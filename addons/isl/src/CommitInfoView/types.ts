@@ -26,10 +26,6 @@ export type FieldsBeingEdited = Record<string, boolean> & {forceWhileOnHead?: bo
 
 export interface CommitMessageFieldsUtilsType {
   /**
-   * Fields for blank message
-   */
-  emptyCommitMessageFields: () => CommitMessageFields;
-  /**
    * Extract fields from string commit message
    */
   parseCommitMessageFields: (title: string, description: string) => CommitMessageFields;

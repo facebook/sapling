@@ -13,7 +13,10 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import {islDrawerState} from './App';
 import serverAPI from './ClientToServerAPI';
 import {commitFieldsBeingEdited, commitMode} from './CommitInfoView/CommitInfoState';
-import {CommitMessageFieldUtils} from './CommitInfoView/CommitMessageFields';
+import {
+  CommitMessageFieldUtils,
+  emptyCommitMessageFields,
+} from './CommitInfoView/CommitMessageFields';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {ErrorNotice} from './ErrorNotice';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
@@ -410,7 +413,12 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
                           .map(file => file.path);
                   runOperation(
                     new CommitOperation(
-                      {fields: {...CommitMessageFieldUtils.emptyCommitMessageFields(), title}},
+                      {
+                        fields: {
+                          ...emptyCommitMessageFields(CommitMessageFieldUtils.configuredFields),
+                          title,
+                        },
+                      },
                       headCommit?.hash ?? '',
                       filesToCommit,
                     ),

@@ -9,7 +9,7 @@ import type {Hash} from '../types';
 import type {CommitMessageFields, FieldsBeingEdited} from './types';
 
 import {commitMessageTemplate, latestCommitTreeMap} from '../serverAPIState';
-import {CommitMessageFieldUtils} from './CommitMessageFields';
+import {emptyCommitMessageFields, CommitMessageFieldUtils} from './CommitMessageFields';
 import {atomFamily, selectorFamily, atom} from 'recoil';
 
 export type EditedMessage = {fields: CommitMessageFields};
@@ -59,7 +59,9 @@ export const editedCommitMessages = atomFamily<EditedMessageUnlessOptimistic, Ha
       ({get}) => {
         if (hash === 'head') {
           const template = get(commitMessageTemplate);
-          return template ?? {fields: CommitMessageFieldUtils.emptyCommitMessageFields()};
+          return (
+            template ?? {fields: emptyCommitMessageFields(CommitMessageFieldUtils.configuredFields)}
+          );
         }
         // TODO: is there a better way we should derive `isOptimistic`
         // from `get(treeWithPreviews)`, rather than using non-previewed map?

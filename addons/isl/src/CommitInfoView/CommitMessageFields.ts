@@ -5,15 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitMessageFields, CommitMessageFieldsUtilsType, FieldsBeingEdited} from './types';
+import type {
+  CommitMessageFields,
+  CommitMessageFieldsUtilsType,
+  FieldConfig,
+  FieldsBeingEdited,
+} from './types';
 
 import {Internal} from '../Internal';
 
-function emptyCommitMessageFields(): CommitMessageFields {
-  return {
-    title: '',
-    description: '',
-  };
+export function emptyCommitMessageFields(schema: Array<FieldConfig>): CommitMessageFields {
+  return Object.fromEntries(schema.map(config => [config.key, config.type === 'field' ? [] : '']));
 }
 
 function noFieldsBeingEdited(): FieldsBeingEdited {
@@ -49,7 +51,6 @@ function commitMessageFieldsToString(fields: CommitMessageFields): string {
 }
 
 export const OSSCommitMessageFieldsUtils: CommitMessageFieldsUtilsType = {
-  emptyCommitMessageFields,
   parseCommitMessageFields,
   commitMessageFieldsToString,
 
