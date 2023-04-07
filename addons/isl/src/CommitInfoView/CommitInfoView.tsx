@@ -47,7 +47,7 @@ import {
   hasUnsavedEditedCommitMessage,
 } from './CommitInfoState';
 import {CommitMessageFieldUtils} from './CommitMessageFields';
-import {CommitTitleByline, Section, SmallCapsTitle} from './utils';
+import {CommitTitleByline, getTopmostEditedField, Section, SmallCapsTitle} from './utils';
 import {
   VSCodeBadge,
   VSCodeButton,
@@ -194,6 +194,11 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [commit.hash, isCommitMode]);
 
+  const topmostEditedField = getTopmostEditedField(
+    CommitMessageFieldUtils.configuredFields,
+    fieldsBeingEdited,
+  );
+
   return (
     <div className="commit-info-view" data-testid="commit-info-view">
       {!commit.isHead ? null : (
@@ -220,6 +225,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             key={field.key}
             field={field}
             content={parsedFields[field.key as keyof CommitMessageFields]}
+            autofocus={topmostEditedField === field.key}
             isOptimistic={editedMessage.type === 'optimistic'}
             isBeingEdited={fieldsBeingEdited[field.key]}
             startEditingField={() => startEditingField(field.key)}
@@ -236,7 +242,11 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                     },
               )
             }
-            extra={field.key === 'title' ? <CommitTitleByline commit={commit} /> : undefined}
+            extra={
+              mode !== 'commit' && field.key === 'title' ? (
+                <CommitTitleByline commit={commit} />
+              ) : undefined
+            }
           />
         ))}
         <VSCodeDivider />

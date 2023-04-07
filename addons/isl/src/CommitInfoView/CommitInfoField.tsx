@@ -23,6 +23,7 @@ export function CommitInfoField({
   startEditingField,
   setEditedField,
   extra,
+  autofocus,
 }: {
   field: FieldConfig<CommitMessageFields>;
   isBeingEdited: boolean;
@@ -32,6 +33,7 @@ export function CommitInfoField({
   editedField: string | Array<string> | undefined;
   setEditedField: (value: string) => unknown;
   extra?: JSX.Element;
+  autofocus?: boolean;
 }): JSX.Element | null {
   const editedFieldContent =
     editedField == null ? '' : Array.isArray(editedField) ? editedField.join(', ') : editedField;
@@ -47,7 +49,7 @@ export function CommitInfoField({
             <CommitInfoTextArea
               kind={field.type}
               name={field.key}
-              autoFocus={true}
+              autoFocus={autofocus ?? false}
               editedMessage={editedFieldContent}
               setEditedCommitMessage={setEditedField}
             />
@@ -78,7 +80,7 @@ export function CommitInfoField({
         <CommitInfoTextArea
           kind={field.type}
           name={field.key}
-          autoFocus={true}
+          autoFocus={autofocus ?? false}
           editedMessage={editedFieldContent}
           setEditedCommitMessage={setEditedField}
         />

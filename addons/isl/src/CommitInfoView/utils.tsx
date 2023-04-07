@@ -6,6 +6,8 @@
  */
 
 import type {CommitInfo} from '../types';
+import type {CommitMessageFields} from './CommitMessageFields';
+import type {FieldConfig, FieldsBeingEdited} from './types';
 import type {ReactNode} from 'react';
 
 import {YouAreHere} from '../Commit';
@@ -54,4 +56,16 @@ export function Section({
       {children}
     </section>
   );
+}
+
+export function getTopmostEditedField(
+  fields: Array<FieldConfig<CommitMessageFields>>,
+  fieldsBeingEdited: FieldsBeingEdited<CommitMessageFields>,
+): keyof CommitMessageFields | undefined {
+  for (const field of fields) {
+    if (fieldsBeingEdited[field.key]) {
+      return field.key;
+    }
+  }
+  return undefined;
 }
