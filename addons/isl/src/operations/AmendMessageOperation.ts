@@ -51,7 +51,7 @@ export class AmendMessageOperation extends Operation {
           info: {
             ...tree.info,
             title,
-            description,
+            description: description ?? '',
           },
           children: tree.children,
         };

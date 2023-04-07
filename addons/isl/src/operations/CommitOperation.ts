@@ -63,8 +63,7 @@ export class CommitOperation extends Operation {
       return undefined;
     }
 
-    const message = this.message;
-    const stringMessage = CommitMessageFieldUtils.commitMessageFieldsToString(message.fields);
+    const stringMessage = CommitMessageFieldUtils.commitMessageFieldsToString(this.message.fields);
     const [title] = stringMessage.split(/\n+/, 1);
     const description = stringMessage.slice(title.length);
 
@@ -72,7 +71,7 @@ export class CommitOperation extends Operation {
       children: [],
       info: {
         author: head?.author ?? '',
-        description,
+        description: description ?? '',
         title,
         bookmarks: [],
         remoteBookmarks: [],

@@ -28,8 +28,7 @@ import * as utils from 'shared/utils';
 
 jest.mock('../MessageBus');
 
-// TODO: Fix after changes to Commit Fields
-describe.skip('Image upload inside TextArea ', () => {
+describe('Image upload inside TextArea ', () => {
   beforeEach(() => {
     resetTestMessages();
   });
@@ -51,7 +50,8 @@ describe.skip('Image upload inside TextArea ', () => {
       });
     });
     act(() => {
-      CommitInfoTestUtils.clickCommitMode();
+      CommitInfoTestUtils.clickToEditTitle();
+      CommitInfoTestUtils.clickToEditDescription();
     });
   });
 
@@ -120,7 +120,7 @@ describe.skip('Image upload inside TextArea ', () => {
 
   describe('file picker to upload file', () => {
     it('lets you pick a file to upload', async () => {
-      const uploadButton = screen.getByTestId('attach-file-input');
+      const uploadButton = screen.getAllByTestId('attach-file-input')[0];
       act(() => {
         userEvent.upload(uploadButton, [mockFile]);
       });
@@ -135,7 +135,7 @@ describe.skip('Image upload inside TextArea ', () => {
     async function startFileUpload(id: string) {
       const randomIdSpy = jest.spyOn(utils, 'randomId');
       randomIdSpy.mockImplementationOnce(() => id);
-      const uploadButton = screen.getByTestId('attach-file-input');
+      const uploadButton = screen.getAllByTestId('attach-file-input')[0];
       act(() => void userEvent.upload(uploadButton, [mockFile]));
       await waitFor(() =>
         expectMessageSentToServer(expect.objectContaining({type: 'uploadFile', id})),
@@ -351,8 +351,6 @@ describe.skip('Image upload inside TextArea ', () => {
       });
 
       it('disables amend button', async () => {
-        CommitInfoTestUtils.clickAmendMode();
-        CommitInfoTestUtils.clickToEditDescription();
         expect(CommitInfoTestUtils.withinCommitActionBar().getByText('Amend')).not.toBeDisabled();
         await startFileUpload('1111');
         expect(CommitInfoTestUtils.withinCommitActionBar().getByText('Amend')).toBeDisabled();
@@ -418,7 +416,10 @@ describe.skip('Image upload inside TextArea ', () => {
       expectMessageSentToServer({
         type: 'runOperation',
         operation: expect.objectContaining({
-          args: expect.arrayContaining(['commit', 'hi\nhey\nhttps://image.example.com/1111']),
+          args: expect.arrayContaining([
+            'commit',
+            expect.stringMatching('hi\n+(Summary: )?hey\nhttps://image.example.com/1111'),
+          ]),
         }),
       });
     });

@@ -7,6 +7,7 @@
 
 import type {Hash} from './types';
 
+import {Internal} from './Internal';
 import {screen, within, fireEvent, waitFor} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 import {unwrap} from 'shared/utils';
@@ -101,13 +102,21 @@ export const CommitInfoTestUtils = {
     return (textarea as unknown as {control: HTMLTextAreaElement}).control;
   },
 
-  /** Get the outer custom element for the description editor (actually just a div in tests) */
+  /** Get the outer custom element for the description editor (actually just a div in tests)
+   * For internal builds, this points to the "summary" editor instead of the "description" editor
+   */
   getDescriptionWrapper(): HTMLDivElement {
-    const description = screen.getByTestId('commit-info-description-field') as HTMLDivElement;
+    const description = screen.getByTestId(
+      Internal.CommitMessageFieldUtils != null
+        ? 'commit-info-summary-field'
+        : 'commit-info-description-field',
+    ) as HTMLDivElement;
     expect(description).toBeInTheDocument();
     return description;
   },
-  /** Get the inner textarea for the description editor (inside the fake shadow dom) */
+  /** Get the inner textarea for the description editor (inside the fake shadow dom)
+   * For internal builds, this points to the "summary" editor instead of the "description" editor
+   */
   getDescriptionEditor(): HTMLTextAreaElement {
     const textarea = CommitInfoTestUtils.getDescriptionWrapper();
     return (textarea as unknown as {control: HTMLTextAreaElement}).control;
@@ -126,7 +135,11 @@ export const CommitInfoTestUtils = {
   },
   clickToEditDescription() {
     act(() => {
-      const description = screen.getByTestId('commit-info-rendered-description');
+      const description = screen.getByTestId(
+        Internal.CommitMessageFieldUtils != null
+          ? 'commit-info-rendered-summary'
+          : 'commit-info-rendered-description',
+      );
       expect(description).toBeInTheDocument();
       fireEvent.click(description);
     });
@@ -143,13 +156,17 @@ export const CommitInfoTestUtils = {
 
   expectIsEditingDescription() {
     const descriptionEditor = screen.queryByTestId(
-      'commit-info-description-field',
+      Internal.CommitMessageFieldUtils != null
+        ? 'commit-info-summary-field'
+        : 'commit-info-description-field',
     ) as HTMLTextAreaElement;
     expect(descriptionEditor).toBeInTheDocument();
   },
   expectIsNOTEditingDescription() {
     const descriptionEditor = screen.queryByTestId(
-      'commit-info-description-field',
+      Internal.CommitMessageFieldUtils != null
+        ? 'commit-info-summary-field'
+        : 'commit-info-description-field',
     ) as HTMLTextAreaElement;
     expect(descriptionEditor).not.toBeInTheDocument();
   },

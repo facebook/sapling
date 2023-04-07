@@ -45,8 +45,7 @@ const {
   expectIsNOTEditingDescription,
 } = CommitInfoTestUtils;
 
-// TODO: Fix after changes to Commit Fields
-describe.skip('CommitInfoView', () => {
+describe('CommitInfoView', () => {
   beforeEach(() => {
     resetTestMessages();
   });
@@ -204,7 +203,7 @@ describe.skip('CommitInfoView', () => {
               '--addremove',
               {type: 'repo-relative-file', path: 'src/file2.js'},
               '--message',
-              'Head Commit\n',
+              expect.stringMatching(/^Head Commit\n/),
             ],
             id: expect.anything(),
             runner: CommandRunner.Sapling,
@@ -368,7 +367,9 @@ describe.skip('CommitInfoView', () => {
 
         {
           expect(getTitleEditor().value).toBe('Head Commit hello new title');
-          expect(getDescriptionEditor().value).toBe('Summary: stacked commit\nhello new text');
+          expect(getDescriptionEditor().value).toEqual(
+            expect.stringContaining('stacked commit\nhello new text'),
+          );
         }
       });
 
@@ -502,7 +503,9 @@ describe.skip('CommitInfoView', () => {
                   '--rev',
                   SucceedableRevset('a'),
                   '--message',
-                  'My Commit hello new title\nSummary: First commit in the stack\nhello new text',
+                  expect.stringMatching(
+                    /^My Commit hello new title\n+Summary: First commit in the stack\nhello new text/,
+                  ),
                 ],
                 id: expect.anything(),
                 runner: CommandRunner.Sapling,
@@ -533,7 +536,9 @@ describe.skip('CommitInfoView', () => {
                   'amend',
                   '--addremove',
                   '--message',
-                  'Head Commit hello new title\nSummary: stacked commit\nhello new text',
+                  expect.stringMatching(
+                    /^Head Commit hello new title\n+Summary: stacked commit\nhello new text/,
+                  ),
                 ],
                 id: expect.anything(),
                 runner: CommandRunner.Sapling,
@@ -688,7 +693,12 @@ describe.skip('CommitInfoView', () => {
           expectMessageSentToServer({
             type: 'runOperation',
             operation: {
-              args: ['commit', '--addremove', '--message', 'new commit title\nmy description'],
+              args: [
+                'commit',
+                '--addremove',
+                '--message',
+                expect.stringMatching(/^new commit title\n+(Summary: )?my description/),
+              ],
               id: expect.anything(),
               runner: CommandRunner.Sapling,
               trackEventName: 'CommitOperation',
@@ -830,12 +840,12 @@ describe.skip('CommitInfoView', () => {
           act(() => {
             simulateMessageFromServer({
               type: 'fetchedCommitMessageTemplate',
-              template: '[isl]\nSummary:\nTest Plan:\n',
+              template: '[isl]\nSummary: Hello\nTest Plan:\n',
             });
           });
 
           expect(getTitleEditor().value).toBe('[isl]');
-          expect(getDescriptionEditor().value).toBe('Summary:\nTest Plan:\n');
+          expect(getDescriptionEditor().value).toEqual(expect.stringMatching(/(Summary: )?Hello/));
         });
 
         it('only asynchronously overwrites default commit fields', () => {
@@ -921,7 +931,9 @@ describe.skip('CommitInfoView', () => {
             expectIsEditingDescription();
 
             expect(getTitleEditor().value).toBe('Head CommitQ');
-            expect(getDescriptionEditor().value).toBe('Summary: stacked commitW');
+            expect(getDescriptionEditor().value).toEqual(
+              expect.stringContaining('stacked commitW'),
+            );
           });
           expect(confirmSpy).toHaveBeenCalled();
         });
@@ -990,7 +1002,7 @@ describe.skip('CommitInfoView', () => {
 
           expect(withinCommitInfo().getByText('My Commit with change!')).toBeInTheDocument();
           expect(
-            withinCommitInfo().getByText('Summary: First commit in the stack\nmore stuff!', {
+            withinCommitInfo().getByText(/First commit in the stack\nmore stuff!/, {
               collapseWhitespace: false,
             }),
           ).toBeInTheDocument();
@@ -1018,7 +1030,7 @@ describe.skip('CommitInfoView', () => {
           expectIsNOTEditingDescription();
 
           expect(withinCommitInfo().queryByText('New Commit')).toBeInTheDocument();
-          expect(withinCommitInfo().queryByText('Message!')).toBeInTheDocument();
+          expect(withinCommitInfo().queryByText(/Message!/)).toBeInTheDocument();
           expect(withinCommitInfo().queryByText('You are here')).toBeInTheDocument();
 
           // finish commit operation with hg log
@@ -1028,12 +1040,15 @@ describe.skip('CommitInfoView', () => {
                 COMMIT('1', 'some public base', '0', {phase: 'public'}),
                 COMMIT('a', 'My Commit', '1'),
                 COMMIT('b', 'Head Commit', 'a'),
-                COMMIT('c', 'New Commit', 'b', {isHead: true, description: 'Message!'}),
+                COMMIT('c', 'New Commit', 'b', {
+                  isHead: true,
+                  description: 'Summary: Message!',
+                }),
               ],
             });
           });
           expect(withinCommitInfo().queryByText('New Commit')).toBeInTheDocument();
-          expect(withinCommitInfo().queryByText('Message!')).toBeInTheDocument();
+          expect(withinCommitInfo().getByText(/Message!/)).toBeInTheDocument();
           expect(withinCommitInfo().queryByText('You are here')).toBeInTheDocument();
         });
 
@@ -1064,7 +1079,7 @@ describe.skip('CommitInfoView', () => {
                 COMMIT('1', 'some public base', '0', {phase: 'public'}),
                 COMMIT('a', 'My Commit', '1'),
                 COMMIT('b', 'Head Commit', 'a'),
-                COMMIT('c', 'New Commit', 'b', {isHead: true, description: 'Message!'}),
+                COMMIT('c', 'New Commit', 'b', {isHead: true, description: 'Summary: Message!'}),
               ],
             });
           });
@@ -1094,7 +1109,7 @@ describe.skip('CommitInfoView', () => {
 
           expect(withinCommitInfo().getByText('Head Commit Hey')).toBeInTheDocument();
           expect(
-            withinCommitInfo().getByText('Summary: stacked commit\nHello', {
+            withinCommitInfo().getByText(/stacked commit\nHello/, {
               collapseWhitespace: false,
             }),
           ).toBeInTheDocument();
@@ -1115,7 +1130,7 @@ describe.skip('CommitInfoView', () => {
           });
           expect(withinCommitInfo().getByText('Head Commit Hey')).toBeInTheDocument();
           expect(
-            withinCommitInfo().getByText('Summary: stacked commit\nHello', {
+            withinCommitInfo().getByText(/stacked commit\nHello/, {
               collapseWhitespace: false,
             }),
           ).toBeInTheDocument();
