@@ -18,25 +18,39 @@ export function emptyCommitMessageFields(schema: Array<FieldConfig>): CommitMess
   return Object.fromEntries(schema.map(config => [config.key, config.type === 'field' ? [] : '']));
 }
 
-function noFieldsBeingEdited(): FieldsBeingEdited {
-  return {
-    title: false,
-    description: false,
-  };
+/**
+ * Construct value representing all fields are false: {title: false, description: false, ...}
+ */
+export function noFieldsBeingEdited(schema: Array<FieldConfig>): FieldsBeingEdited {
+  return Object.fromEntries(schema.map(config => [config.key, false]));
 }
 
-function allFieldsBeingEdited(): FieldsBeingEdited {
-  return {
-    title: true,
-    description: true,
-  };
+/**
+ * Construct value representing all fields are being edited: {title: true, description: true, ...}
+ */
+export function allFieldsBeingEdited(schema: Array<FieldConfig>): FieldsBeingEdited {
+  return Object.fromEntries(schema.map(config => [config.key, true]));
 }
 
-function findFieldsBeingEdited(a: CommitMessageFields, b: CommitMessageFields): FieldsBeingEdited {
-  return {
-    title: a.title !== b.title,
-    description: a.description !== b.description,
-  };
+/**
+ * Construct value representing which fields differ between two parsed messages, by comparing each field.
+ * ```
+ * findFieldsBeingEdited({title: 'hi', description: 'yo'}, {title: 'hey', description: 'yo'}) -> {title: true, description: false}
+ * ```
+ */
+export function findFieldsBeingEdited(
+  schema: Array<FieldConfig>,
+  a: CommitMessageFields,
+  b: CommitMessageFields,
+): FieldsBeingEdited {
+  return Object.fromEntries(
+    schema.map(config => [
+      config.key,
+      config.type === 'field'
+        ? !arraysEqual(a[config.key] as Array<string>, b[config.key] as Array<string>)
+        : a[config.key] !== b[config.key],
+    ]),
+  );
 }
 
 function parseCommitMessageFields(title: string, description: string): CommitMessageFields {
@@ -58,10 +72,6 @@ export const OSSCommitMessageFieldsUtils: CommitMessageFieldsUtilsType = {
     {key: 'title', name: 'Title', type: 'title', icon: 'milestone'},
     {key: 'description', name: 'Description', type: 'textarea', icon: 'note'},
   ],
-
-  allFieldsBeingEdited,
-  noFieldsBeingEdited,
-  findFieldsBeingEdited,
 };
 
 /**
@@ -71,3 +81,10 @@ export const OSSCommitMessageFieldsUtils: CommitMessageFieldsUtilsType = {
  */
 export const CommitMessageFieldUtils: CommitMessageFieldsUtilsType =
   Internal.CommitMessageFieldUtils ?? OSSCommitMessageFieldsUtils;
+
+function arraysEqual<T>(a: Array<T>, b: Array<T>): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  return a.every((val, i) => b[i] === val);
+}

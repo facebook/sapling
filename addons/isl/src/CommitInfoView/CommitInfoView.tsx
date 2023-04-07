@@ -45,7 +45,12 @@ import {
   editedCommitMessages,
   hasUnsavedEditedCommitMessage,
 } from './CommitInfoState';
-import {CommitMessageFieldUtils} from './CommitMessageFields';
+import {
+  allFieldsBeingEdited,
+  findFieldsBeingEdited,
+  noFieldsBeingEdited,
+  CommitMessageFieldUtils,
+} from './CommitMessageFields';
 import {CommitTitleByline, getTopmostEditedField, Section, SmallCapsTitle} from './utils';
 import {
   VSCodeBadge,
@@ -171,7 +176,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
       assert(!isCommitMode, 'Should not be in commit mode while editedMessage.type is optimistic');
 
       // no fields are edited during optimistic state
-      setFieldsBeingEdited(CommitMessageFieldUtils.noFieldsBeingEdited());
+      setFieldsBeingEdited(noFieldsBeingEdited(CommitMessageFieldUtils.configuredFields));
       return;
     }
     if (fieldsBeingEdited.forceWhileOnHead && commit.isHead) {
@@ -184,8 +189,12 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     // except for fields that are being edited on this commit, too
     setFieldsBeingEdited(
       isCommitMode
-        ? CommitMessageFieldUtils.allFieldsBeingEdited()
-        : CommitMessageFieldUtils.findFieldsBeingEdited(editedMessage.fields, parsedFields),
+        ? allFieldsBeingEdited(CommitMessageFieldUtils.configuredFields)
+        : findFieldsBeingEdited(
+            CommitMessageFieldUtils.configuredFields,
+            editedMessage.fields,
+            parsedFields,
+          ),
     );
 
     // We only want to recompute this when the commit/mode changes.
@@ -358,7 +367,7 @@ function ActionsBar({
         }
 
         reset(editedCommitMessages(isCommitMode ? 'head' : commit.hash));
-        setFieldsBeingEdited(CommitMessageFieldUtils.noFieldsBeingEdited());
+        setFieldsBeingEdited(noFieldsBeingEdited(CommitMessageFieldUtils.configuredFields));
       },
   );
   const runOperation = useRunOperation();

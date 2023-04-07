@@ -38,22 +38,6 @@ export interface CommitMessageFieldsUtilsType {
    * Schema for fields in a commit message
    */
   configuredFields: Array<FieldConfig>;
-
-  /**
-   * Construct value representing all fields are false: {title: false, description: false, ...}
-   */
-  noFieldsBeingEdited: () => FieldsBeingEdited;
-  /**
-   * Construct value representing all fields are being edited: {title: true, description: true, ...}
-   */
-  allFieldsBeingEdited: () => FieldsBeingEdited;
-  /**
-   * Construct value representing which fields differ between two parsed messages, by comparing each field.
-   * ```
-   * findFieldsBeingEdited({title: 'hi', description: 'yo'}, {title: 'hey', description: 'yo'}) -> {title: true, description: false}
-   * ```
-   */
-  findFieldsBeingEdited: (a: CommitMessageFields, b: CommitMessageFields) => FieldsBeingEdited;
 }
 
 /**

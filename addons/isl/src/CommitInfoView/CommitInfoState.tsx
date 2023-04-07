@@ -9,7 +9,12 @@ import type {Hash} from '../types';
 import type {CommitMessageFields, FieldsBeingEdited} from './types';
 
 import {commitMessageTemplate, latestCommitTreeMap} from '../serverAPIState';
-import {emptyCommitMessageFields, CommitMessageFieldUtils} from './CommitMessageFields';
+import {
+  findFieldsBeingEdited,
+  noFieldsBeingEdited,
+  emptyCommitMessageFields,
+  CommitMessageFieldUtils,
+} from './CommitMessageFields';
 import {atomFamily, selectorFamily, atom} from 'recoil';
 
 export type EditedMessage = {fields: CommitMessageFields};
@@ -98,14 +103,14 @@ export const hasUnsavedEditedCommitMessage = selectorFamily<boolean, Hash | 'hea
         original?.description ?? '',
       );
       return Object.values(
-        CommitMessageFieldUtils.findFieldsBeingEdited(edited.fields, parsed),
+        findFieldsBeingEdited(CommitMessageFieldUtils.configuredFields, edited.fields, parsed),
       ).some(Boolean);
     },
 });
 
 export const commitFieldsBeingEdited = atom<FieldsBeingEdited>({
   key: 'commitFieldsBeingEdited',
-  default: CommitMessageFieldUtils.noFieldsBeingEdited(),
+  default: noFieldsBeingEdited(CommitMessageFieldUtils.configuredFields),
 });
 
 export const commitMode = atom<CommitInfoMode>({
