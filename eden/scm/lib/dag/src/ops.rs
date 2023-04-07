@@ -31,7 +31,7 @@ use crate::VertexListWithOptions;
 /// DAG related read-only algorithms.
 #[async_trait::async_trait]
 pub trait DagAlgorithm: Send + Sync {
-    /// Sort a `NameSet` topologically.
+    /// Sort a `NameSet` topologically in descending order.
     ///
     /// The returned set should have `dag` and `id_map` hints set to associated
     /// with this dag or its previous compatible version. For example, if a
