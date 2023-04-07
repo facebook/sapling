@@ -41,16 +41,13 @@ impl GitCopyTrace {
 
         diff.foreach(
             &mut |file, _progress| {
-                match file.status() {
-                    git2::Delta::Renamed => {
-                        let old_path = diff_file_to_string(file.old_file());
-                        let new_path = diff_file_to_string(file.new_file());
-                        // skip non-utf8 paths
-                        if let (Some(old_path), Some(new_path)) = (old_path, new_path) {
-                            map.insert(new_path.to_owned(), old_path.to_owned());
-                        }
+                if let git2::Delta::Renamed = file.status() {
+                    let old_path = diff_file_to_string(file.old_file());
+                    let new_path = diff_file_to_string(file.new_file());
+                    // skip non-utf8 paths
+                    if let (Some(old_path), Some(new_path)) = (old_path, new_path) {
+                        map.insert(new_path.to_owned(), old_path.to_owned());
                     }
-                    _ => {}
                 }
                 true
             },
