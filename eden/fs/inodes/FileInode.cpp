@@ -812,9 +812,9 @@ ImmediateFuture<BlobMetadata> FileInode::getBlobMetadata(
 #ifdef _WIN32
       return makeImmediateFutureWith([this] {
         auto pathToFile = getMaterializedFilePath();
-        struct stat st = getMount()->initStatData();
         return BlobMetadata(
-            getFileSha1(pathToFile), getMaterializedFileSize(st, pathToFile));
+            getFileSha1(pathToFile),
+            getMaterializedFileSize(pathToFile).value());
       });
 #else
       auto sha1 = getOverlayFileAccess(state)->getSha1(*this);
@@ -845,7 +845,7 @@ ImmediateFuture<struct stat> FileInode::stat(
   if (state->isMaterialized()) {
 #ifdef _WIN32
     auto pathToFile = getMaterializedFilePath();
-    getMaterializedFileSize(st, pathToFile);
+    st.st_size = getMaterializedFileSize(pathToFile).value();
 #else
     st.st_size = getOverlayFileAccess(state)->getFileSize(*this);
 #endif

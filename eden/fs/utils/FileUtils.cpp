@@ -71,14 +71,6 @@ folly::Try<std::vector<PathComponent>> getAllDirectoryEntryNames(
 
 #else
 
-off_t getMaterializedFileSize(struct stat& st, AbsolutePath& pathToFile) {
-  struct stat targetStat;
-  if (::stat(pathToFile.c_str(), &targetStat) == 0) {
-    st.st_size = targetStat.st_size;
-  }
-  return st.st_size;
-}
-
 namespace {
 
 enum class OpenMode {
@@ -140,7 +132,28 @@ folly::Try<void> writeToHandle(
   return folly::Try<void>{};
 }
 
+folly::Try<uint64_t> getHandleFileSize(
+    const FileHandle& handle,
+    AbsolutePathPiece path) {
+  LARGE_INTEGER fileSize;
+  if (!GetFileSizeEx(handle.get(), &fileSize)) {
+    return folly::Try<uint64_t>{makeWin32ErrorExplicit(
+        GetLastError(),
+        fmt::format(FMT_STRING("couldn't obtain the file size of {}"), path))};
+  }
+  return folly::Try{folly::to_unsigned(fileSize.QuadPart)};
+}
+
 } // namespace
+
+folly::Try<uint64_t> getMaterializedFileSize(AbsolutePathPiece path) {
+  auto tryFileHandle = openHandle(path, OpenMode::READ);
+  if (tryFileHandle.hasException()) {
+    return folly::Try<uint64_t>{std::move(tryFileHandle).exception()};
+  }
+  auto fileHandle = std::move(tryFileHandle).value();
+  return getHandleFileSize(fileHandle, path);
+}
 
 folly::Try<std::string> readFile(AbsolutePathPiece path, size_t num_bytes) {
   auto tryFileHandle = openHandle(path, OpenMode::READ);
@@ -150,14 +163,11 @@ folly::Try<std::string> readFile(AbsolutePathPiece path, size_t num_bytes) {
   auto fileHandle = std::move(tryFileHandle).value();
 
   if (num_bytes == std::numeric_limits<size_t>::max()) {
-    LARGE_INTEGER fileSize;
-    if (!GetFileSizeEx(fileHandle.get(), &fileSize)) {
-      return folly::Try<std::string>{makeWin32ErrorExplicit(
-          GetLastError(),
-          fmt::format(
-              FMT_STRING("couldn't obtain the file size of {}"), path))};
+    auto fileSize = getHandleFileSize(fileHandle, path);
+    if (fileSize.hasException()) {
+      return folly::Try<std::string>{std::move(fileSize).exception()};
     }
-    num_bytes = fileSize.QuadPart;
+    num_bytes = fileSize.value();
   }
 
   // TODO(xavierd): this can only read up to 4GB.

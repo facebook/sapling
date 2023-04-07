@@ -71,7 +71,7 @@ getAllDirectoryEntryNames(AbsolutePathPiece path);
 /**
  * For Windows only, returns the file size of the materialized file.
  */
-off_t getMaterializedFileSize(struct stat& st, AbsolutePath& pathToFile);
+folly::Try<uint64_t> getMaterializedFileSize(AbsolutePathPiece pathToFile);
 #endif // _WIN32
 
 } // namespace facebook::eden
