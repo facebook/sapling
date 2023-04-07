@@ -81,11 +81,14 @@
 .commit-info-rendered-textarea {
   cursor: pointer;
   white-space: pre-wrap;
-  margin: calc(-1 * var(--pad));
-  margin-bottom: var(--pad);
   transition: background-color 0.1s;
   border-radius: var(--pad);
   padding: var(--pad);
+}
+
+.commit-info-section .see-more-container {
+  margin: calc(-1 * var(--pad));
+  margin-bottom: var(--pad);
 }
 
 .commit-info-rendered-textarea:hover,

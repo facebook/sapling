@@ -9,8 +9,10 @@ import type {FieldConfig} from './types';
 import type {ReactNode} from 'react';
 
 import {T} from '../i18n';
+import {SeeMoreContainer} from './SeeMoreContainer';
 import {CommitInfoTextArea} from './TextArea';
 import {Section, SmallCapsTitle} from './utils';
+import {Fragment} from 'react';
 import {Icon} from 'shared/Icon';
 
 export function CommitInfoField({
@@ -70,6 +72,7 @@ export function CommitInfoField({
       </>
     );
   } else {
+    const Wrapper = field.type === 'field' ? Fragment : SeeMoreContainer;
     return isBeingEdited ? (
       <Section className="commit-info-field-section">
         <SmallCapsTitle>
@@ -86,34 +89,36 @@ export function CommitInfoField({
       </Section>
     ) : (
       <Section>
-        <ClickToEditField
-          startEditingField={isOptimistic ? undefined : startEditingField}
-          kind={field.type}
-          fieldKey={field.key}>
-          <SmallCapsTitle>
-            <Icon icon={field.icon} />
-            <T>{field.key}</T>
-            <span className="hover-edit-button">
-              <Icon icon="edit" />
-            </span>
-          </SmallCapsTitle>
-          {content ? (
-            <div>{content}</div>
-          ) : (
-            <span className="empty-description subtle">
-              {isOptimistic ? (
-                <>
-                  <T replace={{$name: field.key}}> No $name</T>
-                </>
-              ) : (
-                <>
-                  <Icon icon="add" />
-                  <T replace={{$name: field.key}}> Click to add $name</T>
-                </>
-              )}
-            </span>
-          )}
-        </ClickToEditField>
+        <Wrapper>
+          <ClickToEditField
+            startEditingField={isOptimistic ? undefined : startEditingField}
+            kind={field.type}
+            fieldKey={field.key}>
+            <SmallCapsTitle>
+              <Icon icon={field.icon} />
+              <T>{field.key}</T>
+              <span className="hover-edit-button">
+                <Icon icon="edit" />
+              </span>
+            </SmallCapsTitle>
+            {content ? (
+              <div>{content}</div>
+            ) : (
+              <span className="empty-description subtle">
+                {isOptimistic ? (
+                  <>
+                    <T replace={{$name: field.key}}> No $name</T>
+                  </>
+                ) : (
+                  <>
+                    <Icon icon="add" />
+                    <T replace={{$name: field.key}}> Click to add $name</T>
+                  </>
+                )}
+              </span>
+            )}
+          </ClickToEditField>
+        </Wrapper>
       </Section>
     );
   }

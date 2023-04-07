@@ -1,0 +1,31 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.see-more-container {
+  width: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.see-more-container-collapsed {
+  max-height: 275px;
+  overflow-y: hidden;
+}
+
+.see-less-button,
+.see-more-button {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.see-more-button {
+  position: absolute;
+  bottom: 0;
+  background: linear-gradient(0deg, var(--background), var(--background), transparent);
+  /* extra padding for the gradient to transition */
+  padding-top: calc(2 * var(--pad));
+}
