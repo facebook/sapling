@@ -26,11 +26,6 @@ export type FieldsBeingEdited = Record<string, boolean> & {forceWhileOnHead?: bo
 
 export interface CommitMessageFieldsUtilsType {
   /**
-   * Extract fields from string commit message
-   */
-  parseCommitMessageFields: (title: string, description: string) => CommitMessageFields;
-
-  /**
    * Schema for fields in a commit message
    */
   configuredFields: Array<FieldConfig>;
@@ -61,6 +56,6 @@ export type FieldConfig = {
     }
   | {
       type: 'field';
-      autocompleteType: 'user' | 'task';
+      autocompleteType: 'user' | 'task' | 'tag' | 'diff';
     }
 );

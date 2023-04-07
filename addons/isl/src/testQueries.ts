@@ -7,7 +7,10 @@
 
 import type {Hash} from './types';
 
-import {Internal} from './Internal';
+import {
+  CommitMessageFieldUtils,
+  OSSCommitMessageFieldsUtils,
+} from './CommitInfoView/CommitMessageFields';
 import {screen, within, fireEvent, waitFor} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 import {unwrap} from 'shared/utils';
@@ -107,9 +110,7 @@ export const CommitInfoTestUtils = {
    */
   getDescriptionWrapper(): HTMLDivElement {
     const description = screen.getByTestId(
-      Internal.CommitMessageFieldUtils != null
-        ? 'commit-info-summary-field'
-        : 'commit-info-description-field',
+      isInternalMessageFields() ? 'commit-info-summary-field' : 'commit-info-description-field',
     ) as HTMLDivElement;
     expect(description).toBeInTheDocument();
     return description;
@@ -136,7 +137,7 @@ export const CommitInfoTestUtils = {
   clickToEditDescription() {
     act(() => {
       const description = screen.getByTestId(
-        Internal.CommitMessageFieldUtils != null
+        isInternalMessageFields()
           ? 'commit-info-rendered-summary'
           : 'commit-info-rendered-description',
       );
@@ -156,17 +157,13 @@ export const CommitInfoTestUtils = {
 
   expectIsEditingDescription() {
     const descriptionEditor = screen.queryByTestId(
-      Internal.CommitMessageFieldUtils != null
-        ? 'commit-info-summary-field'
-        : 'commit-info-description-field',
+      isInternalMessageFields() ? 'commit-info-summary-field' : 'commit-info-description-field',
     ) as HTMLTextAreaElement;
     expect(descriptionEditor).toBeInTheDocument();
   },
   expectIsNOTEditingDescription() {
     const descriptionEditor = screen.queryByTestId(
-      Internal.CommitMessageFieldUtils != null
-        ? 'commit-info-summary-field'
-        : 'commit-info-description-field',
+      isInternalMessageFields() ? 'commit-info-summary-field' : 'commit-info-description-field',
     ) as HTMLTextAreaElement;
     expect(descriptionEditor).not.toBeInTheDocument();
   },
@@ -196,3 +193,7 @@ export const MergeConflictTestUtils = {
       within(screen.getByTestId('commit-tree-root')).queryByText('Unresolved Merge Conflicts'),
     ).not.toBeInTheDocument(),
 };
+
+function isInternalMessageFields(): boolean {
+  return CommitMessageFieldUtils.configuredFields !== OSSCommitMessageFieldsUtils.configuredFields;
+}

@@ -46,6 +46,7 @@ import {
   hasUnsavedEditedCommitMessage,
 } from './CommitInfoState';
 import {
+  parseCommitMessageFields,
   allFieldsBeingEdited,
   findFieldsBeingEdited,
   noFieldsBeingEdited,
@@ -165,7 +166,8 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     setFieldsBeingEdited({...fieldsBeingEdited, [field]: true});
   };
 
-  const parsedFields = CommitMessageFieldUtils.parseCommitMessageFields(
+  const parsedFields = parseCommitMessageFields(
+    CommitMessageFieldUtils.configuredFields,
     commit.title,
     commit.description,
   );

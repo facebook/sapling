@@ -53,18 +53,12 @@ export function findFieldsBeingEdited(
   );
 }
 
-function parseCommitMessageFields(title: string, description: string): CommitMessageFields {
-  return {
-    title,
-    description,
-  };
-}
-
 export function commitMessageFieldsToString(
   schema: Array<FieldConfig>,
   fields: CommitMessageFields,
 ): string {
   return schema
+    .filter(config => config.key === 'title' || fields[config.key])
     .map(
       config =>
         // stringified messages of the form Key: value, except the title or generic description don't need a label
@@ -76,9 +70,69 @@ export function commitMessageFieldsToString(
     .join('\n\n');
 }
 
-export const OSSCommitMessageFieldsUtils: CommitMessageFieldsUtilsType = {
-  parseCommitMessageFields,
+function commaSeparated(s: string | undefined): Array<string> {
+  if (s == null || s.trim() === '') {
+    return [];
+  }
+  // TODO: remove duplicates
+  const split = s.split(',').map(s => s.trim());
+  return split;
+}
 
+const SL_COMMIT_MESSAGE_REGEX = /^(HG:.*)|(SL:.*)/gm;
+
+/**
+ * Extract fields from string commit message, based on the field schema.
+ */
+export function parseCommitMessageFields(
+  schema: Array<FieldConfig>,
+  title: string,
+  description: string,
+): CommitMessageFields {
+  const map: Partial<Record<string, string>> = {};
+  const sanitizedCommitMessage = (title + '\n' + description).replace(SL_COMMIT_MESSAGE_REGEX, '');
+
+  const sectionTags = schema.map(field => field.name);
+  const TAG_SEPARATOR = ':';
+  const sectionSeparatorRegex = new RegExp(`\n\\s*\\b(${sectionTags.join('|')})${TAG_SEPARATOR} ?`);
+
+  // The section names are in a capture group in the regex so the odd elements
+  // in the array are the section names.
+  const splitSections = sanitizedCommitMessage.split(sectionSeparatorRegex);
+  for (let i = 1; i < splitSections.length; i += 2) {
+    const sectionTag = splitSections[i];
+    const sectionContent = splitSections[i + 1] || '';
+
+    // Special case: If a user types the name of a field in the text, a single section might be
+    // discovered more than once.
+    if (map[sectionTag]) {
+      map[sectionTag] += '\n' + sectionTag + ':\n' + sectionContent.replace(/^\n/, '').trimEnd();
+    } else {
+      // If we captured the trailing \n in the regex, it could cause leading newlines to not capture.
+      // So we instead need to manually trim the leading \n in the content, if it exists.
+      map[sectionTag] = sectionContent.replace(/^\n/, '').trimEnd();
+    }
+  }
+
+  const result = Object.fromEntries(
+    schema.map(config => {
+      const found = map[config.name] ?? '';
+      if (config.key === 'description') {
+        // special case: a field called "description" should contain the entire description,
+        // in case you don't have any fields configured.
+        // TODO: this should probably be a key on the schema description field instead,
+        // or configured as part of the overall schema "parseMethod", to support formats other than "Key: Value"
+        return ['description', description];
+      }
+      return [config.key, config.type === 'field' ? commaSeparated(found) : found];
+    }),
+  );
+  // title won't get parsed automatically, manually insert it
+  result.title = title;
+  return result;
+}
+
+export const OSSCommitMessageFieldsUtils: CommitMessageFieldsUtilsType = {
   configuredFields: [
     {key: 'title', name: 'Title', type: 'title', icon: 'milestone'},
     {key: 'description', name: 'Description', type: 'textarea', icon: 'note'},

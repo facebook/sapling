@@ -8,6 +8,10 @@
 import type {Hash} from '../types';
 
 import App from '../App';
+import {
+  CommitMessageFieldUtils,
+  OSSCommitMessageFieldsUtils,
+} from '../CommitInfoView/CommitMessageFields';
 import platform from '../platform';
 import {CommitInfoTestUtils} from '../testQueries';
 import {
@@ -48,6 +52,8 @@ const {
 describe('CommitInfoView', () => {
   beforeEach(() => {
     resetTestMessages();
+    // Use OSS message fields for tests, even internally for consistency
+    CommitMessageFieldUtils.configuredFields = OSSCommitMessageFieldsUtils.configuredFields;
   });
 
   it('shows loading spinner on mount', () => {
@@ -203,7 +209,7 @@ describe('CommitInfoView', () => {
               '--addremove',
               {type: 'repo-relative-file', path: 'src/file2.js'},
               '--message',
-              expect.stringMatching(/^Head Commit\n/),
+              expect.stringMatching(/^Head Commit/),
             ],
             id: expect.anything(),
             runner: CommandRunner.Sapling,

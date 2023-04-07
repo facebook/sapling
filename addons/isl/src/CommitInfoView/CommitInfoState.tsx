@@ -10,6 +10,7 @@ import type {CommitMessageFields, FieldsBeingEdited} from './types';
 
 import {commitMessageTemplate, latestCommitTreeMap} from '../serverAPIState';
 import {
+  parseCommitMessageFields,
   findFieldsBeingEdited,
   noFieldsBeingEdited,
   emptyCommitMessageFields,
@@ -75,7 +76,8 @@ export const editedCommitMessages = atomFamily<EditedMessageUnlessOptimistic, Ha
         if (info == null) {
           return {type: 'optimistic'};
         }
-        const fields = CommitMessageFieldUtils.parseCommitMessageFields(
+        const fields = parseCommitMessageFields(
+          CommitMessageFieldUtils.configuredFields,
           info.title,
           info.description,
         );
@@ -98,7 +100,8 @@ export const hasUnsavedEditedCommitMessage = selectorFamily<boolean, Hash | 'hea
       }
       // TODO: T149536695 use treeWithPreviews so this indicator is accurate on top of previews
       const original = get(latestCommitTreeMap).get(hash)?.info;
-      const parsed = CommitMessageFieldUtils.parseCommitMessageFields(
+      const parsed = parseCommitMessageFields(
+        CommitMessageFieldUtils.configuredFields,
         original?.title ?? '',
         original?.description ?? '',
       );

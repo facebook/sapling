@@ -5,11 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {commitMessageFieldsToString, OSSCommitMessageFieldsUtils} from '../CommitMessageFields';
+import {
+  commitMessageFieldsToString,
+  OSSCommitMessageFieldsUtils,
+  parseCommitMessageFields,
+} from '../CommitMessageFields';
 
 describe('InternalCommitInfoFields', () => {
   it('parses messages correctly', () => {
-    const parsed = OSSCommitMessageFieldsUtils.parseCommitMessageFields(
+    const parsed = parseCommitMessageFields(
+      OSSCommitMessageFieldsUtils.configuredFields,
       'my title',
       `My description!
 another line
