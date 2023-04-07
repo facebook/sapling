@@ -135,7 +135,7 @@ std::shared_ptr<const Blob> FileInode::LockedState::getCachedBlob(
   // check the BlobCache, but by checking it here, we can avoid a transition to
   // BLOB_LOADING and back, and also avoid allocating some futures and closures.
   auto result =
-      mount->getBlobCache()->get(ptr_->nonMaterializedState->hash, interest);
+      mount->getBlobCache()->get(ptr_->nonMaterializedState.hash, interest);
   if (result.object) {
     ptr_->interestHandle = std::move(result.interestHandle);
     return std::move(result.object);
@@ -154,8 +154,11 @@ std::shared_ptr<const Blob> FileInode::LockedState::getCachedBlob(
 }
 
 void FileInode::LockedState::setMaterialized() {
-  ptr_->nonMaterializedState.reset();
-  ptr_->tag = State::MATERIALIZED_IN_OVERLAY;
+  if (ptr_->tag != State::MATERIALIZED_IN_OVERLAY) {
+    ptr_->nonMaterializedState.~NonMaterializedState();
+    new (&ptr_->materializedState) FileInodeState::MaterializedState{};
+    ptr_->tag = State::MATERIALIZED_IN_OVERLAY;
+  }
 
   ptr_->interestHandle.reset();
 
@@ -243,7 +246,7 @@ FileInode::runWhileMaterialized(
   // If we don't have a startTime and aren't materialized already, start timing
   // the upcoming materialization. If we have a startTime already, then we came
   // from a recursive call waiting for/timing how long it takes to load the blob
-  if (!startTime.has_value() && state->tag != State::MATERIALIZED_IN_OVERLAY) {
+  if (!startTime.has_value() && !state->isMaterialized()) {
     startTime = std::chrono::system_clock::now();
     getMount()->publishInodeTraceEvent(InodeTraceEvent(
         startTime.value(),
@@ -418,15 +421,19 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
  * FileInode::State methods
  ********************************************************************/
 
-FileInodeState::FileInodeState(const ObjectId* h)
-    : nonMaterializedState(
-          h ? std::optional(NonMaterializedState{*h}) : std::nullopt) {
-  tag = nonMaterializedState ? BLOB_NOT_LOADING : MATERIALIZED_IN_OVERLAY;
-
+FileInodeState::FileInodeState(const ObjectId* h) {
+  if (h) {
+    new (&nonMaterializedState) NonMaterializedState{*h};
+    tag = BLOB_NOT_LOADING;
+  } else {
+    new (&materializedState) MaterializedState{};
+    tag = MATERIALIZED_IN_OVERLAY;
+  }
   checkInvariants();
 }
 
 FileInodeState::FileInodeState() : tag(MATERIALIZED_IN_OVERLAY) {
+  new (&materializedState) MaterializedState{};
   checkInvariants();
 }
 
@@ -434,16 +441,29 @@ FileInodeState::FileInodeState() : tag(MATERIALIZED_IN_OVERLAY) {
  * Define FileInodeState destructor explicitly to avoid including
  * some header files in FileInode.h
  */
-FileInodeState::~FileInodeState() = default;
-
-void FileInodeState::checkInvariants() {
+FileInodeState::~FileInodeState() {
   switch (tag) {
     case BLOB_NOT_LOADING:
-      XCHECK(nonMaterializedState);
+    case BLOB_LOADING:
+      nonMaterializedState.~NonMaterializedState();
+      break;
+    case MATERIALIZED_IN_OVERLAY:
+      materializedState.~MaterializedState();
+      break;
+  }
+};
+
+void FileInodeState::checkInvariants() {
+  // FileInode is the most allocated structure in EdenFS, make sure that its
+  // size is under control.
+  static_assert(sizeof(NonMaterializedState) == 32);
+  static_assert(sizeof(NonMaterializedState) >= sizeof(MaterializedState));
+
+  switch (tag) {
+    case BLOB_NOT_LOADING:
       XCHECK(!blobLoadingPromise);
       return;
     case BLOB_LOADING:
-      XCHECK(nonMaterializedState);
       XCHECK(blobLoadingPromise);
 #ifndef _WIN32
       XCHECK(readByteRanges.empty());
@@ -451,7 +471,6 @@ void FileInodeState::checkInvariants() {
       return;
     case MATERIALIZED_IN_OVERLAY:
       // 'materialized'
-      XCHECK(!nonMaterializedState);
       XCHECK(!blobLoadingPromise);
 #ifndef _WIN32
       XCHECK(readByteRanges.empty());
@@ -595,19 +614,20 @@ std::optional<bool> FileInode::isSameAsFast(
   }
 #endif // !_WIN32
 
-  if (state->nonMaterializedState.has_value()) {
-    switch (getObjectStore().compareObjectsById(
-        state->nonMaterializedState->hash, blobID)) {
-      case ObjectComparison::Unknown:
-        return std::nullopt;
-      case ObjectComparison::Identical:
-        return true;
-      case ObjectComparison::Different:
-        return false;
-    }
+  if (state->isMaterialized()) {
+    // Materialized files must be manually compared with the blob contents.
+    return std::nullopt;
   }
-  // Materialized files must be manually compared with the blob contents.
-  return std::nullopt;
+
+  switch (getObjectStore().compareObjectsById(
+      state->nonMaterializedState.hash, blobID)) {
+    case ObjectComparison::Unknown:
+      return std::nullopt;
+    case ObjectComparison::Identical:
+      return true;
+    case ObjectComparison::Different:
+      return false;
+  }
 }
 
 ImmediateFuture<bool> FileInode::isSameAsSlow(
@@ -701,8 +721,8 @@ void FileInode::forceMetadataUpdate() {
 }
 
 std::optional<ObjectId> FileInode::getBlobHash() const {
-  if (auto state = state_.rlock(); state->nonMaterializedState) {
-    return state->nonMaterializedState->hash;
+  if (auto state = state_.rlock(); !state->isMaterialized()) {
+    return state->nonMaterializedState.hash;
   } else {
     return std::nullopt;
   }
@@ -764,7 +784,7 @@ ImmediateFuture<Hash20> FileInode::getSha1(
     case State::BLOB_LOADING:
       // If a file is not materialized, it should have a hash value.
       return getObjectStore().getBlobSha1(
-          state->nonMaterializedState->hash, fetchContext);
+          state->nonMaterializedState.hash, fetchContext);
     case State::MATERIALIZED_IN_OVERLAY:
 #ifdef _WIN32
       return makeImmediateFutureWith(
@@ -787,7 +807,7 @@ ImmediateFuture<BlobMetadata> FileInode::getBlobMetadata(
     case State::BLOB_LOADING:
       // If a file is not materialized, it should have a hash value.
       return getObjectStore().getBlobMetadata(
-          state->nonMaterializedState->hash, fetchContext);
+          state->nonMaterializedState.hash, fetchContext);
     case State::MATERIALIZED_IN_OVERLAY:
 #ifdef _WIN32
       return makeImmediateFutureWith([this] {
@@ -832,11 +852,9 @@ ImmediateFuture<struct stat> FileInode::stat(
     updateBlockCount(st);
     return st;
   } else {
-    XCHECK(state->nonMaterializedState.has_value());
-
-    if (state->nonMaterializedState->size !=
+    if (state->nonMaterializedState.size !=
         FileInodeState::NonMaterializedState::kUnknownSize) {
-      st.st_size = state->nonMaterializedState->size;
+      st.st_size = state->nonMaterializedState.size;
       updateBlockCount(st);
       return st;
     }
@@ -845,15 +863,15 @@ ImmediateFuture<struct stat> FileInode::stat(
     // size, if it's already known, return the cached size. This is especially
     // a win after restarting Eden - size can be loaded from the local cache
     // more cheaply than deserializing an entire blob.
-    auto sizeFut = getObjectStore().getBlobSize(
-        state->nonMaterializedState->hash, context);
+    auto sizeFut =
+        getObjectStore().getBlobSize(state->nonMaterializedState.hash, context);
     state.unlock();
 
     return std::move(sizeFut).thenValue(
         [self = inodePtrFromThis(), st](const uint64_t size) mutable {
           if (auto lockedState = LockedState{self};
               !lockedState->isMaterialized()) {
-            lockedState->nonMaterializedState->size = size;
+            lockedState->nonMaterializedState.size = size;
           }
           st.st_size = size;
           updateBlockCount(st);
@@ -971,7 +989,7 @@ FileInode::read(size_t size, off_t off, const ObjectFetchContextPtr& context) {
         };
 
         // Materialized either before or during blob load.
-        if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
+        if (state->isMaterialized()) {
           // TODO(xavierd): For materialized files, only return EOF when
           // read returned no bytes. This will force some FS Channel
           // (like NFS) to issue at least 2 read calls: one for reading
@@ -1133,7 +1151,7 @@ ImmediateFuture<size_t> FileInode::write(
   auto state = LockedState{this};
 
   // If we are currently materialized we don't need to copy the input data.
-  if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
+  if (state->isMaterialized()) {
     struct iovec iov;
     iov.iov_base = const_cast<char*>(data.data());
     iov.iov_len = data.size();
@@ -1164,7 +1182,7 @@ ImmediateFuture<std::shared_ptr<const Blob>> FileInode::startLoadingData(
   // Ideally the state transition is no-except in tandem with the
   // Future's .then call.
   auto getBlobFuture = getMount()->getBlobAccess()->getBlob(
-      state->nonMaterializedState->hash, fetchContext, interest);
+      state->nonMaterializedState.hash, fetchContext, interest);
   auto blobLoadingPromise =
       std::make_unique<folly::SharedPromise<std::shared_ptr<const Blob>>>();
 
@@ -1242,10 +1260,10 @@ void FileInode::materializeNow(
 
   // If the blob metadata is immediately available, use it to populate the SHA-1
   // value in the overlay for this file.
-  // Since this uses state->nonMaterializedState->hash we perform this before
+  // Since this uses state->nonMaterializedState.hash we perform this before
   // calling state.setMaterialized().
   auto blobSha1Future = getObjectStore().getBlobSha1(
-      state->nonMaterializedState->hash, fetchContext);
+      state->nonMaterializedState.hash, fetchContext);
   std::optional<Hash20> blobSha1;
   if (blobSha1Future.isReady()) {
     blobSha1 = std::move(blobSha1Future).get();
@@ -1264,7 +1282,6 @@ void FileInode::materializeAndTruncate(LockedState& state) {
 
 void FileInode::truncateInOverlay(LockedState& state) {
   XCHECK_EQ(state->tag, State::MATERIALIZED_IN_OVERLAY);
-  XCHECK(!state->nonMaterializedState);
 
   getOverlayFileAccess(state)->truncate(*this);
 }

@@ -93,10 +93,16 @@ struct FileInodeState {
     explicit NonMaterializedState(const ObjectId& hash) : hash(hash) {}
   };
 
-  /**
-   * Set only in 'not loading' and 'loading' states. std::nullopt otherwise.
-   */
-  std::optional<NonMaterializedState> nonMaterializedState;
+  struct MaterializedState {};
+
+  union {
+    /**
+     * Set only in 'not loading' and 'loading' states. std::nullopt otherwise.
+     */
+    NonMaterializedState nonMaterializedState;
+    /** Set only when materialized */
+    MaterializedState materializedState;
+  };
 
   /**
    * Set if 'loading'. Unset when load completes.
