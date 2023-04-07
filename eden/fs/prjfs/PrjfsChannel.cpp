@@ -490,8 +490,10 @@ HRESULT PrjfsChannelInner::getEnumerationData(
     context->startRequest(getStats().copy(), stat, requestWatch);
 
     return enumerator->prepareEnumeration().thenValue(
-        [buffer, context = std::move(context)](
-            std::shared_ptr<Enumeration> enumeration) {
+        [buffer,
+         context = std::move(context),
+         enumerator =
+             std::move(enumerator)](std::shared_ptr<Enumeration> enumeration) {
           bool added = false;
           for (auto optEntry = enumeration->getCurrent(); optEntry.has_value();
                optEntry = enumeration->getNext()) {
