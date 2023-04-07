@@ -64,6 +64,7 @@ impl DagCopyTrace {
         keys: Vec<Key>,
     ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
         // TODO: add metrics for the size of the result
+        tracing::trace!(" read_renamed_metadata: len(keys)={}", keys.len());
         let mut renames = self.file_reader.read_rename_metadata(keys).await;
 
         let mut map: HashMap<RepoPathBuf, RepoPathBuf> = HashMap::new();
@@ -210,6 +211,7 @@ impl CopyTrace for DagCopyTrace {
                 Some(rename_commit) => rename_commit,
                 None => return Ok(None), // cur_path does not exist
             };
+            tracing::trace!(?rename_commit, " found");
 
             if rename_commit == target {
                 return Ok(Some(curr_path));
@@ -245,6 +247,8 @@ impl CopyTrace for DagCopyTrace {
                 Some(rename_commit) => rename_commit,
                 None => return Ok(None), // cur_path does not exist
             };
+            tracing::trace!(?rename_commit, " found");
+
             if rename_commit == curr {
                 return Ok(Some(curr_path));
             }
