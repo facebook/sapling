@@ -377,6 +377,23 @@ fn test_generic_dag2<T: DagAlgorithm + DagAddHeads>(dag: T) -> Result<T> {
 }
 
 #[test]
+fn test_import_ascii_with_vertex_fn() {
+    let ascii = r#"
+        B C
+        |/
+        A
+    "#;
+    let mut dag = MemNameDag::new();
+    let vertex_fn = |s: &str| -> VertexName {
+        let mut bytes = s.as_bytes().to_vec();
+        bytes.push(b'0');
+        VertexName::copy_from(&bytes)
+    };
+    dag.import_ascii_with_vertex_fn(ascii, vertex_fn).unwrap();
+    assert_eq!(expand(r(dag.all()).unwrap()), "A0 B0 C0");
+}
+
+#[test]
 fn test_mem_namedag() {
     let new_dag = MemNameDag::new;
     test_generic_dag(&new_dag);

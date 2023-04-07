@@ -395,18 +395,43 @@ pub trait DagPersistent {
 /// Import ASCII graph to DAG.
 pub trait ImportAscii {
     /// Import vertexes described in an ASCII graph.
+    fn import_ascii(&mut self, text: &str) -> Result<()> {
+        self.import_ascii_with_heads_and_vertex_fn(text, <Option<&[&str]>>::None, None)
+    }
+
+    /// Import vertexes described in an ASCII graph.
     /// `heads` optionally specifies the order of heads to insert.
     /// Useful for testing. Panic if the input is invalid.
     fn import_ascii_with_heads(
         &mut self,
         text: &str,
         heads: Option<&[impl AsRef<str>]>,
-    ) -> Result<()>;
+    ) -> Result<()> {
+        self.import_ascii_with_heads_and_vertex_fn(text, heads, None)
+    }
 
     /// Import vertexes described in an ASCII graph.
-    fn import_ascii(&mut self, text: &str) -> Result<()> {
-        self.import_ascii_with_heads(text, <Option<&[&str]>>::None)
+    /// `vertex_fn` specifies how to generate Vertex from a str from the ASCII graph.
+    /// Useful for testing when we need to generate `HgId` (fixed length) from vertex.
+    fn import_ascii_with_vertex_fn(
+        &mut self,
+        text: &str,
+        vertex_fn: fn(&str) -> VertexName,
+    ) -> Result<()> {
+        self.import_ascii_with_heads_and_vertex_fn(text, <Option<&[&str]>>::None, Some(vertex_fn))
     }
+
+    /// Import vertexes described in an ASCII graph.
+    /// `heads` optionally specifies the order of heads to insert.
+    /// `vertex_fn` specifies how to generate Vertex from a str from the ASCII graph.
+    ///
+    /// This method is a helper function of other APIs, choose other APIs if possible.
+    fn import_ascii_with_heads_and_vertex_fn(
+        &mut self,
+        text: &str,
+        heads: Option<&[impl AsRef<str>]>,
+        vertex_fn: Option<fn(&str) -> VertexName>,
+    ) -> Result<()>;
 }
 
 /// Lookup vertexes by prefixes.
@@ -509,31 +534,29 @@ impl<T> ImportAscii for T
 where
     T: DagAddHeads,
 {
-    fn import_ascii_with_heads(
+    fn import_ascii_with_heads_and_vertex_fn(
         &mut self,
         text: &str,
         heads: Option<&[impl AsRef<str>]>,
+        vertex_fn: Option<fn(&str) -> VertexName>,
     ) -> Result<()> {
+        let vertex_fn = match vertex_fn {
+            Some(vertex_fn) => vertex_fn,
+            None => |s: &str| VertexName::copy_from(s.as_bytes()),
+        };
         let parents = drawdag::parse(&text);
         let heads: Vec<_> = match heads {
-            Some(heads) => heads
-                .iter()
-                .map(|s| VertexName::copy_from(s.as_ref().as_bytes()))
-                .collect(),
+            Some(heads) => heads.iter().map(|s| vertex_fn(s.as_ref())).collect(),
             None => {
-                let mut heads: Vec<_> = parents
-                    .keys()
-                    .map(|s| VertexName::copy_from(s.as_bytes()))
-                    .collect();
+                let mut heads: Vec<_> = parents.keys().map(|s| vertex_fn(s)).collect();
                 heads.sort();
                 heads
             }
         };
 
-        let v = |s: String| VertexName::copy_from(s.as_bytes());
         let parents: std::collections::HashMap<VertexName, Vec<VertexName>> = parents
-            .into_iter()
-            .map(|(k, vs)| (v(k), vs.into_iter().map(v).collect()))
+            .iter()
+            .map(|(k, vs)| (vertex_fn(k), vs.iter().map(|v| vertex_fn(v)).collect()))
             .collect();
         nonblocking::non_blocking_result(self.add_heads(&parents, &heads[..].into()))?;
         Ok(())
