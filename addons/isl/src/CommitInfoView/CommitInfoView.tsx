@@ -7,8 +7,7 @@
 
 import type {CommitInfo} from '../types';
 import type {CommitInfoMode, EditedMessageUnlessOptimistic} from './CommitInfoState';
-import type {CommitMessageFields} from './CommitMessageFields';
-import type {FieldsBeingEdited} from './types';
+import type {CommitMessageFields, FieldsBeingEdited} from './types';
 import type {Dispatch, SetStateAction} from 'react';
 
 import {Commit} from '../Commit';
@@ -151,7 +150,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
 
   const [fieldsBeingEdited, setFieldsBeingEdited] =
-    useRecoilState<FieldsBeingEdited<CommitMessageFields>>(commitFieldsBeingEdited);
+    useRecoilState<FieldsBeingEdited>(commitFieldsBeingEdited);
 
   const startEditingField = (field: string) => {
     assert(
@@ -310,8 +309,8 @@ function ActionsBar({
 }: {
   commit: CommitInfo;
   editedMessage: EditedMessageUnlessOptimistic;
-  fieldsBeingEdited: FieldsBeingEdited<CommitMessageFields>;
-  setFieldsBeingEdited: Dispatch<SetStateAction<FieldsBeingEdited<CommitMessageFields>>>;
+  fieldsBeingEdited: FieldsBeingEdited;
+  setFieldsBeingEdited: Dispatch<SetStateAction<FieldsBeingEdited>>;
   isCommitMode: boolean;
   setMode: (mode: CommitInfoMode) => unknown;
 }) {

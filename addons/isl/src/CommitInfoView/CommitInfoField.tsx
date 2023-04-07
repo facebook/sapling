@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitMessageFields} from './CommitMessageFields';
 import type {FieldConfig} from './types';
 import type {ReactNode} from 'react';
 
@@ -25,7 +24,7 @@ export function CommitInfoField({
   extra,
   autofocus,
 }: {
-  field: FieldConfig<CommitMessageFields>;
+  field: FieldConfig;
   isBeingEdited: boolean;
   isOptimistic: boolean;
   startEditingField: () => void;

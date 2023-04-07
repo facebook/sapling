@@ -5,59 +5,50 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {InternalTypes} from '../InternalTypes';
-import type {CommitMessageFieldsUtilsType, FieldsBeingEdited} from './types';
+import type {CommitMessageFields, CommitMessageFieldsUtilsType, FieldsBeingEdited} from './types';
 
 import {Internal} from '../Internal';
 
-function emptyCommitMessageFields(): OSSCommitMessageFields {
+function emptyCommitMessageFields(): CommitMessageFields {
   return {
     title: '',
     description: '',
   };
 }
 
-function noFieldsBeingEdited(): FieldsBeingEdited<OSSCommitMessageFields> {
+function noFieldsBeingEdited(): FieldsBeingEdited {
   return {
     title: false,
     description: false,
   };
 }
 
-function allFieldsBeingEdited(): FieldsBeingEdited<OSSCommitMessageFields> {
+function allFieldsBeingEdited(): FieldsBeingEdited {
   return {
     title: true,
     description: true,
   };
 }
 
-function findFieldsBeingEdited(
-  a: OSSCommitMessageFields,
-  b: OSSCommitMessageFields,
-): FieldsBeingEdited<OSSCommitMessageFields> {
+function findFieldsBeingEdited(a: CommitMessageFields, b: CommitMessageFields): FieldsBeingEdited {
   return {
     title: a.title !== b.title,
     description: a.description !== b.description,
   };
 }
 
-function parseCommitMessageFields(title: string, description: string): OSSCommitMessageFields {
+function parseCommitMessageFields(title: string, description: string): CommitMessageFields {
   return {
     title,
     description,
   };
 }
 
-function commitMessageFieldsToString(fields: OSSCommitMessageFields): string {
+function commitMessageFieldsToString(fields: CommitMessageFields): string {
   return `${fields.title}\n${fields.description}`;
 }
 
-type OSSCommitMessageFields = {
-  title: string;
-  description: string;
-};
-
-export const OSSCommitMessageFieldsUtils: CommitMessageFieldsUtilsType<OSSCommitMessageFields> = {
+export const OSSCommitMessageFieldsUtils: CommitMessageFieldsUtilsType = {
   emptyCommitMessageFields,
   parseCommitMessageFields,
   commitMessageFieldsToString,
@@ -72,17 +63,10 @@ export const OSSCommitMessageFieldsUtils: CommitMessageFieldsUtilsType<OSSCommit
   findFieldsBeingEdited,
 };
 
-/** Utilities to access, parse, and use CommitMessageFields. If internal, uses internal fields. */
-/** type of parseable fields from commit messages. If internal, includes internal fields. */
-export type CommitMessageFields = InternalTypes['InternalCommitMessageFields'] extends never
-  ? OSSCommitMessageFields
-  : InternalTypes['InternalCommitMessageFields'];
-
 /**
  * Type representing fields parsed from a commit message.
  * Internally, this includes summary and test plan, etc.
  * Externally, this is just the description right now
- * TODO: Support defining this via a config so OSS users can get the fields they want in each repo.
  */
-export const CommitMessageFieldUtils = (Internal.CommitMessageFieldUtils ??
-  OSSCommitMessageFieldsUtils) as CommitMessageFieldsUtilsType<CommitMessageFields>;
+export const CommitMessageFieldUtils: CommitMessageFieldsUtilsType =
+  Internal.CommitMessageFieldUtils ?? OSSCommitMessageFieldsUtils;

@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+/** Values for each field key,  */
+export type CommitMessageFields = Record<string, string | Array<string>>;
+
 /**
  * Which fields of the message should display as editors instead of rendered values.
  * This can be controlled outside of the commit info view, but it gets updated in an effect as well when commits are changed.
@@ -19,60 +22,55 @@
  * }
  * ```
  */
-export type FieldsBeingEdited<Fields extends Record<string, string | Array<string>>> = Record<
-  keyof Fields,
-  boolean
-> & {forceWhileOnHead?: boolean};
+export type FieldsBeingEdited = Record<string, boolean> & {forceWhileOnHead?: boolean};
 
-export interface CommitMessageFieldsUtilsType<
-  Fields extends Record<string, string | Array<string>>,
-> {
+export interface CommitMessageFieldsUtilsType {
   /**
    * Fields for blank message
    */
-  emptyCommitMessageFields: () => Fields;
+  emptyCommitMessageFields: () => CommitMessageFields;
   /**
    * Extract fields from string commit message
    */
-  parseCommitMessageFields: (title: string, description: string) => Fields;
+  parseCommitMessageFields: (title: string, description: string) => CommitMessageFields;
   /**
    * Convert fields back into a string commit message, the opposite of parseCommitMessageFields.
    */
-  commitMessageFieldsToString: (fields: Fields) => string;
+  commitMessageFieldsToString: (fields: CommitMessageFields) => string;
 
   /**
    * Schema for fields in a commit message
    */
-  configuredFields: Array<FieldConfig<Fields>>;
+  configuredFields: Array<FieldConfig>;
 
   /**
    * Construct value representing all fields are false: {title: false, description: false, ...}
    */
-  noFieldsBeingEdited: () => FieldsBeingEdited<Fields>;
+  noFieldsBeingEdited: () => FieldsBeingEdited;
   /**
    * Construct value representing all fields are being edited: {title: true, description: true, ...}
    */
-  allFieldsBeingEdited: () => FieldsBeingEdited<Fields>;
+  allFieldsBeingEdited: () => FieldsBeingEdited;
   /**
    * Construct value representing which fields differ between two parsed messages, by comparing each field.
    * ```
    * findFieldsBeingEdited({title: 'hi', description: 'yo'}, {title: 'hey', description: 'yo'}) -> {title: true, description: false}
    * ```
    */
-  findFieldsBeingEdited: (a: Fields, b: Fields) => FieldsBeingEdited<Fields>;
+  findFieldsBeingEdited: (a: CommitMessageFields, b: CommitMessageFields) => FieldsBeingEdited;
 }
 
 /**
- * Configuration for a single field in a commit message
+ * Dynamic configuration for a single field in a commit message
  */
-export type FieldConfig<Fields extends Record<string, string | Array<string>>> = {
+export type FieldConfig = {
   /** i18n key for the display name for this field. Note: this should be provided to t() or <T> to render. */
   name: string;
   /**
    * Internal label for this field, unrelated to how it was parsed from the message.
    * commitMessageFieldsToString handles re-inserting parseable tags.
    */
-  key: keyof Fields;
+  key: 'title' | string;
   /** Codicon to show next to this field */
   icon: string;
 } & (

@@ -6,8 +6,7 @@
  */
 
 import type {Hash} from '../types';
-import type {CommitMessageFields} from './CommitMessageFields';
-import type {FieldsBeingEdited} from './types';
+import type {CommitMessageFields, FieldsBeingEdited} from './types';
 
 import {commitMessageTemplate, latestCommitTreeMap} from '../serverAPIState';
 import {CommitMessageFieldUtils} from './CommitMessageFields';
@@ -102,7 +101,7 @@ export const hasUnsavedEditedCommitMessage = selectorFamily<boolean, Hash | 'hea
     },
 });
 
-export const commitFieldsBeingEdited = atom<FieldsBeingEdited<CommitMessageFields>>({
+export const commitFieldsBeingEdited = atom<FieldsBeingEdited>({
   key: 'commitFieldsBeingEdited',
   default: CommitMessageFieldUtils.noFieldsBeingEdited(),
 });
