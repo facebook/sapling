@@ -166,7 +166,7 @@ in [Google Logging](https://github.com/google/glog) format:
 
 In addition, output from commands spawned by EdenFS will also be directed to
 this log file.  In particular, when importing data from EdenSCM the output of
-the `eden debugedenimporthelper` command command will be sent to this file.
+the `eden debugedenimporthelper` command will be sent to this file.
 
 ### `storage/`
 
