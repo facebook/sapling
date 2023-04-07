@@ -69,6 +69,8 @@ impl RevlogCommits {
 impl AppendCommits for RevlogCommits {
     async fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
         // Topo sort nodes since EdenAPI returns nodes sorted lexically.
+        // We try to keep a stable order relative to the input since revlog
+        // insertion order can affect tests.
 
         let mut vertex_to_commit: HashMap<Vertex, &HgCommit> =
             commits.iter().map(|c| (c.vertex.clone(), c)).collect();
@@ -79,7 +81,7 @@ impl AppendCommits for RevlogCommits {
         // Queue of nodes not waiting on parents to be processed.
         let mut queue: Vec<&HgCommit> = Vec::new();
 
-        for (v, c) in vertex_to_commit.iter() {
+        for c in commits {
             let mut pending_parents = 0;
             for pv in c.parents.iter() {
                 if let Some(pc) = vertex_to_commit.get(pv) {
@@ -94,7 +96,7 @@ impl AppendCommits for RevlogCommits {
                 // Parents are not present in args - assume we are good to go.
                 queue.push(c);
             } else {
-                parent_count.insert(v.clone(), pending_parents);
+                parent_count.insert(c.vertex.clone(), pending_parents);
             }
         }
 

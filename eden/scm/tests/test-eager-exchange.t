@@ -87,10 +87,23 @@ Push:
 
 Pull (non-lazy):
 
-  for cltype in ["revlog", "fullsegments"]:
     $ newremoterepo
     $ setconfig paths.default=test:e1
-    $ hg debugchangelog --migrate $(py cltype)
+    $ hg debugchangelog --migrate revlog
+    $ LOG= hg pull -B master -r $B
+    pulling from test:e1
+    $ LOG= hg log -Gr 'all()' -T '{desc} {remotenames}'
+    o  D remote/master
+    │
+    o  C
+    │
+    │ o  B
+    ├─╯
+    o  A
+
+    $ newremoterepo
+    $ setconfig paths.default=test:e1
+    $ hg debugchangelog --migrate fullsegments
     $ LOG= hg pull -B master -r $B
     pulling from test:e1
     $ LOG= hg log -Gr 'all()' -T '{desc} {remotenames}'
