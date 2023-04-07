@@ -12,6 +12,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use dag::DagAlgorithm;
 use manifest::DiffType;
+use manifest::Manifest;
 use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
@@ -135,6 +136,19 @@ impl DagCopyTrace {
         };
         Ok((renames, next_commit))
     }
+
+    async fn check_path(
+        &self,
+        commit: &dag::Vertex,
+        path: RepoPathBuf,
+    ) -> Result<Option<RepoPathBuf>> {
+        let tree = self.vertex_to_tree_manifest(commit).await?;
+        if tree.get(&path)?.is_some() {
+            Ok(Some(path))
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 #[async_trait]
@@ -192,7 +206,7 @@ impl CopyTrace for DagCopyTrace {
                 .await?
             {
                 Some(rename_commit) => rename_commit,
-                None => return Ok(None), // cur_path does not exist
+                None => return self.check_path(&target, curr_path).await,
             };
             tracing::trace!(?rename_commit, " found");
 
@@ -228,7 +242,7 @@ impl CopyTrace for DagCopyTrace {
                 .await?
             {
                 Some(rename_commit) => rename_commit,
-                None => return Ok(None), // cur_path does not exist
+                None => return self.check_path(&target, curr_path).await,
             };
             tracing::trace!(?rename_commit, " found");
 

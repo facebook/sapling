@@ -338,9 +338,8 @@ async fn test_linear_multiple_renames() {
 
     let res = trace_rename(&c, "X", "H", "d").await.unwrap();
     assert_eq!(res, p("c"));
-    // tofix
-    // let res = trace_rename(&c, "X", "C", "d").await.unwrap();
-    // assert_eq!(res, p("b"));
+    let res = trace_rename(&c, "X", "C", "d").await.unwrap();
+    assert_eq!(res, p("b"));
     let res = trace_rename(&c, "X", "B", "d").await.unwrap();
     assert_eq!(res, p("b"));
     let res = trace_rename(&c, "X", "A", "d").await.unwrap();
@@ -375,8 +374,6 @@ async fn test_linear_multiple_renames_with_deletes() {
     assert_eq!(res, None);
 }
 
-//tofix
-#[ignore]
 #[tokio::test]
 async fn test_non_linear_multiple_renames() {
     let ascii = r#"
@@ -448,9 +445,8 @@ async fn test_non_linear_multiple_renames_with_deletes() {
     let t = CopyTraceTestCase::new(ascii, changes).await;
     let c = t.copy_trace().await;
 
-    // tofix
-    // let res = trace_rename(&c, "Z", "1000", "a2").await.unwrap();
-    // assert_eq!(res, p("d"));
+    let res = trace_rename(&c, "Z", "1000", "a2").await.unwrap();
+    assert_eq!(res, p("d"));
     let res = trace_rename(&c, "Z", "1001", "a2").await.unwrap();
     assert_eq!(res, None);
     let res = trace_rename(&c, "Z", "1023", "a2").await.unwrap();
