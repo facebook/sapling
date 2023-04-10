@@ -79,6 +79,12 @@ Checking out commits triggers submodule updates
   $ echo mod/*/*
   mod/1/A mod/2/C
 
+Don't crash on "hg manifest":
+  $ hg manifest -v
+  644   .gitmodules
+   submod mod/1
+   submod mod/2
+
 Make changes to submodules via working copy
 
   $ hg --cwd mod/1 up -q $B

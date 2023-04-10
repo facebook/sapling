@@ -4201,7 +4201,9 @@ def log(ui, repo, *pats, **opts):
     cmdtype=readonly,
 )
 def manifest(ui, repo, node=None, rev=None, **opts):
-    """output the current or given revision of the project manifest
+    """output the current or given revision of the project manifest (DEPRECATED)
+
+    See :prog:`help files` for a more versatile command.
 
     Print a list of version controlled files for the given revision.
     If no revision is given, the first parent of the working directory
@@ -4243,8 +4245,8 @@ def manifest(ui, repo, node=None, rev=None, **opts):
     if not node:
         node = rev
 
-    char = {"l": "@", "x": "*", "": ""}
-    mode = {"l": "644", "x": "755", "": "644"}
+    char = {"l": "@", "x": "*", "m": "submod"}
+    mode = {"x": "755", "m": ""}
     ctx = scmutil.revsingle(repo, node)
     mf = ctx.manifest()
     ui.pager("manifest")
@@ -4252,7 +4254,9 @@ def manifest(ui, repo, node=None, rev=None, **opts):
         fm.startitem()
         fl = ctx[f].flags()
         fm.condwrite(ui.debugflag, "hash", "%s ", hex(mf[f]))
-        fm.condwrite(ui.verbose, "mode type", "%s %1s ", mode[fl], char[fl])
+        fm.condwrite(
+            ui.verbose, "mode type", "%s %1s ", mode.get(fl, "644"), char.get(fl, "")
+        )
         fm.write("path", "%s\n", f)
     fm.end()
 
