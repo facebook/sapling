@@ -875,7 +875,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> enableGc{
       "experimental:enable-garbage-collection",
-      true,
+      folly::kIsWindows,
       this};
 
   /**
