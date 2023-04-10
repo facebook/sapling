@@ -53,7 +53,9 @@ class SqliteInodeCatalog : public InodeCatalog {
     return true;
   }
 
-  std::optional<InodeNumber> initOverlay(bool createIfNonExisting) override;
+  std::optional<InodeNumber> initOverlay(
+      bool createIfNonExisting,
+      bool bypassLockFile = false) override;
 
   void close(std::optional<InodeNumber> nextInodeNumber) override;
 

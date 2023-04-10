@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
 
   SqliteInodeCatalog inodeCatalog(
       overlayPath, std::make_shared<NullStructuredLogger>());
-  inodeCatalog.initOverlay(true);
+  inodeCatalog.initOverlay(/*createIfNonExisting=*/true);
   XLOG(INFO) << "start scanning";
   OverlayChecker::LookupCallback lookup = [](auto, auto) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(

@@ -23,13 +23,18 @@ DEFINE_bool(
     false,
     "Only report errors, without attempting to fix any problems");
 
+DEFINE_bool(
+    force,
+    false,
+    "Force fsck to scan for errors even on checkouts that appear to currently be mounted.  It will not attempt to fix any problems, but will only scan and report possible issues");
+
 using namespace facebook::eden;
 
 int main(int argc, char** argv) {
   folly::init(&argc, &argv);
   if (argc != 2) {
-    fprintf(stderr, "error: no overlay path\n");
-    fprintf(stderr, "usage: eden_store_util COMMAND\n");
+    fprintf(stderr, "error: no overlay path provided\n");
+    fprintf(stderr, "usage: eden_fsck PATH [ARGS]\n");
     return EX_USAGE;
   }
 
@@ -43,8 +48,8 @@ int main(int argc, char** argv) {
   try {
     fileContentStore.emplace(overlayPath);
     fsInodeCatalog.emplace(&fileContentStore.value());
-    nextInodeNumber =
-        fsInodeCatalog->initOverlay(/*createIfNonExisting=*/false);
+    nextInodeNumber = fsInodeCatalog->initOverlay(
+        /*createIfNonExisting=*/false, /*bypassLockFile=*/FLAGS_force);
   } catch (std::exception& ex) {
     XLOG(ERR) << "unable to open overlay: " << folly::exceptionStr(ex);
     return 1;
@@ -64,7 +69,7 @@ int main(int argc, char** argv) {
       nextInodeNumber,
       lookup);
   checker.scanForErrors();
-  if (FLAGS_dry_run) {
+  if (FLAGS_dry_run || FLAGS_force) {
     checker.logErrors();
     fsInodeCatalog->close(nextInodeNumber);
   } else {

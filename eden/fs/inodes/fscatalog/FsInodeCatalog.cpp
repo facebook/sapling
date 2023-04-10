@@ -98,7 +98,9 @@ void FileContentStore::formatSubdirShardPath(
   return doFormatSubdirPath(shardID, subdirPath);
 }
 
-bool FileContentStore::initialize(bool createIfNonExisting) {
+bool FileContentStore::initialize(
+    bool createIfNonExisting,
+    bool bypassLockFile) {
   // Read the info file.
   auto infoPath = localDir_ + PathComponentPiece{kInfoFile};
   int fd = folly::openNoInt(infoPath.value().c_str(), O_RDONLY | O_CLOEXEC);
@@ -121,7 +123,7 @@ bool FileContentStore::initialize(bool createIfNonExisting) {
     overlayCreated = true;
   }
 
-  if (!infoFile_.try_lock()) {
+  if (!infoFile_.try_lock() && !bypassLockFile) {
     folly::throwSystemError(
         "failed to acquire overlay lock on ", infoPath.view());
   }
@@ -142,8 +144,9 @@ bool FileContentStore::initialize(bool createIfNonExisting) {
 }
 
 std::optional<InodeNumber> FsInodeCatalog::initOverlay(
-    bool createIfNonExisting) {
-  bool overlayCreated = core_->initialize(createIfNonExisting);
+    bool createIfNonExisting,
+    bool bypassLockFile) {
+  bool overlayCreated = core_->initialize(createIfNonExisting, bypassLockFile);
 
   if (overlayCreated) {
     return InodeNumber{kRootNodeId.get() + 1};

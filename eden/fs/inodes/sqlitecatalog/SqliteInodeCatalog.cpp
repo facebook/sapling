@@ -24,7 +24,8 @@ SqliteInodeCatalog::SqliteInodeCatalog(
     : store_{path, std::move(logger), mode} {}
 
 std::optional<InodeNumber> SqliteInodeCatalog::initOverlay(
-    bool createIfNonExisting) {
+    bool createIfNonExisting,
+    bool /*bypassLockFile*/) {
   if (createIfNonExisting) {
     store_.createTableIfNonExisting();
   }

@@ -56,12 +56,18 @@ class InodeCatalog {
    * The `close` method should be used to clean up any acquired resource for the
    * overlay and persist `nextInodeNumber` if needed.
    *
+   * If `bypassLockFile` is set, in the case of an already opened overlay,
+   * errors will be reported but fixes will not be attempted. This is used by
+   * the `eden_fsck` executable.
+   *
    * Returns the next inode number to start at when allocating new inodes.  For
    * certain overlay implementations, the inode number may not be available
    * if EdenFS was not shutdown cleanly. In that case, `std::nullopt` will be
    * returned.
    */
-  virtual std::optional<InodeNumber> initOverlay(bool createIfNonExisting) = 0;
+  virtual std::optional<InodeNumber> initOverlay(
+      bool createIfNonExisting,
+      bool bypassLockFile = false) = 0;
 
   /**
    * Gracefully, shutdown the overlay, persisting the overlay's

@@ -253,9 +253,10 @@ void Overlay::initOverlay(
     FOLLY_MAYBE_UNUSED const OverlayChecker::ProgressCallback& progressCallback,
     FOLLY_MAYBE_UNUSED OverlayChecker::LookupCallback& lookupCallback) {
   IORequest req{this};
-  auto optNextInodeNumber = inodeCatalog_->initOverlay(true);
+  auto optNextInodeNumber =
+      inodeCatalog_->initOverlay(/*createIfNonExisting=*/true);
   if (fileContentStore_ && inodeCatalogType_ != InodeCatalogType::Legacy) {
-    fileContentStore_->initialize(true);
+    fileContentStore_->initialize(/*createIfNonExisting=*/true);
   }
   if (!optNextInodeNumber.has_value()) {
 #ifndef _WIN32

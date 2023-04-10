@@ -40,7 +40,9 @@ class IFileContentStore {
   IFileContentStore(IFileContentStore&&) = delete;
   IFileContentStore&& operator=(IFileContentStore&&) = delete;
 
-  virtual bool initialize(bool createIfNonExisting) = 0;
+  virtual bool initialize(
+      bool createIfNonExisting,
+      bool bypassLockFile = false) = 0;
 
   /**
    * Gracefully shutdown the file content store.

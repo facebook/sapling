@@ -47,7 +47,8 @@ class FileContentStore : public IFileContentStore {
    *
    * Returns true if a new directory was created.
    */
-  bool initialize(bool createIfNonExisting) override;
+  bool initialize(bool createIfNonExisting, bool bypassLockFile = false)
+      override;
 
   /**
    * Gracefully shutdown the file content store.
@@ -261,7 +262,9 @@ class FsInodeCatalog : public InodeCatalog {
    * std::nullopt is returned.  In this case, the caller should re-scan
    * the overlay to check for issues and compute the next inode number.
    */
-  std::optional<InodeNumber> initOverlay(bool createIfNonExisting) override;
+  std::optional<InodeNumber> initOverlay(
+      bool createIfNonExisting,
+      bool bypassLockFile = false) override;
 
   /**
    *  Gracefully, shutdown the overlay, persisting the overlay's
