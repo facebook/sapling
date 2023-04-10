@@ -1273,12 +1273,12 @@ Help subsection:
 Show nested definitions
 ("profiling.type"[break]"ls"[break]"stat"[break])
 
-  $ hg help config.type | egrep '^$'|wc -l
+  $ hg help config.type | grep -E '^$'|wc -l
   \s*3 (re)
 
 Separate sections from subsections
 
-  $ hg help config.format | egrep '^    ("|-)|^\s*$' | uniq
+  $ hg help config.format | grep -E '^    ("|-)|^\s*$' | uniq
       "format"
       --------
   
@@ -1314,7 +1314,7 @@ note to use help -c for general hg help config:
 
 Test templating help
 
-  $ hg help templating | egrep '(desc|diffstat|firstline|nonempty)  '
+  $ hg help templating | grep -E '(desc|diffstat|firstline|nonempty)  '
       desc          String. The text of the changeset description.
       diffstat      String. Statistics of changes with the following format:
       firstline     Any text. Returns the first line of text.
@@ -1355,12 +1355,12 @@ Test help hooks
 
 help -c should only show debug --debug
 
-  $ hg help -c --debug|egrep debug|wc -l|egrep '^\s*0\s*$'
+  $ hg help -c --debug|grep -E debug|wc -l|grep -E '^\s*0\s*$'
   [1]
 
 help -c should only show deprecated for -v
 
-  $ hg help -c -v|egrep DEPRECATED|wc -l|egrep '^\s*0\s*$'
+  $ hg help -c -v|grep -E DEPRECATED|wc -l|grep -E '^\s*0\s*$'
   [1]
 
 Test -s / --system
@@ -1374,14 +1374,14 @@ Test -s / --system
 
 Test -e / -c / -k combinations
 
-  $ hg help -c|egrep '^[A-Z].*:|^ debug'
+  $ hg help -c|grep -E '^[A-Z].*:|^ debug'
   Commands:
-  $ hg help -e|egrep '^[A-Z].*:|^ debug'
+  $ hg help -e|grep -E '^[A-Z].*:|^ debug'
   Extensions:
    debugcommitmessage            (no help text available)
    debugnetwork                  test network connections to the server
    debugshell                    a python shell with repo, changelog & manifest
-  $ hg help -k|egrep '^[A-Z].*:|^ debug'
+  $ hg help -k|grep -E '^[A-Z].*:|^ debug'
   Topics:
   Commands:
   Extensions:
@@ -1389,11 +1389,11 @@ Test -e / -c / -k combinations
    debugnetwork                  test network connections to the server
    debugshell                    a python shell with repo, changelog & manifest
   Extension Commands:
-  $ hg help -c -k dates |egrep '^(Topics|Extensions|Commands):'
+  $ hg help -c -k dates |grep -E '^(Topics|Extensions|Commands):'
   Commands:
-  $ hg help -e -k a |egrep '^(Topics|Extensions|Commands):'
+  $ hg help -e -k a |grep -E '^(Topics|Extensions|Commands):'
   Extensions:
-  $ hg help -e -c -k date |egrep '^(Topics|Extensions|Commands):'
+  $ hg help -e -c -k date |grep -E '^(Topics|Extensions|Commands):'
   Extensions:
   Commands:
   $ hg help -c commit > /dev/null

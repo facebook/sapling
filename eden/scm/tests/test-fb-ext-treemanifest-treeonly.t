@@ -227,7 +227,7 @@ Test peer-to-peer push/pull of tree only commits
 # Test pulling from a treeonly peer
 # - We should see one tree recieve from the client, and then a second one when
 #   prefetching the draft commit parent.
-  $ hg pull -r tip ssh://user@dummy/client --debug 2>&1 | egrep "(payload|treegroup|running)"
+  $ hg pull -r tip ssh://user@dummy/client --debug 2>&1 | grep -E "(payload|treegroup|running)"
   running * 'user@dummy' 'hg -R client serve --stdio' (glob)
   running * 'user@dummy' 'hg -R master serve --stdio' (glob)
   bundle2-input-part: total payload size 831
@@ -321,7 +321,7 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
   $ hg up -q 'desc(modify)'
   $ cd ../client3
 
-  $ hg push -r 'max(desc(add))' --to master --debug 2>&1 | egrep '(remote:|add|converting)'
+  $ hg push -r 'max(desc(add))' --to master --debug 2>&1 | grep -E '(remote:|add|converting)'
   remote: * (glob)
   remote: * (glob)
   remote: 1

@@ -9,7 +9,7 @@
 New errors are not allowed. Warnings are strongly discouraged.
 (The writing "no-che?k-code" is for not skipping this file when checking.)
 
-  $ testrepohg files . | egrep -v "^(edenscm/ext/extlib/pywatchman|lib/cdatapack|lib/third-party|edenscm/thirdparty|fb|newdoc|tests|edenscm/templates/static|i18n|slides|.*\\.(bin|bindag|hg|pdf|jpg)$)" \
+  $ testrepohg files . | grep -Ev "^(edenscm/ext/extlib/pywatchman|lib/cdatapack|lib/third-party|edenscm/thirdparty|fb|newdoc|tests|edenscm/templates/static|i18n|slides|.*\\.(bin|bindag|hg|pdf|jpg)$)" \
   > | sed 's-\\-/-g' > $TESTTMP/files.txt
 
   $ NPROC=`hg debugpython -- -c 'import multiprocessing; print(str(multiprocessing.cpu_count()))'`

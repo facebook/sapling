@@ -7,7 +7,7 @@ test --time
 
 Function to check that statprof ran
   $ statprofran () {
-  >   egrep 'Sample count:|No samples recorded' > /dev/null
+  >   grep -E 'Sample count:|No samples recorded' > /dev/null
   > }
 
 test --profile

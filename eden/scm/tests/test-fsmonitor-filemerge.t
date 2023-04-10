@@ -24,7 +24,7 @@
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
-  $ hg blackbox --no-timestamp --no-sid --pattern '{"watchman":"_"}' | egrep '(watchman.*state.*)'
+  $ hg blackbox --no-timestamp --no-sid --pattern '{"watchman":"_"}' | grep -E '(watchman.*state.*)'
   [watchman] command ["state-enter",{"metadata":{"distance":2,"merge":false,"partial":false,"rev":"0000000000000000000000000000000000000000","status":"ok"},"name":"hg.update"}] finished in 0 ms
   [watchman] command ["state-leave",{"metadata":{"distance":2,"merge":false,"partial":false,"rev":"2e2f27616b65209eecd4710c454df0f678f271d9","status":"ok"},"name":"hg.update"}] finished in 0 ms
   [watchman] command ["state-enter",{"metadata":{"distance":2,"merge":true,"partial":false,"rev":"2e2f27616b65209eecd4710c454df0f678f271d9","status":"ok"},"name":"hg.update"}] finished in 0 ms
