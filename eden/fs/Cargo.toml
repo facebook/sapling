@@ -26,7 +26,6 @@ tracing-futures = { git = "https://github.com/jsgf/tracing.git", rev = "f9fbbc6a
 tracing-log = { git = "https://github.com/jsgf/tracing.git", rev = "f9fbbc6ae5d81ec59e4fd52ad3da1e261e8af681" }
 tracing-serde = { git = "https://github.com/jsgf/tracing.git", rev = "f9fbbc6ae5d81ec59e4fd52ad3da1e261e8af681" }
 tracing-subscriber = { git = "https://github.com/jsgf/tracing.git", rev = "f9fbbc6ae5d81ec59e4fd52ad3da1e261e8af681" }
-windows-sys = { package = "windows-sys", git = "https://github.com/davidbarsky/windows-rs", rev = "0489fa456a104f49c7807ae309743c36709bf179" }
 
 [workspace]
 members = [
