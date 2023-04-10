@@ -8,7 +8,6 @@ Setup
   $ setconfig ui.username="nobody <no.reply@fb.com>" experimental.rebaseskipobsolete=true
   $ setconfig remotenames.allownonfastforward=true
   $ setconfig pullcreatemarkers.use-graphql=false
-  $ setconfig pullcreatemarkers.hook-pull=true
   $ setconfig extensions.arcconfig="$TESTDIR/../edenscm/ext/extlib/phabricator/arcconfig.py"
 
 Test that hg pull creates obsolescence markers for landed diffs

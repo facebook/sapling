@@ -16,11 +16,6 @@ Config::
     # Make sure commits being hidden matches the commit hashes in
     # Phabricator. Locally modified commits won't be hidden.
     check-local-versions = true
-
-    # Hook the pull command to preform a "mark landed" operation.
-    # Note: This is suspected to hide commits unexpectedly.
-    # It is currently only useful for test compatibility.
-    hook-pull = true
 """
 from .. import commands, extensions, mutation, phases, registrar, visibility
 from ..i18n import _, _n
@@ -35,7 +30,6 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 configitem("pullcreatemarkers", "check-local-versions", default=False)
-configitem("pullcreatemarkers", "hook-pull", default=False)
 configitem("pullcreatemarkers", "use-graphql", default=True)
 
 
@@ -160,9 +154,8 @@ def getdiff(rev):
     return int(phabrev) if phabrev else None
 
 
-def extsetup(ui):
-    if ui.configbool("pullcreatemarkers", "hook-pull"):
-        extensions.wrapcommand(commands.table, "pull", _pull)
+def uisetup(ui):
+    ui.setconfig("hooks", "post-pull.marklanded", _("@prog@ debugmarklanded"))
 
 
 def _pull(orig, ui, repo, *args, **opts):

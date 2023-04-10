@@ -1,5 +1,6 @@
 #chg-compatible
 #debugruntest-compatible
+#inprocess-hg-incompatible
   $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
@@ -8,7 +9,6 @@
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=server
   $ setconfig pullcreatemarkers.use-graphql=false
-  $ setconfig pullcreatemarkers.hook-pull=true
   $ setconfig extensions.arcconfig="$TESTDIR/../edenscm/ext/extlib/phabricator/arcconfig.py"
   $ setconfig devel.segmented-changelog-rev-compat=true
 
