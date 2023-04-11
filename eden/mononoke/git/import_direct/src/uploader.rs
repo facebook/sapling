@@ -231,9 +231,14 @@ fn generate_bonsai_changeset(
         author_date,
         committer,
         committer_date,
+        git_extra_headers,
         ..
     } = metadata;
-
+    let git_extra_headers = if git_extra_headers.is_empty() {
+        None
+    } else {
+        Some(git_extra_headers)
+    };
     let mut extra = SortedVectorMap::new();
     extra.insert(
         HGGIT_COMMIT_ID_EXTRA.to_string(),
@@ -249,8 +254,8 @@ fn generate_bonsai_changeset(
         committer_date: Some(committer_date),
         message,
         hg_extra: extra,
+        git_extra_headers,
         // TODO(rajshar): Populate these fields correctly instead of using empty values
-        git_extra_headers: None,
         git_tree_hash: None,
         file_changes,
         is_snapshot: false,
