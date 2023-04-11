@@ -3,6 +3,7 @@
   $ configure modernclient
   $ configure mutation-norecord
   $ enable conflictinfo rebase
+  $ setconfig experimental.rebase-long-labels=True
 
 1) Make the repo
   $ newclientrepo basic
@@ -218,7 +219,7 @@ Test case 1: Source deleted, dest changed
 
   $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing 25c2ef28f4c7 "source"
-  local [dest] changed file which other [source] deleted
+  local [dest (rebasing onto)] changed file which other [source (being rebased)] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
@@ -293,7 +294,7 @@ Test case 2: Source changed, dest deleted
 
   $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing ec87889f5f90 "source"
-  other [source] changed file which local [dest] deleted
+  other [source (being rebased)] changed file which local [dest (rebasing onto)] deleted
   use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
@@ -366,7 +367,7 @@ Test case 4: Source changed, dest moved (w/o copytracing)
 
   $ hg rebase -d 'desc(dest)' -s 'desc(source)' --config experimental.copytrace=off
   rebasing ec87889f5f90 "source"
-  other [source] changed file which local [dest] deleted
+  other [source (being rebased)] changed file which local [dest (rebasing onto)] deleted
   use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
@@ -440,7 +441,7 @@ Test case 6: Source moved, dest changed (w/o copytracing)
 
   $ hg rebase -d 'desc(dest)' -s 'desc(source)' --config experimental.copytrace=off
   rebasing e6e7483a8950 "source"
-  local [dest] changed file which other [source] deleted
+  local [dest (rebasing onto)] changed file which other [source (being rebased)] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
@@ -730,7 +731,7 @@ mergestate (like shelve):
    {
     "command": "unshelve",
     "command_details": {"cmd": "unshelve", "to_abort": "unshelve --abort", "to_continue": "unshelve --continue"},
-    "conflicts": [{"base": {"contents": "", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": "b", "exists": true, "isexec": false, "issymlink": false}, "other": {"contents": "state\n", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": "<<<<<<< dest:   488e1b7e7341 b - test: b\nb=======\nstate\n>>>>>>> source: b0582bede31d - test: shelve changes to: c\n", "exists": true, "isexec": false, "issymlink": false, "path": "$TESTTMP/command_details/b"}, "path": "b"}],
+    "conflicts": [{"base": {"contents": "", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": "b", "exists": true, "isexec": false, "issymlink": false}, "other": {"contents": "state\n", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": "<<<<<<< dest (rebasing onto):   488e1b7e7341 b - test: b\nb=======\nstate\n>>>>>>> source (being rebased): b0582bede31d - test: shelve changes to: c\n", "exists": true, "isexec": false, "issymlink": false, "path": "$TESTTMP/command_details/b"}, "path": "b"}],
     "pathconflicts": []
    }
   ]

@@ -1698,10 +1698,23 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest, wctx):
     repo.ui.debug(" merge against %s\n" % (repo[rev]))
     if base is not None:
         repo.ui.debug("   detach base %s\n" % (repo[base]))
+    # Prepare the labels for rebase. This is currently a config option since
+    # not all users are ready for the new label.
+    if repo.ui.configbool("experimental", "rebase-long-labels"):
+        labels = ["dest (rebasing onto)", "source (being rebased)"]
+    else:
+        labels = ["dest", "source"]
     # When collapsing in-place, the parent is the common ancestor, we
     # have to allow merging with it.
     stats = mergemod.update(
-        repo, rev, True, True, base, collapse, labels=["dest", "source"], wc=wctx
+        repo,
+        rev,
+        True,
+        True,
+        base,
+        collapse,
+        labels=labels,
+        wc=wctx,
     )
     if collapse:
         copies.duplicatecopies(repo, wctx, rev, dest)

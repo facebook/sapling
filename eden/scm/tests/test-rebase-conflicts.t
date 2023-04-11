@@ -3,6 +3,8 @@
   $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
+  $ setconfig experimental.rebase-long-labels=True
+
   $ disable treemanifest
   $ enable undo rebase
 
@@ -298,10 +300,10 @@ Test minimization of merge conflicts
   @@ -1,2 +1,6 @@
    a
    b
-  +<<<<<<< dest:   328e4ab1f7cc ab - test: ab
+  +<<<<<<< dest (rebasing onto):   328e4ab1f7cc ab - test: ab
   +=======
   +c
-  +>>>>>>> source: 7bc217434fc1 - test: abc
+  +>>>>>>> source (being rebased): 7bc217434fc1 - test: abc
   $ hg rebase --abort
   rebase aborted
   $ hg up -q -C 7bc217434fc1
@@ -317,13 +319,13 @@ Test minimization of merge conflicts
   +++ b/a	* (glob)
   @@ -1,2 +1,8 @@
    a
-  +<<<<<<< dest:   328e4ab1f7cc ab - test: ab
+  +<<<<<<< dest (rebasing onto):   328e4ab1f7cc ab - test: ab
    b
   +||||||| base
   +=======
   +b
   +c
-  +>>>>>>> source: 7bc217434fc1 - test: abc
+  +>>>>>>> source (being rebased): 7bc217434fc1 - test: abc
 
 Test rebase with obsstore turned on and off (issue5606)
 
