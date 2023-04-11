@@ -26,7 +26,9 @@ use mercurial_types::HgManifestEnvelope;
 use mononoke_types::fsnode::Fsnode;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
 use mononoke_types::BonsaiChangeset;
+use mononoke_types::ContentAlias;
 use mononoke_types::ContentChunk;
+use mononoke_types::ContentMetadataV2;
 use mononoke_types::FileContents;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -64,6 +66,8 @@ pub enum DecodeAs {
     GitTree,
     SkeletonManifest,
     Fsnode,
+    ContentMetadataV2,
+    Alias,
     // TODO: Missing types, e.g. RedactionKeyList,  DeletedManifest,
     // FastlogBatch, FileUnode, ManifestUnode,
 }
@@ -84,6 +88,8 @@ impl DecodeAs {
                 ("git.tree.", DecodeAs::GitTree),
                 ("skeletonmanifest.", DecodeAs::SkeletonManifest),
                 ("fsnode.", DecodeAs::Fsnode),
+                ("content_metadata2.", DecodeAs::ContentMetadataV2),
+                ("alias.", DecodeAs::Alias),
             ] {
                 if key[index..].starts_with(prefix) {
                     return Some(auto_decode_as);
@@ -143,6 +149,10 @@ fn decode(key: &str, data: BlobstoreGetData, mut decode_as: DecodeAs) -> Decoded
             Decoded::try_debug(SkeletonManifest::from_bytes(data.into_raw_bytes().as_ref()))
         }
         DecodeAs::Fsnode => Decoded::try_debug(Fsnode::from_bytes(data.into_raw_bytes().as_ref())),
+        DecodeAs::ContentMetadataV2 => Decoded::try_debug(ContentMetadataV2::from_bytes(
+            data.into_raw_bytes().as_ref(),
+        )),
+        DecodeAs::Alias => Decoded::try_debug(ContentAlias::from_bytes(data.into_raw_bytes())),
     }
 }
 
@@ -155,7 +165,6 @@ pub async fn fetch(
         .get(ctx, &fetch_args.key)
         .await
         .context("Failed to fetch blob")?;
-
     match value {
         None => {
             writeln!(std::io::stderr(), "No blob exists for {}", fetch_args.key)?;

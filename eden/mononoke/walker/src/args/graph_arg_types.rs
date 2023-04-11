@@ -144,6 +144,11 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::FileContentMetadataToSha1Alias,
     EdgeType::FileContentMetadataToSha256Alias,
     EdgeType::FileContentMetadataToGitSha1Alias,
+    EdgeType::FileContentToFileContentMetadataV2,
+    EdgeType::FileContentMetadataV2ToSha1Alias,
+    EdgeType::FileContentMetadataV2ToSha256Alias,
+    EdgeType::FileContentMetadataV2ToGitSha1Alias,
+    EdgeType::FileContentMetadataV2ToSeededBlake3Alias,
     EdgeType::AliasContentMappingToFileContent,
     // Derived data
     EdgeType::BlameToChangeset,
@@ -208,6 +213,11 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::FileContentMetadataToSha1Alias,
     EdgeType::FileContentMetadataToSha256Alias,
     EdgeType::FileContentMetadataToGitSha1Alias,
+    EdgeType::FileContentToFileContentMetadataV2,
+    EdgeType::FileContentMetadataV2ToSha1Alias,
+    EdgeType::FileContentMetadataV2ToSha256Alias,
+    EdgeType::FileContentMetadataV2ToGitSha1Alias,
+    EdgeType::FileContentMetadataV2ToSeededBlake3Alias,
     EdgeType::AliasContentMappingToFileContent,
     // Derived data
     EdgeType::ChangesetInfoMappingToChangesetInfo,
@@ -270,6 +280,11 @@ const CONTENT_META_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::FileContentMetadataToSha1Alias,
     EdgeType::FileContentMetadataToSha256Alias,
     EdgeType::FileContentMetadataToGitSha1Alias,
+    EdgeType::FileContentToFileContentMetadataV2,
+    EdgeType::FileContentMetadataV2ToSha1Alias,
+    EdgeType::FileContentMetadataV2ToSha256Alias,
+    EdgeType::FileContentMetadataV2ToGitSha1Alias,
+    EdgeType::FileContentMetadataV2ToSeededBlake3Alias,
     EdgeType::AliasContentMappingToFileContent,
 ];
 

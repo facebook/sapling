@@ -77,6 +77,8 @@
   $ ls $TESTTMP/blobstore/blobs | grep "alias" | sort -h
   blob-repo0000.alias.gitsha1.23c160a91fd3e722a49a86017e103e83e7965af7
   blob-repo0000.alias.gitsha1.b4785957bc986dc39c629de9fac9df46972c00fc
+  blob-repo0000.alias.seeded_blake3.3d2f50c6508da9d8025883d80f2b90237dafadafae797d8320822bf8fbd06ac8
+  blob-repo0000.alias.seeded_blake3.a718362bb5bc80bc81f8ff7c7016bfd600ef9d82d143e07d2450c79972780d00
   blob-repo0000.alias.sha1.8cfc11d4c1bf45aca9412afc5b95cfd1db83e885
   blob-repo0000.alias.sha1.ded5ba42480fe75dcebba1ce068489ff7be2186a
   blob-repo0000.alias.sha256.cbc80bb5c0c0f8944bf73b3a429505ac5cde16644978bc9a1e74c5755f8ca556
@@ -115,6 +117,8 @@
   $ ls $TESTTMP/blobstore/blobs | grep "alias" | sort -h
   blob-repo0000.alias.gitsha1.23c160a91fd3e722a49a86017e103e83e7965af7
   blob-repo0000.alias.gitsha1.b4785957bc986dc39c629de9fac9df46972c00fc
+  blob-repo0000.alias.seeded_blake3.3d2f50c6508da9d8025883d80f2b90237dafadafae797d8320822bf8fbd06ac8
+  blob-repo0000.alias.seeded_blake3.a718362bb5bc80bc81f8ff7c7016bfd600ef9d82d143e07d2450c79972780d00
   blob-repo0000.alias.sha1.8cfc11d4c1bf45aca9412afc5b95cfd1db83e885
   blob-repo0000.alias.sha1.ded5ba42480fe75dcebba1ce068489ff7be2186a
   blob-repo0000.alias.sha256.cbc80bb5c0c0f8944bf73b3a429505ac5cde16644978bc9a1e74c5755f8ca556

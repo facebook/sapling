@@ -251,6 +251,7 @@ impl HgRepoContext {
             data,
         )
         .await
+        .map(ContentMetadata::from)
         .map_err(MononokeError::from)
     }
 

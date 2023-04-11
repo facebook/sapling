@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use blake3::Hasher as Blake3;
 use bytes::Bytes;
 use digest::Digest;
 use mononoke_types::hash;
@@ -113,5 +114,44 @@ impl Hasher<hash::RichGitSha1> for GitSha1IncrementalHasher {
     fn finish(self) -> hash::RichGitSha1 {
         let hash = self.0.finalize().into();
         hash::RichGitSha1::from_byte_array(hash, "blob", self.1)
+    }
+}
+
+/// Incremental hasher for non-seeded and seeded Blake3 hash
+pub struct Blake3IncrementalHasher(Blake3);
+
+impl Blake3IncrementalHasher {
+    /// Creates a non-seeded Blake3 incremental hasher
+    pub fn _new() -> Self {
+        Self(Blake3::new())
+    }
+
+    /// Creates a seeded Blake3 incremental hasher
+    pub fn new_seeded() -> Self {
+        #[cfg(fbcode_build)]
+        let bytes = blake3_constant::BLAKE3_HASH_KEY.as_bytes();
+        #[cfg(not(fbcode_build))]
+        let bytes = "20220728-2357111317192329313741#".as_bytes();
+        if bytes.len() != blake3::KEY_LEN {
+            panic!(
+                "Seed for Blake3 hash needs exactly {} bytes",
+                blake3::KEY_LEN
+            )
+        } else {
+            let mut ret = [0; blake3::KEY_LEN];
+            ret.copy_from_slice(bytes);
+            Self(Blake3::new_keyed(&ret))
+        }
+    }
+}
+
+impl Hasher<hash::Blake3> for Blake3IncrementalHasher {
+    fn update<T: AsRef<[u8]>>(&mut self, bytes: T) {
+        self.0.update(bytes.as_ref());
+    }
+
+    fn finish(self) -> hash::Blake3 {
+        let hash = self.0.finalize().into();
+        hash::Blake3::from_byte_array(hash)
     }
 }

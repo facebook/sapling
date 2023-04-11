@@ -25,11 +25,11 @@ blobimport them into Mononoke storage again, but with write failures on one side
 
 Check that healer queue has successful items
   $ read_blobstore_wal_queue_size
-  30
+  33
 
 Check the number of blobs.  Scrub should process every blob once.
   $ ls $TESTTMP/blobstore/1/blobs/blob-repo0000.* | grep -v .filenode_lookup. | wc -l
-  27
+  30
 
 Check that scrub doesnt report issues despite one store being missing, as the entries needed are on the queue and less than N minutes old
 # TODO(mbthomas): concurrent fetches may not hit in the cache

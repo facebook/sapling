@@ -35,7 +35,7 @@ use futures::stream::TryStreamExt;
 use futures_stats::FutureStats;
 use futures_stats::TimedFutureExt;
 use mononoke_types::BlobstoreKey;
-use mononoke_types::ContentMetadata;
+use mononoke_types::ContentMetadataV2;
 use rand::Rng;
 use throttledblob::ThrottledBlob;
 use tokio::fs::File;
@@ -82,7 +82,7 @@ fn log_perf<I, E: Debug>(stats: FutureStats, res: &Result<I, E>, len: u64) {
 async fn read<B: Blobstore>(
     blob: &B,
     ctx: &CoreContext,
-    content_metadata: &ContentMetadata,
+    content_metadata: &ContentMetadataV2,
 ) -> Result<(), Error> {
     let key = FetchKey::Canonical(content_metadata.content_id);
     eprintln!(

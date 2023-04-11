@@ -176,6 +176,15 @@ impl RepoArgs {
     }
 }
 
+repo_args_optional!(
+    OptRepoArgs,
+    "repo-name",
+    Some('R'),
+    "Repository name",
+    "repo-id",
+    "Numeric repository ID"
+);
+
 /// Command line arguments for specifying multiple repos.
 #[derive(Args, Debug)]
 #[clap(group(

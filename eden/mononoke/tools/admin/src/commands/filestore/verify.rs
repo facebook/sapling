@@ -51,7 +51,7 @@ pub async fn verify(
         .context("Failed to get metadata from filestore")?
         .ok_or_else(|| anyhow!("Content not found"))?;
 
-    let (content_id, sha1, sha256, git_sha1) = futures::future::join4(
+    let (content_id, sha1, sha256, git_sha1, seeded_blake3) = futures::future::join5(
         filestore::fetch(
             &blobstore,
             ctx.clone(),
@@ -72,6 +72,11 @@ pub async fn verify(
             ctx.clone(),
             &FetchKey::Aliased(Alias::GitSha1(metadata.git_sha1.sha1())),
         ),
+        filestore::fetch(
+            &blobstore,
+            ctx.clone(),
+            &FetchKey::Aliased(Alias::SeededBlake3(metadata.seeded_blake3)),
+        ),
     )
     .await;
 
@@ -79,6 +84,7 @@ pub async fn verify(
     println!("sha1: {}", sha1.is_ok());
     println!("sha256: {}", sha256.is_ok());
     println!("git_sha1: {}", git_sha1.is_ok());
+    println!("seeded_blake3: {}", seeded_blake3.is_ok());
 
     Ok(())
 }

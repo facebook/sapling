@@ -68,8 +68,12 @@ impl<T: Send + Sync + Clone + 'static> Multiplexer<T> {
 
     /// Add a new consumer on the Multiplexer. To do so, pass a builder that expects a Stream of
     /// data as input (the same data you'll pass in later when draining the Multiplexer), and
-    /// retuns a Future. This returns a Future with the same result, and an Error type of
+    /// returns a Future. This returns a Future with the same result, and an Error type of
     /// SpawnError, which is a thin wrapper over your Future's Error type.
+    ///
+    /// NOTE: The builder added to the multiplexer should consume the ENTIRE stream that gets
+    /// drained. Terminating halfway through the stream through the use of short-circuiting
+    /// functions like `any`, `all`, etc. results in `Multiplexer Cancelled` Error.
     pub fn add<I, F, B>(&mut self, builder: B) -> JoinHandle<I>
     where
         I: Send + 'static,

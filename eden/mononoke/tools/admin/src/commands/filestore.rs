@@ -31,6 +31,8 @@ use is_chunked::FilestoreIsChunkedArgs;
 use metadata::FilestoreMetadataArgs;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
+use mononoke_types::hash::Blake3;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
 use mononoke_types::ContentId;
@@ -97,6 +99,12 @@ pub struct FilestoreItemIdArgs {
 
     #[clap(long)]
     content_sha256: Option<Sha256>,
+
+    #[clap(long)]
+    content_seeded_blake3: Option<Blake3>,
+
+    #[clap(long)]
+    content_git_sha1: Option<GitSha1>,
 }
 
 impl FilestoreItemIdArgs {
@@ -107,6 +115,10 @@ impl FilestoreItemIdArgs {
             Ok(FetchKey::Aliased(Alias::Sha1(sha1)))
         } else if let Some(sha256) = self.content_sha256 {
             Ok(FetchKey::Aliased(Alias::Sha256(sha256)))
+        } else if let Some(seeded_blake3) = self.content_seeded_blake3 {
+            Ok(FetchKey::Aliased(Alias::SeededBlake3(seeded_blake3)))
+        } else if let Some(git_sha1) = self.content_git_sha1 {
+            Ok(FetchKey::Aliased(Alias::GitSha1(git_sha1)))
         } else {
             Err(anyhow!("Filestore item id required"))
         }

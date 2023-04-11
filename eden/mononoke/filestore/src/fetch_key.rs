@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt::Display;
+
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -19,6 +21,7 @@ use mononoke_types::hash;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ContentAlias;
 use mononoke_types::ContentId;
+use strum_macros::EnumIter;
 
 /// Key for fetching - we can access with any of the supported key types
 #[derive(Debug, Copy, Clone)]
@@ -51,6 +54,13 @@ impl From<hash::Sha1> for FetchKey {
     }
 }
 
+impl From<hash::Blake3> for FetchKey {
+    fn from(hash: hash::Blake3) -> Self {
+        FetchKey::Aliased(Alias::SeededBlake3(hash))
+    }
+}
+
+// TODO(rajshar): Include seeded Blake3 as AnyFileContentId
 impl From<AnyFileContentId> for FetchKey {
     fn from(id: AnyFileContentId) -> Self {
         match id {
@@ -70,11 +80,23 @@ impl FetchKey {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, EnumIter)]
 pub enum Alias {
     Sha1(hash::Sha1),
     Sha256(hash::Sha256),
     GitSha1(hash::GitSha1),
+    SeededBlake3(hash::Blake3),
+}
+
+impl Display for Alias {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Sha1(sha1) => f.write_fmt(format_args!("{:?}", sha1)),
+            Self::Sha256(sha256) => f.write_fmt(format_args!("{:?}", sha256)),
+            Self::GitSha1(gitsha1) => f.write_fmt(format_args!("{:?}", gitsha1)),
+            Self::SeededBlake3(seeded_blake3) => f.write_fmt(format_args!("{:?}", seeded_blake3)),
+        }
+    }
 }
 
 #[async_trait]
@@ -104,6 +126,7 @@ impl Alias {
             Alias::GitSha1(git_sha1) => format!("alias.gitsha1.{}", git_sha1.to_hex()),
             Alias::Sha1(sha1) => format!("alias.sha1.{}", sha1.to_hex()),
             Alias::Sha256(sha256) => format!("alias.sha256.{}", sha256.to_hex()),
+            Alias::SeededBlake3(blake3) => format!("alias.seeded_blake3.{}", blake3.to_hex()),
         }
     }
 
@@ -113,6 +136,7 @@ impl Alias {
             Alias::GitSha1(git_sha1) => git_sha1.sampling_fingerprint(),
             Alias::Sha1(sha1) => sha1.sampling_fingerprint(),
             Alias::Sha256(sha256) => sha256.sampling_fingerprint(),
+            Alias::SeededBlake3(blake3) => blake3.sampling_fingerprint(),
         }
     }
 }

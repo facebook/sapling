@@ -92,9 +92,9 @@
       "BlobGetsTotalSize": 0,
       "BlobPresenceChecks": 0,
       "BlobPresenceChecksMaxLatency": *, (glob)
-      "BlobPuts": 210,
+      "BlobPuts": 211,
       "BlobPutsMaxLatency": *, (glob)
-      "BlobPutsTotalSize": 10930,
+      "BlobPutsTotalSize": *, (glob)
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -138,7 +138,7 @@
       "BlobGetsMaxLatency": *, (glob)
       "BlobGetsNotFound": 0,
       "BlobGetsNotFoundMaxLatency": *, (glob)
-      "BlobGetsTotalSize": 155,
+      "BlobGetsTotalSize": *, (glob)
       "BlobPresenceChecks": 0,
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
@@ -193,7 +193,7 @@
       "BlobGetsMaxLatency": *, (glob)
       "BlobGetsNotFound": 0,
       "BlobGetsNotFoundMaxLatency": *, (glob)
-      "BlobGetsTotalSize": 10701,
+      "BlobGetsTotalSize": 1*, (glob)
       "BlobPresenceChecks": 0,
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
