@@ -381,6 +381,8 @@ pub struct MononokeTunables {
 
     // Disable sharing of large reads
     disable_large_blob_read_deduplication: TunableBool,
+    // Enable double writing of Content Metadata.
+    enable_content_metadata_double_writing: TunableBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

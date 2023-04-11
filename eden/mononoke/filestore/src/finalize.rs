@@ -138,6 +138,15 @@ pub async fn finalize<B: Blobstore>(
     };
 
     metadata.clone().into_blob().store(ctx, blobstore).await?;
+    if tunables::tunables()
+        .enable_content_metadata_double_writing()
+        .unwrap_or(false)
+    {
+        mononoke_types::ContentMetadata::from(metadata.clone())
+            .into_blob()
+            .store(ctx, blobstore)
+            .await?;
+    }
 
     Ok(metadata)
 }
