@@ -4319,7 +4319,7 @@ def debugscmstore(
 def debugrevlogclone(ui, repo, source) -> None:
     """download revlog and bookmarks into a newly initialized repo"""
     clone.revlogclone(source, repo)
-    changelog_format = ui.config("clone", "nonsegmented-changelog", "doublewrite")
+    changelog_format = ui.config("clone", "nonsegmented-changelog", "lazytext")
     changelog2.migrateto(repo, changelog_format)
 
 
