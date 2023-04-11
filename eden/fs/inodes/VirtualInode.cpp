@@ -124,11 +124,11 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
       variant_);
 }
 
-ImmediateFuture<TreeEntryType> VirtualInode::getTreeEntryType(
+ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
     RelativePathPiece path,
     const ObjectFetchContextPtr& fetchContext) const {
   return std::visit(
-      [&](auto&& arg) -> ImmediateFuture<TreeEntryType> {
+      [&](auto&& arg) -> ImmediateFuture<std::optional<TreeEntryType>> {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, InodePtr>) {
 #ifdef _WIN32
@@ -142,20 +142,19 @@ ImmediateFuture<TreeEntryType> VirtualInode::getTreeEntryType(
             case dtype_t::Regular:
               return TreeEntryType::REGULAR_FILE;
             default:
-              return makeImmediateFuture<TreeEntryType>(
-                  PathError(EINVAL, path, "variant is of unhandled type"));
+              return std::nullopt;
           }
 #else
           (void)path;
           return arg->stat(fetchContext).thenValue([](const struct stat&& st) {
-            return treeEntryTypeFromMode(st.st_mode).value();
+            return treeEntryTypeFromMode(st.st_mode);
           });
 #endif
         } else if constexpr (std::is_same_v<
                                  T,
                                  UnmaterializedUnloadedBlobDirEntry>) {
           return makeImmediateFutureWith([mode = arg.getInitialMode()]() {
-            return treeEntryTypeFromMode(mode).value();
+            return treeEntryTypeFromMode(mode);
           });
         } else if constexpr (std::is_same_v<T, TreePtr>) {
           return TreeEntryType::TREE;
@@ -190,6 +189,29 @@ ImmediateFuture<BlobMetadata> VirtualInode::getBlobMetadata(
       variant_);
 }
 
+EntryAttributes getEntryAttributesForNonFile(
+    EntryAttributeFlags requestedAttributes,
+    RelativePathPiece path,
+    std::optional<TreeEntryType> entryType,
+    int errorCode,
+    std::string additionalErrorContext = {}) {
+  std::optional<folly::Try<Hash20>> sha1;
+  std::optional<folly::Try<uint64_t>> size;
+  std::optional<folly::Try<std::optional<TreeEntryType>>> type;
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
+    sha1 =
+        folly::Try<Hash20>{PathError{errorCode, path, additionalErrorContext}};
+  }
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
+    size = folly::Try<uint64_t>{
+        PathError{errorCode, path, std::move(additionalErrorContext)}};
+  }
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
+    type = folly::Try<std::optional<TreeEntryType>>{entryType};
+  }
+  return EntryAttributes{std::move(sha1), std::move(size), std::move(type)};
+}
+
 ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     EntryAttributeFlags requestedAttributes,
     RelativePathPiece path,
@@ -197,46 +219,40 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     const ObjectFetchContextPtr& fetchContext) const {
   std::optional<folly::Try<Hash20>> sha1;
   std::optional<folly::Try<uint64_t>> size;
-  std::optional<folly::Try<TreeEntryType>> type;
+  std::optional<folly::Try<std::optional<TreeEntryType>>> type;
   // For non regular files we return errors for hashes and sizes.
   // We intentionally want to refuse to compute the SHA1 of symlinks.
-  switch (getDtype()) {
-    case dtype_t::Dir:
-      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
-        sha1 = folly::Try<Hash20>{PathError{EISDIR, path}};
-      }
-      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
-        size = folly::Try<uint64_t>{PathError{EISDIR, path}};
-      }
-      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_TYPE)) {
-        type = folly::Try<TreeEntryType>{TreeEntryType::TREE};
-      }
-      return EntryAttributes{std::move(sha1), std::move(size), std::move(type)};
-    case dtype_t::Symlink:
-      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
-        sha1 = folly::Try<Hash20>{PathError(EINVAL, path, "file is a symlink")};
-      }
-      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
-        size =
-            folly::Try<uint64_t>{PathError(EINVAL, path, "file is a symlink")};
-      }
-      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_TYPE)) {
-        type = folly::Try<TreeEntryType>{TreeEntryType::SYMLINK};
-      }
-      return EntryAttributes{std::move(sha1), std::move(size), std::move(type)};
+  auto dtype = getDtype();
+  switch (dtype) {
     case dtype_t::Regular:
       break;
+    case dtype_t::Dir:
+      return getEntryAttributesForNonFile(
+          requestedAttributes, path, TreeEntryType::TREE, EISDIR);
+    case dtype_t::Symlink:
+      return getEntryAttributesForNonFile(
+          requestedAttributes,
+          path,
+          TreeEntryType::SYMLINK,
+          EINVAL,
+          "file is a symlink");
     default:
-      return makeImmediateFuture<EntryAttributes>(
-          PathError(EINVAL, path, "variant is of unhandled type"));
+      return getEntryAttributesForNonFile(
+          requestedAttributes,
+          path,
+          std::nullopt,
+          EINVAL,
+          fmt::format(
+              "file is a non-source-control type: {}",
+              folly::to_underlying(dtype)));
   }
   // This is now guaranteed to be a dtype_t::Regular file. This
   // means there's no need for a Tree case, as Trees are always
   // directories. It's included to check that the visitor here is
   // exhaustive.
-  auto entryTypeFuture = ImmediateFuture<TreeEntryType>{
+  auto entryTypeFuture = ImmediateFuture<std::optional<TreeEntryType>>{
       PathError{EINVAL, path, "type not requested"}};
-  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_TYPE)) {
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
     entryTypeFuture = getTreeEntryType(path, fetchContext);
   }
   auto blobMetadataFuture = ImmediateFuture<BlobMetadata>{
@@ -250,14 +266,18 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
   return collectAll(std::move(entryTypeFuture), std::move(blobMetadataFuture))
       .thenValue(
           [requestedAttributes](
-              std::tuple<folly::Try<TreeEntryType>, folly::Try<BlobMetadata>>
-                  rawAttributeData) mutable -> EntryAttributes {
+              std::tuple<
+                  folly::Try<std::optional<TreeEntryType>>,
+                  folly::Try<BlobMetadata>> rawAttributeData) mutable
+          -> EntryAttributes {
             std::optional<folly::Try<Hash20>> sha1;
             std::optional<folly::Try<uint64_t>> size;
-            std::optional<folly::Try<TreeEntryType>> type;
-            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_TYPE)) {
-              type = std::move(
-                  std::get<folly::Try<TreeEntryType>>(rawAttributeData));
+            std::optional<folly::Try<std::optional<TreeEntryType>>> type;
+            if (requestedAttributes.contains(
+                    ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
+              type =
+                  std::move(std::get<folly::Try<std::optional<TreeEntryType>>>(
+                      rawAttributeData));
             }
             auto& blobMetadata =
                 std::get<folly::Try<BlobMetadata>>(rawAttributeData);

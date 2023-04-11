@@ -355,6 +355,12 @@ class EdenTestCase(EdenTestCaseBase):
             return ((0).to_bytes(20, byteorder="big"), 0, SourceControlType.TREE)
         if stat.S_ISLNK(file_stat.st_mode):
             return ((0).to_bytes(20, byteorder="big"), 0, SourceControlType.SYMLINK)
+        if not stat.S_ISREG(file_stat.st_mode):
+            return (
+                (0).to_bytes(20, byteorder="big"),
+                0,
+                SourceControlType.UNKNOWN,
+            )
         if stat.S_IXUSR & file_stat.st_mode:
             file_type = SourceControlType.EXECUTABLE_FILE
         file_size = file_stat.st_size

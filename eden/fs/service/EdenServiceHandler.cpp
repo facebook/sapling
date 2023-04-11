@@ -1991,8 +1991,11 @@ EdenServiceHandler::semifuture_getFileInformation(
 }
 
 namespace {
-SourceControlType entryTypeToThriftType(TreeEntryType type) {
-  switch (type) {
+SourceControlType entryTypeToThriftType(std::optional<TreeEntryType> type) {
+  if (!type.has_value()) {
+    return SourceControlType::UNKNOWN;
+  }
+  switch (type.value()) {
     case TreeEntryType::TREE:
       return SourceControlType::TREE;
     case TreeEntryType::REGULAR_FILE:
@@ -2085,9 +2088,9 @@ FileAttributeDataOrErrorV2 serializeEntryAttributes(
       fileData.size() = std::move(size);
     }
 
-    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_TYPE)) {
+    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
       SourceControlTypeOrError type;
-      if (!fillErrorRef<SourceControlTypeOrError, TreeEntryType>(
+      if (!fillErrorRef<SourceControlTypeOrError, std::optional<TreeEntryType>>(
               type, attributes->type, entryPath, "type")) {
         type.sourceControlType_ref() =
             entryTypeToThriftType(attributes->type.value().value());
@@ -2184,8 +2187,8 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
 
 // TODO(kmancini): we shouldn't need this for the long term, but needs to be
 // updated if attributes are added.
-constexpr EntryAttributeFlags kAllEntryAttributes =
-    ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 | ENTRY_ATTRIBUTE_TYPE;
+constexpr EntryAttributeFlags kAllEntryAttributes = ENTRY_ATTRIBUTE_SIZE |
+    ENTRY_ATTRIBUTE_SHA1 | ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE;
 
 ImmediateFuture<std::vector<folly::Try<EntryAttributes>>>
 EdenServiceHandler::getEntryAttributes(
@@ -2295,7 +2298,8 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
                            file_data.fileSize_ref() =
                                attributes.size.value().value();
                          }
-                         if (reqBitmask.contains(ENTRY_ATTRIBUTE_TYPE)) {
+                         if (reqBitmask.contains(
+                                 ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
                            file_data.type_ref() = entryTypeToThriftType(
                                attributes.type.value().value());
                          }

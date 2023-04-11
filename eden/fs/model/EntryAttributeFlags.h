@@ -27,7 +27,7 @@ struct EntryAttributeFlags
   }
 };
 
-inline constexpr auto ENTRY_ATTRIBUTE_TYPE =
+inline constexpr auto ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE =
     EntryAttributeFlags::raw(FileAttributes::SOURCE_CONTROL_TYPE);
 inline constexpr auto ENTRY_ATTRIBUTE_SIZE =
     EntryAttributeFlags::raw(FileAttributes::FILE_SIZE);

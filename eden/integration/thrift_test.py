@@ -8,6 +8,7 @@ import binascii
 import hashlib
 import os
 import re
+import socket
 import subprocess
 import sys
 from pathlib import Path
@@ -473,6 +474,52 @@ class ThriftTest(testcase.EdenRepoTest):
         self.assertEqual(1, len(results_v2.res))
         self.assertEqual(expected_result_v2, results_v2)
 
+    def test_get_attributes_socket(self) -> None:
+        sockpath = self.get_path("adir/asock")
+        # UDS are not supported in python on Win until 3.9:
+        # https://bugs.python.org/issue33408
+        with socket.socket(socket.AF_UNIX) as sock:
+            sock.bind(sockpath)
+
+            results = self.get_all_attributes([b"adir/asock"])
+            self.assertEqual(1, len(results.res))
+            self.assert_attribute_error(
+                results,
+                "adir/asock: file is a non-source-control type: 12: Invalid argument",
+                0,
+            )
+
+            expected_adir_result_v2 = FileAttributeDataOrErrorV2(
+                FileAttributeDataV2(
+                    Sha1OrError(
+                        error=EdenError(
+                            message="adir/asock: file is a non-source-control type: 12: Invalid argument",
+                            errorCode=22,
+                            errorType=EdenErrorType.POSIX_ERROR,
+                        )
+                    ),
+                    SizeOrError(
+                        error=EdenError(
+                            message="adir/asock: file is a non-source-control type: 12: Invalid argument",
+                            errorCode=22,
+                            errorType=EdenErrorType.POSIX_ERROR,
+                        )
+                    ),
+                    SourceControlTypeOrError(SourceControlType.UNKNOWN),
+                )
+            )
+
+            expected_result_v2 = GetAttributesFromFilesResultV2(
+                [
+                    expected_adir_result_v2,
+                ]
+            )
+            print(f"expected v2: \n{expected_result_v2}")
+            results_v2 = self.get_all_attributes_v2([b"adir/asock"])
+            print(f"actual v2: \n{results_v2}")
+            self.assertEqual(1, len(results_v2.res))
+            self.assertEqual(expected_result_v2, results_v2)
+
     def test_get_attributes_symlink(self) -> None:
         results = self.get_all_attributes([b"slink"])
         self.assertEqual(1, len(results.res))
@@ -928,7 +975,7 @@ class ThriftTest(testcase.EdenRepoTest):
                 actual.dirLists[0].get_dirListAttributeData()[entry_name],
             )
 
-    def test_readdir_directory_and_symlink(self) -> None:
+    def test_readdir_directory_symlink_and_other(self) -> None:
         self.readdir_no_size_or_sha1(
             parent_name=b"cdir",
             entry_name=b"subdir",
@@ -937,6 +984,19 @@ class ThriftTest(testcase.EdenRepoTest):
             source_control_type=SourceControlType.TREE,
         )
         if sys.platform != "win32":
+            sockpath = self.get_path("adir/asock")
+            # UDS are not supported in python on Win until 3.9:
+            # https://bugs.python.org/issue33408
+            with socket.socket(socket.AF_UNIX) as sock:
+                sock.bind(sockpath)
+                self.readdir_no_size_or_sha1(
+                    parent_name=b"adir",
+                    entry_name=b"asock",
+                    error_message="adir/asock: file is a non-source-control type: 12: Invalid argument",
+                    error_code=22,
+                    source_control_type=SourceControlType.UNKNOWN,
+                )
+
             self.readdir_no_size_or_sha1(
                 parent_name=b"",
                 entry_name=b"slink",

@@ -518,7 +518,7 @@ void verifyTreeState(
         auto metadataFut = virtualInode
                                .getEntryAttributes(
                                    ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
-                                       ENTRY_ATTRIBUTE_TYPE,
+                                       ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE,
                                    expected.path,
                                    mount.getEdenMount()->getObjectStore(),
                                    ObjectFetchContext::getNullContext())
@@ -702,9 +702,10 @@ TEST(VirtualInodeTest, getChildrenAttributes) {
   auto mount = TestMount{MakeTestTreeBuilder(files)};
   VERIFY_TREE(flags);
   std::vector<EntryAttributeFlags> attribute_requests{
-      ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 | ENTRY_ATTRIBUTE_TYPE,
+      ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
+          ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE,
       ENTRY_ATTRIBUTE_SHA1,
-      ENTRY_ATTRIBUTE_TYPE | ENTRY_ATTRIBUTE_SIZE,
+      ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE | ENTRY_ATTRIBUTE_SIZE,
       EntryAttributeFlags{0}};
 
   for (auto info : files.getOriginalItems()) {
@@ -782,7 +783,7 @@ TEST(VirtualInodeTest, fileOpsOnCorrectObjectsOnly) {
     auto metadataTry = virtualInode
                            .getEntryAttributes(
                                ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
-                                   ENTRY_ATTRIBUTE_TYPE,
+                                   ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE,
                                info.path,
                                mount.getEdenMount()->getObjectStore(),
                                ObjectFetchContext::getNullContext())
@@ -811,13 +812,14 @@ TEST(VirtualInodeTest, fileOpsOnCorrectObjectsOnly) {
       }
     }
 
-    metadataTry = virtualInode
-                      .getEntryAttributes(
-                          ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_TYPE,
-                          info.path,
-                          mount.getEdenMount()->getObjectStore(),
-                          ObjectFetchContext::getNullContext())
-                      .getTry();
+    metadataTry =
+        virtualInode
+            .getEntryAttributes(
+                ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE,
+                info.path,
+                mount.getEdenMount()->getObjectStore(),
+                ObjectFetchContext::getNullContext())
+            .getTry();
     if (info.isRegularFile()) {
       EXPECT_EQ(true, metadataTry.hasValue())
           << " on path " << info.getLogPath();
@@ -869,7 +871,8 @@ TEST(VirtualInodeTest, getEntryAttributesAttributeError) {
   auto virtualInode = mount.getVirtualInode("root_dirA");
 
   auto attributesFuture = virtualInode.getEntryAttributes(
-      ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 | ENTRY_ATTRIBUTE_TYPE,
+      ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
+          ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE,
       RelativePathPiece{"root_dirA"},
       mount.getEdenMount()->getObjectStore(),
       ObjectFetchContext::getNullContext());

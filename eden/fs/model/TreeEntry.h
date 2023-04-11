@@ -39,11 +39,18 @@ class EntryAttributes {
   EntryAttributes(
       std::optional<folly::Try<Hash20>> contentsHash,
       std::optional<folly::Try<uint64_t>> fileLength,
-      std::optional<folly::Try<TreeEntryType>> fileType);
+      std::optional<folly::Try<std::optional<TreeEntryType>>> fileType);
 
+  // for each requested attribute the member here should be set. If the
+  // attribute was not requested, then the member will be nullopt.
+  // Any errors will be encapsulated in the try. For the Source Control type
+  // member the inner optional may be nullopt, if the entry is not a source
+  // control type. Currently, source control types only include directories,
+  // regular files, executable files, and symlinks. FIFOs or sockets for
+  // example would fall into the nullopt case.
   std::optional<folly::Try<Hash20>> sha1;
   std::optional<folly::Try<uint64_t>> size;
-  std::optional<folly::Try<TreeEntryType>> type;
+  std::optional<folly::Try<std::optional<TreeEntryType>>> type;
 };
 
 /**

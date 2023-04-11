@@ -97,7 +97,13 @@ class VirtualInode {
   };
   ContainedType testGetContainedType() const;
 
-  ImmediateFuture<TreeEntryType> getTreeEntryType(
+  /**
+   * Returns nullopt if the entry has a non source control file type.
+   * Source Control types are currently limited to symlinks, executable files,
+   * regular files and directories. So something like a FIFO or a socket would
+   * fall into nullopt here.
+   */
+  ImmediateFuture<std::optional<TreeEntryType>> getTreeEntryType(
       RelativePathPiece path,
       const ObjectFetchContextPtr& fetchContext) const;
 

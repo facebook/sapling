@@ -95,6 +95,8 @@ if sys.platform == "win32":
             "test_pid_fetch_counts",
             "test_unload_free_inodes",
             "test_unload_thrift_api_accepts_single_dot_as_root",
+            # creating sockets is not supported in python on Windows until 3.9
+            "test_get_attributes_socket",
         ],
         "unixsocket_test.UnixSocketTestHg": True,
         "userinfo_test.UserInfoTest": True,

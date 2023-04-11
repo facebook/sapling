@@ -26,7 +26,7 @@ using namespace folly::io;
 EntryAttributes::EntryAttributes(
     std::optional<folly::Try<Hash20>> contentsHash,
     std::optional<folly::Try<uint64_t>> fileLength,
-    std::optional<folly::Try<TreeEntryType>> fileType)
+    std::optional<folly::Try<std::optional<TreeEntryType>>> fileType)
     : sha1(std::move(contentsHash)),
       size(std::move(fileLength)),
       type(std::move(fileType)) {}
