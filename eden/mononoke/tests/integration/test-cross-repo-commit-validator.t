@@ -235,7 +235,7 @@ attention to more than just the last commit (successful validation of many commi
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" << ENDOFINSERT
   > INSERT INTO synced_commit_mapping
   >   (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id, sync_map_version_name)
-  > VALUES 
+  > VALUES
   >   (1, X'$FBSOURCE_C1_BONSAI', 0, X'$MEGAREPO_C1_BONSAI', 'TEST_VERSION_NAME'),
   >   (1, X'$FBSOURCE_C2_BONSAI', 0, X'$MEGAREPO_C2_BONSAI', 'TEST_VERSION_NAME'),
   >   (1, X'$FBSOURCE_C3_BONSAI', 0, X'$MEGAREPO_C3_BONSAI', 'TEST_VERSION_NAME');
@@ -284,13 +284,13 @@ attention to more than just the last commit (failed validation of inner commit)
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" << ENDOFINSERT
   > INSERT INTO synced_commit_mapping
   >   (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id, sync_map_version_name)
-  > VALUES 
+  > VALUES
   >   (1, X'$FBSOURCE_C1_BONSAI', 0, X'$MEGAREPO_C1_BONSAI', 'TEST_VERSION_NAME'),
   >   (1, X'$FBSOURCE_C2_BONSAI', 0, X'$MEGAREPO_C2_BONSAI', 'TEST_VERSION_NAME'),
   >   (1, X'$FBSOURCE_C3_BONSAI', 0, X'$MEGAREPO_C3_BONSAI', 'TEST_VERSION_NAME');
   > ENDOFINSERT
 
--- run the validator, check that commits are eqiuvalent
+-- run the validator, check that commits are equivalent
   $ REPOIDLARGE=0 validate_commit_sync 9 |& grep -E "(Preparing entry|Different contents)"
   * Preparing entry Entry 9 (1/3); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
   * Preparing entry Entry 9 (2/3); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
@@ -322,7 +322,7 @@ Check that we validate the topological order
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" << ENDOFINSERT
   > INSERT INTO synced_commit_mapping
   >   (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id, sync_map_version_name)
-  > VALUES 
+  > VALUES
   >   (1, X'$FBSOURCE_C1_BONSAI', 0, X'$MEGAREPO_C2_BONSAI', 'TEST_VERSION_NAME'),
   >   (1, X'$FBSOURCE_C2_BONSAI', 0, X'$MEGAREPO_C1_BONSAI', 'TEST_VERSION_NAME');
   > ENDOFINSERT
@@ -352,7 +352,7 @@ Check that we validate the newly-added root commits
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" << ENDOFINSERT
   > INSERT INTO synced_commit_mapping
   >   (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id, sync_map_version_name)
-  > VALUES 
+  > VALUES
   >   (1, X'$FBSOURCE_NEWROOT_BONSAI', 0, X'$MEGAREPO_NEWROOT_BONSAI', 'TEST_VERSION_NAME');
   > ENDOFINSERT
 

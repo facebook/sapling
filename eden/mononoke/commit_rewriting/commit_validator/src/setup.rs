@@ -11,9 +11,6 @@ use anyhow::Result;
 use blobstore_factory::ReadOnlyStorage;
 use bookmarks::BookmarkKey;
 use borrowed::borrowed;
-use clap_old::ArgMatches;
-use cmdlib::args;
-use cmdlib::args::MononokeMatches;
 use context::CoreContext;
 use cross_repo_sync::types::Large;
 use cross_repo_sync::types::Small;
@@ -23,6 +20,8 @@ use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::RepoConfig;
 use mononoke_api_types::InnerRepo;
+use mononoke_app::args::RepoArg;
+use mononoke_app::MononokeApp;
 use mutable_counters::MutableCountersRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -30,25 +29,23 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
-use crate::cli::ARG_ENTRY_ID;
-use crate::cli::ARG_MASTER_BOOKMARK;
-use crate::cli::ARG_START_ID;
+use crate::cli::MononokeCommitValidatorArgs;
 use crate::reporting::add_common_commit_syncing_fields;
 use crate::validation::ValidationHelpers;
 
 pub async fn get_validation_helpers<'a>(
     fb: FacebookInit,
     ctx: CoreContext,
+    app: &MononokeApp,
     large_repo: InnerRepo,
     repo_config: RepoConfig,
-    matches: &'a MononokeMatches<'a>,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<ValidationHelpers, Error> {
     let repo_id = large_repo.blob_repo.repo_identity().id();
 
-    let config_store = matches.config_store();
+    let config_store = app.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
     let common_commit_sync_config = live_commit_sync_config.get_common_config(repo_id)?;
 
@@ -59,7 +56,8 @@ pub async fn get_validation_helpers<'a>(
         readonly_storage.0,
     )?;
 
-    let large_repo_master_bookmark = get_master_bookmark(matches)?;
+    let large_repo_master_bookmark =
+        BookmarkKey::new(app.args::<MononokeCommitValidatorArgs>()?.master_bookmark)?;
 
     let validation_helper_futs =
         common_commit_sync_config
@@ -67,7 +65,7 @@ pub async fn get_validation_helpers<'a>(
             .into_keys()
             .map(|small_repo_id| {
                 let large_blob_repo = large_repo.blob_repo.clone();
-                borrowed!(matches, ctx, scuba_sample);
+                borrowed!(app, scuba_sample);
                 async move {
                     let scuba_sample = {
                         let mut scuba_sample = scuba_sample.clone();
@@ -79,10 +77,7 @@ pub async fn get_validation_helpers<'a>(
 
                         scuba_sample
                     };
-
-                    let small_repo =
-                        args::open_repo_with_repo_id(fb, ctx.logger(), small_repo_id, matches)
-                            .await?;
+                    let small_repo = app.open_repo(&RepoArg::Id(small_repo_id)).await?;
                     Result::<_, Error>::Ok((
                         small_repo_id,
                         (Large(large_blob_repo), Small(small_repo), scuba_sample),
@@ -108,12 +103,10 @@ pub fn format_counter() -> String {
 pub async fn get_start_id<'a>(
     ctx: &CoreContext,
     repo: &impl MutableCountersRef,
-    matches: &'a ArgMatches<'a>,
+    start_id: Option<u64>,
 ) -> Result<u64, Error> {
-    match matches.value_of(ARG_START_ID) {
-        Some(start_id) => start_id
-            .parse::<u64>()
-            .map_err(|_| format_err!("{} must be a valid u64", ARG_START_ID)),
+    match start_id {
+        Some(start_id) => Ok(start_id),
         None => {
             let counter = format_counter();
             repo.mutable_counters()
@@ -123,19 +116,4 @@ pub async fn get_start_id<'a>(
                 .map(|val| val as u64)
         }
     }
-}
-
-pub fn get_entry_id<'a>(matches: &'a ArgMatches<'a>) -> Result<u64, Error> {
-    matches
-        .value_of(ARG_ENTRY_ID)
-        .ok_or_else(|| format_err!("Entry id argument missing"))?
-        .parse::<u64>()
-        .map_err(|_| format_err!("{} must be a valid u64", ARG_ENTRY_ID))
-}
-
-fn get_master_bookmark<'a, 'b>(matches: &'a MononokeMatches<'b>) -> Result<BookmarkKey, Error> {
-    let name = matches
-        .value_of(ARG_MASTER_BOOKMARK)
-        .ok_or_else(|| format_err!("Argument {} is required", ARG_MASTER_BOOKMARK))?;
-    BookmarkKey::new(name)
 }
