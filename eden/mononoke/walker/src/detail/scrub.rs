@@ -75,8 +75,6 @@ define_stats! {
     prefix = "mononoke.walker";
     walk_progress_keys: dynamic_timeseries("{}.progress.{}.blobstore_keys", (subcommand: &'static str, repo: String); Rate, Sum),
     walk_progress_bytes: dynamic_timeseries("{}.progress.{}.blobstore_bytes", (subcommand: &'static str, repo: String); Rate, Sum),
-    walk_progress_keys_by_type: dynamic_timeseries("{}.progress.{}.{}.blobstore_keys", (subcommand: &'static str, repo: String, node_type: &'static str); Rate, Sum),
-    walk_progress_bytes_by_type: dynamic_timeseries("{}.progress.{}.{}.blobstore_bytes", (subcommand: &'static str, repo: String, node_type: &'static str); Rate, Sum),
     walk_last_completed_by_type: dynamic_singleton_counter("{}.last_completed.{}.{}.{}", (subcommand: &'static str, repo: String, node_type: &'static str, desc: &'static str)),
 }
 
@@ -284,25 +282,6 @@ impl ComponentSamplingHandler for WalkSampleMapping<Node, ScrubSample> {
 }
 
 impl ProgressStateCountByType<ScrubStats, ScrubStats> {
-    fn report_stats(&self, node_type: &NodeType, summary: &ScrubStats) {
-        STATS::walk_progress_bytes_by_type.add_value(
-            summary.blobstore_bytes as i64,
-            (
-                self.params.subcommand_stats_key,
-                self.params.repo_stats_key.clone(),
-                node_type.into(),
-            ),
-        );
-        STATS::walk_progress_keys_by_type.add_value(
-            summary.blobstore_keys as i64,
-            (
-                self.params.subcommand_stats_key,
-                self.params.repo_stats_key.clone(),
-                node_type.into(),
-            ),
-        );
-    }
-
     fn report_completion_stat(&self, stat: &ScrubStats, stat_key: &'static str) {
         for (desc, value) in &[
             ("blobstore_bytes", stat.blobstore_bytes),
@@ -335,16 +314,6 @@ impl ProgressStateCountByType<ScrubStats, ScrubStats> {
             .iter()
             .map(|(k, (_i, v))| (*k, *v))
             .collect();
-        for (k, v) in &summary_by_type {
-            let delta = *v
-                - self
-                    .reporting_stats
-                    .last_summary_by_type
-                    .get(k)
-                    .cloned()
-                    .unwrap_or_default();
-            self.report_stats(k, &delta);
-        }
         let new_summary = summary_by_type
             .values()
             .fold(ScrubStats::default(), |acc, v| acc + *v);

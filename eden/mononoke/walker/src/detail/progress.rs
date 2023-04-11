@@ -40,10 +40,6 @@ define_stats! {
     walk_progress_errors: dynamic_timeseries("{}.progress.{}.errors", (subcommand: &'static str, repo: String); Rate, Sum),
     walk_progress_missing: dynamic_timeseries("{}.progress.{}.missing", (subcommand: &'static str, repo: String); Rate, Sum),
     walk_progress_hash_validation_failure: dynamic_timeseries("{}.progress.{}.hash_validation_failure", (subcommand: &'static str, repo: String); Rate, Sum),
-    walk_progress_walked_by_type: dynamic_timeseries("{}.progress.{}.{}.walked", (subcommand: &'static str, repo: String, node_type: String); Rate, Sum),
-    walk_progress_errors_by_type: dynamic_timeseries("{}.progress.{}.{}.errors", (subcommand: &'static str, repo: String, node_type: String); Rate, Sum),
-    walk_progress_missing_by_type: dynamic_timeseries("{}.progress.{}.{}.missing", (subcommand: &'static str, repo: String, node_type: String); Rate, Sum),
-    walk_progress_hash_validation_failure_by_type: dynamic_timeseries("{}.progress.{}.{}.hash_validation_failure", (subcommand: &'static str, repo: String, node_type: String); Rate, Sum),
 }
 
 pub trait ProgressRecorderUnprotected<SS> {
@@ -197,41 +193,6 @@ where
 }
 
 impl ProgressStateCountByType<StepStats, ProgressSummary> {
-    fn report_stats(&self, node_type: &NodeType, summary: &ProgressSummary) {
-        STATS::walk_progress_walked_by_type.add_value(
-            summary.walked as i64,
-            (
-                self.params.subcommand_stats_key,
-                self.params.repo_stats_key.clone(),
-                node_type.to_string(),
-            ),
-        );
-        STATS::walk_progress_errors_by_type.add_value(
-            summary.errors as i64,
-            (
-                self.params.subcommand_stats_key,
-                self.params.repo_stats_key.clone(),
-                node_type.to_string(),
-            ),
-        );
-        STATS::walk_progress_missing_by_type.add_value(
-            summary.missing as i64,
-            (
-                self.params.subcommand_stats_key,
-                self.params.repo_stats_key.clone(),
-                node_type.to_string(),
-            ),
-        );
-        STATS::walk_progress_hash_validation_failure_by_type.add_value(
-            summary.hash_validation_failure as i64,
-            (
-                self.params.subcommand_stats_key,
-                self.params.repo_stats_key.clone(),
-                node_type.to_string(),
-            ),
-        );
-    }
-
     pub fn report_progress_log(&mut self, mut delta_time: Option<Duration>) {
         let summary_by_type: HashMap<NodeType, ProgressSummary> = self
             .work_stats
@@ -247,13 +208,6 @@ impl ProgressStateCountByType<StepStats, ProgressSummary> {
                     missing: ss.missing_count as u64,
                     hash_validation_failure: ss.hash_validation_failure_count as u64,
                 };
-                let delta = s - self
-                    .reporting_stats
-                    .last_summary_by_type
-                    .get(k)
-                    .cloned()
-                    .unwrap_or_default();
-                self.report_stats(k, &delta);
                 (*k, s)
             })
             .collect();
