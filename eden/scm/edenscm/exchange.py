@@ -1503,10 +1503,6 @@ def _httpcommitgraphenabled(repo, remote):
     if repo.nullableedenapi is None:
         return None
 
-    # TODO(liubovd) check if "and" condition is more correct here
-    if remote.capable("commitgraph") or repo.ui.configbool("pull", "httpcommitgraph"):
-        return "v1"
-
     if remote.capable("commitgraph2") or repo.ui.configbool("pull", "httpcommitgraph2"):
         return "v2"
 
@@ -1767,10 +1763,7 @@ def _pullcommitgraph(pullop, version):
     assert heads is not None
 
     commits = repo.changelog.inner
-    if version == "v2":
-        items = repo.edenapi.commitgraph2(heads, pullop.common)
-    else:
-        items = repo.edenapi.commitgraph(heads, pullop.common)
+    items = repo.edenapi.commitgraph2(heads, pullop.common)
     graphnodes = []
     draftnodes = []
     allphasesreturned = True

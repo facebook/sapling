@@ -84,11 +84,11 @@ class eagerpeer(repository.peer):
 
     # "Pull" without using getbundle.
 
-    def commitgraph(self, heads, common):
+    def commitgraph2(self, heads, common):
         """heads: [node], common: [node]
         Returns a list of [(node, parents)], parents is a list of node.
         """
-        items = self.edenapi.commitgraph(heads, common)
+        items = self.edenapi.commitgraph2(heads, common)
         shouldtrace = tracing.isenabled(tracing.LEVEL_TRACE)
         for item in items:
             node = item["hgid"]
@@ -137,7 +137,7 @@ class eagerpeer(repository.peer):
             "known",
             "branchmap",
             "addblobs",
-            "commitgraph",
+            "commitgraph2",
             "clonedata",
         }
 
