@@ -44,7 +44,7 @@ class MercurialExtOrderException(BaseException):
     """
 
 
-def uisetup(ui):
+def uisetup(ui) -> None:
 
     deps = {}
     preferlast = []
