@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ configure modern
   $ setconfig remotenames.selectivepulldefault=master_bookmark \
-  >  pull.httpcommitgraph=1 pull.httphashprefix=1
+  >  pull.httpcommitgraph2=1 pull.httphashprefix=1
 
 Set up local hgrc and Mononoke config, with http pull
   $ setup_common_config

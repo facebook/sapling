@@ -28,7 +28,7 @@ Run a few requests that use different codepaths for logging server-side
   {"repos":["repo"]} (no-eol)
 
   $ hgedenapi debugapi -e uploadfilecontents -i '[({"Sha1":"03cfd743661f07975fa2f1220c5194cbaff48451"}, b"abc\n")]' > /dev/null
-  $ hgedenapi debugapi -e commitgraph -i "['$C']" -i "['$A']" --sort > /dev/null
+  $ hgedenapi debugapi -e commitgraph2 -i "['$C']" -i "['$A']" --sort > /dev/null
 
 
   $ cat "$SCUBA" | summarize_scuba_json "EdenAPI.*" \
@@ -61,7 +61,7 @@ Run a few requests that use different codepaths for logging server-side
   }
   {
     "http_method": "POST",
-    "http_path": "/repo/commit/graph",
+    "http_path": "/repo/commit/graph_v2",
     "log_tag": "EdenAPI Request Processed",
     "max_poll_time_us": \d*, (re)
     "poll_count": \d*, (re)

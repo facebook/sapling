@@ -599,52 +599,6 @@ impl EdenApiHandler for EphemeralPrepareHandler {
     }
 }
 
-pub struct GraphHandler;
-
-#[async_trait]
-impl EdenApiHandler for GraphHandler {
-    type Request = CommitGraphRequest;
-    type Response = CommitGraphEntry;
-
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::CommitGraph;
-    const ENDPOINT: &'static str = "/commit/graph";
-
-    async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
-        request: Self::Request,
-    ) -> HandlerResult<'async_trait, Self::Response> {
-        let heads = request
-            .heads
-            .into_iter()
-            .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
-            .collect();
-        let common = request
-            .common
-            .into_iter()
-            .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
-            .collect();
-
-        let graph_entries = repo
-            .get_graph_mapping(common, heads, false)
-            .await?
-            .into_iter()
-            .map(|(hgid, (parents, is_draft))| {
-                Ok(CommitGraphEntry {
-                    hgid: HgId::from(hgid.into_nodehash()),
-                    parents: parents
-                        .into_iter()
-                        .map(|p_hgid| HgId::from(p_hgid.into_nodehash()))
-                        .collect(),
-                    is_draft: Some(is_draft),
-                })
-            });
-        Ok(stream::iter(graph_entries).boxed())
-    }
-}
-
 pub struct GraphHandlerV2;
 
 #[async_trait]
@@ -674,7 +628,7 @@ impl EdenApiHandler for GraphHandlerV2 {
             .collect();
 
         let graph_entries = repo
-            .get_graph_mapping(common, heads, true)
+            .get_graph_mapping(common, heads)
             .await?
             .into_iter()
             .map(|(hgid, (parents, is_draft))| {

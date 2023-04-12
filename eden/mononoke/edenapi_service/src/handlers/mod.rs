@@ -437,7 +437,6 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<trees::UploadTreesHandler>(route);
         Handlers::setup::<commit::FetchSnapshotHandler>(route);
         Handlers::setup::<commit::AlterSnapshotHandler>(route);
-        Handlers::setup::<commit::GraphHandler>(route);
         Handlers::setup::<commit::GraphHandlerV2>(route);
         Handlers::setup::<files::DownloadFileHandler>(route);
         Handlers::setup::<commit::CommitMutationsHandler>(route);

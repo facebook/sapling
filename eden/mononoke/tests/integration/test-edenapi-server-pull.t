@@ -32,7 +32,7 @@ Enable Segmented Changelog
 Lazy clone the repo from mononoke 
   $ cd "$TESTTMP"
   $ setconfig remotenames.selectivepull=True remotenames.selectivepulldefault=master_bookmark
-  $ setconfig pull.httpcommitgraph=1 pull.httphashprefix=1
+  $ setconfig pull.httpcommitgraph2=1 pull.httphashprefix=1
   $ hgedenapi clone "mononoke://$(mononoke_address)/repo" repo2
   fetching lazy changelog
   populating main commit graph

@@ -8,26 +8,19 @@
 # Commit Cloud Test with as much Edenapi integration as possible
 # the most important parts are:
 #    pull.httpbookmarks    ENABLED
-#    pull.httpcommitgraph/pull.httpcommitgraph2    ENABLED
+#    pull.httpcommitgraph2    ENABLED
 #    pull.httphashprefix    ENABLED
 #    pull.httpmutation      ENABLED
 #    commitcloud.usehttpupload    ENABLED
 #    exchange.httpcommitlookup    ENABLED
 
 
-#testcases commitgraph commitgraph_v2
-
   $ . "${TEST_FIXTURES}/library.sh"
   $ configure modern
   $ setconfig ui.ignorerevnum=false
 
 
-select version of commit graph
-#if commitgraph_v2
   $ setconfig pull.httpcommitgraph2=true
-#else
-  $ setconfig pull.httpcommitgraph=true
-#endif
 
 setup custom smartlog
   $ function sl {
@@ -157,6 +150,7 @@ Make commits in the first client, and sync it
   o  929f2b9071cf draft 'A'
   │
   o  8b2dca0c8a72 public 'base_commit'
+  
 
 Sync from the second client - the commits should appear
   $ cd ../client2
@@ -178,6 +172,7 @@ Sync from the second client - the commits should appear
   o  929f2b9071cf draft 'A'
   │
   @  8b2dca0c8a72 public 'base_commit'
+  
 
 
 Make commits from the second client and sync it
@@ -227,6 +222,7 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   │ o  929f2b9071cf draft 'A'
   ├─╯
   o  8b2dca0c8a72 public 'base_commit' new_bookmark
+  
 
 
 On the first client rebase the stack
@@ -278,6 +274,7 @@ On the second client sync it
   o  929f2b9071cf draft 'A'
   │
   o  8b2dca0c8a72 public 'base_commit' new_bookmark
+  
 
 Check mutation markers
   $ hgedenapi up c981069f3f05 -q
@@ -301,6 +298,7 @@ Check mutation markers
   o │  929f2b9071cf draft 'A'
   ├─╯
   o  8b2dca0c8a72 public 'base_commit' new_bookmark
+  
 
 
 On the second client hide all draft commits
@@ -326,6 +324,7 @@ On the second client hide all draft commits
 
   $ sl
   @  8b2dca0c8a72 public 'base_commit' new_bookmark
+  
 
 
 On the first client check that all commits were hidden
@@ -339,3 +338,4 @@ On the first client check that all commits were hidden
 
   $ sl
   @  8b2dca0c8a72 public 'base_commit' new_bookmark
+  
