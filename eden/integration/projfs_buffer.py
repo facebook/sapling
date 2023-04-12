@@ -54,7 +54,7 @@ if sys.platform == "win32":
             sparse: bool = False,
             reparse: bool = False,
             recall: bool = False,
-        ):
+        ) -> None:
             if raw_attribute_mask:
                 self.raw_attribute_mask = raw_attribute_mask
                 return
@@ -111,7 +111,7 @@ if sys.platform == "win32":
             result += f"recall: {recall}\n"
             return result
 
-        def __eq__(self, other):
+        def __eq__(self, other: object) -> bool:
             return self.raw_attribute_mask == other.raw_attribute_mask
 
     def getFileAttributes(path: Path) -> FileAttributes:
@@ -134,10 +134,10 @@ else:
             sparse: bool = False,
             reparse: bool = False,
             recall: bool = False,
-        ):
+        ) -> None:
             pass
 
-        def __eq__(self, other):
+        def __eq__(self, other: object) -> bool:
             return False
 
     def getFileAttributes(path: Path) -> FileAttributes:
