@@ -16,7 +16,7 @@ chrono = { version = "0.4", features = ["clock", "serde", "std"], default-featur
 clidispatch = { version = "0.1.0", path = "../clidispatch" }
 cliparser = { version = "0.1.0", path = "../cliparser", features = ["python"] }
 clone = { version = "0.1.0", path = "../clone" }
-comfy-table = "4.0.1"
+comfy-table = "6.1.4"
 configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 cpython = { version = "0.7.1", default-features = false }
