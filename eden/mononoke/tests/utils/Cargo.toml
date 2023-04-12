@@ -9,6 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.65"
+blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 bytes = { version = "1.1", features = ["serde"] }
@@ -25,5 +26,7 @@ manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+rand = { version = "0.8", features = ["small_rng"] }
+rand_distr = "0.4"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }

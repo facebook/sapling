@@ -238,8 +238,6 @@ mod tests {
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
-    use simulated_repo::GenManifest;
-    use simulated_repo::GenSettings;
 
     use super::*;
     use crate::fastlog_impl::fetch_fastlog_batch_by_unode_id;
@@ -380,20 +378,10 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
 
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
-        let gen_settings = GenSettings::default();
-        let mut changes_count = vec![];
-        changes_count.resize(200, 10);
-        let latest = GenManifest::new()
-            .gen_stack(
-                ctx.clone(),
-                repo.clone(),
-                &mut rng,
-                &gen_settings,
-                None,
-                changes_count,
-            )
-            .await
-            .unwrap();
+        let (latest, _) =
+            tests_utils::random::create_random_stack(&ctx, &repo, &mut rng, None, [10; 200])
+                .await
+                .unwrap();
 
         verify_all_entries_for_commit(&ctx, &repo, latest).await;
     }

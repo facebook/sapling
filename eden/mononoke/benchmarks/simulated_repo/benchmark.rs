@@ -22,13 +22,13 @@ use derived_data_utils::derived_data_utils;
 use derived_data_utils::POSSIBLE_DERIVED_TYPES;
 use fbinit::FacebookInit;
 use futures::future::TryFutureExt;
-use futures_stats::futures03::TimedFutureExt;
+use futures_stats::TimedFutureExt;
+use futures_stats::TimedTryFutureExt;
 use rand::SeedableRng;
 use rand_xorshift::XorShiftRng;
 use repo_derived_data::RepoDerivedDataArc;
 use simulated_repo::new_benchmark_repo;
 use simulated_repo::DelaySettings;
-use simulated_repo::GenManifest;
 
 const ARG_SEED: &str = "seed";
 const ARG_TYPE: &str = "type";
@@ -52,22 +52,22 @@ async fn run(
     println!("rng seed: {}", rng_seed);
     let mut rng = XorShiftRng::seed_from_u64(rng_seed); // reproducable Rng
 
-    let mut gen = GenManifest::new();
-    let settings = Default::default();
-    let (stats, csidq) = gen
-        .gen_stack(
-            ctx.clone(),
-            repo.clone(),
-            &mut rng,
-            &settings,
-            None,
-            std::iter::repeat(16).take(stack_size),
-        )
-        .timed()
-        .await;
-    println!("stack generated: {:?} {:?}", gen.size(), stats);
+    let (stats, (csid, manifest)) = tests_utils::random::create_random_stack(
+        &ctx,
+        &repo,
+        &mut rng,
+        None,
+        std::iter::repeat(16).take(stack_size),
+    )
+    .try_timed()
+    .await?;
+    println!(
+        "stack generated: {} {:?} {:?}",
+        csid,
+        manifest.size(),
+        stats
+    );
 
-    let csid = csidq?;
     let derive_utils = derived_data_utils(ctx.fb, &repo, derived_data_type)?;
 
     let (stats2, result) = if use_backfill_mode {

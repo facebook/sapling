@@ -979,7 +979,6 @@ async fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> 
     use rand_xorshift::XorShiftRng;
     use simulated_repo::new_benchmark_repo;
     use simulated_repo::DelaySettings;
-    use simulated_repo::GenManifest;
 
     let ctx = CoreContext::test_mock(fb);
     let delay_settings = DelaySettings {
@@ -992,19 +991,15 @@ async fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> 
     let repo = new_benchmark_repo(fb, delay_settings)?;
 
     let mut rng = XorShiftRng::seed_from_u64(1);
-    let mut gen = GenManifest::new();
-    let settings = Default::default();
 
-    let csid = gen
-        .gen_stack(
-            ctx.clone(),
-            repo.clone(),
-            &mut rng,
-            &settings,
-            None,
-            std::iter::repeat(16).take(50),
-        )
-        .await?;
+    let (csid, _) = tests_utils::random::create_random_stack(
+        &ctx,
+        &repo,
+        &mut rng,
+        None,
+        std::iter::repeat(16).take(50),
+    )
+    .await?;
     let hgcsid = repo.derive_hg_changeset(&ctx, csid).await?;
 
     assert_eq!(hgcsid, "e9b73f926c993c5232139d4eefa6f77fa8c41279".parse()?);

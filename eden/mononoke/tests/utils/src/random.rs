@@ -10,9 +10,9 @@ use std::collections::BTreeMap;
 
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::save_bonsai_changesets;
 use blobstore::Storable;
 use changesets::ChangesetsRef;
+use changesets_creation::save_changesets;
 use context::CoreContext;
 use futures::future;
 use futures::stream;
@@ -31,6 +31,21 @@ use rand::Rng;
 use rand_distr::Binomial;
 use rand_distr::Uniform;
 use repo_blobstore::RepoBlobstoreRef;
+
+pub async fn create_random_stack(
+    ctx: &CoreContext,
+    repo: &(impl RepoBlobstoreRef + ChangesetsRef),
+    rng: &mut impl Rng,
+    parent: Option<ChangesetId>,
+    changes_count: impl IntoIterator<Item = usize>,
+) -> Result<(ChangesetId, Box<GenManifest>), Error> {
+    let settings = GenSettings::default();
+    let mut manifest = GenManifest::new();
+    let changeset_id = manifest
+        .gen_stack(ctx, repo, rng, &settings, parent, changes_count)
+        .await?;
+    Ok((changeset_id, manifest))
+}
 
 #[derive(Clone, Copy)]
 pub struct GenSettings {
@@ -62,13 +77,13 @@ pub struct GenManifest {
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Size {
-    pub width: usize,
-    pub depth: usize,
-    pub files: usize,
+    width: usize,
+    depth: usize,
+    files: usize,
 }
 
 impl GenManifest {
-    pub fn new() -> Box<Self> {
+    fn new() -> Box<Self> {
         Box::new(Self {
             dirs: BTreeMap::new(),
             files: BTreeMap::new(),
@@ -92,10 +107,10 @@ impl GenManifest {
         }
     }
 
-    pub async fn gen_stack(
+    async fn gen_stack(
         &mut self,
-        ctx: CoreContext,
-        repo: impl RepoBlobstoreRef + ChangesetsRef + Send + Sync,
+        ctx: &CoreContext,
+        repo: &(impl RepoBlobstoreRef + ChangesetsRef),
         rng: &mut impl Rng,
         settings: &GenSettings,
         parent: Option<ChangesetId>,
@@ -120,7 +135,7 @@ impl GenManifest {
                             let size = content.size();
                             let blob = content.into_blob();
                             let id = *blob.id();
-                            store_changes.push(blob.store(&ctx, blobstore));
+                            store_changes.push(blob.store(ctx, blobstore));
                             file_changes.insert(
                                 path,
                                 FileChange::tracked(id, FileType::Regular, size, None),
@@ -153,7 +168,7 @@ impl GenManifest {
                 None => Err(Error::msg("empty changes iterator")),
                 Some(csid) => {
                     store_changes.try_for_each(|_| future::ok(())).await?;
-                    save_bonsai_changesets(changesets, ctx, &repo).await?;
+                    save_changesets(ctx, repo, changesets).await?;
                     Ok(csid)
                 }
             }

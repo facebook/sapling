@@ -50,6 +50,7 @@ use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 
 pub mod drawdag;
+pub mod random;
 
 pub trait Repo = BonsaiHgMappingRef
     + BookmarksRef
