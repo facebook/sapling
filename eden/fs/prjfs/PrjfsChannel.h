@@ -324,6 +324,10 @@ class PrjfsChannelInner {
     mountChannel_ = channel;
   }
 
+  PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT getMountChannel() const {
+    return mountChannel_;
+  }
+
   void sendSuccess(
       int32_t commandId,
       PRJ_COMPLETE_COMMAND_EXTENDED_PARAMETERS* FOLLY_NULLABLE extra);
@@ -524,9 +528,6 @@ class PrjfsChannel {
 
   folly::AtomicReadMostlyMainPtr<PrjfsChannelInner> inner_;
   folly::SemiFuture<folly::Unit> innerDeleted_;
-
-  // Internal ProjectedFS channel used to communicate with ProjectedFS.
-  PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};
 };
 
 #endif

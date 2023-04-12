@@ -1252,25 +1252,30 @@ void PrjfsChannel::start(
             FMT_STRING("Failed to setup the mount point: {}"), mountPath_));
   }
 
+  PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel;
   result = PrjStartVirtualizing(
-      winPath.c_str(), &callbacks, this, &startOpts, &mountChannel_);
+      winPath.c_str(), &callbacks, this, &startOpts, &mountChannel);
 
   if (FAILED(result)) {
     throw makeHResultErrorExplicit(result, "Failed to start the mount point");
   }
+
+  getInner()->setMountChannel(mountChannel);
 
   // On Windows, negative path cache is kept between channels. Invalidating here
   // gives our user an easy way to get out of a situation where an incorrect
   // negative path result is cached by Windows without rebooting.
   flushNegativePathCache();
 
-  getInner()->setMountChannel(mountChannel_);
-
   XLOG(INFO) << "Started PrjfsChannel for: " << mountPath_;
 }
 
 ImmediateFuture<folly::Unit> PrjfsChannel::waitForPendingNotifications() {
   auto inner = getInner();
+  if (!inner) {
+    return makeImmediateFuture<folly::Unit>(std::runtime_error(fmt::format(
+        FMT_STRING("The mount at {} has been stopped"), mountPath_)));
+  }
   return inner->waitForPendingNotifications().ensure(
       [inner = std::move(inner)] {});
 }
@@ -1278,10 +1283,12 @@ ImmediateFuture<folly::Unit> PrjfsChannel::waitForPendingNotifications() {
 folly::SemiFuture<folly::Unit> PrjfsChannel::stop() {
   XLOG(INFO) << "Stopping PrjfsChannel for: " << mountPath_;
   XCHECK(!stopPromise_.isFulfilled());
-  PrjStopVirtualizing(mountChannel_);
-  mountChannel_ = nullptr;
 
-  inner_.store(nullptr, std::memory_order_release);
+  {
+    auto oldInner = inner_.exchange(nullptr, std::memory_order_release);
+    PrjStopVirtualizing(oldInner->getMountChannel());
+  }
+
   return std::move(innerDeleted_)
       .deferValue([stopPromise = std::move(stopPromise_)](auto&&) mutable {
         stopPromise.setValue(StopData{});
@@ -1296,8 +1303,15 @@ folly::SemiFuture<PrjfsChannel::StopData> PrjfsChannel::getStopFuture() {
 // Eden from leaking into FS. This would come in soon.
 
 folly::Try<folly::Unit> PrjfsChannel::removeCachedFile(RelativePathPiece path) {
-  DurationScope statScope{
-      getInner()->getStats(), &PrjfsStats::removeCachedFile};
+  auto inner = getInner();
+  if (!inner) {
+    // TODO: The mount is being unmounted but the caller is still manipulating
+    // it. This is unexpected.
+    return folly::Try<folly::Unit>{std::runtime_error{fmt::format(
+        FMT_STRING("Couldn't delete file {}: PrjfsChannel is stopped"), path)}};
+  }
+
+  DurationScope statScope{inner->getStats(), &PrjfsStats::removeCachedFile};
 
   if (path.empty()) {
     return folly::Try<folly::Unit>{folly::unit};
@@ -1309,7 +1323,7 @@ folly::Try<folly::Unit> PrjfsChannel::removeCachedFile(RelativePathPiece path) {
 
   PRJ_UPDATE_FAILURE_CAUSES failureReason;
   auto result = PrjDeleteFile(
-      mountChannel_,
+      inner->getMountChannel(),
       winPath.c_str(),
       PRJ_UPDATE_ALLOW_DIRTY_METADATA | PRJ_UPDATE_ALLOW_DIRTY_DATA |
           PRJ_UPDATE_ALLOW_READ_ONLY | PRJ_UPDATE_ALLOW_TOMBSTONE,
@@ -1340,8 +1354,16 @@ folly::Try<folly::Unit> PrjfsChannel::removeCachedFile(RelativePathPiece path) {
 
 folly::Try<folly::Unit> PrjfsChannel::addDirectoryPlaceholder(
     RelativePathPiece path) {
+  auto inner = getInner();
+  if (!inner) {
+    return folly::Try<folly::Unit>{std::runtime_error{fmt::format(
+        FMT_STRING(
+            "Couldn't add a placeholder for {}: PrjfsChannel is stopped"),
+        path)}};
+  }
+
   DurationScope statScope{
-      getInner()->getStats(), &PrjfsStats::addDirectoryPlaceholder};
+      inner->getStats(), &PrjfsStats::addDirectoryPlaceholder};
 
   if (path.empty()) {
     return folly::Try<folly::Unit>{folly::unit};
@@ -1378,11 +1400,17 @@ folly::Try<folly::Unit> PrjfsChannel::addDirectoryPlaceholder(
 }
 
 void PrjfsChannel::flushNegativePathCache() {
+  auto inner = getInner();
+  if (!inner) {
+    return;
+  }
+
   if (useNegativePathCaching_) {
     XLOG(DBG6) << "Flushing negative path cache";
 
     uint32_t numFlushed = 0;
-    auto result = PrjClearNegativePathCache(mountChannel_, &numFlushed);
+    auto result =
+        PrjClearNegativePathCache(inner->getMountChannel(), &numFlushed);
     if (FAILED(result)) {
       throwHResultErrorExplicit(
           result, "Couldn't flush the negative path cache");
