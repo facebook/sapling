@@ -25,7 +25,7 @@ pub struct BookmarksLogArgs {
     name: BookmarkKey,
 
     /// Commit identity schemes to display
-    #[clap(long, short='S', arg_enum, default_values = &["bonsai"], use_value_delimiter = true)]
+    #[clap(long, short='S', value_enum, default_values = &["bonsai"], use_value_delimiter = true)]
     schemes: Vec<IdentityScheme>,
 
     /// Limit the number of entries returned
@@ -39,7 +39,7 @@ pub struct BookmarksLogArgs {
 
     /// Filter log records to those ending at this time
     /// (either absolute time, or e.g. "2 hours ago").
-    #[clap(long, short = 'e', requires = "start-time")]
+    #[clap(long, short = 'e', requires = "start_time")]
     end_time: Option<DateTime>,
 }
 

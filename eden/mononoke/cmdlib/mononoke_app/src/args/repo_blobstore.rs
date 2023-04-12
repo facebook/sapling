@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use clap::ArgEnum;
 use clap::ArgGroup;
 use clap::Args;
+use clap::ValueEnum;
 
 /// Command line arguments for specifying a blobstore, either by
 /// repo, or by storage name.
@@ -15,7 +15,7 @@ use clap::Args;
 #[clap(group(
     ArgGroup::new("repo_blobstore")
         .required(true)
-        .args(&["repo-id", "repo-name", "storage-name"]),
+        .args(&["repo_id", "repo_name", "storage_name"]),
 ))]
 pub struct RepoBlobstoreArgs {
     /// Numeric repository ID
@@ -35,7 +35,7 @@ pub struct RepoBlobstoreArgs {
     pub inner_blobstore_id: Option<u64>,
 
     /// Use memcache to cache access to the blobstore
-    #[clap(long, arg_enum)]
+    #[clap(long, value_enum)]
     pub use_memcache: Option<UseMemcache>,
 
     /// Don't prepend the repo prefix to the key
@@ -43,7 +43,7 @@ pub struct RepoBlobstoreArgs {
     pub no_prefix: bool,
 }
 
-#[derive(Copy, Clone, Debug, ArgEnum, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, ValueEnum, Eq, PartialEq)]
 pub enum UseMemcache {
     CacheOnly,
     NoFill,

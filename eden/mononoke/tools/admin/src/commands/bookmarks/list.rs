@@ -30,11 +30,11 @@ use crate::commit_id::IdentityScheme;
 #[derive(Args)]
 pub struct BookmarksListArgs {
     /// Kind of bookmarks to list
-    #[clap(long = "kind", short = 'k', value_name = "KIND", arg_enum, default_values = &["publishing", "pull-default-publishing"])]
+    #[clap(long = "kind", short = 'k', value_name = "KIND", value_enum, default_values = &["publishing", "pull-default-publishing"])]
     kinds: Vec<BookmarkKind>,
 
     /// Categories of bookmarks to list
-    #[clap(long = "category", short = 'c', value_name = "CATEGORY", arg_enum, default_values = &["branch", "tag", "note"])]
+    #[clap(long = "category", short = 'c', value_name = "CATEGORY", value_enum, default_values = &["branch", "tag", "note"])]
     categories: Vec<BookmarkCategory>,
 
     /// Prefix of bookmarks to list
@@ -50,7 +50,7 @@ pub struct BookmarksListArgs {
     after: Option<BookmarkKey>,
 
     /// Commit identity schemes to display
-    #[clap(long, short='S', arg_enum, default_values = &["bonsai"], use_value_delimiter = true)]
+    #[clap(long, short='S', value_enum, default_values = &["bonsai"], use_value_delimiter = true)]
     schemes: Vec<IdentityScheme>,
 
     /// Request most recent values of bookmarks (bypass caches and replicas)

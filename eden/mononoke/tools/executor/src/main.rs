@@ -193,7 +193,7 @@ struct TestArgs {
     pub sharded_service_name: Option<String>,
     /// The repo for which the job needs to be executed when sharded
     /// execution is not desired.
-    #[clap(long, conflicts_with = "sharded-service-name")]
+    #[clap(long, conflicts_with = "sharded_service_name")]
     pub repo_name: Option<String>,
 }
 

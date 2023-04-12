@@ -35,7 +35,7 @@ pub struct HgSyncLastProcessedArgs {
     #[clap(
         long,
         short = 'n',
-        requires = "skip-blobimport",
+        requires = "skip_blobimport",
         conflicts_with = "set"
     )] // You would think this "conflicts_with" wouldn't be required, but it is, due
     // to a weird interaction with the `conflicts_with` on `skip_blobimport`.

@@ -13,8 +13,10 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
 use cached_config::ConfigStore;
-use clap::ArgEnum;
+use clap::builder::PossibleValuesParser;
+use clap::ArgAction;
 use clap::Args;
+use clap::ValueEnum;
 use fbinit::FacebookInit;
 use observability::ObservabilityContext;
 use panichandler::Fate;
@@ -41,7 +43,7 @@ pub struct LoggingArgs {
     pub debug: bool,
 
     /// Log level to use
-    #[clap(long, conflicts_with = "debug", possible_values = &slog::LOG_LEVEL_NAMES)]
+    #[clap(long, conflicts_with = "debug", value_parser = PossibleValuesParser::new(&slog::LOG_LEVEL_NAMES))]
     pub log_level: Option<String>,
 
     /// Include only log messages with these slog::Record::tags() or
@@ -65,27 +67,22 @@ pub struct LoggingArgs {
     /// Note that this level is applied AFTER --log-level/--debug was applied,
     /// so it doesn't make sense to set this parameter to a lower level than
     /// --log-level.
-    #[clap(long, requires = "logview-category", possible_values = &slog::LOG_LEVEL_NAMES)]
+    #[clap(long, requires = "logview_category", value_parser = PossibleValuesParser::new(&slog::LOG_LEVEL_NAMES))]
     pub logview_additional_level_filter: Option<String>,
 
     /// Fate of the process when a panic happens
-    #[clap(long, arg_enum, default_value_t=PanicFate::Abort)]
+    #[clap(long, value_enum, default_value_t=PanicFate::Abort)]
     pub panic_fate: PanicFate,
 
     /// Whether to instantiate ObservabilityContext::Dynamic, which reads
     /// logging levels from configerator. Overwrites --log-level or --debug
     // For compatibility with existing usage, this arg takes value,
     // for example `--with-dynamic-observability=true`.
-    #[clap(
-        long,
-        parse(try_from_str),
-        default_value_t = false,
-        value_name = "BOOL"
-    )]
+    #[clap(long, default_value_t = false, value_name = "BOOL", action = ArgAction::Set)]
     pub with_dynamic_observability: bool,
 }
 
-#[derive(ArgEnum, Clone, Copy, Debug)]
+#[derive(ValueEnum, Clone, Copy, Debug)]
 #[clap(rename_all = "lower")]
 pub enum PanicFate {
     None,

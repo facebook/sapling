@@ -7,8 +7,8 @@
 
 use std::collections::HashSet;
 
-use clap::ArgEnum;
 use clap::Args;
+use clap::ValueEnum;
 use strum_macros::AsRefStr;
 use strum_macros::EnumString;
 use strum_macros::EnumVariantNames;
@@ -35,7 +35,9 @@ impl HashValidationArgs {
     }
 }
 
-#[derive(Debug, Clone, Copy, ArgEnum, AsRefStr, EnumString, EnumVariantNames)]
+#[derive(Debug, Clone, Copy, ValueEnum, AsRefStr, EnumString, EnumVariantNames)]
+// Forcing backward compatibility with clap-3 for user facing CLI arguments
+#[clap(rename_all = "PascalCase")]
 pub enum HashValidationArg {
     HgFileEnvelope,
 }

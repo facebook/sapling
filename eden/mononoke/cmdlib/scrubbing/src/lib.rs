@@ -29,7 +29,7 @@ pub struct ScrubArgs {
     #[clap(
         long,
         help_heading = "BLOBSTORE OPTIONS",
-        requires = "blobstore-scrub-action"
+        requires = "blobstore_scrub_action"
     )]
     pub blobstore_scrub_grace: Option<u64>,
 
@@ -38,7 +38,7 @@ pub struct ScrubArgs {
     #[clap(
         long,
         help_heading = "BLOBSTORE OPTIONS",
-        requires = "blobstore-scrub-action"
+        requires = "blobstore_scrub_action"
     )]
     pub blobstore_scrub_queue_peek_bound: Option<u64>,
 
@@ -47,7 +47,7 @@ pub struct ScrubArgs {
     #[clap(
         long,
         help_heading = "BLOBSTORE OPTIONS",
-        requires = "blobstore-scrub-action"
+        requires = "blobstore_scrub_action"
     )]
     pub blobstore_scrub_write_only_missing: Option<SrubWriteOnly>,
 }
@@ -73,22 +73,22 @@ impl AppExtension for ScrubAppExtension {
         let mut defaults = Vec::new();
         if let Some(action) = self.action {
             defaults.push((
-                "blobstore-scrub-action",
+                "blobstore_scrub_action",
                 <&'static str>::from(action).to_string(),
             ));
         }
         if let Some(grace) = self.grace {
-            defaults.push(("blobstore-scrub-grace", grace.as_secs().to_string()));
+            defaults.push(("blobstore_scrub_grace", grace.as_secs().to_string()));
         }
         if let Some(queue_peek_bound) = self.queue_peek_bound {
             defaults.push((
-                "blobstore-scrub-queue-peek-bound",
+                "blobstore_scrub_queue_peek_bound",
                 queue_peek_bound.as_secs().to_string(),
             ));
         }
         if let Some(write_only_missing) = self.write_only_missing {
             defaults.push((
-                "blobstore-scrub-write-only-missing",
+                "blobstore_scrub_write_only_missing",
                 <&'static str>::from(write_only_missing).to_string(),
             ));
         }

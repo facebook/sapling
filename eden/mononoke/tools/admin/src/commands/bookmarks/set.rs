@@ -53,7 +53,7 @@ pub struct BookmarksSetArgs {
     old_commit_id: Option<String>,
 
     /// Only set this bookmark if it does not already exist.
-    #[clap(long, conflicts_with = "old-commit-id")]
+    #[clap(long, conflicts_with = "old_commit_id")]
     create_only: bool,
 }
 

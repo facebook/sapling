@@ -27,7 +27,6 @@ use super::Repo;
 
 #[derive(Args)]
 pub struct FilestoreStoreArgs {
-    #[clap(parse(from_os_str))]
     file: PathBuf,
 
     #[clap(long)]

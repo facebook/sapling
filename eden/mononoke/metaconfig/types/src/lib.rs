@@ -1586,7 +1586,7 @@ pub struct WalkerJobParams {
     pub error_as_node_data_type: Option<String>,
 }
 
-#[derive(Debug, Copy, clap::ArgEnum, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, clap::ValueEnum, Clone, Eq, PartialEq, Hash)]
 /// The type of walker jobs deployed in production
 pub enum WalkerJobType {
     /// Invalid value

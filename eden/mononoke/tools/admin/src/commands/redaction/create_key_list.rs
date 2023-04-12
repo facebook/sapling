@@ -45,7 +45,7 @@ use super::Repo;
 use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
-#[clap(group(ArgGroup::new("files-input=file").args(&["files", "input-file"]).required(true)))]
+#[clap(group(ArgGroup::new("files-input=file").args(&["files", "input_file"]).required(true)))]
 pub struct RedactionCreateKeyListArgs {
     #[clap(flatten)]
     repo_args: RepoArgs,
@@ -64,11 +64,11 @@ pub struct RedactionCreateKeyListArgs {
     force: bool,
 
     /// Name of a file with a list of filenames to redact.
-    #[clap(long, parse(from_os_str))]
+    #[clap(long)]
     input_file: Option<PathBuf>,
 
     /// Name of a file to write the new key to.
-    #[clap(long, parse(from_os_str))]
+    #[clap(long)]
     output_file: Option<PathBuf>,
 
     /// Files to redact
@@ -86,7 +86,7 @@ pub struct RedactionCreateKeyListFromIdsArgs {
     keys: Vec<String>,
 
     /// Name of a file to write the new key to.
-    #[clap(long, parse(from_os_str))]
+    #[clap(long)]
     output_file: Option<PathBuf>,
 }
 

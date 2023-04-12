@@ -15,7 +15,9 @@ use std::num::NonZeroU64;
 
 use anyhow::format_err;
 use anyhow::Error;
+use clap::builder::ValueRange;
 use clap::Arg;
+use clap::ArgAction;
 use clap::ArgGroup;
 use clap::ArgMatches;
 use clap::Args;
@@ -90,88 +92,84 @@ impl SchemeArgs {
 /// The user can specify commit_ids by bookmark, hg commit ID, bonsai changeset ID, or
 /// a generic "commit_id", for which we will try to work out which kind of identifier
 /// the user has provided.
-fn add_commit_id_args_impl(
-    cmd: clap::Command<'_>,
-    required: bool,
-    multiple: bool,
-) -> clap::Command<'_> {
+fn add_commit_id_args_impl(cmd: clap::Command, required: bool, multiple: bool) -> clap::Command {
+    let num_args: ValueRange = if multiple { (1..).into() } else { 1.into() };
     cmd.arg(
-        Arg::with_name(ARG_COMMIT_ID)
+        Arg::new(ARG_COMMIT_ID)
             .short('i')
             .long("commit-id")
-            .takes_value(true)
-            .multiple(multiple)
+            .num_args(num_args)
             .number_of_values(1)
+            .action(ArgAction::Append)
             .help("Commit ID to query (bonsai or Hg)"),
     )
     .arg(
-        Arg::with_name(ARG_BOOKMARK)
+        Arg::new(ARG_BOOKMARK)
             .short('B')
             .long("bookmark")
-            .takes_value(true)
-            .multiple(multiple)
+            .num_args(num_args)
+            .action(ArgAction::Append)
             .number_of_values(1)
             .help("Bookmark to query"),
     )
     .arg(
-        Arg::with_name(ARG_HG_COMMIT_ID)
+        Arg::new(ARG_HG_COMMIT_ID)
             .long("hg-commit-id")
-            .takes_value(true)
-            .multiple(multiple)
+            .num_args(num_args)
+            .action(ArgAction::Append)
             .number_of_values(1)
             .help("Hg commit ID to query"),
     )
     .arg(
-        Arg::with_name(ARG_BONSAI_ID)
+        Arg::new(ARG_BONSAI_ID)
             .long("bonsai-id")
-            .takes_value(true)
-            .multiple(multiple)
+            .num_args(num_args)
+            .action(ArgAction::Append)
             .number_of_values(1)
             .help("Bonsai ID to query"),
     )
     .arg(
-        Arg::with_name(ARG_SNAPSHOT_ID)
+        Arg::new(ARG_SNAPSHOT_ID)
             .long("snapshot-id")
-            .takes_value(true)
-            .multiple(multiple)
+            .num_args(num_args)
+            .action(ArgAction::Append)
             .number_of_values(1)
             .help("Snapshot ID to query"),
     )
     .arg(
-        Arg::with_name(ARG_GIT_SHA1)
+        Arg::new(ARG_GIT_SHA1)
             .long("git")
-            .takes_value(true)
-            .multiple(multiple)
+            .num_args(num_args)
+            .action(ArgAction::Append)
             .number_of_values(1)
             .help("Git SHA-1 to query"),
     )
     .arg(
-        Arg::with_name(ARG_GLOBALREV)
+        Arg::new(ARG_GLOBALREV)
             .long("globalrev")
-            .takes_value(true)
-            .multiple(multiple)
+            .num_args(num_args)
+            .action(ArgAction::Append)
             .number_of_values(1)
             .help("Globalrev to query"),
     )
     .arg(
-        Arg::with_name(ARG_SVNREV)
+        Arg::new(ARG_SVNREV)
             .long("svnrev")
-            .takes_value(true)
-            .multiple(multiple)
+            .num_args(num_args)
+            .action(ArgAction::Append)
             .number_of_values(1)
             .help("SVN revision to query"),
     )
     .arg(
-        Arg::with_name(ARG_BUBBLE_ID)
+        Arg::new(ARG_BUBBLE_ID)
             .long("bubble-id")
-            .takes_value(true)
-            .multiple(false)
+            .num_args(1)
             .number_of_values(1)
             .help("Bubble id on which to check the bonsai commits"),
     )
     .group(
-        ArgGroup::with_name("commit")
-            .args(&[
+        ArgGroup::new("commit")
+            .args([
                 ARG_COMMIT_ID,
                 ARG_BOOKMARK,
                 ARG_HG_COMMIT_ID,
@@ -194,21 +192,21 @@ fn get_commit_ids(matches: &ArgMatches) -> Result<Vec<CommitId>, clap::Error> {
 /// Get the commit ids specified by the user.  They are returned in the order specified.
 fn get_commit_ids_impl(matches: &ArgMatches) -> Result<Vec<CommitId>, Error> {
     let bubble_id = matches
-        .value_of(ARG_BUBBLE_ID)
+        .get_one::<String>(ARG_BUBBLE_ID)
         .map(|id| id.parse::<NonZeroU64>())
         .transpose()?;
     let mut commit_ids = BTreeMap::new();
     if let (Some(indices), Some(values)) = (
         matches.indices_of(ARG_BOOKMARK),
-        matches.values_of(ARG_BOOKMARK),
+        matches.get_many::<String>(ARG_BOOKMARK),
     ) {
         for (index, value) in indices.zip(values) {
-            commit_ids.insert(index, CommitId::Bookmark(value.to_string()));
+            commit_ids.insert(index, CommitId::Bookmark(value.clone()));
         }
     }
     if let (Some(indices), Some(values)) = (
         matches.indices_of(ARG_HG_COMMIT_ID),
-        matches.values_of(ARG_HG_COMMIT_ID),
+        matches.get_many::<String>(ARG_HG_COMMIT_ID),
     ) {
         for (index, value) in indices.zip(values) {
             let mut id = [0; 20];
@@ -218,7 +216,7 @@ fn get_commit_ids_impl(matches: &ArgMatches) -> Result<Vec<CommitId>, Error> {
     }
     if let (Some(indices), Some(values)) = (
         matches.indices_of(ARG_BONSAI_ID),
-        matches.values_of(ARG_BONSAI_ID),
+        matches.get_many::<String>(ARG_BONSAI_ID),
     ) {
         for (index, value) in indices.zip(values) {
             let mut id = [0; 32];
@@ -228,7 +226,7 @@ fn get_commit_ids_impl(matches: &ArgMatches) -> Result<Vec<CommitId>, Error> {
     }
     if let (Some(indices), Some(values)) = (
         matches.indices_of(ARG_SNAPSHOT_ID),
-        matches.values_of(ARG_SNAPSHOT_ID),
+        matches.get_many::<String>(ARG_SNAPSHOT_ID),
     ) {
         for (index, value) in indices.zip(values) {
             let mut id = [0; 32];
@@ -238,7 +236,7 @@ fn get_commit_ids_impl(matches: &ArgMatches) -> Result<Vec<CommitId>, Error> {
     }
     if let (Some(indices), Some(values)) = (
         matches.indices_of(ARG_GIT_SHA1),
-        matches.values_of(ARG_GIT_SHA1),
+        matches.get_many::<String>(ARG_GIT_SHA1),
     ) {
         for (index, value) in indices.zip(values) {
             let mut hash = [0; 20];
@@ -248,7 +246,7 @@ fn get_commit_ids_impl(matches: &ArgMatches) -> Result<Vec<CommitId>, Error> {
     }
     if let (Some(indices), Some(values)) = (
         matches.indices_of(ARG_GLOBALREV),
-        matches.values_of(ARG_GLOBALREV),
+        matches.get_many::<String>(ARG_GLOBALREV),
     ) {
         for (index, value) in indices.zip(values) {
             commit_ids.insert(index, CommitId::Globalrev(value.parse::<u64>()?));
@@ -256,7 +254,7 @@ fn get_commit_ids_impl(matches: &ArgMatches) -> Result<Vec<CommitId>, Error> {
     }
     if let (Some(indices), Some(values)) = (
         matches.indices_of(ARG_SVNREV),
-        matches.values_of(ARG_SVNREV),
+        matches.get_many::<String>(ARG_SVNREV),
     ) {
         for (index, value) in indices.zip(values) {
             commit_ids.insert(index, CommitId::Svnrev(value.parse::<u64>()?));
@@ -264,7 +262,7 @@ fn get_commit_ids_impl(matches: &ArgMatches) -> Result<Vec<CommitId>, Error> {
     }
     if let (Some(indices), Some(values)) = (
         matches.indices_of(ARG_COMMIT_ID),
-        matches.values_of(ARG_COMMIT_ID),
+        matches.get_many::<String>(ARG_COMMIT_ID),
     ) {
         for (index, value) in indices.zip(values) {
             commit_ids.insert(index, CommitId::Resolve(value.to_string()));
@@ -315,11 +313,11 @@ impl clap::FromArgMatches for CommitIdArgs {
 }
 
 impl clap::Args for CommitIdArgs {
-    fn augment_args(cmd: clap::Command<'_>) -> clap::Command<'_> {
+    fn augment_args(cmd: clap::Command) -> clap::Command {
         add_commit_id_args_impl(cmd, true, false)
     }
 
-    fn augment_args_for_update(cmd: clap::Command<'_>) -> clap::Command<'_> {
+    fn augment_args_for_update(cmd: clap::Command) -> clap::Command {
         add_commit_id_args_impl(cmd, true, false)
     }
 }
@@ -351,11 +349,11 @@ impl clap::FromArgMatches for OptionalCommitIdArgs {
 }
 
 impl clap::Args for OptionalCommitIdArgs {
-    fn augment_args(cmd: clap::Command<'_>) -> clap::Command<'_> {
+    fn augment_args(cmd: clap::Command) -> clap::Command {
         add_commit_id_args_impl(cmd, false, false)
     }
 
-    fn augment_args_for_update(cmd: clap::Command<'_>) -> clap::Command<'_> {
+    fn augment_args_for_update(cmd: clap::Command) -> clap::Command {
         add_commit_id_args_impl(cmd, false, false)
     }
 }
@@ -385,11 +383,11 @@ impl clap::FromArgMatches for CommitIdsArgs {
 }
 
 impl clap::Args for CommitIdsArgs {
-    fn augment_args(cmd: clap::Command<'_>) -> clap::Command<'_> {
+    fn augment_args(cmd: clap::Command) -> clap::Command {
         add_commit_id_args_impl(cmd, false, true)
     }
 
-    fn augment_args_for_update(cmd: clap::Command<'_>) -> clap::Command<'_> {
+    fn augment_args_for_update(cmd: clap::Command) -> clap::Command {
         add_commit_id_args_impl(cmd, false, true)
     }
 }

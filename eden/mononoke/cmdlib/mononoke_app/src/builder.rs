@@ -28,8 +28,8 @@ use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
 use clap::Args;
 use clap::Command;
+use clap::CommandFactory;
 use clap::FromArgMatches;
-use clap::IntoApp;
 use cmdlib_caching::init_cachelib;
 use cmdlib_caching::CachelibArgs;
 use cmdlib_caching::CachelibSettings;
@@ -177,17 +177,17 @@ impl MononokeAppBuilder {
 
     pub fn build<AppArgs>(&mut self) -> Result<MononokeApp>
     where
-        AppArgs: IntoApp,
+        AppArgs: CommandFactory,
     {
         self.build_with_subcommands::<AppArgs>(Vec::new())
     }
 
-    pub fn build_with_subcommands<'sub, AppArgs>(
-        &'sub mut self,
-        subcommands: Vec<Command<'sub>>,
+    pub fn build_with_subcommands<'a, AppArgs>(
+        &'a mut self,
+        subcommands: Vec<Command>,
     ) -> Result<MononokeApp>
     where
-        AppArgs: IntoApp,
+        AppArgs: CommandFactory,
     {
         for (arg, default) in self.cachelib_settings.arg_defaults() {
             self.defaults.insert(arg, default);
@@ -207,19 +207,26 @@ impl MononokeAppBuilder {
 
         let mut app = AppArgs::command();
 
-        // Save app-generated about so we can restore it.
-        let about = app.get_about();
-        let long_about = app.get_long_about();
+        {
+            // Save app-generated about so we can restore it.
+            let about = app.get_about().cloned();
+            let long_about = app.get_long_about().cloned();
 
-        app = RuntimeArgs::augment_args_for_update(app);
-        app = EnvironmentArgs::augment_args_for_update(app);
-        for (_type_id, ext) in self.extensions.iter() {
-            app = ext.augment_args(app);
+            app = RuntimeArgs::augment_args_for_update(app);
+            app = EnvironmentArgs::augment_args_for_update(app);
+            for (_type_id, ext) in self.extensions.iter() {
+                app = ext.augment_args(app);
+            }
+
+            // Adding the additional args overrode the about messages.
+            // Restore them.
+            if let Some(about) = about {
+                app = app.about(about);
+            }
+            if let Some(long_about) = long_about {
+                app = app.long_about(long_about);
+            }
         }
-
-        // Adding the additional args overrode the about messages.
-        // Restore them.
-        app = app.about(about).long_about(long_about);
 
         if !subcommands.is_empty() {
             app = app
@@ -229,7 +236,7 @@ impl MononokeAppBuilder {
         }
 
         for (name, default) in self.defaults.iter() {
-            app = app.mut_arg(*name, |arg| arg.default_value(default.as_str()));
+            app = app.mut_arg(name, |arg| arg.default_value(default));
         }
 
         let args = app.get_matches();

@@ -91,7 +91,7 @@ struct RoundTrip {
     config: Option<String>,
 
     /// Changesets from which to start traversing
-    #[clap(required = true, parse(try_from_str))]
+    #[clap(required = true)]
     start_points: Vec<HgChangesetId>,
 }
 
@@ -99,7 +99,6 @@ struct RoundTrip {
 #[derive(Parser)]
 struct HgManifest {
     /// Starting point of traversal
-    #[clap(parse(try_from_str))]
     hg_changeset_id: HgChangesetId,
 
     /// Count of changeset to traverse

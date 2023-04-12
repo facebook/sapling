@@ -22,8 +22,8 @@ use crate::ScscApp;
 #[derive(clap::Parser)]
 #[clap(group(
     clap::ArgGroup::new("hint")
-    .args(&["hint-exact-commit", "hint-ancestor-of-commit", "hint-descendant-of-commit",
-            "hint-ancestor-of-bookmark", "hint-descendant-of-bookmark"])
+    .args(&["hint_exact_commit", "hint_ancestor_of_commit", "hint_descendant_of_commit",
+            "hint_ancestor_of_bookmark", "hint_descendant_of_bookmark"])
 ))]
 /// Sync a commit between repositories
 pub(super) struct CommandArgs {

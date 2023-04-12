@@ -42,7 +42,6 @@ pub struct CommandArgs {
     repo_args: RepoArgs,
 
     /// Path to a file containing a JSON-encoded bonsai changeset
-    #[clap(parse(from_os_str))]
     bonsai_file: PathBuf,
 }
 

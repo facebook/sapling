@@ -10,7 +10,7 @@ use std::fmt;
 use anyhow::Result;
 use bookmarks_types::BookmarkKey;
 use bookmarks_types::Freshness;
-use clap::ArgEnum;
+use clap::ValueEnum;
 use context::CoreContext;
 use futures::future::BoxFuture;
 use futures::stream::BoxStream;
@@ -118,7 +118,15 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
 }
 
 /// Describes why a bookmark was moved
-#[derive(Clone, Copy, Debug, Eq, PartialEq, ArgEnum, mysql::OptTryFromRowField)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    PartialEq,
+    ValueEnum,
+    mysql::OptTryFromRowField
+)]
 pub enum BookmarkUpdateReason {
     /// Bookmark was updated by a pushrebase.
     Pushrebase,

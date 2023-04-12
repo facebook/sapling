@@ -24,7 +24,7 @@ use super::Repo;
 use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
-#[clap(group(ArgGroup::new("file-size-and-num").args(&["commit-file-size", "commit-file-num"]).multiple(true)))]
+#[clap(group(ArgGroup::new("file-size-and-num").args(&["commit_file_size", "commit_file_num"]).multiple(true)))]
 pub struct CommitSplitArgs {
     /// Commit ID to split
     commit_id: String,

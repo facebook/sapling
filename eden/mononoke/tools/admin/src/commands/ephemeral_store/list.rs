@@ -24,11 +24,11 @@ const DEFAULT_MAX_KEYS_FOR_LIST: u32 = 100;
 pub struct EphemeralStoreListArgs {
     /// The ID of any one of the changesets for which the bubble blob data needs to
     /// be listed.
-    #[clap(long, short = 'i', conflicts_with = "bubble-id")]
+    #[clap(long, short = 'i', conflicts_with = "bubble_id")]
     changeset_id: Option<String>,
 
     /// The ID of the bubble for which the blob data needs to be listed.
-    #[clap(long, short = 'b', conflicts_with = "changeset-id")]
+    #[clap(long, short = 'b', conflicts_with = "changeset_id")]
     bubble_id: Option<BubbleId>,
 
     /// The maximum number of blob keys listed in the output. Defaults to 100.

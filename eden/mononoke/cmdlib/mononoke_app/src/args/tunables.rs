@@ -15,11 +15,11 @@ pub struct TunablesArgs {
     pub tunables_config: Option<String>,
 
     /// Tunables static config local path
-    #[clap(long, conflicts_with = "tunables-config")]
+    #[clap(long, conflicts_with = "tunables_config")]
     pub tunables_local_path: Option<String>,
 
     /// Use the default values for all tunables (useful for tests)
-    #[clap(long, conflicts_with_all = &["tunables-config", "tunables-local-path"])]
+    #[clap(long, conflicts_with_all = &["tunables_config", "tunables_local_path"])]
     pub disable_tunables: bool,
 }
 

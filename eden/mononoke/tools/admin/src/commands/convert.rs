@@ -26,14 +26,14 @@ pub struct CommandArgs {
     repo: RepoArgs,
 
     /// Identity scheme to convert from
-    #[clap(long, short = 'f', arg_enum, value_name = "SCHEME")]
+    #[clap(long, short = 'f', value_enum, value_name = "SCHEME")]
     from: Option<IdentityScheme>,
 
     /// Identity scheme to
     #[clap(
         long,
         short = 't',
-        arg_enum,
+        value_enum,
         value_name = "SCHEME",
         required = true,
         use_value_delimiter = true

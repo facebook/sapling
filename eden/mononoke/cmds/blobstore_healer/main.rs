@@ -94,6 +94,7 @@ struct MononokeBlobstoreHealerArgs {
     shard_range: ShardRange,
 }
 
+#[derive(Clone, Copy)]
 struct ShardRange {
     left: Bound<usize>,
     right: Bound<usize>,

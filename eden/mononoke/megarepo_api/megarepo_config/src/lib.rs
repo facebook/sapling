@@ -11,6 +11,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use async_trait::async_trait;
+use clap::ArgAction;
 use clap::Args;
 use context::CoreContext;
 pub use megarepo_configs::types::MergeMode;
@@ -63,12 +64,7 @@ pub struct MegarepoConfigsArgs {
     /// requires the FB environment to work properly.
     // For compatibility with existing usage, this arg takes value
     // for example `--with-test-megarepo-configs-client=true`.
-    #[clap(
-        long,
-        parse(try_from_str),
-        default_value_t = false,
-        value_name = "BOOL"
-    )]
+    #[clap(long, default_value_t = false, value_name = "BOOL", action = ArgAction::Set)]
     pub with_test_megarepo_configs_client: bool,
 }
 

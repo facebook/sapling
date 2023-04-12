@@ -15,8 +15,8 @@ use blobstore::BlobstoreGetData;
 use bytes::Bytes;
 use chrono::Local;
 use chrono::TimeZone;
-use clap::ArgEnum;
 use clap::Args;
+use clap::ValueEnum;
 use cmdlib_displaying::hexdump;
 use context::CoreContext;
 use git_types::Tree as GitTree;
@@ -37,7 +37,7 @@ use tokio::io::AsyncWriteExt;
 pub struct BlobstoreFetchArgs {
     /// Write raw blob bytes to the given filename instead of
     /// printing to stdout.
-    #[clap(long, short = 'o', value_name = "FILE", parse(from_os_str))]
+    #[clap(long, short = 'o', value_name = "FILE")]
     output: Option<PathBuf>,
 
     /// Blobstore key to fetch.
@@ -49,11 +49,11 @@ pub struct BlobstoreFetchArgs {
     quiet: bool,
 
     /// Decode as a particular type.
-    #[clap(long, arg_enum, default_value = "auto")]
+    #[clap(long, value_enum, default_value = "auto")]
     decode_as: DecodeAs,
 }
 
-#[derive(ArgEnum, Copy, Clone, Eq, PartialEq)]
+#[derive(ValueEnum, Copy, Clone, Eq, PartialEq)]
 pub enum DecodeAs {
     Hex,
     Auto,

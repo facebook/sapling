@@ -18,6 +18,7 @@ use blake2::Digest;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
 use borrowed::borrowed;
+use clap::builder::NonEmptyStringValueParser;
 use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
@@ -72,7 +73,7 @@ enum StreamingCloneSubCommand {
 #[derive(Args)]
 struct StreamingCloneSubCommandArgs {
     /// Path to .hg folder with changelog
-    #[clap(long, forbid_empty_values = true)]
+    #[clap(long, value_parser = NonEmptyStringValueParser::new())]
     dot_hg_path: String,
     /// Max size of the data entry that we'll write to the blobstore
     #[clap(long, default_value_t = 950 * 1024)]
@@ -84,7 +85,7 @@ struct StreamingCloneSubCommandArgs {
     #[clap(long, action)]
     skip_last_chunk: bool,
     /// Do not do anything if we have less than that number of chunks to upload
-    #[clap(long, conflicts_with = "skip-last-chunk")]
+    #[clap(long, conflicts_with = "skip_last_chunk")]
     no_upload_if_less_than_chunks: Option<usize>,
 }
 

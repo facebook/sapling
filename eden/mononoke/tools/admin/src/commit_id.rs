@@ -12,7 +12,7 @@ use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
-use clap::ArgEnum;
+use clap::ValueEnum;
 use context::CoreContext;
 use futures::future::join;
 use mercurial_types::HgChangesetId;
@@ -25,7 +25,7 @@ use strum_macros::ToString;
 pub trait Repo =
     BonsaiHgMappingRef + BonsaiGitMappingRef + BonsaiGlobalrevMappingRef + BonsaiSvnrevMappingRef;
 
-#[derive(Copy, Clone, Eq, PartialEq, ArgEnum, ToString)]
+#[derive(Copy, Clone, Eq, PartialEq, ValueEnum, ToString)]
 #[strum(serialize_all = "kebab_case")]
 pub enum IdentityScheme {
     /// Mononoke bonsai hash

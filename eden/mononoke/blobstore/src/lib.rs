@@ -27,7 +27,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use bytes::Bytes;
-use clap::ArgEnum;
+use clap::ValueEnum;
 use context::CoreContext;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -410,10 +410,12 @@ pub const DEFAULT_PUT_BEHAVIOUR: PutBehaviour = PutBehaviour::IfAbsent;
     Display,
     EnumIter,
     EnumString,
-    ArgEnum,
+    ValueEnum,
     Eq,
     PartialEq
 )]
+// Forcing backward compatibility with clap-3 for user facing CLI arguments
+#[clap(rename_all = "PascalCase")]
 pub enum PutBehaviour {
     /// Blobstore::put will overwrite even if key is already present
     Overwrite,

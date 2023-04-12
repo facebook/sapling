@@ -35,7 +35,7 @@ use multiplexedblob::SrubWriteOnly;
     ArgGroup::new("walkerargs")
         .required(true)
         .multiple(true)
-        .args(&["repo-id", "repo-name", "sharded-service-name", "walker-type"]),
+        .args(&["repo_id", "repo_name", "sharded_service_name", "walker_type"]),
 ))]
 struct WalkerArgs {
     /// List of Repo IDs or Repo Names used when sharded-service-name
@@ -45,12 +45,12 @@ struct WalkerArgs {
 
     /// The name of ShardManager service to be used when the walker
     /// functionality is desired to be executed in a sharded setting.
-    #[clap(long, conflicts_with = "multirepos", requires = "walker-type")]
+    #[clap(long, conflicts_with = "multirepos", requires = "walker_type")]
     pub sharded_service_name: Option<String>,
 
     /// The type of the walker job that needs to run for the current
     /// repo.
-    #[clap(arg_enum, long, conflicts_with = "multirepos")]
+    #[clap(long, value_enum, conflicts_with = "multirepos")]
     pub walker_type: Option<WalkerJobType>,
 }
 

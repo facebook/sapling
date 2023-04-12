@@ -21,7 +21,7 @@ use mononoke_types::ChangesetId;
 #[clap(group(
     ArgGroup::new("changeset")
         .required(true)
-        .args(&["changeset-id", "hg-id", "bookmark"]),
+        .args(&["changeset_id", "hg_id", "bookmark"]),
 ))]
 pub struct ChangesetArgs {
     /// Bonsai changeset id

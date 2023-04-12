@@ -7,7 +7,7 @@
 
 use std::collections::HashSet;
 
-use clap::ArgEnum;
+use clap::ValueEnum;
 use once_cell::sync::Lazy;
 use strum::IntoEnumIterator;
 use strum_macros::AsRefStr;
@@ -17,7 +17,9 @@ use strum_macros::EnumVariantNames;
 use crate::detail::graph::NodeType;
 use crate::detail::state::InternedType;
 
-#[derive(Debug, Clone, Copy, ArgEnum, AsRefStr, EnumString, EnumVariantNames)]
+#[derive(Debug, Clone, Copy, ValueEnum, AsRefStr, EnumString, EnumVariantNames)]
+// Forcing backward compatibility with clap-3 for user facing CLI arguments
+#[clap(rename_all = "PascalCase")]
 pub enum InternedTypeArg {
     All,
     FileUnodeId,
@@ -78,7 +80,9 @@ pub static DEFAULT_INTERNED_TYPES_STR: Lazy<Vec<&'static str>> = Lazy::new(|| {
 });
 
 /// We can jump for ChangesetId to all of these
-#[derive(Debug, Clone, Copy, ArgEnum, AsRefStr, EnumString, EnumVariantNames)]
+#[derive(Debug, Clone, Copy, ValueEnum, AsRefStr, EnumString, EnumVariantNames)]
+// Forcing backward compatibility with clap-3 for user facing CLI arguments
+#[clap(rename_all = "PascalCase")]
 pub enum ChunkByPublicArg {
     BonsaiHgMapping,
     PhaseMapping,

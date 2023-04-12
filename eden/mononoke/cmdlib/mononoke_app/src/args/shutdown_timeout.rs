@@ -14,11 +14,11 @@ use clap::Args;
 #[derive(Args, Debug)]
 pub struct ShutdownTimeoutArgs {
     /// Number of seconds to wait after receiving a shutdown signal before shutting down
-    #[clap(long, default_value = "0", parse(try_from_str=duration_secs_from_str))]
+    #[clap(long, default_value = "0", value_parser = duration_secs_from_str)]
     pub shutdown_grace_period: Duration,
 
     /// Number of seconds to wait for requests to complete during shutdown
-    #[clap(long, default_value = "10", parse(try_from_str=duration_secs_from_str))]
+    #[clap(long, default_value = "10", value_parser = duration_secs_from_str)]
     pub shutdown_timeout: Duration,
 }
 

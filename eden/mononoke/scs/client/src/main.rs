@@ -84,9 +84,14 @@ impl BaseApp for ScscApp {
     version(&**SHORT_VERSION),
     long_version(&**LONG_VERSION),
     term_width(textwrap::termwidth()),
+    disable_help_flag = true,
 )]
 /// Send requests to the Source Control Service
 struct ScscArgs {
+    // Add help without a short version to avoid conflict with -h for host from `ConnectionArgs`
+    #[clap(long)]
+    /// Print help information
+    help: bool,
     /// Should the output of the command be JSON?
     #[clap(long, global = true)]
     json: bool,

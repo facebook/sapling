@@ -281,7 +281,7 @@ impl From<BookmarkPrefix> for Value {
     Hash,
     PartialEq,
     Copy,
-    clap::ArgEnum,
+    clap::ValueEnum,
     mysql::OptTryFromRowField
 )]
 pub enum BookmarkKind {
@@ -384,9 +384,9 @@ impl From<BookmarkKind> for Value {
     Copy,
     Ord,
     PartialOrd,
-    clap::ArgEnum
+    clap::ValueEnum,
+    mysql::OptTryFromRowField
 )]
-#[derive(mysql::OptTryFromRowField)]
 pub enum BookmarkCategory {
     /// A bookmark created in Mononoke or imported from a Git branch (ref living under
     /// `refs/heads` or `refs/remotes/<remote_name>`)

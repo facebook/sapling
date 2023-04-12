@@ -12,7 +12,7 @@ use std::io::Write;
 
 use anyhow::bail;
 use anyhow::Result;
-use clap::ArgEnum;
+use clap::ValueEnum;
 use maplit::btreeset;
 use serde::Serialize;
 use source_control as thrift;
@@ -24,7 +24,7 @@ use crate::library::diff::diff_files;
 use crate::render::Render;
 use crate::ScscApp;
 
-#[derive(ArgEnum, Clone, Copy, Debug)]
+#[derive(ValueEnum, Clone, Copy, Debug)]
 enum DiffFormat {
     RawDiff,
     MetadataDiff,
@@ -46,7 +46,7 @@ pub(super) struct CommandArgs {
     #[clap(long)]
     /// Only list differing paths instead of printing the diff.
     paths_only: bool,
-    #[clap(long, conflicts_with = "paths-only")]
+    #[clap(long, conflicts_with = "paths_only")]
     /// Instead of generating a real diff let's generate a placeholder diff that just says that file differs.
     placeholders_only: bool,
     #[clap(long, short = 'O')]
@@ -62,7 +62,7 @@ pub(super) struct CommandArgs {
     /// Limit the total size in bytes of returned diffs.
     diff_size_limit: Option<i64>,
     /// The format of the diff.
-    #[clap(long, short = 'f', arg_enum, default_value_t = DiffFormat::RawDiff)]
+    #[clap(long, short = 'f', value_enum, default_value_t = DiffFormat::RawDiff)]
     diff_format: DiffFormat,
 }
 

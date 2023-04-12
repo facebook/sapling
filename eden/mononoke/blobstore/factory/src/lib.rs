@@ -8,6 +8,7 @@
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 
 use arg_extensions::ArgDefaults;
+use clap::ArgAction;
 use clap::Args;
 
 mod args;
@@ -51,7 +52,7 @@ pub struct ReadOnlyStorage(pub bool);
 
 impl ArgDefaults for ReadOnlyStorage {
     fn arg_defaults(&self) -> Vec<(&'static str, String)> {
-        vec![("with-readonly-storage", self.0.to_string())]
+        vec![("with_readonly_storage", self.0.to_string())]
     }
 }
 
@@ -70,9 +71,9 @@ pub struct ReadOnlyStorageArgs {
     #[clap(
         long,
         value_name = "BOOL",
-        parse(try_from_str),
         default_value = "false",
-        default_missing_value = "true"
+        default_missing_value = "true",
+        action = ArgAction::Set
     )]
     pub with_readonly_storage: bool,
 }

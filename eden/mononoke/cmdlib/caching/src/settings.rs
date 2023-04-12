@@ -41,13 +41,13 @@ pub struct CachelibSettings {
 impl CachelibSettings {
     pub fn arg_defaults(&self) -> Vec<(&'static str, String)> {
         let mut defaults = vec![
-            ("cache-size-gb", (self.cache_size / ONE_GIB).to_string()),
+            ("cache_size_gb", (self.cache_size / ONE_GIB).to_string()),
             (
-                "cachelib-rebalancing-interval-secs",
+                "cachelib_rebalancing_interval_secs",
                 self.rebalancing_interval.as_secs().to_string(),
             ),
             (
-                "blobstore-cachelib-only",
+                "blobstore_cachelib_only",
                 self.blobstore_cachelib_only.to_string(),
             ),
         ];

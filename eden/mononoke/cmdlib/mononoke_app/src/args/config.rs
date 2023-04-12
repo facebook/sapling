@@ -11,7 +11,7 @@ use clap::ArgGroup;
 use clap::Args;
 
 #[derive(Args, Debug)]
-#[clap(group(ArgGroup::new("config").args(&["config-path", "config-tier", "prod"]).required(true)))]
+#[clap(group(ArgGroup::new("config").args(&["config_path", "config_tier", "prod"]).required(true)))]
 pub struct ConfigArgs {
     /// Path to Mononoke config
     #[clap(long, alias = "mononoke-config-path")]

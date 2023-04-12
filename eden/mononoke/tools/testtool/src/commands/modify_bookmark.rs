@@ -40,7 +40,7 @@ pub enum BookmarkOperation {
         bookmark: BookmarkKey,
 
         /// Bookmark update reason
-        #[clap(long, arg_enum, default_value = "test-move")]
+        #[clap(long, value_enum, default_value = "test-move")]
         reason: BookmarkUpdateReason,
 
         /// Changeset bookmark should be created at
@@ -52,7 +52,7 @@ pub enum BookmarkOperation {
         bookmark: BookmarkKey,
 
         /// Bookmark update reason
-        #[clap(long, arg_enum, default_value = "test-move")]
+        #[clap(long, value_enum, default_value = "test-move")]
         reason: BookmarkUpdateReason,
 
         /// Changeset bookmark is being moved from
@@ -73,7 +73,7 @@ pub enum BookmarkOperation {
         bookmark: BookmarkKey,
 
         /// Bookmark update reason
-        #[clap(long, arg_enum, default_value = "test-move")]
+        #[clap(long, value_enum, default_value = "test-move")]
         reason: BookmarkUpdateReason,
 
         /// Changeset bookmark is being deleted from

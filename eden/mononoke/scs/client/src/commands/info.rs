@@ -40,7 +40,7 @@ pub(super) struct CommandArgs {
     scheme_args: SchemeArgs,
     #[clap(flatten)]
     commit_id_args: CommitIdArgs,
-    #[clap(long, short, multiple_values = true)]
+    #[clap(long, short, num_args = 1..)]
     /// Path
     path: Option<Vec<String>>,
     #[clap(long)]

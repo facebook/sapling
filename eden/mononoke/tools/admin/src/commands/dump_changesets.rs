@@ -24,10 +24,10 @@ use changesets::ChangesetEntry;
 use changesets::Changesets;
 use changesets::ChangesetsArc;
 use changesets::ChangesetsRef;
-use clap::ArgEnum;
 use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
+use clap::ValueEnum;
 use context::CoreContext;
 use futures::compat::Stream01CompatExt;
 use futures::future;
@@ -46,7 +46,7 @@ use skiplist::SkiplistIndexArc;
 
 use crate::commit_id::parse_commit_id;
 
-#[derive(Debug, Clone, Copy, ArgEnum)]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 enum Format {
     /// Thrift serialized ChangesetEntry, with info about repo, parents and generation number.
     Thrift,
@@ -69,10 +69,10 @@ pub struct CommandArgs {
     #[clap(long)]
     merge_file: Vec<String>,
     /// What format to write to the file.
-    #[clap(long, arg_enum, default_value_t=Format::Thrift)]
+    #[clap(long, value_enum, default_value_t=Format::Thrift)]
     output_format: Format,
     /// What format to read files with. Plaintext files can be in hg format.
-    #[clap(long, arg_enum, default_value_t=Format::Thrift)]
+    #[clap(long, value_enum, default_value_t=Format::Thrift)]
     input_format: Format,
 
     #[clap(subcommand)]

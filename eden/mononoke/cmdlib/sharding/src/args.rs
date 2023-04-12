@@ -21,10 +21,10 @@ use crate::ShardedProcessExecutor;
 pub struct ShardedExecutorArgs {
     /// The name of the ShardManager service corresponding to this service's region.
     /// If this argument isn't provided, the service will operate in non-sharded mode.
-    #[clap(long, requires = "sharded-scope-name")]
+    #[clap(long, requires = "sharded_scope_name")]
     pub sharded_service_name: Option<String>,
     /// The scope of the ShardManager service that this service corresponds to.
-    #[clap(long, requires = "sharded-service-name")]
+    #[clap(long, requires = "sharded_service_name")]
     pub sharded_scope_name: Option<String>,
 }
 

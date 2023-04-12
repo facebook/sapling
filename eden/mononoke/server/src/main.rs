@@ -93,7 +93,7 @@ struct MononokeServerArgs {
     #[clap(long)]
     land_service_client_cert: Option<String>,
     /// Path to a file with land service client private key
-    #[clap(long, requires = "land-service-client-cert")]
+    #[clap(long, requires = "land_service_client_cert")]
     land_service_client_private_key: Option<String>,
 }
 

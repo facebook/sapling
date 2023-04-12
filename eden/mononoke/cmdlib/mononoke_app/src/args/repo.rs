@@ -21,8 +21,8 @@ use mononoke_types::RepositoryId;
 // For convenience first we define macro for generating appropiate RepoArgs
 // structure that can be used with clap derive structs. Each struct adds args
 // for providing repo using id or name.
-fn augment_args<'a>(
-    cmd: Command<'a>,
+fn augment_args(
+    cmd: Command,
     ident: &'static str,
     required: bool,
     name_arg: &'static str,
@@ -30,7 +30,7 @@ fn augment_args<'a>(
     name_help: &'static str,
     id_arg: &'static str,
     id_help: &'static str,
-) -> Command<'a> {
+) -> Command {
     cmd.arg(
         Arg::new(id_arg)
             .long(id_arg)
@@ -51,7 +51,7 @@ fn augment_args<'a>(
     .group(
         ArgGroup::new(ident)
             .required(required)
-            .args(&[id_arg, name_arg]),
+            .args([id_arg, name_arg]),
     )
 }
 
@@ -191,7 +191,7 @@ repo_args_optional!(
     ArgGroup::new("multirepos")
         .multiple(true)
         .conflicts_with("repo")
-        .args(&["repo-id", "repo-name"]),
+        .args(&["repo_id", "repo_name"]),
 ))]
 pub struct MultiRepoArgs {
     /// Numeric repository ID

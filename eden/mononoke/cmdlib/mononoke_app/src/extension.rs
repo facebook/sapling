@@ -46,7 +46,7 @@ pub trait AppExtension: Send + Sync + 'static {
 
 // Internal trait to hide the concrete extension type.
 pub(crate) trait BoxedAppExtension: Send + Sync + 'static {
-    fn augment_args<'help>(&self, app: Command<'help>) -> Command<'help>;
+    fn augment_args(&self, app: Command) -> Command;
     fn arg_defaults(&self) -> Vec<(&'static str, String)>;
     fn parse_args(&self, args: &ArgMatches) -> Result<Box<dyn BoxedAppExtensionArgs>>;
 }
@@ -64,7 +64,7 @@ impl<Ext: AppExtension> AppExtensionBox<Ext> {
 }
 
 impl<Ext: AppExtension> BoxedAppExtension for AppExtensionBox<Ext> {
-    fn augment_args<'help>(&self, command: Command<'help>) -> Command<'help> {
+    fn augment_args(&self, command: Command) -> Command {
         Ext::Args::augment_args_for_update(command)
     }
 

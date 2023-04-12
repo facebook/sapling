@@ -20,11 +20,11 @@ use super::Repo;
 pub struct EphemeralStoreInfoArgs {
     /// The ID of any one of the changesets for which the bubble metadata is
     /// requested.
-    #[clap(long, short = 'i', conflicts_with = "bubble-id")]
+    #[clap(long, short = 'i', conflicts_with = "bubble_id")]
     changeset_id: Option<String>,
 
     /// The ID of the bubble for which the metadata is requested.
-    #[clap(long, short = 'b', conflicts_with = "changeset-id")]
+    #[clap(long, short = 'b', conflicts_with = "changeset_id")]
     bubble_id: Option<BubbleId>,
 }
 

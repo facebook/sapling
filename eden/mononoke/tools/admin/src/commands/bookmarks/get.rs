@@ -22,7 +22,7 @@ pub struct BookmarksGetArgs {
     name: BookmarkKey,
 
     /// Commit identity schemes to display
-    #[clap(long, short='S', arg_enum, default_values = &["bonsai"], use_value_delimiter = true)]
+    #[clap(long, short='S', value_enum, default_values = &["bonsai"], use_value_delimiter = true)]
     schemes: Vec<IdentityScheme>,
 }
 

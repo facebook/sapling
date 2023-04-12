@@ -62,7 +62,7 @@ pub struct ChunkingArgs {
     #[clap(long, short = 'p')]
     pub chunk_by_public: Vec<ChunkByPublicArg>,
     /// Set the direction to proceed through changesets
-    #[clap(long, short = 'd', requires = "chunk-by-public")]
+    #[clap(long, short = 'd', requires = "chunk_by_public")]
     pub chunk_direction: Option<Direction>,
     /// How many changesets to include in a chunk.
     #[clap(long, short = 'k', default_value = "100000")]
@@ -76,7 +76,7 @@ pub struct ChunkingArgs {
     pub allow_remaining_deferred: bool,
 
     /// Include in InternedTypes to flush between chunks
-    #[clap(long, short = 't', default_values = &DEFAULT_INTERNED_TYPES_STR)]
+    #[clap(long, short = 't', default_values = &*DEFAULT_INTERNED_TYPES_STR)]
     pub include_chunk_clear_interned_type: Vec<InternedTypeArg>,
     /// Exclude from InternedTypes to flush between chunks
     #[clap(long, short = 'T')]
@@ -91,12 +91,12 @@ pub struct ChunkingArgs {
 
     /// Set the repo upper bound used by chunking instead of loading it.
     /// Inclusive. Useful for reproducing issues from a particular chunk.
-    #[clap(long, requires = "chunk-by-public")]
+    #[clap(long, requires = "chunk_by_public")]
     pub repo_lower_bound: Option<u64>,
     /// Set the repo lower bound used by chunking instead of loading it.
     /// Exclusive (used in rust ranges). Useful for reproducing issues
     /// from a particular chunk.
-    #[clap(long, requires = "chunk-by-public")]
+    #[clap(long, requires = "chunk_by_public")]
     pub repo_upper_bound: Option<u64>,
 
     #[clap(flatten)]
@@ -159,7 +159,7 @@ pub struct CheckpointArgs {
     #[clap(long)]
     pub checkpoint_name: Option<String>,
     /// Path for sqlite checkpoint db if using sqlite
-    #[clap(long, requires = "checkpoint-name")]
+    #[clap(long, requires = "checkpoint_name")]
     pub checkpoint_path: Option<String>,
     /// Checkpoint the walk covered bounds 1 in N steps.
     #[clap(long, default_value = "1")]

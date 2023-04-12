@@ -44,10 +44,10 @@ pub struct ScrubPackLogArgs {
     #[clap(long, short = 'a')]
     pub include_pack_log_node_type: Vec<NodeTypeArg>,
     /// Scuba table for logging pack info data to. e.g. mononoke_packinfo
-    #[clap(long, requires = "include-pack-log-node-type")]
+    #[clap(long, requires = "include_pack_log_node_type")]
     pub pack_log_scuba_table: Option<String>,
     /// A log file to write Scuba pack info logs to (primarily useful in testing)
-    #[clap(long, requires = "include-pack-log-node-type")]
+    #[clap(long, requires = "include_pack_log_node_type")]
     pub pack_log_scuba_file: Option<String>,
 }
 

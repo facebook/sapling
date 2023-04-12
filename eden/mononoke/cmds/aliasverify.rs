@@ -23,8 +23,8 @@ use blobstore::Storable;
 use bytes::Bytes;
 use changesets::Changesets;
 use changesets::ChangesetsRef;
-use clap::ArgEnum;
 use clap::Parser;
+use clap::ValueEnum;
 use context::CoreContext;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
@@ -85,7 +85,7 @@ pub struct Repo {
     changesets: dyn Changesets,
 }
 
-#[derive(Debug, Clone, Copy, ArgEnum)]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 enum Mode {
     /// Mode to verify if the alias exists, and if it doesn't, report the error
     Verify,
@@ -105,7 +105,7 @@ enum RunStatus {
     Finished,
 }
 
-#[derive(Debug, Clone, Copy, ArgEnum)]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 enum AliasType {
     Sha256,
     SeededBlake3,
@@ -230,10 +230,10 @@ impl RepoShardedProcess for AliasVerifyProcess {
 #[clap(about = "Verify and reload all the alias blobs into Mononoke blobstore.")]
 struct AliasVerifyArgs {
     /// The type of alias to verify or generate (in case of missing alias)
-    #[clap(long, arg_enum, default_value_t = AliasType::Sha256)]
+    #[clap(long, value_enum, default_value_t = AliasType::Sha256)]
     alias_type: AliasType,
     /// Mode for missing blobs
-    #[clap(long, arg_enum, default_value_t = Mode::Verify)]
+    #[clap(long, value_enum, default_value_t = Mode::Verify)]
     mode: Mode,
     /// Number of commit ids to process at a time
     #[clap(long, default_value_t = 5000)]

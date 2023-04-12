@@ -17,7 +17,7 @@ use crate::detail::tail::TailParams;
 use crate::detail::walk::RepoWalkParams;
 
 pub const SCRUB: &str = "scrub";
-pub const COMPRESSION_BENEFIT: &str = "compression-benefit";
+pub const COMPRESSION_BENEFIT: &str = "compression_benefit";
 pub const VALIDATE: &str = "validate";
 pub const CORPUS: &str = "corpus";
 

@@ -30,8 +30,8 @@ macro_rules! subcommands {
          $crate::macro_export::assert_impl_all!($app: $crate::BaseApp);
 
          /// Add args for all commands.
-         pub(crate) fn subcommands<'help>() -> Vec<$crate::macro_export::clap::Command<'help>> {
-             use $crate::macro_export::clap::IntoApp;
+         pub(crate) fn subcommands() -> Vec<$crate::macro_export::clap::Command> {
+             use $crate::macro_export::clap::CommandFactory;
              use $crate::macro_export::heck::KebabCase;
              let mut apps = vec![];
             $(

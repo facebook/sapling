@@ -89,7 +89,7 @@ pub enum FilestoreSubcommand {
 }
 
 #[derive(Args)]
-#[clap(group(ArgGroup::new("filestore-item-id").args(&["content-id", "content-sha1", "content-sha256"]).required(true)))]
+#[clap(group(ArgGroup::new("filestore-item-id").args(&["content_id", "content_sha1", "content_sha256"]).required(true)))]
 pub struct FilestoreItemIdArgs {
     #[clap(long, short = 'i')]
     content_id: Option<ContentId>,

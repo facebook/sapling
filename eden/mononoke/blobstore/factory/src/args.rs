@@ -12,6 +12,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use arg_extensions::ArgDefaults;
+use clap::ArgAction;
 use clap::Args;
 use metaconfig_types::PackFormat;
 use rand_distr::Normal;
@@ -62,19 +63,19 @@ pub struct BlobstoreArgs {
     pub blobstore_write_chaos_rate: Option<NonZeroU32>,
 
     /// Mean value of additional delay for blobstore put calls.
-    #[clap(long, requires = "blobstore-put-stddev-delay-secs")]
+    #[clap(long, requires = "blobstore_put_stddev_delay_secs")]
     pub blobstore_put_mean_delay_secs: Option<f64>,
 
     /// Standard devation of additional delay for blobstore put calls.
-    #[clap(long, requires = "blobstore-put-mean-delay-secs")]
+    #[clap(long, requires = "blobstore_put_mean_delay_secs")]
     pub blobstore_put_stddev_delay_secs: Option<f64>,
 
     /// Mean value of additional delay for blobstore get calls.
-    #[clap(long, requires = "blobstore-get-stddev-delay-secs")]
+    #[clap(long, requires = "blobstore_get_stddev_delay_secs")]
     pub blobstore_get_mean_delay_secs: Option<f64>,
 
     /// Standard deviation of additional delay for blobstore get calls.
-    #[clap(long, requires = "blobstore-get-mean-delay-secs")]
+    #[clap(long, requires = "blobstore_get_mean_delay_secs")]
     pub blobstore_get_stddev_delay_secs: Option<f64>,
 
     /// Override config to enable or disable zstd compression on write
@@ -93,12 +94,7 @@ pub struct BlobstoreArgs {
     /// things into cachelib over the threshold size.
     // For compatibility with existing usage, this arg takes value,
     // for example `--blobstore-cachelib-attempt-zstd=true`.
-    #[clap(
-        long,
-        parse(try_from_str),
-        default_value_t = false,
-        value_name = "BOOL"
-    )]
+    #[clap(long, default_value_t = false, value_name = "BOOL", action = ArgAction::Set)]
     pub blobstore_cachelib_attempt_zstd: bool,
 
     /// Desired blobstore behaviour when a put is made to an existing key.

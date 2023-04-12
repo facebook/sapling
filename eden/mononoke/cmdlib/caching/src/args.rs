@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use clap::ArgEnum;
+use clap::ArgAction;
 use clap::Args;
+use clap::ValueEnum;
 
-#[derive(ArgEnum, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CacheMode {
     /// Caching is enabled, both local and shared caches.
     Enabled,
@@ -23,7 +24,7 @@ pub enum CacheMode {
 #[derive(Args, Debug)]
 pub struct CachelibArgs {
     /// Mode to initialize caching in.
-    #[clap(long, arg_enum, default_value_t = CacheMode::Enabled)]
+    #[clap(long, value_enum, default_value_t = CacheMode::Enabled)]
     pub cache_mode: CacheMode,
 
     /// Do not initialize cachelib and disable caches (useful for tests)
@@ -33,13 +34,7 @@ pub struct CachelibArgs {
 
     /// Run the blobstore with cachelib only (i.e., without memcache)
     /// (DEPRECATED)
-    #[clap(
-        long,
-        value_name = "BOOL",
-        parse(try_from_str),
-        default_missing_value = "true",
-        hide = true
-    )]
+    #[clap(long, value_name = "BOOL", default_missing_value = "true", hide = true, action = ArgAction::Set)]
     pub blobstore_cachelib_only: bool,
 
     #[clap(long)]

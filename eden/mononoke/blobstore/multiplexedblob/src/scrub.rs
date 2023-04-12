@@ -19,7 +19,7 @@ use blobstore::BlobstoreMetadata;
 use blobstore::BlobstorePutOps;
 use blobstore::PutBehaviour;
 use chrono::Duration as ChronoDuration;
-use clap::ArgEnum;
+use clap::ValueEnum;
 use context::CoreContext;
 use futures::stream::FuturesUnordered;
 use futures::stream::TryStreamExt;
@@ -47,11 +47,13 @@ static HEAL_MAX_BACKLOG: Lazy<Duration> =
     Eq,
     PartialEq,
     Hash,
-    ArgEnum,
+    ValueEnum,
     EnumString,
     EnumVariantNames,
     IntoStaticStr
 )]
+// Forcing backward compatibility with clap-3 for user facing CLI arguments
+#[clap(rename_all = "PascalCase")]
 pub enum ScrubAction {
     /// Log items needing repair
     ReportOnly,
@@ -67,11 +69,13 @@ pub enum ScrubAction {
     Eq,
     PartialEq,
     Hash,
-    ArgEnum,
+    ValueEnum,
     EnumString,
     EnumVariantNames,
     IntoStaticStr
 )]
+// Forcing backward compatibility with clap-3 for user facing CLI arguments
+#[clap(rename_all = "PascalCase")]
 pub enum SrubWriteOnly {
     /// don't take action on scrub missing keys from write only stores
     SkipMissing,

@@ -14,8 +14,8 @@ use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::Bookmarks;
-use clap::ArgEnum;
 use clap::Parser;
+use clap::ValueEnum;
 use cmdlib_displaying::display_content;
 use cmdlib_displaying::display_hg_manifest;
 use cmdlib_displaying::DisplayChangeset;
@@ -55,7 +55,7 @@ pub struct CommandArgs {
     json: bool,
 
     /// Manifest type to use to find trees or files.
-    #[clap(long, short = 'k', arg_enum, default_value_t = ManifestKind::Hg)]
+    #[clap(long, short = 'k', value_enum, default_value_t = ManifestKind::Hg)]
     manifest_kind: ManifestKind,
 }
 
@@ -74,7 +74,7 @@ pub struct Repo {
     repo_ephemeral_store: RepoEphemeralStore,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, ArgEnum)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, ValueEnum)]
 pub enum ManifestKind {
     Hg,
     // TODO: Add unode manifest, fsnode and skmf support

@@ -11,7 +11,7 @@ use anyhow::Error;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::OverwriteStatus;
-use clap::ArgEnum;
+use clap::ValueEnum;
 use context::PerfCounters;
 use futures_stats::FutureStats;
 use metaconfig_types::BlobstoreId;
@@ -52,7 +52,7 @@ const OVERWRITE_STATUS: &str = "overwrite_status";
     AsRefStr,
     EnumString,
     EnumVariantNames,
-    ArgEnum
+    ValueEnum
 )]
 #[strum(serialize_all = "kebab_case")]
 pub enum OperationType {
