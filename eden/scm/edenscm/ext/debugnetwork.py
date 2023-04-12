@@ -91,20 +91,7 @@ def checkreachability(ui, url, addrinfos) -> bool:
 
 
 def checkmononokehost(ui, url, opts) -> bool:
-    sslvalidator = lambda x: None if opts.get("insecure") else sslutil.validatesocket
-
-    _authdata, auth = httpconnection.readauthforuri(ui, str(url), url.user)
-
-    conn = httpclient.HTTPConnection(
-        url.host,
-        int(url.port),
-        use_ssl=True,
-        ssl_wrap_socket=sslutil.wrapsocket,
-        ssl_validator=sslvalidator,
-        ui=ui,
-        certfile=auth.get("cert"),
-        keyfile=auth.get("key"),
-    )
+    conn = openhttpconn(ui, url, opts)
 
     conn.request(b"GET", b"/health_check", body=None, headers=None)
     res = conn.getresponse()
@@ -127,32 +114,7 @@ def checkspeedhttp(ui, url, opts) -> bool:
     upload = ui.configbytes("debugnetwork", "speed-test-upload-size", 1000000)
     unixsocketpath = ui.config("auth_proxy", "unix_socket_path")
 
-    if unixsocketpath:
-        ui.status(_("Traffic will go through the x2pagentd."), component="debugnetwork")
-        conn = httpclient.HTTPConnection(
-            url.host,
-            use_ssl=False,
-            ui=ui,
-            unix_socket_path=unixsocketpath,
-        )
-    else:
-
-        sslvalidator = (
-            lambda x: None if opts.get("insecure") else sslutil.validatesocket
-        )
-
-        _authdata, auth = httpconnection.readauthforuri(ui, str(url), url.user)
-
-        conn = httpclient.HTTPConnection(
-            url.host,
-            int(url.port),
-            use_ssl=True,
-            ssl_wrap_socket=sslutil.wrapsocket,
-            ssl_validator=sslvalidator,
-            ui=ui,
-            certfile=auth.get("cert"),
-            keyfile=auth.get("key"),
-        )
+    conn = openhttpconn(ui, url, opts)
 
     def downloadtest(_description, bytecount):
         headers = {HEADER_NETSPEEDTEST_NBYTES: bytecount}
@@ -207,6 +169,37 @@ def checkspeedhttp(ui, url, opts) -> bool:
     conn.close()
 
     return res
+
+
+def openhttpconn(ui, url, opts) -> httpclient.HTTPConnection:
+    unixsocketpath = ui.config("auth_proxy", "unix_socket_path")
+
+    if unixsocketpath:
+        ui.status(_("Connecting through x2pagentd\n"), component="debugnetwork")
+
+        return httpclient.HTTPConnection(
+            url.host,
+            use_ssl=False,
+            ui=ui,
+            unix_socket_path=unixsocketpath,
+        )
+    else:
+        sslvalidator = (
+            lambda x: None if opts.get("insecure") else sslutil.validatesocket
+        )
+
+        _authdata, auth = httpconnection.readauthforuri(ui, str(url), url.user)
+
+        return httpclient.HTTPConnection(
+            url.host,
+            int(url.port),
+            use_ssl=True,
+            ssl_wrap_socket=sslutil.wrapsocket,
+            ssl_validator=sslvalidator,
+            ui=ui,
+            certfile=auth.get("cert"),
+            keyfile=auth.get("key"),
+        )
 
 
 def drivespeedtests(ui, latency: float, upload, download) -> bool:
