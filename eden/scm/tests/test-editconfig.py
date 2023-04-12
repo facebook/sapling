@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 import silenttestrunner
+from edenscm import ui as uimod
 from edenscm.rcutil import editconfig
 
 
@@ -156,7 +157,9 @@ bar = three
         )
 
     def assertedit(self, section: str, name: str, value: Optional[str], expected: str):
-        editconfig(self.path, section, name, value)
+        ui = uimod.ui()
+        ui.quiet = True
+        editconfig(ui, self.path, section, name, value)
         self.assertEqual(self.path.read_text(), expected)
 
 

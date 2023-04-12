@@ -18,6 +18,7 @@ import os
 import bindings
 
 from . import util
+from .i18n import _
 
 
 def defaultpagerenv():
@@ -27,7 +28,7 @@ def defaultpagerenv():
     return {"LESS": "FRX", "LV": "-c"}
 
 
-def editconfig(path, section, name, value):
+def editconfig(ui, path, section, name, value):
     """Add or remove a config item to the given config path.
 
     If value is None, delete the config item."""
@@ -45,6 +46,12 @@ def editconfig(path, section, name, value):
     # add necessary indentation to multi-line value
     if value and "\n" in value:
         value = value.rstrip("\n").replace("\n", "\n  ")
+
+    if len(sources) > 1:
+        ui.status_err(
+            _("warning: duplicate config entries for %s.%s in %s\n")
+            % (section, name, path)
+        )
 
     bcontent = content.encode()
     for _value, (_filepath, start, end, _line), _source in reversed(sources):

@@ -420,7 +420,7 @@ def expaths(orig, ui, repo, *args, **opts):
     add = opts.get("add")
     configrepofile = repo.localvfs.join(ui.identity.configrepofile())
     if delete:
-        rcutil.editconfig(configrepofile, "paths", delete, None)
+        rcutil.editconfig(ui, configrepofile, "paths", delete, None)
         saveremotenames(repo, {delete: {}})
         precachedistance(repo)
         return
@@ -437,7 +437,7 @@ def expaths(orig, ui, repo, *args, **opts):
             if origpath != path:
                 ui.status_err(_("normalized path %s to %s\n") % (origpath, path))
 
-        rcutil.editconfig(configrepofile, "paths", add, path)
+        rcutil.editconfig(ui, configrepofile, "paths", add, path)
         return
 
     return orig(ui, repo, *args)

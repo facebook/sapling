@@ -1925,7 +1925,7 @@ def editconfig(ui, repo, *values, **opts):
         )
 
     for section, name, value in to_edit:
-        rcutil.editconfig(targetpath, section, name, value)
+        rcutil.editconfig(ui, targetpath, section, name, value)
 
     ui.status(_("updated config in %s\n") % targetpath)
 

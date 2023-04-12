@@ -241,7 +241,7 @@ config editing without an editor
  append configs
   $ hg config --local aa.bb.cc.字 "配
   > 置" ee.fff=gggg
-  updated config in $TESTTMP/repo1/.hg/hgrc
+  updated config in $TESTTMP/*/.hg/hgrc (glob)
   $ tail -6 .hg/hgrc | dos2unix
   [aa]
   bb.cc.字 = 配
@@ -255,7 +255,7 @@ config editing without an editor
   > 测
   > 试
   > "
-  updated config in $TESTTMP/repo1/.hg/hgrc
+  updated config in $TESTTMP/*/.hg/hgrc (glob)
   $ tail -7 .hg/hgrc | dos2unix
   [aa]
   bb.cc.字 = 新值
@@ -279,7 +279,7 @@ config editing without an editor
   > EOF
 
   $ hg config --local a.b 4
-  updated config in $TESTTMP/repo2/.hg/hgrc
+  updated config in $TESTTMP/*/.hg/hgrc (glob)
   $ cat .hg/hgrc
   [a]
   # b = 1
@@ -289,7 +289,7 @@ config editing without an editor
   $ cd
   $ HGIDENTITY=sl newrepo
   $ sl config --local foo.bar baz
-  updated config in $TESTTMP/repo3/.sl/config
+  updated config in $TESTTMP/*/.sl/config (glob)
   $ cat .sl/config | dos2unix
   # example repository config (see 'sl help config' for more info)
   [paths]
@@ -330,3 +330,21 @@ Show builtin configs with --verbose (filtersuspectsymlink is merely a sample ite
   $ hg config | grep filtersuspectsymlink || true
   $ hg config --verbose | grep filtersuspectsymlink
   unsafe.filtersuspectsymlink=true
+
+Warn about duplicate entries:
+  $ newrepo
+  $ cat > .hg/hgrc << 'EOF'
+  > [a]
+  > b = 1
+  > [a]
+  > b = 2
+  > EOF
+
+  $ hg config --local a.b=3
+  warning: duplicate config entries for a.b in $TESTTMP/*/.hg/hgrc (glob)
+  updated config in $TESTTMP/*/.hg/hgrc (glob)
+  $ cat .hg/hgrc
+  [a]
+  b = 1
+  [a]
+  b = 3

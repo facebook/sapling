@@ -116,7 +116,7 @@ def silence(ui, names) -> None:
         if name not in acked:
             acked.append(name)
     value = " ".join(util.shellquote(w) for w in acked)
-    rcutil.editconfig(path, "hint", "ack", value)
+    rcutil.editconfig(ui, path, "hint", "ack", value)
 
 
 def clear() -> None:

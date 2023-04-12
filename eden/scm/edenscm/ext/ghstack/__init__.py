@@ -239,7 +239,7 @@ query UsernameQuery {
         # authenticated with gh.
         configfile = repo.localvfs.join(ui.identity.configrepofile())
         rcutil.editconfig(
-            configfile, config_section, username_config_name, github_username
+            ui, configfile, config_section, username_config_name, github_username
         )
 
     github_url = ui.config(config_section, "github_url", github_repo.hostname)
