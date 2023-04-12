@@ -28,7 +28,7 @@ Test clone and other pull related endpoints
                                    "high": 2,
                                    "parents": []}]}}
 
-  $ hgedenapi debugapi -e commitgraph -i '["26805aba1e600a82e93661149f2313866a221a7b"]' -i '[]' --sort
+  $ hgedenapi debugapi -e commitgraph2 -i '["26805aba1e600a82e93661149f2313866a221a7b"]' -i '[]' --sort
   [{"hgid": bin("26805aba1e600a82e93661149f2313866a221a7b"),
     "parents": [bin("112478962961147124edd43549aedd1a335e44bf")],
     "is_draft": False},
@@ -38,7 +38,7 @@ Test clone and other pull related endpoints
    {"hgid": bin("112478962961147124edd43549aedd1a335e44bf"),
     "parents": [bin("426bada5c67598ca65036d57d9e4b64b0c1ce7a0")],
     "is_draft": False}]
-  $ hgedenapi debugapi -e commitgraph -i '["26805aba1e600a82e93661149f2313866a221a7b"]' -i '["426bada5c67598ca65036d57d9e4b64b0c1ce7a0"]' --sort
+  $ hgedenapi debugapi -e commitgraph2 -i '["26805aba1e600a82e93661149f2313866a221a7b"]' -i '["426bada5c67598ca65036d57d9e4b64b0c1ce7a0"]' --sort
   [{"hgid": bin("26805aba1e600a82e93661149f2313866a221a7b"),
     "parents": [bin("112478962961147124edd43549aedd1a335e44bf")],
     "is_draft": False},
