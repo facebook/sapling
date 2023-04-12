@@ -192,10 +192,12 @@ function FileTree(props: {
 
   const [collapsed, setCollapsed] = useState(new Set());
 
-  function renderTree(tree: PathTree<UIChangedFile>) {
+  function renderTree(tree: PathTree<UIChangedFile>, accumulatedPath = '') {
     return (
       <>
         {[...tree.entries()].map(([folder, inner]) => {
+          const folderKey = `${accumulatedPath}/${folder}`;
+          const isCollapsed = collapsed.has(folderKey);
           return (
             <div className="file-tree-level">
               {inner instanceof Map ? (
@@ -205,19 +207,16 @@ function FileTree(props: {
                       appearance="icon"
                       onClick={() => {
                         setCollapsed(last =>
-                          collapsed.has(folder)
-                            ? new Set([...last].filter(v => v !== folder))
-                            : new Set([...last, folder]),
+                          isCollapsed
+                            ? new Set([...last].filter(v => v !== folderKey))
+                            : new Set([...last, folderKey]),
                         );
                       }}>
-                      <Icon
-                        icon={collapsed.has(folder) ? 'chevron-right' : 'chevron-down'}
-                        slot="start"
-                      />
+                      <Icon icon={isCollapsed ? 'chevron-right' : 'chevron-down'} slot="start" />
                       {folder}
                     </VSCodeButton>
                   </span>
-                  {collapsed.has(folder) ? null : renderTree(inner)}
+                  {isCollapsed ? null : renderTree(inner, folderKey)}
                 </>
               ) : (
                 <File key={inner.path} {...rest} file={inner} />
