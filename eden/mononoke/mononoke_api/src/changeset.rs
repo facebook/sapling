@@ -861,11 +861,14 @@ impl ChangesetContext {
             let (from_path_to_mf_entry, to_path_exists_in_parent) =
                 try_join(from_path_to_mf_entry, to_path_exists_in_parent).await?;
 
-            // Filter out copies where the to_path already existed in the
-            // parent.  These don't show up as copies in the diff view.
-            copy_path_map.retain(|_, to_paths| {
+            // Filter out:
+            // - Copies where the to_path already existed in the parent.  These don't show up as
+            //   copies in the diff view.
+            // - Copies where the from_path didn't exist in the parent.  These are indicative of
+            //   an invalid bonsai changeset or mutable rename and can be ignored.
+            copy_path_map.retain(|from_path, to_paths| {
                 to_paths.retain(|to_path| !to_path_exists_in_parent.contains(to_path));
-                !to_paths.is_empty()
+                !to_paths.is_empty() && from_path_to_mf_entry.contains_key(from_path)
             });
 
             // Build the inverse copy map (from to_path to from_path),
