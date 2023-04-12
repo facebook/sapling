@@ -21,7 +21,6 @@ use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use sql_ext::SqlConnections;
 use synced_commit_mapping::SyncedCommitMapping;
 
 #[derive(Clone)]
@@ -45,7 +44,6 @@ pub struct PushRedirectorBase {
 #[derive(Clone)]
 #[facet]
 pub struct TargetRepoDbs {
-    pub connections: SqlConnections,
     pub bookmarks: ArcBookmarks,
     pub bookmark_update_log: ArcBookmarkUpdateLog,
     pub counters: ArcMutableCounters,

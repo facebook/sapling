@@ -1064,14 +1064,7 @@ async fn repo_import(
         )
         .await?;
 
-        let target_repo_dbs = open_backsyncer_dbs(
-            ctx.clone(),
-            &repo,
-            repo_config.storage_config.metadata,
-            env.mysql_options.clone(),
-            env.readonly_storage.clone(),
-        )
-        .await?;
+        let target_repo_dbs = open_backsyncer_dbs(&repo).await?;
 
         let maybe_version = find_mapping_version(
             &ctx,

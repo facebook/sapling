@@ -493,8 +493,6 @@ async fn run(
     )
     .await?;
     let logger = ctx.logger();
-    let mysql_options = matches.mysql_options();
-    let readonly_storage = matches.readonly_storage();
 
     info!(
         logger,
@@ -508,17 +506,10 @@ async fn run(
         (ARG_MODE_BACKSYNC_ALL, _) => {
             let scuba_sample = MononokeScubaSampleBuilder::with_discard();
             let ctx = session_container.new_context(logger.clone(), scuba_sample);
-            let db_config = target_repo.config.storage_config.metadata;
             let target_repo_dbs = Arc::new(
-                open_backsyncer_dbs(
-                    ctx.clone(),
-                    commit_syncer.get_target_repo(),
-                    db_config,
-                    mysql_options.clone(),
-                    *readonly_storage,
-                )
-                .boxed()
-                .await?,
+                open_backsyncer_dbs(commit_syncer.get_target_repo())
+                    .boxed()
+                    .await?,
             );
 
             // TODO(ikostia): why do we use discarding ScubaSample for BACKSYNC_ALL?
@@ -535,19 +526,10 @@ async fn run(
             .await?;
         }
         (ARG_MODE_BACKSYNC_FOREVER, _) => {
-            let db_config = target_repo.config.storage_config.metadata;
-            let ctx = session_container
-                .new_context(logger.clone(), MononokeScubaSampleBuilder::with_discard());
             let target_repo_dbs = Arc::new(
-                open_backsyncer_dbs(
-                    ctx,
-                    commit_syncer.get_target_repo(),
-                    db_config,
-                    mysql_options.clone(),
-                    *readonly_storage,
-                )
-                .boxed()
-                .await?,
+                open_backsyncer_dbs(commit_syncer.get_target_repo())
+                    .boxed()
+                    .await?,
             );
 
             let mut scuba_sample = MononokeScubaSampleBuilder::new(fb, SCUBA_TABLE)?;

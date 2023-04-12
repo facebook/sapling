@@ -152,7 +152,6 @@ use segmented_changelog_types::ArcSegmentedChangelog;
 use skiplist::ArcSkiplistIndex;
 use skiplist::SkiplistIndex;
 use slog::o;
-use sql::SqlConnections;
 use sql::SqlConnectionsWithSchema;
 use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
 use sql_construct::SqlConstruct;
@@ -299,19 +298,11 @@ impl RepoFactory {
         &self,
         config: &MetadataDatabaseConfig,
     ) -> Result<SqlConnectionsWithSchema> {
-        self.sql_connections_with_label(config, "metadata").await
-    }
-
-    async fn sql_connections_with_label(
-        &self,
-        config: &MetadataDatabaseConfig,
-        label: &str,
-    ) -> Result<SqlConnectionsWithSchema> {
         let sql_factory = self.sql_factory(config).await?;
         self.sql_connections
             .get_or_try_init(config, || async move {
                 sql_factory
-                    .make_primary_connections(label.to_string())
+                    .make_primary_connections(String::from("metadata"))
                     .await
             })
             .await
@@ -1413,21 +1404,11 @@ impl RepoFactory {
 
     pub async fn target_repo_dbs(
         &self,
-        repo_config: &ArcRepoConfig,
         bookmarks: &ArcBookmarks,
         bookmark_update_log: &ArcBookmarkUpdateLog,
         mutable_counters: &ArcMutableCounters,
     ) -> Result<ArcTargetRepoDbs> {
-        let connections: SqlConnections = self
-            .sql_connections_with_label(
-                &repo_config.storage_config.metadata,
-                "bookmark_mutable_counters",
-            )
-            .await
-            .context(RepoFactoryError::TargetRepoDbs)?
-            .into();
         let target_repo_dbs = TargetRepoDbs {
-            connections,
             bookmarks: bookmarks.clone(),
             bookmark_update_log: bookmark_update_log.clone(),
             counters: mutable_counters.clone(),

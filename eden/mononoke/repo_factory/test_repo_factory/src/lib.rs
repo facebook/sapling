@@ -113,7 +113,6 @@ use skiplist::ArcSkiplistIndex;
 use skiplist::SkiplistIndex;
 use sql::rusqlite::Connection as SqliteConnection;
 use sql::Connection;
-use sql::SqlConnections;
 use sql::SqlConnectionsWithSchema;
 use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
 use sql_construct::SqlConstruct;
@@ -615,7 +614,6 @@ impl TestRepoFactory {
         let synced_commit_mapping = repo_cross_repo.synced_commit_mapping();
         let backup_repo_config = repo_config.backup_repo_config.clone();
         let target_repo_dbs = Arc::new(TargetRepoDbs {
-            connections: SqlConnections::from(self.metadata_db.clone()),
             bookmarks: bookmarks.clone(),
             bookmark_update_log: bookmark_update_log.clone(),
             counters: mutable_counters.clone(),

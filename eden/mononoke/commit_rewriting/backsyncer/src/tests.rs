@@ -689,7 +689,6 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
 
     // Create commit syncer with two version - current and new
     let target_repo_dbs = TargetRepoDbs {
-        connections: factory.metadata_db().clone().into(),
         bookmarks: target_repo.bookmarks_arc(),
         bookmark_update_log: target_repo.bookmark_update_log_arc(),
         counters: target_repo.mutable_counters_arc(),
@@ -1288,7 +1287,6 @@ async fn init_repos(
     let target_repo: TestRepo = factory.with_id(target_repo_id).build()?;
 
     let target_repo_dbs = TargetRepoDbs {
-        connections: factory.metadata_db().clone().into(),
         bookmarks: target_repo.bookmarks_arc(),
         bookmark_update_log: target_repo.bookmark_update_log_arc(),
         counters: target_repo.mutable_counters_arc(),
@@ -1586,7 +1584,6 @@ async fn init_merged_repos(
         let repoid = RepositoryId::new(idx as i32);
         let small_repo: TestRepo = factory.with_id(repoid).build()?;
         let small_repo_dbs = TargetRepoDbs {
-            connections: factory.metadata_db().clone().into(),
             bookmarks: small_repo.bookmarks_arc(),
             bookmark_update_log: small_repo.bookmark_update_log_arc(),
             counters: small_repo.mutable_counters_arc(),

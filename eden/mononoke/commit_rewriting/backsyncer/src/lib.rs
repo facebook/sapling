@@ -33,8 +33,6 @@ use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Error;
 use blobstore::Loadable;
-use blobstore_factory::make_metadata_sql_factory;
-use blobstore_factory::ReadOnlyStorage;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkTransactionError;
@@ -62,7 +60,6 @@ use futures::stream;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::ChangesetId;
@@ -85,8 +82,6 @@ use slog::debug;
 use slog::info;
 use slog::warn;
 use sql::Transaction;
-use sql_ext::facebook::MysqlOptions;
-use sql_ext::SqlConnections;
 use sql_ext::TransactionResult;
 use synced_commit_mapping::SyncedCommitMapping;
 use thiserror::Error;
@@ -554,26 +549,11 @@ where
     Ok(updated)
 }
 
-pub async fn open_backsyncer_dbs(
-    ctx: CoreContext,
-    blobrepo: &impl RepoLike,
-    db_config: MetadataDatabaseConfig,
-    mysql_options: MysqlOptions,
-    readonly_storage: ReadOnlyStorage,
-) -> Result<TargetRepoDbs, Error> {
-    let sql_factory =
-        make_metadata_sql_factory(ctx.fb, db_config, mysql_options, readonly_storage).await?;
-
-    let connections: SqlConnections = sql_factory
-        .make_primary_connections("bookmark_mutable_counters".to_string())
-        .await?
-        .into();
-
+pub async fn open_backsyncer_dbs(repo: &impl RepoLike) -> Result<TargetRepoDbs, Error> {
     Ok(TargetRepoDbs {
-        connections,
-        bookmarks: blobrepo.bookmarks_arc(),
-        bookmark_update_log: blobrepo.bookmark_update_log_arc(),
-        counters: blobrepo.mutable_counters_arc(),
+        bookmarks: repo.bookmarks_arc(),
+        bookmark_update_log: repo.bookmark_update_log_arc(),
+        counters: repo.mutable_counters_arc(),
     })
 }
 
