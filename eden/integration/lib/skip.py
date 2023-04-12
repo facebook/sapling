@@ -286,6 +286,26 @@ if sys.platform != "win32":
         }
     )
 
+def _have_ntapi_extension_module() -> bool:
+    if sys.platform != "win32":
+        return False
+
+    try:
+        from eden.integration.lib.ntapi import get_directory_entry_size  # @nolint
+        return True
+    except ImportError:
+        return False
+
+# ProjFS enumeration tests depend on a Python extension module, which may not be
+# available with all build systems.
+if not _have_ntapi_extension_module():
+    TEST_DISABLED.update(
+        {
+            "projfs_enumeration.ProjFSEnumeration": True,
+            "projfs_enumeration.ProjFSEnumerationInsufficientBuffer": True,
+        }
+    )
+
 # We only run tests on linux currently, so we only need to disable them there.
 if sys.platform.startswith("linux"):
     # tests to skip on nfs, this list allows us to avoid writing the nfs postfix

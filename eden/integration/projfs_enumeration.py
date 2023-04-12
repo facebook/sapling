@@ -10,11 +10,17 @@ from pathlib import Path
 from .lib import testcase
 
 if sys.platform == "win32":
-    from .lib.ntapi import (
-        get_directory_entry_size,
-        open_directory_handle,
-        query_directory_file_ex,
-    )
+    try:
+        from .lib.ntapi import (
+            get_directory_entry_size,
+            open_directory_handle,
+            query_directory_file_ex,
+        )
+    except ImportError:
+        # TODO(T150221518): We should add the ntapi extension module to the
+        # getdeps build, but for now we have to account for the possibility that
+        # it may not be present.
+        pass
 
 
 SL_RESTART_SCAN = 0x00000001
