@@ -3,13 +3,15 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+from typing import Optional
+
 from edenscm import error
 from edenscm.i18n import _
 
 from .createremote import parselabels
 
 
-def add_labels(ui, repo, csid=None, **opts):
+def add_labels(ui, repo, csid: Optional[str] = None, **opts) -> None:
     if csid is None:
         raise error.CommandError("snapshot add-labels", _("missing snapshot id"))
     labels = parselabels(opts)
@@ -36,7 +38,7 @@ def add_labels(ui, repo, csid=None, **opts):
     )
 
 
-def remove_labels(ui, repo, csid=None, **opts):
+def remove_labels(ui, repo, csid: Optional[str] = None, **opts) -> None:
     if csid is None:
         raise error.CommandError("snapshot remove-labels", _("missing snapshot id"))
     labels = parselabels(opts)
