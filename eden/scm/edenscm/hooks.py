@@ -8,7 +8,7 @@
 from . import util
 
 
-def backgroundfsync(ui, repo, hooktype, **kwargs):
+def backgroundfsync(ui, repo, hooktype, **kwargs) -> None:
     """run fsync in background
 
     Example config::
