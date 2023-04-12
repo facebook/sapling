@@ -203,7 +203,7 @@ function FileTree(props: {
           const folderKey = `${accumulatedPath}/${folder}`;
           const isCollapsed = collapsed.has(folderKey);
           return (
-            <div className="file-tree-level">
+            <div className="file-tree-level" key={folderKey}>
               {inner instanceof Map ? (
                 <>
                   <span className="file-tree-folder-path">

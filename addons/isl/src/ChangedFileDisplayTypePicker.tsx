@@ -56,6 +56,7 @@ export function ChangedFileDisplayTypePicker() {
       <VSCodeButton
         appearance="icon"
         className="changed-file-display-type-picker"
+        data-testid="changed-file-display-type-picker"
         onClick={contextMenu}>
         <Icon icon={ChangedFileDisplayTypeOptions[displayType].icon} />
       </VSCodeButton>
