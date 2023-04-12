@@ -9,6 +9,7 @@ from enum import IntEnum
 from typing import List, Optional, Set
 
 from eden.fs.cli import ui
+from eden.fs.cli.config import AbstractEdenInstance, configutil
 
 from .util import format_exception
 
@@ -106,12 +107,31 @@ class ProblemTracker(abc.ABC):
     # are no configured EdenFS checkouts.
     using_edenfs: bool = True
 
+    def __init__(self, instance: AbstractEdenInstance) -> None:
+        self.ignored_problem_types: Set[str] = set()
+        self._instance = instance
+        self._ignored_problem_class_names: configutil.Strs = instance.get_config_strs(
+            "doctor.ignored-problem-class-names", default=configutil.Strs()
+        )
+
     def add_problem(self, problem: ProblemBase) -> None:
         """Record a new problem"""
 
+        problem_type = type(problem).__name__
+        if problem_type in self._ignored_problem_class_names:
+            self.ignored_problem_types.add(problem_type)
+        else:
+            self.add_problem_impl(problem)
+
+    def add_problem_impl(self, problem: ProblemBase) -> None:
+        ...
+
 
 class ProblemFixer(ProblemTracker):
-    def __init__(self, out: ui.Output, debug: bool = False) -> None:
+    def __init__(
+        self, instance: AbstractEdenInstance, out: ui.Output, debug: bool = False
+    ) -> None:
+        super().__init__(instance)
         self._out = out
         self.debug = debug
         self.num_problems = 0
@@ -121,7 +141,7 @@ class ProblemFixer(ProblemTracker):
         self.problem_types: Set[str] = set()
         self.problem_description: List[str] = []
 
-    def add_problem(self, problem: ProblemBase) -> None:
+    def add_problem_impl(self, problem: ProblemBase) -> None:
         self.num_problems += 1
         problem_class = problem.__class__.__name__
         self.problem_types.add(problem_class)

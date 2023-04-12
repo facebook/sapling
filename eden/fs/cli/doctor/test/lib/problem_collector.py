@@ -5,15 +5,16 @@
 
 from typing import List
 
+from eden.fs.cli.config import AbstractEdenInstance
 from eden.fs.cli.doctor.problem import ProblemBase, ProblemTracker
 
 
 class ProblemCollector(ProblemTracker):
     problems: List[ProblemBase]
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, instance: AbstractEdenInstance) -> None:
+        super().__init__(instance)
         self.problems = []
 
-    def add_problem(self, problem: ProblemBase) -> None:
+    def add_problem_impl(self, problem: ProblemBase) -> None:
         self.problems.append(problem)

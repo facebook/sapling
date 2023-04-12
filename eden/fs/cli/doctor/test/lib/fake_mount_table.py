@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Set, Union
 
 from eden.fs.cli import mtab
 
-from .testcase import FAKE_UID
+from .fake_constants import FAKE_UID
 
 
 EDENFS_DEVTYPE = "edenfs:"

@@ -41,9 +41,10 @@ class DiskUsageTest(DoctorTestBase):
     def _check_disk_usage(
         self, instance: Optional[FakeEdenInstance] = None
     ) -> List[ProblemBase]:
-        problem_collector = ProblemCollector()
         if instance is None:
             instance = FakeEdenInstance(self.make_temporary_directory())
+
+        problem_collector = ProblemCollector(instance)
 
         doctor.check_filesystems.check_disk_usage(
             tracker=problem_collector,

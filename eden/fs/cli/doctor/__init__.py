@@ -342,9 +342,9 @@ class EdenDoctor(EdenDoctorChecker):
         self.dry_run = dry_run
         out = out if out is not None else ui.get_output()
         if dry_run:
-            self.fixer = DryRunFixer(out, debug)
+            self.fixer = DryRunFixer(instance, out, debug)
         else:
-            self.fixer = ProblemFixer(out, debug)
+            self.fixer = ProblemFixer(instance, out, debug)
 
         super().__init__(
             instance,
@@ -371,7 +371,7 @@ class EdenDoctor(EdenDoctorChecker):
             self.instance.log_sample(
                 "eden_doctor",
                 num_problems=fixer.num_problems,
-                problems=fixer.problem_types,
+                problems=fixer.problem_types.union(fixer.ignored_problem_types),
                 problem_description=fixer.problem_description,
             )
 

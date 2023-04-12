@@ -982,7 +982,7 @@ Checking {mount}
             # a/b is now missing from inodes
         ]
 
-        tracker = ProblemCollector()
+        tracker = ProblemCollector(instance)
         check_materialized_are_accessible(
             tracker,
             typing.cast(EdenInstance, instance),
@@ -1022,7 +1022,7 @@ Checking {mount}
             else:
                 return os.lstat(path).st_mode
 
-        tracker = ProblemCollector()
+        tracker = ProblemCollector(instance)
         check_materialized_are_accessible(
             tracker, typing.cast(EdenInstance, instance), checkout, get_mode
         )
@@ -1072,7 +1072,7 @@ Checking {mount}
             ),
         ]
 
-        tracker = ProblemCollector()
+        tracker = ProblemCollector(instance)
         check_materialized_are_accessible(
             tracker,
             typing.cast(EdenInstance, instance),
@@ -1205,7 +1205,7 @@ Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>f
                 ),
             ]
 
-            tracker = ProblemCollector()
+            tracker = ProblemCollector(instance)
             check_materialized_are_accessible(
                 tracker,
                 typing.cast(EdenInstance, instance),
@@ -1270,7 +1270,7 @@ Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>f
                 ),
             ]
 
-            tracker = ProblemCollector()
+            tracker = ProblemCollector(instance)
             check_materialized_are_accessible(
                 tracker,
                 typing.cast(EdenInstance, instance),
@@ -1329,7 +1329,7 @@ Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>f
             else:
                 return PRJ_FILE_STATE.Placeholder
 
-        tracker = ProblemCollector()
+        tracker = ProblemCollector(instance)
         check_loaded_content(
             tracker,
             typing.cast(EdenInstance, instance),
@@ -1450,7 +1450,7 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             returncode=0,
         )
 
-        tracker = ProblemCollector()
+        tracker = ProblemCollector(instance)
         # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
         # `FakeEdenInstance`.
         check_hg_status_match_hg_diff(tracker, instance, checkout)
@@ -1471,7 +1471,7 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             stdout="{}", args=["hg", "diff", "--stat"], returncode=0
         )
 
-        tracker = ProblemCollector()
+        tracker = ProblemCollector(instance)
         # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
         # `FakeEdenInstance`.
         check_hg_status_match_hg_diff(tracker, instance, checkout)
@@ -1480,6 +1480,39 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             tracker.problems[0].description(),
             f"{Path('foo/bar')} is present as modified in `hg status` but not in `hg diff`",
         )
+
+    def test_ignored_problems_config(self) -> None:
+        tmp_dir = self.make_temporary_directory()
+        instance = FakeEdenInstance(
+            tmp_dir,
+            config={
+                "doctor.ignored-problem-class-names": '["FooProblem", "SlowHgImportProblem", "BarProblem"]'
+            },
+        )
+
+        instance.get_thrift_client_legacy().set_counter_value(
+            "store.hg.live_import.max_duration_us", 15 * 60 * 1_000_000
+        )
+
+        out = TestOutput()
+        dry_run = False
+
+        exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
+            instance,
+            dry_run,
+            mount_table=instance.mount_table,
+            fs_util=FakeFsUtil(),
+            proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            out=out,
+        )
+
+        # SlowHgImportProblem should not be reported because we've ignored it in
+        # the config.
+        self.assertEqual(exit_code, 0)
 
 
 def _create_watchman_subscription(

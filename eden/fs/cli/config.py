@@ -226,6 +226,9 @@ class AbstractEdenInstance:
     def get_config_bool(self, key: str, default: bool) -> bool:
         ...
 
+    def get_config_strs(self, key: str, default: configutil.Strs) -> configutil.Strs:
+        ...
+
     def get_checkouts(self) -> List["EdenCheckout"]:
         ...
 
@@ -438,6 +441,11 @@ class EdenInstance(AbstractEdenInstance):
         parser = self._loadConfig()
         section, option = key.split(".", 1)
         return parser.get_bool(section, option, default=default)
+
+    def get_config_strs(self, key: str, default: configutil.Strs) -> configutil.Strs:
+        parser = self._loadConfig()
+        section, option = key.split(".", 1)
+        return parser.get_strs(section, option, default=default)
 
     def print_full_config(self, out: IO[bytes]) -> None:
         parser = self._loadConfig()

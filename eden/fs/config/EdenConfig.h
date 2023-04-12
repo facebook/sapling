@@ -1117,6 +1117,17 @@ class EdenConfig : private ConfigSettingManager {
       true,
       this};
 
+  // [doctor]
+
+  /**
+   * Class names of doctor problems that should not be reported to the user or
+   * automatically fixed.
+   */
+  ConfigSetting<std::vector<std::string>> doctorIgnoredProblemClassNames{
+      "doctor:ignored-problem-class-names",
+      {},
+      this};
+
   // [facebook]
   // Facebook internal
 

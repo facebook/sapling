@@ -22,6 +22,7 @@ from eden.fs.cli import mtab, version as version_mod
 from eden.fs.cli.config import (
     AbstractEdenInstance,
     CheckoutConfig,
+    configutil,
     EdenCheckout,
     EdenInstance,
     HealthStatus,
@@ -30,9 +31,9 @@ from eden.fs.cli.config import (
 from fb303_core.ttypes import fb303_status
 
 from .fake_client import FakeClient
+from .fake_constants import FAKE_UID
 from .fake_hg_repo import FakeHgRepo
 from .fake_mount_table import FakeMountTable
-from .testcase import FAKE_UID
 
 
 class FakeCheckout(NamedTuple):
@@ -281,6 +282,9 @@ class FakeEdenInstance(AbstractEdenInstance):
         if key in self._config:
             return self._config[key] == "true"
         return default
+
+    def get_config_strs(self, key: str, default: configutil.Strs) -> configutil.Strs:
+        return self._config.get(key, default)
 
     def get_hg_repo(self, path: Path) -> FakeHgRepo:
         if path in self._hg_repo_by_path:

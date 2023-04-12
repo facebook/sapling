@@ -11,21 +11,20 @@ from typing import Tuple
 import eden.dirstate
 import eden.fs.cli.doctor as doctor
 from eden.fs.cli.config import EdenCheckout
+from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.test.lib.fake_proc_utils import FakeProcUtils
 from eden.fs.cli.test.lib.output import TestOutput
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 
-FAKE_UID = 1234
-
-
 class DoctorTestBase(unittest.TestCase, TemporaryDirectoryMixin):
     def create_fixer(self, dry_run: bool) -> Tuple[doctor.ProblemFixer, TestOutput]:
         out = TestOutput()
+        instance = FakeEdenInstance(self.make_temporary_directory())
         if not dry_run:
-            fixer = doctor.ProblemFixer(out)
+            fixer = doctor.ProblemFixer(instance, out)
         else:
-            fixer = doctor.DryRunFixer(out)
+            fixer = doctor.DryRunFixer(instance, out)
         return fixer, out
 
     def assert_results(
