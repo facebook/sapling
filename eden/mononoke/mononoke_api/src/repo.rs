@@ -22,7 +22,7 @@ use blobrepo::AsBlobRepo;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use blobstore_factory::make_metadata_sql_factory;
+use blobstore_factory::MetadataSqlFactory;
 use blobstore_factory::ReadOnlyStorage;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_git_mapping::BonsaiGitMappingRef;
@@ -373,7 +373,7 @@ pub async fn open_synced_commit_mapping(
     mysql_options: &MysqlOptions,
     readonly_storage: ReadOnlyStorage,
 ) -> Result<Arc<SqlSyncedCommitMapping>, Error> {
-    let sql_factory = make_metadata_sql_factory(
+    let sql_factory = MetadataSqlFactory::new(
         fb,
         config.storage_config.metadata,
         mysql_options.clone(),

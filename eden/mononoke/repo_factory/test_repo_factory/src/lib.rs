@@ -113,7 +113,7 @@ use skiplist::ArcSkiplistIndex;
 use skiplist::SkiplistIndex;
 use sql::rusqlite::Connection as SqliteConnection;
 use sql::Connection;
-use sql::SqlConnectionsWithSchema;
+use sql::SqlConnections;
 use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
 use sql_construct::SqlConstruct;
 use sql_query_config::ArcSqlQueryConfig;
@@ -143,8 +143,8 @@ pub struct TestRepoFactory {
     name: String,
     config: RepoConfig,
     blobstore: Arc<dyn Blobstore>,
-    metadata_db: SqlConnectionsWithSchema,
-    hg_mutation_db: SqlConnectionsWithSchema,
+    metadata_db: SqlConnections,
+    hg_mutation_db: SqlConnections,
     redacted: Option<Arc<RedactedBlobs>>,
     permission_checker: Option<ArcRepoPermissionChecker>,
     derived_data_lease: Option<Box<dyn Fn() -> Arc<dyn LeaseOps> + Send + Sync>>,
@@ -238,12 +238,10 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlRepoLock::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlSparseProfilesSizes::CREATION_QUERY)?;
         metadata_con.execute_batch(StreamingCloneBuilder::CREATION_QUERY)?;
-        let metadata_db =
-            SqlConnectionsWithSchema::new_single(Connection::with_sqlite(metadata_con));
+        let metadata_db = SqlConnections::new_single(Connection::with_sqlite(metadata_con));
 
         hg_mutation_con.execute_batch(SqlHgMutationStoreBuilder::CREATION_QUERY)?;
-        let hg_mutation_db =
-            SqlConnectionsWithSchema::new_single(Connection::with_sqlite(hg_mutation_con));
+        let hg_mutation_db = SqlConnections::new_single(Connection::with_sqlite(hg_mutation_con));
 
         Ok(TestRepoFactory {
             fb,
@@ -260,7 +258,7 @@ impl TestRepoFactory {
     }
 
     /// Get the metadata database this factory is using for repositories.
-    pub fn metadata_db(&self) -> &SqlConnectionsWithSchema {
+    pub fn metadata_db(&self) -> &SqlConnections {
         &self.metadata_db
     }
 
@@ -324,7 +322,7 @@ impl TestRepoFactory {
     /// Function to create megarepo mapping from the same connection as other DBs
     pub fn megarepo_mapping(&self) -> Arc<MegarepoMapping> {
         Arc::new(MegarepoMapping::from_sql_connections(
-            self.metadata_db.clone().into(),
+            self.metadata_db.clone(),
         ))
     }
 }
@@ -344,7 +342,7 @@ impl TestRepoFactory {
     /// Construct Changesets using the in-memory metadata database.
     pub fn changesets(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcChangesets> {
         Ok(Arc::new(
-            SqlChangesetsBuilder::from_sql_connections(self.metadata_db.clone().into())
+            SqlChangesetsBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(RendezVousOptions::for_test(), repo_identity.id()),
         ))
     }
@@ -364,7 +362,7 @@ impl TestRepoFactory {
     /// Construct SQL bookmarks using the in-memory metadata database.
     pub fn sql_bookmarks(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcSqlBookmarks> {
         Ok(Arc::new(
-            SqlBookmarksBuilder::from_sql_connections(self.metadata_db.clone().into())
+            SqlBookmarksBuilder::from_sql_connections(self.metadata_db.clone())
                 .with_repo_id(repo_identity.id()),
         ))
     }
@@ -386,8 +384,7 @@ impl TestRepoFactory {
         bookmarks: &ArcBookmarks,
         changeset_fetcher: &ArcChangesetFetcher,
     ) -> ArcPhases {
-        let sql_phases_builder =
-            SqlPhasesBuilder::from_sql_connections(self.metadata_db.clone().into());
+        let sql_phases_builder = SqlPhasesBuilder::from_sql_connections(self.metadata_db.clone());
         let heads_fetcher = bookmark_heads_fetcher(bookmarks.clone());
         sql_phases_builder.build(repo_identity.id(), changeset_fetcher.clone(), heads_fetcher)
     }
@@ -395,7 +392,7 @@ impl TestRepoFactory {
     /// Construct Bonsai Hg Mapping using the in-memory metadata database.
     pub fn bonsai_hg_mapping(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcBonsaiHgMapping> {
         Ok(Arc::new(
-            SqlBonsaiHgMappingBuilder::from_sql_connections(self.metadata_db.clone().into())
+            SqlBonsaiHgMappingBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(repo_identity.id(), RendezVousOptions::for_test()),
         ))
     }
@@ -406,7 +403,7 @@ impl TestRepoFactory {
         repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcBonsaiGitMapping> {
         Ok(Arc::new(
-            SqlBonsaiGitMappingBuilder::from_sql_connections(self.metadata_db.clone().into())
+            SqlBonsaiGitMappingBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(repo_identity.id()),
         ))
     }
@@ -418,7 +415,7 @@ impl TestRepoFactory {
         repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcBonsaiGlobalrevMapping> {
         Ok(Arc::new(
-            SqlBonsaiGlobalrevMappingBuilder::from_sql_connections(self.metadata_db.clone().into())
+            SqlBonsaiGlobalrevMappingBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(repo_identity.id()),
         ))
     }
@@ -430,7 +427,7 @@ impl TestRepoFactory {
         repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcBonsaiSvnrevMapping> {
         Ok(Arc::new(
-            SqlBonsaiSvnrevMappingBuilder::from_sql_connections(self.metadata_db.clone().into())
+            SqlBonsaiSvnrevMappingBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(repo_identity.id()),
         ))
     }
@@ -442,10 +439,8 @@ impl TestRepoFactory {
         repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcPushrebaseMutationMapping> {
         Ok(Arc::new(
-            SqlPushrebaseMutationMappingConnection::from_sql_connections(
-                self.metadata_db.clone().into(),
-            )
-            .with_repo_id(repo_identity.id()),
+            SqlPushrebaseMutationMappingConnection::from_sql_connections(self.metadata_db.clone())
+                .with_repo_id(repo_identity.id()),
         ))
     }
 
@@ -476,7 +471,7 @@ impl TestRepoFactory {
     /// database.
     pub fn hg_mutation_store(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcHgMutationStore> {
         Ok(Arc::new(
-            SqlHgMutationStoreBuilder::from_sql_connections(self.hg_mutation_db.clone().into())
+            SqlHgMutationStoreBuilder::from_sql_connections(self.hg_mutation_db.clone())
                 .with_repo_id(repo_identity.id()),
         ))
     }
@@ -563,8 +558,7 @@ impl TestRepoFactory {
 
     /// Mutable renames
     pub fn mutable_renames(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcMutableRenames> {
-        let sql_store =
-            SqlMutableRenamesStore::from_sql_connections(self.metadata_db.clone().into());
+        let sql_store = SqlMutableRenamesStore::from_sql_connections(self.metadata_db.clone());
         Ok(Arc::new(MutableRenames::new_test(
             repo_identity.id(),
             sql_store,
@@ -574,7 +568,7 @@ impl TestRepoFactory {
     /// The commit mapping bettween repos for synced commits.
     pub fn synced_commit_mapping(&self) -> Result<ArcSyncedCommitMapping> {
         Ok(Arc::new(SqlSyncedCommitMapping::from_sql_connections(
-            self.metadata_db.clone().into(),
+            self.metadata_db.clone(),
         )))
     }
 
@@ -639,7 +633,7 @@ impl TestRepoFactory {
     /// Mutable counters
     pub fn mutable_counters(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcMutableCounters> {
         Ok(Arc::new(
-            SqlMutableCountersBuilder::from_sql_connections(self.metadata_db.clone().into())
+            SqlMutableCountersBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(repo_identity.id()),
         ))
     }
@@ -737,7 +731,7 @@ impl TestRepoFactory {
         repo_blobstore: &ArcRepoBlobstore,
     ) -> ArcStreamingClone {
         Arc::new(
-            StreamingCloneBuilder::from_sql_connections(self.metadata_db.clone().into())
+            StreamingCloneBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(repo_identity.id(), repo_blobstore.clone()),
         )
     }

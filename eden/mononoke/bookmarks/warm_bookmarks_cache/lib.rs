@@ -1866,7 +1866,7 @@ mod tests {
         );
 
         ClearBookmarkUpdateLog::query(
-            &factory.metadata_db().connections().write_connection,
+            &factory.metadata_db().write_connection,
             &repo.blob_repo.repo_identity().id(),
         )
         .await?;

@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use blobstore_factory::make_metadata_sql_factory;
+use blobstore_factory::MetadataSqlFactory;
 use blobstore_factory::ReadOnlyStorage;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
@@ -87,14 +87,14 @@ pub async fn subcommand_truncate_segmented_changelog<'a>(
         }
     };
 
-    let sql_factory = make_metadata_sql_factory(
+    let sql_factory = MetadataSqlFactory::new(
         ctx.fb,
         storage_config.metadata,
         mysql_options.clone(),
         readonly_storage,
     )
     .await
-    .context("constructing metadata sql factory")?;
+    .context("failed to construct metadata sql factory")?;
 
     let segmented_changelog_sql_connections = sql_factory
         .open::<SegmentedChangelogSqlConnections>()

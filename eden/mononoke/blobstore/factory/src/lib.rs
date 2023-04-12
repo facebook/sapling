@@ -43,7 +43,6 @@ pub use crate::blobstore::make_packblob;
 pub use crate::blobstore::make_sql_blobstore;
 pub use crate::blobstore::make_sql_blobstore_xdb;
 pub use crate::blobstore::BlobstoreOptions;
-pub use crate::sql::make_metadata_sql_factory;
 pub use crate::sql::MetadataSqlFactory;
 pub use crate::sql::SqlTierInfo;
 

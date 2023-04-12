@@ -10,7 +10,6 @@ use std::path::Path;
 use anyhow::Result;
 use sql::Connection;
 use sql::SqlConnections;
-use sql::SqlConnectionsWithSchema;
 use sql::SqlShardedConnections;
 use sql_ext::open_existing_sqlite_path;
 use sql_ext::open_sqlite_in_memory;
@@ -32,12 +31,6 @@ pub trait SqlConstruct: Sized + Send + Sync + 'static {
     ///
     /// This function may be called in an async context and must not block.
     fn from_sql_connections(connections: SqlConnections) -> Self;
-
-    // Wraps from_sql_connections, creating the sqlite schema if required
-    fn from_connections_with_schema(connections: SqlConnectionsWithSchema) -> Result<Self> {
-        connections.create_schema(Self::CREATION_QUERY)?;
-        Ok(Self::from_sql_connections(connections.into()))
-    }
 
     /// Construct an instance from an in-memory SQLite instance
     fn with_sqlite_in_memory() -> Result<Self> {

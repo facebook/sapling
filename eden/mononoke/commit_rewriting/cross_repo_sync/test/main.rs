@@ -497,8 +497,7 @@ fn prepare_repos_and_mapping(
     let mut factory = TestRepoFactory::with_sqlite_connection(fb, metadata_con, hg_mutation_con)?;
     let megarepo = factory.with_id(RepositoryId::new(1)).build()?;
     let small_repo = factory.with_id(RepositoryId::new(0)).build()?;
-    let mapping =
-        SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone().into());
+    let mapping = SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone());
     Ok((small_repo, megarepo, mapping))
 }
 
@@ -2093,8 +2092,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mut factory = TestRepoFactory::new(fb)?;
-    let mapping =
-        SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone().into());
+    let mapping = SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone());
 
     let large_repo_id = RepositoryId::new(0);
     let large_repo: TestRepo = factory.with_id(large_repo_id).build()?;

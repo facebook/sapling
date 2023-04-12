@@ -197,8 +197,7 @@ pub async fn init_small_large_repo(
 > {
     let mut factory = TestRepoFactory::new(ctx.fb)?;
     let megarepo: TestRepo = factory.with_id(RepositoryId::new(1)).build()?;
-    let mapping =
-        SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone().into());
+    let mapping = SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone());
     let smallrepo: TestRepo = factory.with_id(RepositoryId::new(0)).build()?;
 
     let repos = CommitSyncRepos::SmallToLarge {

@@ -96,11 +96,20 @@ pub trait SqlConstructFromMetadataDatabaseConfig: FbSqlConstruct + SqlConstruct 
                 Self::with_sqlite_path(path.join("sqlite_dbs"), readonly)
             }
             MetadataDatabaseConfig::Remote(remote) => {
-                let config = Self::remote_database_config(remote)
-                    .ok_or_else(|| anyhow!("no configuration available"))?;
-                Self::with_mysql(fb, config.db_address.clone(), mysql_options, readonly)
+                Self::with_remote_metadata_database_config(fb, remote, mysql_options, readonly)
             }
         }
+    }
+
+    fn with_remote_metadata_database_config(
+        fb: FacebookInit,
+        remote: &RemoteMetadataDatabaseConfig,
+        mysql_options: &MysqlOptions,
+        readonly: bool,
+    ) -> Result<Self> {
+        let config = Self::remote_database_config(remote)
+            .ok_or_else(|| anyhow!("no configuration available"))?;
+        Self::with_mysql(fb, config.db_address.clone(), mysql_options, readonly)
     }
 
     /// Get the remote database config for this type.  Override this to use a database other than
@@ -127,21 +136,30 @@ pub trait SqlShardableConstructFromMetadataDatabaseConfig:
                 Self::with_sqlite_path(path.join("sqlite_dbs"), readonly)
             }
             MetadataDatabaseConfig::Remote(remote) => {
-                let config = Self::remote_database_config(remote)
-                    .ok_or_else(|| anyhow!("no configuration available"))?;
-                match config {
-                    ShardableRemoteDatabaseConfig::Unsharded(config) => {
-                        Self::with_mysql(fb, config.db_address.clone(), mysql_options, readonly)
-                    }
-                    ShardableRemoteDatabaseConfig::Sharded(config) => Self::with_sharded_mysql(
-                        fb,
-                        config.shard_map.clone(),
-                        config.shard_num,
-                        mysql_options,
-                        readonly,
-                    ),
-                }
+                Self::with_remote_metadata_database_config(fb, remote, mysql_options, readonly)
             }
+        }
+    }
+
+    fn with_remote_metadata_database_config(
+        fb: FacebookInit,
+        remote: &RemoteMetadataDatabaseConfig,
+        mysql_options: &MysqlOptions,
+        readonly: bool,
+    ) -> Result<Self> {
+        let config = Self::remote_database_config(remote)
+            .ok_or_else(|| anyhow!("no configuration available"))?;
+        match config {
+            ShardableRemoteDatabaseConfig::Unsharded(config) => {
+                Self::with_mysql(fb, config.db_address.clone(), mysql_options, readonly)
+            }
+            ShardableRemoteDatabaseConfig::Sharded(config) => Self::with_sharded_mysql(
+                fb,
+                config.shard_map.clone(),
+                config.shard_num,
+                mysql_options,
+                readonly,
+            ),
         }
     }
 

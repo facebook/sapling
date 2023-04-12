@@ -13,7 +13,7 @@ use anyhow::Error;
 use anyhow::Result;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
-use blobstore_factory::make_metadata_sql_factory;
+use blobstore_factory::MetadataSqlFactory;
 use blobstore_factory::ReadOnlyStorage;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
@@ -164,7 +164,7 @@ impl SegmentedChangelogTailer {
             }
         };
 
-        let sql_factory = make_metadata_sql_factory(
+        let sql_factory = MetadataSqlFactory::new(
             ctx.fb,
             storage_config_metadata.clone(),
             mysql_options.clone(),

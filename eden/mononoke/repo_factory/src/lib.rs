@@ -24,7 +24,6 @@ use blobstore::BlobstoreEnumerableWithUnlink;
 use blobstore_factory::default_scrub_handler;
 use blobstore_factory::make_blobstore;
 use blobstore_factory::make_blobstore_enumerable_with_unlink;
-use blobstore_factory::make_metadata_sql_factory;
 pub use blobstore_factory::BlobstoreOptions;
 use blobstore_factory::ComponentSamplingHandler;
 use blobstore_factory::MetadataSqlFactory;
@@ -152,9 +151,7 @@ use segmented_changelog_types::ArcSegmentedChangelog;
 use skiplist::ArcSkiplistIndex;
 use skiplist::SkiplistIndex;
 use slog::o;
-use sql::SqlConnectionsWithSchema;
 use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
-use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_query_config::ArcSqlQueryConfig;
@@ -225,7 +222,6 @@ pub trait RepoFactoryOverride<T> = Fn(T) -> T + Send + Sync + 'static;
 pub struct RepoFactory {
     pub env: Arc<MononokeEnvironment>,
     sql_factories: RepoFactoryCache<MetadataDatabaseConfig, Arc<MetadataSqlFactory>>,
-    sql_connections: RepoFactoryCache<MetadataDatabaseConfig, SqlConnectionsWithSchema>,
     blobstores: RepoFactoryCache<BlobConfig, Arc<dyn Blobstore>>,
     redacted_blobs: RepoFactoryCache<MetadataDatabaseConfig, Arc<RedactedBlobs>>,
     blobstore_override: Option<Arc<dyn RepoFactoryOverride<Arc<dyn Blobstore>>>>,
@@ -238,7 +234,6 @@ impl RepoFactory {
     pub fn new(env: Arc<MononokeEnvironment>) -> RepoFactory {
         RepoFactory {
             sql_factories: RepoFactoryCache::new(),
-            sql_connections: RepoFactoryCache::new(),
             blobstores: RepoFactoryCache::new(),
             redacted_blobs: RepoFactoryCache::new(),
             blobstore_override: None,
@@ -281,7 +276,7 @@ impl RepoFactory {
     ) -> Result<Arc<MetadataSqlFactory>> {
         self.sql_factories
             .get_or_try_init(config, || async move {
-                let sql_factory = make_metadata_sql_factory(
+                let sql_factory = MetadataSqlFactory::new(
                     self.env.fb,
                     config.clone(),
                     self.env.mysql_options.clone(),
@@ -294,33 +289,12 @@ impl RepoFactory {
             .await
     }
 
-    async fn sql_connections(
+    async fn open_sql<T: SqlConstructFromMetadataDatabaseConfig>(
         &self,
-        config: &MetadataDatabaseConfig,
-    ) -> Result<SqlConnectionsWithSchema> {
-        let sql_factory = self.sql_factory(config).await?;
-        self.sql_connections
-            .get_or_try_init(config, || async move {
-                sql_factory
-                    .make_primary_connections(String::from("metadata"))
-                    .await
-            })
-            .await
-    }
-
-    async fn open<T: SqlConstruct>(&self, config: &MetadataDatabaseConfig) -> Result<T> {
-        let sql_connections = match config {
-            // For sqlite cache the connections to save reopening the file
-            MetadataDatabaseConfig::Local(_) => self.sql_connections(config).await?,
-            // TODO(ahornby) for other dbs the label can be part of connection identity in stats so don't reuse
-            _ => {
-                self.sql_factory(config)
-                    .await?
-                    .make_primary_connections(T::LABEL.to_string())
-                    .await?
-            }
-        };
-        T::from_connections_with_schema(sql_connections)
+        config: &RepoConfig,
+    ) -> Result<T> {
+        let sql_factory = self.sql_factory(&config.storage_config.metadata).await?;
+        sql_factory.open::<T>()
     }
 
     async fn blobstore_no_cache(&self, config: &BlobConfig) -> Result<Arc<dyn Blobstore>> {
@@ -438,8 +412,8 @@ impl RepoFactory {
         self.redacted_blobs
             .get_or_try_init(db_config, || async move {
                 let redacted_blobs = if tunables().redaction_config_from_xdb().unwrap_or_default() {
-                    let redacted_content_store =
-                        self.open::<SqlRedactedContentStore>(db_config).await?;
+                    let sql_factory = self.sql_factory(db_config).await?;
+                    let redacted_content_store = sql_factory.open::<SqlRedactedContentStore>()?;
                     // Fetch redacted blobs in a separate task so that slow polls
                     // in repo construction don't interfere with the SQL query.
                     tokio::task::spawn(async move {
@@ -661,7 +635,7 @@ impl RepoFactory {
         commit_graph: &ArcCommitGraph,
     ) -> Result<ArcChangesets> {
         let builder = self
-            .open::<SqlChangesetsBuilder>(&repo_config.storage_config.metadata)
+            .open_sql::<SqlChangesetsBuilder>(repo_config)
             .await
             .context(RepoFactoryError::Changesets)?;
         let changesets = builder.build(self.env.rendezvous_options, repo_identity.id());
@@ -702,7 +676,7 @@ impl RepoFactory {
         repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcSqlBookmarks> {
         let sql_bookmarks = self
-            .open::<SqlBookmarksBuilder>(&repo_config.storage_config.metadata)
+            .open_sql::<SqlBookmarksBuilder>(repo_config)
             .await
             .context(RepoFactoryError::Bookmarks)?
             .with_repo_id(repo_identity.id());
@@ -733,7 +707,7 @@ impl RepoFactory {
         changeset_fetcher: &ArcChangesetFetcher,
     ) -> Result<ArcPhases> {
         let mut sql_phases_builder = self
-            .open::<SqlPhasesBuilder>(&repo_config.storage_config.metadata)
+            .open_sql::<SqlPhasesBuilder>(repo_config)
             .await
             .context(RepoFactoryError::Phases)?;
         if let Some(cache_handler_factory) = self.cache_handler_factory("phases")? {
@@ -749,7 +723,7 @@ impl RepoFactory {
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcBonsaiHgMapping> {
         let mut builder = self
-            .open::<SqlBonsaiHgMappingBuilder>(&repo_config.storage_config.metadata)
+            .open_sql::<SqlBonsaiHgMappingBuilder>(repo_config)
             .await
             .context(RepoFactoryError::BonsaiHgMapping)?;
 
@@ -775,7 +749,7 @@ impl RepoFactory {
         repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcBonsaiGitMapping> {
         let bonsai_git_mapping = self
-            .open::<SqlBonsaiGitMappingBuilder>(&repo_config.storage_config.metadata)
+            .open_sql::<SqlBonsaiGitMappingBuilder>(repo_config)
             .await
             .context(RepoFactoryError::BonsaiGitMapping)?
             .build(repo_identity.id());
@@ -787,7 +761,7 @@ impl RepoFactory {
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcLongRunningRequestsQueue> {
         let long_running_requests_queue = self
-            .open::<SqlLongRunningRequestsQueue>(&repo_config.storage_config.metadata)
+            .open_sql::<SqlLongRunningRequestsQueue>(repo_config)
             .await
             .context(RepoFactoryError::LongRunningRequestsQueue)?;
         Ok(Arc::new(long_running_requests_queue))
@@ -799,7 +773,7 @@ impl RepoFactory {
         repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcBonsaiGlobalrevMapping> {
         let bonsai_globalrev_mapping = self
-            .open::<SqlBonsaiGlobalrevMappingBuilder>(&repo_config.storage_config.metadata)
+            .open_sql::<SqlBonsaiGlobalrevMappingBuilder>(repo_config)
             .await
             .context(RepoFactoryError::BonsaiGlobalrevMapping)?
             .build(repo_identity.id());
@@ -821,7 +795,7 @@ impl RepoFactory {
         repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcBonsaiSvnrevMapping> {
         let bonsai_svnrev_mapping = self
-            .open::<SqlBonsaiSvnrevMappingBuilder>(&repo_config.storage_config.metadata)
+            .open_sql::<SqlBonsaiSvnrevMappingBuilder>(repo_config)
             .await
             .context(RepoFactoryError::BonsaiSvnrevMapping)?
             .build(repo_identity.id());
@@ -840,7 +814,7 @@ impl RepoFactory {
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcPushrebaseMutationMapping> {
         let conn = self
-            .open::<SqlPushrebaseMutationMappingConnection>(&repo_config.storage_config.metadata)
+            .open_sql::<SqlPushrebaseMutationMappingConnection>(repo_config)
             .await
             .context(RepoFactoryError::PushrebaseMutationMapping)?;
         Ok(Arc::new(conn.with_repo_id(repo_config.repoid)))
@@ -916,11 +890,9 @@ impl RepoFactory {
         repo_config: &ArcRepoConfig,
         repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcHgMutationStore> {
-        let sql_factory = self
-            .sql_factory(&repo_config.storage_config.metadata)
-            .await?;
-        let hg_mutation_store = sql_factory
-            .open::<SqlHgMutationStoreBuilder>()
+        let hg_mutation_store = self
+            .open_sql::<SqlHgMutationStoreBuilder>(repo_config)
+            .await
             .context(RepoFactoryError::HgMutationStore)?
             .with_repo_id(repo_identity.id());
 
@@ -943,7 +915,7 @@ impl RepoFactory {
         repo_blobstore: &ArcRepoBlobstore,
     ) -> Result<ArcSegmentedChangelog> {
         let sql_connections = self
-            .open::<SegmentedChangelogSqlConnections>(&repo_config.storage_config.metadata)
+            .open_sql::<SegmentedChangelogSqlConnections>(repo_config)
             .await
             .context(RepoFactoryError::SegmentedChangelog)?;
         let cache_handler_factory = self.cache_handler_factory("segmented_changelog")?;
@@ -971,9 +943,9 @@ impl RepoFactory {
         repo_blobstore: &ArcRepoBlobstore,
     ) -> Result<ArcSegmentedChangelogManager> {
         let sql_connections = self
-            .open::<SegmentedChangelogSqlConnections>(&repo_config.storage_config.metadata)
+            .open_sql::<SegmentedChangelogSqlConnections>(repo_config)
             .await
-            .context(RepoFactoryError::SegmentedChangelog)?;
+            .context(RepoFactoryError::SegmentedChangelogManager)?;
         let cache_handler_factory = self.cache_handler_factory("segmented_changelog")?;
         let manager = new_server_segmented_changelog_manager(
             &self.ctx(Some(repo_identity)),
@@ -1124,7 +1096,7 @@ impl RepoFactory {
 
     pub async fn mutable_renames(&self, repo_config: &ArcRepoConfig) -> Result<ArcMutableRenames> {
         let sql_store = self
-            .open::<SqlMutableRenamesStore>(&repo_config.storage_config.metadata)
+            .open_sql::<SqlMutableRenamesStore>(repo_config)
             .await
             .context(RepoFactoryError::MutableRenames)?;
         let cache_handler_factory = self.cache_handler_factory("mutable_renames")?;
@@ -1176,8 +1148,7 @@ impl RepoFactory {
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcSyncedCommitMapping> {
         Ok(Arc::new(
-            self.open::<SqlSyncedCommitMapping>(&repo_config.storage_config.metadata)
-                .await?,
+            self.open_sql::<SqlSyncedCommitMapping>(repo_config).await?,
         ))
     }
 
@@ -1210,7 +1181,7 @@ impl RepoFactory {
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcMutableCounters> {
         Ok(Arc::new(
-            self.open::<SqlMutableCountersBuilder>(&repo_config.storage_config.metadata)
+            self.open_sql::<SqlMutableCountersBuilder>(repo_config)
                 .await
                 .context(RepoFactoryError::MutableCounters)?
                 .build(repo_identity.id()),
@@ -1304,14 +1275,11 @@ impl RepoFactory {
         &self,
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcRepoSparseProfiles> {
-        let sql = self
-            .sql_factory(&repo_config.storage_config.metadata)
-            .await?
-            .open::<SqlSparseProfilesSizes>()
+        let sql_profile_sizes = self
+            .open_sql::<SqlSparseProfilesSizes>(repo_config)
+            .await
             .ok();
-        Ok(Arc::new(RepoSparseProfiles {
-            sql_profile_sizes: sql,
-        }))
+        Ok(Arc::new(RepoSparseProfiles { sql_profile_sizes }))
     }
 
     pub fn repo_lock(
@@ -1357,7 +1325,7 @@ impl RepoFactory {
         repo_blobstore: &ArcRepoBlobstore,
     ) -> Result<ArcStreamingClone> {
         let streaming_clone = self
-            .open::<StreamingCloneBuilder>(&repo_config.storage_config.metadata)
+            .open_sql::<StreamingCloneBuilder>(repo_config)
             .await
             .context(RepoFactoryError::StreamingClone)?
             .build(repo_identity.id(), repo_blobstore.clone());
@@ -1494,7 +1462,7 @@ impl RepoFactory {
         repo_config: &RepoConfig,
     ) -> Result<ArcCommitGraph> {
         let sql_storage = self
-            .open::<SqlCommitGraphStorageBuilder>(&repo_config.storage_config.metadata)
+            .open_sql::<SqlCommitGraphStorageBuilder>(repo_config)
             .await?
             .build(
                 RendezVousOptions {
