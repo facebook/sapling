@@ -11,6 +11,7 @@ import type {Comparison} from 'shared/Comparison';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import {islDrawerState} from './App';
+import {ChangedFileDisplayTypePicker} from './ChangedFileDisplayTypePicker';
 import serverAPI from './ClientToServerAPI';
 import {commitFieldsBeingEdited, commitMode} from './CommitInfoView/CommitInfoState';
 import {
@@ -306,6 +307,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
           <MergeConflictButtons allConflictsResolved={allConflictsResolved} conflicts={conflicts} />
         ) : (
           <>
+            <ChangedFileDisplayTypePicker />
             <OpenComparisonViewButton
               comparison={{
                 type:

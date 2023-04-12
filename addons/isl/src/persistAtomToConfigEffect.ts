@@ -15,7 +15,10 @@ import serverAPI from './ClientToServerAPI';
  * Loads this atom from server config via `sl config`,
  * and persists any changes via `sl config --user name value`
  */
-export function persistAtomToConfigEffect<T extends Json>(name: ConfigName): AtomEffect<T> {
+export function persistAtomToConfigEffect<T extends Json>(
+  name: ConfigName,
+  defaultValue?: T,
+): AtomEffect<T> {
   return ({onSet, setSelf}) => {
     onSet(newValue => {
       serverAPI.postMessage({
@@ -25,8 +28,13 @@ export function persistAtomToConfigEffect<T extends Json>(name: ConfigName): Ato
       });
     });
     serverAPI.onMessageOfType('gotConfig', event => {
+      if (event.name !== name) {
+        return;
+      }
       if (event.value != null) {
         setSelf(JSON.parse(event.value));
+      } else if (defaultValue != null) {
+        setSelf(defaultValue);
       }
     });
     serverAPI.onConnectOrReconnect(() => {
