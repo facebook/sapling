@@ -148,6 +148,11 @@ impl RequestDumper {
         }
     }
 
+    // Add duration in ms for the origin request
+    pub fn add_duration(&mut self, duration: i64) {
+        self.logger.add("duration_ms_origin", duration);
+    }
+
     pub fn new(fb: FacebookInit) -> Self {
         let scuba = MononokeScubaSampleBuilder::new(fb, "mononoke_replay_logged_edenapi_requests")
             .expect("Couldn't create scuba sample builder");
@@ -231,6 +236,7 @@ impl Middleware for RequestDumperMiddleware {
                         trace!(logger, "Won't record this request");
                         return;
                     }
+                    request_dumper.add_duration(dur_ms);
                     if let Err(e) = request_dumper.log() {
                         warn!(logger, "Couldn't dump request: {}", e);
                     }
