@@ -94,6 +94,7 @@ use itertools::Itertools;
 use metrics::Counter;
 use metrics::EntranceGuard;
 use minibytes::Bytes;
+use parking_lot::Once;
 use progress_model::AggregatingProgressBar;
 use repo_name::encode_repo_name;
 use serde::de::DeserializeOwned;
@@ -169,6 +170,8 @@ pub struct ClientInner {
     tree_progress: Arc<AggregatingProgressBar>,
     file_progress: Arc<AggregatingProgressBar>,
 }
+
+static LOG_SERVER_INFO_ONCE: Once = Once::new();
 
 impl Client {
     /// Create an EdenAPI client with the given configuration.
@@ -293,6 +296,12 @@ impl Client {
             stream::once(async move {
                 let res = raise_for_status(fut.await?).await?;
                 tracing::debug!("{:?}", ResponseMeta::from(&res));
+
+                LOG_SERVER_INFO_ONCE.call_once(|| {
+                    let res_meta = ResponseMeta::from(&res);
+                    tracing::debug!(target: "mononoke_info", mononoke_host=res_meta.mononoke_host.unwrap_or_default());
+                });
+
                 Ok::<_, EdenApiError>(res.into_body().cbor::<T>().err_into())
             })
             .try_flatten()

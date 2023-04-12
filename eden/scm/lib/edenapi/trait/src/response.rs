@@ -24,6 +24,7 @@ const TW_TASK_HEADER: &str = "x-tw-task";
 const TW_VERSION_HEADER: &str = "x-tw-task-version";
 const TW_CANARY_HEADER: &str = "x-tw-canary-id";
 const SERVER_LOAD_HEADER: &str = "x-load";
+const MONONOKE_HOST: &str = "x-mononoke-host";
 
 /// A generic `Stream` of "entries" representing the deserialized content
 /// of a streaming response from the server.
@@ -91,6 +92,7 @@ pub struct ResponseMeta {
     pub server_load: Option<usize>,
     pub content_length: Option<usize>,
     pub content_encoding: Option<String>,
+    pub mononoke_host: Option<String>,
 }
 
 impl ResponseMeta {
@@ -99,6 +101,7 @@ impl ResponseMeta {
             version,
             status,
             server: get_header(headers, SERVER_HEADER),
+            mononoke_host: get_header(headers, MONONOKE_HOST),
             request_id: get_header(headers, REQUEST_ID_HEADER),
             tw_task_handle: get_header(headers, TW_TASK_HEADER),
             tw_task_version: get_header(headers, TW_VERSION_HEADER),
