@@ -70,3 +70,19 @@
   ? exp/.gitignore
   ? exp/i.tmp
   ? x.pyc
+
+# Test exclusion patterns
+
+  $ cat > .gitignore << 'EOF'
+  > /*
+  > !/build
+  > EOF
+
+  $ rm -rf build/
+  $ mkdir build
+  $ touch build/libfoo.so t.tmp Makefile
+
+  $ hg status
+  ? build/libfoo.so
+  $ hg status
+  ? build/libfoo.so

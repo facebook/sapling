@@ -446,6 +446,8 @@ def _innerwalk(self, match, event, span):
         ignorevisitdir = self.dirstate._ignore.visitdir
 
         def dirfilter(path):
+            if path == "":
+                return False
             result = ignorevisitdir(path.rstrip("/"))
             return result == "all"
 
