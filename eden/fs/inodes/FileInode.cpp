@@ -89,7 +89,8 @@ class FileInode::LockedState {
   /**
    * Move the file into the MATERIALIZED_IN_OVERLAY state.
    *
-   * This updates state->tag and state->nonMaterializedState.
+   * This updates state->tag, state->nonMaterializedState and
+   * state->materializedState.
    */
   void setMaterialized();
 
@@ -160,6 +161,7 @@ void FileInode::LockedState::setMaterialized() {
     ptr_->tag = State::MATERIALIZED_IN_OVERLAY;
   }
 
+  ptr_->materializedState.invalidate();
   ptr_->interestHandle.reset();
 
 #ifndef _WIN32
@@ -314,6 +316,7 @@ FileInode::runWhileMaterialized(
       break;
     case State::MATERIALIZED_IN_OVERLAY:
       logAccess(*fetchContext);
+      state->materializedState.invalidate();
       return makeImmediateFutureWith(
           [&] { return std::forward<Fn>(fn)(LockedState{std::move(state)}); });
   }
@@ -481,6 +484,41 @@ void FileInodeState::checkInvariants() {
   XLOG(FATAL) << "Unexpected tag value: " << tag;
 }
 
+Hash20 FileInodeState::MaterializedState::getSha1(FileInode& inode) {
+  if (sha1_.has_value()) {
+    return sha1_.value();
+  }
+
+#ifdef _WIN32
+  auto sha1 = getFileSha1(inode.getMaterializedFilePath());
+#else
+  auto sha1 = inode.getMount()->getOverlayFileAccess()->getSha1(inode);
+#endif // _WIN32
+
+  sha1_ = sha1;
+  return sha1;
+}
+
+uint64_t FileInodeState::MaterializedState::getSize(FileInode& inode) {
+  if (size_ != FileInodeState::kUnknownSize) {
+    return size_;
+  }
+
+#ifdef _WIN32
+  auto size = getMaterializedFileSize(inode.getMaterializedFilePath()).value();
+#else
+  auto size = inode.getMount()->getOverlayFileAccess()->getFileSize(inode);
+#endif
+
+  size_ = size;
+  return size;
+}
+
+void FileInodeState::MaterializedState::invalidate() {
+  sha1_ = std::nullopt;
+  size_ = FileInodeState::kUnknownSize;
+}
+
 /*********************************************************************
  * FileInode methods
  ********************************************************************/
@@ -540,6 +578,7 @@ ImmediateFuture<struct stat> FileInode::setattr(
     if (desired.size.has_value()) {
       // Throws upon error.
       self->getOverlayFileAccess(state)->truncate(*self, desired.size.value());
+      state->materializedState.invalidate();
     }
 
     auto metadata = self->getMount()->getInodeMetadataTable()->modifyOrThrow(
@@ -552,7 +591,7 @@ ImmediateFuture<struct stat> FileInode::setattr(
     // when desired.size flag is set but when the flag is not set we
     // have to return the correct size of the file even if some size is sent
     // in attr.st.st_size.
-    off_t size = self->getOverlayFileAccess(state)->getFileSize(*self);
+    auto size = state->materializedState.getSize(*self);
     result.st_ino = ino.get();
     result.st_size = size;
     metadata.applyToStat(result);
@@ -786,12 +825,8 @@ ImmediateFuture<Hash20> FileInode::getSha1(
       return getObjectStore().getBlobSha1(
           state->nonMaterializedState.hash, fetchContext);
     case State::MATERIALIZED_IN_OVERLAY:
-#ifdef _WIN32
       return makeImmediateFutureWith(
-          [this] { return getFileSha1(getMaterializedFilePath()); });
-#else
-      return getOverlayFileAccess(state)->getSha1(*this);
-#endif // _WIN32
+          [&] { return state->materializedState.getSha1(*this); });
   }
 
   XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
@@ -809,18 +844,11 @@ ImmediateFuture<BlobMetadata> FileInode::getBlobMetadata(
       return getObjectStore().getBlobMetadata(
           state->nonMaterializedState.hash, fetchContext);
     case State::MATERIALIZED_IN_OVERLAY:
-#ifdef _WIN32
-      return makeImmediateFutureWith([this] {
-        auto pathToFile = getMaterializedFilePath();
-        return BlobMetadata(
-            getFileSha1(pathToFile),
-            getMaterializedFileSize(pathToFile).value());
+      return makeImmediateFutureWith([&] {
+        return BlobMetadata{
+            state->materializedState.getSha1(*this),
+            state->materializedState.getSize(*this)};
       });
-#else
-      auto sha1 = getOverlayFileAccess(state)->getSha1(*this);
-      auto fileSize = getOverlayFileAccess(state)->getFileSize(*this);
-      return BlobMetadata(sha1, fileSize);
-#endif // _WIN32
   }
 
   XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
@@ -843,17 +871,11 @@ ImmediateFuture<struct stat> FileInode::stat(
 #endif
 
   if (state->isMaterialized()) {
-#ifdef _WIN32
-    auto pathToFile = getMaterializedFilePath();
-    st.st_size = getMaterializedFileSize(pathToFile).value();
-#else
-    st.st_size = getOverlayFileAccess(state)->getFileSize(*this);
-#endif
+    st.st_size = state->materializedState.getSize(*this);
     updateBlockCount(st);
     return st;
   } else {
-    if (state->nonMaterializedState.size !=
-        FileInodeState::NonMaterializedState::kUnknownSize) {
+    if (state->nonMaterializedState.size != FileInodeState::kUnknownSize) {
       st.st_size = state->nonMaterializedState.size;
       updateBlockCount(st);
       return st;
@@ -1152,6 +1174,7 @@ ImmediateFuture<size_t> FileInode::write(
 
   // If we are currently materialized we don't need to copy the input data.
   if (state->isMaterialized()) {
+    state->materializedState.invalidate();
     struct iovec iov;
     iov.iov_base = const_cast<char*>(data.data());
     iov.iov_len = data.size();
@@ -1284,6 +1307,7 @@ void FileInode::truncateInOverlay(LockedState& state) {
   XCHECK_EQ(state->tag, State::MATERIALIZED_IN_OVERLAY);
 
   getOverlayFileAccess(state)->truncate(*this);
+  state->materializedState.invalidate();
 }
 
 OverlayFileAccess* FileInode::getOverlayFileAccess(LockedState&) const {

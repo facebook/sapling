@@ -78,6 +78,8 @@ struct FileInodeState {
 
   Tag tag;
 
+  static constexpr uint64_t kUnknownSize = std::numeric_limits<uint64_t>::max();
+
   struct NonMaterializedState {
     ObjectId hash;
 
@@ -86,14 +88,44 @@ struct FileInodeState {
      * used to represent a non-cached size, this is used instead of a
      * std::optional to save 8 bytes.
      */
-    static constexpr uint64_t kUnknownSize =
-        std::numeric_limits<uint64_t>::max();
     uint64_t size{kUnknownSize};
 
     explicit NonMaterializedState(const ObjectId& hash) : hash(hash) {}
   };
 
-  struct MaterializedState {};
+  struct MaterializedState {
+    /**
+     * Get the sha1 for this inode.
+     *
+     * In the case where a sha1 is not yet cached, it will be computed and
+     * stored so future calls will be served from the cache.
+     */
+    Hash20 getSha1(FileInode& inode);
+
+    /**
+     * Get the file size for this inode.
+     *
+     * In the case where a file size is not yet cached, it will be computed and
+     * stored so future calls will be served from the cache.
+     */
+    uint64_t getSize(FileInode& inode);
+
+    /**
+     * Reset the cached sha1 and size.
+     *
+     * This must be used for every write operation to this inode to ensure that
+     * the cache is not out of sync with the Overlay/on-disk state.
+     */
+    void invalidate();
+
+   private:
+    std::optional<Hash20> sha1_;
+    /**
+     * See NonMaterializedState::size.
+     * TODO: We probably want to merge NonMaterializedState::size and this one.
+     */
+    uint64_t size_{kUnknownSize};
+  };
 
   union {
     /**
@@ -492,5 +524,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   // So it can call inodePtrFromThis() for better error messages.
   friend class ::facebook::eden::OverlayFileAccess;
+  friend struct FileInodeState::MaterializedState;
 };
 } // namespace facebook::eden
