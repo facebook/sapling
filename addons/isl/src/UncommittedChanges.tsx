@@ -57,6 +57,7 @@ import {useEffect, useRef, useState} from 'react';
 import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
+import {useDeepMemo} from 'shared/hooks';
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 import {notEmpty} from 'shared/utils';
 
@@ -149,7 +150,7 @@ export function ChangedFiles(
 ) {
   const displayType = useRecoilValue(changedFilesDisplayType);
   const {files, ...rest} = props;
-  const processedFiles = processCopiesAndRenames(files);
+  const processedFiles = useDeepMemo(() => processCopiesAndRenames(files), [files]);
   return (
     <div className="changed-files">
       {displayType === 'tree' ? (
@@ -188,7 +189,10 @@ function FileTree(props: {
 }) {
   const {files, ...rest} = props;
 
-  const tree = buildPathTree(Object.fromEntries(files.map(file => [file.path, file])));
+  const tree = useDeepMemo(
+    () => buildPathTree(Object.fromEntries(files.map(file => [file.path, file]))),
+    [files],
+  );
 
   const [collapsed, setCollapsed] = useState(new Set());
 
