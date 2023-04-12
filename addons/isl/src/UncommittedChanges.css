@@ -62,6 +62,39 @@
   margin: var(--pad) 0;
 }
 
+.file-tree-level {
+  --file-tree-indent: calc(2 * var(--pad));
+  margin-left: var(--file-tree-indent);
+  position: relative;
+}
+.changed-files > .file-tree-level {
+  margin-left: 0;
+}
+.file-tree-level > .changed-file {
+  margin-left: var(--halfpad);
+}
+.file-tree-folder-path {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+}
+.file-tree-folder-path vscode-button::part(control) {
+  font-size: initial;
+  max-width: unset;
+}
+
+.file-tree-level .file-tree-level:before {
+  content: '';
+  position: absolute;
+  left: calc(var(--file-tree-indent) / -2);
+  height: 100%;
+  top: 0;
+  border-left: 1px solid var(--divider-background);
+}
+.file-tree-level:hover > .file-tree-level:before {
+  border-left: 1px solid var(--foreground);
+}
+
 .changed-files {
   display: flex;
   flex-direction: column;

@@ -5,13 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {PathTree} from './pathTree';
 import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} from './types';
 import type {SetterOrUpdater} from 'recoil';
 import type {Comparison} from 'shared/Comparison';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import {islDrawerState} from './App';
-import {ChangedFileDisplayTypePicker} from './ChangedFileDisplayTypePicker';
+import {
+  ChangedFileDisplayTypePicker,
+  type ChangedFilesDisplayType,
+  changedFilesDisplayType,
+} from './ChangedFileDisplayTypePicker';
 import serverAPI from './ClientToServerAPI';
 import {commitFieldsBeingEdited, commitMode} from './CommitInfoView/CommitInfoState';
 import {
@@ -33,6 +38,7 @@ import {ForgetOperation} from './operations/ForgetOperation';
 import {PurgeOperation} from './operations/PurgeOperation';
 import {ResolveOperation, ResolveTool} from './operations/ResolveOperation';
 import {RevertOperation} from './operations/RevertOperation';
+import {buildPathTree} from './pathTree';
 import platform from './platform';
 import {
   optimisticMergeConflicts,
@@ -47,7 +53,7 @@ import {
   useRunOperation,
 } from './serverAPIState';
 import {VSCodeButton, VSCodeCheckbox, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
-import {useEffect, useRef} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
@@ -74,8 +80,6 @@ function processCopiesAndRenames(files: Array<ChangedFile>): Array<UIChangedFile
 
   return (
     files
-      // Hide files that were renamed
-      .filter(file => !(file.status === 'R' && copySources.has(file.path)))
       .map((file, i) => {
         const minimalName = disambiguousPaths[i];
         let fileLabel = minimalName;
@@ -113,6 +117,8 @@ function processCopiesAndRenames(files: Array<ChangedFile>): Array<UIChangedFile
           tooltip,
         };
       })
+      // Hide files that were renamed. This comes after the map since we need to use the index to refer to minimalDisambiguousPaths
+      .filter(file => !(file.status === 'R' && copySources.has(file.path)))
       .sort((a, b) =>
         a.visualStatus === b.visualStatus
           ? a.path.localeCompare(b.path)
@@ -135,77 +141,192 @@ const sortKeyForStatus: Record<VisualChangedFileType, number> = {
   Resolved: 8,
 };
 
-export function ChangedFiles({
-  files,
-  deselectedFiles,
-  setDeselectedFiles,
-  comparison,
-}: {files: Array<ChangedFile>; comparison: Comparison} & EnsureAssignedTogether<{
-  deselectedFiles?: Set<string>;
-  setDeselectedFiles?: (newDeselected: Set<string>) => unknown;
-}>) {
+export function ChangedFiles(
+  props: {files: Array<ChangedFile>; comparison: Comparison} & EnsureAssignedTogether<{
+    deselectedFiles?: Set<string>;
+    setDeselectedFiles?: (newDeselected: Set<string>) => unknown;
+  }>,
+) {
+  const displayType = useRecoilValue(changedFilesDisplayType);
+  const {files, ...rest} = props;
   const processedFiles = processCopiesAndRenames(files);
   return (
     <div className="changed-files">
-      {processedFiles.map(file => {
-        // Renamed files are files which have a copy field, where that path was also removed.
-        // Visually show renamed files as if they were modified, even though sl treats them as added.
-        const [statusName, icon] = nameAndIconForFileStatus[file.visualStatus];
-
-        return (
-          <div
-            className={`changed-file file-${statusName}`}
-            data-testid={`changed-file-${file.path}`}
-            key={file.path}
-            tabIndex={0}
-            onKeyPress={e => {
-              if (e.key === 'Enter') {
-                platform.openFile(file.path);
-              }
-            }}>
-            {deselectedFiles == null ? null : (
-              <VSCodeCheckbox
-                checked={!deselectedFiles.has(file.path)}
-                // Note: Using `onClick` instead of `onChange` since onChange apparently fires when the controlled `checked` value changes,
-                // which means this fires when using "select all" / "deselect all"
-                onClick={e => {
-                  const newDeselected = new Set(deselectedFiles);
-                  const checked = (e.target as HTMLInputElement).checked;
-                  if (checked) {
-                    if (newDeselected.has(file.path)) {
-                      newDeselected.delete(file.path);
-                      if (file.renamedFrom != null) {
-                        newDeselected.delete(file.renamedFrom); // checkbox applies to original part of renamed files too
-                      }
-                      setDeselectedFiles?.(newDeselected);
-                    }
-                  } else {
-                    if (!newDeselected.has(file.path)) {
-                      newDeselected.add(file.path);
-                      if (file.renamedFrom != null) {
-                        newDeselected.add(file.renamedFrom); // checkbox applies to original part of renamed files too
-                      }
-                      setDeselectedFiles?.(newDeselected);
-                    }
-                  }
-                }}
-              />
-            )}
-            <span
-              className="changed-file-path"
-              onClick={() => {
-                platform.openFile(file.path);
-              }}>
-              <Icon icon={icon} />
-              <Tooltip title={file.tooltip} delayMs={2_000} placement="top">
-                <span className="changed-file-path-text">{file.label}</span>
-              </Tooltip>
-            </span>
-            <FileActions file={file} comparison={comparison} />
-          </div>
-        );
-      })}
+      {displayType === 'tree' ? (
+        <FileTree {...rest} files={processedFiles} displayType={displayType} />
+      ) : (
+        <LinearFileList {...rest} files={processedFiles} displayType={displayType} />
+      )}
     </div>
+  );
+}
+
+function LinearFileList(props: {
+  files: Array<UIChangedFile>;
+  displayType: ChangedFilesDisplayType;
+  comparison: Comparison;
+  deselectedFiles?: Set<string>;
+  setDeselectedFiles?: (newDeselected: Set<string>) => unknown;
+}) {
+  const {files, ...rest} = props;
+
+  return (
+    <>
+      {files.map(file => (
+        <File key={file.path} {...rest} file={file} />
+      ))}
+    </>
+  );
+}
+
+function FileTree(props: {
+  files: Array<UIChangedFile>;
+  displayType: ChangedFilesDisplayType;
+  comparison: Comparison;
+  deselectedFiles?: Set<string>;
+  setDeselectedFiles?: (newDeselected: Set<string>) => unknown;
+}) {
+  const {files, ...rest} = props;
+
+  const tree = buildPathTree(Object.fromEntries(files.map(file => [file.path, file])));
+
+  const [collapsed, setCollapsed] = useState(new Set());
+
+  function renderTree(tree: PathTree<UIChangedFile>) {
+    return (
+      <>
+        {[...tree.entries()].map(([folder, inner]) => {
+          return (
+            <div className="file-tree-level">
+              {inner instanceof Map ? (
+                <>
+                  <span className="file-tree-folder-path">
+                    <VSCodeButton
+                      appearance="icon"
+                      onClick={() => {
+                        setCollapsed(last =>
+                          collapsed.has(folder)
+                            ? new Set([...last].filter(v => v !== folder))
+                            : new Set([...last, folder]),
+                        );
+                      }}>
+                      <Icon
+                        icon={collapsed.has(folder) ? 'chevron-right' : 'chevron-down'}
+                        slot="start"
+                      />
+                      {folder}
+                    </VSCodeButton>
+                  </span>
+                  {collapsed.has(folder) ? null : renderTree(inner)}
+                </>
+              ) : (
+                <File key={inner.path} {...rest} file={inner} />
+              )}
+            </div>
+          );
+        })}
+      </>
+    );
+  }
+
+  return renderTree(tree);
+}
+
+function File({
+  file,
+  displayType,
+  comparison,
+  deselectedFiles,
+  setDeselectedFiles,
+}: {
+  file: UIChangedFile;
+  displayType: ChangedFilesDisplayType;
+  comparison: Comparison;
+  deselectedFiles?: Set<string>;
+  setDeselectedFiles?: (newDeselected: Set<string>) => unknown;
+}) {
+  // Renamed files are files which have a copy field, where that path was also removed.
+  // Visually show renamed files as if they were modified, even though sl treats them as added.
+  const [statusName, icon] = nameAndIconForFileStatus[file.visualStatus];
+
+  return (
+    <div
+      className={`changed-file file-${statusName}`}
+      data-testid={`changed-file-${file.path}`}
+      key={file.path}
+      tabIndex={0}
+      onKeyPress={e => {
+        if (e.key === 'Enter') {
+          platform.openFile(file.path);
+        }
+      }}>
+      <FileSelectionCheckbox
+        file={file}
+        deselectedFiles={deselectedFiles}
+        setDeselectedFiles={setDeselectedFiles}
+      />
+      <span
+        className="changed-file-path"
+        onClick={() => {
+          platform.openFile(file.path);
+        }}>
+        <Icon icon={icon} />
+        <Tooltip title={file.tooltip} delayMs={2_000} placement="right">
+          <span className="changed-file-path-text">
+            {displayType === 'fish'
+              ? file.path
+                  .split('/')
+                  .map((a, i, arr) => (i === arr.length - 1 ? a : a[0]))
+                  .join('/')
+              : displayType === 'fullPaths'
+              ? file.path
+              : displayType === 'tree'
+              ? file.path.slice(file.path.lastIndexOf('/') + 1)
+              : file.label}
+          </span>
+        </Tooltip>
+      </span>
+      <FileActions file={file} comparison={comparison} />
+    </div>
+  );
+}
+
+function FileSelectionCheckbox({
+  file,
+  deselectedFiles,
+  setDeselectedFiles,
+}: {
+  file: UIChangedFile;
+  deselectedFiles?: Set<string>;
+  setDeselectedFiles?: (newDeselected: Set<string>) => unknown;
+}) {
+  return deselectedFiles == null ? null : (
+    <VSCodeCheckbox
+      checked={!deselectedFiles.has(file.path)}
+      // Note: Using `onClick` instead of `onChange` since onChange apparently fires when the controlled `checked` value changes,
+      // which means this fires when using "select all" / "deselect all"
+      onClick={e => {
+        const newDeselected = new Set(deselectedFiles);
+        const checked = (e.target as HTMLInputElement).checked;
+        if (checked) {
+          if (newDeselected.has(file.path)) {
+            newDeselected.delete(file.path);
+            if (file.renamedFrom != null) {
+              newDeselected.delete(file.renamedFrom); // checkbox applies to original part of renamed files too
+            }
+            setDeselectedFiles?.(newDeselected);
+          }
+        } else {
+          if (!newDeselected.has(file.path)) {
+            newDeselected.add(file.path);
+            if (file.renamedFrom != null) {
+              newDeselected.add(file.renamedFrom); // checkbox applies to original part of renamed files too
+            }
+            setDeselectedFiles?.(newDeselected);
+          }
+        }
+      }}
+    />
   );
 }
 
