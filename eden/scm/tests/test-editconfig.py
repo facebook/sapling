@@ -133,6 +133,28 @@ name2 = bar
 """.lstrip(),
         )
 
+    def testduplicateentries(self):
+        self.path.write_text(
+            """
+[foo]
+bar = one
+[foo]
+bar = two
+""".lstrip()
+        )
+
+        self.assertedit(
+            "foo",
+            "bar",
+            "three",
+            """
+[foo]
+bar = one
+[foo]
+bar = three
+""".lstrip(),
+        )
+
     def assertedit(self, section: str, name: str, value: Optional[str], expected: str):
         editconfig(self.path, section, name, value)
         self.assertEqual(self.path.read_text(), expected)

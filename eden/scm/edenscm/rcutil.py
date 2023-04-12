@@ -47,7 +47,7 @@ def editconfig(path, section, name, value):
         value = value.rstrip("\n").replace("\n", "\n  ")
 
     bcontent = content.encode()
-    for _value, (_filepath, start, end, _line), _source in sources:
+    for _value, (_filepath, start, end, _line), _source in reversed(sources):
         if value is None:
             # "start" is the start of value, but we need to remove the
             # "name =" part as well, so back up to beginning of line.
