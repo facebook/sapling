@@ -25,7 +25,7 @@ use futures::lock::Mutex;
 use futures_watchdog::WatchdogExt;
 use getbundle_response::SessionLfsParams;
 use itertools::Itertools;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::RepoConfigRef;
 use mononoke_hg_sync_job_helper_lib::save_bytes_to_temp_file;

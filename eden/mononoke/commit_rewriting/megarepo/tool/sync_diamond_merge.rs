@@ -54,7 +54,7 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
 use maplit::hashmap;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use metaconfig_types::CommitSyncConfigVersion;

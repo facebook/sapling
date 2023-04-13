@@ -46,7 +46,7 @@ filenodes = { version = "0.1.0", path = "../../filenodes" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 maplit = "1.0"
-mercurial_derived_data = { version = "0.1.0", path = "../mercurial_derived_data" }
+mercurial_derivation = { version = "0.1.0", path = "../mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }

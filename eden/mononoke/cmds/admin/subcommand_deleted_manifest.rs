@@ -33,7 +33,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use manifest::get_implicit_deletes;
 use manifest::PathOrPrefix;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::MPath;

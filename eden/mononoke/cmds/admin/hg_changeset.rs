@@ -27,7 +27,7 @@ use futures::compat::Stream01CompatExt;
 use futures::TryStreamExt;
 use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
 use mercurial_types::MPath;

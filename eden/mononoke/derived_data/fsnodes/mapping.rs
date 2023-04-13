@@ -198,7 +198,7 @@ mod test {
     use futures::stream::TryStreamExt;
     use futures::try_join;
     use manifest::Entry;
-    use mercurial_derived_data::DeriveHgChangeset;
+    use mercurial_derivation::DeriveHgChangeset;
     use mercurial_types::HgChangesetId;
     use mercurial_types::HgManifestId;
     use repo_blobstore::RepoBlobstoreRef;

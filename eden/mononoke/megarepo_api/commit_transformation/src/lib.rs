@@ -31,7 +31,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use manifest::get_implicit_deletes;
 use megarepo_configs::types::SourceMappingRules;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgManifestId;
 use mononoke_types::mpath_element_iter;
 use mononoke_types::BonsaiChangeset;

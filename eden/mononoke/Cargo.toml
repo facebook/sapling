@@ -103,7 +103,7 @@ git2 = "0.14"
 itertools = "0.10.3"
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "manifest" }
-mercurial_derived_data = { version = "0.1.0", path = "derived_data/mercurial_derived_data" }
+mercurial_derivation = { version = "0.1.0", path = "derived_data/mercurial_derivation" }
 mercurial_revlog = { version = "0.1.0", path = "mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "metaconfig/types" }
@@ -295,7 +295,7 @@ members = [
   "derived_data/filenodes",
   "derived_data/fsnodes",
   "derived_data/manager",
-  "derived_data/mercurial_derived_data",
+  "derived_data/mercurial_derivation",
   "derived_data/remote",
   "derived_data/remote/if",
   "derived_data/skeleton_manifest",

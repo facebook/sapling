@@ -20,7 +20,7 @@ use futures::Stream;
 use futures::TryStreamExt;
 use itertools::Itertools;
 use manifest::ManifestOps;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::blobs::HgBlobEnvelope;
 use mercurial_types::HgChangesetId;

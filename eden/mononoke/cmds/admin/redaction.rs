@@ -34,7 +34,7 @@ use futures::future::TryFutureExt;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use manifest::ManifestOps;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::MPath;

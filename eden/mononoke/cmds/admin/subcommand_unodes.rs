@@ -28,7 +28,7 @@ use futures::TryStreamExt;
 use manifest::Entry;
 use manifest::ManifestOps;
 use manifest::PathOrPrefix;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use repo_blobstore::RepoBlobstoreRef;

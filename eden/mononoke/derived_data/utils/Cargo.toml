@@ -38,7 +38,7 @@ git_types = { version = "0.1.0", path = "../../git/git_types" }
 lazy_static = "1.4"
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "../../manifest" }
-mercurial_derived_data = { version = "0.1.0", path = "../mercurial_derived_data" }
+mercurial_derivation = { version = "0.1.0", path = "../mercurial_derivation" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }

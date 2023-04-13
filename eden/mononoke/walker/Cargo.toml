@@ -53,7 +53,7 @@ internment = { version = "0.7", features = ["arc", "serde"] }
 itertools = "0.10.3"
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
-mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
+mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }

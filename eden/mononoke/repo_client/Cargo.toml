@@ -37,7 +37,7 @@ lazy_static = "1.4"
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
 mercurial_bundles = { version = "0.1.0", path = "../mercurial/bundles" }
-mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
+mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_derivation" }
 mercurial_revlog = { version = "0.1.0", path = "../mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }

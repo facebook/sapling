@@ -39,7 +39,7 @@ use futures::TryStreamExt;
 use hash_memo::EagerHashMemoizer;
 use internment::ArcIntern;
 use manifest::Entry;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::blobs::HgBlobManifest;
 use mercurial_types::calculate_hg_node_id_stream;

@@ -55,7 +55,7 @@ use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::ManifestOps;
 use maplit::hashset;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::MPath;
 use metaconfig_parser::RepoConfigs;

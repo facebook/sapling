@@ -18,7 +18,7 @@ use futures::TryStreamExt;
 use mercurial_bundles::obsmarkers::MetadataEntry;
 use mercurial_bundles::part_encode::PartEncodeBuilder;
 use mercurial_bundles::parts;
-use mercurial_derived_data::derive_hg_changeset;
+use mercurial_derivation::derive_hg_changeset;
 use mercurial_types::HgChangesetId;
 use mononoke_types::DateTime;
 use repo_derived_data::RepoDerivedData;

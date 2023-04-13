@@ -54,7 +54,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use manifest::AsyncManifest;
 use manifest::Entry;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use mercurial_types::FileBytes;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;

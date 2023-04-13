@@ -98,7 +98,7 @@ use mercurial_bundles::create_bundle_stream;
 use mercurial_bundles::parts;
 use mercurial_bundles::wirepack;
 use mercurial_bundles::Bundle2Item;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_revlog::RevlogChangeset;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::calculate_hg_node_id;

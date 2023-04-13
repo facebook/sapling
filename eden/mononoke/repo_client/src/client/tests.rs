@@ -14,7 +14,7 @@ use futures::compat::Future01CompatExt;
 use manifest::Entry;
 use manifest::ManifestOps;
 use maplit::hashset;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
 use metaconfig_types::LfsParams;
 use mononoke_api::Repo;

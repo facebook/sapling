@@ -56,7 +56,7 @@ use futures_stats::TimedFutureExt;
 use futures_watchdog::WatchdogExt;
 use itertools::Itertools;
 use lock_ext::RwLockExt;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use metaconfig_types::BlameVersion;
 use mononoke_types::ChangesetId;
 use mononoke_types::Timestamp;

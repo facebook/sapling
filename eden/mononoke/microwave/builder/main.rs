@@ -33,7 +33,7 @@ use derived_data_filenodes::FilenodesOnlyPublic;
 use fbinit::FacebookInit;
 use futures::channel::mpsc;
 use futures::future;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use metaconfig_types::CacheWarmupParams;
 use microwave::Snapshot;
 use microwave::SnapshotLocation;

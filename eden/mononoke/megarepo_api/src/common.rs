@@ -52,7 +52,7 @@ use megarepo_config::Target;
 use megarepo_error::MegarepoError;
 use megarepo_mapping::CommitRemappingState;
 use megarepo_mapping::SourceName;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
 use mononoke_api::ChangesetContext;
 use mononoke_api::Mononoke;

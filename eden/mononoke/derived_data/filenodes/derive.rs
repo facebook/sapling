@@ -24,7 +24,7 @@ use itertools::Either;
 use itertools::Itertools;
 use manifest::find_intersection_of_diffs_and_parents;
 use manifest::Entry;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use mercurial_types::blobs::File;
 use mercurial_types::fetch_manifest_envelope;
 use mercurial_types::nodehash::NULL_HASH;
@@ -315,7 +315,7 @@ mod tests {
     use futures::compat::Stream01CompatExt;
     use manifest::ManifestOps;
     use maplit::hashmap;
-    use mercurial_derived_data::DeriveHgChangeset;
+    use mercurial_derivation::DeriveHgChangeset;
     use mononoke_types::FileType;
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;

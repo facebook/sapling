@@ -28,7 +28,7 @@ use mercurial_bundles::create_bundle_stream;
 use mercurial_bundles::parts;
 use mercurial_bundles::Bundle2EncodeBuilder;
 use mercurial_bundles::PartId;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;

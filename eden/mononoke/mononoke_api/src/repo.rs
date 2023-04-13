@@ -88,7 +88,7 @@ use hooks::HookManagerArc;
 use itertools::Itertools;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use mercurial_mutation::HgMutationStore;
 use mercurial_types::Globalrev;
 use metaconfig_types::HookManagerParams;

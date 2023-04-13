@@ -20,7 +20,7 @@ use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;

@@ -21,7 +21,7 @@ use filestore::StoreRequest;
 use futures::future::try_join_all;
 use futures::stream;
 use maplit::btreemap;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use mercurial_types::HgChangesetId;
 use mercurial_types::MPath;
 use mononoke_api_types::InnerRepo;

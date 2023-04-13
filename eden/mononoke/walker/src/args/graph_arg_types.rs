@@ -15,7 +15,7 @@ use anyhow::Context as _;
 use anyhow::Error;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::derivable::BonsaiDerivable;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use once_cell::sync::Lazy;
 use strum::IntoEnumIterator;
 

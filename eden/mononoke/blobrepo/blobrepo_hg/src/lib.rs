@@ -55,7 +55,7 @@ use futures::Stream;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mononoke_types::ChangesetId;

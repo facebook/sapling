@@ -32,7 +32,7 @@ use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;

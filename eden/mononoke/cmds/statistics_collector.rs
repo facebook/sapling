@@ -43,7 +43,7 @@ use futures_ext::StreamExt as OldStreamExt;
 use manifest::Diff;
 use manifest::Entry;
 use manifest::ManifestOps;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::FileBytes;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;

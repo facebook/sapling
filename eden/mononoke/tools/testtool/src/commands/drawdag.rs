@@ -57,7 +57,7 @@ use derived_data_manager::BonsaiDerivable;
 use fastlog::RootFastlog;
 use fsnodes::RootFsnodeId;
 use futures::try_join;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;

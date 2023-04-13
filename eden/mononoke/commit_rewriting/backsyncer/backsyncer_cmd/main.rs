@@ -51,7 +51,7 @@ use futures::stream::TryStreamExt;
 use futures::try_join;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use once_cell::sync::OnceCell;

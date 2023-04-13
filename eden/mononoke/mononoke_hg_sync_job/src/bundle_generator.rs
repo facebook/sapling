@@ -38,7 +38,7 @@ use mercurial_bundles::capabilities::Capabilities;
 use mercurial_bundles::changegroup::CgVersion;
 use mercurial_bundles::create_bundle_stream;
 use mercurial_bundles::parts;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_revlog::RevlogChangeset;
 use mercurial_types::HgBlobNode;
 use mercurial_types::HgChangesetId;

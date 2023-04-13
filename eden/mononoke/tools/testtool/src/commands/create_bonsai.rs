@@ -17,7 +17,7 @@ use anyhow::Result;
 use blobrepo::BlobRepo;
 use changesets_creation::save_changesets;
 use clap::Parser;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use mononoke_types::hash::GitSha1;

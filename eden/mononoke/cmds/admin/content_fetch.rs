@@ -20,7 +20,7 @@ use fbinit::FacebookInit;
 use manifest::Entry;
 use manifest::Manifest;
 use manifest::ManifestOps;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::MPath;

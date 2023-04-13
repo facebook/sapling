@@ -29,7 +29,7 @@ use futures::TryStreamExt;
 use futures_stats::TimedFutureExt;
 use manifest::Entry;
 use manifest::ManifestOps;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgFileEnvelope;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::MPath;

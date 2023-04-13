@@ -58,7 +58,7 @@ use futures_stats::TimedTryFutureExt;
 use git_types::TreeHandle;
 use lazy_static::lazy_static;
 use lock_ext::LockExt;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use metaconfig_types::BlameVersion;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;

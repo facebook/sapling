@@ -35,7 +35,7 @@ use manifest::BonsaiDiffFileChange;
 use manifest::Diff;
 use manifest::Entry;
 use manifest::ManifestOps;
-use mercurial_derived_data::derive_hg_manifest;
+use mercurial_derivation::derive_hg_manifest;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::blobs::HgBlobManifest;
 use mercurial_types::HgChangesetId;

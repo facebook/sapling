@@ -24,7 +24,7 @@ use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures_stats::TimedFutureExt;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use mononoke_types::ChangesetId;
 use rand::distributions::Alphanumeric;
 use rand::distributions::Uniform;

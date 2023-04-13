@@ -60,7 +60,7 @@ use maplit::hashmap;
 use maplit::hashset;
 use megarepo_mapping::MegarepoMapping;
 use memblob::Memblob;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use mercurial_mutation::ArcHgMutationStore;
 use mercurial_mutation::SqlHgMutationStoreBuilder;
 use metaconfig_types::ArcRepoConfig;

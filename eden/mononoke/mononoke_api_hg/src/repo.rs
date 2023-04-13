@@ -48,7 +48,7 @@ use futures::TryStream;
 use futures::TryStreamExt;
 use futures_util::try_join;
 use hgproto::GettreepackArgs;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_mutation::HgMutationEntry;
 use mercurial_mutation::HgMutationStoreRef;
 use mercurial_types::blobs::RevlogChangeset;

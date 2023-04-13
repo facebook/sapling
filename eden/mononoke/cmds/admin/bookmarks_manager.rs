@@ -23,7 +23,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::TryStreamExt;
 use humantime::parse_duration;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mononoke_types::Timestamp;
 use repo_blobstore::RepoBlobstoreRef;
 use serde_json::json;

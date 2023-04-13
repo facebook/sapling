@@ -19,7 +19,7 @@ use hooks::CrossRepoPushSource;
 use hooks::HookManager;
 use hooks::HookRejection;
 use hooks::PushAuthoredBy;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 
 use crate::resolver::HgHookRejection;
 use crate::resolver::PostResolveAction;

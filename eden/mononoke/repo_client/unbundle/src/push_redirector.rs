@@ -34,7 +34,7 @@ use hooks::CrossRepoPushSource;
 use hooks::HookManagerRef;
 use hooks::HookRejection;
 use live_commit_sync_config::LiveCommitSyncConfig;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseChangesetPair;

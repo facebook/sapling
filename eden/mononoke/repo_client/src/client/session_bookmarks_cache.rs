@@ -35,7 +35,7 @@ use futures_01_ext::StreamExt as OldStreamExt;
 use futures_ext::FbFutureExt;
 use futures_ext::FbTryFutureExt;
 use futures_old::Future;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_api::Repo;
 use tunables::tunables;

@@ -224,7 +224,7 @@ mod tests {
     use futures::TryFutureExt;
     use manifest::ManifestOps;
     use maplit::btreemap;
-    use mercurial_derived_data::DeriveHgChangeset;
+    use mercurial_derivation::DeriveHgChangeset;
     use mercurial_types::HgChangesetId;
     use mononoke_types::fastlog_batch::max_entries_in_fastlog_batch;
     use mononoke_types::fastlog_batch::MAX_BATCHES;

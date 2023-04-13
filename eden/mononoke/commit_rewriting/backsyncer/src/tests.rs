@@ -54,7 +54,7 @@ use manifest::Entry;
 use manifest::ManifestOps;
 use maplit::btreemap;
 use maplit::hashmap;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;

@@ -24,7 +24,7 @@ use derived_data_service_if::types as thrift;
 use filenodes::FilenodeInfo;
 use filenodes::FilenodeResult;
 use filenodes::PreparedFilenode;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::NULL_HASH;

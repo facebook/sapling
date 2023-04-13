@@ -13,7 +13,7 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use changesets::ChangesetsRef;
 use context::CoreContext;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::MPath;
 use mononoke_types::BonsaiChangeset;

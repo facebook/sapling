@@ -56,7 +56,7 @@ fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../manifest" }
 memblob = { version = "0.1.0", path = "../blobstore/memblob" }
-mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
+mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 mercurial_types-mocks = { version = "0.1.0", path = "../mercurial/types/mocks" }
 rand = { version = "0.8", features = ["small_rng"] }

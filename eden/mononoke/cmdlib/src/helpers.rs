@@ -26,7 +26,7 @@ use fbinit::FacebookInit;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
 use mononoke_types::ChangesetId;

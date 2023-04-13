@@ -23,7 +23,7 @@ filenodes = { version = "0.1.0", path = "../../filenodes" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 itertools = "0.10.3"
 manifest = { version = "0.1.0", path = "../../manifest" }
-mercurial_derived_data = { version = "0.1.0", path = "../mercurial_derived_data" }
+mercurial_derivation = { version = "0.1.0", path = "../mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 tunables = { version = "0.1.0", path = "../../tunables" }

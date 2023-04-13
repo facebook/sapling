@@ -46,7 +46,7 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::Diff;
 use manifest::Entry;
 use manifest::ManifestOps;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::FileType;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;

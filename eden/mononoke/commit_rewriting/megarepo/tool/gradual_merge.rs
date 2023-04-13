@@ -24,7 +24,7 @@ use megarepolib::common::create_and_save_bonsai;
 use megarepolib::common::ChangesetArgs;
 use megarepolib::common::ChangesetArgsFactory;
 use megarepolib::common::StackPosition;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use metaconfig_types::PushrebaseFlags;
 use mononoke_api_types::InnerRepo;
 use mononoke_types::ChangesetId;

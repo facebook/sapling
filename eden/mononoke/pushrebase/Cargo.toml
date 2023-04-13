@@ -21,7 +21,7 @@ derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes"
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
-mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
+mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }

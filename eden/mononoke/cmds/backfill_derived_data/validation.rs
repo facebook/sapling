@@ -39,7 +39,7 @@ use manifest::find_intersection_of_diffs;
 use manifest::find_intersection_of_diffs_and_parents;
 use manifest::Entry;
 use manifest::Manifest;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ChangesetId;
 use readonlyblob::ReadOnlyBlobstore;

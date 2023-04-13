@@ -15,7 +15,7 @@ use futures::try_join;
 use megarepolib::common::create_save_and_generate_hg_changeset;
 use megarepolib::common::ChangesetArgs;
 use megarepolib::working_copy::get_colliding_paths_between_commits;
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use slog::info;

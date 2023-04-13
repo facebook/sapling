@@ -376,7 +376,7 @@ mod test {
     use fbinit::FacebookInit;
     use manifest::Entry;
     use manifest::Manifest;
-    use mercurial_derived_data::DeriveHgChangeset;
+    use mercurial_derivation::DeriveHgChangeset;
     use metaconfig_types::FilestoreParams;
     use mononoke_types::MPathElement;
     use test_repo_factory::TestRepoFactory;

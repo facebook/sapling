@@ -23,7 +23,7 @@ use futures_util::future::TryFutureExt;
 use manifest::Diff;
 use manifest::Entry;
 use manifest::ManifestOps;
-use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_derivation::MappedHgChangesetId;
 use mercurial_types::FileType;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;

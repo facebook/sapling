@@ -51,7 +51,7 @@ futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimenta
 live_commit_sync_config = { version = "0.1.0", path = "../live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
-mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
+mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 movers = { version = "0.1.0", path = "../movers" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
