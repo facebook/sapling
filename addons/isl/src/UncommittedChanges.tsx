@@ -7,6 +7,7 @@
 
 import type {PathTree} from './pathTree';
 import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} from './types';
+import type {MutableRefObject} from 'react';
 import type {SetterOrUpdater} from 'recoil';
 import type {Comparison} from 'shared/Comparison';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
@@ -18,7 +19,11 @@ import {
   changedFilesDisplayType,
 } from './ChangedFileDisplayTypePicker';
 import serverAPI from './ClientToServerAPI';
-import {commitFieldsBeingEdited, commitMode} from './CommitInfoView/CommitInfoState';
+import {
+  commitFieldsBeingEdited,
+  commitMode,
+  editedCommitMessages,
+} from './CommitInfoView/CommitInfoState';
 import {
   allFieldsBeingEdited,
   commitMessageFieldsSchema,
@@ -343,7 +348,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
   const conflicts = useRecoilValue(optimisticMergeConflicts);
 
   const [deselectedFiles, setDeselectedFiles] = useDeselectedFiles(uncommittedChanges);
-  const commitTitleRef = useRef(null);
+  const commitTitleRef = useRef<HTMLTextAreaElement | undefined>(null);
 
   const runOperation = useRunOperation();
 
@@ -362,6 +367,16 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
         // we have to explicitly keep this change to fieldsBeingEdited because otherwise it would be reset by effects.
         forceWhileOnHead: true,
       });
+    }
+
+    const quickCommitTyped = commitTitleRef.current?.value;
+    if (which === 'commit' && quickCommitTyped != null && quickCommitTyped != '') {
+      set(editedCommitMessages('head'), value => ({
+        ...value,
+        fields: {...value.fields, Title: quickCommitTyped},
+      }));
+      // delete what was written in the quick commit form
+      commitTitleRef.current != null && (commitTitleRef.current.value = '');
     }
   });
 
@@ -549,7 +564,11 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
                 <Icon slot="start" icon="plus" />
                 <T>Commit</T>
               </VSCodeButton>
-              <VSCodeTextField placeholder="Title" ref={commitTitleRef} />
+              <VSCodeTextField
+                data-testid="quick-commit-title"
+                placeholder="Title"
+                ref={commitTitleRef as MutableRefObject<null>}
+              />
             </span>
             <VSCodeButton
               appearance="icon"

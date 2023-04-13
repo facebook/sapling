@@ -1259,6 +1259,19 @@ describe('CommitInfoView', () => {
             });
             expect(getTitleEditor()).toHaveFocus();
           });
+
+          it('copies commit title from quick commit form', () => {
+            const title = screen.getByTestId('quick-commit-title');
+            act(() => {
+              userEvent.type(title, 'Hello, world!');
+            });
+            clickCommitAs();
+
+            expect((screen.getByTestId('quick-commit-title') as HTMLInputElement).value).toEqual(
+              '',
+            );
+            expect(getTitleEditor().value).toBe('Hello, world!');
+          });
         });
       });
     });
