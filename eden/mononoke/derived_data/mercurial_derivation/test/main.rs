@@ -6,8 +6,6 @@
  */
 
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
-use repo_blobstore::RepoBlobstoreArc;
-use repo_blobstore::RepoBlobstoreRef;
 mod file_history_test;
 mod tracing_blobstore;
 mod utils;
@@ -15,12 +13,14 @@ mod utils;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 use ::manifest::Entry;
 use ::manifest::Manifest;
 use ::manifest::ManifestOps;
 use anyhow::Error;
 use assert_matches::assert_matches;
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobrepo_errors::ErrorKind;
 use blobrepo_hg::repo_commit::compute_changed_files;
@@ -67,6 +67,8 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileContents;
+use repo_blobstore::RepoBlobstoreArc;
+use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::CreateCommitContext;
@@ -974,21 +976,61 @@ async fn test_hg_commit_generation_uneven_branch(fb: FacebookInit) {
 #[cfg(fbcode_build)]
 #[fbinit::test]
 async fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> {
+    use delayblob::DelayedBlobstore;
+    use rand::Rng;
     use rand::SeedableRng;
+    use rand_distr::Distribution;
     use rand_distr::Normal;
     use rand_xorshift::XorShiftRng;
-    use simulated_repo::new_benchmark_repo;
-    use simulated_repo::DelaySettings;
+    use sql::rusqlite::Connection as SqliteConnection;
+    use sql::sqlite::SqliteCallbacks;
+    use sql::sqlite::SqliteQueryType;
 
     let ctx = CoreContext::test_mock(fb);
-    let delay_settings = DelaySettings {
-        blobstore_put_dist: Normal::new(0.01, 0.005).expect("Normal::new failed"),
-        blobstore_get_dist: Normal::new(0.005, 0.0025).expect("Normal::new failed"),
+    let blobstore = Arc::new(DelayedBlobstore::new(
+        Memblob::default(),
+        Normal::new(0.01, 0.005).expect("Normal::new failed"),
+        Normal::new(0.005, 0.0025).expect("Normal::new failed"),
+    ));
+
+    struct DelayedSqliteCallbacks {
+        db_put_dist: Normal<f64>,
+        db_get_dist: Normal<f64>,
+    }
+
+    async fn delay(distribution: impl Distribution<f64>) {
+        let seconds = rand::thread_rng().sample(distribution).abs();
+        let duration = Duration::from_secs_f64(seconds);
+        tokio::time::sleep(duration).await;
+    }
+
+    #[async_trait]
+    impl SqliteCallbacks for DelayedSqliteCallbacks {
+        async fn query_start(&self, query_type: SqliteQueryType) -> Result<(), Error> {
+            match query_type {
+                SqliteQueryType::Read => delay(self.db_get_dist).await,
+                SqliteQueryType::Write => delay(self.db_put_dist).await,
+                _ => {}
+            }
+            Ok(())
+        }
+    }
+
+    let delayed_sqlite_callbacks = DelayedSqliteCallbacks {
         db_put_dist: Normal::new(0.002, 0.001).expect("Normal::new failed"),
         db_get_dist: Normal::new(0.002, 0.001).expect("Normal::new failed"),
     };
+
     cmdlib_caching::facebook::init_cachelib_from_settings(fb, Default::default(), false).unwrap();
-    let repo = new_benchmark_repo(fb, delay_settings)?;
+
+    let repo: BlobRepo = TestRepoFactory::with_sqlite_connection_callbacks(
+        fb,
+        SqliteConnection::open_in_memory()?,
+        SqliteConnection::open_in_memory()?,
+        Some(Box::new(delayed_sqlite_callbacks)),
+    )?
+    .with_blobstore(blobstore)
+    .build()?;
 
     let mut rng = XorShiftRng::seed_from_u64(1);
 

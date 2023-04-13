@@ -112,6 +112,7 @@ use skeleton_manifest::RootSkeletonManifestId;
 use skiplist::ArcSkiplistIndex;
 use skiplist::SkiplistIndex;
 use sql::rusqlite::Connection as SqliteConnection;
+use sql::sqlite::SqliteCallbacks;
 use sql::Connection;
 use sql::SqlConnections;
 use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
@@ -207,19 +208,30 @@ where
 impl TestRepoFactory {
     /// Create a new factory for test repositories with default settings.
     pub fn new(fb: FacebookInit) -> Result<TestRepoFactory> {
-        Self::with_sqlite_connection(
+        Self::with_sqlite_connection_callbacks(
             fb,
             SqliteConnection::open_in_memory()?,
             SqliteConnection::open_in_memory()?,
+            None,
         )
     }
-
     /// Create a new factory for test repositories with an existing Sqlite
     /// connection.
     pub fn with_sqlite_connection(
         fb: FacebookInit,
         metadata_con: SqliteConnection,
         hg_mutation_con: SqliteConnection,
+    ) -> Result<TestRepoFactory> {
+        Self::with_sqlite_connection_callbacks(fb, metadata_con, hg_mutation_con, None)
+    }
+
+    /// Create a new factory for test repositories with an existing Sqlite
+    /// connection.
+    pub fn with_sqlite_connection_callbacks(
+        fb: FacebookInit,
+        metadata_con: SqliteConnection,
+        hg_mutation_con: SqliteConnection,
+        callbacks: Option<Box<dyn SqliteCallbacks>>,
     ) -> Result<TestRepoFactory> {
         metadata_con.execute_batch(MegarepoMapping::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlMutableCountersBuilder::CREATION_QUERY)?;
@@ -238,7 +250,10 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlRepoLock::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlSparseProfilesSizes::CREATION_QUERY)?;
         metadata_con.execute_batch(StreamingCloneBuilder::CREATION_QUERY)?;
-        let metadata_db = SqlConnections::new_single(Connection::with_sqlite(metadata_con));
+        let metadata_db = SqlConnections::new_single(match callbacks {
+            Some(callbacks) => Connection::with_sqlite_callbacks(metadata_con, callbacks),
+            None => Connection::with_sqlite(metadata_con),
+        });
 
         hg_mutation_con.execute_batch(SqlHgMutationStoreBuilder::CREATION_QUERY)?;
         let hg_mutation_db = SqlConnections::new_single(Connection::with_sqlite(hg_mutation_con));
