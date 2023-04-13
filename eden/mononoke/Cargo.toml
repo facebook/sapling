@@ -168,7 +168,6 @@ members = [
   "backfill_derived_data",
   "benchmark_filestore",
   "benchmarks/derived_data",
-  "benchmarks/simulated_repo",
   "blobimport",
   "blobimport_lib",
   "blobimport_lib/consts",
