@@ -1,5 +1,5 @@
 name: Release - Homebrew macOS-x86
-'on':
+on:
   workflow_dispatch: null
   push:
     tags:

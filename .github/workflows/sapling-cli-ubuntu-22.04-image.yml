@@ -1,5 +1,5 @@
 name: Docker Image - ubuntu:22.04
-'on':
+on:
   workflow_dispatch: null
   schedule:
   - cron: 0 1 * * mon

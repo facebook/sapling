@@ -1,5 +1,5 @@
 name: Release - Windows amd64
-'on':
+on:
   workflow_dispatch: null
   push:
     tags:
