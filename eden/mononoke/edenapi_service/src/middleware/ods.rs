@@ -111,7 +111,6 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 EphemeralPrepare => STATS::ephemeral_prepare_duration_ms.add_value(dur_ms),
                 FetchSnapshot => STATS::fetch_snapshot_duration_ms.add_value(dur_ms),
                 AlterSnapshot => STATS::alter_snapshot_duration_ms.add_value(dur_ms),
-                CommitGraph => STATS::commit_graph_duration_ms.add_value(dur_ms),
                 CommitGraphV2 => STATS::commit_graph_v2_duration_ms.add_value(dur_ms),
                 DownloadFile => STATS::download_file_duration_ms.add_value(dur_ms),
                 CommitMutations => STATS::commit_mutations_duration_ms.add_value(dur_ms),
