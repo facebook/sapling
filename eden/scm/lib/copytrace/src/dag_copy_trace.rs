@@ -11,6 +11,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use dag::DagAlgorithm;
+use itertools::Itertools;
 use manifest::DiffType;
 use manifest::Manifest;
 use manifest_tree::Diff;
@@ -129,6 +130,7 @@ impl DagCopyTrace {
                 let renames = renames
                     .into_iter()
                     .map(|(k, v)| (v, k))
+                    .sorted()
                     .collect::<HashMap<_, _>>();
                 (renames, commit)
             }

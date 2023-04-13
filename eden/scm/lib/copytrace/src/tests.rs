@@ -46,10 +46,10 @@ struct CopyTraceTestCaseInner {
     commit_to_tree: HashMap<Vertex, HgId>,
     /// In memory tree store
     tree_store: Arc<dyn TreeStore + Send + Sync>,
-    /// dag algorithm
+    /// Dag algorithm
     dagalgo: Arc<dyn DagAlgorithm + Send + Sync>,
-    /// commit renames
-    renames: HashMap<Key, Key>,
+    /// Copies info: dest -> src mapping
+    copies: HashMap<Key, Key>,
 }
 
 #[derive(Debug)]
@@ -58,6 +58,7 @@ enum Change {
     Delete(RepoPathBuf),
     Rename(RepoPathBuf, RepoPathBuf),
     Modify(RepoPathBuf, FileMetadata),
+    Copy(RepoPathBuf, RepoPathBuf),
 }
 
 impl CopyTraceTestCase {
@@ -68,7 +69,7 @@ impl CopyTraceTestCase {
             .unwrap();
 
         let mut commit_to_tree: HashMap<Vertex, HgId> = Default::default();
-        let mut renames: HashMap<Key, Key> = Default::default();
+        let mut copies: HashMap<Key, Key> = Default::default();
         let tree_store = Arc::new(TestStore::new().with_format(TreeFormat::Git));
         let changes = Change::build_changes(changes);
 
@@ -80,7 +81,7 @@ impl CopyTraceTestCase {
                 &mem_dag,
                 tree_store.clone(),
                 &mut commit_to_tree,
-                &mut renames,
+                &mut copies,
                 item.unwrap(),
                 &changes,
             )
@@ -91,7 +92,7 @@ impl CopyTraceTestCase {
             commit_to_tree,
             tree_store,
             dagalgo: Arc::new(mem_dag),
-            renames,
+            copies,
         });
         CopyTraceTestCase { inner }
     }
@@ -111,7 +112,7 @@ impl CopyTraceTestCase {
         dag: &MemDag,
         tree_store: Arc<dyn TreeStore + Send + Sync>,
         commit_to_tree: &mut HashMap<Vertex, HgId>,
-        renames: &mut HashMap<Key, Key>,
+        copies: &mut HashMap<Key, Key>,
         commit: Vertex,
         changes: &HashMap<Vertex, Vec<Change>>,
     ) {
@@ -131,15 +132,17 @@ impl CopyTraceTestCase {
                         tree.remove(path).unwrap();
                     }
                     Change::Modify(path, metadata) => tree.insert(path.clone(), *metadata).unwrap(),
-                    Change::Rename(from_path, to_path) => {
+                    Change::Rename(from_path, to_path) | Change::Copy(from_path, to_path) => {
                         let file_metadata = tree.get_file(from_path).unwrap().unwrap();
-                        tree.remove(from_path).unwrap();
+                        if let Change::Rename(_, _) = v {
+                            tree.remove(from_path).unwrap();
+                        }
                         tree.insert(to_path.clone(), file_metadata).unwrap();
 
-                        // update renames mapping
+                        // update copies mapping
                         let to_key = Key::new(to_path.clone(), file_metadata.hgid);
                         let from_key = Key::new(from_path.clone(), file_metadata.hgid);
-                        renames.insert(to_key, from_key);
+                        copies.insert(to_key, from_key);
                     }
                 }
             }
@@ -184,7 +187,7 @@ impl ReadFileContents for CopyTraceTestCase {
     ) -> stream::BoxStream<Result<(Key, Option<Key>), Self::Error>> {
         let renames: Vec<_> = {
             keys.iter()
-                .map(|k| Ok((k.clone(), self.inner.renames.get(k).cloned())))
+                .map(|k| Ok((k.clone(), self.inner.copies.get(k).cloned())))
                 .collect()
         };
         stream::iter(renames).boxed()
@@ -199,6 +202,7 @@ impl Change {
             "-" => Change::Delete(to_repo_path_buf(items[1])),
             "M" => Change::Modify(to_repo_path_buf(items[1]), to_file_metadata(items[2])),
             "->" => Change::Rename(to_repo_path_buf(items[1]), to_repo_path_buf(items[2])),
+            "C" => Change::Copy(to_repo_path_buf(items[1]), to_repo_path_buf(items[2])),
             _ => unreachable!("unexpected token {}", items[0]),
         };
         return change;
@@ -451,4 +455,23 @@ async fn test_non_linear_multiple_renames_with_deletes() {
     assert_eq!(res, None);
     let res = trace_rename(&c, "Z", "1023", "a2").await.unwrap();
     assert_eq!(res, None);
+}
+
+#[tokio::test]
+async fn test_one_file_copied_to_multiple_files() {
+    let ascii = r#"
+    C
+    :
+    A
+    "#;
+    // It's rare that user will copy and rename the same file in one commit. We don't have
+    // plan to support this one-to-many mapping, since it will make copytrace complexity
+    // increase exponentially in theory. For now, we just pick the last copy in ascending
+    // alphabetical order
+    let changes = HashMap::from([("A", vec!["+ a 1"]), ("B", vec!["C a c", "-> a b"])]);
+    let t = CopyTraceTestCase::new(ascii, changes).await;
+    let c = t.copy_trace().await;
+
+    let res = trace_rename(&c, "A", "C", "a").await.unwrap();
+    assert_eq!(res, p("c"));
 }
