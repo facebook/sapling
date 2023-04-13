@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 #inprocess-hg-incompatible
+  $ eagerepo
   $ setconfig experimental.allowfilepeer=True
 
   $ configure mutation-norecord
@@ -30,6 +31,7 @@ Check filename heuristics (same dirname and same basename)
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
+  $ hg pull -B book1 -q
   $ hg up -q 'desc(initial)'
   $ echo b > a
   $ echo b > dir/file.txt
@@ -41,7 +43,7 @@ Check filename heuristics (same dirname and same basename)
   │ o  desc: mv a b, mv dir/ dir2/, phase: public
   ├─╯
   o  desc: initial, phase: public
-  
+
 
   $ hg rebase -s . -d 'desc(mv)'
   rebasing * "mod a, mod dir/file.txt" (glob)
@@ -66,6 +68,7 @@ Make sure filename heuristics do not when they are not related
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
+  $ hg pull -B book1 -q
   $ hg up -q 'desc(initial)'
   $ printf 'somecontent\nmoarcontent' > a
   $ hg ci -qm 'mode a'
@@ -105,6 +108,7 @@ Test when lca didn't modified the file that was moved
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
+  $ hg pull -B book1 -q
   $ hg up -q 'desc(randomcommit)'
   $ echo b > a
   $ hg ci -qm 'mod a'
@@ -142,6 +146,7 @@ Rebase "backwards"
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
+  $ hg pull -B book1 -q
   $ hg up -q 'desc(mv)'
   $ echo b > b
   $ hg ci -qm 'mod b'
@@ -210,6 +215,7 @@ Check a few potential move candidates
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
+  $ hg pull -B book1 -q
   $ hg up -q 'desc(initial)'
   $ echo b > dir/a
   $ hg ci -qm 'mod dir/a'
@@ -222,7 +228,7 @@ Check a few potential move candidates
   │ o  desc: mv dir/a dir/b, phase: public
   ├─╯
   o  desc: initial, phase: public
-  
+
 
   $ hg rebase -s . -d 'desc(create)'
   rebasing * "mod dir/a" (glob)
@@ -243,6 +249,7 @@ Move file in one branch and delete it in another
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
+  $ hg pull -B book1 -q
   $ hg mv a b
   $ hg ci -m 'mv a b'
   $ hg up -q ".^"
@@ -292,6 +299,7 @@ Too many move candidates
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
+  $ hg pull -B book1 -q
   $ hg up -q ".^"
   $ echo b > a
   $ hg ci -m 'mod a'
@@ -328,6 +336,7 @@ Move a directory in draft branch
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
+  $ hg pull -B book1 -q
   $ echo b > dir/a
   $ hg ci -qm 'mod dir/a'
   $ hg up -q ".^"
@@ -340,7 +349,7 @@ Move a directory in draft branch
   │ o  desc: mod dir/a, phase: draft
   ├─╯
   o  desc: initial, phase: public
-  
+
 
   $ hg rebase -s . -d 'desc(mod)'
   rebasing * "mv dir/ dir2/" (glob)
@@ -365,6 +374,7 @@ Move file twice and rebase mod on top of moves
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
+  $ hg pull -B book1 -q
   $ hg up -q 'desc(initial)'
   $ echo c > a
   $ hg ci -m 'mod a'
@@ -397,6 +407,7 @@ Move file twice and rebase moves on top of mods
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
+  $ hg pull -B book1 -q
   $ hg mv a b
   $ hg ci -m 'mv a b'
   $ hg mv b c
@@ -440,6 +451,7 @@ Move one file and add another file in the same folder in one branch, modify file
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
+  $ hg pull -B book1 -q
   $ hg up -q 'desc(initial)'
   $ echo b > a
   $ hg ci -m 'mod a'
@@ -480,6 +492,7 @@ Merge test
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
+  $ hg pull -B book1 -B book2 -q
   $ hg up -q 'desc(mv)'
 
   $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
@@ -516,6 +529,7 @@ Copy and move file
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
+  $ hg pull -B book1 -q
   $ hg up -q 'desc(initial)'
   $ echo b > a
   $ hg ci -m 'mod a'
@@ -557,6 +571,7 @@ Do a merge commit with many consequent moves in one branch
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
+  $ hg pull -B book1 -q
   $ hg up -q ".^"
   $ hg mv a b
   $ hg ci -qm 'mv a b'
@@ -607,6 +622,7 @@ Test shelve/unshelve
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
+  $ hg pull -B book1 -q
   $ echo b > a
   $ hg shelve
   shelved as default
@@ -657,7 +673,7 @@ changed in same move
   │ o  desc mv a b; mv dir1 dir2, phase: draft
   ├─╯
   o  desc initial, phase: draft
-  
+
 
   $ hg rebase -s . -d 'desc(mv)' --config=experimental.copytrace=on
   rebasing * "mod a" (glob)
@@ -694,7 +710,7 @@ while adding file to original directory in other merge parent. File moved on reb
   │ o  desc hg add dir1/a, phase: draft
   ├─╯
   o  desc initial, phase: draft
-  
+
 
   $ hg rebase -s . -d 'desc(hg)' --config=experimental.copytrace=on
   rebasing * "mv dir1 dir2" (glob)
