@@ -51,7 +51,6 @@ from . import (
     hg_util,
     mtab,
     prefetch as prefetch_mod,
-    prefetch_profile as prefetch_profile_mod,
     rage as rage_mod,
     redirect as redirect_mod,
     stats as stats_mod,
@@ -1112,6 +1111,17 @@ class MinitopCmd(Subcmd):
         print_stderr(
             "This is not implemented for python edenfsctl. Use `top` subcommand instead."
         )
+        return 1
+
+
+@subcmd(
+    "prefetch-profile",
+    "Create, manage, and use Prefetch Profiles. Use `eden prefetch-profile help` to see more detailed help text.",
+    aliases=["pp"],
+)
+class PrefetchProfileCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        print_stderr("This is not implemented for python edenfsctl.")
         return 1
 
 
@@ -2335,7 +2345,6 @@ def create_parser() -> argparse.ArgumentParser:
         redirect_mod.RedirectCmd,
         prefetch_mod.GlobCmd,
         prefetch_mod.PrefetchCmd,
-        prefetch_profile_mod.PrefetchProfileCmd,
     ]
 
     subcmd_add_list.append(debug_mod.DebugCmd)
