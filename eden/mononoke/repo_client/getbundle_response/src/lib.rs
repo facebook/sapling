@@ -26,7 +26,7 @@ use cloned::cloned;
 use context::CoreContext;
 use context::PerfCounterType;
 use derived_data::BonsaiDerived;
-use derived_data_filenodes::FilenodesOnlyPublic;
+use filenodes_derivation::FilenodesOnlyPublic;
 use filestore::FetchKey;
 use futures::compat::Stream01CompatExt;
 use futures::future;

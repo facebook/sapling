@@ -49,9 +49,9 @@ bytes = { version = "1.1", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib_caching = { version = "0.1.0", path = "../cmdlib/caching" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
-derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+filenodes_derivation = { version = "0.1.0", path = "../derived_data/filenodes_derivation" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../manifest" }

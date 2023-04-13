@@ -69,7 +69,7 @@ use bookmarks::BookmarksRef;
 use changeset_fetcher::ChangesetFetcherArc;
 use changesets::ChangesetsRef;
 use context::CoreContext;
-use derived_data_filenodes::FilenodesOnlyPublic;
+use filenodes_derivation::FilenodesOnlyPublic;
 use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::future::try_join;

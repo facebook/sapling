@@ -31,11 +31,11 @@ use cmdlib::args::RepoRequirement;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use context::SessionContainer;
-use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_utils::POSSIBLE_DERIVED_TYPES;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
+use filenodes_derivation::FilenodesOnlyPublic;
 use futures::future::try_join;
 use futures::future::TryFutureExt;
 #[cfg(fbcode_build)]

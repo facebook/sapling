@@ -292,7 +292,7 @@ members = [
   "derived_data/deleted_manifest",
   "derived_data/derived_generation",
   "derived_data/fastlog",
-  "derived_data/filenodes",
+  "derived_data/filenodes_derivation",
   "derived_data/fsnodes",
   "derived_data/manager",
   "derived_data/mercurial_derivation",

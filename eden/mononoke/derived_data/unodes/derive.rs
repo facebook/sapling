@@ -474,10 +474,10 @@ mod tests {
     use blobstore::Storable;
     use bytes::Bytes;
     use derived_data::BonsaiDerived;
-    use derived_data_filenodes::FilenodesOnlyPublic;
     use derived_data_test_utils::bonsai_changeset_from_hg;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
+    use filenodes_derivation::FilenodesOnlyPublic;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use futures::TryStreamExt;
