@@ -5,6 +5,8 @@ on:
     tags:
     - v*
     - test-release-*
+env:
+  HOMEBREW_FAIL_LOG_LINES: 50000
 jobs:
   build:
     runs-on: macos-12
