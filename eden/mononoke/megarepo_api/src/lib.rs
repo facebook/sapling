@@ -343,7 +343,8 @@ impl MegarepoApi {
                     .repo_factory
                     .sql_factory(&repo_config.storage_config.metadata)
                     .await?
-                    .open::<MegarepoMapping>()?;
+                    .open::<MegarepoMapping>()
+                    .await?;
 
                 Ok(Arc::new(megarepo_mapping))
             })

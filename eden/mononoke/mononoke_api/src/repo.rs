@@ -381,7 +381,9 @@ pub async fn open_synced_commit_mapping(
     )
     .await?;
 
-    Ok(Arc::new(sql_factory.open::<SqlSyncedCommitMapping>()?))
+    Ok(Arc::new(
+        sql_factory.open::<SqlSyncedCommitMapping>().await?,
+    ))
 }
 
 impl Repo {

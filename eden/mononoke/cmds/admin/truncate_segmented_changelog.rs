@@ -98,6 +98,7 @@ pub async fn subcommand_truncate_segmented_changelog<'a>(
 
     let segmented_changelog_sql_connections = sql_factory
         .open::<SegmentedChangelogSqlConnections>()
+        .await
         .context("error opening segmented changelog sql connections")?;
 
     let heads = vec![helpers::csid_resolve(&ctx, &container, rev).await?];

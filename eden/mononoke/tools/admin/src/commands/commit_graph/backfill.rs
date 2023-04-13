@@ -182,7 +182,8 @@ pub(super) async fn backfill(
         .repo_factory()
         .sql_factory(&repo.repo_config().storage_config.metadata)
         .await?
-        .open::<SqlCommitGraphStorageBuilder>()?
+        .open::<SqlCommitGraphStorageBuilder>()
+        .await?
         .build(
             RendezVousOptions {
                 free_connections: 5,
@@ -219,7 +220,8 @@ pub(super) async fn backfill(
         .repo_factory()
         .sql_factory(&repo.repo_config().storage_config.metadata)
         .await?
-        .open()?;
+        .open()
+        .await?;
 
     backfill_impl(
         ctx,

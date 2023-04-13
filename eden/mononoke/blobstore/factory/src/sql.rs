@@ -7,12 +7,14 @@
 
 use anyhow::bail;
 use anyhow::Error;
+use cloned::cloned;
 use fbinit::FacebookInit;
 use metaconfig_types::LocalDatabaseConfig;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use metaconfig_types::ShardableRemoteDatabaseConfig;
 use sql::sqlite::SqliteMultithreaded;
+use sql::sqlite::SqliteQueryType;
 use sql::Connection;
 use sql::SqlConnections;
 use sql_construct::SqlConstruct;
@@ -95,14 +97,15 @@ impl MetadataSqlFactory {
         })
     }
 
-    pub fn open<T: SqlConstructFromMetadataDatabaseConfig>(&self) -> Result<T, Error> {
+    pub async fn open<T: SqlConstructFromMetadataDatabaseConfig>(&self) -> Result<T, Error> {
         match &self.connections_factory {
             MetadataSqlConnectionsFactory::Local {
                 connections,
                 schema_connection,
             } => {
                 schema_connection
-                    .get_sqlite_guard()
+                    .acquire_sqlite_connection(SqliteQueryType::SchemaChange)
+                    .await?
                     .execute_batch(T::CREATION_QUERY)?;
                 Ok(T::from_sql_connections(connections.clone()))
             }
@@ -118,7 +121,7 @@ impl MetadataSqlFactory {
         }
     }
 
-    pub fn open_shardable<T: SqlShardableConstructFromMetadataDatabaseConfig>(
+    pub async fn open_shardable<T: SqlShardableConstructFromMetadataDatabaseConfig>(
         &self,
     ) -> Result<T, Error> {
         match &self.connections_factory {
@@ -127,19 +130,30 @@ impl MetadataSqlFactory {
                 schema_connection,
             } => {
                 schema_connection
-                    .get_sqlite_guard()
+                    .acquire_sqlite_connection(SqliteQueryType::SchemaChange)
+                    .await?
                     .execute_batch(<T as SqlConstruct>::CREATION_QUERY)?;
                 Ok(T::from_sql_connections(connections.clone()))
             }
             MetadataSqlConnectionsFactory::Remote {
                 remote_config,
                 mysql_options,
-            } => T::with_remote_metadata_database_config(
-                self.fb,
-                remote_config,
-                mysql_options,
-                self.readonly.0,
-            ),
+            } => {
+                // Large numbers of shards means this can take some time.
+                // Spawn it as a blocking task.
+                tokio::task::spawn_blocking({
+                    cloned!(self.fb, remote_config, mysql_options, self.readonly);
+                    move || {
+                        T::with_remote_metadata_database_config(
+                            fb,
+                            &remote_config,
+                            &mysql_options,
+                            readonly.0,
+                        )
+                    }
+                })
+                .await?
+            }
         }
     }
 

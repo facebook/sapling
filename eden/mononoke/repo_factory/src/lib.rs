@@ -57,7 +57,6 @@ use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::ArcChangesets;
 use changesets_impl::CachingChangesets;
 use changesets_impl::SqlChangesetsBuilder;
-use cloned::cloned;
 use commit_graph::ArcCommitGraph;
 use commit_graph::CommitGraph;
 use commit_graph_compat::ChangesetsCommitGraphCompat;
@@ -294,7 +293,7 @@ impl RepoFactory {
         config: &RepoConfig,
     ) -> Result<T> {
         let sql_factory = self.sql_factory(&config.storage_config.metadata).await?;
-        sql_factory.open::<T>()
+        sql_factory.open::<T>().await
     }
 
     async fn blobstore_no_cache(&self, config: &BlobConfig) -> Result<Arc<dyn Blobstore>> {
@@ -413,7 +412,8 @@ impl RepoFactory {
             .get_or_try_init(db_config, || async move {
                 let redacted_blobs = if tunables().redaction_config_from_xdb().unwrap_or_default() {
                     let sql_factory = self.sql_factory(db_config).await?;
-                    let redacted_content_store = sql_factory.open::<SqlRedactedContentStore>()?;
+                    let redacted_content_store =
+                        sql_factory.open::<SqlRedactedContentStore>().await?;
                     // Fetch redacted blobs in a separate task so that slow polls
                     // in repo construction don't interfere with the SQL query.
                     tokio::task::spawn(async move {
@@ -861,15 +861,10 @@ impl RepoFactory {
         let sql_factory = self
             .sql_factory(&repo_config.storage_config.metadata)
             .await?;
-        let mut filenodes_builder = tokio::task::spawn_blocking({
-            cloned!(sql_factory);
-            move || {
-                sql_factory
-                    .open_shardable::<NewFilenodesBuilder>()
-                    .context(RepoFactoryError::Filenodes)
-            }
-        })
-        .await??;
+        let mut filenodes_builder = sql_factory
+            .open_shardable::<NewFilenodesBuilder>()
+            .await
+            .context(RepoFactoryError::Filenodes)?;
         if let (Some(filenodes_cache_handler_factory), Some(history_cache_handler_factory)) = (
             self.cache_handler_factory("filenodes")?,
             self.cache_handler_factory("filenodes_history")?,

@@ -175,6 +175,7 @@ impl SegmentedChangelogTailer {
 
         let segmented_changelog_sql_connections = sql_factory
             .open::<SegmentedChangelogSqlConnections>()
+            .await
             .with_context(|| {
                 format!(
                     "error constructing segmented changelog sql connections for repo {}",
