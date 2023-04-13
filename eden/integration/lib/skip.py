@@ -104,7 +104,10 @@ if sys.platform == "win32":
         #
         # Test classes from the hg integration test binary
         #
-        "hg.debug_clear_local_caches_test.DebugClearLocalCachesTestTreeOnly": True,
+        "hg.debug_clear_local_caches_test.DebugClearLocalCachesTestTreeOnly": [
+            # Graceful restart is not implemented on Windows
+            "test_contents_are_the_same_if_handle_is_held_open",
+        ],
         "hg.debug_get_parents.DebugGetParentsTestTreeOnly": True,
         "hg.debug_hg_dirstate_test.DebugHgDirstateTestTreeOnly": True,
         "hg.diff_test.DiffTestTreeOnly": True,
