@@ -64,8 +64,7 @@ impl DagCopyTrace {
         &self,
         keys: Vec<Key>,
     ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
-        // TODO: add metrics for the size of the result
-        tracing::trace!(" read_renamed_metadata: len(keys)={}", keys.len());
+        tracing::trace!(keys_len = keys.len(), " read_renamed_metadata");
         let mut renames = self.file_reader.read_rename_metadata(keys).await;
 
         let mut map: HashMap<RepoPathBuf, RepoPathBuf> = HashMap::new();
@@ -75,7 +74,7 @@ impl DagCopyTrace {
                 map.insert(key.path, rename_from_key.path);
             }
         }
-
+        tracing::trace!(result_map_len = map.len(), " read_renamed_metadata");
         Ok(map)
     }
 
