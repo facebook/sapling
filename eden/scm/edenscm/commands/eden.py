@@ -396,20 +396,6 @@ class HgServer(object):
 
     def get_tree(self, path: str, manifest_node: bytes) -> bytes:
 
-        # Even though get_tree would fetch the tree if missing, it has a couple
-        # of drawbacks. First, for the root manifest, it may prefetch the
-        # entire tree, second, it doesn't honor the self._treefetchdepth which
-        # avoids a lot of round trips to the server.
-        missing = self.repo.manifestlog.datastore.getmissing([(path, manifest_node)])
-        if missing:
-            try:
-                self._fetch_tree_impl(path, manifest_node)
-            except Exception:
-                logging.warning(
-                    "Fetching failed, continuing as this may be spurious",
-                    exc_info=True,
-                )
-
         try:
             return self.repo.manifestlog.datastore.get(path, manifest_node)
         except Exception as ex:
