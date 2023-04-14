@@ -1271,6 +1271,11 @@ class LogCmd(Subcmd):
             ),
         )
         parser.add_argument(
+            "--tail",
+            action="store_true",
+            help="Tail the end of the log file",
+        )
+        parser.add_argument(
             "--path",
             action="store_true",
             help="Print the location of the EdenFS log file",
@@ -1313,9 +1318,23 @@ class LogCmd(Subcmd):
 
         if args.stdout or args.upload:
             return self.upload_logs(args, instance, eden_log_path)
+        elif args.tail:
+            if sys.platform == "win32":
+                cmd = [
+                    "powershell.exe",
+                    "cat",
+                    "-tail",
+                    "50",
+                    "-wait",
+                    str(eden_log_path),
+                ]
+                subprocess.run(cmd)
+            else:
+                cmd = ["tail", "-f", str(eden_log_path)]
+                os.execvp(cmd[0], cmd)
+                raise Exception("we should never reach here")
         else:
-            # Display eden's log with the system pager if possible.  We could
-            # add a --tail option.
+            # Display eden's log with the system pager if possible.
             pager_env = os.getenv("PAGER")
             if pager_env:
                 pager_cmd = shlex.split(pager_env)
