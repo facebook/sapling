@@ -80,6 +80,9 @@ Configs::
     # Use EdenApi Uploads for uploading commit cloud commits during sync
     usehttpupload = True
 
+    # List of remote bookmarks to exclude from age check when cleaning up unnessesary remote bookmarks
+    expensive_bookmarks = bookmark1, bookmark2, bookmark3
+
     [infinitepushbackup]
     # Whether to enable automatic backups. If this option is True then a backup
     # process will be started after every mercurial command that modifies the
@@ -147,9 +150,9 @@ configitem("commitcloud", "synccheckoutlocations", default=False)
 configitem("commitcloud", "enablestatus", default=True)
 configitem("commitcloud", "enableprogress", default=True)
 configitem("commitcloud", "pullsizelimit", 300)
-configitem("commitcloud", "sl_showremotebookmarks", False)
-configitem("commitcloud", "sl_showallbookmarks", False)
-configitem("commitcloud", "usehttpupload", False)
+configitem("commitcloud", "sl_showremotebookmarks", default=False)
+configitem("commitcloud", "sl_showallbookmarks", default=False)
+configitem("commitcloud", "usehttpupload", default=False)
 configitem("infinitepushbackup", "enablestatus", default=True)
 configitem("infinitepushbackup", "maxheadstobackup", default=-1)
 

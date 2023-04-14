@@ -1739,3 +1739,23 @@ def cloudupload(ui, repo, **opts):
                 component="commitcloud",
             )
         return 2
+
+
+@subcmd("tidyup", workspace.workspaceopts)
+def cloudtidyup(ui, repo, **opts):
+    """tidy up commit cloud workspace
+
+    At the moment, this command only cleans up unnessesary remote bookmarks if they are old or expensive to fetch.
+    """
+    reponame = ccutil.getreponame(repo)
+    workspacename = workspace.parseworkspaceordefault(ui, repo, opts)
+    if workspacename is None:
+        raise ccerror.WorkspaceError(ui, _("undefined workspace"))
+    serv = service.get(ui)
+    ui.status(
+        _("cleanup unnessesary remote bookmarks from the workspace %s for repo %s\n")
+        % (workspacename, reponame),
+        component="commitcloud",
+    )
+    serv.cleanupworkspace(reponame, workspacename)
+    ui.status(_("cleanup completed\n"), component="commitcloud")

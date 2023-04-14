@@ -270,6 +270,10 @@ class BaseService(pycompat.ABC):
     def rollbackworkspace(self, reponame, workspace, version):
         """Rollback the given workspace to a specific version"""
 
+    @abstractmethod
+    def cleanupworkspace(self, reponame, workspace):
+        """Cleanup unnecessary remote bookmarks from the given workspace"""
+
     @staticmethod
     def _makesmartloginfo(data):
         """Returns a SmartlogInfo that supports DAG operations like heads, parents,

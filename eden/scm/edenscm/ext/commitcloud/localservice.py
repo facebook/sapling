@@ -337,3 +337,7 @@ class LocalService(baseservice.BaseService):
     def rollbackworkspace(self, reponame, workspace, version):
         """Rollback the given workspace to a specific version"""
         raise NotImplementedError  # Since commit cloud history is not supported in the tests yet
+
+    def cleanupworkspace(self, reponame, workspace):
+        """Cleanup unnecessary remote bookmarks from the given workspace"""
+        raise NotImplementedError  # Not supported in the tests yet

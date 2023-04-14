@@ -552,6 +552,26 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         }
         self._timedsend(path, data)
 
+    @perftrace.tracefunc("Cleanup Workspace")
+    def cleanupworkspace(self, reponame, workspace):
+        """Cleanup unnecessary remote bookmarks from the given workspace"""
+        self.ui.debug("sending 'cleanup_workspace' request\n", component="commitcloud")
+        path = "/commit_cloud/cleanup_workspace"
+        important_remote_bookmarks = self.ui.configlist(
+            "remotenames", "selectivepulldefault"
+        )
+        expensive_remote_bookmarks = self.ui.configlist(
+            "commitcloud", "expensive_bookmarks", []
+        )
+        data = {
+            "repo_name": reponame,
+            "workspace": workspace,
+            "expensive_bookmarks": expensive_remote_bookmarks,
+            "important_bookmarks": important_remote_bookmarks,
+            "main_bookmark": important_remote_bookmarks[0],
+        }
+        self._timedsend(path, data)
+
 
 # Make sure that the HttpsCommitCloudService is a singleton
 HttpsCommitCloudService = baseservice.SingletonDecorator(_HttpsCommitCloudService)
