@@ -178,7 +178,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
     config.set("paths", "default", Some(source_url.as_str()), &"arg".into());
 
     let reponame = match config.get_opt::<String>("remotefilelog", "reponame")? {
-        // This gets the reponame from the --configfile config. Ingore
+        // This gets the reponame from the --configfile config. Ignore
         // bogus "no-repo" value that dynamicconfig sets when there is
         // no repo name.
         Some(c) if c != "no-repo" => {
@@ -417,6 +417,7 @@ fn clone_metadata(
         let commits = repo.dag_commits()?;
         tracing::trace!("fetching lazy commit data and bookmarks");
         let bookmark_ids = exchange::clone(
+            config,
             edenapi,
             &mut metalog.write(),
             &mut commits.write(),
@@ -502,7 +503,7 @@ fn get_update_target(
         })?
         .clone();
 
-    let remote_bookmark = exchange::convert_to_remote(&main_bookmark);
+    let remote_bookmark = exchange::convert_to_remote(repo.config(), &main_bookmark)?;
     let remote_bookmarks = repo.remote_bookmarks()?;
 
     match remote_bookmarks.get(&remote_bookmark) {

@@ -8,6 +8,7 @@
 #![allow(non_camel_case_types)]
 
 use std::cell::RefCell;
+use std::sync::Arc;
 
 use configloader::config::ConfigSet;
 use configloader::config::Options;
@@ -23,11 +24,18 @@ use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::Str;
 
+mod impl_into;
+
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "configloader"].join(".");
     let m = PyModule::new(py, &name)?;
+
     m.add_class::<config>(py)?;
+
     m.add(py, "parselist", py_fn!(py, parselist(value: String)))?;
+
+    impl_into::register(py);
+
     Ok(m)
 }
 
@@ -162,6 +170,10 @@ py_class!(pub class config |py| {
 impl config {
     pub fn get_cfg(&self, py: Python) -> ConfigSet {
         self.cfg(py).clone().into_inner()
+    }
+
+    pub(crate) fn get_config_trait(&self, py: Python) -> Arc<dyn Config> {
+        Arc::new(self.get_cfg(py))
     }
 }
 

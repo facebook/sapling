@@ -5,7 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
+use configmodel::Config;
 use cpython::*;
+use cpython_ext::convert::ImplInto;
 use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::ExtractInner;
 use cpython_ext::PyNone;
@@ -22,6 +26,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         py_fn!(
             py,
             clone(
+                config: ImplInto<Arc<dyn Config>>,
                 edenapi: &PyClient,
                 metalog: metalog,
                 commits: &commits,
@@ -35,6 +40,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
 fn clone(
     py: Python,
+    config: ImplInto<Arc<dyn Config>>,
     edenapi: &PyClient,
     metalog: metalog,
     commits: &commits,
@@ -45,7 +51,6 @@ fn clone(
     let mut commits = commits.write();
     let meta = metalog.metalog_rwlock(py);
     let mut meta = meta.write();
-    exchange::clone(client, &mut meta, &mut commits, bookmarks).map_pyerr(py)?;
-
+    exchange::clone(&config.into(), client, &mut meta, &mut commits, bookmarks).map_pyerr(py)?;
     Ok(PyNone)
 }

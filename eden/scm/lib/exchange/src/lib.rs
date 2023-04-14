@@ -12,6 +12,8 @@ use anyhow::Result;
 use async_runtime::block_unless_interrupted as block_on;
 use dag::CloneData;
 use dag::VertexName;
+use edenapi::configmodel::Config;
+use edenapi::configmodel::ConfigExt;
 use edenapi::EdenApi;
 use hgcommits::DagCommits;
 use metalog::CommitOptions;
@@ -20,13 +22,18 @@ use tracing::instrument;
 use types::HgId;
 
 // TODO: move to a bookmarks crate
-pub fn convert_to_remote(bookmark: &str) -> String {
-    return format!("remote/{}", bookmark);
+pub fn convert_to_remote(config: &dyn Config, bookmark: &str) -> Result<String> {
+    Ok(format!(
+        "{}/{}",
+        config.must_get::<String>("remotenames", "hoist")?,
+        bookmark
+    ))
 }
 
 /// Download commit data via lazy pull endpoint. Returns hash of bookmarks, if any.
 #[instrument(skip_all, fields(?bookmarks))]
 pub fn clone(
+    config: &dyn Config,
     edenapi: Arc<dyn EdenApi>,
     metalog: &mut MetaLog,
     commits: &mut Box<dyn DagCommits + Send + 'static>,
@@ -61,8 +68,8 @@ pub fn clone(
         &refencode::encode_remotenames(
             &bookmarks
                 .iter()
-                .map(|(bm, id)| (convert_to_remote(bm), id.clone()))
-                .collect(),
+                .map(|(bm, id)| Ok((convert_to_remote(config, bm)?, id.clone())))
+                .collect::<Result<_>>()?,
         ),
     )?;
     metalog.commit(CommitOptions::default())?;

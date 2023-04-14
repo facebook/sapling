@@ -137,7 +137,11 @@ def segmentsclone(source, repo) -> None:
         repo.ui.status(_("populating main commit graph\n"))
         if repo.ui.configbool("clone", "nativepull"):
             bindings.exchange.clone(
-                repo.edenapi, repo.metalog(), repo.changelog.inner, bookmarks
+                repo.ui._rcfg,
+                repo.edenapi,
+                repo.metalog(),
+                repo.changelog.inner,
+                bookmarks,
             )
         else:
             clonedata = repo.edenapi.clonedata()
