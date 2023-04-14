@@ -78,6 +78,8 @@ pub struct FileMetadata {
     pub content_sha1: Option<Sha1>,
     #[id(5)]
     pub content_sha256: Option<Sha256>,
+    #[id(6)]
+    pub content_seeded_blake3: Option<Blake3>,
 }
 
 #[auto_wire]
@@ -96,10 +98,13 @@ pub struct FileMetadataRequest {
     pub with_content_sha1: bool,
     #[id(5)]
     pub with_content_sha256: bool,
+    #[id(6)]
+    pub with_content_seeded_blake3: bool,
 }
 
 sized_hash!(Sha1, 20);
 sized_hash!(Sha256, 32);
+sized_hash!(Blake3, 32);
 blake2_hash!(ContentId);
 blake2_hash!(FsnodeId);
 
@@ -131,6 +136,8 @@ pub enum AnyFileContentId {
     Sha1(Sha1),
     #[id(3)]
     Sha256(Sha256),
+    #[id(4)]
+    SeededBlake3(Blake3),
 }
 
 impl Default for AnyFileContentId {
@@ -155,9 +162,10 @@ impl FromStr for AnyFileContentId {
             "content_id" => AnyFileContentId::ContentId(ContentId::from_str(id)?),
             "sha1" => AnyFileContentId::Sha1(Sha1::from_str(id)?),
             "sha256" => AnyFileContentId::Sha256(Sha256::from_str(id)?),
+            "seeded_blake3" => AnyFileContentId::SeededBlake3(Blake3::from_str(id)?),
             _ => {
                 return Err(Self::Err::generic(
-                    "AnyFileContentId parsing failure: supported id types are: 'content_id', 'sha1' and 'sha256'",
+                    "AnyFileContentId parsing failure: supported id types are: 'content_id', 'sha1', 'sha256' and 'seeded_blake3'",
                 ));
             }
         };
@@ -171,6 +179,7 @@ impl fmt::Display for AnyFileContentId {
             AnyFileContentId::ContentId(id) => write!(f, "{}", id),
             AnyFileContentId::Sha1(id) => write!(f, "{}", id),
             AnyFileContentId::Sha256(id) => write!(f, "{}", id),
+            AnyFileContentId::SeededBlake3(id) => write!(f, "{}", id),
         }
     }
 }

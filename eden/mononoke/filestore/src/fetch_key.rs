@@ -60,13 +60,13 @@ impl From<hash::Blake3> for FetchKey {
     }
 }
 
-// TODO(rajshar): Include seeded Blake3 as AnyFileContentId
 impl From<AnyFileContentId> for FetchKey {
     fn from(id: AnyFileContentId) -> Self {
         match id {
             AnyFileContentId::ContentId(id) => Self::from(ContentId::from(id)),
             AnyFileContentId::Sha1(id) => Self::from(hash::Sha1::from(id)),
             AnyFileContentId::Sha256(id) => Self::from(hash::Sha256::from(id)),
+            AnyFileContentId::SeededBlake3(id) => Self::from(hash::Blake3::from(id)),
         }
     }
 }
