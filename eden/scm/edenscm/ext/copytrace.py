@@ -18,9 +18,6 @@
     # many commits in this "branch".
     sourcecommitlimit = 100
 
-    # limits the number of heuristically found move candidates to check
-    maxmovescandidatestocheck = 5
-
     # whether to enable fast copytracing during amends (requires fastcopytrace
     # to be enabled.)
     enableamendcopytrace = True
@@ -41,6 +38,8 @@ import os
 import sys
 import time
 from typing import Optional, Tuple, Type
+
+import bindings
 
 from edenscm import (
     cmdutil,
@@ -68,11 +67,11 @@ else:
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("copytrace", "maxmovescandidatestocheck", default=5)
 configitem("copytrace", "sourcecommitlimit", default=100)
 configitem("copytrace", "fastcopytrace", default=False)
 configitem("copytrace", "enableamendcopytrace", default=True)
 configitem("copytrace", "amendcopytracecommitlimit", default=100)
+configitem("copytrace", "dagcopytrace", default=False)
 
 defaultdict = collections.defaultdict
 _copytracinghint: str = (
@@ -460,43 +459,17 @@ def _domergecopies(orig, repo, cdst, csrc, base):
     missingfiles = list(
         filter(lambda f: f not in mdst and f in base and f in csrc, changedfiles)
     )
-    if missingfiles:
-        # Use the following file name heuristic to find moves: moves are
-        # usually either directory moves or renames of the files in the
-        # same directory. That means that we can look for the files in dstc
-        # with either the same basename or the same dirname.
-        basenametofilename = defaultdict(list)
-        dirnametofilename = defaultdict(list)
-        for f in mdst.filesnotin(base.manifest()):
-            basename = os.path.basename(f)
-            dirname = os.path.dirname(f)
-            basenametofilename[basename].append(f)
-            dirnametofilename[dirname].append(f)
-
-        maxmovecandidatestocheck = repo.ui.configint(
-            "copytrace", "maxmovescandidatestocheck"
+    if missingfiles and _dagcopytraceenabled(repo.ui):
+        dag_copy_trace = bindings.copytrace.dagcopytrace(
+            repo.changelog.inner,
+            repo.manifestlog.datastore,
+            repo.fileslog.filescmstore,
+            repo.changelog.dag,
         )
-        # in case of a rebase/graft, base may not be a common ancestor
-        anc = cdst.ancestor(csrc)
         for f in missingfiles:
-            basename = os.path.basename(f)
-            dirname = os.path.dirname(f)
-            samebasename = basenametofilename[basename]
-            samedirname = dirnametofilename[dirname]
-            movecandidates = samebasename + samedirname
-            # f is guaranteed to be present in csrc, that's why
-            # csrc.filectx(f) won't fail
-            f2 = csrc.filectx(f)
-            for candidate in movecandidates[:maxmovecandidatestocheck]:
-                f1 = cdst.filectx(candidate)
-                if copiesmod._related(f1, f2, anc.rev()):
-                    # if there are a few related copies then we'll merge
-                    # changes into all of them. This matches the behaviour
-                    # of upstream copytracing
-                    copies[candidate] = f
-            if len(movecandidates) > maxmovecandidatestocheck:
-                msg = "too many moves candidates: %d" % len(movecandidates)
-                repo.ui.log("copytrace", msg=msg, reponame=_getreponame(repo, repo.ui))
+            dst_file = dag_copy_trace.trace_rename(csrc.node(), cdst.node(), f)
+            if dst_file:
+                copies[dst_file] = f
 
     if repo.ui.configbool("copytrace", "enableamendcopytrace"):
         # Look for additional amend-copies.
@@ -546,6 +519,10 @@ def _filtercopies(copies, cdst, csrc, base):
 
 def _fastcopytraceenabled(ui):
     return ui.configbool("copytrace", "fastcopytrace")
+
+
+def _dagcopytraceenabled(ui):
+    return ui.configbool("copytrace", "dagcopytrace")
 
 
 def _getreponame(repo, ui):

@@ -11,6 +11,7 @@
   $ initclient() {
   >   setconfig copytrace.remote=false copytrace.enablefilldb=true copytrace.fastcopytrace=true
   >   setconfig experimental.copytrace=off
+  >   setconfig copytrace.dagcopytrace=True
   > }
 
 Check filename heuristics (same dirname and same basename)
@@ -542,15 +543,16 @@ Copy and move file
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
       desc: initial, phase: public
 
+dagcopytrace does support copying & renaming one file to multiple files, it picks the last one in ascending order
+
   $ hg rebase -s . -d 'desc(cp)'
   rebasing ef716627c70b "mod a"
-  merging b and a to b
   merging c and a to c
   $ ls
   b
   c
   $ cat b
-  b
+  a
   $ cat c
   b
   $ cd ..
