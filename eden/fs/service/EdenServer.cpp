@@ -362,9 +362,6 @@ EdenServer::EdenServer(
       edenDir_{edenConfig->edenDir.getValue()},
       activityRecorderFactory_{std::move(activityRecorderFactory)},
       backingStoreFactory_{backingStoreFactory},
-      blobCache_{BlobCache::create(
-          FLAGS_maximumBlobCacheSize,
-          FLAGS_minimumBlobCacheEntryCount)},
       config_{std::make_shared<ReloadableConfig>(edenConfig)},
       mountPoints_{std::make_shared<folly::Synchronized<MountMap>>(
           MountMap{kPathMapDefaultCaseSensitive})},
@@ -390,11 +387,14 @@ EdenServer::EdenServer(
           mainEventBase_,
           getPlatformNotifier(config_, structuredLogger_, version),
           FLAGS_enable_fault_injection)},
+      blobCache_{BlobCache::create(
+          FLAGS_maximumBlobCacheSize,
+          FLAGS_minimumBlobCacheEntryCount)},
+      treeCache_{TreeCache::create(serverState_->getReloadableConfig())},
       version_{std::move(version)},
       progressManager_{
           std::make_unique<folly::Synchronized<EdenServer::ProgressManager>>()},
       startupStatusChannel_{std::move(startupStatusChannel)} {
-  treeCache_ = TreeCache::create(serverState_->getReloadableConfig());
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->registerCallback(kBlobCacheMemory, [this] {
     return this->getBlobCache()->getStats().totalSizeInBytes;

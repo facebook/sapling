@@ -668,8 +668,6 @@ class EdenServer : private TakeoverHandler {
 
   std::shared_ptr<LocalStore> localStore_;
   folly::Synchronized<BackingStoreMap> backingStores_;
-  const std::shared_ptr<BlobCache> blobCache_;
-  std::shared_ptr<TreeCache> treeCache_;
   std::shared_ptr<ReloadableConfig> config_;
 
   std::shared_ptr<folly::Synchronized<MountMap>> mountPoints_;
@@ -722,6 +720,13 @@ class EdenServer : private TakeoverHandler {
    * Common state shared by all of the EdenMount objects.
    */
   const std::shared_ptr<ServerState> serverState_;
+
+  // TODO: We should not be sharing in-memory BlobCache and TreeCache across
+  // multiple BackingStores. The IDs inhabit different spaces. But we share
+  // LocalStore across BackingStores already, so fixing this properly is a
+  // bigger issue.
+  const std::shared_ptr<BlobCache> blobCache_;
+  const std::shared_ptr<TreeCache> treeCache_;
 
   /**
    * Start time of edenfs daemon
