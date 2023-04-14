@@ -284,7 +284,7 @@ sidebar_position: {index}
                 subcommands += sub.get("doc", "") + "\n"
                 args = sub.get("args")
                 if args:
-                    subcommands += create_arg_table(args)
+                    subcommands += f"{create_arg_table(args)}\n"
 
         # Note that to workaround an issue in Docusaurus, signed_source has to
         # appear after alias so that alias shows in the preview on the category
