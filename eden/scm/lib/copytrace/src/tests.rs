@@ -241,20 +241,22 @@ fn vertex_from_str(s: &str) -> Vertex {
     Vertex::copy_from(&bytes)
 }
 
-async fn trace_rename(
-    c: &Arc<dyn CopyTrace + Send + Sync>,
-    src: &str,
-    dst: &str,
-    src_path: &str,
-) -> Result<Option<RepoPathBuf>> {
-    let src = vertex_from_str(src);
-    let dst = vertex_from_str(dst);
-    let src_path = RepoPath::from_str(src_path).unwrap().to_owned();
-    c.trace_rename(src, dst, src_path).await
-}
+macro_rules! assert_trace_rename {
+    ($copy_trace:ident $src:tt $dst:tt, $src_path:tt -> $dst_path:tt) => {{
+        let src = vertex_from_str(&stringify!($src));
+        let dst = vertex_from_str(&stringify!($dst));
+        let src_path = RepoPath::from_str(&stringify!($src_path))
+            .unwrap()
+            .to_owned();
+        let dst_path = match stringify!($dst_path) {
+            "!" => None,
+            p => Some(RepoPath::from_str(&p).unwrap().to_owned()),
+        };
 
-fn p(path: &str) -> Option<RepoPathBuf> {
-    Some(RepoPath::from_str(path).unwrap().to_owned())
+        let res = $copy_trace.trace_rename(src, dst, src_path).await.unwrap();
+
+        assert_eq!(res, dst_path);
+    }};
 }
 
 #[tokio::test]
@@ -274,18 +276,13 @@ async fn test_linear_single_rename() {
     let t = CopyTraceTestCase::new(ascii, changes).await;
     let c = t.copy_trace().await;
 
-    let res = trace_rename(&c, "A", "C", "a").await.unwrap();
-    assert_eq!(res, p("b"));
-    let res = trace_rename(&c, "C", "A", "b").await.unwrap();
-    assert_eq!(res, p("a"));
+    assert_trace_rename!(c A C, a -> b);
+    assert_trace_rename!(c C A, b -> a);
 
-    let res = trace_rename(&c, "A", "B", "a").await.unwrap();
-    assert_eq!(res, p("b"));
-    let res = trace_rename(&c, "B", "A", "b").await.unwrap();
-    assert_eq!(res, p("a"));
+    assert_trace_rename!(c A B, a -> b);
+    assert_trace_rename!(c B A, b -> a);
 
-    let res = trace_rename(&c, "A", "C", "d").await.unwrap();
-    assert_eq!(res, None);
+    assert_trace_rename!(c A C, d -> !);
 }
 
 #[tokio::test]
@@ -307,10 +304,8 @@ async fn test_non_linear_single_rename() {
     let t = CopyTraceTestCase::new(ascii, changes).await;
     let c = t.copy_trace().await;
 
-    let res = trace_rename(&c, "C", "B", "a").await.unwrap();
-    assert_eq!(res, p("b"));
-    let res = trace_rename(&c, "B", "C", "b").await.unwrap();
-    assert_eq!(res, p("a"));
+    assert_trace_rename!(c C B, a -> b);
+    assert_trace_rename!(c B C, b -> a);
 }
 
 #[tokio::test]
@@ -331,23 +326,15 @@ async fn test_linear_multiple_renames() {
     let t = CopyTraceTestCase::new(ascii, changes).await;
     let c = t.copy_trace().await;
 
-    let res = trace_rename(&c, "A", "B", "a").await.unwrap();
-    assert_eq!(res, p("b"));
-    let res = trace_rename(&c, "A", "H", "a").await.unwrap();
-    assert_eq!(res, p("c"));
-    let res = trace_rename(&c, "A", "K", "a").await.unwrap();
-    assert_eq!(res, p("c"));
-    let res = trace_rename(&c, "A", "X", "a").await.unwrap();
-    assert_eq!(res, p("d"));
+    assert_trace_rename!(c A B, a -> b);
+    assert_trace_rename!(c A H, a -> c);
+    assert_trace_rename!(c A K, a -> c);
+    assert_trace_rename!(c A X, a -> d);
 
-    let res = trace_rename(&c, "X", "H", "d").await.unwrap();
-    assert_eq!(res, p("c"));
-    let res = trace_rename(&c, "X", "C", "d").await.unwrap();
-    assert_eq!(res, p("b"));
-    let res = trace_rename(&c, "X", "B", "d").await.unwrap();
-    assert_eq!(res, p("b"));
-    let res = trace_rename(&c, "X", "A", "d").await.unwrap();
-    assert_eq!(res, p("a"));
+    assert_trace_rename!(c X H, d -> c);
+    assert_trace_rename!(c X C, d -> b);
+    assert_trace_rename!(c X B, d -> b);
+    assert_trace_rename!(c X A, d -> a);
 }
 
 #[tokio::test]
@@ -367,15 +354,11 @@ async fn test_linear_multiple_renames_with_deletes() {
     let t = CopyTraceTestCase::new(ascii, changes).await;
     let c = t.copy_trace().await;
 
-    let res = trace_rename(&c, "A", "X", "a").await.unwrap();
-    assert_eq!(res, p("d"));
-    let res = trace_rename(&c, "A", "Z", "a").await.unwrap();
-    assert_eq!(res, None);
+    assert_trace_rename!(c A X, a -> d);
+    assert_trace_rename!(c A Z, a -> !);
 
-    let res = trace_rename(&c, "Z", "B", "b2").await.unwrap();
-    assert_eq!(res, p("b2"));
-    let res = trace_rename(&c, "Z", "A", "b2").await.unwrap();
-    assert_eq!(res, None);
+    assert_trace_rename!(c Z B, b2 -> b2);
+    assert_trace_rename!(c Z A, b2 -> !);
 }
 
 #[tokio::test]
@@ -396,38 +379,23 @@ async fn test_non_linear_multiple_renames() {
     let t = CopyTraceTestCase::new(ascii, changes).await;
     let c = t.copy_trace().await;
 
-    let res = trace_rename(&c, "Z", "99", "a2").await.unwrap();
-    assert_eq!(res, p("a"));
-    let res = trace_rename(&c, "Z", "100", "a2").await.unwrap();
-    assert_eq!(res, p("b"));
-    let res = trace_rename(&c, "Z", "101", "a2").await.unwrap();
-    assert_eq!(res, p("b"));
-    let res = trace_rename(&c, "Z", "500", "a2").await.unwrap();
-    assert_eq!(res, p("c"));
-    let res = trace_rename(&c, "Z", "999", "a2").await.unwrap();
-    assert_eq!(res, p("c"));
-    let res = trace_rename(&c, "Z", "1000", "a2").await.unwrap();
-    assert_eq!(res, p("d"));
-    let res = trace_rename(&c, "Z", "1001", "a2").await.unwrap();
-    assert_eq!(res, p("d"));
-    let res = trace_rename(&c, "Z", "1023", "a2").await.unwrap();
-    assert_eq!(res, p("d"));
+    assert_trace_rename!(c Z 99, a2 -> a);
+    assert_trace_rename!(c Z 100, a2 -> b);
+    assert_trace_rename!(c Z 101, a2 -> b);
+    assert_trace_rename!(c Z 500, a2 -> c);
+    assert_trace_rename!(c Z 999, a2 -> c);
+    assert_trace_rename!(c Z 1000, a2 -> d);
+    assert_trace_rename!(c Z 1001, a2 -> d);
+    assert_trace_rename!(c Z 1023, a2 -> d);
 
-    let res = trace_rename(&c, "C", "999", "a").await.unwrap();
-    assert_eq!(res, p("c"));
-    let res = trace_rename(&c, "C", "1023", "a").await.unwrap();
-    assert_eq!(res, p("d"));
+    assert_trace_rename!(c C 999, a -> c);
+    assert_trace_rename!(c C 1023, a -> d);
 
-    let res = trace_rename(&c, "1023", "B", "d").await.unwrap();
-    assert_eq!(res, p("a"));
-    let res = trace_rename(&c, "1023", "C", "d").await.unwrap();
-    assert_eq!(res, p("a"));
-    let res = trace_rename(&c, "1023", "D", "d").await.unwrap();
-    assert_eq!(res, p("a2"));
-    let res = trace_rename(&c, "1023", "E", "d").await.unwrap();
-    assert_eq!(res, p("a2"));
-    let res = trace_rename(&c, "1023", "Z", "d").await.unwrap();
-    assert_eq!(res, p("a2"));
+    assert_trace_rename!(c 1023 B, d -> a);
+    assert_trace_rename!(c 1023 C, d -> a);
+    assert_trace_rename!(c 1023 D, d -> a2);
+    assert_trace_rename!(c 1023 E, d -> a2);
+    assert_trace_rename!(c 1023 Z, d -> a2);
 }
 
 #[tokio::test]
@@ -449,12 +417,9 @@ async fn test_non_linear_multiple_renames_with_deletes() {
     let t = CopyTraceTestCase::new(ascii, changes).await;
     let c = t.copy_trace().await;
 
-    let res = trace_rename(&c, "Z", "1000", "a2").await.unwrap();
-    assert_eq!(res, p("d"));
-    let res = trace_rename(&c, "Z", "1001", "a2").await.unwrap();
-    assert_eq!(res, None);
-    let res = trace_rename(&c, "Z", "1023", "a2").await.unwrap();
-    assert_eq!(res, None);
+    assert_trace_rename!(c Z 1000, a2 -> d);
+    assert_trace_rename!(c Z 1001, a2 -> !);
+    assert_trace_rename!(c Z 1023, a2 -> !);
 }
 
 #[tokio::test]
@@ -472,6 +437,5 @@ async fn test_one_file_copied_to_multiple_files() {
     let t = CopyTraceTestCase::new(ascii, changes).await;
     let c = t.copy_trace().await;
 
-    let res = trace_rename(&c, "A", "C", "a").await.unwrap();
-    assert_eq!(res, p("c"));
+    assert_trace_rename!(c A C, a -> c);
 }
