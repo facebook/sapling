@@ -2272,6 +2272,13 @@ class DebugRunTestTest(Test):
         vlog("# Running", shlex.join(cmdargs))
         exitcode, out = self._runcommand(cmdargs, env)
 
+        # Make sure libc/rust output directly to stderr/stdout shows up, albeit
+        # not interleaved properly with well behaved output.
+        with iolock:
+            for line in out:
+                sys.stdout.buffer.write(line)
+            sys.stdout.flush()
+
         if exitcode == 1:
             if os.path.exists(self.errpath):
                 with open(self.errpath, "rb") as f:
