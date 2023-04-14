@@ -1188,7 +1188,7 @@ void EdenServer::closeStorage() {
 
 bool EdenServer::performCleanup() {
   bool takeover = false;
-#ifndef _WIN32
+
   folly::stop_watch<> shutdown;
   bool shutdownSuccess = true;
   SCOPE_EXIT {
@@ -1197,7 +1197,6 @@ bool EdenServer::performCleanup() {
     serverState_->getStructuredLogger()->logEvent(
         DaemonStop{shutdownTimeInSeconds, takeover, shutdownSuccess});
   };
-#endif
   auto&& shutdownFuture =
       folly::Future<std::optional<TakeoverData>>::makeEmpty();
   {
