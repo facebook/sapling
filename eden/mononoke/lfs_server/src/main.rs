@@ -23,7 +23,7 @@ use anyhow::Result;
 use cached_config::ConfigHandle;
 use clap::Parser;
 use cloned::cloned;
-use cmdlib::args::CachelibSettings;
+use cmdlib_caching::CachelibSettings;
 use connection_security_checker::ConnectionSecurityChecker;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
