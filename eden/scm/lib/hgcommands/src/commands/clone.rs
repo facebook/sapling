@@ -326,7 +326,9 @@ fn try_clone_metadata(
             } else {
                 destination.to_path_buf()
             };
-            fs::remove_dir_all(removal_dir)?;
+            if !ctx.global_opts().debug {
+                fs::remove_dir_all(removal_dir)?;
+            }
             Err(e)
         }
         Ok(repo) => Ok(repo),

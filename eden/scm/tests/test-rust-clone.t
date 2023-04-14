@@ -177,3 +177,8 @@ Test various --eden errors:
   $ hg clone -q test:e1 --eden --config clone.use-rust=0
   abort: --eden requires --config clone.use-rust=True
   [255]
+
+Don't delete repo on error if --debug:
+  $ FAILPOINTS=run::clone=return hg clone -Uq test:e1 $TESTTMP/debug-failure --debug &>/dev/null
+  [255]
+  $ ls $TESTTMP/debug-failure
