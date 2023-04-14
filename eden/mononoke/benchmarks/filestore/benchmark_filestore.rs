@@ -8,6 +8,8 @@
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 
 use std::fmt::Debug;
+use std::num::NonZeroUsize;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -15,15 +17,14 @@ use anyhow::format_err;
 use anyhow::Error;
 use blobstore::Blobstore;
 use blobstore_factory::make_sql_blobstore_xdb;
+use blobstore_factory::BlobstoreOptions;
 use blobstore_factory::ReadOnlyStorage;
 use bytes::Bytes;
 use bytes::BytesMut;
 use cacheblob::new_memcache_blobstore;
 use cached_config::ConfigStore;
-use clap_old::Arg;
-use clap_old::SubCommand;
-use cmdlib::args;
-use cmdlib::args::MononokeMatches;
+use clap::Parser;
+use clap::ValueEnum;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::FetchKey;
@@ -34,6 +35,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_stats::FutureStats;
 use futures_stats::TimedFutureExt;
+use mononoke_app::MononokeAppBuilder;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ContentMetadataV2;
 use rand::Rng;
@@ -45,22 +47,56 @@ use tokio_util::codec::FramedRead;
 
 const NAME: &str = "benchmark_filestore";
 
-const CMD_MANIFOLD: &str = "manifold";
-const CMD_MEMORY: &str = "memory";
-const CMD_XDB: &str = "xdb";
+/// Benchmark the filestore
+#[derive(Parser)]
+struct BenchmarkArgs {
+    #[clap(long, default_value_t = 8192)]
+    input_capacity: usize,
 
-const ARG_MANIFOLD_BUCKET: &str = "manifold-bucket";
-const ARG_SHARDMAP: &str = "shardmap";
-const ARG_SHARD_COUNT: &str = "shard-count";
-const ARG_INPUT_CAPACITY: &str = "input-capacity";
-const ARG_CHUNK_SIZE: &str = "chunk-size";
-const ARG_CONCURRENCY: &str = "concurrency";
-const ARG_MEMCACHE: &str = "memcache";
-const ARG_CACHELIB_SIZE: &str = "cachelib-size";
-const ARG_INPUT: &str = "input";
-const ARG_DELAY: &str = "delay";
-const ARG_RANDOMIZE: &str = "randomize";
-const ARG_READ_COUNT: &str = "read-count";
+    #[clap(long, default_value_t = 1048576)]
+    chunk_size: u64,
+
+    #[clap(long, default_value_t = 1)]
+    concurrency: usize,
+
+    #[clap(long)]
+    memcache: bool,
+
+    #[clap(long)]
+    cachelib_size: Option<usize>,
+
+    #[clap(long)]
+    delay: Option<u64>,
+
+    #[clap(long)]
+    randomize: bool,
+
+    #[clap(long, default_value_t = 2)]
+    read_count: usize,
+
+    #[clap(long, required_if_eq("blobstore_type", "manifold"))]
+    manifold_bucket: Option<String>,
+
+    #[clap(long, required_if_eq("blobstore_type", "xdb"))]
+    shardmap: Option<String>,
+
+    #[clap(long)]
+    shard_count: Option<NonZeroUsize>,
+
+    /// Data file to use as input.
+    input: PathBuf,
+
+    /// Which type of blobstore to benchmark against.
+    #[clap(value_enum)]
+    blobstore_type: BlobstoreType,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+enum BlobstoreType {
+    Manifold,
+    Memory,
+    Xdb,
+}
 
 fn log_perf<I, E: Debug>(stats: FutureStats, res: &Result<I, E>, len: u64) {
     match res {
@@ -80,7 +116,7 @@ fn log_perf<I, E: Debug>(stats: FutureStats, res: &Result<I, E>, len: u64) {
 }
 
 async fn read<B: Blobstore>(
-    blob: &B,
+    blobstore: &B,
     ctx: &CoreContext,
     content_metadata: &ContentMetadataV2,
 ) -> Result<(), Error> {
@@ -90,7 +126,7 @@ async fn read<B: Blobstore>(
         key, content_metadata.total_size
     );
 
-    let stream = filestore::fetch(blob, ctx.clone(), &key)
+    let stream = filestore::fetch(blobstore, ctx.clone(), &key)
         .await?
         .ok_or_else(|| format_err!("Fetch failed: no stream"))?;
 
@@ -106,44 +142,24 @@ async fn read<B: Blobstore>(
 
 async fn run_benchmark_filestore<'a>(
     ctx: &'a CoreContext,
-    matches: &'a MononokeMatches<'a>,
-    blob: Arc<dyn Blobstore>,
+    args: &BenchmarkArgs,
+    blobstore: Arc<dyn Blobstore>,
 ) -> Result<(), Error> {
-    let input = matches.value_of(ARG_INPUT).unwrap().to_string();
-
-    let input_capacity: usize = matches.value_of(ARG_INPUT_CAPACITY).unwrap().parse()?;
-
-    let chunk_size: u64 = matches.value_of(ARG_CHUNK_SIZE).unwrap().parse()?;
-
-    let concurrency: usize = matches.value_of(ARG_CONCURRENCY).unwrap().parse()?;
-
-    let read_count: usize = matches.value_of(ARG_READ_COUNT).unwrap().parse()?;
-
-    let delay: Option<Duration> = matches
-        .value_of(ARG_DELAY)
-        .map(|seconds| -> Result<Duration, Error> {
-            let seconds = seconds.parse().map_err(Error::from)?;
-            Ok(Duration::new(seconds, 0))
-        })
-        .transpose()?;
-
-    let randomize = matches.is_present(ARG_RANDOMIZE);
-
     let config = FilestoreConfig {
-        chunk_size: Some(chunk_size),
-        concurrency,
+        chunk_size: Some(args.chunk_size),
+        concurrency: args.concurrency,
     };
 
-    eprintln!("Test with {:?}, writing into {:?}", config, blob);
+    eprintln!("Test with {:?}, writing into {:?}", config, blobstore);
 
-    let file = File::open(input).await?;
+    let file = File::open(&args.input).await?;
     let metadata = file.metadata().await?;
 
-    let data = BufReader::with_capacity(input_capacity, file);
+    let data = BufReader::with_capacity(args.input_capacity, file);
     let data = FramedRead::new(data, BytesCodec::new()).map_ok(BytesMut::freeze);
     let len = metadata.len();
 
-    let (len, data) = if randomize {
+    let (len, data) = if args.randomize {
         let bytes = rand::thread_rng().gen::<[u8; 32]>();
         let bytes = Bytes::copy_from_slice(&bytes[..]);
         (
@@ -158,24 +174,24 @@ async fn run_benchmark_filestore<'a>(
 
     let req = StoreRequest::new(len);
 
-    let (stats, res) = filestore::store(&blob, config, ctx, &req, data.map_err(Error::from))
+    let (stats, res) = filestore::store(&blobstore, config, ctx, &req, data.map_err(Error::from))
         .timed()
         .await;
     log_perf(stats, &res, len);
 
     let metadata = res?;
 
-    match delay {
+    match args.delay {
         Some(delay) => {
-            tokio_shim::time::sleep(delay).await;
+            tokio_shim::time::sleep(Duration::from_secs(delay)).await;
         }
         None => {}
     }
 
     eprintln!("Write committed: {:?}", metadata.content_id.blobstore_key());
 
-    for _c in 0..read_count {
-        read(&blob, ctx, &metadata).await?;
+    for _c in 0..args.read_count {
+        read(&blobstore, ctx, &metadata).await?;
     }
 
     Ok(())
@@ -184,21 +200,24 @@ async fn run_benchmark_filestore<'a>(
 #[cfg(fbcode_build)]
 const TEST_DATA_TTL: Option<Duration> = Some(Duration::from_secs(3600));
 
-async fn get_blob<'a>(
+async fn open_blobstore(
     fb: FacebookInit,
-    matches: &'a MononokeMatches<'a>,
+    args: &BenchmarkArgs,
+    blobstore_options: &BlobstoreOptions,
+    readonly_storage: &ReadOnlyStorage,
     config_store: &ConfigStore,
 ) -> Result<Arc<dyn Blobstore>, Error> {
-    let blobstore_options = matches.blobstore_options();
-    let readonly_storage = matches.readonly_storage();
-    let blob: Arc<dyn Blobstore> = match matches.subcommand() {
-        (CMD_MANIFOLD, Some(sub)) => {
+    let blobstore: Arc<dyn Blobstore> = match args.blobstore_type {
+        BlobstoreType::Manifold => {
             #[cfg(fbcode_build)]
             {
                 use manifoldblob::ManifoldBlob;
                 use prefixblob::PrefixBlobstore;
 
-                let bucket = sub.value_of(ARG_MANIFOLD_BUCKET).unwrap();
+                let bucket = args
+                    .manifold_bucket
+                    .as_ref()
+                    .expect("Manifold bucket must be set when using manifold blobstore type");
                 let put_behaviour = blobstore_options.put_behaviour;
                 let manifold = ManifoldBlob::new(
                     fb,
@@ -212,21 +231,20 @@ async fn get_blob<'a>(
             }
             #[cfg(not(fbcode_build))]
             {
-                let _ = sub;
                 unimplemented!("Accessing Manifold is not implemented in non fbcode builds");
             }
         }
-        (CMD_MEMORY, Some(_)) => Arc::new(memblob::Memblob::default()),
-        (CMD_XDB, Some(sub)) => {
-            let shardmap_or_tier = sub.value_of(ARG_SHARDMAP).unwrap().to_string();
-            let shard_count = sub
-                .value_of(ARG_SHARD_COUNT)
-                .map(|v| v.parse())
-                .transpose()?;
+        BlobstoreType::Memory => Arc::new(memblob::Memblob::default()),
+        BlobstoreType::Xdb => {
+            let tier_name = args
+                .shardmap
+                .as_ref()
+                .expect("Shardmap must be set when using xdb blobstore type")
+                .to_string();
             let blobstore = make_sql_blobstore_xdb(
                 fb,
-                shardmap_or_tier,
-                shard_count,
+                tier_name,
+                args.shard_count,
                 blobstore_options,
                 *readonly_storage,
                 blobstore_options.put_behaviour,
@@ -235,21 +253,19 @@ async fn get_blob<'a>(
             .await?;
             Arc::new(blobstore)
         }
-        _ => unreachable!(),
     };
 
-    let blob: Arc<dyn Blobstore> = if matches.is_present(ARG_MEMCACHE) {
-        Arc::new(new_memcache_blobstore(fb, blob, NAME, "")?)
+    let blobstore: Arc<dyn Blobstore> = if args.memcache {
+        Arc::new(new_memcache_blobstore(fb, blobstore, NAME, "")?)
     } else {
-        blob
+        blobstore
     };
 
-    let blob: Arc<dyn Blobstore> = match matches.value_of(ARG_CACHELIB_SIZE) {
+    let blobstore: Arc<dyn Blobstore> = match args.cachelib_size {
         Some(size) => {
             #[cfg(fbcode_build)]
             {
-                let cache_size_bytes = size.parse()?;
-                cachelib::init_cache(fb, cachelib::LruCacheConfig::new(cache_size_bytes))?;
+                cachelib::init_cache(fb, cachelib::LruCacheConfig::new(size))?;
 
                 let presence_pool = cachelib::get_or_create_pool(
                     "presence",
@@ -259,7 +275,7 @@ async fn get_blob<'a>(
                     cachelib::get_or_create_pool("blobs", cachelib::get_available_space()?)?;
 
                 Arc::new(cacheblob::new_cachelib_blobstore_no_lease(
-                    blob,
+                    blobstore,
                     Arc::new(blob_pool),
                     Arc::new(presence_pool),
                     blobstore_options.cachelib_options,
@@ -271,105 +287,35 @@ async fn get_blob<'a>(
                 unimplemented!("Using cachelib is not implemented for non fbcode build");
             }
         }
-        None => blob,
+        None => blobstore,
     };
 
     // ThrottledBlob is a noop if no throttling requested
-    let blob = Arc::new(ThrottledBlob::new(blob, blobstore_options.throttle_options).await);
+    let blobstore =
+        Arc::new(ThrottledBlob::new(blobstore, blobstore_options.throttle_options).await);
 
-    Ok(blob)
+    Ok(blobstore)
 }
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let manifold_subcommand = SubCommand::with_name(CMD_MANIFOLD).arg(
-        Arg::with_name(ARG_MANIFOLD_BUCKET)
-            .takes_value(true)
-            .required(false),
-    );
+    let app = MononokeAppBuilder::new(fb).build::<BenchmarkArgs>()?;
+    let args: BenchmarkArgs = app.args()?;
 
-    let memory_subcommand = SubCommand::with_name(CMD_MEMORY);
-    let xdb_subcommand = SubCommand::with_name(CMD_XDB)
-        .arg(
-            Arg::with_name(ARG_SHARDMAP)
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(ARG_SHARD_COUNT)
-                .long(ARG_SHARD_COUNT)
-                .takes_value(true)
-                .required(false),
-        );
-
-    let app = args::MononokeAppBuilder::new(NAME)
-        .with_all_repos()
-        .with_readonly_storage_default(ReadOnlyStorage(false))
-        .build()
-        .arg(
-            Arg::with_name(ARG_INPUT_CAPACITY)
-                .long(ARG_INPUT_CAPACITY)
-                .takes_value(true)
-                .required(false)
-                .default_value("8192"),
-        )
-        .arg(
-            Arg::with_name(ARG_CHUNK_SIZE)
-                .long(ARG_CHUNK_SIZE)
-                .takes_value(true)
-                .required(false)
-                .default_value("1048576"),
-        )
-        .arg(
-            Arg::with_name(ARG_CONCURRENCY)
-                .long(ARG_CONCURRENCY)
-                .takes_value(true)
-                .required(false)
-                .default_value("1"),
-        )
-        .arg(
-            Arg::with_name(ARG_MEMCACHE)
-                .long(ARG_MEMCACHE)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name(ARG_CACHELIB_SIZE)
-                .long(ARG_CACHELIB_SIZE)
-                .takes_value(true)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name(ARG_DELAY)
-                .long(ARG_DELAY)
-                .takes_value(true)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name(ARG_RANDOMIZE)
-                .long(ARG_RANDOMIZE)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name(ARG_READ_COUNT)
-                .long(ARG_READ_COUNT)
-                .takes_value(true)
-                .default_value("2")
-                .required(true),
-        )
-        .arg(Arg::with_name(ARG_INPUT).takes_value(true).required(true))
-        .subcommand(manifold_subcommand)
-        .subcommand(memory_subcommand)
-        .subcommand(xdb_subcommand);
-
-    let (matches, runtime) = app.get_matches(fb)?;
-
-    let logger = matches.logger();
-    let config_store = matches.config_store();
+    let runtime = app.runtime();
+    let logger = app.logger();
+    let config_store = app.config_store();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let blob = runtime.block_on(get_blob(fb, &matches, config_store))?;
+    let blobstore = runtime.block_on(open_blobstore(
+        fb,
+        &args,
+        app.blobstore_options(),
+        app.readonly_storage(),
+        config_store,
+    ))?;
 
-    runtime.block_on(run_benchmark_filestore(&ctx, &matches, blob))?;
+    runtime.block_on(run_benchmark_filestore(&ctx, &args, blobstore))?;
 
     Ok(())
 }
