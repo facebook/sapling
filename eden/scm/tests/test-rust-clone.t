@@ -157,6 +157,9 @@ Not an error for bookmarks to not exist
    INFO get_update_target: hgcommands::commands::clone: enter
    INFO get_update_target: hgcommands::commands::clone: return=None
    INFO get_update_target: hgcommands::commands::clone: exit
+remotenames.selectivepulldefault gets persisted
+  $ hg -R $TESTTMP/no-bookmarks config remotenames.selectivepulldefault
+  banana
 
 Test various --eden errors:
   $ hg clone -Uq test:e1 --eden-backing-repo /foo/bar

@@ -18,7 +18,9 @@ use clidispatch::ReqCtx;
 use clidispatch::TermLogger;
 use cliparser::define_flags;
 use configloader::hg::resolve_custom_scheme;
+use configmodel::Config;
 use configmodel::ConfigExt;
+use configmodel::ValueSource;
 use migration::feature::deprecate;
 use repo::repo::Repo;
 use repo_name::encode_repo_name;
@@ -354,8 +356,27 @@ fn clone_metadata(
         .into_iter()
         .map(|file| format!("%include {}\n", file))
         .collect::<String>();
-    repo_config_file_content
-        .push_str(format!("\n[paths]\ndefault = {}\n", ctx.opts.source).as_str());
+
+    if !repo_config_file_content.is_empty() {
+        repo_config_file_content.push('\n');
+    }
+
+    repo_config_file_content.push_str(format!("[paths]\ndefault = {}\n", ctx.opts.source).as_str());
+
+    // Some config values are inherent to the repo and should be persisted if passed to clone.
+    // This is analagous to persisting the --configfile args above.
+    for (section, name) in &[("remotenames", "selectivepulldefault")] {
+        if let Some(&ValueSource {
+            ref source,
+            value: Some(ref value),
+            ..
+        }) = config.get_sources(section, name).last()
+        {
+            if *source == "--config" {
+                repo_config_file_content.push_str(&format!("\n[{section}]\n{name} = {value}\n"));
+            }
+        }
+    }
 
     let mut repo = Repo::init(
         destination,

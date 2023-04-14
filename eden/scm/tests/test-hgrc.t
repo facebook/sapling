@@ -30,7 +30,6 @@ Issue1199: Can't use '%' in hgrc (eg url encoded username)
   $ newclientrepo "foo%bar"
   $ newclientrepo foobar test:foo%bar_server
   $ cat .hg/hgrc
-  
   [paths]
   default = test:foo%bar_server
   $ hg paths
