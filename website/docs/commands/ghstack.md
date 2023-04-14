@@ -4,7 +4,7 @@ sidebar_position: 14
 
 ## ghstack
 <!--
-  @generated SignedSource<<454d5ddfde7a8cd37c159aa4e6e2c009>>
+  @generated SignedSource<<11e53e77e9dfe8cf7a3a88aa558d8ace>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -36,7 +36,8 @@ submit stack of commits to GitHub
 | | `--short`| `false`| print only the URL of the latest opened PR to stdout|
 | | `--force`| `false`| force push the branch even if your local branch is stale|
 | | `--skip`| `false`| never skip pushing commits, even if the contents didn't change (use this if you've only updated the commit message).|
-| | `--draft`| `false`| create the pull request in draft mode (only if it has not already been created)|### unlink
+| | `--draft`| `false`| create the pull request in draft mode (only if it has not already been created)|
+### unlink
 
 remove the association of a commit with a pull request
 

@@ -311,12 +311,6 @@
       },
       {
         "shortname": "",
-        "fullname": "skip",
-        "default": [],
-        "description": "revision to not display (EXPERIMENTAL)"
-      },
-      {
-        "shortname": "",
         "fullname": "short-date",
         "default": null,
         "description": "list the brief date (EXPERIMENTAL)"
@@ -614,7 +608,7 @@
     "aliases": [
       "clone"
     ],
-    "doc": "\n**make a copy of an existing repository**\n\nCreate a copy of an existing repository in a new directory.\n\nIf no destination directory name is specified, it defaults to the\nbasename of the source.\n\nThe location of the source is added to the new repository's\nconfig file as the default to be used for future pulls.\n\nSources are typically URLs. The following URL schemes are assumed\nto be a Git repo: `git`, `git+file`, `git+ftp`, `git+ftps`,\n`git+http`, `git+https`, `git+ssh`, `ssh` and `https`.\n\nScp-like URLs of the form `user@host:path` are converted to\n`ssh://user@host/path`.\n\nOther URL schemes are assumed to point to an EdenAPI capable repo.\n\nThe `--git` option forces the source to be interpreted as a Git repo.\n\nTo check out a particular version, use `-u/--update`, or\n`-U/--noupdate` to create a clone with no working copy.\n\nIf specified, the `--enable-profile` option should refer to a\nsparse profile within the source repo to filter the contents of\nthe new working copy. See `sl help -e sparse` for details.\n\nExamples:\n\n- clone a remote repository to a new directory named some_repo:\n\n```\nsl clone https://example.com/some_repo\n```\n\nReturns 0 on success.\n",
+    "doc": "\n**make a copy of an existing repository**\n\nCreate a copy of an existing repository in a new directory.\n\nIf no destination directory name is specified, it defaults to the\nbasename of the source.\n\nThe location of the source is added to the new repository's\nconfig file as the default to be used for future pulls.\n\nSources are typically URLs. The following URL schemes are assumed\nto be a Git repo: `git`, `git+file`, `git+ftp`, `git+ftps`,\n`git+http`, `git+https`, `git+ssh`, `ssh` and `https`.\n\nScp-like URLs of the form `user@host:path` are converted to\n`ssh://user@host/path`.\n\nOther URL schemes are assumed to point to an EdenAPI capable repo.\n\nThe `--git` option forces the source to be interpreted as a Git repo.\n\nTo check out a particular version, use `-u/--update`, or\n`-U/--noupdate` to create a clone with no working copy.\n\nIf specified, the `--enable-profile` option should refer to a\nsparse profile within the source repo to filter the contents of\nthe new working copy. See `sl help -e sparse` for details.\n\nExamples:\n\n- clone a remote repository to a new directory named some_repo:\n\n```\nsl clone https://example.com/some_repo\n```\n\nAs an experimental feature, if specified the source URL fragment\nis persisted as the repo's main bookmark.\n\nReturns 0 on success.\n",
     "args": [
       {
         "shortname": "U",
@@ -1847,7 +1841,7 @@
       {
         "name": "s|submit",
         "aliases": [],
-        "doc": "\ncreate or update GitHub pull requests from local commits\n",
+        "doc": "\ncreate or update GitHub pull requests from local commits\n\nCommit(s) will be pushed to `default-push`, if configured, else\n`default` (see `sl help urls` and `sl help path`).\n\nPull request(s) will be created against `default`. If\n`default` is a fork, they will be created against default's\nupstream repository.\n\nReturns 0 on success.\n",
         "args": [
           {
             "shortname": "s",
