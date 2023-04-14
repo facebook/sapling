@@ -779,8 +779,8 @@ pub fn repo_name_from_url(config: &dyn Config, s: &str) -> Option<String> {
                         return Some(last_segment.to_string());
                     }
                     // Try path. `path_segment` can be `None` for URL like "test:reponame".
-                    let path = url.path();
-                    if !path.contains('/') && !path.is_empty() {
+                    let path = url.path().trim_matches('/');
+                    if !path.is_empty() {
                         return Some(path.to_string());
                     }
                     // Try the hostname. ex. in "fb://fbsource", "fbsource" is a host not a path.

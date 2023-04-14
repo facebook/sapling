@@ -17,6 +17,7 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use edenapi::Stats;
 use hgtime::HgTime;
+use repo_name::encode_repo_name;
 use tracing::Span;
 use util::path::create_dir;
 use util::path::create_shared_dir;
@@ -29,7 +30,7 @@ fn get_config_cache_path(config: &dyn Config) -> Result<PathBuf> {
     let reponame = get_repo_name(config)?;
     let mut path: PathBuf = config.must_get("remotefilelog", "cachepath")?;
     create_shared_dir(&path)?;
-    path.push(&reponame);
+    path.push(encode_repo_name(reponame));
     create_shared_dir(&path)?;
 
     Ok(path)

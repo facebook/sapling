@@ -37,7 +37,6 @@ verify content
 
   $ cd $TESTTMP
   $ blobimport repo-hg/.hg $REPONAME
-  warning: failed to inspect working copy parent
 
 setup push source repo
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2

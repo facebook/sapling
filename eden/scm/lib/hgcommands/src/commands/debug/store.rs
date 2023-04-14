@@ -7,10 +7,8 @@
 
 use std::str::FromStr;
 
-use clidispatch::errors;
 use clidispatch::ReqCtx;
 use configloader::convert::ByteCount;
-use configmodel::Config;
 use configmodel::ConfigExt;
 use revisionstore::CorruptionPolicy;
 use revisionstore::DataPackStore;
@@ -47,22 +45,16 @@ pub fn run(ctx: ReqCtx<DebugstoreOpts>, repo: &mut Repo) -> Result<u8> {
     let path = RepoPathBuf::from_string(ctx.opts.path)?;
     let hgid = HgId::from_str(&ctx.opts.hgid)?;
     let config = repo.config();
-    let cachepath = match config.get("remotefilelog", "cachepath") {
-        Some(c) => c.to_string(),
-        None => return Err(errors::Abort("remotefilelog.cachepath is not set".into()).into()),
-    };
-    let reponame = match config.get("remotefilelog", "reponame") {
-        Some(c) => c.to_string(),
-        None => return Err(errors::Abort("remotefilelog.reponame is not set".into()).into()),
-    };
-    let fullpath = format!("{}/{}/packs", cachepath, reponame);
+
+    let packs_path = revisionstore::util::get_cache_path(config, &Some("packs"))?;
     let packstore = Box::new(DataPackStore::new(
-        fullpath,
+        packs_path,
         CorruptionPolicy::IGNORE,
         None,
         ExtStoredPolicy::Use,
     ));
-    let fullpath = format!("{}/{}/indexedlogdatastore", cachepath, reponame);
+
+    let datastore_path = revisionstore::util::get_cache_path(config, &Some("indexedlogdatastore"))?;
 
     let max_log_count = config.get_opt::<u8>("indexedlog", "data.max-log-count")?;
     let max_bytes_per_log = config.get_opt::<ByteCount>("indexedlog", "data.max-bytes-per-log")?;
@@ -75,7 +67,7 @@ pub fn run(ctx: ReqCtx<DebugstoreOpts>, repo: &mut Repo) -> Result<u8> {
 
     let indexedstore = Box::new(
         IndexedLogHgIdDataStore::new(
-            fullpath,
+            datastore_path,
             ExtStoredPolicy::Use,
             &indexedlog_config,
             StoreType::Local,

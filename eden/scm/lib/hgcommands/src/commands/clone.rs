@@ -21,6 +21,7 @@ use configloader::hg::resolve_custom_scheme;
 use configmodel::ConfigExt;
 use migration::feature::deprecate;
 use repo::repo::Repo;
+use repo_name::encode_repo_name;
 use tracing::instrument;
 use types::HgId;
 use util::path::absolute;
@@ -203,7 +204,16 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
                 "DEST must be specified because HGPLAIN is enabled",
             );
 
-            clone::get_default_destination_directory(config)?.join(&reponame)
+            // Change "some/repo" into "repo". There is an argument to
+            // defaulting to "some_repo" or similar if the canonical repo name
+            // contains a slash, but using just "repo" probably has less
+            // friction with current workflows/expectations.
+            let basename = match reponame.split(&['/', '\\']).last() {
+                Some(name) if !name.is_empty() => name,
+                _ => abort!("invalid reponame {reponame}"),
+            };
+
+            clone::get_default_destination_directory(config)?.join(basename)
         }
     };
 
@@ -238,7 +248,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         let backing_path = if !ctx.opts.eden_backing_repo.is_empty() {
             PathBuf::from(&ctx.opts.eden_backing_repo)
         } else if let Some(dir) = clone::get_default_eden_backing_directory(config)? {
-            dir.join(&reponame)
+            dir.join(encode_repo_name(&reponame))
         } else {
             abort!("please specify --eden-backing-repo");
         };
@@ -331,7 +341,7 @@ fn clone_metadata(
 ) -> Result<Repo> {
     let mut includes = ctx.global_opts().configfile.clone();
     if let Some(mut repo_config) = config.get_opt::<PathBuf>("clone", "repo-specific-config-dir")? {
-        repo_config.push(format!("{}.rc", reponame));
+        repo_config.push(format!("{}.rc", encode_repo_name(reponame)));
         if repo_config.exists() {
             let repo_config = repo_config.into_os_string().into_string().unwrap();
             if !includes.contains(&repo_config) {
