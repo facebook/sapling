@@ -14,6 +14,7 @@ use async_runtime::block_unless_interrupted as block_on;
 use clidispatch::abort;
 use clidispatch::abort_if;
 use clidispatch::errors;
+use clidispatch::fallback;
 use clidispatch::ReqCtx;
 use clidispatch::TermLogger;
 use cliparser::define_flags;
@@ -26,6 +27,7 @@ use repo::repo::Repo;
 use repo_name::encode_repo_name;
 use tracing::instrument;
 use types::HgId;
+use url::Url;
 use util::path::absolute;
 
 use super::ConfigSet;
@@ -85,6 +87,15 @@ define_flags! {
     }
 }
 
+impl CloneOpts {
+    fn source_url(&self) -> Result<(Url, Option<String>)> {
+        let mut url = Url::parse(&self.source)?;
+        let frag = url.fragment().map(|f| f.to_string());
+        url.set_fragment(None);
+        Ok((url, frag))
+    }
+}
+
 pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
     let mut logger = ctx.logger();
 
@@ -137,14 +148,14 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         );
 
         logger.verbose("Falling back to Python clone (config not enabled)");
-        return Err(errors::FallbackToPython("clone.use-rust not set to True".to_owned()).into());
+        fallback!("clone.use-rust not set to True");
     }
 
-    let supported_url = match url::Url::parse(&ctx.opts.source) {
-        Err(_) => false,
-        Ok(url) => match resolve_custom_scheme(config, url)?.scheme() {
-            "mononoke" | "eager" | "test" => true,
-            _ => false,
+    let source_url = match ctx.opts.source_url() {
+        Err(_) => fallback!("invalid URL"),
+        Ok((url, _)) => match resolve_custom_scheme(config, url.clone())?.scheme() {
+            "mononoke" | "eager" | "test" => url,
+            _ => fallback!("unsupported URL scheme"),
         },
     };
 
@@ -154,7 +165,6 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         || ctx.opts.stream
         || !ctx.opts.shallow
         || ctx.opts.git
-        || !supported_url
     {
         abort_if!(
             ctx.opts.eden,
@@ -162,18 +172,10 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         );
 
         logger.verbose("Falling back to Python clone (incompatible options)");
-        return Err(errors::FallbackToPython(
-            "one or more unsupported options in Rust clone".to_owned(),
-        )
-        .into());
+        fallback!("one or more unsupported options in Rust clone");
     }
 
-    config.set(
-        "paths",
-        "default",
-        Some(ctx.opts.source.clone()),
-        &"arg".into(),
-    );
+    config.set("paths", "default", Some(source_url.as_str()), &"arg".into());
 
     let reponame = match config.get_opt::<String>("remotefilelog", "reponame")? {
         // This gets the reponame from the --configfile config. Ingore
@@ -363,7 +365,17 @@ fn clone_metadata(
         repo_config_file_content.push('\n');
     }
 
-    repo_config_file_content.push_str(format!("[paths]\ndefault = {}\n", ctx.opts.source).as_str());
+    let (url, frag) = ctx.opts.source_url()?;
+    if let Some(frag) = frag {
+        config.set(
+            "remotenames",
+            "selectivepulldefault",
+            Some(frag),
+            &"clone source".into(),
+        );
+    }
+
+    repo_config_file_content.push_str(format!("[paths]\ndefault = {}\n", url.as_str()).as_str());
 
     // Some config values are inherent to the repo and should be persisted if passed to clone.
     // This is analagous to persisting the --configfile args above.
@@ -374,7 +386,7 @@ fn clone_metadata(
             ..
         }) = config.get_sources(section, name).last()
         {
-            if *source == "--config" {
+            if *source == "--config" || *source == "clone source" {
                 repo_config_file_content.push_str(&format!("\n[{section}]\n{name} = {value}\n"));
             }
         }
@@ -437,7 +449,7 @@ pub fn revlog_clone(
     let mut args = vec![
         identity::cli_name().to_string(),
         "debugrevlogclone".to_string(),
-        ctx.opts.source.to_string(),
+        ctx.opts.source_url()?.0.to_string(),
         "-R".to_string(),
         root.to_string_lossy().to_string(),
     ];
@@ -545,6 +557,11 @@ pub fn doc() -> &'static str {
       - clone a remote repository to a new directory named some_repo::
 
           @prog@ clone https://example.com/some_repo
+
+    .. container:: verbose
+
+      As an experimental feature, if specified the source URL fragment
+      is persisted as the repo's main bookmark.
 
     Returns 0 on success."#
 }

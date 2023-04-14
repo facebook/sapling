@@ -24,6 +24,16 @@ macro_rules! abort {
     };
 }
 
+#[macro_export]
+macro_rules! fallback {
+    ( $msg:expr ) => {
+        return Err(clidispatch::errors::FallbackToPython($msg.into()).into());
+    };
+    ( $($arg:tt)+ ) => {
+        return Err(clidispatch::errors::FallbackToPython(format!($($arg)*).into()).into());
+    };
+}
+
 #[cfg(test)]
 mod test {
     use crate as clidispatch;

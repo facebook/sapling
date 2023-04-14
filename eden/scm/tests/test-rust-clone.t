@@ -161,6 +161,20 @@ remotenames.selectivepulldefault gets persisted
   $ hg -R $TESTTMP/no-bookmarks config remotenames.selectivepulldefault
   banana
 
+Can specify selectivepull branch via URL fragment:
+  $ hg clone -Uq test:e1#banana $TESTTMP/fragment
+  TRACE hgcommands::commands::clone: performing rust clone
+   INFO clone_metadata{repo="test-repo"}: hgcommands::commands::clone: enter
+  TRACE clone_metadata{repo="test-repo"}: hgcommands::commands::clone: fetching lazy commit data and bookmarks
+   INFO clone_metadata{repo="test-repo"}: hgcommands::commands::clone: exit
+   INFO get_update_target: hgcommands::commands::clone: enter
+   INFO get_update_target: hgcommands::commands::clone: return=None
+   INFO get_update_target: hgcommands::commands::clone: exit
+  $ hg -R $TESTTMP/fragment config remotenames.selectivepulldefault
+  banana
+  $ hg -R $TESTTMP/fragment paths
+  default = test:e1
+
 Test various --eden errors:
   $ hg clone -Uq test:e1 --eden-backing-repo /foo/bar
   abort: --eden-backing-repo requires --eden
