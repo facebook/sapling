@@ -25,11 +25,6 @@
     # how many previous commits to search through when looking for amend
     # copytrace data.
     amendcopytracecommitlimit = 100
-
-    # whether to enable full copytracing on small draft branches.
-    # Disabled by default
-    draftusefullcopytrace = False
-
 """
 
 import codecs
@@ -37,7 +32,6 @@ import collections
 import os
 import sys
 import time
-from typing import Optional, Tuple, Type
 
 import bindings
 
@@ -406,21 +400,6 @@ def _domergecopies(orig, repo, cdst, csrc, base):
     if not _fastcopytraceenabled(repo.ui):
         return orig(repo, cdst, csrc, base)
 
-    # If base, source and destination are all draft branches, let's use full
-    # copytrace for increased capabilities since it will work fast enough
-    if _isfullcopytraceable(repo.ui, cdst, base):
-        configoverrides = {("experimental", "copytrace"): "on"}
-        with repo.ui.configoverride(configoverrides, "mergecopies"):
-            result = orig(repo, cdst, csrc, base)
-            if repo.ui.configbool("copytrace", "enableamendcopytrace"):
-                # Look for additional amend-copies
-                amend_copies = _getamendcopies(repo, cdst, base.p1())
-                # update result[0] dict w/ amend_copies
-                result[0].update(amend_copies)
-                result[0] = _filtercopies(result[0], cdst, csrc, base)
-
-        return result
-
     # avoid silly behavior for parent -> working dir
     if csrc.node() is None and cdst.node() == repo.dirstate.p1():
         return repo.dirstate.copies(), {}, {}, {}, {}
@@ -543,17 +522,3 @@ def _getctxfromfctx(fctx):
 def _gethex(ctx):
     # for workingctx return p1 hex
     return ctx.hex() if ctx.hex() != node.wdirhex else ctx.p1().hex()
-
-
-def _isfullcopytraceable(ui, cdst, base) -> Optional[bool]:
-    if not ui.configbool("copytrace", "draftusefullcopytrace", False):
-        return False
-    if cdst.phase() == phases.draft and base.phase() == phases.draft:
-        # draft branch: Use traditional copytracing if < 100 commits
-        ctx = cdst
-        commits = 0
-        sourcecommitlimit = ui.configint("copytrace", "sourcecommitlimit")
-        while ctx != base and commits != sourcecommitlimit:
-            ctx = ctx.p1()
-            commits += 1
-        return commits < sourcecommitlimit
