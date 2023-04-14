@@ -1539,97 +1539,78 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
 
   const bool doTakeover = optionalTakeover.has_value();
 
-  auto initFuture = edenMount->initialize(
+  // Now actually begin starting the mount point
+  auto initializeFuture = edenMount->initialize(
       std::move(progressCallback),
       doTakeover ? std::make_optional(optionalTakeover->inodeMap)
                  : std::nullopt);
+  return std::move(initializeFuture)
+      .thenValue([this,
+                  readOnly,
+                  edenMount,
+                  optionalTakeover =
+                      std::move(optionalTakeover)](folly::Unit) mutable {
+        return optionalTakeover
+            ? performTakeoverStart(edenMount, std::move(*optionalTakeover))
+            : edenMount->startFsChannel(readOnly);
+      })
+      .thenValue([edenMount, doTakeover, this](folly::Unit) mutable {
+        registerStats(edenMount);
 
-  // Now actually begin starting the mount point
-  return std::move(initFuture)
-      .thenTry([this,
-                doTakeover,
-                readOnly,
-                edenMount,
-                mountStopWatch,
-                optionalTakeover = std::move(optionalTakeover)](
-                   folly::Try<Unit>&& result) mutable {
-        if (result.hasException()) {
-          XLOG(ERR) << "error initializing " << edenMount->getPath() << ": "
-                    << result.exception().what();
-          mountFinished(edenMount.get(), std::nullopt);
-          return makeFuture<shared_ptr<EdenMount>>(
-              std::move(result).exception());
-        }
-
-        return (optionalTakeover ? performTakeoverStart(
-                                       edenMount, std::move(*optionalTakeover))
-                                 : edenMount->startFsChannel(readOnly))
-            .thenTry([edenMount, doTakeover, this](
-                         folly::Try<Unit>&& result) mutable {
-              // Call mountFinished() if an error occurred during FUSE
-              // initialization.
-              if (result.hasException()) {
-                mountFinished(edenMount.get(), std::nullopt);
-                return makeFuture<shared_ptr<EdenMount>>(
-                    std::move(result).exception());
+        // Now that we've started the workers, arrange to call
+        // mountFinished once the pool is torn down.
+        auto finishFuture = edenMount->getChannelCompletionFuture().thenTry(
+            [this, edenMount](folly::Try<TakeoverData::MountInfo>&& takeover) {
+              std::optional<TakeoverData::MountInfo> optTakeover;
+              if (takeover.hasValue()) {
+                optTakeover = std::move(takeover.value());
               }
-
-              registerStats(edenMount);
-
-              // Now that we've started the workers, arrange to call
-              // mountFinished once the pool is torn down.
-              auto finishFuture =
-                  edenMount->getChannelCompletionFuture().thenTry(
-                      [this, edenMount](
-                          folly::Try<TakeoverData::MountInfo>&& takeover) {
-                        std::optional<TakeoverData::MountInfo> optTakeover;
-                        if (takeover.hasValue()) {
-                          optTakeover = std::move(takeover.value());
-                        }
-                        unregisterStats(edenMount.get());
-                        mountFinished(edenMount.get(), std::move(optTakeover));
-                      });
-
-              if (doTakeover) {
-                // The bind mounts are already mounted in the takeover case
-                return makeFuture<std::shared_ptr<EdenMount>>(
-                    std::move(edenMount));
-              } else {
-                // Perform all of the bind mounts associated with the
-                // client.  We don't need to do this for the takeover
-                // case as they are already mounted.
-                return edenMount->performBindMounts()
-                    .deferValue([edenMount](auto&&) { return edenMount; })
-                    .deferError([edenMount](folly::exception_wrapper ew) {
-                      XLOG(ERR)
-                          << "Error while performing bind mounts, will continue with mount anyway: "
-                          << folly::exceptionStr(ew);
-                      return edenMount;
-                    })
-                    .via(getServerState()->getThreadPool().get());
-              }
-            })
-            .thenTry([this, mountStopWatch, doTakeover, edenMount](auto&& t) {
-              FinishedMount event;
-              event.repo_type = edenMount->getCheckoutConfig()->getRepoType();
-              event.repo_source =
-                  basename(edenMount->getCheckoutConfig()->getRepoSource());
-              if (auto mountProtocol = edenMount->getMountProtocol()) {
-                event.fs_channel_type =
-                    FieldConverter<MountProtocol>{}.toDebugString(
-                        mountProtocol.value());
-              } else {
-                event.fs_channel_type = "unknown";
-              }
-              event.is_takeover = doTakeover;
-              event.duration =
-                  std::chrono::duration<double>{mountStopWatch.elapsed()}
-                      .count();
-              event.success = !t.hasException();
-              event.clean = edenMount->getOverlay()->hadCleanStartup();
-              serverState_->getStructuredLogger()->logEvent(event);
-              return makeFuture(std::move(t));
+              unregisterStats(edenMount.get());
+              mountFinished(edenMount.get(), std::move(optTakeover));
             });
+
+        if (doTakeover) {
+          // The bind mounts are already mounted in the takeover case
+          return makeFuture<std::shared_ptr<EdenMount>>(std::move(edenMount));
+        } else {
+          // Perform all of the bind mounts associated with the
+          // client.  We don't need to do this for the takeover
+          // case as they are already mounted.
+          return edenMount->performBindMounts()
+              .deferValue([edenMount](auto&&) { return edenMount; })
+              .deferError([edenMount](folly::exception_wrapper ew) {
+                XLOG(ERR)
+                    << "Error while performing bind mounts, will continue with mount anyway: "
+                    << folly::exceptionStr(ew);
+                return edenMount;
+              })
+              .via(getServerState()->getThreadPool().get());
+        }
+      })
+      .thenTry([this, mountStopWatch, doTakeover, edenMount](auto&& t) {
+        FinishedMount event;
+        event.repo_type = edenMount->getCheckoutConfig()->getRepoType();
+        event.repo_source =
+            basename(edenMount->getCheckoutConfig()->getRepoSource());
+        if (auto mountProtocol = edenMount->getMountProtocol()) {
+          event.fs_channel_type = FieldConverter<MountProtocol>{}.toDebugString(
+              mountProtocol.value());
+        } else {
+          event.fs_channel_type = "unknown";
+        }
+        event.is_takeover = doTakeover;
+        event.duration =
+            std::chrono::duration<double>{mountStopWatch.elapsed()}.count();
+        event.success = !t.hasException();
+        event.clean = edenMount->getOverlay()->hadCleanStartup();
+        serverState_->getStructuredLogger()->logEvent(event);
+        return std::move(t);
+      })
+      .thenError([this, edenMount](folly::exception_wrapper error) {
+        XLOG(ERR) << "error initializing " << edenMount->getPath() << ": "
+                  << error.what();
+        mountFinished(edenMount.get(), std::nullopt);
+        return makeFuture<shared_ptr<EdenMount>>(std::move(error));
       });
 }
 
