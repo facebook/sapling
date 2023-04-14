@@ -152,7 +152,7 @@ pub(super) struct ConnectionArgs {
     #[clap(long, short, default_value = DEFAULT_TIER, global = true)]
     /// Connect to SCS through given tier.
     tier: String,
-    #[clap(long, short, conflicts_with = "tier", global = true)]
+    #[clap(long, short = 'H', conflicts_with = "tier", global = true)]
     /// Connect to SCS through a given host and port pair, format HOST:PORT.
     host: Option<String>,
 }
