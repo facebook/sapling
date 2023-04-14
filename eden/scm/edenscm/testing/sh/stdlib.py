@@ -641,7 +641,7 @@ def ln(args: List[str], fs: ShellFS):
 
 
 @command
-def ls(args: List[str], fs: ShellFS):
+def ls(args: List[str], stdout: BinaryIO, stderr: BinaryIO, fs: ShellFS):
     entries = []
 
     def listdir(path: str, listall: bool = False, fs=fs) -> List[str]:
@@ -659,11 +659,16 @@ def ls(args: List[str], fs: ShellFS):
             entries += listdir(arg, listall=listall)
         elif fs.exists(arg):
             entries.append(arg)
+        else:
+            stderr.write(f"ls: {arg}: No such file or directory\n".encode())
+            return 1
+
     if not args:
         entries = listdir("")
     entries = sorted(entries)
     lines = [f"{path}\n" for path in entries]
-    return "".join(lines)
+    stdout.write("".join(lines).encode())
+    return 0
 
 
 @command

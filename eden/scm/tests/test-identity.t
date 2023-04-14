@@ -19,6 +19,8 @@
 Init can create a ".sl" repo.
   $ SL_IDENTITY=sl hg init
   $ ls .hg
+  ls: .hg: $ENOENT$
+  [1]
   $ ls .sl
   00changelog.i
   hgrc.dynamic
@@ -41,6 +43,8 @@ Clone can create a ".sl" repo.
   $ find cloned
   cloned/foo
   $ ls cloned/.hg
+  ls: cloned/.hg: $ENOENT$
+  [1]
   $ ls cloned/.sl
   00changelog.i
   config
