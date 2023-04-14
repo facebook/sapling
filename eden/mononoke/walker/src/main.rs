@@ -19,7 +19,7 @@ use blobstore_factory::BlobstoreArgDefaults;
 use blobstore_factory::ReadOnlyStorage;
 use clap::ArgGroup;
 use clap::Parser;
-use cmdlib::args::CachelibSettings;
+use cmdlib_caching::CachelibSettings;
 use cmdlib_scrubbing::ScrubAppExtension;
 use fbinit::FacebookInit;
 use metaconfig_types::WalkerJobType;

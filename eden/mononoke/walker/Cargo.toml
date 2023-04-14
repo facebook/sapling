@@ -30,7 +30,7 @@ changeset_info = { version = "0.1.0", path = "../derived_data/changeset_info" }
 changesets = { version = "0.1.0", path = "../changesets" }
 clap = { version = "4.1.4", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-cmdlib = { version = "0.1.0", path = "../cmdlib" }
+cmdlib_caching = { version = "0.1.0", path = "../cmdlib/caching" }
 cmdlib_scrubbing = { version = "0.1.0", path = "../cmdlib/scrubbing" }
 context = { version = "0.1.0", path = "../server/context" }
 dashmap = { version = "5.4", features = ["raw-api", "rayon", "serde"] }

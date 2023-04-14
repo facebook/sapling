@@ -18,7 +18,6 @@ use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use blobstore_factory::ScrubHandler;
 use cloned::cloned;
-use cmdlib::args::ResolvedRepo;
 use fbinit::FacebookInit;
 use metaconfig_types::CommonConfig;
 use metaconfig_types::MetadataDatabaseConfig;
@@ -211,11 +210,6 @@ pub async fn setup_common<'a>(
                 HashSet::<NodeType>::from_iter(n.0.iter().cloned())
             });
 
-        let resolved_repo = ResolvedRepo {
-            id: repo_conf.repoid,
-            name: repo,
-            config: repo_conf,
-        };
         let common_config = app.repo_configs().common.clone();
         let one_repo = setup_repo(
             walk_stats_key,
@@ -226,7 +220,8 @@ pub async fn setup_common<'a>(
             sql_shard_info,
             scheduled_max_concurrency,
             repo_count,
-            &resolved_repo,
+            repo.clone(),
+            &repo_conf,
             walk_roots.clone(),
             tail_params.clone(),
             include_edge_types.clone(),
@@ -397,7 +392,8 @@ async fn setup_repo<'a>(
     sql_shard_info: SqlShardInfo,
     scheduled_max: usize,
     repo_count: usize,
-    resolved: &'a ResolvedRepo,
+    repo_name: String,
+    repo_config: &'a RepoConfig,
     walk_roots: Vec<OutgoingEdge>,
     mut tail_params: TailParams,
     include_edge_types: HashSet<EdgeType>,
@@ -406,15 +402,15 @@ async fn setup_repo<'a>(
     progress_options: ProgressOptions,
     common_config: CommonConfig,
 ) -> Result<(RepoSubcommandParams, RepoWalkParams), Error> {
-    let logger = logger.new(o!("repo" => resolved.name.clone()));
+    let logger = logger.new(o!("repo" => repo_name.clone()));
 
     let scheduled_max = scheduled_max / repo_count;
-    scuba_builder.add(REPO, resolved.name.clone());
+    scuba_builder.add(REPO, repo_name.clone());
 
     // Only walk derived node types that the repo is configured to contain
     include_node_types.retain(|t| {
         if let Some(t) = t.derived_data_name() {
-            resolved.config.derived_data_config.is_enabled(t)
+            repo_config.derived_data_config.is_enabled(t)
         } else {
             true
         }
@@ -426,7 +422,7 @@ async fn setup_repo<'a>(
     if let Some(ref mut chunking) = tail_params.chunking {
         chunking.chunk_by.retain(|t| {
             if let Some(t) = t.derived_data_name() {
-                resolved.config.derived_data_config.is_enabled(t)
+                repo_config.derived_data_config.is_enabled(t)
             } else {
                 true
             }
@@ -450,7 +446,7 @@ async fn setup_repo<'a>(
         sort_by_string(&include_node_types)
     );
 
-    scuba_builder.add(REPO, resolved.name.clone());
+    scuba_builder.add(REPO, repo_name.clone());
 
     let mut progress_node_types = include_node_types.clone();
     for e in &walk_roots {
@@ -461,24 +457,20 @@ async fn setup_repo<'a>(
         fb,
         logger.clone(),
         walk_stats_key,
-        resolved.name.clone(),
+        repo_name.clone(),
         progress_node_types,
         progress_options,
     ));
 
     let repo: BlobRepo = repo_factory
-        .build(
-            resolved.name.clone(),
-            resolved.config.clone(),
-            common_config,
-        )
+        .build(repo_name.clone(), repo_config.clone(), common_config)
         .await?;
 
     Ok((
         RepoSubcommandParams {
             progress_state,
             tail_params,
-            lfs_threshold: resolved.config.lfs.threshold,
+            lfs_threshold: repo_config.lfs.threshold,
         },
         RepoWalkParams {
             repo,
