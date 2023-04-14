@@ -15,6 +15,7 @@ use std::sync::Arc;
 use minibytes::Text;
 
 use crate::convert::FromConfigValue;
+use crate::Error;
 use crate::Result;
 
 /// Readable config. This can be used as a trait object.
@@ -110,6 +111,16 @@ pub trait ConfigExt: Config {
     /// If the config item is not set, return `T::default()`.
     fn get_or_default<T: Default + FromConfigValue>(&self, section: &str, name: &str) -> Result<T> {
         self.get_or(section, name, Default::default)
+    }
+
+    /// Get a config item. Convert to type `T`.
+    ///
+    /// If the config item is not set, return Error::NotSet.
+    fn must_get<T: Default + FromConfigValue>(&self, section: &str, name: &str) -> Result<T> {
+        match self.get_nonempty_opt(section, name)? {
+            Some(val) => Ok(val),
+            None => Err(Error::NotSet(section.to_string(), name.to_string())),
+        }
     }
 }
 
@@ -259,5 +270,18 @@ mod tests {
 
         // Make sure we can pass BTreeMap config to generic func.
         wants_impl(&map);
+    }
+
+    #[test]
+    fn test_must_get() {
+        let map: BTreeMap<&str, &str> = vec![("foo.bar", "baz")].into_iter().collect();
+        assert_eq!(
+            map.must_get::<Vec<String>>("foo", "bar").unwrap(),
+            vec!["baz".to_string()]
+        );
+        assert!(matches!(
+            map.must_get::<Vec<String>>("foo", "nope"),
+            Err(Error::NotSet(_, _))
+        ));
     }
 }

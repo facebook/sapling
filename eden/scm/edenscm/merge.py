@@ -344,8 +344,9 @@ class mergestate(object):
             and self._readmergedriver != configmergedriver
         ):
             raise error.ConfigError(
-                _("merge driver changed since merge started"),
-                hint=_("revert merge driver change or abort merge"),
+                _("merge driver changed since merge started")
+                + "\n"
+                + _("revert merge driver change or abort merge")
             )
 
         return configmergedriver

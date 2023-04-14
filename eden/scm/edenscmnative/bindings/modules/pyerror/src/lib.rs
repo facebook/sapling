@@ -10,6 +10,7 @@ use cpython_ext::error;
 
 py_exception!(error, CertificateError);
 py_exception!(error, CommitLookupError, exc::KeyError);
+py_exception!(error, ConfigError);
 py_exception!(error, FetchError, exc::KeyError);
 py_exception!(error, HttpError);
 py_exception!(error, IndexedLogError);
@@ -19,7 +20,6 @@ py_exception!(error, NeedSlowPathError);
 py_exception!(error, NonUTF8Path);
 py_exception!(error, WorkingCopyError);
 py_exception!(error, RepoInitError);
-py_exception!(error, RevisionstoreError);
 py_exception!(error, UncategorizedNativeError);
 py_exception!(error, TlsError);
 
@@ -46,11 +46,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     )?;
     m.add(py, "WorkingCopyError", py.get_type::<WorkingCopyError>())?;
     m.add(py, "RepoInitError", py.get_type::<RepoInitError>())?;
-    m.add(
-        py,
-        "RevisionstoreError",
-        py.get_type::<RevisionstoreError>(),
-    )?;
+    m.add(py, "ConfigError", py.get_type::<ConfigError>())?;
     m.add(py, "NonUTF8Path", py.get_type::<NonUTF8Path>())?;
     m.add(py, "TlsError", py.get_type::<TlsError>())?;
 
@@ -143,8 +139,8 @@ fn register_error_handlers() {
                 py,
                 cpython_ext::Str::from(format!("{:?}", e)),
             ))
-        } else if e.is::<revisionstore::Error>() {
-            Some(PyErr::new::<RevisionstoreError, _>(
+        } else if e.is::<configmodel::Error>() {
+            Some(PyErr::new::<ConfigError, _>(
                 py,
                 cpython_ext::Str::from(format!("{:?}", e)),
             ))

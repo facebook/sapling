@@ -18,7 +18,7 @@ Verify error message when no cachepath specified
   $ cp $HGRCPATH $HGRCPATH.bak
   $ sed -i.bak -n "/cachepath/!p" $HGRCPATH
   $ hg up tip
-  abort: could not find config option remotefilelog.cachepath
+  abort: config remotefilelog.cachepath is not set
   [255]
   $ mv $HGRCPATH.bak $HGRCPATH
 

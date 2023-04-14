@@ -115,7 +115,6 @@ use crate::uniondatastore::UnionHgIdDataStore;
 use crate::util::get_lfs_blobs_path;
 use crate::util::get_lfs_objects_path;
 use crate::util::get_lfs_pointers_path;
-use crate::util::get_str_config;
 
 /// The `LfsPointersStore` holds the mapping between a `HgId` and the content hash (sha256) of the LFS blob.
 struct LfsPointersStore(Store);
@@ -1575,7 +1574,7 @@ impl LfsRemote {
         config: &dyn Config,
         correlator: Option<String>,
     ) -> Result<Self> {
-        let mut url = get_str_config(config, "lfs", "url")?;
+        let mut url: String = config.must_get("lfs", "url")?;
         // A trailing '/' needs to be present so that `Url::join` doesn't remove the reponame
         // present at the end of the config.
         url.push('/');

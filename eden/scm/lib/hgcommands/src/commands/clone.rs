@@ -435,15 +435,9 @@ pub fn revlog_clone(
 }
 
 fn get_selective_bookmarks(repo: &Repo) -> Result<Vec<String>> {
-    match repo
+    Ok(repo
         .config()
-        .get_opt("remotenames", "selectivepulldefault")?
-    {
-        Some(bms) => Ok(bms),
-        None => {
-            abort!("remotenames.selectivepulldefault config is not set");
-        }
-    }
+        .must_get("remotenames", "selectivepulldefault")?)
 }
 
 #[instrument(skip_all, err, ret)]

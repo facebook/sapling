@@ -28,6 +28,7 @@ from . import pycompat
 
 CertificateError = bindings.error.CertificateError
 CommitLookupError = bindings.error.CommitLookupError
+ConfigError = bindings.error.ConfigError
 FetchError = bindings.error.FetchError
 HttpError = bindings.error.HttpError
 IndexedLogError = bindings.error.IndexedLogError
@@ -37,7 +38,6 @@ NeedSlowPathError = bindings.error.NeedSlowPathError
 NonUTF8PathError = bindings.error.NonUTF8Path
 WorkingCopyError = bindings.error.WorkingCopyError
 RepoInitError = bindings.error.RepoInitError
-RevisionstoreError = bindings.error.RevisionstoreError
 UncategorizedNativeError = bindings.error.UncategorizedNativeError
 TlsError = bindings.error.TlsError
 
@@ -180,10 +180,6 @@ class HookAbort(Abort):
     def __init__(self, *args, **kwargs):
         self.reason = kwargs.pop("reason", None)
         Abort.__init__(self, *args, **kwargs)
-
-
-class ConfigError(Abort):
-    """Exception raised when parsing config files"""
 
 
 class UpdateAbort(Abort):

@@ -278,9 +278,9 @@ def callcatch(ui, req, func):
         ui.warn(_("(this usually happens after hard reboot or system crash)\n"))
         ui.warn(_("(try '@prog@ doctor' to attempt to fix it)\n"))
     except (
+        error.ConfigError,
         error.NonUTF8PathError,
         error.RepoInitError,
-        error.RevisionstoreError,
         error.WorkingCopyError,
     ) as inst:
         ui.warn(_("%s\n") % inst, error=_("abort"))

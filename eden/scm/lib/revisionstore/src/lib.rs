@@ -216,7 +216,6 @@ pub use crate::repack::ToKeys;
 pub use crate::types::ContentHash;
 pub use crate::types::StoreKey;
 pub use crate::uniondatastore::UnionHgIdDataStore;
-pub use crate::util::Error;
 
 #[cfg(any(test, feature = "for-tests"))]
 pub mod testutil;
