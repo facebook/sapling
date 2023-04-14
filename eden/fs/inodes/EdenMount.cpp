@@ -28,6 +28,7 @@
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/EdenDispatcherFactory.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeTable.h"
@@ -1157,7 +1158,25 @@ std::shared_ptr<const EdenConfig> EdenMount::getEdenConfig() const {
 InodeMetadataTable* EdenMount::getInodeMetadataTable() const {
   return overlay_->getInodeMetadataTable();
 }
+#endif
 
+FsChannel* EdenMount::getFsChannel() {
+  if (auto* channel = std::get_if<EdenMount::NfsdChannelVariant>(&channel_)) {
+    return channel->get();
+  }
+#ifdef _WIN32
+  if (auto* channel = std::get_if<EdenMount::PrjfsChannelVariant>(&channel_)) {
+    return channel->get();
+  }
+#else
+  if (auto* channel = std::get_if<EdenMount::FuseChannelVariant>(&channel_)) {
+    return channel->get();
+  }
+#endif
+  return nullptr;
+}
+
+#ifndef _WIN32
 FuseChannel* FOLLY_NULLABLE EdenMount::getFuseChannel() const {
   if (auto channel = std::get_if<EdenMount::FuseChannelVariant>(&channel_)) {
     return channel->get();
@@ -1735,26 +1754,18 @@ void EdenMount::forgetStaleInodes() {
 }
 
 ImmediateFuture<folly::Unit> EdenMount::flushInvalidations() {
-#ifndef _WIN32
   XLOG(DBG4) << "waiting for inode invalidations to complete";
-  auto flushInvalidationsFuture = ImmediateFuture<folly::Unit>::makeEmpty();
-  if (auto* fuseChannel = getFuseChannel()) {
-    flushInvalidationsFuture = fuseChannel->flushInvalidations().semi();
-  } else if (auto* nfsdChannel = getNfsdChannel()) {
-    flushInvalidationsFuture = nfsdChannel->flushInvalidations().semi();
+  // TODO: If it's possible for flushInvalidations() and unmount() to run
+  // concurrently, accessing the channel_ pointer here is racy. It's deallocated
+  // by unmount(). We need to either guarantee these functions can never run
+  // concurrently or use some sort of lock or atomic pointer.
+  if (auto* fsChannel = getFsChannel()) {
+    return fsChannel->completeInvalidations().thenValue([](folly::Unit) {
+      XLOG(DBG4) << "finished processing inode invalidations";
+    });
   } else {
-    flushInvalidationsFuture = folly::unit;
-  }
-  return std::move(flushInvalidationsFuture).thenValue([](auto&&) {
-    XLOG(DBG4) << "finished processing inode invalidations";
     return folly::unit;
-  });
-#else
-  if (auto* channel = getPrjfsChannel()) {
-    channel->flushNegativePathCache();
   }
-  return folly::unit;
-#endif
 }
 
 #ifndef _WIN32
@@ -1786,7 +1797,7 @@ ImmediateFuture<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
   auto inodesToInvalidate = getInodeMap()->getReferencedInodes();
   fuseChannel->invalidateInodes(folly::range(inodesToInvalidate));
 
-  return fuseChannel->flushInvalidations();
+  return fuseChannel->completeInvalidations();
 }
 #endif
 

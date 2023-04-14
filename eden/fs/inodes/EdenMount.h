@@ -389,6 +389,12 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   }
 
   /**
+   * Returns the FsChannel for this mount point. Returns nullptr if it's not
+   * initialized yet.
+   */
+  FsChannel* getFsChannel();
+
+  /**
    * Get the FUSE/NFS/Prjfs channel for this mount point.
    *
    * This should only be called after the mount point has been successfully

@@ -2074,7 +2074,7 @@ void Nfsd3::invalidate(AbsolutePath path, mode_t mode) {
   });
 }
 
-folly::Future<folly::Unit> Nfsd3::flushInvalidations() {
+ImmediateFuture<folly::Unit> Nfsd3::completeInvalidations() {
   folly::Promise<folly::Unit> promise;
   auto result = promise.getFuture();
   invalidationExecutor_->add([promise = std::move(promise)]() mutable {

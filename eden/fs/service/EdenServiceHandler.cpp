@@ -3878,7 +3878,7 @@ EdenServiceHandler::semifuture_invalidateKernelInodeCache(
     }
 
     // Wait for all of the invalidations to complete
-    return fuseChannel->flushInvalidations().semi();
+    return fuseChannel->completeInvalidations().semi();
   }
 
   if (auto* nfsChannel = edenMount->getNfsdChannel()) {
@@ -3934,7 +3934,7 @@ EdenServiceHandler::semifuture_invalidateKernelInodeCache(
                          return folly::unit;
                        })
                    .ensure([nfsChannel]() {
-                     return nfsChannel->flushInvalidations();
+                     return nfsChannel->completeInvalidations();
                    }))
         .semi();
   }

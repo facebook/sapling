@@ -10,6 +10,7 @@
 // Implementation of the NFSv3 protocol as described in:
 // https://tools.ietf.org/html/rfc1813
 
+#include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/nfs/NfsDispatcher.h"
 #include "eden/fs/nfs/rpc/Server.h"
 #include "eden/fs/telemetry/TraceBus.h"
@@ -106,7 +107,7 @@ struct NfsTraceEvent : TraceEventBase {
   Details details_;
 };
 
-class Nfsd3 {
+class Nfsd3 final : public FsChannel {
  public:
   /**
    * Create a new RPC NFSv3 program.
@@ -191,7 +192,7 @@ class Nfsd3 {
    * The future will complete when all the previously triggered invalidation
    * completed.
    */
-  folly::Future<folly::Unit> flushInvalidations();
+  ImmediateFuture<folly::Unit> completeInvalidations() override;
 
   /**
    * Obtain the address that this NFSv3 program is listening on.

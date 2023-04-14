@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "eden/fs/fuse/FuseDispatcher.h"
+#include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/telemetry/TraceBus.h"
@@ -164,7 +165,7 @@ struct FuseTraceEvent : TraceEventBase {
   Details details_;
 };
 
-class FuseChannel {
+class FuseChannel final : public FsChannel {
  public:
   enum class StopReason {
     RUNNING, // not stopped
@@ -354,9 +355,9 @@ class FuseChannel {
    * operations to complete.
    *
    * The returned Future will complete once all invalidation operations
-   * scheduled before this flushInvalidations() call have finished.
+   * scheduled before this completeInvalidations() call have finished.
    */
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> flushInvalidations();
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> completeInvalidations() override;
 
   /**
    * Sends a reply to a kernel request that consists only of the error

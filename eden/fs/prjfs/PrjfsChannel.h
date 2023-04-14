@@ -11,6 +11,7 @@
 #include <folly/portability/Windows.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
 
+#include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
@@ -427,7 +428,7 @@ class PrjfsChannelInner {
   std::shared_ptr<TraceBus<PrjfsTraceEvent>> traceBus_;
 };
 
-class PrjfsChannel {
+class PrjfsChannel : public FsChannel {
  public:
   PrjfsChannel(const PrjfsChannel&) = delete;
   PrjfsChannel& operator=(const PrjfsChannel&) = delete;
@@ -499,6 +500,8 @@ class PrjfsChannel {
    */
   FOLLY_NODISCARD virtual folly::Try<folly::Unit> addDirectoryPlaceholder(
       RelativePathPiece path);
+
+  ImmediateFuture<folly::Unit> completeInvalidations() override;
 
   void flushNegativePathCache();
 

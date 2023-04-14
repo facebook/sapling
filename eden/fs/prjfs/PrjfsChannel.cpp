@@ -1399,6 +1399,14 @@ folly::Try<folly::Unit> PrjfsChannel::addDirectoryPlaceholder(
   return folly::Try<folly::Unit>{folly::unit};
 }
 
+ImmediateFuture<folly::Unit> PrjfsChannel::completeInvalidations() {
+  // completeInvalidations() is called before filesystem-modifying Thrift calls
+  // return. If new files have been added, we need to clear the negative path
+  // cache.
+  flushNegativePathCache();
+  return folly::unit;
+}
+
 void PrjfsChannel::flushNegativePathCache() {
   auto inner = getInner();
   if (!inner) {
