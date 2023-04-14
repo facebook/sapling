@@ -14,6 +14,7 @@
 
 #include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/MemoryLocalStore.h"
@@ -69,7 +70,7 @@ class DiffTest : public ::testing::Test {
         EdenConfig::createTestEdenConfig()};
     rawEdenConfig->inMemoryTreeCacheSize.setValue(
         kTreeCacheMaximumSize, ConfigSourceType::Default, true);
-    rawEdenConfig->inMemoryTreeCacheMinElements.setValue(
+    rawEdenConfig->inMemoryTreeCacheMinimumItems.setValue(
         kTreeCacheMinimumEntries, ConfigSourceType::Default, true);
     auto edenConfig = std::make_shared<ReloadableConfig>(
         rawEdenConfig, ConfigReloadBehavior::NoReload);

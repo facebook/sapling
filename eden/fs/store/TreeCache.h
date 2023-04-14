@@ -7,11 +7,12 @@
 
 #pragma once
 
-#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ObjectCache.h"
 
 namespace facebook::eden {
+
+class ReloadableConfig;
 
 /**
  * An in-memory LRU cache for loaded trees. Currently, this will not be used by

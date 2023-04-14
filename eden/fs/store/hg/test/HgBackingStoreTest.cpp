@@ -14,6 +14,7 @@
 
 #include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/MemoryLocalStore.h"
@@ -60,7 +61,7 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
   HgBackingStoreTest() {
     rawEdenConfig->inMemoryTreeCacheSize.setValue(
         kTreeCacheMaximumSize, ConfigSourceType::Default, true);
-    rawEdenConfig->inMemoryTreeCacheMinElements.setValue(
+    rawEdenConfig->inMemoryTreeCacheMinimumItems.setValue(
         kTreeCacheMinimumEntries, ConfigSourceType::Default, true);
     auto treeCache = TreeCache::create(edenConfig);
     objectStore = ObjectStore::create(

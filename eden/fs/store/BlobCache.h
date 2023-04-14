@@ -6,10 +6,13 @@
  */
 
 #pragma once
+
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/store/ObjectCache.h"
 
 namespace facebook::eden {
+
+class ReloadableConfig;
 
 using BlobInterestHandle = ObjectInterestHandle<Blob>;
 
@@ -26,15 +29,21 @@ using BlobInterestHandle = ObjectInterestHandle<Blob>;
  * It is safe to use this object from arbitrary threads.
  */
 class BlobCache : public ObjectCache<Blob, ObjectCacheFlavor::InterestHandle> {
+  struct PrivateTag {};
+
  public:
   static std::shared_ptr<BlobCache> create(
-      size_t maximumCacheSizeBytes,
-      size_t minimumEntryCount) {
-    struct BC : BlobCache {
-      BC(size_t x, size_t y) : BlobCache{x, y} {}
-    };
-    return std::make_shared<BC>(maximumCacheSizeBytes, minimumEntryCount);
+      std::shared_ptr<ReloadableConfig> config) {
+    return std::make_shared<BlobCache>(PrivateTag{}, std::move(config));
   }
+  static std::shared_ptr<BlobCache> create(
+      size_t maximumSize,
+      size_t minimumCount) {
+    return std::make_shared<BlobCache>(PrivateTag{}, maximumSize, minimumCount);
+  }
+
+  explicit BlobCache(PrivateTag, std::shared_ptr<ReloadableConfig> config);
+  explicit BlobCache(PrivateTag, size_t maximumSize, size_t minimumCount);
   ~BlobCache() = default;
 
   /**
@@ -68,12 +77,6 @@ class BlobCache : public ObjectCache<Blob, ObjectCacheFlavor::InterestHandle> {
       Interest interest = Interest::LikelyNeededAgain) {
     return insertInterestHandle(blob, interest);
   }
-
- private:
-  explicit BlobCache(size_t maximumCacheSizeBytes, size_t minimumEntryCount)
-      : ObjectCache<Blob, ObjectCacheFlavor::InterestHandle>{
-            maximumCacheSizeBytes,
-            minimumEntryCount} {}
 };
 
 } // namespace facebook::eden

@@ -6,8 +6,8 @@
  */
 
 #include "eden/fs/store/TreeCache.h"
-
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 
 namespace facebook::eden {
 std::shared_ptr<const Tree> TreeCache::get(const ObjectId& hash) {
@@ -26,7 +26,7 @@ void TreeCache::insert(std::shared_ptr<const Tree> tree) {
 TreeCache::TreeCache(std::shared_ptr<ReloadableConfig> config)
       : ObjectCache<Tree, ObjectCacheFlavor::Simple>{
             config->getEdenConfig()->inMemoryTreeCacheSize.getValue(),
-            config->getEdenConfig()->inMemoryTreeCacheMinElements.getValue()},
+            config->getEdenConfig()->inMemoryTreeCacheMinimumItems.getValue()},
         config_{config} {}
 
 } // namespace facebook::eden

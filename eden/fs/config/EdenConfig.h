@@ -889,6 +889,25 @@ class EdenConfig : private ConfigSettingManager {
       folly::kIsWindows,
       this};
 
+  // [blobcache]
+
+  /**
+   * How many bytes worth of blobs to keep in memory, at most.
+   */
+  ConfigSetting<size_t> inMemoryBlobCacheSize{
+      "blobcache:cache-size",
+      40 * 1024 * 1024,
+      this};
+
+  /**
+   * The minimum number of recent blobs to keep cached. Trumps
+   * maximumBlobCacheSize.
+   */
+  ConfigSetting<size_t> inMemoryBlobCacheMinimumItems{
+      "blobcache:minimum-items",
+      16,
+      this};
+
   // [treecache]
 
   /**
@@ -900,7 +919,7 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Number of bytes worth of data to keep in memory
+   * Number of bytes worth of data to keep in memory.
    */
   ConfigSetting<size_t> inMemoryTreeCacheSize{
       "treecache:cache-size",
@@ -909,10 +928,10 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * The minimum number of recent tree to keep cached. Trumps
-   * inMemoryTreeCacheSize
+   * inMemoryTreeCacheSize.
    */
-  ConfigSetting<size_t> inMemoryTreeCacheMinElements{
-      "treecache:min-cache-elements",
+  ConfigSetting<size_t> inMemoryTreeCacheMinimumItems{
+      "treecache:minimum-items",
       16,
       this};
 

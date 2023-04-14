@@ -138,15 +138,6 @@ DEFINE_int64(
     6 * 60,
     "Minimum age of the inodes to be unloaded in background");
 
-DEFINE_uint64(
-    maximumBlobCacheSize,
-    40 * 1024 * 1024,
-    "How many bytes worth of blobs to keep in memory, at most");
-DEFINE_uint64(
-    minimumBlobCacheEntryCount,
-    16,
-    "The minimum number of recent blobs to keep cached. Trumps maximumBlobCacheSize");
-
 using apache::thrift::ThriftServer;
 using folly::Future;
 using folly::makeFuture;
@@ -387,9 +378,7 @@ EdenServer::EdenServer(
           mainEventBase_,
           getPlatformNotifier(config_, structuredLogger_, version),
           FLAGS_enable_fault_injection)},
-      blobCache_{BlobCache::create(
-          FLAGS_maximumBlobCacheSize,
-          FLAGS_minimumBlobCacheEntryCount)},
+      blobCache_{BlobCache::create(serverState_->getReloadableConfig())},
       treeCache_{TreeCache::create(serverState_->getReloadableConfig())},
       version_{std::move(version)},
       progressManager_{
