@@ -17,7 +17,6 @@ by SCM wrappers
 
 """
 
-import os
 from typing import Optional
 
 from edenscm import extensions, localrepo, registrar
@@ -31,12 +30,8 @@ def _localrepoinit(
     orig, self, baseui, path, create=False, initial_config: Optional[str] = None
 ):
     orig(self, baseui, path, create, initial_config)
-    reponame = self.ui.config("paths", "default")
-    if reponame:
-        reponame = os.path.basename(reponame).split("?")[0]
-    if path and not reponame:
-        reponame = os.path.basename(path)
-    kwargs = {"repo": reponame}
+
+    kwargs = {}
 
     # The configs being read here are user defined, so we need to suppress
     # warnings telling us to register them.
@@ -49,13 +44,6 @@ def _localrepoinit(
             value = self.ui.config(section, name)
             if value is not None:
                 kwargs[targetname] = value
-
-    if "treestate" in self.requirements:
-        dirstateformat = "treestate"
-    else:
-        dirstateformat = "flatdirstate"
-
-    kwargs["dirstate_format"] = dirstateformat
 
     self.ui.log(
         "logginghelper", "", **kwargs  # ui.log requires a format string as args[0].
