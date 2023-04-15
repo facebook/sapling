@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::fs;
 use std::fs::create_dir_all;
 use std::fs::remove_dir;
 use std::fs::remove_dir_all;
@@ -62,7 +63,7 @@ impl VFS {
         let auditor = PathAuditor::new(&root);
         let fs_type =
             fstype(&root).with_context(|| format!("Can't construct a VFS for {:?}", root))?;
-        let supports_symlinks = supports_symlinks(&fs_type);
+        let supports_symlinks = supports_symlinks(root.as_path())?;
         let supports_executables = supports_executables(&fs_type);
         let case_sensitive = case_sensitive(&root, &fs_type)?;
 
@@ -428,23 +429,26 @@ mod unix_tests {
     }
 }
 
-/// Since Windows doesn't support symlinks (without Windows' Developer Mode), and NTFS on unices is
-/// only used for repos that are intended to be used on Windows, pretend that NTFS doesn't support
-/// symlinks. This is of course a lie since unices have no issues supporting symlinks on NTFS.
-///
-/// Once the need to use NTFS on unices is gone (because this module solves the slowness), this
-/// hack will be removed.
-fn supports_symlinks(fs_type: &FsType) -> bool {
+fn supports_symlinks(path: &Path) -> Result<bool> {
     if std::env::var("SL_DEBUG_DISABLE_SYMLINKS").is_ok() {
-        return false;
+        return Ok(false);
     }
 
-    match *fs_type {
-        FsType::NTFS => false,
-        // TODO(T66590035): Once EdenFS on Windows support symlink, remove this
-        FsType::EDENFS => !cfg!(windows),
-        _ => true,
+    if !cfg!(windows) {
+        return Ok(true);
     }
+
+    return Ok(if let Some((root, ident)) = identity::sniff_root(path)? {
+        // This assumes that at this point symlinks are already properly checked for as part of
+        // the repo initialization
+        fs::read_to_string(root.join(ident.dot_dir()).join("requires"))?
+            .split_whitespace()
+            .any(|s| s == "windowssymlinks")
+    } else {
+        // There are some cases (e.g., tests) where we do not have an actual repo and thus
+        // no dot_dir directory. Gracefully fail in this case.
+        false
+    });
 }
 
 /// Since Windows determines if a file is executable based on its extension, it doesn't support
