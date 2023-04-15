@@ -2514,6 +2514,12 @@ class localrepository(object):
 
         # is the file changed?
         text = fctx.data()
+        if (
+            pycompat.iswindows
+            and "windowssymlinks" in self.requirements
+            and "l" in fctx.flags()
+        ):
+            text = text.replace(b"\\", b"/")
         if fparent2 != nullid or flog.cmp(fparent1, text) or meta:
             changelist.append(fname)
             return flog.add(text, meta, tr, linkrev, fparent1, fparent2)
