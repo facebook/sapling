@@ -1,10 +1,12 @@
-#chg-compatible
 #debugruntest-compatible
   $ eagerepo
   $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig experimental.windows-symlinks=True
 
+#if no-windows
 #require symlink
+#endif
 
 == tests added in 0.7 ==
 
@@ -124,21 +126,39 @@ try cloning symlink in a subdir
   $ cd ../../..
   $ hg stat
   ? a/b/c/demo
-  $ hg commit -A -m 'add symlink in a/b/c subdir'
-  adding a/b/c/demo
+  $ hg add -q
+  $ hg diff --git
+  diff --git a/a/b/c/demo b/a/b/c/demo
+  new file mode 120000
+  --- /dev/null
+  +++ b/a/b/c/demo
+  @@ -0,0 +1,1 @@
+  +/path/to/symlink/source
+  \ No newline at end of file
+  $ hg commit -m 'add symlink in a/b/c subdir'
+  $ hg show --stat --git
+  commit:      7c0e359fc055
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       a/b/c/demo
+  description:
+  add symlink in a/b/c subdir
+  
+  
+   a/b/c/demo |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
 
 2. clone it
-
   $ cd ..
   $ hg clone clone clonedest
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-
 == symlink and git diffs ==
 
 git symlink diff
 
+#if no-windows
   $ cd clonedest
   $ hg diff --git -r null:tip
   diff --git a/a/b/c/demo b/a/b/c/demo
@@ -210,7 +230,6 @@ commit and update back
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg up tip
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
-
   $ cd ..
 
 == root of repository is symlinked ==
@@ -244,8 +263,8 @@ commit and update back
   files:       dangling
   description:
   add symlink
-  
-  
+
+
   $ hg manifest --debug
   2564acbe54bbbedfbf608479340b359f04597f80 644 @ dangling
   $ f dangling
@@ -301,6 +320,7 @@ Issue995: hg copy -A incorrectly handles symbolic links
   $ hg mv -A dirlink newdir/dirlink
 
   $ cd ..
+#endif
 
 Don't treat symlinks as untrackable if symlinks aren't supported.
   $ newclientrepo

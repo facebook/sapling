@@ -44,7 +44,7 @@ _FS_CAP_TABLE = {
     "EdenFS": _EDENFS_CAPS,
     "ext4": _ALL_CAPS,
     "NTFS": {
-        SYMLINK: False,
+        SYMLINK: True,
         HARDLINK: True,
         EXECBIT: False,
         ALWAYSCASESENSITIVE: False,
