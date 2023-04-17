@@ -1847,7 +1847,7 @@
       {
         "name": "s|submit",
         "aliases": [],
-        "doc": "\ncreate or update GitHub pull requests from local commits\n",
+        "doc": "\ncreate or update GitHub pull requests from local commits\n\nCommit(s) will be pushed to `default-push`, if configured, else\n`default` (see `sl help urls` and `sl help path`).\n\nPull request(s) will be created against `default`. If\n`default` is a fork, they will be created against default's\nupstream repository.\n\nReturns 0 on success.\n",
         "args": [
           {
             "shortname": "s",

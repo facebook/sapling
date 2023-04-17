@@ -34,7 +34,7 @@ When you run `commit`, a submodule is also treated as a single file with just
 its commit hash. `commit` will not recursively make commits in submodules.
 Same for `amend`.
 
-### Submoudle as a repository
+### Submodule as a repository
 
 When you run `goto`, `revert` or commands that ask Sapling to change the
 working copy to match the content of a submodule, Sapling will pull the
@@ -135,7 +135,7 @@ submodule repos on demand in order to complete the `goto` operation.
 
 Right now, Sapling might only pull the commit needed and will not pull branches
 like `main` or `master`. If you want to pull branches explicitly, you can pull
-it within the submoudle:
+it within the submodule:
 
 ```
 $ cd path/to/submodule
@@ -148,7 +148,7 @@ repos recursively.
 ### Push submodule changes
 
 You can push submodule changes to the remote server by running `sl push` within
-the submoudle:
+the submodule:
 
 ```
 $ cd path/to/submodule
