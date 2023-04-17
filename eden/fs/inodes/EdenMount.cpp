@@ -732,19 +732,17 @@ void EdenMount::transitionState(State expected, State newState) {
   State found = expected;
   if (!state_.compare_exchange_strong(
           found, newState, std::memory_order_acq_rel)) {
-    throw_<std::runtime_error>(
-        "unable to transition mount ",
+    throwf<std::runtime_error>(
+        "unable to transition mount {} to state {}: "
+        "expected to be in state {} but actually in {}",
         getPath(),
-        " to state ",
         apache::thrift::util::enumNameSafe(newState),
-        ": expected to be in state ",
         apache::thrift::util::enumNameSafe(expected),
-        " but actually in ",
         apache::thrift::util::enumNameSafe(found));
   }
 }
 
-void EdenMount::transitionToFuseInitializationErrorState() {
+void EdenMount::transitionToFsChannelInitializationErrorState() {
   auto oldState = State::STARTING;
   auto newState = State::FUSE_ERROR;
   if (!state_.compare_exchange_strong(
@@ -762,7 +760,7 @@ void EdenMount::transitionToFuseInitializationErrorState() {
       case State::RUNNING:
       case State::UNINITIALIZED:
         XLOG(ERR)
-            << "FUSE initialization error occurred for an EdenMount in the unexpected "
+            << "FS channel initialization error occurred for an EdenMount in the unexpected "
             << oldState << " state";
         break;
 
@@ -2202,79 +2200,76 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
 }
 
 folly::Future<folly::Unit> EdenMount::startFsChannel(bool readOnly) {
-  return folly::makeFutureWith([&]() {
-    transitionState(
-        /*expected=*/State::INITIALIZED, /*newState=*/State::STARTING);
+  return folly::makeFutureWith([&] {
+           transitionState(
+               /*expected=*/State::INITIALIZED, /*newState=*/State::STARTING);
 
-    // Just in case the mount point directory doesn't exist,
-    // automatically create it.
-    boost::filesystem::path boostMountPath{getPath().value()};
-    boost::filesystem::create_directories(boostMountPath);
+           // Just in case the mount point directory doesn't exist,
+           // automatically create it.
+           boost::filesystem::path boostMountPath{getPath().value()};
+           boost::filesystem::create_directories(boostMountPath);
 
-    return channelMount(readOnly)
-        .thenValue([this](auto&&) {
+           return channelMount(readOnly);
+         })
+      .thenValue([this](auto&&) {
 #ifdef _WIN32
-          std::visit(
-              [this](auto&& variant) -> void {
-                using T = std::decay_t<decltype(variant)>;
-                // TODO make stop data a variant.
-                if constexpr (std::is_same_v<
-                                  T,
-                                  EdenMount::PrjfsChannelVariant>) {
-                  channelInitSuccessful(variant->getStopFuture());
-                } else if constexpr (std::is_same_v<
-                                         T,
-                                         EdenMount::NfsdChannelVariant>) {
-                  channelInitSuccessful(variant->getStopFuture().deferValue(
-                      [](auto&&) { return ChannelStopData{}; }));
-                } else {
-                  static_assert(std::is_same_v<T, std::monostate>);
-                  EDEN_BUG() << "EdenMount::channel_ is not constructed.";
-                }
-              },
-              channel_);
+        std::visit(
+            [this](auto&& variant) -> void {
+              using T = std::decay_t<decltype(variant)>;
+              // TODO make stop data a variant.
+              if constexpr (std::is_same_v<T, EdenMount::PrjfsChannelVariant>) {
+                channelInitSuccessful(variant->getStopFuture());
+              } else if constexpr (std::is_same_v<
+                                       T,
+                                       EdenMount::NfsdChannelVariant>) {
+                channelInitSuccessful(variant->getStopFuture().deferValue(
+                    [](auto&&) { return ChannelStopData{}; }));
+              } else {
+                static_assert(std::is_same_v<T, std::monostate>);
+                EDEN_BUG() << "EdenMount::channel_ is not constructed.";
+              }
+            },
+            channel_);
 #else
-          return std::visit(
-              [this](auto&& variant) -> folly::Future<folly::Unit> {
-                using T = std::decay_t<decltype(variant)>;
+        return std::visit(
+            [this](auto&& variant) -> folly::Future<folly::Unit> {
+              using T = std::decay_t<decltype(variant)>;
 
-                if constexpr (std::
-                                  is_same_v<T, EdenMount::FuseChannelVariant>) {
-                  return variant->initialize().thenValue(
-                      [this](FuseChannel::StopFuture&& fuseCompleteFuture) {
-                        auto stopFuture =
-                            std::move(fuseCompleteFuture)
-                                .deferValue(
-                                    [](FuseChannel::StopData&& stopData)
-                                        -> EdenMount::ChannelStopData {
-                                      return std::move(stopData);
-                                    });
-                        channelInitSuccessful(std::move(stopFuture));
-                      });
-                } else if constexpr (std::is_same_v<
-                                         T,
-                                         EdenMount::NfsdChannelVariant>) {
-                  auto stopFuture = variant->getStopFuture().deferValue(
-                      [](Nfsd3::StopData&& stopData)
-                          -> EdenMount::ChannelStopData {
-                        return std::move(stopData);
-                      });
-                  channelInitSuccessful(std::move(stopFuture));
-                  return makeFuture(folly::unit);
-                } else {
-                  static_assert(std::is_same_v<T, std::monostate>);
-                  return EDEN_BUG_FUTURE(folly::Unit)
-                      << "EdenMount::channel_ is not constructed.";
-                }
-              },
-              channel_);
+              if constexpr (std::is_same_v<T, EdenMount::FuseChannelVariant>) {
+                return variant->initialize().thenValue(
+                    [this](FuseChannel::StopFuture&& fuseCompleteFuture) {
+                      auto stopFuture =
+                          std::move(fuseCompleteFuture)
+                              .deferValue(
+                                  [](FuseChannel::StopData&& stopData)
+                                      -> EdenMount::ChannelStopData {
+                                    return std::move(stopData);
+                                  });
+                      channelInitSuccessful(std::move(stopFuture));
+                    });
+              } else if constexpr (std::is_same_v<
+                                       T,
+                                       EdenMount::NfsdChannelVariant>) {
+                auto stopFuture = variant->getStopFuture().deferValue(
+                    [](Nfsd3::StopData&& stopData)
+                        -> EdenMount::ChannelStopData {
+                      return std::move(stopData);
+                    });
+                channelInitSuccessful(std::move(stopFuture));
+                return makeFuture(folly::unit);
+              } else {
+                static_assert(std::is_same_v<T, std::monostate>);
+                return EDEN_BUG_FUTURE(folly::Unit)
+                    << "EdenMount::channel_ is not constructed.";
+              }
+            },
+            channel_);
 #endif
-        })
-        .thenError([this](folly::exception_wrapper&& ew) {
-          transitionToFuseInitializationErrorState();
-          return makeFuture<folly::Unit>(std::move(ew));
-        });
-  });
+      })
+      .thenError([this](folly::exception_wrapper&& ew) {
+        transitionToFsChannelInitializationErrorState();
+        return makeFuture<folly::Unit>(std::move(ew));
+      });
 }
 
 folly::Promise<folly::Unit>& EdenMount::beginMount() {
@@ -2363,7 +2358,7 @@ void EdenMount::preparePostChannelCompletion(
 }
 
 void EdenMount::channelInitSuccessful(
-    EdenMount::StopFuture&& channelCompleteFuture) {
+    EdenMount::StopFuture channelCompleteFuture) {
   // Try to transition to the RUNNING state.
   // This state transition could fail if shutdown() was called before we saw
   // the FUSE_INIT message from the kernel.
@@ -2407,12 +2402,12 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
     channel_ = std::move(channel);
     channelInitSuccessful(std::move(fuseCompleteFuture));
   } catch (const std::exception&) {
-    transitionToFuseInitializationErrorState();
+    transitionToFsChannelInitializationErrorState();
     throw;
   }
 #else
   (void)takeoverData;
-  throw std::runtime_error("Fuse not supported on this platform.");
+  throw std::runtime_error("FUSE not supported on this platform.");
 #endif
 }
 
@@ -2435,16 +2430,16 @@ folly::Future<folly::Unit> EdenMount::takeoverNfs(NfsChannelData takeoverData) {
           this->channelInitSuccessful(std::move(stopFuture));
         })
         .thenError([this](auto&& err) {
-          this->transitionToFuseInitializationErrorState();
+          this->transitionToFsChannelInitializationErrorState();
           return folly::makeFuture<folly::Unit>(std::move(err));
         });
   } catch (const std::exception& err) {
-    transitionToFuseInitializationErrorState();
+    transitionToFsChannelInitializationErrorState();
     return folly::makeFuture<folly::Unit>(err);
   }
 #else
   (void)takeoverData;
-  throw std::runtime_error("Nfs not supported on this platform.");
+  throw std::runtime_error("NFS not supported on this platform.");
 #endif
 }
 

@@ -1103,7 +1103,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    *
    * TODO: we should make this a bit more channel type agnostic.
    */
-  void transitionToFuseInitializationErrorState();
+  void transitionToFsChannelInitializationErrorState();
 
   /**
    * Returns overlay type based on settings.
@@ -1192,7 +1192,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Once the channel has been initialized, set up callbacks to clean up
    * correctly when it shuts down.
    */
-  void channelInitSuccessful(EdenMount::StopFuture&& channelCompleteFuture);
+  void channelInitSuccessful(EdenMount::StopFuture channelCompleteFuture);
 
   void preparePostChannelCompletion(
       EdenMount::StopFuture&& channelCompleteFuture);

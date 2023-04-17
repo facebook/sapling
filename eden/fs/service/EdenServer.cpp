@@ -1197,8 +1197,8 @@ bool EdenServer::performCleanup() {
     serverState_->getStructuredLogger()->logEvent(
         DaemonStop{shutdownTimeInSeconds, takeover, shutdownSuccess});
   };
-  auto&& shutdownFuture =
-      folly::Future<std::optional<TakeoverData>>::makeEmpty();
+
+  auto shutdownFuture = folly::Future<std::optional<TakeoverData>>::makeEmpty();
   {
     auto state = runningState_.wlock();
     takeover = state->shutdownFuture.valid();
@@ -1213,15 +1213,13 @@ bool EdenServer::performCleanup() {
         performNormalShutdown().thenValue([](auto&&) { return std::nullopt; });
   }
 
-  XDCHECK(shutdownFuture.valid())
+  XCHECK(shutdownFuture.valid())
       << "shutdownFuture should not be empty during cleanup";
 
   // Drive the main event base until shutdownFuture completes
   XCHECK_EQ(mainEventBase_, folly::EventBaseManager::get()->getEventBase());
-  while (!shutdownFuture.isReady()) {
-    mainEventBase_->loopOnce();
-  }
-  auto&& shutdownResult = shutdownFuture.result();
+  auto shutdownResult = std::move(shutdownFuture).getTryVia(mainEventBase_);
+
 #ifndef _WIN32
   shutdownSuccess = !shutdownResult.hasException();
 
