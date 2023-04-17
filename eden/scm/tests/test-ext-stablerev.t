@@ -1,6 +1,3 @@
-#debugruntest-compatible
-#require /bin/bash /bin/cat /bin/fbpython
-
   $ configure modernclient
   $ newclientrepo
   $ enable stablerev
@@ -27,7 +24,7 @@ If the script doesn't return anything, an abort is raised:
   Executing script: $TESTTMP/repo1/stable.py
   setting current working directory to: $TESTTMP/repo1
   script stdout:
-
+  
   abort: stable rev returned by script (stable.py) was empty
   [255]
 
@@ -83,12 +80,13 @@ An alias can be used for simplicity:
 Check that stables template keyword works:
   $ cat << 'EOF' > stables.py
   > #!/usr/bin/env fbpython
-  > print('{nodeid\": [\"stable1\",\"stable1\"]}')
+  > import sys
+  > print('{{\"{nodeid}\": [\"stable1\",\"stable2\"]}}'.format(nodeid=sys.argv[1]))
   > EOF
-  $ chmod +x stables.sh
-  $ setconfig "stablerev.stablesscript=./stables.sh {nodeid}"
-  $ hg log -r "D" --template "{stables}\n"
-  stable1 stable2
+  $ chmod +x stables.py
+  $ setconfig "stablerev.stablesscript=./stables.py {nodeid}"
+  $ hg log -r "D" --template "{stables}"
+  stable1 stable2 (no-eol)
 
 # Auto-pull
 
@@ -166,7 +164,7 @@ Try making the script return different locations
   $ cat << 'EOF' > stable.py
   > #!/usr/bin/env fbpython
   > import os
-  > if os.getenv("REAL_CWD") == "foo":
+  > if os.getenv("TARGET") == "foo":
   >   print('D')
   > else:
   >   print('C')
