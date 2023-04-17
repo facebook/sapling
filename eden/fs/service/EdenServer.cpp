@@ -1545,7 +1545,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
 
         // Now that we've started the workers, arrange to call
         // mountFinished once the pool is torn down.
-        auto finishFuture = edenMount->getChannelCompletionFuture().thenTry(
+        auto finishFuture = edenMount->getFsChannelCompletionFuture().thenTry(
             [this, edenMount](folly::Try<TakeoverData::MountInfo>&& takeover) {
               std::optional<TakeoverData::MountInfo> optTakeover;
               if (takeover.hasValue()) {

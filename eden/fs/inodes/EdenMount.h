@@ -346,7 +346,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * concurrently:
    *
    * * The future returned by unmount() is fulfilled successfully.
-   * * The future returned by getChannelCompletionFuture() is fulfilled.
+   * * The future returned by getFsChannelCompletionFuture() is fulfilled.
    *
    * If startChannel() is in progress, unmount() can cancel startChannel().
    *
@@ -869,10 +869,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * This method may be called at any time, but the returned future will only be
    * fulfilled if startChannel() completes successfully.  If startChannel()
    * fails or is never called, the future returned by
-   * getChannelCompletionFuture() will never complete.
+   * getFsChannelCompletionFuture() will never complete.
    */
   FOLLY_NODISCARD folly::Future<TakeoverData::MountInfo>
-  getChannelCompletionFuture();
+  getFsChannelCompletionFuture();
 
   Owner getOwner() const {
     return *owner_.rlock();
@@ -1158,12 +1158,12 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       folly::CancellationToken cancellation) const;
 
   /**
-   * Signal to unmount() that fuseMount() or takeoverFuse() has started.
+   * Signal to unmount() that fsChannelMount() or takeoverFuse() has started.
    *
    * beginMount() returns a reference to
    * *mountingUnmountingState_->channelMountPromise. To signal that the
-   * fuseMount() has completed, set the promise's value (or exception) without
-   * mountingUnmountingState_'s lock held.
+   * fsChannelMount() has completed, set the promise's value (or exception)
+   * without mountingUnmountingState_'s lock held.
    *
    * If unmount() was called in the past, beginMount() throws
    * EdenMountCancelled.
@@ -1184,18 +1184,18 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   using StopFuture = folly::SemiFuture<ChannelStopData>;
 
   /**
-   * Open the platform specific device and mount it.
+   * Open the platform-specific device and mount it.
    */
-  folly::Future<folly::Unit> channelMount(bool readOnly);
+  folly::Future<folly::Unit> fsChannelMount(bool readOnly);
 
   /**
    * Once the channel has been initialized, set up callbacks to clean up
    * correctly when it shuts down.
    */
-  void channelInitSuccessful(EdenMount::StopFuture channelCompleteFuture);
+  void fsChannelInitSuccessful(EdenMount::StopFuture fsChannelCompleteFuture);
 
-  void preparePostChannelCompletion(
-      EdenMount::StopFuture&& channelCompleteFuture);
+  void preparePostFsChannelCompletion(
+      EdenMount::StopFuture&& fsChannelCompleteFuture);
 
   /**
    * Private destructor.
@@ -1215,16 +1215,16 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 
   /**
    * A promise associated with the future returned from
-   * EdenMount::getChannelCompletionFuture() that completes when the
-   * fuseChannel has no work remaining and can be torn down.
-   * The future yields the underlying fuseDevice descriptor; it can
-   * be passed on during graceful restart or simply closed if we're
+   * EdenMount::getFsChannelCompletionFuture() that completes when the
+   * FsChannel has no work remaining and can be torn down.
+   * The future yields the underlying file descriptors (in the case of FUSE and
+   * NFS); it can be passed on during graceful restart or simply closed if we're
    * unmounting and shutting down completely.  In the unmount scenario
    * the device should be closed prior to calling EdenMount::shutdown()
    * so that the subsequent privilegedFuseUnmount() call won't block
    * waiting on us for a response.
    */
-  folly::Promise<TakeoverData::MountInfo> channelCompletionPromise_;
+  folly::Promise<TakeoverData::MountInfo> fsChannelCompletionPromise_;
 
   /**
    * Eden server state shared across multiple mount points.
@@ -1319,45 +1319,46 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::atomic<EdenTimestamp> lastCheckoutTime_;
 
   struct MountingUnmountingState {
-    bool channelMountStarted() const noexcept;
-    bool channelUnmountStarted() const noexcept;
+    bool fsChannelMountStarted() const noexcept;
+    bool fsChannelUnmountStarted() const noexcept;
 
     /**
-     * Whether or not the mount(2) syscall has been called (via fuseMount).
+     * Whether or not the mount(2) syscall has been called (via fsChannelMount).
      *
-     * Use this promise to wait for fuseMount to finish.
+     * Use this promise to wait for fsChannelMount to finish.
      *
-     * * Empty optional: fuseMount/mount(2) has not been called yet.
-     *   (startChannel/fuseMount can be called.)
-     * * Unfulfilled: fuseMount is in progress.
-     * * Fulfilled with Unit: fuseMount completed successfully (via
+     * * nullopt: fsChannelMount/mount(2) has not been called yet.
+     *   (startChannel/fsChannelMount can be called.)
+     * * Unfulfilled: fsChannelMount is in progress.
+     * * Fulfilled with Unit: fsChannelMount completed successfully (via
      *   startChannel), or we took over the FUSE device from another process
      *   (via takeoverFuse). (startChannel or takeoverFuse can still be in
      *   progress.)
-     * * Fulfilled with error: fuseMount failed, or fuseMount was cancelled.
+     * * Fulfilled with error: fsChannelMount failed, or fsChannelMount was
+     * cancelled.
      *
      * The state of this variable might not reflect whether the file system is
      * mounted. For example, if this promise is fulfilled with Unit, then
      * umount(8) is called by another process, the file system will not be
      * mounted.
      */
-    std::optional<folly::Promise<folly::Unit>> channelMountPromise;
+    std::optional<folly::Promise<folly::Unit>> fsChannelMountPromise;
 
     /**
      * Whether or not unmount has been called.
      *
-     * * Empty optional: unmount has not been called yet. (unmount can be
+     * * nullopt: unmount has not been called yet. (unmount can be
      *   called.)
      * * Unfulfilled: unmount is in progress, either waiting for a concurrent
-     *   fuseMount to complete or waiting for fuseUnmount to complete.
+     *   fsChannelMount to complete or waiting for fuseUnmount to complete.
      * * Fulfilled with Unit: unmount was called. fuseUnmount completed
-     *   successfully, or fuseMount was never called for this EdenMount.
+     *   successfully, or fsChannelMount was never called for this EdenMount.
      * * Fulfilled with error: unmount was called, but fuseUnmount failed.
      *
      * The state of this variable might not reflect whether the file system is
      * unmounted.
      */
-    std::optional<folly::SharedPromise<folly::Unit>> channelUnmountPromise;
+    std::optional<folly::SharedPromise<folly::Unit>> fsChannelUnmountPromise;
   };
 
   folly::Synchronized<MountingUnmountingState> mountingUnmountingState_;

@@ -731,7 +731,7 @@ TEST(EdenMount, unmountIsIdempotent) {
       .getVia(testMount.getServerExecutor().get());
   SCOPE_EXIT {
     fuse->close();
-    mount.getChannelCompletionFuture().within(kTimeout).getVia(
+    mount.getFsChannelCompletionFuture().within(kTimeout).getVia(
         testMount.getServerExecutor().get());
   };
 
@@ -760,7 +760,7 @@ TEST(EdenMount, concurrentUnmountCallsWaitForExactlyOneFuseUnmount) {
       .getVia(testMount.getServerExecutor().get());
   SCOPE_EXIT {
     fuse->close();
-    mount.getChannelCompletionFuture().within(kTimeout).getVia(
+    mount.getFsChannelCompletionFuture().within(kTimeout).getVia(
         testMount.getServerExecutor().get());
   };
 
@@ -798,7 +798,7 @@ TEST(EdenMount, unmountUnmountsIfMounted) {
 
   mount.unmount().get(kTimeout);
   SCOPE_EXIT {
-    mount.getChannelCompletionFuture().within(kTimeout).getVia(
+    mount.getFsChannelCompletionFuture().within(kTimeout).getVia(
         testMount.getServerExecutor().get());
   };
 
@@ -819,7 +819,7 @@ TEST(EdenMount, unmountUnmountsIfTookOver) {
 
   mount.unmount().get(kTimeout);
   SCOPE_EXIT {
-    mount.getChannelCompletionFuture().within(kTimeout).getVia(
+    mount.getFsChannelCompletionFuture().within(kTimeout).getVia(
         testMount.getServerExecutor().get());
   };
   EXPECT_TRUE(mountDelegate->wasFuseUnmountEverCalled())
@@ -1058,7 +1058,7 @@ TEST(EdenMountState, newMountIsRunningAndOldMountIsShutDownAfterFuseTakeover) {
   oldMount.getFuseChannel()->takeoverStop();
 
   TakeoverData::MountInfo takeoverData =
-      oldMount.getChannelCompletionFuture().within(kTimeout).getVia(
+      oldMount.getFsChannelCompletionFuture().within(kTimeout).getVia(
           oldTestMount.getServerExecutor().get());
   oldRootInode.reset();
   oldMount.shutdown(/*doTakeover=*/true).get(kTimeout);
