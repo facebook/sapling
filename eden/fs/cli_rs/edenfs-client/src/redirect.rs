@@ -46,6 +46,7 @@ use util::path::absolute;
 
 use crate::checkout::CheckoutConfig;
 use crate::checkout::EdenFsCheckout;
+#[cfg(unix)]
 use crate::instance::EdenFsInstance;
 use crate::mounttable::read_mount_table;
 

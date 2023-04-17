@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use std::env;
 use std::fmt;
 use std::fmt::Write as _;
+#[cfg(unix)]
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
@@ -997,7 +998,6 @@ pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, E
 #[cfg(windows)]
 #[derive(Deserialize)]
 struct WindowsEdenConfigInner {
-    socket: PathBuf,
     root: PathBuf,
     client: PathBuf,
 }
