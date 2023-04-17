@@ -1,5 +1,5 @@
 name: CI - Ubuntu 22.04
-on: workflow_dispatch
+'on': workflow_dispatch
 jobs:
   build-deb:
     runs-on: ubuntu-latest

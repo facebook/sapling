@@ -1,5 +1,5 @@
 name: Release - Ubuntu 20.04
-on:
+'on':
   workflow_dispatch: null
   push:
     tags:
