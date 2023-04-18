@@ -312,7 +312,8 @@ impl Changesets for SqlChangesets {
                 .collect::<Vec<_>>()
                 .as_slice(),
         )
-        .await?;
+        .await
+        .with_context(|| "during the InsertChangeset query")?;
         if result.affected_rows() == 0 {
             return Ok(());
         }
@@ -335,7 +336,8 @@ impl Changesets for SqlChangesets {
             &self.repo_id,
             all_cs_ids_to_query.as_slice(),
         )
-        .await?;
+        .await
+        .with_context(|| "during the SelectChangesets query")?;
         let cs_id_to_sql_id: HashMap<ChangesetId, u64> = changesets_info
             .into_iter()
             .map(|(sql_id, cs_id, _gen)| (cs_id, sql_id))
@@ -373,8 +375,12 @@ impl Changesets for SqlChangesets {
                 .collect::<Vec<_>>()
                 .as_slice(),
         )
-        .await?;
-        transaction.commit().await?;
+        .await
+        .with_context(|| "during the InsertParents query")?;
+        transaction
+            .commit()
+            .await
+            .with_context(|| "during the transaction commmit")?;
 
         Ok(())
     }

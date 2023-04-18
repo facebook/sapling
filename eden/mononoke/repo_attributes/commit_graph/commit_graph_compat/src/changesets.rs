@@ -95,7 +95,9 @@ impl ChangesetsCommitGraphCompat {
                 scuba.add("error", err.to_string());
                 scuba.log_with_msg("Insertion failed", None);
 
-                Err(err)
+                Err(err).with_context(
+                    || "during commit_graph_compat::Changesets::maybe_write_to_new_commit_graph",
+                )?
             }
             Ok((stats, added_to_commit_graph)) => {
                 scuba.add("time_s", stats.completion_time.as_secs_f64());
@@ -126,7 +128,8 @@ impl Changesets for ChangesetsCommitGraphCompat {
                 ctx,
                 vec1![(cs.cs_id, SmallVec::from_vec(cs.parents))],
             )
-        )?;
+        )
+        .with_context(|| "during commit_graph_compat::Changesets::add")?;
         Ok(added_to_changesets)
     }
 
@@ -139,9 +142,10 @@ impl Changesets for ChangesetsCommitGraphCompat {
             self.changesets.add_many(ctx, css.clone()),
             self.maybe_write_to_new_commit_graph(
                 ctx,
-                css.mapped(|(cs, _)| (cs.cs_id, SmallVec::from_vec(cs.parents))),
+                css.mapped(|(cs, _gen)| (cs.cs_id, SmallVec::from_vec(cs.parents))),
             )
-        )?;
+        )
+        .with_context(|| "during commit_graph_compat::Changesets::add")?;
         Ok(())
     }
 

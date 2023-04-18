@@ -14,6 +14,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use buffered_commit_graph_storage::BufferedCommitGraphStorage;
@@ -100,7 +101,8 @@ impl CommitGraph {
             edges_map.extend(
                 self.storage
                     .fetch_many_edges(ctx, &parents, Prefetch::None)
-                    .await?
+                    .await
+                    .with_context(|| "during commit_graph::add_recursive (fetch_many_edges)")?
                     .into_iter(),
             );
 
@@ -109,7 +111,8 @@ impl CommitGraph {
                     parent,
                     changeset_fetcher
                         .get_parents(ctx, parent)
-                        .await?
+                        .await
+                        .with_context(|| "during commit_graph::add_recursive (get_parents)")?
                         .to_smallvec(),
                 ));
             }
