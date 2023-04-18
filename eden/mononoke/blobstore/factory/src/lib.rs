@@ -73,7 +73,8 @@ pub struct ReadOnlyStorageArgs {
         value_name = "BOOL",
         default_value = "false",
         default_missing_value = "true",
-        action = ArgAction::Set
+        action = ArgAction::Set,
+        num_args = 0..=1,
     )]
     pub with_readonly_storage: bool,
 }

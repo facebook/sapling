@@ -34,7 +34,7 @@ pub struct CachelibArgs {
 
     /// Run the blobstore with cachelib only (i.e., without memcache)
     /// (DEPRECATED)
-    #[clap(long, value_name = "BOOL", default_missing_value = "true", hide = true, action = ArgAction::Set)]
+    #[clap(long, value_name = "BOOL", default_missing_value = "true", hide = true, action = ArgAction::Set, num_args=0..=1)]
     pub blobstore_cachelib_only: bool,
 
     #[clap(long)]
