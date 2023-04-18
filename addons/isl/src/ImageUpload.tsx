@@ -6,7 +6,7 @@
  */
 
 import clientToServerAPI from './ClientToServerAPI';
-import {getInnerTextareaForVSCodeTextArea} from './CommitInfoView/TextArea';
+import {getInnerTextareaForVSCodeTextArea} from './CommitInfoView/utils';
 import {InlineErrorBadge} from './ErrorNotice';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';

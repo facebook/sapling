@@ -15,18 +15,9 @@ import {
 } from '../ImageUpload';
 import {Internal} from '../Internal';
 import {assert} from '../utils';
+import {getInnerTextareaForVSCodeTextArea} from './utils';
 import {VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
 import {forwardRef, useRef, useEffect} from 'react';
-
-/**
- * VSCodeTextArea elements use custom components, which renders in a shadow DOM.
- * Most often, we want to access the inner <textarea>, which acts like a normal textarea.
- */
-export function getInnerTextareaForVSCodeTextArea(
-  outer: HTMLElement | null,
-): HTMLTextAreaElement | null {
-  return outer == null ? null : (outer as unknown as {control: HTMLTextAreaElement}).control;
-}
 
 /**
  * Wrap `VSCodeTextArea` to auto-resize to minimum height and disallow newlines.
