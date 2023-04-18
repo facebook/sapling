@@ -13,6 +13,7 @@ import type {ChangedFile, CommitInfo, Hash, MergeConflicts, UncommittedChanges} 
 import {getTracker} from './analytics/globalTracker';
 import {getOpName} from './operations/Operation';
 import {
+  operationBeingPreviewed,
   latestCommitsData,
   latestUncommittedChangesData,
   mergeConflicts,
@@ -24,7 +25,7 @@ import {
   queuedOperations,
 } from './serverAPIState';
 import {useEffect} from 'react';
-import {atom, selector, useRecoilState, useRecoilValue} from 'recoil';
+import {selector, useRecoilState, useRecoilValue} from 'recoil';
 import {notEmpty, unwrap} from 'shared/utils';
 
 export enum CommitPreview {
@@ -81,11 +82,6 @@ export type ApplyUncommittedChangesPreviewsFuncType = (
 export type ApplyMergeConflictsPreviewsFuncType = (
   conflicts: MergeConflicts | undefined,
 ) => MergeConflicts | undefined;
-
-export const operationBeingPreviewed = atom<Operation | undefined>({
-  key: 'operationBeingPreviewed',
-  default: undefined,
-});
 
 function applyPreviewsToChangedFiles(
   files: Array<ChangedFile>,

@@ -25,7 +25,6 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
-import {operationBeingPreviewed} from './previews';
 import {initialParams} from './urlParams';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
@@ -372,6 +371,11 @@ export const haveCommitsLoadedYet = selector<boolean>({
     const commits = get(latestCommits);
     return commits.length > 0;
   },
+});
+
+export const operationBeingPreviewed = atom<Operation | undefined>({
+  key: 'operationBeingPreviewed',
+  default: undefined,
 });
 
 export type OperationInfo = {

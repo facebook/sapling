@@ -21,13 +21,14 @@ import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
 import platform from './platform';
-import {CommitPreview, operationBeingPreviewed} from './previews';
+import {CommitPreview} from './previews';
 import {RelativeDate} from './relativeDate';
 import {useCommitSelection} from './selection';
 import {
   isFetchingUncommittedChanges,
   latestCommitTreeMap,
   latestUncommittedChanges,
+  operationBeingPreviewed,
   useRunOperation,
   useRunPreviewedOperation,
 } from './serverAPIState';
