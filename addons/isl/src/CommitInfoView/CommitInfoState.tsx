@@ -8,7 +8,9 @@
 import type {Hash} from '../types';
 import type {CommitMessageFields, FieldsBeingEdited} from './types';
 
-import {commitMessageTemplate, latestCommitTreeMap} from '../serverAPIState';
+import serverAPI from '../ClientToServerAPI';
+import {latestCommitTreeMap} from '../serverAPIState';
+import {firstLine} from '../utils';
 import {
   commitMessageFieldsSchema,
   parseCommitMessageFields,
@@ -37,6 +39,29 @@ export function assertNonOptimistic(editedMessage: EditedMessageUnlessOptimistic
   }
   return editedMessage;
 }
+
+export const commitMessageTemplate = atom<EditedMessage | undefined>({
+  key: 'commitMessageTemplate',
+  default: undefined,
+  effects: [
+    ({setSelf, getLoadable}) => {
+      const disposable = serverAPI.onMessageOfType('fetchedCommitMessageTemplate', event => {
+        const title = firstLine(event.template);
+        const description = event.template.slice(title.length + 1);
+        const schema = getLoadable(commitMessageFieldsSchema).valueOrThrow();
+        const fields = parseCommitMessageFields(schema, title, description);
+        setSelf({fields});
+      });
+      return () => disposable.dispose();
+    },
+    () =>
+      serverAPI.onConnectOrReconnect(() =>
+        serverAPI.postMessage({
+          type: 'fetchCommitMessageTemplate',
+        }),
+      ),
+  ],
+});
 
 /**
  * Map of hash -> latest edited commit message, representing any changes made to the commit's message fields.

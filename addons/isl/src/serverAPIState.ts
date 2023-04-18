@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {EditedMessage} from './CommitInfoView/CommitInfoState';
 import type {MessageBusStatus} from './MessageBus';
 import type {CommitTree} from './getCommitTree';
 import type {Operation} from './operations/Operation';
@@ -24,15 +23,10 @@ import type {AtomEffect, CallbackInterface} from 'recoil';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import serverAPI from './ClientToServerAPI';
-import {
-  commitMessageFieldsSchema,
-  parseCommitMessageFields,
-} from './CommitInfoView/CommitMessageFields';
 import messageBus from './MessageBus';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {operationBeingPreviewed} from './previews';
 import {initialParams} from './urlParams';
-import {firstLine} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
 import {randomId} from 'shared/utils';
@@ -322,29 +316,6 @@ export const commitsShownRange = atom<number | undefined>({
         disposables.forEach(d => d.dispose());
       };
     },
-  ],
-});
-
-export const commitMessageTemplate = atom<EditedMessage | undefined>({
-  key: 'commitMessageTemplate',
-  default: undefined,
-  effects: [
-    ({setSelf, getLoadable}) => {
-      const disposable = serverAPI.onMessageOfType('fetchedCommitMessageTemplate', event => {
-        const title = firstLine(event.template);
-        const description = event.template.slice(title.length + 1);
-        const schema = getLoadable(commitMessageFieldsSchema).valueOrThrow();
-        const fields = parseCommitMessageFields(schema, title, description);
-        setSelf({fields});
-      });
-      return () => disposable.dispose();
-    },
-    () =>
-      serverAPI.onConnectOrReconnect(() =>
-        serverAPI.postMessage({
-          type: 'fetchCommitMessageTemplate',
-        }),
-      ),
   ],
 });
 
