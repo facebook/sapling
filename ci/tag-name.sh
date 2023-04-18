@@ -9,9 +9,9 @@ VERSION=$(<"$DIR"/../SAPLING_VERSION)
 
 # Create the commit info using either sl or git, whichever way we cloned this repo
 if ! command -v sl &> /dev/null; then
-  COMMIT_INFO=$(git -c "core.abbrev=8" show -s "--format=%cd-h%h" "--date=format:%Y%m%d-%H%M%S")
+  COMMIT_INFO=$(git -c "core.abbrev=8" show -s "--format=%cd+%h" "--date=format:%Y%m%d-%H%M%S")
 else
-  COMMIT_INFO=$(sl log --rev . --template '{date(date, "%Y%m%d-%H%M%S")}-h{shortest(node, 8)}')
+  COMMIT_INFO=$(sl log --rev . --template '{date(date, "%Y%m%d-%H%M%S")}+{shortest(node, 8)}')
 fi
 
 echo "$VERSION"."$COMMIT_INFO"
