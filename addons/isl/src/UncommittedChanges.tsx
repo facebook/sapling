@@ -12,7 +12,6 @@ import type {SetterOrUpdater} from 'recoil';
 import type {Comparison} from 'shared/Comparison';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
-import {islDrawerState} from './App';
 import {
   ChangedFileDisplayTypePicker,
   type ChangedFilesDisplayType,
@@ -31,6 +30,7 @@ import {
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {ErrorNotice} from './ErrorNotice';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
+import {islDrawerState} from './drawerState';
 import {T, t} from './i18n';
 import {AbortMergeOperation} from './operations/AbortMergeOperation';
 import {AddOperation} from './operations/AddOperation';

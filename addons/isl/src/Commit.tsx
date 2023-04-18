@@ -7,7 +7,6 @@
 
 import type {CommitInfo, SuccessorInfo} from './types';
 
-import {islDrawerState} from './App';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {BranchIndicator} from './CommitTreeList';
 import {highlightedCommits} from './HighlightedCommits';
@@ -15,6 +14,7 @@ import {Tooltip} from './Tooltip';
 import {UncommitButton} from './UncommitButton';
 import {UncommittedChanges} from './UncommittedChanges';
 import {DiffInfo} from './codeReview/DiffBadge';
+import {islDrawerState} from './drawerState';
 import {isDescendant} from './getCommitTree';
 import {t, T} from './i18n';
 import {GotoOperation} from './operations/GotoOperation';

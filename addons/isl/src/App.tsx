@@ -6,7 +6,6 @@
  */
 
 import type {RepositoryError} from './types';
-import type {AllDrawersState} from 'shared/Drawers';
 
 import {CommandHistoryAndProgress} from './CommandHistoryAndProgress';
 import {CommitInfoSidebar} from './CommitInfoView/CommitInfoView';
@@ -18,15 +17,15 @@ import {ISLCommandContext, useCommand} from './ISLShortcuts';
 import {TopBar} from './TopBar';
 import {TopLevelErrors} from './TopLevelErrors';
 import {tracker} from './analytics';
+import {islDrawerState} from './drawerState';
 import {I18nSupport, t, T} from './i18n';
 import platform from './platform';
 import {repositoryInfo} from './serverAPIState';
 import {ThemeRoot} from './theme';
 import {ModalContainer} from './useModal';
-import {getWindowWidthInPixels} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import React from 'react';
-import {atom, RecoilRoot, useRecoilValue, useSetRecoilState} from 'recoil';
+import {RecoilRoot, useRecoilValue, useSetRecoilState} from 'recoil';
 import {ContextMenus} from 'shared/ContextMenu';
 import {Drawers} from 'shared/Drawers';
 import {Icon} from 'shared/Icon';
@@ -56,19 +55,6 @@ export default function App() {
   );
 }
 
-export const islDrawerState = atom<AllDrawersState>({
-  key: 'islDrawerState',
-  default: {
-    right: {
-      size: 500,
-      // Collapse by default on small screens.
-      collapsed: getWindowWidthInPixels() <= 500,
-    },
-    left: {size: 200, collapsed: true},
-    top: {size: 200, collapsed: true},
-    bottom: {size: 200, collapsed: true},
-  },
-});
 function ISLDrawers() {
   const setDrawerState = useSetRecoilState(islDrawerState);
   useCommand('ToggleSidebar', () => {
