@@ -7,8 +7,8 @@
 
 import type {CommitInfo, SuccessorInfo} from './types';
 
+import {BranchIndicator} from './BranchIndicator';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
-import {BranchIndicator} from './CommitTreeList';
 import {highlightedCommits} from './HighlightedCommits';
 import {Tooltip} from './Tooltip';
 import {UncommitButton} from './UncommitButton';
