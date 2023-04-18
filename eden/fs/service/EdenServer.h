@@ -191,7 +191,6 @@ class EdenServer : private TakeoverHandler {
    */
   void serve() const;
 
-#ifndef _WIN32
   /**
    * Recover the EdenServer after a failed takeover request.
    *
@@ -203,7 +202,6 @@ class EdenServer : private TakeoverHandler {
    * sets the state to RUNNING
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> recover(TakeoverData&& data);
-#endif // _WIN32
 
   /**
    * Shut down the EdenServer after it has stopped running.
@@ -562,12 +560,10 @@ class EdenServer : private TakeoverHandler {
       std::shared_ptr<StartupLogger> logger);
   static void incrementStartupMountFailures();
 
-#ifndef _WIN32
   /**
    * recoverImpl() contains the bulk of the implementation of recover()
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> recoverImpl(TakeoverData&& data);
-#endif // !_WIN32
 
   /**
    * Load and parse existing eden config.

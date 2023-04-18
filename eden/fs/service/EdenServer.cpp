@@ -802,6 +802,8 @@ void EdenServer::scheduleInodeUnload(std::chrono::milliseconds timeout) {
       timeout);
 }
 
+#endif // !_WIN32
+
 Future<Unit> EdenServer::recover(TakeoverData&& data) {
   return recoverImpl(std::move(data))
       .ensure(
@@ -836,8 +838,6 @@ Future<Unit> EdenServer::recoverImpl(TakeoverData&& takeoverData) {
   mountFutures.emplace_back(std::move(thriftRunningFuture));
   return folly::collectAllUnsafe(mountFutures).unit();
 }
-
-#endif // !_WIN32
 
 void EdenServer::serve() const {
   getServer()->serve();
@@ -1931,11 +1931,7 @@ void EdenServer::prepareThriftAddress() const {
   auto sock = folly::AsyncServerSocket::UniquePtr(new folly::AsyncServerSocket);
   const auto addr = folly::SocketAddress::makeFromPath(*path);
 
-#ifdef _WIN32
-  auto constexpr maxTries = 3;
-#else
-  auto constexpr maxTries = 1;
-#endif
+  const size_t maxTries = folly::kIsWindows ? 3 : 1;
 
   auto tries = 1;
   while (true) {
