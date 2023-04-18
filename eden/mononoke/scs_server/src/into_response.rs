@@ -147,6 +147,16 @@ impl IntoResponse<thrift::FileInfo> for FileMetadata {
             file_size: self.total_size as i64,
             content_sha1: self.sha1.as_ref().to_vec(),
             content_sha256: self.sha256.as_ref().to_vec(),
+            content_git_sha1: self.git_sha1.as_ref().to_vec(),
+            content_seeded_blake3: self.seeded_blake3.as_ref().to_vec(),
+            is_binary: self.is_binary,
+            is_ascii: self.is_ascii,
+            is_utf8: self.is_utf8,
+            ends_in_newline: self.ends_in_newline,
+            newline_count: self.newline_count as i64,
+            first_line: self.first_line,
+            is_generated: self.is_generated,
+            is_partially_generated: self.is_partially_generated,
             ..Default::default()
         }
     }
