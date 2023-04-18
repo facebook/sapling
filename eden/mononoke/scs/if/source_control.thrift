@@ -251,6 +251,42 @@ struct FileInfo {
 
   /// The content sha256 of the file.
   4: binary content_sha256;
+
+  /// Git SHA1 hash of the content of the file
+  5: binary content_git_sha1;
+
+  /// If this file is a binary file
+  6: bool is_binary;
+
+  /// If the file is ASCII encoded
+  7: bool is_ascii;
+
+  /// If the file is UTF-8 encoded
+  8: bool is_utf8;
+
+  /// If the file is ends with a new line
+  9: bool ends_in_newline;
+
+  /// How many newlines does this file has
+  10: i64 newline_count;
+
+  /// The first UTF-8 encoded line of the file content,
+  /// or UTF-8 string equivalent of the first 64 bytes,
+  /// whichiever is shorter. This field is None if the file
+  /// is not encoded with UTF-8
+  11: optional string first_line;
+
+  /// Is the file auto-generated
+  /// i.e., contains the '@ generated' tag ?
+  12: bool is_generated;
+
+  /// Is the file partially-generated
+  /// i.e., contains the '@ partially-generated' tag ?
+  13: bool is_partially_generated;
+
+  /// Blake3 hash of the file seeded with the global thrift
+  /// constant in fbcode/blake3.thrift
+  14: binary content_seeded_blake3;
 }
 
 struct TreeInfo {
