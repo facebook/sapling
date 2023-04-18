@@ -500,6 +500,44 @@ pub async fn test_add_recursive(
     Ok(())
 }
 
+pub async fn test_add_recursive_many_changesets(
+    ctx: &CoreContext,
+    storage: Arc<dyn CommitGraphStorage>,
+) -> Result<()> {
+    let reference_storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
+
+    let reference_graph = Arc::new(
+        from_dag(
+            ctx,
+            r##"
+             A-B-C-D-G-H-I
+              \     /
+               E---F---J
+         "##,
+            reference_storage,
+        )
+        .await?,
+    );
+
+    let graph = CommitGraph::new(storage);
+    assert!(
+        graph
+            .add_recursive(
+                ctx,
+                reference_graph.clone(),
+                vec1![
+                    (name_cs_id("I"), smallvec![name_cs_id("H")]),
+                    (name_cs_id("K"), smallvec![name_cs_id("I")]),
+                    (name_cs_id("L"), smallvec![name_cs_id("K")]),
+                    (name_cs_id("M"), smallvec![name_cs_id("J")]),
+                ],
+            )
+            .await
+            .is_err()
+    );
+    Ok(())
+}
+
 pub async fn test_ancestors_frontier_with(
     ctx: &CoreContext,
     storage: Arc<dyn CommitGraphStorage>,

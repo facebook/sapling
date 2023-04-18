@@ -90,6 +90,18 @@ async fn test_sqlite_add_recursive(fb: FacebookInit) -> Result<()> {
 }
 
 #[fbinit::test]
+async fn test_sqlite_add_recursive_many_changesets(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let storage = Arc::new(
+        SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+    );
+
+    test_add_recursive_many_changesets(&ctx, storage).await
+}
+
+#[fbinit::test]
 async fn test_sqlite_ancestors_frontier_with(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let storage = Arc::new(
