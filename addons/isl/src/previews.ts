@@ -10,7 +10,7 @@ import type {Operation} from './operations/Operation';
 import type {OperationInfo, OperationList} from './serverAPIState';
 import type {ChangedFile, CommitInfo, Hash, MergeConflicts, UncommittedChanges} from './types';
 
-import {tracker} from './analytics';
+import {getTracker} from './analytics/globalTracker';
 import {getOpName} from './operations/Operation';
 import {
   latestCommitsData,
@@ -470,7 +470,7 @@ export function useMarkOperationsCompleted(): void {
             } else if (
               uncommittedChanges.fetchStartTimestamp > unwrap(operation.endTime).valueOf()
             ) {
-              tracker.track('OptimisticFilesStateForceResolved', {extras: {}});
+              getTracker()?.track('OptimisticFilesStateForceResolved', {extras: {}});
               files = true;
             }
           }
@@ -490,7 +490,7 @@ export function useMarkOperationsCompleted(): void {
               (mergeConflictsContext.conflicts?.fetchStartTimestamp ?? 0) >
               unwrap(operation.endTime).valueOf()
             ) {
-              tracker.track('OptimisticConflictsStateForceResolved', {
+              getTracker()?.track('OptimisticConflictsStateForceResolved', {
                 extras: {operation: getOpName(operation.operation)},
               });
               conflicts = true;
@@ -508,7 +508,7 @@ export function useMarkOperationsCompleted(): void {
             if (optimisticApplier == null || operation.exitCode !== 0) {
               commits = true;
             } else if (fetchedCommits.fetchStartTimestamp > unwrap(operation.endTime).valueOf()) {
-              tracker.track('OptimisticCommitsStateForceResolved', {extras: {}});
+              getTracker()?.track('OptimisticCommitsStateForceResolved', {extras: {}});
               commits = true;
             }
           }

@@ -12,6 +12,7 @@ import {Tracker} from 'isl-server/src/analytics/tracker';
 
 /** Client-side global analytics tracker */
 export const tracker = new Tracker(sendDataToServer, {});
+window.globalIslClientTracker = tracker;
 
 /**
  * The client side sends data to the server-side to actually get tracked.
