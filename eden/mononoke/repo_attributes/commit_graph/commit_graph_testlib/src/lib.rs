@@ -24,6 +24,25 @@ use crate::utils::*;
 
 mod utils;
 
+#[macro_export]
+macro_rules! impl_commit_graph_tests {
+    ( $test_runner:ident ) => {
+        $crate::impl_commit_graph_tests_internal!($test_runner, test_add_recursive_many_changesets,);
+    };
+}
+
+#[macro_export]
+macro_rules! impl_commit_graph_tests_internal {
+    ( $test_runner:ident, $($test_name:ident, )* ) => {
+        $(
+            #[fbinit::test]
+            pub async fn $test_name(fb: FacebookInit) -> Result<()> {
+                $test_runner(fb, $crate::$test_name).await
+            }
+        )*
+    }
+}
+
 pub async fn test_storage_store_and_fetch(
     ctx: &CoreContext,
     storage: Arc<dyn CommitGraphStorage>,
@@ -501,14 +520,14 @@ pub async fn test_add_recursive(
 }
 
 pub async fn test_add_recursive_many_changesets(
-    ctx: &CoreContext,
+    ctx: CoreContext,
     storage: Arc<dyn CommitGraphStorage>,
 ) -> Result<()> {
     let reference_storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
 
     let reference_graph = Arc::new(
         from_dag(
-            ctx,
+            &ctx,
             r##"
              A-B-C-D-G-H-I
               \     /
@@ -523,7 +542,7 @@ pub async fn test_add_recursive_many_changesets(
     assert_eq!(
         graph
             .add_recursive(
-                ctx,
+                &ctx,
                 reference_graph.clone(),
                 vec1![
                     (name_cs_id("I"), smallvec![name_cs_id("H")]),
@@ -538,7 +557,7 @@ pub async fn test_add_recursive_many_changesets(
 
     assert_eq!(
         graph
-            .changeset_parents(ctx, name_cs_id("I"))
+            .changeset_parents(&ctx, name_cs_id("I"))
             .await?
             .unwrap()
             .as_slice(),
@@ -546,7 +565,7 @@ pub async fn test_add_recursive_many_changesets(
     );
     assert_eq!(
         graph
-            .changeset_parents(ctx, name_cs_id("K"))
+            .changeset_parents(&ctx, name_cs_id("K"))
             .await?
             .unwrap()
             .as_slice(),
@@ -554,7 +573,7 @@ pub async fn test_add_recursive_many_changesets(
     );
     assert_eq!(
         graph
-            .changeset_parents(ctx, name_cs_id("L"))
+            .changeset_parents(&ctx, name_cs_id("L"))
             .await?
             .unwrap()
             .as_slice(),
@@ -564,7 +583,7 @@ pub async fn test_add_recursive_many_changesets(
     assert_eq!(
         graph
             .add_recursive(
-                ctx,
+                &ctx,
                 reference_graph.clone(),
                 vec1![
                     (name_cs_id("N"), smallvec![name_cs_id("M")]),
