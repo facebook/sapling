@@ -520,7 +520,7 @@ pub async fn test_add_recursive_many_changesets(
     );
 
     let graph = CommitGraph::new(storage);
-    assert!(
+    assert_eq!(
         graph
             .add_recursive(
                 ctx,
@@ -532,8 +532,47 @@ pub async fn test_add_recursive_many_changesets(
                     (name_cs_id("M"), smallvec![name_cs_id("J")]),
                 ],
             )
-            .await
-            .is_err()
+            .await?,
+        13
+    );
+
+    assert_eq!(
+        graph
+            .changeset_parents(ctx, name_cs_id("I"))
+            .await?
+            .unwrap()
+            .as_slice(),
+        &[name_cs_id("H")]
+    );
+    assert_eq!(
+        graph
+            .changeset_parents(ctx, name_cs_id("K"))
+            .await?
+            .unwrap()
+            .as_slice(),
+        &[name_cs_id("I")]
+    );
+    assert_eq!(
+        graph
+            .changeset_parents(ctx, name_cs_id("L"))
+            .await?
+            .unwrap()
+            .as_slice(),
+        &[name_cs_id("K")]
+    );
+
+    assert_eq!(
+        graph
+            .add_recursive(
+                ctx,
+                reference_graph.clone(),
+                vec1![
+                    (name_cs_id("N"), smallvec![name_cs_id("M")]),
+                    (name_cs_id("O"), smallvec![name_cs_id("K"), name_cs_id("N")]),
+                ],
+            )
+            .await?,
+        2
     );
     Ok(())
 }
