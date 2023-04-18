@@ -7,7 +7,7 @@
 
 import type {Logger} from 'isl-server/src/logger';
 
-import * as packageJson from '../package.json';
+import packageJson from '../package.json';
 import {executeVSCodeCommand} from './commands';
 import {getCLICommand} from './config';
 import {locale, t} from './i18n';

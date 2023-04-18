@@ -7,7 +7,7 @@
 
 import type {Logger} from 'isl-server/src/logger';
 
-import * as packageJson from '../package.json';
+import packageJson from '../package.json';
 import {registerSaplingDiffContentProvider} from './DiffContentProvider';
 import {watchAndCreateRepositoriesForWorkspaceFolders} from './VSCodeRepo';
 import {registerCommands} from './commands';
