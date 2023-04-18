@@ -27,7 +27,17 @@ mod utils;
 #[macro_export]
 macro_rules! impl_commit_graph_tests {
     ( $test_runner:ident ) => {
-        $crate::impl_commit_graph_tests_internal!($test_runner, test_add_recursive_many_changesets,);
+        $crate::impl_commit_graph_tests_internal!(
+            $test_runner,
+            test_storage_store_and_fetch,
+            test_skip_tree,
+            test_p1_linear_tree,
+            test_ancestors_difference,
+            test_find_by_prefix,
+            test_add_recursive,
+            test_add_recursive_many_changesets,
+            test_ancestors_frontier_with,
+        );
     };
 }
 
@@ -44,11 +54,11 @@ macro_rules! impl_commit_graph_tests_internal {
 }
 
 pub async fn test_storage_store_and_fetch(
-    ctx: &CoreContext,
+    ctx: CoreContext,
     storage: Arc<dyn CommitGraphStorage>,
 ) -> Result<()> {
     let graph = from_dag(
-        ctx,
+        &ctx,
         r##"
              A-B-C-D-G-H-I
               \     /
@@ -59,12 +69,12 @@ pub async fn test_storage_store_and_fetch(
     .await?;
 
     // Check the public API.
-    assert!(graph.exists(ctx, name_cs_id("A")).await?);
+    assert!(graph.exists(&ctx, name_cs_id("A")).await?);
 
-    assert!(!graph.exists(ctx, name_cs_id("nonexistent")).await?);
+    assert!(!graph.exists(&ctx, name_cs_id("nonexistent")).await?);
     assert_eq!(
         graph
-            .changeset_generation(ctx, name_cs_id("G"))
+            .changeset_generation(&ctx, name_cs_id("G"))
             .await?
             .unwrap()
             .value(),
@@ -72,7 +82,7 @@ pub async fn test_storage_store_and_fetch(
     );
     assert_eq!(
         graph
-            .changeset_parents(ctx, name_cs_id("A"))
+            .changeset_parents(&ctx, name_cs_id("A"))
             .await?
             .unwrap()
             .as_slice(),
@@ -80,7 +90,7 @@ pub async fn test_storage_store_and_fetch(
     );
     assert_eq!(
         graph
-            .changeset_parents(ctx, name_cs_id("E"))
+            .changeset_parents(&ctx, name_cs_id("E"))
             .await?
             .unwrap()
             .as_slice(),
@@ -88,7 +98,7 @@ pub async fn test_storage_store_and_fetch(
     );
     assert_eq!(
         graph
-            .changeset_parents(ctx, name_cs_id("G"))
+            .changeset_parents(&ctx, name_cs_id("G"))
             .await?
             .unwrap()
             .as_slice(),
@@ -97,49 +107,49 @@ pub async fn test_storage_store_and_fetch(
 
     assert!(
         graph
-            .is_ancestor(ctx, name_cs_id("C"), name_cs_id("C"))
+            .is_ancestor(&ctx, name_cs_id("C"), name_cs_id("C"))
             .await?
     );
     assert!(
         graph
-            .is_ancestor(ctx, name_cs_id("A"), name_cs_id("H"))
+            .is_ancestor(&ctx, name_cs_id("A"), name_cs_id("H"))
             .await?
     );
     assert!(
         graph
-            .is_ancestor(ctx, name_cs_id("A"), name_cs_id("F"))
+            .is_ancestor(&ctx, name_cs_id("A"), name_cs_id("F"))
             .await?
     );
     assert!(
         graph
-            .is_ancestor(ctx, name_cs_id("F"), name_cs_id("I"))
+            .is_ancestor(&ctx, name_cs_id("F"), name_cs_id("I"))
             .await?
     );
     assert!(
         graph
-            .is_ancestor(ctx, name_cs_id("C"), name_cs_id("I"))
+            .is_ancestor(&ctx, name_cs_id("C"), name_cs_id("I"))
             .await?
     );
     assert!(
         !graph
-            .is_ancestor(ctx, name_cs_id("I"), name_cs_id("A"))
+            .is_ancestor(&ctx, name_cs_id("I"), name_cs_id("A"))
             .await?
     );
     assert!(
         !graph
-            .is_ancestor(ctx, name_cs_id("E"), name_cs_id("D"))
+            .is_ancestor(&ctx, name_cs_id("E"), name_cs_id("D"))
             .await?
     );
     assert!(
         !graph
-            .is_ancestor(ctx, name_cs_id("B"), name_cs_id("E"))
+            .is_ancestor(&ctx, name_cs_id("B"), name_cs_id("E"))
             .await?
     );
 
     // Check some underlying storage details.
     assert_eq!(
         storage
-            .fetch_edges(ctx, name_cs_id("A"))
+            .fetch_edges(&ctx, name_cs_id("A"))
             .await?
             .unwrap()
             .merge_ancestor,
@@ -147,7 +157,7 @@ pub async fn test_storage_store_and_fetch(
     );
     assert_eq!(
         storage
-            .fetch_edges(ctx, name_cs_id("C"))
+            .fetch_edges(&ctx, name_cs_id("C"))
             .await?
             .unwrap()
             .merge_ancestor,
@@ -155,7 +165,7 @@ pub async fn test_storage_store_and_fetch(
     );
     assert_eq!(
         storage
-            .fetch_edges(ctx, name_cs_id("I"))
+            .fetch_edges(&ctx, name_cs_id("I"))
             .await?
             .unwrap()
             .merge_ancestor,
@@ -165,9 +175,9 @@ pub async fn test_storage_store_and_fetch(
     Ok(())
 }
 
-pub async fn test_skip_tree(ctx: &CoreContext, storage: Arc<dyn CommitGraphStorage>) -> Result<()> {
+pub async fn test_skip_tree(ctx: CoreContext, storage: Arc<dyn CommitGraphStorage>) -> Result<()> {
     let graph = from_dag(
-        ctx,
+        &ctx,
         r##"
          A-B-C-D-G-H---J-K
             \   /   \ /
@@ -181,7 +191,7 @@ pub async fn test_skip_tree(ctx: &CoreContext, storage: Arc<dyn CommitGraphStora
 
     assert_eq!(
         storage
-            .fetch_edges(ctx, name_cs_id("K"))
+            .fetch_edges(&ctx, name_cs_id("K"))
             .await?
             .unwrap()
             .node
@@ -189,39 +199,39 @@ pub async fn test_skip_tree(ctx: &CoreContext, storage: Arc<dyn CommitGraphStora
         name_cs_id("K")
     );
 
-    assert_skip_tree_parent(&storage, ctx, "G", "B").await?;
-    assert_skip_tree_parent(&storage, ctx, "K", "J").await?;
-    assert_skip_tree_parent(&storage, ctx, "J", "H").await?;
-    assert_skip_tree_parent(&storage, ctx, "H", "G").await?;
+    assert_skip_tree_parent(&storage, &ctx, "G", "B").await?;
+    assert_skip_tree_parent(&storage, &ctx, "K", "J").await?;
+    assert_skip_tree_parent(&storage, &ctx, "J", "H").await?;
+    assert_skip_tree_parent(&storage, &ctx, "H", "G").await?;
 
-    assert_skip_tree_skew_ancestor(&storage, ctx, "H", "A").await?;
-    assert_skip_tree_skew_ancestor(&storage, ctx, "K", "J").await?;
-    assert_skip_tree_skew_ancestor(&storage, ctx, "U", "T").await?;
-    assert_skip_tree_skew_ancestor(&storage, ctx, "T", "S").await?;
-    assert_skip_tree_skew_ancestor(&storage, ctx, "S", "L").await?;
+    assert_skip_tree_skew_ancestor(&storage, &ctx, "H", "A").await?;
+    assert_skip_tree_skew_ancestor(&storage, &ctx, "K", "J").await?;
+    assert_skip_tree_skew_ancestor(&storage, &ctx, "U", "T").await?;
+    assert_skip_tree_skew_ancestor(&storage, &ctx, "T", "S").await?;
+    assert_skip_tree_skew_ancestor(&storage, &ctx, "S", "L").await?;
 
-    assert_skip_tree_level_ancestor(&graph, ctx, "S", 4, Some("P")).await?;
-    assert_skip_tree_level_ancestor(&graph, ctx, "U", 7, Some("S")).await?;
-    assert_skip_tree_level_ancestor(&graph, ctx, "T", 7, Some("S")).await?;
-    assert_skip_tree_level_ancestor(&graph, ctx, "O", 2, Some("N")).await?;
-    assert_skip_tree_level_ancestor(&graph, ctx, "N", 3, None).await?;
-    assert_skip_tree_level_ancestor(&graph, ctx, "K", 2, Some("G")).await?;
+    assert_skip_tree_level_ancestor(&graph, &ctx, "S", 4, Some("P")).await?;
+    assert_skip_tree_level_ancestor(&graph, &ctx, "U", 7, Some("S")).await?;
+    assert_skip_tree_level_ancestor(&graph, &ctx, "T", 7, Some("S")).await?;
+    assert_skip_tree_level_ancestor(&graph, &ctx, "O", 2, Some("N")).await?;
+    assert_skip_tree_level_ancestor(&graph, &ctx, "N", 3, None).await?;
+    assert_skip_tree_level_ancestor(&graph, &ctx, "K", 2, Some("G")).await?;
 
-    assert_skip_tree_lowest_common_ancestor(&graph, ctx, "D", "F", Some("B")).await?;
-    assert_skip_tree_lowest_common_ancestor(&graph, ctx, "K", "I", Some("H")).await?;
-    assert_skip_tree_lowest_common_ancestor(&graph, ctx, "D", "C", Some("C")).await?;
-    assert_skip_tree_lowest_common_ancestor(&graph, ctx, "N", "K", None).await?;
-    assert_skip_tree_lowest_common_ancestor(&graph, ctx, "A", "I", Some("A")).await?;
+    assert_skip_tree_lowest_common_ancestor(&graph, &ctx, "D", "F", Some("B")).await?;
+    assert_skip_tree_lowest_common_ancestor(&graph, &ctx, "K", "I", Some("H")).await?;
+    assert_skip_tree_lowest_common_ancestor(&graph, &ctx, "D", "C", Some("C")).await?;
+    assert_skip_tree_lowest_common_ancestor(&graph, &ctx, "N", "K", None).await?;
+    assert_skip_tree_lowest_common_ancestor(&graph, &ctx, "A", "I", Some("A")).await?;
 
     Ok(())
 }
 
 pub async fn test_p1_linear_tree(
-    ctx: &CoreContext,
+    ctx: CoreContext,
     storage: Arc<dyn CommitGraphStorage>,
 ) -> Result<()> {
     let graph = from_dag(
-        ctx,
+        &ctx,
         r##"
          A-B-C-D-G-H---J-K
             \   /   \ /
@@ -233,40 +243,40 @@ pub async fn test_p1_linear_tree(
     )
     .await?;
 
-    assert_p1_linear_skew_ancestor(&storage, ctx, "A", None).await?;
-    assert_p1_linear_skew_ancestor(&storage, ctx, "B", Some("A")).await?;
-    assert_p1_linear_skew_ancestor(&storage, ctx, "C", Some("B")).await?;
-    assert_p1_linear_skew_ancestor(&storage, ctx, "D", Some("A")).await?;
-    assert_p1_linear_skew_ancestor(&storage, ctx, "E", Some("B")).await?;
-    assert_p1_linear_skew_ancestor(&storage, ctx, "F", Some("A")).await?;
-    assert_p1_linear_skew_ancestor(&storage, ctx, "G", Some("D")).await?;
-    assert_p1_linear_skew_ancestor(&storage, ctx, "H", Some("G")).await?;
-    assert_p1_linear_skew_ancestor(&storage, ctx, "I", Some("D")).await?;
-    assert_p1_linear_skew_ancestor(&storage, ctx, "J", Some("D")).await?;
-    assert_p1_linear_skew_ancestor(&storage, ctx, "K", Some("A")).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "A", None).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "B", Some("A")).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "C", Some("B")).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "D", Some("A")).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "E", Some("B")).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "F", Some("A")).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "G", Some("D")).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "H", Some("G")).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "I", Some("D")).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "J", Some("D")).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "K", Some("A")).await?;
 
-    assert_p1_linear_level_ancestor(&graph, ctx, "S", 4, Some("P")).await?;
-    assert_p1_linear_level_ancestor(&graph, ctx, "U", 7, Some("S")).await?;
-    assert_p1_linear_level_ancestor(&graph, ctx, "T", 7, Some("S")).await?;
-    assert_p1_linear_level_ancestor(&graph, ctx, "O", 2, Some("N")).await?;
-    assert_p1_linear_level_ancestor(&graph, ctx, "N", 3, None).await?;
-    assert_p1_linear_level_ancestor(&graph, ctx, "K", 2, Some("C")).await?;
+    assert_p1_linear_level_ancestor(&graph, &ctx, "S", 4, Some("P")).await?;
+    assert_p1_linear_level_ancestor(&graph, &ctx, "U", 7, Some("S")).await?;
+    assert_p1_linear_level_ancestor(&graph, &ctx, "T", 7, Some("S")).await?;
+    assert_p1_linear_level_ancestor(&graph, &ctx, "O", 2, Some("N")).await?;
+    assert_p1_linear_level_ancestor(&graph, &ctx, "N", 3, None).await?;
+    assert_p1_linear_level_ancestor(&graph, &ctx, "K", 2, Some("C")).await?;
 
-    assert_p1_linear_lowest_common_ancestor(&graph, ctx, "D", "F", Some("B")).await?;
-    assert_p1_linear_lowest_common_ancestor(&graph, ctx, "K", "I", Some("H")).await?;
-    assert_p1_linear_lowest_common_ancestor(&graph, ctx, "D", "C", Some("C")).await?;
-    assert_p1_linear_lowest_common_ancestor(&graph, ctx, "N", "K", None).await?;
-    assert_p1_linear_lowest_common_ancestor(&graph, ctx, "A", "I", Some("A")).await?;
+    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "D", "F", Some("B")).await?;
+    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "K", "I", Some("H")).await?;
+    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "D", "C", Some("C")).await?;
+    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "N", "K", None).await?;
+    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "A", "I", Some("A")).await?;
 
     Ok(())
 }
 
 pub async fn test_ancestors_difference(
-    ctx: &CoreContext,
+    ctx: CoreContext,
     storage: Arc<dyn CommitGraphStorage>,
 ) -> Result<()> {
     let graph = from_dag(
-        ctx,
+        &ctx,
         r##"
          A-B-C-D-G-H---J-K
             \   /   \ /
@@ -280,7 +290,7 @@ pub async fn test_ancestors_difference(
 
     assert_ancestors_difference(
         &graph,
-        ctx,
+        &ctx,
         vec!["K"],
         vec![],
         vec!["K", "J", "I", "H", "G", "D", "F", "C", "E", "B", "A"],
@@ -289,7 +299,7 @@ pub async fn test_ancestors_difference(
 
     assert_ancestors_difference(
         &graph,
-        ctx,
+        &ctx,
         vec!["K", "U"],
         vec![],
         vec![
@@ -299,14 +309,14 @@ pub async fn test_ancestors_difference(
     )
     .await?;
 
-    assert_ancestors_difference(&graph, ctx, vec!["K"], vec!["G"], vec!["K", "J", "I", "H"])
+    assert_ancestors_difference(&graph, &ctx, vec!["K"], vec!["G"], vec!["K", "J", "I", "H"])
         .await?;
 
-    assert_ancestors_difference(&graph, ctx, vec!["K", "I"], vec!["J"], vec!["K"]).await?;
+    assert_ancestors_difference(&graph, &ctx, vec!["K", "I"], vec!["J"], vec!["K"]).await?;
 
     assert_ancestors_difference(
         &graph,
-        ctx,
+        &ctx,
         vec!["I"],
         vec!["C"],
         vec!["I", "H", "G", "F", "E", "D"],
@@ -315,7 +325,7 @@ pub async fn test_ancestors_difference(
 
     assert_ancestors_difference(
         &graph,
-        ctx,
+        &ctx,
         vec!["J", "S"],
         vec!["C", "E", "O"],
         vec!["J", "I", "H", "G", "F", "D", "S", "R", "Q", "P"],
@@ -329,7 +339,7 @@ pub async fn test_ancestors_difference(
 
     assert_ancestors_difference_with(
         &graph,
-        ctx,
+        &ctx,
         vec!["J", "S"],
         vec!["C", "E", "O"],
         |cs_id| set1.contains(&cs_id),
@@ -339,7 +349,7 @@ pub async fn test_ancestors_difference(
 
     assert_ancestors_difference_with(
         &graph,
-        ctx,
+        &ctx,
         vec!["K"],
         vec!["C", "E"],
         |cs_id| set1.contains(&cs_id),
@@ -354,7 +364,7 @@ pub async fn test_ancestors_difference(
 
     assert_ancestors_difference_with(
         &graph,
-        ctx,
+        &ctx,
         vec!["H"],
         vec![],
         |cs_id| set2.contains(&cs_id),
@@ -364,7 +374,7 @@ pub async fn test_ancestors_difference(
 
     assert_ancestors_difference_with(
         &graph,
-        ctx,
+        &ctx,
         vec!["H"],
         vec!["F"],
         |cs_id| set2.contains(&cs_id),
@@ -376,11 +386,11 @@ pub async fn test_ancestors_difference(
 }
 
 pub async fn test_find_by_prefix(
-    ctx: &CoreContext,
+    ctx: CoreContext,
     storage: Arc<dyn CommitGraphStorage>,
 ) -> Result<()> {
     let graph = from_dag(
-        ctx,
+        &ctx,
         r##"
              J-K-L-LZZ
              M-MA-MAA-MAB-MAC
@@ -395,19 +405,19 @@ pub async fn test_find_by_prefix(
 
     assert_eq!(
         graph
-            .find_by_prefix(ctx, ChangesetIdPrefix::from_bytes("Z")?, 10)
+            .find_by_prefix(&ctx, ChangesetIdPrefix::from_bytes("Z")?, 10)
             .await?,
         ChangesetIdsResolvedFromPrefix::NoMatch
     );
     assert_eq!(
         graph
-            .find_by_prefix(ctx, ChangesetIdPrefix::from_bytes("Q")?, 10)
+            .find_by_prefix(&ctx, ChangesetIdPrefix::from_bytes("Q")?, 10)
             .await?,
         ChangesetIdsResolvedFromPrefix::Single(name_cs_id("QQ"))
     );
     assert_eq!(
         graph
-            .find_by_prefix(ctx, ChangesetIdPrefix::from_bytes("MA")?, 10)
+            .find_by_prefix(&ctx, ChangesetIdPrefix::from_bytes("MA")?, 10)
             .await?,
         ChangesetIdsResolvedFromPrefix::Multiple(vec![
             name_cs_id("MA"),
@@ -418,7 +428,7 @@ pub async fn test_find_by_prefix(
     );
     assert_eq!(
         graph
-            .find_by_prefix(ctx, ChangesetIdPrefix::from_bytes("M")?, 6)
+            .find_by_prefix(&ctx, ChangesetIdPrefix::from_bytes("M")?, 6)
             .await?,
         ChangesetIdsResolvedFromPrefix::TooMany(vec![
             name_cs_id("M"),
@@ -432,7 +442,7 @@ pub async fn test_find_by_prefix(
     // Check prefixes that are not a full byte. `P` is `\x50` in ASCII.
     assert_eq!(
         graph
-            .find_by_prefix(ctx, ChangesetIdPrefix::from_str("5")?, 2)
+            .find_by_prefix(&ctx, ChangesetIdPrefix::from_str("5")?, 2)
             .await?,
         ChangesetIdsResolvedFromPrefix::Multiple(vec![name_cs_id("P"), name_cs_id("QQ")])
     );
@@ -441,14 +451,14 @@ pub async fn test_find_by_prefix(
 }
 
 pub async fn test_add_recursive(
-    ctx: &CoreContext,
+    ctx: CoreContext,
     storage: Arc<dyn CommitGraphStorage>,
 ) -> Result<()> {
     let reference_storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
 
     let reference_graph = Arc::new(
         from_dag(
-            ctx,
+            &ctx,
             r##"
              A-B-C-D-G-H-I
               \     /
@@ -463,7 +473,7 @@ pub async fn test_add_recursive(
     assert_eq!(
         graph
             .add_recursive(
-                ctx,
+                &ctx,
                 reference_graph.clone(),
                 vec1![(name_cs_id("I"), smallvec![name_cs_id("H")])],
             )
@@ -473,7 +483,7 @@ pub async fn test_add_recursive(
     assert_eq!(
         graph
             .add_recursive(
-                ctx,
+                &ctx,
                 reference_graph,
                 vec1![(name_cs_id("J"), smallvec![name_cs_id("F")])]
             )
@@ -481,11 +491,11 @@ pub async fn test_add_recursive(
         1
     );
 
-    assert!(graph.exists(ctx, name_cs_id("A")).await?);
+    assert!(graph.exists(&ctx, name_cs_id("A")).await?);
 
     assert_eq!(
         graph
-            .changeset_parents(ctx, name_cs_id("E"))
+            .changeset_parents(&ctx, name_cs_id("E"))
             .await?
             .unwrap()
             .as_slice(),
@@ -493,7 +503,7 @@ pub async fn test_add_recursive(
     );
     assert_eq!(
         graph
-            .changeset_parents(ctx, name_cs_id("G"))
+            .changeset_parents(&ctx, name_cs_id("G"))
             .await?
             .unwrap()
             .as_slice(),
@@ -501,7 +511,7 @@ pub async fn test_add_recursive(
     );
     assert_eq!(
         graph
-            .changeset_parents(ctx, name_cs_id("I"))
+            .changeset_parents(&ctx, name_cs_id("I"))
             .await?
             .unwrap()
             .as_slice(),
@@ -509,7 +519,7 @@ pub async fn test_add_recursive(
     );
     assert_eq!(
         graph
-            .changeset_parents(ctx, name_cs_id("J"))
+            .changeset_parents(&ctx, name_cs_id("J"))
             .await?
             .unwrap()
             .as_slice(),
@@ -597,11 +607,11 @@ pub async fn test_add_recursive_many_changesets(
 }
 
 pub async fn test_ancestors_frontier_with(
-    ctx: &CoreContext,
+    ctx: CoreContext,
     storage: Arc<dyn CommitGraphStorage>,
 ) -> Result<()> {
     let graph = from_dag(
-        ctx,
+        &ctx,
         r##"
          A-B-C-D-G-H---J-K
             \   /   \ /
@@ -620,7 +630,7 @@ pub async fn test_ancestors_frontier_with(
 
     assert_ancestors_frontier_with(
         &graph,
-        ctx,
+        &ctx,
         vec!["K", "U"],
         |cs_id| set1.contains(&cs_id),
         vec!["H", "I"],
@@ -634,7 +644,7 @@ pub async fn test_ancestors_frontier_with(
 
     assert_ancestors_frontier_with(
         &graph,
-        ctx,
+        &ctx,
         vec!["D", "F"],
         |cs_id| set2.contains(&cs_id),
         vec!["C", "E"],
@@ -643,7 +653,7 @@ pub async fn test_ancestors_frontier_with(
 
     assert_ancestors_frontier_with(
         &graph,
-        ctx,
+        &ctx,
         vec!["G"],
         |cs_id| set2.contains(&cs_id),
         vec!["C", "E"],
@@ -652,7 +662,7 @@ pub async fn test_ancestors_frontier_with(
 
     assert_ancestors_frontier_with(
         &graph,
-        ctx,
+        &ctx,
         vec!["K"],
         |cs_id| set2.contains(&cs_id),
         vec!["C", "E"],
@@ -661,7 +671,7 @@ pub async fn test_ancestors_frontier_with(
 
     assert_ancestors_frontier_with(
         &graph,
-        ctx,
+        &ctx,
         vec!["D"],
         |cs_id| set2.contains(&cs_id),
         vec!["C"],
