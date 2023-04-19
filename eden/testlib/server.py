@@ -179,7 +179,7 @@ def _start(
             mononoke_config,
             "--no-default-scuba-dataset",
             "--debug",
-            "--skip-caching",
+            "--cache-mode=disabled",
             "--mysql-master-only",
             "--tunables-config",
             tunables_path,
