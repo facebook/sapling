@@ -17,7 +17,6 @@ cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimen
 cats = { version = "0.1.0", path = "../../cats" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
-cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 connection_security_checker = { version = "0.1.0", path = "../../common/connection_security_checker" }
 context = { version = "0.1.0", path = "../context" }
 edenapi_service = { version = "0.1.0", path = "../../edenapi_service" }
@@ -39,6 +38,7 @@ maplit = "1.0"
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 metadata = { version = "0.1.0", path = "../metadata" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
+mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 openssl = "0.10.35"
 percent-encoding = "2.1"
