@@ -2074,6 +2074,14 @@ void Nfsd3::invalidate(AbsolutePath path, mode_t mode) {
   });
 }
 
+uint32_t Nfsd3::getProgramNumber() {
+  return kNfsdProgNumber;
+}
+
+uint32_t Nfsd3::getProgramVersion() {
+  return kNfsd3ProgVersion;
+}
+
 ImmediateFuture<folly::Unit> Nfsd3::completeInvalidations() {
   folly::Promise<folly::Unit> promise;
   auto result = promise.getFuture();

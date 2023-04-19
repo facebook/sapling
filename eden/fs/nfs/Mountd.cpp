@@ -236,6 +236,14 @@ void Mountd::initialize(folly::File&& socket) {
       std::move(socket), RpcServer::InitialSocketType::SERVER_SOCKET);
 }
 
+uint32_t Mountd::getProgramNumber() {
+  return kMountdProgNumber;
+}
+
+uint32_t Mountd::getProgramVersion() {
+  return kMountdProgVersion;
+}
+
 void Mountd::registerMount(AbsolutePathPiece path, InodeNumber ino) {
   proc_->registerMount(path, ino);
 }

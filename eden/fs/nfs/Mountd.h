@@ -51,6 +51,10 @@ class Mountd {
   void initialize(folly::SocketAddress addr, bool registerWithRpcbind);
   void initialize(folly::File&& socket);
 
+  uint32_t getProgramNumber();
+
+  uint32_t getProgramVersion();
+
   /**
    * Register a path as the root of a mount point.
    *

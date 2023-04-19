@@ -37,14 +37,21 @@ void NfsServer::initialize(
   if (rpcbindd_) {
     rpcbindd_->initialize();
   }
+  recordPortNumber(
+      mountd_.getProgramNumber(),
+      mountd_.getProgramVersion(),
+      mountd_.getAddr().getPort());
 }
 
 void NfsServer::initialize(folly::File&& socket) {
   mountd_.initialize(std::move(socket));
-  // todo add a config for this
   if (rpcbindd_) {
     rpcbindd_->initialize();
   }
+  // TODO: we should register the mountd server on takeover too. but
+  // we only transfer the connected socket not the listening socket.
+  // the listening one is the one we wanna register. So we need to
+  // transfer that socket to be able to register it.
 }
 
 NfsServer::NfsMountInfo NfsServer::registerMount(
@@ -76,6 +83,18 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
   mountd_.registerMount(path, rootIno);
 
   return {std::move(nfsd), mountd_.getAddr()};
+}
+
+/**
+ * Registers an RPC service running a certain protocol version on port.
+ */
+void NfsServer::recordPortNumber(
+    uint32_t protocol,
+    uint32_t version,
+    uint32_t port) {
+  if (rpcbindd_) {
+    rpcbindd_->recordPortNumber(protocol, version, port);
+  }
 }
 
 void NfsServer::unregisterMount(AbsolutePathPiece path) {

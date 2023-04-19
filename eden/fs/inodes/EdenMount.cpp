@@ -2042,7 +2042,9 @@ folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
                    iosize,
                    edenConfig->nfsTraceBusCapacity.getValue());
              })
-      .thenValue([mount, connectedSocket = std::move(connectedSocket)](
+      .thenValue([mount,
+                  nfsServer,
+                  connectedSocket = std::move(connectedSocket)](
                      NfsServer::NfsMountInfo mountInfo) mutable {
         auto [channel, mountdAddr] = std::move(mountInfo);
 
@@ -2050,6 +2052,10 @@ folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
           XLOG(DBG4) << "Mount takeover: Initiating nfsd with socket: "
                      << connectedSocket.value().fd();
           channel->initialize(std::move(connectedSocket.value()));
+          // TODO: we should register the NFS server on takeover too. but
+          // we only transfer the connected socket not the listening socket.
+          // the listening one is the one we wanna register. So we need to
+          // transfer that socket to be able to register it.
         } else {
           XLOG(DBG4) << "Normal Start: Initiating nfsd from scratch: ";
           std::optional<AbsolutePath> unixSocketPath;
@@ -2060,6 +2066,10 @@ folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
                 kNfsdSocketName;
           }
           channel->initialize(makeNfsSocket(std::move(unixSocketPath)), false);
+          nfsServer->recordPortNumber(
+              channel->getProgramNumber(),
+              channel->getProgramVersion(),
+              channel->getAddr().getPort());
         }
         return NfsServer::NfsMountInfo{
             std::move(channel), std::move(mountdAddr)};

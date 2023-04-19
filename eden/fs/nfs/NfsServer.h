@@ -83,6 +83,11 @@ class NfsServer {
       size_t traceBusCapacity);
 
   /**
+   * Registers an RPC service running a certain protocol version on port.
+   */
+  void recordPortNumber(uint32_t protocol, uint32_t version, uint32_t port);
+
+  /**
    * Unregister the mount point matching the path.
    *
    * The nfs program will also be destroyed, and thus it is expected that

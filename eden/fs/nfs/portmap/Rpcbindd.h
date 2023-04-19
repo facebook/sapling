@@ -46,6 +46,11 @@ class Rpcbindd {
    */
   void initialize();
 
+  /**
+   * Registers an RPC service running a certain protocol version on port.
+   */
+  void recordPortNumber(uint32_t protocol, uint32_t version, uint16_t port);
+
   Rpcbindd(const Rpcbindd&) = delete;
   Rpcbindd(Rpcbindd&&) = delete;
   Rpcbindd& operator=(const Rpcbindd&) = delete;

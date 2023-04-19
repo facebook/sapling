@@ -194,6 +194,10 @@ class Nfsd3 final : public FsChannel {
    */
   ImmediateFuture<folly::Unit> completeInvalidations() override;
 
+  uint32_t getProgramNumber();
+
+  uint32_t getProgramVersion();
+
   /**
    * Obtain the address that this NFSv3 program is listening on.
    */

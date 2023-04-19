@@ -49,6 +49,15 @@ class RpcbinddServerProcessor final : public RpcServerProcessor {
   ImmediateFuture<folly::Unit>
   callit(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
 
+  void recordPortNumber(uint32_t protocol, uint32_t version, uint16_t port) {
+    auto lockedServers = registeredServers_.wlock();
+    lockedServers->emplace(
+        std::make_pair<std::pair<uint32_t, uint32_t>, uint16_t>(
+            std::make_pair<uint32_t, uint32_t>(
+                std::move(protocol), std::move(version)),
+            std::move(port)));
+  }
+
  private:
   typedef uint32_t RpcProtocolNumber;
   typedef uint32_t RpcProtocolVersion;
@@ -211,5 +220,12 @@ Rpcbindd::Rpcbindd(
 
 void Rpcbindd::initialize() {
   server_->initialize(folly::SocketAddress("127.0.0.1", kPortmapPortNumber));
+}
+
+void Rpcbindd::recordPortNumber(
+    uint32_t protocol,
+    uint32_t version,
+    uint16_t port) {
+  proc_->recordPortNumber(protocol, version, port);
 }
 } // namespace facebook::eden
