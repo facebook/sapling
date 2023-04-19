@@ -301,7 +301,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> initialize(
       OverlayChecker::ProgressCallback&& progressCallback = [](auto) {},
-      const std::optional<SerializedInodeMap>& takeover = std::nullopt);
+      const std::optional<SerializedInodeMap>& takeover = std::nullopt,
+      const std::optional<MountProtocol>& takeoverMountProtocol = std::nullopt);
 
   /**
    * Destroy the EdenMount.
@@ -434,6 +435,26 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   bool isPrjfsChannel() const;
   bool fsChannelIsInitialized() const;
   std::optional<MountProtocol> getMountProtocol() const;
+
+  /**
+   * This allows earlier detection if this is an NFS mount than isNfsdChannel.
+   *
+   * This should only be called after the mount is "Initializing". (It is the
+   * caller's responsibility to perform proper synchronization here with the
+   * mount start operation.  This method provides no internal synchronization of
+   * its own.)
+   */
+  bool shouldBeOrIsNfsChannel() const;
+
+  bool throwEstaleIfInodeIsMissing() const;
+
+  enum class ReadLocation { InRepo, Overlay };
+
+  /**
+   * Depending on the channel type materialized files (and directories in some
+   * cases) should be read directly out of the repo (ProjFS).
+   */
+  ReadLocation getReadLocationForMaterializedFiles() const;
 
   /**
    * Wait for all inflight notifications to complete.
@@ -1039,18 +1060,17 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       const ObjectFetchContextPtr& context);
 
   /**
-   * Should only be called by the mount contructor. We decide wether this
-   * mount should use nfs at construction time and do not change the decision.
-   * This is so that we can consitently determine if we are determining if we
-   * are using an nfs mount without checking if the channel is an NFS mount.
-   * Needed because the InodeMap which is a dependency of ourselves needs to be
-   * NFS aware. We don't want a dependency inversion where the inode map relies
-   * on the mount to determine if its an NFS inode map.
+   * Should only be called before the EdenMount transitions to the INITIALIZING
+   * state.
+   * We decide wether this mount should use nfs before initialization time and
+   * do not change the decision. This is so that we can consitently determine if
+   * we are determining if we are using an nfs mount without checking if the
+   * channel is an NFS mount. Needed because we need to know the type of mount
+   * earlier than channel object creation. This is for responding to stale
+   * inodes specially for NFS and reading inodes specially off nfs on windows.
    */
-  bool shouldUseNFSMount() {
-    return getEdenConfig()->enableNfsServer.getValue() &&
-        getCheckoutConfig()->getMountProtocol() == MountProtocol::NFS;
-  }
+  void calculateIsNfsMount(
+      const std::optional<MountProtocol>& takeoverMountProtocol);
   /**
    * Clear the fs reference count for all stale inodes. Stale inodes are those
    * that have been unlinked and not recently referenced.
@@ -1243,7 +1263,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Windows). We calculate this when the mount is created based on the
    * underlying dynamic configuration.
    */
-  bool shouldUseNFSMount_;
+  std::optional<bool> shouldUseNFSMount_{std::nullopt};
 
   std::unique_ptr<InodeMap> inodeMap_;
 

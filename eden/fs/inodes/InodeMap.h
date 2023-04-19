@@ -98,10 +98,7 @@ class InodeMap {
  public:
   using PromiseVector = std::vector<folly::Promise<InodePtr>>;
 
-  explicit InodeMap(
-      EdenMount* mount,
-      std::shared_ptr<ReloadableConfig> config,
-      bool throwEstaleIfInodeIsMissing);
+  explicit InodeMap(EdenMount* mount, std::shared_ptr<ReloadableConfig> config);
   virtual ~InodeMap();
 
   InodeMap(InodeMap&&) = delete;
@@ -746,15 +743,6 @@ class InodeMap {
    * the InodeMap while holding their own lock.)
    */
   folly::Synchronized<Members> data_;
-
-  /**
-   * This boolean controls EdenFS's response to receiving a request for an
-   * unknown inode. When this is true ESTALE is thrown. When this is false
-   * this will abruptly terminate the EdenFS process. This should be set on
-   * platforms that need to be forgiving of old inode numbers being used (ex.
-   * NFSv3).
-   */
-  bool throwEstaleIfInodeIsMissing_;
 
   /**
    * The number of inodes that we have unloaded with our periodic

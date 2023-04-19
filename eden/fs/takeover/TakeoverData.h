@@ -15,6 +15,7 @@
 #include <folly/futures/Promise.h>
 #include <folly/io/Cursor.h>
 
+#include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/takeover/gen-cpp2/takeover_types.h"
 #include "eden/fs/utils/FsChannelTypes.h"
 #include "eden/fs/utils/FutureUnixSocket.h"
@@ -255,6 +256,8 @@ class TakeoverData {
           bindMounts{bindMountPaths},
           channelInfo{std::move(projfsChannelData)},
           inodeMap{std::move(inodeMap)} {}
+
+    MountProtocol getMountProtocol() const;
 
     AbsolutePath mountPath;
     AbsolutePath stateDirectory;

@@ -99,13 +99,8 @@ InodeType InodeMap::UnloadedInode::getInodeType() const {
   return S_ISDIR(mode) ? InodeType::TREE : InodeType::FILE;
 }
 
-InodeMap::InodeMap(
-    EdenMount* mount,
-    std::shared_ptr<ReloadableConfig> config,
-    bool throwEstaleIfInodeIsMissing)
-    : mount_{mount},
-      config_{std::move(config)},
-      throwEstaleIfInodeIsMissing_{throwEstaleIfInodeIsMissing} {}
+InodeMap::InodeMap(EdenMount* mount, std::shared_ptr<ReloadableConfig> config)
+    : mount_{mount}, config_{std::move(config)} {}
 
 InodeMap::~InodeMap() {
   // TODO: We need to clean up the EdenMount / InodeMap destruction process a
@@ -281,7 +276,7 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
   // Look up the data in the unloadedInodes_ map.
   auto unloadedIter = data->unloadedInodes_.find(number);
   if (UNLIKELY(unloadedIter == data->unloadedInodes_.end())) {
-    if (throwEstaleIfInodeIsMissing_) {
+    if (mount_->throwEstaleIfInodeIsMissing()) {
       XLOG(DBG3) << "NFS inode " << number << " stale";
       // windows does not have ESTALE. We need some other error to turn into the
       // nfs stale error. For now let's just let it throw.

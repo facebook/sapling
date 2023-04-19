@@ -258,11 +258,7 @@ EdenMount::EdenMount(
           serverState_->getEdenConfig()->prjfsNumInvalidationThreads.getValue(),
           "prjfs-dir-inval")},
 #endif
-      shouldUseNFSMount_{shouldUseNFSMount()},
-      inodeMap_{new InodeMap(
-          this,
-          serverState_->getReloadableConfig(),
-          shouldUseNFSMount_)},
+      inodeMap_{new InodeMap(this, serverState_->getReloadableConfig())},
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
       blobAccess_{objectStore_, blobCache_},
@@ -388,7 +384,12 @@ class TreeLookupProcessor {
 
 FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
     OverlayChecker::ProgressCallback&& progressCallback,
-    const std::optional<SerializedInodeMap>& takeover) {
+    const std::optional<SerializedInodeMap>& takeover,
+    const std::optional<MountProtocol>& takeoverMountProtocol) {
+  // it is an invariant that shouldUseNfs_ is set before we transition to
+  // INITIALIZING
+  calculateIsNfsMount(takeoverMountProtocol);
+
   transitionState(State::UNINITIALIZED, State::INITIALIZING);
 
   auto parentCommit = checkoutConfig_->getParentCommit();
@@ -1251,6 +1252,53 @@ std::optional<MountProtocol> EdenMount::getMountProtocol() const {
   return std::nullopt;
 }
 
+void EdenMount::calculateIsNfsMount(
+    const std::optional<MountProtocol>& takeover) {
+  if (takeover) {
+    shouldUseNFSMount_ = takeover.value() == MountProtocol::NFS;
+  } else {
+    shouldUseNFSMount_ = getEdenConfig()->enableNfsServer.getValue() &&
+        getCheckoutConfig()->getMountProtocol() == MountProtocol::NFS;
+  }
+  // So this whole method should run before the mount is initialized.
+  XCHECK_LT(
+      folly::to_underlying(state_.load(std::memory_order_acquire)),
+      folly::to_underlying(State::INITIALIZING))
+      << "The invariant that shouldUseNFSMount_ should not be modified after "
+         "the mount has started initializing has been violated. This could "
+         "make calls to shouldBeOrIsNfsChannel unsafe.";
+}
+
+bool EdenMount::shouldBeOrIsNfsChannel() const {
+  XCHECK_GE(
+      folly::to_underlying(state_.load(std::memory_order_acquire)),
+      folly::to_underlying(State::INITIALIZING))
+      << "Though we guarantee that we won't modify shouldUseNFSMount_ after "
+         "after initialization begins. shouldUseNFSMount_ might be set any time "
+         "before initialization starts and we provide no explicit synchronization "
+         "on it, so it is not safe to access right now.";
+  XCHECK(shouldUseNFSMount_.has_value())
+      << "shouldUseNFSMount_ should have been set by this point. It is intended"
+         " that this is set before the mount begins initializing, and we only "
+         "access it after the mount has started initializing. ";
+  return shouldUseNFSMount_.value();
+}
+
+bool EdenMount::throwEstaleIfInodeIsMissing() const {
+  return shouldBeOrIsNfsChannel();
+}
+
+EdenMount::ReadLocation EdenMount::getReadLocationForMaterializedFiles() const {
+#ifdef _WIN32
+  if (!shouldBeOrIsNfsChannel()) {
+    // if we are on Windows and  the mount is not an NFS channel then it must be
+    // a prjfs one.
+    return ReadLocation::InRepo;
+  }
+#endif
+  return ReadLocation::Overlay;
+}
+
 ProcessAccessLog& EdenMount::getProcessAccessLog() const {
 #ifdef _WIN32
   return getPrjfsChannel()->getProcessAccessLog();
@@ -2083,7 +2131,7 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
         AbsolutePath mountPath = getPath();
         auto edenConfig = getEdenConfig();
 
-        if (shouldUseNFSMount_) {
+        if (shouldBeOrIsNfsChannel()) {
           auto iosize = edenConfig->nfsIoSize.getValue();
           auto useReaddirplus = edenConfig->useReaddirplus.getValue();
 
@@ -2399,7 +2447,7 @@ void EdenMount::fsChannelInitSuccessful(
 void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
 #ifndef _WIN32
   transitionState(State::INITIALIZED, State::STARTING);
-  shouldUseNFSMount_ = false;
+
   try {
     beginMount().setValue();
 
@@ -2426,7 +2474,6 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
 folly::Future<folly::Unit> EdenMount::takeoverNfs(NfsChannelData takeoverData) {
 #ifndef _WIN32
   transitionState(State::INITIALIZED, State::STARTING);
-  shouldUseNFSMount_ = true;
   try {
     beginMount().setValue();
 

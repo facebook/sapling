@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#ifndef _WIN32
-
 #include "eden/fs/takeover/TakeoverData.h"
 
 #include <memory>
@@ -29,13 +27,13 @@ using folly::IOBuf;
 using std::string;
 
 namespace facebook::eden {
-
+#ifndef _WIN32
 namespace {
 
 /**
  * Determines the mount protocol for the mount point encoded in the mountInfo.
  */
-TakeoverMountProtocol getMountProtocol(
+TakeoverMountProtocol getTakeoverMountProtocol(
     const TakeoverData::MountInfo& mountInfo) {
   if (std::holds_alternative<FuseChannelData>(mountInfo.channelInfo)) {
     return TakeoverMountProtocol::FUSE;
@@ -49,6 +47,24 @@ TakeoverMountProtocol getMountProtocol(
 }
 
 } // namespace
+#endif
+
+MountProtocol TakeoverData::MountInfo::getMountProtocol() const {
+  if (std::holds_alternative<FuseChannelData>(channelInfo)) {
+    return MountProtocol::FUSE;
+  } else if (std::holds_alternative<NfsChannelData>(channelInfo)) {
+    return MountProtocol::NFS;
+  } else if (std::holds_alternative<ProjFsChannelData>(channelInfo)) {
+    return MountProtocol::PRJFS;
+  }
+
+  throwf<std::runtime_error>(
+      "unrecognized mount protocol {} for mount: {}",
+      channelInfo.index(),
+      mountPath);
+}
+
+#ifndef _WIN32
 
 const std::set<int32_t> kSupportedTakeoverVersions{
     TakeoverData::kTakeoverProtocolVersionThree,
@@ -517,7 +533,7 @@ IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
 
   std::vector<SerializedMountInfo> serializedMounts;
   for (const auto& mount : mountPoints) {
-    auto mountProtocol = getMountProtocol(mount);
+    auto mountProtocol = getTakeoverMountProtocol(mount);
 
     checkCanSerDeMountType(
         protocolCapabilities, mountProtocol, mount.mountPath.view());
@@ -702,7 +718,6 @@ TakeoverData TakeoverData::deserializeThriftMounts(
   }
   return data;
 }
+#endif
 
 } // namespace facebook::eden
-
-#endif

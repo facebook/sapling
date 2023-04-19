@@ -508,7 +508,11 @@ void TestMount::remountGracefully() {
       serverState_,
       std::move(journal),
       stats_.copy());
-  edenMount_->initialize([](auto) {}, takeoverData)
+  edenMount_
+      ->initialize(
+          [](auto) {},
+          takeoverData,
+          std::optional<MountProtocol>(MountProtocol::FUSE))
       .getVia(serverExecutor_.get());
   rootInode_ = edenMount_->getRootInodeUnchecked();
 }

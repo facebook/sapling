@@ -39,6 +39,7 @@
 
 #include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/TomlConfig.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -67,6 +68,7 @@
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
+#include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
@@ -1529,6 +1531,8 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   auto initializeFuture = edenMount->initialize(
       std::move(progressCallback),
       doTakeover ? std::make_optional(optionalTakeover->inodeMap)
+                 : std::nullopt,
+      doTakeover ? std::make_optional(optionalTakeover->getMountProtocol())
                  : std::nullopt);
   return std::move(initializeFuture)
       .thenValue([this,
