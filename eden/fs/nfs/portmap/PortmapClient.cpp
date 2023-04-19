@@ -44,24 +44,42 @@ PortmapClient::PortmapClient()
         addr.getPath());
   }
 #endif
-  // TODO: it seems like this is not the right thing todo on Windows. needs
-  // fixing
+  // TODO: We should make the portmapper client (or some interface and derived
+  // implementation version of it) cross platform. Currently we are
+  // registering our rpc servers with the portmapper directly on Windows, and
+  // that is easier to do with out the portmapper client. We should put the
+  // registration behind a common abstraction. Perhaps We should even teach the
+  // port mapper client to speak v2 and register themselves over the socket?
+#ifndef _WIN32
   client_.connect();
+#endif
 }
 
 bool PortmapClient::unsetMapping(PortmapMapping map) {
+#ifndef _WIN32
   return client_.call<bool, PortmapMapping>(
       kPortmapProgNumber, kPortmapVersionNumber, kPortmapUnSet, map);
+#else
+  return false;
+#endif
 }
 
 bool PortmapClient::setMapping(PortmapMapping map) {
+#ifndef _WIN32
   return client_.call<bool, PortmapMapping>(
       kPortmapProgNumber, kPortmapVersionNumber, kPortmapSet, map);
+#else
+  return false;
+#endif
 }
 
 std::string PortmapClient::getAddr(PortmapMapping map) {
+#ifndef _WIN32
   return client_.call<std::string, PortmapMapping>(
       kPortmapProgNumber, kPortmapVersionNumber, kPortmapGetAddr, map);
+#else
+  return "";
+#endif
 }
 
 } // namespace facebook::eden
