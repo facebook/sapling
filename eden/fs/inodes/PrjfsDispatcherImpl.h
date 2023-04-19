@@ -20,6 +20,8 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
  public:
   explicit PrjfsDispatcherImpl(EdenMount* mount);
 
+  EdenTimestamp getLastCheckoutTime() const override;
+
   ImmediateFuture<std::vector<PrjfsDirEntry>> opendir(
       RelativePath path,
       const ObjectFetchContextPtr& context) override;

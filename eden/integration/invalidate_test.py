@@ -137,3 +137,13 @@ class InvalidateTest(testcase.EdenRepoTest):
         self.read_all()
         self.invalidate("", seconds=10, background=True)
         time.sleep(2)
+
+    def test_invalidate_keep_timestamp(self) -> None:
+        self.read_all()
+        st_before = os.stat(self.get_path("a/1"))
+        time.sleep(5)
+        self.invalidate("", seconds=0)
+        st_after = os.stat(self.get_path("a/1"))
+
+        self.assertEqual(st_before.st_mtime, st_after.st_mtime)
+        self.assertEqual(st_before.st_ctime, st_after.st_ctime)

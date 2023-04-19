@@ -71,6 +71,10 @@ PrjfsDispatcherImpl::PrjfsDispatcherImpl(EdenMount* mount)
           folly::SerialExecutor::create(folly::getKeepAliveToken(&executor_))},
       dotEdenConfig_{makeDotEdenConfig(*mount)} {}
 
+EdenTimestamp PrjfsDispatcherImpl::getLastCheckoutTime() const {
+  return mount_->getLastCheckoutTime();
+}
+
 ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
     RelativePath path,
     const ObjectFetchContextPtr& context) {

@@ -37,6 +37,12 @@ static_assert(
 constexpr int64_t kEpochOffsetSeconds = 0x80000000ll;
 
 /**
+ * On Windows, the FILETIME offset is 11644473600 seconds before the unix
+ * epoch, which works out to Jan 1st, 1601.
+ */
+constexpr int64_t kEpochFileTimeOffsetSeconds = 11644473600ll;
+
+/**
  * Largest representable sec,nsec pair.
  *
  * $ python3
@@ -127,6 +133,21 @@ EdenTimestamp::EdenTimestamp(timespec ts, ThrowIfOutOfRange)
 
 timespec EdenTimestamp::toTimespec() const noexcept {
   return repToTimespec(nsec_);
+}
+
+timespec EdenTimestamp::toFileTime() const noexcept {
+  constexpr uint64_t kOffsetSinceEdenEpochSeconds =
+      kEpochFileTimeOffsetSeconds - kEpochOffsetSeconds;
+  uint64_t offsetSinceEdenEpochNsec =
+      kOffsetSinceEdenEpochSeconds * 1000000000ull;
+
+  // TODO(xavierd): Handle nsec_ > max representable timespec.
+
+  auto timestamp = offsetSinceEdenEpochNsec + nsec_;
+  timespec ts;
+  ts.tv_sec = timestamp / 1000000000ull;
+  ts.tv_nsec = timestamp % 1000000000ull;
+  return ts;
 }
 
 #ifndef _WIN32

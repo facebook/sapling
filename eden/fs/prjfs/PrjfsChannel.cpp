@@ -441,6 +441,15 @@ HRESULT PrjfsChannelInner::endEnumeration(
   return S_OK;
 }
 
+namespace {
+LARGE_INTEGER timespecToPrjTime(EdenTimestamp time) {
+  auto filetime = time.toFileTime();
+  LARGE_INTEGER res;
+  res.QuadPart = (filetime.tv_sec * 1000000000ull + filetime.tv_nsec) / 100ull;
+  return res;
+}
+} // namespace
+
 HRESULT PrjfsChannelInner::getEnumerationData(
     std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
@@ -490,11 +499,15 @@ HRESULT PrjfsChannelInner::getEnumerationData(
     context->startRequest(getStats().copy(), stat, requestWatch);
 
     return enumerator->prepareEnumeration().thenValue(
-        [buffer,
+        [this,
+         buffer,
          context = std::move(context),
          enumerator =
              std::move(enumerator)](std::shared_ptr<Enumeration> enumeration) {
           bool added = false;
+          auto timestamp = dispatcher_->getLastCheckoutTime();
+          auto prjTime = timespecToPrjTime(timestamp);
+
           for (auto optEntry = enumeration->getCurrent(); optEntry.has_value();
                optEntry = enumeration->getNext()) {
             auto& entry = optEntry.value();
@@ -502,6 +515,9 @@ HRESULT PrjfsChannelInner::getEnumerationData(
             auto fileInfo = PRJ_FILE_BASIC_INFO();
             fileInfo.IsDirectory = entry.isDir;
             fileInfo.FileSize = entry.size;
+            fileInfo.CreationTime = prjTime;
+            fileInfo.LastWriteTime = prjTime;
+            fileInfo.ChangeTime = prjTime;
 
             XLOGF(
                 DBG6,
@@ -560,7 +576,7 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
     return dispatcher_
         ->lookup(std::move(path), context->getObjectFetchContext())
         .thenValue(
-            [context, virtualizationContext = virtualizationContext](
+            [this, context, virtualizationContext = virtualizationContext](
                 std::optional<LookupResult>&& optLookupResult)
                 -> ImmediateFuture<folly::Unit> {
               if (!optLookupResult) {
@@ -569,9 +585,15 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
               }
               const auto& lookupResult = optLookupResult.value();
 
+              auto timestamp = dispatcher_->getLastCheckoutTime();
+              auto prjTime = timespecToPrjTime(timestamp);
+
               PRJ_PLACEHOLDER_INFO placeholderInfo{};
               placeholderInfo.FileBasicInfo.IsDirectory = lookupResult.isDir;
               placeholderInfo.FileBasicInfo.FileSize = lookupResult.size;
+              placeholderInfo.FileBasicInfo.CreationTime = prjTime;
+              placeholderInfo.FileBasicInfo.LastWriteTime = prjTime;
+              placeholderInfo.FileBasicInfo.ChangeTime = prjTime;
               auto inodeName = lookupResult.path.wide();
 
               HRESULT result = PrjWritePlaceholderInfo(

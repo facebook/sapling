@@ -9,6 +9,7 @@
 
 #include <folly/portability/Windows.h>
 
+#include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -39,6 +40,14 @@ class PrjfsDispatcher {
   explicit PrjfsDispatcher(EdenStatsPtr stats);
 
   const EdenStatsPtr& getStats() const;
+
+  /**
+   * Get the timestamp of the last time a checkout was performed.
+   *
+   * This must be monotonically increasing as this timestamp will be used when
+   * writing placeholders in the working copy.
+   */
+  virtual EdenTimestamp getLastCheckoutTime() const = 0;
 
   /**
    * Open a directory

@@ -83,6 +83,11 @@ class EdenTimestamp {
   timespec toTimespec() const noexcept;
 
   /**
+   * Returns a timespec representing duration since Windows FILETIME epoch.
+   */
+  timespec toFileTime() const noexcept;
+
+  /**
    * Returns the raw representation -- should be for testing only.  :)
    */
   uint64_t asRawRepresentation() const noexcept {

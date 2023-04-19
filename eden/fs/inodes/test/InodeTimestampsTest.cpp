@@ -38,6 +38,15 @@ TEST(EdenTimestamp, zero_timespec_is_unix_epoch) {
   EXPECT_EQ(0, et.toTimespec().tv_nsec);
 }
 
+TEST(EdenTimestamp, zero_timespec_to_filetime) {
+  auto ts = timespec{};
+  auto et = EdenTimestamp{ts};
+
+  auto filetime = et.toFileTime();
+  EXPECT_EQ(filetime.tv_sec, 11644473600ll);
+  EXPECT_EQ(filetime.tv_nsec, 0);
+}
+
 TEST(EdenTimestamp, round_trip_shortly_after_epoch) {
   timespec ts1;
   ts1.tv_sec = 1;
