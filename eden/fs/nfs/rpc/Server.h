@@ -424,7 +424,7 @@ class RpcServer : public std::enable_shared_from_this<RpcServer> {
     PortmapState() = default;
 
     PortmapClient portMap;
-    std::vector<PortmapMapping> mappedPorts;
+    std::vector<PortmapMapping4> mappedPorts;
   };
   folly::Synchronized<std::optional<PortmapState>> portMapState_;
 

@@ -663,8 +663,8 @@ namespace {
 
 std::pair<std::string, std::string> getNetIdAndAddr(const SocketAddress& addr) {
   if (addr.isFamilyInet()) {
-    auto netid = addr.getFamily() == AF_INET6 ? PortmapMapping::kTcp6NetId
-                                              : PortmapMapping::kTcpNetId;
+    auto netid = addr.getFamily() == AF_INET6 ? PortmapMapping4::kTcp6NetId
+                                              : PortmapMapping4::kTcpNetId;
     auto port = addr.getPort();
     // The port format is a bit odd, reversed from looking at rpcinfo output.
     return {
@@ -672,7 +672,7 @@ std::pair<std::string, std::string> getNetIdAndAddr(const SocketAddress& addr) {
         fmt::format(
             "{}.{}.{}", addr.getAddressStr(), (port >> 8) & 0xff, port & 0xff)};
   } else {
-    return {PortmapMapping::kLocalNetId, addr.getPath()};
+    return {PortmapMapping4::kLocalNetId, addr.getPath()};
   }
 }
 
@@ -692,7 +692,7 @@ void RpcServer::registerService(uint32_t progNumber, uint32_t progVersion) {
   auto addrs = serverSocket_->getAddresses();
   for (auto& addr : addrs) {
     auto [netid, addrStr] = getNetIdAndAddr(addr);
-    PortmapMapping mapping{progNumber, progVersion, netid, addrStr, "edenfs"};
+    PortmapMapping4 mapping{progNumber, progVersion, netid, addrStr, "edenfs"};
     state.portMap.setMapping(mapping);
     state.mappedPorts.push_back(std::move(mapping));
   }

@@ -17,17 +17,6 @@ using folly::SocketAddress;
 
 namespace facebook::eden {
 
-namespace {
-constexpr uint32_t kPortmapPortNumber = 111;
-constexpr uint32_t kPortmapProgNumber = 100000;
-constexpr uint32_t kPortmapVersionNumber = 4;
-constexpr uint32_t kPortmapSet = 1;
-constexpr uint32_t kPortmapUnSet = 2;
-constexpr uint32_t kPortmapGetAddr = 3;
-} // namespace
-
-EDEN_XDR_SERDE_IMPL(PortmapMapping, prog, vers, netid, addr, owner);
-
 PortmapClient::PortmapClient()
     : client_(SocketAddress("127.0.0.1", kPortmapPortNumber)) {
 #ifdef __APPLE__
@@ -55,28 +44,37 @@ PortmapClient::PortmapClient()
 #endif
 }
 
-bool PortmapClient::unsetMapping(PortmapMapping map) {
+bool PortmapClient::unsetMapping(PortmapMapping4 map) {
 #ifndef _WIN32
-  return client_.call<bool, PortmapMapping>(
-      kPortmapProgNumber, kPortmapVersionNumber, kPortmapUnSet, map);
+  return client_.call<bool, PortmapMapping4>(
+      kPortmapProgNumber,
+      kPortmapVersion4,
+      folly::to_underlying(rpcbindProcs4::unset),
+      map);
 #else
   return false;
 #endif
 }
 
-bool PortmapClient::setMapping(PortmapMapping map) {
+bool PortmapClient::setMapping(PortmapMapping4 map) {
 #ifndef _WIN32
-  return client_.call<bool, PortmapMapping>(
-      kPortmapProgNumber, kPortmapVersionNumber, kPortmapSet, map);
+  return client_.call<bool, PortmapMapping4>(
+      kPortmapProgNumber,
+      kPortmapVersion4,
+      folly::to_underlying(rpcbindProcs4::set),
+      map);
 #else
   return false;
 #endif
 }
 
-std::string PortmapClient::getAddr(PortmapMapping map) {
+std::string PortmapClient::getAddr(PortmapMapping4 map) {
 #ifndef _WIN32
-  return client_.call<std::string, PortmapMapping>(
-      kPortmapProgNumber, kPortmapVersionNumber, kPortmapGetAddr, map);
+  return client_.call<std::string, PortmapMapping4>(
+      kPortmapProgNumber,
+      kPortmapVersion4,
+      folly::to_underlying(rpcbindProcs4::getaddr),
+      map);
 #else
   return "";
 #endif
