@@ -543,10 +543,6 @@ IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
     *serializedMount.mountPath_ref() = mount.mountPath.asString();
     *serializedMount.stateDirectory_ref() = mount.stateDirectory.asString();
 
-    for (const auto& bindMount : mount.bindMounts) {
-      serializedMount.bindMountPaths_ref()->push_back(bindMount.asString());
-    }
-
     if (auto fuseChannelInfo =
             std::get_if<FuseChannelData>(&mount.channelInfo)) {
       // Stuffing the fuse connection information in as a binary
@@ -671,10 +667,6 @@ TakeoverData TakeoverData::deserializeThriftMounts(
     std::vector<SerializedMountInfo>& serializedMounts) {
   TakeoverData data;
   for (auto& serializedMount : serializedMounts) {
-    std::vector<AbsolutePath> bindMounts;
-    for (const auto& path : *serializedMount.bindMountPaths_ref()) {
-      bindMounts.emplace_back(canonicalPath(path));
-    }
     switch (*serializedMount.mountProtocol_ref()) {
       case TakeoverMountProtocol::UNKNOWN:
         if (protocolCapabilities & TakeoverCapabilities::MOUNT_TYPES) {
@@ -692,7 +684,6 @@ TakeoverData TakeoverData::deserializeThriftMounts(
         data.mountPoints.emplace_back(
             canonicalPath(*serializedMount.mountPath_ref()),
             canonicalPath(*serializedMount.stateDirectory_ref()),
-            std::move(bindMounts),
             FuseChannelData{
                 folly::File{},
                 *reinterpret_cast<const fuse_init_out*>(
@@ -707,7 +698,6 @@ TakeoverData TakeoverData::deserializeThriftMounts(
         data.mountPoints.emplace_back(
             canonicalPath(*serializedMount.mountPath_ref()),
             canonicalPath(*serializedMount.stateDirectory_ref()),
-            std::move(bindMounts),
             NfsChannelData{folly::File{}},
             std::move(*serializedMount.inodeMap_ref()));
         break;

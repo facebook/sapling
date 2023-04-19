@@ -218,12 +218,10 @@ class TakeoverData {
     MountInfo(
         AbsolutePathPiece mountPath,
         AbsolutePathPiece stateDirectory,
-        const std::vector<AbsolutePath>& bindMountPaths,
         NfsChannelData nfsChannelData,
         SerializedInodeMap&& inodeMap)
         : mountPath{mountPath},
           stateDirectory{stateDirectory},
-          bindMounts{bindMountPaths},
           channelInfo{std::move(nfsChannelData)},
           inodeMap{std::move(inodeMap)} {}
 
@@ -233,12 +231,10 @@ class TakeoverData {
     MountInfo(
         AbsolutePathPiece mountPath,
         AbsolutePathPiece stateDirectory,
-        const std::vector<AbsolutePath>& bindMountPaths,
         FuseChannelData fuseChannelData,
         SerializedInodeMap&& inodeMap)
         : mountPath{mountPath},
           stateDirectory{stateDirectory},
-          bindMounts{bindMountPaths},
           channelInfo{std::move(fuseChannelData)},
           inodeMap{std::move(inodeMap)} {}
 
@@ -248,12 +244,10 @@ class TakeoverData {
     MountInfo(
         AbsolutePathPiece mountPath,
         AbsolutePathPiece stateDirectory,
-        const std::vector<AbsolutePath>& bindMountPaths,
         ProjFsChannelData projfsChannelData,
         SerializedInodeMap&& inodeMap)
         : mountPath{mountPath},
           stateDirectory{stateDirectory},
-          bindMounts{bindMountPaths},
           channelInfo{std::move(projfsChannelData)},
           inodeMap{std::move(inodeMap)} {}
 
@@ -261,7 +255,6 @@ class TakeoverData {
 
     AbsolutePath mountPath;
     AbsolutePath stateDirectory;
-    std::vector<AbsolutePath> bindMounts;
 
     std::variant<FuseChannelData, NfsChannelData, ProjFsChannelData>
         channelInfo;

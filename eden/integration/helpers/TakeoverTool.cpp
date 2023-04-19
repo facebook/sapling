@@ -72,9 +72,6 @@ int main(int argc, char* argv[]) {
       mountFD = &nfsChannelData.nfsdSocketFd;
     }
     XLOG(INFO) << "mount " << mount.mountPath << ": fd=" << mountFD->fd();
-    for (const auto& bindMount : mount.bindMounts) {
-      XLOG(INFO) << "  bind mount " << bindMount;
-    }
   }
   return EX_OK;
 }

@@ -269,7 +269,6 @@ void simpleTestImpl(
   serverData.mountPoints.emplace_back(
       mount1Path,
       client1Path,
-      std::vector<AbsolutePath>{},
       FuseChannelData{
           folly::File{mount1FusePath.view(), O_RDWR | O_CREAT},
           fuse_init_out{}},
@@ -278,15 +277,9 @@ void simpleTestImpl(
   auto mount2Path = tmpDirPath + "mount2"_pc;
   auto client2Path = tmpDirPath + "client2"_pc;
   auto mount2FusePath = tmpDirPath + "fuse2"_pc;
-  std::vector<AbsolutePath> mount2BindMounts = {
-      mount2Path + "test/test2"_relpath,
-      canonicalPath("/foo/bar"),
-      mount2Path + "a/b/c/d/e/f"_relpath,
-  };
   serverData.mountPoints.emplace_back(
       mount2Path,
       client2Path,
-      mount2BindMounts,
       FuseChannelData{
           folly::File{mount2FusePath.view(), O_RDWR | O_CREAT},
           fuse_init_out{}},
@@ -318,16 +311,12 @@ void simpleTestImpl(
   ASSERT_EQ(2, clientData.mountPoints.size());
   EXPECT_EQ(mount1Path, clientData.mountPoints.at(0).mountPath);
   EXPECT_EQ(client1Path, clientData.mountPoints.at(0).stateDirectory);
-  EXPECT_THAT(clientData.mountPoints.at(0).bindMounts, ElementsAre());
   auto& fuseChannelData0 =
       std::get<FuseChannelData>(clientData.mountPoints.at(0).channelInfo);
   checkExpectedFile(fuseChannelData0.fd.fd(), mount1FusePath);
 
   EXPECT_EQ(mount2Path, clientData.mountPoints.at(1).mountPath);
   EXPECT_EQ(client2Path, clientData.mountPoints.at(1).stateDirectory);
-  EXPECT_THAT(
-      clientData.mountPoints.at(1).bindMounts,
-      ElementsAreArray(mount2BindMounts));
   auto& fuseChannelData1 =
       std::get<FuseChannelData>(clientData.mountPoints.at(1).channelInfo);
   checkExpectedFile(fuseChannelData1.fd.fd(), mount2FusePath);
@@ -523,18 +512,11 @@ TEST(Takeover, manyMounts) {
         tmpDirPath + RelativePathPiece{folly::to<string>("mounts/foo/test", n)};
     auto stateDirectory =
         tmpDirPath + RelativePathPiece{folly::to<string>("client", n)};
-    // Define 0 to 9 bind mounts
-    std::vector<AbsolutePath> bindMounts;
-    for (size_t b = 0; b < n % 10; ++b) {
-      bindMounts.emplace_back(
-          mountPath + RelativePathPiece{folly::to<string>("bind_mount", b)});
-    }
     auto fusePath =
         tmpDirPath + PathComponentPiece{folly::to<string>("fuse", n)};
     serverData.mountPoints.emplace_back(
         mountPath,
         stateDirectory,
-        bindMounts,
         FuseChannelData{
             folly::File{fusePath.view(), O_RDWR | O_CREAT}, fuse_init_out{}},
         SerializedInodeMap{});
@@ -564,14 +546,6 @@ TEST(Takeover, manyMounts) {
     auto expectedClientPath =
         tmpDirPath + RelativePathPiece{folly::to<string>("client", n)};
     EXPECT_EQ(expectedClientPath, mountInfo.stateDirectory);
-
-    std::vector<AbsolutePath> expectedBindMounts;
-    for (size_t b = 0; b < n % 10; ++b) {
-      expectedBindMounts.emplace_back(
-          expectedMountPath +
-          RelativePathPiece{folly::to<string>("bind_mount", b)});
-    }
-    EXPECT_THAT(mountInfo.bindMounts, ElementsAreArray(expectedBindMounts));
 
     auto expectedFusePath =
         tmpDirPath + PathComponentPiece{folly::to<string>("fuse", n)};
@@ -678,7 +652,6 @@ TEST(Takeover, nfs) {
   serverData.mountPoints.emplace_back(
       mount1Path,
       client1Path,
-      std::vector<AbsolutePath>{},
       FuseChannelData{
           folly::File{mount1FusePath.view(), O_RDWR | O_CREAT},
           fuse_init_out{}},
@@ -687,15 +660,9 @@ TEST(Takeover, nfs) {
   auto mount2Path = tmpDirPath + "mount2"_pc;
   auto client2Path = tmpDirPath + "client2"_pc;
   auto mount2NfsPath = tmpDirPath + "nfs"_pc;
-  std::vector<AbsolutePath> mount2BindMounts = {
-      mount2Path + "test/test2"_relpath,
-      canonicalPath("/foo/bar"),
-      mount2Path + "a/b/c/d/e/f"_relpath,
-  };
   serverData.mountPoints.emplace_back(
       mount2Path,
       client2Path,
-      mount2BindMounts,
       NfsChannelData{folly::File{mount2NfsPath.view(), O_RDWR | O_CREAT}},
       SerializedInodeMap{});
 
@@ -717,16 +684,12 @@ TEST(Takeover, nfs) {
   ASSERT_EQ(2, clientData.mountPoints.size());
   EXPECT_EQ(mount1Path, clientData.mountPoints.at(0).mountPath);
   EXPECT_EQ(client1Path, clientData.mountPoints.at(0).stateDirectory);
-  EXPECT_THAT(clientData.mountPoints.at(0).bindMounts, ElementsAre());
   auto& fuseChannelData =
       std::get<FuseChannelData>(clientData.mountPoints.at(0).channelInfo);
   checkExpectedFile(fuseChannelData.fd.fd(), mount1FusePath);
 
   EXPECT_EQ(mount2Path, clientData.mountPoints.at(1).mountPath);
   EXPECT_EQ(client2Path, clientData.mountPoints.at(1).stateDirectory);
-  EXPECT_THAT(
-      clientData.mountPoints.at(1).bindMounts,
-      ElementsAreArray(mount2BindMounts));
   auto& nfsChannelData =
       std::get<NfsChannelData>(clientData.mountPoints.at(1).channelInfo);
   checkExpectedFile(nfsChannelData.nfsdSocketFd.fd(), mount2NfsPath);
@@ -760,7 +723,6 @@ TEST(Takeover, mixedupFdOrder) {
   serverData.mountPoints.emplace_back(
       mount1Path,
       client1Path,
-      std::vector<AbsolutePath>{},
       FuseChannelData{
           folly::File{mount1FusePath.view(), O_RDWR | O_CREAT},
           fuse_init_out{}},
@@ -784,7 +746,6 @@ TEST(Takeover, mixedupFdOrder) {
   ASSERT_EQ(1, clientData.mountPoints.size());
   EXPECT_EQ(mount1Path, clientData.mountPoints.at(0).mountPath);
   EXPECT_EQ(client1Path, clientData.mountPoints.at(0).stateDirectory);
-  EXPECT_THAT(clientData.mountPoints.at(0).bindMounts, ElementsAre());
   auto& fuseChannelData0 =
       std::get<FuseChannelData>(clientData.mountPoints.at(0).channelInfo);
   checkExpectedFile(fuseChannelData0.fd.fd(), mount1FusePath);
@@ -815,7 +776,6 @@ TEST(Takeover, missingFdOrder) {
   serverData.mountPoints.emplace_back(
       mount1Path,
       client1Path,
-      std::vector<AbsolutePath>{},
       FuseChannelData{
           folly::File{mount1FusePath.view(), O_RDWR | O_CREAT},
           fuse_init_out{}},
@@ -857,7 +817,6 @@ TEST(Takeover, nfsNotEnabled) {
   serverData.mountPoints.emplace_back(
       mount1Path,
       client1Path,
-      std::vector<AbsolutePath>{},
       FuseChannelData{
           folly::File{mount1FusePath.view(), O_RDWR | O_CREAT},
           fuse_init_out{}},
@@ -881,7 +840,6 @@ TEST(Takeover, nfsNotEnabled) {
   ASSERT_EQ(1, clientData.mountPoints.size());
   EXPECT_EQ(mount1Path, clientData.mountPoints.at(0).mountPath);
   EXPECT_EQ(client1Path, clientData.mountPoints.at(0).stateDirectory);
-  EXPECT_THAT(clientData.mountPoints.at(0).bindMounts, ElementsAre());
   auto& fuseChannelData0 =
       std::get<FuseChannelData>(clientData.mountPoints.at(0).channelInfo);
   checkExpectedFile(fuseChannelData0.fd.fd(), mount1FusePath);

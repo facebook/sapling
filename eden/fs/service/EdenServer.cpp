@@ -1438,17 +1438,15 @@ Future<Unit> EdenServer::performTakeoverStart(
     FOLLY_MAYBE_UNUSED TakeoverData::MountInfo&& info) {
 #ifndef _WIN32
   auto mountPath = info.mountPath;
-  std::vector<std::string> bindMounts;
-  for (const auto& bindMount : info.bindMounts) {
-    bindMounts.emplace_back(bindMount.value());
-  }
 
   auto future = completeTakeoverStart(edenMount, std::move(info));
   return std::move(future).thenValue(
       [this,
        edenMount = std::move(edenMount),
-       bindMounts = std::move(bindMounts),
        mountPath = std::move(mountPath)](auto&&) mutable {
+        // Daemon-managed bind mounts are vestigial, but left in the privhelper
+        // protocol in case we change our mind.
+        std::vector<std::string> bindMounts;
         return serverState_->getPrivHelper()->takeoverStartup(
             mountPath.view(), bindMounts);
       });

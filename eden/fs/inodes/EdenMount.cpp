@@ -2359,11 +2359,9 @@ void EdenMount::preparePostFsChannelCompletion(
           [this](FOLLY_MAYBE_UNUSED EdenMount::ChannelStopData&& stopData) {
 #ifdef _WIN32
             inodeMap_->setUnmounted();
-            std::vector<AbsolutePath> bindMounts;
             fsChannelCompletionPromise_.setValue(TakeoverData::MountInfo(
                 getPath(),
                 checkoutConfig_->getClientDirectory(),
-                bindMounts,
                 ProjFsChannelData{}, // placeholder
                 SerializedInodeMap{} // placeholder
                 ));
@@ -2379,13 +2377,10 @@ void EdenMount::preparePostFsChannelCompletion(
                       inodeMap_->setUnmounted();
                     }
 
-                    std::vector<AbsolutePath> bindMounts;
-
                     fsChannelCompletionPromise_.setValue(
                         TakeoverData::MountInfo(
                             getPath(),
                             checkoutConfig_->getClientDirectory(),
-                            bindMounts,
                             FuseChannelData{
                                 std::move(variant.fuseDevice),
                                 variant.fuseSettings},
@@ -2397,12 +2392,10 @@ void EdenMount::preparePostFsChannelCompletion(
                     if (!variant.socketToKernel) {
                       inodeMap_->setUnmounted();
                     }
-                    std::vector<AbsolutePath> bindMounts;
                     fsChannelCompletionPromise_.setValue(
                         TakeoverData::MountInfo(
                             getPath(),
                             checkoutConfig_->getClientDirectory(),
-                            bindMounts,
                             NfsChannelData{std::move(variant.socketToKernel)},
                             SerializedInodeMap{} // placeholder
                             ));
