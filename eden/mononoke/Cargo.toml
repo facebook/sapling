@@ -405,7 +405,6 @@ members = [
   "server",
   "server/context",
   "server/metadata",
-  "server/monitoring",
   "server/qps",
   "server/repo_listener",
   "server/session_id",
