@@ -27,3 +27,15 @@ target_link_libraries(
     portmap_rpc
     Folly::folly
 )
+
+add_library(
+  eden_nfs_portmap_server STATIC
+    "Rpcbindd.cpp" "Rpcbindd.h"
+)
+
+target_link_libraries(
+  eden_nfs_portmap_server
+  PUBLIC
+    portmap_rpc
+    Folly::folly
+)

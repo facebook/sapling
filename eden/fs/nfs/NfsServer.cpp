@@ -17,22 +17,34 @@ NfsServer::NfsServer(
     folly::EventBase* evb,
     uint64_t numServicingThreads,
     uint64_t maxInflightRequests,
+    bool shouldRunOurOwnRpcbindServer,
     const std::shared_ptr<StructuredLogger>& structuredLogger)
     : evb_(evb),
       threadPool_(std::make_shared<folly::CPUThreadPoolExecutor>(
           numServicingThreads,
           std::make_unique<EdenTaskQueue>(maxInflightRequests),
           std::make_unique<folly::NamedThreadFactory>("NfsThreadPool"))),
+      rpcbindd_(
+          shouldRunOurOwnRpcbindServer
+              ? std::make_shared<Rpcbindd>(evb_, threadPool_, structuredLogger)
+              : nullptr),
       mountd_(evb_, threadPool_, structuredLogger) {}
 
 void NfsServer::initialize(
     folly::SocketAddress addr,
     bool registerMountdWithRpcbind) {
   mountd_.initialize(addr, registerMountdWithRpcbind);
+  if (rpcbindd_) {
+    rpcbindd_->initialize();
+  }
 }
 
 void NfsServer::initialize(folly::File&& socket) {
   mountd_.initialize(std::move(socket));
+  // todo add a config for this
+  if (rpcbindd_) {
+    rpcbindd_->initialize();
+  }
 }
 
 NfsServer::NfsMountInfo NfsServer::registerMount(

@@ -62,6 +62,7 @@ ServerState::ServerState(
                     mainEventBase,
                     initialConfig.numNfsThreads.getValue(),
                     initialConfig.maxNfsInflightRequests.getValue(),
+                    initialConfig.runInternalRpcbind.getValue(),
                     structuredLogger_)
               : nullptr},
       config_{std::move(reloadableConfig)},

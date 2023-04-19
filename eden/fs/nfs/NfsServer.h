@@ -10,6 +10,7 @@
 #include <tuple>
 #include "eden/fs/nfs/Mountd.h"
 #include "eden/fs/nfs/Nfsd3.h"
+#include "eden/fs/nfs/portmap/Rpcbindd.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 
 namespace folly {
@@ -39,6 +40,7 @@ class NfsServer {
       folly::EventBase* evb,
       uint64_t numServicingThreads,
       uint64_t maxInflightRequests,
+      bool shouldRunOurOwnRpcbindServer,
       const std::shared_ptr<StructuredLogger>& structuredLogger);
 
   /**
@@ -105,6 +107,7 @@ class NfsServer {
  private:
   folly::EventBase* evb_;
   std::shared_ptr<folly::Executor> threadPool_;
+  std::shared_ptr<Rpcbindd> rpcbindd_;
   Mountd mountd_;
 };
 

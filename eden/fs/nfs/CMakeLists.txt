@@ -83,6 +83,7 @@ target_link_libraries(
   PUBLIC
     eden_nfs_mountd
     eden_nfs_nfsd3
+    eden_nfs_portmap_server
   PRIVATE
     Folly::folly
 )
