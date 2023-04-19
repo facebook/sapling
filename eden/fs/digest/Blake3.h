@@ -9,7 +9,7 @@
 
 #include <folly/Range.h>
 
-#include <blake3.h> // @manual
+#include <blake3.h>
 
 namespace facebook::eden {
 
