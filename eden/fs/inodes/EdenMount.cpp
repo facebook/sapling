@@ -2299,7 +2299,7 @@ folly::Future<folly::Unit> EdenMount::startFsChannel(bool readOnly) {
                       auto stopFuture =
                           std::move(fuseCompleteFuture)
                               .deferValue(
-                                  [](FuseChannel::StopData&& stopData)
+                                  [](FsStopDataPtr stopData)
                                       -> EdenMount::ChannelStopData {
                                     return std::move(stopData);
                                   });
@@ -2366,42 +2366,40 @@ void EdenMount::preparePostFsChannelCompletion(
                 SerializedInodeMap{} // placeholder
                 ));
 #else
-            std::visit(
-                [this](auto&& variant) {
-                  using T = std::decay_t<decltype(variant)>;
+            fsChannelCompletionPromise_.setWith([&] {
+              return std::visit(
+                  [this](auto&& variant) {
+                    using T = std::decay_t<decltype(variant)>;
 
-                  if constexpr (std::is_same_v<T, EdenMount::FuseStopData>) {
-                    // If the FUSE device is no longer valid then the mount
-                    // point has been unmounted.
-                    if (!variant.fuseDevice) {
-                      inodeMap_->setUnmounted();
-                    }
+                    if constexpr (std::is_same_v<T, EdenMount::FuseStopData>) {
+                      // If the FUSE device is no longer valid then the mount
+                      // point has been unmounted.
+                      if (variant->isUnmounted()) {
+                        inodeMap_->setUnmounted();
+                      }
 
-                    fsChannelCompletionPromise_.setValue(
-                        TakeoverData::MountInfo(
-                            getPath(),
-                            checkoutConfig_->getClientDirectory(),
-                            FuseChannelData{
-                                std::move(variant.fuseDevice),
-                                variant.fuseSettings},
-                            SerializedInodeMap{} // placeholder
-                            ));
-                  } else {
-                    static_assert(std::is_same_v<T, EdenMount::NfsdStopData>);
-                    serverState_->getNfsServer()->unregisterMount(getPath());
-                    if (!variant.socketToKernel) {
-                      inodeMap_->setUnmounted();
+                      return TakeoverData::MountInfo{
+                          getPath(),
+                          checkoutConfig_->getClientDirectory(),
+                          variant->extractTakeoverInfo(),
+                          SerializedInodeMap{} // placeholder
+                      };
+                    } else {
+                      static_assert(std::is_same_v<T, EdenMount::NfsdStopData>);
+                      serverState_->getNfsServer()->unregisterMount(getPath());
+                      if (!variant.socketToKernel) {
+                        inodeMap_->setUnmounted();
+                      }
+                      return TakeoverData::MountInfo{
+                          getPath(),
+                          checkoutConfig_->getClientDirectory(),
+                          NfsChannelData{std::move(variant.socketToKernel)},
+                          SerializedInodeMap{} // placeholder
+                      };
                     }
-                    fsChannelCompletionPromise_.setValue(
-                        TakeoverData::MountInfo(
-                            getPath(),
-                            checkoutConfig_->getClientDirectory(),
-                            NfsChannelData{std::move(variant.socketToKernel)},
-                            SerializedInodeMap{} // placeholder
-                            ));
-                  }
-                },
-                stopData);
+                  },
+                  stopData);
+            });
 #endif
           })
       .thenError([this](folly::exception_wrapper&& ew) {
@@ -2448,8 +2446,7 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
     auto fuseCompleteFuture =
         channel->initializeFromTakeover(takeoverData.connInfo)
             .deferValue(
-                [](FuseChannel::StopData&& stopData)
-                    -> EdenMount::ChannelStopData {
+                [](FsStopDataPtr stopData) -> EdenMount::ChannelStopData {
                   return std::move(stopData);
                 });
     channel_ = std::move(channel);

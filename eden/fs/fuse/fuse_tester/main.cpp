@@ -147,7 +147,8 @@ int main(int argc, char** argv) {
   auto completionFuture = channel->initialize().get();
   XLOG(INFO) << "FUSE started";
 
-  auto stopData = std::move(completionFuture).get();
+  auto stopDataPtr = std::move(completionFuture).get();
+  auto& stopData = dynamic_cast<FuseChannel::StopData&>(*stopDataPtr);
   XLOG(INFO) << "FUSE channel done; stop_reason=" << enumValue(stopData.reason);
 
   return EX_OK;

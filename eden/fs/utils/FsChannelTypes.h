@@ -6,7 +6,10 @@
  */
 
 #pragma once
+
 #include <folly/File.h>
+#include <variant>
+
 #ifdef __linux__
 #include "eden/fs/third-party/fuse_kernel_linux.h" // @manual
 #elif __APPLE__
@@ -18,7 +21,9 @@ namespace facebook::eden {
 #ifndef _WIN32
 using FuseOpcode = decltype(std::declval<fuse_in_header>().opcode);
 #endif
-/** Encapsulates the fuse device & connection information for a mount point.
+
+/**
+ * Encapsulates the fuse device & connection information for a mount point.
  * This is the data that is required to be passed to a new process when
  * performing a graceful restart in order to re-establish the FuseChannel.
  */
@@ -36,5 +41,16 @@ struct NfsChannelData {
 struct ProjFsChannelData {
   // TODO fill this in with data to support takeover on windows
 };
+
+/**
+ * This header is platform- and FS-independent, implying we don't necessarily
+ * know at the type level which filesystem type we're serializing in the
+ * takeover protocol.
+ *
+ * FsChannel supports extracting and reconstructing from a generic
+ * FsChannelInfo.
+ */
+using FsChannelInfo =
+    std::variant<FuseChannelData, NfsChannelData, ProjFsChannelData>;
 
 } // namespace facebook::eden

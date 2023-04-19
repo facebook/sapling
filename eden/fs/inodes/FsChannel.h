@@ -7,9 +7,26 @@
 
 #pragma once
 
+#include "eden/fs/utils/FsChannelTypes.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
+
+class FsStopData {
+ public:
+  virtual ~FsStopData() = default;
+
+  /**
+   * If true, the mount has been stopped and should be considered unmounted.
+   *
+   * If false, this mount is intended to be taken over by a new EdenFS daemon.
+   */
+  virtual bool isUnmounted() = 0;
+
+  virtual FsChannelInfo extractTakeoverInfo() = 0;
+};
+
+using FsStopDataPtr = std::unique_ptr<FsStopData>;
 
 /**
  * A connection to a userspace filesystem driver.

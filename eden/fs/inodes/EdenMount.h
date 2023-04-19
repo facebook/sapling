@@ -1196,7 +1196,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 #ifdef _WIN32
   using ChannelStopData = PrjfsChannel::StopData;
 #else
-  using FuseStopData = FuseChannel::StopData;
+  using FuseStopData = FsStopDataPtr;
   using NfsdStopData = Nfsd3::StopData;
   using ChannelStopData = std::variant<FuseStopData, NfsdStopData>;
 #endif

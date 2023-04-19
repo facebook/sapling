@@ -212,6 +212,16 @@ class TakeoverData {
       uint64_t supported);
 
   struct MountInfo {
+    MountInfo(
+        AbsolutePathPiece mountPath,
+        AbsolutePathPiece stateDirectory,
+        FsChannelInfo channelInfo,
+        SerializedInodeMap&& inodeMap)
+        : mountPath{mountPath},
+          stateDirectory{stateDirectory},
+          channelInfo{std::move(channelInfo)},
+          inodeMap{std::move(inodeMap)} {}
+
     /**
      * Constructor for an NFS mount's MountInfo
      */
@@ -223,19 +233,6 @@ class TakeoverData {
         : mountPath{mountPath},
           stateDirectory{stateDirectory},
           channelInfo{std::move(nfsChannelData)},
-          inodeMap{std::move(inodeMap)} {}
-
-    /**
-     * Constructor for a Fuse mount's MountInfo
-     */
-    MountInfo(
-        AbsolutePathPiece mountPath,
-        AbsolutePathPiece stateDirectory,
-        FuseChannelData fuseChannelData,
-        SerializedInodeMap&& inodeMap)
-        : mountPath{mountPath},
-          stateDirectory{stateDirectory},
-          channelInfo{std::move(fuseChannelData)},
           inodeMap{std::move(inodeMap)} {}
 
     /**
@@ -256,8 +253,7 @@ class TakeoverData {
     AbsolutePath mountPath;
     AbsolutePath stateDirectory;
 
-    std::variant<FuseChannelData, NfsChannelData, ProjFsChannelData>
-        channelInfo;
+    FsChannelInfo channelInfo;
 
     SerializedInodeMap inodeMap;
   };

@@ -179,7 +179,15 @@ class FuseChannel final : public FsChannel {
     WORKER_EXCEPTION,
   };
 
-  struct StopData {
+  struct StopData final : public FsStopData {
+    bool isUnmounted() override {
+      return !fuseDevice;
+    }
+
+    FsChannelInfo extractTakeoverInfo() override {
+      return FuseChannelData{std::move(fuseDevice), fuseSettings};
+    }
+
     /**
      * The reason why the FUSE channel was stopped.
      *
@@ -208,7 +216,7 @@ class FuseChannel final : public FsChannel {
      */
     fuse_init_out fuseSettings = {};
   };
-  using StopFuture = folly::SemiFuture<StopData>;
+  using StopFuture = folly::SemiFuture<FsStopDataPtr>;
 
   struct OutstandingRequest {
     uint64_t unique;
@@ -790,7 +798,7 @@ class FuseChannel final : public FsChannel {
   folly::once_flag unmountLogFlag_;
   folly::Synchronized<State> state_;
   folly::Promise<StopFuture> initPromise_;
-  folly::Promise<StopData> sessionCompletePromise_;
+  folly::Promise<FsStopDataPtr> sessionCompletePromise_;
 
   folly::Synchronized<TelemetryState> telemetryState_;
 

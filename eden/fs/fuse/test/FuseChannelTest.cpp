@@ -165,8 +165,9 @@ TEST_F(FuseChannelTest, testInitUnmount) {
 
   // Wait for the FuseChannel to signal that it has finished.
   auto stopData = std::move(completeFuture).get(kTimeout);
-  EXPECT_EQ(stopData.reason, FuseChannel::StopReason::UNMOUNTED);
-  EXPECT_FALSE(stopData.fuseDevice);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  EXPECT_EQ(fuseStopData->reason, FuseChannel::StopReason::UNMOUNTED);
+  EXPECT_FALSE(fuseStopData->fuseDevice);
 }
 
 TEST_F(FuseChannelTest, testTakeoverStop) {
@@ -181,13 +182,14 @@ TEST_F(FuseChannelTest, testTakeoverStop) {
 
   // Wait for the FuseChannel to signal that it has finished.
   auto stopData = std::move(completeFuture).get(kTimeout);
-  EXPECT_EQ(stopData.reason, FuseChannel::StopReason::TAKEOVER);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  EXPECT_EQ(fuseStopData->reason, FuseChannel::StopReason::TAKEOVER);
   // We should have received the FUSE device and valid settings information
-  EXPECT_TRUE(stopData.fuseDevice);
-  EXPECT_EQ(FUSE_KERNEL_VERSION, stopData.fuseSettings.major);
-  EXPECT_EQ(minorVersion, stopData.fuseSettings.minor);
-  EXPECT_EQ(maxReadahead, stopData.fuseSettings.max_readahead);
-  EXPECT_EQ(flags, stopData.fuseSettings.flags);
+  EXPECT_TRUE(fuseStopData->fuseDevice);
+  EXPECT_EQ(FUSE_KERNEL_VERSION, fuseStopData->fuseSettings.major);
+  EXPECT_EQ(minorVersion, fuseStopData->fuseSettings.minor);
+  EXPECT_EQ(maxReadahead, fuseStopData->fuseSettings.max_readahead);
+  EXPECT_EQ(flags, fuseStopData->fuseSettings.flags);
 }
 
 TEST_F(FuseChannelTest, testInitUnmountRace) {
@@ -202,13 +204,14 @@ TEST_F(FuseChannelTest, testInitUnmountRace) {
 
   // Wait for the session complete future now.
   auto stopData = std::move(completeFuture).get(kTimeout);
-  if (stopData.reason == FuseChannel::StopReason::UNMOUNTED) {
-    EXPECT_FALSE(stopData.fuseDevice);
-  } else if (stopData.reason == FuseChannel::StopReason::DESTRUCTOR) {
-    EXPECT_TRUE(stopData.fuseDevice);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  if (fuseStopData->reason == FuseChannel::StopReason::UNMOUNTED) {
+    EXPECT_FALSE(fuseStopData->fuseDevice);
+  } else if (fuseStopData->reason == FuseChannel::StopReason::DESTRUCTOR) {
+    EXPECT_TRUE(fuseStopData->fuseDevice);
   } else {
     FAIL() << "unexpected FuseChannel stop reason: "
-           << enumValue(stopData.reason);
+           << enumValue(fuseStopData->reason);
   }
 }
 

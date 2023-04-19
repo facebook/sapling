@@ -1838,11 +1838,12 @@ void FuseChannel::sessionComplete(folly::Synchronized<State>::LockedPtr state) {
   bool destroy = state->destroyPending;
 
   // Build the StopData to return
-  StopData data;
-  data.reason = state->stopReason;
-  if (isFuseDeviceValid(data.reason) && connInfo_.has_value()) {
-    data.fuseDevice = std::move(fuseDevice_);
-    data.fuseSettings = connInfo_.value();
+
+  auto data = std::make_unique<StopData>();
+  data->reason = state->stopReason;
+  if (isFuseDeviceValid(data->reason) && connInfo_.has_value()) {
+    data->fuseDevice = std::move(fuseDevice_);
+    data->fuseSettings = connInfo_.value();
   }
 
   // Unlock the state before the remaining steps
