@@ -48,6 +48,19 @@ class RpcbinddServerProcessor final : public RpcServerProcessor {
   dump(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   ImmediateFuture<folly::Unit>
   callit(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
+
+ private:
+  typedef uint32_t RpcProtocolNumber;
+  typedef uint32_t RpcProtocolVersion;
+  typedef uint16_t PortNumber;
+  typedef std::pair<RpcProtocolNumber, RpcProtocolVersion> RpcIdentifier;
+  typedef std::map<RpcIdentifier, PortNumber> RpcMappings;
+
+  // contains the registered RPC services. Maps (server protocol number & server
+  // protocol version -> port. We assume all registered services are going to
+  // use TCP just because we only use TCP today. You can change that assumption,
+  // but you need to add the protocol to the key.
+  folly::Synchronized<RpcMappings> registeredServers_;
 };
 
 namespace {
@@ -111,10 +124,27 @@ ImmediateFuture<folly::Unit> RpcbinddServerProcessor::unset(
 }
 
 ImmediateFuture<folly::Unit> RpcbinddServerProcessor::getport(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  auto args = XdrTrait<PortmapMapping2>::deserialize(deser);
+  XLOG(DBG7) << "prog: " << args.prog;
+  XLOG(DBG7) << "vers: " << args.vers;
+  XLOG(DBG7) << "protocol: " << args.prot;
+  if (args.prot == PortmapMapping2::kTcpProto) {
+    auto lockedServers = registeredServers_.rlock();
+    auto maybePort = lockedServers->find(std::make_pair<uint32_t, uint32_t>(
+        std::move(args.prog), std::move(args.vers)));
+    if (maybePort != lockedServers->end()) {
+      XLOG(DBG7) << "port: " << maybePort->second;
+      XdrTrait<uint32_t>::serialize(ser, maybePort->second);
+      return folly::unit;
+    }
+  }
+  XLOG(DBG7) << "port : none";
+  XdrTrait<uint32_t>::serialize(ser, 0);
   return folly::unit;
 }
 
