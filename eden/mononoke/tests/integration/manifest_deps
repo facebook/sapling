@@ -25,7 +25,6 @@ MONONOKE_BINS = {
     "MONONOKE_GITIMPORT": "gitimport",
     "MONONOKE_HG_SYNC": "mononoke_hg_sync_job",
     "MONONOKE_HOOK_TAILER": "hook_tailer",
-    "MONONOKE_HYPER_REPO_BUILDER": "hyper_repo_builder",
     "MONONOKE_IMPORT": "import",
     "MONONOKE_MANUAL_SCRUB": "manual_scrub",
     "MONONOKE_MICROWAVE_BUILDER": "builder",

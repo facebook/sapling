@@ -234,7 +234,6 @@ members = [
   "cmdlib/sharding",
   "cmdlib/x_repo",
   "cmds/copy_blobstore_keys",
-  "cmds/hyper_repo_builder",
   "commit_rewriting/backsyncer",
   "commit_rewriting/backsyncer/backsyncer_cmd",
   "commit_rewriting/bookmark_renaming",
