@@ -767,9 +767,13 @@ def get_modified_files(instance: EdenInstance, checkout: EdenCheckout) -> List[P
         )
 
     modified_files = []
-    for path, file_status in status.status.entries.items():
+    case_sensitive = checkout.get_config().case_sensitive
+    for pathb, file_status in status.status.entries.items():
         if file_status == ScmFileStatus.MODIFIED:
-            modified_files += [Path(os.fsdecode(path))]
+            path = os.fsdecode(pathb)
+            if not case_sensitive:
+                path = path.lower()
+            modified_files += [Path(path)]
 
     return modified_files
 
@@ -786,7 +790,8 @@ def get_hg_diff(checkout: EdenCheckout) -> Set[Path]:
     ).stdout
     diff = json.loads(json_diff)
 
-    return {Path(path) for path in diff.keys()}
+    case_sensitive = checkout.get_config().case_sensitive
+    return {Path(path if case_sensitive else path.lower()) for path in diff.keys()}
 
 
 def check_hg_status_match_hg_diff(
