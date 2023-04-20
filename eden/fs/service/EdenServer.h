@@ -743,6 +743,7 @@ class EdenServer : private TakeoverHandler {
     std::string localDir;
     uint16_t fsckPercentComplete{0};
     bool mountFinished{false};
+    bool mountFailed{false};
     bool fsckStarted{false};
     ProgressState(std::string&& mountPath, std::string&& localDir)
         : mountPath(std::move(mountPath)), localDir(std::move(localDir)) {}
@@ -757,6 +758,7 @@ class EdenServer : private TakeoverHandler {
 
     size_t totalLinesPrinted{0};
     size_t totalFinished{0};
+    size_t totalFailed{0};
     size_t totalInProgress{0};
 
     /**
@@ -768,8 +770,13 @@ class EdenServer : private TakeoverHandler {
 
     /**
      * Print registered progress states to stdout
+     *
+     * errorMessage is a message that we want printed, but not erased by future
+     * status updates.
      */
-    void printProgresses(std::shared_ptr<StartupLogger>);
+    void printProgresses(
+        std::shared_ptr<StartupLogger>,
+        std::optional<std::string_view> errorMessage = std::nullopt);
 
     /**
      * Update fsck completion percent and mark fsckStarted as true. Then refresh
@@ -785,6 +792,8 @@ class EdenServer : private TakeoverHandler {
      * Mark mountFinished as true when a remounting progress is finished.
      */
     void finishProgress(size_t processIndex);
+
+    void markFailed(size_t processIndex);
   };
 
   const std::unique_ptr<folly::Synchronized<ProgressManager>> progressManager_;

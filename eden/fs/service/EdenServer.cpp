@@ -467,6 +467,7 @@ void EdenServer::ProgressManager::updateProgressState(
     progresses[progressIndex].fsckStarted = true;
   }
 }
+
 void EdenServer::ProgressManager::finishProgress(size_t progressIndex) {
   progresses[progressIndex].mountFinished = true;
 
@@ -474,8 +475,16 @@ void EdenServer::ProgressManager::finishProgress(size_t progressIndex) {
   totalInProgress--;
 }
 
+void EdenServer::ProgressManager::markFailed(size_t progressIndex) {
+  progresses[progressIndex].mountFailed = true;
+
+  totalFailed++;
+  totalInProgress--;
+}
+
 void EdenServer::ProgressManager::printProgresses(
-    std::shared_ptr<StartupLogger> logger) {
+    std::shared_ptr<StartupLogger> logger,
+    std::optional<std::string_view> errorMessage) {
   std::string prepare;
   std::string content;
 
@@ -485,16 +494,25 @@ void EdenServer::ProgressManager::printProgresses(
   }
   prepare += cursor_helper::clear_to_bottom();
 
-  unsigned int printedFinished = 0;
-  unsigned int printedInProgress = 0;
+  // we intentially don't include the lines here in totalLinesPrinted so that
+  // they won't be erased next time.
+  if (errorMessage.has_value()) {
+    content += errorMessage.value();
+  }
+
+  size_t printedFinished = 0;
+  size_t printedFailed = 0;
+  size_t printedInProgress = 0;
   for (auto& it : progresses) {
     if (it.mountFinished) {
-      content +=
-          folly::to<std::string>("Successfully remounted ", it.mountPath, "\n");
+      content += fmt::format("Successfully remounted {}\n", it.mountPath);
       printedFinished++;
+    } else if (it.mountFailed) {
+      content += fmt::format("Failed to remount {}\n", it.mountPath);
+      printedFailed++;
     } else if (!it.fsckStarted) {
-      content += folly::to<std::string>("Remounting ", it.mountPath, "\n");
-      printedFinished++;
+      content += fmt::format("Remounting {}\n", it.mountPath);
+      printedInProgress++;
     } else {
       content += fmt::format(
           "[{:21}] {:>3}%: fsck on {}{}",
@@ -506,12 +524,11 @@ void EdenServer::ProgressManager::printProgresses(
     }
     totalLinesPrinted++;
     if (totalLinesPrinted == kMaxProgressLines) {
-      content += folly::to<std::string>(
-          "and ",
+      content += fmt::format(
+          "and {} finished, {} failed, {} in progress...",
           totalFinished - printedFinished,
-          " finished, ",
-          totalInProgress - printedInProgress,
-          " in progress...");
+          totalFailed - printedFailed,
+          totalInProgress - printedInProgress);
       break;
     }
   }
@@ -1151,11 +1168,14 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
               return makeFuture();
             } else {
               incrementStartupMountFailures();
-              logger->warn(
-                  "Failed to remount ",
-                  mountPath,
-                  ": ",
+              auto errorMessage = fmt::format(
+                  "Failed to remount {}: {}\n",
+                  mountPath.value(),
                   result.exception().what());
+              XLOG(DBG7) << errorMessage;
+              auto wl = progressManager_->wlock();
+              wl->markFailed(progressIndex);
+              wl->printProgresses(logger, errorMessage);
               return makeFuture<Unit>(std::move(result).exception());
             }
           });
