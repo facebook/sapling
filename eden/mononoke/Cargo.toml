@@ -21,10 +21,6 @@ name = "check_git_wc"
 path = "cmds/check_git_wc/main.rs"
 
 [[bin]]
-name = "configlint"
-path = "cmds/configlint.rs"
-
-[[bin]]
 name = "manual_scrub"
 path = "cmds/manual_scrub/main.rs"
 
@@ -88,7 +84,6 @@ futures = { version = "0.3.28", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
 futures-util = "0.3.7"
 git2 = "0.14"
-itertools = "0.10.3"
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_derivation = { version = "0.1.0", path = "derived_data/mercurial_derivation" }
 mercurial_revlog = { version = "0.1.0", path = "mercurial/revlog" }
