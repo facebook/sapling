@@ -5,30 +5,40 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use manifest::DiffType;
+use manifest::Manifest;
 use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use pathmatcher::AlwaysMatcher;
 use storemodel::futures::StreamExt;
 use storemodel::ReadFileContents;
 use types::Key;
+use types::RepoPath;
 use types::RepoPathBuf;
 
 /// Finding rename between old and new trees (commits).
 /// old_tree is a parent of new_tree
 #[async_trait]
 pub trait RenameFinder {
-    /// Find rename file paris in the specified commits.
-    async fn find_renames(
+    /// Find the new path of the given old path in the new_tree
+    async fn find_rename_forward(
         &self,
         old_tree: &TreeManifest,
         new_tree: &TreeManifest,
-    ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>>;
+        old_path: &RepoPath,
+    ) -> Result<Option<RepoPathBuf>>;
+
+    /// Find the old path of the given new path in the old_tree
+    async fn find_rename_backward(
+        &self,
+        old_tree: &TreeManifest,
+        new_tree: &TreeManifest,
+        new_path: &RepoPath,
+    ) -> Result<Option<RepoPathBuf>>;
 }
 
 /// Rename finder for Sapling repo.
@@ -44,38 +54,46 @@ impl SaplingRenameFinder {
         Self { file_reader }
     }
 
-    async fn read_renamed_metadata(
+    async fn read_renamed_metadata_forward(
         &self,
         keys: Vec<Key>,
-    ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
-        tracing::trace!(keys_len = keys.len(), " read_renamed_metadata");
+        old_path: &RepoPath,
+    ) -> Result<Option<RepoPathBuf>> {
+        tracing::trace!(keys_len = keys.len(), " read_renamed_metadata_forward");
         let mut renames = self.file_reader.read_rename_metadata(keys).await;
-
-        let mut map: HashMap<RepoPathBuf, RepoPathBuf> = HashMap::new();
         while let Some(rename) = renames.next().await {
             let (key, rename_from_key) = rename?;
             if let Some(rename_from_key) = rename_from_key {
-                map.insert(key.path, rename_from_key.path);
+                if rename_from_key.path.as_repo_path() == old_path {
+                    return Ok(Some(key.path));
+                }
             }
         }
-        tracing::trace!(result_map_len = map.len(), " read_renamed_metadata");
-        Ok(map)
+        Ok(None)
+    }
+
+    async fn read_renamed_metadata_backward(&self, key: Key) -> Result<Option<RepoPathBuf>> {
+        let mut renames = self.file_reader.read_rename_metadata(vec![key]).await;
+        if let Some(rename) = renames.next().await {
+            let (_, rename_from_key) = rename?;
+            return Ok(rename_from_key.map(|k| k.path));
+        }
+        Ok(None)
     }
 }
 
 #[async_trait]
 impl RenameFinder for SaplingRenameFinder {
-    async fn find_renames(
+    async fn find_rename_forward(
         &self,
         old_tree: &TreeManifest,
         new_tree: &TreeManifest,
-    ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
+        old_path: &RepoPath,
+    ) -> Result<Option<RepoPathBuf>> {
         let mut new_files = Vec::new();
-
         {
-            // this block is for dropping matcher and diff at the end of the block,
+            // this block is for dropping `matcher` and `diff` at the end of the block,
             // otherwise the compiler compilains variable might be used across 'await'
-
             let matcher = AlwaysMatcher::new();
             let diff = Diff::new(old_tree, new_tree, &matcher)?;
             for entry in diff {
@@ -91,7 +109,25 @@ impl RenameFinder for SaplingRenameFinder {
                 }
             }
         }
+        // todo(zhaolong): sort the files with same basename or directory at beginning
+        new_files.sort();
+        self.read_renamed_metadata_forward(new_files, old_path)
+            .await
+    }
 
-        self.read_renamed_metadata(new_files).await
+    async fn find_rename_backward(
+        &self,
+        _old_tree: &TreeManifest,
+        new_tree: &TreeManifest,
+        new_path: &RepoPath,
+    ) -> Result<Option<RepoPathBuf>> {
+        let new_key = match new_tree.get_file(new_path)? {
+            Some(file_metadata) => Key {
+                path: new_path.to_owned(),
+                hgid: file_metadata.hgid,
+            },
+            None => return Ok(None),
+        };
+        self.read_renamed_metadata_backward(new_key).await
     }
 }

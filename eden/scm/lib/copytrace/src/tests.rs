@@ -435,11 +435,11 @@ async fn test_one_file_copied_to_multiple_files() {
     "#;
     // It's rare that user will copy and rename the same file in one commit. We don't have
     // plan to support this one-to-many mapping, since it will make copytrace complexity
-    // increase exponentially in theory. For now, we just pick the last copy in ascending
+    // increase exponentially in theory. For now, we just pick the first copy in ascending
     // alphabetical order
     let changes = HashMap::from([("A", vec!["+ a 1"]), ("B", vec!["C a c", "-> a b"])]);
     let t = CopyTraceTestCase::new(ascii, changes).await;
     let c = t.copy_trace().await;
 
-    assert_trace_rename!(c A C, a -> c);
+    assert_trace_rename!(c A C, a -> b);
 }

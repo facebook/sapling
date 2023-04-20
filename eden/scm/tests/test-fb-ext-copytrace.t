@@ -543,18 +543,18 @@ Copy and move file
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
       desc: initial, phase: public
 
-dagcopytrace does support copying & renaming one file to multiple files, it picks the last one in ascending order
+dagcopytrace does support copying & renaming one file to multiple files, it picks the first one in ascending order
 
   $ hg rebase -s . -d 'desc(cp)'
   rebasing ef716627c70b "mod a"
-  merging c and a to c
+  merging b and a to b
   $ ls
   b
   c
   $ cat b
-  a
-  $ cat c
   b
+  $ cat c
+  a
   $ cd ..
   $ rm -rf server
   $ rm -rf repo

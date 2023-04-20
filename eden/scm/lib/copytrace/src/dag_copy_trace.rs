@@ -5,19 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use dag::DagAlgorithm;
-use itertools::Itertools;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
 use pathhistory::RenameTracer;
 use storemodel::ReadRootTreeIds;
 use types::HgId;
+use types::RepoPath;
 use types::RepoPathBuf;
 
 use crate::error::CopyTraceError;
@@ -90,8 +89,9 @@ impl DagCopyTrace {
     async fn find_renames_in_direction(
         &self,
         commit: dag::Vertex,
+        path: &RepoPath,
         direction: SearchDirection,
-    ) -> Result<(HashMap<RepoPathBuf, RepoPathBuf>, dag::Vertex)> {
+    ) -> Result<(Option<RepoPathBuf>, dag::Vertex)> {
         let parents = self.dag.parent_names(commit.clone()).await?;
         if parents.is_empty() {
             return Err(CopyTraceError::NoParents(commit).into());
@@ -100,22 +100,23 @@ impl DagCopyTrace {
         let p1 = &parents[0];
         let old_manifest = self.vertex_to_tree_manifest(p1).await?;
         let new_manifest = self.vertex_to_tree_manifest(&commit).await?;
-        let renames = self
-            .rename_finder
-            .find_renames(&old_manifest, &new_manifest)
-            .await?;
-        let (renames, next_commit) = match direction {
-            SearchDirection::Backward => (renames, p1.clone()),
+        let (rename, next_commit) = match direction {
+            SearchDirection::Backward => {
+                let rename = self
+                    .rename_finder
+                    .find_rename_backward(&old_manifest, &new_manifest, path)
+                    .await?;
+                (rename, p1.clone())
+            }
             SearchDirection::Forward => {
-                let renames = renames
-                    .into_iter()
-                    .map(|(k, v)| (v, k))
-                    .sorted()
-                    .collect::<HashMap<_, _>>();
-                (renames, commit)
+                let rename = self
+                    .rename_finder
+                    .find_rename_forward(&old_manifest, &new_manifest, path)
+                    .await?;
+                (rename, commit)
             }
         };
-        Ok((renames, next_commit))
+        Ok((rename, next_commit))
     }
 
     async fn check_path(
@@ -194,12 +195,16 @@ impl CopyTrace for DagCopyTrace {
             if rename_commit == target {
                 return Ok(Some(curr_path));
             }
-            let (renames, next_commit) = self
-                .find_renames_in_direction(rename_commit, SearchDirection::Backward)
+            let (next_path, next_commit) = self
+                .find_renames_in_direction(
+                    rename_commit,
+                    curr_path.as_repo_path(),
+                    SearchDirection::Backward,
+                )
                 .await?;
-            if let Some(next_path) = renames.get(&curr_path) {
+            if let Some(next_path) = next_path {
                 curr = next_commit;
-                curr_path = next_path.clone();
+                curr_path = next_path;
             } else {
                 // no rename info for curr_path
                 return Ok(None);
@@ -230,12 +235,16 @@ impl CopyTrace for DagCopyTrace {
             if rename_commit == curr {
                 return Ok(Some(curr_path));
             }
-            let (renames, next_commit) = self
-                .find_renames_in_direction(rename_commit, SearchDirection::Forward)
+            let (next_path, next_commit) = self
+                .find_renames_in_direction(
+                    rename_commit,
+                    curr_path.as_repo_path(),
+                    SearchDirection::Forward,
+                )
                 .await?;
-            if let Some(next_path) = renames.get(&curr_path) {
+            if let Some(next_path) = next_path {
                 curr = next_commit;
-                curr_path = next_path.clone();
+                curr_path = next_path;
             } else {
                 // no rename info for curr_path
                 return Ok(None);
