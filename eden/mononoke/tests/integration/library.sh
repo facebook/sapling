@@ -2144,15 +2144,6 @@ function backfill_derived_data_multiple_repos() {
     "$@"
 }
 
-function hook_tailer() {
-  "$MONONOKE_HOOK_TAILER" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --repo-id "$REPOID" \
-    --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    "$@"
-}
-
 function quiet() {
   local log="$TESTTMP/quiet.last.log"
   "$@" >"$log" 2>&1

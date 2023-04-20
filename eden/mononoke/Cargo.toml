@@ -308,7 +308,6 @@ members = [
   "git/import_tools",
   "gotham_ext",
   "hgproto",
-  "hook_tailer",
   "hooks",
   "hooks/content-stores",
   "lfs_import_lib",

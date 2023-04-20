@@ -24,7 +24,6 @@ MONONOKE_BINS = {
     "MONONOKE_CHECK_GIT_WC": "check_git_wc",
     "MONONOKE_GITIMPORT": "gitimport",
     "MONONOKE_HG_SYNC": "mononoke_hg_sync_job",
-    "MONONOKE_HOOK_TAILER": "hook_tailer",
     "MONONOKE_IMPORT": "import",
     "MONONOKE_MANUAL_SCRUB": "manual_scrub",
     "MONONOKE_MICROWAVE_BUILDER": "builder",
