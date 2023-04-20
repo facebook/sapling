@@ -25,10 +25,6 @@ name = "packer"
 path = "cmds/packer/main.rs"
 
 [[bin]]
-name = "rechunker"
-path = "cmds/rechunker.rs"
-
-[[bin]]
 name = "revlogrepo"
 path = "cmds/revlogrepo.rs"
 
@@ -71,7 +67,6 @@ context = { version = "0.1.0", path = "server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-filestore = { version = "0.1.0", path = "filestore" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
 futures-util = "0.3.7"

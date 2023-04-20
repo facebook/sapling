@@ -322,15 +322,6 @@ function mononoke_x_repo_sync() {
     "$@"
 }
 
-function mononoke_rechunker {
-    GLOG_minloglevel=5 "$MONONOKE_RECHUNKER" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --repo-id $REPOID \
-    --mononoke-config-path "$TESTTMP"/mononoke-config \
-    "$@"
-}
-
 function mononoke_hg_sync_with_retry {
   GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
     "${CACHE_ARGS[@]}" \
