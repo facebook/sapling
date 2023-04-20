@@ -95,9 +95,10 @@ pub trait Subcommand: Send + Sync {
  */
 #[derive(Parser, Debug)]
 pub enum TopLevelSubcommand {
-    Config(crate::config::ConfigCmd),
+    Config(crate::config::CliConfigCmd),
     Debug(crate::debug::DebugCmd),
     Du(crate::du::DiskUsageCmd),
+    Fsconfig(crate::config::FsConfigCmd),
     // Gc(crate::gc::GcCmd),
     List(crate::list::ListCmd),
     Minitop(crate::minitop::MinitopCmd),
@@ -118,6 +119,7 @@ impl TopLevelSubcommand {
 
         match self {
             Config(cmd) => cmd,
+            Fsconfig(cmd) => cmd,
             Debug(cmd) => cmd,
             Du(cmd) => cmd,
             // Gc(cmd) => cmd,
@@ -139,6 +141,7 @@ impl TopLevelSubcommand {
             TopLevelSubcommand::Config(_) => "config",
             TopLevelSubcommand::Debug(_) => "debug",
             TopLevelSubcommand::Du(_) => "du",
+            TopLevelSubcommand::Fsconfig(_) => "fsconfig",
             //TopLevelSubcommand::Gc(_) => "gc",
             TopLevelSubcommand::List(_) => "list",
             TopLevelSubcommand::Minitop(_) => "minitop",

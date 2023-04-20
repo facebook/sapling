@@ -1016,12 +1016,24 @@ is case-sensitive. This is not recommended and is intended only for testing."""
         return repo, repo_config
 
 
-@subcmd("config", "Query EdenFS configuration")
+@subcmd("config", "Query EdenFS CLI configuration")
 class ConfigCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
-        instance = get_eden_instance(args)
-        instance.print_full_config(sys.stdout.buffer)
-        return 0
+        raise NotImplementedError("Stub -- only implemented in Rust")
+
+
+@subcmd("fsconfig", "Query EdenFS daemon configuration")
+class FsConfigCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--all",
+            action="store_true",
+            default=False,
+            help="Show all configuration values",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        raise NotImplementedError("Stub -- only implemented in Rust")
 
 
 @subcmd("doctor", "Debug and fix issues with EdenFS")
