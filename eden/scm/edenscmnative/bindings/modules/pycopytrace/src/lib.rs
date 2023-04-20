@@ -15,6 +15,7 @@ use ::types::HgId;
 use async_runtime::try_block_unless_interrupted as block_on;
 use copytrace::CopyTrace;
 use copytrace::DagCopyTrace;
+use copytrace::SaplingRenameFinder;
 use cpython::*;
 use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
@@ -24,7 +25,6 @@ use cpython_ext::ResultPyErrExt;
 use dag::DagAlgorithm;
 use dag::Vertex;
 use parking_lot::Mutex;
-use pymanifest::treemanifest;
 use storemodel::ReadFileContents;
 use storemodel::ReadRootTreeIds;
 use storemodel::TreeStore;
@@ -67,12 +67,13 @@ py_class!(pub class dagcopytrace |py| {
     ) -> PyResult<Self> {
         let root_tree_reader = root_tree_reader.into();
         let tree_store = tree_store.into();
-        let file_reader = file_reader.into();
+        let rename_finder = Arc::new(SaplingRenameFinder::new(file_reader.into()));
         let dag = dag.into();
+
         let copytrace = DagCopyTrace::new(
             root_tree_reader,
             tree_store,
-            file_reader,
+            rename_finder,
             dag,
         ).map_pyerr(py)?;
         Self::create_instance(py, Arc::new(copytrace))
@@ -91,22 +92,5 @@ py_class!(pub class dagcopytrace |py| {
         let src_path = src_path.to_repo_path_buf().map_pyerr(py)?;
         let path = block_on(self.inner(py).trace_rename(src, dst, src_path)).map_pyerr(py)?;
         Ok(path.map(|v| v.to_string()))
-    }
-
-
-    /// Find renames between old and new commits, the result is a {newpath: oldpath} map.
-    def find_renames(
-        &self,
-        old_tree: &treemanifest,
-        new_tree: &treemanifest,
-    ) -> PyResult<HashMap<String, String>> {
-        let old_tree = old_tree.get_underlying(py);
-        let new_tree = new_tree.get_underlying(py);
-        let map = block_on(self.inner(py).find_renames(&old_tree.read(), &new_tree.read())).map_pyerr(py)?;
-        let map = map
-            .into_iter()
-            .map(|(k, v)| (k.to_string(), v.to_string()))
-            .collect::<HashMap<_, _>>();
-        Ok(map)
     }
 });

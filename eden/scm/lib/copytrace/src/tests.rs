@@ -35,6 +35,7 @@ use types::RepoPathBuf;
 
 use crate::CopyTrace;
 use crate::DagCopyTrace;
+use crate::SaplingRenameFinder;
 
 #[derive(Clone)]
 struct CopyTraceTestCase {
@@ -99,12 +100,15 @@ impl CopyTraceTestCase {
 
     /// Create a DagCopyTrace instance
     pub async fn copy_trace(&self) -> Arc<dyn CopyTrace + Send + Sync> {
-        let root_tree_reader = Arc::new(self.clone());
         let file_reader = Arc::new(self.clone());
+        let rename_finder = Arc::new(SaplingRenameFinder::new(file_reader));
+
+        let root_tree_reader = Arc::new(self.clone());
         let tree_store = self.inner.tree_store.clone();
         let dagalgo = self.inner.dagalgo.clone();
+
         let copy_trace =
-            DagCopyTrace::new(root_tree_reader, tree_store, file_reader, dagalgo).unwrap();
+            DagCopyTrace::new(root_tree_reader, tree_store, rename_finder, dagalgo).unwrap();
         Arc::new(copy_trace)
     }
 

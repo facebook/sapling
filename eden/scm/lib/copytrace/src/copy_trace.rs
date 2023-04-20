@@ -5,12 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-
 use anyhow::Result;
 use async_trait::async_trait;
 use dag::Vertex;
-use manifest_tree::TreeManifest;
 use types::RepoPathBuf;
 
 /// Tracing the rename history of a file for rename detection in rebase, amend etc
@@ -43,15 +40,4 @@ pub trait CopyTrace {
         dst: Vertex,
         src_path: RepoPathBuf,
     ) -> Result<Option<RepoPathBuf>>;
-
-    /// Find rename file paris in the specified `commit`.
-    ///
-    /// TODO: move this method into a separate trait. Practically the graph log and
-    /// the find_renames can use different impls independently and form different
-    /// combinations.
-    async fn find_renames(
-        &self,
-        old_tree: &TreeManifest,
-        new_tree: &TreeManifest,
-    ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>>;
 }
