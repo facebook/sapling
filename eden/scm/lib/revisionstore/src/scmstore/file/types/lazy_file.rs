@@ -64,7 +64,6 @@ impl LazyFile {
                 content_id: ContentHash::content_id(&content),
                 content_sha1: ContentHash::sha1(&content),
                 content_sha256: ptr.sha256(),
-                content_seeded_blake3: Some(ContentHash::seeded_blake3(content)),
             }
         } else {
             let content = self.file_content()?;
@@ -73,7 +72,6 @@ impl LazyFile {
                 content_id: ContentHash::content_id(&content),
                 content_sha1: ContentHash::sha1(&content),
                 content_sha256: ContentHash::sha256(&content).unwrap_sha256(),
-                content_seeded_blake3: Some(ContentHash::seeded_blake3(&content)),
             }
         })
     }

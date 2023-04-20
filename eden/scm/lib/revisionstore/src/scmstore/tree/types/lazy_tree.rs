@@ -118,8 +118,6 @@ impl LazyTree {
                                                 .unwrap()
                                                 .into_byte_array()
                                                 .into(),
-                                            content_seeded_blake3: file_metadata
-                                                .content_seeded_blake3,
                                         },
                                     )
                                 })

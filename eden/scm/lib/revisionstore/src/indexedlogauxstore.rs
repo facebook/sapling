@@ -17,7 +17,6 @@ use byteorder::WriteBytesExt;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use edenapi_types::Blake3;
 use edenapi_types::ContentId;
 use edenapi_types::FileAuxData;
 use edenapi_types::Sha1;
@@ -41,7 +40,6 @@ pub struct Entry {
     pub(crate) content_id: ContentId,
     pub(crate) content_sha1: Sha1,
     pub(crate) content_sha256: Sha256,
-    pub(crate) content_seeded_blake3: Option<Blake3>,
 }
 
 impl From<FileAuxData> for Entry {
@@ -51,7 +49,6 @@ impl From<FileAuxData> for Entry {
             content_id: v.content_id,
             content_sha1: v.sha1,
             content_sha256: v.sha256,
-            content_seeded_blake3: v.seeded_blake3,
         }
     }
 }
@@ -73,10 +70,6 @@ impl Entry {
         self.content_sha256
     }
 
-    pub fn content_seeded_blake3(&self) -> Option<Blake3> {
-        self.content_seeded_blake3.clone()
-    }
-
     /// Serialize the Entry to Bytes.
     ///
     /// The serialization format is as follows:
@@ -86,8 +79,6 @@ impl Entry {
     /// - content sha1 <20 bytes>
     /// - content sha256 <32 bytes>
     /// - total_size <u64 VLQ, 1-9 bytes>
-    /// - presence byte for seeded blake3 <1 byte>
-    /// - content seeded blake3 <32 OR 0 bytes>
     fn serialize(&self, hgid: HgId) -> Result<Bytes> {
         let mut buf = Vec::new();
         buf.write_all(hgid.as_ref())?;
@@ -96,13 +87,6 @@ impl Entry {
         buf.write_all(self.content_sha1.as_ref())?;
         buf.write_all(self.content_sha256.as_ref())?;
         buf.write_vlq(self.total_size)?;
-        match self.content_seeded_blake3() {
-            Some(content_seeded_blake3) => {
-                buf.write_u8(1)?; // A value of 1 indicates the blake3 hash is present
-                buf.write_all(content_seeded_blake3.as_ref())?;
-            }
-            None => buf.write_u8(0)?, // A value of 0 indicates the blake3 hash is absent
-        };
         Ok(buf.into())
     }
 
@@ -127,14 +111,6 @@ impl Entry {
         cur.read_exact(&mut content_sha256)?;
 
         let total_size: u64 = cur.read_vlq()?;
-        let remaining = cur.position() < bytes.len() as u64;
-        let content_seeded_blake3 = if remaining && cur.read_u8()? == 1 {
-            let mut content_seeded_blake3 = [0u8; 32];
-            cur.read_exact(&mut content_seeded_blake3)?;
-            Some(content_seeded_blake3.into())
-        } else {
-            None
-        };
 
         Ok((
             hgid,
@@ -143,7 +119,6 @@ impl Entry {
                 content_sha1: content_sha1.into(),
                 content_sha256: content_sha256.into(),
                 total_size,
-                content_seeded_blake3,
             },
         ))
     }
@@ -404,9 +379,7 @@ mod tests {
         expected.content_sha1 = Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?;
         expected.content_sha256 =
             Sha256::from_str("03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4")?;
-        expected.content_seeded_blake3 = Some(Blake3::from_str(
-            "2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a",
-        )?);
+
         // Attempt fetch.
         let fetched = store
             .fetch(
@@ -424,37 +397,6 @@ mod tests {
         // Verify we can read it directly too
         let found = aux.get(k.hgid)?;
         assert_eq!(Some(expected), found);
-        Ok(())
-    }
-
-    #[test]
-    /// Test that we can deserialize non-BLAKE3 entries stored in cache.
-    fn test_deserialize_non_blake3_entry() -> Result<()> {
-        let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
-        let entry = Entry {
-            total_size: 4,
-            content_id: ContentId::from_str(
-                "aa6ab85da77ca480b7624172fe44aa9906b6c3f00f06ff23c3e5f60bfd0c414e",
-            )?,
-            content_sha1: Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?,
-            content_sha256: Sha256::from_str(
-                "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
-            )?,
-            content_seeded_blake3: Some(Blake3::from_str(
-                "2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a",
-            )?),
-        };
-
-        let mut buf = Vec::new();
-        buf.write_all(k.hgid.as_ref())?;
-        buf.write_u8(0)?; // write version
-        buf.write_all(entry.content_id.as_ref())?;
-        buf.write_all(entry.content_sha1.as_ref())?;
-        buf.write_all(entry.content_sha256.as_ref())?;
-        buf.write_vlq(entry.total_size)?;
-
-        // Validate that we can deserialize the entry even when the Blake3 hash has not been written to it.
-        Entry::deserialize(buf.into()).expect("Failed to deserialize non-Blake3 entry");
         Ok(())
     }
 }
