@@ -364,7 +364,6 @@ members = [
   "reachabilityindex/if",
   "reachabilityindex/skiplist",
   "reachabilityindex/test-helpers",
-  "regenerate_hg_filenodes",
   "repo_attributes/commit_graph/buffered_commit_graph_storage",
   "repo_attributes/commit_graph/caching_commit_graph_storage",
   "repo_attributes/commit_graph/caching_commit_graph_storage/if",

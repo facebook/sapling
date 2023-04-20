@@ -2075,16 +2075,6 @@ if [ -z "$HAS_FB" ]; then
   }
 fi
 
-function regenerate_hg_filenodes() {
-  "$MONONOKE_REGENERATE_HG_FILENODES" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --repo-id "$REPOID" \
-    --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    --i-know-what-i-am-doing \
-    "$@"
-}
-
 function segmented_changelog_tailer_reseed() {
   "$MONONOKE_SEGMENTED_CHANGELOG_TAILER" \
     "${CACHE_ARGS[@]}" \
