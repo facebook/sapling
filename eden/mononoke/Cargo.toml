@@ -389,7 +389,6 @@ members = [
   "tools/testtool",
   "tunables",
   "tunables/tunables-derive",
-  "upload_globalrevs",
   "walker",
   "wireproto_handler",
 ]
