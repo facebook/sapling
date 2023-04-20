@@ -40,8 +40,8 @@ pub trait ReadFileContents {
     /// - The returned content does not contain the "copy from" header.
     /// - The returned content does not contain raw LFS content. LFS pointer
     ///   is resolved transparently.
-    /// - If the file content is redacted, it's an error instead of an explicit
-    ///   instead of a placeholder of dummy data.
+    /// - If the file content is redacted, it's an error instead of a placeholder
+    ///   of dummy data.
     async fn read_file_contents(
         &self,
         keys: Vec<Key>,
