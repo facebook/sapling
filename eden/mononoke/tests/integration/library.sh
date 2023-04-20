@@ -1304,14 +1304,6 @@ function bonsai_verify {
     "$@"
 }
 
-function manual_scrub {
-  GLOG_minloglevel=5 "$MONONOKE_MANUAL_SCRUB" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --mononoke-config-path "$TESTTMP/mononoke-config" \
-    "$@"
-}
-
 function s_client {
     /usr/local/fbcode/platform009/bin/openssl s_client \
         -connect "$(mononoke_address)" \
