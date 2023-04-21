@@ -7,7 +7,7 @@
 
 import type {Rev} from './fileStackState';
 import type {Author, DateTuple, Hash, RepoPath} from 'shared/types/common';
-import type {ExportStack, ExportFile, Mark} from 'shared/types/stack';
+import type {ExportStack, ExportFile} from 'shared/types/stack';
 
 import {assert} from '../utils';
 import {FileStackState} from './fileStackState';
@@ -53,7 +53,7 @@ export class CommitStackState {
    * in the stack will be present in this map. If a file was added
    * later in the stack, it is in this map and marked as absent.
    */
-  bottomFiles: Map<RepoPath, ExportFile>;
+  bottomFiles: Map<RepoPath, FileState>;
 
   /**
    * Mutable commit stack. Indexed by rev.
@@ -106,7 +106,7 @@ export class CommitStackState {
    * since `files` only tracks modified files, not existing files
    * created from the bottom of the stack.
    */
-  getFile(rev: Rev, path: RepoPath): ExportFile {
+  getFile(rev: Rev, path: RepoPath): FileState {
     for (const logRev of this.log(rev)) {
       const commit = this.stack[logRev];
       const file = commit.files.get(path);
@@ -177,7 +177,7 @@ export class CommitStackState {
    * If the returned `rev` is -1, it means the file comes from
    * "bottomFiles", aka. its introducing rev is outside the stack.
    */
-  parentFile(rev: Rev, path: RepoPath, followRenames = true): [Rev, RepoPath, ExportFile] {
+  parentFile(rev: Rev, path: RepoPath, followRenames = true): [Rev, RepoPath, FileState] {
     let prevRev = -1;
     let prevPath = path;
     let prevFile = unwrap(this.bottomFiles.get(path));
@@ -200,9 +200,9 @@ export class CommitStackState {
     const commitToFile = new Map<string, [FileStackIndex, Rev]>();
     const fileToCommit = new Map<string, [Rev, RepoPath]>();
 
-    const processFile = (rev: Rev, file: ExportFile, path: RepoPath) => {
+    const processFile = (rev: Rev, file: FileState, path: RepoPath) => {
       const [prevRev, prevPath, prevFile] = this.parentFile(rev, path);
-      if (file.data != null) {
+      if (isUtf8(file)) {
         // File was added or modified and has utf-8 content.
         let fileAppended = false;
         if (prevRev >= 0) {
@@ -215,7 +215,7 @@ export class CommitStackState {
             // rev matches `prevFileRev`
             if (prevFileStack.revLength === prevFileRev + 1) {
               const fileRev = prevFileRev + 1;
-              prevFileStack.editText(fileRev, file.data, false);
+              prevFileStack.editText(fileRev, this.getUtf8Data(file), false);
               commitToFile.set(`${rev}:${path}`, [prevIdx, fileRev]);
               fileToCommit.set(`${prevIdx}:${fileRev}`, [rev, path]);
               fileAppended = true;
@@ -225,11 +225,11 @@ export class CommitStackState {
         if (!fileAppended) {
           // Cannot reuse an existing file stack. Create a new file stack.
           const fileIdx = fileStacks.length;
-          let fileTextList = [file.data];
+          let fileTextList = [this.getUtf8Data(file)];
           let fileRev = 0;
-          if (prevFile?.data != null) {
+          if (isUtf8(prevFile)) {
             // Use "prevFile" as rev 0 (immutable public).
-            fileTextList = [prevFile.data, file.data];
+            fileTextList = [this.getUtf8Data(prevFile), ...fileTextList];
             commitToFile.set(`${prevRev}:${prevPath}`, [fileIdx, fileRev]);
             fileToCommit.set(`${fileIdx}:${fileRev}`, [prevRev, prevPath]);
             fileRev = 1;
@@ -242,10 +242,13 @@ export class CommitStackState {
       }
     };
 
+    // Migrate off 'fileStack' type, since we are going to replace the file stacks.
+    this.useFileContent();
+
     this.stack.forEach((commit, rev) => {
       const files = commit.files;
       // Process order: renames, non-copy, copies.
-      const priorityFiles: [number, RepoPath, ExportFile][] = [...files.entries()].map(
+      const priorityFiles: [number, RepoPath, FileState][] = [...files.entries()].map(
         ([path, file]) => {
           const priority = isRename(commit, path) ? 0 : file.copyFrom == null ? 1 : 2;
           return [priority, path, file];
@@ -268,6 +271,46 @@ export class CommitStackState {
     this.fileStacks = fileStacks;
     this.commitToFile = commitToFile;
     this.fileToCommit = fileToCommit;
+  }
+
+  /**
+   * Switch file contents to use FileStack as source of truth.
+   * Useful when using FileStack to edit files.
+   */
+  useFileStack() {
+    this.forEachFile((rev, file, path) => {
+      if (typeof file.data === 'string') {
+        const fileIdxRev = this.commitToFile.get(`${rev}:${path}`);
+        if (fileIdxRev != null) {
+          const [fileIdx, fileRev] = fileIdxRev;
+          file.data = {type: 'fileStack', rev: fileRev, index: fileIdx};
+        }
+      }
+    });
+  }
+
+  /**
+   * Switch file contents to use string as source of truth.
+   * Useful when rebuilding FileStack.
+   */
+  useFileContent() {
+    this.forEachFile((_rev, file) => {
+      if (typeof file.data !== 'string' && isUtf8(file)) {
+        const data = this.getUtf8Data(file);
+        file.data = data;
+      }
+    });
+  }
+
+  /**
+   * Iterate through all changed files via the given function.
+   */
+  forEachFile(func: (commitRev: Rev, file: FileState, path: RepoPath) => void) {
+    this.stack.forEach(commit => {
+      commit.files.forEach((file, path) => {
+        func(commit.rev, file, path);
+      });
+    });
   }
 
   /**
@@ -316,6 +359,39 @@ export class CommitStackState {
         })
         .join(' ');
     });
+  }
+
+  /** Extract utf-8 data from a file. */
+  getUtf8Data(file: FileState): string {
+    if (typeof file.data === 'string') {
+      return file.data;
+    }
+    const type = file.data.type;
+    if (type === 'fileStack') {
+      return unwrap(this.fileStacks.at(file.data.index)).get(file.data.rev);
+    } else {
+      throw new Error('getUtf8Data called on non-utf8 file.');
+    }
+  }
+
+  /** Test if two files have the same data. */
+  isEqualFile(a: FileState, b: FileState): boolean {
+    if ((a.flags ?? '') !== (b.flags ?? '')) {
+      return false;
+    }
+    if (isUtf8(a) && isUtf8(b)) {
+      return this.getUtf8Data(a) === this.getUtf8Data(b);
+    }
+    // We assume base85 data is immutable, non-utf8 so they won't match utf8 data.
+    if (
+      typeof a.data !== 'string' &&
+      typeof b.data !== 'string' &&
+      a.data.type === 'base85' &&
+      b.data.type === 'base85'
+    ) {
+      return a.data.dataBase85 === b.data.dataBase85;
+    }
+    return false;
   }
 
   // Histedit-related opeations.
@@ -443,7 +519,7 @@ export class CommitStackState {
       } else {
         file.copyFrom = copyFrom;
       }
-      if (isEqualFile(this.parentFile(parentRev, path, false /* [1] */)[2], file)) {
+      if (this.isEqualFile(this.parentFile(parentRev, path, false /* [1] */)[2], file)) {
         // The file changes cancel out. Remove it.
         // [1]: we need to disable following renames when comparing files for cancel-out check.
         parent.files.delete(path);
@@ -465,16 +541,16 @@ export class CommitStackState {
   }
 }
 
-function getBottomFilesFromExportStack(stack: ExportStack): Map<RepoPath, ExportFile> {
+function getBottomFilesFromExportStack(stack: ExportStack): Map<RepoPath, FileState> {
   // bottomFiles requires that the stack only has one root.
   checkStackSingleRoot(stack);
 
   // Calculate bottomFiles.
-  const bottomFiles: Map<RepoPath, ExportFile> = new Map();
+  const bottomFiles: Map<RepoPath, FileState> = new Map();
   stack.forEach(commit => {
-    for (const [path, content] of Object.entries(commit.relevantFiles ?? {})) {
+    for (const [path, file] of Object.entries(commit.relevantFiles ?? {})) {
       if (!bottomFiles.has(path)) {
-        bottomFiles.set(path, content ?? ABSENT_FILE);
+        bottomFiles.set(path, convertExportFileToFileState(file));
       }
     }
 
@@ -488,6 +564,17 @@ function getBottomFilesFromExportStack(stack: ExportStack): Map<RepoPath, Export
   });
 
   return bottomFiles;
+}
+
+function convertExportFileToFileState(file: ExportFile | null): FileState {
+  if (file == null) {
+    return ABSENT_FILE;
+  }
+  return {
+    data: file.data != null ? file.data : {type: 'base85', dataBase85: unwrap(file.dataBase85)},
+    copyFrom: file.copyFrom,
+    flags: file.flags,
+  };
 }
 
 function getCommitStatesFromExportStack(stack: ExportStack): CommitState[] {
@@ -517,7 +604,10 @@ function getCommitStatesFromExportStack(stack: ExportStack): CommitState[] {
     immutableKind: commit.immutable || !commit.requested ? 'hash' : 'none',
     parents: (commit.parents ?? []).map(p => nodeToRev(p)),
     files: new Map(
-      Object.entries(commit.files ?? {}).map(([path, file]) => [path, file ?? ABSENT_FILE]),
+      Object.entries(commit.files ?? {}).map(([path, file]) => [
+        path,
+        convertExportFileToFileState(file),
+      ]),
     ),
   }));
 }
@@ -588,17 +678,21 @@ function isRename(commit: CommitState, path: RepoPath): boolean {
   return isAbsent(files.get(copyFromPath));
 }
 
-/** Test if two files have the same data. */
-function isEqualFile(a: ExportFile, b: ExportFile): boolean {
-  return a.data === b.data && a.dataBase85 === b.dataBase85 && a.flags === b.flags;
-}
-
 /** Test if a file is absent. */
-function isAbsent(file: ExportFile | undefined): boolean {
+function isAbsent(file: FileState | undefined): boolean {
   if (file == null) {
     return true;
   }
   return file.flags === ABSENT_FLAG;
+}
+
+/** Test if a file has utf-8 content. */
+function isUtf8(file: FileState): boolean {
+  if (typeof file.data === 'string') {
+    return true;
+  }
+  const type = file.data.type;
+  return type == 'fileStack';
 }
 
 const ABSENT_FLAG = 'a';
@@ -611,7 +705,7 @@ const ABSENT_FLAG = 'a';
  * adjacent versions and edited. This makes it easier to, for example,
  * split a newly added file.
  */
-export const ABSENT_FILE: ExportFile = {
+export const ABSENT_FILE: FileState = {
   data: '',
   flags: ABSENT_FLAG,
 };
@@ -638,7 +732,22 @@ type CommitState = {
   /** Parent commits. */
   parents: Rev[];
   /** Changed files. */
-  files: Map<RepoPath, ExportFile>;
+  files: Map<RepoPath, FileState>;
+};
+
+/**
+ * Similar to `ExportFile` but `data` can be lazy by redirecting to a rev in a file stack.
+ * Besides, supports "absent" state.
+ */
+type FileState = {
+  data:
+    | string
+    | {type: 'base85'; dataBase85: string}
+    | {type: 'fileStack'; index: FileStackIndex; rev: Rev};
+  /** If present, this file is copied (or renamed) from another file. */
+  copyFrom?: RepoPath;
+  /** 'x': executable. 'l': symlink. 'm': submodule. */
+  flags?: string;
 };
 
 type FileStackIndex = number;
