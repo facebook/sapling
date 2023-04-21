@@ -2291,24 +2291,12 @@ folly::Future<folly::Unit> EdenMount::startFsChannel(bool readOnly) {
               if constexpr (std::is_same_v<T, EdenMount::FuseChannelVariant>) {
                 return variant->initialize().thenValue(
                     [this](FuseChannel::StopFuture&& fuseCompleteFuture) {
-                      auto stopFuture =
-                          std::move(fuseCompleteFuture)
-                              .deferValue(
-                                  [](FsStopDataPtr stopData)
-                                      -> EdenMount::ChannelStopData {
-                                    return std::move(stopData);
-                                  });
-                      fsChannelInitSuccessful(std::move(stopFuture));
+                      fsChannelInitSuccessful(std::move(fuseCompleteFuture));
                     });
               } else if constexpr (std::is_same_v<
                                        T,
                                        EdenMount::NfsdChannelVariant>) {
-                auto stopFuture = variant->getStopFuture().deferValue(
-                    [](Nfsd3::StopData&& stopData)
-                        -> EdenMount::ChannelStopData {
-                      return std::move(stopData);
-                    });
-                fsChannelInitSuccessful(std::move(stopFuture));
+                fsChannelInitSuccessful(variant->getStopFuture());
                 return makeFuture(folly::unit);
               } else {
                 static_assert(std::is_same_v<T, std::monostate>);
@@ -2362,38 +2350,22 @@ void EdenMount::preparePostFsChannelCompletion(
                 ));
 #else
             fsChannelCompletionPromise_.setWith([&] {
-              return std::visit(
-                  [this](auto&& variant) {
-                    using T = std::decay_t<decltype(variant)>;
+              // TODO: This dynamic_cast is janky. How should we decide whether
+              // to tell NfsServer to unregister the mount?
+              if (dynamic_cast<Nfsd3::StopData*>(stopData.get())) {
+                serverState_->getNfsServer()->unregisterMount(getPath());
+              }
 
-                    if constexpr (std::is_same_v<T, EdenMount::FuseStopData>) {
-                      // If the FUSE device is no longer valid then the mount
-                      // point has been unmounted.
-                      if (variant->isUnmounted()) {
-                        inodeMap_->setUnmounted();
-                      }
+              if (stopData->isUnmounted()) {
+                inodeMap_->setUnmounted();
+              }
 
-                      return TakeoverData::MountInfo{
-                          getPath(),
-                          checkoutConfig_->getClientDirectory(),
-                          variant->extractTakeoverInfo(),
-                          SerializedInodeMap{} // placeholder
-                      };
-                    } else {
-                      static_assert(std::is_same_v<T, EdenMount::NfsdStopData>);
-                      serverState_->getNfsServer()->unregisterMount(getPath());
-                      if (!variant.socketToKernel) {
-                        inodeMap_->setUnmounted();
-                      }
-                      return TakeoverData::MountInfo{
-                          getPath(),
-                          checkoutConfig_->getClientDirectory(),
-                          NfsChannelData{std::move(variant.socketToKernel)},
-                          SerializedInodeMap{} // placeholder
-                      };
-                    }
-                  },
-                  stopData);
+              return TakeoverData::MountInfo{
+                  getPath(),
+                  checkoutConfig_->getClientDirectory(),
+                  stopData->extractTakeoverInfo(),
+                  SerializedInodeMap{} // placeholder
+              };
             });
 #endif
           })
@@ -2439,11 +2411,7 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
 
     auto channel = makeFuseChannel(this, std::move(takeoverData.fd));
     auto fuseCompleteFuture =
-        channel->initializeFromTakeover(takeoverData.connInfo)
-            .deferValue(
-                [](FsStopDataPtr stopData) -> EdenMount::ChannelStopData {
-                  return std::move(stopData);
-                });
+        channel->initializeFromTakeover(takeoverData.connInfo);
     channel_ = std::move(channel);
     fsChannelInitSuccessful(std::move(fuseCompleteFuture));
   } catch (const std::exception&) {
@@ -2466,10 +2434,7 @@ folly::Future<folly::Unit> EdenMount::takeoverNfs(NfsChannelData takeoverData) {
         .thenValue([this](NfsServer::NfsMountInfo mountInfo) {
           auto& channel = mountInfo.nfsd;
 
-          auto stopFuture = channel->getStopFuture().deferValue(
-              [](Nfsd3::StopData&& stopData) -> EdenMount::ChannelStopData {
-                return std::move(stopData);
-              });
+          auto stopFuture = channel->getStopFuture();
           this->channel_ = std::move(channel);
           this->fsChannelInitSuccessful(std::move(stopFuture));
         })

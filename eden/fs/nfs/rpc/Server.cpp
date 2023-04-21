@@ -28,6 +28,14 @@ using folly::SocketAddress;
 
 namespace facebook::eden {
 
+bool RpcStopData::isUnmounted() {
+  return !socketToKernel;
+}
+
+FsChannelInfo RpcStopData::extractTakeoverInfo() {
+  return NfsChannelData{std::move(socketToKernel)};
+}
+
 RpcTcpHandler::Reader::Reader(RpcTcpHandler* handler)
     : handler_(handler), guard_(handler_) {}
 

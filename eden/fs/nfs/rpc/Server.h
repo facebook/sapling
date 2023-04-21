@@ -14,6 +14,7 @@
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/net/NetworkSocket.h>
 
+#include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/nfs/portmap/PortmapClient.h"
 #include "eden/fs/nfs/rpc/Rpc.h"
 #include "eden/fs/nfs/rpc/Server.h"
@@ -36,7 +37,10 @@ enum class RpcStopReason {
   TAKEOVER,
 };
 
-struct RpcStopData {
+struct RpcStopData final : FsStopData {
+  bool isUnmounted() override;
+  FsChannelInfo extractTakeoverInfo() override;
+
   /**
    * The reason why the connection was stopped.
    *

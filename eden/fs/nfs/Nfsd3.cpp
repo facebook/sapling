@@ -46,7 +46,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       const std::shared_ptr<StructuredLogger>& structuredLogger,
       CaseSensitivity caseSensitive,
       uint32_t iosize,
-      folly::Promise<Nfsd3::StopData>& stopPromise,
+      folly::Promise<FsStopDataPtr>& stopPromise,
       ProcessAccessLog& processAccessLog,
       std::atomic<size_t>& traceDetailedArguments,
       std::shared_ptr<TraceBus<NfsTraceEvent>>& traceBus)
@@ -180,7 +180,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   // this server processor. This promise should only be used during the
   // lifetime of  nfs3d. The way we currently enforce this is by waiting for
   // this promise to be set before destroying of the nfs3d.
-  folly::Promise<Nfsd3::StopData>& stopPromise_;
+  folly::Promise<FsStopDataPtr>& stopPromise_;
   ProcessAccessLog& processAccessLog_;
   std::atomic_int32_t numberOfClients_;
   std::atomic<size_t>& traceDetailedArguments_;
@@ -1953,7 +1953,7 @@ void Nfsd3ServerProcessor::onShutdown(RpcStopData data) {
   // Note this triggers the Nfsd3 destruction which will also destroy
   // Nfsd3ServerProcessor. Don't do anything will the Nfsd3ServerProcessor
   // member variables after this!
-  stopPromise_.setValue(std::move(data));
+  stopPromise_.setValue(std::make_unique<RpcStopData>(std::move(data)));
 }
 
 void Nfsd3ServerProcessor::clientConnected() {
@@ -2118,8 +2118,10 @@ Nfsd3::~Nfsd3() {
   // when the socket was closed.
 }
 
-folly::SemiFuture<Nfsd3::StopData> Nfsd3::getStopFuture() {
-  return stopPromise_.getSemiFuture();
+folly::SemiFuture<FsStopDataPtr> Nfsd3::getStopFuture() {
+  // TODO: There's a memory-safety bug in Nfsd3 shutdown which requires one
+  // extra turn of the EventBase.
+  return stopPromise_.getSemiFuture().defer([](auto p) { return p; });
 }
 
 void Nfsd3::takeoverStop() {

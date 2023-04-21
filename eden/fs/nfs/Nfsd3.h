@@ -211,10 +211,11 @@ class Nfsd3 final : public FsChannel {
   };
 
   using StopData = RpcStopData;
+
   /**
    * Return a future that will be triggered on unmount.
    */
-  folly::SemiFuture<StopData> getStopFuture();
+  folly::SemiFuture<FsStopDataPtr> getStopFuture();
 
   ProcessAccessLog& getProcessAccessLog() {
     return processAccessLog_;
@@ -249,7 +250,7 @@ class Nfsd3 final : public FsChannel {
   folly::Synchronized<TelemetryState> telemetryState_;
   std::vector<TraceSubscriptionHandle<NfsTraceEvent>> traceSubscriptionHandles_;
 
-  folly::Promise<StopData> stopPromise_;
+  folly::Promise<FsStopDataPtr> stopPromise_;
   std::shared_ptr<RpcServer> server_;
   ProcessAccessLog processAccessLog_;
   // It is critical that this is a SerialExecutor. invalidation for parent
