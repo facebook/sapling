@@ -90,6 +90,9 @@ export class FileStackState {
     } else {
       this.convertToPlainText()[rev] = text;
     }
+    if (rev >= this.revLength) {
+      this.revLength = rev + 1;
+    }
   }
 
   /**

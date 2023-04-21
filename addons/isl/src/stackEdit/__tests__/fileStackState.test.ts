@@ -104,4 +104,16 @@ describe('FileStackState', () => {
       'a\nc\nd\ne\n',
     ]);
   });
+
+  it('supports appending text', () => {
+    const stack = new FileStackState([]);
+    expect(stack.revLength).toBe(0);
+    stack.editText(0, 'a', false);
+    expect(stack.revLength).toBe(1);
+    stack.editText(1, 'b', false);
+    expect(stack.revLength).toBe(2);
+    stack.editText(2, 'c', true);
+    expect(stack.revLength).toBe(3);
+    expect(stack.get(2)).toBe('c');
+  });
 });
