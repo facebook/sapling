@@ -42,7 +42,6 @@ add a mapping key prefix to skeleton manifests to test these work
   > [derived_data_config.available_configs.backfilling]
   > types=["blame", "skeleton_manifests", "unodes"]
   > mapping_key_prefixes={"skeleton_manifests"="xyz."}
-  > blame_version=2
   > CONFIG
 
 Backfill all enabled data types. That command uses the same logic as tailer does

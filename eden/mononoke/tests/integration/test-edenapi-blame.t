@@ -5,7 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ BLAME_VERSION=2 setup_common_config
+  $ setup_common_config
   $ setconfig experimental.edenapi-blame=true
 
   $ start_and_wait_for_mononoke_server

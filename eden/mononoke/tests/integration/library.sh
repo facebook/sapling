@@ -1122,10 +1122,6 @@ if [[ -n "${BLAME_VERSION}" ]]; then
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 blame_version = $BLAME_VERSION
 CONFIG
-else
-  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
-blame_version = 2
-CONFIG
 fi
 
 if [[ -n "${HG_SET_COMMITTER_EXTRA}" ]]; then

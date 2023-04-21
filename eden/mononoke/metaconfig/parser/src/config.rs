@@ -1206,7 +1206,7 @@ mod test {
                         unode_version: UnodeVersion::V2,
                         blame_filesize_limit: Some(101),
                         hg_set_committer_extra: false,
-                        blame_version: BlameVersion::V1,
+                        blame_version: BlameVersion::V2,
                     },],
                     scuba_table: None,
                 },

@@ -72,7 +72,7 @@ Derive the blame
 Switch to blame V2
   $ killandwait "$MONONOKE_PID"
   $ rm -rf "$TESTTMP/mononoke-config"
-  $ BLAME_VERSION=2 setup_common_config blob_files
+  $ setup_common_config blob_files
   $ mononoke_admin blame derive -l main file
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(617a81a133c0e681396cf70aa84dd51d12608873febde458a46874e3baa8cd08)) (glob)

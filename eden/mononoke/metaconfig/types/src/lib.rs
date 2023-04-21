@@ -385,9 +385,9 @@ pub enum UnodeVersion {
 #[derive(Eq, Clone, Copy, Debug, Default, PartialEq)]
 pub enum BlameVersion {
     /// Blame v1
-    #[default]
     V1,
     /// Blame v2
+    #[default]
     V2,
 }
 
