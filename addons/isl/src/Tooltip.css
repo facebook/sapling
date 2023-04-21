@@ -53,7 +53,7 @@
 .tooltip.simple-text-tooltip {
   max-width: 250px;
   white-space: pre-wrap;
-  word-break: break-all;
+  word-break: break-word;
   pointer-events: unset;
 }
 
