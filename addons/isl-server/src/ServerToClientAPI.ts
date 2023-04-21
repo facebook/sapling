@@ -246,6 +246,9 @@ export default class ServerToClientAPI {
             /*repo=*/ undefined,
             data as PlatformSpecificClientToServerMessages,
             message => this.postMessage(message),
+            (dispose: () => unknown) => {
+              this.repoDisposables.push({dispose});
+            },
           );
           this.notifyListeners(data);
         }
@@ -552,7 +555,14 @@ export default class ServerToClientAPI {
         return;
       }
       default: {
-        this.platform.handleMessageFromClient(repo, data, message => this.postMessage(message));
+        this.platform.handleMessageFromClient(
+          repo,
+          data,
+          message => this.postMessage(message),
+          (dispose: () => unknown) => {
+            this.repoDisposables.push({dispose});
+          },
+        );
         break;
       }
     }

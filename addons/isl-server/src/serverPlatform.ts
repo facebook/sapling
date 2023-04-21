@@ -26,6 +26,7 @@ export interface ServerPlatform {
     repo: Repository | undefined,
     message: PlatformSpecificClientToServerMessages,
     postMessage: (message: ServerToClientMessage) => void,
+    onDispose: (disapose: () => unknown) => void,
   ): void | Promise<void>;
 }
 

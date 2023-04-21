@@ -294,16 +294,29 @@ export type PlatformSpecificClientToServerMessages =
   | {type: 'platform/openFile'; path: RepoRelativePath; options?: {line?: OneIndexedLineNumber}}
   | {type: 'platform/openDiff'; path: RepoRelativePath; comparison: Comparison}
   | {type: 'platform/openExternal'; url: string}
-  | {type: 'platform/confirm'; message: string; details?: string | undefined};
+  | {type: 'platform/confirm'; message: string; details?: string | undefined}
+  | {
+      type: 'platform/setVSCodeConfig';
+      config: string;
+      value: Json | undefined;
+      scope: 'workspace' | 'global';
+    }
+  | {type: 'platform/subscribeToVSCodeConfig'; config: string};
 
 /**
  * messages returned by platform-specific (browser, vscode, electron) server implementation,
  * usually in response to a platform-specific ClientToServer message
  */
-export type PlatformSpecificServerToClientMessages = {
-  type: 'platform/confirmResult';
-  result: boolean;
-};
+export type PlatformSpecificServerToClientMessages =
+  | {
+      type: 'platform/confirmResult';
+      result: boolean;
+    }
+  | {
+      type: 'platform/vscodeConfigChanged';
+      config: string;
+      value: Json | undefined;
+    };
 
 export type PageVisibility = 'focused' | 'visible' | 'hidden';
 

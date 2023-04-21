@@ -12,6 +12,7 @@ import type {
   PlatformSpecificClientToServerMessages,
   ServerToClientMessage,
 } from 'isl/src/types';
+import type {Json} from 'shared/typeUtils';
 
 import {executeVSCodeCommand} from './commands';
 import {t} from './i18n';
@@ -24,6 +25,7 @@ export const VSCodePlatform: ServerPlatform = {
     repo: Repository | undefined,
     message: PlatformSpecificClientToServerMessages,
     postMessage: (message: ServerToClientMessage) => void,
+    onDispose: (cb: () => unknown) => void,
   ) => {
     try {
       switch (message.type) {
@@ -71,6 +73,33 @@ export const VSCodePlatform: ServerPlatform = {
           );
           postMessage({type: 'platform/confirmResult', result: result === OKButton});
           break;
+        }
+        case 'platform/setVSCodeConfig': {
+          vscode.workspace
+            .getConfiguration()
+            .update(
+              message.config,
+              message.value,
+              message.scope === 'global'
+                ? vscode.ConfigurationTarget.Global
+                : vscode.ConfigurationTarget.Workspace,
+            );
+          break;
+        }
+        case 'platform/subscribeToVSCodeConfig': {
+          const sendLatestValue = () =>
+            postMessage({
+              type: 'platform/vscodeConfigChanged',
+              config: message.config,
+              value: vscode.workspace.getConfiguration().get<Json>(message.config),
+            });
+          const dispose = vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration(message.config)) {
+              sendLatestValue();
+            }
+          });
+          sendLatestValue();
+          onDispose(() => dispose.dispose());
         }
       }
     } catch (err) {
