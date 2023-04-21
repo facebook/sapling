@@ -111,3 +111,19 @@ export function generatorContains<V>(gen: Generator<V>, value: V): boolean {
   }
   return false;
 }
+
+/**
+ * Zip 2 iterators.
+ */
+export function* zip<T, U>(iter1: Iterable<T>, iter2: Iterable<U>): IterableIterator<[T, U]> {
+  const iterator1 = iter1[Symbol.iterator]();
+  const iterator2 = iter2[Symbol.iterator]();
+  while (true) {
+    const result1 = iterator1.next();
+    const result2 = iterator2.next();
+    if (result1.done || result2.done) {
+      break;
+    }
+    yield [result1.value, result2.value];
+  }
+}
