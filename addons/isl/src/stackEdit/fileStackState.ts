@@ -220,3 +220,5 @@ type FileStackStateSource =
       type: 'flatten';
       lines: FlattenLine[];
     };
+
+export type {Rev};
