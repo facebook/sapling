@@ -7,12 +7,14 @@
 
 import {Copyable} from './Copyable';
 import {DropdownFields} from './DropdownFields';
+import {ErrorBoundary} from './ErrorNotice';
 import {Internal} from './Internal';
 import {Tooltip} from './Tooltip';
 import {T} from './i18n';
 import platform from './platform';
 import {applicationinfo} from './serverAPIState';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton, VSCodeDivider} from '@vscode/webview-ui-toolkit/react';
+import {Suspense} from 'react';
 import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
@@ -30,6 +32,8 @@ export function BugButton() {
 
 function BugDropdown({dismiss}: {dismiss: () => void}) {
   const info = useRecoilValue(applicationinfo);
+
+  const AdditionalDebugContent = platform.AdditionalDebugContent;
   return (
     <DropdownFields
       title={<T>Help</T>}
@@ -53,6 +57,16 @@ function BugDropdown({dismiss}: {dismiss: () => void}) {
           <T>View Documentation</T>
         </VSCodeButton>
         <FileABug dismissBugDropdown={dismiss} />
+        {AdditionalDebugContent && (
+          <div className="additional-debug-content">
+            <VSCodeDivider />
+            <ErrorBoundary>
+              <Suspense>
+                <AdditionalDebugContent />
+              </Suspense>
+            </ErrorBoundary>
+          </div>
+        )}
       </div>
       {/*
       // TODO: enable these debug actions

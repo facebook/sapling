@@ -10,6 +10,8 @@ import type {ThemeColor} from 'isl/src/theme';
 import type {RepoRelativePath} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
+import {Internal} from './Internal';
+
 export const vscodeWebviewPlatform: Platform = {
   platformName: 'vscode',
   confirm: (message: string, details?: string | undefined) => {
@@ -52,6 +54,8 @@ export const vscodeWebviewPlatform: Platform = {
       return {dispose: () => observer.disconnect()};
     },
   },
+
+  AdditionalDebugContent: Internal.AdditionalDebugContent,
 };
 
 function getTheme(): ThemeColor {

@@ -36,3 +36,9 @@
   justify-content: center;
   width: 100%;
 }
+
+.additional-debug-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad);
+}

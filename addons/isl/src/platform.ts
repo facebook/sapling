@@ -7,6 +7,7 @@
 
 import type {ThemeColor} from './theme';
 import type {Disposable, OneIndexedLineNumber, PlatformName, RepoRelativePath} from './types';
+import type {LazyExoticComponent} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
 import {browserPlatform} from './BrowserPlatform';
@@ -23,6 +24,13 @@ export interface Platform {
   openDiff?(path: RepoRelativePath, comparison: Comparison): void;
   openExternalLink(url: string): void;
   clipboardCopy(value: string): void;
+
+  /**
+   * Component representing additional buttons/info in the help menu.
+   * Note: This should be lazy-loaded via `React.lazy()` so that implementations
+   * may import any files without worrying about the platform being set up yet or not.
+   */
+  AdditionalDebugContent?: LazyExoticComponent<() => JSX.Element>;
 
   theme?: {
     getTheme(): ThemeColor;
