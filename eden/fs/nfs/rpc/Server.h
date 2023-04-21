@@ -106,14 +106,22 @@ class RpcServerProcessor {
 
 class RpcServer;
 
-class RpcTcpHandler : public folly::DelayedDestruction,
-                      private folly::AsyncWriter::WriteCallback {
+/**
+ * RpcConnectionHandler manages connected RPC sockets, whether for NFS or Mountd
+ * or Rpcbind.
+ *
+ * Right now, it only supports stream sockets, such as TCP. If we add support
+ * for UDP or unix datagram sockets, rename this to RpcStreamHandler and
+ * introduce an RpcDatagramHandler.
+ */
+class RpcConnectionHandler : public folly::DelayedDestruction,
+                             private folly::AsyncWriter::WriteCallback {
  public:
-  using UniquePtr =
-      std::unique_ptr<RpcTcpHandler, folly::DelayedDestruction::Destructor>;
+  using UniquePtr = std::
+      unique_ptr<RpcConnectionHandler, folly::DelayedDestruction::Destructor>;
 
   /**
-   * Build a RpcTcpHandler.
+   * Build a RpcConnectionHandler.
    *
    * When the returned UniquePtr is dropped, this class will stay alive until
    * the client drops the connection, at which time the memory will be released
@@ -122,7 +130,7 @@ class RpcTcpHandler : public folly::DelayedDestruction,
   template <class... Args>
   static UniquePtr create(Args&&... args) {
     return UniquePtr(
-        new RpcTcpHandler(std::forward<Args>(args)...),
+        new RpcConnectionHandler(std::forward<Args>(args)...),
         folly::DelayedDestruction::Destructor());
   }
 
@@ -137,7 +145,7 @@ class RpcTcpHandler : public folly::DelayedDestruction,
   folly::SemiFuture<folly::Unit> takeoverStop();
 
  private:
-  RpcTcpHandler(
+  RpcConnectionHandler(
       std::shared_ptr<RpcServerProcessor> proc,
       folly::AsyncSocket::UniquePtr&& socket,
       std::shared_ptr<folly::Executor> threadPool,
@@ -146,7 +154,7 @@ class RpcTcpHandler : public folly::DelayedDestruction,
 
   class Reader : public folly::AsyncReader::ReadCallback {
    public:
-    explicit Reader(RpcTcpHandler* handler);
+    explicit Reader(RpcConnectionHandler* handler);
 
     /**
      * This must be called on the main event base of the socket. This is
@@ -170,7 +178,7 @@ class RpcTcpHandler : public folly::DelayedDestruction,
 
     void readErr(const folly::AsyncSocketException& ex) noexcept override;
 
-    RpcTcpHandler* handler_;
+    RpcConnectionHandler* handler_;
     DestructorGuard guard_;
   };
 
@@ -286,8 +294,8 @@ class RpcTcpHandler : public folly::DelayedDestruction,
   folly::Promise<folly::Unit> pendingRequestsComplete_;
 
   /**
-   * RpcServer that initiated this RpcTcpHandler. We keep a reference to this
-   * so that we can notify the server when we are shutting down. The server
+   * RpcServer that initiated this RpcConnectionHandler. We keep a reference to
+   * this so that we can notify the server when we are shutting down. The server
    * should outlive all of it's connections, but if the server has already been
    * shutdown then we can just skip notifying it that we are shutting down.
    */
@@ -348,14 +356,14 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
    * this is used to inform the server about the handler so that it can manage
    * it.
    */
-  void registerRpcHandler(RpcTcpHandler::UniquePtr handler);
+  void registerRpcHandler(RpcConnectionHandler::UniquePtr handler);
 
   /**
    * The socket underlying handlerToErase was closed and so the handler
    * is shutting down. This informs the server so that the server can stop
    * tracking it.
    */
-  void unregisterRpcHandler(RpcTcpHandler* handlerToErase);
+  void unregisterRpcHandler(RpcConnectionHandler* handlerToErase);
 
  private:
   RpcServer(
@@ -406,7 +414,8 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
 
   // Existing handlers that have an open socket and are processing requests from
   // their socket.
-  folly::Synchronized<std::vector<RpcTcpHandler::UniquePtr>> rpcTcpHandlers_;
+  folly::Synchronized<std::vector<RpcConnectionHandler::UniquePtr>>
+      rpcConnectionHandlers_;
 };
 
 } // namespace facebook::eden

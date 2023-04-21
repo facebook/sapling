@@ -36,10 +36,10 @@ FsChannelInfo RpcStopData::extractTakeoverInfo() {
   return NfsChannelData{std::move(socketToKernel)};
 }
 
-RpcTcpHandler::Reader::Reader(RpcTcpHandler* handler)
+RpcConnectionHandler::Reader::Reader(RpcConnectionHandler* handler)
     : handler_(handler), guard_(handler_) {}
 
-void RpcTcpHandler::Reader::getReadBuffer(void** bufP, size_t* lenP) {
+void RpcConnectionHandler::Reader::getReadBuffer(void** bufP, size_t* lenP) {
   // TODO(xavierd): Should maxSize be configured to be at least the
   // configured NFS iosize?
   constexpr size_t maxSize = 64 * 1024;
@@ -56,29 +56,29 @@ void RpcTcpHandler::Reader::getReadBuffer(void** bufP, size_t* lenP) {
   *bufP = buf;
 }
 
-void RpcTcpHandler::Reader::readDataAvailable(size_t len) noexcept {
+void RpcConnectionHandler::Reader::readDataAvailable(size_t len) noexcept {
   handler_->readBuf_.postallocate(len);
   handler_->tryConsumeReadBuffer();
 }
 
-bool RpcTcpHandler::Reader::isBufferMovable() noexcept {
+bool RpcConnectionHandler::Reader::isBufferMovable() noexcept {
   // prefer to have getReadBuffer / readDataAvailable called
   // rather than readBufferAvailable.
   return true;
 }
 
-void RpcTcpHandler::Reader::readBufferAvailable(
+void RpcConnectionHandler::Reader::readBufferAvailable(
     std::unique_ptr<IOBuf> readBuf) noexcept {
   handler_->readBuf_.append(std::move(readBuf));
   handler_->tryConsumeReadBuffer();
 }
 
-folly::SemiFuture<folly::Unit> RpcTcpHandler::Reader::deleteMe(
+folly::SemiFuture<folly::Unit> RpcConnectionHandler::Reader::deleteMe(
     RpcStopReason stopReason) {
   return handler_->resetReader(stopReason);
 }
 
-void RpcTcpHandler::Reader::readEOF() noexcept {
+void RpcConnectionHandler::Reader::readEOF() noexcept {
   // note1: The socket was closed on us. For the mountd, this is just a
   // connection closing which is normal after every request. we don't care too
   // much about the stop data for mountd any way because we throw it away. For
@@ -95,7 +95,7 @@ void RpcTcpHandler::Reader::readEOF() noexcept {
   deleteMe(RpcStopReason::UNMOUNT).via(evb);
 }
 
-void RpcTcpHandler::Reader::readErr(
+void RpcConnectionHandler::Reader::readErr(
     const folly::AsyncSocketException& ex) noexcept {
   XLOG(ERR) << "Error while reading: " << folly::exceptionStr(ex);
   // see comment in readEOF about "dropping" this future.
@@ -103,7 +103,7 @@ void RpcTcpHandler::Reader::readErr(
   deleteMe(RpcStopReason::ERROR).via(evb);
 }
 
-void RpcTcpHandler::writeErr(
+void RpcConnectionHandler::writeErr(
     size_t /*bytesWritten*/,
     const folly::AsyncSocketException& ex) noexcept {
   // TODO: Should we assume the connection is broken, and we should close the
@@ -111,7 +111,7 @@ void RpcTcpHandler::writeErr(
   XLOG(ERR) << "Error while writing: " << folly::exceptionStr(ex);
 }
 
-RpcTcpHandler::RpcTcpHandler(
+RpcConnectionHandler::RpcConnectionHandler(
     std::shared_ptr<RpcServerProcessor> proc,
     AsyncSocket::UniquePtr&& socket,
     std::shared_ptr<folly::Executor> threadPool,
@@ -128,7 +128,7 @@ RpcTcpHandler::RpcTcpHandler(
   proc_->clientConnected();
 }
 
-folly::SemiFuture<folly::Unit> RpcTcpHandler::takeoverStop() {
+folly::SemiFuture<folly::Unit> RpcConnectionHandler::takeoverStop() {
   XLOG(DBG7) << "Takeover requested: locking state to change the status";
   // note its essential that this runs inline with the pending requests
   // check in resetReader. This ensures that we don't double set the pending
@@ -158,12 +158,12 @@ folly::SemiFuture<folly::Unit> RpcTcpHandler::takeoverStop() {
   return reader_->deleteMe(RpcStopReason::TAKEOVER);
 }
 
-folly::SemiFuture<folly::Unit> RpcTcpHandler::resetReader(
+folly::SemiFuture<folly::Unit> RpcConnectionHandler::resetReader(
     RpcStopReason stopReason) {
   // The lifetimes here are tricky. The reader holds the last reference to the
-  // RpcTcpHandler, so when we reset the reader, this class will be destroyed.
-  // Thus, we need to keep any member variables around our selves to use after
-  // the reset call.
+  // RpcConnectionHandler, so when we reset the reader, this class will be
+  // destroyed. Thus, we need to keep any member variables around our selves to
+  // use after the reset call.
   {
     auto& state = state_.get();
 
@@ -228,7 +228,7 @@ std::string displayBuffer(folly::IOBuf* buf) {
 }
 } // namespace
 
-void RpcTcpHandler::tryConsumeReadBuffer() noexcept {
+void RpcConnectionHandler::tryConsumeReadBuffer() noexcept {
   // Iterate over all the complete fragments and dispatch these to the
   // threadPool_.
   while (true) {
@@ -276,7 +276,7 @@ void RpcTcpHandler::tryConsumeReadBuffer() noexcept {
   }
 }
 
-std::unique_ptr<folly::IOBuf> RpcTcpHandler::readOneRequest() noexcept {
+std::unique_ptr<folly::IOBuf> RpcConnectionHandler::readOneRequest() noexcept {
   if (!readBuf_.front()) {
     return nullptr;
   }
@@ -358,7 +358,7 @@ std::unique_ptr<folly::IOBuf> finalizeFragment(
 }
 } // namespace
 
-void RpcTcpHandler::recordParsingError(
+void RpcConnectionHandler::recordParsingError(
     RpcParsingError& err,
     std::unique_ptr<folly::IOBuf> input) {
   std::string message = fmt::format(
@@ -373,7 +373,7 @@ void RpcTcpHandler::recordParsingError(
       folly::to<std::string>("FS", " - ", err.getProcedureContext()), message});
 }
 
-void RpcTcpHandler::replyServerError(
+void RpcConnectionHandler::replyServerError(
     accept_stat err,
     uint32_t xid,
     std::unique_ptr<folly::IOBufQueue>& outputBuffer) {
@@ -385,7 +385,7 @@ void RpcTcpHandler::replyServerError(
   serializeReply(errSer, err, xid);
 }
 
-void RpcTcpHandler::dispatchAndReply(
+void RpcConnectionHandler::dispatchAndReply(
     std::unique_ptr<folly::IOBuf> input,
     DestructorGuard guard) {
   folly::makeFutureWith([this, input = std::move(input)]() mutable {
@@ -489,7 +489,7 @@ void RpcServer::connectionAccepted(
     AcceptInfo /* info */) noexcept {
   XLOG(DBG7) << "Accepted connection from: " << clientAddr;
   auto socket = AsyncSocket::newSocket(evb_, fd);
-  registerRpcHandler(RpcTcpHandler::create(
+  registerRpcHandler(RpcConnectionHandler::create(
       proc_,
       std::move(socket),
       threadPool_,
@@ -549,8 +549,7 @@ RpcServer::RpcServer(
       threadPool_(threadPool),
       structuredLogger_(structuredLogger),
       serverSocket_(new AsyncServerSocket(evb_)),
-      proc_(std::move(proc)),
-      rpcTcpHandlers_{} {}
+      proc_(std::move(proc)) {}
 
 void RpcServer::initialize(folly::SocketAddress addr) {
   evb_->checkIsInEventBaseThread();
@@ -569,7 +568,7 @@ void RpcServer::initializeConnectedSocket(folly::File socket) {
   // meant for server that only ever has one connected socket (nfsd3). Since
   // we already have the one connected socket, we will not need the
   // accepting socket to make any more connections.
-  rpcTcpHandlers_.wlock()->emplace_back(RpcTcpHandler::create(
+  rpcConnectionHandlers_.wlock()->emplace_back(RpcConnectionHandler::create(
       proc_,
       AsyncSocket::newSocket(
           evb_, folly::NetworkSocket::fromFd(socket.release())),
@@ -589,20 +588,20 @@ void RpcServer::initializeServerSocket(folly::File socket) {
   serverSocket_->startAccepting();
 }
 
-void RpcServer::registerRpcHandler(RpcTcpHandler::UniquePtr handler) {
-  rpcTcpHandlers_.wlock()->emplace_back(std::move(handler));
+void RpcServer::registerRpcHandler(RpcConnectionHandler::UniquePtr handler) {
+  rpcConnectionHandlers_.wlock()->emplace_back(std::move(handler));
 }
 
-void RpcServer::unregisterRpcHandler(RpcTcpHandler* handlerToErase) {
-  auto rpcTcpHandlers = rpcTcpHandlers_.wlock();
-  rpcTcpHandlers->erase(
+void RpcServer::unregisterRpcHandler(RpcConnectionHandler* handlerToErase) {
+  auto rpcConnectionHandlers = rpcConnectionHandlers_.wlock();
+  rpcConnectionHandlers->erase(
       std::remove_if(
-          rpcTcpHandlers->begin(),
-          rpcTcpHandlers->end(),
-          [&handlerToErase](RpcTcpHandler::UniquePtr& handler) {
+          rpcConnectionHandlers->begin(),
+          rpcConnectionHandlers->end(),
+          [&handlerToErase](RpcConnectionHandler::UniquePtr& handler) {
             return handler.get() == handlerToErase;
           }),
-      rpcTcpHandlers->end());
+      rpcConnectionHandlers->end());
 }
 
 folly::SemiFuture<folly::File> RpcServer::takeoverStop() {
@@ -623,9 +622,9 @@ folly::SemiFuture<folly::File> RpcServer::takeoverStop() {
   XLOG(DBG7) << "calling takeover stop on handlers";
   // TODO this needs to check if the unique_ptr is valid
   // todo should this return the file descriptor for the socket?
-  std::vector<RpcTcpHandler::UniquePtr> handlers;
+  std::vector<RpcConnectionHandler::UniquePtr> handlers;
   {
-    auto lockedHandlers = rpcTcpHandlers_.wlock();
+    auto lockedHandlers = rpcConnectionHandlers_.wlock();
     lockedHandlers->swap(handlers);
   }
 
