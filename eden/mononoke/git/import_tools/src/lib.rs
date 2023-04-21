@@ -46,6 +46,7 @@ use tokio::task;
 pub use crate::git_reader::GitRepoReader;
 pub use crate::gitimport_objects::convert_time_to_datetime;
 pub use crate::gitimport_objects::oid_to_sha1;
+use crate::gitimport_objects::read_raw_object;
 pub use crate::gitimport_objects::CommitMetadata;
 pub use crate::gitimport_objects::ExtractedCommit;
 pub use crate::gitimport_objects::GitLeaf;
@@ -214,17 +215,18 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
                         )
                         .await?;
 
-                        Result::<_, Error>::Ok((metadata, file_changes, original_commit))
+                        Result::<_, Error>::Ok((metadata, file_changes, original_commit, tree))
                     }
                 })
                 .await?
             }
         })
         .try_buffered(prefs.concurrency)
-        .and_then(|(metadata, file_changes, original_commit)| {
+        .and_then(|(metadata, file_changes, original_commit, tree)| {
             let acc = &acc;
             let uploader = &uploader;
             let repo_name = &repo_name;
+            let reader = &reader;
             async move {
                 let oid = metadata.oid;
                 let bonsai_parents = metadata
@@ -245,7 +247,24 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
                     .collect::<Result<Vec<_>, _>>()
                     .with_context(|| format_err!("While looking for parents of {}", oid))?;
 
-                // Before generating the corresponding changeset at Mononoke end, upload the raw git commit.
+                // Before generating the corresponding changeset at Mononoke end, upload the raw git commit
+                // and the git tree pointed to by the git commit.
+                let tree_for_commit =
+                    read_raw_object(reader, &tree.0).await.with_context(|| {
+                        format_err!("Failed to fetch git tree {} for commit {}", tree.0, oid)
+                    })?;
+                // Upload Git Tree
+                uploader
+                    .upload_object(ctx, tree.0, tree_for_commit)
+                    .await
+                    .with_context(|| {
+                        format_err!(
+                            "Failed to upload raw git tree {} for commit {}",
+                            tree.0,
+                            oid
+                        )
+                    })?;
+                // Upload Git commit
                 uploader
                     .upload_object(ctx, oid, original_commit)
                     .await

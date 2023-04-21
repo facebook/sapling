@@ -315,7 +315,7 @@ pub(crate) async fn read_commit(
         .map_err(|_| format_err!("{} is not a commit", oid))
 }
 
-pub(crate) async fn read_raw_commit(
+pub(crate) async fn read_raw_object(
     reader: &GitRepoReader,
     oid: &git_hash::oid,
 ) -> Result<Bytes, Error> {
@@ -413,7 +413,7 @@ impl ExtractedCommit {
                 )
             })
             .collect();
-        let original_commit = read_raw_commit(reader, &oid).await?;
+        let original_commit = read_raw_object(reader, &oid).await?;
         Result::<_, Error>::Ok(ExtractedCommit {
             original_commit,
             metadata: CommitMetadata {

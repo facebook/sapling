@@ -42,10 +42,17 @@
   * Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
   * Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
 
-# Validate if creating the commit also uploaded the raw commit blob
-# The id of the blob should be the same as the commit object id
+# Validate if creating the commit also uploaded the raw commit blob AND the raw tree blob
+# The ids of the blobs should be the same as the commit and tree object ids
   $ ls $TESTTMP/blobstore/blobs | grep "git_object"
   blob-repo0000.git_object.8ce3eae44760b500bf3f2c3922a95dcd3c908e9e
+  blob-repo0000.git_object.cb2ef838eb24e4667fee3a8b89c930234ae6e4bb
+
+# Cross reference with the blobs present in the git store
+  $ cd "$GIT_REPO"
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | grep -e '^[^ ]* commit' -e '^[^ ]* tree' | cut -d" " -f1,9- | sort
+  8ce3eae44760b500bf3f2c3922a95dcd3c908e9e
+  cb2ef838eb24e4667fee3a8b89c930234ae6e4bb
 
 # Add second commit to git repository
   $ cd "$GIT_REPO"
@@ -69,8 +76,18 @@
 # Validate if creating the commit also uploaded the raw commit blob
 # The id of the blob should be the same as the commit object id
   $ ls $TESTTMP/blobstore/blobs | grep "git_object"
+  blob-repo0000.git_object.7327e6c9b533787eeb80877d557d50f39c480f54
   blob-repo0000.git_object.8ce3eae44760b500bf3f2c3922a95dcd3c908e9e
+  blob-repo0000.git_object.cb2ef838eb24e4667fee3a8b89c930234ae6e4bb
   blob-repo0000.git_object.e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
+
+# Cross reference with the blobs present in the git store
+  $ cd "$GIT_REPO"
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | grep -e '^[^ ]* commit' -e '^[^ ]* tree' | cut -d" " -f1,9- | sort
+  7327e6c9b533787eeb80877d557d50f39c480f54
+  8ce3eae44760b500bf3f2c3922a95dcd3c908e9e
+  cb2ef838eb24e4667fee3a8b89c930234ae6e4bb
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
 
 # Test missing-for-commit flag (agains fully imported repo history)
   $ gitimport "$GIT_REPO" --suppress-ref-mapping missing-for-commit e8615d6f149b876be0a2f30a1c5bf0c42bf8e136

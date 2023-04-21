@@ -60,12 +60,17 @@
   * Ref: "refs/heads/master": Some(ChangesetId(Blake2(375ef2c64bcda29f59e557d6da26baca67af93b6da5702fcaa2bb626aa1a45e7))) (glob)
   * Ref: "refs/heads/root": Some(ChangesetId(Blake2(*))) (glob)
 
-# Validate if creating the commits also uploaded the raw commit blobs
-# The id of the blobs should be the same as the commit object ids
+# Validate if creating the commits also uploaded the raw commit blobs AND the raw tree blobs
+# The id of the blobs should be the same as the commit and tree object ids
   $ ls $TESTTMP/blobstore/blobs | grep "git_object"
   blob-repo0000.git_object.161a8cb720352af550786d4e73eeb36d5b958ddd
+  blob-repo0000.git_object.345b79b8bd294b77d50384ffa777c56191620334
+  blob-repo0000.git_object.3e11aab71d3e96c63139b4f68c0f0c65e86e078c
+  blob-repo0000.git_object.4b825dc642cb6eb9a060e54bf8d69288fbee4904
   blob-repo0000.git_object.6283891fdea5a1a4560451f09366220a585e07b2
+  blob-repo0000.git_object.8b275500af68d631c2062eb45c743174aaadf224
   blob-repo0000.git_object.933c6d8556a071c2105b8b2fd1dabff709d87929
+  blob-repo0000.git_object.a6fb918088a115d0f76618a4d048339cd2abcf69
   blob-repo0000.git_object.bf946c828dea5fe0a0228dc7d556aa4a524df2d1
   blob-repo0000.git_object.d53a2ef2bbadbe26f8c28598b408e03c0b01027c
 
