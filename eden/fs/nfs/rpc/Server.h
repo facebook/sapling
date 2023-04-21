@@ -315,13 +315,15 @@ class RpcServer : public std::enable_shared_from_this<RpcServer> {
    */
   void initialize(folly::SocketAddress addr);
 
-  enum class InitialSocketType { SERVER_SOCKET, CONNECTED_SOCKET };
+  /**
+   * Initialize this server from an existing connected socket.
+   */
+  void initializeConnectedSocket(folly::File socket);
 
   /**
-   * Initialize this server from an already existing socket. connected indicates
-   * if this is a connected socket or server socket.
+   * Initialize this server from an existing server socket.
    */
-  void initialize(folly::File&& socket, InitialSocketType type);
+  void initializeServerSocket(folly::File socket);
 
   folly::SemiFuture<folly::File> takeoverStop();
 

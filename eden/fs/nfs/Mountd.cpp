@@ -230,10 +230,9 @@ void Mountd::initialize(folly::SocketAddress addr, bool registerWithRpcbind) {
   }
 }
 
-void Mountd::initialize(folly::File&& socket) {
+void Mountd::initialize(folly::File socket) {
   XLOG(DBG7) << "initializing mountd: " << socket.fd();
-  server_->initialize(
-      std::move(socket), RpcServer::InitialSocketType::SERVER_SOCKET);
+  server_->initializeServerSocket(std::move(socket));
 }
 
 uint32_t Mountd::getProgramNumber() {

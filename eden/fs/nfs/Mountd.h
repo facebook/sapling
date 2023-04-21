@@ -49,7 +49,7 @@ class Mountd {
    * host, EdenFS won't be able to register itself.
    */
   void initialize(folly::SocketAddress addr, bool registerWithRpcbind);
-  void initialize(folly::File&& socket);
+  void initialize(folly::File socket);
 
   uint32_t getProgramNumber();
 

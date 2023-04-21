@@ -2046,12 +2046,10 @@ void Nfsd3::initialize(folly::SocketAddress addr, bool registerWithRpcbind) {
   }
 }
 
-void Nfsd3::initialize(folly::File&& connectedSocket) {
+void Nfsd3::initialize(folly::File connectedSocket) {
   XLOG(DBG7) << "Initializing nfsd3 with connected socket: "
              << connectedSocket.fd();
-  server_->initialize(
-      std::move(connectedSocket),
-      RpcServer::InitialSocketType::CONNECTED_SOCKET);
+  server_->initializeConnectedSocket(std::move(connectedSocket));
 }
 
 void Nfsd3::invalidate(AbsolutePath path, mode_t mode) {

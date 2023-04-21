@@ -146,7 +146,7 @@ class Nfsd3 final : public FsChannel {
   ~Nfsd3();
 
   void initialize(folly::SocketAddress addr, bool registerWithRpcbind);
-  void initialize(folly::File&& connectedSocket);
+  void initialize(folly::File connectedSocket);
 
   /**
    * Trigger an invalidation for the given path.

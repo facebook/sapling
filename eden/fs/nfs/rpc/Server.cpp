@@ -199,7 +199,7 @@ folly::SemiFuture<folly::Unit> RpcTcpHandler::resetReader(
       .ensure([this, proc = proc_, stopReason]() {
         XLOG(DBG7) << "Pending Requests complete;"
                    << "finishing destroying this rpc tcp handler";
-        this->sock_->getEventBase()->dcheckIsInEventBaseThread();
+        this->sock_->getEventBase()->checkIsInEventBaseThread();
         if (auto owningServer = this->owningServer_.lock()) {
           owningServer->unregisterRpcHandler(this);
         }
@@ -555,12 +555,10 @@ RpcServer::RpcServer(
       rpcTcpHandlers_{} {}
 
 void RpcServer::initialize(folly::SocketAddress addr) {
+  evb_->checkIsInEventBaseThread();
+
   acceptCb_.reset(new RpcServer::RpcAcceptCallback{
-      proc_,
-      evb_,
-      threadPool_,
-      structuredLogger_,
-      std::weak_ptr<RpcServer>{shared_from_this()}});
+      proc_, evb_, threadPool_, structuredLogger_, weak_from_this()});
 
   // Ask kernel to assign us a port on the loopback interface
   serverSocket_->bind(addr);
@@ -570,39 +568,32 @@ void RpcServer::initialize(folly::SocketAddress addr) {
   serverSocket_->startAccepting();
 }
 
-void RpcServer::initialize(folly::File&& socket, InitialSocketType type) {
-  switch (type) {
-    case InitialSocketType::CONNECTED_SOCKET:
-      XLOG(DBG7) << "Initializing server from connected socket: "
-                 << socket.fd();
-      // Note we don't initialize the accepting socket in this case. This is
-      // meant for server that only ever has one connected socket (nfsd3). Since
-      // we already have the one connected socket, we will not need the
-      // accepting socket to make any more connections.
-      rpcTcpHandlers_.wlock()->emplace_back(RpcTcpHandler::create(
-          proc_,
-          AsyncSocket::newSocket(
-              evb_, folly::NetworkSocket::fromFd(socket.release())),
-          threadPool_,
-          structuredLogger_,
-          shared_from_this()));
-      return;
-    case InitialSocketType::SERVER_SOCKET:
-      XLOG(DBG7) << "Initializing server from server socket: " << socket.fd();
-      acceptCb_.reset(new RpcServer::RpcAcceptCallback{
-          proc_,
-          evb_,
-          threadPool_,
-          structuredLogger_,
-          std::weak_ptr<RpcServer>{shared_from_this()}});
-      serverSocket_->useExistingSocket(
-          folly::NetworkSocket::fromFd(socket.release()));
+void RpcServer::initializeConnectedSocket(folly::File socket) {
+  XLOG(DBG7) << "Initializing server from connected socket: " << socket.fd();
+  // Note we don't initialize the accepting socket in this case. This is
+  // meant for server that only ever has one connected socket (nfsd3). Since
+  // we already have the one connected socket, we will not need the
+  // accepting socket to make any more connections.
+  rpcTcpHandlers_.wlock()->emplace_back(RpcTcpHandler::create(
+      proc_,
+      AsyncSocket::newSocket(
+          evb_, folly::NetworkSocket::fromFd(socket.release())),
+      threadPool_,
+      structuredLogger_,
+      shared_from_this()));
+}
 
-      serverSocket_->addAcceptCallback(acceptCb_.get(), evb_);
-      serverSocket_->startAccepting();
-      return;
-  }
-  throw std::runtime_error("Impossible socket type.");
+void RpcServer::initializeServerSocket(folly::File socket) {
+  evb_->checkIsInEventBaseThread();
+
+  XLOG(DBG7) << "Initializing server from server socket: " << socket.fd();
+  acceptCb_.reset(new RpcServer::RpcAcceptCallback{
+      proc_, evb_, threadPool_, structuredLogger_, weak_from_this()});
+  serverSocket_->useExistingSocket(
+      folly::NetworkSocket::fromFd(socket.release()));
+
+  serverSocket_->addAcceptCallback(acceptCb_.get(), evb_);
+  serverSocket_->startAccepting();
 }
 
 void RpcServer::registerRpcHandler(RpcTcpHandler::UniquePtr handler) {
@@ -622,7 +613,7 @@ void RpcServer::unregisterRpcHandler(RpcTcpHandler* handlerToErase) {
 }
 
 folly::SemiFuture<folly::File> RpcServer::takeoverStop() {
-  evb_->dcheckIsInEventBaseThread();
+  evb_->checkIsInEventBaseThread();
 
   XLOG(DBG7) << "Removing accept callback";
   if (acceptCb_) {
