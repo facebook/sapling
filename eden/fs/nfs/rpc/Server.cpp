@@ -509,6 +509,7 @@ void RpcServer::RpcAcceptCallback::acceptError(
 void RpcServer::RpcAcceptCallback::acceptStopped() noexcept {
   // We won't ever be accepting any connection, it is now safe to delete
   // ourself, release the guard.
+  stopped_ = true;
   { auto guard = std::move(guard_); }
 }
 
@@ -564,7 +565,7 @@ void RpcServer::initialize(folly::SocketAddress addr) {
   serverSocket_->bind(addr);
   serverSocket_->listen(1024);
 
-  serverSocket_->addAcceptCallback(acceptCb_.get(), evb_);
+  serverSocket_->addAcceptCallback(acceptCb_.get(), nullptr);
   serverSocket_->startAccepting();
 }
 
@@ -589,6 +590,7 @@ void RpcServer::initializeServerSocket(folly::File socket) {
   XLOG(DBG7) << "Initializing server from server socket: " << socket.fd();
   acceptCb_.reset(new RpcServer::RpcAcceptCallback{
       proc_, evb_, threadPool_, structuredLogger_, weak_from_this()});
+
   serverSocket_->useExistingSocket(
       folly::NetworkSocket::fromFd(socket.release()));
 
@@ -617,15 +619,20 @@ folly::SemiFuture<folly::File> RpcServer::takeoverStop() {
 
   XLOG(DBG7) << "Removing accept callback";
   if (acceptCb_) {
-    serverSocket_->removeAcceptCallback(acceptCb_.get(), evb_);
+    serverSocket_->removeAcceptCallback(acceptCb_.get(), nullptr);
+    XCHECK(acceptCb_->isStopped())
+        << "We always accept on the same primary socket EventBase, so it should be guaranteed that acceptStopped() ran synchronously.";
+    acceptCb_.reset();
+
+    // Removing the last accept callback implicitly paused accepting.
   }
-  // implicitly pauses accepting on the socket.
-  // not more connections will be made after this point.
+
+  // No more connections will be made after this point.
 
   XLOG(DBG7) << "calling takeover stop on handlers";
   // TODO this needs to check if the unique_ptr is valid
   // todo should this return the file descriptor for the socket?
-  std::vector<RpcTcpHandler::UniquePtr> handlers{};
+  std::vector<RpcTcpHandler::UniquePtr> handlers;
   {
     auto lockedHandlers = rpcTcpHandlers_.wlock();
     lockedHandlers->swap(handlers);

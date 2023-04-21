@@ -381,6 +381,11 @@ class RpcServer : public std::enable_shared_from_this<RpcServer> {
           owningServer_(std::move(owningServer)),
           guard_(this) {}
 
+    /// Returns true if acceptStopped() has run.
+    bool isStopped() const {
+      return stopped_;
+    }
+
    private:
     void connectionAccepted(
         folly::NetworkSocket fd,
@@ -398,6 +403,8 @@ class RpcServer : public std::enable_shared_from_this<RpcServer> {
     std::shared_ptr<folly::Executor> threadPool_;
     std::shared_ptr<StructuredLogger> structuredLogger_;
     std::weak_ptr<RpcServer> owningServer_;
+
+    bool stopped_ = false;
 
     /**
      * Hold a guard to ourself to avoid being deleted until the callback is
