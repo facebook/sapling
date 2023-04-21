@@ -175,4 +175,85 @@ describe('CommitStackState', () => {
     expect(stack.getFile(3, 'y.txt')).toMatchObject({data: '33'});
     expect(stack.getFile(3, 'z.txt')).toBe(ABSENT_FILE);
   });
+
+  describe('builds FileStack', () => {
+    it('for double renames', () => {
+      // x.txt renamed to both y.txt and z.txt.
+      const stack = new CommitStackState([
+        {...exportCommitDefault, node: 'A', files: {'x.txt': {data: 'xx'}}},
+        {
+          ...exportCommitDefault,
+          node: 'B',
+          parents: ['A'],
+          files: {
+            'x.txt': null,
+            'y.txt': {data: 'yy', copyFrom: 'x.txt'},
+            'z.txt': {data: 'zz', copyFrom: 'x.txt'},
+          },
+        },
+      ]);
+      expect(stack.describeFileStacks()).toStrictEqual([
+        // y.txt inherits x.txt's history.
+        '0:./x.txt 1:A/x.txt(xx) 2:B/y.txt(yy)',
+        // z.txt does not inherit x.txt's history (but still has a parent for diff rendering purpose).
+        '0:A/x.txt(xx) 1:B/z.txt(zz)',
+      ]);
+    });
+
+    it('for double copies', () => {
+      // x.txt copied to both y.txt and z.txt.
+      const stack = new CommitStackState([
+        {...exportCommitDefault, node: 'A', files: {'x.txt': {data: 'xx'}}},
+        {
+          ...exportCommitDefault,
+          node: 'B',
+          parents: ['A'],
+          files: {
+            'y.txt': {data: 'yy', copyFrom: 'x.txt'},
+            'z.txt': {data: 'zz', copyFrom: 'y.txt'},
+          },
+        },
+      ]);
+      expect(stack.describeFileStacks()).toStrictEqual([
+        // y.txt connects to x.txt's history.
+        '0:./x.txt 1:A/x.txt(xx) 2:B/y.txt(yy)',
+        // z.txt does not connect to x.txt's history (but still have one parent for diff).
+        '0:./z.txt 1:B/z.txt(zz)',
+      ]);
+    });
+
+    it('for changes and copies', () => {
+      // x.txt is changed, and copied to both y.txt and z.txt.
+      const stack = new CommitStackState([
+        {...exportCommitDefault, node: 'A', files: {'x.txt': {data: 'xx'}}},
+        {
+          ...exportCommitDefault,
+          node: 'B',
+          parents: ['A'],
+          files: {
+            'x.txt': {data: 'yy'},
+            'y.txt': {data: 'xx', copyFrom: 'x.txt'},
+            'z.txt': {data: 'xx', copyFrom: 'x.txt'},
+          },
+        },
+      ]);
+      expect(stack.describeFileStacks()).toStrictEqual([
+        // x.txt has its own history.
+        '0:./x.txt 1:A/x.txt(xx) 2:B/x.txt(yy)',
+        // y.txt and z.txt do not share x.txt's history (but still have one parent for diff).
+        '0:A/x.txt(xx) 1:B/y.txt(xx)',
+        '0:A/x.txt(xx) 1:B/z.txt(xx)',
+      ]);
+    });
+
+    it('for the the example stack', () => {
+      const stack = new CommitStackState(exportStack1);
+      expect(stack.describeFileStacks()).toStrictEqual([
+        // x.txt: added by A, modified and renamed by B.
+        '0:./x.txt 1:A/x.txt(33) 2:B/y.txt(33)',
+        // z.txt: modified by A, deleted by C.
+        '0:./z.txt(11) 1:A/z.txt(22) 2:C/z.txt',
+      ]);
+    });
+  });
 });
