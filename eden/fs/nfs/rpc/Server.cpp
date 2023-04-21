@@ -483,18 +483,18 @@ void RpcTcpHandler::dispatchAndReply(
       });
 }
 
-void RpcServer::RpcAcceptCallback::connectionAccepted(
+void RpcServer::connectionAccepted(
     folly::NetworkSocket fd,
     const folly::SocketAddress& clientAddr,
     AcceptInfo /* info */) noexcept {
   XLOG(DBG7) << "Accepted connection from: " << clientAddr;
   auto socket = AsyncSocket::newSocket(evb_, fd);
-  auto handler = RpcTcpHandler::create(
-      proc_, std::move(socket), threadPool_, structuredLogger_, owningServer_);
-
-  if (auto server = owningServer_.lock()) {
-    server->registerRpcHandler(std::move(handler));
-  }
+  registerRpcHandler(RpcTcpHandler::create(
+      proc_,
+      std::move(socket),
+      threadPool_,
+      structuredLogger_,
+      weak_from_this()));
 
   // At this point we could stop accepting connections with this callback for
   // nfsd3 because we only support one connected client, and we do not support
@@ -503,16 +503,12 @@ void RpcServer::RpcAcceptCallback::connectionAccepted(
   // shutdown.
 }
 
-void RpcServer::RpcAcceptCallback::acceptError(
-    const std::exception& ex) noexcept {
+void RpcServer::acceptError(const std::exception& ex) noexcept {
   XLOG(ERR) << "acceptError: " << folly::exceptionStr(ex);
 }
 
-void RpcServer::RpcAcceptCallback::acceptStopped() noexcept {
-  // We won't ever be accepting any connection, it is now safe to delete
-  // ourself, release the guard.
-  stopped_ = true;
-  { auto guard = std::move(guard_); }
+void RpcServer::acceptStopped() noexcept {
+  acceptStopped_ = true;
 }
 
 auth_stat RpcServerProcessor::checkAuthentication(
@@ -552,7 +548,6 @@ RpcServer::RpcServer(
     : evb_(evb),
       threadPool_(threadPool),
       structuredLogger_(structuredLogger),
-      acceptCb_(nullptr),
       serverSocket_(new AsyncServerSocket(evb_)),
       proc_(std::move(proc)),
       rpcTcpHandlers_{} {}
@@ -560,14 +555,11 @@ RpcServer::RpcServer(
 void RpcServer::initialize(folly::SocketAddress addr) {
   evb_->checkIsInEventBaseThread();
 
-  acceptCb_.reset(new RpcServer::RpcAcceptCallback{
-      proc_, evb_, threadPool_, structuredLogger_, weak_from_this()});
-
   // Ask kernel to assign us a port on the loopback interface
   serverSocket_->bind(addr);
   serverSocket_->listen(1024);
 
-  serverSocket_->addAcceptCallback(acceptCb_.get(), nullptr);
+  serverSocket_->addAcceptCallback(this, nullptr);
   serverSocket_->startAccepting();
 }
 
@@ -590,13 +582,10 @@ void RpcServer::initializeServerSocket(folly::File socket) {
   evb_->checkIsInEventBaseThread();
 
   XLOG(DBG7) << "Initializing server from server socket: " << socket.fd();
-  acceptCb_.reset(new RpcServer::RpcAcceptCallback{
-      proc_, evb_, threadPool_, structuredLogger_, weak_from_this()});
 
   serverSocket_->useExistingSocket(
       folly::NetworkSocket::fromFd(socket.release()));
-
-  serverSocket_->addAcceptCallback(acceptCb_.get(), evb_);
+  serverSocket_->addAcceptCallback(this, evb_);
   serverSocket_->startAccepting();
 }
 
@@ -620,11 +609,11 @@ folly::SemiFuture<folly::File> RpcServer::takeoverStop() {
   evb_->checkIsInEventBaseThread();
 
   XLOG(DBG7) << "Removing accept callback";
-  if (acceptCb_) {
-    serverSocket_->removeAcceptCallback(acceptCb_.get(), nullptr);
-    XCHECK(acceptCb_->isStopped())
+
+  if (serverSocket_->getAccepting()) {
+    serverSocket_->removeAcceptCallback(this, nullptr);
+    XCHECK(acceptStopped_)
         << "We always accept on the same primary socket EventBase, so it should be guaranteed that acceptStopped() ran synchronously.";
-    acceptCb_.reset();
 
     // Removing the last accept callback implicitly paused accepting.
   }

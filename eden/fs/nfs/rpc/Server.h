@@ -294,7 +294,8 @@ class RpcTcpHandler : public folly::DelayedDestruction,
   std::weak_ptr<RpcServer> owningServer_;
 };
 
-class RpcServer : public std::enable_shared_from_this<RpcServer> {
+class RpcServer final : public std::enable_shared_from_this<RpcServer>,
+                        private folly::AsyncServerSocket::AcceptCallback {
  public:
   /**
    * Create an RPC server.
@@ -363,56 +364,16 @@ class RpcServer : public std::enable_shared_from_this<RpcServer> {
       std::shared_ptr<folly::Executor> threadPool,
       const std::shared_ptr<StructuredLogger>& structuredLogger);
 
-  class RpcAcceptCallback : public folly::AsyncServerSocket::AcceptCallback,
-                            public folly::DelayedDestruction {
-   public:
-    using UniquePtr = std::
-        unique_ptr<RpcAcceptCallback, folly::DelayedDestruction::Destructor>;
+  // AsyncServerSocket::AcceptCallback
 
-    explicit RpcAcceptCallback(
-        std::shared_ptr<RpcServerProcessor> proc,
-        folly::EventBase* evb,
-        std::shared_ptr<folly::Executor> threadPool,
-        const std::shared_ptr<StructuredLogger>& structuredLogger,
-        std::weak_ptr<RpcServer> owningServer)
-        : evb_(evb),
-          proc_(proc),
-          threadPool_(std::move(threadPool)),
-          structuredLogger_(structuredLogger),
-          owningServer_(std::move(owningServer)),
-          guard_(this) {}
+  void connectionAccepted(
+      folly::NetworkSocket fd,
+      const folly::SocketAddress& clientAddr,
+      AcceptInfo /* info */) noexcept override;
 
-    /// Returns true if acceptStopped() has run.
-    bool isStopped() const {
-      return stopped_;
-    }
+  void acceptError(const std::exception& ex) noexcept override;
 
-   private:
-    void connectionAccepted(
-        folly::NetworkSocket fd,
-        const folly::SocketAddress& clientAddr,
-        AcceptInfo /* info */) noexcept override;
-
-    void acceptError(const std::exception& ex) noexcept override;
-
-    void acceptStopped() noexcept override;
-
-    ~RpcAcceptCallback() override = default;
-
-    folly::EventBase* evb_;
-    std::shared_ptr<RpcServerProcessor> proc_;
-    std::shared_ptr<folly::Executor> threadPool_;
-    std::shared_ptr<StructuredLogger> structuredLogger_;
-    std::weak_ptr<RpcServer> owningServer_;
-
-    bool stopped_ = false;
-
-    /**
-     * Hold a guard to ourself to avoid being deleted until the callback is
-     * removed from the AsyncServerSocket.
-     */
-    folly::DelayedDestruction::DestructorGuard guard_;
-  };
+  void acceptStopped() noexcept override;
 
   // main event base that is used for socket interactions. Do not block this
   // event base, it needs to be available to process incoming reads and writes
@@ -425,11 +386,12 @@ class RpcServer : public std::enable_shared_from_this<RpcServer> {
   // Logger for logging anomalous things to Scuba
   std::shared_ptr<StructuredLogger> structuredLogger_;
 
-  // will be called when clients connect to the server socket.
-  RpcAcceptCallback::UniquePtr acceptCb_;
-
   // listening socket for this server.
   folly::AsyncServerSocket::UniquePtr serverSocket_;
+
+  // Set to true when acceptStopped() is called so we can assert that it was
+  // synchronous.
+  bool acceptStopped_ = false;
 
   // used to handle requests on the connected sockets.
   std::shared_ptr<RpcServerProcessor> proc_;
