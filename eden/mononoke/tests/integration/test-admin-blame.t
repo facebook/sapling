@@ -8,7 +8,7 @@
 
 Setup a Mononoke repo.
 
-  $ setup_common_config blob_files
+  $ BLAME_VERSION=1 setup_common_config blob_files
   $ cd "$TESTTMP"
 
 Start Mononoke & LFS.

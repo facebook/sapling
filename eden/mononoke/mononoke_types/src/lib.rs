@@ -43,6 +43,7 @@ pub mod unode;
 pub use blame::Blame;
 pub use blame::BlameId;
 pub use blame::BlameRange;
+pub use blame_v2::BlameV2Id;
 pub use blob::Blob;
 pub use blob::BlobstoreValue;
 pub use blob::ChangesetBlob;

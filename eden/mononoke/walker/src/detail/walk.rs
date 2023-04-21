@@ -16,7 +16,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
-use blame::BlameRoot;
+use blame::RootBlameV2;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -60,13 +60,12 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::RepoPath;
-use mononoke_types::blame::BlameMaybeRejected;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
 use mononoke_types::unode::UnodeEntry;
 use mononoke_types::BasenameSuffixSkeletonManifestId;
-use mononoke_types::BlameId;
+use mononoke_types::BlameV2Id;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::DeletedManifestV2Id;
@@ -375,30 +374,26 @@ async fn blame_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
-    blame_id: BlameId,
+    blame_id: BlameV2Id,
 ) -> Result<StepOutput, StepError> {
     let blame = blame_id.load(ctx, repo.repo_blobstore()).await?;
     let mut edges = vec![];
 
-    if let BlameMaybeRejected::Blame(blame) = blame {
-        for r in blame.ranges() {
+    // Ignore rejected blames, we are just interested in the changesets.
+    if let Ok(csids) = blame.changeset_ids() {
+        for (csid, _) in csids {
             checker.add_edge(&mut edges, EdgeType::BlameToChangeset, || {
                 Node::Changeset(ChangesetKey {
-                    inner: r.csid,
+                    inner: csid,
                     filenode_known_derived: false, /* from blame we don't know if hg is fully derived */
                 })
             });
         }
-        Ok(StepOutput::Done(
-            checker.step_data(NodeType::Blame, || NodeData::Blame(Some(blame))),
-            edges,
-        ))
-    } else {
-        Ok(StepOutput::Done(
-            checker.step_data(NodeType::Blame, || NodeData::Blame(None)),
-            edges,
-        ))
     }
+    Ok(StepOutput::Done(
+        checker.step_data(NodeType::Blame, || NodeData::Blame(Some(blame))),
+        edges,
+    ))
 }
 
 async fn fastlog_batch_step<V: VisitOne>(
@@ -1369,7 +1364,7 @@ async fn bonsai_to_unode_mapping_step<V: VisitOne>(
     let mut walk_blame = checker.with_blame && root_unode_id.is_some();
 
     // If we need blame, need to make sure its derived also
-    if walk_blame && !is_derived::<BlameRoot>(ctx, repo, bcs_id, enable_derive).await? {
+    if walk_blame && !is_derived::<RootBlameV2>(ctx, repo, bcs_id, enable_derive).await? {
         walk_blame = false;
         // Check if we should still walk the Unode even without blame
         if checker.is_public(ctx, &bcs_id).await? {
@@ -1455,7 +1450,7 @@ async fn unode_file_step<V: VisitOne>(
     if walk_blame {
         flags |= UnodeFlags::BLAME;
         checker.add_edge(&mut edges, EdgeType::UnodeFileToBlame, || {
-            Node::Blame(BlameId::from(key.inner))
+            Node::Blame(BlameV2Id::from(key.inner))
         });
     }
     if walk_fastlog {

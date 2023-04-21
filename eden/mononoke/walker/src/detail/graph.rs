@@ -15,7 +15,7 @@ use anyhow::format_err;
 use anyhow::Error;
 use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use bitflags::bitflags;
-use blame::BlameRoot;
+use blame::RootBlameV2;
 use blobrepo::BlobRepo;
 use blobstore_factory::SqlTierInfo;
 use bookmarks::BookmarkKey;
@@ -51,7 +51,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgParents;
 use mononoke_types::basename_suffix_skeleton_manifest::BasenameSuffixSkeletonManifest;
-use mononoke_types::blame::Blame;
+use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
 use mononoke_types::fastlog_batch::FastlogBatch;
 use mononoke_types::fsnode::Fsnode;
@@ -59,7 +59,7 @@ use mononoke_types::skeleton_manifest::SkeletonManifest;
 use mononoke_types::unode::FileUnode;
 use mononoke_types::unode::ManifestUnode;
 use mononoke_types::BasenameSuffixSkeletonManifestId;
-use mononoke_types::BlameId;
+use mononoke_types::BlameV2Id;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
@@ -465,7 +465,7 @@ create_graph!(
     // Derived data
     (
         Blame,
-        BlameId,
+        BlameV2Id,
         [Changeset]
     ),
     (
@@ -563,7 +563,7 @@ impl NodeType {
             NodeType::FileContentMetadataV2 => None,
             NodeType::AliasContentMapping => None,
             // Derived data
-            NodeType::Blame => Some(BlameRoot::NAME),
+            NodeType::Blame => Some(RootBlameV2::NAME),
             NodeType::ChangesetInfo => Some(ChangesetInfo::NAME),
             NodeType::ChangesetInfoMapping => Some(ChangesetInfo::NAME),
             NodeType::DeletedManifestV2 => Some(RootDeletedManifestV2Id::NAME),
@@ -871,7 +871,7 @@ pub enum NodeData {
     FileContentMetadataV2(Option<ContentMetadataV2>),
     AliasContentMapping(ContentId),
     // Derived data
-    Blame(Option<Blame>),
+    Blame(Option<BlameV2>),
     ChangesetInfo(Option<ChangesetInfo>),
     ChangesetInfoMapping(Option<ChangesetId>),
     DeletedManifestV2(Option<DeletedManifestV2>),
