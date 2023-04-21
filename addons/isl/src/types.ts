@@ -301,6 +301,7 @@ export type PlatformSpecificClientToServerMessages =
       value: Json | undefined;
       scope: 'workspace' | 'global';
     }
+  | {type: 'platform/executeVSCodeCommand'; command: string; args: Array<Json>}
   | {type: 'platform/subscribeToVSCodeConfig'; config: string};
 
 /**

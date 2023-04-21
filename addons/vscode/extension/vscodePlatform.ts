@@ -100,6 +100,11 @@ export const VSCodePlatform: ServerPlatform = {
           });
           sendLatestValue();
           onDispose(() => dispose.dispose());
+          break;
+        }
+        case 'platform/executeVSCodeCommand': {
+          vscode.commands.executeCommand(message.command, ...message.args);
+          break;
         }
       }
     } catch (err) {

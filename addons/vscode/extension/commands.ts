@@ -57,8 +57,18 @@ export const vscodeCommands = {
 /** Type definitions for built-in or third-party VS Code commands we want to execute programatically. */
 type ExternalVSCodeCommands = {
   'vscode.diff': (left: vscode.Uri, right: vscode.Uri, title: string) => Thenable<unknown>;
+  'workbench.action.closeSidebar': () => Thenable<void>;
+  'sapling.open-isl': () => Thenable<void>;
+  'sapling.close-isl': () => Thenable<void>;
   'sapling.isl.focus': () => Thenable<void>;
+  'fb-hg.open-or-focus-interactive-smartlog': (
+    _: unknown,
+    __?: unknown,
+    forceNoSapling?: boolean,
+  ) => Thenable<void>;
 };
+
+export type VSCodeCommand = typeof vscodeCommands & ExternalVSCodeCommands;
 
 /**
  * Type-safe programmatic execution of VS Code commands (via `vscode.commands.executeCommand`).
@@ -66,15 +76,11 @@ type ExternalVSCodeCommands = {
  * Built-in or third-party commands may also be typed through this function,
  * just define them in ExternalVSCodeCommands.
  */
-export function executeVSCodeCommand<
-  K extends keyof (typeof vscodeCommands & ExternalVSCodeCommands),
->(
+export function executeVSCodeCommand<K extends keyof VSCodeCommand>(
   id: K,
-  ...args: Parameters<(typeof vscodeCommands & ExternalVSCodeCommands)[K]>
-): ReturnType<(typeof vscodeCommands & ExternalVSCodeCommands)[K]> {
-  return vscode.commands.executeCommand(id, ...args) as ReturnType<
-    (typeof vscodeCommands & ExternalVSCodeCommands)[K]
-  >;
+  ...args: Parameters<VSCodeCommand[K]>
+): ReturnType<VSCodeCommand[K]> {
+  return vscode.commands.executeCommand(id, ...args) as ReturnType<VSCodeCommand[K]>;
 }
 
 type Context = {

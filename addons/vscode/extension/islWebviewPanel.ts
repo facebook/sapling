@@ -74,6 +74,17 @@ export function registerISLCommands(
         vscode.window.showErrorMessage(`error opening isl: ${err}`);
       }
     }),
+    vscode.commands.registerCommand('sapling.close-isl', () => {
+      if (!islPanelOrView) {
+        return;
+      }
+      if (isPanel(islPanelOrView)) {
+        islPanelOrView.dispose();
+      } else {
+        // close sidebar entirely
+        executeVSCodeCommand('workbench.action.closeSidebar');
+      }
+    }),
     registerDeserializer(context, logger),
     vscode.window.registerWebviewViewProvider(viewType, webviewViewProvider),
     vscode.workspace.onDidChangeConfiguration(e => {
