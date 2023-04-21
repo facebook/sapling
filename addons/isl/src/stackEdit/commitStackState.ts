@@ -366,6 +366,103 @@ export class CommitStackState {
 
     return depMap;
   }
+
+  /** Return the single parent rev, or null. */
+  singleParentRev(rev: Rev): Rev | null {
+    const commit = this.stack.at(rev);
+    const parents = commit?.parents;
+    if (parents != null) {
+      const parentRev = parents?.at(0);
+      if (parentRev != null && parents.length === 1) {
+        return parentRev;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Test if the commit can be folded with its parent.
+   */
+  canFoldDown(rev: Rev): boolean {
+    if (rev <= 0 || rev >= this.stack.length) {
+      return false;
+    }
+    const commit = this.stack[rev];
+    const parentRev = this.singleParentRev(rev);
+    if (parentRev == null) {
+      return false;
+    }
+    const parent = this.stack[parentRev];
+    if (commit.immutableKind !== 'none' || parent.immutableKind !== 'none') {
+      return false;
+    }
+    // This is a bit conservative. But we're not doing complex content check for now.
+    const childCount = this.stack.filter(c => c.parents.includes(parentRev)).length;
+    if (childCount > 1) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Drop the given `rev`.
+   * The callsite should take care of `files` updates.
+   */
+  rewriteStackDroppingRev(rev: Rev) {
+    const revMapFunc = (r: Rev) => (r < rev ? r : r - 1);
+    this.stack = this.stack.filter(c => c.rev !== rev).map(c => rewriteCommitRevs(c, revMapFunc));
+    // Recalculate file stacks.
+    this.buildFileStacks();
+  }
+
+  /**
+   * Fold the commit with its parent.
+   * This should only be called when `canFoldDown(rev)` returned `true`.
+   */
+  foldDown(rev: Rev) {
+    const commit = this.stack[rev];
+    const parentRev = unwrap(this.singleParentRev(rev));
+    const parent = this.stack[parentRev];
+    commit.files.forEach((file, path) => {
+      // Fold copyFrom. `-` means "no change".
+      //
+      // | grand  | direct |      |                   |
+      // | parent | parent | rev  | folded (copyFrom) |
+      // +--------------------------------------------+
+      // | A      | A->B   | B->C | A->C   (parent)   |
+      // | A      | A->B   | B    | A->B   (parent)   |
+      // | A      | A->B   | -    | A->B   (parent)   |
+      // | A      | A      | A->C | A->C   (rev)      |
+      // | A      | -      | A->C | A->C   (rev)      |
+      // | -      | B      | B->C | C      (drop)     |
+      const optionalParentFile = parent.files.get(file.copyFrom ?? path);
+      const copyFrom = optionalParentFile?.copyFrom ?? file.copyFrom;
+      if (copyFrom != null && isAbsent(this.parentFile(parentRev, file.copyFrom ?? path)[2])) {
+        // "copyFrom" is no longer valid (not existed in grand parent). Drop it.
+        delete file.copyFrom;
+      } else {
+        file.copyFrom = copyFrom;
+      }
+      if (isEqualFile(this.parentFile(parentRev, path, false /* [1] */)[2], file)) {
+        // The file changes cancel out. Remove it.
+        // [1]: we need to disable following renames when comparing files for cancel-out check.
+        parent.files.delete(path);
+      } else {
+        // Fold the change of this file.
+        parent.files.set(path, file);
+      }
+    });
+
+    // Fold other properties to parent.
+    commit.originalNodes.forEach(node => parent.originalNodes.add(node));
+    parent.date = commit.date;
+    if (isMeaningfulText(commit.text)) {
+      parent.text = `${parent.text.trim()}\n\n${commit.text}`;
+    }
+
+    // Update this.stack.
+    this.rewriteStackDroppingRev(rev);
+  }
 }
 
 function getBottomFilesFromExportStack(stack: ExportStack): Map<RepoPath, ExportFile> {
@@ -468,6 +565,19 @@ function checkStackParents(stack: ExportStack) {
   }
 }
 
+/** Rewrite fields that contains `rev` based on the mapping function. */
+function rewriteCommitRevs(commit: CommitState, revMapFunc: (rev: Rev) => Rev): CommitState {
+  commit.rev = revMapFunc(commit.rev);
+  commit.parents = commit.parents.map(revMapFunc);
+  return commit;
+}
+
+/** Guess if commit message is meaningful. Messages like "wip" or "fixup" are meaningless. */
+function isMeaningfulText(text: string): boolean {
+  const trimmed = text.trim();
+  return trimmed.includes(' ') || trimmed.includes('\n') || trimmed.length > 20;
+}
+
 /** Check if a path at the given commit is a rename. */
 function isRename(commit: CommitState, path: RepoPath): boolean {
   const files = commit.files;
@@ -476,6 +586,11 @@ function isRename(commit: CommitState, path: RepoPath): boolean {
     return false;
   }
   return isAbsent(files.get(copyFromPath));
+}
+
+/** Test if two files have the same data. */
+function isEqualFile(a: ExportFile, b: ExportFile): boolean {
+  return a.data === b.data && a.dataBase85 === b.dataBase85 && a.flags === b.flags;
 }
 
 /** Test if a file is absent. */

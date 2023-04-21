@@ -316,4 +316,137 @@ describe('CommitStackState', () => {
       );
     });
   });
+
+  describe('folding commits', () => {
+    const e = exportCommitDefault;
+
+    it('cannot be used for immutable commits', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'A', immutable: true},
+        {...e, node: 'B', parents: ['A'], immutable: false},
+        {...e, node: 'C', parents: ['B'], immutable: false},
+      ]);
+      expect(stack.canFoldDown(1)).toBeFalsy();
+      expect(stack.canFoldDown(2)).toBeTruthy();
+    });
+
+    it('cannot be used for out-of-range commits', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'A'},
+        {...e, node: 'B', parents: ['A']},
+      ]);
+      expect(stack.canFoldDown(0)).toBeFalsy();
+      expect(stack.canFoldDown(1)).toBeTruthy();
+      expect(stack.canFoldDown(2)).toBeFalsy();
+    });
+
+    it('cannot be used for forks', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'A'},
+        {...e, node: 'B', parents: ['A']},
+        {...e, node: 'C', parents: ['A']},
+      ]);
+      expect(stack.canFoldDown(1)).toBeFalsy();
+      expect(stack.canFoldDown(2)).toBeFalsy();
+    });
+
+    it('works for simple edits', () => {
+      const stack = new CommitStackState([
+        {
+          ...e,
+          node: 'A',
+          text: 'Commit A',
+          parents: [],
+          files: {'x.txt': {data: 'xx'}, 'y.txt': {data: 'yy'}},
+        },
+        {...e, node: 'B', text: 'Commit B', parents: ['A'], files: {'x.txt': {data: 'yy'}}},
+        {...e, node: 'C', text: 'Commit C', parents: ['B'], files: {'x.txt': {data: 'zz'}}},
+      ]);
+      expect(stack.canFoldDown(1)).toBeTruthy();
+      stack.foldDown(1);
+      expect(stack.stack.length).toBe(2);
+      expect(stack.stack[0]).toMatchObject({
+        files: new Map([
+          ['x.txt', {data: 'yy'}],
+          ['y.txt', {data: 'yy'}],
+        ]),
+        originalNodes: new Set(['A', 'B']),
+        text: 'Commit A\n\nCommit B',
+        parents: [],
+      });
+      expect(stack.stack[1]).toMatchObject({
+        text: 'Commit C',
+        parents: [0], // Commit C's parent is updated to Commit A.
+      });
+    });
+
+    it('removes copyFrom appropriately', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'A', parents: [], files: {'x.txt': {data: 'xx'}}},
+        {...e, node: 'B', parents: ['A'], files: {'y.txt': {data: 'yy', copyFrom: 'x.txt'}}},
+      ]);
+      expect(stack.canFoldDown(1)).toBeTruthy();
+      stack.foldDown(1);
+      expect(stack.stack[0]).toMatchObject({
+        files: new Map([
+          ['x.txt', {data: 'xx'}],
+          ['y.txt', {data: 'yy'}], // no longer has "copyFrom", since 'x.txt' does not exist in commit A.
+        ]),
+      });
+    });
+
+    it('keeps copyFrom appropriately', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'A', parents: [], files: {xt: {data: 'xx'}, yt: {data: 'yy'}}},
+        {...e, node: 'B', parents: ['A'], files: {y1t: {data: 'yy', copyFrom: 'yt'}}},
+        {
+          ...e,
+          node: 'C',
+          parents: ['B'],
+          files: {x1t: {data: 'x1', copyFrom: 'xt'}, y1t: {data: 'y1'}},
+        },
+      ]);
+      // Fold B+C.
+      expect(stack.canFoldDown(2)).toBeTruthy();
+      stack.foldDown(2);
+      expect(stack.stack[1]).toMatchObject({
+        files: new Map([
+          ['y1t', {data: 'y1', copyFrom: 'yt'}], // reuse copyFrom: 'yt' from commit B.
+          ['x1t', {data: 'x1', copyFrom: 'xt'}], // reuse copyFrom: 'xt' from commit C.
+        ]),
+      });
+    });
+
+    it('chains renames', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'A', parents: [], files: {xt: {data: 'xx'}}},
+        {...e, node: 'B', parents: ['A'], files: {yt: {data: 'yy', copyFrom: 'xt'}, xt: null}},
+        {...e, node: 'C', parents: ['B'], files: {zt: {data: 'zz', copyFrom: 'yt'}, yt: null}},
+      ]);
+      // Fold B+C.
+      expect(stack.canFoldDown(2)).toBeTruthy();
+      stack.foldDown(2);
+      expect(stack.stack[1]).toMatchObject({
+        files: new Map([
+          ['xt', ABSENT_FILE],
+          // 'yt' is no longer considered changed.
+          ['zt', {data: 'zz', copyFrom: 'xt'}], // 'xt'->'yt'->'zt' is folded to 'xt'->'zt'.
+        ]),
+      });
+    });
+
+    it('removes cancel-out changes', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'A', parents: [], files: {xt: {data: 'xx'}}},
+        {...e, node: 'B', parents: ['A'], files: {xt: {data: 'yy'}, zt: {data: 'zz'}}},
+        {...e, node: 'C', parents: ['B'], files: {xt: {data: 'xx'}}},
+      ]);
+      // Fold B+C.
+      expect(stack.canFoldDown(2)).toBeTruthy();
+      stack.foldDown(2);
+      expect(stack.stack[1]).toMatchObject({
+        files: new Map([['zt', {data: 'zz'}]]), // changes to 'yt' is removed.
+      });
+    });
+  });
 });
