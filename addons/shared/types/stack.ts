@@ -31,8 +31,8 @@ export type ExportCommit = {
   immutable: boolean;
   parents?: Hash[];
   /** Files changed by this commit. `null` means the file is deleted. */
-  files?: Map<RepoPath, ExportFile | null>;
-  relevantFiles?: Map<RepoPath, ExportFile | null>;
+  files?: {[path: RepoPath]: ExportFile | null};
+  relevantFiles?: {[path: RepoPath]: ExportFile | null};
 };
 
 export type ExportFile = {
@@ -62,7 +62,7 @@ export type ImportCommit = {
   predecessors?: (Hash | Mark)[];
   /** Why predecessors are obsoleted? For example, 'amend', 'split', 'histedit'. */
   operation?: string;
-  files: Map<RepoPath, ExportFile | null>;
+  files: {[path: RepoPath]: ExportFile | null};
 };
 
 /** Update the "current commit" without changing the working copy. */
