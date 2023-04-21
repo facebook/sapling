@@ -29,6 +29,8 @@ export type TrackEventName =
   | 'GhStackSubmitOperation'
   | 'GotoOperation'
   | 'GoBackToOldISL'
+  | 'GoBackToOldISLOnce'
+  | 'GoBackToOldISLReason'
   | 'HideOperation'
   | 'PrSubmitOperation'
   | 'PullOperation'
