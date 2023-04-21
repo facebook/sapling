@@ -28,6 +28,7 @@ use import_tools::GitUploader;
 use import_tools::HGGIT_COMMIT_ID_EXTRA;
 use import_tools::HGGIT_MARKER_EXTRA;
 use import_tools::HGGIT_MARKER_VALUE;
+use mononoke_api::repo::upload_git_object;
 use mononoke_types::hash;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
@@ -198,6 +199,22 @@ where
         }
 
         Ok(())
+    }
+
+    async fn upload_object(
+        &self,
+        ctx: &CoreContext,
+        oid: ObjectId,
+        git_bytes: Bytes,
+    ) -> Result<(), Error> {
+        upload_git_object(ctx, &*self.inner, &oid, git_bytes.to_vec())
+            .await
+            .map_err(|e| {
+                anyhow::anyhow!(
+                    "Failure in uploading raw git object. Cause: {}",
+                    e.to_string()
+                )
+            })
     }
 }
 

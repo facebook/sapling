@@ -455,6 +455,15 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
         git_bytes: Bytes,
     ) -> Result<Self::Change, Error>;
 
+    /// Upload a single git object to the repo blobstore of the mercurial mirror.
+    /// Use this method for uploading non-blob git objects (e.g. tree, commit, etc)
+    async fn upload_object(
+        &self,
+        ctx: &CoreContext,
+        oid: ObjectId,
+        git_bytes: Bytes,
+    ) -> Result<(), Error>;
+
     /// Generate a single Bonsai changeset ID
     /// This should delay saving the changeset if possible
     /// but may save it if required.
