@@ -317,6 +317,55 @@ export class CommitStackState {
         .join(' ');
     });
   }
+
+  // Histedit-related opeations.
+
+  /**
+   * Calculate the dependencies of revisions.
+   * For example, `{5: [3, 1]}` means rev 5 depends on rev 3 and rev 1.
+   *
+   * This is used to detect what's reasonable when reordering and dropping
+   * commits. For example, if rev 3 depends on rev 2, then rev 3 cannot be
+   * moved to be an ancestor of rev 2, and rev 2 cannot be dropped alone.
+   */
+  calculateDepMap(): Map<Rev, Set<Rev>> {
+    const depMap = new Map<Rev, Set<Rev>>(this.stack.map(c => [c.rev, new Set()]));
+
+    const fileIdxRevToCommitRev = (fileIdx: FileStackIndex, fileRev: Rev): Rev =>
+      unwrap(this.fileToCommit.get(`${fileIdx}:${fileRev}`))[0];
+
+    // Ask FileStack for dependencies about content edits.
+    this.fileStacks.forEach((fileStack, fileIdx) => {
+      const fileDepMap = fileStack.calculateDepMap();
+      const toCommitRev = (rev: Rev) => fileIdxRevToCommitRev(fileIdx, rev);
+      // Convert file revs to commit revs.
+      fileDepMap.forEach((valueFileRevs, keyFileRev) => {
+        const keyCommitRev = toCommitRev(keyFileRev);
+        if (keyCommitRev >= 0) {
+          const set = unwrap(depMap.get(keyCommitRev));
+          valueFileRevs.forEach(fileRev => {
+            const rev = toCommitRev(fileRev);
+            if (rev >= 0) {
+              set.add(rev);
+            }
+          });
+        }
+      });
+    });
+
+    // Besides, file deletion / addition / renames also introduce dependencies.
+    this.stack.forEach(commit => {
+      const set = unwrap(depMap.get(commit.rev));
+      commit.files.forEach((file, path) => {
+        const [prevRev, prevPath, prevFile] = this.parentFile(commit.rev, path, true);
+        if (prevRev >= 0 && (isAbsent(prevFile) !== isAbsent(file) || prevPath !== path)) {
+          set.add(prevRev);
+        }
+      });
+    });
+
+    return depMap;
+  }
 }
 
 function getBottomFilesFromExportStack(stack: ExportStack): Map<RepoPath, ExportFile> {

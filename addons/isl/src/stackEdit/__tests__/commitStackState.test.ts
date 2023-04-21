@@ -256,4 +256,64 @@ describe('CommitStackState', () => {
       ]);
     });
   });
+
+  describe('calculates dependencies', () => {
+    const e = exportCommitDefault;
+
+    it('for content changes', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'Z', requested: false, relevantFiles: {'x.txt': null}},
+        {...e, node: 'A', parents: ['Z'], files: {'x.txt': {data: 'b\n'}}},
+        {...e, node: 'B', parents: ['A'], files: {'x.txt': {data: 'a\nb\n'}}},
+        {...e, node: 'C', parents: ['B'], files: {'x.txt': {data: 'a\nb\nc\n'}}},
+      ]);
+      expect(stack.calculateDepMap()).toStrictEqual(
+        new Map([
+          [0, new Set()],
+          [1, new Set()],
+          [2, new Set([1])],
+          [3, new Set([1])], // commit C does not depend on commit B
+        ]),
+      );
+    });
+
+    it('for file addition and deletion', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'Z', requested: false, relevantFiles: {'x.txt': {data: 'a'}}},
+        {...e, node: 'A', parents: ['Z'], files: {'x.txt': null}},
+        {...e, node: 'B', parents: ['A'], files: {'x.txt': {data: 'a'}}},
+        {...e, node: 'C', parents: ['B'], files: {'x.txt': null}},
+      ]);
+      expect(stack.calculateDepMap()).toStrictEqual(
+        new Map([
+          [0, new Set()],
+          [1, new Set()],
+          [2, new Set([1])], // commit B adds x.txt, depends on commit A's deletion.
+          [3, new Set([2])], // commit C deletes x.txt, depends on commit B's addition.
+        ]),
+      );
+    });
+
+    it('for copies', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'A', files: {'x.txt': {data: 'a'}}},
+        {...e, node: 'B', parents: ['A'], files: {'y.txt': {data: 'a', copyFrom: 'x.txt'}}},
+        {...e, node: 'C', parents: ['B'], files: {'z.txt': {data: 'a', copyFrom: 'x.txt'}}},
+        {
+          ...e,
+          node: 'D',
+          parents: ['C'],
+          files: {'p.txt': {data: 'a', copyFrom: 'x.txt'}, 'q.txt': {data: 'a', copyFrom: 'z.txt'}},
+        },
+      ]);
+      expect(stack.calculateDepMap()).toStrictEqual(
+        new Map([
+          [0, new Set()],
+          [1, new Set([0])], // commit B copies commit A's x.txt to y.txt.
+          [2, new Set([0])], // commit C copies commit A's x.txt to z.txt.
+          [3, new Set([0, 2])], // commit D copies commit A's x.txt to p.txt, and commit C's z.txt to q.txt.
+        ]),
+      );
+    });
+  });
 });
