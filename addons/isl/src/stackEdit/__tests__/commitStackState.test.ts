@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Rev} from '../fileStackState';
 import type {ExportCommit, ExportStack} from 'shared/types/stack';
 
 import {ABSENT_FILE, CommitStackState} from '../commitStackState';
@@ -505,6 +506,92 @@ describe('CommitStackState', () => {
         originalNodes: new Set(['C']),
         files: new Map([['xx', {data: 'y\nz\n'}]]),
       });
+    });
+  });
+
+  describe('reordering commits', () => {
+    const e = exportCommitDefault;
+
+    it('cannot be used for immutable commits', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'A', immutable: true},
+        {...e, node: 'B', parents: ['A'], immutable: true},
+        {...e, node: 'C', parents: ['B'], immutable: false},
+      ]);
+      expect(stack.canReorder([0, 2, 1])).toBeFalsy();
+      expect(stack.canReorder([1, 0, 2])).toBeFalsy();
+      expect(stack.canReorder([0, 1, 2])).toBeTruthy();
+    });
+
+    it('respects content dependencies', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'A', files: {xx: {data: '2\n'}}},
+        {...e, node: 'B', parents: ['A'], files: {xx: {data: '1\n2\n'}}},
+        {...e, node: 'C', parents: ['B'], files: {xx: {data: '1\n2\n3\n'}}},
+        {...e, node: 'D', parents: ['C'], files: {xx: {data: '1\n2\n3\n4\n'}}},
+      ]);
+      expect(stack.canReorder([0, 2, 3, 1])).toBeTruthy();
+      expect(stack.canReorder([0, 2, 1, 3])).toBeTruthy();
+      expect(stack.canReorder([0, 3, 2, 1])).toBeFalsy();
+      expect(stack.canReorder([0, 3, 1, 2])).toBeFalsy();
+    });
+
+    it('refuses to reorder non-linear stack', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'A', files: {xx: {data: '1'}}},
+        {...e, node: 'B', parents: ['A'], files: {xx: {data: '2'}}},
+        {...e, node: 'C', parents: ['A'], files: {xx: {data: '3'}}},
+        {...e, node: 'D', parents: ['C'], files: {xx: {data: '4'}}},
+      ]);
+      expect(stack.canReorder([0, 2, 3, 1])).toBeFalsy();
+      expect(stack.canReorder([0, 2, 1, 3])).toBeFalsy();
+      expect(stack.canReorder([0, 1, 2, 3])).toBeFalsy();
+    });
+
+    it('reorders content changes', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'A', files: {xx: {data: '1\n1\n'}}},
+        {...e, node: 'B', parents: ['A'], files: {xx: {data: '0\n1\n1\n'}}},
+        {...e, node: 'C', parents: ['B'], files: {yy: {data: '0'}}}, // Does not change 'xx'.
+        {...e, node: 'D', parents: ['C'], files: {xx: {data: '0\n1\n1\n2\n'}}},
+        {...e, node: 'E', parents: ['D'], files: {xx: {data: '0\n1\n3\n1\n2\n'}}},
+      ]);
+
+      // A-B-C-D-E => A-C-E-B-D.
+      let order = [0, 2, 4, 1, 3];
+      expect(stack.canReorder(order)).toBeTruthy();
+      stack.reorder(order);
+      const getNode = (r: Rev) => [...stack.stack[r].originalNodes][0];
+      expect(stack.revs().map(r => getNode(r))).toMatchObject(['A', 'C', 'E', 'B', 'D']);
+      expect(stack.revs().map(r => stack.stack[r].parents)).toMatchObject([[], [0], [1], [2], [3]]);
+      expect(stack.revs().map(r => stack.getFile(r, 'xx').data)).toMatchObject([
+        '1\n1\n',
+        '1\n1\n', // Not changed by 'C'.
+        '1\n3\n1\n',
+        '0\n1\n3\n1\n',
+        '0\n1\n3\n1\n2\n',
+      ]);
+      expect(stack.revs().map(r => stack.getFile(r, 'yy').data)).toMatchObject([
+        '',
+        '0',
+        '0',
+        '0',
+        '0',
+      ]);
+
+      // Reorder back. A-C-E-B-D => A-B-C-D-E.
+      order = [0, 3, 1, 4, 2];
+      expect(stack.canReorder(order)).toBeTruthy();
+      stack.reorder(order);
+      expect(stack.revs().map(r => getNode(r))).toMatchObject(['A', 'B', 'C', 'D', 'E']);
+      expect(stack.revs().map(r => stack.stack[r].parents)).toMatchObject([[], [0], [1], [2], [3]]);
+      expect(stack.revs().map(r => stack.getFile(r, 'xx').data)).toMatchObject([
+        '1\n1\n',
+        '0\n1\n1\n',
+        '0\n1\n1\n',
+        '0\n1\n1\n2\n',
+        '0\n1\n3\n1\n2\n',
+      ]);
     });
   });
 });

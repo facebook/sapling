@@ -11,7 +11,8 @@ import type {ExportStack, ExportFile} from 'shared/types/stack';
 
 import {assert} from '../utils';
 import {FileStackState} from './fileStackState';
-import {generatorContains, unwrap} from 'shared/utils';
+import deepEqual from 'fast-deep-equal';
+import {generatorContains, unwrap, zip} from 'shared/utils';
 
 /**
  * A stack of commits with stack editing features.
@@ -394,6 +395,11 @@ export class CommitStackState {
     return false;
   }
 
+  /** Test if the stack is linear. */
+  isStackLinear(): boolean {
+    return this.stack.every((commit, rev) => rev === 0 || deepEqual(commit.parents, [rev - 1]));
+  }
+
   // Histedit-related opeations.
 
   /**
@@ -578,6 +584,119 @@ export class CommitStackState {
 
     this.rewriteStackDroppingRev(rev);
   }
+
+  /**
+   * Check if reorder is conflict-free.
+   *
+   * `order` defines the new order as a "from rev" list.
+   * For example, when `this.revs()` is `[0, 1, 2, 3]` and `order` is
+   * `[0, 2, 3, 1]`, it means moving the second (rev 1) commit to the
+   * stack top.
+   *
+   * Reordering in a non-linear stack is not supported and will return
+   * `false`. This is because it's tricky to describe the desired
+   * new parent relationships with just `order`.
+   *
+   * If `order` is `this.revs()` then no reorder is done.
+   */
+  canReorder(order: Rev[]): boolean {
+    if (!this.isStackLinear()) {
+      return false;
+    }
+    if (!deepEqual([...order].sort(), this.revs())) {
+      return false;
+    }
+
+    // "hash" immutable commits cannot be moved.
+    if (this.stack.some((commit, rev) => commit.immutableKind === 'hash' && order[rev] !== rev)) {
+      return false;
+    }
+
+    const map = new Map<Rev, Rev>(order.map((fromRev, toRev) => [fromRev, toRev]));
+    // Check dependencies.
+    const depMap = this.calculateDepMap();
+    for (const [rev, depRevs] of depMap) {
+      const newRev = map.get(rev);
+      if (newRev == null) {
+        return false;
+      }
+      for (const depRev of depRevs) {
+        const newDepRev = map.get(depRev);
+        if (newDepRev == null) {
+          return false;
+        }
+        if (!generatorContains(this.log(newRev), newDepRev)) {
+          return false;
+        }
+      }
+    }
+    // Passed checks.
+    return true;
+  }
+
+  /**
+   * Reorder stack. Similar to running `histedit`, follwed by reordering
+   * commits.
+   *
+   * See `canReorder` for the meaning of `order`.
+   * This should only be called when `canReorder(order)` returned `true`.
+   */
+  reorder(order: Rev[]) {
+    const commitRevMap = new Map<Rev, Rev>(order.map((fromRev, toRev) => [fromRev, toRev]));
+
+    // Reorder file contents. This is somewhat tricky involving multiple
+    // mappings. Here is an example:
+    //
+    //   Stack: A-B-C-D. Original file contents: [11, 112, 0112, 01312].
+    //   Reorder to: A-D-B-C. Expected result: [11, 131, 1312, 01312].
+    //
+    // First, we figure out the file stack, and reorder it. The file stack
+    // now has the content [11 (A), 131 (B), 1312 (C), 01312 (D)], but the
+    // commit stack is still in the A-B-C-D order and refers to the file stack
+    // using **fileRev**s. If we blindly reorder the commit stack to A-D-B-C,
+    // the resulting files would be [11 (A), 01312 (D), 131 (B), 1312 (C)].
+    //
+    // To make it work properly, we apply a reverse mapping (A-D-B-C =>
+    // A-B-C-D) to the file stack before reordering commits, changing
+    // [11 (A), 131 (D), 1312 (B), 01312 (C)] to [11 (A), 1312 (B), 01312 (C),
+    // 131 (D)]. So after the commit remapping it produces the desired
+    // output.
+    this.useFileStack();
+    this.fileStacks.forEach((fileStack, fileIdx) => {
+      // file revs => commit revs => mapped commit revs => mapped file revs
+      const fileRevs = fileStack.revs();
+      const commitRevPaths: [Rev, RepoPath][] = fileRevs.map(fRev =>
+        unwrap(this.fileToCommit.get(`${fileIdx}:${fRev}`)),
+      );
+      const commitRevs: Rev[] = commitRevPaths.map(([rev, _path]) => rev);
+      const mappedCommitRevs: Rev[] = commitRevs.map(rev => commitRevMap.get(rev) ?? rev);
+      // commitRevs and mappedCommitRevs might not overlap, although they
+      // have the same length (fileRevs.length). Turn them into compact
+      // sequence to reason about.
+      const fromRevs: Rev[] = compactSequence(commitRevs);
+      const toRevs: Rev[] = compactSequence(mappedCommitRevs);
+      // Mapping: zip(original revs, mapped file revs)
+      const fileRevMap = new Map<Rev, Rev>(zip(fromRevs, toRevs));
+      fileStack.remapRevs(fileRevMap);
+      // Apply the reverse mapping. See the above comment for why this is necessary.
+      const fileTextList = [...fileStack.convertToPlainText()];
+      fileRevs.forEach(rev => {
+        const text = fileTextList[toRevs[rev]];
+        fileStack.editText(rev, text, false /* do not update rest of the stack */);
+      });
+    });
+
+    // Update this.stack.
+    this.stack = this.stack.map((_commit, rev) => {
+      const commit = this.stack[order[rev]];
+      if (commit.parents.length > 0 && rev > 0) {
+        commit.parents = [rev - 1];
+      }
+      commit.rev = rev;
+      return commit;
+    });
+    this.buildFileStacks();
+  }
 }
 
 function getBottomFilesFromExportStack(stack: ExportStack): Map<RepoPath, FileState> {
@@ -732,6 +851,15 @@ function isUtf8(file: FileState): boolean {
   }
   const type = file.data.type;
   return type == 'fileStack';
+}
+
+/**
+ * Turn distinct numbers to a 0..n sequence preserving the order.
+ * For example, turn [0, 100, 50] into [0, 2, 1].
+ */
+function compactSequence(revs: Rev[]): Rev[] {
+  const sortedRevs = [...revs].sort();
+  return revs.map(rev => sortedRevs.indexOf(rev));
 }
 
 const ABSENT_FLAG = 'a';
