@@ -7,13 +7,14 @@
 
 use std::time::Duration;
 
+use anyhow::Context;
+use anyhow::Result;
 use blobrepo::BlobRepo;
 use bulkops::Direction;
 use bulkops::PublicChangesetBulkFetch;
 use bulkops::MAX_FETCH_STEP;
 use changesets::ChangesetsArc;
-use clap::Arg;
-use cmdlib::args;
+use clap::Parser;
 use context::CoreContext;
 use criterion::BenchmarkId;
 use criterion::Criterion;
@@ -23,13 +24,30 @@ use futures::future::TryFutureExt;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use mononoke_app::args::RepoArgs;
+use mononoke_app::MononokeAppBuilder;
 use phases::PhasesArc;
 use repo_identity::RepoIdentityRef;
 use tokio::runtime::Handle;
 
-const BENCHMARK_SAVE_BASELINE_ARG: &str = "benchmark-save-baseline";
-const BENCHMARK_USE_BASELINE_ARG: &str = "benchmark-use-baseline";
-const BENCHMARK_FILTER_ARG: &str = "benchmark-filter";
+/// Benchmark bulkops.
+#[derive(Parser)]
+struct BenchmarkArgs {
+    #[clap(flatten)]
+    repo: RepoArgs,
+
+    /// Save results as a baseline under this name, for comparison.
+    #[clap(long)]
+    save_baseline: Option<String>,
+
+    /// Compare to named baseline instead of last run.
+    #[clap(long)]
+    use_baseline: Option<String>,
+
+    /// Limit to benchmarks whose name contains this string. Repetition tightens the filter.
+    #[clap(long)]
+    filter: Vec<String>,
+}
 
 pub fn bench_stream<'a, F, S, O, E>(
     c: &'a mut Criterion,
@@ -69,74 +87,46 @@ pub fn bench_stream<'a, F, S, O, E>(
 }
 
 #[fbinit::main]
-fn main(fb: fbinit::FacebookInit) {
-    let app = args::MononokeAppBuilder::new("benchmark_bulkops")
-         .with_advanced_args_hidden()
-         .build()
-         .arg(
-             Arg::with_name(BENCHMARK_SAVE_BASELINE_ARG)
-                 .long(BENCHMARK_SAVE_BASELINE_ARG)
-                 .takes_value(true)
-                 .required(false)
-                 .help("save results as a baseline under given name, for comparison"),
-         )
-         .arg(
-             Arg::with_name(BENCHMARK_USE_BASELINE_ARG)
-                 .long(BENCHMARK_USE_BASELINE_ARG)
-                 .takes_value(true)
-                 .required(false)
-                 .conflicts_with(BENCHMARK_SAVE_BASELINE_ARG)
-                 .help("compare to named baseline instead of last run"),
-         )
-         .arg(
-             Arg::with_name(BENCHMARK_FILTER_ARG)
-                 .long(BENCHMARK_FILTER_ARG)
-                 .takes_value(true)
-                 .required(false)
-                 .multiple(true)
-                 .help("limit to benchmarks whose name contains this string. Repetition tightens the filter"),
-         );
-    let (matches, runtime) = app.get_matches(fb).expect("Failed to start Mononoke");
+fn main(fb: fbinit::FacebookInit) -> Result<()> {
+    let app = MononokeAppBuilder::new(fb).build::<BenchmarkArgs>()?;
+    let args: BenchmarkArgs = app.args()?;
 
     let mut criterion = Criterion::default()
         .measurement_time(Duration::from_secs(450))
         .sample_size(10)
         .warm_up_time(Duration::from_secs(60));
 
-    if let Some(baseline) = matches.value_of(BENCHMARK_SAVE_BASELINE_ARG) {
+    if let Some(baseline) = &args.save_baseline {
         criterion = criterion.save_baseline(baseline.to_string());
     }
-    if let Some(baseline) = matches.value_of(BENCHMARK_USE_BASELINE_ARG) {
+    if let Some(baseline) = &args.use_baseline {
         criterion = criterion.retain_baseline(baseline.to_string());
     }
 
-    if let Some(filters) = matches.values_of(BENCHMARK_FILTER_ARG) {
-        for filter in filters {
-            criterion = criterion.with_filter(filter.to_string())
-        }
+    for filter in args.filter.iter() {
+        criterion = criterion.with_filter(filter.to_string())
     }
 
-    let logger = matches.logger();
+    let logger = app.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let blobrepo = args::not_shardmanager_compatible::open_repo::<BlobRepo>(fb, logger, &matches);
 
-    let (repo, fetcher) = runtime.block_on(async move {
-        let blobrepo = blobrepo.await.expect("blobrepo should open");
-        (
-            blobrepo.repo_identity().name().to_string(),
-            PublicChangesetBulkFetch::new(blobrepo.changesets_arc(), blobrepo.phases_arc()),
-        )
-    });
+    let repo = app.runtime().block_on(async {
+        app.open_repo::<BlobRepo>(&args.repo)
+            .await
+            .context("Failed to open repo")
+    })?;
+    let fetcher = PublicChangesetBulkFetch::new(repo.changesets_arc(), repo.phases_arc());
+    let repo_name = repo.repo_identity().name().to_string();
 
     // Tests are run from here
 
     bench_stream(
         &mut criterion,
         &ctx,
-        runtime.handle(),
+        app.runtime(),
         format!(
             "{}{}",
-            repo, ":PublicChangesetBulkFetch::fetch_best_newest_first_mid"
+            repo_name, ":PublicChangesetBulkFetch::fetch_best_newest_first_mid"
         ),
         &fetcher,
         |ctx, fetcher| {
@@ -152,10 +142,10 @@ fn main(fb: fbinit::FacebookInit) {
     bench_stream(
         &mut criterion,
         &ctx,
-        runtime.handle(),
+        app.runtime(),
         format!(
             "{}{}",
-            repo, ":PublicChangesetBulkFetch::fetch_best_oldest_first"
+            repo_name, ":PublicChangesetBulkFetch::fetch_best_oldest_first"
         ),
         &fetcher,
         |ctx, fetcher| fetcher.fetch_ids(ctx, Direction::OldestFirst, None),
@@ -164,14 +154,16 @@ fn main(fb: fbinit::FacebookInit) {
     bench_stream(
         &mut criterion,
         &ctx,
-        runtime.handle(),
+        app.runtime(),
         format!(
             "{}{}",
-            repo, ":PublicChangesetBulkFetch::fetch_entries_oldest_first"
+            repo_name, ":PublicChangesetBulkFetch::fetch_entries_oldest_first"
         ),
         &fetcher,
         |ctx, fetcher| fetcher.fetch(ctx, Direction::OldestFirst),
     );
 
     criterion.final_summary();
+
+    Ok(())
 }
