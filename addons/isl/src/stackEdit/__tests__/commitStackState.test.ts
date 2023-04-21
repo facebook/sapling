@@ -449,4 +449,62 @@ describe('CommitStackState', () => {
       });
     });
   });
+
+  describe('dropping commits', () => {
+    const e = exportCommitDefault;
+
+    it('cannot be used for immutable commits', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'A', immutable: true},
+        {...e, node: 'B', parents: ['A'], immutable: true},
+        {...e, node: 'C', parents: ['B'], immutable: false},
+      ]);
+      expect(stack.canDrop(0)).toBeFalsy();
+      expect(stack.canDrop(1)).toBeFalsy();
+      expect(stack.canDrop(2)).toBeTruthy();
+    });
+
+    it('detects content dependencies', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'A', files: {xx: {data: '2\n'}}},
+        {...e, node: 'B', parents: ['A'], files: {xx: {data: '1\n2\n'}}},
+        {...e, node: 'C', parents: ['B'], files: {xx: {data: '1\n2\n3\n'}}},
+        {...e, node: 'D', parents: ['C'], files: {xx: {data: '1\n2\n3\n4\n'}}},
+      ]);
+      expect(stack.canDrop(0)).toBeFalsy();
+      expect(stack.canDrop(1)).toBeTruthy();
+      expect(stack.canDrop(2)).toBeFalsy(); // D depends on C
+      expect(stack.canDrop(3)).toBeTruthy();
+    });
+
+    it('detects commit graph dependencies', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'A', files: {xx: {data: '1'}}},
+        {...e, node: 'B', parents: ['A'], files: {xx: {data: '2'}}},
+        {...e, node: 'C', parents: ['A'], files: {xx: {data: '3'}}},
+        {...e, node: 'D', parents: ['C'], files: {xx: {data: '4'}}},
+      ]);
+      expect(stack.canDrop(0)).toBeFalsy();
+      expect(stack.canDrop(1)).toBeTruthy();
+      expect(stack.canDrop(2)).toBeFalsy();
+      expect(stack.canDrop(3)).toBeTruthy();
+    });
+
+    it('for a change in the middle of a stack', () => {
+      const stack = new CommitStackState([
+        {...e, node: 'A', files: {xx: {data: 'y\n'}}},
+        {...e, node: 'B', parents: ['A'], files: {xx: {data: 'x\ny\n'}}},
+        {...e, node: 'C', parents: ['B'], files: {xx: {data: 'x\ny\nz\n'}}},
+      ]);
+      expect(stack.canDrop(0)).toBeFalsy();
+      expect(stack.canDrop(1)).toBeTruthy();
+      expect(stack.canDrop(2)).toBeTruthy();
+      stack.drop(1);
+      expect(stack.stack.length).toBe(2);
+      expect(stack.stack[1]).toMatchObject({
+        originalNodes: new Set(['C']),
+        files: new Map([['xx', {data: 'y\nz\n'}]]),
+      });
+    });
+  });
 });

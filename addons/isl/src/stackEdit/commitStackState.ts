@@ -11,7 +11,7 @@ import type {ExportStack, ExportFile} from 'shared/types/stack';
 
 import {assert} from '../utils';
 import {FileStackState} from './fileStackState';
-import {unwrap} from 'shared/utils';
+import {generatorContains, unwrap} from 'shared/utils';
 
 /**
  * A stack of commits with stack editing features.
@@ -537,6 +537,45 @@ export class CommitStackState {
     }
 
     // Update this.stack.
+    this.rewriteStackDroppingRev(rev);
+  }
+
+  /**
+   * Test if the commit can be dropped. That is, none of its descendants depend on it.
+   */
+  canDrop(rev: Rev): boolean {
+    if (this.stack.at(rev)?.immutableKind !== 'none') {
+      return false;
+    }
+    const depMap = this.calculateDepMap();
+    for (const [currentRev, dependentRevs] of depMap.entries()) {
+      if (dependentRevs.has(rev) && generatorContains(this.log(currentRev), rev)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Drop a commit. Changes made by the commit will be removed in its
+   * descendants.
+   *
+   * This should only be called when `canDrop(rev)` returned `true`.
+   */
+  drop(rev: Rev) {
+    this.useFileStack();
+    const commit = this.stack[rev];
+    commit.files.forEach((file, path) => {
+      const fileIdxRev = this.commitToFile.get(`${rev}:${path}`);
+      if (fileIdxRev != null) {
+        const [fileIdx, fileRev] = fileIdxRev;
+        const fileStack = this.fileStacks[fileIdx];
+        // Drop the rev by remapping it to an unused rev.
+        const unusedFileRev = fileStack.revLength;
+        fileStack.remapRevs(new Map([[fileRev, unusedFileRev]]));
+      }
+    });
+
     this.rewriteStackDroppingRev(rev);
   }
 }
