@@ -73,7 +73,8 @@ class RpcServerProcessor {
 
 class RpcServer;
 
-class RpcTcpHandler : public folly::DelayedDestruction {
+class RpcTcpHandler : public folly::DelayedDestruction,
+                      private folly::AsyncWriter::WriteCallback {
  public:
   using UniquePtr =
       std::unique_ptr<RpcTcpHandler, folly::DelayedDestruction::Destructor>;
@@ -140,17 +141,13 @@ class RpcTcpHandler : public folly::DelayedDestruction {
     DestructorGuard guard_;
   };
 
-  class Writer : public folly::AsyncWriter::WriteCallback {
-   public:
-    Writer() = default;
+  // AsyncWriter::WriteCallback
 
-   private:
-    void writeSuccess() noexcept override {}
+  void writeSuccess() noexcept override {}
 
-    void writeErr(
-        size_t /*bytesWritten*/,
-        const folly::AsyncSocketException& ex) noexcept override;
-  };
+  void writeErr(
+      size_t /*bytesWritten*/,
+      const folly::AsyncSocketException& ex) noexcept override;
 
   /**
    * Parse the buffer that was just read from the socket. Complete RPC buffers
@@ -231,11 +228,6 @@ class RpcTcpHandler : public folly::DelayedDestruction {
    * Reads raw data off the socket.
    */
   std::unique_ptr<Reader> reader_;
-
-  /**
-   * Writes raw data to the socket.
-   */
-  Writer writer_{};
 
   folly::IOBufQueue readBuf_{folly::IOBufQueue::cacheChainLength()};
 

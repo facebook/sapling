@@ -103,9 +103,11 @@ void RpcTcpHandler::Reader::readErr(
   deleteMe(RpcStopReason::ERROR).via(evb);
 }
 
-void RpcTcpHandler::Writer::writeErr(
+void RpcTcpHandler::writeErr(
     size_t /*bytesWritten*/,
     const folly::AsyncSocketException& ex) noexcept {
+  // TODO: Should we assume the connection is broken, and we should close the
+  // socket, aborting existing requests?
   XLOG(ERR) << "Error while writing: " << folly::exceptionStr(ex);
 }
 
@@ -458,7 +460,7 @@ void RpcTcpHandler::dispatchAndReply(
         } else {
           auto resultBuffer = std::move(result).value();
           XLOG(DBG7) << "About to write to the socket.";
-          sock_->writeChain(&writer_, std::move(resultBuffer));
+          sock_->writeChain(this, std::move(resultBuffer));
         }
       })
       .ensure([this, guard = std::move(guard)]() {
