@@ -49,7 +49,7 @@ export class CommitStackState {
    * in the stack will be present in this map. If a file was added
    * later in the stack, it is in this map and marked as absent.
    */
-  bottomFiles: Map<RepoPath, ExportFile | null>;
+  bottomFiles: Map<RepoPath, ExportFile>;
 
   /**
    * Mutable commit stack. Indexed by rev.
@@ -76,14 +76,14 @@ export class CommitStackState {
   /**
    * Get the file at the given `rev`.
    *
-   * Returns `null` if the file does not exist in the commit.
+   * Returns `ABSENT_FILE` if the file does not exist in the commit.
    * Throws if the stack does not have information about the path.
    *
    * Note this is different from `this.stack[rev].files.get(path)`,
    * since `files` only tracks modified files, not existing files
    * created from the bottom of the stack.
    */
-  getFile(rev: Rev, path: RepoPath): ExportFile | null {
+  getFile(rev: Rev, path: RepoPath): ExportFile {
     for (const logRev of this.log(rev)) {
       const commit = this.stack[logRev];
       const file = commit.files.get(path);
@@ -92,7 +92,7 @@ export class CommitStackState {
         return file;
       }
     }
-    const file = this.bottomFiles.get(path);
+    const file = this.bottomFiles.get(path) ?? ABSENT_FILE;
     if (file === undefined) {
       throw new Error(
         `file ${path} is not tracked by stack (tracked files: ${JSON.stringify(
@@ -148,16 +148,16 @@ export class CommitStackState {
   }
 }
 
-function getBottomFilesFromExportStack(stack: ExportStack): Map<RepoPath, ExportFile | null> {
+function getBottomFilesFromExportStack(stack: ExportStack): Map<RepoPath, ExportFile> {
   // bottomFiles requires that the stack only has one root.
   checkStackSingleRoot(stack);
 
   // Calculate bottomFiles.
-  const bottomFiles: Map<RepoPath, ExportFile | null> = new Map();
+  const bottomFiles: Map<RepoPath, ExportFile> = new Map();
   stack.forEach(commit => {
     for (const [path, content] of Object.entries(commit.relevantFiles ?? {})) {
       if (!bottomFiles.has(path)) {
-        bottomFiles.set(path, content);
+        bottomFiles.set(path, content ?? ABSENT_FILE);
       }
     }
 
@@ -165,7 +165,7 @@ function getBottomFilesFromExportStack(stack: ExportStack): Map<RepoPath, Export
     // mark them as "missing" in the stack bottom.
     for (const path of Object.keys(commit.files ?? {})) {
       if (!bottomFiles.has(path)) {
-        bottomFiles.set(path, null);
+        bottomFiles.set(path, ABSENT_FILE);
       }
     }
   });
@@ -199,7 +199,9 @@ function getCommitStatesFromExportStack(stack: ExportStack): CommitState[] {
     // Treat commits that are not requested explicitly as immutable too.
     immutableKind: commit.immutable || !commit.requested ? 'hash' : 'none',
     parents: (commit.parents ?? []).map(p => nodeToRev(p)),
-    files: new Map(Object.entries(commit.files ?? {})),
+    files: new Map(
+      Object.entries(commit.files ?? {}).map(([path, file]) => [path, file ?? ABSENT_FILE]),
+    ),
   }));
 }
 
@@ -246,6 +248,21 @@ function checkStackParents(stack: ExportStack) {
   }
 }
 
+const ABSENT_FLAG = 'a';
+
+/**
+ * Represents an absent (or deleted) file.
+ *
+ * Helps simplify `null` handling logic. Since `data` is a regular
+ * string, an absent file can be compared (data-wise) with its
+ * adjacent versions and edited. This makes it easier to, for example,
+ * split a newly added file.
+ */
+export const ABSENT_FILE: ExportFile = {
+  data: '',
+  flags: ABSENT_FLAG,
+};
+
 /** Mutable commit state. */
 type CommitState = {
   rev: Rev;
@@ -268,5 +285,5 @@ type CommitState = {
   /** Parent commits. */
   parents: Rev[];
   /** Changed files. */
-  files: Map<RepoPath, ExportFile | null>;
+  files: Map<RepoPath, ExportFile>;
 };

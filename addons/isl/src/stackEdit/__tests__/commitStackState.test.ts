@@ -7,7 +7,7 @@
 
 import type {ExportCommit, ExportStack} from 'shared/types/stack';
 
-import {CommitStackState} from '../commitStackState';
+import {ABSENT_FILE, CommitStackState} from '../commitStackState';
 
 const exportCommitDefault: ExportCommit = {
   requested: true,
@@ -162,17 +162,17 @@ describe('CommitStackState', () => {
 
   it('provides file contents at given revs', () => {
     const stack = new CommitStackState(exportStack1);
-    expect(stack.getFile(0, 'x.txt')).toBeNull();
-    expect(stack.getFile(0, 'y.txt')).toBeNull();
+    expect(stack.getFile(0, 'x.txt')).toBe(ABSENT_FILE);
+    expect(stack.getFile(0, 'y.txt')).toBe(ABSENT_FILE);
     expect(stack.getFile(0, 'z.txt')).toMatchObject({data: '11'});
     expect(stack.getFile(1, 'x.txt')).toMatchObject({data: '33'});
-    expect(stack.getFile(1, 'y.txt')).toBeNull();
+    expect(stack.getFile(1, 'y.txt')).toBe(ABSENT_FILE);
     expect(stack.getFile(1, 'z.txt')).toMatchObject({data: '22'});
-    expect(stack.getFile(2, 'x.txt')).toBeNull();
+    expect(stack.getFile(2, 'x.txt')).toBe(ABSENT_FILE);
     expect(stack.getFile(2, 'y.txt')).toMatchObject({data: '33'});
     expect(stack.getFile(2, 'z.txt')).toMatchObject({data: '22'});
-    expect(stack.getFile(3, 'x.txt')).toBeNull();
+    expect(stack.getFile(3, 'x.txt')).toBe(ABSENT_FILE);
     expect(stack.getFile(3, 'y.txt')).toMatchObject({data: '33'});
-    expect(stack.getFile(3, 'z.txt')).toBeNull();
+    expect(stack.getFile(3, 'z.txt')).toBe(ABSENT_FILE);
   });
 });
