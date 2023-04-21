@@ -107,9 +107,13 @@ fn python_fallback() -> Result<Command> {
     Err(anyhow!("unable to locate fallback binary"))
 }
 
-fn fallback() -> Result<i32> {
+fn fallback(reason: Option<clap::Error>) -> Result<i32> {
     if std::env::var("EDENFS_LOG").is_ok() {
         setup_logging();
+    }
+
+    if let Some(reason) = reason {
+        tracing::debug!(%reason, "falling back to Python");
     }
 
     let mut cmd = python_fallback()?;
@@ -162,7 +166,7 @@ fn wrapper_main() -> Result<i32> {
         let cmd = edenfs_commands::MainCommand::parse();
         rust_main(cmd)
     } else if std::env::var("EDENFSCTL_SKIP_RUST").is_ok() {
-        fallback()
+        fallback(None)
     } else {
         match edenfs_commands::MainCommand::try_parse() {
             // The command is defined in Rust, but check whether it's "enabled"
@@ -171,7 +175,7 @@ fn wrapper_main() -> Result<i32> {
                 if cmd.is_enabled() {
                     rust_main(cmd)
                 } else {
-                    fallback()
+                    fallback(None)
                 }
             }
             // If the command is defined in Rust, then --help will cause
@@ -189,7 +193,7 @@ fn wrapper_main() -> Result<i32> {
                 {
                     e.exit()
                 } else {
-                    fallback()
+                    fallback(Some(e))
                 }
             }
         }
