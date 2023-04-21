@@ -13,6 +13,7 @@ use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use chrono::DateTime;
 use chrono::FixedOffset;
+use context::CoreContext;
 use filestore::hash_bytes;
 use filestore::Sha1IncrementalHasher;
 use megarepo_error::cloneable_error;
@@ -21,8 +22,6 @@ use mononoke_types::hash::GitSha1;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::DateTime as MononokeDateTime;
-use repo_authorization::RepoWriteOperation;
-use sorted_vector_map::SortedVectorMap;
 use thiserror::Error;
 
 use crate::changeset::ChangesetContext;
@@ -119,37 +118,7 @@ impl RepoContext {
         git_hash: &git_hash::oid,
         raw_content: Vec<u8>,
     ) -> anyhow::Result<(), GitError> {
-        // Check if the provided Sha1 hash (i.e. ObjectId) of the bytes actually corresponds to the hash of the bytes
-        let bytes = bytes::Bytes::from(raw_content);
-        let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), &bytes);
-        if sha1_hash.as_ref() != git_hash.as_bytes() {
-            return Err(GitError::HashMismatch(
-                git_hash.to_hex().to_string(),
-                sha1_hash.to_hex().to_string(),
-            ));
-        };
-        // Check if the bytes actually correspond to a valid Git object
-        let blobstore_bytes = BlobstoreBytes::from_bytes(bytes.clone());
-        let git_obj = git_object::ObjectRef::from_loose(bytes.as_ref()).map_err(|e| {
-            GitError::InvalidContent(
-                git_hash.to_hex().to_string(),
-                anyhow::anyhow!(e.to_string()).into(),
-            )
-        })?;
-        // Check if the git object is not a raw content blob. Raw content blobs are uploaded directly through
-        // LFS. This method supports git commits, trees, tags, notes and similar pointer objects.
-        if let git_object::ObjectRef::Blob(_) = git_obj {
-            return Err(GitError::DisallowedBlobObject(
-                git_hash.to_hex().to_string(),
-            ));
-        }
-        // The bytes are valid, upload to blobstore with the key:
-        // git_object_{hex-value-of-hash}
-        let blobstore_key = format!("{}{}{}", GIT_OBJECT_PREFIX, SEPARATOR, git_hash.to_hex());
-        self.repo_blobstore()
-            .put(&self.ctx, blobstore_key, blobstore_bytes)
-            .await
-            .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))
+        upload_git_object(&self.ctx, self.inner_repo(), git_hash, raw_content).await
     }
 
     /// Create Mononoke counterpart of Git tree object
@@ -157,108 +126,147 @@ impl RepoContext {
         &self,
         git_tree_hash: &git_hash::oid,
     ) -> anyhow::Result<(), GitError> {
-        let blobstore_key = format!(
-            "{}{}{}",
-            GIT_OBJECT_PREFIX,
-            SEPARATOR,
-            git_tree_hash.to_hex()
-        );
-        // Before creating the Mononoke version of the git tree, validate if the raw git
-        // tree is stored in the blobstore
-        let get_result = self
-            .repo_blobstore()
-            .get(&self.ctx, &blobstore_key)
-            .await
-            .map_err(|e| GitError::StorageFailure(git_tree_hash.to_hex().to_string(), e.into()))?;
-        if get_result.is_none() {
-            return Err(GitError::NonExistentObject(
-                git_tree_hash.to_hex().to_string(),
-            ));
-        }
-        let mut changeset = BonsaiChangesetMut::default();
-        // Get git hash from tree object ID
-        let git_hash = GitSha1::from_bytes(git_tree_hash.as_bytes())
-            .map_err(|_| GitError::InvalidHash(git_tree_hash.to_hex().to_string()))?;
-        // Store hash in the changeset
-        changeset.git_tree_hash = Some(git_hash);
-        // Freeze the changeset to determine if there are any errors
-        let changeset = changeset
-            .freeze()
-            .map_err(|e| GitError::InvalidBonsai(git_tree_hash.to_hex().to_string(), e.into()))?;
-
-        // Store the created changeset
-        changesets_creation::save_changesets(self.ctx(), self.inner_repo(), vec![changeset])
-            .await
-            .map_err(|e| GitError::StorageFailure(git_tree_hash.to_hex().to_string(), e.into()))
+        create_git_tree(&self.ctx, self.inner_repo(), git_tree_hash).await
     }
 
     /// Create a new annotated tag in the repository.
-    ///
-    /// Annotated tags are bookmarks of category `Tag` or `Note` which point to one of these
-    /// annotated tag changesets.
-    /// Bookmarks of category `Tag` can also represent lightweight tags, pointing directly to
-    /// a changeset representing a commit.
-    /// Bookmarks of category `Note` can only represent annotated tags.
-    /// Bookmarks of category `Branch` are never annotated.
-    ///
-    /// TODO: Consider also taking an `Option<Bubble>` in the future to support snapshoting for
-    /// tags.
-    ///
-    /// For git repos with tags, permit_commits_without_parents must be set to True
-    pub async fn create_annotated_tag_changeset(
+    pub async fn create_annotated_tag(
         &self,
         author: String,
         author_date: DateTime<FixedOffset>,
         annotation: String,
-        annotated_tag_target: BonsaiAnnotatedTag,
-    ) -> Result<ChangesetContext, MononokeError> {
-        self.start_write()?;
-        self.authorization_context()
-            .require_repo_write(
-                self.ctx(),
-                self.inner_repo(),
-                RepoWriteOperation::CreateChangeset,
-            )
-            .await?;
-
-        let allowed_no_parents = self
-            .config()
-            .source_control_service
-            .permit_commits_without_parents;
-        if !allowed_no_parents {
-            return Err(MononokeError::InvalidRequest(String::from(
-                "Changesets with no parents cannot be created",
-            )));
-        }
-
-        let author_date = MononokeDateTime::new(author_date);
-
-        // Create the new Bonsai Changeset. The `freeze` method validates
-        // that the bonsai changeset is internally consistent.
-        let new_changeset = BonsaiChangesetMut {
-            parents: Vec::new(),
+        annotated_tag: BonsaiAnnotatedTag,
+    ) -> Result<ChangesetContext, GitError> {
+        let new_changeset_id = create_annotated_tag(
+            self.ctx(),
+            self.inner_repo(),
             author,
             author_date,
-            committer: None,
-            committer_date: None,
-            message: annotation,
-            hg_extra: SortedVectorMap::new(),
-            git_extra_headers: None,
-            git_tree_hash: None,
-            file_changes: SortedVectorMap::new(),
-            is_snapshot: false,
-            git_annotated_tag: Some(annotated_tag_target),
-        }
-        .freeze()
-        .map_err(|e| {
-            MononokeError::InvalidRequest(format!("Changes create invalid bonsai changeset: {}", e))
-        })?;
-
-        let new_changeset_id = new_changeset.get_changeset_id();
-
-        self.save_changesets(vec![new_changeset], self.inner_repo(), None)
-            .await?;
+            annotation,
+            annotated_tag,
+        )
+        .await?;
 
         Ok(ChangesetContext::new(self.clone(), new_changeset_id))
     }
+}
+
+/// Free function for uploading serialized git objects
+pub async fn upload_git_object(
+    ctx: &CoreContext,
+    repo: &impl repo_blobstore::RepoBlobstoreRef,
+    git_hash: &git_hash::oid,
+    raw_content: Vec<u8>,
+) -> anyhow::Result<(), GitError> {
+    // Check if the provided Sha1 hash (i.e. ObjectId) of the bytes actually corresponds to the hash of the bytes
+    let bytes = bytes::Bytes::from(raw_content);
+    let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), &bytes);
+    if sha1_hash.as_ref() != git_hash.as_bytes() {
+        return Err(GitError::HashMismatch(
+            git_hash.to_hex().to_string(),
+            sha1_hash.to_hex().to_string(),
+        ));
+    };
+    // Check if the bytes actually correspond to a valid Git object
+    let blobstore_bytes = BlobstoreBytes::from_bytes(bytes.clone());
+    let git_obj = git_object::ObjectRef::from_loose(bytes.as_ref()).map_err(|e| {
+        GitError::InvalidContent(
+            git_hash.to_hex().to_string(),
+            anyhow::anyhow!(e.to_string()).into(),
+        )
+    })?;
+    // Check if the git object is not a raw content blob. Raw content blobs are uploaded directly through
+    // LFS. This method supports git commits, trees, tags, notes and similar pointer objects.
+    if let git_object::ObjectRef::Blob(_) = git_obj {
+        return Err(GitError::DisallowedBlobObject(
+            git_hash.to_hex().to_string(),
+        ));
+    }
+    // The bytes are valid, upload to blobstore with the key:
+    // git_object_{hex-value-of-hash}
+    let blobstore_key = format!("{}{}{}", GIT_OBJECT_PREFIX, SEPARATOR, git_hash.to_hex());
+    repo.repo_blobstore()
+        .put(ctx, blobstore_key, blobstore_bytes)
+        .await
+        .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))
+}
+
+/// Free function for creating Mononoke counterpart of Git tree object
+pub async fn create_git_tree(
+    ctx: &CoreContext,
+    repo: &(impl changesets::ChangesetsRef + repo_blobstore::RepoBlobstoreRef),
+    git_tree_hash: &git_hash::oid,
+) -> anyhow::Result<(), GitError> {
+    let blobstore_key = format!(
+        "{}{}{}",
+        GIT_OBJECT_PREFIX,
+        SEPARATOR,
+        git_tree_hash.to_hex()
+    );
+    // Before creating the Mononoke version of the git tree, validate if the raw git
+    // tree is stored in the blobstore
+    let get_result = repo
+        .repo_blobstore()
+        .get(ctx, &blobstore_key)
+        .await
+        .map_err(|e| GitError::StorageFailure(git_tree_hash.to_hex().to_string(), e.into()))?;
+    if get_result.is_none() {
+        return Err(GitError::NonExistentObject(
+            git_tree_hash.to_hex().to_string(),
+        ));
+    }
+    let mut changeset = BonsaiChangesetMut::default();
+    // Get git hash from tree object ID
+    let git_hash = GitSha1::from_bytes(git_tree_hash.as_bytes())
+        .map_err(|_| GitError::InvalidHash(git_tree_hash.to_hex().to_string()))?;
+    // Store hash in the changeset
+    changeset.git_tree_hash = Some(git_hash);
+    // Freeze the changeset to determine if there are any errors
+    let changeset = changeset
+        .freeze()
+        .map_err(|e| GitError::InvalidBonsai(git_tree_hash.to_hex().to_string(), e.into()))?;
+
+    // Store the created changeset
+    changesets_creation::save_changesets(ctx, repo, vec![changeset])
+        .await
+        .map_err(|e| GitError::StorageFailure(git_tree_hash.to_hex().to_string(), e.into()))
+}
+
+/// Free function for creating a new annotated tag in the repository.
+///
+/// Annotated tags are bookmarks of category `Tag` or `Note` which point to one of these
+/// annotated tag changesets.
+/// Bookmarks of category `Tag` can also represent lightweight tags, pointing directly to
+/// a changeset representing a commit.
+/// Bookmarks of category `Note` can only represent annotated tags.
+/// Bookmarks of category `Branch` are never annotated.
+pub async fn create_annotated_tag(
+    ctx: &CoreContext,
+    repo: &(impl changesets::ChangesetsRef + repo_blobstore::RepoBlobstoreRef),
+    author: String,
+    author_date: DateTime<FixedOffset>,
+    annotation: String,
+    annotated_tag: BonsaiAnnotatedTag,
+) -> Result<mononoke_types::ChangesetId, GitError> {
+    let author_date = MononokeDateTime::new(author_date);
+    let tag_id = format!("{:?}", annotated_tag);
+
+    // Create the new Bonsai Changeset. The `freeze` method validates
+    // that the bonsai changeset is internally consistent.
+    let changeset = BonsaiChangesetMut {
+        author,
+        author_date,
+        message: annotation,
+        git_annotated_tag: Some(annotated_tag),
+        ..Default::default()
+    }
+    .freeze()
+    .map_err(|e| GitError::InvalidBonsai(tag_id.clone(), e.into()))?;
+
+    let changeset_id = changeset.get_changeset_id();
+    // Store the created changeset
+    changesets_creation::save_changesets(ctx, repo, vec![changeset])
+        .await
+        .map_err(|e| GitError::StorageFailure(tag_id, e.into()))?;
+    Ok(changeset_id)
 }
