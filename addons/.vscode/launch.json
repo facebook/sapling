@@ -19,6 +19,15 @@
       "localRoot": "${workspaceRoot}/isl-server",
       "stopOnEntry": false,
       "sourceMaps": true,
+    },
+    {
+      "name": "isl tests",
+      "type": "node",
+      "request": "launch",
+      "args": ["../node_modules/react-scripts/scripts/test.js"],
+      "localRoot": "${workspaceRoot}/isl",
+      "stopOnEntry": false,
+      "sourceMaps": true,
     }
   ]
 }
