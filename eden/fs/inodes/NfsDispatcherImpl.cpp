@@ -39,7 +39,8 @@ ImmediateFuture<struct stat> statHelper(
 NfsDispatcherImpl::NfsDispatcherImpl(EdenMount* mount)
     : NfsDispatcher(mount->getStats().copy(), mount->getClock()),
       mount_(mount),
-      inodeMap_(mount_->getInodeMap()) {}
+      inodeMap_(mount_->getInodeMap()),
+      allowAppleDouble_(mount_->getEdenConfig()->allowAppleDouble.getValue()) {}
 
 ImmediateFuture<struct stat> NfsDispatcherImpl::getattr(
     InodeNumber ino,
@@ -152,11 +153,10 @@ ImmediateFuture<NfsDispatcher::CreateRes> NfsDispatcherImpl::create(
     const ObjectFetchContextPtr& context) {
   // macOS loves sprinkling ._ (AppleDouble) files all over the repository,
   // prevent it from doing so.
-  if (folly::kIsApple && string_view{name.view()}.starts_with("._")) {
-    if (!mount_->getEdenConfig()->allowAppleDouble.getValue()) {
-      return makeImmediateFuture<NfsDispatcher::CreateRes>(
-          std::system_error(EACCES, std::generic_category()));
-    }
+  if (folly::kIsApple && !allowAppleDouble_ &&
+      string_view{name.view()}.starts_with("._")) {
+    return makeImmediateFuture<NfsDispatcher::CreateRes>(
+        std::system_error(EACCES, std::generic_category()));
   }
   // Make sure that we're attempting to create a file.
   mode = S_IFREG | (0777 & mode);

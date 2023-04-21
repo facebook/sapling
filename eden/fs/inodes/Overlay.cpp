@@ -148,6 +148,8 @@ Overlay::Overlay(
           logger)},
       inodeCatalogType_{inodeCatalogType},
       supportsSemanticOperations_{inodeCatalog_->supportsSemanticOperations()},
+      filterAppleDouble_{
+          folly::kIsApple && !config.allowAppleDouble.getValue()},
       localDir_{localDir},
       caseSensitive_{caseSensitive},
       structuredLogger_{logger},
@@ -364,18 +366,26 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
   }
   const auto& dir = dirData.value();
 
-  bool shouldMigrateToNewFormat = false;
+  bool shouldRewriteOverlay = false;
 
   for (auto& iter : *dir.entries_ref()) {
     const auto& name = iter.first;
     const auto& value = iter.second;
+
+    // If AppleDouble files (._) need to be filtered, omit them from the
+    // returned DirContents and rewrite the overlay directory to remove them
+    // from the Overlay entirely.
+    if (filterAppleDouble_ && string_view{name}.starts_with("._")) {
+      shouldRewriteOverlay = true;
+      continue;
+    }
 
     InodeNumber ino;
     if (*value.inodeNumber_ref()) {
       ino = InodeNumber::fromThrift(*value.inodeNumber_ref());
     } else {
       ino = allocateInodeNumber();
-      shouldMigrateToNewFormat = true;
+      shouldRewriteOverlay = true;
     }
 
     if (value.hash_ref() && !value.hash_ref()->empty()) {
@@ -388,7 +398,7 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     }
   }
 
-  if (shouldMigrateToNewFormat) {
+  if (shouldRewriteOverlay) {
     saveOverlayDir(inodeNumber, result);
   }
 

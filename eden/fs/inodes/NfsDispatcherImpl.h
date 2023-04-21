@@ -113,5 +113,7 @@ class NfsDispatcherImpl : public NfsDispatcher {
   // The EdenMount associated with this dispatcher.
   EdenMount* const mount_;
   InodeMap* const inodeMap_;
+
+  bool allowAppleDouble_;
 };
 } // namespace facebook::eden

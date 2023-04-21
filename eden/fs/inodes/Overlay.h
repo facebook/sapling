@@ -370,6 +370,8 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   bool supportsSemanticOperations_;
 
+  bool filterAppleDouble_;
+
   const AbsolutePath localDir_;
 
 #ifndef _WIN32
