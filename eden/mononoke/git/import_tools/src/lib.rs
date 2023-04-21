@@ -84,6 +84,7 @@ where
                             let git_bytes = {
                                 let object = reader.get_object(&oid).await?;
                                 let blob = object
+                                    .parsed
                                     .try_into_blob()
                                     .map_err(|_| format_err!("{} is not a blob", oid))?;
                                 Bytes::from(blob.data)
@@ -199,6 +200,7 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
                             metadata,
                             tree,
                             parent_trees,
+                            original_commit,
                         } = ExtractedCommit::new(&ctx, oid, &reader)
                             .await
                             .with_context(|| format!("While extracting {}", oid))?;
@@ -212,48 +214,59 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
                         )
                         .await?;
 
-                        Result::<_, Error>::Ok((metadata, file_changes))
+                        Result::<_, Error>::Ok((metadata, file_changes, original_commit))
                     }
                 })
                 .await?
             }
         })
         .try_buffered(prefs.concurrency)
-        .and_then(|(metadata, file_changes)| async {
-            let oid = metadata.oid;
-            let bonsai_parents = metadata
-                .parents
-                .iter()
-                .map(|p| {
-                    roots
-                        .get(p)
-                        .copied()
-                        .or_else(|| acc.read().expect("lock poisoned").get(p))
-                        .ok_or_else(|| {
-                            format_err!(
-                                "Couldn't find parent: {} in local list of imported commits",
-                                p
-                            )
-                        })
-                })
-                .collect::<Result<Vec<_>, _>>()
-                .with_context(|| format_err!("While looking for parents of {}", oid))?;
-            let (int_cs, bcs_id) = uploader
-                .generate_changeset(ctx, bonsai_parents, metadata, file_changes, dry_run)
-                .await?;
-            acc.write().expect("lock poisoned").insert(oid, bcs_id);
+        .and_then(|(metadata, file_changes, original_commit)| {
+            let acc = &acc;
+            let uploader = &uploader;
+            let repo_name = &repo_name;
+            async move {
+                let oid = metadata.oid;
+                let bonsai_parents = metadata
+                    .parents
+                    .iter()
+                    .map(|p| {
+                        roots
+                            .get(p)
+                            .copied()
+                            .or_else(|| acc.read().expect("lock poisoned").get(p))
+                            .ok_or_else(|| {
+                                format_err!(
+                                    "Couldn't find parent: {} in local list of imported commits",
+                                    p
+                                )
+                            })
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+                    .with_context(|| format_err!("While looking for parents of {}", oid))?;
 
-            let git_sha1 = oid_to_sha1(&oid)?;
-            info!(
-                ctx.logger(),
-                "GitRepo:{} commit {} of {} - Oid:{} => Bid:{}",
-                &repo_name,
-                acc.read().expect("lock poisoned").len(),
-                nb_commits_to_import,
-                git_sha1.to_brief(),
-                bcs_id.to_brief()
-            );
-            Ok((int_cs, git_sha1))
+                // Before generating the corresponding changeset at Mononoke end, upload the raw git commit.
+                uploader
+                    .upload_object(ctx, oid, original_commit)
+                    .await
+                    .with_context(|| format_err!("Failed to upload raw git commit {}", oid))?;
+                let (int_cs, bcs_id) = uploader
+                    .generate_changeset(ctx, bonsai_parents, metadata, file_changes, dry_run)
+                    .await?;
+                acc.write().expect("lock poisoned").insert(oid, bcs_id);
+
+                let git_sha1 = oid_to_sha1(&oid)?;
+                info!(
+                    ctx.logger(),
+                    "GitRepo:{} commit {} of {} - Oid:{} => Bid:{}",
+                    &repo_name,
+                    acc.read().expect("lock poisoned").len(),
+                    nb_commits_to_import,
+                    git_sha1.to_brief(),
+                    bcs_id.to_brief()
+                );
+                Ok((int_cs, git_sha1))
+            }
         })
         // Chunk together into Vec<std::result::Result<(bcs, oid), Error> >
         .chunks(prefs.concurrency)
@@ -312,7 +325,7 @@ pub async fn read_git_refs(
                 let object = reader.get_object(&oid).await.with_context(|| {
                     format!("unable to read git object: {oid} for ref: {ref_name}")
                 })?;
-                match object {
+                match object.parsed {
                     Object::Tree(_) => {
                         // This happens in the Linux kernel repo, because Linus was being clever - a commit and a tree
                         // are both treeish for the purposes of things like checkout and diff.
@@ -346,7 +359,12 @@ pub async fn import_tree_as_single_bonsai_changeset(
 
     let sha1 = oid_to_sha1(&git_cs_id)?;
 
-    let ExtractedCommit { tree, metadata, .. } = ExtractedCommit::new(ctx, git_cs_id, &reader)
+    let ExtractedCommit {
+        tree,
+        metadata,
+        original_commit,
+        ..
+    } = ExtractedCommit::new(ctx, git_cs_id, &reader)
         .await
         .with_context(|| format!("While extracting {}", git_cs_id))?;
 
@@ -358,6 +376,12 @@ pub async fn import_tree_as_single_bonsai_changeset(
         bonsai_diff(ctx.clone(), reader, tree, HashSet::new()),
     )
     .await?;
+
+    // Before generating the corresponding changeset at Mononoke end, upload the raw git commit.
+    uploader
+        .upload_object(ctx, git_cs_id, original_commit)
+        .await
+        .with_context(|| format_err!("Failed to upload raw git commit {}", git_cs_id))?;
 
     uploader
         .generate_changeset(ctx, vec![], metadata, file_changes, prefs.dry_run)

@@ -71,6 +71,7 @@ pub async fn missing_for_commit(
             } else {
                 let object = reader.get_object(&id).await?;
                 let commit = object
+                    .parsed
                     .try_into_commit()
                     .map_err(|_| format_err!("oid {} is not a commit", id))?;
                 q.extend(commit.parents);

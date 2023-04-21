@@ -8,6 +8,8 @@
   $ ENABLED_DERIVED_DATA='["git_trees", "filenodes", "hgchangesets"]' setup_common_config
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ HG_REPO="${TESTTMP}/repo-hg"
+  $ REPOTYPE="blob_files"
+  $ setup_common_config $REPOTYPE
 
 # Setup git repsitory
   $ mkdir "$GIT_REPO"
@@ -36,6 +38,11 @@
   $ gitimport "$GIT_REPO" import-tree-as-single-bonsai-changeset 69d481cfc9a21ef59b516c3de04cd742d059d345
   * using repo "repo" repoid RepositoryId(0) (glob)
   * imported as 996a9fdfbf6ef7fe0e61e6f5da99f2189896379558cc24e9501b06b45350d489 (glob)
+
+# Validate if creating the commit also uploaded the raw commit blob
+# The id of the blob should be the same as the commit object id
+  $ ls $TESTTMP/blobstore/blobs | grep "git_object"
+  blob-repo0000.git_object.69d481cfc9a21ef59b516c3de04cd742d059d345
 
 # Set master (gitimport does not do this yet)
   $ mononoke_admin bookmarks set master 996a9fdfbf6ef7fe0e61e6f5da99f2189896379558cc24e9501b06b45350d489

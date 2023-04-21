@@ -8,6 +8,8 @@
   $ ENABLED_DERIVED_DATA='["git_trees", "filenodes", "hgchangesets"]' setup_common_config "blob_files"
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ HG_REPO="${TESTTMP}/repo-hg"
+  $ REPOTYPE="blob_files"
+  $ setup_common_config $REPOTYPE
 
 # Setup git repsitory
   $ mkdir "$GIT_REPO"
@@ -57,6 +59,15 @@
   * Ref: "refs/heads/branch2": Some(ChangesetId(Blake2(*))) (glob)
   * Ref: "refs/heads/master": Some(ChangesetId(Blake2(375ef2c64bcda29f59e557d6da26baca67af93b6da5702fcaa2bb626aa1a45e7))) (glob)
   * Ref: "refs/heads/root": Some(ChangesetId(Blake2(*))) (glob)
+
+# Validate if creating the commits also uploaded the raw commit blobs
+# The id of the blobs should be the same as the commit object ids
+  $ ls $TESTTMP/blobstore/blobs | grep "git_object"
+  blob-repo0000.git_object.161a8cb720352af550786d4e73eeb36d5b958ddd
+  blob-repo0000.git_object.6283891fdea5a1a4560451f09366220a585e07b2
+  blob-repo0000.git_object.933c6d8556a071c2105b8b2fd1dabff709d87929
+  blob-repo0000.git_object.bf946c828dea5fe0a0228dc7d556aa4a524df2d1
+  blob-repo0000.git_object.d53a2ef2bbadbe26f8c28598b408e03c0b01027c
 
 # Set master (gitimport does not do this yet)
   $ mononoke_admin bookmarks set master 375ef2c64bcda29f59e557d6da26baca67af93b6da5702fcaa2bb626aa1a45e7

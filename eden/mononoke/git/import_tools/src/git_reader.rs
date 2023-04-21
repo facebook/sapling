@@ -16,6 +16,7 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use bytes::Bytes;
 use git_hash::ObjectId;
 use git_object::Kind;
 use git_object::Object;
@@ -29,7 +30,13 @@ use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
-type ObjectSender = oneshot::Sender<Result<Object>>;
+type ObjectSender = oneshot::Sender<Result<ObjectContent>>;
+
+#[derive(Clone, Debug)]
+pub struct ObjectContent {
+    pub parsed: Object,
+    pub raw: Bytes,
+}
 
 /// Uses `git-cat-file` to read a git repository's ODB directly
 #[derive(Clone)]
@@ -105,7 +112,7 @@ impl GitRepoReader {
     }
 
     /// Read `oid` from the git store
-    pub fn get_object(&self, oid: &git_hash::oid) -> impl Future<Output = Result<Object>> {
+    pub fn get_object(&self, oid: &git_hash::oid) -> impl Future<Output = Result<ObjectContent>> {
         let outstanding_requests = self.outstanding_requests.clone();
         let send_request = self.send_request.clone();
         let oid = oid.to_owned();
@@ -156,7 +163,7 @@ fn parse_cat_header(header: &str) -> Result<(ObjectId, Result<(Kind, usize)>)> {
     Ok((oid.parse()?, parse_kind_and_size(content_type)))
 }
 
-fn convert_to_object(kind: Kind, bytes: Vec<u8>) -> Result<Object> {
+fn convert_to_object(kind: Kind, size: usize, bytes: Vec<u8>) -> Result<ObjectContent> {
     let object_ref = ObjectRef::from_bytes(kind, &bytes).with_context(|| {
         format!(
             "Failed to parse:\n```\n{}\n```\ninto object of kind {:?}",
@@ -164,7 +171,13 @@ fn convert_to_object(kind: Kind, bytes: Vec<u8>) -> Result<Object> {
             kind
         )
     })?;
-    Ok(object_ref.into_owned())
+    let mut raw = format!("{} {}\x00", kind, size).into_bytes();
+    raw.append(&mut bytes.clone());
+
+    Ok(ObjectContent {
+        parsed: object_ref.into_owned(),
+        raw: Bytes::from(raw),
+    })
 }
 
 async fn read_objects_task(
@@ -217,7 +230,7 @@ async fn read_objects_task(
                 .await
                 .with_context(|| format!("failed to read exactly {} bytes", size))?;
             if let Some(sender) = maybe_sender {
-                let object = convert_to_object(kind, bytes);
+                let object = convert_to_object(kind, size, bytes);
                 let _ = sender.send(object);
             }
             // Finally, there's an empty line after the object, but before the next header. Consume it

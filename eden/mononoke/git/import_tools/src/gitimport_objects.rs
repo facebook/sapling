@@ -75,6 +75,7 @@ impl Manifest for GitManifest {
 async fn read_tree(reader: &GitRepoReader, oid: &git_hash::oid) -> Result<Tree, Error> {
     let object = reader.get_object(oid).await?;
     object
+        .parsed
         .try_into_tree()
         .map_err(|_| format_err!("{} is not a tree", oid))
 }
@@ -300,6 +301,7 @@ pub struct ExtractedCommit {
     pub metadata: CommitMetadata,
     pub tree: GitTree,
     pub parent_trees: HashSet<GitTree>,
+    pub original_commit: Bytes,
 }
 
 pub(crate) async fn read_commit(
@@ -308,8 +310,20 @@ pub(crate) async fn read_commit(
 ) -> Result<Commit, Error> {
     let object = reader.get_object(oid).await?;
     object
+        .parsed
         .try_into_commit()
         .map_err(|_| format_err!("{} is not a commit", oid))
+}
+
+pub(crate) async fn read_raw_commit(
+    reader: &GitRepoReader,
+    oid: &git_hash::oid,
+) -> Result<Bytes, Error> {
+    reader
+        .get_object(oid)
+        .await
+        .map(|obj| obj.raw)
+        .with_context(|| format!("Error while fetching Git object for ID {}", oid))
 }
 
 fn format_signature(sig: git_actor::SignatureRef) -> String {
@@ -399,8 +413,9 @@ impl ExtractedCommit {
                 )
             })
             .collect();
-
+        let original_commit = read_raw_commit(reader, &oid).await?;
         Result::<_, Error>::Ok(ExtractedCommit {
+            original_commit,
             metadata: CommitMetadata {
                 oid,
                 parents,
