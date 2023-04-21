@@ -1193,13 +1193,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   FOLLY_NODISCARD folly::Promise<folly::Unit>& beginMount();
 
-#ifdef _WIN32
-  using ChannelStopData = PrjfsChannel::StopData;
-#else
-  using ChannelStopData = FsStopDataPtr;
-#endif
-
-  using StopFuture = folly::SemiFuture<ChannelStopData>;
+  using StopFuture = folly::SemiFuture<FsStopDataPtr>;
 
   /**
    * Open the platform-specific device and mount it.

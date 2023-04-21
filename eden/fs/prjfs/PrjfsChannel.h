@@ -478,8 +478,11 @@ class PrjfsChannel : public FsChannel {
    */
   folly::SemiFuture<folly::Unit> stop();
 
-  struct StopData {};
-  folly::SemiFuture<StopData> getStopFuture();
+  struct StopData : FsStopData {
+    bool isUnmounted() override;
+    FsChannelInfo extractTakeoverInfo() override;
+  };
+  folly::SemiFuture<FsStopDataPtr> getStopFuture();
 
   /**
    * Remove a file that has been cached on disk by ProjectedFS. This should be
@@ -523,7 +526,7 @@ class PrjfsChannel : public FsChannel {
   const AbsolutePath mountPath_;
   Guid mountId_;
   bool useNegativePathCaching_{true};
-  folly::Promise<StopData> stopPromise_;
+  folly::Promise<FsStopDataPtr> stopPromise_;
 
   ProcessAccessLog processAccessLog_;
 

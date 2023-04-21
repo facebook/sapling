@@ -1302,6 +1302,14 @@ ImmediateFuture<folly::Unit> PrjfsChannel::waitForPendingNotifications() {
       [inner = std::move(inner)] {});
 }
 
+bool PrjfsChannel::StopData::isUnmounted() {
+  return true;
+}
+
+FsChannelInfo PrjfsChannel::StopData::extractTakeoverInfo() {
+  return ProjFsChannelData{};
+}
+
 folly::SemiFuture<folly::Unit> PrjfsChannel::stop() {
   XLOG(INFO) << "Stopping PrjfsChannel for: " << mountPath_;
   XCHECK(!stopPromise_.isFulfilled());
@@ -1313,11 +1321,11 @@ folly::SemiFuture<folly::Unit> PrjfsChannel::stop() {
 
   return std::move(innerDeleted_)
       .deferValue([stopPromise = std::move(stopPromise_)](auto&&) mutable {
-        stopPromise.setValue(StopData{});
+        stopPromise.setValue(std::make_unique<StopData>());
       });
 }
 
-folly::SemiFuture<PrjfsChannel::StopData> PrjfsChannel::getStopFuture() {
+folly::SemiFuture<FsStopDataPtr> PrjfsChannel::getStopFuture() {
   return stopPromise_.getSemiFuture();
 }
 

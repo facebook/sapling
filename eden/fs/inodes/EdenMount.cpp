@@ -2275,8 +2275,7 @@ folly::Future<folly::Unit> EdenMount::startFsChannel(bool readOnly) {
               } else if constexpr (std::is_same_v<
                                        T,
                                        EdenMount::NfsdChannelVariant>) {
-                fsChannelInitSuccessful(variant->getStopFuture().deferValue(
-                    [](auto&&) { return ChannelStopData{}; }));
+                fsChannelInitSuccessful(variant->getStopFuture());
               } else {
                 static_assert(std::is_same_v<T, std::monostate>);
                 EDEN_BUG() << "EdenMount::channel_ is not constructed.";
@@ -2338,37 +2337,26 @@ void EdenMount::preparePostFsChannelCompletion(
     EdenMount::StopFuture&& fsChannelCompleteFuture) {
   std::move(fsChannelCompleteFuture)
       .via(getServerThreadPool().get())
-      .thenValue(
-          [this](FOLLY_MAYBE_UNUSED EdenMount::ChannelStopData&& stopData) {
-#ifdef _WIN32
-            inodeMap_->setUnmounted();
-            fsChannelCompletionPromise_.setValue(TakeoverData::MountInfo(
-                getPath(),
-                checkoutConfig_->getClientDirectory(),
-                ProjFsChannelData{}, // placeholder
-                SerializedInodeMap{} // placeholder
-                ));
-#else
-            fsChannelCompletionPromise_.setWith([&] {
-              // TODO: This dynamic_cast is janky. How should we decide whether
-              // to tell NfsServer to unregister the mount?
-              if (dynamic_cast<Nfsd3::StopData*>(stopData.get())) {
-                serverState_->getNfsServer()->unregisterMount(getPath());
-              }
+      .thenValue([this](FsStopDataPtr stopData) {
+        // TODO: This dynamic_cast is janky. How should we decide whether
+        // to tell NfsServer to unregister the mount?
+        if (dynamic_cast<Nfsd3::StopData*>(stopData.get())) {
+          serverState_->getNfsServer()->unregisterMount(getPath());
+        }
 
-              if (stopData->isUnmounted()) {
-                inodeMap_->setUnmounted();
-              }
+        if (stopData->isUnmounted()) {
+          inodeMap_->setUnmounted();
+        }
 
-              return TakeoverData::MountInfo{
-                  getPath(),
-                  checkoutConfig_->getClientDirectory(),
-                  stopData->extractTakeoverInfo(),
-                  SerializedInodeMap{} // placeholder
-              };
-            });
-#endif
-          })
+        fsChannelCompletionPromise_.setWith([&] {
+          return TakeoverData::MountInfo{
+              getPath(),
+              checkoutConfig_->getClientDirectory(),
+              stopData->extractTakeoverInfo(),
+              SerializedInodeMap{} // placeholder
+          };
+        });
+      })
       .thenError([this](folly::exception_wrapper&& ew) {
         XLOG(ERR) << "session complete with err: " << ew.what();
         fsChannelCompletionPromise_.setException(std::move(ew));
@@ -2390,9 +2378,9 @@ void EdenMount::fsChannelInitSuccessful(
     preparePostFsChannelCompletion(
         std::move(channelCompleteFuture)
             .via(serverState_->getNfsServer()->getEventBase())
-            .thenValue([this](EdenMount::ChannelStopData&& stopData) {
+            .thenValue([this](FsStopDataPtr stopData) {
               channel_ = std::monostate{};
-              return std::move(stopData);
+              return stopData;
             }));
   } else {
     preparePostFsChannelCompletion(std::move(channelCompleteFuture));
