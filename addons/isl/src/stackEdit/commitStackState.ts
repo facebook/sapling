@@ -173,6 +173,26 @@ export class CommitStackState {
   // File stack related.
 
   /**
+   * Get the parent version of a file and its introducing rev.
+   * If the returned `rev` is -1, it means the file comes from
+   * "bottomFiles", aka. its introducing rev is outside the stack.
+   */
+  parentFile(rev: Rev, path: RepoPath, followRenames = true): [Rev, RepoPath, ExportFile] {
+    let prevRev = -1;
+    let prevPath = path;
+    let prevFile = unwrap(this.bottomFiles.get(path));
+    const logFile = this.logFile(rev, path, followRenames);
+    for (const [logRev, logPath] of logFile) {
+      if (logRev !== rev) {
+        [prevRev, prevPath] = [logRev, logPath];
+        prevFile = unwrap(this.stack[prevRev].files.get(prevPath));
+        break;
+      }
+    }
+    return [prevRev, prevPath, prevFile];
+  }
+
+  /**
    * (Re-)build file stacks and mappings.
    */
   buildFileStacks() {
@@ -181,16 +201,7 @@ export class CommitStackState {
     const fileToCommit = new Map<string, [Rev, RepoPath]>();
 
     const processFile = (rev: Rev, file: ExportFile, path: RepoPath) => {
-      const logFile = this.logFile(rev, path, true);
-      let prevRev = -1;
-      let prevPath = path;
-      let prevFile = null;
-      for (const [logRev, logPath] of logFile) {
-        if (logRev !== rev) {
-          [prevRev, prevPath] = [logRev, logPath];
-          break;
-        }
-      }
+      const [prevRev, prevPath, prevFile] = this.parentFile(rev, path);
       if (file.data != null) {
         // File was added or modified and has utf-8 content.
         let fileAppended = false;
@@ -208,8 +219,6 @@ export class CommitStackState {
               commitToFile.set(`${rev}:${path}`, [prevIdx, fileRev]);
               fileToCommit.set(`${prevIdx}:${fileRev}`, [rev, path]);
               fileAppended = true;
-            } else {
-              prevFile = this.stack[prevRev].files.get(prevPath);
             }
           }
         }
@@ -218,7 +227,6 @@ export class CommitStackState {
           const fileIdx = fileStacks.length;
           let fileTextList = [file.data];
           let fileRev = 0;
-          prevFile ??= this.bottomFiles.get(path);
           if (prevFile?.data != null) {
             // Use "prevFile" as rev 0 (immutable public).
             fileTextList = [prevFile.data, file.data];
