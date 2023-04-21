@@ -119,7 +119,7 @@ def getdraftstack(headctx, limit=None):
     """
     ctx = headctx
     result = []
-    while ctx.phase() != phases.public:
+    while ctx.phase() != phases.public and not ctx.obsolete():
         if limit and len(result) >= limit:
             break
         if len(ctx.parents()) > 1:
