@@ -135,6 +135,24 @@ impl GitimportAccumulator {
     }
 }
 
+pub async fn upload_git_tag<Uploader: GitUploader>(
+    ctx: &CoreContext,
+    uploader: &Uploader,
+    path: &Path,
+    prefs: &GitimportPreferences,
+    tag_id: &ObjectId,
+) -> Result<(), Error> {
+    let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
+    let tag_bytes = read_raw_object(&reader, tag_id)
+        .await
+        .with_context(|| format_err!("Failed to fetch git tag {}", tag_id))?;
+    // Upload Git Tag
+    uploader
+        .upload_object(ctx, *tag_id, tag_bytes)
+        .await
+        .with_context(|| format_err!("Failed to upload raw git tag {}", tag_id,))
+}
+
 pub async fn gitimport_acc<Uploader: GitUploader>(
     ctx: &CoreContext,
     path: &Path,
@@ -313,10 +331,27 @@ pub async fn gitimport(
         .inner)
 }
 
+/// Object representing Git refs. maybe_tag_id will only
+/// have a value if the ref is a tag pointing to a commit.
+#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct GitRef {
+    pub name: Vec<u8>,
+    pub maybe_tag_id: Option<ObjectId>,
+}
+
+impl GitRef {
+    fn new(name: Vec<u8>) -> Self {
+        Self {
+            name,
+            maybe_tag_id: None,
+        }
+    }
+}
+
 pub async fn read_git_refs(
     path: &Path,
     prefs: &GitimportPreferences,
-) -> Result<BTreeMap<Vec<u8>, ObjectId>, Error> {
+) -> Result<BTreeMap<GitRef, ObjectId>, Error> {
     let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
 
     let mut command = Command::new(&prefs.git_command_path)
@@ -340,6 +375,7 @@ pub async fn read_git_refs(
     {
         if let Some((oid_str, ref_name)) = line.split_once(' ') {
             let mut oid: ObjectId = oid_str.parse().context("reading refs")?;
+            let mut git_ref = GitRef::new(ref_name.into());
             loop {
                 let object = reader.get_object(&oid).await.with_context(|| {
                     format!("unable to read git object: {oid} for ref: {ref_name}")
@@ -354,10 +390,16 @@ pub async fn read_git_refs(
                         bail!("ref {} points to a blob", ref_name);
                     }
                     Object::Commit(_) => {
-                        refs.insert(ref_name.into(), oid);
+                        refs.insert(git_ref, oid);
                         break;
                     }
+                    // If the ref is a tag, then we capture the object id of the tag.
+                    // The loop is designed to peel the tag but we want the outermost
+                    // tag object so only get the ID if we haven't already done it before.
                     Object::Tag(tag) => {
+                        if git_ref.maybe_tag_id.is_none() {
+                            git_ref.maybe_tag_id = Some(oid);
+                        }
                         oid = tag.target;
                     }
                 }

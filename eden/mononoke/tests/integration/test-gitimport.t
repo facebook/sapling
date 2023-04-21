@@ -26,6 +26,7 @@
   [master (root-commit) 8ce3eae] Add file1
    1 file changed, 1 insertion(+)
    create mode 100644 file1
+  $ git tag -a -m"new tag" first_tag
   $ cd "$TESTTMP"
   $ git clone "$GIT_REPO_ORIGIN"
   Cloning into 'repo-git'...
@@ -41,6 +42,7 @@
   * Ref: "refs/heads/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
   * Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
   * Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
+  * Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(*))) (glob)
 
 # Validate if creating the commit also uploaded the raw commit blob AND the raw tree blob
 # The ids of the blobs should be the same as the commit and tree object ids
@@ -72,6 +74,7 @@
   * Ref: "refs/heads/master": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c))) (glob)
   * Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
   * Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
+  * Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
 
 # Validate if creating the commit also uploaded the raw commit blob
 # The id of the blob should be the same as the commit object id
@@ -104,6 +107,7 @@
   * Ref: "refs/heads/master": Some(ChangesetId(Blake2(*))) (glob)
   * Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
   * Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
+  * Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
 
 # Add an empty tag
   $ cd "$GIT_REPO"
@@ -118,12 +122,32 @@
   * Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
   * Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
   * Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(*))) (glob)
+  * Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
   * Initializing repo: repo (glob)
   * Initialized repo: repo (glob)
   * All repos initialized. * (glob)
   * Bookmark: "heads/master": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created) (glob)
   * Bookmark: "heads/master": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (moved from Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))) (glob)
   * Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created) (glob)
+  * Bookmark: "tags/first_tag": ChangesetId(Blake2(*)) (created) (glob)
+
+# Generating bookmarks should upload the raw tag object to blobstore.
+# The id of the blob should be the same as the tag object id
+  $ ls $TESTTMP/blobstore/blobs | grep "git_object"
+  blob-repo0000.git_object.7327e6c9b533787eeb80877d557d50f39c480f54
+  blob-repo0000.git_object.8963e1f55d1346a07c3aec8c8fc72bf87d0452b1
+  blob-repo0000.git_object.8ce3eae44760b500bf3f2c3922a95dcd3c908e9e
+  blob-repo0000.git_object.cb2ef838eb24e4667fee3a8b89c930234ae6e4bb
+  blob-repo0000.git_object.e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
+  blob-repo0000.git_object.fb02ed046a1e75fe2abb8763f7c715496ae36353
+
+# Cross reference with the tag blobs present in the git store
+# (There should be two, first_tag and empty_tag)
+  $ cd "$GIT_REPO"
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | grep -e '^[^ ]* tag' | cut -d" " -f1,9- | sort
+  8963e1f55d1346a07c3aec8c8fc72bf87d0452b1
+  fb02ed046a1e75fe2abb8763f7c715496ae36353
+
 # Importing a second time should still work
   $ gitimport "$GIT_REPO" --generate-bookmarks full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
@@ -133,12 +157,14 @@
   * Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
   * Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
   * Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(*))) (glob)
+  * Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(*))) (glob)
   * Initializing repo: repo (glob)
   * Initialized repo: repo (glob)
   * All repos initialized. * (glob)
   * Bookmark: "heads/master": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (moved from Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))) (glob)
   * Bookmark: "heads/master": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (moved from Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))) (glob)
   * Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (already up-to-date) (glob)
+  * Bookmark: "tags/first_tag": ChangesetId(Blake2(*)) (already up-to-date) (glob)
 
 
 # Start Mononoke
@@ -165,3 +191,4 @@
   $ hg bookmarks --all
   * heads/master * (glob)
   * tags/empty_tag * (glob)
+  * tags/first_tag * (glob)

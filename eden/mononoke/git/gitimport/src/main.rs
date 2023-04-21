@@ -29,6 +29,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future;
 use import_tools::import_tree_as_single_bonsai_changeset;
+use import_tools::upload_git_tag;
 use import_tools::GitimportPreferences;
 use import_tools::GitimportTarget;
 use linked_hash_map::LinkedHashMap;
@@ -225,7 +226,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     };
 
     let gitimport_result: LinkedHashMap<_, _> =
-        import_tools::gitimport(&ctx, path, uploader, &target, &prefs)
+        import_tools::gitimport(&ctx, path, uploader.clone(), &target, &prefs)
             .await
             .context("gitimport failed")?;
     if args.derive_hg {
@@ -240,10 +241,16 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             .context("read_git_refs failed")?;
         let mapping = refs
             .iter()
-            .map(|(name, commit)| (String::from_utf8_lossy(name), gitimport_result.get(commit)))
+            .map(|(git_ref, commit)| {
+                (
+                    git_ref.maybe_tag_id,
+                    String::from_utf8_lossy(&git_ref.name),
+                    gitimport_result.get(commit),
+                )
+            })
             .collect::<Vec<_>>();
         if !args.suppress_ref_mapping {
-            for (name, changeset) in &mapping {
+            for (_, name, changeset) in &mapping {
                 info!(ctx.logger(), "Ref: {:?}: {:?}", name, changeset);
             }
         }
@@ -262,9 +269,12 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 .build()
                 .await
                 .context("failed to build RepoContext")?;
-            for (name, changeset) in mapping
-                .iter()
-                .filter_map(|(name, changeset)| changeset.map(|cs| (name, cs)))
+            for (maybe_tag_id, name, changeset) in
+                mapping
+                    .iter()
+                    .filter_map(|(maybe_tag_id, name, changeset)| {
+                        changeset.map(|cs| (maybe_tag_id, name, cs))
+                    })
             {
                 let mut name = name
                     .strip_prefix("refs/")
@@ -276,6 +286,10 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 if name.as_str() == "heads/HEAD" {
                     // Skip the HEAD revision: it shouldn't be imported as a bookmark in mononoke
                     continue;
+                }
+                // The ref getting imported is a tag, so store the raw git Tag object.
+                if let Some(tag_id) = maybe_tag_id {
+                    upload_git_tag(&ctx, &uploader, path, &prefs, tag_id).await?;
                 }
                 let pushvars = None;
                 if repo_context
