@@ -32,11 +32,10 @@ bool isValidAbsolutePath(string_view path) {
   // reject relative paths.
   return path.starts_with(detail::kRootStr);
 }
-} // namespace
 
-Expected<AbsolutePath, string> FieldConverter<AbsolutePath>::fromString(
+std::string expandConvData(
     std::string_view value,
-    const std::map<string, string>& convData) const {
+    const std::map<std::string, std::string>& convData) {
   auto sString = std::string{value};
   for (auto varName : kEnvVars) {
     auto it = convData.find(std::string{varName});
@@ -53,6 +52,14 @@ Expected<AbsolutePath, string> FieldConverter<AbsolutePath>::fromString(
       }
     }
   }
+  return sString;
+}
+} // namespace
+
+Expected<AbsolutePath, string> FieldConverter<AbsolutePath>::fromString(
+    std::string_view value,
+    const std::map<string, string>& convData) const {
+  auto sString = expandConvData(value, convData);
 
   if (!isValidAbsolutePath(sString)) {
     return folly::makeUnexpected<string>(
@@ -65,6 +72,20 @@ Expected<AbsolutePath, string> FieldConverter<AbsolutePath>::fromString(
   } catch (const std::exception& ex) {
     return folly::makeUnexpected<string>(fmt::format(
         "Failed to convert value '{}' to an absolute path, error : {}",
+        value,
+        ex.what()));
+  }
+}
+
+Expected<RelativePath, string> FieldConverter<RelativePath>::fromString(
+    std::string_view value,
+    const std::map<string, string>& convData) const {
+  auto sString = expandConvData(value, convData);
+  try {
+    return RelativePath{sString};
+  } catch (const std::exception& ex) {
+    return folly::makeUnexpected<string>(fmt::format(
+        "Failed to convert value '{}' to a relative path, error : {}",
         value,
         ex.what()));
   }

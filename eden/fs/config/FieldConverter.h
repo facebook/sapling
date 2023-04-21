@@ -52,6 +52,24 @@ class FieldConverter<AbsolutePath> {
 };
 
 template <>
+class FieldConverter<RelativePath> {
+ public:
+  /**
+   * Convert the passed string piece to a repository RelativePath.
+   * @param convData is a map of conversion data that can be used by conversions
+   * method (for example $HOME value.)
+   * @return the converted RelativePath or an error message.
+   */
+  folly::Expected<RelativePath, std::string> fromString(
+      std::string_view value,
+      const std::map<std::string, std::string>& convData) const;
+
+  std::string toDebugString(const RelativePath& path) const {
+    return path.value();
+  }
+};
+
+template <>
 class FieldConverter<std::string> {
  public:
   folly::Expected<std::string, std::string> fromString(
@@ -122,6 +140,36 @@ class FieldConverter<std::vector<T>> {
   }
 
   std::string toDebugString(const std::vector<T>& value) const {
+    std::vector<std::string> serializedElements;
+    serializedElements.resize(value.size());
+    std::transform(
+        value.begin(),
+        value.end(),
+        serializedElements.begin(),
+        [](auto& element) {
+          return FieldConverter<T>{}.toDebugString(element);
+        });
+    return fmt::to_string(fmt::join(serializedElements, ", "));
+  }
+};
+
+template <typename T>
+class FieldConverter<std::unordered_set<T>> {
+ public:
+  folly::Expected<std::unordered_set<T>, std::string> fromString(
+      std::string_view value,
+      const std::map<std::string, std::string>& convData) const {
+    // TODO(xavierd): directly construct the set without the vector middle-step
+    return FieldConverter<std::vector<T>>{}
+        .fromString(value, convData)
+        .then([](std::vector<T> vec) {
+          return std::unordered_set<T>{
+              std::make_move_iterator(vec.begin()),
+              std::make_move_iterator(vec.end())};
+        });
+  }
+
+  std::string toDebugString(const std::unordered_set<T>& value) const {
     std::vector<std::string> serializedElements;
     serializedElements.resize(value.size());
     std::transform(

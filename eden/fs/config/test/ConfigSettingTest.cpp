@@ -432,3 +432,17 @@ TEST_F(ConfigSettingTest, setArrayOptional) {
   checkSet(
       setting, std::vector<std::optional<std::string>>{"foo"}, "[\"foo\"]");
 }
+
+TEST_F(ConfigSettingTest, setRelativePath) {
+  ConfigSetting<RelativePath> setting{"test:value", RelativePath{}, nullptr};
+  checkSet(setting, RelativePath{"foo/bar"}, "foo/bar");
+}
+
+TEST_F(ConfigSettingTest, setUnorderedSet) {
+  ConfigSetting<std::unordered_set<std::string>> setting{
+      "test:value", std::unordered_set<std::string>{}, nullptr};
+  checkSet(
+      setting,
+      std::unordered_set<std::string>{"1", "2", "3", "4"},
+      "[\"1\", \"2\", \"3\", \"4\"]");
+}
