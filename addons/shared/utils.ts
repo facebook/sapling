@@ -99,3 +99,15 @@ export function mapObject<K1 extends string | number, V1, K2 extends string | nu
 ): Record<K2, V2> {
   return Object.fromEntries((Object.entries(o) as Array<[K1, V1]>).map(func)) as Record<K2, V2>;
 }
+
+/**
+ * Test if a generator yields the given value.
+ */
+export function generatorContains<V>(gen: Generator<V>, value: V): boolean {
+  for (const v of gen) {
+    if (v === value) {
+      return true;
+    }
+  }
+  return false;
+}
