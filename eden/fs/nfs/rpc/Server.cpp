@@ -489,7 +489,8 @@ void RpcServer::connectionAccepted(
     AcceptInfo /* info */) noexcept {
   XLOG(DBG7) << "Accepted connection from: " << clientAddr;
   auto socket = AsyncSocket::newSocket(evb_, fd);
-  registerRpcHandler(RpcConnectionHandler::create(
+  auto& state = state_.get();
+  state.connectionHandlers.push_back(RpcConnectionHandler::create(
       proc_,
       std::move(socket),
       threadPool_,
@@ -501,6 +502,9 @@ void RpcServer::connectionAccepted(
   // reconnects. BUT its tricky to unregister the accept callback.
   // to unregister and is fine to keep it around for now and just clean it up on
   // shutdown.
+  //
+  // TODO: Is it really tricky to unregister the accept callback? We could call
+  // stopAccepting() here and removeAcceptCallback.
 }
 
 void RpcServer::acceptError(const std::exception& ex) noexcept {
@@ -549,7 +553,8 @@ RpcServer::RpcServer(
       threadPool_(threadPool),
       structuredLogger_(structuredLogger),
       serverSocket_(new AsyncServerSocket(evb_)),
-      proc_(std::move(proc)) {}
+      proc_(std::move(proc)),
+      state_{evb} {}
 
 void RpcServer::initialize(folly::SocketAddress addr) {
   evb_->checkIsInEventBaseThread();
@@ -568,13 +573,14 @@ void RpcServer::initializeConnectedSocket(folly::File socket) {
   // meant for server that only ever has one connected socket (nfsd3). Since
   // we already have the one connected socket, we will not need the
   // accepting socket to make any more connections.
-  rpcConnectionHandlers_.wlock()->emplace_back(RpcConnectionHandler::create(
+  auto& state = state_.get();
+  state.connectionHandlers.push_back(RpcConnectionHandler::create(
       proc_,
       AsyncSocket::newSocket(
           evb_, folly::NetworkSocket::fromFd(socket.release())),
       threadPool_,
       structuredLogger_,
-      shared_from_this()));
+      weak_from_this()));
 }
 
 void RpcServer::initializeServerSocket(folly::File socket) {
@@ -588,20 +594,17 @@ void RpcServer::initializeServerSocket(folly::File socket) {
   serverSocket_->startAccepting();
 }
 
-void RpcServer::registerRpcHandler(RpcConnectionHandler::UniquePtr handler) {
-  rpcConnectionHandlers_.wlock()->emplace_back(std::move(handler));
-}
-
 void RpcServer::unregisterRpcHandler(RpcConnectionHandler* handlerToErase) {
-  auto rpcConnectionHandlers = rpcConnectionHandlers_.wlock();
-  rpcConnectionHandlers->erase(
+  auto& state = state_.get();
+  auto& handlers = state.connectionHandlers;
+  handlers.erase(
       std::remove_if(
-          rpcConnectionHandlers->begin(),
-          rpcConnectionHandlers->end(),
-          [&handlerToErase](RpcConnectionHandler::UniquePtr& handler) {
+          handlers.begin(),
+          handlers.end(),
+          [handlerToErase](RpcConnectionHandler::UniquePtr& handler) {
             return handler.get() == handlerToErase;
           }),
-      rpcConnectionHandlers->end());
+      handlers.end());
 }
 
 folly::SemiFuture<folly::File> RpcServer::takeoverStop() {
@@ -620,13 +623,9 @@ folly::SemiFuture<folly::File> RpcServer::takeoverStop() {
   // No more connections will be made after this point.
 
   XLOG(DBG7) << "calling takeover stop on handlers";
-  // TODO this needs to check if the unique_ptr is valid
   // todo should this return the file descriptor for the socket?
   std::vector<RpcConnectionHandler::UniquePtr> handlers;
-  {
-    auto lockedHandlers = rpcConnectionHandlers_.wlock();
-    lockedHandlers->swap(handlers);
-  }
+  handlers.swap(state_.get().connectionHandlers);
 
   std::vector<folly::SemiFuture<folly::Unit>> futures{};
   futures.reserve(handlers.size());

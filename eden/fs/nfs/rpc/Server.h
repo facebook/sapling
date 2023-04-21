@@ -352,16 +352,11 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
   folly::SocketAddress getAddr() const;
 
   /**
-   * A client attempted to connect to this server and spawned a handler
-   * this is used to inform the server about the handler so that it can manage
-   * it.
-   */
-  void registerRpcHandler(RpcConnectionHandler::UniquePtr handler);
-
-  /**
    * The socket underlying handlerToErase was closed and so the handler
    * is shutting down. This informs the server so that the server can stop
    * tracking it.
+   *
+   * Must be called on the EventBase.
    */
   void unregisterRpcHandler(RpcConnectionHandler* handlerToErase);
 
@@ -405,17 +400,18 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
   std::shared_ptr<RpcServerProcessor> proc_;
 
   struct PortmapState {
-    PortmapState() = default;
-
     PortmapClient portMap;
     std::vector<PortmapMapping4> mappedPorts;
   };
   folly::Synchronized<std::optional<PortmapState>> portMapState_;
 
-  // Existing handlers that have an open socket and are processing requests from
-  // their socket.
-  folly::Synchronized<std::vector<RpcConnectionHandler::UniquePtr>>
-      rpcConnectionHandlers_;
+  struct State {
+    // Existing handlers that have an open socket and are processing requests
+    // from their socket.
+    std::vector<RpcConnectionHandler::UniquePtr> connectionHandlers;
+  };
+
+  EventBaseState<State> state_;
 };
 
 } // namespace facebook::eden
