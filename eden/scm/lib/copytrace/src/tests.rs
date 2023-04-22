@@ -247,14 +247,14 @@ fn vertex_from_str(s: &str) -> Vertex {
 
 macro_rules! assert_trace_rename {
     ($copy_trace:ident $src:tt $dst:tt, $src_path:tt -> $dst_path:tt) => {{
-        let src = vertex_from_str(&stringify!($src));
-        let dst = vertex_from_str(&stringify!($dst));
-        let src_path = RepoPath::from_str(&stringify!($src_path))
+        let src = vertex_from_str(stringify!($src));
+        let dst = vertex_from_str(stringify!($dst));
+        let src_path = RepoPath::from_str(stringify!($src_path).trim_matches('"'))
             .unwrap()
             .to_owned();
-        let dst_path = match stringify!($dst_path) {
+        let dst_path = match stringify!($dst_path).trim_matches('"') {
             "!" => None,
-            p => Some(RepoPath::from_str(&p).unwrap().to_owned()),
+            p => Some(RepoPath::from_str(p).unwrap().to_owned()),
         };
 
         let res = $copy_trace.trace_rename(src, dst, src_path).await.unwrap();
@@ -427,17 +427,45 @@ async fn test_non_linear_multiple_renames_with_deletes() {
 }
 
 #[tokio::test]
-async fn test_one_file_copied_to_multiple_files() {
+async fn test_multiple_copies_ordering_default() {
     let ascii = r#"
     C
     :
     A
     "#;
-    // It's rare that user will copy and rename the same file in one commit. We don't have
-    // plan to support this one-to-many mapping, since it will make copytrace complexity
-    // increase exponentially in theory. For now, we just pick the first copy in ascending
-    // alphabetical order
     let changes = HashMap::from([("A", vec!["+ a 1"]), ("B", vec!["C a c", "-> a b"])]);
+    let t = CopyTraceTestCase::new(ascii, changes).await;
+    let c = t.copy_trace().await;
+
+    assert_trace_rename!(c A C, a -> b);
+}
+
+#[tokio::test]
+async fn test_multiple_copies_ordering_same_basename_win() {
+    let ascii = r#"
+    C
+    :
+    A
+    "#;
+    let changes = HashMap::from([
+        ("A", vec!["+ a 1"]),
+        ("B", vec!["C a x/b", "C a z/a", "-> a b"]),
+    ]);
+    let t = CopyTraceTestCase::new(ascii, changes).await;
+    let c = t.copy_trace().await;
+
+    assert_trace_rename!(c A C, a -> "z/a");
+}
+
+#[tokio::test]
+async fn test_multiple_copies_ordering_same_directory_win() {
+    let ascii = r#"
+    C
+    :
+    A
+    "#;
+
+    let changes = HashMap::from([("A", vec!["+ a 1"]), ("B", vec!["C a x/b", "-> a b"])]);
     let t = CopyTraceTestCase::new(ascii, changes).await;
     let c = t.copy_trace().await;
 

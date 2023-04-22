@@ -20,6 +20,8 @@ use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
 
+use crate::utils::file_path_similarity;
+
 /// Finding rename between old and new trees (commits).
 /// old_tree is a parent of new_tree
 #[async_trait]
@@ -109,8 +111,16 @@ impl RenameFinder for SaplingRenameFinder {
                 }
             }
         }
-        // todo(zhaolong): sort the files with same basename or directory at beginning
-        new_files.sort();
+        // It's rare that a file will be copied and renamed (multiple copies) in one commit.
+        // We don't plan to support this one-to-many mapping since it will make copytrace
+        // complexity increase exponentially. Here, we order the potential new files in
+        // path similarity order (most similar one first), and return the first one that
+        // is a copy of the old_path.
+        new_files.sort_by_key(|k| {
+            let path = k.path.as_repo_path();
+            let score = file_path_similarity(path, old_path);
+            (-score, path.to_owned())
+        });
         self.read_renamed_metadata_forward(new_files, old_path)
             .await
     }
