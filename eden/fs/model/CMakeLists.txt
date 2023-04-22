@@ -11,6 +11,7 @@ add_library(
 target_link_libraries(
   eden_model
   PUBLIC
+    eden_digest
     eden_utils
     Folly::folly
     edencommon::edencommon_utils
