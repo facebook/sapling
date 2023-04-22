@@ -51,7 +51,13 @@ rm_rf(manifestFolder);
 mkdir_p(manifestFolder);
 const manifestPath = `${manifestFolder}/TextMateGrammarManifest.ts`;
 
-const node = 'node --experimental-specifier-resolution=node';
+let node = 'node --experimental-specifier-resolution=node';
+const nodeMajorVersion = process.versions.node.split('.')[0];
+// For node.js 19, use the experimental loader API instead of the experimental specifier resolution flag above.
+if (nodeMajorVersion >= 19) {
+  node = 'node --experimental-loader=./loader.mjs';
+}
+
 child_process.execSync(`${node} ${textmateModule}/dist/index.js ${manifestPath} ${grammarsFolder}`);
 
 fs.copyFileSync(
