@@ -2109,10 +2109,15 @@ folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
                 kNfsdSocketName;
           }
           channel->initialize(makeNfsSocket(std::move(unixSocketPath)), false);
-          nfsServer->recordPortNumber(
-              channel->getProgramNumber(),
-              channel->getProgramVersion(),
-              channel->getAddr().getPort());
+          // we can't register uds sockets with our portmapper (portmapper v2
+          // does not support those).
+          auto addr = channel->getAddr();
+          if (addr.isFamilyInet()) {
+            nfsServer->recordPortNumber(
+                channel->getProgramNumber(),
+                channel->getProgramVersion(),
+                addr.getPort());
+          }
         }
         return NfsServer::NfsMountInfo{
             std::move(channel), std::move(mountdAddr)};

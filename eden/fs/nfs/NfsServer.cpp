@@ -37,10 +37,15 @@ void NfsServer::initialize(
   if (rpcbindd_) {
     rpcbindd_->initialize();
   }
-  recordPortNumber(
-      mountd_.getProgramNumber(),
-      mountd_.getProgramVersion(),
-      mountd_.getAddr().getPort());
+  auto registeredAddr = mountd_.getAddr();
+  // we can't register uds sockets with our portmapper (portmapper v2
+  // does not support those).
+  if (registeredAddr.isFamilyInet()) {
+    recordPortNumber(
+        mountd_.getProgramNumber(),
+        mountd_.getProgramVersion(),
+        registeredAddr.getPort());
+  }
 }
 
 void NfsServer::initialize(folly::File&& socket) {
