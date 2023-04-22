@@ -10,6 +10,7 @@ mod dag_copy_trace;
 mod error;
 mod git_copy_trace;
 mod rename_finders;
+mod utils;
 
 // traits
 pub use crate::copy_trace::CopyTrace;
