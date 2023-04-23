@@ -7,6 +7,7 @@
 
 #include "eden/fs/config/FieldConverter.h"
 
+#include <re2/re2.h>
 #include "eden/fs/utils/ChronoParse.h"
 
 using folly::Expected;

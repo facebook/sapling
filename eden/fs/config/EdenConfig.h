@@ -28,6 +28,10 @@
 #include "eden/fs/eden-config.h"
 #include "eden/fs/utils/PathFuncs.h"
 
+namespace re2 {
+class RE2;
+} // namespace re2
+
 namespace facebook::eden {
 
 extern const AbsolutePath kUnspecifiedDefault;
