@@ -431,20 +431,34 @@ static void attachio(hgclient_t* hgc) {
   if (ctx->ch != 'I')
     abortmsg("unexpected response for attachio (ch = %c)", ctx->ch);
 
-  static const int fds[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
+  size_t fds_len = 3;
+  int fds[4] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO, -1};
+
+  // Pass NODE_CHANNEL_FD as the 4th fd.
+  const char* env = getenv("NODE_CHANNEL_FD");
+  if (env && env[0] && env[1] == '\0') {
+    int node_fd = env[0] - '0';
+    if (fcntl(node_fd, F_GETFD) != -1) {
+      // node fd is valid.
+      fds[fds_len] = node_fd;
+      fds_len += 1;
+      debugmsg("passing NODE_CHANNEL_FD %s", env);
+    }
+  }
+
   struct msghdr msgh;
   memset(&msgh, 0, sizeof(msgh));
   struct iovec iov = {ctx->data, ctx->datasize}; /* dummy payload */
   msgh.msg_iov = &iov;
   msgh.msg_iovlen = 1;
-  char fdbuf[CMSG_SPACE(sizeof(fds))];
+  char fdbuf[CMSG_SPACE(sizeof(fds[0]) * fds_len)];
   msgh.msg_control = fdbuf;
   msgh.msg_controllen = sizeof(fdbuf);
   struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msgh);
   cmsg->cmsg_level = SOL_SOCKET;
   cmsg->cmsg_type = SCM_RIGHTS;
   cmsg->cmsg_len = CMSG_LEN(sizeof(fds));
-  memcpy(CMSG_DATA(cmsg), fds, sizeof(fds));
+  memcpy(CMSG_DATA(cmsg), fds, sizeof(fds[0]) * fds_len);
   msgh.msg_controllen = cmsg->cmsg_len;
   ssize_t r = sendmsg(hgc->sockfd, &msgh, 0);
   if (r < 0)

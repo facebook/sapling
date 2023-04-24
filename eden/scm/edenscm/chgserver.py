@@ -186,6 +186,7 @@ class chgcmdserver(commandserver.server):
         )
         self.clientsock = sock
         self._ioattached = False
+        self._clientfds = []
         self.baseaddress = baseaddress
 
     def cleanup(self):
@@ -215,6 +216,7 @@ class chgcmdserver(commandserver.server):
 
         self.cresult.write(struct.pack(">i", len(clientfds)))
         self._ioattached = True
+        self._clientfds = clientfds
 
     def chdir(self) -> None:
         """Change current directory
@@ -268,6 +270,13 @@ class chgcmdserver(commandserver.server):
         except ValueError:
             raise ValueError("unexpected value in setenv request")
         _log("setenv: %r\n" % sorted(newenv.keys()))
+        # Adjust NODE_CHANNEL_FD
+        if "NODE_CHANNEL_FD" in newenv and len(self._clientfds) == 4:
+            node_fd = self._clientfds[3]
+            _log(
+                f"adjust NODE_CHANNEL_FD from {newenv['NODE_CHANNEL_FD']} to {node_fd}\n"
+            )
+            newenv["NODE_CHANNEL_FD"] = str(node_fd)
         encoding.environ.clear()
         encoding.environ.update(newenv)
         # Apply $TZ changes.
@@ -387,6 +396,11 @@ def chgunixservice(ui, repo, opts):
     # environ cleaner.
     if "CHGINTERNALMARK" in encoding.environ:
         del encoding.environ["CHGINTERNALMARK"]
+
+    # Close nodeipc channel, this prevents the node parent from waiting.
+    if "NODE_CHANNEL_FD" in encoding.environ:
+        fd = int(encoding.environ["NODE_CHANNEL_FD"])
+        os.close(fd)
 
     if repo:
         # one chgserver can serve multiple repos. drop repo information
