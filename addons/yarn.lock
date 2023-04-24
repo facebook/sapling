@@ -5684,6 +5684,11 @@ express@^4.17.3:
     utils-merge "1.0.1"
     vary "~1.1.2"
 
+extensionless@1.4.5:
+  version "1.4.5"
+  resolved "https://registry.yarnpkg.com/extensionless/-/extensionless-1.4.5.tgz#055a627624d6378d93d9dfa860fb7e658e060dc1"
+  integrity sha512-aDQYk6bksjzxoqpBYDYSGh3WaOk12Bn1rYwnOdv+z/Ys+4jFEU33XgvoXF5rJEho9myS5T0uMm337ejPkHjXTw==
+
 external-editor@^3.0.3:
   version "3.1.0"
   resolved "https://registry.npmjs.org/external-editor/-/external-editor-3.1.0.tgz"

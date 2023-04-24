@@ -55,7 +55,7 @@ let node = 'node --experimental-specifier-resolution=node';
 const nodeMajorVersion = process.versions.node.split('.')[0];
 // For node.js 19, use the experimental loader API instead of the experimental specifier resolution flag above.
 if (nodeMajorVersion >= 19) {
-  node = 'node --experimental-loader=./loader.mjs';
+  node = 'node --experimental-loader=extensionless';
 }
 
 child_process.execSync(`${node} ${textmateModule}/dist/index.js ${manifestPath} ${grammarsFolder}`);
