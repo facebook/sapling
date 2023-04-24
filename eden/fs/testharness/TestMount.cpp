@@ -161,6 +161,10 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
   edenConfig_->enableActivityBuffer.setValue(
       enableActivityBuffer, ConfigSourceType::Default, true);
 
+  // By default, we should not allocate an NFS server (including mountd and
+  // rpcbindd) on an EventBase in unit tests.
+  edenConfig_->enableNfsServer.setValue(false, ConfigSourceType::Default, true);
+
   auto reloadableConfig = std::make_shared<ReloadableConfig>(edenConfig_);
 
   // Create treeCache

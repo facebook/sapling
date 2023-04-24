@@ -317,7 +317,11 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
       std::shared_ptr<folly::Executor> threadPool,
       const std::shared_ptr<StructuredLogger>& structuredLogger);
 
-  ~RpcServer();
+  /**
+   * RpcServer must be torn down on its EventBase. destroy() is called by the
+   * shared_ptr deleter.
+   */
+  void destroy();
 
   /**
    * Bind this server to the passed in address and start accepting
@@ -337,6 +341,11 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
 
   folly::SemiFuture<folly::File> takeoverStop();
 
+  /**
+   * Enables the service mapping with rpcbind/portmap.
+   *
+   * Must be called on the EventBase.
+   */
   void registerService(uint32_t progNumber, uint32_t progVersion);
 
   /**
@@ -366,6 +375,8 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
       folly::EventBase* evb,
       std::shared_ptr<folly::Executor> threadPool,
       const std::shared_ptr<StructuredLogger>& structuredLogger);
+
+  ~RpcServer() override;
 
   // AsyncServerSocket::AcceptCallback
 
@@ -403,9 +414,10 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
     PortmapClient portMap;
     std::vector<PortmapMapping4> mappedPorts;
   };
-  folly::Synchronized<std::optional<PortmapState>> portMapState_;
 
   struct State {
+    std::optional<PortmapState> portmapState;
+
     // Existing handlers that have an open socket and are processing requests
     // from their socket.
     std::vector<RpcConnectionHandler::UniquePtr> connectionHandlers;

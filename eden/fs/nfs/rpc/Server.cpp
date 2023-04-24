@@ -540,8 +540,10 @@ std::shared_ptr<RpcServer> RpcServer::create(
     folly::EventBase* evb,
     std::shared_ptr<folly::Executor> threadPool,
     const std::shared_ptr<StructuredLogger>& structuredLogger) {
-  return std::shared_ptr<RpcServer>{new RpcServer{
-      std::move(proc), evb, std::move(threadPool), structuredLogger}};
+  return std::shared_ptr<RpcServer>{
+      new RpcServer{
+          std::move(proc), evb, std::move(threadPool), structuredLogger},
+      [](RpcServer* p) { p->destroy(); }};
 }
 
 RpcServer::RpcServer(
@@ -555,6 +557,10 @@ RpcServer::RpcServer(
       serverSocket_(new AsyncServerSocket(evb_)),
       proc_(std::move(proc)),
       state_{evb} {}
+
+void RpcServer::destroy() {
+  evb_->runInEventBaseThread([this] { delete this; });
+}
 
 void RpcServer::initialize(folly::SocketAddress addr) {
   evb_->checkIsInEventBaseThread();
@@ -645,9 +651,9 @@ folly::SemiFuture<folly::File> RpcServer::takeoverStop() {
 }
 
 RpcServer::~RpcServer() {
-  auto lock = portMapState_.wlock();
-  if (lock->has_value()) {
-    auto& state = lock->value();
+  auto& ebstate = state_.get();
+  if (ebstate.portmapState) {
+    auto& state = ebstate.portmapState.value();
     for (const auto& mapping : state.mappedPorts) {
       state.portMap.unsetMapping(mapping);
     }
@@ -674,12 +680,13 @@ std::pair<std::string, std::string> getNetIdAndAddr(const SocketAddress& addr) {
 } // namespace
 
 void RpcServer::registerService(uint32_t progNumber, uint32_t progVersion) {
-  auto lock = portMapState_.wlock();
-  if (!lock->has_value()) {
+  auto& ebstate = state_.get();
+  auto& pmstate = ebstate.portmapState;
+  if (!pmstate.has_value()) {
     // The rpcbind client was never initialized, do it now.
-    lock->emplace();
+    pmstate.emplace();
   }
-  auto& state = lock->value();
+  auto& state = pmstate.value();
 
   // Enumerate the addresses (in practice, just the loopback) and use the
   // port number we got from the kernel to register the mapping for
