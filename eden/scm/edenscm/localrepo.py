@@ -61,6 +61,7 @@ from . import (
     progress,
     pushkey,
     pycompat,
+    rcutil,
     repository,
     revset,
     revsetlang,
@@ -3195,6 +3196,12 @@ class localrepository(object):
 
     def metalog(self):
         return self.svfs.metalog
+
+    def update_and_persist_config(self, section, name, value):
+        """edit config and save it to the repo's config file"""
+        configfilename = self.ui.identity.configrepofile() # config
+        configfilepath = self.localvfs.join(configfilename) # <reporoot>/.hg/config
+        rcutil.editconfig(self.ui, configfilepath, section, name, value)
 
 
 # used to avoid circular references so destructors work

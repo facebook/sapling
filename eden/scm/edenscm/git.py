@@ -153,6 +153,12 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
                     # If `git ls-remote --symref <url> HEAD` failed to yield a name,
                     # fall back to the using the names in the config.
                     pullnames = bookmod.selectivepullbookmarknames(repo)
+                default_publicheads = repo.ui.configlist('remotenames', 'publicheads') # ['remote/master', 'remote/main']
+                remote_publicheads = ['remote/' + path for path in pullnames]
+                all_publicheads = ','.join(sorted(set(default_publicheads + remote_publicheads)))
+
+                repo.update_and_persist_config('remotenames', 'publicheads',
+                                               all_publicheads)
 
                 # Make sure we pull "update". If it looks like a hash, add to
                 # "nodes", otherwise to "names".
