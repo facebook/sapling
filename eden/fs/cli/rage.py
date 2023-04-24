@@ -190,7 +190,7 @@ def print_diagnostic_info(
                 trace_running_edenfs(processor, edenfs_instance_pid, out)
 
     print_eden_redirections(instance, out)
-
+    print_recent_events(processor, out)
     section_title("List of mount points:", out)
     mountpoint_paths = []
     for key in sorted(instance.get_mount_paths()):
@@ -442,6 +442,7 @@ def print_edenfs_process_tree(pid: int, out: IO[bytes]) -> None:
         section_title("EdenFS process tree:", out)
         output = subprocess.check_output(["ps", "-o", "sid=", "-p", str(pid)])
         sid = output.decode("utf-8").strip()
+
         output = subprocess.check_output(
             ["ps", "f", "-o", "pid,s,comm,start_time,etime,cputime,drs", "-s", sid]
         )
@@ -619,6 +620,32 @@ def trace_running_edenfs(processor: str, pid: int, out: IO[bytes]) -> None:
         )
     except Exception as e:
         out.write(b"Error getting EdenFS trace: %s.\n" % str(e).encode())
+
+
+def print_recent_events(processor: str, out: IO[bytes]) -> None:
+
+    section_title("EdenFS recent events", out)
+    for opt in ["thrift", "hg", "inode"]:
+        trace_cmd = [
+            "edenfsctl",
+            "trace",
+            opt,
+            "--retroactive",
+        ]
+
+        try:
+            out.write(f"{opt}: ".encode())
+            paste_output(
+                lambda sink: run_trace_cmd(trace_cmd, sink),
+                processor,
+                out,
+            )
+        except Exception as e:
+            out.write(b"Error getting EdenFS trace events: %s.\n" % str(e).encode())
+
+
+def run_trace_cmd(cmd: List[str], sink: IO[bytes]) -> None:
+    subprocess.run(cmd, check=True, stderr=subprocess.STDOUT, stdout=sink)
 
 
 def find_cdb() -> Optional[Path]:
