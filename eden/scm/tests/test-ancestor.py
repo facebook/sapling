@@ -18,9 +18,8 @@ from edenscm.node import nullrev
 from hghave import require
 
 
-if sys.version_info[0] >= 3:
-    long = int
-    xrange = range
+long = int
+xrange = range
 
 
 def buildgraph(rng, nodes=100, rootprob=0.05, mergeprob=0.2, prevprob=0.7):

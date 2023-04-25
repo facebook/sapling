@@ -20,32 +20,7 @@ from thrift.Thrift import TApplicationException
 from . import error, node, pycompat, util
 from .i18n import _
 
-
-if sys.version_info < (2, 7, 6):
-    # 2.7.6 was the first version to allow unicode format strings in
-    # struct.{pack,unpack}; our devservers have 2.7.5, so let's
-    # monkey patch in support for unicode format strings.
-    import functools
-    import struct
-
-    # We disable F821 below because we know we are in Python 2.x based on the
-    # sys.version_info check above.
-
-    def pack(orig, fmt, *args):
-        if isinstance(fmt, pycompat.unicode):  # noqa: F821
-            fmt = fmt.encode("utf-8")
-        return orig(fmt, *args)
-
-    def unpack(orig, fmt, data):
-        if isinstance(fmt, pycompat.unicode):  # noqa: F821
-            fmt = fmt.encode("utf-8")
-        return orig(fmt, data)
-
-    struct.pack = functools.partial(pack, struct.pack)
-    struct.unpack = functools.partial(unpack, struct.unpack)
-
 # Disable demandimport while importing thrift files.
-#
 # The thrift modules try importing modules which may or may not exist, and they
 # handle the ImportError generated if the modules aren't present.  demandimport
 # breaks this behavior by making it appear like the modules were successfully

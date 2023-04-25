@@ -22,12 +22,7 @@ import os
 import sys
 
 
-# PY3-compat
-if sys.version_info[0] >= 3:
-    fromhex = bytes.fromhex
-else:
-    fromhex = lambda x: x.decode("hex")
-
+fromhex = bytes.fromhex
 
 files = [
     (

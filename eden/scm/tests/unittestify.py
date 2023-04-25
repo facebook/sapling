@@ -31,7 +31,7 @@ try:
 except ImportError:
     # Used by :hg_run_tests and :hg_watchman_run_tests unittest target
     hgpath = os.environ.get("HGTEST_HG")
-    pythonbinpath = os.environ.get("HGTEST_PYTHON", "python2")
+    pythonbinpath = os.environ.get("HGTEST_PYTHON", "python3")
     watchman = os.environ.get("HGTEST_WATCHMAN")
     mononoke_server = os.environ.get("HGTEST_MONONOKE_SERVER")
     dummyssh = os.environ.get("HGTEST_DUMMYSSH")

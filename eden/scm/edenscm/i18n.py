@@ -66,12 +66,8 @@ def setdatapath(datapath: str) -> None:
     t = gettextmod.translation("hg", localedir, _languages, fallback=True)
     global _ugettext
     global _ungettext
-    if sys.version_info[0] < 3:
-        _ugettext = t.ugettext
-        _ungettext = t.ungettext
-    else:
-        _ugettext = t.gettext
-        _ungettext = t.ngettext
+    _ugettext = t.gettext
+    _ungettext = t.ngettext
 
 
 _msgcache = {}  # encoding: {message: translation}
@@ -103,20 +99,8 @@ def gettext(message: str) -> str:
         # Be careful not to translate the empty string -- it holds the
         # meta data of the .po file.
         u = "\n\n".join([p and _ugettext(p) or "" for p in paragraphs])
-        if sys.version_info[0] >= 3:
-            cache[message] = identity.replace(u)
-        else:
-            try:
-                # encoding.tolocal cannot be used since it will first try to
-                # decode the Unicode string. Calling u.decode(enc) really
-                # means u.encode(sys.getdefaultencoding()).decode(enc). Since
-                # the Python encoding defaults to 'ascii', this fails if the
-                # translated string use non-ASCII characters.
-                encodingstr = encoding.encoding
-                cache[message] = identity.replace(u.encode(encodingstr, "replace"))
-            except LookupError:
-                # An unknown encoding results in a LookupError.
-                cache[message] = identity.replace(message)
+        cache[message] = identity.replace(u)
+
     return cache[message]
 
 
@@ -138,11 +122,8 @@ def ngettext(singular: str, plural: str, count: int) -> str:
     # Don't cache pluralized messages.  They are relatively rare, and the
     # content depends on the count.
     translated = _ungettext(singular, plural, count)
-    if sys.version_info[0] == 3:
-        return identity.replace(translated)
-    else:
-        encodingstr = encoding.encoding
-        return identity.replace(translated.encode(encodingstr, "replace"))
+
+    return identity.replace(translated)
 
 
 _plain = True

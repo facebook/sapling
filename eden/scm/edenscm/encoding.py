@@ -103,12 +103,8 @@ def setfromenviron():
 
 _encodingfixers = {"646": lambda: "ascii", "ANSI_X3.4-1968": lambda: "ascii"}
 
-# cp65001 is a Windows variant of utf-8, which isn't supported on Python 2.
 # No idea if it should be rewritten to the canonical name 'utf-8' on Python 3.
 # https://bugs.python.org/issue13216
-# pyre-fixme[58]: `<` is not supported for operand types `Union[int, str]` and `int`.
-if pycompat.iswindows and sys.version_info[0] < 3:
-    _encodingfixers["cp65001"] = lambda: "utf-8"
 
 environ = encoding = outputencoding = encodingmode = _wide = None
 setfromenviron()
@@ -157,14 +153,10 @@ def unimethod(bytesfunc):
 # converter functions between native str and byte string. use these if the
 # character encoding is not aware (e.g. exception message) or is known to
 # be locale dependent (e.g. date formatting.)
-if sys.version_info[0] >= 3:
-    strtolocal = unitolocal
-    strfromlocal = unifromlocal
-    strmethod = unimethod
-else:
-    strtolocal = pycompat.identity
-    strfromlocal = pycompat.identity
-    strmethod = pycompat.identity
+
+strtolocal = unitolocal
+strfromlocal = unifromlocal
+strmethod = unimethod
 
 
 def _colwidth(s):
@@ -303,23 +295,7 @@ def _upper(s):
 
 
 def upperfallback(s):
-    if sys.version_info[0] < 3:
-        try:
-            if isinstance(s, localstr):
-                u = s._utf8.decode("utf-8")
-            else:
-                u = s.decode(encoding, encodingmode)
-
-            uu = u.upper()
-            if u == uu:
-                return s  # preserve localstring
-            return uu.encode(encoding)
-        except UnicodeError:
-            return s.upper()  # we don't know how to fold this except in ASCII
-        except LookupError as k:
-            raise error.Abort(k, hint="please check your locale settings")
-    else:
-        return s.upper()
+    return s.upper()
 
 
 class normcasespecs(object):
@@ -394,10 +370,8 @@ def jsonescape(s, paranoid=False):
 
 # We need to decode/encode U+DCxx codes transparently since invalid UTF-8
 # bytes are mapped to that range.
-if sys.version_info[0] >= 3:
-    _utf8strict = r"surrogatepass"
-else:
-    _utf8strict = r"strict"
+
+_utf8strict = r"surrogatepass"
 
 _utf8len = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 4]
 
@@ -470,61 +444,37 @@ def toutf8b(s):
             if b"\xed\xb0\x80" <= c <= b"\xed\xb3\xbf":
                 # have to re-escape existing U+DCxx characters
                 value = s[pos]
-                if sys.version_info[0] < 3:
-                    value = ord(value)
                 c = unichr(0xDC00 + value).encode("utf-8", _utf8strict)
                 pos += 1
             else:
                 pos += len(c)
         except UnicodeDecodeError:
             value = s[pos]
-            if sys.version_info[0] < 3:
-                value = ord(value)
             c = unichr(0xDC00 + value).encode("utf-8", _utf8strict)
             pos += 1
         r += c
     return r
 
 
-if sys.version_info[0] >= 3:
-
-    # Prefer native unicode on Python
-    colwidth = ucolwidth
-    fromlocal = pycompat.identity
-    strfromlocal = pycompat.identity
-    strio = pycompat.identity
-    strmethod = pycompat.identity
-    strtolocal = pycompat.identity
-    tolocal = pycompat.identity
-    tolocalstr = pycompat.decodeutf8  # Binary utf-8 to Python 3 str
-    unifromlocal = pycompat.identity
-    unitolocal = pycompat.identity
-
-    def lower(s):
-        return s.lower()
-
-    def upper(s):
-        return s.upper()
-
-else:
-    colwidth = _colwidth
-    fromlocal = pycompat.identity
-    lower = _lower
-    strio = pycompat.identity
-    tolocal = pycompat.identity
-    tolocalstr = pycompat.identity
-    upper = _upper
+# Prefer native unicode on Python
+colwidth = ucolwidth
+fromlocal = pycompat.identity
+strfromlocal = pycompat.identity
+strio = pycompat.identity
+strmethod = pycompat.identity
+strtolocal = pycompat.identity
+tolocal = pycompat.identity
+tolocalstr = pycompat.decodeutf8  # Binary utf-8 to Python 3 str
+unifromlocal = pycompat.identity
+unitolocal = pycompat.identity
 
 
-if sys.version_info[0] < 3:
+def lower(s):
+    return s.lower()
 
-    def localtooutput(s: bytes) -> bytes:
-        if outputencoding is not None and outputencoding != encoding:
-            try:
-                return fromlocal(s).decode("utf-8").encode(outputencoding, "replace")
-            except Exception:
-                pass
-        return s
 
-else:
-    localtooutput = pycompat.identity
+def upper(s):
+    return s.upper()
+
+
+localtooutput = pycompat.identity

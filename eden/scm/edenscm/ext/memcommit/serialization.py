@@ -101,10 +101,7 @@ def deserialize(inputstream: "BinaryIO") -> "Dict[str, Any]":
 
         return data
 
-    if sys.version_info[0] < 3:
-        d: "Dict[str, Any]" = json.loads(unpackdata(inputstream), object_hook=tobytes)
-    else:
-        d: "Dict[str, Any]" = json.loads(unpackdata(inputstream))
+    d: "Dict[str, Any]" = json.loads(unpackdata(inputstream))
 
     numfiles: int = readunsignedint(inputstream)
     contents: "Dict[str, bytes]" = {}

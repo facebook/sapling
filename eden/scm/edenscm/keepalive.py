@@ -373,9 +373,6 @@ class HTTPResponse(httplib.HTTPResponse):
 
     def __init__(self, sock, debuglevel=0, strict=0, method=None):
         extrakw = {}
-        if sys.version_info[0] < 3:
-            extrakw[r"strict"] = True
-            extrakw[r"buffering"] = True
         httplib.HTTPResponse.__init__(
             self, sock, debuglevel=debuglevel, method=method, **extrakw
         )

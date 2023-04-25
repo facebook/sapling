@@ -471,8 +471,6 @@ def emailuser(text):
 @templatefilter("utf8")
 def utf8(text):
     """Any text. Converts from the local character encoding to UTF-8."""
-    if sys.version_info[0] < 3:
-        return encoding.fromlocal(text)
     return text
 
 

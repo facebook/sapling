@@ -129,16 +129,6 @@ class _CompatMessage(email.message.Message):
             # bytes.
             s = s.decode("iso-8859-1")
         headers = email.message_from_string(s, _class=_CompatMessage)
-        # Fix multi-line headers to match httplib's behavior from
-        # Python 2.x, since email.message.Message handles them in
-        # slightly different ways.
-        if sys.version_info < (3, 0):
-            new = []
-            for h, v in headers._headers:
-                if "\r\n" in v:
-                    v = "\n".join([" " + x.lstrip() for x in v.split("\r\n")])[1:]
-                new.append((h, v))
-            headers._headers = new
         return headers
 
     def getheaders(self, key):
@@ -198,8 +188,6 @@ class HTTPResponse(object):
         return self.headers.getheader(header, default=default)
 
     def getheaders(self):
-        if sys.version_info < (3, 0):
-            return [(k.lower(), v) for k, v in self.headers.items()]
         # Starting in Python 3, headers aren't lowercased before being
         # returned here.
         return self.headers.items()

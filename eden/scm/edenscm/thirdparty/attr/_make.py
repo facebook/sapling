@@ -5,7 +5,7 @@ import linecache
 from operator import itemgetter
 
 from . import _config
-from ._compat import PY2, isclass, iteritems, iterkeys, metadata_proxy
+from ._compat import isclass, iteritems, iterkeys, metadata_proxy
 from .exceptions import (
     DefaultAlreadySetError,
     FrozenInstanceError,
@@ -399,27 +399,14 @@ def attributes(
         return wrap(maybe_cls)
 
 
-if PY2:
-
-    def _has_frozen_superclass(cls):
-        """
-        Check whether *cls* has a frozen ancestor by looking at its
-        __setattr__.
-        """
-        return (
-            getattr(cls.__setattr__, "__module__", None) == _frozen_setattrs.__module__
-            and cls.__setattr__.__name__ == _frozen_setattrs.__name__
-        )
 
 
-else:
-
-    def _has_frozen_superclass(cls):
-        """
-        Check whether *cls* has a frozen ancestor by looking at its
-        __setattr__.
-        """
-        return cls.__setattr__ == _frozen_setattrs
+def _has_frozen_superclass(cls):
+    """
+    Check whether *cls* has a frozen ancestor by looking at its
+    __setattr__.
+    """
+    return cls.__setattr__ == _frozen_setattrs
 
 
 def _attrs_to_tuple(obj, attrs):

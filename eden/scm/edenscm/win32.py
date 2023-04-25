@@ -727,7 +727,4 @@ def getoemcp():
 
 
 def pathtowin32W(path):
-    if sys.version_info[0] >= 3:
-        return _LPCWSTR(path)
-    else:
-        return _LPCWSTR(path.decode("utf-8"))
+    return _LPCWSTR(path)

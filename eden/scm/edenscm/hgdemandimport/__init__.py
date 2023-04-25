@@ -21,12 +21,7 @@ from __future__ import absolute_import
 import os
 import sys
 
-
-if sys.version_info[0] >= 3:
-    from . import demandimportpy3 as demandimport
-else:
-    from . import demandimportpy2 as demandimport
-
+from . import demandimportpy3 as demandimport
 
 # Extensions can add to this list if necessary.
 ignore = [

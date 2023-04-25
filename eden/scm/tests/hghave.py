@@ -1,3 +1,8 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 from __future__ import absolute_import
 
 import errno
@@ -731,11 +736,6 @@ def has_debhelper():
 def has_demandimport():
     # chg disables demandimport intentionally for performance wins.
     return (not has_chg()) and os.environ.get("HGDEMANDIMPORT") != "disable"
-
-
-@check("py2", "running with Python 2.x")
-def has_py2():
-    return 2 == sys.version_info[0] or "HGTEST_FORCE_PY2" in os.environ
 
 
 @check("slow", "allow slow tests (use --allow-slow-tests)")

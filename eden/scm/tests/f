@@ -32,16 +32,9 @@ import stat as statmod
 import sys
 
 # Python 3 adapters
-ispy3 = sys.version_info[0] >= 3
-if ispy3:
-
-    def iterbytes(s):
-        for i in range(len(s)):
-            yield s[i : i + 1]
-
-
-else:
-    iterbytes = iter
+def iterbytes(s):
+    for i in range(len(s)):
+        yield s[i : i + 1]
 
 
 def visit(opts, filenames, outfile, infile):

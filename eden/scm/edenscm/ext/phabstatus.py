@@ -15,12 +15,6 @@ from edenscm.i18n import _
 from .extlib.phabricator import arcconfig, diffprops, graphql
 
 
-if sys.version_info[0] < 3:
-    pass
-else:
-    pass
-
-
 COMMITTEDSTATUS = "Committed"
 
 

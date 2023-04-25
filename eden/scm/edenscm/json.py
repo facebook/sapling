@@ -55,10 +55,7 @@ def dumps(obj, paranoid=True):
 
 
 def dump(data, fp):
-    if sys.version_info[0] < 3:
-        return fp.write(dumps(data))
-    else:
-        return _sysjson.dump(data, fp)
+    return _sysjson.dump(data, fp)
 
 
 def _rapply(f, xs):
@@ -73,10 +70,7 @@ def _rapply(f, xs):
 
 
 def load(fp):
-    if sys.version_info[0] < 3:
-        return loads(fp.read())
-    else:
-        return _sysjson.load(fp)
+    return _sysjson.load(fp)
 
 
 def loads(string):
@@ -85,15 +79,4 @@ def loads(string):
     Warning: this does not round-trip with "dumps". "dumps" supports non-utf8
     binary content that is unsupported by this function.
     """
-    if sys.version_info[0] < 3:
-        # XXX: This should round-trip with "dumps". But it might be non-trivial to
-        # do so.
-        def encode(s):
-            if isinstance(s, type("")):
-                return pycompat.decodeutf8(s.encode("utf-8"))
-            else:
-                return s
-
-        return _rapply(encode, _sysjson.loads(string))
-    else:
-        return _sysjson.loads(string)
+    return _sysjson.loads(string)

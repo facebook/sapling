@@ -8,22 +8,16 @@
 HTTP server for use in graphql tests.
 """
 
+import http.server as BaseHTTPServer
 import json
 import signal
 import sys
+import urllib.parse as urlparse
 
 # no-check-code
 from optparse import OptionParser
 
 from edenscm import pycompat
-
-
-if sys.version_info[0] >= 3:
-    import http.server as BaseHTTPServer
-    import urllib.parse as urlparse
-else:
-    import BaseHTTPServer
-    import urlparse
 
 
 try:
@@ -96,10 +90,8 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.wfile.write(pycompat.encodeutf8(json.dumps(response)))
 
     def do_POST(self):
-        if sys.version_info[0] >= 3:
-            content_len = int(self.headers.get("content-length", 0))
-        else:
-            content_len = int(self.headers.getheader("content-length", 0))
+
+        content_len = int(self.headers.get("content-length", 0))
         data = self.rfile.read(content_len)
         params = urlparse.parse_qs(data)
 

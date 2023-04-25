@@ -204,11 +204,7 @@ def _buildpackmeta(metadict: "Mapping[str, bytes]") -> bytes:
     return metabuf
 
 
-if sys.version_info[0] >= 3:
-    inttype = (int,)
-else:
-    inttype = (int, long)  # noqa: F821
-
+inttype = (int,)
 
 _metaitemtypes = {constants.METAKEYFLAG: inttype, constants.METAKEYSIZE: inttype}
 

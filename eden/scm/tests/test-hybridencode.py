@@ -1,4 +1,9 @@
 # encoding: utf-8
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 from __future__ import absolute_import, print_function
 
 import sys
@@ -7,15 +12,8 @@ from edenscm import store
 from hghave import require
 
 
-if sys.version_info[0] >= 3:
-
-    def escape(s):
-        return str(s.encode("utf-8"))[2:-1]
-
-else:
-
-    def escape(s):
-        return s.encode("string_escape")
+def escape(s):
+    return str(s.encode("utf-8"))[2:-1]
 
 
 def show(s):

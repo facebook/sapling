@@ -18,8 +18,6 @@ export PREFIX=/usr/local
 
 ifeq ($(OS),Windows_NT)
 PYTHON := python
-else
-PYTHON := python2
 endif
 PYTHON3 := python3
 

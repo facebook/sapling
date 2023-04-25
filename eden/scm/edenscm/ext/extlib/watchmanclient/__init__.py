@@ -503,8 +503,6 @@ if pycompat.iswindows:
                 # The first four chars are //?/
                 if result <= numwchars:
                     path = buf.value[4:].replace("\\", "/")
-                    if compat.PYTHON2:
-                        path = path.encode("utf-8")
                     return path
 
                 # Not big enough; the result is the amount we need

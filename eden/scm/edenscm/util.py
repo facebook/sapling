@@ -2750,91 +2750,14 @@ def wrap(line, width, initindent="", hangindent=""):
     if width <= maxindent:
         # adjust for weird terminal size
         width = max(78, maxindent + 1)
-    if sys.version_info[0] < 3:
-        line = line.decode(encoding.encoding, encoding.encodingmode)
-        initindent = initindent.decode(encoding.encoding, encoding.encodingmode)
-        hangindent = hangindent.decode(encoding.encoding, encoding.encodingmode)
     wrapper = MBTextWrapper(
         width=width, initial_indent=initindent, subsequent_indent=hangindent
     )
-    if sys.version_info[0] < 3:
-        return wrapper.fill(line).encode(encoding.encoding)
-    else:
-        return wrapper.fill(line)
+    return wrapper.fill(line)
 
 
-if pyplatform.python_implementation() == "CPython" and sys.version_info < (3, 0):
-    # There is an issue in CPython that some IO methods do not handle EINTR
-    # correctly. The following table shows what CPython version (and functions)
-    # are affected (buggy: has the EINTR bug, okay: otherwise):
-    #
-    #                | < 2.7.4 | 2.7.4 to 2.7.12 | >= 3.0
-    #   --------------------------------------------------
-    #    fp.__iter__ | buggy   | buggy           | okay
-    #    fp.read*    | buggy   | okay [1]        | okay
-    #
-    # [1]: fixed by changeset 67dc99a989cd in the cpython hg repo.
-    #
-    # Here we workaround the EINTR issue for fileobj.__iter__. Other methods
-    # like "read*" are ignored for now, as Python < 2.7.4 is a minority.
-    #
-    # Although we can workaround the EINTR issue for fp.__iter__, it is slower:
-    # "for x in fp" is 4x faster than "for x in iter(fp.readline, '')" in
-    # CPython 2, because CPython 2 maintains an internal readahead buffer for
-    # fp.__iter__ but not other fp.read* methods.
-    #
-    # On modern systems like Linux, the "read" syscall cannot be interrupted
-    # when reading "fast" files like on-disk files. So the EINTR issue only
-    # affects things like pipes, sockets, ttys etc. We treat "normal" (S_ISREG)
-    # files approximately as "fast" files and use the fast (unsafe) code path,
-    # to minimize the performance impact.
-    if sys.version_info >= (2, 7, 4):
-        # fp.readline deals with EINTR correctly, use it as a workaround.
-        def _safeiterfile(fp):
-            return iter(fp.readline, "")
-
-    else:
-        # fp.read* are broken too, manually deal with EINTR in a stupid way.
-        # note: this may block longer than necessary because of bufsize.
-        def _safeiterfile(fp, bufsize=4096):
-            fd = fp.fileno()
-            line = ""
-            while True:
-                try:
-                    buf = os.read(fd, bufsize)
-                except OSError as ex:
-                    # os.read only raises EINTR before any data is read
-                    if ex.errno == errno.EINTR:
-                        continue
-                    else:
-                        raise
-                line += buf
-                if "\n" in buf:
-                    splitted = line.splitlines(True)
-                    line = ""
-                    for l in splitted:
-                        if l[-1] == "\n":
-                            yield l
-                        else:
-                            line = l
-                if not buf:
-                    break
-            if line:
-                yield line
-
-    def iterfile(fp):
-        fastpath = True
-        if type(fp) is file:  # noqa
-            fastpath = statmod.S_ISREG(os.fstat(fp.fileno()).st_mode)
-        if fastpath:
-            return fp
-        else:
-            return _safeiterfile(fp)
-
-else:
-    # PyPy and CPython 3 do not have the EINTR issue thus no workaround needed.
-    def iterfile(fp):
-        return fp
+def iterfile(fp):
+    return fp
 
 
 def iterlines(iterator):
@@ -4816,8 +4739,8 @@ def printrecordedtracebacks():
 
 
 class wrapped_stat_result(object):
-    """Mercurial assumes that st_[amc]time is an integer, but both Python2 and
-    Python3 are returning a float value. This class overrides these attributes
+    """Mercurial assumes that st_[amc]time is an integer, but Python 3
+    returns a float value. This class overrides these attributes
     with their integer counterpart.
     """
 

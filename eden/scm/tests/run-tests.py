@@ -194,15 +194,6 @@ elif sys.version_info >= (3, 0, 0):
 else:
     PYTHON3 = False
 
-    # In python 2.x, path operations are generally done using
-    # bytestrings by default, so we don't have to do any extra
-    # fiddling there. We define the wrapper functions anyway just to
-    # help keep code consistent between platforms.
-    def _bytespath(p):
-        return p
-
-    _strpath = _bytespath
-
 # For Windows support
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
 

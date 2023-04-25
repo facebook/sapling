@@ -39,9 +39,6 @@ import tempfile
 import time
 import zipfile
 
-if sys.version_info.major == 2:
-    raise RuntimeError("This setup.py is Python 3 only!")
-
 PY_VERSION = os.environ.get("PY_VERSION")
 if PY_VERSION is None:
     if os.name == "nt":

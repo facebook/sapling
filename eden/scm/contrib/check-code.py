@@ -33,12 +33,8 @@ import re
 import sys
 
 
-if sys.version_info[0] < 3:
-    opentext = open
-else:
-
-    def opentext(f):
-        return open(f, encoding="utf-8")
+def opentext(f):
+    return open(f, encoding="utf-8")
 
 
 try:

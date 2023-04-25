@@ -32,17 +32,17 @@ BSER_TEMPLATE = b"\x0b"
 BSER_SKIP = b"\x0c"
 BSER_UTF8STRING = b"\x0d"
 
-if compat.PYTHON3:
-    STRING_TYPES = (str, bytes)
-    unicode = str
 
-    def tobytes(i):
-        return str(i).encode("ascii")
+STRING_TYPES = (str, bytes)
+unicode = str
 
-    long = int
-else:
-    STRING_TYPES = (unicode, str)
-    tobytes = bytes
+
+def tobytes(i):
+    return str(i).encode("ascii")
+
+
+long = int
+
 
 # Leave room for the serialization header, which includes
 # our overall length.  To make things simpler, we'll use an

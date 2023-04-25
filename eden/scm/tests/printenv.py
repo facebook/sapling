@@ -38,10 +38,7 @@ except ImportError:
 
 exitcode = 0
 
-if sys.version_info[0] >= 3:
-    out = sys.stdout.buffer
-else:
-    out = sys.stdout
+out = sys.stdout.buffer
 
 name = sys.argv[1]
 if len(sys.argv) > 2:

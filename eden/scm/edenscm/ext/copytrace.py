@@ -29,6 +29,8 @@
 
 import codecs
 import collections
+
+import dbm
 import os
 import sys
 import time
@@ -50,12 +52,6 @@ from edenscm import (
     util,
 )
 from edenscm.i18n import _
-
-
-if sys.version_info[0] < 3:
-    import anydbm as dbm
-else:
-    import dbm
 
 
 configtable = {}
