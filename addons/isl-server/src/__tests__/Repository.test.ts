@@ -431,6 +431,13 @@ describe('extractRepoInfoFromUrl', () => {
         hostname: 'github.com',
       });
     });
+    it('handles plain github.com', () => {
+      expect(extractRepoInfoFromUrl('github.com/myUsername/myRepo.git')).toEqual({
+        owner: 'myUsername',
+        repo: 'myRepo',
+        hostname: 'github.com',
+      });
+    });
     it('handles git@github', () => {
       expect(extractRepoInfoFromUrl('git@github.com:myUsername/myRepo.git')).toEqual({
         owner: 'myUsername',
@@ -471,6 +478,13 @@ describe('extractRepoInfoFromUrl', () => {
   describe('github enterprise', () => {
     it('handles http', () => {
       expect(extractRepoInfoFromUrl('https://ghe.company.com/myUsername/myRepo.git')).toEqual({
+        owner: 'myUsername',
+        repo: 'myRepo',
+        hostname: 'ghe.company.com',
+      });
+    });
+    it('handles plain github.com', () => {
+      expect(extractRepoInfoFromUrl('ghe.company.com/myUsername/myRepo.git')).toEqual({
         owner: 'myUsername',
         repo: 'myRepo',
         hostname: 'ghe.company.com',
