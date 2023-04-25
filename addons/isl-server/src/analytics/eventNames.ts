@@ -26,6 +26,7 @@ export type TrackEventName =
   | 'CreateEmptyInitialCommit'
   | 'DiscardOperation'
   | 'ForgetOperation'
+  | 'GettingStartedInteraction'
   | 'GhStackSubmitOperation'
   | 'GotoOperation'
   | 'GoBackToOldISL'

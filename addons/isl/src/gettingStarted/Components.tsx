@@ -27,13 +27,20 @@ export function Link({
   children,
   href,
   className,
+  onNavigate,
 }: {
   children: React.ReactNode;
   href: string;
   className?: string;
+  onNavigate?: () => unknown;
 }) {
   return (
-    <VSCodeLink className={className} onClick={() => platform.openExternalLink(href)}>
+    <VSCodeLink
+      className={className}
+      onClick={() => {
+        onNavigate?.();
+        platform.openExternalLink(href);
+      }}>
       {children}
     </VSCodeLink>
   );
@@ -47,7 +54,15 @@ export function Squares({children}: {children: React.ReactNode}) {
   return <div className="squares">{children}</div>;
 }
 
-export function SquareLink({children, href}: {children: React.ReactNode; href: string}) {
+export function SquareLink({
+  children,
+  href,
+  onNavigate,
+}: {
+  children: React.ReactNode;
+  href: string;
+  onNavigate?: () => unknown;
+}) {
   return (
     <a
       className="square"
@@ -56,11 +71,13 @@ export function SquareLink({children, href}: {children: React.ReactNode; href: s
         if (e.key === 'Enter') {
           platform.openExternalLink(href);
           e.preventDefault();
+          onNavigate?.();
         }
       }}
       onClick={e => {
         platform.openExternalLink(href);
         e.preventDefault();
+        onNavigate?.();
       }}>
       {children}
     </a>
