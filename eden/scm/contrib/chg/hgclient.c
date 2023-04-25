@@ -451,14 +451,15 @@ static void attachio(hgclient_t* hgc) {
   struct iovec iov = {ctx->data, ctx->datasize}; /* dummy payload */
   msgh.msg_iov = &iov;
   msgh.msg_iovlen = 1;
-  char fdbuf[CMSG_SPACE(sizeof(fds[0]) * fds_len)];
+  size_t fds_size = sizeof(fds[0]) * fds_len;
+  char fdbuf[CMSG_SPACE(fds_size)];
   msgh.msg_control = fdbuf;
   msgh.msg_controllen = sizeof(fdbuf);
   struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msgh);
   cmsg->cmsg_level = SOL_SOCKET;
   cmsg->cmsg_type = SCM_RIGHTS;
-  cmsg->cmsg_len = CMSG_LEN(sizeof(fds));
-  memcpy(CMSG_DATA(cmsg), fds, sizeof(fds[0]) * fds_len);
+  cmsg->cmsg_len = CMSG_LEN(fds_size);
+  memcpy(CMSG_DATA(cmsg), fds, fds_size);
   msgh.msg_controllen = cmsg->cmsg_len;
   ssize_t r = sendmsg(hgc->sockfd, &msgh, 0);
   if (r < 0)
@@ -470,7 +471,7 @@ static void attachio(hgclient_t* hgc) {
     abortmsg("unexpected size of attachio result");
   memcpy(&n, ctx->data, sizeof(n));
   n = ntohl(n);
-  if (n != sizeof(fds) / sizeof(fds[0]))
+  if (n != fds_size / sizeof(fds[0]))
     abortmsg("failed to send fds (n = %d)", n);
 }
 
