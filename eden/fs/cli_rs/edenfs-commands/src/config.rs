@@ -13,7 +13,6 @@ use clap::Parser;
 use edenfs_client::EdenFsInstance;
 use thrift_types::edenfs::types::GetConfigParams;
 use thrift_types::edenfs_config::types::ConfigSourceType;
-use thrift_types::edenfs_config::types::ConfigValue;
 
 use crate::ExitCode;
 
