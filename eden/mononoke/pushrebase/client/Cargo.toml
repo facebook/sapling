@@ -23,6 +23,6 @@ hooks = { version = "0.1.0", path = "../../hooks" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 pushrebase = { version = "0.1.0", path = ".." }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
+regex = "1.6.0"
 repo_authorization = { version = "0.1.0", path = "../../repo_authorization" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
-tunables = { version = "0.1.0", path = "../../tunables" }

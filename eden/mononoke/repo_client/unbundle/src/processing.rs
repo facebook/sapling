@@ -458,7 +458,7 @@ async fn convert_bookmark_movement_err(
     })
 }
 
-pub fn maybe_client_from_address<'a>(
+pub async fn maybe_client_from_address<'a>(
     remote_mode: &'a PushrebaseRemoteMode,
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
@@ -466,13 +466,13 @@ pub fn maybe_client_from_address<'a>(
     match remote_mode {
         PushrebaseRemoteMode::RemoteLandService(address)
         | PushrebaseRemoteMode::RemoteLandServiceWithLocalFallback(address) => {
-            address_from_land_service(address, ctx, repo)
+            address_from_land_service(address, ctx, repo).await
         }
         PushrebaseRemoteMode::Local => None,
     }
 }
 
-fn address_from_land_service<'a>(
+async fn address_from_land_service<'a>(
     address: &'a Address,
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
@@ -481,10 +481,14 @@ fn address_from_land_service<'a>(
     {
         match address {
             metaconfig_types::Address::Tier(tier) => Some(Box::new(
-                LandServicePushrebaseClient::from_tier(ctx, tier.clone(), repo).ok()?,
+                LandServicePushrebaseClient::from_tier(ctx, tier.clone(), repo)
+                    .await
+                    .ok()?,
             )),
             metaconfig_types::Address::HostPort(host_port) => Some(Box::new(
-                LandServicePushrebaseClient::from_host_port(ctx, host_port.clone(), repo).ok()?,
+                LandServicePushrebaseClient::from_host_port(ctx, host_port.clone(), repo)
+                    .await
+                    .ok()?,
             )),
         }
     }
@@ -514,7 +518,7 @@ async fn normal_pushrebase<'a>(
     };
     let maybe_fallback_scuba: Option<(MononokeScubaSampleBuilder, BookmarkMovementError)> = {
         let maybe_client: Option<Box<dyn PushrebaseClient>> =
-            maybe_client_from_address(&remote_mode, ctx, repo);
+            maybe_client_from_address(&remote_mode, ctx, repo).await;
 
         if let Some(client) = maybe_client {
             let result = client
