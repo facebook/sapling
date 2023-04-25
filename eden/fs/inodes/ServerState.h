@@ -156,18 +156,8 @@ class ServerState {
    * caller needs to own a reference due to lifetime mismatch with the
    * ServerState
    */
-  std::shared_ptr<IHiveLogger> getHiveLogger() const {
+  const std::shared_ptr<IHiveLogger>& getHiveLogger() const {
     return hiveLogger_;
-  }
-
-  /**
-   * Returns a HiveLogger that can be used to send log events to external
-   * long term storage for offline consumption. This should only be used if
-   * the caller ensures that they will not outlive the ServerState, but should
-   * be preferred in that case for performance considerations
-   */
-  IHiveLogger* getRawHiveLogger() const {
-    return hiveLogger_.get();
   }
 
   /**
@@ -175,7 +165,7 @@ class ServerState {
    * platform supports it. Otherwise, returns nullptr. The caller is responsible
    * for null checking.
    */
-  std::shared_ptr<FsEventLogger> getFsEventLogger() const {
+  const std::shared_ptr<FsEventLogger>& getFsEventLogger() const {
     return fsEventLogger_;
   }
 
@@ -183,7 +173,7 @@ class ServerState {
     return *faultInjector_;
   }
 
-  std::shared_ptr<Notifier> getNotifier() {
+  const std::shared_ptr<Notifier>& getNotifier() {
     return notifier_;
   }
 
