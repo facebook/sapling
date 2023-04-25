@@ -1364,7 +1364,7 @@ function wait_for_bookmark_update() {
   local bookmark=$2
   local target=$3
   local attempt=1
-  sleep 1
+  sleep 2
   while [[ "$(scsc lookup -R $repo -B $bookmark)" != "$target" ]]
   do
     attempt=$((attempt + 1))
@@ -1373,7 +1373,7 @@ function wait_for_bookmark_update() {
         echo "bookmark move of $bookmark to $target has not happened"
         return 1
     fi
-    sleep 1
+    sleep 2
   done
 }
 
@@ -1381,7 +1381,7 @@ function wait_for_bookmark_delete() {
   local repo=$1
   local bookmark=$2
   local attempt=1
-  sleep 1
+  sleep 2
   while scsc lookup -R $repo -B $bookmark 2>/dev/null
   do
     attempt=$((attempt + 1))
@@ -1390,7 +1390,7 @@ function wait_for_bookmark_delete() {
        echo "bookmark deletion of $bookmark has not happened"
        return 1
     fi
-    sleep 1
+    sleep 2
   done
 }
 
