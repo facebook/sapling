@@ -127,13 +127,13 @@ async fn main(fb: FacebookInit) -> ExitCode {
         let prog_name = env::args().next().unwrap_or_else(|| "scsc".to_string());
         if atty::is(Stream::Stderr) {
             eprintln!(
-                "{}: {} {}",
+                "{}: {} {:#}",
                 prog_name,
                 Colour::Red.bold().paint("error:"),
                 e
             );
         } else {
-            eprintln!("{}: error: {}", prog_name, e);
+            eprintln!("{}: error: {:#}", prog_name, e);
         }
         return ExitCode::FAILURE;
     }
