@@ -10,10 +10,7 @@ use std::collections::BTreeMap;
 use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data_manager::manager::derive::BatchDeriveOptions;
-use derived_data_manager::BonsaiDerivable;
-use derived_data_manager::DerivedDataManager;
-use fsnodes::RootFsnodeId;
+use derived_data_manager::DerivableType;
 use futures::future::try_join_all;
 use futures::stream;
 use futures::stream::FuturesOrdered;
@@ -41,7 +38,6 @@ use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
 use repo_authorization::AuthorizationContext;
-use repo_derived_data::RepoDerivedDataRef;
 use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;
@@ -765,20 +761,9 @@ impl SourceControlServiceImpl {
             .collect::<Result<Vec<_>, _>>()?;
 
         // Derive data of the requested type for the batch of desired commits
-        let manager = repo.inner_repo().repo_derived_data().manager();
-        match params.derived_data_type {
-            thrift::DerivedDataType::FSNODE => {
-                Self::derive_exactly_batch_data::<RootFsnodeId>(manager, repo.ctx(), cs_ids)
-                    .await?;
-            }
-            _ => {
-                return Err(errors::not_implemented(format!(
-                    "The derived data type: {} is not supported",
-                    params.derived_data_type
-                ))
-                .into());
-            }
-        };
+        let derivable_type = DerivableType::from_request(&params.derived_data_type)?;
+        repo.prepare_derived_data(derivable_type, cs_ids).await?;
+
         Ok(thrift::RepoPrepareCommitsResponse {
             ..Default::default()
         })
@@ -822,22 +807,5 @@ impl SourceControlServiceImpl {
             id,
             ..Default::default()
         })
-    }
-
-    async fn derive_exactly_batch_data<Derivable: BonsaiDerivable>(
-        manager: &DerivedDataManager,
-        ctx: &CoreContext,
-        cs_ids: Vec<ChangesetId>,
-    ) -> Result<(), errors::ServiceError> {
-        manager
-            .derive_exactly_batch::<Derivable>(
-                ctx,
-                cs_ids,
-                BatchDeriveOptions::Parallel { gap_size: None },
-                None,
-            )
-            .await
-            .map_err(|e| errors::internal_error(format!("{e}")))?;
-        Ok(())
     }
 }

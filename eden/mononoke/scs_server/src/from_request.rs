@@ -18,6 +18,7 @@ use chrono::DateTime;
 use chrono::FixedOffset;
 use chrono::Local;
 use chrono::TimeZone;
+use derived_data_manager::DerivableType;
 use ephemeral_blobstore::BubbleId;
 use faster_hex::hex_string;
 use hooks::CrossRepoPushSource;
@@ -377,6 +378,18 @@ impl FromRequest<thrift::DateTime> for DateTime<FixedOffset> {
             .unwrap()
             .timestamp_opt(date.timestamp, 0)
             .unwrap())
+    }
+}
+
+impl FromRequest<thrift::DerivedDataType> for DerivableType {
+    fn from_request(data_type: &thrift::DerivedDataType) -> Result<Self, thrift::RequestError> {
+        match *data_type {
+            thrift::DerivedDataType::FSNODE => Ok(DerivableType::Fsnodes),
+            val => Err(errors::invalid_request(format!(
+                "unsupported derived data type ({})",
+                val
+            ))),
+        }
     }
 }
 

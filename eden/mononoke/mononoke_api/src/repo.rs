@@ -62,7 +62,9 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
-use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
+use derived_data_manager::manager::derive::BatchDeriveOptions;
+use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivableType;
 use ephemeral_blobstore::ArcRepoEphemeralStore;
 use ephemeral_blobstore::Bubble;
 use ephemeral_blobstore::BubbleId;
@@ -76,6 +78,7 @@ use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use filestore::FilestoreConfigRef;
 pub use filestore::StoreRequest;
+use fsnodes::RootFsnodeId;
 use futures::compat::Stream01CompatExt;
 use futures::stream;
 use futures::stream::Stream;
@@ -1801,6 +1804,36 @@ impl RepoContext {
             .await
             .map_err(MononokeError::from)?;
         Ok(pull_data)
+    }
+
+    pub async fn prepare_derived_data(
+        &self,
+        derivable_type: DerivableType,
+        csids: Vec<ChangesetId>,
+    ) -> Result<(), MononokeError> {
+        // Simple initial implementation: does not support types with
+        // dependencies, and only supports a single type at a time.
+        match derivable_type {
+            DerivableType::Fsnodes => {
+                self.repo
+                    .repo_derived_data()
+                    .manager()
+                    .derive_exactly_batch::<RootFsnodeId>(
+                        self.ctx(),
+                        csids,
+                        BatchDeriveOptions::Parallel { gap_size: None },
+                        None,
+                    )
+                    .await?;
+            }
+            _ => {
+                return Err(MononokeError::InvalidRequest(format!(
+                    "Unsupported derived data type for preparation: {}",
+                    derivable_type
+                )));
+            }
+        }
+        Ok(())
     }
 }
 

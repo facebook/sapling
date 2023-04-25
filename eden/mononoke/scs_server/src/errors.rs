@@ -361,6 +361,7 @@ pub(crate) fn not_available(reason: String) -> thrift::RequestError {
     }
 }
 
+#[allow(unused)]
 pub(crate) fn not_implemented(reason: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::NOT_IMPLEMENTED,
