@@ -19,6 +19,7 @@
 #include "eden/fs/nfs/rpc/Rpc.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
+#include "eden/fs/utils/Throw.h"
 
 using folly::AsyncServerSocket;
 using folly::AsyncSocket;
@@ -71,18 +72,19 @@ void RpcConnectionHandler::readBufferAvailable(
 }
 
 void RpcConnectionHandler::readEOF() noexcept {
-  // note1: The socket was closed on us. For the mountd, this is just a
-  // connection closing which is normal after every request. we don't care too
-  // much about the stop data for mountd any way because we throw it away. For
-  // the nfsd this means the mountpoint was unmounted. Thus the socket closed
-  // state is called unmounted, since this is when it is meaningful.
-  // note2: we are "dropping" this future. This is fine, there is no need to
-  // block the caller on completing the shutdown. We need to update the handers
-  // state inline with this so that we could not have multiple versions of
-  // shutdown running in parallel, but we can wait for all requests to finish
-  // asynchronously from this call. (in fact it would lead to deadlock to
-  // block this thread waiting to complete shutdown because shutdown might need
-  // to run thing on our thread.)
+  // The socket was closed on us.
+  //
+  // For mountd, this is just a connection closing which is normal after every
+  // request. We don't care about the stop date.
+  //
+  // For nfsd, this means the mountpoint was unmounted, so record the stop
+  // reason as UNMOUNT.
+  //
+  // We intentionally "drop" this future. This is fine: there is no need to
+  // block the caller on completing the shutdown. We need to update the
+  // handler's state inline with this so that we could not have multiple
+  // versions of shutdown running in parallel, but we can wait for all requests
+  // to finish asynchronously from this call.
   folly::futures::detachOn(
       sock_->getEventBase(), resetReader(RpcStopReason::UNMOUNT));
 }
@@ -90,7 +92,9 @@ void RpcConnectionHandler::readEOF() noexcept {
 void RpcConnectionHandler::readErr(
     const folly::AsyncSocketException& ex) noexcept {
   XLOG(ERR) << "Error while reading: " << folly::exceptionStr(ex);
-  // see comment in readEOF about "dropping" this future.
+  // Reading from the socket failed. There's nothing else to do, so
+  // close the connection.  See the comment in readEOF() for more
+  // context.
   folly::futures::detachOn(
       sock_->getEventBase(), resetReader(RpcStopReason::ERROR));
 }
@@ -126,9 +130,14 @@ folly::SemiFuture<folly::Unit> RpcConnectionHandler::takeoverStop() {
   // requests promise.
   {
     auto& state = state_.get();
-    if (state.stopReason != RpcStopReason::RUNNING) {
-      return folly::makeSemiFuture<folly::Unit>(std::runtime_error(
-          "Rpc Server already shutting down during a takeover."));
+    if (state.stopReason.has_value()) {
+      // TODO: Ensure takeoverStop call sites handle exceptions
+      // appropriately, and remove this makeSemiFutureWith.
+      return folly::makeSemiFutureWith([&] {
+        throwf<std::runtime_error>(
+            "Takeover attempt failed: RpcServer already shutting down because {}",
+            *state.stopReason);
+      });
     }
   }
   XLOG(DBG7) << "Stop reading from the socket";
@@ -175,24 +184,17 @@ folly::SemiFuture<folly::Unit> RpcConnectionHandler::resetReader(
     // Note this must run on the main eventbase for the socket, and inline with
     // setting the stop reason This ensures that we don't accidentally set this
     // promise twice.
-    XLOG(DBG7) << "Pending Requests: " << state.pendingRequests;
+    XLOG(DBG7) << "Pending requests: " << state.pendingRequests;
     if (state.pendingRequests == 0) {
       pendingRequestsComplete_.setValue();
     }
-
-    stopReason = state.stopReason;
   }
 
-  auto future = pendingRequestsComplete_.getSemiFuture();
-
   XLOG(DBG7) << "waiting for pending requests to complete";
-  return std::move(future)
-      .via(
-          this->sock_->getEventBase()) // make sure we go back to the main event
-                                       // base to do our socket manipulations
-      .ensure([this, proc = proc_, dg = std::move(dg), stopReason]() {
-        XLOG(DBG7) << "Pending Requests complete;"
-                   << "finishing destroying this rpc tcp handler";
+  return pendingRequestsComplete_.getFuture().ensure(
+      [this, proc = proc_, dg = std::move(dg), stopReason]() {
+        XLOG(DBG7) << "Pending requests complete; "
+                   << "finishing destroying this RPC handler";
         this->sock_->getEventBase()->checkIsInEventBaseThread();
         if (auto owningServer = this->owningServer_.lock()) {
           owningServer->unregisterRpcHandler(this);
@@ -201,6 +203,9 @@ folly::SemiFuture<folly::Unit> RpcConnectionHandler::resetReader(
         RpcStopData data{};
         data.reason = stopReason;
         if (stopReason == RpcStopReason::TAKEOVER) {
+          // We've already set readCB to nullptr, so detach the
+          // network socket and transfer it to the process taking over
+          // the connection.
           data.socketToKernel =
               folly::File{this->sock_->detachNetworkSocket().toFd(), true};
         }
@@ -451,25 +456,21 @@ void RpcConnectionHandler::dispatchAndReply(
         } else {
           auto resultBuffer = std::move(result).value();
           XLOG(DBG7) << "About to write to the socket.";
+          // TODO: Wait until the write completes before considering
+          // the request finished.
           sock_->writeChain(this, std::move(resultBuffer));
         }
       })
       .ensure([this, guard = std::move(guard)]() {
         XLOG(DBG7) << "Request complete";
-        {
-          // needs to be called on sock_->getEventBase
-          auto& state = this->state_.get();
-          state.pendingRequests -= 1;
-          // this is actually a bug two threads might try to set the promise
-          XLOG(DBG7) << state.pendingRequests << " more requests to process";
-          // We are shutting down either due to an unmount or a takeover,
-          // and the last request has just been handled, we signal all the
-          // pendingRequests have completed
-          if (UNLIKELY(state.stopReason != RpcStopReason::RUNNING)) {
-            if (state.pendingRequests == 0) {
-              this->pendingRequestsComplete_.setValue();
-            }
-          }
+        auto& state = this->state_.get();
+        state.pendingRequests -= 1;
+        XLOG(DBG7) << state.pendingRequests << " more requests to process";
+        if (state.pendingRequests == 0 && state.stopReason.has_value()) {
+          // We are shutting down and the last request has been
+          // handled, so signal that all pending requests have
+          // completed.
+          pendingRequestsComplete_.setValue();
         }
       });
 }

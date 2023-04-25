@@ -30,12 +30,20 @@ namespace facebook::eden {
 class StructuredLogger;
 
 enum class RpcStopReason {
-  RUNNING, // Running not stopping
-  UNMOUNT, // happens when the socket is closed. For the nfsd3 the socket
-           // closing means the mountpoint was unmounted (either eden
-           // unmounted or force unmounted). For the mountd this means a normal
-           // connection is closed, but we don't really care about this.
-  ERROR, // happens when we encounter an error reading from the socket
+  /**
+   * The socket was closed. For nfsd3, the socket closing means the
+   * mount point was unmounted (perhaps by EdenFS). For mountd, this
+   * means a normal connection was closed, but that case is typical.
+   */
+  UNMOUNT,
+  /**
+   * Reading from the socket failed. There's nothing else to do, so
+   * the server stopped.
+   */
+  ERROR,
+  /**
+   * takeoverStop() was called.
+   */
   TAKEOVER,
 };
 
@@ -229,8 +237,9 @@ class RpcConnectionHandler : public folly::DelayedDestruction,
    * request.
    */
   struct State {
-    // This is essentially equivelent to a status.
-    RpcStopReason stopReason = RpcStopReason::RUNNING;
+    // If set, shutdown has started.
+    std::optional<RpcStopReason> stopReason;
+
     // number of requests we are in the middle of processing
     size_t pendingRequests = 0;
   };
@@ -239,7 +248,10 @@ class RpcConnectionHandler : public folly::DelayedDestruction,
 
   /**
    * Promise that we set during shutdown when we finish processing all the
-   * pending requests
+   * pending requests.
+   *
+   * pendingRequestsComplete_ is fulfilled the first time
+   * pendingRequests == 0 and stopReason.has_value().
    */
   folly::Promise<folly::Unit> pendingRequestsComplete_;
 
