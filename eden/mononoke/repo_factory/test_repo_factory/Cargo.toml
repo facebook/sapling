@@ -53,6 +53,7 @@ newfilenodes = { version = "0.1.0", path = "../../newfilenodes" }
 phases = { version = "0.1.0", path = "../../phases" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
+regex = "1.6.0"
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_bookmark_attrs = { version = "0.1.0", path = "../../repo_attributes/repo_bookmark_attrs" }

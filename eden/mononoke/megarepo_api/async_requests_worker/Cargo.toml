@@ -31,7 +31,6 @@ source_control = { version = "0.1.0", path = "../../scs/if" }
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 requests_table = { version = "0.1.0", path = "../requests_table" }

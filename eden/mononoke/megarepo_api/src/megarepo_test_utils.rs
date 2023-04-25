@@ -28,6 +28,7 @@ use megarepo_mapping::SourceMappingRules;
 use megarepo_mapping::SourceName;
 use megarepo_mapping::SyncTargetConfig;
 use mononoke_api::Mononoke;
+use mononoke_api::Repo;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mutable_renames::MutableRenames;
@@ -55,10 +56,9 @@ impl MegarepoTest {
         let config = factory.repo_config();
         let repo_identity = factory.repo_identity(&config);
         let mutable_renames = factory.mutable_renames(&repo_identity)?;
-        let blobrepo: BlobRepo = factory.build().await?;
-        let mononoke = Arc::new(
-            Mononoke::new_test(ctx.clone(), vec![("repo".to_string(), blobrepo.clone())]).await?,
-        );
+        let repo: Repo = factory.build().await?;
+        let blobrepo = repo.blob_repo().clone();
+        let mononoke = Arc::new(Mononoke::new_test(vec![("repo".to_string(), repo)]).await?);
         let configs_storage = TestMononokeMegarepoConfigs::new(ctx.logger());
 
         Ok(Self {

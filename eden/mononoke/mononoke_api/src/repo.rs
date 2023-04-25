@@ -90,14 +90,12 @@ use hooks::HookManager;
 use hooks::HookManagerArc;
 use itertools::Itertools;
 use live_commit_sync_config::LiveCommitSyncConfig;
-use live_commit_sync_config::TestLiveCommitSyncConfig;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_mutation::HgMutationStore;
 use mercurial_types::Globalrev;
 use metaconfig_types::HookManagerParams;
 use metaconfig_types::InfinitepushNamespace;
 use metaconfig_types::InfinitepushParams;
-use metaconfig_types::LfsParams;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::SourceControlServiceParams;
 use mononoke_api_types::InnerRepo;
@@ -411,42 +409,12 @@ impl Repo {
         }
     }
 
-    /// Construct a Repo from a test BlobRepo
-    pub async fn new_test(ctx: CoreContext, blob_repo: BlobRepo) -> Result<Self, Error> {
-        Self::new_test_common(
-            ctx,
-            blob_repo,
-            None,
-            Arc::new(SqlSyncedCommitMapping::with_sqlite_in_memory()?),
-            Default::default(),
-        )
-        .await
-    }
-
     /// Construct a Repo from a test BlobRepo and commit_sync_config
     pub async fn new_test_xrepo(
         ctx: CoreContext,
         blob_repo: BlobRepo,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
         synced_commit_mapping: ArcSyncedCommitMapping,
-    ) -> Result<Self, Error> {
-        Self::new_test_common(
-            ctx,
-            blob_repo,
-            Some(live_commit_sync_config),
-            synced_commit_mapping,
-            Default::default(),
-        )
-        .await
-    }
-
-    /// Construct a Repo from a test BlobRepo and commit_sync_config
-    async fn new_test_common(
-        ctx: CoreContext,
-        blob_repo: BlobRepo,
-        live_commit_sync_config: Option<Arc<dyn LiveCommitSyncConfig>>,
-        synced_commit_mapping: ArcSyncedCommitMapping,
-        lfs: LfsParams,
     ) -> Result<Self, Error> {
         // TODO: Migrate more of this code to use the TestRepoFactory so that we can eventually
         // replace these test methods.
@@ -455,7 +423,6 @@ impl Repo {
         let repo_id = blob_repo.repo_identity().id();
 
         let config = RepoConfig {
-            lfs,
             infinitepush: InfinitepushParams {
                 namespace: Some(InfinitepushNamespace::new(
                     Regex::new("scratch/.+").unwrap(),
@@ -483,8 +450,7 @@ impl Repo {
         );
         let repo_cross_repo = Arc::new(RepoCrossRepo::new(
             synced_commit_mapping,
-            live_commit_sync_config
-                .unwrap_or_else(|| Arc::new(TestLiveCommitSyncConfig::new_empty())),
+            live_commit_sync_config,
             Arc::new(InProcessLease::new()),
         ));
         let mutable_counters = repo_factory.mutable_counters(&blob_repo.repo_identity_arc())?;
@@ -1834,7 +1800,7 @@ mod tests {
     #[fbinit::test]
     async fn test_try_find_child(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Repo::new_test(ctx.clone(), Linear::getrepo(fb).await).await?;
+        let repo: Repo = Linear::get_custom_test_repo(fb).await;
 
         let ancestor = ChangesetId::from_str(
             "c9f9a2a39195a583d523a4e5f6973443caeb0c66a315d5bf7db1b5775c725310",
@@ -1861,7 +1827,7 @@ mod tests {
     #[fbinit::test]
     async fn test_try_find_child_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Repo::new_test(ctx.clone(), MergeEven::getrepo(fb).await).await?;
+        let repo: Repo = MergeEven::get_custom_test_repo(fb).await;
 
         let ancestor = ChangesetId::from_str(
             "35fb4e0fb3747b7ca4d18281d059be0860d12407dc5dce5e02fb99d1f6a79d2a",

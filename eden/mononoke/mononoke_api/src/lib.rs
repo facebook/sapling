@@ -15,7 +15,6 @@ pub use bookmarks::BookmarkCategory;
 pub use bookmarks::BookmarkKey;
 use mononoke_repos::MononokeRepos;
 use mononoke_types::RepositoryId;
-use repo_identity::RepoIdentityRef;
 
 use crate::repo::RepoContextBuilder;
 
@@ -198,6 +197,7 @@ pub mod test_impl {
     use cloned::cloned;
     use live_commit_sync_config::LiveCommitSyncConfig;
     use metaconfig_types::CommitSyncConfig;
+    use repo_identity::RepoIdentityRef;
     use synced_commit_mapping::ArcSyncedCommitMapping;
 
     use super::*;
@@ -205,26 +205,16 @@ pub mod test_impl {
     impl Mononoke {
         /// Create a Mononoke instance for testing.
         pub async fn new_test(
-            ctx: CoreContext,
-            repos: impl IntoIterator<Item = (String, BlobRepo)>,
+            repos: impl IntoIterator<Item = (String, Repo)>,
         ) -> Result<Self, Error> {
-            use futures::stream::FuturesOrdered;
-            use futures::stream::TryStreamExt;
             let repos = repos
                 .into_iter()
-                .map(move |(name, repo)| {
-                    cloned!(ctx);
-                    async move {
-                        Repo::new_test(ctx.clone(), repo).await.map(move |repo| {
-                            (repo.blob_repo().repo_identity().id().id(), name, repo)
-                        })
-                    }
-                })
-                .collect::<FuturesOrdered<_>>()
-                .try_collect::<Vec<_>>()
-                .await?;
-            let repo_names_in_tier =
-                Vec::from_iter(repos.iter().map(|(_, name, _)| name.to_string()));
+                .map(|(name, repo)| (repo.blob_repo().repo_identity().id().id(), name, repo))
+                .collect::<Vec<_>>();
+            let repo_names_in_tier = repos
+                .iter()
+                .map(|(_, name, _)| name.to_string())
+                .collect::<Vec<_>>();
             let mononoke_repos = MononokeRepos::new();
             mononoke_repos.populate(repos);
             Ok(Self {

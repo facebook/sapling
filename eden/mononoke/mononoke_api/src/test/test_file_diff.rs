@@ -17,14 +17,13 @@ use tests_utils::drawdag::create_from_dag_with_changes;
 use crate::headerless_unified_diff;
 use crate::ChangesetId;
 use crate::CoreContext;
-use crate::Repo;
 use crate::RepoContext;
 
 async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, ChangesetId>)> {
-    let blob_repo = test_repo_factory::build_empty(ctx.fb).await?;
+    let repo = test_repo_factory::build_empty(ctx.fb).await?;
     let changesets = create_from_dag_with_changes(
         ctx,
-        &blob_repo,
+        &repo,
         r##"
             A-B-C
         "##,
@@ -35,7 +34,6 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
     )
     .await?;
 
-    let repo = Repo::new_test(ctx.clone(), blob_repo).await?;
     let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo)).await?;
     Ok((repo_ctx, changesets))
 }

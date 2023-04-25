@@ -150,7 +150,7 @@ mod tests {
     #[fbinit::test]
     async fn test_hg_tree_context(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(Repo::new_test(ctx.clone(), Linear::getrepo(fb).await).await?);
+        let repo = Arc::new(Linear::get_custom_test_repo::<Repo>(fb).await);
         let rctx = RepoContext::new_test(ctx.clone(), repo.clone()).await?;
 
         // Get the HgManifestId of the root tree manifest for a commit in this repo.

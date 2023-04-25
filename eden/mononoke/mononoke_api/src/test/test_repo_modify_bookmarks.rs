@@ -9,7 +9,6 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkName;
@@ -28,10 +27,10 @@ use crate::repo::Repo;
 use crate::repo::RepoContext;
 
 async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, ChangesetId>)> {
-    let blob_repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+    let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
     let changesets = create_from_dag(
         ctx,
-        &blob_repo,
+        &repo,
         r##"
             A-B-C-D-E
                \
@@ -39,7 +38,8 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
         "##,
     )
     .await?;
-    let mut txn = blob_repo.bookmarks().create_transaction(ctx.clone());
+
+    let mut txn = repo.bookmarks().create_transaction(ctx.clone());
     txn.force_set(
         &BookmarkKey::new("trunk")?,
         changesets["C"],
@@ -47,7 +47,6 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
     )?;
     txn.commit().await?;
 
-    let repo = Repo::new_test(ctx.clone(), blob_repo).await?;
     let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo)).await?;
     Ok((repo_ctx, changesets))
 }

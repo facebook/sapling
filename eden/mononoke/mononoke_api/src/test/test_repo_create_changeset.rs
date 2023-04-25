@@ -48,10 +48,10 @@ async fn test_create_commit(fb: FacebookInit) -> Result<(), Error> {
 // to).
 async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mononoke = Mononoke::new_test(
-        ctx.clone(),
-        vec![("test".to_string(), Linear::getrepo(fb).await)],
-    )
+    let mononoke = Mononoke::new_test(vec![(
+        "test".to_string(),
+        Linear::get_custom_test_repo(fb).await,
+    )])
     .await?;
     let repo = mononoke
         .repo(ctx.clone(), "test")
@@ -220,10 +220,10 @@ async fn validate_unnecessary_derived_data_is_not_derived(
 #[fbinit::test]
 async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mononoke = Mononoke::new_test(
-        ctx.clone(),
-        vec![("test".to_string(), ManyFilesDirs::getrepo(fb).await)],
-    )
+    let mononoke = Mononoke::new_test(vec![(
+        "test".to_string(),
+        ManyFilesDirs::get_custom_test_repo(fb).await,
+    )])
     .await?;
     let repo = mononoke
         .repo(ctx, "test")
@@ -360,10 +360,10 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_create_merge_commit(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mononoke = Mononoke::new_test(
-        ctx.clone(),
-        vec![("test".to_string(), Linear::getrepo(fb).await)],
-    )
+    let mononoke = Mononoke::new_test(vec![(
+        "test".to_string(),
+        Linear::get_custom_test_repo(fb).await,
+    )])
     .await?;
     let repo = mononoke
         .repo(ctx.clone(), "test")
@@ -467,10 +467,10 @@ async fn test_create_merge_commit(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_merge_commit_parent_file_conflict(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mononoke = Mononoke::new_test(
-        ctx.clone(),
-        vec![("test".to_string(), Linear::getrepo(fb).await)],
-    )
+    let mononoke = Mononoke::new_test(vec![(
+        "test".to_string(),
+        Linear::get_custom_test_repo(fb).await,
+    )])
     .await?;
     let repo = mononoke
         .repo(ctx.clone(), "test")
@@ -584,10 +584,10 @@ async fn test_merge_commit_parent_file_conflict(fb: FacebookInit) -> Result<(), 
 #[fbinit::test]
 async fn test_merge_commit_parent_tree_file_conflict(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mononoke = Mononoke::new_test(
-        ctx.clone(),
-        vec![("test".to_string(), Linear::getrepo(fb).await)],
-    )
+    let mononoke = Mononoke::new_test(vec![(
+        "test".to_string(),
+        Linear::get_custom_test_repo(fb).await,
+    )])
     .await?;
     let repo = mononoke
         .repo(ctx.clone(), "test")

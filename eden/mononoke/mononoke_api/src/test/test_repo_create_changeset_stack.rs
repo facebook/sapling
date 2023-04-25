@@ -128,13 +128,16 @@ async fn compare_create_stack(
 #[fbinit::test]
 async fn test_create_commit_stack(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mononoke = Mononoke::new_test(
-        ctx.clone(),
-        vec![
-            ("test_stack".to_string(), Linear::getrepo(fb).await),
-            ("test_seq".to_string(), Linear::getrepo(fb).await),
-        ],
-    )
+    let mononoke = Mononoke::new_test(vec![
+        (
+            "test_stack".to_string(),
+            Linear::get_custom_test_repo(fb).await,
+        ),
+        (
+            "test_seq".to_string(),
+            Linear::get_custom_test_repo(fb).await,
+        ),
+    ])
     .await?;
     let stack_repo = mononoke
         .repo(ctx.clone(), "test_stack")
@@ -229,13 +232,16 @@ async fn test_create_commit_stack(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mononoke = Mononoke::new_test(
-        ctx.clone(),
-        vec![
-            ("test_stack".to_string(), Linear::getrepo(fb).await),
-            ("test_seq".to_string(), Linear::getrepo(fb).await),
-        ],
-    )
+    let mononoke = Mononoke::new_test(vec![
+        (
+            "test_stack".to_string(),
+            Linear::get_custom_test_repo(fb).await,
+        ),
+        (
+            "test_seq".to_string(),
+            Linear::get_custom_test_repo(fb).await,
+        ),
+    ])
     .await?;
     let stack_repo = mononoke
         .repo(ctx.clone(), "test_stack")
@@ -363,13 +369,16 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
 #[fbinit::test]
 async fn test_create_commit_stack_path_conflicts(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mononoke = Mononoke::new_test(
-        ctx.clone(),
-        vec![
-            ("test_stack".to_string(), Linear::getrepo(fb).await),
-            ("test_seq".to_string(), Linear::getrepo(fb).await),
-        ],
-    )
+    let mononoke = Mononoke::new_test(vec![
+        (
+            "test_stack".to_string(),
+            Linear::get_custom_test_repo(fb).await,
+        ),
+        (
+            "test_seq".to_string(),
+            Linear::get_custom_test_repo(fb).await,
+        ),
+    ])
     .await?;
     let stack_repo = mononoke
         .repo(ctx.clone(), "test_stack")
@@ -451,13 +460,16 @@ async fn test_create_commit_stack_path_conflicts(fb: FacebookInit) -> Result<(),
 #[fbinit::test]
 async fn test_create_commit_stack_copy_from(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mononoke = Mononoke::new_test(
-        ctx.clone(),
-        vec![
-            ("test_stack".to_string(), Linear::getrepo(fb).await),
-            ("test_seq".to_string(), Linear::getrepo(fb).await),
-        ],
-    )
+    let mononoke = Mononoke::new_test(vec![
+        (
+            "test_stack".to_string(),
+            Linear::get_custom_test_repo(fb).await,
+        ),
+        (
+            "test_seq".to_string(),
+            Linear::get_custom_test_repo(fb).await,
+        ),
+    ])
     .await?;
     let stack_repo = mononoke
         .repo(ctx.clone(), "test_stack")

@@ -11,7 +11,6 @@ use std::str::FromStr;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use fbinit::FacebookInit;
 use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
@@ -19,6 +18,7 @@ use maplit::btreeset;
 use pretty_assertions::assert_eq;
 use tests_utils::CreateCommitContext;
 
+use crate::repo::Repo;
 use crate::ChangesetDiffItem;
 use crate::ChangesetFileOrdering;
 use crate::ChangesetPathDiffContext;
@@ -30,20 +30,19 @@ use crate::MononokePath;
 #[fbinit::test]
 async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
-    let root = CreateCommitContext::new_root(&ctx, &blobrepo)
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let root = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("file_to_move", "context1")
         .commit()
         .await?;
 
-    let commit_with_move = CreateCommitContext::new(&ctx, &blobrepo, vec![root])
+    let commit_with_move = CreateCommitContext::new(&ctx, &repo, vec![root])
         .add_file_with_copy_info("file_moved", "context", (root, "file_to_move"))
         .delete_file("file_to_move")
         .commit()
         .await?;
 
-    let mononoke =
-        Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), repo)]).await?;
 
     let repo = mononoke
         .repo(ctx.clone(), "test")
@@ -80,20 +79,19 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
-    let root = CreateCommitContext::new_root(&ctx, &blobrepo)
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let root = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("file_to_copy", "context1")
         .commit()
         .await?;
 
-    let commit_with_copies = CreateCommitContext::new(&ctx, &blobrepo, vec![root])
+    let commit_with_copies = CreateCommitContext::new(&ctx, &repo, vec![root])
         .add_file_with_copy_info("copy_one", "context", (root, "file_to_copy"))
         .add_file_with_copy_info("copy_two", "context", (root, "file_to_copy"))
         .commit()
         .await?;
 
-    let mononoke =
-        Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), repo)]).await?;
 
     let repo = mononoke
         .repo(ctx.clone(), "test")
@@ -135,13 +133,13 @@ async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
-    let root = CreateCommitContext::new_root(&ctx, &blobrepo)
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let root = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("file_to_move", "context1")
         .commit()
         .await?;
 
-    let commit_with_moves = CreateCommitContext::new(&ctx, &blobrepo, vec![root])
+    let commit_with_moves = CreateCommitContext::new(&ctx, &repo, vec![root])
         .add_file_with_copy_info("copy_one", "context", (root, "file_to_move"))
         .add_file_with_copy_info("copy_two", "context", (root, "file_to_move"))
         .add_file_with_copy_info("copy_zzz", "context", (root, "file_to_move"))
@@ -149,8 +147,7 @@ async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
         .commit()
         .await?;
 
-    let mononoke =
-        Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), repo)]).await?;
 
     let repo = mononoke
         .repo(ctx.clone(), "test")
@@ -211,10 +208,10 @@ fn check_root_dir_diff(diff: Option<&ChangesetPathDiffContext>) -> Result<(), Er
 #[fbinit::test]
 async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mononoke = Mononoke::new_test(
-        ctx.clone(),
-        vec![("test".to_string(), ManyFilesDirs::getrepo(fb).await)],
-    )
+    let mononoke = Mononoke::new_test(vec![(
+        "test".to_string(),
+        ManyFilesDirs::get_custom_test_repo(fb).await,
+    )])
     .await?;
     let repo = mononoke
         .repo(ctx, "test")
@@ -307,8 +304,8 @@ fn check_diff_paths(diff_ctxs: &[ChangesetPathDiffContext], paths: &[&str]) {
 #[fbinit::test]
 async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
-    let root = CreateCommitContext::new_root(&ctx, &blobrepo)
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let root = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("root", "root")
         .commit()
         .await?;
@@ -321,26 +318,28 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
         "r/s/t/u", "r/v", "r/w/x", "r/y", "z", "é",
     ];
 
-    let mut commit = CreateCommitContext::new(&ctx, &blobrepo, vec![root]);
+    let mut commit = CreateCommitContext::new(&ctx, &repo, vec![root]);
     for file in file_list.iter() {
         commit = commit.add_file(*file, *file);
     }
     let commit = commit.commit().await?;
 
-    let mononoke =
-        Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), repo.clone())]).await?;
 
-    let repo = mononoke
+    let repo_ctx = mononoke
         .repo(ctx.clone(), "test")
         .await?
         .expect("repo exists")
         .build()
         .await?;
-    let commit_ctx = repo
+    let commit_ctx = repo_ctx
         .changeset(commit)
         .await?
         .ok_or_else(|| anyhow!("commit not found"))?;
-    let root_ctx = &repo.changeset(root).await?.context("commit not found")?;
+    let root_ctx = &repo_ctx
+        .changeset(root)
+        .await?
+        .context("commit not found")?;
     let diff = commit_ctx
         .diff(
             root_ctx,
@@ -405,7 +404,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
         .collect::<Vec<_>>();
     all_file_list.sort_unstable();
 
-    let mut commit2 = CreateCommitContext::new(&ctx, &blobrepo, vec![commit]);
+    let mut commit2 = CreateCommitContext::new(&ctx, &repo, vec![commit]);
     for file in mod_file_list.iter() {
         commit2 = commit2.add_file(*file, "modified");
     }
@@ -417,7 +416,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
     }
     let commit2 = commit2.commit().await?;
 
-    let commit2_ctx = repo
+    let commit2_ctx = repo_ctx
         .changeset(commit2)
         .await?
         .ok_or_else(|| anyhow!("commit not found"))?;
@@ -515,7 +514,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
 
     // List of file names to test in repo order.  Note in particular that
     // "j.txt" is after "j/k" even though "." is before "/" in lexicographic
@@ -525,23 +524,22 @@ async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
         "r/s/t/u", "r/v", "r/w/x", "r/y", "z", "é",
     ];
 
-    let mut root = CreateCommitContext::new_root(&ctx, &blobrepo);
+    let mut root = CreateCommitContext::new_root(&ctx, &repo);
 
     for file in file_list.iter() {
         root = root.add_file(*file, *file);
     }
     let commit = root.commit().await?;
 
-    let mononoke =
-        Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), repo.clone())]).await?;
 
-    let repo = mononoke
+    let repo_ctx = mononoke
         .repo(ctx.clone(), "test")
         .await?
         .expect("repo exists")
         .build()
         .await?;
-    let commit_ctx = repo
+    let commit_ctx = repo_ctx
         .changeset(commit)
         .await?
         .ok_or_else(|| anyhow!("commit not found"))?;
@@ -638,7 +636,7 @@ async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
     check_diff_paths(&diff, &dirs_list);
 
     // a non-root commit2
-    let commit2 = CreateCommitContext::new(&ctx, &blobrepo, vec![commit])
+    let commit2 = CreateCommitContext::new(&ctx, &repo, vec![commit])
         .add_file("second_file", "second_file")
         .delete_file("!")
         .delete_file("0")
@@ -647,7 +645,7 @@ async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
         .await?;
 
     // commit2
-    let commit2_ctx = repo
+    let commit2_ctx = repo_ctx
         .changeset(commit2)
         .await?
         .ok_or_else(|| anyhow!("commit not found"))?;

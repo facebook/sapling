@@ -219,7 +219,7 @@ mod tests {
     #[fbinit::test]
     async fn test_hg_file_context(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(Repo::new_test(ctx.clone(), ManyFilesDirs::getrepo(fb).await).await?);
+        let repo = Arc::new(ManyFilesDirs::get_custom_test_repo::<Repo>(fb).await);
 
         // The `ManyFilesDirs` test repo contains the following files (at tip):
         //   $ hg manifest --debug
@@ -258,7 +258,7 @@ mod tests {
     #[fbinit::test]
     async fn test_hg_file_history(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(Repo::new_test(ctx.clone(), ManyFilesDirs::getrepo(fb).await).await?);
+        let repo = Arc::new(ManyFilesDirs::get_custom_test_repo::<Repo>(fb).await);
 
         // The `ManyFilesDirs` test repo contains the following files (at tip):
         //   $ hg manifest --debug

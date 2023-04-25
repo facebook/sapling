@@ -916,8 +916,7 @@ mod tests {
     async fn test_new_hg_context(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
 
-        let blob_repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
-        let repo = Repo::new_test(ctx.clone(), blob_repo).await?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
         let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
 
         let hg = repo_ctx.hg();
@@ -929,25 +928,24 @@ mod tests {
     #[fbinit::test]
     async fn test_trees_under_path(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
-        let blob_repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
 
         // Create test stack; child commit modifies 2 directories.
-        let commit_1 = CreateCommitContext::new_root(&ctx, &blob_repo)
+        let commit_1 = CreateCommitContext::new_root(&ctx, repo.blob_repo())
             .add_file("dir1/a", "1")
             .add_file("dir2/b", "1")
             .add_file("dir3/c", "1")
             .commit()
             .await?;
-        let commit_2 = CreateCommitContext::new(&ctx, &blob_repo, vec![commit_1])
+        let commit_2 = CreateCommitContext::new(&ctx, repo.blob_repo(), vec![commit_1])
             .add_file("dir1/a", "2")
             .add_file("dir3/a/b/c", "1")
             .commit()
             .await?;
 
-        let root_mfid_1 = root_manifest_id(ctx.clone(), &blob_repo, commit_1).await?;
-        let root_mfid_2 = root_manifest_id(ctx.clone(), &blob_repo, commit_2).await?;
+        let root_mfid_1 = root_manifest_id(ctx.clone(), repo.blob_repo(), commit_1).await?;
+        let root_mfid_2 = root_manifest_id(ctx.clone(), repo.blob_repo(), commit_2).await?;
 
-        let repo = Repo::new_test(ctx.clone(), blob_repo).await?;
         let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
         let hg = repo_ctx.hg();
 

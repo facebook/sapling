@@ -344,9 +344,9 @@ mod test {
     use std::sync::atomic::Ordering;
 
     use anyhow::Error;
-    use blobrepo::BlobRepo;
     use fbinit::FacebookInit;
     use mononoke_api::Mononoke;
+    use mononoke_api::Repo;
     use requests_table::RequestType;
     use source_control as thrift;
 
@@ -356,9 +356,8 @@ mod test {
     async fn test_request_stream_simple(fb: FacebookInit) -> Result<(), Error> {
         let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
         let ctx = CoreContext::test_mock(fb);
-        let blobrepo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
-        let mononoke =
-            Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
+        let mononoke = Mononoke::new_test(vec![("test".to_string(), repo)]).await?;
 
         let params = thrift::MegarepoSyncChangesetParams {
             cs_id: vec![],
@@ -399,9 +398,8 @@ mod test {
     async fn test_request_stream_clear_abandoned(fb: FacebookInit) -> Result<(), Error> {
         let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
         let ctx = CoreContext::test_mock(fb);
-        let blobrepo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
-        let mononoke =
-            Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
+        let mononoke = Mononoke::new_test(vec![("test".to_string(), repo)]).await?;
 
         let params = thrift::MegarepoSyncChangesetParams {
             cs_id: vec![],

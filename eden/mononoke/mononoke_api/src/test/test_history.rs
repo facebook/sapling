@@ -18,7 +18,6 @@ use tests_utils::CreateCommitContext;
 use crate::ChangesetHistoryOptions;
 use crate::ChangesetId;
 use crate::ChangesetPathHistoryOptions;
-use crate::Repo;
 use crate::RepoContext;
 
 // Generates this commit graph:
@@ -53,12 +52,12 @@ use crate::RepoContext;
 //
 // Commits e1, e2 and e3 are empty (contain no file changes).
 async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static str, ChangesetId>)> {
-    let blob_repo = test_repo_factory::build_empty(ctx.fb).await?;
+    let repo = test_repo_factory::build_empty(ctx.fb).await?;
     let mut changesets = HashMap::new();
 
     changesets.insert(
         "a1",
-        CreateCommitContext::new_root(ctx, &blob_repo)
+        CreateCommitContext::new_root(ctx, &repo)
             .add_file("a", "1")
             .set_author_date(DateTime::from_timestamp(1000, 0)?)
             .commit()
@@ -66,7 +65,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static s
     );
     changesets.insert(
         "a2",
-        CreateCommitContext::new(ctx, &blob_repo, vec![changesets["a1"]])
+        CreateCommitContext::new(ctx, &repo, vec![changesets["a1"]])
             .add_file("a", "2")
             .add_file("dir1/a", "2")
             .set_author_date(DateTime::from_timestamp(2000, 0)?)
@@ -75,7 +74,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static s
     );
     changesets.insert(
         "a3",
-        CreateCommitContext::new(ctx, &blob_repo, vec![changesets["a2"]])
+        CreateCommitContext::new(ctx, &repo, vec![changesets["a2"]])
             .add_file("a", "3")
             .add_file("dir1/a", "3")
             .add_file("dir3/a", "3")
@@ -85,7 +84,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static s
     );
     changesets.insert(
         "b1",
-        CreateCommitContext::new_root(ctx, &blob_repo)
+        CreateCommitContext::new_root(ctx, &repo)
             .add_file("b", "1")
             .add_file("dir2/b", "1")
             .set_author_date(DateTime::from_timestamp(1500, 0)?)
@@ -94,7 +93,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static s
     );
     changesets.insert(
         "b2",
-        CreateCommitContext::new(ctx, &blob_repo, vec![changesets["b1"]])
+        CreateCommitContext::new(ctx, &repo, vec![changesets["b1"]])
             .add_file("b", "2")
             .add_file("dir2/b", "2")
             .add_file("dir3/b", "2")
@@ -104,7 +103,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static s
     );
     changesets.insert(
         "m1",
-        CreateCommitContext::new(ctx, &blob_repo, vec![changesets["b2"], changesets["a3"]])
+        CreateCommitContext::new(ctx, &repo, vec![changesets["b2"], changesets["a3"]])
             .add_file("a", "3")
             .add_file("dir1/a", "3")
             .add_file("dir3/a", "3")
@@ -117,14 +116,14 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static s
     );
     changesets.insert(
         "e1",
-        CreateCommitContext::new(ctx, &blob_repo, vec![changesets["m1"]])
+        CreateCommitContext::new(ctx, &repo, vec![changesets["m1"]])
             .set_author_date(DateTime::from_timestamp(5000, 0)?)
             .commit()
             .await?,
     );
     changesets.insert(
         "c1",
-        CreateCommitContext::new(ctx, &blob_repo, vec![changesets["e1"]])
+        CreateCommitContext::new(ctx, &repo, vec![changesets["e1"]])
             .add_file("c", "1")
             .add_file("dir3/c", "1")
             .set_author_date(DateTime::from_timestamp(6000, 0)?)
@@ -133,7 +132,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static s
     );
     changesets.insert(
         "a4",
-        CreateCommitContext::new(ctx, &blob_repo, vec![changesets["c1"]])
+        CreateCommitContext::new(ctx, &repo, vec![changesets["c1"]])
             .add_file("a", "4")
             .add_file("dir1/a", "4")
             .add_file("dir3/a", "4")
@@ -143,14 +142,14 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static s
     );
     changesets.insert(
         "e2",
-        CreateCommitContext::new(ctx, &blob_repo, vec![changesets["a4"]])
+        CreateCommitContext::new(ctx, &repo, vec![changesets["a4"]])
             .set_author_date(DateTime::from_timestamp(8000, 0)?)
             .commit()
             .await?,
     );
     changesets.insert(
         "b3",
-        CreateCommitContext::new(ctx, &blob_repo, vec![changesets["c1"]])
+        CreateCommitContext::new(ctx, &repo, vec![changesets["c1"]])
             .add_file("b", "3")
             .add_file("dir2/b", "3")
             .add_file("dir3/b", "3")
@@ -160,14 +159,14 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static s
     );
     changesets.insert(
         "e3",
-        CreateCommitContext::new(ctx, &blob_repo, vec![changesets["b3"]])
+        CreateCommitContext::new(ctx, &repo, vec![changesets["b3"]])
             .set_author_date(DateTime::from_timestamp(8500, 0)?)
             .commit()
             .await?,
     );
     changesets.insert(
         "m2",
-        CreateCommitContext::new(ctx, &blob_repo, vec![changesets["e2"], changesets["e3"]])
+        CreateCommitContext::new(ctx, &repo, vec![changesets["e2"], changesets["e3"]])
             .add_file("a", "4")
             .add_file("dir1/a", "4")
             .add_file("dir3/a", "4")
@@ -180,7 +179,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static s
     );
     changesets.insert(
         "c2",
-        CreateCommitContext::new(ctx, &blob_repo, vec![changesets["m2"]])
+        CreateCommitContext::new(ctx, &repo, vec![changesets["m2"]])
             .add_file("c", "2")
             .add_file("dir3/c", "2")
             .set_author_date(DateTime::from_timestamp(10000, 0)?)
@@ -188,7 +187,6 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static s
             .await?,
     );
 
-    let repo = Repo::new_test(ctx.clone(), blob_repo).await?;
     let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo)).await?;
     Ok((repo_ctx, changesets))
 }

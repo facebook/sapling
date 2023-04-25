@@ -317,9 +317,9 @@ impl AsyncMethodRequestQueue {
 
 #[cfg(test)]
 mod tests {
-    use blobrepo::BlobRepo;
     use context::CoreContext;
     use fbinit::FacebookInit;
+    use mononoke_api::Repo;
     use requests_table::ClaimedBy;
     use requests_table::RequestStatus;
     use source_control::types::MegarepoTarget as ThriftMegarepoTarget;
@@ -356,9 +356,9 @@ mod tests {
             async fn $fn_name(fb: FacebookInit) -> Result<(), Error> {
                 let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
                 let ctx = CoreContext::test_mock(fb);
-                let blobrepo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+                let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
                 let mononoke =
-                    Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
+                    Mononoke::new_test(vec![("test".to_string(), repo)]).await?;
 
                 // Enqueue a request
                 let params = $thrift_params;

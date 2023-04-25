@@ -67,9 +67,13 @@ use metaconfig_types::ArcRepoConfig;
 use metaconfig_types::BlameVersion;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
+use metaconfig_types::HookManagerParams;
+use metaconfig_types::InfinitepushNamespace;
+use metaconfig_types::InfinitepushParams;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::SegmentedChangelogConfig;
 use metaconfig_types::SegmentedChangelogHeadConfig;
+use metaconfig_types::SourceControlServiceParams;
 use metaconfig_types::UnodeVersion;
 use mononoke_types::RepositoryId;
 use mutable_counters::ArcMutableCounters;
@@ -82,6 +86,7 @@ use phases::ArcPhases;
 use pushrebase_mutation_mapping::ArcPushrebaseMutationMapping;
 use pushrebase_mutation_mapping::SqlPushrebaseMutationMappingConnection;
 use redactedblobstore::RedactedBlobs;
+use regex::Regex;
 use rendezvous::RendezVousOptions;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::RepoBlobstore;
@@ -192,6 +197,20 @@ pub fn default_test_repo_config() -> RepoConfig {
             )],
             ..Default::default()
         },
+        infinitepush: InfinitepushParams {
+            namespace: Some(InfinitepushNamespace::new(
+                Regex::new("scratch/.+").unwrap(),
+            )),
+            ..Default::default()
+        },
+        source_control_service: SourceControlServiceParams {
+            permit_writes: true,
+            ..Default::default()
+        },
+        hook_manager_params: Some(HookManagerParams {
+            disable_acl_checker: true,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
