@@ -18,6 +18,7 @@
     "isolatedModules": true
   },
   "include": [
+    "webview/global.d.ts",
     "extension",
     "webview",
     "extension.webpack.config.ts",
