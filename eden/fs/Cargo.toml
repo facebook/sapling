@@ -15,13 +15,13 @@ terminfo = { git = "https://github.com/rust-terminfo/terminfo", rev = "9b4e1c6aa
 toml = { git = "https://github.com/fbsource/toml", rev = "0ee7001fb64f7c5094a00d3a360e402201f498fe" }
 tonic = { version = "0.8.3", git = "https://github.com/krallin/tonic.git", rev = "c67fc25b636b48b90c83dfc8dd1f89c00b84846d" }
 tonic-build = { version = "0.8.4", git = "https://github.com/krallin/tonic.git", rev = "c67fc25b636b48b90c83dfc8dd1f89c00b84846d" }
-tracing = { git = "https://github.com/jsgf/tracing.git", rev = "f9fbbc6ae5d81ec59e4fd52ad3da1e261e8af681" }
-tracing-appender = { git = "https://github.com/jsgf/tracing.git", rev = "f9fbbc6ae5d81ec59e4fd52ad3da1e261e8af681" }
-tracing-core = { git = "https://github.com/jsgf/tracing.git", rev = "f9fbbc6ae5d81ec59e4fd52ad3da1e261e8af681" }
-tracing-futures = { git = "https://github.com/jsgf/tracing.git", rev = "f9fbbc6ae5d81ec59e4fd52ad3da1e261e8af681" }
-tracing-log = { git = "https://github.com/jsgf/tracing.git", rev = "f9fbbc6ae5d81ec59e4fd52ad3da1e261e8af681" }
-tracing-serde = { git = "https://github.com/jsgf/tracing.git", rev = "f9fbbc6ae5d81ec59e4fd52ad3da1e261e8af681" }
-tracing-subscriber = { git = "https://github.com/jsgf/tracing.git", rev = "f9fbbc6ae5d81ec59e4fd52ad3da1e261e8af681" }
+tracing = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
+tracing-appender = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
+tracing-core = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
+tracing-futures = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
+tracing-log = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
+tracing-serde = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
+tracing-subscriber = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
 
 [workspace]
 members = [
