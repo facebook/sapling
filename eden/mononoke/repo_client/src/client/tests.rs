@@ -15,7 +15,6 @@ use manifest::Entry;
 use manifest::ManifestOps;
 use maplit::hashset;
 use mercurial_derivation::DeriveHgChangeset;
-use mercurial_types::HgFileNodeId;
 use metaconfig_types::LfsParams;
 use mononoke_api::Repo;
 use mononoke_types_mocks::changesetid::ONES_CSID;
@@ -249,34 +248,8 @@ async fn get_changed_manifests_stream_test_base_path_impl(fb: FacebookInit) -> R
 #[fbinit::test]
 async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
-    let commit = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("largefile", "11111_11111")
-        .commit()
-        .await?;
 
-    let hg_cs_id = repo.derive_hg_changeset(&ctx, commit).await?;
-
-    let hg_cs = hg_cs_id.load(&ctx, &repo.repo_blobstore().clone()).await?;
-
-    let path = MPath::new("largefile")?;
-    let maybe_entry = hg_cs
-        .manifestid()
-        .find_entry(
-            ctx.clone(),
-            repo.repo_blobstore().clone(),
-            Some(path.clone()),
-        )
-        .await?
-        .unwrap();
-
-    let filenode_id = match maybe_entry {
-        Entry::Leaf((_, filenode_id)) => filenode_id,
-        Entry::Tree(_) => {
-            panic!("should be a leaf");
-        }
-    };
-    assert!(!run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, LfsParams::default()).await?,);
+    assert!(!run_and_check_if_lfs(&ctx, LfsParams::default()).await?);
 
     // Rollout percentage is 100 and threshold is set - enable lfs
     let lfs_params = LfsParams {
@@ -284,7 +257,7 @@ async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
         rollout_percentage: 100,
         ..Default::default()
     };
-    assert!(run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, lfs_params).await?,);
+    assert!(run_and_check_if_lfs(&ctx, lfs_params).await?);
 
     // Rollout percentage is 0 - no lfs is enabled
     let lfs_params = LfsParams {
@@ -292,7 +265,7 @@ async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
         rollout_percentage: 0,
         ..Default::default()
     };
-    assert!(!run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, lfs_params).await?);
+    assert!(!run_and_check_if_lfs(&ctx, lfs_params).await?);
 
     // Rollout percentage is 100, but threshold is too high
     let lfs_params = LfsParams {
@@ -300,7 +273,7 @@ async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
         rollout_percentage: 100,
         ..Default::default()
     };
-    assert!(!run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, lfs_params).await?);
+    assert!(!run_and_check_if_lfs(&ctx, lfs_params).await?);
     Ok(())
 }
 
@@ -389,14 +362,39 @@ async fn test_maybe_validate_pushed_bonsais(fb: FacebookInit) -> Result<(), Erro
     Ok(())
 }
 
-async fn run_and_check_if_lfs(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    path: &MPath,
-    filenode_id: &HgFileNodeId,
-    lfs_params: LfsParams,
-) -> Result<bool, Error> {
-    let repo = Arc::new(Repo::new_test_lfs(ctx.clone(), repo.clone(), lfs_params).await?);
+async fn run_and_check_if_lfs(ctx: &CoreContext, lfs_params: LfsParams) -> Result<bool, Error> {
+    let repo = Arc::new(
+        test_repo_factory::TestRepoFactory::new(ctx.fb)?
+            .with_config_override(|config| config.lfs = lfs_params)
+            .build::<Repo>()
+            .await?,
+    );
+    let commit = CreateCommitContext::new_root(ctx, &repo)
+        .add_file("largefile", "11111_11111")
+        .commit()
+        .await?;
+
+    let hg_cs_id = repo.derive_hg_changeset(ctx, commit).await?;
+
+    let hg_cs = hg_cs_id.load(ctx, &repo.repo_blobstore().clone()).await?;
+
+    let path = MPath::new("largefile")?;
+    let maybe_entry = hg_cs
+        .manifestid()
+        .find_entry(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            Some(path.clone()),
+        )
+        .await?
+        .unwrap();
+
+    let filenode_id = match maybe_entry {
+        Entry::Leaf((_, filenode_id)) => filenode_id,
+        Entry::Tree(_) => {
+            panic!("should be a leaf");
+        }
+    };
 
     let logging = LoggingContainer::new(
         ctx.fb,
@@ -414,7 +412,7 @@ async fn run_and_check_if_lfs(
     );
 
     let bytes = repo_client
-        .getpackv2(stream_old::iter_ok(vec![(path.clone(), vec![*filenode_id])]).boxify())
+        .getpackv2(stream_old::iter_ok(vec![(path.clone(), vec![filenode_id])]).boxify())
         .concat2()
         .compat()
         .await?;

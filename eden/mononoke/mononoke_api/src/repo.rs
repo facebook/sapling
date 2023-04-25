@@ -423,22 +423,6 @@ impl Repo {
         .await
     }
 
-    /// Construct a Repo from a test BlobRepo and LFS config
-    pub async fn new_test_lfs(
-        ctx: CoreContext,
-        blob_repo: BlobRepo,
-        lfs: LfsParams,
-    ) -> Result<Self, Error> {
-        Self::new_test_common(
-            ctx,
-            blob_repo,
-            None,
-            Arc::new(SqlSyncedCommitMapping::with_sqlite_in_memory()?),
-            lfs,
-        )
-        .await
-    }
-
     /// Construct a Repo from a test BlobRepo and commit_sync_config
     pub async fn new_test_xrepo(
         ctx: CoreContext,
