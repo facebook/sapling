@@ -341,7 +341,10 @@ export type ClientToServerMessageWithPayload = {
 
 export type SubscriptionKind = 'uncommittedChanges' | 'smartlogCommits' | 'mergeConflicts';
 
-export type ConfigName = 'isl.submitAsDraft' | 'isl.changedFilesDisplayType';
+export type ConfigName =
+  | 'isl.submitAsDraft'
+  | 'isl.changedFilesDisplayType'
+  | 'isl.hasShownGettingStarted';
 
 export type ClientToServerMessage =
   | {

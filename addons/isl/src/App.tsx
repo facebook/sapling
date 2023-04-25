@@ -18,6 +18,7 @@ import {TopBar} from './TopBar';
 import {TopLevelErrors} from './TopLevelErrors';
 import {tracker} from './analytics';
 import {islDrawerState} from './drawerState';
+import {GettingStartedModal} from './gettingStarted/GettingStartedModal';
 import {I18nSupport, t, T} from './i18n';
 import platform from './platform';
 import {repositoryInfo} from './serverAPIState';
@@ -43,6 +44,7 @@ export default function App() {
               <ErrorBoundary>
                 <ISLDrawers />
                 <div className="tooltip-root-container" data-testid="tooltip-root-container" />
+                <GettingStartedModal />
                 <ComparisonViewModal />
                 <ModalContainer />
                 <ContextMenus />

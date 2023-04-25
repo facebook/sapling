@@ -31,6 +31,12 @@ export interface Platform {
    * may import any files without worrying about the platform being set up yet or not.
    */
   AdditionalDebugContent?: LazyExoticComponent<() => JSX.Element>;
+  /**
+   * Content to show in splash screen when starting ISL for the first time.
+   * Note: This should be lazy-loaded via `React.lazy()` so that implementations
+   * may import any files without worrying about the platform being set up yet or not.
+   */
+  GettingStartedContent?: LazyExoticComponent<({dismiss}: {dismiss: () => void}) => JSX.Element>;
 
   theme?: {
     getTheme(): ThemeColor;
