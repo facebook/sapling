@@ -21,7 +21,8 @@ from typing import Optional
 import bindings
 from edenscm import tracing
 
-from . import bookmarks as bookmod, error, identity, progress, util
+from . import bookmarks as bookmod, error, identity, progress, rcutil, util
+
 from .i18n import _
 from .node import bin, hex, nullid
 
@@ -154,6 +155,8 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
                     # fall back to the using the names in the config.
                     pullnames = bookmod.selectivepullbookmarknames(repo)
 
+                update_publicheads(repo, pullnames)
+
                 # Make sure we pull "update". If it looks like a hash, add to
                 # "nodes", otherwise to "names".
                 nodes = []
@@ -181,6 +184,15 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
         if node is not None and node != nullid:
             hg.updatetotally(repo.ui, repo, node, None)
     return repo
+
+
+def update_publicheads(repo, pullnames):
+    default_publicheads = repo.ui.configlist(
+        "remotenames", "publicheads"
+    )  # ['remote/master', 'remote/main']
+    remote_publicheads = ["remote/" + path for path in pullnames]
+    all_publicheads = ",".join(sorted(set(default_publicheads + remote_publicheads)))
+    update_and_persist_config(repo, "remotenames", "publicheads", all_publicheads)
 
 
 def parse_symref_head(symref_head_output: str) -> Optional[str]:
@@ -340,6 +352,13 @@ def readconfig(repo):
         section, name = sectionname.split(".", 1)
         config.set(section, name, value, "git")
     return config
+
+
+def update_and_persist_config(repo, section, name, value):
+    """edit config and save it to the repo's config file"""
+    configfilename = repo.ui.identity.configrepofile()
+    configfilepath = repo.localvfs.join(configfilename)
+    rcutil.editconfig(repo.ui, configfilepath, section, name, value)
 
 
 @dataclass
