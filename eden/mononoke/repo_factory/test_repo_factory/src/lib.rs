@@ -37,6 +37,7 @@ use changesets::ArcChangesets;
 use changesets_impl::SqlChangesetsBuilder;
 use commit_graph::ArcCommitGraph;
 use commit_graph::CommitGraph;
+use commit_graph_compat::ChangesetsCommitGraphCompat;
 use context::CoreContext;
 use dbbookmarks::ArcSqlBookmarks;
 use dbbookmarks::SqlBookmarksBuilder;
@@ -271,6 +272,7 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlRepoLock::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlSparseProfilesSizes::CREATION_QUERY)?;
         metadata_con.execute_batch(StreamingCloneBuilder::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlCommitGraphStorageBuilder::CREATION_QUERY)?;
         let metadata_db = SqlConnections::new_single(match callbacks {
             Some(callbacks) => Connection::with_sqlite_callbacks(metadata_con, callbacks),
             None => Connection::with_sqlite(metadata_con),
@@ -376,11 +378,24 @@ impl TestRepoFactory {
     }
 
     /// Construct Changesets using the in-memory metadata database.
-    pub fn changesets(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcChangesets> {
-        Ok(Arc::new(
+    pub fn changesets(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        commit_graph: &ArcCommitGraph,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcChangesets> {
+        let changesets = Arc::new(
             SqlChangesetsBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(RendezVousOptions::for_test(), repo_identity.id()),
-        ))
+        );
+
+        Ok(Arc::new(ChangesetsCommitGraphCompat::new(
+            self.fb,
+            changesets,
+            commit_graph.clone(),
+            repo_identity.name().to_string(),
+            repo_config.commit_graph_config.scuba_table.as_deref(),
+        )?))
     }
 
     /// Construct a Changeset Fetcher.
@@ -779,8 +794,9 @@ impl TestRepoFactory {
 
     /// Commit graph
     pub fn commit_graph(&self, repo_identity: &RepoIdentity) -> Result<ArcCommitGraph> {
-        let sql_storage = SqlCommitGraphStorageBuilder::with_sqlite_in_memory()?
-            .build(RendezVousOptions::for_test(), repo_identity.id());
+        let sql_storage =
+            SqlCommitGraphStorageBuilder::from_sql_connections(self.metadata_db.clone())
+                .build(RendezVousOptions::for_test(), repo_identity.id());
         Ok(Arc::new(CommitGraph::new(Arc::new(sql_storage))))
     }
 

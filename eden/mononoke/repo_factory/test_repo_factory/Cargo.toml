@@ -24,6 +24,7 @@ changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info"
 changesets = { version = "0.1.0", path = "../../changesets" }
 changesets_impl = { version = "0.1.0", path = "../../changesets/changesets_impl" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
+commit_graph_compat = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_compat" }
 context = { version = "0.1.0", path = "../../server/context" }
 dbbookmarks = { version = "0.1.0", path = "../../bookmarks/dbbookmarks" }
 deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manifest" }
