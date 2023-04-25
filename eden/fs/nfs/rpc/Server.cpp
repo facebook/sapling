@@ -36,10 +36,7 @@ FsChannelInfo RpcStopData::extractTakeoverInfo() {
   return NfsChannelData{std::move(socketToKernel)};
 }
 
-RpcConnectionHandler::Reader::Reader(RpcConnectionHandler* handler)
-    : handler_(handler), guard_(handler_) {}
-
-void RpcConnectionHandler::Reader::getReadBuffer(void** bufP, size_t* lenP) {
+void RpcConnectionHandler::getReadBuffer(void** bufP, size_t* lenP) {
   // TODO(xavierd): Should maxSize be configured to be at least the
   // configured NFS iosize?
   constexpr size_t maxSize = 64 * 1024;
@@ -49,36 +46,31 @@ void RpcConnectionHandler::Reader::getReadBuffer(void** bufP, size_t* lenP) {
   // the available writable size of the readBuf_ to minimize allocation
   // cost. This guarantees reading large buffers, and minimize the number
   // of calls to tryConsumeReadBuffer.
-  auto minSize = std::max(handler_->readBuf_.tailroom(), minReadSize);
+  auto minSize = std::max(readBuf_.tailroom(), minReadSize);
 
-  auto [buf, len] = handler_->readBuf_.preallocate(minSize, maxSize);
+  auto [buf, len] = readBuf_.preallocate(minSize, maxSize);
   *lenP = len;
   *bufP = buf;
 }
 
-void RpcConnectionHandler::Reader::readDataAvailable(size_t len) noexcept {
-  handler_->readBuf_.postallocate(len);
-  handler_->tryConsumeReadBuffer();
+void RpcConnectionHandler::readDataAvailable(size_t len) noexcept {
+  readBuf_.postallocate(len);
+  tryConsumeReadBuffer();
 }
 
-bool RpcConnectionHandler::Reader::isBufferMovable() noexcept {
+bool RpcConnectionHandler::isBufferMovable() noexcept {
   // prefer to have getReadBuffer / readDataAvailable called
   // rather than readBufferAvailable.
   return true;
 }
 
-void RpcConnectionHandler::Reader::readBufferAvailable(
+void RpcConnectionHandler::readBufferAvailable(
     std::unique_ptr<IOBuf> readBuf) noexcept {
-  handler_->readBuf_.append(std::move(readBuf));
-  handler_->tryConsumeReadBuffer();
+  readBuf_.append(std::move(readBuf));
+  tryConsumeReadBuffer();
 }
 
-folly::SemiFuture<folly::Unit> RpcConnectionHandler::Reader::deleteMe(
-    RpcStopReason stopReason) {
-  return handler_->resetReader(stopReason);
-}
-
-void RpcConnectionHandler::Reader::readEOF() noexcept {
+void RpcConnectionHandler::readEOF() noexcept {
   // note1: The socket was closed on us. For the mountd, this is just a
   // connection closing which is normal after every request. we don't care too
   // much about the stop data for mountd any way because we throw it away. For
@@ -91,16 +83,16 @@ void RpcConnectionHandler::Reader::readEOF() noexcept {
   // asynchronously from this call. (in fact it would lead to deadlock to
   // block this thread waiting to complete shutdown because shutdown might need
   // to run thing on our thread.)
-  auto evb = handler_->sock_->getEventBase();
-  deleteMe(RpcStopReason::UNMOUNT).via(evb);
+  folly::futures::detachOn(
+      sock_->getEventBase(), resetReader(RpcStopReason::UNMOUNT));
 }
 
-void RpcConnectionHandler::Reader::readErr(
+void RpcConnectionHandler::readErr(
     const folly::AsyncSocketException& ex) noexcept {
   XLOG(ERR) << "Error while reading: " << folly::exceptionStr(ex);
   // see comment in readEOF about "dropping" this future.
-  auto evb = handler_->sock_->getEventBase();
-  deleteMe(RpcStopReason::ERROR).via(evb);
+  folly::futures::detachOn(
+      sock_->getEventBase(), resetReader(RpcStopReason::ERROR));
 }
 
 void RpcConnectionHandler::writeErr(
@@ -121,10 +113,9 @@ RpcConnectionHandler::RpcConnectionHandler(
       sock_(std::move(socket)),
       threadPool_(std::move(threadPool)),
       errorLogger_(structuredLogger),
-      reader_(std::make_unique<Reader>(this)),
       state_(sock_->getEventBase()),
       owningServer_(std::move(owningServer)) {
-  sock_->setReadCB(reader_.get());
+  sock_->setReadCB(this);
   proc_->clientConnected();
 }
 
@@ -155,15 +146,16 @@ folly::SemiFuture<folly::Unit> RpcConnectionHandler::takeoverStop() {
   sock_->setReadCB(nullptr);
 
   // Trigger the reader to shutdown now, this will shutdown the handler as well.
-  return reader_->deleteMe(RpcStopReason::TAKEOVER);
+  return resetReader(RpcStopReason::TAKEOVER);
 }
 
 folly::SemiFuture<folly::Unit> RpcConnectionHandler::resetReader(
     RpcStopReason stopReason) {
-  // The lifetimes here are tricky. The reader holds the last reference to the
-  // RpcConnectionHandler, so when we reset the reader, this class will be
-  // destroyed. Thus, we need to keep any member variables around our selves to
-  // use after the reset call.
+  // The lifetimes here are tricky. resetReader() is called by AsyncSocket
+  // callbacks under EOF or error conditions, and `this` must stay alive for the
+  // duration of this callback.
+  DestructorGuard dg{this};
+
   {
     auto& state = state_.get();
 
@@ -198,7 +190,7 @@ folly::SemiFuture<folly::Unit> RpcConnectionHandler::resetReader(
       .via(
           this->sock_->getEventBase()) // make sure we go back to the main event
                                        // base to do our socket manipulations
-      .ensure([this, proc = proc_, stopReason]() {
+      .ensure([this, proc = proc_, dg = std::move(dg), stopReason]() {
         XLOG(DBG7) << "Pending Requests complete;"
                    << "finishing destroying this rpc tcp handler";
         this->sock_->getEventBase()->checkIsInEventBaseThread();
@@ -213,14 +205,13 @@ folly::SemiFuture<folly::Unit> RpcConnectionHandler::resetReader(
               folly::File{this->sock_->detachNetworkSocket().toFd(), true};
         }
 
-        this->reader_.reset(); // DO NOT USE "this" after this point!
-
         // We could move the onSocketClosed call earlier, but it
         // triggers a lot of destruction, so first we finish cleaning up our
         // socket reading and then trigger the socket closed callback.
         proc->onShutdown(std::move(data));
       });
 }
+
 namespace {
 std::string displayBuffer(folly::IOBuf* buf) {
   auto bytes = buf->coalesce();

@@ -115,6 +115,7 @@ class RpcServer;
  * introduce an RpcDatagramHandler.
  */
 class RpcConnectionHandler : public folly::DelayedDestruction,
+                             private folly::AsyncReader::ReadCallback,
                              private folly::AsyncWriter::WriteCallback {
  public:
   using UniquePtr = std::
@@ -152,35 +153,20 @@ class RpcConnectionHandler : public folly::DelayedDestruction,
       const std::shared_ptr<StructuredLogger>& structuredLogger,
       std::weak_ptr<RpcServer> owningServer);
 
-  class Reader : public folly::AsyncReader::ReadCallback {
-   public:
-    explicit Reader(RpcConnectionHandler* handler);
+  // AsyncReader::ReadCallback
 
-    /**
-     * This must be called on the main event base of the socket. This is
-     * because we are going to access state_ which can only be accessed on the
-     * main eventbase and we do operations on the socket (which generally can
-     * only be done on the main eventbase).
-     */
-    folly::SemiFuture<folly::Unit> deleteMe(RpcStopReason stopReason);
+  void getReadBuffer(void** bufP, size_t* lenP) override;
 
-   private:
-    void getReadBuffer(void** bufP, size_t* lenP) override;
+  void readDataAvailable(size_t len) noexcept override;
 
-    void readDataAvailable(size_t len) noexcept override;
+  bool isBufferMovable() noexcept override;
 
-    bool isBufferMovable() noexcept override;
+  void readBufferAvailable(
+      std::unique_ptr<folly::IOBuf> readBuf) noexcept override;
 
-    void readBufferAvailable(
-        std::unique_ptr<folly::IOBuf> readBuf) noexcept override;
+  void readEOF() noexcept override;
 
-    void readEOF() noexcept override;
-
-    void readErr(const folly::AsyncSocketException& ex) noexcept override;
-
-    RpcConnectionHandler* handler_;
-    DestructorGuard guard_;
-  };
+  void readErr(const folly::AsyncSocketException& ex) noexcept override;
 
   // AsyncWriter::WriteCallback
 
@@ -264,11 +250,6 @@ class RpcConnectionHandler : public folly::DelayedDestruction,
    * where you log anomalous things that you want to monitor accross the fleet.
    */
   std::shared_ptr<StructuredLogger> errorLogger_;
-
-  /**
-   * Reads raw data off the socket.
-   */
-  std::unique_ptr<Reader> reader_;
 
   folly::IOBufQueue readBuf_{folly::IOBufQueue::cacheChainLength()};
 
@@ -392,6 +373,7 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
   // main event base that is used for socket interactions. Do not block this
   // event base, it needs to be available to process incoming reads and writes
   // on the socket.
+  // TODO: This should probably be KeepAlive<EventBase>.
   folly::EventBase* evb_;
 
   // Threadpool for processing requests off the main event base.
