@@ -28,6 +28,10 @@ use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use commit_graph_types::ChangesetParents;
 use context::CoreContext;
+use futures::stream;
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use itertools::Either;
 use itertools::Itertools;
 use maplit::hashset;
@@ -594,14 +598,14 @@ impl CommitGraph {
     async fn lower_frontier(
         &self,
         ctx: &CoreContext,
-        mut frontier: ChangesetFrontier,
+        frontier: &mut ChangesetFrontier,
         target_generation: Generation,
-    ) -> Result<ChangesetFrontier> {
+    ) -> Result<()> {
         loop {
             match frontier.last_key_value() {
-                None => return Ok(frontier),
+                None => return Ok(()),
                 Some((generation, _)) if *generation <= target_generation => {
-                    return Ok(frontier);
+                    return Ok(());
                 }
                 _ => {}
             }
@@ -720,13 +724,87 @@ impl CommitGraph {
         ancestor: ChangesetId,
         descendant: ChangesetId,
     ) -> Result<bool> {
-        let (frontier, target_gen) = futures::try_join!(
+        let (mut frontier, target_gen) = futures::try_join!(
             self.single_frontier(ctx, descendant),
             self.changeset_generation_required(ctx, ancestor)
         )?;
         debug_assert!(!frontier.is_empty(), "frontier should contain descendant");
-        let frontier = self.lower_frontier(ctx, frontier, target_gen).await?;
+        self.lower_frontier(ctx, &mut frontier, target_gen).await?;
         Ok(frontier.highest_generation_contains(ancestor, target_gen))
+    }
+
+    pub async fn ancestors_difference_stream_with<'a, P: Fn(ChangesetId) -> bool + 'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        heads: Vec<ChangesetId>,
+        common: Vec<ChangesetId>,
+        monotonic_property: P,
+    ) -> Result<impl Stream<Item = Result<ChangesetId>> + 'a> {
+        struct AncestorsDifferenceState<P: Fn(ChangesetId) -> bool> {
+            heads: ChangesetFrontier,
+            common: ChangesetFrontier,
+            monotonic_property: P,
+        }
+
+        let (heads, common) =
+            futures::try_join!(self.frontier(ctx, heads), self.frontier(ctx, common))?;
+
+        Ok(stream::try_unfold(
+            Box::new(AncestorsDifferenceState {
+                heads,
+                common,
+                monotonic_property,
+            }),
+            |mut state| async {
+                if let Some((generation, cs_ids)) = state.heads.pop_last() {
+                    self.lower_frontier(ctx, &mut state.common, generation)
+                        .await?;
+
+                    let mut cs_ids_not_excluded = vec![];
+                    for cs_id in cs_ids {
+                        if !state.common.highest_generation_contains(cs_id, generation)
+                            && !(state.monotonic_property)(cs_id)
+                        {
+                            cs_ids_not_excluded.push(cs_id)
+                        }
+                    }
+
+                    let all_edges = self
+                        .storage
+                        .fetch_many_edges(
+                            ctx,
+                            &cs_ids_not_excluded,
+                            Prefetch::for_p1_linear_traversal(),
+                        )
+                        .await?;
+
+                    for (_, edges) in all_edges.into_iter() {
+                        for parent in edges.parents.into_iter() {
+                            state
+                                .heads
+                                .entry(parent.generation)
+                                .or_default()
+                                .insert(parent.cs_id);
+                        }
+                    }
+
+                    anyhow::Ok(Some((stream::iter(cs_ids_not_excluded).map(Ok), state)))
+                } else {
+                    Ok(None)
+                }
+            },
+        )
+        .try_flatten())
+    }
+
+    pub async fn ancestors_difference_stream<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        heads: Vec<ChangesetId>,
+        common: Vec<ChangesetId>,
+    ) -> Result<impl Stream<Item = Result<ChangesetId>> + 'a> {
+        self.ancestors_difference_stream_with(ctx, heads, common, |_| false)
+            .await
     }
 
     /// Returns all ancestors of any changeset in heads, excluding
@@ -743,45 +821,10 @@ impl CommitGraph {
         common: Vec<ChangesetId>,
         monotonic_property: impl Fn(ChangesetId) -> bool,
     ) -> Result<Vec<ChangesetId>> {
-        let mut ancestors_difference = vec![];
-
-        let (mut heads, mut common) =
-            futures::try_join!(self.frontier(ctx, heads), self.frontier(ctx, common))?;
-
-        while let Some((generation, cs_ids)) = heads.pop_last() {
-            common = self.lower_frontier(ctx, common, generation).await?;
-
-            let mut cs_ids_not_excluded = vec![];
-            for cs_id in cs_ids {
-                if !common.highest_generation_contains(cs_id, generation)
-                    && !monotonic_property(cs_id)
-                {
-                    cs_ids_not_excluded.push(cs_id)
-                }
-            }
-
-            ancestors_difference.extend(&cs_ids_not_excluded);
-
-            let all_edges = self
-                .storage
-                .fetch_many_edges(
-                    ctx,
-                    &cs_ids_not_excluded,
-                    Prefetch::for_p1_linear_traversal(),
-                )
-                .await?;
-
-            for (_, edges) in all_edges.into_iter() {
-                for parent in edges.parents.into_iter() {
-                    heads
-                        .entry(parent.generation)
-                        .or_default()
-                        .insert(parent.cs_id);
-                }
-            }
-        }
-
-        Ok(ancestors_difference)
+        self.ancestors_difference_stream_with(ctx, heads, common, monotonic_property)
+            .await?
+            .try_collect()
+            .await
     }
 
     /// Returns all ancestors of any changeset in heads, excluding
@@ -792,7 +835,9 @@ impl CommitGraph {
         heads: Vec<ChangesetId>,
         common: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetId>> {
-        self.ancestors_difference_with(ctx, heads, common, |_| false)
+        self.ancestors_difference_stream(ctx, heads, common)
+            .await?
+            .try_collect()
             .await
     }
 }

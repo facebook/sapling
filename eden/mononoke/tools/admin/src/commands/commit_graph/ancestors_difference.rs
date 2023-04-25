@@ -10,6 +10,7 @@ use clap::Args;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use futures::future::try_join_all;
+use futures::StreamExt;
 
 use super::Repo;
 use crate::commit_id::parse_commit_id;
@@ -45,13 +46,13 @@ pub async fn ancestors_difference(
     )
     .await?;
 
-    let ancestors = repo
-        .commit_graph()
-        .ancestors_difference(ctx, heads, common)
-        .await?;
-
-    for cs_id in ancestors {
-        println!("{}", cs_id);
+    let mut ancestors_difference_stream = Box::pin(
+        repo.commit_graph()
+            .ancestors_difference_stream(ctx, heads, common)
+            .await?,
+    );
+    while let Some(ancestor_result) = ancestors_difference_stream.next().await {
+        println!("{}", ancestor_result?);
     }
 
     Ok(())
