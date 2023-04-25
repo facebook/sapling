@@ -23,6 +23,7 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
+use commit_graph::CommitGraph;
 use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::rewrite_commit;
@@ -91,6 +92,9 @@ pub struct TestRepo {
 
     #[facet]
     pub skiplist: SkiplistIndex,
+
+    #[facet]
+    pub commit_graph: CommitGraph,
 }
 
 impl AsBlobRepo for TestRepo {

@@ -16,6 +16,7 @@ use bookmarks::BookmarksRef;
 use bookmarks_types::BookmarkKey;
 use changeset_fetcher::ChangesetFetcherArc;
 use changesets::ChangesetsRef;
+use commit_graph::CommitGraphRef;
 use itertools::Itertools;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::ChangesetId;
@@ -79,6 +80,7 @@ pub trait Repo = AsBlobRepo
     + RepoIdentityRef
     + RepoPermissionCheckerRef
     + RepoLockRef
+    + CommitGraphRef
     + Send
     + Sync;
 

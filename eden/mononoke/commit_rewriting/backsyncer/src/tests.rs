@@ -27,8 +27,8 @@ use bookmarks::BookmarksArc;
 use bookmarks::BookmarksMaybeStaleExt;
 use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
-use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
+use commit_graph::CommitGraphRef;
 use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::rewrite_commit;
@@ -44,7 +44,6 @@ use cross_repo_sync_test_utils::TestRepo;
 use fbinit::FacebookInit;
 use fixtures::Linear;
 use fixtures::TestRepoFixture;
-use futures::compat::Stream01CompatExt;
 use futures::FutureExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
@@ -70,8 +69,6 @@ use mutable_counters::MutableCountersArc;
 use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use revset::DifferenceOfUnionsOfAncestorsNodeStream;
-use skiplist::SkiplistIndex;
 use sql_construct::SqlConstruct;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SqlSyncedCommitMapping;
@@ -954,15 +951,10 @@ async fn verify_mapping_and_all_wc(
         .await?;
 
     println!("checking all source commits");
-    let all_source_commits = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
-        ctx.clone(),
-        &source_repo.changeset_fetcher_arc(),
-        Arc::new(SkiplistIndex::new()),
-        heads,
-    )
-    .compat()
-    .try_collect::<Vec<_>>()
-    .await?;
+    let all_source_commits = source_repo
+        .commit_graph()
+        .ancestors_difference(&ctx, heads, vec![])
+        .await?;
 
     // Check that all commits were synced correctly
     for source_cs_id in all_source_commits {

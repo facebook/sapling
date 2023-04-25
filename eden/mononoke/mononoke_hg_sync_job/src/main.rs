@@ -48,6 +48,7 @@ use cloned::cloned;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers::block_execute;
+use commit_graph::CommitGraph;
 use context::CoreContext;
 use darkstorm_verifier::DarkstormVerifier;
 use dbbookmarks::SqlBookmarksBuilder;
@@ -167,6 +168,9 @@ pub struct Repo {
 
     #[facet]
     pub changesets: dyn Changesets,
+
+    #[facet]
+    pub commit_graph: CommitGraph,
 
     #[facet]
     pub bonsai_hg_mapping: dyn BonsaiHgMapping,

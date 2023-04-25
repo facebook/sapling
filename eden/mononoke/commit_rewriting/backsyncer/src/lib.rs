@@ -48,6 +48,8 @@ use changeset_fetcher::ChangesetFetcher;
 use changeset_fetcher::ChangesetFetcherArc;
 use changesets::Changesets;
 use cloned::cloned;
+use commit_graph::CommitGraph;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::CandidateSelectionHint;
@@ -103,6 +105,7 @@ pub struct Repo(
     RepoDerivedData,
     RepoIdentity,
     SkiplistIndex,
+    CommitGraph,
 );
 
 #[cfg(test)]
@@ -340,16 +343,29 @@ async fn commits_added_by_bookmark_move(
         (Some(from_id), Some(to_id)) => {
             // If needed, this can be optimised by using RangeNodeStream when from_id is
             // an ancestor of from_id
-            DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                ctx.clone(),
-                &repo.changeset_fetcher_arc(),
-                repo.skiplist_index_arc(),
-                vec![to_id],
-                vec![from_id],
-            )
-            .compat()
-            .try_collect()
-            .await
+            if tunables::tunables()
+                .by_repo_enable_new_commit_graph_ancestors_difference_stream(
+                    repo.repo_identity().name(),
+                )
+                .unwrap_or_default()
+            {
+                repo.commit_graph()
+                    .ancestors_difference_stream(ctx, vec![to_id], vec![from_id])
+                    .await?
+                    .try_collect()
+                    .await
+            } else {
+                DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                    ctx.clone(),
+                    &repo.changeset_fetcher_arc(),
+                    repo.skiplist_index_arc(),
+                    vec![to_id],
+                    vec![from_id],
+                )
+                .compat()
+                .try_collect()
+                .await
+            }
         }
     }
 }

@@ -15,6 +15,7 @@ use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
+use commit_graph::CommitGraph;
 use ephemeral_blobstore::RepoEphemeralStore;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
@@ -64,6 +65,9 @@ pub struct InnerRepo {
         dyn RepoLock,
     )]
     pub blob_repo: BlobRepo,
+
+    #[facet]
+    pub commit_graph: CommitGraph,
 
     #[facet]
     pub repo_config: RepoConfig,

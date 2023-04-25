@@ -56,6 +56,7 @@ use changesets::Changesets;
 use changesets::ChangesetsArc;
 use changesets::ChangesetsRef;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::types::Target;
 use cross_repo_sync::CandidateSelectionHint;
@@ -235,6 +236,7 @@ pub struct Repo {
         dyn AclRegions,
         RepoSparseProfiles,
         StreamingClone,
+        CommitGraph,
     )]
     pub inner: InnerRepo,
 
@@ -249,9 +251,6 @@ pub struct Repo {
 
     #[facet]
     pub repo_handler_base: RepoHandlerBase,
-
-    #[facet]
-    pub commit_graph: CommitGraph,
 
     #[facet]
     pub filestore_config: FilestoreConfig,
@@ -404,7 +403,6 @@ impl Repo {
             warm_bookmarks_cache: self.warm_bookmarks_cache.clone(),
             hook_manager: self.hook_manager.clone(),
             repo_handler_base: self.repo_handler_base.clone(),
-            commit_graph: self.commit_graph.clone(),
             filestore_config: self.filestore_config.clone(),
         }
     }
@@ -480,6 +478,7 @@ impl Repo {
             streaming_clone: Arc::new(
                 StreamingCloneBuilder::with_sqlite_in_memory()?.build(repo_id, repo_blobstore),
             ),
+            commit_graph,
         };
 
         let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(
@@ -502,7 +501,6 @@ impl Repo {
             warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
             hook_manager,
             repo_handler_base,
-            commit_graph,
             filestore_config,
         })
     }
@@ -1077,22 +1075,40 @@ impl RepoContext {
         Ok(changeset)
     }
 
-    pub fn difference_of_unions_of_ancestors(
-        &self,
+    pub async fn difference_of_unions_of_ancestors<'a>(
+        &'a self,
         includes: Vec<ChangesetId>,
         excludes: Vec<ChangesetId>,
-    ) -> impl Stream<Item = Result<ChangesetContext, MononokeError>> {
+    ) -> Result<impl Stream<Item = Result<ChangesetContext, MononokeError>> + 'a, MononokeError>
+    {
         let repo = self.clone();
-        DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-            self.ctx.clone(),
-            &self.blob_repo().changeset_fetcher_arc(),
-            self.skiplist_index_arc(),
-            includes,
-            excludes,
-        )
-        .compat()
-        .map_ok(move |cs_id| ChangesetContext::new(repo.clone(), cs_id))
-        .map_err(|err| err.into())
+        if tunables::tunables()
+            .by_repo_enable_new_commit_graph_ancestors_difference_stream(
+                repo.repo().repo_identity().name(),
+            )
+            .unwrap_or_default()
+        {
+            Ok(self
+                .repo()
+                .commit_graph()
+                .ancestors_difference_stream(&self.ctx, includes, excludes)
+                .await?
+                .map_ok(move |cs_id| ChangesetContext::new(repo.clone(), cs_id))
+                .map_err(|err| err.into())
+                .boxed())
+        } else {
+            Ok(DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                self.ctx.clone(),
+                &self.blob_repo().changeset_fetcher_arc(),
+                self.skiplist_index_arc(),
+                includes,
+                excludes,
+            )
+            .compat()
+            .map_ok(move |cs_id| ChangesetContext::new(repo.clone(), cs_id))
+            .map_err(|err| err.into())
+            .boxed())
+        }
     }
 
     /// Get Mercurial ID for multiple changesets

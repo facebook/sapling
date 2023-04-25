@@ -18,6 +18,7 @@ use borrowed::borrowed;
 use bytes_old::Bytes as BytesOld;
 use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use futures::compat::Stream01CompatExt;
 use futures::future;
@@ -48,6 +49,7 @@ use mononoke_types::hash::Sha256;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_identity::RepoIdentityRef;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use skiplist::SkiplistIndexArc;
 use slog::debug;
@@ -86,6 +88,7 @@ pub async fn create_bundle<'a>(
             .chain(bookmark_change.get_from().into_iter()),
         bookmark_change.get_to(),
     )
+    .await?
     .try_collect()
     .await?;
     commits_to_push.reverse();
@@ -356,26 +359,47 @@ async fn fetch_timestamps(
     .await
 }
 
-fn find_commits_to_push<'a>(
+async fn find_commits_to_push<'a>(
     ctx: &'a CoreContext,
     repo: &'a Repo,
     hg_server_heads: impl IntoIterator<Item = ChangesetId>,
     maybe_to_cs_id: Option<ChangesetId>,
-) -> impl Stream<Item = Result<(ChangesetId, HgChangesetId), Error>> + 'a {
-    let lca_hint = repo.skiplist_index_arc();
-    DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-        ctx.clone(),
-        &repo.changeset_fetcher_arc(),
-        lca_hint,
-        maybe_to_cs_id.into_iter().collect(),
-        hg_server_heads.into_iter().collect(),
-    )
-    .compat()
-    .map_ok(async move |bcs_id| {
-        let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
-        Ok((bcs_id, hg_cs_id))
-    })
-    .try_buffered(100)
+) -> Result<impl Stream<Item = Result<(ChangesetId, HgChangesetId)>> + 'a> {
+    if tunables::tunables()
+        .by_repo_enable_new_commit_graph_ancestors_difference_stream(repo.repo_identity().name())
+        .unwrap_or_default()
+    {
+        Ok(repo
+            .commit_graph()
+            .ancestors_difference_stream(
+                ctx,
+                maybe_to_cs_id.into_iter().collect(),
+                hg_server_heads.into_iter().collect(),
+            )
+            .await?
+            .map_ok(async move |bcs_id| {
+                let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
+                Ok((bcs_id, hg_cs_id))
+            })
+            .try_buffered(100)
+            .boxed())
+    } else {
+        let lca_hint = repo.skiplist_index_arc();
+        Ok(DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+            ctx.clone(),
+            &repo.changeset_fetcher_arc(),
+            lca_hint,
+            maybe_to_cs_id.into_iter().collect(),
+            hg_server_heads.into_iter().collect(),
+        )
+        .compat()
+        .map_ok(async move |bcs_id| {
+            let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
+            Ok((bcs_id, hg_cs_id))
+        })
+        .try_buffered(100)
+        .boxed())
+    }
 }
 
 // TODO(stash): this should generate different capabilities depending on whether client

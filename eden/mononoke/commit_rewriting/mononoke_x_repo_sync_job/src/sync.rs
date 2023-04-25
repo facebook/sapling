@@ -19,6 +19,7 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::types::Source;
@@ -31,6 +32,7 @@ use futures::compat::Future01CompatExt;
 use futures::future::try_join_all;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
+use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures_old::stream::Stream;
 use futures_old::Future;
@@ -40,6 +42,7 @@ use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use reachabilityindex::ReachabilityIndex;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_identity::RepoIdentityRef;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
@@ -494,7 +497,13 @@ async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
 /// This function returns new commits that were introduced by this merge
 async fn validate_if_new_repo_merge(
     ctx: &CoreContext,
-    repo: &(impl ChangesetFetcherRef + ChangesetFetcherArc + RepoBlobstoreRef),
+    repo: &(
+         impl ChangesetFetcherRef
+         + ChangesetFetcherArc
+         + RepoBlobstoreRef
+         + RepoIdentityRef
+         + CommitGraphRef
+     ),
     skiplist_index: Source<Arc<SkiplistIndex>>,
     p1: ChangesetId,
     p2: ChangesetId,
@@ -530,32 +539,45 @@ async fn validate_if_new_repo_merge(
 /// i.e. (::branch_tips) is returned in mercurial's revset terms
 async fn check_if_independent_branch_and_return(
     ctx: &CoreContext,
-    repo: &(impl ChangesetFetcherArc + RepoBlobstoreRef),
+    repo: &(impl ChangesetFetcherArc + RepoBlobstoreRef + RepoIdentityRef + CommitGraphRef),
     skiplist_index: Arc<SkiplistIndex>,
     branch_tips: Vec<ChangesetId>,
     other_branches: Vec<ChangesetId>,
 ) -> Result<Option<Vec<ChangesetId>>, Error> {
     let fetcher = repo.changeset_fetcher_arc();
     let blobstore = repo.repo_blobstore();
-    let bcss = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-        ctx.clone(),
-        &fetcher,
-        skiplist_index,
-        branch_tips.clone(),
-        other_branches,
-    )
-    .map({
-        move |cs| {
-            { async move { cs.load(ctx, blobstore).await } }
-                .boxed()
-                .compat()
-                .from_err()
-        }
-    })
-    .buffered(100)
-    .collect()
-    .compat()
-    .await?;
+    let bcss = if tunables::tunables()
+        .by_repo_enable_new_commit_graph_ancestors_difference_stream(repo.repo_identity().name())
+        .unwrap_or_default()
+    {
+        repo.commit_graph()
+            .ancestors_difference_stream(ctx, branch_tips.clone(), other_branches)
+            .await?
+            .map_ok({ move |cs| async move { Ok(cs.load(ctx, blobstore).await?) } })
+            .try_buffered(100)
+            .try_collect()
+            .await?
+    } else {
+        DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+            ctx.clone(),
+            &fetcher,
+            skiplist_index,
+            branch_tips.clone(),
+            other_branches,
+        )
+        .map({
+            move |cs| {
+                { async move { cs.load(ctx, blobstore).await } }
+                    .boxed()
+                    .compat()
+                    .from_err()
+            }
+        })
+        .buffered(100)
+        .collect()
+        .compat()
+        .await?
+    };
 
     let bcss: Vec<_> = bcss.into_iter().rev().collect();
     let mut cs_to_parents: HashMap<_, Vec<_>> = HashMap::new();

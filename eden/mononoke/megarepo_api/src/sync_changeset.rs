@@ -280,6 +280,7 @@ impl<'a> SyncChangeset<'a> {
         // latest_synced_cs_id up to limit+1 commits.
         let side_commits: Vec<_> = source_repo
             .difference_of_unions_of_ancestors(vec![source_cs_id], vec![latest_synced_cs_id])
+            .await?
             .skip(1) // The source_cs_id is always the first returned commit.
             .take(squashing_config.squash_limit + 1) // Get one above limit so we know if there's more than limit.
             .try_collect()

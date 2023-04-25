@@ -14,6 +14,7 @@ use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
+use commit_graph::CommitGraph;
 use filestore::FilestoreConfig;
 use metaconfig_types::RepoConfig;
 use mononoke_types::RepositoryId;
@@ -58,6 +59,9 @@ pub struct Repo {
 
     #[facet]
     skiplist: SkiplistIndex,
+
+    #[facet]
+    commit_graph: CommitGraph,
 }
 
 impl Repo {

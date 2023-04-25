@@ -28,6 +28,7 @@ use bytes::Bytes;
 use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetInsert;
 use changesets::ChangesetsRef;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use edenapi_types::AnyId;
 use edenapi_types::UploadToken;
@@ -826,7 +827,7 @@ impl HgRepoContext {
 
                 let bonsai_common = hg_bonsai_common.iter().map(|(_, bcs_id)| *bcs_id).collect();
 
-                self.repo().repo().commit_graph.ancestors_difference(
+                self.repo().repo().commit_graph().ancestors_difference(
                     &ctx,
                     bonsai_heads,
                     bonsai_common,

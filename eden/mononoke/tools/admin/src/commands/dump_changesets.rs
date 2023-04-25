@@ -28,6 +28,8 @@ use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
 use clap::ValueEnum;
+use commit_graph::CommitGraph;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use futures::compat::Stream01CompatExt;
 use futures::future;
@@ -40,6 +42,8 @@ use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use phases::Phases;
 use phases::PhasesArc;
+use repo_identity::RepoIdentity;
+use repo_identity::RepoIdentityRef;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use skiplist::SkiplistIndex;
 use skiplist::SkiplistIndexArc;
@@ -132,6 +136,12 @@ pub struct Repo {
     changesets: dyn Changesets,
 
     #[facet]
+    commit_graph: CommitGraph,
+
+    #[facet]
+    repo_identity: RepoIdentity,
+
+    #[facet]
     phases: dyn Phases,
 
     #[facet]
@@ -196,26 +206,56 @@ impl FixedHeadsArgs {
         repo: &Repo,
     ) -> Result<Vec<ChangesetEntry>> {
         let changesets = repo.changesets();
-        let mut css: Vec<ChangesetEntry> = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
-            ctx.clone(),
-            &repo.changeset_fetcher_arc(),
-            repo.skiplist_index_arc(),
-            self.head
-                .into_iter()
-                .map(|id| id.parse())
-                .collect::<Result<_>>()?,
-        )
-        .compat()
-        .try_chunks(1000)
-        .map_err(|stream::TryChunksError(_chunk, err)| err)
-        .map_ok(|ids| async move {
-            let css = changesets.get_many(ctx, ids).await?;
-            Ok(stream::iter(css.into_iter().map(anyhow::Ok)))
-        })
-        .try_buffered(5)
-        .try_flatten()
-        .try_collect()
-        .await?;
+
+        let mut css: Vec<ChangesetEntry> = if tunables::tunables()
+            .by_repo_enable_new_commit_graph_ancestors_difference_stream(
+                repo.repo_identity().name(),
+            )
+            .unwrap_or_default()
+        {
+            repo.commit_graph()
+                .ancestors_difference_stream(
+                    ctx,
+                    self.head
+                        .into_iter()
+                        .map(|id| id.parse())
+                        .collect::<Result<_>>()?,
+                    vec![],
+                )
+                .await?
+                .try_chunks(1000)
+                .map_err(|stream::TryChunksError(_chunk, err)| err)
+                .map_ok(|ids| async move {
+                    let css = changesets.get_many(ctx, ids).await?;
+                    Ok(stream::iter(css.into_iter().map(anyhow::Ok)))
+                })
+                .try_buffered(5)
+                .try_flatten()
+                .try_collect()
+                .await?
+        } else {
+            DifferenceOfUnionsOfAncestorsNodeStream::new_union(
+                ctx.clone(),
+                &repo.changeset_fetcher_arc(),
+                repo.skiplist_index_arc(),
+                self.head
+                    .into_iter()
+                    .map(|id| id.parse())
+                    .collect::<Result<_>>()?,
+            )
+            .compat()
+            .try_chunks(1000)
+            .map_err(|stream::TryChunksError(_chunk, err)| err)
+            .map_ok(|ids| async move {
+                let css = changesets.get_many(ctx, ids).await?;
+                Ok(stream::iter(css.into_iter().map(anyhow::Ok)))
+            })
+            .try_buffered(5)
+            .try_flatten()
+            .try_collect()
+            .await?
+        };
+
         css.sort_by_key(|entry| entry.gen);
         Ok(css)
     }

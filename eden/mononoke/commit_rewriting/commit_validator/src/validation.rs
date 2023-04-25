@@ -22,6 +22,7 @@ use bookmarks::BookmarksRef;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
 use cloned::cloned;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::get_commit_sync_outcome;
 use cross_repo_sync::types::Large;
@@ -767,16 +768,31 @@ pub async fn unfold_bookmarks_update_log_entry(
                 );
                 // This might be slow. If too many bookmakrs are being created, it can be optimised
                 // or we could just check to_cs_id as a best effort.
-                DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                    ctx.clone(),
-                    &changeset_fetcher,
-                    lca_hint,
-                    vec![to_cs_id],
-                    vec![master_cs_id],
-                )
-                .compat()
-                .collect()
-                .await
+                if tunables::tunables()
+                    .by_repo_enable_new_commit_graph_ancestors_difference_stream(
+                        validation_helpers.large_repo.repo_identity().name(),
+                    )
+                    .unwrap_or_default()
+                {
+                    validation_helpers
+                        .large_repo
+                        .commit_graph()
+                        .ancestors_difference_stream(ctx, vec![to_cs_id], vec![master_cs_id])
+                        .await?
+                        .collect()
+                        .await
+                } else {
+                    DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                        ctx.clone(),
+                        &changeset_fetcher,
+                        lca_hint,
+                        vec![to_cs_id],
+                        vec![master_cs_id],
+                    )
+                    .compat()
+                    .collect()
+                    .await
+                }
             }
         }
         (Some(from_cs_id), Some(to_cs_id)) => {
@@ -793,21 +809,45 @@ pub async fn unfold_bookmarks_update_log_entry(
                 );
                 // This might be slow. If too many bookmakrs are being non-FF moved, it can be optimised
                 // or we could just check to_cs_id as a best effort.
-                DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                    ctx.clone(),
-                    &changeset_fetcher,
-                    lca_hint,
-                    vec![to_cs_id],
-                    if is_master_entry {
-                        vec![from_cs_id]
-                    } else {
-                        // Skip ancestors of master since validating master bookmark moves covers them.
-                        vec![from_cs_id, master_cs_id]
-                    },
-                )
-                .compat()
-                .collect()
-                .await
+                if tunables::tunables()
+                    .by_repo_enable_new_commit_graph_ancestors_difference_stream(
+                        validation_helpers.large_repo.repo_identity().name(),
+                    )
+                    .unwrap_or_default()
+                {
+                    validation_helpers
+                        .large_repo
+                        .commit_graph()
+                        .ancestors_difference_stream(
+                            ctx,
+                            vec![to_cs_id],
+                            if is_master_entry {
+                                vec![from_cs_id]
+                            } else {
+                                // Skip ancestors of master since validating master bookmark moves covers them.
+                                vec![from_cs_id, master_cs_id]
+                            },
+                        )
+                        .await?
+                        .collect()
+                        .await
+                } else {
+                    DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                        ctx.clone(),
+                        &changeset_fetcher,
+                        lca_hint,
+                        vec![to_cs_id],
+                        if is_master_entry {
+                            vec![from_cs_id]
+                        } else {
+                            // Skip ancestors of master since validating master bookmark moves covers them.
+                            vec![from_cs_id, master_cs_id]
+                        },
+                    )
+                    .compat()
+                    .collect()
+                    .await
+                }
             } else {
                 let mut v: Vec<_> =
                     RangeNodeStream::new(ctx.clone(), changeset_fetcher, from_cs_id, to_cs_id)

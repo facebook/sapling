@@ -150,19 +150,37 @@ impl AffectedChangesets {
             .await?;
         excludes.extend(base);
 
-        let range = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-            ctx.clone(),
-            &repo.changeset_fetcher_arc(),
-            lca_hint.clone(),
-            vec![head],
-            excludes.into_iter().collect(),
-        )
-        .compat()
-        .yield_periodically()
-        .try_filter(|bcs_id| {
-            let exists = self.new_changesets.contains_key(bcs_id);
-            future::ready(!exists)
-        });
+        let range = if tunables::tunables()
+            .by_repo_enable_new_commit_graph_ancestors_difference_stream(
+                repo.repo_identity().name(),
+            )
+            .unwrap_or_default()
+        {
+            repo.commit_graph()
+                .ancestors_difference_stream(ctx, vec![head], excludes.into_iter().collect())
+                .await?
+                .yield_periodically()
+                .try_filter(|bcs_id| {
+                    let exists = self.new_changesets.contains_key(bcs_id);
+                    future::ready(!exists)
+                })
+                .boxed()
+        } else {
+            DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                ctx.clone(),
+                &repo.changeset_fetcher_arc(),
+                lca_hint.clone(),
+                vec![head],
+                excludes.into_iter().collect(),
+            )
+            .compat()
+            .yield_periodically()
+            .try_filter(|bcs_id| {
+                let exists = self.new_changesets.contains_key(bcs_id);
+                future::ready(!exists)
+            })
+            .boxed()
+        };
 
         let limit = match tunables()
             .hooks_additional_changesets_limit()

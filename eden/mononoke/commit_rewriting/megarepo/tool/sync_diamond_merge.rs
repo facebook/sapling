@@ -28,6 +28,7 @@ use cacheblob::LeaseOps;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
 use cloned::cloned;
+use commit_graph::CommitGraphRef;
 use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
@@ -64,6 +65,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::MPath;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_identity::RepoIdentityRef;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use slog::info;
 use slog::warn;
@@ -401,27 +403,49 @@ async fn find_new_branch_oldest_first(
 ) -> Result<Vec<BonsaiChangeset>, Error> {
     let fetcher = small_repo.blob_repo.changeset_fetcher_arc();
 
-    let new_branch = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-        ctx.clone(),
-        &fetcher,
-        small_repo.skiplist_index.clone(),
-        vec![p2],
-        vec![p1],
-    )
-    .map({
-        cloned!(ctx, small_repo);
-        move |cs| {
+    let new_branch = if tunables::tunables()
+        .by_repo_enable_new_commit_graph_ancestors_difference_stream(
+            small_repo.repo_identity().name(),
+        )
+        .unwrap_or_default()
+    {
+        small_repo
+            .commit_graph()
+            .ancestors_difference_stream(&ctx, vec![p2], vec![p1])
+            .await?
+            .map_ok({
+                cloned!(ctx, small_repo);
+                move |cs| {
+                    cloned!(ctx, small_repo);
+                    async move { Ok(cs.load(&ctx, small_repo.blob_repo.repo_blobstore()).await?) }
+                }
+            })
+            .try_buffered(100)
+            .try_collect::<Vec<_>>()
+            .await?
+    } else {
+        DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+            ctx.clone(),
+            &fetcher,
+            small_repo.skiplist_index.clone(),
+            vec![p2],
+            vec![p1],
+        )
+        .map({
             cloned!(ctx, small_repo);
-            async move { cs.load(&ctx, small_repo.blob_repo.repo_blobstore()).await }
-                .boxed()
-                .compat()
-                .from_err()
-        }
-    })
-    .buffered(100)
-    .collect()
-    .compat()
-    .await?;
+            move |cs| {
+                cloned!(ctx, small_repo);
+                async move { cs.load(&ctx, small_repo.blob_repo.repo_blobstore()).await }
+                    .boxed()
+                    .compat()
+                    .from_err()
+            }
+        })
+        .buffered(100)
+        .collect()
+        .compat()
+        .await?
+    };
 
     Ok(new_branch.into_iter().rev().collect())
 }

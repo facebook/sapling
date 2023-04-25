@@ -62,6 +62,7 @@ use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
 use cmdlib::monitoring;
 use cmdlib_x_repo::create_commit_syncer_from_matches;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::types::Source;
 use cross_repo_sync::types::Target;
@@ -88,6 +89,7 @@ use mutable_counters::MutableCountersRef;
 use regex::Regex;
 use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
 use slog::debug;
@@ -127,7 +129,9 @@ pub trait Repo = cross_repo_sync::Repo
     + ChangesetsArc
     + FilenodesArc
     + BonsaiHgMappingArc
-    + MutableCountersRef;
+    + MutableCountersRef
+    + RepoIdentityRef
+    + CommitGraphRef;
 
 fn print_error(ctx: CoreContext, error: &Error) {
     error!(ctx.logger(), "{}", error);

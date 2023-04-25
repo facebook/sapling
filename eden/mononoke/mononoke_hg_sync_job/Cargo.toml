@@ -32,6 +32,7 @@ changesets = { version = "0.1.0", path = "../changesets" }
 clap-old = { package = "clap", version = "2.33" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
+commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../server/context" }
 dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
 executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }
@@ -78,6 +79,7 @@ tempfile = "3.5"
 thiserror = "1.0.36"
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
+tunables = { version = "0.1.0", path = "../tunables" }
 
 [dev-dependencies]
 assert_matches = "1.5"

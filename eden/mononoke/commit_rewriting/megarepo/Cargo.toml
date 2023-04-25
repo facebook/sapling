@@ -26,6 +26,7 @@ clap = "2.33"
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 cmdlib_x_repo = { version = "0.1.0", path = "../../cmdlib/x_repo" }
+commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 commit_transformation = { version = "0.1.0", path = "../../megarepo_api/commit_transformation" }
 context = { version = "0.1.0", path = "../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../cross_repo_sync" }
@@ -59,6 +60,7 @@ sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 synced_commit_mapping = { version = "0.1.0", path = "../synced_commit_mapping" }
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
+tunables = { version = "0.1.0", path = "../../tunables" }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 
 [dev-dependencies]
