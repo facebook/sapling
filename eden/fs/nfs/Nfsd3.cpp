@@ -2117,9 +2117,7 @@ Nfsd3::~Nfsd3() {
 }
 
 folly::SemiFuture<FsStopDataPtr> Nfsd3::getStopFuture() {
-  // TODO: There's a memory-safety bug in Nfsd3 shutdown which requires one
-  // extra turn of the EventBase.
-  return stopPromise_.getSemiFuture().defer([](auto p) { return p; });
+  return stopPromise_.getSemiFuture();
 }
 
 bool Nfsd3::takeoverStop() {
