@@ -41,8 +41,10 @@ class MockFileChangeProcessor {
     throwException_ = throwException;
   }
 
-  void
-  operator()(folly::File&& f, int errorNum, AbsolutePathPiece /* unused */) {
+  void operator()(
+      const folly::File& f,
+      int errorNum,
+      AbsolutePathPiece /* unused */) {
     callbackCount_++;
     errorNum_ = errorNum;
     fileContents_ = "";

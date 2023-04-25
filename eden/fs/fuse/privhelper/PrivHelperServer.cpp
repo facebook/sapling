@@ -67,11 +67,11 @@ PrivHelperServer::PrivHelperServer() {}
 
 PrivHelperServer::~PrivHelperServer() {}
 
-void PrivHelperServer::init(folly::File&& socket, uid_t uid, gid_t gid) {
+void PrivHelperServer::init(folly::File socket, uid_t uid, gid_t gid) {
   initPartial(std::move(socket), uid, gid);
 }
 
-void PrivHelperServer::initPartial(folly::File&& socket, uid_t uid, gid_t gid) {
+void PrivHelperServer::initPartial(folly::File socket, uid_t uid, gid_t gid) {
   // Make sure init() is only called once.
   XCHECK_EQ(uid_, std::numeric_limits<uid_t>::max());
   XCHECK_EQ(gid_, std::numeric_limits<gid_t>::max());
@@ -979,7 +979,7 @@ UnixSocket::Message PrivHelperServer::processSetLogFileMsg(
   return makeResponse();
 }
 
-void PrivHelperServer::setLogFile(folly::File&& logFile) {
+void PrivHelperServer::setLogFile(folly::File logFile) {
   // Replace stdout and stderr with the specified file descriptor
   folly::checkUnixError(dup2(logFile.fd(), STDOUT_FILENO));
   folly::checkUnixError(dup2(logFile.fd(), STDERR_FILENO));
@@ -1148,7 +1148,7 @@ UnixSocket::Message PrivHelperServer::makeResponse() {
   return msg;
 }
 
-UnixSocket::Message PrivHelperServer::makeResponse(folly::File&& file) {
+UnixSocket::Message PrivHelperServer::makeResponse(folly::File file) {
   auto response = makeResponse();
   response.files.push_back(std::move(file));
   return response;

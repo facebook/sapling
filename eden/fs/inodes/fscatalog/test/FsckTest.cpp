@@ -91,7 +91,7 @@ class TestFile {
   TestFile(
       std::shared_ptr<TestOverlay> overlay,
       InodeNumber number,
-      folly::File&& file)
+      folly::File file)
       : overlay_(std::move(overlay)), number_(number), file_(std::move(file)) {}
 
   InodeNumber number() const {

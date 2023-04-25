@@ -47,14 +47,14 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
    *
    * This calls folly::init().
    */
-  virtual void init(folly::File&& socket, uid_t uid, gid_t gid);
+  virtual void init(folly::File socket, uid_t uid, gid_t gid);
 
   /**
    * Initialize the PrivHelperServer without calling folly::init().
    *
    * This can be used if folly::init() has already been called.
    */
-  void initPartial(folly::File&& socket, uid_t uid, gid_t gid);
+  void initPartial(folly::File socket, uid_t uid, gid_t gid);
 
   /**
    * Run the PrivHelperServer main loop.
@@ -76,7 +76,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       folly::io::Cursor& cursor,
       UnixSocket::Message& request);
   UnixSocket::Message makeResponse();
-  UnixSocket::Message makeResponse(folly::File&& file);
+  UnixSocket::Message makeResponse(folly::File file);
 
   UnixSocket::Message processMountMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processMountNfsMsg(folly::io::Cursor& cursor);
@@ -120,7 +120,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   // Both clientPath and mountPath must be existing directories.
   virtual void bindMount(const char* clientPath, const char* mountPath);
   virtual void bindUnmount(const char* mountPath);
-  virtual void setLogFile(folly::File&& logFile);
+  virtual void setLogFile(folly::File logFile);
   virtual void setDaemonTimeout(std::chrono::nanoseconds duration);
 
   std::unique_ptr<folly::EventBase> eventBase_;

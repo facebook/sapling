@@ -74,7 +74,7 @@ class MockMountDelegate : public FakePrivHelper::MountDelegate {
   FOLLY_NODISCARD folly::Future<folly::File> fuseMount() override;
   FOLLY_NODISCARD folly::Future<folly::Unit> fuseUnmount() override;
 
-  void setMountFuseDevice(folly::File&&);
+  void setMountFuseDevice(folly::File);
 
   void makeMountFail();
 
@@ -1200,7 +1200,7 @@ folly::Future<folly::Unit> MockMountDelegate::fuseUnmount() {
   }
 }
 
-void MockMountDelegate::setMountFuseDevice(folly::File&& fuseDevice) {
+void MockMountDelegate::setMountFuseDevice(folly::File fuseDevice) {
   XCHECK(!mountFuture_.valid())
       << __func__ << " unexpectedly called more than once";
   XCHECK(!wasFuseMountEverCalled())

@@ -71,7 +71,7 @@ class PrivHelperClientImpl : public PrivHelper,
                              private UnixSocket::SendCallback,
                              private EventBase::OnDestructionCallback {
  public:
-  PrivHelperClientImpl(File&& conn, std::optional<SpawnedProcess> proc)
+  PrivHelperClientImpl(File conn, std::optional<SpawnedProcess> proc)
       : helperProc_(std::move(proc)),
         state_{ThreadSafeData{
             Status::NOT_STARTED,
@@ -686,7 +686,7 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
       std::move(clientConn), std::move(proc));
 }
 
-unique_ptr<PrivHelper> createTestPrivHelper(File&& conn) {
+unique_ptr<PrivHelper> createTestPrivHelper(File conn) {
   return make_unique<PrivHelperClientImpl>(std::move(conn), std::nullopt);
 }
 

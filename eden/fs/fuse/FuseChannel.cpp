@@ -783,7 +783,7 @@ void FuseChannel::sendRawReply(const iovec iov[], size_t count) const {
 }
 
 FuseChannel::FuseChannel(
-    folly::File&& fuseDevice,
+    folly::File fuseDevice,
     AbsolutePathPiece mountPath,
     size_t numThreads,
     std::unique_ptr<FuseDispatcher> dispatcher,

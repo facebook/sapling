@@ -60,7 +60,7 @@ class CachedParsedFileMonitor {
    */
   folly::Expected<T, int> getFileContents() {
     fileChangeMonitor_.invokeIfUpdated(
-        [this](folly::File&& f, int errorNum, AbsolutePathPiece filePath) {
+        [this](folly::File f, int errorNum, AbsolutePathPiece filePath) {
           processUpdatedFile(std::move(f), errorNum, filePath);
         });
     if (lastErrno_) {
@@ -70,7 +70,7 @@ class CachedParsedFileMonitor {
   }
 
   void processUpdatedFile(
-      folly::File&& f,
+      const folly::File& f,
       int errorNum,
       AbsolutePathPiece filePath) {
     updateCount_++;

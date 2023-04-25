@@ -2108,7 +2108,7 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
                   if (auto& takeoverServer =
                           this->getServerState()->getNfsServer()) {
                     return takeoverServer->takeoverStop().deferValue(
-                        [](folly::File&& file) {
+                        [](folly::File file) {
                           return std::make_optional<folly::File>(
                               std::move(file));
                         });

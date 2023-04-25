@@ -157,7 +157,7 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
     std::move(future).get(1s);
   }
 
-  void setLogFile(folly::File&& logFile) override {
+  void setLogFile(folly::File logFile) override {
     auto data = data_.wlock();
     data->logFiles.push_back(std::move(logFile));
   }
@@ -559,7 +559,7 @@ TEST_F(PrivHelperTest, detachEventBase) {
 
     bool success = false;
     std::move(result)
-        .thenValue([&success](folly::File&&) { success = true; })
+        .thenValue([&success](folly::File) { success = true; })
         .ensure([&evb] { evb.terminateLoopSoon(); });
 
     filePromise.setValue(File(tempFile.fd(), /* ownsFD */ false));

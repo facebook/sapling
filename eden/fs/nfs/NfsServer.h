@@ -49,7 +49,7 @@ class NfsServer {
    * See Mountd::initialize for the meaning of registerMountdWithRpcbind.
    */
   void initialize(folly::SocketAddress addr, bool registerMountdWithRpcbind);
-  void initialize(folly::File&& socket);
+  void initialize(folly::File socket);
 
   /**
    * Return value of registerMount.

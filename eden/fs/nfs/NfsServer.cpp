@@ -48,7 +48,7 @@ void NfsServer::initialize(
   }
 }
 
-void NfsServer::initialize(folly::File&& socket) {
+void NfsServer::initialize(folly::File socket) {
   mountd_.initialize(std::move(socket));
   if (rpcbindd_) {
     rpcbindd_->initialize();

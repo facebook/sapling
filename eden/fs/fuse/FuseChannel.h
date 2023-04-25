@@ -236,7 +236,7 @@ class FuseChannel final : public FsChannel {
    * kernel and set up the thread pool.
    */
   FuseChannel(
-      folly::File&& fuseDevice,
+      folly::File fuseDevice,
       AbsolutePathPiece mountPath,
       size_t numThreads,
       std::unique_ptr<FuseDispatcher> dispatcher,

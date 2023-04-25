@@ -38,7 +38,7 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv);
  *
  * This is primarily intended for use in unit tests.
  */
-std::unique_ptr<PrivHelper> createTestPrivHelper(folly::File&& conn);
+std::unique_ptr<PrivHelper> createTestPrivHelper(folly::File conn);
 
 #endif // !_WIN32
 
