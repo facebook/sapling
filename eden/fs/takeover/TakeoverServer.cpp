@@ -24,6 +24,7 @@
 
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
+#include "eden/fs/utils/EventBaseState.h"
 #include "eden/fs/utils/FutureUnixSocket.h"
 
 using apache::thrift::CompactSerializer;
@@ -53,9 +54,12 @@ class TakeoverServer::ConnHandler {
       const std::set<int32_t>& supportedVersions,
       const uint64_t supportedCapabilities)
       : server_{server},
-        socket_{server_->getEventBase(), std::move(socket)},
         supportedCapabilities_{supportedCapabilities},
-        supportedVersions_{supportedVersions} {}
+        supportedVersions_{supportedVersions},
+        state_{
+            server->getEventBase(),
+            server->getEventBase(),
+            std::move(socket)} {}
 
   /**
    * start() begins processing data on this connection.
@@ -82,21 +86,30 @@ class TakeoverServer::ConnHandler {
     throw std::runtime_error(msg);
   }
 
-  bool shouldPing_{false};
-  TakeoverServer* const server_{nullptr};
-  FutureUnixSocket socket_;
+  struct State {
+    State(folly::EventBase* evb, folly::File socket)
+        : socket{evb, std::move(socket)} {}
+
+    bool shouldPing = false;
+    // FutureUnixSocket must always be accessed on the EventBase.
+    FutureUnixSocket socket;
+    int32_t protocolVersion =
+        TakeoverData::kTakeoverProtocolVersionNeverSupported;
+    uint64_t protocolCapabilities = 0;
+  };
+
+  TakeoverServer* const server_;
   const uint64_t supportedCapabilities_;
   const std::set<int32_t>& supportedVersions_;
-  int32_t protocolVersion_{
-      TakeoverData::kTakeoverProtocolVersionNeverSupported};
-  uint64_t protocolCapabilities_{0};
+  EventBaseState<State> state_;
 };
 
 Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
   // Check the remote endpoint's credentials.
   // We only allow transferring our mount points to another process
   // owned by the same user.
-  auto uid = socket_.getRemoteUID();
+  auto& state = state_.get();
+  auto uid = state.socket.getRemoteUID();
   if (uid != getuid()) {
     throwf<std::runtime_error>(
         "invalid takeover request from incorrect user: current UID={}, got request from UID {}",
@@ -112,7 +125,7 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
   // version data; in practice it will appear immediately or will
   // never be received.
   auto timeout = std::chrono::seconds(5);
-  return socket_.receive(timeout)
+  return state.socket.receive(timeout)
       .thenTry([this](folly::Try<UnixSocket::Message>&& msg) {
         if (msg.hasException()) {
           // most likely cause: timed out waiting for the client to
@@ -147,21 +160,26 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
               clientVersionList,
               serverVersionList);
         }
+
+        auto& state = state_.get();
+
         // Initiate the takeover shutdown.
-        protocolVersion_ = supported.value();
+        state.protocolVersion = supported.value();
         auto protocolCapabilities =
-            TakeoverData::versionToCapabilites(protocolVersion_);
+            TakeoverData::versionToCapabilites(state.protocolVersion);
         if (protocolCapabilities & TakeoverCapabilities::CAPABILITY_MATCHING) {
-          protocolCapabilities_ = TakeoverData::computeCompatibleCapabilities(
-              *query.capabilities_ref(), supportedCapabilities_);
+          state.protocolCapabilities =
+              TakeoverData::computeCompatibleCapabilities(
+                  *query.capabilities_ref(), supportedCapabilities_);
         } else {
-          protocolCapabilities_ = protocolCapabilities;
+          state.protocolCapabilities = protocolCapabilities;
         }
 
-        XLOG(DBG7) << "Protocol version: " << protocolVersion_
-                   << "; Protocol Capabilities: " << protocolCapabilities_;
+        XLOG(DBG7) << "Protocol version: " << state.protocolVersion
+                   << "; Protocol Capabilities: " << state.protocolCapabilities;
 
-        shouldPing_ = (protocolCapabilities_ & TakeoverCapabilities::PING);
+        state.shouldPing =
+            (state.protocolCapabilities & TakeoverCapabilities::PING);
         return server_->getTakeoverHandler()->startTakeoverShutdown();
       })
       .via(server_->eventBase_)
@@ -169,7 +187,7 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
         if (!data.hasValue()) {
           return sendError(data.exception());
         }
-        if (shouldPing_) {
+        if (state_.get().shouldPing) {
           XLOG(DBG7) << "sending ready ping to takeover client";
           return pingThenSendTakeoverData(std::move(data.value()));
         } else {
@@ -182,10 +200,11 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
 Future<Unit> TakeoverServer::ConnHandler::sendError(
     const folly::exception_wrapper& error) {
   XLOG(ERR) << "error while performing takeover shutdown: " << error;
-  if (socket_) {
+  auto& state = state_.get();
+  if (state.socket) {
     // Send the error to the client.
-    return socket_.send(
-        TakeoverData::serializeError(protocolCapabilities_, error));
+    return state.socket.send(
+        TakeoverData::serializeError(state.protocolCapabilities, error));
   }
   // Socket was closed (likely by a receive timeout above), so don't
   // try to send again in here lest we break; instead just pass up
@@ -203,7 +222,9 @@ Future<Unit> TakeoverServer::ConnHandler::pingThenSendTakeoverData(
   UnixSocket::Message msg;
   msg.data = TakeoverData::serializePing();
 
-  return socket_.send(std::move(msg))
+  auto& state = state_.get();
+
+  return state.socket.send(std::move(msg))
       .thenValue([this](auto&&) {
         // Wait for the ping reply. Here we just give it a few seconds to
         // respond.
@@ -213,7 +234,8 @@ Future<Unit> TakeoverServer::ConnHandler::pingThenSendTakeoverData(
       .via(server_->eventBase_)
       .thenValue([this](auto&&) {
         auto timeout = std::chrono::seconds(FLAGS_pingReceiveTimeout);
-        return socket_.receive(timeout);
+        auto& state = state_.get();
+        return state.socket.receive(timeout);
       })
       .thenTry([this, data = std::move(data)](
                    folly::Try<UnixSocket::Message>&& msg) mutable {
@@ -241,23 +263,25 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
   // lock is released so the client can take over.
   server_->getTakeoverHandler()->closeStorage();
 
+  auto& state = state_.get();
+
   UnixSocket::Message msg;
   try {
-    data.serialize(protocolCapabilities_, msg);
+    data.serialize(state.protocolCapabilities, msg);
     for (auto& file : msg.files) {
       XLOG(DBG7) << "sending fd for takeover: " << file.fd();
     }
   } catch (...) {
     auto ew = folly::exception_wrapper{std::current_exception()};
     data.takeoverComplete.setException(ew);
-    return socket_.send(
-        TakeoverData::serializeError(protocolCapabilities_, ew));
+    return state.socket.send(
+        TakeoverData::serializeError(state.protocolCapabilities, ew));
   }
 
   XLOG(INFO) << "Sending takeover data to new process: "
              << msg.data.computeChainDataLength() << " bytes";
 
-  return socket_.send(std::move(msg))
+  return state.socket.send(std::move(msg))
       .thenTry([promise = std::move(data.takeoverComplete)](
                    folly::Try<Unit>&& sendResult) mutable {
         if (sendResult.hasException()) {
