@@ -381,7 +381,7 @@ mod test {
         .await?;
         // Create a repo with a few empty commits in a row
         verify_repo(fb, || async {
-            let repo: TestRepo = test_repo_factory::build_empty(fb).unwrap();
+            let repo: TestRepo = test_repo_factory::build_empty(fb).await.unwrap();
             let ctx = CoreContext::test_mock(fb);
             let root_empty = CreateCommitContext::new_root(&ctx, &repo)
                 .commit()
@@ -423,7 +423,7 @@ mod test {
         .await?;
 
         verify_repo(fb, || async {
-            let repo: TestRepo = test_repo_factory::build_empty(fb).unwrap();
+            let repo: TestRepo = test_repo_factory::build_empty(fb).await.unwrap();
             let ctx = CoreContext::test_mock(fb);
             let root = CreateCommitContext::new_root(&ctx, &repo)
                 .add_file("dir/subdir/to_replace", "one")
@@ -456,7 +456,7 @@ mod test {
 
         // Weird case - let's delete a file that was already replaced with a directory
         verify_repo(fb, || async {
-            let repo: TestRepo = test_repo_factory::build_empty(fb).unwrap();
+            let repo: TestRepo = test_repo_factory::build_empty(fb).await.unwrap();
             let ctx = CoreContext::test_mock(fb);
             let root = CreateCommitContext::new_root(&ctx, &repo)
                 .add_file("dir/subdir/to_replace", "one")
@@ -490,7 +490,7 @@ mod test {
 
         // Add renames
         verify_repo(fb, || async {
-            let repo: TestRepo = test_repo_factory::build_empty(fb).unwrap();
+            let repo: TestRepo = test_repo_factory::build_empty(fb).await.unwrap();
             let ctx = CoreContext::test_mock(fb);
             let root = CreateCommitContext::new_root(&ctx, &repo)
                 .add_file("dir", "one")

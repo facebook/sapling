@@ -949,7 +949,7 @@ async fn test_file_hook_length(fb: FacebookInit) {
 #[fbinit::test]
 async fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
+    let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
     let root_id = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("dir/file", "dir/file")
         .add_file("dir-2/file", "dir-2/file")
@@ -1038,7 +1038,7 @@ async fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) -> Result<(
 #[fbinit::test]
 async fn test_cs_file_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
+    let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
     let root_id = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("file", "file")
         .add_file("dir/file", "dir/file")
@@ -1094,7 +1094,7 @@ async fn test_cs_file_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(
 #[fbinit::test]
 async fn test_cs_latest_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
+    let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
     let root_id = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("file", "file")
         .commit()
@@ -1162,7 +1162,7 @@ async fn test_file_hooks_with_blob_store(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     // Create an init a repo
     let (repo, bcs_id) = {
-        let repo: BasicTestRepo = test_repo_factory::build_empty(fb).unwrap();
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb).await.unwrap();
 
         let parent = create_commit(
             ctx.clone(),

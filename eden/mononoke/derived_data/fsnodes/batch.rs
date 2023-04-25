@@ -315,7 +315,7 @@ mod test {
     }
 
     async fn repo_with_merge(ctx: &CoreContext) -> Result<TestRepo, Error> {
-        let repo: TestRepo = TestRepoFactory::new(ctx.fb)?.build()?;
+        let repo: TestRepo = TestRepoFactory::new(ctx.fb)?.build().await?;
 
         let commit_map = create_from_dag(
             ctx,

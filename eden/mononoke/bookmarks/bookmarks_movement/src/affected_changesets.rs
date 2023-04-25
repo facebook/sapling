@@ -590,7 +590,7 @@ mod test {
     #[fbinit::test]
     async fn test_find_draft_ancestors_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: InnerRepo = test_repo_factory::build_empty(fb)?;
+        let repo: InnerRepo = test_repo_factory::build_empty(fb).await?;
         let mapping = create_from_dag(
             &ctx,
             repo.as_blob_repo(),
@@ -644,7 +644,7 @@ mod test {
     #[fbinit::test]
     async fn test_find_draft_ancestors_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: InnerRepo = test_repo_factory::build_empty(fb)?;
+        let repo: InnerRepo = test_repo_factory::build_empty(fb).await?;
         let mapping = create_from_dag(
             &ctx,
             repo.as_blob_repo(),

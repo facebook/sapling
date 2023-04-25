@@ -68,7 +68,8 @@ async fn pushrebase_populates_git_mapping(fb: FacebookInit) -> Result<(), Error>
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = TestRepoFactory::new(fb)?
         .with_id(RepositoryId::new(1))
-        .build()?;
+        .build()
+        .await?;
     borrowed!(ctx, repo);
     let mapping = repo.bonsai_git_mapping();
 

@@ -125,6 +125,8 @@ use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::ArcSyncedCommitMapping;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use unodes::RootUnodeManifestId;
+use warm_bookmarks_cache::ArcBookmarksCache;
+use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
 use wireproto_handler::ArcRepoHandlerBase;
 use wireproto_handler::PushRedirectorBase;
 use wireproto_handler::RepoHandlerBase;
@@ -198,11 +200,11 @@ pub fn default_test_repo_config() -> RepoConfig {
 ///
 /// This covers the simplest case.  For more complicated repositories, use
 /// `TestRepoFactory`.
-pub fn build_empty<R>(fb: FacebookInit) -> Result<R>
+pub async fn build_empty<R>(fb: FacebookInit) -> Result<R>
 where
-    R: for<'builder> facet::Buildable<TestRepoFactoryBuilder<'builder>>,
+    R: for<'builder> facet::AsyncBuildable<'builder, TestRepoFactoryBuilder<'builder>>,
 {
-    Ok(TestRepoFactory::new(fb)?.build()?)
+    Ok(TestRepoFactory::new(fb)?.build().await?)
 }
 
 impl TestRepoFactory {
@@ -761,5 +763,26 @@ impl TestRepoFactory {
         let sql_storage = SqlCommitGraphStorageBuilder::with_sqlite_in_memory()?
             .build(RendezVousOptions::for_test(), repo_identity.id());
         Ok(Arc::new(CommitGraph::new(Arc::new(sql_storage))))
+    }
+
+    /// Warm bookmarks cache
+    pub async fn warm_bookmarks_cache(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        bookmarks: &ArcBookmarks,
+        bookmark_update_log: &ArcBookmarkUpdateLog,
+        repo_derived_data: &ArcRepoDerivedData,
+        phases: &ArcPhases,
+    ) -> Result<ArcBookmarksCache> {
+        let ctx = CoreContext::test_mock(self.fb);
+        let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(
+            ctx,
+            bookmarks.clone(),
+            bookmark_update_log.clone(),
+            repo_identity.clone(),
+        );
+        warm_bookmarks_cache_builder.add_all_warmers(repo_derived_data, phases)?;
+        warm_bookmarks_cache_builder.wait_until_warmed();
+        Ok(Arc::new(warm_bookmarks_cache_builder.build().await?))
     }
 }

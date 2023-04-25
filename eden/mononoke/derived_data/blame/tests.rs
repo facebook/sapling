@@ -191,7 +191,8 @@ async fn test_blame_version(fb: FacebookInit, version: BlameVersion) -> Result<(
                 .expect("No enabled derived data types config")
                 .blame_version = version
         })
-        .build()?;
+        .build()
+        .await?;
     borrowed!(ctx, repo);
 
     let c0 = create_commit(
@@ -293,7 +294,7 @@ async fn test_blame_size_rejected_version(
     version: BlameVersion,
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: TestRepo = test_repo_factory::build_empty(fb).unwrap();
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await.unwrap();
     borrowed!(ctx, repo);
     let file1 = "file1";
     let content = "content";
@@ -320,7 +321,8 @@ async fn test_blame_size_rejected_version(
                 .expect("No enabled derived data types config")
                 .blame_filesize_limit = Some(4);
         })
-        .build()?;
+        .build()
+        .await?;
 
     let file2 = "file2";
     let c2 = CreateCommitContext::new_root(ctx, &repo)
@@ -352,7 +354,8 @@ async fn test_blame_copy_source(fb: FacebookInit) -> Result<(), Error> {
                 .expect("No enabled derived data types config")
                 .blame_version = BlameVersion::V2
         })
-        .build()?;
+        .build()
+        .await?;
     borrowed!(ctx, repo);
 
     let c1 = CreateCommitContext::new_root(ctx, &repo)

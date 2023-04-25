@@ -753,7 +753,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_rewrite_commit(fb: FacebookInit) -> Result<(), Error> {
-        let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build()?;
+        let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build().await?;
         let ctx = CoreContext::test_mock(fb);
         let first = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("path", "path")

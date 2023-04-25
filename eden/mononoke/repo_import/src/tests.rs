@@ -99,7 +99,7 @@ mod tests {
         MPath::new(s).unwrap()
     }
 
-    fn create_repo(fb: FacebookInit, id: i32) -> Result<Repo> {
+    async fn create_repo(fb: FacebookInit, id: i32) -> Result<Repo> {
         let repo: Repo = TestRepoFactory::new(fb)?
             .with_config_override(|config| {
                 config
@@ -110,7 +110,8 @@ mod tests {
                     .remove(TreeHandle::NAME);
             })
             .with_id(RepositoryId::new(id))
-            .build()?;
+            .build()
+            .await?;
         Ok(repo)
     }
 
@@ -150,7 +151,7 @@ mod tests {
     #[fbinit::test]
     async fn test_move_bookmark(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: Repo = test_repo_factory::build_empty(fb)?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
         let mut recovery_fields = create_mock_recovery_fields();
         let call_sign = Some("FBS".to_string());
         let checker_flags = CheckerFlags {
@@ -210,7 +211,7 @@ mod tests {
     #[fbinit::test]
     async fn test_move_bookmark_with_existing_bookmark(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: Repo = test_repo_factory::build_empty(fb)?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
         let mut recovery_fields = create_mock_recovery_fields();
         let checker_flags = CheckerFlags {
             phab_check_disabled: true,
@@ -284,7 +285,7 @@ mod tests {
     #[fbinit::test]
     async fn test_hg_sync_check(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: Repo = test_repo_factory::build_empty(fb)?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
         let checker_flags = CheckerFlags {
             phab_check_disabled: true,
             x_repo_check_disabled: true,
@@ -345,7 +346,7 @@ mod tests {
     #[fbinit::test]
     async fn test_merge_push_commit(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = create_repo(fb, 1)?;
+        let repo = create_repo(fb, 1).await?;
 
         let master_cs_id = CreateCommitContext::new_root(&ctx, repo.as_blob_repo())
             .add_file("a", "a")
@@ -486,7 +487,7 @@ mod tests {
         let config_store = ConfigStore::new(test_source.clone(), Duration::from_millis(2), None);
         let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
 
-        let repo0 = create_repo(fb, 0)?;
+        let repo0 = create_repo(fb, 0).await?;
 
         insert_repo_config(0, &mut repos);
         assert!(
@@ -495,7 +496,7 @@ mod tests {
                 .is_none()
         );
 
-        let repo1 = create_repo(fb, 1)?;
+        let repo1 = create_repo(fb, 1).await?;
 
         insert_repo_config(1, &mut repos);
         assert!(
@@ -504,7 +505,7 @@ mod tests {
                 .is_some()
         );
 
-        let repo2 = create_repo(fb, 2)?;
+        let repo2 = create_repo(fb, 2).await?;
 
         insert_repo_config(2, &mut repos);
         assert!(
@@ -610,8 +611,8 @@ mod tests {
     async fn test_get_large_repo_setting(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
-        let large_repo = create_repo(fb, 0)?;
-        let small_repo_1 = create_repo(fb, 1)?;
+        let large_repo = create_repo(fb, 0).await?;
+        let small_repo_1 = create_repo(fb, 1).await?;
 
         let small_repo_setting_1 = RepoImportSetting {
             importing_bookmark: create_bookmark_name("importing_bookmark"),
@@ -638,7 +639,7 @@ mod tests {
 
         assert_eq!(expected_large_repo_setting_1, large_repo_setting_1);
 
-        let small_repo_2 = create_repo(fb, 2)?;
+        let small_repo_2 = create_repo(fb, 2).await?;
 
         let small_repo_setting_2 = RepoImportSetting {
             importing_bookmark: create_bookmark_name("importing_bookmark_2"),
@@ -684,8 +685,8 @@ mod tests {
     #[fbinit::test]
     async fn test_rewrite_file_paths_and_backsync(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let large_repo = create_repo(fb, 0)?;
-        let small_repo = create_repo(fb, 1)?;
+        let large_repo = create_repo(fb, 0).await?;
+        let small_repo = create_repo(fb, 1).await?;
         let changesets = create_from_dag(
             &ctx,
             large_repo.as_blob_repo(),
@@ -807,7 +808,7 @@ mod tests {
     #[fbinit::test]
     async fn test_derive_bonsais_multiple_repos(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo_0 = create_repo(fb, 0)?;
+        let repo_0 = create_repo(fb, 0).await?;
 
         let repo_0_commits = create_from_dag(
             &ctx,
@@ -820,7 +821,7 @@ mod tests {
 
         let repo_0_cs_ids: Vec<ChangesetId> = repo_0_commits.values().copied().collect();
 
-        let repo_1 = create_repo(fb, 1)?;
+        let repo_1 = create_repo(fb, 1).await?;
         let repo_1_commits = create_from_dag(
             &ctx,
             repo_1.as_blob_repo(),
@@ -848,8 +849,8 @@ mod tests {
     #[fbinit::test]
     async fn test_rewrite_and_derive(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let large_repo = create_repo(fb, 0)?;
-        let small_repo = create_repo(fb, 1)?;
+        let large_repo = create_repo(fb, 0).await?;
+        let small_repo = create_repo(fb, 1).await?;
         let changesets = create_from_dag(
             &ctx,
             large_repo.as_blob_repo(),
@@ -926,8 +927,8 @@ mod tests {
     #[fbinit::test]
     async fn test_find_version_and_backsync(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let large_repo = create_repo(fb, 0)?;
-        let small_repo = create_repo(fb, 1)?;
+        let large_repo = create_repo(fb, 0).await?;
+        let small_repo = create_repo(fb, 1).await?;
 
         let root = CreateCommitContext::new_root(&ctx, large_repo.as_blob_repo())
             .add_file("random_dir/B/file", "text")

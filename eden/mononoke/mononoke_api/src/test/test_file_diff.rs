@@ -21,7 +21,7 @@ use crate::Repo;
 use crate::RepoContext;
 
 async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, ChangesetId>)> {
-    let blob_repo = test_repo_factory::build_empty(ctx.fb)?;
+    let blob_repo = test_repo_factory::build_empty(ctx.fb).await?;
     let changesets = create_from_dag_with_changes(
         ctx,
         &blob_repo,

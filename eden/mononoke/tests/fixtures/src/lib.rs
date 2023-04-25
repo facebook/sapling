@@ -174,13 +174,14 @@ pub trait TestRepoFixture {
             .with_id(RepositoryId::new(0))
             .with_name(Self::REPO_NAME.to_string())
             .build()
+            .await
             .unwrap();
         Self::initrepo(fb, &repo).await;
         repo
     }
 
     async fn get_custom_test_repo<
-        R: Repo + for<'builder> facet::Buildable<TestRepoFactoryBuilder<'builder>>,
+        R: Repo + for<'builder> facet::AsyncBuildable<'builder, TestRepoFactoryBuilder<'builder>>,
     >(
         fb: FacebookInit,
     ) -> R {
@@ -188,7 +189,7 @@ pub trait TestRepoFixture {
     }
 
     async fn get_custom_test_repo_with_id<
-        R: Repo + for<'builder> facet::Buildable<TestRepoFactoryBuilder<'builder>>,
+        R: Repo + for<'builder> facet::AsyncBuildable<'builder, TestRepoFactoryBuilder<'builder>>,
     >(
         fb: FacebookInit,
         id: RepositoryId,
@@ -198,6 +199,7 @@ pub trait TestRepoFixture {
             .with_id(id)
             .with_name(Self::REPO_NAME.to_string())
             .build()
+            .await
             .unwrap();
         Self::initrepo(fb, &repo).await;
         repo
@@ -223,6 +225,7 @@ pub trait TestRepoFixture {
             .with_id(id)
             .with_name(Self::REPO_NAME.to_string())
             .build()
+            .await
             .unwrap();
         Self::initrepo(fb, &repo.blob_repo).await;
         repo

@@ -296,7 +296,7 @@ mod tests {
     #[fbinit::test]
     async fn test_new_mapping_entries(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: InnerRepo = TestRepoFactory::new(fb)?.build()?;
+        let repo: InnerRepo = TestRepoFactory::new(fb)?.build().await?;
         let bookmark = BookmarkKey::new("main")?;
         borrowed!(ctx, repo);
 

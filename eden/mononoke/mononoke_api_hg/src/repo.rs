@@ -916,7 +916,7 @@ mod tests {
     async fn test_new_hg_context(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
 
-        let blob_repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let blob_repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
         let repo = Repo::new_test(ctx.clone(), blob_repo).await?;
         let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
 
@@ -929,7 +929,7 @@ mod tests {
     #[fbinit::test]
     async fn test_trees_under_path(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
-        let blob_repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let blob_repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         // Create test stack; child commit modifies 2 directories.
         let commit_1 = CreateCommitContext::new_root(&ctx, &blob_repo)

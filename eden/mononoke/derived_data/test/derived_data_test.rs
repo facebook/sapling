@@ -114,43 +114,43 @@ async fn test_derive_fixtures(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mut factory = make_test_repo_factory(fb);
 
-    let repo: TestRepo = factory.with_id(RepositoryId::new(1)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(1)).build().await?;
     BranchEven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: TestRepo = factory.with_id(RepositoryId::new(2)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(2)).build().await?;
     BranchUneven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: TestRepo = factory.with_id(RepositoryId::new(3)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(3)).build().await?;
     BranchWide::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: TestRepo = factory.with_id(RepositoryId::new(4)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(4)).build().await?;
     Linear::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: TestRepo = factory.with_id(RepositoryId::new(5)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(5)).build().await?;
     ManyFilesDirs::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: TestRepo = factory.with_id(RepositoryId::new(6)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(6)).build().await?;
     MergeEven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: TestRepo = factory.with_id(RepositoryId::new(7)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(7)).build().await?;
     MergeUneven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: TestRepo = factory.with_id(RepositoryId::new(8)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(8)).build().await?;
     UnsharedMergeEven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: TestRepo = factory.with_id(RepositoryId::new(9)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(9)).build().await?;
     UnsharedMergeUneven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: TestRepo = factory.with_id(RepositoryId::new(10)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(10)).build().await?;
     ManyDiamonds::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
@@ -162,7 +162,7 @@ async fn test_derive_fixtures(fb: FacebookInit) -> Result<()> {
 /// derived changesets do not have their parents derived).
 async fn test_gapped_derivation(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: TestRepo = make_test_repo_factory(fb).build()?;
+    let repo: TestRepo = make_test_repo_factory(fb).build().await?;
     Linear::initrepo(fb, &repo).await;
 
     let master = repo
@@ -219,7 +219,7 @@ async fn test_gapped_derivation(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_leases(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: TestRepo = make_test_repo_factory(fb).build()?;
+    let repo: TestRepo = make_test_repo_factory(fb).build().await?;
     Linear::initrepo(fb, &repo).await;
 
     let master = repo
@@ -320,7 +320,8 @@ async fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: TestRepo = make_test_repo_factory(fb)
         .with_derived_data_lease(|| Arc::new(FailingLease))
-        .build()?;
+        .build()
+        .await?;
     Linear::initrepo(fb, &repo).await;
 
     let master = repo
@@ -359,7 +360,7 @@ async fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_parallel_derivation(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: TestRepo = make_test_repo_factory(fb).build()?;
+    let repo: TestRepo = make_test_repo_factory(fb).build().await?;
 
     // Create a commit with lots of parents, and make each derivation take
     // 2 seconds.  Check that derivations happen in parallel by ensuring
@@ -426,7 +427,7 @@ async fn ensure_tunables_disable_derivation(
 /// the appropriate values in tunables.
 async fn test_cancelling_slow_derivation(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: TestRepo = make_test_repo_factory(fb).build()?;
+    let repo: TestRepo = make_test_repo_factory(fb).build().await?;
 
     let create_tunables = || {
         let tunables = MononokeTunables::default();

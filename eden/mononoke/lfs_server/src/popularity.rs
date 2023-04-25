@@ -210,7 +210,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_disabled(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = RepositoryRequestContext::test_builder(fb)?.build()?;
+        let ctx = RepositoryRequestContext::test_builder(fb).await?.build()?;
         let ctr = DummyCounter::default();
 
         assert!(allow_consistent_routing(&ctx, dummy(None), ctr).await);
@@ -227,7 +227,8 @@ mod test {
             threshold: 10,
         });
 
-        let ctx = RepositoryRequestContext::test_builder(fb)?
+        let ctx = RepositoryRequestContext::test_builder(fb)
+            .await?
             .config(config)
             .build()?;
         let ctr = DummyCounter::default();
@@ -250,7 +251,8 @@ mod test {
             threshold: 10,
         });
 
-        let ctx = RepositoryRequestContext::test_builder(fb)?
+        let ctx = RepositoryRequestContext::test_builder(fb)
+            .await?
             .config(config)
             .build()?;
 
@@ -268,7 +270,8 @@ mod test {
             threshold: 10,
         });
 
-        let ctx = RepositoryRequestContext::test_builder(fb)?
+        let ctx = RepositoryRequestContext::test_builder(fb)
+            .await?
             .config(config)
             .build()?;
 

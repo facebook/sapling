@@ -355,7 +355,7 @@ fn create_large_to_small_commit_syncer(
 #[fbinit::test]
 async fn test_sync_parentage(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb)?;
+    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).await?;
     Linear::initrepo(fb, &small_repo).await;
     let config =
         create_small_to_large_commit_syncer(&ctx, small_repo, megarepo.clone(), "linear", mapping)?;
@@ -438,7 +438,8 @@ async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let megarepo: TestRepo = TestRepoFactory::new(fb)?
         .with_id(RepositoryId::new(1))
-        .build()?;
+        .build()
+        .await?;
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
     let linear: TestRepo = Linear::get_custom_test_repo(fb).await;
@@ -488,15 +489,15 @@ async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-fn prepare_repos_and_mapping(
+async fn prepare_repos_and_mapping(
     fb: FacebookInit,
 ) -> Result<(TestRepo, TestRepo, SqlSyncedCommitMapping), Error> {
     let metadata_con = SqliteConnection::open_in_memory()?;
     metadata_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
     let hg_mutation_con = SqliteConnection::open_in_memory()?;
     let mut factory = TestRepoFactory::with_sqlite_connection(fb, metadata_con, hg_mutation_con)?;
-    let megarepo = factory.with_id(RepositoryId::new(1)).build()?;
-    let small_repo = factory.with_id(RepositoryId::new(0)).build()?;
+    let megarepo = factory.with_id(RepositoryId::new(1)).build().await?;
+    let small_repo = factory.with_id(RepositoryId::new(0)).build().await?;
     let mapping = SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone());
     Ok((small_repo, megarepo, mapping))
 }
@@ -504,7 +505,7 @@ fn prepare_repos_and_mapping(
 #[fbinit::test]
 async fn test_sync_empty_commit(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb)?;
+    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).await?;
     Linear::initrepo(fb, &small_repo).await;
     let linear = small_repo;
 
@@ -573,7 +574,7 @@ async fn megarepo_copy_file(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
 #[fbinit::test]
 async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).unwrap();
+    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).await.unwrap();
     Linear::initrepo(fb, &small_repo).await;
     let linear = small_repo;
 
@@ -653,7 +654,7 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).unwrap();
+    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).await.unwrap();
     ManyFilesDirs::initrepo(fb, &small_repo).await;
     let repo = small_repo.clone();
 
@@ -795,7 +796,7 @@ async fn update_linear_1_file(ctx: CoreContext, repo: &TestRepo) -> ChangesetId 
 #[fbinit::test]
 async fn test_sync_parent_search(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb)?;
+    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).await?;
     Linear::initrepo(fb, &small_repo).await;
     let linear = small_repo;
 
@@ -915,7 +916,7 @@ async fn get_multiple_master_mapping_setup(
     Error,
 > {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).unwrap();
+    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).await.unwrap();
     Linear::initrepo(fb, &small_repo).await;
     let small_to_large_syncer = create_small_to_large_commit_syncer(
         &ctx,
@@ -1458,7 +1459,7 @@ async fn test_disabled_sync(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).unwrap();
+    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).await.unwrap();
     Linear::initrepo(fb, &small_repo).await;
     let small_to_large_syncer = create_small_to_large_commit_syncer(
         &ctx,
@@ -1560,7 +1561,7 @@ async fn prepare_commit_syncer_with_mapping_change(
     Error,
 > {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb)?;
+    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).await?;
     let (large_to_small_syncer, config_source) =
         create_large_to_small_commit_syncer_and_config_source(
             &ctx,
@@ -1750,8 +1751,8 @@ async fn merge_test_setup(
     let ctx = CoreContext::test_mock(fb);
     // Set up various structures
     let mut factory = TestRepoFactory::new(fb)?;
-    let large_repo: TestRepo = factory.with_id(RepositoryId::new(0)).build()?;
-    let small_repo: TestRepo = factory.with_id(RepositoryId::new(1)).build()?;
+    let large_repo: TestRepo = factory.with_id(RepositoryId::new(0)).build().await?;
+    let small_repo: TestRepo = factory.with_id(RepositoryId::new(1)).build().await?;
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
     let v1 = CommitSyncConfigVersion("v1".to_string());
     let v2 = CommitSyncConfigVersion("v2".to_string());
@@ -2067,7 +2068,7 @@ async fn test_no_accidental_preserved_roots(
 #[fbinit::test]
 async fn test_no_accidental_preserved_roots_large_to_small(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, large_repo, mapping) = prepare_repos_and_mapping(fb).unwrap();
+    let (small_repo, large_repo, mapping) = prepare_repos_and_mapping(fb).await.unwrap();
     let commit_sync_repos = CommitSyncRepos::LargeToSmall {
         small_repo: small_repo.clone(),
         large_repo: large_repo.clone(),
@@ -2078,7 +2079,7 @@ async fn test_no_accidental_preserved_roots_large_to_small(fb: FacebookInit) -> 
 #[fbinit::test]
 async fn test_no_accidental_preserved_roots_small_to_large(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, large_repo, mapping) = prepare_repos_and_mapping(fb).unwrap();
+    let (small_repo, large_repo, mapping) = prepare_repos_and_mapping(fb).await.unwrap();
     let commit_sync_repos = CommitSyncRepos::SmallToLarge {
         small_repo: small_repo.clone(),
         large_repo: large_repo.clone(),
@@ -2095,11 +2096,11 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
     let mapping = SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone());
 
     let large_repo_id = RepositoryId::new(0);
-    let large_repo: TestRepo = factory.with_id(large_repo_id).build()?;
+    let large_repo: TestRepo = factory.with_id(large_repo_id).build().await?;
     let first_small_repo_id = RepositoryId::new(1);
-    let first_smallrepo: TestRepo = factory.with_id(first_small_repo_id).build()?;
+    let first_smallrepo: TestRepo = factory.with_id(first_small_repo_id).build().await?;
     let second_small_repo_id = RepositoryId::new(2);
-    let second_smallrepo: TestRepo = factory.with_id(second_small_repo_id).build()?;
+    let second_smallrepo: TestRepo = factory.with_id(second_small_repo_id).build().await?;
 
     let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
 

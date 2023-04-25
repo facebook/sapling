@@ -23,7 +23,7 @@ use crate::Repo;
 use crate::RepoContext;
 
 async fn init_repo(ctx: &CoreContext) -> Result<RepoContext> {
-    let blob_repo = test_repo_factory::build_empty(ctx.fb)?;
+    let blob_repo = test_repo_factory::build_empty(ctx.fb).await?;
     let repo = Repo::new_test(ctx.clone(), blob_repo).await?;
     let repo_context = RepoContext::new_test(ctx.clone(), Arc::new(repo)).await?;
     Ok(repo_context)

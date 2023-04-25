@@ -55,7 +55,7 @@ impl MegarepoTest {
         let config = factory.repo_config();
         let repo_identity = factory.repo_identity(&config);
         let mutable_renames = factory.mutable_renames(&repo_identity)?;
-        let blobrepo: BlobRepo = factory.build()?;
+        let blobrepo: BlobRepo = factory.build().await?;
         let mononoke = Arc::new(
             Mononoke::new_test(ctx.clone(), vec![("repo".to_string(), blobrepo.clone())]).await?,
         );

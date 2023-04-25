@@ -137,10 +137,12 @@ mod test {
 
         let orig_repo: Repo = TestRepoFactory::new(fb)?
             .with_id(RepositoryId::new(0))
-            .build()?;
+            .build()
+            .await?;
         let darkstorm_repo: Repo = TestRepoFactory::new(fb)?
             .with_id(RepositoryId::new(1))
-            .build()?;
+            .build()
+            .await?;
 
         let e1 = BonsaiGlobalrevMappingEntry {
             bcs_id: ONES_CSID,

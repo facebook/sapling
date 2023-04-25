@@ -49,7 +49,7 @@ use crate::RepoContext;
 // c change the number of lines in a and b.
 // There are no subdirectories here.
 async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static str, ChangesetId>)> {
-    let blob_repo = test_repo_factory::build_empty(ctx.fb)?;
+    let blob_repo = test_repo_factory::build_empty(ctx.fb).await?;
     let mut changesets = HashMap::new();
 
     changesets.insert(

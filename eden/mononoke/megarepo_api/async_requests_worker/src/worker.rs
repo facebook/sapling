@@ -356,7 +356,7 @@ mod test {
     async fn test_request_stream_simple(fb: FacebookInit) -> Result<(), Error> {
         let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
         let ctx = CoreContext::test_mock(fb);
-        let blobrepo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let blobrepo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
         let mononoke =
             Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
 
@@ -399,7 +399,7 @@ mod test {
     async fn test_request_stream_clear_abandoned(fb: FacebookInit) -> Result<(), Error> {
         let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
         let ctx = CoreContext::test_mock(fb);
-        let blobrepo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let blobrepo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
         let mononoke =
             Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
 

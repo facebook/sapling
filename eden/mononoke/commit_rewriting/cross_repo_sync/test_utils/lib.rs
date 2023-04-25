@@ -196,9 +196,9 @@ pub async fn init_small_large_repo(
     Error,
 > {
     let mut factory = TestRepoFactory::new(ctx.fb)?;
-    let megarepo: TestRepo = factory.with_id(RepositoryId::new(1)).build()?;
+    let megarepo: TestRepo = factory.with_id(RepositoryId::new(1)).build().await?;
     let mapping = SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone());
-    let smallrepo: TestRepo = factory.with_id(RepositoryId::new(0)).build()?;
+    let smallrepo: TestRepo = factory.with_id(RepositoryId::new(0)).build().await?;
 
     let repos = CommitSyncRepos::SmallToLarge {
         small_repo: smallrepo.clone(),

@@ -240,9 +240,11 @@ mod test {
                    log_only: false,
                 }},
             ))))
-            .build()?;
+            .build()
+            .await?;
 
-        let ctx = RepositoryRequestContext::test_builder(fb)?
+        let ctx = RepositoryRequestContext::test_builder(fb)
+            .await?
             .repo(repo)
             .build()?;
 

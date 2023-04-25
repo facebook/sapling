@@ -970,14 +970,14 @@ mod test {
 
     #[fbinit::test]
     async fn test_resolve_missing(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = RepositoryRequestContext::test_builder(fb)?.build()?;
+        let ctx = RepositoryRequestContext::test_builder(fb).await?.build()?;
         assert_eq!(resolve_internal_object(&ctx, ONES_SHA256).await?, None);
         Ok(())
     }
 
     #[fbinit::test]
     async fn test_resolve_present(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = RepositoryRequestContext::test_builder(fb)?.build()?;
+        let ctx = RepositoryRequestContext::test_builder(fb).await?.build()?;
 
         let meta = filestore::store(
             ctx.repo.repo_blobstore(),
@@ -1043,7 +1043,7 @@ mod test {
 
         // First, have the filestore tell us what the hash for this blob would be, so we can create
         // a new repo and redact it.
-        let stub: Repo = factory.build()?;
+        let stub: Repo = factory.build().await?;
 
         let meta = filestore::store(
             stub.repo_blobstore(),
@@ -1062,9 +1062,11 @@ mod test {
                     log_only: false,
                 }
             }))))
-            .build()?;
+            .build()
+            .await?;
 
-        let ctx = RepositoryRequestContext::test_builder(fb)?
+        let ctx = RepositoryRequestContext::test_builder(fb)
+            .await?
             .repo(repo)
             .build()?;
 
@@ -1092,9 +1094,13 @@ mod test {
             hits: hits.clone(),
         };
 
-        let repo = factory.with_blobstore(Arc::new(hide_blobstore)).build()?;
+        let repo = factory
+            .with_blobstore(Arc::new(hide_blobstore))
+            .build()
+            .await?;
 
-        let ctx = RepositoryRequestContext::test_builder(fb)?
+        let ctx = RepositoryRequestContext::test_builder(fb)
+            .await?
             .repo(repo)
             .build()?;
 
@@ -1112,7 +1118,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_resolve_size(fb: FacebookInit) -> Result<(), Error> {
-        let repo: Repo = test_repo_factory::build_empty(fb)?;
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
 
         let meta = filestore::store(
             repo.repo_blobstore(),
@@ -1123,7 +1129,8 @@ mod test {
         )
         .await?;
 
-        let ctx = RepositoryRequestContext::test_builder(fb)?
+        let ctx = RepositoryRequestContext::test_builder(fb)
+            .await?
             .repo(repo)
             .build()?;
 

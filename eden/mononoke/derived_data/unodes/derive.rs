@@ -686,7 +686,7 @@ mod tests {
     async fn diamond_merge_unodes_v2(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mut factory = TestRepoFactory::new(fb)?;
-        let repo: TestRepo = factory.build()?;
+        let repo: TestRepo = factory.build().await?;
         let merged_files = "dir/file.txt";
         let root_commit = CreateCommitContext::new_root(&ctx, &repo)
             .add_file(merged_files, "a")
@@ -757,7 +757,8 @@ mod tests {
                     .expect("No enabled derived data types config")
                     .unode_version = UnodeVersion::V1;
             })
-            .build()?;
+            .build()
+            .await?;
         let (p1_unodes, merge_unodes) = find_unodes(ctx.clone(), repo.clone()).await?;
         assert_ne!(p1_unodes, merge_unodes);
 
@@ -787,7 +788,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_parent_order(fb: FacebookInit) -> Result<(), Error> {
-        let repo: TestRepo = test_repo_factory::build_empty(fb).unwrap();
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await.unwrap();
         let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
         let ctx = CoreContext::test_mock(fb);
 

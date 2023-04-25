@@ -1490,7 +1490,7 @@ mod tests {
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let factory = TestRepoFactory::new(fb)?;
-            let repo: BlobRepo = factory.build()?;
+            let repo: BlobRepo = factory.build().await?;
             Linear::initrepo(fb, &repo).await;
             // Bottom commit of the repo
             let parents = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"];
@@ -2658,7 +2658,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+            let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
             let p1 = CreateCommitContext::new_root(&ctx, &repo)
                 .add_file("p1", "some content")
@@ -2785,7 +2785,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+            let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
             // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
             // on top of master
@@ -2868,7 +2868,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+            let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
             // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
             // on top of master
@@ -2941,7 +2941,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+            let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
             // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
             // on top of master
@@ -3086,7 +3086,7 @@ mod tests {
     #[fbinit::test]
     async fn test_commit_validation(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         // Pushrebase hook that deletes "base" file from the list of file changes
         struct InvalidPushrebaseHook {}

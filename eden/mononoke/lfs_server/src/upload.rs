@@ -449,7 +449,8 @@ mod test {
 
     #[fbinit::test]
     async fn test_upload_from_client_discard_upstream(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = RepositoryRequestContext::test_builder(fb)?
+        let ctx = RepositoryRequestContext::test_builder(fb)
+            .await?
             .upstream_uri(None)
             .build()?;
 
@@ -471,7 +472,8 @@ mod test {
                 Memblob::default(),
                 ChaosOptions::new(NonZeroU32::new(1), NonZeroU32::new(1)),
             )))
-            .build()?;
+            .build()
+            .await?;
 
         let ctx = RepositoryRequestContext::test_builder_with_repo(fb, repo)?
             .upstream_uri(None)

@@ -1259,7 +1259,8 @@ mod tests {
         ));
         let repo: InnerRepo = TestRepoFactory::new(fb)?
             .with_blobstore(blobstore)
-            .build()?;
+            .build()
+            .await?;
         Linear::initrepo(fb, &repo.blob_repo).await;
         let ctx = CoreContext::test_mock(fb);
 
@@ -1909,7 +1910,7 @@ mod tests {
     #[fbinit::test]
     async fn test_single_bookmarks_no_history(fb: FacebookInit) -> Result<(), Error> {
         let factory = TestRepoFactory::new(fb)?;
-        let repo: InnerRepo = factory.build()?;
+        let repo: InnerRepo = factory.build().await?;
         Linear::initrepo(fb, &repo.blob_repo).await;
         let ctx = CoreContext::test_mock(fb);
 

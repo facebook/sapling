@@ -379,7 +379,7 @@ mod tests {
 
     async fn test_generate_filenodes_simple(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         let filename = "path";
         let commit = CreateCommitContext::new_root(&ctx, &repo)
             .add_file(filename, "content")
@@ -406,7 +406,7 @@ mod tests {
 
     async fn test_generate_filenodes_merge(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         let first_p1 = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("path1", "content")
             .commit()
@@ -435,7 +435,7 @@ mod tests {
 
     async fn test_generate_type_change(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         let parent = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("path", "content")
             .commit()
@@ -460,7 +460,7 @@ mod tests {
 
     async fn test_many_parents(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         let p1 = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("path1", "content")
             .commit()
@@ -501,7 +501,7 @@ mod tests {
 
     async fn test_derive_empty_commits(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         let parent_empty = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
 
         let child_empty = CreateCommitContext::new(&ctx, &repo, vec![parent_empty])
@@ -532,7 +532,7 @@ mod tests {
 
     async fn test_derive_only_empty_commits(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let parent_empty = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
         let child_empty = CreateCommitContext::new(&ctx, &repo, vec![parent_empty])
@@ -573,7 +573,7 @@ mod tests {
 
     async fn test_derive_disabled_filenodes(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         let cs = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
         let derived = repo
             .repo_derived_data()
@@ -595,9 +595,9 @@ mod tests {
     #[fbinit::test]
     async fn verify_batch_and_sequential_derive(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo1: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo1: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         Linear::initrepo(fb, &repo1).await;
-        let repo2: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo2: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         Linear::initrepo(fb, &repo2).await;
         let master_cs_id = resolve_cs_id(&ctx, &repo1, "master").await?;
         let mut cs_ids =
@@ -654,7 +654,8 @@ mod tests {
                     })
                 }
             })
-            .build()?;
+            .build()
+            .await?;
         Linear::initrepo(fb, &repo).await;
         let commit8 =
             resolve_cs_id(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await?;

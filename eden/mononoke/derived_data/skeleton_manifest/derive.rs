@@ -423,7 +423,7 @@ mod test {
     }
 
     async fn init_repo(ctx: &CoreContext) -> Result<(TestRepo, BTreeMap<String, ChangesetId>)> {
-        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).unwrap();
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await.unwrap();
         let changesets = create_from_dag_with_changes(
             ctx,
             &repo,

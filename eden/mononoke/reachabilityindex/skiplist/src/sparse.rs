@@ -287,7 +287,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let ctx = &ctx;
 
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let dag = create_from_dag(
             ctx,
@@ -327,7 +327,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let ctx = &ctx;
 
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let dag = create_from_dag(
             ctx,
@@ -367,7 +367,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let ctx = &ctx;
 
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let dag = create_from_dag(
             ctx,
@@ -415,7 +415,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let ctx = &ctx;
 
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let dag = create_from_dag(
             ctx,
@@ -461,7 +461,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let ctx = &ctx;
 
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let dag = create_from_dag(
             ctx,
@@ -523,7 +523,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let ctx = &ctx;
 
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let dag = create_from_dag(
             ctx,
@@ -569,7 +569,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let ctx = &ctx;
 
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let dag = create_from_dag(
             ctx,
@@ -613,7 +613,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let ctx = &ctx;
 
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let dag = create_from_dag(
             ctx,

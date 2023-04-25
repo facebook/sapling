@@ -49,7 +49,8 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
     let ctx = CoreContext::test_mock(fb);
     let repo: BlobRepo = TestRepoFactory::new(fb)?
         .with_id(RepositoryId::new(1))
-        .build()?;
+        .build()
+        .await?;
     borrowed!(ctx, repo);
 
     let root = CreateCommitContext::new_root(ctx, repo).commit().await?;
@@ -199,7 +200,8 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
     let ctx = CoreContext::test_mock(fb);
     let repo: BlobRepo = TestRepoFactory::new(fb)?
         .with_id(RepositoryId::new(1))
-        .build()?;
+        .build()
+        .await?;
     borrowed!(ctx, repo);
 
     let root = CreateCommitContext::new_root(ctx, repo).commit().await?;

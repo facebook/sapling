@@ -97,7 +97,9 @@ async fn get_content(
 #[fbinit::test]
 async fn upload_blob_no_parents(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).expect("Couldn't create repo");
+    let repo: BlobRepo = test_repo_factory::build_empty(fb)
+        .await
+        .expect("Couldn't create repo");
     let expected_hash = HgFileNodeId::new(string_to_nodehash(
         "c3127cdbf2eae0f09653f9237d85c8436425b246",
     ));
@@ -123,7 +125,9 @@ async fn upload_blob_no_parents(fb: FacebookInit) {
 #[fbinit::test]
 async fn upload_blob_one_parent(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).expect("Couldn't create repo");
+    let repo: BlobRepo = test_repo_factory::build_empty(fb)
+        .await
+        .expect("Couldn't create repo");
     let expected_hash = HgFileNodeId::new(string_to_nodehash(
         "c2d60b35a8e7e034042a9467783bbdac88a0d219",
     ));
@@ -151,7 +155,9 @@ async fn upload_blob_one_parent(fb: FacebookInit) {
 #[fbinit::test]
 async fn create_one_changeset(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).expect("Couldn't create repo");
+    let repo: BlobRepo = test_repo_factory::build_empty(fb)
+        .await
+        .expect("Couldn't create repo");
     let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
     let path = RepoPath::file("dir/file")
@@ -207,7 +213,9 @@ async fn create_one_changeset(fb: FacebookInit) {
 #[fbinit::test]
 async fn create_two_changesets(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).expect("Couldn't create repo");
+    let repo: BlobRepo = test_repo_factory::build_empty(fb)
+        .await
+        .expect("Couldn't create repo");
     let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
     let utf_author: String = "\u{041F}\u{0451}\u{0442}\u{0440} <peter@fb.com>".into();
@@ -283,7 +291,9 @@ async fn create_two_changesets(fb: FacebookInit) {
 #[fbinit::test]
 async fn check_bonsai_creation(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).expect("Couldn't create repo");
+    let repo: BlobRepo = test_repo_factory::build_empty(fb)
+        .await
+        .expect("Couldn't create repo");
     let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
 
@@ -336,7 +346,9 @@ async fn check_bonsai_creation(fb: FacebookInit) {
 #[fbinit::test]
 async fn check_bonsai_creation_with_rename(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).expect("Couldn't create repo");
+    let repo: BlobRepo = test_repo_factory::build_empty(fb)
+        .await
+        .expect("Couldn't create repo");
     let parent = {
         let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
 
@@ -424,7 +436,9 @@ async fn check_bonsai_creation_with_rename(fb: FacebookInit) {
 #[fbinit::test]
 async fn create_bad_changeset(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).expect("Couldn't create repo");
+    let repo: BlobRepo = test_repo_factory::build_empty(fb)
+        .await
+        .expect("Couldn't create repo");
     let dirhash = string_to_nodehash("c2d60b35a8e7e034042a9467783bbdac88a0d219");
 
     let (_, root_manifest_future) = upload_manifest_no_parents(
@@ -446,7 +460,9 @@ async fn create_bad_changeset(fb: FacebookInit) {
 #[fbinit::test]
 async fn upload_entries_finalize_success(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).expect("Couldn't create repo");
+    let repo: BlobRepo = test_repo_factory::build_empty(fb)
+        .await
+        .expect("Couldn't create repo");
 
     let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
 
@@ -484,7 +500,9 @@ async fn upload_entries_finalize_success(fb: FacebookInit) {
 #[fbinit::test]
 async fn upload_entries_finalize_fail(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).expect("Couldn't create repo");
+    let repo: BlobRepo = test_repo_factory::build_empty(fb)
+        .await
+        .expect("Couldn't create repo");
 
     let entries = UploadEntries::new(
         repo.repo_blobstore().clone(),
@@ -933,7 +951,9 @@ async fn test_hg_commit_generation_many_diamond(fb: FacebookInit) {
 #[fbinit::test]
 async fn test_hg_commit_generation_uneven_branch(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).expect("Couldn't create repo");
+    let repo: BlobRepo = test_repo_factory::build_empty(fb)
+        .await
+        .expect("Couldn't create repo");
 
     let root_bcs = fixtures::create_bonsai_changeset(vec![]);
 
@@ -1030,7 +1050,8 @@ async fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> 
         Some(Box::new(delayed_sqlite_callbacks)),
     )?
     .with_blobstore(blobstore)
-    .build()?;
+    .build()
+    .await?;
 
     let mut rng = XorShiftRng::seed_from_u64(1);
 
@@ -1058,7 +1079,8 @@ async fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
 
     let repo: BlobRepo = TestRepoFactory::new(fb)?
         .with_blobstore(blobstore.clone())
-        .build()?;
+        .build()
+        .await?;
 
     let p1 = None;
     let p2 = None;
@@ -1158,7 +1180,9 @@ async fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
 async fn test_content_uploaded_filenode_id(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).expect("Couldn't create repo");
+    let repo: BlobRepo = test_repo_factory::build_empty(fb)
+        .await
+        .expect("Couldn't create repo");
 
     let p1 = None;
     let p2 = None;
@@ -1202,9 +1226,11 @@ struct TestHelper {
 }
 
 impl TestHelper {
-    fn new(fb: FacebookInit) -> Result<Self, Error> {
+    async fn new(fb: FacebookInit) -> Result<Self, Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb).expect("Couldn't create repo");
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)
+            .await
+            .expect("Couldn't create repo");
         Ok(Self { ctx, repo })
     }
 
@@ -1294,7 +1320,9 @@ mod octopus_merges {
     #[fbinit::test]
     async fn test_basic(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb).expect("Couldn't create repo");
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)
+            .await
+            .expect("Couldn't create repo");
 
         let p1 = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("foo", "foo")
@@ -1330,7 +1358,7 @@ mod octopus_merges {
 
     #[fbinit::test]
     async fn test_basic_filenode_parents(fb: FacebookInit) -> Result<(), Error> {
-        let helper = TestHelper::new(fb)?;
+        let helper = TestHelper::new(fb).await?;
 
         let p1 = helper.new_commit().add_file("foo", "foo").commit().await?;
         let p2 = helper.new_commit().add_file("bar", "bar").commit().await?;
@@ -1376,7 +1404,7 @@ mod octopus_merges {
 
     #[fbinit::test]
     async fn test_many_filenode_parents(fb: FacebookInit) -> Result<(), Error> {
-        let helper = TestHelper::new(fb)?;
+        let helper = TestHelper::new(fb).await?;
 
         let p1 = helper.new_commit().add_file("foo", "foo").commit().await?;
         let p2 = helper.new_commit().add_file("foo", "bar").commit().await?;
@@ -1406,7 +1434,7 @@ mod octopus_merges {
 
     #[fbinit::test]
     async fn test_mixed_filenode_parents(fb: FacebookInit) -> Result<(), Error> {
-        let helper = TestHelper::new(fb)?;
+        let helper = TestHelper::new(fb).await?;
 
         let p1 = helper.new_commit().commit().await?;
         let p2 = helper.new_commit().add_file("foo", "foo").commit().await?;
@@ -1436,7 +1464,7 @@ mod octopus_merges {
 
     #[fbinit::test]
     async fn test_strip_copy_from(fb: FacebookInit) -> Result<(), Error> {
-        let helper = TestHelper::new(fb)?;
+        let helper = TestHelper::new(fb).await?;
 
         let p1 = helper.new_commit().commit().await?;
         let p2 = helper.new_commit().commit().await?;
@@ -1460,7 +1488,7 @@ mod octopus_merges {
 
     #[fbinit::test]
     async fn test_mixed_manifest_parents(fb: FacebookInit) -> Result<(), Error> {
-        let helper = TestHelper::new(fb)?;
+        let helper = TestHelper::new(fb).await?;
 
         let p1 = helper
             .new_commit()
@@ -1515,7 +1543,7 @@ mod octopus_merges {
 
     #[fbinit::test]
     async fn test_step_parents_metadata(fb: FacebookInit) -> Result<(), Error> {
-        let helper = TestHelper::new(fb)?;
+        let helper = TestHelper::new(fb).await?;
 
         let p1 = helper.new_commit().commit().await?;
         let p2 = helper.new_commit().commit().await?;
@@ -1583,7 +1611,7 @@ mod octopus_merges {
 
     #[fbinit::test]
     async fn test_resolve_trivial_conflict(fb: FacebookInit) -> Result<(), Error> {
-        let helper = TestHelper::new(fb)?;
+        let helper = TestHelper::new(fb).await?;
 
         let p1 = helper.new_commit().commit().await?;
         let p2 = helper.new_commit().add_file("foo", "foo").commit().await?;
@@ -1614,7 +1642,7 @@ mod octopus_merges {
 
     #[fbinit::test]
     async fn test_fail_to_resolve_conflict_on_content(fb: FacebookInit) -> Result<(), Error> {
-        let helper = TestHelper::new(fb)?;
+        let helper = TestHelper::new(fb).await?;
 
         let p1 = helper.new_commit().commit().await?;
         let p2 = helper.new_commit().add_file("foo", "foo").commit().await?;
@@ -1644,7 +1672,7 @@ mod octopus_merges {
 
     #[fbinit::test]
     async fn test_fail_to_resolve_conflict_on_type(fb: FacebookInit) -> Result<(), Error> {
-        let helper = TestHelper::new(fb)?;
+        let helper = TestHelper::new(fb).await?;
 
         let p1 = helper.new_commit().commit().await?;
         let p2 = helper
@@ -1682,7 +1710,7 @@ mod octopus_merges {
 
     #[fbinit::test]
     async fn test_changeset_file_changes(fb: FacebookInit) -> Result<(), Error> {
-        let helper = TestHelper::new(fb)?;
+        let helper = TestHelper::new(fb).await?;
 
         let p1 = helper.new_commit().commit().await?;
         let p2 = helper.new_commit().add_file("p2", "p2").commit().await?;

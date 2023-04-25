@@ -683,9 +683,9 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mut factory = TestRepoFactory::new(fb)?;
     let source_repo_id = RepositoryId::new(1);
-    let source_repo: TestRepo = factory.with_id(source_repo_id).build()?;
+    let source_repo: TestRepo = factory.with_id(source_repo_id).build().await?;
     let target_repo_id = RepositoryId::new(2);
-    let target_repo: TestRepo = factory.with_id(target_repo_id).build()?;
+    let target_repo: TestRepo = factory.with_id(target_repo_id).build().await?;
 
     // Create commit syncer with two version - current and new
     let target_repo_dbs = TargetRepoDbs {
@@ -1280,11 +1280,11 @@ async fn init_repos(
     let ctx = CoreContext::test_mock(fb);
     let mut factory = TestRepoFactory::new(fb)?;
     let source_repo_id = RepositoryId::new(1);
-    let source_repo: TestRepo = factory.with_id(source_repo_id).build()?;
+    let source_repo: TestRepo = factory.with_id(source_repo_id).build().await?;
     Linear::initrepo(fb, &source_repo).await;
 
     let target_repo_id = RepositoryId::new(2);
-    let target_repo: TestRepo = factory.with_id(target_repo_id).build()?;
+    let target_repo: TestRepo = factory.with_id(target_repo_id).build().await?;
 
     let target_repo_dbs = TargetRepoDbs {
         bookmarks: target_repo.bookmarks_arc(),
@@ -1572,7 +1572,7 @@ async fn init_merged_repos(
 
     let mut factory = TestRepoFactory::new(fb)?;
     let large_repo_id = RepositoryId::new(num_repos as i32);
-    let large_repo: TestRepo = factory.with_id(large_repo_id).build()?;
+    let large_repo: TestRepo = factory.with_id(large_repo_id).build().await?;
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
 
@@ -1582,7 +1582,7 @@ async fn init_merged_repos(
     // Create small repos and one large repo
     for idx in 0..num_repos {
         let repoid = RepositoryId::new(idx as i32);
-        let small_repo: TestRepo = factory.with_id(repoid).build()?;
+        let small_repo: TestRepo = factory.with_id(repoid).build().await?;
         let small_repo_dbs = TargetRepoDbs {
             bookmarks: small_repo.bookmarks_arc(),
             bookmark_update_log: small_repo.bookmark_update_log_arc(),

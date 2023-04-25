@@ -584,8 +584,8 @@ mod test {
     }
 
     impl RepositoryRequestContext {
-        pub fn test_builder(fb: FacebookInit) -> Result<TestContextBuilder<'static>, Error> {
-            let repo = TestRepoFactory::new(fb)?.build()?;
+        pub async fn test_builder(fb: FacebookInit) -> Result<TestContextBuilder<'static>, Error> {
+            let repo = TestRepoFactory::new(fb)?.build().await?;
 
             Self::test_builder_with_repo(fb, repo)
         }
@@ -811,7 +811,8 @@ mod test {
         let aclchecker = AlwaysAllowRepoPermissionChecker::new();
         let repo: Repo = test_repo_factory::TestRepoFactory::new(fb)?
             .with_permission_checker(Arc::new(aclchecker))
-            .build()?;
+            .build()
+            .await?;
 
         let ctx = CoreContext::test_mock(fb);
         // No certificates + ACL enforcement off = free pass
@@ -834,7 +835,8 @@ mod test {
 
         let repo: Repo = test_repo_factory::TestRepoFactory::new(fb)?
             .with_permission_checker(Arc::new(aclchecker))
-            .build()?;
+            .build()
+            .await?;
 
         let ctx = CoreContext::test_mock(fb);
         acl_check(&ctx, &repo, false, LfsMethod::Download).await?;

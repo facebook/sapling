@@ -920,14 +920,14 @@ mod test {
     #[fbinit::test]
     async fn test_verify_working_copy(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let source: TestRepo = test_repo_factory::build_empty(fb)?;
+        let source: TestRepo = test_repo_factory::build_empty(fb).await?;
         let source_cs_id = CreateCommitContext::new_root(&ctx, &source)
             .add_file("prefix/file1", "1")
             .add_file("prefix/file2", "2")
             .commit()
             .await?;
 
-        let target: TestRepo = test_repo_factory::build_empty(fb)?;
+        let target: TestRepo = test_repo_factory::build_empty(fb).await?;
         let target_cs_id = CreateCommitContext::new_root(&ctx, &target)
             .add_file("file1", "1")
             .commit()
@@ -956,7 +956,7 @@ mod test {
     #[fbinit::test]
     async fn test_verify_working_copy_with_prefixes(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let source: TestRepo = test_repo_factory::build_empty(fb)?;
+        let source: TestRepo = test_repo_factory::build_empty(fb).await?;
         let source_cs_id = CreateCommitContext::new_root(&ctx, &source)
             .add_file("prefix/sub/file1", "1")
             .add_file("prefix/sub/file2", "2")
@@ -964,7 +964,7 @@ mod test {
             .commit()
             .await?;
 
-        let target: TestRepo = test_repo_factory::build_empty(fb)?;
+        let target: TestRepo = test_repo_factory::build_empty(fb).await?;
         let target_cs_id = CreateCommitContext::new_root(&ctx, &target)
             .add_file("sub/file1", "1")
             .add_file("sub/file2", "2")
@@ -1011,7 +1011,7 @@ mod test {
     async fn test_verify_working_copy_fast_path(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mut factory = TestRepoFactory::new(fb)?;
-        let source = factory.with_id(RepositoryId::new(0)).build()?;
+        let source = factory.with_id(RepositoryId::new(0)).build().await?;
         let root_source_cs_id = CreateCommitContext::new_root(&ctx, &source)
             .add_file("prefix/sub/file1", "1")
             .add_file("somefile", "content")
@@ -1026,7 +1026,7 @@ mod test {
             .commit()
             .await?;
 
-        let target: TestRepo = factory.with_id(RepositoryId::new(1)).build()?;
+        let target: TestRepo = factory.with_id(RepositoryId::new(1)).build().await?;
         let root_target_cs_id = CreateCommitContext::new_root(&ctx, &target)
             .add_file("sub/file1", "1")
             .commit()

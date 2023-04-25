@@ -106,7 +106,7 @@ impl TestData {
 async fn test_acl_regions(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mut factory = TestRepoFactory::new(fb)?;
-    let repo: Repo = factory.build()?;
+    let repo: Repo = factory.build().await?;
     let dag = r#"
           I
          /
@@ -177,7 +177,8 @@ async fn test_acl_regions(fb: FacebookInit) -> Result<()> {
                 allow_rules: vec![rule1, rule2, rule3],
             });
         })
-        .build()?;
+        .build()
+        .await?;
 
     let same_mapping = create_from_dag(&ctx, &repo, dag).await?;
     assert_eq!(mapping, same_mapping);
