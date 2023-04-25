@@ -7,6 +7,8 @@
 
 #![feature(result_flattening)]
 
+pub mod security;
+
 use std::net::IpAddr;
 use std::time::Duration;
 
@@ -20,6 +22,7 @@ use session_id::generate_session_id;
 use session_id::SessionId;
 use tokio::time::timeout;
 use trust_dns_resolver::TokioAsyncResolver;
+use tunables::tunables;
 
 #[derive(Clone, Debug, Default)]
 pub struct Metadata {
@@ -29,6 +32,10 @@ pub struct Metadata {
     /// identities from the request.
     original_identities: Option<MononokeIdentitySet>,
     client_debug: bool,
+    /// "true" if client connects from untrusted environment.
+    /// We're going to apply restrictions in this case, like rejecting pushes
+    /// or admin bypass.
+    client_untrusted: bool,
     client_ip: Option<IpAddr>,
     client_hostname: Option<String>,
     revproxy_region: Option<String>,
@@ -41,6 +48,7 @@ impl Metadata {
         session_id: Option<&String>,
         identities: MononokeIdentitySet,
         client_debug: bool,
+        client_untrusted: bool,
         client_ip: Option<IpAddr>,
     ) -> Self {
         let session_id: SessionId = match session_id {
@@ -69,6 +77,7 @@ impl Metadata {
             identities,
             original_identities: None,
             client_debug,
+            client_untrusted,
             client_ip,
             client_hostname,
             revproxy_region: None,
@@ -116,6 +125,13 @@ impl Metadata {
         self
     }
 
+    pub fn update_client_untrusted(&mut self, client_untrusted: bool) -> &mut Self {
+        // Be conservative: if client was already untrusted, don't allow to make
+        // it trusted
+        self.client_untrusted |= client_untrusted;
+        self
+    }
+
     pub fn session_id(&self) -> &SessionId {
         &self.session_id
     }
@@ -143,6 +159,20 @@ impl Metadata {
 
     pub fn client_debug(&self) -> bool {
         self.client_debug
+    }
+
+    pub fn ensure_client_trusted(&self) -> Result<()> {
+        if self.client_untrusted
+            && !tunables()
+                .disable_client_security_check()
+                .unwrap_or_default()
+        {
+            Err(anyhow!(
+                "Client environment is not trusted. Are you connected to VPN?"
+            ))
+        } else {
+            Ok(())
+        }
     }
 
     pub fn client_ip(&self) -> Option<&IpAddr> {

@@ -158,8 +158,14 @@ impl Factory {
             let client_debug = header(FORWARDED_CLIENT_DEBUG_HEADER)?.is_some();
 
             header_identities.extend(cats_identities.into_iter());
-            let mut metadata =
-                Metadata::new(None, header_identities, client_debug, client_ip).await;
+            let mut metadata = Metadata::new(
+                None,
+                header_identities,
+                client_debug,
+                metadata::security::is_client_untrusted(|h| req_ctxt.header(h))?,
+                client_ip,
+            )
+            .await;
 
             metadata.add_original_identities(tls_identities);
 
@@ -174,6 +180,7 @@ impl Factory {
             None,
             tls_identities.union(&cats_identities).cloned().collect(),
             false,
+            metadata::security::is_client_untrusted(|h| req_ctxt.header(h))?,
             None,
         )
         .await)

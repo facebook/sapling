@@ -84,6 +84,11 @@ pub async fn run_post_resolve_action(
 ) -> Result<UnbundleResponse, BundleResolverError> {
     enforce_commit_rate_limits(ctx, &action).await?;
 
+    match action {
+        PostResolveAction::InfinitePush(_) => {}
+        _ => ctx.metadata().ensure_client_trusted()?,
+    };
+
     // FIXME: it's used not only in pushrebase, so it worth moving
     // populate_git_mapping outside of PushrebaseParams.
     let unbundle_response = match action {

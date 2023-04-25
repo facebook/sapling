@@ -497,6 +497,12 @@ mod h2m {
             Some(&generate_session_id().to_string()),
             (*conn.identities).clone(),
             debug,
+            metadata::security::is_client_untrusted(|h| {
+                Ok(headers
+                    .get(h)
+                    .map(|h| h.to_str().map(|s| s.to_owned()))
+                    .transpose()?)
+            })?,
             Some(conn.pending.addr.ip()),
         )
         .await)
@@ -585,6 +591,12 @@ mod h2m {
                     Some(&generate_session_id().to_string()),
                     identities,
                     debug,
+                    metadata::security::is_client_untrusted(|h| {
+                        Ok(headers
+                            .get(h)
+                            .map(|h| h.to_str().map(|s| s.to_owned()))
+                            .transpose()?)
+                    })?,
                     Some(ip_addr),
                 )
                 .await;
@@ -603,6 +615,12 @@ mod h2m {
             Some(&generate_session_id().to_string()),
             identities,
             debug,
+            metadata::security::is_client_untrusted(|h| {
+                Ok(headers
+                    .get(h)
+                    .map(|h| h.to_str().map(|s| s.to_owned()))
+                    .transpose()?)
+            })?,
             Some(conn.pending.addr.ip()),
         )
         .await)

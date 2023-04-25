@@ -136,6 +136,16 @@ impl Middleware for MetadataMiddleware {
             if let Some(identities) = maybe_identities {
                 metadata = metadata.set_identities(identities)
             }
+
+            metadata.update_client_untrusted(
+                metadata::security::is_client_untrusted(|h| {
+                    Ok(headers
+                        .get(h)
+                        .map(|h| h.to_str().map(|s| s.to_owned()))
+                        .transpose()?)
+                })
+                .unwrap_or_default(),
+            );
         }
 
         // For the IP, we can fallback to the peer IP
