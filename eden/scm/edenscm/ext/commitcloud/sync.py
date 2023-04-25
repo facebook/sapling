@@ -103,7 +103,7 @@ def _iscleanrepo(repo):
 def sync(repo, *args, **kwargs):
     with backuplock.lock(repo):
         try:
-            besteffort = kwargs.pop("besteffort", False)
+            besteffort = kwargs.get("besteffort", False)
             if besteffort:
                 rc, synced = _sync(repo, *args, **kwargs)
             else:
@@ -146,6 +146,7 @@ def _sync(
     cloudversion=None,
     cloudworkspace=None,
     connect_opts=None,
+    besteffort=None,
 ):
     ui = repo.ui
     start = util.timer()
@@ -245,7 +246,7 @@ def _sync(
 
             with repo.transaction("cloudsync") as tr:
 
-                if _hashrepostate(repo) != origrepostate:
+                if besteffort and _hashrepostate(repo) != origrepostate:
                     # Another transaction changed the repository while we were backing
                     # up commits. This may have introduced new commits that also need
                     # backing up.  That transaction should have started its own sync
