@@ -1030,10 +1030,15 @@ struct RepoLandStackParams {
 /// Only support the types of derived data that we wish to expose to SCS clients.
 /// This can be extended later if other usecases arrise.
 /// See https://www.internalfb.com/code/fbsource/[f84d7f31d5e251d6b1a4dcacce880e4b29a73652]/fbcode/eden/mononoke/derived_data/remote/if/derived_data_service.thrift?lines=40
-/// for an exhaustive list of derived data types.
+/// for an exhaustive list of derived data types.  For convenience, keep the variant numbers matching.
 enum DerivedDataType {
   /// Derive fsnode data
+  /// DEPRECATED: Thrift enums should not start at 0.
   FSNODE = 0,
+  /// Derive fsnode data (this will be the new enum value once the server supports it).
+  FSNODE_NEW = 1,
+  /// Derive skeleton manifest data
+  SKELETON_MANIFEST = 9,
 }
 
 struct RepoPrepareCommitsParams {
