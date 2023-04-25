@@ -18,6 +18,7 @@
 #include "eden/fs/nfs/portmap/PortmapClient.h"
 #include "eden/fs/nfs/rpc/Rpc.h"
 #include "eden/fs/nfs/rpc/Server.h"
+#include "eden/fs/utils/EventBaseState.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 
 namespace folly {
@@ -27,38 +28,6 @@ class Executor;
 namespace facebook::eden {
 
 class StructuredLogger;
-
-/**
- * The RpcServer state machine and IO are multiplexed on an EventBase. To
- * prevent accidentally accessing state from another thread, wrap the state in
- * EventBaseState which asserts every access is from the EventBase thread.
- *
- * This could be moved into a utility header for use in other EventBase systems.
- */
-template <typename State>
-class EventBaseState {
- public:
-  /**
-   * Constructs an EventBaseState tied to the specified EventBase.
-   */
-  template <typename... T>
-  explicit EventBaseState(folly::EventBase* evb, T&&... args)
-      : evb_{evb}, state_{std::forward<T>(args)...} {}
-
-  State& get() {
-    evb_->checkIsInEventBaseThread();
-    return state_;
-  }
-
-  const State& get() const {
-    evb_->checkIsInEventBaseThread();
-    return state_;
-  }
-
- private:
-  folly::EventBase* evb_;
-  State state_;
-};
 
 enum class RpcStopReason {
   RUNNING, // Running not stopping
