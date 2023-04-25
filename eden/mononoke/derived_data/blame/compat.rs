@@ -37,6 +37,14 @@ impl CompatBlame {
         }
     }
 
+    pub fn range_count(&self) -> Result<usize, BlameRejected> {
+        match self {
+            CompatBlame::V1(BlameMaybeRejected::Rejected(rejected)) => Err(*rejected),
+            CompatBlame::V1(BlameMaybeRejected::Blame(blame)) => Ok(blame.ranges().len()),
+            CompatBlame::V2(blame) => Ok(blame.range_count()?),
+        }
+    }
+
     pub fn lines(&self) -> Result<CompatBlameLines<'_>, BlameRejected> {
         match self {
             CompatBlame::V1(BlameMaybeRejected::Rejected(rejected)) => Err(*rejected),
@@ -59,6 +67,19 @@ impl CompatBlame {
                 .zip(0..)
                 .collect()),
             CompatBlame::V2(blame) => Ok(blame.changeset_ids()?.collect()),
+        }
+    }
+
+    pub fn changeset_count(&self) -> Result<u32, BlameRejected> {
+        match self {
+            CompatBlame::V1(BlameMaybeRejected::Rejected(rejected)) => Err(*rejected),
+            CompatBlame::V1(BlameMaybeRejected::Blame(blame)) => Ok(blame
+                .ranges()
+                .iter()
+                .map(|range| range.csid)
+                .collect::<BTreeSet<_>>()
+                .len() as u32),
+            CompatBlame::V2(blame) => Ok(blame.changeset_count()?),
         }
     }
 }

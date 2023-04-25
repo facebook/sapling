@@ -181,6 +181,13 @@ impl BlameV2 {
         }
     }
 
+    pub fn range_count(&self) -> Result<usize, BlameRejected> {
+        match self {
+            BlameV2::Blame(blame_data) => Ok(blame_data.ranges.len()),
+            BlameV2::Rejected(rejected) => Err(rejected.clone()),
+        }
+    }
+
     pub fn lines(&self) -> Result<BlameLines<'_>, BlameRejected> {
         match self {
             BlameV2::Blame(blame_data) => Ok(BlameLines::new(blame_data)),
@@ -196,6 +203,13 @@ impl BlameV2 {
                 .csids
                 .iter()
                 .map(|(number, csid)| (*csid, number as u32))),
+            BlameV2::Rejected(rejected) => Err(rejected.clone()),
+        }
+    }
+
+    pub fn changeset_count(&self) -> Result<u32, BlameRejected> {
+        match self {
+            BlameV2::Blame(blame_data) => Ok(blame_data.max_csid_index + 1),
             BlameV2::Rejected(rejected) => Err(rejected.clone()),
         }
     }

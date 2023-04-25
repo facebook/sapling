@@ -571,6 +571,15 @@ struct BlameCompact {
   /// server will attempt to keep the numbers stable over the main history of
   /// the file.
   9: optional list<i32> commit_numbers;
+
+  /// Approximate number of commits in the history of this file (merged
+  /// ancestors may not be included in this count if they did not contribute
+  /// content to the merge).  Only present if `INCLUDE_COMMIT_NUMERS` was
+  /// requested.
+  10: optional i32 approx_commit_count;
+
+  /// Number of distinct ranges in the blame.
+  11: optional i32 distinct_range_count;
 }
 
 struct BlameCompactLine {

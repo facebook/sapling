@@ -393,6 +393,15 @@ impl SourceControlServiceImpl {
         let titles = Some(titles.into_items()).filter(|titles| !titles.is_empty());
         let messages = Some(messages.into_items()).filter(|messages| !messages.is_empty());
         let commit_numbers = option_include_commit_numbers.then_some(commit_numbers);
+        let approx_commit_count = option_include_commit_numbers
+            .then(|| blame.changeset_count().ok())
+            .flatten()
+            .map(|c| c as i32);
+        let distinct_range_count = Some(
+            blame
+                .range_count()
+                .map_err(|e| MononokeError::InvalidRequest(e.to_string()))? as i32,
+        );
         let dates = dates
             .into_items()
             .into_iter()
@@ -412,6 +421,8 @@ impl SourceControlServiceImpl {
             messages,
             parent_commit_ids,
             commit_numbers,
+            approx_commit_count,
+            distinct_range_count,
             ..Default::default()
         };
 
