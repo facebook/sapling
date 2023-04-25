@@ -1632,6 +1632,27 @@ def cloudstatus(ui, repo, **opts):
     ui.write(_("Last Sync Status: %s\n") % status)
 
 
+@command("debugcloudstatus", [])
+def debugcloudstate(ui, repo, **opts):
+    """Json output of the state of the user's commit cloud workspace"""
+    helperkey = "commitcloud"
+    workspacename = workspace.currentworkspace(repo)
+    data = {}
+    data["raw_workspace_name"] = workspace.currentworkspace(repo)
+    if workspacename:
+        state = syncstate.SyncState(repo, workspacename)
+        data["sync_heads"] = state.heads
+        data["sync_bookmarks"] = state.bookmarks
+        data["sync_remote_bookmarks"] = state.remotebookmarks
+        data["omitted_heads_len"] = len(state.omittedheads)
+        data["omitted_bookmarks_len"] = len(state.omittedbookmarks)
+        data["last_sync_time"] = state.lastupdatetime
+    results = {helperkey: data}
+    text = cmdutil.rendertemplate(ui, "{%s|json}" % helperkey, results)
+    ui.write(text)
+    return
+
+
 @command("debugwaitbackup", [("", "timeout", "", "timeout value")])
 def waitbackup(ui, repo, timeout):
     """wait for backup operations to complete"""
