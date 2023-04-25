@@ -178,6 +178,7 @@
 
 .getting-started-modal .card-image {
   max-width: 50%;
+  max-height: 200px;
   height: min-content;
 }
 

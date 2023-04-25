@@ -56,6 +56,7 @@ export const vscodeWebviewPlatform: Platform = {
   },
 
   AdditionalDebugContent: Internal.AdditionalDebugContent,
+  GettingStartedContent: Internal.GettingStartedContent,
 };
 
 function getTheme(): ThemeColor {
