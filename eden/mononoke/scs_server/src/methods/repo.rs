@@ -489,6 +489,17 @@ impl SourceControlServiceImpl {
             .create_changeset_stack(stack_parents, info_stack, changes_stack, bubble)
             .await?;
 
+        // Prepare derived data if we were asked to.  Simple implementation
+        // that doesn't support parallel derivation or dependencies between types.
+        if let Some(prepare_types) = &params.prepare_derived_data_types {
+            let csids = stack.iter().map(|c| c.id()).collect::<Vec<_>>();
+            for derived_data_type in prepare_types {
+                let derivable_type = DerivableType::from_request(derived_data_type)?;
+                repo.prepare_derived_data(derivable_type, csids.clone())
+                    .await?;
+            }
+        }
+
         // If you ask for a git identity back, then we'll assume that you supplied one to us
         // and set it. Later, when we can derive a git commit hash, this'll become more
         // open, because we'll only do the check if you ask for a hash different to the

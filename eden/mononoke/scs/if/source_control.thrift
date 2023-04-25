@@ -918,6 +918,11 @@ struct RepoCreateStackParams {
   /// The parents of the first commit in the stack.
   2: list<CommitId> parents;
 
+  /// Optional set of derived data types to derive for the newly created
+  /// commits in preparation of future operations.  Derivation for the parents
+  /// must already be complete.
+  3: optional set<DerivedDataType> prepare_derived_data_types;
+
   /// Commit identity schemes to return.
   4: set<CommitIdentityScheme> identity_schemes;
 
