@@ -1206,11 +1206,7 @@ bool EdenMount::isFuseChannel() const {
 }
 
 bool EdenMount::isNfsdChannel() const {
-#ifndef _WIN32
   return std::holds_alternative<EdenMount::NfsdChannelVariant>(channel_);
-#else
-  return false;
-#endif
 }
 
 bool EdenMount::isPrjfsChannel() const {
