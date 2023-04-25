@@ -33,7 +33,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 movers = { version = "0.1.0", path = "../movers" }
 mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
-ref-cast = "1.0.12"
+ref-cast = "1.0.16"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 revset = { version = "0.1.0", path = "../../revset" }
