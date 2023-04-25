@@ -122,7 +122,7 @@ uint64_t TakeoverData::computeCompatibleCapabilities(
   return compatible;
 }
 
-uint64_t TakeoverData::versionToCapabilites(int32_t version) {
+uint64_t TakeoverData::versionToCapabilities(int32_t version) {
   switch (version) {
     case kTakeoverProtocolVersionNeverSupported:
       return 0;
@@ -163,7 +163,7 @@ uint64_t TakeoverData::versionToCapabilites(int32_t version) {
   throwf<std::runtime_error>("Unsupported version: {}", version);
 }
 
-int32_t TakeoverData::capabilitesToVersion(uint64_t capabilities) {
+int32_t TakeoverData::capabilitiesToVersion(uint64_t capabilities) {
   if (capabilities == 0) {
     return kTakeoverProtocolVersionNeverSupported;
   }
@@ -418,12 +418,12 @@ uint64_t TakeoverData::getProtocolCapabilities(IOBuf* buf) {
     case kTakeoverProtocolVersionFive:
     case kTakeoverProtocolVersionSix:
       buf->trimStart(sizeof(uint32_t));
-      return versionToCapabilites(version);
+      return versionToCapabilities(version);
     case kTakeoverProtocolVersionSeven: {
       // version 7 and above should support INCLUDE_HEADER_SIZE and
       // CAPABILITY_MATCHING but we check those assumptions to make this more
       // clear.
-      auto versionBasedCapabilities = versionToCapabilites(version);
+      auto versionBasedCapabilities = versionToCapabilities(version);
       auto expected_capabilities = TakeoverCapabilities::INCLUDE_HEADER_SIZE |
           TakeoverCapabilities::CAPABILITY_MATCHING;
       if ((versionBasedCapabilities & expected_capabilities) !=
@@ -509,7 +509,7 @@ void TakeoverData::serializeHeader(
     uint64_t protocolCapabilities,
     folly::IOBufQueue& buf) {
   folly::io::QueueAppender appender(&buf, 0);
-  int32_t versionToAdvertize = capabilitesToVersion(protocolCapabilities);
+  int32_t versionToAdvertize = capabilitiesToVersion(protocolCapabilities);
   // first word is the protocol version. previous versions of EdenFS do not
   // know how to deserialize version 4 because they assume that protocol 4
   // uses protocol 3 serialization. We need to do this funkiness for rollback

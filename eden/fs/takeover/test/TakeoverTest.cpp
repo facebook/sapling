@@ -177,39 +177,39 @@ void checkExpectedFile(int fd, AbsolutePathPiece path) {
 TEST(Takeover, roundTripVersionCapabilities) {
   for (auto& version : kSupportedTakeoverVersions) {
     EXPECT_EQ(
-        TakeoverData::capabilitesToVersion(
-            TakeoverData::versionToCapabilites(version)),
+        TakeoverData::capabilitiesToVersion(
+            TakeoverData::versionToCapabilities(version)),
         version);
   }
 }
 
-TEST(Takeover, unsupportedVersionCapabilites) {
+TEST(Takeover, unsupportedVersionCapabilities) {
   EXPECT_EQ(
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionNeverSupported),
       0);
 
   EXPECT_EQ(
-      TakeoverData::capabilitesToVersion(0),
+      TakeoverData::capabilitiesToVersion(0),
       TakeoverData::kTakeoverProtocolVersionNeverSupported);
 }
 
-TEST(Takeover, invalidComboCapabilites) {
+TEST(Takeover, invalidComboCapabilities) {
   EXPECT_THROW(
-      TakeoverData::capabilitesToVersion(TakeoverCapabilities::FUSE),
+      TakeoverData::capabilitiesToVersion(TakeoverCapabilities::FUSE),
       std::runtime_error);
 }
 
-TEST(Takeover, matchCapabilites) {
-  auto threeCapabilities = TakeoverData::versionToCapabilites(
+TEST(Takeover, matchCapabilities) {
+  auto threeCapabilities = TakeoverData::versionToCapabilities(
       TakeoverData::kTakeoverProtocolVersionThree);
-  auto fourCapabilities = TakeoverData::versionToCapabilites(
+  auto fourCapabilities = TakeoverData::versionToCapabilities(
       TakeoverData::kTakeoverProtocolVersionFour);
-  auto fiveCapabilities = TakeoverData::versionToCapabilites(
+  auto fiveCapabilities = TakeoverData::versionToCapabilities(
       TakeoverData::kTakeoverProtocolVersionFive);
-  auto sixCapabilities = TakeoverData::versionToCapabilites(
+  auto sixCapabilities = TakeoverData::versionToCapabilities(
       TakeoverData::kTakeoverProtocolVersionSix);
-  auto sevenCapabilities = TakeoverData::versionToCapabilites(
+  auto sevenCapabilities = TakeoverData::versionToCapabilities(
       TakeoverData::kTakeoverProtocolVersionSeven);
 
   EXPECT_EQ(
@@ -245,7 +245,7 @@ void simpleTestImpl(
     const std::set<int32_t>& serverSupportedVersions =
         kSupportedTakeoverVersions,
     uint64_t clientCapabilities = kSupportedCapabilities,
-    uint64_t serverCapabilites = kSupportedCapabilities) {
+    uint64_t serverCapabilities = kSupportedCapabilities) {
   TemporaryDirectory tmpDir("eden_takeover_test");
   AbsolutePath tmpDirPath = canonicalPath(tmpDir.path().string());
 
@@ -294,7 +294,7 @@ void simpleTestImpl(
       clientSupportedVersions,
       serverSupportedVersions,
       clientCapabilities,
-      serverCapabilites);
+      serverCapabilities);
   ASSERT_TRUE(serverSendFuture.hasValue());
   EXPECT_TRUE(result.hasValue());
   const auto& clientData = result.value();
@@ -337,9 +337,9 @@ TEST(Takeover, fourToSeven) {
        TakeoverData::kTakeoverProtocolVersionFive,
        TakeoverData::kTakeoverProtocolVersionSix,
        TakeoverData::kTakeoverProtocolVersionSeven},
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionFour),
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionSeven));
 
   simpleTestImpl(
@@ -349,9 +349,9 @@ TEST(Takeover, fourToSeven) {
        TakeoverData::kTakeoverProtocolVersionSix,
        TakeoverData::kTakeoverProtocolVersionSeven},
       {TakeoverData::kTakeoverProtocolVersionFour},
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionSeven),
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionFour));
 }
 
@@ -364,9 +364,9 @@ TEST(Takeover, fiveToSeven) {
        TakeoverData::kTakeoverProtocolVersionFive,
        TakeoverData::kTakeoverProtocolVersionSix,
        TakeoverData::kTakeoverProtocolVersionSeven},
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionFive),
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionSeven));
 
   simpleTestImpl(
@@ -377,9 +377,9 @@ TEST(Takeover, fiveToSeven) {
        TakeoverData::kTakeoverProtocolVersionSeven},
       {TakeoverData::kTakeoverProtocolVersionFour,
        TakeoverData::kTakeoverProtocolVersionFive},
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionSeven),
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionFive));
 }
 
@@ -393,9 +393,9 @@ TEST(Takeover, sixToSeven) {
        TakeoverData::kTakeoverProtocolVersionFive,
        TakeoverData::kTakeoverProtocolVersionSix,
        TakeoverData::kTakeoverProtocolVersionSeven},
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionSix),
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionSeven));
 
   simpleTestImpl(
@@ -407,9 +407,9 @@ TEST(Takeover, sixToSeven) {
       {TakeoverData::kTakeoverProtocolVersionFour,
        TakeoverData::kTakeoverProtocolVersionFive,
        TakeoverData::kTakeoverProtocolVersionSix},
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionSeven),
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionSix));
 }
 
@@ -418,36 +418,36 @@ TEST(Takeover, atypicalVersionCapability) {
       CheckMountdSocket::YES,
       kSupportedTakeoverVersions,
       kSupportedTakeoverVersions,
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionSix),
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionSeven));
 
   simpleTestImpl(
       CheckMountdSocket::YES,
       kSupportedTakeoverVersions,
       kSupportedTakeoverVersions,
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionSeven),
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionSix));
 
   simpleTestImpl(
       CheckMountdSocket::YES,
       kSupportedTakeoverVersions,
       kSupportedTakeoverVersions,
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionFive),
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionSeven));
 
   simpleTestImpl(
       CheckMountdSocket::YES,
       kSupportedTakeoverVersions,
       kSupportedTakeoverVersions,
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionSeven),
-      TakeoverData::versionToCapabilites(
+      TakeoverData::versionToCapabilities(
           TakeoverData::kTakeoverProtocolVersionFive));
 }
 

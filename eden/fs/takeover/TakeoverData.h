@@ -181,7 +181,7 @@ class TakeoverData {
    * protocol we use now and the capability based protocol we would like to use
    * in future versions. See T104382350.
    */
-  static uint64_t versionToCapabilites(int32_t version);
+  static uint64_t versionToCapabilities(int32_t version);
 
   /**
    * Converts a valid set of capabilities into the takeover version that
@@ -190,7 +190,7 @@ class TakeoverData {
    * capability based. So we "serialize" the capabilities as a version number.
    * Eventually we will migrate off versions, then we can get rid of this.
    */
-  static int32_t capabilitesToVersion(uint64_t capabilities);
+  static int32_t capabilitiesToVersion(uint64_t capabilities);
 
   /**
    * Given a set of versions provided by a client, find the largest

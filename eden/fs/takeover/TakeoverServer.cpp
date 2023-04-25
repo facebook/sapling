@@ -166,7 +166,7 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
         // Initiate the takeover shutdown.
         state.protocolVersion = supported.value();
         auto protocolCapabilities =
-            TakeoverData::versionToCapabilites(state.protocolVersion);
+            TakeoverData::versionToCapabilities(state.protocolVersion);
         if (protocolCapabilities & TakeoverCapabilities::CAPABILITY_MATCHING) {
           state.protocolCapabilities =
               TakeoverData::computeCompatibleCapabilities(
