@@ -595,35 +595,31 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
   std::vector<Future<optional<TakeoverData::MountInfo>>> futures;
   {
     const auto mountPoints = mountPoints_->wlock();
-    for (auto& entry : *mountPoints) {
-      const auto& mountPath = entry.first;
-      auto& info = entry.second;
-
+    for (auto& [mountPath, info] : *mountPoints) {
       try {
         info.takeoverPromise.emplace();
         auto future = info.takeoverPromise->getFuture();
 
-        if (auto* channel = info.edenMount->getFuseChannel()) {
-          XLOG(DBG7) << "Calling takeover stop on fuse channel";
-          channel->takeoverStop();
-        } else if (auto* channel = info.edenMount->getNfsdChannel()) {
-          XLOG(DBG7) << "Calling takeover stop on nfsd3";
-          channel->takeoverStop();
-        } else if (!info.edenMount->fsChannelIsInitialized()) {
+        FsChannel* fsChannel = info.edenMount->getFsChannel();
+        if (!fsChannel) {
           return EDEN_BUG_FUTURE(TakeoverData)
               << "Takeover isn't (yet) supported during mount initialization."
               << "Mount State "
               << folly::to_underlying(info.edenMount->getState());
+        }
+
+        XLOG(DBG7) << "Calling takeoverStop on " << fsChannel->getName()
+                   << " channel";
+        if (fsChannel->takeoverStop()) {
+          // Success! Takeover has begun.
         } else {
           auto mountProtocol = info.edenMount->getMountProtocol();
-          std::string formatedMountProtocol = "<unknown>";
-          if (mountProtocol.has_value()) {
-            formatedMountProtocol =
-                fmt::format("{}", folly::to_underlying(mountProtocol.value()));
-          }
+          std::string formattedMountProtocol =
+              mountProtocol ? fmt::to_string(*mountProtocol) : "<unknown>";
           return EDEN_BUG_FUTURE(TakeoverData)
-              << "Takeover isn't (yet) supported for non-FUSE/NFS mounts."
-              << "Mount type: " << formatedMountProtocol << ". Mount State: "
+              << "Takeover isn't (yet) supported for " << fsChannel->getName()
+              << " mounts."
+              << "Mount type: " << formattedMountProtocol << ". Mount State: "
               << folly::to_underlying(info.edenMount->getState());
         }
 
@@ -672,6 +668,8 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
           // log the error but continue trying to perform graceful takeover
           // of the other mount points.
           if (!result.hasValue()) {
+            // TODO: Log this type of error either in the new process or the old
+            // process.
             XLOG(ERR) << "error stopping mount during takeover shutdown: "
                       << result.exception().what();
             continue;
@@ -682,6 +680,8 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
           // in the middle of stopping it for takeover.  Just skip this mount
           // in this case.
           if (!result.value().has_value()) {
+            // TODO: Log this type of error either in the new process or the old
+            // process.
             XLOG(WARN) << "mount point was unmounted during "
                           "takeover shutdown";
             continue;
@@ -2087,7 +2087,6 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
         // currently processing thrift calls to finish.
         server_->stop();
       })
-      .via(getMainEventBase()) // NFS mounts need to be shut down here
       .thenTry([this, takeoverPromise = std::move(takeoverPromise)](
                    auto&& t) mutable {
         if (t.hasException()) {
@@ -2140,8 +2139,7 @@ void EdenServer::shutdownSubscribers() {
   // below
   XLOG(DBG1) << "cancel all subscribers prior to stopping thrift";
   auto mountPoints = mountPoints_->wlock();
-  for (auto& entry : *mountPoints) {
-    auto& info = entry.second;
+  for (auto& [path, info] : *mountPoints) {
     info.edenMount->getJournal().cancelAllSubscribers();
   }
 }
@@ -2178,8 +2176,8 @@ void EdenServer::refreshBackingStore() {
   std::vector<shared_ptr<BackingStore>> backingStores;
   {
     auto lockedStores = backingStores_.wlock();
-    for (auto& entry : *lockedStores) {
-      backingStores.emplace_back(entry.second);
+    for (auto& [key, backingStore] : *lockedStores) {
+      backingStores.emplace_back(backingStore);
     }
   }
 

@@ -467,6 +467,15 @@ class PrjfsChannel : public FsChannel {
    */
   ImmediateFuture<folly::Unit> waitForPendingNotifications();
 
+  const char* getName() const override {
+    return "prjfs";
+  }
+
+  bool takeoverStop() override {
+    // ProjFS does not support takeover.
+    return false;
+  }
+
   /**
    * Stop the PrjfsChannel.
    *

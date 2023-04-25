@@ -515,7 +515,7 @@ class EdenServer : private TakeoverHandler {
   using BackingStoreKey = std::pair<BackingStoreType, std::string>;
   using BackingStoreMap =
       std::unordered_map<BackingStoreKey, std::shared_ptr<BackingStore>>;
-  using MountMap = PathMap<struct EdenMountInfo, AbsolutePath>;
+  using MountMap = PathMap<EdenMountInfo, AbsolutePath>;
   class ThriftServerEventHandler;
 
   // Forbidden copy constructor and assignment operator

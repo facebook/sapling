@@ -1197,10 +1197,6 @@ void EdenMount::setTestPrjfsChannel(std::unique_ptr<PrjfsChannel> channel) {
 }
 #endif
 
-bool EdenMount::fsChannelIsInitialized() const {
-  return !std::holds_alternative<std::monostate>(channel_);
-}
-
 bool EdenMount::isFuseChannel() const {
 #ifndef _WIN32
   return std::holds_alternative<EdenMount::FuseChannelVariant>(channel_);

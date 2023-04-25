@@ -2122,11 +2122,12 @@ folly::SemiFuture<FsStopDataPtr> Nfsd3::getStopFuture() {
   return stopPromise_.getSemiFuture().defer([](auto p) { return p; });
 }
 
-void Nfsd3::takeoverStop() {
+bool Nfsd3::takeoverStop() {
   XLOG(DBG7) << "calling takeover stop on the nfs RpcServer";
   server_->takeoverStop().via(
       server_->getEventBase()); // we do this to make sure the takeover future
   // was completely scheduled
+  return true;
 }
 
 folly::StringPiece nfsProcName(uint32_t procNumber) {

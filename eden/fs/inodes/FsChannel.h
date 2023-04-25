@@ -38,6 +38,21 @@ class FsChannel {
   virtual ~FsChannel() = default;
 
   /**
+   * Returns a short, human-readable (or at least loggable) name for this
+   * FsChannel type.
+   *
+   * e.g. "fuse", "nfs3", "prjfs"
+   */
+  virtual const char* getName() const = 0;
+
+  /**
+   * Ask this FsChannel to stop for a takeover request.
+   *
+   * Returns true if takeover is supported and a takeover attempt has begun.
+   */
+  virtual bool takeoverStop() = 0;
+
+  /**
    * During checkout or other Thrift calls that modify the filesystem, those
    * modifications may be invisible to the filesystem's own caches. Therefore,
    * we send fine-grained invalidation messages to the FsChannel. Those

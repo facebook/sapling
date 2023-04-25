@@ -267,6 +267,10 @@ class FuseChannel final : public FsChannel {
    */
   void destroy();
 
+  const char* getName() const override {
+    return "fuse";
+  }
+
   /**
    * Initialize the FuseChannel; until this completes successfully,
    * FUSE requests will not be serviced.
@@ -317,8 +321,9 @@ class FuseChannel final : public FsChannel {
    * Request that the FuseChannel stop processing new requests, and prepare
    * to hand over the FuseDevice to another process.
    */
-  void takeoverStop() {
+  bool takeoverStop() override {
     requestSessionExit(StopReason::TAKEOVER);
+    return true;
   }
 
   /**

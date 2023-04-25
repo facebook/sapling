@@ -145,6 +145,10 @@ class Nfsd3 final : public FsChannel {
    */
   ~Nfsd3();
 
+  const char* getName() const override {
+    return "nfs3";
+  }
+
   void initialize(folly::SocketAddress addr, bool registerWithRpcbind);
   void initialize(folly::File connectedSocket);
 
@@ -184,7 +188,7 @@ class Nfsd3 final : public FsChannel {
    */
   void invalidate(AbsolutePath path, mode_t mode);
 
-  void takeoverStop();
+  bool takeoverStop() override;
 
   /**
    * Wait for all pending invalidation to complete.
