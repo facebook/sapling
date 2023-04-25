@@ -12,14 +12,25 @@ mod git_copy_trace;
 mod rename_finders;
 mod utils;
 
-// traits
 pub use crate::copy_trace::CopyTrace;
-// copy tracers
 pub use crate::dag_copy_trace::DagCopyTrace;
 pub use crate::git_copy_trace::GitCopyTrace;
-// rename finders
 pub use crate::rename_finders::RenameFinder;
 pub use crate::rename_finders::SaplingRenameFinder;
 
 #[cfg(test)]
 mod tests;
+
+/// SearchDirection when searching renames.
+///
+/// Assuming we have a commit graph like below:
+///
+///  a..z # draw dag syntax
+///
+/// Forward means searching from a to z.
+/// Backward means searching from z to a.
+#[derive(Debug, PartialEq)]
+pub(crate) enum SearchDirection {
+    Forward,
+    Backward,
+}

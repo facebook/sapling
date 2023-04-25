@@ -22,6 +22,7 @@ use types::RepoPathBuf;
 use crate::error::CopyTraceError;
 use crate::CopyTrace;
 use crate::RenameFinder;
+use crate::SearchDirection;
 
 pub struct DagCopyTrace {
     /* Input */
@@ -251,18 +252,4 @@ impl CopyTrace for DagCopyTrace {
             }
         }
     }
-}
-
-/// SearchDirection when searching renames.
-///
-/// Assuming we have a commit graph like below:
-///
-///  a..z # draw dag syntax
-///
-/// Forward means searching from a to z.
-/// Backward means searching from z to a.
-#[derive(Debug)]
-enum SearchDirection {
-    Forward,
-    Backward,
 }
