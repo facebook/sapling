@@ -70,6 +70,8 @@ use slog::debug;
 use slog::info;
 use slog::warn;
 use stats::prelude::*;
+use tokio::sync::Notify;
+use tokio::task::JoinHandle;
 use tunables::tunables;
 use unodes::RootUnodeManifestId;
 
@@ -87,6 +89,8 @@ define_stats! {
 pub struct WarmBookmarksCache {
     bookmarks: Arc<RwLock<HashMap<BookmarkKey, (ChangesetId, BookmarkKind)>>>,
     terminate: Option<oneshot::Sender<()>>,
+    notify_sync_start: Arc<Notify>,
+    notify_sync_complete: Arc<Notify>,
 }
 
 pub type WarmerFn =
@@ -307,6 +311,9 @@ pub trait BookmarksCache: Send + Sync {
         pagination: &BookmarkPagination,
         limit: Option<u64>,
     ) -> Result<Vec<(BookmarkKey, (ChangesetId, BookmarkKind))>, Error>;
+
+    /// Awaits the completion of any ongoing update.
+    async fn sync(&self, ctx: &CoreContext);
 }
 
 /// A drop-in replacement for warm bookmark cache that doesn't
@@ -355,6 +362,8 @@ impl BookmarksCache for NoopBookmarksCache {
             .try_collect()
             .await
     }
+
+    async fn sync(&self, _ctx: &CoreContext) {}
 }
 
 impl WarmBookmarksCache {
@@ -368,6 +377,8 @@ impl WarmBookmarksCache {
     ) -> Result<Self, Error> {
         let warmers = Arc::new(warmers);
         let (sender, receiver) = oneshot::channel();
+        let notify_sync_start = Arc::new(Notify::new());
+        let notify_sync_complete = Arc::new(Notify::new());
 
         info!(ctx.logger(), "Starting warm bookmark cache updater");
         let sub = bookmarks
@@ -395,11 +406,18 @@ impl WarmBookmarksCache {
             repo_identity.clone(),
             warmers.clone(),
         )
-        .spawn(ctx.clone(), receiver);
+        .spawn(
+            ctx.clone(),
+            receiver,
+            notify_sync_start.clone(),
+            notify_sync_complete.clone(),
+        );
 
         Ok(Self {
             bookmarks: bookmarks_to_watch,
             terminate: Some(sender),
+            notify_sync_start,
+            notify_sync_complete,
         })
     }
 }
@@ -453,6 +471,14 @@ impl BookmarksCache for WarmBookmarksCache {
             }
             Ok(matches)
         }
+    }
+
+    async fn sync(&self, _ctx: &CoreContext) {
+        // Notifies the bookmark coordinator of sync start and
+        // starts listening for a notification indicating sync completion.
+        let notified = self.notify_sync_complete.notified();
+        self.notify_sync_start.notify_one();
+        notified.await;
     }
 }
 
@@ -723,6 +749,7 @@ struct BookmarksCoordinator {
     repo: BookmarksCoordinatorRepo,
     warmers: Arc<Vec<Warmer>>,
     live_updaters: Arc<RwLock<HashMap<BookmarkKey, BookmarkUpdaterState>>>,
+    updaters_handles: HashMap<BookmarkKey, JoinHandle<()>>,
 }
 
 impl BookmarksCoordinator {
@@ -746,11 +773,11 @@ impl BookmarksCoordinator {
             repo,
             warmers,
             live_updaters: Arc::new(RwLock::new(HashMap::new())),
+            updaters_handles: Default::default(),
         }
     }
 
     async fn update(&mut self, ctx: &CoreContext) -> Result<(), Error> {
-        // Report delay and remove finished updaters
         report_delay_and_remove_finished_updaters(
             ctx,
             &self.live_updaters,
@@ -840,39 +867,40 @@ impl BookmarksCoordinator {
                     self.live_updaters,
                     self.warmers,
                 );
-                // By dropping the future output by tokio::spawn instead of awaiting it, we
-                // delegate the responsibility of managing it to tokio's async queue
-                std::mem::drop(tokio::spawn(async move {
-                    let res = single_bookmark_updater(
-                        &ctx,
-                        &repo,
-                        &book,
-                        &bookmarks,
-                        &warmers,
-                        |ts: Timestamp| {
-                            live_updaters.with_write(|live_updaters| {
-                                live_updaters.insert(
-                                    book.key().clone(),
-                                    BookmarkUpdaterState::InProgress {
-                                        oldest_underived_ts: ts,
-                                    },
-                                );
-                            });
-                        },
-                    )
-                    .await;
-                    if let Err(ref err) = res {
-                        STATS::bookmark_update_failures.add_value(1);
-                        warn!(ctx.logger(), "update of {} failed: {:?}", book.key(), err);
-                    };
+                self.updaters_handles.insert(
+                    book.key().clone(),
+                    tokio::spawn(async move {
+                        let res = single_bookmark_updater(
+                            &ctx,
+                            &repo,
+                            &book,
+                            &bookmarks,
+                            &warmers,
+                            |ts: Timestamp| {
+                                live_updaters.with_write(|live_updaters| {
+                                    live_updaters.insert(
+                                        book.key().clone(),
+                                        BookmarkUpdaterState::InProgress {
+                                            oldest_underived_ts: ts,
+                                        },
+                                    );
+                                });
+                            },
+                        )
+                        .await;
+                        if let Err(ref err) = res {
+                            STATS::bookmark_update_failures.add_value(1);
+                            warn!(ctx.logger(), "update of {} failed: {:?}", book.key(), err);
+                        };
 
-                    live_updaters.with_write(|live_updaters| {
-                        let maybe_state = live_updaters.remove(book.key());
-                        if let Some(state) = maybe_state {
-                            live_updaters.insert(book.key().clone(), state.into_finished(&res));
-                        }
-                    });
-                }));
+                        live_updaters.with_write(|live_updaters| {
+                            let maybe_state = live_updaters.remove(book.key());
+                            if let Some(state) = maybe_state {
+                                live_updaters.insert(book.key().clone(), state.into_finished(&res));
+                            }
+                        });
+                    }),
+                );
             }
         }
 
@@ -880,10 +908,20 @@ impl BookmarksCoordinator {
     }
 
     // Loop that finds bookmarks that were modified and spawns separate bookmark updaters for them
-    pub fn spawn(mut self, ctx: CoreContext, terminate: oneshot::Receiver<()>) {
+    pub fn spawn(
+        mut self,
+        ctx: CoreContext,
+        terminate: oneshot::Receiver<()>,
+        notify_sync_start: Arc<Notify>,
+        notify_sync_complete: Arc<Notify>,
+    ) {
         let fut = async move {
             info!(ctx.logger(), "Started warm bookmark cache updater");
+
             let infinite_loop = async {
+                // Indicates that the sync method was called and is waiting for a sync
+                // completion notification
+                let mut sync_started = false;
                 loop {
                     // Reset the sequence counter for each loop iteration.
                     let ctx = ctx.with_mutated_scuba(|scuba| scuba.with_seq("seq"));
@@ -892,6 +930,24 @@ impl BookmarksCoordinator {
                     if let Err(err) = res.as_ref() {
                         STATS::bookmark_discover_failures.add_value(1);
                         warn!(ctx.logger(), "failed to update bookmarks {:?}", err);
+                    }
+
+                    if sync_started {
+                        // Wait for all updaters to finish and notify sync completion
+                        if let Err(join_err) = self
+                            .updaters_handles
+                            .drain()
+                            .map(|(_, handle)| handle)
+                            .collect::<FuturesUnordered<_>>()
+                            .try_collect::<Vec<_>>()
+                            .await
+                        {
+                            warn!(
+                                ctx.logger(),
+                                "failed to join updater tasks when syncing {:?}", join_err
+                            );
+                        }
+                        notify_sync_complete.notify_waiters();
                     }
 
                     let delay_ms = match tunables()
@@ -903,7 +959,17 @@ impl BookmarksCoordinator {
                         _ => 1000,
                     };
 
-                    tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+                    // Receiving a sync notification interrupts sleep and forces
+                    // waiting for all updaters to finish in the next iteration
+                    let notified = notify_sync_start.notified();
+                    let sleep = tokio::time::sleep(Duration::from_millis(delay_ms));
+
+                    futures::pin_mut!(notified, sleep);
+
+                    match select(notified, sleep).await {
+                        future::Either::Left(_) => sync_started = true,
+                        future::Either::Right(_) => sync_started = false,
+                    }
                 }
             }
             .boxed();
