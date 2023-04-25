@@ -253,12 +253,6 @@ class EdenServer : private TakeoverHandler {
       std::optional<TakeoverData::MountInfo>&& optionalTakeover = std::nullopt);
 
   /**
-   * Takeover a mount from another eden instance
-   */
-  FOLLY_NODISCARD folly::Future<std::shared_ptr<EdenMount>> takeoverMount(
-      TakeoverData::MountInfo&& takeover);
-
-  /**
    * Unmount an EdenMount.
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> unmount(

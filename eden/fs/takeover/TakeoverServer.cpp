@@ -93,102 +93,90 @@ class TakeoverServer::ConnHandler {
 };
 
 Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
-  try {
-    // Check the remote endpoint's credentials.
-    // We only allow transferring our mount points to another process
-    // owned by the same user.
-    auto uid = socket_.getRemoteUID();
-    if (uid != getuid()) {
-      return makeFuture<Unit>(std::runtime_error(folly::to<std::string>(
-          "invalid takeover request from incorrect user: current UID=",
-          getuid(),
-          ", got request from UID ",
-          uid)));
-    }
-
-    // Check to see if we are speaking a compatible takeover protocol
-    // version.  If not, error out so that we don't change any state.
-    // The client should send us the version information, but clients
-    // prior to the revision where this check was added will never send
-    // us the version data.  We use a short timeout for receiving the
-    // version data; in practice it will appear immediately or will
-    // never be received.
-    auto timeout = std::chrono::seconds(5);
-    return socket_.receive(timeout)
-        .thenTry([this](folly::Try<UnixSocket::Message>&& msg) {
-          if (msg.hasException()) {
-            // most likely cause: timed out waiting for the client to
-            // send the protocol version.  FutureUnixSocket::receiveTimeout()
-            // will close the socket unconditionally, so we can't send
-            // an error message back to the peer.  However, for the sake
-            // of clarity in the control flow we bubble up the error
-            // as if we could do that.
-            XLOG(ERR) << "Exception while waiting for takeover version from "
-                         "the client.  Most likely reason is a client version "
-                         "mismatch, you may need to perform a full "
-                         "`eden shutdown ; eden daemon` restart to migrate."
-                      << msg.exception();
-            return folly::makeFuture<TakeoverData>(msg.exception());
-          }
-
-          auto query =
-              CompactSerializer::deserialize<TakeoverVersionQuery>(&msg->data);
-
-          auto supported = TakeoverData::computeCompatibleVersion(
-              *query.versions_ref(), this->supportedVersions_);
-
-          if (!supported.has_value()) {
-            auto clientVersionList = folly::join(", ", *query.versions_ref());
-            auto serverVersionList =
-                folly::join(", ", this->supportedVersions_);
-
-            return folly::makeFuture<TakeoverData>(
-                folly::make_exception_wrapper<std::runtime_error>(
-                    folly::to<std::string>(
-                        "The client and the server do not share a common "
-                        "takeover protocol implementation.  Use "
-                        "`eden shutdown ; eden daemon` to migrate.  "
-                        "clientVersions=[",
-                        clientVersionList,
-                        "], "
-                        "serverVersions=[",
-                        serverVersionList,
-                        "]")));
-          }
-          // Initiate the takeover shutdown.
-          protocolVersion_ = supported.value();
-          auto protocolCapabilities =
-              TakeoverData::versionToCapabilites(protocolVersion_);
-          if (protocolCapabilities &
-              TakeoverCapabilities::CAPABILITY_MATCHING) {
-            protocolCapabilities_ = TakeoverData::computeCompatibleCapabilities(
-                *query.capabilities_ref(), supportedCapabilities_);
-          } else {
-            protocolCapabilities_ = protocolCapabilities;
-          }
-
-          XLOG(DBG7) << "Protocol version: " << protocolVersion_
-                     << "; Protocol Capabilities: " << protocolCapabilities_;
-
-          shouldPing_ = (protocolCapabilities_ & TakeoverCapabilities::PING);
-          return server_->getTakeoverHandler()->startTakeoverShutdown();
-        })
-        .thenTryInline(folly::makeAsyncTask(
-            server_->eventBase_, [this](folly::Try<TakeoverData>&& data) {
-              if (!data.hasValue()) {
-                return sendError(data.exception());
-              }
-              if (shouldPing_) {
-                XLOG(DBG7) << "sending ready ping to takeover client";
-                return pingThenSendTakeoverData(std::move(data.value()));
-              } else {
-                XLOG(DBG7) << "not sending ready ping to takeover client";
-                return sendTakeoverData(std::move(data.value()));
-              }
-            }));
-  } catch (...) {
-    return makeFuture<Unit>(folly::exception_wrapper{std::current_exception()});
+  // Check the remote endpoint's credentials.
+  // We only allow transferring our mount points to another process
+  // owned by the same user.
+  auto uid = socket_.getRemoteUID();
+  if (uid != getuid()) {
+    throwf<std::runtime_error>(
+        "invalid takeover request from incorrect user: current UID={}, got request from UID {}",
+        getuid(),
+        uid);
   }
+
+  // Check to see if we are speaking a compatible takeover protocol
+  // version.  If not, error out so that we don't change any state.
+  // The client should send us the version information, but clients
+  // prior to the revision where this check was added will never send
+  // us the version data.  We use a short timeout for receiving the
+  // version data; in practice it will appear immediately or will
+  // never be received.
+  auto timeout = std::chrono::seconds(5);
+  return socket_.receive(timeout)
+      .thenTry([this](folly::Try<UnixSocket::Message>&& msg) {
+        if (msg.hasException()) {
+          // most likely cause: timed out waiting for the client to
+          // send the protocol version.  FutureUnixSocket::receiveTimeout()
+          // will close the socket unconditionally, so we can't send
+          // an error message back to the peer.  However, for the sake
+          // of clarity in the control flow we bubble up the error
+          // as if we could do that.
+          XLOG(ERR) << "Exception while waiting for takeover version from "
+                       "the client.  Most likely reason is a client version "
+                       "mismatch, you may need to perform a full "
+                       "`eden shutdown ; eden daemon` restart to migrate."
+                    << msg.exception();
+          return folly::makeFuture<TakeoverData>(msg.exception());
+        }
+
+        auto query =
+            CompactSerializer::deserialize<TakeoverVersionQuery>(&msg->data);
+
+        auto supported = TakeoverData::computeCompatibleVersion(
+            *query.versions_ref(), this->supportedVersions_);
+
+        if (!supported.has_value()) {
+          auto clientVersionList = folly::join(", ", *query.versions_ref());
+          auto serverVersionList = folly::join(", ", this->supportedVersions_);
+
+          throwf<std::runtime_error>(
+              "The client and the server do not share a common "
+              "takeover protocol implementation.  Use "
+              "`eden shutdown ; eden daemon` to migrate.  "
+              "clientVersions=[{}], serverVersions=[{}]",
+              clientVersionList,
+              serverVersionList);
+        }
+        // Initiate the takeover shutdown.
+        protocolVersion_ = supported.value();
+        auto protocolCapabilities =
+            TakeoverData::versionToCapabilites(protocolVersion_);
+        if (protocolCapabilities & TakeoverCapabilities::CAPABILITY_MATCHING) {
+          protocolCapabilities_ = TakeoverData::computeCompatibleCapabilities(
+              *query.capabilities_ref(), supportedCapabilities_);
+        } else {
+          protocolCapabilities_ = protocolCapabilities;
+        }
+
+        XLOG(DBG7) << "Protocol version: " << protocolVersion_
+                   << "; Protocol Capabilities: " << protocolCapabilities_;
+
+        shouldPing_ = (protocolCapabilities_ & TakeoverCapabilities::PING);
+        return server_->getTakeoverHandler()->startTakeoverShutdown();
+      })
+      .via(server_->eventBase_)
+      .thenTry([this](folly::Try<TakeoverData>&& data) {
+        if (!data.hasValue()) {
+          return sendError(data.exception());
+        }
+        if (shouldPing_) {
+          XLOG(DBG7) << "sending ready ping to takeover client";
+          return pingThenSendTakeoverData(std::move(data.value()));
+        } else {
+          XLOG(DBG7) << "not sending ready ping to takeover client";
+          return sendTakeoverData(std::move(data.value()));
+        }
+      });
 }
 
 Future<Unit> TakeoverServer::ConnHandler::sendError(
@@ -219,32 +207,31 @@ Future<Unit> TakeoverServer::ConnHandler::pingThenSendTakeoverData(
       .thenValue([this](auto&&) {
         // Wait for the ping reply. Here we just give it a few seconds to
         // respond.
-        auto timeout = std::chrono::seconds(FLAGS_pingReceiveTimeout);
         return server_->faultInjector_.checkAsync("takeover", "ping_receive")
-            .semi()
-            .via(server_->eventBase_)
-            .thenValue(
-                [this, timeout](auto&&) { return socket_.receive(timeout); });
+            .semi();
       })
-      .thenTryInline(folly::makeAsyncTask(
-          server_->eventBase_,
-          [this, data = std::move(data)](
-              folly::Try<UnixSocket::Message>&& msg) mutable {
-            if (msg.hasException()) {
-              // If we got an exception on sending or receiving here, we should
-              // bubble up an exception and recover.
+      .via(server_->eventBase_)
+      .thenValue([this](auto&&) {
+        auto timeout = std::chrono::seconds(FLAGS_pingReceiveTimeout);
+        return socket_.receive(timeout);
+      })
+      .thenTry([this, data = std::move(data)](
+                   folly::Try<UnixSocket::Message>&& msg) mutable {
+        if (msg.hasException()) {
+          // If we got an exception on sending or receiving here, we should
+          // bubble up an exception and recover.
 
-              // We must save the original takeoverComplete promise
-              // since we will move the TakeoverData into the takeoverComplete
-              // promise and the EdenServer waits on this to be fulfilled to
-              // determine to recover or not
-              auto takeoverPromise = std::move(data.takeoverComplete);
-              takeoverPromise.setValue(std::move(data));
+          // We must save the original takeoverComplete promise
+          // since we will move the TakeoverData into the takeoverComplete
+          // promise and the EdenServer waits on this to be fulfilled to
+          // determine to recover or not
+          auto takeoverPromise = std::move(data.takeoverComplete);
+          takeoverPromise.setValue(std::move(data));
 
-              return makeFuture<Unit>(msg.exception());
-            }
-            return sendTakeoverData(std::move(data));
-          }));
+          return makeFuture<Unit>(msg.exception());
+        }
+        return sendTakeoverData(std::move(data));
+      });
 }
 
 Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
@@ -338,7 +325,7 @@ void TakeoverServer::connectionAccepted(
 
   XLOG(INFO) << "takeover socket connection received";
   auto* handlerRawPtr = handler.get();
-  handlerRawPtr->start()
+  folly::makeFutureWith([&] { return handlerRawPtr->start(); })
       .thenError([](const folly::exception_wrapper& ew) {
         XLOG(ERR) << "error processing takeover connection request: "
                   << folly::exceptionStr(ew);
