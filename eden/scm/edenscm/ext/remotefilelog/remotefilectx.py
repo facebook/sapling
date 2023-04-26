@@ -535,6 +535,12 @@ class remotefilectx(context.filectx):
         diffopts=None,
         prefetchskip=None,
     ):
+        if self._repo.ui.configbool("experimental", "edenapi-blame"):
+            # Avoid slow prefetching below if we are using EdenAPI blame cache.
+            return super(remotefilectx, self).annotate(
+                follow, linenumber, diffopts=diffopts
+            )
+
         introctx = self
         if prefetchskip:
             # use introrev so prefetchskip can be accurately tested

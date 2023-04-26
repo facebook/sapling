@@ -32,6 +32,7 @@ use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
 use parking_lot::RwLock;
 use pathmatcher::AlwaysMatcher;
+use pathmatcher::ExactMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::TreeMatcher;
 use pypathmatcher::extract_matcher;
@@ -65,6 +66,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             prefetch(
                 store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
                 node: Vec<PyBytes>,
+                paths: Option<Vec<PyPathBuf>> = None,
             )
         ),
     )?;
@@ -568,16 +570,27 @@ pub fn prefetch(
     py: Python,
     store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
     nodes: Vec<PyBytes>,
+    paths: Option<Vec<PyPathBuf>>,
 ) -> PyResult<PyNone> {
-    let store = store.into();
     let nodes: Vec<Node> = nodes
         .iter()
         .map(|n| pybytes_to_node(py, n))
         .collect::<PyResult<_>>()?;
+    let matcher: Arc<dyn Matcher + Send + Sync> = match paths {
+        Some(paths) => Arc::new(ExactMatcher::new(
+            paths
+                .iter()
+                .map(|p| p.to_repo_path())
+                .collect::<Result<Vec<_>>>()
+                .map_pyerr(py)?
+                .into_iter(),
+            false,
+        )),
+        None => Arc::new(AlwaysMatcher::new()),
+    };
 
-    py.allow_threads(|| manifest_tree::prefetch(store, &nodes, AlwaysMatcher::new()))
+    py.allow_threads(|| manifest_tree::prefetch(store.into(), &nodes, matcher))
         .map_pyerr(py)?;
-
     Ok(PyNone)
 }
 

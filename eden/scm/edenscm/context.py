@@ -21,6 +21,8 @@ import stat
 import sys
 from typing import Callable, List, Tuple
 
+import bindings
+
 from . import (
     annotate,
     encoding,
@@ -1149,8 +1151,21 @@ class basefilectx(object):
 
         blame = blame["Ok"]
 
-        # prefetch commit text
-        repo.changelog.inner.getcommitrawtextlist([n for n in blame["commits"]])
+        # Prefetch commit and parent nodes.
+        tofetch = bindings.dag.nameset(blame["commits"])
+        tofetch += repo.changelog.dag.parents(tofetch)
+        repo.changelog.filternodes(tofetch)
+
+        # Prefetch commit text.
+        committexts = repo.changelog.inner.getcommitrawtextlist(
+            [n for n in blame["commits"]]
+        )
+
+        # Prefetch trees for all relevant files and commits.
+        treeroots = [bin(text[:40]) for text in committexts]
+        bindings.manifest.prefetch(
+            repo.manifestlog.datastore, treeroots, paths=blame["paths"]
+        )
 
         lines = []
         for rng in blame["line_ranges"]:
