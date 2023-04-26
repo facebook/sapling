@@ -58,22 +58,33 @@ impl LazyFile {
     /// Compute's the aux data associated with this file from the content.
     pub(crate) fn aux_data(&mut self) -> Result<FileAuxData> {
         // TODO(meyer): Implement the rest of the aux data fields
-        Ok(if let LazyFile::Lfs(content, ref ptr) = self {
-            FileAuxData {
+        let aux_data = match self {
+            LazyFile::Lfs(content, ref ptr) => FileAuxData {
                 total_size: content.len() as u64,
                 content_id: ContentHash::content_id(&content),
                 content_sha1: ContentHash::sha1(&content),
                 content_sha256: ptr.sha256(),
+                content_seeded_blake3: Some(ContentHash::seeded_blake3(content)),
+            },
+            LazyFile::EdenApi(entry) if entry.aux_data.is_some() => entry
+                .aux_data()
+                .cloned()
+                .ok_or_else(|| {
+                    anyhow::anyhow!("Invalid EdenAPI entry in LazyFile. Aux data is empty")
+                })?
+                .into(),
+            _ => {
+                let content = self.file_content()?;
+                FileAuxData {
+                    total_size: content.len() as u64,
+                    content_id: ContentHash::content_id(&content),
+                    content_sha1: ContentHash::sha1(&content),
+                    content_sha256: ContentHash::sha256(&content).unwrap_sha256(),
+                    content_seeded_blake3: Some(ContentHash::seeded_blake3(&content)),
+                }
             }
-        } else {
-            let content = self.file_content()?;
-            FileAuxData {
-                total_size: content.len() as u64,
-                content_id: ContentHash::content_id(&content),
-                content_sha1: ContentHash::sha1(&content),
-                content_sha256: ContentHash::sha256(&content).unwrap_sha256(),
-            }
-        })
+        };
+        Ok(aux_data)
     }
 
     /// The file content, as would be found in the working copy (stripped of copy header)

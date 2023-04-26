@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use edenapi_types::Blake3;
 use edenapi_types::ContentId;
 use edenapi_types::FileAuxData as EdenApiFileAuxData;
 use edenapi_types::Sha1;
@@ -20,6 +21,7 @@ pub struct FileAuxData {
     pub content_id: ContentId,
     pub content_sha1: Sha1,
     pub content_sha256: Sha256,
+    pub content_seeded_blake3: Option<Blake3>,
 }
 
 impl From<AuxDataEntry> for FileAuxData {
@@ -29,6 +31,7 @@ impl From<AuxDataEntry> for FileAuxData {
             content_id: v.content_id(),
             content_sha1: v.content_sha1(),
             content_sha256: Sha256::from_byte_array(v.content_sha256().into()),
+            content_seeded_blake3: v.content_seeded_blake3(),
         }
     }
 }
@@ -40,6 +43,7 @@ impl From<FileAuxData> for AuxDataEntry {
             content_id: v.content_id,
             content_sha1: v.content_sha1,
             content_sha256: v.content_sha256.into_inner().into(),
+            content_seeded_blake3: v.content_seeded_blake3,
         }
     }
 }
@@ -51,6 +55,7 @@ impl From<EdenApiFileAuxData> for FileAuxData {
             content_id: v.content_id,
             content_sha1: v.sha1,
             content_sha256: Sha256::from_byte_array(v.sha256.into()),
+            content_seeded_blake3: v.seeded_blake3,
         }
     }
 }
@@ -62,6 +67,7 @@ impl From<FileAuxData> for EdenApiFileAuxData {
             content_id: v.content_id,
             sha1: v.content_sha1,
             sha256: v.content_sha256.into_inner().into(),
+            seeded_blake3: v.content_seeded_blake3,
         }
     }
 }
