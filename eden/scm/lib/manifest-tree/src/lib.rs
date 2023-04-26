@@ -326,11 +326,16 @@ impl Manifest for TreeManifest {
         &'a self,
         matcher: M,
     ) -> Box<dyn Iterator<Item = Result<File>> + 'a> {
-        let files = bfs_iter(self, matcher).filter_map(|result| match result {
-            Ok((path, FsNodeMetadata::File(metadata))) => Some(Ok(File::new(path, metadata))),
-            Ok(_) => None,
-            Err(e) => Some(Err(e)),
-        });
+        let files =
+            bfs_iter(self.store.clone(), &[&self.root], matcher).filter_map(
+                |result| match result {
+                    Ok((path, FsNodeMetadata::File(metadata))) => {
+                        Some(Ok(File::new(path, metadata)))
+                    }
+                    Ok(_) => None,
+                    Err(e) => Some(Err(e)),
+                },
+            );
         Box::new(files)
     }
 
@@ -344,13 +349,16 @@ impl Manifest for TreeManifest {
         &'a self,
         matcher: M,
     ) -> Box<dyn Iterator<Item = Result<Directory>> + 'a> {
-        let dirs = bfs_iter(self, matcher).filter_map(|result| match result {
-            Ok((path, FsNodeMetadata::Directory(metadata))) => {
-                Some(Ok(Directory::new(path, metadata)))
-            }
-            Ok(_) => None,
-            Err(e) => Some(Err(e)),
-        });
+        let dirs =
+            bfs_iter(self.store.clone(), &[&self.root], matcher).filter_map(
+                |result| match result {
+                    Ok((path, FsNodeMetadata::Directory(metadata))) => {
+                        Some(Ok(Directory::new(path, metadata)))
+                    }
+                    Ok(_) => None,
+                    Err(e) => Some(Err(e)),
+                },
+            );
         Box::new(dirs)
     }
 
@@ -689,18 +697,18 @@ pub fn compat_subtree_diff(
     Ok(state.result)
 }
 
-/// Prefetch everything under given tree node, filtered by the given matcher.
+/// Prefetch everything under given tree nodes, filtered by the given matcher.
 ///
 /// Server requests are only made for trees not already available locally.
 /// Assuming nothing is available locally, prefetch must make O(depth) serial
 /// round trips to the server.
 pub fn prefetch(
     store: Arc<dyn TreeStore + Send + Sync>,
-    mf_node: HgId,
+    mf_nodes: &[HgId],
     matcher: impl 'static + Matcher + Sync + Send,
 ) -> Result<()> {
-    let tree = TreeManifest::durable(store, mf_node);
-    for node in bfs_iter(&tree, matcher) {
+    let links: Vec<Link> = mf_nodes.iter().map(|id| Link::durable(*id)).collect();
+    for node in bfs_iter(InnerStore::new(store), &links, matcher) {
         node?;
     }
     Ok(())

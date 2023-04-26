@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Borrow;
 use std::collections::btree_map;
 use std::mem;
 use std::sync::atomic::AtomicUsize;
@@ -29,10 +30,10 @@ use crate::link::Ephemeral;
 use crate::link::Leaf;
 use crate::link::Link;
 use crate::store::InnerStore;
-use crate::TreeManifest;
 
 pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
-    tree: &TreeManifest,
+    store: InnerStore,
+    roots: &[impl Borrow<Link>],
     matcher: M,
 ) -> Box<dyn Iterator<Item = Result<(RepoPathBuf, FsNodeMetadata)>>> {
     // This channel carries iteration results to the calling code.
@@ -47,14 +48,16 @@ pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
         work_send,
         result_send,
         pending: Arc::new(AtomicUsize::new(0)),
-        store: tree.store.clone(),
+        store,
         matcher: Arc::new(matcher),
     };
 
     // Kick off the search at the root.
-    worker
-        .publish_work(vec![(RepoPathBuf::new(), tree.root.thread_copy())])
-        .unwrap();
+    for root in roots {
+        worker
+            .publish_work(vec![(RepoPathBuf::new(), root.borrow().thread_copy())])
+            .unwrap();
+    }
 
     const NUM_BFS_WORKERS: usize = 10;
 
@@ -362,7 +365,9 @@ mod tests {
     use types::testutil::*;
 
     use super::*;
+    use crate::prefetch;
     use crate::testutil::*;
+    use crate::TreeManifest;
 
     #[test]
     fn test_items_empty() {
@@ -517,6 +522,43 @@ mod tests {
 
         let files_result = tree.files(AlwaysMatcher::new()).collect::<Result<Vec<_>>>();
         assert!(files_result.is_err());
+    }
+
+    #[test]
+    fn test_multi_root_prefetch() {
+        let store = Arc::new(TestStore::new());
+
+        let mut tree1 = TreeManifest::ephemeral(store.clone());
+        tree1.insert(repo_path_buf("a/b"), make_meta("1")).unwrap();
+        let tree1_hgid = tree1.flush().unwrap();
+
+        let mut tree2 = TreeManifest::ephemeral(store.clone());
+        tree2.insert(repo_path_buf("c/d"), make_meta("2")).unwrap();
+        let tree2_hgid = tree2.flush().unwrap();
+
+        prefetch(
+            store.clone(),
+            &[tree1_hgid, tree2_hgid],
+            AlwaysMatcher::new(),
+        )
+        .unwrap();
+
+        let get_tree_key = |t: &TreeManifest, path: &str| -> Key {
+            let path = repo_path_buf(path);
+            let hgid = match t.get(&path).unwrap().unwrap() {
+                FsNodeMetadata::File(_) => panic!("{path} is a file"),
+                FsNodeMetadata::Directory(hgid) => hgid.unwrap(),
+            };
+            Key::new(path, hgid)
+        };
+
+        let fetches = store.fetches();
+
+        assert!(fetches.contains(&vec![get_tree_key(&tree1, "")]));
+        assert!(fetches.contains(&vec![get_tree_key(&tree1, "a")]));
+
+        assert!(fetches.contains(&vec![get_tree_key(&tree2, "")]));
+        assert!(fetches.contains(&vec![get_tree_key(&tree2, "c")]));
     }
 
     fn dirs<M: 'static + Matcher + Sync + Send>(tree: &TreeManifest, matcher: M) -> Vec<String> {

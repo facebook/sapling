@@ -632,7 +632,7 @@ def wraprepo(repo):
                 store = self.manifestlog.datastore
                 for node in mfnodes:
                     if node != nullid:
-                        rustmanifest.prefetch(store, node)
+                        rustmanifest.prefetch(store, [node])
 
     repo.__class__ = treerepository
     repo._treefetches = 0

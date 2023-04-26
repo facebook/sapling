@@ -20,16 +20,18 @@ use crate::path::RepoPathBuf;
 
 pub fn repo_path(s: &str) -> &RepoPath {
     if s == "" {
-        panic!("the empty repo path is special, use RepoPath::empty() to build");
+        RepoPath::empty()
+    } else {
+        RepoPath::from_str(s).unwrap()
     }
-    RepoPath::from_str(s).unwrap()
 }
 
 pub fn repo_path_buf(s: &str) -> RepoPathBuf {
     if s == "" {
-        panic!("the empty repo path is special, use RepoPathBuf::new() to build");
+        RepoPathBuf::new()
+    } else {
+        RepoPathBuf::from_string(s.to_owned()).unwrap()
     }
-    RepoPathBuf::from_string(s.to_owned()).unwrap()
 }
 
 pub fn path_component(s: &str) -> &PathComponent {

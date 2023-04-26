@@ -64,7 +64,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             py,
             prefetch(
                 store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
-                node: &PyBytes,
+                node: Vec<PyBytes>,
             )
         ),
     )?;
@@ -567,12 +567,17 @@ pub fn subdir_diff(
 pub fn prefetch(
     py: Python,
     store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
-    node: &PyBytes,
+    nodes: Vec<PyBytes>,
 ) -> PyResult<PyNone> {
     let store = store.into();
-    let node = pybytes_to_node(py, node)?;
-    py.allow_threads(|| manifest_tree::prefetch(store, node, AlwaysMatcher::new()))
+    let nodes: Vec<Node> = nodes
+        .iter()
+        .map(|n| pybytes_to_node(py, n))
+        .collect::<PyResult<_>>()?;
+
+    py.allow_threads(|| manifest_tree::prefetch(store, &nodes, AlwaysMatcher::new()))
         .map_pyerr(py)?;
+
     Ok(PyNone)
 }
 
