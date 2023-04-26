@@ -163,6 +163,8 @@ Available IPython magics (auto magic is on, `%` is optional):
         # Disable history during tests.
         config.HistoryAccessor.enabled = False
 
+    util.mainio.disable_progress()
+
     globals().update(env)
     shell = InteractiveShellEmbed.instance(
         config=config, user_ns=globals(), user_module=sys.modules[__name__]
