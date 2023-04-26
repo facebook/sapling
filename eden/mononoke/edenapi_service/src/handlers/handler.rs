@@ -22,6 +22,9 @@ use nonzero_ext::nonzero;
 use serde::Deserialize;
 
 use super::EdenApiMethod;
+use crate::context::ServerContext;
+use crate::middleware::RequestContext;
+use crate::utils::get_repo;
 
 pub trait PathExtractorWithRepo: PathExtractor<Body> + Send + Sync {
     fn repo(&self) -> &str;
@@ -70,14 +73,28 @@ pub type HandlerResult<'a, Response> =
     Result<BoxStream<'a, anyhow::Result<Response>>, HandlerError>;
 
 pub struct EdenApiContext<P, Q> {
+    rctx: RequestContext,
+    sctx: ServerContext,
     repo: HgRepoContext,
     path: P,
     query: Q,
 }
 
 impl<P, Q> EdenApiContext<P, Q> {
-    pub fn new(repo: HgRepoContext, path: P, query: Q) -> Self {
-        Self { repo, path, query }
+    pub fn new(
+        rctx: RequestContext,
+        sctx: ServerContext,
+        repo: HgRepoContext,
+        path: P,
+        query: Q,
+    ) -> Self {
+        Self {
+            rctx,
+            sctx,
+            repo,
+            path,
+            query,
+        }
     }
     pub fn repo(&self) -> HgRepoContext {
         self.repo.clone()
@@ -90,6 +107,11 @@ impl<P, Q> EdenApiContext<P, Q> {
 
     pub fn query(&self) -> &Q {
         &self.query
+    }
+
+    /// Open an "other" repo (i.e. distinct from repo specified in URL path).
+    pub async fn other_repo(&self, repo_name: impl AsRef<str>) -> Result<HgRepoContext, HttpError> {
+        get_repo(&self.sctx, &self.rctx, repo_name, None).await
     }
 }
 

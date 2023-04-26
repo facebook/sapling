@@ -277,9 +277,9 @@ where
         state.put(HandlerInfo::new(path.repo(), Handler::API_METHOD));
 
         let rctx = RequestContext::borrow_from(&state).clone();
-        let sctx = ServerContext::borrow_from(&state);
+        let sctx = ServerContext::borrow_from(&state).clone();
 
-        let repo = get_repo(sctx, &rctx, path.repo(), None).await?;
+        let repo = get_repo(&sctx, &rctx, path.repo(), None).await?;
         let request = parse_wire_request::<<Handler::Request as ToWire>::Wire>(&mut state).await?;
 
         let sampling_rate = Handler::sampling_rate(&request);
@@ -291,7 +291,7 @@ where
             rd.add_request(&request);
         }
 
-        let ectx = EdenApiContext::new(repo, path, query);
+        let ectx = EdenApiContext::new(rctx, sctx, repo, path, query);
 
         match Handler::handler(ectx, request).await {
             Ok(responses) => Ok(encode_response_stream(

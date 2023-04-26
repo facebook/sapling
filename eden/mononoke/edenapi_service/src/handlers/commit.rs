@@ -696,7 +696,17 @@ impl EdenApiHandler for CommitTranslateId {
         ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
-        let repo = ectx.repo();
+        let from_repo = match request.from_repo {
+            Some(from_repo) => ectx.other_repo(from_repo).await?,
+            None => ectx.repo(),
+        };
+        let from_repo = from_repo.repo();
+
+        let to_repo = match request.to_repo {
+            Some(to_repo) => ectx.other_repo(to_repo).await?,
+            None => ectx.repo(),
+        };
+        let to_repo = to_repo.repo();
 
         let mut hg_ids = Vec::new();
         let mut bonsai_ids = Vec::new();
@@ -712,15 +722,15 @@ impl EdenApiHandler for CommitTranslateId {
             }
         }
 
-        // Convert request types to intermediate bonsais.
+        // Convert request types to intermediate bonsais using "from" repo.
         let (hg_bonsais, git_bonsais, globalrev_bonsais) = try_join!(
-            repo.repo().many_changeset_ids_from_hg(hg_ids),
-            repo.repo().many_changeset_ids_from_git_sha1(git_ids),
-            repo.repo().many_changeset_ids_from_globalrev(globalrevs),
+            from_repo.many_changeset_ids_from_hg(hg_ids),
+            from_repo.many_changeset_ids_from_git_sha1(git_ids),
+            from_repo.many_changeset_ids_from_globalrev(globalrevs),
         )?;
 
-        // Mapping of request id to intermediate bonsai id.
-        let input_to_bonsai: HashMap<CommitId, ChangesetId> = bonsai_ids
+        // Mapping of request id to intermediate bonsai id of "from" repo.
+        let mut input_to_bonsai: HashMap<CommitId, ChangesetId> = bonsai_ids
             .into_iter()
             .map(|id| (id.clone().into(), id))
             .chain(hg_bonsais.into_iter().map(|(hg, bs)| (hg.into(), bs)))
@@ -728,30 +738,54 @@ impl EdenApiHandler for CommitTranslateId {
             .chain(globalrev_bonsais.into_iter().map(|(g, bs)| (g.into(), bs)))
             .collect();
 
-        let all_bonsai_ids: Vec<_> = input_to_bonsai.values().cloned().collect();
+        // Convert bonsai ids to that of "to" repo, if necessary.
+        if from_repo.repoid() != to_repo.repoid() {
+            input_to_bonsai = stream::iter(input_to_bonsai.into_iter())
+                .then(|(id, bs)| {
+                    let from_repo = from_repo.clone();
+                    let to_repo = to_repo.clone();
+                    async move {
+                        (
+                            id,
+                            from_repo
+                                .xrepo_commit_lookup(&to_repo, bs.clone(), None)
+                                .await,
+                        )
+                    }
+                })
+                .filter_map(|(id, xctx)| async move {
+                    match xctx {
+                        // If there is no mapping, skip it.
+                        // TODO: perhaps we should propagate an error
+                        Ok(None) => None,
+                        Ok(Some(xctx)) => Some(Ok((id, xctx.id()))),
+                        Err(err) => Some(Err(err)),
+                    }
+                })
+                .try_collect()
+                .await?;
+        }
 
+        let all_bonsai_ids: Vec<_> = input_to_bonsai.values().cloned().collect();
         // Convert all bonsais to the target type
         let bonsai_to_target: HashMap<ChangesetId, CommitId> = match request.scheme {
             CommitIdScheme::Bonsai => all_bonsai_ids
                 .into_iter()
                 .map(|to| (to.clone(), to.into()))
                 .collect(),
-            CommitIdScheme::Hg => repo
-                .repo()
+            CommitIdScheme::Hg => to_repo
                 .many_changeset_hg_ids(all_bonsai_ids)
                 .await?
                 .into_iter()
                 .map(|(id, hg_id)| (id, hg_id.into()))
                 .collect(),
-            CommitIdScheme::GitSha1 => repo
-                .repo()
+            CommitIdScheme::GitSha1 => to_repo
                 .many_changeset_git_sha1s(all_bonsai_ids)
                 .await?
                 .into_iter()
                 .map(|(id, git_sha1)| (id, git_sha1.into()))
                 .collect(),
-            CommitIdScheme::Globalrev => repo
-                .repo()
+            CommitIdScheme::Globalrev => to_repo
                 .many_changeset_globalrev_ids(all_bonsai_ids)
                 .await?
                 .into_iter()
