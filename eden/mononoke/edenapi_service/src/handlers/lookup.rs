@@ -32,6 +32,7 @@ use mononoke_api_hg::HgRepoContext;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 
+use super::handler::EdenApiContext;
 use super::EdenApiHandler;
 use super::EdenApiMethod;
 use super::HandlerResult;
@@ -211,11 +212,10 @@ impl EdenApiHandler for LookupHandler {
     const ENDPOINT: &'static str = "/lookup";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
         let tokens = request
             .batch
             .into_iter()

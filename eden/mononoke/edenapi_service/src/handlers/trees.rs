@@ -50,6 +50,7 @@ use tunables::tunables;
 use types::Key;
 use types::RepoPathBuf;
 
+use super::handler::EdenApiContext;
 use super::EdenApiHandler;
 use super::EdenApiMethod;
 use super::HandlerInfo;
@@ -247,11 +248,10 @@ impl EdenApiHandler for UploadTreesHandler {
     const ENDPOINT: &'static str = "/upload/trees";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
         let tokens = request
             .batch
             .into_iter()

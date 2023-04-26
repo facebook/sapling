@@ -21,6 +21,7 @@ use mercurial_types::HgNodeHash;
 use mononoke_api_hg::HgRepoContext;
 use types::Key;
 
+use super::handler::EdenApiContext;
 use super::EdenApiHandler;
 use super::EdenApiMethod;
 use super::HandlerResult;
@@ -44,11 +45,10 @@ impl EdenApiHandler for HistoryHandler {
     const ENDPOINT: &'static str = "/history";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
         let HistoryRequest { keys, length } = request;
 
         let fetches = keys.into_iter().map(move |key| {

@@ -81,6 +81,8 @@ pub(crate) use handler::HandlerError;
 pub(crate) use handler::HandlerResult;
 pub(crate) use handler::PathExtractorWithRepo;
 
+use self::handler::EdenApiContext;
+
 /// Enum identifying the EdenAPI method that each handler corresponds to.
 /// Used to identify the handler for logging and stats collection.
 #[derive(Copy, Clone)]
@@ -271,7 +273,7 @@ where
 {
     let (future_stats, res) = async {
         let path = Handler::PathExtractor::take_from(&mut state);
-        let query_string = Handler::QueryStringExtractor::take_from(&mut state);
+        let query = Handler::QueryStringExtractor::take_from(&mut state);
         let content_encoding = ContentEncoding::from_state(&state);
 
         state.put(HandlerInfo::new(path.repo(), Handler::API_METHOD));
@@ -289,9 +291,11 @@ where
 
         if let Some(rd) = RequestDumper::try_borrow_mut_from(&mut state) {
             rd.add_request(&request);
-        };
+        }
 
-        match Handler::handler(repo, path, query_string, request).await {
+        let ectx = EdenApiContext::new(repo, path, query);
+
+        match Handler::handler(ectx, request).await {
             Ok(responses) => Ok(encode_response_stream(
                 monitor_request(&state, responses),
                 content_encoding,

@@ -22,6 +22,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_api_hg::HgRepoContext;
 
+use super::handler::EdenApiContext;
 use super::EdenApiHandler;
 use super::EdenApiMethod;
 use super::HandlerResult;
@@ -40,13 +41,11 @@ impl EdenApiHandler for LandStackHandler {
     const ENDPOINT: &'static str = "/land";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         Ok(stream::once(land_stack(
-            repo,
+            ectx.repo(),
             request.bookmark,
             request.head,
             request.base,

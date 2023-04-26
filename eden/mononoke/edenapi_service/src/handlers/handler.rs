@@ -53,6 +53,30 @@ where
 pub type HandlerResult<'a, Response> =
     Result<BoxStream<'a, anyhow::Result<Response>>, HandlerError>;
 
+pub struct EdenApiContext<P, Q> {
+    repo: HgRepoContext,
+    path: P,
+    query: Q,
+}
+
+impl<P, Q> EdenApiContext<P, Q> {
+    pub fn new(repo: HgRepoContext, path: P, query: Q) -> Self {
+        Self { repo, path, query }
+    }
+    pub fn repo(&self) -> HgRepoContext {
+        self.repo.clone()
+    }
+
+    #[allow(unused)]
+    pub fn path(&self) -> &P {
+        &self.path
+    }
+
+    pub fn query(&self) -> &Q {
+        &self.query
+    }
+}
+
 #[async_trait]
 pub trait EdenApiHandler: 'static {
     type PathExtractor: PathExtractorWithRepo = BasicPathExtractor;
@@ -72,9 +96,7 @@ pub trait EdenApiHandler: 'static {
     }
 
     async fn handler(
-        repo: HgRepoContext,
-        path: Self::PathExtractor,
-        query: Self::QueryStringExtractor,
+        ctx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response>;
 }

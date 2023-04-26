@@ -72,6 +72,7 @@ use tunables::tunables;
 use types::HgId;
 use types::Parents;
 
+use super::handler::EdenApiContext;
 use super::EdenApiHandler;
 use super::EdenApiMethod;
 use super::HandlerInfo;
@@ -143,11 +144,10 @@ impl EdenApiHandler for LocationToHashHandler {
     }
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
         let hgid_list = request
             .requests
             .into_iter()
@@ -274,11 +274,10 @@ impl EdenApiHandler for HashLookupHandler {
     const ENDPOINT: &'static str = "/commit/hash_lookup";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
         use CommitHashLookupRequest::*;
         Ok(stream::iter(request.batch.into_iter())
             .then(move |request| {
@@ -311,11 +310,10 @@ impl EdenApiHandler for UploadHgChangesetsHandler {
     const ENDPOINT: &'static str = "/upload/changesets";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
         let changesets = request.changesets;
         let mutations = request.mutations;
         let changesets_data = changesets
@@ -365,11 +363,11 @@ impl EdenApiHandler for UploadBonsaiChangesetHandler {
     const ENDPOINT: &'static str = "/upload/changeset/bonsai";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
+        let query = ectx.query();
         let bubble_id = query.bubble_id.map(BubbleId::new);
         let cs = request.changeset;
         let repo = &repo;
@@ -438,12 +436,10 @@ impl EdenApiHandler for FetchSnapshotHandler {
     const ENDPOINT: &'static str = "/snapshot";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
-        let repo = &repo;
+        let repo = ectx.repo();
         let cs_id = ChangesetId::from(request.cs_id);
         let bubble_id = repo
             .ephemeral_store()
@@ -526,12 +522,10 @@ impl EdenApiHandler for AlterSnapshotHandler {
     const ENDPOINT: &'static str = "/snapshot/alter";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
-        let repo = &repo;
+        let repo = ectx.repo();
         let cs_id = ChangesetId::from(request.cs_id);
         let id = repo
             .ephemeral_store()
@@ -578,11 +572,10 @@ impl EdenApiHandler for EphemeralPrepareHandler {
     const ENDPOINT: &'static str = "/ephemeral/prepare";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
         Ok(stream::once(async move {
             Ok(EphemeralPrepareResponse {
                 bubble_id: repo
@@ -611,11 +604,10 @@ impl EdenApiHandler for GraphHandlerV2 {
     const ENDPOINT: &'static str = "/commit/graph_v2";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
         let heads = request
             .heads
             .into_iter()
@@ -657,11 +649,10 @@ impl EdenApiHandler for CommitMutationsHandler {
     const ENDPOINT: &'static str = "/commit/mutations";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
         if !tunables().mutation_generate_for_draft().unwrap_or_default() {
             return Ok(stream::empty().boxed());
         }
@@ -697,11 +688,11 @@ impl EdenApiHandler for CommitTranslateId {
     const ENDPOINT: &'static str = "/commit/translate_id";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
+
         let mut hg_ids = Vec::new();
         let mut bonsai_ids = Vec::new();
         let mut git_ids = Vec::new();

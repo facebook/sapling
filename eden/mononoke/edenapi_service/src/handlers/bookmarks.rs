@@ -23,6 +23,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_api_hg::HgRepoContext;
 
+use super::handler::EdenApiContext;
 use super::EdenApiHandler;
 use super::EdenApiMethod;
 use super::HandlerResult;
@@ -44,11 +45,10 @@ impl EdenApiHandler for BookmarksHandler {
     const ENDPOINT: &'static str = "/bookmarks";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
         let fetches = request
             .bookmarks
             .into_iter()
@@ -83,13 +83,11 @@ impl EdenApiHandler for SetBookmarkHandler {
     const ENDPOINT: &'static str = "/bookmarks/set";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         Ok(stream::once(set_bookmark(
-            repo,
+            ectx.repo(),
             request.bookmark,
             request.to,
             request.from,

@@ -52,6 +52,7 @@ use rate_limiting::Metric;
 use serde::Deserialize;
 use types::Key;
 
+use super::handler::EdenApiContext;
 use super::EdenApiHandler;
 use super::EdenApiMethod;
 use super::HandlerInfo;
@@ -102,11 +103,10 @@ impl EdenApiHandler for FilesHandler {
     }
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
         let ctx = repo.ctx().clone();
 
         let len = request.keys.len() + request.reqs.len();
@@ -151,11 +151,10 @@ impl EdenApiHandler for Files2Handler {
     }
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
         let ctx = repo.ctx().clone();
 
         let len = request.keys.len() + request.reqs.len();
@@ -387,11 +386,10 @@ impl EdenApiHandler for UploadHgFilenodesHandler {
     const ENDPOINT: &'static str = "/upload/filenodes";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
         let tokens = request
             .batch
             .into_iter()
@@ -415,11 +413,10 @@ impl EdenApiHandler for DownloadFileHandler {
     const ENDPOINT: &'static str = "/download/file";
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
         let content = repo
             .download_file(request)
             .await?

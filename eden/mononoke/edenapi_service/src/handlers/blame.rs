@@ -27,6 +27,7 @@ use mononoke_api::CompatBlame;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_types::blame_v2::BlameV2;
 
+use super::handler::EdenApiContext;
 use super::EdenApiHandler;
 use super::EdenApiMethod;
 use super::HandlerResult;
@@ -53,11 +54,10 @@ impl EdenApiHandler for BlameHandler {
     }
 
     async fn handler(
-        repo: HgRepoContext,
-        _path: Self::PathExtractor,
-        _query: Self::QueryStringExtractor,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
         let blames = request
             .files
             .into_iter()
