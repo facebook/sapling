@@ -13,6 +13,8 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 
 use abomonation_derive::Abomonation;
+use maplit::btreemap;
+use maplit::hashset;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use smallvec::SmallVec;
@@ -80,6 +82,10 @@ pub struct ChangesetFrontier(BTreeMap<Generation, HashSet<ChangesetId>>);
 impl ChangesetFrontier {
     pub fn new() -> Self {
         Self(Default::default())
+    }
+
+    pub fn new_single(cs_id: ChangesetId, generation: Generation) -> Self {
+        Self(btreemap! { generation => hashset! { cs_id }})
     }
 
     pub fn highest_generation_contains(&self, cs_id: ChangesetId, generation: Generation) -> bool {

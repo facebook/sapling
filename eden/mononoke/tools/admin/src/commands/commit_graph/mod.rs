@@ -9,6 +9,7 @@ mod ancestors_difference;
 mod backfill;
 mod backfill_one;
 mod checkpoints;
+mod range_stream;
 
 use ancestors_difference::AncestorsDifferenceArgs;
 use anyhow::Result;
@@ -26,6 +27,7 @@ use commit_graph::CommitGraph;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
+use range_stream::RangeStreamArgs;
 use repo_identity::RepoIdentity;
 
 #[derive(Parser)]
@@ -43,8 +45,10 @@ pub enum CommitGraphSubcommand {
     Backfill(BackfillArgs),
     /// Backfill a commit and all of its missing ancestors.
     BackfillOne(BackfillOneArgs),
-    /// Display ids of all commits that are ancestors of one set of commits (heads), excluding ancestors of another set of commits (common).
+    /// Display ids of all commits that are ancestors of one set of commits (heads), excluding ancestors of another set of commits (common) in reverse topological order.
     AncestorsDifference(AncestorsDifferenceArgs),
+    /// Display ids of all commits that are simultaneously a descendant of one commit (start) and an ancestor of another (end) in topological order.
+    RangeStream(RangeStreamArgs),
 }
 
 #[facet::container]
@@ -88,6 +92,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         CommitGraphSubcommand::AncestorsDifference(args) => {
             ancestors_difference::ancestors_difference(&ctx, &repo, args).await
+        }
+        CommitGraphSubcommand::RangeStream(args) => {
+            range_stream::range_stream(&ctx, &repo, args).await
         }
     }
 }

@@ -37,6 +37,7 @@ macro_rules! impl_commit_graph_tests {
             test_add_recursive,
             test_add_recursive_many_changesets,
             test_ancestors_frontier_with,
+            test_range_stream,
         );
     };
 }
@@ -677,6 +678,38 @@ pub async fn test_ancestors_frontier_with(
         vec!["C"],
     )
     .await?;
+
+    Ok(())
+}
+
+pub async fn test_range_stream(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorage>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r##"
+         A-B-C-D-G-H---J-K
+            \   /   \ /
+             E-F     I
+
+         L-M-N-O-P-Q-R-S-T-U
+         "##,
+        storage.clone(),
+    )
+    .await?;
+
+    assert_range_stream(
+        &graph,
+        &ctx,
+        "A",
+        "K",
+        vec!["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"],
+    )
+    .await?;
+    assert_range_stream(&graph, &ctx, "D", "K", vec!["D", "G", "H", "I", "J", "K"]).await?;
+    assert_range_stream(&graph, &ctx, "A", "U", vec![]).await?;
+    assert_range_stream(&graph, &ctx, "O", "T", vec!["O", "P", "Q", "R", "S", "T"]).await?;
 
     Ok(())
 }

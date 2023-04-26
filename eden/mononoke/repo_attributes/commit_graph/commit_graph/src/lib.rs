@@ -29,12 +29,12 @@ use commit_graph_types::storage::Prefetch;
 use commit_graph_types::ChangesetParents;
 use context::CoreContext;
 use futures::stream;
+use futures::stream::BoxStream;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use itertools::Either;
 use itertools::Itertools;
-use maplit::hashset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
@@ -561,9 +561,7 @@ impl CommitGraph {
         cs_id: ChangesetId,
     ) -> Result<ChangesetFrontier> {
         let generation = self.changeset_generation_required(ctx, cs_id).await?;
-        let mut frontier = ChangesetFrontier::new();
-        frontier.insert(generation, hashset! { cs_id });
-        Ok(frontier)
+        Ok(ChangesetFrontier::new_single(cs_id, generation))
     }
 
     /// Obtain a frontier of changesets from a list of changeset ids, which
@@ -839,6 +837,82 @@ impl CommitGraph {
             .await?
             .try_collect()
             .await
+    }
+
+    pub async fn range_stream<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        start_id: ChangesetId,
+        end_id: ChangesetId,
+    ) -> Result<BoxStream<'a, ChangesetId>> {
+        let (start_generation, mut frontier) = futures::try_join!(
+            self.changeset_generation_required(ctx, start_id),
+            self.single_frontier(ctx, end_id)
+        )?;
+        let mut children: HashMap<ChangesetId, HashSet<(ChangesetId, Generation)>> =
+            Default::default();
+        let mut reached_start = false;
+
+        while let Some((gen, cs_ids)) = frontier.pop_last() {
+            let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
+            let all_edges = self
+                .storage
+                .fetch_many_edges_required(ctx, &cs_ids, Prefetch::for_p1_linear_traversal())
+                .await?;
+
+            reached_start |= cs_ids.contains(&start_id);
+
+            if gen > start_generation {
+                for (_, edges) in all_edges.into_iter() {
+                    for parent in edges.parents.into_iter() {
+                        children
+                            .entry(parent.cs_id)
+                            .or_default()
+                            .insert((edges.node.cs_id, edges.node.generation));
+                        frontier
+                            .entry(parent.generation)
+                            .or_default()
+                            .insert(parent.cs_id);
+                    }
+                }
+            }
+        }
+
+        if !reached_start {
+            return Ok(stream::empty().boxed());
+        }
+
+        struct RangeStreamState {
+            children: HashMap<ChangesetId, HashSet<(ChangesetId, Generation)>>,
+            upwards_frontier: ChangesetFrontier,
+        }
+
+        Ok(stream::unfold(
+            Box::new(RangeStreamState {
+                children,
+                upwards_frontier: ChangesetFrontier::new_single(start_id, start_generation),
+            }),
+            |mut state| async {
+                if let Some((_, cs_ids)) = state.upwards_frontier.pop_first() {
+                    for cs_id in cs_ids.iter() {
+                        if let Some(children) = state.children.get(cs_id) {
+                            for (child, generation) in children.iter() {
+                                state
+                                    .upwards_frontier
+                                    .entry(*generation)
+                                    .or_default()
+                                    .insert(*child);
+                            }
+                        }
+                    }
+                    Some((stream::iter(cs_ids), state))
+                } else {
+                    None
+                }
+            },
+        )
+        .flatten()
+        .boxed())
     }
 }
 

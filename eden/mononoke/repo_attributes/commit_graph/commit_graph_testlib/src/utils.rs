@@ -14,6 +14,7 @@ use commit_graph::CommitGraph;
 use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::storage::CommitGraphStorage;
 use context::CoreContext;
+use futures::stream::StreamExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 
@@ -195,6 +196,54 @@ pub async fn assert_ancestors_difference(
             .into_iter()
             .map(name_cs_id)
             .collect::<HashSet<_>>()
+    );
+    Ok(())
+}
+
+async fn assert_topological_order(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    cs_ids: &Vec<ChangesetId>,
+) -> Result<()> {
+    let all_cs_ids: HashSet<ChangesetId> = cs_ids.iter().copied().collect();
+    let mut previous_cs_ids: HashSet<ChangesetId> = Default::default();
+
+    for cs_id in cs_ids {
+        let parents = graph.changeset_parents_required(ctx, *cs_id).await?;
+        // Check that each parent of cs_id either isn't contained in cs_ids
+        // or is found before cs_id.
+        assert!(
+            parents
+                .into_iter()
+                .all(|parent| !all_cs_ids.contains(&parent) || previous_cs_ids.contains(&parent))
+        );
+        previous_cs_ids.insert(*cs_id);
+    }
+
+    Ok(())
+}
+
+pub async fn assert_range_stream(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    start: &str,
+    end: &str,
+    range: Vec<&str>,
+) -> Result<()> {
+    let start_id = name_cs_id(start);
+    let end_id = name_cs_id(end);
+
+    let range_stream_cs_ids = graph
+        .range_stream(ctx, start_id, end_id)
+        .await?
+        .collect::<Vec<_>>()
+        .await;
+
+    assert_topological_order(graph, ctx, &range_stream_cs_ids).await?;
+
+    assert_eq!(
+        range_stream_cs_ids.into_iter().collect::<HashSet<_>>(),
+        range.into_iter().map(name_cs_id).collect::<HashSet<_>>()
     );
     Ok(())
 }
