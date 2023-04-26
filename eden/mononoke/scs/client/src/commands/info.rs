@@ -41,9 +41,11 @@ pub(super) struct CommandArgs {
     #[clap(flatten)]
     commit_id_args: CommitIdArgs,
     #[clap(long, short, num_args = 1..)]
-    /// Path
+    /// Path or paths to display info for.  If not present, display info about
+    /// the commit.  To display directory info about the root directory, use
+    /// -p ""
     path: Option<Vec<String>>,
-    #[clap(long)]
+    #[clap(long, conflicts_with = "path")]
     /// Display info about bookmark itself rather than the commit it points to
     bookmark_info: bool,
 }
