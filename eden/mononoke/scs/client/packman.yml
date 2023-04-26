@@ -4,6 +4,6 @@ packages:
     build_architectures: [x86_64, aarch64]
     summary: Source Control Service Client
     rules:
-      buck:eden/mononoke/scs/client:scsc:
+      buck2:eden/mononoke/scs/client:scsc:
         eden/mononoke/scs/client/scsc#binary/scsc:
           path: /usr/local/bin/scsc
