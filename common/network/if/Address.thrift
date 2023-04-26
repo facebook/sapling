@@ -7,10 +7,7 @@ namespace py facebook.network.Address
 
 # fbstring uses the small internal buffer to store the data
 # if the data is small enough (< 24 bytes).
-include "thrift/annotation/cpp.thrift"
-
-@cpp.Type{name = "::folly::fbstring"}
-typedef binary fbbinary
+typedef binary (cpp.type = "::folly::fbstring") fbbinary
 
 enum AddressType {
   VUNSPEC = 0,
