@@ -13,18 +13,17 @@
 #    pull.httpmutation      ENABLED
 #    commitcloud.usehttpupload    ENABLED
 #    exchange.httpcommitlookup    ENABLED
-
+# Sync of remote bookmarks is also enabled in this test
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ configure modern
   $ setconfig ui.ignorerevnum=false
-
-
   $ setconfig pull.httpcommitgraph2=true
+  $ setconfig remotenames.selectivepull=True remotenames.selectivepulldefault=master
 
 setup custom smartlog
   $ function sl {
-  >  hgedenapi log -G -T "{node|short} {phase} '{desc|firstline}' {bookmarks} {join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}"
+  >  hgedenapi log -G -T "{node|short} {phase} '{desc|firstline}' {bookmarks} {remotebookmarks} {join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}"
   > }
 
 setup configuration
@@ -79,6 +78,7 @@ setup common configuration for these tests
   > owner_team = The Test Team
   > updateonmove = true
   > usehttpupload = true
+  > remotebookmarkssync = true
   > [pull]
   > httphashprefix = true
   > httpbookmarks = true
@@ -149,7 +149,7 @@ Make commits in the first client, and sync it
   │
   o  929f2b9071cf draft 'A'
   │
-  o  8b2dca0c8a72 public 'base_commit'
+  o  8b2dca0c8a72 public 'base_commit'  remote/master
   
 
 Sync from the second client - the commits should appear
@@ -171,7 +171,7 @@ Sync from the second client - the commits should appear
   │
   o  929f2b9071cf draft 'A'
   │
-  @  8b2dca0c8a72 public 'base_commit'
+  @  8b2dca0c8a72 public 'base_commit'  remote/master
   
 
 
@@ -221,7 +221,7 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   │ │
   │ o  929f2b9071cf draft 'A'
   ├─╯
-  o  8b2dca0c8a72 public 'base_commit' new_bookmark
+  o  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
   
 
 
@@ -273,7 +273,7 @@ On the second client sync it
   │
   o  929f2b9071cf draft 'A'
   │
-  o  8b2dca0c8a72 public 'base_commit' new_bookmark
+  o  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
   
 
 Check mutation markers
@@ -285,11 +285,11 @@ Check mutation markers
   │
   o  d79a28423f14 draft 'D'
   │
-  │ @  c981069f3f05 draft 'F'  (Rewritten using rebase into f5aa28a22f7b)
+  │ @  c981069f3f05 draft 'F'   (Rewritten using rebase into f5aa28a22f7b)
   │ │
-  │ x  5267c897028e draft 'E'  (Rewritten using rebase into 8da26d088b8f)
+  │ x  5267c897028e draft 'E'   (Rewritten using rebase into 8da26d088b8f)
   │ │
-  │ x  4594cad5305d draft 'D'  (Rewritten using rebase into d79a28423f14)
+  │ x  4594cad5305d draft 'D'   (Rewritten using rebase into d79a28423f14)
   │ │
   o │  c4f3cf0b6f49 draft 'C'
   │ │
@@ -297,7 +297,7 @@ Check mutation markers
   │ │
   o │  929f2b9071cf draft 'A'
   ├─╯
-  o  8b2dca0c8a72 public 'base_commit' new_bookmark
+  o  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
   
 
 
@@ -323,7 +323,7 @@ On the second client hide all draft commits
   $ hgedenapi up master -q
 
   $ sl
-  @  8b2dca0c8a72 public 'base_commit' new_bookmark
+  @  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
   
 
 
@@ -337,5 +337,128 @@ On the first client check that all commits were hidden
   $ hgedenapi up master -q
 
   $ sl
-  @  8b2dca0c8a72 public 'base_commit' new_bookmark
+  @  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
+  
+
+Test sync of remote bookmarks.
+Create "expensive" remote bookmark and another remote bookmark at the first client and push those.
+The purpose of the test is to check syncing of remote bookmarks and to verify that expensive bookmarks are pulled separately.
+  $ mkcommitedenapi e1
+  $ mkcommitedenapi e2
+  $ mkcommitedenapi e3
+  $ mkcommitedenapi e4
+  $ hgedenapi push -r . --to expensive --force --create --pushvars "BYPASS_READONLY=true"
+  pushing rev fb2839263293 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark expensive
+  searching for changes
+  exporting bookmark expensive
+  $ mkcommitedenapi e_draft
+
+  $ hgedenapi up master -q
+  $ mkcommitedenapi o1
+  $ mkcommitedenapi o2
+  $ hgedenapi push -r . --to other --force --create --pushvars "BYPASS_READONLY=true"
+  pushing rev 22f66edbeb8e to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark other
+  searching for changes
+  exporting bookmark other
+  $ mkcommitedenapi o_draft
+
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: head '5fd64a4a5d62' hasn't been uploaded yet
+  commitcloud: head 'f141e512974a' hasn't been uploaded yet
+  edenapi: queue 2 commits for upload
+  edenapi: queue 2 files for upload
+  edenapi: uploaded 2 files
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploading commit '5fd64a4a5d6265137ea099b5b1cf35de39e5b33f'...
+  edenapi: uploading commit 'f141e512974a53a739b7d7ab33aca9f18c8feef0'...
+  edenapi: uploaded 2 changesets
+  commitcloud: commits synchronized
+  finished in * (glob)
+  $ sl
+  @  f141e512974a draft 'o_draft'
+  │
+  o  22f66edbeb8e draft 'o2'
+  │
+  o  b22b11c36d16 draft 'o1'
+  │
+  │ o  5fd64a4a5d62 draft 'e_draft'
+  │ │
+  │ o  fb2839263293 draft 'e4'
+  │ │
+  │ o  3458092a4703 draft 'e3'
+  │ │
+  │ o  98eac947fc54 draft 'e2'
+  │ │
+  │ o  6733e9fe3e4b draft 'e1'
+  ├─╯
+  o  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
+  
+(Unfortunately, remote bookmarks are not updated on push)
+  $ hgedenapi pull -B expensive -B other
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'expensive': 'fb2839263293068bec2e7bd082c54030e4e364a7', 'other': '22f66edbeb8ed912d75fab074df8b3069c91424a'}
+
+  $ sl
+  @  f141e512974a draft 'o_draft'
+  │
+  o  22f66edbeb8e public 'o2'  remote/other
+  │
+  o  b22b11c36d16 public 'o1'
+  │
+  │ o  5fd64a4a5d62 draft 'e_draft'
+  │ │
+  │ o  fb2839263293 public 'e4'  remote/expensive
+  │ │
+  │ o  3458092a4703 public 'e3'
+  │ │
+  │ o  98eac947fc54 public 'e2'
+  │ │
+  │ o  6733e9fe3e4b public 'e1'
+  ├─╯
+  o  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
+  
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: nothing to upload
+  commitcloud: commits synchronized
+  finished in 0.00 sec
+
+  $ cd ../client2
+
+  $ setconfig commitcloud.expensive_bookmarks=expensive
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: nothing to upload
+  fetching remote bookmark 'remote/expensive', sorry, this may take a while...
+  pulling fb2839263293 from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  searching for changes
+  DEBUG pull::httpgraph: edenapi fetched 4 graph nodes
+  DEBUG pull::httpgraph: edenapi fetched graph with known 0 draft commits
+  pulling 22f66edbeb8e 5fd64a4a5d62 f141e512974a from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  searching for changes
+  DEBUG pull::httpgraph: edenapi fetched 4 graph nodes
+  DEBUG pull::httpgraph: edenapi fetched graph with known 2 draft commits
+  commitcloud: commits synchronized
+  finished in * (glob)
+
+  $ sl
+  o  f141e512974a draft 'o_draft'
+  │
+  o  22f66edbeb8e public 'o2'  remote/other
+  │
+  o  b22b11c36d16 public 'o1'
+  │
+  │ o  5fd64a4a5d62 draft 'e_draft'
+  │ │
+  │ o  fb2839263293 public 'e4'  remote/expensive
+  │ │
+  │ o  3458092a4703 public 'e3'
+  │ │
+  │ o  98eac947fc54 public 'e2'
+  │ │
+  │ o  6733e9fe3e4b public 'e1'
+  ├─╯
+  @  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
   

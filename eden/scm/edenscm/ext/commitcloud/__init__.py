@@ -80,6 +80,9 @@ Configs::
     # Use EdenApi Uploads for uploading commit cloud commits during sync
     usehttpupload = True
 
+    # Sync remote bookmarks via commitcloud
+    remotebookmarkssync = True
+
     # List of remote bookmarks to exclude from age check when cleaning up unnessesary remote bookmarks
     expensive_bookmarks = bookmark1, bookmark2, bookmark3
 
@@ -153,6 +156,7 @@ configitem("commitcloud", "pullsizelimit", 300)
 configitem("commitcloud", "sl_showremotebookmarks", default=False)
 configitem("commitcloud", "sl_showallbookmarks", default=False)
 configitem("commitcloud", "usehttpupload", default=False)
+configitem("commitcloud", "remotebookmarkssync", default=False)
 configitem("infinitepushbackup", "enablestatus", default=True)
 configitem("infinitepushbackup", "maxheadstobackup", default=-1)
 

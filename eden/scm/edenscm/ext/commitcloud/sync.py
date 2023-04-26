@@ -409,6 +409,33 @@ def _maybeupdateworkingcopy(repo, currentnode):
     return 0
 
 
+@perftrace.tracefunc("Prefetching Expensive Remote Bookmarks")
+def _prefetchexpensivebookmarks(repo, remotepath, remotebookmarknewnames):
+    """Fetch expensive bookmarks separately from remote as a series of pulls"""
+    if not remotebookmarknewnames:
+        return remotebookmarknewnames
+
+    expensiveremotebookmarks = set(
+        repo.ui.configlist("commitcloud", "expensive_bookmarks", [])
+    )
+
+    remotebookmarknewnamesprefetch = {
+        (name, node)
+        for name, node in remotebookmarknewnames.items()
+        if bookmarks.splitremotename(name)[1] in expensiveremotebookmarks
+    }
+
+    for name, node in remotebookmarknewnamesprefetch:
+        repo.ui.status(
+            _("fetching remote bookmark '%s', sorry, this may take a while...\n") % name
+        )
+        _pullheadgroups(repo, remotepath, _partitionheads(repo.ui, [node]))
+        remotebookmarknewnames.pop(name)
+
+    # returns remaining names
+    return remotebookmarknewnames
+
+
 @perftrace.tracefunc("Apply Cloud Changes")
 def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state, tr):
     # Pull all the new heads and any bookmark hashes we don't have. We need to
@@ -480,16 +507,22 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
             }
             newvisibleheads = [head for head in newvisibleheads if head not in toremove]
 
-    remotebookmarknewnodes = set()
+    remotebookmarknewnames = {}
     remotebookmarkupdates = {}
     if _isremotebookmarkssyncenabled(repo.ui):
-        (remotebookmarkupdates, remotebookmarknewnodes) = _processremotebookmarks(
+        (remotebookmarkupdates, remotebookmarknewnames) = _processremotebookmarks(
             repo, cloudrefs.remotebookmarks, lastsyncstate
         )
 
-    if remotebookmarknewnodes or newheads:
+    remotebookmarknewnames = _prefetchexpensivebookmarks(
+        repo, remotepath, remotebookmarknewnames
+    )
+
+    if remotebookmarknewnames or newheads:
         # Partition the heads into groups we can pull together.
-        headgroups = _partitionheads(repo.ui, list(remotebookmarknewnodes) + newheads)
+        headgroups = _partitionheads(
+            repo.ui, list(remotebookmarknewnames.values()) + newheads
+        )
         _pullheadgroups(repo, remotepath, headgroups)
 
     omittedbookmarks.extend(
@@ -659,12 +692,12 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
         return not repo._scratchbranchmatcher.match(name)
 
     unfi = repo
-    newnodes = set(
-        node
+    newnames = {
+        name: node
         for name, node in pycompat.iteritems(updates)
         if node != nodemod.nullhex and node not in unfi and ispublic(name)
-    )
-    return (updates, newnodes)
+    }
+    return (updates, newnames)
 
 
 def _updateremotebookmarks(repo, tr, updates):
@@ -695,11 +728,12 @@ def _updateremotebookmarks(repo, tr, updates):
 
 def _forcesyncremotebookmarks(repo, cloudrefs, lastsyncstate, remotepath, tr):
     cloudremotebookmarks = cloudrefs.remotebookmarks or {}
-    (updates, newnodes) = _processremotebookmarks(
+    (updates, newnames) = _processremotebookmarks(
         repo, cloudremotebookmarks, lastsyncstate
     )
-    if newnodes:
-        _pullheadgroups(repo, remotepath, _partitionheads(repo.ui, newnodes))
+    newnames = _prefetchexpensivebookmarks(repo, remotepath, newnames)
+    if newnames:
+        _pullheadgroups(repo, remotepath, _partitionheads(repo.ui, newnames.values()))
     omittedremotebookmarks = _updateremotebookmarks(repo, tr, updates)
 
     # We have now synced the repo to the cloud version.  Store this.
@@ -727,7 +761,6 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate, omittedheads, maxag
 
     Returns a list of the omitted bookmark names.
     """
-    unfi = repo
     localbookmarks = _getbookmarks(repo)
     omittedbookmarks = set(lastsyncstate.omittedbookmarks)
     changes = []
