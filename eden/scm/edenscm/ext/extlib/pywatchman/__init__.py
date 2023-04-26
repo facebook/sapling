@@ -310,7 +310,7 @@ class SockPath(object):
         ):
             unix_domain = sockpath
 
-        if compat.PYTHON3 and named_pipe:
+        if named_pipe:
             named_pipe = os.fsencode(named_pipe)
 
         self.unix_domain = unix_domain
@@ -816,10 +816,7 @@ class Bser2WithFallbackCodec(BserCodec):
         super(Bser2WithFallbackCodec, self).__init__(
             transport, value_encoding, value_errors
         )
-        if compat.PYTHON3:
-            bserv2_key = "required"
-        else:
-            bserv2_key = "optional"
+        bserv2_key = "required"
 
         self.send(["version", {bserv2_key: ["bser-v2"]}])
 
@@ -897,8 +894,7 @@ class JsonCodec(Codec):
             # the JSON blob to be ASCII-only with non-ASCII characters escaped,
             # but it's possible we might get non-ASCII bytes that are valid
             # UTF-8.
-            if compat.PYTHON3:
-                line = line.decode("utf-8")
+            line = line.decode("utf-8")
             return self.json.loads(line)
         except Exception as e:
             print(e, line)
@@ -909,8 +905,7 @@ class JsonCodec(Codec):
         # In Python 3, json.dumps is a transformation from objects possibly
         # containing Unicode strings to Unicode string. Even with (the default)
         # ensure_ascii=True, dumps returns a Unicode string.
-        if compat.PYTHON3:
-            cmd = cmd.encode("ascii")
+        cmd = cmd.encode("ascii")
         self.transport.write(cmd + b"\n")
 
 
@@ -988,12 +983,8 @@ class client(object):
         # strings on Python 3. However we take an optional argument that lets
         # users override this.
         if valueEncoding is False:
-            if compat.PYTHON3:
-                self.valueEncoding = encoding.get_local_encoding()
-                self.valueErrors = encoding.default_local_errors
-            else:
-                self.valueEncoding = None
-                self.valueErrors = None
+            self.valueEncoding = encoding.get_local_encoding()
+            self.valueErrors = encoding.default_local_errors
         else:
             self.valueEncoding = valueEncoding
             if valueErrors is False:
@@ -1013,15 +1004,11 @@ class client(object):
                 return self._makeBSERCodec(ImmutableBser2Codec)
             return self._makeBSERCodec(Bser2WithFallbackCodec)
         elif enc == "bser-v1":
-            if compat.PYTHON3:
-                raise BSERv1Unsupported(
-                    "Python 3 does not support the BSER v1 encoding: specify "
-                    '"bser" or omit the sendEncoding and recvEncoding '
-                    "arguments"
-                )
-            if self.useImmutableBser:
-                return self._makeBSERCodec(ImmutableBserCodec)
-            return self._makeBSERCodec(BserCodec)
+            raise BSERv1Unsupported(
+                "Python 3 does not support the BSER v1 encoding: specify "
+                '"bser" or omit the sendEncoding and recvEncoding '
+                "arguments"
+            )
         elif enc == "json":
             return JsonCodec
         else:

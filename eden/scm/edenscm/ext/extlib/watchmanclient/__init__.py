@@ -148,10 +148,7 @@ class client(object):
         starttime = util.timer()
         try:
             if self._watchmanclient is None:
-                if compat.PYTHON3:
-                    encoding = "bser"
-                else:
-                    encoding = "bser-v1"
+                encoding = "bser"
                 self._firsttime = False
                 self._watchmanclient = pywatchman.client(
                     sockpath=self._sockpath,

@@ -68,7 +68,7 @@ def _int_size(x):
 def _buf_pos(buf, pos):
     ret = buf[pos]
     # Normalize the return type to bytes
-    if compat.PYTHON3 and not isinstance(ret, bytes):
+    if not isinstance(ret, bytes):
         ret = bytes((ret,))
     return ret
 
