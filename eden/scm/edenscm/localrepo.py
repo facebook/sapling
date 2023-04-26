@@ -607,6 +607,9 @@ class localrepository(object):
         self._applyopenerreqs()
 
         self._eventreporting = True
+
+        self._xrepo_lookup_cache = util.lrucachedict(10)
+
         try:
             self._treestatemigration()
             self._visibilitymigration()
@@ -932,8 +935,13 @@ class localrepository(object):
                 return low[:i]
         return low
 
-    def _http_prefix_lookup(self, prefixes):
-        responses = self.edenapi.hashlookup(prefixes)
+    def _http_prefix_lookup(self, prefixes, reponame=None):
+        if reponame:
+            client = bindings.edenapi.client(self.ui._rcfg, reponame=reponame)
+        else:
+            client = self.edenapi
+
+        responses = client.hashlookup(prefixes)
         for resp in responses:
             hgids = resp["hgids"]
             hashrange = resp["request"]["InclusiveRange"]
@@ -945,13 +953,51 @@ class localrepository(object):
                 target="pull::httphashlookup",
             )
             if len(hgids) == 0:
-                raise errormod.Abort(_("%s not found!") % prefix)
+                raise errormod.RepoLookupError(_("%s not found!") % prefix)
             elif len(hgids) > 1:
                 raise errormod.Abort(
                     _("ambiguous identifier: %s") % prefix,
-                    hint=_("suggestsions are:\n%s") % "\n".join(hgids),
+                    hint=_("suggestions are:\n%s") % "\n".join(hgids),
                 )
             yield bin(hgids[0])
+
+    def _xrepo_lookup(self, commithash):
+        xrepo = self.ui.config("megarepo", "transparent-lookup")
+        if not xrepo:
+            return None
+
+        if commithash in self._xrepo_lookup_cache:
+            return self._xrepo_lookup_cache[commithash]
+
+        if len(commithash) == 40:
+            xnode = bin(commithash)
+        else:
+            try:
+                xnode = next(self._http_prefix_lookup([commithash], reponame=xrepo))
+            except errormod.RepoLookupError:
+                xnode = None
+
+        localnode = None
+        if xnode is not None:
+            if xnode in self._xrepo_lookup_cache:
+                return self._xrepo_lookup_cache[xnode]
+
+            translated = list(
+                self.edenapi.committranslateids([{"Hg": xnode}], "Hg", fromrepo=xrepo)
+            )
+            if len(translated) == 1:
+                localnode = translated[0]["translated"]["Hg"]
+                self.ui.status_err(
+                    _("translated %s@%s to %s\n") % (hex(xnode), xrepo, hex(localnode))
+                )
+
+            # Cache negative result.
+            self._xrepo_lookup_cache[xnode] = localnode
+
+        # Cache by original input as well, just in case.
+        self._xrepo_lookup_cache[commithash] = localnode
+
+        return localnode
 
     @util.timefunction("pull", 0, "ui")
     def pull(

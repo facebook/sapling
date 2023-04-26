@@ -52,3 +52,7 @@ Setup config repo:
   $ hgedenapi debugapi -e committranslateids -i "[{'Hg': 'bfcfb674663c5438027bcde4a7ae5024c838f76a'}]" -i "'Hg'" -i "'large-mon'"
   [{"commit": {"Hg": bin("bfcfb674663c5438027bcde4a7ae5024c838f76a")},
     "translated": {"Hg": bin("11f848659bfcf77abd04f947883badd8efa88d26")}}]
+
+  $ hgedenapi log -r bfcfb67466 -T '{node}\n' --config megarepo.transparent-lookup=large-mon --debug
+  translated bfcfb674663c5438027bcde4a7ae5024c838f76a@large-mon to 11f848659bfcf77abd04f947883badd8efa88d26
+  11f848659bfcf77abd04f947883badd8efa88d26
