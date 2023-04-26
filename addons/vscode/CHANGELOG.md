@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.13
+
+- Customize how changed file paths are displayed: minimal, full file path, tree view, or fish-shell-style
+- Copy quick commit form title into full commit form when clicking "Commit as..."
+- Fix tooltips wrapping text mid-word
+- Allow repos cloned without http prefix
+
 ## 0.1.12
 
 - Reduce visual padding in the tree to improve information density
