@@ -59,6 +59,7 @@ static CUSTOM_BUILD_FUNCS: Lazy<
 pub struct Builder<'a> {
     config: &'a dyn configmodel::Config,
     correlator: Option<String>,
+    repo_name: Option<String>,
 }
 
 impl<'a> Builder<'a> {
@@ -67,6 +68,7 @@ impl<'a> Builder<'a> {
         let builder = Self {
             config,
             correlator: None,
+            repo_name: None,
         };
         Ok(builder)
     }
@@ -80,9 +82,14 @@ impl<'a> Builder<'a> {
         self
     }
 
+    /// Configure repo name for client. This is only used by the Http Client.
+    pub fn repo_name(mut self, repo_name: Option<impl ToString>) -> Self {
+        self.repo_name = repo_name.map(|s| s.to_string());
+        self
+    }
+
     /// Build the client.
     pub fn build(self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
-        // Consider custom build functions?
         {
             let funcs = CUSTOM_BUILD_FUNCS.read();
             for func in funcs.iter() {
@@ -92,22 +99,13 @@ impl<'a> Builder<'a> {
             }
         }
 
-        let reponame = match self.config.get("remotefilelog", "reponame") {
-            Some(name) => name.to_string(),
-            None => String::new(),
-        };
-        if reponame.is_empty() {
-            return Err(EdenApiError::BadConfig(ConfigError::Invalid(
-                "remotefilelog.reponame".into(),
-                anyhow!("reponame is not set"),
-            )));
+        let mut builder = HttpClientBuilder::from_config(self.config)?.correlator(self.correlator);
+
+        if let Some(repo_name) = &self.repo_name {
+            builder = builder.repo_name(repo_name);
         }
-        let client = Arc::new(
-            HttpClientBuilder::from_config(self.config)?
-                .correlator(self.correlator)
-                .build()?,
-        );
-        Ok(client)
+
+        Ok(Arc::new(builder.build()?))
     }
 
     /// Register a customized builder that can produce a non-HTTP `EdenApi` from config.
