@@ -657,6 +657,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore)] // FIXME: see D45267362, this needs a different test on Windows on 1.69+
     fn test_atomic_write_symlink() -> Result<()> {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path();
