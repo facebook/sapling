@@ -324,8 +324,10 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         commits: Vec<CommitId>,
         scheme: CommitIdScheme,
+        from_repo: Option<String>,
+        to_repo: Option<String>,
     ) -> Result<Response<CommitTranslateIdResponse>, EdenApiError> {
-        let _ = (commits, scheme);
+        let _ = (commits, scheme, from_repo, to_repo);
         Err(EdenApiError::NotSupported)
     }
 

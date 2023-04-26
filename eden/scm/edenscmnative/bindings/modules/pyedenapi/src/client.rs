@@ -508,9 +508,11 @@ py_class!(pub class client |py| {
         &self,
         commits: Serde<Vec<CommitId>>,
         scheme: Serde<CommitIdScheme>,
+        fromrepo: Option<String> = None,
+        torepo: Option<String> = None,
     ) -> PyResult<TStream<anyhow::Result<Serde<CommitTranslateIdResponse>>>> {
         let api = self.inner(py).as_ref();
-        let responses = py.allow_threads(|| block_unless_interrupted(api.commit_translate_id(commits.0, scheme.0)))
+        let responses = py.allow_threads(|| block_unless_interrupted(api.commit_translate_id(commits.0, scheme.0, fromrepo, torepo)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
         Ok(responses.entries.map_ok(Serde).map_err(Into::into).into())

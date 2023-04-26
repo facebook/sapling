@@ -451,6 +451,10 @@ pub struct CommitTranslateIdRequest {
     pub commits: Vec<CommitId>,
     #[id(2)]
     pub scheme: CommitIdScheme,
+    #[id(3)]
+    pub from_repo: Option<String>,
+    #[id(4)]
+    pub to_repo: Option<String>,
 }
 
 #[auto_wire]

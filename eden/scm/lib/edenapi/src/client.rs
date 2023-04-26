@@ -1300,6 +1300,8 @@ impl EdenApi for Client {
         &self,
         commits: Vec<CommitId>,
         scheme: CommitIdScheme,
+        from_repo: Option<String>,
+        to_repo: Option<String>,
     ) -> Result<Response<CommitTranslateIdResponse>, EdenApiError> {
         tracing::info!(
             "Requesting commit id translation for {} commits into {:?}",
@@ -1312,7 +1314,12 @@ impl EdenApi for Client {
             commits,
             self.config().max_commit_translate_id,
             |commits| {
-                let req = CommitTranslateIdRequest { commits, scheme };
+                let req = CommitTranslateIdRequest {
+                    commits,
+                    scheme,
+                    from_repo: from_repo.clone(),
+                    to_repo: to_repo.clone(),
+                };
                 self.log_request(&req, "commit_translate_id");
                 req
             },
