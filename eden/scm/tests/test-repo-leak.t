@@ -113,7 +113,6 @@ Somehow problematic: With many extensions
   > errorredirect=!
   > extorder=
   > extorder=
-  > fastannotate=
   > fastlog=
   > fastpartialmatch=!
   > fbscmquery=

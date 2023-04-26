@@ -51,11 +51,6 @@ ignorerevnumincompatiblelist = """
     test-export.t
     test-fb-ext-copytrace-errormsg.t
     test-fb-ext-drop.t
-    test-fb-ext-fastannotate-corrupt.t
-    test-fb-ext-fastannotate-perfhack.t
-    test-fb-ext-fastannotate-protocol.t
-    test-fb-ext-fastannotate-renames.t
-    test-fb-ext-fastannotate.t
     test-fb-ext-fastlog.t
     test-fb-ext-fbhistedit-rebase-interactive.t
     test-fb-ext-morestatus.t

@@ -280,7 +280,6 @@ def _preimportmodules():
         "extlib",
         "extorder",
         "extutil",
-        "fastannotate",
         "fastlog",
         "fbscmquery",
         "fbhistedit",
@@ -326,9 +325,7 @@ def _preimportmodules():
         "tweakdefaults",
         "undo",
     ]
-    modnames = ["edenscm.%s" % name for name in coremods] + [
-        "edenscm.ext.fastannotate.support"
-    ]
+    modnames = ["edenscm.%s" % name for name in coremods]
     for name in modnames:
         __import__(name)
     # Modules below are optional - expected to cause ImportError

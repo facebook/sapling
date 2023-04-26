@@ -285,13 +285,13 @@ https://en.wikipedia.org/wiki/Interleaved_deltas for its introduction.
   Doing annotate(maxrev) before replacelines (aka. a1, a2 passed to
   replacelines are related to the latest revision) eliminates the possibility
   of case 3. That makes sense since usually you'd like to make edits on top of
-  the latest revision. Practically, both absorb and fastannotate do this.
+  the latest revision. Practically, absorb does this.
 
   Doing annotate(maxrev), plus replacelines(rev, ...) where rev >= maxrev
-  eliminates the possibility of case 2. That makes sense since usually the
-  edits belong to "new revisions", not "old revisions". Practically,
-  fastannotate does this. Absorb calls replacelines with rev < maxrev to edit
-  past revisions. So it needs some extra care to not generate case 2.
+  eliminates the possibility of case 2. That makes sense since usually the edits
+  belong to "new revisions", not "old revisions". Absorb calls replacelines with
+  rev < maxrev to edit past revisions. So it needs some extra care to not
+  generate case 2.
 
   If case 1 occurs, that probably means linelog file corruption (assuming
   linelog is edited via public APIs) the checkout or annotate result could

@@ -315,7 +315,6 @@ Test extension help:
        extdiff       command to allow external programs to compare revisions
        extorder
        extutil       (no help text available)
-       fastannotate  yet another annotate implementation that might be faster
        fastlog
        fbhistedit    extends the existing histedit functionality
        fbscmquery    (no help text available)
