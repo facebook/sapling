@@ -61,6 +61,7 @@ use gotham_ext::response::TryIntoResponse;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_api::CreateInfo;
+use mononoke_api::MononokeError;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
@@ -452,7 +453,11 @@ impl EdenApiHandler for FetchSnapshotHandler {
             .await
             .context("Failed to fetch labels associated with the snapshot")?;
         let blobstore = repo.bubble_blobstore(Some(bubble_id)).await?;
-        let cs = cs_id.load(repo.ctx(), &blobstore).await?.into_mut();
+        let cs = cs_id
+            .load(repo.ctx(), &blobstore)
+            .await
+            .map_err(MononokeError::from)?
+            .into_mut();
         let time = cs.author_date.timestamp_secs();
         let tz = cs.author_date.tz_offset_secs();
         let response = FetchSnapshotResponse {

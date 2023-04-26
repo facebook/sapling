@@ -33,7 +33,6 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_ext::content_encoding::ContentEncoding;
 use gotham_ext::error::ErrorFormatter;
-use gotham_ext::error::HttpError;
 use gotham_ext::middleware::load::RequestLoad;
 use gotham_ext::middleware::scuba::HttpScubaKey;
 use gotham_ext::middleware::scuba::ScubaMiddlewareState;
@@ -77,7 +76,6 @@ mod repos;
 mod trees;
 
 pub(crate) use handler::EdenApiHandler;
-pub(crate) use handler::HandlerError;
 pub(crate) use handler::HandlerResult;
 pub(crate) use handler::PathExtractorWithRepo;
 
@@ -300,7 +298,7 @@ where
                 monitor_request(&state, responses),
                 content_encoding,
             )),
-            Err(HandlerError::E500(err)) => Err(HttpError::e500(err)),
+            Err(err) => Err(err.into()),
         }
     }
     .timed()

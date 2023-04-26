@@ -14,7 +14,9 @@ use gotham::extractor::PathExtractor;
 use gotham::extractor::QueryStringExtractor;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
+use gotham_ext::error::HttpError;
 use hyper::body::Body;
+use mononoke_api::MononokeError;
 use mononoke_api_hg::HgRepoContext;
 use nonzero_ext::nonzero;
 use serde::Deserialize;
@@ -36,17 +38,31 @@ impl PathExtractorWithRepo for BasicPathExtractor {
     }
 }
 
-pub enum HandlerError {
-    E500(anyhow::Error),
+pub struct HandlerError(HttpError);
+
+impl From<HandlerError> for HttpError {
+    fn from(e: HandlerError) -> Self {
+        e.0
+    }
 }
 
-// Default errors to 500
-impl<E> From<E> for HandlerError
-where
-    E: Into<anyhow::Error>,
-{
-    fn from(e: E) -> Self {
-        Self::E500(e.into())
+// Default errors to 500.
+impl From<MononokeError> for HandlerError {
+    fn from(e: MononokeError) -> Self {
+        Self(HttpError::e500(e))
+    }
+}
+
+impl From<anyhow::Error> for HandlerError {
+    fn from(e: anyhow::Error) -> Self {
+        Self(HttpError::e500(e))
+    }
+}
+
+// Handlers can propagate HttpError for a specific response code.
+impl From<HttpError> for HandlerError {
+    fn from(e: HttpError) -> Self {
+        Self(e)
     }
 }
 
