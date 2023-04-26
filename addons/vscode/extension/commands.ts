@@ -125,7 +125,10 @@ export function registerCommands(tracker: ServerSideTracker): Array<vscode.Dispo
 function openDiffView(uri: vscode.Uri, comparison: Comparison): Thenable<unknown> {
   const {fsPath} = uri;
   const left = encodeSaplingDiffUri(uri, comparison);
-  const right = uri;
+  const right =
+    comparison.type === ComparisonType.Committed
+      ? encodeSaplingDiffUri(uri, {type: ComparisonType.Committed, hash: `${comparison.hash}^`})
+      : uri;
   const title = `${path.basename(fsPath)} (${t(labelForComparison(comparison))})`;
 
   return executeVSCodeCommand('vscode.diff', left, right, title);
