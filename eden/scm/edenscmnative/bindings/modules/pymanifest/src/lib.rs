@@ -36,7 +36,6 @@ use pathmatcher::Matcher;
 use pathmatcher::TreeMatcher;
 use pypathmatcher::extract_matcher;
 use pypathmatcher::extract_option_matcher;
-use types::Key;
 use types::Node;
 use types::RepoPathBuf;
 
@@ -66,8 +65,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             prefetch(
                 store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
                 node: &PyBytes,
-                path: PyPathBuf,
-                depth: Option<usize> = None
             )
         ),
     )?;
@@ -571,14 +568,11 @@ pub fn prefetch(
     py: Python,
     store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
     node: &PyBytes,
-    path: PyPathBuf,
-    depth: Option<usize>,
 ) -> PyResult<PyNone> {
     let store = store.into();
     let node = pybytes_to_node(py, node)?;
-    let repo_path_buf = path.to_repo_path_buf().map_pyerr(py)?;
-    let key = Key::new(repo_path_buf, node);
-    manifest_tree::prefetch(store, key, depth).map_pyerr(py)?;
+    py.allow_threads(|| manifest_tree::prefetch(store, node, AlwaysMatcher::new()))
+        .map_pyerr(py)?;
     Ok(PyNone)
 }
 

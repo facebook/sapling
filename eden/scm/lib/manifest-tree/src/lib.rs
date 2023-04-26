@@ -40,7 +40,6 @@ pub use store::Flag;
 use storemodel::TreeFormat;
 use thiserror::Error;
 use types::HgId;
-use types::Key;
 pub use types::PathComponent;
 pub use types::PathComponentBuf;
 use types::RepoPath;
@@ -690,50 +689,20 @@ pub fn compat_subtree_diff(
     Ok(state.result)
 }
 
-/// Recursively prefetch the entire subtree under the given Key up to the given depth.
-////
-/// This serves as a client-driven alternative to the `gettreepack` wire protocol
-/// command (wherein the server determines which missing tree nodes to send).
+/// Prefetch everything under given tree node, filtered by the given matcher.
 ///
-/// Determining which missing nodes to fetch on the client side, as this function does,
-/// may be faster in some cases since any nodes that are already present on the client
-/// will be by definition fast to access, whereas the server would effectively be forced
-/// to fetch the desired tree and the base tree from its underlying datastore. This comes
-/// at the expense of an increased number of network roundtrips to the server (specifically,
-/// O(depth) requests will be sent serially), which may be problematic if there is high
-/// network latency between the server and client. As such, this function's performance
-/// relative to `gettreepack` is highly dependent on the situation in question.
+/// Server requests are only made for trees not already available locally.
+/// Assuming nothing is available locally, prefetch must make O(depth) serial
+/// round trips to the server.
 pub fn prefetch(
     store: Arc<dyn TreeStore + Send + Sync>,
-    key: Key,
-    mut depth: Option<usize>,
+    mf_node: HgId,
+    matcher: impl 'static + Matcher + Sync + Send,
 ) -> Result<()> {
-    let tree = TreeManifest::durable(store, key.hgid);
-    let mut dirs = vec![DirLink::from_link(&tree.root, key.path).unwrap()];
-
-    while !dirs.is_empty() {
-        let keys = dirs.iter().filter_map(|d| d.key()).collect::<Vec<_>>();
-        if !keys.is_empty() {
-            // Note that the prefetch() function is expected to filter out
-            // keys that are already present in the client's cache.
-            tree.store.prefetch(keys)?;
-        }
-
-        dirs = dirs
-            .into_iter()
-            .map(|d| Ok(d.list(&tree.store)?.1))
-            .collect::<Result<Vec<_>>>()?
-            .into_iter()
-            .flatten()
-            .collect();
-
-        depth = match depth {
-            Some(0) => break,
-            Some(d) => Some(d - 1),
-            None => None,
-        };
+    let tree = TreeManifest::durable(store, mf_node);
+    for node in bfs_iter(&tree, matcher) {
+        node?;
     }
-
     Ok(())
 }
 

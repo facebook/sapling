@@ -368,7 +368,7 @@ def _setupupdates(_ui) -> None:
                         # (and its root could be unknown to the server if this is a
                         # local commit), we use BFS prefetching to "complete" our tree.
                         if util.safehasattr(repo, "forcebfsprefetch"):
-                            repo.forcebfsprefetch("", [mctx.manifestnode()])
+                            repo.forcebfsprefetch([mctx.manifestnode()])
 
                         iter = mf
                     else:

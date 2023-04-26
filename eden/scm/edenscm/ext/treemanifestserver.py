@@ -623,16 +623,16 @@ def wraprepo(repo):
             self.edenapi.storetrees(dpack, keys)
             return True
 
-        def forcebfsprefetch(self, rootdir, mfnodes, depth=None):
-            self._bfsprefetch(rootdir, mfnodes, depth)
+        def forcebfsprefetch(self, mfnodes):
+            self._bfsprefetch(mfnodes)
 
         @perftrace.tracefunc("BFS Prefetch")
-        def _bfsprefetch(self, rootdir, mfnodes, depth=None):
+        def _bfsprefetch(self, mfnodes):
             with progress.spinner(self.ui, "prefetching trees using BFS"):
                 store = self.manifestlog.datastore
                 for node in mfnodes:
                     if node != nullid:
-                        rustmanifest.prefetch(store, node, rootdir, depth)
+                        rustmanifest.prefetch(store, node)
 
     repo.__class__ = treerepository
     repo._treefetches = 0
