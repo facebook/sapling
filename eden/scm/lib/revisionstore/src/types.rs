@@ -89,18 +89,29 @@ impl ContentHash {
     }
 
     pub(crate) fn seeded_blake3(data: &Bytes) -> Blake3 {
-        use blake3::Hasher;
-        #[cfg(fbcode_build)]
-        let key = blake3_constant::BLAKE3_HASH_KEY.as_bytes();
         #[cfg(not(fbcode_build))]
-        let key = "20220728-2357111317192329313741#".as_bytes();
-
-        let mut ret = [0; blake3::KEY_LEN];
-        ret.copy_from_slice(key);
-        let mut hasher = Hasher::new_keyed(&ret);
-        hasher.update(data.as_ref());
-        let hashed_bytes: [u8; Blake3::len()] = hasher.finalize().into();
-        Blake3::from(hashed_bytes)
+        {
+            use blake3::Hasher;
+            let key = "20220728-2357111317192329313741#".as_bytes();
+            let mut ret = [0; Blake3::len()];
+            ret.copy_from_slice(key);
+            let mut hasher = Hasher::new_keyed(&ret);
+            hasher.update(data.as_ref());
+            let hashed_bytes: [u8; Blake3::len()] = hasher.finalize().into();
+            Blake3::from(hashed_bytes)
+        }
+        #[cfg(fbcode_build)]
+        {
+            use blake3_c_ffi::Hasher;
+            let key = blake3_constant::BLAKE3_HASH_KEY.as_bytes();
+            let mut ret = [0; Blake3::len()];
+            ret.copy_from_slice(key);
+            let mut hasher = Hasher::new_keyed(&ret);
+            hasher.update(data.as_ref());
+            let mut hashed_bytes = [0; Blake3::len()];
+            hasher.finalize(&mut hashed_bytes);
+            Blake3::from(hashed_bytes)
+        }
     }
 
     pub fn unwrap_sha256(self) -> Sha256 {
