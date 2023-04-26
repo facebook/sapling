@@ -16,6 +16,7 @@ use abomonation_derive::Abomonation;
 use anyhow::Result;
 use ascii::AsciiStr;
 use ascii::AsciiString;
+use edenapi_types::CommitId as EdenapiCommitId;
 use mononoke_types::sha1_hash;
 use mononoke_types::sha1_hash::Sha1;
 use mononoke_types::sha1_hash::Sha1Prefix;
@@ -290,6 +291,12 @@ impl FromStr for HgChangesetId {
 impl Display for HgChangesetId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(fmt)
+    }
+}
+
+impl From<HgChangesetId> for EdenapiCommitId {
+    fn from(value: HgChangesetId) -> Self {
+        EdenapiCommitId::Hg(value.into())
     }
 }
 

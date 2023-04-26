@@ -36,7 +36,7 @@ sized_hash!(GitSha1, 20);
 blake2_hash!(BonsaiChangesetId);
 
 #[auto_wire]
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum CommitId {
     #[id(1)]

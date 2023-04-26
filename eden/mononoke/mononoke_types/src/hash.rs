@@ -21,6 +21,7 @@ use blake2::digest::Update;
 use blake2::digest::VariableOutput;
 use blake2::VarBlake2b;
 use edenapi_types::Blake3 as EdenapiBlake3;
+use edenapi_types::CommitId as EdenapiCommitId;
 use edenapi_types::GitSha1 as EdenapiGitSha1;
 use edenapi_types::Sha1 as EdenapiSha1;
 use edenapi_types::Sha256 as EdenapiSha256;
@@ -628,6 +629,12 @@ impl From<Sha256> for lfs_protocol::Sha256 {
 impl From<lfs_protocol::Sha256> for Sha256 {
     fn from(v: lfs_protocol::Sha256) -> Self {
         Sha256::from_byte_array(v.0)
+    }
+}
+
+impl From<GitSha1> for EdenapiCommitId {
+    fn from(value: GitSha1) -> Self {
+        EdenapiCommitId::GitSha1(value.into())
     }
 }
 

@@ -20,6 +20,7 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
 use edenapi_types::BonsaiChangesetId as EdenapiBonsaiChangesetId;
+use edenapi_types::CommitId as EdenapiCommitId;
 use edenapi_types::ContentId as EdenapiContentId;
 use edenapi_types::FsnodeId as EdenapiFsnodeId;
 use sql::mysql;
@@ -719,6 +720,12 @@ impl FromStr for ChangesetIdPrefix {
 impl Display for ChangesetIdPrefix {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.0, fmt)
+    }
+}
+
+impl From<ChangesetId> for EdenapiCommitId {
+    fn from(value: ChangesetId) -> Self {
+        EdenapiCommitId::Bonsai(value.into())
     }
 }
 

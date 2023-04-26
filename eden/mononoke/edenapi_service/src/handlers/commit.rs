@@ -697,6 +697,7 @@ impl EdenApiHandler for CommitTranslateId {
         let mut bonsai_ids = Vec::new();
         let mut git_ids = Vec::new();
         let mut globalrevs = Vec::new();
+
         for commit in &request.commits {
             match commit {
                 CommitId::Hg(hg_id) => hg_ids.push(HgChangesetId::from(*hg_id)),
@@ -705,68 +706,65 @@ impl EdenApiHandler for CommitTranslateId {
                 CommitId::Globalrev(globalrev) => globalrevs.push(Globalrev::new(*globalrev)),
             }
         }
-        // Convert request types to bonsais
+
+        // Convert request types to intermediate bonsais.
         let (hg_bonsais, git_bonsais, globalrev_bonsais) = try_join!(
             repo.repo().many_changeset_ids_from_hg(hg_ids),
             repo.repo().many_changeset_ids_from_git_sha1(git_ids),
             repo.repo().many_changeset_ids_from_globalrev(globalrevs),
         )?;
-        let hg_bonsais = hg_bonsais.into_iter().collect::<HashMap<_, _>>();
-        let git_bonsais = git_bonsais.into_iter().collect::<HashMap<_, _>>();
-        let globalrev_bonsais = globalrev_bonsais.into_iter().collect::<HashMap<_, _>>();
-        // Collect all bonsai changeset ids
-        let all_bonsai_ids: Vec<ChangesetId> = bonsai_ids
+
+        // Mapping of request id to intermediate bonsai id.
+        let input_to_bonsai: HashMap<CommitId, ChangesetId> = bonsai_ids
             .into_iter()
-            .chain(hg_bonsais.values().copied())
-            .chain(git_bonsais.values().copied())
-            .chain(globalrev_bonsais.values().copied())
+            .map(|id| (id.clone().into(), id))
+            .chain(hg_bonsais.into_iter().map(|(hg, bs)| (hg.into(), bs)))
+            .chain(git_bonsais.into_iter().map(|(g, bs)| (g.into(), bs)))
+            .chain(globalrev_bonsais.into_iter().map(|(g, bs)| (g.into(), bs)))
             .collect();
+
+        let all_bonsai_ids: Vec<_> = input_to_bonsai.values().cloned().collect();
+
         // Convert all bonsais to the target type
-        let bonsai_translations: HashMap<ChangesetId, CommitId> = match request.scheme {
+        let bonsai_to_target: HashMap<ChangesetId, CommitId> = match request.scheme {
             CommitIdScheme::Bonsai => all_bonsai_ids
                 .into_iter()
-                .map(|id| (id.clone(), CommitId::Bonsai(id.clone().into())))
+                .map(|to| (to.clone(), to.into()))
                 .collect(),
             CommitIdScheme::Hg => repo
                 .repo()
                 .many_changeset_hg_ids(all_bonsai_ids)
                 .await?
                 .into_iter()
-                .map(|(id, hg_id)| (id, CommitId::Hg(hg_id.into())))
+                .map(|(id, hg_id)| (id, hg_id.into()))
                 .collect(),
             CommitIdScheme::GitSha1 => repo
                 .repo()
                 .many_changeset_git_sha1s(all_bonsai_ids)
                 .await?
                 .into_iter()
-                .map(|(id, git_sha1)| (id, CommitId::GitSha1(git_sha1.into())))
+                .map(|(id, git_sha1)| (id, git_sha1.into()))
                 .collect(),
             CommitIdScheme::Globalrev => repo
                 .repo()
                 .many_changeset_globalrev_ids(all_bonsai_ids)
                 .await?
                 .into_iter()
-                .map(|(id, globalrev)| (id, CommitId::Globalrev(globalrev.id())))
+                .map(|(id, globalrev)| (id, globalrev.into()))
                 .collect(),
         };
-        // Build the response based on the original request
+
+        // Build the response based on the order within the request.
         let translations: Vec<_> = request
             .commits
             .into_iter()
             .filter_map(|commit| {
-                let id = match commit {
-                    CommitId::Hg(hg_id) => *hg_bonsais.get(&HgChangesetId::from(hg_id))?,
-                    CommitId::Bonsai(id) => ChangesetId::from(id),
-                    CommitId::GitSha1(git_id) => *git_bonsais.get(&GitSha1::from(git_id))?,
-                    CommitId::Globalrev(globalrev) => {
-                        *globalrev_bonsais.get(&Globalrev::new(globalrev))?
-                    }
-                };
-                let translated = bonsai_translations.get(&id)?.clone();
+                let translated = bonsai_to_target.get(input_to_bonsai.get(&commit)?)?.clone();
                 Some(CommitTranslateIdResponse { commit, translated })
             })
             .map(anyhow::Ok)
             .collect();
+
         Ok(stream::iter(translations).boxed())
     }
 }

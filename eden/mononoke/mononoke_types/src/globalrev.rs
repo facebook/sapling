@@ -14,6 +14,7 @@ use abomonation_derive::Abomonation;
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use edenapi_types::CommitId as EdenapiCommitId;
 use sql::mysql;
 
 use crate::BonsaiChangeset;
@@ -110,5 +111,11 @@ impl FromStr for Globalrev {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         u64::from_str(s).map(Globalrev::new)
+    }
+}
+
+impl From<Globalrev> for EdenapiCommitId {
+    fn from(value: Globalrev) -> Self {
+        EdenapiCommitId::Globalrev(value.id())
     }
 }
