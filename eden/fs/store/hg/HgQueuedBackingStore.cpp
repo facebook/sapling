@@ -43,13 +43,7 @@
 namespace facebook::eden {
 
 namespace {
-// 100,000 hg object fetches in a short term is plausible.
-constexpr size_t kTraceBusCapacity = 100000;
 static_assert(CheckSize<HgImportTraceEvent, 64>());
-// TraceBus is double-buffered, so the following capacity should be doubled.
-// 10 MB overhead per backing repo is tolerable.
-static_assert(
-    CheckEqual<6400000, kTraceBusCapacity * sizeof(HgImportTraceEvent)>());
 } // namespace
 
 HgImportTraceEvent::HgImportTraceEvent(
@@ -89,7 +83,9 @@ HgQueuedBackingStore::HgQueuedBackingStore(
       logger_(std::move(logger)),
       activityBuffer_{
           config_->getEdenConfig()->hgActivityBufferSize.getValue()},
-      traceBus_{TraceBus<HgImportTraceEvent>::create("hg", kTraceBusCapacity)} {
+      traceBus_{TraceBus<HgImportTraceEvent>::create(
+          "hg",
+          config_->getEdenConfig()->HgTraceBusCapacity.getValue())} {
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {
