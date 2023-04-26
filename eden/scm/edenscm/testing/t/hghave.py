@@ -786,6 +786,11 @@ def has_demandimport():
     return (not has_chg()) and os.environ.get("HGDEMANDIMPORT") != "disable"
 
 
+@check("py2", "running with Python 2.x")
+def has_py2():
+    return 2 == sys.version_info[0] or "HGTEST_FORCE_PY2" in os.environ
+
+
 @check("slow", "allow slow tests (use --allow-slow-tests)")
 def has_slow():
     return os.environ.get("HGTEST_SLOW") == "slow"
