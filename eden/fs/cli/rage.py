@@ -190,7 +190,8 @@ def print_diagnostic_info(
                 trace_running_edenfs(processor, edenfs_instance_pid, out)
 
     print_eden_redirections(instance, out)
-    print_recent_events(processor, out)
+    if not dry_run and processor:
+        print_recent_events(processor, out)
     section_title("List of mount points:", out)
     mountpoint_paths = []
     for key in sorted(instance.get_mount_paths()):
