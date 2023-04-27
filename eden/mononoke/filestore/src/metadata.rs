@@ -60,8 +60,7 @@ pub async fn get_metadata<B: Blobstore>(
                 let key = ContentMetadataV2Id::from(content_id).blobstore_key();
                 let msg = format!(
                     "Invalid ContentMetadataV2 format exists in blobstore for key {}. Error: {}",
-                    key,
-                    e.to_string()
+                    key, e
                 );
                 let mut scuba = ctx.scuba().clone();
                 scuba.add("blobstore_key", key);

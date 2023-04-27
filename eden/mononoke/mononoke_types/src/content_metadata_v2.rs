@@ -520,7 +520,7 @@ mod test {
             .sample_iter(&mut rng)
             .take(4096)
             .collect::<Bytes>();
-        let bytes_stream = stream::iter(bytes.chunks(37).into_iter().map(Bytes::copy_from_slice));
+        let bytes_stream = stream::iter(bytes.chunks(37).map(Bytes::copy_from_slice));
         assert!(is_ascii(bytes_stream).await);
     }
 
@@ -532,8 +532,7 @@ mod test {
             .take(4096)
             .collect::<Bytes>();
         for chunk in [230, 10, 35, 89, 1000] {
-            let bytes_stream =
-                stream::iter(bytes.chunks(chunk).into_iter().map(Bytes::copy_from_slice));
+            let bytes_stream = stream::iter(bytes.chunks(chunk).map(Bytes::copy_from_slice));
             assert!(is_ascii(bytes_stream).await);
         }
     }
@@ -605,7 +604,7 @@ mod test {
                 .take(4096)
                 .collect::<String>(),
         );
-        let bytes_stream = stream::iter(bytes.chunks(37).into_iter().map(Bytes::copy_from_slice));
+        let bytes_stream = stream::iter(bytes.chunks(37).map(Bytes::copy_from_slice));
         assert!(is_utf8(bytes_stream).await);
     }
 
@@ -618,8 +617,7 @@ mod test {
                 .collect::<String>(),
         );
         for chunk in [230, 10, 35, 89, 1000] {
-            let bytes_stream =
-                stream::iter(bytes.chunks(chunk).into_iter().map(Bytes::copy_from_slice));
+            let bytes_stream = stream::iter(bytes.chunks(chunk).map(Bytes::copy_from_slice));
             assert!(is_utf8(bytes_stream).await);
         }
     }
@@ -1174,7 +1172,7 @@ mod test {
     #[tokio::test]
     async fn non_utf8_letter_in_stream_after_first_line_test() {
         let bytes = b"Only the last part of this string has non-utf8 characters. But the earlier part of the string has valid encoding. C\xF4te d'Ivoire";
-        let bytes_stream = stream::iter(bytes.chunks(10).into_iter().map(Bytes::from_static));
+        let bytes_stream = stream::iter(bytes.chunks(10).map(Bytes::from_static));
         assert_eq!(
             Some("Only the last part of this string has non-utf8 characters. But t".to_string()),
             first_line(bytes_stream).await
@@ -1184,7 +1182,7 @@ mod test {
     #[tokio::test]
     async fn non_utf8_letter_in_stream_before_first_line_test() {
         let bytes = b"The first part of the string, C\xF4te d'Ivoire, contains invalid characters. The rest of the string is valid UTF-8";
-        let bytes_stream = stream::iter(bytes.chunks(10).into_iter().map(Bytes::from_static));
+        let bytes_stream = stream::iter(bytes.chunks(10).map(Bytes::from_static));
         assert_eq!(None, first_line(bytes_stream).await)
     }
 }
