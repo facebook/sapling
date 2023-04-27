@@ -1083,7 +1083,7 @@ Binary file x has changed
         // std::fs::write("b", &b).unwrap();
 
         // This can complete relatively fast (run with --release to reduce test generation time).
-        // When n = 10M, edit_cost takes ~1.5s, full xdiff (blocks(), or git diff --stat) takes ~68s.
+        // When n = 10M, edit_cost takes ~0.6s, full xdiff (blocks(), or git diff --stat) takes ~68s.
         assert_eq!(edit_cost(&a, &b, 100), 100);
     }
 
