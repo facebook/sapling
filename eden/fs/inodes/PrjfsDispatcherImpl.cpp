@@ -78,175 +78,214 @@ EdenTimestamp PrjfsDispatcherImpl::getLastCheckoutTime() const {
 ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
     RelativePath path,
     const ObjectFetchContextPtr& context) {
-  bool isRoot = path.empty();
-  return mount_->getTreeOrTreeEntry(path, context)
-      .thenValue([isRoot,
-                  objectStore = mount_->getObjectStore(),
-                  context = context.copy()](
-                     std::variant<std::shared_ptr<const Tree>, TreeEntry>
-                         treeOrTreeEntry) mutable {
-        auto& tree = std::get<std::shared_ptr<const Tree>>(treeOrTreeEntry);
+  return mount_->getServerState()
+      ->getFaultInjector()
+      .checkAsync("PrjfsDispatcherImpl::opendir", path.view())
+      .thenValue([this, path = std::move(path), context = context.copy()](
+                     auto&&) mutable {
+        bool isRoot = path.empty();
+        return mount_->getTreeOrTreeEntry(path, context)
+            .thenValue([isRoot,
+                        objectStore = mount_->getObjectStore(),
+                        context = context.copy()](
+                           std::variant<std::shared_ptr<const Tree>, TreeEntry>
+                               treeOrTreeEntry) mutable {
+              auto& tree =
+                  std::get<std::shared_ptr<const Tree>>(treeOrTreeEntry);
 
-        std::vector<PrjfsDirEntry> ret;
-        ret.reserve(tree->size() + isRoot);
-        for (const auto& treeEntry : *tree) {
-          if (treeEntry.second.isTree()) {
-            ret.emplace_back(
-                treeEntry.first, true, ImmediateFuture<uint64_t>(0ull));
-          } else {
-            auto sizeFut =
-                objectStore->getBlobSize(treeEntry.second.getHash(), context);
-            ret.emplace_back(treeEntry.first, false, std::move(sizeFut));
-          }
-        }
-
-        if (isRoot) {
-          ret.emplace_back(
-              kDotEdenPathComponent, true, ImmediateFuture<uint64_t>(0ull));
-        }
-
-        return ret;
-      })
-      .thenTry([this, path = std::move(path)](
-                   folly::Try<std::vector<PrjfsDirEntry>> dirEntries) {
-        if (auto* exc = dirEntries.tryGetExceptionObject<std::system_error>()) {
-          if (isEnoent(*exc)) {
-            if (path == kDotEdenRelativePath) {
               std::vector<PrjfsDirEntry> ret;
-              ret.emplace_back(
-                  PathComponent{kConfigTable},
-                  false,
-                  ImmediateFuture<uint64_t>(dotEdenConfig_.size()));
-              return folly::Try{ret};
-            } else {
-              // An update to a commit not containing a directory but with
-              // materialized and ignored subdirectories/files will still be
-              // present in the working copy and will still be a placeholder
-              // due to EdenFS not being able to make the directory full. We
-              // thus simply return an empty directory and ProjectedFS will
-              // combine it with the on-disk materialized state.
-              return folly::Try{std::vector<PrjfsDirEntry>{}};
-            }
-          }
-        }
-        return dirEntries;
+              ret.reserve(tree->size() + isRoot);
+              for (const auto& treeEntry : *tree) {
+                if (treeEntry.second.isTree()) {
+                  ret.emplace_back(
+                      treeEntry.first, true, ImmediateFuture<uint64_t>(0ull));
+                } else {
+                  auto sizeFut = objectStore->getBlobSize(
+                      treeEntry.second.getHash(), context);
+                  ret.emplace_back(treeEntry.first, false, std::move(sizeFut));
+                }
+              }
+
+              if (isRoot) {
+                ret.emplace_back(
+                    kDotEdenPathComponent,
+                    true,
+                    ImmediateFuture<uint64_t>(0ull));
+              }
+
+              return ret;
+            })
+            .thenTry([this, path = std::move(path)](
+                         folly::Try<std::vector<PrjfsDirEntry>> dirEntries) {
+              if (auto* exc =
+                      dirEntries.tryGetExceptionObject<std::system_error>()) {
+                if (isEnoent(*exc)) {
+                  if (path == kDotEdenRelativePath) {
+                    std::vector<PrjfsDirEntry> ret;
+                    ret.emplace_back(
+                        PathComponent{kConfigTable},
+                        false,
+                        ImmediateFuture<uint64_t>(dotEdenConfig_.size()));
+                    return folly::Try{ret};
+                  } else {
+                    // An update to a commit not containing a directory but with
+                    // materialized and ignored subdirectories/files will still
+                    // be present in the working copy and will still be a
+                    // placeholder due to EdenFS not being able to make the
+                    // directory full. We thus simply return an empty directory
+                    // and ProjectedFS will combine it with the on-disk
+                    // materialized state.
+                    return folly::Try{std::vector<PrjfsDirEntry>{}};
+                  }
+                }
+              }
+              return dirEntries;
+            });
       });
 }
 
 ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
     RelativePath path,
     const ObjectFetchContextPtr& context) {
-  return mount_->getTreeOrTreeEntry(path, context)
-      .thenValue([this, context = context.copy(), path](
-                     std::variant<std::shared_ptr<const Tree>, TreeEntry>
-                         treeOrTreeEntry) mutable {
-        bool isDir = std::holds_alternative<std::shared_ptr<const Tree>>(
-            treeOrTreeEntry);
-        auto pathFut = mount_->canonicalizePathFromTree(path, context);
-        auto sizeFut = isDir
-            ? ImmediateFuture<uint64_t>{0ull}
-            : mount_->getObjectStore()->getBlobSize(
-                  std::get<TreeEntry>(treeOrTreeEntry).getHash(), context);
+  return mount_->getServerState()
+      ->getFaultInjector()
+      .checkAsync("PrjfsDispatcherImpl::lookup", path.view())
+      .thenValue([this, path = std::move(path), context = context.copy()](
+                     auto&&) mutable {
+        return mount_->getTreeOrTreeEntry(path, context)
+            .thenValue([this, context = context.copy(), path](
+                           std::variant<std::shared_ptr<const Tree>, TreeEntry>
+                               treeOrTreeEntry) mutable {
+              bool isDir = std::holds_alternative<std::shared_ptr<const Tree>>(
+                  treeOrTreeEntry);
+              auto pathFut = mount_->canonicalizePathFromTree(path, context);
+              auto sizeFut = isDir
+                  ? ImmediateFuture<uint64_t>{0ull}
+                  : mount_->getObjectStore()->getBlobSize(
+                        std::get<TreeEntry>(treeOrTreeEntry).getHash(),
+                        context);
 
-        return collectAllSafe(pathFut, sizeFut)
-            .thenValue([this, isDir, context = context.copy()](
-                           std::tuple<RelativePath, uint64_t> res) {
-              auto [path, size] = std::move(res);
-              auto lookupResult = LookupResult{path, size, isDir};
+              return collectAllSafe(pathFut, sizeFut)
+                  .thenValue([this, isDir, context = context.copy()](
+                                 std::tuple<RelativePath, uint64_t> res) {
+                    auto [path, size] = std::move(res);
+                    auto lookupResult = LookupResult{path, size, isDir};
 
-              // We need to run the following asynchronously to avoid the risk
-              // of deadlocks when EdenFS recursively triggers this lookup
-              // call. In rare situation, this might happen during a checkout
-              // operation which is already holding locks that the code below
-              // also need.
-              folly::via(
-                  notificationExecutor_,
-                  [&mount = *mount_,
-                   path = std::move(path),
-                   context = context.copy()]() {
-                    // Finally, let's tell the TreeInode that this file needs
-                    // invalidation during update. This is run in a separate
-                    // executor to avoid deadlocks. This is guaranteed to 1) run
-                    // before any other changes to this inode, and 2) before
-                    // checkout starts invalidating files/directories.
-                    // This also cannot race with a decFsRefcount from
-                    // TreeInode::invalidateChannelEntryCache due to
-                    // getInodeSlow needing to acquire the content lock that
-                    // invalidateChannelEntryCache is already holding.
-                    mount.getInodeSlow(path, context)
-                        .thenValue(
-                            [](InodePtr inode) { inode->incFsRefcount(); })
-                        .get();
+                    // We need to run the following asynchronously to avoid the
+                    // risk of deadlocks when EdenFS recursively triggers this
+                    // lookup call. In rare situation, this might happen during
+                    // a checkout operation which is already holding locks that
+                    // the code below also need.
+                    folly::via(
+                        notificationExecutor_,
+                        [&mount = *mount_,
+                         path = std::move(path),
+                         context = context.copy()]() {
+                          // Finally, let's tell the TreeInode that this file
+                          // needs invalidation during update. This is run in a
+                          // separate executor to avoid deadlocks. This is
+                          // guaranteed to 1) run before any other changes to
+                          // this inode, and 2) before checkout starts
+                          // invalidating files/directories. This also cannot
+                          // race with a decFsRefcount from
+                          // TreeInode::invalidateChannelEntryCache due to
+                          // getInodeSlow needing to acquire the content lock
+                          // that invalidateChannelEntryCache is already
+                          // holding.
+                          mount.getInodeSlow(path, context)
+                              .thenValue([](InodePtr inode) {
+                                inode->incFsRefcount();
+                              })
+                              .get();
+                        });
+
+                    return std::optional{std::move(lookupResult)};
                   });
-
-              return std::optional{std::move(lookupResult)};
-            });
-      })
-      .thenTry(
-          [this, path = std::move(path)](
-              folly::Try<std::optional<LookupResult>> result)
-              -> folly::Try<std::optional<LookupResult>> {
-            if (auto* exc = result.tryGetExceptionObject<std::system_error>()) {
-              if (isEnoent(*exc)) {
-                if (path == kDotEdenConfigPath) {
-                  return folly::Try{std::optional{LookupResult{
-                      std::move(path), dotEdenConfig_.length(), false}}};
-                } else if (path == kDotEdenRelativePath) {
-                  return folly::Try{
-                      std::optional{LookupResult{std::move(path), 0, true}}};
-                } else {
-                  XLOG(DBG6) << path << ": File not found";
-                  return folly::Try<std::optional<LookupResult>>{std::nullopt};
-                }
-              }
-            }
-            return result;
-          });
+            })
+            .thenTry(
+                [this, path = std::move(path)](
+                    folly::Try<std::optional<LookupResult>> result)
+                    -> folly::Try<std::optional<LookupResult>> {
+                  if (auto* exc =
+                          result.tryGetExceptionObject<std::system_error>()) {
+                    if (isEnoent(*exc)) {
+                      if (path == kDotEdenConfigPath) {
+                        return folly::Try{std::optional{LookupResult{
+                            std::move(path), dotEdenConfig_.length(), false}}};
+                      } else if (path == kDotEdenRelativePath) {
+                        return folly::Try{std::optional{
+                            LookupResult{std::move(path), 0, true}}};
+                      } else {
+                        XLOG(DBG6) << path << ": File not found";
+                        return folly::Try<std::optional<LookupResult>>{
+                            std::nullopt};
+                      }
+                    }
+                  }
+                  return result;
+                });
+      });
 }
 
 ImmediateFuture<bool> PrjfsDispatcherImpl::access(
     RelativePath path,
     const ObjectFetchContextPtr& context) {
-  return mount_->getTreeOrTreeEntry(path, context)
-      .thenValue([](auto&&) { return true; })
-      .thenTry([path = std::move(path)](folly::Try<bool> result) {
-        if (auto* exc = result.tryGetExceptionObject<std::system_error>()) {
-          if (isEnoent(*exc)) {
-            if (path == kDotEdenRelativePath || path == kDotEdenConfigPath) {
-              return folly::Try<bool>{true};
-            } else {
-              return folly::Try<bool>{false};
-            }
-          }
-        }
-        return result;
+  return mount_->getServerState()
+      ->getFaultInjector()
+      .checkAsync("PrjfsDispatcherImpl::access", path.view())
+      .thenValue([this, path = std::move(path), context = context.copy()](
+                     auto&&) mutable {
+        return mount_->getTreeOrTreeEntry(path, context)
+            .thenValue([](auto&&) { return true; })
+            .thenTry([path = std::move(path)](folly::Try<bool> result) {
+              if (auto* exc =
+                      result.tryGetExceptionObject<std::system_error>()) {
+                if (isEnoent(*exc)) {
+                  if (path == kDotEdenRelativePath ||
+                      path == kDotEdenConfigPath) {
+                    return folly::Try<bool>{true};
+                  } else {
+                    return folly::Try<bool>{false};
+                  }
+                }
+              }
+              return result;
+            });
       });
 }
 
 ImmediateFuture<std::string> PrjfsDispatcherImpl::read(
     RelativePath path,
     const ObjectFetchContextPtr& context) {
-  return mount_->getTreeOrTreeEntry(path, context)
-      .thenValue(
-          [context = context.copy(), objectStore = mount_->getObjectStore()](
-              std::variant<std::shared_ptr<const Tree>, TreeEntry>
-                  treeOrTreeEntry) {
-            auto& treeEntry = std::get<TreeEntry>(treeOrTreeEntry);
-            return objectStore->getBlob(treeEntry.getHash(), context)
-                .thenValue([](std::shared_ptr<const Blob> blob) {
-                  // TODO(xavierd): directly return the Blob to the caller.
-                  std::string res;
-                  blob->getContents().appendTo(res);
-                  return res;
-                });
-          })
-      .thenTry([this, path = std::move(path)](folly::Try<std::string> result) {
-        if (auto* exc = result.tryGetExceptionObject<std::system_error>()) {
-          if (isEnoent(*exc) && path == kDotEdenConfigPath) {
-            return folly::Try<std::string>{std::string(dotEdenConfig_)};
-          }
-        }
-        return result;
+  return mount_->getServerState()
+      ->getFaultInjector()
+      .checkAsync("PrjfsDispatcherImpl::read", path.view())
+      .thenValue([this, path = std::move(path), context = context.copy()](
+                     auto&&) mutable {
+        return mount_->getTreeOrTreeEntry(path, context)
+            .thenValue([context = context.copy(),
+                        objectStore = mount_->getObjectStore()](
+                           std::variant<std::shared_ptr<const Tree>, TreeEntry>
+                               treeOrTreeEntry) {
+              auto& treeEntry = std::get<TreeEntry>(treeOrTreeEntry);
+              return objectStore->getBlob(treeEntry.getHash(), context)
+                  .thenValue([](std::shared_ptr<const Blob> blob) {
+                    // TODO(xavierd): directly return the Blob to the caller.
+                    std::string res;
+                    blob->getContents().appendTo(res);
+                    return res;
+                  });
+            })
+            .thenTry([this,
+                      path = std::move(path)](folly::Try<std::string> result) {
+              if (auto* exc =
+                      result.tryGetExceptionObject<std::system_error>()) {
+                if (isEnoent(*exc) && path == kDotEdenConfigPath) {
+                  return folly::Try<std::string>{std::string(dotEdenConfig_)};
+                }
+              }
+              return result;
+            });
       });
 }
 
