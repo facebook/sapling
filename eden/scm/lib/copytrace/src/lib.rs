@@ -15,6 +15,7 @@ mod utils;
 pub use crate::copy_trace::CopyTrace;
 pub use crate::dag_copy_trace::DagCopyTrace;
 pub use crate::git_copy_trace::GitCopyTrace;
+pub use crate::rename_finders::ContentSimilarityRenameFinder;
 pub use crate::rename_finders::RenameFinder;
 pub use crate::rename_finders::SaplingRenameFinder;
 

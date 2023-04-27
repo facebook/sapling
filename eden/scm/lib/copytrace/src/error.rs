@@ -7,6 +7,7 @@
 
 use dag::Vertex;
 use types::HgId;
+use types::RepoPathBuf;
 
 #[derive(Debug, thiserror::Error)]
 pub enum CopyTraceError {
@@ -17,4 +18,7 @@ pub enum CopyTraceError {
     /// Parents can not be found for the given commit
     #[error("Parents can not be found for commit: {0:?}")]
     NoParents(Vertex),
+
+    #[error("File not found: {0:?}")]
+    FileNotFound(RepoPathBuf),
 }
