@@ -9,6 +9,7 @@
 
 pub const XDF_NEED_MINIMAL: u32 = 1;
 pub const XDF_INDENT_HEURISTIC: u32 = 8388608;
+pub const XDF_CAPPED_EDIT_COST_ONLY: u32 = 4194304;
 pub const XDL_EMIT_BDIFFHUNK: u32 = 16;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -116,6 +117,7 @@ pub type mmbuffer_t = s_mmbuffer;
 #[derive(Debug, Default, Copy, Clone)]
 pub struct s_xpparam {
     pub flags: u64,
+    pub max_edit_cost: i64,
 }
 #[test]
 fn bindgen_test_layout_s_xpparam() {
@@ -123,7 +125,7 @@ fn bindgen_test_layout_s_xpparam() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::std::mem::size_of::<s_xpparam>(),
-        8usize,
+        16usize,
         concat!("Size of: ", stringify!(s_xpparam))
     );
     assert_eq!(
@@ -139,6 +141,16 @@ fn bindgen_test_layout_s_xpparam() {
             stringify!(s_xpparam),
             "::",
             stringify!(flags)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).max_edit_cost) as usize - ptr as usize },
+        8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(s_xpparam),
+            "::",
+            stringify!(max_edit_cost)
         )
     );
 }
@@ -250,5 +262,5 @@ extern "C" {
         xpp: *const xpparam_t,
         xecfg: *const xdemitconf_t,
         ecb: *mut xdemitcb_t,
-    ) -> ::std::os::raw::c_int;
+    ) -> i64;
 }

@@ -41,7 +41,10 @@ mod tests {
             ptr: b.as_ptr() as *mut c_char,
             size: b.len() as i64,
         };
-        let xpp = xpparam_t { flags: 0 };
+        let xpp = xpparam_t {
+            flags: 0,
+            max_edit_cost: 0,
+        };
         let xecfg = xdemitconf_t {
             flags: 0,
             hunk_func: Some(hunk_func),

@@ -35,6 +35,10 @@ extern "C" {
 
 #define XDF_INDENT_HEURISTIC (1 << 23)
 
+/* only need edit cost without hunks.
+ * max edit cost set by xpparam_t max_edit_cost. */
+#define XDF_CAPPED_EDIT_COST_ONLY (1 << 22)
+
 /* emit bdiff-style "matched" (a1, a2, b1, b2) hunks instead of "different"
  * (a1, a2 - a1, b1, b2 - b1) hunks */
 #define XDL_EMIT_BDIFFHUNK (1 << 4)
@@ -51,6 +55,7 @@ typedef struct s_mmbuffer {
 
 typedef struct s_xpparam {
 	uint64_t flags;
+	int64_t max_edit_cost;
 } xpparam_t;
 
 typedef struct s_xdemitcb {
@@ -74,7 +79,7 @@ typedef struct s_xdemitconf {
 void *xdl_mmfile_first_vendored(mmfile_t *mmf, int64_t *size);
 int64_t xdl_mmfile_size_vendored(mmfile_t *mmf);
 
-int xdl_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
+int64_t xdl_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	     xdemitconf_t const *xecfg, xdemitcb_t *ecb);
 
 #ifdef __cplusplus

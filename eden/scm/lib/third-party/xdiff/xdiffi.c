@@ -62,6 +62,11 @@ static xdchange_t *xdl_add_change(xdchange_t *xscr, int64_t i1, int64_t i2, int6
  * returns the furthest point of reach. We might end up having to expensive
  * cases using this algorithm is full, so a little bit of heuristic is needed
  * to cut the search and to return a suboptimal point.
+ *
+ * need_min:
+ * - 0: regular heuristics
+ * - 1: no heuristics, minimal diff
+ * - 2: edit cost only (xenv->mxcost limits the cost, return edit cost)
  */
 static int64_t xdl_split(uint64_t const *ha1, int64_t off1, int64_t lim1,
 		      uint64_t const *ha2, int64_t off2, int64_t lim2,
@@ -114,8 +119,15 @@ static int64_t xdl_split(uint64_t const *ha1, int64_t off1, int64_t lim1,
 				spl->i1 = i1;
 				spl->i2 = i2;
 				spl->min_lo = spl->min_hi = 1;
+				if (need_min == 2) {
+					return ec * 2 - 1;
+				}
 				return ec;
 			}
+		}
+
+		if (need_min == 2 && ec * 2 - 1 >= xenv->mxcost) {
+			return xenv->mxcost;
 		}
 
 		/*
@@ -149,8 +161,15 @@ static int64_t xdl_split(uint64_t const *ha1, int64_t off1, int64_t lim1,
 				spl->i1 = i1;
 				spl->i2 = i2;
 				spl->min_lo = spl->min_hi = 1;
+				if (need_min == 2) {
+					return ec * 2;
+				}
 				return ec;
 			}
+		}
+
+		if (need_min == 2 && ec * 2 >= xenv->mxcost) {
+			return xenv->mxcost;
 		}
 
 		if (need_min)
@@ -269,7 +288,7 @@ static int64_t xdl_split(uint64_t const *ha1, int64_t off1, int64_t lim1,
  * the box splitting function. Note that the real job (marking changed lines)
  * is done in the two boundary reaching checks.
  */
-int xdl_recs_cmp_vendored(diffdata_t *dd1, int64_t off1, int64_t lim1,
+int64_t xdl_recs_cmp_vendored(diffdata_t *dd1, int64_t off1, int64_t lim1,
 		 diffdata_t *dd2, int64_t off2, int64_t lim2,
 		 int64_t *kvdf, int64_t *kvdb, int need_min, xdalgoenv_t *xenv) {
 	uint64_t const *ha1 = dd1->ha, *ha2 = dd2->ha;
@@ -288,11 +307,17 @@ int xdl_recs_cmp_vendored(diffdata_t *dd1, int64_t off1, int64_t lim1,
 		char *rchg2 = dd2->rchg;
 		int64_t *rindex2 = dd2->rindex;
 
+		if (need_min == 2)
+			return lim2 - off2;
+
 		for (; off2 < lim2; off2++)
 			rchg2[rindex2[off2]] = 1;
 	} else if (off2 == lim2) {
 		char *rchg1 = dd1->rchg;
 		int64_t *rindex1 = dd1->rindex;
+
+		if (need_min == 2)
+			return lim1 - off1;
 
 		for (; off1 < lim1; off1++)
 			rchg1[rindex1[off1]] = 1;
@@ -303,10 +328,13 @@ int xdl_recs_cmp_vendored(diffdata_t *dd1, int64_t off1, int64_t lim1,
 		/*
 		 * Divide ...
 		 */
-		if (xdl_split(ha1, off1, lim1, ha2, off2, lim2, kvdf, kvdb,
-			      need_min, &spl, xenv) < 0) {
-
+		int64_t ret = xdl_split(ha1, off1, lim1, ha2, off2, lim2, kvdf, kvdb,
+						need_min, &spl, xenv);
+		if (ret < 0) {
 			return -1;
+		}
+		if (need_min == 2) {
+			return ret;
 		}
 
 		/*
@@ -325,25 +353,44 @@ int xdl_recs_cmp_vendored(diffdata_t *dd1, int64_t off1, int64_t lim1,
 }
 
 
-int xdl_do_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
+int64_t xdl_do_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 		xdfenv_t *xe) {
 	int64_t ndiags;
 	int64_t *kvd, *kvdf, *kvdb;
+	int need_min = 0;
 	xdalgoenv_t xenv;
 	diffdata_t dd1, dd2;
 
 	if (xdl_prepare_env_vendored(mf1, mf2, xpp, xe) < 0) {
-
 		return -1;
+	}
+
+	ndiags = xe->xdf1.nreff + xe->xdf2.nreff + 3;
+
+	/* Prepare need_min and xenv.mxcost */
+	if (xpp->flags & XDF_CAPPED_EDIT_COST_ONLY) {
+		int64_t mxcost = xpp->max_edit_cost - xe->nopt;
+		if (mxcost <= 0) {
+			// number of "optimized out" lines already exceeds limit.
+			xdl_free_env_vendored(xe);
+			return xpp->max_edit_cost;
+		}
+		xenv.mxcost = mxcost;
+		need_min = 2;
+	} else {
+		xenv.mxcost = xdl_bogosqrt_vendored(ndiags);
+		if (xenv.mxcost < XDL_MAX_COST_MIN)
+			xenv.mxcost = XDL_MAX_COST_MIN;
+		if (xpp->flags & XDF_NEED_MINIMAL) {
+			need_min = 1;
+		}
 	}
 
 	/*
 	 * Allocate and setup K vectors to be used by the differential algorithm.
 	 * One is to store the forward path and one to store the backward path.
 	 */
-	ndiags = xe->xdf1.nreff + xe->xdf2.nreff + 3;
 	if (!(kvd = (int64_t *) xdl_malloc((2 * ndiags + 2) * sizeof(int64_t)))) {
-
 		xdl_free_env_vendored(xe);
 		return -1;
 	}
@@ -352,9 +399,6 @@ int xdl_do_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	kvdf += xe->xdf2.nreff + 1;
 	kvdb += xe->xdf2.nreff + 1;
 
-	xenv.mxcost = xdl_bogosqrt_vendored(ndiags);
-	if (xenv.mxcost < XDL_MAX_COST_MIN)
-		xenv.mxcost = XDL_MAX_COST_MIN;
 	xenv.snake_cnt = XDL_SNAKE_CNT;
 	xenv.heur_min = XDL_HEUR_MIN_COST;
 
@@ -367,17 +411,21 @@ int xdl_do_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	dd2.rchg = xe->xdf2.rchg;
 	dd2.rindex = xe->xdf2.rindex;
 
-	if (xdl_recs_cmp_vendored(&dd1, 0, dd1.nrec, &dd2, 0, dd2.nrec,
-			 kvdf, kvdb, (xpp->flags & XDF_NEED_MINIMAL) != 0, &xenv) < 0) {
-
-		xdl_free(kvd);
+	int64_t ret = xdl_recs_cmp_vendored(&dd1, 0, dd1.nrec, &dd2, 0, dd2.nrec,
+			 kvdf, kvdb, need_min, &xenv);
+	if (need_min == 2 || ret < 0) {
 		xdl_free_env_vendored(xe);
-		return -1;
+	}
+
+	if (need_min == 2 && ret >= 0) {
+		ret += xe->nopt;
+		if (ret > xpp->max_edit_cost)
+			ret = xpp->max_edit_cost;
 	}
 
 	xdl_free(kvd);
 
-	return 0;
+	return ret;
 }
 
 
@@ -1101,15 +1149,16 @@ static int xdl_call_hunk_func(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
 	return 0;
 }
 
-int xdl_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
+int64_t xdl_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	     xdemitconf_t const *xecfg, xdemitcb_t *ecb) {
 	xdchange_t *xscr;
 	xdfenv_t xe;
 
-	if (xdl_do_diff_vendored(mf1, mf2, xpp, &xe) < 0) {
-
-		return -1;
+	int64_t ret = xdl_do_diff_vendored(mf1, mf2, xpp, &xe);
+	if (ret < 0 || (xpp->flags & XDF_CAPPED_EDIT_COST_ONLY) != 0) {
+		return ret;
 	}
+
 	if (xdl_change_compact_vendored(&xe.xdf1, &xe.xdf2, xpp->flags) < 0 ||
 	    xdl_change_compact_vendored(&xe.xdf2, &xe.xdf1, xpp->flags) < 0 ||
 	    xdl_build_script_vendored(&xe, &xscr) < 0) {

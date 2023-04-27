@@ -94,6 +94,7 @@ where
     };
     let xpp = ffi::xpparam_t {
         flags: ffi::XDF_INDENT_HEURISTIC as u64,
+        ..Default::default()
     };
     let xecfg = ffi::xdemitconf_t {
         flags: 0,
@@ -132,6 +133,7 @@ pub fn blocks(a: &[u8], b: &[u8]) -> Vec<(u64, u64, u64, u64)> {
     };
     let xpp = ffi::xpparam_t {
         flags: ffi::XDF_INDENT_HEURISTIC as u64,
+        ..Default::default()
     };
     let xecfg = ffi::xdemitconf_t {
         flags: ffi::XDL_EMIT_BDIFFHUNK as _,
@@ -148,6 +150,46 @@ pub fn blocks(a: &[u8], b: &[u8]) -> Vec<(u64, u64, u64, u64)> {
     assert_eq!(ret, 0, "xdl_diff failed");
 
     result
+}
+
+/// Calculate the edit cost (added and deleted line count), with a maximum threshold.
+///
+/// The maximum threshold `max_edit_cost` decides the maximum D in O(N+D^2)
+/// complexity. Do not set it to a large value. The underlying diff algorithm
+/// does not use any heuristics!
+///
+/// This is useful for similarity check.
+pub fn edit_cost(a: &[u8], b: &[u8], max_edit_cost: u64) -> u64 {
+    let mut a_mmfile = ffi::mmfile_t {
+        ptr: a.as_ptr() as *mut c_char,
+        size: a.len() as i64,
+    };
+    let mut b_mmfile = ffi::mmfile_t {
+        ptr: b.as_ptr() as *mut c_char,
+        size: b.len() as i64,
+    };
+    let xpp = ffi::xpparam_t {
+        flags: ffi::XDF_CAPPED_EDIT_COST_ONLY as _,
+        max_edit_cost: max_edit_cost as _,
+    };
+    let xecfg = ffi::xdemitconf_t {
+        flags: 0,
+        hunk_func: None,
+    };
+
+    let ret = unsafe {
+        ffi::xdl_diff_vendored(
+            &mut a_mmfile,
+            &mut b_mmfile,
+            &xpp,
+            &xecfg,
+            std::ptr::null_mut(),
+        )
+    };
+
+    assert!(ret >= 0, "xdl_diff failed");
+
+    ret as _
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -960,5 +1002,125 @@ Binary file x has changed
             blocks(b"a\nb\nc\nd\nx\ny\nz\n", b"b\nc\nd\ne\nf\nu\nv\nw\nx\n"),
             [(1, 4, 0, 3), (4, 5, 8, 9), (7, 7, 9, 9)],
         );
+    }
+
+    #[test]
+    fn test_edit_cost_small_diffs() {
+        let c = |a: &str, b: &str, max_edit_cost: u64| {
+            // Insert "\n" per character.
+            let a = a
+                .chars()
+                .map(|c| format!("{c}\n"))
+                .collect::<Vec<_>>()
+                .concat();
+            let b = b
+                .chars()
+                .map(|c| format!("{c}\n"))
+                .collect::<Vec<_>>()
+                .concat();
+            edit_cost(a.as_bytes(), b.as_bytes(), max_edit_cost)
+        };
+
+        // Same content.
+        assert_eq!(c("", "", 0), 0);
+        assert_eq!(c("", "", 10), 0);
+        assert_eq!(c("xyz", "xyz", 0), 0);
+        assert_eq!(c("xyz", "xyz", 10), 0);
+
+        // Unique lines.
+        assert_eq!(c("", "xyz", 10), 3);
+        assert_eq!(c("abcd", "", 10), 4);
+        assert_eq!(c("abcd", "xyz", 10), 7);
+
+        // Capped unique lines.
+        assert_eq!(c("abcd", "xyz", 6), 6);
+        assert_eq!(c("abcd", "xyz", 5), 5);
+
+        // "One side empty" fast path.
+        assert_eq!(c("ab", "abb", 10), 1);
+        assert_eq!(c("ab", "aabb", 10), 2);
+        assert_eq!(c("aabb", "ab", 10), 2);
+        assert_eq!(c("aab", "ab", 10), 1);
+
+        // No fast path - run xdl_split.
+        assert_eq!(c("abc", "cba", 10), 4);
+        assert_eq!(c("abcd", "dcba", 10), 6);
+        assert_eq!(c("abcdefg", "gfedcba", 3), 3);
+
+        // Mixed. xdl_split and unique lines.
+        assert_eq!(c("abcxyz", "cba", 10), 7);
+        assert_eq!(c("abcxyz", "cba", 4), 4);
+    }
+
+    #[test]
+    fn test_edit_cost_large_diff() {
+        // Large diff. Return early set by max_edit_cost.
+        // Avoid allocation when generating the test case.
+        // This test case is generally challenging for diff algorithms.
+        let n = 10_000_000;
+        let mut a: Vec<u8> = Vec::with_capacity(n);
+        let mut b: Vec<u8> = Vec::with_capacity(n);
+        a.resize(n, b'\n');
+        b.resize(n, b'\n');
+        // Range of printable ASCII characters.
+        let start_byte = b' ';
+        let end_byte = b'~';
+        let mut a_byte = start_byte;
+        let mut b_byte = end_byte;
+        for i in (0..n).step_by(2) {
+            a[i] = a_byte;
+            b[i] = b_byte;
+            a_byte += 1;
+            b_byte -= 1;
+            if a_byte > end_byte {
+                a_byte = start_byte;
+                b_byte = end_byte;
+            }
+        }
+
+        // Uncomment to write the test case to disk.
+        // std::fs::write("a", &a).unwrap();
+        // std::fs::write("b", &b).unwrap();
+
+        // This can complete relatively fast (run with --release to reduce test generation time).
+        // When n = 10M, edit_cost takes ~1.5s, full xdiff (blocks(), or git diff --stat) takes ~68s.
+        assert_eq!(edit_cost(&a, &b, 100), 100);
+    }
+
+    #[test]
+    fn test_edit_cost_against_diff_hunks() {
+        // Edit cost should match diff_hunks line count.
+        const CHARS: [u8; 4] = [b'x', b'y', b'z', b'\n'];
+        let to_slice = |bits: u8| -> [u8; 8] {
+            [
+                CHARS[(bits & 3) as usize],
+                b'\n',
+                CHARS[((bits >> 2) & 3) as usize],
+                b'\n',
+                CHARS[((bits >> 4) & 3) as usize],
+                b'\n',
+                CHARS[((bits >> 6) & 3) as usize],
+                b'\n',
+            ]
+        };
+        (0..=0xffu8).for_each(|i| {
+            let a = to_slice(i);
+            (0..=0xffu8).for_each(|i| {
+                let b = to_slice(i);
+                let cost1 = edit_cost(&a, &b, 1000);
+                let cost2 = diff_hunks(&a, &b)
+                    .into_iter()
+                    .fold(0, |a, h| a + h.add.len() + h.remove.len())
+                    as u64;
+                use std::str::from_utf8;
+                assert_eq!(
+                    cost1,
+                    cost2,
+                    "edit cost does not match: {:?} {:?}",
+                    from_utf8(&a).unwrap(),
+                    from_utf8(&b).unwrap()
+                );
+            });
+        });
     }
 }
