@@ -471,7 +471,8 @@ static void attachio(hgclient_t* hgc) {
     abortmsg("unexpected size of attachio result");
   memcpy(&n, ctx->data, sizeof(n));
   n = ntohl(n);
-  if (n != fds_size / sizeof(fds[0]))
+  // safety: fds_len <= 4
+  if (n != (int32_t)fds_len)
     abortmsg("failed to send fds (n = %d)", n);
 }
 
