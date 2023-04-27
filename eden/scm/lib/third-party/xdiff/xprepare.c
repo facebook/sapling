@@ -191,10 +191,12 @@ static void xdl_trim_files(mmfile_t *mf1, mmfile_t *mf2, int64_t reserved,
 		pp1++, pp2++;
 	}
 
-	ps1 = msmall.ptr + msmall.size - 1, ps2 = mlarge.ptr + mlarge.size - 1;
-	while (ps1 > pp1 && *ps1 == *ps2) {
-		slines += (*ps1 == '\n');
-		ps1--, ps2--;
+	if (msmall.size > 0 && mlarge.size > 0) {
+		ps1 = msmall.ptr + msmall.size - 1, ps2 = mlarge.ptr + mlarge.size - 1;
+		while (ps1 > pp1 && *ps1 == *ps2) {
+			slines += (*ps1 == '\n');
+			ps1--, ps2--;
+		}
 	}
 
 	/* Retract common prefix and suffix boundaries for reserved lines */
