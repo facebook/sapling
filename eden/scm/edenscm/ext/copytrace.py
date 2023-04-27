@@ -434,6 +434,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
     missingfiles = list(
         filter(lambda f: f not in mdst and f in base and f in csrc, changedfiles)
     )
+    repo.ui.metrics.gauge("copytrace_missingfiles", len(missingfiles))
     if missingfiles and _dagcopytraceenabled(repo.ui):
         dag_copy_trace = bindings.copytrace.dagcopytrace(
             repo.changelog.inner,
@@ -455,6 +456,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
                 if dst not in copies:
                     copies[dst] = src
 
+    repo.ui.metrics.gauge("copytrace_copies", len(copies))
     return _filtercopies(copies, cdst, csrc, base), {}, {}, {}, {}
 
 
