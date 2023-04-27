@@ -111,6 +111,45 @@ where
     result
 }
 
+/// Produce matching blocks, in (a1, a2, b1, b2) format.
+/// `a_lines[a1:a2]` matches `b_lines[b1:b2]`.
+pub fn blocks(a: &[u8], b: &[u8]) -> Vec<(u64, u64, u64, u64)> {
+    extern "C" fn hunk_consumer(a1: i64, a2: i64, b1: i64, b2: i64, blocks: *mut c_void) -> c_int {
+        let blocks = unsafe { (blocks as *mut Vec<(u64, u64, u64, u64)>).as_mut() };
+        if let Some(blocks) = blocks {
+            blocks.push((a1 as _, a2 as _, b1 as _, b2 as _));
+        }
+        0
+    }
+
+    let mut a_mmfile = ffi::mmfile_t {
+        ptr: a.as_ptr() as *mut c_char,
+        size: a.len() as i64,
+    };
+    let mut b_mmfile = ffi::mmfile_t {
+        ptr: b.as_ptr() as *mut c_char,
+        size: b.len() as i64,
+    };
+    let xpp = ffi::xpparam_t {
+        flags: ffi::XDF_INDENT_HEURISTIC as u64,
+    };
+    let xecfg = ffi::xdemitconf_t {
+        flags: ffi::XDL_EMIT_BDIFFHUNK as _,
+        hunk_func: Some(hunk_consumer),
+    };
+    let mut result: Vec<(u64, u64, u64, u64)> = Vec::new();
+    let mut ecb = ffi::xdemitcb_t {
+        priv_: &mut result as *mut Vec<(u64, u64, u64, u64)> as *mut c_void,
+    };
+
+    let ret =
+        unsafe { ffi::xdl_diff_vendored(&mut a_mmfile, &mut b_mmfile, &xpp, &xecfg, &mut ecb) };
+
+    assert_eq!(ret, 0, "xdl_diff failed");
+
+    result
+}
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct HeaderlessDiffOpts {
     /// Number of context lines
@@ -706,7 +745,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_blocks() {
+    fn test_diff_hunks() {
         // We're repeating the example from doctest because "buck test" doesn't run it.
         let a = "a\n b\n c\n d\n";
         let b = "a\n c\n d\n e\n";
@@ -912,6 +951,14 @@ d
             r"diff --git a/x b/x
 Binary file x has changed
 "
+        );
+    }
+
+    #[test]
+    fn test_blocks() {
+        assert_eq!(
+            blocks(b"a\nb\nc\nd\nx\ny\nz\n", b"b\nc\nd\ne\nf\nu\nv\nw\nx\n"),
+            [(1, 4, 0, 3), (4, 5, 8, 9), (7, 7, 9, 9)],
         );
     }
 }
