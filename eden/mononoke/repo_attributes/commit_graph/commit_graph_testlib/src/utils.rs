@@ -156,7 +156,7 @@ pub async fn assert_ancestors_difference_with(
     ctx: &CoreContext,
     heads: Vec<&str>,
     common: Vec<&str>,
-    property_fn: impl Fn(ChangesetId) -> bool,
+    property_fn: impl Fn(ChangesetId) -> bool + 'static,
     ancestors_difference: Vec<&str>,
 ) -> Result<()> {
     let heads = heads.into_iter().map(name_cs_id).collect();

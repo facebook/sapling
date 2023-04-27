@@ -338,12 +338,14 @@ pub async fn test_ancestors_difference(
         .map(name_cs_id)
         .collect::<HashSet<_>>();
 
+    let set1_fn = move |cs_id| set1.contains(&cs_id);
+
     assert_ancestors_difference_with(
         &graph,
         &ctx,
         vec!["J", "S"],
         vec!["C", "E", "O"],
-        |cs_id| set1.contains(&cs_id),
+        set1_fn.clone(),
         vec!["J", "S", "R", "Q", "P"],
     )
     .await?;
@@ -353,7 +355,7 @@ pub async fn test_ancestors_difference(
         &ctx,
         vec!["K"],
         vec!["C", "E"],
-        |cs_id| set1.contains(&cs_id),
+        set1_fn.clone(),
         vec!["K", "J"],
     )
     .await?;
@@ -363,12 +365,14 @@ pub async fn test_ancestors_difference(
         .map(name_cs_id)
         .collect::<HashSet<_>>();
 
+    let set2_fn = move |cs_id| set2.contains(&cs_id);
+
     assert_ancestors_difference_with(
         &graph,
         &ctx,
         vec!["H"],
         vec![],
-        |cs_id| set2.contains(&cs_id),
+        set2_fn.clone(),
         vec!["D", "E", "F", "G", "H"],
     )
     .await?;
@@ -378,7 +382,7 @@ pub async fn test_ancestors_difference(
         &ctx,
         vec!["H"],
         vec!["F"],
-        |cs_id| set2.contains(&cs_id),
+        set2_fn.clone(),
         vec!["D", "G", "H"],
     )
     .await?;
