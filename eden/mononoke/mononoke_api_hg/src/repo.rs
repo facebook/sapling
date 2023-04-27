@@ -79,6 +79,7 @@ use repo_update_logger::log_new_commits;
 use repo_update_logger::CommitInfo;
 use segmented_changelog::CloneData;
 use segmented_changelog::Location;
+use slog::debug;
 use unbundle::upload_changeset;
 
 use super::HgFileContext;
@@ -790,8 +791,82 @@ impl HgRepoContext {
             .map_err(|e| e.into())
     }
 
-    /// return a mapping of commits to their parents that are in the segment of
+    /// Convert a list of hg changesets to a list of bonsai changesets.
+    async fn convert_changeset_ids(
+        &self,
+        changesets: Vec<HgChangesetId>,
+    ) -> Result<Vec<ChangesetId>, MononokeError> {
+        Ok(self
+            .blob_repo()
+            .get_hg_bonsai_mapping(self.ctx().clone(), changesets.to_vec())
+            .await
+            .context("error fetching hg bonsai mapping")?
+            .iter()
+            .map(|(_, bcs_id)| *bcs_id)
+            .collect())
+    }
+
+    /// Check if all changesets in the list are public.
+    pub async fn is_all_public(
+        &self,
+        changesets: &Vec<HgChangesetId>,
+    ) -> Result<bool, MononokeError> {
+        let len = changesets.len();
+        let public_phases = self
+            .blob_repo()
+            .phases()
+            .get_public(
+                self.ctx(),
+                self.convert_changeset_ids(changesets.to_vec()).await?,
+                false,
+            )
+            .await?;
+        Ok(len == public_phases.len())
+    }
+
+    /// Return a mapping of commits to their parents that are in the segment of
     /// of the commit graph bounded by common and heads.
+    ///
+    /// This should be used for public fetches only, since for draft commits we need to
+    /// make sure filenodes are derived before sending.
+    pub async fn get_graph_mapping_stream(
+        &self,
+        common: Vec<HgChangesetId>,
+        heads: Vec<HgChangesetId>,
+    ) -> Result<
+        impl Stream<Item = Result<(HgChangesetId, Vec<HgChangesetId>), MononokeError>> + 'static,
+        MononokeError,
+    > {
+        let ctx = self.ctx().clone();
+        let blob_repo = self.blob_repo().clone();
+        let bonsai_common = self.convert_changeset_ids(common).await?;
+        let bonsai_heads = self.convert_changeset_ids(heads).await?;
+        debug!(ctx.logger(), "Streaming Commit Graph...");
+        let commit_graph_stream = self
+            .repo()
+            .repo()
+            .commit_graph()
+            .ancestors_difference_stream(&ctx, bonsai_heads, bonsai_common)
+            .await?
+            .map_err(MononokeError::from)
+            .and_then(move |bcs_id| {
+                let ctx = ctx.clone();
+                let blob_repo = blob_repo.clone();
+                async move {
+                    blob_repo
+                        .get_hg_changeset_and_parents_from_bonsai(ctx, bcs_id)
+                        .await
+                        .map_err(MononokeError::from)
+                }
+            });
+        Ok(commit_graph_stream)
+    }
+
+    /// Return a mapping of commits to their parents that are in the segment of
+    /// of the commit graph bounded by common and heads.
+    ///
+    /// We need to make sure filenodes are derived before sending for draft commits.
+    /// This method also return commit's phases.
     pub async fn get_graph_mapping(
         &self,
         common: Vec<HgChangesetId>,
@@ -800,33 +875,22 @@ impl HgRepoContext {
         let ctx = self.ctx().clone();
         let blob_repo = self.blob_repo();
         let phases = blob_repo.phases();
-        let common_set: HashSet<_> = common.iter().cloned().collect();
 
-        // make sure filenodes are derived before sending
+        let common_set: HashSet<_> = common.iter().cloned().collect();
+        let heads_vec: Vec<_> = heads.to_vec();
+
+        debug!(ctx.logger(), "Calculating Commit Graph...");
         let (draft_commits, missing_commits) = try_join!(
-            // TODO(liubovd): migrate this part
             find_new_draft_commits_and_derive_filenodes_for_public_roots(
                 &ctx,
                 blob_repo,
                 &common_set,
-                &heads,
+                &heads_vec,
                 phases
             ),
             {
-                let hg_bonsai_heads = self
-                    .blob_repo()
-                    .get_hg_bonsai_mapping(ctx.clone(), heads.to_vec())
-                    .await?;
-
-                let bonsai_heads = hg_bonsai_heads.iter().map(|(_, bcs_id)| *bcs_id).collect();
-
-                let hg_bonsai_common = self
-                    .blob_repo()
-                    .get_hg_bonsai_mapping(ctx.clone(), common.to_vec())
-                    .await?;
-
-                let bonsai_common = hg_bonsai_common.iter().map(|(_, bcs_id)| *bcs_id).collect();
-
+                let bonsai_common = self.convert_changeset_ids(common).await?;
+                let bonsai_heads = self.convert_changeset_ids(heads).await?;
                 self.repo().repo().commit_graph().ancestors_difference(
                     &ctx,
                     bonsai_heads,
@@ -876,6 +940,7 @@ impl HgRepoContext {
 
         let mut hg_parent_mapping: BTreeMap<HgChangesetId, (Vec<HgChangesetId>, bool)> =
             BTreeMap::new();
+
         let get_hg_id = |cs_id| {
             bonsai_hg_mapping
                 .get(cs_id)

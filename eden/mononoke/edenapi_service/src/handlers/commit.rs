@@ -96,6 +96,8 @@ use crate::utils::to_revlog_changeset;
 const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;
 const HASH_TO_LOCATION_BATCH_SIZE: usize = 100;
 
+const PHASES_CHECK_LIMIT: usize = 10;
+
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct HashToLocationParams {
     repo: String,
@@ -613,16 +615,36 @@ impl EdenApiHandler for GraphHandlerV2 {
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
-        let heads = request
+        let heads: Vec<_> = request
             .heads
             .into_iter()
             .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
             .collect();
-        let common = request
+        let common: Vec<_> = request
             .common
             .into_iter()
             .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
             .collect();
+
+        // If all the requested heads are public, return stream.
+        if heads.len() < PHASES_CHECK_LIMIT && repo.is_all_public(&heads).await? {
+            let graph_stream = repo
+                .get_graph_mapping_stream(common, heads)
+                .await?
+                .err_into::<Error>()
+                .and_then(|(hgid, parents)| async move {
+                    Ok(CommitGraphEntry {
+                        hgid: HgId::from(hgid.into_nodehash()),
+                        parents: parents
+                            .into_iter()
+                            .map(|p_hgid| HgId::from(p_hgid.into_nodehash()))
+                            .collect(),
+                        is_draft: Some(false),
+                    })
+                })
+                .boxed();
+            return Ok(graph_stream);
+        }
 
         let graph_entries = repo
             .get_graph_mapping(common, heads)

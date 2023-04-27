@@ -90,6 +90,14 @@ pub trait BlobRepoHg: Send + Sync {
     where
         Self: BonsaiHgMappingRef + ChangesetsRef;
 
+    async fn get_hg_changeset_and_parents_from_bonsai(
+        &self,
+        ctx: CoreContext,
+        csid: ChangesetId,
+    ) -> Result<(HgChangesetId, Vec<HgChangesetId>), Error>
+    where
+        Self: BonsaiHgMappingRef + ChangesetsRef + RepoDerivedDataRef;
+
     async fn get_hg_changeset_parents(
         &self,
         ctx: CoreContext,
@@ -152,6 +160,7 @@ define_stats! {
     hg_changeset_exists: timeseries(Rate, Sum),
     get_all_filenodes: timeseries(Rate, Sum),
     get_bookmark_hg: timeseries(Rate, Sum),
+    get_hg_changeset_and_parents_from_bonsai: timeseries(Rate, Sum),
     get_hg_changeset_parents: timeseries(Rate, Sum),
     get_hg_heads_maybe_stale: timeseries(Rate, Sum),
     get_hg_bonsai_mapping: timeseries(Rate, Sum),
@@ -284,6 +293,34 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
             }
             None => Ok(false),
         }
+    }
+
+    async fn get_hg_changeset_and_parents_from_bonsai(
+        &self,
+        ctx: CoreContext,
+        csid: ChangesetId,
+    ) -> Result<(HgChangesetId, Vec<HgChangesetId>), Error>
+    where
+        Self: BonsaiHgMappingRef + ChangesetsRef + RepoDerivedDataRef,
+    {
+        STATS::get_hg_changeset_and_parents_from_bonsai.add_value(1);
+
+        let parents = self
+            .changesets()
+            .get(&ctx, csid)
+            .await?
+            .ok_or(ErrorKind::BonsaiNotFound(csid))?
+            .parents
+            .into_iter()
+            .map(|parent| self.derive_hg_changeset(&ctx, parent));
+
+        let changesetid = self
+            .bonsai_hg_mapping()
+            .get_hg_from_bonsai(&ctx, csid)
+            .await?
+            .ok_or(ErrorKind::BonsaiNotFound(csid))?;
+
+        Ok((changesetid, future::try_join_all(parents).await?))
     }
 
     async fn get_hg_changeset_parents(

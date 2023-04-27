@@ -41,6 +41,7 @@ repo_client = { version = "0.1.0", path = "../repo_client" }
 repo_update_logger = { version = "0.1.0", path = "../features/repo_update_logger" }
 revisionstore_types = { version = "0.1.0", path = "../../scm/lib/revisionstore/types" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 unbundle = { version = "0.1.0", path = "../repo_client/unbundle" }
 
 [dev-dependencies]
