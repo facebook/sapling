@@ -135,6 +135,26 @@ impl GitimportAccumulator {
     }
 }
 
+pub async fn is_annotated_tag(
+    path: &Path,
+    prefs: &GitimportPreferences,
+    object_id: &ObjectId,
+) -> Result<bool, Error> {
+    let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
+    Ok(reader
+        .get_object(object_id)
+        .await
+        .with_context(|| {
+            format_err!(
+                "Failed to fetch git object {} for checking if its a tag",
+                object_id,
+            )
+        })?
+        .parsed
+        .as_tag()
+        .is_some())
+}
+
 pub async fn upload_git_tag<Uploader: GitUploader>(
     ctx: &CoreContext,
     uploader: &Uploader,
