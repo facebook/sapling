@@ -62,7 +62,7 @@ use once_cell::sync::OnceCell;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentity;
-use sharding_lib_ext::split_repo_names;
+use sharding_ext::split_repo_names;
 use slog::debug;
 use slog::error;
 use slog::info;

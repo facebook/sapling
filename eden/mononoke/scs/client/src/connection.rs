@@ -13,7 +13,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Error;
 use fbinit::FacebookInit;
-use sharding_lib_ext::encode_repo_name;
+use sharding_ext::encode_repo_name;
 use source_control::client::make_SourceControlService;
 use source_control::client::SourceControlService;
 use x2pclient::X2pClientBuilder;

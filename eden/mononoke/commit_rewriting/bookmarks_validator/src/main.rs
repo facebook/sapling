@@ -41,7 +41,7 @@ use mononoke_types::ChangesetId;
 use once_cell::sync::OnceCell;
 use pushredirect_enable::types::MononokePushRedirectEnable;
 use scuba_ext::MononokeScubaSampleBuilder;
-use sharding_lib_ext::split_repo_names;
+use sharding_ext::split_repo_names;
 use slog::error;
 use slog::info;
 use slog::Logger;
