@@ -7,8 +7,6 @@
 
 #pragma once
 
-#define NOMINMAX
-
 #include <boost/regex.hpp>
 #include <fmt/ranges.h>
 #include <folly/Synchronized.h>
