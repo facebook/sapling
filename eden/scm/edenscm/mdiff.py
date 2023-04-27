@@ -19,7 +19,9 @@ import zlib
 from hashlib import sha1
 from typing import Iterator, List, Optional, Pattern, Sized, Tuple, TYPE_CHECKING, Union
 
-from edenscmnative import bdiff, mpatch, xdiff
+import bindings
+
+from edenscmnative import bdiff, mpatch
 
 from . import error, util
 from .i18n import _
@@ -46,9 +48,7 @@ wordsplitter: Pattern[bytes] = re.compile(
 def init(ui: "edenscm.ui.ui") -> None:
     if ui.configbool("experimental", "xdiff"):
         global blocks
-        # pyre-fixme[9]: blocks has type `(a: str, b: str) -> List[Tuple[int, int,
-        #  int, int]]`; used as `(a: str, b: str) -> List[Tuple[int, int, int, int]]`.
-        blocks = xdiff.blocks
+        blocks = bindings.xdiff.blocks
 
 
 def splitnewlines(text: bytes) -> "List[bytes]":

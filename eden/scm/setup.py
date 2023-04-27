@@ -1564,26 +1564,6 @@ extmodules = [
         depends=common_depends,
     ),
     Extension(
-        "edenscmnative.xdiff",
-        sources=[
-            "lib/third-party/xdiff/xdiffi.c",
-            "lib/third-party/xdiff/xprepare.c",
-            "lib/third-party/xdiff/xutils.c",
-            "edenscm/cext/xdiff.c",
-        ],
-        include_dirs=include_dirs,
-        depends=common_depends
-        + [
-            "lib/third-party/xdiff/xdiff.h",
-            "lib/third-party/xdiff/xdiffi.h",
-            "lib/third-party/xdiff/xinclude.h",
-            "lib/third-party/xdiff/xmacros.h",
-            "lib/third-party/xdiff/xprepare.h",
-            "lib/third-party/xdiff/xtypes.h",
-            "lib/third-party/xdiff/xutils.h",
-        ],
-    ),
-    Extension(
         "edenscmnative.bser",
         sources=["edenscm/ext/extlib/pywatchman/bser.c"],
         include_dirs=include_dirs,
