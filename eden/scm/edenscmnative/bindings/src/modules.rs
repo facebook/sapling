@@ -91,6 +91,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
             vlq,
             worker,
             workingcopy,
+            xdiff,
             zstd,
             zstore,
             // [[[end]]]
