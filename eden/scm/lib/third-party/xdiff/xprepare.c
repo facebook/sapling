@@ -60,9 +60,9 @@ static int xdl_prepare_ctx(unsigned int pass, mmfile_t *mf, int64_t narec,
 			   xdlclassifier_t *cf, xdfile_t *xdf);
 static void xdl_free_ctx(xdfile_t *xdf);
 static int xdl_clean_mmatch(char const *dis, int64_t i, int64_t s, int64_t e);
-static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xdf2);
+static int xdl_cleanup_records(xdlclassifier_t *cf, xdfenv_t *xe);
 static int xdl_trim_ends(xdfile_t *xdf1, xdfile_t *xdf2);
-static int xdl_optimize_ctxs(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xdf2);
+static int xdl_optimize_ctxs(xdlclassifier_t *cf, xdfenv_t *xe);
 
 
 
@@ -368,7 +368,7 @@ int xdl_prepare_env_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 		return -1;
 	}
 
-	if (xdl_optimize_ctxs(&cf, &xe->xdf1, &xe->xdf2) < 0) {
+	if (xdl_optimize_ctxs(&cf, xe) < 0) {
 		xdl_free_ctx(&xe->xdf2);
 		xdl_free_ctx(&xe->xdf1);
 		xdl_free_classifier(&cf);
@@ -451,8 +451,10 @@ static int xdl_clean_mmatch(char const *dis, int64_t i, int64_t s, int64_t e) {
  * matches on the other file. Also, lines that have multiple matches
  * might be potentially discarded if they happear in a run of discardable.
  */
-static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xdf2) {
-	int64_t i, nm, nreff, mlim;
+static int xdl_cleanup_records(xdlclassifier_t *cf, xdfenv_t *xe) {
+	xdfile_t *xdf1 = &xe->xdf1;
+	xdfile_t *xdf2 = &xe->xdf2;
+	int64_t i, nm, nreff, mlim, nopt = 0;
 	xrecord_t **recs;
 	xdlclass_t *rcrec;
 	char *dis, *dis1, *dis2;
@@ -488,8 +490,10 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 			xdf1->rindex[nreff] = i;
 			xdf1->ha[nreff] = (*recs)->ha;
 			nreff++;
-		} else
+		} else {
 			xdf1->rchg[i] = 1;
+			nopt++;
+		}
 	}
 	xdf1->nreff = nreff;
 
@@ -500,10 +504,14 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 			xdf2->rindex[nreff] = i;
 			xdf2->ha[nreff] = (*recs)->ha;
 			nreff++;
-		} else
+		} else {
 			xdf2->rchg[i] = 1;
+			nopt++;
+		}
 	}
 	xdf2->nreff = nreff;
+
+	xe->nopt = nopt;
 
 	xdl_free(dis);
 
@@ -540,10 +548,10 @@ static int xdl_trim_ends(xdfile_t *xdf1, xdfile_t *xdf2) {
 }
 
 
-static int xdl_optimize_ctxs(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xdf2) {
+static int xdl_optimize_ctxs(xdlclassifier_t *cf, xdfenv_t *xe) {
 
-	if (xdl_trim_ends(xdf1, xdf2) < 0 ||
-	    xdl_cleanup_records(cf, xdf1, xdf2) < 0) {
+	if (xdl_trim_ends(&xe->xdf1, &xe->xdf2) < 0 ||
+	    xdl_cleanup_records(cf, xe) < 0) {
 
 		return -1;
 	}

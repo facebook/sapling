@@ -98,6 +98,9 @@ typedef struct s_xdfenv {
 	/* number of lines for common prefix and suffix that are removed
 	 * from xdf1 and xdf2 as a preprocessing step */
 	int64_t nprefix, nsuffix;
+
+	/* number of lines that got "optimized" out (unique - match) */
+	int64_t nopt;
 } xdfenv_t;
 
 
