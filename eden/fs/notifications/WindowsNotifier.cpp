@@ -784,9 +784,12 @@ void WindowsNotifier::showContextMenu(HWND hwnd, POINT pt) {
     uFlags |= TPM_LEFTALIGN;
   }
 
-  checkNonZero(
-      TrackPopupMenuEx(hMenu.get(), uFlags, pt.x, pt.y, hwnd, NULL),
-      "TrackPopupMenuEx failed");
+  // We silently ignore ERROR_POPUP_ALREADY_ACTIVE as it's not worth crashing
+  // Eden for.
+  auto res = TrackPopupMenuEx(hMenu.get(), uFlags, pt.x, pt.y, hwnd, NULL);
+  if (res != 0 && GetLastError() != ERROR_POPUP_ALREADY_ACTIVE) {
+    checkNonZero(res, "TrackPopupMenuEx failed");
+  }
 }
 
 std::unique_ptr<WindowsNotification> WindowsNotifier::popNextNotification() {
