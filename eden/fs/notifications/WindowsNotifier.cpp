@@ -451,9 +451,11 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
         return DefWindowProc(hwnd, message, wParam, lParam);
     }
   } catch (const std::exception& e) {
-    XLOGF(FATAL, "Exception occurred in E-Menu WndProc: {}", e.what());
+    XLOGF(ERR, "Exception occurred in E-Menu WndProc: {}", e.what());
+    return 0;
   } catch (...) {
-    XLOG(FATAL, "Unknown exception occurred in E-Menu WndProc");
+    XLOG(ERR, "Unknown exception occurred in E-Menu WndProc");
+    return 0;
   }
 }
 
