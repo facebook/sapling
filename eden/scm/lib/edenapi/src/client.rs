@@ -1272,7 +1272,7 @@ impl EdenApi for Client {
         &self,
         commits: Vec<HgId>,
     ) -> Result<Vec<CommitMutationsResponse>, EdenApiError> {
-        tracing::info!("Requesting mutation info for {} commits", commits.len());
+        tracing::info!("Requesting mutation info for {} commit(s)", commits.len());
         let url = self.build_url(paths::COMMIT_MUTATIONS)?;
         let requests = self.prepare_requests(
             &url,
