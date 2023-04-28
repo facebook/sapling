@@ -30,6 +30,8 @@ use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
 use cmdlib::helpers::csid_resolve;
+use commit_graph::CommitGraphArc;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::SessionClass;
 use derived_data::BonsaiDerived;
@@ -411,6 +413,8 @@ async fn count_underived(
     + BookmarksRef
     + ChangesetsArc
     + ChangesetsRef
+    + CommitGraphArc
+    + CommitGraphRef
     + Clone,
     derived_data_type: String,
     hashes_or_bookmarks: Vec<String>,

@@ -16,6 +16,7 @@ use anyhow::Result;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use cacheblob::LeaseOps;
 use changesets::Changesets;
+use commit_graph::CommitGraph;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationError;
@@ -45,6 +46,7 @@ impl RepoDerivedData {
         repo_id: RepositoryId,
         repo_name: String,
         changesets: Arc<dyn Changesets>,
+        commit_graph: Arc<CommitGraph>,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         filenodes: Arc<dyn Filenodes>,
         repo_blobstore: RepoBlobstore,
@@ -58,6 +60,7 @@ impl RepoDerivedData {
             repo_id,
             repo_name,
             changesets,
+            commit_graph,
             bonsai_hg_mapping,
             filenodes,
             repo_blobstore,

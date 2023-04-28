@@ -62,6 +62,7 @@ use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
 use cmdlib::monitoring;
 use cmdlib_x_repo::create_commit_syncer_from_matches;
+use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::types::Source;
@@ -131,7 +132,8 @@ pub trait Repo = cross_repo_sync::Repo
     + BonsaiHgMappingArc
     + MutableCountersRef
     + RepoIdentityRef
-    + CommitGraphRef;
+    + CommitGraphRef
+    + CommitGraphArc;
 
 fn print_error(ctx: CoreContext, error: &Error) {
     error!(ctx.logger(), "{}", error);

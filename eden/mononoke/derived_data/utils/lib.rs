@@ -29,6 +29,7 @@ use changeset_fetcher::ChangesetFetcherArc;
 use changeset_info::ChangesetInfo;
 use changesets::ChangesetsArc;
 use cloned::cloned;
+use commit_graph::CommitGraphArc;
 use context::CoreContext;
 use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data::DerivedDataTypesConfig;
@@ -132,7 +133,8 @@ pub trait Repo = RepoDerivedDataArc
     + ChangesetsArc
     + BonsaiHgMappingArc
     + FilenodesArc
-    + RepoBlobstoreRef;
+    + RepoBlobstoreRef
+    + CommitGraphArc;
 
 pub fn derive_data_for_csids(
     ctx: &CoreContext,
@@ -246,6 +248,7 @@ impl<Derivable> DerivedUtilsFromManager<Derivable> {
             repo.repo_identity().id(),
             repo.repo_identity().name().to_string(),
             repo.changesets_arc(),
+            repo.commit_graph_arc(),
             repo.bonsai_hg_mapping_arc(),
             repo.filenodes_arc(),
             repo.repo_blobstore().clone(),
@@ -1053,6 +1056,7 @@ mod tests {
     use bookmarks::Bookmarks;
     use changeset_fetcher::ChangesetFetcher;
     use changesets::Changesets;
+    use commit_graph::CommitGraph;
     use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
     use filenodes::Filenodes;
@@ -1086,6 +1090,8 @@ mod tests {
         changeset_fetcher: dyn ChangesetFetcher,
         #[facet]
         changesets: dyn Changesets,
+        #[facet]
+        commit_graph: CommitGraph,
         #[facet]
         repo_identity: RepoIdentity,
         #[facet]

@@ -23,6 +23,7 @@ use borrowed::borrowed;
 use changeset_fetcher::ChangesetFetcherArc;
 use changesets::ChangesetsRef;
 use cloned::cloned;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use filestore::FilestoreConfigRef;
 use futures::future::try_join_all;
@@ -61,6 +62,7 @@ pub trait Repo = RepoIdentityRef
     + BonsaiHgMappingRef
     + RepoDerivedDataRef
     + RepoBlobstoreRef
+    + CommitGraphRef
     + Send
     + Sync;
 

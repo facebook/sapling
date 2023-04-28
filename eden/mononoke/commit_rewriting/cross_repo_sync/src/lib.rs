@@ -40,6 +40,8 @@ use changeset_fetcher::ChangesetFetcherRef;
 use changeset_info::ChangesetInfo;
 use changesets::Changesets;
 use changesets::ChangesetsRef;
+use commit_graph::CommitGraph;
+use commit_graph::CommitGraphRef;
 use commit_transformation::rewrite_commit as multi_mover_rewrite_commit;
 use commit_transformation::upload_commits;
 pub use commit_transformation::CommitRewrittenToEmpty;
@@ -426,6 +428,7 @@ pub trait Repo = BookmarksArc
     + RepoBlobstoreRef
     + RepoConfigRef
     + RepoDerivedDataRef
+    + CommitGraphRef
     + Send
     + Sync
     + Clone
@@ -470,6 +473,9 @@ pub struct ConcreteRepo {
 
     #[facet]
     mutable_counters: dyn MutableCounters,
+
+    #[facet]
+    commit_graph: CommitGraph,
 }
 
 assert_impl_all!(ConcreteRepo: Repo);

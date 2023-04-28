@@ -12,6 +12,7 @@ use anyhow::Result;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use cacheblob::LeaseOps;
 use changesets::Changesets;
+use commit_graph::CommitGraph;
 use context::CoreContext;
 use derived_data_remote::DerivationClient;
 use filenodes::Filenodes;
@@ -43,6 +44,7 @@ pub struct DerivedDataManagerInner {
     repo_id: RepositoryId,
     repo_name: String,
     changesets: Arc<dyn Changesets>,
+    commit_graph: Arc<CommitGraph>,
     bonsai_hg_mapping: Option<Arc<dyn BonsaiHgMapping>>,
     filenodes: Option<Arc<dyn Filenodes>>,
     repo_blobstore: RepoBlobstore,
@@ -86,6 +88,7 @@ impl DerivedDataManager {
         repo_id: RepositoryId,
         repo_name: String,
         changesets: Arc<dyn Changesets>,
+        commit_graph: Arc<CommitGraph>,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         filenodes: Arc<dyn Filenodes>,
         repo_blobstore: RepoBlobstore,
@@ -103,6 +106,7 @@ impl DerivedDataManager {
                 config_name,
                 config,
                 changesets,
+                commit_graph,
                 bonsai_hg_mapping: Some(bonsai_hg_mapping),
                 filenodes: Some(filenodes),
                 repo_blobstore,
@@ -195,6 +199,14 @@ impl DerivedDataManager {
 
     pub fn changesets_arc(&self) -> Arc<dyn Changesets> {
         self.inner.changesets.clone()
+    }
+
+    pub fn commit_graph(&self) -> &CommitGraph {
+        self.inner.commit_graph.as_ref()
+    }
+
+    pub fn commit_graph_arc(&self) -> Arc<CommitGraph> {
+        self.inner.commit_graph.clone()
     }
 
     pub fn repo_blobstore(&self) -> &RepoBlobstore {
