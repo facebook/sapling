@@ -460,7 +460,6 @@ impl Repo {
             &blob_repo.bookmark_update_log_arc(),
             &mutable_counters,
         )?;
-        let commit_graph = repo_factory.commit_graph(&blob_repo.repo_identity_arc())?;
 
         let inner = InnerRepo {
             blob_repo,
@@ -478,7 +477,6 @@ impl Repo {
             streaming_clone: Arc::new(
                 StreamingCloneBuilder::with_sqlite_in_memory()?.build(repo_id, repo_blobstore),
             ),
-            commit_graph,
         };
 
         let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(

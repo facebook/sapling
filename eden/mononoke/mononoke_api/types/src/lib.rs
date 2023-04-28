@@ -63,11 +63,9 @@ pub struct InnerRepo {
         dyn MutableCounters,
         dyn RepoPermissionChecker,
         dyn RepoLock,
+        CommitGraph,
     )]
     pub blob_repo: BlobRepo,
-
-    #[facet]
-    pub commit_graph: CommitGraph,
 
     #[facet]
     pub repo_config: RepoConfig,

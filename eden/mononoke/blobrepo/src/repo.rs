@@ -18,6 +18,7 @@ use changeset_fetcher::ChangesetFetcher;
 use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::Changesets;
 use changesets::ChangesetsRef;
+use commit_graph::CommitGraph;
 use context::CoreContext;
 use ephemeral_blobstore::Bubble;
 use filenodes::Filenodes;
@@ -54,6 +55,9 @@ pub struct BlobRepoInner {
 
     #[facet]
     pub changeset_fetcher: dyn ChangesetFetcher,
+
+    #[facet]
+    pub commit_graph: CommitGraph,
 
     #[facet]
     pub bonsai_hg_mapping: dyn BonsaiHgMapping,
@@ -112,6 +116,7 @@ pub struct BlobRepo {
         RepoBlobstore,
         dyn Changesets,
         dyn ChangesetFetcher,
+        CommitGraph,
         dyn BonsaiHgMapping,
         dyn BonsaiGitMapping,
         dyn BonsaiGlobalrevMapping,

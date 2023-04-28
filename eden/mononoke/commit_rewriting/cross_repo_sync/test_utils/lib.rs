@@ -84,6 +84,7 @@ pub struct TestRepo {
         RepoBlobstore,
         RepoDerivedData,
         RepoIdentity,
+        CommitGraph,
     )]
     pub blob_repo: BlobRepo,
 
@@ -92,9 +93,6 @@ pub struct TestRepo {
 
     #[facet]
     pub skiplist: SkiplistIndex,
-
-    #[facet]
-    pub commit_graph: CommitGraph,
 }
 
 impl AsBlobRepo for TestRepo {

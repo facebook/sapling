@@ -48,6 +48,7 @@ pub struct Repo {
         dyn Phases,
         dyn PushrebaseMutationMapping,
         dyn MutableCounters,
+        CommitGraph,
     )]
     blob_repo: BlobRepo,
 
@@ -59,9 +60,6 @@ pub struct Repo {
 
     #[facet]
     skiplist: SkiplistIndex,
-
-    #[facet]
-    commit_graph: CommitGraph,
 }
 
 impl Repo {
