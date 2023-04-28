@@ -411,7 +411,10 @@ def _maybeupdateworkingcopy(repo, currentnode):
 
 @perftrace.tracefunc("Prefetching Expensive Remote Bookmarks")
 def _prefetchexpensivebookmarks(repo, remotepath, remotebookmarknewnames):
-    """Fetch expensive bookmarks separately from remote as a series of pulls"""
+    """Fetch expensive bookmarks separately from remote as an independent pull
+
+    The pull will be a streaming pull since all commits are public.
+    """
     if not remotebookmarknewnames:
         return remotebookmarknewnames
 
@@ -420,16 +423,27 @@ def _prefetchexpensivebookmarks(repo, remotepath, remotebookmarknewnames):
     )
 
     remotebookmarknewnamesprefetch = {
-        (name, node)
+        name: node
         for name, node in remotebookmarknewnames.items()
         if bookmarks.splitremotename(name)[1] in expensiveremotebookmarks
     }
 
-    for name, node in remotebookmarknewnamesprefetch:
-        repo.ui.status(
-            _("fetching remote bookmark '%s', sorry, this may take a while...\n") % name
-        )
-        _pullheadgroups(repo, remotepath, _partitionheads(repo.ui, [node]))
+    if not remotebookmarknewnamesprefetch:
+        return remotebookmarknewnames
+
+    repo.ui.status(
+        _("fetching remote bookmark(s) %s. Sorry, this may take a while...\n")
+        % ", ".join(sorted(remotebookmarknewnamesprefetch.keys())),
+        component="commitcloud",
+    )
+
+    _pullheadgroups(
+        repo,
+        remotepath,
+        _partitionheads(repo.ui, sorted(remotebookmarknewnamesprefetch.values())),
+    )
+
+    for name in remotebookmarknewnamesprefetch.keys():
         remotebookmarknewnames.pop(name)
 
     # returns remaining names

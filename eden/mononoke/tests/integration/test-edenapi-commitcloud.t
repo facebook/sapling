@@ -341,37 +341,45 @@ On the first client check that all commits were hidden
   
 
 Test sync of remote bookmarks.
-Create "expensive" remote bookmark and another remote bookmark at the first client and push those.
-The purpose of the test is to check syncing of remote bookmarks and to verify that expensive bookmarks are pulled separately.
+Create two "expensive" remote bookmarks and another regular remote bookmark at the first client and push those. Create couple of draft commits as well.
+Sync on the first client, sync on the second client.
+The purpose of the test is to check syncing of remote bookmarks and to verify that expensive bookmarks are pulled separately (prefetched).
   $ mkcommitedenapi e1
   $ mkcommitedenapi e2
-  $ mkcommitedenapi e3
-  $ mkcommitedenapi e4
   $ hgedenapi push -r . --to expensive --force --create --pushvars "BYPASS_READONLY=true"
-  pushing rev fb2839263293 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark expensive
+  pushing rev 98eac947fc54 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark expensive
   searching for changes
   exporting bookmark expensive
+  $ hgedenapi up master -q
+  $ mkcommitedenapi e3
+  $ mkcommitedenapi e4
+  $ hgedenapi push -r . --to expensive_other --force --create --pushvars "BYPASS_READONLY=true"
+  pushing rev 8537bcdeff72 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark expensive_other
+  searching for changes
+  exporting bookmark expensive_other
+
   $ mkcommitedenapi e_draft
 
   $ hgedenapi up master -q
   $ mkcommitedenapi o1
   $ mkcommitedenapi o2
-  $ hgedenapi push -r . --to other --force --create --pushvars "BYPASS_READONLY=true"
-  pushing rev 22f66edbeb8e to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark other
+  $ hgedenapi push -r . --to regular --force --create --pushvars "BYPASS_READONLY=true"
+  pushing rev 22f66edbeb8e to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark regular
   searching for changes
-  exporting bookmark other
+  exporting bookmark regular
+
   $ mkcommitedenapi o_draft
 
   $ hgedenapi cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
-  commitcloud: head '5fd64a4a5d62' hasn't been uploaded yet
+  commitcloud: head '2c6d1f3b1bd6' hasn't been uploaded yet
   commitcloud: head 'f141e512974a' hasn't been uploaded yet
   edenapi: queue 2 commits for upload
   edenapi: queue 2 files for upload
   edenapi: uploaded 2 files
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
-  edenapi: uploading commit '5fd64a4a5d6265137ea099b5b1cf35de39e5b33f'...
+  edenapi: uploading commit '2c6d1f3b1bd6973bd6d4478ed139525d0800ce42'...
   edenapi: uploading commit 'f141e512974a53a739b7d7ab33aca9f18c8feef0'...
   edenapi: uploaded 2 changesets
   commitcloud: commits synchronized
@@ -383,12 +391,12 @@ The purpose of the test is to check syncing of remote bookmarks and to verify th
   │
   o  b22b11c36d16 draft 'o1'
   │
-  │ o  5fd64a4a5d62 draft 'e_draft'
+  │ o  2c6d1f3b1bd6 draft 'e_draft'
   │ │
-  │ o  fb2839263293 draft 'e4'
+  │ o  8537bcdeff72 draft 'e4'
   │ │
-  │ o  3458092a4703 draft 'e3'
-  │ │
+  │ o  5b7437b33959 draft 'e3'
+  ├─╯
   │ o  98eac947fc54 draft 'e2'
   │ │
   │ o  6733e9fe3e4b draft 'e1'
@@ -396,24 +404,24 @@ The purpose of the test is to check syncing of remote bookmarks and to verify th
   o  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
   
 (Unfortunately, remote bookmarks are not updated on push)
-  $ hgedenapi pull -B expensive -B other
+  $ hgedenapi pull -B expensive -B expensive_other -B regular
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
-  DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'expensive': 'fb2839263293068bec2e7bd082c54030e4e364a7', 'other': '22f66edbeb8ed912d75fab074df8b3069c91424a'}
+  DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'expensive': '98eac947fc545fda4c6fc8531b18250aca738ca0', 'expensive_other': '8537bcdeff72ae8456e99f835f7cd3ce5e382772', 'regular': '22f66edbeb8ed912d75fab074df8b3069c91424a'}
 
   $ sl
   @  f141e512974a draft 'o_draft'
   │
-  o  22f66edbeb8e public 'o2'  remote/other
+  o  22f66edbeb8e public 'o2'  remote/regular
   │
   o  b22b11c36d16 public 'o1'
   │
-  │ o  5fd64a4a5d62 draft 'e_draft'
+  │ o  2c6d1f3b1bd6 draft 'e_draft'
   │ │
-  │ o  fb2839263293 public 'e4'  remote/expensive
+  │ o  8537bcdeff72 public 'e4'  remote/expensive_other
   │ │
-  │ o  3458092a4703 public 'e3'
-  │ │
-  │ o  98eac947fc54 public 'e2'
+  │ o  5b7437b33959 public 'e3'
+  ├─╯
+  │ o  98eac947fc54 public 'e2'  remote/expensive
   │ │
   │ o  6733e9fe3e4b public 'e1'
   ├─╯
@@ -427,16 +435,16 @@ The purpose of the test is to check syncing of remote bookmarks and to verify th
 
   $ cd ../client2
 
-  $ setconfig commitcloud.expensive_bookmarks=expensive
+  $ setconfig commitcloud.expensive_bookmarks="expensive, expensive_other"
   $ hgedenapi cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
-  fetching remote bookmark 'remote/expensive', sorry, this may take a while...
-  pulling fb2839263293 from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  commitcloud: fetching remote bookmark(s) remote/expensive, remote/expensive_other. Sorry, this may take a while...
+  pulling 8537bcdeff72 98eac947fc54 from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   DEBUG pull::httpgraph: edenapi fetched 4 graph nodes
   DEBUG pull::httpgraph: edenapi fetched graph with known 0 draft commits
-  pulling 22f66edbeb8e 5fd64a4a5d62 f141e512974a from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  pulling 22f66edbeb8e 2c6d1f3b1bd6 f141e512974a from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   DEBUG pull::httpgraph: edenapi fetched 4 graph nodes
   DEBUG pull::httpgraph: edenapi fetched graph with known 2 draft commits
@@ -446,17 +454,17 @@ The purpose of the test is to check syncing of remote bookmarks and to verify th
   $ sl
   o  f141e512974a draft 'o_draft'
   │
-  o  22f66edbeb8e public 'o2'  remote/other
+  o  22f66edbeb8e public 'o2'  remote/regular
   │
   o  b22b11c36d16 public 'o1'
   │
-  │ o  5fd64a4a5d62 draft 'e_draft'
+  │ o  2c6d1f3b1bd6 draft 'e_draft'
   │ │
-  │ o  fb2839263293 public 'e4'  remote/expensive
+  │ o  8537bcdeff72 public 'e4'  remote/expensive_other
   │ │
-  │ o  3458092a4703 public 'e3'
-  │ │
-  │ o  98eac947fc54 public 'e2'
+  │ o  5b7437b33959 public 'e3'
+  ├─╯
+  │ o  98eac947fc54 public 'e2'  remote/expensive
   │ │
   │ o  6733e9fe3e4b public 'e1'
   ├─╯
