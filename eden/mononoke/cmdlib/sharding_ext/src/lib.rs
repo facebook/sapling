@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(test)]
+mod test;
+
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
@@ -54,8 +57,11 @@ impl RepoShard {
         }
     }
 
-    fn with_chunks(repo_name: &str, target_repo_name: &str, chunks: &str) -> Result<Self> {
-        let mut repo_shard = Self::with_source_and_target(repo_name, target_repo_name);
+    fn with_chunks(repo_name: &str, chunks: &str, target_repo_name: Option<&str>) -> Result<Self> {
+        let mut repo_shard = match target_repo_name {
+            Some(target_repo_name) => Self::with_source_and_target(repo_name, target_repo_name),
+            None => Self::with_repo_name(repo_name),
+        };
         let mut chunk_size_split = split_chunk_size(chunks).into_iter();
         if let Some(chunk_parts) = chunk_size_split.next() {
             let mut parts = split_chunk_parts(chunk_parts).into_iter();
@@ -104,22 +110,20 @@ impl RepoShard {
         let mut split = split_repo_names(&decoded).into_iter();
 
         let repo_shard = match (split.next(), split.next()) {
-            (Some(repo_name), None) => RepoShard::with_repo_name(repo_name),
-            (Some(repo_name), Some(target_repo_name_and_chunks)) => {
-                let mut split = split_chunk(target_repo_name_and_chunks).into_iter();
-                match (split.next(), split.next()) {
-                    (Some(target_repo_name), None) => {
-                        RepoShard::with_source_and_target(repo_name, target_repo_name)
-                    }
-                    (Some(target_repo_name), Some(chunk_parts)) => {
-                        RepoShard::with_chunks(repo_name, target_repo_name, chunk_parts)?
-                    }
-                    _ => anyhow::bail!(
-                        "Failure in creating RepoShard. Invalid shard id {}",
-                        shard_id
-                    ),
+            (Some(remaining), None) => match get_repo_with_chunks(remaining)? {
+                ShardSplit::Repo(repo_name) => RepoShard::with_repo_name(repo_name),
+                ShardSplit::RepoWithChunks(repo_name, chunk_parts) => {
+                    RepoShard::with_chunks(repo_name, chunk_parts, None)?
                 }
-            }
+            },
+            (Some(source_repo_name), Some(remaining)) => match get_repo_with_chunks(remaining)? {
+                ShardSplit::Repo(target_repo_name) => {
+                    RepoShard::with_source_and_target(source_repo_name, target_repo_name)
+                }
+                ShardSplit::RepoWithChunks(target_repo_name, chunk_parts) => {
+                    RepoShard::with_chunks(source_repo_name, chunk_parts, Some(target_repo_name))?
+                }
+            },
             _ => anyhow::bail!(
                 "Failure in creating RepoShard. Invalid shard id {}",
                 shard_id
@@ -129,16 +133,34 @@ impl RepoShard {
     }
 }
 
+enum ShardSplit<'a> {
+    Repo(&'a str),
+    RepoWithChunks(&'a str, &'a str),
+}
+
+fn get_repo_with_chunks<'a>(input: &'a str) -> Result<ShardSplit<'a>> {
+    let mut split = split_chunk(input).into_iter();
+    let shard_split = match (split.next(), split.next()) {
+        (Some(repo), None) => ShardSplit::Repo(repo),
+        (Some(repo), Some(chunk_parts)) => ShardSplit::RepoWithChunks(repo, chunk_parts),
+        _ => anyhow::bail!(
+            "Failure in creating RepoShard. Invalid shard split {}",
+            input
+        ),
+    };
+    Ok(shard_split)
+}
+
 fn split_chunk(input: &str) -> Vec<&str> {
-    input.split(CHUNK_SEPARATOR).collect()
+    input.splitn(2, CHUNK_SEPARATOR).collect()
 }
 
 fn split_chunk_size(chunks: &str) -> Vec<&str> {
-    chunks.split(CHUNK_SIZE_SEPARATOR).collect()
+    chunks.splitn(2, CHUNK_SIZE_SEPARATOR).collect()
 }
 
 fn split_chunk_parts(chunk_parts: &str) -> Vec<&str> {
-    chunk_parts.split(CHUNK_PART_SEPARATOR).collect()
+    chunk_parts.splitn(2, CHUNK_PART_SEPARATOR).collect()
 }
 
 /// Function responsible for decoding an SM-encoded repo-name.
@@ -158,5 +180,5 @@ pub fn encode_repo_name(repo_name: &str) -> String {
 /// Function responsible for splitting source and target repo name
 /// from combined repo-name string.
 pub fn split_repo_names(combined_repo_names: &str) -> Vec<&str> {
-    combined_repo_names.split(X_REPO_SEPARATOR).collect()
+    combined_repo_names.splitn(2, X_REPO_SEPARATOR).collect()
 }
