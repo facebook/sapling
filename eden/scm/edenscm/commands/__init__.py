@@ -441,13 +441,13 @@ def annotate(ui, repo, *pats, **opts):
         return "old"
 
     opmap = [
-        ("user", " ", lambda x: x.fctx.user(), ui.shortuser),
-        ("number", " ", lambda x: x.fctx.rev(), formatrev),
-        ("changeset", " ", lambda x: hexfn(x.fctx.node()), formathex),
-        ("date", " ", lambda x: x.fctx.date(), util.cachefunc(datefunc)),
-        ("file", " ", lambda x: x.fctx.path(), str),
+        ("user", " ", lambda x: x.user(), ui.shortuser),
+        ("number", " ", lambda x: x.rev(), formatrev),
+        ("changeset", " ", lambda x: hexfn(x.node()), formathex),
+        ("date", " ", lambda x: x.date(), util.cachefunc(datefunc)),
+        ("file", " ", lambda x: x.path(), str),
         ("line_number", ":", lambda x: x.lineno, str),
-        ("age_bucket", "", lambda x: agebucket(x.fctx.date()), lambda x: ""),
+        ("age_bucket", "", lambda x: agebucket(x.date()), lambda x: ""),
     ]
     fieldnamemap = {"number": "rev", "changeset": "node"}
 
@@ -522,7 +522,7 @@ def annotate(ui, repo, *pats, **opts):
                 formats.append(["%s" for x in l])
             pieces.append(l)
 
-        agebuckets = [agebucket(x.fctx.date()) for x, dummy in lines]
+        agebuckets = [agebucket(x.date()) for x, dummy in lines]
 
         for f, p, l, a in zip(zip(*formats), zip(*pieces), lines, agebuckets):
             fm.startitem()

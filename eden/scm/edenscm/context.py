@@ -1133,6 +1133,10 @@ class basefilectx(object):
             # TODO: emulate whitespace diffopts support
             return None
 
+        if self.node() is None:
+            # Working copy blame not supported.
+            return None
+
         repo = self.repo()
 
         blame = next(
@@ -1163,23 +1167,15 @@ class basefilectx(object):
         repo.changelog.filternodes(tofetch)
 
         # Prefetch commit text.
-        committexts = repo.changelog.inner.getcommitrawtextlist(
-            [n for n in blame["commits"]]
-        )
-
-        # Prefetch trees for all relevant files and commits.
-        treeroots = [bin(text[:40]) for text in committexts]
-        bindings.manifest.prefetch(
-            repo.manifestlog.datastore, treeroots, paths=blame["paths"]
-        )
+        repo.changelog.inner.getcommitrawtextlist([n for n in blame["commits"]])
 
         lines = []
         for rng in blame["line_ranges"]:
             ctx = repo[blame["commits"][rng["commit_index"]]]
-            fctx = ctx[blame["paths"][rng["path_index"]]]
+            path = blame["paths"][rng["path_index"]]
             for i in range(rng["line_count"]):
                 lineno = bool(linenumber) and rng["line_offset"] + i + 1
-                lines.append(annotateline(fctx=fctx, lineno=lineno))
+                lines.append(annotateline(ctx=ctx, lineno=lineno, path=path))
 
         return zip(lines, self.data().splitlines(True))
 
@@ -1341,10 +1337,33 @@ class pathhistoryparents:
         raise error.ProgrammingError("%s is not yet follow()-ed" % hex(node))
 
 
-@attr.s(slots=True, frozen=True)
 class annotateline(object):
-    fctx = attr.ib()
-    lineno = attr.ib(default=False)
+    def __init__(self, fctx=None, ctx=None, lineno=None, path=None):
+        if (not fctx) == (not ctx):
+            raise error.ProgrammingError("must specify exactly one of ctx or fctx")
+        if not fctx and not path:
+            raise error.ProgrammingError("must specify fctx or path")
+
+        self._ctx = ctx or fctx.changectx()
+        self._fctx = fctx
+        self._path = path or fctx.path()
+        self.lineno = lineno
+
+    def date(self):
+        # Prefer fctx.date() since that can differ for wdir files.
+        return (self._fctx or self._ctx).date()
+
+    def rev(self):
+        return self._ctx.rev()
+
+    def node(self):
+        return self._ctx.node()
+
+    def path(self):
+        return self._path
+
+    def user(self):
+        return self._ctx.user()
 
 
 class filectx(basefilectx):

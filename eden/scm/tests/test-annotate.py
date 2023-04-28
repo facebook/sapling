@@ -14,8 +14,6 @@ import unittest
 
 from edenscm import mdiff
 from edenscm.annotate import _annotatepair
-from edenscm.context import annotateline
-from hghave import require
 
 
 try:
@@ -40,10 +38,7 @@ class AnnotateTests(unittest.TestCase):
 
         def decorate(text, rev):
             return (
-                [
-                    annotateline(fctx=rev, lineno=i)
-                    for i in xrange(1, text.count(b"\n") + 1)
-                ],
+                [(rev, i) for i in xrange(1, text.count(b"\n") + 1)],
                 text,
             )
 
@@ -54,14 +49,14 @@ class AnnotateTests(unittest.TestCase):
         p1ann = _annotatepair([oldann], p1ann, diffopts)
         self.assertEqual(
             p1ann[0],
-            [annotateline("old", 1), annotateline("old", 2), annotateline("p1", 3)],
+            [("old", 1), ("old", 2), ("p1", 3)],
         )
 
         p2ann = decorate(p2data, p2fctx)
         p2ann = _annotatepair([oldann], p2ann, diffopts)
         self.assertEqual(
             p2ann[0],
-            [annotateline("old", 1), annotateline("p2", 2), annotateline("p2", 3)],
+            [("old", 1), ("p2", 2), ("p2", 3)],
         )
 
         # Test with multiple parents (note the difference caused by ordering)
@@ -71,11 +66,11 @@ class AnnotateTests(unittest.TestCase):
         self.assertEqual(
             childann[0],
             [
-                annotateline("old", 1),
-                annotateline("c", 2),
-                annotateline("p2", 2),
-                annotateline("c", 4),
-                annotateline("p2", 3),
+                ("old", 1),
+                ("c", 2),
+                ("p2", 2),
+                ("c", 4),
+                ("p2", 3),
             ],
         )
 
@@ -84,11 +79,11 @@ class AnnotateTests(unittest.TestCase):
         self.assertEqual(
             childann[0],
             [
-                annotateline("old", 1),
-                annotateline("c", 2),
-                annotateline("p1", 3),
-                annotateline("c", 4),
-                annotateline("p2", 3),
+                ("old", 1),
+                ("c", 2),
+                ("p1", 3),
+                ("c", 4),
+                ("p2", 3),
             ],
         )
 
