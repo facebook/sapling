@@ -31,6 +31,8 @@ export interface UICodeReviewProvider {
 
   RepoInfo(): JSX.Element | null;
 
+  isDiffClosed(summary: DiffSummary): boolean;
+
   /**
    * Defines when this review provider can submit diffs as drafts,
    * submitting for the first time or also when resubmitting.

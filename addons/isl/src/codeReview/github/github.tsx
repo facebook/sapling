@@ -77,6 +77,10 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
     return [];
   }
 
+  isDiffClosed(diff: DiffSummary & {type: 'github'}): boolean {
+    return diff.state === PullRequestState.Closed;
+  }
+
   supportSubmittingAsDraft = 'newDiffsOnly' as const;
 }
 
