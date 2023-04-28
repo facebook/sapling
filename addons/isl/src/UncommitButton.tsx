@@ -6,6 +6,7 @@
  */
 
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
+import {codeReviewProvider, diffSummary} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import {UncommitOperation} from './operations/Uncommit';
 import {latestCommitTreeMap, latestHeadCommit, useRunOperation} from './serverAPIState';
@@ -17,13 +18,23 @@ export function UncommitButton() {
   // otherwise there's bugs with disabling this button during previews
   const headCommit = useRecoilValue(latestHeadCommit);
   const treeMap = useRecoilValue(latestCommitTreeMap);
+
+  const provider = useRecoilValue(codeReviewProvider);
+  const diff = useRecoilValue(diffSummary(headCommit?.diffId));
+  const isClosed = provider != null && diff.value != null && provider?.isDiffClosed(diff.value);
+
   const runOperation = useRunOperation();
   if (!headCommit) {
     return null;
   }
+
   const headTree = treeMap.get(headCommit.hash);
   if (!headTree || headTree.children.length) {
     // if the head commit has children, we can't uncommit
+    return null;
+  }
+
+  if (isClosed) {
     return null;
   }
   return (
