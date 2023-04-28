@@ -109,10 +109,7 @@ void InodeTraceEvent::setPath(std::string_view stringPath) {
 // InodeTraceEvents do include pointers to path info that is saved on the heap,
 // and there is memory usage of this data outside of the mount (by the
 // EdenServiceHandler during eden trace inode calls)
-constexpr size_t kInodeTraceBusCapacity = 25000;
 static_assert(CheckSize<InodeTraceEvent, 64>());
-static_assert(
-    CheckEqual<1600000, kInodeTraceBusCapacity * sizeof(InodeTraceEvent)>());
 
 #ifndef _WIN32
 namespace {
@@ -281,8 +278,9 @@ EdenMount::EdenMount(
       lastCheckoutTime_{EdenTimestamp{serverState_->getClock()->getRealtime()}},
       owner_{Owner{getuid(), getgid()}},
       inodeActivityBuffer_{initInodeActivityBuffer()},
-      inodeTraceBus_{
-          TraceBus<InodeTraceEvent>::create("inode", kInodeTraceBusCapacity)},
+      inodeTraceBus_{TraceBus<InodeTraceEvent>::create(
+          "inode",
+          serverState_->getEdenConfig()->InodeTraceBusCapacity.getValue())},
       clock_{serverState_->getClock()} {
   subscribeInodeActivityBuffer();
 }
