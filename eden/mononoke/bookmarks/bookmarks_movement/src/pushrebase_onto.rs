@@ -212,7 +212,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             .log_with_msg("Pushrebase started", None);
         let (stats, result) = pushrebase::do_pushrebase_bonsai(
             ctx,
-            repo.as_blob_repo(),
+            repo,
             &flags,
             self.bookmark,
             self.affected_changesets.source_changesets(),

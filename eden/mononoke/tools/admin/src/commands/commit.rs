@@ -18,13 +18,13 @@ use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
-use changeset_fetcher::ChangesetFetcherArc;
-use changeset_fetcher::ChangesetFetcherRef;
 use changesets::Changesets;
 use clap::Parser;
 use clap::Subcommand;
+use commit_graph::CommitGraph;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
-use futures::compat::Stream01CompatExt;
+use futures::StreamExt;
 use futures::TryStreamExt;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::RepoArgs;
@@ -79,6 +79,9 @@ pub struct Repo {
 
     #[facet]
     changeset_fetcher: dyn ChangesetFetcher,
+
+    #[facet]
+    commit_graph: CommitGraph,
 
     #[facet]
     bookmarks: dyn Bookmarks,
@@ -148,21 +151,20 @@ async fn resolve_stack(
     bottom: ChangesetId,
     top: ChangesetId,
 ) -> Result<Vec<ChangesetId>> {
-    let mut csids =
-        revset::RangeNodeStream::new(ctx.clone(), repo.changeset_fetcher_arc(), bottom, top)
-            .compat()
-            .map_ok(|csid| async move {
-                let parents = repo.changeset_fetcher().get_parents(ctx, csid).await?;
-                if parents.len() > 1 {
-                    bail!("rebasing stacks with merges is not supported");
-                }
-                Ok(csid)
-            })
-            .try_buffered(100)
-            .try_collect::<Vec<_>>()
-            .await?;
-    // Reverse so that the stack is provided in topological order from bottom
-    // to top.
-    csids.reverse();
-    Ok(csids)
+    repo.commit_graph()
+        .range_stream(ctx, bottom, top)
+        .await?
+        .map(|csid| async move {
+            let parents = repo
+                .commit_graph()
+                .changeset_parents_required(ctx, csid)
+                .await?;
+            if parents.len() > 1 {
+                bail!("rebasing stacks with merges is not supported");
+            }
+            Ok(csid)
+        })
+        .buffered(100)
+        .try_collect::<Vec<_>>()
+        .await
 }

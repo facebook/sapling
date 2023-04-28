@@ -15,15 +15,15 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use changeset_fetcher::ChangesetFetcherArc;
 use clap_old::App;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Stream01CompatExt;
+use futures::StreamExt;
 use futures::TryStreamExt;
 use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
@@ -32,7 +32,6 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
 use mercurial_types::MPath;
 use repo_blobstore::RepoBlobstoreRef;
-use revset::RangeNodeStream;
 use serde_derive::Serialize;
 use slog::Logger;
 
@@ -105,14 +104,15 @@ pub async fn subcommand_hg_changeset<'a>(
             )?;
             let start_cs = start_cs_opt.ok_or_else(|| Error::msg("failed to resolve changeset"))?;
             let stop_cs = stop_cs_opt.ok_or_else(|| Error::msg("failed to resovle changeset"))?;
-            let css: Vec<_> =
-                RangeNodeStream::new(ctx.clone(), repo.changeset_fetcher_arc(), start_cs, stop_cs)
-                    .compat()
-                    .map_ok(|cs| repo.derive_hg_changeset(&ctx, cs))
-                    .try_buffer_unordered(100)
-                    .map_ok(|cs| cs.to_hex().to_string())
-                    .try_collect()
-                    .await?;
+            let css: Vec<_> = repo
+                .commit_graph()
+                .range_stream(&ctx, start_cs, stop_cs)
+                .await?
+                .map(|cs| repo.derive_hg_changeset(&ctx, cs))
+                .buffer_unordered(100)
+                .map_ok(|cs| cs.to_hex().to_string())
+                .try_collect()
+                .await?;
             serde_json::to_writer(io::stdout(), &css).map_err(Error::from)?;
             Ok(())
         }

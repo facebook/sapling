@@ -64,7 +64,6 @@ use ref_cast::RefCast;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
-use revset::RangeNodeStream;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use slog::error;
@@ -849,14 +848,19 @@ pub async fn unfold_bookmarks_update_log_entry(
                     .await
                 }
             } else {
-                let mut v: Vec<_> =
-                    RangeNodeStream::new(ctx.clone(), changeset_fetcher, from_cs_id, to_cs_id)
-                        .compat()
-                        .collect()
-                        .await;
-                // Drop from_cs
-                v.pop();
-                v
+                validation_helpers
+                    .large_repo
+                    .commit_graph()
+                    .range_stream(ctx, from_cs_id, to_cs_id)
+                    .await?
+                    // Drop from_cs
+                    .skip(1)
+                    .map(Ok)
+                    .collect::<Vec<_>>()
+                    .await
+                    .into_iter()
+                    .rev()
+                    .collect()
             }
         }
     };

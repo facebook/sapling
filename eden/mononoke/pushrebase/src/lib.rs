@@ -68,6 +68,7 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use changeset_fetcher::ChangesetFetcherArc;
 use changesets::ChangesetsRef;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use filenodes_derivation::FilenodesOnlyPublic;
 use futures::compat::Stream01CompatExt;
@@ -244,6 +245,7 @@ pub trait Repo = BonsaiHgMappingRef
     + RepoBlobstoreArc
     + RepoDerivedDataRef
     + RepoIdentityRef
+    + CommitGraphRef
     + Send
     + Sync;
 
@@ -710,25 +712,42 @@ async fn fetch_bonsai_range_ancestor_not_included(
     ancestor: ChangesetId,
     descendant: ChangesetId,
 ) -> Result<Vec<BonsaiChangeset>, PushrebaseError> {
-    let stream = RangeNodeStream::new(
-        ctx.clone(),
-        repo.changeset_fetcher_arc(),
-        ancestor,
-        descendant,
-    )
-    .compat();
-
-    let nodes =
-        stream
+    if tunables()
+        .by_repo_enable_new_commit_graph_range_stream(repo.repo_identity().name())
+        .unwrap_or_default()
+    {
+        Ok(repo
+            .commit_graph()
+            .range_stream(ctx, ancestor, descendant)
+            .await?
+            .filter(|cs_id| future::ready(cs_id != &ancestor))
+            .map(|res| async move {
+                Result::<_, Error>::Ok(res.load(ctx, repo.repo_blobstore()).await?)
+            })
+            .buffered(100)
+            .try_collect::<Vec<_>>()
+            .await?
+            .into_iter()
+            .rev()
+            .collect::<Vec<_>>())
+    } else {
+        Ok(
+            RangeNodeStream::new(
+                ctx.clone(),
+                repo.changeset_fetcher_arc(),
+                ancestor,
+                descendant,
+            )
+            .compat()
             .try_filter(|cs_id| future::ready(cs_id != &ancestor))
             .map(|res| async move {
                 Result::<_, Error>::Ok(res?.load(ctx, repo.repo_blobstore()).await?)
             })
             .buffered(100)
             .try_collect::<Vec<_>>()
-            .await?;
-
-    Ok(nodes)
+            .await?,
+        )
+    }
 }
 
 async fn find_changed_files(
@@ -737,15 +756,28 @@ async fn find_changed_files(
     ancestor: ChangesetId,
     descendant: ChangesetId,
 ) -> Result<Vec<MPath>, PushrebaseError> {
-    let stream = RangeNodeStream::new(
-        ctx.clone(),
-        repo.changeset_fetcher_arc(),
-        ancestor,
-        descendant,
-    )
-    .compat();
-
-    let id_to_bcs = stream
+    let id_to_bcs = if tunables()
+        .by_repo_enable_new_commit_graph_range_stream(repo.repo_identity().name())
+        .unwrap_or_default()
+    {
+        repo.commit_graph()
+            .range_stream(ctx, ancestor, descendant)
+            .await?
+            .map(|bcs_id| async move {
+                let bcs = bcs_id.load(ctx, repo.repo_blobstore()).await?;
+                anyhow::Ok((bcs_id, bcs))
+            })
+            .buffered(100)
+            .try_collect::<HashMap<_, _>>()
+            .await?
+    } else {
+        RangeNodeStream::new(
+            ctx.clone(),
+            repo.changeset_fetcher_arc(),
+            ancestor,
+            descendant,
+        )
+        .compat()
         .map(|res| async move {
             match res {
                 Ok(bcs_id) => {
@@ -757,7 +789,8 @@ async fn find_changed_files(
         })
         .buffered(100)
         .try_collect::<HashMap<_, _>>()
-        .await?;
+        .await?
+    };
 
     let ids: HashSet<_> = id_to_bcs.keys().copied().collect();
 
@@ -1269,6 +1302,7 @@ mod tests {
     use changeset_fetcher::ChangesetFetcher;
     use changesets::Changesets;
     use cloned::cloned;
+    use commit_graph::CommitGraph;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use filestore::FilestoreConfigRef;
@@ -1334,6 +1368,9 @@ mod tests {
 
         #[facet]
         mutable_counters: dyn MutableCounters,
+
+        #[facet]
+        commit_graph: CommitGraph,
     }
 
     async fn fetch_bonsai_changesets(
@@ -2321,11 +2358,25 @@ mod tests {
             .await?
             .ok_or_else(|| Error::msg("bonsai not found"))?;
 
-        let n = RangeNodeStream::new(ctx, repo.changeset_fetcher_arc(), ancestor, descendant)
-            .compat()
-            .try_collect::<Vec<_>>()
-            .await?
-            .len();
+        let n = RangeNodeStream::new(
+            ctx.clone(),
+            repo.changeset_fetcher_arc(),
+            ancestor,
+            descendant,
+        )
+        .compat()
+        .try_collect::<Vec<_>>()
+        .await?
+        .len();
+
+        assert_eq!(
+            n,
+            repo.commit_graph()
+                .range_stream(&ctx, ancestor, descendant)
+                .await?
+                .count()
+                .await
+        );
 
         Ok(n)
     }

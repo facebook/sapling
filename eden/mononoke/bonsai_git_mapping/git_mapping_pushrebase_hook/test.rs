@@ -15,6 +15,7 @@ use bookmarks::Bookmarks;
 use borrowed::borrowed;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
+use commit_graph::CommitGraph;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
@@ -49,6 +50,9 @@ struct Repo {
 
     #[facet]
     changesets: dyn Changesets,
+
+    #[facet]
+    commit_graph: CommitGraph,
 
     #[facet]
     filestore_config: FilestoreConfig,

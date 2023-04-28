@@ -25,6 +25,7 @@ use phases::PhasesRef;
 use pushrebase::PushrebaseError;
 use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
 use repo_authorization::AuthorizationError;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 use repo_cross_repo::RepoCrossRepoRef;
@@ -75,6 +76,7 @@ pub trait Repo = AsBlobRepo
     + RepoBookmarkAttrsRef
     + RepoConfigRef
     + RepoDerivedDataRef
+    + RepoBlobstoreArc
     + RepoBlobstoreRef
     + RepoCrossRepoRef
     + RepoIdentityRef

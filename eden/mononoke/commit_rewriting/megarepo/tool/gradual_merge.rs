@@ -16,9 +16,9 @@ use bookmarks::BookmarkKey;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
 use cmdlib::helpers;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
-use futures::compat::Stream01CompatExt;
-use futures::TryStreamExt;
+use futures::StreamExt;
 use maplit::hashset;
 use megarepolib::common::create_and_save_bonsai;
 use megarepolib::common::ChangesetArgs;
@@ -31,7 +31,6 @@ use mononoke_types::ChangesetId;
 use pushrebase::do_pushrebase_bonsai;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstoreRef;
-use revset::RangeNodeStream;
 use slog::info;
 
 pub struct GradualMergeParams {
@@ -192,15 +191,15 @@ async fn find_all_commits_to_merge(
     last_deletion_commit: ChangesetId,
 ) -> Result<Vec<ChangesetId>, Error> {
     info!(ctx.logger(), "Finding all commits to merge...");
-    let commits_to_merge = RangeNodeStream::new(
-        ctx.clone(),
-        repo.changeset_fetcher_arc(),
-        pre_deletion_commit,
-        last_deletion_commit,
-    )
-    .compat()
-    .try_collect::<Vec<_>>()
-    .await?;
+    let commits_to_merge = repo
+        .commit_graph()
+        .range_stream(ctx, pre_deletion_commit, last_deletion_commit)
+        .await?
+        .collect::<Vec<_>>()
+        .await
+        .into_iter()
+        .rev()
+        .collect::<Vec<_>>();
 
     Ok(commits_to_merge)
 }

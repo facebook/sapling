@@ -372,6 +372,8 @@ pub struct MononokeTunables {
     new_commit_graph_is_ancestor_percentage: TunableI64ByRepo,
     // Enable using new commit graph ancestors difference stream in place of DifferenceOfUnionsOfAncestorsNodeStream
     enable_new_commit_graph_ancestors_difference_stream: TunableBoolByRepo,
+    // Enable using new commit graph range stream in place of RangeNodeStream
+    enable_new_commit_graph_range_stream: TunableBoolByRepo,
 
     // Disable all prefetching in the commit graph
     disable_commit_graph_prefetch: TunableBool,

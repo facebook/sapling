@@ -215,12 +215,11 @@ async fn find_files_that_need_to_be_deleted(
 
 #[cfg(test)]
 mod test {
-    use changeset_fetcher::ChangesetFetcherArc;
+    use commit_graph::CommitGraphRef;
     use fbinit::FacebookInit;
-    use futures::compat::Stream01CompatExt;
+    use futures::StreamExt;
     use megarepolib::common::ChangesetArgs;
     use mononoke_types::DateTime;
-    use revset::RangeNodeStream;
     use tests_utils::bookmark;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
@@ -339,17 +338,15 @@ mod test {
         .await?;
         let commit_after_push = resolve_cs_id(&ctx, &repo, book.clone()).await?;
 
-        let range: Vec<_> = RangeNodeStream::new(
-            ctx.clone(),
-            repo.changeset_fetcher_arc(),
-            commit_before_push,
-            commit_after_push,
-        )
-        .compat()
-        .try_collect()
-        .await?;
+        let range_len = repo
+            .commit_graph()
+            .range_stream(&ctx, commit_before_push, commit_after_push)
+            .await?
+            .count()
+            .await;
+
         // 4 new commits + commit_before_push
-        assert_eq!(range.len(), 4 + 1);
+        assert_eq!(range_len, 4 + 1);
 
         let paths = find_files_that_need_to_be_deleted(
             &ctx,
