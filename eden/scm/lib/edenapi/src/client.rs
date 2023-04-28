@@ -139,7 +139,6 @@ mod paths {
     pub const COMMIT_LOCATION_TO_HASH: &str = "commit/location_to_hash";
     pub const COMMIT_HASH_TO_LOCATION: &str = "commit/hash_to_location";
     pub const COMMIT_HASH_LOOKUP: &str = "commit/hash_lookup";
-    pub const COMMIT_GRAPH: &str = "commit/graph";
     pub const COMMIT_GRAPH_V2: &str = "commit/graph_v2";
     pub const COMMIT_MUTATIONS: &str = "commit/mutations";
     pub const COMMIT_TRANSLATE_ID: &str = "commit/translate_id";
@@ -943,19 +942,13 @@ impl EdenApi for Client {
         &self,
         heads: Vec<HgId>,
         common: Vec<HgId>,
-        v2: bool,
     ) -> Result<Vec<CommitGraphEntry>, EdenApiError> {
         tracing::info!(
-            "Requesting commit graph {}with {} heads and {} common",
-            if v2 { "v2 " } else { "" },
+            "Requesting commit graph with {} heads and {} common",
             heads.len(),
             common.len(),
         );
-        let url = self.build_url(if v2 {
-            paths::COMMIT_GRAPH_V2
-        } else {
-            paths::COMMIT_GRAPH
-        })?;
+        let url = self.build_url(paths::COMMIT_GRAPH_V2)?;
         let graph_req = CommitGraphRequest { heads, common };
         self.log_request(&graph_req, "commit_graph");
         let wire_graph_req = graph_req.to_wire();

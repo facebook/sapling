@@ -368,7 +368,6 @@ impl EdenApi for EagerRepo {
         &self,
         heads: Vec<HgId>,
         common: Vec<HgId>,
-        _v2: bool,
     ) -> Result<Vec<CommitGraphEntry>, EdenApiError> {
         debug!(
             "commit_graph {} {}",
