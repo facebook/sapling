@@ -208,8 +208,6 @@ class PrefetchFetchContext : public ObjectFetchContext {
   std::string_view endpoint_;
 };
 
-constexpr size_t kTraceBusCapacity = 25000;
-
 /**
  * Lives as long as a Thrift request and primarily exists to record logging and
  * telemetry.
@@ -443,7 +441,9 @@ EdenServiceHandler::EdenServiceHandler(
       thriftRequestActivityBuffer_(initThriftRequestActivityBuffer()),
       thriftRequestTraceBus_(TraceBus<ThriftRequestTraceEvent>::create(
           "ThriftRequestTrace",
-          kTraceBusCapacity)) {
+          server_->getServerState()
+              ->getEdenConfig()
+              ->ThriftTraceBusCapacity.getValue())) {
   struct HistConfig {
     int64_t bucketSize{250};
     int64_t min{0};
