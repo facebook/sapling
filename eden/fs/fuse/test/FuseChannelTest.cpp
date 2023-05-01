@@ -35,6 +35,7 @@ folly::Logger straceLogger{"eden.strace"};
 // and a future never completes.  1 second seems to be long enough for the tests
 // to pass even when the system is under fairly heavy CPU load.
 constexpr auto kTimeout = 1s;
+constexpr size_t kTraceBusCapacity = 25000;
 
 fuse_entry_out genRandomLookupResponse(uint64_t nodeid) {
   fuse_entry_out response;
@@ -82,7 +83,8 @@ class FuseChannelTest : public ::testing::Test {
         CaseSensitivity::Sensitive,
         /*requireUtf8Path=*/true,
         /*maximumBackgroundRequests=*/12,
-        /*useWriteBackCache=*/false));
+        /*useWriteBackCache=*/false,
+        /*fuseTraceBusCapacity*/ kTraceBusCapacity));
   }
 
   FuseChannel::StopFuture performInit(

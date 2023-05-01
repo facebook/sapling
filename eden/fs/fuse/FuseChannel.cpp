@@ -8,7 +8,6 @@
 #ifndef _WIN32
 
 #include "eden/fs/fuse/FuseChannel.h"
-
 #include <boost/cast.hpp>
 #include <fmt/core.h>
 #include <folly/executors/QueuedImmediateExecutor.h>
@@ -209,10 +208,7 @@ std::string fallocate(FuseArg arg) {
 // These static asserts exist to make explicit the memory usage of the per-mount
 // FUSE TraceBus. TraceBus uses 2 * capacity * sizeof(TraceEvent) memory usage,
 // so limit total memory usage to around 4 MB per mount.
-constexpr size_t kTraceBusCapacity = 25000;
 static_assert(CheckSize<FuseTraceEvent, 72>());
-static_assert(
-    CheckEqual<1800000, kTraceBusCapacity * sizeof(FuseTraceEvent)>());
 
 // This is the minimum size used by libfuse so we use it too!
 constexpr size_t MIN_BUFSIZE = 0x21000;
@@ -795,7 +791,8 @@ FuseChannel::FuseChannel(
     CaseSensitivity caseSensitive,
     bool requireUtf8Path,
     int32_t maximumBackgroundRequests,
-    bool useWriteBackCache)
+    bool useWriteBackCache,
+    size_t fuseTraceBusCapacity)
     : bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
       numThreads_(numThreads),
       dispatcher_(std::move(dispatcher)),
@@ -812,7 +809,7 @@ FuseChannel::FuseChannel(
       traceDetailedArguments_(std::make_shared<std::atomic<size_t>>(0)),
       traceBus_(TraceBus<FuseTraceEvent>::create(
           "FuseTrace" + mountPath.asString(),
-          kTraceBusCapacity)) {
+          fuseTraceBusCapacity)) {
   XCHECK_GE(numThreads_, 1ul);
   installSignalHandler();
 

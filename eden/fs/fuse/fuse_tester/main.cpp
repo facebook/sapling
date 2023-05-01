@@ -36,6 +36,7 @@ using std::string;
 DEFINE_int32(numFuseThreads, 4, "The number of FUSE worker threads");
 
 namespace {
+constexpr size_t kTraceBusCapacity = 25000;
 class TestDispatcher : public FuseDispatcher {
  public:
   TestDispatcher(EdenStatsPtr stats, const UserInfo& identity)
@@ -141,7 +142,8 @@ int main(int argc, char** argv) {
       CaseSensitivity::Sensitive,
       /*requireUtf8Path=*/true,
       /*maximumBackgroundRequests=*/12 /* the default on Linux */,
-      /*useWriteBackCache=*/false));
+      /*useWriteBackCache=*/false,
+      /*fuseTraceBusCapacity=*/kTraceBusCapacity));
 
   XLOG(INFO) << "Starting FUSE...";
   auto completionFuture = channel->initialize().get();

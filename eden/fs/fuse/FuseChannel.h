@@ -248,7 +248,8 @@ class FuseChannel final : public FsChannel {
       CaseSensitivity caseSensitive,
       bool requireUtf8Path,
       int32_t maximumBackgroundRequests,
-      bool useWriteBackCache);
+      bool useWriteBackCache,
+      size_t fuseTraceBusCapacity);
 
   /**
    * Destroy the FuseChannel.

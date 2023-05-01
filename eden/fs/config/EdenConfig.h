@@ -845,6 +845,11 @@ class EdenConfig : private ConfigSettingManager {
       25000,
       this};
 
+  ConfigSetting<size_t> FuseTraceBusCapacity{
+      "telemetry:fuse-tracebus-capacity",
+      25000,
+      this};
+
   /**
    * Controls whether EdenFS logs inode state changes to Tracebus or not.
    */

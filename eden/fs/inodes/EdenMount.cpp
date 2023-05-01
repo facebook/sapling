@@ -2043,7 +2043,10 @@ std::unique_ptr<FuseChannel, FuseChannelDeleter> makeFuseChannel(
       mount->getCheckoutConfig()->getCaseSensitive(),
       mount->getCheckoutConfig()->getRequireUtf8Path(),
       edenConfig->fuseMaximumRequests.getValue(),
-      mount->getCheckoutConfig()->getUseWriteBackCache())};
+      mount->getCheckoutConfig()->getUseWriteBackCache(),
+      mount->getServerState()
+          ->getEdenConfig()
+          ->FuseTraceBusCapacity.getValue())};
 }
 } // namespace
 #endif
