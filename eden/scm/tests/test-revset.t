@@ -949,6 +949,18 @@
   8
   9
 
+  $ try '.^::'
+  hg: parse error at 4: not a prefix: end
+  (.^::
+       ^ here)
+  [255]
+
+  $ try '.^..'
+  hg: parse error at 4: not a prefix: end
+  (.^..
+       ^ here)
+  [255]
+
 #  x^ in alias should also be resolved
 
   $ try A --config 'revsetalias.A=1^:2'
