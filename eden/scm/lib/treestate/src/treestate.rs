@@ -258,6 +258,14 @@ impl TreeState {
             return Ok((Cow::Borrowed(path), self.get(path)?.cloned()));
         }
 
+        // Optimistic check for normal case where path matches exactly.
+        // Case insensitive filesystems are normally still case preserving.
+        if let Some(state) = self.get(path)? {
+            if state.state.intersects(StateFlags::EXIST_NEXT) {
+                return Ok((Cow::Borrowed(path), Some(state.clone())));
+            }
+        }
+
         let mut best = None;
         for key in self.get_keys_ignorecase(path)? {
             let state = match self.get(&key)? {
