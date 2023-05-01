@@ -8,7 +8,7 @@
 import type {MouseEvent, ReactNode} from 'react';
 import type {ExclusiveOr} from 'shared/typeUtils';
 
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useLayoutEffect, useEffect, useRef, useState} from 'react';
 import ReactDOM from 'react-dom';
 import {findParentWithClassName, unwrap} from 'shared/utils';
 
@@ -117,6 +117,23 @@ export function Tooltip({
     }
   }, [visible, setVisible]);
 
+  // Using onMouseLeave directly on the div is unreliable if the component rerenders: https://github.com/facebook/react/issues/4492
+  // Use a manually managed subscription instead.
+  useLayoutEffect(() => {
+    if (trigger !== 'hover') {
+      return;
+    }
+    const onMouseEnter = () => setVisible(true);
+    const onMouseLeave = () => setVisible(false);
+    const div = ref.current;
+    div?.addEventListener('mouseenter', onMouseEnter);
+    div?.addEventListener('mouseleave', onMouseLeave);
+    return () => {
+      div?.removeEventListener('mouseenter', onMouseEnter);
+      div?.removeEventListener('mouseleave', onMouseLeave);
+    };
+  }, [trigger]);
+
   return (
     <div
       className="tooltip-creator"
@@ -131,9 +148,7 @@ export function Tooltip({
               }
             }
           : undefined
-      }
-      onMouseEnter={trigger === 'hover' ? () => setVisible(true) : undefined}
-      onMouseLeave={trigger === 'hover' ? () => setVisible(false) : undefined}>
+      }>
       {visible && ref.current && (
         <RenderTooltipOnto delayMs={delayMs} element={ref.current} placement={placement}>
           {content}
