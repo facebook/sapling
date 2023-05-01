@@ -30,8 +30,9 @@ bitflags! {
         const IS_SYMLINK = 1 << 0;
         const IS_EXEC = 1 << 1;
         const IS_REGULAR = 1 << 2;
-        const HAS_MTIME = 1 << 3;
-        const HAS_SIZE = 1 << 4;
+        const IS_DIR = 1 << 3;
+        const HAS_MTIME = 1 << 4;
+        const HAS_SIZE = 1 << 5;
     }
 }
 
@@ -78,12 +79,17 @@ impl Metadata {
         }
     }
 
+    pub fn is_dir(&self) -> bool {
+        self.flags.intersects(MetadataFlags::IS_DIR)
+    }
+
     pub fn from_stat(mode: u32, size: u64, mtime: i64) -> Self {
         // Watchman sends mode_t even on Windows where they aren't fully
         // reflected in libc. Let's just hardcode the values we need.
         const S_IFLNK: u32 = 0o120000;
         const S_IFMT: u32 = 0o170000;
         const S_IFREG: u32 = 0o100000;
+        const S_IFDIR: u32 = 0o040000;
 
         let mut flags = MetadataFlags::HAS_SIZE | MetadataFlags::HAS_MTIME;
 
@@ -95,6 +101,10 @@ impl Metadata {
 
         if mode & S_IFMT == S_IFREG {
             flags |= MetadataFlags::IS_REGULAR;
+        }
+
+        if mode & S_IFMT == S_IFDIR {
+            flags |= MetadataFlags::IS_DIR;
         }
 
         Self {
@@ -151,6 +161,8 @@ impl From<std::fs::Metadata> for Metadata {
             if m.permissions().mode() & 0o111 != 0 {
                 flags |= MetadataFlags::IS_EXEC;
             }
+        } else if m.is_dir() {
+            flags |= MetadataFlags::IS_DIR;
         }
 
         let mtime = match m.modified() {

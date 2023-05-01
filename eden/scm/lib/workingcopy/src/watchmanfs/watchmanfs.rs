@@ -292,13 +292,19 @@ impl PendingChanges for WatchmanFileSystem {
                             "watchman file"
                         );
 
+                        let meta = Metadata::from_stat(
+                            file.mode.into_inner() as u32,
+                            file.size.into_inner(),
+                            file.mtime.into_inner(),
+                        );
+                        if meta.is_dir() {
+                            // Filter directories out of results.
+                            return None;
+                        }
+
                         let fs_meta = if *file.exists {
                             if use_watchman_metadata {
-                                Some(Some(Metadata::from_stat(
-                                    file.mode.into_inner() as u32,
-                                    file.size.into_inner(),
-                                    file.mtime.into_inner(),
-                                )))
+                                Some(Some(meta))
                             } else {
                                 None
                             }
