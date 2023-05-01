@@ -28,8 +28,8 @@ elements = {
     "~": (18, None, None, ("ancestor", 18), None),
     "^": (18, None, None, ("parent", 18), "parentpost"),
     "-": (5, None, ("negate", 19), ("minus", 5), None),
-    "::": (17, None, ("dagrangepre", 17), ("dagrange", 17), "dagrangepost"),
-    "..": (17, None, ("dagrangepre", 17), ("dagrange", 17), "dagrangepost"),
+    "::": (17, "dagrangeall", ("dagrangepre", 17), ("dagrange", 17), "dagrangepost"),
+    "..": (17, "dagrangeall", ("dagrangepre", 17), ("dagrange", 17), "dagrangepost"),
     ":": (15, "rangeall", ("rangepre", 15), ("range", 15), "rangepost"),
     "not": (10, None, ("not", 10), None, None),
     "!": (10, None, ("not", 10), None, None),
@@ -306,9 +306,12 @@ def _fixops(x):
     if op == "parent":
         # x^:y means (x^) : y, not x ^ (:y)
         # x^:  means (x^) :,   not x ^ (:)
+        # x^::  means (x^) ::,   not x ^ (::)
         post = ("parentpost", x[1])
         if x[2][0] == "dagrangepre":
             return _fixops(("dagrange", post, x[2][1]))
+        elif x[2][0] == "dagrangeall":
+            return _fixops(("dagrangepost", post))
         elif x[2][0] == "rangepre":
             return _fixops(("range", post, x[2][1]))
         elif x[2][0] == "rangeall":
@@ -335,6 +338,8 @@ def _analyze(x):
         return _analyze(_build("only(_, _)", *x[1:]))
     elif op == "onlypost":
         return _analyze(_build("only(_)", x[1]))
+    elif op == "dagrangeall":
+        raise error.ParseError(_("can't use '::' in this context"))
     elif op == "dagrangepre":
         return _analyze(_build("ancestors(_)", x[1]))
     elif op == "dagrangepost":

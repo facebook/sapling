@@ -950,15 +950,42 @@
   9
 
   $ try '.^::'
-  hg: parse error at 4: not a prefix: end
-  (.^::
-       ^ here)
-  [255]
+  (dagrangepost
+    (parentpost
+      (symbol '.')))
+  * set:
+  <nameset+
+    <spans [d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c:6a4f54cc779b5949146617ba046459baab4a496f+8:9]>>
+  8
+  9
 
   $ try '.^..'
-  hg: parse error at 4: not a prefix: end
-  (.^..
-       ^ here)
+  (dagrangepost
+    (parentpost
+      (symbol '.')))
+  * set:
+  <nameset+
+    <spans [d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c:6a4f54cc779b5949146617ba046459baab4a496f+8:9]>>
+  8
+  9
+
+  $ try '.^::.'
+  (dagrange
+    (parentpost
+      (symbol '.'))
+    (symbol '.'))
+  * set:
+  <nameset+
+    <spans [d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c:6a4f54cc779b5949146617ba046459baab4a496f+8:9]>>
+  8
+  9
+
+# '::' itself isn't a valid expression
+
+  $ try '::'
+  (dagrangeall
+    None)
+  hg: parse error: can't use '::' in this context
   [255]
 
 #  x^ in alias should also be resolved
