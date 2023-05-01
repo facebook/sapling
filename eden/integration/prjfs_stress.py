@@ -7,8 +7,10 @@
 import os
 import stat
 import subprocess
+import time
 from contextlib import contextmanager
 from pathlib import Path
+from threading import Thread
 from typing import Dict, Generator, List, Optional, Set, Tuple
 
 from eden.fs.cli import util
@@ -370,6 +372,47 @@ class PrjFSStress(PrjFSStressBase):
         self.assertEqual("", read_back)
 
         self.assertEqual(0, st.st_size)
+
+    def test_read_and_unmount(self) -> None:
+        rel_path = "adir/file"
+        path = self.mount_path / rel_path
+
+        # Lays a placeholder on disk
+        os.lstat(path)
+
+        def read_file() -> None:
+            with self.run_with_fault("PrjfsDispatcherImpl::read"):
+                with path.open("rb") as f:
+                    f.read()
+
+        def unmount() -> None:
+            self.eden.unmount(self.mount_path)
+
+        read_thread = Thread(target=read_file)
+        read_thread.start()
+
+        unmount_thread = Thread(target=unmount)
+        unmount_thread.start()
+
+        def wait_until_unmount_started() -> None:
+            """Wait until reading a directory starts failing and raising an
+            exception. This is a sign that either EdenFS is in the process of
+            unmounting, or EdenFS crashed.
+            """
+            while True:
+                try:
+                    self.read_dir("adir")
+                    time.sleep(0.1)
+                    continue
+                except Exception:
+                    break
+
+        wait_until_unmount_started()
+        self.wait_on_fault_unblock(keyClass="PrjfsDispatcherImpl::read")
+        read_thread.join(timeout=30.0)
+        unmount_thread.join(timeout=30.0)
+
+        self.assertTrue(self.eden.is_healthy())
 
 
 @testcase.eden_repo_test

@@ -389,6 +389,7 @@ PrjfsChannelInner::PrjfsChannelInner(
 }
 
 PrjfsChannelInner::~PrjfsChannelInner() {
+  PrjStopVirtualizing(mountChannel_);
   deletedPromise_.setValue(folly::unit);
 }
 
@@ -1315,11 +1316,7 @@ folly::SemiFuture<folly::Unit> PrjfsChannel::stop() {
   XLOG(INFO) << "Stopping PrjfsChannel for: " << mountPath_;
   XCHECK(!stopPromise_.isFulfilled());
 
-  {
-    auto oldInner = inner_.exchange(nullptr, std::memory_order_release);
-    PrjStopVirtualizing(oldInner->getMountChannel());
-  }
-
+  inner_.store(nullptr, std::memory_order_release);
   return std::move(innerDeleted_)
       .deferValue([stopPromise = std::move(stopPromise_)](auto&&) mutable {
         stopPromise.setValue(std::make_unique<StopData>());
