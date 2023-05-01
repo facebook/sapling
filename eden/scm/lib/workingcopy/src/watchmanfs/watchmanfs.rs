@@ -41,7 +41,6 @@ use super::treestate::set_clock;
 use crate::filechangedetector::ArcReadFileContents;
 use crate::filechangedetector::FileChangeDetector;
 use crate::filechangedetector::FileChangeDetectorTrait;
-use crate::filechangedetector::ParallelDetector;
 use crate::filechangedetector::ResolvedFileChangeResult;
 use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
@@ -326,41 +325,22 @@ impl PendingChanges for WatchmanFileSystem {
             ignore_matcher = Arc::new(NeverMatcher::new());
         }
 
-        let worker_count = config.get_or("workingcopy", "watchman-worker-count", || 10)?;
-        let mut pending_changes = if worker_count == 0 {
-            let detector = FileChangeDetector::new(
-                self.vfs.clone(),
-                last_write.try_into()?,
-                manifests[0].clone(),
-                self.store.clone(),
-            );
-            detect_changes(
-                matcher,
-                ignore_matcher,
-                detector,
-                ts,
-                wm_needs_check,
-                result.is_fresh_instance,
-                self.vfs.case_sensitive(),
-            )?
-        } else {
-            let detector = ParallelDetector::new(
-                self.vfs.clone(),
-                last_write.try_into()?,
-                manifests[0].clone(),
-                self.store.clone(),
-                worker_count,
-            );
-            detect_changes(
-                matcher,
-                ignore_matcher,
-                detector,
-                ts,
-                wm_needs_check,
-                result.is_fresh_instance,
-                self.vfs.case_sensitive(),
-            )?
-        };
+        let detector = FileChangeDetector::new(
+            self.vfs.clone(),
+            last_write.try_into()?,
+            manifests[0].clone(),
+            self.store.clone(),
+            config.get_opt("workingcopy", "worker-count")?,
+        );
+        let mut pending_changes = detect_changes(
+            matcher,
+            ignore_matcher,
+            detector,
+            ts,
+            wm_needs_check,
+            result.is_fresh_instance,
+            self.vfs.case_sensitive(),
+        )?;
 
         // Add back path errors into the pending changes. The caller
         // of pending_changes must choose how to handle these.

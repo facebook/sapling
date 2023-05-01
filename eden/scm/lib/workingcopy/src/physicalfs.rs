@@ -11,6 +11,7 @@ use std::time::SystemTime;
 
 use anyhow::Result;
 use configmodel::Config;
+use configmodel::ConfigExt;
 use io::IO;
 use manifest_tree::ReadTreeManifest;
 use parking_lot::Mutex;
@@ -72,7 +73,7 @@ impl PendingChangesTrait for PhysicalFileSystem {
         matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         _ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         last_write: SystemTime,
-        _config: &dyn Config,
+        config: &dyn Config,
         _io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let root = self.vfs.root().to_path_buf();
@@ -91,6 +92,7 @@ impl PendingChangesTrait for PhysicalFileSystem {
             last_write.try_into()?,
             manifests[0].clone(),
             self.store.clone(),
+            config.get_opt("workingcopy", "worker-count")?,
         );
         let pending_changes = PendingChanges {
             walker,
