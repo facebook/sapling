@@ -20,8 +20,6 @@ use io::IO;
 use manifest_tree::ReadTreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::AlwaysMatcher;
-use pathmatcher::DifferenceMatcher;
-use pathmatcher::ExactMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::NeverMatcher;
 use progress_model::ProgressBar;
@@ -456,7 +454,7 @@ pub(crate) fn detect_changes(
             path: ts_needs_check.clone(),
             ts_state: ts.normalized_get(ts_needs_check)?,
             fs_meta: None,
-        })
+        });
     }
 
     drop(_span);
@@ -487,14 +485,20 @@ pub(crate) fn detect_changes(
 
     let _span = tracing::info_span!("handle results").entered();
 
+    let mut deletes = Vec::new();
+
     for result in file_change_detector {
         match result {
             Ok(ResolvedFileChangeResult::Yes(change)) => {
                 let path = change.get_path();
-                if !ts_need_check.contains(path) {
-                    needs_mark.push(path.clone());
+                if let ChangeType::Deleted(path) = change {
+                    deletes.push(path);
+                } else {
+                    if !ts_need_check.contains(path) {
+                        needs_mark.push(path.clone());
+                    }
+                    pending_changes.push(Ok(PendingChangeResult::File(change)));
                 }
-                pending_changes.push(Ok(PendingChangeResult::File(change)));
             }
             Ok(ResolvedFileChangeResult::No(path)) => {
                 if ts_need_check.contains(&path) {
@@ -510,11 +514,6 @@ pub(crate) fn detect_changes(
     if wm_fresh_instance {
         let _span = tracing::info_span!("fresh_instance work", wm_len = wm_seen.len()).entered();
 
-        let was_deleted_matcher = Arc::new(DifferenceMatcher::new(
-            AlwaysMatcher::new(),
-            ExactMatcher::new(wm_seen.iter(), fs_case_sensitive),
-        ));
-
         // On fresh instance, watchman returns all files present on
         // disk. We need to catch the case where a tracked file has been
         // deleted while watchman wasn't running. To do that, report a
@@ -522,12 +521,13 @@ pub(crate) fn detect_changes(
         // _not_ in the list we got from watchman.
         walk_treestate(
             ts,
-            was_deleted_matcher.clone(),
+            Arc::new(AlwaysMatcher::new()),
             StateFlags::EXIST_NEXT,
             StateFlags::NEED_CHECK,
             |path, _state| {
-                needs_mark.push(path.clone());
-                pending_changes.push(Ok(PendingChangeResult::File(ChangeType::Deleted(path))));
+                if !wm_seen.contains(&path) {
+                    deletes.push(path);
+                }
                 Ok(())
             },
         )?;
@@ -535,14 +535,54 @@ pub(crate) fn detect_changes(
         // Clear out ignored/untracked files that have been deleted.
         walk_treestate(
             ts,
-            was_deleted_matcher,
+            Arc::new(AlwaysMatcher::new()),
             StateFlags::NEED_CHECK,
             StateFlags::EXIST_NEXT | StateFlags::EXIST_P1 | StateFlags::EXIST_P2,
             |path, _state| {
-                needs_clear.push(path);
+                if !wm_seen.contains(&path) {
+                    needs_clear.push(path);
+                }
                 Ok(())
             },
         )?;
+    }
+
+    if !deletes.is_empty() {
+        let mut deletes: HashSet<_> = deletes.into_iter().collect();
+
+        if !fs_case_sensitive {
+            // On case insensitive (but case preservign) filesystems, watchman
+            // reports a case sensitive rename as a delete of the old name and
+            // update of the new name. We need to ignore the delete. We do that
+            // here by skipping deletes that insensitively match other paths
+            // watchman told us about.
+            let other_changes: HashSet<RepoPathBuf> = wm_seen
+                .iter()
+                .filter_map(|p| {
+                    if !deletes.contains(p) {
+                        Some(p.to_lower_case())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            deletes.retain(|d| {
+                if !other_changes.contains(&d.to_lower_case()) {
+                    true
+                } else {
+                    tracing::trace!(deleted=?d, "ignoring case insensitive delete");
+                    false
+                }
+            });
+        }
+
+        for d in deletes {
+            if !ts_need_check.contains(&d) {
+                needs_mark.push(d.clone());
+            }
+            pending_changes.push(Ok(PendingChangeResult::File(ChangeType::Deleted(d))));
+        }
     }
 
     Ok(WatchmanPendingChanges {
