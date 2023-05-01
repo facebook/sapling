@@ -343,14 +343,21 @@ impl<V> RepoPathMap<V> {
     pub fn keys(&self) -> std::collections::hash_map::Keys<'_, RepoPathBuf, V> {
         self.map.keys()
     }
+
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
 }
 
 impl IntoIterator for FileChangeDetector {
     type Item = Result<ResolvedFileChangeResult>;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
+    #[tracing::instrument(skip_all)]
     fn into_iter(mut self) -> Self::IntoIter {
         let bar = self.progress;
+
+        let _span = tracing::info_span!("check manifest", lookups = self.lookups.len()).entered();
 
         // First, get the keys for the paths from the current manifest.
         let matcher = ExactMatcher::new(self.lookups.keys(), self.vfs.case_sensitive());
@@ -384,6 +391,10 @@ impl IntoIterator for FileChangeDetector {
             })
             .collect::<Vec<_>>();
 
+        drop(_span);
+
+        let _span = tracing::info_span!("compare contents", keys = keys.len()).entered();
+
         let (disk_send, disk_recv) = crossbeam::channel::unbounded::<(RepoPathBuf, Bytes)>();
         let (results_send, results_recv) =
             crossbeam::channel::unbounded::<Result<ResolvedFileChangeResult>>();
@@ -408,6 +419,8 @@ impl IntoIterator for FileChangeDetector {
         // switch this to use that (rather than pulling down the entire contents of each
         // file).
         async_runtime::block_on(async {
+            let _span = tracing::info_span!("read_file_contents").entered();
+
             let mut results = self.store.read_file_contents(keys).await;
             while let Some(result) = results.next().await {
                 match result {

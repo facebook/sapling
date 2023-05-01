@@ -92,6 +92,7 @@ pub fn set_clock(ts: &mut TreeState, clock: Clock) -> Result<()> {
     Ok(())
 }
 
+#[tracing::instrument(skip_all)]
 pub fn maybe_flush_treestate(root: &Path, ts: &mut TreeState, locker: &RepoLocker) -> Result<()> {
     match dirstate::flush(root, ts, locker) {
         Ok(()) => Ok(()),
@@ -104,6 +105,7 @@ pub fn maybe_flush_treestate(root: &Path, ts: &mut TreeState, locker: &RepoLocke
     }
 }
 
+#[tracing::instrument(skip_all)]
 pub fn list_needs_check(
     ts: &mut TreeState,
     matcher: Arc<dyn Matcher + Send + Sync + 'static>,

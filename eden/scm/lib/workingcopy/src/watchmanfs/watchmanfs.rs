@@ -113,7 +113,6 @@ impl WatchmanFileSystem {
         })
     }
 
-    #[tracing::instrument(skip_all, err)]
     async fn query_files(&self, config: WatchmanConfig) -> Result<QueryResult<StatusQuery>> {
         let start = std::time::Instant::now();
 
@@ -229,16 +228,25 @@ impl PendingChanges for WatchmanFileSystem {
             ts.update_metadata(&[("track-ignored".to_string(), Some(md_value))])?;
         }
 
+        if config.get_or_default("devel", "watchman-reset-clock")? {
+            prev_clock = None;
+        }
+
         let progress_handle = async_runtime::spawn(crawl_progress(
             self.vfs.root().to_path_buf(),
             ts.len() as u64,
         ));
 
-        let result = async_runtime::block_on(self.query_files(WatchmanConfig {
-            clock: prev_clock.clone(),
-            sync_timeout:
-                config.get_or::<Duration>("fsmonitor", "timeout", || Duration::from_secs(10))?,
-        }))?;
+        let result = {
+            // Instrument query_files() from outside to avoid async weirdness.
+            let _span = tracing::info_span!("query_files").entered();
+
+            async_runtime::block_on(self.query_files(WatchmanConfig {
+                clock: prev_clock.clone(),
+                sync_timeout:
+                    config.get_or::<Duration>("fsmonitor", "timeout", || Duration::from_secs(10))?,
+            }))?
+        };
 
         progress_handle.abort();
 
@@ -392,6 +400,7 @@ fn warn_about_fresh_instance(io: &IO, old_pid: Option<u32>, new_pid: Option<u32>
 // figure out all the files that may have changed and check them for
 // changes. Also track paths we need to mark or unmark as NEED_CHECK
 // in the treestate.
+#[tracing::instrument(skip_all)]
 pub(crate) fn detect_changes(
     matcher: Arc<dyn Matcher + Send + Sync + 'static>,
     ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
@@ -401,6 +410,8 @@ pub(crate) fn detect_changes(
     wm_fresh_instance: bool,
     fs_case_sensitive: bool,
 ) -> Result<WatchmanPendingChanges> {
+    let _span = tracing::info_span!("prepare stuff").entered();
+
     let (ts_need_check, ts_errors) = list_needs_check(ts, matcher)?;
 
     // NB: ts_need_check is filtered by the matcher, so it does not
@@ -428,6 +439,10 @@ pub(crate) fn detect_changes(
 
     let wm_seen: HashSet<RepoPathBuf> = wm_need_check.iter().map(|f| f.path.clone()).collect();
 
+    drop(_span);
+
+    let _span = tracing::info_span!("submit ts_need_check").entered();
+
     for ts_needs_check in ts_need_check.iter() {
         // Prefer to kick off file check using watchman data since that already
         // includes disk metadata.
@@ -443,6 +458,10 @@ pub(crate) fn detect_changes(
             fs_meta: None,
         })
     }
+
+    drop(_span);
+
+    let _span = tracing::info_span!("submit wm_need_check").entered();
 
     for mut wm_needs_check in wm_need_check {
         let state = ts.normalized_get(&wm_needs_check.path)?;
@@ -464,6 +483,10 @@ pub(crate) fn detect_changes(
         file_change_detector.submit(wm_needs_check);
     }
 
+    drop(_span);
+
+    let _span = tracing::info_span!("handle results").entered();
+
     for result in file_change_detector {
         match result {
             Ok(ResolvedFileChangeResult::Yes(change)) => {
@@ -482,7 +505,11 @@ pub(crate) fn detect_changes(
         }
     }
 
+    drop(_span);
+
     if wm_fresh_instance {
+        let _span = tracing::info_span!("fresh_instance work", wm_len = wm_seen.len()).entered();
+
         let was_deleted_matcher = Arc::new(DifferenceMatcher::new(
             AlwaysMatcher::new(),
             ExactMatcher::new(wm_seen.iter(), fs_case_sensitive),

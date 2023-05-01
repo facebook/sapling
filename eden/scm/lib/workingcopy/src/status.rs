@@ -40,6 +40,7 @@ impl ReadTreeManifest for FakeTreeResolver {
 
 /// Compute the status of the working copy relative to the current commit.
 #[allow(unused_variables)]
+#[tracing::instrument(skip_all)]
 pub fn compute_status(
     p1_manifest: &impl Manifest,
     treestate: Arc<Mutex<TreeState>>,

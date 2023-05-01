@@ -434,6 +434,9 @@ def _innerwalk(self, match, event, span):
             notefiles = []
             clock = "c:0:0"
 
+    if self._ui.configbool("devel", "watchman-reset-clock"):
+        clock = "c:0:0"
+
     matchfn = match.matchfn
     matchalways = match.always()
     dmap = self.dirstate._map
