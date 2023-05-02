@@ -1398,6 +1398,33 @@ function wait_for_bookmark_delete() {
   done
 }
 
+function get_bookmark_value_edenapi {
+  local repo="$1"
+  local bookmark="$2"
+  REPONAME="$repo" hgedenapi debugapi -e bookmarks -i "[\"$bookmark\"]" | jq ".$bookmark"
+}
+
+function wait_for_bookmark_move_away_edenapi() {
+  local repo="$1"
+  local bookmark="$2"
+  local prev="$3"
+  local attempt=1
+  sleep 1
+  flush_mononoke_bookmarks
+  while [[ "$(get_bookmark_value_edenapi "$repo" "$bookmark")" == "$prev" ]]
+  do
+    attempt=$((attempt + 1))
+    if [[ $attempt -gt 30 ]]
+    then
+        echo "bookmark move of $bookmark away from $prev has not happened"
+        return 1
+    fi
+    sleep 2
+    flush_mononoke_bookmarks
+  done
+}
+
+
 function wait_for_land_service {
   export LAND_SERVICE_PORT
   wait_for_server "Land service" LAND_SERVICE_PORT "$TESTTMP/land_service.out" \

@@ -36,6 +36,7 @@ Before config change
   $ mkdir -p smallrepofolder
   $ echo bla > smallrepofolder/bla
   $ hg ci -Aqm "before config change"
+  $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi small-mon master_bookmark)
   $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
   $ log -r master_bookmark
   o  before config change [public;rev=4;*] default/master_bookmark (glob)
@@ -43,8 +44,7 @@ Before config change
   ~
 
 -- wait a second to give backsyncer some time to catch up
-  $ sleep 50
-  $ flush_mononoke_bookmarks
+  $ wait_for_bookmark_move_away_edenapi small-mon master_bookmark  "$PREV_BOOK_VALUE"
 
 -- check the same commit in the small repo
   $ cd "$TESTTMP/small-hg-client"
@@ -67,11 +67,11 @@ Config change
   $ echo 1 >> 1 && hg add 1 && hg ci -m 'change of mapping'
   $ hg revert -r .^ 1
   $ hg commit --amend
+  $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi small-mon master_bookmark)
   $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
 
 -- wait a second to give backsyncer some time to catch up
-  $ sleep 50
-  $ flush_mononoke_bookmarks
+  $ wait_for_bookmark_move_away_edenapi small-mon master_bookmark  "$PREV_BOOK_VALUE"
   $ LARGE_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDLARGE master_bookmark)
   $ SMALL_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDSMALL master_bookmark)
   $ update_mapping_version "$REPOIDSMALL" "$SMALL_MASTER_BONSAI" "$REPOIDLARGE" "$LARGE_MASTER_BONSAI" "new_version"
@@ -83,6 +83,7 @@ Config change
   $ mkdir -p smallrepofolder_after
   $ echo baz > smallrepofolder_after/baz
   $ hg ci -Aqm "after config change"
+  $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi small-mon master_bookmark)
   $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
   $ log -r master_bookmark
   o  after config change [public;rev=*;*] default/master_bookmark (glob)
@@ -90,8 +91,7 @@ Config change
   ~
 
 -- wait a second to give backsyncer some time to catch up
-  $ sleep 50
-  $ flush_mononoke_bookmarks
+  $ wait_for_bookmark_move_away_edenapi small-mon master_bookmark  "$PREV_BOOK_VALUE"
 
 -- check the same commit in the small repo
   $ cd "$TESTTMP/small-hg-client"
