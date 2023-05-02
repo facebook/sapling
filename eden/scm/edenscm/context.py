@@ -1181,7 +1181,7 @@ class basefilectx(object):
             ctx = repo[blame["commits"][rng["commit_index"]]]
             path = blame["paths"][rng["path_index"]]
             for i in range(rng["line_count"]):
-                lineno = bool(linenumber) and rng["line_offset"] + i + 1
+                lineno = bool(linenumber) and rng["origin_line_offset"] + i + 1
                 lines.append(annotateline(ctx=ctx, lineno=lineno, path=path))
 
         return zip(lines, self.data().splitlines(True))
