@@ -733,6 +733,20 @@ class EdenConfig : private ConfigSettingManager {
       100,
       this};
 
+  /**
+   * List of paths to filter out when importing Mercurial trees.
+   *
+   * This config must be set prior to cloning as no cache flushing is performed
+   * when setting this config and thus setting this after a mount has been
+   * created will lead to undefined behavior.
+   *
+   * DO NOT USE UNLESS YOU HAVE THE OK FROM THE EDENFS TEAM.
+   */
+  ConfigSetting<std::unordered_set<RelativePath>> hgFilteredPaths{
+      "hg:filtered-paths",
+      std::unordered_set<RelativePath>{},
+      this};
+
   // [backingstore]
 
   /**

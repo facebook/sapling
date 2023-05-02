@@ -71,14 +71,20 @@ std::unique_ptr<Tree> fromRawTree(
     const sapling::Tree* tree,
     const ObjectId& edenTreeId,
     RelativePathPiece path,
-    HgObjectIdFormat hgObjectIdFormat) {
+    HgObjectIdFormat hgObjectIdFormat,
+    const std::unordered_set<RelativePath>& filteredPaths) {
   Tree::container entries{kPathMapDefaultCaseSensitive};
 
   entries.reserve(tree->length);
   for (uintptr_t i = 0; i < tree->length; i++) {
     try {
       auto entry = fromRawTreeEntry(tree->entries[i], path, hgObjectIdFormat);
-      entries.emplace(entry.first, std::move(entry.second));
+      // TODO(xavierd): In the case where this checks becomes too hot, we may
+      // need to change to a Trie like datastructure for fast filtering.
+      if (filteredPaths.empty() ||
+          filteredPaths.count(path + entry.first) == 0) {
+        entries.emplace(entry.first, std::move(entry.second));
+      }
     } catch (const PathComponentContainsDirectorySeparator& ex) {
       XLOG(WARN) << "Ignoring directory entry: " << ex.what();
     }
@@ -107,6 +113,8 @@ void HgDatapackStore::getTreeBatch(
   }
 
   auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
+  const auto& filteredPaths =
+      config_->getEdenConfig()->hgFilteredPaths.getValue();
 
   store_.getTreeBatch(
       folly::range(requests),
@@ -137,7 +145,8 @@ void HgDatapackStore::getTreeBatch(
                   content.value().get(),
                   treeRequest->hash,
                   treeRequest->proxyHash.path(),
-                  hgObjectIdFormat)};
+                  hgObjectIdFormat,
+                  filteredPaths)};
             });
 
         // Make sure that we're stopping this watch.
@@ -166,7 +175,10 @@ std::unique_ptr<Tree> HgDatapackStore::getTree(
   if (tree) {
     auto hgObjectIdFormat =
         config_->getEdenConfig()->hgObjectIdFormat.getValue();
-    return fromRawTree(tree.get(), edenTreeId, path, hgObjectIdFormat);
+    const auto& filteredPaths =
+        config_->getEdenConfig()->hgFilteredPaths.getValue();
+    return fromRawTree(
+        tree.get(), edenTreeId, path, hgObjectIdFormat, filteredPaths);
   }
   return nullptr;
 }
@@ -175,10 +187,17 @@ std::unique_ptr<Tree> HgDatapackStore::getTreeLocal(
     const ObjectId& edenTreeId,
     const HgProxyHash& proxyHash) {
   auto tree = store_.getTree(proxyHash.byteHash(), /*local=*/true);
-  auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
   if (tree) {
+    auto hgObjectIdFormat =
+        config_->getEdenConfig()->hgObjectIdFormat.getValue();
+    const auto& filteredPaths =
+        config_->getEdenConfig()->hgFilteredPaths.getValue();
     return fromRawTree(
-        tree.get(), edenTreeId, proxyHash.path(), hgObjectIdFormat);
+        tree.get(),
+        edenTreeId,
+        proxyHash.path(),
+        hgObjectIdFormat,
+        filteredPaths);
   }
 
   return nullptr;
