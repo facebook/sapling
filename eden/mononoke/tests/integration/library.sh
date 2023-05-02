@@ -26,6 +26,8 @@ CLIENT2_ID_DATA="${FB_CLIENT2_ID_DATA:-CN=client2,O=Mononoke,C=US,ST=CA}"
 # shellcheck disable=SC2034
 JSON_CLIENT_ID="${FB_JSON_CLIENT_ID:-[\"X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA\"]}"
 
+SCRIBE_LOGS_DIR="$TESTTMP/scribe_logs"
+
 if [[ -n "$DB_SHARD_NAME" ]]; then
   MONONOKE_DEFAULT_START_TIMEOUT=600
   MONONOKE_LFS_DEFAULT_START_TIMEOUT=60
@@ -167,7 +169,6 @@ function sslcurl {
 }
 
 function mononoke {
-  SCRIBE_LOGS_DIR="$TESTTMP/scribe_logs"
   if [[ ! -d "$SCRIBE_LOGS_DIR" ]]; then
     mkdir "$SCRIBE_LOGS_DIR"
   fi
@@ -1305,7 +1306,6 @@ function s_client {
 }
 
 function scs {
-  SCRIBE_LOGS_DIR="$TESTTMP/scribe_logs"
   if [[ ! -d "$SCRIBE_LOGS_DIR" ]]; then
     mkdir "$SCRIBE_LOGS_DIR"
   fi
@@ -1332,6 +1332,9 @@ function scs {
 }
 
 function land_service {
+  if [[ ! -d "$SCRIBE_LOGS_DIR" ]]; then
+    mkdir "$SCRIBE_LOGS_DIR"
+  fi
   rm -f "$TESTTMP/land_service_addr.txt"
   GLOG_minloglevel=5 \
     THRIFT_TLS_SRV_CERT="$TEST_CERTDIR/localhost.crt" \
@@ -1343,6 +1346,7 @@ function land_service {
     --port 0 \
     --log-level DEBUG \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --scribe-logging-directory "$TESTTMP/scribe_logs" \
     --bound-address-file "$TESTTMP/land_service_addr.txt" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/land_service.out" 2>&1 &

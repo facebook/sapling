@@ -103,6 +103,7 @@ impl BacksyncProcess {
             .with_fb303_args()
             .with_source_and_target_repos()
             .with_dynamic_repos()
+            .with_scribe_args()
             .build();
         let backsync_forever_subcommand = SubCommand::with_name(ARG_MODE_BACKSYNC_FOREVER)
             .about("Backsyncs all new bookmark moves");
@@ -480,10 +481,12 @@ async fn run(
     let target_repo = args::resolve_repo_by_name(config_store, &matches, &target_repo_name)?;
     let repo_tag = format!("{}=>{}", &source_repo_name, &target_repo_name);
     let session_container = SessionContainer::new_with_defaults(fb);
+    let scribe = args::get_scribe(fb, &matches)?;
     let ctx = session_container
-        .new_context(
+        .new_context_with_scribe(
             matches.logger().clone(),
             MononokeScubaSampleBuilder::with_discard(),
+            scribe.clone(),
         )
         .clone_with_repo_name(&repo_tag);
     let commit_syncer = create_commit_syncer_from_matches::<Repo>(
@@ -505,7 +508,8 @@ async fn run(
     match matches.subcommand() {
         (ARG_MODE_BACKSYNC_ALL, _) => {
             let scuba_sample = MononokeScubaSampleBuilder::with_discard();
-            let ctx = session_container.new_context(logger.clone(), scuba_sample);
+            let ctx =
+                session_container.new_context_with_scribe(logger.clone(), scuba_sample, scribe);
             let target_repo_dbs = Arc::new(
                 open_backsyncer_dbs(commit_syncer.get_target_repo())
                     .boxed()
@@ -539,7 +543,8 @@ async fn run(
             scuba_sample.add("target_repo_name", target_repo.name.clone());
             scuba_sample.add_common_server_data();
 
-            let ctx = session_container.new_context(logger.clone(), scuba_sample);
+            let ctx =
+                session_container.new_context_with_scribe(logger.clone(), scuba_sample, scribe);
             let f = backsync_forever(
                 ctx,
                 commit_syncer,
@@ -553,8 +558,11 @@ async fn run(
             f.await?;
         }
         (ARG_MODE_BACKSYNC_COMMITS, Some(sub_m)) => {
-            let ctx = session_container
-                .new_context(logger.clone(), MononokeScubaSampleBuilder::with_discard());
+            let ctx = session_container.new_context_with_scribe(
+                logger.clone(),
+                MononokeScubaSampleBuilder::with_discard(),
+                scribe,
+            );
             let inputfile = sub_m
                 .value_of(ARG_INPUT_FILE)
                 .expect("input file is not set");

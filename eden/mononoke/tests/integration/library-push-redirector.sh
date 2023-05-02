@@ -410,19 +410,29 @@ EOF
 }
 
 function backsync_large_to_small() {
+  if [[ ! -d "$SCRIBE_LOGS_DIR" ]]; then
+    mkdir "$SCRIBE_LOGS_DIR"
+  fi
+
   "$BACKSYNCER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" --debug --source-repo-id "$REPOIDLARGE" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --scribe-logging-directory "$TESTTMP/scribe_logs" \
     --target-repo-id "$REPOIDSMALL" \
     backsync-all
 }
 
 function backsync_large_to_small_forever {
+  if [[ ! -d "$SCRIBE_LOGS_DIR" ]]; then
+    mkdir "$SCRIBE_LOGS_DIR"
+  fi
+
   "$BACKSYNCER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" --debug \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --scribe-logging-directory "$TESTTMP/scribe_logs" \
     --source-repo-id "$REPOIDLARGE" \
     --target-repo-id "$REPOIDSMALL" \
     "$@" \
@@ -441,6 +451,7 @@ function mononoke_x_repo_sync_forever() {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --scribe-logging-directory "$TESTTMP/scribe_logs" \
     --source-repo-id "$source_repo_id" \
     --target-repo-id "$target_repo_id" \
     "$@" \

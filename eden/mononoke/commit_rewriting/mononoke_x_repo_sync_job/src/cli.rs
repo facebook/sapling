@@ -25,6 +25,7 @@ pub const ARG_BOOKMARK_REGEX: &str = "bookmark-regex";
 pub fn create_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     let app = args::MononokeAppBuilder::new("Mononoke cross-repo sync job")
         .with_fb303_args()
+        .with_scribe_args()
         .with_source_and_target_repos()
         .build();
 

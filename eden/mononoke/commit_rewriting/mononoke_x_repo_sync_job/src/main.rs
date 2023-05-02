@@ -65,6 +65,7 @@ use cmdlib_x_repo::create_commit_syncer_from_matches;
 use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use context::SessionContainer;
 use cross_repo_sync::types::Source;
 use cross_repo_sync::types::Target;
 use cross_repo_sync::CommitSyncer;
@@ -591,7 +592,12 @@ fn main(fb: FacebookInit) -> Result<()> {
     let app = create_app();
     let (matches, _runtime) = app.get_matches(fb)?;
     let logger = matches.logger();
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let session = SessionContainer::new_with_defaults(fb);
+    let ctx = session.new_context_with_scribe(
+        logger.clone(),
+        MononokeScubaSampleBuilder::with_discard(),
+        args::get_scribe(fb, &matches)?,
+    );
 
     let res = helpers::block_execute(
         run(fb, ctx.clone(), &matches),
