@@ -2116,15 +2116,24 @@ Nfsd3::~Nfsd3() {
   // when the socket was closed.
 }
 
+void Nfsd3::destroy() {
+  // Make sure that the Nfsd3 is destroyed in the EventBase that it was
+  // created on. This is necessary as the various async sockets cannot be
+  // used in multiple threads and can only be manipulated in the EventBase
+  // they are attached to.
+  server_->getEventBase()->runInEventBaseThreadAlwaysEnqueue(
+      [this] { delete this; });
+}
+
 folly::SemiFuture<FsStopDataPtr> Nfsd3::getStopFuture() {
   return stopPromise_.getSemiFuture();
 }
 
 bool Nfsd3::takeoverStop() {
   XLOG(DBG7) << "calling takeover stop on the nfs RpcServer";
-  server_->takeoverStop().via(
-      server_->getEventBase()); // we do this to make sure the takeover future
-  // was completely scheduled
+  // Ensure the takeover future was scheduled by detaching it onto the
+  // EventBase.
+  folly::futures::detachOn(server_->getEventBase(), server_->takeoverStop());
   return true;
 }
 

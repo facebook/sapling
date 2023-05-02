@@ -445,6 +445,8 @@ class PrjfsChannel : public FsChannel {
 
   virtual ~PrjfsChannel();
 
+  void destroy() override;
+
   void start(
       bool readOnly,
       bool useNegativePathCaching,

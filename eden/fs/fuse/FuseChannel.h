@@ -266,7 +266,7 @@ class FuseChannel final : public FsChannel {
    * before this happens if some FUSE requests are still pending and will
    * complete in a non-FUSE-worker thread.
    */
-  void destroy();
+  void destroy() override;
 
   const char* getName() const override {
     return "fuse";
@@ -853,17 +853,6 @@ class FuseChannel final : public FsChannel {
 
 folly::StringPiece fuseOpcodeName(uint32_t opcode);
 ProcessAccessLog::AccessType fuseOpcodeAccessType(uint32_t opcode);
-
-/**
- * FuseChannelDeleter acts as a deleter argument for std::shared_ptr or
- * std::unique_ptr.
- */
-class FuseChannelDeleter {
- public:
-  void operator()(FuseChannel* channel) {
-    channel->destroy();
-  }
-};
 
 class FuseDeviceUnmountedDuringInitialization : public std::runtime_error {
  public:

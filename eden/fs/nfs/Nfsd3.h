@@ -139,11 +139,7 @@ class Nfsd3 final : public FsChannel {
       uint32_t iosize,
       size_t traceBusCapacity);
 
-  /**
-   * This is triggered when the kernel closes the socket. The socket is closed
-   * when the privhelper or a user runs umount.
-   */
-  ~Nfsd3();
+  void destroy() override;
 
   const char* getName() const override {
     return "nfs3";
@@ -251,6 +247,13 @@ class Nfsd3 final : public FsChannel {
   struct TelemetryState {
     std::unordered_map<uint64_t, OutstandingRequest> requests;
   };
+
+  /**
+   * This is triggered when the kernel closes the socket. The socket is closed
+   * when the privhelper or a user runs umount.
+   */
+  ~Nfsd3();
+
   folly::Synchronized<TelemetryState> telemetryState_;
   std::vector<TraceSubscriptionHandle<NfsTraceEvent>> traceSubscriptionHandles_;
 

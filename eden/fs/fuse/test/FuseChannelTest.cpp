@@ -24,7 +24,6 @@ using namespace facebook::eden;
 using namespace std::chrono_literals;
 using folly::ByteRange;
 using folly::Random;
-using std::unique_ptr;
 
 namespace {
 
@@ -66,11 +65,11 @@ fuse_entry_out genRandomLookupResponse(uint64_t nodeid) {
 
 class FuseChannelTest : public ::testing::Test {
  protected:
-  unique_ptr<FuseChannel, FuseChannelDeleter> createChannel(
+  std::unique_ptr<FuseChannel, FsChannelDeleter> createChannel(
       size_t numThreads = 2) {
     auto testDispatcher = std::make_unique<TestDispatcher>(stats_.copy());
     dispatcher_ = testDispatcher.get();
-    return unique_ptr<FuseChannel, FuseChannelDeleter>(new FuseChannel(
+    return std::unique_ptr<FuseChannel, FsChannelDeleter>(new FuseChannel(
         fuse_.start(),
         mountPath_,
         numThreads,

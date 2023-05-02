@@ -8,6 +8,7 @@
 #pragma once
 
 #include <tuple>
+#include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/nfs/Mountd.h"
 #include "eden/fs/nfs/Nfsd3.h"
 #include "eden/fs/nfs/portmap/Rpcbindd.h"
@@ -55,7 +56,7 @@ class NfsServer {
    * Return value of registerMount.
    */
   struct NfsMountInfo {
-    std::unique_ptr<Nfsd3> nfsd;
+    std::unique_ptr<Nfsd3, FsChannelDeleter> nfsd;
     folly::SocketAddress mountdAddr;
   };
 

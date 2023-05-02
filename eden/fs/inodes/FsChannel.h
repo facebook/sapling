@@ -53,6 +53,16 @@ class FsChannel {
   virtual bool takeoverStop() = 0;
 
   /**
+   * Neither FuseChannel and Nfsd3 can be deleted from arbitrary threads.
+   *
+   * destroy() initiates the destruction process, but the delete will occur on
+   * another thread.
+   *
+   * The FsChannel may not be accessed after destroy() is called.
+   */
+  virtual void destroy() = 0;
+
+  /**
    * During checkout or other Thrift calls that modify the filesystem, those
    * modifications may be invisible to the filesystem's own caches. Therefore,
    * we send fine-grained invalidation messages to the FsChannel. Those
@@ -65,6 +75,17 @@ class FsChannel {
    */
   FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit>
   completeInvalidations() = 0;
+};
+
+/**
+ * FsChannelDeleter acts as a deleter argument for std::shared_ptr or
+ * std::unique_ptr.
+ */
+class FsChannelDeleter {
+ public:
+  void operator()(FsChannel* channel) {
+    channel->destroy();
+  }
 };
 
 } // namespace facebook::eden

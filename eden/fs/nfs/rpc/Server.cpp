@@ -208,6 +208,7 @@ folly::SemiFuture<folly::Unit> RpcConnectionHandler::resetReader(
           // the connection.
           data.socketToKernel =
               folly::File{this->sock_->detachNetworkSocket().toFd(), true};
+          this->sock_.reset();
         }
 
         // We could move the onSocketClosed call earlier, but it
@@ -606,6 +607,10 @@ void RpcServer::unregisterRpcHandler(RpcConnectionHandler* handlerToErase) {
 }
 
 folly::SemiFuture<folly::File> RpcServer::takeoverStop() {
+  return takeoverStopImpl();
+}
+
+folly::SemiFuture<folly::File> RpcServer::takeoverStopImpl() {
   evb_->checkIsInEventBaseThread();
 
   XLOG(DBG7) << "Removing accept callback";

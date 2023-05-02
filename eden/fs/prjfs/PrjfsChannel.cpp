@@ -1222,6 +1222,10 @@ PrjfsChannel::~PrjfsChannel() {
       << "stop() must be called before destroying the channel";
 }
 
+void PrjfsChannel::destroy() {
+  delete this;
+}
+
 void PrjfsChannel::start(
     bool readOnly,
     bool useNegativePathCaching,

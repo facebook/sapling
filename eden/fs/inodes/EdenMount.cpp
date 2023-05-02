@@ -2025,11 +2025,11 @@ EdenMount::getFsChannelCompletionFuture() {
 
 #ifndef _WIN32
 namespace {
-std::unique_ptr<FuseChannel, FuseChannelDeleter> makeFuseChannel(
+std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(
     EdenMount* mount,
     folly::File fuseFd) {
   auto edenConfig = mount->getEdenConfig();
-  return std::unique_ptr<FuseChannel, FuseChannelDeleter>{new FuseChannel(
+  return std::unique_ptr<FuseChannel, FsChannelDeleter>{new FuseChannel(
       std::move(fuseFd),
       mount->getPath(),
       FLAGS_fuseNumThreads,
@@ -2332,33 +2332,34 @@ folly::Promise<folly::Unit>& EdenMount::beginMount() {
 }
 
 void EdenMount::preparePostFsChannelCompletion(
-    EdenMount::StopFuture&& fsChannelCompleteFuture) {
-  std::move(fsChannelCompleteFuture)
-      .via(getServerThreadPool().get())
-      .thenValue([this](FsStopDataPtr stopData) {
-        // TODO: This dynamic_cast is janky. How should we decide whether
-        // to tell NfsServer to unregister the mount?
-        if (dynamic_cast<Nfsd3::StopData*>(stopData.get())) {
-          serverState_->getNfsServer()->unregisterMount(getPath());
-        }
+    EdenMount::StopFuture fsChannelCompleteFuture) {
+  folly::futures::detachOn(
+      getServerThreadPool().get(),
+      std::move(fsChannelCompleteFuture)
+          .deferValue([this](FsStopDataPtr stopData) {
+            // TODO: This dynamic_cast is janky. How should we decide whether
+            // to tell NfsServer to unregister the mount?
+            if (dynamic_cast<Nfsd3::StopData*>(stopData.get())) {
+              serverState_->getNfsServer()->unregisterMount(getPath());
+            }
 
-        if (stopData->isUnmounted()) {
-          inodeMap_->setUnmounted();
-        }
+            if (stopData->isUnmounted()) {
+              inodeMap_->setUnmounted();
+            }
 
-        fsChannelCompletionPromise_.setWith([&] {
-          return TakeoverData::MountInfo{
-              getPath(),
-              checkoutConfig_->getClientDirectory(),
-              stopData->extractTakeoverInfo(),
-              SerializedInodeMap{} // placeholder
-          };
-        });
-      })
-      .thenError([this](folly::exception_wrapper&& ew) {
-        XLOG(ERR) << "session complete with err: " << ew.what();
-        fsChannelCompletionPromise_.setException(std::move(ew));
-      });
+            fsChannelCompletionPromise_.setWith([&] {
+              return TakeoverData::MountInfo{
+                  getPath(),
+                  checkoutConfig_->getClientDirectory(),
+                  stopData->extractTakeoverInfo(),
+                  SerializedInodeMap{} // placeholder
+              };
+            });
+          })
+          .deferError([this](folly::exception_wrapper&& ew) {
+            XLOG(ERR) << "session complete with err: " << ew.what();
+            fsChannelCompletionPromise_.setException(std::move(ew));
+          }));
 }
 
 void EdenMount::fsChannelInitSuccessful(
@@ -2367,25 +2368,22 @@ void EdenMount::fsChannelInitSuccessful(
   // This state transition could fail if shutdown() was called before we saw
   // the FUSE_INIT message from the kernel.
   transitionState(State::STARTING, State::RUNNING);
-#ifndef _WIN32
-  if (std::holds_alternative<NfsdChannelVariant>(channel_)) {
-    // Make sure that the Nfsd3 is destroyed in the EventBase that it was
-    // created on. This is necessary as the various async sockets cannot be
-    // used in multiple threads and can only be manipulated in the EventBase
-    // they are attached to.
-    preparePostFsChannelCompletion(
-        std::move(channelCompleteFuture)
-            .via(serverState_->getNfsServer()->getEventBase())
-            .thenValue([this](FsStopDataPtr stopData) {
+  preparePostFsChannelCompletion(
+      std::move(channelCompleteFuture)
+          .deferValue([this](FsStopDataPtr stopData) {
+            if (isNfsdChannel()) {
+              // TODO: Understand why destroying Nfsd3 here is necessary, and
+              // allowing it to destroy itself when EdenMount dies is not
+              // sufficient. The problem with clearing channel_ is that it
+              // introduces a potential race with every other use of channel_ in
+              // EdenMount.
+              //
+              // In particular, it races with fb303's dynamic counter
+              // aggregation.
               channel_ = std::monostate{};
-              return stopData;
-            }));
-  } else {
-    preparePostFsChannelCompletion(std::move(channelCompleteFuture));
-  }
-#else
-  preparePostFsChannelCompletion(std::move(channelCompleteFuture));
-#endif
+            }
+            return stopData;
+          }));
 }
 
 void EdenMount::takeoverFuse(FuseChannelData takeoverData) {

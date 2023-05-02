@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
 
   folly::Logger straceLogger{"eden.strace"};
 
-  std::unique_ptr<FuseChannel, FuseChannelDeleter> channel(new FuseChannel(
+  std::unique_ptr<FuseChannel, FsChannelDeleter> channel(new FuseChannel(
       std::move(fuseDevice),
       mountPath,
       FLAGS_numFuseThreads,

@@ -72,7 +72,7 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
     CaseSensitivity caseSensitive,
     uint32_t iosize,
     size_t traceBusCapacity) {
-  auto nfsd = std::make_unique<Nfsd3>(
+  auto nfsd = std::unique_ptr<Nfsd3, FsChannelDeleter>{new Nfsd3{
       evb_,
       threadPool_,
       std::move(dispatcher),
@@ -84,7 +84,7 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
       std::move(notifier),
       caseSensitive,
       iosize,
-      traceBusCapacity);
+      traceBusCapacity}};
   mountd_.registerMount(path, rootIno);
 
   return {std::move(nfsd), mountd_.getAddr()};

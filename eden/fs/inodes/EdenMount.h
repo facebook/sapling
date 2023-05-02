@@ -1205,8 +1205,9 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   void fsChannelInitSuccessful(EdenMount::StopFuture fsChannelCompleteFuture);
 
+  // TODO: This function only has one call site. Inline it.
   void preparePostFsChannelCompletion(
-      EdenMount::StopFuture&& fsChannelCompleteFuture);
+      EdenMount::StopFuture fsChannelCompleteFuture);
 
   /**
    * Private destructor.
@@ -1400,7 +1401,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * EdenFS. Used in the retroactive version of the eden inode trace command.
    *
    * The initialization of this buffer depends on serverState_ being
-   * intitialized to get eden config information, so inodeActivityBuffer_ is
+   * initialized to get eden config information, so inodeActivityBuffer_ is
    * ordered after serverState_ in this header file. Also, inodeTraceBus_
    * subscriptions publish to inodeActivityBuffer_ so inodeActivityBuffer_ is
    * ordered before inodeTraceBus_.
@@ -1410,7 +1411,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::shared_ptr<TraceBus<InodeTraceEvent>> inodeTraceBus_;
   TraceSubscriptionHandle<InodeTraceEvent> inodeTraceHandle_;
 
-  using NfsdChannelVariant = std::unique_ptr<Nfsd3>;
+  using NfsdChannelVariant = std::unique_ptr<Nfsd3, FsChannelDeleter>;
 
 #ifdef _WIN32
   using PrjfsChannelVariant = std::unique_ptr<PrjfsChannel>;
@@ -1419,7 +1420,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       channel_;
 
 #else
-  using FuseChannelVariant = std::unique_ptr<FuseChannel, FuseChannelDeleter>;
+  using FuseChannelVariant = std::unique_ptr<FuseChannel, FsChannelDeleter>;
 
   /**
    * The associated fuse channel to the kernel.

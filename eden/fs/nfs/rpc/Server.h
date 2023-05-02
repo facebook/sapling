@@ -301,6 +301,10 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
    */
   void initializeServerSocket(folly::File socket);
 
+  /**
+   * Stop reading new requests, wait for pending requests, and detach and return
+   * the connected socket for handoff to a new process.
+   */
   folly::SemiFuture<folly::File> takeoverStop();
 
   /**
@@ -339,6 +343,8 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
       const std::shared_ptr<StructuredLogger>& structuredLogger);
 
   ~RpcServer() override;
+
+  folly::SemiFuture<folly::File> takeoverStopImpl();
 
   // AsyncServerSocket::AcceptCallback
 
