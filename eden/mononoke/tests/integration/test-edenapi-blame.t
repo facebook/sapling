@@ -49,6 +49,22 @@ Server has commits - use edenapi blame data:
   e9ace545f925 1970-01-01 bar:2: uno
   4b86660b0697 1970-01-01 foo:3: two
 
+Works with "wdir()" for unchanged files:
+  $ hgedenapi go -q $D
+  $ EDENSCM_LOG=edenapi::client=info hgedenapi blame -cldqf bar -r 'wdir()'
+   INFO edenapi::client: Blaming 1 file(s)
+  1ac4b616a32d  1970-01-01 bar:1: zero
+  e9ace545f925  1970-01-01 bar:2: uno
+  4b86660b0697  1970-01-01 foo:3: two
+
+But doesn't work if file is dirty:
+  $ echo dirty >> bar
+  $ EDENSCM_LOG=edenapi::client=info hgedenapi blame -cldqf bar -r 'wdir()'
+  1ac4b616a32d  1970-01-01 bar:1: zero
+  e9ace545f925  1970-01-01 bar:2: uno
+  4b86660b0697  1970-01-01 foo:2: two
+  e9ace545f925+ ********** bar:4: dirty (glob)
+
 Peek at what the data looks like:
   $ hgedenapi debugapi -e blame -i "[{'path': 'bar', 'node': '$D'}]"
   [{"data": {"Ok": {"paths": ["foo",

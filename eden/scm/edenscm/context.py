@@ -1134,6 +1134,13 @@ class basefilectx(object):
             return None
 
         if self.node() is None:
+            # If we are a "clean" working copy file, delegate to the equivalent
+            # p1 fctx since it is associated w/ a real commit that EdenAPI
+            # probably knows about.
+            parents = self.changectx().parents()
+            if len(parents) == 1 and not self.cmp(fctx := parents[0][self.path()]):
+                return fctx._edenapi_annotate(linenumber, diffopts)
+
             # Working copy blame not supported.
             return None
 
