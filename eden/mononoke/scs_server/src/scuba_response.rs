@@ -73,7 +73,32 @@ impl AddScubaResponse for thrift::RepoUploadFileContentResponse {
 
 impl AddScubaResponse for thrift::CommitCompareResponse {}
 
-impl AddScubaResponse for thrift::CommitFileDiffsResponse {}
+impl AddScubaResponse for thrift::CommitFileDiffsResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        let non_text_files = self
+            .path_diffs
+            .iter()
+            .filter_map(|response| match &response.diff {
+                thrift::Diff::metadata_diff(metadata) => match (
+                    metadata.old_file_info.file_content_type,
+                    metadata.new_file_info.file_content_type,
+                ) {
+                    (Some(old_file), Some(new_file)) => Some(vec![old_file, new_file]),
+                    (Some(old_file), _) => Some(vec![old_file]),
+                    (_, Some(new_file)) => Some(vec![new_file]),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .flatten()
+            .filter(|content_type| content_type.0 > 1) // Non-text or binary
+            .count();
+        // Only log if there are any actual non-textual files
+        if non_text_files > 0 {
+            scuba.add("non_text_files", non_text_files);
+        }
+    }
+}
 
 impl AddScubaResponse for thrift::CommitFindFilesResponse {}
 
