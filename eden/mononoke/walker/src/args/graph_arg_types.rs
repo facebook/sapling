@@ -47,7 +47,7 @@ const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
     NodeType::HgFileEnvelope,
     NodeType::HgFileNode,
     NodeType::FileContent,
-    NodeType::FileContentMetadata,
+    NodeType::FileContentMetadataV2,
     NodeType::AliasContentMapping,
 ];
 
@@ -140,10 +140,6 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::HgManifestFileNodeToHgParentFileNode,
     EdgeType::HgManifestFileNodeToHgCopyfromFileNode,
     // Content
-    EdgeType::FileContentToFileContentMetadata,
-    EdgeType::FileContentMetadataToSha1Alias,
-    EdgeType::FileContentMetadataToSha256Alias,
-    EdgeType::FileContentMetadataToGitSha1Alias,
     EdgeType::FileContentToFileContentMetadataV2,
     EdgeType::FileContentMetadataV2ToSha1Alias,
     EdgeType::FileContentMetadataV2ToSha256Alias,
@@ -209,10 +205,6 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::HgManifestToChildHgManifest,
     EdgeType::HgFileEnvelopeToFileContent,
     // Content
-    EdgeType::FileContentToFileContentMetadata,
-    EdgeType::FileContentMetadataToSha1Alias,
-    EdgeType::FileContentMetadataToSha256Alias,
-    EdgeType::FileContentMetadataToGitSha1Alias,
     EdgeType::FileContentToFileContentMetadataV2,
     EdgeType::FileContentMetadataV2ToSha1Alias,
     EdgeType::FileContentMetadataV2ToSha256Alias,
@@ -276,10 +268,6 @@ const BONSAI_EDGE_TYPES: &[EdgeType] = &[
 
 const CONTENT_META_EDGE_TYPES: &[EdgeType] = &[
     // Content
-    EdgeType::FileContentToFileContentMetadata,
-    EdgeType::FileContentMetadataToSha1Alias,
-    EdgeType::FileContentMetadataToSha256Alias,
-    EdgeType::FileContentMetadataToGitSha1Alias,
     EdgeType::FileContentToFileContentMetadataV2,
     EdgeType::FileContentMetadataV2ToSha1Alias,
     EdgeType::FileContentMetadataV2ToSha256Alias,

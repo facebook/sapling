@@ -20,7 +20,7 @@ setup configuration
 validate, expecting all valid, checking marker types
   $ mononoke_walker -l validate validate -q -I deep -I marker -b master_bookmark 2>&1 | strip_glog
   Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated], repo: repo
-  Nodes,Pass,Fail:43,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 ChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0, repo: repo
+  Nodes,Pass,Fail:46,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 ChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0, repo: repo
 
 Remove the phase information, linknodes already point to them
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM phases where repo_id >= 0";
@@ -28,7 +28,7 @@ Remove the phase information, linknodes already point to them
 validate, expect no failures on phase info, as the commits are still public, just not marked as so in the phases table
   $ mononoke_walker -l validate validate -q -I deep -I marker -b master_bookmark 2>&1 | strip_glog
   Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated], repo: repo
-  Nodes,Pass,Fail:43,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 ChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0, repo: repo
+  Nodes,Pass,Fail:46,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 ChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0, repo: repo
 
 Record the filenode info
   $ PATHHASHC=$(sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT hex(path_hash) FROM paths WHERE path = CAST('C' as BLOB)")

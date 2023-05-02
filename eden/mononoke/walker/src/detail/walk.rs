@@ -692,53 +692,6 @@ async fn file_content_step<V: VisitOne>(
     ))
 }
 
-async fn file_content_metadata_step<V: VisitOne>(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    checker: &Checker<V>,
-    id: ContentId,
-    enable_derive: bool,
-) -> Result<StepOutput, StepError> {
-    let metadata_opt = if enable_derive {
-        filestore::get_metadata(repo.repo_blobstore(), ctx, &id.into())
-            .await?
-            .map(Some)
-    } else {
-        filestore::get_metadata_readonly(repo.repo_blobstore(), ctx, &id.into()).await?
-    };
-
-    match metadata_opt {
-        Some(Some(metadata)) => {
-            let mut edges = vec![];
-            checker.add_edge(&mut edges, EdgeType::FileContentMetadataToSha1Alias, || {
-                Node::AliasContentMapping(AliasKey(Alias::Sha1(metadata.sha1)))
-            });
-            checker.add_edge(
-                &mut edges,
-                EdgeType::FileContentMetadataToSha256Alias,
-                || Node::AliasContentMapping(AliasKey(Alias::Sha256(metadata.sha256))),
-            );
-            checker.add_edge(
-                &mut edges,
-                EdgeType::FileContentMetadataToGitSha1Alias,
-                || Node::AliasContentMapping(AliasKey(Alias::GitSha1(metadata.git_sha1.sha1()))),
-            );
-            Ok(StepOutput::Done(
-                checker.step_data(NodeType::FileContentMetadata, || {
-                    NodeData::FileContentMetadata(Some(metadata.into()))
-                }),
-                edges,
-            ))
-        }
-        Some(None) | None => Ok(StepOutput::Done(
-            checker.step_data(NodeType::FileContentMetadata, || {
-                NodeData::FileContentMetadata(None)
-            }),
-            vec![],
-        )),
-    }
-}
-
 async fn file_content_metadata_v2_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -1847,8 +1800,8 @@ pub fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) {
                 path,
             } => {
                 extra.push(OutgoingEdge::new_with_path(
-                    EdgeType::FileContentToFileContentMetadata,
-                    Node::FileContentMetadata(*fc_id),
+                    EdgeType::FileContentToFileContentMetadataV2,
+                    Node::FileContentMetadataV2(*fc_id),
                     path.clone(),
                 ));
             }
@@ -2234,9 +2187,6 @@ where
         // Content
         Node::FileContent(content_id) => {
             file_content_step(ctx.clone(), &repo, &checker, content_id).await
-        }
-        Node::FileContentMetadata(content_id) => {
-            file_content_metadata_step(&ctx, &repo, &checker, content_id, enable_derive).await
         }
         Node::FileContentMetadataV2(content_id) => {
             file_content_metadata_v2_step(&ctx, &repo, &checker, content_id, enable_derive).await

@@ -283,11 +283,6 @@ mod tests {
                 node_type,
                 &parse_node(&format!("FileContent{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
             ),
-            NodeType::FileContentMetadata => assert_eq!(
-                node_type,
-                &parse_node(&format!("FileContentMetadata{}{}", NODE_SEP, SAMPLE_BLAKE2))?
-                    .get_type()
-            ),
             NodeType::FileContentMetadataV2 => assert_eq!(
                 node_type,
                 &parse_node(&format!(

@@ -65,7 +65,6 @@ use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
-use mononoke_types::ContentMetadata;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::FastlogBatchId;
@@ -357,7 +356,6 @@ create_graph!(
             HgManifestFileNode,
             // Content
             FileContent,
-            FileContentMetadata,
             FileContentMetadataV2,
             AliasContentMapping,
             // Derived
@@ -441,16 +439,7 @@ create_graph!(
         ]
     ),
     // Content
-    (FileContent, ContentId, [FileContentMetadata, FileContentMetadataV2]),
-    (
-        FileContentMetadata,
-        ContentId,
-        [
-            Sha1Alias(AliasContentMapping),
-            Sha256Alias(AliasContentMapping),
-            GitSha1Alias(AliasContentMapping)
-        ]
-    ),
+    (FileContent, ContentId, [FileContentMetadataV2]),
     (
         FileContentMetadataV2,
         ContentId,
@@ -559,7 +548,6 @@ impl NodeType {
             NodeType::HgManifestFileNode => Some(FilenodesOnlyPublic::NAME),
             // Content
             NodeType::FileContent => None,
-            NodeType::FileContentMetadata => None,
             NodeType::FileContentMetadataV2 => None,
             NodeType::AliasContentMapping => None,
             // Derived data
@@ -607,7 +595,6 @@ impl NodeType {
             NodeType::HgManifestFileNode => true,
             // Content
             NodeType::FileContent => true,
-            NodeType::FileContentMetadata => true,
             NodeType::FileContentMetadataV2 => true,
             NodeType::AliasContentMapping => true,
             // Derived Data
@@ -867,7 +854,6 @@ pub enum NodeData {
     HgManifestFileNode(Option<FilenodeInfo>),
     // Content
     FileContent(FileContentData),
-    FileContentMetadata(Option<ContentMetadata>),
     FileContentMetadataV2(Option<ContentMetadataV2>),
     AliasContentMapping(ContentId),
     // Derived data
@@ -941,7 +927,6 @@ impl Node {
             }
             // Content
             Node::FileContent(_) => None,
-            Node::FileContentMetadata(_) => None,
             Node::FileContentMetadataV2(_) => None,
             Node::AliasContentMapping(_) => None,
             // Derived data
@@ -984,7 +969,6 @@ impl Node {
             Node::HgManifestFileNode(PathKey { id, path: _ }) => id.blobstore_key(),
             // Content
             Node::FileContent(k) => k.blobstore_key(),
-            Node::FileContentMetadata(k) => k.blobstore_key(),
             Node::FileContentMetadataV2(k) => k.blobstore_key(),
             Node::AliasContentMapping(k) => k.0.blobstore_key(),
             // Derived data
@@ -1027,7 +1011,6 @@ impl Node {
             Node::HgManifestFileNode(PathKey { id: _, path }) => Some(path),
             // Content
             Node::FileContent(_) => None,
-            Node::FileContentMetadata(_) => None,
             Node::FileContentMetadataV2(_) => None,
             Node::AliasContentMapping(_) => None,
             // Derived data
@@ -1071,7 +1054,6 @@ impl Node {
             Node::HgManifestFileNode(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
             // Content
             Node::FileContent(k) => Some(k.sampling_fingerprint()),
-            Node::FileContentMetadata(k) => Some(k.sampling_fingerprint()),
             Node::FileContentMetadataV2(k) => Some(k.sampling_fingerprint()),
             Node::AliasContentMapping(k) => Some(k.0.sampling_fingerprint()),
             // Derived data

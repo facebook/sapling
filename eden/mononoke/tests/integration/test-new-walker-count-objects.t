@@ -31,15 +31,15 @@ check blobstore numbers, walk will do some more steps for mappings
 
 count-objects, all types, shallow edges
   $ mononoke_walker -l loaded scrub -q -b master_bookmark -I shallow -i all 2>&1 | strip_glog
-  Seen,Loaded: 49,49, repo: repo
+  Seen,Loaded: 52,52, repo: repo
 
 count-objects, all types, deep edges
   $ mononoke_walker -l loaded scrub -q -b master_bookmark -I deep -i all 2>&1 | strip_glog
-  Seen,Loaded: 86,86, repo: repo
+  Seen,Loaded: 89,89, repo: repo
 
 count-objects, all types, all edges, difference in final count vs deep edges is PhaseMapping and one extra BonsaiHgMapping from the bookmark
   $ mononoke_walker -l loaded scrub -q -b master_bookmark -I all -i all 2>&1 | strip_glog
-  Seen,Loaded: 89,89, repo: repo
+  Seen,Loaded: 92,92, repo: repo
 
 count-objects, bonsai core data.  total nodes is BONSAICOUNT plus one for the root bookmark step.
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I bonsai 2>&1 | strip_glog
@@ -50,10 +50,10 @@ count-objects, bonsai core data.  total nodes is BONSAICOUNT plus one for the ro
 
 count-objects, shallow, bonsai only.  No parents, expect just one of each node type. Also exclude FsnodeToFileContent to keep the test intact
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I shallow -X hg -x BonsaiHgMapping -X FsnodeToFileContent -i default -i derived_fsnodes 2>&1 | strip_glog
-  Walking edge types [AliasContentMappingToFileContent, BookmarkToChangeset, ChangesetToFileContent, ChangesetToFsnodeMapping, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeMappingToRootFsnode, FsnodeToChildFsnode], repo: repo
-  Walking node types [AliasContentMapping, Bookmark, Changeset, FileContent, FileContentMetadata, Fsnode, FsnodeMapping], repo: repo
-  Seen,Loaded: 9,9, repo: repo
-  * Type:Walked,Checks,Children AliasContentMapping:3,* Bookmark:1,* Changeset:1,* FileContent:1,* FileContentMetadata:1,* Fsnode:1,* FsnodeMapping:1,* (glob)
+  Walking edge types [AliasContentMappingToFileContent, BookmarkToChangeset, ChangesetToFileContent, ChangesetToFsnodeMapping, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, FsnodeMappingToRootFsnode, FsnodeToChildFsnode], repo: repo
+  Walking node types [AliasContentMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, Fsnode, FsnodeMapping], repo: repo
+  Seen,Loaded: 10,10, repo: repo
+  * Type:Walked,Checks,Children AliasContentMapping:4,* Bookmark:1,* Changeset:1,* FileContent:1,* FileContentMetadataV2:1,* Fsnode:1,* FsnodeMapping:1,* (glob)
 
 count-objects, hg only. total nodes is HGCOUNT plus 1 for the root bookmark step, plus 1 for mapping from bookmark to hg. plus 3 for filenode (same blob as envelope)
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I hg 2>&1 | strip_glog
@@ -64,25 +64,25 @@ count-objects, hg only. total nodes is HGCOUNT plus 1 for the root bookmark step
 
 count-objects, default shallow walk across bonsai and hg data, but exclude HgFileEnvelope so that we can test that we visit FileContent from fsnodes
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I shallow -x HgFileEnvelope -i default -i derived_fsnodes 2>&1 | strip_glog
-  Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToFileContent, ChangesetToFsnodeMapping, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeMappingToRootFsnode, FsnodeToChildFsnode, FsnodeToFileContent, HgChangesetToHgManifest, HgChangesetViaBonsaiToHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileNode], repo: repo
-  Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadata, Fsnode, FsnodeMapping, HgChangeset, HgChangesetViaBonsai, HgFileNode, HgManifest], repo: repo
-  Seen,Loaded: 26,26, repo: repo
-  * Type:Walked,Checks,Children AliasContentMapping:9,* BonsaiHgMapping:1,* Bookmark:1,* Changeset:1,* FileContent:3,* FileContentMetadata:3,* Fsnode:1,* FsnodeMapping:1,* HgChangeset:1,* HgChangesetViaBonsai:1,* HgFileNode:3,* HgManifest:1,* (glob)
+  Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToFileContent, ChangesetToFsnodeMapping, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, FsnodeMappingToRootFsnode, FsnodeToChildFsnode, FsnodeToFileContent, HgChangesetToHgManifest, HgChangesetViaBonsaiToHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileNode], repo: repo
+  Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, Fsnode, FsnodeMapping, HgChangeset, HgChangesetViaBonsai, HgFileNode, HgManifest], repo: repo
+  Seen,Loaded: 29,29, repo: repo
+  * Type:Walked,Checks,Children AliasContentMapping:12,* BonsaiHgMapping:1,* Bookmark:1,* Changeset:1,* FileContent:3,* FileContentMetadataV2:3,* Fsnode:1,* FsnodeMapping:1,* HgChangeset:1,* HgChangesetViaBonsai:1,* HgFileNode:3,* HgManifest:1,* (glob)
 
 count-objects, default shallow walk across bonsai and hg data, including mutable
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I shallow -I marker 2>&1 | strip_glog
-  Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToFileContent, ChangesetToPhaseMapping, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, HgChangesetToHgManifest, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode], repo: repo
-  Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadata, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, PhaseMapping], repo: repo
-  Seen,Loaded: 28,28, repo: repo
-  * Type:Walked,Checks,Children AliasContentMapping:9,* BonsaiHgMapping:1,* Bookmark:1,* Changeset:1,* FileContent:3,* FileContentMetadata:3,* HgChangeset:1,* HgChangesetViaBonsai:1,* HgFileEnvelope:3,* HgFileNode:3,* HgManifest:1,* PhaseMapping:1,* (glob)
+  Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToFileContent, ChangesetToPhaseMapping, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgChangesetToHgManifest, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode], repo: repo
+  Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, PhaseMapping], repo: repo
+  Seen,Loaded: 31,31, repo: repo
+  * Type:Walked,Checks,Children AliasContentMapping:12,* BonsaiHgMapping:1,* Bookmark:1,* Changeset:1,* FileContent:3,* FileContentMetadataV2:3,* HgChangeset:1,* HgChangesetViaBonsai:1,* HgFileEnvelope:3,* HgFileNode:3,* HgManifest:1,* PhaseMapping:1,* (glob)
 
 count-objects, default shallow walk across bonsai and hg data, including mutable for all public heads
   $ mononoke_walker -L sizing scrub -q --walk-root PublishedBookmarks -I shallow -I marker 2>&1 | strip_glog
-  Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, ChangesetToBonsaiHgMapping, ChangesetToFileContent, ChangesetToPhaseMapping, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, HgChangesetToHgManifest, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode, PublishedBookmarksToBonsaiHgMapping, PublishedBookmarksToChangeset], repo: repo
-  Walking node types [AliasContentMapping, BonsaiHgMapping, Changeset, FileContent, FileContentMetadata, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, PhaseMapping, PublishedBookmarks], repo: repo
+  Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, ChangesetToBonsaiHgMapping, ChangesetToFileContent, ChangesetToPhaseMapping, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgChangesetToHgManifest, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode, PublishedBookmarksToBonsaiHgMapping, PublishedBookmarksToChangeset], repo: repo
+  Walking node types [AliasContentMapping, BonsaiHgMapping, Changeset, FileContent, FileContentMetadataV2, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, PhaseMapping, PublishedBookmarks], repo: repo
   Suppressing edge OutgoingEdge { label: ChangesetToBonsaiHgMapping, target: BonsaiHgMapping(ChangesetKey { inner: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)), filenode_known_derived: false }), path: None }, repo: repo
-  Seen,Loaded: 28,28, repo: repo
-  * Type:Walked,Checks,Children AliasContentMapping:9,* BonsaiHgMapping:1,* Changeset:1,* FileContent:3,* FileContentMetadata:3,* HgChangeset:1,* HgChangesetViaBonsai:1,* HgFileEnvelope:3,* HgFileNode:3,* HgManifest:1,* PhaseMapping:1,* PublishedBookmarks:1,* (glob)
+  Seen,Loaded: 31,31, repo: repo
+  * Type:Walked,Checks,Children AliasContentMapping:12,* BonsaiHgMapping:1,* Changeset:1,* FileContent:3,* FileContentMetadataV2:3,* HgChangeset:1,* HgChangesetViaBonsai:1,* HgFileEnvelope:3,* HgFileNode:3,* HgManifest:1,* PhaseMapping:1,* PublishedBookmarks:1,* (glob)
 
 count-objects, shallow walk across bonsai and changeset_info
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I shallow -i bonsai -i derived_changeset_info 2>&1 | strip_glog

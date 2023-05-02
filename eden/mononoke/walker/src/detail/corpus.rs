@@ -196,7 +196,6 @@ fn dump_with_extension(node_type: NodeType) -> bool {
         NodeType::HgManifestFileNode => false,
         // Content
         NodeType::FileContent => true,
-        NodeType::FileContentMetadata => true,
         NodeType::FileContentMetadataV2 => true,
         NodeType::AliasContentMapping => true,
         // Derived Data

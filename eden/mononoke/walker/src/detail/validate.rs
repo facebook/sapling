@@ -164,7 +164,7 @@ impl CheckType {
         match self {
             CheckType::ChangesetPhaseIsPublic => NodeType::PhaseMapping,
             CheckType::HgLinkNodePopulated => NodeType::HgFileNode,
-            CheckType::FileContentIsLfs => NodeType::FileContentMetadata,
+            CheckType::FileContentIsLfs => NodeType::FileContentMetadataV2,
         }
     }
 }
@@ -353,8 +353,8 @@ fn check_file_content_is_lfs(
 ) -> CheckStatus {
     match (&resolved.target, &node_data) {
         (
-            Node::FileContentMetadata(_content_id),
-            Some(NodeData::FileContentMetadata(Some(content_meta))),
+            Node::FileContentMetadataV2(_content_id),
+            Some(NodeData::FileContentMetadataV2(Some(content_meta))),
         ) => {
             if content_meta.total_size < lfs_threshold {
                 // not interesting to log
@@ -936,7 +936,7 @@ async fn run_one(
         .include_check_types
         .contains(&CheckType::FileContentIsLfs)
     {
-        required_node_data_types.insert(NodeType::FileContentMetadata);
+        required_node_data_types.insert(NodeType::FileContentMetadataV2);
         keep_edge_paths = true;
     }
 

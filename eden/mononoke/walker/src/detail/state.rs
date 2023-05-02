@@ -486,9 +486,8 @@ impl WalkState {
             NodeType::HgFileEnvelope => self.visited_hg_file_envelope.clear(),
             // Content
             NodeType::FileContent => self.visited_file.clear(),
-            NodeType::FileContentMetadata => {} // reached via expand_checked_nodes
             NodeType::FileContentMetadataV2 => {} // reached via expand_checked_nodes
-            NodeType::AliasContentMapping => {} // reached via expand_checked_nodes
+            NodeType::AliasContentMapping => {}   // reached via expand_checked_nodes
             // Derived
             NodeType::Blame => self.visited_blame.clear(),
             NodeType::ChangesetInfo => self.visited_changeset_info.clear(),
@@ -597,9 +596,8 @@ impl WalkState {
             // Content
             (Node::FileContent(_), true) => true,
             (Node::FileContent(content_id), false) => self.record(&self.visited_file, content_id),
-            (Node::FileContentMetadata(_), _) => true, // reached via expand_checked_nodes
             (Node::FileContentMetadataV2(_), _) => true, // reached via expand_checked_nodes
-            (Node::AliasContentMapping(_), _) => true, // reached via expand_checked_nodes
+            (Node::AliasContentMapping(_), _) => true,   // reached via expand_checked_nodes
             // Derived
             (Node::Blame(_), true) => true,
             (Node::Blame(k), false) => self.record(

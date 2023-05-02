@@ -31,7 +31,7 @@ Base case, check can walk fine, one repo
   $ mononoke_walker scrub -I deep -q -b master_bookmark 2>&1 | strip_glog
   Walking edge types *, repo: repo0 (glob)
   Walking node types *, repo: repo0 (glob)
-  Seen,Loaded: 40,40, repo: repo0 (glob)
+  Seen,Loaded: 43,43, repo: repo0
   Bytes/s,*, repo: repo0 (glob)
   Walked*, repo: repo0 (glob)
 
@@ -41,14 +41,14 @@ Check that multi repo runs for all repos specified
   Walking repos ["repo0", "repo2"]* (glob)
   Walking edge types *, repo: repo0* (glob)
   Walking node types *, repo: repo0* (glob)
-  Seen,Loaded: 40,40, repo: repo0* (glob)
-  Bytes/s,*, repo: repo0* (glob)
-  Walked*, repo: repo0* (glob)
+  Seen,Loaded: 43,43, repo: repo* (glob)
+  Bytes/s,*, repo: repo* (glob)
+  Walked*, repo: repo* (glob)
   $ grep 'repo2' multi_repo.log
   Walking repos ["repo0", "repo2"]* (glob)
   Walking edge types *, repo: repo2* (glob)
   Walking node types *, repo: repo2* (glob)
-  Seen,Loaded: 8,8, repo: repo2* (glob)
+  Seen,Loaded: 9,9, repo: repo2* (glob)
   Bytes/s,*, repo: repo2* (glob)
   Walked*, repo: repo2* (glob)
 
@@ -67,17 +67,17 @@ Check fails on only the deleted side
 
 Check can walk fine on the only remaining side
   $ mononoke_walker -L graph scrub -q --inner-blobstore-id=1 -I deep -b master_bookmark 2>&1 | strip_glog
-  Seen,Loaded: 40,40, repo: repo0
-  Bytes/s,Keys/s,Bytes,Keys; Delta */s,*/s,2*,*,0s; Run */s,*/s,2*,*,*s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiHgMapping:* Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadata:4*,3 HgBonsaiMapping:0,0 HgChangeset:* HgChangesetViaBonsai:0,0 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3*, repo: repo0 (glob)
+  Seen,Loaded: 43,43, repo: repo0
+  Bytes/s,Keys/s,Bytes,Keys; Delta */s,*/s,*,*,0s; Run */s,*/s,*,*,*s; Type:Raw,Compressed AliasContentMapping:444,12 BonsaiHgMapping:281,3 Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadataV2:4*,3 HgBonsaiMapping:0,0 HgChangeset:* HgChangesetViaBonsai:0,0 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3*, repo: repo0 (glob)
 
 Check can walk fine on the multiplex remaining side
   $ mononoke_walker -l loaded scrub -q -I deep -b master_bookmark 2>&1 | strip_glog
-  Seen,Loaded: 40,40, repo: repo0
+  Seen,Loaded: 43,43, repo: repo0
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in ReportOnly mode, should log the scrub repairs needed
   $ mononoke_walker -l loaded --blobstore-scrub-action=ReportOnly --scuba-dataset file://scuba-reportonly.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   * scrub: blobstore_id BlobstoreId(0) not repaired for repo0000. (glob)
-  1 Seen,Loaded: 40,40, repo: repo0
+  1 Seen,Loaded: 43,43, repo: repo0
 
 Check scuba data
 Note - we might get duplicate reports, we just expect that there should not be a lot of them
@@ -87,6 +87,9 @@ Note - we might get duplicate reports, we just expect that there should not be a
   1,"scrub_repair","repo0000.alias.gitsha1.7371f47a6f8bd23a8fa1a8b2a9479cdd76380e54","repo0","scrub",1* (glob)
   1,"scrub_repair","repo0000.alias.gitsha1.8c7e5a667f1b771847fe88c01c3de34413a1b220","repo0","scrub",1* (glob)
   1,"scrub_repair","repo0000.alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c","repo0","scrub",1* (glob)
+  1,"scrub_repair","repo0000.alias.seeded_blake3.5667f2421ac250c4bb9af657b5ead3cdbd940bfbc350b2bfee47454643832b48","repo0","scrub",1* (glob)
+  1,"scrub_repair","repo0000.alias.seeded_blake3.5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda","repo0","scrub",1* (glob)
+  1,"scrub_repair","repo0000.alias.seeded_blake3.6fb4c384e79ac0771a483fcf3c46fb4ea8609f79608e8bcbf710f9887a3b9cf6","repo0","scrub",1* (glob)
   1,"scrub_repair","repo0000.alias.sha1.32096c2e0eff33d844ee6d675407ace18289357d","repo0","scrub",1* (glob)
   1,"scrub_repair","repo0000.alias.sha1.6dcd4ce23d88e2ee9568ba546c007c63d9131c1b","repo0","scrub",1* (glob)
   1,"scrub_repair","repo0000.alias.sha1.ae4f281df5a5d0ff3cad6371f76d5c29b6d953ec","repo0","scrub",1* (glob)
@@ -114,14 +117,14 @@ Note - we might get duplicate reports, we just expect that there should not be a
 
 Check that walking with a grace period does not report the errors as the keys are too new
   $ mononoke_walker -l loaded --blobstore-scrub-grace=3600 --blobstore-scrub-action=ReportOnly --scuba-dataset file://scuba-reportonly-grace.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
-  1 Seen,Loaded: 40,40, repo: repo0
+  1 Seen,Loaded: 43,43, repo: repo0
   $ LINES="$(wc -l < scuba-reportonly-grace.json)"
   $ [[ $LINES -lt 1 ]]
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in Repair mode, should also log the scrub repairs done
   $ mononoke_walker -l loaded --blobstore-scrub-action=Repair --scuba-dataset file://scuba-repair.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   * scrub: blobstore_id BlobstoreId(0) repaired for repo0000. (glob)
-  1 Seen,Loaded: 40,40, repo: repo0
+  1 Seen,Loaded: 43,43, repo: repo0
 
 Check scuba data
 Note - we might get duplicate repairs, we just expect that there should not be a lot of them
@@ -131,6 +134,9 @@ Note - we might get duplicate repairs, we just expect that there should not be a
   0,"scrub_repair","repo0000.alias.gitsha1.7371f47a6f8bd23a8fa1a8b2a9479cdd76380e54","repo0","scrub",1* (glob)
   0,"scrub_repair","repo0000.alias.gitsha1.8c7e5a667f1b771847fe88c01c3de34413a1b220","repo0","scrub",1* (glob)
   0,"scrub_repair","repo0000.alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c","repo0","scrub",1* (glob)
+  0,"scrub_repair","repo0000.alias.seeded_blake3.5667f2421ac250c4bb9af657b5ead3cdbd940bfbc350b2bfee47454643832b48","repo0","scrub",1* (glob)
+  0,"scrub_repair","repo0000.alias.seeded_blake3.5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda","repo0","scrub",1* (glob)
+  0,"scrub_repair","repo0000.alias.seeded_blake3.6fb4c384e79ac0771a483fcf3c46fb4ea8609f79608e8bcbf710f9887a3b9cf6","repo0","scrub",1* (glob)
   0,"scrub_repair","repo0000.alias.sha1.32096c2e0eff33d844ee6d675407ace18289357d","repo0","scrub",1* (glob)
   0,"scrub_repair","repo0000.alias.sha1.6dcd4ce23d88e2ee9568ba546c007c63d9131c1b","repo0","scrub",1* (glob)
   0,"scrub_repair","repo0000.alias.sha1.ae4f281df5a5d0ff3cad6371f76d5c29b6d953ec","repo0","scrub",1* (glob)
@@ -158,16 +164,13 @@ Note - we might get duplicate repairs, we just expect that there should not be a
 
 Check that all is repaired by running on only the deleted side
   $ mononoke_walker -l loaded scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | strip_glog
-  Seen,Loaded: 40,40, repo: repo0
+  Seen,Loaded: 43,43, repo: repo0
 
 Check the files after restore.  The blobstore filenode_lookup representation is currently not traversed, so remains as a difference
   $ ls blobstore/0/blobs/* | wc -l
-  27
-The output contains seeded_blake3 alias cause walker has not yet been taught to handle it.
+  30
+
   $ diff -ur blobstore/0/blobs/ blobstore/1/blobs/ | grep -E -v blob-repo0002
-  Only in blobstore/1/blobs/: blob-repo0000.alias.seeded_blake3.5667f2421ac250c4bb9af657b5ead3cdbd940bfbc350b2bfee47454643832b48
-  Only in blobstore/1/blobs/: blob-repo0000.alias.seeded_blake3.5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda
-  Only in blobstore/1/blobs/: blob-repo0000.alias.seeded_blake3.6fb4c384e79ac0771a483fcf3c46fb4ea8609f79608e8bcbf710f9887a3b9cf6
   Only in blobstore/1/blobs/: blob-repo0000.filenode_lookup.61585a6b75335f6ec9540101b7147908564f2699dcad59134fdf23cb086787ad
   Only in blobstore/1/blobs/: blob-repo0000.filenode_lookup.9915e555ad3fed014aa36a4e48549c1130fddffc7660589f42af5f0520f1118e
   Only in blobstore/1/blobs/: blob-repo0000.filenode_lookup.a0377040953a1a3762b7c59cb526797c1afd7ae6fcebb4d11e3c9186a56edb4e

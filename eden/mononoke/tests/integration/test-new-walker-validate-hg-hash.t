@@ -24,7 +24,7 @@ validate, expecting all valid
   Performing check types [HgLinkNodePopulated], repo: repo
   Seen,Loaded: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:40,3,0; EdgesChecked:9; CheckType:Pass,Fail Total:3,0 HgLinkNodePopulated:3,0, repo: repo
+  Nodes,Pass,Fail:43,3,0; EdgesChecked:9; CheckType:Pass,Fail Total:3,0 HgLinkNodePopulated:3,0, repo: repo
 
 Check that hash validation does not fail when blob is not corrupt
   $ mononoke_walker scrub -I deep -q -b master_bookmark --include-hash-validation-node-type HgFileEnvelope 2>&1 | strip_glog | grep 'failed to validate'
