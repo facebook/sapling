@@ -129,7 +129,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_basic_context();
 
     let repo: Repo = app
-        .open_repo(&args.repo)
+        .open_repo_unredacted(&args.repo)
         .await
         .context("Failed to open repo")?;
 

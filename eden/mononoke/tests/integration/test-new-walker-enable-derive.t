@@ -103,16 +103,3 @@ check the base case with all the alias types present in blobstore
   Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, Fsnode, FsnodeMapping, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, PhaseMapping], repo: repo
   Seen,Loaded: 52,52, repo: repo
   * AliasContentMapping:12,12,0 * FileContent:3,*,0 FileContentMetadataV2:3,0,12 * (glob)
-
-delete the derived file metadata
-  $ ls $BLOBPREFIX.* | grep -E '.(alias|content_metadata).' | xargs rm
-  $ BLOBCOUNT=$(ls $BLOBPREFIX.* | wc -l)
-  $ echo "$BLOBCOUNT"
-  24
-
-do a walk again, should succeed but not find the alias or other data derived from file content metadata
-  $ mononoke_walker -L sizing scrub -q -b master_bookmark -I deep -I marker -i default -i derived_fsnodes 2>&1 | strip_glog
-  Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, ChangesetToFsnodeMapping, ChangesetToPhaseMapping, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, FsnodeMappingToRootFsnode, FsnodeToChildFsnode, FsnodeToFileContent, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode], repo: repo
-  Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadataV2, Fsnode, FsnodeMapping, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, PhaseMapping], repo: repo
-  Seen,Loaded: 40,40, repo: repo
-  * AliasContentMapping:0,0,0 * FileContent:3,*,0 FileContentMetadataV2:3,0,0 * (glob)

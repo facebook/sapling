@@ -18,9 +18,12 @@ use futures::TryFutureExt;
 use mononoke_types::private::ErrorKind;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
+use mononoke_types::ContentAlias;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::ContentMetadataV2Id;
+use slog::warn;
+use strum::IntoEnumIterator;
 use thiserror::Error;
 
 use crate::alias::add_aliases_to_multiplexer;
@@ -29,6 +32,8 @@ use crate::fetch;
 use crate::multiplexer::Multiplexer;
 use crate::multiplexer::MultiplexerError;
 use crate::prepare::add_partial_metadata_to_multiplexer;
+use crate::Alias;
+use crate::AliasBlob;
 
 #[derive(Debug, Error)]
 pub enum RebuildBackmappingError {
@@ -62,6 +67,7 @@ pub async fn get_metadata<B: Blobstore>(
                     "Invalid ContentMetadataV2 format exists in blobstore for key {}. Error: {}",
                     key, e
                 );
+                warn!(ctx.logger(), "{}", &msg);
                 let mut scuba = ctx.scuba().clone();
                 scuba.add("blobstore_key", key);
                 scuba.log_with_msg("ContentMetadataV2 backfill repair", msg);
@@ -148,6 +154,28 @@ async fn rebuild_metadata<B: Blobstore>(
             let (sha1, sha256, git_sha1, seeded_blake3) = redeemable
                 .redeem(total_size)
                 .map_err(|e| InternalError(content_id, e))?;
+            // To maintain consistency, rebuild the aliases to the content along with rebuilding
+            // content metadata.
+            let alias = ContentAlias::from_content_id(content_id);
+            // Ensure that all aliases are covered, and missing out an alias gives a compile time error.
+            future::try_join_all(
+                Alias::iter()
+                    .map(|alias_type| match alias_type {
+                        Alias::Sha1(_) => AliasBlob(Alias::Sha1(sha1), alias.clone()),
+                        Alias::GitSha1(_) => {
+                            AliasBlob(Alias::GitSha1(git_sha1.sha1()), alias.clone())
+                        }
+
+                        Alias::Sha256(_) => AliasBlob(Alias::Sha256(sha256), alias.clone()),
+                        Alias::SeededBlake3(_) => {
+                            AliasBlob(Alias::SeededBlake3(seeded_blake3), alias.clone())
+                        }
+                    })
+                    .map(|alias_blob| alias_blob.store(ctx, blobstore)),
+            )
+            .await
+            .map_err(|e| InternalError(content_id, e))?;
+
             let metadata = ContentMetadataV2 {
                 total_size,
                 content_id,
