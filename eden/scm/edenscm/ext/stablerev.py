@@ -202,7 +202,6 @@ def _executescript(script, repo, extraenv=None):
     ui = repo.ui
 
     reporoot = repo.wvfs.join("")
-    script = repo.wvfs.join(script)
 
     ui.debug("Executing script: %s\n" % script)
 

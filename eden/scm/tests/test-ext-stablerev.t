@@ -19,13 +19,13 @@ If the script doesn't return anything, an abort is raised:
   > #!/usr/bin/env fbpython
   > EOF
   $ chmod +x stable.py
-  $ setconfig stablerev.script=stable.py
+  $ setconfig stablerev.script="fbpython stable.py"
   $ hg log -r "getstablerev()" --debug
-  Executing script: $TESTTMP/repo1/stable.py
+  Executing script: fbpython stable.py
   setting current working directory to: $TESTTMP/repo1
   script stdout:
   
-  abort: stable rev returned by script (stable.py) was empty
+  abort: stable rev returned by script (fbpython stable.py) was empty
   [255]
 
 Make the script return something:
@@ -65,7 +65,7 @@ Invalid JSON aborts:
   > print('{node\": \"D\"}')
   > EOF
   $ hg log -r "getstablerev()"
-  abort: stable rev returned by script (stable.py) was invalid
+  abort: stable rev returned by script (fbpython stable.py) was invalid
   [255]
 
 An alias can be used for simplicity:
@@ -84,7 +84,7 @@ Check that stables template keyword works:
   > print('{{\"{nodeid}\": [\"stable1\",\"stable2\"]}}'.format(nodeid=sys.argv[1]))
   > EOF
   $ chmod +x stables.py
-  $ setconfig "stablerev.stablesscript=./stables.py {nodeid}"
+  $ setconfig "stablerev.stablesscript=fbpython stables.py {nodeid}"
   $ hg log -r "D" --template "{stables}"
   stable1 stable2 (no-eol)
 
