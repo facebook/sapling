@@ -103,21 +103,26 @@ impl RepoContext {
             redirector.convert_pushrebased_changesets(ctx, rebased_changesets)
         )?;
 
-        for pair in rebased_changesets.iter() {
-            let info = changesets_to_log
-                .get_mut(&pair.id_old)
-                .with_context(|| format!("Missing commit info for {}", pair.id_old))?;
-            info.update_changeset_id(pair.id_old, pair.id_new)?;
-        }
+        if !tunables::tunables()
+            .log_backsynced_commits_from_backsyncer()
+            .unwrap_or(false)
+        {
+            for pair in rebased_changesets.iter() {
+                let info = changesets_to_log
+                    .get_mut(&pair.id_old)
+                    .with_context(|| format!("Missing commit info for {}", pair.id_old))?;
+                info.update_changeset_id(pair.id_old, pair.id_new)?;
+            }
 
-        // Also log commits on small repo
-        log_new_commits(
-            ctx,
-            redirector.small_repo.as_ref(),
-            Some((&bookmark, BookmarkKind::Publishing)),
-            changesets_to_log.0.into_values().collect(),
-        )
-        .await;
+            // Also log commits on small repo
+            log_new_commits(
+                ctx,
+                redirector.small_repo.as_ref(),
+                Some((&bookmark, BookmarkKind::Publishing)),
+                changesets_to_log.0.into_values().collect(),
+            )
+            .await;
+        }
 
         Ok(Small(PushrebaseOutcome {
             old_bookmark_value,

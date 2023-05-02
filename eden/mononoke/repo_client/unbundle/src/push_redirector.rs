@@ -584,14 +584,19 @@ impl<R: Repo> PushRedirector<R> {
                 )
             })?;
 
-        // Also log commits on small repo
-        log_new_commits(
-            ctx,
-            self.small_repo.as_ref(),
-            Some((&onto, BookmarkKind::Publishing)),
-            changesets_to_log.into_values().collect(),
-        )
-        .await;
+        if !tunables::tunables()
+            .log_backsynced_commits_from_backsyncer()
+            .unwrap_or(false)
+        {
+            // Also log commits on small repo
+            log_new_commits(
+                ctx,
+                self.small_repo.as_ref(),
+                Some((&onto, BookmarkKind::Publishing)),
+                changesets_to_log.into_values().collect(),
+            )
+            .await;
+        }
 
         Ok(UnbundlePushRebaseResponse {
             commonheads,

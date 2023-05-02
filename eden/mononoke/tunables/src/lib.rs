@@ -391,6 +391,9 @@ pub struct MononokeTunables {
     // Disable write restrictions for untrusted clients (e.g. off VPN). Intended
     // to be used in case of emergency.
     disable_client_security_check: TunableBool,
+
+    // Temporary for rollout of logging change
+    log_backsynced_commits_from_backsyncer: TunableBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

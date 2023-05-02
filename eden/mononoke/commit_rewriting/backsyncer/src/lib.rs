@@ -35,6 +35,7 @@ use anyhow::Error;
 use blobstore::Loadable;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::BookmarkKind;
 use bookmarks::BookmarkTransactionError;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogArc;
@@ -76,6 +77,8 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
+use repo_update_logger::find_draft_ancestors;
+use repo_update_logger::log_new_bonsai_changesets;
 use revset::AncestorsNodeStream;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use skiplist::SkiplistIndex;
@@ -467,6 +470,25 @@ where
             } else {
                 vec![]
             };
+            let commits_to_log = async {
+                match to_cs_id {
+                    Some(to_cs_id) => {
+                        let res = find_draft_ancestors(&ctx, target_repo, to_cs_id).await;
+                        match res {
+                            Ok(bcss) => bcss,
+                            Err(err) => {
+                                ctx.scuba().clone().log_with_msg(
+                                    "Failed to find draft ancestors for logging",
+                                    Some(format!("{}", err)),
+                                );
+                                vec![]
+                            }
+                        }
+                    }
+                    None => vec![],
+                }
+            }
+            .await;
 
             let mut bookmark_txn = target_repo_dbs.bookmarks.create_transaction(ctx.clone());
             debug!(
@@ -539,7 +561,22 @@ where
                 }
             });
 
-            return bookmark_txn.commit_with_hook(txn_hook).await;
+            let res = bookmark_txn.commit_with_hook(txn_hook).await?;
+            if tunables::tunables()
+                .log_backsynced_commits_from_backsyncer()
+                .unwrap_or(false)
+            {
+                log_new_bonsai_changesets(
+                    &ctx,
+                    target_repo,
+                    &bookmark,
+                    BookmarkKind::Publishing,
+                    commits_to_log,
+                )
+                .await;
+            }
+
+            return Ok(res);
         } else {
             debug!(
                 ctx.logger(),
