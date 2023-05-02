@@ -100,7 +100,7 @@ class PrjFSStressBase(testcase.EdenRepoTest):
         self.assertSetEqual(materialized, {(Path(path), mode) for path, mode in paths})
 
     @contextmanager
-    def run_with_fault(
+    def run_with_blocking_fault(
         self, keyClass="PrjfsDispatcherImpl::fileNotification", keyValueRegex=".*"
     ) -> Generator[None, None, None]:
         with self.eden.get_thrift_client_legacy() as client:
@@ -137,7 +137,7 @@ class PrjFSStress(PrjFSStressBase):
         return result
 
     def test_create_and_remove_file(self) -> None:
-        with self.run_with_fault():
+        with self.run_with_blocking_fault():
             self.touch("foo")
             # EdenFS will now block due to the fault above
             self.wait_on_fault_unblock()
@@ -147,7 +147,7 @@ class PrjFSStress(PrjFSStressBase):
             self.assertNotMaterialized("foo")
 
     def test_create_already_removed(self) -> None:
-        with self.run_with_fault():
+        with self.run_with_blocking_fault():
             self.touch("foo")
             # EdenFS will now block due to the fault above, remove the file to
             # force it down the removal path.
@@ -157,7 +157,7 @@ class PrjFSStress(PrjFSStressBase):
             self.assertNotMaterialized("foo")
 
     def test_create_file_to_directory(self) -> None:
-        with self.run_with_fault():
+        with self.run_with_blocking_fault():
             self.touch("foo")
             # EdenFS will now block due to the fault above, remove the file to
             # force it down the removal path.
@@ -169,7 +169,7 @@ class PrjFSStress(PrjFSStressBase):
             self.assertMaterialized("foo", stat.S_IFDIR)
 
     def test_create_directory_to_file(self) -> None:
-        with self.run_with_fault():
+        with self.run_with_blocking_fault():
             self.mkdir("foo")
             self.rmdir("foo")
             self.touch("foo")
@@ -178,7 +178,7 @@ class PrjFSStress(PrjFSStressBase):
             self.assertMaterialized("foo", stat.S_IFREG)
 
     def test_rename_hierarchy(self) -> None:
-        with self.run_with_fault():
+        with self.run_with_blocking_fault():
             self.mkdir("foo")
             self.touch("foo/bar")
             self.touch("foo/baz")
@@ -193,7 +193,7 @@ class PrjFSStress(PrjFSStressBase):
             self.assertNotMaterialized("foo")
 
     def test_rename_to_file(self) -> None:
-        with self.run_with_fault():
+        with self.run_with_blocking_fault():
             self.mkdir("foo")
             self.touch("foo/bar")
             self.touch("foo/baz")
@@ -211,7 +211,7 @@ class PrjFSStress(PrjFSStressBase):
             self.assertNotMaterialized("foo")
 
     def test_rename_and_replace(self) -> None:
-        with self.run_with_fault():
+        with self.run_with_blocking_fault():
             self.mkdir("foo")
             self.touch("foo/bar")
             self.touch("foo/baz")
@@ -236,7 +236,7 @@ class PrjFSStress(PrjFSStressBase):
             )
 
     def test_out_of_order_file_removal(self) -> None:
-        with self.run_with_fault():
+        with self.run_with_blocking_fault():
             self.mkdir("a/b")
             self.touch("a/b/c")
             self.wait_on_fault_unblock(3)
@@ -278,7 +278,7 @@ class PrjFSStress(PrjFSStressBase):
             )
 
     def test_out_of_order_file_removal_to_renamed(self) -> None:
-        with self.run_with_fault():
+        with self.run_with_blocking_fault():
             self.mkdir("a/b")
             self.touch("a/b/c")
             self.mkdir("z")
@@ -328,7 +328,7 @@ class PrjFSStress(PrjFSStressBase):
             )
 
     def test_rename_twice(self) -> None:
-        with self.run_with_fault():
+        with self.run_with_blocking_fault():
             self.mkdir("first")
             self.touch("first/a")
             self.mkdir("first/b")
@@ -373,7 +373,7 @@ class PrjFSStress(PrjFSStressBase):
                 break
 
     def test_unmount_with_ongoing_notification(self) -> None:
-        with self.run_with_fault():
+        with self.run_with_blocking_fault():
             self.touch("adir/a")
 
             unmount_thread = Thread(target=self.unmount)
@@ -411,7 +411,7 @@ class PrjFSStress(PrjFSStressBase):
         os.lstat(path)
 
         def read_file() -> None:
-            with self.run_with_fault("PrjfsDispatcherImpl::read"):
+            with self.run_with_blocking_fault("PrjfsDispatcherImpl::read"):
                 with path.open("rb") as f:
                     f.read()
 
