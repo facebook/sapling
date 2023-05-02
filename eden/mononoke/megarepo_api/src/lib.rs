@@ -6,6 +6,7 @@
  */
 
 #![feature(async_closure)]
+#![feature(trait_alias)]
 
 use std::collections::HashMap;
 use std::future::Future;
@@ -20,8 +21,14 @@ use anyhow::Error;
 use async_once_cell::AsyncOnceCell;
 use async_requests::AsyncMethodRequestQueue;
 use blobstore::Blobstore;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bookmarks::BookmarksRef;
 use change_target_config::ChangeTargetConfig;
+use changeset_fetcher::ChangesetFetcherArc;
+use changesets::ChangesetsRef;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use filestore::FilestoreConfigRef;
 use futures::future::try_join_all;
 use megarepo_config::CfgrMononokeMegarepoConfigs;
 use megarepo_config::MononokeMegarepoConfigs;
@@ -36,20 +43,25 @@ use megarepo_mapping::MegarepoMapping;
 use megarepo_mapping::SourceName;
 use metaconfig_types::ArcRepoConfig;
 use metaconfig_types::RepoConfigArc;
+use metaconfig_types::RepoConfigRef;
 use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mutable_renames::MutableRenames;
+use mutable_renames::MutableRenamesRef;
 use parking_lot::Mutex;
 use remerge_source::RemergeSource;
 use repo_authorization::AuthorizationContext;
 use repo_blobstore::RepoBlobstoreArc;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_factory::RepoFactory;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityArc;
+use repo_identity::RepoIdentityRef;
 use requests_table::LongRunningRequestsQueue;
 use slog::info;
 use slog::o;
@@ -71,6 +83,21 @@ mod remerge_source;
 #[cfg(test)]
 mod remerge_source_test;
 mod sync_changeset;
+
+pub trait Repo = BonsaiHgMappingRef
+    + BookmarksRef
+    + ChangesetFetcherArc
+    + ChangesetsRef
+    + CommitGraphRef
+    + FilestoreConfigRef
+    + MutableRenamesRef
+    + RepoBlobstoreArc
+    + RepoBlobstoreRef
+    + RepoConfigRef
+    + RepoDerivedDataRef
+    + RepoIdentityRef
+    + Send
+    + Sync;
 
 /// A cache for AsyncMethodRequestQueue instances
 #[derive(Clone)]
@@ -172,7 +199,7 @@ impl MegarepoApi {
         let target_repo = self.target_repo(ctx, target).await?;
         common::find_target_sync_config(
             ctx,
-            target_repo.blob_repo(),
+            target_repo.inner_repo(),
             *cs_id,
             target,
             &self.megarepo_configs,

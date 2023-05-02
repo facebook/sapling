@@ -106,7 +106,7 @@ impl<'a> AddSyncTarget<'a> {
         let moved_commits = self
             .create_move_commits(
                 ctx,
-                repo.blob_repo(),
+                repo.inner_repo(),
                 &sync_target_config.sources,
                 &changesets_to_merge,
                 self.mutable_renames,
@@ -118,7 +118,7 @@ impl<'a> AddSyncTarget<'a> {
         let top_merge_cs_id = self
             .create_merge_commits(
                 ctx,
-                repo.blob_repo(),
+                repo.inner_repo(),
                 moved_commits,
                 true, /* write_commit_remapping_state */
                 sync_target_config.version.clone(),
@@ -178,7 +178,7 @@ impl<'a> AddSyncTarget<'a> {
 
         self.create_bookmark(
             ctx,
-            repo.blob_repo(),
+            repo.inner_repo(),
             sync_target_config.target.bookmark,
             top_merge_cs_id,
         )

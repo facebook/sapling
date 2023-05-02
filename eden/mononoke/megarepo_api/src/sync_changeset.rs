@@ -13,7 +13,6 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use blobrepo::save_bonsai_changesets;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetsRef;
@@ -49,6 +48,7 @@ use crate::common::find_target_bookmark_and_value;
 use crate::common::find_target_sync_config;
 use crate::common::MegarepoOp;
 use crate::common::SourceAndMovedChangesets;
+use crate::Repo;
 
 pub(crate) struct SyncChangeset<'a> {
     megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
@@ -142,7 +142,7 @@ impl<'a> SyncChangeset<'a> {
 
         let (commit_remapping_state, target_config) = find_target_sync_config(
             ctx,
-            target_repo.blob_repo(),
+            target_repo.inner_repo(),
             target_location,
             target,
             self.megarepo_configs,
@@ -156,7 +156,7 @@ impl<'a> SyncChangeset<'a> {
         // Find source repo and changeset that we need to sync
         let source_repo = self.find_repo_by_id(ctx, source_config.repo_id).await?;
         let source_cs = source_cs_id
-            .load(ctx, source_repo.blob_repo().repo_blobstore())
+            .load(ctx, source_repo.inner_repo().repo_blobstore())
             .await?;
 
         validate_can_sync_changeset(
@@ -227,9 +227,9 @@ impl<'a> SyncChangeset<'a> {
             ctx,
             &source_config.mapping,
             source_name,
-            source_repo.blob_repo(),
+            source_repo.inner_repo(),
             source_cs,
-            target_repo.blob_repo(),
+            target_repo.inner_repo(),
             target_location,
             target,
             commit_remapping_state,
@@ -251,7 +251,7 @@ impl<'a> SyncChangeset<'a> {
         // Move the bookmark and record latest synced source changeset
         self.move_bookmark_conditionally(
             ctx,
-            target_repo.blob_repo(),
+            target_repo.inner_repo(),
             target.bookmark.clone(),
             (target_location, new_target_cs_id),
         )
@@ -344,7 +344,7 @@ impl<'a> SyncChangeset<'a> {
             .map(|parent| {
                 self.create_single_move_commit(
                     ctx,
-                    target_repo.blob_repo(),
+                    target_repo.inner_repo(),
                     parent.clone(),
                     &mover,
                     &directory_mover,
@@ -359,7 +359,7 @@ impl<'a> SyncChangeset<'a> {
         save_bonsai_changesets(
             moved_commits.iter().map(|css| css.moved.clone()).collect(),
             ctx.clone(),
-            target_repo.blob_repo(),
+            target_repo.inner_repo(),
         )
         .await?;
 
@@ -399,7 +399,7 @@ impl<'a> SyncChangeset<'a> {
 
         // Check that first parent is a target location
         let parents = repo
-            .blob_repo()
+            .inner_repo()
             .changeset_fetcher()
             .get_parents(ctx, actual_target_location)
             .await?;
@@ -481,9 +481,9 @@ async fn sync_changeset_to_target(
     ctx: &CoreContext,
     mapping: &SourceMappingRules,
     source: &SourceName,
-    source_repo: &BlobRepo,
+    source_repo: &impl Repo,
     source_cs: BonsaiChangeset,
-    target_repo: &BlobRepo,
+    target_repo: &impl Repo,
     target_cs_id: ChangesetId,
     target: &Target,
     mut state: CommitRemappingState,
@@ -1149,7 +1149,7 @@ mod test {
         // Find source repo and changeset that we need to sync
         let target_repo = sync_changeset.find_repo_by_id(&ctx, target.repo_id).await?;
         let merge_cs = merge_target
-            .load(&ctx, target_repo.blob_repo().repo_blobstore())
+            .load(&ctx, target_repo.inner_repo().repo_blobstore())
             .await?;
 
         let parents: Vec<_> = merge_cs.parents().collect();

@@ -15,21 +15,18 @@ use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::save_bonsai_changesets;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use bytes::Bytes;
 use changesets::Changesets;
-use changesets::ChangesetsRef;
 use commit_transformation::create_directory_source_to_target_multi_mover;
 use commit_transformation::create_source_to_target_multi_mover;
 use commit_transformation::DirectoryMultiMover;
 use commit_transformation::MultiMover;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use filestore::FilestoreConfigRef;
 use fsnodes::RootFsnodeId;
 use futures::future::try_join;
 use futures::future::try_join_all;
@@ -69,10 +66,11 @@ use mononoke_types::RepositoryId;
 use mutable_renames::MutableRenameEntry;
 use mutable_renames::MutableRenames;
 use repo_authorization::AuthorizationContext;
-use repo_blobstore::RepoBlobstoreRef;
 use sorted_vector_map::SortedVectorMap;
 use tunables::tunables;
 use unodes::RootUnodeManifestId;
+
+use crate::Repo;
 
 pub struct SourceAndMovedChangesets {
     pub source: ChangesetId,
@@ -188,7 +186,7 @@ pub trait MegarepoOp {
             .save_in_changeset(ctx, repo.blob_repo(), &mut bcs)
             .await?;
         let merge = bcs.freeze()?;
-        save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo.blob_repo()).await?;
+        save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo.inner_repo()).await?;
 
         // We don't want to have deletion commit on our mainline. So we'd like to create a new
         // merge commit whose parent is not a deletion commit. For that we take the manifest
@@ -203,7 +201,7 @@ pub trait MegarepoOp {
         let result = self
             .create_new_changeset_using_parents(
                 ctx,
-                repo,
+                repo.inner_repo(),
                 merge.get_changeset_id(),
                 new_parents,
                 message,
@@ -216,20 +214,19 @@ pub trait MegarepoOp {
     async fn create_new_changeset_using_parents(
         &self,
         ctx: &CoreContext,
-        repo: &RepoContext,
+        repo: &impl Repo,
         merge_commit: ChangesetId,
         new_parent_commits: Vec<ChangesetId>,
         message: Option<String>,
     ) -> Result<ChangesetId, MegarepoError> {
-        let blob_repo = repo.blob_repo();
         let hg_cs_merge = async {
-            let hg_cs_id = blob_repo.derive_hg_changeset(ctx, merge_commit).await?;
-            let hg_cs = hg_cs_id.load(ctx, blob_repo.repo_blobstore()).await?;
+            let hg_cs_id = repo.derive_hg_changeset(ctx, merge_commit).await?;
+            let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
             Ok(hg_cs.manifestid())
         };
         let parent_hg_css = try_join_all(new_parent_commits.iter().map(|p| async move {
-            let hg_cs_id = blob_repo.derive_hg_changeset(ctx, *p).await?;
-            let hg_cs = hg_cs_id.load(ctx, blob_repo.repo_blobstore()).await?;
+            let hg_cs_id = repo.derive_hg_changeset(ctx, *p).await?;
+            let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
             Result::<_, Error>::Ok(hg_cs.manifestid())
         }));
 
@@ -239,7 +236,7 @@ pub trait MegarepoOp {
 
         let file_changes = bonsai_diff(
             ctx.clone(),
-            blob_repo.repo_blobstore().clone(),
+            repo.repo_blobstore().clone(),
             hg_cs_merge,
             parent_hg_css.into_iter().collect(),
         )
@@ -248,7 +245,7 @@ pub trait MegarepoOp {
                 BonsaiDiffFileChange::Changed(path, ty, entry_id)
                 | BonsaiDiffFileChange::ChangedReusedId(path, ty, entry_id) => {
                     let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
-                    let envelope = file_node_id.load(ctx, blob_repo.repo_blobstore()).await?;
+                    let envelope = file_node_id.load(ctx, repo.repo_blobstore()).await?;
                     let size = envelope.content_size();
                     let content_id = envelope.content_id();
 
@@ -276,7 +273,7 @@ pub trait MegarepoOp {
             git_annotated_tag: None,
         };
         let merge = bcs.freeze()?;
-        save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo.blob_repo()).await?;
+        save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo).await?;
 
         Ok(merge.get_changeset_id())
     }
@@ -383,7 +380,7 @@ pub trait MegarepoOp {
     async fn create_single_move_commit(
         &self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         cs_id: ChangesetId,
         mover: &MultiMover,
         directory_mover: &DirectoryMultiMover,
@@ -491,7 +488,7 @@ pub trait MegarepoOp {
     async fn create_mutable_renames(
         &self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         cs_id: ChangesetId,
         dst_cs_id: ChangesetId,
         mover: &MultiMover,
@@ -572,7 +569,7 @@ pub trait MegarepoOp {
     async fn create_move_commits<'b>(
         &'b self,
         ctx: &'b CoreContext,
-        repo: &'b BlobRepo,
+        repo: &'b impl Repo,
         sources: &[Source],
         changesets_to_merge: &'b BTreeMap<SourceName, ChangesetId>,
         mutable_renames: &Arc<MutableRenames>,
@@ -645,7 +642,7 @@ pub trait MegarepoOp {
                 .map(|(_, css)| css.moved.clone())
                 .collect(),
             ctx.clone(),
-            &repo,
+            repo,
         )
         .await?;
 
@@ -785,7 +782,7 @@ pub trait MegarepoOp {
         &self,
         ctx: &CoreContext,
         links: BTreeMap<MPath, Bytes>,
-        repo: &BlobRepo,
+        repo: &impl Repo,
     ) -> Result<BTreeMap<MPath, FileChange>, Error> {
         let linkfiles = stream::iter(links.into_iter())
             .map(Ok)
@@ -827,7 +824,7 @@ pub trait MegarepoOp {
     async fn create_merge_commits(
         &self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         moved_commits: Vec<(SourceName, SourceAndMovedChangesets)>,
         write_commit_remapping_state: bool,
         sync_config_version: SyncConfigVersion,
@@ -912,7 +909,7 @@ pub trait MegarepoOp {
     async fn create_bookmark(
         &self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         bookmark: String,
         cs_id: ChangesetId,
     ) -> Result<(), MegarepoError> {
@@ -933,7 +930,7 @@ pub trait MegarepoOp {
     async fn move_bookmark_conditionally(
         &self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         bookmark: String,
         (from_cs_id, to_cs_id): (ChangesetId, ChangesetId),
     ) -> Result<(), MegarepoError> {
@@ -958,7 +955,7 @@ pub trait MegarepoOp {
     async fn move_bookmark(
         &self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         bookmark: String,
         cs_id: ChangesetId,
     ) -> Result<(), MegarepoError> {
@@ -1179,7 +1176,7 @@ fn add_and_check<'a>(
 
 pub(crate) async fn find_target_sync_config<'a>(
     ctx: &'a CoreContext,
-    target_repo: &'a BlobRepo,
+    target_repo: &'a impl Repo,
     target_cs_id: ChangesetId,
     target: &Target,
     megarepo_configs: &Arc<dyn MononokeMegarepoConfigs>,
