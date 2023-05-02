@@ -493,7 +493,10 @@ class PrjfsChannel : public FsChannel {
     bool isUnmounted() override;
     FsChannelInfo extractTakeoverInfo() override;
   };
-  folly::SemiFuture<FsStopDataPtr> getStopFuture();
+
+  folly::Future<StopFuture> initialize() override;
+
+  StopFuture getStopFuture();
 
   /**
    * Remove a file that has been cached on disk by ProjectedFS. This should be
@@ -519,7 +522,7 @@ class PrjfsChannel : public FsChannel {
 
   void flushNegativePathCache();
 
-  ProcessAccessLog& getProcessAccessLog() {
+  ProcessAccessLog& getProcessAccessLog() override {
     return processAccessLog_;
   }
 

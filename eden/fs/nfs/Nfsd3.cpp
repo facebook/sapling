@@ -2039,6 +2039,10 @@ Nfsd3::Nfsd3(
       }));
 }
 
+folly::Future<FsChannel::StopFuture> Nfsd3::initialize() {
+  return folly::makeFuture<FsChannel::StopFuture>(getStopFuture());
+}
+
 void Nfsd3::initialize(folly::SocketAddress addr, bool registerWithRpcbind) {
   server_->initialize(addr);
   if (registerWithRpcbind) {

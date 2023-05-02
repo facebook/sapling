@@ -1335,7 +1335,11 @@ folly::SemiFuture<folly::Unit> PrjfsChannel::stop() {
       });
 }
 
-folly::SemiFuture<FsStopDataPtr> PrjfsChannel::getStopFuture() {
+folly::Future<FsChannel::StopFuture> PrjfsChannel::initialize() {
+  return folly::makeFuture<FsChannel::StopFuture>(getStopFuture());
+}
+
+FsChannel::StopFuture PrjfsChannel::getStopFuture() {
   return stopPromise_.getSemiFuture();
 }
 

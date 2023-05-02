@@ -69,7 +69,7 @@ class FuseChannelTest : public ::testing::Test {
       size_t numThreads = 2) {
     auto testDispatcher = std::make_unique<TestDispatcher>(stats_.copy());
     dispatcher_ = testDispatcher.get();
-    return std::unique_ptr<FuseChannel, FsChannelDeleter>(new FuseChannel(
+    return makeFuseChannel(
         fuse_.start(),
         mountPath_,
         numThreads,
@@ -83,7 +83,7 @@ class FuseChannelTest : public ::testing::Test {
         /*requireUtf8Path=*/true,
         /*maximumBackgroundRequests=*/12,
         /*useWriteBackCache=*/false,
-        /*fuseTraceBusCapacity*/ kTraceBusCapacity));
+        /*fuseTraceBusCapacity*/ kTraceBusCapacity);
   }
 
   FuseChannel::StopFuture performInit(

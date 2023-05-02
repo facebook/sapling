@@ -1774,7 +1774,7 @@ TEST(Checkout, changing_hash_scheme_does_not_conflict_if_contents_are_same) {
 using ActionMap = std::
     unordered_map<RelativePathPiece, std::function<void(RelativePathPiece)>>;
 
-class FakePrjfsChannel : public PrjfsChannel {
+class FakePrjfsChannel final : public PrjfsChannel {
  public:
   FakePrjfsChannel(
       ActionMap actions,

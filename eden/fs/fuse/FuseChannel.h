@@ -216,7 +216,6 @@ class FuseChannel final : public FsChannel {
      */
     fuse_init_out fuseSettings = {};
   };
-  using StopFuture = folly::SemiFuture<FsStopDataPtr>;
 
   struct OutstandingRequest {
     uint64_t unique;
@@ -293,7 +292,7 @@ class FuseChannel final : public FsChannel {
    * Callers should normally use via() to perform any additional work in
    * another executor thread.
    */
-  FOLLY_NODISCARD folly::Future<StopFuture> initialize();
+  FOLLY_NODISCARD folly::Future<StopFuture> initialize() override;
 
   /**
    * Initialize the FuseChannel when taking over an existing FuseDevice.
@@ -471,7 +470,7 @@ class FuseChannel final : public FsChannel {
     return *traceBus_;
   }
 
-  ProcessAccessLog& getProcessAccessLog() {
+  ProcessAccessLog& getProcessAccessLog() override {
     return processAccessLog_;
   }
 
@@ -853,6 +852,12 @@ class FuseChannel final : public FsChannel {
 
 folly::StringPiece fuseOpcodeName(uint32_t opcode);
 ProcessAccessLog::AccessType fuseOpcodeAccessType(uint32_t opcode);
+
+template <typename... Args>
+std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(Args&&... args) {
+  return std::unique_ptr<FuseChannel, FsChannelDeleter>{
+      new FuseChannel(std::forward<Args>(args)...)};
+}
 
 class FuseDeviceUnmountedDuringInitialization : public std::runtime_error {
  public:

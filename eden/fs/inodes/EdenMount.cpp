@@ -1152,36 +1152,30 @@ InodeMetadataTable* EdenMount::getInodeMetadataTable() const {
 }
 #endif
 
-FsChannel* EdenMount::getFsChannel() {
+FsChannel* EdenMount::getFsChannel() const {
+#ifdef _WIN32
   if (auto* channel = std::get_if<EdenMount::NfsdChannelVariant>(&channel_)) {
     return channel->get();
-  }
-#ifdef _WIN32
-  if (auto* channel = std::get_if<EdenMount::PrjfsChannelVariant>(&channel_)) {
+  } else if (
+      auto* channel = std::get_if<EdenMount::PrjfsChannelVariant>(&channel_)) {
     return channel->get();
+  } else {
+    return nullptr;
   }
 #else
-  if (auto* channel = std::get_if<EdenMount::FuseChannelVariant>(&channel_)) {
-    return channel->get();
-  }
+  return channel_.get();
 #endif
-  return nullptr;
+}
+
+Nfsd3* FOLLY_NULLABLE EdenMount::getNfsdChannel() const {
+  return dynamic_cast<Nfsd3*>(getFsChannel());
 }
 
 #ifndef _WIN32
 FuseChannel* FOLLY_NULLABLE EdenMount::getFuseChannel() const {
-  if (auto channel = std::get_if<EdenMount::FuseChannelVariant>(&channel_)) {
-    return channel->get();
-  }
-  return nullptr;
+  return dynamic_cast<FuseChannel*>(channel_.get());
 }
 
-Nfsd3* FOLLY_NULLABLE EdenMount::getNfsdChannel() const {
-  if (auto channel = std::get_if<EdenMount::NfsdChannelVariant>(&channel_)) {
-    return channel->get();
-  }
-  return nullptr;
-}
 #else
 PrjfsChannel* FOLLY_NULLABLE EdenMount::getPrjfsChannel() const {
   if (auto channel = std::get_if<EdenMount::PrjfsChannelVariant>(&channel_)) {
@@ -1196,15 +1190,15 @@ void EdenMount::setTestPrjfsChannel(std::unique_ptr<PrjfsChannel> channel) {
 #endif
 
 bool EdenMount::isFuseChannel() const {
-#ifndef _WIN32
-  return std::holds_alternative<EdenMount::FuseChannelVariant>(channel_);
-#else
+#ifdef _WIN32
   return false;
+#else
+  return getFuseChannel() != nullptr;
 #endif
 }
 
 bool EdenMount::isNfsdChannel() const {
-  return std::holds_alternative<EdenMount::NfsdChannelVariant>(channel_);
+  return getNfsdChannel() != nullptr;
 }
 
 bool EdenMount::isPrjfsChannel() const {
@@ -1288,16 +1282,12 @@ ProcessAccessLog& EdenMount::getProcessAccessLog() const {
 #ifdef _WIN32
   return getPrjfsChannel()->getProcessAccessLog();
 #else
-  return std::visit(
-      [](auto&& channel) -> ProcessAccessLog& {
-        using T = std::decay_t<decltype(channel)>;
-        if constexpr (!std::is_same_v<T, std::monostate>) {
-          return channel->getProcessAccessLog();
-        } else {
-          EDEN_BUG() << "EdenMount::channel_ is not constructed.";
-        }
-      },
-      channel_);
+
+  if (!channel_) {
+    EDEN_BUG() << "cannot call getProcessAccessLog() before "
+                  "EdenMount has started or unmounted";
+  }
+  return channel_->getProcessAccessLog();
 #endif
 }
 
@@ -2029,7 +2019,7 @@ std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(
     EdenMount* mount,
     folly::File fuseFd) {
   auto edenConfig = mount->getEdenConfig();
-  return std::unique_ptr<FuseChannel, FsChannelDeleter>{new FuseChannel(
+  return makeFuseChannel(
       std::move(fuseFd),
       mount->getPath(),
       FLAGS_fuseNumThreads,
@@ -2046,7 +2036,7 @@ std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(
       mount->getCheckoutConfig()->getUseWriteBackCache(),
       mount->getServerState()
           ->getEdenConfig()
-          ->FuseTraceBusCapacity.getValue())};
+          ->FuseTraceBusCapacity.getValue());
 }
 } // namespace
 #endif
@@ -2262,47 +2252,16 @@ folly::Future<folly::Unit> EdenMount::startFsChannel(bool readOnly) {
 
            return fsChannelMount(readOnly);
          })
-      .thenValue([this](auto&&) {
-#ifdef _WIN32
-        std::visit(
-            [this](auto&& variant) -> void {
-              using T = std::decay_t<decltype(variant)>;
-              // TODO make stop data a variant.
-              if constexpr (std::is_same_v<T, EdenMount::PrjfsChannelVariant>) {
-                fsChannelInitSuccessful(variant->getStopFuture());
-              } else if constexpr (std::is_same_v<
-                                       T,
-                                       EdenMount::NfsdChannelVariant>) {
-                fsChannelInitSuccessful(variant->getStopFuture());
-              } else {
-                static_assert(std::is_same_v<T, std::monostate>);
-                EDEN_BUG() << "EdenMount::channel_ is not constructed.";
-              }
-            },
-            channel_);
-#else
-        return std::visit(
-            [this](auto&& variant) -> folly::Future<folly::Unit> {
-              using T = std::decay_t<decltype(variant)>;
-
-              if constexpr (std::is_same_v<T, EdenMount::FuseChannelVariant>) {
-                return variant->initialize().thenValue(
-                    [this](FuseChannel::StopFuture&& fuseCompleteFuture) {
-                      fsChannelInitSuccessful(std::move(fuseCompleteFuture));
-                    });
-              } else if constexpr (std::is_same_v<
-                                       T,
-                                       EdenMount::NfsdChannelVariant>) {
-                fsChannelInitSuccessful(variant->getStopFuture());
-                return makeFuture(folly::unit);
-              } else {
-                static_assert(std::is_same_v<T, std::monostate>);
-                return EDEN_BUG_FUTURE(folly::Unit)
-                    << "EdenMount::channel_ is not constructed.";
-              }
-            },
-            channel_);
-#endif
+      .thenValue([this](auto&&) -> folly::Future<folly::Unit> {
+        auto* fsChannel = getFsChannel();
+        if (!fsChannel) {
+          return EDEN_BUG_FUTURE(folly::Unit)
+              << "EdenMount::channel_ is not constructed";
+        }
+        return fsChannel->initialize().thenValue(
+            [this](FsChannel::StopFuture mountCompleteFuture) {
+              fsChannelInitSuccessful(std::move(mountCompleteFuture));
+            });
       })
       .thenError([this](folly::exception_wrapper&& ew) {
         transitionToFsChannelInitializationErrorState();
@@ -2372,15 +2331,20 @@ void EdenMount::fsChannelInitSuccessful(
       std::move(channelCompleteFuture)
           .deferValue([this](FsStopDataPtr stopData) {
             if (isNfsdChannel()) {
-              // TODO: Understand why destroying Nfsd3 here is necessary, and
-              // allowing it to destroy itself when EdenMount dies is not
-              // sufficient. The problem with clearing channel_ is that it
-              // introduces a potential race with every other use of channel_ in
-              // EdenMount.
-              //
-              // In particular, it races with fb303's dynamic counter
-              // aggregation.
+      // TODO: Understand why destroying Nfsd3 here is necessary, and
+      // allowing it to destroy itself when EdenMount dies is not
+      // sufficient. The problem with clearing channel_ is that it
+      // introduces a potential race with every other use of channel_ in
+      // EdenMount.
+      //
+      // In particular, it races with fb303's dynamic counter
+      // aggregation.
+
+#ifdef _WIN32
               channel_ = std::monostate{};
+#else
+              channel_ = nullptr;
+#endif
             }
             return stopData;
           }));

@@ -145,6 +145,8 @@ class Nfsd3 final : public FsChannel {
     return "nfs3";
   }
 
+  FOLLY_NODISCARD folly::Future<StopFuture> initialize() override;
+
   void initialize(folly::SocketAddress addr, bool registerWithRpcbind);
   void initialize(folly::File connectedSocket);
 
@@ -215,9 +217,9 @@ class Nfsd3 final : public FsChannel {
   /**
    * Return a future that will be triggered on unmount.
    */
-  folly::SemiFuture<FsStopDataPtr> getStopFuture();
+  StopFuture getStopFuture();
 
-  ProcessAccessLog& getProcessAccessLog() {
+  ProcessAccessLog& getProcessAccessLog() override {
     return processAccessLog_;
   }
 

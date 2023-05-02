@@ -12,6 +12,8 @@
 
 namespace facebook::eden {
 
+class ProcessAccessLog;
+
 class FsStopData {
  public:
   virtual ~FsStopData() = default;
@@ -35,8 +37,12 @@ using FsStopDataPtr = std::unique_ptr<FsStopData>;
  */
 class FsChannel {
  public:
+  using StopFuture = folly::SemiFuture<FsStopDataPtr>;
+
+ protected:
   virtual ~FsChannel() = default;
 
+ public:
   /**
    * Returns a short, human-readable (or at least loggable) name for this
    * FsChannel type.
@@ -63,6 +69,23 @@ class FsChannel {
   virtual void destroy() = 0;
 
   /**
+   * An FsChannel must be initialized after construction. This process begins
+   * the handshake with the filesystem driver.
+   *
+   * Returns a SemiFuture that is completed when the initialized mount has shut
+   * down. This future should be used to detect when the mount has been stopped
+   * for an error or any other reason. For example, in FUSE and NFS, the unmount
+   * process is initiated by the kernel and not by FuseChannel.
+   */
+  FOLLY_NODISCARD virtual folly::Future<StopFuture> initialize() = 0;
+
+  /**
+   * Returns the ProcessAccessLog used to track this channel's filesystem
+   * accesses.
+   */
+  virtual ProcessAccessLog& getProcessAccessLog() = 0;
+
+  /**
    * During checkout or other Thrift calls that modify the filesystem, those
    * modifications may be invisible to the filesystem's own caches. Therefore,
    * we send fine-grained invalidation messages to the FsChannel. Those
@@ -87,5 +110,7 @@ class FsChannelDeleter {
     channel->destroy();
   }
 };
+
+using FsChannelPtr = std::unique_ptr<FsChannel, FsChannelDeleter>;
 
 } // namespace facebook::eden

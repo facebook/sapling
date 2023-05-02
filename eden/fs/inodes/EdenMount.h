@@ -393,7 +393,9 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Returns the FsChannel for this mount point. Returns nullptr if it's not
    * initialized yet.
    */
-  FsChannel* FOLLY_NULLABLE getFsChannel();
+  FsChannel* FOLLY_NULLABLE getFsChannel() const;
+
+  Nfsd3* FOLLY_NULLABLE getNfsdChannel() const;
 
   /**
    * Get the FUSE/NFS/Prjfs channel for this mount point.
@@ -414,7 +416,6 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   void setTestPrjfsChannel(std::unique_ptr<PrjfsChannel> channel);
 #else
   FuseChannel* FOLLY_NULLABLE getFuseChannel() const;
-  Nfsd3* FOLLY_NULLABLE getNfsdChannel() const;
 #endif
 
   /**
@@ -1420,12 +1421,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       channel_;
 
 #else
-  using FuseChannelVariant = std::unique_ptr<FuseChannel, FsChannelDeleter>;
-
-  /**
-   * The associated fuse channel to the kernel.
-   */
-  std::variant<std::monostate, FuseChannelVariant, NfsdChannelVariant> channel_;
+  FsChannelPtr channel_;
 #endif // !_WIN32
 
   /**

@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
 
   folly::Logger straceLogger{"eden.strace"};
 
-  std::unique_ptr<FuseChannel, FsChannelDeleter> channel(new FuseChannel(
+  auto channel = makeFuseChannel(
       std::move(fuseDevice),
       mountPath,
       FLAGS_numFuseThreads,
@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
       /*requireUtf8Path=*/true,
       /*maximumBackgroundRequests=*/12 /* the default on Linux */,
       /*useWriteBackCache=*/false,
-      /*fuseTraceBusCapacity=*/kTraceBusCapacity));
+      /*fuseTraceBusCapacity=*/kTraceBusCapacity);
 
   XLOG(INFO) << "Starting FUSE...";
   auto completionFuture = channel->initialize().get();
