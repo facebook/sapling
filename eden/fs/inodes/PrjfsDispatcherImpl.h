@@ -7,10 +7,8 @@
 
 #pragma once
 
-#include <folly/executors/SequencedExecutor.h>
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
-#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 namespace facebook::eden {
 
@@ -90,12 +88,6 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
  private:
   // The EdenMount associated with this dispatcher.
   EdenMount* const mount_;
-
-  UnboundedQueueExecutor executor_;
-  // All the notifications are dispatched to this executor. The
-  // waitForPendingNotifications implementation depends on this being a
-  // SequencedExecutor.
-  folly::Executor::KeepAlive<folly::SequencedExecutor> notificationExecutor_;
 
   const std::string dotEdenConfig_;
 };

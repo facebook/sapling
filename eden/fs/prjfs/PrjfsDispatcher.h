@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/executors/SequencedExecutor.h>
 #include <folly/portability/Windows.h>
 
 #include "eden/fs/inodes/InodeTimestamps.h"
@@ -14,9 +15,11 @@
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/RefPtr.h"
+#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 namespace facebook::eden {
 
+class PrjfsRequestContext;
 class ObjectFetchContext;
 class EdenStats;
 template <class T>
@@ -40,6 +43,15 @@ class PrjfsDispatcher {
   explicit PrjfsDispatcher(EdenStatsPtr stats);
 
   const EdenStatsPtr& getStats() const;
+
+  /**
+   * Executor on which all the filesystem write notification will run on.
+   *
+   * ProjectedFS will send write notifications out of order, these will be
+   * handled in this executor.
+   */
+  folly::Executor::KeepAlive<folly::SequencedExecutor> getNotificationExecutor()
+      const;
 
   /**
    * Get the timestamp of the last time a checkout was performed.
@@ -84,6 +96,9 @@ class PrjfsDispatcher {
 
   /**
    * Notification sent when a file was created
+   *
+   * The caller must guarantee that the dispatcher and EdenMount stay alive
+   * until the returned ImmediateFuture complete.
    */
   virtual ImmediateFuture<folly::Unit> fileCreated(
       RelativePath path,
@@ -91,6 +106,9 @@ class PrjfsDispatcher {
 
   /**
    * Notification sent when a directory was created
+   *
+   * The caller must guarantee that the dispatcher and EdenMount stay alive
+   * until the returned ImmediateFuture complete.
    */
   virtual ImmediateFuture<folly::Unit> dirCreated(
       RelativePath path,
@@ -98,6 +116,9 @@ class PrjfsDispatcher {
 
   /**
    * Notification sent when a file has been modified
+   *
+   * The caller must guarantee that the dispatcher and EdenMount stay alive
+   * until the returned ImmediateFuture complete.
    */
   virtual ImmediateFuture<folly::Unit> fileModified(
       RelativePath relPath,
@@ -105,6 +126,9 @@ class PrjfsDispatcher {
 
   /**
    * Notification sent when a file is renamed
+   *
+   * The caller must guarantee that the dispatcher and EdenMount stay alive
+   * until the returned ImmediateFuture complete.
    */
   virtual ImmediateFuture<folly::Unit> fileRenamed(
       RelativePath oldPath,
@@ -116,6 +140,9 @@ class PrjfsDispatcher {
    *
    * This should succeed or fail without any side effects to the inode
    * hierarchy.
+   *
+   * The caller must guarantee that the dispatcher and EdenMount stay alive
+   * until the returned ImmediateFuture complete.
    */
   virtual ImmediateFuture<folly::Unit> preDirRename(
       RelativePath oldPath,
@@ -127,6 +154,9 @@ class PrjfsDispatcher {
    *
    * This should succeed or fail without any side effects to the inode
    * hierarchy.
+   *
+   * The caller must guarantee that the dispatcher and EdenMount stay alive
+   * until the returned ImmediateFuture complete.
    */
   virtual ImmediateFuture<folly::Unit> preFileRename(
       RelativePath oldPath,
@@ -135,6 +165,9 @@ class PrjfsDispatcher {
 
   /**
    * Notification sent when a file was removed
+   *
+   * The caller must guarantee that the dispatcher and EdenMount stay alive
+   * until the returned ImmediateFuture complete.
    */
   virtual ImmediateFuture<folly::Unit> fileDeleted(
       RelativePath relPath,
@@ -145,6 +178,9 @@ class PrjfsDispatcher {
    *
    * This should succeed or fail without any side effects to the inode
    * hierarchy.
+   *
+   * The caller must guarantee that the dispatcher and EdenMount stay alive
+   * until the returned ImmediateFuture complete.
    */
   virtual ImmediateFuture<folly::Unit> preFileDelete(
       RelativePath relPath,
@@ -152,6 +188,9 @@ class PrjfsDispatcher {
 
   /**
    * Notification sent when a directory was removed
+   *
+   * The caller must guarantee that the dispatcher and EdenMount stay alive
+   * until the returned ImmediateFuture complete.
    */
   virtual ImmediateFuture<folly::Unit> dirDeleted(
       RelativePath relPath,
@@ -162,6 +201,9 @@ class PrjfsDispatcher {
    *
    * This should succeed or fail without any side effects to the inode
    * hierarchy.
+   *
+   * The caller must guarantee that the dispatcher and EdenMount stay alive
+   * until the returned ImmediateFuture complete.
    */
   virtual ImmediateFuture<folly::Unit> preDirDelete(
       RelativePath relPath,
@@ -169,6 +211,9 @@ class PrjfsDispatcher {
 
   /**
    * Notification sent when a file is about to be converted to a full file.
+   *
+   * The caller must guarantee that the dispatcher and EdenMount stay alive
+   * until the returned ImmediateFuture complete.
    */
   virtual ImmediateFuture<folly::Unit> preFileConvertedToFull(
       RelativePath relPath,
@@ -181,5 +226,11 @@ class PrjfsDispatcher {
 
  private:
   EdenStatsPtr stats_;
+
+  UnboundedQueueExecutor executor_;
+  // All the notifications are dispatched to this executor. The
+  // waitForPendingNotifications implementation depends on this being a
+  // SequencedExecutor.
+  folly::Executor::KeepAlive<folly::SequencedExecutor> notificationExecutor_;
 };
 } // namespace facebook::eden

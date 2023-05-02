@@ -1153,14 +1153,22 @@ HRESULT PrjfsChannelInner::notification(
 
     FB_LOG(getStraceLogger(), DBG7, renderer(relPath, destPath, isDirectory));
     auto fut = (this->*handler)(
-        std::move(relPath),
-        std::move(destPath),
-        isDirectory,
-        context->getObjectFetchContext());
-
-    // Since the future should just be enqueing to an executor, it should
-    // always be ready.
-    return tryToHResult(std::move(fut).getTry(0ms));
+                   std::move(relPath),
+                   std::move(destPath),
+                   isDirectory,
+                   context->getObjectFetchContext())
+                   .semi();
+    if (fut.isReady()) {
+      // The notification is ready, this is usually coming from pre*
+      // notifications to deny the operation, in that case EdenFS should return
+      // the error code instead of pushing the operation to the background.
+      return tryToHResult(std::move(fut).getTry(0ms));
+    } else {
+      folly::futures::detachOn(
+          dispatcher_->getNotificationExecutor(),
+          std::move(fut).deferEnsure([context] {}));
+      return S_OK;
+    }
   }
 }
 

@@ -12,7 +12,6 @@
 #include <boost/filesystem/path.hpp>
 #include <cpptoml.h>
 #include <folly/executors/QueuedImmediateExecutor.h>
-#include <folly/executors/SerialExecutor.h>
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
 #include "eden/fs/config/CheckoutConfig.h"
@@ -66,9 +65,6 @@ std::string makeDotEdenConfig(EdenMount& mount) {
 PrjfsDispatcherImpl::PrjfsDispatcherImpl(EdenMount* mount)
     : PrjfsDispatcher(mount->getStats().copy()),
       mount_{mount},
-      executor_{1, "PrjfsDispatcher"},
-      notificationExecutor_{
-          folly::SerialExecutor::create(folly::getKeepAliveToken(&executor_))},
       dotEdenConfig_{makeDotEdenConfig(*mount)} {}
 
 EdenTimestamp PrjfsDispatcherImpl::getLastCheckoutTime() const {
@@ -177,7 +173,7 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
                     // a checkout operation which is already holding locks that
                     // the code below also need.
                     folly::via(
-                        notificationExecutor_,
+                        getNotificationExecutor(),
                         [&mount = *mount_,
                          path = std::move(path),
                          context = context.copy()]() {
@@ -705,14 +701,16 @@ ImmediateFuture<folly::Unit> fileNotificationImpl(
 ImmediateFuture<folly::Unit> fileNotification(
     EdenMount& mount,
     RelativePath path,
-    folly::Executor::KeepAlive<folly::SequencedExecutor> executor,
     const ObjectFetchContextPtr& context) {
   auto receivedAt = std::chrono::steady_clock::now();
   folly::stop_watch<std::chrono::milliseconds> watch;
 
-  folly::via(
-      executor,
-      [&mount, path, receivedAt, context = context.copy(), watch]() mutable {
+  // We need to make sure all the handling of the notification is done
+  // non-immediately in the executor chosen by the caller thus creating a
+  // not-ready ImmediateFuture to this effect.
+  return makeNotReadyImmediateFuture()
+      .thenValue([&mount, path, receivedAt, context = context.copy(), watch](
+                     auto&&) mutable {
         auto fault = mount.getServerState()->getFaultInjector().checkAsync(
             "PrjfsDispatcherImpl::fileNotification", path);
 
@@ -724,9 +722,13 @@ ImmediateFuture<folly::Unit> fileNotification(
               return fileNotificationImpl(
                   mount, std::move(path), receivedAt, context);
             })
+            // Manually waiting for the future to make sure that a single
+            // notification is handled with no interleaving with other
+            // notifications.
             .get();
         mount.getStats()->addDuration(
             &PrjfsStats::queuedFileNotification, watch.elapsed());
+        return folly::unit;
       })
       .thenError([path, &mount](const folly::exception_wrapper& ew) {
         if (ew.get_exception<QuietFault>()) {
@@ -746,7 +748,6 @@ ImmediateFuture<folly::Unit> fileNotification(
                      << ew;
         return folly::unit;
       });
-  return folly::unit;
 }
 
 } // namespace
@@ -754,22 +755,19 @@ ImmediateFuture<folly::Unit> fileNotification(
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileCreated(
     RelativePath path,
     const ObjectFetchContextPtr& context) {
-  return fileNotification(
-      *mount_, std::move(path), notificationExecutor_, context);
+  return fileNotification(*mount_, std::move(path), context);
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::dirCreated(
     RelativePath path,
     const ObjectFetchContextPtr& context) {
-  return fileNotification(
-      *mount_, std::move(path), notificationExecutor_, context);
+  return fileNotification(*mount_, std::move(path), context);
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileModified(
     RelativePath path,
     const ObjectFetchContextPtr& context) {
-  return fileNotification(
-      *mount_, std::move(path), notificationExecutor_, context);
+  return fileNotification(*mount_, std::move(path), context);
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
@@ -778,10 +776,8 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
     const ObjectFetchContextPtr& context) {
   // A rename is just handled like 2 notifications separate notifications on
   // the old and new paths.
-  auto oldNotification = fileNotification(
-      *mount_, std::move(oldPath), notificationExecutor_, context);
-  auto newNotification = fileNotification(
-      *mount_, std::move(newPath), notificationExecutor_, context);
+  auto oldNotification = fileNotification(*mount_, std::move(oldPath), context);
+  auto newNotification = fileNotification(*mount_, std::move(newPath), context);
 
   return collectAllSafe(std::move(oldNotification), std::move(newNotification))
       .thenValue(
@@ -821,8 +817,7 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preDirRename(
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileDeleted(
     RelativePath path,
     const ObjectFetchContextPtr& context) {
-  return fileNotification(
-      *mount_, std::move(path), notificationExecutor_, context);
+  return fileNotification(*mount_, std::move(path), context);
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preFileDelete(
@@ -838,8 +833,7 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preFileDelete(
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::dirDeleted(
     RelativePath path,
     const ObjectFetchContextPtr& context) {
-  return fileNotification(
-      *mount_, std::move(path), notificationExecutor_, context);
+  return fileNotification(*mount_, std::move(path), context);
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preDirDelete(
@@ -857,8 +851,7 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preFileConvertedToFull(
     const ObjectFetchContextPtr& context) {
   // this is an asynchonous notification, so we have to treat this just like
   // all the other write notifications.
-  return fileNotification(
-      *mount_, std::move(path), notificationExecutor_, context);
+  return fileNotification(*mount_, std::move(path), context);
 }
 
 ImmediateFuture<folly::Unit>
@@ -874,7 +867,7 @@ PrjfsDispatcherImpl::waitForPendingNotifications() {
   // complete. This is expected and therefore not a bug.
   folly::stop_watch<std::chrono::microseconds> timer{};
   return ImmediateFuture{
-      folly::via(notificationExecutor_, [this, timer = std::move(timer)]() {
+      folly::via(getNotificationExecutor(), [this, timer = std::move(timer)]() {
         this->mount_->getStats()->addDuration(
             &PrjfsStats::filesystemSync, timer.elapsed());
         return folly::unit;

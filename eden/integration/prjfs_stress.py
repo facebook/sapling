@@ -356,6 +356,36 @@ class PrjFSStress(PrjFSStressBase):
                 }
             )
 
+    def unmount(self) -> None:
+        self.eden.unmount(self.mount_path)
+
+    def wait_until_unmount_started(self) -> None:
+        """Wait until reading a directory starts failing and raising an
+        exception. This is a sign that either EdenFS is in the process of
+        unmounting, or EdenFS crashed.
+        """
+        while True:
+            try:
+                self.read_dir("adir")
+                time.sleep(0.1)
+                continue
+            except Exception:
+                break
+
+    def test_unmount_with_ongoing_notification(self) -> None:
+        with self.run_with_fault():
+            self.touch("adir/a")
+
+            unmount_thread = Thread(target=self.unmount)
+            unmount_thread.start()
+
+            self.wait_until_unmount_started()
+            self.wait_on_fault_unblock(1)
+
+            unmount_thread.join(timeout=30.0)
+
+            self.assertTrue(self.eden.is_healthy())
+
     def test_truncate(self) -> None:
         rel_path = "adir/file"
         path = self.mount_path / rel_path
@@ -385,29 +415,13 @@ class PrjFSStress(PrjFSStressBase):
                 with path.open("rb") as f:
                     f.read()
 
-        def unmount() -> None:
-            self.eden.unmount(self.mount_path)
-
         read_thread = Thread(target=read_file)
         read_thread.start()
 
-        unmount_thread = Thread(target=unmount)
+        unmount_thread = Thread(target=self.unmount)
         unmount_thread.start()
 
-        def wait_until_unmount_started() -> None:
-            """Wait until reading a directory starts failing and raising an
-            exception. This is a sign that either EdenFS is in the process of
-            unmounting, or EdenFS crashed.
-            """
-            while True:
-                try:
-                    self.read_dir("adir")
-                    time.sleep(0.1)
-                    continue
-                except Exception:
-                    break
-
-        wait_until_unmount_started()
+        self.wait_until_unmount_started()
         self.wait_on_fault_unblock(keyClass="PrjfsDispatcherImpl::read")
         read_thread.join(timeout=30.0)
         unmount_thread.join(timeout=30.0)
