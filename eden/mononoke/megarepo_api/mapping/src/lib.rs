@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+#![feature(trait_alias)]
+
 use std::collections::BTreeMap;
 use std::fmt;
 
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use context::CoreContext;
 use context::PerfCounterType;
 use derived_data::BonsaiDerived;
@@ -32,6 +33,7 @@ use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use serde::Deserialize;
 use serde::Serialize;
 use sql::Connection;
@@ -39,6 +41,8 @@ use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+
+pub trait Repo = RepoDerivedDataRef + RepoBlobstoreRef + FilestoreConfigRef + Sync + Send;
 
 mononoke_queries! {
     read GetMappingEntry(
@@ -137,7 +141,7 @@ impl CommitRemappingState {
 
     pub async fn read_state_from_commit(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         cs_id: ChangesetId,
     ) -> Result<Self, Error> {
         let maybe_state = Self::read_state_from_commit_opt(ctx, repo, cs_id).await?;
@@ -147,7 +151,7 @@ impl CommitRemappingState {
 
     pub async fn read_state_from_commit_opt(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         cs_id: ChangesetId,
     ) -> Result<Option<Self>, Error> {
         let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id).await?;
@@ -182,7 +186,7 @@ impl CommitRemappingState {
     pub async fn save_in_changeset(
         &self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         bcs: &mut BonsaiChangesetMut,
     ) -> Result<(), Error> {
         let (content_id, size) = self.save(ctx, repo).await?;
@@ -215,7 +219,7 @@ impl CommitRemappingState {
         &self.sync_config_version
     }
 
-    async fn save(&self, ctx: &CoreContext, repo: &BlobRepo) -> Result<(ContentId, u64), Error> {
+    async fn save(&self, ctx: &CoreContext, repo: &impl Repo) -> Result<(ContentId, u64), Error> {
         let bytes = self.serialize()?;
 
         let ((content_id, size), fut) = filestore::store_bytes(
