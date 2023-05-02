@@ -5,6 +5,8 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
+  $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
+  $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
 
   $ setup_configerator_configs
   $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
@@ -88,3 +90,8 @@ Make sure we have directory from the first move, but not from the second
   file.txt
   filetoremove
   newrepo
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq --compact-output '[.repo_name, .changeset_id, .bookmark, .is_public]' | sort
+  ["large-mon","097273394f9ce820e56caaadbea092b73e7639666b63294e098a311e33af04c5","master_bookmark",true]
+  ["large-mon","2e4090631ddfa0b3a2fe26c5d2560c615ebc2b77533e6a2039afcfbd3424c3ac","master_bookmark",true]
+  ["large-mon","3c4cdb0a6b145deb53f79178ba48c6fd1316058982bf6ab618402b91901de75e","master_bookmark",true]
+  ["large-mon","71634714290726837d0f66eff98add40cd621b0aa745b5bfc587cbc89b2fc94f","master_bookmark",true]

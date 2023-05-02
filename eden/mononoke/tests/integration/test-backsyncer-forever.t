@@ -4,6 +4,8 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+  $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
+  $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
   $ setup_configerator_configs
@@ -101,3 +103,9 @@ Config change
   ~
   $ hg log -r master_bookmark -T "{files % '{file}\n'}"
   baz
+
+-- Check logging
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq --compact-output '[.repo_name, .changeset_id, .bookmark, .is_public]' | sort
+  ["large-mon","*","master_bookmark",true] (glob)
+  ["large-mon","*","master_bookmark",true] (glob)
+  ["large-mon","*","master_bookmark",true] (glob)
