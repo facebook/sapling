@@ -372,10 +372,6 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
   // listening socket for this server.
   folly::AsyncServerSocket::UniquePtr serverSocket_;
 
-  // Set to true when acceptStopped() is called so we can assert that it was
-  // synchronous.
-  bool acceptStopped_ = false;
-
   // used to handle requests on the connected sockets.
   std::shared_ptr<RpcServerProcessor> proc_;
 
@@ -385,6 +381,10 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
   };
 
   struct State {
+    // Set to true when acceptStopped() is called so we can assert that it was
+    // synchronous.
+    bool acceptStopped = false;
+
     std::optional<PortmapState> portmapState;
 
     // Existing handlers that have an open socket and are processing requests

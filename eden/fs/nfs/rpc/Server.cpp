@@ -505,7 +505,7 @@ void RpcServer::acceptError(const std::exception& ex) noexcept {
 }
 
 void RpcServer::acceptStopped() noexcept {
-  acceptStopped_ = true;
+  state_.get().acceptStopped = true;
 }
 
 auth_stat RpcServerProcessor::checkAuthentication(
@@ -611,13 +611,13 @@ folly::SemiFuture<folly::File> RpcServer::takeoverStop() {
 }
 
 folly::SemiFuture<folly::File> RpcServer::takeoverStopImpl() {
-  evb_->checkIsInEventBaseThread();
+  auto& state = state_.get();
 
   XLOG(DBG7) << "Removing accept callback";
 
   if (serverSocket_->getAccepting()) {
     serverSocket_->removeAcceptCallback(this, nullptr);
-    XCHECK(acceptStopped_)
+    XCHECK(state.acceptStopped)
         << "We always accept on the same primary socket EventBase, so it should be guaranteed that acceptStopped() ran synchronously.";
 
     // Removing the last accept callback implicitly paused accepting.
@@ -628,9 +628,9 @@ folly::SemiFuture<folly::File> RpcServer::takeoverStopImpl() {
   XLOG(DBG7) << "calling takeover stop on handlers";
   // todo should this return the file descriptor for the socket?
   std::vector<RpcConnectionHandler::UniquePtr> handlers;
-  handlers.swap(state_.get().connectionHandlers);
+  handlers.swap(state.connectionHandlers);
 
-  std::vector<folly::SemiFuture<folly::Unit>> futures{};
+  std::vector<folly::SemiFuture<folly::Unit>> futures;
   futures.reserve(handlers.size());
   for (auto& handler : handlers) {
     futures.emplace_back(handler->takeoverStop());
