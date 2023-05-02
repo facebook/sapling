@@ -64,5 +64,22 @@ macro_rules! subcommands {
                  Err($crate::macro_export::anyhow::anyhow!("no subcommand specified"))
              }
          }
+
+         /// Confirm whether the subcommand this app was passed is covered by the subcommands
+         /// registered in this scope.
+         pub(crate) fn subcommand_is_in_scope(app: &$app) -> bool {
+             use $crate::macro_export::heck::SnakeCase;
+             use $crate::BaseApp;
+             if let Some((name, matches)) = app.subcommand() {
+                 match name.to_snake_case().as_str() {
+                     $(
+                         stringify!($command) => true,
+                     )*
+                     _ => false,
+                 }
+             } else {
+                 false
+             }
+         }
      }
  }
