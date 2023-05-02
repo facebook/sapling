@@ -5,13 +5,18 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::collections::VecDeque;
 use std::num::NonZeroU64;
 
 use anyhow::anyhow;
+use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
+use blobstore::Loadable;
 use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
+use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetsRef;
 use chrono::DateTime;
 use chrono::Utc;
@@ -29,7 +34,9 @@ use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use once_cell::sync::Lazy;
 use permission_checker::MononokeIdentitySet;
+use phases::PhasesRef;
 use regex::Regex;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use serde_derive::Serialize;
 #[cfg(fbcode_build)]
@@ -270,5 +277,182 @@ pub async fn log_new_commits(
             "Failed to log new draft commit to scribe",
             Some(err.to_string()),
         );
+    }
+}
+
+pub async fn log_new_bonsai_changesets(
+    ctx: &CoreContext,
+    repo: &(impl RepoIdentityRef + ChangesetsRef + RepoConfigRef),
+    bookmark: &BookmarkKey,
+    kind: BookmarkKind,
+    commits_to_log: Vec<BonsaiChangeset>,
+) {
+    log_new_commits(
+        ctx,
+        repo,
+        Some((bookmark, kind)),
+        commits_to_log
+            .iter()
+            .map(|bcs| CommitInfo::new(bcs, None))
+            .collect(),
+    )
+    .await;
+}
+
+/// Helper function for finding all the newly public commit that should be logged after
+/// the bookmark moves to to_cs_id. For public commits we allow them to be logged twice:
+/// once when they're actually created, second time when they become public.
+pub async fn find_draft_ancestors(
+    ctx: &CoreContext,
+    repo: &(impl RepoIdentityRef + RepoConfigRef + PhasesRef + ChangesetFetcherRef + RepoBlobstoreRef),
+    to_cs_id: ChangesetId,
+) -> Result<Vec<BonsaiChangeset>, Error> {
+    ctx.scuba()
+        .clone()
+        .log_with_msg("Started finding draft ancestors", None);
+
+    let phases = repo.phases();
+    let mut queue = VecDeque::new();
+    let mut visited = HashSet::new();
+    let mut drafts = vec![];
+    queue.push_back(to_cs_id);
+    visited.insert(to_cs_id);
+
+    while let Some(cs_id) = queue.pop_front() {
+        let public = phases
+            .get_public(ctx, vec![cs_id], false /*ephemeral_derive*/)
+            .await?;
+
+        if public.contains(&cs_id) {
+            continue;
+        }
+        drafts.push(cs_id);
+
+        let parents = repo.changeset_fetcher().get_parents(ctx, cs_id).await?;
+        for p in parents {
+            if visited.insert(p) {
+                queue.push_back(p);
+            }
+        }
+    }
+
+    let drafts = stream::iter(drafts)
+        .map(Ok)
+        .map_ok(|cs_id| async move { cs_id.load(ctx, repo.repo_blobstore()).await })
+        .try_buffer_unordered(100)
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    ctx.scuba()
+        .clone()
+        .log_with_msg("Found draft ancestors", Some(format!("{}", drafts.len())));
+    Ok(drafts)
+}
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashSet;
+
+    use blobrepo::AsBlobRepo;
+    use fbinit::FacebookInit;
+    use maplit::hashset;
+    use mononoke_api_types::InnerRepo;
+    use tests_utils::bookmark;
+    use tests_utils::drawdag::create_from_dag;
+
+    use super::*;
+
+    #[fbinit::test]
+    async fn test_find_draft_ancestors_simple(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: InnerRepo = test_repo_factory::build_empty(fb).await?;
+        let mapping = create_from_dag(
+            &ctx,
+            repo.as_blob_repo(),
+            r##"
+            A-B-C-D
+            "##,
+        )
+        .await?;
+
+        let cs_id = mapping.get("A").unwrap();
+        let to_cs_id = mapping.get("D").unwrap();
+        bookmark(&ctx, repo.as_blob_repo(), "book")
+            .set_to(*cs_id)
+            .await?;
+        let drafts = find_draft_ancestors(&ctx, &repo, *to_cs_id).await?;
+
+        let drafts = drafts
+            .into_iter()
+            .map(|bcs| bcs.get_changeset_id())
+            .collect::<HashSet<_>>();
+
+        assert_eq!(
+            drafts,
+            hashset! {
+                *mapping.get("B").unwrap(),
+                *mapping.get("C").unwrap(),
+                *mapping.get("D").unwrap(),
+            }
+        );
+
+        bookmark(&ctx, repo.as_blob_repo(), "book")
+            .set_to(*mapping.get("B").unwrap())
+            .await?;
+        let drafts = find_draft_ancestors(&ctx, &repo, *to_cs_id).await?;
+
+        let drafts = drafts
+            .into_iter()
+            .map(|bcs| bcs.get_changeset_id())
+            .collect::<HashSet<_>>();
+
+        assert_eq!(
+            drafts,
+            hashset! {
+                *mapping.get("C").unwrap(),
+                *mapping.get("D").unwrap(),
+            }
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_find_draft_ancestors_merge(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: InnerRepo = test_repo_factory::build_empty(fb).await?;
+        let mapping = create_from_dag(
+            &ctx,
+            repo.as_blob_repo(),
+            r##"
+              B
+             /  \
+            A    D
+             \  /
+               C
+            "##,
+        )
+        .await?;
+
+        let cs_id = mapping.get("B").unwrap();
+        let to_cs_id = mapping.get("D").unwrap();
+        bookmark(&ctx, repo.as_blob_repo(), "book")
+            .set_to(*cs_id)
+            .await?;
+        let drafts = find_draft_ancestors(&ctx, &repo, *to_cs_id).await?;
+
+        let drafts = drafts
+            .into_iter()
+            .map(|bcs| bcs.get_changeset_id())
+            .collect::<HashSet<_>>();
+
+        assert_eq!(
+            drafts,
+            hashset! {
+                *mapping.get("C").unwrap(),
+                *mapping.get("D").unwrap(),
+            }
+        );
+
+        Ok(())
     }
 }

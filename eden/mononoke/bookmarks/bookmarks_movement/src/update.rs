@@ -21,12 +21,12 @@ use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
+use repo_update_logger::find_draft_ancestors;
 use repo_update_logger::log_bookmark_operation;
+use repo_update_logger::log_new_bonsai_changesets;
 use repo_update_logger::BookmarkInfo;
 use repo_update_logger::BookmarkOperation;
 
-use crate::affected_changesets::find_draft_ancestors;
-use crate::affected_changesets::log_new_bonsai_changesets;
 use crate::affected_changesets::AdditionalChangesets;
 use crate::affected_changesets::AffectedChangesets;
 use crate::repo_lock::check_repo_lock;

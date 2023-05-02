@@ -14,5 +14,7 @@ mod commit_logger;
 pub use crate::bookmark_logger::log_bookmark_operation;
 pub use crate::bookmark_logger::BookmarkInfo;
 pub use crate::bookmark_logger::BookmarkOperation;
+pub use crate::commit_logger::find_draft_ancestors;
+pub use crate::commit_logger::log_new_bonsai_changesets;
 pub use crate::commit_logger::log_new_commits;
 pub use crate::commit_logger::CommitInfo;

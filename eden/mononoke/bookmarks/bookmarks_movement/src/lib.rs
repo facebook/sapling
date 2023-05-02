@@ -34,7 +34,7 @@ use repo_identity::RepoIdentityRef;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use thiserror::Error;
 
-mod affected_changesets;
+pub mod affected_changesets;
 mod create;
 mod delete;
 mod git_mapping;
