@@ -126,6 +126,14 @@ export class CommitStackState extends CommitStackRecord {
   }
 
   /**
+   * Return mutable revs.
+   * This filters out public or commits outisde the original stack export request.
+   */
+  mutableRevs(): Rev[] {
+    return [...this.stack.filter(c => c.immutableKind !== 'hash').map(c => c.rev)];
+  }
+
+  /**
    * Get the file at the given `rev`.
    *
    * Returns `ABSENT_FILE` if the file does not exist in the commit.
