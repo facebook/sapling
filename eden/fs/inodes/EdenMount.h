@@ -41,7 +41,6 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifndef _WIN32
-#include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/OverlayFileAccess.h"
 #endif
 
@@ -394,8 +393,6 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   FsChannel* FOLLY_NULLABLE getFsChannel() const;
 
-  Nfsd3* FOLLY_NULLABLE getNfsdChannel() const;
-
   /**
    * Get the FUSE/NFS/Prjfs channel for this mount point.
    *
@@ -414,9 +411,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   void setTestPrjfsChannel(
       std::unique_ptr<PrjfsChannel, FsChannelDeleter> channel);
-#else
-  FuseChannel* FOLLY_NULLABLE getFuseChannel() const;
 #endif
+
+  FuseChannel* FOLLY_NULLABLE getFuseChannel() const;
+  Nfsd3* FOLLY_NULLABLE getNfsdChannel() const;
 
   /**
    * Detect the FUSE/NFS/Prjfs channel for this mount point.
@@ -628,13 +626,11 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   TreeInodePtr getRootInodeUnchecked() const;
 
-#ifndef _WIN32
   /**
    * Get the inode number for the .eden dir.  Returns an empty InodeNumber
    * prior to the .eden directory being set up.
    */
   InodeNumber getDotEdenInodeNumber() const;
-#endif // !_WIN32
 
   /**
    * Loads and returns the Tree corresponding to the root of the mount's working

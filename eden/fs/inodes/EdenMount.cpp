@@ -1154,13 +1154,15 @@ Nfsd3* FOLLY_NULLABLE EdenMount::getNfsdChannel() const {
   return dynamic_cast<Nfsd3*>(channel_.get());
 }
 
-#ifndef _WIN32
-
 FuseChannel* FOLLY_NULLABLE EdenMount::getFuseChannel() const {
+#ifndef _WIN32
   return dynamic_cast<FuseChannel*>(channel_.get());
+#else
+  return nullptr;
+#endif
 }
 
-#else
+#ifdef _WIN32
 
 PrjfsChannel* FOLLY_NULLABLE EdenMount::getPrjfsChannel() const {
   return dynamic_cast<PrjfsChannel*>(channel_.get());
@@ -1174,11 +1176,7 @@ void EdenMount::setTestPrjfsChannel(
 #endif
 
 bool EdenMount::isFuseChannel() const {
-#ifdef _WIN32
-  return false;
-#else
   return getFuseChannel() != nullptr;
-#endif
 }
 
 bool EdenMount::isNfsdChannel() const {
@@ -1391,12 +1389,9 @@ ImmediateFuture<RelativePath> EdenMount::canonicalizePathFromTree(
       [p = std::move(processor)]() mutable { p.reset(); });
 }
 
-#ifndef _WIN32
 InodeNumber EdenMount::getDotEdenInodeNumber() const {
   return dotEdenInodeNumber_;
 }
-
-#endif // !_WIN32
 
 ImmediateFuture<InodePtr> EdenMount::getInodeSlow(
     RelativePathPiece path,
@@ -2373,13 +2368,11 @@ folly::Future<folly::Unit> EdenMount::takeoverNfs(NfsChannelData takeoverData) {
 #endif
 }
 
-#ifndef _WIN32
 InodeMetadata EdenMount::getInitialInodeMetadata(mode_t mode) const {
   auto owner = getOwner();
   return InodeMetadata{
       mode, owner.uid, owner.gid, InodeTimestamps{getLastCheckoutTime()}};
 }
-#endif
 
 struct stat EdenMount::initStatData() const {
   struct stat st = {};

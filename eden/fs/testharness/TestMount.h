@@ -44,6 +44,7 @@ class FakeFuse;
 class FakePrivHelper;
 class FakeTreeBuilder;
 class FileInode;
+class FuseDispatcher;
 class LocalStore;
 class TestConfigSource;
 class TreeInode;
