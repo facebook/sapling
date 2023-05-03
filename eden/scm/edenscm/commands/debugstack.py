@@ -7,7 +7,7 @@ from __future__ import absolute_import
 
 import base64, collections, functools
 
-from .. import context, hg, json, mutation, scmutil, smartset
+from .. import context, hg, json, mutation, scmutil, smartset, visibility
 from ..i18n import _
 from ..node import bin, hex, wdirhex, wdirrev
 from .cmdtable import command
@@ -233,13 +233,16 @@ def debugimportstack(ui, repo, **opts):
         [["commit", commit_info],
          ["commit", commit_info],
          ["goto", {"mark": mark}],
-         ["reset", {"mark": mark}]]
+         ["reset", {"mark": mark}],
+         ["hide", {"nodes": [node]}]]
 
     "goto" performs a checkout that will overwrite conflicted files.
 
     "reset" moves the "current commit" to the given rev without changing
     files in the working copy. It can be useful to implement "absorb" or
     "commit -i". It is similar to the ``reset -kr REV`` command.
+
+    "hide" hides commits if they do not have visible descendants.
 
     Both "goto" and "reset" accept "mark" only.
 
@@ -331,6 +334,7 @@ def debugimportstack(ui, repo, **opts):
             _create_commits(repo, commit_infos, marks)
 
             # Handle "goto" or "reset".
+            to_hide = []
             for action in actions:
                 action_name = action[0]
                 if action_name == "commit":
@@ -342,8 +346,14 @@ def debugimportstack(ui, repo, **opts):
                 elif action_name == "reset":
                     node = marks[action[1]["mark"]]
                     _reset(repo, node)
+                elif action_name == "hide":
+                    to_hide += [bin(n) for n in action[1]["nodes"]]
                 else:
                     raise ValueError(f"unsupported action: {action}")
+
+            # Handle "hide".
+            if to_hide:
+                visibility.remove(repo, to_hide)
 
     except (ValueError, TypeError, KeyError, AttributeError) as ex:
         ui.write("%s\n" % json.dumps({"error": str(ex)}))

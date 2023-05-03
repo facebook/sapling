@@ -225,6 +225,18 @@ Import stack:
        *  :5d amend by test at 1970-01-01T00:00:00 from:
           :5
 
+    # Hide.
+
+      $ hg up -q 'bottom()'
+      $ hg debugimportstack << EOS | marks
+      > [["hide", {"nodes": `marks :5b :5c :5d`}]]
+      > EOS
+      {}
+
+      $ hg log -Gr 'all()' -T '{desc}'
+      @  E1
+
+
     # Error cases
     $ hg debugimportstack << EOS
     > [["foo", {}]]
