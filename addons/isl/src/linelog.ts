@@ -53,48 +53,63 @@ enum Op {
 }
 
 /** J instruction. */
-interface J {
-  /** Opcode: J */
-  op: Op.J;
-  /** Program counter (offset to jump). */
-  pc: Pc;
-}
+const J = Record(
+  {
+    /** Opcode: J */
+    op: Op.J,
+    /** Program counter (offset to jump). */
+    pc: 0,
+  },
+  'J',
+);
 
 /** JGE instruction. */
-interface JGE {
-  /** Opcode: JGE */
-  op: Op.JGE;
-  /** `rev` to test. */
-  rev: Rev;
-  /** Program counter (offset to jump). */
-  pc: Pc;
-}
+const JGE = Record(
+  {
+    /** Opcode: JGE */
+    op: Op.JGE,
+    /** `rev` to test. */
+    rev: 0,
+    /** Program counter (offset to jump). */
+    pc: 0,
+  },
+  'JGE',
+);
 
 /** JL instruction. */
-interface JL {
-  /** Opcode: JL */
-  op: Op.JL;
-  /** `rev` to test. */
-  rev: Rev;
-  /** Program counter (offset to jump). */
-  pc: Pc;
-}
+const JL = Record(
+  {
+    /** Opcode: JL */
+    op: Op.JL,
+    /** `rev` to test. */
+    rev: 0,
+    /** Program counter (offset to jump). */
+    pc: 0,
+  },
+  'JL',
+);
 
 /** LINE instruction. */
-interface LINE {
-  /** Opcode: LINE */
-  op: Op.LINE;
-  /** `rev` to test. */
-  rev: Rev;
-  /** Line content. Includes EOL. */
-  data: string;
-}
+const LINE = Record(
+  {
+    /** Opcode: LINE */
+    op: Op.LINE,
+    /** `rev` to test. */
+    rev: 0,
+    /** Line content. Includes EOL. */
+    data: '',
+  },
+  'LINE',
+);
 
 /** END instruction. */
-interface END {
-  /** Opcode: END */
-  op: Op.END;
-}
+const END = Record(
+  {
+    /** Opcode: END */
+    op: Op.END,
+  },
+  'END',
+);
 
 /** Program counter (offset to instructions). */
 type Pc = number;
@@ -106,7 +121,16 @@ type Rev = number;
 type LineIdx = number;
 
 /** Instruction. */
-type Inst = J | JGE | JL | LINE | END;
+type Inst = Readonly<
+  | {op: Op.J; pc: Pc}
+  | {op: Op.END}
+  | ((
+      | {op: Op.JGE; rev: Rev; pc: Pc}
+      | {op: Op.JL; rev: Rev; pc: Pc}
+      | {op: Op.LINE; rev: Rev; data: string}
+    ) &
+      Record<{rev: Rev}>)
+>;
 
 /** Information about a line. Internal (`lines`) result of `LineLog.checkOut`. */
 interface LineInfo {
@@ -141,7 +165,7 @@ export const executeCache: LRUWithStats = new LRU(100);
 
 const LineLogRecord = Record({
   /** Core state: instructions. The array index type is `Pc`. */
-  code: List([{op: Op.END}]) as Code,
+  code: List([END()]) as Code,
   /** Maximum rev tracked. */
   maxRev: 0 as Rev,
 });
@@ -199,28 +223,28 @@ class LineLog extends LineLogRecord {
       const a1Pc = aLines[a1].pc;
       if (bLines.length > 0) {
         const b2Pc = start + bLines.length + 1;
-        code.push({op: Op.JL, rev: bRev, pc: b2Pc});
+        code.push(JL({rev: bRev, pc: b2Pc}) as Inst);
         bLines.forEach(line => {
-          code = code.push({op: Op.LINE, rev: bRev, data: line});
+          code = code.push(LINE({rev: bRev, data: line}) as Inst);
         });
         assert(b2Pc === code.size, 'bug: wrong pc');
       }
       if (a1 < a2) {
         const a2Pc = aLines[a2 - 1].pc + 1;
-        code = code.push({op: Op.JGE, rev: bRev, pc: a2Pc});
+        code = code.push(JGE({rev: bRev, pc: a2Pc}) as Inst);
       }
       if (aLinesMutable) {
         aLines[a1] = {...aLines[a1], pc: code.size};
       }
-      code = code.push({...unwrap(code.get(a1Pc))});
+      code = code.push(unwrap(code.get(a1Pc)));
       switch (unwrap(code.get(a1Pc)).op) {
         case Op.J:
         case Op.END:
           break;
         default:
-          code = code.push({op: Op.J, pc: a1Pc + 1});
+          code = code.push(J({pc: a1Pc + 1}) as Inst);
       }
-      code = code.set(a1Pc, {op: Op.J, pc: start});
+      code = code.set(a1Pc, J({pc: start}) as Inst);
       return code;
     });
 
@@ -247,14 +271,13 @@ class LineLog extends LineLogRecord {
   remapRevs(revMap: Map<Rev, Rev>): LineLog {
     let newMaxRev = 0;
     const newCode = this.code
-      .map(inst => {
-        const c = {...inst};
+      .map(c => {
         if (c.op === Op.JGE || c.op === Op.JL || c.op === Op.LINE) {
           const newRev = revMap.get(c.rev) ?? c.rev;
           if (newRev > newMaxRev) {
             newMaxRev = newRev;
           }
-          c.rev = newRev;
+          return c.set('rev', newRev);
         }
         return c;
       })

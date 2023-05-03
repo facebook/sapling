@@ -162,9 +162,7 @@ describe('LineLog', () => {
 
     expect(Object.is(log1, log2)).toBeFalsy();
     expect(Immutable.is(log1, log2)).toBeTruthy();
-
-    // FIXME: Inst type needs to be Immutable.Record too.
-    expect(Immutable.is(log1, log3)).toBeFalsy();
+    expect(Immutable.is(log1, log3)).toBeTruthy();
   });
 
   describe('supports editing previous revisions', () => {
