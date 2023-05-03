@@ -7,6 +7,9 @@
 
 import type {Rev} from './fileStackState';
 
+import {CommitStackState} from './commitStackState';
+import {List, Record} from 'immutable';
+
 type ReorderResult = {
   /** Reorder result that satisfy dependencies. */
   order: Rev[];
@@ -79,4 +82,44 @@ export function reorderWithDeps(
     order = [...range(0, n)];
   }
   return {order, deps};
+}
+
+/** State to preview effects of drag-n-drop reorder. */
+export class ReorderState extends Record({
+  commitStack: new CommitStackState([]),
+  reorderRevs: List<Rev>(),
+  draggingRevs: List<Rev>(),
+  draggingRev: -1 as Rev,
+}) {
+  static init(commitStack: CommitStackState, draggingRev: Rev): ReorderState {
+    return new ReorderState({
+      commitStack,
+      draggingRev,
+      reorderRevs: List(commitStack.revs()),
+      draggingRevs: List([draggingRev]),
+    });
+  }
+
+  isDragging() {
+    return this.draggingRev >= 0;
+  }
+
+  /**
+   * Calculate reorderRevs and draggingRevs based on the given offset.
+   * `draggingRevs` might change to maintain the dependency map.
+   */
+  withOffset(offset: number): ReorderState {
+    const reordered = reorderWithDeps(
+      this.commitStack.stack.size,
+      this.draggingRev,
+      offset,
+      this.commitStack.calculateDepMap(),
+    );
+
+    // Force match depdency requirements of `rev` by moving dependencies.
+    return this.merge({
+      reorderRevs: List(reordered.order),
+      draggingRevs: List(reordered.deps),
+    });
+  }
 }
