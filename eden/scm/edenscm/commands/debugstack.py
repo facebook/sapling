@@ -482,8 +482,8 @@ def _create_commits(repo, commit_infos, marks: Marks):
             moves[pred].append(node)
         marks.set(mark, node)
 
-        # Move bookmarks and adjust visibility.
-        scmutil.cleanupnodes(repo, moves, operation="importstack")
+    # Move bookmarks and adjust visibility.
+    scmutil.cleanupnodes(repo, moves, operation="importstack")
 
 
 def _reset(repo, node):
