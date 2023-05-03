@@ -889,11 +889,8 @@ export class CommitStackState extends CommitStackRecord {
 
     // Update state.stack.
     const newStack = state.stack.map((_commit, rev) => {
-      let commit = unwrap(state.stack.get(order[rev]));
-      if (commit.parents.size > 0 && rev > 0) {
-        commit = commit.set('parents', List([rev - 1]));
-      }
-      return commit.set('rev', rev);
+      const commit = unwrap(state.stack.get(order[rev]));
+      return commit.merge({parents: List(rev > 0 ? [rev - 1] : []), rev});
     });
     state = state.set('stack', newStack);
 

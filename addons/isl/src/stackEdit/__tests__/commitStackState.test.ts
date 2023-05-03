@@ -548,6 +548,28 @@ describe('CommitStackState', () => {
       expect(stack.canReorder([0, 1, 2, 3])).toBeFalsy();
     });
 
+    it('reorders adjacent changes', () => {
+      // Note: usually rev 0 is a public parent commit, rev 0 is not usually reordered.
+      // But this test reorders rev 0 and triggers some interesting code paths.
+      let stack = new CommitStackState([
+        {...e, node: 'A', files: {xx: {data: '1\n'}}},
+        {...e, node: 'B', parents: ['A'], files: {xx: {data: '1\n2\n'}}},
+      ]);
+      expect(stack.canReorder([1, 0])).toBeTruthy();
+      stack = stack.reorder([1, 0]);
+      expect(stack.stack.toArray().map(c => c.files.get('xx')?.data)).toMatchObject([
+        '2\n',
+        '1\n2\n',
+      ]);
+      // Reorder back.
+      expect(stack.canReorder([1, 0])).toBeTruthy();
+      stack = stack.reorder([1, 0]);
+      expect(stack.stack.toArray().map(c => c.files.get('xx')?.data)).toMatchObject([
+        '1\n',
+        '1\n2\n',
+      ]);
+    });
+
     it('reorders content changes', () => {
       let stack = new CommitStackState([
         {...e, node: 'A', files: {xx: {data: '1\n1\n'}}},
