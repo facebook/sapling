@@ -51,6 +51,7 @@ repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
+sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }
 skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manifest" }
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slice_repository = { version = "0.1.0", path = "../commit_traversal/slice_repository" }

@@ -42,7 +42,7 @@ pub struct RepoShard {
 }
 
 impl RepoShard {
-    fn with_repo_name(repo_name: &str) -> Self {
+    pub fn with_repo_name(repo_name: &str) -> Self {
         Self {
             repo_name: repo_name.to_string(),
             ..Default::default()
@@ -133,6 +133,26 @@ impl RepoShard {
     }
 }
 
+impl std::fmt::Display for RepoShard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.repo_name)?;
+        if let Some(target_repo_name) = self.target_repo_name.as_ref() {
+            f.write_str(X_REPO_SEPARATOR)?;
+            f.write_str(target_repo_name)?;
+        }
+        if let (Some(total_chunks), Some(chunk_id)) = (self.total_chunks, self.chunk_id) {
+            f.write_fmt(format_args!(
+                "{}{}{}{}",
+                CHUNK_SEPARATOR, chunk_id, CHUNK_PART_SEPARATOR, total_chunks
+            ))?;
+        }
+        if let Some(chunk_size) = self.chunk_size {
+            f.write_fmt(format_args!("{}{}", CHUNK_SIZE_SEPARATOR, chunk_size))?;
+        }
+        Ok(())
+    }
+}
+
 enum ShardSplit<'a> {
     Repo(&'a str),
     RepoWithChunks(&'a str, &'a str),
@@ -179,6 +199,6 @@ pub fn encode_repo_name(repo_name: &str) -> String {
 
 /// Function responsible for splitting source and target repo name
 /// from combined repo-name string.
-pub fn split_repo_names(combined_repo_names: &str) -> Vec<&str> {
+fn split_repo_names(combined_repo_names: &str) -> Vec<&str> {
     combined_repo_names.splitn(2, X_REPO_SEPARATOR).collect()
 }

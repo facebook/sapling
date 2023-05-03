@@ -38,6 +38,7 @@ use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
 use panichandler::Fate;
 use permission_checker::DefaultAclProvider;
+use sharding_ext::RepoShard;
 use slog::info;
 use source_control::server::make_SourceControlService_server;
 use srserver::service_framework::BuildModule;
@@ -103,7 +104,8 @@ impl ScsServerProcess {
 
 #[async_trait]
 impl RepoShardedProcess for ScsServerProcess {
-    async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+    async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+        let repo_name = repo.repo_name.as_str();
         let logger = self.repos_mgr.repo_logger(repo_name);
         info!(&logger, "Setting up repo {} in SCS service", repo_name);
         // Check if the input repo is already initialized. This can happen if the repo is a

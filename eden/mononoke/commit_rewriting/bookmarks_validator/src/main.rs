@@ -41,7 +41,7 @@ use mononoke_types::ChangesetId;
 use once_cell::sync::OnceCell;
 use pushredirect_enable::types::MononokePushRedirectEnable;
 use scuba_ext::MononokeScubaSampleBuilder;
-use sharding_ext::split_repo_names;
+use sharding_ext::RepoShard;
 use slog::error;
 use slog::info;
 use slog::Logger;
@@ -91,38 +91,34 @@ impl BookmarkValidateProcess {
 
 #[async_trait]
 impl RepoShardedProcess for BookmarkValidateProcess {
-    async fn setup(
-        &self,
-        repo_names_pair: &str,
-    ) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        // Since for bookmark validator, two repos (i.e. source and target)
-        // are required, the input would be of the form:
-        // source_repo_TO_target_repo (e.g. fbsource_TO_aros)
-        let repo_pair: Vec<_> = split_repo_names(repo_names_pair);
-        if repo_pair.len() != 2 {
-            error!(
-                self.matches.logger(),
-                "Repo names provided in incorrect format: {}", repo_names_pair
-            );
-            bail!(
-                "Repo names provided in incorrect format: {}",
-                repo_names_pair
-            )
-        }
-        let (source_repo_name, target_repo_name) = (repo_pair[0], repo_pair[1]);
+    async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+        let logger = self.matches.logger();
+        // For bookmark validator, two repos (i.e. source and target) are required as input
+        let source_repo_name = repo.repo_name.clone();
+        let target_repo_name = match repo.target_repo_name.clone() {
+            Some(repo_name) => repo_name,
+            None => {
+                let details = format!(
+                    "Only source repo name {} provided, target repo name missing in {}",
+                    source_repo_name, repo
+                );
+                error!(logger, "{}", details);
+                bail!("{}", details)
+            }
+        };
         info!(
-            self.matches.logger(),
+            logger,
             "Setting up bookmark validate command from repo {} to repo {}",
             source_repo_name,
             target_repo_name,
         );
-        let ctx = create_core_context(self.fb, self.matches.logger().clone())
-            .clone_with_repo_name(repo_names_pair);
+        let ctx =
+            create_core_context(self.fb, logger.clone()).clone_with_repo_name(&repo.to_string());
         let config_store = self.matches.config_store().clone();
         let source_repo_id =
-            args::resolve_repo_by_name(&config_store, &self.matches, source_repo_name)?.id;
+            args::resolve_repo_by_name(&config_store, &self.matches, &source_repo_name)?.id;
         let target_repo_id =
-            args::resolve_repo_by_name(&config_store, &self.matches, target_repo_name)?.id;
+            args::resolve_repo_by_name(&config_store, &self.matches, &target_repo_name)?.id;
 
         let syncers = create_commit_syncers_from_matches::<Repo>(
             &ctx,
@@ -131,25 +127,25 @@ impl RepoShardedProcess for BookmarkValidateProcess {
         )
         .await?;
         if syncers.large_to_small.get_large_repo().repo_identity().id() != source_repo_id {
-            bail!(
+            let details = format!(
                 "Source repo must be a large repo!. Source repo: {}, Target repo: {}",
-                &source_repo_name,
-                &target_repo_name
-            )
+                source_repo_name, target_repo_name
+            );
+            error!(logger, "{}", details);
+            bail!("{}", details);
         }
+        let details = format!(
+            "Completed bookmark validate command setup from repo {} to repo {}",
+            source_repo_name, target_repo_name
+        );
         let executor = BookmarkValidateProcessExecutor::new(
             syncers,
             ctx,
             config_store,
-            source_repo_name.to_string(),
-            target_repo_name.to_string(),
-        );
-        info!(
-            self.matches.logger(),
-            "Completed bookmark validate command setup from repo {} to repo {}",
             source_repo_name,
             target_repo_name,
         );
+        info!(logger, "{}", details,);
         Ok(Arc::new(executor))
     }
 }

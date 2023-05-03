@@ -20,6 +20,7 @@ use fbinit::FacebookInit;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::MononokeApp;
 use once_cell::sync::OnceCell;
+use sharding_ext::RepoShard;
 use slog::info;
 use slog::Logger;
 
@@ -76,7 +77,8 @@ impl WalkerScrubProcess {
 
 #[async_trait]
 impl RepoShardedProcess for WalkerScrubProcess {
-    async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+    async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+        let repo_name = repo.repo_name.as_str();
         let logger = self.app.repo_logger(repo_name);
         info!(&logger, "Setting up walker scrub for repo {}", repo_name);
         let repos = MultiRepoArgs {

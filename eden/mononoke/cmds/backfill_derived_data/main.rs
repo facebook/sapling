@@ -86,6 +86,7 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_factory::RepoFactoryBuilder;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
+use sharding_ext::RepoShard;
 use skiplist::SkiplistIndex;
 use slog::info;
 use slog::Logger;
@@ -507,7 +508,8 @@ impl DerivedDataProcess {
 
 #[async_trait]
 impl RepoShardedProcess for DerivedDataProcess {
-    async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+    async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+        let repo_name = repo.repo_name.as_str();
         info!(
             self.matches.logger(),
             "Setting up derived data command for repo {}", repo_name
@@ -630,7 +632,9 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .map(|repo| {
                     let process = Arc::clone(&process);
                     async move {
-                        let executor = process.setup(&repo.name).await?;
+                        let executor = process
+                            .setup(&RepoShard::with_repo_name(&repo.name))
+                            .await?;
                         executor.execute().await
                     }
                 }),

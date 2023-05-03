@@ -43,6 +43,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
 use openssl::ssl::AlpnError;
+use sharding_ext::RepoShard;
 use slog::error;
 use slog::info;
 use slog::o;
@@ -137,7 +138,8 @@ impl MononokeServerProcess {
 
 #[async_trait]
 impl RepoShardedProcess for MononokeServerProcess {
-    async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+    async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+        let repo_name = repo.repo_name.as_str();
         let logger = self.repos_mgr.repo_logger(repo_name);
         info!(&logger, "Setting up repo {} in Mononoke service", repo_name);
         self.add_repo(repo_name, &logger).await.with_context(|| {

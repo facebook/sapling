@@ -62,7 +62,7 @@ use once_cell::sync::OnceCell;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentity;
-use sharding_ext::split_repo_names;
+use sharding_ext::RepoShard;
 use slog::debug;
 use slog::error;
 use slog::info;
@@ -148,51 +148,11 @@ impl AliasVerifyProcess {
 
 #[async_trait]
 impl RepoShardedProcess for AliasVerifyProcess {
-    async fn setup(
-        &self,
-        repo_name_with_multiplier: &str,
-    ) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        let logger = self.app.repo_logger(repo_name_with_multiplier);
-        let mut repo_name_parts = split_repo_names(repo_name_with_multiplier).into_iter();
-        let mut repo_name = repo_name_with_multiplier;
-        let (mut start, mut total) = (0u64, 1u64);
-        if let Some(repo) = repo_name_parts.next() {
-            repo_name = repo;
-        }
-        if let Some(multiplier_str) = repo_name_parts.next() {
-            let mut parts = multiplier_str.split('-');
-            match (parts.next(), parts.next()) {
-                (Some(start_multiplier), Some(total_multiplier)) => {
-                    start = start_multiplier.parse().with_context(|| {
-                        format!("Invalid start multiplier {}", start_multiplier)
-                    })?;
-                    total = total_multiplier.parse().with_context(|| {
-                        format!("Invalid total multiplier {}", total_multiplier)
-                    })?;
-                }
-                _ => {
-                    error!(
-                        logger,
-                        "Multiplier provided in incorrect format: {}", multiplier_str
-                    );
-                    bail!(
-                        "Multiplier provided in incorrect format: {}",
-                        multiplier_str
-                    )
-                }
-            }
-        }
-        if repo_name_parts.next().is_some() {
-            error!(
-                logger,
-                "Repo name with multiplier provided in incorrect format: {}",
-                repo_name_with_multiplier
-            );
-            bail!(
-                "Repo name with multiplier provided in incorrect format: {}",
-                repo_name_with_multiplier
-            )
-        }
+    async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+        let logger = self.app.repo_logger(&repo.to_string());
+        let repo_name = repo.repo_name.as_str();
+        let start = repo.chunk_id.unwrap_or(0) as u64;
+        let total = repo.total_chunks.unwrap_or(1) as u64;
         info!(&logger, "Setting up alias verify for repo {}", repo_name);
         let ctx = self.app.new_basic_context();
         self.repos_mgr
@@ -693,7 +653,9 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     "Repo name or ID not provided. Either sharded-service-name or repo id/name should be provided."
                 ),
             };
-            let alias_verify = process.setup(repo_name.as_ref()).await?;
+            let alias_verify = process
+                .setup(&RepoShard::with_repo_name(repo_name.as_ref()))
+                .await?;
             alias_verify.execute().await
         }
         Some(name) => {

@@ -20,6 +20,7 @@ use fbinit::FacebookInit;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use once_cell::sync::OnceCell;
+use sharding_ext::RepoShard;
 use slog::info;
 use slog::Logger;
 use tokio::time;
@@ -50,17 +51,14 @@ impl RepoShardedProcess for TestProcess {
     /// Method responsible for performing the initial setup of the BP in context of
     /// the provided repo. This method should ONLY contain code necessary to build
     /// state (in form of the struct that implements RepoShardedProcessExecutor trait)
-    /// that is required to execute the job. The repo-name (or related entity)
+    /// that is required to execute the job. The repo (or related entity)
     /// should be included as part of the RepoShardedProcessExecutor state.
-    async fn setup(&self, repo_name: &str) -> Result<Arc<dyn RepoShardedProcessExecutor>> {
+    async fn setup(&self, repo: &RepoShard) -> Result<Arc<dyn RepoShardedProcessExecutor>> {
         // Since this is a test application, there is no actual state construction
         // to be performed here. In common cases, this would involve generating the
         // Repo struct or related entity utilizing a factory and then storing the
         // generated entities as part of the returned struct.
-        Ok(Arc::new(TestProcessExecutor::new(
-            &self.app,
-            repo_name.to_string(),
-        )))
+        Ok(Arc::new(TestProcessExecutor::new(&self.app, repo)))
     }
 }
 
@@ -71,16 +69,16 @@ impl RepoShardedProcess for TestProcess {
 /// to be stopped or paused.
 pub struct TestProcessExecutor {
     terminate_execution: Arc<AtomicBool>,
-    repo_name: String,
+    repo: RepoShard,
     logger: Logger,
 }
 
 impl TestProcessExecutor {
-    fn new(app: &MononokeApp, repo_name: String) -> Self {
+    fn new(app: &MononokeApp, repo: &RepoShard) -> Self {
         Self {
             terminate_execution: Arc::new(AtomicBool::new(false)),
             logger: app.logger().clone(),
-            repo_name,
+            repo: repo.clone(),
         }
     }
 }
@@ -109,18 +107,18 @@ impl TestProcessExecutor {
 /// as part of this BP.
 async fn do_busy_work(
     logger: &Logger,
-    repo_name: String,
+    repo: &RepoShard,
     terminate_execution: Arc<AtomicBool>,
 ) -> Result<()> {
     info!(
         logger,
-        "Beginning execution of test process for repo {}", repo_name,
+        "Beginning execution of test process for repo {}", repo,
     );
     let mut iteration = 1;
     loop {
         info!(
             logger,
-            "Executing iteration {} of test process for repo {}", iteration, repo_name,
+            "Executing iteration {} of test process for repo {}", iteration, repo,
         );
         // Equivalent to heavy work being done by the process for a repo.
         time::sleep(time::Duration::from_secs(SECS_IN_MINUTE)).await;
@@ -133,7 +131,7 @@ async fn do_busy_work(
             info!(
                 logger,
                 "Finishing execution of test process for repo {} after {} iterations",
-                repo_name,
+                repo,
                 iteration,
             );
             // Finally return
@@ -147,7 +145,7 @@ async fn do_busy_work(
         if iteration % 10 == 0 {
             bail!(
                 "Sample transient error for repo {} after {} iterations",
-                repo_name,
+                repo,
                 iteration
             )
         }
@@ -165,7 +163,7 @@ impl RepoShardedProcessExecutor for TestProcessExecutor {
     async fn execute(&self) -> Result<()> {
         do_busy_work(
             &self.logger,
-            self.repo_name.to_string(),
+            &self.repo,
             Arc::clone(&self.terminate_execution),
         )
         .await
@@ -257,8 +255,9 @@ async fn run_unsharded(app: MononokeApp) -> Result<()> {
         .args::<TestArgs>()?
         .repo_name
         .expect("Repo name needs to be provided when executing in unsharded mode");
+    let repo = RepoShard::from_shard_id(&repo_name)?;
     // Terminate execution can still be used to halt execution even in unsharded mode.
     // For this example, we are immediately terminating after one loop.
     let terminate_execution = Arc::new(AtomicBool::new(true));
-    do_busy_work(app.logger(), repo_name, Arc::clone(&terminate_execution)).await
+    do_busy_work(app.logger(), &repo, Arc::clone(&terminate_execution)).await
 }

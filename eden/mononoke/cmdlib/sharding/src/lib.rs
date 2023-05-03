@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use sharding_ext::RepoShard;
 
 pub mod args;
 #[cfg(fbcode_build)]
@@ -31,9 +32,9 @@ pub trait RepoShardedProcess: Send + Sync {
     /// Method responsible for performing the initial setup of the process in context of
     /// the provided repo. This method should ONLY contain code necessary to build
     /// state (in form of the struct that implements RepoShardedProcessExecutor trait)
-    /// that is required to execute the job. The repo-name (or related entity)
+    /// that is required to execute the job. The repo (or any related entity)
     /// should be included as part of the RepoShardedProcessExecutor state.
-    async fn setup(&self, repo_name: &str) -> Result<Arc<dyn RepoShardedProcessExecutor>>;
+    async fn setup(&self, repo: &RepoShard) -> Result<Arc<dyn RepoShardedProcessExecutor>>;
 }
 
 /// Trait outlining the methods to be implemented by Mononoke jobs that require

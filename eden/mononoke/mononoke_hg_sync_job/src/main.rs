@@ -94,6 +94,7 @@ use repo_lock::SqlRepoLock;
 use retry::retry_always;
 use retry::RetryAttemptsCount;
 use scuba_ext::MononokeScubaSampleBuilder;
+use sharding_ext::RepoShard;
 use skiplist::SkiplistIndex;
 use slog::error;
 use slog::info;
@@ -426,7 +427,8 @@ impl HgSyncProcess {
 
 #[async_trait]
 impl RepoShardedProcess for HgSyncProcess {
-    async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+    async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+        let repo_name = repo.repo_name.as_str();
         info!(
             self.matches.logger(),
             "Setting up hg sync command for repo {}", repo_name
