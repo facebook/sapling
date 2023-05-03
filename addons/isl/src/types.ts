@@ -145,6 +145,13 @@ export type CommitInfo = {
   remoteBookmarks: Array<string>;
   /** if this commit is obsolete, it is succeeded by another commit */
   successorInfo?: SuccessorInfo;
+  /**
+   * Cloest predecessors (not all recursive predecessors, which can be a long
+   * chain and hurt performance). Useful to deal with optimistic states where
+   * we know the hashes of predecessors (commits being rewritten) but not their
+   * successors (rewritten result).
+   */
+  closestPredecessors?: Hash[];
   /** only a subset of the total files for this commit */
   filesSample: Array<ChangedFile>;
   totalFileCount: number;

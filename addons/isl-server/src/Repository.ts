@@ -74,6 +74,7 @@ const FIELDS = {
   filesModified: '{file_mods|json}',
   filesRemoved: '{file_dels|json}',
   successorInfo: '{mutations % "{operation}:{successors % "{node}"},"}',
+  cloesestPredecessors: '{predecessors % "{node},"}',
   // This would be more elegant as a new built-in template
   diffId: '{if(phabdiff, phabdiff, github_pull_request_number)}',
   stableCommitMetadata: Internal.stableCommitTemplate ?? '',
@@ -846,6 +847,7 @@ export function parseCommitInfoOutput(logger: Logger, output: string): SmartlogC
         filesSample: files.slice(0, MAX_FETCHED_FILES_PER_COMMIT),
         totalFileCount: files.length,
         successorInfo: parseSuccessorData(lines[FIELD_INDEX.successorInfo]),
+        closestPredecessors: splitLine(lines[FIELD_INDEX.cloesestPredecessors], ','),
         description: lines
           .slice(FIELD_INDEX.description + 1 /* first field of description is title; skip it */)
           .join('\n'),
@@ -872,8 +874,8 @@ export function parseSuccessorData(successorData: string): SuccessorInfo | undef
     type: successor[0],
   };
 }
-function splitLine(line: string): Array<string> {
-  return line.split(NULL_CHAR).filter(e => e.length > 0);
+function splitLine(line: string, separator = NULL_CHAR): Array<string> {
+  return line.split(separator).filter(e => e.length > 0);
 }
 
 /**
