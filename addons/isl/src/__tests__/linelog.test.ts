@@ -227,7 +227,7 @@ describe('LineLog', () => {
     ]);
     expect(deps(['b', 'ab'])).toEqual([
       [1, [0]],
-      [2, [1]], // suboptimal
+      [2, [0]],
     ]);
     expect(deps(['ad', 'abd', 'abcd'])).toEqual([
       [1, [0]],
@@ -237,7 +237,7 @@ describe('LineLog', () => {
     expect(deps(['ad', 'acd', 'abcd'])).toEqual([
       [1, [0]],
       [2, [1]],
-      [3, [2]], // suboptimal
+      [3, [1]],
     ]);
 
     // Deletions.

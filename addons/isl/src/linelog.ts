@@ -245,9 +245,30 @@ class LineLog extends LineLogRecord {
     //      the last rev for performance optimization.
     // [3]: <a1 Inst> could be LINE or END.
     // [4]: As an optimization, this is only present if <a1 Inst> is not END.
+    //
+    // As an optimization to make reorder less restrictive, we treat insertion
+    // (a1 == a2) at the beginning of another insertion (<a1 Inst> is after a
+    // <JL>) specially by patching the <JL> instruction instead of <a1 Inst>
+    // and make sure the new <JL> (for this edit) is before the old <JL>.
+    // See the [*] lines below for differences with the above:
+    //
+    // # Before             # After
+    // # (pc): Instruction  # (pc): Instruction
+    //       : ...                : ...
+    //       : <JL>         a1Pc-1: J start           [*]
+    //     a1: <a1 Inst>      a1Pc: ... (unchanged)   [*]
+    //       : ...                : ...
+    //    len: N/A           start: JL brev b2Pc
+    //                            : ...
+    //                        b2Pc: <JL> (moved)      [*]
+    //                            : J a1Pc            [*]
     const newCode = this.code.withMutations(origCode => {
       let code = origCode;
       const a1Pc = aLines[a1].pc;
+      let jlInst = a1Pc > 0 && a1 === a2 ? code.get(a1Pc - 1) : undefined;
+      if (jlInst?.op !== Op.JL) {
+        jlInst = undefined;
+      }
       if (bLines.length > 0) {
         const b2Pc = start + bLines.length + 1;
         code.push(JL({rev: bRev, pc: b2Pc}) as Inst);
@@ -257,18 +278,26 @@ class LineLog extends LineLogRecord {
         assert(b2Pc === code.size, 'bug: wrong pc');
       }
       if (a1 < a2) {
+        assert(jlInst === undefined, 'no deletions when jlInst is set');
         const a2Pc = aLines[a2 - 1].pc + 1;
         code = code.push(JGE({rev: bRev, pc: a2Pc}) as Inst);
       }
-      if (aLinesMutable) {
+      if (aLinesMutable && jlInst === undefined) {
         aLinesCache[a1] = {...aLines[a1], pc: code.size};
       }
-      const a1Inst = unwrap(code.get(a1Pc));
-      code = code.push(a1Inst);
-      if (a1Inst.op /* LINE or END */ !== Op.END) {
-        code = code.push(J({pc: a1Pc + 1}) as Inst);
+      if (jlInst === undefined) {
+        const a1Inst = unwrap(code.get(a1Pc));
+        code = code.push(a1Inst);
+        if (a1Inst.op /* LINE or END */ !== Op.END) {
+          code = code.push(J({pc: a1Pc + 1}) as Inst);
+        }
+        code = code.set(a1Pc, J({pc: start}) as Inst);
+      } else {
+        code = code
+          .push(jlInst)
+          .push(J({pc: a1Pc}) as Inst)
+          .set(a1Pc - 1, J({pc: start}) as Inst);
       }
-      code = code.set(a1Pc, J({pc: start}) as Inst);
       return code;
     });
 
