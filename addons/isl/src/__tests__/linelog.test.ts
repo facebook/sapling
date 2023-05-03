@@ -166,7 +166,7 @@ describe('LineLog', () => {
     });
   });
 
-  it('tracks rev dependencies', () => {
+  it('calculates rev dependencies', () => {
     const textList = [
       'a\nb\nc\n',
       'a\nb\nc\nd\n',
@@ -178,10 +178,10 @@ describe('LineLog', () => {
       'a\nd\n1\ne\n',
       'x\ny\nz\n',
     ];
-    let log = logFromTextList(textList, {trackDeps: true});
+    const log = logFromTextList(textList);
     const flatten = (depMap: Map<Rev, Set<Rev>>) =>
       [...depMap.entries()].map(([rev, set]) => [rev, [...set].sort()]);
-    expect(flatten(log.revDepMap)).toStrictEqual([
+    expect(flatten(log.calculateDepMap())).toStrictEqual([
       [1, [0]],
       [2, [0, 1]],
       [3, [1]],
@@ -198,10 +198,6 @@ describe('LineLog', () => {
       // replaces all: "a" (rev 1), "d" (rev 2), "1" (rev 8), "e" (rev 6)
       [9, [0, 1, 2, 6, 8]],
     ]);
-
-    // Disable trackDeps
-    log = logFromTextList(textList, {trackDeps: false});
-    expect(log.revDepMap).toEqual(new Map());
   });
 
   it('produces flatten lines', () => {
@@ -303,8 +299,8 @@ describe('LineLog', () => {
   });
 });
 
-function logFromTextList(textList: string[], {trackDeps} = {trackDeps: false}): LineLog {
-  const log = new LineLog({trackDeps});
+function logFromTextList(textList: string[]): LineLog {
+  const log = new LineLog();
   textList.forEach(text => log.recordText(text));
   return log;
 }

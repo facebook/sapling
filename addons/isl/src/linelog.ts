@@ -147,16 +147,6 @@ class LineLog {
   /** Core state: instructions. The array index type is `Pc`. */
   private code: Inst[] = [{op: Op.END}];
 
-  /**
-   * Rev dependencies.
-   * For example, `{5: [3, 1]}` means rev 5 depends on rev 3 and rev 1.
-   * This is only updated when `trackDeps` is `true` during construction.
-   */
-  readonly revDepMap: Map<Rev, Set<Rev>> = new Map<Rev, Set<Rev>>();
-
-  /** If `true`, update `revDepMap` on change. */
-  trackDeps = false;
-
   /** Maximum rev tracked. */
   maxRev: Rev = 0;
 
@@ -171,11 +161,8 @@ class LineLog {
 
   /**
    * Create a `LineLog` with empty content.
-   * If `trackDeps` is `true`, rev dependencies are updated and
-   * stored in `revDepMap`.
    */
-  constructor({trackDeps}: {trackDeps: boolean} = {trackDeps: false}) {
-    this.trackDeps = trackDeps;
+  constructor() {
     this.checkOut(0);
   }
 
@@ -197,23 +184,6 @@ class LineLog {
   editChunk(a1: LineIdx, a2: LineIdx, rev: Rev, lines: string[]) {
     assert(a1 <= a2, 'illegal chunk (a1 < a2)');
     assert(a2 <= this.lines.length, 'out of bound a2 (forgot checkOut?)');
-
-    // Track dependencies. This is done by marking rev depend on all revs added by the a1..a2 range.
-    if (this.trackDeps) {
-      let depRevs = this.revDepMap.get(rev);
-      if (depRevs == null) {
-        const set = new Set<Rev>();
-        this.revDepMap.set(rev, set);
-        depRevs = set;
-      }
-      // Also check surrounding lines. This is a bit conservative.
-      for (let ai = Math.max(a1 - 1, 0); ai < Math.min(a2 + 1, this.lines.length); ai += 1) {
-        const depRev = this.lines[ai].rev;
-        if (depRev >= 0 && depRev < rev) {
-          depRevs.add(depRev);
-        }
-      }
-    }
 
     const start = this.code.length;
     const a1Pc = this.lines[a1].pc;
@@ -274,6 +244,44 @@ class LineLog {
     // Invalidate outdated checkout.
     this.lastCheckoutKey = '';
     this.checkOut(this.maxRev);
+  }
+
+  /**
+   * Calculate the dependencies of revisions.
+   * For example, `{5: [3, 1]}` means rev 5 depends on rev 3 and rev 1.
+   */
+  calculateDepMap(): Map<Rev, Set<Rev>> {
+    // To calculate dependencies. We look at differences between
+    // adjacent revs.
+    const depMap = new Map<Rev, Set<Rev>>();
+    let leftSide = this.execute(0, 0, null);
+    if (leftSide.length > 1) {
+      // rev 0 is non-empty.
+      depMap.set(0, new Set());
+    }
+    for (let rev = 1; rev <= this.maxRev; rev += 1) {
+      const rightSide = this.execute(rev, rev, null);
+      diffLines(
+        leftSide.map(l => l.data),
+        rightSide.map(l => l.data),
+      ).forEach(([a1, a2, _b1, _b2]) => {
+        let depRevs = depMap.get(rev);
+        if (depRevs == null) {
+          const newSet = new Set<Rev>();
+          depMap.set(rev, newSet);
+          depRevs = newSet;
+        }
+        // Blame surrounding and changed/deleted lines on the left side.
+        for (let ai = Math.max(a1 - 1, 0); ai < Math.min(a2 + 1, leftSide.length); ai += 1) {
+          const depRev = leftSide[ai].rev;
+          if (depRev >= 0 && depRev < rev) {
+            depRevs.add(depRev);
+          }
+        }
+      });
+      leftSide = rightSide;
+    }
+    return depMap;
   }
 
   /**

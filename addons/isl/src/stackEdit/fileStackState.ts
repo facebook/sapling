@@ -58,8 +58,7 @@ export class FileStackState {
    * For example, `{5: [3, 1]}` means rev 5 depends on rev 3 and rev 1.
    */
   calculateDepMap(): Map<Rev, Set<Rev>> {
-    const log = this.convertToLineLog(true);
-    return log.revDepMap;
+    return this.convertToLineLog().calculateDepMap();
   }
 
   /** Figure out which `rev` introduces the lines. */
@@ -163,12 +162,12 @@ export class FileStackState {
   // Internal format convertions.
 
   /** Convert to LineLog representation on demand. */
-  convertToLineLog(trackDeps = false): LineLog {
+  convertToLineLog(): LineLog {
     const type = 'linelog';
-    if (this.source.type === type && this.source.log.trackDeps >= trackDeps) {
+    if (this.source.type === type) {
       return this.source.log;
     }
-    const log = new LineLog({trackDeps});
+    const log = new LineLog();
     this.revs().forEach(rev => {
       const data = this.get(rev);
       log.recordText(data, rev);
