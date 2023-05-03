@@ -29,10 +29,13 @@ SOFTWARE.
 
 */
 
+import type {LRUWithStats} from 'shared/LRU';
+
 import {assert} from './utils';
 // Read D43857949 about the choice of the diff library.
 import diffSequences from 'diff-sequences';
 import {List} from 'immutable';
+import {cached, LRU} from 'shared/LRU';
 import {unwrap} from 'shared/utils';
 
 /** Operation code. */
@@ -133,6 +136,9 @@ interface FlattenLine {
 /** List of instructions. */
 type Code = List<Inst>;
 
+// Export for testing purpose.
+export const executeCache: LRUWithStats = new LRU(100);
+
 /**
  * `LineLog` is a data structure that tracks linear changes to a single text
  * file. Conceptually similar to a list of texts like `string[]`, with extra
@@ -156,13 +162,6 @@ class LineLog {
   maxRev: Rev = 0;
 
   /**
-   * Create a `LineLog` with empty content.
-   */
-  constructor() {
-    this.checkOut(0);
-  }
-
-  /**
    * Edit chunk. Replace line `a1` (inclusive) to `a2` (exclusive) in rev
    * `aRev` with `bLines`. `bLines` are considered introduced by `bRev`.
    * If `bLines` is empty, the edit is a deletion. If `a1` equals to `a2`,
@@ -171,9 +170,21 @@ class LineLog {
    * While this function does not cause conflicts or error out, not all
    * editings make practical sense. The callsite might want to do some
    * extra checks to ensure the edit is meaningful.
+   *
+   * `aLinesCache` is optional. If provided, then `editChunk` will skip a
+   * `checkOutLines` call and modify `aLinesCache` *in place* to reflect
+   * the edit. It is used by `recordText`.
    */
-  editChunk(aRev: Rev, a1: LineIdx, a2: LineIdx, bRev: Rev, bLines: string[]) {
-    const aLines = this.checkOutLines(aRev);
+  editChunk(
+    aRev: Rev,
+    a1: LineIdx,
+    a2: LineIdx,
+    bRev: Rev,
+    bLines: string[],
+    aLinesCache?: LineInfo[],
+  ) {
+    const aLinesMutable = aLinesCache != null;
+    const aLines = aLinesCache ?? this.checkOutLines(aRev);
     const start = this.code.size;
 
     assert(a1 <= a2, 'illegal chunk (a1 < a2)');
@@ -194,7 +205,9 @@ class LineLog {
         const a2Pc = aLines[a2 - 1].pc + 1;
         code = code.push({op: Op.JGE, rev: bRev, pc: a2Pc});
       }
-      aLines[a1] = {...aLines[a1], pc: code.size};
+      if (aLinesMutable) {
+        aLines[a1] = {...aLines[a1], pc: code.size};
+      }
       code = code.push({...unwrap(code.get(a1Pc))});
       switch (unwrap(code.get(a1Pc)).op) {
         case Op.J:
@@ -208,13 +221,13 @@ class LineLog {
     });
     this.code = newCode;
 
-    const newLines = bLines.map((s, i) => {
-      return {data: s, rev: bRev, pc: start + 1 + i, deleted: false};
-    });
-    // This is needed for FileStackState.editChunk test (temporarily).
-    if (bRev <= aRev || bRev >= this.maxRev) {
+    if (aLinesMutable) {
+      const newLines = bLines.map((s, i) => {
+        return {data: s, rev: bRev, pc: start + 1 + i, deleted: false};
+      });
       aLines.splice(a1, a2 - a1, ...newLines);
     }
+
     if (bRev > this.maxRev) {
       this.maxRev = bRev;
     }
@@ -290,6 +303,12 @@ class LineLog {
    * Interpret the bytecodes with the given revision range.
    * Used by `checkOut`.
    */
+  @cached({
+    cache: executeCache,
+    getExtraKeys(this: LineLog) {
+      return [this.code];
+    },
+  })
   execute(startRev: Rev, endRev: Rev = startRev, present?: {[pc: number]: boolean}): LineInfo[] {
     const rev = endRev;
     const lines: LineInfo[] = [];
@@ -384,7 +403,7 @@ class LineLog {
   public checkOutLines(rev: Rev, start: Rev | null = null): LineInfo[] {
     // eslint-disable-next-line no-param-reassign
     rev = Math.min(rev, this.maxRev);
-    let lines = this.execute(rev, rev);
+    let lines = this.execute(rev);
     if (start !== null) {
       // Checkout a range, including deleted revs.
       const present: {[key: number]: boolean} = {};
@@ -419,19 +438,23 @@ class LineLog {
     const [aRev, bRev] = rev != null ? [rev, rev] : [this.maxRev, this.maxRev + 1];
     const b = text;
 
+    const aLineInfos = [...this.checkOutLines(aRev)];
     const bLines = splitLines(b);
-    const aContent = this.checkOut(aRev);
-    const aLines = splitLines(aContent);
+    const aLines = aLineInfos.map(l => l.data);
+    aLines.pop(); // Drop the last END empty line.
     const blocks = diffLines(aLines, bLines);
 
     blocks.reverse().forEach(([a1, a2, b1, b2]) => {
-      this.editChunk(aRev, a1, a2, bRev, bLines.slice(b1, b2));
+      this.editChunk(aRev, a1, a2, bRev, bLines.slice(b1, b2), aLineInfos);
     });
 
     // This is needed in case editChunk is not called (no difference).
     if (bRev > this.maxRev) {
       this.maxRev = bRev;
     }
+
+    // Populate cache for checking out bRev.
+    executeCache.set(List([this.code, bRev]), aLineInfos);
 
     return bRev;
   }

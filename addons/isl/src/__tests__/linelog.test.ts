@@ -31,7 +31,7 @@ SOFTWARE.
 
 import type {Rev} from '../linelog';
 
-import {LineLog} from '../linelog';
+import {LineLog, executeCache} from '../linelog';
 import {describe, it, expect} from '@jest/globals';
 
 describe('LineLog', () => {
@@ -133,6 +133,26 @@ describe('LineLog', () => {
     expect(log.recordText('a\n')).toBe(1);
     expect(log.recordText('a\n')).toBe(2);
     expect(log.recordText('a\n')).toBe(3);
+  });
+
+  it('avoids checkout/execute calls for common edits', () => {
+    const stats = (executeCache.stats = {miss: 0, hit: 0});
+    const log = new LineLog();
+
+    // Initial checkout triggers execute() and cache miss.
+    log.recordText('a\nb\nc\nd\ne\n', 1);
+    expect(stats).toMatchObject({miss: 1, hit: 0});
+
+    // Modifies 3 chunks. This does not introduce new cache
+    // miss, because:
+    // - checkout (calls execute) used by recordText can
+    //   reuse cache populated by the previous recordText.
+    //   This contributes a cache hit.
+    // - checkout used by editChunk is skipped, because
+    //   recordText passes in `aLinesCache`. This does not
+    //   change cache miss or hit.
+    log.recordText('A\nb\nC\nd\nE\n', 3);
+    expect(stats).toMatchObject({miss: 1, hit: 1});
   });
 
   describe('supports editing previous revisions', () => {
