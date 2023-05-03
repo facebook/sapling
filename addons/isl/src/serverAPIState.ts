@@ -549,6 +549,7 @@ function runOperationImpl(
     operation: {
       args: operation.getArgs(),
       id: operation.id,
+      stdin: operation.getStdin(),
       runner: operation.runner,
       trackEventName: operation.trackEventName,
     },

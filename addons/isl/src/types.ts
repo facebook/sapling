@@ -270,6 +270,7 @@ export type MergeConflicts =
 export type RunnableOperation = {
   args: Array<CommandArg>;
   id: string;
+  stdin?: string | undefined;
   runner: CommandRunner;
   trackEventName: TrackEventName;
 };

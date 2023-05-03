@@ -33,6 +33,11 @@ export abstract class Operation {
 
   abstract getArgs(): Array<CommandArg>;
 
+  /** Optional stdin data piped to the process. */
+  getStdin(): string | undefined {
+    return undefined;
+  }
+
   public runner: CommandRunner = CommandRunner.Sapling;
 
   /** Used to preview how this operation would affect the tree, if you ran it. */

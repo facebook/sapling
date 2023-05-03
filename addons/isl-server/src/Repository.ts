@@ -461,13 +461,20 @@ export class Repository {
     operation: {
       id: string;
       args: Array<CommandArg>;
+      stdin?: string;
     },
     onProgress: OperationCommandProgressReporter,
     cwd: string,
     signal: AbortSignal,
   ): Promise<void> {
     const cwdRelativeArgs = this.normalizeOperationArgs(cwd, operation.args);
-    const {command, args, options} = getExecParams(this.info.command, cwdRelativeArgs, cwd);
+    const {stdin} = operation;
+    const {command, args, options} = getExecParams(
+      this.info.command,
+      cwdRelativeArgs,
+      cwd,
+      stdin ? {input: stdin} : undefined,
+    );
 
     this.logger.log('run operation: ', command, cwdRelativeArgs.join(' '));
 
