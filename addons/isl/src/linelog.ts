@@ -212,7 +212,7 @@ class LineLog extends LineLogRecord {
     aLinesCache?: LineInfo[],
   ): LineLog {
     const aLinesMutable = aLinesCache != null;
-    const aLines = aLinesCache ?? this.checkOutLines(aRev);
+    const aLines = aLinesMutable ? aLinesCache : this.checkOutLines(aRev);
     const start = this.code.size;
 
     assert(a1 <= a2, 'illegal chunk (a1 < a2)');
@@ -234,7 +234,7 @@ class LineLog extends LineLogRecord {
         code = code.push(JGE({rev: bRev, pc: a2Pc}) as Inst);
       }
       if (aLinesMutable) {
-        aLines[a1] = {...aLines[a1], pc: code.size};
+        aLinesCache[a1] = {...aLines[a1], pc: code.size};
       }
       code = code.push(unwrap(code.get(a1Pc)));
       switch (unwrap(code.get(a1Pc)).op) {
@@ -252,7 +252,7 @@ class LineLog extends LineLogRecord {
       const newLines = bLines.map((s, i) => {
         return {data: s, rev: bRev, pc: start + 1 + i, deleted: false};
       });
-      aLines.splice(a1, a2 - a1, ...newLines);
+      aLinesCache.splice(a1, a2 - a1, ...newLines);
     }
 
     const newMaxRev = Math.max(bRev, this.maxRev);
@@ -328,7 +328,11 @@ class LineLog extends LineLogRecord {
    * Used by `checkOut`.
    */
   @cached({cache: executeCache, cacheSize: 1000})
-  execute(startRev: Rev, endRev: Rev = startRev, present?: {[pc: number]: boolean}): LineInfo[] {
+  execute(
+    startRev: Rev,
+    endRev: Rev = startRev,
+    present?: {[pc: number]: boolean},
+  ): Readonly<LineInfo[]> {
     const rev = endRev;
     const lines: LineInfo[] = [];
     let pc = 0;
@@ -419,7 +423,7 @@ class LineLog extends LineLogRecord {
    *
    * @returns Content of the specified revision.
    */
-  public checkOutLines(rev: Rev, start: Rev | null = null): LineInfo[] {
+  public checkOutLines(rev: Rev, start: Rev | null = null): Readonly<LineInfo[]> {
     // eslint-disable-next-line no-param-reassign
     rev = Math.min(rev, this.maxRev);
     let lines = this.execute(rev);
