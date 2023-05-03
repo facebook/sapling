@@ -120,16 +120,19 @@ export const Commit = memo(
     const setOperationBeingPreviewed = useSetRecoilState(operationBeingPreviewed);
 
     const contextMenu = useContextMenu(() => {
-      return [
+      const items = [
         {
           label: <T replace={{$hash: short(commit?.hash)}}>Copy Commit Hash "$hash"</T>,
           onClick: () => platform.clipboardCopy(commit.hash),
         },
-        {
+      ];
+      if (!isPublic && !actionsPrevented) {
+        items.push({
           label: <T>Hide Commit and Descendents</T>,
           onClick: () => setOperationBeingPreviewed(new HideOperation(commit.hash)),
-        },
-      ];
+        });
+      }
+      return items;
     });
 
     return (
