@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.14
+
+- Fix tooltips not disappearing (such as on pull button)
+- Use normal font-smoothing for more readable text
+- Hide uncommit button on closed PRs
+
 ## 0.1.13
 
 - Customize how changed file paths are displayed: minimal, full file path, tree view, or fish-shell-style
