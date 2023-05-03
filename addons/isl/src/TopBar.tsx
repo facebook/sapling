@@ -15,6 +15,7 @@ import {tracker} from './analytics';
 import {t} from './i18n';
 import {
   haveCommitsLoadedYet,
+  haveRemotePath,
   isFetchingCommits,
   useClearAllOptimisticState,
 } from './serverAPIState';
@@ -26,13 +27,14 @@ import './TopBar.css';
 
 export function TopBar() {
   const loaded = useRecoilValue(haveCommitsLoadedYet);
+  const canPush = useRecoilValue(haveRemotePath);
   if (!loaded) {
     return null;
   }
   return (
     <div className="top-bar">
       <span className="button-group">
-        <PullButton />
+        {canPush && <PullButton />}
         <CwdSelector />
         <FetchingDataIndicator />
       </span>

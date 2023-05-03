@@ -378,6 +378,15 @@ export const operationBeingPreviewed = atom<Operation | undefined>({
   default: undefined,
 });
 
+export const haveRemotePath = selector({
+  key: 'haveRemotePath',
+  get: ({get}) => {
+    const info = get(repositoryInfo);
+    // codeReviewSystem.type is 'unknown' or other values if paths.default is present.
+    return info?.type === 'success' && info.codeReviewSystem.type !== 'none';
+  },
+});
+
 export type OperationInfo = {
   operation: Operation;
   startTime?: Date;
