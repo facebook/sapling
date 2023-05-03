@@ -200,6 +200,66 @@ describe('LineLog', () => {
     });
   });
 
+  it('calculates dependencies using linelog instructions', () => {
+    const deps = (textList: string[]): (number | number[])[][] => {
+      const insertEOL = (text: string): string =>
+        text
+          .split('')
+          .map(c => `${c}\n`)
+          .join('');
+      const log = logFromTextList(textList.map(insertEOL));
+      const flatten = (depMap: Map<Rev, Set<Rev>>) =>
+        [...depMap.entries()].map(([rev, set]) => [rev, [...set].sort()]).sort();
+      return flatten(log.calculateLineLogDepMap());
+    };
+
+    expect(deps([])).toEqual([]);
+
+    // Insertions.
+    expect(deps(['a'])).toEqual([[1, [0]]]);
+    expect(deps(['a', 'b'])).toEqual([
+      [1, [0]],
+      [2, [1]],
+    ]);
+    expect(deps(['a', 'ab'])).toEqual([
+      [1, [0]],
+      [2, [0]],
+    ]);
+    expect(deps(['b', 'ab'])).toEqual([
+      [1, [0]],
+      [2, [1]], // suboptimal
+    ]);
+    expect(deps(['ad', 'abd', 'abcd'])).toEqual([
+      [1, [0]],
+      [2, [1]],
+      [3, [1]],
+    ]);
+    expect(deps(['ad', 'acd', 'abcd'])).toEqual([
+      [1, [0]],
+      [2, [1]],
+      [3, [2]], // suboptimal
+    ]);
+
+    // Deletions.
+    expect(deps(['abcd', 'abd', 'ad', 'a'])).toEqual([
+      [1, [0]],
+      [2, [1]],
+      [3, [1]],
+      [4, [1]],
+    ]);
+    expect(deps(['abcd', 'acd', 'ad', 'd'])).toEqual([
+      [1, [0]],
+      [2, [1]],
+      [3, [1]],
+      [4, [1]],
+    ]);
+
+    // Multi-rev insertion, then delete.
+    expect(deps(['abc', 'abcdef', '']).at(-1)).toEqual([3, [1, 2]]);
+    expect(deps(['abc', 'abcdef', 'af']).at(-1)).toEqual([3, [1, 2]]);
+    expect(deps(['abc', 'abcdef', 'cd']).at(-1)).toEqual([3, [1, 2]]);
+  });
+
   it('calculates rev dependencies', () => {
     const textList = [
       'a\nb\nc\n',
