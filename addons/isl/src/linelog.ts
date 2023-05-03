@@ -172,39 +172,35 @@ class LineLog {
   }
 
   /**
-   * Edit chunk. Replace line `a1` (inclusive) to `a2` (exclusive) with
-   * `lines`. `lines` are considered introduced by `rev`. If `lines` is
-   * empty, the edit is a deletion. If `a1` equals to `a2`, the edit is
-   * an insertion. Otherwise, the edit is a modification.
-   *
-   * `a1` and `a2` are based on the line indexes of the current checkout.
-   * Use `checkOut(this.maxRev)` before this function to edit the last
-   * revision. Use `checkOut(rev)` before this function to edit arbitary
-   * revision.
+   * Edit chunk. Replace line `a1` (inclusive) to `a2` (exclusive) in rev
+   * `aRev` with `bLines`. `bLines` are considered introduced by `bRev`.
+   * If `bLines` is empty, the edit is a deletion. If `a1` equals to `a2`,
+   * the edit is an insertion. Otherwise, the edit is a modification.
    *
    * While this function does not cause conflicts or error out, not all
    * editings make practical sense. The callsite might want to do some
    * extra checks to ensure the edit is meaningful.
    */
-  editChunk(a1: LineIdx, a2: LineIdx, rev: Rev, lines: string[]) {
+  editChunk(aRev: Rev, a1: LineIdx, a2: LineIdx, bRev: Rev, bLines: string[]) {
     assert(a1 <= a2, 'illegal chunk (a1 < a2)');
     assert(a2 <= this.lines.length, 'out of bound a2 (forgot checkOut?)');
 
+    this.checkOut(aRev);
     const start = this.code.size;
     const newCode = this.code.withMutations(origCode => {
       let code = origCode;
       const a1Pc = this.lines[a1].pc;
-      if (lines.length > 0) {
-        const b2Pc = start + lines.length + 1;
-        code.push({op: Op.JL, rev, pc: b2Pc});
-        lines.forEach(line => {
-          code = code.push({op: Op.LINE, rev, data: line});
+      if (bLines.length > 0) {
+        const b2Pc = start + bLines.length + 1;
+        code.push({op: Op.JL, rev: bRev, pc: b2Pc});
+        bLines.forEach(line => {
+          code = code.push({op: Op.LINE, rev: bRev, data: line});
         });
         assert(b2Pc === code.size, 'bug: wrong pc');
       }
       if (a1 < a2) {
         const a2Pc = this.lines[a2 - 1].pc + 1;
-        code = code.push({op: Op.JGE, rev, pc: a2Pc});
+        code = code.push({op: Op.JGE, rev: bRev, pc: a2Pc});
       }
       this.lines[a1].pc = code.size;
       code = code.push({...unwrap(code.get(a1Pc))});
@@ -220,12 +216,12 @@ class LineLog {
     });
     this.code = newCode;
 
-    const newLines = lines.map((s, i) => {
-      return {data: s, rev, pc: start + 1 + i, deleted: false};
+    const newLines = bLines.map((s, i) => {
+      return {data: s, rev: bRev, pc: start + 1 + i, deleted: false};
     });
     this.lines.splice(a1, a2 - a1, ...newLines);
-    if (rev > this.maxRev) {
-      this.maxRev = rev;
+    if (bRev > this.maxRev) {
+      this.maxRev = bRev;
     }
     // NOTE: this.content is not updated here. It should be updated by the call-site.
   }
@@ -450,7 +446,7 @@ class LineLog {
     const blocks = diffLines(aLines, bLines);
 
     blocks.reverse().forEach(([a1, a2, b1, b2]) => {
-      this.editChunk(a1, a2, bRev, bLines.slice(b1, b2));
+      this.editChunk(aRev, a1, a2, bRev, bLines.slice(b1, b2));
     });
     this.content = b;
     this.lastCheckoutKey = `${bRev},null`;

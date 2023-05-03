@@ -112,8 +112,7 @@ export class FileStackState {
    */
   editChunk(aRev: Rev, a1: LineIdx, a2: LineIdx, bRev: Rev, bLines: string[]) {
     const log = this.convertToLineLog();
-    log.checkOut(aRev);
-    log.editChunk(a1, a2, bRev, bLines);
+    log.editChunk(aRev, a1, a2, bRev, bLines);
   }
 
   /**
