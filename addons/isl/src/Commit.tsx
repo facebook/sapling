@@ -468,16 +468,16 @@ export function SuccessorInfoToDisplay({successorInfo}: {successorInfo: Successo
     case 'pushrebase':
       return <T>Landed as a newer commit</T>;
     case 'amend':
-      return <T>Amended as a newer commit'</T>;
+      return <T>Amended as a newer commit</T>;
     case 'rebase':
-      return <T>Rebased as a newer commit'</T>;
+      return <T>Rebased as a newer commit</T>;
     case 'split':
-      return <T>Split as a newer commit'</T>;
+      return <T>Split as a newer commit</T>;
     case 'fold':
-      return <T>Folded as a newer commit'</T>;
+      return <T>Folded as a newer commit</T>;
     case 'histedit':
-      return <T>Histedited as a newer commit'</T>;
+      return <T>Histedited as a newer commit</T>;
     default:
-      return <T>Rewritten as a newer commit'</T>;
+      return <T>Rewritten as a newer commi'</T>;
   }
 }
