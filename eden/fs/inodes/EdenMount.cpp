@@ -1263,16 +1263,11 @@ EdenMount::ReadLocation EdenMount::getReadLocationForMaterializedFiles() const {
 }
 
 ProcessAccessLog& EdenMount::getProcessAccessLog() const {
-#ifdef _WIN32
-  return getPrjfsChannel()->getProcessAccessLog();
-#else
-
   if (!channel_) {
     EDEN_BUG() << "cannot call getProcessAccessLog() before "
                   "EdenMount has started or unmounted";
   }
   return channel_->getProcessAccessLog();
-#endif
 }
 
 const AbsolutePath& EdenMount::getPath() const {

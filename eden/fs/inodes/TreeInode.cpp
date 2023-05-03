@@ -39,6 +39,7 @@
 #include "eden/fs/nfs/NfsDirList.h"
 #include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/prjfs/Enumerator.h"
+#include "eden/fs/prjfs/PrjfsChannel.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BackingStore.h"

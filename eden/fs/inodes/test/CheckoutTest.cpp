@@ -20,6 +20,7 @@
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/prjfs/PrjfsChannel.h"
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/IObjectStore.h"

@@ -43,8 +43,6 @@
 #ifndef _WIN32
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/OverlayFileAccess.h"
-#else
-#include "eden/fs/prjfs/PrjfsChannel.h"
 #endif
 
 DECLARE_string(edenfsctlPath);
@@ -79,6 +77,7 @@ class Journal;
 class ObjectStore;
 class Overlay;
 class OverlayFileAccess;
+class PrjfsChannel;
 class ServerState;
 class Tree;
 class TreePrefetchLease;
