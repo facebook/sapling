@@ -218,6 +218,33 @@ class LineLog extends LineLogRecord {
     assert(a1 <= a2, 'illegal chunk (a1 < a2)');
     assert(a2 <= aLines.length, 'out of bound a2 (wrong aRev?)');
 
+    // See also https://sapling-scm.com/docs/internals/linelog/#editing-linelog
+    // # Before             # After
+    // # (pc): Instruction  # (pc): Instruction
+    //       : ...                : ...
+    //     a1: <a1 Inst>      a1Pc: J start
+    //   a1+1: ...          a1Pc+1: ...
+    //       : ...                : ...
+    //     a2: ...            a2Pc: ...
+    //       : ...                : ...
+    //    len: N/A           start: JL brev b2Pc      [1]
+    //                            : LINE brev b1      [1]
+    //                            : LINE brev b1+1    [1]
+    //                            : ...               [1]
+    //                            : LINE brev b2-1    [1]
+    //                        b2Pc: JGE brev a2Pc     [2]
+    //                            : <a1 Inst> (moved) [3]
+    //                            : J a1Pc+1          [4]
+    // [1]: Only present if `bLines` is not empty.
+    // [2]: Only present if `a1 < a2`.
+    //      There are 2 choices for "a2Pc":
+    //      - The a2 line exactly: aLines[a2].pc
+    //      - The next instruction of the "a2 -1" line: aLines[a2 - 1].pc + 1
+    //      We pick the latter to avoid overly aggressive deletion.
+    //      The original C implementation might pick the former when editing
+    //      the last rev for performance optimization.
+    // [3]: <a1 Inst> could be LINE or END.
+    // [4]: As an optimization, this is only present if <a1 Inst> is not END.
     const newCode = this.code.withMutations(origCode => {
       let code = origCode;
       const a1Pc = aLines[a1].pc;
@@ -236,13 +263,10 @@ class LineLog extends LineLogRecord {
       if (aLinesMutable) {
         aLinesCache[a1] = {...aLines[a1], pc: code.size};
       }
-      code = code.push(unwrap(code.get(a1Pc)));
-      switch (unwrap(code.get(a1Pc)).op) {
-        case Op.J:
-        case Op.END:
-          break;
-        default:
-          code = code.push(J({pc: a1Pc + 1}) as Inst);
+      const a1Inst = unwrap(code.get(a1Pc));
+      code = code.push(a1Inst);
+      if (a1Inst.op /* LINE or END */ !== Op.END) {
+        code = code.push(J({pc: a1Pc + 1}) as Inst);
       }
       code = code.set(a1Pc, J({pc: start}) as Inst);
       return code;
