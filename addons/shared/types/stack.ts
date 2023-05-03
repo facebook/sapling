@@ -49,7 +49,11 @@ export type ExportFile = {
 /** Matches input of debugimportstack. See debugstack.py. */
 export type ImportStack = ImportAction[];
 
-export type ImportAction = ['commit', ImportCommit] | ['goto', ImportGoto] | ['reset', ImportReset];
+export type ImportAction =
+  | ['commit', ImportCommit]
+  | ['goto', ImportGoto]
+  | ['reset', ImportReset]
+  | ['hide', ImportHide];
 
 export type ImportCommit = {
   /** Placeholder commit hash. Must start with ":". */
@@ -70,6 +74,9 @@ export type ImportReset = {mark: Mark};
 
 /** Checkout the given commit. */
 export type ImportGoto = {mark: Mark};
+
+/** Hide commits if they do not have visible descendants. */
+export type ImportHide = {nodes: Hash[]};
 
 /** Matches output of debugimportstack. See debugstack.py. */
 export type ImportedStack = ImportedCommit[];
