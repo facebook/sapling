@@ -595,4 +595,76 @@ describe('CommitStackState', () => {
       ]);
     });
   });
+
+  describe('calculating ImportStack', () => {
+    it('skips all if nothing changed', () => {
+      const stack = new CommitStackState(exportStack1);
+      expect(stack.calculateImportStack()).toMatchObject([]);
+    });
+
+    it('skips unchnaged commits', () => {
+      // Edits B/y.txt, affects descendants C.
+      const stack = new CommitStackState(exportStack1).updateEachFile((rev, file, path) =>
+        path === 'y.txt' ? file.set('data', '333') : file,
+      );
+      expect(stack.calculateImportStack()).toMatchObject([
+        [
+          'commit',
+          {
+            mark: ':r2',
+            date: [0, 0],
+            text: 'B',
+            parents: ['A_NODE'],
+            predecessors: ['B_NODE'],
+            files: {
+              'x.txt': null,
+              'y.txt': {data: '333', copyFrom: 'x.txt', flags: ''},
+            },
+          },
+        ],
+        [
+          'commit',
+          {
+            mark: ':r3',
+            date: [0, 0],
+            text: 'C',
+            parents: [':r2'],
+            predecessors: ['C_NODE'],
+            files: {'z.txt': null},
+          },
+        ],
+      ]);
+    });
+
+    it('hides dropped commits', () => {
+      let stack = new CommitStackState(exportStack1);
+      const revs = stack.revs();
+      // Drop the last 2 commits: B and C.
+      stack = stack.drop(revs[revs.length - 1]).drop(revs[revs.length - 2]);
+      expect(stack.calculateImportStack()).toMatchObject([
+        [
+          'hide',
+          {
+            nodes: ['B_NODE', 'C_NODE'],
+          },
+        ],
+      ]);
+    });
+
+    it('produces goto or reset command', () => {
+      const stack = new CommitStackState(exportStack1).updateEachFile((rev, file, path) =>
+        path === 'y.txt' ? file.set('data', '333') : file,
+      );
+      expect(stack.calculateImportStack({goto: 3})).toMatchObject([
+        ['commit', {}],
+        ['commit', {}],
+        ['goto', {mark: ':r3'}],
+      ]);
+      expect(stack.calculateImportStack({goto: 3, preserveDirtyFiles: true})).toMatchObject([
+        ['commit', {}],
+        ['commit', {}],
+        ['reset', {mark: ':r3'}],
+      ]);
+    });
+  });
 });

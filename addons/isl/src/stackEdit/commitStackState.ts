@@ -8,12 +8,19 @@
 import type {Rev} from './fileStackState';
 import type {RecordOf} from 'immutable';
 import type {Author, Hash, RepoPath} from 'shared/types/common';
-import type {ExportStack, ExportFile} from 'shared/types/stack';
+import type {
+  ExportStack,
+  ExportFile,
+  ImportStack,
+  ImportCommit,
+  Mark,
+  ImportAction,
+} from 'shared/types/stack';
 
 import {assert} from '../utils';
 import {FileStackState} from './fileStackState';
 import deepEqual from 'fast-deep-equal';
-import {List, Map as ImMap, Set as ImSet, Record} from 'immutable';
+import {List, Map as ImMap, Set as ImSet, Record, is} from 'immutable';
 import {cached} from 'shared/LRU';
 import {generatorContains, unwrap, zip} from 'shared/utils';
 
@@ -213,6 +220,116 @@ export class CommitStackState extends CommitStackRecord {
         path = file.copyFrom;
       }
     }
+  }
+
+  // "Save changes" related.
+
+  /**
+   * Produce a `ImportStack` useful for the `debugimportstack` command
+   * to save changes.
+   *
+   * Note this function only returns parts that are changed. If nothing is
+   * changed, this function might return an empty array.
+   *
+   * Options:
+   * - goto: specify a rev or (old commit) to goto. The rev must be changed
+   *   otherwise this parameter is ignored.
+   * - preserveDirtyFiles: if true, do not change files in the working copy.
+   *   Under the hood, this changes the "goto" to "reset".
+   *
+   * Example use-cases:
+   * - Editing a stack (clean working copy): goto = origCurrentHash
+   * - commit -i: create new rev, goto = maxRev, preserveDirtyFiles = true
+   * - amend -i, absorb: goto = origCurrentHash, preserveDirtyFiles = true
+   */
+  calculateImportStack(opts?: {goto?: Rev | Hash; preserveDirtyFiles?: boolean}): ImportStack {
+    // Resolve goto to a Rev.
+    const gotoRev: Rev | undefined =
+      typeof opts?.goto === 'string'
+        ? this.stack.findLastKey(c => c.originalNodes.has(opts.goto as string))
+        : opts?.goto;
+
+    // Figure out the first changed rev.
+    const state = this.useFileContent();
+    const originalState = new CommitStackState(state.originalStack);
+    const firstChangedRev = state.stack.findIndex((commit, i) => {
+      const originalCommit = originalState.stack.get(i);
+      return originalCommit == null || !is(commit, originalCommit);
+    });
+
+    // Figure out what commits are changed.
+    const changedCommits: CommitState[] =
+      firstChangedRev < 0 ? [] : state.stack.slice(firstChangedRev).toArray();
+    const changedRevs: Set<Rev> = new Set(changedCommits.map(c => c.rev));
+    const revToMark = (rev: Rev): Mark => `:r${rev}`;
+    const revToMarkOrHash = (rev: Rev): Mark | Hash => {
+      if (changedRevs.has(rev)) {
+        return revToMark(rev);
+      } else {
+        const nodes = unwrap(state.stack.get(rev)).originalNodes;
+        assert(nodes.size === 1, 'unchanged commits should have exactly 1 nodes');
+        return unwrap(nodes.first());
+      }
+    };
+
+    // "commit" new commits based on state.stack.
+    const actions: ImportAction[] = changedCommits.map(commit => {
+      assert(commit.immutableKind !== 'hash', 'immutable commits should not be changed');
+      const newFiles: {[path: RepoPath]: ExportFile | null} = Object.fromEntries(
+        [...commit.files.entries()].map(([path, file]) => {
+          if (isAbsent(file)) {
+            return [path, null];
+          }
+          const newFile: ExportFile = {};
+          if (typeof file.data === 'string') {
+            newFile.data = file.data;
+          } else if (file.data instanceof Base85) {
+            newFile.dataBase85 = file.data.dataBase85;
+          }
+          if (file.copyFrom != null) {
+            newFile.copyFrom = file.copyFrom;
+          }
+          if (file.flags != null) {
+            newFile.flags = file.flags;
+          }
+          return [path, newFile];
+        }),
+      );
+      const importCommit: ImportCommit = {
+        mark: revToMark(commit.rev),
+        author: commit.author,
+        date: [commit.date.unix, commit.date.tz],
+        text: commit.text,
+        parents: commit.parents.toArray().map(revToMarkOrHash),
+        predecessors: commit.originalNodes.toArray(),
+        files: newFiles,
+      };
+      return ['commit', importCommit];
+    });
+
+    // "goto" or "reset" as requested.
+    if (gotoRev != null && changedRevs.has(gotoRev)) {
+      if (opts?.preserveDirtyFiles) {
+        actions.push(['reset', {mark: revToMark(gotoRev)}]);
+      } else {
+        actions.push(['goto', {mark: revToMark(gotoRev)}]);
+      }
+    }
+
+    // "hide" commits that disappear from state.originalStack => state.stack.
+    // Only requested mutable commits are counted.
+    const coveredNodes: Set<Hash> = state.stack.reduce((acc, commit) => {
+      commit.originalNodes.forEach((n: Hash): Set<Hash> => acc.add(n));
+      return acc;
+    }, new Set<Hash>());
+    const orphanedNodes: Hash[] = state.originalStack
+      .filter(c => c.requested && !c.immutable && !coveredNodes.has(c.node))
+      .map(c => c.node);
+    if (orphanedNodes.length > 0) {
+      actions.push(['hide', {nodes: orphanedNodes}]);
+    }
+
+    return actions;
   }
 
   // File stack related.
