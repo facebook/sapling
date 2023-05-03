@@ -148,10 +148,7 @@ describe('Repository', () => {
       command: 'sl',
       repoRoot: '/path/to/myRepo',
       dotdir: '/path/to/myRepo/.sl',
-      codeReviewSystem: {
-        type: 'phabricator',
-        repo: 'fbsource',
-      },
+      codeReviewSystem: expect.anything(),
       pullRequestDomain: undefined,
     });
   });

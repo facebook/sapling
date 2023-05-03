@@ -362,6 +362,8 @@ export class Repository {
       await Promise.all([
         findRoot(command, logger, cwd).catch((err: Error) => err),
         findDotDir(command, logger, cwd),
+        // TODO: This should actually use expanded paths, since the config won't handle custom schemes.
+        // However, `sl debugexpandpaths` is currently too slow and impacts startup time.
         getConfig(command, logger, cwd, 'paths.default').then(value => value ?? ''),
         getConfig(command, logger, cwd, 'github.pull_request_domain'),
         getConfig(command, logger, cwd, 'github.preferred_submit_command').then(
@@ -376,8 +378,7 @@ export class Repository {
     }
 
     let codeReviewSystem: CodeReviewSystem;
-    const isMononoke = /^(mononoke|fb):\/\/.*/.test(pathsDefault);
-    if (isMononoke) {
+    if (Internal.isMononokePath?.(pathsDefault)) {
       // TODO: where should we be getting this from? arcconfig instead? do we need this?
       const repo = pathsDefault.slice(pathsDefault.lastIndexOf('/') + 1);
       codeReviewSystem = {type: 'phabricator', repo};
