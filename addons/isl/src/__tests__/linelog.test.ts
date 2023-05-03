@@ -46,11 +46,13 @@ describe('LineLog', () => {
     log.recordText('c\nd\ne');
     expect(log.maxRev).toBe(1);
     expect(log.content).toBe('c\nd\ne');
-    expect(log.getLineRev(0)).toBe(1);
-    expect(log.getLineRev(1)).toBe(1);
-    expect(log.getLineRev(2)).toBe(1);
-    expect(log.getLineRev(3)).toBeNull(); // out of range
-    expect(log.lines[0].deleted).toBe(false);
+
+    expect(log.checkOutLines(1)).toMatchObject([
+      {data: 'c\n', rev: 1},
+      {data: 'd\n', rev: 1},
+      {data: 'e', rev: 1},
+      {data: '', rev: 0},
+    ]);
   });
 
   it('supports modifying rev 0', () => {
@@ -58,12 +60,12 @@ describe('LineLog', () => {
     log.recordText('c\n', 0);
     expect(log.maxRev).toBe(0);
     expect(log.content).toBe('c\n');
-    expect(log.getLineRev(0)).toBe(0);
+    expect(log.checkOutLines(0)[0]).toMatchObject({rev: 0});
     log.recordText('c\nd', 1);
-    expect(log.getLineRev(1)).toBe(1);
+    expect(log.checkOutLines(1)[1]).toMatchObject({rev: 1});
     log.checkOut(0);
     expect(log.content).toBe('c\n');
-    expect(log.getLineRev(0)).toBe(0);
+    expect(log.checkOutLines(0)[0]).toMatchObject({rev: 0});
   });
 
   it('supports multiple edits', () => {
@@ -72,12 +74,12 @@ describe('LineLog', () => {
     log.recordText('d\ne\nf\n');
     expect(log.maxRev).toBe(2);
     expect(log.content).toBe('d\ne\nf\n');
-    expect(log.getLineRev(0)).toBe(1);
-    expect(log.getLineRev(1)).toBe(1);
-    expect(log.getLineRev(2)).toBe(2);
-    expect(log.getLineRev(3)).toBeNull(); // out of range
-    expect(log.lines[0].deleted).toBe(false);
-    expect(log.lines[2].deleted).toBe(false);
+    expect(log.checkOutLines(2)).toMatchObject([
+      {data: 'd\n', rev: 1, deleted: false},
+      {data: 'e\n', rev: 1, deleted: false},
+      {data: 'f\n', rev: 2, deleted: false},
+      {data: '', rev: 0, deleted: false},
+    ]);
   });
 
   it('supports checkout', () => {
@@ -89,7 +91,7 @@ describe('LineLog', () => {
     log.checkOut(0);
     expect(log.lines[0].deleted).toBe(false);
     expect(log.content).toBe('');
-    expect(log.getLineRev(0)).toBeNull();
+    expect(log.checkOutLines(0)).toMatchObject([{data: ''}]);
     log.checkOut(2);
     expect(log.content).toBe('d\ne\nf\n');
     expect(log.lines[2].deleted).toBe(false);
@@ -269,9 +271,12 @@ describe('LineLog', () => {
       expect(log.checkOut(1)).toBe('b\n');
       expect(log.checkOut(2)).toBe('a\nb\n');
       expect(log.checkOut(3)).toBe('a\nb\nc\n');
-      expect(log.getLineRev(0)).toBe(2); // 'a' is from rev 2
-      expect(log.getLineRev(1)).toBe(1); // 'b' is from rev 1
-      expect(log.getLineRev(2)).toBe(3); // 'c' is from rev 3
+      expect(log.checkOutLines(3)).toMatchObject([
+        {data: 'a\n', rev: 2},
+        {data: 'b\n', rev: 1},
+        {data: 'c\n', rev: 3},
+        {data: '', rev: 0},
+      ]);
     });
 
     it('can merge changes', () => {

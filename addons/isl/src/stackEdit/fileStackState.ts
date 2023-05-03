@@ -64,16 +64,9 @@ export class FileStackState {
   /** Figure out which `rev` introduces the lines. */
   blame(rev: Rev): Rev[] {
     const log = this.convertToLineLog();
-    log.checkOut(rev);
-    const revs: Rev[] = [];
-    for (let i = 0; ; i++) {
-      const rev = log.getLineRev(i);
-      if (rev == null) {
-        break;
-      }
-      revs.push(rev);
-    }
-    return revs;
+    const lines = log.checkOutLines(rev);
+    // Skip the last 'END' line.
+    return lines.slice(0, lines.length - 1).map(l => l.rev);
   }
 
   // Write opertions.

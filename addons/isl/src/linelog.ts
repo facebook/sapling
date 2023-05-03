@@ -456,15 +456,6 @@ class LineLog {
     // assert(this.reconstructContent() === b, "bug: text does not match");
     return bRev;
   }
-
-  /** Get revision of the specified line. Returns null if out of range. */
-  public getLineRev(i: LineIdx): Rev | null {
-    if (i >= this.lines.length - 1) {
-      return null;
-    } else {
-      return this.lines[i].rev;
-    }
-  }
 }
 
 /**
