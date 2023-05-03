@@ -23,7 +23,7 @@
 
 setup custom smartlog
   $ function sl {
-  >  hgedenapi log -G -T "{node|short} {phase} '{desc|firstline}' {bookmarks} {remotebookmarks} {join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}"
+  >  hgedenapi log -G -T "{node|short} {phase} '{desc|firstline}' {bookmarks} {remotebookmarks} {join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}" "$@"
   > }
 
 setup configuration
@@ -451,7 +451,21 @@ The purpose of the test is to check syncing of remote bookmarks and to verify th
   commitcloud: commits synchronized
   finished in * (glob)
 
-  $ sl
+  $ sl -r "all() - 5b7437b33959::"
+  o  f141e512974a draft 'o_draft'
+  │
+  o  22f66edbeb8e public 'o2'  remote/regular
+  │
+  o  b22b11c36d16 public 'o1'
+  │
+  │ o  98eac947fc54 public 'e2'  remote/expensive
+  │ │
+  │ o  6733e9fe3e4b public 'e1'
+  ├─╯
+  @  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
+  
+
+  $ sl -r "all() - 6733e9fe3e4b::"
   o  f141e512974a draft 'o_draft'
   │
   o  22f66edbeb8e public 'o2'  remote/regular
@@ -463,10 +477,6 @@ The purpose of the test is to check syncing of remote bookmarks and to verify th
   │ o  8537bcdeff72 public 'e4'  remote/expensive_other
   │ │
   │ o  5b7437b33959 public 'e3'
-  ├─╯
-  │ o  98eac947fc54 public 'e2'  remote/expensive
-  │ │
-  │ o  6733e9fe3e4b public 'e1'
   ├─╯
   @  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
   
