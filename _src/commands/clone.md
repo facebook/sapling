@@ -4,7 +4,7 @@ sidebar_position: 8
 
 ## clone
 <!--
-  @generated SignedSource<<158dcf634491e8e44b4d37d139260dde>>
+  @generated SignedSource<<23b566b1dfc4ab075608655b22d6d5bd>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -44,6 +44,9 @@ Examples:
 ```
 sl clone https://example.com/some_repo
 ```
+
+As an experimental feature, if specified the source URL fragment
+is persisted as the repo's main bookmark.
 
 Returns 0 on success.
 

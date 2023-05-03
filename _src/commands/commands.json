@@ -311,12 +311,6 @@
       },
       {
         "shortname": "",
-        "fullname": "skip",
-        "default": [],
-        "description": "revision to not display (EXPERIMENTAL)"
-      },
-      {
-        "shortname": "",
         "fullname": "short-date",
         "default": null,
         "description": "list the brief date (EXPERIMENTAL)"
@@ -614,7 +608,7 @@
     "aliases": [
       "clone"
     ],
-    "doc": "make a copy of an existing repository\n\n    Create a copy of an existing repository in a new directory.\n\n    If no destination directory name is specified, it defaults to the\n    basename of the source.\n\n    The location of the source is added to the new repository's\n    config file as the default to be used for future pulls.\n\n    Sources are typically URLs. The following URL schemes are assumed\n    to be a Git repo: ``git``, ``git+file``, ``git+ftp``, ``git+ftps``,\n    ``git+http``, ``git+https``, ``git+ssh``, ``ssh`` and ``https``.\n\n    Scp-like URLs of the form ``user@host:path`` are converted to\n    ``ssh://user@host/path``.\n\n    Other URL schemes are assumed to point to an EdenAPI capable repo.\n\n    The ``--git`` option forces the source to be interpreted as a Git repo.\n\n    To check out a particular version, use ``-u/--update``, or\n    ``-U/--noupdate`` to create a clone with no working copy.\n\n    If specified, the ``--enable-profile`` option should refer to a\n    sparse profile within the source repo to filter the contents of\n    the new working copy. See :prog:`help -e sparse` for details.\n\n    .. container:: verbose\n\n      Examples:\n\n      - clone a remote repository to a new directory named some_repo::\n\n          @prog@ clone https://example.com/some_repo\n\n    Returns 0 on success.",
+    "doc": "make a copy of an existing repository\n\n    Create a copy of an existing repository in a new directory.\n\n    If no destination directory name is specified, it defaults to the\n    basename of the source.\n\n    The location of the source is added to the new repository's\n    config file as the default to be used for future pulls.\n\n    Sources are typically URLs. The following URL schemes are assumed\n    to be a Git repo: ``git``, ``git+file``, ``git+ftp``, ``git+ftps``,\n    ``git+http``, ``git+https``, ``git+ssh``, ``ssh`` and ``https``.\n\n    Scp-like URLs of the form ``user@host:path`` are converted to\n    ``ssh://user@host/path``.\n\n    Other URL schemes are assumed to point to an EdenAPI capable repo.\n\n    The ``--git`` option forces the source to be interpreted as a Git repo.\n\n    To check out a particular version, use ``-u/--update``, or\n    ``-U/--noupdate`` to create a clone with no working copy.\n\n    If specified, the ``--enable-profile`` option should refer to a\n    sparse profile within the source repo to filter the contents of\n    the new working copy. See :prog:`help -e sparse` for details.\n\n    .. container:: verbose\n\n      Examples:\n\n      - clone a remote repository to a new directory named some_repo::\n\n          @prog@ clone https://example.com/some_repo\n\n    .. container:: verbose\n\n      As an experimental feature, if specified the source URL fragment\n      is persisted as the repo's main bookmark.\n\n    Returns 0 on success.",
     "args": [
       {
         "shortname": "U",
