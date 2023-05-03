@@ -6,25 +6,35 @@
  */
 
 import type {FlattenLine, Rev, LineIdx} from '../linelog';
+import type {RecordOf} from 'immutable';
 
 import {LineLog} from '../linelog';
+import {Record, List} from 'immutable';
+
+export const Source = Record<FileStackStateSource>({
+  type: 'plain',
+  value: List([]),
+  revLength: 0,
+});
+
+const State = Record({source: Source()});
 
 /**
  * A stack of file contents with stack editing features.
  */
-export class FileStackState {
-  /** Source of truth that provides the file contents. */
-  source: FileStackStateSource;
+export class FileStackState extends State {
+  constructor(value: RecordOf<FileStackStateSource> | string[]) {
+    if (Array.isArray(value)) {
+      const contents: string[] = value;
+      const source = Source({type: 'plain', value: List(contents), revLength: contents.length});
+      super({source});
+    } else {
+      super({source: value});
+    }
+  }
 
-  /** Maximum revision (exclusive) */
-  revLength: Rev;
-
-  constructor(contents: string[]) {
-    this.revLength = contents.length;
-    this.source = {
-      type: 'plain',
-      contents: [...contents],
-    };
+  fromLineLog(log: LineLog): FileStackState {
+    return new FileStackState(Source({type: 'linelog', value: log, revLength: log.maxRev + 1}));
   }
 
   // Read opertions.
@@ -33,24 +43,24 @@ export class FileStackState {
    * Obtain the content at the given revision.
    * 0 <= rev < this.revLength
    */
-  get(rev: Rev): string {
-    const type = this.source?.type;
+  getRev(rev: Rev): string {
+    const type = this.source.type;
     if (type === 'linelog') {
-      return this.source.log.checkOut(rev);
+      return this.source.value.checkOut(rev);
     } else if (type === 'flatten') {
-      return this.source.lines
+      return this.source.value
         .filter(l => l.revs.has(rev))
         .map(l => l.data)
         .join('');
     } else if (type === 'plain') {
-      return this.source.contents[rev];
+      return this.source.value.get(rev, '');
     }
     throw new Error(`unexpected source type ${type}`);
   }
 
   /** Array of valid revisions. */
   revs(): Rev[] {
-    return [...Array(this.revLength).keys()];
+    return [...Array(this.source.revLength).keys()];
   }
 
   /**
@@ -76,16 +86,17 @@ export class FileStackState {
    * If `updateStack` is true, the rest of the stack will be updated
    * accordingly. Otherwise, no other revs are updated.
    */
-  editText(rev: Rev, text: string, updateStack = true) {
+  editText(rev: Rev, text: string, updateStack = true): FileStackState {
+    const revLength = rev >= this.source.revLength ? rev + 1 : this.source.revLength;
+    let source = this.source;
     if (updateStack) {
       const log = this.convertToLineLog().recordText(text, rev);
-      this.source = {type: 'linelog', log};
+      source = Source({type: 'linelog', value: log, revLength});
     } else {
-      this.convertToPlainText()[rev] = text;
+      const plain = this.convertToPlainText().set(rev, text);
+      source = Source({type: 'plain', value: plain, revLength});
     }
-    if (rev >= this.revLength) {
-      this.revLength = rev + 1;
-    }
+    return new FileStackState(source);
   }
 
   /**
@@ -104,9 +115,9 @@ export class FileStackState {
    * So `aRev` is the stack top, since the diff uses line numbers in the
    * stack top. `bRev` is the revisions that each chunk blames to.
    */
-  editChunk(aRev: Rev, a1: LineIdx, a2: LineIdx, bRev: Rev, bLines: string[]) {
+  editChunk(aRev: Rev, a1: LineIdx, a2: LineIdx, bRev: Rev, bLines: string[]): FileStackState {
     const log = this.convertToLineLog().editChunk(aRev, a1, a2, bRev, bLines);
-    this.source = {type: 'linelog', log};
+    return this.fromLineLog(log);
   }
 
   /**
@@ -114,18 +125,25 @@ export class FileStackState {
    * and insertion. The callsite is responsible for checking
    * `revDepMap` to ensure the reordering can be "conflict"-free.
    */
-  remapRevs(revMap: Map<Rev, Rev>) {
+  remapRevs(revMap: Map<Rev, Rev>): FileStackState {
     const log = this.convertToLineLog().remapRevs(revMap);
-    this.source = {type: 'linelog', log};
-    this.revLength = log.maxRev + 1;
+    return this.fromLineLog(log);
   }
 
   /**
    * Move (or copy) line range `a1` to `a2` at `aRev` to other revs.
    * Those lines will be included by `includeRevs` and excluded by `excludeRevs`.
+   *
+   * PERF: It would be better to just use linelog to complete the edit.
    */
-  moveLines(aRev: Rev, a1: LineIdx, a2: LineIdx, includeRevs?: Rev[], excludeRevs?: Rev[]) {
-    const lines = this.convertToFlattenLines();
+  moveLines(
+    aRev: Rev,
+    a1: LineIdx,
+    a2: LineIdx,
+    includeRevs?: Rev[],
+    excludeRevs?: Rev[],
+  ): FileStackState {
+    const lines = this.convertToFlattenLines().toArray();
     const editLine = (line: FlattenLine) => {
       if (includeRevs) {
         includeRevs.forEach(rev => line.revs.add(rev));
@@ -150,6 +168,9 @@ export class FileStackState {
         }
       }
     }
+
+    const source = Source({type: 'flatten', value: List(lines), revLength: this.source.revLength});
+    return new FileStackState(source);
   }
 
   // Internal format convertions.
@@ -158,38 +179,35 @@ export class FileStackState {
   convertToLineLog(): LineLog {
     const type = 'linelog';
     if (this.source.type === type) {
-      return this.source.log;
+      return this.source.value;
     }
     let log = new LineLog();
     this.revs().forEach(rev => {
-      const data = this.get(rev);
+      const data = this.getRev(rev);
       log = log.recordText(data, rev);
     });
-    this.source = {type, log};
     return log;
   }
 
   /** Convert to flatten representation on demand. */
-  convertToFlattenLines(): FlattenLine[] {
+  convertToFlattenLines(): List<FlattenLine> {
     const type = 'flatten';
     if (this.source.type === type) {
-      return this.source.lines;
+      return this.source.value;
     }
     const log = this.convertToLineLog();
     const lines = log.flatten();
-    this.source = {type, lines};
-    return lines;
+    return List(lines);
   }
 
   /** Convert to plain representation on demand. */
-  convertToPlainText(): string[] {
+  convertToPlainText(): List<string> {
     const type = 'plain';
     if (this.source.type === type) {
-      return this.source.contents;
+      return this.source.value;
     }
-    const contents = this.revs().map(this.get.bind(this));
-    this.source = {type, contents};
-    return contents;
+    const contents = this.revs().map(this.getRev.bind(this));
+    return List(contents);
   }
 }
 
@@ -205,15 +223,18 @@ export class FileStackState {
 type FileStackStateSource =
   | {
       type: 'linelog';
-      log: LineLog;
+      value: LineLog;
+      revLength: number;
     }
   | {
       type: 'plain';
-      contents: string[];
+      value: List<string>;
+      revLength: number;
     }
   | {
       type: 'flatten';
-      lines: FlattenLine[];
+      value: List<FlattenLine>;
+      revLength: number;
     };
 
 export type {Rev};

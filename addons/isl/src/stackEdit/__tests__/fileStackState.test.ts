@@ -5,25 +5,28 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {FileStackState} from '../fileStackState';
-import {describe, it, expect} from '@jest/globals';
+import {FileStackState, Source} from '../fileStackState';
 
 describe('FileStackState', () => {
   const commonContents = ['b\nc\nd\n', 'a\nb\nc\nd\n', 'a\nb\nc\nd\ne\n', 'a\nc\nd\ne\n'];
+  const revLength = commonContents.length;
 
   it('converts between formats', () => {
     const stack = new FileStackState(commonContents);
     const formats = [
-      () => stack.convertToPlainText(),
-      () => stack.convertToLineLog(),
-      () => stack.convertToFlattenLines(),
+      (s: FileStackState) =>
+        new FileStackState(Source({type: 'plain', value: s.convertToPlainText(), revLength})),
+      (s: FileStackState) =>
+        new FileStackState(Source({type: 'linelog', value: s.convertToLineLog(), revLength})),
+      (s: FileStackState) =>
+        new FileStackState(Source({type: 'flatten', value: s.convertToFlattenLines(), revLength})),
     ];
     formats.forEach(fromFormat => {
-      fromFormat();
+      const fromState = fromFormat(stack);
       formats.forEach(toFormat => {
-        toFormat();
-        expect(stack.revs()).toStrictEqual([...commonContents.keys()]);
-        expect(stack.revs().map(rev => stack.get(rev))).toStrictEqual(commonContents);
+        const toState = toFormat(fromState);
+        expect(toState.revs()).toStrictEqual([...commonContents.keys()]);
+        expect(toState.revs().map(rev => toState.getRev(rev))).toStrictEqual(commonContents);
       });
     });
   });
@@ -51,53 +54,49 @@ describe('FileStackState', () => {
   });
 
   it('supports editing text without affecting the stack', () => {
-    const stack = new FileStackState(commonContents);
-    stack.editText(0, 'b\nC\nD\n', false);
-    expect(stack.get(0)).toBe('b\nC\nD\n');
-    expect(stack.get(1)).toBe('a\nb\nc\nd\n');
+    const stack = new FileStackState(commonContents).editText(0, 'b\nC\nD\n', false);
+    expect(stack.getRev(0)).toBe('b\nC\nD\n');
+    expect(stack.getRev(1)).toBe('a\nb\nc\nd\n');
   });
 
   it('supports editing text and updating the stack', () => {
-    const stack = new FileStackState(commonContents);
-    stack.editText(0, 'b\nC\nD\n', true);
-    expect(stack.get(0)).toBe('b\nC\nD\n');
-    expect(stack.get(1)).toBe('a\nb\nC\nD\n');
+    const stack = new FileStackState(commonContents).editText(0, 'b\nC\nD\n', true);
+    expect(stack.getRev(0)).toBe('b\nC\nD\n');
+    expect(stack.getRev(1)).toBe('a\nb\nC\nD\n');
   });
 
   it('supports editing chunk at the given rev', () => {
-    const stack = new FileStackState(commonContents);
     // Edit rev 1 from rev 0's line ranges.
-    stack.editChunk(0, 1, 3, 1, ['C\n', 'D\n']);
+    const stack = new FileStackState(commonContents).editChunk(0, 1, 3, 1, ['C\n', 'D\n']);
     // rev 0 is not changed.
-    expect(stack.get(0)).toBe('b\nc\nd\n');
+    expect(stack.getRev(0)).toBe('b\nc\nd\n');
     // rev 1 is edited.
-    expect(stack.get(1)).toBe('a\nb\nC\nD\n');
+    expect(stack.getRev(1)).toBe('a\nb\nC\nD\n');
   });
 
   it('supports remapping revs', () => {
-    const stack = new FileStackState(['a\n', 'a\nb\n', 'z\na\nb\n']);
-    stack.remapRevs(
+    const stack = new FileStackState(['a\n', 'a\nb\n', 'z\na\nb\n']).remapRevs(
       new Map([
         [1, 2],
         [2, 1],
       ]),
     );
-    expect(stack.get(1)).toBe('z\na\n');
-    expect(stack.get(2)).toBe('z\na\nb\n');
+    expect(stack.getRev(1)).toBe('z\na\n');
+    expect(stack.getRev(2)).toBe('z\na\nb\n');
   });
 
   it('supports moving lines between revs', () => {
-    const stack = new FileStackState(commonContents);
+    let stack = new FileStackState(commonContents);
     // Move +a from rev 1 to rev 2 (->).
-    stack.moveLines(1, 0, 1, [], [1]);
-    expect(stack.get(1)).toBe('b\nc\nd\n');
+    stack = stack.moveLines(1, 0, 1, [], [1]);
+    expect(stack.getRev(1)).toBe('b\nc\nd\n');
     // Move -b from rev 3 (present in rev 2) to rev 2 (present in rev 1) (<-).
-    stack.moveLines(2, 1, 2, [], [2]);
-    expect(stack.get(2)).toBe('a\nc\nd\ne\n');
+    stack = stack.moveLines(2, 1, 2, [], [2]);
+    expect(stack.getRev(2)).toBe('a\nc\nd\ne\n');
     // Move +e from rev 2 to rev 1 (<-).
-    stack.moveLines(2, 3, 4, [1], []);
-    expect(stack.get(1)).toBe('b\nc\nd\ne\n');
-    expect(stack.convertToPlainText()).toStrictEqual([
+    stack = stack.moveLines(2, 3, 4, [1], []);
+    expect(stack.getRev(1)).toBe('b\nc\nd\ne\n');
+    expect(stack.convertToPlainText().toArray()).toStrictEqual([
       'b\nc\nd\n',
       'b\nc\nd\ne\n',
       'a\nc\nd\ne\n',
@@ -106,14 +105,14 @@ describe('FileStackState', () => {
   });
 
   it('supports appending text', () => {
-    const stack = new FileStackState([]);
-    expect(stack.revLength).toBe(0);
-    stack.editText(0, 'a', false);
-    expect(stack.revLength).toBe(1);
-    stack.editText(1, 'b', false);
-    expect(stack.revLength).toBe(2);
-    stack.editText(2, 'c', true);
-    expect(stack.revLength).toBe(3);
-    expect(stack.get(2)).toBe('c');
+    let stack = new FileStackState([]);
+    expect(stack.source.revLength).toBe(0);
+    stack = stack.editText(0, 'a', false);
+    expect(stack.source.revLength).toBe(1);
+    stack = stack.editText(1, 'b', false);
+    expect(stack.source.revLength).toBe(2);
+    stack = stack.editText(2, 'c', true);
+    expect(stack.source.revLength).toBe(3);
+    expect(stack.getRev(2)).toBe('c');
   });
 });

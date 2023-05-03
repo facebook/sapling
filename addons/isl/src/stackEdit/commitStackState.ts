@@ -214,9 +214,9 @@ export class CommitStackState {
             const prevFileStack = fileStacks[prevIdx];
             // File stack history is linear. Only reuse it if its last
             // rev matches `prevFileRev`
-            if (prevFileStack.revLength === prevFileRev + 1) {
+            if (prevFileStack.source.revLength === prevFileRev + 1) {
               const fileRev = prevFileRev + 1;
-              prevFileStack.editText(fileRev, this.getUtf8Data(file), false);
+              fileStacks[prevIdx] = prevFileStack.editText(fileRev, this.getUtf8Data(file), false);
               commitToFile.set(`${rev}:${path}`, [prevIdx, fileRev]);
               fileToCommit.set(`${prevIdx}:${fileRev}`, [rev, path]);
               fileAppended = true;
@@ -354,7 +354,7 @@ export class CommitStackState {
                 ];
           spans.push(`${commitTitle}/${path}`);
           if (showContent && !absent) {
-            spans.push(`(${fileStack.get(fileRev)})`);
+            spans.push(`(${fileStack.getRev(fileRev)})`);
           }
           return spans.join('');
         })
@@ -369,7 +369,7 @@ export class CommitStackState {
     }
     const type = file.data.type;
     if (type === 'fileStack') {
-      return unwrap(this.fileStacks.at(file.data.index)).get(file.data.rev);
+      return unwrap(this.fileStacks.at(file.data.index)).getRev(file.data.rev);
     } else {
       throw new Error('getUtf8Data called on non-utf8 file.');
     }
@@ -577,8 +577,8 @@ export class CommitStackState {
         const [fileIdx, fileRev] = fileIdxRev;
         const fileStack = this.fileStacks[fileIdx];
         // Drop the rev by remapping it to an unused rev.
-        const unusedFileRev = fileStack.revLength;
-        fileStack.remapRevs(new Map([[fileRev, unusedFileRev]]));
+        const unusedFileRev = fileStack.source.revLength;
+        this.fileStacks[fileIdx] = fileStack.remapRevs(new Map([[fileRev, unusedFileRev]]));
       }
     });
 
@@ -662,7 +662,9 @@ export class CommitStackState {
     // 131 (D)]. So after the commit remapping it produces the desired
     // output.
     this.useFileStack();
-    this.fileStacks.forEach((fileStack, fileIdx) => {
+    this.fileStacks.forEach((origFileStack, fileIdx) => {
+      let fileStack = origFileStack;
+
       // file revs => commit revs => mapped commit revs => mapped file revs
       const fileRevs = fileStack.revs();
       const commitRevPaths: [Rev, RepoPath][] = fileRevs.map(fRev =>
@@ -677,13 +679,15 @@ export class CommitStackState {
       const toRevs: Rev[] = compactSequence(mappedCommitRevs);
       // Mapping: zip(original revs, mapped file revs)
       const fileRevMap = new Map<Rev, Rev>(zip(fromRevs, toRevs));
-      fileStack.remapRevs(fileRevMap);
+      fileStack = fileStack.remapRevs(fileRevMap);
       // Apply the reverse mapping. See the above comment for why this is necessary.
       const fileTextList = [...fileStack.convertToPlainText()];
       fileRevs.forEach(rev => {
         const text = fileTextList[toRevs[rev]];
-        fileStack.editText(rev, text, false /* do not update rest of the stack */);
+        fileStack = fileStack.editText(rev, text, false /* do not update rest of the stack */);
       });
+
+      this.fileStacks[fileIdx] = fileStack;
     });
 
     // Update this.stack.
