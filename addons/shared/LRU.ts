@@ -7,7 +7,7 @@
 
 import type {ValueObject} from 'immutable';
 
-import {is, List, isImmutable} from 'immutable';
+import {isValueObject, is, List} from 'immutable';
 
 type LRUKey = LRUHashKey | ValueObject;
 type LRUHashKey = string | number | boolean | null | undefined | object;
@@ -220,8 +220,8 @@ function cacheDecorator<T>(opts?: CacheOpts<T>) {
   const getExtraKeys =
     opts?.getExtraKeys ??
     function (this: T): unknown[] {
-      // Use `this` as extra key if it's an immutable object.
-      if (isImmutable(this)) {
+      // Use `this` as extra key if it's a value object (hash + eq).
+      if (isValueObject(this)) {
         return [this];
       }
       // Scan through cachable properties.
@@ -262,7 +262,7 @@ function isCachable(arg: unknown): boolean {
   if (cachableTypeNames.has(typeName)) {
     return true;
   }
-  if (typeName === 'object' && isImmutable(arg)) {
+  if (typeName === 'object' && isValueObject(arg)) {
     return true;
   }
   return false;
