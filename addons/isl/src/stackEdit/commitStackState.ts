@@ -108,7 +108,7 @@ export class CommitStackState extends CommitStackRecord {
    * Construct from an exported stack. For efficient operatoins,
    * call `.buildFileStacks()` to build up states.
    */
-  constructor(originalStack: ExportStack) {
+  constructor(originalStack: Readonly<ExportStack>) {
     const bottomFiles = getBottomFilesFromExportStack(originalStack);
     const stack = getCommitStatesFromExportStack(originalStack);
     super({
@@ -784,7 +784,7 @@ export class CommitStackState extends CommitStackRecord {
   }
 }
 
-function getBottomFilesFromExportStack(stack: ExportStack): Map<RepoPath, FileState> {
+function getBottomFilesFromExportStack(stack: Readonly<ExportStack>): Map<RepoPath, FileState> {
   // bottomFiles requires that the stack only has one root.
   checkStackSingleRoot(stack);
 
@@ -820,7 +820,7 @@ function convertExportFileToFileState(file: ExportFile | null): FileState {
   });
 }
 
-function getCommitStatesFromExportStack(stack: ExportStack): List<CommitState> {
+function getCommitStatesFromExportStack(stack: Readonly<ExportStack>): List<CommitState> {
   checkStackParents(stack);
 
   // Prepare nodeToRev convertion.
@@ -860,7 +860,7 @@ function getCommitStatesFromExportStack(stack: ExportStack): List<CommitState> {
 }
 
 /** Check that there is only one root in the stack. */
-function checkStackSingleRoot(stack: ExportStack) {
+function checkStackSingleRoot(stack: Readonly<ExportStack>) {
   const rootNodes = stack.filter(commit => (commit.parents ?? []).length === 0);
   if (rootNodes.length > 1) {
     throw new Error(
@@ -874,7 +874,7 @@ function checkStackSingleRoot(stack: ExportStack) {
  * - No duplicated commits.
  * - "parents" refer to other commits in the stack.
  */
-function checkStackParents(stack: ExportStack) {
+function checkStackParents(stack: Readonly<ExportStack>) {
   const knownNodes = new Set();
   stack.forEach(commit => {
     const parents = commit.parents ?? [];
