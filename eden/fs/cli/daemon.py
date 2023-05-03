@@ -168,6 +168,10 @@ def get_edenfsctl_cmd() -> str:
     if env:
         return env
 
+    env = os.environ.get("__EDENFSCTL_RUST", None)
+    if env:
+        return env
+
     edenfsctl_real = os.path.abspath(sys.argv[0])
     if sys.platform == "win32":
         edenfsctl = os.path.join(edenfsctl_real, "../edenfsctl.exe")
