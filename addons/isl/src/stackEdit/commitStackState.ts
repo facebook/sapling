@@ -190,8 +190,9 @@ export class CommitStackState extends CommitStackRecord {
       const commit = this.stack.get(rev);
       if (commit != null) {
         // Visit parent commits.
-        commit.parents.forEach(rev => {
-          toVisit.push(rev);
+        commit.parents.forEach(parentRev => {
+          assert(parentRev < rev, 'parent rev must < child to prevent infinite loop in log()');
+          toVisit.push(parentRev);
         });
       }
     }
@@ -354,6 +355,18 @@ export class CommitStackState extends CommitStackRecord {
     return [prevRev, prevPath, prevFile];
   }
 
+  /** Assert that the revs are in the right order. */
+  assertRevOrder() {
+    assert(
+      this.stack.every(c => c.parents.every(p => p < c.rev)),
+      'parent rev should < child rev',
+    );
+    assert(
+      this.stack.every((c, i) => c.rev === i),
+      'rev should equal to stack index',
+    );
+  }
+
   /**
    * (Re-)build file stacks and mappings.
    */
@@ -361,6 +374,8 @@ export class CommitStackState extends CommitStackRecord {
     const fileStacks: FileStackState[] = [];
     let commitToFile = ImMap<CommitIdx, FileIdx>();
     let fileToCommit = ImMap<FileIdx, CommitIdx>();
+
+    this.assertRevOrder();
 
     const processFile = (state: CommitStackState, rev: Rev, file: FileState, path: RepoPath) => {
       const [prevRev, prevPath, prevFile] = state.parentFile(rev, path);
