@@ -195,71 +195,74 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
   // Non-empty only when actions is non-empty.
   const moreActions: Array<ContextMenuItem> = [];
 
-  const reviewActions =
-    diffMap.value == null ? {} : reviewProvider?.getSupportedStackActions(tree, diffMap.value);
-  const resubmittableStack = reviewActions?.resubmittableStack;
-  const submittableStack = reviewActions?.submittableStack;
-  const MIN_STACK_SIZE_TO_SUGGEST_SUBMIT = 2; // don't show "submit stack" on single commits... they're not really "stacks".
-
   const contextMenu = useContextMenu(() => moreActions);
-  if (reviewProvider == null) {
-    return null;
-  }
-  // any existing diffs -> show resubmit stack,
-  if (resubmittableStack != null && resubmittableStack.length >= MIN_STACK_SIZE_TO_SUGGEST_SUBMIT) {
-    actions.push(
-      <HighlightCommitsWhileHovering key="resubmit-stack" toHighlight={resubmittableStack}>
-        <VSCodeButton
-          appearance="icon"
-          onClick={() => {
-            runOperation(reviewProvider.submitOperation(resubmittableStack));
-          }}>
-          <Icon icon="cloud-upload" slot="start" />
-          <T>Resubmit stack</T>
-        </VSCodeButton>
-      </HighlightCommitsWhileHovering>,
-    );
-    //     any non-submitted diffs -> "submit all commits this stack" in hidden group
+  if (reviewProvider !== null) {
+    const reviewActions =
+      diffMap.value == null ? {} : reviewProvider?.getSupportedStackActions(tree, diffMap.value);
+    const resubmittableStack = reviewActions?.resubmittableStack;
+    const submittableStack = reviewActions?.submittableStack;
+    const MIN_STACK_SIZE_TO_SUGGEST_SUBMIT = 2; // don't show "submit stack" on single commits... they're not really "stacks".
+
+    // any existing diffs -> show resubmit stack,
     if (
-      submittableStack != null &&
-      submittableStack.length > 0 &&
-      submittableStack.length > resubmittableStack.length
+      resubmittableStack != null &&
+      resubmittableStack.length >= MIN_STACK_SIZE_TO_SUGGEST_SUBMIT
     ) {
-      moreActions.push({
-        label: (
-          <HighlightCommitsWhileHovering key="submit-entire-stack" toHighlight={submittableStack}>
-            <FlexRow>
-              <Icon icon="cloud-upload" slot="start" />
-              <T>Submit entire stack</T>
-            </FlexRow>
-          </HighlightCommitsWhileHovering>
-        ),
-        onClick: () => {
-          runOperation(
-            reviewProvider.submitOperation([...resubmittableStack, ...submittableStack]),
-          );
-        },
-      });
+      actions.push(
+        <HighlightCommitsWhileHovering key="resubmit-stack" toHighlight={resubmittableStack}>
+          <VSCodeButton
+            appearance="icon"
+            onClick={() => {
+              runOperation(reviewProvider.submitOperation(resubmittableStack));
+            }}>
+            <Icon icon="cloud-upload" slot="start" />
+            <T>Resubmit stack</T>
+          </VSCodeButton>
+        </HighlightCommitsWhileHovering>,
+      );
+      //     any non-submitted diffs -> "submit all commits this stack" in hidden group
+      if (
+        submittableStack != null &&
+        submittableStack.length > 0 &&
+        submittableStack.length > resubmittableStack.length
+      ) {
+        moreActions.push({
+          label: (
+            <HighlightCommitsWhileHovering key="submit-entire-stack" toHighlight={submittableStack}>
+              <FlexRow>
+                <Icon icon="cloud-upload" slot="start" />
+                <T>Submit entire stack</T>
+              </FlexRow>
+            </HighlightCommitsWhileHovering>
+          ),
+          onClick: () => {
+            runOperation(
+              reviewProvider.submitOperation([...resubmittableStack, ...submittableStack]),
+            );
+          },
+        });
+      }
+      //     NO non-submitted diffs -> nothing in hidden group
+    } else if (
+      submittableStack != null &&
+      submittableStack.length >= MIN_STACK_SIZE_TO_SUGGEST_SUBMIT
+    ) {
+      // NO existing diffs -> show submit stack ()
+      actions.push(
+        <HighlightCommitsWhileHovering key="submit-stack" toHighlight={submittableStack}>
+          <VSCodeButton
+            appearance="icon"
+            onClick={() => {
+              runOperation(reviewProvider.submitOperation(submittableStack));
+            }}>
+            <Icon icon="cloud-upload" slot="start" />
+            <T>Submit stack</T>
+          </VSCodeButton>
+        </HighlightCommitsWhileHovering>,
+      );
     }
-    //     NO non-submitted diffs -> nothing in hidden group
-  } else if (
-    submittableStack != null &&
-    submittableStack.length >= MIN_STACK_SIZE_TO_SUGGEST_SUBMIT
-  ) {
-    // NO existing diffs -> show submit stack ()
-    actions.push(
-      <HighlightCommitsWhileHovering key="submit-stack" toHighlight={submittableStack}>
-        <VSCodeButton
-          appearance="icon"
-          onClick={() => {
-            runOperation(reviewProvider.submitOperation(submittableStack));
-          }}>
-          <Icon icon="cloud-upload" slot="start" />
-          <T>Submit stack</T>
-        </VSCodeButton>
-      </HighlightCommitsWhileHovering>,
-    );
   }
+
   if (actions.length === 0) {
     return null;
   }
