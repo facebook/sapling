@@ -32,6 +32,7 @@ import {
   useRunOperation,
   useRunPreviewedOperation,
 } from './serverAPIState';
+import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
 import React, {memo} from 'react';
 import {useRecoilCallback, useRecoilValue, useSetRecoilState} from 'recoil';
@@ -121,7 +122,7 @@ export const Commit = memo(
     const contextMenu = useContextMenu(() => {
       return [
         {
-          label: <T replace={{$hash: commit?.hash}}>Copy Commit Hash "$hash"</T>,
+          label: <T replace={{$hash: short(commit?.hash)}}>Copy Commit Hash "$hash"</T>,
           onClick: () => platform.clipboardCopy(commit.hash),
         },
         {

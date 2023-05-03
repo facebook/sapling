@@ -11,6 +11,7 @@ import type {TrackDataWithEventName} from 'isl-server/src/analytics/types';
 import type {GitHubDiffSummary} from 'isl-server/src/github/githubCodeReviewProvider';
 import type {Comparison} from 'shared/Comparison';
 import type {AllUndefined, Json} from 'shared/typeUtils';
+import type {Hash} from 'shared/types/common';
 
 export type Result<T> = {value: T; error?: undefined} | {value?: undefined; error: Error};
 
@@ -35,10 +36,8 @@ export type RepoRelativePath = string;
  * but we generally prefer {@link RepoRelativePaths} when possible. */
 export type CwdRelativePath = string;
 
-/**
- * Shortened 12-character commit hashes from `{node|short}` template,
- * as opposed to full 40-char hashes */
-export type Hash = string;
+export type {Hash};
+
 /** Revsets are an eden concept that let you specify commits.
  * This could be a Hash, '.' for HEAD, .^ for parent of head, etc. See `eden help revset` */
 export type Revset = string;

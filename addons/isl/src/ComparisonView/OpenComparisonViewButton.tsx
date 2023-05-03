@@ -8,6 +8,7 @@
 import type {Comparison} from 'shared/Comparison';
 
 import {t} from '../i18n';
+import {short} from '../utils';
 import {currentComparisonMode} from './atoms';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useSetRecoilState} from 'recoil';
@@ -38,6 +39,6 @@ function buttonLabelForComparison(comparison: Comparison): string {
     case ComparisonType.StackChanges:
       return t('View Stack Changes');
     case ComparisonType.Committed:
-      return t('View Changes in $hash', {replace: {$hash: comparison.hash}});
+      return t('View Changes in $hash', {replace: {$hash: short(comparison.hash)}});
   }
 }
