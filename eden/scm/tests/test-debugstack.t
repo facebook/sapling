@@ -1,6 +1,8 @@
 #debugruntest-compatible
 
   $ configure modern
+  $ enable tweakdefaults
+  $ setconfig tweakdefaults.showupdated=true
 
 Test utils:
 

@@ -532,7 +532,7 @@ def _rebase(orig, ui, repo, *pats, **opts):
 
 
 # set of commands which define their own formatter and prints the hash changes
-formattercommands: Set[str] = set(["fold"])
+formattercommands: Set[str] = {"fold", "importstack"}
 
 
 def cleanupnodeswrapper(orig, repo, mapping, operation, *args, **kwargs):
