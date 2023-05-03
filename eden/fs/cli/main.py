@@ -63,6 +63,13 @@ from . import (
 )
 from .cmd_util import get_eden_instance, prompt_confirmation, require_checkout
 from .config import EdenCheckout, EdenInstance, ListMountInfo
+from .constants import (
+    SHUTDOWN_EXIT_CODE_ERROR,
+    SHUTDOWN_EXIT_CODE_NORMAL,
+    SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR,
+    SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN,
+    SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL,
+)
 from .stats_print import format_size
 from .subcmd import Subcmd
 from .util import get_environment_suitable_for_subprocess, print_stderr, ShutdownError
@@ -2210,13 +2217,6 @@ class UptimeCmd(Subcmd):
         instance = get_eden_instance(args)
         instance.do_uptime(pretty=True)
         return 0
-
-
-SHUTDOWN_EXIT_CODE_NORMAL = 0
-SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN = 0
-SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR = 2
-SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL = 3
-SHUTDOWN_EXIT_CODE_ERROR = 4
 
 
 @subcmd("stop", "Shutdown the EdenFS service", aliases=["shutdown"])
