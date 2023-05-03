@@ -14,6 +14,7 @@ import {assert} from '../utils';
 import {FileStackState} from './fileStackState';
 import deepEqual from 'fast-deep-equal';
 import {List, Map as ImMap, Set as ImSet, Record} from 'immutable';
+import {cached} from 'shared/LRU';
 import {generatorContains, unwrap, zip} from 'shared/utils';
 
 type CommitStackProps = {
@@ -467,7 +468,8 @@ export class CommitStackState extends CommitStackRecord {
    * commits. For example, if rev 3 depends on rev 2, then rev 3 cannot be
    * moved to be an ancestor of rev 2, and rev 2 cannot be dropped alone.
    */
-  calculateDepMap(): Map<Rev, Set<Rev>> {
+  @cached({cacheSize: 100})
+  calculateDepMap(): Readonly<Map<Rev, Set<Rev>>> {
     const state = this.maybeBuildFileStacks();
     const depMap = new Map<Rev, Set<Rev>>(state.stack.map(c => [c.rev, new Set()]));
 
