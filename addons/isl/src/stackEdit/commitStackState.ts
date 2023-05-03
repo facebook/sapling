@@ -22,6 +22,7 @@ import {FileStackState} from './fileStackState';
 import deepEqual from 'fast-deep-equal';
 import {List, Map as ImMap, Set as ImSet, Record, is} from 'immutable';
 import {cached} from 'shared/LRU';
+import {SelfUpdate} from 'shared/immutableExt';
 import {generatorContains, unwrap, zip} from 'shared/utils';
 
 type CommitStackProps = {
@@ -108,21 +109,65 @@ type CommitStackRecord = RecordOf<CommitStackProps>;
  * to file stacks. Part of analysis and edit operations are deletegated
  * to corrosponding file stacks.
  */
-export class CommitStackState extends CommitStackRecord {
+export class CommitStackState extends SelfUpdate<CommitStackRecord> {
   // Initial setup.
 
   /**
    * Construct from an exported stack. For efficient operatoins,
    * call `.buildFileStacks()` to build up states.
+   *
+   * `record` initialization is for internal use only.
    */
-  constructor(originalStack: Readonly<ExportStack>) {
-    const bottomFiles = getBottomFilesFromExportStack(originalStack);
-    const stack = getCommitStatesFromExportStack(originalStack);
-    super({
-      originalStack,
-      bottomFiles,
-      stack,
-    });
+  constructor(originalStack?: Readonly<ExportStack>, record?: CommitStackRecord) {
+    if (originalStack !== undefined) {
+      const bottomFiles = getBottomFilesFromExportStack(originalStack);
+      const stack = getCommitStatesFromExportStack(originalStack);
+      super(
+        CommitStackRecord({
+          originalStack,
+          bottomFiles,
+          stack,
+        }),
+      );
+    } else if (record !== undefined) {
+      super(record);
+    } else {
+      super(CommitStackRecord());
+    }
+  }
+
+  // Delegates to SelfUpdate.inner
+
+  get originalStack(): Readonly<ExportStack> {
+    return this.inner.originalStack;
+  }
+
+  get bottomFiles(): Readonly<Map<RepoPath, FileState>> {
+    return this.inner.bottomFiles;
+  }
+
+  get stack(): List<CommitState> {
+    return this.inner.stack;
+  }
+
+  get fileStacks(): List<FileStackState> {
+    return this.inner.fileStacks;
+  }
+
+  get commitToFile(): ImMap<CommitIdx, FileIdx> {
+    return this.inner.commitToFile;
+  }
+
+  get fileToCommit(): ImMap<FileIdx, CommitIdx> {
+    return this.inner.fileToCommit;
+  }
+
+  merge(props: Partial<CommitStackProps>): CommitStackState {
+    return new CommitStackState(undefined, this.inner.merge(props));
+  }
+
+  set<K extends keyof CommitStackProps>(key: K, value: CommitStackProps[K]): CommitStackState {
+    return new CommitStackState(undefined, this.inner.set(key, value));
   }
 
   // Read operations.
@@ -788,7 +833,7 @@ export class CommitStackState extends CommitStackRecord {
    * This should only be called when `canDrop(rev)` returned `true`.
    */
   drop(rev: Rev): CommitStackState {
-    let state = this.useFileStack();
+    let state = this.useFileStack().inner;
     const commit = unwrap(state.stack.get(rev));
     commit.files.forEach((file, path) => {
       const fileIdxRev: FileIdx | undefined = state.commitToFile.get(CommitIdx({rev, path}));
@@ -802,7 +847,7 @@ export class CommitStackState extends CommitStackRecord {
       }
     });
 
-    return state.rewriteStackDroppingRev(rev);
+    return new CommitStackState(undefined, state).rewriteStackDroppingRev(rev);
   }
 
   /**

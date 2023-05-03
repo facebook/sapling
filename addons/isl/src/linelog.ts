@@ -29,7 +29,7 @@ SOFTWARE.
 
 */
 
-import type {ValueObject} from 'immutable';
+import type {RecordOf, ValueObject} from 'immutable';
 import type {LRUWithStats} from 'shared/LRU';
 
 import {assert} from './utils';
@@ -37,6 +37,7 @@ import {assert} from './utils';
 import diffSequences from 'diff-sequences';
 import {hash, List, Record} from 'immutable';
 import {cached, LRU} from 'shared/LRU';
+import {SelfUpdate} from 'shared/immutableExt';
 import {unwrap} from 'shared/utils';
 
 /** Operation code. */
@@ -340,12 +341,18 @@ class Code implements ValueObject {
 // Export for testing purpose.
 export const executeCache: LRUWithStats = new LRU(100);
 
-const LineLogRecord = Record({
+type LineLogProps = {
   /** Core state: instructions. The array index type is `Pc`. */
-  code: new Code(),
+  code: Code;
   /** Maximum rev tracked. */
+  maxRev: Rev;
+};
+
+const LineLogRecord = Record<LineLogProps>({
+  code: new Code(),
   maxRev: 0 as Rev,
 });
+type LineLogRecord = RecordOf<LineLogProps>;
 
 /**
  * `LineLog` is a data structure that tracks linear changes to a single text
@@ -365,7 +372,20 @@ const LineLogRecord = Record({
  * This implementation of `LineLog` uses immutable patterns.
  * Write operations return new `LineLog`s.
  */
-class LineLog extends LineLogRecord {
+class LineLog extends SelfUpdate<LineLogRecord> {
+  constructor(props?: {code?: Code; maxRev?: Rev}) {
+    const record = LineLogRecord(props);
+    super(record);
+  }
+
+  get maxRev(): Rev {
+    return this.inner.maxRev;
+  }
+
+  get code(): Code {
+    return this.inner.code;
+  }
+
   /**
    * Edit chunk. Replace line `a1` (inclusive) to `a2` (exclusive) in rev
    * `aRev` with `bLines`. `bLines` are considered introduced by `bRev`.
@@ -533,8 +553,9 @@ class LineLog extends LineLogRecord {
       }
     };
 
+    const codeList = this.inner.code;
     let pc = 0;
-    let patience = this.code.getSize() * 2;
+    let patience = codeList.getSize() * 2;
     while (patience > 0) {
       if (insStack.at(-1)?.endPc === pc) {
         insStack.pop();
@@ -542,7 +563,7 @@ class LineLog extends LineLogRecord {
       if (delStack.at(-1)?.endPc === pc) {
         delStack.pop();
       }
-      const code = unwrap(this.code.get(pc));
+      const code = unwrap(codeList.get(pc));
       switch (code.op) {
         case Op.END:
           patience = -1;
@@ -719,7 +740,8 @@ class LineLog extends LineLogRecord {
     const aLines = aLineInfos.map(l => l.data);
     aLines.pop(); // Drop the last END empty line.
     const blocks = diffLines(aLines, bLines);
-    let log: LineLog = new LineLog(this);
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    let log: LineLog = this;
 
     blocks.reverse().forEach(([a1, a2, b1, b2]) => {
       log = log.editChunk(aRev, a1, a2, bRev, bLines.slice(b1, b2), aLineInfos);
