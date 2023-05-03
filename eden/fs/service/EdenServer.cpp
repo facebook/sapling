@@ -613,13 +613,9 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
         if (fsChannel->takeoverStop()) {
           // Success! Takeover has begun.
         } else {
-          auto mountProtocol = info.edenMount->getMountProtocol();
-          std::string formattedMountProtocol =
-              mountProtocol ? fmt::to_string(*mountProtocol) : "<unknown>";
           return EDEN_BUG_FUTURE(TakeoverData)
               << "Takeover isn't (yet) supported for " << fsChannel->getName()
-              << " mounts."
-              << "Mount type: " << formattedMountProtocol << ". Mount State: "
+              << " mounts. Mount state: "
               << folly::to_underlying(info.edenMount->getState());
         }
 
