@@ -29,7 +29,7 @@ SOFTWARE.
 
 */
 
-import type {Rev} from '../linelog';
+import type {LineIdx, Rev} from '../linelog';
 
 import {LineLog, executeCache} from '../linelog';
 import {describe, it, expect} from '@jest/globals';
@@ -258,6 +258,55 @@ describe('LineLog', () => {
         .join('');
       expect(text).toBe(textList[rev - 1]);
     }
+  });
+
+  // Ported from test-linelog-edits.py (D3709431)
+  // Compare LineLog.editChunk against List<string>.splice edits.
+  it('stress tests against random edits', () => {
+    const maxDeltaA = 10; // max(a2 - a1)
+    const maxDeltaB = 10; // max(b2 - b1)
+    const maxB1 = 0xffffff;
+
+    function randInt(min: number, max: number): number {
+      return Math.floor(Math.random() * (max - min + 1) + min);
+    }
+
+    function* generateCases(
+      endRev = 1000,
+    ): Generator<[Immutable.List<string>, Rev, LineIdx, LineIdx, LineIdx, LineIdx, string[]]> {
+      // Maintain `lines` as an alternative to LineLog
+      let lines: Immutable.List<string> = Immutable.List();
+      for (let rev = 0; rev <= endRev; ++rev) {
+        const n = lines.size;
+        const a1 = randInt(0, n);
+        const a2 = randInt(a1, Math.min(n, a1 + maxDeltaA));
+        const b1 = randInt(0, maxB1);
+        const b2 = randInt(b1, b1 + maxDeltaB);
+        const bLines: string[] = [];
+        for (let bIdx = b1; bIdx < b2; bIdx++) {
+          bLines.push(`${rev}:${bIdx}\n`);
+        }
+        lines = lines.splice(a1, a2 - a1, ...bLines);
+        yield [lines, rev, a1, a2, b1, b2, bLines];
+      }
+    }
+
+    const cases = [...generateCases()];
+    let log = new LineLog();
+
+    // The use of aLines cache prevents cache miss.
+    // It can reduce editChunk time for 100 revs from 240ms to 8ms.
+    const aLines = [...log.checkOutLines(0)];
+    executeCache.stats = {miss: 0};
+    cases.forEach(([_lines, rev, a1, a2, _b1, _b2, bLines]) => {
+      log = log.editChunk(log.maxRev, a1, a2, rev, bLines, aLines);
+    });
+    expect(executeCache.stats).toMatchObject({miss: 0});
+
+    // Check that every rev can be checked out fine.
+    cases.forEach(([lines, rev, _a1, _a2, _b1, _b2, _bLines]) => {
+      expect(log.checkOut(rev)).toBe(lines.join(''));
+    });
   });
 
   describe('supports remapping revisions', () => {
