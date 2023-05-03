@@ -33,6 +33,7 @@ export type TrackEventName =
   | 'GoBackToOldISLOnce'
   | 'GoBackToOldISLReason'
   | 'HideOperation'
+  | 'ImportStackOperation'
   | 'PrSubmitOperation'
   | 'PullOperation'
   | 'PurgeOperation'
