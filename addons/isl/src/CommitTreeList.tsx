@@ -60,7 +60,9 @@ export function CommitTreeList() {
       {fetchError ? <CommitFetchError error={fetchError} /> : null}
       <div className="commit-tree-root commit-group" data-testid="commit-tree-root">
         <MainLineEllipsis />
-        {trees.map(tree => createSubtree(tree, /* depth */ 0))}
+        {trees.map(tree => (
+          <SubTree key={tree.info.hash} tree={tree} depth={0} />
+        ))}
         <MainLineEllipsis>
           <FetchingAdditionalCommitsButton />
           <FetchingAdditionalCommitsIndicator />
@@ -93,12 +95,14 @@ function CommitFetchError({error}: {error: Error}) {
   return <ErrorNotice title={t('Failed to fetch commits')} error={error} />;
 }
 
-function createSubtree(tree: CommitTreeWithPreviews, depth: number): Array<React.ReactElement> {
+function SubTree({tree, depth}: {tree: CommitTreeWithPreviews; depth: number}): React.ReactElement {
   const {info, children, previewType} = tree;
   const isPublic = info.phase === 'public';
 
+  const stackActions = depth === 1 ? <StackActions key="stack-actions" tree={tree} /> : null;
+
   const renderedChildren = (children ?? [])
-    .map(tree => createSubtree(tree, depth + 1))
+    .map(tree => <SubTree key={`tree-${tree.info.hash}`} tree={tree} depth={depth + 1} />)
     .map((components, i) => {
       if (!isPublic && i === 0) {
         // first child can be rendered without branching, so single-child lineages render in the same branch
@@ -113,7 +117,7 @@ function createSubtree(tree: CommitTreeWithPreviews, depth: number): Array<React
     })
     .flat();
 
-  return [
+  const rendered = [
     ...renderedChildren,
     <Commit
       commit={info}
@@ -121,17 +125,13 @@ function createSubtree(tree: CommitTreeWithPreviews, depth: number): Array<React
       previewType={previewType}
       hasChildren={renderedChildren.length > 0}
     />,
-    depth === 1 ? <StackActions key="stack-actions" tree={tree} /> : null,
+    stackActions,
   ].filter(notEmpty);
+
+  return <>{rendered}</>;
 }
 
-function Branch({
-  children,
-  descendsFrom,
-}: {
-  children: Array<React.ReactElement>;
-  descendsFrom: Hash;
-}) {
+function Branch({children, descendsFrom}: {children: React.ReactElement; descendsFrom: Hash}) {
   return (
     <div className="commit-group" data-testid={`branch-from-${descendsFrom}`}>
       {children}
