@@ -551,6 +551,14 @@ describe('CommitStackState', () => {
       expect(stack.canReorder([0, 1, 2, 3])).toBeFalsy();
     });
 
+    it('can reorder a long stack', () => {
+      const exportStack: ExportStack = [...Array(20).keys()].map(i => {
+        return {...e, node: `A${i}`, parents: i === 0 ? [] : [`A${i - 1}`], files: {}};
+      });
+      const stack = new CommitStackState(exportStack);
+      expect(stack.canReorder(stack.revs().reverse())).toBeTruthy();
+    });
+
     it('reorders adjacent changes', () => {
       // Note: usually rev 0 is a public parent commit, rev 0 is not usually reordered.
       // But this test reorders rev 0 and triggers some interesting code paths.

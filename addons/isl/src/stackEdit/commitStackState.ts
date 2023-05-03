@@ -441,18 +441,22 @@ export class CommitStackState extends CommitStackRecord {
         },
       );
       const renamed = new Set<RepoPath>();
-      priorityFiles.sort().forEach(([priority, path, file]) => {
-        // Skip already "renamed" absent files.
-        let skip = false;
-        if (priority === 0 && file.copyFrom != null) {
-          renamed.add(file.copyFrom);
-        } else {
-          skip = isAbsent(file) && renamed.has(path);
-        }
-        if (!skip) {
-          processFile(state, rev, file, path);
-        }
-      });
+      priorityFiles
+        .sort(([aPri, aPath, _aFile], [bPri, bPath, _bFile]) =>
+          aPri < bPri || (aPri === bPri && aPath < bPath) ? -1 : 1,
+        )
+        .forEach(([priority, path, file]) => {
+          // Skip already "renamed" absent files.
+          let skip = false;
+          if (priority === 0 && file.copyFrom != null) {
+            renamed.add(file.copyFrom);
+          } else {
+            skip = isAbsent(file) && renamed.has(path);
+          }
+          if (!skip) {
+            processFile(state, rev, file, path);
+          }
+        });
     });
 
     return state.merge({
@@ -820,7 +824,12 @@ export class CommitStackState extends CommitStackRecord {
     if (!state.isStackLinear()) {
       return false;
     }
-    if (!deepEqual([...order].sort(), state.revs())) {
+    if (
+      !deepEqual(
+        [...order].sort((a, b) => a - b),
+        state.revs(),
+      )
+    ) {
       return false;
     }
 
@@ -1077,7 +1086,7 @@ function isUtf8(file: FileState): boolean {
  * For example, turn [0, 100, 50] into [0, 2, 1].
  */
 function compactSequence(revs: Rev[]): Rev[] {
-  const sortedRevs = [...revs].sort();
+  const sortedRevs = [...revs].sort((aRev, bRev) => aRev - bRev);
   return revs.map(rev => sortedRevs.indexOf(rev));
 }
 
