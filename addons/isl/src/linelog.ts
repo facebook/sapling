@@ -155,12 +155,6 @@ class LineLog {
   /** Maximum rev tracked. */
   maxRev: Rev = 0;
 
-  /** Cache key for `checkOut`. */
-  private lastCheckoutKey = '';
-
-  /** Result of a `checkOut`. */
-  lines: LineInfo[] = [];
-
   /**
    * Create a `LineLog` with empty content.
    */
@@ -179,14 +173,15 @@ class LineLog {
    * extra checks to ensure the edit is meaningful.
    */
   editChunk(aRev: Rev, a1: LineIdx, a2: LineIdx, bRev: Rev, bLines: string[]) {
-    assert(a1 <= a2, 'illegal chunk (a1 < a2)');
-    assert(a2 <= this.lines.length, 'out of bound a2 (forgot checkOut?)');
-
-    this.checkOutLines(aRev);
+    const aLines = this.checkOutLines(aRev);
     const start = this.code.size;
+
+    assert(a1 <= a2, 'illegal chunk (a1 < a2)');
+    assert(a2 <= aLines.length, 'out of bound a2 (wrong aRev?)');
+
     const newCode = this.code.withMutations(origCode => {
       let code = origCode;
-      const a1Pc = this.lines[a1].pc;
+      const a1Pc = aLines[a1].pc;
       if (bLines.length > 0) {
         const b2Pc = start + bLines.length + 1;
         code.push({op: Op.JL, rev: bRev, pc: b2Pc});
@@ -196,10 +191,10 @@ class LineLog {
         assert(b2Pc === code.size, 'bug: wrong pc');
       }
       if (a1 < a2) {
-        const a2Pc = this.lines[a2 - 1].pc + 1;
+        const a2Pc = aLines[a2 - 1].pc + 1;
         code = code.push({op: Op.JGE, rev: bRev, pc: a2Pc});
       }
-      this.lines[a1].pc = code.size;
+      aLines[a1] = {...aLines[a1], pc: code.size};
       code = code.push({...unwrap(code.get(a1Pc))});
       switch (unwrap(code.get(a1Pc)).op) {
         case Op.J:
@@ -218,7 +213,7 @@ class LineLog {
     });
     // This is needed for FileStackState.editChunk test (temporarily).
     if (bRev <= aRev || bRev >= this.maxRev) {
-      this.lines.splice(a1, a2 - a1, ...newLines);
+      aLines.splice(a1, a2 - a1, ...newLines);
     }
     if (bRev > this.maxRev) {
       this.maxRev = bRev;
@@ -251,9 +246,6 @@ class LineLog {
       })
       .toList();
     this.maxRev = newMaxRev;
-    // Invalidate outdated checkout.
-    this.lastCheckoutKey = '';
-    this.checkOut(this.maxRev);
   }
 
   /**
@@ -392,11 +384,6 @@ class LineLog {
   public checkOutLines(rev: Rev, start: Rev | null = null): LineInfo[] {
     // eslint-disable-next-line no-param-reassign
     rev = Math.min(rev, this.maxRev);
-    const key = `${rev},${start}`;
-    if (key === this.lastCheckoutKey) {
-      return this.lines;
-    }
-
     let lines = this.execute(rev, rev);
     if (start !== null) {
       // Checkout a range, including deleted revs.
@@ -408,9 +395,6 @@ class LineLog {
       // Go through all lines again. But do not skip chunks.
       lines = this.execute(start, rev, present);
     }
-
-    this.lines = lines;
-    this.lastCheckoutKey = key;
     return lines;
   }
 
@@ -443,12 +427,12 @@ class LineLog {
     blocks.reverse().forEach(([a1, a2, b1, b2]) => {
       this.editChunk(aRev, a1, a2, bRev, bLines.slice(b1, b2));
     });
-    this.lastCheckoutKey = `${bRev},null`;
+
+    // This is needed in case editChunk is not called (no difference).
     if (bRev > this.maxRev) {
       this.maxRev = bRev;
     }
 
-    // assert(this.reconstructContent() === b, "bug: text does not match");
     return bRev;
   }
 }
