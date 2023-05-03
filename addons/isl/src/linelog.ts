@@ -32,6 +32,8 @@ SOFTWARE.
 import {assert} from './utils';
 // Read D43857949 about the choice of the diff library.
 import diffSequences from 'diff-sequences';
+import {List} from 'immutable';
+import {unwrap} from 'shared/utils';
 
 /** Operation code. */
 enum Op {
@@ -128,6 +130,9 @@ interface FlattenLine {
   data: string;
 }
 
+/** List of instructions. */
+type Code = List<Inst>;
+
 /**
  * `LineLog` is a data structure that tracks linear changes to a single text
  * file. Conceptually similar to a list of texts like `string[]`, with extra
@@ -145,7 +150,7 @@ interface FlattenLine {
  */
 class LineLog {
   /** Core state: instructions. The array index type is `Pc`. */
-  private code: Inst[] = [{op: Op.END}];
+  private code: Code = List([{op: Op.END}]);
 
   /** Maximum rev tracked. */
   maxRev: Rev = 0;
@@ -185,30 +190,35 @@ class LineLog {
     assert(a1 <= a2, 'illegal chunk (a1 < a2)');
     assert(a2 <= this.lines.length, 'out of bound a2 (forgot checkOut?)');
 
-    const start = this.code.length;
-    const a1Pc = this.lines[a1].pc;
-    if (lines.length > 0) {
-      const b2Pc = start + lines.length + 1;
-      this.code.push({op: Op.JL, rev, pc: b2Pc});
-      lines.forEach(line => {
-        this.code.push({op: Op.LINE, rev, data: line});
-      });
-      assert(b2Pc === this.code.length, 'bug: wrong pc');
-    }
-    if (a1 < a2) {
-      const a2Pc = this.lines[a2 - 1].pc + 1;
-      this.code.push({op: Op.JGE, rev, pc: a2Pc});
-    }
-    this.lines[a1].pc = this.code.length;
-    this.code.push({...this.code[a1Pc]});
-    switch (this.code[a1Pc].op) {
-      case Op.J:
-      case Op.END:
-        break;
-      default:
-        this.code.push({op: Op.J, pc: a1Pc + 1});
-    }
-    this.code[a1Pc] = {op: Op.J, pc: start};
+    const start = this.code.size;
+    const newCode = this.code.withMutations(origCode => {
+      let code = origCode;
+      const a1Pc = this.lines[a1].pc;
+      if (lines.length > 0) {
+        const b2Pc = start + lines.length + 1;
+        code.push({op: Op.JL, rev, pc: b2Pc});
+        lines.forEach(line => {
+          code = code.push({op: Op.LINE, rev, data: line});
+        });
+        assert(b2Pc === code.size, 'bug: wrong pc');
+      }
+      if (a1 < a2) {
+        const a2Pc = this.lines[a2 - 1].pc + 1;
+        code = code.push({op: Op.JGE, rev, pc: a2Pc});
+      }
+      this.lines[a1].pc = code.size;
+      code = code.push({...unwrap(code.get(a1Pc))});
+      switch (unwrap(code.get(a1Pc)).op) {
+        case Op.J:
+        case Op.END:
+          break;
+        default:
+          code = code.push({op: Op.J, pc: a1Pc + 1});
+      }
+      code = code.set(a1Pc, {op: Op.J, pc: start});
+      return code;
+    });
+    this.code = newCode;
 
     const newLines = lines.map((s, i) => {
       return {data: s, rev, pc: start + 1 + i, deleted: false};
@@ -231,15 +241,19 @@ class LineLog {
    */
   remapRevs(revMap: Map<Rev, Rev>) {
     let newMaxRev = 0;
-    this.code.forEach(c => {
-      if (c.op === Op.JGE || c.op === Op.JL || c.op === Op.LINE) {
-        const newRev = revMap.get(c.rev) ?? c.rev;
-        if (newRev > newMaxRev) {
-          newMaxRev = newRev;
+    this.code = this.code
+      .map(inst => {
+        const c = {...inst};
+        if (c.op === Op.JGE || c.op === Op.JL || c.op === Op.LINE) {
+          const newRev = revMap.get(c.rev) ?? c.rev;
+          if (newRev > newMaxRev) {
+            newMaxRev = newRev;
+          }
+          c.rev = newRev;
         }
-        c.rev = newRev;
-      }
-    });
+        return c;
+      })
+      .toList();
     this.maxRev = newMaxRev;
     // Invalidate outdated checkout.
     this.lastCheckoutKey = '';
@@ -296,10 +310,10 @@ class LineLog {
     const rev = endRev;
     const lines: LineInfo[] = [];
     let pc = 0;
-    let patience = this.code.length * 2;
+    let patience = this.code.size * 2;
     const deleted = present === null ? () => false : (pc: Pc) => !present[pc];
     while (patience > 0) {
-      const code = this.code[pc];
+      const code = unwrap(this.code.get(pc));
       switch (code.op) {
         case Op.END:
           lines.push({data: '', rev: 0, pc, deleted: deleted(pc)});
