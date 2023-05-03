@@ -5,7 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {LRU} from '../LRU';
+import type {LRUWithStats} from '../LRU';
+
+import {cached, LRU} from '../LRU';
+import {List, Record} from 'immutable';
 
 describe('LRU', () => {
   it('evicts oldest items after reaching the max', () => {
@@ -120,5 +123,133 @@ describe('LRU', () => {
     expect(lru.get(4)).toBe(null);
     expect(lru.get(5)).toBe(undefined);
     expect(lru.get(6)).toBe(undefined);
+  });
+});
+
+describe('cached()', () => {
+  describe('for pure functions', () => {
+    it('works for pure function', () => {
+      let calledTimes = 0;
+      const fib = cached((n: number): number => {
+        calledTimes += 1;
+        return n < 2 ? n : fib(n - 1) + fib(n - 2);
+      });
+      expect(fib(20)).toBe(6765);
+      expect(calledTimes).toBe(21);
+    });
+
+    it('takes user-provided cache', () => {
+      const cache = new LRU(10);
+      const fib = cached(
+        (n: number): number => {
+          return n < 2 ? n : fib(n - 1) + fib(n - 2);
+        },
+        {cache},
+      );
+      expect(fib(20)).toBe(6765);
+      expect(cache.get(List([20]))).toBe(6765);
+    });
+
+    it('provides access to cache via func.cache', () => {
+      const fib = cached((n: number): number => {
+        return n < 2 ? n : fib(n - 1) + fib(n - 2);
+      });
+      expect(fib(20)).toBe(6765);
+      expect(fib.cache.get(List([20]))).toBe(6765);
+    });
+
+    it('counts cache miss and hit if cache.stats is present', () => {
+      const fib = cached((n: number): number => {
+        return n < 2 ? n : fib(n - 1) + fib(n - 2);
+      });
+      fib.cache.stats = {};
+      expect(fib(20)).toBe(6765);
+      expect(fib.cache.stats).toMatchObject({hit: 18, miss: 21});
+    });
+
+    it('skips cache if an arg is non-cachable', () => {
+      const max = cached((a: number, b: number, map?: (v: number) => number): number => {
+        const pickA = map == null ? a > b : map(a) > map(b);
+        return pickA ? a : b;
+      });
+      const stats = (max.cache.stats = {});
+      // number is cachable.
+      expect(max(1, 2) + max(1, 2)).toBe(4);
+      expect(stats).toMatchObject({hit: 1, miss: 1});
+      // function is not cachable.
+      expect(max(1, 2, v => 3 - v) + max(1, 2, v => 3 - v)).toBe(2);
+      expect(max(1, 2, v => v)).toBe(2);
+      expect(stats).toMatchObject({skip: 3});
+    });
+  });
+
+  describe('for class methods', () => {
+    it('can be used as a decorator', () => {
+      let calledTimes = 0;
+      class Fib {
+        @cached()
+        fib(n: number): number {
+          calledTimes += 1;
+          return n < 2 ? n : this.fib(n - 1) + this.fib(n - 2);
+        }
+      }
+      const f = new Fib();
+      expect(f.fib(20)).toBe(6765);
+      expect(calledTimes).toBe(21);
+    });
+
+    it('takes properties as extra cache keys', () => {
+      const cache: LRUWithStats = new LRU(10);
+      class Add {
+        // lhs will be used as an extra cache key.
+        lhs: number;
+        constructor(lhs: number) {
+          this.lhs = lhs;
+        }
+        @cached({cache})
+        add(rhs: number): number {
+          return this.lhs + rhs;
+        }
+      }
+      const stats = (cache.stats = {});
+      const a1 = new Add(100);
+      const a2 = new Add(200);
+      // `add(5)` for both a1 and a2. No cache hit since lhs is different.
+      expect(a1.add(5)).toBe(105);
+      expect(a2.add(5)).toBe(205);
+      expect(stats).toMatchObject({miss: 2});
+      // `a3.add(5)` gets a cache hit, since a3.lhs == a1.lhs.
+      const a3 = new Add(200);
+      expect(a3.add(5)).toBe(205);
+      expect(stats).toMatchObject({hit: 1});
+    });
+
+    it('takes immutable object as an extra key', () => {
+      const cache: LRUWithStats = new LRU(10);
+      // Position is an immutable Record, and will be used as an extra cache key.
+      class Position extends Record({x: 10, y: 20}) {
+        @cached({cache})
+        offset(dx: number, dy: number): [number, number] {
+          return [this.x + dx, this.y + dy];
+        }
+      }
+      const stats = (cache.stats = {});
+      const p1 = new Position();
+      const p2 = new Position({x: 30, y: 40});
+      [...Array(3)].forEach(() => {
+        expect(p1.offset(1, 2)).toMatchObject([11, 22]);
+      });
+      expect(stats).toMatchObject({miss: 1, hit: 2});
+      [...Array(3)].forEach(() => {
+        expect(p2.offset(1, 2)).toMatchObject([31, 42]);
+      });
+      expect(stats).toMatchObject({miss: 2, hit: 4});
+      // p3 is a different instance, but can reuse p2 cache
+      // since Immutable.is(p2, p3).
+      const p3 = new Position({x: 30, y: 40});
+      expect(p3).not.toBe(p1);
+      expect(p3.offset(1, 2)).toMatchObject([31, 42]);
+      expect(stats).toMatchObject({miss: 2, hit: 5});
+    });
   });
 });

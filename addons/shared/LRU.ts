@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {OrderedMap} from 'immutable';
+import {List, OrderedMap, isImmutable} from 'immutable';
 
 /**
  * Simple least-recently-used cache which holds at most `max` entries.
@@ -79,4 +79,170 @@ export class LRU<K, V> {
   clear() {
     this.cache = this.cache.clear();
   }
+}
+
+// Neither `unknown` nor `never` works here.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyFunction<T> = (this: T, ...args: any[]) => any;
+
+type CacheStats = {
+  hit?: number;
+  miss?: number;
+  skip?: number;
+};
+
+export interface LRUWithStats extends LRU<unknown, unknown> {
+  stats?: CacheStats;
+}
+
+export interface WithCache {
+  cache: LRUWithStats;
+}
+
+/** Cache options. */
+type CacheOpts<This> = {
+  /**
+   * If set, use the specified cache.
+   *
+   * Callsite can assign `cache.stats = {hit: 0, miss: 0, skip: 0}`
+   * to collect statistics.
+   */
+  cache?: LRUWithStats;
+
+  /**
+   * If set, and cache is not set, create cache of the given size.
+   * Default value: 10.
+   */
+  cacheSize?: number;
+
+  /** If set, use the returned values as extra cache keys. */
+  getExtraKeys?: (this: This) => unknown[];
+};
+
+type DecoratorFunc = (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) => void;
+
+/**
+ * Decorator to make a class method cached.
+ *
+ * This is similar to calling `cached` on the function, with
+ * an auto-generated `opts.getExtraKeys` function that turns
+ * `this` into extra cache keys. Immutable `this` is used
+ * as the extra cache key directly. Otherwise, cachable
+ * properties of `this` are used as extra cache keys.
+ */
+export function cached<T>(opts?: CacheOpts<T>): DecoratorFunc;
+
+/**
+ * Wraps the given function with a LRU cache.
+ * Returns the wrapped function.
+ *
+ * If the function depends on extra inputs outside the
+ * parameters, use `opts.getExtraKeys` to provide them.
+ *
+ * The cache can be accessed via `returnedFunction.cache`.
+ *
+ * Cache is used only when all parameters are cachable [1].
+ * For example, if a parameter is a function or `null`,
+ * then cache is only used when that parameter is `null`,
+ * since functions are not cachable.
+ *
+ * [1]: See `isCachable` for cachable types.
+ */
+export function cached<T, F extends AnyFunction<T>>(func: F, opts?: CacheOpts<T>): F & WithCache;
+
+// union of the above
+export function cached<T, F extends AnyFunction<T>>(
+  arg1?: F | CacheOpts<T>,
+  arg2?: CacheOpts<T>,
+): (F & WithCache) | DecoratorFunc {
+  if (typeof arg1 === 'function') {
+    // cached(func)
+    return cachedFunction(arg1, arg2);
+  } else {
+    // @cached(opts)
+    return cacheDecorator(arg1);
+  }
+}
+
+function cachedFunction<T, F extends AnyFunction<T>>(func: F, opts?: CacheOpts<T>): F & WithCache {
+  const cache: LRUWithStats = opts?.cache ?? new LRU(opts?.cacheSize ?? 10);
+  const getExtraKeys = opts?.getExtraKeys;
+  const cachedFunc = function (this: T, ...args: Parameters<F>): ReturnType<F> {
+    const stats = cache.stats;
+    if (!args.every(isCachable)) {
+      if (stats != null) {
+        stats.skip = (stats.skip ?? 0) + 1;
+      }
+      return func.apply(this, args) as ReturnType<F>;
+    }
+    const cacheKey = List(getExtraKeys ? [...getExtraKeys.apply(this), ...args] : args);
+    const cachedValue = cache.get(cacheKey);
+    if (cachedValue !== undefined) {
+      if (stats != null) {
+        stats.hit = (stats.hit ?? 0) + 1;
+      }
+      return cachedValue as ReturnType<F>;
+    }
+    if (stats != null) {
+      stats.miss = (stats.miss ?? 0) + 1;
+    }
+    const result = func.apply(this, args) as ReturnType<F>;
+    cache.set(cacheKey, result);
+    return result;
+  };
+  cachedFunc.cache = cache;
+  return cachedFunc as WithCache & F;
+}
+
+// See https://www.typescriptlang.org/docs/handbook/decorators.html.
+function cacheDecorator<T>(opts?: CacheOpts<T>) {
+  const getExtraKeys =
+    opts?.getExtraKeys ??
+    function (this: T): unknown[] {
+      // Use `this` as extra key if it's an immutable object.
+      if (isImmutable(this)) {
+        return [this];
+      }
+      // Scan through cachable properties.
+      if (this != null && typeof this === 'object') {
+        return Object.values(this).filter(isCachable);
+      }
+      // Give up - do not add extra cache keys.
+      return [];
+    };
+  return function (_target: unknown, _propertyKey: string, descriptor: PropertyDescriptor) {
+    const originalFunc = descriptor.value;
+    descriptor.value = cachedFunction(originalFunc, {...opts, getExtraKeys});
+  };
+}
+
+const cachableTypeNames = new Set([
+  'number',
+  'string',
+  'boolean',
+  'symbol',
+  'bigint',
+  'undefined',
+  'null',
+]);
+
+/**
+ * Returns true if `arg` can be used as cache keys.
+ * Primitive types (string, number, boolean, null, undefined)
+ * can be used as cache keys.
+ * Objects can be used as cache keys if they are immutable.
+ */
+function isCachable(arg: unknown): boolean {
+  // null is a special case, since typeof(null) returns 'object'.
+  if (arg == null) {
+    return true;
+  }
+  const typeName = typeof arg;
+  if (cachableTypeNames.has(typeName)) {
+    return true;
+  }
+  if (typeName === 'object' && isImmutable(arg)) {
+    return true;
+  }
+  return false;
 }
