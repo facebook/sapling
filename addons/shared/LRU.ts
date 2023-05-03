@@ -5,7 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {List, OrderedMap, isImmutable} from 'immutable';
+import type {ValueObject} from 'immutable';
+
+import {is, List, isImmutable} from 'immutable';
+
+type LRUKey = LRUHashKey | ValueObject;
+type LRUHashKey = string | number | boolean | null | undefined | object;
 
 /**
  * Simple least-recently-used cache which holds at most `max` entries.
@@ -19,66 +24,82 @@ import {List, OrderedMap, isImmutable} from 'immutable';
  *
  * [1]: https://immutable-js.com/docs/v4.3.0/is()/.
  */
-export class LRU<K, V> {
-  // Implementation is based on Map having stable insertion order and O(1) insertion
-  private cache = OrderedMap<K, V>();
+export class LRU<K extends LRUKey, V> {
+  // Implementation is based on Map having stable insertion order and O(1).
+  // To support immutable objects, the cache map uses hashCode of "key" as
+  // the first key, then the actual key in the nested map.
+  private cache = new Map<LRUHashKey, Map<K, V>>();
 
-  constructor(private maxItems: number) {}
+  constructor(private maxItems: number, private maxHashCollision = 3) {}
 
   get(key: K): V | undefined {
-    const val = this.cache.get(key);
-    if (val === undefined) {
-      return undefined;
+    let result = undefined;
+    const hashKey = getHashKey(key);
+    const valueMap = this.cache.get(hashKey);
+    if (valueMap !== undefined) {
+      // Fast path: by object reference.
+      const maybeValue = valueMap.get(key);
+      if (maybeValue !== undefined) {
+        result = maybeValue;
+      } else {
+        // Slower path: immutable.is
+        for (const [k, v] of valueMap) {
+          // The order matters. `is(key, k)` updates `key` (user-provided) to
+          // the `k` (cache) reference. See `immutableExt.withSelfUpdateEquals`.
+          if (is(key, k)) {
+            result = v;
+            break;
+          }
+        }
+      }
+      this.cache.delete(hashKey);
+      this.cache.set(hashKey, valueMap);
     }
-
-    this.cache = this.cache.withMutations(origCache => {
-      let cache = origCache;
-      // refresh by re-inserting
-      cache = cache.delete(key);
-      cache = cache.set(key, val);
-      return cache;
-    });
-
-    return val;
+    return result;
   }
 
   set(key: K, value: V) {
-    this.cache = this.cache.withMutations(origCache => {
-      let cache = origCache;
+    const hashKey = getHashKey(key);
+    let valueMap = this.cache.get(hashKey);
+    if (valueMap === undefined || valueMap.size >= this.maxHashCollision) {
+      valueMap = new Map([[key, value]]);
+    } else {
+      valueMap.set(key, value);
+    }
+    // ensure refresh by deleting before setting
+    this.cache.delete(hashKey);
 
-      if (cache.has(key)) {
-        // ensure refresh by deleting before setting
-        cache = cache.delete(key);
-      }
-
-      if (value !== undefined) {
-        // `set(key, undefined)` is indistinguishable from `key` not being in the cache,
-        // as far as you can tell from `get(key)`.
-        // Save a bit of space by not re-inserting into the cache after deleting.
-        cache = cache.set(key, value);
-      }
-
-      if (cache.size > this.maxItems) {
+    if (value !== undefined) {
+      this.cache.set(hashKey, valueMap);
+      if (this.cache.size > this.maxItems) {
         // evict oldest
         // iteration order guarantees oldest item is first
-        const next = cache.keys().next();
+        const next = this.cache.keys().next();
         // undefined is a valid value, so use iterator `done` to know whether to delete or not.
         if (!next.done) {
-          cache = cache.delete(next.value);
+          this.cache.delete(next.value);
         }
       }
-
-      return cache;
-    });
+    }
   }
 
   delete(key: K) {
-    this.cache = this.cache.delete(key);
+    const hashKey = getHashKey(key);
+    this.cache.delete(hashKey);
   }
 
   clear() {
-    this.cache = this.cache.clear();
+    this.cache.clear();
   }
+}
+
+function getHashKey<K extends LRUKey>(key: K): LRUHashKey {
+  // @ts-expect-error (string)?.hashCode is valid JavaScript.
+  const hashCodeFunc = key?.hashCode;
+  if (hashCodeFunc !== undefined) {
+    return hashCodeFunc.apply(key);
+  }
+  return key;
 }
 
 // Neither `unknown` nor `never` works here.
@@ -91,7 +112,7 @@ type CacheStats = {
   skip?: number;
 };
 
-export interface LRUWithStats extends LRU<unknown, unknown> {
+export interface LRUWithStats extends LRU<LRUKey, unknown> {
   stats?: CacheStats;
 }
 
