@@ -29,12 +29,13 @@ SOFTWARE.
 
 */
 
+import type {ValueObject} from 'immutable';
 import type {LRUWithStats} from 'shared/LRU';
 
 import {assert} from './utils';
 // Read D43857949 about the choice of the diff library.
 import diffSequences from 'diff-sequences';
-import {List, Record} from 'immutable';
+import {hash, List, Record} from 'immutable';
 import {cached, LRU} from 'shared/LRU';
 import {unwrap} from 'shared/utils';
 
@@ -157,63 +158,59 @@ interface FlattenLine {
   data: string;
 }
 
-/** List of instructions. */
-type Code = List<Inst>;
-
-// Export for testing purpose.
-export const executeCache: LRUWithStats = new LRU(100);
-
-const LineLogRecord = Record({
-  /** Core state: instructions. The array index type is `Pc`. */
-  code: List([END()]) as Code,
-  /** Maximum rev tracked. */
-  maxRev: 0 as Rev,
-});
-
 /**
- * `LineLog` is a data structure that tracks linear changes to a single text
- * file. Conceptually similar to a list of texts like `string[]`, with extra
- * features suitable for stack editing:
- * - Calculate the "blame" of the text of a given version efficiently.
- * - Edit lines or trunks in a past version, and affect future versions.
- * - List all lines that ever existed with each line annotated, like
- *   a unified diff, but for all versions, not just 2 versions.
+ * List of instructions.
  *
- * Internally, `LineLog` is a byte-code interpreter that runs a program to
- * emit lines. Changes are done by patching in new byte-codes. There are
- * no traditional text patch involved. No operations would cause merge
- * conflicts. See https://sapling-scm.com/docs/internals/linelog for more
- * details.
+ * This is a wrapper of `List<Inst>` for more efficient `hashCode` and `equals`
+ * calculations. The default `hashCode` from `immutable.js` scans the whole
+ * `List`. In this implementation we keep 2 internal values: hash and str. The
+ * `hash` is used for hashCode, and the `str` is an append-only string that
+ * tracks the `editChunk` and other operations to `List<Inst>` for testing
+ * equality.
  *
- * This implementation of `LineLog` uses immutable patterns.
- * Write operations return new `LineLog`s.
+ * You might have noticed that the `str` equality might not match the
+ * `List<Inst>` equality. For example, if we remap 1 to 2, then remap 2 to 1,
+ * the `List<Inst>` is not changed, but the `str` is changed. It is okay to
+ * treat the linelogs as different in this case as we almost always immediately
+ * rebuild linelogs after a `remap`. It's important to make sure `recordText`
+ * with the same text list gets cache hit.
  */
-class LineLog extends LineLogRecord {
-  /**
-   * Edit chunk. Replace line `a1` (inclusive) to `a2` (exclusive) in rev
-   * `aRev` with `bLines`. `bLines` are considered introduced by `bRev`.
-   * If `bLines` is empty, the edit is a deletion. If `a1` equals to `a2`,
-   * the edit is an insertion. Otherwise, the edit is a modification.
-   *
-   * While this function does not cause conflicts or error out, not all
-   * editings make practical sense. The callsite might want to do some
-   * extra checks to ensure the edit is meaningful.
-   *
-   * `aLinesCache` is optional. If provided, then `editChunk` will skip a
-   * `checkOutLines` call and modify `aLinesCache` *in place* to reflect
-   * the edit. It is used by `recordText`.
-   */
+class Code implements ValueObject {
+  constructor(
+    private instList: List<Inst> = List([END() as Inst]),
+    private __hash: Readonly<number> = 0,
+    private __valueOf: Readonly<string> = '',
+  ) {}
+
+  getSize(): number {
+    return this.instList.size;
+  }
+
+  get(pc: Pc): Readonly<Inst> | undefined {
+    return this.instList.get(pc);
+  }
+
+  valueOf(): string {
+    return this.__valueOf;
+  }
+
+  equals(other: Code): boolean {
+    return this.__valueOf === other.__valueOf;
+  }
+
+  hashCode(): number {
+    return this.__hash;
+  }
+
   editChunk(
     aRev: Rev,
     a1: LineIdx,
     a2: LineIdx,
     bRev: Rev,
     bLines: string[],
-    aLinesCache?: LineInfo[],
-  ): LineLog {
-    const aLinesMutable = aLinesCache != null;
-    const aLines = aLinesMutable ? aLinesCache : this.checkOutLines(aRev);
-    const start = this.code.size;
+    [aLines, aLinesMutable]: [LineInfo[], true] | [Readonly<LineInfo[]>, false],
+  ): Code {
+    const start = this.instList.size;
 
     assert(a1 <= a2, 'illegal chunk (a1 < a2)');
     assert(a2 <= aLines.length, 'out of bound a2 (wrong aRev?)');
@@ -262,7 +259,7 @@ class LineLog extends LineLogRecord {
     //                            : ...
     //                        b2Pc: <JL> (moved)      [*]
     //                            : J a1Pc            [*]
-    const newCode = this.code.withMutations(origCode => {
+    const newInstList = this.instList.withMutations(origCode => {
       let code = origCode;
       const a1Pc = aLines[a1].pc;
       let jlInst = a1Pc > 0 && a1 === a2 ? code.get(a1Pc - 1) : undefined;
@@ -283,7 +280,7 @@ class LineLog extends LineLogRecord {
         code = code.push(JGE({rev: bRev, pc: a2Pc}) as Inst);
       }
       if (aLinesMutable && jlInst === undefined) {
-        aLinesCache[a1] = {...aLines[a1], pc: code.size};
+        aLines[a1] = {...aLines[a1], pc: code.size};
       }
       if (jlInst === undefined) {
         const a1Inst = unwrap(code.get(a1Pc));
@@ -305,9 +302,97 @@ class LineLog extends LineLogRecord {
       const newLines = bLines.map((s, i) => {
         return {data: s, rev: bRev, pc: start + 1 + i, deleted: false};
       });
-      aLinesCache.splice(a1, a2 - a1, ...newLines);
+      aLines.splice(a1, a2 - a1, ...newLines);
     }
 
+    const newValueOf = `E${aRev},${a1},${a2},${bRev},${bLines.join('')}`;
+    return this.newCode(newInstList, newValueOf);
+  }
+
+  remapRevs(revMap: Map<Rev, Rev>): [Code, Rev] {
+    let newMaxRev = 0;
+    const newInstList = this.instList
+      .map(c => {
+        if (c.op === Op.JGE || c.op === Op.JL || c.op === Op.LINE) {
+          const newRev = revMap.get(c.rev) ?? c.rev;
+          if (newRev > newMaxRev) {
+            newMaxRev = newRev;
+          }
+          return c.set('rev', newRev);
+        }
+        return c;
+      })
+      .toList();
+    const newValueOf = `R${[...revMap.entries()]}`;
+    const newCode = this.newCode(newInstList, newValueOf);
+    return [newCode, newMaxRev];
+  }
+
+  private newCode(instList: List<Inst>, newValueOf: string): Code {
+    const newStr = this.__valueOf + '\0' + newValueOf;
+    // We want bitwise operations.
+    // eslint-disable-next-line no-bitwise
+    const newHash = (this.__hash * 23 + hash(newValueOf)) & 0x7fffffff;
+    return new Code(instList, newHash, newStr);
+  }
+}
+
+// Export for testing purpose.
+export const executeCache: LRUWithStats = new LRU(100);
+
+const LineLogRecord = Record({
+  /** Core state: instructions. The array index type is `Pc`. */
+  code: new Code(),
+  /** Maximum rev tracked. */
+  maxRev: 0 as Rev,
+});
+
+/**
+ * `LineLog` is a data structure that tracks linear changes to a single text
+ * file. Conceptually similar to a list of texts like `string[]`, with extra
+ * features suitable for stack editing:
+ * - Calculate the "blame" of the text of a given version efficiently.
+ * - Edit lines or trunks in a past version, and affect future versions.
+ * - List all lines that ever existed with each line annotated, like
+ *   a unified diff, but for all versions, not just 2 versions.
+ *
+ * Internally, `LineLog` is a byte-code interpreter that runs a program to
+ * emit lines. Changes are done by patching in new byte-codes. There are
+ * no traditional text patch involved. No operations would cause merge
+ * conflicts. See https://sapling-scm.com/docs/internals/linelog for more
+ * details.
+ *
+ * This implementation of `LineLog` uses immutable patterns.
+ * Write operations return new `LineLog`s.
+ */
+class LineLog extends LineLogRecord {
+  /**
+   * Edit chunk. Replace line `a1` (inclusive) to `a2` (exclusive) in rev
+   * `aRev` with `bLines`. `bLines` are considered introduced by `bRev`.
+   * If `bLines` is empty, the edit is a deletion. If `a1` equals to `a2`,
+   * the edit is an insertion. Otherwise, the edit is a modification.
+   *
+   * While this function does not cause conflicts or error out, not all
+   * editings make practical sense. The callsite might want to do some
+   * extra checks to ensure the edit is meaningful.
+   *
+   * `aLinesCache` is optional. If provided, then `editChunk` will skip a
+   * `checkOutLines` call and modify `aLinesCache` *in place* to reflect
+   * the edit. It is used by `recordText`.
+   */
+  editChunk(
+    aRev: Rev,
+    a1: LineIdx,
+    a2: LineIdx,
+    bRev: Rev,
+    bLines: string[],
+    aLinesCache?: LineInfo[],
+  ): LineLog {
+    const aLinesMutable = aLinesCache != null;
+    const aLinesInfo: [LineInfo[], true] | [Readonly<LineInfo[]>, false] = aLinesMutable
+      ? [aLinesCache, true]
+      : [this.checkOutLines(aRev), false];
+    const newCode = this.code.editChunk(aRev, a1, a2, bRev, bLines, aLinesInfo);
     const newMaxRev = Math.max(bRev, this.maxRev);
     return new LineLog({code: newCode, maxRev: newMaxRev});
   }
@@ -322,19 +407,7 @@ class LineLog extends LineLogRecord {
    * moving a change to before its dependency.
    */
   remapRevs(revMap: Map<Rev, Rev>): LineLog {
-    let newMaxRev = 0;
-    const newCode = this.code
-      .map(c => {
-        if (c.op === Op.JGE || c.op === Op.JL || c.op === Op.LINE) {
-          const newRev = revMap.get(c.rev) ?? c.rev;
-          if (newRev > newMaxRev) {
-            newMaxRev = newRev;
-          }
-          return c.set('rev', newRev);
-        }
-        return c;
-      })
-      .toList();
+    const [newCode, newMaxRev] = this.code.remapRevs(revMap);
     return new LineLog({code: newCode, maxRev: newMaxRev});
   }
 
@@ -461,7 +534,7 @@ class LineLog extends LineLogRecord {
     };
 
     let pc = 0;
-    let patience = this.code.size * 2;
+    let patience = this.code.getSize() * 2;
     while (patience > 0) {
       if (insStack.at(-1)?.endPc === pc) {
         insStack.pop();
@@ -515,7 +588,7 @@ class LineLog extends LineLogRecord {
     const rev = endRev;
     const lines: LineInfo[] = [];
     let pc = 0;
-    let patience = this.code.size * 2;
+    let patience = this.code.getSize() * 2;
     const deleted = present == null ? () => false : (pc: Pc) => !present[pc];
     while (patience > 0) {
       const code = unwrap(this.code.get(pc));
