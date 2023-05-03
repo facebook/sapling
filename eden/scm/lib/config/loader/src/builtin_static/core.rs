@@ -47,9 +47,9 @@ status.unknown=magenta bold underline
 filtersuspectsymlink=true
 
 [experimental]
-exportstack-max-commit-count=50
-exportstack-max-file-count=200
-exportstack-max-bytes=2M
+exportstack-max-commit-count=100
+exportstack-max-file-count=400
+exportstack-max-bytes=20M
 
 [zsh]
 completion-age=7
