@@ -1095,16 +1095,10 @@ folly::Future<folly::Unit> EdenMount::unmount() {
             return folly::makeFuture();
           }
 #ifdef _WIN32
-          if (auto channel =
-                  std::get_if<EdenMount::PrjfsChannelVariant>(&channel_)) {
-            return (*channel)
-                ->stop()
+          if (auto* channel = getPrjfsChannel()) {
+            return channel->stop()
                 .via(getServerThreadPool().get())
-                .ensure([this] {
-                  auto channel =
-                      std::get_if<EdenMount::PrjfsChannelVariant>(&channel_);
-                  channel->reset();
-                });
+                .ensure([this] { channel_.reset(); });
           } else {
             return folly::makeFutureWith([]() { NOT_IMPLEMENTED(); });
           }
@@ -1153,40 +1147,30 @@ InodeMetadataTable* EdenMount::getInodeMetadataTable() const {
 #endif
 
 FsChannel* EdenMount::getFsChannel() const {
-#ifdef _WIN32
-  if (auto* channel = std::get_if<EdenMount::NfsdChannelVariant>(&channel_)) {
-    return channel->get();
-  } else if (
-      auto* channel = std::get_if<EdenMount::PrjfsChannelVariant>(&channel_)) {
-    return channel->get();
-  } else {
-    return nullptr;
-  }
-#else
   return channel_.get();
-#endif
 }
 
 Nfsd3* FOLLY_NULLABLE EdenMount::getNfsdChannel() const {
-  return dynamic_cast<Nfsd3*>(getFsChannel());
+  return dynamic_cast<Nfsd3*>(channel_.get());
 }
 
 #ifndef _WIN32
+
 FuseChannel* FOLLY_NULLABLE EdenMount::getFuseChannel() const {
   return dynamic_cast<FuseChannel*>(channel_.get());
 }
 
 #else
+
 PrjfsChannel* FOLLY_NULLABLE EdenMount::getPrjfsChannel() const {
-  if (auto channel = std::get_if<EdenMount::PrjfsChannelVariant>(&channel_)) {
-    return channel->get();
-  }
-  return nullptr;
+  return dynamic_cast<PrjfsChannel*>(channel_.get());
 }
 
-void EdenMount::setTestPrjfsChannel(std::unique_ptr<PrjfsChannel> channel) {
+void EdenMount::setTestPrjfsChannel(
+    std::unique_ptr<PrjfsChannel, FsChannelDeleter> channel) {
   channel_ = std::move(channel);
 }
+
 #endif
 
 bool EdenMount::isFuseChannel() const {
@@ -2169,21 +2153,21 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                                       mountPath = std::move(mountPath),
                                       readOnly,
                                       edenConfig]() {
-                 auto channel = std::make_unique<PrjfsChannel>(
-                     mountPath,
-                     EdenDispatcherFactory::makePrjfsDispatcher(this),
-                     &getStraceLogger(),
-                     serverState_->getProcessNameCache(),
-                     getCheckoutConfig()->getRepoGuid(),
-                     this->getServerState()->getNotifier());
+                 auto channel = std::unique_ptr<PrjfsChannel, FsChannelDeleter>(
+                     new PrjfsChannel(
+                         mountPath,
+                         EdenDispatcherFactory::makePrjfsDispatcher(this),
+                         &getStraceLogger(),
+                         serverState_->getProcessNameCache(),
+                         getCheckoutConfig()->getRepoGuid(),
+                         this->getServerState()->getNotifier()));
                  channel->start(
                      readOnly,
                      edenConfig->prjfsUseNegativePathCaching.getValue(),
                      edenConfig->prjfsListenToPreConvertToFull.getValue());
-                 return channel;
+                 return FsChannelPtr{std::move(channel)};
                })
-            .thenTry([this, mountPromise](
-                         Try<std::unique_ptr<PrjfsChannel>>&& channel) {
+            .thenTry([this, mountPromise](Try<FsChannelPtr>&& channel) {
               if (channel.hasException()) {
                 mountPromise->setException(channel.exception());
                 return makeFuture<folly::Unit>(channel.exception());
@@ -2253,12 +2237,11 @@ folly::Future<folly::Unit> EdenMount::startFsChannel(bool readOnly) {
            return fsChannelMount(readOnly);
          })
       .thenValue([this](auto&&) -> folly::Future<folly::Unit> {
-        auto* fsChannel = getFsChannel();
-        if (!fsChannel) {
+        if (!channel_) {
           return EDEN_BUG_FUTURE(folly::Unit)
               << "EdenMount::channel_ is not constructed";
         }
-        return fsChannel->initialize().thenValue(
+        return channel_->initialize().thenValue(
             [this](FsChannel::StopFuture mountCompleteFuture) {
               fsChannelInitSuccessful(std::move(mountCompleteFuture));
             });
@@ -2331,20 +2314,15 @@ void EdenMount::fsChannelInitSuccessful(
       std::move(channelCompleteFuture)
           .deferValue([this](FsStopDataPtr stopData) {
             if (isNfsdChannel()) {
-      // TODO: Understand why destroying Nfsd3 here is necessary, and
-      // allowing it to destroy itself when EdenMount dies is not
-      // sufficient. The problem with clearing channel_ is that it
-      // introduces a potential race with every other use of channel_ in
-      // EdenMount.
-      //
-      // In particular, it races with fb303's dynamic counter
-      // aggregation.
-
-#ifdef _WIN32
-              channel_ = std::monostate{};
-#else
+              // TODO: Understand why destroying Nfsd3 here is necessary, and
+              // allowing it to destroy itself when EdenMount dies is not
+              // sufficient. The problem with clearing channel_ is that it
+              // introduces a potential race with every other use of channel_ in
+              // EdenMount.
+              //
+              // In particular, it races with fb303's dynamic counter
+              // aggregation.
               channel_ = nullptr;
-#endif
             }
             return stopData;
           }));

@@ -1795,13 +1795,14 @@ class FakePrjfsChannel final : public PrjfsChannel {
   static void initializeFakePrjfsChannel(
       ActionMap actions,
       std::shared_ptr<EdenMount> mount) {
-    auto channel = std::make_unique<FakePrjfsChannel>(
-        std::move(actions),
-        mount->getPath(),
-        EdenDispatcherFactory::makePrjfsDispatcher(mount.get()),
-        &mount->getStraceLogger(),
-        mount->getServerState()->getProcessNameCache(),
-        mount->getCheckoutConfig()->getRepoGuid());
+    auto channel = std::unique_ptr<FakePrjfsChannel, FsChannelDeleter>(
+        new FakePrjfsChannel(
+            std::move(actions),
+            mount->getPath(),
+            EdenDispatcherFactory::makePrjfsDispatcher(mount.get()),
+            &mount->getStraceLogger(),
+            mount->getServerState()->getProcessNameCache(),
+            mount->getCheckoutConfig()->getRepoGuid()));
     channel->start(false, false, true);
     mount->setTestPrjfsChannel(std::move(channel));
   }

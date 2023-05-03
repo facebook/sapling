@@ -447,6 +447,8 @@ class PrjfsChannel : public FsChannel {
 
   void destroy() override;
 
+  folly::Future<StopFuture> initialize() override;
+
   void start(
       bool readOnly,
       bool useNegativePathCaching,
@@ -493,8 +495,6 @@ class PrjfsChannel : public FsChannel {
     bool isUnmounted() override;
     FsChannelInfo extractTakeoverInfo() override;
   };
-
-  folly::Future<StopFuture> initialize() override;
 
   StopFuture getStopFuture();
 

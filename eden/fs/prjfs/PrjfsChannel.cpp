@@ -1226,6 +1226,10 @@ void PrjfsChannel::destroy() {
   delete this;
 }
 
+folly::Future<FsChannel::StopFuture> PrjfsChannel::initialize() {
+  return folly::makeFuture<FsChannel::StopFuture>(getStopFuture());
+}
+
 void PrjfsChannel::start(
     bool readOnly,
     bool useNegativePathCaching,
@@ -1333,10 +1337,6 @@ folly::SemiFuture<folly::Unit> PrjfsChannel::stop() {
       .deferValue([stopPromise = std::move(stopPromise_)](auto&&) mutable {
         stopPromise.setValue(std::make_unique<StopData>());
       });
-}
-
-folly::Future<FsChannel::StopFuture> PrjfsChannel::initialize() {
-  return folly::makeFuture<FsChannel::StopFuture>(getStopFuture());
 }
 
 FsChannel::StopFuture PrjfsChannel::getStopFuture() {

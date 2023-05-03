@@ -413,7 +413,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    *
    * This should only be used in test to set a fake channel.
    */
-  void setTestPrjfsChannel(std::unique_ptr<PrjfsChannel> channel);
+  void setTestPrjfsChannel(
+      std::unique_ptr<PrjfsChannel, FsChannelDeleter> channel);
 #else
   FuseChannel* FOLLY_NULLABLE getFuseChannel() const;
 #endif
@@ -1412,17 +1413,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::shared_ptr<TraceBus<InodeTraceEvent>> inodeTraceBus_;
   TraceSubscriptionHandle<InodeTraceEvent> inodeTraceHandle_;
 
-  using NfsdChannelVariant = std::unique_ptr<Nfsd3, FsChannelDeleter>;
-
-#ifdef _WIN32
-  using PrjfsChannelVariant = std::unique_ptr<PrjfsChannel>;
-
-  std::variant<std::monostate, PrjfsChannelVariant, NfsdChannelVariant>
-      channel_;
-
-#else
   FsChannelPtr channel_;
-#endif // !_WIN32
 
   /**
    * The clock.  This is also available as serverState_->getClock().
