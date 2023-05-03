@@ -955,6 +955,7 @@ function getCommitStatesFromExportStack(stack: Readonly<ExportStack>): List<Comm
     CommitState({
       originalNodes: ImSet([commit.node]),
       rev: nodeToRev(commit.node),
+      key: commit.node,
       author: commit.author,
       date: DateTuple({unix: commit.date[0], tz: commit.date[1]}),
       text: commit.text,
@@ -1077,6 +1078,19 @@ type CommitStateProps = {
   rev: Rev;
   /** Original hashes. Used for "predecessor" information. */
   originalNodes: ImSet<Hash>;
+  /**
+   * Unique identifier within the stack. Useful for React animation.
+   *
+   * Note this should not be a random string, since we expect the CommitState[]
+   * state to be purely derived from the initial ExportStack. It makes it easier
+   * to check what commits are actually modified by just comparing CommitStates.
+   * The "skip unchanged commits" logic is used by `calculateImportStack()`.
+   *
+   * We use commit hashes initially. When there is a split or add a new commit,
+   * we assign new keys in a predicable (non-random) way. This property is
+   * never empty, unlike `originalNodes`.
+   */
+  key: string;
   author: Author;
   date: DateTuple;
   /** Commit message. */
@@ -1100,6 +1114,7 @@ type CommitStateProps = {
 const CommitState = Record<CommitStateProps>({
   rev: 0,
   originalNodes: ImSet(),
+  key: '',
   author: '',
   date: DateTuple(),
   text: '',

@@ -367,6 +367,7 @@ describe('CommitStackState', () => {
       stack = stack.foldDown(1);
       expect(stack.stack.size).toBe(2);
       expect(stack.stack.get(0)?.toJS()).toMatchObject({
+        key: 'A',
         files: {
           'x.txt': {data: 'yy'},
           'y.txt': {data: 'yy'},
@@ -376,6 +377,7 @@ describe('CommitStackState', () => {
         parents: [],
       });
       expect(stack.stack.get(1)?.toJS()).toMatchObject({
+        key: 'C',
         text: 'Commit C',
         parents: [0], // Commit C's parent is updated to Commit A.
       });
@@ -506,6 +508,7 @@ describe('CommitStackState', () => {
         originalNodes: ['C'],
         files: {xx: {data: 'p\ny\nz\n'}},
       });
+      expect(stack.stack.toArray().map(c => c.key)).toMatchObject(['A', 'C']);
     });
   });
 
@@ -561,6 +564,7 @@ describe('CommitStackState', () => {
         '2\n',
         '1\n2\n',
       ]);
+      expect(stack.stack.toArray().map(c => c.key)).toMatchObject(['B', 'A']);
       // Reorder back.
       expect(stack.canReorder([1, 0])).toBeTruthy();
       stack = stack.reorder([1, 0]);
@@ -568,6 +572,7 @@ describe('CommitStackState', () => {
         '1\n',
         '1\n2\n',
       ]);
+      expect(stack.stack.toArray().map(c => c.key)).toMatchObject(['A', 'B']);
     });
 
     it('reorders content changes', () => {
