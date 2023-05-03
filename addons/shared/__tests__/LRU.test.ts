@@ -126,6 +126,34 @@ describe('LRU', () => {
   });
 });
 
+describe('LRU benchmark', () => {
+  const getLru = new LRU(1000);
+  const n = 1000;
+  for (let i = 0; i < n; i++) {
+    getLru.set(List([i]), i);
+  }
+
+  it('get() with a large cache size', () => {
+    for (let j = 0; j < 100; j++) {
+      let equalCount = 0;
+      for (let i = 0; i < n; i++) {
+        const item = getLru.get(List([i]));
+        equalCount += item === i ? 1 : 0;
+      }
+      expect(equalCount).toBe(n);
+    }
+  });
+
+  it('set() with a large cache size', () => {
+    const setLru = new LRU(1000);
+    for (let j = 0; j < 100; j++) {
+      for (let i = 0; i < n; i++) {
+        setLru.set(List([i]), i);
+      }
+    }
+  });
+});
+
 describe('cached()', () => {
   describe('for pure functions', () => {
     it('works for pure function', () => {
