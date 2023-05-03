@@ -708,6 +708,7 @@ class LineLog extends LineLogRecord {
    * @param rev Revision to to edit (in-place). If not set, append a new revision.
    * @returns A new `LineLog` with the change.
    */
+  @cached({cacheSize: 1000})
   public recordText(text: string, rev: Rev | null = null): LineLog {
     // rev to edit from, and rev to match 'text'.
     const [aRev, bRev] = rev != null ? [rev, rev] : [this.maxRev, this.maxRev + 1];
