@@ -161,9 +161,6 @@ class LineLog {
   /** Result of a `checkOut`. */
   lines: LineInfo[] = [];
 
-  /** Content of lines joined. */
-  content = '';
-
   /**
    * Create a `LineLog` with empty content.
    */
@@ -421,7 +418,6 @@ class LineLog {
   public checkOut(rev: Rev): string {
     const lines = this.checkOutLines(rev);
     const content = lines.map(l => l.data).join('');
-    this.content = content;
     return content;
   }
 
@@ -440,14 +436,13 @@ class LineLog {
     const b = text;
 
     const bLines = splitLines(b);
-    this.checkOut(aRev);
-    const aLines = splitLines(this.content);
+    const aContent = this.checkOut(aRev);
+    const aLines = splitLines(aContent);
     const blocks = diffLines(aLines, bLines);
 
     blocks.reverse().forEach(([a1, a2, b1, b2]) => {
       this.editChunk(aRev, a1, a2, bRev, bLines.slice(b1, b2));
     });
-    this.content = b;
     this.lastCheckoutKey = `${bRev},null`;
     if (bRev > this.maxRev) {
       this.maxRev = bRev;

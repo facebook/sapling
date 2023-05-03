@@ -38,14 +38,14 @@ describe('LineLog', () => {
   it('can be empty', () => {
     const log = new LineLog();
     expect(log.maxRev).toBe(0);
-    expect(log.content).toBe('');
+    expect(log.checkOut(0)).toBe('');
   });
 
   it('supports a single edit', () => {
     const log = new LineLog();
     log.recordText('c\nd\ne');
     expect(log.maxRev).toBe(1);
-    expect(log.content).toBe('c\nd\ne');
+    expect(log.checkOut(1)).toBe('c\nd\ne');
 
     expect(log.checkOutLines(1)).toMatchObject([
       {data: 'c\n', rev: 1},
@@ -59,12 +59,11 @@ describe('LineLog', () => {
     const log = new LineLog();
     log.recordText('c\n', 0);
     expect(log.maxRev).toBe(0);
-    expect(log.content).toBe('c\n');
+    expect(log.checkOut(0)).toBe('c\n');
     expect(log.checkOutLines(0)[0]).toMatchObject({rev: 0});
     log.recordText('c\nd', 1);
     expect(log.checkOutLines(1)[1]).toMatchObject({rev: 1});
-    log.checkOut(0);
-    expect(log.content).toBe('c\n');
+    expect(log.checkOut(0)).toBe('c\n');
     expect(log.checkOutLines(0)[0]).toMatchObject({rev: 0});
   });
 
@@ -73,7 +72,7 @@ describe('LineLog', () => {
     log.recordText('c\nd\ne\n');
     log.recordText('d\ne\nf\n');
     expect(log.maxRev).toBe(2);
-    expect(log.content).toBe('d\ne\nf\n');
+    expect(log.checkOut(2)).toBe('d\ne\nf\n');
     expect(log.checkOutLines(2)).toMatchObject([
       {data: 'd\n', rev: 1, deleted: false},
       {data: 'e\n', rev: 1, deleted: false},
@@ -86,15 +85,12 @@ describe('LineLog', () => {
     const log = new LineLog();
     log.recordText('c\nd\ne\n');
     log.recordText('d\ne\nf\n');
-    log.checkOut(1);
-    expect(log.content).toBe('c\nd\ne\n');
-    log.checkOut(0);
-    expect(log.lines[0].deleted).toBe(false);
-    expect(log.content).toBe('');
+    expect(log.checkOut(1)).toBe('c\nd\ne\n');
+    expect(log.checkOutLines(1)[0].deleted).toBe(false);
+    expect(log.checkOut(0)).toBe('');
     expect(log.checkOutLines(0)).toMatchObject([{data: ''}]);
-    log.checkOut(2);
-    expect(log.content).toBe('d\ne\nf\n');
-    expect(log.lines[2].deleted).toBe(false);
+    expect(log.checkOut(2)).toBe('d\ne\nf\n');
+    expect(log.checkOutLines(2)[2].deleted).toBe(false);
   });
 
   it('supports checkout range', () => {
@@ -250,14 +246,14 @@ describe('LineLog', () => {
 
     it('invalidates previous checkout', () => {
       const log = logFromTextList(['b\n', 'b\nc\n', 'a\nb\nc\n']);
-      log.checkOut(2);
+      expect(log.checkOut(2)).toBe('b\nc\n');
       log.remapRevs(
         new Map([
           [2, 3],
           [3, 2],
         ]),
       );
-      expect(log.content).not.toBe('b\nc\n');
+      expect(log.checkOut(2)).not.toBe('b\nc\n');
     });
 
     it('can reorder changes', () => {
