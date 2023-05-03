@@ -6,28 +6,22 @@
  */
 
 import type {Rev} from './fileStackState';
-import type {Author, DateTuple, Hash, RepoPath} from 'shared/types/common';
+import type {RecordOf} from 'immutable';
+import type {Author, Hash, RepoPath} from 'shared/types/common';
 import type {ExportStack, ExportFile} from 'shared/types/stack';
 
 import {assert} from '../utils';
 import {FileStackState} from './fileStackState';
 import deepEqual from 'fast-deep-equal';
+import {List, Map as ImMap, Set as ImSet, Record} from 'immutable';
 import {generatorContains, unwrap, zip} from 'shared/utils';
 
-/**
- * A stack of commits with stack editing features.
- *
- * Provides read write APIs for editing the stack.
- * Under the hood, continuous changes to a same file are grouped
- * to file stacks. Part of analysis and edit operations are deletegated
- * to corrosponding file stacks.
- */
-export class CommitStackState {
+type CommitStackProps = {
   /**
    * Original stack exported by `debugexportstack`. Immutable.
    * Useful to calculate "predecessor" information.
    */
-  originalStack: ExportStack;
+  originalStack: Readonly<ExportStack>;
 
   /**
    * File contents at the bottom of the stack.
@@ -54,40 +48,73 @@ export class CommitStackState {
    * in the stack will be present in this map. If a file was added
    * later in the stack, it is in this map and marked as absent.
    */
-  bottomFiles: Map<RepoPath, FileState>;
+  bottomFiles: Readonly<Map<RepoPath, FileState>>;
 
   /**
    * Mutable commit stack. Indexed by rev.
    * Only stores "modified (added, edited, deleted)" files.
    */
-  stack: CommitState[];
+  stack: List<CommitState>;
 
   /**
    * File stack states.
    * They are constructed on demand, and provide advanced features.
    */
-  fileStacks: FileStackState[] = [];
+  fileStacks: List<FileStackState>;
 
   /**
-   * Map from `${commitRev}:${path}` to FileStack index and rev.
+   * Map from `CommitIdx` (commitRev and path) to `FileIdx` (FileStack index and rev).
    * Note the commitRev could be -1, meaning that `bottomFiles` is used.
    */
-  commitToFile: Map<string, [FileStackIndex, Rev]> = new Map();
+  commitToFile: ImMap<CommitIdx, FileIdx>;
 
   /**
-   * Map from `${fileStackIndex}:${fileRev}` to commitRev and path.
+   * Reverse (swapped key and value) mapping of `commitToFile` mapping.
    * Note the commitRev could be -1, meaning that `bottomFiles` is used.
    */
-  fileToCommit: Map<string, [Rev, RepoPath]> = new Map();
+  fileToCommit: ImMap<FileIdx, CommitIdx>;
+};
 
+// Factory function for creating instances.
+// Its type is the factory function (or the "class type" in OOP sense).
+const CommitStackRecord = Record<CommitStackProps>({
+  originalStack: [],
+  bottomFiles: new Map(),
+  stack: List(),
+  fileStacks: List(),
+  commitToFile: ImMap(),
+  fileToCommit: ImMap(),
+});
+
+// Type of *instances* created by the `CommitStackRecord`.
+// This makes `CommitStackState` work more like a common OOP `class Foo`:
+// `new Foo(...)` is a constructor, and `Foo` is the type of the instances,
+// not the constructor or factory.
+type CommitStackRecord = RecordOf<CommitStackProps>;
+
+/**
+ * A stack of commits with stack editing features.
+ *
+ * Provides read write APIs for editing the stack.
+ * Under the hood, continuous changes to a same file are grouped
+ * to file stacks. Part of analysis and edit operations are deletegated
+ * to corrosponding file stacks.
+ */
+export class CommitStackState extends CommitStackRecord {
   // Initial setup.
 
-  /** Construct from an exported stack. */
-  constructor(stack: ExportStack) {
-    this.originalStack = stack;
-    this.bottomFiles = getBottomFilesFromExportStack(stack);
-    this.stack = getCommitStatesFromExportStack(stack);
-    this.buildFileStacks();
+  /**
+   * Construct from an exported stack. For efficient operatoins,
+   * call `.buildFileStacks()` to build up states.
+   */
+  constructor(originalStack: ExportStack) {
+    const bottomFiles = getBottomFilesFromExportStack(originalStack);
+    const stack = getCommitStatesFromExportStack(originalStack);
+    super({
+      originalStack,
+      bottomFiles,
+      stack,
+    });
   }
 
   // Read operations.
@@ -109,7 +136,10 @@ export class CommitStackState {
    */
   getFile(rev: Rev, path: RepoPath): FileState {
     for (const logRev of this.log(rev)) {
-      const commit = this.stack[logRev];
+      const commit = this.stack.get(logRev);
+      if (commit == null) {
+        return ABSENT_FILE;
+      }
       const file = commit.files.get(path);
       if (file !== undefined) {
         // Commit modifieds `file`.
@@ -141,11 +171,13 @@ export class CommitStackState {
         break;
       }
       yield rev;
-      const commit = this.stack[rev];
-      // Visit parent commits.
-      commit.parents.forEach(rev => {
-        toVisit.push(rev);
-      });
+      const commit = this.stack.get(rev);
+      if (commit != null) {
+        // Visit parent commits.
+        commit.parents.forEach(rev => {
+          toVisit.push(rev);
+        });
+      }
     }
   }
 
@@ -160,7 +192,10 @@ export class CommitStackState {
   ): Generator<[Rev, RepoPath], void> {
     let path = startPath;
     for (const rev of this.log(startRev)) {
-      const commit = this.stack[rev];
+      const commit = this.stack.get(rev);
+      if (commit == null) {
+        continue;
+      }
       const file = commit.files.get(path);
       if (file !== undefined) {
         yield [rev, path];
@@ -186,7 +221,7 @@ export class CommitStackState {
     for (const [logRev, logPath] of logFile) {
       if (logRev !== rev) {
         [prevRev, prevPath] = [logRev, logPath];
-        prevFile = unwrap(this.stack[prevRev].files.get(prevPath));
+        prevFile = unwrap(this.stack.get(prevRev)?.files?.get(prevPath));
         break;
       }
     }
@@ -196,29 +231,34 @@ export class CommitStackState {
   /**
    * (Re-)build file stacks and mappings.
    */
-  buildFileStacks() {
+  buildFileStacks(): CommitStackState {
     const fileStacks: FileStackState[] = [];
-    const commitToFile = new Map<string, [FileStackIndex, Rev]>();
-    const fileToCommit = new Map<string, [Rev, RepoPath]>();
+    let commitToFile = ImMap<CommitIdx, FileIdx>();
+    let fileToCommit = ImMap<FileIdx, CommitIdx>();
 
-    const processFile = (rev: Rev, file: FileState, path: RepoPath) => {
-      const [prevRev, prevPath, prevFile] = this.parentFile(rev, path);
+    const processFile = (state: CommitStackState, rev: Rev, file: FileState, path: RepoPath) => {
+      const [prevRev, prevPath, prevFile] = state.parentFile(rev, path);
       if (isUtf8(file)) {
         // File was added or modified and has utf-8 content.
         let fileAppended = false;
         if (prevRev >= 0) {
           // Try to reuse an existing file stack.
-          const prev = commitToFile.get(`${prevRev}:${prevPath}`);
+          const prev = commitToFile.get(CommitIdx({rev: prevRev, path: prevPath}));
           if (prev) {
-            const [prevIdx, prevFileRev] = prev;
-            const prevFileStack = fileStacks[prevIdx];
+            const prevFileStack = fileStacks[prev.fileIdx];
             // File stack history is linear. Only reuse it if its last
             // rev matches `prevFileRev`
-            if (prevFileStack.source.revLength === prevFileRev + 1) {
-              const fileRev = prevFileRev + 1;
-              fileStacks[prevIdx] = prevFileStack.editText(fileRev, this.getUtf8Data(file), false);
-              commitToFile.set(`${rev}:${path}`, [prevIdx, fileRev]);
-              fileToCommit.set(`${prevIdx}:${fileRev}`, [rev, path]);
+            if (prevFileStack.source.revLength === prev.fileRev + 1) {
+              const fileRev = prev.fileRev + 1;
+              fileStacks[prev.fileIdx] = prevFileStack.editText(
+                fileRev,
+                state.getUtf8Data(file),
+                false,
+              );
+              const cIdx = CommitIdx({rev, path});
+              const fIdx = FileIdx({fileIdx: prev.fileIdx, fileRev});
+              commitToFile = commitToFile.set(cIdx, fIdx);
+              fileToCommit = fileToCommit.set(fIdx, cIdx);
               fileAppended = true;
             }
           }
@@ -226,27 +266,31 @@ export class CommitStackState {
         if (!fileAppended) {
           // Cannot reuse an existing file stack. Create a new file stack.
           const fileIdx = fileStacks.length;
-          let fileTextList = [this.getUtf8Data(file)];
+          let fileTextList = [state.getUtf8Data(file)];
           let fileRev = 0;
           if (isUtf8(prevFile)) {
             // Use "prevFile" as rev 0 (immutable public).
-            fileTextList = [this.getUtf8Data(prevFile), ...fileTextList];
-            commitToFile.set(`${prevRev}:${prevPath}`, [fileIdx, fileRev]);
-            fileToCommit.set(`${fileIdx}:${fileRev}`, [prevRev, prevPath]);
+            fileTextList = [state.getUtf8Data(prevFile), ...fileTextList];
+            const cIdx = CommitIdx({rev: prevRev, path: prevPath});
+            const fIdx = FileIdx({fileIdx, fileRev});
+            commitToFile = commitToFile.set(cIdx, fIdx);
+            fileToCommit = fileToCommit.set(fIdx, cIdx);
             fileRev = 1;
           }
           const fileStack = new FileStackState(fileTextList);
           fileStacks.push(fileStack);
-          commitToFile.set(`${rev}:${path}`, [fileIdx, fileRev]);
-          fileToCommit.set(`${fileIdx}:${fileRev}`, [rev, path]);
+          const cIdx = CommitIdx({rev, path});
+          const fIdx = FileIdx({fileIdx, fileRev});
+          commitToFile = commitToFile.set(cIdx, fIdx);
+          fileToCommit = fileToCommit.set(fIdx, cIdx);
         }
       }
     };
 
     // Migrate off 'fileStack' type, since we are going to replace the file stacks.
-    this.useFileContent();
+    const state = this.useFileContent();
 
-    this.stack.forEach((commit, rev) => {
+    state.stack.forEach((commit, rev) => {
       const files = commit.files;
       // Process order: renames, non-copy, copies.
       const priorityFiles: [number, RepoPath, FileState][] = [...files.entries()].map(
@@ -265,28 +309,37 @@ export class CommitStackState {
           skip = isAbsent(file) && renamed.has(path);
         }
         if (!skip) {
-          processFile(rev, file, path);
+          processFile(state, rev, file, path);
         }
       });
     });
-    this.fileStacks = fileStacks;
-    this.commitToFile = commitToFile;
-    this.fileToCommit = fileToCommit;
+
+    return state.merge({
+      fileStacks: List(fileStacks),
+      commitToFile,
+      fileToCommit,
+    });
+  }
+
+  /** Build file stacks if it's not present. */
+  maybeBuildFileStacks(): CommitStackState {
+    return this.fileStacks.size === 0 ? this.buildFileStacks() : this;
   }
 
   /**
    * Switch file contents to use FileStack as source of truth.
    * Useful when using FileStack to edit files.
    */
-  useFileStack() {
-    this.forEachFile((rev, file, path) => {
+  useFileStack(): CommitStackState {
+    const state = this.maybeBuildFileStacks();
+    return state.updateEachFile((rev, file, path) => {
       if (typeof file.data === 'string') {
-        const fileIdxRev = this.commitToFile.get(`${rev}:${path}`);
-        if (fileIdxRev != null) {
-          const [fileIdx, fileRev] = fileIdxRev;
-          file.data = {type: 'fileStack', rev: fileRev, index: fileIdx};
+        const index = state.commitToFile.get(CommitIdx({rev, path}));
+        if (index != null) {
+          return file.set('data', index);
         }
       }
+      return file;
     });
   }
 
@@ -294,24 +347,29 @@ export class CommitStackState {
    * Switch file contents to use string as source of truth.
    * Useful when rebuilding FileStack.
    */
-  useFileContent() {
-    this.forEachFile((_rev, file) => {
+  useFileContent(): CommitStackState {
+    return this.updateEachFile((_rev, file) => {
       if (typeof file.data !== 'string' && isUtf8(file)) {
         const data = this.getUtf8Data(file);
-        file.data = data;
+        return file.set('data', data);
       }
+      return file;
     });
   }
 
   /**
    * Iterate through all changed files via the given function.
    */
-  forEachFile(func: (commitRev: Rev, file: FileState, path: RepoPath) => void) {
-    this.stack.forEach(commit => {
-      commit.files.forEach((file, path) => {
-        func(commit.rev, file, path);
+  updateEachFile(
+    func: (commitRev: Rev, file: FileState, path: RepoPath) => FileState,
+  ): CommitStackState {
+    const newStack = this.stack.map(commit => {
+      const newFiles = commit.files.map((file, path) => {
+        return func(commit.rev, file, path);
       });
+      return commit.set('files', newFiles);
     });
+    return this.set('stack', newStack);
   }
 
   /**
@@ -334,32 +392,34 @@ export class CommitStackState {
    * its content to `22` and commit C deleted `z.txt`.
    */
   describeFileStacks(showContent = true): string[] {
-    const fileToCommit = this.fileToCommit;
-    const stack = this.stack;
-    return this.fileStacks.map((fileStack, fileIdx) => {
-      return fileStack
-        .revs()
-        .map(fileRev => {
-          const key = `${fileIdx}:${fileRev}`;
-          const value = fileToCommit.get(key);
-          const spans = [`${fileRev}:`];
-          assert(value != null, 'fileToCommit should have all file stack revs');
-          const [rev, path] = value;
-          const [commitTitle, absent] =
-            rev < 0
-              ? ['.', isAbsent(this.bottomFiles.get(path))]
-              : [
-                  stack[rev].text.split('\n').at(0) || [...stack[rev].originalNodes].at(0) || '?',
-                  isAbsent(stack[rev].files.get(path)),
-                ];
-          spans.push(`${commitTitle}/${path}`);
-          if (showContent && !absent) {
-            spans.push(`(${fileStack.getRev(fileRev)})`);
-          }
-          return spans.join('');
-        })
-        .join(' ');
-    });
+    const state = this.maybeBuildFileStacks();
+    const fileToCommit = state.fileToCommit;
+    const stack = state.stack;
+    return state.fileStacks
+      .map((fileStack, fileIdx) => {
+        return fileStack
+          .revs()
+          .map(fileRev => {
+            const value = fileToCommit.get(FileIdx({fileIdx, fileRev}));
+            const spans = [`${fileRev}:`];
+            assert(value != null, 'fileToCommit should have all file stack revs');
+            const {rev, path} = value;
+            const [commitTitle, absent] =
+              rev < 0
+                ? ['.', isAbsent(state.bottomFiles.get(path))]
+                : ((c: CommitState): [string, boolean] => [
+                    c.text.split('\n').at(0) || [...c.originalNodes].at(0) || '?',
+                    isAbsent(c.files.get(path)),
+                  ])(unwrap(stack.get(rev)));
+            spans.push(`${commitTitle}/${path}`);
+            if (showContent && !absent) {
+              spans.push(`(${fileStack.getRev(fileRev)})`);
+            }
+            return spans.join('');
+          })
+          .join(' ');
+      })
+      .toArray();
   }
 
   /** Extract utf-8 data from a file. */
@@ -367,9 +427,8 @@ export class CommitStackState {
     if (typeof file.data === 'string') {
       return file.data;
     }
-    const type = file.data.type;
-    if (type === 'fileStack') {
-      return unwrap(this.fileStacks.at(file.data.index)).getRev(file.data.rev);
+    if (file.data instanceof FileIdx) {
+      return unwrap(this.fileStacks.get(file.data.fileIdx)).getRev(file.data.fileRev);
     } else {
       throw new Error('getUtf8Data called on non-utf8 file.');
     }
@@ -384,12 +443,7 @@ export class CommitStackState {
       return this.getUtf8Data(a) === this.getUtf8Data(b);
     }
     // We assume base85 data is immutable, non-utf8 so they won't match utf8 data.
-    if (
-      typeof a.data !== 'string' &&
-      typeof b.data !== 'string' &&
-      a.data.type === 'base85' &&
-      b.data.type === 'base85'
-    ) {
+    if (a.data instanceof Base85 && b.data instanceof Base85) {
       return a.data.dataBase85 === b.data.dataBase85;
     }
     return false;
@@ -397,7 +451,10 @@ export class CommitStackState {
 
   /** Test if the stack is linear. */
   isStackLinear(): boolean {
-    return this.stack.every((commit, rev) => rev === 0 || deepEqual(commit.parents, [rev - 1]));
+    return this.stack.every(
+      (commit, rev) =>
+        rev === 0 || (commit.parents.size === 1 && commit.parents.first() === rev - 1),
+    );
   }
 
   // Histedit-related opeations.
@@ -411,13 +468,14 @@ export class CommitStackState {
    * moved to be an ancestor of rev 2, and rev 2 cannot be dropped alone.
    */
   calculateDepMap(): Map<Rev, Set<Rev>> {
-    const depMap = new Map<Rev, Set<Rev>>(this.stack.map(c => [c.rev, new Set()]));
+    const state = this.maybeBuildFileStacks();
+    const depMap = new Map<Rev, Set<Rev>>(state.stack.map(c => [c.rev, new Set()]));
 
     const fileIdxRevToCommitRev = (fileIdx: FileStackIndex, fileRev: Rev): Rev =>
-      unwrap(this.fileToCommit.get(`${fileIdx}:${fileRev}`))[0];
+      unwrap(state.fileToCommit.get(FileIdx({fileIdx, fileRev}))).rev;
 
     // Ask FileStack for dependencies about content edits.
-    this.fileStacks.forEach((fileStack, fileIdx) => {
+    state.fileStacks.forEach((fileStack, fileIdx) => {
       const fileDepMap = fileStack.calculateDepMap();
       const toCommitRev = (rev: Rev) => fileIdxRevToCommitRev(fileIdx, rev);
       // Convert file revs to commit revs.
@@ -436,10 +494,10 @@ export class CommitStackState {
     });
 
     // Besides, file deletion / addition / renames also introduce dependencies.
-    this.stack.forEach(commit => {
+    state.stack.forEach(commit => {
       const set = unwrap(depMap.get(commit.rev));
       commit.files.forEach((file, path) => {
-        const [prevRev, prevPath, prevFile] = this.parentFile(commit.rev, path, true);
+        const [prevRev, prevPath, prevFile] = state.parentFile(commit.rev, path, true);
         if (prevRev >= 0 && (isAbsent(prevFile) !== isAbsent(file) || prevPath !== path)) {
           set.add(prevRev);
         }
@@ -451,11 +509,11 @@ export class CommitStackState {
 
   /** Return the single parent rev, or null. */
   singleParentRev(rev: Rev): Rev | null {
-    const commit = this.stack.at(rev);
+    const commit = this.stack.get(rev);
     const parents = commit?.parents;
     if (parents != null) {
-      const parentRev = parents?.at(0);
-      if (parentRev != null && parents.length === 1) {
+      const parentRev = parents?.first();
+      if (parentRev != null && parents.size === 1) {
         return parentRev;
       }
     }
@@ -466,20 +524,23 @@ export class CommitStackState {
    * Test if the commit can be folded with its parent.
    */
   canFoldDown(rev: Rev): boolean {
-    if (rev <= 0 || rev >= this.stack.length) {
+    if (rev <= 0) {
       return false;
     }
-    const commit = this.stack[rev];
+    const commit = this.stack.get(rev);
+    if (commit == null) {
+      return false;
+    }
     const parentRev = this.singleParentRev(rev);
     if (parentRev == null) {
       return false;
     }
-    const parent = this.stack[parentRev];
+    const parent = unwrap(this.stack.get(parentRev));
     if (commit.immutableKind !== 'none' || parent.immutableKind !== 'none') {
       return false;
     }
     // This is a bit conservative. But we're not doing complex content check for now.
-    const childCount = this.stack.filter(c => c.parents.includes(parentRev)).length;
+    const childCount = this.stack.count(c => c.parents.includes(parentRev));
     if (childCount > 1) {
       return false;
     }
@@ -490,11 +551,13 @@ export class CommitStackState {
    * Drop the given `rev`.
    * The callsite should take care of `files` updates.
    */
-  rewriteStackDroppingRev(rev: Rev) {
+  rewriteStackDroppingRev(rev: Rev): CommitStackState {
     const revMapFunc = (r: Rev) => (r < rev ? r : r - 1);
-    this.stack = this.stack.filter(c => c.rev !== rev).map(c => rewriteCommitRevs(c, revMapFunc));
+    const newStack = this.stack
+      .filter(c => c.rev !== rev)
+      .map(c => rewriteCommitRevs(c, revMapFunc));
     // Recalculate file stacks.
-    this.buildFileStacks();
+    return this.set('stack', newStack).buildFileStacks();
   }
 
   /**
@@ -502,10 +565,11 @@ export class CommitStackState {
    * This should only be called when `canFoldDown(rev)` returned `true`.
    */
   foldDown(rev: Rev) {
-    const commit = this.stack[rev];
+    const commit = unwrap(this.stack.get(rev));
     const parentRev = unwrap(this.singleParentRev(rev));
-    const parent = this.stack[parentRev];
-    commit.files.forEach((file, path) => {
+    const parent = unwrap(this.stack.get(parentRev));
+    let newParentFiles = parent.files;
+    const newFiles = commit.files.map((origFile, path) => {
       // Fold copyFrom. `-` means "no change".
       //
       // | grand  | direct |      |                   |
@@ -517,40 +581,49 @@ export class CommitStackState {
       // | A      | A      | A->C | A->C   (rev)      |
       // | A      | -      | A->C | A->C   (rev)      |
       // | -      | B      | B->C | C      (drop)     |
-      const optionalParentFile = parent.files.get(file.copyFrom ?? path);
+      let file = origFile;
+      const optionalParentFile = newParentFiles.get(file.copyFrom ?? path);
       const copyFrom = optionalParentFile?.copyFrom ?? file.copyFrom;
       if (copyFrom != null && isAbsent(this.parentFile(parentRev, file.copyFrom ?? path)[2])) {
         // "copyFrom" is no longer valid (not existed in grand parent). Drop it.
-        delete file.copyFrom;
+        file = file.set('copyFrom', undefined);
       } else {
-        file.copyFrom = copyFrom;
+        file = file.set('copyFrom', copyFrom);
       }
       if (this.isEqualFile(this.parentFile(parentRev, path, false /* [1] */)[2], file)) {
         // The file changes cancel out. Remove it.
         // [1]: we need to disable following renames when comparing files for cancel-out check.
-        parent.files.delete(path);
+        newParentFiles = newParentFiles.delete(path);
       } else {
         // Fold the change of this file.
-        parent.files.set(path, file);
+        newParentFiles = newParentFiles.set(path, file);
       }
+      return file;
     });
 
     // Fold other properties to parent.
-    commit.originalNodes.forEach(node => parent.originalNodes.add(node));
-    parent.date = commit.date;
-    if (isMeaningfulText(commit.text)) {
-      parent.text = `${parent.text.trim()}\n\n${commit.text}`;
-    }
+    const newParentText = isMeaningfulText(commit.text)
+      ? `${parent.text.trim()}\n\n${commit.text}`
+      : parent.text;
+    const newParent = parent.merge({
+      text: newParentText,
+      date: commit.date,
+      originalNodes: parent.originalNodes.merge(commit.originalNodes),
+      files: newParentFiles,
+    });
+    const newCommit = commit.set('files', newFiles);
+    const newStack = this.stack.withMutations(mutStack => {
+      mutStack.set(parentRev, newParent).set(rev, newCommit);
+    });
 
-    // Update this.stack.
-    this.rewriteStackDroppingRev(rev);
+    return this.set('stack', newStack).rewriteStackDroppingRev(rev);
   }
 
   /**
    * Test if the commit can be dropped. That is, none of its descendants depend on it.
    */
   canDrop(rev: Rev): boolean {
-    if (this.stack.at(rev)?.immutableKind !== 'none') {
+    if (rev < 0 || this.stack.get(rev)?.immutableKind !== 'none') {
       return false;
     }
     const depMap = this.calculateDepMap();
@@ -568,21 +641,22 @@ export class CommitStackState {
    *
    * This should only be called when `canDrop(rev)` returned `true`.
    */
-  drop(rev: Rev) {
-    this.useFileStack();
-    const commit = this.stack[rev];
+  drop(rev: Rev): CommitStackState {
+    let state = this.useFileStack();
+    const commit = unwrap(state.stack.get(rev));
     commit.files.forEach((file, path) => {
-      const fileIdxRev = this.commitToFile.get(`${rev}:${path}`);
+      const fileIdxRev: FileIdx | undefined = state.commitToFile.get(CommitIdx({rev, path}));
       if (fileIdxRev != null) {
-        const [fileIdx, fileRev] = fileIdxRev;
-        const fileStack = this.fileStacks[fileIdx];
+        const {fileIdx, fileRev} = fileIdxRev;
+        const fileStack = unwrap(state.fileStacks.get(fileIdx));
         // Drop the rev by remapping it to an unused rev.
         const unusedFileRev = fileStack.source.revLength;
-        this.fileStacks[fileIdx] = fileStack.remapRevs(new Map([[fileRev, unusedFileRev]]));
+        const newFileStack = fileStack.remapRevs(new Map([[fileRev, unusedFileRev]]));
+        state = state.setIn(['fileStacks', fileIdx], newFileStack);
       }
     });
 
-    this.rewriteStackDroppingRev(rev);
+    return state.rewriteStackDroppingRev(rev);
   }
 
   /**
@@ -600,21 +674,22 @@ export class CommitStackState {
    * If `order` is `this.revs()` then no reorder is done.
    */
   canReorder(order: Rev[]): boolean {
-    if (!this.isStackLinear()) {
+    const state = this.maybeBuildFileStacks();
+    if (!state.isStackLinear()) {
       return false;
     }
-    if (!deepEqual([...order].sort(), this.revs())) {
+    if (!deepEqual([...order].sort(), state.revs())) {
       return false;
     }
 
     // "hash" immutable commits cannot be moved.
-    if (this.stack.some((commit, rev) => commit.immutableKind === 'hash' && order[rev] !== rev)) {
+    if (state.stack.some((commit, rev) => commit.immutableKind === 'hash' && order[rev] !== rev)) {
       return false;
     }
 
     const map = new Map<Rev, Rev>(order.map((fromRev, toRev) => [fromRev, toRev]));
     // Check dependencies.
-    const depMap = this.calculateDepMap();
+    const depMap = state.calculateDepMap();
     for (const [rev, depRevs] of depMap) {
       const newRev = map.get(rev);
       if (newRev == null) {
@@ -625,7 +700,7 @@ export class CommitStackState {
         if (newDepRev == null) {
           return false;
         }
-        if (!generatorContains(this.log(newRev), newDepRev)) {
+        if (!generatorContains(state.log(newRev), newDepRev)) {
           return false;
         }
       }
@@ -641,7 +716,7 @@ export class CommitStackState {
    * See `canReorder` for the meaning of `order`.
    * This should only be called when `canReorder(order)` returned `true`.
    */
-  reorder(order: Rev[]) {
+  reorder(order: Rev[]): CommitStackState {
     const commitRevMap = new Map<Rev, Rev>(order.map((fromRev, toRev) => [fromRev, toRev]));
 
     // Reorder file contents. This is somewhat tricky involving multiple
@@ -661,16 +736,16 @@ export class CommitStackState {
     // [11 (A), 131 (D), 1312 (B), 01312 (C)] to [11 (A), 1312 (B), 01312 (C),
     // 131 (D)]. So after the commit remapping it produces the desired
     // output.
-    this.useFileStack();
-    this.fileStacks.forEach((origFileStack, fileIdx) => {
-      let fileStack = origFileStack;
+    let state = this.useFileStack();
+    const newFileStacks = state.fileStacks.map((origFileStack, fileIdx) => {
+      let fileStack: FileStackState = origFileStack;
 
       // file revs => commit revs => mapped commit revs => mapped file revs
       const fileRevs = fileStack.revs();
-      const commitRevPaths: [Rev, RepoPath][] = fileRevs.map(fRev =>
-        unwrap(this.fileToCommit.get(`${fileIdx}:${fRev}`)),
+      const commitRevPaths: CommitIdx[] = fileRevs.map(fileRev =>
+        unwrap(state.fileToCommit.get(FileIdx({fileIdx, fileRev}))),
       );
-      const commitRevs: Rev[] = commitRevPaths.map(([rev, _path]) => rev);
+      const commitRevs: Rev[] = commitRevPaths.map(({rev}) => rev);
       const mappedCommitRevs: Rev[] = commitRevs.map(rev => commitRevMap.get(rev) ?? rev);
       // commitRevs and mappedCommitRevs might not overlap, although they
       // have the same length (fileRevs.length). Turn them into compact
@@ -681,25 +756,21 @@ export class CommitStackState {
       const fileRevMap = new Map<Rev, Rev>(zip(fromRevs, toRevs));
       fileStack = fileStack.remapRevs(fileRevMap);
       // Apply the reverse mapping. See the above comment for why this is necessary.
-      const fileTextList = [...fileStack.convertToPlainText()];
-      fileRevs.forEach(rev => {
-        const text = fileTextList[toRevs[rev]];
-        fileStack = fileStack.editText(rev, text, false /* do not update rest of the stack */);
-      });
-
-      this.fileStacks[fileIdx] = fileStack;
+      return new FileStackState(fileRevs.map(fileRev => fileStack.getRev(toRevs[fileRev])));
     });
+    state = state.set('fileStacks', newFileStacks);
 
-    // Update this.stack.
-    this.stack = this.stack.map((_commit, rev) => {
-      const commit = this.stack[order[rev]];
-      if (commit.parents.length > 0 && rev > 0) {
-        commit.parents = [rev - 1];
+    // Update state.stack.
+    const newStack = state.stack.map((_commit, rev) => {
+      let commit = unwrap(state.stack.get(order[rev]));
+      if (commit.parents.size > 0 && rev > 0) {
+        commit = commit.set('parents', List([rev - 1]));
       }
-      commit.rev = rev;
-      return commit;
+      return commit.set('rev', rev);
     });
-    this.buildFileStacks();
+    state = state.set('stack', newStack);
+
+    return state.buildFileStacks();
   }
 }
 
@@ -732,14 +803,14 @@ function convertExportFileToFileState(file: ExportFile | null): FileState {
   if (file == null) {
     return ABSENT_FILE;
   }
-  return {
-    data: file.data != null ? file.data : {type: 'base85', dataBase85: unwrap(file.dataBase85)},
+  return FileState({
+    data: file.data != null ? file.data : Base85({dataBase85: unwrap(file.dataBase85)}),
     copyFrom: file.copyFrom,
     flags: file.flags,
-  };
+  });
 }
 
-function getCommitStatesFromExportStack(stack: ExportStack): CommitState[] {
+function getCommitStatesFromExportStack(stack: ExportStack): List<CommitState> {
   checkStackParents(stack);
 
   // Prepare nodeToRev convertion.
@@ -756,22 +827,26 @@ function getCommitStatesFromExportStack(stack: ExportStack): CommitState[] {
   };
 
   // Calculate requested stack.
-  return stack.map(commit => ({
-    originalNodes: new Set([commit.node]),
-    rev: nodeToRev(commit.node),
-    author: commit.author,
-    date: commit.date,
-    text: commit.text,
-    // Treat commits that are not requested explicitly as immutable too.
-    immutableKind: commit.immutable || !commit.requested ? 'hash' : 'none',
-    parents: (commit.parents ?? []).map(p => nodeToRev(p)),
-    files: new Map(
-      Object.entries(commit.files ?? {}).map(([path, file]) => [
-        path,
-        convertExportFileToFileState(file),
-      ]),
-    ),
-  }));
+  const commitStates = stack.map(commit =>
+    CommitState({
+      originalNodes: ImSet([commit.node]),
+      rev: nodeToRev(commit.node),
+      author: commit.author,
+      date: DateTuple({unix: commit.date[0], tz: commit.date[1]}),
+      text: commit.text,
+      // Treat commits that are not requested explicitly as immutable too.
+      immutableKind: commit.immutable || !commit.requested ? 'hash' : 'none',
+      parents: List((commit.parents ?? []).map(p => nodeToRev(p))),
+      files: ImMap<RepoPath, FileState>(
+        Object.entries(commit.files ?? {}).map(([path, file]) => [
+          path,
+          convertExportFileToFileState(file),
+        ]),
+      ),
+    }),
+  );
+
+  return List(commitStates);
 }
 
 /** Check that there is only one root in the stack. */
@@ -819,9 +894,10 @@ function checkStackParents(stack: ExportStack) {
 
 /** Rewrite fields that contains `rev` based on the mapping function. */
 function rewriteCommitRevs(commit: CommitState, revMapFunc: (rev: Rev) => Rev): CommitState {
-  commit.rev = revMapFunc(commit.rev);
-  commit.parents = commit.parents.map(revMapFunc);
-  return commit;
+  return commit.merge({
+    rev: revMapFunc(commit.rev),
+    parents: commit.parents.map(revMapFunc),
+  });
 }
 
 /** Guess if commit message is meaningful. Messages like "wip" or "fixup" are meaningless. */
@@ -850,11 +926,7 @@ function isAbsent(file: FileState | undefined): boolean {
 
 /** Test if a file has utf-8 content. */
 function isUtf8(file: FileState): boolean {
-  if (typeof file.data === 'string') {
-    return true;
-  }
-  const type = file.data.type;
-  return type == 'fileStack';
+  return typeof file.data === 'string' || file.data instanceof FileIdx;
 }
 
 /**
@@ -866,26 +938,21 @@ function compactSequence(revs: Rev[]): Rev[] {
   return revs.map(rev => sortedRevs.indexOf(rev));
 }
 
-const ABSENT_FLAG = 'a';
-
-/**
- * Represents an absent (or deleted) file.
- *
- * Helps simplify `null` handling logic. Since `data` is a regular
- * string, an absent file can be compared (data-wise) with its
- * adjacent versions and edited. This makes it easier to, for example,
- * split a newly added file.
- */
-export const ABSENT_FILE: FileState = {
-  data: '',
-  flags: ABSENT_FLAG,
+type DateTupleProps = {
+  /** UTC Unix timestamp in seconds. */
+  unix: number;
+  /** Timezone offset in minutes. */
+  tz: number;
 };
 
+const DateTuple = Record<DateTupleProps>({unix: 0, tz: 0});
+type DateTuple = RecordOf<DateTupleProps>;
+
 /** Mutable commit state. */
-type CommitState = {
+type CommitStateProps = {
   rev: Rev;
   /** Original hashes. Used for "predecessor" information. */
-  originalNodes: Set<Hash>;
+  originalNodes: ImSet<Hash>;
   author: Author;
   date: DateTuple;
   /** Commit message. */
@@ -901,24 +968,72 @@ type CommitState = {
    */
   immutableKind: 'hash' | 'content' | 'diff' | 'none';
   /** Parent commits. */
-  parents: Rev[];
+  parents: List<Rev>;
   /** Changed files. */
-  files: Map<RepoPath, FileState>;
+  files: ImMap<RepoPath, FileState>;
 };
+
+const CommitState = Record<CommitStateProps>({
+  rev: 0,
+  originalNodes: ImSet(),
+  author: '',
+  date: DateTuple(),
+  text: '',
+  immutableKind: 'none',
+  parents: List(),
+  files: ImMap(),
+});
+type CommitState = RecordOf<CommitStateProps>;
 
 /**
  * Similar to `ExportFile` but `data` can be lazy by redirecting to a rev in a file stack.
  * Besides, supports "absent" state.
  */
-type FileState = {
-  data:
-    | string
-    | {type: 'base85'; dataBase85: string}
-    | {type: 'fileStack'; index: FileStackIndex; rev: Rev};
+type FileStateProps = {
+  data: string | Base85 | FileIdx;
   /** If present, this file is copied (or renamed) from another file. */
   copyFrom?: RepoPath;
   /** 'x': executable. 'l': symlink. 'm': submodule. */
   flags?: string;
 };
 
+type Base85Props = {dataBase85: string};
+
+const Base85 = Record<Base85Props>({dataBase85: ''});
+type Base85 = RecordOf<Base85Props>;
+
+const FileState = Record<FileStateProps>({data: '', copyFrom: undefined, flags: ''});
+type FileState = RecordOf<FileStateProps>;
+
 type FileStackIndex = number;
+
+type FileIdxProps = {
+  fileIdx: FileStackIndex;
+  fileRev: Rev;
+};
+
+type CommitIdxProps = {
+  rev: Rev;
+  path: RepoPath;
+};
+
+const FileIdx = Record<FileIdxProps>({fileIdx: 0, fileRev: 0});
+type FileIdx = RecordOf<FileIdxProps>;
+
+const CommitIdx = Record<CommitIdxProps>({rev: -1, path: ''});
+type CommitIdx = RecordOf<CommitIdxProps>;
+
+const ABSENT_FLAG = 'a';
+
+/**
+ * Represents an absent (or deleted) file.
+ *
+ * Helps simplify `null` handling logic. Since `data` is a regular
+ * string, an absent file can be compared (data-wise) with its
+ * adjacent versions and edited. This makes it easier to, for example,
+ * split a newly added file.
+ */
+export const ABSENT_FILE = FileState({
+  data: '',
+  flags: ABSENT_FLAG,
+});

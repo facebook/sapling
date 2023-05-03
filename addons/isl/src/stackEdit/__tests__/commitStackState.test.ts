@@ -352,7 +352,7 @@ describe('CommitStackState', () => {
     });
 
     it('works for simple edits', () => {
-      const stack = new CommitStackState([
+      let stack = new CommitStackState([
         {
           ...e,
           node: 'A',
@@ -364,40 +364,40 @@ describe('CommitStackState', () => {
         {...e, node: 'C', text: 'Commit C', parents: ['B'], files: {'x.txt': {data: 'zz'}}},
       ]);
       expect(stack.canFoldDown(1)).toBeTruthy();
-      stack.foldDown(1);
-      expect(stack.stack.length).toBe(2);
-      expect(stack.stack[0]).toMatchObject({
-        files: new Map([
-          ['x.txt', {data: 'yy'}],
-          ['y.txt', {data: 'yy'}],
-        ]),
+      stack = stack.foldDown(1);
+      expect(stack.stack.size).toBe(2);
+      expect(stack.stack.get(0)?.toJS()).toMatchObject({
+        files: {
+          'x.txt': {data: 'yy'},
+          'y.txt': {data: 'yy'},
+        },
         originalNodes: new Set(['A', 'B']),
         text: 'Commit A\n\nCommit B',
         parents: [],
       });
-      expect(stack.stack[1]).toMatchObject({
+      expect(stack.stack.get(1)?.toJS()).toMatchObject({
         text: 'Commit C',
         parents: [0], // Commit C's parent is updated to Commit A.
       });
     });
 
     it('removes copyFrom appropriately', () => {
-      const stack = new CommitStackState([
+      let stack = new CommitStackState([
         {...e, node: 'A', parents: [], files: {'x.txt': {data: 'xx'}}},
         {...e, node: 'B', parents: ['A'], files: {'y.txt': {data: 'yy', copyFrom: 'x.txt'}}},
       ]);
       expect(stack.canFoldDown(1)).toBeTruthy();
-      stack.foldDown(1);
-      expect(stack.stack[0]).toMatchObject({
-        files: new Map([
-          ['x.txt', {data: 'xx'}],
-          ['y.txt', {data: 'yy'}], // no longer has "copyFrom", since 'x.txt' does not exist in commit A.
-        ]),
+      stack = stack.foldDown(1);
+      expect(stack.stack.get(0)?.toJS()).toMatchObject({
+        files: {
+          'x.txt': {data: 'xx'},
+          'y.txt': {data: 'yy'}, // no longer has "copyFrom", since 'x.txt' does not exist in commit A.
+        },
       });
     });
 
     it('keeps copyFrom appropriately', () => {
-      const stack = new CommitStackState([
+      let stack = new CommitStackState([
         {...e, node: 'A', parents: [], files: {xt: {data: 'xx'}, yt: {data: 'yy'}}},
         {...e, node: 'B', parents: ['A'], files: {y1t: {data: 'yy', copyFrom: 'yt'}}},
         {
@@ -409,44 +409,44 @@ describe('CommitStackState', () => {
       ]);
       // Fold B+C.
       expect(stack.canFoldDown(2)).toBeTruthy();
-      stack.foldDown(2);
-      expect(stack.stack[1]).toMatchObject({
-        files: new Map([
-          ['y1t', {data: 'y1', copyFrom: 'yt'}], // reuse copyFrom: 'yt' from commit B.
-          ['x1t', {data: 'x1', copyFrom: 'xt'}], // reuse copyFrom: 'xt' from commit C.
-        ]),
+      stack = stack.foldDown(2);
+      expect(stack.stack.get(1)?.toJS()).toMatchObject({
+        files: {
+          y1t: {data: 'y1', copyFrom: 'yt'}, // reuse copyFrom: 'yt' from commit B.
+          x1t: {data: 'x1', copyFrom: 'xt'}, // reuse copyFrom: 'xt' from commit C.
+        },
       });
     });
 
     it('chains renames', () => {
-      const stack = new CommitStackState([
+      let stack = new CommitStackState([
         {...e, node: 'A', parents: [], files: {xt: {data: 'xx'}}},
         {...e, node: 'B', parents: ['A'], files: {yt: {data: 'yy', copyFrom: 'xt'}, xt: null}},
         {...e, node: 'C', parents: ['B'], files: {zt: {data: 'zz', copyFrom: 'yt'}, yt: null}},
       ]);
       // Fold B+C.
       expect(stack.canFoldDown(2)).toBeTruthy();
-      stack.foldDown(2);
-      expect(stack.stack[1]).toMatchObject({
-        files: new Map([
-          ['xt', ABSENT_FILE],
+      stack = stack.foldDown(2);
+      expect(stack.stack.get(1)?.toJS()).toMatchObject({
+        files: {
+          xt: ABSENT_FILE.toJS(),
           // 'yt' is no longer considered changed.
-          ['zt', {data: 'zz', copyFrom: 'xt'}], // 'xt'->'yt'->'zt' is folded to 'xt'->'zt'.
-        ]),
+          zt: {data: 'zz', copyFrom: 'xt'}, // 'xt'->'yt'->'zt' is folded to 'xt'->'zt'.
+        },
       });
     });
 
     it('removes cancel-out changes', () => {
-      const stack = new CommitStackState([
+      let stack = new CommitStackState([
         {...e, node: 'A', parents: [], files: {xt: {data: 'xx'}}},
         {...e, node: 'B', parents: ['A'], files: {xt: {data: 'yy'}, zt: {data: 'zz'}}},
         {...e, node: 'C', parents: ['B'], files: {xt: {data: 'xx'}}},
       ]);
       // Fold B+C.
       expect(stack.canFoldDown(2)).toBeTruthy();
-      stack.foldDown(2);
-      expect(stack.stack[1]).toMatchObject({
-        files: new Map([['zt', {data: 'zz'}]]), // changes to 'yt' is removed.
+      stack = stack.foldDown(2);
+      expect(stack.stack.get(1)?.toJS()).toMatchObject({
+        files: {zt: {data: 'zz'}}, // changes to 'yt' is removed.
       });
     });
   });
@@ -492,7 +492,7 @@ describe('CommitStackState', () => {
     });
 
     it('for a change in the middle of a stack', () => {
-      const stack = new CommitStackState([
+      let stack = new CommitStackState([
         {...e, node: 'A', files: {xx: {data: 'y\n'}}},
         {...e, node: 'B', parents: ['A'], files: {xx: {data: 'x\ny\n'}}},
         {...e, node: 'C', parents: ['B'], files: {xx: {data: 'x\ny\nz\n'}}},
@@ -500,11 +500,11 @@ describe('CommitStackState', () => {
       expect(stack.canDrop(0)).toBeFalsy();
       expect(stack.canDrop(1)).toBeTruthy();
       expect(stack.canDrop(2)).toBeTruthy();
-      stack.drop(1);
-      expect(stack.stack.length).toBe(2);
-      expect(stack.stack[1]).toMatchObject({
-        originalNodes: new Set(['C']),
-        files: new Map([['xx', {data: 'y\nz\n'}]]),
+      stack = stack.drop(1);
+      expect(stack.stack.size).toBe(2);
+      expect(stack.stack.get(1)?.toJS()).toMatchObject({
+        originalNodes: ['C'],
+        files: {xx: {data: 'y\nz\n'}},
       });
     });
   });
@@ -549,7 +549,7 @@ describe('CommitStackState', () => {
     });
 
     it('reorders content changes', () => {
-      const stack = new CommitStackState([
+      let stack = new CommitStackState([
         {...e, node: 'A', files: {xx: {data: '1\n1\n'}}},
         {...e, node: 'B', parents: ['A'], files: {xx: {data: '0\n1\n1\n'}}},
         {...e, node: 'C', parents: ['B'], files: {yy: {data: '0'}}}, // Does not change 'xx'.
@@ -560,10 +560,11 @@ describe('CommitStackState', () => {
       // A-B-C-D-E => A-C-E-B-D.
       let order = [0, 2, 4, 1, 3];
       expect(stack.canReorder(order)).toBeTruthy();
-      stack.reorder(order);
-      const getNode = (r: Rev) => [...stack.stack[r].originalNodes][0];
-      expect(stack.revs().map(r => getNode(r))).toMatchObject(['A', 'C', 'E', 'B', 'D']);
-      expect(stack.revs().map(r => stack.stack[r].parents)).toMatchObject([[], [0], [1], [2], [3]]);
+      stack = stack.reorder(order);
+      const getNode = (r: Rev) => stack.stack.get(r)?.originalNodes?.first();
+      const getParents = (r: Rev) => stack.stack.get(r)?.parents?.toJS();
+      expect(stack.revs().map(getNode)).toMatchObject(['A', 'C', 'E', 'B', 'D']);
+      expect(stack.revs().map(getParents)).toMatchObject([[], [0], [1], [2], [3]]);
       expect(stack.revs().map(r => stack.getFile(r, 'xx').data)).toMatchObject([
         '1\n1\n',
         '1\n1\n', // Not changed by 'C'.
@@ -582,9 +583,9 @@ describe('CommitStackState', () => {
       // Reorder back. A-C-E-B-D => A-B-C-D-E.
       order = [0, 3, 1, 4, 2];
       expect(stack.canReorder(order)).toBeTruthy();
-      stack.reorder(order);
-      expect(stack.revs().map(r => getNode(r))).toMatchObject(['A', 'B', 'C', 'D', 'E']);
-      expect(stack.revs().map(r => stack.stack[r].parents)).toMatchObject([[], [0], [1], [2], [3]]);
+      stack = stack.reorder(order);
+      expect(stack.revs().map(getNode)).toMatchObject(['A', 'B', 'C', 'D', 'E']);
+      expect(stack.revs().map(getParents)).toMatchObject([[], [0], [1], [2], [3]]);
       expect(stack.revs().map(r => stack.getFile(r, 'xx').data)).toMatchObject([
         '1\n1\n',
         '0\n1\n1\n',

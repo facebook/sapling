@@ -58,7 +58,7 @@ const stackEditState = atom<StackEditState>({
             return {hashes, stack: {state: 'hasError', error: event.error}};
           } else {
             try {
-              const stack = new CommitStackState(event.stack);
+              const stack = new CommitStackState(event.stack).buildFileStacks();
               return {hashes, stack: {state: 'hasValue', value: stack}};
             } catch (err) {
               const msg = `Cannot construct stack ${err}`;
