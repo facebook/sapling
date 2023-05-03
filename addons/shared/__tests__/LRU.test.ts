@@ -8,6 +8,7 @@
 import type {LRUWithStats} from '../LRU';
 
 import {cached, LRU} from '../LRU';
+import {SelfUpdate} from '../immutableExt';
 import {List, Record} from 'immutable';
 
 describe('LRU', () => {
@@ -123,6 +124,44 @@ describe('LRU', () => {
     expect(lru.get(4)).toBe(null);
     expect(lru.get(5)).toBe(undefined);
     expect(lru.get(6)).toBe(undefined);
+  });
+
+  it('works with SelfUpdate keys to avoid repeatitive deepEquals', () => {
+    const ListEqualsMock = jest.spyOn(List.prototype, 'equals');
+
+    type NestedList = List<number | NestedList>;
+    const nestedList = (level: number): NestedList =>
+      level <= 0 ? List([10]) : List([nestedList(level - 1)]);
+
+    const list1 = new SelfUpdate(nestedList(10));
+    const list2 = new SelfUpdate(nestedList(10));
+
+    const lru = new LRU(1);
+    lru.set(list1, 'x');
+
+    expect(lru.get(list2)).toBe('x');
+    expect(ListEqualsMock).toHaveBeenCalledTimes(11);
+    ListEqualsMock.mockClear();
+
+    // SelfUpdate avoids deepEquals after the first lru.get().
+    expect(lru.get(list2)).toBe('x');
+    expect(ListEqualsMock).toHaveBeenCalledTimes(1);
+    ListEqualsMock.mockClear();
+
+    // SelfUpdate can be used in a nested structure.
+    const list3 = List([List([new SelfUpdate(nestedList(8))])]);
+    const list4 = List([List([new SelfUpdate(nestedList(8))])]);
+
+    lru.set(list3, 'y');
+    expect(lru.get(list4)).toBe('y');
+    expect(ListEqualsMock).toHaveBeenCalledTimes(11);
+    ListEqualsMock.mockClear();
+
+    expect(lru.get(list4)).toBe('y');
+    expect(ListEqualsMock).toHaveBeenCalledTimes(3);
+    ListEqualsMock.mockClear();
+
+    ListEqualsMock.mockRestore();
   });
 });
 
