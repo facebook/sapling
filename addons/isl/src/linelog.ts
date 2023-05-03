@@ -264,13 +264,13 @@ class LineLog {
     // To calculate dependencies. We look at differences between
     // adjacent revs.
     const depMap = new Map<Rev, Set<Rev>>();
-    let leftSide = this.execute(0, 0, null);
+    let leftSide = this.execute(0);
     if (leftSide.length > 1) {
       // rev 0 is non-empty.
       depMap.set(0, new Set());
     }
     for (let rev = 1; rev <= this.maxRev; rev += 1) {
-      const rightSide = this.execute(rev, rev, null);
+      const rightSide = this.execute(rev);
       diffLines(
         leftSide.map(l => l.data),
         rightSide.map(l => l.data),
@@ -298,16 +298,12 @@ class LineLog {
    * Interpret the bytecodes with the given revision range.
    * Used by `checkOut`.
    */
-  private execute(
-    startRev: Rev,
-    endRev: Rev,
-    present: {[pc: number]: boolean} | null = null,
-  ): LineInfo[] {
+  execute(startRev: Rev, endRev: Rev = startRev, present?: {[pc: number]: boolean}): LineInfo[] {
     const rev = endRev;
     const lines: LineInfo[] = [];
     let pc = 0;
     let patience = this.code.size * 2;
-    const deleted = present === null ? () => false : (pc: Pc) => !present[pc];
+    const deleted = present == null ? () => false : (pc: Pc) => !present[pc];
     while (patience > 0) {
       const code = unwrap(this.code.get(pc));
       switch (code.op) {
