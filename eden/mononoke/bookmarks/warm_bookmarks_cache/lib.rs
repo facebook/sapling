@@ -18,7 +18,6 @@ use anyhow::Context as _;
 use anyhow::Error;
 use async_trait::async_trait;
 use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
-use blame::BlameRoot;
 use blame::RootBlameV2;
 use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
@@ -57,7 +56,6 @@ use futures_watchdog::WatchdogExt;
 use itertools::Itertools;
 use lock_ext::RwLockExt;
 use mercurial_derivation::MappedHgChangesetId;
-use metaconfig_types::BlameVersion;
 use mononoke_types::ChangesetId;
 use mononoke_types::Timestamp;
 use phases::ArcPhases;
@@ -223,21 +221,11 @@ impl WarmBookmarksCacheBuilder {
                     repo_derived_data.clone(),
                 ));
         }
-        if types.contains(BlameRoot::NAME) {
-            match repo_derived_data.active_config().blame_version {
-                BlameVersion::V1 => {
-                    self.warmers.push(create_derived_data_warmer::<BlameRoot>(
-                        &self.ctx,
-                        repo_derived_data.clone(),
-                    ));
-                }
-                BlameVersion::V2 => {
-                    self.warmers.push(create_derived_data_warmer::<RootBlameV2>(
-                        &self.ctx,
-                        repo_derived_data.clone(),
-                    ));
-                }
-            }
+        if types.contains(RootBlameV2::NAME) {
+            self.warmers.push(create_derived_data_warmer::<RootBlameV2>(
+                &self.ctx,
+                repo_derived_data.clone(),
+            ));
         }
         if types.contains(ChangesetInfo::NAME) {
             self.warmers

@@ -24,7 +24,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
-use blame::BlameRoot;
+use blame::RootBlameV2;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::StoreLoadable;
@@ -156,7 +156,7 @@ const UNREDACTED_TYPES: &[&str] = &[
     // discovered via the fsnode tree.
     RootFsnodeId::NAME,
     // Blame does not contain any content of the file itself
-    BlameRoot::NAME,
+    RootBlameV2::NAME,
 ];
 
 async fn open_repo_maybe_unredacted<RepoType>(
