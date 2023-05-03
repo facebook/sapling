@@ -130,10 +130,12 @@ export type CommitInfo = {
   title: string;
   hash: Hash;
   /**
-   * generally, commits have exactly one parent, but it's technically possible to have two for merge commits,
-   * or zero parents for initial commits
+   * This matches the "parents" information from source control without the
+   * "null" hash. Most of the time a commit has 1 parent. For merges there
+   * could be 2 or more parents. The initial commit (and initial commits of
+   * other merged-in repos) have no parents.
    */
-  parents: [] | [string] | [string, string];
+  parents: Hash[];
   phase: CommitPhaseType;
   isHead: boolean;
   author: string;

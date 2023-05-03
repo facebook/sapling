@@ -56,7 +56,6 @@ export const COMMIT_END_MARK = '<<COMMIT_END_MARK>>';
 export const NULL_CHAR = '\0';
 const ESCAPED_NULL_CHAR = '\\0';
 
-const NO_NODE_HASH = '0000000000000000000000000000000000000000';
 const HEAD_MARKER = '@';
 const MAX_FETCHED_FILES_PER_COMMIT = 25;
 const MAX_SIMULTANEOUS_CAT_CALLS = 4;
@@ -69,11 +68,7 @@ const FIELDS = {
   phase: '{phase}',
   bookmarks: `{bookmarks % '{bookmark}${ESCAPED_NULL_CHAR}'}`,
   remoteBookmarks: `{remotenames % '{remotename}${ESCAPED_NULL_CHAR}'}`,
-  // We use `{p1node} {p2node}` instead of `{parents}`
-  // because `{parents}` only prints when a node has more than one parent,
-  // not when a node has one natural parent.
-  // Reference: `sl help templates`
-  parents: `{p1node}${ESCAPED_NULL_CHAR}{p2node}${ESCAPED_NULL_CHAR}`,
+  parents: `{parents % "{node}${ESCAPED_NULL_CHAR}"}`,
   isHead: `{ifcontains(rev, revset('.'), '${HEAD_MARKER}')}`,
   filesAdded: '{file_adds|json}',
   filesModified: '{file_mods|json}',
@@ -843,10 +838,7 @@ export function parseCommitInfoOutput(logger: Logger, output: string): SmartlogC
         title: lines[FIELD_INDEX.title],
         author: lines[FIELD_INDEX.author],
         date: new Date(lines[FIELD_INDEX.date]),
-        parents: splitLine(lines[FIELD_INDEX.parents]).filter(hash => hash !== NO_NODE_HASH) as [
-          string,
-          string,
-        ],
+        parents: splitLine(lines[FIELD_INDEX.parents]) as string[],
         phase: lines[FIELD_INDEX.phase] as CommitPhaseType,
         bookmarks: splitLine(lines[FIELD_INDEX.bookmarks]),
         remoteBookmarks: splitLine(lines[FIELD_INDEX.remoteBookmarks]),
