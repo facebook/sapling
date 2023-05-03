@@ -356,7 +356,7 @@ class LineLog extends LineLogRecord {
    *      and 0.5 in D3628440.
    */
   @cached({cacheSize: 1000})
-  calculateLineLogDepMap(): Readonly<Map<Rev, Set<Rev>>> {
+  calculateDepMap(): Readonly<Map<Rev, Set<Rev>>> {
     const depMap = new Map<Rev, Set<Rev>>();
     const addDep = (child: Rev, parent: Rev) => {
       if (child > parent) {
@@ -499,41 +499,6 @@ class LineLog extends LineLogRecord {
       assert(false, 'bug: code does not end in time');
     }
 
-    return depMap;
-  }
-
-  /** Legacy dependency calculation based on textural. */
-  calculateDepMap(): Map<Rev, Set<Rev>> {
-    // To calculate dependencies. We look at differences between
-    // adjacent revs.
-    const depMap = new Map<Rev, Set<Rev>>();
-    let leftSide = this.execute(0);
-    if (leftSide.length > 1) {
-      // rev 0 is non-empty.
-      depMap.set(0, new Set());
-    }
-    for (let rev = 1; rev <= this.maxRev; rev += 1) {
-      const rightSide = this.execute(rev);
-      diffLines(
-        leftSide.map(l => l.data),
-        rightSide.map(l => l.data),
-      ).forEach(([a1, a2, _b1, _b2]) => {
-        let depRevs = depMap.get(rev);
-        if (depRevs == null) {
-          const newSet = new Set<Rev>();
-          depMap.set(rev, newSet);
-          depRevs = newSet;
-        }
-        // Blame surrounding and changed/deleted lines on the left side.
-        for (let ai = Math.max(a1 - 1, 0); ai < Math.min(a2 + 1, leftSide.length); ai += 1) {
-          const depRev = leftSide[ai].rev;
-          if (depRev >= 0 && depRev < rev) {
-            depRevs.add(depRev);
-          }
-        }
-      });
-      leftSide = rightSide;
-    }
     return depMap;
   }
 

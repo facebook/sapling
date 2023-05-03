@@ -266,14 +266,14 @@ describe('CommitStackState', () => {
         {...e, node: 'Z', requested: false, relevantFiles: {'x.txt': null}},
         {...e, node: 'A', parents: ['Z'], files: {'x.txt': {data: 'b\n'}}},
         {...e, node: 'B', parents: ['A'], files: {'x.txt': {data: 'a\nb\n'}}},
-        {...e, node: 'C', parents: ['B'], files: {'x.txt': {data: 'a\nb\nc\n'}}},
+        {...e, node: 'C', parents: ['B'], files: {'x.txt': {data: 'a\nB\n'}}},
       ]);
       expect(stack.calculateDepMap()).toStrictEqual(
         new Map([
           [0, new Set()],
           [1, new Set()],
-          [2, new Set([1])],
-          [3, new Set([1])], // commit C does not depend on commit B
+          [2, new Set()], // insertion at other insertion boundary is dependency-free
+          [3, new Set([1])],
         ]),
       );
     });
@@ -467,10 +467,10 @@ describe('CommitStackState', () => {
 
     it('detects content dependencies', () => {
       const stack = new CommitStackState([
-        {...e, node: 'A', files: {xx: {data: '2\n'}}},
-        {...e, node: 'B', parents: ['A'], files: {xx: {data: '1\n2\n'}}},
-        {...e, node: 'C', parents: ['B'], files: {xx: {data: '1\n2\n3\n'}}},
-        {...e, node: 'D', parents: ['C'], files: {xx: {data: '1\n2\n3\n4\n'}}},
+        {...e, node: 'A', files: {xx: {data: '0\n2\n'}}},
+        {...e, node: 'B', parents: ['A'], files: {xx: {data: '0\n1\n2\n'}}},
+        {...e, node: 'C', parents: ['B'], files: {xx: {data: '0\n1\n2\n3\n'}}},
+        {...e, node: 'D', parents: ['C'], files: {xx: {data: '0\n1\n2\n4\n'}}},
       ]);
       expect(stack.canDrop(0)).toBeFalsy();
       expect(stack.canDrop(1)).toBeTruthy();
@@ -493,9 +493,9 @@ describe('CommitStackState', () => {
 
     it('for a change in the middle of a stack', () => {
       let stack = new CommitStackState([
-        {...e, node: 'A', files: {xx: {data: 'y\n'}}},
-        {...e, node: 'B', parents: ['A'], files: {xx: {data: 'x\ny\n'}}},
-        {...e, node: 'C', parents: ['B'], files: {xx: {data: 'x\ny\nz\n'}}},
+        {...e, node: 'A', files: {xx: {data: 'p\ny\n'}}},
+        {...e, node: 'B', parents: ['A'], files: {xx: {data: 'p\nx\ny\n'}}},
+        {...e, node: 'C', parents: ['B'], files: {xx: {data: 'p\nx\ny\nz\n'}}},
       ]);
       expect(stack.canDrop(0)).toBeFalsy();
       expect(stack.canDrop(1)).toBeTruthy();
@@ -504,7 +504,7 @@ describe('CommitStackState', () => {
       expect(stack.stack.size).toBe(2);
       expect(stack.stack.get(1)?.toJS()).toMatchObject({
         originalNodes: ['C'],
-        files: {xx: {data: 'y\nz\n'}},
+        files: {xx: {data: 'p\ny\nz\n'}},
       });
     });
   });
@@ -525,10 +525,10 @@ describe('CommitStackState', () => {
 
     it('respects content dependencies', () => {
       const stack = new CommitStackState([
-        {...e, node: 'A', files: {xx: {data: '2\n'}}},
-        {...e, node: 'B', parents: ['A'], files: {xx: {data: '1\n2\n'}}},
-        {...e, node: 'C', parents: ['B'], files: {xx: {data: '1\n2\n3\n'}}},
-        {...e, node: 'D', parents: ['C'], files: {xx: {data: '1\n2\n3\n4\n'}}},
+        {...e, node: 'A', files: {xx: {data: '0\n2\n'}}},
+        {...e, node: 'B', parents: ['A'], files: {xx: {data: '0\n1\n2\n'}}},
+        {...e, node: 'C', parents: ['B'], files: {xx: {data: '0\n1\n2\n3\n'}}},
+        {...e, node: 'D', parents: ['C'], files: {xx: {data: '0\n1\n2\n4\n'}}},
       ]);
       expect(stack.canReorder([0, 2, 3, 1])).toBeTruthy();
       expect(stack.canReorder([0, 2, 1, 3])).toBeTruthy();

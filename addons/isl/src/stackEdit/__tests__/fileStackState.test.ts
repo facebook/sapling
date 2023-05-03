@@ -40,7 +40,6 @@ describe('FileStackState', () => {
     const stack = new FileStackState(['b\n', 'a\nb\n', 'a\nb\nc\n']);
     expect(stack.calculateDepMap()).toStrictEqual(
       new Map([
-        [0, new Set()],
         [1, new Set([0])],
         [2, new Set([0])],
       ]),

@@ -210,7 +210,7 @@ describe('LineLog', () => {
       const log = logFromTextList(textList.map(insertEOL));
       const flatten = (depMap: Map<Rev, Set<Rev>>) =>
         [...depMap.entries()].map(([rev, set]) => [rev, [...set].sort()]).sort();
-      return flatten(log.calculateLineLogDepMap());
+      return flatten(log.calculateDepMap());
     };
 
     expect(deps([])).toEqual([]);
@@ -258,39 +258,26 @@ describe('LineLog', () => {
     expect(deps(['abc', 'abcdef', '']).at(-1)).toEqual([3, [1, 2]]);
     expect(deps(['abc', 'abcdef', 'af']).at(-1)).toEqual([3, [1, 2]]);
     expect(deps(['abc', 'abcdef', 'cd']).at(-1)).toEqual([3, [1, 2]]);
-  });
 
-  it('calculates rev dependencies', () => {
-    const textList = [
-      'a\nb\nc\n',
-      'a\nb\nc\nd\n',
-      'z\na\nb\nc\nd\n',
-      'z\na\nd\n',
-      'a\nd\n',
-      'a\nd\ne\nf\n',
-      'a\nd\ne\n',
-      'a\nd\n1\ne\n',
-      'x\ny\nz\n',
-    ];
-    const log = logFromTextList(textList);
-    const flatten = (depMap: Map<Rev, Set<Rev>>) =>
-      [...depMap.entries()].map(([rev, set]) => [rev, [...set].sort()]);
-    expect(flatten(log.calculateDepMap())).toStrictEqual([
+    // Another test case.
+    const textList = ['abc', 'abcd', 'zabcd', 'zad', 'ad', 'adef', 'ade', 'ad1e', 'xyz'];
+    expect(deps(textList)).toStrictEqual([
       [1, [0]],
-      [2, [0, 1]],
-      [3, [1]],
-      // deletes "c" added by rev 2
-      [4, [1, 2]],
+      [2, [0]],
+      [3, [0]],
+      // deletes "bc" added by rev 1
+      [4, [1]],
       // deletes "z" added by rev 3
-      [5, [1, 3]],
-      // appends after "d" added by rev 2
-      [6, [0, 2]],
+      [5, [3]],
+      // appends after "d" added by rev 2, considered as independent
+      [6, [0]],
       // deletes "f" added by rev 6
-      [7, [0, 6]],
-      // inserts "1" between "d" (rev 2) and "e" (rev 6)
-      [8, [2, 6]],
+      [7, [6]],
+      // inserts "1" between "d" (rev 2) and "e" (rev 6), still considered as independent
+      [8, [0]],
       // replaces all: "a" (rev 1), "d" (rev 2), "1" (rev 8), "e" (rev 6)
-      [9, [0, 1, 2, 6, 8]],
+      // rev 4 is also a dependent for nested deletions.
+      [9, [1, 2, 4, 6, 8]],
     ]);
   });
 
