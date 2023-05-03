@@ -22,14 +22,16 @@ import type {
   FetchedCommits,
   FetchedUncommittedChanges,
 } from 'isl/src/types';
+import type {ExportStack, ImportedStack} from 'shared/types/stack';
 
 import {Internal} from './Internal';
 import {absolutePathForFileInRepo} from './Repository';
-import {findPublicAncestor} from './utils';
+import {findPublicAncestor, parseExecJson} from './utils';
 import fs from 'fs';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
 import {revsetArgsForComparison, revsetForComparison} from 'shared/Comparison';
 import {randomId, unwrap} from 'shared/utils';
+import {Readable} from 'stream';
 
 export type IncomingMessage = ClientToServerMessage;
 type IncomingMessageWithPayload = ClientToServerMessageWithPayload;
@@ -553,6 +555,24 @@ export default class ServerToClientAPI {
         repo.fetchSmartlogCommits();
         this.tracker.track('LoadMoreCommits', {extras: {daysToFetch: rangeInDays ?? 'Infinity'}});
         return;
+      }
+      case 'exportStack': {
+        const {revs} = data;
+        const exec = repo.runCommand(['debugexportstack', '-r', revs]);
+        const reply = (stack?: ExportStack, error?: string) => {
+          this.postMessage({type: 'exportedStack', revs, stack: stack ?? [], error});
+        };
+        parseExecJson(exec, reply);
+        break;
+      }
+      case 'importStack': {
+        const stdinStream = Readable.from(JSON.stringify(data.stack));
+        const exec = repo.runCommand(['debugimportstack'], undefined, {stdin: stdinStream});
+        const reply = (imported?: ImportedStack, error?: string) => {
+          this.postMessage({type: 'importedStack', imported: imported ?? [], error});
+        };
+        parseExecJson(exec, reply);
+        break;
       }
       default: {
         this.platform.handleMessageFromClient(

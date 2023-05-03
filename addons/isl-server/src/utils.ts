@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type execa from 'execa';
 import type {ExecaChildProcess} from 'execa';
 import type {CommitInfo, SmartlogCommits} from 'isl/src/types';
 
@@ -121,4 +122,34 @@ export function findPublicAncestor(
   }
 
   return publicCommit;
+}
+
+/**
+ * Run a command that is expected to produce JSON output.
+ * Return a JSON object. On error, the JSON object has property "error".
+ */
+export function parseExecJson<T>(
+  exec: execa.ExecaChildProcess,
+  reply: (parsed?: T, error?: string) => void,
+) {
+  const execArgs = () => exec.spawnargs.join(' ');
+  exec
+    .then(result => {
+      const stdout = result.stdout;
+      try {
+        const parsed = JSON.parse(stdout);
+        if (parsed.error != null) {
+          reply(undefined, parsed.error);
+        } else {
+          reply(parsed as T);
+        }
+      } catch (err) {
+        const msg = `Cannot parse ${execArgs()} output. (error: ${err}, stdout: ${stdout})`;
+        reply(undefined, msg);
+      }
+    })
+    .catch(err => {
+      const msg = `Cannot run ${execArgs()}. (error: ${err})`;
+      reply(undefined, msg);
+    });
 }

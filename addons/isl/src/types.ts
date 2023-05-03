@@ -12,6 +12,7 @@ import type {GitHubDiffSummary} from 'isl-server/src/github/githubCodeReviewProv
 import type {Comparison} from 'shared/Comparison';
 import type {AllUndefined, Json} from 'shared/typeUtils';
 import type {Hash} from 'shared/types/common';
+import type {ExportStack, ImportedStack, ImportStack} from 'shared/types/stack';
 
 export type Result<T> = {value: T; error?: undefined} | {value?: undefined; error: Error};
 
@@ -377,6 +378,8 @@ export type ClientToServerMessage =
   | {type: 'loadMoreCommits'}
   | {type: 'subscribe'; kind: SubscriptionKind; subscriptionID: string}
   | {type: 'unsubscribe'; kind: SubscriptionKind; subscriptionID: string}
+  | {type: 'exportStack'; revs: string}
+  | {type: 'importStack'; stack: ImportStack}
   | PlatformSpecificClientToServerMessages;
 
 export type SubscriptionResultsData = {
@@ -411,6 +414,8 @@ export type ServerToClientMessage =
   | {type: 'beganLoadingMoreCommits'}
   | {type: 'commitsShownRange'; rangeInDays: number | undefined}
   | {type: 'additionalCommitAvailability'; moreAvailable: boolean}
+  | {type: 'exportedStack'; revs: string; stack: ExportStack; error: string | undefined}
+  | {type: 'importedStack'; imported: ImportedStack; error: string | undefined}
   | OperationProgressEvent
   | PlatformSpecificServerToClientMessages;
 
