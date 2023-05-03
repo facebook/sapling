@@ -894,6 +894,9 @@ export class CommitStackState extends CommitStackRecord {
       // sequence to reason about.
       const fromRevs: Rev[] = compactSequence(commitRevs);
       const toRevs: Rev[] = compactSequence(mappedCommitRevs);
+      if (deepEqual(fromRevs, toRevs)) {
+        return fileStack;
+      }
       // Mapping: zip(original revs, mapped file revs)
       const fileRevMap = new Map<Rev, Rev>(zip(fromRevs, toRevs));
       fileStack = fileStack.remapRevs(fileRevMap);
