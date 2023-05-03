@@ -78,7 +78,8 @@ export class FileStackState {
    */
   editText(rev: Rev, text: string, updateStack = true) {
     if (updateStack) {
-      this.convertToLineLog().recordText(text, rev);
+      const log = this.convertToLineLog().recordText(text, rev);
+      this.source = {type: 'linelog', log};
     } else {
       this.convertToPlainText()[rev] = text;
     }
@@ -104,8 +105,8 @@ export class FileStackState {
    * stack top. `bRev` is the revisions that each chunk blames to.
    */
   editChunk(aRev: Rev, a1: LineIdx, a2: LineIdx, bRev: Rev, bLines: string[]) {
-    const log = this.convertToLineLog();
-    log.editChunk(aRev, a1, a2, bRev, bLines);
+    const log = this.convertToLineLog().editChunk(aRev, a1, a2, bRev, bLines);
+    this.source = {type: 'linelog', log};
   }
 
   /**
@@ -114,8 +115,8 @@ export class FileStackState {
    * `revDepMap` to ensure the reordering can be "conflict"-free.
    */
   remapRevs(revMap: Map<Rev, Rev>) {
-    const log = this.convertToLineLog();
-    log.remapRevs(revMap);
+    const log = this.convertToLineLog().remapRevs(revMap);
+    this.source = {type: 'linelog', log};
     this.revLength = log.maxRev + 1;
   }
 
@@ -159,10 +160,10 @@ export class FileStackState {
     if (this.source.type === type) {
       return this.source.log;
     }
-    const log = new LineLog();
+    let log = new LineLog();
     this.revs().forEach(rev => {
       const data = this.get(rev);
-      log.recordText(data, rev);
+      log = log.recordText(data, rev);
     });
     this.source = {type, log};
     return log;

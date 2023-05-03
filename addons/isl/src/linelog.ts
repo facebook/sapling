@@ -34,7 +34,7 @@ import type {LRUWithStats} from 'shared/LRU';
 import {assert} from './utils';
 // Read D43857949 about the choice of the diff library.
 import diffSequences from 'diff-sequences';
-import {List} from 'immutable';
+import {List, Record} from 'immutable';
 import {cached, LRU} from 'shared/LRU';
 import {unwrap} from 'shared/utils';
 
@@ -139,6 +139,13 @@ type Code = List<Inst>;
 // Export for testing purpose.
 export const executeCache: LRUWithStats = new LRU(100);
 
+const LineLogRecord = Record({
+  /** Core state: instructions. The array index type is `Pc`. */
+  code: List([{op: Op.END}]) as Code,
+  /** Maximum rev tracked. */
+  maxRev: 0 as Rev,
+});
+
 /**
  * `LineLog` is a data structure that tracks linear changes to a single text
  * file. Conceptually similar to a list of texts like `string[]`, with extra
@@ -153,14 +160,11 @@ export const executeCache: LRUWithStats = new LRU(100);
  * no traditional text patch involved. No operations would cause merge
  * conflicts. See https://sapling-scm.com/docs/internals/linelog for more
  * details.
+ *
+ * This implementation of `LineLog` uses immutable patterns.
+ * Write operations return new `LineLog`s.
  */
-class LineLog {
-  /** Core state: instructions. The array index type is `Pc`. */
-  private code: Code = List([{op: Op.END}]);
-
-  /** Maximum rev tracked. */
-  maxRev: Rev = 0;
-
+class LineLog extends LineLogRecord {
   /**
    * Edit chunk. Replace line `a1` (inclusive) to `a2` (exclusive) in rev
    * `aRev` with `bLines`. `bLines` are considered introduced by `bRev`.
@@ -182,7 +186,7 @@ class LineLog {
     bRev: Rev,
     bLines: string[],
     aLinesCache?: LineInfo[],
-  ) {
+  ): LineLog {
     const aLinesMutable = aLinesCache != null;
     const aLines = aLinesCache ?? this.checkOutLines(aRev);
     const start = this.code.size;
@@ -219,7 +223,6 @@ class LineLog {
       code = code.set(a1Pc, {op: Op.J, pc: start});
       return code;
     });
-    this.code = newCode;
 
     if (aLinesMutable) {
       const newLines = bLines.map((s, i) => {
@@ -228,10 +231,8 @@ class LineLog {
       aLines.splice(a1, a2 - a1, ...newLines);
     }
 
-    if (bRev > this.maxRev) {
-      this.maxRev = bRev;
-    }
-    // NOTE: this.content is not updated here. It should be updated by the call-site.
+    const newMaxRev = Math.max(bRev, this.maxRev);
+    return new LineLog({code: newCode, maxRev: newMaxRev});
   }
 
   /**
@@ -243,9 +244,9 @@ class LineLog {
    * a dependency check and avoid troublesome reorders like
    * moving a change to before its dependency.
    */
-  remapRevs(revMap: Map<Rev, Rev>) {
+  remapRevs(revMap: Map<Rev, Rev>): LineLog {
     let newMaxRev = 0;
-    this.code = this.code
+    const newCode = this.code
       .map(inst => {
         const c = {...inst};
         if (c.op === Op.JGE || c.op === Op.JL || c.op === Op.LINE) {
@@ -258,7 +259,7 @@ class LineLog {
         return c;
       })
       .toList();
-    this.maxRev = newMaxRev;
+    return new LineLog({code: newCode, maxRev: newMaxRev});
   }
 
   /**
@@ -303,12 +304,7 @@ class LineLog {
    * Interpret the bytecodes with the given revision range.
    * Used by `checkOut`.
    */
-  @cached({
-    cache: executeCache,
-    getExtraKeys(this: LineLog) {
-      return [this.code];
-    },
-  })
+  @cached({cache: executeCache, cacheSize: 1000})
   execute(startRev: Rev, endRev: Rev = startRev, present?: {[pc: number]: boolean}): LineInfo[] {
     const rev = endRev;
     const lines: LineInfo[] = [];
@@ -431,9 +427,9 @@ class LineLog {
    *
    * @param text Content to match.
    * @param rev Revision to to edit (in-place). If not set, append a new revision.
-   * @returns Revision number. `this.checkOut(rev)` should match `text`.
+   * @returns A new `LineLog` with the change.
    */
-  public recordText(text: string, rev: Rev | null = null): Rev {
+  public recordText(text: string, rev: Rev | null = null): LineLog {
     // rev to edit from, and rev to match 'text'.
     const [aRev, bRev] = rev != null ? [rev, rev] : [this.maxRev, this.maxRev + 1];
     const b = text;
@@ -443,20 +439,20 @@ class LineLog {
     const aLines = aLineInfos.map(l => l.data);
     aLines.pop(); // Drop the last END empty line.
     const blocks = diffLines(aLines, bLines);
+    let log: LineLog = new LineLog(this);
 
     blocks.reverse().forEach(([a1, a2, b1, b2]) => {
-      this.editChunk(aRev, a1, a2, bRev, bLines.slice(b1, b2), aLineInfos);
+      log = log.editChunk(aRev, a1, a2, bRev, bLines.slice(b1, b2), aLineInfos);
     });
 
     // This is needed in case editChunk is not called (no difference).
-    if (bRev > this.maxRev) {
-      this.maxRev = bRev;
-    }
+    const newMaxRev = Math.max(bRev, log.maxRev);
 
     // Populate cache for checking out bRev.
-    executeCache.set(List([this.code, bRev]), aLineInfos);
+    const newLog = new LineLog({code: log.code, maxRev: newMaxRev});
+    executeCache.set(List([newLog, bRev]), aLineInfos);
 
-    return bRev;
+    return newLog;
   }
 }
 

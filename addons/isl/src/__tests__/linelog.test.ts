@@ -33,6 +33,7 @@ import type {Rev} from '../linelog';
 
 import {LineLog, executeCache} from '../linelog';
 import {describe, it, expect} from '@jest/globals';
+import * as Immutable from 'immutable';
 
 describe('LineLog', () => {
   it('can be empty', () => {
@@ -42,8 +43,8 @@ describe('LineLog', () => {
   });
 
   it('supports a single edit', () => {
-    const log = new LineLog();
-    log.recordText('c\nd\ne');
+    let log = new LineLog();
+    log = log.recordText('c\nd\ne');
     expect(log.maxRev).toBe(1);
     expect(log.checkOut(1)).toBe('c\nd\ne');
 
@@ -56,21 +57,21 @@ describe('LineLog', () => {
   });
 
   it('supports modifying rev 0', () => {
-    const log = new LineLog();
-    log.recordText('c\n', 0);
+    let log = new LineLog();
+    log = log.recordText('c\n', 0);
     expect(log.maxRev).toBe(0);
     expect(log.checkOut(0)).toBe('c\n');
     expect(log.checkOutLines(0)[0]).toMatchObject({rev: 0});
-    log.recordText('c\nd', 1);
+    log = log.recordText('c\nd', 1);
     expect(log.checkOutLines(1)[1]).toMatchObject({rev: 1});
     expect(log.checkOut(0)).toBe('c\n');
     expect(log.checkOutLines(0)[0]).toMatchObject({rev: 0});
   });
 
   it('supports multiple edits', () => {
-    const log = new LineLog();
-    log.recordText('c\nd\ne\n');
-    log.recordText('d\ne\nf\n');
+    let log = new LineLog();
+    log = log.recordText('c\nd\ne\n');
+    log = log.recordText('d\ne\nf\n');
     expect(log.maxRev).toBe(2);
     expect(log.checkOut(2)).toBe('d\ne\nf\n');
     expect(log.checkOutLines(2)).toMatchObject([
@@ -82,9 +83,9 @@ describe('LineLog', () => {
   });
 
   it('supports checkout', () => {
-    const log = new LineLog();
-    log.recordText('c\nd\ne\n');
-    log.recordText('d\ne\nf\n');
+    let log = new LineLog();
+    log = log.recordText('c\nd\ne\n');
+    log = log.recordText('d\ne\nf\n');
     expect(log.checkOut(1)).toBe('c\nd\ne\n');
     expect(log.checkOutLines(1)[0].deleted).toBe(false);
     expect(log.checkOut(0)).toBe('');
@@ -94,10 +95,10 @@ describe('LineLog', () => {
   });
 
   it('supports checkout range', () => {
-    const log = new LineLog();
-    log.recordText('c\nd\ne\n'); // rev 1
-    log.recordText('d\ne\nf\n'); // rev 2
-    log.recordText('e\ng\nf\n'); // rev 3
+    const log = new LineLog()
+      .recordText('c\nd\ne\n') // rev 1
+      .recordText('d\ne\nf\n') // rev 2
+      .recordText('e\ng\nf\n'); // rev 3
 
     expect(log.checkOutLines(2, 1)).toMatchObject([
       {data: 'c\n', rev: 1, deleted: true}, // 'c' not in rev 2
@@ -129,19 +130,17 @@ describe('LineLog', () => {
   });
 
   it('bumps rev when recording the same content', () => {
-    const log = new LineLog();
-    expect(log.recordText('a\n')).toBe(1);
-    expect(log.recordText('a\n')).toBe(2);
-    expect(log.recordText('a\n')).toBe(3);
+    let log = new LineLog();
+    log = log.recordText('a\n');
+    expect(log.maxRev).toBe(1);
+    log = log.recordText('a\n');
+    expect(log.maxRev).toBe(2);
+    log = log.recordText('a\n');
+    expect(log.maxRev).toBe(3);
   });
 
   it('avoids checkout/execute calls for common edits', () => {
-    const stats = (executeCache.stats = {miss: 0, hit: 0});
-    const log = new LineLog();
-
-    // Initial checkout triggers execute() and cache miss.
-    log.recordText('a\nb\nc\nd\ne\n', 1);
-    expect(stats).toMatchObject({miss: 1, hit: 0});
+    const log = new LineLog().recordText('a\nb\nc\nd\ne\n', 1);
 
     // Modifies 3 chunks. This does not introduce new cache
     // miss, because:
@@ -151,21 +150,34 @@ describe('LineLog', () => {
     // - checkout used by editChunk is skipped, because
     //   recordText passes in `aLinesCache`. This does not
     //   change cache miss or hit.
+    const stats = (executeCache.stats = {miss: 0, hit: 0});
     log.recordText('A\nb\nC\nd\nE\n', 3);
-    expect(stats).toMatchObject({miss: 1, hit: 1});
+    expect(stats).toMatchObject({miss: 0, hit: 1});
+  });
+
+  it('works with immutable.is', () => {
+    const log1 = new LineLog().recordText('a').recordText('b');
+    const log2 = new LineLog({code: log1.code, maxRev: log1.maxRev});
+    const log3 = new LineLog().recordText('a').recordText('b');
+
+    expect(Object.is(log1, log2)).toBeFalsy();
+    expect(Immutable.is(log1, log2)).toBeTruthy();
+
+    // FIXME: Inst type needs to be Immutable.Record too.
+    expect(Immutable.is(log1, log3)).toBeFalsy();
   });
 
   describe('supports editing previous revisions', () => {
     it('edits stack bottom', () => {
       const textList = ['a\n', 'a\nb\n', 'z\na\nb\n'];
-      const log = logFromTextList(textList);
+      let log = logFromTextList(textList);
 
-      expect(log.recordText('1\n2\n', 1)).toBe(1); // replace rev 1 from "a" to "1 2"
+      log = log.recordText('1\n2\n', 1); // replace rev 1 from "a" to "1 2"
       expect(log.checkOut(1)).toBe('1\n2\n');
       expect(log.checkOut(2)).toBe('1\n2\nb\n');
       expect(log.checkOut(3)).toBe('z\n1\n2\nb\n');
 
-      expect(log.recordText('', 1)).toBe(1); // replace rev 1 to ""
+      log = log.recordText('', 1); // replace rev 1 to ""
       expect(log.checkOut(1)).toBe('');
       expect(log.checkOut(2)).toBe('b\n');
       expect(log.checkOut(3)).toBe('z\nb\n');
@@ -175,17 +187,17 @@ describe('LineLog', () => {
       const textList = ['c\nd\ne\n', 'b\nc\nd\n', 'a\nb\nc\nz\n'];
       let log = logFromTextList(textList);
 
-      expect(log.recordText('b\nd\n', 2)).toBe(2); // remove "c" from "b c d" in rev 2
+      log = log.recordText('b\nd\n', 2); // remove "c" from "b c d" in rev 2
       expect(log.checkOut(1)).toBe('c\nd\ne\n'); // rev 1 is unchanged, despite "c" comes from rev 1
       expect(log.checkOut(2)).toBe('b\nd\n');
       expect(log.checkOut(3)).toBe('a\nb\nz\n'); // "c" in rev 3 is also removed
 
       log = logFromTextList(textList);
-      log.recordText('b\nc\ny\ny\n', 2); // change "d" to "y y" from rev 2.
+      log = log.recordText('b\nc\ny\ny\n', 2); // change "d" to "y y" from rev 2.
       expect(log.checkOut(3)).toBe('a\nb\nc\nz\n'); // rev 3 is unchanged, since "d" was deleted
 
       log = logFromTextList(textList);
-      log.recordText('k\n', 2); // replace rev 2 with "k", this is a tricky case
+      log = log.recordText('k\n', 2); // replace rev 2 with "k", this is a tricky case
       expect(log.checkOut(3)).toBe('a\nk\n'); // "a k" is the current implementation, "a k z" might be better
     });
   });
@@ -252,22 +264,19 @@ describe('LineLog', () => {
 
   describe('supports remapping revisions', () => {
     it('updates maxRev up', () => {
-      const log = logFromTextList(['a', 'b']);
-      log.remapRevs(new Map([[1, 10]]));
+      const log = logFromTextList(['a', 'b']).remapRevs(new Map([[1, 10]]));
       expect(log.maxRev).toBe(10);
     });
 
     it('updates maxRev down', () => {
-      const log = new LineLog();
-      log.recordText('a\n', 10);
-      log.remapRevs(new Map([[10, 5]]));
+      const log = new LineLog().recordText('a\n', 10).remapRevs(new Map([[10, 5]]));
       expect(log.maxRev).toBe(5);
     });
 
     it('invalidates previous checkout', () => {
-      const log = logFromTextList(['b\n', 'b\nc\n', 'a\nb\nc\n']);
+      let log = logFromTextList(['b\n', 'b\nc\n', 'a\nb\nc\n']);
       expect(log.checkOut(2)).toBe('b\nc\n');
-      log.remapRevs(
+      log = log.remapRevs(
         new Map([
           [2, 3],
           [3, 2],
@@ -277,8 +286,7 @@ describe('LineLog', () => {
     });
 
     it('can reorder changes', () => {
-      const log = logFromTextList(['b\n', 'b\nc\n', 'a\nb\nc\n']);
-      log.remapRevs(
+      const log = logFromTextList(['b\n', 'b\nc\n', 'a\nb\nc\n']).remapRevs(
         new Map([
           [2, 3],
           [3, 2],
@@ -296,24 +304,22 @@ describe('LineLog', () => {
     });
 
     it('can merge changes', () => {
-      const log = logFromTextList(['b\n', 'b\nc\n', 'a\nb\nc\n']);
-      log.remapRevs(new Map([[2, 1]]));
+      const log = logFromTextList(['b\n', 'b\nc\n', 'a\nb\nc\n']).remapRevs(new Map([[2, 1]]));
       expect(log.checkOut(1)).toBe('b\nc\n');
       expect(log.checkOut(2)).toBe('b\nc\n');
       expect(log.checkOut(3)).toBe('a\nb\nc\n');
     });
 
     it('can insert changes', () => {
-      const log = logFromTextList(['b\n', 'b\nc\n']);
-      log.remapRevs(new Map([[2, 3]]));
-      log.recordText('a\nb\n', 2);
+      const log = logFromTextList(['b\n', 'b\nc\n'])
+        .remapRevs(new Map([[2, 3]]))
+        .recordText('a\nb\n', 2);
       expect(log.checkOut(3)).toBe('a\nb\nc\n');
     });
 
     it('does not check dependencies or conflicts', () => {
       // rev 2: +b between a and c. rev 2 depends on rev 1.
-      const log = logFromTextList(['a\nc\n', 'a\nb\nc\n']);
-      log.remapRevs(
+      const log = logFromTextList(['a\nc\n', 'a\nb\nc\n']).remapRevs(
         new Map([
           [1, 2],
           [2, 1],
@@ -327,7 +333,7 @@ describe('LineLog', () => {
 });
 
 function logFromTextList(textList: string[]): LineLog {
-  const log = new LineLog();
-  textList.forEach(text => log.recordText(text));
+  let log = new LineLog();
+  textList.forEach(text => (log = log.recordText(text)));
   return log;
 }
