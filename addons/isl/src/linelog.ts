@@ -185,7 +185,7 @@ class LineLog {
     assert(a1 <= a2, 'illegal chunk (a1 < a2)');
     assert(a2 <= this.lines.length, 'out of bound a2 (forgot checkOut?)');
 
-    this.checkOut(aRev);
+    this.checkOutLines(aRev);
     const start = this.code.size;
     const newCode = this.code.withMutations(origCode => {
       let code = origCode;
@@ -219,7 +219,10 @@ class LineLog {
     const newLines = bLines.map((s, i) => {
       return {data: s, rev: bRev, pc: start + 1 + i, deleted: false};
     });
-    this.lines.splice(a1, a2 - a1, ...newLines);
+    // This is needed for FileStackState.editChunk test (temporarily).
+    if (bRev <= aRev || bRev >= this.maxRev) {
+      this.lines.splice(a1, a2 - a1, ...newLines);
+    }
     if (bRev > this.maxRev) {
       this.maxRev = bRev;
     }
@@ -357,20 +360,20 @@ class LineLog {
    * stacks.
    */
   public flatten(): FlattenLine[] {
-    this.checkOut(this.maxRev, 0);
+    const allLines = this.checkOutLines(this.maxRev, 0);
     // Drop the last (empty) line.
-    const len = Math.max(this.lines.length - 1, 0);
-    const lineInfos = this.lines.slice(0, len);
+    const len = Math.max(allLines.length - 1, 0);
+    const lineInfos = allLines.slice(0, len);
     const linePcs = lineInfos.map(info => info.pc);
     const result: FlattenLine[] = lineInfos.map(info => ({
       revs: new Set<Rev>(),
       data: info.data,
     }));
     for (let rev = 0; rev <= this.maxRev; rev += 1) {
-      this.checkOut(rev);
+      const lines = this.checkOutLines(rev);
       // Pc is used as the "unique" line identifier to detect what
       // subset of "all lines" exist in the current "rev".
-      const pcSet: Set<Pc> = new Set(this.lines.map(info => info.pc));
+      const pcSet: Set<Pc> = new Set(lines.map(info => info.pc));
       for (let i = 0; i < linePcs.length; i += 1) {
         if (pcSet.has(linePcs[i])) {
           result[i].revs.add(rev);
@@ -381,23 +384,20 @@ class LineLog {
   }
 
   /**
-   * Checkout the content of the given revision `rev`.
-   *
-   * Updates `this.lines` internally so indexes passed to `editChunk`
-   * will be based on the given `rev`.
+   * Checkout the lines of the given revision `rev`.
    *
    * If `start` is not `null`, checkout a revision range. For example,
    * if `start` is 0, and `rev` is `this.maxRev`, `this.lines` will
    * include all lines ever existed in all revisions.
    *
-   *  @returns Content of the specified revision.
+   * @returns Content of the specified revision.
    */
-  public checkOut(rev: Rev, start: Rev | null = null): string {
+  public checkOutLines(rev: Rev, start: Rev | null = null): LineInfo[] {
     // eslint-disable-next-line no-param-reassign
     rev = Math.min(rev, this.maxRev);
     const key = `${rev},${start}`;
     if (key === this.lastCheckoutKey) {
-      return this.content;
+      return this.lines;
     }
 
     let lines = this.execute(rev, rev);
@@ -413,13 +413,16 @@ class LineLog {
     }
 
     this.lines = lines;
-    this.content = this.reconstructContent();
     this.lastCheckoutKey = key;
-    return this.content;
+    return lines;
   }
 
-  private reconstructContent(): string {
-    return this.lines.map(l => l.data).join('');
+  /** Checkout the content of the given rev. */
+  public checkOut(rev: Rev): string {
+    const lines = this.checkOutLines(rev);
+    const content = lines.map(l => l.data).join('');
+    this.content = content;
+    return content;
   }
 
   /**

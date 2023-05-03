@@ -101,27 +101,33 @@ describe('LineLog', () => {
     log.recordText('d\ne\nf\n'); // rev 2
     log.recordText('e\ng\nf\n'); // rev 3
 
-    log.checkOut(2, 1);
-    expect(log.content).toBe('c\nd\ne\nf\n');
-    expect(log.lines[0].deleted).toBeTruthy(); // 'c' not in rev 2
-    expect(!log.lines[1].deleted).toBeTruthy(); // 'd' in rev 2
-    expect(!log.lines[2].deleted).toBeTruthy();
-    expect(!log.lines[3].deleted).toBeTruthy();
+    expect(log.checkOutLines(2, 1)).toMatchObject([
+      {data: 'c\n', rev: 1, deleted: true}, // 'c' not in rev 2
+      {data: 'd\n', rev: 1, deleted: false},
+      {data: 'e\n', rev: 1, deleted: false},
+      {data: 'f\n', rev: 2, deleted: false},
+      {data: '', rev: 0, deleted: false}, // END
+    ]);
 
-    log.checkOut(3, 0);
-    expect(log.content).toBe('c\nd\ne\ng\nf\n');
-    expect(log.lines[0].deleted).toBeTruthy(); // 'c' not in rev 3
-    expect(log.lines[1].deleted).toBeTruthy(); // 'd' not in rev 3
-    expect(!log.lines[2].deleted).toBeTruthy(); // 'e' in rev 3
+    expect(log.checkOutLines(3, 0)).toMatchObject([
+      {data: 'c\n', rev: 1, deleted: true}, // 'c' not in rev 3
+      {data: 'd\n', rev: 1, deleted: true}, // 'd' not in rev 3
+      {data: 'e\n', rev: 1, deleted: false}, // 'e' in rev 3
+      {data: 'g\n', rev: 3, deleted: false},
+      {data: 'f\n', rev: 2, deleted: false},
+      {data: '', rev: 0, deleted: false},
+    ]);
 
-    log.checkOut(3); // should not reuse cache
-    expect(log.content).toBe('e\ng\nf\n');
+    // should not reuse cache
+    expect(log.checkOut(3)).toBe('e\ng\nf\n');
 
-    log.checkOut(3, 2);
-    expect(log.content).toBe('d\ne\ng\nf\n');
-    expect(log.lines[0].deleted).toBeTruthy(); // 'd' not in rev 3
-    expect(!log.lines[1].deleted).toBeTruthy(); // 'e' in rev 3
-    expect(!log.lines[3].deleted).toBeTruthy(); // 'f' in rev 3
+    expect(log.checkOutLines(3, 2)).toMatchObject([
+      {data: 'd\n', rev: 1, deleted: true},
+      {data: 'e\n', rev: 1, deleted: false},
+      {data: 'g\n', rev: 3, deleted: false},
+      {data: 'f\n', rev: 2, deleted: false},
+      {data: ''},
+    ]);
   });
 
   it('bumps rev when recording the same content', () => {
