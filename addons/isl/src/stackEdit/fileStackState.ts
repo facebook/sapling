@@ -12,12 +12,12 @@ import {LineLog} from '../linelog';
 import {Record, List} from 'immutable';
 import {SelfUpdate} from 'shared/immutableExt';
 
-export const Source = Record<SoureProps>({
+export const Source = Record<SourceProps>({
   type: 'plain',
   value: List([]),
   revLength: 0,
 });
-type Source = RecordOf<SoureProps>;
+type Source = RecordOf<SourceProps>;
 
 const State = Record<FileStackStateProps>({source: Source()});
 type State = RecordOf<FileStackStateProps>;
@@ -26,7 +26,7 @@ type State = RecordOf<FileStackStateProps>;
  * A stack of file contents with stack editing features.
  */
 export class FileStackState extends SelfUpdate<State> {
-  constructor(value: RecordOf<SoureProps> | string[]) {
+  constructor(value: RecordOf<SourceProps> | string[]) {
     if (Array.isArray(value)) {
       const contents: string[] = value;
       const source = Source({type: 'plain', value: List(contents), revLength: contents.length});
@@ -227,7 +227,7 @@ export class FileStackState extends SelfUpdate<State> {
  * - flatten: The flatten view of LineLog. This is useful for moving lines between
  *   revisioins more explicitly.
  */
-type SoureProps =
+type SourceProps =
   | {
       type: 'linelog';
       value: LineLog;
