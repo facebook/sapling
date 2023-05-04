@@ -1,0 +1,144 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+import type {CommitStackState} from './stackEdit/commitStackState';
+import type {Rev} from './stackEdit/fileStackState';
+
+import {Tooltip} from './Tooltip';
+import {t, T} from './i18n';
+import {editingStackState} from './stackEditState';
+import {assert} from './utils';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {useRecoilState} from 'recoil';
+import {Icon} from 'shared/Icon';
+import {unwrap} from 'shared/utils';
+
+import './StackEditSubTree.css';
+
+export function StackEditSubTree(): React.ReactElement {
+  const [stackState, setStackState] = useRecoilState(editingStackState);
+  assert(stackState.state === 'hasValue', '<StackEditSubTree /> requires stack to be loaded');
+
+  const state = stackState.value;
+  const revs = state.mutableRevs().reverse();
+  const setState = (state: CommitStackState) => {
+    setStackState({state: 'hasValue', value: state});
+  };
+
+  return (
+    <div className="stack-edit-subtree">
+      {revs.map(rev => (
+        <StackEditCommit key={rev} rev={rev} state={state} setState={setState} />
+      ))}
+    </div>
+  );
+}
+
+export function StackEditCommit({
+  rev,
+  state,
+  setState,
+}: {
+  rev: Rev;
+  state: CommitStackState;
+  setState: (state: CommitStackState) => void;
+}): React.ReactElement {
+  const canFold = state.canFoldDown(rev);
+  const canDrop = state.canDrop(rev);
+  const canMoveDown = state.canReorder(reorderedRevs(state, rev - 1));
+  const canMoveUp = state.canReorder(reorderedRevs(state, rev));
+  const commit = unwrap(state.stack.get(rev));
+  const titleText = commit.text.split('\n', 1).at(0) ?? '';
+
+  const handleMoveUp = () => setState(state.reorder(reorderedRevs(state, rev)));
+  const handleMoveDown = () => setState(state.reorder(reorderedRevs(state, rev - 1)));
+  const handleFoldDown = () => setState(state.foldDown(rev));
+  const handleDrop = () => setState(state.drop(rev));
+
+  const title =
+    titleText === '' ? (
+      <span className="commit-title untitled">
+        <T>Untitled</T>
+      </span>
+    ) : (
+      <span className="commit-title">{titleText}</span>
+    );
+  const buttons = (
+    <div className="stack-edit-button-group">
+      <Tooltip
+        title={
+          canMoveUp
+            ? t('Move commit up in the stack')
+            : t(
+                'Cannot move up if this commit is at the top, or if the next commit depends on this commit',
+              )
+        }>
+        <VSCodeButton disabled={!canMoveUp} onClick={handleMoveUp} appearance="icon">
+          <Icon icon="chevron-up" />
+        </VSCodeButton>
+      </Tooltip>
+      <Tooltip
+        title={
+          canMoveDown
+            ? t('Move commit down in the stack')
+            : t(
+                'Cannot move up if this commit is at the bottom, or if this commit depends on its parent',
+              )
+        }>
+        <VSCodeButton disabled={!canMoveDown} onClick={handleMoveDown} appearance="icon">
+          <Icon icon="chevron-down" />
+        </VSCodeButton>
+      </Tooltip>
+      <Tooltip
+        title={
+          canFold
+            ? t('Fold the commit with its parent')
+            : t('Can not fold with parent if this commit is at the bottom')
+        }>
+        <VSCodeButton disabled={!canFold} onClick={handleFoldDown} appearance="icon">
+          <Icon icon="fold-down" />
+        </VSCodeButton>
+      </Tooltip>
+      <Tooltip
+        title={
+          canDrop
+            ? t('Drop the commit in the stack')
+            : t('Cannot drop this commit because it has dependencies')
+        }>
+        <VSCodeButton disabled={!canDrop} onClick={handleDrop} appearance="icon">
+          <Icon icon="close" />
+        </VSCodeButton>
+      </Tooltip>
+    </div>
+  );
+
+  return (
+    <div className="commit">
+      <div className="commit-rows">
+        <div className="commit-avatar" />
+        <div className="commit-details">
+          {buttons}
+          {title}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Reorder rev and rev + 1.
+function reorderedRevs(state: CommitStackState, rev: number): Rev[] {
+  // Basically, `toSpliced`, but it's not avaialble everywhere.
+  const order = state.revs();
+  if (rev < 0 || rev >= order.length - 1) {
+    // out of range - canReorder([]) will return false.
+    return [];
+  }
+  const rev1 = order[rev];
+  const rev2 = order[rev + 1];
+  order.splice(rev, 2, rev2, rev1);
+  return order;
+}

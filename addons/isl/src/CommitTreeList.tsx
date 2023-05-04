@@ -16,6 +16,7 @@ import {Center, FlexRow, LargeSpinner} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {StackEditIcon} from './StackEditIcon';
+import {StackEditSubTree} from './StackEditSubTree';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {allDiffSummaries, codeReviewProvider, pageVisibility} from './codeReview/CodeReviewInfo';
 import {isTreeLinear, walkTreePostorder} from './getCommitTree';
@@ -102,8 +103,21 @@ function SubTree({tree, depth}: {tree: CommitTreeWithPreviews; depth: number}): 
   const {info, children, previewType} = tree;
   const isPublic = info.phase === 'public';
 
+  const stackHashes = useRecoilValue(editingStackHashes);
+  const stackState = useRecoilValue(editingStackState);
+  const isStackEditing = depth > 0 && stackHashes.has(info.hash) && stackState.state === 'hasValue';
+
   const stackActions =
     !isPublic && depth === 1 ? <StackActions key="stack-actions" tree={tree} /> : null;
+
+  if (isStackEditing) {
+    return (
+      <>
+        <StackEditSubTree />
+        {stackActions}
+      </>
+    );
+  }
 
   const renderedChildren = (children ?? [])
     .map(tree => <SubTree key={`tree-${tree.info.hash}`} tree={tree} depth={depth + 1} />)
