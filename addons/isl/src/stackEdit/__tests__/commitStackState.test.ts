@@ -637,7 +637,7 @@ describe('CommitStackState', () => {
       expect(stack.calculateImportStack()).toMatchObject([]);
     });
 
-    it('skips unchnaged commits', () => {
+    it('skips unchanged commits', () => {
       // Edits B/y.txt, affects descendants C.
       const stack = new CommitStackState(exportStack1).updateEachFile((rev, file, path) =>
         path === 'y.txt' ? file.set('data', '333') : file,

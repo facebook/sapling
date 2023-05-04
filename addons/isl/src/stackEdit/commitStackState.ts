@@ -366,7 +366,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     }
 
     // "hide" commits that disappear from state.originalStack => state.stack.
-    // Only requested mutable commits are counted.
+    // Only requested mutable commits are considered.
     const coveredNodes: Set<Hash> = state.stack.reduce((acc, commit) => {
       commit.originalNodes.forEach((n: Hash): Set<Hash> => acc.add(n));
       return acc;
