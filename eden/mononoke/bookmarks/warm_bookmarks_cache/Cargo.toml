@@ -32,7 +32,6 @@ futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 itertools = "0.10.3"
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
-metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 phases = { version = "0.1.0", path = "../../phases" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
