@@ -330,13 +330,14 @@ function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactEle
     );
   }
 
+  const isPreview = tree.previewType != null;
   const isLoading = isEditing && editingStack.state === 'loading';
   const isError = isEditing && editingStack.state === 'hasError';
   const isLinear = isTreeLinear(tree);
   const isDirty = stackCommits.some(c => c.isHead) && uncommitted.files.length > 0;
   const obsoleted = stackCommits.filter(c => c.successorInfo != null);
   const hasObsoleted = obsoleted.length > 0;
-  const disabled = isDirty || hasObsoleted || !isLinear || isLoading || isError;
+  const disabled = isDirty || hasObsoleted || !isLinear || isLoading || isError || isPreview;
   const title = isError
     ? t(`Failed to load stack: ${editingStack.error}`)
     : isLoading
@@ -347,6 +348,8 @@ function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactEle
     ? t(
         'Cannot edit stack when there are uncommitted changes.\nCommit or amend your changes first.',
       )
+    : isPreview
+    ? t('Cannot edit pending changes')
     : isLinear
     ? t('Reorder, fold, or drop commits')
     : t('Cannot edit non-linear stack');
