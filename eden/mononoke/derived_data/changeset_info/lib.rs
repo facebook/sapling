@@ -10,3 +10,4 @@ mod derive;
 
 pub use crate::changeset_info::ChangesetInfo;
 pub use crate::changeset_info::ChangesetMessage;
+pub use crate::derive::format_key;

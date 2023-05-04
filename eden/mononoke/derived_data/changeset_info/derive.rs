@@ -24,7 +24,7 @@ use mononoke_types::ChangesetId;
 
 use crate::ChangesetInfo;
 
-fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
+pub fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
     let root_prefix = "changeset_info.blake2.";
     let key_prefix = derivation_ctx.mapping_key_prefix::<ChangesetInfo>();
     format!("{}{}{}", root_prefix, key_prefix, changeset_id)

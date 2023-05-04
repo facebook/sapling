@@ -26,6 +26,7 @@ use thiserror::Error;
 mod derive;
 mod mapping;
 
+pub use mapping::format_key;
 pub use mapping::RootUnodeManifestId;
 
 #[derive(Debug, Error)]

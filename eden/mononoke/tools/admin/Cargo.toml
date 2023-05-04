@@ -19,6 +19,7 @@ bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bonsai_svnrev_mapping = { version = "0.1.0", path = "../../bonsai_svnrev_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../../bookmarks/bookmarks_movement" }
+bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }
 buffered_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/buffered_commit_graph_storage" }
 bulkops = { version = "0.1.0", path = "../../bulkops" }
 bytes = { version = "1.1", features = ["serde"] }
@@ -27,6 +28,7 @@ cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 caching_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/caching_commit_graph_storage" }
 caching_ext = { version = "0.1.0", path = "../../common/rust/caching_ext" }
 changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
+changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
 changesets = { version = "0.1.0", path = "../../changesets" }
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
@@ -38,6 +40,7 @@ commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_g
 context = { version = "0.1.0", path = "../../server/context" }
 dag = { version = "0.1.0", path = "../../../scm/lib/dag" }
 dag-types = { version = "0.1.0", path = "../../../scm/lib/dag/dag-types", features = ["for-tests", "serialize-abomonation"] }
+derived_data = { version = "0.1.0", path = "../../derived_data" }
 environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
