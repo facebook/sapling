@@ -147,8 +147,8 @@ export function StackEditCommit({
   const state = stackEdit.commitStack;
   const canFold = state.canFoldDown(rev);
   const canDrop = state.canDrop(rev);
-  const canMoveDown = state.canReorder(reorderedRevs(state, rev - 1));
-  const canMoveUp = state.canReorder(reorderedRevs(state, rev));
+  const canMoveDown = state.canMoveDown(rev);
+  const canMoveUp = state.canMoveUp(rev);
   const commit = unwrap(state.stack.get(rev));
   const titleText = commit.text.split('\n', 1).at(0) ?? '';
 

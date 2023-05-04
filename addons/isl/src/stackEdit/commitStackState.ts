@@ -905,6 +905,14 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     return true;
   }
 
+  canMoveDown(rev: Rev): boolean {
+    return rev > 0 && this.canMoveUp(rev - 1);
+  }
+
+  canMoveUp(rev: Rev): boolean {
+    return this.canReorder(reorderedRevs(this, rev));
+  }
+
   /**
    * Reorder stack. Similar to running `histedit`, follwed by reordering
    * commits.
