@@ -12,7 +12,6 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Error;
 use async_trait::async_trait;
-use blame::CompatBlame;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use bytes::Bytes;
@@ -38,6 +37,7 @@ use history_traversal::TraversalOrder;
 use history_traversal::Visitor;
 use manifest::Entry;
 use manifest::ManifestOps;
+use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::ChangesetId;
@@ -501,10 +501,7 @@ impl ChangesetPathHistoryContext {
     }
 
     /// Blame metadata for this path.
-    pub async fn blame(
-        &self,
-        follow_mutable_file_history: bool,
-    ) -> Result<CompatBlame, MononokeError> {
+    pub async fn blame(&self, follow_mutable_file_history: bool) -> Result<BlameV2, MononokeError> {
         let ctx = self.changeset.ctx();
         let repo = self.changeset.repo().inner_repo();
         let csid = self.changeset.id();
@@ -518,7 +515,7 @@ impl ChangesetPathHistoryContext {
     pub async fn blame_with_content(
         &self,
         follow_mutable_file_history: bool,
-    ) -> Result<(CompatBlame, Bytes), MononokeError> {
+    ) -> Result<(BlameV2, Bytes), MononokeError> {
         let ctx = self.changeset.ctx();
         let repo = self.changeset.repo().inner_repo();
         let csid = self.changeset.id();

@@ -245,9 +245,10 @@ impl SourceControlServiceImpl {
         // Map all the changeset IDs into the requested identity schemes.  Keep a mapping of
         // which bonsai changeset ID corresponds to which mapped commit ID index, so we can look
         // them up later.
-        let csids_and_nums: Vec<_> = blame
+        let csids_and_nums = blame
             .changeset_ids()
-            .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?;
+            .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?
+            .collect::<Vec<_>>();
         let csids = csids_and_nums
             .iter()
             .map(|(csid, _)| *csid)

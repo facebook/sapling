@@ -9,12 +9,10 @@ use std::collections::HashSet;
 
 use anyhow::anyhow;
 use anyhow::Context;
-use anyhow::Error;
 use async_recursion::async_recursion;
 use blame::fetch_blame_compat;
 use blame::fetch_content_for_blame;
 use blame::BlameError;
-use blame::CompatBlame;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::stream;
@@ -39,7 +37,7 @@ async fn fetch_mutable_blame(
     my_csid: ChangesetId,
     path: &MPath,
     seen: &mut HashSet<ChangesetId>,
-) -> Result<(CompatBlame, FileUnodeId), BlameError> {
+) -> Result<(BlameV2, FileUnodeId), BlameError> {
     let mutable_renames = repo.mutable_renames();
 
     if !seen.insert(my_csid) {
@@ -68,9 +66,8 @@ async fn fetch_mutable_blame(
             .src_path()
             .ok_or_else(|| anyhow!("Mutable rename points file to root directory"))?
             .clone();
-        let (compat_blame, src_content) =
+        let (src_blame, src_content) =
             blame_with_content(ctx, repo, rename.src_cs_id(), rename.src_path(), true).await?;
-        let src_blame = extract_blame_v2_from_compat(compat_blame)?;
 
         let blobstore = repo.repo_blobstore_arc();
         let unode = repo
@@ -90,7 +87,7 @@ async fn fetch_mutable_blame(
         // And reblame directly against the parent mutable renames gave us.
         let blame_parent = BlameParent::new(0, src_path, src_content, src_blame);
         let blame = BlameV2::new(my_csid, path.clone(), my_content, vec![blame_parent])?;
-        return Ok((CompatBlame::V2(blame), unode));
+        return Ok((blame, unode));
     }
 
     // Second case. We don't have a mutable rename attached, so we're going to look
@@ -121,8 +118,7 @@ async fn fetch_mutable_blame(
         find_possible_mutable_ancestors(ctx, repo, my_csid, Some(path)).await?;
 
     // Fetch the immutable blame, which we're going to mutate
-    let (blame, unode) = fetch_immutable_blame(ctx, repo, my_csid, path).await?;
-    let mut my_blame = extract_blame_v2_from_compat(blame)?;
+    let (mut blame, unode) = fetch_immutable_blame(ctx, repo, my_csid, path).await?;
 
     // We now have a stack of possible mutable ancestors, sorted so that the highest generation
     // is last. We now pop the last entry from the stack (highest generation) and apply mutation
@@ -139,9 +135,7 @@ async fn fetch_mutable_blame(
             fetch_mutable_blame(ctx, repo, mutated_csid, path, seen),
             fetch_immutable_blame(ctx, repo, mutated_csid, path)
         )?;
-        let original_blame = extract_blame_v2_from_compat(original_blame)?;
-        let mutated_blame = extract_blame_v2_from_compat(mutated_blame)?;
-        my_blame.apply_mutable_change(&original_blame, &mutated_blame)?;
+        blame.apply_mutable_change(&original_blame, &mutated_blame)?;
 
         // Rebuild possible_mutable_ancestors without anything that's an ancestor
         // of mutated_csid. This must preserve order, so that we deal with the most
@@ -170,7 +164,7 @@ async fn fetch_mutable_blame(
                 .await?;
     }
 
-    Ok((CompatBlame::V2(my_blame), unode))
+    Ok((blame, unode))
 }
 
 async fn fetch_immutable_blame(
@@ -178,7 +172,7 @@ async fn fetch_immutable_blame(
     repo: &impl Repo,
     csid: ChangesetId,
     path: &MPath,
-) -> Result<(CompatBlame, FileUnodeId), BlameError> {
+) -> Result<(BlameV2, FileUnodeId), BlameError> {
     fetch_blame_compat(ctx, repo.as_blob_repo(), csid, path.clone()).await
 }
 
@@ -188,7 +182,7 @@ pub async fn blame(
     csid: ChangesetId,
     path: Option<&MPath>,
     follow_mutable_file_history: bool,
-) -> Result<(CompatBlame, FileUnodeId), BlameError> {
+) -> Result<(BlameV2, FileUnodeId), BlameError> {
     let path = path.ok_or_else(|| anyhow!("Blame is not available for directory: `/`"))?;
     if follow_mutable_file_history {
         fetch_mutable_blame(ctx, repo, csid, path, &mut HashSet::new()).await
@@ -206,15 +200,10 @@ pub async fn blame_with_content(
     csid: ChangesetId,
     path: Option<&MPath>,
     follow_mutable_file_history: bool,
-) -> Result<(CompatBlame, Bytes), BlameError> {
+) -> Result<(BlameV2, Bytes), BlameError> {
     let (blame, file_unode_id) = blame(ctx, repo, csid, path, follow_mutable_file_history).await?;
     let content = fetch_content_for_blame(ctx, repo.as_blob_repo(), file_unode_id)
         .await?
         .into_bytes()?;
     Ok((blame, content))
-}
-
-fn extract_blame_v2_from_compat(blame: CompatBlame) -> Result<BlameV2, Error> {
-    let CompatBlame::V2(blame) = blame;
-    Ok(blame)
 }

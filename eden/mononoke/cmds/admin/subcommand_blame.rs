@@ -12,7 +12,6 @@ use anyhow::format_err;
 use anyhow::Error;
 use blame::fetch_blame_compat;
 use blame::fetch_content_for_blame;
-use blame::CompatBlame;
 use blame::FetchOutcome;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
@@ -423,8 +422,7 @@ async fn subcommand_compute_blame(
     )
     .await?
     .ok_or_else(|| Error::msg("cycle found"))??;
-    let annotate =
-        blame_hg_annotate(ctx, repo, content, CompatBlame::V2(blame), line_number).await?;
+    let annotate = blame_hg_annotate(ctx, repo, content, blame, line_number).await?;
     println!("{}", annotate);
     Ok(())
 }
@@ -434,7 +432,7 @@ async fn blame_hg_annotate<C: AsRef<[u8]> + 'static + Send>(
     ctx: CoreContext,
     repo: BlobRepo,
     content: C,
-    blame: CompatBlame,
+    blame: BlameV2,
     show_line_number: bool,
 ) -> Result<String, Error> {
     if content.as_ref().is_empty() {
@@ -454,9 +452,11 @@ async fn blame_hg_annotate<C: AsRef<[u8]> + 'static + Send>(
         let hg_csid = mapping
             .get(&blame_line.changeset_id)
             .ok_or_else(|| format_err!("unresolved bonsai csid: {}", blame_line.changeset_id))?;
-        if let Some(changeset_index) = blame_line.changeset_index {
-            write!(result, "{:>5} ", format!("#{}", changeset_index + 1))?;
-        }
+        write!(
+            result,
+            "{:>5} ",
+            format!("#{}", blame_line.changeset_index + 1)
+        )?;
         result.push_str(&hg_csid.to_string()[..12]);
         result.push(':');
         if show_line_number {

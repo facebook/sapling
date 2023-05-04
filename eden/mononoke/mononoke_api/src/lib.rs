@@ -34,7 +34,6 @@ mod xrepo;
 mod test;
 
 // Re-export types that are useful for clients.
-pub use blame::CompatBlame;
 pub use context::CoreContext;
 pub use context::LoggingContainer;
 pub use context::SessionContainer;

@@ -21,6 +21,7 @@ use maplit::btreemap;
 use maplit::hashmap;
 use metaconfig_types::BlameVersion;
 use mononoke_types::blame_v2::BlameRejected;
+use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use repo_blobstore::RepoBlobstore;
@@ -32,7 +33,6 @@ use tests_utils::store_rename;
 use tests_utils::CreateCommitContext;
 
 use crate::fetch_blame_compat;
-use crate::CompatBlame;
 
 #[facet::container]
 struct TestRepo {
@@ -372,10 +372,10 @@ async fn test_blame_copy_source(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(
         lines,
         vec![
-            (c2, "file1".to_string(), 0),
-            (c1, "file2".to_string(), 1),
-            (c1, "file2".to_string(), 2),
-            (c2, "file1".to_string(), 3),
+            (&c2, "file1".to_string(), 0),
+            (&c1, "file2".to_string(), 1),
+            (&c1, "file2".to_string(), 2),
+            (&c2, "file1".to_string(), 3),
         ]
     );
     Ok(())
@@ -383,7 +383,7 @@ async fn test_blame_copy_source(fb: FacebookInit) -> Result<(), Error> {
 
 fn annotate(
     content: &str,
-    blame: CompatBlame,
+    blame: BlameV2,
     names: &HashMap<ChangesetId, &'static str>,
 ) -> Result<String, Error> {
     let mut result = String::new();

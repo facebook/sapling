@@ -141,7 +141,7 @@ async fn test_immutable_blame(fb: FacebookInit) -> Result<()> {
         let b_m1_blame = b_m1_with_history.blame(false).await?;
         let b_m1_blame_by_lines: Vec<_> = b_m1_blame
             .lines()?
-            .map(|line| (line.changeset_id, line.path.clone(), line.origin_offset))
+            .map(|line| (*line.changeset_id, line.path.clone(), line.origin_offset))
             .collect();
 
         assert_eq!(
@@ -163,7 +163,7 @@ async fn test_immutable_blame(fb: FacebookInit) -> Result<()> {
         let a_m1_blame = a_m1_with_history.blame(true).await?;
         let a_m1_blame_by_lines: Vec<_> = a_m1_blame
             .lines()?
-            .map(|line| (line.changeset_id, line.path.clone(), line.origin_offset))
+            .map(|line| (*line.changeset_id, line.path.clone(), line.origin_offset))
             .collect();
 
         assert_eq!(
@@ -235,7 +235,7 @@ async fn test_linear_mutable_blame(fb: FacebookInit) -> Result<()> {
         let b_m1_blame = b_m1_with_history.blame(false).await?;
         let b_m1_blame_by_lines: Vec<_> = b_m1_blame
             .lines()?
-            .map(|line| (line.changeset_id, line.path.clone(), line.origin_offset))
+            .map(|line| (*line.changeset_id, line.path.clone(), line.origin_offset))
             .collect();
 
         assert_eq!(
@@ -261,7 +261,7 @@ async fn test_linear_mutable_blame(fb: FacebookInit) -> Result<()> {
         let b_b3_blame = b_b3_with_history.blame(true).await?;
         let b_b3_blame_by_lines: Vec<_> = b_b3_blame
             .lines()?
-            .map(|line| (line.changeset_id, line.path.clone(), line.origin_offset))
+            .map(|line| (*line.changeset_id, line.path.clone(), line.origin_offset))
             .collect();
 
         assert_eq!(
@@ -287,7 +287,7 @@ async fn test_linear_mutable_blame(fb: FacebookInit) -> Result<()> {
         let b_m1_blame = b_m1_with_history.blame(true).await?;
         let b_m1_blame_by_lines: Vec<_> = b_m1_blame
             .lines()?
-            .map(|line| (line.changeset_id, line.path.clone(), line.origin_offset))
+            .map(|line| (*line.changeset_id, line.path.clone(), line.origin_offset))
             .collect();
 
         assert_eq!(
@@ -370,7 +370,7 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
         let b_m1_blame = b_m1_with_history.blame(false).await?;
         let b_m1_blame_by_lines: Vec<_> = b_m1_blame
             .lines()?
-            .map(|line| (line.changeset_id, line.path.clone(), line.origin_offset))
+            .map(|line| (*line.changeset_id, line.path.clone(), line.origin_offset))
             .collect();
 
         assert_eq!(
@@ -391,7 +391,7 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
         let a_m1_blame = a_m1_with_history.blame(false).await?;
         let a_m1_blame_by_lines: Vec<_> = a_m1_blame
             .lines()?
-            .map(|line| (line.changeset_id, line.path.clone(), line.origin_offset))
+            .map(|line| (*line.changeset_id, line.path.clone(), line.origin_offset))
             .collect();
 
         assert_eq!(
@@ -417,7 +417,7 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
         let b_b3_blame = b_b3_with_history.blame(true).await?;
         let b_b3_blame_by_lines: Vec<_> = b_b3_blame
             .lines()?
-            .map(|line| (line.changeset_id, line.path.clone(), line.origin_offset))
+            .map(|line| (*line.changeset_id, line.path.clone(), line.origin_offset))
             .collect();
 
         assert_eq!(
@@ -443,7 +443,7 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
         let b_m1_blame = b_m1_with_history.blame(true).await?;
         let b_m1_blame_by_lines: Vec<_> = b_m1_blame
             .lines()?
-            .map(|line| (line.changeset_id, line.path.clone(), line.origin_offset))
+            .map(|line| (*line.changeset_id, line.path.clone(), line.origin_offset))
             .collect();
 
         assert_eq!(
@@ -503,7 +503,7 @@ async fn test_two_entry_mutable_blame(fb: FacebookInit) -> Result<()> {
         let b_m1_blame = b_m1_with_history.blame(false).await?;
         let b_m1_blame_by_lines: Vec<_> = b_m1_blame
             .lines()?
-            .map(|line| (line.changeset_id, line.path.clone(), line.origin_offset))
+            .map(|line| (*line.changeset_id, line.path.clone(), line.origin_offset))
             .collect();
 
         assert_eq!(
@@ -529,7 +529,7 @@ async fn test_two_entry_mutable_blame(fb: FacebookInit) -> Result<()> {
         let b_b3_blame = b_b3_with_history.blame(true).await?;
         let b_b3_blame_by_lines: Vec<_> = b_b3_blame
             .lines()?
-            .map(|line| (line.changeset_id, line.path.clone(), line.origin_offset))
+            .map(|line| (*line.changeset_id, line.path.clone(), line.origin_offset))
             .collect();
 
         assert_eq!(
@@ -555,7 +555,7 @@ async fn test_two_entry_mutable_blame(fb: FacebookInit) -> Result<()> {
         let b_m1_blame = b_m1_with_history.blame(true).await?;
         let b_m1_blame_by_lines: Vec<_> = b_m1_blame
             .lines()?
-            .map(|line| (line.changeset_id, line.path.clone(), line.origin_offset))
+            .map(|line| (*line.changeset_id, line.path.clone(), line.origin_offset))
             .collect();
 
         assert_eq!(

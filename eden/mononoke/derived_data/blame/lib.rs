@@ -8,7 +8,6 @@
 #![type_length_limit = "1441792"]
 
 mod batch_v2;
-mod compat;
 mod derive_v2;
 mod fetch;
 mod mapping_v2;
@@ -19,7 +18,6 @@ mod tests;
 use anyhow::Error;
 use blobstore::Loadable;
 use blobstore::LoadableError;
-pub use compat::CompatBlame;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use derived_data::DeriveError;
@@ -29,6 +27,7 @@ use manifest::ManifestOps;
 pub use mapping_v2::RootBlameV2;
 use metaconfig_types::BlameVersion;
 use mononoke_types::blame_v2::BlameRejected;
+use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::blame_v2::BlameV2Id;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
@@ -76,14 +75,8 @@ pub async fn fetch_blame_compat(
     repo: impl RepoBlobstoreArc + RepoDerivedDataRef + Sync + Send + Copy,
     csid: ChangesetId,
     path: MPath,
-) -> Result<(CompatBlame, FileUnodeId), BlameError> {
-    let blame_version = repo.repo_derived_data().manager().config().blame_version;
-    let root_unode = match blame_version {
-        BlameVersion::V2 => {
-            let root_blame = RootBlameV2::derive(ctx, &repo, csid).await?;
-            root_blame.root_manifest()
-        }
-    };
+) -> Result<(BlameV2, FileUnodeId), BlameError> {
+    let root_unode = RootBlameV2::derive(ctx, &repo, csid).await?.root_manifest();
     let blobstore = repo.repo_blobstore();
     let file_unode_id = root_unode
         .manifest_unode_id()
@@ -93,10 +86,6 @@ pub async fn fetch_blame_compat(
         .ok_or_else(|| BlameError::NoSuchPath(path.clone()))?
         .into_leaf()
         .ok_or(BlameError::IsDirectory(path))?;
-    match blame_version {
-        BlameVersion::V2 => {
-            let blame = BlameV2Id::from(file_unode_id).load(ctx, &blobstore).await?;
-            Ok((CompatBlame::V2(blame), file_unode_id))
-        }
-    }
+    let blame = BlameV2Id::from(file_unode_id).load(ctx, &blobstore).await?;
+    Ok((blame, file_unode_id))
 }

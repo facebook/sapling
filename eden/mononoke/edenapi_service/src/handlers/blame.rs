@@ -23,7 +23,6 @@ use edenapi_types::ServerError;
 use futures::stream;
 use futures::StreamExt;
 use mononoke_api::ChangesetId;
-use mononoke_api::CompatBlame;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_types::blame_v2::BlameV2;
 
@@ -94,8 +93,8 @@ async fn blame_file_data(repo: HgRepoContext, key: Key) -> Result<BlameData> {
         .await?;
 
     let blame = match blame {
-        CompatBlame::V2(BlameV2::Blame(blame)) => blame,
-        CompatBlame::V2(BlameV2::Rejected(rejected)) => return Err(rejected.into()),
+        BlameV2::Blame(blame) => blame,
+        BlameV2::Rejected(rejected) => return Err(rejected.into()),
     };
 
     let old_csid_index = blame.csid_index();
