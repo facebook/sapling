@@ -1135,6 +1135,19 @@ function compactSequence(revs: Rev[]): Rev[] {
   return revs.map(rev => sortedRevs.indexOf(rev));
 }
 
+/** Reorder rev and rev + 1. Return [] if rev is out of ragne */
+export function reorderedRevs(state: CommitStackState, rev: number): Rev[] {
+  // Basically, `toSpliced`, but it's not avaialble everywhere.
+  const order = state.revs();
+  if (rev < 0 || rev >= order.length - 1) {
+    return [];
+  }
+  const rev1 = order[rev];
+  const rev2 = order[rev + 1];
+  order.splice(rev, 2, rev2, rev1);
+  return order;
+}
+
 type DateTupleProps = {
   /** UTC Unix timestamp in seconds. */
   unix: number;

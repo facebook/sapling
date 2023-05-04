@@ -6,7 +6,6 @@
  */
 
 import type {DragHandler} from './DragHandle';
-import type {CommitStackState} from './stackEdit/commitStackState';
 import type {Rev} from './stackEdit/fileStackState';
 import type {UseStackEditState} from './stackEditState';
 
@@ -14,6 +13,7 @@ import {AnimatedReorderGroup} from './AnimatedReorderGroup';
 import {DragHandle} from './DragHandle';
 import {Tooltip} from './Tooltip';
 import {t, T} from './i18n';
+import {reorderedRevs} from './stackEdit/commitStackState';
 import {ReorderState} from './stackEdit/reorderState';
 import {useStackEditState} from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -229,20 +229,6 @@ export function StackEditCommit({
       </div>
     </div>
   );
-}
-
-// Reorder rev and rev + 1.
-function reorderedRevs(state: CommitStackState, rev: number): Rev[] {
-  // Basically, `toSpliced`, but it's not avaialble everywhere.
-  const order = state.revs();
-  if (rev < 0 || rev >= order.length - 1) {
-    // out of range - canReorder([]) will return false.
-    return [];
-  }
-  const rev1 = order[rev];
-  const rev2 = order[rev + 1];
-  order.splice(rev, 2, rev2, rev1);
-  return order;
 }
 
 /**
