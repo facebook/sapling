@@ -31,6 +31,7 @@ import {
   latestUncommittedChangesData,
   useRunOperation,
 } from './serverAPIState';
+import {editingStackHashes, editingStackState} from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {useRecoilState, useRecoilValue} from 'recoil';
@@ -289,14 +290,58 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
 
 function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactElement | null {
   const uncommitted = useRecoilValue(latestUncommittedChangesData);
+  const [stackHashes, setStackHashes] = useRecoilState(editingStackHashes);
+  const editingStack = useRecoilValue(editingStackState);
 
   const stackCommits = [...walkTreePostorder([tree])].map(t => t.info);
+  const isEditing = stackHashes.size > 0 && stackCommits.some(c => stackHashes.has(c.hash));
+  const isLoaded = isEditing && editingStack.state === 'hasValue';
+  if (isLoaded) {
+    // Show [Cancel] [Save changes].
+    return (
+      <>
+        <Tooltip
+          title={t('Discard stack editing changes')}
+          delayMs={DOCUMENTATION_DELAY}
+          placement="bottom">
+          <VSCodeButton
+            className="cancel-edit-stack-button"
+            appearance="secondary"
+            onClick={() => {
+              setStackHashes(new Set<Hash>());
+            }}>
+            <T>Cancel</T>
+          </VSCodeButton>
+        </Tooltip>
+        <Tooltip
+          title={t('Save stack editing changes')}
+          delayMs={DOCUMENTATION_DELAY}
+          placement="bottom">
+          <VSCodeButton
+            className="confirm-edit-stack-button"
+            appearance="primary"
+            onClick={() => {
+              // TODO.
+            }}>
+            <T>Save changes</T>
+          </VSCodeButton>
+        </Tooltip>
+      </>
+    );
+  }
+
+  const isLoading = isEditing && editingStack.state === 'loading';
+  const isError = isEditing && editingStack.state === 'hasError';
   const isLinear = isTreeLinear(tree);
   const isDirty = stackCommits.some(c => c.isHead) && uncommitted.files.length > 0;
   const obsoleted = stackCommits.filter(c => c.successorInfo != null);
   const hasObsoleted = obsoleted.length > 0;
-  const disabled = isDirty || hasObsoleted || !isLinear;
-  const title = hasObsoleted
+  const disabled = isDirty || hasObsoleted || !isLinear || isLoading || isError;
+  const title = isError
+    ? t(`Failed to load stack: ${editingStack.error}`)
+    : isLoading
+    ? t('Loading stack content')
+    : hasObsoleted
     ? t('Cannot edit stack with commits that have newer versions')
     : isDirty
     ? t(
@@ -306,7 +351,8 @@ function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactEle
     ? t('Reorder, fold, or drop commits')
     : t('Cannot edit non-linear stack');
   const highlight = disabled ? [] : stackCommits;
-  const tooltipDelay = disabled ? undefined : DOCUMENTATION_DELAY;
+  const tooltipDelay = disabled && !isLoading ? undefined : DOCUMENTATION_DELAY;
+  const icon = isLoading ? <Icon icon="loading" slot="start" /> : <StackEditIcon slot="start" />;
 
   return (
     <HighlightCommitsWhileHovering key="submit-stack" toHighlight={highlight}>
@@ -314,8 +360,11 @@ function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactEle
         <VSCodeButton
           className={`edit-stack-button ${disabled && 'disabled'}`}
           disabled={disabled}
-          appearance="icon">
-          <StackEditIcon slot="start" />
+          appearance="icon"
+          onClick={() => {
+            setStackHashes(new Set<Hash>(stackCommits.map(c => c.hash)));
+          }}>
+          {icon}
           <T>Edit stack</T>
         </VSCodeButton>
       </Tooltip>
