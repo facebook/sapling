@@ -15,13 +15,16 @@ import {Commit} from './Commit';
 import {Center, FlexRow, LargeSpinner} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
+import {StackEditIcon} from './StackEditIcon';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {allDiffSummaries, codeReviewProvider, pageVisibility} from './codeReview/CodeReviewInfo';
+import {isTreeLinear, walkTreePostorder} from './getCommitTree';
 import {T, t} from './i18n';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
 import {treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {useArrowKeysToChangeSelection} from './selection';
 import {
+  applicationinfo,
   commitFetchError,
   commitsShownRange,
   isFetchingAdditionalCommits,
@@ -34,7 +37,6 @@ import {useRecoilState, useRecoilValue} from 'recoil';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
-
 import './CommitTreeList.css';
 
 export function CommitTreeList() {
@@ -185,6 +187,7 @@ function FetchingAdditionalCommitsButton() {
 }
 
 function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElement | null {
+  const appInfo = useRecoilValue(applicationinfo);
   const reviewProvider = useRecoilValue(codeReviewProvider);
   const diffMap = useRecoilValue(allDiffSummaries);
   const runOperation = useRunOperation();
@@ -263,6 +266,10 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
     }
   }
 
+  if (appInfo?.version === '(dev)') {
+    actions.push(<StackEditButton key="edit-stack" tree={tree} />);
+  }
+
   if (actions.length === 0) {
     return null;
   }
@@ -277,5 +284,41 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
       {actions}
       {moreActionsButton}
     </div>
+  );
+}
+
+function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactElement | null {
+  const uncommitted = useRecoilValue(latestUncommittedChangesData);
+
+  const stackCommits = [...walkTreePostorder([tree])].map(t => t.info);
+  const isLinear = isTreeLinear(tree);
+  const isDirty = stackCommits.some(c => c.isHead) && uncommitted.files.length > 0;
+  const obsoleted = stackCommits.filter(c => c.successorInfo != null);
+  const hasObsoleted = obsoleted.length > 0;
+  const disabled = isDirty || hasObsoleted || !isLinear;
+  const title = hasObsoleted
+    ? t('Cannot edit stack with commits that have newer versions')
+    : isDirty
+    ? t(
+        'Cannot edit stack when there are uncommitted changes.\nCommit or amend your changes first.',
+      )
+    : isLinear
+    ? t('Reorder, fold, or drop commits')
+    : t('Cannot edit non-linear stack');
+  const highlight = disabled ? [] : stackCommits;
+  const tooltipDelay = disabled ? undefined : DOCUMENTATION_DELAY;
+
+  return (
+    <HighlightCommitsWhileHovering key="submit-stack" toHighlight={highlight}>
+      <Tooltip title={title} delayMs={tooltipDelay} placement="bottom">
+        <VSCodeButton
+          className={`edit-stack-button ${disabled && 'disabled'}`}
+          disabled={disabled}
+          appearance="icon">
+          <StackEditIcon slot="start" />
+          <T>Edit stack</T>
+        </VSCodeButton>
+      </Tooltip>
+    </HighlightCommitsWhileHovering>
   );
 }

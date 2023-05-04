@@ -91,3 +91,11 @@ export function isDescendant(hash: string, commitTree: CommitTree): boolean {
   }
   return false;
 }
+
+/** Test if a tree is linear - no merge or folds. */
+export function isTreeLinear(tree: CommitTreeWithPreviews): boolean {
+  if (tree.children.length > 1 || tree.info.parents.length > 1) {
+    return false;
+  }
+  return tree.children.every(t => isTreeLinear(t));
+}
