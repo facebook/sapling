@@ -23,29 +23,36 @@ import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import './CommandHistoryAndProgress.css';
 
-function displayOperationArgs(info: ValidatedRepoInfo, operation: Operation) {
+function OperationDescription(props: {
+  info: ValidatedRepoInfo;
+  operation: Operation;
+  className?: string;
+}): React.ReactElement {
+  const {info, operation, className} = props;
   const commandName =
     operation.runner === CommandRunner.Sapling
       ? /[^\\/]+$/.exec(info.command)?.[0] ?? 'sl'
       : // TODO: we currently don't know the command name when it's not sapling
         '';
   return (
-    commandName +
-    ' ' +
-    operation
-      .getArgs()
-      .map(arg => {
-        if (typeof arg === 'object') {
-          switch (arg.type) {
-            case 'repo-relative-file':
-              return arg.path;
-            case 'succeedable-revset':
-              return arg.revset;
-          }
-        }
-        return arg;
-      })
-      .join(' ')
+    <code className={className}>
+      {commandName +
+        ' ' +
+        operation
+          .getArgs()
+          .map(arg => {
+            if (typeof arg === 'object') {
+              switch (arg.type) {
+                case 'repo-relative-file':
+                  return arg.path;
+                case 'succeedable-revset':
+                  return arg.revset;
+              }
+            }
+            return arg;
+          })
+          .join(' ')}
+    </code>
   );
 }
 
@@ -64,8 +71,13 @@ export function CommandHistoryAndProgress() {
     return null;
   }
 
-  const commandForDisplay = displayOperationArgs(info, progress.operation);
-  const command = <code className="progress-container-command">{commandForDisplay}</code>;
+  const command = (
+    <OperationDescription
+      info={info}
+      operation={progress.operation}
+      className="progress-container-command"
+    />
+  );
 
   let label;
   let icon;
@@ -113,7 +125,7 @@ export function CommandHistoryAndProgress() {
           <div className="progress-command-tooltip">
             <div className="progress-command-tooltip-command">
               <strong>Command: </strong>
-              {commandForDisplay}
+              <OperationDescription info={info} operation={progress.operation} />
             </div>
             <br />
             <b>Command output:</b>
@@ -126,7 +138,7 @@ export function CommandHistoryAndProgress() {
             <strong>Next to run</strong>
             {queued.map(op => (
               <div key={op.id} id={op.id} className="queued-operation">
-                <code>{displayOperationArgs(info, op)}</code>
+                <OperationDescription info={info} operation={op} />
               </div>
             ))}
           </div>
