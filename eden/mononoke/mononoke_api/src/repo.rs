@@ -146,6 +146,7 @@ use segmented_changelog::DisabledSegmentedChangelog;
 use segmented_changelog::Location;
 use segmented_changelog::SegmentedChangelog;
 use segmented_changelog::SegmentedChangelogRef;
+use skeleton_manifest::RootSkeletonManifestId;
 use skiplist::ArcSkiplistIndex;
 use skiplist::SkiplistIndex;
 use skiplist::SkiplistIndexArc;
@@ -1783,6 +1784,18 @@ impl RepoContext {
                     .repo_derived_data()
                     .manager()
                     .derive_exactly_batch::<RootFsnodeId>(
+                        self.ctx(),
+                        csids,
+                        BatchDeriveOptions::Parallel { gap_size: None },
+                        None,
+                    )
+                    .await?;
+            }
+            DerivableType::SkeletonManifests => {
+                self.repo
+                    .repo_derived_data()
+                    .manager()
+                    .derive_exactly_batch::<RootSkeletonManifestId>(
                         self.ctx(),
                         csids,
                         BatchDeriveOptions::Parallel { gap_size: None },
