@@ -5,15 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {DragHandler} from './DragHandle';
 import type {CommitStackState} from './stackEdit/commitStackState';
 import type {Rev} from './stackEdit/fileStackState';
 import type {UseStackEditState} from './stackEditState';
 
 import {AnimatedReorderGroup} from './AnimatedReorderGroup';
+import {DragHandle} from './DragHandle';
 import {Tooltip} from './Tooltip';
 import {t, T} from './i18n';
+import {ReorderState} from './stackEdit/reorderState';
 import {useStackEditState} from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {is} from 'immutable';
+import {useRef, useState} from 'react';
 import {Icon} from 'shared/Icon';
 import {unwrap} from 'shared/utils';
 
@@ -22,26 +27,122 @@ import './StackEditSubTree.css';
 // <StackEditSubTree /> assumes stack is loaded.
 export function StackEditSubTree(): React.ReactElement {
   const stackEdit = useStackEditState();
+  const [reorderState, setReorderState] = useState<ReorderState>(() => new ReorderState());
 
-  const revs = stackEdit.commitStack.mutableRevs().reverse();
+  const draggingDivRef = useRef<HTMLDivElement | null>(null);
+  const commitListDivRef = useRef<HTMLDivElement | null>(null);
+
+  const commitStack = stackEdit.commitStack;
+  const revs = reorderState.isDragging()
+    ? reorderState.reorderRevs.slice(1).toArray().reverse()
+    : commitStack.mutableRevs().reverse();
+
+  // What will happen after drop.
+  const draggingHintText: string | null =
+    reorderState.draggingRevs.size > 1 ? t('Dependent commits are moved together') : null;
+
+  const getDragHandler = (rev: Rev): DragHandler => {
+    // Track `reorderState` updates in case the <DragHandle/>-captured `reorderState` gets outdated.
+    // Note: this would be unnecessary if React provides `getState()` instead of `state`.
+    let currentReorderState = reorderState;
+    const setCurrentReorderState = (state: ReorderState) => {
+      if (is(state, currentReorderState)) {
+        return;
+      }
+      currentReorderState = state;
+      setReorderState(state);
+    };
+
+    return (x, y, isDragging) => {
+      // Visual update.
+      const draggingDiv = draggingDivRef.current;
+      if (draggingDiv != null) {
+        if (isDragging) {
+          Object.assign(draggingDiv.style, {
+            transform: `translate(${x}px, calc(-50% + ${y}px))`,
+            opacity: '1',
+          });
+        } else {
+          draggingDiv.style.opacity = '0';
+        }
+      }
+      // State update.
+      if (isDragging) {
+        if (currentReorderState.isDragging()) {
+          if (commitListDivRef.current) {
+            const offset = calculateReorderOffset(
+              commitListDivRef.current,
+              y,
+              currentReorderState.draggingRev,
+            );
+            const newReorderState = currentReorderState.withOffset(offset);
+            setCurrentReorderState(newReorderState);
+          }
+        } else {
+          setCurrentReorderState(ReorderState.init(commitStack, rev));
+        }
+      } else if (!isDragging && currentReorderState.isDragging()) {
+        // Apply reorder.
+        const order = currentReorderState.reorderRevs.toArray();
+        const commitStack = stackEdit.commitStack;
+        if (commitStack.canReorder(order)) {
+          const newStackState = commitStack.reorder(order);
+          stackEdit.push(newStackState, t('Reorder'));
+        }
+        // Reset reorder state.
+        setCurrentReorderState(new ReorderState());
+      }
+    };
+  };
 
   return (
-    <div className="stack-edit-subtree">
-      <AnimatedReorderGroup>
-        {revs.map(rev => (
-          <StackEditCommit key={rev} rev={rev} stackEdit={stackEdit} />
-        ))}
-      </AnimatedReorderGroup>
-    </div>
+    <>
+      <div className="stack-edit-subtree" ref={commitListDivRef}>
+        <AnimatedReorderGroup>
+          {revs.map(rev => {
+            return (
+              <StackEditCommit
+                key={rev}
+                rev={rev}
+                stackEdit={stackEdit}
+                isReorderPreview={reorderState.draggingRevs.includes(rev)}
+                onDrag={getDragHandler(rev)}
+              />
+            );
+          })}
+        </AnimatedReorderGroup>
+      </div>
+      {reorderState.isDragging() && (
+        <div className="stack-edit-dragging" ref={draggingDivRef}>
+          <div className="stack-edit-dragging-commit-list">
+            {reorderState.draggingRevs
+              .toArray()
+              .reverse()
+              .map(rev => (
+                <StackEditCommit key={rev} rev={rev} stackEdit={stackEdit} />
+              ))}
+          </div>
+          {draggingHintText && (
+            <div className="stack-edit-dragging-hint-container">
+              <span className="stack-edit-dragging-hint-text tooltip">{draggingHintText}</span>
+            </div>
+          )}
+        </div>
+      )}
+    </>
   );
 }
 
 export function StackEditCommit({
   rev,
   stackEdit,
+  onDrag,
+  isReorderPreview,
 }: {
   rev: Rev;
   stackEdit: UseStackEditState;
+  onDrag?: DragHandler;
+  isReorderPreview?: boolean;
 }): React.ReactElement {
   const state = stackEdit.commitStack;
   const canFold = state.canFoldDown(rev);
@@ -115,10 +216,13 @@ export function StackEditCommit({
   );
 
   return (
-    <div className="commit" data-reorder-id={commit.key}>
+    <div className="commit" data-reorder-id={onDrag ? commit.key : ''} data-rev={rev}>
       <div className="commit-rows">
         <div className="commit-avatar" />
-        <div className="commit-details">
+        <div className={`commit-details${isReorderPreview ? ' commit-reorder-preview' : ''}`}>
+          <DragHandle onDrag={onDrag}>
+            <Icon icon="grabber" />
+          </DragHandle>
           {buttons}
           {title}
         </div>
@@ -139,4 +243,37 @@ function reorderedRevs(state: CommitStackState, rev: number): Rev[] {
   const rev2 = order[rev + 1];
   order.splice(rev, 2, rev2, rev1);
   return order;
+}
+
+/**
+ * Calculate the reorder "offset" based on the y axis.
+ *
+ * This function assumes the stack rev 0 is used as the "public" (or "immutable")
+ * commit that is not rendered. If that's no longer the case, adjust the
+ * `invisibleRevCount` accordingly.
+ *
+ * This is done by counting how many `.commit`s are below the y axis.
+ * If nothing is reordered, there should be `rev - invisibleRevCount` commits below.
+ * The existing `rev`s on the `.commit`s are not considered, as they can be before
+ * or after the reorder preview, which are noisy to consider.
+ */
+function calculateReorderOffset(
+  container: HTMLDivElement,
+  y: number,
+  draggingRev: Rev,
+  invisibleRevCount = 1,
+): number {
+  let belowCount = 0;
+  container.querySelectorAll('.commit').forEach(element => {
+    const commitDiv = element as HTMLDivElement;
+    // commitDiv.getBoundingClientRect() will consider the animation transform.
+    // We don't want to be affected by animation, so we use offsetParent here,
+    // assuming offsetParent is not animated.
+    const commitY = unwrap(commitDiv.offsetParent).getBoundingClientRect().y + commitDiv.offsetTop;
+    if (commitY > y) {
+      belowCount += 1;
+    }
+  });
+  const offset = invisibleRevCount + belowCount - draggingRev;
+  return offset;
 }
