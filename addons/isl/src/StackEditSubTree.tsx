@@ -9,6 +9,7 @@ import type {CommitStackState} from './stackEdit/commitStackState';
 import type {Rev} from './stackEdit/fileStackState';
 import type {UseStackEditState} from './stackEditState';
 
+import {AnimatedReorderGroup} from './AnimatedReorderGroup';
 import {Tooltip} from './Tooltip';
 import {t, T} from './i18n';
 import {useStackEditState} from './stackEditState';
@@ -26,9 +27,11 @@ export function StackEditSubTree(): React.ReactElement {
 
   return (
     <div className="stack-edit-subtree">
-      {revs.map(rev => (
-        <StackEditCommit key={rev} rev={rev} stackEdit={stackEdit} />
-      ))}
+      <AnimatedReorderGroup>
+        {revs.map(rev => (
+          <StackEditCommit key={rev} rev={rev} stackEdit={stackEdit} />
+        ))}
+      </AnimatedReorderGroup>
     </div>
   );
 }
@@ -112,7 +115,7 @@ export function StackEditCommit({
   );
 
   return (
-    <div className="commit">
+    <div className="commit" data-reorder-id={commit.key}>
       <div className="commit-rows">
         <div className="commit-avatar" />
         <div className="commit-details">
