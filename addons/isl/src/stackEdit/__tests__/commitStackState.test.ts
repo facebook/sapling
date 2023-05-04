@@ -671,6 +671,26 @@ describe('CommitStackState', () => {
       ]);
     });
 
+    it('follows reorder', () => {
+      // Reorder B and C in the example stack.
+      const stack = new CommitStackState(exportStack1).reorder([0, 1, 3, 2]);
+      expect(stack.calculateImportStack({goto: 'B_NODE', preserveDirtyFiles: true})).toMatchObject([
+        ['commit', {text: 'C'}],
+        ['commit', {mark: ':r3', text: 'B'}],
+        ['reset', {mark: ':r3'}],
+      ]);
+    });
+
+    it('stays at the stack top on reorder', () => {
+      // Reorder B and C in the example stack.
+      const stack = new CommitStackState(exportStack1).reorder([0, 1, 3, 2]);
+      expect(stack.calculateImportStack({goto: 'C_NODE'})).toMatchObject([
+        ['commit', {text: 'C'}],
+        ['commit', {mark: ':r3', text: 'B'}],
+        ['goto', {mark: ':r3'}],
+      ]);
+    });
+
     it('hides dropped commits', () => {
       let stack = new CommitStackState(exportStack1);
       const revs = stack.revs();

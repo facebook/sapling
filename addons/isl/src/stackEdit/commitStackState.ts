@@ -290,9 +290,12 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    */
   calculateImportStack(opts?: {goto?: Rev | Hash; preserveDirtyFiles?: boolean}): ImportStack {
     // Resolve goto to a Rev.
+    // Special case: if it's at the old stack top, use the new stack top instead.
     const gotoRev: Rev | undefined =
       typeof opts?.goto === 'string'
-        ? this.stack.findLastKey(c => c.originalNodes.has(opts.goto as string))
+        ? this.originalStack.at(-1)?.node == opts.goto
+          ? this.stack.last()?.rev
+          : this.stack.findLastKey(c => c.originalNodes.has(opts.goto as string))
         : opts?.goto;
 
     // Figure out the first changed rev.
