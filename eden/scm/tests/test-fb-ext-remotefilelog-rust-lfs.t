@@ -9,7 +9,6 @@
   $ newserver master
   $ clone master shallow
   $ cd shallow
-  $ setconfig remotefilelog.useruststore=True
   $ setconfig remotefilelog.lfs=True lfs.threshold=10B lfs.url=file:$TESTTMP/lfs
 
   $ printf 'THIS IS A BINARY LFS BLOB\0' > blob

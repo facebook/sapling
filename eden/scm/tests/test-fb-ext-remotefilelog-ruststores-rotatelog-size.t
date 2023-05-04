@@ -4,7 +4,7 @@
   $ setconfig experimental.allowfilepeer=True
 
   $ . "$TESTDIR/library.sh"
-  $ setconfig remotefilelog.useruststore=True remotefilelog.write-hgcache-to-indexedlog=True
+  $ setconfig remotefilelog.write-hgcache-to-indexedlog=True
   $ setconfig remotefilelog.debug=False
 
   $ newserver master

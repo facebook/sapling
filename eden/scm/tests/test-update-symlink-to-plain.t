@@ -8,9 +8,6 @@
 #testcases legacyupdater rustupdater
 
   $ configure modern
-#if rustupdater
-  $ setconfig remotefilelog.useruststore=True
-#endif
 
   $ newserver server1
   $ clone server1 client

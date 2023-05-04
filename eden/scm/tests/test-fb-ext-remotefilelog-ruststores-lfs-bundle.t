@@ -10,7 +10,7 @@
   $ clone master shallow --noupdate
   $ cd shallow
 
-  $ setconfig remotefilelog.useruststore=True remotefilelog.lfs=True
+  $ setconfig remotefilelog.lfs=True
   $ setconfig lfs.url=file:$TESTTMP/lfs-server
 
   $ echo "X" > x

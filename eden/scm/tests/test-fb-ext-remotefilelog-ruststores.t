@@ -9,7 +9,6 @@
 
   $ clone master shallow --noupdate
   $ cd shallow
-  $ setconfig remotefilelog.useruststore=True
   $ setconfig treemanifest.useruststore=True
 
   $ echo x > x
