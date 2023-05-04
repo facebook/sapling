@@ -102,7 +102,8 @@ function SubTree({tree, depth}: {tree: CommitTreeWithPreviews; depth: number}): 
   const {info, children, previewType} = tree;
   const isPublic = info.phase === 'public';
 
-  const stackActions = depth === 1 ? <StackActions key="stack-actions" tree={tree} /> : null;
+  const stackActions =
+    !isPublic && depth === 1 ? <StackActions key="stack-actions" tree={tree} /> : null;
 
   const renderedChildren = (children ?? [])
     .map(tree => <SubTree key={`tree-${tree.info.hash}`} tree={tree} depth={depth + 1} />)
@@ -335,9 +336,11 @@ function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactEle
   const isError = isEditing && editingStack.state === 'hasError';
   const isLinear = isTreeLinear(tree);
   const isDirty = stackCommits.some(c => c.isHead) && uncommitted.files.length > 0;
+  const hasPublic = stackCommits.some(c => c.phase === 'public');
   const obsoleted = stackCommits.filter(c => c.successorInfo != null);
   const hasObsoleted = obsoleted.length > 0;
-  const disabled = isDirty || hasObsoleted || !isLinear || isLoading || isError || isPreview;
+  const disabled =
+    isDirty || hasObsoleted || !isLinear || isLoading || isError || isPreview || hasPublic;
   const title = isError
     ? t(`Failed to load stack: ${editingStack.error}`)
     : isLoading
@@ -350,6 +353,8 @@ function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactEle
       )
     : isPreview
     ? t('Cannot edit pending changes')
+    : hasPublic
+    ? t('Cannot edit public commits')
     : isLinear
     ? t('Reorder, fold, or drop commits')
     : t('Cannot edit non-linear stack');
