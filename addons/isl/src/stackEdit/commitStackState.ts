@@ -714,6 +714,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
   /**
    * Test if the commit can be folded with its parent.
    */
+  @cached({cacheSize: 1000})
   canFoldDown(rev: Rev): boolean {
     if (rev <= 0) {
       return false;
@@ -813,6 +814,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
   /**
    * Test if the commit can be dropped. That is, none of its descendants depend on it.
    */
+  @cached({cacheSize: 1000})
   canDrop(rev: Rev): boolean {
     if (rev < 0 || this.stack.get(rev)?.immutableKind !== 'none') {
       return false;
@@ -909,6 +911,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     return rev > 0 && this.canMoveUp(rev - 1);
   }
 
+  @cached({cacheSize: 1000})
   canMoveUp(rev: Rev): boolean {
     return this.canReorder(reorderedRevs(this, rev));
   }
