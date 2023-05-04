@@ -54,13 +54,6 @@ from .util import (
     write_file_atomically,
 )
 
-try:
-    from eden.thrift import client  # @manual
-except ImportError:
-    # Thrift-py3 is not supported in the CMake build yet.
-    pass
-
-
 log: logging.Logger = logging.getLogger(__name__)
 
 if typing.TYPE_CHECKING:
@@ -457,12 +450,6 @@ class EdenInstance(AbstractEdenInstance):
     def get_mount_paths(self) -> List[str]:
         """Return the paths of the set mount points stored in config.json"""
         return [str(path) for path in self._get_directory_map().keys()]
-
-    def get_thrift_client(self, timeout: Optional[float] = None) -> "client.EdenClient":
-        return client.create_thrift_client(
-            eden_dir=str(self._config_dir),
-            timeout=timeout,
-        )
 
     def get_thrift_client_legacy(
         self, timeout: Optional[float] = None

@@ -294,7 +294,7 @@ def _have_ntapi_extension_module() -> bool:
         return False
 
     try:
-        from eden.integration.lib.ntapi import get_directory_entry_size  # @nolint
+        from eden.integration.lib.ntapi import get_directory_entry_size  # @manual # @nolint
         return True
     except ImportError:
         return False

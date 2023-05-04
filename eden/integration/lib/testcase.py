@@ -16,6 +16,8 @@ import sys
 import time
 import typing
 import unittest
+
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -33,14 +35,6 @@ from typing import (
 import eden.config
 from eden.test_support.testcase import EdenTestCaseBase
 from eden.thrift import legacy
-
-try:
-    from eden.thrift import client  # @manual
-except ImportError:
-    # Thrift-py3 is not supported in the CMake build yet.
-    pass
-
-from pathlib import Path
 
 from facebook.eden.ttypes import SourceControlType
 
@@ -207,12 +201,6 @@ class EdenTestCase(EdenTestCaseBase):
         Get a thrift client to the edenfs daemon.
         """
         return self.eden.get_thrift_client_legacy()
-
-    def get_thrift_client(self) -> "client.EdenClient":
-        """
-        Get a streaming thrift client to the edenfs daemon.
-        """
-        return self.eden.get_thrift_client()
 
     def get_counters(self) -> typing.Mapping[str, float]:
         with self.get_thrift_client_legacy() as thrift_client:

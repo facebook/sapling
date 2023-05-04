@@ -6,9 +6,14 @@
 
 # pyre-strict
 
-from eden.fs.service.eden.types import ScmFileStatus
-from eden.fs.service.streamingeden.types import StreamChangesSinceParams
+import os
+from typing import Optional
+
+from eden.fs.service.eden.thrift_types import ScmFileStatus
+from eden.fs.service.streamingeden.thrift_clients import StreamingEdenService
+from eden.fs.service.streamingeden.thrift_types import StreamChangesSinceParams
 from eden.integration.lib import hgrepo
+from thrift.python.client import ClientType, get_client
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
@@ -25,19 +30,33 @@ class EdenJournalTest(EdenHgTestCase):
         repo.write_file("foo/bar.txt", "bar\n")
         self.commit2 = repo.commit("Commit 2")
 
-    async def test_journal_position_write(self) -> None:
+    def test_journal_position_write(self) -> None:
         """
         Verify that the journal is updated when writing to the working copy.
         """
-        async with self.get_thrift_client() as client:
-            before = await client.getCurrentJournalPosition(self.mount_path_bytes)
+        with self.get_thrift_client_legacy() as client:
+            before = client.getCurrentJournalPosition(self.mount_path_bytes)
 
         self.repo.write_file("hello.txt", "hola\n")
 
-        async with self.get_thrift_client() as client:
-            after = await client.getCurrentJournalPosition(self.mount_path_bytes)
+        with self.get_thrift_client_legacy() as client:
+            after = client.getCurrentJournalPosition(self.mount_path_bytes)
 
         self.assertNotEqual(before, after)
+
+    def get_streaming_client(
+        self, timeout: Optional[float] = None
+    ) -> StreamingEdenService.Async:
+        eden_dir = self.eden._eden_dir
+        socket_path = os.path.join(eden_dir, "socket")
+        if timeout is None:
+            timeout = 0
+        return get_client(
+            StreamingEdenService,
+            path=socket_path,
+            timeout=timeout,
+            client_type=ClientType.THRIFT_ROCKET_CLIENT_TYPE,
+        )
 
     async def test_journal_stream_changes_since(self) -> None:
         """
@@ -45,7 +64,10 @@ class EdenJournalTest(EdenHgTestCase):
         files/directories across update.
         """
 
-        async with self.get_thrift_client() as client:
+        # This is the only integration test that needs Thrift streaming
+        # support, which currently is not supported in the open source build.
+
+        async with self.get_streaming_client() as client:
             before = await client.getCurrentJournalPosition(self.mount_path_bytes)
 
         self.repo.update(self.commit1)
@@ -57,7 +79,7 @@ class EdenJournalTest(EdenHgTestCase):
         removed = set()
         modified = set()
 
-        async with self.get_thrift_client() as client:
+        async with self.get_streaming_client() as client:
             params = StreamChangesSinceParams(
                 mountPoint=self.mount_path_bytes,
                 fromPosition=before,
