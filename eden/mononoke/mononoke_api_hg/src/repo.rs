@@ -871,7 +871,7 @@ impl HgRepoContext {
         &self,
         common: Vec<HgChangesetId>,
         heads: Vec<HgChangesetId>,
-    ) -> Result<BTreeMap<HgChangesetId, (Vec<HgChangesetId>, bool)>, MononokeError> {
+    ) -> Result<Vec<(HgChangesetId, (Vec<HgChangesetId>, bool))>, MononokeError> {
         let ctx = self.ctx().clone();
         let blob_repo = self.blob_repo();
         let phases = blob_repo.phases();
@@ -899,29 +899,29 @@ impl HgRepoContext {
             }
         )?;
 
-        let cs_parent_mapping: HashMap<ChangesetId, Vec<ChangesetId>> =
-            stream::iter(missing_commits.clone().into_iter())
-                .map(move |cs_id| async move {
-                    let parents = blob_repo
-                        .changeset_fetcher()
-                        .get_parents(self.ctx(), cs_id)
-                        .await?;
-                    Ok::<_, Error>((cs_id, parents))
-                })
-                .buffered(100)
-                .try_collect::<HashMap<_, _>>()
-                .await?;
+        let cs_parent_mapping = stream::iter(missing_commits.clone())
+            .map(move |cs_id| async move {
+                let parents = blob_repo
+                    .changeset_fetcher()
+                    .get_parents(self.ctx(), cs_id)
+                    .await?;
+                Ok::<_, Error>((cs_id, parents))
+            })
+            .buffered(100)
+            .try_collect::<Vec<_>>()
+            .await?;
 
-        let cs_ids = cs_parent_mapping
+        let all_cs_ids = cs_parent_mapping
             .clone()
-            .into_values()
+            .into_iter()
+            .map(|(_, parents)| parents)
             .flatten()
             .chain(missing_commits)
             .collect::<HashSet<_>>();
 
         let map_chunk_size = 100;
 
-        let bonsai_hg_mapping = stream::iter(cs_ids)
+        let bonsai_hg_mapping = stream::iter(all_cs_ids)
             .chunks(map_chunk_size)
             .then(move |chunk| async move {
                 let mapping = self
@@ -938,27 +938,27 @@ impl HgRepoContext {
             .map(|(hgid, csid)| (csid, hgid))
             .collect::<HashMap<_, _>>();
 
-        let mut hg_parent_mapping: BTreeMap<HgChangesetId, (Vec<HgChangesetId>, bool)> =
-            BTreeMap::new();
-
-        let get_hg_id = |cs_id| {
+        let get_hg_id_fn = |cs_id| {
             bonsai_hg_mapping
-                .get(cs_id)
+                .get(&cs_id)
                 .cloned()
                 .with_context(|| format_err!("failed to find bonsai '{}' mapping to hg", cs_id))
         };
 
-        for (cs_id, cs_parents) in cs_parent_mapping.iter() {
-            let hg_id = get_hg_id(cs_id)?;
-            let mut hg_parents = cs_parents
-                .iter()
-                .map(get_hg_id)
-                .collect::<Result<Vec<HgChangesetId>, Error>>()
-                .map_err(MononokeError::from)?;
-            hg_parents.sort();
-            let is_draft = draft_commits.contains(&hg_id);
-            hg_parent_mapping.insert(hg_id, (hg_parents, is_draft));
-        }
+        let hg_parent_mapping = cs_parent_mapping
+            .into_iter()
+            .map(|(cs_id, cs_parents)| {
+                let hg_id = get_hg_id_fn(cs_id)?;
+                let hg_parents = cs_parents
+                    .into_iter()
+                    .map(get_hg_id_fn)
+                    .collect::<Result<Vec<HgChangesetId>, Error>>()
+                    .map_err(MononokeError::from)?;
+                let is_draft = draft_commits.contains(&hg_id);
+                Ok((hg_id, (hg_parents, is_draft)))
+            })
+            .collect::<Result<Vec<_>, MononokeError>>()?;
+
         Ok(hg_parent_mapping)
     }
 }
