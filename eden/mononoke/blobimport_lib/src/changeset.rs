@@ -67,7 +67,7 @@ use mercurial_types::RepoPath;
 use mercurial_types::Type;
 use mercurial_types::NULL_HASH;
 use mononoke_types::BonsaiChangeset;
-use mononoke_types::ContentMetadata;
+use mononoke_types::ContentMetadataV2;
 use phases::PhasesArc;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_identity::RepoIdentityRef;
@@ -201,7 +201,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
 fn upload_entry(
     ctx: CoreContext,
     blobrepo: &BlobRepo,
-    lfs_uploader: Arc<JobProcessor<LFSContent, ContentMetadata>>,
+    lfs_uploader: Arc<JobProcessor<LFSContent, ContentMetadataV2>>,
     entry: RevlogEntry,
     path: Option<MPath>,
 ) -> BoxFuture<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error> {

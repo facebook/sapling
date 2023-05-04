@@ -57,7 +57,7 @@ pub async fn force_rechunk<B: Blobstore + Clone + 'static>(
 /// Note that this fn is not suitable for unchunking a file,
 /// as if existing file uses smaller-than-requested chunk size,
 /// this fn won't do anything.
-/// Returns a future, resolving to the `ContentMetadata` of the
+/// Returns a future, resolving to the `ContentMetadataV2` of the
 /// processed `ContentId` and whether it was *actually* rechunked
 pub async fn rechunk<B: Blobstore + Clone + 'static>(
     blobstore: &B,

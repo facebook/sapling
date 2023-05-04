@@ -47,7 +47,7 @@ use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
-use mononoke_types::ContentMetadata;
+use mononoke_types::ContentMetadataV2;
 use mononoke_types::FileType;
 use mononoke_types::FsnodeId;
 use mononoke_types::MPath;
@@ -185,13 +185,13 @@ pub async fn prefetch_content_metadata(
     ctx: &CoreContext,
     blobstore: &impl Blobstore,
     content_ids: HashSet<ContentId>,
-) -> Result<HashMap<ContentId, ContentMetadata>> {
+) -> Result<HashMap<ContentId, ContentMetadataV2>> {
     content_ids
         .into_iter()
         .map({
             move |content_id| async move {
                 match get_metadata(blobstore, ctx, &FetchKey::Canonical(content_id)).await? {
-                    Some(metadata) => Ok(Some((content_id, ContentMetadata::from(metadata)))),
+                    Some(metadata) => Ok(Some((content_id, metadata))),
                     None => Ok(None),
                 }
             }
@@ -207,7 +207,7 @@ pub async fn prefetch_content_metadata(
 async fn collect_fsnode_subentries(
     ctx: &CoreContext,
     blobstore: &impl Blobstore,
-    prefetched_content_metadata: &HashMap<ContentId, ContentMetadata>,
+    prefetched_content_metadata: &HashMap<ContentId, ContentMetadataV2>,
     parents: Vec<FsnodeId>,
     subentries: BTreeMap<
         MPathElement,
@@ -321,7 +321,7 @@ async fn create_fsnode(
     ctx: &CoreContext,
     blobstore: &Arc<dyn Blobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
-    prefetched_content_metadata: Arc<HashMap<ContentId, ContentMetadata>>,
+    prefetched_content_metadata: Arc<HashMap<ContentId, ContentMetadataV2>>,
     tree_info: TreeInfo<FsnodeId, (ContentId, FileType), Option<FsnodeSummary>>,
 ) -> Result<(Option<FsnodeSummary>, FsnodeId)> {
     let entries = collect_fsnode_subentries(

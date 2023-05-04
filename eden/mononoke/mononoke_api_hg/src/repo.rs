@@ -67,7 +67,7 @@ use mononoke_api::repo::RepoContext;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
-use mononoke_types::ContentMetadata;
+use mononoke_types::ContentMetadataV2;
 use mononoke_types::MPath;
 use mononoke_types::RepoPath;
 use phases::PhasesRef;
@@ -242,7 +242,7 @@ impl HgRepoContext {
         size: u64,
         data: impl Stream<Item = Result<Bytes, Error>> + Send,
         bubble_id: Option<BubbleId>,
-    ) -> Result<ContentMetadata, MononokeError> {
+    ) -> Result<ContentMetadataV2, MononokeError> {
         filestore::store(
             &self.bubble_blobstore(bubble_id).await?,
             *self.blob_repo().filestore_config(),
@@ -251,7 +251,6 @@ impl HgRepoContext {
             data,
         )
         .await
-        .map(ContentMetadata::from)
         .map_err(MononokeError::from)
     }
 

@@ -22,7 +22,7 @@ use futures::future::TryFutureExt;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
 use mercurial_types::blobs::LFSContent;
-use mononoke_types::ContentMetadata;
+use mononoke_types::ContentMetadataV2;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::info;
 use tokio::io::BufReader;
@@ -60,7 +60,7 @@ async fn do_lfs_upload(
     repo: &(impl RepoBlobstoreRef + FilestoreConfigRef),
     lfs_helper: &str,
     lfs: &LFSContent,
-) -> Result<ContentMetadata, Error> {
+) -> Result<ContentMetadataV2, Error> {
     let metadata = filestore::get_metadata(
         repo.repo_blobstore(),
         ctx,
@@ -69,7 +69,6 @@ async fn do_lfs_upload(
     .await?;
 
     if let Some(metadata) = metadata {
-        let metadata = ContentMetadata::from(metadata);
         info!(
             ctx.logger(),
             "lfs_upload: reusing blob {:?}", metadata.sha256
@@ -105,7 +104,7 @@ pub async fn lfs_upload(
     repo: &(impl RepoBlobstoreRef + FilestoreConfigRef),
     lfs_helper: &str,
     lfs: &LFSContent,
-) -> Result<ContentMetadata, Error> {
+) -> Result<ContentMetadataV2, Error> {
     let max_attempts = 5;
     let mut attempt = 0;
 

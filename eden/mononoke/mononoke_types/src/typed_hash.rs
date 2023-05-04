@@ -31,7 +31,6 @@ use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::bonsai_changeset::BonsaiChangeset;
 use crate::content_chunk::ContentChunk;
-use crate::content_metadata::ContentMetadata;
 use crate::content_metadata_v2::ContentMetadataV2;
 use crate::deleted_manifest_v2::DeletedManifestV2;
 use crate::fastlog_batch::FastlogBatch;
@@ -130,11 +129,7 @@ pub struct ContentId(Blake2);
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct ContentChunkId(Blake2);
 
-/// An identifier for mapping from a ContentId to various aliases for that content
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-pub struct ContentMetadataId(Blake2);
-
-/// An identifier for mapping from ContentId to ContentMetadata
+/// An identifier for mapping from ContentId to ContentMetadataV2
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct ContentMetadataV2Id(Blake2);
 
@@ -620,17 +615,6 @@ impl_typed_hash! {
 }
 
 impl_typed_hash_no_context! {
-    hash_type => ContentMetadataId,
-    thrift_type => thrift::ContentMetadataId,
-    blobstore_key => "content_metadata",
-}
-
-impl_typed_hash_loadable! {
-    hash_type => ContentMetadataId,
-    value_type => ContentMetadata,
-}
-
-impl_typed_hash_no_context! {
     hash_type => ContentMetadataV2Id,
     thrift_type => thrift::ContentMetadataV2Id,
     blobstore_key => "content_metadata2",
@@ -647,19 +631,6 @@ impl_typed_hash! {
     value_type => FastlogBatch,
     context_type => FastlogBatchIdContext,
     context_key => "fastlogbatch",
-}
-
-impl From<ContentId> for ContentMetadataId {
-    fn from(content: ContentId) -> Self {
-        Self(content.0)
-    }
-}
-
-impl MononokeId for ContentMetadataId {
-    #[inline]
-    fn sampling_fingerprint(&self) -> u64 {
-        self.0.sampling_fingerprint()
-    }
 }
 
 impl From<ContentId> for ContentMetadataV2Id {
@@ -816,12 +787,6 @@ mod test {
             format!("skeletonmanifest.blake2.{}", id)
         );
 
-        let id = ContentMetadataId::from_byte_array([1; 32]);
-        assert_eq!(
-            id.blobstore_key(),
-            format!("content_metadata.blake2.{}", id)
-        );
-
         let id = ContentMetadataV2Id::from_byte_array([1; 32]);
         assert_eq!(
             id.blobstore_key(),
@@ -896,11 +861,6 @@ mod test {
         assert_eq!(id, deserialized);
 
         let id = SkeletonManifestId::from_byte_array([1; 32]);
-        let serialized = serde_json::to_string(&id).unwrap();
-        let deserialized = serde_json::from_str(&serialized).unwrap();
-        assert_eq!(id, deserialized);
-
-        let id = ContentMetadataId::from_byte_array([1; 32]);
         let serialized = serde_json::to_string(&id).unwrap();
         let deserialized = serde_json::from_str(&serialized).unwrap();
         assert_eq!(id, deserialized);

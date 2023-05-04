@@ -7,7 +7,7 @@
 
 use anyhow::Error;
 use mononoke_types::hash::RichGitSha1;
-use mononoke_types::ContentMetadata;
+use mononoke_types::ContentMetadataV2;
 use mononoke_types::FileType;
 
 use crate::mode;
@@ -21,7 +21,7 @@ pub struct BlobHandle {
 }
 
 impl BlobHandle {
-    pub fn new(metadata: ContentMetadata, file_type: FileType) -> Self {
+    pub fn new(metadata: ContentMetadataV2, file_type: FileType) -> Self {
         Self {
             oid: metadata.git_sha1,
             file_type,

@@ -45,7 +45,6 @@ typedef IdType SkeletonManifestId (rust.newtype)
 typedef IdType MPathHash (rust.newtype)
 typedef IdType BasenameSuffixSkeletonManifestId (rust.newtype)
 
-typedef IdType ContentMetadataId (rust.newtype)
 typedef IdType ContentMetadataV2Id (rust.newtype)
 typedef IdType FastlogBatchId (rust.newtype)
 typedef IdType BlameId (rust.newtype)
@@ -207,23 +206,6 @@ union ContentChunk {
 union ContentAlias {
   1: ContentId ContentId; // File content alias
 }
-
-// Metadata about a file. This includes hash aliases, or the file's size.
-// NOTE: Fields 1 through 5 have always been written by Mononoke, and Mononoke
-// expects them to be present when reading ContentMetadata structs back
-// from its Filestore. They're marked optional so we can report errors if
-// they're absent at runtime (as opposed to letting Thrift give us a default
-// value).
-struct ContentMetadata {
-  // total_size is needed to make GitSha1 meaningful, but generally useful
-  1: optional i64 total_size;
-  // ContentId we're providing metadata for
-  2: optional ContentId content_id;
-  3: optional Sha1 sha1;
-  4: optional Sha256 sha256;
-  // always object type "blob"
-  5: optional GitSha1 git_sha1;
-} (rust.exhaustive)
 
 // Metadata and properties associated with a file.
 // NOTE: Fields 1 through 10 will always be written by Mononoke, and Mononoke

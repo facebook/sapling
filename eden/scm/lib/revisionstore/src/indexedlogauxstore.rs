@@ -34,7 +34,7 @@ use crate::indexedlogutil::Store;
 use crate::indexedlogutil::StoreOpenOptions;
 use crate::indexedlogutil::StoreType;
 
-/// See edenapi_types::FileAuxData and mononoke_types::ContentMetadata
+/// See edenapi_types::FileAuxData and mononoke_types::ContentMetadataV2
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub struct Entry {
     pub(crate) total_size: u64,

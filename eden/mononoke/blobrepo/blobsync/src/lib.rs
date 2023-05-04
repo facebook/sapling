@@ -57,7 +57,7 @@ mod test {
     use memblob::Memblob;
     use mononoke_types::typed_hash;
     use mononoke_types::BlobstoreBytes;
-    use mononoke_types::ContentMetadata;
+    use mononoke_types::ContentMetadataV2;
     use mononoke_types::RepositoryId;
     use redactedblobstore::RedactedBlobstore;
     use repo_blobstore::RepoBlobstore;

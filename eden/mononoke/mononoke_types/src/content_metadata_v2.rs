@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use blobstore::BlobstoreBytes;
 use bytes::Bytes;
 use fbthrift::compact_protocol;
 use futures::Stream;
@@ -26,6 +28,43 @@ use crate::typed_hash::ContentMetadataV2Id;
 
 const MAX_BYTES_FOR_FIRST_LINE: usize = 64;
 const UTF8_BYTES_COUNT: usize = 8;
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ContentAlias(ContentId);
+
+impl ContentAlias {
+    pub fn from_content_id(id: ContentId) -> Self {
+        ContentAlias(id)
+    }
+
+    pub fn from_bytes(blob: Bytes) -> Result<Self> {
+        let thrift_tc = compact_protocol::deserialize(blob.as_ref())
+            .with_context(|| ErrorKind::BlobDeserializeError("ContentAlias".into()))?;
+        Self::from_thrift(thrift_tc)
+    }
+
+    pub fn from_thrift(ca: thrift::ContentAlias) -> Result<Self> {
+        match ca {
+            thrift::ContentAlias::ContentId(id) => {
+                Ok(Self::from_content_id(ContentId::from_thrift(id)?))
+            }
+            thrift::ContentAlias::UnknownField(x) => bail!(ErrorKind::InvalidThrift(
+                "ContentAlias".into(),
+                format!("unknown content alias field: {}", x)
+            )),
+        }
+    }
+
+    pub fn into_blob(self) -> BlobstoreBytes {
+        let alias = thrift::ContentAlias::ContentId(self.0.into_thrift());
+        let data = compact_protocol::serialize(&alias);
+        BlobstoreBytes::from_bytes(data)
+    }
+
+    pub fn content_id(&self) -> ContentId {
+        self.0
+    }
+}
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ContentMetadataV2 {
