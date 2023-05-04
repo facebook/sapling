@@ -50,7 +50,7 @@ export function reorderWithDeps(
 
   let order: Rev[] = [];
   const deps: Rev[] = [origRev];
-  const filterFunc = (i: Rev) => deps.indexOf(i) < 0;
+  const filterFunc = (i: Rev) => !deps.includes(i);
   if (offset < 0) {
     // Moved down.
     const depRevs = new Set(depMap.get(origRev) ?? []);
