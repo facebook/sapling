@@ -11,6 +11,7 @@ import type {CommitInfo} from '../types';
 import type {Hash} from 'shared/types/common';
 import type {ImportCommit, ImportStack, Mark} from 'shared/types/stack';
 
+import {t} from '../i18n';
 import {CommitPreview} from '../previews';
 import {Operation} from './Operation';
 
@@ -68,6 +69,16 @@ export class ImportStackOperation extends Operation {
 
   getStdin() {
     return JSON.stringify(this.importStack);
+  }
+
+  getDescriptionForDisplay() {
+    return {
+      description: t('Applying stack changes'),
+      tooltip: t(
+        'This operation does not have a traditional command line equivalent. \n' +
+          'You might use commit, amend, histedit, rebase, absorb, fold, or a combination of them for similar functionalities.',
+      ),
+    };
   }
 
   makeOptimisticApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {

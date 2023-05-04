@@ -38,6 +38,11 @@ export abstract class Operation {
     return undefined;
   }
 
+  /** Description of the operation. This can replace the default display. */
+  getDescriptionForDisplay(): OperationDescription | undefined {
+    return undefined;
+  }
+
   public runner: CommandRunner = CommandRunner.Sapling;
 
   /** Used to preview how this operation would affect the tree, if you ran it. */
@@ -59,3 +64,12 @@ export abstract class Operation {
 export function getOpName(op: Operation): string {
   return (op.constructor as unknown as {opName: string}).opName;
 }
+
+/** Descirbe how to display a operation. */
+export type OperationDescription = {
+  /** If set, this replaces the default command arguments. */
+  description?: string;
+
+  /** If set, this replaces the default command + output tooltip. */
+  tooltip?: string;
+};

@@ -29,6 +29,12 @@ function OperationDescription(props: {
   className?: string;
 }): React.ReactElement {
   const {info, operation, className} = props;
+  const desc = operation.getDescriptionForDisplay();
+
+  if (desc?.description) {
+    return <span className={className}>{desc.description}</span>;
+  }
+
   const commandName =
     operation.runner === CommandRunner.Sapling
       ? /[^\\/]+$/.exec(info.command)?.[0] ?? 'sl'
@@ -71,6 +77,7 @@ export function CommandHistoryAndProgress() {
     return null;
   }
 
+  const desc = progress.operation.getDescriptionForDisplay();
   const command = (
     <OperationDescription
       info={info}
@@ -84,9 +91,9 @@ export function CommandHistoryAndProgress() {
   let abort = null;
   let showLastLineOfOutput = false;
   if (progress.exitCode == null) {
-    label = <T replace={{$command: command}}>Running $command</T>;
+    label = desc?.description ? command : <T replace={{$command: command}}>Running $command</T>;
     icon = <Icon icon="loading" />;
-    showLastLineOfOutput = true;
+    showLastLineOfOutput = desc?.tooltip == null;
     // Only show "Abort" for slow commands, since "Abort" might leave modified
     // files or pending commits around.
     const slowThreshold = 10000;
@@ -123,14 +130,18 @@ export function CommandHistoryAndProgress() {
       <Tooltip
         component={() => (
           <div className="progress-command-tooltip">
-            <div className="progress-command-tooltip-command">
-              <strong>Command: </strong>
-              <OperationDescription info={info} operation={progress.operation} />
-            </div>
-            <br />
-            <b>Command output:</b>
-            <br />
-            <pre>{progress.commandOutput?.join('') || 'No output'}</pre>
+            {desc?.tooltip || (
+              <>
+                <div className="progress-command-tooltip-command">
+                  <strong>Command: </strong>
+                  <OperationDescription info={info} operation={progress.operation} />
+                </div>
+                <br />
+                <b>Command output:</b>
+                <br />
+                <pre>{progress.commandOutput?.join('') || 'No output'}</pre>
+              </>
+            )}
           </div>
         )}>
         {queued.length > 0 ? (
