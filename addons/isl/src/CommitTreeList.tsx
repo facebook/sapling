@@ -65,7 +65,9 @@ export function CommitTreeList() {
   ) : (
     <>
       {fetchError ? <CommitFetchError error={fetchError} /> : null}
-      <div className="commit-tree-root commit-group" data-testid="commit-tree-root">
+      <div
+        className="commit-tree-root commit-group with-vertical-line"
+        data-testid="commit-tree-root">
         <MainLineEllipsis />
         {trees.map(tree => (
           <SubTree key={tree.info.hash} tree={tree} depth={0} />
@@ -153,9 +155,19 @@ function SubTree({tree, depth}: {tree: CommitTreeWithPreviews; depth: number}): 
   return <>{rendered}</>;
 }
 
-function Branch({children, descendsFrom}: {children: React.ReactElement; descendsFrom: Hash}) {
+function Branch({
+  children,
+  descendsFrom,
+  className,
+}: {
+  children: React.ReactElement;
+  descendsFrom: Hash;
+  className?: string;
+}) {
   return (
-    <div className="commit-group" data-testid={`branch-from-${descendsFrom}`}>
+    <div
+      className={`commit-group ${className ?? 'with-vertical-line'}`}
+      data-testid={`branch-from-${descendsFrom}`}>
       {children}
       <BranchIndicator />
     </div>

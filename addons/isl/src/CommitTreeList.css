@@ -35,7 +35,7 @@
   margin-top: var(--halfpad);
 }
 
-.commit-group:before {
+.commit-group.with-vertical-line:before {
   /* branch vertical line */
   content: ' ';
   border-left: 2px solid var(--foreground);
