@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use anyhow::anyhow;
 use anyhow::Context;
 use async_recursion::async_recursion;
-use blame::fetch_blame_compat;
+use blame::fetch_blame_v2;
 use blame::fetch_content_for_blame;
 use blame::BlameError;
 use bytes::Bytes;
@@ -173,7 +173,7 @@ async fn fetch_immutable_blame(
     csid: ChangesetId,
     path: &MPath,
 ) -> Result<(BlameV2, FileUnodeId), BlameError> {
-    fetch_blame_compat(ctx, repo.as_blob_repo(), csid, path.clone()).await
+    fetch_blame_v2(ctx, repo.as_blob_repo(), csid, path.clone()).await
 }
 
 pub async fn blame(

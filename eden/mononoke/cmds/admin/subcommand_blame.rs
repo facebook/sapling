@@ -10,7 +10,7 @@ use std::fmt::Write;
 
 use anyhow::format_err;
 use anyhow::Error;
-use blame::fetch_blame_compat;
+use blame::fetch_blame_v2;
 use blame::fetch_content_for_blame;
 use blame::FetchOutcome;
 use blobrepo::BlobRepo;
@@ -210,7 +210,7 @@ async fn subcommand_show_blame(
     path: MPath,
     line_number: bool,
 ) -> Result<(), Error> {
-    let (blame, unode_id) = fetch_blame_compat(&ctx, &repo, csid, path.clone()).await?;
+    let (blame, unode_id) = fetch_blame_v2(&ctx, &repo, csid, path.clone()).await?;
     let content = fetch_content_for_blame(&ctx, &repo, unode_id)
         .await?
         .into_bytes()?;

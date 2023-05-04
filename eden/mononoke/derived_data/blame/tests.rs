@@ -32,7 +32,7 @@ use tests_utils::store_files;
 use tests_utils::store_rename;
 use tests_utils::CreateCommitContext;
 
-use crate::fetch_blame_compat;
+use crate::fetch_blame_v2;
 
 #[facet::container]
 struct TestRepo {
@@ -262,13 +262,13 @@ async fn test_blame_version(fb: FacebookInit, version: BlameVersion) -> Result<(
         c4 => "c4",
     };
 
-    let (blame, _) = fetch_blame_compat(ctx, repo, c4, MPath::new("f0")?).await?;
+    let (blame, _) = fetch_blame_v2(ctx, repo, c4, MPath::new("f0")?).await?;
     assert_eq!(annotate(F0[4], blame, &names)?, F0_AT_C4);
 
-    let (blame, _) = fetch_blame_compat(ctx, repo, c4, MPath::new("f1")?).await?;
+    let (blame, _) = fetch_blame_v2(ctx, repo, c4, MPath::new("f1")?).await?;
     assert_eq!(annotate(F1[1], blame, &names)?, F1_AT_C4);
 
-    let (blame, _) = fetch_blame_compat(ctx, repo, c4, MPath::new("f2")?).await?;
+    let (blame, _) = fetch_blame_v2(ctx, repo, c4, MPath::new("f2")?).await?;
     assert_eq!(annotate(F2[3], blame, &names)?, F2_AT_C4);
 
     Ok(())
@@ -295,7 +295,7 @@ async fn test_blame_size_rejected_version(
 
     // Default file size is 10MiB, so blame should be computed
     // without problems.
-    let (blame, _) = fetch_blame_compat(ctx, repo, c1, MPath::new(file1)?).await?;
+    let (blame, _) = fetch_blame_v2(ctx, repo, c1, MPath::new(file1)?).await?;
     let _ = blame.ranges()?;
 
     let repo: TestRepo = TestRepoFactory::new(fb)?
@@ -321,7 +321,7 @@ async fn test_blame_size_rejected_version(
         .await?;
 
     // This repo has a decreased limit, so derivation should fail now
-    let (blame, _) = fetch_blame_compat(ctx, &repo, c2, MPath::new(file2)?).await?;
+    let (blame, _) = fetch_blame_v2(ctx, &repo, c2, MPath::new(file2)?).await?;
 
     match blame.ranges() {
         Err(BlameRejected::TooBig) => {}
@@ -360,7 +360,7 @@ async fn test_blame_copy_source(fb: FacebookInit) -> Result<(), Error> {
         .commit()
         .await?;
 
-    let (blame, _) = fetch_blame_compat(ctx, repo, c2, MPath::new("file1")?).await?;
+    let (blame, _) = fetch_blame_v2(ctx, repo, c2, MPath::new("file1")?).await?;
     let lines = blame
         .lines()?
         .map(|line| (line.changeset_id, line.path.to_string(), line.origin_offset))
