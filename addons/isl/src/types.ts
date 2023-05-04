@@ -146,10 +146,13 @@ export type CommitInfo = {
   /** if this commit is obsolete, it is succeeded by another commit */
   successorInfo?: SuccessorInfo;
   /**
-   * Cloest predecessors (not all recursive predecessors, which can be a long
+   * Closest predecessors (not all recursive predecessors, which can be a long
    * chain and hurt performance). Useful to deal with optimistic states where
    * we know the hashes of predecessors (commits being rewritten) but not their
    * successors (rewritten result).
+   *
+   * Most of the time a commit only has one predecessor. In case of a fold
+   * there are multiple predecessors.
    */
   closestPredecessors?: Hash[];
   /** only a subset of the total files for this commit */
