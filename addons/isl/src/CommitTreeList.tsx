@@ -325,7 +325,10 @@ function StackEditConfirmButtons(): React.ReactElement {
   const runOperation = useRunOperation();
   const stackEdit = useStackEditState();
 
-  // Show [Cancel] [Save changes].
+  const canUndo = stackEdit.canUndo();
+  const canRedo = stackEdit.canRedo();
+
+  // Show [Cancel] [Save changes] [Undo] [Redo].
   return (
     <>
       <Tooltip
@@ -358,6 +361,22 @@ function StackEditConfirmButtons(): React.ReactElement {
             setStackHashes(new Set());
           }}>
           <T>Save changes</T>
+        </VSCodeButton>
+      </Tooltip>
+      <Tooltip
+        title={
+          canUndo
+            ? t('Undo $opName', {replace: {$opName: stackEdit.undoOperationName() ?? ''}})
+            : t('No operations to undo')
+        }
+        placement="bottom">
+        <VSCodeButton appearance="icon" disabled={!canUndo} onClick={() => stackEdit.undo()}>
+          <Icon icon="discard" />
+        </VSCodeButton>
+      </Tooltip>
+      <Tooltip title={canRedo ? t('Redo') : t('No operations to redo')} placement="bottom">
+        <VSCodeButton appearance="icon" disabled={!canRedo} onClick={() => stackEdit.redo()}>
+          <Icon icon="redo" />
         </VSCodeButton>
       </Tooltip>
     </>
