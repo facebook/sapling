@@ -7,6 +7,8 @@
 
 #include "eden/fs/telemetry/FsEventLogger.h"
 
+#include <iterator>
+
 #include <folly/Random.h>
 
 #include "eden/fs/config/EdenConfig.h"
@@ -21,6 +23,7 @@ constexpr auto kConfigsStringRefreshInterval = std::chrono::minutes(30);
 
 std::string getConfigsString(std::shared_ptr<const EdenConfig> config) {
   fmt::memory_buffer buffer;
+  const auto inserter = std::back_inserter(buffer);
   // fmt::format_to will grow the buffer if it needs to be longer. However, we
   // should only log what's necessary to not waste logging space.
   buffer.reserve(kConfigsStringBufferSize);
@@ -29,7 +32,7 @@ std::string getConfigsString(std::shared_ptr<const EdenConfig> config) {
     try {
       if (auto value = config->getValueByFullKey(configKey)) {
         // e.g.: telemetry:request-samples-per-minute:10;
-        fmt::format_to(buffer, "{}:{};", configKey, value.value());
+        fmt::format_to(inserter, "{}:{};", configKey, value.value());
       }
     } catch (const std::exception& ex) {
       XLOG(ERR) << "config key " << configKey

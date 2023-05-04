@@ -10,6 +10,7 @@
 #include <folly/Range.h>
 #include <folly/stop_watch.h>
 #include <array>
+#include <iterator>
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/sqlite/PersistentSqliteStatement.h"
@@ -96,7 +97,7 @@ struct SqliteTreeStore::StatementCache {
     constexpr folly::StringPiece values_fmt = "(?,?,?,?,?,?)";
     fmt::memory_buffer stmt_buffer;
     fmt::format_to(
-        stmt_buffer,
+        std::back_inserter(stmt_buffer),
         "INSERT INTO {} (parent, name, dtype, inode, sequence_id, hash) VALUES ",
         kEntryTable);
 
