@@ -23,6 +23,7 @@
   cursor: grab;
   display: flex;
   padding: var(--button-icon-padding);
+  touch-action: none;
 }
 
 .stack-edit-dragging {
@@ -57,4 +58,5 @@
   display: flex;
   justify-content: center;
   margin-top: var(--pad);
+  user-select: none;
 }

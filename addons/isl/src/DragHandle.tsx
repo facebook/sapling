@@ -24,39 +24,42 @@ export type DragHandler = (x: number, y: number, isDragging: boolean) => void;
  * element and move it using `transform: translate(x,y)` during dragging.
  */
 export function DragHandle(props: {onDrag?: DragHandler; children?: ReactElement}): ReactElement {
+  let pointerDown = false;
   const handlePointerDown: PointerEventHandler = e => {
-    if (e.isPrimary) {
-      const handlePointerMove = (e: PointerEvent) => {
-        const target = e.target as HTMLBodyElement;
-        if (target.hasPointerCapture(e.pointerId)) {
-          props.onDrag?.(e.clientX, e.clientY, true);
-        }
-      };
-      const handlePointerUp = (e: PointerEvent) => {
-        const target = e.target as HTMLBodyElement;
-        if (target.hasPointerCapture(e.pointerId)) {
-          target.releasePointerCapture(e.pointerId);
-          target.removeEventListener('pointermove', handlePointerMove as EventListener);
-          target.removeEventListener('pointerup', handlePointerUp as EventListener);
-          target.style.removeProperty('cursor');
-          props.onDrag?.(e.clientX, e.clientY, false);
-        }
-      };
-
+    if (e.isPrimary && !pointerDown) {
       // e.target might be unmounted and lose events, listen on `document.body` instead.
       const body = (e.target as HTMLSpanElement).ownerDocument.body;
 
+      const handlePointerMove = (e: PointerEvent) => {
+        props.onDrag?.(e.clientX, e.clientY, true);
+      };
+      const handlePointerUp = (e: PointerEvent) => {
+        body.removeEventListener('pointermove', handlePointerMove as EventListener);
+        body.removeEventListener('pointerup', handlePointerUp as EventListener);
+        body.removeEventListener('pointerleave', handlePointerUp as EventListener);
+        body.releasePointerCapture(e.pointerId);
+        body.style.removeProperty('cursor');
+        pointerDown = false;
+        props.onDrag?.(e.clientX, e.clientY, false);
+      };
+
+      body.setPointerCapture(e.pointerId);
       body.addEventListener('pointermove', handlePointerMove);
       body.addEventListener('pointerup', handlePointerUp);
-      body.setPointerCapture(e.pointerId);
+      body.addEventListener('pointerleave', handlePointerUp);
+
       body.style.cursor = 'grabbing';
+      pointerDown = true;
 
       props.onDrag?.(e.clientX, e.clientY, true);
     }
   };
 
   return (
-    <span className="drag-handle" onPointerDown={handlePointerDown}>
+    <span
+      className="drag-handle"
+      onDragStart={e => e.preventDefault()}
+      onPointerDown={handlePointerDown}>
       {props.children ?? <Icon icon="gripper" />}
     </span>
   );
