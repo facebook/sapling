@@ -94,7 +94,6 @@ async fn blame_file_data(repo: HgRepoContext, key: Key) -> Result<BlameData> {
         .await?;
 
     let blame = match blame {
-        CompatBlame::V1(_) => bail!("unexpected BlameV1 data"),
         CompatBlame::V2(BlameV2::Blame(blame)) => blame,
         CompatBlame::V2(BlameV2::Rejected(rejected)) => return Err(rejected.into()),
     };

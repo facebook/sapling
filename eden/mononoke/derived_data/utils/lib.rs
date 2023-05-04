@@ -22,7 +22,6 @@ use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
-use blame::BlameRoot;
 use blame::RootBlameV2;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use changeset_fetcher::ChangesetFetcherArc;
@@ -78,7 +77,7 @@ pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     RootFastlog::NAME,
     MappedHgChangesetId::NAME,
     RootFsnodeId::NAME,
-    BlameRoot::NAME,
+    RootBlameV2::NAME,
     ChangesetInfo::NAME,
     FilenodesOnlyPublic::NAME,
     RootSkeletonManifestId::NAME,
@@ -96,7 +95,7 @@ lazy_static! {
         let fastlog = RootFastlog::NAME;
         let hgchangeset = MappedHgChangesetId::NAME;
         let fsnodes = RootFsnodeId::NAME;
-        let blame = BlameRoot::NAME;
+        let blame = RootBlameV2::NAME;
         let changesets_info = ChangesetInfo::NAME;
         let deleted_mf_v2 = RootDeletedManifestV2Id::NAME;
         let filenodes = FilenodesOnlyPublic::NAME;
@@ -470,12 +469,7 @@ fn derived_data_utils_impl(
             config,
             enabled_config_name,
         ))),
-        BlameRoot::NAME => match config.blame_version {
-            BlameVersion::V1 => Ok(Arc::new(DerivedUtilsFromManager::<BlameRoot>::new(
-                repo,
-                config,
-                enabled_config_name,
-            ))),
+        RootBlameV2::NAME => match config.blame_version {
             BlameVersion::V2 => Ok(Arc::new(DerivedUtilsFromManager::<RootBlameV2>::new(
                 repo,
                 config,
@@ -983,11 +977,6 @@ pub async fn check_derived(
     match derived_data_type {
         DerivableType::Unodes => {
             ddm.fetch_derived::<RootUnodeManifestId>(ctx, head_cs_id, None)
-                .map_ok(|res| res.is_some())
-                .await
-        }
-        DerivableType::BlameV1 => {
-            ddm.fetch_derived::<BlameRoot>(ctx, head_cs_id, None)
                 .map_ok(|res| res.is_some())
                 .await
         }

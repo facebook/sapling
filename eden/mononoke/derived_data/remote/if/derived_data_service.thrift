@@ -92,13 +92,9 @@ union DerivedDataFastlog {
 }
 
 union DerivedDataBlame {
-  1: DerivedDataRootBlameV1 root_blame_v1;
+  // 1: DerivedDataRootBlameV1 was deleted
   2: DerivedDataRootBlameV2 root_blame_v2;
 }
-
-struct DerivedDataRootBlameV1 {
-  1: mononoke_types_thrift.ChangesetId blame_root_id;
-} (rust.exhaustive)
 
 struct DerivedDataRootBlameV2 {
   1: mononoke_types_thrift.ChangesetId changeset_id;

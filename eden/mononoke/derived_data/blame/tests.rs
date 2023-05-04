@@ -20,7 +20,7 @@ use filestore::FilestoreConfig;
 use maplit::btreemap;
 use maplit::hashmap;
 use metaconfig_types::BlameVersion;
-use mononoke_types::blame::BlameRejected;
+use mononoke_types::blame_v2::BlameRejected;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use repo_blobstore::RepoBlobstore;
@@ -162,11 +162,6 @@ c0: 1 1
 "#;
 
 #[fbinit::test]
-async fn test_blame_v1(fb: FacebookInit) -> Result<(), Error> {
-    test_blame_version(fb, BlameVersion::V1).await
-}
-
-#[fbinit::test]
 async fn test_blame_v2(fb: FacebookInit) -> Result<(), Error> {
     test_blame_version(fb, BlameVersion::V2).await
 }
@@ -277,11 +272,6 @@ async fn test_blame_version(fb: FacebookInit, version: BlameVersion) -> Result<(
     assert_eq!(annotate(F2[3], blame, &names)?, F2_AT_C4);
 
     Ok(())
-}
-
-#[fbinit::test]
-async fn test_blame_size_rejected_v1(fb: FacebookInit) -> Result<(), Error> {
-    test_blame_size_rejected_version(fb, BlameVersion::V1).await
 }
 
 #[fbinit::test]

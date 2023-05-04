@@ -384,8 +384,6 @@ pub enum UnodeVersion {
 /// What type of blame derived data to generate
 #[derive(Eq, Clone, Copy, Debug, Default, PartialEq)]
 pub enum BlameVersion {
-    /// Blame v1
-    V1,
     /// Blame v2
     #[default]
     V2,

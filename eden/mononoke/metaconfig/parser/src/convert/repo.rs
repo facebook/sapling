@@ -445,7 +445,7 @@ impl Convert for RawDerivedDataTypesConfig {
         let blame_filesize_limit = self.blame_filesize_limit.map(|limit| limit as u64);
         let blame_version = match self.blame_version {
             None => BlameVersion::default(),
-            Some(1) => BlameVersion::V1,
+            Some(1) => return Err(anyhow!("blame version 1 has been deprecated")),
             Some(2) => BlameVersion::V2,
             Some(version) => return Err(anyhow!("unknown blame version {}", version)),
         };

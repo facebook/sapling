@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use blame::fetch_content_for_blame;
-use blame::BlameRoot;
+use blame::RootBlameV2;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
@@ -41,7 +41,7 @@ use unodes::RootUnodeManifestId;
 
 /// Types of derived data for which prefetching content for changed files
 /// migth speed up derivation.
-const PREFETCH_CONTENT_TYPES: &[&str] = &[BlameRoot::DERIVABLE_NAME];
+const PREFETCH_CONTENT_TYPES: &[&str] = &[RootBlameV2::DERIVABLE_NAME];
 const PREFETCH_CONTENT_METADATA_TYPES: &[&str] = &[RootFsnodeId::DERIVABLE_NAME];
 const PREFETCH_UNODE_TYPES: &[&str] = &[
     RootFastlog::DERIVABLE_NAME,

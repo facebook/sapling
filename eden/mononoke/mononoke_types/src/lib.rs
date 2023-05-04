@@ -9,7 +9,6 @@
 #![feature(round_char_boundary)]
 
 pub mod basename_suffix_skeleton_manifest;
-pub mod blame;
 pub mod blame_v2;
 pub mod blob;
 pub mod bonsai_changeset;
@@ -40,9 +39,7 @@ pub mod thrift_convert;
 pub mod typed_hash;
 pub mod unode;
 
-pub use blame::Blame;
-pub use blame::BlameId;
-pub use blame::BlameRange;
+pub use blame_v2::BlameRejected;
 pub use blame_v2::BlameV2Id;
 pub use blob::Blob;
 pub use blob::BlobstoreValue;

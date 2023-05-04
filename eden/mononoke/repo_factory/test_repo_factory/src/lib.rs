@@ -14,7 +14,7 @@ use acl_regions::build_acl_regions;
 use acl_regions::ArcAclRegions;
 use anyhow::Result;
 use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
-use blame::BlameRoot;
+use blame::RootBlameV2;
 use blobstore::Blobstore;
 use bonsai_git_mapping::ArcBonsaiGitMapping;
 use bonsai_git_mapping::SqlBonsaiGitMappingBuilder;
@@ -166,7 +166,7 @@ pub struct TestRepoFactory {
 pub fn default_test_repo_config() -> RepoConfig {
     let derived_data_types_config = DerivedDataTypesConfig {
         types: hashset! {
-            BlameRoot::NAME.to_string(),
+            RootBlameV2::NAME.to_string(),
             FilenodesOnlyPublic::NAME.to_string(),
             ChangesetInfo::NAME.to_string(),
             RootFastlog::NAME.to_string(),

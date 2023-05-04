@@ -15,7 +15,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use filestore::FetchKey;
 use futures::TryStreamExt;
-use mononoke_types::blame::BlameRejected;
+use mononoke_types::blame_v2::BlameRejected;
 use mononoke_types::FileUnodeId;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;

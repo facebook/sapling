@@ -24,10 +24,10 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
 use fbthrift::compact_protocol;
+use thiserror::Error;
 use vec_map::VecMap;
 use xdiff::diff_hunks;
 
-use crate::blame::BlameRejected;
 use crate::path::MPath;
 use crate::thrift;
 use crate::typed_hash::BlobstoreKey;
@@ -107,6 +107,33 @@ pub async fn store_blame<'a, B: Blobstore>(
     let blame_id = BlameV2Id::from(file_unode_id);
     blobstore.put(ctx, blame_id.blobstore_key(), data).await?;
     Ok(blame_id)
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Error)]
+pub enum BlameRejected {
+    #[error("Blame was not generated because file was too big")]
+    TooBig,
+    #[error("Blame was not generated because file was marked as binary")]
+    Binary,
+}
+
+impl BlameRejected {
+    pub fn into_thrift(self) -> thrift::BlameRejected {
+        match self {
+            BlameRejected::TooBig => thrift::BlameRejected::TooBig,
+            BlameRejected::Binary => thrift::BlameRejected::Binary,
+        }
+    }
+
+    pub fn from_thrift(rejected: thrift::BlameRejected) -> Result<Self, Error> {
+        match rejected {
+            thrift::BlameRejected::TooBig => Ok(BlameRejected::TooBig),
+            thrift::BlameRejected::Binary => Ok(BlameRejected::Binary),
+            thrift::BlameRejected(id) => {
+                Err(anyhow!("BlameRejected contains unknown variant: {}", id))
+            }
+        }
+    }
 }
 
 /// Blame data for a particular version of a file.

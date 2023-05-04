@@ -38,12 +38,10 @@ use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use manifest::ManifestOps;
-use mononoke_types::blame::Blame;
-use mononoke_types::blame::BlameMaybeRejected;
-use mononoke_types::blame::BlameRejected;
 use mononoke_types::blame_v2::BlameParent;
+use mononoke_types::blame_v2::BlameRejected;
 use mononoke_types::blame_v2::BlameV2;
-use mononoke_types::BlameId;
+use mononoke_types::BlameV2Id;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::FileUnodeId;
@@ -65,7 +63,6 @@ const ARG_CSID: &str = "csid";
 const ARG_PATH: &str = "path";
 const ARG_PRINT_ERRORS: &str = "print-errors";
 const ARG_LINE: &str = "line";
-const ARG_BLAME_V2: &str = "blame-v2";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let csid_arg = Arg::with_name(ARG_CSID)
@@ -80,11 +77,6 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .help("show line number at the first appearance")
         .short("l")
         .long("line-number")
-        .takes_value(false)
-        .required(false);
-    let blame_v2_arg = Arg::with_name(ARG_BLAME_V2)
-        .help("use blame-v2")
-        .long("blame-v2")
         .takes_value(false)
         .required(false);
 
@@ -105,8 +97,7 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
             SubCommand::with_name(COMMAND_COMPUTE)
                 .arg(line_number_arg.clone())
                 .arg(csid_arg.clone())
-                .arg(path_arg.clone())
-                .arg(blame_v2_arg.clone()),
+                .arg(path_arg.clone()),
         )
         .subcommand(
             SubCommand::with_name(COMMAND_FIND_REJECTED)
@@ -148,9 +139,8 @@ pub async fn subcommand_blame<'a>(
             let repo =
                 args::not_shardmanager_compatible::open_repo(fb, &logger, toplevel_matches).await?;
             let line_number = matches.is_present(ARG_LINE);
-            let blame_v2 = matches.is_present(ARG_BLAME_V2);
             with_changeset_and_path(ctx, repo, matches, move |ctx, repo, csid, path| {
-                subcommand_compute_blame(ctx, repo, csid, path, line_number, blame_v2)
+                subcommand_compute_blame(ctx, repo, csid, path, line_number)
             })
             .await
         }
@@ -169,17 +159,17 @@ pub async fn subcommand_blame<'a>(
                 .manifest_unode_id()
                 .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
                 .map_ok(|(path, file_unode_id)| {
-                    let id = BlameId::from(file_unode_id);
+                    let id = BlameV2Id::from(file_unode_id);
                     cloned!(ctx, repo);
                     async move { id.load(&ctx, repo.repo_blobstore()).await }
-                        .map_ok(move |blame_maybe_rejected| (path, blame_maybe_rejected))
+                        .map_ok(move |blame| (path, blame))
                         .map_err(Error::from)
                 })
                 .try_buffer_unordered(100)
                 .try_filter_map(|(path, blame_maybe_rejected)| async move {
                     match blame_maybe_rejected {
-                        BlameMaybeRejected::Rejected(rejected) => Ok(Some((path, rejected))),
-                        BlameMaybeRejected::Blame(_) => Ok(None),
+                        BlameV2::Rejected(rejected) => Ok(Some((path, rejected))),
+                        BlameV2::Blame(_) => Ok(None),
                     }
                 })
                 .boxed();
@@ -319,21 +309,6 @@ async fn diff(
     Ok(String::from_utf8_lossy(&diff).into_owned())
 }
 
-#[derive(Clone, Debug)]
-enum EitherBlame {
-    V1(Blame),
-    V2(BlameV2),
-}
-
-impl EitherBlame {
-    fn compat(self) -> CompatBlame {
-        match self {
-            EitherBlame::V1(blame) => CompatBlame::V1(BlameMaybeRejected::Blame(blame)),
-            EitherBlame::V2(blame) => CompatBlame::V2(blame),
-        }
-    }
-}
-
 /// Recalculate blame by going through whole history of a file
 async fn subcommand_compute_blame(
     ctx: CoreContext,
@@ -341,7 +316,6 @@ async fn subcommand_compute_blame(
     csid: ChangesetId,
     path: MPath,
     line_number: bool,
-    blame_v2: bool,
 ) -> Result<(), Error> {
     let blobstore = repo.repo_blobstore_arc();
     let file_unode_id = find_leaf(ctx.clone(), repo.clone(), csid, path.clone()).await?;
@@ -351,7 +325,6 @@ async fn subcommand_compute_blame(
         {
             // unfold operator traverses all parents of a given unode, accounting for
             // renames and treating them as another parent.
-            //
             |(parent_index, path, file_unode_id)| {
                 cloned!(ctx, repo, blobstore);
                 async move {
@@ -418,54 +391,30 @@ async fn subcommand_compute_blame(
         {
             |(csid, parent_index, path, file_unode_id),
              parents: Iter<
-                Result<(Option<usize>, MPath, bytes::Bytes, EitherBlame), BlameRejected>,
+                Result<(Option<usize>, MPath, bytes::Bytes, BlameV2), BlameRejected>,
             >| {
                 cloned!(ctx, repo);
                 async move {
                     match fetch_content_for_blame(&ctx, &repo, file_unode_id).await? {
                         FetchOutcome::Rejected(rejected) => Ok(Err(rejected)),
-                        FetchOutcome::Fetched(content) => if blame_v2 {
+                        FetchOutcome::Fetched(content) => {
                             let parents = parents
                                 .into_iter()
                                 .filter_map(|parent| match parent {
-                                    Ok((
-                                        Some(parent_index),
-                                        parent_path,
-                                        content,
-                                        EitherBlame::V2(blame),
-                                    )) => Some(BlameParent::new(
-                                        parent_index,
-                                        parent_path,
-                                        content,
-                                        blame,
-                                    )),
-                                    _ => None,
-                                })
-                                .collect();
-                            Ok(EitherBlame::V2(BlameV2::new(
-                                csid,
-                                path.clone(),
-                                content.clone(),
-                                parents,
-                            )?))
-                        } else {
-                            let parents = parents
-                                .into_iter()
-                                .filter_map(|parent| match parent {
-                                    Ok((_, _, content, EitherBlame::V1(blame))) => {
-                                        Some((content, blame))
+                                    Ok((Some(parent_index), parent_path, content, blame)) => {
+                                        Some(BlameParent::new(
+                                            parent_index,
+                                            parent_path,
+                                            content,
+                                            blame,
+                                        ))
                                     }
                                     _ => None,
                                 })
                                 .collect();
-                            Ok(EitherBlame::V1(Blame::from_parents(
-                                csid,
-                                content.clone(),
-                                path.clone(),
-                                parents,
-                            )?))
+                            let blame = BlameV2::new(csid, path.clone(), content.clone(), parents)?;
+                            Ok(Ok((parent_index, path, content, blame)))
                         }
-                        .map(move |blame| Ok((parent_index, path, content, blame))),
                     }
                 }
                 .boxed()
@@ -474,7 +423,8 @@ async fn subcommand_compute_blame(
     )
     .await?
     .ok_or_else(|| Error::msg("cycle found"))??;
-    let annotate = blame_hg_annotate(ctx, repo, content, blame.compat(), line_number).await?;
+    let annotate =
+        blame_hg_annotate(ctx, repo, content, CompatBlame::V2(blame), line_number).await?;
     println!("{}", annotate);
     Ok(())
 }

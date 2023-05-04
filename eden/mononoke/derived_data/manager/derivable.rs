@@ -35,7 +35,6 @@ use crate::context::DerivationContext;
 /// and implements FromStr trait for deserialization.
 #[derive(AsRefStr, EnumString, Display, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DerivableType {
-    BlameV1,
     BlameV2,
     Bssm,
     ChangesetInfo,
@@ -53,7 +52,6 @@ impl DerivableType {
     const fn name(&self) -> &'static str {
         match self {
             DerivableType::BlameV2 => "blame",
-            DerivableType::BlameV1 => "blame",
             DerivableType::Bssm => "bssm",
             DerivableType::ChangesetInfo => "changeset_info",
             DerivableType::DeletedManifests => "deleted_manifest",

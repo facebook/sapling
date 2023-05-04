@@ -8,7 +8,6 @@
 use std::collections::HashSet;
 
 use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use async_recursion::async_recursion;
@@ -216,9 +215,6 @@ pub async fn blame_with_content(
 }
 
 fn extract_blame_v2_from_compat(blame: CompatBlame) -> Result<BlameV2, Error> {
-    if let CompatBlame::V2(blame) = blame {
-        Ok(blame)
-    } else {
-        bail!("Mutable blame only works with blame V2. Ask Source Control oncall for help")
-    }
+    let CompatBlame::V2(blame) = blame;
+    Ok(blame)
 }
