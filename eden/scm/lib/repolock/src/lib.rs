@@ -95,8 +95,16 @@ impl RepoLocker {
     }
 
     pub fn lock_store(&self) -> anyhow::Result<RepoLockHandle, LockError> {
+        self.lock_store_maybe_wait(true)
+    }
+
+    pub fn try_lock_store(&self) -> anyhow::Result<RepoLockHandle, LockError> {
+        self.lock_store_maybe_wait(false)
+    }
+
+    fn lock_store_maybe_wait(&self, wait: bool) -> anyhow::Result<RepoLockHandle, LockError> {
         let mut inner = self.inner.lock();
-        inner.lock_store()?;
+        inner.lock_store(wait)?;
         Ok(RepoLockHandle::new_store_lock(self.inner.clone()))
     }
 
@@ -119,8 +127,23 @@ impl RepoLocker {
         &self,
         wc_dot_hg: PathBuf,
     ) -> anyhow::Result<RepoLockHandle, LockError> {
+        self.lock_working_copy_maybe_wait(wc_dot_hg, true)
+    }
+
+    pub fn try_lock_working_copy(
+        &self,
+        wc_dot_hg: PathBuf,
+    ) -> anyhow::Result<RepoLockHandle, LockError> {
+        self.lock_working_copy_maybe_wait(wc_dot_hg, false)
+    }
+
+    fn lock_working_copy_maybe_wait(
+        &self,
+        wc_dot_hg: PathBuf,
+        wait: bool,
+    ) -> anyhow::Result<RepoLockHandle, LockError> {
         let mut inner = self.inner.lock();
-        inner.lock_working_copy(wc_dot_hg.clone())?;
+        inner.lock_working_copy(wc_dot_hg.clone(), wait)?;
         Ok(RepoLockHandle::new_working_copy_lock(
             self.inner.clone(),
             wc_dot_hg,
@@ -143,22 +166,30 @@ impl RepoLocker {
 }
 
 impl RepoLockerInner {
-    pub fn lock_store(&mut self) -> anyhow::Result<(), LockError> {
+    pub fn lock_store(&mut self, wait: bool) -> anyhow::Result<(), LockError> {
         if let Some(store_lock) = &mut self.store_lock {
             store_lock.1 = store_lock.1.checked_add(1).unwrap();
         } else {
-            let handle = lock(
-                &self.config,
-                &self.store_path,
-                STORE_NAME,
-                lock_contents()?.as_bytes(),
-            )?;
+            let handle = if wait {
+                lock(
+                    &self.config,
+                    &self.store_path,
+                    STORE_NAME,
+                    lock_contents()?.as_bytes(),
+                )?
+            } else {
+                try_lock(&self.store_path, STORE_NAME, lock_contents()?.as_bytes())?
+            };
             self.store_lock = Some((handle, NonZeroU64::new(1).unwrap()));
         }
         Ok(())
     }
 
-    pub fn lock_working_copy(&mut self, wc_dot_hg: PathBuf) -> anyhow::Result<(), LockError> {
+    pub fn lock_working_copy(
+        &mut self,
+        wc_dot_hg: PathBuf,
+        wait: bool,
+    ) -> anyhow::Result<(), LockError> {
         if let Some(wc_lock) = self.wc_locks.get_mut(&wc_dot_hg) {
             wc_lock.1 = wc_lock.1.checked_add(1).unwrap();
         } else {
@@ -169,12 +200,16 @@ impl RepoLockerInner {
             }
 
             // TODO: Should we check that this working copy is actually related to this store?
-            let handle = lock(
-                &self.config,
-                &wc_dot_hg,
-                WORKING_COPY_NAME,
-                lock_contents()?.as_bytes(),
-            )?;
+            let handle = if wait {
+                lock(
+                    &self.config,
+                    &wc_dot_hg,
+                    WORKING_COPY_NAME,
+                    lock_contents()?.as_bytes(),
+                )?
+            } else {
+                try_lock(&wc_dot_hg, WORKING_COPY_NAME, lock_contents()?.as_bytes())?
+            };
             self.wc_locks
                 .insert(wc_dot_hg, (handle, NonZeroU64::new(1).unwrap()));
         }
@@ -718,6 +753,24 @@ mod tests {
         let _wclock2 = locker
             .lock_working_copy(tmp_dir.path().to_path_buf())
             .unwrap();
+    }
+
+    #[test]
+    fn test_try_repo_lock() {
+        let tmp_dir = tempfile::tempdir().unwrap();
+
+        let cfg = BTreeMap::<&str, &str>::new();
+        let locker1 = RepoLocker::new(&cfg, tmp_dir.path().to_path_buf()).unwrap();
+        let locker2 = RepoLocker::new(&cfg, tmp_dir.path().to_path_buf()).unwrap();
+
+        let _lock1 = locker1.try_lock_store().unwrap();
+        let _lock2 = locker1.try_lock_store().unwrap();
+
+        // Returns immediately with error.
+        assert!(matches!(
+            locker2.try_lock_store().unwrap_err(),
+            LockError::Contended(_)
+        ));
     }
 
     #[test]
