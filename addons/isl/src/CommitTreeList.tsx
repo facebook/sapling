@@ -22,6 +22,7 @@ import {allDiffSummaries, codeReviewProvider, pageVisibility} from './codeReview
 import {isTreeLinear, walkTreePostorder} from './getCommitTree';
 import {T, t} from './i18n';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
+import {ImportStackOperation} from './operations/ImportStackOperation';
 import {treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {useArrowKeysToChangeSelection} from './selection';
 import {
@@ -29,16 +30,18 @@ import {
   commitFetchError,
   commitsShownRange,
   isFetchingAdditionalCommits,
+  latestHeadCommit,
   latestUncommittedChangesData,
   useRunOperation,
 } from './serverAPIState';
-import {editingStackHashes, loadingStackState} from './stackEditState';
+import {editingStackHashes, loadingStackState, useStackEditState} from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {useRecoilState, useRecoilValue} from 'recoil';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
+
 import './CommitTreeList.css';
 
 export function CommitTreeList() {
@@ -304,6 +307,51 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
   );
 }
 
+function StackEditConfirmButtons(): React.ReactElement {
+  const [, setStackHashes] = useRecoilState(editingStackHashes);
+  const originalHead = useRecoilValue(latestHeadCommit);
+  const runOperation = useRunOperation();
+  const stackEdit = useStackEditState();
+
+  // Show [Cancel] [Save changes].
+  return (
+    <>
+      <Tooltip
+        title={t('Discard stack editing changes')}
+        delayMs={DOCUMENTATION_DELAY}
+        placement="bottom">
+        <VSCodeButton
+          className="cancel-edit-stack-button"
+          appearance="secondary"
+          onClick={() => {
+            setStackHashes(new Set<Hash>());
+          }}>
+          <T>Cancel</T>
+        </VSCodeButton>
+      </Tooltip>
+      <Tooltip
+        title={t('Save stack editing changes')}
+        delayMs={DOCUMENTATION_DELAY}
+        placement="bottom">
+        <VSCodeButton
+          className="confirm-edit-stack-button"
+          appearance="primary"
+          onClick={() => {
+            const importStack = stackEdit.commitStack.calculateImportStack({
+              goto: originalHead?.hash,
+            });
+            const op = new ImportStackOperation(importStack);
+            runOperation(op);
+            // Exit stack editing.
+            setStackHashes(new Set());
+          }}>
+          <T>Save changes</T>
+        </VSCodeButton>
+      </Tooltip>
+    </>
+  );
+}
+
 function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactElement | null {
   const uncommitted = useRecoilValue(latestUncommittedChangesData);
   const [stackHashes, setStackHashes] = useRecoilState(editingStackHashes);
@@ -313,37 +361,7 @@ function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactEle
   const isEditing = stackHashes.size > 0 && stackCommits.some(c => stackHashes.has(c.hash));
   const isLoaded = isEditing && loadingState.state === 'hasValue';
   if (isLoaded) {
-    // Show [Cancel] [Save changes].
-    return (
-      <>
-        <Tooltip
-          title={t('Discard stack editing changes')}
-          delayMs={DOCUMENTATION_DELAY}
-          placement="bottom">
-          <VSCodeButton
-            className="cancel-edit-stack-button"
-            appearance="secondary"
-            onClick={() => {
-              setStackHashes(new Set<Hash>());
-            }}>
-            <T>Cancel</T>
-          </VSCodeButton>
-        </Tooltip>
-        <Tooltip
-          title={t('Save stack editing changes')}
-          delayMs={DOCUMENTATION_DELAY}
-          placement="bottom">
-          <VSCodeButton
-            className="confirm-edit-stack-button"
-            appearance="primary"
-            onClick={() => {
-              // TODO.
-            }}>
-            <T>Save changes</T>
-          </VSCodeButton>
-        </Tooltip>
-      </>
-    );
+    return <StackEditConfirmButtons />;
   }
 
   const isPreview = tree.previewType != null;
