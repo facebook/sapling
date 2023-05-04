@@ -159,14 +159,15 @@ impl RepoLockerInner {
     }
 
     pub fn lock_working_copy(&mut self, wc_dot_hg: PathBuf) -> anyhow::Result<(), LockError> {
-        if self.store_lock.is_some() {
-            return Err(LockError::OutOfOrder(
-                "must not take store lock before wlock".to_string(),
-            ));
-        }
         if let Some(wc_lock) = self.wc_locks.get_mut(&wc_dot_hg) {
             wc_lock.1 = wc_lock.1.checked_add(1).unwrap();
         } else {
+            if self.store_lock.is_some() {
+                return Err(LockError::OutOfOrder(
+                    "must not take store lock before wlock".to_string(),
+                ));
+            }
+
             // TODO: Should we check that this working copy is actually related to this store?
             let handle = lock(
                 &self.config,
@@ -233,14 +234,14 @@ impl Drop for RepoLockHandle {
             }
         }
         if let Some(wc_path) = &self.wc_path {
-            if locker.store_lock.is_some() {
-                panic!("attempted to release wlock before lock");
-            }
             let wc_lock = locker.wc_locks.get_mut(wc_path.as_path()).unwrap();
             let lock_count = wc_lock.1.get();
             if lock_count > 1 {
                 wc_lock.1 = NonZeroU64::new(lock_count - 1).unwrap();
             } else {
+                if locker.store_lock.is_some() {
+                    panic!("attempted to release wlock before lock");
+                }
                 locker.wc_locks.remove(wc_path.as_path());
             }
         }
@@ -699,6 +700,24 @@ mod tests {
         let _lock2 = locker.lock_store().unwrap();
 
         drop(_wclock1);
+        drop(_wclock2);
+    }
+
+    #[test]
+    fn test_interesting_acquisition_order() {
+        let tmp_dir = tempfile::tempdir().unwrap();
+
+        let cfg = BTreeMap::<&str, &str>::new();
+        let locker = RepoLocker::new(&cfg, tmp_dir.path().to_path_buf()).unwrap();
+
+        // Lock wlock, then store lock, then wlock again.
+        let _wclock1 = locker
+            .lock_working_copy(tmp_dir.path().to_path_buf())
+            .unwrap();
+        let _storelock = locker.lock_store().unwrap();
+        let _wclock2 = locker
+            .lock_working_copy(tmp_dir.path().to_path_buf())
+            .unwrap();
     }
 
     #[test]
