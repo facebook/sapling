@@ -2215,27 +2215,13 @@ def debuglocks(ui, repo, **opts) -> int:
         if method is None:
             method = lambda: lockmod.lock(vfs, name, timeout=0, ui=ui)
 
-        # this causes stale locks to get reaped for more accurate reporting
-        malformed = object()
-        absent = object()
         try:
+            # this causes stale locks to get reaped for more accurate reporting
             l = method()
-        except error.LockHeld:
-            l = None
-        except error.LockUnavailable:
-            l = absent
-        except error.MalformedLock:
-            l = malformed
-
-        if l == malformed:
-            ui.write(_("%-14s malformed\n") % (name + ":"))
-            return 1
-        elif l == absent:
-            ui.write(_("%-14s absent\n") % (name + ":"))
-            return 0
-        elif l:
             l.release()
-        else:
+            ui.write(_x("%-14s free\n") % (name + ":"))
+            return 0
+        except error.LockHeld:
             try:
                 stat = vfs.lstat(name)
                 age = now - stat.st_mtime
@@ -2252,9 +2238,12 @@ def debuglocks(ui, repo, **opts) -> int:
             except OSError as e:
                 if e.errno != errno.ENOENT:
                     raise
-
-        ui.write(_x("%-14s free\n") % (name + ":"))
-        return 0
+        except error.LockUnavailable:
+            ui.write(_("%-14s absent\n") % (name + ":"))
+            return 0
+        except error.MalformedLock:
+            ui.write(_("%-14s malformed\n") % (name + ":"))
+            return 1
 
     held = sum(
         (
