@@ -8,8 +8,10 @@
 #![allow(non_camel_case_types)]
 
 extern crate repo as rsrepo;
+extern crate repolock as rsrepolock;
 extern crate workingcopy as rsworkingcopy;
 
+use std::cell::Cell;
 use std::cell::RefCell;
 use std::sync::Arc;
 
@@ -30,6 +32,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "repo"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<repo>(py)?;
+    m.add_class::<repolock>(py)?;
     Ok(m)
 }
 
@@ -126,5 +129,41 @@ py_class!(pub class repo |py| {
 
     def dotpath(&self) -> PyResult<PyPathBuf> {
         self.inner(py).read().dot_hg_path().try_into().map_pyerr(py)
+    }
+
+    def trywlock(&self, wc_dot_hg: PyPathBuf) -> PyResult<repolock> {
+        let lock = self.inner(py).read().locker().try_lock_working_copy(wc_dot_hg.to_path_buf()).map_pyerr(py)?;
+        if lock.count() > 1 {
+            Err(PyErr::new::<exc::ValueError, _>(py, "lock is already locked"))
+        } else {
+            repolock::create_instance(py, Cell::new(Some(lock)))
+        }
+    }
+
+    def trylock(&self) -> PyResult<repolock> {
+        let lock = self.inner(py).read().locker().try_lock_store().map_pyerr(py)?;
+        if lock.count() > 1 {
+            Err(PyErr::new::<exc::ValueError, _>(py, "lock is already locked"))
+        } else {
+            repolock::create_instance(py, Cell::new(Some(lock)))
+        }
+    }
+});
+
+py_class!(pub class repolock |py| {
+    data lock: Cell<Option<rsrepolock::RepoLockHandle>>;
+
+    def unlock(&self) -> PyResult<PyNone> {
+        if let Some(f) = self.lock(py).replace(None) {
+            let count = f.count();
+            drop(f);
+            if count == 1 {
+                Ok(PyNone)
+            } else {
+                Err(PyErr::new::<exc::ValueError, _>(py, "lock is still locked"))
+            }
+        } else {
+            Err(PyErr::new::<exc::ValueError, _>(py, "lock is already unlocked"))
+        }
     }
 });

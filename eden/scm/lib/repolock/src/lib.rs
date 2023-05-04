@@ -233,6 +233,22 @@ impl RepoLockHandle {
             wc_path: Some(wc_path),
         }
     }
+
+    /// Return ref count for this lock handle. Ref count of 1 means lock will be
+    /// relased when this handle is dropped.
+    pub fn count(&self) -> u64 {
+        let locker = self.locker.lock();
+        if self.store {
+            locker.store_lock.as_ref().unwrap().1.get()
+        } else {
+            locker
+                .wc_locks
+                .get(self.wc_path.as_ref().unwrap())
+                .unwrap()
+                .1
+                .get()
+        }
+    }
 }
 
 impl fmt::Debug for RepoLockHandle {
