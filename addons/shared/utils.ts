@@ -127,3 +127,8 @@ export function* zip<T, U>(iter1: Iterable<T>, iter2: Iterable<U>): IterableIter
     yield [result1.value, result2.value];
   }
 }
+
+/** Truncate a long string. */
+export function truncate(text: string, maxLength = 100): string {
+  return text.length > maxLength ? text.substring(0, Math.max(0, maxLength - 1)) + '…' : text;
+}

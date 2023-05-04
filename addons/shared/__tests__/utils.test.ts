@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {basename, mapObject} from '../utils';
+import {basename, mapObject, truncate} from '../utils';
 
 describe('basename', () => {
   it('/path/to/foo.txt -> foo.txt', () => {
@@ -42,5 +42,17 @@ describe('mapObject', () => {
       123: 'foo',
       456: 'bar',
     });
+  });
+});
+
+describe('truncate', () => {
+  it('does not truncate strings within the maxLength constraint', () => {
+    expect(truncate('abc', 3)).toBe('abc');
+    expect(truncate('def', 4)).toBe('def');
+  });
+
+  it('truncates long strings', () => {
+    expect(truncate('abc', 2)).toBe('a…');
+    expect(truncate('def', 0)).toBe('…');
   });
 });

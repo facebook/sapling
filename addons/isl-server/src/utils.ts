@@ -10,6 +10,7 @@ import type {ExecaChildProcess} from 'execa';
 import type {CommitInfo, SmartlogCommits} from 'isl/src/types';
 
 import os from 'os';
+import {truncate} from 'shared/utils';
 
 export function sleep(timeMs: number): Promise<void> {
   return new Promise(res => setTimeout(res, timeMs));
@@ -132,7 +133,6 @@ export function parseExecJson<T>(
   exec: execa.ExecaChildProcess,
   reply: (parsed?: T, error?: string) => void,
 ) {
-  const execArgs = () => exec.spawnargs.join(' ');
   exec
     .then(result => {
       const stdout = result.stdout;
@@ -144,12 +144,23 @@ export function parseExecJson<T>(
           reply(parsed as T);
         }
       } catch (err) {
-        const msg = `Cannot parse ${execArgs()} output. (error: ${err}, stdout: ${stdout})`;
+        const msg = `Cannot parse ${truncate(
+          result.escapedCommand,
+        )} output. (error: ${err}, stdout: ${stdout})`;
         reply(undefined, msg);
       }
     })
     .catch(err => {
-      const msg = `Cannot run ${execArgs()}. (error: ${err})`;
+      // Try extracting error from stdout '{error: message}'.
+      try {
+        const parsed = JSON.parse(err.stdout);
+        if (parsed.error != null) {
+          reply(undefined, parsed.error);
+          return;
+        }
+      } catch {}
+      // Fallback to general error.
+      const msg = `Cannot run ${truncate(err.escapedCommand)}. (error: ${err})`;
       reply(undefined, msg);
     });
 }
