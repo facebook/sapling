@@ -25,6 +25,7 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
+import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {initialParams} from './urlParams';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
@@ -195,6 +196,12 @@ export const mostRecentSubscriptionIds: Record<SubscriptionKind, string> = {
   uncommittedChanges: '',
   mergeConflicts: '',
 };
+
+export const hasExperimentalFeatures = atom<boolean | null>({
+  key: 'hasExperimentalFeatures',
+  default: null,
+  effects: [persistAtomToConfigEffect<boolean | null>('isl.experimental-features', false)],
+});
 
 /**
  * Send a subscribeFoo message to the server on initialization,

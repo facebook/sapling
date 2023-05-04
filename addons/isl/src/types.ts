@@ -352,9 +352,12 @@ export type ClientToServerMessageWithPayload = {
 export type SubscriptionKind = 'uncommittedChanges' | 'smartlogCommits' | 'mergeConflicts';
 
 export type ConfigName =
+  // these config names are for compatibility.
   | 'isl.submitAsDraft'
   | 'isl.changedFilesDisplayType'
-  | 'isl.hasShownGettingStarted';
+  | 'isl.hasShownGettingStarted'
+  // sapling config prefers foo-bar naming.
+  | 'isl.experimental-features';
 
 export type ClientToServerMessage =
   | {

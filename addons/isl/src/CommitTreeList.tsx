@@ -26,9 +26,9 @@ import {ImportStackOperation} from './operations/ImportStackOperation';
 import {treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {useArrowKeysToChangeSelection} from './selection';
 import {
-  applicationinfo,
   commitFetchError,
   commitsShownRange,
+  hasExperimentalFeatures,
   isFetchingAdditionalCommits,
   latestHeadCommit,
   latestUncommittedChangesData,
@@ -219,7 +219,7 @@ function FetchingAdditionalCommitsButton() {
 }
 
 function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElement | null {
-  const appInfo = useRecoilValue(applicationinfo);
+  const experimentalFeatures = useRecoilValue(hasExperimentalFeatures);
   const reviewProvider = useRecoilValue(codeReviewProvider);
   const diffMap = useRecoilValue(allDiffSummaries);
   const runOperation = useRunOperation();
@@ -298,7 +298,7 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
     }
   }
 
-  if (appInfo?.version === '(dev)') {
+  if (experimentalFeatures) {
     actions.push(<StackEditButton key="edit-stack" tree={tree} />);
   }
 
