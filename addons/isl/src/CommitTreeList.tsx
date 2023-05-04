@@ -32,7 +32,7 @@ import {
   latestUncommittedChangesData,
   useRunOperation,
 } from './serverAPIState';
-import {editingStackHashes, editingStackState} from './stackEditState';
+import {editingStackHashes, loadingStackState} from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {useRecoilState, useRecoilValue} from 'recoil';
@@ -104,8 +104,9 @@ function SubTree({tree, depth}: {tree: CommitTreeWithPreviews; depth: number}): 
   const isPublic = info.phase === 'public';
 
   const stackHashes = useRecoilValue(editingStackHashes);
-  const stackState = useRecoilValue(editingStackState);
-  const isStackEditing = depth > 0 && stackHashes.has(info.hash) && stackState.state === 'hasValue';
+  const loadingState = useRecoilValue(loadingStackState);
+  const isStackEditing =
+    depth > 0 && stackHashes.has(info.hash) && loadingState.state === 'hasValue';
 
   const stackActions =
     !isPublic && depth === 1 ? <StackActions key="stack-actions" tree={tree} /> : null;
@@ -306,11 +307,11 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
 function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactElement | null {
   const uncommitted = useRecoilValue(latestUncommittedChangesData);
   const [stackHashes, setStackHashes] = useRecoilState(editingStackHashes);
-  const editingStack = useRecoilValue(editingStackState);
+  const loadingState = useRecoilValue(loadingStackState);
 
   const stackCommits = [...walkTreePostorder([tree])].map(t => t.info);
   const isEditing = stackHashes.size > 0 && stackCommits.some(c => stackHashes.has(c.hash));
-  const isLoaded = isEditing && editingStack.state === 'hasValue';
+  const isLoaded = isEditing && loadingState.state === 'hasValue';
   if (isLoaded) {
     // Show [Cancel] [Save changes].
     return (
@@ -346,8 +347,8 @@ function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactEle
   }
 
   const isPreview = tree.previewType != null;
-  const isLoading = isEditing && editingStack.state === 'loading';
-  const isError = isEditing && editingStack.state === 'hasError';
+  const isLoading = isEditing && loadingState.state === 'loading';
+  const isError = isEditing && loadingState.state === 'hasError';
   const isLinear = isTreeLinear(tree);
   const isDirty = stackCommits.some(c => c.isHead) && uncommitted.files.length > 0;
   const hasPublic = stackCommits.some(c => c.phase === 'public');
@@ -356,9 +357,11 @@ function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactEle
   const disabled =
     isDirty || hasObsoleted || !isLinear || isLoading || isError || isPreview || hasPublic;
   const title = isError
-    ? t(`Failed to load stack: ${editingStack.error}`)
+    ? t(`Failed to load stack: ${loadingState.error}`)
     : isLoading
-    ? t('Loading stack content')
+    ? loadingState.exportedStack === undefined
+      ? t('Reading stack content')
+      : t('Analyzing stack content')
     : hasObsoleted
     ? t('Cannot edit stack with commits that have newer versions')
     : isDirty

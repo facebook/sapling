@@ -7,32 +7,27 @@
 
 import type {CommitStackState} from './stackEdit/commitStackState';
 import type {Rev} from './stackEdit/fileStackState';
+import type {UseStackEditState} from './stackEditState';
 
 import {Tooltip} from './Tooltip';
 import {t, T} from './i18n';
-import {editingStackState} from './stackEditState';
-import {assert} from './utils';
+import {useStackEditState} from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useRecoilState} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {unwrap} from 'shared/utils';
 
 import './StackEditSubTree.css';
 
+// <StackEditSubTree /> assumes stack is loaded.
 export function StackEditSubTree(): React.ReactElement {
-  const [stackState, setStackState] = useRecoilState(editingStackState);
-  assert(stackState.state === 'hasValue', '<StackEditSubTree /> requires stack to be loaded');
+  const stackEdit = useStackEditState();
 
-  const state = stackState.value;
-  const revs = state.mutableRevs().reverse();
-  const setState = (state: CommitStackState) => {
-    setStackState({state: 'hasValue', value: state});
-  };
+  const revs = stackEdit.commitStack.mutableRevs().reverse();
 
   return (
     <div className="stack-edit-subtree">
       {revs.map(rev => (
-        <StackEditCommit key={rev} rev={rev} state={state} setState={setState} />
+        <StackEditCommit key={rev} rev={rev} stackEdit={stackEdit} />
       ))}
     </div>
   );
@@ -40,13 +35,12 @@ export function StackEditSubTree(): React.ReactElement {
 
 export function StackEditCommit({
   rev,
-  state,
-  setState,
+  stackEdit,
 }: {
   rev: Rev;
-  state: CommitStackState;
-  setState: (state: CommitStackState) => void;
+  stackEdit: UseStackEditState;
 }): React.ReactElement {
+  const state = stackEdit.commitStack;
   const canFold = state.canFoldDown(rev);
   const canDrop = state.canDrop(rev);
   const canMoveDown = state.canReorder(reorderedRevs(state, rev - 1));
@@ -54,10 +48,11 @@ export function StackEditCommit({
   const commit = unwrap(state.stack.get(rev));
   const titleText = commit.text.split('\n', 1).at(0) ?? '';
 
-  const handleMoveUp = () => setState(state.reorder(reorderedRevs(state, rev)));
-  const handleMoveDown = () => setState(state.reorder(reorderedRevs(state, rev - 1)));
-  const handleFoldDown = () => setState(state.foldDown(rev));
-  const handleDrop = () => setState(state.drop(rev));
+  const handleMoveUp = () => stackEdit.push(state.reorder(reorderedRevs(state, rev)), t('Move up'));
+  const handleMoveDown = () =>
+    stackEdit.push(state.reorder(reorderedRevs(state, rev - 1)), t('Move down'));
+  const handleFoldDown = () => stackEdit.push(state.foldDown(rev), t('Fold down'));
+  const handleDrop = () => stackEdit.push(state.drop(rev), t('Drop'));
 
   const title =
     titleText === '' ? (

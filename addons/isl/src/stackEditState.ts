@@ -6,10 +6,76 @@
  */
 
 import type {Hash} from './types';
+import type {RecordOf} from 'immutable';
+import type {SetterOrUpdater} from 'recoil';
+import type {ExportStack} from 'shared/types/stack';
 
 import clientToServerAPI from './ClientToServerAPI';
+import {t} from './i18n';
 import {CommitStackState} from './stackEdit/commitStackState';
-import {atom, DefaultValue, selector} from 'recoil';
+import {assert} from './utils';
+import {List, Record} from 'immutable';
+import {atom, DefaultValue, selector, useRecoilState} from 'recoil';
+import {unwrap} from 'shared/utils';
+
+type StackStateWithOperationProps = {
+  op: string;
+  state: CommitStackState;
+};
+
+const StackStateWithOperation = Record<StackStateWithOperationProps>({
+  op: '',
+  state: new CommitStackState([]),
+});
+type StackStateWithOperation = RecordOf<StackStateWithOperationProps>;
+
+/** History of multiple states for undo/redo support. */
+type HistoryProps = {
+  history: List<StackStateWithOperation>;
+  currentIndex: number;
+};
+
+const HistoryRecord = Record<HistoryProps>({
+  history: List(),
+  currentIndex: 0,
+});
+type HistoryRecord = RecordOf<HistoryProps>;
+
+class History extends HistoryRecord {
+  current(): CommitStackState {
+    return unwrap(this.history.get(this.currentIndex)).state;
+  }
+
+  push(state: CommitStackState, op: string): History {
+    const newHistory = this.history
+      .slice(0, this.currentIndex + 1)
+      .push(StackStateWithOperation({op, state}));
+    return new History({
+      history: newHistory,
+      currentIndex: newHistory.size - 1,
+    });
+  }
+
+  canUndo(): boolean {
+    return this.currentIndex > 0;
+  }
+
+  canRedo(): boolean {
+    return this.currentIndex + 1 < this.history.size;
+  }
+
+  undoOperationName(): string | undefined {
+    return this.canUndo() ? this.history.get(this.currentIndex)?.op : undefined;
+  }
+
+  undo(): History {
+    return this.canUndo() ? this.set('currentIndex', this.currentIndex - 1) : this;
+  }
+
+  redo(): History {
+    return this.canRedo() ? this.set('currentIndex', this.currentIndex + 1) : this;
+  }
+}
 
 /** State related to stack editing UI. */
 type StackEditState = {
@@ -23,14 +89,19 @@ type StackEditState = {
   hashes: Set<Hash>;
 
   /**
-   * The (mutable) main stack state.
+   * The (mutable) main history of stack states.
    */
-  stack: Loading<CommitStackState>;
+  history: Loading<History>;
 };
 
 /** Lightweight recoil Loadable alternative that is not coupled with Promise. */
 export type Loading<T> =
-  | {state: 'loading'}
+  | {
+      state: 'loading';
+      exportedStack:
+        | ExportStack /* Got the exported stack. Analyzing. */
+        | undefined /* Haven't got the exported stack. */;
+    }
   | {state: 'hasValue'; value: T}
   | {state: 'hasError'; error: string};
 
@@ -41,11 +112,11 @@ const stackEditState = atom<StackEditState>({
   key: 'stackEditState',
   default: {
     hashes: new Set<Hash>(),
-    stack: {state: 'loading'},
+    history: {state: 'loading', exportedStack: undefined},
   },
   effects: [
+    // Subscribe to server exportedStack events.
     ({setSelf}) => {
-      // Listen to the exportedStack event.
       const disposable = clientToServerAPI.onMessageOfType('exportedStack', event => {
         setSelf(prev => {
           const hashes = prev instanceof DefaultValue ? new Set<Hash>() : prev.hashes;
@@ -55,19 +126,32 @@ const stackEditState = atom<StackEditState>({
             return prev;
           }
           if (event.error != null) {
-            return {hashes, stack: {state: 'hasError', error: event.error}};
+            return {hashes, history: {state: 'hasError', error: event.error}};
           } else {
-            try {
-              const stack = new CommitStackState(event.stack).buildFileStacks();
-              return {hashes, stack: {state: 'hasValue', value: stack}};
-            } catch (err) {
-              const msg = `Cannot construct stack ${err}`;
-              return {hashes, stack: {state: 'hasError', error: msg}};
-            }
+            return {hashes, history: {state: 'loading', exportedStack: event.stack}};
           }
         });
       });
       return () => disposable.dispose();
+    },
+    // Kick off stack analysis on receiving an exported stack.
+    ({setSelf, onSet}) => {
+      onSet(newValue => {
+        const {hashes, history} = newValue;
+        if (hashes.size > 0 && history.state === 'loading' && history.exportedStack !== undefined) {
+          try {
+            const stack = new CommitStackState(history.exportedStack).buildFileStacks();
+            const historyValue = new History({
+              history: List([StackStateWithOperation({op: t('Import'), state: stack})]),
+              currentIndex: 0,
+            });
+            setSelf({hashes, history: {state: 'hasValue', value: historyValue}});
+          } catch (err) {
+            const msg = `Cannot construct stack ${err}`;
+            setSelf({hashes, history: {state: 'hasError', error: msg}});
+          }
+        }
+      });
     },
   ],
 });
@@ -81,38 +165,104 @@ export const editingStackHashes = selector({
   get: ({get}) => get(stackEditState).hashes,
   set: ({set}, newValue) => {
     const hashes = newValue instanceof DefaultValue ? new Set<Hash>() : newValue;
-    set(stackEditState, {hashes, stack: {state: 'loading'}});
     if (hashes.size > 0) {
       const revs = getRevs(hashes);
       clientToServerAPI.postMessage({type: 'exportStack', revs});
     }
+    set(stackEditState, {hashes, history: {state: 'loading', exportedStack: undefined}});
   },
 });
 
 /**
- * Main (mutable) stack state being edited.
+ * State for check whether the stack is loaded or not.
+ * Use `useStackEditState` if you want to read or edit the stack.
+ *
+ * This is not `Loading<CommitStackState>` so `hasValue`
+ * states do not trigger re-render.
  */
-export const editingStackState = selector<Loading<CommitStackState>>({
-  key: 'editingStackState',
-  get: ({get}) => get(stackEditState).stack,
-  set: ({set}, newValue) => {
-    set(stackEditState, ({hashes, stack}) => {
-      if (newValue instanceof DefaultValue) {
-        // Ignore DefaultValue.
-        return {hashes, stack};
-      }
-      if (
-        stack.state === 'hasValue' &&
-        newValue.state === 'hasValue' &&
-        stack.value.originalStack !== newValue.value.originalStack
-      ) {
-        // Wrong stack. Racy edit? Ignore.
-        return {hashes, stack};
-      }
-      return {hashes, stack: newValue};
-    });
+export const loadingStackState = selector<Loading<null>>({
+  key: 'loadingStackState',
+  get: ({get}) => {
+    const history = get(stackEditState).history;
+    if (history.state === 'hasValue') {
+      return hasValueState;
+    } else {
+      return history;
+    }
   },
 });
+const hasValueState: Loading<null> = {state: 'hasValue', value: null};
+
+/** APIs exposed via useStackEditState() */
+class UseStackEditState {
+  state: StackEditState;
+  setState: SetterOrUpdater<StackEditState>;
+
+  // derived properties.
+  private history: History;
+
+  constructor(state: StackEditState, setState: SetterOrUpdater<StackEditState>) {
+    this.state = state;
+    this.setState = setState;
+    assert(
+      state.history.state === 'hasValue',
+      'useStackEditState only works when the stack is loaded',
+    );
+    this.history = state.history.value;
+  }
+
+  get commitStack(): CommitStackState {
+    return this.history.current();
+  }
+
+  push(commitStack: CommitStackState, op: string) {
+    if (commitStack.originalStack !== this.commitStack.originalStack) {
+      // Wrong stack. Discard.
+      return;
+    }
+    const newHistory = this.history.push(commitStack, op);
+    this.setHistory(newHistory);
+  }
+
+  canUndo(): boolean {
+    return this.history.canUndo();
+  }
+
+  canRedo(): boolean {
+    return this.history.canRedo();
+  }
+
+  undo() {
+    this.setHistory(this.history.undo());
+  }
+
+  undoOperationName(): string | undefined {
+    return this.history.undoOperationName();
+  }
+
+  redo() {
+    this.setHistory(this.history.redo());
+  }
+
+  private setHistory(newHistory: History) {
+    this.setState({hashes: this.state.hashes, history: {state: 'hasValue', value: newHistory}});
+  }
+}
+
+// Only export the type, not the constructor.
+export type {UseStackEditState};
+
+/**
+ * Get the stack edit state. The stack must be loaded already, that is,
+ * `loadingStackState.state` is `hasValue`. This is the main state for
+ * reading and updating the `CommitStackState`.
+ */
+// This is not a recoil selector for flexibility.
+// See https://github.com/facebookexperimental/Recoil/issues/673
+export function useStackEditState() {
+  const [state, setState] = useRecoilState(stackEditState);
+  return new UseStackEditState(state, setState);
+}
 
 /** Get revset expression for requested hashes. */
 function getRevs(hashes: Set<Hash>): string {
