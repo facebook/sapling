@@ -116,6 +116,21 @@ class UnexpectedMountProblem(Problem):
         super().__init__(f"unexpected error while checking {mount}", exception=ex)
 
 
+class UnknownElevationProblem(Problem):
+    def __init__(self, pid: Optional[int], ex: Exception) -> None:
+        super().__init__(
+            description=f"Unable to determine elevation of process {pid}: {ex}",
+        )
+
+
+class RunningElevatedProblem(Problem):
+    def __init__(self, pid: Optional[int]) -> None:
+        super().__init__(
+            description=f"EdenFS is running as elevated process {pid}, which isn't supported",
+            remediation="Run `edenfsctl restart` from a non-elevated command prompt",
+        )
+
+
 class EdenDoctorChecker:
     """EdenDoctorChecker is a base class for EdenDoctor, and only supports
     running checks, without reporting or fixing problems.
@@ -275,12 +290,36 @@ class EdenDoctorChecker:
             # would be unexpected.
             self.tracker.add_problem(UnexpectedPrivHelperProblem(ex))
 
+    def check_running_elevated(self) -> None:
+        if sys.platform != "win32":
+            return
+
+        # proc_utils_win's ctypes dependences can't be imported on non-Windows.
+        from eden.fs.cli import proc_utils_win
+
+        health_status = self.instance.check_health()
+        if health_status.pid is None:
+            return
+
+        try:
+            process_handle = proc_utils_win.open_process(health_status.pid)
+            token_handle = proc_utils_win.open_process_token(process_handle)
+            elevated = proc_utils_win.is_token_elevated(token_handle)
+        except Exception as ex:
+            self.tracker.add_problem(UnknownElevationProblem(health_status.pid, ex))
+            return
+
+        if elevated:
+            self.tracker.add_problem(RunningElevatedProblem(health_status.pid))
+
     def run_normal_checks(self) -> None:
         check_edenfs_version(self.tracker, self.instance)
         checkouts = self._get_checkouts_info()
         checked_backing_repos = set()
 
-        if sys.platform != "win32":
+        if sys.platform == "win32":
+            self.check_running_elevated()
+        else:
             self.check_privhelper()
 
         if self.run_system_wide_checks:

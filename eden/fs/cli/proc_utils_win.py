@@ -14,6 +14,8 @@ from ctypes.wintypes import (
     HANDLE as _HANDLE,
     LPDWORD as _LPDWORD,
     LPWSTR as _LPWSTR,
+    PDWORD as _PDWORD,
+    PHANDLE as _PHANDLE,
 )
 from pathlib import Path
 from typing import Iterable, NoReturn, Optional, Type
@@ -33,6 +35,8 @@ if sys.platform == "win32":
     psapi.GetProcessImageFileNameW.argstypes = [_HANDLE, _LPWSTR, _DWORD]
     psapi.GetProcessImageFileNameW.restype = _DWORD
 
+    advapi32 = ctypes.windll.advapi32
+
     def raise_win_error() -> NoReturn:
         raise ctypes.WinError()
 
@@ -44,6 +48,12 @@ else:
     class _win32:
         @staticmethod
         def OpenProcess(desired_access: int, inherit_handle: bool, pid: int) -> _HANDLE:
+            ...
+
+        @staticmethod
+        def OpenProcessToken(
+            handle: _HANDLE, desired_access: int, token_handle: _PHANDLE
+        ) -> bool:
             ...
 
         @staticmethod
@@ -65,6 +75,17 @@ else:
         ) -> _DWORD:
             ...
 
+    class advapi32:
+        @staticmethod
+        def GetTokenInformation(
+            token_handle: _HANDLE,
+            token_information_class: int,
+            token_information: ctypes._CArgObject,
+            token_information_length: _DWORD,
+            return_length: _PDWORD,
+        ) -> bool:
+            ...
+
     def raise_win_error() -> NoReturn:
         ...
 
@@ -73,6 +94,8 @@ _PROCESS_TERMINATE = 0x0001
 _PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 _ERROR_ACCESS_DENIED = 5
 _CREATE_NO_WINDOW = 0x08000000
+_TOKEN_READ = 0x00020008
+_TOKEN_ELEVATION = 20
 
 
 class Handle:
@@ -80,6 +103,13 @@ class Handle:
 
     def __init__(self, handle: _HANDLE) -> None:
         self.handle = handle
+
+    @classmethod
+    def make_empty(klass) -> "Handle":
+        return klass(_HANDLE())
+
+    def asref(self) -> "ctypes._Pointer[ctypes.c_void_p]":
+        return ctypes.pointer(self.handle)
 
     def __enter__(self) -> "Handle":
         return self
@@ -104,6 +134,34 @@ def open_process(pid: int, access: int = _PROCESS_QUERY_LIMITED_INFORMATION) -> 
     if handle_value is None:
         raise_win_error()
     return Handle(handle_value)
+
+
+def open_process_token(process_handle: Handle) -> Handle:
+    token_handle = Handle.make_empty()
+    if not _win32.OpenProcessToken(
+        process_handle.handle, _TOKEN_READ, token_handle.asref()
+    ):
+        raise_win_error()
+
+    return token_handle
+
+
+def is_token_elevated(token_handle: Handle) -> bool:
+    elevation = ctypes.c_int(0)
+    output_size = _DWORD(0)
+    if (
+        advapi32.GetTokenInformation(
+            token_handle.handle,
+            _TOKEN_ELEVATION,
+            ctypes.byref(elevation),
+            ctypes.c_ulong(ctypes.sizeof(elevation)),
+            ctypes.pointer(output_size),
+        )
+        == 0
+    ):
+        raise_win_error()
+
+    return elevation.value != 0
 
 
 def get_process_name(handle: Handle) -> str:
