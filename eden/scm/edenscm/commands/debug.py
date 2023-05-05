@@ -2135,9 +2135,9 @@ def debuglabelcomplete(ui, repo, *args) -> None:
 @command(
     "debuglocks|debuglock",
     [
-        ("L", "force-lock", None, _("free the store lock (DANGEROUS)")),
-        ("W", "force-wlock", None, _("free the working state lock (DANGEROUS)")),
-        ("U", "force-undolog-lock", None, _("free the undolog lock " "(DANGEROUS)")),
+        ("L", "force-lock", None, _("free the store lock (DEPRECATED)")),
+        ("W", "force-wlock", None, _("free the working state lock (DEPRECATED)")),
+        ("U", "force-undolog-lock", None, _("free the undolog lock " "(DEPRECATED)")),
         ("s", "set-lock", None, _("set the store lock until stopped")),
         ("S", "set-wlock", None, _("set the working state lock until stopped")),
         ("", "wait", None, _("wait for the lock when setting it")),
@@ -2168,26 +2168,13 @@ def debuglocks(ui, repo, **opts) -> int:
     Returns 0 if no locks are held.
 
     """
-    done = False
-    if pycompat.iswindows:
-        if opts.get(r"force_lock"):
-            repo.svfs.unlink("lock")
-            done = True
-        if opts.get(r"force_wlock"):
-            repo.localvfs.unlink("wlock")
-            done = True
-        if opts.get(r"force_undolog_lock"):
-            repo.localvfs.unlink("undolog/lock")
-            done = True
-    else:
-        if (
-            opts.get(r"force_lock")
-            or opts.get(r"force_wlock")
-            or opts.get(r"force_undolog_lock")
-        ):
-            raise error.Abort(_("cannot force release lock on POSIX"))
-    if done:
-        return 0
+
+    if (
+        opts.get("force_lock")
+        or opts.get("force_wlock")
+        or opts.get("force_undolog_lock")
+    ):
+        raise error.Abort(_("forcing lock release no longer supported"))
 
     wait = opts.get(r"wait") or False
 

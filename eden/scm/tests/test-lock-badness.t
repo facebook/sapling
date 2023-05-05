@@ -175,23 +175,6 @@ Having an empty lock file
   [255]
   $ rm .hg/wlock
 
-Having an undolog lock file
-  $ mkdir .hg/undolog && touch .hg/undolog/lock
-  $ hg debuglocks
-  lock:          free
-  wlock:         free
-  undolog/lock:  malformed
-  prefetchlock:  free
-  infinitepushbackup.lock: free
-  [1]
-  $ hg debuglocks --force-undolog-lock
-  $ hg debuglocks
-  lock:          free
-  wlock:         free
-  undolog/lock:  free
-  prefetchlock:  free
-  infinitepushbackup.lock: free
-
 #else
 
 Having an empty lock file
@@ -212,7 +195,7 @@ Having an empty undolog lock file
   prefetchlock:  free
   infinitepushbackup.lock: free
   $ hg debuglocks --force-undolog-lock
-  abort: cannot force release lock on POSIX
+  abort: forcing lock release no longer supported
   [255]
   $ hg debuglocks
   lock:          free
