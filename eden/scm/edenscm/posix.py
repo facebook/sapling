@@ -285,21 +285,6 @@ def makelock(info: str, pathname: str, checkdeadlock: bool = True) -> "Optional[
             raise
 
 
-def readlock(pathname: str) -> str:
-    with _locked(os.path.dirname(pathname) or "."):
-        try:
-            return os.readlink(pathname)
-        except OSError as why:
-            if why.errno not in (errno.EINVAL, errno.ENOSYS):
-                raise
-        except AttributeError:  # no symlink in os
-            pass
-        fp = posixfile(pathname)
-        r = fp.read()
-        fp.close()
-        return r
-
-
 def releaselock(lockfd: "Optional[int]", pathname: str) -> None:
     # Explicitly unlock. This avoids issues when a
     # forked process inherits the flock.

@@ -650,20 +650,6 @@ def makelock(info: str, pathname: str, checkdeadlock: bool = None) -> "Optional[
         raise
 
 
-def readlock(pathname: str) -> str:
-    try:
-        return os.readlink(pathname)
-    except OSError as why:
-        if why.errno not in (errno.EINVAL, errno.ENOSYS):
-            raise
-    except AttributeError:  # no symlink in os
-        pass
-    fp = posixfile(pathname)
-    r = fp.read()
-    fp.close()
-    return r
-
-
 def releaselock(_lockfd: "Optional[int]", pathname: str) -> None:
     os.unlink(pathname)
 

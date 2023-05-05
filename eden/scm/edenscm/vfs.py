@@ -254,9 +254,6 @@ class abstractvfs(pycompat.ABC):
         #  List[Tuple[str, int, stat]]]`.
         return util.listdir(self.join(path), stat, skip)
 
-    def readlock(self, path: "Optional[str]") -> str:
-        return util.readlock(self.join(path))
-
     def rename(self, src: str, dst: str, checkambig: bool = False) -> None:
         """Rename from src to dst
 

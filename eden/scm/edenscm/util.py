@@ -178,7 +178,6 @@ parsepatchoutput = platform.parsepatchoutput
 pconvert = platform.pconvert
 popen = platform.popen
 posixfile = platform.posixfile
-readlock = platform.readlock
 releaselock = platform.releaselock
 removedirs = platform.removedirs
 rename = platform.rename

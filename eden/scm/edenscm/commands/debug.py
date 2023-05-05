@@ -2221,19 +2221,15 @@ def debuglocks(ui, repo, **opts) -> int:
             l.release()
             ui.write(_x("%-14s free\n") % (name + ":"))
             return 0
-        except error.LockHeld:
+        except error.LockHeld as lockheldexc:
             try:
                 stat = vfs.lstat(name)
                 age = now - stat.st_mtime
                 user = util.username(stat.st_uid)
-                locker = vfs.readlock(name)
-                if ":" in locker:
-                    host, pid = locker.split(":")
-                    if host == socket.gethostname():
-                        locker = "user %s, process %s" % (user, pid)
-                    else:
-                        locker = "user %s, process %s, host %s" % (user, pid, host)
-                ui.write(_x("%-14s %s (%ds)\n") % (name + ":", locker, age))
+                ui.write(
+                    _x("%-14s user %s, %s (%ds)\n")
+                    % (name + ":", user, lockheldexc.lockinfo, age)
+                )
                 return 1
             except OSError as e:
                 if e.errno != errno.ENOENT:
