@@ -103,9 +103,9 @@ struct SqliteTreeStore::StatementCache {
 
     for (size_t i = 0; i < size; i++) {
       if (i != 0) {
-        fmt::format_to(stmt_buffer, ","); // delimiter
+        fmt::format_to(std::back_inserter(stmt_buffer), ","); // delimiter
       }
-      fmt::format_to(stmt_buffer, values_fmt.data());
+      fmt::format_to(std::back_inserter(stmt_buffer), values_fmt.data());
     }
     return PersistentSqliteStatement{db, fmt::to_string(stmt_buffer)};
   }
