@@ -176,7 +176,7 @@ pub async fn upload_git_tag<Uploader: GitUploader>(
 pub async fn gitimport_acc<Uploader: GitUploader>(
     ctx: &CoreContext,
     path: &Path,
-    uploader: Uploader,
+    uploader: &Uploader,
     target: &GitimportTarget,
     prefs: &GitimportPreferences,
 ) -> Result<GitimportAccumulator, Error> {
@@ -308,7 +308,13 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
                     .await
                     .with_context(|| format_err!("Failed to upload raw git commit {}", oid))?;
                 let (int_cs, bcs_id) = uploader
-                    .generate_changeset(ctx, bonsai_parents, metadata, file_changes, dry_run)
+                    .generate_changeset_for_commit(
+                        ctx,
+                        bonsai_parents,
+                        metadata,
+                        file_changes,
+                        dry_run,
+                    )
                     .await?;
                 acc.write().expect("lock poisoned").insert(oid, bcs_id);
 
@@ -342,7 +348,7 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
 pub async fn gitimport(
     ctx: &CoreContext,
     path: &Path,
-    uploader: impl GitUploader,
+    uploader: &impl GitUploader,
     target: &GitimportTarget,
     prefs: &GitimportPreferences,
 ) -> Result<LinkedHashMap<ObjectId, ChangesetId>, Error> {
@@ -465,7 +471,7 @@ pub async fn import_tree_as_single_bonsai_changeset(
         .with_context(|| format_err!("Failed to upload raw git commit {}", git_cs_id))?;
 
     uploader
-        .generate_changeset(ctx, vec![], metadata, file_changes, prefs.dry_run)
+        .generate_changeset_for_commit(ctx, vec![], metadata, file_changes, prefs.dry_run)
         .and_then(|(cs, id)| {
             uploader
                 .finalize_batch(ctx, prefs.dry_run, vec![(cs, sha1)])

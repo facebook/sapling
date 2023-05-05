@@ -530,9 +530,9 @@ impl Arbitrary for BonsaiAnnotatedTagTarget {
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct BonsaiAnnotatedTag {
     // The target of the annotated tag
-    target: BonsaiAnnotatedTagTarget,
+    pub target: BonsaiAnnotatedTagTarget,
     // The signature included with the tag
-    pgp_signature: Option<Bytes>,
+    pub pgp_signature: Option<Bytes>,
 }
 
 impl BonsaiAnnotatedTag {

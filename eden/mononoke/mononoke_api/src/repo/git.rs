@@ -132,8 +132,8 @@ impl RepoContext {
     /// Create a new annotated tag in the repository.
     pub async fn create_annotated_tag(
         &self,
-        author: String,
-        author_date: DateTime<FixedOffset>,
+        author: Option<String>,
+        author_date: Option<DateTime<FixedOffset>>,
         annotation: String,
         annotated_tag: BonsaiAnnotatedTag,
     ) -> Result<ChangesetContext, GitError> {
@@ -243,25 +243,30 @@ pub async fn create_git_tree(
 pub async fn create_annotated_tag(
     ctx: &CoreContext,
     repo: &(impl changesets::ChangesetsRef + repo_blobstore::RepoBlobstoreRef),
-    author: String,
-    author_date: DateTime<FixedOffset>,
+    author: Option<String>,
+    author_date: Option<DateTime<FixedOffset>>,
     annotation: String,
     annotated_tag: BonsaiAnnotatedTag,
 ) -> Result<mononoke_types::ChangesetId, GitError> {
-    let author_date = MononokeDateTime::new(author_date);
     let tag_id = format!("{:?}", annotated_tag);
 
     // Create the new Bonsai Changeset. The `freeze` method validates
     // that the bonsai changeset is internally consistent.
-    let changeset = BonsaiChangesetMut {
-        author,
-        author_date,
+    let mut changeset = BonsaiChangesetMut {
         message: annotation,
         git_annotated_tag: Some(annotated_tag),
         ..Default::default()
+    };
+    if let Some(author) = author {
+        changeset.author = author;
     }
-    .freeze()
-    .map_err(|e| GitError::InvalidBonsai(tag_id.clone(), e.into()))?;
+    if let Some(author_date) = author_date {
+        changeset.author_date = MononokeDateTime::new(author_date);
+    }
+
+    let changeset = changeset
+        .freeze()
+        .map_err(|e| GitError::InvalidBonsai(tag_id.clone(), e.into()))?;
 
     let changeset_id = changeset.get_changeset_id();
     // Store the created changeset

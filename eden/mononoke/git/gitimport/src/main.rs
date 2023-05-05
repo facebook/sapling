@@ -226,7 +226,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     };
 
     let gitimport_result: LinkedHashMap<_, _> =
-        import_tools::gitimport(&ctx, path, uploader.clone(), &target, &prefs)
+        import_tools::gitimport(&ctx, path, &uploader, &target, &prefs)
             .await
             .context("gitimport failed")?;
     if args.derive_hg {

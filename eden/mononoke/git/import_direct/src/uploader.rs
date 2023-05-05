@@ -154,7 +154,7 @@ where
         meta_ret.map(|meta| FileChange::tracked(meta.content_id, ty, meta.total_size, None))
     }
 
-    async fn generate_changeset(
+    async fn generate_changeset_for_commit(
         &self,
         _ctx: &CoreContext,
         bonsai_parents: Vec<ChangesetId>,
