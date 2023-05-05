@@ -2135,9 +2135,20 @@ folly::SemiFuture<FsStopDataPtr> Nfsd3::getStopFuture() {
 
 bool Nfsd3::takeoverStop() {
   XLOG(DBG7) << "calling takeover stop on the nfs RpcServer";
-  // Ensure the takeover future was scheduled by detaching it onto the
-  // EventBase.
-  folly::futures::detachOn(server_->getEventBase(), server_->takeoverStop());
+
+  // RpcServer::takeoverStop() must be called from the RpcServer's EventBase. In
+  // addition, the returned SemiFuture may have deferred callbacks which must be
+  // scheduled on an executor. We can schedule the SemiFuture on the same.
+  //
+  // There is a strangeness to how this works. Nfsd3::takeoverStop is a request
+  // to begin takeover. RpcServer::takeoverStop is an asynchronous operation
+  // that returns a (duplicated) file descriptor, but we drop that on the floor
+  // here. Instead, the file descriptor is detached as returned as part of the
+  // StopFuture returned by getStopFuture(). There may be an opportunity to
+  // simplify this data flow.
+  auto* evb = server_->getEventBase();
+  evb->runImmediatelyOrRunInEventBaseThreadAndWait(
+      [&] { folly::futures::detachOn(evb, server_->takeoverStop()); });
   return true;
 }
 

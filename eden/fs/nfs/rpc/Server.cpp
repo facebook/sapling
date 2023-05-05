@@ -589,7 +589,7 @@ void RpcServer::initializeServerSocket(folly::File socket) {
 
   serverSocket_->useExistingSocket(
       folly::NetworkSocket::fromFd(socket.release()));
-  serverSocket_->addAcceptCallback(this, evb_);
+  serverSocket_->addAcceptCallback(this, nullptr);
   serverSocket_->startAccepting();
 }
 
@@ -607,10 +607,6 @@ void RpcServer::unregisterRpcHandler(RpcConnectionHandler* handlerToErase) {
 }
 
 folly::SemiFuture<folly::File> RpcServer::takeoverStop() {
-  return takeoverStopImpl();
-}
-
-folly::SemiFuture<folly::File> RpcServer::takeoverStopImpl() {
   auto& state = state_.get();
 
   XLOG(DBG7) << "Removing accept callback";
@@ -618,7 +614,8 @@ folly::SemiFuture<folly::File> RpcServer::takeoverStopImpl() {
   if (serverSocket_->getAccepting()) {
     serverSocket_->removeAcceptCallback(this, nullptr);
     XCHECK(state.acceptStopped)
-        << "We always accept on the same primary socket EventBase, so it should be guaranteed that acceptStopped() ran synchronously.";
+        << "We always accept on the same primary socket EventBase, so it "
+           "should be guaranteed that acceptStopped() ran synchronously.";
 
     // Removing the last accept callback implicitly paused accepting.
   }
@@ -643,7 +640,13 @@ folly::SemiFuture<folly::File> RpcServer::takeoverStopImpl() {
         if (fd == -1) {
           return folly::File{};
         }
-        return folly::File(fd, true);
+        // TODO: This needs Windows-specific handling. folly::File and
+        // NetworkSocket are not compatible on Windows.
+
+        // The AsyncServerSocket owns the socket handle, so we can't
+        // steal ownership here. Duplicate the existing fd and send
+        // the duplicated fd to the taking-over process.
+        return folly::File(fd, false).dupCloseOnExec();
       });
 }
 

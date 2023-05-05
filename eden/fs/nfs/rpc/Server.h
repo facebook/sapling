@@ -344,8 +344,6 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
 
   ~RpcServer() override;
 
-  folly::SemiFuture<folly::File> takeoverStopImpl();
-
   // AsyncServerSocket::AcceptCallback
 
   void connectionAccepted(
