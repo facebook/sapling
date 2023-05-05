@@ -13,8 +13,10 @@ use std::sync::Arc;
 use ::copytrace::GitCopyTrace;
 use ::types::HgId;
 use async_runtime::try_block_unless_interrupted as block_on;
+use copytrace::ContentSimilarityRenameFinder;
 use copytrace::CopyTrace;
 use copytrace::DagCopyTrace;
+use copytrace::RenameFinder;
 use copytrace::SaplingRenameFinder;
 use cpython::*;
 use cpython_ext::convert::ImplInto;
@@ -27,6 +29,7 @@ use dag::Vertex;
 use parking_lot::Mutex;
 use storemodel::ReadFileContents;
 use storemodel::ReadRootTreeIds;
+use storemodel::TreeFormat;
 use storemodel::TreeStore;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -67,7 +70,10 @@ py_class!(pub class dagcopytrace |py| {
     ) -> PyResult<Self> {
         let root_tree_reader = root_tree_reader.into();
         let tree_store = tree_store.into();
-        let rename_finder = Arc::new(SaplingRenameFinder::new(file_reader.into()));
+        let rename_finder: Arc<dyn RenameFinder + Send + Sync> = match tree_store.format() {
+            TreeFormat::Hg => Arc::new(SaplingRenameFinder::new(file_reader.into())),
+            TreeFormat::Git => Arc::new(ContentSimilarityRenameFinder::new(file_reader.into())),
+        };
         let dag = dag.into();
 
         let copytrace = DagCopyTrace::new(

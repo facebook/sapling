@@ -52,7 +52,6 @@ pub struct SaplingRenameFinder {
 }
 
 /// Content similarity based Rename finder (mainly for Git repo)
-#[allow(dead_code, unused_variables)]
 pub struct ContentSimilarityRenameFinder {
     // Read content and rename metadata of a file
     file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
