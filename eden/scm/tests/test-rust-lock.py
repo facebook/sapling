@@ -31,7 +31,7 @@ class testrustlock(unittest.TestCase):
             nonlocal postreleased
             postreleased += 1
 
-        l = lock.rustlock(
+        l = lock.lock(
             self.vfs,
             "foo",
             acquirefn=acquire,
@@ -61,7 +61,7 @@ class testrustlock(unittest.TestCase):
     def testsubdirlock(self):
         self.vfs.mkdir("some_dir")
 
-        l = lock.rustlock(
+        l = lock.lock(
             self.vfs,
             "some_dir/foo",
         )
@@ -76,11 +76,11 @@ class testrustlock(unittest.TestCase):
         def testpermissionerror(self):
             os.chmod(self.vfs.base, 0)
             with self.assertRaises(error.LockUnavailable):
-                lock.rustlock(self.vfs, "foo")
+                lock.lock(self.vfs, "foo")
 
         # Test that we don't drop locks in forked child.
         def testfork(self):
-            l = lock.rustlock(self.vfs, "foo")
+            l = lock.lock(self.vfs, "foo")
 
             pid = os.fork()
             if pid == 0:
@@ -96,26 +96,25 @@ class testrustlock(unittest.TestCase):
 
             self.assertNotLocked("foo")
 
-    # Make sure the devel.lockmode=rust_only flag works.
-    def testrustonlymode(self):
-        with self.ui.configoverride({("devel", "lockmode"): "rust_only"}):
-            with lock.lock(self.vfs, "foo", ui=self.ui):
-                self.assertLocked("foo")
-                self.assertLegacyLock("foo", True)
+    # Test we create the legacy lock file for compat with naughty witnesses.
+    def testlegacycompat(self):
+        with lock.lock(self.vfs, "foo", ui=self.ui):
+            self.assertLocked("foo")
+            self.assertLegacyLock("foo", True)
 
-            self.assertNotLocked("foo")
-            self.assertLegacyLock("foo", False)
+        self.assertNotLocked("foo")
+        self.assertLegacyLock("foo", False)
 
     def assertLegacyLock(self, name, exists):
         self.assertEqual(self.vfs.lexists(name), exists)
 
     def assertLocked(self, name):
         with self.assertRaises(error.LockHeld):
-            lock.rustlock(self.vfs, name, timeout=0)
+            lock.lock(self.vfs, name, timeout=0)
 
     def assertNotLocked(self, name):
         try:
-            lock.rustlock(self.vfs, name, timeout=0).release()
+            lock.lock(self.vfs, name, timeout=0).release()
         except Exception as err:
             self.assertTrue(False, str(err))
 

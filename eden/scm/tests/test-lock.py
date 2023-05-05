@@ -13,7 +13,7 @@ from hghave import require
 testlockname = "testlock"
 
 
-class lockwrapper(lock.pythonlock):
+class lockwrapper(lock.lock):
     def __init__(self, pidoffset, *args, **kwargs):
         # lock.lock.__init__() calls lock(), so the pidoffset assignment needs
         # to be earlier
@@ -158,33 +158,6 @@ class testlock(unittest.TestCase):
             lock.release()
             state.assertreleasecalled(True)
             state.assertpostreleasecalled(True)
-            state.assertlockexists(False)
-
-    def testfrequentlockunlock(self):
-        """This tests whether lock acquisition fails as expected, even if
-        (1) lock can't be acquired (makelock fails by EEXIST), and
-        (2) lockinfo can't be read in (readlock fails by ENOENT) while
-        retrying 5 times.
-        """
-
-        d = tempfile.mkdtemp(dir=os.getcwd())
-        state = teststate(self, d)
-
-        def emulatefrequentlock(*args, **kwargs):
-            raise OSError(errno.EEXIST, "File exists")
-
-        def emulatefrequentunlock(*args, **kwargs):
-            raise OSError(errno.ENOENT, "No such file or directory")
-
-        state.vfs.makelock = emulatefrequentlock
-        state.vfs.readlock = emulatefrequentunlock
-
-        try:
-            state.makelock(timeout=0)
-            self.fail("unexpected lock acquisition")
-        except error.LockHeld as why:
-            self.assertTrue(why.errno == errno.ETIMEDOUT)
-            self.assertTrue(why.lockinfo == lock.emptylockinfo)
             state.assertlockexists(False)
 
     def testislocked(self):

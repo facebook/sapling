@@ -12,7 +12,6 @@
 
 from __future__ import absolute_import
 
-import copy
 import errno
 import os
 import socket
@@ -146,7 +145,7 @@ class lockinfo(object):
 
 def trylock(
     ui, vfs, lockname, timeout, warntimeout: Optional[int] = None, *args, **kwargs
-) -> "pythonlock":
+) -> "lock":
     """return an acquired lock or raise an a LockHeld exception
 
     This function is responsible to issue warnings and or debug messages about
@@ -182,22 +181,7 @@ def trylock(
     return l
 
 
-# Temporary method to dispatch based on devel.lockmode during transition to rust locks.
-def lock(*args, ui=None, **kwargs) -> "pythonlock":
-    lockclass = pythonlock
-
-    if ui:
-        mode = ui.config("devel", "lockmode")
-        if mode == "rust_only":
-            lockclass = rustlock
-        elif mode == "python_and_rust":
-            kwargs = copy.copy(kwargs)
-            kwargs["andrust"] = True
-
-    return lockclass(*args, ui=ui, **kwargs)
-
-
-class pythonlock(object):
+class lock(object):
     """An advisory lock held by one process to control access to a set
     of files.  Non-cooperating processes or incorrectly written scripts
     can ignore Mercurial's locking scheme and stomp all over the
@@ -206,14 +190,6 @@ class pythonlock(object):
     Typically used via localrepository.lock() to lock the repository
     store (.hg/store/) or localrepository.wlock() to lock everything
     else under .hg/."""
-
-    # lock is symlink on platforms that support it, file on others.
-
-    # symlink is used because create of directory entry and contents
-    # are atomic even over nfs.
-
-    # old-style lock: symlink to pid
-    # new-style lock: symlink to hostname:pid
 
     def __init__(
         self,
@@ -228,8 +204,6 @@ class pythonlock(object):
         spinnermsg=None,
         warnattemptidx=None,
         debugattemptidx=None,
-        checkdeadlock=True,
-        andrust=False,
         trylockfn=None,
     ):
         self.vfs = vfs
@@ -246,11 +220,8 @@ class pythonlock(object):
         self.spinnermsg = spinnermsg
         self.warnattemptidx = warnattemptidx
         self.debugattemptidx = debugattemptidx
-        self.checkdeadlock = checkdeadlock
         self.trylockfn = trylockfn
         self._debugmessagesprinted = set([])
-        self._lockfd = None
-        self.andrust = andrust
         self._rustlock = None
 
         self.delay = self.lock()
@@ -327,8 +298,7 @@ class pythonlock(object):
         if self.held:
             self.held += 1
             return
-        assert self._lockfd is None
-        retry = 5
+        assert self._rustlock is None
 
         path = self.vfs.join(self.f)
         if (
@@ -338,72 +308,28 @@ class pythonlock(object):
         ):
             raise error.LockHeld(errno.EAGAIN, path, self.desc, None)
 
-        while not self.held and retry:
-            retry -= 1
-            try:
-                self._lockfd = self.vfs.makelock(
-                    self._getlockname(), self.f, checkdeadlock=self.checkdeadlock
-                )
-                self.held = 1
-            except (OSError, IOError) as why:
-                # EEXIST: lockfile exists (Windows)
-                # ELOOP: lockfile exists as a symlink (POSIX)
-                # EAGAIN: lockfile flock taken by other process (POSIX)
-                if why.errno in {errno.EEXIST, errno.ELOOP, errno.EAGAIN}:
-                    lockfilecontents = self._readlock()
-                    if lockfilecontents is None:
-                        continue
-                    info = lockinfo(lockfilecontents, path=self.vfs.join(self.f))
-                    info = self._testlock(info)
-                    if info is not None:
-                        raise error.LockHeld(
-                            errno.EAGAIN, self.vfs.join(self.f), self.desc, info
-                        )
-
-                else:
-                    raise error.LockUnavailable(
-                        why.errno, why.strerror, why.filename, self.desc
-                    )
-
-        if not self.held:
-            # use empty lockinfo to mean "busy for frequent lock/unlock
-            # by many processes"
-            raise error.LockHeld(
-                errno.EAGAIN, self.vfs.join(self.f), self.desc, emptylockinfo
-            )
-
-        if self.andrust:
-            try:
-                self._rustlock = rustlock(
-                    self.vfs,
-                    self.f,
-                    timeout=self.timeout,
-                    desc=self.desc,
-                    ui=self.ui,
-                    warnattemptidx=self.warnattemptidx,
-                    debugattemptidx=self.debugattemptidx,
-                    trylockfn=self.trylockfn,
-                    # don't pass callbacks to avoid double invocation
-                    # don't pass spinner to avoid double spinner
-                )
-            except Exception as err:
-                # Avoid invoking python lock's release callback if rust lock acquisition fails.
-                self.releasefn = None
-                self.release()
-                raise err
-
-    def _readlock(self):
-        """read lock and return its value
-
-        Returns None if no lock exists, pid for old-style locks, and host:pid
-        for new-style locks.
-        """
         try:
-            return self.vfs.readlock(self.f)
-        except (OSError, IOError) as why:
-            if why.errno == errno.ENOENT:
-                return None
-            raise
+            if self.trylockfn:
+                self._rustlock = self.trylockfn()
+            else:
+                self._rustlock = nativelock.pathlock.trylock(
+                    self.vfs.dirname(path), self.vfs.basename(path), self._getlockname()
+                )
+            self.held = 1
+        except error.LockContendedError as err:
+            raise error.LockHeld(
+                errno.EAGAIN,
+                path,
+                self.desc,
+                lockinfo(err.args[0], path=path),
+            )
+        except IOError as err:
+            raise error.LockUnavailable(
+                err.errno,
+                str(err),
+                path,
+                self.desc,
+            )
 
     def _debugprintonce(self, msg):
         """Print debug message only once"""
@@ -411,46 +337,6 @@ class pythonlock(object):
             return
         self._debugmessagesprinted.add(msg)
         self.ui.debug(msg)
-
-    def _testlock(self, info):
-        if info is None:
-            return None
-        if not info.issamenamespace():
-            # this and below debug prints will hopefully help us
-            # understand the issue with stale lock files not being
-            # cleaned up on Windows (T25415269)
-            m = _("locker is not in the same namespace(locker: %r, us: %r)\n")
-            m %= (info.namespace, lockinfo.getcurrentnamespace())
-            self._debugprintonce(m)
-            return info
-        # On posix.makelock removes stale locks automatically. So there is no
-        # need to remove stale lock here.
-        if info.isrunning() or not pycompat.iswindows:
-            m = _("locker is still running (full unique id: %r)\n")
-            m %= (info.uniqueid,)
-            self._debugprintonce(m)
-            return info
-        # XXX: The below logic is broken since "read + test + unlink" should
-        # happen atomically, in a same critical section. Use another lock to
-        # only protect "unlink" is not enough.
-        #
-        # if lockinfo dead, break lock.  must do this with another lock
-        # held, or can race and break valid lock.
-        try:
-            # The "remove dead lock" logic is done by posix.makelock, not here.
-            assert pycompat.iswindows
-            msg = _(
-                "trying to removed the stale lock file " "(will acquire %s for that)\n"
-            )
-            breaklock = self.f + ".break"
-            self._debugprintonce(msg % breaklock)
-            l = lock(self.vfs, breaklock, timeout=0)
-            self.vfs.unlink(self.f)
-            l.release()
-            self._debugprintonce(_("removed the stale lock file\n"))
-        except error.LockError:
-            self._debugprintonce(_("failed to remove the stale lock file\n"))
-            return info
 
     def release(self):
         """release the lock and execute callback function if any
@@ -470,7 +356,7 @@ class pythonlock(object):
             finally:
                 try:
                     self._release()
-                    self._lockfd = None
+                    self._rustlock = None
                 except OSError:
                     pass
             for callback in self.postrelease:
@@ -479,59 +365,13 @@ class pythonlock(object):
             self.postrelease = None
 
     def _release(self):
-        util.releaselock(self._lockfd, self.vfs.join(self.f))
-
         if self._rustlock:
-            self._rustlock.release()
-
-
-class rustlock(pythonlock):
-    """Delegates to rust implementation of advisory file lock."""
-
-    def _trylock(self):
-        if self.held:
-            self.held += 1
-            return
-        assert self._lockfd is None
-
-        path = self.vfs.join(self.f)
-        if (
-            util.istest()
-            and self.f
-            in encoding.environ.get("EDENSCM_TEST_PRETEND_LOCKED", "").split()
-        ):
-            raise error.LockHeld(errno.EAGAIN, path, self.desc, None)
-
-        try:
-            if self.trylockfn:
-                self._lockfd = self.trylockfn()
-            else:
-                self._lockfd = nativelock.pathlock.trylock(
-                    self.vfs.dirname(path), self.vfs.basename(path), self._getlockname()
-                )
-            self.held = 1
-        except error.LockContendedError as err:
-            raise error.LockHeld(
-                errno.EAGAIN,
-                path,
-                self.desc,
-                lockinfo(err.args[0], path=path),
-            )
-        except IOError as err:
-            raise error.LockUnavailable(
-                err.errno,
-                str(err),
-                path,
-                self.desc,
-            )
-
-    def _release(self):
-        self._lockfd.unlock()
+            self._rustlock.unlock()
 
 
 def islocked(vfs, name) -> bool:
     try:
-        lock(vfs, name, timeout=0, checkdeadlock=False).release()
+        lock(vfs, name, timeout=0).release()
         return False
     except error.LockHeld:
         return True
