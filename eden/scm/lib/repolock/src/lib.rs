@@ -42,14 +42,41 @@ pub struct RepoLocker {
 struct RepoLockerInner {
     config: LockConfigs,
     store_path: PathBuf,
-    store_lock: Option<(LockHandle, NonZeroU64)>,
-    wc_locks: HashMap<PathBuf, (LockHandle, NonZeroU64)>,
+    store_lock: Option<ReentrantLockHandle>,
+    wc_locks: HashMap<PathBuf, ReentrantLockHandle>,
 }
 
 pub struct RepoLockHandle {
     locker: Arc<Mutex<RepoLockerInner>>,
     store: bool,
     wc_path: Option<PathBuf>,
+}
+
+#[derive(Debug)]
+struct ReentrantLockHandle {
+    _lock: LockHandle,
+    ref_count: NonZeroU64,
+}
+
+impl ReentrantLockHandle {
+    pub fn new(lock: LockHandle) -> Self {
+        Self {
+            _lock: lock,
+            ref_count: NonZeroU64::new(1).unwrap(),
+        }
+    }
+
+    pub fn inc_ref_count(&mut self) {
+        self.ref_count = self.ref_count.checked_add(1).unwrap();
+    }
+
+    pub fn dec_ref_count(&mut self) {
+        self.ref_count = NonZeroU64::new(self.ref_count.get() - 1).unwrap();
+    }
+
+    pub fn ref_count(&self) -> u64 {
+        self.ref_count.get()
+    }
 }
 
 struct LockConfigs {
@@ -168,7 +195,7 @@ impl RepoLocker {
 impl RepoLockerInner {
     pub fn lock_store(&mut self, wait: bool) -> anyhow::Result<(), LockError> {
         if let Some(store_lock) = &mut self.store_lock {
-            store_lock.1 = store_lock.1.checked_add(1).unwrap();
+            store_lock.inc_ref_count();
         } else {
             let handle = if wait {
                 lock(
@@ -180,7 +207,7 @@ impl RepoLockerInner {
             } else {
                 try_lock(&self.store_path, STORE_NAME, lock_contents()?.as_bytes())?
             };
-            self.store_lock = Some((handle, NonZeroU64::new(1).unwrap()));
+            self.store_lock = Some(ReentrantLockHandle::new(handle));
         }
         Ok(())
     }
@@ -191,7 +218,7 @@ impl RepoLockerInner {
         wait: bool,
     ) -> anyhow::Result<(), LockError> {
         if let Some(wc_lock) = self.wc_locks.get_mut(&wc_dot_hg) {
-            wc_lock.1 = wc_lock.1.checked_add(1).unwrap();
+            wc_lock.inc_ref_count();
         } else {
             if self.store_lock.is_some() {
                 return Err(LockError::OutOfOrder(
@@ -210,8 +237,9 @@ impl RepoLockerInner {
             } else {
                 try_lock(&wc_dot_hg, WORKING_COPY_NAME, lock_contents()?.as_bytes())?
             };
+
             self.wc_locks
-                .insert(wc_dot_hg, (handle, NonZeroU64::new(1).unwrap()));
+                .insert(wc_dot_hg, ReentrantLockHandle::new(handle));
         }
         Ok(())
     }
@@ -239,14 +267,13 @@ impl RepoLockHandle {
     pub fn count(&self) -> u64 {
         let locker = self.locker.lock();
         if self.store {
-            locker.store_lock.as_ref().unwrap().1.get()
+            locker.store_lock.as_ref().unwrap().ref_count()
         } else {
             locker
                 .wc_locks
                 .get(self.wc_path.as_ref().unwrap())
                 .unwrap()
-                .1
-                .get()
+                .ref_count()
         }
     }
 }
@@ -277,18 +304,18 @@ impl Drop for RepoLockHandle {
         let mut locker = self.locker.lock();
         if self.store {
             let store_lock = locker.store_lock.as_mut().unwrap();
-            let lock_count = store_lock.1.get();
+            let lock_count = store_lock.ref_count();
             if lock_count > 1 {
-                store_lock.1 = NonZeroU64::new(lock_count - 1).unwrap();
+                store_lock.dec_ref_count();
             } else {
                 let _ = locker.store_lock.take();
             }
         }
         if let Some(wc_path) = &self.wc_path {
             let wc_lock = locker.wc_locks.get_mut(wc_path.as_path()).unwrap();
-            let lock_count = wc_lock.1.get();
+            let lock_count = wc_lock.ref_count();
             if lock_count > 1 {
-                wc_lock.1 = NonZeroU64::new(lock_count - 1).unwrap();
+                wc_lock.dec_ref_count();
             } else {
                 if locker.store_lock.is_some() {
                     panic!("attempted to release wlock before lock");
