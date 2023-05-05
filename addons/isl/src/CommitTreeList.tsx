@@ -37,7 +37,7 @@ import {
 import {editingStackHashes, loadingStackState, useStackEditState} from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
-import {useRecoilState, useRecoilValue} from 'recoil';
+import {useRecoilState, useRecoilValue, useSetRecoilState} from 'recoil';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
@@ -320,7 +320,7 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
 }
 
 function StackEditConfirmButtons(): React.ReactElement {
-  const [, setStackHashes] = useRecoilState(editingStackHashes);
+  const setStackHashes = useSetRecoilState(editingStackHashes);
   const originalHead = useRecoilValue(latestHeadCommit);
   const runOperation = useRunOperation();
   const stackEdit = useStackEditState();
