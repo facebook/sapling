@@ -220,11 +220,6 @@ class abstractvfs(pycompat.ABC):
     ) -> None:
         return util.makedirs(self.join(path), mode)
 
-    def makelock(
-        self, info: str, path: str, checkdeadlock: bool = True
-    ) -> "Optional[int]":
-        return util.makelock(info, self.join(path), checkdeadlock=checkdeadlock)
-
     def mkdir(self, path: "Optional[str]" = None) -> None:
         return os.mkdir(self.join(path))
 

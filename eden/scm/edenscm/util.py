@@ -166,7 +166,6 @@ listdir = osutil.listdir
 localpath = platform.localpath
 lookupreg = platform.lookupreg
 makedir = platform.makedir
-makelock = platform.makelock
 nlinks = platform.nlinks
 normpath = platform.normpath
 normcase = platform.normcase

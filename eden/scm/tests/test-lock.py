@@ -1,3 +1,8 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 from __future__ import absolute_import
 
 import errno
@@ -170,28 +175,6 @@ class testlock(unittest.TestCase):
             self.assertTrue(lock.islocked(state.vfs, testlockname))
 
         self.assertFalse(lock.islocked(state.vfs, testlockname))
-
-
-if not pycompat.iswindows:
-
-    class testposixmakelock(unittest.TestCase):
-        def testremovesymlinkplaceholder(self):
-            class SpecificError(Exception):
-                pass
-
-            # Rename is the last step of makelock. Make it fail.
-            def _failrename(orig, src, dst):
-                raise SpecificError()
-
-            testtmp = encoding.environ.get("TESTTMP")
-            lockpath = os.path.join(testtmp, "testlock")
-            with extensions.wrappedfunction(
-                os, "rename", _failrename
-            ), self.assertRaises(SpecificError):
-                util.makelock("foo:%s" % os.getpid(), lockpath)
-
-            # The placeholder lock should be removed.
-            self.assertFalse(os.path.lexists(lockpath))
 
 
 if __name__ == "__main__":

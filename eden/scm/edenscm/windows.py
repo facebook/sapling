@@ -608,48 +608,6 @@ def bindunixsocket(sock, path):
     raise NotImplementedError("unsupported platform")
 
 
-def _cleanuptemplockfiles(dirname: str, basename: str) -> None:
-    for susp in os.listdir(dirname):
-        if not susp.startswith(basename) or not susp.endswith(".tmplock"):
-            continue
-
-        # Multiple processes might be trying to take the lock at the  same
-        # time, they will all create a .tmplock file, let's not remove a file
-        # that was just created to let the other process continue.
-        try:
-            stat = os.lstat(susp)
-        except OSError:
-            continue
-
-        now = time.mktime(time.gmtime())
-        filetime = time.mktime(time.gmtime(stat.st_mtime))
-        if now > filetime + 10:
-            continue
-
-        try:
-            os.unlink(os.path.join(dirname, susp))
-        except WindowsError:
-            pass
-
-
-# pyre-fixme[9]: checkdeadlock has type `bool`; used as `None`.
-def makelock(info: str, pathname: str, checkdeadlock: bool = None) -> "Optional[int]":
-    dirname = os.path.dirname(pathname)
-    basename = os.path.basename(pathname)
-    _cleanuptemplockfiles(dirname, basename)
-    fd, tname = tempfile.mkstemp(
-        suffix=".tmplock", prefix="%s.%i." % (basename, os.getpid()), dir=dirname
-    )
-    os.write(fd, pycompat.encodeutf8(info))
-    os.fsync(fd)
-    os.close(fd)
-    try:
-        os.rename(tname, pathname)
-    except WindowsError:
-        os.unlink(tname)
-        raise
-
-
 def unixsocket():
     # Defer import since this isn't present in OSS build yet.
     # pyre-fixme[21]: Could not find a module corresponding to import `eden.thrift.windows_thrift`.
