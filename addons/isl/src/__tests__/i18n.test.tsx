@@ -14,9 +14,9 @@ jest.mock(
   () => ({
     translate_me: 'this was translated',
     plural_one: 'There is one apple',
-    plural_other: 'There are {count} apples',
+    plural_other: 'There are $count apples',
     replace_and_plural_one: 'There is one $type apple',
-    replace_and_plural_other: 'There are {count} $type apples',
+    replace_and_plural_other: 'There are $count $type apples',
   }),
   {virtual: true},
 );

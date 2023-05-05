@@ -57,7 +57,7 @@ export function setCurrentLanguage(lang: LanguageId) {
 
 /**
  * what key suffixes to use for count-based translations
- * e.g., in en, myStringKey_one = 'open {count} file', myStringKey_other = 'open {count} files'
+ * e.g., in en, myStringKey_one = 'open $count file', myStringKey_other = 'open $count files'
  * so when you call t('myStringKey', {count: 4}) it uses the right plural.
  * Different languages have different rules for plurals.
  */
@@ -83,7 +83,7 @@ const pluralizers: {[key in keyof typeof langs]: (n: number) => string} = {
  * ```
  * To include arbitrary opaque contents that are not translated, you can provide a replacer:
  * ```
- * t('Hello, my name is {name}.', {replace: {'{name}': getName()}})
+ * t('Hello, my name is $name.', {replace: {$name: getName()}})
  * ```
  * {@link T See also &lt;T&gt; React component}
  */
@@ -132,7 +132,7 @@ function translate(
       // last resort is to use the key directly
       i18nKeyOrEnText;
     // replace number into the appropriate location
-    result = pluralized.replace(/{count}/g, String(options.count));
+    result = pluralized.replace(/\$count/g, String(options.count));
   }
   if (!result) {
     result =

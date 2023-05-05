@@ -56,7 +56,7 @@ export function FileHeader<Id>({
               {acc}
               <span
                 // TODO: better translate API that supports templates.
-                title={copy && t('Copy {path}').replace('{path}', pathSoFar)}
+                title={copy && t('Copy $path}').replace('$path', pathSoFar)}
                 onClick={copy && (() => copy(pathSoFar))}
                 className={'file-header-path-element'}>
                 {part}
