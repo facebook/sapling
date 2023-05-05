@@ -6,8 +6,9 @@
  */
 
 import type {DragHandler} from './DragHandle';
+import type {CommitState} from './stackEdit/commitStackState';
 import type {Rev} from './stackEdit/fileStackState';
-import type {UseStackEditState} from './stackEditState';
+import type {StackEditOpDescription, UseStackEditState} from './stackEditState';
 
 import {AnimatedReorderGroup} from './AnimatedReorderGroup';
 import {DragHandle} from './DragHandle';
@@ -87,7 +88,12 @@ export function StackEditSubTree(): React.ReactElement {
         const commitStack = stackEdit.commitStack;
         if (commitStack.canReorder(order) && !currentReorderState.isNoop()) {
           const newStackState = commitStack.reorder(order);
-          stackEdit.push(newStackState, t('Reorder'));
+          stackEdit.push(newStackState, {
+            name: 'move',
+            offset: currentReorderState.offset,
+            depCount: currentReorderState.draggingRevs.size - 1,
+            commit: unwrap(commitStack.stack.get(currentReorderState.draggingRev)),
+          });
         }
         // Reset reorder state.
         setCurrentReorderState(new ReorderState());
@@ -152,11 +158,16 @@ export function StackEditCommit({
   const commit = unwrap(state.stack.get(rev));
   const titleText = commit.text.split('\n', 1).at(0) ?? '';
 
-  const handleMoveUp = () => stackEdit.push(state.reorder(reorderedRevs(state, rev)), t('Move up'));
+  const handleMoveUp = () =>
+    stackEdit.push(state.reorder(reorderedRevs(state, rev)), {name: 'move', offset: 1, commit});
   const handleMoveDown = () =>
-    stackEdit.push(state.reorder(reorderedRevs(state, rev - 1)), t('Move down'));
-  const handleFoldDown = () => stackEdit.push(state.foldDown(rev), t('Fold down'));
-  const handleDrop = () => stackEdit.push(state.drop(rev), t('Drop'));
+    stackEdit.push(state.reorder(reorderedRevs(state, rev - 1)), {
+      name: 'move',
+      offset: -1,
+      commit,
+    });
+  const handleFoldDown = () => stackEdit.push(state.foldDown(rev), {name: 'fold', commit});
+  const handleDrop = () => stackEdit.push(state.drop(rev), {name: 'drop', commit});
 
   const title =
     titleText === '' ? (
@@ -262,4 +273,51 @@ function calculateReorderOffset(
   });
   const offset = invisibleRevCount + belowCount - draggingRev;
   return offset;
+}
+
+/** Used in undo tooltip. */
+export function UndoDescription({op}: {op?: StackEditOpDescription}): React.ReactElement | null {
+  if (op == null) {
+    return <T>null</T>;
+  }
+  if (op.name === 'move') {
+    const {offset, commit} = op;
+    const depCount = op.depCount ?? 0;
+    const replace = {
+      $commit: <CommitTitle commit={commit} />,
+      $depCount: depCount,
+      $offset: Math.abs(offset).toString(),
+    };
+    if (offset === 1) {
+      return <T replace={replace}>moving up $commit</T>;
+    } else if (offset === -1) {
+      return <T replace={replace}>moving down $commit</T>;
+    } else if (offset > 0) {
+      if (depCount > 0) {
+        return <T replace={replace}>moving up $commit and $depCount more</T>;
+      } else {
+        return <T replace={replace}>moving up $commit by $offset commits</T>;
+      }
+    } else {
+      if (depCount > 0) {
+        return <T replace={replace}>moving down $commit and $depCount more</T>;
+      } else {
+        return <T replace={replace}>moving down $commit by $offset commits</T>;
+      }
+    }
+  } else if (op.name === 'fold') {
+    const replace = {$commit: <CommitTitle commit={op.commit} />};
+    return <T replace={replace}>folding down $commit</T>;
+  } else if (op.name === 'drop') {
+    const replace = {$commit: <CommitTitle commit={op.commit} />};
+    return <T replace={replace}>dropping $commit</T>;
+  } else if (op.name === 'import') {
+    return <T>import</T>;
+  }
+  return <T>unknown</T>;
+}
+
+/** Used in undo tooltip. Styled. */
+function CommitTitle({commit}: {commit: CommitState}): React.ReactElement {
+  return <span className="commit-title">{commit.text.split('\n', 1).at(0)}</span>;
 }

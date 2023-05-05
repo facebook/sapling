@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {CommitState} from './stackEdit/commitStackState';
 import type {Hash} from './types';
 import type {RecordOf} from 'immutable';
 import type {SetterOrUpdater} from 'recoil';
 import type {ExportStack} from 'shared/types/stack';
 
 import clientToServerAPI from './ClientToServerAPI';
-import {t} from './i18n';
 import {CommitStackState} from './stackEdit/commitStackState';
 import {assert} from './utils';
 import {List, Record} from 'immutable';
@@ -19,12 +19,31 @@ import {atom, DefaultValue, selector, useRecoilState} from 'recoil';
 import {unwrap} from 'shared/utils';
 
 type StackStateWithOperationProps = {
-  op: string;
+  op: StackEditOpDescription;
   state: CommitStackState;
 };
 
+/** Description of a stack edit operation. Used for display purpose. */
+export type StackEditOpDescription =
+  | {
+      name: 'move';
+      offset: number;
+      /** Count of dependencies excluding self. */
+      depCount?: number;
+      commit: CommitState;
+    }
+  | {
+      name: 'drop';
+      commit: CommitState;
+    }
+  | {
+      name: 'fold';
+      commit: CommitState;
+    }
+  | {name: 'import'};
+
 const StackStateWithOperation = Record<StackStateWithOperationProps>({
-  op: '',
+  op: {name: 'import'},
   state: new CommitStackState([]),
 });
 type StackStateWithOperation = RecordOf<StackStateWithOperationProps>;
@@ -46,7 +65,7 @@ class History extends HistoryRecord {
     return unwrap(this.history.get(this.currentIndex)).state;
   }
 
-  push(state: CommitStackState, op: string): History {
+  push(state: CommitStackState, op: StackEditOpDescription): History {
     const newHistory = this.history
       .slice(0, this.currentIndex + 1)
       .push(StackStateWithOperation({op, state}));
@@ -64,8 +83,12 @@ class History extends HistoryRecord {
     return this.currentIndex + 1 < this.history.size;
   }
 
-  undoOperationName(): string | undefined {
+  undoOperationDescription(): StackEditOpDescription | undefined {
     return this.canUndo() ? this.history.get(this.currentIndex)?.op : undefined;
+  }
+
+  redoOperationDescription(): StackEditOpDescription | undefined {
+    return this.canRedo() ? this.history.get(this.currentIndex + 1)?.op : undefined;
   }
 
   undo(): History {
@@ -142,7 +165,7 @@ const stackEditState = atom<StackEditState>({
           try {
             const stack = new CommitStackState(history.exportedStack).buildFileStacks();
             const historyValue = new History({
-              history: List([StackStateWithOperation({op: t('Import'), state: stack})]),
+              history: List([StackStateWithOperation({state: stack})]),
               currentIndex: 0,
             });
             setSelf({hashes, history: {state: 'hasValue', value: historyValue}});
@@ -215,7 +238,7 @@ class UseStackEditState {
     return this.history.current();
   }
 
-  push(commitStack: CommitStackState, op: string) {
+  push(commitStack: CommitStackState, op: StackEditOpDescription) {
     if (commitStack.originalStack !== this.commitStack.originalStack) {
       // Wrong stack. Discard.
       return;
@@ -236,8 +259,12 @@ class UseStackEditState {
     this.setHistory(this.history.undo());
   }
 
-  undoOperationName(): string | undefined {
-    return this.history.undoOperationName();
+  undoOperationDescription(): StackEditOpDescription | undefined {
+    return this.history.undoOperationDescription();
+  }
+
+  redoOperationDescription(): StackEditOpDescription | undefined {
+    return this.history.redoOperationDescription();
   }
 
   redo() {

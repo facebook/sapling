@@ -223,3 +223,10 @@
   white-space: nowrap;
   overflow: hidden;
 }
+
+.tooltip span.commit-title {
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 90%;
+  background-color: var(--hover-darken);
+}

@@ -16,7 +16,7 @@ import {Center, FlexRow, LargeSpinner} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {StackEditIcon} from './StackEditIcon';
-import {StackEditSubTree} from './StackEditSubTree';
+import {StackEditSubTree, UndoDescription} from './StackEditSubTree';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {allDiffSummaries, codeReviewProvider, pageVisibility} from './codeReview/CodeReviewInfo';
 import {isTreeLinear, walkTreePostorder} from './getCommitTree';
@@ -364,17 +364,31 @@ function StackEditConfirmButtons(): React.ReactElement {
         </VSCodeButton>
       </Tooltip>
       <Tooltip
-        title={
-          canUndo
-            ? t('Undo $opName', {replace: {$opName: stackEdit.undoOperationName() ?? ''}})
-            : t('No operations to undo')
+        component={() =>
+          canUndo ? (
+            <T replace={{$op: <UndoDescription op={stackEdit.undoOperationDescription()} />}}>
+              Undo $op
+            </T>
+          ) : (
+            <T>No operations to undo</T>
+          )
         }
         placement="bottom">
         <VSCodeButton appearance="icon" disabled={!canUndo} onClick={() => stackEdit.undo()}>
           <Icon icon="discard" />
         </VSCodeButton>
       </Tooltip>
-      <Tooltip title={canRedo ? t('Redo') : t('No operations to redo')} placement="bottom">
+      <Tooltip
+        component={() =>
+          canRedo ? (
+            <T replace={{$op: <UndoDescription op={stackEdit.redoOperationDescription()} />}}>
+              Redo $op
+            </T>
+          ) : (
+            <T>No operations to redo</T>
+          )
+        }
+        placement="bottom">
         <VSCodeButton appearance="icon" disabled={!canRedo} onClick={() => stackEdit.redo()}>
           <Icon icon="redo" />
         </VSCodeButton>

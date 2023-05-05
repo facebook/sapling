@@ -1210,7 +1210,7 @@ type CommitStateProps = {
   files: ImMap<RepoPath, FileState>;
 };
 
-const CommitState = Record<CommitStateProps>({
+export const CommitState = Record<CommitStateProps>({
   rev: 0,
   originalNodes: ImSet(),
   key: '',
@@ -1221,7 +1221,7 @@ const CommitState = Record<CommitStateProps>({
   parents: List(),
   files: ImMap(),
 });
-type CommitState = RecordOf<CommitStateProps>;
+export type CommitState = RecordOf<CommitStateProps>;
 
 /**
  * Similar to `ExportFile` but `data` can be lazy by redirecting to a rev in a file stack.
