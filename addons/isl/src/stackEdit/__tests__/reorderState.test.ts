@@ -20,6 +20,7 @@ describe('reorderWithDeps', () => {
     expect(reorderWithDeps(5, 3, 0, depMap)).toMatchObject({
       order: [0, 1, 2, 3, 4],
       deps: [3],
+      offset: 0,
     });
   });
 
@@ -27,6 +28,7 @@ describe('reorderWithDeps', () => {
     expect(reorderWithDeps(5, 4, -1, depMap)).toMatchObject({
       order: [0, 1, 2, 4, 3],
       deps: [4],
+      offset: -1,
     });
   });
 
@@ -34,11 +36,13 @@ describe('reorderWithDeps', () => {
     expect(reorderWithDeps(5, 0, 1, depMap)).toMatchObject({
       order: [1, 0, 2, 3, 4],
       deps: [0],
+      offset: 1,
     });
 
     expect(reorderWithDeps(5, 0, 4, depMap)).toMatchObject({
       order: [1, 2, 3, 4, 0],
       deps: [0],
+      offset: 4,
     });
   });
 
@@ -46,11 +50,13 @@ describe('reorderWithDeps', () => {
     expect(reorderWithDeps(5, 3, 999, new Map())).toMatchObject({
       order: [0, 1, 2, 4, 3],
       deps: [3],
+      offset: 1,
     });
 
     expect(reorderWithDeps(5, 3, -999, new Map())).toMatchObject({
       order: [3, 0, 1, 2, 4],
       deps: [3],
+      offset: -3,
     });
   });
 

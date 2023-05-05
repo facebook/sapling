@@ -11,6 +11,9 @@ import {CommitStackState} from './commitStackState';
 import {List, Record} from 'immutable';
 
 type ReorderResult = {
+  /** Offset of the move. Positive: move up. Negative: move down. */
+  offset: number;
+
   /** Reorder result that satisfy dependencies. */
   order: Rev[];
 
@@ -81,11 +84,12 @@ export function reorderWithDeps(
     // Nothing moved.
     order = [...range(0, n)];
   }
-  return {order, deps};
+  return {offset, order, deps};
 }
 
 /** State to preview effects of drag-n-drop reorder. */
 export class ReorderState extends Record({
+  offset: 0,
   commitStack: new CommitStackState([]),
   reorderRevs: List<Rev>(),
   draggingRevs: List<Rev>(),
@@ -93,6 +97,7 @@ export class ReorderState extends Record({
 }) {
   static init(commitStack: CommitStackState, draggingRev: Rev): ReorderState {
     return new ReorderState({
+      offset: 0,
       commitStack,
       draggingRev,
       reorderRevs: List(commitStack.revs()),
@@ -102,6 +107,11 @@ export class ReorderState extends Record({
 
   isDragging() {
     return this.draggingRev >= 0;
+  }
+
+  /** Returns true if the reoder does nothing. */
+  isNoop(): boolean {
+    return this.offset === 0;
   }
 
   /**
@@ -120,6 +130,7 @@ export class ReorderState extends Record({
     return this.merge({
       reorderRevs: List(reordered.order),
       draggingRevs: List(reordered.deps),
+      offset: reordered.offset,
     });
   }
 }

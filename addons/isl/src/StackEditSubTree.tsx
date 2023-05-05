@@ -17,7 +17,6 @@ import {reorderedRevs} from './stackEdit/commitStackState';
 import {ReorderState} from './stackEdit/reorderState';
 import {useStackEditState} from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import deepEqual from 'fast-deep-equal';
 import {is} from 'immutable';
 import {useRef, useState} from 'react';
 import {Icon} from 'shared/Icon';
@@ -86,7 +85,7 @@ export function StackEditSubTree(): React.ReactElement {
         // Apply reorder.
         const order = currentReorderState.reorderRevs.toArray();
         const commitStack = stackEdit.commitStack;
-        if (commitStack.canReorder(order) && !deepEqual(order, commitStack.revs())) {
+        if (commitStack.canReorder(order) && !currentReorderState.isNoop()) {
           const newStackState = commitStack.reorder(order);
           stackEdit.push(newStackState, t('Reorder'));
         }
