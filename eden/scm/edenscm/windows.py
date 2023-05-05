@@ -650,10 +650,6 @@ def makelock(info: str, pathname: str, checkdeadlock: bool = None) -> "Optional[
         raise
 
 
-def releaselock(_lockfd: "Optional[int]", pathname: str) -> None:
-    os.unlink(pathname)
-
-
 def unixsocket():
     # Defer import since this isn't present in OSS build yet.
     # pyre-fixme[21]: Could not find a module corresponding to import `eden.thrift.windows_thrift`.

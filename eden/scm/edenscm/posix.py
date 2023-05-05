@@ -285,19 +285,7 @@ def makelock(info: str, pathname: str, checkdeadlock: bool = True) -> "Optional[
             raise
 
 
-def releaselock(lockfd: "Optional[int]", pathname: str) -> None:
-    # Explicitly unlock. This avoids issues when a
-    # forked process inherits the flock.
-    assert lockfd is not None
-    fd, _tb = _processlocks.get(pathname, None)
-    assert fd == lockfd
-    fcntl.flock(lockfd, fcntl.LOCK_UN)
-    del _processlocks[pathname]
-    os.close(lockfd)
-    os.unlink(pathname)
-
-
-_processlocks = {}  # {path: (fd, traceback)}
+_processlocks = {}  # {path: fd}
 
 
 def openhardlinks():
