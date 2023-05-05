@@ -4,9 +4,6 @@
 
   $ configure modernclient
 
-workingcopy.ruststatus deadlocks when calling into rust status
-  $ setconfig devel.lockmode=rust_only workingcopy.ruststatus=false
-
 Prepare
 
   $ newclientrepo a

@@ -230,6 +230,7 @@ class pythonlock(object):
         debugattemptidx=None,
         checkdeadlock=True,
         andrust=False,
+        trylockfn=None,
     ):
         self.vfs = vfs
         self.f = file
@@ -246,6 +247,7 @@ class pythonlock(object):
         self.warnattemptidx = warnattemptidx
         self.debugattemptidx = debugattemptidx
         self.checkdeadlock = checkdeadlock
+        self.trylockfn = trylockfn
         self._debugmessagesprinted = set([])
         self._lockfd = None
         self.andrust = andrust
@@ -312,6 +314,12 @@ class pythonlock(object):
                         errno.ETIMEDOUT, inst.filename, self.desc, inst.lockinfo
                     )
 
+                if inst.lockinfo.pid == str(util.getpid()):
+                    raise error.ProgrammingError(
+                        "deadlock: %s was locked in the same process"
+                        % self.vfs.join(self.f)
+                    )
+
                 time.sleep(1)
                 delay += 1
 
@@ -374,6 +382,7 @@ class pythonlock(object):
                     ui=self.ui,
                     warnattemptidx=self.warnattemptidx,
                     debugattemptidx=self.debugattemptidx,
+                    trylockfn=self.trylockfn,
                     # don't pass callbacks to avoid double invocation
                     # don't pass spinner to avoid double spinner
                 )
@@ -494,9 +503,12 @@ class rustlock(pythonlock):
             raise error.LockHeld(errno.EAGAIN, path, self.desc, None)
 
         try:
-            self._lockfd = nativelock.pathlock.trylock(
-                self.vfs.dirname(path), self.vfs.basename(path), self._getlockname()
-            )
+            if self.trylockfn:
+                self._lockfd = self.trylockfn()
+            else:
+                self._lockfd = nativelock.pathlock.trylock(
+                    self.vfs.dirname(path), self.vfs.basename(path), self._getlockname()
+                )
             self.held = 1
         except error.LockContendedError as err:
             raise error.LockHeld(

@@ -501,7 +501,7 @@ def fixupamend(ui, repo, noconflict=None, noconflictmsg=None):
             ui, repo, current.rev(), noconflict=noconflict, noconflictmsg=noconflictmsg
         )
     finally:
-        lockmod.release(wlock, lock, tr)
+        lockmod.release(lock, wlock, tr)
 
 
 def amendtocommit(ui, repo, commitspec, pats=None, opts=None):

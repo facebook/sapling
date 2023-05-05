@@ -10,6 +10,7 @@ Create a repository:
   devel.all-warnings=True
   devel.collapse-traceback=True
   devel.default-date=0 0
+  devel.lockmode=rust_only
   extensions.fsmonitor= (fsmonitor !)
   extensions.treemanifest=
   fsmonitor.detectrace=True (fsmonitor !)

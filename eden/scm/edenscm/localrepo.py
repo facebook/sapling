@@ -2293,6 +2293,21 @@ class localrepository(object):
             timeout = self.ui.configint("ui", "timeout")
             warntimeout = self.ui.configint("ui", "timeout.warn")
 
+        rsrepo = self._rsrepo
+
+        def trywlock():
+            return rsrepo.trywlock(vfs.base)
+
+        def trylock():
+            return rsrepo.trylock()
+
+        trylockfn = None
+        if self.ui.configbool("experimental", "share-locks", True):
+            if lockname == "lock":
+                trylockfn = trylock
+            elif lockname == "wlock":
+                trylockfn = trywlock
+
         return lockmod.trylock(
             self.ui,
             vfs,
@@ -2302,6 +2317,7 @@ class localrepository(object):
             releasefn=releasefn,
             acquirefn=acquirefn,
             desc=desc,
+            trylockfn=trylockfn,
         )
 
     def _afterlock(self, callback):

@@ -55,6 +55,9 @@ record=False
 
 [hint]
 ack-match-full-traversal=True
+
+[devel]
+lockmode=rust_only
 """
     if use_watchman:
         content += """

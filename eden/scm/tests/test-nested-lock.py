@@ -19,7 +19,7 @@ def test_nested_lock():
         repo2 = hg.repository(ui, t)
         # repo2.lock() should detect deadlock.
         try:
-            with repo1.lock(), repo2.lock(wait=False):
+            with repo1.lock(), repo2.lock():
                 pass
         except Exception as ex:
             msg = str(ex)

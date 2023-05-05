@@ -56,13 +56,17 @@ pub struct RepoLockHandle {
 struct ReentrantLockHandle {
     _lock: LockHandle,
     ref_count: NonZeroU64,
+    // Was this lock acquired out of order, such as the latter of repo.lock()
+    // followed by repo.wlock(wait=False).
+    out_of_order: bool,
 }
 
 impl ReentrantLockHandle {
-    pub fn new(lock: LockHandle) -> Self {
+    pub fn new(lock: LockHandle, out_of_order: bool) -> Self {
         Self {
             _lock: lock,
             ref_count: NonZeroU64::new(1).unwrap(),
+            out_of_order,
         }
     }
 
@@ -76,6 +80,10 @@ impl ReentrantLockHandle {
 
     pub fn ref_count(&self) -> u64 {
         self.ref_count.get()
+    }
+
+    pub fn out_of_order(&self) -> bool {
+        self.out_of_order
     }
 }
 
@@ -207,7 +215,7 @@ impl RepoLockerInner {
             } else {
                 try_lock(&self.store_path, STORE_NAME, lock_contents()?.as_bytes())?
             };
-            self.store_lock = Some(ReentrantLockHandle::new(handle));
+            self.store_lock = Some(ReentrantLockHandle::new(handle, false));
         }
         Ok(())
     }
@@ -220,14 +228,18 @@ impl RepoLockerInner {
         if let Some(wc_lock) = self.wc_locks.get_mut(&wc_dot_hg) {
             wc_lock.inc_ref_count();
         } else {
-            if self.store_lock.is_some() {
-                return Err(LockError::OutOfOrder(
-                    "must not take store lock before wlock".to_string(),
-                ));
-            }
-
             // TODO: Should we check that this working copy is actually related to this store?
             let handle = if wait {
+                // Only check out-of-order if we are waiting. If we aren't
+                // waiting and the the deadlock condition occurs (i.e. other
+                // process locks wlock and is waiting for store lock), our wlock
+                // acquisition will simply fail and no deadlock will occur.
+                if self.store_lock.is_some() {
+                    return Err(LockError::OutOfOrder(
+                        "must not take store lock before wlock".to_string(),
+                    ));
+                }
+
                 lock(
                     &self.config,
                     &wc_dot_hg,
@@ -238,8 +250,10 @@ impl RepoLockerInner {
                 try_lock(&wc_dot_hg, WORKING_COPY_NAME, lock_contents()?.as_bytes())?
             };
 
-            self.wc_locks
-                .insert(wc_dot_hg, ReentrantLockHandle::new(handle));
+            self.wc_locks.insert(
+                wc_dot_hg,
+                ReentrantLockHandle::new(handle, self.store_lock.is_some()),
+            );
         }
         Ok(())
     }
@@ -317,7 +331,7 @@ impl Drop for RepoLockHandle {
             if lock_count > 1 {
                 wc_lock.dec_ref_count();
             } else {
-                if locker.store_lock.is_some() {
+                if !wc_lock.out_of_order() && locker.store_lock.is_some() {
                     panic!("attempted to release wlock before lock");
                 }
                 locker.wc_locks.remove(wc_path.as_path());
