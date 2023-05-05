@@ -67,7 +67,7 @@ impl From<ChangesetId> for RootFastlog {
     }
 }
 
-fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
+pub fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
     let root_prefix = "derived_rootfastlog.";
     let key_prefix = derivation_ctx.mapping_key_prefix::<RootFastlog>();
     format!("{}{}{}", root_prefix, key_prefix, changeset_id)
