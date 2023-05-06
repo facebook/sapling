@@ -44,7 +44,7 @@ impl RootBlameV2 {
     }
 }
 
-fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
+pub fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
     let root_prefix = "derived_root_blame_v2.";
     let key_prefix = derivation_ctx.mapping_key_prefix::<RootBlameV2>();
     format!("{}{}{}", root_prefix, key_prefix, changeset_id)

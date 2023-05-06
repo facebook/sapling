@@ -24,6 +24,7 @@ use derived_data::DeriveError;
 pub use fetch::fetch_content_for_blame;
 pub use fetch::FetchOutcome;
 use manifest::ManifestOps;
+pub use mapping_v2::format_key;
 pub use mapping_v2::RootBlameV2;
 use metaconfig_types::BlameVersion;
 use mononoke_types::blame_v2::BlameRejected;
