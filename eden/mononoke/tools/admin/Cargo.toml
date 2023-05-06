@@ -11,6 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.65"
 async-trait = "0.1.58"
 async_requests = { version = "0.1.0", path = "../../megarepo_api/async_requests" }
+basename_suffix_skeleton_manifest = { version = "0.1.0", path = "../../derived_data/basename_suffix_skeleton_manifest" }
 blame = { version = "0.1.0", path = "../../derived_data/blame" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
