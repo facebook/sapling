@@ -33,6 +33,10 @@ use crate::mapping::RootDeletedManifestIdCommon;
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct RootDeletedManifestV2Id(DeletedManifestV2Id);
 
+pub fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
+    RootDeletedManifestV2Id::format_key(derivation_ctx, changeset_id)
+}
+
 impl RootDeletedManifestIdCommon for RootDeletedManifestV2Id {
     type Manifest = DeletedManifestV2;
     type Id = DeletedManifestV2Id;

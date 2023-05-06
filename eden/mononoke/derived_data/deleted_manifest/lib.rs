@@ -16,6 +16,7 @@ mod ops;
 pub mod test_utils;
 
 pub use mapping::RootDeletedManifestIdCommon;
+pub use mapping_v2::format_key;
 pub use mapping_v2::RootDeletedManifestV2Id;
 pub use ops::DeletedManifestOps;
 pub use ops::PathState;
