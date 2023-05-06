@@ -14,6 +14,7 @@ mod derive;
 mod mapping;
 
 pub use derive::prefetch_content_metadata;
+pub use mapping::format_key;
 pub use mapping::RootFsnodeId;
 
 #[derive(Debug, Error)]
