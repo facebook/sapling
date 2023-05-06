@@ -82,6 +82,7 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 repo_lock = { version = "0.1.0", path = "../../repo_attributes/repo_lock/repo_lock" }
 revset = { version = "0.1.0", path = "../../revset" }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
+skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }

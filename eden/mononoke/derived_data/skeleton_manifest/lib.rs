@@ -12,6 +12,7 @@ mod batch;
 mod derive;
 pub mod mapping;
 
+pub use mapping::format_key;
 pub use mapping::RootSkeletonManifestId;
 
 #[derive(Debug, Error)]
