@@ -11,6 +11,7 @@ import type {ReactNode} from 'react';
 import {T} from '../i18n';
 import {SeeMoreContainer} from './SeeMoreContainer';
 import {CommitInfoTextArea} from './TextArea';
+import {CommitInfoTextField} from './TextField';
 import {Section, SmallCapsTitle} from './utils';
 import {Fragment} from 'react';
 import {Icon} from 'shared/Icon';
@@ -79,13 +80,22 @@ export function CommitInfoField({
           <Icon icon={field.icon} />
           {field.key}
         </SmallCapsTitle>
-        <CommitInfoTextArea
-          kind={field.type}
-          name={field.key}
-          autoFocus={autofocus ?? false}
-          editedMessage={editedFieldContent}
-          setEditedCommitMessage={setEditedField}
-        />
+        {field.type === 'field' ? (
+          <CommitInfoTextField
+            name={field.key}
+            autoFocus={autofocus ?? false}
+            editedMessage={editedFieldContent}
+            setEditedCommitMessage={setEditedField}
+          />
+        ) : (
+          <CommitInfoTextArea
+            kind={field.type}
+            name={field.key}
+            autoFocus={autofocus ?? false}
+            editedMessage={editedFieldContent}
+            setEditedCommitMessage={setEditedField}
+          />
+        )}
       </Section>
     ) : (
       <Section>
