@@ -32,10 +32,7 @@ namespace {
 // These static asserts exist to make explicit the memory usage of the per-mount
 // PrjfsTraceBus. TraceBus uses 2 * capacity * sizeof(TraceEvent) memory usage,
 // so limit total memory usage to around 1 MB per mount.
-constexpr size_t kTraceBusCapacity = 25000;
 static_assert(CheckSize<PrjfsTraceEvent, 48>());
-static_assert(
-    CheckEqual<1200000, kTraceBusCapacity * sizeof(PrjfsTraceEvent)>());
 
 folly::ReadMostlySharedPtr<PrjfsChannelInner> getChannel(
     const PRJ_CALLBACK_DATA* callbackData) noexcept {
@@ -359,15 +356,17 @@ PrjfsChannelInner::PrjfsChannelInner(
     const folly::Logger* straceLogger,
     ProcessAccessLog& processAccessLog,
     folly::Promise<folly::Unit> deletedPromise,
-    std::shared_ptr<Notifier> notifier)
+    std::shared_ptr<Notifier> notifier,
+    size_t prjfsTraceBusCapacity)
     : dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
       notifier_(std::move(notifier)),
       processAccessLog_(processAccessLog),
       deletedPromise_(std::move(deletedPromise)),
       traceDetailedArguments_(std::atomic<size_t>(0)),
-      traceBus_(
-          TraceBus<PrjfsTraceEvent>::create("PrjfsTrace", kTraceBusCapacity)) {
+      traceBus_(TraceBus<PrjfsTraceEvent>::create(
+          "PrjfsTrace",
+          prjfsTraceBusCapacity)) {
   traceSubscriptionHandles_.push_back(traceBus_->subscribeFunction(
       "PrjFS request tracking", [this](const PrjfsTraceEvent& event) {
         switch (event.getType()) {
@@ -1202,7 +1201,8 @@ PrjfsChannel::PrjfsChannel(
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
     Guid guid,
-    std::shared_ptr<Notifier> notifier)
+    std::shared_ptr<Notifier> notifier,
+    size_t prjfsTraceBusCapacity)
     : mountPath_(mountPath),
       mountId_(std::move(guid)),
       processAccessLog_(std::move(processNameCache)) {
@@ -1214,7 +1214,8 @@ PrjfsChannel::PrjfsChannel(
       straceLogger,
       processAccessLog_,
       std::move(innerDeletedPromise),
-      std::move(notifier)));
+      std::move(notifier),
+      prjfsTraceBusCapacity));
 }
 
 PrjfsChannel::~PrjfsChannel() {

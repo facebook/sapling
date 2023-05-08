@@ -2150,7 +2150,9 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                          &getStraceLogger(),
                          serverState_->getProcessNameCache(),
                          getCheckoutConfig()->getRepoGuid(),
-                         this->getServerState()->getNotifier()));
+                         this->getServerState()->getNotifier(),
+                         serverState_->getEdenConfig()
+                             ->PrjfsTraceBusCapacity.getValue()));
                  channel->start(
                      readOnly,
                      edenConfig->prjfsUseNegativePathCaching.getValue(),

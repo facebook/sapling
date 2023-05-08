@@ -1774,6 +1774,7 @@ TEST(Checkout, changing_hash_scheme_does_not_conflict_if_contents_are_same) {
 #ifdef _WIN32
 using ActionMap = std::
     unordered_map<RelativePathPiece, std::function<void(RelativePathPiece)>>;
+constexpr size_t kTraceBusCapacity = 25000;
 
 class FakePrjfsChannel final : public PrjfsChannel {
  public:
@@ -1790,7 +1791,8 @@ class FakePrjfsChannel final : public PrjfsChannel {
             straceLogger,
             std::move(processNameCache),
             guid,
-            nullptr),
+            nullptr,
+            kTraceBusCapacity),
         actions_{std::move(actions)} {}
 
   static void initializeFakePrjfsChannel(

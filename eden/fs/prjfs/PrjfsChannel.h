@@ -138,7 +138,8 @@ class PrjfsChannelInner {
       const folly::Logger* straceLogger,
       ProcessAccessLog& processAccessLog,
       folly::Promise<folly::Unit> deletedPromise,
-      std::shared_ptr<Notifier> notifier);
+      std::shared_ptr<Notifier> notifier,
+      size_t prjfsTraceBusCapacity);
 
   ~PrjfsChannelInner();
 
@@ -441,7 +442,8 @@ class PrjfsChannel : public FsChannel {
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
       Guid guid,
-      std::shared_ptr<Notifier> notifier);
+      std::shared_ptr<Notifier> notifier,
+      size_t prjfsTraceBusCapacity);
 
   virtual ~PrjfsChannel();
 
