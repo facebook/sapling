@@ -149,7 +149,7 @@ export function CommitInfoTextField({
                   className={
                     'suggestion' + (index === selectedSuggestionIndex ? ' selected-suggestion' : '')
                   }
-                  onClick={() => {
+                  onMouseDown={() => {
                     saveNewValue(suggestion.value);
                   }}>
                   {suggestion.image && <img src={suggestion.image} alt={suggestion.label} />}

@@ -295,6 +295,10 @@
   gap: var(--pad);
 }
 
+.commit-info-tokenized-field:not(:focus-within) .typeahead-suggestions {
+  display: none;
+}
+
 .commit-info-tokenized-field .typeahead-suggestions .suggestion {
   --typeahead-img-size: 30px;
   display: flex;
