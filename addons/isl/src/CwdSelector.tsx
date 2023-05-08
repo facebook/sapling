@@ -53,7 +53,7 @@ export function CwdSelector() {
   const repoBasename = basename(info.repoRoot);
   return (
     <Tooltip trigger="click" component={CwdDetails} placement="bottom">
-      <VSCodeButton appearance="icon">
+      <VSCodeButton appearance="icon" data-testid="cwd-dropdown-button">
         <Icon icon="folder" slot="start" />
         {repoBasename}
       </VSCodeButton>
@@ -67,7 +67,7 @@ function CwdDetails() {
   const provider = useRecoilValue(codeReviewProvider);
   const cwd = useRecoilValue(serverCwd);
   return (
-    <DropdownFields title={<T>Repository info</T>} icon="folder">
+    <DropdownFields title={<T>Repository info</T>} icon="folder" data-testid="cwd-details-dropdown">
       <CwdSelections />
       <DropdownField title={<T>Active repository</T>}>
         <code>{cwd}</code>
@@ -115,15 +115,15 @@ function CwdSelections() {
         {paths.map((shortCwd, index) => {
           const fullCwd = cwdOptions[index];
           return (
-            <Tooltip key={shortCwd} title={fullCwd} placement="right">
-              <VSCodeRadio
-                key={shortCwd}
-                value={fullCwd}
-                checked={fullCwd === currentCwd}
-                tabIndex={0}>
+            <VSCodeRadio
+              key={shortCwd}
+              value={fullCwd}
+              checked={fullCwd === currentCwd}
+              tabIndex={0}>
+              <Tooltip key={shortCwd} title={fullCwd} placement="right">
                 {shortCwd}
-              </VSCodeRadio>
-            </Tooltip>
+              </Tooltip>
+            </VSCodeRadio>
           );
         })}
       </VSCodeRadioGroup>
