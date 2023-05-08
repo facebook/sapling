@@ -8,8 +8,6 @@
 import type {Logger} from './logger';
 import type {ServerPlatform} from './serverPlatform';
 
-import {Repository} from './Repository';
-import {repositoryCache} from './RepositoryCache';
 import ServerToClientAPI from './ServerToClientAPI';
 import {makeServerSideTracker} from './analytics/serverSideTracker';
 import {fileLogger, stdoutLogger} from './logger';
@@ -54,29 +52,19 @@ export function onClientConnection(connection: ClientConnection): () => void {
     connection.logger ??
     (connection.logFileLocation ? fileLogger(connection.logFileLocation) : stdoutLogger);
   connection.logger = logger;
-  const command = connection?.command ?? 'sl';
   const platform = connection?.platform ?? browserServerPlatform;
   const version = connection?.version ?? 'unknown';
-  logger.log(`establish ${command} client connection for ${connection.cwd}`);
+  logger.log(`establish client connection for ${connection.cwd}`);
   logger.log(`platform '${platform.platformName}', version '${version}'`);
 
   const tracker = makeServerSideTracker(logger, platform, version);
   tracker.track('ClientConnection', {extras: {cwd: connection.cwd}});
 
   // start listening to messages
-  let api: ServerToClientAPI | null = new ServerToClientAPI(platform, connection, tracker);
-
-  const repositoryReference = repositoryCache.getOrCreate(command, logger, connection.cwd);
-  repositoryReference.promise.then(repoOrError => {
-    if (repoOrError instanceof Repository) {
-      api?.setCurrentRepo(repoOrError, connection.cwd);
-    } else {
-      api?.setRepoError(repoOrError);
-    }
-  });
+  let api: ServerToClientAPI | null = new ServerToClientAPI(platform, connection, tracker, logger);
+  api.setActiveRepoForCwd(connection.cwd);
 
   return () => {
-    repositoryReference.unref();
     api?.dispose();
     api = null;
   };

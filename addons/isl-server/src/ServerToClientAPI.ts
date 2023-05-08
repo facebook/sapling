@@ -6,8 +6,9 @@
  */
 
 import type {ClientConnection} from '.';
-import type {Repository} from './Repository';
+import type {RepositoryReference} from './RepositoryCache';
 import type {ServerSideTracker} from './analytics/serverSideTracker';
+import type {Logger} from './logger';
 import type {ServerPlatform} from './serverPlatform';
 import type {
   ServerToClientMessage,
@@ -25,7 +26,8 @@ import type {
 import type {ExportStack, ImportedStack} from 'shared/types/stack';
 
 import {Internal} from './Internal';
-import {absolutePathForFileInRepo} from './Repository';
+import {Repository, absolutePathForFileInRepo} from './Repository';
+import {repositoryCache} from './RepositoryCache';
 import {findPublicAncestor, parseExecJson} from './utils';
 import fs from 'fs';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
@@ -74,6 +76,7 @@ export default class ServerToClientAPI {
   /** Disposables that must be disposed whenever the current repo is changed */
   private repoDisposables: Array<Disposable> = [];
   private subscriptions = new Map<string, Disposable>();
+  private activeRepoRef: RepositoryReference | undefined;
 
   private queuedMessages: Array<IncomingMessage> = [];
   private currentState:
@@ -87,6 +90,7 @@ export default class ServerToClientAPI {
     private platform: ServerPlatform,
     private connection: ClientConnection,
     private tracker: ServerSideTracker,
+    private logger: Logger,
   ) {
     // messages with binary payloads are sent as two post calls. We first get the JSON message, then the binary payload,
     // which we will reconstruct together.
@@ -132,7 +136,7 @@ export default class ServerToClientAPI {
     });
   }
 
-  setRepoError(error: RepositoryError) {
+  private setRepoError(error: RepositoryError) {
     this.disposeRepoDisposables();
 
     this.currentState = {type: 'error', error};
@@ -142,7 +146,7 @@ export default class ServerToClientAPI {
     this.processQueuedMessages();
   }
 
-  setCurrentRepo(repo: Repository, cwd: string) {
+  private setCurrentRepo(repo: Repository, cwd: string) {
     this.disposeRepoDisposables();
 
     this.currentState = {type: 'repo', repo, cwd};
@@ -178,9 +182,33 @@ export default class ServerToClientAPI {
     this.connection.postMessage(serializeToString(message));
   }
 
+  /** Get a repository reference for a given cwd, and set that as the active repo. */
+  setActiveRepoForCwd(newCwd: string) {
+    if (this.activeRepoRef !== undefined) {
+      this.activeRepoRef.unref();
+    }
+    this.logger.info(`Setting active repo cwd to ${newCwd}`);
+    // Set as loading right away while we determine the new cwd's repo
+    // This ensures new messages coming in will be queued and handled only with the new repository
+    this.currentState = {type: 'loading'};
+    const command = this.connection.command ?? 'sl';
+    this.activeRepoRef = repositoryCache.getOrCreate(command, this.logger, newCwd);
+    this.activeRepoRef.promise.then(repoOrError => {
+      if (repoOrError instanceof Repository) {
+        this.setCurrentRepo(repoOrError, newCwd);
+      } else {
+        this.setRepoError(repoOrError);
+      }
+    });
+  }
+
   dispose() {
     this.incomingListener.dispose();
     this.disposeRepoDisposables();
+
+    if (this.activeRepoRef !== undefined) {
+      this.activeRepoRef.unref();
+    }
   }
 
   private disposeRepoDisposables() {
@@ -269,7 +297,7 @@ export default class ServerToClientAPI {
         break;
       }
       case 'changeCwd': {
-        // TODO
+        this.setActiveRepoForCwd(data.cwd);
         break;
       }
       case 'requestRepoInfo': {
