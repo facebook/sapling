@@ -60,9 +60,14 @@ export function CommitInfoTextField({
     if (typeaheadSuggestions?.type !== 'success' || typeaheadSuggestions.values.length === 0) {
       setTypeaheadSuggestions({type: 'loading'});
     }
-    fetchNewSuggestions(typeaheadKind, newValue).then(values =>
-      setTypeaheadSuggestions({type: 'success', values}),
-    );
+    fetchNewSuggestions(typeaheadKind, newValue).then(({values, fetchStartTimestamp}) => {
+      setTypeaheadSuggestions(last =>
+        last?.type === 'success' && last.timestamp > fetchStartTimestamp
+          ? // this result is older than the one we've already set: ignore it
+            last
+          : {type: 'success', values, timestamp: fetchStartTimestamp},
+      );
+    });
   };
 
   const fieldKey = name.toLowerCase().replace(/\s/g, '-');
@@ -77,7 +82,7 @@ export function CommitInfoTextField({
         ),
       );
       // clear out typeahead
-      setTypeaheadSuggestions({type: 'success', values: []});
+      setTypeaheadSuggestions({type: 'success', values: [], timestamp: Date.now()});
     }
   };
 
@@ -171,16 +176,17 @@ type TypeaheadSuggestions =
   | {
       type: 'loading';
     }
-  | {type: 'success'; values: Array<TypeaheadResult>}
+  | {type: 'success'; values: Array<TypeaheadResult>; timestamp: number}
   | undefined;
 
-// eslint-disable-next-line require-await
 async function fetchNewSuggestions(
   kind: TypeaheadKind,
   text: string,
-): Promise<Array<TypeaheadResult>> {
+): Promise<{values: Array<TypeaheadResult>; fetchStartTimestamp: number}> {
+  const now = Date.now();
   if (text.trim() === '') {
-    return [];
+    // no need to do a fetch on empty input
+    return {values: [], fetchStartTimestamp: now};
   }
   const id = randomId();
   serverApi.postMessage({type: 'typeahead', kind, id, query: text});
@@ -188,5 +194,5 @@ async function fetchNewSuggestions(
     'typeaheadResult',
     message => message.id === id,
   );
-  return values.result;
+  return {values: values.result, fetchStartTimestamp: now};
 }
