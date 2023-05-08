@@ -656,6 +656,14 @@ _hg_cmd_help() {
   '*:mercurial help topic:_hg_help_topics'
 }
 
+_hg_cmd_hide() {
+  _arguments -s -w : $_hg_global_opts \
+  '*'{-r+,--rev=}'[hide these revisions]:revision:_hg_revrange' \
+  '(--cleanup -c)'{-c,--cleanup}'[clean up commits with newer versions]' \
+  '(--bookmark -B)'{-B+,--bookmark=}'[specify bookmark(s)]:bookmark:_hg_bookmarks' \
+  ':revision:_hg_labels'
+}
+
 _hg_cmd_identify() {
   _arguments -s -w : $_hg_global_opts $_hg_remote_opts \
   '(--rev -r)'{-r+,--rev=}'[identify the specified rev]:revision:_hg_labels' \
@@ -861,6 +869,16 @@ _hg_cmd_serve() {
   '(--ipv6 -6)'{-6,--ipv6}'[use IPv6 in addition to IPv4]'
 }
 
+_hg_cmd_show() {
+  _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_ignore_space_opts \
+                     $_hg_style_opts $_hg_gitlike_opts \
+  '(--unified -U)'{-U+,--unified=}'[number of lines of context to show]:' \
+  '--stat[output diffstat-style summary of changes]' \
+  '--noprefix[omit a/ and b/ prefixes from filenames]' \
+  ':revision:_hg_labels' \
+  '*:files:_hg_files'
+}
+
 _hg_cmd_showconfig() {
   _arguments -s -w : $_hg_global_opts \
   '(--untrusted -u)'{-u,--untrusted}'[show untrusted configuration options]' \
@@ -920,6 +938,12 @@ _hg_cmd_update() {
   '(--rev -r)'{-r+,--rev=}'[revision]:revision:_hg_labels' \
   '(--check -c)'{-c,--check}'[update across branches if no uncommitted changes]' \
   '(--date -d)'{-d+,--date=}'[tipmost revision matching date]:' \
+  ':revision:_hg_labels'
+}
+
+_hg_cmd_unhide() {
+  _arguments -s -w : $_hg_global_opts \
+  '*'{-r+,--rev=}'[unhide these revisions]:revision:_hg_revrange' \
   ':revision:_hg_labels'
 }
 
