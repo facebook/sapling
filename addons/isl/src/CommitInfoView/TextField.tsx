@@ -65,6 +65,20 @@ export function CommitInfoTextField({
 
   const fieldKey = name.toLowerCase().replace(/\s/g, '-');
 
+  const saveNewValue = (value: string | undefined) => {
+    if (value) {
+      setEditedCommitMessage(
+        tokensToString(
+          tokens,
+          // add comma to end the token
+          value + ',',
+        ),
+      );
+      // clear out typeahead
+      setTypeaheadSuggestions({type: 'success', values: []});
+    }
+  };
+
   return (
     <div
       className="commit-info-tokenized-field"
@@ -80,6 +94,8 @@ export function CommitInfoTextField({
           // allow -1, so you can up arrow "above" the top, to make it highlight nothing
           setSelectedIndex(last => Math.max(last - 1, -1));
           event.preventDefault();
+        } else if (event.key === 'Enter') {
+          saveNewValue(values[selectedSuggestionIndex].value);
         }
       }}>
       {tokens
@@ -110,7 +126,10 @@ export function CommitInfoTextField({
                   key={suggestion.value}
                   className={
                     'suggestion' + (index === selectedSuggestionIndex ? ' selected-suggestion' : '')
-                  }>
+                  }
+                  onClick={() => {
+                    saveNewValue(suggestion.value);
+                  }}>
                   {suggestion.image && <img src={suggestion.image} alt={suggestion.label} />}
                   <span className="suggestion-label">
                     <span>{suggestion.label}</span>
