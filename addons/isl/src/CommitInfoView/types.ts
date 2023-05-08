@@ -9,6 +9,7 @@
 export type CommitMessageFields = Record<string, string | Array<string>>;
 
 export type TypeaheadKind = 'meta-user' | 'meta-task' | 'meta-tag' | 'meta-diff';
+export type TypeaheadResult = {label: string; value: string};
 
 /**
  * Which fields of the message should display as editors instead of rendered values.

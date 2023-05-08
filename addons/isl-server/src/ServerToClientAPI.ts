@@ -578,12 +578,15 @@ export default class ServerToClientAPI {
         break;
       }
       case 'typeahead': {
-        // TODO: actually do the query
-        this.postMessage({
-          type: 'typeaheadResult',
-          id: data.id,
-          result: [],
-        });
+        // Current repo's code review provider should be able to handle all
+        // TypeaheadKinds for the fields in its defined schema.
+        repo.codeReviewProvider?.typeahead?.(data.kind, data.query)?.then(result =>
+          this.postMessage({
+            type: 'typeaheadResult',
+            id: data.id,
+            result,
+          }),
+        );
         break;
       }
       case 'fetchDiffSummaries': {

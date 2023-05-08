@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TypeaheadKind} from './CommitInfoView/types';
+import type {TypeaheadKind, TypeaheadResult} from './CommitInfoView/types';
 import type {InternalTypes} from './InternalTypes';
 import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 import type {TrackDataWithEventName} from 'isl-server/src/analytics/types';
@@ -428,7 +428,7 @@ export type ServerToClientMessage =
   | FileABugProgressMessage
   | {type: 'gotConfig'; name: ConfigName; value: string | undefined}
   | {type: 'fetchedCommitMessageTemplate'; template: string}
-  | {type: 'typeaheadResult'; id: string; result: Array<{label: string; value: string}>}
+  | {type: 'typeaheadResult'; id: string; result: Array<TypeaheadResult>}
   | {type: 'applicationInfo'; platformName: string; version: string}
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}
   | {type: 'repoError'; error: RepositoryError | undefined}

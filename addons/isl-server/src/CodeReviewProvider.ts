@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {TypeaheadKind, TypeaheadResult} from 'isl/src/CommitInfoView/types';
 import type {
   DiffId,
   DiffSummary,
@@ -34,4 +35,6 @@ export interface CodeReviewProvider {
 
   /** Convert Code Review Provider info into a short summary string, usable in analytics */
   getSummaryName(): string;
+
+  typeahead?(kind: TypeaheadKind, query: string): Promise<Array<TypeaheadResult>>;
 }
