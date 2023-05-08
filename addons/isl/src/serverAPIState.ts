@@ -42,7 +42,7 @@ const repositoryData = atom<{info: RepoInfo | undefined; cwd: string | undefined
       return () => disposable.dispose();
     },
     () =>
-      serverAPI.onConnectOrReconnect(() =>
+      serverAPI.onSetup(() =>
         serverAPI.postMessage({
           type: 'requestRepoInfo',
         }),
@@ -75,7 +75,7 @@ export const applicationinfo = atom<{platformName: string; version: string} | un
       return () => disposable.dispose();
     },
     () =>
-      serverAPI.onConnectOrReconnect(() =>
+      serverAPI.onSetup(() =>
         serverAPI.postMessage({
           type: 'requestApplicationInfo',
         }),
@@ -222,7 +222,7 @@ function subscriptionEffect<K extends SubscriptionKind, T>(
       onData(event.data as SubscriptionResultsData[K], effectParams);
     });
 
-    const disposeSubscription = serverAPI.onConnectOrReconnect(() => {
+    const disposeSubscription = serverAPI.onSetup(() => {
       serverAPI.postMessage({
         type: 'subscribe',
         kind,

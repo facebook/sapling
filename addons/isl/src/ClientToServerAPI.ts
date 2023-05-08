@@ -14,6 +14,7 @@ import type {
 
 import messageBus from './MessageBus';
 import {deserializeFromString, serializeToString} from './serialize';
+import EventEmitter from 'events';
 import {defer} from 'shared/utils';
 
 export type IncomingMessage = ServerToClientMessage;
@@ -112,6 +113,9 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
     messageBus.postMessage(payload);
   }
 
+  /**
+   * Call a callback when a connection is established, or reestablished after a disconnection.
+   */
   onConnectOrReconnect(callback: () => (() => unknown) | unknown): () => void {
     let reconnecting = true;
     let disposeCallback: (() => unknown) | unknown = undefined;
@@ -128,6 +132,25 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
     return () => {
       disposable.dispose();
       typeof disposeCallback === 'function' && disposeCallback?.();
+    };
+  }
+
+  cwdChanged() {
+    this.onCwdChanged.emit('change');
+  }
+  onCwdChanged = new EventEmitter();
+
+  /**
+   * Call a callback when a connection is established, or reestablished after a disconnection,
+   * or the current working directory (and therefore usually repository) changes.
+   */
+  onSetup(cb: () => (() => unknown) | unknown): () => void {
+    const connectionSubscription = this.onConnectOrReconnect(cb);
+    this.onCwdChanged.on('change', cb);
+
+    return () => {
+      connectionSubscription();
+      this.onCwdChanged.off('change', cb);
     };
   }
 }

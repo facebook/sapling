@@ -55,7 +55,7 @@ export const commitMessageTemplate = atom<EditedMessage | undefined>({
       return () => disposable.dispose();
     },
     () =>
-      serverAPI.onConnectOrReconnect(() =>
+      serverAPI.onSetup(() =>
         serverAPI.postMessage({
           type: 'fetchCommitMessageTemplate',
         }),

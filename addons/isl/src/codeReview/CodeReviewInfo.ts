@@ -69,7 +69,7 @@ export const allDiffSummaries = atom<Result<Map<DiffId, DiffSummary> | null>>({
       return () => disposable.dispose();
     },
     () =>
-      serverAPI.onConnectOrReconnect(() =>
+      serverAPI.onSetup(() =>
         serverAPI.postMessage({
           type: 'fetchDiffSummaries',
         }),

@@ -110,6 +110,7 @@ function CwdSelections() {
             type: 'changeCwd',
             cwd: newCwd,
           });
+          serverAPI.cwdChanged();
         }}>
         {paths.map((shortCwd, index) => {
           const fullCwd = cwdOptions[index];
