@@ -9,7 +9,17 @@
 export type CommitMessageFields = Record<string, string | Array<string>>;
 
 export type TypeaheadKind = 'meta-user' | 'meta-task' | 'meta-tag' | 'meta-diff';
-export type TypeaheadResult = {label: string; value: string};
+export type TypeaheadResult = {
+  /** The display text of the suggestion */
+  label: string;
+
+  /**
+   * The literal value of the suggestion,
+   * shown de-emphasized next to the display name
+   * and placed literally as text into the commit message
+   */
+  value: string;
+};
 
 /**
  * Which fields of the message should display as editors instead of rendered values.

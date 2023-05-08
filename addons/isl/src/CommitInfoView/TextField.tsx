@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TypeaheadKind} from './types';
+import type {TypeaheadKind, TypeaheadResult} from './types';
 
 import serverApi from '../ClientToServerAPI';
 import {Subtle} from '../Subtle';
@@ -106,24 +106,14 @@ type TypeaheadSuggestions =
   | {
       type: 'loading';
     }
-  | {type: 'success'; values: Array<TypeaheadSuggestion>}
+  | {type: 'success'; values: Array<TypeaheadResult>}
   | undefined;
-type TypeaheadSuggestion = {
-  /** The display text of the suggestion */
-  label: string;
-  /**
-   * The literal value of the suggestion,
-   * shown de-emphasized next to the display name
-   * and placed literally as text into the commit message
-   */
-  value: string;
-};
 
 // eslint-disable-next-line require-await
 async function fetchNewSuggestions(
   kind: TypeaheadKind,
   text: string,
-): Promise<Array<TypeaheadSuggestion>> {
+): Promise<Array<TypeaheadResult>> {
   const id = randomId();
   serverApi.postMessage({type: 'typeahead', kind, id, query: text});
   const values = await serverApi.nextMessageMatching(
