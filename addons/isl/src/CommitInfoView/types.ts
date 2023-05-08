@@ -19,6 +19,11 @@ export type TypeaheadResult = {
    * and placed literally as text into the commit message
    */
   value: string;
+
+  /**
+   * An optional image url representing this result. Usually, a user avatar.
+   */
+  image?: string;
 };
 
 /**

@@ -292,14 +292,45 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--halfpad);
+  gap: var(--pad);
 }
 
 .commit-info-tokenized-field .typeahead-suggestions .suggestion {
+  --typeahead-img-size: 30px;
   display: flex;
   flex-direction: row;
   gap: var(--pad);
   align-items: center;
+}
+.commit-info-tokenized-field .typeahead-suggestions .suggestion-label {
+  display: flex;
+  flex-direction: column;
+}
+
+.commit-info-tokenized-field .typeahead-suggestions img {
+  width: var(--typeahead-img-size);
+  height: var(--typeahead-img-size);
+  border-radius: 100%;
+  position: relative;
+}
+
+.commit-info-tokenized-field .typeahead-suggestions img::before {
+  /* fallback if the image URL doesn't load */
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  line-height: var(--typeahead-img-size);
+  background-color: rgba(0, 0, 0, 1);
+  background: linear-gradient(45deg, var(--background), var(--foreground));
+  text-align: center;
+  border-radius: 100%;
+  display: block;
+  width: var(--typeahead-img-size);
+  height: var(--typeahead-img-size);
+  overflow: hidden;
 }
 
 .upload-status {

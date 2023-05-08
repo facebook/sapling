@@ -90,8 +90,11 @@ export function CommitInfoTextField({
             ) : (
               typeaheadSuggestions?.values.map(suggestion => (
                 <span key={suggestion.value} className="suggestion">
-                  <span>{suggestion.label}</span>
-                  <Subtle>{suggestion.value}</Subtle>
+                  {suggestion.image && <img src={suggestion.image} alt={suggestion.label} />}
+                  <span className="suggestion-label">
+                    <span>{suggestion.label}</span>
+                    <Subtle>{suggestion.value}</Subtle>
+                  </span>
                 </span>
               ))
             )}
