@@ -285,7 +285,7 @@
 .commit-info-tokenized-field .typeahead-suggestions {
   position: absolute;
   top: calc(100% + var(--halfpad));
-  max-width: 200px;
+  max-width: 250px;
   background-color: var(--tooltip-background);
   padding: var(--pad);
   border: 1px solid var(--tooltip-border);
@@ -318,13 +318,17 @@
 .commit-info-tokenized-field .typeahead-suggestions .suggestion-label {
   display: flex;
   flex-direction: column;
+  overflow-wrap: break-word;
+  max-width: calc(100% - var(--typeahead-img-size));
 }
 
 .commit-info-tokenized-field .typeahead-suggestions img {
   width: var(--typeahead-img-size);
   height: var(--typeahead-img-size);
+  min-width: var(--typeahead-img-size);
   border-radius: 100%;
   position: relative;
+  background: linear-gradient(45deg, var(--background), var(--foreground));
 }
 
 .commit-info-tokenized-field .typeahead-suggestions img::before {
@@ -336,7 +340,6 @@
   bottom: 0;
   right: 0;
   line-height: var(--typeahead-img-size);
-  background-color: rgba(0, 0, 0, 1);
   background: linear-gradient(45deg, var(--background), var(--foreground));
   text-align: center;
   border-radius: 100%;
