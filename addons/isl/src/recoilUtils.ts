@@ -13,8 +13,5 @@ import serverAPI from './ClientToServerAPI';
  * Atom effect that clears the atom's value when the current working directory / repository changes.
  */
 export function clearOnCwdChange<T>(): AtomEffect<T> {
-  return ({resetSelf}) => {
-    serverAPI.onCwdChanged.on('change', resetSelf);
-    return () => serverAPI.onCwdChanged.off('change', resetSelf);
-  };
+  return ({resetSelf}) => serverAPI.onCwdChanged(resetSelf);
 }

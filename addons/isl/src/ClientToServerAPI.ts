@@ -14,7 +14,6 @@ import type {
 
 import messageBus from './MessageBus';
 import {deserializeFromString, serializeToString} from './serialize';
-import EventEmitter from 'events';
 import {defer} from 'shared/utils';
 
 export type IncomingMessage = ServerToClientMessage;
@@ -135,22 +134,28 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
     };
   }
 
-  cwdChanged() {
-    this.onCwdChanged.emit('change');
+  private cwdChangeHandlers: Array<() => unknown> = [];
+  onCwdChanged(cb: () => unknown) {
+    this.cwdChangeHandlers.push(cb);
+    return () => {
+      this.cwdChangeHandlers.splice(this.cwdChangeHandlers.indexOf(cb), 1);
+    };
   }
-  onCwdChanged = new EventEmitter();
+  cwdChanged() {
+    this.cwdChangeHandlers.forEach(handler => handler());
+  }
 
   /**
    * Call a callback when a connection is established, or reestablished after a disconnection,
    * or the current working directory (and therefore usually repository) changes.
    */
   onSetup(cb: () => (() => unknown) | unknown): () => void {
-    const connectionSubscription = this.onConnectOrReconnect(cb);
-    this.onCwdChanged.on('change', cb);
+    const disposeConnectionSubscription = this.onConnectOrReconnect(cb);
+    const disposeCwdChange = this.onCwdChanged(cb);
 
     return () => {
-      connectionSubscription();
-      this.onCwdChanged.off('change', cb);
+      disposeConnectionSubscription();
+      disposeCwdChange();
     };
   }
 }
