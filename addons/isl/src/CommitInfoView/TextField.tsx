@@ -115,7 +115,17 @@ export function CommitInfoTextField({
         .map((token, i) => (
           <span key={i} className="token">
             {token}
-            <VSCodeButton appearance="icon">
+            <VSCodeButton
+              appearance="icon"
+              onClick={() => {
+                setEditedCommitMessage(
+                  tokensToString(
+                    tokens.filter(t => t !== token),
+                    // keep anything already typed in
+                    (ref.current as HTMLInputElement | null)?.value ?? '',
+                  ),
+                );
+              }}>
               <Icon icon="x" />
             </VSCodeButton>
           </span>
