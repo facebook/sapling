@@ -335,6 +335,7 @@ Test extension help:
        logginghelper
                      this extension logs different pieces of information that
                      will be used
+       megarepo      provides support for cross repo commit resolution
        memcommit     make commits without a working copy
        morestatus    make status give a bit more context
        myparent

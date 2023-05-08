@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import re
+from typing import Callable, Optional
 
 from . import bookmarks, error, pycompat, registrar, util
 from .i18n import _
@@ -90,7 +91,7 @@ class pullattempt(object):
 
         If pullattempt cannot be merged, return None.
         """
-        if self.source != other.source:
+        if type(self) != type(other) or self.source != other.source:
             return None
         return pullattempt(
             bookmarknames=self.bookmarknames + other.bookmarknames,
@@ -98,6 +99,23 @@ class pullattempt(object):
             headnames=self.headnames + other.headnames,
             source=self.source,
         )
+
+
+class deferredpullattempt(pullattempt):
+    """Defer pullattempt generation until execute() time.
+
+    deferredpullattempts are not mergeable with any other pullattempts.
+    """
+
+    def __init__(self, generate: Callable[[], Optional[pullattempt]]):
+        self.generate = generate
+
+    def execute(self, repo):
+        if attempt := self.generate():
+            attempt.execute(repo)
+
+    def trymerge(self, _other):
+        return None
 
 
 def _cachedstringmatcher(pattern, _cache={}):

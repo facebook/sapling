@@ -510,11 +510,6 @@ class changectx(basectx):
                 repo.changelog.rev(self._node)
                 return
 
-            self._node = repo._xrepo_lookup(changeid)
-            if self._node is not None:
-                repo.changelog.rev(self._node)
-                return
-
             # lookup failed
             # check if it might have come from damaged dirstate
             if repo.local() and changeid in repo.dirstate.parents():
