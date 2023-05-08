@@ -8,6 +8,7 @@
 import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types';
 
 import {Internal} from '../Internal';
+import {clearOnCwdChange} from '../recoilUtils';
 import {atom} from 'recoil';
 
 export function emptyCommitMessageFields(schema: Array<FieldConfig>): CommitMessageFields {
@@ -148,6 +149,7 @@ function arraysEqual<T>(a: Array<T>, b: Array<T>): boolean {
 export const commitMessageFieldsSchema = atom<Array<FieldConfig>>({
   key: 'commitMessageFieldsSchema',
   default: getDefaultCommitMessageSchema(),
+  effects: [clearOnCwdChange()],
 });
 
 export function getDefaultCommitMessageSchema() {

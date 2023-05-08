@@ -50,6 +50,7 @@ import {
   uncommittedChangesWithPreviews,
   useIsOperationRunningOrQueued,
 } from './previews';
+import {clearOnCwdChange} from './recoilUtils';
 import {selectedCommits} from './selection';
 import {
   latestHeadCommit,
@@ -840,6 +841,7 @@ function FileActions({comparison, file}: {comparison: Comparison; file: UIChange
 export const deselectedUncommittedChanges = atom<Set<RepoRelativePath>>({
   key: 'deselectedUncommittedChanges',
   default: new Set(),
+  effects: [clearOnCwdChange()],
 });
 
 function useDeselectedFiles(

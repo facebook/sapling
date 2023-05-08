@@ -26,6 +26,7 @@ import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
+import {clearOnCwdChange} from './recoilUtils';
 import {initialParams} from './urlParams';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
@@ -312,6 +313,7 @@ export const commitsShownRange = atom<number | undefined>({
   key: 'commitsShownRange',
   default: DEFAULT_DAYS_OF_COMMITS_TO_LOAD,
   effects: [
+    clearOnCwdChange(),
     ({setSelf}) => {
       const disposables = [
         serverAPI.onMessageOfType('commitsShownRange', event => {
@@ -383,6 +385,7 @@ export const haveCommitsLoadedYet = selector<boolean>({
 export const operationBeingPreviewed = atom<Operation | undefined>({
   key: 'operationBeingPreviewed',
   default: undefined,
+  effects: [clearOnCwdChange()],
 });
 
 export const haveRemotePath = selector({
@@ -442,6 +445,7 @@ export const operationList = atom<OperationList>({
   key: 'operationList',
   default: defaultOperationList(),
   effects: [
+    clearOnCwdChange(),
     ({setSelf}) => {
       const disposable = serverAPI.onMessageOfType('operationProgress', progress => {
         switch (progress.kind) {
@@ -512,6 +516,7 @@ export const queuedOperations = atom<Array<Operation>>({
   key: 'queuedOperations',
   default: [],
   effects: [
+    clearOnCwdChange(),
     ({setSelf}) => {
       const disposable = serverAPI.onMessageOfType('operationProgress', progress => {
         switch (progress.kind) {
