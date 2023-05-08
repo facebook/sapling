@@ -308,6 +308,7 @@ export type PlatformSpecificClientToServerMessages =
   | {type: 'platform/openDiff'; path: RepoRelativePath; comparison: Comparison}
   | {type: 'platform/openExternal'; url: string}
   | {type: 'platform/confirm'; message: string; details?: string | undefined}
+  | {type: 'platform/subscribeToAvailableCwds'}
   | {
       type: 'platform/setVSCodeConfig';
       config: string;
@@ -325,6 +326,10 @@ export type PlatformSpecificServerToClientMessages =
   | {
       type: 'platform/confirmResult';
       result: boolean;
+    }
+  | {
+      type: 'platform/availableCwds';
+      options: Array<AbsolutePath>;
     }
   | {
       type: 'platform/vscodeConfigChanged';
@@ -368,6 +373,7 @@ export type ClientToServerMessage =
     }
   | {type: 'getConfig'; name: ConfigName}
   | {type: 'setConfig'; name: ConfigName; value: string}
+  | {type: 'changeCwd'; cwd: string}
   | {type: 'track'; data: TrackDataWithEventName}
   | {type: 'fileBugReport'; data: FileABugFields; uiState?: Json}
   | {type: 'runOperation'; operation: RunnableOperation}

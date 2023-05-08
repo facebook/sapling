@@ -39,6 +39,7 @@ export type OutgoingMessage = ServerToClientMessage;
 
 type GeneralMessage = IncomingMessage &
   (
+    | {type: 'changeCwd'}
     | {type: 'requestRepoInfo'}
     | {type: 'requestApplicationInfo'}
     | {type: 'fileBugReport'}
@@ -265,6 +266,10 @@ export default class ServerToClientAPI {
     switch (data.type) {
       case 'track': {
         this.tracker.trackData(data.data);
+        break;
+      }
+      case 'changeCwd': {
+        // TODO
         break;
       }
       case 'requestRepoInfo': {

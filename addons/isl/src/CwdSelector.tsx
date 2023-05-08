@@ -5,15 +5,45 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {AbsolutePath} from './types';
+
+import serverAPI from './ClientToServerAPI';
 import {DropdownField, DropdownFields} from './DropdownFields';
 import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T} from './i18n';
 import {repositoryInfo, serverCwd} from './serverAPIState';
-import {VSCodeBadge, VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useRecoilValue} from 'recoil';
+import {
+  VSCodeBadge,
+  VSCodeButton,
+  VSCodeDivider,
+  VSCodeRadio,
+  VSCodeRadioGroup,
+} from '@vscode/webview-ui-toolkit/react';
+import {atom, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
+import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 import {basename} from 'shared/utils';
+
+export const availableCwds = atom<Array<AbsolutePath>>({
+  key: 'availableCwds',
+  default: [],
+  effects: [
+    ({setSelf}) => {
+      const disposable = serverAPI.onMessageOfType('platform/availableCwds', event => {
+        setSelf(event.options);
+      });
+      return () => disposable.dispose();
+    },
+
+    () =>
+      serverAPI.onConnectOrReconnect(() =>
+        serverAPI.postMessage({
+          type: 'platform/subscribeToAvailableCwds',
+        }),
+      ),
+  ],
+});
 
 export function CwdSelector() {
   const info = useRecoilValue(repositoryInfo);
@@ -22,7 +52,7 @@ export function CwdSelector() {
   }
   const repoBasename = basename(info.repoRoot);
   return (
-    <Tooltip trigger="click" component={CwdSelectorDetails} placement="bottom">
+    <Tooltip trigger="click" component={CwdDetails} placement="bottom">
       <VSCodeButton appearance="icon">
         <Icon icon="folder" slot="start" />
         {repoBasename}
@@ -31,18 +61,19 @@ export function CwdSelector() {
   );
 }
 
-function CwdSelectorDetails() {
+function CwdDetails() {
   const info = useRecoilValue(repositoryInfo);
   const repoRoot = info?.type === 'success' ? info.repoRoot : null;
   const provider = useRecoilValue(codeReviewProvider);
   const cwd = useRecoilValue(serverCwd);
   return (
-    <DropdownFields title={<T>Repository Info</T>} icon="folder">
-      <DropdownField title={<T>Repository root</T>}>
-        <code>{repoRoot}</code>
-      </DropdownField>
-      <DropdownField title={<T>Current Working Directory</T>}>
+    <DropdownFields title={<T>Repository info</T>} icon="folder">
+      <CwdSelections />
+      <DropdownField title={<T>Active repository</T>}>
         <code>{cwd}</code>
+      </DropdownField>
+      <DropdownField title={<T>Repository Root</T>}>
+        <code>{repoRoot}</code>
       </DropdownField>
       {provider != null ? (
         <DropdownField title={<T>Code Review Provider</T>}>
@@ -52,5 +83,50 @@ function CwdSelectorDetails() {
         </DropdownField>
       ) : null}
     </DropdownFields>
+  );
+}
+
+function CwdSelections() {
+  const currentCwd = useRecoilValue(serverCwd);
+  const cwdOptions = useRecoilValue(availableCwds);
+  if (cwdOptions.length < 2) {
+    return null;
+  }
+
+  const paths = minimalDisambiguousPaths(cwdOptions);
+
+  return (
+    <DropdownField title={<T>Change active repository</T>}>
+      <VSCodeRadioGroup
+        orientation="vertical"
+        value={currentCwd}
+        onChange={e => {
+          const newCwd = (e.target as HTMLOptionElement).value as string;
+          if (newCwd === currentCwd) {
+            // nothing to change
+            return;
+          }
+          serverAPI.postMessage({
+            type: 'changeCwd',
+            cwd: newCwd,
+          });
+        }}>
+        {paths.map((shortCwd, index) => {
+          const fullCwd = cwdOptions[index];
+          return (
+            <Tooltip key={shortCwd} title={fullCwd} placement="right">
+              <VSCodeRadio
+                key={shortCwd}
+                value={fullCwd}
+                checked={fullCwd === currentCwd}
+                tabIndex={0}>
+                {shortCwd}
+              </VSCodeRadio>
+            </Tooltip>
+          );
+        })}
+      </VSCodeRadioGroup>
+      <VSCodeDivider />
+    </DropdownField>
   );
 }

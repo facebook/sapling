@@ -74,6 +74,18 @@ export const VSCodePlatform: ServerPlatform = {
           postMessage({type: 'platform/confirmResult', result: result === OKButton});
           break;
         }
+        case 'platform/subscribeToAvailableCwds': {
+          const postAllAvailableCwds = () =>
+            postMessage({
+              type: 'platform/availableCwds',
+              options: (vscode.workspace.workspaceFolders ?? []).map(folder => folder.uri.fsPath),
+            });
+
+          postAllAvailableCwds();
+          const dispose = vscode.workspace.onDidChangeWorkspaceFolders(postAllAvailableCwds);
+          onDispose(() => dispose.dispose());
+          break;
+        }
         case 'platform/setVSCodeConfig': {
           vscode.workspace
             .getConfiguration()
