@@ -85,10 +85,20 @@ export function CommitInfoTextField({
     <div
       className="commit-info-tokenized-field"
       onKeyDown={event => {
+        if (
+          event.key === 'Backspace' &&
+          (ref.current as HTMLInputElement | null)?.value.length === 0
+        ) {
+          // pop one token off
+          setEditedCommitMessage(tokensToString(tokens.slice(0, -1), ''));
+          return;
+        }
+
         const values = (typeaheadSuggestions as TypeaheadSuggestions & {type: 'success'})?.values;
         if (values == null) {
           return;
         }
+
         if (event.key === 'ArrowDown') {
           setSelectedIndex(last => Math.min(last + 1, values.length - 1));
           event.preventDefault();
