@@ -250,6 +250,58 @@
   display: none;
 }
 
+.commit-info-tokenized-field {
+  position: relative;
+  display: flex;
+  gap: var(--halfpad);
+  align-items: center;
+  flex-wrap: wrap;
+  padding: var(--halfpad) 0;
+  --token-height: 26px;
+}
+.commit-info-tokenized-field vscode-text-field {
+  margin: 0;
+}
+
+.commit-info-field-with-autocomplete {
+  flex-grow: 1;
+  min-width: 30px;
+  position: relative;
+  height: var(--token-height);
+}
+
+.commit-info-tokenized-field .token {
+  padding: 0;
+  background-color: var(--tooltip-background);
+  padding-left: var(--pad);
+  padding-right: 1px;
+  border: 1px solid var(--tooltip-border);
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+  min-height: calc(var(--token-height) - 2px);
+}
+
+.commit-info-tokenized-field .autocomplete-suggestions {
+  position: absolute;
+  top: calc(100% + var(--halfpad));
+  max-width: 200px;
+  background-color: var(--tooltip-background);
+  padding: var(--pad);
+  border: 1px solid var(--tooltip-border);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--halfpad);
+}
+
+.commit-info-tokenized-field .autocomplete-suggestions .suggestion {
+  display: flex;
+  flex-direction: row;
+  gap: var(--pad);
+  align-items: center;
+}
+
 .upload-status {
   cursor: pointer;
   user-select: none;
