@@ -185,8 +185,9 @@ async function fetchNewSuggestions(
   text: string,
 ): Promise<{values: Array<TypeaheadResult>; fetchStartTimestamp: number}> {
   const now = Date.now();
-  if (text.trim() === '') {
-    // no need to do a fetch on empty input
+  if (text.trim().length < 2) {
+    // no need to do a fetch on zero- or one-char input...
+    // it's slow and doesn't give good suggestions anyway
     return {values: [], fetchStartTimestamp: now};
   }
   const id = randomId();
