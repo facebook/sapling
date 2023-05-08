@@ -57,7 +57,9 @@ export function CommitInfoTextField({
   const onInput = (event: {target: EventTarget | null}) => {
     const newValue = (event?.target as HTMLInputElement)?.value;
     setEditedCommitMessage(tokensToString(tokens, newValue));
-    setTypeaheadSuggestions({type: 'loading'});
+    if (typeaheadSuggestions?.type !== 'success' || typeaheadSuggestions.values.length === 0) {
+      setTypeaheadSuggestions({type: 'loading'});
+    }
     fetchNewSuggestions(typeaheadKind, newValue).then(values =>
       setTypeaheadSuggestions({type: 'success', values}),
     );
@@ -157,6 +159,9 @@ async function fetchNewSuggestions(
   kind: TypeaheadKind,
   text: string,
 ): Promise<Array<TypeaheadResult>> {
+  if (text.trim() === '') {
+    return [];
+  }
   const id = randomId();
   serverApi.postMessage({type: 'typeahead', kind, id, query: text});
   const values = await serverApi.nextMessageMatching(
