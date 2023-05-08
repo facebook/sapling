@@ -52,6 +52,8 @@ export function CommitInfoTextField({
 
   const [typeaheadSuggestions, setTypeaheadSuggestions] = useState<TypeaheadSuggestions>(undefined);
 
+  const [selectedSuggestionIndex, setSelectedIndex] = useState(0);
+
   const onInput = (event: {target: EventTarget | null}) => {
     const newValue = (event?.target as HTMLInputElement)?.value;
     setEditedCommitMessage(tokensToString(tokens, newValue));
@@ -64,7 +66,22 @@ export function CommitInfoTextField({
   const fieldKey = name.toLowerCase().replace(/\s/g, '-');
 
   return (
-    <div className="commit-info-tokenized-field">
+    <div
+      className="commit-info-tokenized-field"
+      onKeyDown={event => {
+        const values = (typeaheadSuggestions as TypeaheadSuggestions & {type: 'success'})?.values;
+        if (values == null) {
+          return;
+        }
+        if (event.key === 'ArrowDown') {
+          setSelectedIndex(last => Math.min(last + 1, values.length - 1));
+          event.preventDefault();
+        } else if (event.key === 'ArrowUp') {
+          // allow -1, so you can up arrow "above" the top, to make it highlight nothing
+          setSelectedIndex(last => Math.max(last - 1, -1));
+          event.preventDefault();
+        }
+      }}>
       {tokens
         .filter(token => token != '')
         .map((token, i) => (
@@ -88,8 +105,12 @@ export function CommitInfoTextField({
             {typeaheadSuggestions?.type === 'loading' ? (
               <Icon icon="loading" />
             ) : (
-              typeaheadSuggestions?.values.map(suggestion => (
-                <span key={suggestion.value} className="suggestion">
+              typeaheadSuggestions?.values.map((suggestion, index) => (
+                <span
+                  key={suggestion.value}
+                  className={
+                    'suggestion' + (index === selectedSuggestionIndex ? ' selected-suggestion' : '')
+                  }>
                   {suggestion.image && <img src={suggestion.image} alt={suggestion.label} />}
                   <span className="suggestion-label">
                     <span>{suggestion.label}</span>

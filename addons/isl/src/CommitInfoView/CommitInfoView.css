@@ -301,6 +301,15 @@
   flex-direction: row;
   gap: var(--pad);
   align-items: center;
+  border-radius: var(--halfpad);
+  padding: var(--halfpad);
+  margin: calc(-1 * var(--halfpad));
+  cursor: pointer;
+}
+
+.commit-info-tokenized-field .typeahead-suggestions .suggestion:hover,
+.commit-info-tokenized-field .typeahead-suggestions .selected-suggestion {
+  background-color: var(--hover-darken);
 }
 .commit-info-tokenized-field .typeahead-suggestions .suggestion-label {
   display: flex;
