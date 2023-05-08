@@ -263,7 +263,7 @@
   margin: 0;
 }
 
-.commit-info-field-with-autocomplete {
+.commit-info-field-with-typeahead {
   flex-grow: 1;
   min-width: 30px;
   position: relative;
@@ -282,7 +282,7 @@
   min-height: calc(var(--token-height) - 2px);
 }
 
-.commit-info-tokenized-field .autocomplete-suggestions {
+.commit-info-tokenized-field .typeahead-suggestions {
   position: absolute;
   top: calc(100% + var(--halfpad));
   max-width: 200px;
@@ -295,7 +295,7 @@
   gap: var(--halfpad);
 }
 
-.commit-info-tokenized-field .autocomplete-suggestions .suggestion {
+.commit-info-tokenized-field .typeahead-suggestions .suggestion {
   display: flex;
   flex-direction: row;
   gap: var(--pad);

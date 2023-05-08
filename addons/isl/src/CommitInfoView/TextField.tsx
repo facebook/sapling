@@ -44,15 +44,14 @@ export function CommitInfoTextField({
 
   const [tokens, remaining] = extractTokens(editedMessage);
 
-  const [autocompleteSuggestions, setAutocompleteSuggestions] =
-    useState<AutocompleteSuggestions>(undefined);
+  const [typeaheadSuggestions, setTypeaheadSuggestions] = useState<TypeaheadSuggestions>(undefined);
 
   const onInput = (event: {target: EventTarget | null}) => {
     const newValue = (event?.target as HTMLInputElement)?.value;
     setEditedCommitMessage(tokensToString(tokens, newValue));
-    setAutocompleteSuggestions({type: 'loading'});
+    setTypeaheadSuggestions({type: 'loading'});
     fetchNewSuggestions(newValue).then(values =>
-      setAutocompleteSuggestions({type: 'success', values}),
+      setTypeaheadSuggestions({type: 'success', values}),
     );
   };
 
@@ -70,20 +69,20 @@ export function CommitInfoTextField({
             </VSCodeButton>
           </span>
         ))}
-      <div className="commit-info-field-with-autocomplete">
+      <div className="commit-info-field-with-typeahead">
         <VSCodeTextField
           ref={ref}
           value={remaining}
           data-testid={`commit-info-${fieldKey}-field`}
           onInput={onInput}
         />
-        {autocompleteSuggestions?.type === 'loading' ||
-        (autocompleteSuggestions?.values?.length ?? 0) > 0 ? (
-          <div className="autocomplete-suggestions">
-            {autocompleteSuggestions?.type === 'loading' ? (
+        {typeaheadSuggestions?.type === 'loading' ||
+        (typeaheadSuggestions?.values?.length ?? 0) > 0 ? (
+          <div className="typeahead-suggestions">
+            {typeaheadSuggestions?.type === 'loading' ? (
               <Icon icon="loading" />
             ) : (
-              autocompleteSuggestions?.values.map(suggestion => (
+              typeaheadSuggestions?.values.map(suggestion => (
                 <span key={suggestion.value} className="suggestion">
                   <span>{suggestion.display}</span>
                   <Subtle>{suggestion.value}</Subtle>
@@ -97,13 +96,13 @@ export function CommitInfoTextField({
   );
 }
 
-type AutocompleteSuggestions =
+type TypeaheadSuggestions =
   | {
       type: 'loading';
     }
-  | {type: 'success'; values: Array<AutocompleteSuggestion>}
+  | {type: 'success'; values: Array<TypeaheadSuggestion>}
   | undefined;
-type AutocompleteSuggestion = {
+type TypeaheadSuggestion = {
   /** The display text of the suggestion */
   display: string;
   /**
@@ -115,6 +114,6 @@ type AutocompleteSuggestion = {
 };
 
 // eslint-disable-next-line require-await
-async function fetchNewSuggestions(_text: string): Promise<Array<AutocompleteSuggestion>> {
+async function fetchNewSuggestions(_text: string): Promise<Array<TypeaheadSuggestion>> {
   return [];
 }

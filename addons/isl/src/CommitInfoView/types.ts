@@ -50,6 +50,6 @@ export type FieldConfig = {
     }
   | {
       type: 'field';
-      autocompleteType: 'user' | 'task' | 'tag' | 'diff';
+      typeaheadType: 'user' | 'task' | 'tag' | 'diff';
     }
 );
