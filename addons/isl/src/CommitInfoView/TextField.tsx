@@ -160,7 +160,7 @@ export function CommitInfoTextField({
                   {suggestion.image && <img src={suggestion.image} alt={suggestion.label} />}
                   <span className="suggestion-label">
                     <span>{suggestion.label}</span>
-                    <Subtle>{suggestion.value}</Subtle>
+                    {suggestion.label !== suggestion.value && <Subtle>{suggestion.value}</Subtle>}
                   </span>
                 </span>
               ))
