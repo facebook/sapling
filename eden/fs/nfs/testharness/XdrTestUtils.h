@@ -7,8 +7,6 @@
 
 #pragma once
 
-#ifndef _WIN32
-
 #include <fmt/core.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
@@ -52,5 +50,3 @@ void roundtrip(T value) {
 }
 
 } // namespace facebook::eden
-
-#endif
