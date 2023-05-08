@@ -144,7 +144,8 @@ export function CommitInfoTextField({
         />
         {typeaheadSuggestions?.type === 'loading' ||
         (typeaheadSuggestions?.values?.length ?? 0) > 0 ? (
-          <div className="typeahead-suggestions">
+          <div className="typeahead-suggestions tooltip tooltip-bottom">
+            <div className="tooltip-arrow tooltip-arrow-bottom" />
             {typeaheadSuggestions?.type === 'loading' ? (
               <Icon icon="loading" />
             ) : (

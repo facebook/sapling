@@ -287,9 +287,6 @@
   top: calc(100% + var(--halfpad));
   max-width: 250px;
   min-width: 250px;
-  background-color: var(--tooltip-background);
-  padding: var(--pad);
-  border: 1px solid var(--tooltip-border);
   z-index: 1;
   display: flex;
   flex-direction: column;
