@@ -2454,6 +2454,10 @@ async def async_main(parser: argparse.ArgumentParser, args: argparse.Namespace) 
     if stale_return_code is not None:
         return stale_return_code
 
+    if args.config_dir == "":
+        print_stderr("error: empty --config-dir path specified")
+        return EX_USAGE
+
     if args.version:
         return do_version(args)
     if getattr(args, "func", None) is None:

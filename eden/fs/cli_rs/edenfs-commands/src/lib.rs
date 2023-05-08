@@ -11,6 +11,7 @@ use std::io::BufReader;
 use std::path::PathBuf;
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -167,11 +168,14 @@ impl Subcommand for TopLevelSubcommand {
 }
 
 impl MainCommand {
-    fn get_config_dir(&self) -> PathBuf {
+    fn get_config_dir(&self) -> Result<PathBuf> {
         // A config dir might be provided as a top-level argument. Top-level arguments take
         // precedent over sub-command args.
         if let Some(config_dir) = &self.config_dir {
-            config_dir.clone()
+            if config_dir.as_os_str().is_empty() {
+                bail!("empty --config-dir path specified")
+            }
+            Ok(config_dir.clone())
         // Then check if the optional mount path provided by some subcommands is an EdenFS mount.
         // If it's provided and is a valid EdenFS mount, use the mounts config dir.
         } else if let Some(config_dir) = self
@@ -179,17 +183,17 @@ impl MainCommand {
             .get_mount_path_override()
             .and_then(|x| util::locate_eden_config_dir(&x))
         {
-            config_dir
+            Ok(config_dir)
         // Then check if the current working directory is an EdenFS mount. If not, we should
         // default to the default config-dir location which varies by platform.
         } else {
-            env::current_dir()
+            Ok(env::current_dir()
                 .map_err(From::from)
                 .and_then(|cwd| {
                     util::locate_eden_config_dir(&cwd)
                         .ok_or_else(|| anyhow!("cwd is not in an eden mount"))
                 })
-                .unwrap_or(expand_path(DEFAULT_CONFIG_DIR))
+                .unwrap_or(expand_path(DEFAULT_CONFIG_DIR)))
         }
     }
 
@@ -237,7 +241,7 @@ impl MainCommand {
         event!(Level::TRACE, cmd = ?self, "Dispatching");
 
         EdenFsInstance::init(
-            self.get_config_dir(),
+            self.get_config_dir()?,
             get_etc_eden_dir(&self.etc_eden_dir),
             self.get_home_dir(),
         );
