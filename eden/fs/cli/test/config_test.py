@@ -164,8 +164,12 @@ class TomlConfigTest(EdenTestCaseBase):
         self.write_user_config(get_toml_test_file_invalid())
 
         cfg = self.get_config()
-        with self.assertRaises(toml.decoder.TomlDecodeError):
+        with self.assertLogs() as logs_assertion:
             cfg._loadConfig()
+        self.assertIn(
+            "toml config is either missing or corrupted",
+            "\n".join(logs_assertion.output),
+        )
 
     def test_get_config_value_returns_default_if_section_is_missing(self) -> None:
         self.assertEqual(
