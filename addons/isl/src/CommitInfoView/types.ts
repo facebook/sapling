@@ -8,6 +8,8 @@
 /** Values for each field key,  */
 export type CommitMessageFields = Record<string, string | Array<string>>;
 
+export type TypeaheadKind = 'meta-user' | 'meta-task' | 'meta-tag' | 'meta-diff';
+
 /**
  * Which fields of the message should display as editors instead of rendered values.
  * This can be controlled outside of the commit info view, but it gets updated in an effect as well when commits are changed.
@@ -50,6 +52,6 @@ export type FieldConfig = {
     }
   | {
       type: 'field';
-      typeaheadType: 'user' | 'task' | 'tag' | 'diff';
+      typeaheadKind: TypeaheadKind;
     }
 );

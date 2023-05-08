@@ -86,6 +86,7 @@ export function CommitInfoField({
             autoFocus={autofocus ?? false}
             editedMessage={editedFieldContent}
             setEditedCommitMessage={setEditedField}
+            typeaheadKind={field.typeaheadKind}
           />
         ) : (
           <CommitInfoTextArea

@@ -5,11 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {TypeaheadKind} from './types';
+
+import serverApi from '../ClientToServerAPI';
 import {Subtle} from '../Subtle';
 import {getInnerTextareaForVSCodeTextArea} from './utils';
 import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useRef, useEffect, useState} from 'react';
 import {Icon} from 'shared/Icon';
+import {randomId} from 'shared/utils';
 
 /** Extract comma-separated tokens into an array, plus any remaining non-tokenized text */
 function extractTokens(raw: string): [Array<string>, string] {
@@ -28,11 +32,13 @@ export function CommitInfoTextField({
   autoFocus,
   editedMessage,
   setEditedCommitMessage,
+  typeaheadKind,
 }: {
   name: string;
   autoFocus: boolean;
   editedMessage: string;
   setEditedCommitMessage: (fieldValue: string) => unknown;
+  typeaheadKind: TypeaheadKind;
 }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -50,7 +56,7 @@ export function CommitInfoTextField({
     const newValue = (event?.target as HTMLInputElement)?.value;
     setEditedCommitMessage(tokensToString(tokens, newValue));
     setTypeaheadSuggestions({type: 'loading'});
-    fetchNewSuggestions(newValue).then(values =>
+    fetchNewSuggestions(typeaheadKind, newValue).then(values =>
       setTypeaheadSuggestions({type: 'success', values}),
     );
   };
@@ -84,7 +90,7 @@ export function CommitInfoTextField({
             ) : (
               typeaheadSuggestions?.values.map(suggestion => (
                 <span key={suggestion.value} className="suggestion">
-                  <span>{suggestion.display}</span>
+                  <span>{suggestion.label}</span>
                   <Subtle>{suggestion.value}</Subtle>
                 </span>
               ))
@@ -104,7 +110,7 @@ type TypeaheadSuggestions =
   | undefined;
 type TypeaheadSuggestion = {
   /** The display text of the suggestion */
-  display: string;
+  label: string;
   /**
    * The literal value of the suggestion,
    * shown de-emphasized next to the display name
@@ -114,6 +120,15 @@ type TypeaheadSuggestion = {
 };
 
 // eslint-disable-next-line require-await
-async function fetchNewSuggestions(_text: string): Promise<Array<TypeaheadSuggestion>> {
-  return [];
+async function fetchNewSuggestions(
+  kind: TypeaheadKind,
+  text: string,
+): Promise<Array<TypeaheadSuggestion>> {
+  const id = randomId();
+  serverApi.postMessage({type: 'typeahead', kind, id, query: text});
+  const values = await serverApi.nextMessageMatching(
+    'typeaheadResult',
+    message => message.id === id,
+  );
+  return values.result;
 }

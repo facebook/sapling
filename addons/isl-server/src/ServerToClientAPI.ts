@@ -577,6 +577,15 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'typeahead': {
+        // TODO: actually do the query
+        this.postMessage({
+          type: 'typeaheadResult',
+          id: data.id,
+          result: [],
+        });
+        break;
+      }
       case 'fetchDiffSummaries': {
         repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
         break;
