@@ -17,14 +17,14 @@ import {randomId} from 'shared/utils';
 
 /** Extract comma-separated tokens into an array, plus any remaining non-tokenized text */
 function extractTokens(raw: string): [Array<string>, string] {
-  const tokens = raw.split(',').map(token => token.trim());
+  const tokens = raw.split(',');
   const remaining = tokens.length === 0 ? raw : tokens.pop();
-  return [tokens, remaining ?? ''];
+  return [tokens.map(token => token.trim()), remaining ?? ''];
 }
 
 /** Combine tokens back into a string to be stored in the commit message */
 function tokensToString(tokens: Array<string>, remaining: string): string {
-  return tokens.join(',') + ',' + remaining;
+  return tokens.length === 0 ? remaining : tokens.join(',') + ',' + remaining;
 }
 
 export function CommitInfoTextField({
