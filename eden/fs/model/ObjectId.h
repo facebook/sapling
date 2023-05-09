@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <fmt/format.h>
+#include <fmt/core.h>
 #include <folly/FBString.h>
 #include <folly/Range.h>
 #include <stdint.h>
@@ -185,9 +185,6 @@ using ObjectIdRange = folly::Range<const ObjectId*>;
  * This makes it possible to easily use ObjectId in glog statements.
  */
 std::ostream& operator<<(std::ostream& os, const ObjectId& hash);
-
-/* Define toAppend() so folly::to<string>(Hash) will work */
-void toAppend(const ObjectId& hash, std::string* result);
 
 /**
  * The meaning of an ObjectId is defined by the BackingStore implementation.

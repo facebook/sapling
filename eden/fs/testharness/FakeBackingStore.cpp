@@ -81,9 +81,8 @@ ImmediateFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
         auto data = data_.rlock();
         auto treeIter = data->trees.find(*hash);
         if (treeIter == data->trees.end()) {
-          return makeFuture<unique_ptr<Tree>>(
-              std::domain_error(folly::to<std::string>(
-                  "tree ", *hash, " for commit ", commitID, " not found")));
+          return makeFuture<unique_ptr<Tree>>(std::domain_error(
+              fmt::format("tree {} for commit {} not found", *hash, commitID)));
         }
 
         return treeIter->second->getFuture();

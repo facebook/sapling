@@ -65,8 +65,4 @@ std::ostream& operator<<(std::ostream& os, const ObjectId& hash) {
   return os;
 }
 
-void toAppend(const ObjectId& hash, std::string* result) {
-  folly::toAppend(hash.toLogString(), result);
-}
-
 } // namespace facebook::eden

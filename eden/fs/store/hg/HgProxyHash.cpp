@@ -8,7 +8,6 @@
 #include "eden/fs/store/hg/HgProxyHash.h"
 
 #include <fmt/core.h>
-#include <folly/String.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 
@@ -237,12 +236,10 @@ void HgProxyHash::validate(ObjectId edenBlobHash) {
   ByteRange infoBytes = StringPiece(value_);
   // Make sure the data is long enough to contain the rev hash and path length
   if (infoBytes.size() < Hash20::RAW_SIZE + sizeof(uint32_t)) {
-    auto msg = folly::to<string>(
-        "mercurial blob info data for ",
+    auto msg = fmt::format(
+        "mercurial blob info data for {} is too short ({} bytes)",
         edenBlobHash,
-        " is too short (",
-        infoBytes.size(),
-        " bytes)");
+        infoBytes.size());
     XLOG(ERR) << msg;
     throw std::length_error(msg);
   }
@@ -256,10 +253,9 @@ void HgProxyHash::validate(ObjectId edenBlobHash) {
   infoBytes.advance(sizeof(uint32_t));
   // Make sure the path length agrees with the length of data remaining
   if (infoBytes.size() != pathLength) {
-    auto msg = folly::to<string>(
-        "mercurial blob info data for ",
-        edenBlobHash,
-        " has inconsistent path length");
+    auto msg = fmt::format(
+        "mercurial blob info data for {} has inconsistent path length",
+        edenBlobHash);
     XLOG(ERR) << msg;
     throw std::length_error(msg);
   }
