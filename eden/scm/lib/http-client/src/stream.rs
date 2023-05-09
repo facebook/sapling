@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp;
 use std::marker::PhantomData;
 use std::mem;
 use std::pin::Pin;
@@ -27,7 +28,8 @@ pub enum CborStreamError {
     TrailingData(usize),
 }
 
-const DEFAULT_BUFFER_SIZE: usize = 1024 * 1024;
+const MEDIUM_BUFFER_SIZE: usize = 1024 * 1024;
+const SMALL_BUFFER_SIZE: usize = 1024 * 8;
 
 /// A wrapper around a `TryStream` of bytes that will attempt to deserialize
 /// CBOR-encoded values from the data stream as it is received.
@@ -49,7 +51,7 @@ pub struct CborStream<T, S, B, E> {
 
 impl<T, S, B, E> CborStream<T, S, B, E> {
     pub(crate) fn new(body: S) -> Self {
-        Self::with_buffer_size(body, DEFAULT_BUFFER_SIZE)
+        Self::with_buffer_size(body, SMALL_BUFFER_SIZE)
     }
 
     pub(crate) fn with_buffer_size(body: S, size: usize) -> Self {
@@ -87,7 +89,13 @@ where
                 Ok(value) => {
                     *this.position += de.byte_offset();
                     // Reset the buffer threshold in case we had expanded it to fit a large value.
-                    this.incoming.as_mut().set_threshold(*this.threshold);
+                    // If we indeed had to expand it, do not shrink it to smaller size than the MEDIUM_BUFFER_SIZE since
+                    // it could be traffic pattern rather than a single large item.
+                    if this.incoming.threshold() > (*this.threshold) {
+                        this.incoming
+                            .as_mut()
+                            .set_threshold(cmp::max(*this.threshold, MEDIUM_BUFFER_SIZE));
+                    }
                     return Poll::Ready(Some(Ok(value)));
                 }
                 Err(e) if !e.is_eof() => {
@@ -120,7 +128,9 @@ where
                 // To prevent this situation, whenever we encounter an item that exceeds the current
                 // buffer size, we simply double it. This means that we'll only need to do O(log(n))
                 // deserialization attempts for very large values.
-                let new_threshold = 2 * this.incoming.threshold();
+                //
+                // We will skip doubling small buffers, and go strait to 1MB buffer size.
+                let new_threshold = cmp::max(MEDIUM_BUFFER_SIZE, 2 * this.incoming.threshold());
                 this.incoming.as_mut().set_threshold(new_threshold);
             }
 
