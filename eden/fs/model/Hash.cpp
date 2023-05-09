@@ -14,12 +14,25 @@
 #include <folly/ssl/OpenSSLHash.h>
 
 #include "eden/fs/digest/Blake3.h"
+#include "eden/fs/utils/Throw.h"
 
 using folly::ByteRange;
 using folly::range;
 using folly::ssl::OpenSSLHash;
 
 namespace facebook::eden {
+
+namespace detail {
+
+void throwInvalidArgument(const char* message, size_t number) {
+  throwf<std::invalid_argument>("{}{}", message, number);
+}
+
+void throwInvalidArgument(const char* message, std::string_view extra) {
+  throwf<std::invalid_argument>("{}{}", message, extra);
+}
+
+} // namespace detail
 
 const Hash20 kZeroHash;
 const Hash32 kZeroHash32;

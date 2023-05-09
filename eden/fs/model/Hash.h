@@ -13,8 +13,8 @@
 #include <iosfwd>
 #include <string>
 
+#include <fmt/core.h>
 #include <folly/CPortability.h>
-#include <folly/Conv.h>
 #include <folly/Range.h>
 #include <folly/container/Array.h>
 
@@ -26,7 +26,8 @@ class IOBuf;
 
 namespace facebook::eden {
 
-namespace {
+namespace detail {
+
 struct StringTableHexMakeItem {
   constexpr uint8_t operator()(std::size_t index) const noexcept {
     // clang-format off
@@ -70,10 +71,17 @@ hexToBytesPtrSafe(const C* data, const size_t length, uint8_t* bytes) {
 
   return true;
 }
-} // namespace
+
+[[noreturn]] void throwInvalidArgument(const char* message, size_t number);
+
+[[noreturn]] void throwInvalidArgument(
+    const char* message,
+    std::string_view extra);
+
+} // namespace detail
 
 template <size_t RAW_SIZE>
-class Hash : boost::totally_ordered<Hash<RAW_SIZE>> {
+class Hash : public boost::totally_ordered<Hash<RAW_SIZE>> {
  public:
   using Storage = std::array<uint8_t, RAW_SIZE>;
 
@@ -108,8 +116,8 @@ class Hash : boost::totally_ordered<Hash<RAW_SIZE>> {
   std::string toString() const {
     std::string hexStr(bytes_.size() << 1, '0');
     for (auto i = 0u; i < bytes_.size(); ++i) {
-      hexStr[i << 1] = kLookup[(bytes_[i] >> 4) & 0x0F];
-      hexStr[(i << 1) + 1] = kLookup[bytes_[i] & 0x0F];
+      hexStr[i << 1] = detail::kLookup[(bytes_[i] >> 4) & 0x0F];
+      hexStr[(i << 1) + 1] = detail::kLookup[bytes_[i] & 0x0F];
     }
 
     return hexStr;
@@ -138,7 +146,7 @@ class Hash : boost::totally_ordered<Hash<RAW_SIZE>> {
  private:
   static constexpr Storage constructFromByteRange(folly::ByteRange bytes) {
     if (bytes.size() != RAW_SIZE) {
-      throwInvalidArgument(
+      detail::throwInvalidArgument(
           "incorrect data size for Hash constructor from bytes: ",
           bytes.size());
     }
@@ -150,27 +158,17 @@ class Hash : boost::totally_ordered<Hash<RAW_SIZE>> {
 
   static constexpr Storage constructFromHex(folly::StringPiece hex) {
     if (hex.size() != (RAW_SIZE * 2)) {
-      throwInvalidArgument(
+      detail::throwInvalidArgument(
           "incorrect data size for Hash constructor from string: ", hex.size());
     }
     Storage storage{};
-    if (!hexToBytesPtrSafe(hex.data(), hex.size(), storage.data())) {
-      throwInvalidArgument(fmt::format(
+    if (!detail::hexToBytesPtrSafe(hex.data(), hex.size(), storage.data())) {
+      detail::throwInvalidArgument(
           "invalid hex digit supplied to Hash constructor from string: {}",
-          hex));
+          hex);
     }
 
     return storage;
-  }
-
-  [[noreturn]] static void throwInvalidArgument(
-      const char* message,
-      size_t number) {
-    throwInvalidArgument(folly::to<std::string>(message, number));
-  }
-
-  [[noreturn]] static void throwInvalidArgument(std::string&& what) {
-    throw std::invalid_argument(what);
   }
 
   Storage bytes_;
