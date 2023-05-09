@@ -10,6 +10,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use configmodel::Config;
+use configmodel::ConfigExt;
 use manifest::DiffType;
 use manifest::Manifest;
 use manifest_tree::Diff;
@@ -51,7 +52,7 @@ pub struct SaplingRenameFinder {
     // Read content and rename metadata of a file
     file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
     // Read configs
-    _config: Arc<dyn Config + Send + Sync>,
+    config: Arc<dyn Config + Send + Sync>,
 }
 
 /// Content similarity based Rename finder (mainly for Git repo)
@@ -59,7 +60,7 @@ pub struct ContentSimilarityRenameFinder {
     // Read content and rename metadata of a file
     file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
     // Read configs
-    _config: Arc<dyn Config + Send + Sync>,
+    config: Arc<dyn Config + Send + Sync>,
 }
 
 impl SaplingRenameFinder {
@@ -69,7 +70,7 @@ impl SaplingRenameFinder {
     ) -> Self {
         Self {
             file_reader,
-            _config: config,
+            config,
         }
     }
 
@@ -128,17 +129,9 @@ impl RenameFinder for SaplingRenameFinder {
                 }
             }
         }
-        // It's rare that a file will be copied and renamed (multiple copies) in one commit.
-        // We don't plan to support this one-to-many mapping since it will make copytrace
-        // complexity increase exponentially. Here, we order the potential new files in
-        // path similarity order (most similar one first), and return the first one that
-        // is a copy of the old_path.
-        new_files.sort_by_key(|k| {
-            let path = k.path.as_repo_path();
-            let score = file_path_similarity(path, old_path);
-            (-score, path.to_owned())
-        });
-        self.read_renamed_metadata_forward(new_files, old_path)
+
+        let candidates = select_rename_candidates(new_files, old_path, &self.config)?;
+        self.read_renamed_metadata_forward(candidates, old_path)
             .await
     }
 
@@ -166,7 +159,7 @@ impl ContentSimilarityRenameFinder {
     ) -> Self {
         Self {
             file_reader,
-            _config: config,
+            config,
         }
     }
 
@@ -192,6 +185,7 @@ impl ContentSimilarityRenameFinder {
                 return Ok(Some(k.path));
             }
         }
+
         Ok(None)
     }
 
@@ -232,11 +226,8 @@ impl ContentSimilarityRenameFinder {
                 }
             }
         }
-        candidates.sort_by_key(|k| {
-            let path = k.path.as_repo_path();
-            let score = file_path_similarity(path, source_path);
-            (-score, path.to_owned())
-        });
+
+        let candidates = select_rename_candidates(candidates, source_path, &self.config)?;
         tracing::trace!(candidates_len = candidates.len(), " found");
 
         let source_tree = match direction {
@@ -252,6 +243,31 @@ impl ContentSimilarityRenameFinder {
         };
 
         self.find_similar_file(candidates, source).await
+    }
+}
+
+pub(crate) fn select_rename_candidates(
+    mut candidates: Vec<Key>,
+    source_path: &RepoPath,
+    config: &dyn Config,
+) -> Result<Vec<Key>> {
+    // It's rare that a file will be copied and renamed (multiple copies) in one commit.
+    // We don't plan to support this one-to-many mapping since it will make copytrace
+    // complexity increase exponentially. Here, we order the potential new files in
+    // path similarity order (most similar one first), and return the first one that
+    // is a copy of the old_path.
+    candidates.sort_by_key(|k| {
+        let path = k.path.as_repo_path();
+        let score = file_path_similarity(path, source_path);
+        (-score, path.to_owned())
+    });
+    let max_rename_candidates = config
+        .get_opt::<usize>("copytrace", "max-rename-candidates")?
+        .unwrap_or(10);
+    if candidates.len() > max_rename_candidates {
+        Ok(candidates.into_iter().take(max_rename_candidates).collect())
+    } else {
+        Ok(candidates)
     }
 }
 
@@ -275,5 +291,39 @@ impl RenameFinder for ContentSimilarityRenameFinder {
     ) -> Result<Option<RepoPathBuf>> {
         self.find_rename_in_direction(old_tree, new_tree, new_path, SearchDirection::Backward)
             .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use types::HgId;
+
+    use super::*;
+
+    #[test]
+    fn test_select_rename_candidates() {
+        let candidates: Vec<Key> = vec![
+            gen_key("a/b/c.txt"),
+            gen_key("a/b/c.md"),
+            gen_key("a/d.txt"),
+            gen_key("e.txt"),
+        ];
+        let source_path = &RepoPath::from_str("a/c.txt").unwrap();
+        let mut config: BTreeMap<&'static str, &'static str> = Default::default();
+        config.insert("copytrace.max-rename-candidates", "2");
+        let config = Arc::new(config);
+
+        let actual = select_rename_candidates(candidates, source_path, &config).unwrap();
+
+        let expected = vec![gen_key("a/b/c.txt"), gen_key("a/d.txt")];
+        assert_eq!(actual, expected)
+    }
+
+    fn gen_key(path: &str) -> Key {
+        let path = RepoPath::from_str(path).unwrap().to_owned();
+        let hgid = HgId::null_id().clone();
+        Key { path, hgid }
     }
 }
