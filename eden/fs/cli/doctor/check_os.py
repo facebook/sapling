@@ -121,13 +121,17 @@ def _get_windows_build_and_revision() -> Optional[Tuple[int, int]]:
     # out to `ver` to get the build and revision instead.
     try:
         ver = subprocess.run(
-            "C:\\Windows\\system32\\cmd.exe /c ver", capture_output=True, check=True
+            "C:\\Windows\\system32\\cmd.exe /c ver",
+            capture_output=True,
+            check=True,
+            text=True,
         )
     except subprocess.CalledProcessError:
         return None
+    except UnicodeDecodeError:
+        return None
 
-    stdout = ver.stdout.decode("utf-8").strip()
-    match = _WINDOWS_VERSION_PATTERN.search(stdout)
+    match = _WINDOWS_VERSION_PATTERN.search(ver.stdout)
     if not match:
         return None
 
