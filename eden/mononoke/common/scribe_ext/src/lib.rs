@@ -58,7 +58,7 @@ impl Scribe {
         match self {
             Client(client) => {
                 #[cfg(fbcode_build)]
-                let res = client.offer(category, sample);
+                let res = client.offer(category, sample.as_bytes());
 
                 #[cfg(not(fbcode_build))]
                 let res = {
