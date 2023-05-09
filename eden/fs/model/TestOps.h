@@ -13,21 +13,6 @@
 
 namespace facebook::eden {
 
-/*
- * ObjectId comparison operators for convenient unit tests.
- *
- * This header is not used in EdenFS, because call sites should be explicit
- * about byte-wise comparison or use of BackingStore::compareObjectsById.
- */
-
-inline bool operator==(const ObjectId& lhs, const ObjectId& rhs) {
-  return lhs.getBytes() == rhs.getBytes();
-}
-
-inline bool operator!=(const ObjectId& lhs, const ObjectId& rhs) {
-  return lhs.getBytes() != rhs.getBytes();
-}
-
 inline bool operator<(const ObjectId& lhs, const ObjectId& rhs) {
   return lhs.getBytes() < rhs.getBytes();
 }

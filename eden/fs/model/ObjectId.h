@@ -62,6 +62,10 @@ class ObjectId {
    */
   static ObjectId sha1(folly::ByteRange data);
 
+  static ObjectId fromHex(folly::StringPiece hex) {
+    return ObjectId{constructFromHex(hex)};
+  }
+
   /**
    * Returns bytes content of the ObjectId
    */
@@ -115,9 +119,6 @@ class ObjectId {
    * interested in whether two objects have the same contents, consider
    * ObjectStore::areObjectsKnownIdentical or BackingStore::compareObjectsById
    * instead.
-   *
-   * Note: operator== is not provided so call sites must be explicit about how
-   * object IDs are compared.
    */
   bool bytesEqual(const ObjectId& that) const noexcept {
     return bytes_ == that.bytes_;
@@ -132,8 +133,17 @@ class ObjectId {
     return bytes_ < that.bytes_;
   }
 
-  static ObjectId fromHex(folly::StringPiece hex) {
-    return ObjectId{constructFromHex(hex)};
+  /**
+   * Equality comparison. Be careful. Two ObjectIds may compare different even
+   * if they reference the same content. See the documentation for `bytesEqual`
+   * for alternatives.
+   */
+  friend bool operator==(const ObjectId& lhs, const ObjectId& rhs) {
+    return lhs.bytesEqual(rhs);
+  }
+
+  friend bool operator!=(const ObjectId& lhs, const ObjectId& rhs) {
+    return !(lhs == rhs);
   }
 
  private:
@@ -209,15 +219,6 @@ class ObjectIdCodec {
 } // namespace facebook::eden
 
 namespace std {
-
-template <>
-struct equal_to<facebook::eden::ObjectId> {
-  bool operator()(
-      const facebook::eden::ObjectId& lhs,
-      const facebook::eden::ObjectId& rhs) const noexcept {
-    return lhs.bytesEqual(rhs);
-  }
-};
 
 template <>
 struct less<facebook::eden::ObjectId> {
