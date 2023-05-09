@@ -109,15 +109,13 @@ macro_rules! impl_deleted_manifest_tests {
 }
 pub(crate) use impl_deleted_manifest_tests;
 
-async fn build_repo<Root: RootDeletedManifestIdCommon>(
-    fb: FacebookInit,
-) -> Result<TestRepo, Error> {
+async fn build_repo(fb: FacebookInit) -> Result<TestRepo, Error> {
     Ok(test_repo_factory::TestRepoFactory::new(fb)?.build().await?)
 }
 
 pub(crate) async fn linear_test<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) {
     // Test simple separate files and whole dir deletions
-    let repo: TestRepo = build_repo::<Root>(fb).await.unwrap();
+    let repo: TestRepo = build_repo(fb).await.unwrap();
     let ctx = CoreContext::test_mock(fb);
 
     // create parent deleted manifest
@@ -281,7 +279,7 @@ pub(crate) async fn linear_test<Root: RootDeletedManifestIdCommon>(fb: FacebookI
 }
 
 pub(crate) async fn many_file_dirs_test<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) {
-    let repo: TestRepo = build_repo::<Root>(fb).await.unwrap();
+    let repo: TestRepo = build_repo(fb).await.unwrap();
     ManyFilesDirs::initrepo(fb, &repo).await;
     let ctx = CoreContext::test_mock(fb);
 
@@ -385,7 +383,7 @@ pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
     //  | /
     //  A
     //
-    let repo: TestRepo = build_repo::<Root>(fb).await.unwrap();
+    let repo: TestRepo = build_repo(fb).await.unwrap();
     let ctx = CoreContext::test_mock(fb);
 
     let a = CreateCommitContext::new_root(&ctx, &repo)
@@ -593,7 +591,7 @@ pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
 
 pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) {
     // Test simple separate files and whole dir deletions
-    let repo: TestRepo = build_repo::<Root>(fb).await.unwrap();
+    let repo: TestRepo = build_repo(fb).await.unwrap();
     let ctx = CoreContext::test_mock(fb);
 
     // create parent deleted manifest
@@ -707,7 +705,7 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(fb: Fac
 
 pub(crate) async fn test_list_all_entries<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) {
     // Test simple separate files and whole dir deletions
-    let repo: TestRepo = build_repo::<Root>(fb).await.unwrap();
+    let repo: TestRepo = build_repo(fb).await.unwrap();
     let ctx = CoreContext::test_mock(fb);
 
     // create parent deleted manifest

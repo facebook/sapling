@@ -913,8 +913,7 @@ impl HgRepoContext {
         let all_cs_ids = cs_parent_mapping
             .clone()
             .into_iter()
-            .map(|(_, parents)| parents)
-            .flatten()
+            .flat_map(|(_, parents)| parents)
             .chain(missing_commits)
             .collect::<HashSet<_>>();
 

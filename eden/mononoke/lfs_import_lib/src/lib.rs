@@ -96,7 +96,7 @@ async fn do_lfs_upload(
 
     info!(ctx.logger(), "lfs_upload: imported blob {:?}", meta.sha256);
 
-    Ok(meta.into())
+    Ok(meta)
 }
 
 pub async fn lfs_upload(

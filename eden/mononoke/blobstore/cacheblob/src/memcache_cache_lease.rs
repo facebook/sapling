@@ -96,7 +96,7 @@ async fn mc_raw_put(
     value: BlobstoreGetData,
     presence_key: String,
 ) {
-    let uploaded = compact_protocol::serialize(&LockState::uploaded_key(orig_key));
+    let uploaded = compact_protocol::serialize(LockState::uploaded_key(orig_key));
 
     STATS::presence_put.add_value(1);
     // This cache key is read by leases, and if it's set then lease can't be reacquired.
@@ -245,7 +245,7 @@ impl CacheOps for MemcacheOps {
 impl LeaseOps for MemcacheOps {
     async fn try_add_put_lease(&self, key: &str) -> Result<bool> {
         let mc_key = self.presence_keygen.key(key);
-        let lockstate = compact_protocol::serialize(&LockState::locked_by(self.hostname.clone()));
+        let lockstate = compact_protocol::serialize(LockState::locked_by(self.hostname.clone()));
         let lock_ttl = Duration::from_secs(10);
         let lease_type = self.lease_type;
         let res = self
@@ -261,7 +261,7 @@ impl LeaseOps for MemcacheOps {
     }
 
     fn renew_lease_until(&self, ctx: CoreContext, key: &str, mut done: BoxFuture<'static, ()>) {
-        let lockstate = compact_protocol::serialize(&LockState::locked_by(self.hostname.clone()));
+        let lockstate = compact_protocol::serialize(LockState::locked_by(self.hostname.clone()));
         let lock_ttl = Duration::from_secs(10);
         let mc_key = self.presence_keygen.key(key);
         let key = key.to_string();

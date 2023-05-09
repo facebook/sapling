@@ -337,7 +337,7 @@ impl SourceControlServiceImpl {
             .map(|(line, blame_line)| -> Result<_, thrift::RequestError> {
                 let commit_id_index =
                     commit_id_indexes
-                        .get(&blame_line.changeset_id)
+                        .get(blame_line.changeset_id)
                         .ok_or_else(|| {
                             errors::commit_not_found(format!(
                                 "failed to resolve commit: {}",
@@ -345,7 +345,7 @@ impl SourceControlServiceImpl {
                             ))
                         })?;
                 let (author, date, message, title) =
-                    info.get(&blame_line.changeset_id).ok_or_else(|| {
+                    info.get(blame_line.changeset_id).ok_or_else(|| {
                         errors::commit_not_found(format!(
                             "failed to resolve commit: {}",
                             blame_line.changeset_id
