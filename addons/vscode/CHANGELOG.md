@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.15
+
+- Add repo selector if multiple workspace folders are mounted
+- Add "View Changes" context menu action on commits to quickly diff their changes
+- Show diff badges inline on large displays to better use horizontal space
+- Experimental stack editing UX hidden behind `isl.experimental-features` `sl` config
+
 ## 0.1.14
 
 - Fix tooltips not disappearing (such as on pull button)
