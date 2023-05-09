@@ -1375,19 +1375,7 @@ mod tests {
         let b = *dag.get("B").unwrap();
         let c = *dag.get("C").unwrap();
 
-        // Create utils for both versions of unodes.
-        let utils_v1 = derived_data_utils_impl(
-            fb,
-            &repo,
-            "unodes",
-            &DerivedDataTypesConfig {
-                types: hashset! { String::from("unodes") },
-                unode_version: UnodeVersion::V1,
-                ..Default::default()
-            },
-            "default",
-        )?;
-
+        // Create utils for only version 2 of unodes.
         let utils_v2 = derived_data_utils_impl(
             fb,
             &repo,
@@ -1401,28 +1389,12 @@ mod tests {
         )?;
 
         assert_eq!(
-            utils_v1
-                .pending(ctx.clone(), repo.repo_derived_data_arc(), vec![a, b, c])
-                .await?,
-            vec![a, b, c]
-        );
-        assert_eq!(
             utils_v2
                 .pending(ctx.clone(), repo.repo_derived_data_arc(), vec![a, b, c])
                 .await?,
             vec![a, b, c]
         );
 
-        // Derive V1 of A using the V1 utils.  V2 of A should still be underived.
-        utils_v1
-            .derive(ctx.clone(), repo.repo_derived_data_arc(), a)
-            .await?;
-        assert_eq!(
-            utils_v1
-                .pending(ctx.clone(), repo.repo_derived_data_arc(), vec![a, b, c])
-                .await?,
-            vec![b, c]
-        );
         assert_eq!(
             utils_v2
                 .pending(ctx.clone(), repo.repo_derived_data_arc(), vec![a, b, c])
@@ -1431,14 +1403,8 @@ mod tests {
         );
 
         // Derive B directly, which should use the V2 mapping, as that is the
-        // version configured on the repo.  V1 of B should still be underived.
+        // version configured on the repo.
         RootUnodeManifestId::derive(&ctx, &repo, b).await?;
-        assert_eq!(
-            utils_v1
-                .pending(ctx.clone(), repo.repo_derived_data_arc(), vec![a, b, c])
-                .await?,
-            vec![b, c]
-        );
         assert_eq!(
             utils_v2
                 .pending(ctx.clone(), repo.repo_derived_data_arc(), vec![a, b, c])

@@ -685,7 +685,7 @@ mod tests {
 
     async fn diamond_merge_unodes_v2(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let mut factory = TestRepoFactory::new(fb)?;
+        let factory = TestRepoFactory::new(fb)?;
         let repo: TestRepo = factory.build().await?;
         let merged_files = "dir/file.txt";
         let root_commit = CreateCommitContext::new_root(&ctx, &repo)
@@ -747,37 +747,6 @@ mod tests {
         // Unodes v2 should just reuse merged filenode
         let (p1_unodes, merge_unodes) = find_unodes(ctx.clone(), repo.clone()).await?;
         assert_eq!(p1_unodes, merge_unodes);
-
-        // Unodes v1 should create a new one that points to the parent unode
-        let repo: TestRepo = factory
-            .with_config_override(|config| {
-                config
-                    .derived_data_config
-                    .get_active_config()
-                    .expect("No enabled derived data types config")
-                    .unode_version = UnodeVersion::V1;
-            })
-            .build()
-            .await?;
-        let (p1_unodes, merge_unodes) = find_unodes(ctx.clone(), repo.clone()).await?;
-        assert_ne!(p1_unodes, merge_unodes);
-
-        for ((_, p1), (_, merge)) in p1_unodes.iter().zip(merge_unodes.iter()) {
-            let merge_unode = merge.load(&ctx, &repo.repo_blobstore).await?;
-
-            match (p1, merge_unode) {
-                (Entry::Leaf(p1), Entry::Leaf(ref merge_unode)) => {
-                    assert!(merge_unode.parents().contains(p1));
-                }
-                (Entry::Tree(p1), Entry::Tree(ref merge_unode)) => {
-                    assert!(merge_unode.parents().contains(p1));
-                }
-                _ => {
-                    return Err(format_err!("inconsistent unodes in p1 and merge"));
-                }
-            }
-        }
-
         Ok(())
     }
 

@@ -374,10 +374,8 @@ pub struct DerivedDataTypesConfig {
 /// What type of unode derived data to generate
 #[derive(Eq, Clone, Copy, Debug, Default, PartialEq)]
 pub enum UnodeVersion {
-    /// Unodes v1
-    #[default]
-    V1,
     /// Unodes v2
+    #[default]
     V2,
 }
 

@@ -438,7 +438,7 @@ impl Convert for RawDerivedDataTypesConfig {
         let mapping_key_prefixes = self.mapping_key_prefixes.into_iter().collect();
         let unode_version = match self.unode_version {
             None => UnodeVersion::default(),
-            Some(1) => UnodeVersion::V1,
+            Some(1) => return Err(anyhow!("unode version 1 has been deprecated")),
             Some(2) => UnodeVersion::V2,
             Some(version) => return Err(anyhow!("unknown unode version {}", version)),
         };

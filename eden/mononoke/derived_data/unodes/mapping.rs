@@ -79,7 +79,6 @@ impl From<RootUnodeManifestId> for BlobstoreBytes {
 
 pub fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
     let root_prefix = match derivation_ctx.config().unode_version {
-        UnodeVersion::V1 => "derived_root_unode.",
         UnodeVersion::V2 => "derived_root_unode_v2.",
     };
     let key_prefix = derivation_ctx.mapping_key_prefix::<RootUnodeManifestId>();
