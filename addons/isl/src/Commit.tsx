@@ -9,6 +9,7 @@ import type {CommitInfo, SuccessorInfo} from './types';
 
 import {BranchIndicator} from './BranchIndicator';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
+import {currentComparisonMode} from './ComparisonView/atoms';
 import {highlightedCommits} from './HighlightedCommits';
 import {Tooltip} from './Tooltip';
 import {UncommitButton} from './UncommitButton';
@@ -37,6 +38,7 @@ import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
 import React, {memo} from 'react';
 import {useRecoilCallback, useRecoilValue, useSetRecoilState} from 'recoil';
+import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
@@ -122,6 +124,13 @@ export const Commit = memo(
     }
     const setOperationBeingPreviewed = useSetRecoilState(operationBeingPreviewed);
 
+    const viewChangesCallback = useRecoilCallback(({set}) => () => {
+      set(currentComparisonMode, {
+        comparison: {type: ComparisonType.Committed, hash: commit.hash},
+        visible: true,
+      });
+    });
+
     const contextMenu = useContextMenu(() => {
       const items = [
         {
@@ -129,6 +138,12 @@ export const Commit = memo(
           onClick: () => platform.clipboardCopy(commit.hash),
         },
       ];
+      if (!isPublic) {
+        items.push({
+          label: <T>View Changes in Commit</T>,
+          onClick: viewChangesCallback,
+        });
+      }
       if (!isPublic && !actionsPrevented) {
         items.push({
           label: <T>Hide Commit and Descendents</T>,
