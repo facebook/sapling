@@ -10,12 +10,13 @@ import {DropdownFields} from './DropdownFields';
 import {ErrorBoundary} from './ErrorNotice';
 import {Internal} from './Internal';
 import {Tooltip} from './Tooltip';
+import {tracker} from './analytics';
 import {T} from './i18n';
 import platform from './platform';
 import {applicationinfo} from './serverAPIState';
 import {VSCodeButton, VSCodeDivider} from '@vscode/webview-ui-toolkit/react';
 import {Suspense, useEffect} from 'react';
-import {atom, useRecoilState, useRecoilValue, useSetRecoilState} from 'recoil';
+import {atom, DefaultValue, useRecoilState, useRecoilValue, useSetRecoilState} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 import './BugButton.css';
@@ -35,6 +36,24 @@ export function BugButton() {
 export const bugButtonNux = atom<string | null>({
   key: 'bugButtonNux',
   default: null,
+  effects: [
+    // track how long the nux is shown
+    ({onSet}) => {
+      let start: number | undefined;
+      onSet((value, previousValue) => {
+        if (value != null) {
+          // starting to show nux
+          start = Date.now();
+        } else {
+          // stopped showing nux by clearing value
+          tracker.track('ShowBugButtonNux', {
+            extras: {nux: previousValue instanceof DefaultValue ? null : previousValue},
+            duration: start == null ? undefined : Date.now() - start,
+          });
+        }
+      });
+    },
+  ],
 });
 
 /**

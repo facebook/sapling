@@ -41,6 +41,7 @@ export type TrackEventName =
   | 'ResolveOperation'
   | 'RevertOperation'
   | 'SetConfigOperation'
+  | 'ShowBugButtonNux'
   | 'UncommitOperation'
   // @fb-only
   | 'OptimisticFilesStateForceResolved'
