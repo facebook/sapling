@@ -13,6 +13,7 @@ use std::sync::Arc;
 use ::copytrace::GitCopyTrace;
 use ::types::HgId;
 use async_runtime::try_block_unless_interrupted as block_on;
+use configmodel::Config;
 use copytrace::ContentSimilarityRenameFinder;
 use copytrace::CopyTrace;
 use copytrace::DagCopyTrace;
@@ -67,12 +68,14 @@ py_class!(pub class dagcopytrace |py| {
         tree_store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
         file_reader: ImplInto<Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>>,
         dag: ImplInto<Arc<dyn DagAlgorithm + Send + Sync>>,
+        config: ImplInto<Arc<dyn Config + Send + Sync>>,
     ) -> PyResult<Self> {
         let root_tree_reader = root_tree_reader.into();
         let tree_store = tree_store.into();
+        let config = config.into();
         let rename_finder: Arc<dyn RenameFinder + Send + Sync> = match tree_store.format() {
-            TreeFormat::Hg => Arc::new(SaplingRenameFinder::new(file_reader.into())),
-            TreeFormat::Git => Arc::new(ContentSimilarityRenameFinder::new(file_reader.into())),
+            TreeFormat::Hg => Arc::new(SaplingRenameFinder::new(file_reader.into(), config)),
+            TreeFormat::Git => Arc::new(ContentSimilarityRenameFinder::new(file_reader.into(), config)),
         };
         let dag = dag.into();
 

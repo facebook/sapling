@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use configmodel::Config;
 use manifest::DiffType;
 use manifest::Manifest;
 use manifest_tree::Diff;
@@ -49,19 +50,27 @@ pub trait RenameFinder {
 pub struct SaplingRenameFinder {
     // Read content and rename metadata of a file
     file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+    // Read configs
+    _config: Arc<dyn Config + Send + Sync>,
 }
 
 /// Content similarity based Rename finder (mainly for Git repo)
 pub struct ContentSimilarityRenameFinder {
     // Read content and rename metadata of a file
     file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+    // Read configs
+    _config: Arc<dyn Config + Send + Sync>,
 }
 
 impl SaplingRenameFinder {
     pub fn new(
         file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+        config: Arc<dyn Config + Send + Sync>,
     ) -> Self {
-        Self { file_reader }
+        Self {
+            file_reader,
+            _config: config,
+        }
     }
 
     async fn read_renamed_metadata_forward(
@@ -153,8 +162,12 @@ impl RenameFinder for SaplingRenameFinder {
 impl ContentSimilarityRenameFinder {
     pub fn new(
         file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+        config: Arc<dyn Config + Send + Sync>,
     ) -> Self {
-        Self { file_reader }
+        Self {
+            file_reader,
+            _config: config,
+        }
     }
 
     async fn find_similar_file(

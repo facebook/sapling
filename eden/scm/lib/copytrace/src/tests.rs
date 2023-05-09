@@ -7,6 +7,7 @@
 
 //! Testing.
 
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -51,6 +52,8 @@ struct CopyTraceTestCaseInner {
     dagalgo: Arc<dyn DagAlgorithm + Send + Sync>,
     /// Copies info: dest -> src mapping
     copies: HashMap<Key, Key>,
+    /// Config
+    config: BTreeMap<&'static str, &'static str>,
 }
 
 #[derive(Debug)]
@@ -73,6 +76,7 @@ impl CopyTraceTestCase {
         let mut copies: HashMap<Key, Key> = Default::default();
         let tree_store = Arc::new(TestStore::new().with_format(TreeFormat::Git));
         let changes = Change::build_changes(changes);
+        let config: BTreeMap<&'static str, &'static str> = Default::default();
 
         // iterate through the commit graph to build trees in topo order (ascending)
         let set = mem_dag.all().await.unwrap();
@@ -94,6 +98,7 @@ impl CopyTraceTestCase {
             tree_store,
             dagalgo: Arc::new(mem_dag),
             copies,
+            config,
         });
         CopyTraceTestCase { inner }
     }
@@ -101,7 +106,8 @@ impl CopyTraceTestCase {
     /// Create a DagCopyTrace instance
     pub async fn copy_trace(&self) -> Arc<dyn CopyTrace + Send + Sync> {
         let file_reader = Arc::new(self.clone());
-        let rename_finder = Arc::new(SaplingRenameFinder::new(file_reader));
+        let config = Arc::new(self.inner.config.clone());
+        let rename_finder = Arc::new(SaplingRenameFinder::new(file_reader, config));
 
         let root_tree_reader = Arc::new(self.clone());
         let tree_store = self.inner.tree_store.clone();

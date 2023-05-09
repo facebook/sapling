@@ -441,6 +441,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
             repo.manifestlog.datastore,
             repo.fileslog.filescmstore,
             repo.changelog.dag,
+            repo.ui._rcfg,
         )
         for f in missingfiles:
             dst_file = dag_copy_trace.trace_rename(csrc.node(), cdst.node(), f)

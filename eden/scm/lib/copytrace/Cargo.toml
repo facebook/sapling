@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.65"
 async-trait = "0.1.58"
+configmodel = { version = "0.1.0", path = "../config/model" }
 dag = { version = "0.1.0", path = "../dag" }
 git2 = "0.14"
 manifest = { version = "0.1.0", path = "../manifest", features = ["for-tests"] }

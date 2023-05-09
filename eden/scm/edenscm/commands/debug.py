@@ -4313,6 +4313,7 @@ def debugcopytrace(ui, repo, *files, **opts) -> None:
         repo.manifestlog.datastore,
         repo.fileslog.filescmstore,
         repo.changelog.dag,
+        repo.ui._rcfg,
     )
 
     res = {
