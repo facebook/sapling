@@ -5,12 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {bugButtonNux} from '../BugButton';
 import {useCommand} from '../ISLShortcuts';
 import {Modal} from '../Modal';
 import {persistAtomToConfigEffect} from '../persistAtomToConfigEffect';
 import platform from '../platform';
 import {Suspense, useEffect, useState} from 'react';
-import {atom, useRecoilState} from 'recoil';
+import {atom, useRecoilState, useSetRecoilState} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 export const hasShownGettingStarted = atom<boolean | null>({
@@ -40,6 +41,13 @@ function DismissableModal() {
   useCommand('Escape', () => {
     setVisible(false);
   });
+  const setBugButtonNux = useSetRecoilState(bugButtonNux);
+
+  useEffect(() => {
+    if (!visible && platform.GettingStartedBugNuxContent) {
+      setBugButtonNux(platform.GettingStartedBugNuxContent);
+    }
+  }, [visible, setBugButtonNux]);
 
   if (!visible) {
     return null;

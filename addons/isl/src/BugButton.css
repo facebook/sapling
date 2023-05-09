@@ -42,3 +42,10 @@
   flex-direction: column;
   gap: var(--pad);
 }
+
+.bug-button-nux {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--pad);
+}

@@ -37,6 +37,8 @@ export interface Platform {
    * may import any files without worrying about the platform being set up yet or not.
    */
   GettingStartedContent?: LazyExoticComponent<({dismiss}: {dismiss: () => void}) => JSX.Element>;
+  /** Content to show as a tooltip on the bug button after going through the getting started experience */
+  GettingStartedBugNuxContent?: string;
 
   theme?: {
     getTheme(): ThemeColor;
