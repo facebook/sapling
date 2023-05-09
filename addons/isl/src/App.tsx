@@ -21,6 +21,7 @@ import {islDrawerState} from './drawerState';
 import {GettingStartedModal} from './gettingStarted/GettingStartedModal';
 import {I18nSupport, t, T} from './i18n';
 import platform from './platform';
+import {useMainContentWidth} from './responsive';
 import {repositoryInfo} from './serverAPIState';
 import {ThemeRoot} from './theme';
 import {ModalContainer} from './useModal';
@@ -86,8 +87,10 @@ function ISLDrawers() {
 function MainContent() {
   const repoInfo = useRecoilValue(repositoryInfo);
 
+  const ref = useMainContentWidth();
+
   return (
-    <div className="main-content-area">
+    <div className="main-content-area" ref={ref}>
       <TopBar />
       <TopLevelErrors />
       {repoInfo != null && repoInfo.type !== 'success' ? (

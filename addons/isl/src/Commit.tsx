@@ -23,6 +23,7 @@ import {RebaseOperation} from './operations/RebaseOperation';
 import platform from './platform';
 import {CommitPreview} from './previews';
 import {RelativeDate} from './relativeDate';
+import {isNarrowCommitTree} from './responsive';
 import {useCommitSelection} from './selection';
 import {
   isFetchingUncommittedChanges,
@@ -101,6 +102,8 @@ export const Commit = memo(
     const {isSelected, onClickToSelect} = useCommitSelection(commit.hash);
     const actionsPrevented = previewPreventsActions(previewType);
 
+    const isNarrow = useRecoilValue(isNarrowCommitTree);
+
     const isNonActionable = previewType === CommitPreview.NON_ACTIONABLE_COMMIT;
 
     function onDoubleClickToShowDrawer(e: React.MouseEvent<HTMLDivElement>) {
@@ -135,6 +138,63 @@ export const Commit = memo(
       return items;
     });
 
+    const commitActions = [];
+
+    if (previewType === CommitPreview.REBASE_ROOT) {
+      commitActions.push(
+        <React.Fragment key="rebase">
+          <VSCodeButton
+            appearance="secondary"
+            onClick={() => handlePreviewedOperation(/* cancel */ true)}>
+            <T>Cancel</T>
+          </VSCodeButton>
+          <VSCodeButton
+            appearance="primary"
+            onClick={() => handlePreviewedOperation(/* cancel */ false)}>
+            <T>Run Rebase</T>
+          </VSCodeButton>
+        </React.Fragment>,
+      );
+    } else if (previewType === CommitPreview.HIDDEN_ROOT) {
+      commitActions.push(
+        <React.Fragment key="hide">
+          <VSCodeButton
+            appearance="secondary"
+            onClick={() => handlePreviewedOperation(/* cancel */ true)}>
+            <T>Cancel</T>
+          </VSCodeButton>
+          <VSCodeButton
+            appearance="primary"
+            onClick={() => handlePreviewedOperation(/* cancel */ false)}>
+            <T>Hide</T>
+          </VSCodeButton>
+        </React.Fragment>,
+      );
+    }
+    if (!actionsPrevented && !commit.isHead) {
+      commitActions.push(
+        <span className="goto-button" key="goto-button">
+          <VSCodeButton
+            appearance="secondary"
+            onClick={event => {
+              runOperation(
+                new GotoOperation(
+                  // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
+                  // and works better with optimistic state
+                  commit.remoteBookmarks.length > 0 ? commit.remoteBookmarks[0] : commit.hash,
+                ),
+              );
+              event.stopPropagation(); // don't select commit
+            }}>
+            <T>Goto</T> <Icon icon="arrow-right" />
+          </VSCodeButton>
+        </span>,
+      );
+    }
+    if (!isPublic && !actionsPrevented && commit.isHead) {
+      commitActions.push(<UncommitButton key="uncommit" />);
+    }
+
     return (
       <div
         className={
@@ -148,7 +208,7 @@ export const Commit = memo(
         (commit.isHead || previewType === CommitPreview.GOTO_PREVIOUS_LOCATION) ? (
           <HeadCommitInfo commit={commit} previewType={previewType} hasChildren={hasChildren} />
         ) : null}
-        <div className="commit-rows">
+        <div className={'commit-rows' + (isNarrow ? ' narrow' : '')}>
           {isSelected ? (
             <div className="selected-commit-background" data-testid="selected-commit" />
           ) : null}
@@ -190,53 +250,7 @@ export const Commit = memo(
                 <Icon icon="loading" /> <T>rebasing...</T>
               </span>
             ) : null}
-            {previewType === CommitPreview.REBASE_ROOT ? (
-              <>
-                <VSCodeButton
-                  appearance="secondary"
-                  onClick={() => handlePreviewedOperation(/* cancel */ true)}>
-                  <T>Cancel</T>
-                </VSCodeButton>
-                <VSCodeButton
-                  appearance="primary"
-                  onClick={() => handlePreviewedOperation(/* cancel */ false)}>
-                  <T>Run Rebase</T>
-                </VSCodeButton>
-              </>
-            ) : null}
-            {previewType === CommitPreview.HIDDEN_ROOT ? (
-              <>
-                <VSCodeButton
-                  appearance="secondary"
-                  onClick={() => handlePreviewedOperation(/* cancel */ true)}>
-                  <T>Cancel</T>
-                </VSCodeButton>
-                <VSCodeButton
-                  appearance="primary"
-                  onClick={() => handlePreviewedOperation(/* cancel */ false)}>
-                  <T>Hide</T>
-                </VSCodeButton>
-              </>
-            ) : null}
-            {actionsPrevented || commit.isHead ? null : (
-              <span className="goto-button">
-                <VSCodeButton
-                  appearance="secondary"
-                  onClick={event => {
-                    runOperation(
-                      new GotoOperation(
-                        // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
-                        // and works better with optimistic state
-                        commit.remoteBookmarks.length > 0 ? commit.remoteBookmarks[0] : commit.hash,
-                      ),
-                    );
-                    event.stopPropagation(); // don't select commit
-                  }}>
-                  <T>Goto</T> <Icon icon="arrow-right" />
-                </VSCodeButton>
-              </span>
-            )}
-            {!isPublic && !actionsPrevented && commit.isHead ? <UncommitButton /> : null}
+            {isNarrow ? commitActions : null}
           </DraggableCommit>
           <DivIfChildren className="commit-second-row">
             {commit.diffId && !isPublic ? <DiffInfo diffId={commit.diffId} /> : null}
@@ -244,6 +258,7 @@ export const Commit = memo(
               <SuccessorInfoToDisplay successorInfo={commit.successorInfo} />
             ) : null}
           </DivIfChildren>
+          {!isNarrow ? commitActions : null}
         </div>
       </div>
     );

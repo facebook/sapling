@@ -23,3 +23,5 @@ if (process.env.HIDE_RTL_DOM_ERRORS) {
     },
   });
 }
+
+global.ResizeObserver = require('resize-observer-polyfill');

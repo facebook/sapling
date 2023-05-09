@@ -116,12 +116,16 @@
 
 .commit-rows {
   display: flex;
-  flex-direction: column;
-  gap: calc(var(--halfpad) / 2);
+  flex-direction: row;
+  gap: calc(var(--halfpad) / 2) var(--halfpad);
   padding: calc(var(--halfpad) / 2);
   padding-left: 0;
   margin-left: var(--halfpad);
   position: relative;
+}
+
+.commit-rows.narrow {
+  flex-direction: column;
 }
 
 .commit-details {
