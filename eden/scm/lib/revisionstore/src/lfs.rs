@@ -35,7 +35,6 @@ use anyhow::Error;
 use anyhow::Result;
 use async_runtime::block_on;
 use async_runtime::stream_to_iter;
-use auth::AuthSection;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -155,7 +154,6 @@ struct HttpOptions {
     backoff_times: Vec<f32>,
     throttle_backoff_times: Vec<f32>,
     request_timeout: Duration,
-    missing_client_certs: bool,
 }
 
 pub(crate) enum LfsRemoteInner {
@@ -1122,16 +1120,6 @@ impl LfsRemoteInner {
         check_status: impl Fn(StatusCode) -> Result<(), TransferError>,
         http_options: Arc<HttpOptions>,
     ) -> Result<Bytes, FetchError> {
-        if http_options.missing_client_certs {
-            return Err(FetchError {
-                url,
-                method,
-                error: TransferError::HttpClientError(HttpClientError::Other(anyhow!(
-                    "Certificate not found when attempting to send LFS request."
-                ))),
-            });
-        }
-
         let span = trace_span!("LfsRemoteInner::send_with_retry", url = %url);
 
         let host_str = url.host_str().expect("No host in url").to_string();
@@ -1599,16 +1587,6 @@ impl LfsRemote {
                 bail!("Unsupported url: {}", url);
             }
 
-            let use_client_certs = config.get_or("lfs", "use-client-certs", || true)?;
-
-            let auth = if use_client_certs {
-                AuthSection::from_config(config).best_match_for(&url)?
-            } else {
-                None
-            };
-
-            let missing_client_certs = use_client_certs && auth.is_none();
-
             let user_agent = config.get_or("experimental", "lfs.user-agent", || {
                 format!("EdenSCM/{}", ::version::VERSION)
             })?;
@@ -1656,7 +1634,7 @@ impl LfsRemote {
                 .map(|s| NonZeroU64::new(s).context("download chunk size cannot be 0"))
                 .transpose()?;
 
-            let client = http_client("lfs", http_config(config, auth));
+            let client = http_client("lfs", http_config(config, &url)?);
 
             Ok(Self {
                 shared,
@@ -1677,7 +1655,6 @@ impl LfsRemote {
                         backoff_times,
                         throttle_backoff_times,
                         request_timeout,
-                        missing_client_certs,
                     }),
                 }),
             })

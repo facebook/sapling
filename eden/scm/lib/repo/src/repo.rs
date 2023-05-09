@@ -347,12 +347,17 @@ impl Repo {
                 // Explicitly set EdenAPI URLs.
                 // Ideally we can make paths.default derive the edenapi URLs. But "push" is not on
                 // EdenAPI yet. So we have to wait.
-                if self.config.get("edenapi", "url").is_none()
-                    || self.config.get("remotefilelog", "reponame").is_none()
+                if self.config.get_nonempty("edenapi", "url").is_none()
+                    || self
+                        .config
+                        .get_nonempty("remotefilelog", "reponame")
+                        .is_none()
                 {
                     tracing::trace!(target: "repo::eden_api", "disabled because edenapi.url or remotefilelog.reponame is not set");
                     return Ok(None);
                 }
+
+                tracing::trace!(target: "repo::eden_api", "proceeding with path {}, reponame {:?}", path, self.config.get("remotefilelog", "reponame"));
             }
         }
         Ok(Some(self.eden_api()?))

@@ -357,23 +357,19 @@ impl Doctor {
     ) -> Result<(), HttpError> {
         tracing::debug!(%url, use_x2pagentd, "check_host_http");
 
-        let mut hc = hg_http::http_config(config, None);
+        let mut hc = hg_http::http_config(config, url)?;
 
         if !use_x2pagentd {
-            let auth = match AuthSection::from_config(config).best_match_for(url) {
-                Ok(Some(auth)) => Some(auth),
-                Ok(None) => {
-                    if url.scheme() == "https" {
-                        return Err(HttpError::Config(format!("no auth section for {}", url)));
-                    } else {
-                        None
-                    }
-                }
-                Err(err) => return Err(err.into()),
-            };
-            hc = hg_http::http_config(config, auth);
-            // This disables x2pagentd when it is enabled by default.
             hc.unix_socket_path = None;
+
+            let auth = AuthSection::from_config(config).best_match_for(url)?;
+            (hc.cert_path, hc.key_path, hc.ca_path) = auth
+                .map(|auth| (auth.cert, auth.key, auth.cacerts))
+                .unwrap_or_default();
+
+            if url.scheme() == "https" && hc.cert_path.is_none() {
+                return Err(HttpError::Config(format!("no auth section for {}", url)));
+            }
         }
 
         let result = if let Some(stub) = &self.stub_healthcheck_response {
@@ -407,7 +403,10 @@ impl Doctor {
 }
 
 fn use_x2pagentd(config: &dyn Config, url: &Url) -> bool {
-    let hc = hg_http::http_config(config, None);
+    let hc = match hg_http::http_config(config, url) {
+        Ok(hc) => hc,
+        Err(_) => return false,
+    };
     if hc.unix_socket_path.is_none() {
         return false;
     }

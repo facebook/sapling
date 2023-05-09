@@ -15,7 +15,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
 
-use auth::AuthGroup;
+use auth::AuthSection;
 use clientinfo::ClientInfo;
 use configmodel::ConfigExt;
 use hg_metrics::increment_counter;
@@ -28,6 +28,7 @@ use progress_model::IoSample;
 use progress_model::IoTimeSeries;
 use progress_model::ProgressBar;
 use progress_model::Registry;
+use url::Url;
 
 #[derive(Default)]
 struct Total {
@@ -61,18 +62,14 @@ pub fn http_client(client_id: impl ToString, config: http_client::Config) -> Htt
     })
 }
 
+/// Generate http_client::Config taking into account hg specific config/auth
+/// settings. url_for_auth will should be the URL to connect to, and will be
+/// used to look up TLS credentials.
 pub fn http_config(
     config: &dyn configmodel::Config,
-    auth: Option<AuthGroup>,
-) -> http_client::Config {
-    let (cert, key, ca) = auth
-        .map(|auth| (auth.cert, auth.key, auth.cacerts))
-        .unwrap_or_default();
-
-    http_client::Config {
-        cert_path: cert,
-        key_path: key,
-        ca_path: ca,
+    url_for_auth: &Url,
+) -> Result<http_client::Config, auth::MissingCerts> {
+    let mut hc = http_client::Config {
         convert_cert: config
             .get_or("http", "convert-cert", || cfg!(windows))
             .unwrap_or(cfg!(windows)),
@@ -90,7 +87,23 @@ pub fn http_config(
         ),
         verbose: config.get_or_default("http", "verbose").unwrap_or(false),
         ..Default::default()
+    };
+
+    let using_auth_proxy = hc.unix_socket_path.is_some()
+        && url_for_auth
+            .domain()
+            .map_or(false, |d| hc.unix_socket_domains.contains(d));
+
+    if !using_auth_proxy {
+        // If we aren't using auth proxy, we need to configure client certs.
+        // Defer attempt to load certs until we know we need them.
+        let auth = AuthSection::from_config(config).best_match_for(url_for_auth)?;
+        (hc.cert_path, hc.key_path, hc.ca_path) = auth
+            .map(|auth| (auth.cert, auth.key, auth.cacerts))
+            .unwrap_or_default();
     }
+
+    Ok(hc)
 }
 
 static INSECURE_MODE: AtomicBool = AtomicBool::new(false);
@@ -205,12 +218,17 @@ mod tests {
     fn test_convert_cert_config() {
         let mut hg_config = BTreeMap::<&str, &str>::new();
 
-        assert_eq!(cfg!(windows), http_config(&hg_config, None).convert_cert);
+        let url: Url = "https://example.com".parse().unwrap();
+
+        assert_eq!(
+            cfg!(windows),
+            http_config(&hg_config, &url).unwrap().convert_cert
+        );
 
         hg_config.insert("http.convert-cert", "True");
-        assert!(http_config(&hg_config, None).convert_cert);
+        assert!(http_config(&hg_config, &url).unwrap().convert_cert);
 
         hg_config.insert("http.convert-cert", "false");
-        assert!(!http_config(&hg_config, None).convert_cert);
+        assert!(!http_config(&hg_config, &url).unwrap().convert_cert);
     }
 }

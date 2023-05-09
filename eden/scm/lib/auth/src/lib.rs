@@ -25,8 +25,9 @@ pub use x509::check_certs;
 pub use x509::X509Error;
 
 #[derive(Debug, Error)]
-#[error("Certificate(s) or private key(s) not found: {missing:?}\n{msg}")]
+#[error("Certificate(s) or private key(s) not found for {url}: {missing:?}\n{msg}")]
 pub struct MissingCerts {
+    url: String,
     missing: HashSet<PathBuf>,
     msg: String,
 }
@@ -230,6 +231,7 @@ impl<'a> AuthSection<'a> {
         } else if !missing.is_empty() {
             let msg = self.config.get("help", "tlsauthhelp").unwrap_or_default();
             Err(MissingCerts {
+                url: url.to_string(),
                 missing,
                 msg: msg.to_string(),
             })

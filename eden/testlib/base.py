@@ -53,6 +53,9 @@ cachepath = {new_dir()}
 [edenfs]
 backing-repos-dir={new_dir()}
 command={str(os.getenv("EDENFSCTL_RUST_PATH"))}
+
+[edenapi]
+url=
 """
         )
 

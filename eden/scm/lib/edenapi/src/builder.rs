@@ -14,7 +14,6 @@ use std::time::Duration;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
-use auth::AuthSection;
 use configmodel::convert::FromConfigValue;
 use configmodel::ConfigExt;
 use http_client::Encoding;
@@ -177,16 +176,6 @@ impl HttpClientBuilder {
             .parse::<Url>()
             .map_err(|e| ConfigError::Invalid("edenapi.url".into(), e.into()))?;
 
-        let auth = AuthSection::from_config(config)
-            .best_match_for(&server_url)
-            .unwrap_or_else(|e| {
-                // Ignore errors here and make it appear as if there simply
-                // wasn't a matching cert. This prevents EdenAPI from crashing
-                // the program on startup if the user's certificate is missing.
-                tracing::warn!("Ignoring missing client certificates: {}", &e);
-                None
-            });
-
         let mut headers = get_config::<String>(config, "edenapi", "headers")?
             .map(parse_headers)
             .transpose()
@@ -234,7 +223,7 @@ impl HttpClientBuilder {
         let max_retry_per_request =
             get_config::<usize>(config, "edenapi", "max-retry-per-request")?.unwrap_or(3);
 
-        let mut http_config = hg_http::http_config(config, auth);
+        let mut http_config = hg_http::http_config(config, &server_url)?;
         http_config.verbose_stats |= debug;
         http_config.max_concurrent_requests = max_requests;
 

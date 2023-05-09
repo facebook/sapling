@@ -44,6 +44,8 @@ pub enum EdenApiError {
     Other(#[from] anyhow::Error),
     #[error("Not supported by the server")]
     NotSupported,
+    #[error(transparent)]
+    MissingCerts(#[from] auth::MissingCerts),
 }
 
 #[derive(Debug, Error)]
@@ -97,7 +99,8 @@ impl EdenApiError {
             | BadConfig(_)
             | InvalidUrl(_)
             | WireToApiConversionFailed(_)
-            | NotSupported => false,
+            | NotSupported
+            | MissingCerts(_) => false,
         }
     }
 
