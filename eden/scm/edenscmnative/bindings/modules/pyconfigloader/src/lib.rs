@@ -175,6 +175,10 @@ impl config {
     pub(crate) fn get_config_trait(&self, py: Python) -> Arc<dyn Config> {
         Arc::new(self.get_cfg(py))
     }
+
+    pub(crate) fn get_thread_safe_config_trait(&self, py: Python) -> Arc<dyn Config + Send + Sync> {
+        Arc::new(self.get_cfg(py))
+    }
 }
 
 fn parselist(py: Python, value: String) -> PyResult<Vec<PyUnicode>> {

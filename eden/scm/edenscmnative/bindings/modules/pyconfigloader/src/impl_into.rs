@@ -14,4 +14,5 @@ use crate::config;
 
 pub(crate) fn register(py: Python) {
     register_into(py, |py, c: config| c.get_config_trait(py));
+    register_into(py, |py, c: config| c.get_thread_safe_config_trait(py));
 }
