@@ -7,11 +7,10 @@
 
 #pragma once
 
+#include <folly/portability/SysTypes.h>
 #include <optional>
 #include <string>
 #include <unordered_map>
-
-#include "eden/fs/service/gen-cpp2/eden_types.h"
 
 namespace facebook::eden {
 

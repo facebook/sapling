@@ -5,7 +5,10 @@
 
 add_library(
   eden_nfs_rpc STATIC
-    "Rpc.cpp" "StreamClient.cpp" "Rpc.h" "StreamClient.h"
+  "Rpc.cpp"
+  "StreamClient.cpp"
+  "Rpc.h"
+  "StreamClient.h"
 )
 
 target_link_libraries(
@@ -17,7 +20,8 @@ target_link_libraries(
 
 add_library(
   eden_nfs_rpc_server STATIC
-    "Server.cpp" "Server.h"
+  "Server.cpp"
+  "Server.h"
 )
 
 target_link_libraries(

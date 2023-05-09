@@ -13,6 +13,7 @@ target_link_libraries(
   PUBLIC
     eden_store
     eden_model
+    eden_telemetry
     eden_testharness
     Folly::folly_test_util
     ${LIBGMOCK_LIBRARIES}

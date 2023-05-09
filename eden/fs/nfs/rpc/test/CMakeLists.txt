@@ -13,8 +13,9 @@ add_executable(
 target_link_libraries(
   eden_nfs_rpc_test
   PUBLIC
-    eden_nfs_rpc
+    eden_nfs_rpc_server
     eden_nfs_testharness_xdr_test_utils
+    eden_telemetry
     Folly::folly_test_util
     ${LIBGMOCK_LIBRARIES}
 )
