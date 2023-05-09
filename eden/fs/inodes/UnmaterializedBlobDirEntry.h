@@ -6,6 +6,7 @@
  */
 
 #pragma once
+
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/utils/DirType.h"

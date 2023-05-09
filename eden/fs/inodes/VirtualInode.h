@@ -8,16 +8,12 @@
 #pragma once
 
 #include <sys/stat.h>
-#include <variant>
-
-#include <folly/String.h>
 
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/UnmaterializedUnloadedBlobDirEntry.h"
 #include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/EntryAttributeFlags.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/RefPtr.h"
@@ -27,6 +23,7 @@ namespace facebook::eden {
 class ObjectStore;
 class ObjectFetchContext;
 using ObjectFetchContextPtr = RefPtr<ObjectFetchContext>;
+class Tree;
 
 namespace detail {
 using TreePtr = std::shared_ptr<const Tree>;
