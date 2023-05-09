@@ -1051,9 +1051,6 @@ bool EdenServer::createStorageEngine(cpptoml::table& config) {
         rocksPath,
         serverState_->getStructuredLogger(),
         &serverState_->getFaultInjector());
-    localStore_->enableBlobCaching.store(
-        serverState_->getEdenConfig()->enableBlobCaching.getValue(),
-        std::memory_order_relaxed);
     XLOG(DBG2) << "Created RocksDB store in "
                << watch.elapsed().count() / 1000.0 << " seconds.";
   } else {

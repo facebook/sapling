@@ -136,7 +136,8 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
 
             # now its available locally.
             for fromWhere in [
-                DataFetchOrigin.DISK_CACHE,
+                # Blobs aren't cached to the LocalStore.
+                # DataFetchOrigin.DISK_CACHE,
                 DataFetchOrigin.LOCAL_BACKING_STORE,
                 # reading a blob is actually insuffient to put it in
                 # DataFetchFromWhere.MEMORY_CACHE,
@@ -165,7 +166,7 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                 if blob.origin == DataFetchOrigin.MEMORY_CACHE:
                     blob.blob.get_error()
                 elif blob.origin == DataFetchOrigin.DISK_CACHE:
-                    self.assertEqual(b"\xff\xfe\xfd\xfc", blob.blob.get_blob())
+                    blob.blob.get_error()
                 elif blob.origin == DataFetchOrigin.LOCAL_BACKING_STORE:
                     self.assertEqual(b"\xff\xfe\xfd\xfc", blob.blob.get_blob())
                 elif blob.origin == DataFetchOrigin.REMOTE_BACKING_STORE:

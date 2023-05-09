@@ -258,15 +258,6 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
 
   virtual void periodicManagementTask(const EdenConfig& config);
 
-  /*
-   * We keep this field to avoid making `LocalStore` holding a reference to
-   * `EdenConfig`, which will require us to change all the subclasses. We update
-   * this flag through `periodicManagementTask` function. The implication is
-   * that the configuration may need up to 1 minute to propagate (or whatever
-   * the configured local store management interval is).
-   */
-  std::atomic<bool> enableBlobCaching = true;
-
  private:
   /**
    * Compute the serialized version of the tree in a (not coalesced) IOBuf.

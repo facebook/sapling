@@ -105,10 +105,6 @@ ImmediateFuture<std::unique_ptr<Tree>> LocalStore::getTree(
 
 ImmediateFuture<std::unique_ptr<Blob>> LocalStore::getBlob(
     const ObjectId& id) const {
-  if (!enableBlobCaching) {
-    return std::unique_ptr<Blob>(nullptr);
-  }
-
   return getImmediateFuture(KeySpace::BlobFamily, id)
       .thenValue([id](StoreResult&& data) {
         if (!data.isValid()) {
@@ -154,19 +150,14 @@ void LocalStore::WriteBatch::putTree(const Tree& tree) {
 }
 
 void LocalStore::putBlob(const ObjectId& id, const Blob* blob) {
-  if (!enableBlobCaching) {
-    XLOG(DBG8) << "Skipping caching " << id
-               << " because blob cache is disabled via config";
-  } else {
-    // Since blob serialization is moderately complex, just delegate
-    // the immediate putBlob to the method on the WriteBatch.
-    // Pre-allocate a buffer of approximately the right size; it
-    // needs to hold the blob content plus have room for a couple of
-    // hashes for the keys, plus some padding.
-    auto batch = beginWrite(blob->getSize() + 64);
-    batch->putBlob(id, blob);
-    batch->flush();
-  }
+  // Since blob serialization is moderately complex, just delegate
+  // the immediate putBlob to the method on the WriteBatch.
+  // Pre-allocate a buffer of approximately the right size; it
+  // needs to hold the blob content plus have room for a couple of
+  // hashes for the keys, plus some padding.
+  auto batch = beginWrite(blob->getSize() + 64);
+  batch->putBlob(id, blob);
+  batch->flush();
 }
 
 void LocalStore::putBlobMetadata(

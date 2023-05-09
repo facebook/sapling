@@ -17,10 +17,15 @@ namespace facebook::eden {
 LocalStoreCachedBackingStore::LocalStoreCachedBackingStore(
     std::shared_ptr<BackingStore> backingStore,
     std::shared_ptr<LocalStore> localStore,
-    EdenStatsPtr stats)
+    EdenStatsPtr stats,
+    LocalStoreCachedBackingStore::CachingPolicy cachingPolicy)
     : backingStore_{std::move(backingStore)},
       localStore_{std::move(localStore)},
-      stats_{std::move(stats)} {}
+      stats_{std::move(stats)},
+      cachingPolicy_{cachingPolicy} {
+  XCHECK_NE(
+      cachingPolicy_, LocalStoreCachedBackingStore::CachingPolicy::NoCaching);
+}
 
 LocalStoreCachedBackingStore::~LocalStoreCachedBackingStore() {}
 
@@ -58,42 +63,50 @@ folly::SemiFuture<BackingStore::GetTreeResult>
 LocalStoreCachedBackingStore::getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
-  return localStore_->getTree(id)
-      .thenValue([id = id,
-                  context = context.copy(),
-                  localStore = localStore_,
-                  backingStore =
-                      backingStore_](std::unique_ptr<Tree> tree) mutable {
+  auto localStoreGetTree =
+      ImmediateFuture<std::unique_ptr<Tree>>{std::in_place, nullptr};
+  if (shouldCache(LocalStoreCachedBackingStore::CachingPolicy::Trees)) {
+    localStoreGetTree = localStore_->getTree(id);
+  }
+
+  return std::move(localStoreGetTree)
+      .thenValue([self = shared_from_this(), id = id, context = context.copy()](
+                     std::unique_ptr<Tree> tree) mutable {
         if (tree) {
           return folly::makeSemiFuture(GetTreeResult{
               std::move(tree), ObjectFetchContext::FromDiskCache});
         }
 
-        return backingStore
+        return self->backingStore_
             ->getTree(id, context)
             // TODO: This is a good use for toUnsafeFuture to ensure the tree is
             // cached even if the resulting future is never consumed.
-            .deferValue(
-                [localStore = std::move(localStore)](GetTreeResult result) {
-                  if (result.tree) {
-                    auto batch = localStore->beginWrite();
-                    batch->putTree(*result.tree);
+            .deferValue([self](GetTreeResult result) {
+              if (result.tree) {
+                auto batch = self->localStore_->beginWrite();
+                if (self->shouldCache(
+                        LocalStoreCachedBackingStore::CachingPolicy::Trees)) {
+                  batch->putTree(*result.tree);
+                }
 
-                    // Let's cache all the entries in the LocalStore.
-                    for (const auto& [name, treeEntry] : *result.tree) {
-                      const auto& size = treeEntry.getSize();
-                      const auto& sha1 = treeEntry.getContentSha1();
-                      if (treeEntry.getType() == TreeEntryType::REGULAR_FILE &&
-                          size && sha1) {
-                        batch->putBlobMetadata(
-                            treeEntry.getHash(), BlobMetadata{*sha1, *size});
-                      }
+                if (self->shouldCache(LocalStoreCachedBackingStore::
+                                          CachingPolicy::BlobMetadata)) {
+                  // Let's cache all the entries in the LocalStore.
+                  for (const auto& [name, treeEntry] : *result.tree) {
+                    const auto& size = treeEntry.getSize();
+                    const auto& sha1 = treeEntry.getContentSha1();
+                    if (treeEntry.getType() == TreeEntryType::REGULAR_FILE &&
+                        size && sha1) {
+                      batch->putBlobMetadata(
+                          treeEntry.getHash(), BlobMetadata{*sha1, *size});
                     }
-                    batch->flush();
                   }
+                }
+                batch->flush();
+              }
 
-                  return result;
-                });
+              return result;
+            });
       })
       .semi();
 }
@@ -102,7 +115,12 @@ folly::SemiFuture<BackingStore::GetBlobMetaResult>
 LocalStoreCachedBackingStore::getBlobMetadata(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
-  return localStore_->getBlobMetadata(id)
+  auto localStoreGetBlobMetadata =
+      ImmediateFuture<std::unique_ptr<BlobMetadata>>{std::in_place, nullptr};
+  if (shouldCache(LocalStoreCachedBackingStore::CachingPolicy::BlobMetadata)) {
+    localStoreGetBlobMetadata = localStore_->getBlobMetadata(id);
+  }
+  return std::move(localStoreGetBlobMetadata)
       .thenValue([self = shared_from_this(), id = id, context = context.copy()](
                      std::unique_ptr<BlobMetadata> metadata) mutable {
         if (metadata) {
@@ -144,13 +162,14 @@ LocalStoreCachedBackingStore::getBlobMetadata(
                             result.origin};
                       });
                 })
-            .deferValue(
-                [localStore = self->localStore_, id](GetBlobMetaResult result) {
-                  if (result.blobMeta) {
-                    localStore->putBlobMetadata(id, *result.blobMeta);
-                  }
-                  return result;
-                });
+            .deferValue([self, id](GetBlobMetaResult result) {
+              if (result.blobMeta &&
+                  self->shouldCache(LocalStoreCachedBackingStore::
+                                        CachingPolicy::BlobMetadata)) {
+                self->localStore_->putBlobMetadata(id, *result.blobMeta);
+              }
+              return result;
+            });
       })
       .semi();
 }
@@ -159,28 +178,32 @@ folly::SemiFuture<BackingStore::GetBlobResult>
 LocalStoreCachedBackingStore::getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
-  return localStore_->getBlob(id)
-      .thenValue([id = id,
-                  context = context.copy(),
-                  localStore = localStore_,
-                  backingStore = backingStore_,
-                  stats = stats_.copy()](std::unique_ptr<Blob> blob) mutable {
+  auto localStoreGetBlob =
+      ImmediateFuture<std::unique_ptr<Blob>>{std::in_place, nullptr};
+  if (shouldCache(LocalStoreCachedBackingStore::CachingPolicy::Blobs)) {
+    localStoreGetBlob = localStore_->getBlob(id);
+  }
+  return std::move(localStoreGetBlob)
+      .thenValue([self = shared_from_this(), id = id, context = context.copy()](
+                     std::unique_ptr<Blob> blob) mutable {
         if (blob) {
-          stats->increment(&ObjectStoreStats::getBlobFromLocalStore);
+          self->stats_->increment(&ObjectStoreStats::getBlobFromLocalStore);
           return folly::makeSemiFuture(GetBlobResult{
               std::move(blob), ObjectFetchContext::FromDiskCache});
         }
 
-        return backingStore
+        return self->backingStore_
             ->getBlob(id, context)
             // TODO: This is a good use for toUnsafeFuture to ensure the tree is
             // cached even if the resulting future is never consumed.
-            .deferValue([localStore = std::move(localStore),
-                         stats = std::move(stats),
-                         id](GetBlobResult result) {
+            .deferValue([self, id](GetBlobResult result) {
               if (result.blob) {
-                localStore->putBlob(id, result.blob.get());
-                stats->increment(&ObjectStoreStats::getBlobFromBackingStore);
+                if (self->shouldCache(
+                        LocalStoreCachedBackingStore::CachingPolicy::Blobs)) {
+                  self->localStore_->putBlob(id, result.blob.get());
+                }
+                self->stats_->increment(
+                    &ObjectStoreStats::getBlobFromBackingStore);
               }
               return result;
             });
@@ -234,6 +257,12 @@ std::string LocalStoreCachedBackingStore::renderObjectId(
 
 std::optional<folly::StringPiece> LocalStoreCachedBackingStore::getRepoName() {
   return backingStore_->getRepoName();
+}
+
+bool LocalStoreCachedBackingStore::shouldCache(CachingPolicy object) const {
+  auto underlyingObject = folly::to_underlying(object);
+  return (folly::to_underlying(cachingPolicy_) & underlyingObject) ==
+      underlyingObject;
 }
 
 } // namespace facebook::eden

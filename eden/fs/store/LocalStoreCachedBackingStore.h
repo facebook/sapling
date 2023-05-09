@@ -33,10 +33,23 @@ class LocalStoreCachedBackingStore
     : public BackingStore,
       public std::enable_shared_from_this<LocalStoreCachedBackingStore> {
  public:
+  /**
+   * Policy describing the kind of data cached in the LocalStore.
+   */
+  enum class CachingPolicy {
+    NoCaching = 0,
+    Trees = 1 << 0,
+    Blobs = 1 << 1,
+    BlobMetadata = 1 << 2,
+    TreesAndBlobMetadata = Trees | BlobMetadata,
+    Everything = Trees | Blobs | BlobMetadata,
+  };
+
   LocalStoreCachedBackingStore(
       std::shared_ptr<BackingStore> backingStore,
       std::shared_ptr<LocalStore> localStore,
-      EdenStatsPtr stats);
+      EdenStatsPtr stats,
+      CachingPolicy cachingPolicy);
   ~LocalStoreCachedBackingStore() override;
 
   ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
@@ -97,9 +110,15 @@ class LocalStoreCachedBackingStore
   }
 
  private:
+  /**
+   * Test if the object should be cached in the LocalStore.
+   */
+  bool shouldCache(CachingPolicy object) const;
+
   std::shared_ptr<BackingStore> backingStore_;
   std::shared_ptr<LocalStore> localStore_;
   EdenStatsPtr stats_;
+  CachingPolicy cachingPolicy_;
 };
 
 } // namespace facebook::eden

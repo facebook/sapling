@@ -637,9 +637,6 @@ uint64_t RocksDbLocalStore::getApproximateSize(KeySpace keySpace) const {
 }
 
 void RocksDbLocalStore::periodicManagementTask(const EdenConfig& config) {
-  enableBlobCaching.store(
-      config.enableBlobCaching.getValue(), std::memory_order_relaxed);
-
   // Compute and publish the stats
   auto before = computeStats(/*publish=*/true, &config);
 

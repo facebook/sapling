@@ -47,7 +47,10 @@ struct ObjectStoreTest : ::testing::Test {
     stats = makeRefPtr<EdenStats>();
     fakeBackingStore = std::make_shared<FakeBackingStore>();
     backingStore = std::make_shared<LocalStoreCachedBackingStore>(
-        fakeBackingStore, localStore, stats.copy());
+        fakeBackingStore,
+        localStore,
+        stats.copy(),
+        LocalStoreCachedBackingStore::CachingPolicy::Everything);
     objectStore = ObjectStore::create(
         localStore,
         backingStore,

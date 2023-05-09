@@ -906,14 +906,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Controls whether if EdenFS caches blobs in local store.
-   */
-  ConfigSetting<bool> enableBlobCaching{
-      "experimental:enable-blob-caching",
-      false,
-      this};
-
-  /**
    * Controls whether EdenFS uses EdenApi to import data from remote.
    *
    * TODO: Remove once this config value is no longer written.

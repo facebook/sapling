@@ -159,7 +159,8 @@ void EdenMain::registerStandardBackingStores() {
                 params.serverState->getStructuredLogger(),
                 params.serverState->getProcessNameCache())),
         params.localStore,
-        params.sharedStats.copy());
+        params.sharedStats.copy(),
+        LocalStoreCachedBackingStore::CachingPolicy::TreesAndBlobMetadata);
   });
 
   registerBackingStore(
@@ -170,7 +171,8 @@ void EdenMain::registerStandardBackingStores() {
         return std::make_shared<LocalStoreCachedBackingStore>(
             std::make_shared<GitBackingStore>(repoPath),
             params.localStore,
-            params.sharedStats.copy());
+            params.sharedStats.copy(),
+            LocalStoreCachedBackingStore::CachingPolicy::TreesAndBlobMetadata);
 #else // EDEN_HAVE_GIT
         (void)params;
         throw std::domain_error(
