@@ -9,12 +9,10 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::Context;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks_movement::BookmarkKindRestrictions;
 pub use bookmarks_movement::PushrebaseOutcome;
-use bookmarks_types::BookmarkKind;
 use bytes::Bytes;
 use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
@@ -35,8 +33,6 @@ use pushrebase_client::LocalPushrebaseClient;
 use pushrebase_client::PushrebaseClient;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstoreRef;
-use repo_update_logger::log_new_commits;
-use repo_update_logger::CommitInfo;
 use revset::RangeNodeStream;
 use skiplist::SkiplistIndexArc;
 use unbundle::PushRedirector;
@@ -83,8 +79,7 @@ impl RepoContext {
         &self,
         redirector: &PushRedirector<Repo>,
         outcome: Large<PushrebaseOutcome>,
-        bookmark: BookmarkKey,
-        mut changesets_to_log: Small<HashMap<ChangesetId, CommitInfo>>,
+        _bookmark: BookmarkKey,
     ) -> Result<Small<PushrebaseOutcome>, MononokeError> {
         let ctx = self.ctx();
         let Large(PushrebaseOutcome {
@@ -102,27 +97,6 @@ impl RepoContext {
             redirector.get_large_to_small_commit_equivalent(ctx, head),
             redirector.convert_pushrebased_changesets(ctx, rebased_changesets)
         )?;
-
-        if !tunables::tunables()
-            .log_backsynced_commits_from_backsyncer()
-            .unwrap_or(false)
-        {
-            for pair in rebased_changesets.iter() {
-                let info = changesets_to_log
-                    .get_mut(&pair.id_old)
-                    .with_context(|| format!("Missing commit info for {}", pair.id_old))?;
-                info.update_changeset_id(pair.id_old, pair.id_new)?;
-            }
-
-            // Also log commits on small repo
-            log_new_commits(
-                ctx,
-                redirector.small_repo.as_ref(),
-                Some((&bookmark, BookmarkKind::Publishing)),
-                changesets_to_log.0.into_values().collect(),
-            )
-            .await;
-        }
 
         Ok(Small(PushrebaseOutcome {
             old_bookmark_value,
@@ -234,12 +208,6 @@ impl RepoContext {
             .await?;
             // Convert changesets to large repo
             let large_bookmark = redirector.small_to_large_bookmark(&bookmark).await?;
-            let commit_infos = Small(
-                changesets
-                    .iter()
-                    .map(|bcs| (bcs.get_changeset_id(), CommitInfo::new(bcs, None)))
-                    .collect::<HashMap<_, _>>(),
-            );
             let small_to_large = redirector
                 .sync_uploaded_changesets(ctx, changesets, Some(&large_bookmark))
                 .await?;
@@ -262,7 +230,7 @@ impl RepoContext {
             )
             .await?;
             // Convert response back, finishing the land on the small repo
-            self.convert_outcome(redirector, Large(outcome), bookmark, commit_infos)
+            self.convert_outcome(redirector, Large(outcome), bookmark)
                 .await?
                 .0
         } else {

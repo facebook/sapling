@@ -562,19 +562,14 @@ where
             });
 
             let res = bookmark_txn.commit_with_hook(txn_hook).await?;
-            if tunables::tunables()
-                .log_backsynced_commits_from_backsyncer()
-                .unwrap_or(false)
-            {
-                log_new_bonsai_changesets(
-                    &ctx,
-                    target_repo,
-                    &bookmark,
-                    BookmarkKind::Publishing,
-                    commits_to_log,
-                )
-                .await;
-            }
+            log_new_bonsai_changesets(
+                &ctx,
+                target_repo,
+                &bookmark,
+                BookmarkKind::Publishing,
+                commits_to_log,
+            )
+            .await;
 
             return Ok(res);
         } else {

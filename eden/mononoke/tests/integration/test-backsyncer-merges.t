@@ -9,13 +9,6 @@
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
 
   $ setup_configerator_configs
-  $ merge_tunables <<EOF
-  > {
-  >   "killswitches": {
-  >     "log_backsynced_commits_from_backsyncer": true
-  >   }
-  > }
-  > EOF
   $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
   > {
   > "per_repo": {

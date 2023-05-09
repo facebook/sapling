@@ -10,13 +10,6 @@
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
   $ setup_configerator_configs
-  $ merge_tunables <<EOF
-  > {
-  >   "killswitches": {
-  >     "log_backsynced_commits_from_backsyncer": true
-  >   }
-  > }
-  > EOF
   $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
   > {
   > "per_repo": {
