@@ -27,6 +27,7 @@ use git_hash::ObjectId;
 use git_object::bstr::BString;
 use git_object::tree;
 use git_object::Commit;
+use git_object::Tag;
 use git_object::Tree;
 use manifest::Entry;
 use manifest::Manifest;
@@ -286,6 +287,51 @@ impl GitimportTarget {
     }
 }
 
+#[derive(Debug)]
+pub struct TagMetadata {
+    pub message: String,
+    pub author: Option<String>,
+    pub author_date: Option<DateTime>,
+    pub name: String,
+    pub pgp_signature: Option<Bytes>,
+}
+
+impl TagMetadata {
+    pub async fn new(
+        ctx: &CoreContext,
+        oid: ObjectId,
+        reader: &GitRepoReader,
+    ) -> Result<Self, Error> {
+        let Tag {
+            name,
+            mut tagger,
+            message,
+            mut pgp_signature,
+            ..
+        } = read_tag(reader, &oid).await?;
+
+        let author_date = tagger
+            .take()
+            .map(|tagger| convert_time_to_datetime(&tagger.time))
+            .transpose()?;
+        let author = tagger
+            .take()
+            .map(|tagger| format_signature(tagger.to_ref()));
+        let message = decode_message(&message, &None, ctx.logger())?;
+        let name = decode_message(&name, &None, ctx.logger())?;
+        let pgp_signature = pgp_signature
+            .take()
+            .map(|signature| Bytes::from(signature.to_vec()));
+        Result::<_, Error>::Ok(TagMetadata {
+            author,
+            author_date,
+            name,
+            message,
+            pgp_signature,
+        })
+    }
+}
+
 pub struct CommitMetadata {
     pub oid: ObjectId,
     pub parents: Vec<ObjectId>,
@@ -302,6 +348,14 @@ pub struct ExtractedCommit {
     pub tree: GitTree,
     pub parent_trees: HashSet<GitTree>,
     pub original_commit: Bytes,
+}
+
+pub(crate) async fn read_tag(reader: &GitRepoReader, oid: &git_hash::oid) -> Result<Tag, Error> {
+    let object = reader.get_object(oid).await?;
+    object
+        .parsed
+        .try_into_tag()
+        .map_err(|_| format_err!("{} is not a tag", oid))
 }
 
 pub(crate) async fn read_commit(
@@ -493,6 +547,15 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
         changes: SortedVectorMap<MPath, Self::Change>,
         dry_run: bool,
     ) -> Result<(Self::IntermediateChangeset, ChangesetId), Error>;
+
+    /// Generate a single Bonsai changeset ID for corresponding Git
+    /// annotated tag.
+    async fn generate_changeset_for_annotated_tag(
+        &self,
+        ctx: &CoreContext,
+        target_changeset_id: ChangesetId,
+        tag: TagMetadata,
+    ) -> Result<ChangesetId, Error>;
 
     /// Finalize a batch of generated changesets. The supplied batch is
     /// topologically sorted so that parents are all present before children

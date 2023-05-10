@@ -55,6 +55,7 @@ pub use crate::gitimport_objects::GitTree;
 pub use crate::gitimport_objects::GitUploader;
 pub use crate::gitimport_objects::GitimportPreferences;
 pub use crate::gitimport_objects::GitimportTarget;
+pub use crate::gitimport_objects::TagMetadata;
 pub use crate::gitlfs::GitImportLfs;
 pub use crate::gitlfs::LfsMetaData;
 
@@ -153,6 +154,27 @@ pub async fn is_annotated_tag(
         .parsed
         .as_tag()
         .is_some())
+}
+
+pub async fn create_changeset_for_annotated_tag<Uploader: GitUploader>(
+    ctx: &CoreContext,
+    uploader: &Uploader,
+    path: &Path,
+    prefs: &GitimportPreferences,
+    tag_id: &ObjectId,
+    original_changeset_id: &ChangesetId,
+) -> Result<ChangesetId, Error> {
+    let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
+    // Get the parsed Git Tag
+    let tag_metadata = TagMetadata::new(ctx, *tag_id, &reader)
+        .await
+        .with_context(|| format_err!("Failed to create TagMetadata from git tag {}", tag_id))?;
+    // Create the corresponding changeset for the Git Tag at Mononoke end
+    let changeset_id = uploader
+        .generate_changeset_for_annotated_tag(ctx, *original_changeset_id, tag_metadata)
+        .await
+        .with_context(|| format_err!("Failed to generate changeset for git tag {}", tag_id))?;
+    Ok(changeset_id)
 }
 
 pub async fn upload_git_tag<Uploader: GitUploader>(

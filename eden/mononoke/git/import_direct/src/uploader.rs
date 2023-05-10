@@ -7,6 +7,7 @@
 
 use std::sync::Arc;
 
+use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::save_bonsai_changesets;
@@ -25,10 +26,14 @@ use git_hash::ObjectId;
 use import_tools::CommitMetadata;
 use import_tools::GitImportLfs;
 use import_tools::GitUploader;
+use import_tools::TagMetadata;
 use import_tools::HGGIT_COMMIT_ID_EXTRA;
 use import_tools::HGGIT_MARKER_EXTRA;
 use import_tools::HGGIT_MARKER_VALUE;
+use mononoke_api::repo::git::create_annotated_tag;
 use mononoke_api::repo::upload_git_object;
+use mononoke_types::bonsai_changeset::BonsaiAnnotatedTag;
+use mononoke_types::bonsai_changeset::BonsaiAnnotatedTagTarget;
 use mononoke_types::hash;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
@@ -215,6 +220,28 @@ where
                     e.to_string()
                 )
             })
+    }
+
+    async fn generate_changeset_for_annotated_tag(
+        &self,
+        ctx: &CoreContext,
+        target_changeset_id: ChangesetId,
+        mut tag: TagMetadata,
+    ) -> Result<ChangesetId, Error> {
+        let annotated_tag = BonsaiAnnotatedTag {
+            target: BonsaiAnnotatedTagTarget::Changeset(target_changeset_id),
+            pgp_signature: tag.pgp_signature.take(),
+        };
+        create_annotated_tag(
+            ctx,
+            &*self.inner,
+            tag.author.take(),
+            tag.author_date.take().map(|date| date.into()),
+            tag.message,
+            annotated_tag,
+        )
+        .await
+        .context("Failure in creating changeset for tag")
     }
 }
 

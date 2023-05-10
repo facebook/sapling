@@ -28,6 +28,7 @@ use clap::Subcommand;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future;
+use import_tools::create_changeset_for_annotated_tag;
 use import_tools::import_tree_as_single_bonsai_changeset;
 use import_tools::upload_git_tag;
 use import_tools::GitimportPreferences;
@@ -35,6 +36,7 @@ use import_tools::GitimportTarget;
 use linked_hash_map::LinkedHashMap;
 use mercurial_derivation::get_manifest_from_bonsai;
 use mercurial_derivation::DeriveHgChangeset;
+use mononoke_api::BookmarkCategory;
 use mononoke_api::BookmarkFreshness;
 use mononoke_api::BookmarkKey;
 use mononoke_app::args::RepoArgs;
@@ -276,6 +278,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                         changeset.map(|cs| (maybe_tag_id, name, cs))
                     })
             {
+                let final_changeset = changeset.clone();
                 let mut name = name
                     .strip_prefix("refs/")
                     .context("Ref does not start with refs/")?
@@ -287,48 +290,58 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     // Skip the HEAD revision: it shouldn't be imported as a bookmark in mononoke
                     continue;
                 }
-                // The ref getting imported is a tag, so store the raw git Tag object.
                 if let Some(tag_id) = maybe_tag_id {
+                    // The ref getting imported is a tag, so store the raw git Tag object.
                     upload_git_tag(&ctx, &uploader, path, &prefs, tag_id).await?;
+                    // Create the changeset corresponding to the commit pointed to by the tag.
+                    create_changeset_for_annotated_tag(
+                        &ctx, &uploader, path, &prefs, tag_id, changeset,
+                    )
+                    .await?;
                 }
+                // Set the appropriate category for branch and tag bookmarks
+                let bookmark_key = if maybe_tag_id.is_some() {
+                    BookmarkKey::with_name_and_category(name.parse()?, BookmarkCategory::Tag)
+                } else {
+                    BookmarkKey::new(&name)?
+                };
                 let pushvars = None;
                 if repo_context
-                    .create_bookmark(&BookmarkKey::new(&name)?, *changeset, pushvars)
+                    .create_bookmark(&bookmark_key, final_changeset, pushvars)
                     .await
                     .is_err()
                 {
-                    // TODO (pierre): handle category here
                     let old_changeset = repo_context
-                        .resolve_bookmark(&BookmarkKey::new(&name)?, BookmarkFreshness::MostRecent)
+                        .resolve_bookmark(&bookmark_key, BookmarkFreshness::MostRecent)
                         .await
                         .with_context(|| format!("failed to resolve bookmark {name}"))?
                         .map(|context| context.id());
-                    if old_changeset != Some(*changeset) {
+                    if old_changeset != Some(final_changeset) {
                         let allow_non_fast_forward = true;
                         repo_context
                         .move_bookmark(
-                            &BookmarkKey::new(&name)?,
-                            *changeset,
+                            &bookmark_key,
+                            final_changeset,
                             old_changeset,
                             allow_non_fast_forward,
                             pushvars,
                         )
                         .await
-                        .with_context(|| format!("failed to move bookmark {name} from {old_changeset:?} to {changeset:?}"))?;
+                        .with_context(|| format!("failed to move bookmark {name} from {old_changeset:?} to {final_changeset:?}"))?;
                         info!(
                             ctx.logger(),
-                            "Bookmark: \"{name}\": {changeset:?} (moved from {old_changeset:?})"
+                            "Bookmark: \"{name}\": {final_changeset:?} (moved from {old_changeset:?})"
                         );
                     } else {
                         info!(
                             ctx.logger(),
-                            "Bookmark: \"{name}\": {changeset:?} (already up-to-date)"
+                            "Bookmark: \"{name}\": {final_changeset:?} (already up-to-date)"
                         );
                     }
                 } else {
                     info!(
                         ctx.logger(),
-                        "Bookmark: \"{name}\": {changeset:?} (created)"
+                        "Bookmark: \"{name}\": {final_changeset:?} (created)"
                     );
                 }
             }
