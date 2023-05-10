@@ -444,16 +444,12 @@
 
   $ hg bisect -r
   $ hg up -qr tip
-  $ 
-hg bisect --command "hg debugshell -c \"sys.exit(1 if (repo['.'].rev() < 6) else 0)\""
-
+  $ hg bisect --command "hg debugshell -c \"sys.exit(1 if (repo['.'].rev() < 6) else 0)\""
   changeset 58c80a7c8a40: good
   abort: cannot bisect (no known bad revisions)
   [255]
   $ hg up -qr 0
-  $ 
-hg bisect --command "hg debugshell -c \"sys.exit(1 if (repo['.'].rev() < 6) else 0)\""
-
+  $ hg bisect --command "hg debugshell -c \"sys.exit(1 if (repo['.'].rev() < 6) else 0)\""
   changeset b99c7b9c8e11: bad
   changeset e7fa0811edb0: good
   changeset 03750880c6b5: good

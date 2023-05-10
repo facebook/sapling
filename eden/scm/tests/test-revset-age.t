@@ -22,8 +22,8 @@
 
 # Check age ranges
 
-  from edenscm.extensions import wrappedfunction
-  with wrappedfunction(time, "time", lambda orig: now + 1):
+    from edenscm.extensions import wrappedfunction
+    with wrappedfunction(time, "time", lambda orig: now + 1):
       $ hg log -T '{rev} {desc}\n' -r 'age("<30")'
       5 Changeset 5 seconds ago
       $ hg log -T '{rev} {desc}\n' -r 'age("<7m30s")'

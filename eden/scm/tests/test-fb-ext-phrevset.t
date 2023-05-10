@@ -8,9 +8,6 @@
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > phrevset=
-
-  > [paths]
-  > default=dummy://dummy
   > EOF
   $ hg init repo
   $ cd repo

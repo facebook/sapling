@@ -5,37 +5,40 @@
 # GNU General Public License version 2.
 
   $ eagerepo
-import os
-from bindings import tracing
-idtopath = {}
 
-def getidtopath():
-    """Return a dict mapping from id (in hex form) to path"""
-    output = sheval('hg debugmanifestdirs -r "all()"')
-    # debugmanifestdirs prints "<id> <path>" per line
-    result = dict(l.split() for l in output.splitlines())
-    return result
+Python utilities:
 
-def collectprefetch(command):
-    """Updating to commit, check prefetched paths"""
-    d = tracing.tracingdata()
-
-    with d:
-        sheval(f"EDENSCM_LOG=manifest_tree=debug {command} 2>/dev/null")
-
-    ids = []
-    for spans in d.treespans().values():
-        for span in spans.flatten():
-            name = span.get("name")
-            if name == "tree::store::prefetch":
-                ids += span["ids"].split()
-            elif name == "tree::store::get":
-                ids.append(span["id"])
-    idtopath.update(getidtopath())
-    paths = set(idtopath[id] for id in set(ids)) - {"/"}
-
-    # Translate ids to paths
-    return sorted(filter(None, paths))
+    import os
+    from bindings import tracing
+    idtopath = {}
+    
+    def getidtopath():
+        """Return a dict mapping from id (in hex form) to path"""
+        output = sheval('hg debugmanifestdirs -r "all()"')
+        # debugmanifestdirs prints "<id> <path>" per line
+        result = dict(l.split() for l in output.splitlines())
+        return result
+    
+    def collectprefetch(command):
+        """Updating to commit, check prefetched paths"""
+        d = tracing.tracingdata()
+    
+        with d:
+            sheval(f"EDENSCM_LOG=manifest_tree=debug {command} 2>/dev/null")
+    
+        ids = []
+        for spans in d.treespans().values():
+            for span in spans.flatten():
+                name = span.get("name")
+                if name == "tree::store::prefetch":
+                    ids += span["ids"].split()
+                elif name == "tree::store::get":
+                    ids.append(span["id"])
+        idtopath.update(getidtopath())
+        paths = set(idtopath[id] for id in set(ids)) - {"/"}
+    
+        # Translate ids to paths
+        return sorted(filter(None, paths))
 
 
 # Use some production settings. They avoid expensive paths.

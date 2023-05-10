@@ -13,20 +13,20 @@
 
 # Prepare test functions
 
-  import os
-  import generateworkingcopystates
-  
-  def dircontent():
-      # generate a simple text view of the directory for easy comparison
-      files = os.listdir(".")
-      files.sort()
-      output = []
-      for filename in files:
-          if os.path.isdir(filename):
-              continue
-          content = open(filename).read()
-          output.append("%-6s %s" % (content.strip(), filename))
-      return "\n".join(output)
+    import os
+    import generateworkingcopystates
+    
+    def dircontent():
+        # generate a simple text view of the directory for easy comparison
+        files = os.listdir(".")
+        files.sort()
+        output = []
+        for filename in files:
+            if os.path.isdir(filename):
+                continue
+            content = open(filename).read()
+            output.append("%-6s %s" % (content.strip(), filename))
+        return "\n".join(output)
 
 # init 
 

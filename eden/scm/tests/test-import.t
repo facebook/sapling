@@ -208,17 +208,19 @@
   $ hg --cwd b8 log -r tip -T '{desc}'
   override (no-eol)
 
-def mkmsg(path1, path2):
-    import email, sys
+Python utility:
 
-    Message = email.message.Message
-
-    msg = Message()
-    patch = open(path1, "rb").read()
-    msg.set_payload(b"email commit message\n" + patch)
-    msg["Subject"] = "email patch"
-    msg["From"] = "email patcher"
-    open(path2, "wb").write(msg.as_string().encode("utf-8"))
+    def mkmsg(path1, path2):
+        import email, sys
+    
+        Message = email.message.Message
+    
+        msg = Message()
+        patch = open(path1, "rb").read()
+        msg.set_payload(b"email commit message\n" + patch)
+        msg["Subject"] = "email patch"
+        msg["From"] = "email patcher"
+        open(path2, "wb").write(msg.as_string().encode("utf-8"))
 
 # plain diff in email, subject, message body
 
@@ -249,15 +251,15 @@ def mkmsg(path1, path2):
 # subject: duplicate detection, removal of [PATCH]
 # The '---' tests the gitsendmail handling without proper mail headers
 
-def mkmsg2(path1, path2):
-    import email, sys
-
-    msg = email.message.Message()
-    patch = open(path1, "rb").read()
-    msg.set_payload(b"email patch\n\nnext line\n---\n" + patch)
-    msg["Subject"] = "[PATCH] email patch"
-    msg["From"] = "email patcher"
-    open(path2, "wb").write(msg.as_string().encode("utf-8"))
+    def mkmsg2(path1, path2):
+        import email, sys
+    
+        msg = email.message.Message()
+        patch = open(path1, "rb").read()
+        msg.set_payload(b"email patch\n\nnext line\n---\n" + patch)
+        msg["Subject"] = "[PATCH] email patch"
+        msg["From"] = "email patcher"
+        open(path2, "wb").write(msg.as_string().encode("utf-8"))
 
 
 # plain diff in email, [PATCH] subject, message body with subject

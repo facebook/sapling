@@ -10,34 +10,34 @@
 
 Python utility:
 
-  @command
-  def createstate(args):
-      """Create an interrupted state resolving 'hg update --merge' conflicts"""
-      def createrepo():
-          $ newrepo
-          $ drawdag << 'EOS'
-          > B C
-          > |/   # B/A=B\n
-          > A
-          > EOS
-      if not args or args[0] == "update":
-          createrepo()
-          $ hg up -C $C -q
-          $ echo C > A
-          $ hg up --merge $B -q
-          warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
-          [1]
-      elif args[0] == "backout":
-          createrepo()
-          $ drawdag << 'EOS'
-          > D  # D/A=D\n
-          > |
-          > desc(B)
-          > EOS
-          $ hg up -C $D -q
-          $ hg backout $B -q
-          warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
-          [1]
+    @command
+    def createstate(args):
+        """Create an interrupted state resolving 'hg update --merge' conflicts"""
+        def createrepo():
+            $ newrepo
+            $ drawdag << 'EOS'
+            > B C
+            > |/   # B/A=B\n
+            > A
+            > EOS
+        if not args or args[0] == "update":
+            createrepo()
+            $ hg up -C $C -q
+            $ echo C > A
+            $ hg up --merge $B -q
+            warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
+            [1]
+        elif args[0] == "backout":
+            createrepo()
+            $ drawdag << 'EOS'
+            > D  # D/A=D\n
+            > |
+            > desc(B)
+            > EOS
+            $ hg up -C $D -q
+            $ hg backout $B -q
+            warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
+            [1]
 
 
   $ createstate
