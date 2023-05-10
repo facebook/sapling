@@ -88,12 +88,9 @@ Extended .t syntax
   `$` and `>>>` blocks can have more than 2 spaces indentation.
 
 - Hybrid Python block.
-  Python block can be used without `>>>`. In the Python block regular
-  `$` and `>>>` blocks can be used. This can be helpful to express
+  Python block can be used with 4-space indentation. Inside the Python block
+  regular `$` and `>>>` blocks can be used. This can be helpful to express
   things that are harder for bash.
-  Consider only use this feature when bash or Python doctest sucks, since it
-  is incompatible with `run-tests.py` and `$` and `>>>` blocks are much easier
-  to parse and codemod.
   If unsure about how this works, check `__pycache__/ttest/test-name.py` for
   generated Python code transformed from `.t` source.
 

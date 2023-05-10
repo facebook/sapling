@@ -18,11 +18,17 @@ Syntax rules:
         >>> 1 + 1
         2
 
-  - Code block (identified by identation, or separated by blank lines)
-    in valid Python is treated as Python code without testing output:
+  - Python code blocks are indented by 4 spaces:
 
-        if True:
-            pass
+        # This is comment:
+
+            if True:  # This is Python code
+                pass
+
+  - Non-indented lines are comments.
+
+        This is a comment.
+        # This is another comment.
 
   - Python code block can embed "$" or ">>>" block:
 
@@ -30,24 +36,11 @@ Syntax rules:
             $ echo 1
             1
 
-  - Other things are treated as comments:
-
-        this line is a comment but the 'echo 1' will be tested:
-            $ echo 1
-            1
-
-        this line is a comment but the Python code below will be executed
-        (note the empty line is needed):
-
-            def foo():
-                return 1
-
-The main function is transform()
+The main function in this module is transform().
 """
 from __future__ import annotations
 
 import textwrap
-from ast import parse
 from dataclasses import dataclass
 from typing import Callable, List, Optional
 
@@ -64,36 +57,54 @@ def transform(
     Example:
 
         >>> print(transform('''begin of .t test:
-        ...   $ echo 1
+        ... shell code block with output test:
+        ...   $ cat << EOF
+        ...   > 1
+        ...   > EOF
         ...   1
         ...
-        ... if True:  # mixed in python code
-        ...   $ echo 2
+        ... python code block with output test:
+        ...   >>> def f():
+        ...   ...     print(2)
+        ...   ... f()
         ...   2
         ...
-        ... this is a comment:
+        ... python code block without output test:
         ...     class A:
         ...         pass
-        ... end of python code
+        ...
+        ... python code block with shell code block:
+        ...     if True:
+        ...         $ echo 2
+        ...         2
+        ...
         ... end of .t test''', filename='a.t'))
         # begin of .t test:
+        # shell code block with output test:
         <BLANKLINE>
-        checkoutput(sheval('echo 1\n'), '1\n', src='$ echo 1\n', srcloc=1, outloc=2, endloc=3, indent=2, filename='a.t')
+        checkoutput(sheval('cat << EOF\n1\nEOF\n'), '1\n', src='$ cat << EOF\n> 1\n> EOF\n', srcloc=2, outloc=5, endloc=6, indent=2, filename='a.t')
         <BLANKLINE>
-        if True:  # mixed in python code
+        # python code block with output test:
         <BLANKLINE>
-          checkoutput(sheval('echo 2\n'), '2\n', src='$ echo 2\n', srcloc=5, outloc=6, endloc=7, indent=2, filename='a.t')
+        checkoutput(pydoceval('def f():\n    print(2)\nf()\n') or '', '2\n', src='>>> def f():\n...     print(2)\n... f()\n', srcloc=8, outloc=11, endloc=12, indent=2, filename='a.t')
         <BLANKLINE>
-        # this is a comment:
+        # python code block without output test:
+        <BLANKLINE>
         class A:
             pass
-        # end of python code
+        <BLANKLINE>
+        # python code block with shell code block:
+        <BLANKLINE>
+        if True:
+        <BLANKLINE>
+            checkoutput(sheval('echo 2\n'), '2\n', src='$ echo 2\n', srcloc=19, outloc=20, endloc=21, indent=8, filename='a.t')
+        <BLANKLINE>
         # end of .t test
 
     With indent:
 
-        >>> print(transform('a = 1', indent=2))
-          a = 1
+        >>> print(transform('Foo bar', indent=2))
+          # Foo bar
 
     With indent, prefix and filename:
 
@@ -125,7 +136,6 @@ def transform(
         <BLANKLINE>
     """
     code = rewriteblocks(code, prefix=prefix, filename=filename, hasfeature=hasfeature)
-    code = commentinvalid(code)
     if indent:
         code = textwrap.indent(code, " " * indent)
     return code
@@ -146,7 +156,7 @@ class LineInfo:
         return cls(line, indent, prompt)
 
     def stripindent(self, info: LineInfo) -> str:
-        """line content without indent"""
+        """use self.indent to strip spaces of another LineInfo"""
         return info.line[self.indent :]
 
     def stripprompt(self, info: LineInfo) -> str:
@@ -197,21 +207,21 @@ def rewriteblocks(
         ...   >>> f() + 3
         ...   6
         ... end'''))
-        start
+        # start
         <BLANKLINE>
-          checkoutput(sheval('false\n'), '[1]\n', src='$ false\n', srcloc=1, outloc=2, endloc=3, indent=2, filename='')
-          checkoutput(sheval("echo 1\necho ' 2' '  $ 3'\n"), '1\n 2\n  $ 3\n', src="$ echo 1\n> echo ' 2' '  $ 3'\n", srcloc=3, outloc=5, endloc=8, indent=2, filename='')
+        checkoutput(sheval('false\n'), '[1]\n', src='$ false\n', srcloc=1, outloc=2, endloc=3, indent=2, filename='')
+        checkoutput(sheval("echo 1\necho ' 2' '  $ 3'\n"), '1\n 2\n  $ 3\n', src="$ echo 1\n> echo ' 2' '  $ 3'\n", srcloc=3, outloc=5, endloc=8, indent=2, filename='')
         <BLANKLINE>
-        inline python
+        # inline python
         <BLANKLINE>
-          checkoutput(pydoceval('def f():\n    return 3\n') or '', '', src='>>> def f():\n...     return 3\n', srcloc=9, outloc=11, endloc=11, indent=2, filename='')
-          checkoutput(pydoceval('f()\n') or '', '3\n', src='>>> f()\n', srcloc=11, outloc=12, endloc=13, indent=2, filename='')
+        checkoutput(pydoceval('def f():\n    return 3\n') or '', '', src='>>> def f():\n...     return 3\n', srcloc=9, outloc=11, endloc=11, indent=2, filename='')
+        checkoutput(pydoceval('f()\n') or '', '3\n', src='>>> f()\n', srcloc=11, outloc=12, endloc=13, indent=2, filename='')
         <BLANKLINE>
-          checkoutput(pydoceval('f() + 3\n') or '', '6\n', src='>>> f() + 3\n', srcloc=14, outloc=15, endloc=16, indent=2, filename='')
+        checkoutput(pydoceval('f() + 3\n') or '', '6\n', src='>>> f() + 3\n', srcloc=14, outloc=15, endloc=16, indent=2, filename='')
         <BLANKLINE>
-        end
+        # end
 
-    macros like #if and #require are rewritten:
+    macros like #if and #require are evaluated at "compile" time:
 
         >>> print(rewriteblocks('''#require git no-windows
         ... #require fsmonitor
@@ -232,13 +242,13 @@ def rewriteblocks(
         ...   $ echo 5
         ...   5
         ... end''', hasfeature=lambda f: f in ['git', 'fsmonitor', 'tar']))
-          raise __import__("unittest").SkipTest('missing feature: no-windows')
+        raise __import__("unittest").SkipTest('missing feature: no-windows')
         <BLANKLINE>
-          checkoutput(sheval('echo 1\n'), '1\n', src='$ echo 1\n', srcloc=3, outloc=4, endloc=5, indent=2, filename='')
+        checkoutput(sheval('echo 1\n'), '1\n', src='$ echo 1\n', srcloc=3, outloc=4, endloc=5, indent=2, filename='')
         <BLANKLINE>
         #if tar
         <BLANKLINE>
-          checkoutput(sheval('echo 2\n'), '2\n', src='$ echo 2\n', srcloc=6, outloc=7, endloc=8, indent=2, filename='')
+        checkoutput(sheval('echo 2\n'), '2\n', src='$ echo 2\n', srcloc=6, outloc=7, endloc=8, indent=2, filename='')
         <BLANKLINE>
         #if foo
         <BLANKLINE>
@@ -246,9 +256,9 @@ def rewriteblocks(
         <BLANKLINE>
         #endif
         <BLANKLINE>
-          checkoutput(sheval('echo 5\n'), '5\n', src='$ echo 5\n', srcloc=16, outloc=17, endloc=18, indent=2, filename='')
+        checkoutput(sheval('echo 5\n'), '5\n', src='$ echo 5\n', srcloc=16, outloc=17, endloc=18, indent=2, filename='')
         <BLANKLINE>
-        end
+        # end
 
     """
     # preprocess - get indent and prompt ('$' or '>>>') info
@@ -268,7 +278,7 @@ def rewriteblocks(
             newlines.append("\n")
         lastblocktype = blocktype
 
-    # "#if" upport:
+    # "#if" support:
     # - None: no "#if"
     # - True: lines should be taken until #else or #endif
     # - False: lines should be ignored until #else or #endif
@@ -307,8 +317,13 @@ def rewriteblocks(
             assert "\n" not in code  # \n should be escaped
 
             maybeseparate("checkoutput")
-            appendline(f"{' ' * info.indent}{code}\n")
+            # -4 spaces to match indented python code
+            appendline(f"{' ' * max(info.indent - 4, 0)}{code}\n")
             nexti = j
+        elif info.indent >= 4:
+            # indented Python code
+            maybeseparate("python")
+            appendline(info.line[4:])
         elif info.line.startswith("#require "):
             maybeseparate("require")
             features = info.line[9:].split()
@@ -318,7 +333,7 @@ def rewriteblocks(
                 missing = [f for f in features if not hasfeature(f)]
             if missing:
                 msg = f"missing feature: {' '.join(missing)}"
-                appendline(f'  raise __import__("unittest").SkipTest({repr(msg)})\n')
+                appendline(f'raise __import__("unittest").SkipTest({repr(msg)})\n')
         elif info.line.startswith("#if "):
             maybeseparate("if")
             features = info.line[4:].split()
@@ -340,135 +355,14 @@ def rewriteblocks(
             except IndexError as e:
                 raise e
             appendline(info.line)
+        elif info.line.strip():
+            assert info.indent < 2, f"invalid indentation at line {i} (2-space for $ or >>> blocks, 4-space for Python blocks): {info.line.strip()}"
+            # Otherwise, it's a comment.
+            maybeseparate("comment")
+            appendline(f"# {info.line}")
         else:
-            if info.line != "\n":
-                maybeseparate("unknown")
+            # Empty line
             appendline(info.line)
         i = nexti
 
     return "".join(newlines)
-
-
-def commentinvalid(code: str) -> str:
-    r"""comment out code blocks that are not valid Python
-
-    Examples:
-
-        >>> print(commentinvalid('this is a test\nend'))
-        # this is a test
-        # end
-
-        >>> print(commentinvalid('if True:\n    pass\n\nnot python code'))
-        if True:
-            pass
-        <BLANKLINE>
-        # not python code
-
-        >>> print(commentinvalid('''this is a comment:
-        ...     class ThisIsPython:
-        ...         def b():
-        ...             pass
-        ...
-        ...         def c():
-        ...             pass
-        ... ----this is a separator----
-        ...         def foo():
-        ...             return bar()
-        ... end of test'''))
-        # this is a comment:
-        class ThisIsPython:
-            def b():
-                pass
-        <BLANKLINE>
-            def c():
-                pass
-        # ----this is a separator----
-        def foo():
-            return bar()
-        # end of test
-    """
-    lines = code.splitlines(True)
-    lineinfos: List[LineInfo] = list(map(LineInfo.fromline, lines))
-    n = len(lineinfos)
-
-    newlines: List[str] = []
-    skipping: Optional[LineInfo] = None
-    i = 0
-    while i < n:
-        info = lineinfos[i]
-        if info.line == "\n" or info.line.startswith("#"):
-            newlines.append(info.line)
-            skipping = None
-            i += 1
-            continue
-        if skipping:
-            if info.indent == skipping.indent:
-                newlines.append(f"# {info.line}")
-                i += 1
-                continue
-            else:
-                # pyre-fixme[9]: skipping has type `Optional[LineInfo]`; used as `bool`.
-                skipping = False
-
-        # find a Python code block starting from line i, looks like:
-        #
-        #     def foo(): # line i             --
-        #         ...    #                      | found block
-        #         ...    #                    --
-        #                # line j (empty)
-        #     bar = 1    # line j + 1 (same or less indentation, or end of file)
-        #
-        # or with less indentation:
-        #
-        #         def foo(): # line i             --
-        #             ...    #                      | found block
-        #             ...    #                    --
-        #     bar = 1        # line j (less or invalid indentation)
-
-        j = i + 1
-        seenindents = {info.indent}
-        lastindent = info.indent
-        while j < n:
-            nextinfo = lineinfos[j]
-            if nextinfo.line == "\n":
-                if j + 1 < n:
-                    nextnext = lineinfos[j + 1]
-                    if nextnext.indent <= info.indent:
-                        break
-                    if (
-                        nextnext.indent < lastindent
-                        and nextnext.indent not in seenindents
-                    ):
-                        break
-                j += 1
-                continue
-            if nextinfo.indent < info.indent:
-                # outside the starting block
-                break
-            if nextinfo.indent < lastindent and nextinfo.indent not in seenindents:
-                # invalid dedent
-                break
-            j += 1
-            lastindent = nextinfo.indent
-            seenindents.add(nextinfo.indent)
-        # line i..j is a candidate code block
-        candidate = textwrap.dedent("".join(lines[i:j]))
-        if _ispythoncodeblock(candidate):
-            newlines.append(candidate)
-            i = j
-        else:
-            # skip until a blank line, or a different indent
-            skipping = info
-    return "".join(newlines)
-
-
-def _ispythoncodeblock(code: str) -> bool:
-    """check if code looks like meaningful Python block"""
-    # a single word (ex. 'foo') - not practically meaningful
-    if code.strip().isalnum():
-        return False
-    try:
-        parse(code)
-    except SyntaxError:
-        return False
-    return True
