@@ -6,9 +6,9 @@
  */
 
 #pragma once
-#include <folly/FBString.h>
+
+#include <folly/memory/Malloc.h>
 #include <map>
-#include <string>
 
 namespace facebook::eden {
 
