@@ -124,7 +124,7 @@ Import stack:
   with assertCovered(
     debugstack.debugimportstack,
     debugstack._create_commits,
-    debugstack._filectxfn
+    debugstack._filectxfn,
     debugstack._reset,
   ):
     # Simple linear stack
@@ -238,11 +238,30 @@ Import stack:
       $ hg log -Gr 'all()' -T '{desc}'
       @  E1
 
+    # Error cases.
 
-    # Error cases
-    $ hg debugimportstack << EOS
-    > [["foo", {}]]
-    > EOS
-    {"error": "unsupported action: ['foo', {}]"}
-    [1]
+      $ hg debugimportstack << EOS
+      > [["foo", {}]]
+      > EOS
+      {"error": "unsupported action: ['foo', {}]"}
+      [1]
+
+      $ hg debugimportstack << EOS
+      > not-json
+      > EOS
+      {"error": "commit info is invalid JSON (Expecting value: line 1 column 1 (char 0))"}
+      [1]
+
+      $ hg debugimportstack << EOS
+      > [["commit", {"text": "x", "mark": "123"}]]
+      > EOS
+      {"error": "invalid mark: 123"}
+      [1]
+
+      $ hg debugimportstack << EOS
+      > [["goto", {}]]
+      > EOS
+      {"error": "'mark'"}
+      [1]
+
 
