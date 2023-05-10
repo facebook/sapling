@@ -309,6 +309,9 @@ class EdenInstance(AbstractEdenInstance):
         for path in paths:
             try:
                 toml_cfg = load_toml_config(path)
+            except FileNotFoundError:
+                # Ignore missing config files. Eg. user_config_path is optional
+                continue
             except FileError as e:
                 log.warning(f"Not reading {path}: {str(e)}")
                 continue
@@ -1763,5 +1766,7 @@ TomlConfigDict = Mapping[str, Mapping[str, Any]]
 def load_toml_config(path: Path) -> TomlConfigDict:
     try:
         return typing.cast(TomlConfigDict, toml.load(str(path)))
+    except FileNotFoundError:
+        raise
     except Exception as e:
         raise FileError(f"toml config is either missing or corrupted : {str(e)}")
