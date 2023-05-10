@@ -182,6 +182,15 @@ impl From<Value> for bool {
     }
 }
 
+impl From<Value> for Option<bool> {
+    fn from(v: Value) -> Self {
+        match v {
+            Value::Bool(b) => b,
+            _ => panic!("programming error:  {:?} was converted to bool", v),
+        }
+    }
+}
+
 impl From<Value> for Vec<String> {
     fn from(v: Value) -> Self {
         match v {
@@ -200,6 +209,12 @@ impl From<i64> for Value {
 impl From<bool> for Value {
     fn from(v: bool) -> Self {
         Value::Bool(Some(v))
+    }
+}
+
+impl From<Option<bool>> for Value {
+    fn from(v: Option<bool>) -> Self {
+        Value::Bool(v)
     }
 }
 
@@ -1384,7 +1399,7 @@ mod tests {
         let flags = vec![(None, "foo", "foo desc", "", "").into()];
         let parsed = ParseOptions::new()
             .flags(flags)
-            .parse_args(&vec!["--no-foo", "bar"])
+            .parse_args(&["--no-foo", "bar"])
             .unwrap();
         let foo: String = parsed.pick("foo");
         assert_eq!(foo, "bar");
@@ -1396,7 +1411,7 @@ mod tests {
         let flags = vec![(None, "no-foo", "foo desc", "", "").into()];
         let parsed = ParseOptions::new()
             .flags(flags)
-            .parse_args(&vec!["--foo", "bar"])
+            .parse_args(&["--foo", "bar"])
             .unwrap();
         let foo: String = parsed.pick("no-foo");
         assert_eq!(foo, "bar");
@@ -1420,10 +1435,26 @@ mod tests {
         let parsed = parser.parse_args(&args).unwrap();
         assert_eq!(parsed.pick::<Option<String>>("opt_str"), None);
 
-        let parsed = parser.parse_args(&vec!["--opt_str", "foo"]).unwrap();
+        let parsed = parser.parse_args(&["--opt_str", "foo"]).unwrap();
         assert_eq!(
             parsed.pick::<Option<String>>("opt_str"),
             Some("foo".to_string())
         );
+    }
+
+    #[test]
+    fn test_parse_option_bool_value() {
+        let flags = vec![(None, "opt-bool", "a bool", Value::Bool(None), "").into()];
+        let parser = ParseOptions::new().flags(flags).into_parser();
+
+        let args: Vec<&str> = Default::default();
+        let parsed = parser.parse_args(&args).unwrap();
+        assert_eq!(parsed.pick::<Option<bool>>("opt-bool"), None);
+
+        let parsed = parser.parse_args(&["--opt-bool"]).unwrap();
+        assert_eq!(parsed.pick::<Option<bool>>("opt-bool"), Some(true),);
+
+        let parsed = parser.parse_args(&["--no-opt-bool"]).unwrap();
+        assert_eq!(parsed.pick::<Option<bool>>("opt-bool"), Some(false),);
     }
 }

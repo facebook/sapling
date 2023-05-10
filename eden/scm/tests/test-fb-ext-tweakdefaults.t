@@ -256,6 +256,13 @@ Don't break automation
   A dir1/file with space
   A dir1/subdir1/subf1
 
+But can still manually disable root-relative:
+  $ HGPLAIN=1 hg status --no-root-relative
+  A ../-v
+  A ../f1
+  A ../file with space
+  A ../subdir1/subf1
+
 This tag is kept to keep the rest of the test consistent:
   $ echo >> ../.hgtags
   $ hg commit -Aqm "add foo tag"

@@ -86,7 +86,7 @@ define_flags! {
         change: String,
 
         /// show status relative to root
-        root_relative: bool,
+        root_relative: Option<bool>,
 
         walk_opts: WalkOpts,
         formatter_opts: FormatterOpts,
@@ -164,7 +164,10 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
                 .config()
                 .get_or::<bool>("ui", "statuscopies", || false)?,
         endl: if ctx.opts.print0 { '\0' } else { '\n' },
-        root_relative: ctx.opts.root_relative || hgplain::is_plain(None),
+        root_relative: ctx
+            .opts
+            .root_relative
+            .unwrap_or_else(|| hgplain::is_plain(None)),
     };
 
     let (status, copymap) = match repo.config().get_or_default("status", "use-rust")? {
