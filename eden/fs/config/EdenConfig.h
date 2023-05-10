@@ -733,6 +733,11 @@ class EdenConfig : private ConfigSettingManager {
       100,
       this};
 
+  ConfigSetting<bool> hgEnableBlobMetaLocalStoreCaching{
+      "hg:cache-blob-metadata-in-localstore",
+      true,
+      this};
+
   /**
    * List of paths to filter out when importing Mercurial trees.
    *

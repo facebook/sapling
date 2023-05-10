@@ -148,6 +148,11 @@ void EdenMain::registerStandardBackingStores() {
         reloadableConfig,
         params.sharedStats.copy(),
         params.serverState->getStructuredLogger());
+
+    auto localStoreCaching = reloadableConfig->getEdenConfig()
+                                 ->hgEnableBlobMetaLocalStoreCaching.getValue()
+        ? LocalStoreCachedBackingStore::CachingPolicy::TreesAndBlobMetadata
+        : LocalStoreCachedBackingStore::CachingPolicy::Trees;
     return std::make_shared<LocalStoreCachedBackingStore>(
         std::make_shared<HgQueuedBackingStore>(
             params.localStore,
@@ -160,7 +165,7 @@ void EdenMain::registerStandardBackingStores() {
                 params.serverState->getProcessNameCache())),
         params.localStore,
         params.sharedStats.copy(),
-        LocalStoreCachedBackingStore::CachingPolicy::TreesAndBlobMetadata);
+        localStoreCaching);
   });
 
   registerBackingStore(
