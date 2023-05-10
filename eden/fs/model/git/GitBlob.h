@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <folly/Range.h>
+#include <memory>
 
 namespace folly {
 class IOBuf;
@@ -16,7 +16,6 @@ class IOBuf;
 namespace facebook::eden {
 
 class ObjectId;
-class Hash20;
 class Blob;
 
 /**

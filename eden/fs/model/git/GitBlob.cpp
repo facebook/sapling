@@ -11,7 +11,6 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include "eden/fs/model/Blob.h"
-#include "eden/fs/model/Hash.h"
 
 using folly::IOBuf;
 using std::invalid_argument;
