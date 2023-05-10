@@ -59,7 +59,7 @@ use crate::errors::ErrorKind;
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::lfs_server_context::UriBuilder;
 use crate::middleware::LfsMethod;
-use crate::popularity::allow_consistent_routing;
+use crate::popularity::consistent_routing;
 use crate::scuba::LfsScubaKey;
 
 define_stats! {
@@ -313,22 +313,22 @@ async fn internal_objects(
             .await
             .map_err(ErrorKind::Error)?;
 
-        let allow_consistent_routing = match obj {
-            Some(obj) => allow_consistent_routing(ctx, obj, GlobalTimeWindowCounterBuilder).await,
-            None => true,
+        let consistent_routing = match obj {
+            Some(obj) => consistent_routing(ctx, obj, GlobalTimeWindowCounterBuilder).await,
+            None => Some(NonZeroU16::new(1).unwrap()),
         };
 
-        Result::<_, ErrorKind>::Ok((obj, allow_consistent_routing))
+        Result::<_, ErrorKind>::Ok((obj, consistent_routing))
     });
 
     let objs = future::try_join_all(futs).await?;
 
     objs.into_iter()
-        .filter_map(|(maybe_obj, allow_consistent_routing)| match maybe_obj {
+        .filter_map(|(maybe_obj, consistent_routing)| match maybe_obj {
             // Map the objects we have locally into an action routing to a Mononoke LFS server.
             Some(obj) => {
-                let uri = if allow_consistent_routing && ctx.config.enable_consistent_routing() {
-                    let routing_key = generate_routing_key(ctx.config.tasks_per_content(), obj.oid);
+                let uri = if let Some(consistent_routing) = consistent_routing && ctx.config.enable_consistent_routing() {
+                    let routing_key = generate_routing_key(consistent_routing, obj.oid);
                     ctx.uri_builder
                         .consistent_download_uri(&obj.id, routing_key)
                 } else {

@@ -9,6 +9,7 @@ use std::collections::BTreeSet;
 use std::num::NonZeroU16;
 use std::str::FromStr;
 
+use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use gotham_ext::middleware::PostResponseConfig;
@@ -30,6 +31,59 @@ pub struct ObjectPopularity {
     /// consistently-routed. This ensures the full pool of servers can be used to serve very
     /// popular blobs.
     pub threshold: u64,
+
+    pub thresholds: Vec<ConsistentRoutingRing>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsistentRoutingRing {
+    pub threshold: u64,
+    pub mode: ConsistentRoutingRingMode,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ConsistentRoutingRingMode {
+    Num { tasks_per_content: NonZeroU16 },
+    All,
+}
+
+impl TryFrom<lfs_server_config::ConsistentRoutingRingMode> for ConsistentRoutingRingMode {
+    type Error = Error;
+
+    fn try_from(value: lfs_server_config::ConsistentRoutingRingMode) -> Result<Self, Self::Error> {
+        let mode = match value {
+            lfs_server_config::ConsistentRoutingRingMode::num(t) => {
+                let tasks_per_content = t
+                    .tasks_per_content
+                    .try_into()
+                    .with_context(|| "tasks_per_content is < 0")?;
+                ConsistentRoutingRingMode::Num {
+                    tasks_per_content: NonZeroU16::new(tasks_per_content)
+                        .with_context(|| "tasks_per_content is 0")?,
+                }
+            }
+            lfs_server_config::ConsistentRoutingRingMode::all(_) => ConsistentRoutingRingMode::All,
+            lfs_server_config::ConsistentRoutingRingMode::UnknownField(_) => {
+                bail!("Unknown field in ConsistentRoutingRingMode")
+            }
+        };
+        Ok(mode)
+    }
+}
+
+impl TryFrom<lfs_server_config::ConsistentRoutingRing> for ConsistentRoutingRing {
+    type Error = Error;
+
+    fn try_from(value: lfs_server_config::ConsistentRoutingRing) -> Result<Self, Self::Error> {
+        let threshold = value
+            .threshold
+            .try_into()
+            .with_context(|| format!("Invalid threshold: {:?}", value.threshold))?;
+
+        let mode = value.mode.try_into().context("Invalid mode")?;
+
+        Ok(Self { threshold, mode })
+    }
 }
 
 impl TryFrom<lfs_server_config::ObjectPopularity> for ObjectPopularity {
@@ -46,10 +100,19 @@ impl TryFrom<lfs_server_config::ObjectPopularity> for ObjectPopularity {
             .try_into()
             .with_context(|| format!("Invalid threshold: {:?}", value.threshold))?;
 
+        let thresholds = value
+            .thresholds
+            .clone()
+            .into_iter()
+            .map(|l| l.try_into())
+            .collect::<Result<Vec<_>, _>>()
+            .context("Invalid routing thresholds")?;
+
         Ok(Self {
             category: value.category,
             window,
             threshold,
+            thresholds,
         })
     }
 }
@@ -59,7 +122,6 @@ pub struct ServerConfig {
     pub raw_server_config: lfs_server_config::LfsServerConfig,
     loadshedding_limits: Vec<LoadShedLimit>,
     object_popularity: Option<ObjectPopularity>,
-    tasks_per_content: NonZeroU16,
     disable_compression_identities: Vec<MononokeIdentitySet>,
 }
 
@@ -82,14 +144,6 @@ impl TryFrom<lfs_server_config::LfsServerConfig> for ServerConfig {
             .transpose()
             .with_context(|| "Invalid object popularity")?;
 
-        let tasks_per_content = value
-            .tasks_per_content
-            .try_into()
-            .with_context(|| "tasks_per_content is < 0")?;
-
-        let tasks_per_content =
-            NonZeroU16::new(tasks_per_content).with_context(|| "tasks_per_content is 0")?;
-
         let mut disable_compression_identities: Vec<MononokeIdentitySet> = Vec::new();
         for list in value.disable_compression_identities.iter() {
             let idents = list
@@ -103,7 +157,6 @@ impl TryFrom<lfs_server_config::LfsServerConfig> for ServerConfig {
             raw_server_config: value,
             loadshedding_limits,
             object_popularity,
-            tasks_per_content,
             disable_compression_identities,
         })
     }
@@ -148,7 +201,6 @@ impl Default for ServerConfig {
             raw_server_config,
             loadshedding_limits: vec![],
             object_popularity: None,
-            tasks_per_content: NonZeroU16::new(1).unwrap(),
             disable_compression_identities: vec![],
         }
     }
@@ -179,9 +231,6 @@ impl ServerConfig {
     #[cfg(test)]
     pub fn object_popularity_mut(&mut self) -> &mut Option<ObjectPopularity> {
         &mut self.object_popularity
-    }
-    pub fn tasks_per_content(&self) -> NonZeroU16 {
-        self.tasks_per_content
     }
     pub fn disable_compression(&self) -> bool {
         self.raw_server_config.disable_compression

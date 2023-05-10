@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::num::NonZeroU16;
 use std::time::Duration;
 
 use anyhow::Error;
@@ -15,6 +16,7 @@ use time_window_counter::GlobalTimeWindowCounterBuilder;
 use tokio::time;
 
 use crate::batch::InternalObject;
+use crate::config::ConsistentRoutingRingMode;
 use crate::config::ObjectPopularity;
 use crate::lfs_server_context::RepositoryRequestContext;
 
@@ -72,14 +74,18 @@ async fn increment_and_fetch_object_popularity<B: PopularityBuilder>(
     Ok(v)
 }
 
-pub async fn allow_consistent_routing<B: PopularityBuilder>(
+/// None -> no consistent routing - routing randomly to all tasks
+/// Some(n) -> consistently route to n tasks
+///
+/// By default, route all blobs consistently to one task - Some(1)
+pub async fn consistent_routing<B: PopularityBuilder>(
     ctx: &RepositoryRequestContext,
     obj: InternalObject,
     builder: B,
-) -> bool {
+) -> Option<NonZeroU16> {
     let config = match ctx.config.object_popularity() {
         Some(r) => r,
-        None => return true,
+        None => return Some(NonZeroU16::new(1).unwrap()),
     };
 
     let popularity = time::timeout(
@@ -91,7 +97,23 @@ pub async fn allow_consistent_routing<B: PopularityBuilder>(
     match popularity {
         Ok(Ok(popularity)) => {
             STATS::success.add_value(1);
-            return popularity <= config.threshold;
+            // The bigger the popularity, the bigger tasks_per_content.
+            // Thresholds are sorted in increasing order.
+            // [pop_thresh = 0,    tasks_per_content = 1]
+            // [pop_thresh = 100,  tasks_per_content = 10]
+            // [pop_thresh = 1000, tasks_per_content = All]
+            for ring in config.thresholds.iter().rev() {
+                if popularity >= ring.threshold {
+                    match ring.mode {
+                        ConsistentRoutingRingMode::Num { tasks_per_content } => {
+                            return Some(tasks_per_content);
+                        }
+                        ConsistentRoutingRingMode::All => return None,
+                    }
+                }
+            }
+            // Shouldn't be reached as we require to have a ring with popularity
+            // threshold 0. Let's default to 1 anyway.
         }
         Ok(Err(_)) => {
             // Errored
@@ -103,8 +125,8 @@ pub async fn allow_consistent_routing<B: PopularityBuilder>(
         }
     };
 
-    // Default to allowed
-    true
+    // Default to one task per blob
+    Some(NonZeroU16::new(1).unwrap())
 }
 
 #[cfg(test)]
@@ -120,6 +142,8 @@ mod test {
     use time_window_counter::GlobalTimeWindowCounter;
 
     use super::*;
+    use crate::config::ConsistentRoutingRing;
+    use crate::config::ConsistentRoutingRingMode;
     use crate::config::ObjectPopularity;
     use crate::config::ServerConfig;
 
@@ -213,7 +237,7 @@ mod test {
         let ctx = RepositoryRequestContext::test_builder(fb).await?.build()?;
         let ctr = DummyCounter::default();
 
-        assert!(allow_consistent_routing(&ctx, dummy(None), ctr).await);
+        assert!(consistent_routing(&ctx, dummy(None), ctr).await.is_some());
 
         Ok(())
     }
@@ -225,6 +249,18 @@ mod test {
             category: "foo".into(),
             window: 100,
             threshold: 10,
+            thresholds: vec![
+                ConsistentRoutingRing {
+                    threshold: 0,
+                    mode: ConsistentRoutingRingMode::Num {
+                        tasks_per_content: std::num::NonZeroU16::new(1).unwrap(),
+                    },
+                },
+                ConsistentRoutingRing {
+                    threshold: 10,
+                    mode: ConsistentRoutingRingMode::All,
+                },
+            ],
         });
 
         let ctx = RepositoryRequestContext::test_builder(fb)
@@ -233,11 +269,80 @@ mod test {
             .build()?;
         let ctr = DummyCounter::default();
 
-        assert!(allow_consistent_routing(&ctx, dummy(4), ctr.clone()).await);
+        assert!(
+            consistent_routing(&ctx, dummy(4), ctr.clone())
+                .await
+                .is_some()
+        );
 
-        assert!(allow_consistent_routing(&ctx, dummy(4), ctr.clone()).await);
+        assert!(
+            consistent_routing(&ctx, dummy(4), ctr.clone())
+                .await
+                .is_some()
+        );
 
-        assert!(!allow_consistent_routing(&ctx, dummy(4), ctr.clone()).await);
+        assert!(
+            consistent_routing(&ctx, dummy(4), ctr.clone())
+                .await
+                .is_none()
+        );
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_popularity_rings(fb: FacebookInit) -> Result<(), Error> {
+        let mut config = ServerConfig::default();
+        *config.object_popularity_mut() = Some(ObjectPopularity {
+            category: "foo".into(),
+            window: 100,
+            threshold: 10,
+            thresholds: vec![
+                ConsistentRoutingRing {
+                    threshold: 0,
+                    mode: ConsistentRoutingRingMode::Num {
+                        tasks_per_content: std::num::NonZeroU16::new(1).unwrap(),
+                    },
+                },
+                ConsistentRoutingRing {
+                    threshold: 10,
+                    mode: ConsistentRoutingRingMode::Num {
+                        tasks_per_content: std::num::NonZeroU16::new(10).unwrap(),
+                    },
+                },
+                ConsistentRoutingRing {
+                    threshold: 15,
+                    mode: ConsistentRoutingRingMode::All,
+                },
+            ],
+        });
+
+        let ctx = RepositoryRequestContext::test_builder(fb)
+            .await?
+            .config(config)
+            .build()?;
+        let ctr = DummyCounter::default();
+
+        assert_eq!(
+            consistent_routing(&ctx, dummy(4), ctr.clone()).await,
+            Some(std::num::NonZeroU16::new(1).unwrap())
+        );
+
+        assert_eq!(
+            consistent_routing(&ctx, dummy(4), ctr.clone()).await,
+            Some(std::num::NonZeroU16::new(1).unwrap())
+        );
+
+        assert_eq!(
+            consistent_routing(&ctx, dummy(4), ctr.clone()).await,
+            Some(std::num::NonZeroU16::new(10).unwrap())
+        );
+
+        assert!(
+            consistent_routing(&ctx, dummy(4), ctr.clone())
+                .await
+                .is_none()
+        );
 
         Ok(())
     }
@@ -249,6 +354,18 @@ mod test {
             category: "foo".into(),
             window: 100,
             threshold: 10,
+            thresholds: vec![
+                ConsistentRoutingRing {
+                    threshold: 0,
+                    mode: ConsistentRoutingRingMode::Num {
+                        tasks_per_content: std::num::NonZeroU16::new(1).unwrap(),
+                    },
+                },
+                ConsistentRoutingRing {
+                    threshold: 10,
+                    mode: ConsistentRoutingRingMode::All,
+                },
+            ],
         });
 
         let ctx = RepositoryRequestContext::test_builder(fb)
@@ -256,7 +373,11 @@ mod test {
             .config(config)
             .build()?;
 
-        assert!(allow_consistent_routing(&ctx, dummy(None), TimeoutCounter).await);
+        assert!(
+            consistent_routing(&ctx, dummy(None), TimeoutCounter)
+                .await
+                .is_some()
+        );
 
         Ok(())
     }
@@ -268,6 +389,18 @@ mod test {
             category: "foo".into(),
             window: 100,
             threshold: 10,
+            thresholds: vec![
+                ConsistentRoutingRing {
+                    threshold: 0,
+                    mode: ConsistentRoutingRingMode::Num {
+                        tasks_per_content: std::num::NonZeroU16::new(1).unwrap(),
+                    },
+                },
+                ConsistentRoutingRing {
+                    threshold: 10,
+                    mode: ConsistentRoutingRingMode::All,
+                },
+            ],
         });
 
         let ctx = RepositoryRequestContext::test_builder(fb)
@@ -275,7 +408,11 @@ mod test {
             .config(config)
             .build()?;
 
-        assert!(allow_consistent_routing(&ctx, dummy(None), ErrorCounter).await);
+        assert!(
+            consistent_routing(&ctx, dummy(None), ErrorCounter)
+                .await
+                .is_some()
+        );
 
         Ok(())
     }
