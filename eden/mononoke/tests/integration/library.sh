@@ -1194,8 +1194,7 @@ function write_infinitepush_config {
 CONFIG
 
   if [[ -n "${INFINITEPUSH_ALLOW_WRITES:-}" ]] || \
-     [[ -n "${INFINITEPUSH_NAMESPACE_REGEX:-}" ]] || \
-     [[ -n "${INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE:-}" ]];
+     [[ -n "${INFINITEPUSH_NAMESPACE_REGEX:-}" ]];
   then
     namespace=""
     if [[ -n "${INFINITEPUSH_NAMESPACE_REGEX:-}" ]]; then
@@ -1204,7 +1203,6 @@ CONFIG
 
     cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 allow_writes = ${INFINITEPUSH_ALLOW_WRITES:-true}
-hydrate_getbundle_response = ${INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE:-false}
 ${namespace}
 CONFIG
   fi
