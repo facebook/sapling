@@ -451,32 +451,14 @@ The purpose of the test is to check syncing of remote bookmarks and to verify th
   commitcloud: commits synchronized
   finished in * (glob)
 
-  $ sl -r "all() - 5b7437b33959::"
-  o  f141e512974a draft 'o_draft'
-  │
-  o  22f66edbeb8e public 'o2'  remote/regular
-  │
-  o  b22b11c36d16 public 'o1'
-  │
-  │ o  98eac947fc54 public 'e2'  remote/expensive
-  │ │
-  │ o  6733e9fe3e4b public 'e1'
-  ├─╯
-  @  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
-  
-
-  $ sl -r "all() - 6733e9fe3e4b::"
-  o  f141e512974a draft 'o_draft'
-  │
-  o  22f66edbeb8e public 'o2'  remote/regular
-  │
-  o  b22b11c36d16 public 'o1'
-  │
-  │ o  2c6d1f3b1bd6 draft 'e_draft'
-  │ │
-  │ o  8537bcdeff72 public 'e4'  remote/expensive_other
-  │ │
-  │ o  5b7437b33959 public 'e3'
-  ├─╯
-  @  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
-  
+XXX: We can't use `sl` here because output ordering is flaky.
+  $ hgedenapi log -T "{node|short} {phase} '{desc|firstline}' {remotebookmarks}\n" -r "sort(all(), desc)"
+  8b2dca0c8a72 public 'base_commit' remote/master
+  6733e9fe3e4b public 'e1' 
+  98eac947fc54 public 'e2' remote/expensive
+  5b7437b33959 public 'e3' 
+  8537bcdeff72 public 'e4' remote/expensive_other
+  2c6d1f3b1bd6 draft 'e_draft' 
+  b22b11c36d16 public 'o1' 
+  22f66edbeb8e public 'o2' remote/regular
+  f141e512974a draft 'o_draft' 
