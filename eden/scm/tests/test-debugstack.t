@@ -238,6 +238,52 @@ Import stack:
       $ hg log -Gr 'all()' -T '{desc}'
       @  E1
 
+    # Refer to working copy content.
+    # (add untracked file, add renamed file, delete file)
+
+      $ echo content > x
+      $ hg debugimportstack << EOS | marks
+      > [["commit", {"text": "F", "mark": ":6", "files": {"x": "."}}],
+      >  ["goto", {"mark": ":6"}]]
+      > EOS
+      {":6": "d10c8b78105441f6dc32a7bbce4168ea9c65f1e1"}
+
+      $ hg mv x y
+      $ hg debugimportstack << EOS | marks
+      > [["commit", {"text": "G", "mark": ":7", "files": {"y": "."}, "parents": `marks :6`}],
+      >  ["goto", {"mark": ":7"}]]
+      > EOS
+      {":7": "21c37e7dcec01cab99284455a842e5c1f4dc1023"}
+
+      $ rm y
+
+      $ hg debugimportstack << EOS | marks
+      > [["commit", {"text": "H", "mark": ":8", "files": {"y": "."}, "parents": `marks :7`}],
+      >  ["goto", {"mark": ":8"}]]
+      {":8": "9d8fe7c75ea2d88aa6e3242283443a8904991ed7"}
+
+      $ hg log -p -T '{desc}\n' -fr . --config diff.git=true
+      H
+      diff --git a/y b/y
+      deleted file mode 100644
+      --- a/y
+      +++ /dev/null
+      @@ -1,1 +0,0 @@
+      -content
+      
+      G
+      diff --git a/x b/y
+      copy from x
+      copy to y
+      
+      F
+      diff --git a/x b/x
+      new file mode 100644
+      --- /dev/null
+      +++ b/x
+      @@ -0,0 +1,1 @@
+      +content
+
     # Error cases.
 
       $ hg debugimportstack << EOS

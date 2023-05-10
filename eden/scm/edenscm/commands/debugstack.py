@@ -272,7 +272,8 @@ def debugimportstack(ui, repo, **opts):
          "files": {
            // null: file is deleted by this commit, otherwise
            // added or modified.
-           "foo/bar.txt": null | {
+           // ".": use file content from the working copy.
+           "foo/bar.txt": null | "." | {
              // The file content is utf-8.
              "data": "utf-8 file content",
 
@@ -298,6 +299,9 @@ def debugimportstack(ui, repo, **opts):
 
     Bookmarks will be moved if they become obsoleted (referred by
     ``predecessors``).
+
+    ``debugimportstack`` supports files to be referred as ".".
+    This can be useful to avoid reading file contents first.
 
     Working copy parent is not automatically moved. Use a separate
     ``goto`` or ``reset`` to move it.
@@ -506,6 +510,20 @@ def _filectxfn(repo, mctx, path, files_dict):
     file_info = files_dict[path]
     if file_info is None:
         return None
+    elif file_info == ".":
+        # get file from the working copy
+        if repo.wvfs.lexists(path):
+            # try to use wctx to preserve rename information
+            wctx = repo[None]
+            if path in wctx:
+                # wctx[path] contains rename information
+                return wctx[path]
+            else:
+                # untracked
+                return context.workingfilectx(repo, path)
+        else:
+            # deleted - do not use wctx since "!" files will fail to commit
+            return None
     else:
         if "data" in file_info:
             data = file_info["data"].encode("utf-8")

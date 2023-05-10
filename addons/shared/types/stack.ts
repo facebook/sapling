@@ -66,7 +66,7 @@ export type ImportCommit = {
   predecessors?: (Hash | Mark)[];
   /** Why predecessors are obsoleted? For example, 'amend', 'split', 'histedit'. */
   operation?: string;
-  files: {[path: RepoPath]: ExportFile | null};
+  files: {[path: RepoPath]: ExportFile | '.' | null};
 };
 
 /** Update the "current commit" without changing the working copy. */
