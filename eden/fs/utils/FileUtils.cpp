@@ -6,11 +6,14 @@
  */
 
 #include "eden/fs/utils/FileUtils.h"
+
 #include <boost/filesystem.hpp>
 #include <fmt/format.h>
 
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
+
+#include "eden/common/utils/WinError.h"
 
 namespace facebook::eden {
 

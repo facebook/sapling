@@ -13,6 +13,7 @@
 
 #include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/StringConv.h"
+#include "eden/common/utils/WinError.h"
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
 

@@ -6,6 +6,7 @@
  */
 
 #include <fmt/printf.h>
+#include <folly/Try.h>
 #include <folly/init/Init.h>
 #include <folly/portability/GFlags.h>
 #include <folly/portability/Windows.h>

@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/utils/SpawnedProcess.h"
+
 #include <fcntl.h>
 #include <folly/Exception.h>
 #include <folly/ScopeGuard.h>
@@ -14,19 +15,19 @@
 #include <folly/io/async/AsyncTimeout.h>
 #include <folly/io/async/EventBaseManager.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/Unistd.h>
 #include <folly/system/Shell.h>
 #include <signal.h>
 #include <chrono>
 #include <memory>
 #include <system_error>
 #include <thread>
+#include "eden/common/utils/StringConv.h"
+#include "eden/common/utils/WinError.h"
 
 #ifndef _WIN32
-#include <folly/portability/Unistd.h>
 #include <sys/poll.h>
 #include <sys/wait.h>
-#else
-#include "eden/common/utils/StringConv.h"
 #endif
 
 using folly::checkPosixError;
