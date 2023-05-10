@@ -14,8 +14,6 @@ use cpython::*;
 #[cfg(feature = "python")]
 use cpython_ext::Bytes;
 #[cfg(feature = "python")]
-use cpython_ext::PyNone;
-#[cfg(feature = "python")]
 use cpython_ext::Str;
 use thiserror::Error;
 
@@ -51,8 +49,7 @@ pub enum ParseError {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Value {
-    OptBool(),
-    Bool(bool),
+    Bool(Option<bool>),
     Str(String),
     Int(i64),
     List(Vec<String>),
@@ -71,7 +68,7 @@ impl Value {
         };
 
         match self {
-            Value::Bool(_) | Value::OptBool() => unreachable!(),
+            Value::Bool(_) => unreachable!(),
             Value::Str(ref mut s) => {
                 *s = token.to_string();
                 Ok(())
@@ -104,7 +101,6 @@ impl ToPyObject for Value {
 
     fn to_py_object(&self, py: Python) -> Self::ObjectType {
         match self {
-            Value::OptBool() => PyNone.to_py_object(py).into_object(),
             Value::Bool(b) => b.to_py_object(py).into_object(),
             Value::Str(s) => Str::from(Bytes::from(s.to_string()))
                 .to_py_object(py)
@@ -129,7 +125,7 @@ impl ToPyObject for Value {
 impl<'source> FromPyObject<'source> for Value {
     fn extract(py: Python, obj: &'source PyObject) -> PyResult<Self> {
         if let Ok(b) = obj.cast_as::<PyBool>(py) {
-            return Ok(Value::Bool(b.is_true()));
+            return Ok(Value::Bool(Some(b.is_true())));
         }
 
         if let Ok(_l) = obj.cast_as::<PyList>(py) {
@@ -143,7 +139,7 @@ impl<'source> FromPyObject<'source> for Value {
             return Ok(Value::Int(obj.extract::<i64>(py).unwrap()));
         }
 
-        Ok(Value::OptBool())
+        Ok(Value::Bool(None))
     }
 }
 
@@ -180,7 +176,7 @@ impl From<Value> for Option<String> {
 impl From<Value> for bool {
     fn from(v: Value) -> Self {
         match v {
-            Value::Bool(b) => b,
+            Value::Bool(b) => b.unwrap_or(false),
             _ => panic!("programming error:  {:?} was converted to bool", v),
         }
     }
@@ -203,7 +199,7 @@ impl From<i64> for Value {
 
 impl From<bool> for Value {
     fn from(v: bool) -> Self {
-        Value::Bool(v)
+        Value::Bool(Some(v))
     }
 }
 
@@ -551,10 +547,7 @@ impl Parser {
         if let Some(&known_flag_id) = self.long_map.get(clean_arg) {
             let name = self.parsing_options.flags[known_flag_id].long_name.as_ref();
             match opts.get_mut(name) {
-                Some(Value::OptBool()) => {
-                    opts.insert(name.to_string(), Value::Bool(positive_flag));
-                }
-                Some(Value::Bool(ref mut b)) => *b = positive_flag,
+                Some(Value::Bool(ref mut b)) => *b = Some(positive_flag),
                 Some(ref mut value) => {
                     let next = parts.next().or_else(|| iter.next().map(|(_i, arg)| arg));
                     value
@@ -571,10 +564,7 @@ impl Parser {
         if let Some(&known_flag_id) = self.long_map.get(&flag_with_no) {
             let name = self.parsing_options.flags[known_flag_id].long_name.as_ref();
             match opts.get_mut(name) {
-                Some(Value::OptBool()) => {
-                    opts.insert(name.to_string(), Value::Bool(!positive_flag));
-                }
-                Some(Value::Bool(ref mut b)) => *b = !positive_flag,
+                Some(Value::Bool(ref mut b)) => *b = Some(!positive_flag),
                 Some(ref mut value) => {
                     let next = parts.next().or_else(|| iter.next().map(|(_i, arg)| arg));
                     value
@@ -611,10 +601,7 @@ impl Parser {
             let matched_flag = &self.parsing_options.flags[prefixed_flag_ids[0]];
             let name = matched_flag.long_name.as_ref();
             match opts.get_mut(name) {
-                Some(Value::OptBool()) => {
-                    opts.insert(name.to_string(), Value::Bool(positive_flag));
-                }
-                Some(Value::Bool(ref mut b)) => *b = positive_flag,
+                Some(Value::Bool(ref mut b)) => *b = Some(positive_flag),
                 Some(ref mut value) => {
                     let next = parts.next().or_else(|| iter.next().map(|(_i, arg)| arg));
                     value
@@ -642,10 +629,7 @@ impl Parser {
                     .long_name
                     .to_string();
                 match opts.get_mut(&flag_name) {
-                    Some(Value::OptBool()) => {
-                        opts.insert(flag_name, Value::Bool(true));
-                    }
-                    Some(Value::Bool(ref mut b)) => *b = true,
+                    Some(Value::Bool(ref mut b)) => *b = Some(true),
                     Some(ref mut value) => {
                         if char_iter.peek().is_none() {
                             let next = iter.next().map(|(_i, arg)| arg);
@@ -767,7 +751,13 @@ mod tests {
 
     fn flags() -> Vec<Flag> {
         vec![
-            ('q', "quiet", "silences the output", Value::Bool(false), ""),
+            (
+                'q',
+                "quiet",
+                "silences the output",
+                Value::Bool(Some(false)),
+                "",
+            ),
             (
                 'c',
                 "config",
@@ -775,8 +765,14 @@ mod tests {
                 Value::List(Vec::new()),
                 "",
             ),
-            ('h', "help", "get some help", Value::Bool(false), ""),
-            ('v', "verbose", "level of verbosity", Value::Bool(false), ""),
+            ('h', "help", "get some help", Value::Bool(Some(false)), ""),
+            (
+                'v',
+                "verbose",
+                "level of verbosity",
+                Value::Bool(Some(false)),
+                "",
+            ),
             ('r', "rev", "revision hash", Value::Str("".to_string()), ""),
         ]
         .into_iter()
@@ -1342,7 +1338,7 @@ mod tests {
             ' ',
             "no-commit",
             "leaves the changes in the working copy",
-            Value::Bool(false),
+            Value::Bool(Some(false)),
             "",
         )];
         let flags = flags.into_iter().map(Into::into).collect();
@@ -1352,7 +1348,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        if let Value::Bool(no_commit) = result.pick("no-commit") {
+        if let Value::Bool(Some(no_commit)) = result.pick("no-commit") {
             assert!(!no_commit);
         } else {
             assert!(false);
@@ -1365,7 +1361,7 @@ mod tests {
             ' ',
             "no-commit",
             "leaves the changes in the working copy",
-            Value::Bool(false),
+            Value::Bool(Some(false)),
             "",
         )];
         let flags = flags.into_iter().map(Into::into).collect();
@@ -1375,7 +1371,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        if let Value::Bool(no_commit) = result.pick("no-commit") {
+        if let Value::Bool(Some(no_commit)) = result.pick("no-commit") {
             assert!(no_commit);
         } else {
             assert!(false);
