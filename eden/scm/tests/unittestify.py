@@ -22,12 +22,16 @@ try:
     # Used by :run_tests binary target
     import libfb.py.pathutils as pathutils
 
-    hgpath = parutil.get_file_path("hg.sh", pkg=__package__)
-    pythonbinpath = parutil.get_file_path("hgpython.sh", pkg=__package__)
+    hgpath = parutil.get_file_path("fb/run_buck_hg.sh", pkg=__package__)
+    pythonbinpath = parutil.get_file_path("fb/run_buck_hgpython.sh", pkg=__package__)
     watchman = parutil.get_file_path("watchman", pkg=__package__)
-    mononoke_server = parutil.get_file_path("mononoke", pkg=__package__)
     dummyssh = parutil.get_file_path("dummyssh3.par", pkg=__package__)
-    get_free_socket = parutil.get_file_path("get_free_socket.par", pkg=__package__)
+    if os.environ.get("USE_MONONOKE"):
+        mononoke_server = parutil.get_file_path("mononoke", pkg=__package__)
+        get_free_socket = parutil.get_file_path("get_free_socket.par", pkg=__package__)
+    else:
+        mononoke_server = None
+        get_free_socket = None
 except ImportError:
     # Used by :hg_run_tests and :hg_watchman_run_tests unittest target
     hgpath = os.environ.get("HGTEST_HG")

@@ -1569,7 +1569,7 @@ class Test(unittest.TestCase):
         env["CHGSOCKNAME"] = self._chgsockpath
 
         if self._watchman:
-            env["WATCHMAN_SOCK"] = self._watchmanproc.socket
+            env["WATCHMAN_SOCK"] = str(self._watchmanproc.socket)
             env["HGFSMONITOR_TESTS"] = "1"
 
         return env
