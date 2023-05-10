@@ -19,6 +19,7 @@ storemodel = { version = "0.1.0", path = "../storemodel" }
 thiserror = "1.0.36"
 tracing = "0.1.35"
 types = { version = "0.1.0", path = "../types" }
+xdiff = { version = "0.1.0", path = "../xdiff" }
 
 [dev-dependencies]
 manifest-tree = { version = "0.1.0", path = "../manifest-tree", features = ["for-tests"] }
