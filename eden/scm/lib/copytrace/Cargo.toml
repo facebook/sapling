@@ -11,6 +11,7 @@ async-trait = "0.1.58"
 configmodel = { version = "0.1.0", path = "../config/model" }
 dag = { version = "0.1.0", path = "../dag" }
 git2 = "0.14"
+hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
 manifest = { version = "0.1.0", path = "../manifest", features = ["for-tests"] }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 pathhistory = { version = "0.1.0", path = "../pathhistory" }

@@ -10,6 +10,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use dag::DagAlgorithm;
+use hg_metrics::increment_counter;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
@@ -155,7 +156,8 @@ impl CopyTrace for DagCopyTrace {
             let base = match self.dag.gca_one(set).await? {
                 Some(base) => base,
                 None => {
-                    tracing::trace!("no common ancestor");
+                    tracing::trace!("no common base");
+                    increment_counter("copytrace_noCommonBase", 1);
                     return Ok(None);
                 }
             };
@@ -167,6 +169,7 @@ impl CopyTrace for DagCopyTrace {
             if let Some(base_path) = base_path {
                 return self.trace_rename_forward(base, dst, base_path).await;
             } else {
+                increment_counter("copytrace_notInCommonBase", 1);
                 return Ok(None);
             }
         }
