@@ -783,7 +783,7 @@ def _related(f1, f2, limit):
     if _wrap_fctx(f1) == _wrap_fctx(f2):
         return f1  # a match
 
-    g1, g2 = f1.ancestors(), f2.ancestors()
+    g1, g2 = f1.ancestors(sort=True), f2.ancestors(sort=True)
     invalidatelinkrev = "invalidatelinkrev" in repo.storerequirements
 
     if invalidatelinkrev:

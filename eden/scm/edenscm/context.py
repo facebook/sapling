@@ -1184,7 +1184,10 @@ class basefilectx(object):
     def topologicalancestors(self, followfirst=False):
         return self.ancestors(followfirst=followfirst)
 
-    def ancestors(self, followfirst=False):
+    def ancestors(self, followfirst=False, sort=True):
+        # Results are always sorted. "sort" option is just for signature compat
+        # w/ remotefilectx.
+
         visit = {}
         c = self
         if followfirst:

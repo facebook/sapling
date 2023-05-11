@@ -483,13 +483,13 @@ class remotefilectx(context.filectx):
                     queue.append(p)
                 first = False
 
-    def ancestors(self, followfirst=False):
+    def ancestors(self, followfirst=False, sort=False):
         ancestors = list(self.topologicalancestors(followfirst=followfirst))
 
-        # Sort by linkrev
-        # TODO(strager): Remove this sort. linkrev() can be very expensive
-        # (O(changelog)), and the caller might not care about the order.
-        ancestors = sorted(ancestors, reverse=True, key=lambda x: x.linkrev())
+        if sort:
+            # Sort by linkrev - extremely slow (O(changelog)). Avoid this at all
+            # costs.
+            ancestors = sorted(ancestors, reverse=True, key=lambda x: x.linkrev())
 
         for ancestor in ancestors:
             yield ancestor
