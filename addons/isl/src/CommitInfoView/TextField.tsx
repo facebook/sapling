@@ -158,7 +158,7 @@ export function CommitInfoTextField({
                   onMouseDown={() => {
                     saveNewValue(suggestion.value);
                   }}>
-                  {suggestion.image && <img src={suggestion.image} alt={suggestion.label} />}
+                  {suggestion.image && <ImageWithFallback src={suggestion.image} />}
                   <span className="suggestion-label">
                     <span>{suggestion.label}</span>
                     {suggestion.label !== suggestion.value && <Subtle>{suggestion.value}</Subtle>}
@@ -170,6 +170,31 @@ export function CommitInfoTextField({
         ) : null}
       </div>
     </div>
+  );
+}
+
+const TRANSPARENT_1PX_GIF =
+  'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
+function ImageWithFallback({
+  src,
+  ...rest
+}: {src: string} & React.DetailedHTMLProps<
+  React.ImgHTMLAttributes<HTMLImageElement>,
+  HTMLImageElement
+>) {
+  return (
+    <img
+      src={src}
+      onError={e => {
+        // Images that fail to load would show a broken image icon.
+        // Instead, on error we can replace the image src with a transparent 1x1 gif to hide it
+        // and use our CSS fallback.
+        if (e.target) {
+          (e.target as HTMLImageElement).src = TRANSPARENT_1PX_GIF;
+        }
+      }}
+      {...rest}
+    />
   );
 }
 
