@@ -158,6 +158,8 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
   const schema = useRecoilValue(commitMessageFieldsSchema);
 
+  const isPublic = mode === 'amend' && commit.phase === 'public';
+
   const [fieldsBeingEdited, setFieldsBeingEdited] =
     useRecoilState<FieldsBeingEdited>(commitFieldsBeingEdited);
 
@@ -292,16 +294,18 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
           </Section>
         )}
       </div>
-      <div className="commit-info-view-toolbar-bottom">
-        <ActionsBar
-          commit={commit}
-          editedMessage={editedMessage}
-          fieldsBeingEdited={fieldsBeingEdited}
-          setFieldsBeingEdited={setFieldsBeingEdited}
-          isCommitMode={isCommitMode}
-          setMode={setMode}
-        />
-      </div>
+      {!isPublic && (
+        <div className="commit-info-view-toolbar-bottom">
+          <ActionsBar
+            commit={commit}
+            editedMessage={editedMessage}
+            fieldsBeingEdited={fieldsBeingEdited}
+            setFieldsBeingEdited={setFieldsBeingEdited}
+            isCommitMode={isCommitMode}
+            setMode={setMode}
+          />
+        </div>
+      )}
     </div>
   );
 }
