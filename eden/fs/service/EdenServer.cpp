@@ -1593,12 +1593,8 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
         event.repo_type = edenMount->getCheckoutConfig()->getRepoType();
         event.repo_source =
             basename(edenMount->getCheckoutConfig()->getRepoSource());
-        if (auto mountProtocol = edenMount->getMountProtocol()) {
-          event.fs_channel_type = FieldConverter<MountProtocol>{}.toDebugString(
-              mountProtocol.value());
-        } else {
-          event.fs_channel_type = "unknown";
-        }
+        auto* fsChannel = edenMount->getFsChannel();
+        event.fs_channel_type = fsChannel ? fsChannel->getName() : "unknown";
         event.is_takeover = doTakeover;
         event.duration =
             std::chrono::duration<double>{mountStopWatch.elapsed()}.count();

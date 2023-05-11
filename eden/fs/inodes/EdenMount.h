@@ -417,22 +417,13 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   Nfsd3* FOLLY_NULLABLE getNfsdChannel() const;
 
   /**
-   * Detect the FUSE/NFS/Prjfs channel for this mount point.
+   * Return true if the mount is initialized and it's NFS. A few parts of EdenFS
+   * special-case their behavior if NFS is in use.
    *
-   * This should only be called after the mount point has been successfully
-   * started.  (It is the caller's responsibility to perform proper
-   * synchronization here with the mount start operation.  This method provides
-   * no internal synchronization of its own.)
-   *
-   * Note these reflect the actually in use Mount Protocol, not what is written
-   * on disk to the mount config. If this mount failed to initialize, these
-   * boolean functions may all return false and getMountProtocol may return a
-   * nullopt.
+   * TODO: Ideally this function would not exist and any differences would be
+   * exposed via the FsChannel interface.
    */
-  bool isFuseChannel() const;
   bool isNfsdChannel() const;
-  bool isPrjfsChannel() const;
-  std::optional<MountProtocol> getMountProtocol() const;
 
   /**
    * This allows earlier detection if this is an NFS mount than isNfsdChannel.

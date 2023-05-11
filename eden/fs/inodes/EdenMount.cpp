@@ -1180,42 +1180,8 @@ void EdenMount::setTestPrjfsChannel(
 
 #endif
 
-bool EdenMount::isFuseChannel() const {
-  return getFuseChannel() != nullptr;
-}
-
 bool EdenMount::isNfsdChannel() const {
   return getNfsdChannel() != nullptr;
-}
-
-bool EdenMount::isPrjfsChannel() const {
-  return folly::kIsWindows;
-}
-
-std::optional<MountProtocol> EdenMount::getMountProtocol() const {
-  // Ideally we could just read the client config and return that value.
-  // However, the mount protocol used vs. written can change in a few cases.
-  // 1. The specificed protocol is NFS, but NFS is not enabled. Fuse will be
-  // used instead
-  // 2. Someone changed the protocol version written to disk after we
-  // initialized the mount. We do not re-read the config after we initialize a
-  // mount. So technically our in memory config would match the mount protocol
-  // actually used. But someday checkout configs might be reloadable, so
-  // its not clear that this case will always remain safe.
-  // 3. Someone changed the on disk config and performed a graceful restart.
-  // We will use whatever mount protocol was used by the process before the
-  // graceful restart and ignore the on disk state.
-  //
-  // To most accurately report the mount protocol used we, check the actual type
-  // of the channel and report this mount protocol.
-  if (isFuseChannel()) {
-    return MountProtocol::FUSE;
-  } else if (isNfsdChannel()) {
-    return MountProtocol::NFS;
-  } else if (isPrjfsChannel()) {
-    return MountProtocol::PRJFS;
-  }
-  return std::nullopt;
 }
 
 void EdenMount::calculateIsNfsMount(
