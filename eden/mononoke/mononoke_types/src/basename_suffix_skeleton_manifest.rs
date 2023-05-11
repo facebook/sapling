@@ -18,6 +18,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 
 use crate::blob::BasenameSuffixSkeletonManifestBlob;
 use crate::blob::Blob;
@@ -29,7 +30,7 @@ use crate::typed_hash::BasenameSuffixSkeletonManifestContext;
 use crate::typed_hash::BasenameSuffixSkeletonManifestId;
 use crate::typed_hash::IdContext;
 use crate::typed_hash::ShardedMapNodeBSSMContext;
-use crate::typed_hash::ShardedMapNodeBSSMId;
+pub use crate::typed_hash::ShardedMapNodeBSSMId;
 use crate::MPathElement;
 use crate::ThriftConvert;
 
@@ -196,7 +197,7 @@ impl BasenameSuffixSkeletonManifest {
     ) -> BoxStream<'a, Result<(MPathElement, BssmEntry)>> {
         self.subentries
             .into_entries(ctx, blobstore)
-            .map(|res| res.and_then(|(k, v)| anyhow::Ok((MPathElement::from_smallvec(k)?, v))))
+            .and_then(|(k, v)| async move { anyhow::Ok((MPathElement::from_smallvec(k)?, v)) })
             .boxed()
     }
 
@@ -209,6 +210,19 @@ impl BasenameSuffixSkeletonManifest {
         self.subentries
             .into_prefix_entries(ctx, blobstore, prefix)
             .map(|res| res.and_then(|(k, v)| anyhow::Ok((MPathElement::from_smallvec(k)?, v))))
+            .boxed()
+    }
+
+    pub fn into_subentries_with_shard_ids<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+    ) -> BoxStream<'a, Result<(MPathElement, BssmEntry, Option<ShardedMapNodeBSSMId>)>> {
+        self.subentries
+            .into_entries_with_shard_ids(ctx, blobstore)
+            .map(|res| {
+                res.and_then(|(k, v, id)| anyhow::Ok((MPathElement::from_smallvec(k)?, v, id)))
+            })
             .boxed()
     }
 }

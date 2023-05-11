@@ -28,6 +28,7 @@ use crate::typed_hash::ChangesetId;
 use crate::typed_hash::DeletedManifestV2Context;
 use crate::typed_hash::DeletedManifestV2Id;
 use crate::typed_hash::IdContext;
+pub use crate::typed_hash::ShardedMapNodeDMv2Id;
 use crate::MPathElement;
 use crate::ThriftConvert;
 
@@ -199,6 +200,25 @@ impl DeletedManifestV2 {
             linknode,
             subentries,
         }
+    }
+    pub fn into_subentries_with_shard_ids<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+    ) -> BoxStream<
+        'a,
+        Result<(
+            MPathElement,
+            DeletedManifestV2Id,
+            Option<ShardedMapNodeDMv2Id>,
+        )>,
+    > {
+        self.subentries
+            .into_entries_with_shard_ids(ctx, blobstore)
+            .and_then(
+                |(k, v, id)| async move { anyhow::Ok((MPathElement::from_smallvec(k)?, v, id)) },
+            )
+            .boxed()
     }
 }
 
