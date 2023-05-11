@@ -13,6 +13,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/utils/Match.h"
 #include "eden/fs/utils/StatTimes.h"
 
 namespace facebook::eden {
@@ -28,24 +29,14 @@ template <class>
 inline constexpr bool always_false_v = false;
 
 dtype_t VirtualInode::getDtype() const {
-  return std::visit(
-      [](auto&& arg) {
-        using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_same_v<T, InodePtr>) {
-          return arg->getType();
-        } else if constexpr (std::is_same_v<
-                                 T,
-                                 UnmaterializedUnloadedBlobDirEntry>) {
-          return arg.getDtype();
-        } else if constexpr (std::is_same_v<T, TreePtr>) {
-          return dtype_t::Dir;
-        } else if constexpr (std::is_same_v<T, TreeEntry>) {
-          return arg.getDtype();
-        } else {
-          static_assert(always_false_v<T>, "non-exhaustive visitor!");
-        }
+  return match(
+      variant_,
+      [](const InodePtr& inode) { return inode->getType(); },
+      [](const UnmaterializedUnloadedBlobDirEntry& entry) {
+        return entry.getDtype();
       },
-      variant_);
+      [](const TreePtr&) { return dtype_t::Dir; },
+      [](const TreeEntry& entry) { return entry.getDtype(); });
 }
 
 bool VirtualInode::isDirectory() const {
@@ -53,24 +44,14 @@ bool VirtualInode::isDirectory() const {
 }
 
 VirtualInode::ContainedType VirtualInode::testGetContainedType() const {
-  return std::visit(
-      [](auto&& arg) {
-        using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_same_v<T, InodePtr>) {
-          return ContainedType::Inode;
-        } else if constexpr (std::is_same_v<
-                                 T,
-                                 UnmaterializedUnloadedBlobDirEntry>) {
-          return ContainedType::DirEntry;
-        } else if constexpr (std::is_same_v<T, TreePtr>) {
-          return ContainedType::Tree;
-        } else if constexpr (std::is_same_v<T, TreeEntry>) {
-          return ContainedType::TreeEntry;
-        } else {
-          static_assert(always_false_v<T>, "non-exhaustive visitor!");
-        }
+  return match(
+      variant_,
+      [](const InodePtr&) { return ContainedType::Inode; },
+      [](const UnmaterializedUnloadedBlobDirEntry&) {
+        return ContainedType::DirEntry;
       },
-      variant_);
+      [](const TreePtr&) { return ContainedType::Tree; },
+      [](const TreeEntry&) { return ContainedType::TreeEntry; });
 }
 
 ImmediateFuture<Hash20> VirtualInode::getSHA1(
@@ -95,95 +76,79 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
   // This is now guaranteed to be a dtype_t::Regular file. This means there's no
   // need for a Tree case, as Trees are always directories.
 
-  return std::visit(
-      [&](auto&& arg) -> ImmediateFuture<Hash20> {
-        using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_same_v<T, InodePtr>) {
-          return arg.asFilePtr()->getSha1(fetchContext);
-        } else if constexpr (std::is_same_v<
-                                 T,
-                                 UnmaterializedUnloadedBlobDirEntry>) {
-          return objectStore->getBlobSha1(arg.getHash(), fetchContext);
-        } else if constexpr (std::is_same_v<T, TreePtr>) {
-          return makeImmediateFuture<Hash20>(PathError(EISDIR, path));
-        } else if constexpr (std::is_same_v<T, TreeEntry>) {
-          const auto& hash = arg.getContentSha1();
-          // If available, use the TreeEntry's ContentsSha1
-          if (hash.has_value()) {
-            return ImmediateFuture<Hash20>(hash.value());
-          }
-          // Revert to querying the objectStore for the file's medatadata
-          return objectStore->getBlobSha1(arg.getHash(), fetchContext);
-        } else {
-          static_assert(always_false_v<T>, "non-exhaustive visitor!");
-        }
+  return match(
+      variant_,
+      [&](const InodePtr& inode) {
+        return inode.asFilePtr()->getSha1(fetchContext);
       },
-      variant_);
+      [&](const UnmaterializedUnloadedBlobDirEntry& entry) {
+        return objectStore->getBlobSha1(entry.getHash(), fetchContext);
+      },
+      [&](const TreePtr&) {
+        return makeImmediateFuture<Hash20>(PathError(EISDIR, path));
+      },
+      [&](const TreeEntry& entry) {
+        const auto& hash = entry.getContentSha1();
+        // If available, use the TreeEntry's ContentsSha1
+        if (hash.has_value()) {
+          return ImmediateFuture<Hash20>(hash.value());
+        }
+        // Revert to querying the objectStore for the file's medatadata
+        return objectStore->getBlobSha1(entry.getHash(), fetchContext);
+      });
 }
 
 ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
     RelativePathPiece path,
     const ObjectFetchContextPtr& fetchContext) const {
-  return std::visit(
-      [&](auto&& arg) -> ImmediateFuture<std::optional<TreeEntryType>> {
-        using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_same_v<T, InodePtr>) {
+  using R = ImmediateFuture<std::optional<TreeEntryType>>;
+  return match(
+      variant_,
+      [&](const InodePtr& inode) -> R {
 #ifdef _WIN32
-          (void)fetchContext;
-          // stat does not have real data for an inode on Windows, so we can not
-          // directly use the mode bits. Further inodes are only tree or regular
-          // files on windows see treeEntryTypeFromMode.
-          switch (arg->getType()) {
-            case dtype_t::Dir:
-              return TreeEntryType::TREE;
-            case dtype_t::Regular:
-              return TreeEntryType::REGULAR_FILE;
-            default:
-              return std::nullopt;
-          }
-#else
-          (void)path;
-          return arg->stat(fetchContext).thenValue([](const struct stat&& st) {
-            return treeEntryTypeFromMode(st.st_mode);
-          });
-#endif
-        } else if constexpr (std::is_same_v<
-                                 T,
-                                 UnmaterializedUnloadedBlobDirEntry>) {
-          return makeImmediateFutureWith([mode = arg.getInitialMode()]() {
-            return treeEntryTypeFromMode(mode);
-          });
-        } else if constexpr (std::is_same_v<T, TreePtr>) {
-          return TreeEntryType::TREE;
-        } else if constexpr (std::is_same_v<T, TreeEntry>) {
-          return arg.getType();
-        } else {
-          static_assert(always_false_v<T>, "non-exhaustive visitor!");
+        (void)fetchContext;
+        // stat does not have real data for an inode on Windows, so we can not
+        // directly use the mode bits. Further inodes are only tree or regular
+        // files on windows see treeEntryTypeFromMode.
+        switch (inode->getType()) {
+          case dtype_t::Dir:
+            return TreeEntryType::TREE;
+          case dtype_t::Regular:
+            return TreeEntryType::REGULAR_FILE;
+          default:
+            return std::nullopt;
         }
+#else
+        (void)path;
+        return inode->stat(fetchContext).thenValue([](const struct stat&& st) {
+          return treeEntryTypeFromMode(st.st_mode);
+        });
+#endif
       },
-      variant_);
+      [&](const UnmaterializedUnloadedBlobDirEntry& entry) {
+        return makeImmediateFutureWith([mode = entry.getInitialMode()]() {
+          return treeEntryTypeFromMode(mode);
+        });
+      },
+      [&](const TreePtr&) -> R { return TreeEntryType::TREE; },
+      [&](const TreeEntry& entry) -> R { return entry.getType(); });
 }
 
 ImmediateFuture<BlobMetadata> VirtualInode::getBlobMetadata(
     RelativePathPiece path,
     ObjectStore* objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
-  return std::visit(
-      [&](auto&& arg) mutable -> ImmediateFuture<BlobMetadata> {
-        using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_same_v<T, InodePtr>) {
-          return arg.asFilePtr()->getBlobMetadata(fetchContext);
-        } else if constexpr (
-            std::is_same_v<T, UnmaterializedUnloadedBlobDirEntry> ||
-            std::is_same_v<T, TreeEntry>) {
-          return objectStore->getBlobMetadata(arg.getHash(), fetchContext);
-        } else if constexpr (std::is_same_v<T, TreePtr>) {
-          return makeImmediateFuture<BlobMetadata>(PathError(EISDIR, path));
-        } else {
-          static_assert(always_false_v<T>, "non-exhaustive visitor!");
-        }
+  return match(
+      variant_,
+      [&](const InodePtr& inode) {
+        return inode.asFilePtr()->getBlobMetadata(fetchContext);
       },
-      variant_);
+      [&](const TreePtr&) {
+        return makeImmediateFuture<BlobMetadata>(PathError(EISDIR, path));
+      },
+      [&](auto& entry) {
+        return objectStore->getBlobMetadata(entry.getHash(), fetchContext);
+      });
 }
 
 EntryAttributes getEntryAttributesForNonFile(
@@ -418,32 +383,28 @@ VirtualInode::getChildren(
         std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>(
         PathError(ENOTDIR, path));
   }
-  return std::visit(
-      [&](auto&& arg)
-          -> folly::Try<std::vector<
-              std::pair<PathComponent, ImmediateFuture<VirtualInode>>>> {
-        using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_same_v<T, InodePtr>) {
-          return folly::Try<std::vector<
-              std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
-              arg.asTreePtr()->getChildren(fetchContext, false)};
-        } else if constexpr (std::is_same_v<T, TreePtr>) {
-          return folly::Try<std::vector<
-              std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
-              getChildrenHelper(arg, objectStore, fetchContext)};
-        } else if constexpr (
-            std::is_same_v<T, UnmaterializedUnloadedBlobDirEntry> ||
-            std::is_same_v<T, TreeEntry>) {
-          // These represent files in VirtualInode, and can't be
-          // descended
-          return folly::Try<std::vector<
-              std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
-              PathError(ENOTDIR, path, "variant is of unhandled type")};
-        } else {
-          static_assert(always_false_v<T>, "non-exhaustive visitor!");
-        }
+
+  auto notDirectory = [&] {
+    // These represent files in VirtualInode, and can't be descended
+    return folly::Try<
+        std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
+        PathError(ENOTDIR, path, "variant is of unhandled type")};
+  };
+
+  return match(
+      variant_,
+      [&](const InodePtr& inode) {
+        return folly::Try<std::vector<
+            std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
+            inode.asTreePtr()->getChildren(fetchContext, false)};
       },
-      variant_);
+      [&](const TreePtr& tree) {
+        return folly::Try<std::vector<
+            std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
+            getChildrenHelper(tree, objectStore, fetchContext)};
+      },
+      [&](const UnmaterializedUnloadedBlobDirEntry&) { return notDirectory(); },
+      [&](const TreeEntry&) { return notDirectory(); });
 }
 
 ImmediateFuture<
@@ -541,27 +502,23 @@ ImmediateFuture<VirtualInode> VirtualInode::getOrFindChild(
   if (!isDirectory()) {
     return makeImmediateFuture<VirtualInode>(PathError(ENOTDIR, path));
   }
-  return std::visit(
-      [childName, path, objectStore, &fetchContext](
-          auto&& arg) -> ImmediateFuture<VirtualInode> {
-        using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_same_v<T, InodePtr>) {
-          return arg.asTreePtr()->getOrFindChild(
-              childName, fetchContext, false);
-        } else if constexpr (std::is_same_v<T, TreePtr>) {
-          return getOrFindChildHelper(
-              arg, childName, path, objectStore, fetchContext);
-        } else if constexpr (
-            std::is_same_v<T, UnmaterializedUnloadedBlobDirEntry> ||
-            std::is_same_v<T, TreeEntry>) {
-          // These represent files in VirtualInode, and can't be descended
-          return makeImmediateFuture<VirtualInode>(
-              PathError(ENOTDIR, path, "variant is of unhandled type"));
-        } else {
-          static_assert(always_false_v<T>, "non-exhaustive visitor!");
-        }
+  auto notDirectory = [&] {
+    // These represent files in VirtualInode, and can't be descended
+    return makeImmediateFuture<VirtualInode>(
+        PathError(ENOTDIR, path, "variant is of unhandled type"));
+  };
+  return match(
+      variant_,
+      [&](const InodePtr& inode) {
+        return inode.asTreePtr()->getOrFindChild(
+            childName, fetchContext, false);
       },
-      variant_);
+      [&](const TreePtr& tree) {
+        return getOrFindChildHelper(
+            tree, childName, path, objectStore, fetchContext);
+      },
+      [&](const UnmaterializedUnloadedBlobDirEntry&) { return notDirectory(); },
+      [&](const TreeEntry&) { return notDirectory(); });
 }
 
 } // namespace facebook::eden
