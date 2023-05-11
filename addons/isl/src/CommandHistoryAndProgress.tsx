@@ -18,15 +18,18 @@ import {
   useAbortRunningOperation,
 } from './serverAPIState';
 import {CommandRunner} from './types';
+import {short} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import './CommandHistoryAndProgress.css';
+import {truncate} from 'shared/utils';
 
 function OperationDescription(props: {
   info: ValidatedRepoInfo;
   operation: Operation;
   className?: string;
+  long?: boolean;
 }): React.ReactElement {
   const {info, operation, className} = props;
   const desc = operation.getDescriptionForDisplay();
@@ -52,8 +55,17 @@ function OperationDescription(props: {
                 case 'repo-relative-file':
                   return arg.path;
                 case 'succeedable-revset':
-                  return arg.revset;
+                  return props.long
+                    ? arg.revset
+                    : // truncate full commit hashes to short representation visually
+                    // revset could also be a remote bookmark, so only do this if it looks like a hash
+                    /[a-z0-9]{40}/.test(arg.revset)
+                    ? short(arg.revset)
+                    : arg.revset;
               }
+            }
+            if (/\s/.test(arg)) {
+              return `"${props.long ? arg : truncate(arg, 30)}"`;
             }
             return arg;
           })
@@ -134,7 +146,7 @@ export function CommandHistoryAndProgress() {
               <>
                 <div className="progress-command-tooltip-command">
                   <strong>Command: </strong>
-                  <OperationDescription info={info} operation={progress.operation} />
+                  <OperationDescription info={info} operation={progress.operation} long />
                 </div>
                 <br />
                 <b>Command output:</b>
