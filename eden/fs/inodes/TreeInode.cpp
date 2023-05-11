@@ -37,6 +37,7 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/nfs/NfsDirList.h"
+#include "eden/fs/nfs/Nfsd3.h"
 #include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/prjfs/PrjfsChannel.h"

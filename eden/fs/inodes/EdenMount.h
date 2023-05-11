@@ -26,18 +26,19 @@
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/CacheHint.h"
+#include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/VirtualInode.h"
 #include "eden/fs/model/RootId.h"
-#include "eden/fs/nfs/Nfsd3.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/fs/telemetry/IActivityRecorder.h"
+#include "eden/fs/telemetry/TraceBus.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifndef _WIN32
@@ -67,12 +68,13 @@ class FuseChannel;
 class FuseDeviceUnmountedDuringInitialization;
 class DiffCallback;
 class InodeMap;
-class MountPoint;
 struct InodeMetadata;
 template <typename T>
 class InodeTable;
 using InodeMetadataTable = InodeTable<InodeMetadata>;
 class Journal;
+class MountPoint;
+class Nfsd3;
 class ObjectStore;
 class Overlay;
 class OverlayFileAccess;

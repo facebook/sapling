@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <optional>
 #include <vector>
+#include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"

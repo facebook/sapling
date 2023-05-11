@@ -41,6 +41,7 @@
 #include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/nfs/NfsServer.h"
+#include "eden/fs/nfs/Nfsd3.h"
 #include "eden/fs/prjfs/PrjfsChannel.h"
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
