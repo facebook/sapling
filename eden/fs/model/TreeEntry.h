@@ -10,7 +10,6 @@
 #include <iosfwd>
 #include <optional>
 
-#include <folly/String.h>
 #include <folly/Try.h>
 #include <folly/io/Cursor.h>
 
@@ -89,6 +88,11 @@ class TreeEntry {
         size_(size),
         contentSha1_(contentSha1) {}
 
+  const ObjectId& getObjectId() const {
+    return hash_;
+  }
+
+  // TODO: Replace with the more-accurate getObjectId() accessor.
   const ObjectId& getHash() const {
     return hash_;
   }

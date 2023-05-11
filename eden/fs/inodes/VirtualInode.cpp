@@ -82,7 +82,7 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
         return inode.asFilePtr()->getSha1(fetchContext);
       },
       [&](const UnmaterializedUnloadedBlobDirEntry& entry) {
-        return objectStore->getBlobSha1(entry.getHash(), fetchContext);
+        return objectStore->getBlobSha1(entry.getObjectId(), fetchContext);
       },
       [&](const TreePtr&) {
         return makeImmediateFuture<Hash20>(PathError(EISDIR, path));
@@ -147,7 +147,7 @@ ImmediateFuture<BlobMetadata> VirtualInode::getBlobMetadata(
         return makeImmediateFuture<BlobMetadata>(PathError(EISDIR, path));
       },
       [&](auto& entry) {
-        return objectStore->getBlobMetadata(entry.getHash(), fetchContext);
+        return objectStore->getBlobMetadata(entry.getObjectId(), fetchContext);
       });
 }
 
@@ -179,9 +179,6 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     RelativePathPiece path,
     ObjectStore* objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
-  std::optional<folly::Try<Hash20>> sha1;
-  std::optional<folly::Try<uint64_t>> size;
-  std::optional<folly::Try<std::optional<TreeEntryType>>> type;
   // For non regular files we return errors for hashes and sizes.
   // We intentionally want to refuse to compute the SHA1 of symlinks.
   auto dtype = getDtype();
@@ -287,7 +284,7 @@ ImmediateFuture<struct stat> VirtualInode::stat(
   return std::visit(
       [&](auto&& arg) -> ImmediateFuture<struct stat> {
         using T = std::decay_t<decltype(arg)>;
-        ObjectId hash;
+        ObjectId objectId;
         mode_t mode;
         if constexpr (std::is_same_v<T, InodePtr>) {
           // Note: there's no need to modify the return value of stat here, as
@@ -297,7 +294,7 @@ ImmediateFuture<struct stat> VirtualInode::stat(
         } else if constexpr (std::is_same_v<
                                  T,
                                  UnmaterializedUnloadedBlobDirEntry>) {
-          hash = arg.getHash();
+          objectId = arg.getObjectId();
           mode = arg.getInitialMode();
           // fallthrough
         } else if constexpr (std::is_same_v<T, TreePtr>) {
@@ -315,13 +312,13 @@ ImmediateFuture<struct stat> VirtualInode::stat(
           st.st_size = 0U;
           return st;
         } else if constexpr (std::is_same_v<T, TreeEntry>) {
-          hash = arg.getHash();
+          objectId = arg.getHash();
           mode = modeFromTreeEntryType(arg.getType());
           // fallthrough
         } else {
           static_assert(always_false_v<T>, "non-exhaustive visitor!");
         }
-        return objectStore->getBlobMetadata(hash, fetchContext)
+        return objectStore->getBlobMetadata(objectId, fetchContext)
             .thenValue([mode, lastCheckoutTime](const BlobMetadata& metadata) {
               struct stat st = {};
               st.st_mode = static_cast<decltype(st.st_mode)>(mode);

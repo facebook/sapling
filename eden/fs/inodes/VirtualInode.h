@@ -33,36 +33,26 @@ using VariantVirtualInode = std::
 } // namespace detail
 
 /**
- * Allows operating on an inode in whatever state it's currently in.
- * VirtualInode allows operating on an Inode object, Tree object or DirEntry
- * object all the same.
+ * VirtualInode allows read-only queries over a mount independent of the state
+ * it's in. If a mount has loaded inodes, they will be queried. Otherwise,
+ * source control objects will be fetched from the BackingStore, avoiding
+ * needing to query the overlay and track loaded inodes.
  *
- * This prevents needed to load inodes to perform operations on them, which
- * improves performance of SourceControl operations.
- *
- * note that the "virtual" in VirtualInodes means that they are representing
- * Inodes but may not actually hold an inode under the hood. VirtualInodes are
- * different from vnodes (macOS/freebsd data structure for inodes).
+ * Note that "virtual" in VirtualInode refers to the fact that these objects are
+ * inode-like, but may not reference an inode under the hood. They are unrelated
+ * to the BSD vnode concept.
  */
 class VirtualInode {
  public:
-  explicit VirtualInode(InodePtr& value) : variant_(value) {}
-  explicit VirtualInode(InodePtr&& value) : variant_(std::move(value)) {}
+  explicit VirtualInode(InodePtr value) : variant_(std::move(value)) {}
 
-  explicit VirtualInode(UnmaterializedUnloadedBlobDirEntry&& value)
+  explicit VirtualInode(UnmaterializedUnloadedBlobDirEntry value)
       : variant_(std::move(value)) {}
 
-  explicit VirtualInode(const detail::TreePtr& value, mode_t mode)
-      : variant_(value), treeMode_(mode) {}
-  explicit VirtualInode(detail::TreePtr&& value, mode_t mode)
+  explicit VirtualInode(detail::TreePtr value, mode_t mode)
       : variant_(std::move(value)), treeMode_(mode) {}
 
-  explicit VirtualInode(const TreeEntry& value) : variant_(value) {
-    XCHECK(!value.isTree())
-        << "TreeEntries which represent a tree should be resolved to a tree "
-        << "before being constructed into VirtualInode";
-  }
-  explicit VirtualInode(TreeEntry&& value) : variant_(std::move(value)) {
+  explicit VirtualInode(TreeEntry value) : variant_(std::move(value)) {
     XCHECK(!value.isTree())
         << "TreeEntries which represent a tree should be resolved to a tree "
         << "before being constructed into VirtualInode";

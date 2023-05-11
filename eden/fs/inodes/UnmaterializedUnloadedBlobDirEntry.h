@@ -6,6 +6,7 @@
  */
 
 #pragma once
+
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/utils/DirType.h"
@@ -31,12 +32,22 @@ class UnmaterializedUnloadedBlobDirEntry {
   // Note that these objects are only constructed when it is known that the
   // entry.getHash() exists. See TreeInode::getOrFindChild()
   explicit UnmaterializedUnloadedBlobDirEntry(const DirEntry& entry)
-      : hash_(entry.getHash()),
+      : objectId_(entry.getHash()),
         dtype_(entry.getDtype()),
         initialMode_(entry.getInitialMode()) {}
 
-  const ObjectId getHash() const {
-    return hash_;
+  UnmaterializedUnloadedBlobDirEntry(
+      const UnmaterializedUnloadedBlobDirEntry&) = default;
+  UnmaterializedUnloadedBlobDirEntry(UnmaterializedUnloadedBlobDirEntry&&) =
+      default;
+
+  UnmaterializedUnloadedBlobDirEntry& operator=(
+      const UnmaterializedUnloadedBlobDirEntry&) = default;
+  UnmaterializedUnloadedBlobDirEntry& operator=(
+      UnmaterializedUnloadedBlobDirEntry&&) = default;
+
+  const ObjectId& getObjectId() const {
+    return objectId_;
   }
 
   dtype_t getDtype() const {
@@ -55,7 +66,7 @@ class UnmaterializedUnloadedBlobDirEntry {
   }
 
  private:
-  ObjectId hash_;
+  ObjectId objectId_;
   dtype_t dtype_;
   mode_t initialMode_;
 };
