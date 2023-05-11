@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-#include "JournalDelta.h"
+#include "eden/fs/journal/JournalDelta.h"
 #include <folly/logging/xlog.h>
+#include "eden/fs/utils/Match.h"
 
 namespace facebook::eden {
 
@@ -132,40 +133,24 @@ JournalDeltaPtr::JournalDeltaPtr(RootUpdateJournalDelta* p) : data_{p} {
 }
 
 size_t JournalDeltaPtr::estimateMemoryUsage() const {
-  return std::visit(
-      [](auto delta) -> size_t {
-        if constexpr (std::is_same_v<decltype(delta), std::monostate>) {
-          return 0;
-        } else {
-          return delta->estimateMemoryUsage();
-        }
-      },
-      data_);
+  return match(
+      data_,
+      [](std::monostate) -> size_t { return 0; },
+      [](auto* delta) { return delta->estimateMemoryUsage(); });
 }
 
 const JournalDelta* JournalDeltaPtr::operator->() const noexcept {
-  return std::visit(
-      [](auto delta) -> JournalDelta* {
-        if constexpr (std::is_same_v<decltype(delta), std::monostate>) {
-          return nullptr;
-        } else {
-          return delta;
-        }
-      },
-      data_);
+  return match(
+      data_,
+      [](std::monostate) -> JournalDelta* { return nullptr; },
+      [](auto* delta) -> JournalDelta* { return delta; });
 }
 
 FileChangeJournalDelta* JournalDeltaPtr::getAsFileChangeJournalDelta() {
-  return std::visit(
-      [](auto delta) -> FileChangeJournalDelta* {
-        if constexpr (std::
-                          is_same_v<decltype(delta), FileChangeJournalDelta*>) {
-          return delta;
-        } else {
-          return nullptr;
-        }
-      },
-      data_);
+  return match(
+      data_,
+      [](FileChangeJournalDelta* p) { return p; },
+      [](auto) -> FileChangeJournalDelta* { return nullptr; });
 }
 
 } // namespace facebook::eden
