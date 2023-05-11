@@ -8,7 +8,7 @@
 import type {TrackErrorName, TrackEventName} from './eventNames';
 import type {TrackData, TrackDataWithEventName, TrackResult} from './types';
 
-import {randomId} from 'shared/utils';
+import {isPromise, randomId} from 'shared/utils';
 
 type SendData<T> = (data: TrackDataWithEventName, context: T) => void;
 
@@ -121,8 +121,4 @@ export class Tracker<T> {
     };
     this.sendData(trackData, this.context);
   }
-}
-
-function isPromise<T>(o: unknown): o is Promise<T> {
-  return typeof (o as {then?: () => void})?.then === 'function';
 }

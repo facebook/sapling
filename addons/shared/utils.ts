@@ -132,3 +132,7 @@ export function* zip<T, U>(iter1: Iterable<T>, iter2: Iterable<U>): IterableIter
 export function truncate(text: string, maxLength = 100): string {
   return text.length > maxLength ? text.substring(0, Math.max(0, maxLength - 1)) + '…' : text;
 }
+
+export function isPromise<T>(o: unknown): o is Promise<T> {
+  return typeof (o as {then?: () => void})?.then === 'function';
+}

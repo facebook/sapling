@@ -518,6 +518,28 @@ describe('CommitInfoView', () => {
               },
             });
           });
+
+          it('disables metaedit button with spinner while running', () => {
+            clickToSelectCommit('a');
+
+            clickToEditTitle();
+            clickToEditDescription();
+            {
+              act(() => {
+                userEvent.type(getTitleEditor(), ' hello new title');
+                userEvent.type(getDescriptionEditor(), '\nhello new text');
+              });
+            }
+
+            const amendMessageButton = within(
+              screen.getByTestId('commit-info-actions-bar'),
+            ).queryByText('Amend Message');
+            act(() => {
+              fireEvent.click(amendMessageButton!);
+            });
+
+            expect(amendMessageButton).toBeDisabled();
+          });
         });
 
         describe('amend', () => {
@@ -590,6 +612,29 @@ describe('CommitInfoView', () => {
             expect(
               within(screen.getByTestId('commit-a')).queryByTestId('selected-commit'),
             ).toBeInTheDocument();
+          });
+
+          it('disables amend button with spinner while running', () => {
+            clickToEditTitle();
+            clickToEditDescription();
+
+            {
+              act(() => {
+                userEvent.type(getTitleEditor(), ' hello new title');
+                userEvent.type(getDescriptionEditor(), '\nhello new text');
+              });
+            }
+
+            clickAmendButton();
+
+            const amendMessageButton = within(
+              screen.getByTestId('commit-info-actions-bar'),
+            ).queryByText('Amend');
+            act(() => {
+              fireEvent.click(amendMessageButton!);
+            });
+
+            expect(amendMessageButton).toBeDisabled();
           });
         });
       });

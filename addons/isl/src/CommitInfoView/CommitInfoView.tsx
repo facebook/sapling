@@ -15,6 +15,7 @@ import {OpenComparisonViewButton} from '../ComparisonView/OpenComparisonViewButt
 import {Center} from '../ComponentUtils';
 import {HighlightCommitsWhileHovering} from '../HighlightedCommits';
 import {numPendingImageUploads} from '../ImageUpload';
+import {OperationDisabledButton} from '../OperationDisabledButton';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
 import {
@@ -66,7 +67,7 @@ import {useEffect} from 'react';
 import {useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
-import {unwrap} from 'shared/utils';
+import {notEmpty, unwrap} from 'shared/utils';
 
 import './CommitInfoView.css';
 
@@ -364,7 +365,6 @@ function ActionsBar({
         setFieldsBeingEdited(noFieldsBeingEdited(schema));
       },
   );
-  const runOperation = useRunOperation();
   const doAmendOrCommit = () => {
     const message = commitMessageFieldsToString(schema, assertNonOptimistic(editedMessage).fields);
     const filesToCommit =
@@ -373,15 +373,17 @@ function ActionsBar({
           undefined
         : // only files not unchecked
           uncommittedChanges.filter(file => !deselected.has(file.path)).map(file => file.path);
-    runOperation(
-      isCommitMode
-        ? new CommitOperation(message, commit.hash, filesToCommit)
-        : new AmendOperation(filesToCommit, message),
-    );
+
+    const operation = isCommitMode
+      ? new CommitOperation(message, commit.hash, filesToCommit)
+      : new AmendOperation(filesToCommit, message);
+
     clearEditedCommitMessage(/* skip confirmation */ true);
     // reset to amend mode now that the commit has been made
     setMode('amend');
     deselectIfHeadIsSelected();
+
+    return operation;
   };
 
   const showOptionModal = useModal();
@@ -423,31 +425,33 @@ function ActionsBar({
                 : t('No selected changes to amend')
             }
             trigger={areImageUploadsOngoing || !anythingToCommit ? 'hover' : 'disabled'}>
-            <VSCodeButton
+            <OperationDisabledButton
+              contextKey={isCommitMode ? 'commit' : 'amend'}
               appearance="secondary"
               disabled={!anythingToCommit || editedMessage == null || areImageUploadsOngoing}
-              onClick={doAmendOrCommit}>
+              runOperation={doAmendOrCommit}>
               {isCommitMode ? <T>Commit</T> : <T>Amend</T>}
-            </VSCodeButton>
+            </OperationDisabledButton>
           </Tooltip>
         ) : (
           <Tooltip
             title={t('Image uploads are still pending')}
             trigger={areImageUploadsOngoing ? 'hover' : 'disabled'}>
-            <VSCodeButton
+            <OperationDisabledButton
+              contextKey={`amend-message-${commit.hash}`}
               appearance="secondary"
+              data-testid="amend-message-button"
               disabled={!isAnythingBeingEdited || editedMessage == null || areImageUploadsOngoing}
-              onClick={() => {
-                runOperation(
-                  new AmendMessageOperation(
-                    commit.hash,
-                    commitMessageFieldsToString(schema, assertNonOptimistic(editedMessage).fields),
-                  ),
+              runOperation={() => {
+                const operation = new AmendMessageOperation(
+                  commit.hash,
+                  commitMessageFieldsToString(schema, assertNonOptimistic(editedMessage).fields),
                 );
                 clearEditedCommitMessage(/* skip confirmation */ true);
+                return operation;
               }}>
               <T>Amend Message</T>
-            </VSCodeButton>
+            </OperationDisabledButton>
           </Tooltip>
         )}
         {commit.isHead || canSubmitIndividualDiffs ? (
@@ -464,11 +468,13 @@ function ActionsBar({
                   )
             }
             placement="top">
-            <VSCodeButton
+            <OperationDisabledButton
+              contextKey={`submit-${commit.isHead ? 'head' : commit.hash}`}
               disabled={!canSubmitWithCodeReviewProvider || areImageUploadsOngoing}
-              onClick={async () => {
+              runOperation={async () => {
+                let amendOrCommitOp;
                 if (anythingToCommit) {
-                  doAmendOrCommit();
+                  amendOrCommitOp = doAmendOrCommit();
                 }
 
                 if (
@@ -514,8 +520,10 @@ function ActionsBar({
                   if (answer === cancel || answer == null) {
                     return;
                   }
-                  runOperation(
-                    new SetConfigOperation('local', 'github.preferred_submit_command', answer),
+                  const rememberConfigOp = new SetConfigOperation(
+                    'local',
+                    'github.preferred_submit_command',
+                    answer,
                   );
                   setRepoInfo(info => ({
                     ...unwrap(info),
@@ -524,25 +532,24 @@ function ActionsBar({
                   // setRepoInfo updates `provider`, but we still have a stale reference in this callback.
                   // So this one time, we need to manually run the new submit command.
                   // Future submit calls can delegate to provider.submitOperation();
-                  runOperation(
+                  const submitOp =
                     answer === 'ghstack'
                       ? new GhStackSubmitOperation({
                           draft: shouldSubmitAsDraft,
                         })
                       : new PrSubmitOperation({
                           draft: shouldSubmitAsDraft,
-                        }),
-                  );
-                  return;
+                        });
+
+                  return [amendOrCommitOp, rememberConfigOp, submitOp].filter(notEmpty);
                 }
-                runOperation(
-                  unwrap(provider).submitOperation(
-                    commit.isHead ? [] : [commit], // [] means to submit the head commit
-                    {
-                      draft: shouldSubmitAsDraft,
-                    },
-                  ),
+                const submitOp = unwrap(provider).submitOperation(
+                  commit.isHead ? [] : [commit], // [] means to submit the head commit
+                  {
+                    draft: shouldSubmitAsDraft,
+                  },
                 );
+                return [amendOrCommitOp, submitOp].filter(notEmpty);
               }}>
               {commit.isHead && anythingToCommit ? (
                 isCommitMode ? (
@@ -553,7 +560,7 @@ function ActionsBar({
               ) : (
                 <T>Submit</T>
               )}
-            </VSCodeButton>
+            </OperationDisabledButton>
           </Tooltip>
         ) : null}
       </div>

@@ -568,3 +568,15 @@ export function useIsOperationRunningOrQueued(
   }
   return undefined;
 }
+
+export function useMostRecentPendingOperation(): Operation | undefined {
+  const list = useRecoilValue(operationList);
+  const queued = useRecoilValue(queuedOperations);
+  if (queued.length > 0) {
+    return queued.at(-1);
+  }
+  if (list.currentOperation?.exitCode == null) {
+    return list.currentOperation?.operation;
+  }
+  return undefined;
+}
