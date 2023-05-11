@@ -10,9 +10,10 @@ import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types'
 import type {ReactNode} from 'react';
 
 import {YouAreHere} from '../Commit';
+import {InlineBadge} from '../InlineBadge';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
-import {T} from '../i18n';
+import {t, T} from '../i18n';
 import {RelativeDate} from '../relativeDate';
 
 export function CommitTitleByline({commit}: {commit: CommitInfo}) {
@@ -23,6 +24,7 @@ export function CommitTitleByline({commit}: {commit: CommitInfo}) {
   return (
     <Subtle className="commit-info-title-byline">
       {commit.isHead ? <YouAreHere hideSpinner /> : null}
+      {commit.phase === 'public' ? <PublicCommitBadge /> : null}
       <OverflowEllipsis shrink>
         <Tooltip trigger="hover" component={() => createdByInfo}>
           {createdByInfo}
@@ -34,6 +36,20 @@ export function CommitTitleByline({commit}: {commit: CommitInfo}) {
         </Tooltip>
       </OverflowEllipsis>
     </Subtle>
+  );
+}
+
+function PublicCommitBadge() {
+  return (
+    <Tooltip
+      placement="bottom"
+      title={t(
+        "This commit has already been pushed to an append-only remote branch and can't be modified locally.",
+      )}>
+      <InlineBadge>
+        <T>Public</T>
+      </InlineBadge>
+    </Tooltip>
   );
 }
 

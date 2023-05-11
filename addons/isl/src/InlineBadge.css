@@ -1,0 +1,27 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.inline-badge {
+  border-radius: 14px;
+  padding: 3px var(--pad);
+  display: inline-block;
+  font-size: 80%;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--halfpad);
+}
+
+.inline-badge.badge-secondary {
+  background-color: var(--button-secondary-hover-background);
+  color: var(--button-secondary-foreground);
+}
+
+.inline-badge.badge-primary {
+  background-color: var(--button-primary-hover-background);
+  color: var(--button-primary-foreground);
+}

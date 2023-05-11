@@ -11,6 +11,7 @@ import {BranchIndicator} from './BranchIndicator';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
 import {highlightedCommits} from './HighlightedCommits';
+import {InlineBadge} from './InlineBadge';
 import {Tooltip} from './Tooltip';
 import {UncommitButton} from './UncommitButton';
 import {UncommittedChanges} from './UncommittedChanges';
@@ -370,10 +371,10 @@ export function YouAreHere({
   }
   return (
     <div className="you-are-here-container">
-      <span className="you-are-here">
+      <InlineBadge kind="primary">
         {spinner ? <Icon icon="loading" /> : null}
         {text}
-      </span>
+      </InlineBadge>
       {isFetching &&
       // don't show fetch spinner on previous location
       previewType !== CommitPreview.GOTO_PREVIOUS_LOCATION ? (
