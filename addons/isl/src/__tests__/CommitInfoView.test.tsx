@@ -1320,5 +1320,42 @@ describe('CommitInfoView', () => {
         });
       });
     });
+
+    describe('Public commits in amend mode', () => {
+      beforeEach(() => {
+        act(() => {
+          simulateCommits({
+            value: [
+              COMMIT('1', 'some public base', '0', {phase: 'public', isHead: true}),
+              COMMIT('a', 'My Commit', '1'),
+              COMMIT('b', 'Head Commit', 'a'),
+            ],
+          });
+        });
+      });
+
+      it('shows public label', () => {
+        expect(withinCommitInfo().getByText('Public')).toBeInTheDocument();
+      });
+
+      it('does not allow submitting', () => {
+        expect(withinCommitInfo().queryByText('Submit')).not.toBeInTheDocument();
+      });
+
+      it('does not show changes to amend', () => {
+        expect(withinCommitInfo().queryByText('Changes to Amend')).not.toBeInTheDocument();
+      });
+
+      it('does not allow clicking to edit fields', () => {
+        expectIsNOTEditingTitle();
+        expectIsNOTEditingDescription();
+
+        clickToEditTitle();
+        clickToEditDescription();
+
+        expectIsNOTEditingTitle();
+        expectIsNOTEditingDescription();
+      });
+    });
   });
 });
