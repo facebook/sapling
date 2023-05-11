@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::hash::Hasher;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -21,6 +22,7 @@ use sql_construct::SqlShardableConstructFromMetadataDatabaseConfig;
 use sql_construct::SqlShardedConstruct;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlShardedConnections;
+use twox_hash::XxHash32;
 use vec1::Vec1;
 
 mononoke_queries! {
@@ -44,6 +46,7 @@ pub struct BonsaiBlobMapping {
 }
 
 pub struct SqlBonsaiBlobMapping {
+    shard_count: usize,
     write_connections: Arc<Vec1<Connection>>,
     read_connections: Arc<Vec1<Connection>>,
 }
@@ -53,7 +56,9 @@ impl SqlBonsaiBlobMapping {
         write_connections: Arc<Vec1<Connection>>,
         read_connections: Arc<Vec1<Connection>>,
     ) -> Self {
+        let shard_count = read_connections.len();
         Self {
+            shard_count,
             write_connections,
             read_connections,
         }
@@ -134,9 +139,11 @@ impl SqlBonsaiBlobMapping {
             .await
     }
 
-    fn shard(&self, _repo_id: RepositoryId, _blob_key: &str) -> usize {
-        // TODO(Egor): Shard based on repo_id + blob_key
-        0
+    fn shard(&self, repo_id: RepositoryId, blob_key: &str) -> usize {
+        let mut hasher = XxHash32::with_seed(0);
+        hasher.write(&repo_id.id().to_ne_bytes());
+        hasher.write(blob_key.as_bytes());
+        (hasher.finish() % self.shard_count as u64) as usize
     }
 }
 
@@ -154,8 +161,10 @@ impl SqlShardedConstruct for SqlBonsaiBlobMapping {
 
         let write_connections = Arc::new(write_connections);
         let read_connections = Arc::new(read_connections);
+        let shard_count = read_connections.len();
 
         Self {
+            shard_count,
             write_connections,
             read_connections,
         }
@@ -254,6 +263,29 @@ mod test {
                 (THREES_CSID, "blob6".to_string()),
             ]
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_sharding() -> Result<()> {
+        let mut sql = SqlBonsaiBlobMapping::with_sqlite_in_memory()?;
+        // manually specif multiple shards
+        sql.shard_count = 3;
+        let repo_id = RepositoryId::new(1);
+        let blobs = vec![
+            "blob1", "blob2", "blob3", "blob4", "blob5", "blob6", "blob7",
+        ];
+        let shards: Vec<_> = blobs.iter().map(|blob| sql.shard(repo_id, blob)).collect();
+        assert_eq!(shards, vec![1, 2, 1, 2, 0, 2, 0]);
+
+        // verify that blob will consistently hashed to the same shard
+        let shard = sql.shard(repo_id, blobs[2]);
+        assert_eq!(shard, 1);
+
+        // verify that different repo_id with the same blob will land on a different shard
+        let shard = sql.shard(RepositoryId::new(3), blobs[2]);
+        assert_eq!(shard, 0);
 
         Ok(())
     }
