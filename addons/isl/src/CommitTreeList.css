@@ -93,12 +93,31 @@
   vertical-align: top;
   overflow: hidden;
   left: -21px;
-  top: 9px;
+  top: auto;
+  bottom: auto;
   border-radius: 50%;
   height: 14px;
   width: 14px;
   box-sizing: border-box;
   transition: transform 0.2s, box-shadow 0.3s;
+}
+
+/*
+avatar may render below the top of the border,
+cover up the border that peeks out the top with background color,
+but only on the top commit of a stack
+*/
+.commit.topmost .commit-details:before {
+  left: -15px;
+  top: 0;
+  content: '';
+  width: 2px;
+  height: calc(50%);
+  background-color: var(--background);
+  position: absolute;
+}
+.commit.topmost.head-commit .commit-details:before {
+  background-color: var(--button-primary-hover-background);
 }
 
 .commit.highlighted .commit-avatar {
@@ -122,10 +141,12 @@
   padding-left: 0;
   margin-left: var(--halfpad);
   position: relative;
+  align-items: center;
 }
 
 .commit-rows.narrow {
   flex-direction: column;
+  align-items: initial;
 }
 
 .commit-details {
@@ -142,6 +163,7 @@
   display: flex;
   gap: var(--pad);
   align-items: center;
+  flex-shrink: 0;
 }
 
 .commit-rows > *:not(.selected-commit-background) {

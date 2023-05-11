@@ -217,7 +217,8 @@ export const Commit = memo(
           'commit' +
           (commit.isHead ? ' head-commit' : '') +
           (commit.successorInfo != null ? ' obsolete' : '') +
-          (isHighlighted ? ' highlighted' : '')
+          (isHighlighted ? ' highlighted' : '') +
+          (isPublic || hasChildren ? '' : ' topmost')
         }
         data-testid={`commit-${commit.hash}`}>
         {!isNonActionable &&
