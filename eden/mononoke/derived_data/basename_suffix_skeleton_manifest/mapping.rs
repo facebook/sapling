@@ -59,6 +59,9 @@ impl RootBasenameSuffixSkeletonManifest {
     pub fn into_inner_id(self) -> BasenameSuffixSkeletonManifestId {
         self.0.id
     }
+    pub fn inner_id(&self) -> &BasenameSuffixSkeletonManifestId {
+        &self.0.id
+    }
 }
 
 #[async_trait]
