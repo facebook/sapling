@@ -401,10 +401,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * synchronization here with the mount start operation.  This method provides
    * no internal synchronization of its own.)
    */
-#ifdef _WIN32
   PrjfsChannel* FOLLY_NULLABLE getPrjfsChannel() const;
-
-#endif
 
   /**
    * Set a test channel for this mount point.

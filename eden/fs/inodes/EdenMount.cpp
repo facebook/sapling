@@ -1167,13 +1167,13 @@ FuseChannel* FOLLY_NULLABLE EdenMount::getFuseChannel() const {
 #endif
 }
 
-#ifdef _WIN32
-
 PrjfsChannel* FOLLY_NULLABLE EdenMount::getPrjfsChannel() const {
+#ifdef _WIN32
   return dynamic_cast<PrjfsChannel*>(channel_.get());
-}
-
+#else
+  return nullptr;
 #endif
+}
 
 void EdenMount::setTestFsChannel(FsChannelPtr channel) {
   channel_ = std::move(channel);
