@@ -1173,12 +1173,11 @@ PrjfsChannel* FOLLY_NULLABLE EdenMount::getPrjfsChannel() const {
   return dynamic_cast<PrjfsChannel*>(channel_.get());
 }
 
-void EdenMount::setTestPrjfsChannel(
-    std::unique_ptr<PrjfsChannel, FsChannelDeleter> channel) {
+#endif
+
+void EdenMount::setTestFsChannel(FsChannelPtr channel) {
   channel_ = std::move(channel);
 }
-
-#endif
 
 bool EdenMount::isNfsdChannel() const {
   return getNfsdChannel() != nullptr;

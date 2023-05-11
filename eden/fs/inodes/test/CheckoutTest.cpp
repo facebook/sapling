@@ -1807,7 +1807,7 @@ class FakePrjfsChannel final : public PrjfsChannel {
             mount->getServerState()->getProcessNameCache(),
             mount->getCheckoutConfig()->getRepoGuid()));
     channel->start(false, false, true);
-    mount->setTestPrjfsChannel(std::move(channel));
+    mount->setTestFsChannel(std::move(channel));
   }
 
   folly::Try<folly::Unit> removeCachedFile(RelativePathPiece path) override {
