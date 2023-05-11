@@ -96,6 +96,7 @@ use metrics::EntranceGuard;
 use minibytes::Bytes;
 use parking_lot::Once;
 use progress_model::AggregatingProgressBar;
+use progress_model::ProgressBar;
 use repo_name::encode_repo_name;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -302,6 +303,7 @@ impl Client {
                 });
 
                 Ok::<_, EdenApiError>(res.into_body().cbor::<T>().err_into())
+
             })
             .try_flatten()
             .boxed()
@@ -366,6 +368,32 @@ impl Client {
     {
         self.with_retry(|this| this.fetch_vec::<T>(requests.clone()).boxed())
             .await
+    }
+
+    /// Similar to `fetch_vec`. But with retries and a custom progress bar (position drops on a retry).
+    async fn fetch_vec_with_retry_and_prog<T>(
+        &self,
+        requests: Vec<Request>,
+        prog: Arc<ProgressBar>,
+    ) -> Result<Vec<T>, EdenApiError>
+    where
+        <T as ToWire>::Wire: Send + DeserializeOwned + 'static,
+        T: ToWire + Send + 'static,
+    {
+        self.with_retry(|this| {
+            Box::pin(async {
+                let prog = prog.clone();
+                prog.set_position(0);
+                let resp = this
+                    .fetch_guard::<T>(requests.clone(), vec![])?
+                    .then(move |v| {
+                        prog.increase_position(1);
+                        future::ready(v)
+                    });
+                resp.flatten().await
+            })
+        })
+        .await
     }
 
     /// Similar to `fetch`, but returns the response type directly, instead of Response<_>.
@@ -953,16 +981,17 @@ impl EdenApi for Client {
         self.log_request(&graph_req, "commit_graph");
         let wire_graph_req = graph_req.to_wire();
 
-        // In the current implementation, server sends CommitGraph
-        // once it is fully ready, not streaming it.
-        // min speed transfer check must be disabled
+        // In the current implementation, server may send all CommitGraph nodes
+        // at once on completion, or may send graph nodes gradually (streaming).
+        // Since, it depends on request, min speed transfer check must be disabled.
         let req = self
             .configure_request(self.inner.client.post(url))?
             .min_transfer_speed(None)
             .cbor(&wire_graph_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        self.fetch_vec_with_retry::<CommitGraphEntry>(vec![req])
+        let prog = ProgressBar::register_new("commit graph", 0, "commits fetched");
+        self.fetch_vec_with_retry_and_prog::<CommitGraphEntry>(vec![req], prog)
             .await
     }
 
