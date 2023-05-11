@@ -34,7 +34,10 @@ describe('RevertOperation', () => {
       });
       simulateCommits({
         value: [
-          COMMIT('c', 'Commit C', 'b', {isHead: true}),
+          COMMIT('c', 'Commit C', 'b', {
+            filesSample: [{path: 'file.txt', status: 'M'}],
+            isHead: true,
+          }),
           COMMIT('b', 'Commit B', 'a', {filesSample: [{path: 'file.txt', status: 'M'}]}),
           COMMIT('a', 'Commit A', '1', {filesSample: [{path: 'file.txt', status: 'M'}]}),
           COMMIT('1', 'Commit 1', '0', {phase: 'public'}),
@@ -95,9 +98,18 @@ describe('RevertOperation', () => {
     });
   });
 
-  describe('to a specific commit', () => {
-    it('reverts to a specific rev', async () => {
+  describe('in commit info view for a given commit', () => {
+    it('hides revert button on non-head commits', () => {
       CommitInfoTestUtils.clickToSelectCommit('a');
+
+      const revertButton = within(
+        within(screen.getByTestId('commit-info-view')).getByTestId(`changed-file-file.txt`),
+      ).queryByTestId('file-revert-button');
+      expect(revertButton).not.toBeInTheDocument();
+    });
+
+    it('reverts before head commit', async () => {
+      CommitInfoTestUtils.clickToSelectCommit('c');
       await clickRevert(screen.getByTestId('commit-info-view'), 'file.txt');
 
       expectMessageSentToServer({
@@ -106,7 +118,7 @@ describe('RevertOperation', () => {
           args: [
             'revert',
             '--rev',
-            {type: 'succeedable-revset', revset: 'a'},
+            {type: 'succeedable-revset', revset: '.^'},
             {type: 'repo-relative-file', path: 'file.txt'},
           ],
           id: expect.anything(),
@@ -117,11 +129,11 @@ describe('RevertOperation', () => {
     });
 
     it('renders optimistic state while running', async () => {
+      CommitInfoTestUtils.clickToSelectCommit('c');
       expect(
         CommitTreeListTestUtils.withinCommitTree().queryByText('file.txt'),
       ).not.toBeInTheDocument();
 
-      CommitInfoTestUtils.clickToSelectCommit('a');
       await clickRevert(screen.getByTestId('commit-info-view'), 'file.txt');
 
       // file is not hidden from the tree, instead it's inserted

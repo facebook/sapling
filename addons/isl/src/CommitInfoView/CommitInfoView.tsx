@@ -279,10 +279,14 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
               />
               <ChangedFiles
                 files={commit.filesSample}
-                comparison={{
-                  type: ComparisonType.Committed,
-                  hash: commit.hash,
-                }}
+                comparison={
+                  commit.isHead
+                    ? {type: ComparisonType.HeadChanges}
+                    : {
+                        type: ComparisonType.Committed,
+                        hash: commit.hash,
+                      }
+                }
               />
             </div>
           </Section>

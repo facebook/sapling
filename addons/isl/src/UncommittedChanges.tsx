@@ -61,7 +61,7 @@ import {
 import {VSCodeButton, VSCodeCheckbox, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useEffect, useRef, useState} from 'react';
 import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
-import {ComparisonType} from 'shared/Comparison';
+import {revsetForComparison, ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {useDeepMemo} from 'shared/hooks';
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
@@ -690,31 +690,43 @@ function FileActions({comparison, file}: {comparison: Comparison; file: UIChange
     );
   }
 
-  if (revertableStatues.has(file.status)) {
+  if (revertableStatues.has(file.status) && comparison.type !== ComparisonType.Committed) {
     actions.push(
-      <Tooltip title={t('Revert back to original')} key="revert" delayMs={1000}>
+      <Tooltip
+        title={
+          comparison.type === ComparisonType.UncommittedChanges
+            ? t('Revert back to last commit')
+            : t('Revert changes made by this commit')
+        }
+        key="revert"
+        delayMs={1000}>
         <VSCodeButton
           className="file-show-on-hover"
           key={file.path}
           appearance="icon"
           data-testid="file-revert-button"
           onClick={() => {
-            const compareToHash =
-              comparison.type === ComparisonType.Committed ? comparison.hash : undefined;
             platform
               .confirm(
-                compareToHash == null
+                comparison.type === ComparisonType.UncommittedChanges
                   ? t('Are you sure you want to revert $file?', {replace: {$file: file.path}})
                   : t(
-                      'Are you sure you want to revert $file back to how it was at commit $commit? Uncommitted changes to this file will be lost.',
-                      {replace: {$file: file.path, $commit: compareToHash ?? ''}},
+                      'Are you sure you want to revert $file back to how it was just before the last commit? Uncommitted changes to this file will be lost.',
+                      {replace: {$file: file.path}},
                     ),
               )
               .then(ok => {
                 if (!ok) {
                   return;
                 }
-                runOperation(new RevertOperation([file.path], compareToHash));
+                runOperation(
+                  new RevertOperation(
+                    [file.path],
+                    comparison.type === ComparisonType.UncommittedChanges
+                      ? undefined
+                      : revsetForComparison(comparison),
+                  ),
+                );
               });
           }}>
           <Icon icon="discard" />
