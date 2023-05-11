@@ -333,6 +333,7 @@ members = [
   "reachabilityindex/if",
   "reachabilityindex/skiplist",
   "reachabilityindex/test-helpers",
+  "repo_attributes/bonsai_blob_mapping",
   "repo_attributes/commit_graph/buffered_commit_graph_storage",
   "repo_attributes/commit_graph/caching_commit_graph_storage",
   "repo_attributes/commit_graph/caching_commit_graph_storage/if",
