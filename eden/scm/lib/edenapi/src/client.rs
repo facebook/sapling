@@ -88,6 +88,7 @@ use futures::future::BoxFuture;
 use futures::prelude::*;
 use hg_http::http_client;
 use http_client::AsyncResponse;
+use http_client::Encoding;
 use http_client::HttpClient;
 use http_client::Request;
 use itertools::Itertools;
@@ -984,8 +985,11 @@ impl EdenApi for Client {
         // In the current implementation, server may send all CommitGraph nodes
         // at once on completion, or may send graph nodes gradually (streaming).
         // Since, it depends on request, min speed transfer check must be disabled.
+        // Since we have a special progress bar and response is small, let's disable compression of
+        // response's body.
         let req = self
             .configure_request(self.inner.client.post(url))?
+            .accept_encoding([Encoding::Identity])
             .min_transfer_speed(None)
             .cbor(&wire_graph_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
