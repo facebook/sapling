@@ -9,7 +9,6 @@ import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
 import type {Hash} from '../types';
 
 import {CommitPreview} from '../previews';
-import {SucceedableRevset} from '../types';
 import {Operation} from './Operation';
 
 export class HideOperation extends Operation {
@@ -20,7 +19,7 @@ export class HideOperation extends Operation {
   static opName = 'Hide';
 
   getArgs() {
-    return ['hide', '--rev', SucceedableRevset(this.source)];
+    return ['hide', '--rev', this.source];
   }
 
   makePreviewApplier(_context: PreviewContext): ApplyPreviewsFuncType | undefined {

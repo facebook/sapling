@@ -13,7 +13,7 @@ import {
   closeCommitInfoSidebar,
   TEST_COMMIT_HISTORY,
 } from '../../testUtils';
-import {CommandRunner, SucceedableRevset} from '../../types';
+import {CommandRunner} from '../../types';
 import {fireEvent, render, screen, within} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 
@@ -66,7 +66,7 @@ describe('hide operation', () => {
     expectMessageSentToServer({
       type: 'runOperation',
       operation: {
-        args: ['hide', '--rev', SucceedableRevset('b')],
+        args: ['hide', '--rev', 'b'],
         id: expect.anything(),
         runner: CommandRunner.Sapling,
         trackEventName: 'HideOperation',
