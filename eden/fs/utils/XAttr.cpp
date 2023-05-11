@@ -8,6 +8,7 @@
 #include "eden/fs/utils/XAttr.h"
 #include <folly/Exception.h>
 #include <folly/File.h>
+#include <folly/String.h>
 
 #ifndef _WIN32
 

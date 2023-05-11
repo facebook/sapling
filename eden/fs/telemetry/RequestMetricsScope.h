@@ -11,7 +11,7 @@
 #include <memory>
 #include <string>
 
-#include <folly/String.h>
+#include <folly/Range.h>
 #include <folly/Synchronized.h>
 #include <folly/stop_watch.h>
 

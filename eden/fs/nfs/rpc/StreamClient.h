@@ -10,7 +10,6 @@
 #include <tuple>
 
 #include <folly/SocketAddress.h>
-#include <folly/String.h>
 #include <folly/io/IOBufQueue.h>
 #include <folly/logging/xlog.h>
 #include <folly/net/NetworkSocket.h>

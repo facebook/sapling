@@ -11,7 +11,6 @@
 
 #include <folly/Executor.h>
 #include <folly/Range.h>
-#include <folly/String.h>
 #include <folly/Synchronized.h>
 
 #include "eden/fs/eden-config.h"

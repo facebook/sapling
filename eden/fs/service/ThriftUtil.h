@@ -8,7 +8,6 @@
 #pragma once
 
 #include <folly/Range.h>
-#include <folly/String.h>
 #include <string>
 
 #include "eden/fs/model/Hash.h"
@@ -55,12 +54,8 @@ inline Hash20 hash20FromThrift(folly::StringPiece commitID) {
  */
 class HashRootIdCodec : public RootIdCodec {
  public:
-  RootId parseRootId(folly::StringPiece piece) override {
-    return RootId{hash20FromThrift(piece).toString()};
-  }
-  std::string renderRootId(const RootId& rootId) override {
-    return folly::unhexlify(rootId.value());
-  }
+  RootId parseRootId(folly::StringPiece piece) override;
+  std::string renderRootId(const RootId& rootId) override;
 };
 
 } // namespace facebook::eden

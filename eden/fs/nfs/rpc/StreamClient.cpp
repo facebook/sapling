@@ -8,6 +8,7 @@
 #include "eden/fs/nfs/rpc/StreamClient.h"
 
 #include <folly/Exception.h>
+#include <folly/String.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/nfs/rpc/Rpc.h"
 

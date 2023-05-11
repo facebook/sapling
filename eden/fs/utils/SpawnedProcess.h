@@ -6,12 +6,10 @@
  */
 
 #pragma once
-#include <folly/String.h>
+
+#include <folly/Range.h>
 #include <folly/futures/Future.h>
 #include <signal.h>
-#ifndef _WIN32
-#include <spawn.h>
-#endif
 #include <memory>
 #include <mutex>
 #include <string>
@@ -21,6 +19,10 @@
 #include "eden/fs/utils/FileDescriptor.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/Pipe.h"
+
+#ifndef _WIN32
+#include <spawn.h>
+#endif
 
 namespace facebook::eden {
 

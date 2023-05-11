@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <folly/String.h>
 #include <sqlite3.h>
 
 #include "eden/fs/sqlite/SqliteConnection.h"

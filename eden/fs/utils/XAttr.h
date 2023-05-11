@@ -8,7 +8,7 @@
 #pragma once
 
 #include <errno.h>
-#include <folly/String.h>
+#include <folly/Range.h>
 
 #ifndef _WIN32
 #include <sys/xattr.h>
