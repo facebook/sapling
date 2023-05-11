@@ -686,31 +686,36 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::removeBindMount(
 folly::SemiFuture<Unit> EdenMount::performBindMounts() {
   auto mountPath = getPath();
   auto systemConfigDir = getEdenConfig()->getSystemConfigDir();
-  std::vector<std::string> argv{
-      FLAGS_edenfsctlPath,
-      "--etc-eden-dir",
-      systemConfigDir.c_str(),
-      "redirect",
-      "fixup",
-      "--mount",
-      mountPath.c_str()};
-  return SpawnedProcess(argv)
-      .future_wait()
+  return folly::makeSemiFutureWith([&] {
+           std::vector<std::string> argv{
+               FLAGS_edenfsctlPath,
+               "--etc-eden-dir",
+               systemConfigDir.c_str(),
+               "redirect",
+               "fixup",
+               "--mount",
+               mountPath.c_str()};
+           return SpawnedProcess(argv).future_wait();
+         })
       .deferValue([mountPath](ProcessStatus returnCode) {
         if (returnCode.exitStatus() == 0) {
           return folly::unit;
         }
-        throwf<std::runtime_error>(
-            "Failed to run `{} redirect fixup --mount {}`: exited with status {}",
+        throw_<std::runtime_error>(
+            "Failed to run `",
             FLAGS_edenfsctlPath,
+            " redirect fixup --mount ",
             mountPath,
+            "`: exited with status ",
             returnCode.str());
       })
       .deferError([mountPath](folly::exception_wrapper err) {
-        throwf<std::runtime_error>(
-            "Failed to run `{} redirect fixup --mount {}`: {}",
+        throw_<std::runtime_error>(
+            "Failed to run `",
             FLAGS_edenfsctlPath,
+            " fixup --mount ",
             mountPath,
+            "`: ",
             folly::exceptionStr(err));
       });
 }
