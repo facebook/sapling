@@ -471,7 +471,7 @@ class PrjfsChannel : public FsChannel {
    * The returned ImmediateFuture will complete when all the previously
    * received notifications have completed.
    */
-  ImmediateFuture<folly::Unit> waitForPendingNotifications();
+  ImmediateFuture<folly::Unit> waitForPendingWrites() override;
 
   const char* getName() const override {
     return "prjfs";

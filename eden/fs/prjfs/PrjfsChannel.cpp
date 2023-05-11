@@ -1311,7 +1311,7 @@ void PrjfsChannel::start(
   XLOG(INFO) << "Started PrjfsChannel for: " << mountPath_;
 }
 
-ImmediateFuture<folly::Unit> PrjfsChannel::waitForPendingNotifications() {
+ImmediateFuture<folly::Unit> PrjfsChannel::waitForPendingWrites() {
   auto inner = getInner();
   if (!inner) {
     return makeImmediateFuture<folly::Unit>(std::runtime_error(fmt::format(

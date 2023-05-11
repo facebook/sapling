@@ -474,6 +474,10 @@ class FuseChannel final : public FsChannel {
     return processAccessLog_;
   }
 
+  ImmediateFuture<folly::Unit> waitForPendingWrites() override {
+    return folly::unit;
+  }
+
   std::shared_ptr<Notifier> getNotifier() const {
     return notifier_;
   }

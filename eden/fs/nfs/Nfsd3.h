@@ -188,6 +188,10 @@ class Nfsd3 final : public FsChannel {
 
   bool takeoverStop() override;
 
+  ImmediateFuture<folly::Unit> waitForPendingWrites() override {
+    return folly::unit;
+  }
+
   /**
    * Wait for all pending invalidation to complete.
    *

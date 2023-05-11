@@ -1424,13 +1424,14 @@ ImmediateFuture<VirtualInode> EdenMount::getVirtualInode(
       [p = std::move(processor)]() mutable { p.reset(); });
 }
 
-ImmediateFuture<folly::Unit> EdenMount::waitForPendingNotifications() const {
-#ifdef _WIN32
-  if (auto* channel = getPrjfsChannel()) {
-    return channel->waitForPendingNotifications();
+ImmediateFuture<folly::Unit> EdenMount::waitForPendingWrites() const {
+  // TODO: This is a race condition since channel_ can be destroyed
+  // concurrently. We need to change EdenMount to never unset channel_.
+  if (channel_) {
+    return channel_->waitForPendingWrites();
+  } else {
+    return folly::unit;
   }
-#endif
-  return folly::unit;
 }
 
 folly::Future<CheckoutResult> EdenMount::checkout(
@@ -1511,8 +1512,8 @@ folly::Future<CheckoutResult> EdenMount::checkout(
       .thenValue(
           [this](std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
                      treeResults) {
-            XLOG(DBG7) << "Checkout: waitForPendingNotifications";
-            return waitForPendingNotifications()
+            XLOG(DBG7) << "Checkout: waitForPendingWrites";
+            return waitForPendingWrites()
                 .thenValue([treeResults = std::move(treeResults)](auto&&) {
                   return treeResults;
                 })
@@ -1785,7 +1786,7 @@ ImmediateFuture<Unit> EdenMount::diff(
     const RootId& commitHash) const {
   return objectStore_->getRootTree(commitHash, ctxPtr->getFetchContext())
       .thenValue([this](std::shared_ptr<const Tree> rootTree) {
-        return waitForPendingNotifications().thenValue(
+        return waitForPendingWrites().thenValue(
             [rootTree = std::move(rootTree)](auto&&) { return rootTree; });
       })
       .thenValue([ctxPtr, rootInode = std::move(rootInode)](

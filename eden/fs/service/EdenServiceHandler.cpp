@@ -655,7 +655,7 @@ int64_t getSyncTimeout(const SyncBehavior& sync) {
  * When the SyncBehavior is unset, this default to a timeout of 60 seconds. A
  * negative SyncBehavior mean to wait indefinitely.
  */
-ImmediateFuture<folly::Unit> waitForPendingNotifications(
+ImmediateFuture<folly::Unit> waitForPendingWrites(
     const EdenMount& mount,
     const SyncBehavior& sync) {
   auto seconds = getSyncTimeout(sync);
@@ -663,7 +663,7 @@ ImmediateFuture<folly::Unit> waitForPendingNotifications(
     return folly::unit;
   }
 
-  auto future = mount.waitForPendingNotifications().semi();
+  auto future = mount.waitForPendingWrites().semi();
   if (seconds > 0) {
     future = std::move(future).within(std::chrono::seconds{seconds});
   }
@@ -682,7 +682,7 @@ EdenServiceHandler::semifuture_synchronizeWorkingCopy(
 
   return wrapImmediateFuture(
              std::move(helper),
-             waitForPendingNotifications(*edenMount, *params->sync()))
+             waitForPendingWrites(*edenMount, *params->sync()))
       .semi();
 }
 
@@ -698,7 +698,7 @@ EdenServiceHandler::semifuture_getSHA1(
   auto mountPath = absolutePathFromThrift(*mountPoint);
   auto [mount, rootInode] = server_->getMountAndRootInode(mountPath);
 
-  auto notificationFuture = waitForPendingNotifications(*mount, *sync);
+  auto notificationFuture = waitForPendingWrites(*mount, *sync);
   return wrapImmediateFuture(
              std::move(helper),
              std::move(notificationFuture)
@@ -1880,7 +1880,7 @@ EdenServiceHandler::semifuture_getEntryInformation(
 
   return wrapImmediateFuture(
              std::move(helper),
-             waitForPendingNotifications(*edenMount, *sync)
+             waitForPendingWrites(*edenMount, *sync)
                  .thenValue([rootInode = std::move(rootInode),
                              paths = std::move(paths),
                              objectStore,
@@ -1931,7 +1931,7 @@ EdenServiceHandler::semifuture_getFileInformation(
 
   return wrapImmediateFuture(
              std::move(helper),
-             waitForPendingNotifications(*edenMount, *sync)
+             waitForPendingWrites(*edenMount, *sync)
                  .thenValue([rootInode = std::move(rootInode),
                              paths = std::move(paths),
                              lastCheckoutTime,
@@ -2139,7 +2139,7 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
       EntryAttributeFlags::raw(*params->requestedAttributes());
   return wrapImmediateFuture(
              std::move(helper),
-             waitForPendingNotifications(*edenMount, *params->sync())
+             waitForPendingWrites(*edenMount, *params->sync())
                  .thenValue(
                      [edenMount = std::move(edenMount),
                       rootInode = std::move(rootInode),
@@ -2198,7 +2198,7 @@ EdenServiceHandler::getEntryAttributes(
     SyncBehavior sync,
     const ObjectFetchContextPtr& fetchContext) {
   auto [edenMount, _] = server_->getMountAndRootInode(mountPath);
-  return waitForPendingNotifications(*edenMount, sync)
+  return waitForPendingWrites(*edenMount, sync)
       .thenValue([this,
                   &paths,
                   fetchContext = fetchContext.copy(),
@@ -2433,7 +2433,7 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeRecursively(
 
   return wrapImmediateFuture(
              std::move(helper),
-             waitForPendingNotifications(*edenMount, *params->sync())
+             waitForPendingWrites(*edenMount, *params->sync())
                  .thenValue([edenMount = edenMount,
                              relativePath,
                              fetchContext = fetchContext.copy()](folly::Unit) {
@@ -2565,10 +2565,10 @@ EdenServiceHandler::semifuture_ensureMaterialized(
   // execution starting by read large files on the background.
   bool background = *params->background();
 
-  auto waitForPendingNotificationsFuture =
-      waitForPendingNotifications(*edenMount, *params->sync());
+  auto waitForPendingWritesFuture =
+      waitForPendingWrites(*edenMount, *params->sync());
   auto ensureMaterializedFuture =
-      std::move(waitForPendingNotificationsFuture)
+      std::move(waitForPendingWritesFuture)
           .thenValue([params = std::move(params),
                       edenMount = std::move(edenMount),
                       helper = std::move(helper)](auto&&) mutable {
@@ -3352,7 +3352,7 @@ void EdenServiceHandler::debugInodeStatus(
   auto mountPath = absolutePathFromThrift(*mountPoint);
   auto [edenMount, rootInode] = server_->getMountAndRootInode(mountPath);
 
-  waitForPendingNotifications(*edenMount, *sync)
+  waitForPendingWrites(*edenMount, *sync)
       .thenValue([&, edenMount = edenMount](auto&&) {
         auto inode =
             inodeFromUserPath(*edenMount, *path, helper->getFetchContext())
@@ -3696,7 +3696,7 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
   auto invalFut =
       std::move(backgroundFuture)
           .thenValue([edenMount = edenMount, sync = *params->sync()](auto&&) {
-            return waitForPendingNotifications(*edenMount, sync);
+            return waitForPendingWrites(*edenMount, sync);
           })
           .thenValue([edenMount = edenMount,
                       path = *params->path(),

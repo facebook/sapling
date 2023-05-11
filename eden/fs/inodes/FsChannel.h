@@ -86,6 +86,17 @@ class FsChannel {
   virtual ProcessAccessLog& getProcessAccessLog() = 0;
 
   /**
+   * Some user-space filesystem implementations (notably Projected FS, but also
+   * FUSE in writeback-cache mode) receive write notifications asynchronously.
+   *
+   * In situations like Thrift requests where EdenFS must guarantee previous
+   * writes have been observed, call waitForPendingWrites. The returned future
+   * will complete when all pending write operations have been observed.
+   */
+  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit>
+  waitForPendingWrites() = 0;
+
+  /**
    * During checkout or other Thrift calls that modify the filesystem, those
    * modifications may be invisible to the filesystem's own caches. Therefore,
    * we send fine-grained invalidation messages to the FsChannel. Those

@@ -453,7 +453,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    *
    * This can be called from any thread/executor.
    */
-  ImmediateFuture<folly::Unit> waitForPendingNotifications() const;
+  ImmediateFuture<folly::Unit> waitForPendingWrites() const;
 
   /**
    * Test if the working copy persist on disk after this mount will be
