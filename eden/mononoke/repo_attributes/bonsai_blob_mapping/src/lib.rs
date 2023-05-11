@@ -12,9 +12,12 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use itertools::Itertools;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
+use metaconfig_types::ShardableRemoteDatabaseConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use sql::Connection;
+use sql_construct::SqlShardableConstructFromMetadataDatabaseConfig;
 use sql_construct::SqlShardedConstruct;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlShardedConnections;
@@ -156,6 +159,14 @@ impl SqlShardedConstruct for SqlBonsaiBlobMapping {
             write_connections,
             read_connections,
         }
+    }
+}
+
+impl SqlShardableConstructFromMetadataDatabaseConfig for SqlBonsaiBlobMapping {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&ShardableRemoteDatabaseConfig> {
+        remote.bonsai_blob_mapping.as_ref()
     }
 }
 

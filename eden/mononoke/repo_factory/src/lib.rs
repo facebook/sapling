@@ -29,6 +29,9 @@ use blobstore_factory::ComponentSamplingHandler;
 use blobstore_factory::MetadataSqlFactory;
 pub use blobstore_factory::ReadOnlyStorage;
 use blobstore_factory::ScrubHandler;
+use bonsai_blob_mapping::ArcBonsaiBlobMapping;
+use bonsai_blob_mapping::BonsaiBlobMapping;
+use bonsai_blob_mapping::SqlBonsaiBlobMapping;
 use bonsai_git_mapping::ArcBonsaiGitMapping;
 use bonsai_git_mapping::SqlBonsaiGitMappingBuilder;
 use bonsai_globalrev_mapping::ArcBonsaiGlobalrevMapping;
@@ -608,6 +611,9 @@ pub enum RepoFactoryError {
 
     #[error("Error creating repo handler base")]
     RepoHandlerBase,
+
+    #[error("Error openning bonsai blob mapping DB")]
+    BonsaiBlobMapping,
 }
 
 #[facet::factory(name: String, repo_config_param: RepoConfig, common_config_param: CommonConfig)]
@@ -1480,6 +1486,24 @@ impl RepoFactory {
             };
 
         Ok(Arc::new(CommitGraph::new(maybe_cached_storage)))
+    }
+
+    pub async fn bonsai_blob_mapping(
+        &self,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcBonsaiBlobMapping> {
+        let sql_factory = self
+            .sql_factory(&repo_config.storage_config.metadata)
+            .await?;
+        let sql_bonsai_blob_mapping = Some(
+            sql_factory
+                .open_shardable::<SqlBonsaiBlobMapping>()
+                .await
+                .context(RepoFactoryError::BonsaiBlobMapping)?,
+        );
+        Ok(Arc::new(BonsaiBlobMapping {
+            sql_bonsai_blob_mapping,
+        }))
     }
 }
 
