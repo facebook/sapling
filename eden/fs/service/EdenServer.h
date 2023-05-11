@@ -506,10 +506,16 @@ class EdenServer : private TakeoverHandler {
   template <void (EdenServer::*MemberFn)()>
   class PeriodicFnTask : public PeriodicTask {
    public:
-    using PeriodicTask::PeriodicTask;
+    PeriodicFnTask(EdenServer* server, std::string name)
+        : PeriodicTask{server->getMainEventBase(), std::move(name)},
+          server_{server} {}
+
     void runTask() override {
-      (getServer()->*MemberFn)();
+      (server_->*MemberFn)();
     }
+
+   private:
+    EdenServer* server_;
   };
 
   using BackingStoreKey = std::pair<BackingStoreType, std::string>;

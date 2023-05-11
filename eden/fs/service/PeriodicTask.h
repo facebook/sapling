@@ -9,13 +9,15 @@
 
 #include <chrono>
 #include <string>
+#include <string_view>
 
-#include <folly/Range.h>
 #include <folly/io/async/HHWheelTimer.h>
 
-namespace facebook::eden {
+namespace folly {
+class EventBase;
+}
 
-class EdenServer;
+namespace facebook::eden {
 
 /**
  * A helper class for implementing periodic tasks that should be run by
@@ -31,11 +33,7 @@ class PeriodicTask : private folly::HHWheelTimer::Callback {
   // Unfortunately HHWheelTimer does not expose this as a class member.
   using Duration = std::chrono::milliseconds;
 
-  PeriodicTask(EdenServer* server, folly::StringPiece name);
-
-  EdenServer* getServer() const {
-    return server_;
-  }
+  PeriodicTask(folly::EventBase* evb, std::string name);
 
   const std::string& getName() const {
     return name_;
@@ -82,7 +80,7 @@ class PeriodicTask : private folly::HHWheelTimer::Callback {
 
   void reschedule();
 
-  EdenServer* const server_;
+  folly::EventBase* const evb_;
   std::string const name_;
 
   /*

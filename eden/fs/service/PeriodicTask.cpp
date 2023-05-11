@@ -9,10 +9,8 @@
 
 #include <folly/Random.h>
 #include <folly/io/async/EventBase.h>
-#include <folly/lang/Bits.h>
+#include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
-
-#include "eden/fs/service/EdenServer.h"
 
 using namespace std::chrono_literals;
 
@@ -22,8 +20,8 @@ constexpr auto kSlowTaskLimit = 50ms;
 
 namespace facebook::eden {
 
-PeriodicTask::PeriodicTask(EdenServer* server, folly::StringPiece name)
-    : server_{server}, name_{name.str()}, interval_{0} {}
+PeriodicTask::PeriodicTask(folly::EventBase* evb, std::string name)
+    : evb_{evb}, name_{std::move(name)}, interval_{0} {}
 
 void PeriodicTask::timeoutExpired() noexcept {
   folly::stop_watch<> timer;
@@ -64,7 +62,7 @@ void PeriodicTask::timeoutExpired() noexcept {
 }
 
 void PeriodicTask::updateInterval(Duration interval, bool splay) {
-  server_->getMainEventBase()->dcheckIsInEventBaseThread();
+  evb_->dcheckIsInEventBaseThread();
 
   auto oldInterval = interval_;
   interval_ = interval;
@@ -87,15 +85,14 @@ void PeriodicTask::updateInterval(Duration interval, bool splay) {
     initialScheduleTime += Duration(folly::Random::rand64(interval_.count()));
   }
   cancelTimeout();
-  server_->getMainEventBase()->timer().scheduleTimeout(
-      this, initialScheduleTime);
+  evb_->timer().scheduleTimeout(this, initialScheduleTime);
 }
 
 void PeriodicTask::reschedule() {
   if (interval_ <= Duration(0)) {
     return;
   }
-  server_->getMainEventBase()->timer().scheduleTimeout(this, interval_);
+  evb_->timer().scheduleTimeout(this, interval_);
 }
 
 } // namespace facebook::eden

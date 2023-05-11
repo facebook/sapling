@@ -37,7 +37,8 @@ class TestTask : public PeriodicTask {
       EdenServer* server,
       StringPiece name,
       std::function<void()>&& fn)
-      : PeriodicTask(server, name), fn_(std::move(fn)) {}
+      : PeriodicTask(server->getMainEventBase(), name.str()),
+        fn_(std::move(fn)) {}
 
   void runTask() override {
     fn_();
