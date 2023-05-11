@@ -19,7 +19,7 @@ import {Icon} from 'shared/Icon';
 export function CommitInfoField({
   field,
   isBeingEdited,
-  isOptimistic,
+  readonly,
   content,
   editedField,
   startEditingField,
@@ -29,7 +29,7 @@ export function CommitInfoField({
 }: {
   field: FieldConfig;
   isBeingEdited: boolean;
-  isOptimistic: boolean;
+  readonly: boolean;
   startEditingField: () => void;
   content?: string | Array<string>;
   editedField: string | Array<string> | undefined;
@@ -58,11 +58,11 @@ export function CommitInfoField({
           </Section>
         ) : (
           <ClickToEditField
-            startEditingField={isOptimistic ? undefined : startEditingField}
+            startEditingField={readonly ? undefined : startEditingField}
             kind={field.type}
             fieldKey={field.key}>
             <span>{content}</span>
-            {isOptimistic ? null : (
+            {readonly ? null : (
               <span className="hover-edit-button">
                 <Icon icon="edit" />
               </span>
@@ -102,21 +102,23 @@ export function CommitInfoField({
       <Section>
         <Wrapper>
           <ClickToEditField
-            startEditingField={isOptimistic ? undefined : startEditingField}
+            startEditingField={readonly ? undefined : startEditingField}
             kind={field.type}
             fieldKey={field.key}>
             <SmallCapsTitle>
               <Icon icon={field.icon} />
               <T>{field.key}</T>
-              <span className="hover-edit-button">
-                <Icon icon="edit" />
-              </span>
+              {readonly ? null : (
+                <span className="hover-edit-button">
+                  <Icon icon="edit" />
+                </span>
+              )}
             </SmallCapsTitle>
             {content ? (
               <div>{content}</div>
             ) : (
               <span className="empty-description subtle">
-                {isOptimistic ? (
+                {readonly ? (
                   <>
                     <T replace={{$name: field.key}}> No $name</T>
                   </>

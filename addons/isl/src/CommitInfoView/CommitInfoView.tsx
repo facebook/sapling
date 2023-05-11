@@ -230,7 +230,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             field={field}
             content={parsedFields[field.key as keyof CommitMessageFields]}
             autofocus={topmostEditedField === field.key}
-            isOptimistic={editedMessage.type === 'optimistic'}
+            readonly={editedMessage.type === 'optimistic' || isPublic}
             isBeingEdited={fieldsBeingEdited[field.key]}
             startEditingField={() => startEditingField(field.key)}
             editedField={editedMessage.fields?.[field.key]}
