@@ -254,7 +254,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
           />
         ))}
         <VSCodeDivider />
-        {commit.isHead ? (
+        {commit.isHead && !isPublic ? (
           <Section data-testid="changes-to-amend">
             <SmallCapsTitle>
               {isCommitMode ? <T>Changes to Commit</T> : <T>Changes to Amend</T>}
