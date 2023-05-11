@@ -151,7 +151,8 @@ class Hash : public boost::totally_ordered<Hash<RAW_SIZE>> {
           bytes.size());
     }
 
-    Storage storage;
+    // Sigh, silence a gcc warning.
+    Storage storage{};
     std::memcpy(storage.data(), bytes.data(), RAW_SIZE);
     return storage;
   }
