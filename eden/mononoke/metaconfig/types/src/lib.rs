@@ -1016,6 +1016,10 @@ pub struct RemoteMetadataDatabaseConfig {
     pub mutation: RemoteDatabaseConfig,
     /// Database for sparse profiles sizes.
     pub sparse_profiles: RemoteDatabaseConfig,
+    /// Database for bonsai blob mapping
+    pub bonsai_blob_mapping: Option<ShardableRemoteDatabaseConfig>,
+    /// Database for deletion log
+    pub deletion_log: Option<RemoteDatabaseConfig>,
 }
 
 /// Configuration for the Metadata database

@@ -331,6 +331,8 @@ impl Convert for RawMetadataConfig {
                     filenodes: raw.filenodes.convert()?,
                     mutation: raw.mutation.convert()?,
                     sparse_profiles: raw.sparse_profiles.convert()?,
+                    bonsai_blob_mapping: raw.bonsai_blob_mapping.convert()?,
+                    deletion_log: raw.deletion_log.convert()?,
                 },
             )),
             RawMetadataConfig::UnknownField(f) => Err(anyhow!(

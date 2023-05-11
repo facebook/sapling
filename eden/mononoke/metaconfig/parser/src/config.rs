@@ -906,7 +906,7 @@ mod test {
 
             [commit_graph_config]
             scuba_table = "commit_graph"
-            
+
             [deep_sharding_config.status]
         "#;
         let fbsource_repo_def = r#"
@@ -957,6 +957,8 @@ mod test {
         filenodes = { sharded = { shard_map = "db_address_shards", shard_num = 123 } }
         mutation = { db_address = "mutation_db_address" }
         sparse_profiles = { db_address = "sparse_profiles_db_address" }
+        bonsai_blob_mapping = { sharded = { shard_map = "blob_mapping_shards", shard_num = 12 } }
+        deletion_log = { db_address = "deletion_log" }
 
         [main.blobstore.multiplexed_wal]
         multiplex_id = 1
@@ -1058,6 +1060,15 @@ mod test {
                 sparse_profiles: RemoteDatabaseConfig {
                     db_address: "sparse_profiles_db_address".into(),
                 },
+                bonsai_blob_mapping: Some(ShardableRemoteDatabaseConfig::Sharded(
+                    ShardedRemoteDatabaseConfig {
+                        shard_map: "blob_mapping_shards".into(),
+                        shard_num: NonZeroUsize::new(12).unwrap(),
+                    },
+                )),
+                deletion_log: Some(RemoteDatabaseConfig {
+                    db_address: "deletion_log".into(),
+                }),
             }),
             ephemeral_blobstore: None,
         };
@@ -1595,6 +1606,8 @@ mod test {
                         sparse_profiles: RemoteDatabaseConfig {
                             db_address: "some_db".into(),
                         },
+                        bonsai_blob_mapping: None,
+                        deletion_log: None,
                     }),
                     ephemeral_blobstore: None,
                 },
@@ -1688,7 +1701,9 @@ mod test {
                         primary: RemoteDatabaseConfig { db_address: "other_other_db".into(), },
                         filenodes: ShardableRemoteDatabaseConfig::Sharded(ShardedRemoteDatabaseConfig { shard_map: "other-other-shards".into(), shard_num: NonZeroUsize::new(789).unwrap() }),
                         mutation: RemoteDatabaseConfig { db_address: "other_other_mutation_db".into(), },
-                        sparse_profiles: RemoteDatabaseConfig { db_address: "test_db".into(), }
+                        sparse_profiles: RemoteDatabaseConfig { db_address: "test_db".into(), },
+                        bonsai_blob_mapping: None,
+                        deletion_log: None,
                     }),
 
                     ephemeral_blobstore: None,
