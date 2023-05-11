@@ -13,6 +13,8 @@ export interface Logger {
   log(...args: Parameters<typeof console.log>): void;
   warn(...args: Parameters<typeof console.warn>): void;
   error(...args: Parameters<typeof console.error>): void;
+
+  getLogFileContents?: () => Promise<string>;
 }
 
 export const stdoutLogger = console;
@@ -28,5 +30,9 @@ export function fileLogger(filename: string): Logger {
     log,
     warn: log,
     error: log,
+
+    getLogFileContents: () => {
+      return fs.promises.readFile(filename, 'utf-8');
+    },
   };
 }

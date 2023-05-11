@@ -37,14 +37,23 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 }
 
+const logFileContents: Array<string> = [];
 function createOutputChannelLogger(): [vscode.OutputChannel, Logger] {
   const outputChannel = vscode.window.createOutputChannel('Sapling ISL');
-  const log = (...data: Array<unknown>) => outputChannel.appendLine(util.format(...data));
+  const log = (...data: Array<unknown>) => {
+    const line = util.format(...data);
+    logFileContents.push(line);
+    outputChannel.appendLine(line);
+  };
   const outputChannelLogger = {
     log,
     info: log,
     warn: log,
     error: log,
+
+    getLogFileContents() {
+      return Promise.resolve(logFileContents.join('\n'));
+    },
   } as Logger;
   return [outputChannel, outputChannelLogger];
 }
