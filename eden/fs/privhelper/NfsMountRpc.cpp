@@ -7,7 +7,7 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/fuse/privhelper/NfsMountRpc.h"
+#include "eden/fs/privhelper/NfsMountRpc.h"
 
 namespace facebook::eden {
 EDEN_XDR_SERDE_IMPL(nfstime32, seconds, nseconds);

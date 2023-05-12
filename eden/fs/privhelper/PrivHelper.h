@@ -156,7 +156,7 @@ class PrivHelper {
    *
    * The privhelper process will exit automatically when the main process exits
    * even if this method is not called.  However, this method can be used to
-   * explictly stop the privhelper process, and check its exit code.
+   * explicitly stop the privhelper process, and check its exit code.
    *
    * Note that when the privhelper is stopped it will unmount any outstanding
    * mounts points.

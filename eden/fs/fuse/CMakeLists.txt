@@ -19,5 +19,3 @@ target_link_libraries(
     Folly::folly
     edencommon::edencommon_utils
 )
-
-add_subdirectory(privhelper)

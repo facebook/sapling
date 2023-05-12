@@ -10,7 +10,7 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/fuse/privhelper/PrivHelperServer.h"
+#include "eden/fs/privhelper/PrivHelperServer.h"
 
 #include <errno.h>
 #include <folly/Conv.h>

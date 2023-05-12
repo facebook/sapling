@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
+#include "eden/fs/privhelper/PrivHelperImpl.h"
 
 #include <folly/Exception.h>
 #include <folly/Expected.h>
@@ -26,12 +26,12 @@
 #include <sys/wait.h>
 #endif // !_WIN32
 
-#include "eden/fs/fuse/privhelper/PrivHelper.h"
-#include "eden/fs/fuse/privhelper/PrivHelperFlags.h"
+#include "eden/fs/privhelper/PrivHelper.h"
+#include "eden/fs/privhelper/PrivHelperFlags.h"
 
 #ifndef _WIN32
-#include "eden/fs/fuse/privhelper/PrivHelperConn.h"
-#include "eden/fs/fuse/privhelper/PrivHelperServer.h"
+#include "eden/fs/privhelper/PrivHelperConn.h"
+#include "eden/fs/privhelper/PrivHelperServer.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/FileDescriptor.h"
 #include "eden/fs/utils/PathFuncs.h"

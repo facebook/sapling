@@ -12,7 +12,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
-#include "eden/fs/fuse/privhelper/PrivHelperConn.h"
+#include "eden/fs/privhelper/PrivHelperConn.h"
 #include "eden/fs/utils/UnixSocket.h"
 
 namespace folly {

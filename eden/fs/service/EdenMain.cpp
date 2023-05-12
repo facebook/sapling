@@ -28,8 +28,8 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
-#include "eden/fs/fuse/privhelper/PrivHelper.h"
-#include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
+#include "eden/fs/privhelper/PrivHelper.h"
+#include "eden/fs/privhelper/PrivHelperImpl.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/EdenServiceHandler.h" // for kServiceName

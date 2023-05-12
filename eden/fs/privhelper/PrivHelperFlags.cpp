@@ -5,6 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/fuse/privhelper/PrivHelperFlags.h"
+#include "eden/fs/privhelper/PrivHelperFlags.h"
 
 DEFINE_int32(privhelper_fd, -1, "The file descriptor number of control socket");

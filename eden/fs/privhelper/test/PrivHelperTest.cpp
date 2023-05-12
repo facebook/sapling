@@ -19,10 +19,10 @@
 #include <chrono>
 #include <unordered_map>
 
-#include "eden/fs/fuse/privhelper/PrivHelper.h"
-#include "eden/fs/fuse/privhelper/PrivHelperConn.h"
-#include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
-#include "eden/fs/fuse/privhelper/test/PrivHelperTestServer.h"
+#include "eden/fs/privhelper/PrivHelper.h"
+#include "eden/fs/privhelper/PrivHelperConn.h"
+#include "eden/fs/privhelper/PrivHelperImpl.h"
+#include "eden/fs/privhelper/test/PrivHelperTestServer.h"
 #include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/utils/UserInfo.h"
 

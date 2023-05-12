@@ -7,8 +7,8 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/fuse/privhelper/PrivHelperServer.h"
-#include "eden/fs/fuse/privhelper/PrivHelperConn.h"
+#include "eden/fs/privhelper/PrivHelperServer.h"
+#include "eden/fs/privhelper/PrivHelperConn.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <fcntl.h>
@@ -35,8 +35,8 @@
 #include <sys/types.h>
 #include <chrono>
 #include <set>
-#include "eden/fs/fuse/privhelper/NfsMountRpc.h"
-#include "eden/fs/fuse/privhelper/PrivHelperConn.h"
+#include "eden/fs/privhelper/NfsMountRpc.h"
+#include "eden/fs/privhelper/PrivHelperConn.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SysctlUtil.h"
 #include "eden/fs/utils/Throw.h"

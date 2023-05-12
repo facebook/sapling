@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/fuse/privhelper/PrivHelper.h"
+#include "eden/fs/privhelper/PrivHelper.h"
 
 #include <folly/File.h>
 #include <folly/futures/Future.h>

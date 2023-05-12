@@ -8,7 +8,7 @@
 #pragma once
 
 #include <folly/futures/Future.h>
-#include "eden/fs/fuse/privhelper/PrivHelper.h"
+#include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 #include <memory>

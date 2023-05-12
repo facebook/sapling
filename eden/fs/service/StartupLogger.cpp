@@ -17,7 +17,7 @@
 #include <folly/portability/Unistd.h>
 #include <sys/types.h>
 
-#include "eden/fs/fuse/privhelper/PrivHelper.h"
+#include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/service/StartupStatusSubscriber.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"

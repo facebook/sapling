@@ -52,6 +52,7 @@ endif()
 
 add_subdirectory(config)
 add_subdirectory(fuse)
+add_subdirectory(privhelper)
 add_subdirectory(inodes)
 add_subdirectory(journal)
 add_subdirectory(model)

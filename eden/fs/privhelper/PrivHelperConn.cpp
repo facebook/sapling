@@ -7,7 +7,7 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/fuse/privhelper/PrivHelperConn.h"
+#include "eden/fs/privhelper/PrivHelperConn.h"
 
 #include <fcntl.h>
 #include <folly/Demangle.h>
