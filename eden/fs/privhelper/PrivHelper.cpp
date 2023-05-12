@@ -45,27 +45,11 @@ void PrivHelper::setDaemonTimeoutBlocking(std::chrono::nanoseconds duration) {
   std::move(future).get();
 }
 
-void PrivHelper::setUseEdenFsBlocking(bool useEdenFs) {
-  folly::EventBase evb;
-  attachEventBase(&evb);
-
-  auto future = setUseEdenFs(useEdenFs);
-  if (future.isReady()) {
-    std::move(future).get();
-    return;
-  }
-
-  future = std::move(future).ensure([&evb] { evb.terminateLoopSoon(); });
-  evb.loopForever();
-  std::move(future).get();
-}
-
 #else // _WIN32
 
 void PrivHelper::setLogFileBlocking(folly::File) {}
 
 void PrivHelper::setDaemonTimeoutBlocking(std::chrono::nanoseconds) {}
-void PrivHelper::setUseEdenFsBlocking(bool) {}
 
 #endif // _WIN32
 

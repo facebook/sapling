@@ -149,7 +149,6 @@ class PrivHelper {
    */
   void setLogFileBlocking(folly::File logFile);
   void setDaemonTimeoutBlocking(std::chrono::nanoseconds duration);
-  void setUseEdenFsBlocking(bool useEdenFs);
 
   /*
    * Explicitly stop the privhelper process.
@@ -198,7 +197,6 @@ class PrivHelper {
  public:
   void setLogFileBlocking(folly::File logFile);
   void setDaemonTimeoutBlocking(std::chrono::nanoseconds duration);
-  void setUseEdenFsBlocking(bool useEdenFs);
 };
 
 #endif // _WIN32

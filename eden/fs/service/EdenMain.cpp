@@ -333,7 +333,6 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
 
     privHelper->setDaemonTimeoutBlocking(
         edenConfig->fuseDaemonTimeout.getValue());
-    privHelper->setUseEdenFsBlocking(edenConfig->fuseUseEdenFS.getValue());
 
     // Since we are a daemon, and we don't ever want to be in a situation
     // where we hold any open descriptors through a fuse mount that points

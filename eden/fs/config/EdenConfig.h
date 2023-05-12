@@ -448,12 +448,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Whether Eden should attempt to load and use /dev/edenfs in preference
-   * to other fuse implementations that may be available on the system.
-   */
-  ConfigSetting<bool> fuseUseEdenFS{"fuse:use-edenfs", false, this};
-
-  /**
    * The maximum number of concurrent requests allowed into userspace from the
    * kernel. This corresponds to fuse_init_out::max_background. The
    * documentation this applies to only readaheads and async direct IO, but
