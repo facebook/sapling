@@ -111,8 +111,9 @@ Inspect results
   
 
 Test move bookmark failure (invalid from)
-  $ hgedenapi debugapi -e setbookmark -i "'master_bookmark'" -i "'$D'" -i "'$C'" 2>&1 | grep 'error.HttpError'
+  $ quiet_grep error.HttpError -- hgedenapi debugapi -e setbookmark -i "'master_bookmark'" -i "'$D'" -i "'$C'"
   error.HttpError: expected response, but none returned by the server
+  [1]
 
 Inspect results
   $ hgedenapi pull -q
@@ -130,8 +131,9 @@ Inspect results
 
 
 Test delete bookmark failure (invalid from)
-  $ hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "None" -i "'$D'" 2>&1 | grep 'error.HttpError'
+  $ quiet_grep error.HttpError -- hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "None" -i "'$D'"
   error.HttpError: expected response, but none returned by the server
+  [1]
 
 Inspect results
   $ hgedenapi pull -q
@@ -149,8 +151,9 @@ Inspect results
 
 
 Test create bookmark failure (already exists)
-  $ hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "'$D'" -i "None" 2>&1 | grep 'error.HttpError'
+  $ quiet_grep error.HttpError -- hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "'$D'" -i "None"
   error.HttpError: expected response, but none returned by the server
+  [1]
 
 Inspect results
   $ hgedenapi pull -q

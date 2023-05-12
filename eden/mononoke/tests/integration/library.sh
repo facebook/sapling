@@ -2144,14 +2144,73 @@ function backfill_derived_data_multiple_repos() {
     "$@"
 }
 
+function hook_tailer() {
+  "$MONONOKE_HOOK_TAILER" \
+    "${CACHE_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
+    --repo-id "$REPOID" \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    "$@"
+}
+
+# quiet <command> - run command and supress all output in case of success
+#
+# This helper function allows to supress overly verbose logging when there
+# are no errors but print all the useful stacktraces when there are errors.
+#
+# The function always returns the original command return code.
+#
+# The function behaviour can be tweaked further by tweaking the following env
+# variables:
+# * QUIET_LOGGING_LOG_FILE - the file where the command output is stored (default: $TESTTMP/quiet.last.log)
+# * EXPECTED_RC - the return code that's expected and considered success (default: 0)
 function quiet() {
-  local log="$TESTTMP/quiet.last.log"
+  local log=${QUIET_LOGGING_LOG_FILE:="$TESTTMP/quiet.last.log"}
   "$@" >"$log" 2>&1
   ret="$?"
-  if [[ "$ret" == 0 ]]; then
-    return "$ret"
+  expected_ret=${EXPECTED_RC:=0}
+  if [[ "$ret" != "$expected_ret" ]]; then
+    cat "$log" >&2
   fi
-  cat "$log"
+  return "$ret"
+}
+
+# quiet_grep <grep_args> -- <command> - run command and supress all output in case of success
+#
+# This helper function allows to supress overly verbose logging when the output
+# matches grep expression but display full output otherwise.
+#
+# Full command output is always printed to stderr.
+#
+# The function always returns the original command return code (so if you count
+# or sort the lines of grepped output) the full output won't be affected.
+#
+# The function behaviour can be tweaked further by tweaking the following env
+# variables:
+# * QUIET_LOGGING_LOG_FILE - the file where the command output is stored (default: $TESTTMP/quiet.last.log)
+function quiet_grep() {
+  ret="$?"
+  local log=${QUIET_LOGGING_LOG_FILE:="$TESTTMP/quiet.last.log"}
+  GREP_ARGS=()
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --)
+        shift
+        break
+        ;;
+      *)
+        GREP_ARGS+=("$1")
+        shift
+        ;;
+    esac
+  done
+  "$@" >"$log" 2>&1
+  ret="$?"
+  if grep "${GREP_ARGS[@]}" < "$log" 2>&1 > /dev/null; then
+    grep "${GREP_ARGS[@]}" < "$log"
+  else
+    cat "$log" >&2
+  fi
   return "$ret"
 }
 
