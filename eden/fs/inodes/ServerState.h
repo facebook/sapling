@@ -7,18 +7,20 @@
 
 #pragma once
 
-#include <folly/ThreadLocal.h>
-#include <chrono>
 #include <memory>
 
 #include "eden/fs/config/CachedParsedFileMonitor.h"
-#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/git/GitIgnoreFileParser.h"
-#include "eden/fs/notifications/Notifier.h"
-#include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/RefPtr.h"
 #include "eden/fs/utils/UserInfo.h"
+
+// For ConfigReloadBehavior
+#include "eden/fs/config/gen-cpp2/eden_config_types.h"
+
+namespace folly {
+class EventBase;
+}
 
 namespace facebook::eden {
 
@@ -26,21 +28,29 @@ class Clock;
 class EdenConfig;
 class EdenStats;
 class FaultInjector;
-class IHiveLogger;
 class FsEventLogger;
+class IHiveLogger;
+class NfsServer;
+class Notifier;
+class PrivHelper;
 class ProcessNameCache;
+class ReloadableConfig;
 class StructuredLogger;
 class TopLevelIgnores;
 class UnboundedQueueExecutor;
-class NfsServer;
 
 using EdenStatsPtr = RefPtr<EdenStats>;
 
 /**
- * ServerState contains state shared across multiple mounts.
+ * ServerState is the testabl, dependency injection seam for the inode
+ * layer. It includes some platform abstractions like Clock, loggers,
+ * and configuration, and state shared across multiple mounts.
  *
- * This is normally owned by the main EdenServer object.  However unit tests
- * also create ServerState objects without an EdenServer.
+ * This is normally owned by the main EdenServer object. However unit
+ * tests also create ServerState objects without an
+ * EdenServer. ServerState should not contain expensive-to-create
+ * objects or they should be abstracted behind an interface so
+ * appropriate fakes can be used in tests.
  */
 class ServerState {
  public:
@@ -97,9 +107,7 @@ class ServerState {
    * reload parameter.
    */
   std::shared_ptr<const EdenConfig> getEdenConfig(
-      ConfigReloadBehavior reload = ConfigReloadBehavior::AutoReload) {
-    return config_->getEdenConfig(reload);
-  }
+      ConfigReloadBehavior reload = ConfigReloadBehavior::AutoReload);
 
   /**
    * Get the TopLevelIgnores. It is based on the system and user git ignore

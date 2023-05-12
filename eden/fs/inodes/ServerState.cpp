@@ -11,6 +11,7 @@
 #include <folly/portability/GFlags.h>
 
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/nfs/NfsServer.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -91,6 +92,11 @@ ServerState::ServerState(
 }
 
 ServerState::~ServerState() {}
+
+std::shared_ptr<const EdenConfig> ServerState::getEdenConfig(
+    ConfigReloadBehavior reload) {
+  return config_->getEdenConfig(reload);
+}
 
 std::unique_ptr<TopLevelIgnores> ServerState::getTopLevelIgnores() {
   // Update EdenConfig to detect changes to the system or user ignore files

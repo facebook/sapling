@@ -23,6 +23,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/MountProtocol.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/EdenDispatcherFactory.h"

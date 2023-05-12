@@ -32,6 +32,7 @@
 
 #include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -51,6 +52,7 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/nfs/Nfsd3.h"
+#include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/prjfs/PrjfsChannel.h"
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/ThriftGetObjectImpl.h"
