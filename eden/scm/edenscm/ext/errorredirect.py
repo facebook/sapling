@@ -66,6 +66,8 @@ def _handlecommandexception(orig, ui):
         "exception has occurred: %s",
         warning,
         exception_type=exctypename,
+        exception_msg=str(sys.exc_info()[1]),
+        source="command_exception",
         traceback=trace,
     )
 

@@ -919,7 +919,12 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
 
 def _log_exception(lui, e):
     try:
-        lui.log("exceptions", exception_type=type(e).__name__, exception_msg=str(e))
+        lui.log(
+            "exceptions",
+            exception_type=type(e).__name__,
+            exception_msg=str(e),
+            source="log_exception",
+        )
     except Exception as e:
         try:
             wrapped = error.ProgrammingError("failed to log exception: {!r}".format(e))
@@ -927,6 +932,7 @@ def _log_exception(lui, e):
                 "exceptions",
                 exception_type=type(wrapped).__name__,
                 exception_msg=str(wrapped),
+                source="log_exception_wrapped",
             )
         except Exception:
             # If there's an unrecoverable error in the exception handling flow

@@ -2236,6 +2236,7 @@ def pull(orig, ui, repo, *pats, **opts):
                 exception_type=type(ex).__name__,
                 exception_msg=str(ex),
                 fatal="false",
+                source="post_pull_prefetch",
             )
     return result
 

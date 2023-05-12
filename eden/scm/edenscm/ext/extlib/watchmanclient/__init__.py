@@ -444,14 +444,15 @@ class state_update(object):
             return True
         except Exception as ex:
             # Swallow any errors; fire and forget
-            exctype = sys.exc_info()[0]
-            exctypename = "None" if exctype is None else exctype.__name__
             self.repo.ui.log(
                 "hgerrors",
                 "watchman '%s' event has failed: %s",
                 cmd,
                 str(ex),
-                exception_type=exctypename,
+                exception_type=type(ex).__name__,
+                exception_msg=str(ex),
+                watchman_cmd=cmd,
+                source="watchman",
             )
             return False
 
