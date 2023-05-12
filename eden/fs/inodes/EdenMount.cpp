@@ -659,31 +659,6 @@ ImmediateFuture<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
       });
 }
 
-#ifndef _WIN32
-FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::addBindMount(
-    RelativePathPiece repoPath,
-    AbsolutePathPiece targetPath,
-    const ObjectFetchContextPtr& context) {
-  auto absRepoPath = getPath() + repoPath;
-
-  return this->ensureDirectoryExists(repoPath, context)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([this,
-                  target = targetPath.copy(),
-                  pathInMountDir = getPath() + repoPath](auto&&) {
-        return serverState_->getPrivHelper()->bindMount(
-            target.view(), pathInMountDir.view());
-      });
-}
-
-FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::removeBindMount(
-    RelativePathPiece repoPath) {
-  auto absRepoPath = getPath() + repoPath;
-  return serverState_->getPrivHelper()->bindUnMount(absRepoPath.view());
-}
-#endif // !_WIN32
-
 folly::SemiFuture<Unit> EdenMount::performBindMounts() {
   auto mountPath = getPath();
   auto systemConfigDir = getEdenConfig()->getSystemConfigDir();

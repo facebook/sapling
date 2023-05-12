@@ -126,11 +126,11 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<SynchronizeWorkingCopyParams> params) override;
 
-  void addBindMount(
+  folly::SemiFuture<folly::Unit> semifuture_addBindMount(
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::string> repoPath,
       std::unique_ptr<std::string> targetPath) override;
-  void removeBindMount(
+  folly::SemiFuture<folly::Unit> semifuture_removeBindMount(
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::string> repoPath) override;
 

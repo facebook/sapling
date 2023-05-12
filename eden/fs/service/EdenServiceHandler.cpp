@@ -791,36 +791,46 @@ ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
   }
 }
 
-void EdenServiceHandler::addBindMount(
+folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_addBindMount(
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
-    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> repoPath,
+    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> repoPathStr,
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> targetPath) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto mountPath = absolutePathFromThrift(*mountPoint);
   auto [edenMount, rootInode] = server_->getMountAndRootInode(mountPath);
 
-  edenMount
-      ->addBindMount(
-          RelativePathPiece{*repoPath},
-          absolutePathFromThrift(*targetPath),
-          helper->getFetchContext())
-      .ensure([rootInode = std::move(rootInode)] {})
-      .get();
+  auto repoPath = RelativePathPiece{*repoPathStr};
+  auto absRepoPath = edenMount->getPath() + repoPath;
+  auto* privHelper = server_->getServerState()->getPrivHelper();
+
+  auto fut =
+      edenMount->ensureDirectoryExists(repoPath, helper->getFetchContext());
+  return std::move(fut)
+      .thenValue([privHelper,
+                  target = absolutePathFromThrift(*targetPath),
+                  pathInMountDir = absRepoPath.copy()](TreeInodePtr) {
+#ifndef _WIN32
+        return privHelper->bindMount(target.view(), pathInMountDir.view());
 #else
-  NOT_IMPLEMENTED();
+        NOT_IMPLEMENTED();
 #endif
+      })
+      .ensure([rootInode = std::move(rootInode), helper = std::move(helper)] {})
+      .semi();
 }
 
-void EdenServiceHandler::removeBindMount(
+folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeBindMount(
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
-    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> repoPath) {
-#ifndef _WIN32
+    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> repoPathStr) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto [edenMount, _] = server_->getMountAndRootInode(mountPath);
+  auto [edenMount, rootInode] = server_->getMountAndRootInode(mountPath);
 
-  edenMount->removeBindMount(RelativePathPiece{*repoPath}).get();
+  auto repoPath = RelativePathPiece{*repoPathStr};
+  auto absRepoPath = edenMount->getPath() + repoPath;
+#ifndef _WIN32
+  return server_->getServerState()->getPrivHelper()->bindUnMount(
+      absRepoPath.view());
 #else
   NOT_IMPLEMENTED();
 #endif

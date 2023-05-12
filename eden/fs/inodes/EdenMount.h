@@ -948,13 +948,6 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> performBindMounts();
 
-  FOLLY_NODISCARD folly::Future<folly::Unit> addBindMount(
-      RelativePathPiece repoPath,
-      AbsolutePathPiece targetPath,
-      const ObjectFetchContextPtr& context);
-  FOLLY_NODISCARD folly::Future<folly::Unit> removeBindMount(
-      RelativePathPiece repoPath);
-
   /**
    * Ensures the path `fromRoot` is a directory. If it is not, then it creates
    * subdirectories until it is. If creating a subdirectory fails, it throws an
