@@ -22,9 +22,6 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/SysTypes.h>
 #include <folly/portability/Unistd.h>
-#ifndef _WIN32
-#include <sys/wait.h>
-#endif // !_WIN32
 
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/privhelper/PrivHelperFlags.h"
