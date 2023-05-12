@@ -16,8 +16,7 @@
   >   "enable_consistent_routing": false,
   >   "disable_hostname_logging": false,
   >   "acl_check": false,
-  >   "enforce_acl_check": false,
-  >   "tasks_per_content": 1
+  >   "enforce_acl_check": false
   > }
   > EOF
 

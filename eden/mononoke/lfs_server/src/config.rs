@@ -30,8 +30,6 @@ pub struct ObjectPopularity {
     /// Objects whose sum of downloads exceeds the threshold during the window will not be
     /// consistently-routed. This ensures the full pool of servers can be used to serve very
     /// popular blobs.
-    pub threshold: u64,
-
     pub thresholds: Vec<ConsistentRoutingRing>,
 }
 
@@ -95,11 +93,6 @@ impl TryFrom<lfs_server_config::ObjectPopularity> for ObjectPopularity {
             .try_into()
             .with_context(|| format!("Invalid window: {:?}", value.window))?;
 
-        let threshold = value
-            .threshold
-            .try_into()
-            .with_context(|| format!("Invalid threshold: {:?}", value.threshold))?;
-
         let thresholds = value
             .thresholds
             .clone()
@@ -111,7 +104,6 @@ impl TryFrom<lfs_server_config::ObjectPopularity> for ObjectPopularity {
         Ok(Self {
             category: value.category,
             window,
-            threshold,
             thresholds,
         })
     }
@@ -191,7 +183,6 @@ impl Default for ServerConfig {
             enforce_acl_check: false,
             loadshedding_limits: vec![],
             object_popularity: None,
-            tasks_per_content: 1,
             disable_compression: false,
             disable_compression_identities: vec![],
             enforce_authentication: false,

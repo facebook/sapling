@@ -248,7 +248,6 @@ mod test {
         *config.object_popularity_mut() = Some(ObjectPopularity {
             category: "foo".into(),
             window: 100,
-            threshold: 10,
             thresholds: vec![
                 ConsistentRoutingRing {
                     threshold: 0,
@@ -296,7 +295,6 @@ mod test {
         *config.object_popularity_mut() = Some(ObjectPopularity {
             category: "foo".into(),
             window: 100,
-            threshold: 10,
             thresholds: vec![
                 ConsistentRoutingRing {
                     threshold: 0,
@@ -353,7 +351,6 @@ mod test {
         *config.object_popularity_mut() = Some(ObjectPopularity {
             category: "foo".into(),
             window: 100,
-            threshold: 10,
             thresholds: vec![
                 ConsistentRoutingRing {
                     threshold: 0,
@@ -388,7 +385,6 @@ mod test {
         *config.object_popularity_mut() = Some(ObjectPopularity {
             category: "foo".into(),
             window: 100,
-            threshold: 10,
             thresholds: vec![
                 ConsistentRoutingRing {
                     threshold: 0,

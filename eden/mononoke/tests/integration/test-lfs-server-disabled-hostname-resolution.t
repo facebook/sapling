@@ -15,8 +15,7 @@
   >   "track_bytes_sent": true,
   >   "enable_consistent_routing": false,
   >   "disable_hostname_logging": true,
-  >   "enforce_acl_check": false,
-  >   "tasks_per_content": 1
+  >   "enforce_acl_check": false
   > }
   > EOF
 
@@ -36,7 +35,6 @@
     "enforce_authentication": false,
     "loadshedding_limits": [],
     "object_popularity": null,
-    "tasks_per_content": 1,
     "track_bytes_sent": true
   }
 
@@ -57,8 +55,7 @@
   >   "track_bytes_sent": false,
   >   "enable_consistent_routing": false,
   >   "disable_hostname_logging": false,
-  >   "enforce_acl_check": false,
-  >   "tasks_per_content": 1
+  >   "enforce_acl_check": false
   > }
   > EOF
 

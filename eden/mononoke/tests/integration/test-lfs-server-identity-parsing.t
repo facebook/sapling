@@ -17,8 +17,7 @@
   >   "track_bytes_sent": true,
   >   "enable_consistent_routing": false,
   >   "disable_hostname_logging": false,
-  >   "enforce_acl_check": true,
-  >   "tasks_per_content": 1
+  >   "enforce_acl_check": true
   > }
   > EOF
 
