@@ -82,6 +82,9 @@ impl FileNodeIdPointer {
         let key = format!("filenode_lookup.{}", ctx.finish().to_hex());
         Self(key)
     }
+    pub fn blobstore_key(&self) -> String {
+        self.0.clone()
+    }
 }
 
 pub fn store_filenode_id<'a, B: Blobstore>(
