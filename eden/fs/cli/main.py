@@ -1469,8 +1469,9 @@ class RemoveCmd(Subcmd):
                     # user may want us to delete it anyway, so let's ask.
                     if args.prompt and sys.stdin.isatty():
                         prompt = f"""\
-Warning: The following is not an EdenFS Mount: {path}. Any files in this \
-directory will be lost forever. Do you stil want to delete {path}?"""
+Warning: the following is not an EdenFS mount: {path}
+Any files in this directory will be lost forever.
+Do you still want to delete {path}?"""
                         if not prompt_confirmation(prompt):
                             return 2
                         else:
