@@ -38,6 +38,8 @@ const DEFAULT_MAX_RENAME_CANDIDATES: usize = 10;
 const DEFAULT_SIMILARITY_THRESHOLD: f32 = 0.8;
 /// Maximum rename edit cost determines whether we treat two files as a rename
 const DEFAULT_MAX_EDIT_COST: u64 = 1000;
+/// Control if MetadataRenameFinder fallbacks to content similarity finder
+const DEFAULT_FALLBACK_TO_CONTENT_SIMILARITY: bool = false;
 
 /// Finding rename between old and new trees (commits).
 /// old_tree is a parent of new_tree
@@ -102,19 +104,40 @@ impl RenameFinder for MetadataRenameFinder {
     ) -> Result<Option<RepoPathBuf>> {
         let new_files = self.inner.get_added_files(old_tree, new_tree)?;
         let candidates = select_rename_candidates(new_files, old_path, &self.inner.config)?;
-        self.inner
-            .read_renamed_metadata_forward(candidates, old_path)
-            .await
+        let found = self
+            .inner
+            .read_renamed_metadata_forward(candidates.clone(), old_path)
+            .await?;
+
+        if found.is_some() || !self.inner.get_fallback_to_content_similarity()? {
+            return Ok(found);
+        }
+
+        // fallback to content similarity
+        let old_path_key = self.inner.get_key_from_path(old_tree, old_path)?;
+        self.inner.find_similar_file(candidates, old_path_key).await
     }
 
     async fn find_rename_backward(
         &self,
-        _old_tree: &TreeManifest,
+        old_tree: &TreeManifest,
         new_tree: &TreeManifest,
         new_path: &RepoPath,
     ) -> Result<Option<RepoPathBuf>> {
         let new_key = self.inner.get_key_from_path(new_tree, new_path)?;
-        self.inner.read_renamed_metadata_backward(new_key).await
+        let found = self
+            .inner
+            .read_renamed_metadata_backward(new_key.clone())
+            .await?;
+
+        if found.is_some() || !self.inner.get_fallback_to_content_similarity()? {
+            return Ok(found);
+        }
+
+        // fallback to content similarity
+        let old_files = self.inner.get_deleted_files(old_tree, new_tree)?;
+        let candidates = select_rename_candidates(old_files, new_path, &self.inner.config)?;
+        self.inner.find_similar_file(candidates, new_key).await
     }
 }
 
@@ -315,6 +338,14 @@ impl RenameFinderInner {
             .config
             .get_opt::<u64>("copytrace", "max-edit-cost")?
             .unwrap_or(DEFAULT_MAX_EDIT_COST);
+        Ok(v)
+    }
+
+    pub(crate) fn get_fallback_to_content_similarity(&self) -> Result<bool> {
+        let v = self
+            .config
+            .get_opt::<bool>("copytrace", "fallback-to-content-similarity")?
+            .unwrap_or(DEFAULT_FALLBACK_TO_CONTENT_SIMILARITY);
         Ok(v)
     }
 }
