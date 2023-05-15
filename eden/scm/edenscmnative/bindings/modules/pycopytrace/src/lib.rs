@@ -17,8 +17,8 @@ use configmodel::Config;
 use copytrace::ContentSimilarityRenameFinder;
 use copytrace::CopyTrace;
 use copytrace::DagCopyTrace;
+use copytrace::MetadataRenameFinder;
 use copytrace::RenameFinder;
-use copytrace::SaplingRenameFinder;
 use cpython::*;
 use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
@@ -74,7 +74,7 @@ py_class!(pub class dagcopytrace |py| {
         let tree_store = tree_store.into();
         let config = config.into();
         let rename_finder: Arc<dyn RenameFinder + Send + Sync> = match tree_store.format() {
-            TreeFormat::Hg => Arc::new(SaplingRenameFinder::new(file_reader.into(), config)),
+            TreeFormat::Hg => Arc::new(MetadataRenameFinder::new(file_reader.into(), config)),
             TreeFormat::Git => Arc::new(ContentSimilarityRenameFinder::new(file_reader.into(), config)),
         };
         let dag = dag.into();

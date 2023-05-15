@@ -60,8 +60,8 @@ pub trait RenameFinder {
     ) -> Result<Option<RepoPathBuf>>;
 }
 
-/// Rename finder for Sapling repo.
-pub struct SaplingRenameFinder {
+/// Rename finder based on the copy information in the file header metadata
+pub struct MetadataRenameFinder {
     // Read content and rename metadata of a file
     file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
     // Read configs
@@ -76,7 +76,7 @@ pub struct ContentSimilarityRenameFinder {
     config: Arc<dyn Config + Send + Sync>,
 }
 
-impl SaplingRenameFinder {
+impl MetadataRenameFinder {
     pub fn new(
         file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
         config: Arc<dyn Config + Send + Sync>,
@@ -116,7 +116,7 @@ impl SaplingRenameFinder {
 }
 
 #[async_trait]
-impl RenameFinder for SaplingRenameFinder {
+impl RenameFinder for MetadataRenameFinder {
     async fn find_rename_forward(
         &self,
         old_tree: &TreeManifest,
