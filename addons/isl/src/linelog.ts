@@ -154,7 +154,7 @@ interface LineInfo {
 /** A "flatten" line. Result of `LineLog.flatten()`. */
 interface FlattenLine {
   /** The line is present in the given revisions. */
-  revs: Set<Rev>;
+  revs: Readonly<Set<Rev>>;
   /** Content of the line, including `\n`. */
   data: string;
 }
@@ -659,7 +659,8 @@ class LineLog extends SelfUpdate<LineLogRecord> {
    * similar to `absorb -e FILE` to edit all versions of a file in
    * a single view.
    */
-  public flatten(): FlattenLine[] {
+  @cached({cacheSize: 1000})
+  public flatten(): Readonly<FlattenLine[]> {
     const result: FlattenLine[] = [];
 
     // See the comments in calculateDepMap for what the stacks mean.
@@ -688,7 +689,7 @@ class LineLog extends SelfUpdate<LineLogRecord> {
     const insStack: Frame[] = [{rev: 0, endPc: -1}];
     const delStack: Frame[] = [];
     const maxDelRev = this.maxRev + 1;
-    const getCurrentRevs = (): Set<Rev> => {
+    const getCurrentRevs = (): Readonly<Set<Rev>> => {
       const insRev = insStack.at(-1)?.rev ?? 0;
       const delRev = delStack.at(-1)?.rev ?? maxDelRev;
       return revRangeToSet(insRev, delRev);
@@ -911,7 +912,7 @@ function stringsToInts(linesArray: string[][]): number[][] {
 
 /** Turn (3, 6) to Set([3, 4, 5]). */
 const revRangeToSet = cached(
-  (startRev, endRev: Rev): Set<Rev> => {
+  (startRev, endRev: Rev): Readonly<Set<Rev>> => {
     const result = new Set<Rev>();
     for (let rev = startRev; rev < endRev; rev++) {
       result.add(rev);
