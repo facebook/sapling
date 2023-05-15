@@ -89,6 +89,13 @@ impl FileContents {
         context.update(bytes);
         context.finish()
     }
+
+    pub fn content_chunk_ids(&self) -> Vec<ContentChunkId> {
+        match self {
+            Self::Bytes(_) => vec![],
+            Self::Chunked(chunked) => chunked.chunk_ids(),
+        }
+    }
 }
 
 impl BlobstoreValue for FileContents {
@@ -210,6 +217,11 @@ impl ChunkedFileContents {
 
     pub fn size(&self) -> u64 {
         self.size
+    }
+    pub(crate) fn chunk_ids(&self) -> Vec<ContentChunkId> {
+        self.iter_chunks()
+            .map(|content_chunk_pointer| content_chunk_pointer.chunk_id())
+            .collect()
     }
 }
 
