@@ -53,6 +53,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/store/StatsFetchContext.h"
+#include "eden/fs/store/TreeLookupProcessor.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
@@ -322,66 +323,6 @@ Overlay::InodeCatalogType EdenMount::getInodeCatalogType(
   }
 }
 
-namespace {
-
-class TreeLookupProcessor {
- public:
-  explicit TreeLookupProcessor(
-      RelativePathPiece path,
-      std::shared_ptr<ObjectStore> objectStore,
-      ObjectFetchContextPtr context)
-      : path_{path},
-        iterRange_{path_.components()},
-        iter_{iterRange_.begin()},
-        objectStore_{std::move(objectStore)},
-        context_{std::move(context)} {}
-
-  ImmediateFuture<OverlayChecker::LookupCallbackValue> next(
-      std::shared_ptr<const Tree> tree) {
-    using RetType = OverlayChecker::LookupCallbackValue;
-    if (iter_ == iterRange_.end()) {
-      return RetType{tree};
-    }
-
-    auto name = *iter_++;
-    auto it = tree->find(name);
-
-    if (it == tree->cend()) {
-      return makeImmediateFuture<RetType>(
-          std::system_error(ENOENT, std::generic_category()));
-    }
-
-    if (iter_ == iterRange_.end()) {
-      if (it->second.isTree()) {
-        return objectStore_->getTree(it->second.getHash(), context_)
-            .thenValue([](std::shared_ptr<const Tree> tree) -> RetType {
-              return tree;
-            });
-      } else {
-        return RetType{it->second};
-      }
-    } else {
-      if (!it->second.isTree()) {
-        return makeImmediateFuture<RetType>(
-            std::system_error(ENOTDIR, std::generic_category()));
-      } else {
-        return objectStore_->getTree(it->second.getHash(), context_)
-            .thenValue([this](std::shared_ptr<const Tree> tree) {
-              return next(std::move(tree));
-            });
-      }
-    }
-  }
-
- private:
-  RelativePath path_;
-  RelativePath::base_type::component_iterator_range iterRange_;
-  RelativePath::base_type::component_iterator iter_;
-  std::shared_ptr<ObjectStore> objectStore_;
-  ObjectFetchContextPtr context_;
-};
-} // namespace
-
 FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
     OverlayChecker::ProgressCallback&& progressCallback,
     const std::optional<SerializedInodeMap>& takeover,
@@ -450,19 +391,11 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
                 [this](
                     const std::shared_ptr<const Tree>& parentTree,
                     RelativePathPiece path) {
-                  auto lookup = std::make_unique<TreeLookupProcessor>(
-                      path, objectStore_, context.copy());
-
-                  auto rootTree =
-                      parentTree ? parentTree : getCheckedOutRootTree();
-                  // Do the next() and the ensure() on separate lines to make
-                  // the order of 'lookup' accesses explicit, so we don't move
-                  // it before calling next.
-                  auto future = lookup->next(rootTree);
-                  // The 'ensure' makes sure the lookup lasts until the future
-                  // finishes.
-                  return std::move(future).ensure(
-                      [proc = std::move(lookup)] {});
+                  return ::facebook::eden::getTreeOrTreeEntry(
+                      parentTree ? parentTree : getCheckedOutRootTree(),
+                      path,
+                      objectStore_,
+                      context.copy());
                 })
             .deferValue([parentTree = std::move(parentTree)](auto&&) mutable {
               return parentTree;
@@ -1258,17 +1191,8 @@ ImmediateFuture<std::variant<std::shared_ptr<const Tree>, TreeEntry>>
 EdenMount::getTreeOrTreeEntry(
     RelativePathPiece path,
     const ObjectFetchContextPtr& context) const {
-  auto rootTree = getCheckedOutRootTree();
-  if (path.empty()) {
-    return std::variant<std::shared_ptr<const Tree>, TreeEntry>{
-        std::move(rootTree)};
-  }
-
-  auto processor =
-      std::make_unique<TreeLookupProcessor>(path, objectStore_, context.copy());
-  auto future = processor->next(std::move(rootTree));
-  return std::move(future).ensure(
-      [p = std::move(processor)]() mutable { p.reset(); });
+  return ::facebook::eden::getTreeOrTreeEntry(
+      getCheckedOutRootTree(), path, objectStore_, context.copy());
 }
 
 namespace {
