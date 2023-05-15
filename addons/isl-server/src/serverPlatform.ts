@@ -82,6 +82,10 @@ export const browserServerPlatform: ServerPlatform = {
             windowsHide: false,
             windowsVerbatimArguments: true,
           });
+          // Silent error. Don't crash the server process.
+          proc.on('error', err => {
+            repo?.logger.log('failed to open', path, err);
+          });
           proc.unref();
         }
         break;
