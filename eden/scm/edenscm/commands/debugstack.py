@@ -511,18 +511,12 @@ def _filectxfn(repo, mctx, path, files_dict):
     if file_info is None:
         return None
     elif file_info == ".":
-        # get file from the working copy
+        # Get file from the working copy, instead of wctx.
+        # This removes the need to `addremove` files first, avoids errors when
+        # reading `!` files (`!` are treated as `R` and `?` are treated as `A`).
         if repo.wvfs.lexists(path):
-            # try to use wctx to preserve rename information
-            wctx = repo[None]
-            if path in wctx:
-                # wctx[path] contains rename information
-                return wctx[path]
-            else:
-                # untracked
-                return context.workingfilectx(repo, path)
+            return context.workingfilectx(repo, path)
         else:
-            # deleted - do not use wctx since "!" files will fail to commit
             return None
     else:
         if "data" in file_info:
