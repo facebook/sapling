@@ -1763,7 +1763,8 @@ def _pullcommitgraph(pullop, version):
     assert heads is not None
 
     commits = repo.changelog.inner
-    items = repo.edenapi.commitgraph2(heads, pullop.common)
+    common = pullop.common
+    items = repo.edenapi.commitgraph2(heads, common)
     graphnodes = []
     draftnodes = []
     allphasesreturned = True
