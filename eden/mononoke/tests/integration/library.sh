@@ -481,7 +481,7 @@ function wait_for_server {
     if [[ -n "$found_port" ]] && "$@" >/dev/null 2>&1 ; then
       return 0
     fi
-    sleep 0.1
+    sleep 1
   done
 
   echo "$service_description did not start in $timeout_secs seconds, took $(($(date +%s) - start))" >&2
