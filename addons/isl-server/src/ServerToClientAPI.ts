@@ -602,8 +602,9 @@ export default class ServerToClientAPI {
         return;
       }
       case 'exportStack': {
-        const {revs} = data;
-        const exec = repo.runCommand(['debugexportstack', '-r', revs]);
+        const {revs, assumeTracked} = data;
+        const assumeTrackedArgs = (assumeTracked ?? []).map(path => `--assume-tracked=${path}`);
+        const exec = repo.runCommand(['debugexportstack', '-r', revs, ...assumeTrackedArgs]);
         const reply = (stack?: ExportStack, error?: string) => {
           this.postMessage({type: 'exportedStack', revs, stack: stack ?? [], error});
         };
