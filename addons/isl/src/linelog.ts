@@ -344,7 +344,7 @@ export const executeCache: LRUWithStats = new LRU(100);
 type LineLogProps = {
   /** Core state: instructions. The array index type is `Pc`. */
   code: Code;
-  /** Maximum rev tracked. */
+  /** Maximum rev tracked (inclusive). */
   maxRev: Rev;
 };
 
@@ -658,32 +658,86 @@ class LineLog extends SelfUpdate<LineLogRecord> {
    * after reordering, folding commits. It can also provide a view
    * similar to `absorb -e FILE` to edit all versions of a file in
    * a single view.
-   *
-   * Note: This is currently implemented naively as roughly
-   * `O(lines * revs)`. Avoid calling frequently for large
-   * stacks.
    */
   public flatten(): FlattenLine[] {
-    const allLines = this.checkOutLines(this.maxRev, 0);
-    // Drop the last (empty) line.
-    const len = Math.max(allLines.length - 1, 0);
-    const lineInfos = allLines.slice(0, len);
-    const linePcs = lineInfos.map(info => info.pc);
-    const result: FlattenLine[] = lineInfos.map(info => ({
-      revs: new Set<Rev>(),
-      data: info.data,
-    }));
-    for (let rev = 0; rev <= this.maxRev; rev += 1) {
-      const lines = this.checkOutLines(rev);
-      // Pc is used as the "unique" line identifier to detect what
-      // subset of "all lines" exist in the current "rev".
-      const pcSet: Set<Pc> = new Set(lines.map(info => info.pc));
-      for (let i = 0; i < linePcs.length; i += 1) {
-        if (pcSet.has(linePcs[i])) {
-          result[i].revs.add(rev);
-        }
+    const result: FlattenLine[] = [];
+
+    // See the comments in calculateDepMap for what the stacks mean.
+    //
+    // The flatten algorithm works as follows:
+    // - For each line, we got an insRev (insStack.at(-1).rev), and a
+    //   delRev (delStack.at(-1)?.rev ?? maxRev + 1), meaning the rev
+    //   attached to the innermost insertion or deletion blocks,
+    //   respectively.
+    // - That line is then present in insRev .. delRev (exclusive) revs.
+    //
+    // This works because:
+    // - The blocks are nested in order:
+    //    - For nested insertions, the nested one must have a larger rev, and
+    //      lines inside the nested block are only present starting from the
+    //      larger rev.
+    //    - For nested deletions, the nested one must have a smaller rev, and
+    //      lines inside the nested block are considered as deleted by the
+    //      smaller rev.
+    //    - For interleaved insertion and deletions, insertion rev and deletion
+    //      rev are tracked separately so their calculations are independent
+    //      from each other.
+    // - Linelog tracks linear history, so (insRev, delRev) can be converted to
+    //   a Set<Rev>.
+    type Frame = {rev: Rev; endPc: Pc};
+    const insStack: Frame[] = [{rev: 0, endPc: -1}];
+    const delStack: Frame[] = [];
+    const maxDelRev = this.maxRev + 1;
+    const getCurrentRevs = (): Set<Rev> => {
+      const insRev = insStack.at(-1)?.rev ?? 0;
+      const delRev = delStack.at(-1)?.rev ?? maxDelRev;
+      return revRangeToSet(insRev, delRev);
+    };
+
+    const codeList = this.inner.code;
+    let pc = 0;
+    let patience = codeList.getSize() * 2;
+    let currentRevs = getCurrentRevs();
+    while (patience > 0) {
+      if (insStack.at(-1)?.endPc === pc) {
+        insStack.pop();
+        currentRevs = getCurrentRevs();
       }
+      if (delStack.at(-1)?.endPc === pc) {
+        delStack.pop();
+        currentRevs = getCurrentRevs();
+      }
+      const code = unwrap(codeList.get(pc));
+      switch (code.op) {
+        case Op.END:
+          patience = -1;
+          break;
+        case Op.LINE:
+          result.push({data: code.data, revs: currentRevs});
+          pc += 1;
+          break;
+        case Op.J:
+          pc = code.pc;
+          break;
+        case Op.JGE:
+          delStack.push({rev: code.rev, endPc: code.pc});
+          currentRevs = getCurrentRevs();
+          pc += 1;
+          break;
+        case Op.JL:
+          insStack.push({rev: code.rev, endPc: code.pc});
+          currentRevs = getCurrentRevs();
+          pc += 1;
+          break;
+        default:
+          assert(false, 'bug: unknown code');
+      }
+      patience -= 1;
     }
+    if (patience === 0) {
+      assert(false, 'bug: code does not end in time');
+    }
+
     return result;
   }
 
@@ -854,6 +908,18 @@ function stringsToInts(linesArray: string[][]): number[][] {
     }),
   );
 }
+
+/** Turn (3, 6) to Set([3, 4, 5]). */
+const revRangeToSet = cached(
+  (startRev, endRev: Rev): Set<Rev> => {
+    const result = new Set<Rev>();
+    for (let rev = startRev; rev < endRev; rev++) {
+      result.add(rev);
+    }
+    return result;
+  },
+  {cacheSize: 1000},
+);
 
 export {LineLog};
 export type {FlattenLine, Rev, LineIdx, LineInfo};
