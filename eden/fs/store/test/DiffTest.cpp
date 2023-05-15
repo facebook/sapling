@@ -98,7 +98,7 @@ class DiffTest : public ::testing::Test {
         folly::CancellationToken{},
         listIgnored,
         caseSensitive,
-        store_.get(),
+        store_,
         std::move(topLevelIgnores));
   }
 

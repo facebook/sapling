@@ -102,7 +102,7 @@ class GlobNode {
    * be appended to it.
    */
   ImmediateFuture<folly::Unit> evaluate(
-      const ObjectStore* store,
+      std::shared_ptr<ObjectStore> store,
       const ObjectFetchContextPtr& context,
       RelativePathPiece rootPath,
       TreeInodePtr root,
@@ -116,7 +116,7 @@ class GlobNode {
    * See the documention for the overload above.
    */
   ImmediateFuture<folly::Unit> evaluate(
-      const ObjectStore* store,
+      std::shared_ptr<ObjectStore> store,
       const ObjectFetchContextPtr& context,
       RelativePathPiece rootPath,
       std::shared_ptr<const Tree> tree,

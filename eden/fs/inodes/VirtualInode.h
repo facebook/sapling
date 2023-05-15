@@ -104,12 +104,12 @@ class VirtualInode {
   ImmediateFuture<VirtualInode> getOrFindChild(
       PathComponentPiece childName,
       RelativePathPiece path,
-      ObjectStore* objectStore,
+      const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
 
   ImmediateFuture<Hash20> getSHA1(
       RelativePathPiece path,
-      ObjectStore* objectStore,
+      const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
 
   /**
@@ -125,7 +125,7 @@ class VirtualInode {
   ImmediateFuture<EntryAttributes> getEntryAttributes(
       EntryAttributeFlags requestedAttributes,
       RelativePathPiece path,
-      ObjectStore* objectStore,
+      const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
 
   /**
@@ -138,7 +138,7 @@ class VirtualInode {
    */
   ImmediateFuture<struct stat> stat(
       const struct timespec& lastCheckoutTime,
-      ObjectStore* objectStore,
+      const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
 
   /**
@@ -152,7 +152,7 @@ class VirtualInode {
       std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>
   getChildren(
       RelativePathPiece path,
-      ObjectStore* objectStore,
+      const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext);
 
   /**
@@ -169,7 +169,7 @@ class VirtualInode {
   getChildrenAttributes(
       EntryAttributeFlags requestedAttributes,
       RelativePath path,
-      ObjectStore* objectStore,
+      const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext);
 
  private:
@@ -178,7 +178,7 @@ class VirtualInode {
    */
   ImmediateFuture<BlobMetadata> getBlobMetadata(
       RelativePathPiece path,
-      ObjectStore* objectStore,
+      const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
 
   /**

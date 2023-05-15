@@ -374,7 +374,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
 }
 
 ImmediateFuture<folly::Unit> GlobNode::evaluate(
-    const ObjectStore* store,
+    std::shared_ptr<ObjectStore> store,
     const ObjectFetchContextPtr& context,
     RelativePathPiece rootPath,
     TreeInodePtr root,
@@ -382,17 +382,19 @@ ImmediateFuture<folly::Unit> GlobNode::evaluate(
     GlobNode::ResultList& globResult,
     const RootId& originRootId) const {
   return evaluateImpl(
-      store,
-      context,
-      rootPath,
-      TreeInodePtrRoot(std::move(root)),
-      fileBlobsToPrefetch,
-      globResult,
-      originRootId);
+             store.get(),
+             context,
+             rootPath,
+             TreeInodePtrRoot(std::move(root)),
+             fileBlobsToPrefetch,
+             globResult,
+             originRootId)
+      // Make sure the store stays alive for the duration of globbing.
+      .ensure([store] {});
 }
 
 ImmediateFuture<folly::Unit> GlobNode::evaluate(
-    const ObjectStore* store,
+    std::shared_ptr<ObjectStore> store,
     const ObjectFetchContextPtr& context,
     RelativePathPiece rootPath,
     std::shared_ptr<const Tree> tree,
@@ -400,13 +402,15 @@ ImmediateFuture<folly::Unit> GlobNode::evaluate(
     GlobNode::ResultList& globResult,
     const RootId& originRootId) const {
   return evaluateImpl(
-      store,
-      context,
-      rootPath,
-      TreeRoot(std::move(tree)),
-      fileBlobsToPrefetch,
-      globResult,
-      originRootId);
+             store.get(),
+             context,
+             rootPath,
+             TreeRoot(std::move(tree)),
+             fileBlobsToPrefetch,
+             globResult,
+             originRootId)
+      // Make sure the store stays alive for the duration of globbing.
+      .ensure([store] {});
 }
 
 StringPiece GlobNode::tokenize(StringPiece& pattern, bool* hasSpecials) {

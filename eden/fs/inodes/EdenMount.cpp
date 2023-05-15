@@ -1276,12 +1276,12 @@ class VirtualInodeLookupProcessor {
  public:
   explicit VirtualInodeLookupProcessor(
       RelativePathPiece path,
-      ObjectStore* objectStore,
+      std::shared_ptr<ObjectStore> objectStore,
       ObjectFetchContextPtr context)
       : path_{path},
         iterRange_{path_.components()},
         iter_{iterRange_.begin()},
-        objectStore_(objectStore),
+        objectStore_(std::move(objectStore)),
         context_{std::move(context)} {}
 
   ImmediateFuture<VirtualInode> next(VirtualInode inodeTreeEntry) {
@@ -1302,12 +1302,7 @@ class VirtualInodeLookupProcessor {
   RelativePath path_;
   RelativePath::base_type::component_iterator_range iterRange_;
   RelativePath::base_type::component_iterator iter_;
-  // The ObjectStore is guaranteed to be valid for the lifetime of the
-  // EdenMount. Since the lifetime of VirtualInodeLookupProcessor is strictly
-  // less than the one of a request (and hence, the lifetime of the mount the
-  // request is against), we can safely store a pointer to the store, rather
-  // than a shared_ptr.
-  ObjectStore* objectStore_;
+  std::shared_ptr<ObjectStore> objectStore_;
   ObjectFetchContextPtr context_;
 };
 

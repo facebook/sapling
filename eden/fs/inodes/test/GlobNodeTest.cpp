@@ -51,7 +51,7 @@ folly::Future<std::vector<GlobResult>> evaluateGlob(
       folly::Synchronized<std::vector<GlobNode::GlobResult>>>();
   return globRoot
       .evaluate(
-          objectStore,
+          std::move(objectStore),
           ObjectFetchContext::getNullContext(),
           RelativePathPiece(),
           rootInode,

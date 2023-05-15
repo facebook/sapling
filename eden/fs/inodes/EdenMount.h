@@ -497,12 +497,9 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 
   /**
    * Return the ObjectStore used by this mount point.
-   *
-   * The ObjectStore is guaranteed to be valid for the lifetime of the
-   * EdenMount.
    */
-  ObjectStore* getObjectStore() const {
-    return objectStore_.get();
+  const std::shared_ptr<ObjectStore>& getObjectStore() const {
+    return objectStore_;
   }
 
   /**

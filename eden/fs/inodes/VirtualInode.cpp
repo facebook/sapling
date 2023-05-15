@@ -56,7 +56,7 @@ VirtualInode::ContainedType VirtualInode::testGetContainedType() const {
 
 ImmediateFuture<Hash20> VirtualInode::getSHA1(
     RelativePathPiece path,
-    ObjectStore* objectStore,
+    const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
   // Ensure this is a regular file.
   // We intentionally want to refuse to compute the SHA1 of symlinks
@@ -136,7 +136,7 @@ ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
 
 ImmediateFuture<BlobMetadata> VirtualInode::getBlobMetadata(
     RelativePathPiece path,
-    ObjectStore* objectStore,
+    const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
   return match(
       variant_,
@@ -177,7 +177,7 @@ EntryAttributes getEntryAttributesForNonFile(
 ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     EntryAttributeFlags requestedAttributes,
     RelativePathPiece path,
-    ObjectStore* objectStore,
+    const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
   // For non regular files we return errors for hashes and sizes.
   // We intentionally want to refuse to compute the SHA1 of symlinks.
@@ -279,7 +279,7 @@ ImmediateFuture<struct stat> VirtualInode::stat(
     // In short: there's a potential race condition here that may cause
     // mis-reporting.
     const struct timespec& lastCheckoutTime,
-    ObjectStore* objectStore,
+    const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
   return std::visit(
       [&](auto&& arg) -> ImmediateFuture<struct stat> {
@@ -345,7 +345,7 @@ namespace {
 std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>
 getChildrenHelper(
     const TreePtr& tree,
-    ObjectStore* objectStore,
+    const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) {
   std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>> result{};
   result.reserve(tree->size());
@@ -373,7 +373,7 @@ getChildrenHelper(
 folly::Try<std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>
 VirtualInode::getChildren(
     RelativePathPiece path,
-    ObjectStore* objectStore,
+    const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) {
   if (!isDirectory()) {
     return folly::Try<
@@ -409,7 +409,7 @@ ImmediateFuture<
 VirtualInode::getChildrenAttributes(
     EntryAttributeFlags requestedAttributes,
     RelativePath path,
-    ObjectStore* objectStore,
+    const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) {
   auto children = this->getChildren(path.piece(), objectStore, fetchContext);
 
@@ -463,7 +463,7 @@ ImmediateFuture<VirtualInode> getOrFindChildHelper(
     TreePtr tree,
     PathComponentPiece childName,
     RelativePathPiece path,
-    ObjectStore* objectStore,
+    const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) {
   // Lookup the next child
   const auto it = tree->find(childName);
@@ -494,7 +494,7 @@ ImmediateFuture<VirtualInode> getOrFindChildHelper(
 ImmediateFuture<VirtualInode> VirtualInode::getOrFindChild(
     PathComponentPiece childName,
     RelativePathPiece path,
-    ObjectStore* objectStore,
+    const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
   if (!isDirectory()) {
     return makeImmediateFuture<VirtualInode>(PathError(ENOTDIR, path));

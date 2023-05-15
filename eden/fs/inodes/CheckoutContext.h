@@ -115,7 +115,7 @@ class CheckoutContext {
   /**
    * Return this EdenMount's ObjectStore.
    */
-  ObjectStore* getObjectStore() const {
+  const std::shared_ptr<ObjectStore>& getObjectStore() const {
     return mount_->getObjectStore();
   }
 

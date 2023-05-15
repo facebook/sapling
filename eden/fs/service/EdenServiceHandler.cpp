@@ -751,11 +751,12 @@ ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPath(
         "path cannot be the empty string"));
   }
 
-  auto* objectStore = edenMount.getObjectStore();
+  auto objectStore = edenMount.getObjectStore();
   auto inodeFut = edenMount.getVirtualInode(path, fetchContext);
   return std::move(inodeFut).thenValue(
-      [path = std::move(path), objectStore, fetchContext = fetchContext.copy()](
-          const VirtualInode& virtualInode) {
+      [path = std::move(path),
+       objectStore = std::move(objectStore),
+       fetchContext = fetchContext.copy()](const VirtualInode& virtualInode) {
         return virtualInode.getSHA1(path, objectStore, fetchContext);
       });
 }
@@ -780,7 +781,7 @@ ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
     return edenMount->getVirtualInode(relativePath, fetchContext)
         .thenValue([reqBitmask,
                     relativePath,
-                    objectStore,
+                    objectStore = std::move(objectStore),
                     fetchContext =
                         fetchContext.copy()](const VirtualInode& virtualInode) {
           return virtualInode.getEntryAttributes(
@@ -1895,7 +1896,7 @@ EdenServiceHandler::semifuture_getEntryInformation(
              waitForPendingWrites(*edenMount, *sync)
                  .thenValue([rootInode = std::move(rootInode),
                              paths = std::move(paths),
-                             objectStore,
+                             objectStore = std::move(objectStore),
                              fetchContext = fetchContext.copy()](auto&&) {
                    return collectAll(applyToVirtualInode(
                                          rootInode,
@@ -1947,7 +1948,7 @@ EdenServiceHandler::semifuture_getFileInformation(
                  .thenValue([rootInode = std::move(rootInode),
                              paths = std::move(paths),
                              lastCheckoutTime,
-                             objectStore,
+                             objectStore = std::move(objectStore),
                              fetchContext = fetchContext.copy()](auto&&) {
                    return collectAll(
                               applyToVirtualInode(

@@ -64,7 +64,7 @@ class VirtualInodeLoader {
   void loaded(
       folly::Try<VirtualInode> inodeTreeTry,
       RelativePathPiece path,
-      ObjectStore* store,
+      const std::shared_ptr<ObjectStore>& store,
       const ObjectFetchContextPtr& fetchContext) {
     for (auto& promise : promises_) {
       promise.setValue(inodeTreeTry);
@@ -155,7 +155,7 @@ auto applyToVirtualInode(
     InodePtr rootInode,
     const std::vector<std::string>& paths,
     Func func,
-    ObjectStore* store,
+    const std::shared_ptr<ObjectStore>& store,
     const ObjectFetchContextPtr& fetchContext) {
   using FuncRet = folly::invoke_result_t<Func&, VirtualInode&>;
   using Result = typename folly::isFutureOrSemiFuture<FuncRet>::Inner;

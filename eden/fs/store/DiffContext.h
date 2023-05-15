@@ -40,7 +40,7 @@ class DiffContext {
       folly::CancellationToken cancellation,
       bool listIgnored,
       CaseSensitivity caseSensitive,
-      const ObjectStore* os,
+      std::shared_ptr<ObjectStore> os,
       std::unique_ptr<TopLevelIgnores> topLevelIgnores);
 
   DiffContext(const DiffContext&) = delete;
@@ -50,7 +50,7 @@ class DiffContext {
   ~DiffContext();
 
   DiffCallback* const callback;
-  const ObjectStore* const store;
+  std::shared_ptr<ObjectStore> store;
   /**
    * If listIgnored is true information about ignored files will be reported.
    * If listIgnored is false then ignoredFile() will never be called on the

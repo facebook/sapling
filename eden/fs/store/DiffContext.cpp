@@ -18,10 +18,10 @@ DiffContext::DiffContext(
     folly::CancellationToken cancellation,
     bool listIgnored,
     CaseSensitivity caseSensitive,
-    const ObjectStore* os,
+    std::shared_ptr<ObjectStore> os,
     std::unique_ptr<TopLevelIgnores> topLevelIgnores)
     : callback{cb},
-      store{os},
+      store{std::move(os)},
       listIgnored{listIgnored},
       topLevelIgnores_(std::move(topLevelIgnores)),
       cancellation_{std::move(cancellation)},
