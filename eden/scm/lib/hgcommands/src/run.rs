@@ -273,9 +273,25 @@ fn dispatch_command(
     Registry::main().remove_orphan_models();
 
     if let Some(rl) = &run_logger {
-        if let Err(err) = rl.close(exit_code) {
-            // Command has already finished - not worth bailing due to this error.
-            let _ = io.write_err(format!("Error writing final runlog: {}\n", err));
+        // Retry a couple times on Windows since this will fail if someone is
+        // reading the file, and it is relatively important to write the final
+        // runlog entry since it contains the exit code and exit time.
+        let tries = if cfg!(windows) { 3 } else { 1 };
+        for i in 0..tries {
+            if i > 0 {
+                thread::sleep(Duration::from_millis(1));
+            }
+
+            match rl.close(exit_code) {
+                Ok(()) => break,
+                Err(err) => {
+                    if i == tries - 1 {
+                        tracing::error!(target: "runlog", ?err, "error closing runlog")
+                    } else {
+                        tracing::warn!(target: "runlog", ?err, "error closing runlog")
+                    }
+                }
+            };
         }
     }
 
@@ -430,8 +446,6 @@ fn spawn_progress_thread(
 
     let registry = Registry::main();
 
-    let mut stderr = io.error();
-
     hg_http::enable_progress_reporting();
 
     // Not fatal if we cannot spawn the progress rendering thread.
@@ -467,7 +481,7 @@ fn spawn_progress_thread(
                         .collect();
 
                     if let Err(err) = run_logger.update_progress(progress) {
-                        let _ = write!(stderr, "Error updating runlog progress: {}\n", err);
+                        tracing::warn!(target: "runlog", ?err, "error updating runlog progress");
                     }
 
                     last_runlog_time = Some(now);
