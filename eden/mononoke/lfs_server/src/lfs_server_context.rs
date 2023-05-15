@@ -42,6 +42,7 @@ use lfs_protocol::RequestObject;
 use lfs_protocol::ResponseBatch;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::ContentId;
+use qps::Qps;
 use repo_authorization::AuthorizationContext;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use slog::Logger;
@@ -67,6 +68,8 @@ struct LfsServerContextInner {
     always_wait_for_upstream: bool,
     max_upload_size: Option<u64>,
     config_handle: ConfigHandle<ServerConfig>,
+    logger: Logger,
+    qps: Arc<Option<Qps>>,
 }
 
 #[derive(Clone, StateData)]
@@ -83,6 +86,8 @@ impl LfsServerContext {
         max_upload_size: Option<u64>,
         will_exit: Arc<AtomicBool>,
         config_handle: ConfigHandle<ServerConfig>,
+        logger: Logger,
+        qps: Option<Qps>,
     ) -> Result<Self, Error> {
         let connector = HttpsConnector::new()
             .map_err(Error::from)
@@ -96,6 +101,8 @@ impl LfsServerContext {
             always_wait_for_upstream,
             max_upload_size,
             config_handle,
+            logger,
+            qps: Arc::new(qps),
         };
 
         Ok(LfsServerContext {
@@ -157,6 +164,15 @@ impl LfsServerContext {
             .expect("poisoned lock")
             .config_handle
             .clone()
+    }
+    pub fn qps(&self) -> Arc<Option<Qps>> {
+        let inner = self.inner.lock().expect("poisoned lock");
+        inner.qps.clone()
+    }
+
+    pub fn logger(&self) -> Logger {
+        let inner = self.inner.lock().expect("poisoned lock");
+        inner.logger.clone()
     }
 
     pub fn get_config(&self) -> Arc<ServerConfig> {

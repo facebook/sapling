@@ -27,6 +27,7 @@ use hyper::Response;
 use hyper::StatusCode;
 
 use super::error_formatter::LfsErrorFormatter;
+use super::middleware::QpsMiddleware;
 use super::middleware::ThrottleMiddleware;
 use crate::batch;
 use crate::download;
@@ -104,6 +105,7 @@ pub fn build_router(
 ) -> Router {
     let pipeline = new_pipeline()
         .add(ThrottleMiddleware::new(fb, lfs_ctx.get_config_handle()))
+        .add(QpsMiddleware::new(lfs_ctx.clone()))
         .add(StateMiddleware::new(lfs_ctx))
         .build();
 

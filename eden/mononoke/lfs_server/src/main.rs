@@ -55,6 +55,7 @@ use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_repos::MononokeRepos;
+use qps::Qps;
 use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
 use repo_permission_checker::RepoPermissionChecker;
@@ -156,6 +157,9 @@ struct LfsServerArgs {
     max_upload_size: Option<u64>,
     #[clap(flatten)]
     readonly: ReadonlyArgs,
+    /// Path to config
+    #[clap(long)]
+    cslb_config: Option<String>,
 }
 
 #[derive(Clone)]
@@ -237,6 +241,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let config_handle = config_handle.context(Error::msg("Failed to load configuration"))?;
 
+    let cslb_config = args.cslb_config;
+
+    let qps = match cslb_config {
+        Some(config) => {
+            Some(Qps::new(fb, config, config_store).with_context(|| "Failed to initialize QPS")?)
+        }
+        None => None,
+    };
     let max_upload_size: Option<u64> = args.max_upload_size;
 
     let self_urls = args.self_urls;
@@ -303,6 +315,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 max_upload_size,
                 will_exit,
                 config_handle.clone(),
+                logger.clone(),
+                qps,
             )?;
             let enforce_authentication = ctx.get_config().enforce_authentication();
 
