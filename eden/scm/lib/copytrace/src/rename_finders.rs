@@ -100,26 +100,7 @@ impl RenameFinder for MetadataRenameFinder {
         new_tree: &TreeManifest,
         old_path: &RepoPath,
     ) -> Result<Option<RepoPathBuf>> {
-        let mut new_files = Vec::new();
-        {
-            // this block is for dropping `matcher` and `diff` at the end of the block,
-            // otherwise the compiler compilains variable might be used across 'await'
-            let matcher = AlwaysMatcher::new();
-            let diff = Diff::new(old_tree, new_tree, &matcher)?;
-            for entry in diff {
-                let entry = entry?;
-
-                if let DiffType::RightOnly(file_metadata) = entry.diff_type {
-                    let path = entry.path;
-                    let key = Key {
-                        path,
-                        hgid: file_metadata.hgid,
-                    };
-                    new_files.push(key);
-                }
-            }
-        }
-
+        let new_files = self.inner.get_added_files(old_tree, new_tree)?;
         let candidates = select_rename_candidates(new_files, old_path, &self.inner.config)?;
         self.inner
             .read_renamed_metadata_forward(candidates, old_path)
@@ -132,13 +113,7 @@ impl RenameFinder for MetadataRenameFinder {
         new_tree: &TreeManifest,
         new_path: &RepoPath,
     ) -> Result<Option<RepoPathBuf>> {
-        let new_key = match new_tree.get_file(new_path)? {
-            Some(file_metadata) => Key {
-                path: new_path.to_owned(),
-                hgid: file_metadata.hgid,
-            },
-            None => return Ok(None),
-        };
+        let new_key = self.inner.get_key_from_path(new_tree, new_path)?;
         self.inner.read_renamed_metadata_backward(new_key).await
     }
 }
@@ -182,6 +157,50 @@ impl RenameFinder for ContentSimilarityRenameFinder {
 }
 
 impl RenameFinderInner {
+    fn get_added_files(
+        &self,
+        old_tree: &TreeManifest,
+        new_tree: &TreeManifest,
+    ) -> Result<Vec<Key>> {
+        let mut files = Vec::new();
+        let matcher = AlwaysMatcher::new();
+        let diff = Diff::new(old_tree, new_tree, &matcher)?;
+        for entry in diff {
+            let entry = entry?;
+            if let DiffType::RightOnly(file_metadata) = entry.diff_type {
+                let path = entry.path;
+                let key = Key {
+                    path,
+                    hgid: file_metadata.hgid,
+                };
+                files.push(key);
+            }
+        }
+        Ok(files)
+    }
+
+    fn get_deleted_files(
+        &self,
+        old_tree: &TreeManifest,
+        new_tree: &TreeManifest,
+    ) -> Result<Vec<Key>> {
+        let mut files = Vec::new();
+        let matcher = AlwaysMatcher::new();
+        let diff = Diff::new(old_tree, new_tree, &matcher)?;
+        for entry in diff {
+            let entry = entry?;
+            if let DiffType::LeftOnly(file_metadata) = entry.diff_type {
+                let path = entry.path;
+                let key = Key {
+                    path,
+                    hgid: file_metadata.hgid,
+                };
+                files.push(key);
+            }
+        }
+        Ok(files)
+    }
+
     async fn read_renamed_metadata_forward(
         &self,
         keys: Vec<Key>,
@@ -217,36 +236,10 @@ impl RenameFinderInner {
         direction: SearchDirection,
     ) -> Result<Option<RepoPathBuf>> {
         tracing::trace!(?source_path, ?direction, " find_rename_in_direction");
-        let mut candidates = Vec::new();
-        {
-            // this block is for dropping `matcher` and `diff` at the end of the block,
-            let matcher = AlwaysMatcher::new();
-            let diff = Diff::new(old_tree, new_tree, &matcher)?;
-            if direction == SearchDirection::Forward {
-                for entry in diff {
-                    let entry = entry?;
-                    if let DiffType::RightOnly(file_metadata) = entry.diff_type {
-                        let key = Key {
-                            path: entry.path,
-                            hgid: file_metadata.hgid,
-                        };
-                        candidates.push(key);
-                    }
-                }
-            } else {
-                for entry in diff {
-                    let entry = entry?;
-                    if let DiffType::LeftOnly(file_metadata) = entry.diff_type {
-                        let key = Key {
-                            path: entry.path,
-                            hgid: file_metadata.hgid,
-                        };
-                        candidates.push(key);
-                    }
-                }
-            }
-        }
-
+        let candidates = match direction {
+            SearchDirection::Forward => self.get_added_files(old_tree, new_tree)?,
+            SearchDirection::Backward => self.get_deleted_files(old_tree, new_tree)?,
+        };
         let candidates = select_rename_candidates(candidates, source_path, &self.config)?;
         tracing::trace!(candidates_len = candidates.len(), " found");
 
@@ -254,14 +247,7 @@ impl RenameFinderInner {
             SearchDirection::Forward => old_tree,
             SearchDirection::Backward => new_tree,
         };
-        let source = match source_tree.get_file(source_path)? {
-            None => return Err(CopyTraceError::FileNotFound(source_path.to_owned()).into()),
-            Some(file_metadata) => Key {
-                path: source_path.to_owned(),
-                hgid: file_metadata.hgid,
-            },
-        };
-
+        let source = self.get_key_from_path(source_tree, source_path)?;
         self.find_similar_file(candidates, source).await
     }
 
@@ -303,6 +289,17 @@ impl RenameFinderInner {
         }
 
         Ok(None)
+    }
+
+    fn get_key_from_path(&self, tree: &TreeManifest, path: &RepoPath) -> Result<Key> {
+        let key = match tree.get_file(path)? {
+            None => return Err(CopyTraceError::FileNotFound(path.to_owned()).into()),
+            Some(file_metadata) => Key {
+                path: path.to_owned(),
+                hgid: file_metadata.hgid,
+            },
+        };
+        Ok(key)
     }
 
     pub(crate) fn get_similarity_threshold(&self) -> Result<f32> {
