@@ -165,11 +165,16 @@ void HgImportRequestQueue::markImportAsFinished(
   }
 
   if (importTry.hasValue()) {
-    // If we find the id in the map, loop through all of the associated
-    // Promises and fulfill them with the obj. We need to construct a
-    // deep copy of the unique_ptr to fulfill the Promises
+    auto& importValue = importTry.value();
     for (auto& promise : (*promises)) {
-      promise.setValue(std::make_unique<T>(*(importTry.value())));
+      if (importValue) {
+        // If we find the id in the map, loop through all of the associated
+        // Promises and fulfill them with the obj. We need to construct a
+        // deep copy of the unique_ptr to fulfill the Promises
+        promise.setValue(std::make_unique<T>(*importValue));
+      } else {
+        promise.setValue(nullptr);
+      }
     }
   } else {
     // If we find the id in the map, loop through all of the associated
