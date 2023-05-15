@@ -462,7 +462,7 @@ Show all commands + options
   debugexistingcasecollisions: rev
   debugexportmetalog: 
   debugexportrevlog: 
-  debugexportstack: rev
+  debugexportstack: rev, assume-tracked
   debugextensions: excludedefault, template
   debugfilerevision: rev, include, exclude
   debugfileset: rev

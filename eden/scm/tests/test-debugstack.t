@@ -101,19 +101,21 @@ Test that various code paths in debugexportstack are exercised:
       $ echo 3 > D
       $ echo X > X
       $ rm C
-      $ hg addremove -q C X
+      $ hg addremove -q X
       $ hg mv B B1
-      $ hg debugexportstack -r 'wdir()' | pprint
+      $ echo F > F
+      $ echo G > G
+      $ hg debugexportstack -r 'wdir()' --assume-tracked B1 --assume-tracked C --assume-tracked G | pprint
       [{'author': 'test',
         'date': [0.0, 0],
         'immutable': False,
         'node': 'f5086e168b2741946a5118463a8be38273822529',
-        'relevantFiles': {'B': {'data': '3', 'flags': 'x'}, 'B1': None, 'C': {'dataBase85': "b'`)v'"}, 'D': {'copyFrom': 'A', 'data': '2'}, 'X': None},
+        'relevantFiles': {'B': {'data': '3', 'flags': 'x'}, 'B1': None, 'C': {'dataBase85': "b'`)v'"}, 'D': {'copyFrom': 'A', 'data': '2'}, 'G': None, 'X': None},
         'requested': False,
         'text': 'D'},
        {'author': 'test',
         'date': [0, 0],
-        'files': {'B': None, 'B1': {'copyFrom': 'B', 'data': '3', 'flags': 'x'}, 'C': None, 'D': {'data': '3\n'}, 'X': {'data': 'X\n'}},
+        'files': {'B': None, 'B1': {'copyFrom': 'B', 'data': '3', 'flags': 'x'}, 'C': None, 'D': {'data': '3\n'}, 'G': {'data': 'G\n'}, 'X': {'data': 'X\n'}},
         'immutable': False,
         'node': 'ffffffffffffffffffffffffffffffffffffffff',
         'parents': ['f5086e168b2741946a5118463a8be38273822529'],

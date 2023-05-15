@@ -13,7 +13,13 @@ from ..node import bin, hex, wdirhex, wdirrev
 from .cmdtable import command
 
 
-@command("debugexportstack", [("r", "rev", [], _("revisions to export"))])
+@command(
+    "debugexportstack",
+    [
+        ("r", "rev", [], _("revisions to export")),
+        ("", "assume-tracked", [], _("extra file paths in wdir to export")),
+    ],
+)
 def debugexportstack(ui, repo, **opts):
     """dump content of commits for automation consumption
 
@@ -120,7 +126,17 @@ def debugexportstack(ui, repo, **opts):
             commit_limiter(1)
             pctx = ctx.p1()
             files = requested_map[ctx.node()]
-            for path in ctx.files():
+            changed_files = ctx.files()
+            if ctx.node() is None:
+                # Consider other (untracked) files in wdir() defined by
+                # status.force-tracked.
+                extra_tracked = opts.get("assume_tracked")
+                if extra_tracked:
+                    existing_tracked = set(changed_files)
+                    for path in extra_tracked:
+                        if path not in existing_tracked:
+                            changed_files.append(path)
+            for path in changed_files:
                 file_limiter(1)
                 parent_paths = [path]
                 file_obj = _file_obj(ctx, path, parent_paths.append, bytes_limiter)
@@ -196,8 +212,18 @@ def _size_limiter(limit, error_message):
 
 
 def _file_obj(ctx, path, set_copy_from=None, limiter=None):
-    if path in ctx:
+    if ctx.node() is None:
+        # For the working copy, use wvfs directly.
+        # This allows exporting untracked files and properly report deleting
+        # files via --assume-tracked, without running `addremove` first.
+        fctx = context.workingfilectx(ctx.repo(), path)
+        if not fctx.lexists():
+            fctx = None
+    elif path in ctx:
         fctx = ctx[path]
+    else:
+        fctx = None
+    if fctx is not None:
         renamed = fctx.renamed()
         copy_from_path = None
         if renamed and renamed[0] != path:
