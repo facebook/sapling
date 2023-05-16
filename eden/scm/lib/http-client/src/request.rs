@@ -187,6 +187,17 @@ pub struct Request {
 static REQUEST_CREATION_LISTENERS: Lazy<RwLock<RequestCreationEventListeners>> =
     Lazy::new(Default::default);
 
+// Attempt to use HTTP/2 by default. Will fall back to HTTP/1.1
+// if version negotiation with the server fails or if the binary
+// is built against some Curl version that doesn't have HTTP/2 available
+static DEFAULT_HTTP_VERSION: Lazy<HttpVersion> = Lazy::new(|| {
+    if curl::Version::get().feature_http2() {
+        HttpVersion::V2
+    } else {
+        HttpVersion::Any
+    }
+});
+
 impl RequestContext {
     /// Create a [`RequestContext`].
     pub fn new(url: Url, method: Method) -> Self {
@@ -253,9 +264,7 @@ impl Request {
             key: None,
             cainfo: None,
             timeout: None,
-            // Attempt to use HTTP/2 by default. Will fall back to HTTP/1.1
-            // if version negotiation with the server fails.
-            http_version: HttpVersion::V2,
+            http_version: DEFAULT_HTTP_VERSION.clone(),
             accept_encoding: Vec::new(),
             min_transfer_speed: None,
             verify_tls_host: true,
