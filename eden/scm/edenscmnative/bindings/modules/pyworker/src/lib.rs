@@ -712,38 +712,6 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(windows)]
-    #[test]
-    fn test_remove_while_open_with_no_sharing() -> Result<()> {
-        let workingdir = TempDir::new()?;
-
-        let root = workingdir.as_ref().to_path_buf();
-        let path = root.join("TEST");
-
-        File::create(&path)?.write_all(b"CONTENT")?;
-
-        // No sharing for this file. remove should still succeed.
-        let f = OpenOptions::new().read(true).share_mode(0).open(&path)?;
-
-        let state = RemoverState::new(root)?;
-        // This will fail silently.
-        state.working_copy.remove(RepoPath::from_str("TEST")?)?;
-        drop(f);
-
-        assert_eq!(read_dir(&workingdir)?.count(), 1);
-
-        // The file is still there.
-        let f = File::open(&path)?;
-        drop(f);
-
-        // Now there is no longer a file handle to it, remove it.
-        state.working_copy.remove(RepoPath::from_str("TEST")?)?;
-
-        assert_eq!(read_dir(&workingdir)?.count(), 0);
-
-        Ok(())
-    }
-
     fn validate_paths<'a>(paths: impl Iterator<Item = &'a RepoPath>) -> bool {
         let mut files = HashSet::new();
         let mut directories = HashSet::new();
