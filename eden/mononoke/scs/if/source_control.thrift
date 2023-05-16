@@ -1645,6 +1645,10 @@ struct CreateGitTagParams {
   4: optional binary pgp_signature;
   /// The changeset corresponding to the commit that was pointed at by the tag.
   5: binary target_changeset;
+  /// The identity of the service making the create git tree request.
+  6: optional string service_identity;
+  /// The name of the tag for which the changeset is getting created
+  7: string tag_name;
 }
 
 /// Method response structures
