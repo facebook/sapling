@@ -80,6 +80,7 @@ use tokio::time::sleep;
 use tokio::time::timeout;
 use tracing::info_span;
 use tracing::trace_span;
+use tracing::warn;
 use tracing::Instrument;
 use types::HgId;
 use types::Key;
@@ -1615,7 +1616,16 @@ impl LfsRemote {
                 .as_str()
             {
                 "1.1" => HttpVersion::V11,
-                "2" => HttpVersion::V2,
+                "2" => {
+                    if !curl::Version::get().feature_http2() {
+                        warn!(
+                            "Asked to use HTTP/2 but HTTP/2 not available in current build; falling back to 1.1"
+                        );
+                        HttpVersion::V11
+                    } else {
+                        HttpVersion::V2
+                    }
+                }
                 x => bail!("Unsupported http_version: {}", x),
             };
 
@@ -2939,6 +2949,10 @@ mod tests {
 
         #[test]
         fn test_lfs_remote_http2() -> Result<()> {
+            if !curl::Version::get().feature_http2() {
+                // Skip this test if HTTP/2 is not available for locally built curl
+                return Ok(());
+            }
             let b1 = example_blob();
             let b2 = example_blob2();
             let b3 = nonexistent_blob();
