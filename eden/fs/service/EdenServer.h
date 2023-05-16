@@ -482,7 +482,8 @@ class EdenServer : private TakeoverHandler {
    * `fn` will either run before the event base is completely destroyed or
    * not at all.
    *
-   * Must be called only from the mainEventBase_ thread.
+   * TODO: Support debouncing these operations. HHWheelTimer::setTimeout has
+   * some built-in support.
    */
   void scheduleCallbackOnMainEventBase(
       std::chrono::milliseconds timeout,

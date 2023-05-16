@@ -751,6 +751,9 @@ void EdenServer::scheduleCallbackOnMainEventBase(
   struct Wrapper : folly::HHWheelTimer::Callback {
     explicit Wrapper(std::function<void()> f) : fn_(std::move(f)) {}
     void timeoutExpired() noexcept override {
+      // Delete this even under exceptions.
+      std::unique_ptr<Wrapper> self{this};
+
       XLOG(DBG3) << "Callback expired, running function";
       try {
         fn_();
@@ -761,30 +764,29 @@ void EdenServer::scheduleCallbackOnMainEventBase(
         LOG(ERROR)
             << "HHWheelTimerBase timeout callback threw a non-exception.";
       }
-      // We have to use a CallBack* to schedule. We need to destroy ourselves
-      // because no one else will
-      delete this;
     }
     // The callback will be canceled if the timer is destroyed. Or we use
     // deduplication We don't want to run fn during destruction.
     void callbackCanceled() noexcept override {
-      XLOG(DBG3) << "Callback cancled, NOT running function";
-      // We have to use a CallBack* to schedule. We need to destory ourselves
-      // because no one else will
-      delete this;
+      // Delete this even under exceptions.
+      std::unique_ptr<Wrapper> self{this};
+      XLOG(DBG3) << "Callback cancelled, NOT running function";
     }
     std::function<void()> fn_;
   };
 
-  // I hate using raw pointers, but we have to to schedule the callback.
-  Wrapper* w = new Wrapper(std::move(fn));
-  // Note callback will be run in the mainEventBase_ Thread.
-  // TODO: would be nice to deduplicate these function calls. We need the
-  // same type of callback to use the same wrapper object ... singletons?
-  // The main difference with scheduleTimeoutFn is whether the callback is
-  // invoked when the EventBase is destroyed: scheduleTimeoutFn will call it,
-  // this function won't. See comment above the wrapper class.
-  mainEventBase_->timer().scheduleTimeout(w, timeout);
+  mainEventBase_->runInEventBaseThread(
+      [timeout, evb = mainEventBase_, fn = std::move(fn)]() mutable {
+        // I hate using raw pointers, but we have to to schedule the callback.
+        Wrapper* w = new Wrapper(std::move(fn));
+        // Note callback will be run in the mainEventBase_ Thread.
+        // TODO: would be nice to deduplicate these function calls. We need the
+        // same type of callback to use the same wrapper object ... singletons?
+        // The main difference with scheduleTimeoutFn is whether the callback is
+        // invoked when the EventBase is destroyed: scheduleTimeoutFn will call
+        // it, this function won't. See comment above the wrapper class.
+        evb->timer().scheduleTimeout(w, timeout);
+      });
 }
 
 #ifndef _WIN32
@@ -1772,7 +1774,6 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
       enumerateInProgressCheckouts() + 1);
   return edenMount
       ->checkout(rootInode, rootId, clientPid, callerName, checkoutMode)
-      .via(mainEventBase_)
       .thenValue([this,
                   checkoutMode,
                   edenMount = edenMount,
@@ -1814,6 +1815,9 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
               std::chrono::duration_cast<std::chrono::milliseconds>(delay),
               [this, mountPath = mountPath.copy()]() {
                 try {
+                  // TODO: This might be a pretty expensive operation to run on
+                  // an EventBase. Maybe we should debounce onto a different
+                  // executor.
                   auto [edenMount, _] = this->getMountAndRootInode(mountPath);
                   edenMount->forgetStaleInodes();
                 } catch (EdenError& err) {
