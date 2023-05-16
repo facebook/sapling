@@ -795,13 +795,15 @@ void EdenServer::unloadInodes() {
     auto cutoff = std::chrono::system_clock::now() -
         std::chrono::minutes(FLAGS_unload_age_minutes);
     auto cutoff_ts = folly::to<timespec>(cutoff);
-    for (auto& [mount, rootInode] : mounts) {
+    for (auto& mountHandle : mounts) {
+      auto& mount = mountHandle.getEdenMount();
+      auto& rootInode = mountHandle.getRootInode();
       auto unloaded = rootInode->unloadChildrenLastAccessedBefore(cutoff_ts);
       if (unloaded) {
         XLOG(INFO) << "Unloaded " << unloaded
-                   << " inodes in background from mount " << mount->getPath();
+                   << " inodes in background from mount " << mount.getPath();
       }
-      mount->getInodeMap()->recordPeriodicInodeUnload(unloaded);
+      mount.getInodeMap()->recordPeriodicInodeUnload(unloaded);
     }
   }
 
@@ -1693,12 +1695,12 @@ void EdenServer::mountFinished(
       });
 }
 
-std::vector<EdenServer::MountAndRootInode> EdenServer::getMountPoints() const {
-  std::vector<EdenServer::MountAndRootInode> results;
+std::vector<EdenMountHandle> EdenServer::getMountPoints() const {
+  std::vector<EdenMountHandle> results;
   {
     const auto mountPoints = mountPoints_->rlock();
-    for (const auto& entry : *mountPoints) {
-      const auto& mount = entry.second.edenMount;
+    for (const auto& [path, mountInfo] : *mountPoints) {
+      auto& mount = mountInfo.edenMount;
       // Avoid returning mount points that are still initializing and are
       // not ready to perform inode operations yet.
       if (!mount->isSafeForInodeAccess()) {
@@ -2185,20 +2187,20 @@ void EdenServer::manageOverlay() {
 }
 
 ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
-    std::shared_ptr<EdenMount> mount,
+    EdenMount& mount,
     TreeInodePtr rootInode,
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context) {
   folly::stop_watch<> workingCopyRuntime;
 
-  auto lease = mount->tryStartWorkingCopyGC(rootInode);
+  auto lease = mount.tryStartWorkingCopyGC(rootInode);
   if (!lease) {
-    XLOG(DBG6) << "Not running GC for: " << mount->getPath()
+    XLOG(DBG6) << "Not running GC for: " << mount.getPath()
                << ", another GC is already in progress";
     return 0u;
   }
 
-  auto mountPath = mount->getPath();
+  auto mountPath = mount.getPath();
   XLOG(DBG1) << "Starting GC for: " << mountPath;
   return rootInode->invalidateChildrenNotMaterialized(cutoff, context)
       .ensure([rootInode, lease = std::move(lease)] {
@@ -2232,19 +2234,20 @@ void EdenServer::garbageCollectAllMounts() {
   auto cutoff = std::chrono::system_clock::now() - cutoffConfig;
 
   auto mountPoints = getMountPoints();
-  for (auto& [mount, rootInode] : mountPoints) {
+  for (auto& mountHandle : mountPoints) {
     folly::via(
         getServerState()->getThreadPool().get(),
-        [this,
-         mount = std::move(mount),
-         rootInode = std::move(rootInode),
-         cutoff]() mutable {
+        [this, mountHandle, cutoff]() mutable {
           static auto context =
               ObjectFetchContext::getNullContextWithCauseDetail(
                   "EdenServer::garbageCollectAllMounts");
           return garbageCollectWorkingCopy(
-              std::move(mount), std::move(rootInode), cutoff, context);
-        });
+              mountHandle.getEdenMount(),
+              mountHandle.getRootInode(),
+              cutoff,
+              context);
+        })
+        .ensure([mountHandle] {});
   }
 }
 

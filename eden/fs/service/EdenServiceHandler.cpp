@@ -3550,8 +3550,8 @@ void EdenServiceHandler::debugGetInodePath(
 void EdenServiceHandler::clearFetchCounts() {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
 
-  for (auto& [mount, rootInode] : server_->getMountPoints()) {
-    mount->getObjectStore()->clearFetchCounts();
+  for (auto& handle : server_->getMountPoints()) {
+    handle.getEdenMount().getObjectStore()->clearFetchCounts();
   }
 }
 
@@ -3607,11 +3607,12 @@ void EdenServiceHandler::getAccessCounts(
 
   auto seconds = std::chrono::seconds{duration};
 
-  for (auto& [mount, rootInode] : server_->getMountPoints()) {
-    auto& mountStr = mount->getPath().value();
-    auto& pal = mount->getProcessAccessLog();
+  for (auto& handle : server_->getMountPoints()) {
+    auto& mount = handle.getEdenMount();
+    auto& mountStr = mount.getPath().value();
+    auto& pal = mount.getProcessAccessLog();
 
-    auto& pidFetches = mount->getObjectStore()->getPidFetches();
+    auto& pidFetches = mount.getObjectStore()->getPidFetches();
 
     MountAccesses& ma = result.accessesByMount_ref()[mountStr];
     for (auto& [pid, accessCounts] : pal.getAccessCounts(seconds)) {
@@ -3724,10 +3725,7 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
                       &fetchContext](TreeInodePtr inode) mutable {
             if (inode == rootInode) {
               return server_->garbageCollectWorkingCopy(
-                  std::move(edenMount),
-                  std::move(rootInode),
-                  cutoff,
-                  fetchContext);
+                  *edenMount, std::move(rootInode), cutoff, fetchContext);
             } else {
               return inode
                   ->invalidateChildrenNotMaterialized(cutoff, fetchContext)
@@ -3769,8 +3767,9 @@ void EdenServiceHandler::getStatInfo(
     auto mountList = server_->getMountPoints();
     std::map<PathString, MountInodeInfo> mountPointInfo = {};
     std::map<PathString, JournalInfo> mountPointJournalInfo = {};
-    for (auto& [mount, rootInode] : mountList) {
-      auto inodeMap = mount->getInodeMap();
+    for (auto& handle : mountList) {
+      auto& mount = handle.getEdenMount();
+      auto inodeMap = mount.getInodeMap();
       // Set LoadedInde Count and unloaded Inode count for the mountPoint.
       MountInodeInfo mountInodeInfo;
       auto counts = inodeMap->getInodeCounts();
@@ -3779,7 +3778,7 @@ void EdenServiceHandler::getStatInfo(
       mountInodeInfo.loadedTreeCount_ref() = counts.treeCount;
 
       JournalInfo journalThrift;
-      if (auto journalStats = mount->getJournal().getStats()) {
+      if (auto journalStats = mount.getJournal().getStats()) {
         journalThrift.entryCount_ref() = journalStats->entryCount;
         journalThrift.durationSeconds_ref() =
             journalStats->getDurationInSeconds();
@@ -3788,9 +3787,9 @@ void EdenServiceHandler::getStatInfo(
         journalThrift.durationSeconds_ref() = 0;
       }
       journalThrift.memoryUsage_ref() =
-          mount->getJournal().estimateMemoryUsage();
+          mount.getJournal().estimateMemoryUsage();
 
-      auto mountPath = absolutePathToThrift(mount->getPath());
+      auto mountPath = absolutePathToThrift(mount.getPath());
       mountPointJournalInfo[mountPath] = journalThrift;
 
       mountPointInfo[mountPath] = mountInodeInfo;
@@ -3805,9 +3804,10 @@ void EdenServiceHandler::getStatInfo(
     auto counters = fb303::ServiceData::get()->getCounters();
     result.counters_ref() = counters;
     size_t periodicUnloadCount{0};
-    for (auto& [mount, rootInode] : server_->getMountPoints()) {
+    for (auto& handle : server_->getMountPoints()) {
+      auto& mount = handle.getEdenMount();
       periodicUnloadCount +=
-          counters[mount->getCounterName(CounterName::PERIODIC_INODE_UNLOAD)];
+          counters[mount.getCounterName(CounterName::PERIODIC_INODE_UNLOAD)];
     }
 
     result.periodicUnloadCount_ref() = periodicUnloadCount;

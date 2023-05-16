@@ -107,6 +107,37 @@ class BackingStoreFactory {
       const CreateParams& params) = 0;
 };
 
+/**
+ * Operations on mounts need to ensure the EdenMount is not deleted
+ * for the duration.  EdenMountHandle holds a reference to the mount
+ * and its root inode and ensures the mount is usable while the
+ * EdenMountHandle lives.
+ */
+class EdenMountHandle {
+ public:
+  EdenMountHandle(std::shared_ptr<EdenMount> edenMount, TreeInodePtr rootInode)
+      : edenMount_{std::move(edenMount)}, rootInode_{std::move(rootInode)} {}
+
+  EdenMountHandle(const EdenMountHandle&) = default;
+  EdenMountHandle(EdenMountHandle&&) = default;
+  EdenMountHandle& operator=(const EdenMountHandle&) = default;
+  EdenMountHandle& operator=(EdenMountHandle&&) = default;
+
+  EdenMount& getEdenMount() const {
+    return *edenMount_;
+  }
+
+  const TreeInodePtr& getRootInode() const {
+    return rootInode_;
+  }
+
+ private:
+  std::shared_ptr<EdenMount> edenMount_;
+  // Today, holding a reference to the root inode is what keeps the mount alive
+  // and usable.
+  TreeInodePtr rootInode_;
+};
+
 /*
  * EdenServer contains logic for running the Eden main loop.
  *
@@ -292,7 +323,7 @@ class EdenServer : private TakeoverHandler {
    * Thus this function guarantees that the mounts are fully initialized and
    * cannot be shut down.
    */
-  std::vector<MountAndRootInode> getMountPoints() const;
+  std::vector<EdenMountHandle> getMountPoints() const;
 
   /**
    * Get all mount points, including mounts that are currently initializing.
@@ -323,7 +354,7 @@ class EdenServer : private TakeoverHandler {
    * Garbage collect the working copy of the passed in mount.
    */
   ImmediateFuture<uint64_t> garbageCollectWorkingCopy(
-      std::shared_ptr<EdenMount> mount,
+      EdenMount& mount,
       TreeInodePtr rootInode,
       std::chrono::system_clock::time_point cutoff,
       const ObjectFetchContextPtr& context);
