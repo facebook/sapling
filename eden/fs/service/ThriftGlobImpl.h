@@ -30,6 +30,9 @@ class ThriftGlobImpl {
   explicit ThriftGlobImpl(const GlobParams& params);
   explicit ThriftGlobImpl(const PrefetchParams& params);
 
+  // TODO: shared_ptr<EdenMount> is not sufficient to ensure an EdenMount is
+  // usable for the duration of this glob. Either pass EdenMountHandle or
+  // .ensure() the lifetime of EdenMountHandle outlives the call.
   ImmediateFuture<std::unique_ptr<Glob>> glob(
       std::shared_ptr<EdenMount> edenMount,
       std::shared_ptr<ServerState> serverState,

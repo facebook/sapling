@@ -123,12 +123,35 @@ class EdenMountHandle {
   EdenMountHandle& operator=(const EdenMountHandle&) = default;
   EdenMountHandle& operator=(EdenMountHandle&&) = default;
 
+  /**
+   * Returns a reference to EdenMount to indicate the reference is unowned. To
+   * ensure that an EdenMount can be used, the EdenMountHandle must be held.
+   */
   EdenMount& getEdenMount() const {
     return *edenMount_;
   }
 
+  // TODO: Remove, preferring getEdenMount()
+  const std::shared_ptr<EdenMount> getEdenMountPtr() const {
+    return edenMount_;
+  }
+
   const TreeInodePtr& getRootInode() const {
     return rootInode_;
+  }
+
+  // Convenience methods that support common uses of lookupMount().
+
+  ObjectStore& getObjectStore() const {
+    return *edenMount_->getObjectStore();
+  }
+
+  const std::shared_ptr<ObjectStore>& getObjectStorePtr() const {
+    return edenMount_->getObjectStore();
+  }
+
+  Journal& getJournal() const {
+    return edenMount_->getJournal();
   }
 
  private:
@@ -333,14 +356,13 @@ class EdenServer : private TakeoverHandler {
   /**
    * Look up an EdenMount by the path where it is mounted.
    *
-   * The root TreeInodePtr is also returned to avoid a race where the EdenMount
-   * is shutdown right after this function returns. Keeping the returned
-   * TreeInodePtr alive will keep the mount alive.
+   * The EdenMount and its root inode are usable as long as the returned
+   * EdenMountHandle is alive.
    *
    * Throws an EdenError if no mount exists with the specified path, or if the
    * mount is still initializing and is not ready for inode operations yet.
    */
-  MountAndRootInode getMountAndRootInode(AbsolutePathPiece mountPath) const;
+  EdenMountHandle getMount(AbsolutePathPiece mountPath) const;
 
   folly::Future<CheckoutResult> checkOutRevision(
       AbsolutePathPiece mountPath,

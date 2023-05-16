@@ -1725,8 +1725,7 @@ EdenServer::MountList EdenServer::getAllMountPoints() const {
   return results;
 }
 
-EdenServer::MountAndRootInode EdenServer::getMountAndRootInode(
-    AbsolutePathPiece mountPath) const {
+EdenMountHandle EdenServer::getMount(AbsolutePathPiece mountPath) const {
   const auto mountPoints = mountPoints_->rlock();
   const auto it = mountPoints->find(mountPath);
   if (it == mountPoints->end()) {
@@ -1754,8 +1753,9 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
     std::optional<pid_t> clientPid,
     StringPiece callerName,
     CheckoutMode checkoutMode) {
-  auto [edenMount, rootInode] = getMountAndRootInode(mountPath);
-  auto rootId = edenMount->getObjectStore()->parseRootId(rootHash);
+  auto mountHandle = getMount(mountPath);
+  auto& edenMount = mountHandle.getEdenMount();
+  auto rootId = edenMount.getObjectStore()->parseRootId(rootHash);
   if (rootHgManifest.has_value()) {
     // The hg client has told us what the root manifest is.
     //
@@ -1764,20 +1764,26 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
     // won't know about the new commit until it reopens the repo.  Instead,
     // import the manifest for this commit directly.
     auto rootManifest = hash20FromThrift(rootHgManifest.value());
-    edenMount->getObjectStore()
+    edenMount.getObjectStore()
         ->getBackingStore()
         ->importManifestForRoot(rootId, rootManifest)
         .get();
   }
+
+  bool isNfs = edenMount.isNfsdChannel();
+
   // the +1 is so we count the current checkout that hasn't quite started yet
   getServerState()->getNotifier()->signalCheckout(
       enumerateInProgressCheckouts() + 1);
   return edenMount
-      ->checkout(rootInode, rootId, clientPid, callerName, checkoutMode)
-      .thenValue([this,
-                  checkoutMode,
-                  edenMount = edenMount,
-                  mountPath = mountPath.copy()](CheckoutResult&& result) {
+      .checkout(
+          mountHandle.getRootInode(),
+          rootId,
+          clientPid,
+          callerName,
+          checkoutMode)
+      .thenValue([this, checkoutMode, isNfs, mountPath = mountPath.copy()](
+                     CheckoutResult&& result) {
         getServerState()->getNotifier()->signalCheckout(
             enumerateInProgressCheckouts());
         if (checkoutMode == CheckoutMode::DRY_RUN) {
@@ -1791,7 +1797,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
         // To avoid unbounded memory and disk use we need to periodically
         // clean them up. Checkout will likely create a lot of stale innodes
         // so we run a delayed cleanup after checkout.
-        if (edenMount->isNfsdChannel() &&
+        if (isNfs &&
             serverState_->getReloadableConfig()
                 ->getEdenConfig()
                 ->unloadUnlinkedInodes.getValue()) {
@@ -1818,8 +1824,8 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
                   // TODO: This might be a pretty expensive operation to run on
                   // an EventBase. Maybe we should debounce onto a different
                   // executor.
-                  auto [edenMount, _] = this->getMountAndRootInode(mountPath);
-                  edenMount->forgetStaleInodes();
+                  auto mountHandle = this->getMount(mountPath);
+                  mountHandle.getEdenMount().forgetStaleInodes();
                 } catch (EdenError& err) {
                   // This is an expected error if the mount has been
                   // unmounted before this callback ran.
@@ -1836,7 +1842,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
         return std::move(result);
       })
       .via(getServerState()->getThreadPool().get())
-      .ensure([rootInode = rootInode] {});
+      .ensure([mountHandle] {});
 }
 
 shared_ptr<BackingStore> EdenServer::getBackingStore(
