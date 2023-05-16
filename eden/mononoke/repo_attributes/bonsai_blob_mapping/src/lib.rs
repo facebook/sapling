@@ -25,8 +25,10 @@ use sql_ext::SqlShardedConnections;
 use twox_hash::XxHash32;
 use vec1::Vec1;
 
+pub const MYSQL_INSERT_CHUNK_SIZE: usize = 1000;
+
 mononoke_queries! {
-    write InsertBlobKeysForChangesets(values: (repo_id: RepositoryId, cs_id: ChangesetId, blob_key: &str)) {
+    write InsertBlobKeysForChangesets(values: (repo_id: RepositoryId, cs_id: ChangesetId, blob_key: String)) {
     insert_or_ignore,
     "{insert_or_ignore} INTO bonsai_blob_mapping (repo_id, cs_id, blob_key) VALUES {values}"
     }
@@ -35,14 +37,46 @@ mononoke_queries! {
         "SELECT cs_id, blob_key FROM bonsai_blob_mapping WHERE repo_id = {repo_id} AND cs_id in {cs_ids}"
     }
 
-    read GetChangesetsForBlobKeys(repo_id: RepositoryId, >list blob_keys: &str) -> (ChangesetId, String) {
+    read GetChangesetsForBlobKeys(repo_id: RepositoryId, >list blob_keys: String) -> (ChangesetId, String) {
         "SELECT cs_id, blob_key FROM bonsai_blob_mapping WHERE repo_id = {repo_id} AND blob_key in {blob_keys}"
     }
 }
 
 #[facet::facet]
 pub struct BonsaiBlobMapping {
-    pub sql_bonsai_blob_mapping: Option<SqlBonsaiBlobMapping>,
+    pub sql_bonsai_blob_mapping: SqlBonsaiBlobMapping,
+}
+
+impl BonsaiBlobMapping {
+    pub async fn get_blob_keys_for_changesets(
+        &self,
+        repo_id: RepositoryId,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<(ChangesetId, String)>> {
+        self.sql_bonsai_blob_mapping
+            .get_blob_keys_for_changesets(repo_id, cs_ids)
+            .await
+    }
+
+    pub async fn get_changesets_for_blob_keys(
+        &self,
+        repo_id: RepositoryId,
+        blob_keys: Vec<String>,
+    ) -> Result<Vec<(ChangesetId, String)>> {
+        self.sql_bonsai_blob_mapping
+            .get_changesets_for_blob_keys(repo_id, blob_keys)
+            .await
+    }
+
+    pub async fn insert_blob_keys_for_changesets(
+        &self,
+        repo_id: RepositoryId,
+        mappings: Vec<(ChangesetId, String)>,
+    ) -> Result<u64> {
+        self.sql_bonsai_blob_mapping
+            .insert_blob_keys_for_changesets(repo_id, mappings)
+            .await
+    }
 }
 
 pub struct SqlBonsaiBlobMapping {
@@ -84,11 +118,11 @@ impl SqlBonsaiBlobMapping {
     pub async fn get_changesets_for_blob_keys(
         &self,
         repo_id: RepositoryId,
-        blob_keys: Vec<&str>,
+        blob_keys: Vec<String>,
     ) -> Result<Vec<(ChangesetId, String)>> {
         let shard_to_blobs = blob_keys
             .into_iter()
-            .map(|key| (self.shard(repo_id, key), key))
+            .map(|key| (self.shard(repo_id, &key), key))
             .into_group_map()
             .into_iter()
             .collect::<Vec<_>>();
@@ -111,15 +145,12 @@ impl SqlBonsaiBlobMapping {
 
     pub async fn insert_blob_keys_for_changesets(
         &self,
-        repo_id: &RepositoryId,
-        mappings: Vec<(ChangesetId, Vec<&str>)>,
+        repo_id: RepositoryId,
+        mappings: Vec<(ChangesetId, String)>,
     ) -> Result<u64> {
         let shard_to_values = mappings
-            .iter()
-            .flat_map(|(cs_id, keys)| keys.iter().map(move |key| (repo_id, cs_id, key)))
-            .map(|(repo_id, cs_id, blob_key)| {
-                (self.shard(*repo_id, blob_key), (repo_id, cs_id, blob_key))
-            })
+            .into_iter()
+            .map(|(cs_id, blob_key)| (self.shard(repo_id, &blob_key), (repo_id, cs_id, blob_key)))
             .into_group_map();
         if shard_to_values.is_empty() {
             return Ok(0);
@@ -127,9 +158,18 @@ impl SqlBonsaiBlobMapping {
 
         stream::iter(shard_to_values)
             .map(|(shard_id, values)| async move {
-                InsertBlobKeysForChangesets::query(&self.write_connections[shard_id], &values[..])
-                    .await
-                    .map(|result| result.affected_rows())
+                let mut affected_rows = 0;
+                for chunk in values.chunks(MYSQL_INSERT_CHUNK_SIZE) {
+                    // This iter().map() is needed to convert &(_,_,_) to (&_, &_, &_)
+                    let chunk: Vec<_> = chunk.iter().map(|(a, b, c)| (a, b, c)).collect();
+                    let result = InsertBlobKeysForChangesets::query(
+                        &self.write_connections[shard_id],
+                        &chunk[..],
+                    )
+                    .await?;
+                    affected_rows += result.affected_rows();
+                }
+                anyhow::Ok(affected_rows)
             })
             .buffer_unordered(100)
             .try_fold(
@@ -192,27 +232,26 @@ mod test {
     async fn test_single_write_and_read() -> Result<()> {
         let sql = SqlBonsaiBlobMapping::with_sqlite_in_memory()?;
         let repo_id = RepositoryId::new(1);
-        let blobs = vec!["blob1", "blob2", "blob3"];
+        let values = vec!["blob1", "blob2", "blob3"]
+            .into_iter()
+            .map(|blob| (ONES_CSID, blob.into()))
+            .collect::<Vec<_>>();
         let res = sql
-            .insert_blob_keys_for_changesets(&repo_id, vec![(ONES_CSID, blobs.clone())])
+            .insert_blob_keys_for_changesets(repo_id, values.clone())
             .await?;
 
         assert_eq!(res, 3); // we are inserting 3 blobs each mapped to ONES_CSID
 
         let rows = sql
-            .get_changesets_for_blob_keys(repo_id, vec!["blob1"])
+            .get_changesets_for_blob_keys(repo_id, vec!["blob1".into()])
             .await?;
-        assert_eq!(rows, vec![(ONES_CSID, blobs[0].to_string())]);
+        assert_eq!(rows, vec![values[0].clone()]);
 
         let rows = sql
             .get_blob_keys_for_changesets(repo_id, vec![ONES_CSID])
             .await?;
 
-        let expected: Vec<_> = blobs
-            .iter()
-            .map(|blob| (ONES_CSID, blob.to_string()))
-            .collect();
-        assert_eq!(rows, expected);
+        assert_eq!(rows, values);
         Ok(())
     }
 
@@ -220,22 +259,29 @@ mod test {
     async fn test_read_write_multiple_values() -> Result<()> {
         let sql = SqlBonsaiBlobMapping::with_sqlite_in_memory()?;
         let repo_id = RepositoryId::new(1);
-        let blobs1 = vec!["blob1", "blob2", "blob3"];
-        let blobs2 = vec!["blob2", "blob4", "blob5"]; // overlap by blob2 with blobs1
-        let blobs3 = vec!["blob3", "blob4", "blob6"]; // overlap by blob3 and blob4 with blobs1 and blobs2
-        let values = vec![
-            (ONES_CSID, blobs1.clone()),
-            (TWOS_CSID, blobs2.clone()),
-            (THREES_CSID, blobs3.clone()),
-        ];
+        let blobs1 = vec!["blob1", "blob2", "blob3"]
+            .into_iter()
+            .map(|blob| (ONES_CSID, blob.into()))
+            .collect::<Vec<_>>();
+        let blobs2 = vec!["blob2", "blob4", "blob5"]
+            .into_iter()
+            .map(|blob| (TWOS_CSID, blob.into()))
+            .collect::<Vec<_>>(); // overlap by blob2 with blobs1
+        let blobs3 = vec!["blob3", "blob4", "blob6"]
+            .into_iter()
+            .map(|blob| (THREES_CSID, blob.into()))
+            .collect::<Vec<_>>(); // overlap by blob3 and blob4 with blobs1 and blobs2
+        let values = [blobs1.clone(), blobs2.clone(), blobs3.clone()]
+            .concat()
+            .into_iter()
+            .collect::<Vec<_>>();
 
-        let res = sql
-            .insert_blob_keys_for_changesets(&repo_id, values)
-            .await?;
+        let res = sql.insert_blob_keys_for_changesets(repo_id, values).await?;
 
         assert_eq!(res, 9); // for each of the 3 cs_ids we have 3 blobs to insert so total = 9
 
-        let rows = sql.get_changesets_for_blob_keys(repo_id, blobs2).await?;
+        let blob_keys = blobs2.into_iter().map(|(_, s)| s).collect::<Vec<_>>();
+        let rows = sql.get_changesets_for_blob_keys(repo_id, blob_keys).await?;
 
         assert_eq!(
             rows,

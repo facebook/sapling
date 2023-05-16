@@ -15,6 +15,7 @@ basename_suffix_skeleton_manifest = { version = "0.1.0", path = "../../derived_d
 blame = { version = "0.1.0", path = "../../derived_data/blame" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
+bonsai_blob_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_blob_mapping" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }

@@ -1495,12 +1495,10 @@ impl RepoFactory {
         let sql_factory = self
             .sql_factory(&repo_config.storage_config.metadata)
             .await?;
-        let sql_bonsai_blob_mapping = Some(
-            sql_factory
-                .open_shardable::<SqlBonsaiBlobMapping>()
-                .await
-                .context(RepoFactoryError::BonsaiBlobMapping)?,
-        );
+        let sql_bonsai_blob_mapping = sql_factory
+            .open_shardable::<SqlBonsaiBlobMapping>()
+            .await
+            .context(RepoFactoryError::BonsaiBlobMapping)?;
         Ok(Arc::new(BonsaiBlobMapping {
             sql_bonsai_blob_mapping,
         }))
