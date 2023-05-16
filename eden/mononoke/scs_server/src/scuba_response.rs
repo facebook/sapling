@@ -238,3 +238,4 @@ impl AddScubaResponse for thrift::MegarepoSyncChangesetToken {
 
 impl AddScubaResponse for thrift::UploadGitObjectResponse {}
 impl AddScubaResponse for thrift::CreateGitTreeResponse {}
+impl AddScubaResponse for thrift::CreateGitTagResponse {}

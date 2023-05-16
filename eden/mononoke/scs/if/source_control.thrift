@@ -1633,6 +1633,20 @@ struct CreateGitTreeParams {
   2: optional string service_identity;
 }
 
+/// Params for create_git_tag method
+struct CreateGitTagParams {
+  /// The author of the tag, if it exists
+  1: optional string author;
+  /// The date of tag creation, if it exists
+  2: optional DateTime author_date;
+  /// The annotation or message of the tag
+  3: string annotation;
+  /// The pgp signature associated with the tag, if one exists
+  4: optional binary pgp_signature;
+  /// The changeset corresponding to the commit that was pointed at by the tag.
+  5: binary target_changeset;
+}
+
 /// Method response structures
 
 struct RepoResolveBookmarkResponse {
@@ -1975,6 +1989,11 @@ struct MegarepoRemergeSourcePollResponse {
 struct UploadGitObjectResponse {}
 
 struct CreateGitTreeResponse {}
+
+struct CreateGitTagResponse {
+  /// The changeset ID of the changeset that was created for the git tag
+  1: binary created_changeset_id;
+}
 
 /// Exceptions
 
@@ -2449,5 +2468,13 @@ service SourceControlService extends fb303_core.BaseService {
   CreateGitTreeResponse create_git_tree(
     1: RepoSpecifier repo,
     2: CreateGitTreeParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
+  /// Create Mononoke counterpart of git tag object in the form of a bonsai changeset.
+  /// The raw git tag object must already be stored in Mononoke stores before invoking
+  /// this endpoint.
+  CreateGitTagResponse create_git_tag(
+    1: RepoSpecifier repo,
+    2: CreateGitTagParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
 } (rust.request_context, sr.service_name = "mononoke-scs-server")

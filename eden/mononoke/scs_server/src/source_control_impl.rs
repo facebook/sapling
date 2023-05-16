@@ -929,5 +929,10 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             repo: thrift::RepoSpecifier,
             params: thrift::CreateGitTreeParams,
         ) -> Result<thrift::CreateGitTreeResponse, service::CreateGitTreeExn>;
+
+        async fn create_git_tag(
+            repo: thrift::RepoSpecifier,
+            params: thrift::CreateGitTagParams,
+        ) -> Result<thrift::CreateGitTagResponse, service::CreateGitTagExn>;
     }
 }

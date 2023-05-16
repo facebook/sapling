@@ -560,3 +560,9 @@ impl AddScubaParams for thrift::CreateGitTreeParams {
         scuba.add("param_git_object_id", hex(&self.git_tree_hash));
     }
 }
+
+impl AddScubaParams for thrift::CreateGitTagParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("tagged_changeset_id", hex(&self.target_changeset));
+    }
+}

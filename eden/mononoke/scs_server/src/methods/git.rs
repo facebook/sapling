@@ -71,4 +71,16 @@ impl SourceControlServiceImpl {
             ..Default::default()
         })
     }
+
+    /// Create Mononoke counterpart of git tag object in the form of a bonsai changeset.
+    /// The raw git tag object must already be stored in Mononoke stores before invoking
+    /// this endpoint.
+    pub(crate) async fn create_git_tag(
+        &self,
+        _ctx: CoreContext,
+        _repo: thrift::RepoSpecifier,
+        _params: thrift::CreateGitTagParams,
+    ) -> Result<thrift::CreateGitTagResponse, errors::ServiceError> {
+        todo!()
+    }
 }
