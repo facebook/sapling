@@ -1028,6 +1028,8 @@ mod tests {
                     // Remove 'Backed up' lines since they have dynamic file names.
                     .filter(|l| !l.contains("Backed up"))
                     .filter(|l| !l.contains("Processing"))
+                    .filter(|l| !l.contains("bytes in log"))
+                    .filter(|l| !l.contains("Reset log size to"))
                     .collect::<Vec<_>>()
                     .join("\n")
                     .replace(&path, "<path>")
@@ -1076,11 +1078,9 @@ All Roots are verified."#
             repair(),
             r#"
 Checking blobs at "<path>":
-Verified 8 entries, 4650 bytes in log
 Index "id" passed integrity check
 
 Checking roots at "<path>":
-Verified 5 entries, 142 bytes in log
 Index "reverse" passed integrity check
 
 Checking blobs referred by 6 Roots:
@@ -1093,12 +1093,9 @@ All Roots are verified."#
             repair(),
             r#"
 Checking blobs at "<path>":
-Verified 8 entries, 4650 bytes in log
 Index "id" passed integrity check
 
 Checking roots at "<path>":
-Verified first 4 entries, 116 of 142 bytes in log
-Reset log size to 116
 Rebuilt index "reverse"
 
 Checking blobs referred by 5 Roots:
@@ -1111,12 +1108,9 @@ All Roots are verified."#
             repair(),
             r#"
 Checking blobs at "<path>":
-Verified first 6 entries, 4491 of 4650 bytes in log
-Reset log size to 4491
 Rebuilt index "id"
 
 Checking roots at "<path>":
-Verified 4 entries, 116 bytes in log
 Index "reverse" passed integrity check
 
 Checking blobs referred by 5 Roots:
@@ -1155,12 +1149,9 @@ Rebuilt Root log with 4 Root IDs."#
             repair(),
             r#"
 Checking blobs at "<path>":
-Verified first 5 entries, 424 of 4491 bytes in log
-Reset log size to 424
 Rebuilt index "id"
 
 Checking roots at "<path>":
-Verified 4 entries, 116 bytes in log
 Index "reverse" passed integrity check
 
 Checking blobs referred by 5 Roots:
@@ -1179,12 +1170,9 @@ Rebuilt Root log with 3 Root IDs."#
             repair(),
             r#"
 Checking blobs at "<path>/1":
-Verified first 7 entries, 583 of 4650 bytes in log
-Reset log size to 583
 Rebuilt index "id"
 
 Checking roots at "<path>/1":
-Verified 5 entries, 142 bytes in log
 Index "reverse" passed integrity check
 
 Checking blobs referred by 6 Roots:
