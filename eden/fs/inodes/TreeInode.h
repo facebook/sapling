@@ -196,6 +196,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       off_t off,
       const ObjectFetchContextPtr& context);
 #endif
+
   /**
    * Populate the list with as many directory entries as possible starting from
    * the inode start.
@@ -214,6 +215,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   folly::Synchronized<TreeInodeState>& getContents() {
     return contents_;
   }
+
+  std::optional<ObjectId> getObjectId() const override;
 
   FileInodePtr symlink(
       PathComponentPiece name,

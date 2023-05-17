@@ -50,7 +50,7 @@ TEST(
       "contents 2\n",
       preInode->readAll(ObjectFetchContext::getNullContext()).get());
 
-  EXPECT_EQ(std::nullopt, preInode->getBlobHash());
+  EXPECT_EQ(std::nullopt, preInode->getObjectId());
   EXPECT_TRUE(mount.getTreeInode("a")->getContents().rlock()->isMaterialized());
 
   // Now checkout 2.
@@ -75,7 +75,7 @@ TEST(
       mount.getTreeInode("a")->getContents().rlock()->isMaterialized());
   EXPECT_EQ(
       std::make_optional(ObjectId{"object2"}),
-      mount.getFileInode("a/test.txt")->getBlobHash());
+      mount.getFileInode("a/test.txt")->getObjectId());
 
   // The only inode should be unlinked!
   EXPECT_TRUE(preInode->isUnlinked());
@@ -110,7 +110,7 @@ TEST(Dematerialize, test_dematerialization_migrates_to_the_new_ID_scheme) {
   // But don't change the contents.
   auto inode = mount.overwriteFile("foo/bar/file.txt", "contents");
 
-  EXPECT_EQ(std::nullopt, inode->getBlobHash());
+  EXPECT_EQ(std::nullopt, inode->getObjectId());
   EXPECT_TRUE(
       mount.getTreeInode("foo")->getContents().rlock()->isMaterialized());
   EXPECT_TRUE(
@@ -135,7 +135,7 @@ TEST(Dematerialize, test_dematerialization_migrates_to_the_new_ID_scheme) {
       mount.getTreeInode("foo/bar")->getContents().rlock()->isMaterialized());
   EXPECT_EQ(
       std::make_optional(ObjectId{"scheme 2"}),
-      mount.getFileInode("foo/bar/file.txt")->getBlobHash());
+      mount.getFileInode("foo/bar/file.txt")->getObjectId());
 
   // The original inode should be unlinked!
   EXPECT_TRUE(inode->isUnlinked());

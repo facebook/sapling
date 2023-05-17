@@ -266,7 +266,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   void forceMetadataUpdate() override;
 
   /**
-   * If this file is backed by a source control Blob, return the hash of the
+   * If this file is backed by a source control Blob, return the ID of the
    * Blob, or return std::nullopt if this file is materialized in the overlay.
    *
    * Beware that the file's materialization state may have changed by the time
@@ -274,8 +274,10 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * intended for use in tests and debugging functions.  Its return value
    * generally cannot be trusted in situations where there may be concurrent
    * modifications by other threads.
+   *
+   * Do not call this function while the inode's lock is held.
    */
-  std::optional<ObjectId> getBlobHash() const;
+  std::optional<ObjectId> getObjectId() const override;
 
   /**
    * Read the entire file contents, and return them as a string.

@@ -1202,6 +1202,11 @@ FileInodePtr TreeInode::createImpl(
   return inode;
 }
 
+std::optional<ObjectId> TreeInode::getObjectId() const {
+  auto state = contents_.rlock();
+  return state->treeHash;
+}
+
 FileInodePtr TreeInode::symlink(
     PathComponentPiece name,
     folly::StringPiece symlinkTarget,

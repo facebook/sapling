@@ -490,7 +490,7 @@ TEST(FileInode, truncatingDuringLoad) {
   auto inode = mount_.getFileInode("notready.txt");
 
   auto backingStore = mount_.getBackingStore();
-  auto storedBlob = backingStore->getStoredBlob(*inode->getBlobHash());
+  auto storedBlob = backingStore->getStoredBlob(*inode->getObjectId());
 
   auto readAllFuture = inode->readAll(ObjectFetchContext::getNullContext());
   EXPECT_EQ(false, readAllFuture.isReady());
@@ -620,7 +620,7 @@ TEST(FileInode, dropsCacheWhenFullyRead) {
   auto blobCache = mount.getBlobCache();
 
   auto inode = mount.getFileInode("bigfile.txt");
-  auto hash = inode->getBlobHash().value();
+  auto hash = inode->getObjectId().value();
 
   EXPECT_FALSE(blobCache->get(hash).object);
 
@@ -641,7 +641,7 @@ TEST(FileInode, keepsCacheIfPartiallyReread) {
   auto blobCache = mount.getBlobCache();
 
   auto inode = mount.getFileInode("bigfile.txt");
-  auto hash = inode->getBlobHash().value();
+  auto hash = inode->getObjectId().value();
 
   EXPECT_FALSE(blobCache->contains(hash));
 
@@ -666,7 +666,7 @@ TEST(FileInode, dropsCacheWhenMaterialized) {
   auto blobCache = mount.getBlobCache();
 
   auto inode = mount.getFileInode("bigfile.txt");
-  auto hash = inode->getBlobHash().value();
+  auto hash = inode->getObjectId().value();
 
   EXPECT_FALSE(blobCache->get(hash).object);
 
@@ -684,7 +684,7 @@ TEST(FileInode, dropsCacheWhenUnloaded) {
   auto blobCache = mount.getBlobCache();
 
   auto inode = mount.getFileInode("bigfile.txt");
-  auto hash = inode->getBlobHash().value();
+  auto hash = inode->getObjectId().value();
 
   inode->read(4, 0, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_TRUE(blobCache->contains(hash));
@@ -701,7 +701,7 @@ TEST(FileInode, reloadsBlobIfCacheIsEvicted) {
   auto blobCache = mount.getBlobCache();
 
   auto inode = mount.getFileInode("bigfile.txt");
-  auto hash = inode->getBlobHash().value();
+  auto hash = inode->getObjectId().value();
 
   inode->read(4, 0, ObjectFetchContext::getNullContext()).get(0ms);
   blobCache->clear();

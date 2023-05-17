@@ -97,7 +97,7 @@ bool isInodeMaterialized(const TreeInodePtr& inode) {
 }
 
 bool isInodeMaterialized(const FileInodePtr& inode) {
-  return !inode->getBlobHash().has_value();
+  return !inode->getObjectId().has_value();
 }
 
 } // namespace

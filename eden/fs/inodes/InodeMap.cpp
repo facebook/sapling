@@ -88,7 +88,7 @@ InodeMap::UnloadedInode::UnloadedInode(
       name{entryName},
       isUnlinked{isUnlinked},
       mode{inode->getMode()},
-      hash{inode->getBlobHash()},
+      hash{inode->getObjectId()},
       numFsReferences{fsRefcount} {
   if (folly::kIsWindows) {
     XDCHECK_LE(numFsReferences, 1u);

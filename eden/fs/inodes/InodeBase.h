@@ -6,15 +6,18 @@
  */
 
 #pragma once
+
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
 #include <atomic>
 #include <memory>
 #include <optional>
 #include <vector>
+
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/InodeTimestamps.h"
+#include "eden/fs/model/ObjectId.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -163,6 +166,14 @@ class InodeBase {
 
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> access(int mask);
 #endif // !_WIN32
+
+  /**
+   * If this inode is not materialized, return its underlying Object ID. If it
+   * is materialized, return nullptr.
+   *
+   * Never call getObjectId() while the inode's lock is held.
+   */
+  virtual std::optional<ObjectId> getObjectId() const = 0;
 
   /**
    * Check if this Inode has been unlinked from its parent TreeInode.

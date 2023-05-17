@@ -759,7 +759,7 @@ void FileInode::forceMetadataUpdate() {
   InodeBaseMetadata::updateMtimeAndCtimeLocked(*state, getNow());
 }
 
-std::optional<ObjectId> FileInode::getBlobHash() const {
+std::optional<ObjectId> FileInode::getObjectId() const {
   if (auto state = state_.rlock(); !state->isMaterialized()) {
     return state->nonMaterializedState.hash;
   } else {

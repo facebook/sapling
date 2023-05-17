@@ -41,7 +41,7 @@ TEST(TestMount, createSimpleTestMount) {
   EXPECT_NE(nullptr, path1Inode.get())
       << "Should be able to find FileInode for path1";
 
-  auto blobHash = path1Inode->getBlobHash();
+  auto blobHash = path1Inode->getObjectId();
   ASSERT_TRUE(blobHash.has_value());
   auto expectedSha1 = ObjectId::sha1(ByteRange(StringPiece("first!")));
   EXPECT_EQ(expectedSha1, blobHash.value())
