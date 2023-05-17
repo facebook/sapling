@@ -24,17 +24,15 @@
 #include <folly/portability/Unistd.h>
 
 #include "eden/fs/privhelper/PrivHelper.h"
-#include "eden/fs/privhelper/PrivHelperFlags.h"
-
-#ifndef _WIN32
 #include "eden/fs/privhelper/PrivHelperConn.h"
+#include "eden/fs/privhelper/PrivHelperFlags.h"
 #include "eden/fs/privhelper/PrivHelperServer.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/FileDescriptor.h"
+#include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 #include "eden/fs/utils/UserInfo.h"
-#endif // _WIN32
 
 using folly::checkUnixError;
 using folly::EventBase;
@@ -689,9 +687,129 @@ unique_ptr<PrivHelper> createTestPrivHelper(File conn) {
 
 #else // _WIN32
 
+namespace {
+
+/**
+ * A stub PrivHelper class for Windows.
+ *
+ * We do not actually use a separate privhelper process on Windows. However,
+ * for ease of sharing server initialization code across platforms, we still
+ * define a PrivHelper object, but it does nothing.
+ *
+ * Unsupported operations throw NOT_IMPLEMENTED.
+ */
+class StubPrivHelper final : public PrivHelper {
+ public:
+  void attachEventBase(folly::EventBase* eventBase) override {
+    (void)eventBase;
+  }
+
+  void detachEventBase() override {}
+
+  folly::Future<folly::File> fuseMount(
+      folly::StringPiece mountPath,
+      bool readOnly) override {
+    (void)mountPath;
+    (void)readOnly;
+    NOT_IMPLEMENTED();
+  }
+
+  folly::Future<folly::Unit> nfsMount(
+      folly::StringPiece mountPath,
+      folly::SocketAddress mountdAddr,
+      folly::SocketAddress nfsdAddr,
+      bool readOnly,
+      uint32_t iosize,
+      bool useReaddirplus) override {
+    (void)mountPath;
+    (void)mountdAddr;
+    (void)nfsdAddr;
+    (void)readOnly;
+    (void)iosize;
+    (void)useReaddirplus;
+    // TODO: We do support NFS on Windows. Should the mount flow be
+    // implemented here?
+    NOT_IMPLEMENTED();
+  }
+
+  folly::Future<folly::Unit> fuseUnmount(
+      folly::StringPiece mountPath) override {
+    (void)mountPath;
+    NOT_IMPLEMENTED();
+  }
+
+  folly::Future<folly::Unit> nfsUnmount(folly::StringPiece mountPath) override {
+    (void)mountPath;
+    // TODO: We do support NFS on Windows. Should the mount flow be
+    // implemented here?
+    NOT_IMPLEMENTED();
+  }
+
+  folly::Future<folly::Unit> bindMount(
+      folly::StringPiece clientPath,
+      folly::StringPiece mountPath) override {
+    (void)clientPath;
+    (void)mountPath;
+    NOT_IMPLEMENTED();
+  }
+
+  folly::Future<folly::Unit> bindUnMount(
+      folly::StringPiece mountPath) override {
+    (void)mountPath;
+    NOT_IMPLEMENTED();
+  }
+
+  folly::Future<folly::Unit> takeoverShutdown(
+      folly::StringPiece mountPath) override {
+    (void)mountPath;
+    NOT_IMPLEMENTED();
+  }
+
+  folly::Future<folly::Unit> takeoverStartup(
+      folly::StringPiece mountPath,
+      const std::vector<std::string>& bindMounts) override {
+    (void)mountPath;
+    (void)bindMounts;
+    NOT_IMPLEMENTED();
+  }
+
+  folly::Future<folly::Unit> setLogFile(folly::File logFile) override {
+    (void)logFile;
+    return folly::unit;
+  }
+
+  folly::Future<folly::Unit> setDaemonTimeout(
+      std::chrono::nanoseconds duration) override {
+    (void)duration;
+    return folly::unit;
+  }
+
+  folly::Future<folly::Unit> setUseEdenFs(bool useEdenFs) override {
+    (void)useEdenFs;
+    return folly::unit;
+  }
+
+  int stop() override {
+    return 0;
+  }
+
+  int getRawClientFd() const override {
+    NOT_IMPLEMENTED();
+  }
+
+  bool checkConnection() override {
+    // checkConnection() is used to determine whether the privhelper is healthy
+    // in `eden doctor`. The Windows privhelper stub is always healthy, so
+    // return true.
+    return true;
+  }
+};
+
+} // namespace
+
 unique_ptr<PrivHelper>
 startOrConnectToPrivHelper(const UserInfo&, int, char**) {
-  return make_unique<PrivHelper>();
+  return make_unique<StubPrivHelper>();
 }
 
 #endif // _WIN32

@@ -13,8 +13,6 @@
 
 namespace facebook::eden {
 
-#ifndef _WIN32
-
 void PrivHelper::setLogFileBlocking(folly::File logFile) {
   folly::EventBase evb;
   attachEventBase(&evb);
@@ -44,13 +42,5 @@ void PrivHelper::setDaemonTimeoutBlocking(std::chrono::nanoseconds duration) {
   evb.loopForever();
   std::move(future).get();
 }
-
-#else // _WIN32
-
-void PrivHelper::setLogFileBlocking(folly::File) {}
-
-void PrivHelper::setDaemonTimeoutBlocking(std::chrono::nanoseconds) {}
-
-#endif // _WIN32
 
 } // namespace facebook::eden

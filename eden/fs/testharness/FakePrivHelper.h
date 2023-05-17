@@ -26,11 +26,10 @@ class FakeFuse;
  * This allows test code to directly control the FUSE messages sent to an
  * EdenMount.
  */
-class FakePrivHelper : public PrivHelper {
+class FakePrivHelper final : public PrivHelper {
  public:
   FakePrivHelper() {}
 
-#ifndef _WIN32
   class MountDelegate {
    public:
     virtual ~MountDelegate();
@@ -91,10 +90,8 @@ class FakePrivHelper : public PrivHelper {
 
   std::unordered_map<std::string, std::shared_ptr<MountDelegate>>
       mountDelegates_;
-#endif // !_WIN32
 };
 
-#ifndef _WIN32
 class FakeFuseMountDelegate : public FakePrivHelper::MountDelegate {
  public:
   explicit FakeFuseMountDelegate(
@@ -111,6 +108,5 @@ class FakeFuseMountDelegate : public FakePrivHelper::MountDelegate {
   std::shared_ptr<FakeFuse> fuse_;
   bool wasFuseUnmountEverCalled_{false};
 };
-#endif // !_WIN32
 
 } // namespace facebook::eden

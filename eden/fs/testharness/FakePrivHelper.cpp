@@ -11,6 +11,8 @@
 #include <folly/futures/Future.h>
 #include <utility>
 
+#include "eden/fs/utils/NotImplemented.h"
+
 #ifndef _WIN32
 #include "eden/fs/testharness/FakeFuse.h"
 #endif // _WIN32
@@ -24,14 +26,13 @@ using std::string;
 
 namespace facebook::eden {
 
-#ifndef _WIN32
-
 FakeFuseMountDelegate::FakeFuseMountDelegate(
     AbsolutePath mountPath,
     std::shared_ptr<FakeFuse> fuse) noexcept
     : mountPath_{std::move(mountPath)}, fuse_{std::move(fuse)} {}
 
 folly::Future<folly::File> FakeFuseMountDelegate::fuseMount() {
+#ifndef _WIN32
   if (fuse_->isStarted()) {
     throwf<std::runtime_error>(
         "got request to create FUSE mount {}, "
@@ -39,9 +40,13 @@ folly::Future<folly::File> FakeFuseMountDelegate::fuseMount() {
         mountPath_);
   }
   return fuse_->start();
+#else
+  NOT_IMPLEMENTED();
+#endif
 }
 
 folly::Future<folly::Unit> FakeFuseMountDelegate::fuseUnmount() {
+#ifndef _WIN32
   return folly::makeFutureWith([this] {
     wasFuseUnmountEverCalled_ = true;
     if (!fuse_->isStarted()) {
@@ -52,6 +57,9 @@ folly::Future<folly::Unit> FakeFuseMountDelegate::fuseUnmount() {
     }
     return fuse_->close();
   });
+#else
+  NOT_IMPLEMENTED();
+#endif
 }
 
 bool FakeFuseMountDelegate::wasFuseUnmountEverCalled() const noexcept {
@@ -165,6 +173,5 @@ folly::Future<folly::Unit> FakePrivHelper::setDaemonTimeout(
 folly::Future<folly::Unit> FakePrivHelper::setUseEdenFs(bool /* useEdenFs */) {
   return folly::unit;
 }
-#endif // !_WIN32
 
 } // namespace facebook::eden
