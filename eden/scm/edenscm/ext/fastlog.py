@@ -27,7 +27,7 @@ from threading import Event, Thread
 
 from edenscm import error, extensions, match as matchmod, phases, revset, smartset
 from edenscm.i18n import _
-from edenscm.node import bin, nullrev
+from edenscm.node import bin, hex, nullrev
 
 from .extlib.phabricator import graphql
 
@@ -278,8 +278,8 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
         path = next(iter(dirs.union(files)))
         yield from draft_revs
 
-        hexnode = repo[parent].hex()
-        log = FastLog(reponame, "hg", hexnode, path, repo)
+        start_node = repo[parent].node()
+        log = FastLog(reponame, "hg", start_node, path, repo)
         for node in log.generate_nodes():
             yield repo.changelog.rev(node)
 
@@ -320,15 +320,15 @@ class FastLog:
 
     * reponame - repository name (str)
     * scm - scm type (str)
-    * rev - revision to start logging from
+    * start_node - node to start logging from
     * path - path to request logs
     * repo - mercurial repository object
     """
 
-    def __init__(self, reponame, scm, rev, path, repo):
+    def __init__(self, reponame, scm, node, path, repo):
         self.reponame = reponame
         self.scm = scm
-        self.rev = rev
+        self.start_node = node
         self.path = path
         self.repo = repo
         self.ui = repo.ui
@@ -338,7 +338,7 @@ class FastLog:
 
     def generate_nodes(self):
         path = self.path
-        start = str(self.rev)
+        start_hex = hex(self.start_node)
         reponame = self.reponame
         skip = 0
         usemutablehistory = self.ui.configbool("fastlog", "followmutablehistory")
@@ -350,7 +350,7 @@ class FastLog:
             results = client.scmquery_log(
                 reponame,
                 self.scm,
-                start,
+                start_hex,
                 file_paths=[path],
                 skip=skip,
                 number=todo,
