@@ -722,6 +722,7 @@ impl Convert for RawShardedService {
             RawShardedService::HG_SYNC_BACKUP => ShardedService::HgSyncBackup,
             RawShardedService::DERIVED_DATA_TAILER => ShardedService::DerivedDataTailer,
             RawShardedService::ALIAS_VERIFY => ShardedService::AliasVerify,
+            RawShardedService::DRAFT_COMMIT_DELETION => ShardedService::DraftCommitDeletion,
             v => return Err(anyhow!("Invalid value {} for enum ShardedService", v)),
         };
         Ok(service)

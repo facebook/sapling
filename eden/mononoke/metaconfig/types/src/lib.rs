@@ -266,6 +266,8 @@ pub enum ShardedService {
     DerivedDataTailer,
     /// Alias Verify
     AliasVerify,
+    /// Draft Commit Deletion,
+    DraftCommitDeletion,
 }
 
 /// Indicates types of commit hashes used in a repo context.
