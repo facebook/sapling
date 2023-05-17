@@ -48,6 +48,12 @@ FASTLOG_QUEUE_SIZE = 1000
 FASTLOG_TIMEOUT = 50
 
 
+class MultiPathError(ValueError):
+    """Error for following multiple paths"""
+
+    pass
+
+
 def extsetup(ui) -> None:
     extensions.wrapfunction(revset, "_follow", fastlogfollow)
 
@@ -259,7 +265,10 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
                     public.add(cur)
 
     def fastlog(repo, startrev, dirs, files, localmatch):
+        if len(dirs) + len(files) != 1:
+            raise MultiPathError()
         filefunc = repo.changelog.readfiles
+        draft_revs = []
         for parent in lazyparents(startrev, public, parents):
             # Undo relevant file renames in parent so we end up
             # passing the renamee to scmquery. Note that this will not
@@ -268,10 +277,16 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
             undorenames(repo[parent], files)
 
             if dirmatches(filefunc(parent), dirs.union(files)):
-                yield parent
+                draft_revs.append(parent)
+
         repo.ui.debug("found common parent at %s\n" % repo[parent].hex())
-        for rev in combinator(repo, parent, dirs.union(files), localmatch):
-            yield rev
+
+        if len(dirs) + len(files) != 1:
+            raise MultiPathError()
+
+        path = next(iter(dirs.union(files)))
+        yield from draft_revs
+        yield from combinator(repo, parent, path, localmatch)
 
     def undorenames(ctx, files):
         """mutate files to undo any file renames in ctx"""
@@ -284,11 +299,11 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
             files.remove(dst)
             files.add(src)
 
-    def combinator(repo, rev, paths, localmatch):
-        """combinator(repo, rev, paths, localmatch)
+    def combinator(repo, rev, path, localmatch):
+        """combinator(repo, rev, path, localmatch)
         Make parallel local and remote queries along ancestors of
         rev along path and combine results, eliminating duplicates,
-        restricting results to those which match paths
+        restricting results to those which match path
         """
 
         LOCAL = "L"
@@ -297,7 +312,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
         hash = repo[rev].hex()
 
         local = None
-        remote = FastLogThread(queue, REMOTE, reponame, "hg", hash, paths, repo)
+        remote = FastLogThread(queue, REMOTE, reponame, "hg", hash, path, repo)
 
         # Allow debugging either remote or local path
         debug = repo.ui.config("fastlog", "debug")
@@ -340,7 +355,12 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
                 local.stop()
             remote.stop()
 
-    revgen = fastlog(repo, rev, dirs, files, dirmatches)
+    try:
+        revgen = fastlog(repo, rev, dirs, files, dirmatches)
+    except MultiPathError:
+        repo.ui.debug("fastlog: not used for multiple paths\n")
+        return orig(repo, subset, x, name, followfirst)
+
     fastlogset = smartset.generatorset(revgen, iterasc=False, repo=repo)
     # Optimization: typically for "reverse(:.) & follow(path)" used by
     # "hg log". The left side is more expensive, although it has smaller
@@ -382,11 +402,11 @@ class FastLogThread(Thread):
     * reponame - repository name (str)
     * scm - scm type (str)
     * rev - revision to start logging from
-    * paths - paths to request logs
+    * path - path to request logs
     * repo - mercurial repository object
     """
 
-    def __init__(self, queue, id, reponame, scm, rev, paths, repo):
+    def __init__(self, queue, id, reponame, scm, rev, path, repo):
         Thread.__init__(self)
         self.daemon = True
         self.queue = queue
@@ -394,12 +414,11 @@ class FastLogThread(Thread):
         self.reponame = reponame
         self.scm = scm
         self.rev = rev
-        self.paths = list(paths)
+        self.path = path
         self.repo = repo
         self.ui = repo.ui
         self.changelog = readonlythreadsafechangelog(repo)
         self._stop = Event()
-        self._paths_to_fetch = 0
 
     def stop(self):
         self._stop.set()
@@ -407,11 +426,8 @@ class FastLogThread(Thread):
     def stopped(self):
         return self._stop.isSet()
 
-    def finishpath(self, path):
-        self._paths_to_fetch -= 1
-
     def gettodo(self):
-        return max(FASTLOG_MAX / self._paths_to_fetch, 100)
+        return FASTLOG_MAX
 
     def generate(self, path):
         start = str(self.rev)
@@ -468,22 +484,16 @@ class FastLogThread(Thread):
 
             skip += todo
             if len(results) < todo:
-                self.finishpath(path)
                 return
 
     def run(self) -> None:
         revs = None
-        paths = self.paths
+        path = self.path
 
-        self._paths_to_fetch = len(paths)
-        for path in paths:
-            g = self.generate(path)
-            gen = smartset.generatorset(g, iterasc=False, repo=self.repo)
-            gen.reverse()
-            if revs:
-                revs = smartset.addset(revs, gen, ascending=False)
-            else:
-                revs = gen
+        g = self.generate(path)
+        gen = smartset.generatorset(g, iterasc=False, repo=self.repo)
+        gen.reverse()
+        revs = gen
 
         if revs:
             for rev in revs:
