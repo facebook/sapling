@@ -25,18 +25,9 @@ import heapq
 from collections import deque
 from threading import Event, Thread
 
-from edenscm import (
-    error,
-    extensions,
-    match as matchmod,
-    node,
-    phases,
-    revset,
-    smartset,
-    util,
-)
+from edenscm import error, extensions, match as matchmod, phases, revset, smartset
 from edenscm.i18n import _
-from edenscm.node import nullrev
+from edenscm.node import bin, nullrev
 
 from .extlib.phabricator import graphql
 
@@ -286,7 +277,11 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
 
         path = next(iter(dirs.union(files)))
         yield from draft_revs
-        yield from combinator(repo, parent, path, localmatch)
+
+        hexnode = repo[parent].hex()
+        log = FastLog(reponame, "hg", hexnode, path, repo)
+        for node in log.generate_nodes():
+            yield repo.changelog.rev(node)
 
     def undorenames(ctx, files):
         """mutate files to undo any file renames in ctx"""
@@ -298,62 +293,6 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
         for (src, dst) in renamed:
             files.remove(dst)
             files.add(src)
-
-    def combinator(repo, rev, path, localmatch):
-        """combinator(repo, rev, path, localmatch)
-        Make parallel local and remote queries along ancestors of
-        rev along path and combine results, eliminating duplicates,
-        restricting results to those which match path
-        """
-
-        LOCAL = "L"
-        REMOTE = "R"
-        queue = util.queue(FASTLOG_QUEUE_SIZE + 100)
-        hash = repo[rev].hex()
-
-        local = None
-        remote = FastLogThread(queue, REMOTE, reponame, "hg", hash, path, repo)
-
-        # Allow debugging either remote or local path
-        debug = repo.ui.config("fastlog", "debug")
-        if debug != "local":
-            repo.ui.debug("starting fastlog at %s\n" % hash)
-            remote.start()
-        if local is not None and debug != "remote":
-            local.start()
-        seen = set([rev])
-
-        try:
-            while True:
-                try:
-                    producer, success, msg = queue.get(True, 3600)
-                except util.empty:
-                    raise error.Abort("Timeout reading log data")
-                if not success:
-                    if producer == LOCAL or local is None:
-                        raise error.Abort(msg)
-                    elif msg:
-                        repo.ui.log("hgfastlog", msg)
-                        continue
-
-                if msg is None:
-                    # Empty message means no more results
-                    return
-
-                rev = msg
-                if debug:
-                    if producer == LOCAL:
-                        repo.ui.debug("LOCAL:: %s\n" % msg)
-                    elif producer == REMOTE:
-                        repo.ui.debug("REMOTE:: %s\n" % msg)
-
-                if rev not in seen:
-                    seen.add(rev)
-                    yield rev
-        finally:
-            if local is not None:
-                local.stop()
-            remote.stop()
 
     try:
         revgen = fastlog(repo, rev, dirs, files, dirmatches)
@@ -372,33 +311,13 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
     return subset & fastlogset
 
 
-class readonlythreadsafechangelog(object):
-    def __init__(self, repo):
-        # Rust changelog backend is thread-safe
-        self._changelog = repo.changelog
-
-    def parentrevs(self, rev):
-        return self._changelog.parentrevs(rev)
-
-    def readfiles(self, node):
-        return self._changelog.readfiles(node)
-
-    def rev(self, node):
-        return self._changelog.rev(node)
-
-
-class FastLogThread(Thread):
+class FastLog:
     """Class which talks to a remote SCMQuery
-
-    Like the above, results are sent to a queue, and tagged with the
-    id passed to this class' initializer.  Same rules for termination.
 
     We page results in windows of up to FASTLOG_MAX to avoid generating
     too many results; this has been optimized on the server to cache
     fast continuations but this assumes service stickiness.
 
-    * queue - self explanatory
-    * id - tag to use when sending messages
     * reponame - repository name (str)
     * scm - scm type (str)
     * rev - revision to start logging from
@@ -406,123 +325,58 @@ class FastLogThread(Thread):
     * repo - mercurial repository object
     """
 
-    def __init__(self, queue, id, reponame, scm, rev, path, repo):
-        Thread.__init__(self)
-        self.daemon = True
-        self.queue = queue
-        self.id = id
+    def __init__(self, reponame, scm, rev, path, repo):
         self.reponame = reponame
         self.scm = scm
         self.rev = rev
         self.path = path
         self.repo = repo
         self.ui = repo.ui
-        self.changelog = readonlythreadsafechangelog(repo)
-        self._stop = Event()
-
-    def stop(self):
-        self._stop.set()
-
-    def stopped(self):
-        return self._stop.isSet()
 
     def gettodo(self):
         return FASTLOG_MAX
 
-    def generate(self, path):
+    def generate_nodes(self):
+        path = self.path
         start = str(self.rev)
         reponame = self.reponame
-        revfn = self.changelog.rev
         skip = 0
         usemutablehistory = self.ui.configbool("fastlog", "followmutablehistory")
 
         while True:
-            if self.stopped():
-                break
-
             results = None
             todo = self.gettodo()
-            try:
-                client = graphql.Client(repo=self.repo)
-                results = client.scmquery_log(
-                    reponame,
-                    self.scm,
-                    start,
-                    file_paths=[path],
-                    skip=skip,
-                    number=todo,
-                    use_mutable_history=usemutablehistory,
-                    timeout=FASTLOG_TIMEOUT,
-                )
-            except Exception as e:
-                if self.ui.config("fastlog", "debug"):
-                    self.ui.traceback(force=True)
-                self.enqueue((self.id, False, str(e)))
-                self.stop()
-                return
+            client = graphql.Client(repo=self.repo)
+            results = client.scmquery_log(
+                reponame,
+                self.scm,
+                start,
+                file_paths=[path],
+                skip=skip,
+                number=todo,
+                use_mutable_history=usemutablehistory,
+                timeout=FASTLOG_TIMEOUT,
+            )
 
             if results is None:
-                self.enqueue((self.id, False, "Unknown error"))
-                self.stop()
-                return
+                raise error.Abort(_("ScmQuery fastlog returned nothing unexpectedly"))
 
-            for commit in results:
-                try:
-                    hash = commit["hash"]
-                    if len(hash) != 40:
-                        raise ValueError("Received invalid hash %s" % hash)
-                    rev = revfn(node.bin(hash))
-                    if rev is None:
-                        raise KeyError("Hash %s not in local repo" % hash)
-                except Exception as e:
-                    if self.ui.config("fastlog", "debug"):
-                        self.ui.traceback(force=True)
-                    if not self.enqueue((self.id, False, str(e))):
-                        break
-                else:
-                    yield rev
+            server_nodes = [bin(commit["hash"]) for commit in results]
+
+            # `filternodes` has a desired side effect that fetches nodes
+            # (in lazy changelog) in batch.
+            nodes = self.repo.changelog.filternodes(server_nodes)
+            if len(nodes) != len(server_nodes):
+                missing_nodes = set(server_nodes) - set(nodes)
+                self.repo.ui.status_err(
+                    _("fastlog: server returned extra nodes unknown locally: %s\n")
+                    % " ".join(sorted([hex(n) for n in missing_nodes]))
+                )
+            yield from nodes
 
             skip += todo
             if len(results) < todo:
-                return
-
-    def run(self) -> None:
-        revs = None
-        path = self.path
-
-        g = self.generate(path)
-        gen = smartset.generatorset(g, iterasc=False, repo=self.repo)
-        gen.reverse()
-        revs = gen
-
-        if revs:
-            for rev in revs:
-                if not self.enqueue((self.id, True, rev)):
-                    break
-
-        # The end marker (self.id, True, None) indicates that the thread
-        # completed successfully. Don't send it if the thread is stopped.
-        # The thread can be stopped for one of two reasons:
-        #  1. The fastlog service failed - in this case, flagging a successful
-        #     finish is harmful, because it will stop us continuing with local
-        #     results, truncating output.
-        #  2. The caller is going to ignore all future results from us. In this
-        #     case, it'll ignore the end marker anyway - it's discarding the
-        #     entire queue.
-        self.enqueue((self.id, True, None))
-
-    def enqueue(self, triple):
-        """Push into self.queue unless we are stopped(). Returns whether enqueue happened."""
-
-        while True:
-            if self.stopped():
-                return False
-
-            try:
-                self.queue.put(triple, timeout=0.1)
-                return True
-            except util.full:
-                pass
+                break
 
 
 if __name__ == "__main__":
