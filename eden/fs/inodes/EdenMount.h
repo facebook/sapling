@@ -262,6 +262,7 @@ struct SetPathObjectIdObjectAndPath {
       case ObjectType::SYMLINK:
         return "symlink";
     }
+    return "<unknown>";
   }
 };
 
