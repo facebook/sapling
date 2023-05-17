@@ -531,6 +531,7 @@ enum DirstateMergeState {
 }
 
 #[cfg(test)]
+#[cfg(target_os = "linux")]
 mod test {
     use std::collections::BTreeMap;
 
