@@ -20,7 +20,7 @@ target_link_libraries(
     eden_sqlite
 
   PRIVATE
-    eden_inodes
+    eden_config
     eden_overlay_thrift_cpp
     eden_utils
     Folly::folly

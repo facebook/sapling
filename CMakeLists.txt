@@ -5,6 +5,7 @@
 
 # The add_fbthrift_library() calls require CMake 3.8+
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+
 # We use the GoogleTest module if it is available (only in CMake 3.9+)
 # It requires CMP0054 and CMP0057 to be enabled.
 if (POLICY CMP0054)
@@ -16,6 +17,8 @@ endif()
 
 # Project information
 project("eden" LANGUAGES CXX C)
+
+set_property(GLOBAL PROPERTY GLOBAL_DEPENDS_NO_CYCLES ON)
 
 set(EDEN_BUILD_REVISION "")
 if(DEFINED ENV{FBSOURCE_DATE})

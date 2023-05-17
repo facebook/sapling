@@ -77,7 +77,6 @@ else()
     PUBLIC
       eden_fuse
       eden_fscatalog
-      eden_service
   )
 endif()
 
