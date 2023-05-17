@@ -354,39 +354,25 @@ async fn adjust_candidate_id(
             break;
         }
         // (Slow) test using the IdMap.
-        let new_candidate_id = ensure_id_not_exist_in_map(map, candidate_id).await?;
-        if new_candidate_id == candidate_id {
-            break;
+        // PERF: This lacks of batching if it forms a loop. But it
+        // is also expected to be rare - only when the server
+        // tailer (assuming only one tailer is writing globally) is
+        // killed abnormally, *and* the branch being assigned has
+        // non-fast-forward move, this code path becomes useful.
+        //
+        // Technically, not using `locally` is more correct in a
+        // lazy `IdMap`. However, lazy `IdMap` is only used by
+        // client (local) dag, which ensures `IdMap` and `IdDag`
+        // are in-sync, meaning that the above `covered_ids` check
+        // is sufficient. So this is really only protecting the
+        // server's out-of-sync `IdMap` use-case, where the
+        // `locally` variant is the same as the non-`locally`,
+        // since the server has a non-lazy `IdMap`.
+        if let [true] = &map.contains_vertex_id_locally(&[candidate_id]).await?[..] {
+            candidate_id = candidate_id + 1;
         } else {
-            // Check the covered_ids + reserved_ids.
-            candidate_id = new_candidate_id;
+            break;
         }
-    }
-    Ok(candidate_id)
-}
-
-/// Pick a minimal `n`, so `candidate_id + n` is an `Id` that is not in the
-/// "map". Return the picked `Id`.
-async fn ensure_id_not_exist_in_map(
-    map: &(impl IdConvert + ?Sized),
-    mut candidate_id: Id,
-) -> Result<Id> {
-    // PERF: This lacks of batching if it forms a loop. But it
-    // is also expected to be rare - only when the server
-    // tailer (assuming only one tailer is writing globally) is
-    // killed abnormally, *and* the branch being assigned has
-    // non-fast-forward move, this code path becomes useful.
-    //
-    // Technically, not using `locally` is more correct in a
-    // lazy `IdMap`. However, lazy `IdMap` is only used by
-    // client (local) dag, which ensures `IdMap` and `IdDag`
-    // are in-sync, meaning that the above `covered_ids` check
-    // is sufficient. So this is really only protecting the
-    // server's out-of-sync `IdMap` use-case, where the
-    // `locally` variant is the same as the non-`locally`,
-    // since the server has a non-lazy `IdMap`.
-    while let [true] = &map.contains_vertex_id_locally(&[candidate_id]).await?[..] {
-        candidate_id = candidate_id + 1;
     }
     Ok(candidate_id)
 }
