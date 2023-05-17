@@ -19,9 +19,6 @@ Config::
     # Also use fastlog for files. Otherwise only use fastlog for directories.
     # (default: false)
     files=true
-
-    # Enable or disable scanning repos locally (default: false).
-    scan-local-repo=false
 """
 
 import heapq
@@ -299,11 +296,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
         queue = util.queue(FASTLOG_QUEUE_SIZE + 100)
         hash = repo[rev].hex()
 
-        localenabled = repo.ui.configbool("fastlog", "scan-local-repo")
-        if localenabled:
-            local = LocalIteratorThread(queue, LOCAL, rev, paths, localmatch, repo)
-        else:
-            local = None
+        local = None
         remote = FastLogThread(queue, REMOTE, reponame, "hg", hash, paths, repo)
 
         # Allow debugging either remote or local path
@@ -372,75 +365,6 @@ class readonlythreadsafechangelog(object):
 
     def rev(self, node):
         return self._changelog.rev(node)
-
-
-class LocalIteratorThread(Thread):
-    """Class which reads from an iterator and sends results to a queue.
-
-    Results are sent in a tuple (tag, success, result), where tag is the
-    id passed to this class' initializer, success is a bool, True for
-    success, False on error, and result is the output of the iterator.
-
-    When the iterator is finished, a poison pill is sent to the queue
-    with result set to None to signal completion.
-
-    Used to allow parallel fetching of results from both a local and
-    remote source.
-
-    * queue - self explanatory
-    * id - tag to use when sending messages
-    * rev - rev to start iterating at
-    * dirs - directories against which to match
-    * localmatch - a function to match candidate results
-    * repo - mercurial repository object
-
-    If an exception is thrown, error result with the message from the
-    exception will be passed along the queue.  Since local results are
-    not expected to generate exceptions, this terminates iteration.
-    """
-
-    def __init__(self, queue, id, rev, dirs, localmatch, repo):
-        Thread.__init__(self)
-        self.daemon = True
-        self.queue = queue
-        self.id = id
-        self.rev = rev
-        self.dirs = dirs
-        self.localmatch = localmatch
-        self.ui = repo.ui
-        self._stop = Event()
-
-        # Create a private instance of changelog to avoid trampling
-        # internal caches of other threads
-        c = readonlythreadsafechangelog(repo)
-        self.generator = originator(c.parentrevs, rev)
-        self.filefunc = c.readfiles
-        self.ui = repo.ui
-
-    def stop(self):
-        self._stop.set()
-
-    def stopped(self):
-        return self._stop.isSet()
-
-    def run(self) -> None:
-        generator = self.generator
-        match = self.localmatch
-        dirs = self.dirs
-        filefunc = self.filefunc
-        queue = self.queue
-
-        try:
-            for result in generator:
-                if self.stopped():
-                    break
-                if not match or match(filefunc(result), dirs):
-                    queue.put((self.id, True, result))
-        except Exception as e:
-            self.ui.traceback()
-            queue.put((self.id, False, str(e)))
-        finally:
-            queue.put((self.id, True, None))
 
 
 class FastLogThread(Thread):
