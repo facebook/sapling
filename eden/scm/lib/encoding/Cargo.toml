@@ -11,6 +11,9 @@ types = { version = "0.1.0", path = "../types" }
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["everything"] }
 
+[target.'cfg(target_os = "windows")'.dev-dependencies]
+local-encoding = "0.2"
+
 [target.'cfg(windows)'.dependencies]
 local-encoding = "*"
 winapi = "0.3"
