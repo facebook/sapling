@@ -817,12 +817,7 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_addBindMount(
       .thenValue([privHelper,
                   target = absolutePathFromThrift(*targetPath),
                   pathInMountDir = absRepoPath.copy()](TreeInodePtr) {
-#ifndef _WIN32
         return privHelper->bindMount(target.view(), pathInMountDir.view());
-#else
-        (void)privHelper;
-        NOT_IMPLEMENTED();
-#endif
       })
       .ensure([mountHandle, helper = std::move(helper)] {})
       .semi();
@@ -837,12 +832,8 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeBindMount(
 
   auto repoPath = RelativePathPiece{*repoPathStr};
   auto absRepoPath = mountHandle.getEdenMount().getPath() + repoPath;
-#ifndef _WIN32
   return server_->getServerState()->getPrivHelper()->bindUnMount(
       absRepoPath.view());
-#else
-  NOT_IMPLEMENTED();
-#endif
 }
 
 void EdenServiceHandler::getCurrentJournalPosition(
@@ -4272,12 +4263,8 @@ EdenServiceHandler::streamStartStatus() {
 }
 
 void EdenServiceHandler::checkPrivHelper(PrivHelperInfo& result) {
-#ifndef _WIN32
   auto privhelper = server_->getServerState()->getPrivHelper();
   result.connected_ref() = privhelper->checkConnection();
-#else
-  result.connected_ref() = true;
-#endif
 }
 
 int64_t EdenServiceHandler::getPid() {
