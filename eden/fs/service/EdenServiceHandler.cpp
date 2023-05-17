@@ -3429,7 +3429,6 @@ void EdenServiceHandler::debugOutstandingFuseCalls(
 void EdenServiceHandler::debugOutstandingNfsCalls(
     FOLLY_MAYBE_UNUSED std::vector<NfsCall>& outstandingCalls,
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
 
   auto mountPath = absolutePathFromThrift(*mountPoint);
@@ -3442,9 +3441,6 @@ void EdenServiceHandler::debugOutstandingNfsCalls(
       outstandingCalls.push_back(nfsCall);
     }
   }
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::debugOutstandingPrjfsCalls(
