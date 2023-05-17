@@ -43,6 +43,18 @@ bool VirtualInode::isDirectory() const {
   return getDtype() == dtype_t::Dir;
 }
 
+std::optional<ObjectId> VirtualInode::getObjectId() const {
+  return match(
+      variant_,
+      [](const InodePtr& inode) { return inode->getObjectId(); },
+      [](const TreePtr& tree) -> std::optional<ObjectId> {
+        return tree->getHash();
+      },
+      [](const auto& entry) -> std::optional<ObjectId> {
+        return entry.getObjectId();
+      });
+}
+
 VirtualInode::ContainedType VirtualInode::testGetContainedType() const {
   return match(
       variant_,

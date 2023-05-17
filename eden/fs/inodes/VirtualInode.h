@@ -69,6 +69,8 @@ class VirtualInode {
 
   bool isDirectory() const;
 
+  std::optional<ObjectId> getObjectId() const;
+
   /**
    * Discover the contained data type.
    *
