@@ -347,10 +347,8 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mute
     let is_test = is_inside_test();
     let mut env_filter_dirs: Option<String> = identity::debug_env_var("LOG").map(|v| v.1);
 
-    // Ensure EnvFilter is used in tests so it can be changed on the
-    // fly. Don't enable if EDENSCM_TRACE_LEVEL is set because that
-    // indicates test is testing tracing/sampling.
-    if is_test && identity::debug_env_var("TRACE_LEVEL").is_none() && env_filter_dirs.is_none() {
+    // Ensure EnvFilter is used in tests so it can be changed on the fly.
+    if is_test && env_filter_dirs.is_none() {
         env_filter_dirs = Some(String::new());
     }
 
@@ -373,13 +371,13 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mute
             // In tests, disable color and timestamps for cleaner output.
             let env_logger = env_logger.without_time().with_ansi(false);
             let subscriber = tracing_subscriber::Registry::default()
-                .with(collector)
-                .with(env_filter.and_then(env_logger));
+                .with(collector.and_then(env_logger).with_filter(env_filter))
+                .with(SamplingLayer::new());
             tracing::subscriber::set_global_default(subscriber)?;
         } else {
             let subscriber = tracing_subscriber::Registry::default()
-                .with(collector)
-                .with(env_filter.and_then(env_logger));
+                .with(collector.and_then(env_logger).with_filter(env_filter))
+                .with(SamplingLayer::new());
             tracing::subscriber::set_global_default(subscriber)?;
         }
     } else {

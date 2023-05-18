@@ -8,9 +8,6 @@ have it set.
 
   $ unset SCM_SAMPLING_FILEPATH
 
-This enables Rust tracing -> sampling support in tests.
-  $ export EDENSCM_TRACE_LEVEL=info
-
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"
@@ -126,7 +123,7 @@ Test env-var logging:
 Test rust traces make it to sampling file as well:
   $ rm $LOGDIR/samplingpath.txt
   $ setconfig sampling.key.from_rust=hello
-  $ EDENSCM_TRACE_LEVEL=info hg debugshell -c "from edenscm import tracing; tracing.info('msg', target='from_rust', hi='there')"
+  $ hg debugshell -c "from edenscm import tracing; tracing.info('msg', target='from_rust', hi='there')"
   atexit handler executed
   >>> import json
   >>> with open("$LOGDIR/samplingpath.txt") as f:
@@ -150,7 +147,7 @@ Test command_duration is logged when ctrl-c'd:
   >         f.write(str(os.getpid()))
   >     time.sleep(3600)
   > EOF
-  $ EDENSCM_TRACE_LEVEL=info hg sleep --config extensions.sigint_self=$TESTTMP/sleep.py &
+  $ hg sleep --config extensions.sigint_self=$TESTTMP/sleep.py &
   $ hg debugpython <<EOF
   > import os, signal
   > while True:
