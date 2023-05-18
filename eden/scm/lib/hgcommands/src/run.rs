@@ -807,6 +807,9 @@ fn setup_atexit(start_time: SystemTime) {
         // Truncate duration to top three significant decimal digits of
         // precision to reduce cardinality for logging storage.
         tracing::debug!(target: "measuredtimes", command_duration=util::math::truncate_int(duration_ms, 3));
+
+        // Make extra sure our metrics are written out.
+        sampling::flush();
     })).queued();
 }
 

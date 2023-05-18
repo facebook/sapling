@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::fs::OpenOptions;
+use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -19,6 +20,12 @@ pub static CONFIG: OnceCell<Option<Arc<SamplingConfig>>> = OnceCell::new();
 
 pub fn init(config: &dyn configmodel::Config) {
     CONFIG.get_or_init(|| SamplingConfig::new(config).map(Arc::new));
+}
+
+pub fn flush() {
+    if let Some(Some(sc)) = CONFIG.get() {
+        let _ = sc.file().flush();
+    }
 }
 
 #[derive(Debug)]
