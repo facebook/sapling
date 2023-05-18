@@ -59,6 +59,7 @@
 #include "eden/fs/service/ThriftGlobImpl.h"
 #include "eden/fs/service/ThriftPermissionChecker.h"
 #include "eden/fs/service/ThriftUtil.h"
+#include "eden/fs/service/UsageService.h"
 #include "eden/fs/service/gen-cpp2/eden_constants.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/service/gen-cpp2/streamingeden_constants.h"
@@ -86,10 +87,6 @@
 #include "eden/fs/utils/StatTimes.h"
 #include "eden/fs/utils/String.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
-
-#ifdef EDEN_HAVE_USAGE_SERVICE
-#include "eden/fs/service/facebook/EdenFSSmartPlatformServiceEndpoint.h" // @manual
-#endif
 
 using folly::Future;
 using folly::makeFuture;
@@ -131,9 +128,6 @@ std::string toLogArg(const std::vector<std::string>& args) {
         args.size() - limit);
   }
 }
-} // namespace
-
-namespace /* anonymous namespace for helper functions */ {
 
 #define EDEN_MICRO reinterpret_cast<const char*>(u8"\u00B5s")
 
@@ -436,10 +430,12 @@ EdenServiceHandler::initThriftRequestActivityBuffer() {
 
 EdenServiceHandler::EdenServiceHandler(
     std::vector<std::string> originalCommandLine,
-    EdenServer* server)
+    EdenServer* server,
+    std::unique_ptr<UsageService> usageService)
     : BaseService{kServiceName},
       originalCommandLine_{std::move(originalCommandLine)},
       server_{server},
+      usageService_{std::move(usageService)},
       thriftRequestActivityBuffer_(initThriftRequestActivityBuffer()),
       thriftRequestTraceBus_(TraceBus<ThriftRequestTraceEvent>::create(
           "ThriftRequestTrace",
@@ -483,11 +479,6 @@ EdenServiceHandler::EdenServiceHandler(
         hc.min,
         hc.max);
   }
-#ifdef EDEN_HAVE_USAGE_SERVICE
-  spServiceEndpoint_ = std::make_unique<EdenFSSmartPlatformServiceEndpoint>(
-      server_->getServerState()->getThreadPool(),
-      server_->getServerState()->getEdenConfig());
-#endif
   thriftRequestTraceHandle_ = thriftRequestTraceBus_->subscribeFunction(
       "Outstanding Thrift request tracing",
       [this](const ThriftRequestTraceEvent& event) {
@@ -2623,7 +2614,6 @@ EdenServiceHandler::semifuture_ensureMaterialized(
 folly::SemiFuture<std::unique_ptr<Glob>>
 EdenServiceHandler::semifuture_predictiveGlobFiles(
     std::unique_ptr<GlobParams> params) {
-#ifdef EDEN_HAVE_USAGE_SERVICE
   ThriftGlobImpl globber{*params};
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3, *params->mountPoint_ref(), globber.logString());
@@ -2683,44 +2673,34 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
   auto& fetchContext = helper->getPrefetchFetchContext();
   bool background = *params->background();
 
-  auto future = ImmediateFuture{spServiceEndpoint_
-                                    ->getTopUsedDirs(
-                                        user,
-                                        repo,
-                                        numResults,
-                                        os,
-                                        startTime,
-                                        endTime,
-                                        sandcastleAlias)
-                                    .semi()}
-                    .thenValue([globber = std::move(globber),
-                                mountHandle,
-                                serverState,
-                                fetchContext = fetchContext.copy()](
-                                   std::vector<std::string>&& globs) mutable {
-                      return globber.glob(
-                          mountHandle.getEdenMountPtr(),
-                          serverState,
-                          globs,
-                          fetchContext);
-                    })
-                    .thenTry([mountHandle,
-                              params = std::move(params),
-                              helper = std::move(helper)](
-                                 folly::Try<std::unique_ptr<Glob>> tryGlob) {
-                      if (tryGlob.hasException()) {
-                        auto& ew = tryGlob.exception();
-                        XLOG(ERR) << "Error fetching predictive file globs: "
-                                  << folly::exceptionStr(ew);
-                      }
-                      return tryGlob;
-                    });
+  auto future =
+      ImmediateFuture{
+          usageService_->getTopUsedDirs(
+              user, repo, numResults, os, startTime, endTime, sandcastleAlias)}
+          .thenValue([globber = std::move(globber),
+                      mountHandle,
+                      serverState,
+                      fetchContext = fetchContext.copy()](
+                         std::vector<std::string>&& globs) mutable {
+            return globber.glob(
+                mountHandle.getEdenMountPtr(),
+                serverState,
+                globs,
+                fetchContext);
+          })
+          .thenTry([mountHandle,
+                    params = std::move(params),
+                    helper = std::move(helper)](
+                       folly::Try<std::unique_ptr<Glob>> tryGlob) {
+            if (tryGlob.hasException()) {
+              auto& ew = tryGlob.exception();
+              XLOG(ERR) << "Error fetching predictive file globs: "
+                        << folly::exceptionStr(ew);
+            }
+            return tryGlob;
+          });
   return detachIfBackgrounded(std::move(future), serverState, background)
       .semi();
-#else // !EDEN_HAVE_USAGE_SERVICE
-  (void)params;
-  NOT_IMPLEMENTED();
-#endif // !EDEN_HAVE_USAGE_SERVICE
 }
 
 folly::SemiFuture<std::unique_ptr<Glob>>

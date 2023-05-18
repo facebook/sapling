@@ -39,10 +39,7 @@ class EntryAttributes;
 struct EntryAttributeFlags;
 template <typename T>
 class ImmediateFuture;
-
-#ifdef EDEN_HAVE_USAGE_SERVICE
-class EdenFSSmartPlatformServiceEndpoint;
-#endif
+class UsageService;
 
 extern const char* const kServiceName;
 
@@ -89,7 +86,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
  public:
   explicit EdenServiceHandler(
       std::vector<std::string> originalCommandLine,
-      EdenServer* server);
+      EdenServer* server,
+      std::unique_ptr<UsageService> usageService);
   ~EdenServiceHandler() override;
 
   EdenServiceHandler(EdenServiceHandler const&) = delete;
@@ -438,13 +436,11 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   folly::Synchronized<std::unordered_map<uint64_t, ThriftRequestTraceEvent>>
       outstandingThriftRequests_;
-#ifdef EDEN_HAVE_USAGE_SERVICE
-  // an endpoint for the edenfs/edenfs_service smartservice used for
-  // predictive prefetch profiles
-  std::unique_ptr<EdenFSSmartPlatformServiceEndpoint> spServiceEndpoint_;
-#endif
+
   const std::vector<std::string> originalCommandLine_;
   EdenServer* const server_;
+
+  std::unique_ptr<UsageService> usageService_;
 
   std::optional<ActivityBuffer<ThriftRequestTraceEvent>>
       thriftRequestActivityBuffer_;

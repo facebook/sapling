@@ -55,6 +55,7 @@
 #include "eden/fs/service/StartupStatusSubscriber.h"
 #include "eden/fs/service/ThriftStreamStartupStatusSubscriber.h"
 #include "eden/fs/service/ThriftUtil.h"
+#include "eden/fs/service/UsageService.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/BlobCache.h"
@@ -88,6 +89,10 @@
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/utils/UserInfo.h"
 
+#ifdef EDEN_HAVE_USAGE_SERVICE
+#include "eden/fs/service/facebook/EdenFSSmartPlatformServiceEndpoint.h" // @manual
+#endif
+
 #ifndef _WIN32
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -95,7 +100,9 @@
 #include "eden/fs/takeover/TakeoverClient.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverServer.h"
-#else
+#endif
+
+#ifdef _WIN32
 #include "eden/fs/notifications/WindowsNotifier.h" // @manual
 #endif // !_WIN32
 
@@ -1926,7 +1933,15 @@ Future<Unit> EdenServer::createThriftServer() {
   server_->setStopWorkersOnStopListening(false);
   server_->leakOutstandingRequestsWhenServerStops(true);
 
-  handler_ = make_shared<EdenServiceHandler>(originalCommandLine_, this);
+#ifdef EDEN_HAVE_USAGE_SERVICE
+  auto usageService = std::make_unique<EdenFSSmartPlatformServiceEndpoint>(
+      serverState_->getThreadPool(), serverState_->getEdenConfig());
+#else
+  auto usageService = std::make_unique<NullUsageService>();
+#endif
+
+  handler_ = make_shared<EdenServiceHandler>(
+      originalCommandLine_, this, std::move(usageService));
   server_->setInterface(handler_);
 
   // Get the path to the thrift socket.
