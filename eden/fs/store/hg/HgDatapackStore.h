@@ -10,20 +10,20 @@
 #include <folly/Range.h>
 #include <folly/futures/Promise.h>
 
+#include "eden/fs/model/BlobFwd.h"
+#include "eden/fs/model/BlobMetadataFwd.h"
+#include "eden/fs/model/TreeFwd.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/scm/lib/backingstore/c_api/SaplingNativeBackingStore.h"
 
 namespace facebook::eden {
 
-class Blob;
-class BlobMetadata;
 class Hash20;
 class HgProxyHash;
 class HgImportRequest;
 class ObjectId;
 class ReloadableConfig;
-class Tree;
 
 class HgDatapackStore {
  public:
@@ -38,7 +38,7 @@ class HgDatapackStore {
   void getTreeBatch(
       const std::vector<std::shared_ptr<HgImportRequest>>& requests);
 
-  std::unique_ptr<Tree> getTree(
+  TreePtr getTree(
       const RelativePath& path,
       const Hash20& manifestId,
       const ObjectId& edenTreeId);
@@ -47,7 +47,7 @@ class HgDatapackStore {
    * Imports the tree identified by the given hash from the local store.
    * Returns nullptr if not found.
    */
-  std::unique_ptr<Tree> getTreeLocal(
+  TreePtr getTreeLocal(
       const ObjectId& edenTreeId,
       const HgProxyHash& proxyHash);
 
@@ -63,14 +63,12 @@ class HgDatapackStore {
    * Imports the blob identified by the given hash from the local store.
    * Returns nullptr if not found.
    */
-  std::unique_ptr<Blob> getBlobLocal(
-      const ObjectId& id,
-      const HgProxyHash& hgInfo);
+  BlobPtr getBlobLocal(const ObjectId& id, const HgProxyHash& hgInfo);
 
   /**
    * Reads blob metadata from hg cache.
    */
-  std::unique_ptr<BlobMetadata> getLocalBlobMetadata(const HgProxyHash& id);
+  BlobMetadataPtr getLocalBlobMetadata(const HgProxyHash& id);
 
   /**
    * Fetch multiple aux data at once.

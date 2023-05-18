@@ -8,6 +8,7 @@
 #pragma once
 
 #include <cstdint>
+#include "eden/fs/model/BlobMetadataFwd.h"
 #include "eden/fs/model/Hash.h"
 
 namespace facebook::eden {

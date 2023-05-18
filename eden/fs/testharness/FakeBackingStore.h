@@ -51,10 +51,10 @@ class FakeBackingStore final : public BackingStore {
   ObjectId parseObjectId(folly::StringPiece objectId) override;
   std::string renderObjectId(const ObjectId& objectId) override;
 
-  ImmediateFuture<std::unique_ptr<Tree>> getRootTree(
+  ImmediateFuture<TreePtr> getRootTree(
       const RootId& commitID,
       const ObjectFetchContextPtr& context) override;
-  ImmediateFuture<std::unique_ptr<TreeEntry>> getTreeEntryForObjectId(
+  ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForObjectId(
       const ObjectId& /* commitID */,
       TreeEntryType /* treeEntryType */,
       const ObjectFetchContextPtr& /* context */) override;

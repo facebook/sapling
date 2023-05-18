@@ -88,12 +88,11 @@ folly::Future<std::vector<StoreResult>> LocalStore::getBatch(
   });
 }
 
-ImmediateFuture<std::unique_ptr<Tree>> LocalStore::getTree(
-    const ObjectId& id) const {
+ImmediateFuture<TreePtr> LocalStore::getTree(const ObjectId& id) const {
   return getImmediateFuture(KeySpace::TreeFamily, id)
       .thenValue([id](StoreResult&& data) {
         if (!data.isValid()) {
-          return std::unique_ptr<Tree>(nullptr);
+          return std::shared_ptr<TreePtr::element_type>(nullptr);
         }
         auto tree = Tree::tryDeserialize(id, StringPiece{data.bytes()});
         if (tree) {
@@ -103,22 +102,21 @@ ImmediateFuture<std::unique_ptr<Tree>> LocalStore::getTree(
       });
 }
 
-ImmediateFuture<std::unique_ptr<Blob>> LocalStore::getBlob(
-    const ObjectId& id) const {
+ImmediateFuture<BlobPtr> LocalStore::getBlob(const ObjectId& id) const {
   return getImmediateFuture(KeySpace::BlobFamily, id)
       .thenValue([id](StoreResult&& data) {
         if (!data.isValid()) {
-          return std::unique_ptr<Blob>(nullptr);
+          return std::shared_ptr<BlobPtr::element_type>(nullptr);
         }
         auto buf = data.extractIOBuf();
         return deserializeGitBlob(id, &buf);
       });
 }
 
-ImmediateFuture<std::unique_ptr<BlobMetadata>> LocalStore::getBlobMetadata(
+ImmediateFuture<BlobMetadataPtr> LocalStore::getBlobMetadata(
     const ObjectId& id) const {
   return getImmediateFuture(KeySpace::BlobMetaDataFamily, id)
-      .thenValue([id](StoreResult&& data) -> std::unique_ptr<BlobMetadata> {
+      .thenValue([id](StoreResult&& data) -> BlobMetadataPtr {
         if (!data.isValid()) {
           return nullptr;
         } else {

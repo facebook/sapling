@@ -140,7 +140,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
     futures.reserve(requests.size());
 
     for (auto& request : requests) {
-      auto* promise = request->getPromise<std::unique_ptr<Blob>>();
+      auto* promise = request->getPromise<BlobPtr>();
       if (promise->isFulfilled()) {
         stats_->addDuration(&HgBackingStoreStats::fetchBlob, watch.elapsed());
         continue;
@@ -196,7 +196,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
     futures.reserve(requests.size());
 
     for (auto& request : requests) {
-      auto* promise = request->getPromise<std::unique_ptr<Tree>>();
+      auto* promise = request->getPromise<TreePtr>();
       if (promise->isFulfilled()) {
         stats_->addDuration(&HgBackingStoreStats::fetchTree, watch.elapsed());
         continue;
@@ -250,7 +250,7 @@ void HgQueuedBackingStore::processBlobMetaImportRequests(
 
   {
     for (auto& request : requests) {
-      auto* promise = request->getPromise<std::unique_ptr<BlobMetadata>>();
+      auto* promise = request->getPromise<BlobMetadataPtr>();
       if (promise->isFulfilled()) {
         stats_->addDuration(
             &HgBackingStoreStats::fetchBlobMetadata, watch.elapsed());
@@ -445,8 +445,8 @@ HgQueuedBackingStore::getTreeImpl(
   });
 
   return std::move(getTreeFuture)
-      .thenTry([this, id](folly::Try<std::unique_ptr<Tree>>&& result) {
-        this->queue_.markImportAsFinished<Tree>(id, result);
+      .thenTry([this, id](folly::Try<TreePtr>&& result) {
+        this->queue_.markImportAsFinished<TreePtr::element_type>(id, result);
         auto tree = std::move(result).value();
         return GetTreeResult{
             std::move(tree), ObjectFetchContext::Origin::FromNetworkFetch};
@@ -519,8 +519,8 @@ HgQueuedBackingStore::getBlobImpl(
   });
 
   return std::move(getBlobFuture)
-      .thenTry([this, id](folly::Try<std::unique_ptr<Blob>>&& result) {
-        this->queue_.markImportAsFinished<Blob>(id, result);
+      .thenTry([this, id](folly::Try<BlobPtr>&& result) {
+        this->queue_.markImportAsFinished<BlobPtr::element_type>(id, result);
         auto blob = std::move(result).value();
         return GetBlobResult{
             std::move(blob), ObjectFetchContext::Origin::FromNetworkFetch};
@@ -600,15 +600,16 @@ HgQueuedBackingStore::getBlobMetadataImpl(
   });
 
   return std::move(getBlobMetaFuture)
-      .thenTry([this, id](folly::Try<std::unique_ptr<BlobMetadata>>&& result) {
-        this->queue_.markImportAsFinished<BlobMetadata>(id, result);
+      .thenTry([this, id](folly::Try<BlobMetadataPtr>&& result) {
+        this->queue_.markImportAsFinished<BlobMetadataPtr::element_type>(
+            id, result);
         auto blobMeta = std::move(result).value();
         return GetBlobMetaResult{
             std::move(blobMeta), ObjectFetchContext::Origin::FromNetworkFetch};
       });
 }
 
-ImmediateFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getRootTree(
+ImmediateFuture<TreePtr> HgQueuedBackingStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& /*context*/) {
   return backingStore_->getRootTree(rootId);
@@ -775,7 +776,7 @@ void HgQueuedBackingStore::periodicManagementTask() {
 
 namespace {
 void dropBlobImportRequest(std::shared_ptr<HgImportRequest>& request) {
-  auto* promise = request->getPromise<std::unique_ptr<Blob>>();
+  auto* promise = request->getPromise<BlobPtr>();
   if (promise != nullptr) {
     if (!promise->isFulfilled()) {
       promise->setException(std::runtime_error("Request forcibly dropped"));
@@ -784,7 +785,7 @@ void dropBlobImportRequest(std::shared_ptr<HgImportRequest>& request) {
 }
 
 void dropTreeImportRequest(std::shared_ptr<HgImportRequest>& request) {
-  auto* promise = request->getPromise<std::unique_ptr<Tree>>();
+  auto* promise = request->getPromise<TreePtr>();
   if (promise != nullptr) {
     if (!promise->isFulfilled()) {
       promise->setException(std::runtime_error("Request forcibly dropped"));

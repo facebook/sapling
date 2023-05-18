@@ -46,9 +46,7 @@ IOBuf Tree::serialize() const {
   return buf;
 }
 
-std::unique_ptr<Tree> Tree::tryDeserialize(
-    ObjectId hash,
-    folly::StringPiece data) {
+TreePtr Tree::tryDeserialize(ObjectId hash, folly::StringPiece data) {
   if (data.size() < sizeof(uint32_t)) {
     XLOG(ERR) << "Can not read tree version, bytes remaining " << data.size();
     return nullptr;
@@ -83,7 +81,8 @@ std::unique_ptr<Tree> Tree::tryDeserialize(
     return nullptr;
   }
 
-  return std::make_unique<Tree>(std::move(entries), std::move(hash));
+  return std::make_shared<TreePtr::element_type>(
+      std::move(entries), std::move(hash));
 }
 
 } // namespace facebook::eden

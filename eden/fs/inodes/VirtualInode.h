@@ -15,6 +15,7 @@
 #include "eden/fs/model/EntryAttributeFlags.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/model/TreeFwd.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/RefPtr.h"
 
@@ -23,11 +24,8 @@ namespace facebook::eden {
 class ObjectStore;
 class ObjectFetchContext;
 using ObjectFetchContextPtr = RefPtr<ObjectFetchContext>;
-class Tree;
 
 namespace detail {
-using TreePtr = std::shared_ptr<const Tree>;
-
 using VariantVirtualInode = std::
     variant<InodePtr, UnmaterializedUnloadedBlobDirEntry, TreePtr, TreeEntry>;
 } // namespace detail
@@ -49,7 +47,7 @@ class VirtualInode {
   explicit VirtualInode(UnmaterializedUnloadedBlobDirEntry value)
       : variant_(std::move(value)) {}
 
-  explicit VirtualInode(detail::TreePtr value, mode_t mode)
+  explicit VirtualInode(TreePtr value, mode_t mode)
       : variant_(std::move(value)), treeMode_(mode) {}
 
   explicit VirtualInode(TreeEntry value) : variant_(std::move(value)) {

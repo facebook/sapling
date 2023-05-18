@@ -51,7 +51,6 @@ using folly::makeFuture;
 using folly::SemiFuture;
 using folly::StringPiece;
 using std::make_unique;
-using std::unique_ptr;
 
 DEFINE_int32(
     num_hg_import_threads,
@@ -206,18 +205,16 @@ HgBackingStore::HgBackingStore(
 
 HgBackingStore::~HgBackingStore() = default;
 
-ImmediateFuture<unique_ptr<Tree>> HgBackingStore::getRootTree(
-    const RootId& rootId) {
+ImmediateFuture<TreePtr> HgBackingStore::getRootTree(const RootId& rootId) {
   ObjectId commitId = hashFromRootId(rootId);
 
   return localStore_
       ->getImmediateFuture(KeySpace::HgCommitToTreeFamily, commitId)
       .thenValue(
-          [this, commitId](
-              StoreResult result) -> folly::SemiFuture<unique_ptr<Tree>> {
+          [this, commitId](StoreResult result) -> folly::SemiFuture<TreePtr> {
             if (!result.isValid()) {
               return importTreeManifest(commitId).thenValue(
-                  [this, commitId](std::unique_ptr<Tree> rootTree) {
+                  [this, commitId](TreePtr rootTree) {
                     XLOG(DBG1) << "imported mercurial commit " << commitId
                                << " as tree " << rootTree->getHash();
 
@@ -238,7 +235,7 @@ ImmediateFuture<unique_ptr<Tree>> HgBackingStore::getRootTree(
           });
 }
 
-SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
+SemiFuture<TreePtr> HgBackingStore::getTree(
     const std::shared_ptr<HgImportRequest>& request) {
   auto* treeImport = request->getRequest<HgImportRequest::TreeImport>();
   return importTreeImpl(
@@ -247,7 +244,7 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
       treeImport->proxyHash.path());
 }
 
-Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
+Future<TreePtr> HgBackingStore::importTreeImpl(
     const Hash20& manifestNode,
     const ObjectId& edenTreeID,
     RelativePathPiece path) {
@@ -258,7 +255,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
   // This isn't actually present in the mercurial data store; it has to be
   // handled specially in the code.
   if (path.empty() && manifestNode == kZeroHash) {
-    auto tree = make_unique<Tree>(
+    auto tree = std::make_shared<TreePtr::element_type>(
         Tree::container{kPathMapDefaultCaseSensitive}, edenTreeID);
     return makeFuture(std::move(tree));
   }
@@ -267,7 +264,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     auto ew = folly::exception_wrapper{std::runtime_error{
         "Data not available via edenapi, skipping fallback to importer because "
         "of FLAGS_hg_fetch_missing_trees"}};
-    return folly::makeFuture<unique_ptr<Tree>>(std::move(ew));
+    return folly::makeFuture<TreePtr>(std::move(ew));
   }
 
   folly::stop_watch<std::chrono::milliseconds> watch;
@@ -276,14 +273,13 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
   // request, no need for separate network call!
   return fetchTreeFromImporter(
              manifestNode, edenTreeID, path.copy(), std::move(writeBatch))
-      .thenValue([this, watch, config = config_](
-                     std::unique_ptr<Tree>&& result) mutable {
+      .thenValue([this, watch, config = config_](TreePtr&& result) mutable {
         stats_->addDuration(&HgBackingStoreStats::fetchTree, watch.elapsed());
         return std::move(result);
       });
 }
 
-folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
+folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
     Hash20 manifestNode,
     ObjectId edenTreeID,
     RelativePath path,
@@ -433,7 +429,7 @@ class Manifest {
 
 } // namespace
 
-std::unique_ptr<Tree> HgBackingStore::processTree(
+TreePtr HgBackingStore::processTree(
     std::unique_ptr<IOBuf> content,
     const Hash20& manifestNode,
     const ObjectId& edenTreeID,
@@ -460,7 +456,8 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
 
   writeBatch->flush();
 
-  return make_unique<Tree>(std::move(entries), edenTreeID);
+  return std::make_shared<TreePtr::element_type>(
+      std::move(entries), edenTreeID);
 }
 
 folly::Future<folly::Unit> HgBackingStore::importTreeManifestForRoot(
@@ -480,8 +477,7 @@ folly::Future<folly::Unit> HgBackingStore::importTreeManifestForRoot(
             }
 
             return importTreeManifestImpl(manifestId)
-                .thenValue([this, commitId, manifestId](
-                               std::unique_ptr<Tree> rootTree) {
+                .thenValue([this, commitId, manifestId](TreePtr rootTree) {
                   XLOG(DBG3) << "imported mercurial commit " << commitId
                              << " with manifest " << manifestId << " as tree "
                              << rootTree->getHash();
@@ -494,7 +490,7 @@ folly::Future<folly::Unit> HgBackingStore::importTreeManifestForRoot(
           });
 }
 
-folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
+folly::Future<TreePtr> HgBackingStore::importTreeManifest(
     const ObjectId& commitId) {
   return folly::via(
              importThreadPool_.get(),
@@ -510,7 +506,7 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
       });
 }
 
-folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifestImpl(
+folly::Future<TreePtr> HgBackingStore::importTreeManifestImpl(
     Hash20 manifestNode) {
   // Record that we are at the root for this node
   RelativePathPiece path{};
@@ -540,7 +536,7 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifestImpl(
   return importTreeImpl(manifestNode, objectId, path);
 }
 
-SemiFuture<std::unique_ptr<Blob>> HgBackingStore::fetchBlobFromHgImporter(
+SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
     HgProxyHash hgInfo) {
   return folly::via(
       importThreadPool_.get(),

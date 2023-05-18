@@ -3000,10 +3000,9 @@ EdenServiceHandler::semifuture_debugGetBlob(
         ImmediateFuture<ScmBlobWithOrigin>{transformToBlobFromOrigin(
             edenMount,
             id,
-            folly::Try<std::shared_ptr<Blob>>{
-                hgBackingStore->getHgBackingStore()
-                    .getDatapackStore()
-                    .getBlobLocal(id, proxyHash)},
+            folly::Try<BlobPtr>{hgBackingStore->getHgBackingStore()
+                                    .getDatapackStore()
+                                    .getBlobLocal(id, proxyHash)},
             DataFetchOrigin::LOCAL_BACKING_STORE)});
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {

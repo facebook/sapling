@@ -144,10 +144,10 @@ class HgQueuedBackingStore final : public BackingStore {
   static ObjectId staticParseObjectId(folly::StringPiece objectId);
   static std::string staticRenderObjectId(const ObjectId& objectId);
 
-  ImmediateFuture<std::unique_ptr<Tree>> getRootTree(
+  ImmediateFuture<TreePtr> getRootTree(
       const RootId& rootId,
       const ObjectFetchContextPtr& context) override;
-  ImmediateFuture<std::unique_ptr<TreeEntry>> getTreeEntryForObjectId(
+  ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForObjectId(
       const ObjectId& /* objectId */,
       TreeEntryType /* treeEntryType */,
       const ObjectFetchContextPtr& /* context */) override {

@@ -7,6 +7,7 @@
 
 #include "eden/fs/store/LocalStoreCachedBackingStore.h"
 #include "eden/fs/model/Blob.h"
+#include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -35,12 +36,11 @@ ObjectComparison LocalStoreCachedBackingStore::compareObjectsById(
   return backingStore_->compareObjectsById(one, two);
 }
 
-ImmediateFuture<std::unique_ptr<Tree>>
-LocalStoreCachedBackingStore::getRootTree(
+ImmediateFuture<TreePtr> LocalStoreCachedBackingStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& context) {
   return backingStore_->getRootTree(rootId, context)
-      .thenValue([localStore = localStore_](std::unique_ptr<Tree> tree) {
+      .thenValue([localStore = localStore_](TreePtr tree) {
         // TODO: perhaps this callback should use toUnsafeFuture() to ensure the
         // tree is cached whether or not the caller consumes the future.
         if (tree) {
@@ -50,7 +50,7 @@ LocalStoreCachedBackingStore::getRootTree(
       });
 }
 
-ImmediateFuture<std::unique_ptr<TreeEntry>>
+ImmediateFuture<std::shared_ptr<TreeEntry>>
 LocalStoreCachedBackingStore::getTreeEntryForObjectId(
     const ObjectId& objectId,
     TreeEntryType treeEntryType,
@@ -63,15 +63,14 @@ folly::SemiFuture<BackingStore::GetTreeResult>
 LocalStoreCachedBackingStore::getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
-  auto localStoreGetTree =
-      ImmediateFuture<std::unique_ptr<Tree>>{std::in_place, nullptr};
+  auto localStoreGetTree = ImmediateFuture<TreePtr>{std::in_place, nullptr};
   if (shouldCache(LocalStoreCachedBackingStore::CachingPolicy::Trees)) {
     localStoreGetTree = localStore_->getTree(id);
   }
 
   return std::move(localStoreGetTree)
       .thenValue([self = shared_from_this(), id = id, context = context.copy()](
-                     std::unique_ptr<Tree> tree) mutable {
+                     TreePtr tree) mutable {
         if (tree) {
           return folly::makeSemiFuture(GetTreeResult{
               std::move(tree), ObjectFetchContext::FromDiskCache});
@@ -116,13 +115,13 @@ LocalStoreCachedBackingStore::getBlobMetadata(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
   auto localStoreGetBlobMetadata =
-      ImmediateFuture<std::unique_ptr<BlobMetadata>>{std::in_place, nullptr};
+      ImmediateFuture<BlobMetadataPtr>{std::in_place, nullptr};
   if (shouldCache(LocalStoreCachedBackingStore::CachingPolicy::BlobMetadata)) {
     localStoreGetBlobMetadata = localStore_->getBlobMetadata(id);
   }
   return std::move(localStoreGetBlobMetadata)
       .thenValue([self = shared_from_this(), id = id, context = context.copy()](
-                     std::unique_ptr<BlobMetadata> metadata) mutable {
+                     BlobMetadataPtr metadata) mutable {
         if (metadata) {
           self->stats_->increment(
               &ObjectStoreStats::getBlobMetadataFromLocalStore);
@@ -156,7 +155,7 @@ LocalStoreCachedBackingStore::getBlobMetadata(
                         }
 
                         return GetBlobMetaResult{
-                            std::make_unique<BlobMetadata>(
+                            std::make_shared<BlobMetadata>(
                                 Hash20::sha1(result.blob->getContents()),
                                 result.blob->getSize()),
                             result.origin};
@@ -178,14 +177,13 @@ folly::SemiFuture<BackingStore::GetBlobResult>
 LocalStoreCachedBackingStore::getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
-  auto localStoreGetBlob =
-      ImmediateFuture<std::unique_ptr<Blob>>{std::in_place, nullptr};
+  auto localStoreGetBlob = ImmediateFuture<BlobPtr>{std::in_place, nullptr};
   if (shouldCache(LocalStoreCachedBackingStore::CachingPolicy::Blobs)) {
     localStoreGetBlob = localStore_->getBlob(id);
   }
   return std::move(localStoreGetBlob)
       .thenValue([self = shared_from_this(), id = id, context = context.copy()](
-                     std::unique_ptr<Blob> blob) mutable {
+                     BlobPtr blob) mutable {
         if (blob) {
           self->stats_->increment(&ObjectStoreStats::getBlobFromLocalStore);
           return folly::makeSemiFuture(GetBlobResult{

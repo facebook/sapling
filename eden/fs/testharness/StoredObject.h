@@ -19,9 +19,9 @@ class Tree;
 
 template <typename T>
 class StoredObject;
-using StoredBlob = StoredObject<Blob>;
+using StoredBlob = StoredObject<const Blob>;
 using StoredHash = StoredObject<ObjectId>;
-using StoredTree = StoredObject<Tree>;
+using StoredTree = StoredObject<const Tree>;
 
 /**
  * A helper class for TestBackingStore.
@@ -53,10 +53,10 @@ class StoredObject {
    * value available.  Otherwise the future will become ready when trigger() or
    * setReady() is called on this StoredObject.
    */
-  folly::Future<std::unique_ptr<T>> getFuture() {
+  folly::Future<std::shared_ptr<T>> getFuture() {
     auto data = data_.wlock();
     if (data->ready) {
-      return folly::makeFuture(std::make_unique<T>(object_));
+      return folly::makeFuture(std::make_shared<T>(object_));
     }
 
     data->promises.emplace_back();
@@ -71,7 +71,7 @@ class StoredObject {
    * immediately ready.
    */
   void setReady() {
-    std::vector<folly::Promise<std::unique_ptr<T>>> promises;
+    std::vector<folly::Promise<std::shared_ptr<T>>> promises;
     {
       auto data = data_.wlock();
       data->ready = true;
@@ -98,7 +98,7 @@ class StoredObject {
    * getFuture() will still return Futures that are not ready yet.
    */
   void trigger() {
-    std::vector<folly::Promise<std::unique_ptr<T>>> promises;
+    std::vector<folly::Promise<std::shared_ptr<T>>> promises;
     {
       auto data = data_.wlock();
       data->promises.swap(promises);
@@ -113,7 +113,7 @@ class StoredObject {
    */
   template <class E>
   void triggerError(const E& e) {
-    std::vector<folly::Promise<std::unique_ptr<T>>> promises;
+    std::vector<folly::Promise<std::shared_ptr<T>>> promises;
     {
       auto data = data_.wlock();
       data->promises.swap(promises);
@@ -124,8 +124,8 @@ class StoredObject {
     }
   }
 
-  std::vector<folly::Promise<std::unique_ptr<T>>> discardOutstandingRequests() {
-    std::vector<folly::Promise<std::unique_ptr<T>>> promises;
+  std::vector<folly::Promise<std::shared_ptr<T>>> discardOutstandingRequests() {
+    std::vector<folly::Promise<std::shared_ptr<T>>> promises;
     {
       auto data = data_.wlock();
       // Destroying a Promise can run callbacks, so do that while the lock isn't
@@ -138,12 +138,12 @@ class StoredObject {
  private:
   struct Data {
     bool ready{false};
-    std::vector<folly::Promise<std::unique_ptr<T>>> promises;
+    std::vector<folly::Promise<std::shared_ptr<T>>> promises;
   };
 
-  void triggerImpl(std::vector<folly::Promise<std::unique_ptr<T>>>& promises) {
+  void triggerImpl(std::vector<folly::Promise<std::shared_ptr<T>>>& promises) {
     for (auto& p : promises) {
-      p.setValue(std::make_unique<T>(object_));
+      p.setValue(std::make_shared<T>(object_));
     }
   }
 

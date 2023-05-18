@@ -21,28 +21,27 @@ void HgImportRequestQueue::stop() {
   }
 }
 
-folly::Future<std::unique_ptr<Blob>> HgImportRequestQueue::enqueueBlob(
+folly::Future<BlobPtr> HgImportRequestQueue::enqueueBlob(
     std::shared_ptr<HgImportRequest> request) {
   return enqueue<Blob, HgImportRequest::BlobImport>(std::move(request));
 }
 
-folly::Future<std::unique_ptr<Tree>> HgImportRequestQueue::enqueueTree(
+folly::Future<TreePtr> HgImportRequestQueue::enqueueTree(
     std::shared_ptr<HgImportRequest> request) {
   return enqueue<Tree, HgImportRequest::TreeImport>(std::move(request));
 }
 
-folly::Future<std::unique_ptr<BlobMetadata>>
-HgImportRequestQueue::enqueueBlobMeta(
+folly::Future<BlobMetadataPtr> HgImportRequestQueue::enqueueBlobMeta(
     std::shared_ptr<HgImportRequest> request) {
   return enqueue<BlobMetadata, HgImportRequest::BlobMetaImport>(
       std::move(request));
 }
 
 template <typename T, typename ImportType>
-folly::Future<std::unique_ptr<T>> HgImportRequestQueue::enqueue(
+folly::Future<std::shared_ptr<const T>> HgImportRequestQueue::enqueue(
     std::shared_ptr<HgImportRequest> request) {
   auto state = state_.lock();
-  auto* importQueue = getImportQueue<T>(state);
+  auto* importQueue = getImportQueue<const T>(state);
   auto* requestQueue = &importQueue->queue;
 
   const auto& hash = request->getRequest<ImportType>()->hash;
@@ -51,7 +50,8 @@ folly::Future<std::unique_ptr<T>> HgImportRequestQueue::enqueue(
     auto& existingRequest = *existingRequestPtr;
     auto* trackedImport = existingRequest->template getRequest<ImportType>();
 
-    auto [promise, future] = folly::makePromiseContract<std::unique_ptr<T>>();
+    auto [promise, future] =
+        folly::makePromiseContract<std::shared_ptr<const T>>();
     trackedImport->promises.emplace_back(std::move(promise));
 
     if (existingRequest->getPriority() < request->getPriority()) {
@@ -75,7 +75,7 @@ folly::Future<std::unique_ptr<T>> HgImportRequestQueue::enqueue(
   }
 
   requestQueue->emplace_back(request);
-  auto promise = request->getPromise<std::unique_ptr<T>>();
+  auto promise = request->getPromise<std::shared_ptr<const T>>();
 
   importQueue->requestTracker.emplace(hash, std::move(request));
 

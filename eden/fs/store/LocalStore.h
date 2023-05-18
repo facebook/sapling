@@ -11,8 +11,10 @@
 #include <atomic>
 #include <memory>
 #include <optional>
-#include "eden/fs/model/BlobMetadata.h"
+#include "eden/fs/model/BlobFwd.h"
+#include "eden/fs/model/BlobMetadataFwd.h"
 #include "eden/fs/model/ObjectId.h"
+#include "eden/fs/model/TreeFwd.h"
 #include "eden/fs/store/KeySpace.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -24,10 +26,8 @@ class Future;
 
 namespace facebook::eden {
 
-class Blob;
 class EdenConfig;
 class StoreResult;
-class Tree;
 
 /*
  * LocalStore stores objects (trees and blobs) locally on disk.
@@ -130,7 +130,7 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * May throw exceptions on error (e.g., if this ID refers to a non-tree
    * object).
    */
-  ImmediateFuture<std::unique_ptr<Tree>> getTree(const ObjectId& id) const;
+  ImmediateFuture<TreePtr> getTree(const ObjectId& id) const;
 
   /**
    * Get a Blob from the store.
@@ -141,7 +141,7 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * May throw exceptions on error (e.g., if this ID refers to a non-blob
    * object).
    */
-  ImmediateFuture<std::unique_ptr<Blob>> getBlob(const ObjectId& id) const;
+  ImmediateFuture<BlobPtr> getBlob(const ObjectId& id) const;
 
   /**
    * Get the size of a blob and the SHA-1 hash of its contents.
@@ -149,8 +149,7 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * Returns std::nullopt if this key is not present in the store, or throws an
    * exception on error.
    */
-  ImmediateFuture<std::unique_ptr<BlobMetadata>> getBlobMetadata(
-      const ObjectId& id) const;
+  ImmediateFuture<BlobMetadataPtr> getBlobMetadata(const ObjectId& id) const;
 
   /**
    * Test whether the key is stored.

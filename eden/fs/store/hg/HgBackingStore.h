@@ -66,8 +66,8 @@ class HgBackingStore {
 
   ~HgBackingStore();
 
-  ImmediateFuture<std::unique_ptr<Tree>> getRootTree(const RootId& rootId);
-  folly::SemiFuture<std::unique_ptr<Tree>> getTree(
+  ImmediateFuture<TreePtr> getRootTree(const RootId& rootId);
+  folly::SemiFuture<TreePtr> getTree(
       const std::shared_ptr<HgImportRequest>& request);
 
   void periodicManagementTask();
@@ -85,8 +85,7 @@ class HgBackingStore {
    * Import the manifest for the specified revision using mercurial
    * treemanifest data.
    */
-  folly::Future<std::unique_ptr<Tree>> importTreeManifest(
-      const ObjectId& commitId);
+  folly::Future<TreePtr> importTreeManifest(const ObjectId& commitId);
 
   /**
    * Objects that can be imported from Hg
@@ -124,8 +123,7 @@ class HgBackingStore {
 
   // Get blob step functions
 
-  folly::SemiFuture<std::unique_ptr<Blob>> fetchBlobFromHgImporter(
-      HgProxyHash hgInfo);
+  folly::SemiFuture<BlobPtr> fetchBlobFromHgImporter(HgProxyHash hgInfo);
 
   HgDatapackStore& getDatapackStore() {
     return datapackStore_;
@@ -140,21 +138,20 @@ class HgBackingStore {
   HgBackingStore(HgBackingStore const&) = delete;
   HgBackingStore& operator=(HgBackingStore const&) = delete;
 
-  folly::Future<std::unique_ptr<Tree>> importTreeManifestImpl(
-      Hash20 manifestNode);
+  folly::Future<TreePtr> importTreeManifestImpl(Hash20 manifestNode);
 
   void initializeDatapackImport(AbsolutePathPiece repository);
-  folly::Future<std::unique_ptr<Tree>> importTreeImpl(
+  folly::Future<TreePtr> importTreeImpl(
       const Hash20& manifestNode,
       const ObjectId& edenTreeID,
       RelativePathPiece path);
 
-  folly::Future<std::unique_ptr<Tree>> fetchTreeFromImporter(
+  folly::Future<TreePtr> fetchTreeFromImporter(
       Hash20 manifestNode,
       ObjectId edenTreeID,
       RelativePath path,
       std::shared_ptr<LocalStore::WriteBatch> writeBatch);
-  std::unique_ptr<Tree> processTree(
+  TreePtr processTree(
       std::unique_ptr<folly::IOBuf> content,
       const Hash20& manifestNode,
       const ObjectId& edenTreeID,

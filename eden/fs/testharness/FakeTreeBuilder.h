@@ -22,8 +22,8 @@ class Tree;
 
 template <typename T>
 class StoredObject;
-using StoredTree = StoredObject<Tree>;
-using StoredBlob = StoredObject<Blob>;
+using StoredTree = StoredObject<const Tree>;
+using StoredBlob = StoredObject<const Blob>;
 
 /**
  * FakeTreeBuilder is a helper class for populating Trees and Blobs in a

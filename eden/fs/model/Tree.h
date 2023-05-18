@@ -10,10 +10,14 @@
 #include <folly/io/IOBuf.h>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/model/TreeFwd.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/PathMap.h"
 
 namespace facebook::eden {
+
+class Tree;
+using TreePtr = std::shared_ptr<const Tree>;
 
 class Tree {
  public:
@@ -95,9 +99,7 @@ class Tree {
    * version identifier. Currently only V1_VERSION is supported, along with
    * git tree format.
    */
-  static std::unique_ptr<Tree> tryDeserialize(
-      ObjectId hash,
-      folly::StringPiece data);
+  static TreePtr tryDeserialize(ObjectId hash, folly::StringPiece data);
 
  private:
   friend bool operator==(const Tree& tree1, const Tree& tree2);

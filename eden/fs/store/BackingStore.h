@@ -11,9 +11,11 @@
 #include <folly/futures/Future.h>
 #include <memory>
 
-#include "eden/fs/model/BlobMetadata.h"
+#include "eden/fs/model/BlobFwd.h"
+#include "eden/fs/model/BlobMetadataFwd.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/RootId.h"
+#include "eden/fs/model/TreeFwd.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/ImmediateFuture.h"
@@ -26,8 +28,6 @@ class Future;
 
 namespace facebook::eden {
 
-class Blob;
-class Tree;
 class TreeEntry;
 enum class TreeEntryType : uint8_t;
 
@@ -73,11 +73,11 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   /**
    * Return the root Tree corresponding to the passed in RootId.
    */
-  virtual ImmediateFuture<std::unique_ptr<Tree>> getRootTree(
+  virtual ImmediateFuture<TreePtr> getRootTree(
       const RootId& rootId,
       const ObjectFetchContextPtr& context) = 0;
 
-  virtual ImmediateFuture<std::unique_ptr<TreeEntry>> getTreeEntryForObjectId(
+  virtual ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForObjectId(
       const ObjectId& objectId,
       TreeEntryType treeEntryType,
       const ObjectFetchContextPtr& context) = 0;
@@ -87,7 +87,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    */
   struct GetTreeResult {
     /** The retrieved tree. */
-    std::unique_ptr<Tree> tree;
+    TreePtr tree;
     /** The fetch origin of the tree. */
     ObjectFetchContext::Origin origin;
   };
@@ -106,7 +106,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    */
   struct GetBlobResult {
     /** The retrieved blob. */
-    std::unique_ptr<Blob> blob;
+    BlobPtr blob;
     /** The fetch origin of the blob. */
     ObjectFetchContext::Origin origin;
   };
@@ -132,7 +132,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
      * fallback to fetching the blob, computing the blob metadata from it and
      * store it in the LocalStore.
      */
-    std::unique_ptr<BlobMetadata> blobMeta;
+    BlobMetadataPtr blobMeta;
     /** The fetch origin of the blob metadata. */
     ObjectFetchContext::Origin origin;
   };

@@ -254,7 +254,7 @@ void HgImporter::stopHelperProcess() {
   }
 }
 
-unique_ptr<Blob> HgImporter::importFileContents(
+BlobPtr HgImporter::importFileContents(
     RelativePathPiece path,
     Hash20 blobHash) {
   XLOG(DBG5) << "requesting file contents of '" << path << "', "
@@ -316,7 +316,7 @@ unique_ptr<Blob> HgImporter::importFileContents(
   auto blobId =
       ObjectId{blobHash.getBytes()}; // fixme: this is a curious case where we
                                      // create blob using HgId as an Id
-  return make_unique<Blob>(blobId, std::move(buf));
+  return std::make_shared<BlobPtr::element_type>(blobId, std::move(buf));
 }
 
 std::unique_ptr<IOBuf> HgImporter::fetchTree(
@@ -635,7 +635,7 @@ Hash20 HgImporterManager::resolveManifestNode(StringPiece revName) {
   });
 }
 
-unique_ptr<Blob> HgImporterManager::importFileContents(
+BlobPtr HgImporterManager::importFileContents(
     RelativePathPiece path,
     Hash20 blobHash) {
   return retryOnError([=](HgImporter* importer) {

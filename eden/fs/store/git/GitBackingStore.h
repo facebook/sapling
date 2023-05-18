@@ -45,10 +45,10 @@ class GitBackingStore final : public BijectiveBackingStore {
   ObjectId parseObjectId(folly::StringPiece objectId) override;
   std::string renderObjectId(const ObjectId& objectId) override;
 
-  ImmediateFuture<std::unique_ptr<Tree>> getRootTree(
+  ImmediateFuture<TreePtr> getRootTree(
       const RootId& rootId,
       const ObjectFetchContextPtr& context) override;
-  ImmediateFuture<std::unique_ptr<TreeEntry>> getTreeEntryForObjectId(
+  ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForObjectId(
       const ObjectId& /* objectId */,
       TreeEntryType /* treeEntryType */,
       const ObjectFetchContextPtr& /* context */) override {
@@ -76,8 +76,8 @@ class GitBackingStore final : public BijectiveBackingStore {
   GitBackingStore(GitBackingStore const&) = delete;
   GitBackingStore& operator=(GitBackingStore const&) = delete;
 
-  std::unique_ptr<Tree> getTreeImpl(const ObjectId& id);
-  std::unique_ptr<Blob> getBlobImpl(const ObjectId& id);
+  TreePtr getTreeImpl(const ObjectId& id);
+  BlobPtr getBlobImpl(const ObjectId& id);
 
   static git_oid root2Oid(const RootId& rootId);
 

@@ -29,9 +29,7 @@ enum GitModeMask {
   SYMLINK = 0120000,
 };
 
-std::unique_ptr<Tree> deserializeGitTree(
-    const ObjectId& hash,
-    const IOBuf* treeData) {
+TreePtr deserializeGitTree(const ObjectId& hash, const IOBuf* treeData) {
   folly::io::Cursor cursor(treeData);
 
   // Find the end of the header and extract the size.
@@ -93,13 +91,11 @@ std::unique_ptr<Tree> deserializeGitTree(
     entries.emplace(pathName, ObjectId(hashBytes), fileType);
   }
 
-  return std::make_unique<Tree>(std::move(entries), hash);
+  return std::make_shared<TreePtr::element_type>(std::move(entries), hash);
 }
 
 // Convenience wrapper which accepts a ByteRange
-std::unique_ptr<Tree> deserializeGitTree(
-    const ObjectId& hash,
-    folly::ByteRange treeData) {
+TreePtr deserializeGitTree(const ObjectId& hash, folly::ByteRange treeData) {
   IOBuf buf(IOBuf::WRAP_BUFFER, treeData);
   return deserializeGitTree(hash, &buf);
 }

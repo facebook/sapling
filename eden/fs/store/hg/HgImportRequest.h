@@ -32,7 +32,7 @@ namespace facebook::eden {
 class HgImportRequest {
  public:
   struct BlobImport {
-    using Response = std::unique_ptr<Blob>;
+    using Response = BlobPtr;
     BlobImport(ObjectId hash, HgProxyHash proxyHash)
         : hash{std::move(hash)}, proxyHash{std::move(proxyHash)} {}
 
@@ -45,7 +45,7 @@ class HgImportRequest {
   };
 
   struct TreeImport {
-    using Response = std::unique_ptr<Tree>;
+    using Response = TreePtr;
     TreeImport(ObjectId hash, HgProxyHash proxyHash)
         : hash{std::move(hash)}, proxyHash{std::move(proxyHash)} {}
 
@@ -57,7 +57,7 @@ class HgImportRequest {
   };
 
   struct BlobMetaImport {
-    using Response = std::unique_ptr<BlobMetadata>;
+    using Response = BlobMetadataPtr;
     BlobMetaImport(ObjectId hash, HgProxyHash proxyHash)
         : hash{std::move(hash)}, proxyHash{std::move(proxyHash)} {}
 
@@ -167,9 +167,9 @@ class HgImportRequest {
 
   using Request = std::variant<BlobImport, TreeImport, BlobMetaImport>;
   using Response = std::variant<
-      folly::Promise<std::unique_ptr<Blob>>,
-      folly::Promise<std::unique_ptr<Tree>>,
-      folly::Promise<std::unique_ptr<BlobMetadata>>>;
+      folly::Promise<BlobPtr>,
+      folly::Promise<TreePtr>,
+      folly::Promise<BlobMetadataPtr>>;
 
   Request request_;
   ImportPriority priority_;

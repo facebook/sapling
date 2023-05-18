@@ -8,6 +8,7 @@
 #pragma once
 
 #include <memory>
+#include "eden/fs/model/BlobFwd.h"
 
 namespace folly {
 class IOBuf;
@@ -16,14 +17,11 @@ class IOBuf;
 namespace facebook::eden {
 
 class ObjectId;
-class Blob;
 
 /**
  * Creates an Eden Blob from the serialized version of a Git blob object.
  * As such, the SHA-1 of the gitBlobObject should match the hash.
  */
-std::unique_ptr<Blob> deserializeGitBlob(
-    const ObjectId& hash,
-    const folly::IOBuf* data);
+BlobPtr deserializeGitBlob(const ObjectId& hash, const folly::IOBuf* data);
 
 } // namespace facebook::eden

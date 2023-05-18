@@ -15,6 +15,7 @@
 
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"
+#include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
@@ -67,7 +68,7 @@ Tree::value_type fromRawTreeEntry(
   return {std::move(name), std::move(treeEntry)};
 }
 
-std::unique_ptr<Tree> fromRawTree(
+TreePtr fromRawTree(
     const sapling::Tree* tree,
     const ObjectId& edenTreeId,
     RelativePathPiece path,
@@ -89,7 +90,8 @@ std::unique_ptr<Tree> fromRawTree(
       XLOG(WARN) << "Ignoring directory entry: " << ex.what();
     }
   }
-  return std::make_unique<Tree>(std::move(entries), edenTreeId);
+  return std::make_shared<TreePtr::element_type>(
+      std::move(entries), edenTreeId);
 }
 
 } // namespace
@@ -135,11 +137,10 @@ void HgDatapackStore::getTreeBatch(
             importRequest->getRequest<HgImportRequest::TreeImport>();
         // A proposed folly::Try::and_then would make the following much
         // simpler.
-        importRequest->getPromise<std::unique_ptr<Tree>>()->setWith(
-            [&]() -> folly::Try<std::unique_ptr<Tree>> {
+        importRequest->getPromise<TreePtr>()->setWith(
+            [&]() -> folly::Try<TreePtr> {
               if (content.hasException()) {
-                return folly::Try<std::unique_ptr<Tree>>{
-                    std::move(content).exception()};
+                return folly::Try<TreePtr>{std::move(content).exception()};
               }
               return folly::Try{fromRawTree(
                   content.value().get(),
@@ -154,7 +155,7 @@ void HgDatapackStore::getTreeBatch(
       });
 }
 
-std::unique_ptr<Tree> HgDatapackStore::getTree(
+TreePtr HgDatapackStore::getTree(
     const RelativePath& path,
     const Hash20& manifestId,
     const ObjectId& edenTreeId) {
@@ -183,7 +184,7 @@ std::unique_ptr<Tree> HgDatapackStore::getTree(
   return nullptr;
 }
 
-std::unique_ptr<Tree> HgDatapackStore::getTreeLocal(
+TreePtr HgDatapackStore::getTreeLocal(
     const ObjectId& edenTreeId,
     const HgProxyHash& proxyHash) {
   auto tree = store_.getTree(proxyHash.byteHash(), /*local=*/true);
@@ -240,14 +241,13 @@ void HgDatapackStore::getBlobBatch(
             importRequest->getRequest<HgImportRequest::BlobImport>();
         // A proposed folly::Try::and_then would make the following much
         // simpler.
-        importRequest->getPromise<std::unique_ptr<Blob>>()->setWith(
-            [&]() -> folly::Try<std::unique_ptr<Blob>> {
+        importRequest->getPromise<BlobPtr>()->setWith(
+            [&]() -> folly::Try<BlobPtr> {
               if (content.hasException()) {
-                return folly::Try<std::unique_ptr<Blob>>{
-                    std::move(content).exception()};
+                return folly::Try<BlobPtr>{std::move(content).exception()};
               }
-              return folly::Try{
-                  std::make_unique<Blob>(blobRequest->hash, *content.value())};
+              return folly::Try{std::make_shared<BlobPtr::element_type>(
+                  blobRequest->hash, *content.value())};
             });
 
         // Make sure that we're stopping this watch.
@@ -255,23 +255,23 @@ void HgDatapackStore::getBlobBatch(
       });
 }
 
-std::unique_ptr<Blob> HgDatapackStore::getBlobLocal(
+BlobPtr HgDatapackStore::getBlobLocal(
     const ObjectId& id,
     const HgProxyHash& hgInfo) {
   auto content = store_.getBlob(hgInfo.byteHash(), true);
   if (content) {
-    return std::make_unique<Blob>(id, std::move(*content));
+    return std::make_shared<BlobPtr::element_type>(id, std::move(*content));
   }
 
   return nullptr;
 }
 
-std::unique_ptr<BlobMetadata> HgDatapackStore::getLocalBlobMetadata(
+BlobMetadataPtr HgDatapackStore::getLocalBlobMetadata(
     const HgProxyHash& hgInfo) {
   auto metadata =
       store_.getBlobMetadata(hgInfo.byteHash(), true /*local_only*/);
   if (metadata) {
-    return std::make_unique<BlobMetadata>(
+    return std::make_shared<BlobMetadataPtr::element_type>(
         BlobMetadata{Hash20{metadata->content_sha1}, metadata->total_size});
   }
   return nullptr;
@@ -309,15 +309,15 @@ void HgDatapackStore::getBlobMetadataBatch(
 
         XLOGF(DBG9, "Imported aux={}", folly::hexlify(requests[index]));
         auto& importRequest = importRequests[index];
-        importRequest->getPromise<std::unique_ptr<BlobMetadata>>()->setWith(
-            [&]() -> folly::Try<std::unique_ptr<BlobMetadata>> {
+        importRequest->getPromise<BlobMetadataPtr>()->setWith(
+            [&]() -> folly::Try<BlobMetadataPtr> {
               if (auxTry.hasException()) {
-                return folly::Try<std::unique_ptr<BlobMetadata>>{
+                return folly::Try<BlobMetadataPtr>{
                     std::move(auxTry).exception()};
               }
 
               auto& aux = auxTry.value();
-              return folly::Try{std::make_unique<BlobMetadata>(
+              return folly::Try{std::make_shared<BlobMetadataPtr::element_type>(
                   Hash20{aux->content_sha1}, aux->total_size)};
             });
 

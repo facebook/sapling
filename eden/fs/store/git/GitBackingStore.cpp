@@ -107,7 +107,7 @@ std::string GitBackingStore::renderObjectId(const ObjectId& objectId) {
   return objectId.asHexString();
 }
 
-ImmediateFuture<unique_ptr<Tree>> GitBackingStore::getRootTree(
+ImmediateFuture<TreePtr> GitBackingStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O
@@ -152,7 +152,7 @@ SemiFuture<BackingStore::GetTreeResult> GitBackingStore::getTree(
       getTreeImpl(id), ObjectFetchContext::Origin::FromDiskCache});
 }
 
-unique_ptr<Tree> GitBackingStore::getTreeImpl(const ObjectId& id) {
+TreePtr GitBackingStore::getTreeImpl(const ObjectId& id) {
   XLOG(DBG4) << "importing tree " << id;
 
   git_oid treeOID = hash2Oid(id);
@@ -203,7 +203,7 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const ObjectId& id) {
     auto name = PathComponentPiece{entryName};
     entries.emplace(name, entryHash, fileType);
   }
-  return make_unique<Tree>(std::move(entries), id);
+  return std::make_shared<TreePtr::element_type>(std::move(entries), id);
 }
 
 SemiFuture<BackingStore::GetBlobResult> GitBackingStore::getBlob(
@@ -214,7 +214,7 @@ SemiFuture<BackingStore::GetBlobResult> GitBackingStore::getBlob(
       getBlobImpl(id), ObjectFetchContext::Origin::FromDiskCache});
 }
 
-unique_ptr<Blob> GitBackingStore::getBlobImpl(const ObjectId& id) {
+BlobPtr GitBackingStore::getBlobImpl(const ObjectId& id) {
   XLOG(DBG5) << "importing blob " << id;
 
   auto blobOID = hash2Oid(id);
@@ -244,7 +244,7 @@ unique_ptr<Blob> GitBackingStore::getBlobImpl(const ObjectId& id) {
       blob);
 
   // Create the blob
-  return make_unique<Blob>(id, std::move(buf));
+  return std::make_shared<BlobPtr::element_type>(id, std::move(buf));
 }
 
 folly::SemiFuture<BackingStore::GetBlobMetaResult>

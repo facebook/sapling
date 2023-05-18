@@ -226,7 +226,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
 
     updateProcessFetch(*fetchContext);
 
-    return changeCaseSensitivity(maybeTree, caseSensitive_);
+    return changeCaseSensitivity(std::move(maybeTree), caseSensitive_);
   }
 
   deprioritizeWhenFetchHeavy(*fetchContext);
@@ -244,12 +244,11 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
           throwf<std::domain_error>("tree {} not found", id);
         }
 
-        // promote to shared_ptr so we can store in the cache and return
-        auto sharedTree = std::shared_ptr<const Tree>(std::move(result.tree));
-        self->treeCache_->insert(sharedTree);
+        self->treeCache_->insert(result.tree);
         fetchContext->didFetch(ObjectFetchContext::Tree, id, result.origin);
         self->updateProcessFetch(*fetchContext);
-        return changeCaseSensitivity(sharedTree, self->caseSensitive_);
+        return changeCaseSensitivity(
+            std::move(result.tree), self->caseSensitive_);
       });
 }
 
@@ -356,7 +355,7 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
         fetchContext->didFetch(
             ObjectFetchContext::BlobMetadata, id, result.origin);
         self->updateProcessFetch(*fetchContext);
-        return std::move(*result.blobMeta);
+        return *result.blobMeta;
       });
 }
 

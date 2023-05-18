@@ -18,8 +18,6 @@
 
 namespace facebook::eden {
 
-using detail::TreePtr;
-
 InodePtr VirtualInode::asInodePtr() const {
   return std::get<InodePtr>(variant_);
 }

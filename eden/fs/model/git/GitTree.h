@@ -9,21 +9,17 @@
 
 #include <folly/Range.h>
 #include <folly/io/IOBuf.h>
+#include "eden/fs/model/TreeFwd.h"
 
 namespace facebook::eden {
 
 class ObjectId;
-class Tree;
 
 /**
  * Creates an Eden Tree from the serialized version of a Git tree object.
  * As such, the SHA-1 of the gitTreeObject should match the hash.
  */
-std::unique_ptr<Tree> deserializeGitTree(
-    const ObjectId& hash,
-    const folly::IOBuf* treeData);
-std::unique_ptr<Tree> deserializeGitTree(
-    const ObjectId& hash,
-    folly::ByteRange treeData);
+TreePtr deserializeGitTree(const ObjectId& hash, const folly::IOBuf* treeData);
+TreePtr deserializeGitTree(const ObjectId& hash, folly::ByteRange treeData);
 
 } // namespace facebook::eden

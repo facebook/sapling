@@ -13,6 +13,7 @@
 #include <optional>
 
 #include "eden/fs/eden-config.h"
+#include "eden/fs/model/BlobFwd.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
@@ -26,11 +27,9 @@ class IOBuf;
 
 namespace facebook::eden {
 
-class Blob;
 class Hash20;
 class HgManifestImporter;
 class StoreResult;
-class Tree;
 class HgProxyHash;
 
 /**
@@ -75,7 +74,7 @@ class Importer {
    *
    * Returns an Blob containing the file contents.
    */
-  virtual std::unique_ptr<Blob> importFileContents(
+  virtual BlobPtr importFileContents(
       RelativePathPiece path,
       Hash20 blobHash) = 0;
 
@@ -123,9 +122,7 @@ class HgImporter : public Importer {
   ProcessStatus debugStopHelperProcess();
 
   Hash20 resolveManifestNode(folly::StringPiece revName) override;
-  std::unique_ptr<Blob> importFileContents(
-      RelativePathPiece path,
-      Hash20 blobHash) override;
+  BlobPtr importFileContents(RelativePathPiece path, Hash20 blobHash) override;
   std::unique_ptr<folly::IOBuf> fetchTree(
       RelativePathPiece path,
       Hash20 pathManifestNode) override;
@@ -297,9 +294,7 @@ class HgImporterManager : public Importer {
 
   Hash20 resolveManifestNode(folly::StringPiece revName) override;
 
-  std::unique_ptr<Blob> importFileContents(
-      RelativePathPiece path,
-      Hash20 blobHash) override;
+  BlobPtr importFileContents(RelativePathPiece path, Hash20 blobHash) override;
   std::unique_ptr<folly::IOBuf> fetchTree(
       RelativePathPiece path,
       Hash20 pathManifestNode) override;

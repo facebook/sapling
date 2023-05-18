@@ -50,16 +50,16 @@ std::string FakeBackingStore::renderObjectId(const ObjectId& objectId) {
   return objectId.asString();
 }
 
-ImmediateFuture<std::unique_ptr<TreeEntry>>
+ImmediateFuture<std::shared_ptr<TreeEntry>>
 FakeBackingStore::getTreeEntryForObjectId(
     const ObjectId& commitID,
     TreeEntryType treeEntryType,
     const ObjectFetchContextPtr& /* context */) {
   return folly::makeSemiFuture(
-      std::make_unique<TreeEntry>(commitID, treeEntryType));
+      std::make_shared<TreeEntry>(commitID, treeEntryType));
 }
 
-ImmediateFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
+ImmediateFuture<TreePtr> FakeBackingStore::getRootTree(
     const RootId& commitID,
     const ObjectFetchContextPtr& /*context*/) {
   StoredHash* storedTreeHash;
@@ -77,11 +77,11 @@ ImmediateFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
   }
 
   return storedTreeHash->getFuture()
-      .thenValue([this, commitID](const std::unique_ptr<ObjectId>& hash) {
+      .thenValue([this, commitID](const std::shared_ptr<ObjectId>& hash) {
         auto data = data_.rlock();
         auto treeIter = data->trees.find(*hash);
         if (treeIter == data->trees.end()) {
-          return makeFuture<unique_ptr<Tree>>(std::domain_error(
+          return makeFuture<TreePtr>(std::domain_error(
               fmt::format("tree {} for commit {} not found", *hash, commitID)));
         }
 
@@ -106,7 +106,7 @@ SemiFuture<BackingStore::GetTreeResult> FakeBackingStore::getTree(
     throw std::domain_error(fmt::format("tree {} not found", id));
   }
 
-  return it->second->getFuture().thenValue([](std::unique_ptr<Tree> tree) {
+  return it->second->getFuture().thenValue([](TreePtr tree) {
     return GetTreeResult{
         std::move(tree), ObjectFetchContext::Origin::FromNetworkFetch};
   });
@@ -123,7 +123,7 @@ SemiFuture<BackingStore::GetBlobResult> FakeBackingStore::getBlob(
     throw std::domain_error(fmt::format("blob {} not found", id));
   }
 
-  return it->second->getFuture().thenValue([](std::unique_ptr<Blob> blob) {
+  return it->second->getFuture().thenValue([](BlobPtr blob) {
     return GetBlobResult{
         std::move(blob), ObjectFetchContext::Origin::FromNetworkFetch};
   });
@@ -141,7 +141,7 @@ FakeBackingStore::getBlobMetadata(
   return getBlob(id, context)
       .deferValue([](BackingStore::GetBlobResult result) {
         return BackingStore::GetBlobMetaResult{
-            std::make_unique<BlobMetadata>(
+            std::make_shared<BlobMetadataPtr::element_type>(
                 Hash20::sha1(result.blob->getContents()),
                 result.blob->getSize()),
             result.origin};
@@ -378,9 +378,9 @@ void FakeBackingStore::discardOutstandingRequests() {
   // error, running arbitrary Future callbacks. Take care to destroy the
   // promises outside of the lock.
 
-  std::vector<folly::Promise<std::unique_ptr<Tree>>> trees;
-  std::vector<folly::Promise<std::unique_ptr<Blob>>> blobs;
-  std::vector<folly::Promise<std::unique_ptr<ObjectId>>> commits;
+  std::vector<folly::Promise<TreePtr>> trees;
+  std::vector<folly::Promise<BlobPtr>> blobs;
+  std::vector<folly::Promise<std::shared_ptr<ObjectId>>> commits;
   {
     auto data = data_.wlock();
     for (const auto& tree : data->trees) {

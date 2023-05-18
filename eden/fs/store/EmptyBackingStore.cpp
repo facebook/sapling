@@ -15,7 +15,6 @@
 
 using folly::makeSemiFuture;
 using folly::SemiFuture;
-using std::unique_ptr;
 
 namespace facebook::eden {
 
@@ -39,11 +38,10 @@ std::string EmptyBackingStore::renderObjectId(const ObjectId& /*objectId*/) {
   throw std::domain_error("empty backing store");
 }
 
-ImmediateFuture<unique_ptr<Tree>> EmptyBackingStore::getRootTree(
+ImmediateFuture<TreePtr> EmptyBackingStore::getRootTree(
     const RootId& /* rootId */,
     const ObjectFetchContextPtr& /* context */) {
-  return makeSemiFuture<unique_ptr<Tree>>(
-      std::domain_error("empty backing store"));
+  return makeSemiFuture<TreePtr>(std::domain_error("empty backing store"));
 }
 
 SemiFuture<BackingStore::GetTreeResult> EmptyBackingStore::getTree(
