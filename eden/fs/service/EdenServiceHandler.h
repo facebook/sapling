@@ -10,6 +10,7 @@
 #include <fb303/BaseService.h>
 #include <optional>
 #include "eden/fs/eden-config.h"
+#include "eden/fs/inodes/EdenMountHandle.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
@@ -424,8 +425,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   std::optional<pid_t> getAndRegisterClientPid();
 
  private:
-  std::tuple<std::shared_ptr<EdenMount>, TreeInodePtr> lookupMount(
-      const MountId& mountId);
+  EdenMountHandle lookupMount(const MountId& mountId);
+  EdenMountHandle lookupMount(const std::unique_ptr<std::string>& mountId);
 
   ImmediateFuture<Hash20> getSHA1ForPath(
       const EdenMount& edenMount,

@@ -499,12 +499,15 @@ EdenServiceHandler::EdenServiceHandler(
 
 EdenServiceHandler::~EdenServiceHandler() = default;
 
-std::tuple<std::shared_ptr<EdenMount>, TreeInodePtr>
-EdenServiceHandler::lookupMount(const MountId& mountId) {
+EdenMountHandle EdenServiceHandler::lookupMount(const MountId& mountId) {
   auto mountPath = absolutePathFromThrift(*mountId.mountPoint());
-  // TODO: Return EdenMountHandle directly.
-  auto handle = server_->getMount(mountPath);
-  return {handle.getEdenMountPtr(), handle.getRootInode()};
+  return server_->getMount(mountPath);
+}
+
+EdenMountHandle EdenServiceHandler::lookupMount(
+    const std::unique_ptr<std::string>& mountId) {
+  auto mountPath = absolutePathFromThrift(*mountId);
+  return server_->getMount(mountPath);
 }
 
 std::unique_ptr<apache::thrift::AsyncProcessor>
@@ -613,8 +616,7 @@ EdenServiceHandler::semifuture_resetParentCommits(
           ? logHash(*params->hgRootManifest_ref())
           : "(unspecified hg root manifest)");
 
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
   auto parent1 =
       mountHandle.getObjectStore().parseRootId(*parents->parent1_ref());
 
@@ -670,8 +672,7 @@ EdenServiceHandler::semifuture_synchronizeWorkingCopy(
     std::unique_ptr<SynchronizeWorkingCopyParams> params) {
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3, *mountPoint, getSyncTimeout(*params->sync()));
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
 
   return wrapImmediateFuture(
              std::move(helper),
@@ -689,8 +690,7 @@ EdenServiceHandler::semifuture_getSHA1(
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3, *mountPoint, getSyncTimeout(*sync), toLogArg(*paths));
   auto& fetchContext = helper->getFetchContext();
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
 
   auto notificationFuture =
       waitForPendingWrites(mountHandle.getEdenMount(), *sync);
@@ -796,8 +796,7 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_addBindMount(
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> repoPathStr,
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> targetPath) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
 
   auto repoPath = RelativePathPiece{*repoPathStr};
   auto absRepoPath = mountHandle.getEdenMount().getPath() + repoPath;
@@ -819,8 +818,7 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeBindMount(
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> repoPathStr) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
 
   auto repoPath = RelativePathPiece{*repoPathStr};
   auto absRepoPath = mountHandle.getEdenMount().getPath() + repoPath;
@@ -832,8 +830,7 @@ void EdenServiceHandler::getCurrentJournalPosition(
     JournalPosition& out,
     std::unique_ptr<std::string> mountPoint) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
   auto latest = mountHandle.getEdenMount().getJournal().getLatest();
 
   *out.mountGeneration_ref() = mountHandle.getEdenMount().getMountGeneration();
@@ -852,8 +849,7 @@ apache::thrift::ServerStream<JournalPosition>
 EdenServiceHandler::subscribeStreamTemporary(
     std::unique_ptr<std::string> mountPoint) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
 
   // We need a weak ref on the mount because the thrift stream plumbing
   // may outlive the mount point
@@ -1159,8 +1155,7 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
     std::unique_ptr<std::string> mountPoint,
     int64_t eventCategoryMask) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
   auto& edenMount = mountHandle.getEdenMount();
 
   // Treat an empty bitset as an unfiltered stream. This is for clients that
@@ -1440,11 +1435,11 @@ void convertHgImportTraceEventToHgEvent(
 apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
     std::unique_ptr<std::string> mountPoint) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
   auto backingStore = mountHandle.getObjectStore().getBackingStore();
   std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
-      castToHgQueuedBackingStore(backingStore, mountPath);
+      castToHgQueuedBackingStore(
+          backingStore, mountHandle.getEdenMount().getPath());
 
   struct Context {
     TraceSubscriptionHandle<HgImportTraceEvent> subHandle;
@@ -1494,8 +1489,7 @@ void ConvertInodeTraceEventToThriftInodeEvent(
 apache::thrift::ServerStream<InodeEvent> EdenServiceHandler::traceInodeEvents(
     std::unique_ptr<std::string> mountPoint) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
   auto inodeMap = mountHandle.getEdenMount().getInodeMap();
 
   struct Context {
@@ -1769,8 +1763,7 @@ void EdenServiceHandler::getFilesChangedSince(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<JournalPosition> fromPosition) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
 
   checkMountGeneration(
       *fromPosition, mountHandle.getEdenMount(), "fromPosition"sv);
@@ -1837,8 +1830,7 @@ void EdenServiceHandler::setJournalMemoryLimit(
     std::unique_ptr<PathString> mountPoint,
     int64_t limit) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint);
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
   if (limit < 0) {
     throw newEdenError(
         EINVAL,
@@ -1851,15 +1843,13 @@ void EdenServiceHandler::setJournalMemoryLimit(
 int64_t EdenServiceHandler::getJournalMemoryLimit(
     std::unique_ptr<PathString> mountPoint) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint);
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
   return static_cast<int64_t>(mountHandle.getJournal().getMemoryLimit());
 }
 
 void EdenServiceHandler::flushJournal(std::unique_ptr<PathString> mountPoint) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint);
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
   mountHandle.getJournal().flush();
 }
 
@@ -1891,8 +1881,7 @@ EdenServiceHandler::semifuture_getEntryInformation(
     std::unique_ptr<SyncBehavior> sync) {
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3, *mountPoint, getSyncTimeout(*sync), toLogArg(*paths));
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
   auto& fetchContext = helper->getFetchContext();
 
   return wrapImmediateFuture(
@@ -1939,8 +1928,7 @@ EdenServiceHandler::semifuture_getFileInformation(
     std::unique_ptr<SyncBehavior> sync) {
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3, *mountPoint, getSyncTimeout(*sync), toLogArg(*paths));
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
   auto& fetchContext = helper->getFetchContext();
   auto lastCheckoutTime =
       mountHandle.getEdenMount().getLastCheckoutTime().toTimespec();
@@ -2817,8 +2805,7 @@ folly::SemiFuture<struct folly::Unit> EdenServiceHandler::semifuture_chown(
     FOLLY_MAYBE_UNUSED int32_t uid,
     FOLLY_MAYBE_UNUSED int32_t gid) {
 #ifndef _WIN32
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto handle = server_->getMount(mountPath);
+  auto handle = lookupMount(mountPoint);
   return handle.getEdenMount().chown(uid, gid).ensure([handle] {}).semi();
 #else
   NOT_IMPLEMENTED();
@@ -2878,8 +2865,7 @@ EdenServiceHandler::semifuture_getScmStatus(
   // that the caller specified the current commit.  In the future we might
   // want to enforce that even for this call, if we confirm that all existing
   // callers of this method can deal with the error.
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
   auto hash = mountHandle.getObjectStore().parseRootId(*commitHash);
   return wrapImmediateFuture(
              std::move(helper),
@@ -2904,8 +2890,7 @@ EdenServiceHandler::semifuture_getScmStatusBetweenRevisions(
       *mountPoint,
       folly::to<string>("oldHash=", logHash(*oldHash)),
       folly::to<string>("newHash=", logHash(*newHash)));
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
 
   auto callback = std::make_unique<ScmStatusDiffCallback>();
   auto diffFuture = diffBetweenRoots(
@@ -2931,8 +2916,7 @@ void EdenServiceHandler::debugGetScmTree(
     unique_ptr<string> idStr,
     bool localStoreOnly) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, logHash(*idStr));
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
   auto& store = mountHandle.getObjectStore();
   auto id = store.parseObjectId(*idStr);
 
@@ -2971,7 +2955,8 @@ EdenServiceHandler::semifuture_debugGetBlob(
   auto helper =
       INSTRUMENT_THRIFT_CALL(DBG2, *mountid, logHash(*idStr), *origins);
 
-  auto edenMount = std::get<0>(lookupMount(*mountid));
+  auto mountHandle = lookupMount(*mountid);
+  auto edenMount = mountHandle.getEdenMountPtr();
   auto id = edenMount->getObjectStore()->parseObjectId(*idStr);
   auto originFlags = DataFetchOriginFlags::raw(*origins);
   auto store = edenMount->getObjectStore();
@@ -3052,8 +3037,7 @@ void EdenServiceHandler::debugGetScmBlob(
     unique_ptr<string> idStr,
     bool localStoreOnly) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, logHash(*idStr));
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
   auto id = mountHandle.getObjectStore().parseObjectId(*idStr);
 
   std::shared_ptr<const Blob> blob;
@@ -3083,8 +3067,7 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
     unique_ptr<string> idStr,
     bool localStoreOnly) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, logHash(*idStr));
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
   auto& store = mountHandle.getObjectStore();
   auto id = store.parseObjectId(*idStr);
 
@@ -3119,7 +3102,8 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
   auto helper =
       INSTRUMENT_THRIFT_CALL(DBG2, *mountid, logHash(*idStr), *origins);
 
-  auto edenMount = std::get<0>(lookupMount(*mountid));
+  auto mountHandle = lookupMount(*mountid);
+  auto edenMount = mountHandle.getEdenMountPtr();
   auto id = edenMount->getObjectStore()->parseObjectId(*idStr);
   auto originFlags = DataFetchOriginFlags::raw(*origins);
   auto store = edenMount->getObjectStore();
@@ -3361,8 +3345,7 @@ void EdenServiceHandler::debugInodeStatus(
 
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG2, *mountPoint, *path, flags, getSyncTimeout(*sync));
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
 
   waitForPendingWrites(mountHandle.getEdenMount(), *sync)
       .thenValue([mountHandle,
@@ -3391,8 +3374,7 @@ void EdenServiceHandler::debugOutstandingFuseCalls(
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
 
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
 
   if (auto* fuseChannel = mountHandle.getEdenMount().getFuseChannel()) {
     for (const auto& call : fuseChannel->getOutstandingRequests()) {
@@ -3412,8 +3394,7 @@ void EdenServiceHandler::debugOutstandingNfsCalls(
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
 
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
 
   if (auto* nfsdChannel = mountHandle.getEdenMount().getNfsdChannel()) {
     for (const auto& call : nfsdChannel->getOutstandingRequests()) {
@@ -3469,7 +3450,7 @@ void EdenServiceHandler::debugStartRecordingActivity(
         "path for output directory is invalid");
   }
 
-  auto mountHandle = server_->getMount(absolutePathFromThrift(*mountPoint));
+  auto mountHandle = lookupMount(mountPoint);
   auto lockedPtr = mountHandle.getEdenMount().getActivityRecorder().wlock();
   // bool check on the wrapped pointer as lockedPtr is truthy as long
   // as we have the lock
@@ -3488,7 +3469,7 @@ void EdenServiceHandler::debugStopRecordingActivity(
     ActivityRecorderResult& result,
     std::unique_ptr<std::string> mountPoint,
     int64_t unique) {
-  auto mountHandle = server_->getMount(absolutePathFromThrift(*mountPoint));
+  auto mountHandle = lookupMount(mountPoint);
   auto lockedPtr = mountHandle.getEdenMount().getActivityRecorder().wlock();
   auto* activityRecorder = lockedPtr->get();
   if (!activityRecorder) {
@@ -3509,7 +3490,7 @@ void EdenServiceHandler::debugStopRecordingActivity(
 void EdenServiceHandler::debugListActivityRecordings(
     ListActivityRecordingsResult& result,
     std::unique_ptr<std::string> mountPoint) {
-  auto mountHandle = server_->getMount(absolutePathFromThrift(*mountPoint));
+  auto mountHandle = lookupMount(mountPoint);
   auto lockedPtr = mountHandle.getEdenMount().getActivityRecorder().rlock();
   auto* activityRecorder = lockedPtr->get();
   if (!activityRecorder) {
@@ -3534,8 +3515,7 @@ void EdenServiceHandler::debugGetInodePath(
     int64_t inodeNumber) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   auto inodeNum = static_cast<InodeNumber>(inodeNumber);
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
   auto inodeMap = mountHandle.getEdenMount().getInodeMap();
 
   auto relativePath = inodeMap->getPathForInode(inodeNum);
@@ -3557,8 +3537,7 @@ void EdenServiceHandler::clearFetchCounts() {
 void EdenServiceHandler::clearFetchCountsByMount(
     std::unique_ptr<std::string> mountPoint) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mount = server_->getMount(mountPath);
+  auto mount = lookupMount(mountPoint);
   mount.getObjectStore().clearFetchCounts();
 }
 
@@ -3658,8 +3637,7 @@ int64_t EdenServiceHandler::unloadInodeForPath(
     FOLLY_MAYBE_UNUSED std::unique_ptr<TimeSpec> age) {
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1, *mountPoint, *path);
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
 
   TreeInodePtr inode =
       inodeFromUserPath(
@@ -3869,8 +3847,7 @@ EdenServiceHandler::semifuture_invalidateKernelInodeCache(
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> path) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, *path);
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
 #ifndef _WIN32
   InodePtr inode = inodeFromUserPath(
       mountHandle.getEdenMount(), *path, helper->getFetchContext());
