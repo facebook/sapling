@@ -24,10 +24,6 @@ namespace facebook::eden {
  * Identifies tree and blob objects.
  * This identifier is a variable length string.
  *
- * NOTE: The hash function assumes that ObjectID are stored in a specific
- * format to provide constant time hash functions. The high entropy data must
- * be stored in the 2nd to 9th bytes of the ObjectID. This property must be
- * respected for new ObjectID types.
  */
 class ObjectId {
  public:
@@ -101,16 +97,11 @@ class ObjectId {
   /**
    * Computes a hash for this ObjectID.
    *
-   * ObjectID are currently of 2 forms:
-   *  - <20-byte hash>
-   *  - <1-byte type><20-bytes hash><path>
-   *  - <20-byte-hash><8-byte size>
-   *
-   * With this, we can compute a hash code by simply returning part of the
-   * already stored hash. The implementation currently returns the bytes at
-   * [1,9].
-   *
-   * Smaller ObjectID will use `std::hash`.
+   * Short ObjectIDs hash to themselves as we assume the ObjectID itself has
+   * high entropy. Long ObjectIDs are hashed by mixing the bits of the ID
+   * together with a XOR operation. This is okay since we assume at least one
+   * eight byte range in the ObjectID has high entropy and XORing with that
+   * range will give us a decent hash.
    */
   size_t getHashCode() const noexcept;
 
@@ -207,10 +198,6 @@ class ObjectIdCodec {
 
   /**
    * Parse the string as an ObjectId.
-   *
-   * Note to implementer: ObjectId::getHashCode is very specific as to how it
-   * expects ObjectId to be layed out in memory. Make sure to respect this
-   * layout.
    */
   virtual ObjectId parseObjectId(folly::StringPiece objectId) = 0;
   virtual std::string renderObjectId(const ObjectId& objectId) = 0;

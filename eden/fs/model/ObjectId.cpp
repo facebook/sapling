@@ -36,12 +36,25 @@ std::string ObjectId::asString() const {
 }
 
 size_t ObjectId::getHashCode() const noexcept {
-  if (bytes_.size() > sizeof(size_t) + 1) {
-    size_t ret;
-    memcpy(&ret, bytes_.data() + 1, sizeof(size_t));
-    return ret;
+  const char* p = bytes_.data();
+  size_t n = bytes_.size();
+
+  if (UNLIKELY(n < sizeof(uint64_t))) {
+    size_t rv = 0;
+    memcpy(&rv, p, n);
+    return rv;
   }
-  return std::hash<folly::fbstring>{}(bytes_);
+
+  // unaligned load of tail
+  size_t rv;
+  size_t incrementSize = sizeof(uint64_t);
+  memcpy(&rv, p + (n - incrementSize), incrementSize);
+  for (const char* end = p + (n - incrementSize); p < end; p += incrementSize) {
+    size_t x;
+    memcpy(&x, p, incrementSize);
+    rv ^= x;
+  }
+  return rv;
 }
 
 ObjectId ObjectId::sha1(const folly::IOBuf& buf) {
