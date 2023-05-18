@@ -82,14 +82,18 @@ impl<'outer, T: ?Sized> VecStack<'outer, T> {
     /// Panic if `push` is called when a previously pushed element is
     /// not popped (ex. the result of a previous `push` is not dropped).
     ///
-    /// ```should_panic
+    /// ```
+    /// # use std::sync::Mutex;
     /// # use treestate::vecstack::VecStack;
     /// let mut vec = vec![];
-    /// let mut stack0 = VecStack::new(&mut vec);
+    /// let mut stack0 = Mutex::new(VecStack::new(&mut vec));
     /// let str1 = String::from("1");
-    /// let mut stack1 = stack0.push(&str1);
+    /// let mut stack1 = stack0.lock().unwrap().push(&str1);
     /// let str2 = String::from("2");
-    /// let mut stack2 = stack0.push(&str2); // panic since `stack1` is alive
+    /// let result = std::panic::catch_unwind(|| {
+    ///     let mut stack2 = stack0.lock().unwrap().push(&str2); // panic since `stack1` is alive
+    /// });
+    /// assert!(result.is_err());
     /// ```
     pub fn push<'inner>(&mut self, elem: &'inner T) -> VecStack<'inner, T>
     where
@@ -143,13 +147,16 @@ impl<'a, T: ?Sized> AsRef<Vec<&'a T>> for VecStack<'a, T> {
     /// Panic if `as_ref` is called when a previously pushed element is
     /// not poped (ex. the result of a previous `push` is not dropped).
     ///
-    /// ```should_panic
+    /// ```
     /// # use treestate::vecstack::VecStack;
     /// let mut vec = vec![];
     /// let mut stack0 = VecStack::new(&mut vec);
     /// let str1 = String::from("1");
     /// let mut stack1 = stack0.push(&str1);
-    /// let ref0 = stack0.as_ref(); // panic since `stack1` is alive
+    /// let result = std::panic::catch_unwind(|| {
+    ///     let ref0 = stack0.as_ref(); // panic since `stack1` is alive
+    /// });
+    /// assert!(result.is_err());
     /// ```
     fn as_ref(&self) -> &Vec<&'a T> {
         let result = unsafe { self.inner.as_ref().unwrap() };
