@@ -41,6 +41,7 @@ use progress_model::Registry;
 use repo::repo::Repo;
 use tracing::dispatcher;
 use tracing::dispatcher::Dispatch;
+use tracing::metadata::LevelFilter;
 use tracing::Level;
 use tracing_collector::TracingData;
 use tracing_sampler::SamplingLayer;
@@ -363,8 +364,7 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mute
         // This might error out if called 2nd time per process.
         let env_filter = tracing_reload::reloadable_env_filter()?;
 
-        // The env_filter does the actual filtering. No need to filter by level.
-        let collector = tracing_collector::default_collector(data.clone(), Level::TRACE);
+        let collector = tracing_collector::TracingCollector::new(data.clone());
         let env_logger = FmtLayer::new()
             .with_span_events(FmtSpan::ACTIVE)
             .with_ansi(can_color)
@@ -372,11 +372,15 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mute
         if is_test {
             // In tests, disable color and timestamps for cleaner output.
             let env_logger = env_logger.without_time().with_ansi(false);
-            let collector = collector.with(env_filter.and_then(env_logger));
-            tracing::subscriber::set_global_default(collector)?;
+            let subscriber = tracing_subscriber::Registry::default()
+                .with(collector)
+                .with(env_filter.and_then(env_logger));
+            tracing::subscriber::set_global_default(subscriber)?;
         } else {
-            let collector = collector.with(env_filter.and_then(env_logger));
-            tracing::subscriber::set_global_default(collector)?;
+            let subscriber = tracing_subscriber::Registry::default()
+                .with(collector)
+                .with(env_filter.and_then(env_logger));
+            tracing::subscriber::set_global_default(subscriber)?;
         }
     } else {
         let level = identity::debug_env_var("TRACE_LEVEL")
@@ -391,9 +395,11 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mute
                 Level::INFO
             });
 
-        let collector =
-            tracing_collector::default_collector(data.clone(), level).with(SamplingLayer::new());
-        tracing::subscriber::set_global_default(collector)?;
+        let collector = tracing_collector::TracingCollector::new(data.clone());
+        let subscriber = tracing_subscriber::Registry::default()
+            .with(collector.with_filter::<LevelFilter>(level.into()))
+            .with(SamplingLayer::new());
+        tracing::subscriber::set_global_default(subscriber)?;
     }
 
     Ok(data)

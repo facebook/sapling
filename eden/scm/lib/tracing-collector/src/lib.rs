@@ -17,48 +17,22 @@ pub use model::TracingData;
 use parking_lot::Mutex;
 use tracing::span::Attributes;
 use tracing::span::Record;
-use tracing::subscriber::SetGlobalDefaultError;
 use tracing::Event;
 use tracing::Id;
-use tracing::Level;
-use tracing::Metadata;
 use tracing::Subscriber;
-use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::layer::Context;
 use tracing_subscriber::layer::Layer;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::registry::LookupSpan;
-use tracing_subscriber::Registry;
-
-pub fn init(data: Arc<Mutex<TracingData>>, level: Level) -> Result<(), SetGlobalDefaultError> {
-    let collector = default_collector(data, level);
-    tracing::subscriber::set_global_default(collector)
-}
-
-pub fn default_collector(
-    data: Arc<Mutex<TracingData>>,
-    level: Level,
-) -> impl Subscriber + for<'a> LookupSpan<'a> {
-    let tracing_data_subscriber = TracingCollector::new(data, level);
-    Registry::default().with(tracing_data_subscriber.with_filter::<LevelFilter>(level.into()))
-}
-
-pub fn test_init() -> Result<(), SetGlobalDefaultError> {
-    let data = Arc::new(Mutex::new(TracingData::new()));
-    init(data, Level::INFO)
-}
 
 /// A `tokio/tracing` subscriber that collects tracing data to [`TracingData`].
 /// [`TracingData`] is independent from `tokio/tracing`. See its docstring for
 /// more details.
 pub struct TracingCollector {
-    level: Level,
     data: Arc<Mutex<TracingData>>,
 }
 
 impl TracingCollector {
-    pub fn new(data: Arc<Mutex<TracingData>>, level: Level) -> Self {
-        Self { data, level }
+    pub fn new(data: Arc<Mutex<TracingData>>) -> Self {
+        Self { data }
     }
 }
 
@@ -115,45 +89,11 @@ impl<S: Subscriber> Layer<S> for TracingCollector {
     }
 }
 
-impl Subscriber for TracingCollector {
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= &self.level
-    }
-
-    fn new_span(&self, span: &Attributes) -> Id {
-        let mut data = self.data.lock();
-        data.new_span(span).into()
-    }
-
-    fn record(&self, span: &Id, values: &Record) {
-        let mut data = self.data.lock();
-        data.record(span, values)
-    }
-
-    fn record_follows_from(&self, span: &Id, follows: &Id) {
-        let mut data = self.data.lock();
-        data.record_follows_from(span, follows)
-    }
-
-    fn event(&self, event: &Event) {
-        let mut data = self.data.lock();
-        data.event(event)
-    }
-
-    fn enter(&self, span: &Id) {
-        let mut data = self.data.lock();
-        data.enter(span)
-    }
-
-    fn exit(&self, span: &Id) {
-        let mut data = self.data.lock();
-        data.exit(span)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use tracing::instrument;
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::Registry;
 
     use super::*;
 
@@ -170,9 +110,9 @@ mod tests {
     fn test_instrument() {
         let data = TracingData::new_for_test();
         let data = Arc::new(Mutex::new(data));
-        let collector = default_collector(data.clone(), Level::INFO);
+        let collector = TracingCollector::new(data.clone());
 
-        tracing::subscriber::with_default(collector, || fib(5));
+        tracing::subscriber::with_default(Registry::default().with(collector), || fib(5));
 
         let mut data = data.lock();
         data.fixup_module_lines_for_tests();
@@ -208,20 +148,20 @@ Start Dur.ms | Name               Source
     fn test_multi_threads() {
         let data = TracingData::new_for_test();
         let data = Arc::new(Mutex::new(data));
-        let collector = default_collector(data.clone(), Level::INFO);
+        let collector = TracingCollector::new(data.clone());
 
-        tracing::subscriber::with_default(collector, || fib(0));
+        tracing::subscriber::with_default(Registry::default().with(collector), || fib(0));
         let cloned = data.clone();
         let thread = std::thread::spawn(|| {
-            let collector = default_collector(cloned, Level::INFO);
-            tracing::subscriber::with_default(collector, || fib(3));
+            let collector = TracingCollector::new(cloned);
+            tracing::subscriber::with_default(Registry::default().with(collector), || fib(3));
         });
         thread.join().unwrap();
 
         let cloned = data.clone();
         let thread = std::thread::spawn(|| {
-            let collector = default_collector(cloned, Level::INFO);
-            tracing::subscriber::with_default(collector, || fib(2));
+            let collector = TracingCollector::new(cloned);
+            tracing::subscriber::with_default(Registry::default().with(collector), || fib(2));
         });
         thread.join().unwrap();
         data.lock().fixup_module_lines_for_tests();
@@ -256,9 +196,9 @@ Start Dur.ms | Name               Source
         let mut data = TracingData::new_for_test();
         data.max_span_ref_count = 5;
         let data = Arc::new(Mutex::new(data));
-        let collector = default_collector(data.clone(), Level::INFO);
+        let collector = TracingCollector::new(data.clone());
 
-        tracing::subscriber::with_default(collector, || fib(10));
+        tracing::subscriber::with_default(Registry::default().with(collector), || fib(10));
         data.lock().fixup_module_lines_for_tests();
 
         // fib(6) ... are not logged.
@@ -284,9 +224,9 @@ Start Dur.ms | Name               Source
         let mut data = TracingData::new_for_test();
         data.max_span_ref_count = 5;
         let data = Arc::new(Mutex::new(data));
-        let collector = default_collector(data.clone(), Level::INFO);
+        let collector = TracingCollector::new(data.clone());
 
-        let counts = tracing::subscriber::with_default(collector, || {
+        let counts = tracing::subscriber::with_default(Registry::default().with(collector), || {
             (0..10)
                 .map(|_| {
                     tracing::info!("log something");
