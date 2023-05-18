@@ -44,6 +44,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/nfs/NfsServer.h"
@@ -2158,6 +2159,10 @@ void EdenServer::shutdownSubscribers() {
   for (auto& [path, info] : *mountPoints) {
     info.edenMount->getJournal().cancelAllSubscribers();
   }
+}
+
+const EdenStatsPtr& EdenServer::getStats() const {
+  return serverState_->getStats();
 }
 
 void EdenServer::flushStatsNow() {

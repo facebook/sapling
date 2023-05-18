@@ -10,7 +10,6 @@
 #include <chrono>
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -24,22 +23,15 @@
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
 #include <folly/futures/SharedPromise.h>
-#include <condition_variable>
 
-#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
-#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/service/EdenStateDir.h"
 #include "eden/fs/service/PeriodicTask.h"
-#include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/telemetry/EdenStats.h"
-#include "eden/fs/telemetry/IActivityRecorder.h"
-#include "eden/fs/telemetry/RequestMetricsScope.h"
-#include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/PathMap.h"
 
@@ -62,19 +54,20 @@ class EventBase;
 namespace facebook::eden {
 
 class BackingStore;
-class HgQueuedBackingStore;
-class IHiveLogger;
 class BlobCache;
-class TreeCache;
 class Dirstate;
 class EdenServiceHandler;
+class HgQueuedBackingStore;
+class IHiveLogger;
 class LocalStore;
 class MountInfo;
-struct SessionInfo;
+class PrivHelper;
 class StartupLogger;
+class StartupStatusChannel;
+class TreeCache;
 class UserInfo;
 struct INodePopulationReport;
-class StartupStatusChannel;
+struct SessionInfo;
 
 #ifndef _WIN32
 class TakeoverServer;
@@ -426,9 +419,7 @@ class EdenServer : private TakeoverHandler {
     return version_;
   }
 
-  const EdenStatsPtr& getStats() const {
-    return serverState_->getStats();
-  }
+  const EdenStatsPtr& getStats() const;
 
   /**
    * Returns a ActivityRecorder appropriate for the Eden build.

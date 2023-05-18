@@ -28,6 +28,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/privhelper/PrivHelperImpl.h"
 #include "eden/fs/service/EdenInit.h"
