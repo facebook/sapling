@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::env;
 use std::io;
 use std::sync::Arc;
 use std::sync::Once;
@@ -26,10 +25,10 @@ static RUST_INIT: Once = Once::new();
 /// `edenapi` and other crates. In longer term we should bridge the logs to folly logging.
 pub(crate) fn backingstore_global_init() {
     RUST_INIT.call_once(|| {
-        if env::var("EDENSCM_LOG").is_ok() {
+        if let Some((var_name, _)) = identity::debug_env_var("LOG") {
             let data = Arc::new(Mutex::new(TracingData::new()));
             let collector = tracing_collector::default_collector(data, Level::TRACE);
-            let env_filter = EnvFilter::from_env("EDENSCM_LOG");
+            let env_filter = EnvFilter::from_env(var_name);
             let env_logger = FmtLayer::new()
                 .with_span_events(FmtSpan::ACTIVE)
                 .with_ansi(false)

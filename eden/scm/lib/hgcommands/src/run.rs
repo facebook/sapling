@@ -122,12 +122,15 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
 
     // Ad-hoc environment variable: EDENSCM_TRACE_OUTPUT. A more standard way
     // to access the data is via the blackbox interface.
-    let trace_output_path = std::env::var("EDENSCM_TRACE_OUTPUT").ok();
-    if trace_output_path.is_some() {
-        // Unset environment variable so processes forked by this command
-        // wouldn't rewrite the trace.
-        std::env::remove_var("EDENSCM_TRACE_OUTPUT");
-    }
+    let trace_output_path = match identity::debug_env_var("TRACE_OUTPUT") {
+        Some((var_name, var_value)) => {
+            // Unset environment variable so processes forked by this command
+            // wouldn't rewrite the trace.
+            std::env::remove_var(var_name);
+            Some(var_value)
+        }
+        None => None,
+    };
 
     let in_scope = Arc::new(()); // Used to tell progress rendering thread to stop.
 
@@ -341,15 +344,12 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mute
     let data = pytracing::DATA.clone();
 
     let is_test = is_inside_test();
-    let mut env_filter_dirs: Option<String> = ["EDENSCM_LOG", "LOG"]
-        .iter()
-        .take(if is_test { 2 } else { 1 }) /* Only consider $LOG in tests */
-        .filter_map(|s| std::env::var(s).ok())
-        .next();
+    let mut env_filter_dirs: Option<String> = identity::debug_env_var("LOG").map(|v| v.1);
+
     // Ensure EnvFilter is used in tests so it can be changed on the
     // fly. Don't enable if EDENSCM_TRACE_LEVEL is set because that
     // indicates test is testing tracing/sampling.
-    if is_test && std::env::var("EDENSCM_TRACE_LEVEL").is_err() && env_filter_dirs.is_none() {
+    if is_test && identity::debug_env_var("TRACE_LEVEL").is_none() && env_filter_dirs.is_none() {
         env_filter_dirs = Some(String::new());
     }
 
@@ -379,8 +379,8 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mute
             tracing::subscriber::set_global_default(collector)?;
         }
     } else {
-        let level = std::env::var("EDENSCM_TRACE_LEVEL")
-            .ok()
+        let level = identity::debug_env_var("TRACE_LEVEL")
+            .map(|v| v.1)
             .and_then(|s| Level::from_str(&s).ok())
             .unwrap_or_else(|| {
                 if let Some(opts) = global_opts {
@@ -597,7 +597,7 @@ fn log_start(args: Vec<String>, now: SystemTime) -> tracing::Span {
         }
     };
 
-    if let Ok(tags) = std::env::var("EDENSCM_BLACKBOX_TAGS") {
+    if let Some((_, tags)) = identity::debug_env_var("BLACKBOX_TAGS") {
         tracing::info!(name = "blackbox_tags", tags = AsRef::<str>::as_ref(&tags));
         let names: Vec<String> = tags.split_whitespace().map(ToString::to_string).collect();
         blackbox::log(&blackbox::event::Event::Tags { names });

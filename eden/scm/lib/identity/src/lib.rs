@@ -282,11 +282,7 @@ mod idents {
     use super::*;
 
     pub fn all() -> &'static [Identity] {
-        if std::env::var("TESTTMP").is_ok() {
-            &[SL, HG]
-        } else {
-            &[SL]
-        }
+        if in_test() { &[SL, HG] } else { &[SL] }
     }
 }
 
@@ -444,6 +440,24 @@ pub fn try_env_var(var_suffix: &str) -> Result<String, VarError> {
         Some(result) => result,
         None => Err(VarError::NotPresent),
     }
+}
+
+pub fn debug_env_var(name: &str) -> Option<(String, String)> {
+    for maybe_name in [format!("SL_{name}"), format!("EDENSCM_{name}")] {
+        if let Ok(val) = std::env::var(&maybe_name) {
+            return Some((maybe_name, val));
+        }
+    }
+
+    if name == "LOG" && in_test() {
+        std::env::var(name).ok().map(|v| (name.to_string(), v))
+    } else {
+        None
+    }
+}
+
+fn in_test() -> bool {
+    std::env::var("TESTTMP").is_ok()
 }
 
 #[cfg(test)]
