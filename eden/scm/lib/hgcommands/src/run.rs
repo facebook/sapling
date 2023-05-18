@@ -56,7 +56,7 @@ use crate::HgPython;
 ///
 /// Have side effect on `io` and return the command exit code.
 pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
-    let now = SystemTime::now();
+    let start_time = SystemTime::now();
 
     // The pfcserver does not want tracing or blackbox or ctrlc setup,
     // or going through the Rust command table. Bypass them.
@@ -100,6 +100,9 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
         Ok(res) => res,
     };
 
+    // Do important finalization tasks (even when ctrl-C'd).
+    setup_atexit(start_time);
+
     setup_ctrlc();
 
     let scenario = setup_fail_points();
@@ -115,7 +118,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     // which is a bit more desirable. Since run_command is very close to process
     // start, it should reflect the duration of the command relatively
     // accurately, at least for non-chg cases.
-    let span = log_start(args.clone(), now);
+    let span = log_start(args.clone(), start_time);
 
     // Ad-hoc environment variable: EDENSCM_TRACE_OUTPUT. A more standard way
     // to access the data is via the blackbox interface.
@@ -145,7 +148,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
 
                 sampling::init(dispatcher.config());
 
-                dispatch_command(io, dispatcher, cwd, Arc::downgrade(&in_scope), now)
+                dispatch_command(io, dispatcher, cwd, Arc::downgrade(&in_scope), start_time)
             }
             Err(err) => {
                 errors::print_error(&err, io, &args[1..]);
@@ -154,12 +157,11 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
         }
     })();
 
-    span.record("exit_code", &exit_code);
     drop(in_scope);
 
     let _ = maybe_write_trace(io, &tracing_data, trace_output_path);
 
-    log_end(exit_code as u8, now, tracing_data, &span);
+    log_end(exit_code as u8, start_time, tracing_data, &span);
 
     // Sync the blackbox before returning: this exit code is going to be used to process::exit(),
     // so we need to flush now.
@@ -649,7 +651,7 @@ fn log_start(args: Vec<String>, now: SystemTime) -> tracing::Span {
 
 fn log_end(
     exit_code: u8,
-    now: SystemTime,
+    start_time: SystemTime,
     tracing_data: Arc<Mutex<TracingData>>,
     span: &tracing::Span,
 ) {
@@ -657,7 +659,7 @@ fn log_end(
     let duration_ms = if inside_test {
         0
     } else {
-        match now.elapsed() {
+        match start_time.elapsed() {
             Ok(duration) => duration.as_millis() as u64,
             Err(_) => 0,
         }
@@ -675,7 +677,7 @@ fn log_end(
         exit_code,
         max_rss,
         duration_ms,
-        timestamp_ms: epoch_ms(now),
+        timestamp_ms: epoch_ms(start_time),
     });
 
     // Stop sending tracing events to subscribers. This prevents
@@ -697,10 +699,6 @@ fn log_end(
         }
         blackbox::sync();
     });
-
-    // Truncate duration to top three significant decimal digits of
-    // precision to reduce cardinality for logging storage.
-    tracing::debug!(target: "measuredtimes", command_duration=util::math::truncate_int(duration_ms, 3));
 }
 
 fn epoch_ms(time: SystemTime) -> u64 {
@@ -797,6 +795,19 @@ fn setup_fail_points<'a>() -> Option<FailScenario<'a>> {
     } else {
         Some(FailScenario::setup())
     }
+}
+
+fn setup_atexit(start_time: SystemTime) {
+    atexit::AtExit::new(Box::new(move || {
+        let duration_ms = match start_time.elapsed() {
+            Ok(duration) => duration.as_millis() as u64,
+            Err(_) => 0,
+        };
+
+        // Truncate duration to top three significant decimal digits of
+        // precision to reduce cardinality for logging storage.
+        tracing::debug!(target: "measuredtimes", command_duration=util::math::truncate_int(duration_ms, 3));
+    })).queued();
 }
 
 fn setup_ctrlc() {

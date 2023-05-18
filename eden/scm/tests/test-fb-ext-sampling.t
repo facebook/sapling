@@ -124,7 +124,7 @@ Test env-var logging:
   metrics_type: env_vars
 
 Test rust traces make it to sampling file as well:
-  $ > $LOGDIR/samplingpath.txt
+  $ rm $LOGDIR/samplingpath.txt
   $ setconfig sampling.key.from_rust=hello
   $ EDENSCM_TRACE_LEVEL=info hg debugshell -c "from edenscm import tracing; tracing.info('msg', target='from_rust', hi='there')"
   atexit handler executed
@@ -136,6 +136,37 @@ Test rust traces make it to sampling file as well:
   ...     if parsed['category'] == 'hello':
   ...         print(entry)
   {"category":"hello","data":{"message":"msg","hi":"there"}}
+
+Test command_duration is logged when ctrl-c'd:
+  $ rm $LOGDIR/samplingpath.txt
+  $ cat > $TESTTMP/sleep.py <<EOF
+  > from edenscm import registrar
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command('sleep', norepo=True)
+  > def sleep(ui):
+  >     import os, time
+  >     with open("sleep.pid", "w") as f:
+  >         f.write(str(os.getpid()))
+  >     time.sleep(3600)
+  > EOF
+  $ EDENSCM_TRACE_LEVEL=info hg sleep --config extensions.sigint_self=$TESTTMP/sleep.py &
+  $ hg debugpython <<EOF
+  > import os, signal
+  > while True:
+  >     if os.path.exists("sleep.pid"):
+  >         os.kill(int(open("sleep.pid").read()), signal.SIGINT)
+  >         break
+  > EOF
+  $ wait
+  >>> import json
+  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  ...     data = f.read().strip("\0").split("\0")
+  >>> for entry in data:
+  ...     parsed = json.loads(entry)
+  ...     if parsed['category'] == 'measuredtimes' and "command_duration" in parsed["data"]:
+  ...         print(entry)
+  {"category":"measuredtimes","data":{"command_duration":*}} (glob)
 
 Test ui.metrics.gauge API
   $ cat > $TESTTMP/a.py << EOF
