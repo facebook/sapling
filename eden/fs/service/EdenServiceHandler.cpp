@@ -496,13 +496,26 @@ EdenServiceHandler::EdenServiceHandler(
 EdenServiceHandler::~EdenServiceHandler() = default;
 
 EdenMountHandle EdenServiceHandler::lookupMount(const MountId& mountId) {
-  auto mountPath = absolutePathFromThrift(*mountId.mountPoint());
-  return server_->getMount(mountPath);
+  return lookupMount(mountId.mountPoint());
 }
 
 EdenMountHandle EdenServiceHandler::lookupMount(
     const std::unique_ptr<std::string>& mountId) {
-  auto mountPath = absolutePathFromThrift(*mountId);
+  return lookupMount(*mountId);
+}
+
+EdenMountHandle EdenServiceHandler::lookupMount(
+    apache::thrift::field_ref<std::string&> mountId) {
+  return lookupMount(*mountId);
+}
+
+EdenMountHandle EdenServiceHandler::lookupMount(
+    apache::thrift::field_ref<const std::string&> mountId) {
+  return lookupMount(*mountId);
+}
+
+EdenMountHandle EdenServiceHandler::lookupMount(const std::string& mountId) {
+  auto mountPath = absolutePathFromThrift(mountId);
   return server_->getMount(mountPath);
 }
 
@@ -1616,8 +1629,7 @@ EdenServiceHandler::streamChangesSince(
     std::unique_ptr<StreamChangesSinceParams> params) {
   auto helper = INSTRUMENT_THRIFT_CALL_WITH_STAT(
       DBG3, &ThriftStats::streamChangesSince, *params->mountPoint_ref());
-  auto mountPath = absolutePathFromThrift(*params->mountPoint_ref());
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(params->mountPoint());
   const auto& fromPosition = *params->fromPosition_ref();
 
   // Streaming in Thrift can be done via a Stream Generator, or via a Stream
@@ -1852,9 +1864,8 @@ void EdenServiceHandler::flushJournal(std::unique_ptr<PathString> mountPoint) {
 void EdenServiceHandler::debugGetRawJournal(
     DebugGetRawJournalResponse& out,
     std::unique_ptr<DebugGetRawJournalParams> params) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *params->mountPoint_ref());
-  auto mountPath = absolutePathFromThrift(*params->mountPoint_ref());
-  auto mountHandle = server_->getMount(mountPath);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *params->mountPoint());
+  auto mountHandle = lookupMount(params->mountPoint());
   auto mountGeneration =
       static_cast<ssize_t>(mountHandle.getEdenMount().getMountGeneration());
 
@@ -2127,13 +2138,14 @@ DirListAttributeDataOrError serializeEntryAttributes(
 
 folly::SemiFuture<std::unique_ptr<ReaddirResult>>
 EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
-  auto mountPoint = *params->mountPoint();
-  auto mountPath = absolutePathFromThrift(mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(params->mountPoint());
   auto paths = *params->directoryPaths();
   // Get requested attributes for each path
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, mountPoint, getSyncTimeout(*params->sync()), toLogArg(paths));
+      DBG3,
+      *params->mountPoint(),
+      getSyncTimeout(*params->sync()),
+      toLogArg(paths));
   auto& fetchContext = helper->getFetchContext();
   auto requestedAttributes =
       EntryAttributeFlags::raw(*params->requestedAttributes());
@@ -2144,8 +2156,7 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
                      [mountHandle,
                       requestedAttributes,
                       paths = std::move(paths),
-                      fetchContext = fetchContext.copy(),
-                      mountPath = mountPath.copy()](auto&&) mutable
+                      fetchContext = fetchContext.copy()](auto&&) mutable
                      -> ImmediateFuture<
                          std::vector<DirListAttributeDataOrError>> {
                        std::vector<ImmediateFuture<DirListAttributeDataOrError>>
@@ -2364,9 +2375,7 @@ folly::SemiFuture<std::unique_ptr<SetPathObjectIdResult>>
 EdenServiceHandler::semifuture_setPathObjectId(
     std::unique_ptr<SetPathObjectIdParams> params) {
 #ifndef _WIN32
-  auto mountPoint = *params->mountPoint();
-  auto mountPath = absolutePathFromThrift(mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(params->mountPoint());
   std::vector<SetPathObjectIdObjectAndPath> objects;
   std::vector<std::string> object_strings;
   auto objectSize =
@@ -2396,8 +2405,8 @@ EdenServiceHandler::semifuture_setPathObjectId(
     objects.emplace_back(std::move(objectAndPath));
   }
 
-  auto helper =
-      INSTRUMENT_THRIFT_CALL(DBG1, mountPoint, toLogArg(object_strings));
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG1, *params->mountPoint(), toLogArg(object_strings));
 
   if (auto requestInfo = params->requestInfo_ref()) {
     helper->getThriftFetchContext().updateRequestInfo(std::move(*requestInfo));
@@ -2426,8 +2435,7 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeRecursively(
   auto repoPath = *params->path();
 
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, mountPoint, repoPath);
-  auto mountPath = absolutePathFromThrift(mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
 
   auto relativePath = RelativePath{repoPath};
   auto& fetchContext = helper->getFetchContext();
@@ -2557,7 +2565,7 @@ EdenServiceHandler::semifuture_ensureMaterialized(
   auto helper =
       INSTRUMENT_THRIFT_CALL(DBG4, mountPoint, toLogArg(*params->paths()));
 
-  auto mountHandle = server_->getMount(absolutePathFromThrift(mountPoint));
+  auto mountHandle = lookupMount(mountPoint);
   // The background mode is not fully running on background, instead, it will
   // start to load inodes in a blocking way, and then collect unready
   // materialization process then throws to the background. This is most
@@ -2600,10 +2608,9 @@ folly::SemiFuture<std::unique_ptr<Glob>>
 EdenServiceHandler::semifuture_predictiveGlobFiles(
     std::unique_ptr<GlobParams> params) {
   ThriftGlobImpl globber{*params};
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, *params->mountPoint_ref(), globber.logString());
+  auto helper =
+      INSTRUMENT_THRIFT_CALL(DBG3, *params->mountPoint(), globber.logString());
 
-  auto& mountPoint = *params->mountPoint_ref();
   /* set predictive glob fetch parameters */
   // if numResults is not specified, use default predictivePrefetchProfileSize
   auto& serverState = server_->getServerState();
@@ -2611,7 +2618,7 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
       serverState->getEdenConfig()->predictivePrefetchProfileSize.getValue();
   // if user is not specified, get user info from the server state
   auto user = folly::StringPiece{serverState->getUserInfo().getUsername()};
-  auto mountHandle = server_->getMount(absolutePathFromThrift(mountPoint));
+  auto mountHandle = lookupMount(params->mountPoint());
   auto backingStore = mountHandle.getObjectStore().getBackingStore();
   // if repo is not specified, get repository name from the backingstore
   auto repo_optional = backingStore->getRepoName();
@@ -2712,8 +2719,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
       context,
       server_->getServerState());
 
-  auto mountHandle =
-      server_->getMount(absolutePathFromThrift(*params->mountPoint()));
+  auto mountHandle = lookupMount(params->mountPoint());
 
   auto globFut = std::move(backgroundFuture)
                      .thenValue([mountHandle,
@@ -2770,8 +2776,7 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
       context,
       server_->getServerState());
 
-  auto mountHandle =
-      server_->getMount(absolutePathFromThrift(*params->mountPoint()));
+  auto mountHandle = lookupMount(params->mountPoint());
 
   auto globFut =
       std::move(backgroundFuture)
@@ -2819,8 +2824,7 @@ EdenServiceHandler::semifuture_getScmStatusV2(
       folly::to<string>("commitHash=", logHash(*params->commit_ref())),
       folly::to<string>("listIgnored=", *params->listIgnored_ref()));
 
-  auto mountPath = absolutePathFromThrift(*params->mountPoint_ref());
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(params->mountPoint());
   auto rootId = mountHandle.getObjectStore().parseRootId(*params->commit_ref());
   const auto& enforceParents = server_->getServerState()
                                    ->getReloadableConfig()
@@ -3407,8 +3411,7 @@ void EdenServiceHandler::debugOutstandingPrjfsCalls(
 #ifdef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
 
-  auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(mountPoint);
 
   if (auto* prjfsChannel = mountHandle.getEdenMount().getPrjfsChannel()) {
     for (const auto& call :
@@ -3653,8 +3656,7 @@ folly::SemiFuture<std::unique_ptr<DebugInvalidateResponse>>
 EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
     std::unique_ptr<DebugInvalidateRequest> params) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1, *params->mount()->mountPoint());
-  auto mountPath = absolutePathFromThrift(*params->mount()->mountPoint());
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(params->mount()->mountPoint());
   auto& fetchContext = helper->getFetchContext();
 
   if (!folly::kIsWindows) {
@@ -3991,12 +3993,11 @@ void EdenServiceHandler::getRetroactiveThriftRequestEvents(
 void EdenServiceHandler::getRetroactiveHgEvents(
     GetRetroactiveHgEventsResult& result,
     std::unique_ptr<GetRetroactiveHgEventsParams> params) {
-  auto mountPoint = *params->mountPoint();
-  auto mountPath = absolutePathFromThrift(mountPoint);
-  auto edenMount = server_->getMount(mountPath);
-  auto backingStore = edenMount.getObjectStore().getBackingStore();
+  auto mountHandle = lookupMount(params->mountPoint());
+  auto backingStore = mountHandle.getObjectStore().getBackingStore();
   std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
-      castToHgQueuedBackingStore(backingStore, mountPath);
+      castToHgQueuedBackingStore(
+          backingStore, mountHandle.getEdenMount().getPath());
 
   std::vector<HgEvent> thriftEvents;
   auto bufferEvents = hgBackingStore->getActivityBuffer().getAllEvents();
@@ -4013,9 +4014,7 @@ void EdenServiceHandler::getRetroactiveHgEvents(
 void EdenServiceHandler::getRetroactiveInodeEvents(
     GetRetroactiveInodeEventsResult& result,
     std::unique_ptr<GetRetroactiveInodeEventsParams> params) {
-  auto mountPoint = *params->mountPoint();
-  auto mountPath = absolutePathFromThrift(mountPoint);
-  auto mountHandle = server_->getMount(mountPath);
+  auto mountHandle = lookupMount(params->mountPoint());
 
   if (!mountHandle.getEdenMount().getActivityBuffer().has_value()) {
     throw newEdenError(

@@ -427,6 +427,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
  private:
   EdenMountHandle lookupMount(const MountId& mountId);
   EdenMountHandle lookupMount(const std::unique_ptr<std::string>& mountId);
+  EdenMountHandle lookupMount(apache::thrift::field_ref<std::string&> mountId);
+  EdenMountHandle lookupMount(
+      apache::thrift::field_ref<const std::string&> mountId);
+  EdenMountHandle lookupMount(const std::string& mountId);
 
   ImmediateFuture<Hash20> getSHA1ForPath(
       const EdenMount& edenMount,
