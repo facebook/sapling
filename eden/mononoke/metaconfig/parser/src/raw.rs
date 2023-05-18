@@ -178,7 +178,7 @@ where
     match std::str::from_utf8(bytes) {
         Ok(s) => {
             let mut unused = BTreeSet::new();
-            let de = &mut toml::de::Deserializer::new(s);
+            let de = toml::de::Deserializer::new(s);
             let t: T = serde_ignored::deserialize(de, |path| {
                 unused.insert(path.to_string());
             })?;

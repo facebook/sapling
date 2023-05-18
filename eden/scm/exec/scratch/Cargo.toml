@@ -15,4 +15,4 @@ identity = { version = "0.1.0", path = "../../lib/identity" }
 libc = "0.2.139"
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 sha2 = "0.10.6"
-toml = "=0.5.8"
+toml = "0.7.3"

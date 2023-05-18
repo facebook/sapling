@@ -5,9 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::fs::File;
-use std::io::Read;
-
 use anyhow::Context;
 use anyhow::Result;
 use mercurial_types::HgChangesetId;
@@ -65,11 +62,8 @@ pub fn get_config(config_file: Option<String>) -> Result<Config> {
         None => return Ok(Config::default()),
     };
 
-    let mut config_toml: Vec<u8> = vec![];
-    let mut file = File::open(config_file)?;
-    file.read_to_end(&mut config_toml)?;
-
+    let config_toml = std::fs::read_to_string(config_file)?;
     let config_serde: ConfigSerde =
-        toml::from_slice(&config_toml).context("error while reading config")?;
+        toml::from_str(&config_toml).context("error while reading config")?;
     Config::new(config_serde)
 }

@@ -43,7 +43,7 @@ impl ObjectKind {
         let mut sha1 = Sha1::new();
         sha1.update(&format!("{} {}", self.as_str(), size));
         sha1.update([0]);
-        sha1.update(object_buff.as_ref());
+        sha1.update(<[u8] as AsRef<[u8]>>::as_ref(object_buff));
 
         let hash: [u8; 20] = sha1.finalize().into();
 
