@@ -291,18 +291,6 @@ size_t getNumberPendingFuseRequests(const EdenMount* mount) {
 
 namespace facebook::eden {
 
-ObjectStore& EdenMountHandle::getObjectStore() const {
-  return *edenMount_->getObjectStore();
-}
-
-const std::shared_ptr<ObjectStore>& EdenMountHandle::getObjectStorePtr() const {
-  return edenMount_->getObjectStore();
-}
-
-Journal& EdenMountHandle::getJournal() const {
-  return edenMount_->getJournal();
-}
-
 class EdenServer::ThriftServerEventHandler
     : public apache::thrift::server::TServerEventHandler,
       public folly::AsyncSignalHandler {
