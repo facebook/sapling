@@ -7,13 +7,13 @@
 
 #pragma once
 
+#include <folly/portability/SysStat.h>
 #include <optional>
 #include "eden/fs/inodes/InodeTimestamps.h"
-#include "folly/portability/SysStat.h"
-
-struct stat;
 
 namespace facebook::eden {
+
+class Clock;
 
 /**
  * Set of metadata to update during an InodeBase::setattr call.

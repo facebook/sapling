@@ -14,6 +14,7 @@
 #include <optional>
 #include <vector>
 
+#include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/InodeTimestamps.h"
@@ -25,7 +26,6 @@
 
 #ifndef _WIN32
 #include "eden/fs/fuse/FuseDispatcher.h"
-#include "eden/fs/inodes/InodeMetadata.h"
 #endif
 
 namespace facebook::eden {
