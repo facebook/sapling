@@ -175,6 +175,7 @@ members = [
   "bonsai_hg_mapping/if",
   "bonsai_svnrev_mapping",
   "bonsai_svnrev_mapping/if",
+  "bonsai_tag_mapping",
   "bookmarks",
   "bookmarks/bookmarks_movement",
   "bookmarks/bookmarks_types",
