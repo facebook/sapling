@@ -19,14 +19,11 @@
 #include <folly/Portability.h>
 #include <folly/String.h>
 #include <folly/chrono/Conv.h>
-#include <folly/container/Access.h>
 #include <folly/executors/SerialExecutor.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/Logger.h>
-#include <folly/logging/LoggerDB.h>
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
-#include <folly/system/Shell.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
@@ -87,7 +84,6 @@
 #include "eden/fs/utils/SourceLocation.h"
 #include "eden/fs/utils/StatTimes.h"
 #include "eden/fs/utils/String.h"
-#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 using folly::Future;
 using folly::makeFuture;
