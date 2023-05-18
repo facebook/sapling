@@ -291,6 +291,18 @@ size_t getNumberPendingFuseRequests(const EdenMount* mount) {
 
 namespace facebook::eden {
 
+ObjectStore& EdenMountHandle::getObjectStore() const {
+  return *edenMount_->getObjectStore();
+}
+
+const std::shared_ptr<ObjectStore>& EdenMountHandle::getObjectStorePtr() const {
+  return edenMount_->getObjectStore();
+}
+
+Journal& EdenMountHandle::getJournal() const {
+  return edenMount_->getJournal();
+}
+
 class EdenServer::ThriftServerEventHandler
     : public apache::thrift::server::TServerEventHandler,
       public folly::AsyncSignalHandler {
@@ -795,6 +807,16 @@ void EdenServer::scheduleCallbackOnMainEventBase(
         // it, this function won't. See comment above the wrapper class.
         evb->timer().scheduleTimeout(w, timeout);
       });
+}
+
+size_t EdenServer::enumerateInProgressCheckouts() {
+  size_t numActive = 0;
+  auto mountPoints = mountPoints_->rlock();
+  for (auto& entry : *mountPoints) {
+    auto& info = entry.second;
+    numActive += info.edenMount->isCheckoutInProgress() ? 1 : 0;
+  }
+  return numActive;
 }
 
 #ifndef _WIN32

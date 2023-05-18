@@ -24,14 +24,16 @@
 #include <folly/ThreadLocal.h>
 #include <folly/futures/SharedPromise.h>
 
-#include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/inodes/InodePtrFwd.h"
+#include "eden/fs/inodes/InodePtr.h"
+#include "eden/fs/inodes/fscatalog/OverlayChecker.h"
 #include "eden/fs/service/EdenStateDir.h"
 #include "eden/fs/service/PeriodicTask.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/IActivityRecorder.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/PathMap.h"
 
@@ -55,17 +57,26 @@ namespace facebook::eden {
 
 class BackingStore;
 class BlobCache;
+class CheckoutConfig;
 class Dirstate;
+class EdenConfig;
+class EdenMount;
 class EdenServiceHandler;
 class HgQueuedBackingStore;
 class IHiveLogger;
+class Journal;
 class LocalStore;
 class MountInfo;
+class ObjectStore;
 class PrivHelper;
+class ReloadableConfig;
+class ServerState;
 class StartupLogger;
 class StartupStatusChannel;
+class StructuredLogger;
 class TreeCache;
 class UserInfo;
+struct CheckoutResult;
 struct INodePopulationReport;
 struct SessionInfo;
 
@@ -135,17 +146,9 @@ class EdenMountHandle {
 
   // Convenience methods that support common uses of lookupMount().
 
-  ObjectStore& getObjectStore() const {
-    return *edenMount_->getObjectStore();
-  }
-
-  const std::shared_ptr<ObjectStore>& getObjectStorePtr() const {
-    return edenMount_->getObjectStore();
-  }
-
-  Journal& getJournal() const {
-    return edenMount_->getJournal();
-  }
+  ObjectStore& getObjectStore() const;
+  const std::shared_ptr<ObjectStore>& getObjectStorePtr() const;
+  Journal& getJournal() const;
 
  private:
   std::shared_ptr<EdenMount> edenMount_;
@@ -505,15 +508,7 @@ class EdenServer : private TakeoverHandler {
   /**
    * Returns the number of in progress checkouts that EdenFS is aware of
    */
-  size_t enumerateInProgressCheckouts() {
-    size_t numActive = 0;
-    auto mountPoints = mountPoints_->rlock();
-    for (auto& entry : *mountPoints) {
-      auto& info = entry.second;
-      numActive += info.edenMount->isCheckoutInProgress() ? 1 : 0;
-    }
-    return numActive;
-  }
+  size_t enumerateInProgressCheckouts();
 
   /**
    * Create a new server stream and publisher to publish the startup status of
