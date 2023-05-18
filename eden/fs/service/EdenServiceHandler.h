@@ -139,20 +139,6 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::vector<std::string>> paths,
       std::unique_ptr<SyncBehavior> sync) override;
 
-  // the caller should ensure the relativePath is valid until the returned
-  // futures complete.
-  ImmediateFuture<EntryAttributes> getEntryAttributesForPath(
-      EntryAttributeFlags reqBitmask,
-      AbsolutePathPiece mountPoint,
-      folly::StringPiece path,
-      const ObjectFetchContextPtr& fetchContext);
-  ImmediateFuture<std::vector<folly::Try<EntryAttributes>>> getEntryAttributes(
-      AbsolutePathPiece mountPath,
-      std::vector<std::string>& paths,
-      EntryAttributeFlags reqBitmask,
-      SyncBehavior sync,
-      const ObjectFetchContextPtr& fetchContext);
-
   void getCurrentJournalPosition(
       JournalPosition& out,
       std::unique_ptr<std::string> mountPoint) override;
@@ -438,6 +424,24 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       const ObjectFetchContextPtr& fetchContext);
 
   void fillDaemonInfo(DaemonInfo& info);
+
+  /**
+   * Returns attributes requested by `reqBitmask` for each path in `paths`.
+   *
+   * The caller must ensure `edenMount` and `paths` stay alive for the duration
+   * of the operation.
+   */
+  ImmediateFuture<std::vector<folly::Try<EntryAttributes>>> getEntryAttributes(
+      const EdenMount& edenMount,
+      const std::vector<std::string>& paths,
+      EntryAttributeFlags reqBitmask,
+      SyncBehavior sync,
+      const ObjectFetchContextPtr& fetchContext);
+  ImmediateFuture<EntryAttributes> getEntryAttributesForPath(
+      const EdenMount& edenMount,
+      EntryAttributeFlags reqBitmask,
+      std::string_view path,
+      const ObjectFetchContextPtr& fetchContext);
 
   folly::Synchronized<std::unordered_map<uint64_t, ThriftRequestTraceEvent>>
       outstandingThriftRequests_;

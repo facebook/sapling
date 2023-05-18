@@ -764,42 +764,6 @@ ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPath(
       });
 }
 
-ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
-    EntryAttributeFlags reqBitmask,
-    AbsolutePathPiece mountPoint,
-    StringPiece path,
-    const ObjectFetchContextPtr& fetchContext) {
-  if (path.empty()) {
-    return ImmediateFuture<EntryAttributes>(newEdenError(
-        EINVAL,
-        EdenErrorType::ARGUMENT_ERROR,
-        "path cannot be the empty string"));
-  }
-
-  try {
-    auto mountHandle = server_->getMount(mountPoint);
-    auto relativePath = RelativePathPiece{path};
-
-    return mountHandle.getEdenMount()
-        .getVirtualInode(relativePath, fetchContext)
-        .thenValue([mountHandle,
-                    reqBitmask,
-                    relativePath,
-                    fetchContext =
-                        fetchContext.copy()](const VirtualInode& virtualInode) {
-          return virtualInode.getEntryAttributes(
-              reqBitmask,
-              relativePath,
-              mountHandle.getObjectStorePtr(),
-              fetchContext);
-        })
-        .ensure([mountHandle] {});
-  } catch (const std::exception& e) {
-    return ImmediateFuture<EntryAttributes>(
-        newEdenError(EINVAL, EdenErrorType::ARGUMENT_ERROR, e.what()));
-  }
-}
-
 folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_addBindMount(
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> repoPathStr,
@@ -2196,42 +2160,75 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
       .semi();
 }
 
-// TODO(kmancini): we shouldn't need this for the long term, but needs to be
-// updated if attributes are added.
-constexpr EntryAttributeFlags kAllEntryAttributes = ENTRY_ATTRIBUTE_SIZE |
-    ENTRY_ATTRIBUTE_SHA1 | ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE;
-
 ImmediateFuture<std::vector<folly::Try<EntryAttributes>>>
 EdenServiceHandler::getEntryAttributes(
-    AbsolutePathPiece mountPath,
-    std::vector<std::string>& paths,
+    const EdenMount& edenMount,
+    const std::vector<std::string>& paths,
     EntryAttributeFlags reqBitmask,
     SyncBehavior sync,
     const ObjectFetchContextPtr& fetchContext) {
-  auto mountHandle = server_->getMount(mountPath);
-  return waitForPendingWrites(mountHandle.getEdenMount(), sync)
+  return waitForPendingWrites(edenMount, sync)
       .thenValue([this,
+                  &edenMount,
                   &paths,
                   fetchContext = fetchContext.copy(),
-                  mountPath = mountPath.copy(),
                   reqBitmask](auto&&) mutable {
         vector<ImmediateFuture<EntryAttributes>> futures;
-        for (const auto& p : paths) {
+        for (const auto& path : paths) {
           futures.emplace_back(getEntryAttributesForPath(
-              reqBitmask, mountPath, p, fetchContext));
+              edenMount, reqBitmask, path, fetchContext));
         }
 
         // Collect all futures into a single tuple
         return facebook::eden::collectAll(std::move(futures));
-      })
-      .ensure([mountHandle] {});
+      });
 }
+
+ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
+    const EdenMount& edenMount,
+    EntryAttributeFlags reqBitmask,
+    std::string_view path,
+    const ObjectFetchContextPtr& fetchContext) {
+  if (path.empty()) {
+    return ImmediateFuture<EntryAttributes>(newEdenError(
+        EINVAL,
+        EdenErrorType::ARGUMENT_ERROR,
+        "path cannot be the empty string"));
+  }
+
+  try {
+    RelativePathPiece relativePath{path};
+
+    return edenMount.getVirtualInode(relativePath, fetchContext)
+        .thenValue([&edenMount,
+                    reqBitmask,
+                    relativePath = relativePath.copy(),
+                    fetchContext =
+                        fetchContext.copy()](const VirtualInode& virtualInode) {
+          return virtualInode.getEntryAttributes(
+              reqBitmask,
+              relativePath,
+              edenMount.getObjectStore(),
+              fetchContext);
+        });
+  } catch (const std::exception& e) {
+    return ImmediateFuture<EntryAttributes>(
+        newEdenError(EINVAL, EdenErrorType::ARGUMENT_ERROR, e.what()));
+  }
+}
+
+// TODO(kmancini): we shouldn't need this for the long term, but needs to be
+// updated if attributes are added.
+constexpr EntryAttributeFlags kAllEntryAttributes = ENTRY_ATTRIBUTE_SIZE |
+    ENTRY_ATTRIBUTE_SHA1 | ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE;
 
 folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResult>>
 EdenServiceHandler::semifuture_getAttributesFromFiles(
     std::unique_ptr<GetAttributesFromFilesParams> params) {
   auto mountPoint = *params->mountPoint();
   auto mountPath = absolutePathFromThrift(mountPoint);
+  auto mountHandle = server_->getMount(mountPath);
+
   std::vector<std::string>& paths = params->paths_ref().value();
   auto reqBitmask = EntryAttributeFlags::raw(*params->requestedAttributes());
   // Get requested attributes for each path
@@ -2246,7 +2243,11 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
   // explicit type information, we can get shape up
   // this API better.
   auto entryAttributesFuture = getEntryAttributes(
-      mountPath, paths, kAllEntryAttributes, *params->sync(), fetchContext);
+      mountHandle.getEdenMount(),
+      paths,
+      kAllEntryAttributes,
+      *params->sync(),
+      fetchContext);
 
   return wrapImmediateFuture(
              std::move(helper),
@@ -2323,7 +2324,7 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
                    }
                    return res;
                  }))
-      .ensure([params = std::move(params)]() {
+      .ensure([params = std::move(params), mountHandle]() {
         // keeps the params memory around for the duration of the thrift call,
         // so that we can safely use the paths by reference to avoid making
         // copies.
@@ -2334,16 +2335,22 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
 folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResultV2>>
 EdenServiceHandler::semifuture_getAttributesFromFilesV2(
     std::unique_ptr<GetAttributesFromFilesParams> params) {
-  auto mountPoint = *params->mountPoint();
-  auto mountPath = absolutePathFromThrift(mountPoint);
+  auto mountHandle = lookupMount(params->mountPoint());
   auto reqBitmask = EntryAttributeFlags::raw(*params->requestedAttributes());
   std::vector<std::string>& paths = params->paths().value();
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, mountPoint, getSyncTimeout(*params->sync()), toLogArg(paths));
+      DBG3,
+      *params->mountPoint(),
+      getSyncTimeout(*params->sync()),
+      toLogArg(paths));
   auto& fetchContext = helper->getFetchContext();
 
   auto entryAttributesFuture = getEntryAttributes(
-      mountPath, paths, reqBitmask, *params->sync(), fetchContext);
+      mountHandle.getEdenMount(),
+      paths,
+      reqBitmask,
+      *params->sync(),
+      fetchContext);
 
   return wrapImmediateFuture(
              std::move(helper),
@@ -2363,7 +2370,7 @@ EdenServiceHandler::semifuture_getAttributesFromFilesV2(
                        }
                        return res;
                      }))
-      .ensure([params = std::move(params)]() {
+      .ensure([mountHandle, params = std::move(params)]() {
         // keeps the params memory around for the duration of the thrift call,
         // so that we can safely use the paths by reference to avoid making
         // copies.
@@ -2732,10 +2739,9 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                            serverState,
                            std::move(globs),
                            context);
-                     })
-                     .ensure([mountHandle] {});
+                     });
   globFut = std::move(globFut).ensure(
-      [helper = std::move(helper), params = std::move(params)] {});
+      [mountHandle, helper = std::move(helper), params = std::move(params)] {});
 
   globFut = detachIfBackgrounded(
       std::move(globFut), server_->getServerState(), isBackground);
