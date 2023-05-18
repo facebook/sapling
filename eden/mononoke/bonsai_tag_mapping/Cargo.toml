@@ -8,6 +8,9 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0.65"
+async-trait = "0.1.58"
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
