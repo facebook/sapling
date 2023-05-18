@@ -30,7 +30,19 @@ class Object {
 
 using SimpleObjectCache = ObjectCache<Object, ObjectCacheFlavor::Simple>;
 
-void getSimple(benchmark::State& st) {
+// 40 characters per line, 6 lines. 240 characters total.
+std::string longObjectBase =
+    "faceb00cdeadbeefc00010ff1badb0028badf00d"
+    "faceb00cdeadbeefc00010ff1badb0028badf00d"
+    "faceb00cdeadbeefc00010ff1badb0028badf00d"
+    "faceb00cdeadbeefc00010ff1badb0028badf00d"
+    "faceb00cdeadbeefc00010ff1badb0028badf00d"
+    "faceb00cdeadbeefc00010ff1badb0028badf00d";
+
+// a single character to mimic a very short Object ID
+std::string shortObjectBase = "f";
+
+void getSimple(benchmark::State& st, const std::string& objectBase) {
   size_t numObjects = 100000;
   auto cache = SimpleObjectCache::create(40 * 1024 * 1024, 1);
 
@@ -38,7 +50,8 @@ void getSimple(benchmark::State& st) {
   ids.reserve(numObjects);
 
   for (size_t i = 0u; i < numObjects; ++i) {
-    ids.push_back(ObjectId::sha1(fmt::to_string(i)));
+    ids.push_back(
+        ObjectId{ObjectId::sha1(fmt::to_string(i)).asString() + objectBase});
     auto object = std::make_shared<Object>(ids[i]);
     cache->insertSimple(object);
   }
@@ -52,9 +65,18 @@ void getSimple(benchmark::State& st) {
     }
   }
 }
-BENCHMARK(getSimple);
 
-void insertSimple(benchmark::State& st) {
+void shortGetSimple(benchmark::State& st) {
+  getSimple(st, shortObjectBase);
+}
+BENCHMARK(shortGetSimple);
+
+void longGetSimple(benchmark::State& st) {
+  getSimple(st, longObjectBase);
+}
+BENCHMARK(longGetSimple);
+
+void insertSimple(benchmark::State& st, const std::string& objectBase) {
   size_t numObjects = 100000;
   auto cache = SimpleObjectCache::create(40 * 1024 * 1024, 1);
   std::vector<ObjectId> ids;
@@ -63,7 +85,8 @@ void insertSimple(benchmark::State& st) {
   vec.reserve(numObjects);
 
   for (size_t i = 0; i < numObjects; ++i) {
-    ids.push_back(ObjectId::sha1(fmt::to_string(i)));
+    ids.push_back(
+        ObjectId{ObjectId::sha1(fmt::to_string(i)).asString() + objectBase});
     vec.push_back(std::make_shared<Object>(ids[i]));
   }
 
@@ -76,7 +99,16 @@ void insertSimple(benchmark::State& st) {
   }
   benchmark::DoNotOptimize(cache);
 }
-BENCHMARK(insertSimple);
+
+void shortInsertSimple(benchmark::State& st) {
+  insertSimple(st, shortObjectBase);
+}
+BENCHMARK(shortInsertSimple);
+
+void longInsertSimple(benchmark::State& st) {
+  insertSimple(st, longObjectBase);
+}
+BENCHMARK(longInsertSimple);
 
 } // namespace
 
