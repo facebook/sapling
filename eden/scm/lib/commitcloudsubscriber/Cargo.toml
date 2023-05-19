@@ -4,7 +4,7 @@
 name = "commitcloudsubscriber"
 version = "0.1.0"
 edition = "2021"
-description = '''
+description = """
     Cross platform client for subscribing to Commit Cloud eventsource (http server-sent events)
     The workflow is the following:
     * define 'subscription' as a unique [repo_name, workspace] pair
@@ -15,7 +15,7 @@ description = '''
         for a given 'subscription'
     * the library also contains a module to find OAuth token,
         this logic should be in sync with `hg cloud auth` command.
-'''
+"""
 
 [dependencies]
 anyhow = "1.0.65"
