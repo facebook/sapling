@@ -240,7 +240,10 @@ async function writeGrammarFiles(
 
       const jsModule = `${scopeName.replace(/\./g, '_')}_TextMateGrammar`;
       const jsonFile = pathMod.join(grammarsDir, `${jsModule}.${type}`);
-      const contents = type === 'json' ? JSON.stringify(definition) : definition;
+      let contents = type === 'json' ? JSON.stringify(definition) : definition;
+      if (contents[contents.length - 1] !== '\n') {
+        contents = `${contents}\n`;
+      }
       await fs.writeFile(jsonFile, contents);
 
       const injections = (scopeNameToInjections.get(scopeName) || []).slice().sort();
