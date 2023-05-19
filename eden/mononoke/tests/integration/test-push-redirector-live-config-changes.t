@@ -206,7 +206,10 @@ Live change of the config, without Mononoke restart
   $ hg revert -r .^ 1
   $ hg commit --amend
   $ REPONAME=small-mon-1  hgmn push -r . --to master_bookmark -q
-
+  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V1
+  * all is well! (glob)
+  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V2
+  * all is well! (glob)
   $ mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL1 crossrepo pushredirection change-mapping-version \
   > --author author \
   > --large-repo-bookmark master_bookmark \
@@ -276,6 +279,12 @@ Again, normal pushrebase with one commit
   $ REPONAME=large-mon hgmn pull -q
   $ REPONAME=large-mon hgmn log -T "{files % '{file}\n'}" -r master_bookmark
   specialsmallrepofolder_after_change/f
+
+  $ EXPECTED_RC=1 quiet_grep "MPath" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V1
+  * Execution error: MPath("special/f") exists in small-mon-1 but not in large-mon (glob)
+  [1]
+  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V2
+  * all is well! (glob)
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT small_repo_id, large_repo_id, sync_map_version_name, source_repo FROM synced_commit_mapping";
   1|0|TEST_VERSION_NAME_LIVE_V1|large

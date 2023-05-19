@@ -65,6 +65,44 @@
             }
           ],
           "version_name": "TEST_VERSION_NAME_OLD"
+        },
+        {
+          "large_repo_id": 0,
+          "common_pushrebase_bookmarks": [
+            "master_bookmark"
+          ],
+          "small_repos": [
+            {
+              "repoid": 1,
+              "default_action": "preserve",
+              "bookmark_prefix": "fbsource/",
+              "mapping": {
+                "arvr": ".fbsource-rest/arvr",
+                "a/b/c1": "ma/b/c1",
+                "a/b/c2": "ma/b/c2",
+                "d/e": "ma/b/c2/d/e"
+              },
+              "direction": "small_to_large"
+            },
+            {
+              "repoid": 2,
+              "default_action": "prepend_prefix",
+              "default_prefix": "arvr-legacy",
+              "bookmark_prefix": "ovrsource/",
+              "mapping": {
+                "arvr": "arvr",
+                "fbandroid": ".ovrsource-rest/fbandroid",
+                "fbcode": ".ovrsource-rest/fbcode",
+                "fbobjc": ".ovrsource-rest/fbobjc",
+                "xplat": ".ovrsource-rest/xplat",
+                "a/b/c1": "ma/b/c1",
+                "a/b/c2": "ma/b/c2",
+                "d/e": "ma/b/c2/d/e"
+              },
+              "direction": "small_to_large"
+            }
+          ],
+          "version_name": "TEST_VERSION_NAME_COMPLEX"
         }
       ],
       "common": {

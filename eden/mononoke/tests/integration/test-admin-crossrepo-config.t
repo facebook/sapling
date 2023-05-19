@@ -13,6 +13,7 @@ setup configerator configs
 test various admin commands
   $ REPOID=0 mononoke_admin crossrepo config list
   TEST_VERSION_NAME
+  TEST_VERSION_NAME_COMPLEX
   TEST_VERSION_NAME_OLD
 
   $ REPOID=0 mononoke_admin crossrepo config list --with-contents
@@ -28,6 +29,30 @@ test various admin commands
       default action: PrependPrefix(MPath("arvr-legacy"))
       prefix map:
         arvr->arvr
+        fbandroid->.ovrsource-rest/fbandroid
+        fbcode->.ovrsource-rest/fbcode
+        fbobjc->.ovrsource-rest/fbobjc
+        xplat->.ovrsource-rest/xplat
+  
+  
+  TEST_VERSION_NAME_COMPLEX:
+    large repo: 0
+    common pushrebase bookmarks: [* "master_bookmark" *] (glob)
+    version name: TEST_VERSION_NAME_COMPLEX
+      small repo: 1
+      default action: Preserve
+      prefix map:
+        a/b/c1->ma/b/c1
+        a/b/c2->ma/b/c2
+        arvr->.fbsource-rest/arvr
+        d/e->ma/b/c2/d/e
+      small repo: 2
+      default action: PrependPrefix(MPath("arvr-legacy"))
+      prefix map:
+        a/b/c1->ma/b/c1
+        a/b/c2->ma/b/c2
+        arvr->arvr
+        d/e->ma/b/c2/d/e
         fbandroid->.ovrsource-rest/fbandroid
         fbcode->.ovrsource-rest/fbcode
         fbobjc->.ovrsource-rest/fbobjc

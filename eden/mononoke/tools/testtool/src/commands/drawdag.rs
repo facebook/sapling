@@ -294,7 +294,7 @@ impl ActionArg {
                             arg = ActionArg::new();
                         }
                     }
-                    ch if ch.is_alphanumeric() || "_./".contains(ch) => {
+                    ch if ch.is_alphanumeric() || "_-./".contains(ch) => {
                         arg.push(ch);
                     }
                     ch => return Err(anyhow!("Unexpected character: '{}'", ch)),
