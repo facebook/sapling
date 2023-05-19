@@ -6,16 +6,20 @@
  */
 
 import type {
+  ExtensionManifest,
   GrammarContribution,
   GrammarSource,
   NormalizedLanguageExtensionPoint,
 } from './AbstractLanguageExtension';
+import type AbstractLanguageExtension from './AbstractLanguageExtension';
 import type {LanguageExtensionAmendment} from './languageExtensionAmendments';
 
-import extensions from './extensions';
+import LanguageExtensionOnDisk from './LanguageExtensionOnDisk';
+import builtInExtensions from './extensions';
 import languageExtensionAmendments from './languageExtensionAmendments';
 import assert from 'assert';
 import {promises as fs} from 'fs';
+import minimist from 'minimist';
 import pathMod from 'path';
 import prettier from 'prettier';
 
@@ -61,13 +65,21 @@ type IndexedLanguageExtensionPoint = {
 };
 
 async function main() {
-  const [manifestPath, grammarsDir] = process.argv.slice(2, 4);
+  const argv = minimist(process.argv.slice(2), {
+    alias: {
+      extension: 'ext',
+    },
+  });
+  const [manifestPath, grammarsDir] = argv._;
   if (manifestPath == null) {
     throw Error('must specify a file for the TextMate grammar manifest');
   }
   if (grammarsDir == null) {
     throw Error('must specify an output directory for the TextMate grammars');
   }
+
+  const extraExtensions = await getExtraExtensions(argv.extension, argv.root);
+  const extensions: AbstractLanguageExtension[] = [...builtInExtensions, ...extraExtensions];
 
   // Key is a Monaco language; value is an Array of language configs.
   // For example, both typescript-basics and the json extension attempt to
@@ -191,6 +203,31 @@ async function main() {
     grammarsDir,
     scopeNameToEmbeddedLanguages,
   );
+}
+
+async function getExtraExtensions(
+  extensions: string | string[] = [],
+  root: string | void,
+): Promise<LanguageExtensionOnDisk[]> {
+  const names = Array.isArray(extensions) ? extensions : [extensions];
+  const absPaths = root ? names.map(e => pathMod.join(root, e)) : names;
+  const exts = absPaths.map(p => new LanguageExtensionOnDisk(p));
+
+  const manifests: [LanguageExtensionOnDisk, ExtensionManifest][] = await Promise.all(
+    exts.map(async ext => [ext, await ext.getManifest()]),
+  );
+
+  // Extra extensions might override built-in VS Code extensions' scopes.
+  // Add them to EXTENSION_FOR_SCOPE_NAME to make sure they take precedence.
+  for (const [ext, manifest] of manifests) {
+    for (const grammar of manifest.contributes?.grammars ?? []) {
+      if (!EXTENSION_FOR_SCOPE_NAME.has(grammar.scopeName)) {
+        EXTENSION_FOR_SCOPE_NAME.set(grammar.scopeName, ext);
+      }
+    }
+  }
+
+  return exts;
 }
 
 /**
