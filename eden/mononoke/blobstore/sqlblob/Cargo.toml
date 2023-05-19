@@ -26,7 +26,7 @@ sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-s
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
-tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
+tokio-stream = { version = "0.1.14", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 twox-hash = "1.6.1"
 vec1 = { version = "1", features = ["serde"] }
 xdb_gc_structs = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/xdb_gc" }

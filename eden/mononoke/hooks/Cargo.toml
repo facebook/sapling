@@ -26,7 +26,7 @@ fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rus
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hooks_content_stores = { version = "0.1.0", path = "content-stores" }
-hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
+hyper = { version = "0.14.26", features = ["client", "http1", "http2"] }
 hyper-tls = "0.5"
 ipnetwork = "0.15"
 itertools = "0.10.3"

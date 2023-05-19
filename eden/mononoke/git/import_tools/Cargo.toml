@@ -21,7 +21,7 @@ git-actor = "0.14"
 git-hash = "0.10"
 git-object = "0.23"
 http = "0.2"
-hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
+hyper = { version = "0.14.26", features = ["client", "http1", "http2"] }
 hyper-openssl = "0.9"
 linked-hash-map = { version = "0.5", features = ["serde_impl"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
@@ -31,4 +31,4 @@ slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
-tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
+tokio-stream = { version = "0.1.14", features = ["fs", "io-util", "net", "signal", "sync", "time"] }

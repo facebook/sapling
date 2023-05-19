@@ -10,8 +10,6 @@ quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb
 tar = { package = "tar", git = "https://github.com/jrwats/tar-rs.git", rev = "21eeccdc08d9b87f6ad610f9b20a5839aabe5974" }
 terminfo = { git = "https://github.com/rust-terminfo/terminfo", rev = "9b4e1c6aae79644c9da7a2e312e3c10ee4759930" }
 toml = { git = "https://github.com/fbsource/toml", rev = "0ee7001fb64f7c5094a00d3a360e402201f498fe" }
-tonic = { version = "0.8.3", git = "https://github.com/krallin/tonic.git", rev = "c67fc25b636b48b90c83dfc8dd1f89c00b84846d" }
-tonic-build = { version = "0.8.4", git = "https://github.com/krallin/tonic.git", rev = "c67fc25b636b48b90c83dfc8dd1f89c00b84846d" }
 tracing = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
 tracing-appender = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
 tracing-core = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
