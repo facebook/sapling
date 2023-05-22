@@ -1287,6 +1287,7 @@ mod test {
                 },
                 commit_graph_config: CommitGraphConfig {
                     scuba_table: Some("commit_graph".to_string()),
+                    preloaded_commit_graph_blobstore_key: None,
                 },
                 deep_sharding_config: Some(ShardingModeConfig { status: hashmap!() }),
             },

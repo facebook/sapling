@@ -700,6 +700,7 @@ impl Convert for RawCommitGraphConfig {
     fn convert(self) -> Result<Self::Output> {
         Ok(CommitGraphConfig {
             scuba_table: self.scuba_table,
+            preloaded_commit_graph_blobstore_key: self.preloaded_commit_graph_blobstore_key,
         })
     }
 }

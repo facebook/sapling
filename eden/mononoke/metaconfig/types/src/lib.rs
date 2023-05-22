@@ -1713,4 +1713,6 @@ pub struct UpdateLoggingConfig {
 pub struct CommitGraphConfig {
     /// Scuba table to log commit graph operations to
     pub scuba_table: Option<String>,
+    /// Blobstore key for a preloaded commit graph
+    pub preloaded_commit_graph_blobstore_key: Option<String>,
 }
