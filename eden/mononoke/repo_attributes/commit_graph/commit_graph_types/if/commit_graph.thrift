@@ -29,3 +29,21 @@ struct ChangesetEdges {
   5: optional ChangesetNode skip_tree_skew_ancestor;
   6: optional ChangesetNode p1_linear_skew_ancestor;
 } (rust.exhaustive)
+
+struct PreloadedEdges {
+  1: list<CompactChangesetEdges> edges;
+  2: optional i64 max_sql_id;
+} (rust.exhaustive)
+
+struct CompactChangesetEdges {
+  1: mononoke_types_thrift.ChangesetId cs_id;
+  2: i32 unique_id;
+  3: i32 generation;
+  4: i32 skip_tree_depth;
+  5: i32 p1_linear_depth;
+  6: list<i32> parents;
+  7: optional i32 merge_ancestor;
+  8: optional i32 skip_tree_parent;
+  9: optional i32 skip_tree_skew_ancestor;
+  10: optional i32 p1_linear_skew_ancestor;
+} (rust.exhaustive)

@@ -340,6 +340,7 @@ members = [
   "repo_attributes/commit_graph/commit_graph_types",
   "repo_attributes/commit_graph/commit_graph_types/if",
   "repo_attributes/commit_graph/in_memory_commit_graph_storage",
+  "repo_attributes/commit_graph/preloaded_commit_graph_storage",
   "repo_attributes/commit_graph/sql_commit_graph_storage",
   "repo_attributes/repo_bookmark_attrs",
   "repo_attributes/repo_cross_repo",

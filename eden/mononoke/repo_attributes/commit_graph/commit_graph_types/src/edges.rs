@@ -9,10 +9,12 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashSet;
+use std::num::NonZeroU32;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
 use abomonation_derive::Abomonation;
+use anyhow::anyhow;
 use anyhow::Result;
 use commit_graph_thrift as thrift;
 use maplit::btreemap;
@@ -65,7 +67,7 @@ impl ChangesetNode {
 pub type ChangesetNodeParents = SmallVec<[ChangesetNode; 1]>;
 
 /// Outgoing edges from a changeset node.
-#[derive(Abomonation, Clone, Debug)]
+#[derive(Abomonation, Clone, Debug, Eq, PartialEq)]
 pub struct ChangesetEdges {
     /// The starting changeset for this set of edges.
     pub node: ChangesetNode,
@@ -139,6 +141,95 @@ impl ChangesetEdges {
             p1_linear_skew_ancestor: edges
                 .p1_linear_skew_ancestor
                 .map(ChangesetNode::from_thrift)
+                .transpose()?,
+        })
+    }
+}
+
+/// A smaller version of ChangesetEdges for use in cases where
+/// space efficiency matters (e.g. preloading the commit graph).
+///
+/// Outgoing edges are replaced by u32 ids identifying a changeset.
+#[derive(Debug)]
+pub struct CompactChangesetEdges {
+    pub generation: u32,
+    pub skip_tree_depth: u32,
+    pub p1_linear_depth: u32,
+    pub parents: SmallVec<[NonZeroU32; 2]>,
+    pub merge_ancestor: Option<NonZeroU32>,
+    pub skip_tree_parent: Option<NonZeroU32>,
+    pub skip_tree_skew_ancestor: Option<NonZeroU32>,
+    pub p1_linear_skew_ancestor: Option<NonZeroU32>,
+}
+
+impl CompactChangesetEdges {
+    pub fn to_thrift(
+        &self,
+        cs_id: ChangesetId,
+        unique_id: NonZeroU32,
+    ) -> thrift::CompactChangesetEdges {
+        thrift::CompactChangesetEdges {
+            cs_id: cs_id.into_thrift(),
+            unique_id: unique_id.get() as i32,
+            generation: self.generation as i32,
+            skip_tree_depth: self.skip_tree_depth as i32,
+            p1_linear_depth: self.p1_linear_depth as i32,
+            parents: self
+                .parents
+                .iter()
+                .copied()
+                .map(|id| id.get() as i32)
+                .collect(),
+            merge_ancestor: self.merge_ancestor.map(|id| id.get() as i32),
+            skip_tree_parent: self.skip_tree_parent.map(|id| id.get() as i32),
+            skip_tree_skew_ancestor: self.skip_tree_skew_ancestor.map(|id| id.get() as i32),
+            p1_linear_skew_ancestor: self.p1_linear_skew_ancestor.map(|id| id.get() as i32),
+        }
+    }
+
+    pub fn from_thrift(edges: thrift::CompactChangesetEdges) -> Result<Self> {
+        Ok(Self {
+            generation: edges.generation as u32,
+            skip_tree_depth: edges.skip_tree_depth as u32,
+            p1_linear_depth: edges.p1_linear_depth as u32,
+            parents: edges
+                .parents
+                .into_iter()
+                .map(|id| {
+                    NonZeroU32::new(id as u32)
+                        .ok_or_else(|| anyhow!("Couldn't convert parent id to NonZeroU32"))
+                })
+                .collect::<Result<_>>()?,
+            merge_ancestor: edges
+                .merge_ancestor
+                .map(|id| {
+                    NonZeroU32::new(id as u32)
+                        .ok_or_else(|| anyhow!("Couldn't convert merge ancestor id to NonZeroU32"))
+                })
+                .transpose()?,
+            skip_tree_parent: edges
+                .skip_tree_parent
+                .map(|id| {
+                    NonZeroU32::new(id as u32).ok_or_else(|| {
+                        anyhow!("Couldn't convert skip tree parent id to NonZeroU32")
+                    })
+                })
+                .transpose()?,
+            skip_tree_skew_ancestor: edges
+                .skip_tree_skew_ancestor
+                .map(|id| {
+                    NonZeroU32::new(id as u32).ok_or_else(|| {
+                        anyhow!("Couldn't convert skip tree skew ancestor id to NonZeroU32")
+                    })
+                })
+                .transpose()?,
+            p1_linear_skew_ancestor: edges
+                .p1_linear_skew_ancestor
+                .map(|id| {
+                    NonZeroU32::new(id as u32).ok_or_else(|| {
+                        anyhow!("Couldn't convert p1 linear skew ancestor id to NonZeroU32")
+                    })
+                })
                 .transpose()?,
         })
     }

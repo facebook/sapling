@@ -22,7 +22,7 @@ use vec1::vec1;
 
 use crate::utils::*;
 
-mod utils;
+pub mod utils;
 
 #[macro_export]
 macro_rules! impl_commit_graph_tests {
