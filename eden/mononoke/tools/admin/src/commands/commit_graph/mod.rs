@@ -10,6 +10,7 @@ mod backfill;
 mod backfill_one;
 mod checkpoints;
 mod range_stream;
+mod update_preloaded;
 
 use ancestors_difference::AncestorsDifferenceArgs;
 use anyhow::Result;
@@ -28,7 +29,9 @@ use metaconfig_types::RepoConfig;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use range_stream::RangeStreamArgs;
+use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
+use update_preloaded::UpdatePreloadedArgs;
 
 #[derive(Parser)]
 pub struct CommandArgs {
@@ -49,6 +52,8 @@ pub enum CommitGraphSubcommand {
     AncestorsDifference(AncestorsDifferenceArgs),
     /// Display ids of all commits that are simultaneously a descendant of one commit (start) and an ancestor of another (end) in topological order.
     RangeStream(RangeStreamArgs),
+    /// Update preloaded commit graph and upload it to blobstore.
+    UpdatePreloaded(UpdatePreloadedArgs),
 }
 
 #[facet::container]
@@ -79,6 +84,9 @@ pub struct Repo {
 
     #[facet]
     bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -95,6 +103,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         CommitGraphSubcommand::RangeStream(args) => {
             range_stream::range_stream(&ctx, &repo, args).await
+        }
+        CommitGraphSubcommand::UpdatePreloaded(args) => {
+            update_preloaded::update_preloaded(&ctx, &app, &repo, args).await
         }
     }
 }
