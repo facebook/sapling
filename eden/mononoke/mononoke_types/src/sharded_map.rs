@@ -750,7 +750,6 @@ pub enum ShardedTraversalOutput<'a, Value: MapValue> {
     /// We found a value. Return the key/value pair
     Value(SmallBinary, Value),
     /// We found a non-inlined shard. Return the current prefix, the remainder and the shard id.
-    /// TODO (Pierre): Make this opaque to the caller by encapsulating it inside a private struct.
     Shard(SmallBinary, &'a [u8], Value::Id),
 }
 
