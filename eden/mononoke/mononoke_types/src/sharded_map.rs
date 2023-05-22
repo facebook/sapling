@@ -110,7 +110,7 @@ impl<Value: MapValue> ShardedMapEdge<Value> {
 }
 
 impl<Value: MapValue> ShardedMapChild<Value> {
-    async fn load(
+    pub async fn load(
         self,
         ctx: &CoreContext,
         blobstore: &impl Blobstore,
@@ -498,12 +498,12 @@ impl<Value: MapValue> ShardedMapNode<Value> {
 
     /// Iterates through all values like `into_entries`, but also leaks information about
     /// the shard ids for each encountered ShardMapNode which is stored in the blobstore
-    pub fn into_entries_with_shard_ids<'a>(
+    pub fn into_sharded_entries<'a>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
-    ) -> impl Stream<Item = Result<(SmallBinary, Value, Option<Value::Id>)>> + 'a {
-        self.into_prefix_entries_with_shard_ids(ctx, blobstore, &[])
+    ) -> impl Stream<Item = Result<ShardedTraversalOutput<'a, Value>>> + 'a {
+        self.into_sharded_prefix_entries(ctx, blobstore, &[])
     }
 
     pub fn into_prefix_entries<'a>(
@@ -512,17 +512,6 @@ impl<Value: MapValue> ShardedMapNode<Value> {
         blobstore: &'a impl Blobstore,
         prefix: &'a [u8],
     ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
-        self.into_prefix_entries_with_shard_ids(ctx, blobstore, prefix)
-            .map_ok(|(sb, v, _shard_id)| (sb, v))
-    }
-
-    fn into_prefix_entries_with_shard_ids<'a>(
-        self,
-        ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
-        prefix: &'a [u8],
-    ) -> impl Stream<Item = Result<(SmallBinary, Value, Option<Value::Id>)>> + 'a {
-        // TODO: prefix
         bounded_traversal_ordered_stream(
             nonzero!(256usize),
             nonzero!(256usize),
@@ -536,7 +525,6 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                 ShardedMapChild<Value>,
             )| {
                 async move {
-                    let shard_id = child.id().clone();
                     Ok(match child.load(ctx, blobstore).await? {
                         // Case 1. Prepend all keys with cur_prefix and output elements
                         Self::Terminal { values } => values
@@ -545,7 +533,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                             .map(|(key, value)| {
                                 let mut full_key = cur_prefix.clone();
                                 full_key.extend(key);
-                                OrderedTraversal::Output((full_key, value, shard_id))
+                                OrderedTraversal::Output((full_key, value))
                             })
                             .collect::<Vec<_>>(),
                         // Case 2. Recurse
@@ -578,9 +566,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                                 .then_some(value)
                                 .flatten()
                                 // Step 2-b. If value is present (and prefix empty), output (cur_prefix, value)
-                                .map(|value| {
-                                    OrderedTraversal::Output((cur_prefix.clone(), value, shard_id))
-                                })
+                                .map(|value| OrderedTraversal::Output((cur_prefix.clone(), value)))
                                 .into_iter()
                                 // Step 2-c. Copy prefix, append byte, and recurse.
                                 .chain(edges.into_iter().filter_map(|(byte, edge)| {
@@ -608,6 +594,139 @@ impl<Value: MapValue> ShardedMapNode<Value> {
         )
     }
 
+    // Traverse the `ShardedMap` down to the next blob, be it a non-inlined `ShardedMapChild` or a `Value`
+    // and return the current state of the traversal at this point.
+    // This allows us to traverse large sharded entries without loading unnecessary blobs if we
+    // don't need to. For instance, it can be used to diff sharded manifests and decide not to
+    // load non-inlined shards which are the same between both manifests.
+    fn into_sharded_prefix_entries<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        prefix: &'a [u8],
+    ) -> impl Stream<Item = Result<ShardedTraversalOutput<'a, Value>>> + 'a {
+        bounded_traversal_ordered_stream(
+            nonzero!(256usize),
+            nonzero!(256usize),
+            vec![(
+                self.size(),
+                (SmallBinary::new(), prefix, ShardedMapChild::Inlined(self)),
+            )],
+            move |(cur_prefix, remaining_prefix, child): (
+                SmallBinary,
+                &[u8],
+                ShardedMapChild<Value>,
+            )| {
+                async move {
+                    Self::sharded_traversal_step(
+                        ctx,
+                        blobstore,
+                        cur_prefix,
+                        remaining_prefix,
+                        child,
+                    )
+                    .await
+                }
+                .boxed()
+            },
+        )
+    }
+
+    async fn sharded_traversal_step<'a>(
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        mut cur_prefix: SmallBinary,
+        remaining_prefix: &'a [u8],
+        child: ShardedMapChild<Value>,
+    ) -> Result<
+        Vec<
+            OrderedTraversal<
+                ShardedTraversalOutput<'a, Value>,
+                (SmallBinary, &'a [u8], ShardedMapChild<Value>),
+            >,
+        >,
+    > {
+        // When this `ShardedMapChild` is inlined, we're not really loading from the blobstore but we fetch from memory instead
+        Ok(match child.load(ctx, blobstore).await? {
+            // Case 1. Prepend all keys with cur_prefix and output elements
+            Self::Terminal { values } => values
+                .into_iter()
+                .filter(|(k, _)| k.starts_with(remaining_prefix))
+                .map(|(key, value)| {
+                    let mut full_key = cur_prefix.clone();
+                    full_key.extend(key);
+                    OrderedTraversal::Output(ShardedTraversalOutput::Value(full_key, value))
+                })
+                .collect::<Vec<_>>(),
+            // Case 2. Recurse
+            Self::Intermediate {
+                prefix: new_prefix,
+                value,
+                edges,
+                ..
+            } => {
+                let remaining_prefix = if remaining_prefix.len() >= new_prefix.len() {
+                    if let Some(new_remaining) =
+                        remaining_prefix.strip_prefix(new_prefix.as_slice())
+                    {
+                        new_remaining
+                    } else {
+                        // prefix doesn't match
+                        return Ok(vec![]);
+                    }
+                } else if new_prefix.starts_with(remaining_prefix) {
+                    &[]
+                } else {
+                    // prefix doesn't match
+                    return Ok(vec![]);
+                };
+                // Step 2-a. Extend cur_prefix
+                cur_prefix.extend(new_prefix);
+                let cur_prefix = &cur_prefix;
+                remaining_prefix
+                    .is_empty()
+                    .then_some(value)
+                    .flatten()
+                    // Step 2-b. If value is present (and prefix empty), output (cur_prefix, value)
+                    .map(|value| {
+                        OrderedTraversal::Output(ShardedTraversalOutput::Value(
+                            cur_prefix.clone(),
+                            value,
+                        ))
+                    })
+                    .into_iter()
+                    // Step 2-c. Copy prefix, append byte, and recurse.
+                    .chain(edges.into_iter().filter_map(|(byte, edge)| {
+                        let (first, rest) = remaining_prefix.split_first().unwrap_or((&byte, &[]));
+                        if *first == byte {
+                            let mut new_prefix = cur_prefix.clone();
+                            new_prefix.push(byte);
+                            let size_prediction = edge.size;
+                            // TODO (Pierre): don't recurse here, but this is where we
+                            // return the shard and maybe its index, maybe its
+                            // prefix, maybe both
+                            match edge.child {
+                                ShardedMapChild::Inlined(_) => Some(OrderedTraversal::Recurse(
+                                    size_prediction,
+                                    (new_prefix, rest, edge.child),
+                                )),
+                                // If this shard lives in the blobstore, return its id
+                                // alongside the current prefix and the rest so we
+                                // can resume the traversal later
+                                ShardedMapChild::Id(id) => Some(OrderedTraversal::Output(
+                                    ShardedTraversalOutput::Shard(new_prefix, rest, id),
+                                )),
+                            }
+                        } else {
+                            // Byte didn't match prefix
+                            None
+                        }
+                    }))
+                    .collect::<Vec<_>>()
+            }
+        })
+    }
+
     pub fn is_empty(&self) -> bool {
         match self {
             Self::Terminal { values } => values.is_empty(),
@@ -625,6 +744,14 @@ impl<Value: MapValue> ShardedMapNode<Value> {
             }),
         }
     }
+}
+
+pub enum ShardedTraversalOutput<'a, Value: MapValue> {
+    /// We found a value. Return the key/value pair
+    Value(SmallBinary, Value),
+    /// We found a non-inlined shard. Return the current prefix, the remainder and the shard id.
+    /// TODO (Pierre): Make this opaque to the caller by encapsulating it inside a private struct.
+    Shard(SmallBinary, &'a [u8], Value::Id),
 }
 
 impl<Value: MapValue> ThriftConvert for ShardedMapNode<Value> {

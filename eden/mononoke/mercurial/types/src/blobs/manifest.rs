@@ -147,7 +147,7 @@ pub async fn fetch_manifest_envelope_opt<B: Blobstore>(
     .context(ErrorKind::ManifestDeserializeFailed(blobstore_key))
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct HgBlobManifest {
     node_id: HgNodeHash,
     p1: Option<HgNodeHash>,

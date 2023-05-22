@@ -22,6 +22,7 @@ use crate::blob::DeletedManifestV2Blob;
 use crate::deleted_manifest_common::DeletedManifestCommon;
 use crate::sharded_map::MapValue;
 use crate::sharded_map::ShardedMapNode;
+use crate::sharded_map::ShardedTraversalOutput;
 use crate::thrift;
 use crate::typed_hash::BlobstoreKey;
 use crate::typed_hash::ChangesetId;
@@ -103,7 +104,7 @@ use crate::ThriftConvert;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct DeletedManifestV2 {
     linknode: Option<ChangesetId>,
-    subentries: ShardedMapNode<DeletedManifestV2Id>,
+    pub subentries: ShardedMapNode<DeletedManifestV2Id>,
 }
 
 impl MapValue for DeletedManifestV2Id {
@@ -201,24 +202,12 @@ impl DeletedManifestV2 {
             subentries,
         }
     }
-    pub fn into_subentries_with_shard_ids<'a>(
+    pub fn into_sharded_subentries<'a>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
-    ) -> BoxStream<
-        'a,
-        Result<(
-            MPathElement,
-            DeletedManifestV2Id,
-            Option<ShardedMapNodeDMv2Id>,
-        )>,
-    > {
-        self.subentries
-            .into_entries_with_shard_ids(ctx, blobstore)
-            .and_then(
-                |(k, v, id)| async move { anyhow::Ok((MPathElement::from_smallvec(k)?, v, id)) },
-            )
-            .boxed()
+    ) -> BoxStream<'a, Result<ShardedTraversalOutput<'a, DeletedManifestV2Id>>> {
+        self.subentries.into_sharded_entries(ctx, blobstore).boxed()
     }
 }
 

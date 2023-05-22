@@ -25,6 +25,7 @@ use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::sharded_map::MapValue;
 use crate::sharded_map::ShardedMapNode;
+use crate::sharded_map::ShardedTraversalOutput;
 use crate::thrift;
 use crate::typed_hash::BasenameSuffixSkeletonManifestContext;
 use crate::typed_hash::BasenameSuffixSkeletonManifestId;
@@ -37,7 +38,7 @@ use crate::ThriftConvert;
 /// See docs/basename_suffix_skeleton_manifest.md for more documentation on this.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct BasenameSuffixSkeletonManifest {
-    subentries: ShardedMapNode<BssmEntry>,
+    pub subentries: ShardedMapNode<BssmEntry>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -213,17 +214,12 @@ impl BasenameSuffixSkeletonManifest {
             .boxed()
     }
 
-    pub fn into_subentries_with_shard_ids<'a>(
+    pub fn into_sharded_subentries<'a>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
-    ) -> BoxStream<'a, Result<(MPathElement, BssmEntry, Option<ShardedMapNodeBSSMId>)>> {
-        self.subentries
-            .into_entries_with_shard_ids(ctx, blobstore)
-            .map(|res| {
-                res.and_then(|(k, v, id)| anyhow::Ok((MPathElement::from_smallvec(k)?, v, id)))
-            })
-            .boxed()
+    ) -> BoxStream<'a, Result<ShardedTraversalOutput<'a, BssmEntry>>> {
+        self.subentries.into_sharded_entries(ctx, blobstore).boxed()
     }
 }
 
