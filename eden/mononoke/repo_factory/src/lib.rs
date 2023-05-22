@@ -113,6 +113,7 @@ use newfilenodes::NewFilenodesBuilder;
 use parking_lot::Mutex;
 use permission_checker::AclProvider;
 use phases::ArcPhases;
+use preloaded_commit_graph_storage::PreloadedCommitGraphStorage;
 use pushrebase_mutation_mapping::ArcPushrebaseMutationMapping;
 use pushrebase_mutation_mapping::SqlPushrebaseMutationMappingConnection;
 use readonlyblob::ReadOnlyBlobstore;
@@ -1463,8 +1464,9 @@ impl RepoFactory {
 
     pub async fn commit_graph(
         &self,
-        repo_identity: &RepoIdentity,
-        repo_config: &RepoConfig,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+        common_config: &ArcCommonConfig,
     ) -> Result<ArcCommitGraph> {
         let sql_storage = self
             .open_sql::<SqlCommitGraphStorageBuilder>(repo_config)
@@ -1475,6 +1477,7 @@ impl RepoFactory {
                 },
                 repo_identity.id(),
             );
+
         let maybe_cached_storage: Arc<dyn CommitGraphStorage> =
             if let Some(cache_handler_factory) = self.cache_handler_factory("commit_graph")? {
                 Arc::new(CachingCommitGraphStorage::new(
@@ -1485,7 +1488,35 @@ impl RepoFactory {
                 Arc::new(sql_storage)
             };
 
-        Ok(Arc::new(CommitGraph::new(maybe_cached_storage)))
+        match &repo_config
+            .commit_graph_config
+            .preloaded_commit_graph_blobstore_key
+        {
+            Some(preloaded_commit_graph_key) => {
+                let blobstore_without_cache = self
+                    .repo_blobstore_from_blobstore(
+                        repo_identity,
+                        repo_config,
+                        &self
+                            .blobstore_no_cache(&repo_config.storage_config.blobstore)
+                            .await?,
+                        common_config,
+                    )
+                    .await?;
+
+                let preloaded_commit_graph_storage = PreloadedCommitGraphStorage::from_blobstore(
+                    &self.ctx(Some(repo_identity)),
+                    repo_identity.id(),
+                    Arc::new(blobstore_without_cache),
+                    preloaded_commit_graph_key.clone(),
+                    maybe_cached_storage,
+                )
+                .await?;
+
+                Ok(Arc::new(CommitGraph::new(preloaded_commit_graph_storage)))
+            }
+            None => Ok(Arc::new(CommitGraph::new(maybe_cached_storage))),
+        }
     }
 
     pub async fn bonsai_blob_mapping(
