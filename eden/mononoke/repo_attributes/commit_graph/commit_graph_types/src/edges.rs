@@ -13,6 +13,8 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 
 use abomonation_derive::Abomonation;
+use anyhow::Result;
+use commit_graph_thrift as thrift;
 use maplit::btreemap;
 use maplit::hashset;
 use mononoke_types::ChangesetId;
@@ -34,6 +36,26 @@ pub struct ChangesetNode {
 
     /// The changeset's depth in the p1 tree
     pub p1_linear_depth: u64,
+}
+
+impl ChangesetNode {
+    pub fn to_thrift(&self) -> thrift::ChangesetNode {
+        thrift::ChangesetNode {
+            cs_id: self.cs_id.into_thrift(),
+            generation: thrift::Generation(self.generation.value() as i64),
+            skip_tree_depth: self.skip_tree_depth as i64,
+            p1_linear_depth: self.p1_linear_depth as i64,
+        }
+    }
+
+    pub fn from_thrift(node: thrift::ChangesetNode) -> Result<Self> {
+        Ok(Self {
+            cs_id: ChangesetId::from_thrift(node.cs_id)?,
+            generation: Generation::new(node.generation.0 as u64),
+            skip_tree_depth: node.skip_tree_depth as u64,
+            p1_linear_depth: node.p1_linear_depth as u64,
+        })
+    }
 }
 
 /// The parents of a changeset node.
@@ -74,6 +96,52 @@ pub struct ChangesetEdges {
     /// Note: this excludes any merged in branches, so should only be used for
     /// history-lossy operations.
     pub p1_linear_skew_ancestor: Option<ChangesetNode>,
+}
+
+impl ChangesetEdges {
+    pub fn to_thrift(&self) -> thrift::ChangesetEdges {
+        thrift::ChangesetEdges {
+            node: self.node.to_thrift(),
+            parents: self.parents.iter().map(ChangesetNode::to_thrift).collect(),
+            merge_ancestor: self.merge_ancestor.as_ref().map(ChangesetNode::to_thrift),
+            skip_tree_parent: self.skip_tree_parent.as_ref().map(ChangesetNode::to_thrift),
+            skip_tree_skew_ancestor: self
+                .skip_tree_skew_ancestor
+                .as_ref()
+                .map(ChangesetNode::to_thrift),
+            p1_linear_skew_ancestor: self
+                .p1_linear_skew_ancestor
+                .as_ref()
+                .map(ChangesetNode::to_thrift),
+        }
+    }
+
+    pub fn from_thrift(edges: thrift::ChangesetEdges) -> Result<Self> {
+        Ok(Self {
+            node: ChangesetNode::from_thrift(edges.node)?,
+            parents: edges
+                .parents
+                .into_iter()
+                .map(ChangesetNode::from_thrift)
+                .collect::<Result<ChangesetNodeParents>>()?,
+            merge_ancestor: edges
+                .merge_ancestor
+                .map(ChangesetNode::from_thrift)
+                .transpose()?,
+            skip_tree_parent: edges
+                .skip_tree_parent
+                .map(ChangesetNode::from_thrift)
+                .transpose()?,
+            skip_tree_skew_ancestor: edges
+                .skip_tree_skew_ancestor
+                .map(ChangesetNode::from_thrift)
+                .transpose()?,
+            p1_linear_skew_ancestor: edges
+                .p1_linear_skew_ancestor
+                .map(ChangesetNode::from_thrift)
+                .transpose()?,
+        })
+    }
 }
 
 /// A frontier of changesets ordered by generation number.

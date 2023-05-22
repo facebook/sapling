@@ -30,8 +30,6 @@ use caching_ext::MemcacheEntity;
 use caching_ext::MemcacheHandler;
 use commit_graph_thrift as thrift;
 use commit_graph_types::edges::ChangesetEdges;
-use commit_graph_types::edges::ChangesetNode;
-use commit_graph_types::edges::ChangesetNodeParents;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
@@ -41,7 +39,6 @@ use memcache::KeyGen;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
-use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use stats::prelude::*;
 use tunables::tunables;
@@ -119,67 +116,13 @@ impl CachedChangesetEdges {
         self.edges
     }
 
-    fn node_to_thrift(node: &ChangesetNode) -> thrift::ChangesetNode {
-        thrift::ChangesetNode {
-            cs_id: node.cs_id.into_thrift(),
-            generation: thrift::Generation(node.generation.value() as i64),
-            skip_tree_depth: node.skip_tree_depth as i64,
-            p1_linear_depth: node.p1_linear_depth as i64,
-        }
-    }
-
     fn to_thrift(&self) -> thrift::ChangesetEdges {
-        thrift::ChangesetEdges {
-            node: Self::node_to_thrift(&self.node),
-            parents: self.parents.iter().map(Self::node_to_thrift).collect(),
-            merge_ancestor: self.merge_ancestor.as_ref().map(Self::node_to_thrift),
-            skip_tree_parent: self.skip_tree_parent.as_ref().map(Self::node_to_thrift),
-            skip_tree_skew_ancestor: self
-                .skip_tree_skew_ancestor
-                .as_ref()
-                .map(Self::node_to_thrift),
-            p1_linear_skew_ancestor: self
-                .p1_linear_skew_ancestor
-                .as_ref()
-                .map(Self::node_to_thrift),
-        }
-    }
-
-    fn node_from_thrift(node: thrift::ChangesetNode) -> Result<ChangesetNode> {
-        Ok(ChangesetNode {
-            cs_id: ChangesetId::from_thrift(node.cs_id)?,
-            generation: Generation::new(node.generation.0 as u64),
-            skip_tree_depth: node.skip_tree_depth as u64,
-            p1_linear_depth: node.p1_linear_depth as u64,
-        })
+        self.edges.to_thrift()
     }
 
     fn from_thrift(edges: thrift::ChangesetEdges) -> Result<Self> {
         Ok(Self {
-            edges: ChangesetEdges {
-                node: Self::node_from_thrift(edges.node)?,
-                parents: edges
-                    .parents
-                    .into_iter()
-                    .map(Self::node_from_thrift)
-                    .collect::<Result<ChangesetNodeParents>>()?,
-                merge_ancestor: edges
-                    .merge_ancestor
-                    .map(Self::node_from_thrift)
-                    .transpose()?,
-                skip_tree_parent: edges
-                    .skip_tree_parent
-                    .map(Self::node_from_thrift)
-                    .transpose()?,
-                skip_tree_skew_ancestor: edges
-                    .skip_tree_skew_ancestor
-                    .map(Self::node_from_thrift)
-                    .transpose()?,
-                p1_linear_skew_ancestor: edges
-                    .p1_linear_skew_ancestor
-                    .map(Self::node_from_thrift)
-                    .transpose()?,
-            },
+            edges: ChangesetEdges::from_thrift(edges)?,
             prefetched: false,
         })
     }
