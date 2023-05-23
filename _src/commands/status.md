@@ -4,7 +4,7 @@ sidebar_position: 41
 
 ## status | st
 <!--
-  @generated SignedSource<<63840291577a2e603dec82d9dda4b062>>
+  @generated SignedSource<<e9101cde37ab8cdfe8a10e8b1a181c78>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -117,6 +117,6 @@ Returns 0 on success.
 | `-0`| `--print0`| `false`| end filenames with NUL, for use with xargs|
 | | `--rev`| | show difference from revision|
 | | `--change`| | list the changed files of a revision|
-| | `--root-relative`| `false`| show status relative to root|
+| | `--root-relative`| | show status relative to root|
 | `-I`| `--include`| | include files matching the given patterns|
 | `-X`| `--exclude`| | exclude files matching the given patterns|

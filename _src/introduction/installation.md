@@ -37,7 +37,7 @@ Follow the instructions depending on your architecture.
 Download using `curl`:
 
 <CodeBlock>
-curl -L -O {macArmAsset.url}
+curl -L -o {macArmAsset.name} {macArmAsset.url}
 </CodeBlock>
 
 Then install:
@@ -51,7 +51,7 @@ brew install ./{macArmAsset.name}
 Download using `curl`:
 
 <CodeBlock>
-curl -L -O {macIntelAsset.url}
+curl -L -o {macIntelAsset.name} {macIntelAsset.url}
 </CodeBlock>
 
 Then install:
@@ -111,7 +111,7 @@ Sapling {latestReleaseVersion}
 Download using `curl`:
 
 <CodeBlock>
-curl -L -O {ubuntu22.url}
+curl -L -o {ubuntu22.name} {ubuntu22.url}
 </CodeBlock>
 
 Then install:
@@ -125,7 +125,7 @@ sudo apt install -y ./{ubuntu22.name}
 Download using `curl`:
 
 <CodeBlock>
-curl -L -O {ubuntu20.url}
+curl -L -o {ubuntu20.name} {ubuntu20.url}
 </CodeBlock>
 
 Then install:

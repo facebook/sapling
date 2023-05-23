@@ -2762,7 +2762,7 @@
       {
         "shortname": "",
         "fullname": "root-relative",
-        "default": false,
+        "default": null,
         "description": "show status relative to root"
       },
       {
