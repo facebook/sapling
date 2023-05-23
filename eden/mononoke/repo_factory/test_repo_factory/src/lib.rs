@@ -729,14 +729,9 @@ impl TestRepoFactory {
     pub fn acl_regions(
         &self,
         repo_config: &ArcRepoConfig,
-        skiplist_index: &ArcSkiplistIndex,
-        changeset_fetcher: &ArcChangesetFetcher,
+        commit_graph: &ArcCommitGraph,
     ) -> ArcAclRegions {
-        build_acl_regions(
-            repo_config.acl_region_config.as_ref(),
-            skiplist_index.clone(),
-            changeset_fetcher.clone(),
-        )
+        build_acl_regions(repo_config.acl_region_config.as_ref(), commit_graph.clone())
     }
 
     /// Hook manager

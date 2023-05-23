@@ -13,7 +13,6 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
-use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
 use cmdlib::helpers;
 use commit_graph::CommitGraphRef;
@@ -29,7 +28,6 @@ use metaconfig_types::PushrebaseFlags;
 use mononoke_api_types::InnerRepo;
 use mononoke_types::ChangesetId;
 use pushrebase::do_pushrebase_bonsai;
-use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::info;
 
@@ -229,13 +227,8 @@ async fn find_unmerged_commits(
     // to check if the first commit has been merged or not i.e. check if this commit
     // is ancestor of bookmark_to_merge_into or not.
     let has_merged_any = repo
-        .skiplist_index
-        .is_ancestor(
-            ctx,
-            &repo.blob_repo.changeset_fetcher_arc(),
-            first.0,
-            bookmark_value,
-        )
+        .commit_graph()
+        .is_ancestor(ctx, first.0, bookmark_value)
         .await?;
     if !has_merged_any {
         return Ok(commits_to_merge);

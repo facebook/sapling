@@ -44,7 +44,6 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_lazy_shared::LazyShared;
-use futures_stats::TimedFutureExt;
 use hooks::CrossRepoPushSource;
 use hooks::HookOutcome;
 use hooks::PushAuthoredBy;
@@ -669,41 +668,28 @@ impl ChangesetContext {
     /// Returns `true` if this commit is an ancestor of `other_commit`.  A commit is considered its
     /// own ancestor for the purpose of this call.
     pub async fn is_ancestor_of(&self, other_commit: ChangesetId) -> Result<bool, MononokeError> {
-        let new_commit_graph_rollout_pct = tunables()
-            .by_repo_new_commit_graph_is_ancestor_percentage(self.repo().name())
-            .unwrap_or(0);
-        let use_new_commit_graph =
-            ((rand::random::<usize>() % 100) as i64) < new_commit_graph_rollout_pct;
-        if use_new_commit_graph {
-            let (stats, result) = self
+        if tunables()
+            .by_repo_enable_new_commit_graph_is_ancestor(self.repo().name())
+            .unwrap_or_default()
+        {
+            Ok(self
                 .repo()
                 .repo()
                 .commit_graph()
                 .is_ancestor(self.ctx(), self.id, other_commit)
-                .timed()
-                .await;
-            let mut scuba = self.ctx().scuba().clone();
-            scuba.add_future_stats(&stats);
-            match result {
-                Ok(is_ancestor) => return Ok(is_ancestor),
-                Err(err) => {
-                    let mut scuba = self.ctx().scuba().clone();
-                    scuba.log_with_msg("New commit graph is_ancestor failed", err.to_string());
-                }
-            }
+                .await?)
+        } else {
+            Ok(self
+                .repo()
+                .skiplist_index_arc()
+                .query_reachability(
+                    self.ctx(),
+                    &self.repo().blob_repo().changeset_fetcher_arc(),
+                    other_commit,
+                    self.id,
+                )
+                .await?)
         }
-
-        let is_ancestor_of = self
-            .repo()
-            .skiplist_index_arc()
-            .query_reachability(
-                self.ctx(),
-                &self.repo().blob_repo().changeset_fetcher_arc(),
-                other_commit,
-                self.id,
-            )
-            .await?;
-        Ok(is_ancestor_of)
     }
 
     /// Returns the lowest common ancestor of two commits.

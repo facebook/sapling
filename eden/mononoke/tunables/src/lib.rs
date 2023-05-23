@@ -368,12 +368,12 @@ pub struct MononokeTunables {
     // Enable derivation on service per repo
     enable_remote_derivation: TunableBoolByRepo,
 
-    // Usage of new commit graph for speeding up server-side operations
-    new_commit_graph_is_ancestor_percentage: TunableI64ByRepo,
     // Enable using new commit graph ancestors difference stream in place of DifferenceOfUnionsOfAncestorsNodeStream
     enable_new_commit_graph_ancestors_difference_stream: TunableBoolByRepo,
     // Enable using new commit graph range stream in place of RangeNodeStream
     enable_new_commit_graph_range_stream: TunableBoolByRepo,
+    // Enable using the new commit graph for is_ancestor queries
+    enable_new_commit_graph_is_ancestor: TunableBoolByRepo,
     // Enable using new commit graph in common_base_with
     enable_new_commit_graph_common_base_with: TunableBoolByRepo,
 

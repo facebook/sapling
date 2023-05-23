@@ -13,7 +13,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
-use changeset_fetcher::ArcChangesetFetcher;
+use commit_graph::ArcCommitGraph;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::StreamExt;
@@ -22,7 +22,6 @@ use metaconfig_types::AclRegion;
 use metaconfig_types::AclRegionConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
-use reachabilityindex::ReachabilityIndex;
 use trie::PrefixTrieWithRules;
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
@@ -60,24 +59,18 @@ pub trait AclRegions: Send + Sync {
 
 struct AclRegionsImpl {
     path_rules_index: PrefixTrieWithRules,
-    reachability_index: Arc<dyn ReachabilityIndex>,
-    changeset_fetcher: ArcChangesetFetcher,
+    commit_graph: ArcCommitGraph,
 }
 
 impl AclRegionsImpl {
-    fn new(
-        config: &AclRegionConfig,
-        reachability_index: Arc<dyn ReachabilityIndex>,
-        changeset_fetcher: ArcChangesetFetcher,
-    ) -> AclRegionsImpl {
+    fn new(config: &AclRegionConfig, commit_graph: ArcCommitGraph) -> AclRegionsImpl {
         let mut path_rules_index = PrefixTrieWithRules::new();
         for rule in &config.allow_rules {
             path_rules_index.add_rule(Arc::new(rule.clone()));
         }
         AclRegionsImpl {
             path_rules_index,
-            reachability_index,
-            changeset_fetcher,
+            commit_graph,
         }
     }
 
@@ -88,14 +81,7 @@ impl AclRegionsImpl {
         candidates: &[ChangesetId],
     ) -> Result<bool> {
         let mut is_descendant_results = stream::iter(candidates)
-            .map(|candidate| {
-                self.reachability_index.query_reachability(
-                    ctx,
-                    &self.changeset_fetcher,
-                    cs_id,
-                    *candidate,
-                )
-            })
+            .map(|candidate| self.commit_graph.is_ancestor(ctx, *candidate, cs_id))
             .boxed()
             .buffered(10);
 
@@ -182,15 +168,10 @@ impl AclRegions for DisabledAclRegions {
 
 pub fn build_acl_regions(
     config: Option<&AclRegionConfig>,
-    reachability_index: Arc<dyn ReachabilityIndex>,
-    changeset_fetcher: ArcChangesetFetcher,
+    commit_graph: ArcCommitGraph,
 ) -> ArcAclRegions {
     match config {
-        Some(config) => Arc::new(AclRegionsImpl::new(
-            config,
-            reachability_index,
-            changeset_fetcher,
-        )),
+        Some(config) => Arc::new(AclRegionsImpl::new(config, commit_graph)),
         None => build_disabled_acl_regions(),
     }
 }

@@ -63,10 +63,8 @@ use mononoke_types::FileChange;
 use mononoke_types::MPath;
 use mononoke_types::RepositoryId;
 use pushrebase::PushrebaseError;
-use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use skiplist::SkiplistIndex;
 use sorted_vector_map::sorted_vector_map;
 use sql::rusqlite::Connection as SqliteConnection;
 use sql_construct::SqlConstruct;
@@ -175,13 +173,7 @@ where
         .unwrap();
 
     config
-        .unsafe_sync_commit_pushrebase(
-            &ctx,
-            source_bcs,
-            bookmark_name,
-            Target(Arc::new(SkiplistIndex::new())),
-            CommitSyncContext::Tests,
-        )
+        .unsafe_sync_commit_pushrebase(&ctx, source_bcs, bookmark_name, CommitSyncContext::Tests)
         .await
 }
 
@@ -928,7 +920,6 @@ async fn get_multiple_master_mapping_setup(
 
     create_initial_commit(ctx.clone(), &megarepo).await;
 
-    let megarepo_lca_hint: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
     let megarepo_master_cs_id = get_bookmark(&ctx, &megarepo, "master").await;
     let small_repo_master_cs_id = get_bookmark(&ctx, &small_repo, "master").await;
     // Masters map to each other before we even do any syncs
@@ -985,7 +976,6 @@ async fn get_multiple_master_mapping_setup(
             &ctx,
             small_cs.clone(),
             BookmarkKey::new("master").unwrap(),
-            Target(megarepo_lca_hint.clone()),
             CommitSyncContext::Tests,
         )
         .await
@@ -996,7 +986,6 @@ async fn get_multiple_master_mapping_setup(
             &ctx,
             small_cs.clone(),
             BookmarkKey::new("other_branch").unwrap(),
-            Target(megarepo_lca_hint.clone()),
             CommitSyncContext::Tests,
         )
         .await
@@ -1053,17 +1042,11 @@ async fn test_sync_parent_has_multiple_mappings(fb: FacebookInit) -> Result<(), 
 
     // Can sync with a bookmark-based hint
     let book = Target(BookmarkKey::new("master").unwrap());
-    let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
-        Target(Arc::new(SkiplistIndex::new()));
     small_to_large_syncer
         .unsafe_sync_commit(
             &ctx,
             to_sync,
-            CandidateSelectionHint::OnlyOrAncestorOfBookmark(
-                book,
-                Target(megarepo.clone()),
-                lca_hint,
-            ),
+            CandidateSelectionHint::OnlyOrAncestorOfBookmark(book, Target(megarepo.clone())),
             CommitSyncContext::Tests,
         )
         .await
@@ -1093,14 +1076,11 @@ async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> R
     .await;
     let to_sync = to_sync_id.load(&ctx, small_repo.repo_blobstore()).await?;
 
-    let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
-        Target(Arc::new(SkiplistIndex::new()));
     small_to_large_syncer
         .unsafe_sync_commit_pushrebase(
             &ctx,
             to_sync,
             BookmarkKey::new("master").unwrap(),
-            lca_hint,
             CommitSyncContext::Tests,
         )
         .await
@@ -1140,14 +1120,11 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
     .await;
     let to_sync = to_sync_id.load(&ctx, small_repo.repo_blobstore()).await?;
 
-    let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
-        Target(Arc::new(SkiplistIndex::new()));
     small_to_large_syncer
         .unsafe_sync_commit_pushrebase(
             &ctx,
             to_sync,
             BookmarkKey::new("master").unwrap(),
-            lca_hint,
             CommitSyncContext::Tests,
         )
         .await
@@ -1471,7 +1448,6 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
 
     create_initial_commit(ctx.clone(), &megarepo).await;
 
-    let megarepo_lca_hint: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
     let megarepo_master_cs_id = get_bookmark(&ctx, &megarepo, "master").await;
     let small_repo_master_cs_id = get_bookmark(&ctx, &small_repo, "master").await;
     // Masters map to each other before we even do any syncs
@@ -1516,7 +1492,6 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
                     &ctx,
                     small_cs.clone(),
                     BookmarkKey::new("master").unwrap(),
-                    Target(megarepo_lca_hint.clone()),
                     CommitSyncContext::Tests,
                 )
                 .await

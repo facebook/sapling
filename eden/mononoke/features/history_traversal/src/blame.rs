@@ -145,15 +145,27 @@ async fn fetch_mutable_blame(
             stream::iter(possible_mutable_ancestors.into_iter().map(anyhow::Ok))
                 .try_filter_map({
                     move |(gen, csid)| async move {
-                        if skiplist_index
-                            .query_reachability(
-                                ctx,
-                                &repo.changeset_fetcher_arc(),
-                                mutated_csid,
-                                csid,
+                        let is_reachable = if tunables::tunables()
+                            .by_repo_enable_new_commit_graph_is_ancestor(
+                                repo.repo_identity().name(),
                             )
-                            .await?
+                            .unwrap_or_default()
                         {
+                            repo.commit_graph()
+                                .is_ancestor(ctx, csid, mutated_csid)
+                                .await?
+                        } else {
+                            skiplist_index
+                                .query_reachability(
+                                    ctx,
+                                    &repo.changeset_fetcher_arc(),
+                                    mutated_csid,
+                                    csid,
+                                )
+                                .await?
+                        };
+
+                        if is_reachable {
                             anyhow::Ok(None)
                         } else {
                             Ok(Some((gen, csid)))

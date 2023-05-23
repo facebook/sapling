@@ -126,15 +126,26 @@ impl RepoContext {
 
         // Check that base is an ancestor of the head commit, and fail with an
         // appropriate error message if that's not the case.
-        if !lca_hint
-            .is_ancestor(
-                self.ctx(),
-                &self.blob_repo().changeset_fetcher_arc(),
-                base,
-                head,
-            )
-            .await?
+        let is_ancestor = if tunables::tunables()
+            .by_repo_enable_new_commit_graph_is_ancestor(self.name())
+            .unwrap_or_default()
         {
+            self.repo()
+                .commit_graph()
+                .is_ancestor(self.ctx(), base, head)
+                .await?
+        } else {
+            lca_hint
+                .is_ancestor(
+                    self.ctx(),
+                    &self.blob_repo().changeset_fetcher_arc(),
+                    base,
+                    head,
+                )
+                .await?
+        };
+
+        if !is_ancestor {
             return Err(MononokeError::InvalidRequest(format!(
                 "Not a stack: base commit {} is not an ancestor of head commit {}",
                 base, head,

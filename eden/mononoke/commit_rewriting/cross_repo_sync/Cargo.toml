@@ -44,7 +44,6 @@ phases = { version = "0.1.0", path = "../../phases" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_hook = { version = "0.1.0", path = "../../pushrebase/pushrebase_hook" }
 rand = { version = "0.8", features = ["small_rng"] }
-reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 ref-cast = "1.0.16"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
@@ -71,7 +70,6 @@ futures-old = { package = "futures", version = "0.1.31" }
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 revset = { version = "0.1.0", path = "../../revset" }
-skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }

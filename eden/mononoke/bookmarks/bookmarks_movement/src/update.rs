@@ -69,14 +69,23 @@ impl BookmarkUpdatePolicy {
         };
         if fast_forward_only && targets.old != targets.new {
             // Check that this move is a fast-forward move.
-            let is_ancestor = lca_hint
-                .is_ancestor(
-                    ctx,
-                    &repo.changeset_fetcher_arc().clone(),
-                    targets.old,
-                    targets.new,
-                )
-                .await?;
+            let is_ancestor = if tunables::tunables()
+                .by_repo_enable_new_commit_graph_is_ancestor(repo.repo_identity().name())
+                .unwrap_or_default()
+            {
+                repo.commit_graph()
+                    .is_ancestor(ctx, targets.old, targets.new)
+                    .await?
+            } else {
+                lca_hint
+                    .is_ancestor(
+                        ctx,
+                        &repo.changeset_fetcher_arc().clone(),
+                        targets.old,
+                        targets.new,
+                    )
+                    .await?
+            };
             if !is_ancestor {
                 return Err(BookmarkMovementError::NonFastForwardMove {
                     bookmark: bookmark.clone(),

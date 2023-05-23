@@ -140,10 +140,20 @@ pub(crate) async fn ensure_ancestor_of(
             )
         })?;
 
-    Ok(target == descendant_cs_id
-        || lca_hint
-            .is_ancestor(ctx, &repo.changeset_fetcher_arc(), target, descendant_cs_id)
+    if tunables()
+        .by_repo_enable_new_commit_graph_is_ancestor(repo.repo_identity().name())
+        .unwrap_or_default()
+    {
+        Ok(repo
+            .commit_graph()
+            .is_ancestor(ctx, target, descendant_cs_id)
             .await?)
+    } else {
+        Ok(target == descendant_cs_id
+            || lca_hint
+                .is_ancestor(ctx, &repo.changeset_fetcher_arc(), target, descendant_cs_id)
+                .await?)
+    }
 }
 
 pub fn check_bookmark_sync_config(

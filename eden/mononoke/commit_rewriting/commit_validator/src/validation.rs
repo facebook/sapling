@@ -22,6 +22,7 @@ use bookmarks::BookmarksRef;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
 use cloned::cloned;
+use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::get_commit_sync_outcome;
@@ -59,7 +60,6 @@ use mononoke_types::MPath;
 use mononoke_types::RepositoryId;
 use movers::get_movers;
 use movers::Mover;
-use reachabilityindex::LeastCommonAncestorsHint;
 use ref_cast::RefCast;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
@@ -795,8 +795,10 @@ pub async fn unfold_bookmarks_update_log_entry(
             }
         }
         (Some(from_cs_id), Some(to_cs_id)) => {
-            if !lca_hint
-                .is_ancestor(ctx, &changeset_fetcher, from_cs_id, to_cs_id)
+            if !validation_helpers
+                .large_repo
+                .commit_graph()
+                .is_ancestor(ctx, from_cs_id, to_cs_id)
                 .await?
             {
                 info!(
@@ -1002,13 +1004,15 @@ pub async fn prepare_entry(
 
 /// Validate that parents of a changeset in a small repo are
 /// ancestors of it's equivalent in the large repo
-async fn validate_topological_order<'a, R: ChangesetFetcherArc + RepoIdentityRef>(
+async fn validate_topological_order<
+    'a,
+    R: ChangesetFetcherArc + RepoIdentityRef + CommitGraphArc,
+>(
     ctx: &'a CoreContext,
     large_repo: &'a Large<R>,
     large_cs_id: Large<ChangesetId>,
     small_repo: &'a Small<R>,
     small_cs_id: Small<ChangesetId>,
-    large_repo_lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     mapping: &'a SqlSyncedCommitMapping,
     commit_sync_data_provider: &'a CommitSyncDataProvider,
 ) -> Result<(), Error> {
@@ -1066,21 +1070,15 @@ async fn validate_topological_order<'a, R: ChangesetFetcherArc + RepoIdentityRef
         }))
         .await?;
 
-    let large_repo_fetcher = large_repo.0.changeset_fetcher_arc();
+    let large_repo_commit_graph = large_repo.0.commit_graph_arc();
     try_join_all(remapped_small_parents.into_iter().map(
         |(small_parent, remapping_of_small_parent)| {
-            cloned!(ctx, large_repo_lca_hint, large_repo_fetcher);
+            cloned!(ctx, large_repo_commit_graph);
             async move {
-                let is_ancestor = large_repo_lca_hint
-                    .is_ancestor(
-                        &ctx,
-                        &large_repo_fetcher,
-                        remapping_of_small_parent,
-                        large_cs_id.0.clone(),
-                    )
-                    .await?;
-
-                if !is_ancestor {
+                if !large_repo_commit_graph
+                    .is_ancestor(&ctx, remapping_of_small_parent, large_cs_id.0.clone())
+                    .await?
+                {
                     Err(format_err!(
                         "{} (remapping of parent {} of {} in {}) is not an ancestor of {} in {}",
                         remapping_of_small_parent,
@@ -1398,7 +1396,6 @@ async fn validate_in_a_single_repo(
     small_cs_id: Small<ChangesetId>,
     large_repo_full_manifest_diff: Large<FullManifestDiff>,
     small_repo_full_manifest_diff: Small<FullManifestDiff>,
-    large_repo_lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     small_to_large_mover: Mover,
     large_to_small_mover: Mover,
     mapping: SqlSyncedCommitMapping,
@@ -1421,7 +1418,6 @@ async fn validate_in_a_single_repo(
         large_cs_id,
         &validation_helper.small_repo,
         small_cs_id,
-        large_repo_lca_hint,
         &mapping,
         &CommitSyncDataProvider::Live(Arc::new(validation_helper.live_commit_sync_config.clone())),
     )
@@ -1442,10 +1438,9 @@ pub async fn validate_entry(
         preparation_duration,
     } = prepared_entry;
 
-    let large_repo_lca_hint = &validation_helpers.large_repo.0.skiplist_index;
     let small_repo_validation_futs = small_repo_full_manifest_diffs.into_iter().map(
         |(repo_id, (small_cs_id, small_repo_full_manifest_diff, version_name))| {
-            cloned!(large_repo_full_manifest_diff, large_repo_lca_hint);
+            cloned!(large_repo_full_manifest_diff);
 
             let entry_id = &entry_id;
             let large_repo = &validation_helpers.large_repo;
@@ -1475,7 +1470,6 @@ pub async fn validate_entry(
                                 small_cs_id,
                                 large_repo_full_manifest_diff,
                                 small_repo_full_manifest_diff,
-                                large_repo_lca_hint,
                                 small_to_large_mover,
                                 large_to_small_mover,
                                 mapping,
@@ -1626,7 +1620,6 @@ mod tests {
     use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
     use maplit::hashmap;
-    use skiplist::SkiplistIndex;
     use tests_utils::CommitIdentifier;
     use tests_utils::CreateCommitContext;
     use tokio::runtime::Runtime;
@@ -1674,7 +1667,6 @@ mod tests {
         let small_to_large_commit_syncer = syncers.small_to_large;
         let small_repo = small_to_large_commit_syncer.get_small_repo();
         let large_repo = small_to_large_commit_syncer.get_large_repo();
-        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
 
         let large_commits = add_commits_to_repo(&ctx, large_repo_commits_spec, large_repo).await?;
         let small_commits = add_commits_to_repo(&ctx, small_repo_commits_spec, small_repo).await?;
@@ -1704,7 +1696,6 @@ mod tests {
             Large(large_commits[large_index_to_test].clone()),
             &small_repo,
             Small(small_commits[small_index_to_test].clone()),
-            lca_hint,
             &small_to_large_commit_syncer.mapping,
             small_to_large_commit_syncer.get_commit_sync_data_provider(),
         )

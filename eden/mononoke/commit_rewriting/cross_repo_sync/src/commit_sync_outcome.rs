@@ -7,7 +7,6 @@
 
 use std::fmt;
 use std::pin::Pin;
-use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Error;
@@ -19,7 +18,6 @@ use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
-use reachabilityindex::LeastCommonAncestorsHint;
 use slog::debug;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::WorkingCopyEquivalence;
@@ -65,32 +63,16 @@ pub enum CandidateSelectionHint<R: Repo> {
     Exact(Target<ChangesetId>),
     /// Selected candidate should either be the only candidate
     /// or be an ancestor of a given bookmark
-    OnlyOrAncestorOfBookmark(
-        Target<BookmarkKey>,
-        Target<R>,
-        Target<Arc<dyn LeastCommonAncestorsHint>>,
-    ),
+    OnlyOrAncestorOfBookmark(Target<BookmarkKey>, Target<R>),
     /// Selected candidate should either be the only candidate
     /// or be a descendant of a given bookmark
-    OnlyOrDescendantOfBookmark(
-        Target<BookmarkKey>,
-        Target<R>,
-        Target<Arc<dyn LeastCommonAncestorsHint>>,
-    ),
+    OnlyOrDescendantOfBookmark(Target<BookmarkKey>, Target<R>),
     /// Selected candidate should either be the only candidate
     /// or be an ancestor of a given changeset
-    OnlyOrAncestorOfCommit(
-        Target<ChangesetId>,
-        Target<R>,
-        Target<Arc<dyn LeastCommonAncestorsHint>>,
-    ),
+    OnlyOrAncestorOfCommit(Target<ChangesetId>, Target<R>),
     /// Selected candidate should either be the only candidate
     /// or be a descendant of a given changeset
-    OnlyOrDescendantOfCommit(
-        Target<ChangesetId>,
-        Target<R>,
-        Target<Arc<dyn LeastCommonAncestorsHint>>,
-    ),
+    OnlyOrDescendantOfCommit(Target<ChangesetId>, Target<R>),
 }
 
 impl<R: Repo> fmt::Debug for CandidateSelectionHint<R> {
@@ -98,20 +80,20 @@ impl<R: Repo> fmt::Debug for CandidateSelectionHint<R> {
         match self {
             Self::Only => write!(f, "CandidateSelectionHint::Only"),
             Self::Exact(cs_id) => write!(f, "CandidateSelectionHint::Exact({})", cs_id.0),
-            Self::OnlyOrAncestorOfBookmark(bn, _, _) => {
+            Self::OnlyOrAncestorOfBookmark(bn, _) => {
                 write!(f, "DesiredRelationship::OnlyOrAncestorOfBookmark({})", bn.0)
             }
-            Self::OnlyOrDescendantOfBookmark(bn, _, _) => write!(
+            Self::OnlyOrDescendantOfBookmark(bn, _) => write!(
                 f,
                 "DesiredRelationship::OnlyOrDescendantOfBookmark({})",
                 bn.0
             ),
-            Self::OnlyOrAncestorOfCommit(cs_id, _, _) => write!(
+            Self::OnlyOrAncestorOfCommit(cs_id, _) => write!(
                 f,
                 "DesiredRelationship::OnlyOrAncestorOfCommit({})",
                 cs_id.0
             ),
-            Self::OnlyOrDescendantOfCommit(cs_id, _, _) => write!(
+            Self::OnlyOrDescendantOfCommit(cs_id, _) => write!(
                 f,
                 "DesiredRelationship::OnlyOrDescendantOfCommit({})",
                 cs_id.0
@@ -143,7 +125,19 @@ impl<R: Repo> CandidateSelectionHint<R> {
         match self {
             Self::Only => Ok(None),
             Self::Exact(cs_id) => Ok(Some(DesiredRelationship::EqualTo(cs_id))),
-            Self::OnlyOrAncestorOfBookmark(bookmark, target_repo, lca_hint) => {
+            Self::OnlyOrAncestorOfBookmark(bookmark, target_repo) => {
+                // Bookmark absence is not a failure, see doctring
+                let maybe_target_cs_id: Option<Target<ChangesetId>> = target_repo
+                    .0
+                    .bookmarks()
+                    .get(ctx.clone(), &bookmark.0)
+                    .await?
+                    .map(Target);
+
+                Ok(maybe_target_cs_id
+                    .map(|target_cs_id| DesiredRelationship::AncestorOf(target_cs_id, target_repo)))
+            }
+            Self::OnlyOrDescendantOfBookmark(bookmark, target_repo) => {
                 // Bookmark absence is not a failure, see doctring
                 let maybe_target_cs_id: Option<Target<ChangesetId>> = target_repo
                     .0
@@ -153,27 +147,14 @@ impl<R: Repo> CandidateSelectionHint<R> {
                     .map(Target);
 
                 Ok(maybe_target_cs_id.map(|target_cs_id| {
-                    DesiredRelationship::AncestorOf(target_cs_id, target_repo, lca_hint)
+                    DesiredRelationship::DescendantOf(target_cs_id, target_repo)
                 }))
             }
-            Self::OnlyOrDescendantOfBookmark(bookmark, target_repo, lca_hint) => {
-                // Bookmark absence is not a failure, see doctring
-                let maybe_target_cs_id: Option<Target<ChangesetId>> = target_repo
-                    .0
-                    .bookmarks()
-                    .get(ctx.clone(), &bookmark.0)
-                    .await?
-                    .map(Target);
-
-                Ok(maybe_target_cs_id.map(|target_cs_id| {
-                    DesiredRelationship::DescendantOf(target_cs_id, target_repo, lca_hint)
-                }))
-            }
-            Self::OnlyOrAncestorOfCommit(target_cs_id, target_repo, lca_hint) => Ok(Some(
-                DesiredRelationship::AncestorOf(target_cs_id, target_repo, lca_hint),
+            Self::OnlyOrAncestorOfCommit(target_cs_id, target_repo) => Ok(Some(
+                DesiredRelationship::AncestorOf(target_cs_id, target_repo),
             )),
-            Self::OnlyOrDescendantOfCommit(target_cs_id, target_repo, lca_hint) => Ok(Some(
-                DesiredRelationship::DescendantOf(target_cs_id, target_repo, lca_hint),
+            Self::OnlyOrDescendantOfCommit(target_cs_id, target_repo) => Ok(Some(
+                DesiredRelationship::DescendantOf(target_cs_id, target_repo),
             )),
         }
     }
@@ -430,18 +411,10 @@ fn get_only_item_selector<'a>(
 enum DesiredRelationship<R: Repo> {
     /// Changeset should be an ancestor of this variant's payload
     /// Note: in this case any changeset is an ancestor of itself
-    AncestorOf(
-        Target<ChangesetId>,
-        Target<R>,
-        Target<Arc<dyn LeastCommonAncestorsHint>>,
-    ),
+    AncestorOf(Target<ChangesetId>, Target<R>),
     /// Changeset should be a descendant of this variant's payload
     /// Note: in this case any changeset is a descendant of itself
-    DescendantOf(
-        Target<ChangesetId>,
-        Target<R>,
-        Target<Arc<dyn LeastCommonAncestorsHint>>,
-    ),
+    DescendantOf(Target<ChangesetId>, Target<R>),
     /// Changeset should the same as this variant's paylod
     EqualTo(Target<ChangesetId>),
 }
@@ -449,10 +422,10 @@ enum DesiredRelationship<R: Repo> {
 impl<R: Repo> fmt::Debug for DesiredRelationship<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::AncestorOf(cs_id, _, _) => {
+            Self::AncestorOf(cs_id, _) => {
                 write!(f, "DesiredRelationship::AncsetorOf({})", cs_id.0)
             }
-            Self::DescendantOf(cs_id, _, _) => {
+            Self::DescendantOf(cs_id, _) => {
                 write!(f, "DesiredRelationship::DescendantOf({})", cs_id.0)
             }
             Self::EqualTo(cs_id) => write!(f, "DesiredRelationship::EqualTo({})", cs_id.0),
@@ -465,8 +438,8 @@ impl<R: Repo> DesiredRelationship<R> {
     fn cs_id(&self) -> Target<ChangesetId> {
         match self {
             Self::EqualTo(cs_id) => *cs_id,
-            Self::AncestorOf(cs_id, _, _) => *cs_id,
-            Self::DescendantOf(cs_id, _, _) => *cs_id,
+            Self::AncestorOf(cs_id, _) => *cs_id,
+            Self::DescendantOf(cs_id, _) => *cs_id,
         }
     }
 
@@ -478,11 +451,11 @@ impl<R: Repo> DesiredRelationship<R> {
         target_repo_id: Target<RepositoryId>,
     ) -> String {
         match self {
-            Self::AncestorOf(cs_id, _, _) => format!(
+            Self::AncestorOf(cs_id, _) => format!(
                 "{} does not rewrite into any ancestor of {} in {}",
                 original_source_cs_id, cs_id.0, target_repo_id.0
             ),
-            Self::DescendantOf(cs_id, _, _) => format!(
+            Self::DescendantOf(cs_id, _) => format!(
                 "{} does not rewrite into any descendant of {} in {}",
                 original_source_cs_id, cs_id.0, target_repo_id.0
             ),
@@ -503,11 +476,11 @@ impl<R: Repo> DesiredRelationship<R> {
         target_repo_id: Target<RepositoryId>,
     ) -> String {
         match self {
-            Self::AncestorOf(cs_id, _, _) => format!(
+            Self::AncestorOf(cs_id, _) => format!(
                 "{} rewrites into multiple ancestors of {} in {}: {}, {} (may be more)",
                 original_source_cs_id, cs_id.0, target_repo_id.0, target_cs_id_1, target_cs_id_2
             ),
-            Self::DescendantOf(cs_id, _, _) => format!(
+            Self::DescendantOf(cs_id, _) => format!(
                 "{} rewrites into multiple descendants of {} in {}: {}, {} (may be more)",
                 original_source_cs_id, cs_id.0, target_repo_id.0, target_cs_id_1, target_cs_id_2
             ),
@@ -532,28 +505,16 @@ impl<R: Repo> DesiredRelationship<R> {
 
         match self {
             Self::EqualTo(expected_cs_id) => Ok(target_cs_id == *expected_cs_id),
-            Self::AncestorOf(comparison_cs_id, target_repo, target_repo_lca_hint) => {
-                let target_repo_fetcher = target_repo.changeset_fetcher_arc();
-                target_repo_lca_hint
-                    .0
-                    .is_ancestor(
-                        ctx,
-                        &target_repo_fetcher,
-                        target_cs_id.0,
-                        comparison_cs_id.0,
-                    )
+            Self::AncestorOf(comparison_cs_id, target_repo) => {
+                target_repo
+                    .commit_graph()
+                    .is_ancestor(ctx, target_cs_id.0, comparison_cs_id.0)
                     .await
             }
-            Self::DescendantOf(comparison_cs_id, target_repo, target_repo_lca_hint) => {
-                let target_repo_fetcher = target_repo.changeset_fetcher_arc();
-                target_repo_lca_hint
-                    .0
-                    .is_ancestor(
-                        ctx,
-                        &target_repo_fetcher,
-                        comparison_cs_id.0,
-                        target_cs_id.0,
-                    )
+            Self::DescendantOf(comparison_cs_id, target_repo) => {
+                target_repo
+                    .commit_graph()
+                    .is_ancestor(ctx, comparison_cs_id.0, target_cs_id.0)
                     .await
             }
         }
@@ -667,6 +628,8 @@ impl PluralCommitSyncOutcome {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use bookmarks::BookmarkUpdateReason;
     use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
@@ -675,7 +638,6 @@ mod tests {
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
-    use skiplist::SkiplistIndex;
     use sql::rusqlite::Connection as SqliteConnection;
     use sql::Connection;
     use sql_construct::SqlConstruct;
@@ -788,8 +750,6 @@ mod tests {
             .with_id(LARGE_REPO_ID)
             .build()
             .await?;
-        let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
-            Target(Arc::new(SkiplistIndex::new()));
         let dag = create_from_dag(
             &ctx,
             &blob_repo,
@@ -812,7 +772,7 @@ mod tests {
             &ctx,
             vec![c, f],
             c,
-            OnlyOrAncestorOfCommit(Target(e), Target(blob_repo.clone()), lca_hint.clone()),
+            OnlyOrAncestorOfCommit(Target(e), Target(blob_repo.clone())),
         )
         .await?;
 
@@ -822,7 +782,7 @@ mod tests {
             &ctx,
             vec![c, f],
             f,
-            OnlyOrAncestorOfCommit(Target(g), Target(blob_repo.clone()), lca_hint.clone()),
+            OnlyOrAncestorOfCommit(Target(g), Target(blob_repo.clone())),
         )
         .await?;
 
@@ -832,7 +792,7 @@ mod tests {
             &ctx,
             vec![c, f],
             c,
-            OnlyOrAncestorOfCommit(Target(c), Target(blob_repo.clone()), lca_hint.clone()),
+            OnlyOrAncestorOfCommit(Target(c), Target(blob_repo.clone())),
         )
         .await?;
 
@@ -842,7 +802,7 @@ mod tests {
             &ctx,
             vec![c],
             c,
-            OnlyOrAncestorOfCommit(Target(f), Target(blob_repo.clone()), lca_hint.clone()),
+            OnlyOrAncestorOfCommit(Target(f), Target(blob_repo.clone())),
         )
         .await?;
 
@@ -851,7 +811,7 @@ mod tests {
             &ctx,
             vec![c, e],
             "does not rewrite into any ancestor of",
-            OnlyOrAncestorOfCommit(Target(g), Target(blob_repo.clone()), lca_hint.clone()),
+            OnlyOrAncestorOfCommit(Target(g), Target(blob_repo.clone())),
         )
         .await?;
 
@@ -860,7 +820,7 @@ mod tests {
             &ctx,
             vec![c, e],
             "rewrites into multiple ancestors of",
-            OnlyOrAncestorOfCommit(Target(e), Target(blob_repo.clone()), lca_hint.clone()),
+            OnlyOrAncestorOfCommit(Target(e), Target(blob_repo.clone())),
         )
         .await?;
 
@@ -871,8 +831,6 @@ mod tests {
     async fn test_descendant_hint_selector(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let blob_repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
-        let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
-            Target(Arc::new(SkiplistIndex::new()));
         let dag = create_from_dag(
             &ctx,
             &blob_repo,
@@ -899,7 +857,7 @@ mod tests {
             &ctx,
             vec![e, j],
             e,
-            OnlyOrDescendantOfCommit(Target(d), Target(blob_repo.clone()), lca_hint.clone()),
+            OnlyOrDescendantOfCommit(Target(d), Target(blob_repo.clone())),
         )
         .await?;
 
@@ -909,7 +867,7 @@ mod tests {
             &ctx,
             vec![e, g],
             g,
-            OnlyOrDescendantOfCommit(Target(f), Target(blob_repo.clone()), lca_hint.clone()),
+            OnlyOrDescendantOfCommit(Target(f), Target(blob_repo.clone())),
         )
         .await?;
 
@@ -918,7 +876,7 @@ mod tests {
             &ctx,
             vec![e, g],
             g,
-            OnlyOrDescendantOfCommit(Target(g), Target(blob_repo.clone()), lca_hint.clone()),
+            OnlyOrDescendantOfCommit(Target(g), Target(blob_repo.clone())),
         )
         .await?;
 
@@ -928,7 +886,7 @@ mod tests {
             &ctx,
             vec![e],
             e,
-            OnlyOrDescendantOfCommit(Target(g), Target(blob_repo.clone()), lca_hint.clone()),
+            OnlyOrDescendantOfCommit(Target(g), Target(blob_repo.clone())),
         )
         .await?;
 
@@ -937,7 +895,7 @@ mod tests {
             &ctx,
             vec![e, j],
             "does not rewrite into any descendant of",
-            OnlyOrDescendantOfCommit(Target(f), Target(blob_repo.clone()), lca_hint.clone()),
+            OnlyOrDescendantOfCommit(Target(f), Target(blob_repo.clone())),
         )
         .await?;
 
@@ -946,7 +904,7 @@ mod tests {
             &ctx,
             vec![e, d],
             "rewrites into multiple descendants of",
-            OnlyOrDescendantOfCommit(Target(b), Target(blob_repo.clone()), lca_hint.clone()),
+            OnlyOrDescendantOfCommit(Target(b), Target(blob_repo.clone())),
         )
         .await?;
 
@@ -1004,8 +962,6 @@ mod tests {
             .with_id(LARGE_REPO_ID)
             .build()
             .await?;
-        let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
-            Target(Arc::new(SkiplistIndex::new()));
         let dag = create_from_dag(
             &ctx,
             &blob_repo,
@@ -1033,11 +989,7 @@ mod tests {
             &ctx,
             vec![c, f],
             c,
-            OnlyOrAncestorOfBookmark(
-                Target(book_e.clone()),
-                Target(blob_repo.clone()),
-                lca_hint.clone(),
-            ),
+            OnlyOrAncestorOfBookmark(Target(book_e.clone()), Target(blob_repo.clone())),
         )
         .await?;
 
@@ -1046,11 +998,7 @@ mod tests {
             &ctx,
             vec![f],
             f,
-            OnlyOrAncestorOfBookmark(
-                Target(book_g.clone()),
-                Target(blob_repo.clone()),
-                lca_hint.clone(),
-            ),
+            OnlyOrAncestorOfBookmark(Target(book_g.clone()), Target(blob_repo.clone())),
         )
         .await?;
 
@@ -1059,7 +1007,7 @@ mod tests {
             &ctx,
             vec![f, g],
             "does not rewrite into any ancestor of",
-            OnlyOrAncestorOfBookmark(Target(book_e), Target(blob_repo.clone()), lca_hint.clone()),
+            OnlyOrAncestorOfBookmark(Target(book_e), Target(blob_repo.clone())),
         )
         .await?;
 

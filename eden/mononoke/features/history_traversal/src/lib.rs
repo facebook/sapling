@@ -22,6 +22,7 @@ use blobrepo::AsBlobRepo;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetsRef;
+use commit_graph::CommitGraphRef;
 pub use log::list_file_history;
 pub use log::CsAndPath;
 pub use log::FastlogError;
@@ -54,5 +55,6 @@ pub trait Repo = AsBlobRepo
     + RepoDerivedDataRef
     + RepoIdentityRef
     + SkiplistIndexRef
+    + CommitGraphRef
     + Send
     + Sync;

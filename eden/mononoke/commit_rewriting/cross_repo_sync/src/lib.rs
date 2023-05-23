@@ -82,7 +82,6 @@ use phases::Phases;
 use phases::PhasesRef;
 use pushrebase::do_pushrebase_bonsai;
 use pushrebase::PushrebaseError;
-use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
@@ -1173,13 +1172,12 @@ where
         ctx: &'a CoreContext,
         source_cs: BonsaiChangeset,
         bookmark: BookmarkKey,
-        target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>>,
         commit_sync_context: CommitSyncContext,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = source_cs.get_changeset_id();
         let before = Instant::now();
         let res = self
-            .unsafe_sync_commit_pushrebase_impl(ctx, source_cs, bookmark, target_lca_hint)
+            .unsafe_sync_commit_pushrebase_impl(ctx, source_cs, bookmark)
             .await;
         let elapsed = before.elapsed();
 
@@ -1206,7 +1204,6 @@ where
         ctx: &'a CoreContext,
         source_cs: BonsaiChangeset,
         bookmark: BookmarkKey,
-        target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>>,
     ) -> Result<Option<ChangesetId>, Error> {
         let hash = source_cs.get_changeset_id();
         let (source_repo, target_repo) = self.get_source_target();
@@ -1214,7 +1211,6 @@ where
         let parent_selection_hint = CandidateSelectionHint::OnlyOrAncestorOfBookmark(
             Target(bookmark.clone()),
             Target(self.get_target_repo().clone()),
-            target_lca_hint,
         );
 
         let mut remapped_parents_outcome = vec![];

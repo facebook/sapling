@@ -12,9 +12,9 @@ use anyhow::Error;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateReason;
-use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
+use commit_graph::CommitGraph;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use futures::future::try_join;
 use futures::future::try_join_all;
@@ -33,7 +33,6 @@ use mononoke_hg_sync_job_helper_lib::write_to_named_temp_file;
 use mononoke_types::datetime::Timestamp;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
-use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use slog::info;
 use slog::warn;
@@ -108,8 +107,7 @@ impl BundlePreparer {
 
         split_in_batches(
             ctx,
-            &self.repo.skiplist_index,
-            &self.repo.changeset_fetcher_arc(),
+            self.repo.commit_graph(),
             overlay,
             entries,
             commit_limit,
@@ -360,8 +358,7 @@ impl BookmarkLogEntryBatch {
     pub async fn try_append(
         &mut self,
         ctx: &CoreContext,
-        lca_hint: &dyn LeastCommonAncestorsHint,
-        changeset_fetcher: &ArcChangesetFetcher,
+        commit_graph: &CommitGraph,
         overlay: &mut BookmarkOverlay,
         entry: BookmarkUpdateLogEntry,
         commit_limit: u64,
@@ -389,8 +386,8 @@ impl BookmarkLogEntryBatch {
         // moves to a separate branch
         match (entry.from_changeset_id, entry.to_changeset_id) {
             (Some(from_cs_id), Some(to_cs_id)) => {
-                let is_ancestor = lca_hint
-                    .is_ancestor(ctx, changeset_fetcher, from_cs_id, to_cs_id)
+                let is_ancestor = commit_graph
+                    .is_ancestor(ctx, from_cs_id, to_cs_id)
                     .watched(ctx.logger())
                     .await?;
                 if !is_ancestor {
@@ -412,14 +409,14 @@ impl BookmarkLogEntryBatch {
                     async {
                         match self.from_cs_id {
                             Some(from_cs_id) => {
-                                changeset_fetcher
-                                    .get_generation_number(ctx, from_cs_id)
+                                commit_graph
+                                    .changeset_generation_required(ctx, from_cs_id)
                                     .await
                             }
                             None => Ok(Generation::new(0)),
                         }
                     },
-                    changeset_fetcher.get_generation_number(ctx, to_cs_id),
+                    commit_graph.changeset_generation_required(ctx, to_cs_id),
                 )
                 .await?;
                 if let Some(diff) = to_gen.difference_from(from_gen) {
@@ -448,8 +445,7 @@ impl BookmarkLogEntryBatch {
 
 async fn split_in_batches(
     ctx: &CoreContext,
-    lca_hint: &dyn LeastCommonAncestorsHint,
-    changeset_fetcher: &ArcChangesetFetcher,
+    commit_graph: &CommitGraph,
     overlay: Arc<Mutex<BookmarkOverlay>>,
     entries: Vec<BookmarkUpdateLogEntry>,
     commit_limit: u64,
@@ -460,14 +456,7 @@ async fn split_in_batches(
     for entry in entries {
         let entry = match batches.last_mut() {
             Some(batch) => match batch
-                .try_append(
-                    ctx,
-                    lca_hint,
-                    changeset_fetcher,
-                    &mut overlay,
-                    entry,
-                    commit_limit,
-                )
+                .try_append(ctx, commit_graph, &mut overlay, entry, commit_limit)
                 .watched(ctx.logger())
                 .await?
             {
@@ -552,19 +541,52 @@ impl BookmarkLogEntryBatch {
 #[cfg(test)]
 mod test {
 
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
+    use changeset_fetcher::ChangesetFetcher;
+    use changesets::Changesets;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use maplit::hashmap;
     use mononoke_types::RepositoryId;
-    use skiplist::SkiplistIndex;
+    use repo_blobstore::RepoBlobstore;
+    use repo_derived_data::RepoDerivedData;
     use tests_utils::drawdag::create_from_dag;
-    use tests_utils::BasicTestRepo;
 
     use super::*;
+
+    #[facet::container]
+    #[derive(Clone)]
+    pub struct TestRepo {
+        #[facet]
+        pub repo_blobstore: RepoBlobstore,
+
+        #[facet]
+        pub changesets: dyn Changesets,
+
+        #[facet]
+        pub changeset_fetcher: dyn ChangesetFetcher,
+
+        #[facet]
+        pub bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+        #[facet]
+        pub bookmarks: dyn Bookmarks,
+
+        #[facet]
+        pub filestore_config: FilestoreConfig,
+
+        #[facet]
+        pub repo_derived_data: RepoDerivedData,
+
+        #[facet]
+        pub commit_graph: CommitGraph,
+    }
 
     #[fbinit::test]
     async fn test_split_in_batches_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let commits = create_from_dag(
             &ctx,
@@ -574,8 +596,6 @@ mod test {
             "##,
         )
         .await?;
-
-        let sli: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
 
         let main = BookmarkKey::new("main")?;
         let commit = commits.get("A").cloned().unwrap();
@@ -588,8 +608,7 @@ mod test {
         let overlay = Arc::new(Mutex::new(BookmarkOverlay::new(Arc::new(hashmap! {}))));
         let res = split_in_batches(
             &ctx,
-            &sli,
-            &repo.changeset_fetcher_arc(),
+            repo.commit_graph(),
             overlay.clone(),
             entries.clone(),
             1000,
@@ -613,7 +632,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_in_batches_all_in_one_batch(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let commits = create_from_dag(
             &ctx,
@@ -623,8 +642,6 @@ mod test {
             "##,
         )
         .await?;
-
-        let sli: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
 
         let main = BookmarkKey::new("main")?;
         let commit_a = commits.get("A").cloned().unwrap();
@@ -638,8 +655,7 @@ mod test {
         let overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
         let res = split_in_batches(
             &ctx,
-            &sli,
-            &repo.changeset_fetcher_arc(),
+            repo.commit_graph(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
             1000,
@@ -658,7 +674,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_in_batches_commit_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let commits = create_from_dag(
             &ctx,
@@ -668,8 +684,6 @@ mod test {
             "##,
         )
         .await?;
-
-        let sli: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
 
         let main = BookmarkKey::new("main")?;
         let commit_a = commits.get("A").cloned().unwrap();
@@ -683,8 +697,7 @@ mod test {
         let overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
         let res = split_in_batches(
             &ctx,
-            &sli,
-            &repo.changeset_fetcher_arc(),
+            repo.commit_graph(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
             2,
@@ -708,7 +721,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_in_batches_different_bookmarks(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let commits = create_from_dag(
             &ctx,
@@ -718,8 +731,6 @@ mod test {
             "##,
         )
         .await?;
-
-        let sli: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
 
         let main = BookmarkKey::new("main")?;
         let another = BookmarkKey::new("another")?;
@@ -738,8 +749,7 @@ mod test {
         let overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
         let res = split_in_batches(
             &ctx,
-            &sli,
-            &repo.changeset_fetcher_arc(),
+            repo.commit_graph(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
             1000,
@@ -768,7 +778,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_in_batches_non_forward_move(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let commits = create_from_dag(
             &ctx,
@@ -778,8 +788,6 @@ mod test {
             "##,
         )
         .await?;
-
-        let sli: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
 
         let main = BookmarkKey::new("main")?;
         let commit_a = commits.get("A").cloned().unwrap();
@@ -798,8 +806,7 @@ mod test {
         let overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
         let res = split_in_batches(
             &ctx,
-            &sli,
-            &repo.changeset_fetcher_arc(),
+            repo.commit_graph(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
             1000,
@@ -823,7 +830,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_in_batches_weird_move(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let commits = create_from_dag(
             &ctx,
@@ -833,8 +840,6 @@ mod test {
             "##,
         )
         .await?;
-
-        let sli: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
 
         let main = BookmarkKey::new("main")?;
         let commit_a = commits.get("A").cloned().unwrap();
@@ -847,8 +852,7 @@ mod test {
         let overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
         let res = split_in_batches(
             &ctx,
-            &sli,
-            &repo.changeset_fetcher_arc(),
+            repo.commit_graph(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
             1000,
@@ -872,7 +876,7 @@ mod test {
     #[fbinit::test]
     async fn test_maybe_adjust_batch(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let commits = create_from_dag(
             &ctx,
@@ -883,8 +887,6 @@ mod test {
             "##,
         )
         .await?;
-
-        let sli: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
 
         let main = BookmarkKey::new("main")?;
         let commit_a = commits.get("A").cloned().unwrap();
@@ -902,8 +904,7 @@ mod test {
         let overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
         let mut batch = split_in_batches(
             &ctx,
-            &sli,
-            &repo.changeset_fetcher_arc(),
+            repo.commit_graph(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
             1000,
@@ -922,8 +923,7 @@ mod test {
         }));
         let mut batch = split_in_batches(
             &ctx,
-            &sli,
-            &repo.changeset_fetcher_arc(),
+            repo.commit_graph(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
             1000,
@@ -945,8 +945,7 @@ mod test {
         }));
         let mut batch = split_in_batches(
             &ctx,
-            &sli,
-            &repo.changeset_fetcher_arc(),
+            repo.commit_graph(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
             1000,
@@ -968,8 +967,7 @@ mod test {
         }));
         let mut batch = split_in_batches(
             &ctx,
-            &sli,
-            &repo.changeset_fetcher_arc(),
+            repo.commit_graph(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
             1000,
@@ -990,8 +988,7 @@ mod test {
         }));
         let mut batch = split_in_batches(
             &ctx,
-            &sli,
-            &repo.changeset_fetcher_arc(),
+            repo.commit_graph(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
             1000,

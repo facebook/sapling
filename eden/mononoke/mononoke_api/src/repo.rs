@@ -119,7 +119,6 @@ use phases::Phases;
 use phases::PhasesArc;
 use phases::PhasesRef;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
-use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use repo_authorization::AuthorizationContext;
 use repo_blobstore::ArcRepoBlobstore;
@@ -1527,12 +1526,8 @@ impl RepoContext {
             .await
     }
 
-    fn get_target_repo_and_lca_hint(
-        &self,
-    ) -> (Target<Repo>, Target<Arc<dyn LeastCommonAncestorsHint>>) {
-        let repo = self.repo().clone();
-        let lca_hint = self.repo.skiplist_index_arc();
-        (Target(repo), Target(lca_hint))
+    fn target_repo(&self) -> Target<Repo> {
+        Target(self.repo().clone())
     }
 
     async fn build_candidate_selection_hint(
@@ -1548,23 +1543,21 @@ impl RepoContext {
         use CandidateSelectionHintArgs::*;
         match args {
             OnlyOrAncestorOfBookmark(bookmark) => {
-                let (repo, lca_hint) = other_repo_context.get_target_repo_and_lca_hint();
+                let repo = other_repo_context.target_repo();
                 Ok(CandidateSelectionHint::OnlyOrAncestorOfBookmark(
                     Target(bookmark),
                     repo,
-                    lca_hint,
                 ))
             }
             OnlyOrDescendantOfBookmark(bookmark) => {
-                let (repo, lca_hint) = other_repo_context.get_target_repo_and_lca_hint();
+                let repo = other_repo_context.target_repo();
                 Ok(CandidateSelectionHint::OnlyOrDescendantOfBookmark(
                     Target(bookmark),
                     repo,
-                    lca_hint,
                 ))
             }
             OnlyOrAncestorOfCommit(specifier) => {
-                let (repo, lca_hint) = other_repo_context.get_target_repo_and_lca_hint();
+                let repo = other_repo_context.target_repo();
                 let cs_id = other_repo_context
                     .resolve_specifier(specifier)
                     .await?
@@ -1577,11 +1570,10 @@ impl RepoContext {
                 Ok(CandidateSelectionHint::OnlyOrAncestorOfCommit(
                     Target(cs_id),
                     repo,
-                    lca_hint,
                 ))
             }
             OnlyOrDescendantOfCommit(specifier) => {
-                let (repo, lca_hint) = other_repo_context.get_target_repo_and_lca_hint();
+                let repo = other_repo_context.target_repo();
                 let cs_id = other_repo_context
                     .resolve_specifier(specifier)
                     .await?
@@ -1594,7 +1586,6 @@ impl RepoContext {
                 Ok(CandidateSelectionHint::OnlyOrDescendantOfCommit(
                     Target(cs_id),
                     repo,
-                    lca_hint,
                 ))
             }
             Exact(specifier) => {

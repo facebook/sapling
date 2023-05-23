@@ -33,7 +33,6 @@ mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 movers = { version = "0.1.0", path = "../movers" }
 mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
-reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 ref-cast = "1.0.16"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
@@ -50,5 +49,4 @@ tunables = { version = "0.1.0", path = "../../tunables" }
 [dev-dependencies]
 cross_repo_sync_test_utils = { version = "0.1.0", path = "../cross_repo_sync/test_utils" }
 maplit = "1.0"
-skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

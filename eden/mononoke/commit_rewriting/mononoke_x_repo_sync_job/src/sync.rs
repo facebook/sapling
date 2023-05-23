@@ -39,7 +39,6 @@ use futures_old::Future;
 use futures_stats::TimedFutureExt;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
-use reachabilityindex::LeastCommonAncestorsHint;
 use reachabilityindex::ReachabilityIndex;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
@@ -292,10 +291,9 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
                 ctx.logger(),
                 "syncing {} via pushrebase for {}", cs_id, bookmark
             );
-            let (stats, result) =
-                pushrebase_commit(ctx, commit_syncer, bookmark, cs_id, target_skiplist_index)
-                    .timed()
-                    .await;
+            let (stats, result) = pushrebase_commit(ctx, commit_syncer, bookmark, cs_id)
+                .timed()
+                .await;
             log_pushrebase_sync_single_changeset_result(
                 ctx.clone(),
                 scuba_sample.clone(),
@@ -427,15 +425,28 @@ async fn check_forward_move<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     to_cs_id: ChangesetId,
     from_cs_id: ChangesetId,
 ) -> Result<(), Error> {
-    if !skiplist_index
-        .query_reachability(
-            ctx,
-            &commit_syncer.get_source_repo().changeset_fetcher_arc(),
-            to_cs_id,
-            from_cs_id,
+    let is_ancestor = if tunables::tunables()
+        .by_repo_enable_new_commit_graph_is_ancestor(
+            commit_syncer.get_source_repo().repo_identity().name(),
         )
-        .await?
+        .unwrap_or_default()
     {
+        commit_syncer
+            .get_source_repo()
+            .commit_graph()
+            .is_ancestor(ctx, from_cs_id, to_cs_id)
+            .await?
+    } else {
+        skiplist_index
+            .query_reachability(
+                ctx,
+                &commit_syncer.get_source_repo().changeset_fetcher_arc(),
+                to_cs_id,
+                from_cs_id,
+            )
+            .await?
+    };
+    if !is_ancestor {
         return Err(format_err!(
             "non-forward moves of shared bookmarks are not allowed"
         ));
@@ -466,21 +477,11 @@ async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     commit_syncer: &CommitSyncer<M, R>,
     bookmark: &BookmarkKey,
     cs_id: ChangesetId,
-    target_skiplist_index: &Target<Arc<SkiplistIndex>>,
 ) -> Result<Option<ChangesetId>, Error> {
     let source_repo = commit_syncer.get_source_repo();
     let bcs = cs_id.load(ctx, source_repo.repo_blobstore()).await?;
-    // TODO: do not require clone here
-    let target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
-        Target(Arc::new((*target_skiplist_index.0).clone()));
     commit_syncer
-        .unsafe_sync_commit_pushrebase(
-            ctx,
-            bcs,
-            bookmark.clone(),
-            target_lca_hint,
-            CommitSyncContext::XRepoSyncJob,
-        )
+        .unsafe_sync_commit_pushrebase(ctx, bcs, bookmark.clone(), CommitSyncContext::XRepoSyncJob)
         .await
 }
 

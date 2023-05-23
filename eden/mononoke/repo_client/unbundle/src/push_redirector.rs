@@ -861,7 +861,6 @@ impl<R: Repo> PushRedirector<R> {
             Some(bookmark) => CandidateSelectionHint::OnlyOrAncestorOfBookmark(
                 Target(bookmark.clone()),
                 Target(self.small_to_large_commit_syncer.get_target_repo().clone()),
-                Target(self.repo.skiplist_index_arc()),
             ),
             None => CandidateSelectionHint::Only,
         };

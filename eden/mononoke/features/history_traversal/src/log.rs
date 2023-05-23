@@ -960,21 +960,37 @@ async fn replace_ancestor_with_mutable_ancestor<'a>(
             // If it's on the path between current commit and next immutable
             // ancestor.  We start from cheap generation number test to exclude
             // the most cases.  Then we do a real ancestry check.
-            let res = try_join(
-                skiplist_index.is_ancestor(
-                    ctx,
-                    &repo.changeset_fetcher_arc(),
-                    *possible_ancestor_cs_id,
-                    *cs_id,
-                ),
-                skiplist_index.is_ancestor(
-                    ctx,
-                    &repo.changeset_fetcher_arc(),
-                    *immutable_ancestor_cs_id,
-                    *possible_ancestor_cs_id,
-                ),
-            )
-            .await?;
+            let res = if tunables::tunables()
+                .by_repo_enable_new_commit_graph_is_ancestor(repo.repo_identity().name())
+                .unwrap_or_default()
+            {
+                try_join(
+                    repo.commit_graph()
+                        .is_ancestor(ctx, *possible_ancestor_cs_id, *cs_id),
+                    repo.commit_graph().is_ancestor(
+                        ctx,
+                        *immutable_ancestor_cs_id,
+                        *possible_ancestor_cs_id,
+                    ),
+                )
+                .await?
+            } else {
+                try_join(
+                    skiplist_index.is_ancestor(
+                        ctx,
+                        &repo.changeset_fetcher_arc(),
+                        *possible_ancestor_cs_id,
+                        *cs_id,
+                    ),
+                    skiplist_index.is_ancestor(
+                        ctx,
+                        &repo.changeset_fetcher_arc(),
+                        *immutable_ancestor_cs_id,
+                        *possible_ancestor_cs_id,
+                    ),
+                )
+                .await?
+            };
             if res.0 && res.1 {
                 if let Some(rename) = mutable_renames
                     .get_rename(ctx, *possible_ancestor_cs_id, path.as_ref().clone())
@@ -1213,6 +1229,7 @@ mod test {
     use changeset_fetcher::ChangesetFetcherArc;
     use changesets::Changesets;
     use changesets::ChangesetsRef;
+    use commit_graph::CommitGraph;
     use context::CoreContext;
     use fastlog::RootFastlog;
     use fbinit::FacebookInit;
@@ -1244,6 +1261,7 @@ mod test {
             dyn BonsaiHgMapping,
             dyn ChangesetFetcher,
             dyn Changesets,
+            CommitGraph,
         )]
         pub blob_repo: BlobRepo,
 
