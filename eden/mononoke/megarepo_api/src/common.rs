@@ -78,6 +78,8 @@ pub struct SourceAndMovedChangesets {
     pub mutable_renames: Vec<MutableRenameEntry>,
 }
 
+const MAX_BOOKMARK_MOVE_ATTEMPTS: usize = 5;
+
 #[async_trait]
 pub trait MegarepoOp {
     fn mononoke(&self) -> &Arc<Mononoke>;
@@ -928,6 +930,30 @@ pub trait MegarepoOp {
     }
 
     async fn move_bookmark_conditionally(
+        &self,
+        ctx: &CoreContext,
+        repo: &impl Repo,
+        bookmark: String,
+        (from_cs_id, to_cs_id): (ChangesetId, ChangesetId),
+    ) -> Result<(), MegarepoError> {
+        let mut res = Ok(());
+        for _retry_num in 0..MAX_BOOKMARK_MOVE_ATTEMPTS {
+            res = self
+                .move_bookmark_conditionally_internal(
+                    ctx,
+                    repo,
+                    bookmark.clone(),
+                    (from_cs_id, to_cs_id),
+                )
+                .await;
+            if res.is_ok() {
+                break;
+            }
+        }
+        return res;
+    }
+
+    async fn move_bookmark_conditionally_internal(
         &self,
         ctx: &CoreContext,
         repo: &impl Repo,
