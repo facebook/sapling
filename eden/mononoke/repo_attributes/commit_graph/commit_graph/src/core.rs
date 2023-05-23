@@ -12,7 +12,7 @@ use anyhow::Result;
 use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::edges::ChangesetNodeParents;
-use commit_graph_types::ChangesetParents;
+use commit_graph_types::edges::ChangesetParents;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;

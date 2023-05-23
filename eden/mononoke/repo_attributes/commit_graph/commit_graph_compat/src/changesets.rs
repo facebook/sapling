@@ -18,7 +18,7 @@ use changesets::ChangesetInsert;
 use changesets::Changesets;
 use changesets::SortOrder;
 use commit_graph::ArcCommitGraph;
-use commit_graph_types::ChangesetParents;
+use commit_graph_types::edges::ChangesetParents;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::BoxStream;

@@ -5,13 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use mononoke_types::ChangesetId;
-use smallvec::SmallVec;
-
 pub mod edges;
+pub mod frontier;
 pub mod storage;
-
-/// The parents of a changeset.
-///
-/// This uses a smallvec, as there is usually exactly one.
-pub type ChangesetParents = SmallVec<[ChangesetId; 1]>;

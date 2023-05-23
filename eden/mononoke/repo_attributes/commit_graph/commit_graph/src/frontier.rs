@@ -7,7 +7,7 @@
 
 use anyhow::anyhow;
 use anyhow::Result;
-use commit_graph_types::edges::ChangesetFrontier;
+use commit_graph_types::frontier::ChangesetFrontier;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
 use mononoke_types::ChangesetId;

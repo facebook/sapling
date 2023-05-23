@@ -15,10 +15,10 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use commit_graph_types::edges::ChangesetFrontier;
+use commit_graph_types::edges::ChangesetParents;
+use commit_graph_types::frontier::ChangesetFrontier;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
-use commit_graph_types::ChangesetParents;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
