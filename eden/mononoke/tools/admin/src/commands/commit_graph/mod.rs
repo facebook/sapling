@@ -9,6 +9,7 @@ mod ancestors_difference;
 mod backfill;
 mod backfill_one;
 mod checkpoints;
+mod common_base;
 mod range_stream;
 mod update_preloaded;
 
@@ -25,6 +26,7 @@ use changesets::Changesets;
 use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
+use common_base::CommonBaseArgs;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
@@ -54,6 +56,8 @@ pub enum CommitGraphSubcommand {
     RangeStream(RangeStreamArgs),
     /// Update preloaded commit graph and upload it to blobstore.
     UpdatePreloaded(UpdatePreloadedArgs),
+    /// Display ids of all the highest generation commits among the common ancestors of two commits.
+    CommonBase(CommonBaseArgs),
 }
 
 #[facet::container]
@@ -106,6 +110,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         CommitGraphSubcommand::UpdatePreloaded(args) => {
             update_preloaded::update_preloaded(&ctx, &app, &repo, args).await
+        }
+        CommitGraphSubcommand::CommonBase(args) => {
+            common_base::common_base(&ctx, &repo, args).await
         }
     }
 }

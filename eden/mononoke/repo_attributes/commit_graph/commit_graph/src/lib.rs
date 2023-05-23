@@ -649,6 +649,36 @@ impl CommitGraph {
         }
     }
 
+    /// Lower the highest generation changesets of a frontier
+    /// to their immediate parents.
+    async fn lower_frontier_highest_generation(
+        &self,
+        ctx: &CoreContext,
+        frontier: &mut ChangesetFrontier,
+    ) -> Result<()> {
+        if let Some((_, cs_ids)) = frontier.pop_last() {
+            let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
+            let frontier_edges = self
+                .storage
+                .fetch_many_edges_required(ctx, &cs_ids, Prefetch::for_p1_linear_traversal())
+                .await?;
+
+            for cs_id in cs_ids {
+                let edges = frontier_edges
+                    .get(&cs_id)
+                    .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?;
+
+                for parent in edges.parents.iter() {
+                    frontier
+                        .entry(parent.generation)
+                        .or_default()
+                        .insert(parent.cs_id);
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Returns a frontier for the ancestors of heads
     /// that satisfy a given property.
     ///
@@ -919,6 +949,73 @@ impl CommitGraph {
         )
         .flatten()
         .boxed())
+    }
+
+    /// Returns all of the highest generation changesets that
+    /// are ancestors of both u and v, sorted by changeset id.
+    pub async fn common_base(
+        &self,
+        ctx: &CoreContext,
+        u: ChangesetId,
+        v: ChangesetId,
+    ) -> Result<Vec<ChangesetId>> {
+        let (mut u_frontier, mut v_frontier) =
+            futures::try_join!(self.single_frontier(ctx, u), self.single_frontier(ctx, v))?;
+
+        loop {
+            let u_gen = match u_frontier.last_key_value() {
+                Some((gen, _)) => *gen,
+                // if u_frontier is empty then there are no common ancestors.
+                None => return Ok(vec![]),
+            };
+
+            // lower v_frontier to the highest generation of u_frontier
+            self.lower_frontier(ctx, &mut v_frontier, u_gen).await?;
+
+            // Check if the highest generation of u_frontier intersects with v_frontier
+            // and return the intersection if so.
+            let mut intersection = u_frontier.highest_generation_intersection(&v_frontier);
+            if !intersection.is_empty() {
+                intersection.sort();
+                return Ok(intersection);
+            }
+
+            let u_highest_generation_edges = match u_frontier
+                .last_key_value()
+                .and_then(|(_, cs_ids)| cs_ids.iter().next())
+            {
+                Some(cs_id) => self.storage.fetch_edges_required(ctx, *cs_id).await?,
+                None => return Ok(vec![]),
+            };
+
+            // Try to lower u_frontier to the generation of one of its
+            // highest generation changesets' skip tree skew ancestor.
+            // This is optimized for the case where u_frontier has only
+            // one changeset, but is correct in all cases.
+            if let Some(ancestor) = u_highest_generation_edges.skip_tree_skew_ancestor {
+                let mut lowered_u_frontier = u_frontier.clone();
+                let mut lowered_v_frontier = v_frontier.clone();
+
+                self.lower_frontier(ctx, &mut lowered_u_frontier, ancestor.generation)
+                    .await?;
+                self.lower_frontier(ctx, &mut lowered_v_frontier, ancestor.generation)
+                    .await?;
+
+                // If the two lowered frontier are disjoint then it's safe to lower,
+                // otherwise there might be a higher generation common ancestor.
+                if lowered_u_frontier.is_disjoint(&lowered_v_frontier) {
+                    u_frontier = lowered_u_frontier;
+                    v_frontier = lowered_v_frontier;
+
+                    continue;
+                }
+            }
+
+            // If we could lower u_frontier using the skip tree skew ancestor
+            // lower only the highest generation instead.
+            self.lower_frontier_highest_generation(ctx, &mut u_frontier)
+                .await?;
+        }
     }
 }
 

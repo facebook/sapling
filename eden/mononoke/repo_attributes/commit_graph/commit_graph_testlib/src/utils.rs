@@ -322,3 +322,24 @@ pub async fn assert_p1_linear_lowest_common_ancestor(
     );
     Ok(())
 }
+
+pub async fn assert_common_base(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    u: &str,
+    v: &str,
+    common_base: Vec<&str>,
+) -> Result<()> {
+    assert_eq!(
+        graph
+            .common_base(ctx, name_cs_id(u), name_cs_id(v))
+            .await?
+            .into_iter()
+            .collect::<HashSet<_>>(),
+        common_base
+            .into_iter()
+            .map(name_cs_id)
+            .collect::<HashSet<_>>()
+    );
+    Ok(())
+}

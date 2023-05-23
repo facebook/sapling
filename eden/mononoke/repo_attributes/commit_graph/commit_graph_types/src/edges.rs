@@ -236,6 +236,7 @@ impl CompactChangesetEdges {
 }
 
 /// A frontier of changesets ordered by generation number.
+#[derive(Clone, Debug)]
 pub struct ChangesetFrontier(BTreeMap<Generation, HashSet<ChangesetId>>);
 
 impl ChangesetFrontier {
@@ -254,6 +255,32 @@ impl ChangesetFrontier {
                 *highest_frontier_generation == generation && cs_ids.contains(&cs_id)
             }
         }
+    }
+
+    pub fn highest_generation_intersection(
+        &self,
+        other_frontier: &ChangesetFrontier,
+    ) -> Vec<ChangesetId> {
+        match self.last_key_value() {
+            None => vec![],
+            Some((highest_frontier_generation, cs_ids)) => {
+                match other_frontier.get(highest_frontier_generation) {
+                    None => vec![],
+                    Some(other_cs_ids) => cs_ids.intersection(other_cs_ids).copied().collect(),
+                }
+            }
+        }
+    }
+
+    pub fn is_disjoint(&self, other_frontier: &ChangesetFrontier) -> bool {
+        for (gen, cs_ids) in self.iter().rev() {
+            if let Some(other_cs_ids) = other_frontier.get(gen) {
+                if !cs_ids.is_disjoint(other_cs_ids) {
+                    return false;
+                }
+            }
+        }
+        true
     }
 }
 

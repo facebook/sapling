@@ -38,6 +38,7 @@ macro_rules! impl_commit_graph_tests {
             test_add_recursive_many_changesets,
             test_ancestors_frontier_with,
             test_range_stream,
+            test_common_base,
         );
     };
 }
@@ -714,6 +715,39 @@ pub async fn test_range_stream(
     assert_range_stream(&graph, &ctx, "D", "K", vec!["D", "G", "H", "I", "J", "K"]).await?;
     assert_range_stream(&graph, &ctx, "A", "U", vec![]).await?;
     assert_range_stream(&graph, &ctx, "O", "T", vec!["O", "P", "Q", "R", "S", "T"]).await?;
+
+    Ok(())
+}
+
+pub async fn test_common_base(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorage>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r##"
+        A-B-C-D-E-L------N
+           \       \    /
+            F-G-H   M  /
+             \     /  /
+              I-J-K--/
+
+        O-P-Q-R-S-T-U-V-W
+        "##,
+        storage.clone(),
+    )
+    .await?;
+
+    assert_common_base(&graph, &ctx, "J", "J", vec!["J"]).await?;
+    assert_common_base(&graph, &ctx, "K", "J", vec!["J"]).await?;
+    assert_common_base(&graph, &ctx, "E", "H", vec!["B"]).await?;
+    assert_common_base(&graph, &ctx, "G", "J", vec!["F"]).await?;
+    assert_common_base(&graph, &ctx, "M", "N", vec!["K", "L"]).await?;
+    assert_common_base(&graph, &ctx, "L", "K", vec!["B"]).await?;
+    assert_common_base(&graph, &ctx, "M", "H", vec!["F"]).await?;
+    assert_common_base(&graph, &ctx, "A", "B", vec!["A"]).await?;
+    assert_common_base(&graph, &ctx, "N", "W", vec![]).await?;
+    assert_common_base(&graph, &ctx, "D", "Q", vec![]).await?;
 
     Ok(())
 }
