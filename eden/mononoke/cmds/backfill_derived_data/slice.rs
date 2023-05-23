@@ -11,6 +11,7 @@ use std::sync::Arc;
 use anyhow::Error;
 use anyhow::Result;
 use blobrepo::BlobRepo;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use derived_data_utils::DerivedUtils;
 use futures::stream;
@@ -18,7 +19,6 @@ use futures::stream::FuturesUnordered;
 use futures::stream::TryStreamExt;
 use mononoke_types::ChangesetId;
 use repo_derived_data::RepoDerivedDataArc;
-use skiplist::SkiplistIndex;
 
 /// Determine which heads are underived in any of the derivers.
 async fn underived_heads(
@@ -44,64 +44,35 @@ async fn underived_heads(
         .await
 }
 
-/// Slice a respository into a sequence of slices for derivation.
+/// Slices ancestors of heads into a sequence of slices for derivation.
 ///
-/// For large repositories with a long history, computing the full set of
-/// commits before beginning backfilling is slow, and cannot be resumed
-/// if interrupted.
-///
-/// This function makes large repositories more tractible by using the
-/// skiplist index to divide the repository history into "slices", where
-/// each slice consists of the commits known to the skiplist index that
-/// are within a range of generations.
-///
-/// Each slice's heads should be derived together and will be ancestors of
-/// subsequent slices.  The returned slices consist only of heads which
-/// haven't been derived by the provided derivers.  Slicing stops once
-/// all derived commits are reached.
-///
-/// For example, given a repository where the skiplists have the structure:
-///
-///     E (gen 450)
-///     :
-///     D (gen 350)
-///     :
-///     : C (gen 275)
-///     :/
-///     B (gen 180)
-///     :
-///     A (gen 1)
-///
-/// And a slice size of 200, this function will generate slices:
-///
-///     (0, [A, B])
-///     (200, [C, D])
-///     (400, [E])
-///
-/// If any of these heads are already derived then they are omitted.  Empty
-/// slices are also omitted.
+/// Each slice contains a frontier of changesets within a generation range, returning
+/// (slice_start, slice_frontier) corresponds to the frontier that has generations numbers
+/// within [slice_start..(slice_start + slice_size)].
 ///
 /// This allows derivation of the first slice with underived commits to begin
 /// more quickly, as the rest of the repository history doesn't need to be
-/// traversed (just the ancestors of B and A).
+/// traversed.
 ///
-/// Returns the number of slices, and an iterator where each item is
-/// (slice_id, heads).
+/// The returned slices consist only of frontiers which haven't been derived yet
+/// by the provided derivers. Slicing stops once we reach a frontier with all its
+/// changesets derived.
+///
+/// If any of these heads are already derived then they are omitted.  Empty
+/// slices are also omitted.
 pub(crate) async fn slice_repository(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    skiplist_index: &SkiplistIndex,
     derivers: &[Arc<dyn DerivedUtils>],
     heads: Vec<ChangesetId>,
     slice_size: u64,
 ) -> Result<Vec<(u64, Vec<ChangesetId>)>> {
-    slice_repository::slice_repository(
-        ctx,
-        repo,
-        skiplist_index,
-        heads,
-        |heads| async move { underived_heads(ctx, repo, derivers, heads.as_slice()).await },
-        slice_size,
-    )
-    .await
+    repo.commit_graph()
+        .slice_ancestors(
+            ctx,
+            heads,
+            |heads| async move { underived_heads(ctx, repo, derivers, heads.as_slice()).await },
+            slice_size,
+        )
+        .await
 }

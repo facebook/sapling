@@ -481,7 +481,7 @@ impl CommitGraph {
         }
     }
 
-    /// Slices ancestors of a vec of changesets into a sequence of slices for processing.
+    /// Slices ancestors of heads into a sequence of slices for processing.
     ///
     /// Each slice contains a frontier of changesets within a generation range, returning
     /// (slice_start, slice_frontier) corresponds to the frontier that has generations numbers

@@ -87,7 +87,6 @@ use repo_factory::RepoFactoryBuilder;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
-use skiplist::SkiplistIndex;
 use slog::info;
 use slog::Logger;
 use stats::prelude::*;
@@ -321,7 +320,7 @@ impl DerivedDataProcess {
                     .arg(
                         Arg::with_name(ARG_SLICED)
                             .long(ARG_SLICED)
-                            .help("pre-slice repository using the skiplist index when backfilling"),
+                            .help("pre-slice repository when backfilling"),
                     )
                     .arg(
                         Arg::with_name(ARG_SLICE_SIZE)
@@ -402,7 +401,7 @@ impl DerivedDataProcess {
                             .help("derive commits within a batch in parallel"),
                     )
                     .arg(Arg::with_name(ARG_SLICED).long(ARG_SLICED).help(
-                        "pre-slice repository into generation slices using the skiplist index",
+                        "pre-slice repository into generation slices",
                     ))
                     .arg(
                         Arg::with_name(ARG_SLICE_SIZE)
@@ -868,21 +867,11 @@ async fn run_subcmd<'a>(
 
             let resolved_repo = args::resolve_repo_by_name(config_store, matches, &repo_name)?;
 
-            let (blob_repo, skiplist) = if backfill {
-                let inner: InnerRepo =
-                    args::open_repo_by_id(fb, logger, matches, resolved_repo.id).await?;
-                (inner.blob_repo.clone(), Some(inner.skiplist_index))
-            } else {
-                (
-                    args::open_repo_by_id(fb, logger, matches, resolved_repo.id).await?,
-                    None,
-                )
-            };
+            let blob_repo = args::open_repo_by_id(fb, logger, matches, resolved_repo.id).await?;
 
             subcommand_tail(
                 ctx,
                 blob_repo,
-                skiplist,
                 use_shared_leases,
                 stop_on_idle,
                 batch_size,
@@ -1015,7 +1004,6 @@ async fn subcommand_backfill_all(
     backfill_heads(
         ctx,
         &repo.blob_repo,
-        Some(&repo.skiplist_index),
         derivers.as_ref(),
         heads,
         slice_size,
@@ -1030,7 +1018,6 @@ async fn subcommand_backfill_all(
 async fn backfill_heads(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    skiplist_index: Option<&SkiplistIndex>,
     derivers: &[Arc<dyn DerivedUtils>],
     heads: Vec<ChangesetId>,
     slice_size: Option<u64>,
@@ -1039,9 +1026,8 @@ async fn backfill_heads(
     gap_size: Option<usize>,
     wait_for_replication: WaitForReplication,
 ) -> Result<()> {
-    if let (Some(skiplist_index), Some(slice_size)) = (skiplist_index, slice_size) {
-        let slices =
-            slice::slice_repository(ctx, repo, skiplist_index, derivers, heads, slice_size).await?;
+    if let Some(slice_size) = slice_size {
+        let slices = slice::slice_repository(ctx, repo, derivers, heads, slice_size).await?;
         let slice_count = slices.len();
         for (index, (id, slice_heads)) in slices.into_iter().enumerate() {
             info!(
@@ -1208,7 +1194,6 @@ async fn subcommand_backfill(
 async fn subcommand_tail(
     ctx: &CoreContext,
     repo: BlobRepo,
-    skiplist_index: Option<Arc<SkiplistIndex>>,
     use_shared_leases: bool,
     stop_on_idle: bool,
     batch_size: Option<usize>,
@@ -1369,7 +1354,6 @@ async fn subcommand_tail(
                             backfill_heads(
                                 &ctx,
                                 &repo,
-                                skiplist_index.as_deref(),
                                 &backfill_derivers,
                                 underived_heads,
                                 slice_size,
