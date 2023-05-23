@@ -22,6 +22,7 @@ use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
+use futures::Future;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -478,5 +479,75 @@ impl CommitGraph {
             self.lower_frontier_highest_generation(ctx, &mut u_frontier)
                 .await?;
         }
+    }
+
+    /// Slices ancestors of a vec of changesets into a sequence of slices for processing.
+    ///
+    /// Each slice contains a frontier of changesets within a generation range, returning
+    /// (slice_start, slice_frontier) corresponds to the frontier that has generations numbers
+    /// within [slice_start..(slice_start + slice_size)].
+    ///
+    /// Useful for any type of processing that needs to happen on ancestors of changesets first.
+    /// By processing slices one by one we avoid traversing the entire history all at once.
+    ///
+    /// The returned slices consist only of frontiers which haven't been processed yet
+    /// (determined by the provided needs_processing function). Slicing stops once we
+    /// reach a frontier with all its changesets processed.
+    pub async fn slice_ancestors<NeedsProcessing, Out>(
+        &self,
+        ctx: &CoreContext,
+        heads: Vec<ChangesetId>,
+        needs_processing: NeedsProcessing,
+        slice_size: u64,
+    ) -> Result<Vec<(u64, Vec<ChangesetId>)>>
+    where
+        NeedsProcessing: Fn(Vec<ChangesetId>) -> Out,
+        Out: Future<Output = Result<HashSet<ChangesetId>>>,
+    {
+        let mut frontier = self.frontier(ctx, heads).await?;
+
+        let max_gen = match frontier.last_key_value() {
+            Some((gen, _)) => gen,
+            None => return Ok(vec![]),
+        };
+
+        // The start of the slice is largest number in the sequence
+        // 1, slice_size + 1, 2 * slice_size + 1 ...
+        let mut slice_start = ((max_gen.value() - 1) / slice_size) * slice_size + 1;
+
+        let mut slices = vec![];
+
+        // Loop over slices in decreasing order of start generation.
+        loop {
+            let needed_cs_ids = needs_processing(frontier.changesets()).await?;
+            frontier = frontier
+                .into_flat_iter()
+                .filter(|(cs_id, _)| needed_cs_ids.contains(cs_id))
+                .collect();
+
+            if frontier.is_empty() {
+                break;
+            }
+
+            // Only push changesets that are in this slice's range.
+            // Any remaining changesets will be pushed in the next iterations.
+            slices.push((
+                slice_start,
+                frontier.changesets_in_range(
+                    Generation::new(slice_start)..Generation::new(slice_start + slice_size),
+                ),
+            ));
+
+            if slice_start > 1 {
+                // Lower the frontier to the end of the next slice (current slice_start - 1).
+                self.lower_frontier(ctx, &mut frontier, Generation::new(slice_start - 1))
+                    .await?;
+                slice_start -= slice_size;
+            } else {
+                break;
+            }
+        }
+
+        Ok(slices.into_iter().rev().collect())
     }
 }

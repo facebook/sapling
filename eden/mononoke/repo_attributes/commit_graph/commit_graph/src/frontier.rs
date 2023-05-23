@@ -39,18 +39,19 @@ impl CommitGraph {
             .fetch_many_edges(ctx, &cs_ids, Prefetch::None)
             .await?;
 
-        let mut frontier = ChangesetFrontier::new();
-        for cs_id in cs_ids {
-            let edges = all_edges
-                .get(&cs_id)
-                .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?;
-            frontier
-                .entry(edges.node.generation)
-                .or_default()
-                .insert(cs_id);
-        }
-
-        Ok(frontier)
+        cs_ids
+            .into_iter()
+            .map(|cs_id| {
+                Ok((
+                    cs_id,
+                    all_edges
+                        .get(&cs_id)
+                        .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?
+                        .node
+                        .generation,
+                ))
+            })
+            .collect::<Result<_>>()
     }
 
     /// Lower a frontier so that it contains the highest ancestors of the

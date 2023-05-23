@@ -11,6 +11,7 @@ mod backfill_one;
 mod checkpoints;
 mod common_base;
 mod range_stream;
+mod slice_ancestors;
 mod update_preloaded;
 
 use ancestors_difference::AncestorsDifferenceArgs;
@@ -33,6 +34,7 @@ use mononoke_app::MononokeApp;
 use range_stream::RangeStreamArgs;
 use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
+use slice_ancestors::SliceAncestorsArgs;
 use update_preloaded::UpdatePreloadedArgs;
 
 #[derive(Parser)]
@@ -58,6 +60,8 @@ pub enum CommitGraphSubcommand {
     UpdatePreloaded(UpdatePreloadedArgs),
     /// Display ids of all the highest generation commits among the common ancestors of two commits.
     CommonBase(CommonBaseArgs),
+    /// Slices ancestors of given commits and displays commits IDs of frontiers for each slice.
+    SliceAncestors(SliceAncestorsArgs),
 }
 
 #[facet::container]
@@ -113,6 +117,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         CommitGraphSubcommand::CommonBase(args) => {
             common_base::common_base(&ctx, &repo, args).await
+        }
+        CommitGraphSubcommand::SliceAncestors(args) => {
+            slice_ancestors::slice_ancestors(&ctx, &repo, args).await
         }
     }
 }

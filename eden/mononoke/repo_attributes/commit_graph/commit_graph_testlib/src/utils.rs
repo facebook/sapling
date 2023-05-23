@@ -15,6 +15,7 @@ use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::storage::CommitGraphStorage;
 use context::CoreContext;
 use futures::stream::StreamExt;
+use futures::Future;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 
@@ -340,6 +341,37 @@ pub async fn assert_common_base(
             .into_iter()
             .map(name_cs_id)
             .collect::<HashSet<_>>()
+    );
+    Ok(())
+}
+
+pub async fn assert_slice_ancestors<NeedsProcessing, Out>(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    heads: Vec<&str>,
+    needs_processing: NeedsProcessing,
+    slice_size: u64,
+    slices: Vec<(u64, Vec<&str>)>,
+) -> Result<()>
+where
+    NeedsProcessing: Fn(Vec<ChangesetId>) -> Out,
+    Out: Future<Output = Result<HashSet<ChangesetId>>>,
+{
+    let heads = heads.into_iter().map(name_cs_id).collect();
+    assert_eq!(
+        graph
+            .slice_ancestors(ctx, heads, needs_processing, slice_size)
+            .await?
+            .into_iter()
+            .map(|(gen_group, cs_ids)| (gen_group, cs_ids.into_iter().collect::<HashSet<_>>()))
+            .collect::<Vec<_>>(),
+        slices
+            .into_iter()
+            .map(|(gen_group, cs_ids)| (
+                gen_group,
+                cs_ids.into_iter().map(name_cs_id).collect::<HashSet<_>>()
+            ))
+            .collect::<Vec<_>>(),
     );
     Ok(())
 }

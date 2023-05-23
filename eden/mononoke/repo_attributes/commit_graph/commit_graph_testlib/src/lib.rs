@@ -39,6 +39,7 @@ macro_rules! impl_commit_graph_tests {
             test_ancestors_frontier_with,
             test_range_stream,
             test_common_base,
+            test_slice_ancestors,
         );
     };
 }
@@ -748,6 +749,78 @@ pub async fn test_common_base(
     assert_common_base(&graph, &ctx, "A", "B", vec!["A"]).await?;
     assert_common_base(&graph, &ctx, "N", "W", vec![]).await?;
     assert_common_base(&graph, &ctx, "D", "Q", vec![]).await?;
+
+    Ok(())
+}
+
+pub async fn test_slice_ancestors(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorage>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r##"
+         A-B-C-D-G-H---J-K
+            \   /   \ /
+             E-F     I
+
+         L-M-N-O-P-Q-R-S-T-U
+         "##,
+        storage.clone(),
+    )
+    .await?;
+
+    assert_slice_ancestors(
+        &graph,
+        &ctx,
+        vec!["H"],
+        |cs_ids| async { Ok(cs_ids.into_iter().collect::<HashSet<_>>()) },
+        2,
+        vec![(1, vec!["B"]), (3, vec!["D", "F"]), (5, vec!["H"])],
+    )
+    .await?;
+
+    assert_slice_ancestors(
+        &graph,
+        &ctx,
+        vec!["Q"],
+        |cs_ids| async { Ok(cs_ids.into_iter().collect::<HashSet<_>>()) },
+        1,
+        vec![
+            (1, vec!["L"]),
+            (2, vec!["M"]),
+            (3, vec!["N"]),
+            (4, vec!["O"]),
+            (5, vec!["P"]),
+            (6, vec!["Q"]),
+        ],
+    )
+    .await?;
+
+    assert_slice_ancestors(
+        &graph,
+        &ctx,
+        vec!["Q"],
+        |cs_ids| async { Ok(cs_ids.into_iter().collect::<HashSet<_>>()) },
+        3,
+        vec![(1, vec!["N"]), (4, vec!["Q"])],
+    )
+    .await?;
+
+    let set1 = ["P", "Q", "R", "S", "T", "U"]
+        .into_iter()
+        .map(name_cs_id)
+        .collect::<HashSet<_>>();
+
+    assert_slice_ancestors(
+        &graph,
+        &ctx,
+        vec!["Q"],
+        |_| async { Ok(set1.clone()) },
+        1,
+        vec![(5, vec!["P"]), (6, vec!["Q"])],
+    )
+    .await?;
 
     Ok(())
 }

@@ -7,8 +7,11 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashSet;
+use std::iter::IntoIterator;
+use std::iter::Iterator;
 use std::ops::Deref;
 use std::ops::DerefMut;
+use std::ops::RangeBounds;
 
 use maplit::btreemap;
 use maplit::hashset;
@@ -62,6 +65,31 @@ impl ChangesetFrontier {
         }
         true
     }
+
+    /// Return an iterator over tuples of each changeset in the frontier
+    /// together with its generation number.
+    pub fn into_flat_iter(self) -> impl Iterator<Item = (ChangesetId, Generation)> {
+        self.0
+            .into_iter()
+            .flat_map(|(gen, cs_ids)| cs_ids.into_iter().map(move |cs_id| (cs_id, gen)))
+    }
+
+    /// Returns a vec of all changesets in the frontier.
+    pub fn changesets(&self) -> Vec<ChangesetId> {
+        self.iter()
+            .flat_map(|(_, cs_ids)| cs_ids.iter())
+            .copied()
+            .collect()
+    }
+
+    /// Returns a vec of all changesets in the frontier inside
+    /// of the given range.
+    pub fn changesets_in_range(&self, range: impl RangeBounds<Generation>) -> Vec<ChangesetId> {
+        self.range(range)
+            .flat_map(|(_, cs_ids)| cs_ids.iter())
+            .copied()
+            .collect()
+    }
 }
 
 impl Deref for ChangesetFrontier {
@@ -75,5 +103,17 @@ impl Deref for ChangesetFrontier {
 impl DerefMut for ChangesetFrontier {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+impl FromIterator<(ChangesetId, Generation)> for ChangesetFrontier {
+    fn from_iter<T: IntoIterator<Item = (ChangesetId, Generation)>>(iter: T) -> Self {
+        let mut frontier = Self::new();
+
+        for (cs_id, gen) in iter {
+            frontier.entry(gen).or_default().insert(cs_id);
+        }
+
+        frontier
     }
 }
