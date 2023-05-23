@@ -128,10 +128,11 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
             )
         })?;
 
-        let output = results
+        let values = results
             .into_iter()
-            .map(|(tag_name, _)| Some(tag_name))
-            .collect::<Option<_>>();
+            .map(|(tag_name, _)| tag_name)
+            .collect::<Vec<_>>();
+        let output = (!values.is_empty()).then_some(values);
         return Ok(output);
     }
 

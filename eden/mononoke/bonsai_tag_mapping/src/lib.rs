@@ -12,6 +12,9 @@ use async_trait::async_trait;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 
+pub use crate::sql::SqlBonsaiTagMapping;
+pub use crate::sql::SqlBonsaiTagMappingBuilder;
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct BonsaiTagMappingEntry {
     pub changeset_id: ChangesetId,
