@@ -714,16 +714,26 @@ impl ChangesetContext {
         &self,
         other_commit: ChangesetId,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
-        let lca = self
-            .repo()
-            .skiplist_index_arc()
-            .lca(
-                self.ctx().clone(),
-                self.repo().blob_repo().changeset_fetcher_arc(),
-                self.id,
-                other_commit,
-            )
-            .await?;
+        let lca = if tunables()
+            .by_repo_enable_new_commit_graph_common_base_with(self.repo().name())
+            .unwrap_or_default()
+        {
+            self.repo()
+                .repo()
+                .commit_graph()
+                .common_base(self.ctx(), self.id, other_commit)
+                .await?
+        } else {
+            self.repo()
+                .skiplist_index_arc()
+                .lca(
+                    self.ctx().clone(),
+                    self.repo().blob_repo().changeset_fetcher_arc(),
+                    self.id,
+                    other_commit,
+                )
+                .await?
+        };
         Ok(lca.get(0).map(|id| Self::new(self.repo.clone(), *id)))
     }
 

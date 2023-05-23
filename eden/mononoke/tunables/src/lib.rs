@@ -374,6 +374,8 @@ pub struct MononokeTunables {
     enable_new_commit_graph_ancestors_difference_stream: TunableBoolByRepo,
     // Enable using new commit graph range stream in place of RangeNodeStream
     enable_new_commit_graph_range_stream: TunableBoolByRepo,
+    // Enable using new commit graph in common_base_with
+    enable_new_commit_graph_common_base_with: TunableBoolByRepo,
 
     // Disable all prefetching in the commit graph
     disable_commit_graph_prefetch: TunableBool,
