@@ -1207,10 +1207,14 @@ class FsckCmd(Subcmd):
             if (Path(path) / "local" / "info").exists() and (
                 Path(path) / "config.toml"
             ).exists():
-                result = self.check_one(args, Path(path), Path(path))
+                result = self.check_one(
+                    args, get_eden_instance(args), Path(path), Path(path)
+                )
             else:
                 instance, checkout, rel_path = require_checkout(args, path)
-                result = self.check_one(args, checkout.path, checkout.state_dir)
+                result = self.check_one(
+                    args, instance, checkout.path, checkout.state_dir
+                )
             return_codes.append(result)
 
         return return_codes
@@ -1220,12 +1224,33 @@ class FsckCmd(Subcmd):
         instance = get_eden_instance(args)
         return_codes: List[int] = []
         for checkout in instance.get_checkouts():
-            result = self.check_one(args, checkout.path, checkout.state_dir)
+            result = self.check_one(args, instance, checkout.path, checkout.state_dir)
             return_codes.append(result)
 
         return return_codes
 
     def check_one(
+        self,
+        args: argparse.Namespace,
+        instance: EdenInstance,
+        checkout_path: Path,
+        state_dir: Path,
+    ) -> int:
+        if instance.get_config_bool("fsck.use-cpp-implementation", False):
+            print(f"Checking {checkout_path}...")
+            overlay_path = state_dir / "local"
+            return subprocess.call(
+                [
+                    fsck_mod.get_fsck_command(),
+                    overlay_path,
+                    f"--dry-run={'true' if args.check_only else 'false'}",
+                    f"--force={'true' if args.force else 'false'}",
+                ]
+            )
+        else:
+            return self.check_one_impl(args, checkout_path, state_dir)
+
+    def check_one_impl(
         self, args: argparse.Namespace, checkout_path: Path, state_dir: Path
     ) -> int:
         with fsck_mod.FilesystemChecker(state_dir) as checker:

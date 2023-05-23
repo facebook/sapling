@@ -20,6 +20,13 @@ from typing import ContextManager, Dict, List, NamedTuple, Optional, Tuple, Type
 from . import overlay as overlay_mod
 
 
+def get_fsck_command() -> Path:
+    try:
+        return Path(os.environ["EDENFS_FSCK"])
+    except KeyError:
+        return Path("/usr/local/libexec/eden/eden_fsck")
+
+
 class InodeType(enum.Enum):
     FILE = enum.auto()
     DIR = enum.auto()
