@@ -1132,7 +1132,7 @@ class EdenConfig : private ConfigSettingManager {
    * Determines if EdenFS should enable the option to buffer overlay writes.
    * This only works with SQLite backed overlays.
    */
-  ConfigSetting<bool> overlayBuffered{"overlay:buffered", false, this};
+  ConfigSetting<bool> overlayBuffered{"overlay:buffered", true, this};
 
   /**
    * Number of bytes worth of Overlay data to keep in memory before pausing
