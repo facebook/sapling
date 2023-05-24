@@ -609,12 +609,24 @@ def check_blob_and_size_match(
                 # only care to check blobs that exist
                 pass
 
-        blobmeta = client.debugGetScmBlobMetadata(
-            mountPoint=bytes(checkout),
-            id=identifying_hash,
-            localStoreOnly=True,  # We don't want to cause any network fetches.
-        )
-        if blob is not None and blobmeta.size != len(blob):
+        blobmeta = None
+        try:
+            blobmeta = (
+                client.debugGetBlobMetadata(
+                    DebugGetBlobMetadataRequest(
+                        MountId(bytes(checkout)),
+                        identifying_hash,
+                        DataFetchOrigin.DISK_CACHE,
+                    )
+                )
+                .metadatas[0]
+                .metadata.get_metadata()
+            )
+        except AssertionError:
+            # only care to check blobs that exist
+            pass
+
+        if blob is not None and blobmeta is not None and blobmeta.size != len(blob):
             return MismatchedBlobSize(
                 actual_blobsize=len(blob), cached_blobsize=blobmeta.size
             )
