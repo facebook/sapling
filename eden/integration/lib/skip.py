@@ -62,6 +62,10 @@ if sys.platform == "win32":
         ],
         "rage_test.RageTestDefault": True,
         "rc_test.RCTestHg": True,
+        "readdir_test.ReaddirTestHg": [
+            # creating sockets is not supported in python on Windows until 3.9
+            "test_get_attributes_socket",
+        ],
         "redirect_test.RedirectTestHg": ["test_disallow_bind_mount_outside_repo"],
         "remount_test.RemountTestHg": True,
         "rename_test.RenameTestHg": True,
@@ -95,8 +99,6 @@ if sys.platform == "win32":
             "test_pid_fetch_counts",
             "test_unload_free_inodes",
             "test_unload_thrift_api_accepts_single_dot_as_root",
-            # creating sockets is not supported in python on Windows until 3.9
-            "test_get_attributes_socket",
         ],
         "unixsocket_test.UnixSocketTestHg": True,
         "userinfo_test.UserInfoTest": True,
@@ -404,5 +406,5 @@ def is_method_disabled(class_name: str, method_name: str) -> bool:
     method_skipped = TEST_DISABLED.get(class_name)
     if method_skipped is None:
         return False
-    assert isinstance(method_skipped, list)
+    assert isinstance(method_skipped, list), "skipped methods must be a list"
     return method_name in method_skipped
