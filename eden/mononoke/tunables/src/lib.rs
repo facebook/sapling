@@ -377,6 +377,9 @@ pub struct MononokeTunables {
     // Enable using new commit graph in common_base_with
     enable_new_commit_graph_common_base_with: TunableBoolByRepo,
 
+    // Enable streaming commit graph EdenAPI endpoint.
+    enable_streaming_commit_graph_edenapi_endpoint: TunableBool,
+
     // Disable all prefetching in the commit graph
     disable_commit_graph_prefetch: TunableBool,
     // Max number of steps to make when prefetching
