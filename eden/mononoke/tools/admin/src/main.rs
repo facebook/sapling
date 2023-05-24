@@ -11,6 +11,8 @@ use anyhow::Result;
 use clap::Parser;
 use cmdlib_scrubbing::ScrubAppExtension;
 use fbinit::FacebookInit;
+use mononoke_app::fb303::AliveService;
+use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 
@@ -22,7 +24,10 @@ mod facebook;
 
 /// Administrate Mononoke
 #[derive(Parser)]
-struct AdminArgs {}
+struct AdminArgs {
+    #[clap(long)]
+    use_monitoring: bool,
+}
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
@@ -38,8 +43,15 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let app = MononokeAppBuilder::new(fb)
         .with_app_extension(ScrubAppExtension::new())
+        .with_app_extension(Fb303AppExtension {})
         .build_with_subcommands::<AdminArgs>(subcommands)?;
-    app.run_basic(async_main)
+
+    let args: AdminArgs = app.args()?;
+    if args.use_monitoring {
+        app.run_with_monitoring_and_logging(async_main, "admin", AliveService)
+    } else {
+        app.run_basic(async_main)
+    }
 }
 
 async fn async_main(app: MononokeApp) -> Result<()> {
