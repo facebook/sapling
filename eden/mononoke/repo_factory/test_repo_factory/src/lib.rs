@@ -24,6 +24,8 @@ use bonsai_hg_mapping::ArcBonsaiHgMapping;
 use bonsai_hg_mapping::SqlBonsaiHgMappingBuilder;
 use bonsai_svnrev_mapping::ArcBonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::SqlBonsaiSvnrevMappingBuilder;
+use bonsai_tag_mapping::ArcBonsaiTagMapping;
+use bonsai_tag_mapping::SqlBonsaiTagMappingBuilder;
 use bookmarks::bookmark_heads_fetcher;
 use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
@@ -262,6 +264,7 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlBonsaiGitMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiGlobalrevMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiSvnrevMappingBuilder::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlBonsaiTagMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiHgMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlPhasesBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlPushrebaseMutationMappingConnection::CREATION_QUERY)?;
@@ -479,6 +482,18 @@ impl TestRepoFactory {
     ) -> Result<ArcBonsaiSvnrevMapping> {
         Ok(Arc::new(
             SqlBonsaiSvnrevMappingBuilder::from_sql_connections(self.metadata_db.clone())
+                .build(repo_identity.id()),
+        ))
+    }
+
+    /// Construct Bonsai Tag Mapping using the in-memory metadata
+    /// database.
+    pub fn bonsai_tag_mapping(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcBonsaiTagMapping> {
+        Ok(Arc::new(
+            SqlBonsaiTagMappingBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(repo_identity.id()),
         ))
     }

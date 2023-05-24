@@ -43,6 +43,8 @@ use bonsai_hg_mapping::SqlBonsaiHgMappingBuilder;
 use bonsai_svnrev_mapping::ArcBonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::CachingBonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::SqlBonsaiSvnrevMappingBuilder;
+use bonsai_tag_mapping::ArcBonsaiTagMapping;
+use bonsai_tag_mapping::SqlBonsaiTagMappingBuilder;
 use bookmarks::bookmark_heads_fetcher;
 use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
@@ -565,6 +567,9 @@ pub enum RepoFactoryError {
     #[error("Error opening bonsai-svnrev mapping")]
     BonsaiSvnrevMapping,
 
+    #[error("Error opening bonsai-tag mapping")]
+    BonsaiTagMapping,
+
     #[error("Error opening pushrebase mutation mapping")]
     PushrebaseMutationMapping,
 
@@ -814,6 +819,20 @@ impl RepoFactory {
         } else {
             Ok(Arc::new(bonsai_svnrev_mapping))
         }
+    }
+
+    pub async fn bonsai_tag_mapping(
+        &self,
+        repo_config: &ArcRepoConfig,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcBonsaiTagMapping> {
+        let bonsai_tag_mapping = self
+            .open_sql::<SqlBonsaiTagMappingBuilder>(repo_config)
+            .await
+            .context(RepoFactoryError::BonsaiTagMapping)?
+            .build(repo_identity.id());
+        // Caching is not enabled for now, but can be added later if required.
+        Ok(Arc::new(bonsai_tag_mapping))
     }
 
     pub async fn pushrebase_mutation_mapping(
