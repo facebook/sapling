@@ -22,14 +22,6 @@ namespace facebook::eden {
 using namespace folly;
 using namespace folly::io;
 
-EntryAttributes::EntryAttributes(
-    std::optional<folly::Try<Hash20>> contentsHash,
-    std::optional<folly::Try<uint64_t>> fileLength,
-    std::optional<folly::Try<std::optional<TreeEntryType>>> fileType)
-    : sha1(std::move(contentsHash)),
-      size(std::move(fileLength)),
-      type(std::move(fileType)) {}
-
 template <typename T>
 bool checkValueEqual(
     const std::optional<folly::Try<T>>& lhs,
@@ -46,7 +38,8 @@ bool checkValueEqual(
 bool operator==(const EntryAttributes& lhs, const EntryAttributes& rhs) {
   return checkValueEqual(lhs.sha1, rhs.sha1) &&
       checkValueEqual(lhs.size, rhs.size) &&
-      checkValueEqual(lhs.type, rhs.type);
+      checkValueEqual(lhs.type, rhs.type) &&
+      checkValueEqual(lhs.objectId, rhs.objectId);
 }
 
 bool operator!=(const EntryAttributes& lhs, const EntryAttributes& rhs) {

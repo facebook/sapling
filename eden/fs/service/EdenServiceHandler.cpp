@@ -2036,6 +2036,7 @@ bool fillErrorRef(
 }
 
 FileAttributeDataOrErrorV2 serializeEntryAttributes(
+    ObjectStore& objectStore,
     folly::StringPiece entryPath,
     const folly::Try<EntryAttributes>& attributes,
     EntryAttributeFlags requestedAttributes) {
@@ -2043,43 +2044,55 @@ FileAttributeDataOrErrorV2 serializeEntryAttributes(
 
   if (attributes.hasException()) {
     fileResult.error_ref() = newEdenError(attributes.exception());
-  } else {
-    FileAttributeDataV2 fileData;
-    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
-      Sha1OrError sha1;
-      if (!fillErrorRef<Sha1OrError, Hash20>(
-              sha1, attributes->sha1, entryPath, "sha1")) {
-        sha1.sha1_ref() = thriftHash20(attributes->sha1.value().value());
-      }
-      fileData.sha1() = std::move(sha1);
-    }
-
-    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
-      SizeOrError size;
-      if (!fillErrorRef<SizeOrError, uint64_t>(
-              size, attributes->size, entryPath, "size")) {
-        size.size_ref() = attributes->size.value().value();
-      }
-      fileData.size() = std::move(size);
-    }
-
-    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
-      SourceControlTypeOrError type;
-      if (!fillErrorRef<SourceControlTypeOrError, std::optional<TreeEntryType>>(
-              type, attributes->type, entryPath, "type")) {
-        type.sourceControlType_ref() =
-            entryTypeToThriftType(attributes->type.value().value());
-      }
-      fileData.sourceControlType() = std::move(type);
-    }
-    fileResult.fileAttributeData_ref() = fileData;
+    return fileResult;
   }
+
+  FileAttributeDataV2 fileData;
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
+    Sha1OrError sha1;
+    if (!fillErrorRef(sha1, attributes->sha1, entryPath, "sha1")) {
+      sha1.sha1_ref() = thriftHash20(attributes->sha1.value().value());
+    }
+    fileData.sha1() = std::move(sha1);
+  }
+
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
+    SizeOrError size;
+    if (!fillErrorRef(size, attributes->size, entryPath, "size")) {
+      size.size_ref() = attributes->size.value().value();
+    }
+    fileData.size() = std::move(size);
+  }
+
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
+    SourceControlTypeOrError type;
+    if (!fillErrorRef(type, attributes->type, entryPath, "type")) {
+      type.sourceControlType_ref() =
+          entryTypeToThriftType(attributes->type.value().value());
+    }
+    fileData.sourceControlType() = std::move(type);
+  }
+
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
+    ObjectIdOrError objectId;
+    if (!fillErrorRef(objectId, attributes->objectId, entryPath, "objectid")) {
+      const std::optional<ObjectId>& oid = attributes->objectId.value().value();
+      if (oid) {
+        objectId.objectId_ref() = objectStore.renderObjectId(*oid);
+      }
+    }
+    fileData.objectId() = std::move(objectId);
+  }
+
+  fileResult.fileAttributeData_ref() = fileData;
   return fileResult;
 }
 
 DirListAttributeDataOrError serializeEntryAttributes(
-    const folly::Try<std::vector<
-        std::pair<PathComponent, folly::Try<EntryAttributes>>>>& entries,
+    ObjectStore& objectStore,
+    const folly::Try<
+        std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>&
+        entries,
     EntryAttributeFlags requestedAttributes) {
   DirListAttributeDataOrError result;
   if (entries.hasException()) {
@@ -2087,11 +2100,14 @@ DirListAttributeDataOrError serializeEntryAttributes(
     return result;
   }
   std::map<std::string, FileAttributeDataOrErrorV2> thriftEntryResult;
-  for (auto& entry : entries.value()) {
+  for (auto& [path_component, attributes] : entries.value()) {
     thriftEntryResult.emplace(
-        entry.first.asString(),
+        path_component.asString(),
         serializeEntryAttributes(
-            entry.first.piece().view(), entry.second, requestedAttributes));
+            objectStore,
+            path_component.piece().view(),
+            attributes,
+            requestedAttributes));
   }
 
   result.dirListAttributeData_ref() = std::move(thriftEntryResult);
@@ -2133,13 +2149,15 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
                                  mountHandle.getEdenMount(),
                                  std::move(path),
                                  fetchContext)
-                                 .thenTry([requestedAttributes](
+                                 .thenTry([requestedAttributes, mountHandle](
                                               folly::Try<std::vector<std::pair<
                                                   PathComponent,
                                                   folly::Try<EntryAttributes>>>>
                                                   entries) {
                                    return serializeEntryAttributes(
-                                       entries, requestedAttributes);
+                                       mountHandle.getObjectStore(),
+                                       entries,
+                                       requestedAttributes);
                                  })
 
                          );
@@ -2356,13 +2374,14 @@ EdenServiceHandler::semifuture_getAttributesFromFilesV2(
              std::move(helper),
              std::move(entryAttributesFuture)
                  .thenValue(
-                     [reqBitmask, &paths](
+                     [reqBitmask, mountHandle, &paths](
                          std::vector<folly::Try<EntryAttributes>>&& allRes) {
                        auto res =
                            std::make_unique<GetAttributesFromFilesResultV2>();
                        size_t index = 0;
                        for (const auto& tryAttributes : allRes) {
                          res->res_ref()->emplace_back(serializeEntryAttributes(
+                             mountHandle.getObjectStore(),
                              basename(paths.at(index)),
                              tryAttributes,
                              reqBitmask));

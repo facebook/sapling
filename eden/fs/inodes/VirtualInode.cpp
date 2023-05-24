@@ -161,27 +161,36 @@ ImmediateFuture<BlobMetadata> VirtualInode::getBlobMetadata(
       });
 }
 
-EntryAttributes getEntryAttributesForNonFile(
+EntryAttributes VirtualInode::getEntryAttributesForNonFile(
     EntryAttributeFlags requestedAttributes,
     RelativePathPiece path,
     std::optional<TreeEntryType> entryType,
     int errorCode,
-    std::string additionalErrorContext = {}) {
+    std::string additionalErrorContext) const {
   std::optional<folly::Try<Hash20>> sha1;
-  std::optional<folly::Try<uint64_t>> size;
-  std::optional<folly::Try<std::optional<TreeEntryType>>> type;
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
     sha1 =
         folly::Try<Hash20>{PathError{errorCode, path, additionalErrorContext}};
   }
+
+  std::optional<folly::Try<uint64_t>> size;
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
     size = folly::Try<uint64_t>{
         PathError{errorCode, path, std::move(additionalErrorContext)}};
   }
+
+  std::optional<folly::Try<std::optional<TreeEntryType>>> type;
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
     type = folly::Try<std::optional<TreeEntryType>>{entryType};
   }
-  return EntryAttributes{std::move(sha1), std::move(size), std::move(type)};
+
+  std::optional<folly::Try<std::optional<ObjectId>>> objectId;
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
+    objectId = folly::Try<std::optional<ObjectId>>{getObjectId()};
+  }
+
+  return EntryAttributes{
+      std::move(sha1), std::move(size), std::move(type), std::move(objectId)};
 }
 
 ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
@@ -232,37 +241,51 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     blobMetadataFuture = getBlobMetadata(path, objectStore, fetchContext);
   }
 
+  std::optional<ObjectId> objectId;
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
+    objectId = getObjectId();
+  }
+
   return collectAll(std::move(entryTypeFuture), std::move(blobMetadataFuture))
       .thenValue(
-          [requestedAttributes](
+          [requestedAttributes, entryObjectId = std::move(objectId)](
               std::tuple<
                   folly::Try<std::optional<TreeEntryType>>,
                   folly::Try<BlobMetadata>> rawAttributeData) mutable
           -> EntryAttributes {
-            std::optional<folly::Try<Hash20>> sha1;
-            std::optional<folly::Try<uint64_t>> size;
-            std::optional<folly::Try<std::optional<TreeEntryType>>> type;
-            if (requestedAttributes.contains(
-                    ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
-              type =
-                  std::move(std::get<folly::Try<std::optional<TreeEntryType>>>(
-                      rawAttributeData));
-            }
-            auto& blobMetadata =
-                std::get<folly::Try<BlobMetadata>>(rawAttributeData);
+            auto& [entryType, blobMetadata] = rawAttributeData;
 
+            std::optional<folly::Try<Hash20>> sha1;
             if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
               sha1 = blobMetadata.hasException()
                   ? folly::Try<Hash20>(blobMetadata.exception())
                   : folly::Try<Hash20>(blobMetadata.value().sha1);
             }
+
+            std::optional<folly::Try<uint64_t>> size;
             if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
               size = blobMetadata.hasException()
                   ? folly::Try<uint64_t>(blobMetadata.exception())
                   : folly::Try<uint64_t>(blobMetadata.value().size);
             }
+
+            std::optional<folly::Try<std::optional<TreeEntryType>>> type;
+            if (requestedAttributes.contains(
+                    ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
+              type = std::move(entryType);
+            }
+
+            std::optional<folly::Try<std::optional<ObjectId>>> objectId;
+            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
+              objectId =
+                  folly::Try<std::optional<ObjectId>>{std::move(entryObjectId)};
+            }
+
             return EntryAttributes{
-                std::move(sha1), std::move(size), std::move(type)};
+                std::move(sha1),
+                std::move(size),
+                std::move(type),
+                std::move(objectId)};
           });
 }
 

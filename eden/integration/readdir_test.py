@@ -4,9 +4,11 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import hashlib
 import os
 import re
 import socket
+import stat
 import sys
 from pathlib import Path
 from typing import List, Optional, Pattern, Tuple, Union
@@ -23,6 +25,7 @@ from facebook.eden.ttypes import (
     GetAttributesFromFilesParams,
     GetAttributesFromFilesResult,
     GetAttributesFromFilesResultV2,
+    ObjectIdOrError,
     ReaddirParams,
     ReaddirResult,
     Sha1OrError,
@@ -44,6 +47,7 @@ ALL_ATTRIBUTES = (
     FileAttributes.FILE_SIZE
     | FileAttributes.SHA1_HASH
     | FileAttributes.SOURCE_CONTROL_TYPE
+    | FileAttributes.OBJECT_ID
 )
 
 
@@ -55,6 +59,13 @@ class ReaddirTest(testcase.EdenRepoTest):
     commit1: str
     commit2: str
     commit3: str
+
+    adir_file_id: bytes
+    bdir_file_id: bytes
+    hello_id: bytes
+    slink_id: bytes
+    adir_id: bytes
+    cdir_subdir_id: bytes
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
@@ -74,6 +85,36 @@ class ReaddirTest(testcase.EdenRepoTest):
         # revert the change made to bdir/file
         self.repo.write_file("bdir/file", "bar!\n")
         self.commit3 = self.repo.commit("Commit 3.")
+
+        self.adir_file_id = {
+            "hg": b"41825fd37af5796284289a1e0770ccd3d27d4832:adir/file",
+            "git": b"929efb30534598535198700b994ee438d441d1af",
+        }[self.repo_type]
+
+        self.bdir_file_id = {
+            "hg": b"e5336dae10d1e7590fc25db9d417d089295875e0:bdir/file",
+            "git": b"e50a49f9558d09d4d3bfc108363bb24c127ed263",
+        }[self.repo_type]
+
+        self.hello_id = {
+            "hg": b"edd9bdab9ab7a84b21a7a19fffe7a29709ac3b47:hello",
+            "git": b"5c1b14949828006ed75a3e8858957f86a2f7e2eb",
+        }[self.repo_type]
+
+        self.slink_id = {
+            "hg": b"7fac34a232926c628f2d890d3eed95be7ab57f34:slink",
+            "git": b"b6fc4c620b67d95f953a5c1c1230aaab5db5a1b0",
+        }[self.repo_type]
+
+        self.adir_id = {
+            "hg": b"6ae9e90c9c90aa85adbdab16808203e64a5163cb:adir",
+            "git": b"aa0e79d49fe12527662d2d73ea839691eb472c9a",
+        }[self.repo_type]
+
+        self.cdir_subdir_id = {
+            "hg": b"cd765cb479197becdca10a4baa87e983244bf24f:cdir/subdir",
+            "git": b"f5497927ddcc19b41c4ca57e01ff99339f93db13",
+        }[self.repo_type]
 
     def assert_eden_error(
         self, result: EdenThriftResult, error_message: Union[str, Pattern]
@@ -118,13 +159,14 @@ class ReaddirTest(testcase.EdenRepoTest):
     def wrap_expected_attributes(
         self,
         raw_attributes: Tuple[
-            Optional[bytes], Optional[int], Optional[SourceControlType]
+            Optional[bytes], Optional[int], Optional[SourceControlType], Optional[bytes]
         ],
     ) -> Tuple[FileAttributeDataOrError, FileAttributeDataOrErrorV2]:
         (
             raw_sha1,
             raw_size,
             raw_type,
+            raw_object_id,
         ) = raw_attributes
         data = FileAttributeData()
         data_v2 = FileAttributeDataV2()
@@ -140,6 +182,9 @@ class ReaddirTest(testcase.EdenRepoTest):
         if raw_type is not None:
             data.type = raw_type
             data_v2.sourceControlType = SourceControlTypeOrError(raw_type)
+
+        if raw_object_id is not None:
+            data_v2.objectId = ObjectIdOrError(raw_object_id)
 
         return (
             FileAttributeDataOrError(data),
@@ -176,11 +221,13 @@ class ReaddirTest(testcase.EdenRepoTest):
         (
             expected_hello_result,
             expected_hello_result_v2,
-        ) = self.wrap_expected_attributes(self.get_expected_file_attributes("hello"))
+        ) = self.wrap_expected_attributes(
+            self.get_expected_file_attributes("hello", self.hello_id)
+        )
 
         # expected results for file "adir/file"
         (expected_adir_result, expected_adir_result_v2) = self.wrap_expected_attributes(
-            self.get_expected_file_attributes("adir/file")
+            self.get_expected_file_attributes("adir/file", self.adir_file_id)
         )
 
         # list of expected_results
@@ -203,11 +250,11 @@ class ReaddirTest(testcase.EdenRepoTest):
 
     def test_get_size_only(self) -> None:
         # expected size result for file
-        expected_hello_size = self.get_expected_file_attributes("hello")[1]
+        expected_hello_size = self.get_expected_file_attributes("hello", None)[1]
         (
             expected_hello_result,
             expected_hello_result_v2,
-        ) = self.wrap_expected_attributes((None, expected_hello_size, None))
+        ) = self.wrap_expected_attributes((None, expected_hello_size, None, None))
 
         # create result object for "hello"
         expected_result = GetAttributesFromFilesResult(
@@ -227,11 +274,11 @@ class ReaddirTest(testcase.EdenRepoTest):
 
     def test_get_type_only(self) -> None:
         # expected size result for file
-        expected_hello_type = self.get_expected_file_attributes("hello")[2]
+        expected_hello_type = self.get_expected_file_attributes("hello", None)[2]
         (
             expected_hello_result,
             expected_hello_result_v2,
-        ) = self.wrap_expected_attributes((None, None, expected_hello_type))
+        ) = self.wrap_expected_attributes((None, None, expected_hello_type, None))
 
         # create result object for "hello"
         expected_result = GetAttributesFromFilesResult(
@@ -267,11 +314,11 @@ class ReaddirTest(testcase.EdenRepoTest):
 
     def test_get_sha1_only(self) -> None:
         # expected sha1 result for file
-        expected_hello_sha1 = self.get_expected_file_attributes("hello")[0]
+        expected_hello_sha1 = self.get_expected_file_attributes("hello", None)[0]
         (
             expected_hello_result,
             expected_hello_result_v2,
-        ) = self.wrap_expected_attributes((expected_hello_sha1, None, None))
+        ) = self.wrap_expected_attributes((expected_hello_sha1, None, None, None))
 
         # create result object for "hello"
         expected_result = GetAttributesFromFilesResult(
@@ -340,6 +387,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                     )
                 ),
                 SourceControlTypeOrError(SourceControlType.TREE),
+                ObjectIdOrError(self.adir_id),
             )
         )
 
@@ -386,6 +434,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                         )
                     ),
                     SourceControlTypeOrError(SourceControlType.UNKNOWN),
+                    ObjectIdOrError(None),
                 )
             )
 
@@ -424,6 +473,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                         )
                     ),
                     SourceControlTypeOrError(SourceControlType.SYMLINK),
+                    ObjectIdOrError(self.slink_id),
                 )
             )
 
@@ -440,7 +490,7 @@ class ReaddirTest(testcase.EdenRepoTest):
 
         else:  # one windows symlinks don't report as symlinks but rather regular files.
             (expected_result, expected_result_v2,) = self.wrap_expected_attributes(
-                self.get_expected_file_attributes("slink")
+                self.get_expected_file_attributes("slink", self.slink_id)
             )
 
             results = self.get_all_attributes([b"slink"])
@@ -507,12 +557,54 @@ class ReaddirTest(testcase.EdenRepoTest):
         )
         self.assert_eden_error(attr_or_err, error_message)
 
+    def get_expected_file_attributes(
+        self,
+        path: str,
+        object_id: Optional[bytes],
+    ) -> Tuple[bytes, int, SourceControlType, Optional[bytes]]:
+        """Get attributes for the file with the specified path inside
+        the eden repository. For now, just sha1 and file size.
+        """
+        fullpath = self.get_path(path)
+        file_stat = os.stat(fullpath, follow_symlinks=False)
+        file_type = SourceControlType.REGULAR_FILE
+        if stat.S_ISDIR(file_stat.st_mode):
+            return (
+                (0).to_bytes(20, byteorder="big"),
+                0,
+                SourceControlType.TREE,
+                object_id,
+            )
+        if stat.S_ISLNK(file_stat.st_mode):
+            return (
+                (0).to_bytes(20, byteorder="big"),
+                0,
+                SourceControlType.SYMLINK,
+                object_id,
+            )
+        if not stat.S_ISREG(file_stat.st_mode):
+            return (
+                (0).to_bytes(20, byteorder="big"),
+                0,
+                SourceControlType.UNKNOWN,
+                object_id,
+            )
+        if stat.S_IXUSR & file_stat.st_mode:
+            file_type = SourceControlType.EXECUTABLE_FILE
+        file_size = file_stat.st_size
+        ifile = open(fullpath, "rb")
+        file_contents = ifile.read()
+        sha1_hash = hashlib.sha1(file_contents).digest()
+        ifile.close()
+
+        return (sha1_hash, file_size, file_type, object_id)
+
     def get_counter(self, name: str) -> float:
         return self.get_counters()[name]
 
     def constructReaddirResult(
         self,
-        expected_attributes: Tuple[bytes, int, SourceControlType],
+        expected_attributes: Tuple[bytes, int, SourceControlType, Optional[bytes]],
         req_attr: int = ALL_ATTRIBUTES,
     ) -> FileAttributeDataOrErrorV2:
         sha1 = None
@@ -529,11 +621,16 @@ class ReaddirTest(testcase.EdenRepoTest):
                 sourceControlType=expected_attributes[2]
             )
 
+        objectId = None
+        if req_attr & FileAttributes.OBJECT_ID:
+            objectId = ObjectIdOrError(expected_attributes[3])
+
         return FileAttributeDataOrErrorV2(
             fileAttributeData=FileAttributeDataV2(
                 sha1=sha1,
                 size=size,
                 sourceControlType=sourceControlType,
+                objectId=objectId,
             )
         )
 
@@ -546,14 +643,18 @@ class ReaddirTest(testcase.EdenRepoTest):
             adir_result = DirListAttributeDataOrError(
                 dirListAttributeData={
                     b"file": self.constructReaddirResult(
-                        self.get_expected_file_attributes("adir/file")
+                        self.get_expected_file_attributes(
+                            "adir/file", self.adir_file_id
+                        )
                     )
                 }
             )
             bdir_result = DirListAttributeDataOrError(
                 dirListAttributeData={
                     b"file": self.constructReaddirResult(
-                        self.get_expected_file_attributes("bdir/file")
+                        self.get_expected_file_attributes(
+                            "bdir/file", self.bdir_file_id
+                        )
                     )
                 }
             )
@@ -650,11 +751,12 @@ class ReaddirTest(testcase.EdenRepoTest):
 
     def readdir_single_attr_only(self, req_attr: int) -> None:
         with self.get_thrift_client_legacy() as client:
-
             adir_result = DirListAttributeDataOrError(
                 dirListAttributeData={
                     b"file": self.constructReaddirResult(
-                        self.get_expected_file_attributes("adir/file"),
+                        self.get_expected_file_attributes(
+                            "adir/file", self.adir_file_id
+                        ),
                         req_attr=req_attr,
                     )
                 }
@@ -662,7 +764,9 @@ class ReaddirTest(testcase.EdenRepoTest):
             bdir_result = DirListAttributeDataOrError(
                 dirListAttributeData={
                     b"file": self.constructReaddirResult(
-                        self.get_expected_file_attributes("bdir/file"),
+                        self.get_expected_file_attributes(
+                            "bdir/file", self.bdir_file_id
+                        ),
                         req_attr=req_attr,
                     )
                 }
@@ -699,6 +803,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         error_message: str,
         error_code: int,
         source_control_type: SourceControlType,
+        object_id: Optional[bytes],
     ) -> None:
         with self.get_thrift_client_legacy() as client:
             expected = FileAttributeDataOrErrorV2(
@@ -719,6 +824,9 @@ class ReaddirTest(testcase.EdenRepoTest):
                     ),
                     sourceControlType=SourceControlTypeOrError(
                         sourceControlType=source_control_type
+                    ),
+                    objectId=ObjectIdOrError(
+                        objectId=object_id,
                     ),
                 )
             )
@@ -771,6 +879,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             error_message="cdir/subdir: Is a directory",
             error_code=21,
             source_control_type=SourceControlType.TREE,
+            object_id=self.cdir_subdir_id,
         )
         if sys.platform != "win32":
             sockpath = self.get_path("adir/asock")
@@ -784,6 +893,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                     error_message="adir/asock: file is a non-source-control type: 12: Invalid argument",
                     error_code=22,
                     source_control_type=SourceControlType.UNKNOWN,
+                    object_id=None,
                 )
 
             self.readdir_no_size_or_sha1(
@@ -792,6 +902,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                 error_message="slink: file is a symlink: Invalid argument",
                 error_code=22,
                 source_control_type=SourceControlType.SYMLINK,
+                object_id=self.slink_id,
             )
         else:
             with self.get_thrift_client_legacy() as client:
@@ -805,10 +916,20 @@ class ReaddirTest(testcase.EdenRepoTest):
                 )
 
                 expected = self.constructReaddirResult(
-                    self.get_expected_file_attributes("slink")
+                    self.get_expected_file_attributes("slink", self.slink_id)
                 )
 
                 self.assertEqual(
                     expected,
                     actual.dirLists[0].get_dirListAttributeData()[b"slink"],
                 )
+
+    def test_materialized_files_return_no_object_id(self) -> None:
+        self.write_file("adir/file", "new contents\n")
+
+        actual = self.get_attributes_v2([b"adir/file"], FileAttributes.OBJECT_ID)
+        self.assertEqual(1, len(actual.res))
+        expected = FileAttributeDataOrErrorV2(
+            fileAttributeData=FileAttributeDataV2(objectId=ObjectIdOrError(None))
+        )
+        self.assertEqual(expected, actual.res[0])

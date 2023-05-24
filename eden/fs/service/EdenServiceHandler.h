@@ -36,7 +36,7 @@ class EdenServer;
 class TreeInode;
 class ObjectFetchContext;
 using ObjectFetchContextPtr = RefPtr<ObjectFetchContext>;
-class EntryAttributes;
+struct EntryAttributes;
 struct EntryAttributeFlags;
 template <typename T>
 class ImmediateFuture;

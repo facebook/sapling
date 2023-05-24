@@ -330,35 +330,6 @@ class EdenTestCase(EdenTestCaseBase):
         with open(fullpath, "r") as f:
             return f.read()
 
-    def get_expected_file_attributes(
-        self, path: str
-    ) -> Tuple[bytes, int, SourceControlType]:
-        """Get attributes for the file with the specified path inside
-        the eden repository. For now, just sha1 and file size.
-        """
-        fullpath = self.get_path(path)
-        file_stat = os.stat(fullpath, follow_symlinks=False)
-        file_type = SourceControlType.REGULAR_FILE
-        if stat.S_ISDIR(file_stat.st_mode):
-            return ((0).to_bytes(20, byteorder="big"), 0, SourceControlType.TREE)
-        if stat.S_ISLNK(file_stat.st_mode):
-            return ((0).to_bytes(20, byteorder="big"), 0, SourceControlType.SYMLINK)
-        if not stat.S_ISREG(file_stat.st_mode):
-            return (
-                (0).to_bytes(20, byteorder="big"),
-                0,
-                SourceControlType.UNKNOWN,
-            )
-        if stat.S_IXUSR & file_stat.st_mode:
-            file_type = SourceControlType.EXECUTABLE_FILE
-        file_size = file_stat.st_size
-        ifile = open(fullpath, "rb")
-        file_contents = ifile.read()
-        sha1_hash = hashlib.sha1(file_contents).digest()
-        ifile.close()
-
-        return (sha1_hash, file_size, file_type)
-
     def mkdir(self, path: str) -> None:
         """Call mkdir for the specified path relative to the clone."""
         full_path = self.get_path(path)
@@ -429,6 +400,7 @@ class EdenRepoTest(EdenTestCase):
 
     repo: repobase.Repository
     repo_name: str
+    repo_type: str
 
     enable_logview: bool = False
 
@@ -669,6 +641,8 @@ eden_repo_test = test_replicator(_replicate_eden_repo_test)
 
 
 class HgRepoTestMixin:
+    repo_type: str = "hg"
+
     def create_repo(self, name: str) -> repobase.Repository:
         # HgRepoTestMixin is always used in classes that derive from EdenRepoTest,
         # but it is difficult to make the type checkers aware of that.  We can't
@@ -680,6 +654,8 @@ class HgRepoTestMixin:
 
 
 class GitRepoTestMixin:
+    repo_type: str = "git"
+
     def create_repo(self, name: str) -> repobase.Repository:
         # pyre-fixme[16]: `GitRepoTestMixin` has no attribute `create_git_repo`.
         return self.create_git_repo(name)

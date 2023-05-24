@@ -63,20 +63,23 @@ TEST(TreeEntry, testEntrySize) {
 }
 
 TEST(TreeEntry, testEntryAttributesEqual) {
-  EntryAttributes nullAttributes{std::nullopt, std::nullopt, std::nullopt};
+  EntryAttributes nullAttributes{
+      std::nullopt, std::nullopt, std::nullopt, std::nullopt};
   EntryAttributes error1Attributes{
       std::nullopt,
       folly::Try<uint64_t>{newEdenError(std::exception{})},
+      std::nullopt,
       std::nullopt};
   EntryAttributes error2Attributes{
       std::nullopt,
       folly::Try<uint64_t>{
           newEdenError(std::runtime_error{"some other error"})},
+      std::nullopt,
       std::nullopt};
   EntryAttributes real1Attributes{
-      std::nullopt, folly::Try<uint64_t>{1}, std::nullopt};
+      std::nullopt, folly::Try<uint64_t>{1}, std::nullopt, std::nullopt};
   EntryAttributes real2Attributes{
-      std::nullopt, folly::Try<uint64_t>{2}, std::nullopt};
+      std::nullopt, folly::Try<uint64_t>{2}, std::nullopt, std::nullopt};
 
   EXPECT_EQ(nullAttributes, nullAttributes);
   EXPECT_NE(nullAttributes, error1Attributes);

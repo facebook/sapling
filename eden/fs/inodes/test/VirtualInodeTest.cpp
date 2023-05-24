@@ -12,11 +12,6 @@
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#ifdef _WIN32
-#include "eden/fs/prjfs/Enumerator.h"
-#else
-#include "eden/fs/fuse/FuseDirList.h"
-#endif // _WIN32
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -31,6 +26,12 @@
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/StatTimes.h"
+
+#ifdef _WIN32
+#include "eden/fs/prjfs/Enumerator.h"
+#else
+#include "eden/fs/fuse/FuseDirList.h"
+#endif // _WIN32
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -706,6 +707,7 @@ TEST(VirtualInodeTest, getChildrenAttributes) {
           ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE,
       ENTRY_ATTRIBUTE_SHA1,
       ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE | ENTRY_ATTRIBUTE_SIZE,
+      ENTRY_ATTRIBUTE_OBJECT_ID,
       EntryAttributeFlags{0}};
 
   for (auto info : files.getOriginalItems()) {

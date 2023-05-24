@@ -181,6 +181,13 @@ class VirtualInode {
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
 
+  EntryAttributes getEntryAttributesForNonFile(
+      EntryAttributeFlags requestedAttributes,
+      RelativePathPiece path,
+      std::optional<TreeEntryType> entryType,
+      int errorCode,
+      std::string additionalErrorContext = {}) const;
+
   /**
    * The main object this encapsulates
    */
