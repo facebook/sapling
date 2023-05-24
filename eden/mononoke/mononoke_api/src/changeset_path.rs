@@ -41,6 +41,9 @@ use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::ChangesetId;
+use mononoke_types::ContentMetadataV2;
+/// Metadata about a file.
+pub use mononoke_types::ContentMetadataV2 as FileMetadata;
 use mononoke_types::FileType;
 use mononoke_types::FileUnodeId;
 use mononoke_types::FsnodeId;
@@ -288,6 +291,14 @@ impl ChangesetPathContentContext {
             Some(context) => Some(context.content_concat().await?),
             None => None,
         })
+    }
+
+    pub async fn file_metadata(&self) -> Result<Option<ContentMetadataV2>, MononokeError> {
+        let metadata = match self.file().await? {
+            Some(context) => Some(context.metadata().await?),
+            None => None,
+        };
+        Ok(metadata)
     }
 
     /// Returns a `TreeContext` or `FileContext` and `FileType` for the tree

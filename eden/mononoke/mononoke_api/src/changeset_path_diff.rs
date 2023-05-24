@@ -8,22 +8,25 @@
 use std::ops::Range;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use bytes::Bytes;
 use futures::try_join;
 use lazy_static::lazy_static;
+use mononoke_types::ContentMetadataV2;
 use regex::Regex;
 pub use xdiff::CopyInfo;
 
 use crate::changeset_path::ChangesetPathContentContext;
 use crate::errors::MononokeError;
 use crate::file::FileType;
+use crate::FileContext;
 
 lazy_static! {
     static ref BEGIN_MANUAL_SECTION_REGEX: Regex =
-        Regex::new(r"^\s*[[:punct:]]*\s*BEGIN MANUAL SECTION").unwrap();
+        Regex::new(r"^(\s|[[:punct:]])*BEGIN MANUAL SECTION").unwrap();
     static ref END_MANUAL_SECTION_REGEX: Regex =
-        Regex::new(r"^\s*[[:punct:]]*\s*END MANUAL SECTION").unwrap();
+        Regex::new(r"^(\s|[[:punct:]])*END MANUAL SECTION").unwrap();
 }
 
 /// A path difference between two commits.
@@ -145,8 +148,8 @@ impl MetadataDiffLinesCount {
 
     fn diff_files(old_text_file: &TextFile, new_text_file: &TextFile) -> Self {
         xdiff::diff_hunks(
-            old_text_file.content.as_bytes(),
-            new_text_file.content.as_bytes(),
+            old_text_file.file_content.clone(),
+            new_text_file.file_content.clone(),
         )
         .into_iter()
         .fold(
@@ -172,7 +175,7 @@ impl MetadataDiffLinesCount {
 
     fn file_created(new_text_file: &TextFile) -> Self {
         Self {
-            added_lines_count: new_text_file.content.lines().count(),
+            added_lines_count: new_text_file.lines(),
             significant_added_lines_count: new_text_file.significant_lines_count(),
             first_added_line_number: Some(1),
             ..Default::default()
@@ -181,7 +184,7 @@ impl MetadataDiffLinesCount {
 
     fn file_deleted(old_text_file: &TextFile) -> Self {
         Self {
-            deleted_lines_count: old_text_file.content.lines().count(),
+            deleted_lines_count: old_text_file.lines(),
             significant_deleted_lines_count: old_text_file.significant_lines_count(),
             ..Default::default()
         }
@@ -221,13 +224,13 @@ pub enum FileGeneratedStatus {
     NotGenerated,
 }
 
-enum ParsedFileContent<'a> {
-    Text(TextFile<'a>),
+enum ParsedFileContent {
+    Text(TextFile),
     NonUtf8,
     Binary,
 }
 
-impl From<&ParsedFileContent<'_>> for FileContentType {
+impl From<&ParsedFileContent> for FileContentType {
     fn from(parsed_file_content: &ParsedFileContent) -> Self {
         match parsed_file_content {
             ParsedFileContent::Text(_) => FileContentType::Text,
@@ -247,28 +250,45 @@ impl From<&FileGeneratedSpan> for FileGeneratedStatus {
     }
 }
 
-impl<'a> ParsedFileContent<'a> {
-    fn new(content: &'a Bytes) -> Self {
-        if let Ok(parsed_content) = std::str::from_utf8(content) {
-            ParsedFileContent::Text(TextFile::new(parsed_content))
-        } else if content.contains(&0) {
+impl ParsedFileContent {
+    async fn new(file: FileContext) -> Result<Self, MononokeError> {
+        let metadata = file.metadata().await?;
+        let parsed_content = if metadata.is_binary {
             ParsedFileContent::Binary
+        } else if metadata.is_utf8 {
+            let file_content = file.content_concat().await?;
+            ParsedFileContent::Text(TextFile::new(file_content, metadata)?)
         } else {
             ParsedFileContent::NonUtf8
-        }
+        };
+        Ok(parsed_content)
     }
 }
 
-struct TextFile<'a> {
-    content: &'a str,
+struct TextFile {
+    file_content: Bytes,
+    metadata: ContentMetadataV2,
     generated_span: FileGeneratedSpan,
 }
 
-impl<'a> TextFile<'a> {
-    fn new(content: &'a str) -> Self {
-        TextFile {
-            content,
-            generated_span: FileGeneratedSpan::new(content),
+impl TextFile {
+    fn new(file_content: Bytes, metadata: ContentMetadataV2) -> Result<Self, MononokeError> {
+        Ok(TextFile {
+            generated_span: FileGeneratedSpan::new(file_content.clone(), &metadata)?,
+            file_content,
+            metadata,
+        })
+    }
+
+    /// This method replaces text.lines().count() and use the metadata to get
+    /// that information. The behavior should be identical in most cases except
+    /// when the text ends in a newline. The lines().count() method does not consider
+    /// the last newline in that case but it would still be counted in metadata.newline_count.
+    fn lines(&self) -> usize {
+        if self.metadata.ends_in_newline {
+            (self.metadata.newline_count - 1) as usize
+        } else {
+            self.metadata.newline_count as usize
         }
     }
 
@@ -278,7 +298,7 @@ impl<'a> TextFile<'a> {
             FileGeneratedSpan::PartiallyGenerated(manual_sections) => manual_sections
                 .iter()
                 .fold(0usize, |acc, section| acc.saturating_add(section.len())),
-            FileGeneratedSpan::NotGenerated => self.content.lines().count(),
+            FileGeneratedSpan::NotGenerated => self.lines(),
         }
     }
 
@@ -307,7 +327,12 @@ enum FileGeneratedSpan {
 }
 
 impl FileGeneratedSpan {
-    fn new<'a>(content: &'a str) -> Self {
+    fn new(content: Bytes, metadata: &ContentMetadataV2) -> Result<Self, MononokeError> {
+        if !metadata.is_generated && !metadata.is_partially_generated {
+            return Ok(FileGeneratedSpan::NotGenerated);
+        }
+        let content = std::str::from_utf8(&content)
+            .context("Failed to parse valid UTF8 bytes for determining generated status")?;
         let mut found_generated_annotation = false;
         let mut manual_sections_ranges = Vec::new();
         let mut manual_section_start = None;
@@ -332,14 +357,16 @@ impl FileGeneratedSpan {
             }
         }
 
-        match (
-            found_generated_annotation,
-            manual_sections_ranges.is_empty(),
-        ) {
-            (true, true) => FileGeneratedSpan::FullyGenerated,
-            (true, false) => FileGeneratedSpan::PartiallyGenerated(manual_sections_ranges),
-            (false, _) => FileGeneratedSpan::NotGenerated,
-        }
+        Ok(
+            match (
+                found_generated_annotation,
+                manual_sections_ranges.is_empty(),
+            ) {
+                (true, true) => FileGeneratedSpan::FullyGenerated,
+                (true, false) => FileGeneratedSpan::PartiallyGenerated(manual_sections_ranges),
+                (false, _) => FileGeneratedSpan::NotGenerated,
+            },
+        )
     }
 }
 
@@ -483,17 +510,23 @@ impl ChangesetPathDiffContext {
     }
 
     pub async fn metadata_diff(&self) -> Result<MetadataDiff, MononokeError> {
-        let (new_file_type, new_file_content) = match self.base() {
-            Some(path) => try_join!(path.file_type(), path.file_content())?,
+        let (new_file_type, mut new_file) = match self.base() {
+            Some(path) => try_join!(path.file_type(), path.file())?,
             None => (None, None),
         };
-        let new_parsed_file_content = new_file_content.as_ref().map(ParsedFileContent::new);
+        let new_parsed_file_content = match new_file.take() {
+            Some(file) => Some(ParsedFileContent::new(file).await?),
+            _ => None,
+        };
 
-        let (old_file_type, old_file_content) = match self.other() {
-            Some(path) => try_join!(path.file_type(), path.file_content())?,
+        let (old_file_type, mut old_file) = match self.other() {
+            Some(path) => try_join!(path.file_type(), path.file())?,
             None => (None, None),
         };
-        let old_parsed_file_content = old_file_content.as_ref().map(ParsedFileContent::new);
+        let old_parsed_file_content = match old_file.take() {
+            Some(file) => Some(ParsedFileContent::new(file).await?),
+            _ => None,
+        };
 
         Ok(MetadataDiff {
             old_file_info: MetadataDiffFileInfo::new(
