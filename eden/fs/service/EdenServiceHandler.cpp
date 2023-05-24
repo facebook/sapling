@@ -3055,38 +3055,6 @@ EdenServiceHandler::semifuture_debugGetBlob(
       .semi();
 }
 
-void EdenServiceHandler::debugGetScmBlobMetadata(
-    ScmBlobMetadata& result,
-    unique_ptr<string> mountPoint,
-    unique_ptr<string> idStr,
-    bool localStoreOnly) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, logHash(*idStr));
-  auto mountHandle = lookupMount(mountPoint);
-  auto& store = mountHandle.getObjectStore();
-  auto id = store.parseObjectId(*idStr);
-
-  std::optional<BlobMetadata> metadata;
-  if (localStoreOnly) {
-    auto localStore = server_->getLocalStore();
-    metadata = *localStore->getBlobMetadata(id).get();
-  } else {
-    auto& fetchContext = helper->getFetchContext();
-    auto sha1 = store.getBlobSha1(id, fetchContext).get();
-    auto size = store.getBlobSize(id, fetchContext).get();
-    metadata.emplace(sha1, size);
-  }
-
-  if (!metadata.has_value()) {
-    throw newEdenError(
-        ENOENT,
-        EdenErrorType::POSIX_ERROR,
-        "no blob metadata found for id ",
-        id);
-  }
-  result.size_ref() = metadata->size;
-  result.contentsSha1_ref() = thriftHash20(metadata->sha1);
-}
-
 folly::SemiFuture<std::unique_ptr<DebugGetBlobMetadataResponse>>
 EdenServiceHandler::semifuture_debugGetBlobMetadata(
     std::unique_ptr<DebugGetBlobMetadataRequest> request) {
