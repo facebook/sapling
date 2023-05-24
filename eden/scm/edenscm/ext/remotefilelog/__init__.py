@@ -724,23 +724,10 @@ def onetimeclientsetup(ui):
 
 
 def getrenamedfn(repo, endrev=None):
-    rcache = {}
-
     def getrenamed(fn, rev):
-        """looks up all renames for a file (up to endrev) the first
-        time the file is given. It indexes on the changerev and only
-        parses the manifest if linkrev != changerev.
-        Returns rename info for fn at changerev rev."""
-        if rev in rcache.setdefault(fn, {}):
-            return rcache[fn][rev]
-
+        """Returns rename info for fn at changerev rev."""
         try:
             fctx = repo[rev].filectx(fn)
-            for ancestor in fctx.ancestors():
-                if ancestor.path() == fn:
-                    renamed = ancestor.renamed()
-                    rcache[fn][ancestor.rev()] = renamed
-
             return fctx.renamed()
         except error.LookupError:
             return None
