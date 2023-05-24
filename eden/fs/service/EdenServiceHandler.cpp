@@ -3055,36 +3055,6 @@ EdenServiceHandler::semifuture_debugGetBlob(
       .semi();
 }
 
-void EdenServiceHandler::debugGetScmBlob(
-    string& data,
-    unique_ptr<string> mountPoint,
-    unique_ptr<string> idStr,
-    bool localStoreOnly) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, logHash(*idStr));
-  auto mountHandle = lookupMount(mountPoint);
-  auto id = mountHandle.getObjectStore().parseObjectId(*idStr);
-
-  std::shared_ptr<const Blob> blob;
-  auto& store = mountHandle.getObjectStore();
-
-  if (localStoreOnly) {
-    auto localStore = server_->getLocalStore();
-    blob = localStore->getBlob(id).get();
-  } else {
-    blob = store.getBlob(id, helper->getFetchContext()).get();
-  }
-
-  if (!blob) {
-    throw newEdenError(
-        ENOENT,
-        EdenErrorType::POSIX_ERROR,
-        "no blob found for id ",
-        store.renderObjectId(id));
-  }
-  auto dataBuf = blob->getContents().cloneCoalescedAsValue();
-  data.assign(reinterpret_cast<const char*>(dataBuf.data()), dataBuf.length());
-}
-
 void EdenServiceHandler::debugGetScmBlobMetadata(
     ScmBlobMetadata& result,
     unique_ptr<string> mountPoint,

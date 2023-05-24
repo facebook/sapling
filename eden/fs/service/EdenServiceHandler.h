@@ -242,12 +242,6 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> id,
       bool localStoreOnly) override;
 
-  void debugGetScmBlob(
-      std::string& data,
-      std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> id,
-      bool localStoreOnly) override;
-
   folly::SemiFuture<std::unique_ptr<DebugGetScmBlobResponse>>
   semifuture_debugGetBlob(
       std::unique_ptr<DebugGetScmBlobRequest> request) override;
