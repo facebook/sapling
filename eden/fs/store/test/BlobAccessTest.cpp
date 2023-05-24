@@ -94,7 +94,6 @@ struct BlobAccessTest : ::testing::Test {
 
     localStore->open();
     objectStore = ObjectStore::create(
-        localStore,
         backingStore,
         treeCache,
         makeRefPtr<EdenStats>(),

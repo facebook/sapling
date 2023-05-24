@@ -1536,7 +1536,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       *initialConfig);
 
   auto objectStore = ObjectStore::create(
-      getLocalStore(),
       backingStore,
       treeCache_,
       getStats().copy(),

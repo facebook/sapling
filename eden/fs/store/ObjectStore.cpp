@@ -39,7 +39,6 @@ constexpr uint64_t kImportPriorityDeprioritizeAmount = 1;
 }
 
 std::shared_ptr<ObjectStore> ObjectStore::create(
-    shared_ptr<LocalStore> localStore,
     shared_ptr<BackingStore> backingStore,
     shared_ptr<TreeCache> treeCache,
     EdenStatsPtr stats,
@@ -48,7 +47,6 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
     std::shared_ptr<const EdenConfig> edenConfig,
     CaseSensitivity caseSensitive) {
   return std::shared_ptr<ObjectStore>{new ObjectStore{
-      std::move(localStore),
       std::move(backingStore),
       std::move(treeCache),
       std::move(stats),
@@ -59,7 +57,6 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
 }
 
 ObjectStore::ObjectStore(
-    shared_ptr<LocalStore> localStore,
     shared_ptr<BackingStore> backingStore,
     shared_ptr<TreeCache> treeCache,
     EdenStatsPtr stats,
@@ -69,7 +66,6 @@ ObjectStore::ObjectStore(
     CaseSensitivity caseSensitive)
     : metadataCache_{folly::in_place, kCacheSize},
       treeCache_{std::move(treeCache)},
-      localStore_{std::move(localStore)},
       backingStore_{std::move(backingStore)},
       stats_{std::move(stats)},
       pidFetchCounts_{std::make_unique<PidFetchCounts>()},
@@ -77,7 +73,6 @@ ObjectStore::ObjectStore(
       structuredLogger_(structuredLogger),
       edenConfig_(edenConfig),
       caseSensitive_{caseSensitive} {
-  XCHECK(localStore_);
   XCHECK(backingStore_);
   XCHECK(stats_);
 }
@@ -162,10 +157,6 @@ std::shared_ptr<const Tree> changeCaseSensitivity(
     return std::make_shared<const Tree>(
         std::move(treeEntries), tree->getHash());
   }
-}
-
-BlobMetadata computeBlobMetadata(const Blob& blob) {
-  return BlobMetadata{Hash20::sha1(blob.getContents()), blob.getSize()};
 }
 
 } // namespace
@@ -288,17 +279,6 @@ ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
               // TODO: Perhaps we should do some short-term negative caching?
               XLOG(DBG2) << "unable to find blob " << id;
               throwf<std::domain_error>("blob {} not found", id);
-            }
-            // Quick check in-memory cache first, before doing expensive
-            // calculations. If metadata is present in cache, it most certainly
-            // exists in local store too.
-            // We always cache metadata in LocalStore because it's faster to
-            // query than the BackingStore, and metadata is very small (~28
-            // bytes per blob).
-            if (!self->metadataCache_.rlock()->exists(id)) {
-              auto metadata = computeBlobMetadata(*result.blob);
-              self->localStore_->putBlobMetadata(id, metadata);
-              self->metadataCache_.wlock()->set(id, metadata);
             }
             self->updateProcessFetch(*fetchContext);
             fetchContext->didFetch(ObjectFetchContext::Blob, id, result.origin);

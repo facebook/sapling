@@ -100,7 +100,7 @@ data, potentially with different commits checked out in each.
 The `ObjectStore` class provides the internal API that EdenFS uses to fetch
 data from a source control repository.  The `ObjectStore` is split into two
 components internally: a `BackingStore` that is responsible for actually
-fetching data from the repository, and a `LocalStore` class that locally caches
+fetching data from the repository, and an in-memory cache that locally caches
 fetched data.  The primary `BackingStore` implementation used by EdenFS is the
 `HgBackingStore` class, which fetches data from an EdenSCM repository.  (The
 name `HgBackingStore` dates back to before EdenSCM was differentiated from
@@ -108,7 +108,9 @@ Mercurial.)  EdenFS also has a `GitBackingStore` implementation that can fetch
 data from a git repository.  However, as the git CLI does not currently have
 any knowledge of EdenFS this is not particularly usable in practice: while
 EdenFS can show a view of a git repository, operations like `git status` or
-`git checkout` are not EdenFS aware.
+`git checkout` are not EdenFS aware. The SCM-specific classes can be wrapped in
+a `LocalStoreCachedBackingStore` to provide caching of data to an on-disk
+RocksDB.
 
 
 Persistent State Management

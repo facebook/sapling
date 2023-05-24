@@ -305,7 +305,6 @@ void TestMount::createMountWithoutInitializing(
 
 void TestMount::createMount(Overlay::InodeCatalogType inodeCatalogType) {
   shared_ptr<ObjectStore> objectStore = ObjectStore::create(
-      localStore_,
       backingStore_,
       treeCache_,
       stats_.copy(),
@@ -433,7 +432,6 @@ void TestMount::remount() {
   auto config = make_unique<CheckoutConfig>(*edenMount_->getCheckoutConfig());
   // Create a new ObjectStore pointing to our local store and backing store
   auto objectStore = ObjectStore::create(
-      localStore_,
       backingStore_,
       treeCache_,
       stats_.copy(),
@@ -473,7 +471,6 @@ void TestMount::remountGracefully() {
   auto config = make_unique<CheckoutConfig>(*edenMount_->getCheckoutConfig());
   // Create a new ObjectStore pointing to our local store and backing store
   auto objectStore = ObjectStore::create(
-      localStore_,
       backingStore_,
       treeCache_,
       stats_.copy(),

@@ -29,7 +29,6 @@ class BackingStore;
 class Blob;
 class EdenConfig;
 class EdenStats;
-class LocalStore;
 class ProcessNameCache;
 class StructuredLogger;
 class Tree;
@@ -67,10 +66,12 @@ struct PidFetchCounts {
  *
  * The ObjectStore class itself is primarily a wrapper around two other
  * underlying storage types:
- * - LocalStore, which caches object data locally in a RocksDB instance
+ * - An in memory cache, for fast repeated queries,
  * - BackingStore, which represents the authoritative source for the object
  *   data.  The BackingStore is generally more expensive to query for object
  *   data, and may not be available during offline operation.
+ *
+ * ObjectStore also takes care of updating various stats and counters.
  */
 class ObjectStore : public IObjectStore,
                     public RootIdCodec,
@@ -78,7 +79,6 @@ class ObjectStore : public IObjectStore,
                     public std::enable_shared_from_this<ObjectStore> {
  public:
   static std::shared_ptr<ObjectStore> create(
-      std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<BackingStore> backingStore,
       std::shared_ptr<TreeCache> treeCache,
       EdenStatsPtr stats,
@@ -242,13 +242,6 @@ class ObjectStore : public IObjectStore,
       const ObjectFetchContextPtr& context) const;
 
   /**
-   * Get the LocalStore used by this ObjectStore
-   */
-  const std::shared_ptr<LocalStore>& getLocalStore() const {
-    return localStore_;
-  }
-
-  /**
    * Get the BackingStore used by this ObjectStore
    */
   const std::shared_ptr<BackingStore>& getBackingStore() const {
@@ -285,7 +278,6 @@ class ObjectStore : public IObjectStore,
  private:
   // Forbidden constructor. Use create().
   ObjectStore(
-      std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<BackingStore> backingStore,
       std::shared_ptr<TreeCache> treeCache,
       EdenStatsPtr stats,
@@ -329,13 +321,6 @@ class ObjectStore : public IObjectStore,
    */
   const std::shared_ptr<TreeCache> treeCache_;
 
-  /*
-   * The LocalStore.
-   *
-   * Multiple ObjectStores (for different mount points) may share the same
-   * LocalStore.
-   */
-  std::shared_ptr<LocalStore> localStore_;
   /*
    * The BackingStore.
    *

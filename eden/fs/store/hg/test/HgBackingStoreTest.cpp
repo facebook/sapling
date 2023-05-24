@@ -65,7 +65,6 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
         kTreeCacheMinimumEntries, ConfigSourceType::Default, true);
     auto treeCache = TreeCache::create(edenConfig);
     objectStore = ObjectStore::create(
-        localStore,
         backingStore,
         treeCache,
         stats.copy(),

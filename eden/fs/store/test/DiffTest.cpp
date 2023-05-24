@@ -78,7 +78,6 @@ class DiffTest : public ::testing::Test {
     localStore_ = make_shared<MemoryLocalStore>();
     backingStore_ = make_shared<FakeBackingStore>();
     store_ = ObjectStore::create(
-        localStore_,
         backingStore_,
         treeCache,
         makeRefPtr<EdenStats>(),

@@ -2947,7 +2947,7 @@ void EdenServiceHandler::debugGetScmTree(
 
   std::shared_ptr<const Tree> tree;
   if (localStoreOnly) {
-    auto localStore = store.getLocalStore();
+    auto localStore = server_->getLocalStore();
     tree = localStore->getTree(id).get();
   } else {
     tree = store.getTree(id, helper->getFetchContext()).get();
@@ -2998,7 +2998,7 @@ EdenServiceHandler::semifuture_debugGetBlob(
             DataFetchOrigin::MEMORY_CACHE)});
   }
   if (originFlags.contains(FROMWHERE_DISK_CACHE)) {
-    auto localStore = store->getLocalStore();
+    auto localStore = server_->getLocalStore();
     blobFutures.emplace_back(
         localStore->getBlob(id).thenTry([edenMount, id](auto&& blob) {
           return transformToBlobFromOrigin(
@@ -3007,7 +3007,7 @@ EdenServiceHandler::semifuture_debugGetBlob(
   }
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
     auto proxyHash = HgProxyHash::load(
-        store->getLocalStore().get(),
+        server_->getLocalStore().get(),
         id,
         "debugGetScmBlob",
         *server_->getServerState()->getStats());
@@ -3068,7 +3068,7 @@ void EdenServiceHandler::debugGetScmBlob(
   auto& store = mountHandle.getObjectStore();
 
   if (localStoreOnly) {
-    auto localStore = store.getLocalStore();
+    auto localStore = server_->getLocalStore();
     blob = localStore->getBlob(id).get();
   } else {
     blob = store.getBlob(id, helper->getFetchContext()).get();
@@ -3097,7 +3097,7 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
 
   std::optional<BlobMetadata> metadata;
   if (localStoreOnly) {
-    auto localStore = store.getLocalStore();
+    auto localStore = server_->getLocalStore();
     metadata = *localStore->getBlobMetadata(id).get();
   } else {
     auto& fetchContext = helper->getFetchContext();
@@ -3143,7 +3143,7 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
             edenMount, id, metadata, DataFetchOrigin::MEMORY_CACHE)});
   }
   if (originFlags.contains(FROMWHERE_DISK_CACHE)) {
-    auto localStore = store->getLocalStore();
+    auto localStore = server_->getLocalStore();
     blobFutures.emplace_back(localStore->getBlobMetadata(id).thenTry(
         [edenMount, id](auto&& metadata) {
           return transformToBlobMetadataFromOrigin(
@@ -3155,7 +3155,7 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
   }
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
     auto proxyHash = HgProxyHash::load(
-        store->getLocalStore().get(),
+        server_->getLocalStore().get(),
         id,
         "debugGetScmBlob",
         *server_->getServerState()->getStats());
@@ -3175,7 +3175,7 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
     auto proxyHash = HgProxyHash::load(
-        store->getLocalStore().get(),
+        server_->getLocalStore().get(),
         id,
         "debugGetScmBlob",
         *server_->getServerState()->getStats());

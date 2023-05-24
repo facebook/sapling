@@ -52,7 +52,6 @@ struct ObjectStoreTest : ::testing::Test {
         stats.copy(),
         LocalStoreCachedBackingStore::CachingPolicy::Everything);
     objectStore = ObjectStore::create(
-        localStore,
         backingStore,
         treeCache,
         stats.copy(),
@@ -173,7 +172,6 @@ TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
   objectStore->getBlobSize(id, context);
   // Clear backing store
   objectStore = ObjectStore::create(
-      localStore,
       backingStore,
       treeCache,
       stats.copy(),
