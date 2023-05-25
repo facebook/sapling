@@ -26,6 +26,7 @@ export default function DiffView({diff, isPullRequest}: {diff: Diff; isPullReque
         </Box>
       );
     });
+    // TODO: Add SuspenseList here so files can load in individually
     return <div>{children}</div>;
   } else {
     return <div>commit not found or fetched from GitHub URL above</div>;
@@ -76,6 +77,8 @@ function AddedFile({
       }
     }
     case 'loading': {
+      // Trigger suspense while loading
+      blobLoadable.getValue();
       return <div>{`loading patch for ${path}`}</div>;
     }
     case 'hasError': {
@@ -97,6 +100,8 @@ function RemovedFile({basePath, name, oid}: {basePath: string; name: string; oid
       );
     }
     case 'loading': {
+      // Trigger suspense while loading
+      blobLoadable.getValue();
       return <div>{`loading patch for ${path}`}</div>;
     }
     case 'hasError': {
@@ -142,6 +147,8 @@ function ModifiedFile({modify, isPullRequest}: {modify: ModifyChange; isPullRequ
       }
     }
     case 'loading': {
+      // Trigger suspense while loading
+      fileModLoadable.getValue();
       return <div>{`loading patch for ${path}`}</div>;
     }
     case 'hasError': {
