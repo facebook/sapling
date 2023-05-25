@@ -23,6 +23,7 @@ target_link_libraries(
   eden_inodes_test
   PRIVATE
     eden_inodes
+    eden_overlay_checker
     eden_testharness
     eden_utils
     eden_service_thrift_cpp

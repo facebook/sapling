@@ -15,7 +15,7 @@
 #include <folly/portability/GTest.h>
 
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
-#include "eden/fs/inodes/fscatalog/OverlayChecker.h"
+#include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/testharness/TestUtil.h"

@@ -17,7 +17,7 @@
 #include <optional>
 #include <thread>
 #include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/inodes/fscatalog/OverlayChecker.h"
+#include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/CaseSensitivity.h"

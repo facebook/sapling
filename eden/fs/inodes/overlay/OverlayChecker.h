@@ -12,6 +12,7 @@
 
 #include <folly/CppAttributes.h>
 
+#include "eden/fs/inodes/InodeCatalog.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/utils/ImmediateFuture.h"

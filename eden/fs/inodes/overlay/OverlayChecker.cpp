@@ -7,7 +7,7 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/inodes/fscatalog/OverlayChecker.h"
+#include "eden/fs/inodes/overlay/OverlayChecker.h"
 
 #include <boost/filesystem.hpp>
 #include <fcntl.h>

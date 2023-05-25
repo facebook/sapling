@@ -16,7 +16,7 @@
 #include <folly/portability/GFlags.h>
 
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
-#include "eden/fs/inodes/fscatalog/OverlayChecker.h"
+#include "eden/fs/inodes/overlay/OverlayChecker.h"
 
 DEFINE_bool(
     dry_run,

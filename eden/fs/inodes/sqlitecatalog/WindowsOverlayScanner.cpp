@@ -14,7 +14,7 @@
 #include <folly/portability/GFlags.h>
 
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/inodes/fscatalog/OverlayChecker.h"
+#include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/utils/PathFuncs.h"

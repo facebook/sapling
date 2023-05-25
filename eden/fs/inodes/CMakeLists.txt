@@ -77,6 +77,7 @@ else()
     PUBLIC
       eden_fuse
       eden_fscatalog
+      eden_overlay_checker
   )
 endif()
 
