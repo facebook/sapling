@@ -72,6 +72,7 @@ LocalStoreCachedBackingStore::getTree(
       .thenValue([self = shared_from_this(), id = id, context = context.copy()](
                      TreePtr tree) mutable {
         if (tree) {
+          self->stats_->increment(&ObjectStoreStats::getTreeFromLocalStore);
           return folly::makeSemiFuture(GetTreeResult{
               std::move(tree), ObjectFetchContext::FromDiskCache});
         }
@@ -102,6 +103,8 @@ LocalStoreCachedBackingStore::getTree(
                   }
                 }
                 batch->flush();
+                self->stats_->increment(
+                    &ObjectStoreStats::getTreeFromBackingStore);
               }
 
               return result;
