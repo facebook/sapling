@@ -74,9 +74,9 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
         kPathMapDefaultCaseSensitive);
   }
 
-  std::shared_ptr<MemoryLocalStore> localStore{
-      std::make_shared<MemoryLocalStore>()};
   EdenStatsPtr stats{makeRefPtr<EdenStats>()};
+  std::shared_ptr<MemoryLocalStore> localStore{
+      std::make_shared<MemoryLocalStore>(stats.copy())};
   HgImporter importer{repo.path(), stats.copy()};
   std::shared_ptr<EdenConfig> rawEdenConfig{EdenConfig::createTestEdenConfig()};
   std::shared_ptr<ReloadableConfig> edenConfig{

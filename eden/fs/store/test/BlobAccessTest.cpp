@@ -57,6 +57,8 @@ class NullLocalStore final : public LocalStore {
     void flush() override {}
   };
 
+  NullLocalStore() : LocalStore{makeRefPtr<EdenStats>()} {}
+
   void close() override {}
   void open() override {}
   void clearKeySpace(KeySpace) override {}

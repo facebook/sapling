@@ -18,6 +18,7 @@
 #include "eden/fs/store/KeySpace.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/RefPtr.h"
 
 namespace folly {
 template <typename T>
@@ -26,8 +27,11 @@ class Future;
 
 namespace facebook::eden {
 
+class EdenStats;
 class EdenConfig;
 class StoreResult;
+
+using EdenStatsPtr = RefPtr<EdenStats>;
 
 /*
  * LocalStore stores objects (trees and blobs) locally on disk.
@@ -48,7 +52,7 @@ class StoreResult;
  */
 class LocalStore : public std::enable_shared_from_this<LocalStore> {
  public:
-  LocalStore() = default;
+  explicit LocalStore(EdenStatsPtr edenStats);
   virtual ~LocalStore() = default;
 
   /**
@@ -266,6 +270,8 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * two phase import.
    */
   static folly::IOBuf serializeTree(const Tree& tree);
+
+  EdenStatsPtr stats_;
 };
 
 } // namespace facebook::eden

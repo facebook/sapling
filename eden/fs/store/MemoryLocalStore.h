@@ -12,6 +12,10 @@
 
 namespace facebook::eden {
 
+class EdenStats;
+
+using EdenStatsPtr = RefPtr<EdenStats>;
+
 /** An implementation of LocalStore that stores values in memory.
  * Stored values remain in memory for the lifetime of the
  * MemoryLocalStore instance.
@@ -20,7 +24,7 @@ namespace facebook::eden {
  * */
 class MemoryLocalStore final : public LocalStore {
  public:
-  explicit MemoryLocalStore();
+  explicit MemoryLocalStore(EdenStatsPtr edenStats);
   void open() override;
   void close() override;
   void clearKeySpace(KeySpace keySpace) override;

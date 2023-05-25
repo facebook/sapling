@@ -12,13 +12,17 @@
 
 namespace facebook::eden {
 
+class EdenStats;
+
+using EdenStatsPtr = RefPtr<EdenStats>;
+
 /** An implementation of LocalStore that stores values in Sqlite.
  * SqliteLocalStore is thread safe, allowing reads and writes from
  * any thread.
  * */
 class SqliteLocalStore final : public LocalStore {
  public:
-  explicit SqliteLocalStore(AbsolutePathPiece pathToDb);
+  explicit SqliteLocalStore(AbsolutePathPiece pathToDb, EdenStatsPtr edenStats);
   void open() override;
   void close() override;
   void clearKeySpace(KeySpace keySpace) override;

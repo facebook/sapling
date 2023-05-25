@@ -27,6 +27,7 @@
 #include "eden/fs/rocksdb/RocksHandles.h"
 #include "eden/fs/store/KeySpace.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/telemetry/TaskTrace.h"
 #include "eden/fs/utils/Bug.h"
@@ -284,10 +285,12 @@ RocksDbLocalStore::RockDBState::RockDBState() {
 
 RocksDbLocalStore::RocksDbLocalStore(
     AbsolutePathPiece pathToRocksDb,
+    EdenStatsPtr edenStats,
     std::shared_ptr<StructuredLogger> structuredLogger,
     FaultInjector* faultInjector,
     RocksDBOpenMode mode)
-    : structuredLogger_{std::move(structuredLogger)},
+    : LocalStore{std::move(edenStats)},
+      structuredLogger_{std::move(structuredLogger)},
       faultInjector_(*faultInjector),
       ioPool_(12, "RocksLocalStore"),
       pathToDb_{pathToRocksDb.copy()},

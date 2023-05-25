@@ -75,7 +75,7 @@ class DiffTest : public ::testing::Test {
     auto edenConfig = std::make_shared<ReloadableConfig>(
         rawEdenConfig, ConfigReloadBehavior::NoReload);
     auto treeCache = TreeCache::create(edenConfig);
-    localStore_ = make_shared<MemoryLocalStore>();
+    localStore_ = make_shared<MemoryLocalStore>(makeRefPtr<EdenStats>());
     backingStore_ = make_shared<FakeBackingStore>();
     store_ = ObjectStore::create(
         backingStore_,

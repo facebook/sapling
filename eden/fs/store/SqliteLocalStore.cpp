@@ -13,6 +13,7 @@
 
 #include "eden/fs/sqlite/SqliteStatement.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 namespace facebook::eden {
 
@@ -100,8 +101,11 @@ class SqliteWriteBatch : public LocalStore::WriteBatch {
 
 } // namespace
 
-SqliteLocalStore::SqliteLocalStore(AbsolutePathPiece pathToDb)
-    : db_(pathToDb, SqliteDatabase::DelayOpeningDB{}) {}
+SqliteLocalStore::SqliteLocalStore(
+    AbsolutePathPiece pathToDb,
+    EdenStatsPtr edenStats)
+    : LocalStore{std::move(edenStats)},
+      db_(pathToDb, SqliteDatabase::DelayOpeningDB{}) {}
 
 void SqliteLocalStore::open() {
   db_.openDb();

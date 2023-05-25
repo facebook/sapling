@@ -21,6 +21,7 @@
 #include "eden/fs/model/git/GitTree.h"
 #include "eden/fs/store/SerializedBlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 using folly::ByteRange;
 using folly::IOBuf;
@@ -30,6 +31,8 @@ using std::optional;
 using std::string;
 
 namespace facebook::eden {
+
+LocalStore::LocalStore(EdenStatsPtr edenStats) : stats_{std::move(edenStats)} {}
 
 void LocalStore::clearDeprecatedKeySpaces() {
   for (auto& ks : KeySpace::kAll) {
@@ -89,8 +92,9 @@ folly::Future<std::vector<StoreResult>> LocalStore::getBatch(
 }
 
 ImmediateFuture<TreePtr> LocalStore::getTree(const ObjectId& id) const {
+  DurationScope stat{stats_, &LocalStoreStats::getTree};
   return getImmediateFuture(KeySpace::TreeFamily, id)
-      .thenValue([id](StoreResult&& data) {
+      .thenValue([id, stat = std::move(stat)](StoreResult&& data) {
         if (!data.isValid()) {
           return std::shared_ptr<TreePtr::element_type>(nullptr);
         }
@@ -103,8 +107,9 @@ ImmediateFuture<TreePtr> LocalStore::getTree(const ObjectId& id) const {
 }
 
 ImmediateFuture<BlobPtr> LocalStore::getBlob(const ObjectId& id) const {
+  DurationScope stat{stats_, &LocalStoreStats::getBlob};
   return getImmediateFuture(KeySpace::BlobFamily, id)
-      .thenValue([id](StoreResult&& data) {
+      .thenValue([id, stat = std::move(stat)](StoreResult&& data) {
         if (!data.isValid()) {
           return std::shared_ptr<BlobPtr::element_type>(nullptr);
         }
@@ -115,14 +120,16 @@ ImmediateFuture<BlobPtr> LocalStore::getBlob(const ObjectId& id) const {
 
 ImmediateFuture<BlobMetadataPtr> LocalStore::getBlobMetadata(
     const ObjectId& id) const {
+  DurationScope stat{stats_, &LocalStoreStats::getBlobMetadata};
   return getImmediateFuture(KeySpace::BlobMetaDataFamily, id)
-      .thenValue([id](StoreResult&& data) -> BlobMetadataPtr {
-        if (!data.isValid()) {
-          return nullptr;
-        } else {
-          return SerializedBlobMetadata::parse(id, data);
-        }
-      });
+      .thenValue(
+          [id, stat = std::move(stat)](StoreResult&& data) -> BlobMetadataPtr {
+            if (!data.isValid()) {
+              return nullptr;
+            } else {
+              return SerializedBlobMetadata::parse(id, data);
+            }
+          });
 }
 
 folly::IOBuf LocalStore::serializeTree(const Tree& tree) {

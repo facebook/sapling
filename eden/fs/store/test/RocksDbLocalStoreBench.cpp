@@ -8,6 +8,7 @@
 #include "eden/common/utils/benchharness/Bench.h"
 #include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/utils/FaultInjector.h"
@@ -18,8 +19,10 @@ using namespace facebook::eden;
 void getBlobMetadata(benchmark::State& st) {
   auto tempDir = makeTempDir();
   FaultInjector faultInjector{false};
+  auto edenStats = makeRefPtr<EdenStats>();
   auto store = std::make_unique<RocksDbLocalStore>(
       canonicalPath(tempDir.path().string()),
+      edenStats.copy(),
       std::make_shared<NullStructuredLogger>(),
       &faultInjector);
   store->open();
@@ -46,6 +49,7 @@ void getBlobMetadata(benchmark::State& st) {
   store.reset();
   store = std::make_unique<RocksDbLocalStore>(
       canonicalPath(tempDir.path().string()),
+      edenStats.copy(),
       std::make_shared<NullStructuredLogger>(),
       &faultInjector);
   store->open();

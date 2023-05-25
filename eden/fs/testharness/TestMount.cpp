@@ -379,7 +379,7 @@ void TestMount::initTestDirectory(CaseSensitivity caseSensitivity) {
   config_ = CheckoutConfig::loadFromClientDirectory(mountPath, clientDirectory);
 
   // Create localStore_ and backingStore_
-  localStore_ = make_shared<MemoryLocalStore>();
+  localStore_ = make_shared<MemoryLocalStore>(makeRefPtr<EdenStats>());
   backingStore_ = make_shared<FakeBackingStore>();
 
   stats_ = makeRefPtr<EdenStats>();

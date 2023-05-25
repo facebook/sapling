@@ -1054,14 +1054,14 @@ bool EdenServer::createStorageEngine(cpptoml::table& config) {
 
   if (storageEngine == "memory") {
     XLOG(DBG2) << "Creating new memory store.";
-    localStore_ = make_shared<MemoryLocalStore>();
+    localStore_ = make_shared<MemoryLocalStore>(getStats().copy());
   } else if (storageEngine == "sqlite") {
     const auto path = edenDir_.getPath() + RelativePathPiece{kSqlitePath};
     const auto parentDir = path.dirname();
     ensureDirectoryExists(parentDir);
     XLOG(DBG2) << "Creating local SQLite store " << path << "...";
     folly::stop_watch<std::chrono::milliseconds> watch;
-    localStore_ = make_shared<SqliteLocalStore>(path);
+    localStore_ = make_shared<SqliteLocalStore>(path, getStats().copy());
     XLOG(DBG2) << "Opened SQLite store in " << watch.elapsed().count() / 1000.0
                << " seconds.";
   } else if (storageEngine == "rocksdb") {
@@ -1071,6 +1071,7 @@ bool EdenServer::createStorageEngine(cpptoml::table& config) {
     ensureDirectoryExists(rocksPath);
     localStore_ = make_shared<RocksDbLocalStore>(
         rocksPath,
+        getStats().copy(),
         serverState_->getStructuredLogger(),
         &serverState_->getFaultInjector());
     XLOG(DBG2) << "Created RocksDB store in "

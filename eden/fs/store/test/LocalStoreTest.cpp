@@ -8,6 +8,7 @@
 #include "eden/fs/store/test/LocalStoreTest.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/SqliteLocalStore.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 namespace {
 
@@ -16,13 +17,16 @@ using namespace folly::string_piece_literals;
 using namespace std::chrono_literals;
 
 LocalStoreImplResult makeMemoryLocalStore(FaultInjector*) {
-  return {std::nullopt, std::make_shared<MemoryLocalStore>()};
+  return {
+      std::nullopt,
+      std::make_shared<MemoryLocalStore>(makeRefPtr<EdenStats>())};
 }
 
 LocalStoreImplResult makeSqliteLocalStore(FaultInjector*) {
   auto tempDir = makeTempDir();
   auto store = std::make_shared<SqliteLocalStore>(
-      canonicalPath(tempDir.path().string()) + "sqlite"_pc);
+      canonicalPath(tempDir.path().string()) + "sqlite"_pc,
+      makeRefPtr<EdenStats>());
   return {std::move(tempDir), std::move(store)};
 }
 

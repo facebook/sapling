@@ -19,6 +19,9 @@ namespace facebook::eden {
 
 class FaultInjector;
 class StructuredLogger;
+class EdenStats;
+
+using EdenStatsPtr = RefPtr<EdenStats>;
 
 /** An implementation of LocalStore that uses RocksDB for the underlying
  * storage.
@@ -31,6 +34,7 @@ class RocksDbLocalStore final : public LocalStore {
    */
   explicit RocksDbLocalStore(
       AbsolutePathPiece pathToRocksDb,
+      EdenStatsPtr edenStats,
       std::shared_ptr<StructuredLogger> structuredLogger,
       FaultInjector* FOLLY_NONNULL faultInjector,
       RocksDBOpenMode mode = RocksDBOpenMode::ReadWrite);

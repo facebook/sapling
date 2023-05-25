@@ -53,9 +53,9 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
 
   std::shared_ptr<ReloadableConfig> edenConfig{
       std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig())};
-  std::shared_ptr<MemoryLocalStore> localStore{
-      std::make_shared<MemoryLocalStore>()};
   EdenStatsPtr stats{makeRefPtr<EdenStats>()};
+  std::shared_ptr<MemoryLocalStore> localStore{
+      std::make_shared<MemoryLocalStore>(stats.copy())};
   HgImporter importer{repo.path(), stats.copy()};
 
   std::unique_ptr<HgBackingStore> backingStore{std::make_unique<HgBackingStore>(

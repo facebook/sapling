@@ -8,6 +8,7 @@
 #include "eden/fs/store/MemoryLocalStore.h"
 #include <folly/String.h>
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 namespace facebook::eden {
 
@@ -51,7 +52,8 @@ class MemoryWriteBatch : public LocalStore::WriteBatch {
 };
 } // namespace
 
-MemoryLocalStore::MemoryLocalStore() {
+MemoryLocalStore::MemoryLocalStore(EdenStatsPtr edenStats)
+    : LocalStore{std::move(edenStats)} {
   storage_.wlock()->resize(KeySpace::kTotalCount);
 }
 

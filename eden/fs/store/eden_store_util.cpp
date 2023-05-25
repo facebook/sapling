@@ -25,6 +25,7 @@
 #include "eden/fs/service/EdenStateDir.h"
 #include "eden/fs/store/KeySpace.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/UserInfo.h"
@@ -86,6 +87,7 @@ class Command {
     ensureDirectoryExists(rocksPath);
     auto localStore = make_unique<RocksDbLocalStore>(
         rocksPath,
+        makeRefPtr<EdenStats>(),
         std::make_shared<NullStructuredLogger>(),
         &faultInjector_,
         mode);

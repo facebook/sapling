@@ -22,6 +22,7 @@ struct FuseStats;
 struct NfsStats;
 struct PrjfsStats;
 struct ObjectStoreStats;
+struct LocalStoreStats;
 struct HgBackingStoreStats;
 struct HgImporterStats;
 struct JournalStats;
@@ -116,6 +117,7 @@ class EdenStats : public RefCounted {
   ThreadLocal<NfsStats> nfsStats_;
   ThreadLocal<PrjfsStats> prjfsStats_;
   ThreadLocal<ObjectStoreStats> objectStoreStats_;
+  ThreadLocal<LocalStoreStats> localStoreStats_;
   ThreadLocal<HgBackingStoreStats> hgBackingStoreStats_;
   ThreadLocal<HgImporterStats> hgImporterStats_;
   ThreadLocal<JournalStats> journalStats_;
@@ -145,6 +147,11 @@ template <>
 inline ObjectStoreStats&
 EdenStats::getStatsForCurrentThread<ObjectStoreStats>() {
   return *objectStoreStats_.get();
+}
+
+template <>
+inline LocalStoreStats& EdenStats::getStatsForCurrentThread<LocalStoreStats>() {
+  return *localStoreStats_.get();
 }
 
 template <>
@@ -301,6 +308,12 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
       "object_store.get_blob_metadata.backing_store_cache"};
   Counter getBlobMetadataFromBlob{"object_store.get_blob_metadata.blob"};
   Counter getBlobMetadataFailed{"object_store.get_blob_metadata_failed"};
+};
+
+struct LocalStoreStats : StatsGroup<LocalStoreStats> {
+  Duration getTree{"local_store.get_tree_us"};
+  Duration getBlob{"local_store.get_blob_us"};
+  Duration getBlobMetadata{"local_store.get_blob_metadata_us"};
 };
 
 /**

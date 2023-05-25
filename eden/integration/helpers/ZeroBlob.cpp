@@ -14,6 +14,7 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/utils/FaultInjector.h"
 
@@ -47,7 +48,10 @@ int main(int argc, char* argv[]) {
   const auto rocksPath = edenDir + RelativePathPiece{kRocksDBPath};
   FaultInjector faultInjector(/*enabled=*/false);
   RocksDbLocalStore localStore(
-      rocksPath, std::make_shared<NullStructuredLogger>(), &faultInjector);
+      rocksPath,
+      makeRefPtr<EdenStats>(),
+      std::make_shared<NullStructuredLogger>(),
+      &faultInjector);
   localStore.open();
   Blob blob(blobID, IOBuf());
   localStore.putBlob(blobID, &blob);

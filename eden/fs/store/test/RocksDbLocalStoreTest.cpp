@@ -7,6 +7,7 @@
 
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/store/test/LocalStoreTest.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 
 namespace {
@@ -17,6 +18,7 @@ LocalStoreImplResult makeRocksDbLocalStore(FaultInjector* faultInjector) {
   auto tempDir = makeTempDir();
   auto store = std::make_unique<RocksDbLocalStore>(
       canonicalPath(tempDir.path().string()),
+      makeRefPtr<EdenStats>(),
       std::make_shared<NullStructuredLogger>(),
       faultInjector);
   return {std::move(tempDir), std::move(store)};
