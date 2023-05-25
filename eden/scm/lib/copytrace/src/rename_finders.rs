@@ -102,8 +102,12 @@ impl RenameFinder for MetadataRenameFinder {
         new_tree: &TreeManifest,
         old_path: &RepoPath,
     ) -> Result<Option<RepoPathBuf>> {
-        let new_files = self.inner.get_added_files(old_tree, new_tree)?;
-        let candidates = select_rename_candidates(new_files, old_path, &self.inner.config)?;
+        let candidates = self.inner.generate_candidates(
+            old_tree,
+            new_tree,
+            old_path,
+            SearchDirection::Forward,
+        )?;
         let found = self
             .inner
             .read_renamed_metadata_forward(candidates.clone(), old_path)
@@ -135,8 +139,12 @@ impl RenameFinder for MetadataRenameFinder {
         }
 
         // fallback to content similarity
-        let old_files = self.inner.get_deleted_files(old_tree, new_tree)?;
-        let candidates = select_rename_candidates(old_files, new_path, &self.inner.config)?;
+        let candidates = self.inner.generate_candidates(
+            old_tree,
+            new_tree,
+            new_path,
+            SearchDirection::Backward,
+        )?;
         self.inner.find_similar_file(candidates, new_key).await
     }
 }
@@ -180,48 +188,55 @@ impl RenameFinder for ContentSimilarityRenameFinder {
 }
 
 impl RenameFinderInner {
-    fn get_added_files(
+    fn generate_candidates(
         &self,
         old_tree: &TreeManifest,
         new_tree: &TreeManifest,
+        path: &RepoPath,
+        direction: SearchDirection,
     ) -> Result<Vec<Key>> {
-        let mut files = Vec::new();
-        let matcher = AlwaysMatcher::new();
-        let diff = Diff::new(old_tree, new_tree, &matcher)?;
-        for entry in diff {
-            let entry = entry?;
-            if let DiffType::RightOnly(file_metadata) = entry.diff_type {
-                let path = entry.path;
-                let key = Key {
-                    path,
-                    hgid: file_metadata.hgid,
-                };
-                files.push(key);
+        let (added_files, deleted_files) = self.get_added_and_deleted_files(old_tree, new_tree)?;
+
+        match direction {
+            SearchDirection::Forward => select_rename_candidates(added_files, path, &self.config),
+            SearchDirection::Backward => {
+                select_rename_candidates(deleted_files, path, &self.config)
             }
         }
-        Ok(files)
     }
 
-    fn get_deleted_files(
+    fn get_added_and_deleted_files(
         &self,
         old_tree: &TreeManifest,
         new_tree: &TreeManifest,
-    ) -> Result<Vec<Key>> {
-        let mut files = Vec::new();
+    ) -> Result<(Vec<Key>, Vec<Key>)> {
+        let mut added_files = Vec::new();
+        let mut deleted_files = Vec::new();
         let matcher = AlwaysMatcher::new();
         let diff = Diff::new(old_tree, new_tree, &matcher)?;
         for entry in diff {
             let entry = entry?;
-            if let DiffType::LeftOnly(file_metadata) = entry.diff_type {
-                let path = entry.path;
-                let key = Key {
-                    path,
-                    hgid: file_metadata.hgid,
-                };
-                files.push(key);
+            match entry.diff_type {
+                DiffType::RightOnly(file_metadata) => {
+                    let path = entry.path;
+                    let key = Key {
+                        path,
+                        hgid: file_metadata.hgid,
+                    };
+                    added_files.push(key);
+                }
+                DiffType::LeftOnly(file_metadata) => {
+                    let path = entry.path;
+                    let key = Key {
+                        path,
+                        hgid: file_metadata.hgid,
+                    };
+                    deleted_files.push(key);
+                }
+                _ => {}
             }
         }
-        Ok(files)
+        Ok((added_files, deleted_files))
     }
 
     async fn read_renamed_metadata_forward(
@@ -259,11 +274,8 @@ impl RenameFinderInner {
         direction: SearchDirection,
     ) -> Result<Option<RepoPathBuf>> {
         tracing::trace!(?source_path, ?direction, " find_rename_in_direction");
-        let candidates = match direction {
-            SearchDirection::Forward => self.get_added_files(old_tree, new_tree)?,
-            SearchDirection::Backward => self.get_deleted_files(old_tree, new_tree)?,
-        };
-        let candidates = select_rename_candidates(candidates, source_path, &self.config)?;
+        let candidates = self.generate_candidates(old_tree, new_tree, source_path, direction)?;
+
         tracing::trace!(candidates_len = candidates.len(), " found");
 
         let source_tree = match direction {
@@ -271,6 +283,7 @@ impl RenameFinderInner {
             SearchDirection::Backward => new_tree,
         };
         let source = self.get_key_from_path(source_tree, source_path)?;
+
         self.find_similar_file(candidates, source).await
     }
 
