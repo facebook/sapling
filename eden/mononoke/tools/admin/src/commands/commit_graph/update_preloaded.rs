@@ -53,6 +53,10 @@ pub struct UpdatePreloadedArgs {
     /// Sleep time between fetching changeset edges in milliseconds.
     #[clap(long)]
     sleep_ms: u64,
+
+    /// Sleep time before exiting the program in seconds.
+    #[clap(long, default_value_t = 60)]
+    sleep_before_exit_secs: u64,
 }
 
 async fn try_fetch_chunk(
@@ -184,6 +188,11 @@ pub(super) async fn update_preloaded(
     repo.repo_blobstore()
         .put(ctx, args.blobstore_key, BlobstoreBytes::from_bytes(bytes))
         .await?;
+
+    // In the case of a multiplexed blobstore, the put operation can exit after it succeeds
+    // in one inner blobstore before finishing in all, and leave the rest running in the
+    // background. This sleep tries to prevent exiting early before they all finish.
+    tokio::time::sleep(Duration::from_secs(args.sleep_before_exit_secs)).await;
 
     println!("Uploaded updated preloaded edges to blobstore");
 
