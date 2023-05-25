@@ -81,6 +81,7 @@ export default function SplitDiffView({
   after,
   isPullRequest,
 }: Props): React.ReactElement {
+  const [open, setOpen] = useState(true);
   const scopeName = getFilepathClassifier().findScopeNameForPath(path);
   const colorMode = useRecoilValue(primerColorMode);
   const loadable = useRecoilValueLoadable(
@@ -111,16 +112,18 @@ export default function SplitDiffView({
       loadable.contents;
     return (
       <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
-        <FileHeader path={path} />
-        <SplitDiffViewTable
-          path={path}
-          beforeOID={before}
-          tokenization={tokenization}
-          patch={patch}
-          allThreads={allThreads}
-          newCommentInputCallbacks={newCommentInputCallbacks}
-          commitIDs={commitIDs}
-        />
+        <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />
+        {open && (
+          <SplitDiffViewTable
+            path={path}
+            beforeOID={before}
+            tokenization={tokenization}
+            patch={patch}
+            allThreads={allThreads}
+            newCommentInputCallbacks={newCommentInputCallbacks}
+            commitIDs={commitIDs}
+          />
+        )}
       </Box>
     );
   } else {
