@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -26,6 +27,7 @@ use vec1::Vec1;
 pub struct InMemoryCommitGraphStorage {
     repo_id: RepositoryId,
     changesets: RwLock<BTreeMap<ChangesetId, ChangesetEdges>>,
+    children: RwLock<BTreeMap<ChangesetId, HashSet<ChangesetId>>>,
 }
 
 impl InMemoryCommitGraphStorage {
@@ -33,6 +35,7 @@ impl InMemoryCommitGraphStorage {
         InMemoryCommitGraphStorage {
             repo_id,
             changesets: Default::default(),
+            children: Default::default(),
         }
     }
 
@@ -59,8 +62,21 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
     }
 
     async fn add(&self, _ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {
-        let cs_id = edges.node.cs_id;
-        Ok(self.changesets.write().insert(cs_id, edges).is_none())
+        {
+            let mut children = self.children.write();
+            for parent in edges.parents.iter() {
+                children
+                    .entry(parent.cs_id)
+                    .or_default()
+                    .insert(edges.node.cs_id);
+            }
+        }
+
+        Ok(self
+            .changesets
+            .write()
+            .insert(edges.node.cs_id, edges)
+            .is_none())
     }
 
     async fn add_many(
@@ -68,13 +84,25 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
         _ctx: &CoreContext,
         many_edges: Vec1<ChangesetEdges>,
     ) -> Result<usize> {
-        let mut changesets = self.changesets.write();
         let mut added = 0;
-        for edges in many_edges {
-            if changesets.insert(edges.node.cs_id, edges).is_none() {
-                added += 1;
+
+        {
+            let mut changesets = self.changesets.write();
+            let mut children = self.children.write();
+            for edges in many_edges {
+                if changesets.insert(edges.node.cs_id, edges.clone()).is_none() {
+                    added += 1;
+
+                    for parent in edges.parents.iter() {
+                        children
+                            .entry(parent.cs_id)
+                            .or_default()
+                            .insert(edges.node.cs_id);
+                    }
+                }
             }
         }
+
         Ok(added)
     }
 
@@ -156,6 +184,21 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
         Ok(ChangesetIdsResolvedFromPrefix::from_vec_and_limit(
             matches, limit,
         ))
+    }
+
+    async fn fetch_children(
+        &self,
+        _ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>> {
+        Ok(self
+            .children
+            .read()
+            .get(&cs_id)
+            .cloned()
+            .unwrap_or_default()
+            .into_iter()
+            .collect())
     }
 }
 

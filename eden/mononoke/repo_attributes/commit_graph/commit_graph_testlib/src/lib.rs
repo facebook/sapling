@@ -40,6 +40,7 @@ macro_rules! impl_commit_graph_tests {
             test_range_stream,
             test_common_base,
             test_slice_ancestors,
+            test_children,
         );
     };
 }
@@ -821,6 +822,38 @@ pub async fn test_slice_ancestors(
         vec![(5, vec!["P"]), (6, vec!["Q"])],
     )
     .await?;
+
+    Ok(())
+}
+
+pub async fn test_children(ctx: CoreContext, storage: Arc<dyn CommitGraphStorage>) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r##"
+        A-B-C-D-E-L------N
+           \       \    /
+            F-G-H   M  /
+             \     /  /
+              I-J-K--/
+        "##,
+        storage,
+    )
+    .await?;
+
+    assert_children(&graph, &ctx, "A", vec!["B"]).await?;
+    assert_children(&graph, &ctx, "B", vec!["C", "F"]).await?;
+    assert_children(&graph, &ctx, "C", vec!["D"]).await?;
+    assert_children(&graph, &ctx, "D", vec!["E"]).await?;
+    assert_children(&graph, &ctx, "E", vec!["L"]).await?;
+    assert_children(&graph, &ctx, "F", vec!["G", "I"]).await?;
+    assert_children(&graph, &ctx, "G", vec!["H"]).await?;
+    assert_children(&graph, &ctx, "H", vec![]).await?;
+    assert_children(&graph, &ctx, "I", vec!["J"]).await?;
+    assert_children(&graph, &ctx, "J", vec!["K"]).await?;
+    assert_children(&graph, &ctx, "K", vec!["M", "N"]).await?;
+    assert_children(&graph, &ctx, "L", vec!["M", "N"]).await?;
+    assert_children(&graph, &ctx, "M", vec![]).await?;
+    assert_children(&graph, &ctx, "N", vec![]).await?;
 
     Ok(())
 }

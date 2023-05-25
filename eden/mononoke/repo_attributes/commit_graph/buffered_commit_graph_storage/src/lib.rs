@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -184,5 +185,26 @@ impl CommitGraphStorage for BufferedCommitGraphStorage {
                 ))
             }
         }
+    }
+
+    async fn fetch_children(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>> {
+        Ok(self
+            .in_memory_storage
+            .fetch_children(ctx, cs_id)
+            .await?
+            .into_iter()
+            .chain(
+                self.persistent_storage
+                    .fetch_children(ctx, cs_id)
+                    .await?
+                    .into_iter(),
+            )
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect())
     }
 }

@@ -375,3 +375,20 @@ where
     );
     Ok(())
 }
+
+pub async fn assert_children(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    cs_id: &str,
+    children: Vec<&str>,
+) -> Result<()> {
+    assert_eq!(
+        graph
+            .changeset_children(ctx, name_cs_id(cs_id))
+            .await?
+            .into_iter()
+            .collect::<HashSet<_>>(),
+        children.into_iter().map(name_cs_id).collect::<HashSet<_>>(),
+    );
+    Ok(())
+}

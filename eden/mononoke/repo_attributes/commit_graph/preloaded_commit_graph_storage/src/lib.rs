@@ -417,4 +417,8 @@ impl CommitGraphStorage for PreloadedCommitGraphStorage {
             .find_by_prefix(ctx, cs_prefix, limit)
             .await
     }
+
+    async fn fetch_children(&self, ctx: &CoreContext, cs: ChangesetId) -> Result<Vec<ChangesetId>> {
+        self.persistent_storage.fetch_children(ctx, cs).await
+    }
 }

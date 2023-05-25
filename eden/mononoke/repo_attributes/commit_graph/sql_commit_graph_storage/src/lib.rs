@@ -785,6 +785,33 @@ mononoke_queries! {
         LIMIT {limit}
         "
     }
+
+    read SelectChildren(repo_id: RepositoryId, cs_id: ChangesetId) -> (ChangesetId) {
+        "
+        SELECT
+            cs.cs_id
+        FROM commit_graph_edges cs
+        INNER JOIN commit_graph_edges cs_p1_parent
+            ON cs_p1_parent.id = cs.p1_parent
+        WHERE
+            cs_p1_parent.repo_id = {repo_id}
+            AND cs_p1_parent.cs_id = {cs_id}
+
+        UNION
+
+        SELECT
+            cs.cs_id
+        FROM commit_graph_edges cs
+        INNER JOIN commit_graph_merge_parents cgmp
+            ON cgmp.id = cs.id
+        INNER JOIN commit_graph_edges cs_merge_parent
+            ON cgmp.parent = cs_merge_parent.id
+        WHERE
+            cs_merge_parent.repo_id = {repo_id}
+            AND cs_merge_parent.cs_id
+                = {cs_id};
+        "
+    }
 }
 
 impl SqlCommitGraphStorage {
@@ -1375,5 +1402,19 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             fetched_ids,
             limit,
         ))
+    }
+
+    async fn fetch_children(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>> {
+        Ok(
+            SelectChildren::query(&self.read_master_connection.conn, &self.repo_id, &cs_id)
+                .await?
+                .into_iter()
+                .map(|(cs_id,)| cs_id)
+                .collect(),
+        )
     }
 }

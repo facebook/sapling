@@ -184,4 +184,11 @@ pub trait CommitGraphStorage: Send + Sync {
         _cs_prefix: ChangesetIdPrefix,
         _limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix>;
+
+    // Fetch all children of a changeset.
+    async fn fetch_children(
+        &self,
+        _ctx: &CoreContext,
+        _cs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>>;
 }

@@ -366,4 +366,12 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
     ) -> Result<ChangesetIdsResolvedFromPrefix> {
         self.storage.find_by_prefix(ctx, cs_prefix, limit).await
     }
+
+    async fn fetch_children(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>> {
+        self.storage.fetch_children(ctx, cs_id).await
+    }
 }

@@ -550,4 +550,13 @@ impl CommitGraph {
 
         Ok(slices.into_iter().rev().collect())
     }
+
+    /// Returns the children of a single changeset.
+    pub async fn changeset_children(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>> {
+        self.storage.fetch_children(ctx, cs_id).await
+    }
 }
