@@ -53,6 +53,8 @@ class SqliteInodeCatalog : public InodeCatalog {
     return true;
   }
 
+  std::vector<InodeNumber> getAllParentInodeNumbers() override;
+
   std::optional<InodeNumber> initOverlay(
       bool createIfNonExisting,
       bool bypassLockFile = false) override;
@@ -105,6 +107,8 @@ class SqliteInodeCatalog : public InodeCatalog {
   void maintenance() override {
     store_.maintenance();
   }
+
+  std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number) override;
 
  private:
   SqliteTreeStore store_;

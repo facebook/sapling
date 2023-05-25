@@ -10,6 +10,7 @@
 #include <optional>
 
 #include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/inodes/overlay/OverlayCheckerUtil.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -50,6 +51,13 @@ class InodeCatalog {
   // This method is used to indicate if the implementation supports these type
   // of operations (`*Child` methods).
   virtual bool supportsSemanticOperations() const = 0;
+
+  /**
+   * Get all of the `InodeNumber`s corresponding to directories. This is only
+   * implemented for SqliteInodeCatalog for use in OverlayChecker to facilitate
+   * loading of all of the known inodes.
+   */
+  virtual std::vector<InodeNumber> getAllParentInodeNumbers() = 0;
 
   /**
    * Initialize the overlay, run necessary operations to bootstrap the overlay.
@@ -109,6 +117,11 @@ class InodeCatalog {
    * Return if the overlay has a directory record of given InodeNumber.
    */
   virtual bool hasOverlayDir(InodeNumber inodeNumber) = 0;
+
+  /**
+   * Loads an inode for use during fsck via the OverlayChecker.
+   */
+  virtual std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number) = 0;
 
   virtual void addChild(
       InodeNumber /* parent */,

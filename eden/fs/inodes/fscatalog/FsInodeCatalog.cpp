@@ -675,6 +675,94 @@ bool FsInodeCatalog::hasOverlayDir(InodeNumber inodeNumber) {
   return core_->hasOverlayFile(inodeNumber);
 }
 
+namespace {
+overlay::OverlayDir loadDirectoryChildren(folly::File& file) {
+  std::string serializedData;
+  if (!folly::readFile(file.fd(), serializedData)) {
+    folly::throwSystemError("read failed");
+  }
+
+  return CompactSerializer::deserialize<overlay::OverlayDir>(serializedData);
+}
+} // namespace
+
+std::optional<fsck::InodeInfo> FileContentStore::loadInodeInfo(
+    InodeNumber number) {
+  auto inodeError = [number](auto&&... args) -> std::optional<fsck::InodeInfo> {
+    return {fsck::InodeInfo(
+        number,
+        fsck::InodeType::Error,
+        fmt::to_string(fmt::join(std::make_tuple(args...), "")))};
+  };
+
+  // Open the inode file
+  folly::File file;
+  try {
+    file = openFileNoVerify(number);
+  } catch (const std::exception& ex) {
+    return inodeError("error opening file: ", folly::exceptionStr(ex));
+  }
+
+  // Read the file header
+  std::array<char, FileContentStore::kHeaderLength> headerContents;
+  auto readResult =
+      folly::readFull(file.fd(), headerContents.data(), headerContents.size());
+  if (readResult < 0) {
+    int errnum = errno;
+    return inodeError("error reading from file: ", folly::errnoStr(errnum));
+  } else if (readResult != FileContentStore::kHeaderLength) {
+    return inodeError(fmt::format(
+        "file was too short to contain overlay header: read {} bytes, expected {} bytes",
+        readResult,
+        FileContentStore::kHeaderLength));
+  }
+
+  // The first 4 bytes of the header are the file type identifier.
+  static_assert(
+      FileContentStore::kHeaderIdentifierDir.size() ==
+          FileContentStore::kHeaderIdentifierFile.size(),
+      "both header IDs must have the same length");
+  StringPiece typeID(
+      headerContents.data(),
+      headerContents.data() + FileContentStore::kHeaderIdentifierDir.size());
+
+  // The next 4 bytes are the version ID.
+  uint32_t versionBE;
+  memcpy(
+      &versionBE,
+      headerContents.data() + FileContentStore::kHeaderIdentifierDir.size(),
+      sizeof(uint32_t));
+  auto version = folly::Endian::big(versionBE);
+  if (version != FileContentStore::kHeaderVersion) {
+    return inodeError("unknown overlay file format version ", version);
+  }
+
+  fsck::InodeType type;
+  if (typeID == FileContentStore::kHeaderIdentifierDir) {
+    type = fsck::InodeType::Dir;
+  } else if (typeID == FileContentStore::kHeaderIdentifierFile) {
+    type = fsck::InodeType::File;
+  } else {
+    return inodeError(
+        "unknown overlay file type ID: ", folly::hexlify(ByteRange{typeID}));
+  }
+
+  if (type == fsck::InodeType::Dir) {
+    try {
+      return {fsck::InodeInfo(number, loadDirectoryChildren(file))};
+    } catch (const std::exception& ex) {
+      return inodeError(
+          "error parsing directory contents: ", folly::exceptionStr(ex));
+    }
+  } else {
+    return {fsck::InodeInfo(number, type)};
+  }
+}
+
+std::optional<fsck::InodeInfo> FsInodeCatalog::loadInodeInfo(
+    InodeNumber number) {
+  return core_->loadInodeInfo(number);
+}
 } // namespace facebook::eden
 
 #endif

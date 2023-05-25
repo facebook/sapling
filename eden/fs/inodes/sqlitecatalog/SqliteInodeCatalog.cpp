@@ -92,6 +92,30 @@ InodeNumber SqliteInodeCatalog::nextInodeNumber() {
   return store_.nextInodeNumber();
 }
 
+std::optional<fsck::InodeInfo> SqliteInodeCatalog::loadInodeInfo(
+    InodeNumber number) {
+  auto inodeError = [number](auto&&... args) -> std::optional<fsck::InodeInfo> {
+    return {fsck::InodeInfo(
+        number, fsck::InodeType::Error, folly::to<std::string>(args...))};
+  };
+
+  if (!hasOverlayDir(number)) {
+    return std::nullopt;
+  }
+
+  auto overlayDir = loadOverlayDir(number);
+
+  if (!overlayDir.has_value()) {
+    return inodeError("unable to load directory contents for inode ", number);
+  }
+
+  return {fsck::InodeInfo(number, std::move(overlayDir.value()))};
+}
+
+std::vector<InodeNumber> SqliteInodeCatalog::getAllParentInodeNumbers() {
+  return store_.getAllParentInodeNumbers();
+}
+
 InodeNumber SqliteInodeCatalog::scanLocalChanges(
     std::shared_ptr<const EdenConfig> config,
     AbsolutePathPiece mountPath,

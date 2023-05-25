@@ -129,6 +129,7 @@ class SqliteTreeStore {
    * Has the child for the given parent
    */
   bool hasChild(InodeNumber parent, PathComponentPiece childName);
+  std::vector<InodeNumber> getAllParentInodeNumbers();
 
   /**
    * Remove a child from the given parent

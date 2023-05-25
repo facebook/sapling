@@ -154,6 +154,8 @@ class FileContentStore : public IFileContentStore {
       ShardID shardID,
       folly::MutableStringPiece subdirPath);
 
+  std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number);
+
   static constexpr folly::StringPiece kMetadataFile{"metadata.table"};
 
   /**
@@ -256,6 +258,10 @@ class FsInodeCatalog : public InodeCatalog {
     return false;
   }
 
+  std::vector<InodeNumber> getAllParentInodeNumbers() override {
+    return {};
+  }
+
   /**
    * Returns the next inode number to start at when allocating new inodes.
    * If the overlay was not shutdown cleanly by the previous user then
@@ -294,6 +300,8 @@ class FsInodeCatalog : public InodeCatalog {
   bool hasOverlayDir(InodeNumber inodeNumber) override;
 
   void maintenance() override {}
+
+  std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number) override;
 
  private:
   FileContentStore* core_;

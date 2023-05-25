@@ -45,6 +45,7 @@ constexpr size_t kBatchInsertSize = 8;
 struct SqliteTreeStore::StatementCache {
   explicit StatementCache(LockedSqliteConnection& db)
       : selectTree{db, "SELECT name, dtype, inode, hash FROM ", kEntryTable, " WHERE parent = ? ORDER BY name"},
+        selectAllParents{db, "SELECT DISTINCT parent FROM ", kEntryTable},
         countChildren{
             db,
             "SELECT COUNT(*) FROM ",
@@ -111,6 +112,7 @@ struct SqliteTreeStore::StatementCache {
   }
 
   PersistentSqliteStatement selectTree;
+  PersistentSqliteStatement selectAllParents;
   PersistentSqliteStatement countChildren;
   PersistentSqliteStatement deleteTree;
   PersistentSqliteStatement hasTree;
@@ -373,6 +375,20 @@ void SqliteTreeStore::saveTree(
       insert->step();
     }
   });
+}
+
+std::vector<InodeNumber> SqliteTreeStore::getAllParentInodeNumbers() {
+  std::vector<InodeNumber> numbers;
+
+  db_->transaction([&](auto& txn) {
+    auto query = cache_->selectAllParents.get(txn);
+
+    while (query->step()) {
+      numbers.emplace_back(query->columnUint64(0));
+    }
+  });
+
+  return numbers;
 }
 
 overlay::OverlayDir SqliteTreeStore::loadTree(InodeNumber inode) {

@@ -40,22 +40,8 @@ using std::chrono::seconds;
 
 namespace facebook::eden {
 
-struct OverlayChecker::InodeInfo {
-  InodeInfo(InodeNumber num, InodeType t) : number(num), type(t) {}
-  InodeInfo(InodeNumber num, overlay::OverlayDir&& c)
-      : number(num), type(InodeType::Dir), children(std::move(c)) {}
-
-  void addParent(InodeNumber parent, mode_t mode) {
-    parents.push_back(parent);
-    modeFromParent = mode;
-  }
-
-  InodeNumber number;
-  InodeType type{InodeType::Error};
-  mode_t modeFromParent{0};
-  overlay::OverlayDir children;
-  folly::small_vector<InodeNumber, 1> parents;
-};
+using fsck::InodeInfo;
+using fsck::InodeType;
 
 struct OverlayChecker::Impl {
   InodeCatalog* const inodeCatalog;
@@ -885,8 +871,7 @@ OverlayChecker::PathInfo OverlayChecker::cachedPathComputation(
   return result;
 }
 
-OverlayChecker::InodeInfo* FOLLY_NULLABLE
-OverlayChecker::getInodeInfo(InodeNumber number) {
+InodeInfo* FOLLY_NULLABLE OverlayChecker::getInodeInfo(InodeNumber number) {
   auto iter = impl_->inodes.find(number);
   if (iter == impl_->inodes.end()) {
     return nullptr;
@@ -986,6 +971,19 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
 
   folly::Synchronized<std::vector<std::unique_ptr<Error>>> errors;
 
+  // TODO: parallelize these loads
+  std::vector<InodeNumber> dirs =
+      this->impl_->inodeCatalog->getAllParentInodeNumbers();
+
+  for (const auto& d : dirs) {
+    auto inodeInfoOpt = loadInodeInfoFromInodeCatalog(d, errors);
+    if (inodeInfoOpt.has_value()) {
+      auto inodeInfo = inodeInfoOpt.value();
+      updateMaxInodeNumber(inodeInfo.number);
+      impl_->inodes.emplace(inodeInfo.number, inodeInfo);
+    }
+  }
+
   seq(0u, FileContentStore::kNumShards - 1) |
       pmap(
           [this, &errors](
@@ -1039,7 +1037,7 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
       pmap(
           [this, &errors](std::tuple<uint64_t, uint32_t> result)
               -> std::optional<InodeInfo> {
-            return this->loadInode(
+            return this->loadInodeSharded(
                 InodeNumber(std::get<0>(result)), std::get<1>(result), errors);
           },
           threads) |
@@ -1081,16 +1079,7 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
              << impl_->inodes.size() << " inodes";
 }
 
-overlay::OverlayDir loadDirectoryChildren(folly::File& file) {
-  std::string serializedData;
-  if (!folly::readFile(file.fd(), serializedData)) {
-    folly::throwSystemError("read failed");
-  }
-
-  return CompactSerializer::deserialize<overlay::OverlayDir>(serializedData);
-}
-
-std::optional<OverlayChecker::InodeInfo> OverlayChecker::loadInode(
+std::optional<InodeInfo> OverlayChecker::loadInodeSharded(
     InodeNumber number,
     ShardID shardID,
     folly::Synchronized<std::vector<std::unique_ptr<Error>>>& errors) const {
@@ -1105,82 +1094,31 @@ std::optional<OverlayChecker::InodeInfo> OverlayChecker::loadInode(
     return std::nullopt;
   }
 
-  return loadInodeInfo(number, errors);
+  return loadInodeInfoFromFileContentStore(number, errors);
 }
 
-std::optional<OverlayChecker::InodeInfo> OverlayChecker::loadInodeInfo(
+std::optional<InodeInfo> OverlayChecker::loadInodeInfoFromInodeCatalog(
     InodeNumber number,
     folly::Synchronized<std::vector<std::unique_ptr<Error>>>& errors) const {
-  auto inodeError = [number,
-                     &errors](auto&&... args) -> std::optional<InodeInfo> {
-    errors.wlock()->push_back(make_error<InodeDataError>(number, args...));
-    return {InodeInfo(number, InodeType::Error)};
-  };
+  auto info = this->impl_->inodeCatalog->loadInodeInfo(number);
 
-  // Open the inode file
-  folly::File file;
-  try {
-    file = this->impl_->fcs->openFileNoVerify(number);
-  } catch (const std::exception& ex) {
-    return inodeError("error opening file: ", folly::exceptionStr(ex));
+  if (info.has_value() && info.value().type == InodeType::Error) {
+    errors.wlock()->push_back(
+        make_error<InodeDataError>(info.value().number, info.value().errorMsg));
   }
+  return info;
+}
 
-  // Read the file header
-  std::array<char, FileContentStore::kHeaderLength> headerContents;
-  auto readResult =
-      folly::readFull(file.fd(), headerContents.data(), headerContents.size());
-  if (readResult < 0) {
-    int errnum = errno;
-    return inodeError("error reading from file: ", folly::errnoStr(errnum));
-  } else if (readResult != FileContentStore::kHeaderLength) {
-    return inodeError(
-        "file was too short to contain overlay header: read ",
-        readResult,
-        " bytes, expected ",
-        FileContentStore::kHeaderLength,
-        " bytes");
+std::optional<InodeInfo> OverlayChecker::loadInodeInfoFromFileContentStore(
+    InodeNumber number,
+    folly::Synchronized<std::vector<std::unique_ptr<Error>>>& errors) const {
+  auto info = this->impl_->fcs->loadInodeInfo(number);
+
+  if (info.has_value() && info.value().type == InodeType::Error) {
+    errors.wlock()->push_back(
+        make_error<InodeDataError>(info.value().number, info.value().errorMsg));
   }
-
-  // The first 4 bytes of the header are the file type identifier.
-  static_assert(
-      FileContentStore::kHeaderIdentifierDir.size() ==
-          FileContentStore::kHeaderIdentifierFile.size(),
-      "both header IDs must have the same length");
-  StringPiece typeID(
-      headerContents.data(),
-      headerContents.data() + FileContentStore::kHeaderIdentifierDir.size());
-
-  // The next 4 bytes are the version ID.
-  uint32_t versionBE;
-  memcpy(
-      &versionBE,
-      headerContents.data() + FileContentStore::kHeaderIdentifierDir.size(),
-      sizeof(uint32_t));
-  auto version = folly::Endian::big(versionBE);
-  if (version != FileContentStore::kHeaderVersion) {
-    return inodeError("unknown overlay file format version ", version);
-  }
-
-  InodeType type;
-  if (typeID == FileContentStore::kHeaderIdentifierDir) {
-    type = InodeType::Dir;
-  } else if (typeID == FileContentStore::kHeaderIdentifierFile) {
-    type = InodeType::File;
-  } else {
-    return inodeError(
-        "unknown overlay file type ID: ", folly::hexlify(ByteRange{typeID}));
-  }
-
-  if (type == InodeType::Dir) {
-    try {
-      return {InodeInfo(number, loadDirectoryChildren(file))};
-    } catch (const std::exception& ex) {
-      return inodeError(
-          "error parsing directory contents: ", folly::exceptionStr(ex));
-    }
-  } else {
-    return {InodeInfo(number, type)};
-  }
+  return info;
 }
 
 void OverlayChecker::linkInodeChildren() {

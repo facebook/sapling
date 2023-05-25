@@ -14,6 +14,7 @@
 
 #include "eden/fs/inodes/InodeCatalog.h"
 #include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/inodes/overlay/OverlayCheckerUtil.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -162,39 +163,38 @@ class OverlayChecker {
   class HardLinkedInode;
   class BadNextInodeNumber;
 
-  enum class InodeType {
-    File,
-    Dir,
-    Error,
-  };
-  struct InodeInfo;
-
   OverlayChecker(OverlayChecker const&) = delete;
   OverlayChecker& operator=(OverlayChecker const&) = delete;
 
   // Get the InodeInfo object for the specified InodeNumber.
   // Returns null if no info for this inode number is present.
   // readInodes() must have been called for inode info to be populated.
-  InodeInfo* FOLLY_NULLABLE getInodeInfo(InodeNumber number);
+  fsck::InodeInfo* FOLLY_NULLABLE getInodeInfo(InodeNumber number);
 
   ImmediateFuture<std::variant<std::shared_ptr<const Tree>, TreeEntry>> lookup(
       RelativePathPiece path);
 
-  PathInfo computePath(const InodeInfo& info);
-  PathComponent findChildName(const InodeInfo& parentInfo, InodeNumber child);
+  PathInfo computePath(const fsck::InodeInfo& info);
+  PathComponent findChildName(
+      const fsck::InodeInfo& parentInfo,
+      InodeNumber child);
   template <typename Fn>
   PathInfo cachedPathComputation(InodeNumber number, Fn&& fn);
 
   using ShardID = uint32_t;
   void readInodes(const ProgressCallback& progressCallback = [](auto) {});
   void readInodeSubdir(const AbsolutePath& path, ShardID shardID);
-  // loadInode and loadInodeInfo are called from a multi-threaded context, so
-  // make them const so they can't accidentally mutate 'this'.
-  std::optional<OverlayChecker::InodeInfo> loadInode(
+  // loadInodeSharded and loadInodeInfoFromFileContentStore are called from a
+  // multi-threaded context, so make them const so they can't accidentally
+  // mutate 'this'.
+  std::optional<fsck::InodeInfo> loadInodeSharded(
       InodeNumber number,
       ShardID shardID,
       folly::Synchronized<std::vector<std::unique_ptr<Error>>>& errors) const;
-  std::optional<OverlayChecker::InodeInfo> loadInodeInfo(
+  std::optional<fsck::InodeInfo> loadInodeInfoFromFileContentStore(
+      InodeNumber number,
+      folly::Synchronized<std::vector<std::unique_ptr<Error>>>& errors) const;
+  std::optional<fsck::InodeInfo> loadInodeInfoFromInodeCatalog(
       InodeNumber number,
       folly::Synchronized<std::vector<std::unique_ptr<Error>>>& errors) const;
 
