@@ -151,7 +151,8 @@ def gitnode(repo, subset, x):
             )
         else:
             repo.ui.warn(_x("Could not translate revision {0}\n".format(n)))
-        return subset.filter(lambda r: False)
+        # If we don't have a valid hg hash, return an empty set
+        return smartset.baseset([], repo=repo)
 
     rn = repo[node.bin(hghash)].rev()
     return subset & smartset.baseset([rn], repo=repo)
