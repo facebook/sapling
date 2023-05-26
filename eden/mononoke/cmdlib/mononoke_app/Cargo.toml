@@ -20,7 +20,6 @@ cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimen
 clap = { version = "4.2.4", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cmdlib_caching = { version = "0.1.0", path = "../caching" }
 cmdlib_logging = { version = "0.1.0", path = "../log" }
-cmdlib_running = { version = "0.1.0", path = "../running" }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data_remote = { version = "0.1.0", path = "../../derived_data/remote" }
 environment = { version = "0.1.0", path = "../environment" }
@@ -44,11 +43,14 @@ redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobsto
 regex = "1.6.0"
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 repo_factory = { version = "0.1.0", path = "../../repo_factory" }
+running = { version = "0.1.0", path = "../../common/running" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 services = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+shutdown_timeout = { version = "0.1.0", path = "shutdown_timeout" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 slog_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+tls = { version = "0.1.0", path = "tls" }
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../../tunables" }

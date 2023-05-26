@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::default::Default;
+
 use anyhow::Result;
 use metaconfig_types::CommonConfig;
 use metaconfig_types::Identity;
@@ -16,6 +18,15 @@ use permission_checker::PermissionCheckerBuilder;
 
 pub struct ConnectionSecurityChecker {
     checker: BoxPermissionChecker,
+}
+
+impl Default for ConnectionSecurityChecker {
+    fn default() -> Self {
+        let builder = PermissionCheckerBuilder::new();
+        ConnectionSecurityChecker {
+            checker: builder.build(),
+        }
+    }
 }
 
 impl ConnectionSecurityChecker {

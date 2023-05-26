@@ -19,8 +19,6 @@ mod repo;
 mod repo_blobstore;
 mod repo_filter;
 mod runtime;
-mod shutdown_timeout;
-mod tls;
 mod tunables;
 mod wbc;
 
