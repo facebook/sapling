@@ -9,6 +9,7 @@ mod ancestors_difference;
 mod backfill;
 mod backfill_one;
 mod checkpoints;
+mod children;
 mod common_base;
 mod range_stream;
 mod slice_ancestors;
@@ -24,6 +25,7 @@ use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
+use children::ChildrenArgs;
 use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
@@ -62,6 +64,8 @@ pub enum CommitGraphSubcommand {
     CommonBase(CommonBaseArgs),
     /// Slices ancestors of given commits and displays commits IDs of frontiers for each slice.
     SliceAncestors(SliceAncestorsArgs),
+    /// Display ids of all children commits of a given commit.
+    Children(ChildrenArgs),
 }
 
 #[facet::container]
@@ -121,5 +125,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         CommitGraphSubcommand::SliceAncestors(args) => {
             slice_ancestors::slice_ancestors(&ctx, &repo, args).await
         }
+        CommitGraphSubcommand::Children(args) => children::children(&ctx, &repo, args).await,
     }
 }
