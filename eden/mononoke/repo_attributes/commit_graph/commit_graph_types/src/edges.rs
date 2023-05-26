@@ -13,6 +13,7 @@ use abomonation_derive::Abomonation;
 use anyhow::anyhow;
 use anyhow::Result;
 use commit_graph_thrift as thrift;
+use futures::Future;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use smallvec::SmallVec;
@@ -141,6 +142,31 @@ impl ChangesetEdges {
                 .map(ChangesetNode::from_thrift)
                 .transpose()?,
         })
+    }
+
+    /// Returns the lowest skip tree edge (skip_tree_parent or skip_tree_skew_ancestor)
+    /// that satisfies the given property, or None if neither does.
+    pub async fn lowest_skip_tree_edge_with<Property, Out>(
+        &self,
+        property: Property,
+    ) -> Result<Option<ChangesetNode>>
+    where
+        Property: Fn(ChangesetNode) -> Out,
+        Out: Future<Output = Result<bool>>,
+    {
+        if let Some(skip_tree_skew_ancestor) = self.skip_tree_skew_ancestor {
+            if property(skip_tree_skew_ancestor).await? {
+                return Ok(Some(skip_tree_skew_ancestor));
+            }
+        }
+
+        if let Some(skip_tree_parent) = self.skip_tree_parent {
+            if property(skip_tree_parent).await? {
+                return Ok(Some(skip_tree_parent));
+            }
+        }
+
+        Ok(None)
     }
 }
 

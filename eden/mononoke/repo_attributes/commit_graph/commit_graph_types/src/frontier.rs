@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashSet;
+use std::iter::Extend;
 use std::iter::IntoIterator;
 use std::iter::Iterator;
 use std::ops::Deref;
@@ -115,5 +116,13 @@ impl FromIterator<(ChangesetId, Generation)> for ChangesetFrontier {
         }
 
         frontier
+    }
+}
+
+impl Extend<(ChangesetId, Generation)> for ChangesetFrontier {
+    fn extend<T: IntoIterator<Item = (ChangesetId, Generation)>>(&mut self, iter: T) {
+        for (cs_id, gen) in iter {
+            self.entry(gen).or_default().insert(cs_id);
+        }
     }
 }

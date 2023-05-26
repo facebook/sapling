@@ -152,14 +152,18 @@ pub async fn assert_skip_tree_lowest_common_ancestor(
     Ok(())
 }
 
-pub async fn assert_ancestors_difference_with(
+pub async fn assert_ancestors_difference_with<Property, Out>(
     graph: &CommitGraph,
     ctx: &CoreContext,
     heads: Vec<&str>,
     common: Vec<&str>,
-    property_fn: impl Fn(ChangesetId) -> bool + 'static,
+    property_fn: Property,
     ancestors_difference: Vec<&str>,
-) -> Result<()> {
+) -> Result<()>
+where
+    Property: Fn(ChangesetId) -> Out + Send + Sync + 'static,
+    Out: Future<Output = Result<bool>> + Send,
+{
     let heads = heads.into_iter().map(name_cs_id).collect();
     let common = common.into_iter().map(name_cs_id).collect();
 
@@ -249,13 +253,17 @@ pub async fn assert_range_stream(
     Ok(())
 }
 
-pub async fn assert_ancestors_frontier_with(
+pub async fn assert_ancestors_frontier_with<Property, Out>(
     graph: &CommitGraph,
     ctx: &CoreContext,
     heads: Vec<&str>,
-    property_fn: impl Fn(ChangesetId) -> bool,
+    property_fn: Property,
     ancestors_frontier: Vec<&str>,
-) -> Result<()> {
+) -> Result<()>
+where
+    Property: Fn(ChangesetId) -> Out + Send + Sync + 'static,
+    Out: Future<Output = Result<bool>>,
+{
     let heads = heads.into_iter().map(name_cs_id).collect();
 
     assert_eq!(

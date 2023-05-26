@@ -10,13 +10,13 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.65"
 async-trait = "0.1.58"
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 buffered_commit_graph_storage = { version = "0.1.0", path = "../buffered_commit_graph_storage" }
 changeset_fetcher = { version = "0.1.0", path = "../../../blobrepo/changeset_fetcher" }
 commit_graph_types = { version = "0.1.0", path = "../commit_graph_types" }
 context = { version = "0.1.0", path = "../../../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
-itertools = "0.10.3"
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 vec1 = { version = "1", features = ["serde"] }

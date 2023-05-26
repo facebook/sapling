@@ -7,9 +7,13 @@
 
 use anyhow::anyhow;
 use anyhow::Result;
+use borrowed::borrowed;
+use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::frontier::ChangesetFrontier;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
+use futures::future;
+use futures::Future;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 
@@ -54,6 +58,69 @@ impl CommitGraph {
             .collect::<Result<_>>()
     }
 
+    /// Pops the highest generation changesets of a frontier, returning any that
+    /// satisify a property and lowering the rest of them to either their immediate
+    /// parents or their lowest skip tree edge that doesn't satisfy the property.
+    /// Repeatedly calling this function and concatenating the output will result
+    /// in the frontier of changesets satisifying the property.
+    ///
+    /// Returns None if the frontier is empty.
+    pub(crate) async fn lower_frontier_step<Property, Out>(
+        &self,
+        ctx: &CoreContext,
+        frontier: &mut ChangesetFrontier,
+        property: Property,
+        prefetch: Prefetch,
+    ) -> Result<Option<Vec<ChangesetId>>>
+    where
+        Property: Fn(ChangesetNode) -> Out + Send + Sync,
+        Out: Future<Output = Result<bool>>,
+    {
+        match frontier.pop_last() {
+            None => Ok(None),
+            Some((_, cs_ids)) => {
+                let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
+                let frontier_edges = self
+                    .storage
+                    .fetch_many_edges_required(ctx, &cs_ids, prefetch)
+                    .await?;
+
+                let mut property_frontier: Vec<_> = Default::default();
+
+                for (_, edges) in frontier_edges {
+                    if property(edges.node).await? {
+                        property_frontier.push(edges.node.cs_id);
+                    } else {
+                        match edges
+                            .lowest_skip_tree_edge_with(|node| {
+                                borrowed!(property);
+                                async move { Ok(!property(node).await?) }
+                            })
+                            .await?
+                        {
+                            Some(ancestor) => {
+                                frontier
+                                    .entry(ancestor.generation)
+                                    .or_default()
+                                    .insert(ancestor.cs_id);
+                            }
+                            None => {
+                                for parent in edges.parents {
+                                    frontier
+                                        .entry(parent.generation)
+                                        .or_default()
+                                        .insert(parent.cs_id);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Ok(Some(property_frontier))
+            }
+        }
+    }
+
     /// Lower a frontier so that it contains the highest ancestors of the
     /// frontier that have a generation number less than or equal to
     /// `generation`.
@@ -71,44 +138,14 @@ impl CommitGraph {
                 }
                 _ => {}
             }
-            if let Some((_, cs_ids)) = frontier.pop_last() {
-                let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
-                let frontier_edges = self
-                    .storage
-                    .fetch_many_edges_required(
-                        ctx,
-                        &cs_ids,
-                        Prefetch::for_skip_tree_traversal(target_generation),
-                    )
-                    .await?;
-                for cs_id in cs_ids {
-                    let edges = frontier_edges
-                        .get(&cs_id)
-                        .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?;
-                    match edges
-                        .skip_tree_parent
-                        .into_iter()
-                        .chain(edges.skip_tree_skew_ancestor)
-                        .filter(|ancestor| ancestor.generation >= target_generation)
-                        .min_by_key(|ancestor| ancestor.generation)
-                    {
-                        Some(ancestor) => {
-                            frontier
-                                .entry(ancestor.generation)
-                                .or_default()
-                                .insert(ancestor.cs_id);
-                        }
-                        None => {
-                            for parent in edges.parents.iter() {
-                                frontier
-                                    .entry(parent.generation)
-                                    .or_default()
-                                    .insert(parent.cs_id);
-                            }
-                        }
-                    }
-                }
-            }
+
+            self.lower_frontier_step(
+                ctx,
+                frontier,
+                move |node| future::ready(Ok(node.generation < target_generation)),
+                Prefetch::for_skip_tree_traversal(target_generation),
+            )
+            .await?;
         }
     }
 

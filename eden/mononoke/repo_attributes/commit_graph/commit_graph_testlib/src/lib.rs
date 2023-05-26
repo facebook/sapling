@@ -10,6 +10,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Result;
+use cloned::cloned;
 use commit_graph::CommitGraph;
 use commit_graph_types::storage::CommitGraphStorage;
 use context::CoreContext;
@@ -341,7 +342,10 @@ pub async fn test_ancestors_difference(
         .map(name_cs_id)
         .collect::<HashSet<_>>();
 
-    let set1_fn = move |cs_id| set1.contains(&cs_id);
+    let set1_fn = move |cs_id| {
+        cloned!(set1);
+        async move { Ok(set1.contains(&cs_id)) }
+    };
 
     assert_ancestors_difference_with(
         &graph,
@@ -368,7 +372,10 @@ pub async fn test_ancestors_difference(
         .map(name_cs_id)
         .collect::<HashSet<_>>();
 
-    let set2_fn = move |cs_id| set2.contains(&cs_id);
+    let set2_fn = move |cs_id| {
+        cloned!(set2);
+        async move { Ok(set2.contains(&cs_id)) }
+    };
 
     assert_ancestors_difference_with(
         &graph,
@@ -640,7 +647,10 @@ pub async fn test_ancestors_frontier_with(
         &graph,
         &ctx,
         vec!["K", "U"],
-        |cs_id| set1.contains(&cs_id),
+        move |cs_id| {
+            cloned!(set1);
+            async move { Ok(set1.contains(&cs_id)) }
+        },
         vec!["H", "I"],
     )
     .await?;
@@ -654,7 +664,13 @@ pub async fn test_ancestors_frontier_with(
         &graph,
         &ctx,
         vec!["D", "F"],
-        |cs_id| set2.contains(&cs_id),
+        {
+            cloned!(set2);
+            move |cs_id| {
+                cloned!(set2);
+                async move { Ok(set2.contains(&cs_id)) }
+            }
+        },
         vec!["C", "E"],
     )
     .await?;
@@ -663,7 +679,13 @@ pub async fn test_ancestors_frontier_with(
         &graph,
         &ctx,
         vec!["G"],
-        |cs_id| set2.contains(&cs_id),
+        {
+            cloned!(set2);
+            move |cs_id| {
+                cloned!(set2);
+                async move { Ok(set2.contains(&cs_id)) }
+            }
+        },
         vec!["C", "E"],
     )
     .await?;
@@ -672,7 +694,13 @@ pub async fn test_ancestors_frontier_with(
         &graph,
         &ctx,
         vec!["K"],
-        |cs_id| set2.contains(&cs_id),
+        {
+            cloned!(set2);
+            move |cs_id| {
+                cloned!(set2);
+                async move { Ok(set2.contains(&cs_id)) }
+            }
+        },
         vec!["C", "E"],
     )
     .await?;
@@ -681,7 +709,13 @@ pub async fn test_ancestors_frontier_with(
         &graph,
         &ctx,
         vec!["D"],
-        |cs_id| set2.contains(&cs_id),
+        {
+            cloned!(set2);
+            move |cs_id| {
+                cloned!(set2);
+                async move { Ok(set2.contains(&cs_id)) }
+            }
+        },
         vec!["C"],
     )
     .await?;
