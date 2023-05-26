@@ -155,13 +155,16 @@ LocalStoreCachedBackingStore::getBlobMetadata(
                         if (result.blob) {
                           self->stats_->increment(
                               &ObjectStoreStats::getBlobMetadataFromBlob);
+
+                          return GetBlobMetaResult{
+                              std::make_shared<BlobMetadata>(
+                                  Hash20::sha1(result.blob->getContents()),
+                                  result.blob->getSize()),
+                              result.origin};
                         }
 
                         return GetBlobMetaResult{
-                            std::make_shared<BlobMetadata>(
-                                Hash20::sha1(result.blob->getContents()),
-                                result.blob->getSize()),
-                            result.origin};
+                            nullptr, ObjectFetchContext::Origin::NotFetched};
                       });
                 })
             .deferValue([self, id](GetBlobMetaResult result) {
