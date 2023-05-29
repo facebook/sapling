@@ -44,6 +44,7 @@ export class WatchForChanges {
     this.setupWatchmanSubscriptions();
     this.setupPolling();
     this.pageFocusTracker.onChange(this.poll.bind(this));
+    this.changeCallback('everything');
   }
 
   private timeout: NodeJS.Timeout | undefined;
