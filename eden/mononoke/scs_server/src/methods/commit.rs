@@ -817,7 +817,7 @@ impl SourceControlServiceImpl {
                 descendants_of,
                 exclude_changeset_and_ancestors,
             })
-            .await;
+            .await?;
         let history = collect_history(
             history_stream,
             skip,

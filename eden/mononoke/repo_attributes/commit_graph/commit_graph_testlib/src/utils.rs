@@ -209,7 +209,7 @@ pub async fn assert_ancestors_difference(
     Ok(())
 }
 
-async fn assert_topological_order(
+pub async fn assert_topological_order(
     graph: &CommitGraph,
     ctx: &CoreContext,
     cs_ids: &Vec<ChangesetId>,

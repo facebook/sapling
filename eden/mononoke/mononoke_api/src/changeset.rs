@@ -28,6 +28,8 @@ use changesets::ChangesetsRef;
 use chrono::DateTime;
 use chrono::FixedOffset;
 use cloned::cloned;
+use commit_graph::AncestorsStreamBuilder;
+use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
@@ -40,6 +42,7 @@ use futures::future;
 use futures::future::try_join;
 use futures::future::try_join_all;
 use futures::stream;
+use futures::stream::BoxStream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -1347,11 +1350,60 @@ impl ChangesetContext {
             .map_err(MononokeError::from))
     }
 
-    /// Returns a stream of `ChangesetContext` for the history of the repository from this commit.
-    pub async fn history(
+    async fn history_new_commit_graph(
         &self,
         opts: ChangesetHistoryOptions,
-    ) -> impl Stream<Item = Result<ChangesetContext, MononokeError>> + '_ {
+    ) -> Result<BoxStream<'_, Result<ChangesetContext, MononokeError>>, MononokeError> {
+        let mut ancestors_stream_builder = AncestorsStreamBuilder::new(
+            self.repo().repo().commit_graph_arc(),
+            self.ctx().clone(),
+            vec![self.id()],
+        );
+
+        if let Some(until_timestamp) = opts.until_timestamp {
+            ancestors_stream_builder = ancestors_stream_builder.with({
+                let ctx = self.ctx().clone();
+                let repo = self.repo().clone();
+                let cs_info_enabled = repo.derive_changeset_info_enabled();
+                move |cs_id| {
+                    cloned!(ctx, repo, cs_info_enabled);
+                    async move {
+                        let info = if cs_info_enabled {
+                            ChangesetInfo::derive(&ctx, repo.repo(), cs_id).await?
+                        } else {
+                            let bonsai = cs_id.load(&ctx, repo.repo().repo_blobstore()).await?;
+                            ChangesetInfo::new(cs_id, bonsai)
+                        };
+                        let date = info.author_date().as_chrono().clone();
+                        Ok(date.timestamp() >= until_timestamp)
+                    }
+                }
+            });
+        }
+
+        if let Some(descendants_of) = opts.descendants_of {
+            ancestors_stream_builder = ancestors_stream_builder.descendants_of(descendants_of);
+        }
+
+        if let Some(exclude_changeset_and_ancestors) = opts.exclude_changeset_and_ancestors {
+            ancestors_stream_builder = ancestors_stream_builder
+                .exclude_ancestors_of(vec![exclude_changeset_and_ancestors]);
+        }
+
+        let cs_ids_stream = ancestors_stream_builder.build().await?;
+
+        Ok(cs_ids_stream
+            .map_err(MononokeError::from)
+            .and_then(move |cs_id| async move {
+                Ok::<_, MononokeError>(ChangesetContext::new(self.repo().clone(), cs_id))
+            })
+            .boxed())
+    }
+
+    async fn history_old_skiplist(
+        &self,
+        opts: ChangesetHistoryOptions,
+    ) -> BoxStream<'_, Result<ChangesetContext, MononokeError>> {
         let descendants_of = opts
             .descendants_of
             .map(|id| Self::new(self.repo().clone(), id));
@@ -1462,6 +1514,22 @@ impl ChangesetContext {
             async move { Ok::<_, MononokeError>(changeset) }
         })
         .boxed()
+    }
+
+    /// Returns a stream of `ChangesetContext` for the history of the repository from this commit.
+    pub async fn history(
+        &self,
+        opts: ChangesetHistoryOptions,
+    ) -> Result<impl Stream<Item = Result<ChangesetContext, MononokeError>> + '_, MononokeError>
+    {
+        if tunables()
+            .by_repo_enable_new_commit_graph_commit_history(self.repo().name())
+            .unwrap_or_default()
+        {
+            self.history_new_commit_graph(opts).await
+        } else {
+            Ok(self.history_old_skiplist(opts).await)
+        }
     }
 
     pub async fn diff_root_unordered(

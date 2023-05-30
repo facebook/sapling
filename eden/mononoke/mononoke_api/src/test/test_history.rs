@@ -6,12 +6,18 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Result;
+use commit_graph::CommitGraph;
+use commit_graph::CommitGraphRef;
+use commit_graph_testlib::utils::assert_topological_order;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
+use maplit::hashmap;
+use maplit::hashset;
 use mononoke_types::DateTime;
 use tests_utils::CreateCommitContext;
 
@@ -363,8 +369,20 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-async fn commit_history(fb: FacebookInit) -> Result<()> {
+async fn assert_history(
+    ctx: &CoreContext,
+    commit_graph: &CommitGraph,
+    history: Vec<ChangesetId>,
+    expected_cs_ids: HashSet<ChangesetId>,
+) -> Result<()> {
+    let history = history.into_iter().rev().collect();
+    assert_topological_order(commit_graph, ctx, &history).await?;
+    assert_eq!(history.into_iter().collect::<HashSet<_>>(), expected_cs_ids);
+
+    Ok(())
+}
+
+async fn commit_history_impl(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
 
@@ -376,13 +394,15 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
     // The commit history includes all commits, including empty ones.
     let history: Vec<_> = cs
         .history(Default::default())
-        .await
+        .await?
         .and_then(|cs| async move { Ok(cs.id()) })
         .try_collect()
         .await?;
-    assert_eq!(
+    assert_history(
+        &ctx,
+        repo.repo().commit_graph(),
         history,
-        vec![
+        hashset! {
             changesets["c2"],
             changesets["m2"],
             changesets["e2"],
@@ -397,8 +417,9 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
             changesets["b1"],
             changesets["a2"],
             changesets["a1"],
-        ]
-    );
+        },
+    )
+    .await?;
 
     // The commit history of an empty commit starts with itself.
     let cs = repo
@@ -407,13 +428,15 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
         .expect("changeset exists");
     let history: Vec<_> = cs
         .history(Default::default())
-        .await
+        .await?
         .and_then(|cs| async move { Ok(cs.id()) })
         .try_collect()
         .await?;
-    assert_eq!(
+    assert_history(
+        &ctx,
+        repo.repo().commit_graph(),
         history,
-        vec![
+        hashset! {
             changesets["e1"],
             changesets["m1"],
             changesets["b2"],
@@ -421,8 +444,9 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
             changesets["b1"],
             changesets["a2"],
             changesets["a1"],
-        ]
-    );
+        },
+    )
+    .await?;
 
     // Setting until_timestamp omits some commits.
     let history: Vec<_> = cs
@@ -430,19 +454,22 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
             until_timestamp: Some(2500),
             ..Default::default()
         })
-        .await
+        .await?
         .and_then(|cs| async move { Ok(cs.id()) })
         .try_collect()
         .await?;
-    assert_eq!(
+    assert_history(
+        &ctx,
+        repo.repo().commit_graph(),
         history,
-        vec![
+        hashset! {
             changesets["e1"],
             changesets["m1"],
             changesets["b2"],
             changesets["a3"],
-        ]
-    );
+        },
+    )
+    .await?;
 
     // Setting descendendants_of omits some commits.
     let cs = repo
@@ -454,13 +481,15 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
             descendants_of: Some(changesets["b2"]),
             ..Default::default()
         })
-        .await
+        .await?
         .and_then(|cs| async move { Ok(cs.id()) })
         .try_collect()
         .await?;
-    assert_eq!(
+    assert_history(
+        &ctx,
+        repo.repo().commit_graph(),
         history,
-        vec![
+        hashset! {
             changesets["c2"],
             changesets["m2"],
             changesets["e2"],
@@ -471,8 +500,9 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
             changesets["e1"],
             changesets["m1"],
             changesets["b2"],
-        ]
-    );
+        },
+    )
+    .await?;
 
     // Setting exclude_changeset omits some commits.
     let cs = repo
@@ -485,13 +515,15 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
             exclude_changeset_and_ancestors: Some(changesets["b2"]),
             ..Default::default()
         })
-        .await
+        .await?
         .and_then(|cs| async move { Ok(cs.id()) })
         .try_collect()
         .await?;
-    assert_eq!(
+    assert_history(
+        &ctx,
+        repo.repo().commit_graph(),
         history,
-        vec![
+        hashset! {
             changesets["c2"],
             changesets["m2"],
             changesets["e2"],
@@ -502,8 +534,9 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
             changesets["e1"],
             changesets["m1"],
             changesets["a3"],
-        ]
-    );
+        },
+    )
+    .await?;
 
     let cs = repo
         .changeset(changesets["m2"])
@@ -514,11 +547,11 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
             exclude_changeset_and_ancestors: Some(changesets["c2"]),
             ..Default::default()
         })
-        .await
+        .await?
         .and_then(|cs| async move { Ok(cs.id()) })
         .try_collect()
         .await?;
-    assert_eq!(history, vec![]);
+    assert_history(&ctx, repo.repo().commit_graph(), history, hashset! {}).await?;
 
     // Setting both descendendants_of and exclude_changeset_and_ancestors
     // lets us filter out the descendant.
@@ -532,13 +565,15 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
             exclude_changeset_and_ancestors: Some(changesets["b2"]),
             ..Default::default()
         })
-        .await
+        .await?
         .and_then(|cs| async move { Ok(cs.id()) })
         .try_collect()
         .await?;
-    assert_eq!(
+    assert_history(
+        &ctx,
+        repo.repo().commit_graph(),
         history,
-        vec![
+        hashset! {
             changesets["c2"],
             changesets["m2"],
             changesets["e2"],
@@ -548,8 +583,25 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
             changesets["c1"],
             changesets["e1"],
             changesets["m1"],
-        ]
-    );
+        },
+    )
+    .await?;
 
     Ok(())
+}
+
+#[fbinit::test]
+async fn commit_history_skiplist(fb: FacebookInit) -> Result<()> {
+    commit_history_impl(fb).await
+}
+
+#[fbinit::test]
+async fn commit_history_commit_graph(fb: FacebookInit) -> Result<()> {
+    let tunables = tunables::MononokeTunables::default();
+    tunables.update_by_repo_bools(&hashmap! {
+        ":override:".to_string() => hashmap! {
+            "enable_new_commit_graph_commit_history".to_string() => true,
+        },
+    });
+    tunables::with_tunables_async(tunables, Box::pin(commit_history_impl(fb))).await
 }
