@@ -197,8 +197,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static s
     Ok((repo_ctx, changesets))
 }
 
-#[fbinit::test]
-async fn commit_path_history(fb: FacebookInit) -> Result<()> {
+async fn commit_path_history_impl(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
 
@@ -367,6 +366,22 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
     );
 
     Ok(())
+}
+
+#[fbinit::test]
+async fn commit_path_history_skiplist(fb: FacebookInit) -> Result<()> {
+    commit_path_history_impl(fb).await
+}
+
+#[fbinit::test]
+async fn commit_path_history_commit_graph(fb: FacebookInit) -> Result<()> {
+    let tunables = tunables::MononokeTunables::default();
+    tunables.update_by_repo_bools(&hashmap! {
+        ":override:".to_string() => hashmap! {
+            "enable_new_commit_graph_commit_path_history".to_string() => true,
+        },
+    });
+    tunables::with_tunables_async(tunables, Box::pin(commit_path_history_impl(fb))).await
 }
 
 async fn assert_history(

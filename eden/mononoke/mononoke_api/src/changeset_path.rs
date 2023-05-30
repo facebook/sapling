@@ -18,6 +18,7 @@ use bytes::Bytes;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::RootDeletedManifestIdCommon;
@@ -25,7 +26,10 @@ use derived_data::BonsaiDerived;
 use filestore::FetchKey;
 use futures::future::try_join_all;
 use futures::future::TryFutureExt;
+use futures::stream;
+use futures::stream::BoxStream;
 use futures::stream::Stream;
+use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_lazy_shared::LazyShared;
 use history_traversal::list_file_history;
@@ -541,13 +545,190 @@ impl ChangesetPathHistoryContext {
         .await?)
     }
 
-    /// Returns a list of `ChangesetContext` for the file at this path that represents
-    /// a history of the path.
-    pub async fn history(
+    async fn history_new_commit_graph(
         &self,
         opts: ChangesetPathHistoryOptions,
-    ) -> Result<impl Stream<Item = Result<ChangesetContext, MononokeError>> + '_, MononokeError>
-    {
+    ) -> Result<BoxStream<'_, Result<ChangesetContext, MononokeError>>, MononokeError> {
+        let repo = self.repo().repo().clone();
+        let mpath = self.path.as_mpath();
+
+        if let Some(descendants_of) = opts.descendants_of {
+            if !repo
+                .commit_graph()
+                .is_ancestor(
+                    self.changeset().ctx(),
+                    descendants_of,
+                    self.changeset().id(),
+                )
+                .await?
+            {
+                return Ok(stream::empty().boxed());
+            }
+        }
+
+        struct FilterVisitor {
+            cs_info_enabled: bool,
+            until_timestamp: Option<i64>,
+            descendants_of: Option<ChangesetId>,
+            exclude_changeset_and_ancestors: Option<ChangesetId>,
+            cache: HashMap<(Option<CsAndPath>, Vec<CsAndPath>), Vec<CsAndPath>>,
+        }
+        impl FilterVisitor {
+            async fn _visit(
+                &self,
+                ctx: &CoreContext,
+                repo: &impl history_traversal::Repo,
+                _descendant_cs_id: Option<CsAndPath>,
+                mut cs_ids: Vec<CsAndPath>,
+            ) -> Result<Vec<CsAndPath>, Error> {
+                let cs_info_enabled = self.cs_info_enabled;
+                if let Some(until_ts) = self.until_timestamp {
+                    cs_ids = try_join_all(cs_ids.into_iter().map(|(cs_id, path)| async move {
+                        let info = if cs_info_enabled {
+                            ChangesetInfo::derive(ctx, repo, cs_id).await
+                        } else {
+                            let bonsai = cs_id.load(ctx, repo.repo_blobstore()).await?;
+                            Ok(ChangesetInfo::new(cs_id, bonsai))
+                        }?;
+                        let timestamp = info.author_date().as_chrono().timestamp();
+                        Ok::<_, Error>((timestamp >= until_ts).then_some((cs_id, path)))
+                    }))
+                    .await?
+                    .into_iter()
+                    .filter_map(std::convert::identity)
+                    .collect();
+                }
+
+                if let Some(descendants_of) = self.descendants_of {
+                    cs_ids = try_join_all(cs_ids.into_iter().map(|(cs_id, path)| async move {
+                        if repo
+                            .commit_graph()
+                            .is_ancestor(ctx, descendants_of, cs_id)
+                            .await?
+                        {
+                            anyhow::Ok(Some((cs_id, path)))
+                        } else {
+                            anyhow::Ok(None)
+                        }
+                    }))
+                    .await?
+                    .into_iter()
+                    .filter_map(std::convert::identity)
+                    .collect();
+                }
+
+                if let Some(exclude_changeset_and_ancestors) = self.exclude_changeset_and_ancestors
+                {
+                    cs_ids = try_join_all(cs_ids.into_iter().map(|(cs_id, path)| async move {
+                        if repo
+                            .commit_graph()
+                            .is_ancestor(ctx, cs_id, exclude_changeset_and_ancestors)
+                            .await?
+                        {
+                            Ok::<_, MononokeError>(None)
+                        } else {
+                            Ok::<_, MononokeError>(Some((cs_id, path)))
+                        }
+                    }))
+                    .await?
+                    .into_iter()
+                    .filter_map(std::convert::identity)
+                    .collect();
+                }
+                Ok(cs_ids)
+            }
+        }
+        #[async_trait]
+        impl Visitor for FilterVisitor {
+            async fn visit(
+                &mut self,
+                ctx: &CoreContext,
+                repo: &impl history_traversal::Repo,
+                descendant_cs_id: Option<CsAndPath>,
+                cs_ids: Vec<CsAndPath>,
+            ) -> Result<Vec<CsAndPath>, Error> {
+                if let Some(res) = self
+                    .cache
+                    .remove(&(descendant_cs_id.clone(), cs_ids.clone()))
+                {
+                    Ok(res)
+                } else {
+                    Ok(self._visit(ctx, repo, descendant_cs_id, cs_ids).await?)
+                }
+            }
+
+            async fn preprocess(
+                &mut self,
+                ctx: &CoreContext,
+                repo: &impl history_traversal::Repo,
+                descendant_id_cs_ids: Vec<(Option<CsAndPath>, Vec<CsAndPath>)>,
+            ) -> Result<(), Error> {
+                try_join_all(
+                    descendant_id_cs_ids
+                        .into_iter()
+                        .map(|(descendant_cs_id, cs_ids)| {
+                            self._visit(ctx, repo, descendant_cs_id.clone(), cs_ids.clone())
+                                .map_ok(move |res| ((descendant_cs_id, cs_ids), res))
+                        }),
+                )
+                .await?
+                .into_iter()
+                .for_each(|(k, v)| {
+                    self.cache.insert(k, v);
+                });
+                Ok(())
+            }
+        }
+        let cs_info_enabled = self.repo().derive_changeset_info_enabled();
+
+        let history_across_deletions = if opts.follow_history_across_deletions {
+            HistoryAcrossDeletions::Track
+        } else {
+            HistoryAcrossDeletions::DontTrack
+        };
+
+        let history = list_file_history(
+            self.changeset.ctx(),
+            self.repo().inner_repo(),
+            mpath.cloned(),
+            self.changeset.id(),
+            FilterVisitor {
+                cs_info_enabled,
+                until_timestamp: opts.until_timestamp,
+                descendants_of: opts.descendants_of,
+                exclude_changeset_and_ancestors: opts.exclude_changeset_and_ancestors,
+                cache: HashMap::new(),
+            },
+            history_across_deletions,
+            if opts.follow_mutable_file_history {
+                FollowMutableFileHistory::MutableFileParents
+            } else {
+                FollowMutableFileHistory::ImmutableCommitParents
+            },
+            self.repo().mutable_renames().clone(),
+            TraversalOrder::new_gen_num_order(
+                self.changeset.ctx().clone(),
+                repo.changeset_fetcher_arc(),
+            ),
+        )
+        .await
+        .map_err(|error| match error {
+            FastlogError::InternalError(e) => MononokeError::from(anyhow!(e)),
+            FastlogError::DeriveError(e) => MononokeError::from(e),
+            FastlogError::LoadableError(e) => MononokeError::from(e),
+            FastlogError::Error(e) => MononokeError::from(e),
+        })?;
+
+        Ok(history
+            .map_err(MononokeError::from)
+            .map_ok(move |changeset_id| ChangesetContext::new(self.repo().clone(), changeset_id))
+            .boxed())
+    }
+
+    async fn history_old_skiplist(
+        &self,
+        opts: ChangesetPathHistoryOptions,
+    ) -> Result<BoxStream<'_, Result<ChangesetContext, MononokeError>>, MononokeError> {
         let repo = self.repo().blob_repo().clone();
         let mpath = self.path.as_mpath();
 
@@ -797,7 +978,25 @@ impl ChangesetPathHistoryContext {
 
         Ok(history
             .map_err(MononokeError::from)
-            .map_ok(move |changeset_id| ChangesetContext::new(self.repo().clone(), changeset_id)))
+            .map_ok(move |changeset_id| ChangesetContext::new(self.repo().clone(), changeset_id))
+            .boxed())
+    }
+
+    /// Returns a list of `ChangesetContext` for the file at this path that represents
+    /// a history of the path.
+    pub async fn history(
+        &self,
+        opts: ChangesetPathHistoryOptions,
+    ) -> Result<impl Stream<Item = Result<ChangesetContext, MononokeError>> + '_, MononokeError>
+    {
+        if tunables::tunables()
+            .by_repo_enable_new_commit_graph_commit_path_history(self.repo().name())
+            .unwrap_or_default()
+        {
+            self.history_new_commit_graph(opts).await
+        } else {
+            self.history_old_skiplist(opts).await
+        }
     }
 }
 

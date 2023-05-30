@@ -378,6 +378,8 @@ pub struct MononokeTunables {
     enable_new_commit_graph_common_base_with: TunableBoolByRepo,
     // Enable using new commit graph in finding commit history
     enable_new_commit_graph_commit_history: TunableBoolByRepo,
+    // Enable using new commit graph in finding commit path history
+    enable_new_commit_graph_commit_path_history: TunableBoolByRepo,
 
     // Enable streaming commit graph EdenAPI endpoint.
     enable_streaming_commit_graph_edenapi_endpoint: TunableBool,
