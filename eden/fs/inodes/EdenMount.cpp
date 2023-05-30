@@ -295,11 +295,6 @@ Overlay::InodeCatalogType EdenMount::getInodeCatalogType(
   }
 
   if (checkoutConfig_->getEnableSqliteOverlay()) {
-    if (!folly::kIsWindows) {
-      throw std::runtime_error(
-          "Sqlite overlay type is only supported on Windows");
-    }
-
     if (getEdenConfig()->unsafeInMemoryOverlay.getValue()) {
       if (getEdenConfig()->overlayBuffered.getValue()) {
         return Overlay::InodeCatalogType::SqliteInMemoryBuffered;

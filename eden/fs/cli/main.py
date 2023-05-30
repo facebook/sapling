@@ -743,7 +743,6 @@ class CloneCmd(Subcmd):
             help=argparse.SUPPRESS,
         )
 
-        # This option only works on Windows for now
         parser.add_argument(
             "--overlay-type",
             choices=("sqlite"),
