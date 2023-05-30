@@ -10,11 +10,13 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Result;
+use commit_graph::AncestorsStreamBuilder;
 use commit_graph::CommitGraph;
 use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::storage::CommitGraphStorage;
 use context::CoreContext;
 use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use futures::Future;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
@@ -162,17 +164,19 @@ pub async fn assert_ancestors_difference_with<Property, Out>(
 ) -> Result<()>
 where
     Property: Fn(ChangesetId) -> Out + Send + Sync + 'static,
-    Out: Future<Output = Result<bool>> + Send,
+    Out: Future<Output = Result<bool>> + Send + Sync + 'static,
 {
     let heads = heads.into_iter().map(name_cs_id).collect();
     let common = common.into_iter().map(name_cs_id).collect();
 
     assert_eq!(
-        graph
-            .ancestors_difference_with(ctx, heads, common, property_fn)
+        AncestorsStreamBuilder::new(Arc::new(graph.clone()), ctx.clone(), heads)
+            .exclude_ancestors_of(common)
+            .without(property_fn)
+            .build()
             .await?
-            .into_iter()
-            .collect::<HashSet<_>>(),
+            .try_collect::<HashSet<_>>()
+            .await?,
         ancestors_difference
             .into_iter()
             .map(name_cs_id)

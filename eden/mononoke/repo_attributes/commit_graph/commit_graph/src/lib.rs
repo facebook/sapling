@@ -9,7 +9,6 @@
 //!
 //! The graph of all commits in the repository.
 
-use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -18,11 +17,9 @@ use anyhow::Result;
 use borrowed::borrowed;
 use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::edges::ChangesetParents;
-use commit_graph_types::frontier::ChangesetFrontier;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
-use futures::future;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::Future;
@@ -33,6 +30,9 @@ use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::Generation;
 
+pub use crate::ancestors_stream::AncestorsStreamBuilder;
+
+mod ancestors_stream;
 mod compat;
 mod core;
 mod frontier;
@@ -195,121 +195,23 @@ impl CommitGraph {
         Ok(frontier.highest_generation_contains(ancestor, target_gen))
     }
 
-    pub async fn ancestors_difference_stream_with<MonotonicProperty, Out>(
-        &self,
-        ctx: &CoreContext,
-        heads: Vec<ChangesetId>,
-        common: Vec<ChangesetId>,
-        monotonic_property: MonotonicProperty,
-    ) -> Result<BoxStream<'static, Result<ChangesetId>>>
-    where
-        MonotonicProperty: Fn(ChangesetId) -> Out + Send + Sync + 'static,
-        Out: Future<Output = Result<bool>> + Send,
-    {
-        struct AncestorsDifferenceState<P> {
-            commit_graph: CommitGraph,
-            ctx: CoreContext,
-            heads: ChangesetFrontier,
-            common: ChangesetFrontier,
-            monotonic_property: P,
-        }
-
-        let (heads, common) =
-            futures::try_join!(self.frontier(ctx, heads), self.frontier(ctx, common))?;
-
-        Ok(stream::try_unfold(
-            Box::new(AncestorsDifferenceState {
-                commit_graph: self.clone(),
-                ctx: ctx.clone(),
-                heads,
-                common,
-                monotonic_property,
-            }),
-            move |mut state| async move {
-                let AncestorsDifferenceState {
-                    commit_graph,
-                    ctx,
-                    heads,
-                    common,
-                    monotonic_property,
-                } = &mut *state;
-
-                if let Some((generation, cs_ids)) = heads.pop_last() {
-                    commit_graph.lower_frontier(ctx, common, generation).await?;
-
-                    let mut cs_ids_not_excluded = vec![];
-                    for cs_id in cs_ids {
-                        if !common.highest_generation_contains(cs_id, generation)
-                            && !monotonic_property(cs_id).await?
-                        {
-                            cs_ids_not_excluded.push(cs_id)
-                        }
-                    }
-
-                    let all_edges = commit_graph
-                        .storage
-                        .fetch_many_edges(
-                            ctx,
-                            &cs_ids_not_excluded,
-                            Prefetch::for_p1_linear_traversal(),
-                        )
-                        .await?;
-
-                    for (_, edges) in all_edges.into_iter() {
-                        for parent in edges.parents.into_iter() {
-                            heads
-                                .entry(parent.generation)
-                                .or_default()
-                                .insert(parent.cs_id);
-                        }
-                    }
-
-                    anyhow::Ok(Some((stream::iter(cs_ids_not_excluded).map(Ok), state)))
-                } else {
-                    Ok(None)
-                }
-            },
-        )
-        .try_flatten()
-        .boxed())
-    }
-
+    /// Returns a stream of all ancestors of any changeset in heads,
+    /// excluding any ancestor of any changeset in common, in reverse
+    /// topological order.
     pub async fn ancestors_difference_stream(
         &self,
         ctx: &CoreContext,
         heads: Vec<ChangesetId>,
         common: Vec<ChangesetId>,
     ) -> Result<BoxStream<'static, Result<ChangesetId>>> {
-        self.ancestors_difference_stream_with(ctx, heads, common, |_| future::ready(Ok(false)))
+        AncestorsStreamBuilder::new(Arc::new(self.clone()), ctx.clone(), heads)
+            .exclude_ancestors_of(common)
+            .build()
             .await
     }
 
-    /// Returns all ancestors of any changeset in heads, excluding
-    /// any ancestor of any changeset in common and any changeset
-    /// that satisfies a given property.
-    ///
-    /// Note: The property needs to be monotonic i.e. if the
-    /// property holds for one changeset then it has to hold
-    /// for all its parents.
-    pub async fn ancestors_difference_with<MonotonicProperty, Out>(
-        &self,
-        ctx: &CoreContext,
-        heads: Vec<ChangesetId>,
-        common: Vec<ChangesetId>,
-        monotonic_property: MonotonicProperty,
-    ) -> Result<Vec<ChangesetId>>
-    where
-        MonotonicProperty: Fn(ChangesetId) -> Out + Send + Sync + 'static,
-        Out: Future<Output = Result<bool>> + Send,
-    {
-        self.ancestors_difference_stream_with(ctx, heads, common, monotonic_property)
-            .await?
-            .try_collect()
-            .await
-    }
-
-    /// Returns all ancestors of any changeset in heads, excluding
-    /// any ancestor of any changeset in common.
+    /// Returns all ancestors of any changeset in heads, excluding any
+    /// ancestor of any changeset in common, in reverse topological order.
     pub async fn ancestors_difference(
         &self,
         ctx: &CoreContext,
@@ -322,80 +224,23 @@ impl CommitGraph {
             .await
     }
 
+    /// Returns a stream of all changesets that are both descendants of
+    /// start_id and ancestors of end_id, in topological order.
     pub async fn range_stream(
         &self,
         ctx: &CoreContext,
         start_id: ChangesetId,
         end_id: ChangesetId,
     ) -> Result<BoxStream<'static, ChangesetId>> {
-        let (start_generation, mut frontier) = futures::try_join!(
-            self.changeset_generation_required(ctx, start_id),
-            self.single_frontier(ctx, end_id)
-        )?;
-        let mut children: HashMap<ChangesetId, HashSet<(ChangesetId, Generation)>> =
-            Default::default();
-        let mut reached_start = false;
-
-        while let Some((gen, cs_ids)) = frontier.pop_last() {
-            let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
-            let all_edges = self
-                .storage
-                .fetch_many_edges_required(ctx, &cs_ids, Prefetch::for_p1_linear_traversal())
+        let range: Vec<_> =
+            AncestorsStreamBuilder::new(Arc::new(self.clone()), ctx.clone(), vec![end_id])
+                .descendants_of(start_id)
+                .build()
+                .await?
+                .try_collect()
                 .await?;
 
-            reached_start |= cs_ids.contains(&start_id);
-
-            if gen > start_generation {
-                for (_, edges) in all_edges.into_iter() {
-                    for parent in edges.parents.into_iter() {
-                        children
-                            .entry(parent.cs_id)
-                            .or_default()
-                            .insert((edges.node.cs_id, edges.node.generation));
-                        frontier
-                            .entry(parent.generation)
-                            .or_default()
-                            .insert(parent.cs_id);
-                    }
-                }
-            }
-        }
-
-        if !reached_start {
-            return Ok(stream::empty().boxed());
-        }
-
-        struct RangeStreamState {
-            children: HashMap<ChangesetId, HashSet<(ChangesetId, Generation)>>,
-            upwards_frontier: ChangesetFrontier,
-        }
-
-        Ok(stream::unfold(
-            Box::new(RangeStreamState {
-                children,
-                upwards_frontier: ChangesetFrontier::new_single(start_id, start_generation),
-            }),
-            |mut state| async {
-                if let Some((_, cs_ids)) = state.upwards_frontier.pop_first() {
-                    for cs_id in cs_ids.iter() {
-                        if let Some(children) = state.children.get(cs_id) {
-                            for (child, generation) in children.iter() {
-                                state
-                                    .upwards_frontier
-                                    .entry(*generation)
-                                    .or_default()
-                                    .insert(*child);
-                            }
-                        }
-                    }
-                    Some((stream::iter(cs_ids), state))
-                } else {
-                    None
-                }
-            },
-        )
-        .flatten()
-        .boxed())
+        Ok(stream::iter(range.into_iter().rev()).boxed())
     }
 
     /// Returns all of the highest generation changesets that
