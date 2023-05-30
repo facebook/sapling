@@ -11,6 +11,8 @@ use anyhow::Context;
 use blobstore::Blobstore;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_tag_mapping::BonsaiTagMappingEntry;
+use bonsai_tag_mapping::BonsaiTagMappingRef;
 use chrono::DateTime;
 use chrono::FixedOffset;
 use context::CoreContext;
@@ -132,6 +134,7 @@ impl RepoContext {
     /// Create a new annotated tag in the repository.
     pub async fn create_annotated_tag(
         &self,
+        name: String,
         author: Option<String>,
         author_date: Option<DateTime<FixedOffset>>,
         annotation: String,
@@ -140,6 +143,7 @@ impl RepoContext {
         let new_changeset_id = create_annotated_tag(
             self.ctx(),
             self.inner_repo(),
+            name,
             author,
             author_date,
             annotation,
@@ -242,7 +246,8 @@ pub async fn create_git_tree(
 /// Bookmarks of category `Branch` are never annotated.
 pub async fn create_annotated_tag(
     ctx: &CoreContext,
-    repo: &(impl changesets::ChangesetsRef + repo_blobstore::RepoBlobstoreRef),
+    repo: &(impl changesets::ChangesetsRef + repo_blobstore::RepoBlobstoreRef + BonsaiTagMappingRef),
+    name: String,
     author: Option<String>,
     author_date: Option<DateTime<FixedOffset>>,
     annotation: String,
@@ -271,6 +276,15 @@ pub async fn create_annotated_tag(
     let changeset_id = changeset.get_changeset_id();
     // Store the created changeset
     changesets_creation::save_changesets(ctx, repo, vec![changeset])
+        .await
+        .map_err(|e| GitError::StorageFailure(tag_id.clone(), e.into()))?;
+    // Create a mapping between the tag name and the metadata changeset
+    let mapping_entry = BonsaiTagMappingEntry {
+        changeset_id,
+        tag_name: name,
+    };
+    repo.bonsai_tag_mapping()
+        .add_mappings(vec![mapping_entry])
         .await
         .map_err(|e| GitError::StorageFailure(tag_id, e.into()))?;
     Ok(changeset_id)

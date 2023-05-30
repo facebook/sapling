@@ -12,6 +12,7 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
+use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
@@ -64,6 +65,9 @@ pub struct BlobRepoInner {
 
     #[facet]
     pub bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    pub bonsai_tag_mapping: dyn BonsaiTagMapping,
 
     #[facet]
     pub bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
@@ -119,6 +123,7 @@ pub struct BlobRepo {
         CommitGraph,
         dyn BonsaiHgMapping,
         dyn BonsaiGitMapping,
+        dyn BonsaiTagMapping,
         dyn BonsaiGlobalrevMapping,
         dyn BonsaiSvnrevMapping,
         dyn PushrebaseMutationMapping,

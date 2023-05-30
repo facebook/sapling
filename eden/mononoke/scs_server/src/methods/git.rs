@@ -121,10 +121,14 @@ impl SourceControlServiceImpl {
             pgp_signature: params.pgp_signature.map(Bytes::from),
         };
         let changeset_context = repo_ctx
-            .create_annotated_tag(params.author, author_date, params.annotation, annotated_tag)
+            .create_annotated_tag(
+                params.tag_name,
+                params.author,
+                author_date,
+                params.annotation,
+                annotated_tag,
+            )
             .await?;
-        // TODO(rajshar): Create a mapping from the tag_name to the changeset_id of the changeset created
-        // for the tag. This will be used when recovering the tag while going from Mononoke to Git
         Ok(thrift::CreateGitTagResponse {
             created_changeset_id: changeset_context.id().as_ref().to_vec(),
             ..Default::default()

@@ -11,6 +11,7 @@ use blobrepo::BlobRepo;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
@@ -50,6 +51,7 @@ pub struct InnerRepo {
         RepoDerivedData,
         RepoIdentity,
         dyn BonsaiGitMapping,
+        dyn BonsaiTagMapping,
         dyn BonsaiGlobalrevMapping,
         dyn BonsaiHgMapping,
         dyn BookmarkUpdateLog,

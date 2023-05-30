@@ -154,6 +154,20 @@
   blob-repo0000.changeset.blake2.5ca579c0e3ebea708371b65ce559e5a51b231ad1b6f3cdfd874ca27362a2a6a8
   blob-repo0000.changeset.blake2.d5be6fdf77fc73ee5e3a4bab1adbb4772829e06c0f104e6cc0d70cabf1ebff4b
 
+# Validate if the mapping from git tag to its metadata changeset was created
+# at Mononoke end
+  $ mononoke_newadmin bookmarks -R repo get tags/first_tag --category tag
+  Metadata changeset for tag bookmark tags/first_tag: 
+  5ca579c0e3ebea708371b65ce559e5a51b231ad1b6f3cdfd874ca27362a2a6a8
+  Changeset pointed to by the tag bookmark tags/first_tag
+  032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044
+
+  $ mononoke_newadmin bookmarks -R repo get tags/empty_tag --category tag
+  Metadata changeset for tag bookmark tags/empty_tag: 
+  d5be6fdf77fc73ee5e3a4bab1adbb4772829e06c0f104e6cc0d70cabf1ebff4b
+  Changeset pointed to by the tag bookmark tags/empty_tag
+  da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c
+
 # Importing a second time should still work
   $ gitimport "$GIT_REPO" --generate-bookmarks full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
