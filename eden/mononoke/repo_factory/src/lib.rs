@@ -71,6 +71,9 @@ use context::SessionContainer;
 use cross_repo_sync::create_commit_syncer_lease;
 use dbbookmarks::ArcSqlBookmarks;
 use dbbookmarks::SqlBookmarksBuilder;
+use deletion_log::ArcDeletionLog;
+use deletion_log::DeletionLog;
+use deletion_log::SqlDeletionLog;
 #[cfg(fbcode_build)]
 use derived_data_client_library::Client as DerivationServiceClient;
 use derived_data_remote::Address;
@@ -620,6 +623,9 @@ pub enum RepoFactoryError {
 
     #[error("Error openning bonsai blob mapping DB")]
     BonsaiBlobMapping,
+
+    #[error("Error openning deletion log DB")]
+    SqlDeletionLog,
 }
 
 #[facet::factory(name: String, repo_config_param: RepoConfig, common_config_param: CommonConfig)]
@@ -1547,6 +1553,14 @@ impl RepoFactory {
         Ok(Arc::new(BonsaiBlobMapping {
             sql_bonsai_blob_mapping,
         }))
+    }
+
+    pub async fn deletion_log(&self, repo_config: &ArcRepoConfig) -> Result<ArcDeletionLog> {
+        let sql_deletion_log = self
+            .open_sql::<SqlDeletionLog>(repo_config)
+            .await
+            .context(RepoFactoryError::SqlDeletionLog)?;
+        Ok(Arc::new(DeletionLog { sql_deletion_log }))
     }
 }
 

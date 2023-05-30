@@ -33,6 +33,7 @@ commit_graph_types = { version = "0.1.0", path = "../repo_attributes/commit_grap
 context = { version = "0.1.0", path = "../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../commit_rewriting/cross_repo_sync" }
 dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
+deletion_log = { version = "0.1.0", path = "../repo_attributes/deletion_log" }
 derived_data_remote = { version = "0.1.0", path = "../derived_data/remote" }
 environment = { version = "0.1.0", path = "../cmdlib/environment" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
