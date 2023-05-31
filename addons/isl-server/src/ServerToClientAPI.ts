@@ -606,7 +606,13 @@ export default class ServerToClientAPI {
         const assumeTrackedArgs = (assumeTracked ?? []).map(path => `--assume-tracked=${path}`);
         const exec = repo.runCommand(['debugexportstack', '-r', revs, ...assumeTrackedArgs]);
         const reply = (stack?: ExportStack, error?: string) => {
-          this.postMessage({type: 'exportedStack', revs, stack: stack ?? [], error});
+          this.postMessage({
+            type: 'exportedStack',
+            assumeTracked: assumeTracked ?? [],
+            revs,
+            stack: stack ?? [],
+            error,
+          });
         };
         parseExecJson(exec, reply);
         break;

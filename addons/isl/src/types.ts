@@ -439,7 +439,13 @@ export type ServerToClientMessage =
   | {type: 'beganLoadingMoreCommits'}
   | {type: 'commitsShownRange'; rangeInDays: number | undefined}
   | {type: 'additionalCommitAvailability'; moreAvailable: boolean}
-  | {type: 'exportedStack'; revs: string; stack: ExportStack; error: string | undefined}
+  | {
+      type: 'exportedStack';
+      revs: string;
+      assumeTracked: Array<string>;
+      stack: ExportStack;
+      error: string | undefined;
+    }
   | {type: 'importedStack'; imported: ImportedStack; error: string | undefined}
   | OperationProgressEvent
   | PlatformSpecificServerToClientMessages;
