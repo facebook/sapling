@@ -40,7 +40,7 @@ import {ErrorShortMessages} from 'isl-server/src/constants';
 import {useRecoilState, useRecoilValue, useSetRecoilState} from 'recoil';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
-import {notEmpty} from 'shared/utils';
+import {generatorContains, notEmpty} from 'shared/utils';
 
 import './CommitTreeList.css';
 
@@ -222,6 +222,8 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
   const experimentalFeatures = useRecoilValue(hasExperimentalFeatures);
   const reviewProvider = useRecoilValue(codeReviewProvider);
   const diffMap = useRecoilValue(allDiffSummaries);
+  const stackHashes = useRecoilValue(editingStackHashes);
+  const loadingState = useRecoilValue(loadingStackState);
   const runOperation = useRunOperation();
 
   // buttons at the bottom of the stack
@@ -230,8 +232,13 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
   // Non-empty only when actions is non-empty.
   const moreActions: Array<ContextMenuItem> = [];
 
+  const isStackEditingActivated =
+    stackHashes.size > 0 &&
+    loadingState.state === 'hasValue' &&
+    generatorContains(walkTreePostorder([tree]), v => stackHashes.has(v.info.hash));
+
   const contextMenu = useContextMenu(() => moreActions);
-  if (reviewProvider !== null) {
+  if (reviewProvider !== null && !isStackEditingActivated) {
     const reviewActions =
       diffMap.value == null ? {} : reviewProvider?.getSupportedStackActions(tree, diffMap.value);
     const resubmittableStack = reviewActions?.resubmittableStack;
