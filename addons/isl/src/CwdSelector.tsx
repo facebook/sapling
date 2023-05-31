@@ -52,7 +52,7 @@ export function CwdSelector() {
   }
   const repoBasename = basename(info.repoRoot);
   return (
-    <Tooltip trigger="click" component={CwdDetails} placement="bottom">
+    <Tooltip trigger="click" component={() => <CwdDetails />} placement="bottom">
       <VSCodeButton appearance="icon" data-testid="cwd-dropdown-button">
         <Icon icon="folder" slot="start" />
         {repoBasename}

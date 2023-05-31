@@ -33,8 +33,8 @@ type TooltipProps = {
   delayMs?: number;
 } & ExclusiveOr<
   ExclusiveOr<{trigger: 'manual'; shouldShow: boolean}, {trigger?: 'hover' | 'disabled'}> &
-    ExclusiveOr<{component: (props: {dismiss: () => void}) => JSX.Element}, {title: string}>,
-  {trigger: 'click'; component: (props: {dismiss: () => void}) => JSX.Element; title?: string}
+    ExclusiveOr<{component: (dismiss: () => void) => JSX.Element}, {title: string}>,
+  {trigger: 'click'; component: (dismiss: () => void) => JSX.Element; title?: string}
 >;
 
 type VisibleState =
@@ -68,7 +68,7 @@ type VisibleState =
 export function Tooltip({
   children,
   title,
-  component: Component,
+  component,
   placement: placementProp,
   trigger: triggerProp,
   delayMs,
@@ -82,7 +82,7 @@ export function Tooltip({
     if (visible === 'title') {
       return title;
     }
-    return Component == null ? title : <Component dismiss={() => setVisible(false)} />;
+    return component == null ? title : component(() => setVisible(false));
   };
 
   useEffect(() => {

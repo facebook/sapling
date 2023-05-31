@@ -30,7 +30,7 @@ import './SettingsTooltip.css';
 
 export function SettingsGearButton() {
   return (
-    <Tooltip trigger="click" component={SettingsDropdown} placement="bottom">
+    <Tooltip trigger="click" component={() => <SettingsDropdown />} placement="bottom">
       <VSCodeButton appearance="icon" data-testid="settings-gear-button">
         <Icon icon="gear" />
       </VSCodeButton>

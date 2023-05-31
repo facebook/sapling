@@ -24,7 +24,10 @@ import './BugButton.css';
 export function BugButton() {
   return (
     <MaybeBugButtonNux>
-      <Tooltip trigger="click" component={BugDropdown} placement="bottom">
+      <Tooltip
+        trigger="click"
+        component={dismiss => <BugDropdown dismiss={dismiss} />}
+        placement="bottom">
         <VSCodeButton appearance="icon" data-testid="bug-button">
           <Icon icon="bug" />
         </VSCodeButton>
