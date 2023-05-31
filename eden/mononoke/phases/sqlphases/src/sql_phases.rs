@@ -30,9 +30,16 @@ use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
+use stats::define_stats;
+use stats::prelude::*;
 
 use crate::errors::SqlPhasesError;
 use crate::sql_store::SqlPhasesStore;
+
+define_stats! {
+    prefix = "mononoke.phases";
+    public_heads_fetched: timeseries(Rate, Sum),
+}
 
 /// Newtype wrapper for Phase that allows us to derive SQL conversions.
 #[derive(Abomonation, Clone, Copy, PartialEq, Eq, Debug)]
@@ -170,6 +177,8 @@ impl SqlPhases {
             return Ok(public_cold);
         }
 
+        // log fetching public heads
+        STATS::public_heads_fetched.add_value(1);
         let heads = (self.heads_fetcher)(ctx).await?;
         let freshly_marked = mark_reachable_as_public(ctx, self, &heads, ephemeral_derive).await?;
 
