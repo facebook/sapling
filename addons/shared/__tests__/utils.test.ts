@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {basename, mapObject, truncate} from '../utils';
+import {basename, generatorContains, mapObject, truncate} from '../utils';
 
 describe('basename', () => {
   it('/path/to/foo.txt -> foo.txt', () => {
@@ -42,6 +42,34 @@ describe('mapObject', () => {
       123: 'foo',
       456: 'bar',
     });
+  });
+});
+
+describe('generatorContains', () => {
+  let lastYield = 0;
+  function* gen() {
+    lastYield = 3;
+    yield 3;
+    lastYield = 5;
+    yield 5;
+  }
+
+  it('supports testing a value', () => {
+    expect(generatorContains(gen(), 3)).toBeTruthy();
+    expect(lastYield).toBe(3);
+    expect(generatorContains(gen(), 5)).toBeTruthy();
+    expect(lastYield).toBe(5);
+    expect(generatorContains(gen(), 2)).toBeFalsy();
+    expect(lastYield).toBe(5);
+  });
+
+  it('supports testing via a function', () => {
+    expect(generatorContains(gen(), v => v > 2)).toBeTruthy();
+    expect(lastYield).toBe(3);
+    expect(generatorContains(gen(), v => v > 4)).toBeTruthy();
+    expect(lastYield).toBe(5);
+    expect(generatorContains(gen(), v => v > 6)).toBeFalsy();
+    expect(lastYield).toBe(5);
   });
 });
 

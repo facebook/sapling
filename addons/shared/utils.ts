@@ -102,10 +102,15 @@ export function mapObject<K1 extends string | number, V1, K2 extends string | nu
 
 /**
  * Test if a generator yields the given value.
+ * `value` can be either a value to test equality, or a function to customize the equality test.
  */
-export function generatorContains<V>(gen: Generator<V>, value: V): boolean {
+export function generatorContains<V>(
+  gen: IterableIterator<V>,
+  value: V | ((v: V) => boolean),
+): boolean {
+  const test = typeof value === 'function' ? (value as (v: V) => boolean) : (v: V) => v === value;
   for (const v of gen) {
-    if (v === value) {
+    if (test(v)) {
       return true;
     }
   }
