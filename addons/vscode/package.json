@@ -138,7 +138,7 @@
     "watch-webview": "webpack --watch --config webview.webpack.config.ts",
     "build-extension": "cross-env NODE_ENV=production webpack --config extension.webpack.config.ts",
     "build-webview": "cross-env NODE_ENV=production webpack --config webview.webpack.config.ts",
-    "vscode:prepublish": "./buildForPublish.sh"
+    "vscode:prepublish": "node ./buildForPublish.js"
   },
   "optionalDependencies": {
     "vsce": "^2.15.0"
