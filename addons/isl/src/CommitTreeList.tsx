@@ -331,6 +331,28 @@ function StackEditConfirmButtons(): React.ReactElement {
   const canUndo = stackEdit.canUndo();
   const canRedo = stackEdit.canRedo();
 
+  const handleUndo = () => {
+    stackEdit.undo();
+  };
+
+  const handleRedo = () => {
+    stackEdit.redo();
+  };
+
+  const handleSaveChanges = () => {
+    const importStack = stackEdit.commitStack.calculateImportStack({
+      goto: originalHead?.hash,
+    });
+    const op = new ImportStackOperation(importStack);
+    runOperation(op);
+    // Exit stack editing.
+    setStackHashes(new Set());
+  };
+
+  const handleCancel = () => {
+    setStackHashes(new Set<Hash>());
+  };
+
   // Show [Cancel] [Save changes] [Undo] [Redo].
   return (
     <>
@@ -341,9 +363,7 @@ function StackEditConfirmButtons(): React.ReactElement {
         <VSCodeButton
           className="cancel-edit-stack-button"
           appearance="secondary"
-          onClick={() => {
-            setStackHashes(new Set<Hash>());
-          }}>
+          onClick={handleCancel}>
           <T>Cancel</T>
         </VSCodeButton>
       </Tooltip>
@@ -354,15 +374,7 @@ function StackEditConfirmButtons(): React.ReactElement {
         <VSCodeButton
           className="confirm-edit-stack-button"
           appearance="primary"
-          onClick={() => {
-            const importStack = stackEdit.commitStack.calculateImportStack({
-              goto: originalHead?.hash,
-            });
-            const op = new ImportStackOperation(importStack);
-            runOperation(op);
-            // Exit stack editing.
-            setStackHashes(new Set());
-          }}>
+          onClick={handleSaveChanges}>
           <T>Save changes</T>
         </VSCodeButton>
       </Tooltip>
@@ -377,7 +389,7 @@ function StackEditConfirmButtons(): React.ReactElement {
           )
         }
         placement="bottom">
-        <VSCodeButton appearance="icon" disabled={!canUndo} onClick={() => stackEdit.undo()}>
+        <VSCodeButton appearance="icon" disabled={!canUndo} onClick={handleUndo}>
           <Icon icon="discard" />
         </VSCodeButton>
       </Tooltip>
@@ -392,7 +404,7 @@ function StackEditConfirmButtons(): React.ReactElement {
           )
         }
         placement="bottom">
-        <VSCodeButton appearance="icon" disabled={!canRedo} onClick={() => stackEdit.redo()}>
+        <VSCodeButton appearance="icon" disabled={!canRedo} onClick={handleRedo}>
           <Icon icon="redo" />
         </VSCodeButton>
       </Tooltip>
