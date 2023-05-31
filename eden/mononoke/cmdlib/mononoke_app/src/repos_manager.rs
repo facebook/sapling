@@ -18,6 +18,7 @@ use futures::stream::StreamExt;
 use itertools::Itertools;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
+use metaconfig_types::Redaction;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::ShardedService;
 use mononoke_api::Mononoke;
@@ -50,9 +51,16 @@ pub struct MononokeReposManager<Repo> {
     configs: Arc<MononokeConfigs>,
     repo_factory: Arc<RepoFactory>,
     logger: Logger,
+    redaction_disabled: bool,
 }
 
 impl<Repo> MononokeReposManager<Repo> {
+    // Create a new `MononokeReposManager`.
+    // Unlike `new_with_redaction_disabled`, we don't expose the mechanism to access redacted blobs
+    // through this API.
+    // This should be your goto constructor for this struct except if you have a specific reason
+    // for needing to disable redaction.
+    #[allow(unused)]
     pub(crate) async fn new<Names>(
         configs: Arc<MononokeConfigs>,
         repo_factory: Arc<RepoFactory>,
@@ -67,12 +75,39 @@ impl<Repo> MononokeReposManager<Repo> {
             + Sync
             + 'static,
     {
+        Self::new_with_redaction_disabled(
+            configs,
+            repo_factory,
+            logger,
+            service_name,
+            repo_names,
+            false,
+        )
+        .await
+    }
+
+    pub(crate) async fn new_with_redaction_disabled<Names>(
+        configs: Arc<MononokeConfigs>,
+        repo_factory: Arc<RepoFactory>,
+        logger: Logger,
+        service_name: Option<ShardedService>,
+        repo_names: Names,
+        redaction_disabled: bool,
+    ) -> Result<Self>
+    where
+        Names: IntoIterator<Item = String>,
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
+            + Send
+            + Sync
+            + 'static,
+    {
         let repos = Arc::new(MononokeRepos::new());
         let mgr = MononokeReposManager {
             repos,
             configs,
             repo_factory,
             logger,
+            redaction_disabled,
         };
         mgr.populate_repos(repo_names).await?;
         let update_receiver = MononokeConfigUpdateReceiver::new(
@@ -104,12 +139,17 @@ impl<Repo> MononokeReposManager<Repo> {
     /// Return a repo config for a named repo.  This reads from the main
     /// configuration, so doesn't need to be a currently managed repo.
     pub fn repo_config(&self, repo_name: &str) -> Result<RepoConfig> {
-        self.configs
+        let mut repo_config = self
+            .configs
             .repo_configs()
             .repos
             .get(repo_name)
             .cloned()
-            .ok_or_else(|| anyhow!("unknown reponame: {:?}", repo_name))
+            .ok_or_else(|| anyhow!("unknown reponame: {:?}", repo_name))?;
+        if self.redaction_disabled {
+            repo_config.redaction = Redaction::Disabled;
+        }
+        Ok(repo_config)
     }
 
     /// Construct and add a new repo to the managed repo collection.

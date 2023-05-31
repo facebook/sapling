@@ -550,6 +550,42 @@ impl MononokeApp {
             + Sync
             + 'static,
     {
+        let redaction_disabled = false;
+        self.open_managed_repos_with_redaction_disabled(service, redaction_disabled)
+            .await
+    }
+
+    /// Create a manager for all configured repos based on deep-sharding status, excluding
+    /// those filtered by `repo_filter_from` in `MononokeEnvironment`.
+    /// When reloading the config, make sure that the opened repo has redaction DISABLED
+    pub async fn open_managed_repos_unredacted<Repo>(
+        &self,
+        service: Option<ShardedService>,
+    ) -> Result<MononokeReposManager<Repo>>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
+            + Send
+            + Sync
+            + 'static,
+    {
+        let redaction_disabled = true;
+        self.open_managed_repos_with_redaction_disabled(service, redaction_disabled)
+            .await
+    }
+
+    /// Create a manager for all configured repos based on deep-sharding status, excluding
+    /// those filtered by `repo_filter_from` in `MononokeEnvironment`.
+    async fn open_managed_repos_with_redaction_disabled<Repo>(
+        &self,
+        service: Option<ShardedService>,
+        redaction_disabled: bool,
+    ) -> Result<MononokeReposManager<Repo>>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
+            + Send
+            + Sync
+            + 'static,
+    {
         let repo_filter = self.environment().filter_repos.clone();
         let service_name = service.clone();
         let repo_names =
@@ -576,8 +612,12 @@ impl MononokeApp {
                         None
                     }
                 });
-        self.open_named_managed_repos(repo_names, service_name)
-            .await
+        self.open_named_managed_repos_with_redaction_disabled(
+            repo_names,
+            service_name,
+            redaction_disabled,
+        )
+        .await
     }
 
     /// Create a manager for a set of named managed repos.  These repos must
@@ -594,14 +634,61 @@ impl MononokeApp {
             + Sync
             + 'static,
     {
+        let redaction_disabled = false;
+        self.open_named_managed_repos_with_redaction_disabled(
+            repo_names,
+            service,
+            redaction_disabled,
+        )
+        .await
+    }
+
+    /// Create a manager for a set of named managed repos.  These repos must
+    /// be configured in the config.
+    /// When reloading the config, make sure that the opened repo has redaction DISABLED
+    pub async fn open_named_managed_repos_unredacted<Repo, Names>(
+        &self,
+        repo_names: Names,
+        service: Option<ShardedService>,
+    ) -> Result<MononokeReposManager<Repo>>
+    where
+        Names: IntoIterator<Item = String>,
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
+            + Send
+            + Sync
+            + 'static,
+    {
+        let redaction_disabled = true;
+        self.open_named_managed_repos_with_redaction_disabled(
+            repo_names,
+            service,
+            redaction_disabled,
+        )
+        .await
+    }
+
+    async fn open_named_managed_repos_with_redaction_disabled<Repo, Names>(
+        &self,
+        repo_names: Names,
+        service: Option<ShardedService>,
+        redaction_disabled: bool,
+    ) -> Result<MononokeReposManager<Repo>>
+    where
+        Names: IntoIterator<Item = String>,
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
+            + Send
+            + Sync
+            + 'static,
+    {
         let logger = self.logger().clone();
         let start = Instant::now();
-        let repos_mgr = MononokeReposManager::new(
+        let repos_mgr = MononokeReposManager::new_with_redaction_disabled(
             self.configs.clone(),
             self.repo_factory().clone(),
             self.logger().clone(),
             service,
             repo_names,
+            redaction_disabled,
         )
         .await?;
         info!(
