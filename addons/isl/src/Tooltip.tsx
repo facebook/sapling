@@ -206,7 +206,7 @@ function RenderTooltipOnto({
   let effectivePlacement = placement;
 
   // to center the tooltip over the tooltip-creator, we need to measure its final rendered size
-  const renderedDimensions = useRenderedDimensions(tooltipRef);
+  const renderedDimensions = useRenderedDimensions(tooltipRef, children);
   const position = offsetsForPlacement(placement, sourceBoundingRect, renderedDimensions);
   effectivePlacement = position.autoPlacement ?? placement;
   // The tooltip may end up overflowing off the screen, since it's rendered absolutely.
@@ -387,17 +387,17 @@ function getViewportAdjustedDelta(
   return delta;
 }
 
-function useRenderedDimensions(ref: React.MutableRefObject<HTMLDivElement | null>) {
+function useRenderedDimensions(ref: React.MutableRefObject<HTMLDivElement | null>, deps: unknown) {
   const [dimensions, setDimensions] = useState({width: 0, height: 0});
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (ref.current) {
       setDimensions({
         width: ref.current.offsetWidth,
         height: ref.current.offsetHeight,
       });
     }
-  }, [ref]);
+  }, [ref, deps]);
 
   return dimensions;
 }
