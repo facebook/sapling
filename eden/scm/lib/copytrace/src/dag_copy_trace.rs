@@ -105,14 +105,14 @@ impl DagCopyTrace {
             SearchDirection::Backward => {
                 let rename = self
                     .rename_finder
-                    .find_rename_backward(&old_manifest, &new_manifest, path)
+                    .find_rename_backward(&old_manifest, &new_manifest, path, &commit)
                     .await?;
                 (rename, p1.clone())
             }
             SearchDirection::Forward => {
                 let rename = self
                     .rename_finder
-                    .find_rename_forward(&old_manifest, &new_manifest, path)
+                    .find_rename_forward(&old_manifest, &new_manifest, path, &commit)
                     .await?;
                 (rename, commit)
             }

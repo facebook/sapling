@@ -107,7 +107,7 @@ impl CopyTraceTestCase {
     pub async fn copy_trace(&self) -> Arc<dyn CopyTrace + Send + Sync> {
         let file_reader = Arc::new(self.clone());
         let config = Arc::new(self.inner.config.clone());
-        let rename_finder = Arc::new(MetadataRenameFinder::new(file_reader, config));
+        let rename_finder = Arc::new(MetadataRenameFinder::new(file_reader, config).unwrap());
 
         let root_tree_reader = Arc::new(self.clone());
         let tree_store = self.inner.tree_store.clone();

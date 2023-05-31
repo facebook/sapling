@@ -30,7 +30,7 @@ mod tests;
 ///
 /// Forward means searching from a to z.
 /// Backward means searching from z to a.
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone, Eq, Hash)]
 pub(crate) enum SearchDirection {
     Forward,
     Backward,

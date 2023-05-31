@@ -14,10 +14,13 @@ use anyhow::Result;
 use async_trait::async_trait;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use dag::Vertex;
+use lru_cache::LruCache;
 use manifest::DiffType;
 use manifest::Manifest;
 use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
+use parking_lot::Mutex;
 use pathmatcher::AlwaysMatcher;
 use storemodel::futures::StreamExt;
 use storemodel::ReadFileContents;
@@ -42,6 +45,8 @@ const DEFAULT_SIMILARITY_THRESHOLD: f32 = 0.8;
 const DEFAULT_MAX_EDIT_COST: u64 = 1000;
 /// Control if MetadataRenameFinder fallbacks to content similarity finder
 const DEFAULT_FALLBACK_TO_CONTENT_SIMILARITY: bool = false;
+/// Default Rename cache size
+const DEFAULT_RENAME_CACHE_SIZE: usize = 1000;
 
 /// Finding rename between old and new trees (commits).
 /// old_tree is a parent of new_tree
@@ -53,6 +58,7 @@ pub trait RenameFinder {
         old_tree: &TreeManifest,
         new_tree: &TreeManifest,
         old_path: &RepoPath,
+        new_vertex: &Vertex,
     ) -> Result<Option<RepoPathBuf>>;
 
     /// Find the old path of the given new path in the old_tree
@@ -61,6 +67,7 @@ pub trait RenameFinder {
         old_tree: &TreeManifest,
         new_tree: &TreeManifest,
         new_path: &RepoPath,
+        new_vertex: &Vertex,
     ) -> Result<Option<RepoPathBuf>>;
 }
 
@@ -81,18 +88,24 @@ struct RenameFinderInner {
     file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
     // Read configs
     config: Arc<dyn Config + Send + Sync>,
+    // Dir move caused rename candidates
+    cache: Mutex<LruCache<CacheKey, Key>>,
 }
+
+type CacheKey = (Vertex, RepoPathBuf);
 
 impl MetadataRenameFinder {
     pub fn new(
         file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
         config: Arc<dyn Config + Send + Sync>,
-    ) -> Self {
+    ) -> Result<Self> {
+        let cache_size = get_rename_cache_size(&config)?;
         let inner = RenameFinderInner {
             file_reader,
             config,
+            cache: Mutex::new(LruCache::new(cache_size)),
         };
-        Self { inner }
+        Ok(Self { inner })
     }
 }
 
@@ -103,13 +116,16 @@ impl RenameFinder for MetadataRenameFinder {
         old_tree: &TreeManifest,
         new_tree: &TreeManifest,
         old_path: &RepoPath,
+        new_vertex: &Vertex,
     ) -> Result<Option<RepoPathBuf>> {
         let candidates = self.inner.generate_candidates(
             old_tree,
             new_tree,
             old_path,
+            new_vertex,
             SearchDirection::Forward,
         )?;
+
         let found = self
             .inner
             .read_renamed_metadata_forward(candidates.clone(), old_path)
@@ -129,6 +145,7 @@ impl RenameFinder for MetadataRenameFinder {
         old_tree: &TreeManifest,
         new_tree: &TreeManifest,
         new_path: &RepoPath,
+        new_vertex: &Vertex,
     ) -> Result<Option<RepoPathBuf>> {
         let new_key = self.inner.get_key_from_path(new_tree, new_path)?;
         let found = self
@@ -145,6 +162,7 @@ impl RenameFinder for MetadataRenameFinder {
             old_tree,
             new_tree,
             new_path,
+            new_vertex,
             SearchDirection::Backward,
         )?;
         self.inner.find_similar_file(candidates, new_key).await
@@ -155,12 +173,14 @@ impl ContentSimilarityRenameFinder {
     pub fn new(
         file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
         config: Arc<dyn Config + Send + Sync>,
-    ) -> Self {
+    ) -> Result<Self> {
+        let cache_size = get_rename_cache_size(&config)?;
         let inner = RenameFinderInner {
             file_reader,
             config,
+            cache: Mutex::new(LruCache::new(cache_size)),
         };
-        Self { inner }
+        Ok(Self { inner })
     }
 }
 
@@ -171,9 +191,16 @@ impl RenameFinder for ContentSimilarityRenameFinder {
         old_tree: &TreeManifest,
         new_tree: &TreeManifest,
         old_path: &RepoPath,
+        new_vertex: &Vertex,
     ) -> Result<Option<RepoPathBuf>> {
         self.inner
-            .find_rename_in_direction(old_tree, new_tree, old_path, SearchDirection::Forward)
+            .find_rename_in_direction(
+                old_tree,
+                new_tree,
+                old_path,
+                new_vertex,
+                SearchDirection::Forward,
+            )
             .await
     }
 
@@ -182,9 +209,16 @@ impl RenameFinder for ContentSimilarityRenameFinder {
         old_tree: &TreeManifest,
         new_tree: &TreeManifest,
         new_path: &RepoPath,
+        new_vertex: &Vertex,
     ) -> Result<Option<RepoPathBuf>> {
         self.inner
-            .find_rename_in_direction(old_tree, new_tree, new_path, SearchDirection::Backward)
+            .find_rename_in_direction(
+                old_tree,
+                new_tree,
+                new_path,
+                new_vertex,
+                SearchDirection::Backward,
+            )
             .await
     }
 }
@@ -195,15 +229,53 @@ impl RenameFinderInner {
         old_tree: &TreeManifest,
         new_tree: &TreeManifest,
         path: &RepoPath,
+        vertex: &Vertex,
         direction: SearchDirection,
     ) -> Result<Vec<Key>> {
-        let (added_files, deleted_files) = self.get_added_and_deleted_files(old_tree, new_tree)?;
-
-        match direction {
-            SearchDirection::Forward => select_rename_candidates(added_files, path, &self.config),
-            SearchDirection::Backward => {
-                select_rename_candidates(deleted_files, path, &self.config)
+        let cache_key = (vertex.clone(), path.to_owned());
+        {
+            let mut cache = self.cache.lock();
+            if let Some(val) = cache.get_mut(&cache_key) {
+                return Ok(vec![val.clone()]);
             }
+        }
+
+        let (mut added_files, mut deleted_files) =
+            self.get_added_and_deleted_files(old_tree, new_tree)?;
+        let batch_mv_candidates = detect_batch_move(&mut added_files, &mut deleted_files);
+
+        if batch_mv_candidates.is_empty() {
+            match direction {
+                SearchDirection::Forward => {
+                    select_rename_candidates(added_files, path, &self.config)
+                }
+                SearchDirection::Backward => {
+                    select_rename_candidates(deleted_files, path, &self.config)
+                }
+            }
+        } else {
+            let mut candidates: Vec<Key> = vec![];
+            let mut cache = self.cache.lock();
+
+            match direction {
+                SearchDirection::Forward => {
+                    for (to, from) in batch_mv_candidates {
+                        let key = (vertex.clone(), from.path);
+                        cache.insert(key, to);
+                    }
+                }
+                SearchDirection::Backward => {
+                    for (to, from) in batch_mv_candidates {
+                        let key = (vertex.clone(), to.path);
+                        cache.insert(key, from);
+                    }
+                }
+            }
+
+            if let Some(val) = cache.get_mut(&cache_key) {
+                candidates.push(val.to_owned());
+            }
+            Ok(candidates)
         }
     }
 
@@ -273,10 +345,13 @@ impl RenameFinderInner {
         old_tree: &TreeManifest,
         new_tree: &TreeManifest,
         source_path: &RepoPath,
+        new_vertex: &Vertex,
         direction: SearchDirection,
     ) -> Result<Option<RepoPathBuf>> {
         tracing::trace!(?source_path, ?direction, " find_rename_in_direction");
-        let candidates = self.generate_candidates(old_tree, new_tree, source_path, direction)?;
+
+        let candidates =
+            self.generate_candidates(old_tree, new_tree, source_path, new_vertex, direction)?;
 
         tracing::trace!(candidates_len = candidates.len(), " found");
 
@@ -390,15 +465,8 @@ pub(crate) fn select_rename_candidates(
     }
 }
 
-#[allow(dead_code)]
-fn detect_batch_move(
-    added_files: &mut Vec<Key>,
-    deleted_files: &mut Vec<Key>,
-    batch_move_threshold: usize,
-) -> Vec<(Key, Key)> {
-    // skip dir move detection if the number of added files are too small, we just
-    // interate through all of them
-    if added_files.len() < batch_move_threshold || added_files.len() != deleted_files.len() {
+fn detect_batch_move(added_files: &mut Vec<Key>, deleted_files: &mut Vec<Key>) -> Vec<(Key, Key)> {
+    if added_files.len() != deleted_files.len() {
         return vec![];
     }
 
@@ -438,6 +506,13 @@ fn strip_common_prefix_and_suffix(s1: &str, s2: &str) -> (String, String) {
     let stripped_s1: String = s1_chars[start..s1_chars.len() - end].iter().collect();
     let stripped_s2: String = s2_chars[start..s2_chars.len() - end].iter().collect();
     (stripped_s1, stripped_s2)
+}
+
+fn get_rename_cache_size(config: &dyn Config) -> Result<usize> {
+    let v = config
+        .get_opt::<usize>("copytrace", "rename-cache-size")?
+        .unwrap_or(DEFAULT_RENAME_CACHE_SIZE);
+    Ok(v)
 }
 
 #[cfg(test)]
@@ -488,32 +563,12 @@ mod tests {
         ];
 
         assert_eq!(
-            detect_batch_move(&mut added_files, &mut deleted_files, 3),
+            detect_batch_move(&mut added_files, &mut deleted_files),
             vec![
                 (gen_key("a/b/c.md"), gen_key("b/b/c.md")),
                 (gen_key("a/b/c.txt"), gen_key("b/b/c.txt")),
                 (gen_key("a/d.txt"), gen_key("b/d.txt")),
             ]
-        );
-    }
-
-    #[test]
-    fn test_detect_batch_move_with_big_threshold() {
-        let mut added_files: Vec<Key> = vec![
-            gen_key("a/b/c.txt"),
-            gen_key("a/b/c.md"),
-            gen_key("a/d.txt"),
-        ];
-
-        let mut deleted_files: Vec<Key> = vec![
-            gen_key("b/b/c.txt"),
-            gen_key("b/b/c.md"),
-            gen_key("b/d.txt"),
-        ];
-
-        assert_eq!(
-            detect_batch_move(&mut added_files, &mut deleted_files, 4),
-            vec![]
         );
     }
 
@@ -533,7 +588,7 @@ mod tests {
         ];
 
         assert_eq!(
-            detect_batch_move(&mut added_files, &mut deleted_files, 3),
+            detect_batch_move(&mut added_files, &mut deleted_files),
             vec![]
         );
     }
@@ -553,7 +608,7 @@ mod tests {
         ];
 
         assert_eq!(
-            detect_batch_move(&mut added_files, &mut deleted_files, 3),
+            detect_batch_move(&mut added_files, &mut deleted_files),
             vec![]
         );
     }

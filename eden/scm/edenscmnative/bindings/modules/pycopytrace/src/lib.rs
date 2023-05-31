@@ -74,8 +74,8 @@ py_class!(pub class dagcopytrace |py| {
         let tree_store = tree_store.into();
         let config = config.into();
         let rename_finder: Arc<dyn RenameFinder + Send + Sync> = match tree_store.format() {
-            TreeFormat::Hg => Arc::new(MetadataRenameFinder::new(file_reader.into(), config)),
-            TreeFormat::Git => Arc::new(ContentSimilarityRenameFinder::new(file_reader.into(), config)),
+            TreeFormat::Hg => Arc::new(MetadataRenameFinder::new(file_reader.into(), config).map_pyerr(py)?),
+            TreeFormat::Git => Arc::new(ContentSimilarityRenameFinder::new(file_reader.into(), config).map_pyerr(py)?),
         };
         let dag = dag.into();
 
