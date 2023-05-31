@@ -12,6 +12,7 @@ import type {SetterOrUpdater} from 'recoil';
 import type {ExportStack} from 'shared/types/stack';
 
 import clientToServerAPI from './ClientToServerAPI';
+import {getTracker} from './analytics/globalTracker';
 import {CommitStackState} from './stackEdit/commitStackState';
 import {assert} from './utils';
 import {List, Record} from 'immutable';
@@ -168,6 +169,12 @@ const stackEditState = atom<StackEditState>({
               history: List([StackStateWithOperation({state: stack})]),
               currentIndex: 0,
             });
+            currentMetrics = {
+              commits: hashes.size,
+              fileStacks: stack.fileStacks.size,
+              fileStackRevs: stack.fileStacks.reduce((acc, f) => acc + f.source.revLength, 0),
+            };
+            currentMetricsStartTime = Date.now();
             setSelf({hashes, history: {state: 'hasValue', value: historyValue}});
           } catch (err) {
             const msg = `Cannot construct stack ${err}`;
@@ -294,4 +301,32 @@ export function useStackEditState() {
 /** Get revset expression for requested hashes. */
 function getRevs(hashes: Set<Hash>): string {
   return [...hashes].join('|');
+}
+
+type StackEditMetrics = {
+  // Managed by this file.
+  commits: number;
+  fileStacks: number;
+  fileStackRevs: number;
+  // Maintained by UI, via 'bumpStackEditMetric'.
+  undo?: number;
+  redo?: number;
+  fold?: number;
+  drop?: number;
+  moveUpDown?: number;
+  moveDnD?: number;
+};
+
+// Not atoms. They do not trigger re-render.
+let currentMetrics: StackEditMetrics = {commits: 0, fileStackRevs: 0, fileStacks: 0};
+let currentMetricsStartTime = 0;
+
+export function bumpStackEditMetric(key: keyof StackEditMetrics) {
+  currentMetrics[key] = (currentMetrics[key] ?? 0) + 1;
+}
+
+export function sendStackEditMetrics(save = true) {
+  const tracker = getTracker();
+  const duration = Date.now() - currentMetricsStartTime;
+  tracker?.track('StackEditMetrics', {duration, extras: {...currentMetrics, save}});
 }

@@ -42,6 +42,7 @@ export type TrackEventName =
   | 'RevertOperation'
   | 'SetConfigOperation'
   | 'ShowBugButtonNux'
+  | 'StackEditMetrics'
   | 'UncommitOperation'
   // @fb-only
   | 'OptimisticFilesStateForceResolved'

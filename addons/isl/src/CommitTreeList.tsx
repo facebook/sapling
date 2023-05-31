@@ -33,7 +33,13 @@ import {
   latestUncommittedChangesData,
   useRunOperation,
 } from './serverAPIState';
-import {editingStackHashes, loadingStackState, useStackEditState} from './stackEditState';
+import {
+  bumpStackEditMetric,
+  editingStackHashes,
+  loadingStackState,
+  sendStackEditMetrics,
+  useStackEditState,
+} from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {useRecoilState, useRecoilValue, useSetRecoilState} from 'recoil';
@@ -333,10 +339,12 @@ function StackEditConfirmButtons(): React.ReactElement {
 
   const handleUndo = () => {
     stackEdit.undo();
+    bumpStackEditMetric('undo');
   };
 
   const handleRedo = () => {
     stackEdit.redo();
+    bumpStackEditMetric('redo');
   };
 
   const handleSaveChanges = () => {
@@ -345,11 +353,13 @@ function StackEditConfirmButtons(): React.ReactElement {
     });
     const op = new ImportStackOperation(importStack);
     runOperation(op);
+    sendStackEditMetrics(true);
     // Exit stack editing.
     setStackHashes(new Set());
   };
 
   const handleCancel = () => {
+    sendStackEditMetrics(false);
     setStackHashes(new Set<Hash>());
   };
 

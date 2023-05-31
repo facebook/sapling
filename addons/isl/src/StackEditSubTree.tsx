@@ -16,7 +16,7 @@ import {Tooltip} from './Tooltip';
 import {t, T} from './i18n';
 import {reorderedRevs} from './stackEdit/commitStackState';
 import {ReorderState} from './stackEdit/reorderState';
-import {useStackEditState} from './stackEditState';
+import {bumpStackEditMetric, useStackEditState} from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {is} from 'immutable';
 import {useRef, useState} from 'react';
@@ -94,6 +94,7 @@ export function StackEditSubTree(): React.ReactElement {
             depCount: currentReorderState.draggingRevs.size - 1,
             commit: unwrap(commitStack.stack.get(currentReorderState.draggingRev)),
           });
+          bumpStackEditMetric('moveDnD');
         }
         // Reset reorder state.
         setCurrentReorderState(new ReorderState());
@@ -158,16 +159,26 @@ export function StackEditCommit({
   const commit = unwrap(state.stack.get(rev));
   const titleText = commit.text.split('\n', 1).at(0) ?? '';
 
-  const handleMoveUp = () =>
+  const handleMoveUp = () => {
     stackEdit.push(state.reorder(reorderedRevs(state, rev)), {name: 'move', offset: 1, commit});
-  const handleMoveDown = () =>
+    bumpStackEditMetric('moveUpDown');
+  };
+  const handleMoveDown = () => {
     stackEdit.push(state.reorder(reorderedRevs(state, rev - 1)), {
       name: 'move',
       offset: -1,
       commit,
     });
-  const handleFoldDown = () => stackEdit.push(state.foldDown(rev), {name: 'fold', commit});
-  const handleDrop = () => stackEdit.push(state.drop(rev), {name: 'drop', commit});
+    bumpStackEditMetric('moveUpDown');
+  };
+  const handleFoldDown = () => {
+    stackEdit.push(state.foldDown(rev), {name: 'fold', commit});
+    bumpStackEditMetric('fold');
+  };
+  const handleDrop = () => {
+    stackEdit.push(state.drop(rev), {name: 'drop', commit});
+    bumpStackEditMetric('drop');
+  };
 
   const title =
     titleText === '' ? (
