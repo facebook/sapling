@@ -71,7 +71,10 @@ export function Tooltip({
   const placement = placementProp ?? 'top';
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const content = Component == null ? title : <Component dismiss={() => setVisible(false)} />;
+  const getContent = () => {
+    return Component == null ? title : <Component dismiss={() => setVisible(false)} />;
+  };
+
   useEffect(() => {
     if (typeof shouldShow === 'boolean') {
       setVisible(shouldShow);
@@ -151,7 +154,7 @@ export function Tooltip({
       }>
       {visible && ref.current && (
         <RenderTooltipOnto delayMs={delayMs} element={ref.current} placement={placement}>
-          {content}
+          {getContent()}
         </RenderTooltipOnto>
       )}
       {children}
