@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.16
+
+- Add "Edit stack" to reorder, drop, or fold stacked commits
+- CI signal badge is now responsive and more obvious
+- Display short hashes in the commit line arguments
+- Public commits are indicated in the commit view
+- Disallow editing fields or amending changes for public commits
+- Sidebar revert button now reverts to the parent commit
+- Show a spinner during code review submitting
+- Respect theme colors like "Solarized"
+- Update VSCode UI toolkits to use rounded button
+- Fix hide operation to not hide successors
+- Fix tooltip alignment in some cases
+- Fix `isl-server` crash when `xdg-open` is not installed
+
 ## 0.1.15
 
 - Add repo selector if multiple workspace folders are mounted
