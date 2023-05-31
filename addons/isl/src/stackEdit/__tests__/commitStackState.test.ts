@@ -721,5 +721,14 @@ describe('CommitStackState', () => {
         ['reset', {mark: ':r3'}],
       ]);
     });
+
+    it('optionally rewrites commit date', () => {
+      // Swap the last 2 commits.
+      const stack = new CommitStackState(exportStack1).reorder([0, 1, 3, 2]);
+      expect(stack.calculateImportStack({rewriteDate: 40})).toMatchObject([
+        ['commit', {date: [40, 0], text: 'C'}],
+        ['commit', {date: [40, 0], text: 'B'}],
+      ]);
+    });
   });
 });

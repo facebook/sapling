@@ -282,13 +282,19 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    *   otherwise this parameter is ignored.
    * - preserveDirtyFiles: if true, do not change files in the working copy.
    *   Under the hood, this changes the "goto" to "reset".
+   * - rewriteDate: if set, the unix timestamp (in seconds) for newly
+   *   created commits.
    *
    * Example use-cases:
    * - Editing a stack (clean working copy): goto = origCurrentHash
    * - commit -i: create new rev, goto = maxRev, preserveDirtyFiles = true
    * - amend -i, absorb: goto = origCurrentHash, preserveDirtyFiles = true
    */
-  calculateImportStack(opts?: {goto?: Rev | Hash; preserveDirtyFiles?: boolean}): ImportStack {
+  calculateImportStack(opts?: {
+    goto?: Rev | Hash;
+    preserveDirtyFiles?: boolean;
+    rewriteDate?: number;
+  }): ImportStack {
     // Resolve goto to a Rev.
     // Special case: if it's at the old stack top, use the new stack top instead.
     const gotoRev: Rev | undefined =
@@ -347,7 +353,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
       const importCommit: ImportCommit = {
         mark: revToMark(commit.rev),
         author: commit.author,
-        date: [commit.date.unix, commit.date.tz],
+        date: [opts?.rewriteDate ?? commit.date.unix, commit.date.tz],
         text: commit.text,
         parents: commit.parents.toArray().map(revToMarkOrHash),
         predecessors: commit.originalNodes.toArray(),
