@@ -1278,6 +1278,16 @@ class localrepository(object):
     def nullableedenapi(self):
         return self._getedenapi(nullable=True)
 
+    @util.propertycache
+    def _dagcopytrace(self):
+        return bindings.copytrace.dagcopytrace(
+            self.changelog.inner,
+            self.manifestlog.datastore,
+            self.fileslog.filescmstore,
+            self.changelog.dag,
+            self.ui._rcfg,
+        )
+
     def _constructmanifest(self):
         # This is a temporary function while we migrate from manifest to
         # manifestlog. It allows bundlerepo to intercept the manifest creation.
@@ -2217,6 +2227,7 @@ class localrepository(object):
         # different form).
         self._headcache.clear()
         self._phasecache.invalidate()
+        self.__dict__.pop("_dagcopytrace", None)
 
     def invalidatemetalog(self):
         """Invalidates the metalog. Discard pending changes."""

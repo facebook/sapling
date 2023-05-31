@@ -32,10 +32,7 @@ import collections
 
 import dbm
 import os
-import sys
 import time
-
-import bindings
 
 from edenscm import (
     cmdutil,
@@ -436,13 +433,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
     )
     repo.ui.metrics.gauge("copytrace_missingfiles", len(missingfiles))
     if missingfiles and _dagcopytraceenabled(repo.ui):
-        dag_copy_trace = bindings.copytrace.dagcopytrace(
-            repo.changelog.inner,
-            repo.manifestlog.datastore,
-            repo.fileslog.filescmstore,
-            repo.changelog.dag,
-            repo.ui._rcfg,
-        )
+        dag_copy_trace = repo._dagcopytrace
         for f in missingfiles:
             dst_file = dag_copy_trace.trace_rename(csrc.node(), cdst.node(), f)
             if dst_file:
