@@ -44,7 +44,7 @@ export class FileStackState extends SelfUpdate<State> {
     return new FileStackState(Source({type: 'linelog', value: log, revLength: log.maxRev + 1}));
   }
 
-  // Read opertions.
+  // Read operations.
 
   /**
    * Obtain the content at the given revision.
@@ -86,7 +86,7 @@ export class FileStackState extends SelfUpdate<State> {
     return lines.slice(0, lines.length - 1).map(l => l.rev);
   }
 
-  // Write opertions.
+  // Write operations.
 
   /**
    * Edit full text of a rev.
@@ -180,7 +180,7 @@ export class FileStackState extends SelfUpdate<State> {
     return new FileStackState(source);
   }
 
-  // Internal format convertions.
+  // Internal format conversions.
 
   /** Convert to LineLog representation on demand. */
   convertToLineLog(): LineLog {
@@ -225,7 +225,7 @@ export class FileStackState extends SelfUpdate<State> {
  *   revs for absorb, line number offset calculation, etc), certain kinds of
  *   editing, and generating the flatten representation.
  * - flatten: The flatten view of LineLog. This is useful for moving lines between
- *   revisioins more explicitly.
+ *   revisions more explicitly.
  */
 type SourceProps =
   | {

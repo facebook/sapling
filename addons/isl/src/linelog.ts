@@ -890,7 +890,7 @@ function splitLines(s: string): string[] {
 
 /**
  * Make strings with the same content use the same integer
- * for fast comparasion.
+ * for fast comparison.
  */
 function stringsToInts(linesArray: string[][]): number[][] {
   // This is similar to diff-match-patch's diff_linesToChars_ but is not
