@@ -15,6 +15,7 @@ use async_trait::async_trait;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use dag::Vertex;
+use hg_metrics::increment_counter;
 use lru_cache::LruCache;
 use manifest::DiffType;
 use manifest::Manifest;
@@ -137,7 +138,12 @@ impl RenameFinder for MetadataRenameFinder {
 
         // fallback to content similarity
         let old_path_key = self.inner.get_key_from_path(old_tree, old_path)?;
-        self.inner.find_similar_file(candidates, old_path_key).await
+        let found = self
+            .inner
+            .find_similar_file(candidates, old_path_key)
+            .await?;
+        emit_content_similarity_fallback_metric(found.is_some());
+        Ok(found)
     }
 
     async fn find_rename_backward(
@@ -165,7 +171,9 @@ impl RenameFinder for MetadataRenameFinder {
             new_vertex,
             SearchDirection::Backward,
         )?;
-        self.inner.find_similar_file(candidates, new_key).await
+        let found = self.inner.find_similar_file(candidates, new_key).await?;
+        emit_content_similarity_fallback_metric(found.is_some());
+        Ok(found)
     }
 }
 
@@ -513,6 +521,15 @@ fn get_rename_cache_size(config: &dyn Config) -> Result<usize> {
         .get_opt::<usize>("copytrace", "rename-cache-size")?
         .unwrap_or(DEFAULT_RENAME_CACHE_SIZE);
     Ok(v)
+}
+
+fn emit_content_similarity_fallback_metric(is_found: bool) {
+    let metric = if is_found {
+        "copytrace_content_similarity_fallback_success"
+    } else {
+        "copytrace_content_similarity_fallback_failure"
+    };
+    increment_counter(metric, 1);
 }
 
 #[cfg(test)]
