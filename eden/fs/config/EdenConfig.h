@@ -1208,6 +1208,16 @@ class EdenConfig : private ConfigSettingManager {
       {},
       this};
 
+  // [hash]
+  /**
+   * The key to use for blake3 hash computation.
+   * The key must be exactly 32 bytes.
+   */
+  ConfigSetting<std::optional<std::string>> blake3Key{
+      "hash:blake3-key",
+      std::nullopt,
+      this};
+
   // [facebook]
   // Facebook internal
 
