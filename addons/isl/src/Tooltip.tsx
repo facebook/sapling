@@ -21,13 +21,34 @@ type Placement = 'top' | 'bottom' | 'left' | 'right';
  */
 export const DOCUMENTATION_DELAY = 750;
 
+type TooltipProps = {
+  children: ReactNode;
+  placement?: Placement;
+  /**
+   * Applies delay to visual appearance of tooltip.
+   * Note element is always constructed immediately.
+   * This delay applies to all trigger methods except 'click'.
+   * The delay is only on the leading-edge; disappearing is always instant.
+   */
+  delayMs?: number;
+} & ExclusiveOr<
+  ExclusiveOr<{trigger: 'manual'; shouldShow: boolean}, {trigger?: 'hover' | 'disabled'}> &
+    ExclusiveOr<{component: (props: {dismiss: () => void}) => JSX.Element}, {title: string}>,
+  {trigger: 'click'; component: (props: {dismiss: () => void}) => JSX.Element; title?: string}
+>;
+
+type VisibleState =
+  | true /* primary content (prefers component) is visible */
+  | false
+  | 'title' /* 'title', not 'component' is visible */;
+
 /**
  * Enables child elements to render a tooltip when hovered/clicked.
  * Children are always rendered, but the tooltip is not rendered until triggered.
  * Tooltip is centered on bounding box of children.
  * You can adjust the trigger method:
  *  - 'hover' (default) to appear when mouse hovers container element
- *  - 'click' to appear when mouse clicks container element
+ *  - 'click' to render `component` on click, render `title` on hover.
  *  - 'manual' to control programmatically by providing `shouldShow` prop.
  *  - 'disabled' to turn off hover/click support programmatically
  *
@@ -52,26 +73,15 @@ export function Tooltip({
   trigger: triggerProp,
   delayMs,
   shouldShow,
-}: {
-  children: ReactNode;
-  placement?: Placement;
-  /**
-   * Applies delay to visual appearance of tooltip.
-   * Note element is always constructed immediately.
-   * This delay applies to all trigger methods, even 'manual'.
-   * The delay is only on the leading-edge; disappearing is always instant.
-   */
-  delayMs?: number;
-} & ExclusiveOr<
-  {trigger: 'manual'; shouldShow: boolean},
-  {trigger?: 'hover' | 'click' | 'disabled'}
-> &
-  ExclusiveOr<{component: (props: {dismiss: () => void}) => JSX.Element}, {title: string}>) {
+}: TooltipProps) {
   const trigger = triggerProp ?? 'hover';
   const placement = placementProp ?? 'top';
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState<VisibleState>(false);
   const ref = useRef<HTMLDivElement>(null);
   const getContent = () => {
+    if (visible === 'title') {
+      return title;
+    }
     return Component == null ? title : <Component dismiss={() => setVisible(false)} />;
   };
 
@@ -123,11 +133,15 @@ export function Tooltip({
   // Using onMouseLeave directly on the div is unreliable if the component rerenders: https://github.com/facebook/react/issues/4492
   // Use a manually managed subscription instead.
   useLayoutEffect(() => {
-    if (trigger !== 'hover') {
+    const needHover = trigger === 'hover' || (trigger === 'click' && title != null);
+    if (!needHover) {
       return;
     }
-    const onMouseEnter = () => setVisible(true);
-    const onMouseLeave = () => setVisible(false);
+    // Do not change visible if 'click' shows the content.
+    const onMouseEnter = () =>
+      setVisible(vis => (trigger === 'click' ? (vis === true ? vis : 'title') : true));
+    const onMouseLeave = () =>
+      setVisible(vis => (trigger === 'click' && vis === true ? vis : false));
     const div = ref.current;
     div?.addEventListener('mouseenter', onMouseEnter);
     div?.addEventListener('mouseleave', onMouseLeave);
@@ -135,7 +149,10 @@ export function Tooltip({
       div?.removeEventListener('mouseenter', onMouseEnter);
       div?.removeEventListener('mouseleave', onMouseLeave);
     };
-  }, [trigger]);
+  }, [trigger, title]);
+
+  // Force delayMs to be 0 when `component` is shown by click.
+  const realDelayMs = trigger === 'click' && visible === true ? 0 : delayMs;
 
   return (
     <div
@@ -144,8 +161,8 @@ export function Tooltip({
       onClick={
         trigger === 'click'
           ? (event: MouseEvent) => {
-              if (!visible || !eventIsFromInsideTooltip(event)) {
-                setVisible(val => !val);
+              if (visible !== true || !eventIsFromInsideTooltip(event)) {
+                setVisible(vis => vis !== true);
                 // don't trigger global click listener in the same tick
                 event.stopPropagation();
               }
@@ -153,7 +170,7 @@ export function Tooltip({
           : undefined
       }>
       {visible && ref.current && (
-        <RenderTooltipOnto delayMs={delayMs} element={ref.current} placement={placement}>
+        <RenderTooltipOnto delayMs={realDelayMs} element={ref.current} placement={placement}>
           {getContent()}
         </RenderTooltipOnto>
       )}
