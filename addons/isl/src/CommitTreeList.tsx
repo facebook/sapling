@@ -352,6 +352,7 @@ function StackEditConfirmButtons(): React.ReactElement {
   const handleSaveChanges = () => {
     const importStack = stackEdit.commitStack.calculateImportStack({
       goto: originalHead?.hash,
+      rewriteDate: Date.now() / 1000,
     });
     const op = new ImportStackOperation(importStack);
     runOperation(op);
