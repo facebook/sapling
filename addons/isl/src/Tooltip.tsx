@@ -391,12 +391,34 @@ function useRenderedDimensions(ref: React.MutableRefObject<HTMLDivElement | null
   const [dimensions, setDimensions] = useState({width: 0, height: 0});
 
   useLayoutEffect(() => {
-    if (ref.current) {
-      setDimensions({
-        width: ref.current.offsetWidth,
-        height: ref.current.offsetHeight,
-      });
+    const target = ref.current;
+    if (target == null) {
+      return;
     }
+
+    const updateDimensions = () => {
+      setDimensions({
+        width: target.offsetWidth,
+        height: target.offsetHeight,
+      });
+    };
+
+    updateDimensions();
+
+    const observer = new ResizeObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.target === target) {
+          updateDimensions();
+        }
+      });
+    });
+
+    // Children might resize without re-rendering the tooltip.
+    // Observe that and trigger re-positioning.
+    // Unlike useLayoutEffect, the ResizeObserver does not prevent
+    // rendering the old state.
+    observer.observe(target);
+    return () => observer.disconnect();
   }, [ref, deps]);
 
   return dimensions;
