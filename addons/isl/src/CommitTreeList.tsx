@@ -309,7 +309,9 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
     }
   }
 
-  actions.push(<StackEditButton key="edit-stack" tree={tree} />);
+  if (tree.children.length > 0) {
+    actions.push(<StackEditButton key="edit-stack" tree={tree} />);
+  }
 
   if (actions.length === 0) {
     return null;
