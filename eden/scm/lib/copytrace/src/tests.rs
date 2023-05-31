@@ -141,7 +141,11 @@ impl CopyTraceTestCase {
                     Change::Delete(path) => {
                         tree.remove(path).unwrap();
                     }
-                    Change::Modify(path, metadata) => tree.insert(path.clone(), *metadata).unwrap(),
+                    Change::Modify(path, metadata) => {
+                        // `path` should exist
+                        tree.get_file(path).unwrap().unwrap();
+                        tree.insert(path.clone(), *metadata).unwrap();
+                    }
                     Change::Rename(from_path, to_path) | Change::Copy(from_path, to_path) => {
                         let file_metadata = tree.get_file(from_path).unwrap().unwrap();
                         if let Change::Rename(_, _) = v {
@@ -476,4 +480,38 @@ async fn test_multiple_copies_ordering_same_directory_win() {
     let c = t.copy_trace().await;
 
     assert_trace_rename!(c A C, a -> b);
+}
+
+#[tokio::test]
+#[traced_test]
+async fn test_linear_dir_move() {
+    let ascii = r#"
+    C
+    |
+    B
+    |
+    A
+    "#;
+    let changes = HashMap::from([
+        ("A", vec!["+ a/1.txt 1", "+ a/2.md 2", "+ a/b/3.c 3"]),
+        (
+            "B",
+            vec![
+                "-> a/1.txt b/1.txt",
+                "-> a/2.md b/2.md",
+                "-> a/b/3.c b/b/3.c",
+            ],
+        ),
+        ("C", vec!["M b/1.txt 4"]),
+    ]);
+    let t = CopyTraceTestCase::new(ascii, changes).await;
+    let c = t.copy_trace().await;
+
+    assert_trace_rename!(c A C, "a/1.txt" -> "b/1.txt");
+    assert_trace_rename!(c A C, "a/2.md" -> "b/2.md");
+    assert_trace_rename!(c C A, "b/1.txt" -> "a/1.txt");
+    assert_trace_rename!(c C A, "b/2.md" -> "a/2.md");
+
+    assert_trace_rename!(c A B, "a/b/3.c" -> "b/b/3.c");
+    assert_trace_rename!(c B A, "b/b/3.c" -> "a/b/3.c");
 }
