@@ -28,7 +28,6 @@ import {useArrowKeysToChangeSelection} from './selection';
 import {
   commitFetchError,
   commitsShownRange,
-  hasExperimentalFeatures,
   isFetchingAdditionalCommits,
   latestHeadCommit,
   latestUncommittedChangesData,
@@ -219,7 +218,6 @@ function FetchingAdditionalCommitsButton() {
 }
 
 function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElement | null {
-  const experimentalFeatures = useRecoilValue(hasExperimentalFeatures);
   const reviewProvider = useRecoilValue(codeReviewProvider);
   const diffMap = useRecoilValue(allDiffSummaries);
   const stackHashes = useRecoilValue(editingStackHashes);
@@ -305,9 +303,7 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
     }
   }
 
-  if (experimentalFeatures) {
-    actions.push(<StackEditButton key="edit-stack" tree={tree} />);
-  }
+  actions.push(<StackEditButton key="edit-stack" tree={tree} />);
 
   if (actions.length === 0) {
     return null;
