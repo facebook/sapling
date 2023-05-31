@@ -6,6 +6,8 @@
  */
 
 use std::cmp::min;
+use std::collections::HashSet;
+use std::iter::zip;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -388,6 +390,56 @@ pub(crate) fn select_rename_candidates(
     }
 }
 
+#[allow(dead_code)]
+fn detect_batch_move(
+    added_files: &mut Vec<Key>,
+    deleted_files: &mut Vec<Key>,
+    batch_move_threshold: usize,
+) -> Vec<(Key, Key)> {
+    // skip dir move detection if the number of added files are too small, we just
+    // interate through all of them
+    if added_files.len() < batch_move_threshold || added_files.len() != deleted_files.len() {
+        return vec![];
+    }
+
+    added_files.sort_unstable_by(|a, b| a.path.cmp(&b.path));
+    deleted_files.sort_unstable_by(|a, b| a.path.cmp(&b.path));
+
+    let stripped_pairs: HashSet<(String, String)> = zip(added_files.clone(), deleted_files.clone())
+        .map(|(a, b)| strip_common_prefix_and_suffix(a.path.as_str(), b.path.as_str()))
+        .collect();
+
+    if stripped_pairs.len() > 1 {
+        vec![]
+    } else {
+        zip(added_files, deleted_files)
+            .map(|(a, b)| (a.clone(), b.clone()))
+            .collect()
+    }
+}
+
+fn strip_common_prefix_and_suffix(s1: &str, s2: &str) -> (String, String) {
+    let s1_chars: Vec<char> = s1.chars().collect();
+    let s2_chars: Vec<char> = s2.chars().collect();
+
+    let mut start = 0;
+    while start < s1_chars.len() && start < s2_chars.len() && s1_chars[start] == s2_chars[start] {
+        start += 1;
+    }
+
+    let mut end = 0;
+    while end < s1_chars.len() - start
+        && end < s2_chars.len() - start
+        && s1_chars[s1_chars.len() - 1 - end] == s2_chars[s2_chars.len() - 1 - end]
+    {
+        end += 1;
+    }
+
+    let stripped_s1: String = s1_chars[start..s1_chars.len() - end].iter().collect();
+    let stripped_s2: String = s2_chars[start..s2_chars.len() - end].iter().collect();
+    (stripped_s1, stripped_s2)
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
@@ -419,5 +471,116 @@ mod tests {
         let path = RepoPath::from_str(path).unwrap().to_owned();
         let hgid = HgId::null_id().clone();
         Key { path, hgid }
+    }
+
+    #[test]
+    fn test_detect_batch_move() {
+        let mut added_files: Vec<Key> = vec![
+            gen_key("a/b/c.txt"),
+            gen_key("a/b/c.md"),
+            gen_key("a/d.txt"),
+        ];
+
+        let mut deleted_files: Vec<Key> = vec![
+            gen_key("b/b/c.txt"),
+            gen_key("b/b/c.md"),
+            gen_key("b/d.txt"),
+        ];
+
+        assert_eq!(
+            detect_batch_move(&mut added_files, &mut deleted_files, 3),
+            vec![
+                (gen_key("a/b/c.md"), gen_key("b/b/c.md")),
+                (gen_key("a/b/c.txt"), gen_key("b/b/c.txt")),
+                (gen_key("a/d.txt"), gen_key("b/d.txt")),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_detect_batch_move_with_big_threshold() {
+        let mut added_files: Vec<Key> = vec![
+            gen_key("a/b/c.txt"),
+            gen_key("a/b/c.md"),
+            gen_key("a/d.txt"),
+        ];
+
+        let mut deleted_files: Vec<Key> = vec![
+            gen_key("b/b/c.txt"),
+            gen_key("b/b/c.md"),
+            gen_key("b/d.txt"),
+        ];
+
+        assert_eq!(
+            detect_batch_move(&mut added_files, &mut deleted_files, 4),
+            vec![]
+        );
+    }
+
+    #[test]
+    fn test_detect_batch_move_with_unequal_num_of_files() {
+        let mut added_files: Vec<Key> = vec![
+            gen_key("a/b/c.txt"),
+            gen_key("a/b/c.md"),
+            gen_key("a/d.txt"),
+            gen_key("a/e.txt"),
+        ];
+
+        let mut deleted_files: Vec<Key> = vec![
+            gen_key("b/b/c.txt"),
+            gen_key("b/b/c.md"),
+            gen_key("b/d.txt"),
+        ];
+
+        assert_eq!(
+            detect_batch_move(&mut added_files, &mut deleted_files, 3),
+            vec![]
+        );
+    }
+
+    #[test]
+    fn test_detect_batch_move_with_unmatched_basename() {
+        let mut added_files: Vec<Key> = vec![
+            gen_key("a/b/c.txt"),
+            gen_key("a/b/c.md"),
+            gen_key("a/d.txt"),
+        ];
+
+        let mut deleted_files: Vec<Key> = vec![
+            gen_key("b/b/ccc.txt"),
+            gen_key("b/b/c.md"),
+            gen_key("b/d.txt"),
+        ];
+
+        assert_eq!(
+            detect_batch_move(&mut added_files, &mut deleted_files, 3),
+            vec![]
+        );
+    }
+
+    #[test]
+    fn test_strip_common_prefix_and_suffix() {
+        let func = strip_common_prefix_and_suffix;
+
+        assert_eq!(func("", ""), ("".to_owned(), "".to_owned()));
+        assert_eq!(func("", "a"), ("".to_owned(), "a".to_owned()));
+        assert_eq!(func("a", ""), ("a".to_owned(), "".to_owned()));
+
+        assert_eq!(func("1a2", "1b2"), ("a".to_owned(), "b".to_owned()));
+        assert_eq!(func("1a22", "1b2"), ("a2".to_owned(), "b".to_owned()));
+
+        assert_eq!(
+            func("/a/1.txt", "/a/1.md"),
+            ("txt".to_owned(), "md".to_owned())
+        );
+        assert_eq!(
+            func("/a/b/1.txt", "/a/c/1.txt"),
+            ("b".to_owned(), "c".to_owned())
+        );
+
+        assert_eq!(
+            func("/文件/我的/好.txt", "/文件/你的/好.txt"),
+            ("我".to_owned(), "你".to_owned()),
+        );
     }
 }
