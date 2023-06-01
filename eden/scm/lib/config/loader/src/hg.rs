@@ -980,9 +980,9 @@ mod tests {
 
     use once_cell::sync::Lazy;
     use tempdir::TempDir;
+    use testutil::envs::lock_env;
 
     use super::*;
-    use crate::lock_env;
 
     static CONFIG_ENV_VAR: Lazy<&str> =
         Lazy::new(|| identity::default().env_name_static("CONFIG").unwrap());
@@ -1096,7 +1096,7 @@ mod tests {
 
     #[test]
     fn test_config_path() {
-        let mut env = crate::lock_env();
+        let mut env = lock_env();
 
         let dir = TempDir::new("test_config_path").unwrap();
 

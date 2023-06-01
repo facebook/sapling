@@ -10,26 +10,19 @@ use std::env;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 
+use once_cell::sync::Lazy;
+use parking_lot::Mutex;
 use parking_lot::MutexGuard;
 
-/// EnvLock allows changing env vars that are unset automatically when
-/// the EnvLock goes out of scope.
-pub(crate) struct EnvLock<'a> {
-    // vars must be declared first to get dropped before mutex guard.
-    vars: HashMap<String, ScopedEnvVar>,
-
-    _guard: MutexGuard<'a, ()>,
-}
-
 impl<'a> EnvLock<'a> {
-    pub(super) fn new(guard: MutexGuard<'a, ()>) -> Self {
+    pub fn new(guard: MutexGuard<'a, ()>) -> Self {
         Self {
             vars: HashMap::new(),
             _guard: guard,
         }
     }
 
-    pub(crate) fn set(&mut self, name: impl ToString, val: Option<&str>) {
+    pub fn set(&mut self, name: impl ToString, val: Option<&str>) {
         let var = self
             .vars
             .entry(name.to_string())
@@ -39,7 +32,7 @@ impl<'a> EnvLock<'a> {
     }
 }
 
-pub(crate) struct ScopedEnvVar {
+pub struct ScopedEnvVar {
     name: String,
     old: Option<OsString>,
 }
@@ -51,16 +44,35 @@ impl Drop for ScopedEnvVar {
 }
 
 impl ScopedEnvVar {
-    fn new(name: impl ToString) -> Self {
+    pub fn new(name: impl ToString) -> Self {
         let name = name.to_string();
         let old = env::var_os(&name);
         Self { name, old }
     }
 
-    pub(crate) fn set(&self, val: Option<impl AsRef<OsStr>>) {
+    pub fn set(&self, val: Option<impl AsRef<OsStr>>) {
         match val {
             None => env::remove_var(&self.name),
             Some(val) => env::set_var(&self.name, val),
         }
     }
+}
+
+/// EnvLock allows changing env vars that are unset automatically when
+/// the EnvLock goes out of scope.
+pub struct EnvLock<'a> {
+    // vars must be declared first to get dropped before mutex guard.
+    vars: HashMap<String, ScopedEnvVar>,
+
+    _guard: MutexGuard<'a, ()>,
+}
+
+static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+
+/// Lock the environment and return an object that allows setting env
+/// vars, undoing env changes when the object goes out of scope. This
+/// should be used by tests that rely on particular environment
+/// variable values that might be overwritten by other tests.
+pub fn lock_env() -> EnvLock<'static> {
+    EnvLock::new(ENV_LOCK.lock())
 }

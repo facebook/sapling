@@ -121,6 +121,7 @@ members = [
   "lib/util/atexit",
   "lib/util/hgplain",
   "lib/util/nodeipc",
+  "lib/util/testutil",
   "lib/version",
   "lib/vfs",
   "lib/vlqencoding",
