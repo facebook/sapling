@@ -64,13 +64,6 @@ Test missing files in source side
   >     # A/A = (removed)
   > EOS
 
-fixme(zhaolong): this is a bug, copytrace should resolve the rename conflict
-
   $ hg rebase -r $C -d $B
   rebasing 470d2f079ab1 "C"
-  local [dest] changed x which other [source] deleted
-  hint: if this message is due to a moved file, you can ask mercurial to attempt to automatically resolve this change by re-running with the --config=experimental.copytrace=on flag, but this will significantly slow down the operation, so you will need to be patient.
-  Source control team is working on fixing this problem.
-  use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [1]
+  merging x and y to y
