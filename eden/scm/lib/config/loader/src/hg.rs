@@ -964,6 +964,15 @@ pub fn all_existing_user_paths<'a>(id: &'a Identity) -> impl Iterator<Item = Pat
         .flat_map(|id| id.user_config_paths().into_iter().filter(|p| p.exists()))
 }
 
+pub fn default_user_config_path() -> Result<PathBuf> {
+    let id = identity::default();
+    let res = all_existing_user_paths(&id)
+        .chain(id.user_config_paths().into_iter())
+        .next()
+        .with_context(|| "unable to determine user config location")?;
+    Ok(res)
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
