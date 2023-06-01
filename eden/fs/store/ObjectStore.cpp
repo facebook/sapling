@@ -324,7 +324,10 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
   auto self = shared_from_this();
   return ImmediateFuture<BackingStore::GetBlobMetaResult>{
       backingStore_->getBlobMetadata(id, fetchContext)}
-      .thenValue([self, fetchContext = fetchContext.copy(), id](
+      .thenValue([self,
+                  fetchContext = fetchContext.copy(),
+                  id,
+                  statScope = std::move(statScope)](
                      BackingStore::GetBlobMetaResult result) {
         if (!result.blobMeta) {
           self->stats_->increment(&ObjectStoreStats::getBlobMetadataFailed);
