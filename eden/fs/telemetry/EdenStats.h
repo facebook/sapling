@@ -332,7 +332,7 @@ struct HgBackingStoreStats : StatsGroup<HgBackingStoreStats> {
   Duration fetchBlob{"store.hg.fetch_blob_us"};
   Duration importBlob{"store.hg.import_blob_us"};
   Duration getBlobMetadata{"store.hg.get_blob_metadata_us"};
-  Duration fetchBlobMetadata{"store.hg.get_blob_metadata_us"};
+  Duration fetchBlobMetadata{"store.hg.fetch_blob_metadata_us"};
   Counter loadProxyHash{"store.hg.load_proxy_hash"};
 };
 
