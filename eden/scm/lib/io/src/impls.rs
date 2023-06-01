@@ -55,6 +55,33 @@ impl<T> IsTty for Cursor<T> {
     }
 }
 
+impl IsTty for crate::IOInput {
+    fn is_tty(&self) -> bool {
+        let inner = match Weak::upgrade(&self.0) {
+            Some(inner) => inner,
+            None => return false,
+        };
+        let inner = inner.io_state.lock();
+        inner.input.is_tty()
+    }
+    fn is_stdin(&self) -> bool {
+        let inner = match Weak::upgrade(&self.0) {
+            Some(inner) => inner,
+            None => return false,
+        };
+        let inner = inner.io_state.lock();
+        inner.input.is_stdin()
+    }
+    fn pager_active(&self) -> bool {
+        let inner = match Weak::upgrade(&self.0) {
+            Some(inner) => inner,
+            None => return false,
+        };
+        let inner = inner.io_state.lock();
+        inner.input.pager_active()
+    }
+}
+
 impl IsTty for crate::IOOutput {
     fn is_tty(&self) -> bool {
         let inner = match Weak::upgrade(&self.0) {

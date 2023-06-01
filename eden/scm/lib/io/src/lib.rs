@@ -44,6 +44,10 @@ pub struct IO {
     inner: Arc<Inner>,
 }
 
+/// Implements `io::Read` on the input stream.
+#[derive(Clone)]
+pub struct IOInput(Weak<Inner>);
+
 /// Implements `io::Write` on the output stream.
 #[derive(Clone)]
 pub struct IOOutput(Weak<Inner>);
@@ -158,6 +162,18 @@ impl<T: io::Write + IsTty + Any + Send + Sync> Write for T {
     }
 }
 
+// Read from input.
+impl io::Read for IOInput {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let inner = match Weak::upgrade(&self.0) {
+            Some(inner) => inner,
+            None => return Ok(0),
+        };
+        let mut inner = inner.io_state.lock();
+        inner.input.read(buf)
+    }
+}
+
 // Write to error.
 impl io::Write for IOError {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
@@ -256,6 +272,15 @@ impl IO {
     /// If this IO is dropped, the IOError stream will be redirected to null.
     pub fn error(&self) -> IOError {
         IOError(Arc::downgrade(&self.inner))
+    }
+
+    /// Returns a clonable value that impls [`io::Read`] from `input` stream.
+    /// The output is associated with the `IO` so if the `IO` starts a pager,
+    /// the error stream will be properly redirected to the pager.
+    ///
+    /// If this IO is dropped, the IOInput stream will be redirected to null.
+    pub fn input(&self) -> IOInput {
+        IOInput(Arc::downgrade(&self.inner))
     }
 
     /// Returns a clonable value that impls [`io::Write`] to `output` stream.
