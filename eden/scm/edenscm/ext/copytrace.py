@@ -421,7 +421,9 @@ def _domergecopies(orig, repo, cdst, csrc, base):
 
     if _dagcopytraceenabled(repo.ui):
         dag_copy_trace = repo._dagcopytrace
-        srcmissingfiles = [f for f in changedfiles if f not in csrc and f in base]
+        srcmissingfiles = [
+            f for f in changedfiles if f not in csrc and f in base and f in mdst
+        ]
         for f in srcmissingfiles:
             src_file = dag_copy_trace.trace_rename(base.node(), csrc.node(), f)
             if src_file:
