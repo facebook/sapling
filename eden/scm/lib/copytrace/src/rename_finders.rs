@@ -423,7 +423,7 @@ impl RenameFinderInner {
         Ok(key)
     }
 
-    pub(crate) fn get_similarity_threshold(&self) -> Result<f32> {
+    fn get_similarity_threshold(&self) -> Result<f32> {
         let v = self
             .config
             .get_opt::<f32>("copytrace", "similarity-threshold")?
@@ -431,7 +431,7 @@ impl RenameFinderInner {
         Ok(v)
     }
 
-    pub(crate) fn get_max_edit_cost(&self) -> Result<u64> {
+    fn get_max_edit_cost(&self) -> Result<u64> {
         let v = self
             .config
             .get_opt::<u64>("copytrace", "max-edit-cost")?
@@ -439,7 +439,7 @@ impl RenameFinderInner {
         Ok(v)
     }
 
-    pub(crate) fn get_fallback_to_content_similarity(&self) -> Result<bool> {
+    fn get_fallback_to_content_similarity(&self) -> Result<bool> {
         let v = self
             .config
             .get_opt::<bool>("copytrace", "fallback-to-content-similarity")?
@@ -448,7 +448,7 @@ impl RenameFinderInner {
     }
 }
 
-pub(crate) fn select_rename_candidates(
+fn select_rename_candidates(
     mut candidates: Vec<Key>,
     source_path: &RepoPath,
     config: &dyn Config,
