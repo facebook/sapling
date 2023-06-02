@@ -59,6 +59,7 @@ export default function Footer(): React.ReactElement {
       as="footer"
       backgroundColor="canvas.subtle"
       flex="0 0 auto"
+      position="relative"
       paddingTop={4}
       bottom={0}
       width="100%">
