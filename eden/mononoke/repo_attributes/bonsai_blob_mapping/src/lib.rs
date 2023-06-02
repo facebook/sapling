@@ -103,16 +103,17 @@ impl SqlBonsaiBlobMapping {
         repo_id: RepositoryId,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<(ChangesetId, String)>> {
-        Ok(stream::iter(self.read_connections.iter())
-            .map(|connection| async {
-                GetBlobKeysForChangesets::query(connection, &repo_id, &cs_ids[..]).await
-            })
-            .buffer_unordered(100)
-            .try_collect::<Vec<_>>()
-            .await?
-            .into_iter()
-            .flatten()
-            .collect())
+        let mut res = vec![];
+        for shard_id in 0..self.shard_count {
+            let rows = GetBlobKeysForChangesets::query(
+                &self.read_connections[shard_id],
+                &repo_id,
+                &cs_ids[..],
+            )
+            .await?;
+            res.extend(rows);
+        }
+        Ok(res)
     }
 
     pub async fn get_changesets_for_blob_keys(
