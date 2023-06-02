@@ -306,46 +306,53 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     BookmarkKey::new(&name)?
                 };
                 let pushvars = None;
-                if repo_context
-                    .create_bookmark(&bookmark_key, final_changeset, pushvars)
+                let old_changeset = repo_context
+                    .resolve_bookmark(&bookmark_key, BookmarkFreshness::MostRecent)
                     .await
-                    .is_err()
-                {
-                    let old_changeset = repo_context
-                        .resolve_bookmark(&bookmark_key, BookmarkFreshness::MostRecent)
-                        .await
-                        .with_context(|| format!("failed to resolve bookmark {name}"))?
-                        .map(|context| context.id());
-                    if old_changeset != Some(final_changeset) {
-                        let allow_non_fast_forward = true;
-                        repo_context
-                        .move_bookmark(
-                            &bookmark_key,
-                            final_changeset,
-                            old_changeset,
-                            allow_non_fast_forward,
-                            pushvars,
-                        )
-                        .await
-                        .with_context(|| format!("failed to move bookmark {name} from {old_changeset:?} to {final_changeset:?}"))?;
-                        info!(
-                            ctx.logger(),
-                            "Bookmark: \"{name}\": {final_changeset:?} (moved from {old_changeset:?})"
-                        );
-                    } else {
-                        info!(
-                            ctx.logger(),
-                            "Bookmark: \"{name}\": {final_changeset:?} (already up-to-date)"
-                        );
+                    .with_context(|| format!("failed to resolve bookmark {name}"))?
+                    .map(|context| context.id());
+                match old_changeset {
+                    // The bookmark already exists. Instead of creating it, we need to move it.
+                    Some(old_changeset) => {
+                        if old_changeset != final_changeset {
+                            let allow_non_fast_forward = true;
+                            repo_context
+                                .move_bookmark(
+                                    &bookmark_key,
+                                    final_changeset,
+                                    Some(old_changeset),
+                                    allow_non_fast_forward,
+                                    pushvars,
+                                )
+                                .await
+                                .with_context(|| format!("failed to move bookmark {name} from {old_changeset:?} to {final_changeset:?}"))?;
+                            info!(
+                                ctx.logger(),
+                                "Bookmark: \"{name}\": {final_changeset:?} (moved from {old_changeset:?})"
+                            );
+                        } else {
+                            info!(
+                                ctx.logger(),
+                                "Bookmark: \"{name}\": {final_changeset:?} (already up-to-date)"
+                            );
+                        }
                     }
-                } else {
-                    info!(
-                        ctx.logger(),
-                        "Bookmark: \"{name}\": {final_changeset:?} (created)"
-                    );
+                    // The bookmark doesn't yet exist. Create it.
+                    None => {
+                        repo_context
+                            .create_bookmark(&bookmark_key, final_changeset, pushvars)
+                            .await
+                            .with_context(|| {
+                                format!("failed to create bookmark {name} during gitimport")
+                            })?;
+                        info!(
+                            ctx.logger(),
+                            "Bookmark: \"{name}\": {final_changeset:?} (created)"
+                        )
+                    }
                 }
             }
-        }
+        };
     }
     Ok(())
 }
