@@ -13,7 +13,7 @@ async-trait = "0.1.58"
 commit_graph_types = { version = "0.1.0", path = "../commit_graph_types" }
 context = { version = "0.1.0", path = "../../../server/context" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
-parking_lot = { version = "0.11.2", features = ["send_guard"] }
+parking_lot = { version = "0.12.1", features = ["send_guard"] }
 vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]

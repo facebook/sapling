@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 once_cell = "1.12"
-parking_lot = { version = "0.11.2", features = ["send_guard"] }
+parking_lot = { version = "0.12.1", features = ["send_guard"] }

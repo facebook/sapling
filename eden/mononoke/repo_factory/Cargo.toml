@@ -51,7 +51,7 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
 newfilenodes = { version = "0.1.0", path = "../newfilenodes" }
-parking_lot = { version = "0.11.2", features = ["send_guard"] }
+parking_lot = { version = "0.12.1", features = ["send_guard"] }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 phases = { version = "0.1.0", path = "../phases" }
 preloaded_commit_graph_storage = { version = "0.1.0", path = "../repo_attributes/commit_graph/preloaded_commit_graph_storage" }

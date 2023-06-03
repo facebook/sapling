@@ -13,5 +13,5 @@ copytrace = { path = "../../../../lib/copytrace" }
 dag = { path = "../../../../lib/dag" }
 storemodel = { path = "../../../../lib/storemodel" }
 types = { path = "../../../../lib/types" }
-parking_lot = "0.11.2"
+parking_lot = "0.12.1"
 pymanifest = { path = "../pymanifest" }

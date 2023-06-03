@@ -11,7 +11,7 @@ cpython = { version = "0.7.1", features = ["python3-sys"], default-features = fa
 io = { version = "0.1.0", path = "../io" }
 libc = "0.2.139"
 once_cell = "1.12"
-parking_lot = { version = "0.11.2", features = ["send_guard"] }
+parking_lot = { version = "0.12.1", features = ["send_guard"] }
 python3-sys = "0.7.1"
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 thiserror = "1.0.36"
