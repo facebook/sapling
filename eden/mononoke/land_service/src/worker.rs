@@ -30,7 +30,6 @@ use mononoke_types::BonsaiChangeset;
 use permission_checker::MononokeIdentity;
 use pushrebase_client::LocalPushrebaseClient;
 use pushrebase_client::PushrebaseClient;
-use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
 use stats::prelude::*;
 use time_ext::DurationExt;
@@ -212,8 +211,6 @@ async fn process_land_changesets_request(
 
     assert_internal_identity(identity, &repo)?;
 
-    let lca_hint: Arc<dyn LeastCommonAncestorsHint> = repo.skiplist_index_arc();
-
     let bookmark = BookmarkKey::new(request.bookmark)?;
     let changesets: HashSet<BonsaiChangeset> =
         conversion_helpers::convert_bonsai_changesets(request.changesets, &ctx, &repo).await?;
@@ -230,7 +227,6 @@ async fn process_land_changesets_request(
         ctx: &ctx,
         authz: &authz,
         repo: &repo.inner_repo().clone(),
-        lca_hint: &lca_hint,
         hook_manager: repo.hook_manager().as_ref(),
     }
     .pushrebase(

@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
@@ -14,8 +13,6 @@ use bookmarks_movement::CreateBookmarkOp;
 use bytes::Bytes;
 use hooks::HookManagerRef;
 use mononoke_types::ChangesetId;
-use reachabilityindex::LeastCommonAncestorsHint;
-use skiplist::SkiplistIndexArc;
 use tunables::tunables;
 
 use crate::errors::MononokeError;
@@ -63,7 +60,6 @@ impl RepoContext {
                     self.ctx(),
                     self.authorization_context(),
                     redirector.repo.inner_repo(),
-                    &(redirector.repo.skiplist_index_arc() as Arc<dyn LeastCommonAncestorsHint>),
                     redirector.repo.hook_manager(),
                 )
                 .await?;
@@ -75,7 +71,6 @@ impl RepoContext {
                     self.ctx(),
                     self.authorization_context(),
                     self.inner_repo(),
-                    &(self.skiplist_index_arc() as Arc<dyn LeastCommonAncestorsHint>),
                     self.hook_manager().as_ref(),
                 )
                 .await?;

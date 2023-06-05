@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use anyhow::Result;
 use bookmarks::BookmarkUpdateReason;
@@ -18,7 +17,6 @@ use hooks::CrossRepoPushSource;
 use hooks::HookManager;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
 use repo_update_logger::find_draft_ancestors;
@@ -59,7 +57,6 @@ impl BookmarkUpdatePolicy {
         &self,
         ctx: &CoreContext,
         repo: &impl Repo,
-        lca_hint: &dyn LeastCommonAncestorsHint,
         bookmark: &BookmarkKey,
         targets: &BookmarkUpdateTargets,
     ) -> Result<(), BookmarkMovementError> {
@@ -69,24 +66,11 @@ impl BookmarkUpdatePolicy {
         };
         if fast_forward_only && targets.old != targets.new {
             // Check that this move is a fast-forward move.
-            let is_ancestor = if tunables::tunables()
-                .by_repo_enable_new_commit_graph_is_ancestor(repo.repo_identity().name())
-                .unwrap_or_default()
+            if !repo
+                .commit_graph()
+                .is_ancestor(ctx, targets.old, targets.new)
+                .await?
             {
-                repo.commit_graph()
-                    .is_ancestor(ctx, targets.old, targets.new)
-                    .await?
-            } else {
-                lca_hint
-                    .is_ancestor(
-                        ctx,
-                        &repo.changeset_fetcher_arc().clone(),
-                        targets.old,
-                        targets.new,
-                    )
-                    .await?
-            };
-            if !is_ancestor {
                 return Err(BookmarkMovementError::NonFastForwardMove {
                     bookmark: bookmark.clone(),
                     from: targets.old,
@@ -178,7 +162,6 @@ impl<'op> UpdateBookmarkOp<'op> {
         ctx: &'op CoreContext,
         authz: &'op AuthorizationContext,
         repo: &'op impl Repo,
-        lca_hint: &'op Arc<dyn LeastCommonAncestorsHint>,
         hook_manager: &'op HookManager,
     ) -> Result<(), BookmarkMovementError> {
         let kind = self.kind_restrictions.check_kind(repo, self.bookmark)?;
@@ -205,7 +188,7 @@ impl<'op> UpdateBookmarkOp<'op> {
         check_bookmark_sync_config(repo, self.bookmark, kind)?;
 
         self.update_policy
-            .check_update_permitted(ctx, repo, lca_hint.as_ref(), self.bookmark, &self.targets)
+            .check_update_permitted(ctx, repo, self.bookmark, &self.targets)
             .await?;
 
         self.affected_changesets
@@ -248,7 +231,6 @@ impl<'op> UpdateBookmarkOp<'op> {
                     ctx,
                     repo,
                     self.bookmark,
-                    lca_hint,
                     self.targets.new,
                 )
                 .await?;

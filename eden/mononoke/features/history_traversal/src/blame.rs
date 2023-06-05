@@ -24,7 +24,6 @@ use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::MPath;
-use reachabilityindex::ReachabilityIndex;
 use unodes::RootUnodeManifestId;
 
 use crate::common::find_possible_mutable_ancestors;
@@ -128,7 +127,6 @@ async fn fetch_mutable_blame(
     // This will mutate our blame to have all appropriate mutations from ancestors applied
     // If we have mutable blame down two ancestors of a merge, we'd expect that the order
     // of applying those mutations will not affect the final result
-    let skiplist_index = repo.skiplist_index();
     while let Some((_, mutated_csid)) = possible_mutable_ancestors.pop() {
         // Apply mutation for mutated_csid
         let ((mutated_blame, _), (original_blame, _)) = try_join!(
@@ -145,27 +143,11 @@ async fn fetch_mutable_blame(
             stream::iter(possible_mutable_ancestors.into_iter().map(anyhow::Ok))
                 .try_filter_map({
                     move |(gen, csid)| async move {
-                        let is_reachable = if tunables::tunables()
-                            .by_repo_enable_new_commit_graph_is_ancestor(
-                                repo.repo_identity().name(),
-                            )
-                            .unwrap_or_default()
+                        if repo
+                            .commit_graph()
+                            .is_ancestor(ctx, csid, mutated_csid)
+                            .await?
                         {
-                            repo.commit_graph()
-                                .is_ancestor(ctx, csid, mutated_csid)
-                                .await?
-                        } else {
-                            skiplist_index
-                                .query_reachability(
-                                    ctx,
-                                    &repo.changeset_fetcher_arc(),
-                                    mutated_csid,
-                                    csid,
-                                )
-                                .await?
-                        };
-
-                        if is_reachable {
                             anyhow::Ok(None)
                         } else {
                             Ok(Some((gen, csid)))

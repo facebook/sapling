@@ -98,11 +98,6 @@ define_perf_counters! {
         NumUnknown,
         SegmentedChangelogServerSideOpsHits,
         SegmentedChangelogServerSideOpsFallbacks,
-        SkiplistAncestorGen,
-        SkiplistDescendantGen,
-        SkiplistNoskipIterations,
-        SkiplistSkipIterations,
-        SkiplistSkippedGenerations,
         SqlReadsMaster,
         SqlReadsReplica,
         SqlWrites,
@@ -200,11 +195,6 @@ impl PerfCounterType {
             | NumUnknown
             | SegmentedChangelogServerSideOpsHits
             | SegmentedChangelogServerSideOpsFallbacks
-            | SkiplistAncestorGen
-            | SkiplistDescendantGen
-            | SkiplistNoskipIterations
-            | SkiplistSkipIterations
-            | SkiplistSkippedGenerations
             | SqlReadsMaster
             | SqlReadsReplica
             | SqlWrites

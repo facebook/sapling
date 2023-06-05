@@ -156,8 +156,6 @@ use segmented_changelog::new_server_segmented_changelog_manager;
 use segmented_changelog::ArcSegmentedChangelogManager;
 use segmented_changelog::SegmentedChangelogSqlConnections;
 use segmented_changelog_types::ArcSegmentedChangelog;
-use skiplist::ArcSkiplistIndex;
-use skiplist::SkiplistIndex;
 use slog::o;
 use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
 use sql_construct::SqlConstructFromDatabaseConfig;
@@ -1021,37 +1019,6 @@ impl RepoFactory {
             config,
             derivation_service_client,
         )?))
-    }
-
-    pub async fn skiplist_index(
-        &self,
-        repo_config: &ArcRepoConfig,
-        repo_identity: &ArcRepoIdentity,
-        common_config: &ArcCommonConfig,
-    ) -> Result<ArcSkiplistIndex> {
-        let blobstore_without_cache = self
-            .repo_blobstore_from_blobstore(
-                repo_identity,
-                repo_config,
-                &self
-                    .blobstore_no_cache(&repo_config.storage_config.blobstore)
-                    .await?,
-                common_config,
-            )
-            .await?;
-
-        let skiplist_key = if self.env.skiplist_enabled {
-            repo_config.skiplist_index_blobstore_key.clone()
-        } else {
-            None
-        };
-
-        SkiplistIndex::from_blobstore(
-            &self.ctx(Some(repo_identity)),
-            &skiplist_key,
-            &blobstore_without_cache.boxed(),
-        )
-        .await
     }
 
     pub async fn repo_blobstore(

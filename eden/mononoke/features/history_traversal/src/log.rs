@@ -46,7 +46,6 @@ use mononoke_types::Generation;
 use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
 use mutable_renames::MutableRenames;
-use reachabilityindex::LeastCommonAncestorsHint;
 use stats::prelude::*;
 use thiserror::Error;
 use time_ext::DurationExt;
@@ -946,7 +945,6 @@ async fn replace_ancestor_with_mutable_ancestor<'a>(
     possible_mutable_ancestors_for_path: &Vec<(Generation, ChangesetId)>,
 ) -> Result<(CsAndPath, Option<(CsAndPath, Option<Vec<CsAndPath>>)>), FastlogError> {
     let (immutable_ancestor_cs_id, immutable_ancestor_path) = immutable_ancestor;
-    let skiplist_index = repo.skiplist_index();
     let mutable_renames = repo.mutable_renames();
     let changeset_fetcher = repo.changeset_fetcher();
     let (current_gen, immutable_ancestor_gen) = try_join(
@@ -960,37 +958,16 @@ async fn replace_ancestor_with_mutable_ancestor<'a>(
             // If it's on the path between current commit and next immutable
             // ancestor.  We start from cheap generation number test to exclude
             // the most cases.  Then we do a real ancestry check.
-            let res = if tunables::tunables()
-                .by_repo_enable_new_commit_graph_is_ancestor(repo.repo_identity().name())
-                .unwrap_or_default()
-            {
-                try_join(
-                    repo.commit_graph()
-                        .is_ancestor(ctx, *possible_ancestor_cs_id, *cs_id),
-                    repo.commit_graph().is_ancestor(
-                        ctx,
-                        *immutable_ancestor_cs_id,
-                        *possible_ancestor_cs_id,
-                    ),
-                )
-                .await?
-            } else {
-                try_join(
-                    skiplist_index.is_ancestor(
-                        ctx,
-                        &repo.changeset_fetcher_arc(),
-                        *possible_ancestor_cs_id,
-                        *cs_id,
-                    ),
-                    skiplist_index.is_ancestor(
-                        ctx,
-                        &repo.changeset_fetcher_arc(),
-                        *immutable_ancestor_cs_id,
-                        *possible_ancestor_cs_id,
-                    ),
-                )
-                .await?
-            };
+            let res = try_join(
+                repo.commit_graph()
+                    .is_ancestor(ctx, *possible_ancestor_cs_id, *cs_id),
+                repo.commit_graph().is_ancestor(
+                    ctx,
+                    *immutable_ancestor_cs_id,
+                    *possible_ancestor_cs_id,
+                ),
+            )
+            .await?;
             if res.0 && res.1 {
                 if let Some(rename) = mutable_renames
                     .get_rename(ctx, *possible_ancestor_cs_id, path.as_ref().clone())
@@ -1243,7 +1220,6 @@ mod test {
     use repo_derived_data::RepoDerivedData;
     use repo_identity::RepoIdentity;
     use repo_identity::RepoIdentityRef;
-    use skiplist::SkiplistIndex;
     use tests_utils::CreateCommitContext;
     use tunables::with_tunables_async_arc;
 
@@ -1267,9 +1243,6 @@ mod test {
 
         #[facet]
         pub mutable_renames: MutableRenames,
-
-        #[facet]
-        pub skiplist_index: SkiplistIndex,
     }
 
     impl AsBlobRepo for TestRepoWithMutableRenames {

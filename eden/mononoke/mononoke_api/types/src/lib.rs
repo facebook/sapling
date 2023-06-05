@@ -35,7 +35,6 @@ use repo_lock::RepoLock;
 use repo_permission_checker::RepoPermissionChecker;
 use repo_sparse_profiles::RepoSparseProfiles;
 use segmented_changelog_types::SegmentedChangelog;
-use skiplist::SkiplistIndex;
 use streaming_clone::StreamingClone;
 
 // Eventually everything inside Repo should really be here
@@ -71,9 +70,6 @@ pub struct InnerRepo {
 
     #[facet]
     pub repo_config: RepoConfig,
-
-    #[facet]
-    pub skiplist_index: SkiplistIndex,
 
     #[facet]
     pub segmented_changelog: dyn SegmentedChangelog,

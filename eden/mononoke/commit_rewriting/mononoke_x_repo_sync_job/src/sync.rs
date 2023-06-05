@@ -7,7 +7,6 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Context;
@@ -22,7 +21,6 @@ use changeset_fetcher::ChangesetFetcherRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
-use cross_repo_sync::types::Source;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
@@ -33,11 +31,9 @@ use futures::try_join;
 use futures_stats::TimedFutureExt;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
-use reachabilityindex::ReachabilityIndex;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
-use skiplist::SkiplistIndex;
 use slog::info;
 use slog::warn;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -73,7 +69,6 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
     entry: BookmarkUpdateLogEntry,
-    source_skiplist_index: &Source<Arc<SkiplistIndex>>,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     mut scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<SyncResult, Error> {
@@ -108,7 +103,6 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
         entry.from_changeset_id,
         to_cs_id,
         Some(bookmark),
-        source_skiplist_index,
         common_pushrebase_bookmarks,
         scuba_sample,
     )
@@ -124,7 +118,6 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
     from_cs_id: Option<ChangesetId>,
     to_cs_id: ChangesetId,
     maybe_bookmark: Option<BookmarkKey>,
-    source_skiplist_index: &Source<Arc<SkiplistIndex>>,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<SyncResult, Error> {
@@ -153,14 +146,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
             // This is a commit that was introduced by common pushrebase bookmark (e.g. "master").
             // Use pushrebase to sync a commit.
             if let Some(from_cs_id) = from_cs_id {
-                check_forward_move(
-                    ctx,
-                    commit_syncer,
-                    &source_skiplist_index.0,
-                    to_cs_id,
-                    from_cs_id,
-                )
-                .await?;
+                check_forward_move(ctx, commit_syncer, to_cs_id, from_cs_id).await?;
             }
 
             return sync_commits_via_pushrebase(
@@ -400,32 +386,15 @@ async fn process_bookmark_deletion<M: SyncedCommitMapping + Clone + 'static, R: 
 async fn check_forward_move<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
-    skiplist_index: &Arc<SkiplistIndex>,
     to_cs_id: ChangesetId,
     from_cs_id: ChangesetId,
 ) -> Result<(), Error> {
-    let is_ancestor = if tunables::tunables()
-        .by_repo_enable_new_commit_graph_is_ancestor(
-            commit_syncer.get_source_repo().repo_identity().name(),
-        )
-        .unwrap_or_default()
+    if !commit_syncer
+        .get_source_repo()
+        .commit_graph()
+        .is_ancestor(ctx, from_cs_id, to_cs_id)
+        .await?
     {
-        commit_syncer
-            .get_source_repo()
-            .commit_graph()
-            .is_ancestor(ctx, from_cs_id, to_cs_id)
-            .await?
-    } else {
-        skiplist_index
-            .query_reachability(
-                ctx,
-                &commit_syncer.get_source_repo().changeset_fetcher_arc(),
-                to_cs_id,
-                from_cs_id,
-            )
-            .await?
-    };
-    if !is_ancestor {
         return Err(format_err!(
             "non-forward moves of shared bookmarks are not allowed"
         ));
@@ -1056,14 +1025,12 @@ mod test {
         );
 
         let mut res = vec![];
-        let source_skiplist_index = Source(Arc::new(SkiplistIndex::new()));
         for entry in log_entries {
             let entry_id = entry.id;
             let single_res = sync_single_bookmark_update_log(
                 ctx,
                 commit_syncer,
                 entry,
-                &source_skiplist_index.clone(),
                 common_pushrebase_bookmarks,
                 MononokeScubaSampleBuilder::with_discard(),
             )

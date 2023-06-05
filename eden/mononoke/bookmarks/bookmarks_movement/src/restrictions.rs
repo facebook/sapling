@@ -14,7 +14,6 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::ChangesetId;
-use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_identity::RepoIdentityRef;
@@ -74,7 +73,6 @@ pub(crate) async fn check_restriction_ensure_ancestor_of(
     ctx: &CoreContext,
     repo: &impl Repo,
     bookmark_to_move: &BookmarkKey,
-    lca_hint: &dyn LeastCommonAncestorsHint,
     target: ChangesetId,
 ) -> Result<(), BookmarkMovementError> {
     // NOTE: Obviously this is a little racy, but the bookmark could move after we check, so it
@@ -97,15 +95,9 @@ pub(crate) async fn check_restriction_ensure_ancestor_of(
     stream::iter(descendant_bookmarks)
         .map(Ok)
         .try_for_each_concurrent(10, |descendant_bookmark| async move {
-            let is_ancestor = ensure_ancestor_of(
-                ctx,
-                repo,
-                bookmark_to_move,
-                lca_hint,
-                descendant_bookmark,
-                target,
-            )
-            .await?;
+            let is_ancestor =
+                ensure_ancestor_of(ctx, repo, bookmark_to_move, descendant_bookmark, target)
+                    .await?;
             if !is_ancestor {
                 let e = BookmarkMovementError::RequiresAncestorOf {
                     bookmark: bookmark_to_move.clone(),
@@ -124,7 +116,6 @@ pub(crate) async fn ensure_ancestor_of(
     ctx: &CoreContext,
     repo: &impl Repo,
     bookmark_to_move: &BookmarkKey,
-    lca_hint: &dyn LeastCommonAncestorsHint,
     descendant_bookmark: &BookmarkKey,
     target: ChangesetId,
 ) -> Result<bool, BookmarkMovementError> {
@@ -140,20 +131,10 @@ pub(crate) async fn ensure_ancestor_of(
             )
         })?;
 
-    if tunables()
-        .by_repo_enable_new_commit_graph_is_ancestor(repo.repo_identity().name())
-        .unwrap_or_default()
-    {
-        Ok(repo
-            .commit_graph()
-            .is_ancestor(ctx, target, descendant_cs_id)
-            .await?)
-    } else {
-        Ok(target == descendant_cs_id
-            || lca_hint
-                .is_ancestor(ctx, &repo.changeset_fetcher_arc(), target, descendant_cs_id)
-                .await?)
-    }
+    Ok(repo
+        .commit_graph()
+        .is_ancestor(ctx, target, descendant_cs_id)
+        .await?)
 }
 
 pub fn check_bookmark_sync_config(

@@ -92,7 +92,6 @@ use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
-use skiplist::SkiplistIndex;
 use slog::debug;
 use slog::error;
 use slog::info;
@@ -147,7 +146,6 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static, R: 
     bcs: ChangesetId,
     commit_syncer: CommitSyncer<M, R>,
     scuba_sample: MononokeScubaSampleBuilder,
-    source_skiplist_index: Source<Arc<SkiplistIndex>>,
     maybe_bookmark: Option<BookmarkKey>,
     common_bookmarks: HashSet<BookmarkKey>,
 ) -> Result<(), Error> {
@@ -172,7 +170,6 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static, R: 
         None, // from_cs_id,
         bcs,
         maybe_bookmark,
-        &source_skiplist_index,
         &common_bookmarks,
         scuba_sample,
     )
@@ -192,7 +189,6 @@ enum TailingArgs<M, R> {
 async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
     target_mutable_counters: ArcMutableCounters,
-    source_skiplist_index: Source<Arc<SkiplistIndex>>,
     common_pushrebase_bookmarks: HashSet<BookmarkKey>,
     base_scuba_sample: MononokeScubaSampleBuilder,
     backpressure_params: BackpressureParams,
@@ -210,7 +206,6 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
                 &target_mutable_counters,
                 scuba_sample,
                 &common_pushrebase_bookmarks,
-                &source_skiplist_index,
                 &backpressure_params,
                 &derived_data_types,
                 sleep_duration,
@@ -243,7 +238,6 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
                     &target_mutable_counters,
                     scuba_sample.clone(),
                     &common_pushrebase_bookmarks,
-                    &source_skiplist_index,
                     &backpressure_params,
                     &derived_data_types,
                     sleep_duration,
@@ -268,7 +262,6 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     target_mutable_counters: &ArcMutableCounters,
     mut scuba_sample: MononokeScubaSampleBuilder,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
-    source_skiplist_index: &Source<Arc<SkiplistIndex>>,
     backpressure_params: &BackpressureParams,
     derived_data_types: &[String],
     sleep_duration: Duration,
@@ -315,7 +308,6 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
                     ctx,
                     commit_syncer,
                     entry,
-                    source_skiplist_index,
                     common_pushrebase_bookmarks,
                     scuba_sample.clone(),
                 )
@@ -465,7 +457,6 @@ async fn run<'a>(
         .into_iter()
         .collect();
 
-    let source_skiplist_index = Source(source_repo.skiplist_index.clone());
     let target_mutable_counters = target_repo.mutable_counters_arc();
     match matches.subcommand() {
         (ARG_ONCE, Some(sub_m)) => {
@@ -481,7 +472,6 @@ async fn run<'a>(
                 bcs,
                 commit_syncer,
                 scuba_sample,
-                source_skiplist_index,
                 maybe_target_bookmark,
                 common_bookmarks,
             )
@@ -517,7 +507,6 @@ async fn run<'a>(
             run_in_tailing_mode(
                 &ctx,
                 target_mutable_counters,
-                source_skiplist_index,
                 common_bookmarks,
                 scuba_sample,
                 backpressure_params,

@@ -47,10 +47,8 @@ setup configuration
 
 Helpers to setup skiplist for repos and
 enable some more derived data types for normal usage and backfilling
-  $ function prod_setup_skiplist() {
-  >   mononoke_admin skiplist build skiplist_4 --exponent 2
-  >   SKIPLIST_INDEX_BLOBSTORE_KEY=skiplist_4 \
-  >     ENABLED_DERIVED_DATA='["hgchangesets", "filenodes", "unodes", "fsnodes"]' \
+  $ function prod_setup() {
+  >   ENABLED_DERIVED_DATA='["hgchangesets", "filenodes", "unodes", "fsnodes"]' \
   >     setup_mononoke_config
   >   cd "$TESTTMP"
   >   cat >> mononoke-config/repos/repo/server.toml <<CONFIG
@@ -59,9 +57,8 @@ enable some more derived data types for normal usage and backfilling
   > CONFIG
   > }
 
-  $ function backup_setup_skiplist() {
-  >   REPOID=1 mononoke_admin skiplist build skiplist_4 --exponent 2
-  >   REPOID=1 REPONAME=backup SKIPLIST_INDEX_BLOBSTORE_KEY=skiplist_4 \
+  $ function backup_setup() {
+  >   REPOID=1 REPONAME=backup \
   >     ENABLED_DERIVED_DATA='["hgchangesets", "filenodes", "unodes", "fsnodes"]' \
   >     setup_mononoke_config
   >   cd "$TESTTMP"
@@ -71,24 +68,14 @@ enable some more derived data types for normal usage and backfilling
   > CONFIG
   > }
 
-build the skiplist that will be used to slice the repository
-  $ prod_setup_skiplist
-  *] using repo "repo" repoid RepositoryId(0) (glob)
-  *] creating a skiplist from scratch (glob)
-  *] build 5 skiplist nodes (glob)
-  *] Skiplist successfully stored in blobstore. (glob)
+  $ prod_setup
 
   $ cd "$TESTTMP"
   $ REPOID=1 REPONAME=backup setup_common_config
   $ cd "$TESTTMP"
   $ REPOID=1 blobimport repo-hg/.hg backup --backup-from-repo-name repo
 
-build the skiplist that will be used to slice the repository
-  $ backup_setup_skiplist
-  *] using repo "backup" repoid RepositoryId(1) (glob)
-  *] creating a skiplist from scratch (glob)
-  *] build 5 skiplist nodes (glob)
-  *] Skiplist successfully stored in blobstore. (glob)
+  $ backup_setup
 
 start the tailer with tailing and backfilling some different types
 normally the tailer runs forever, but for this test we will make it

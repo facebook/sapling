@@ -41,7 +41,6 @@ use mononoke_types::ChangesetId;
 use phases::Phases;
 use phases::PhasesArc;
 use repo_identity::RepoIdentity;
-use skiplist::SkiplistIndex;
 
 use crate::commit_id::parse_commit_id;
 
@@ -138,9 +137,6 @@ pub struct Repo {
 
     #[facet]
     phases: dyn Phases,
-
-    #[facet]
-    skiplist_index: SkiplistIndex,
 
     #[facet]
     changeset_fetcher: dyn ChangesetFetcher,

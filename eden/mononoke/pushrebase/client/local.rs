@@ -7,7 +7,6 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::sync::Arc;
 
 use bookmarks::BookmarkKey;
 use bookmarks_movement::BookmarkKindRestrictions;
@@ -20,7 +19,6 @@ use hooks::CrossRepoPushSource;
 use hooks::HookManager;
 use mononoke_types::BonsaiChangeset;
 use pushrebase::PushrebaseOutcome;
-use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
 
 use crate::PushrebaseClient;
@@ -29,7 +27,6 @@ pub struct LocalPushrebaseClient<'a, R: Repo> {
     pub ctx: &'a CoreContext,
     pub authz: &'a AuthorizationContext,
     pub repo: &'a R,
-    pub lca_hint: &'a Arc<dyn LeastCommonAncestorsHint>,
     pub hook_manager: &'a HookManager,
 }
 

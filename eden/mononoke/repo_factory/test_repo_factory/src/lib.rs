@@ -117,8 +117,6 @@ use segmented_changelog::new_test_segmented_changelog;
 use segmented_changelog::SegmentedChangelogSqlConnections;
 use segmented_changelog_types::ArcSegmentedChangelog;
 use skeleton_manifest::RootSkeletonManifestId;
-use skiplist::ArcSkiplistIndex;
-use skiplist::SkiplistIndex;
 use sql::rusqlite::Connection as SqliteConnection;
 use sql::sqlite::SqliteCallbacks;
 use sql::Connection;
@@ -612,11 +610,6 @@ impl TestRepoFactory {
             },
         );
         Arc::new(filestore_config)
-    }
-
-    /// Create empty skiplist index
-    pub fn skiplist_index(&self) -> ArcSkiplistIndex {
-        Arc::new(SkiplistIndex::new())
     }
 
     /// Disabled ephemeral repo

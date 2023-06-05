@@ -71,7 +71,6 @@ scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 segmented_changelog = { version = "0.1.0", path = "../../segmented_changelog" }
 segmented_changelog_types = { version = "0.1.0", path = "../../segmented_changelog/types" }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
-skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/sql_commit_graph_storage" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }

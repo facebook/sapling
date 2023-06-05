@@ -95,7 +95,6 @@ use retry::retry_always;
 use retry::RetryAttemptsCount;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
-use skiplist::SkiplistIndex;
 use slog::error;
 use slog::info;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -196,9 +195,6 @@ pub struct Repo {
 
     #[facet]
     pub filestore_config: FilestoreConfig,
-
-    #[facet]
-    pub skiplist_index: SkiplistIndex,
 
     #[facet]
     pub repo_derived_data: RepoDerivedData,

@@ -44,15 +44,8 @@ setup configuration
   $ cd "$TESTTMP"
   $ blobimport repo-hg/.hg repo
 
-build the skiplist that will be used to slice the repository
-  $ mononoke_newadmin skiplist -R repo -k skiplist_4 build --exponent 2
-  *] creating a skiplist from scratch (glob)
-  *] built 5 skiplist nodes (glob)
-  *] Skiplist successfully stored in blobstore. (glob)
-
 enable some more derived data types for normal usage and backfilling
-  $ SKIPLIST_INDEX_BLOBSTORE_KEY=skiplist_4 \
-  >   ENABLED_DERIVED_DATA='["hgchangesets", "filenodes", "unodes", "fsnodes"]' \
+  $ ENABLED_DERIVED_DATA='["hgchangesets", "filenodes", "unodes", "fsnodes"]' \
   >   setup_mononoke_config
   $ cd "$TESTTMP"
   $ cat >> mononoke-config/repos/repo/server.toml <<CONFIG

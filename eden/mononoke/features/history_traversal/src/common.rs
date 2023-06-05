@@ -12,7 +12,6 @@ use futures::stream::TryStreamExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use mononoke_types::MPath;
-use reachabilityindex::ReachabilityIndex;
 
 use crate::Repo;
 
@@ -40,7 +39,6 @@ pub(crate) async fn find_possible_mutable_ancestors(
     let mutable_csids = mutable_renames
         .get_cs_ids_with_rename(ctx, path.cloned())
         .await?;
-    let skiplist_index = repo.skiplist_index();
     let mut possible_mutable_ancestors: Vec<(Generation, ChangesetId)> =
         stream::iter(mutable_csids.into_iter().map(anyhow::Ok))
             .try_filter_map({
@@ -48,24 +46,11 @@ pub(crate) async fn find_possible_mutable_ancestors(
                     // First, we filter out csids that cannot be reached from here. These
                     // are attached to mutable renames that are either descendants of us, or
                     // in a completely unrelated tree of history.
-                    let is_reachable = if tunables::tunables()
-                        .by_repo_enable_new_commit_graph_is_ancestor(repo.repo_identity().name())
-                        .unwrap_or_default()
+                    if repo
+                        .commit_graph()
+                        .is_ancestor(ctx, mutated_at, csid)
+                        .await?
                     {
-                        repo.commit_graph()
-                            .is_ancestor(ctx, mutated_at, csid)
-                            .await?
-                    } else {
-                        skiplist_index
-                            .query_reachability(
-                                ctx,
-                                &repo.changeset_fetcher_arc(),
-                                csid,
-                                mutated_at,
-                            )
-                            .await?
-                    };
-                    if is_reachable {
                         // We also want to grab generation here, because we're going to sort
                         // by generation and consider "most recent" candidate first
                         let cs_gen = repo

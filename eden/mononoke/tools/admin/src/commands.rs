@@ -20,7 +20,6 @@ mononoke_app::subcommands! {
     mod redaction;
     mod repo;
     mod repos;
-    mod skiplist;
     mod ephemeral_store;
     mod dump_changesets;
     mod async_requests;

@@ -80,7 +80,6 @@ use repo_identity::RepoIdentityRef;
 use repo_update_logger::find_draft_ancestors;
 use repo_update_logger::log_new_bonsai_changesets;
 use revset::AncestorsNodeStream;
-use skiplist::SkiplistIndex;
 use slog::debug;
 use slog::info;
 use slog::warn;
@@ -105,7 +104,6 @@ pub struct Repo(
     RepoConfig,
     RepoDerivedData,
     RepoIdentity,
-    SkiplistIndex,
     CommitGraph,
 );
 

@@ -146,9 +146,6 @@ use segmented_changelog::Location;
 use segmented_changelog::SegmentedChangelog;
 use segmented_changelog::SegmentedChangelogRef;
 use skeleton_manifest::RootSkeletonManifestId;
-use skiplist::ArcSkiplistIndex;
-use skiplist::SkiplistIndex;
-use skiplist::SkiplistIndexArc;
 use slog::debug;
 use slog::error;
 use sql_construct::SqlConstruct;
@@ -229,7 +226,6 @@ pub struct Repo {
         dyn RepoPermissionChecker,
         dyn RepoLock,
         RepoConfig,
-        SkiplistIndex,
         dyn SegmentedChangelog,
         RepoEphemeralStore,
         MutableRenames,
@@ -465,7 +461,6 @@ impl Repo {
         let inner = InnerRepo {
             blob_repo,
             repo_config: Arc::new(config.clone()),
-            skiplist_index: Arc::new(SkiplistIndex::new()),
             segmented_changelog: Arc::new(DisabledSegmentedChangelog::new()),
             ephemeral_store: Arc::new(RepoEphemeralStore::disabled(repo_id)),
             mutable_renames: Arc::new(MutableRenames::new_test(
@@ -835,11 +830,6 @@ impl RepoContext {
     /// `LiveCommitSyncConfig` instance to query current state of sync configs.
     pub fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
         self.repo.live_commit_sync_config()
-    }
-
-    /// The skiplist index for the referenced repository.
-    pub fn skiplist_index_arc(&self) -> ArcSkiplistIndex {
-        self.repo.skiplist_index_arc()
     }
 
     /// The ephemeral store for the referenced repository

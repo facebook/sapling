@@ -176,8 +176,6 @@ pub struct RepoConfig {
     pub redaction: Redaction,
     /// Params for the hook manager
     pub hook_manager_params: Option<HookManagerParams>,
-    /// Skiplist blobstore key (used to make revset faster)
-    pub skiplist_index_blobstore_key: Option<String>,
     /// Max number of results in listkeyspatterns.
     pub list_keys_patterns_max: u64,
     /// Params for File storage

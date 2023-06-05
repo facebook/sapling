@@ -73,7 +73,6 @@ pub struct MononokeEnvironment {
     pub remote_derivation_options: RemoteDerivationOptions,
     pub disabled_hooks: HashMap<String, HashSet<String>>,
     pub acl_provider: Arc<dyn AclProvider>,
-    pub skiplist_enabled: bool,
     pub warm_bookmarks_cache_derived_data: Option<WarmBookmarksCacheDerivedData>,
     /// Function determining whether given repo (identified by name) should be loaded
     pub filter_repos: Option<Arc<dyn Fn(&str) -> bool + Send + Sync + 'static>>,

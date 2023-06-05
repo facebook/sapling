@@ -202,7 +202,6 @@ fn parse_with_repo_definition(
         pushrebase,
         lfs,
         hash_validation_percentage,
-        skiplist_index_blobstore_key,
         infinitepush,
         list_keys_patterns_max,
         filestore,
@@ -357,7 +356,6 @@ fn parse_with_repo_definition(
         hash_validation_percentage,
         readonly,
         redaction,
-        skiplist_index_blobstore_key,
         infinitepush,
         list_keys_patterns_max,
         filestore,
@@ -783,7 +781,6 @@ mod test {
         let fbsource_content = r#"
             generation_cache_size=1048576
             scuba_table_hooks="scm_hooks"
-            skiplist_index_blobstore_key="skiplist_key"
             storage_config="main"
             list_keys_patterns_max=123
             hook_max_file_size=456
@@ -1179,7 +1176,6 @@ mod test {
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
                 redaction: Redaction::Enabled,
-                skiplist_index_blobstore_key: Some("skiplist_key".into()),
                 infinitepush: InfinitepushParams {
                     allow_writes: true,
                     namespace: Some(InfinitepushNamespace::new(Regex::new("foobar/.+").unwrap())),
@@ -1331,7 +1327,6 @@ mod test {
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
                 redaction: Redaction::Enabled,
-                skiplist_index_blobstore_key: None,
                 infinitepush: InfinitepushParams::default(),
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,

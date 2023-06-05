@@ -72,7 +72,6 @@ requests_table = { version = "0.1.0", path = "../megarepo_api/requests_table" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
 segmented_changelog_types = { version = "0.1.0", path = "../segmented_changelog/types" }
-skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql_commit_graph_storage = { version = "0.1.0", path = "../repo_attributes/commit_graph/sql_commit_graph_storage" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }

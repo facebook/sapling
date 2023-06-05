@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKey;
@@ -17,7 +16,6 @@ use hooks::CrossRepoPushSource;
 use hooks::HookManager;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
 use repo_update_logger::find_draft_ancestors;
@@ -111,7 +109,6 @@ impl<'op> CreateBookmarkOp<'op> {
         ctx: &'op CoreContext,
         authz: &'op AuthorizationContext,
         repo: &'op impl Repo,
-        lca_hint: &'op Arc<dyn LeastCommonAncestorsHint>,
         hook_manager: &'op HookManager,
     ) -> Result<(), BookmarkMovementError> {
         let kind = self.kind_restrictions.check_kind(repo, self.bookmark)?;
@@ -174,7 +171,6 @@ impl<'op> CreateBookmarkOp<'op> {
                     ctx,
                     repo,
                     self.bookmark,
-                    lca_hint,
                     self.target,
                 )
                 .await?;

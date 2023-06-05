@@ -126,7 +126,6 @@ use nonzero_ext::nonzero;
 use phases::PhasesArc;
 use rand::Rng;
 use rate_limiting::Metric;
-use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use remotefilelog::create_getpack_v1_blob;
 use remotefilelog::create_getpack_v2_blob;
@@ -138,7 +137,6 @@ use repo_identity::RepoIdentityRef;
 use revisionstore_types::Metadata;
 use serde::Deserialize;
 use serde_json::json;
-use skiplist::SkiplistIndexArc;
 use slog::debug;
 use slog::error;
 use slog::info;
@@ -1739,7 +1737,6 @@ impl HgCommands for RepoClient {
                         .await
                         .map_err(|err| BundleResolverError::Error(err.into()))?;
 
-                    let lca_hint: Arc<dyn LeastCommonAncestorsHint> = repo.skiplist_index_arc();
                     let infinitepush_writes_allowed = repo.repo_config().infinitepush.allow_writes;
                     let pushrebase_params = repo.repo_config().pushrebase.clone();
                     let pure_push_allowed = repo.repo_config().push.pure_push_allowed;
@@ -1798,7 +1795,6 @@ impl HgCommands for RepoClient {
                                 run_post_resolve_action(
                                     &ctx,
                                     repo,
-                                    &lca_hint,
                                     hook_manager.as_ref(),
                                     action,
                                     CrossRepoPushSource::NativeToThisRepo,

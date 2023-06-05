@@ -7,7 +7,6 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -33,7 +32,6 @@ use pushrebase::PushrebaseError;
 use pushrebase_client::LandServicePushrebaseClient;
 use pushrebase_client::LocalPushrebaseClient;
 use pushrebase_client::PushrebaseClient;
-use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
 use repo_identity::RepoIdentityRef;
 use repo_update_logger::log_new_commits;
@@ -77,7 +75,6 @@ pub trait Repo = bookmarks_movement::Repo + HgMutationStoreRef;
 pub async fn run_post_resolve_action(
     ctx: &CoreContext,
     repo: &impl Repo,
-    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
     action: PostResolveAction,
     cross_repo_push_source: CrossRepoPushSource,
@@ -92,49 +89,29 @@ pub async fn run_post_resolve_action(
     // FIXME: it's used not only in pushrebase, so it worth moving
     // populate_git_mapping outside of PushrebaseParams.
     let unbundle_response = match action {
-        PostResolveAction::Push(action) => run_push(
-            ctx,
-            repo,
-            lca_hint,
-            hook_manager,
-            action,
-            cross_repo_push_source,
-        )
-        .await
-        .context("While doing a push")
-        .map(UnbundleResponse::Push)?,
-        PostResolveAction::InfinitePush(action) => run_infinitepush(
-            ctx,
-            repo,
-            lca_hint,
-            hook_manager,
-            action,
-            cross_repo_push_source,
-        )
-        .await
-        .context("While doing an infinitepush")
-        .map(UnbundleResponse::InfinitePush)?,
-        PostResolveAction::PushRebase(action) => run_pushrebase(
-            ctx,
-            repo,
-            lca_hint,
-            hook_manager,
-            action,
-            cross_repo_push_source,
-        )
-        .await
-        .map(UnbundleResponse::PushRebase)?,
-        PostResolveAction::BookmarkOnlyPushRebase(action) => run_bookmark_only_pushrebase(
-            ctx,
-            repo,
-            lca_hint,
-            hook_manager,
-            action,
-            cross_repo_push_source,
-        )
-        .await
-        .context("While doing a bookmark-only pushrebase")
-        .map(UnbundleResponse::BookmarkOnlyPushRebase)?,
+        PostResolveAction::Push(action) => {
+            run_push(ctx, repo, hook_manager, action, cross_repo_push_source)
+                .await
+                .context("While doing a push")
+                .map(UnbundleResponse::Push)?
+        }
+        PostResolveAction::InfinitePush(action) => {
+            run_infinitepush(ctx, repo, hook_manager, action, cross_repo_push_source)
+                .await
+                .context("While doing an infinitepush")
+                .map(UnbundleResponse::InfinitePush)?
+        }
+        PostResolveAction::PushRebase(action) => {
+            run_pushrebase(ctx, repo, hook_manager, action, cross_repo_push_source)
+                .await
+                .map(UnbundleResponse::PushRebase)?
+        }
+        PostResolveAction::BookmarkOnlyPushRebase(action) => {
+            run_bookmark_only_pushrebase(ctx, repo, hook_manager, action, cross_repo_push_source)
+                .await
+                .context("While doing a bookmark-only pushrebase")
+                .map(UnbundleResponse::BookmarkOnlyPushRebase)?
+        }
     };
     report_unbundle_type(repo, &unbundle_response);
     Ok(unbundle_response)
@@ -155,7 +132,6 @@ fn report_unbundle_type(repo: &impl RepoIdentityRef, unbundle_response: &Unbundl
 async fn run_push(
     ctx: &CoreContext,
     repo: &impl Repo,
-    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
     action: PostResolvePush,
     cross_repo_push_source: CrossRepoPushSource,
@@ -206,7 +182,6 @@ async fn run_push(
         plain_push_bookmark(
             ctx,
             repo,
-            lca_hint,
             hook_manager,
             &bookmark_push,
             new_changesets,
@@ -241,7 +216,6 @@ async fn run_push(
 async fn run_infinitepush(
     ctx: &CoreContext,
     repo: &impl Repo,
-    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
     action: PostResolveInfinitePush,
     cross_repo_push_source: CrossRepoPushSource,
@@ -270,7 +244,6 @@ async fn run_infinitepush(
             infinitepush_scratch_bookmark(
                 ctx,
                 repo,
-                lca_hint,
                 hook_manager,
                 &bookmark_push,
                 cross_repo_push_source,
@@ -301,7 +274,6 @@ async fn run_infinitepush(
 async fn run_pushrebase(
     ctx: &CoreContext,
     repo: &impl Repo,
-    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
     action: PostResolvePushRebase,
     cross_repo_push_source: CrossRepoPushSource,
@@ -331,7 +303,6 @@ async fn run_pushrebase(
             let (pushrebased_rev, pushrebased_changesets) = normal_pushrebase(
                 ctx,
                 repo,
-                lca_hint,
                 uploaded_bonsais,
                 &onto_bookmark,
                 maybe_pushvars.as_ref(),
@@ -366,7 +337,6 @@ async fn run_pushrebase(
             let pushrebased_rev = force_pushrebase(
                 ctx,
                 repo,
-                lca_hint,
                 hook_manager,
                 uploaded_bonsais,
                 &plain_push,
@@ -406,7 +376,6 @@ async fn run_pushrebase(
 async fn run_bookmark_only_pushrebase(
     ctx: &CoreContext,
     repo: &impl Repo,
-    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
     action: PostResolveBookmarkOnlyPushRebase,
     cross_repo_push_source: CrossRepoPushSource,
@@ -430,7 +399,6 @@ async fn run_bookmark_only_pushrebase(
     plain_push_bookmark(
         ctx,
         repo,
-        lca_hint,
         hook_manager,
         &bookmark_push,
         new_changesets,
@@ -507,7 +475,6 @@ async fn address_from_land_service<'a>(
 async fn normal_pushrebase<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
-    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     changesets: HashSet<BonsaiChangeset>,
     bookmark: &'a BookmarkKey,
     maybe_pushvars: Option<&'a HashMap<String, Bytes>>,
@@ -571,7 +538,6 @@ async fn normal_pushrebase<'a>(
         ctx,
         authz: &authz,
         repo,
-        lca_hint,
         hook_manager,
     }
     .pushrebase(
@@ -598,7 +564,6 @@ async fn normal_pushrebase<'a>(
 async fn force_pushrebase(
     ctx: &CoreContext,
     repo: &impl Repo,
-    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
     uploaded_bonsais: HashSet<BonsaiChangeset>,
     bookmark_push: &PlainBookmarkPush<ChangesetId>,
@@ -619,7 +584,6 @@ async fn force_pushrebase(
     plain_push_bookmark(
         ctx,
         repo,
-        lca_hint,
         hook_manager,
         bookmark_push,
         new_changesets,
@@ -637,7 +601,6 @@ async fn force_pushrebase(
 async fn plain_push_bookmark(
     ctx: &CoreContext,
     repo: &impl Repo,
-    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
     bookmark_push: &PlainBookmarkPush<ChangesetId>,
     new_changesets: HashMap<ChangesetId, BonsaiChangeset>,
@@ -660,13 +623,7 @@ async fn plain_push_bookmark(
                             .log_only_wireproto_write_acl()
                             .unwrap_or_default(),
                     )
-                    .run(
-                        ctx,
-                        &AuthorizationContext::new(ctx),
-                        repo,
-                        lca_hint,
-                        hook_manager,
-                    )
+                    .run(ctx, &AuthorizationContext::new(ctx), repo, hook_manager)
                     .await;
             match res {
                 Ok(()) => {}
@@ -708,13 +665,7 @@ async fn plain_push_bookmark(
                     .log_only_wireproto_write_acl()
                     .unwrap_or_default(),
             )
-            .run(
-                ctx,
-                &AuthorizationContext::new(ctx),
-                repo,
-                lca_hint,
-                hook_manager,
-            )
+            .run(ctx, &AuthorizationContext::new(ctx), repo, hook_manager)
             .await;
             match res {
                 Ok(()) => {}
@@ -762,7 +713,6 @@ async fn plain_push_bookmark(
 async fn infinitepush_scratch_bookmark(
     ctx: &CoreContext,
     repo: &impl Repo,
-    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
     bookmark_push: &InfiniteBookmarkPush<ChangesetId>,
     cross_repo_push_source: CrossRepoPushSource,
@@ -780,13 +730,7 @@ async fn infinitepush_scratch_bookmark(
                 .log_only_wireproto_write_acl()
                 .unwrap_or_default(),
         )
-        .run(
-            ctx,
-            &AuthorizationContext::new(ctx),
-            repo,
-            lca_hint,
-            hook_manager,
-        )
+        .run(ctx, &AuthorizationContext::new(ctx), repo, hook_manager)
         .await
         .context("Failed to create scratch bookmark")?;
     } else {
@@ -816,13 +760,7 @@ async fn infinitepush_scratch_bookmark(
                 .log_only_wireproto_write_acl()
                 .unwrap_or_default(),
         )
-        .run(
-            ctx,
-            &AuthorizationContext::new(ctx),
-            repo,
-            lca_hint,
-            hook_manager,
-        )
+        .run(ctx, &AuthorizationContext::new(ctx), repo, hook_manager)
         .await
         .context(if bookmark_push.force {
             "Failed to move scratch bookmark"

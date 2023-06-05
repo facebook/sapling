@@ -36,7 +36,6 @@ phases = { version = "0.1.0", path = "../../../phases" }
 repo_blobstore = { version = "0.1.0", path = "../../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../../repo_attributes/repo_identity" }
-skiplist = { version = "0.1.0", path = "../../../reachabilityindex/skiplist" }
 sql_construct = { version = "0.1.0", path = "../../../common/sql_construct" }
 synced_commit_mapping = { version = "0.1.0", path = "../../synced_commit_mapping" }
 test_repo_factory = { version = "0.1.0", path = "../../../repo_factory/test_repo_factory" }

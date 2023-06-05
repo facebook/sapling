@@ -7,14 +7,12 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::sync::Arc;
 
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks_movement::BookmarkKindRestrictions;
 pub use bookmarks_movement::PushrebaseOutcome;
 use bytes::Bytes;
-use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use cross_repo_sync::types::Large;
@@ -30,9 +28,7 @@ use hooks::PushAuthoredBy;
 use mononoke_types::ChangesetId;
 use pushrebase_client::LocalPushrebaseClient;
 use pushrebase_client::PushrebaseClient;
-use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstoreRef;
-use skiplist::SkiplistIndexArc;
 use unbundle::PushRedirector;
 
 use crate::errors::MononokeError;
@@ -120,30 +116,14 @@ impl RepoContext {
         let bookmark = bookmark.as_ref();
         let bookmark = BookmarkKey::new(bookmark)?;
 
-        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.skiplist_index_arc();
-
         // Check that base is an ancestor of the head commit, and fail with an
         // appropriate error message if that's not the case.
-        let is_ancestor = if tunables::tunables()
-            .by_repo_enable_new_commit_graph_is_ancestor(self.name())
-            .unwrap_or_default()
+        if !self
+            .repo()
+            .commit_graph()
+            .is_ancestor(self.ctx(), base, head)
+            .await?
         {
-            self.repo()
-                .commit_graph()
-                .is_ancestor(self.ctx(), base, head)
-                .await?
-        } else {
-            lca_hint
-                .is_ancestor(
-                    self.ctx(),
-                    &self.blob_repo().changeset_fetcher_arc(),
-                    base,
-                    head,
-                )
-                .await?
-        };
-
-        if !is_ancestor {
             return Err(MononokeError::InvalidRequest(format!(
                 "Not a stack: base commit {} is not an ancestor of head commit {}",
                 base, head,
@@ -199,8 +179,6 @@ impl RepoContext {
                 ctx: self.ctx(),
                 authz: self.authorization_context(),
                 repo: &redirector.repo.inner,
-                lca_hint: &(redirector.repo.skiplist_index_arc()
-                    as Arc<dyn LeastCommonAncestorsHint>),
                 hook_manager: redirector.repo.hook_manager(),
             }
             .pushrebase(
@@ -221,7 +199,6 @@ impl RepoContext {
                 ctx: self.ctx(),
                 authz: self.authorization_context(),
                 repo: self.inner_repo(),
-                lca_hint: &lca_hint,
                 hook_manager: self.hook_manager().as_ref(),
             }
             .pushrebase(

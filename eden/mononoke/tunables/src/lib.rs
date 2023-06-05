@@ -104,10 +104,7 @@ pub struct MononokeTunables {
     pushrebase_disable_rebased_commit_validation: TunableBool,
     filenodes_disabled: TunableBool,
     filenodes_master_fallback_ratio: TunableI64,
-    // Skiplist config
-    skiplist_max_skips_without_yield: TunableI64,
-    skiplist_reload_disabled: TunableBool,
-    skiplist_reload_interval: TunableI64,
+
     deduplicated_put_sampling_rate: TunableI64,
     disable_repo_client_warm_bookmarks_cache: TunableBool,
     remotefilelog_file_history_limit: TunableI64,

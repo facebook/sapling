@@ -69,7 +69,6 @@ retry = { version = "0.1.0", path = "../common/retry" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }
-skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }

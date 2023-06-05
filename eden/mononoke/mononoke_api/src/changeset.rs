@@ -8,7 +8,6 @@
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::collections::VecDeque;
 use std::fmt;
 use std::future::Future;
 
@@ -21,8 +20,6 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use bookmarks::BookmarkKey;
 use bytes::Bytes;
-use changeset_fetcher::ChangesetFetcherArc;
-use changeset_fetcher::ChangesetFetcherRef;
 use changeset_info::ChangesetInfo;
 use changesets::ChangesetsRef;
 use chrono::DateTime;
@@ -40,7 +37,6 @@ use derived_data_manager::BonsaiDerivable;
 use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::future::try_join;
-use futures::future::try_join_all;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::Stream;
@@ -56,7 +52,6 @@ use manifest::Entry as ManifestEntry;
 use manifest::ManifestOps;
 use manifest::ManifestOrderedOps;
 use manifest::PathOrPrefix;
-use maplit::hashset;
 use mercurial_types::Globalrev;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::FileChange;
@@ -65,7 +60,6 @@ use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::SkeletonManifestId;
 use mononoke_types::Svnrev;
-use reachabilityindex::ReachabilityIndex;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
@@ -671,28 +665,12 @@ impl ChangesetContext {
     /// Returns `true` if this commit is an ancestor of `other_commit`.  A commit is considered its
     /// own ancestor for the purpose of this call.
     pub async fn is_ancestor_of(&self, other_commit: ChangesetId) -> Result<bool, MononokeError> {
-        if tunables()
-            .by_repo_enable_new_commit_graph_is_ancestor(self.repo().name())
-            .unwrap_or_default()
-        {
-            Ok(self
-                .repo()
-                .repo()
-                .commit_graph()
-                .is_ancestor(self.ctx(), self.id, other_commit)
-                .await?)
-        } else {
-            Ok(self
-                .repo()
-                .skiplist_index_arc()
-                .query_reachability(
-                    self.ctx(),
-                    &self.repo().blob_repo().changeset_fetcher_arc(),
-                    other_commit,
-                    self.id,
-                )
-                .await?)
-        }
+        Ok(self
+            .repo()
+            .repo()
+            .commit_graph()
+            .is_ancestor(self.ctx(), self.id, other_commit)
+            .await?)
     }
 
     /// Returns the lowest common ancestor of two commits.
@@ -703,26 +681,12 @@ impl ChangesetContext {
         &self,
         other_commit: ChangesetId,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
-        let lca = if tunables()
-            .by_repo_enable_new_commit_graph_common_base_with(self.repo().name())
-            .unwrap_or_default()
-        {
-            self.repo()
-                .repo()
-                .commit_graph()
-                .common_base(self.ctx(), self.id, other_commit)
-                .await?
-        } else {
-            self.repo()
-                .skiplist_index_arc()
-                .lca(
-                    self.ctx().clone(),
-                    self.repo().blob_repo().changeset_fetcher_arc(),
-                    self.id,
-                    other_commit,
-                )
-                .await?
-        };
+        let lca = self
+            .repo()
+            .repo()
+            .commit_graph()
+            .common_base(self.ctx(), self.id, other_commit)
+            .await?;
         Ok(lca.get(0).map(|id| Self::new(self.repo.clone(), *id)))
     }
 
@@ -1350,7 +1314,8 @@ impl ChangesetContext {
             .map_err(MononokeError::from))
     }
 
-    async fn history_new_commit_graph(
+    /// Returns a stream of `ChangesetContext` for the history of the repository from this commit.
+    pub async fn history(
         &self,
         opts: ChangesetHistoryOptions,
     ) -> Result<BoxStream<'_, Result<ChangesetContext, MononokeError>>, MononokeError> {
@@ -1398,138 +1363,6 @@ impl ChangesetContext {
                 Ok::<_, MononokeError>(ChangesetContext::new(self.repo().clone(), cs_id))
             })
             .boxed())
-    }
-
-    async fn history_old_skiplist(
-        &self,
-        opts: ChangesetHistoryOptions,
-    ) -> BoxStream<'_, Result<ChangesetContext, MononokeError>> {
-        let descendants_of = opts
-            .descendants_of
-            .map(|id| Self::new(self.repo().clone(), id));
-        if let Some(ancestor) = descendants_of.as_ref() {
-            // If the the start commit is not descendant of the argument exit early.
-            match ancestor.is_ancestor_of(self.id()).await {
-                Ok(false) => return stream::empty().boxed(),
-                Err(e) => return stream::once(async { Err(e) }).boxed(),
-                _ => {}
-            }
-        }
-
-        let exclude_changeset = opts
-            .exclude_changeset_and_ancestors
-            .map(|id| Self::new(self.repo().clone(), id));
-        if let Some(exclude_changeset) = exclude_changeset.as_ref() {
-            // If the the start is ancestor of the argument exit early.
-            match self.is_ancestor_of(exclude_changeset.id()).await {
-                Ok(true) => return stream::empty().boxed(),
-                Err(e) => return stream::once(async { Err(e) }).boxed(),
-                _ => {}
-            }
-        }
-
-        let cs_info_enabled = self.repo.derive_changeset_info_enabled();
-
-        // Helper allowing us to terminate walk when we reach `until_timestamp`.
-        let terminate = opts.until_timestamp.map(move |until_timestamp| {
-            move |changeset_id| async move {
-                let info = if cs_info_enabled {
-                    ChangesetInfo::derive(self.ctx(), self.repo().blob_repo(), changeset_id).await?
-                } else {
-                    let bonsai = changeset_id
-                        .load(self.ctx(), self.repo().blob_repo().repo_blobstore())
-                        .await?;
-                    ChangesetInfo::new(changeset_id, bonsai)
-                };
-                let date = info.author_date().as_chrono().clone();
-                Ok::<_, MononokeError>(date.timestamp() < until_timestamp)
-            }
-        });
-
-        stream::try_unfold(
-            // starting state
-            (hashset! { self.id() }, VecDeque::from(vec![self.id()])),
-            // unfold
-            move |(mut visited, mut queue)| {
-                cloned!(descendants_of, exclude_changeset);
-                async move {
-                    if let Some(changeset_id) = queue.pop_front() {
-                        // Terminate in three cases.  The order is important:
-                        // cases that do not yield the current changeset must
-                        // come first.
-                        //
-                        // 1. When `until_timestamp` is reached
-                        if let Some(terminate) = terminate {
-                            if terminate(changeset_id).await? {
-                                return Ok(Some((None, (visited, queue))));
-                            }
-                        }
-                        // 2. When we reach the `exclude_changeset_and_ancestors`
-                        if let Some(ancestor) = exclude_changeset.as_ref() {
-                            if changeset_id == ancestor.id() {
-                                return Ok(Some((None, (visited, queue))));
-                            }
-                        }
-                        // 3. When we reach the `descendants_of` ancestor.
-                        //    This case includes the changeset.
-                        if let Some(ancestor) = descendants_of.as_ref() {
-                            if changeset_id == ancestor.id() {
-                                return Ok(Some((Some(changeset_id), (visited, queue))));
-                            }
-                        }
-                        let mut parents = self
-                            .repo()
-                            .blob_repo()
-                            .changeset_fetcher()
-                            .get_parents(self.ctx(), changeset_id)
-                            .await?;
-                        if parents.len() > 1 {
-                            if let Some(ancestor) = descendants_of.as_ref() {
-                                // In case of merge, find out which branches are worth traversing by
-                                // doing ancestry check.
-                                parents =
-                                    try_join_all(parents.into_iter().map(|parent| async move {
-                                        Ok::<_, MononokeError>((
-                                            parent,
-                                            ancestor.is_ancestor_of(parent).await?,
-                                        ))
-                                    }))
-                                    .await?
-                                    .into_iter()
-                                    .filter_map(|(parent, ancestry)| ancestry.then_some(parent))
-                                    .collect();
-                            }
-                        }
-                        queue.extend(parents.into_iter().filter(|parent| visited.insert(*parent)));
-                        Ok(Some((Some(changeset_id), (visited, queue))))
-                    } else {
-                        Ok::<_, MononokeError>(None)
-                    }
-                }
-            },
-        )
-        .try_filter_map(move |changeset_id| {
-            let changeset = changeset_id
-                .map(|changeset_id| ChangesetContext::new(self.repo().clone(), changeset_id));
-            async move { Ok::<_, MononokeError>(changeset) }
-        })
-        .boxed()
-    }
-
-    /// Returns a stream of `ChangesetContext` for the history of the repository from this commit.
-    pub async fn history(
-        &self,
-        opts: ChangesetHistoryOptions,
-    ) -> Result<impl Stream<Item = Result<ChangesetContext, MononokeError>> + '_, MononokeError>
-    {
-        if tunables()
-            .by_repo_enable_new_commit_graph_commit_history(self.repo().name())
-            .unwrap_or_default()
-        {
-            self.history_new_commit_graph(opts).await
-        } else {
-            Ok(self.history_old_skiplist(opts).await)
-        }
     }
 
     pub async fn diff_root_unordered(

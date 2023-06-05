@@ -37,8 +37,6 @@ use mercurial_derivation::DeriveHgChangeset;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseChangesetPair;
-use reachabilityindex::LeastCommonAncestorsHint;
-use skiplist::SkiplistIndexArc;
 use synced_commit_mapping::SyncedCommitMapping;
 use topo_sort::sort_topological;
 use wireproto_handler::TargetRepoDbs;
@@ -177,8 +175,6 @@ impl<R: Repo> PushRedirector<R> {
         ctx: &CoreContext,
         action: PostResolveAction,
     ) -> Result<UnbundleResponse, BundleResolverError> {
-        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.repo.skiplist_index_arc();
-
         let large_repo_action = self
             .convert_post_resolve_action(ctx, action)
             .await
@@ -187,7 +183,6 @@ impl<R: Repo> PushRedirector<R> {
         let large_repo_response = run_post_resolve_action(
             ctx,
             self.repo.as_ref(),
-            &lca_hint,
             self.repo.hook_manager(),
             large_repo_action,
             CrossRepoPushSource::PushRedirected,

@@ -48,7 +48,6 @@ percent-encoding = "2.1"
 phases = { version = "0.1.0", path = "../phases" }
 rand = { version = "0.8", features = ["small_rng"] }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
-reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
 regex = "1.6.0"
 remotefilelog = { version = "0.1.0", path = "remotefilelog" }
 repo_authorization = { version = "0.1.0", path = "../repo_authorization" }
@@ -58,7 +57,6 @@ revisionstore_types = { version = "0.1.0", path = "../../scm/lib/revisionstore/t
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
-skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 streaming_clone = { version = "0.1.0", path = "streaming_clone" }

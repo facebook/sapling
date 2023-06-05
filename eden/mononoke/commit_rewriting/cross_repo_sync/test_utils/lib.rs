@@ -59,7 +59,6 @@ use phases::Phases;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
-use skiplist::SkiplistIndex;
 use sql_construct::SqlConstruct;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -90,9 +89,6 @@ pub struct TestRepo {
 
     #[facet]
     pub repo_config: RepoConfig,
-
-    #[facet]
-    pub skiplist: SkiplistIndex,
 }
 
 impl AsBlobRepo for TestRepo {

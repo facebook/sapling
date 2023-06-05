@@ -949,12 +949,6 @@ repo_client_use_warm_bookmarks_cache=true
 CONFIG
 fi
 
-if [[ -n "${SKIPLIST_INDEX_BLOBSTORE_KEY:-}" ]]; then
-  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
-skiplist_index_blobstore_key="$SKIPLIST_INDEX_BLOBSTORE_KEY"
-CONFIG
-fi
-
 # Normally point to common storageconfig, but if none passed, create per-repo
 if [[ -z "$storageconfig" ]]; then
   storageconfig="blobstore_$reponame_urlencoded"

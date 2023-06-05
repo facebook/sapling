@@ -13,7 +13,6 @@ path = "../cmds/admin/main.rs"
 
 [dependencies]
 anyhow = "1.0.65"
-async-trait = "0.1.58"
 backsyncer = { version = "0.1.0", path = "../commit_rewriting/backsyncer" }
 blame = { version = "0.1.0", path = "../derived_data/blame" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
@@ -26,7 +25,6 @@ bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
-bulkops = { version = "0.1.0", path = "../bulkops" }
 bytes = { version = "1.1", features = ["serde"] }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -46,7 +44,6 @@ derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../filenodes" }
 filestore = { version = "0.1.0", path = "../filestore" }
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
@@ -80,7 +77,6 @@ serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_derive = "1.0"
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manifest" }
-skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
