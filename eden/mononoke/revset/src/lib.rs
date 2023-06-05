@@ -34,9 +34,6 @@ pub use crate::ancestors::common_ancestors;
 pub use crate::ancestors::greatest_common_ancestor;
 pub use crate::ancestors::AncestorsNodeStream;
 
-mod ancestorscombinators;
-pub use crate::ancestorscombinators::DifferenceOfUnionsOfAncestorsNodeStream;
-
 mod range;
 use uniqueheap::UniqueHeap;
 

@@ -12,7 +12,6 @@ mod test {
     use std::collections::HashSet;
     use std::sync::Arc;
 
-    use anyhow::Error;
     use blobrepo::BlobRepo;
     use bookmarks::BookmarksMaybeStaleExt;
     use bookmarks::BookmarksRef;
@@ -24,10 +23,7 @@ mod test {
     use futures::compat::Stream01CompatExt;
     use futures::stream::StreamExt as _;
     use futures::TryStreamExt;
-    use futures_ext::BoxFuture;
-    use futures_ext::BoxStream;
     use futures_ext::StreamExt;
-    use futures_old::future::ok;
     use futures_old::Stream;
     use mononoke_types::ChangesetId;
     use quickcheck::quickcheck;
@@ -37,11 +33,9 @@ mod test {
     use rand::thread_rng;
     use rand::Rng;
     use revset_test_helper::single_changeset_id;
-    use skiplist::SkiplistIndex;
 
     use super::*;
     use crate::ancestors::AncestorsNodeStream;
-    use crate::ancestorscombinators::DifferenceOfUnionsOfAncestorsNodeStream;
     use crate::fixtures::BranchEven;
     use crate::fixtures::BranchUneven;
     use crate::fixtures::BranchWide;
@@ -259,47 +253,6 @@ mod test {
         // is a SetDifference by pure chance.
     }
 
-    async fn match_streams(
-        expected: BoxStream<ChangesetId, Error>,
-        actual: BoxStream<ChangesetId, Error>,
-    ) -> bool {
-        let mut expected = {
-            let mut nodestream = expected.compat();
-
-            let mut expected = HashSet::new();
-            loop {
-                let hash = nodestream.next().await;
-                match hash {
-                    Some(hash) => {
-                        let hash = hash.expect("unexpected error");
-                        expected.insert(hash);
-                    }
-                    None => {
-                        break;
-                    }
-                }
-            }
-            expected
-        };
-
-        let mut nodestream = actual.compat();
-
-        while !expected.is_empty() {
-            match nodestream.next().await {
-                Some(hash) => {
-                    let hash = hash.expect("unexpected error");
-                    if !expected.remove(&hash) {
-                        return false;
-                    }
-                }
-                None => {
-                    return false;
-                }
-            }
-        }
-        nodestream.next().await.is_none() && expected.is_empty()
-    }
-
     async fn match_hashset_to_revset(
         ctx: CoreContext,
         repo: BlobRepo,
@@ -348,204 +301,4 @@ mod test {
     quickcheck_setops!(setops_merge_uneven, MergeUneven);
     quickcheck_setops!(setops_unshared_merge_even, UnsharedMergeEven);
     quickcheck_setops!(setops_unshared_merge_uneven, UnsharedMergeUneven);
-
-    // Given a list of hashes, generates all possible combinations where each hash can be included,
-    // excluded or discarded. So for [h1] outputs are:
-    // ([h1], [])
-    // ([], [h1])
-    // ([], [])
-    struct IncludeExcludeDiscardCombinationsIterator {
-        hashes: Vec<ChangesetId>,
-        index: u64,
-    }
-
-    impl IncludeExcludeDiscardCombinationsIterator {
-        fn new(hashes: Vec<ChangesetId>) -> Self {
-            Self { hashes, index: 0 }
-        }
-
-        fn generate_include_exclude(&self) -> (Vec<ChangesetId>, Vec<ChangesetId>) {
-            let mut val = self.index;
-            let mut include = vec![];
-            let mut exclude = vec![];
-            for i in (0..self.hashes.len()).rev() {
-                let i_commit_state = val / 3_u64.pow(i as u32);
-                val %= 3_u64.pow(i as u32);
-                match i_commit_state {
-                    0 => {
-                        // Do nothing
-                    }
-                    1 => {
-                        include.push(self.hashes[i].clone());
-                    }
-                    2 => {
-                        exclude.push(self.hashes[i].clone());
-                    }
-                    _ => panic!(""),
-                }
-            }
-            (include, exclude)
-        }
-    }
-
-    impl Iterator for IncludeExcludeDiscardCombinationsIterator {
-        type Item = (Vec<ChangesetId>, Vec<ChangesetId>);
-
-        fn next(&mut self) -> Option<Self::Item> {
-            let res = if self.index >= 3_u64.pow(self.hashes.len() as u32) {
-                None
-            } else {
-                Some(self.generate_include_exclude())
-            };
-            self.index += 1;
-            res
-        }
-    }
-
-    macro_rules! ancestors_check {
-        ($test_name:ident, $repo:ident) => {
-            #[fbinit::test]
-            async fn $test_name(fb: FacebookInit) {
-                let ctx = CoreContext::test_mock(fb);
-
-                let repo = $repo::getrepo(fb).await;
-                let changeset_fetcher: ArcChangesetFetcher =
-                    Arc::new(TestChangesetFetcher::new(repo.clone()));
-                let repo = Arc::new(repo);
-
-                let all_changesets = get_changesets_from_repo(ctx.clone(), &*repo).await;
-
-                // Limit the number of changesets, otherwise tests take too much time
-                let max_changesets = 7;
-                let all_changesets: Vec<_> =
-                    all_changesets.into_iter().take(max_changesets).collect();
-                let iter = IncludeExcludeDiscardCombinationsIterator::new(all_changesets);
-                for (include, exclude) in iter {
-                    let difference_stream = create_skiplist(ctx.clone(), &repo)
-                        .map({
-                            cloned!(ctx, changeset_fetcher, exclude, include);
-                            move |skiplist| {
-                                DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                                    ctx.clone(),
-                                    &changeset_fetcher,
-                                    skiplist,
-                                    include.clone(),
-                                    exclude.clone(),
-                                )
-                            }
-                        })
-                        .flatten_stream()
-                        .boxify();
-
-                    let actual =
-                        ValidateNodeStream::new(ctx.clone(), difference_stream, &changeset_fetcher);
-
-                    let mut includes = vec![];
-                    for i in include.clone() {
-                        includes.push(
-                            AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i).boxify(),
-                        );
-                    }
-
-                    let mut excludes = vec![];
-                    for i in exclude.clone() {
-                        excludes.push(
-                            AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i).boxify(),
-                        );
-                    }
-                    let includes =
-                        UnionNodeStream::new(ctx.clone(), &changeset_fetcher, includes).boxify();
-                    let excludes =
-                        UnionNodeStream::new(ctx.clone(), &changeset_fetcher, excludes).boxify();
-                    let expected = SetDifferenceNodeStream::new(
-                        ctx.clone(),
-                        &changeset_fetcher,
-                        includes,
-                        excludes,
-                    )
-                    .boxify();
-
-                    assert!(
-                        match_streams(expected, actual.boxify()).await,
-                        "streams do not match for {:?} {:?}",
-                        include,
-                        exclude
-                    );
-                }
-            }
-        };
-    }
-    mod empty_skiplist_tests {
-        use futures_ext::FutureExt;
-        use futures_old::Future;
-
-        use super::*;
-
-        fn create_skiplist(
-            _ctxt: CoreContext,
-            _repo: &BlobRepo,
-        ) -> BoxFuture<Arc<SkiplistIndex>, Error> {
-            ok(Arc::new(SkiplistIndex::new())).boxify()
-        }
-
-        ancestors_check!(ancestors_check_branch_even, BranchEven);
-        ancestors_check!(ancestors_check_branch_uneven, BranchUneven);
-        ancestors_check!(ancestors_check_branch_wide, BranchWide);
-        ancestors_check!(ancestors_check_linear, Linear);
-        ancestors_check!(ancestors_check_merge_even, MergeEven);
-        ancestors_check!(ancestors_check_merge_uneven, MergeUneven);
-        ancestors_check!(ancestors_check_unshared_merge_even, UnsharedMergeEven);
-        ancestors_check!(ancestors_check_unshared_merge_uneven, UnsharedMergeUneven);
-    }
-
-    mod full_skiplist_tests {
-        use futures::stream::TryStreamExt;
-        use futures_ext::FutureExt;
-        use futures_old::Future;
-        use futures_util::future::try_join_all;
-        use futures_util::future::FutureExt as NewFutureExt;
-        use futures_util::future::TryFutureExt;
-
-        use super::*;
-
-        fn create_skiplist(
-            ctx: CoreContext,
-            repo: &BlobRepo,
-        ) -> BoxFuture<Arc<SkiplistIndex>, Error> {
-            let changeset_fetcher = repo.changeset_fetcher_arc();
-            let skiplist_index = Arc::new(SkiplistIndex::new());
-            let max_index_depth = 100;
-
-            cloned!(repo, ctx);
-            async move {
-                let heads = repo
-                    .bookmarks()
-                    .get_heads_maybe_stale(ctx.clone())
-                    .try_collect::<Vec<_>>()
-                    .await?;
-                try_join_all(heads.into_iter().map(|head| {
-                    cloned!(skiplist_index, ctx, changeset_fetcher);
-                    async move {
-                        skiplist_index
-                            .add_node(&ctx, &changeset_fetcher, head, max_index_depth)
-                            .await
-                    }
-                }))
-                .await?;
-                Ok(skiplist_index)
-            }
-            .boxed()
-            .compat()
-            .boxify()
-        }
-
-        ancestors_check!(ancestors_check_branch_even, BranchEven);
-        ancestors_check!(ancestors_check_branch_uneven, BranchUneven);
-        ancestors_check!(ancestors_check_branch_wide, BranchWide);
-        ancestors_check!(ancestors_check_linear, Linear);
-        ancestors_check!(ancestors_check_merge_even, MergeEven);
-        ancestors_check!(ancestors_check_merge_uneven, MergeUneven);
-        ancestors_check!(ancestors_check_unshared_merge_even, UnsharedMergeEven);
-        ancestors_check!(ancestors_check_unshared_merge_uneven, UnsharedMergeUneven);
-    }
 }
