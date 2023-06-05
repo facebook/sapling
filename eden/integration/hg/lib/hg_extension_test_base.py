@@ -263,7 +263,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         # The merge state file is present when there are unresolved conflicts.
         # It may be present in addition to one of the unfinished state files
         # above.
-        merge_state_path = os.path.join(self.repo.path, ".hg", "merge", "state")
+        merge_state_path = os.path.join(self.repo.path, ".hg", "merge", "state2")
         in_merge = os.path.exists(merge_state_path)
         if in_merge and op is None:
             self.fail("repository is in the middle of an unfinished merge")

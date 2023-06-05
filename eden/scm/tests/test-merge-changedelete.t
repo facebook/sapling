@@ -77,7 +77,6 @@ Non-interactive merge:
   U file2
   U file3
   --- debugmergestate ---
-  * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
   labels:
@@ -144,7 +143,6 @@ Interactive merge:
   R file2
   U file3
   --- debugmergestate ---
-  * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
   labels:
@@ -221,7 +219,6 @@ Interactive merge with bad input:
   R file2
   U file3
   --- debugmergestate ---
-  * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
   labels:
@@ -285,7 +282,6 @@ Interactive merge with not enough input:
   U file2
   U file3
   --- debugmergestate ---
-  * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
   labels:
@@ -338,7 +334,6 @@ Choose local versions of files
   R file2
   R file3
   --- debugmergestate ---
-  * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
   labels:
@@ -387,7 +382,6 @@ Choose other versions of files
   R file2
   R file3
   --- debugmergestate ---
-  * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
   labels:
@@ -437,7 +431,6 @@ Fail
   U file2
   U file3
   --- debugmergestate ---
-  * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
   labels:
@@ -494,7 +487,6 @@ Force prompts with no input (should be similar to :fail)
   U file2
   U file3
   --- debugmergestate ---
-  * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
   labels:
@@ -553,7 +545,6 @@ Force prompts
   U file2
   U file3
   --- debugmergestate ---
-  * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
   labels:
@@ -611,7 +602,6 @@ Choose to merge all files
   U file2
   U file3
   --- debugmergestate ---
-  * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
   labels:
@@ -770,7 +760,6 @@ Non-interactive linear update
   U file1
   U file2
   --- debugmergestate ---
-  * version 2 records
   local: ab57bf49aa276a22d35a473592d4c34b5abc3eff
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
   labels:
@@ -813,7 +802,6 @@ Choose local versions of files
   R file1
   R file2
   --- debugmergestate ---
-  * version 2 records
   local: ab57bf49aa276a22d35a473592d4c34b5abc3eff
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
   labels:
@@ -854,7 +842,6 @@ Choose other versions of files
   R file1
   R file2
   --- debugmergestate ---
-  * version 2 records
   local: ab57bf49aa276a22d35a473592d4c34b5abc3eff
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
   labels:
@@ -897,7 +884,6 @@ Fail
   U file1
   U file2
   --- debugmergestate ---
-  * version 2 records
   local: ab57bf49aa276a22d35a473592d4c34b5abc3eff
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
   labels:
@@ -946,7 +932,6 @@ Force prompts with no input
   U file1
   U file2
   --- debugmergestate ---
-  * version 2 records
   local: ab57bf49aa276a22d35a473592d4c34b5abc3eff
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
   labels:
@@ -996,7 +981,6 @@ Choose to merge all files
   U file1
   U file2
   --- debugmergestate ---
-  * version 2 records
   local: ab57bf49aa276a22d35a473592d4c34b5abc3eff
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
   labels:

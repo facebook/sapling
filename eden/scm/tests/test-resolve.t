@@ -308,7 +308,6 @@ insert unsupported advisory merge record
 
   $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -x
   $ hg debugmergestate
-  * version 2 records
   local: 57653b9f834a4493f7240b0681efcb9ae7cab745
   other: dc77451844e37f03f5c559e3b8529b2b48d381d1
   labels:
@@ -333,7 +332,6 @@ insert unsupported mandatory merge record
 
   $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -X
   $ hg debugmergestate
-  * version 2 records
   local: 57653b9f834a4493f7240b0681efcb9ae7cab745
   other: dc77451844e37f03f5c559e3b8529b2b48d381d1
   labels:
@@ -376,7 +374,7 @@ goto --clean shouldn't abort on unsupported records
 test crashed merge with empty mergestate
 
   $ mkdir .hg/merge
-  $ touch .hg/merge/state
+  $ touch .hg/merge/state2
 
 resolve -l should be empty
 

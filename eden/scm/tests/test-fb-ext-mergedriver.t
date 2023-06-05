@@ -80,7 +80,6 @@ merge driver that always takes other versions
   $ hg up --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge 'desc(b)'
-  * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-other.py (state "s")
@@ -137,7 +136,6 @@ mark a file driver-resolved, and leave others unresolved
   U bar.txt
   D foo.txt
   $ hg debugmergestate
-  * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-auto1.py (state "m")
@@ -160,7 +158,6 @@ mark a file driver-resolved, and leave others unresolved
   R bar.txt
   D foo.txt
   $ hg debugmergestate
-  * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-auto1.py (state "m")
@@ -246,7 +243,6 @@ implicitly makes them resolved
   $ hg merge 'desc(b)'
   * preprocess called
   * conclude called
-  * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-driveronly.py (state "m")
@@ -302,7 +298,6 @@ XXX shouldn't output a warning
   0 files updated, 2 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg debugmergestate
-  * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-special.py (state "s")
@@ -350,7 +345,6 @@ XXX shouldn't output a warning
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg debugmergestate
-  * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-exit.py (state "m")
@@ -407,7 +401,6 @@ raise an error
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg debugmergestate
-  * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-mark-and-raise.py (state "u")
@@ -562,7 +555,6 @@ ensure the right path to load the merge driver hook
   [1]
 verify behavior with different merge driver
   $ hg -R repo1 debugmergestate
-  * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:fail (state "s")
@@ -582,7 +574,6 @@ verify behavior with different merge driver
   $ hg -R repo1 resolve --mark --all --config experimental.mergedriver=
   (no more unresolved files)
   $ hg -R repo1 debugmergestate
-  * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   labels:
@@ -630,7 +621,6 @@ this should invoke the merge driver
   use 'hg resolve' to retry unresolved file merges
   [1]
   $ hg debugmergestate
-  * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   merge driver: python:$TESTTMP/mergedriver-raise.py (state "u")
@@ -674,7 +664,6 @@ test merge with automatic commit afterwards -- e.g. graft
   no merge state found
   $ hg graft 'desc(b)'
   grafting e0cfe070a2bb "b"
-  * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-other.py (state "s")

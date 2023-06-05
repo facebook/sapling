@@ -2296,10 +2296,7 @@ def debugmakepublic(ui, repo, *revs, **opts) -> None:
 
 @command("debugmergestate", [], "")
 def debugmergestate(ui, repo, *args) -> None:
-    """print merge state
-
-    Use --verbose to print out information about whether v1 or v2 merge state
-    was chosen."""
+    """print merge state"""
 
     def _hashornull(h):
         if h == nullhex:
@@ -2307,13 +2304,7 @@ def debugmergestate(ui, repo, *args) -> None:
         else:
             return h
 
-    def printrecords(version):
-        ui.write(_x("* version %s records\n") % version)
-        if version == 1:
-            records = v1records
-        else:
-            records = v2records
-
+    def printrecords():
         for rtype, record in records:
             # pretty print some record types
             if rtype == "L":
@@ -2326,11 +2317,7 @@ def debugmergestate(ui, repo, *args) -> None:
             elif rtype in "FDC":
                 r = record.split("\0")
                 f, state, hash, lfile, afile, anode, ofile = r[0:7]
-                if version == 1:
-                    onode = "not stored in v1 format"
-                    flags = r[7]
-                else:
-                    onode, flags = r[7:9]
+                onode, flags = r[7:9]
                 ui.write(
                     _x('file: %s (record type "%s", state "%s", hash %s)\n')
                     % (f, rtype, state, _hashornull(hash))
@@ -2374,8 +2361,7 @@ def debugmergestate(ui, repo, *args) -> None:
     ms = mergemod.mergestate(repo)
 
     # sort so that reasonable information is on top
-    v1records = ms._readrecordsv1()
-    v2records = ms._readrecordsv2()
+    records = ms._readrecords()
     order = "LOml"
 
     def key(r):
@@ -2385,22 +2371,12 @@ def debugmergestate(ui, repo, *args) -> None:
         else:
             return (0, idx)
 
-    v1records.sort(key=key)
-    v2records.sort(key=key)
+    records.sort(key=key)
 
-    if not v1records and not v2records:
+    if not records:
         ui.write(_x("no merge state found\n"))
-    elif not v2records:
-        ui.note(_x("no version 2 merge state\n"))
-        printrecords(1)
-    elif ms._v1v2match(v1records, v2records):
-        ui.note(_x("v1 and v2 states match: using v2\n"))
-        printrecords(2)
     else:
-        ui.note(_x("v1 and v2 states mismatch: using v1\n"))
-        printrecords(1)
-        if ui.verbose:
-            printrecords(2)
+        printrecords()
 
 
 @command(

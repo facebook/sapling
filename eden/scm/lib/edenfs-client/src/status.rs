@@ -740,7 +740,7 @@ mod test {
         let files = vec![
             (".hg", Fixture::Dir),
             (".hg/merge", Fixture::Dir),
-            (".hg/merge/state", Fixture::File(b"")),
+            (".hg/merge/state2", Fixture::File(b"")),
         ];
         let repo_root = generate_fixture(files);
         assert!(needs_morestatus_extension(&repo_root.path().join(".hg"), 1));

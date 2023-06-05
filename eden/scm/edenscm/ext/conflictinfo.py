@@ -91,7 +91,7 @@ CONFLICTSTATES = [
     # there were conflicts. The command-level statefile should be considered
     # first.
     [
-        "merge/state",
+        "merge/state2",
         {
             "cmd": "merge",
             "to_continue": "merge --continue",

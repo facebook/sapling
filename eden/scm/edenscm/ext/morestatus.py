@@ -203,7 +203,7 @@ STATES = (
     # Sometimes you end up in a merge state when update completes, because you
     # ran `hg update --merge`. We should inform you that you can still use the
     # full suite of resolve tools to deal with conflicts in this state.
-    ("merge", fileexistspredicate("merge/state"), None),
+    ("merge", fileexistspredicate("merge/state2"), None),
     # If there were no conflicts, you may still be in an interrupted update
     # state. Ideally, we should expand this update state to include the merge
     # updates mentioned above, so there's a way to "continue" and finish the

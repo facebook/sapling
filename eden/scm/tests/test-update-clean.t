@@ -1,9 +1,8 @@
-#chg-compatible
 #debugruntest-compatible
 
   $ enable remotefilelog
 
-  $ newrepo
+  $ newrepo foo
   $ echo remotefilelog >> .hg/requires
 
   $ echo a > a
@@ -11,10 +10,14 @@
 
 Make sure merge state is cleared when we have a clean tree.
   $ mkdir .hg/merge
-  $ echo abcd > .hg/merge/state
+
+    # Write out some valid contents
+    with open(f"foo/.hg/merge/state2", "bw") as f:
+        f.write(b"L\x28\x00\x00\x00")
+        f.write(b"a" * 40)
+
   $ hg debugmergestate
-  * version 1 records
-  local: abcd
+  local: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   $ hg up -qC . --config experimental.nativecheckout=True
   $ hg debugmergestate
   no merge state found

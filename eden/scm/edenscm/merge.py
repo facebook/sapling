@@ -51,21 +51,11 @@ _pack = struct.pack
 _unpack = struct.unpack
 
 
-def _droponode(data):
-    # used for compatibility for v1
-    bits = data.split("\0")
-    bits = bits[:-2] + bits[-1:]
-    return "\0".join(bits)
-
-
 class mergestate(object):
     """track 3-way merge state of individual files
 
-    The merge state is stored on disk when needed. Two files are used: one with
-    an old format (version 1), and one with a new format (version 2). Version 2
-    stores a superset of the data in version 1, including new kinds of records
-    in the future. For more about the new format, see the documentation for
-    `_readrecordsv2`.
+    The merge state is stored on disk when needed. For more about the format,
+    see the documentation for `_readrecords`.
 
     Each record can contain arbitrary content, and has an associated type. This
     `type` should be a letter. If `type` is uppercase, the record is mandatory:
@@ -103,10 +93,10 @@ class mergestate(object):
 
     The resolve command transitions between 'u' and 'r' for conflicts and
     'pu' and 'pr' for path conflicts.
+
     """
 
-    statepathv1 = "merge/state"
-    statepathv2 = "merge/state2"
+    statepath = "merge/state2"
 
     @staticmethod
     def clean(repo, node=None, other=None, labels=None, ancestors=None):
@@ -218,78 +208,7 @@ class mergestate(object):
             raise error.UnsupportedMergeRecords(unsupported)
 
     def _readrecords(self):
-        """Read merge state from disk and return a list of record (TYPE, data)
-
-        We read data from both v1 and v2 files and decide which one to use.
-
-        V1 has been used by version prior to 2.9.1 and contains less data than
-        v2. We read both versions and check if no data in v2 contradicts
-        v1. If there is not contradiction we can safely assume that both v1
-        and v2 were written at the same time and use the extract data in v2. If
-        there is contradiction we ignore v2 content as we assume an old version
-        of Mercurial has overwritten the mergestate file and left an old v2
-        file around.
-
-        returns list of record [(TYPE, data), ...]"""
-        v1records = self._readrecordsv1()
-        v2records = self._readrecordsv2()
-        if self._v1v2match(v1records, v2records):
-            return v2records
-        else:
-            # v1 file is newer than v2 file, use it
-            # we have to infer the "other" changeset of the merge
-            # we cannot do better than that with v1 of the format
-            mctx = self._repo[None].parents()[-1]
-            v1records.append(("O", mctx.hex()))
-            # add place holder "other" file node information
-            # nobody is using it yet so we do no need to fetch the data
-            # if mctx was wrong `mctx[bits[-2]]` may fails.
-            for idx, r in enumerate(v1records):
-                if r[0] == "F":
-                    bits = r[1].split("\0")
-                    bits.insert(-2, "")
-                    v1records[idx] = (r[0], "\0".join(bits))
-            return v1records
-
-    def _v1v2match(self, v1records, v2records):
-        oldv2 = set()  # old format version of v2 record
-        for rec in v2records:
-            if rec[0] == "L":
-                oldv2.add(rec)
-            elif rec[0] == "F":
-                # drop the onode data (not contained in v1)
-                oldv2.add(("F", _droponode(rec[1])))
-        for rec in v1records:
-            if rec not in oldv2:
-                return False
-        else:
-            return True
-
-    def _readrecordsv1(self):
-        """read on disk merge state for version 1 file
-
-        returns list of record [(TYPE, data), ...]
-
-        Note: the "F" data from this file are one entry short
-              (no "other file node" entry)
-        """
-        records = []
-        try:
-            f = self._repo.localvfs(self.statepathv1)
-            for i, l in enumerate(f):
-                l = decodeutf8(l)
-                if i == 0:
-                    records.append(("L", l[:-1]))
-                else:
-                    records.append(("F", l[:-1]))
-            f.close()
-        except IOError as err:
-            if err.errno != errno.ENOENT:
-                raise
-        return records
-
-    def _readrecordsv2(self):
-        """read on disk merge state for version 2 file
+        """Read on disk merge state for version 2 file
 
         This format is a list of arbitrary records of the form:
 
@@ -298,17 +217,10 @@ class mergestate(object):
         `type` is a single character, `length` is a 4 byte integer, and
         `content` is an arbitrary byte sequence of length `length`.
 
-        Mercurial versions prior to 3.7 have a bug where if there are
-        unsupported mandatory merge records, attempting to clear out the merge
-        state with hg goto --clean or similar aborts. The 't' record type
-        works around that by writing out what those versions treat as an
-        advisory record, but later versions interpret as special: the first
-        character is the 'real' record type and everything onwards is the data.
-
         Returns list of records [(TYPE, data), ...]."""
         records = []
         try:
-            f = self._repo.localvfs(self.statepathv2)
+            f = self._repo.localvfs(self.statepath)
             data = f.read()
             off = 0
             end = len(data)
@@ -319,8 +231,15 @@ class mergestate(object):
                 off += 4
                 record = data[off : (off + length)]
                 off += length
+
+                # This "t" was a measure to fix compatibility with old versions
+                # of Mercurial. I removed the "t" writer in D46075828, but I'm
+                # leaving the reader since merge states could still contain the
+                # "t". This can be deleted once we aren't worried about old
+                # merge state files.
                 if rtype == b"t":
                     rtype, record = record[0:1], record[1:]
+
                 records.append((decodeutf8(rtype), decodeutf8(record)))
             f.close()
         except IOError as err:
@@ -384,8 +303,7 @@ class mergestate(object):
         return (
             bool(self._local)
             or bool(self._state)
-            or self._repo.localvfs.exists(self.statepathv1)
-            or self._repo.localvfs.exists(self.statepathv2)
+            or self._repo.localvfs.exists(self.statepath)
         )
 
     def commit(self):
@@ -434,33 +352,10 @@ class mergestate(object):
         return records
 
     def _writerecords(self, records):
-        """Write current state on disk (both v1 and v2)"""
-        self._writerecordsv1(records)
-        self._writerecordsv2(records)
-
-    def _writerecordsv1(self, records):
-        """Write current state on disk in a version 1 file"""
-        f = self._repo.localvfs(self.statepathv1, "w")
-        irecords = iter(records)
-        lrecords = next(irecords)
-        assert lrecords[0] == "L"
-        f.write(encodeutf8(hex(self._local) + "\n"))
-        for rtype, data in irecords:
-            if rtype == "F":
-                f.write(encodeutf8("%s\n" % _droponode(data)))
-        f.close()
-
-    def _writerecordsv2(self, records):
-        """Write current state on disk in a version 2 file
-
-        See the docstring for _readrecordsv2 for why we use 't'."""
-        # these are the records that all version 2 clients can read
-        allowedkeys = "LOF"
-        f = self._repo.localvfs(self.statepathv2, "w")
+        """Write out current state to file on disk"""
+        f = self._repo.localvfs(self.statepath, "w")
         for key, data in records:
             assert len(key) == 1
-            if key not in allowedkeys:
-                key, data = "t", "%s%s" % (key, data)
             key = encodeutf8(key)
             data = encodeutf8(data)
             format = ">sI%is" % len(data)
