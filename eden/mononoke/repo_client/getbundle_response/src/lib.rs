@@ -18,17 +18,16 @@ use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
-use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetsRef;
 use cloned::cloned;
+use commit_graph::ArcCommitGraph;
+use commit_graph::CommitGraphArc;
 use context::CoreContext;
 use context::PerfCounterType;
 use derived_data::BonsaiDerived;
 use filenodes_derivation::FilenodesOnlyPublic;
 use filestore::FetchKey;
-use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
@@ -76,11 +75,9 @@ use phases::Phase;
 use phases::Phases;
 use phases::PhasesRef;
 use rate_limiting::Metric;
-use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
-use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use sha1::Digest;
 use sha1::Sha1;
 use slog::debug;
@@ -91,14 +88,10 @@ use tunables::tunables;
 use crate::errors::ErrorKind;
 
 mod errors;
-mod low_gen_nums_optimization;
-use low_gen_nums_optimization::compute_partial_getbundle;
-use low_gen_nums_optimization::low_gen_num_optimization;
-use low_gen_nums_optimization::LowGenNumChecker;
 
 pub const MAX_FILENODE_BYTES_IN_MEMORY: u64 = 100_000_000;
 pub const GETBUNDLE_COMMIT_NUM_WARN: u64 = 1_000_000;
-const UNEXPECTED_NONE_ERR_MSG: &str = "unexpected None while calling DifferenceOfUnionsOfAncestors";
+const UNEXPECTED_NONE_ERR_MSG: &str = "unexpected None while calling ancestors_difference_stream";
 
 #[derive(PartialEq, Eq)]
 pub enum PhasesPart {
@@ -116,7 +109,6 @@ pub async fn create_getbundle_response(
     blobrepo: &BlobRepo,
     common: Vec<HgChangesetId>,
     heads: &[HgChangesetId],
-    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     return_phases: PhasesPart,
     lfs_params: &SessionLfsParams,
 ) -> Result<Vec<PartEncodeBuilder>, Error> {
@@ -131,7 +123,7 @@ pub async fn create_getbundle_response(
         find_new_draft_commits_and_derive_filenodes_for_public_roots(
             ctx, blobrepo, &common, heads, phases
         ),
-        find_commits_to_send(ctx, blobrepo, &common, heads, lca_hint),
+        find_commits_to_send(ctx, blobrepo, &common, heads),
     )?;
 
     report_draft_commits(ctx, &draft_commits);
@@ -192,7 +184,6 @@ pub async fn find_commits_to_send(
     blobrepo: &BlobRepo,
     common: &HashSet<HgChangesetId>,
     heads: &[HgChangesetId],
-    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
 ) -> Result<Vec<ChangesetId>, Error> {
     let heads = hg_to_bonsai_stream(
         ctx,
@@ -214,83 +205,21 @@ pub async fn find_commits_to_send(
             .collect(),
     );
 
-    let (mut heads, mut excludes) = try_join!(heads, excludes)?;
-
-    let (_, highest_head_gen_num) = find_and_log_high_low_gen_nums(
-        ctx,
-        &heads,
-        "Getbundle generation numbers before partial getbundle",
-    );
-    let low_gen_num_checker = LowGenNumChecker::new_from_tunables(highest_head_gen_num);
-    let partial_result = compute_partial_getbundle(
-        ctx,
-        blobrepo.changeset_fetcher(),
-        heads,
-        excludes,
-        &low_gen_num_checker,
-    )
-    .await?;
-    heads = partial_result.new_heads;
-    excludes = partial_result.new_excludes;
-
-    let (lowest_head_gen_num, _) = find_and_log_high_low_gen_nums(
-        ctx,
-        &heads,
-        "Getbundle generation numbers after partial getbundle",
-    );
+    let (heads, excludes) = try_join!(heads, excludes)?;
 
     let params = Params { heads, excludes };
 
-    let nodes_to_send = if !tunables()
-        .getbundle_use_low_gen_optimization()
-        .unwrap_or_default()
-        || !low_gen_num_checker.is_low_gen_num(lowest_head_gen_num)
-    {
-        call_difference_of_union_of_ancestors_revset(
-            ctx,
-            &blobrepo.changeset_fetcher_arc(),
-            params,
-            lca_hint,
-            None,
-        )
-        .await?
-        .ok_or_else(|| anyhow!(UNEXPECTED_NONE_ERR_MSG))?
-    } else {
-        ctx.scuba()
-            .clone()
-            .log_with_msg("Using low generation getbundle optimization", None);
-        let maybe_result = low_gen_num_optimization(
-            ctx,
-            &blobrepo.changeset_fetcher_arc(),
-            params.clone(),
-            lca_hint,
-            &low_gen_num_checker,
-        )
-        .await?;
-        if let Some(result) = maybe_result {
-            result
-        } else {
-            ctx.scuba()
-                .clone()
-                .log_with_msg("Skipped low generation getbundle optimization", None);
-            call_difference_of_union_of_ancestors_revset(
-                ctx,
-                &blobrepo.changeset_fetcher_arc(),
-                params,
-                lca_hint,
-                None,
-            )
-            .await?
-            .ok_or_else(|| anyhow!(UNEXPECTED_NONE_ERR_MSG))?
-        }
-    };
-
-    let nodes_to_send: Vec<_> = partial_result
-        .partial
-        .into_iter()
-        .chain(nodes_to_send.into_iter())
-        .rev()
-        .collect();
+    let nodes_to_send: Vec<_> = call_difference_of_union_of_ancestors_revset(
+        ctx,
+        &blobrepo.commit_graph_arc(),
+        params,
+        None,
+    )
+    .await?
+    .ok_or_else(|| anyhow!(UNEXPECTED_NONE_ERR_MSG))?
+    .into_iter()
+    .rev()
+    .collect();
 
     ctx.session()
         .bump_load(Metric::Commits, nodes_to_send.len() as f64);
@@ -303,32 +232,6 @@ pub async fn find_commits_to_send(
         .clone()
         .log_with_msg("Found commits to send to the client", None);
     Ok(nodes_to_send)
-}
-
-fn find_and_log_high_low_gen_nums(
-    ctx: &CoreContext,
-    heads: &[(ChangesetId, Generation)],
-    msg: &str,
-) -> (u64, u64) {
-    let lowest_head_gen_num = heads
-        .iter()
-        .map(|(_, gen)| gen)
-        .min()
-        .map_or(0, |gen| gen.value());
-
-    let highest_head_gen_num = heads
-        .iter()
-        .map(|(_, gen)| gen)
-        .max()
-        .map_or(0, |gen| gen.value());
-
-    ctx.scuba()
-        .clone()
-        .add("get_bundle_lowest_gen_num", lowest_head_gen_num)
-        .add("get_bundle_highest_gen_num", highest_head_gen_num)
-        .log_with_msg(msg, None);
-
-    (lowest_head_gen_num, highest_head_gen_num)
 }
 
 #[derive(Default, Clone)]
@@ -360,9 +263,8 @@ impl Params {
 
 async fn call_difference_of_union_of_ancestors_revset(
     ctx: &CoreContext,
-    changeset_fetcher: &ArcChangesetFetcher,
+    commit_graph: &ArcCommitGraph,
     params: Params,
-    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     limit: Option<u64>,
 ) -> Result<Option<Vec<ChangesetId>>, Error> {
     let mut scuba = ctx.scuba().clone();
@@ -386,25 +288,24 @@ async fn call_difference_of_union_of_ancestors_revset(
         _ => {}
     };
 
-    let nodes_to_send = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes_gen_num(
-        ctx.clone(),
-        changeset_fetcher,
-        lca_hint.clone(),
-        heads,
-        excludes,
-    )
-    .compat()
-    .yield_periodically()
-    .inspect({
-        let mut i = 0;
-        move |_| {
-            i += 1;
-            if i > GETBUNDLE_COMMIT_NUM_WARN && !notified_expensive_getbundle {
-                notified_expensive_getbundle = true;
-                warn_expensive_getbundle(ctx);
+    let nodes_to_send = commit_graph
+        .ancestors_difference_stream(
+            ctx,
+            heads.into_iter().map(|(cs_id, _gen)| cs_id).collect(),
+            excludes.into_iter().map(|(cs_id, _gen)| cs_id).collect(),
+        )
+        .await?
+        .yield_periodically()
+        .inspect({
+            let mut i = 0;
+            move |_| {
+                i += 1;
+                if i > GETBUNDLE_COMMIT_NUM_WARN && !notified_expensive_getbundle {
+                    notified_expensive_getbundle = true;
+                    warn_expensive_getbundle(ctx);
+                }
             }
-        }
-    });
+        });
 
     let (stats, res) = async move {
         if let Some(limit) = limit {

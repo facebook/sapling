@@ -6,7 +6,6 @@
  */
 
 use std::io::Cursor;
-use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -31,7 +30,6 @@ use mercurial_bundles::PartId;
 use mercurial_derivation::DeriveHgChangeset;
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::ChangesetId;
-use reachabilityindex::LeastCommonAncestorsHint;
 
 use crate::CommonHeads;
 
@@ -124,7 +122,6 @@ impl UnbundleResponse {
         data: UnbundlePushRebaseResponse,
         repo: &BlobRepo,
         pushrebase_params: PushrebaseParams,
-        lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         lfs_params: &SessionLfsParams,
     ) -> Result<Bytes> {
         let UnbundlePushRebaseResponse {
@@ -167,16 +164,9 @@ impl UnbundleResponse {
                 heads.push(onto_head);
             }
             heads.push(pushrebased_hg_rev);
-            let mut cg_part_builder = create_getbundle_response(
-                ctx,
-                repo,
-                common,
-                &heads,
-                lca_hint,
-                PhasesPart::Yes,
-                lfs_params,
-            )
-            .await?;
+            let mut cg_part_builder =
+                create_getbundle_response(ctx, repo, common, &heads, PhasesPart::Yes, lfs_params)
+                    .await?;
 
             cg_part_builder.extend(bookmark_reply_part.into_iter());
             cg_part_builder.extend(obsmarkers_part.into_iter());
@@ -233,7 +223,6 @@ impl UnbundleResponse {
         ctx: &CoreContext,
         repo: &BlobRepo,
         pushrebase_params: PushrebaseParams,
-        lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         lfs_params: &SessionLfsParams,
         respondlightly: Option<bool>,
     ) -> Result<Bytes> {
@@ -253,7 +242,6 @@ impl UnbundleResponse {
                     data,
                     repo,
                     pushrebase_params,
-                    lca_hint,
                     lfs_params,
                 )
                 .await

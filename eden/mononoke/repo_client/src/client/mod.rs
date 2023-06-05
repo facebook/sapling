@@ -643,8 +643,6 @@ impl RepoClient {
             }
         }
         let pull_default_bookmarks = self.get_pull_default_bookmarks_maybe_stale(ctx.clone());
-        let lca_hint: Arc<dyn LeastCommonAncestorsHint> =
-            self.repo.inner_repo().skiplist_index_arc();
 
         async move {
             create_getbundle_response(
@@ -652,7 +650,6 @@ impl RepoClient {
                 &blobrepo,
                 common,
                 &heads,
-                &lca_hint,
                 if use_phases {
                     PhasesPart::Yes
                 } else {
@@ -1813,7 +1810,6 @@ impl HgCommands for RepoClient {
                             &ctx,
                             repo.as_blob_repo(),
                             pushrebase_params,
-                            &lca_hint,
                             &lfs_params,
                             respondlightly,
                         )
