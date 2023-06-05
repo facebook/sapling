@@ -69,7 +69,7 @@ https://bz.mercurial-scm.org/672
    preserving 1a for resolve of 1a
    1a: local copied/moved from 1 -> m (premerge)
   picktool() hgmerge internal:merge
-  picked tool ':merge' for 1a (binary False symlink False changedelete False)
+  picked tool ':merge' for path=1a binary=False symlink=False changedelete=False
   merging 1a and 1 to 1a
   my 1a@e327dca35ac8+ other 1@746e9549ea96 ancestor 1@c64f439569a9
    premerge successful
@@ -93,7 +93,7 @@ https://bz.mercurial-scm.org/672
   removing 1
    1a: remote moved from 1 -> m (premerge)
   picktool() hgmerge internal:merge
-  picked tool ':merge' for 1a (binary False symlink False changedelete False)
+  picked tool ':merge' for path=1a binary=False symlink=False changedelete=False
   merging 1 and 1a to 1a
   my 1a@746e9549ea96+ other 1a@e327dca35ac8 ancestor 1@c64f439569a9
    premerge successful

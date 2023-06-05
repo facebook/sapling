@@ -43,13 +43,13 @@ we get conflicts that shouldn't be there
    preserving foo for resolve of foo
    bar: remote copied from foo -> m (premerge)
   picktool() hgmerge internal:merge
-  picked tool ':merge' for bar (binary False symlink False changedelete False)
+  picked tool ':merge' for path=bar binary=False symlink=False changedelete=False
   merging foo and bar to bar
   my bar@6a0df1dad128+ other bar@484bf6903104 ancestor foo@e6dc8efe11cc
    premerge successful
    foo: versions differ -> m (premerge)
   picktool() hgmerge internal:merge
-  picked tool ':merge' for foo (binary False symlink False changedelete False)
+  picked tool ':merge' for path=foo binary=False symlink=False changedelete=False
   merging foo
   my foo@6a0df1dad128+ other foo@484bf6903104 ancestor foo@e6dc8efe11cc
    premerge successful

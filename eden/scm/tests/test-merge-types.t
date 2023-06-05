@@ -33,7 +33,7 @@ Symlink is local parent, executable is other:
    preserving a for resolve of a
    a: versions differ -> m (premerge)
   picktool() hgmerge internal:merge
-  picked tool ':merge' for a (binary False symlink True changedelete False)
+  picked tool ':merge' for path=a binary=False symlink=True changedelete=False
   merging a
   my a@521a1e40188f+ other a@3574f3e69b1c ancestor a@c334dc3be0da
   warning: internal :merge cannot merge symlinks for a
@@ -68,7 +68,7 @@ Symlink is other parent, executable is local:
    preserving a for resolve of a
    a: versions differ -> m (premerge)
   picktool() forcemerge toolpath :union
-  picked tool ':union' for a (binary False symlink True changedelete False)
+  picked tool ':union' for path=a binary=False symlink=True changedelete=False
   merging a
   my a@3574f3e69b1c+ other a@521a1e40188f ancestor a@c334dc3be0da
   warning: internal :union cannot merge symlinks for a
@@ -94,7 +94,7 @@ Symlink is other parent, executable is local:
    preserving a for resolve of a
    a: versions differ -> m (premerge)
   picktool() forcemerge toolpath :merge3
-  picked tool ':merge3' for a (binary False symlink True changedelete False)
+  picked tool ':merge3' for path=a binary=False symlink=True changedelete=False
   merging a
   my a@3574f3e69b1c+ other a@521a1e40188f ancestor a@c334dc3be0da
   warning: internal :merge3 cannot merge symlinks for a
@@ -120,7 +120,7 @@ Symlink is other parent, executable is local:
    preserving a for resolve of a
    a: versions differ -> m (premerge)
   picktool() forcemerge toolpath :merge-local
-  picked tool ':merge-local' for a (binary False symlink True changedelete False)
+  picked tool ':merge-local' for path=a binary=False symlink=True changedelete=False
   merging a
   my a@3574f3e69b1c+ other a@521a1e40188f ancestor a@c334dc3be0da
   warning: internal :merge-local cannot merge symlinks for a
@@ -145,7 +145,7 @@ Symlink is other parent, executable is local:
    preserving a for resolve of a
    a: versions differ -> m (premerge)
   picktool() forcemerge toolpath :merge-other
-  picked tool ':merge-other' for a (binary False symlink True changedelete False)
+  picked tool ':merge-other' for path=a binary=False symlink=True changedelete=False
   merging a
   my a@3574f3e69b1c+ other a@521a1e40188f ancestor a@c334dc3be0da
   warning: internal :merge-other cannot merge symlinks for a
@@ -184,7 +184,7 @@ Update to link with local change should cause a merge prompt (issue3200):
   picktool() interactive=False plain=False
   (couldn't find merge tool hgmerge|tool hgmerge can't handle symlinks) (re)
   no tool found to merge a
-  picked tool ':prompt' for a (binary False symlink True changedelete False)
+  picked tool ':prompt' for path=a binary=False symlink=True changedelete=False
   keep (l)ocal [working copy], take (o)ther [destination], or leave (u)nresolved for a? u
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges

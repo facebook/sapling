@@ -1345,9 +1345,9 @@ specified file as expected
   $ hg debugpickmergetool unknown
   unknown: no such file in rev ef83787e2614
 
-(--changedelete emulates merging change and delete)
+(--absent emulates merging change and delete)
 
-  $ hg debugpickmergetool --changedelete
+  $ hg debugpickmergetool --absent=local
   f = :prompt
 
 (-r REV causes checking files in specified revision)

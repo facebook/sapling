@@ -91,12 +91,12 @@ Criss cross merging
    preserving f1 for resolve of f1
    f1: versions differ -> m (premerge)
   picktool() forcemerge toolpath internal:dump
-  picked tool ':dump' for f1 (binary False symlink False changedelete False)
+  picked tool ':dump' for path=f1 binary=False symlink=False changedelete=False
   merging f1
   my f1@78d7b604d909+ other f1@f05367a88590 ancestor f1@0e415ae82418
    f1: versions differ -> m (merge)
   picktool() forcemerge toolpath internal:dump
-  picked tool ':dump' for f1 (binary False symlink False changedelete False)
+  picked tool ':dump' for path=f1 binary=False symlink=False changedelete=False
   my f1@78d7b604d909+ other f1@f05367a88590 ancestor f1@0e415ae82418
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon

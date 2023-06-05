@@ -2623,7 +2623,7 @@ def debugpathcomplete(ui, repo, *specs, **opts) -> None:
     "debugpickmergetool",
     [
         ("r", "rev", "", _("check for files in this revision"), _("REV")),
-        ("", "changedelete", None, _("emulate merging change and delete")),
+        ("", "absent", [], _("specify local/other as absent")),
     ]
     + cmdutil.walkopts
     + cmdutil.mergetoolopts,
@@ -2672,6 +2672,10 @@ def debugpickmergetool(ui, repo, *pats, **opts) -> None:
     information, even with --debug. In such case, information above is
     useful to know why a merge tool is chosen.
     """
+
+    if any(a not in {"local", "other"} for a in opts["absent"]):
+        raise error.Abort(_("--absent must be 'local' or 'other'"))
+
     overrides = {}
     if opts["tool"]:
         overrides[("ui", "forcemerge")] = opts["tool"]
@@ -2687,14 +2691,18 @@ def debugpickmergetool(ui, repo, *pats, **opts) -> None:
 
         ctx = scmutil.revsingle(repo, opts.get("rev"))
         m = scmutil.match(ctx, pats, opts)
-        changedelete = opts["changedelete"]
         for path in ctx.walk(m):
             fctx = ctx[path]
+            absent = filemerge.absentfilectx(ctx, path)
+            fcd = absent if "local" in opts["absent"] else fctx
+            fco = absent if "other" in opts["absent"] else fctx
             try:
                 if not ui.debugflag:
                     ui.pushbuffer(error=True)
                 tool, toolpath = filemerge._picktool(
-                    repo, ui, path, fctx.isbinary(), "l" in fctx.flags(), changedelete
+                    repo,
+                    ui,
+                    filemerge.merge_context(fcd, fco, fcd),
                 )
             finally:
                 if not ui.debugflag:

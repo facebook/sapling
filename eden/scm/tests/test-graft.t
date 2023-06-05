@@ -193,7 +193,7 @@
    preserving b for resolve of b
    b: local copied/moved from a -> m (premerge)
   picktool() hgmerge internal:merge
-  picked tool ':merge' for b (binary False symlink False changedelete False)
+  picked tool ':merge' for path=b binary=False symlink=False changedelete=False
   merging b and a to b
   my b@ef0ef43d49e7+ other a@5d205f8b35b6 ancestor a@68795b066622
    premerge successful
@@ -227,12 +227,12 @@
   getting d
    e: versions differ -> m (premerge)
   picktool() hgmerge internal:merge
-  picked tool ':merge' for e (binary False symlink False changedelete False)
+  picked tool ':merge' for path=e binary=False symlink=False changedelete=False
   merging e
   my e@9436191a062e+ other e@9c233e8e184d ancestor e@4c60f11aa304
    e: versions differ -> m (merge)
   picktool() hgmerge internal:merge
-  picked tool ':merge' for e (binary False symlink False changedelete False)
+  picked tool ':merge' for path=e binary=False symlink=False changedelete=False
   my e@9436191a062e+ other e@9c233e8e184d ancestor e@4c60f11aa304
   warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue

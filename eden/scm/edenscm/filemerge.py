@@ -35,6 +35,8 @@ from . import (
 from .i18n import _
 from .node import nullid, short
 
+propertycache = util.propertycache
+
 
 def _toolstr(ui, tool, part, *args):
     return ui.config("merge-tools", tool + "." + part, *args)
@@ -154,7 +156,40 @@ def _findexternaltoolwithreporoot(ui, repo, tool):
     return util.findexe(util.expandpath(exe))
 
 
-def _picktool(repo, ui, path, binary, symlink, changedelete):
+class merge_context(object):
+    def __init__(self, local, other, ancestor):
+        self.local = local
+        self.other = other
+        self.ancestor = ancestor
+
+    @propertycache
+    def path(self):
+        return self.local.path()
+
+    @propertycache
+    def binary(self):
+        return (
+            self.local.isbinary() or self.other.isbinary() or self.ancestor.isbinary()
+        )
+
+    @propertycache
+    def symlink(self):
+        return "l" in self.local.flags() + self.other.flags()
+
+    @propertycache
+    def changedelete(self):
+        return self.local.isabsent() or self.other.isabsent()
+
+    def __str__(self):
+        return f"path={self.path} binary={self.binary} symlink={self.symlink} changedelete={self.changedelete}"
+
+
+def _picktool(repo, ui, mctx):
+    path = mctx.path
+    changedelete = mctx.changedelete
+    symlink = mctx.symlink
+    binary = mctx.binary
+
     def supportscd(tool):
         return tool in internals and internals[tool].mergetype == nomerge
 
@@ -957,23 +992,13 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
     relfo = repo.pathto(fco.path())
     relfd = repo.pathto(fd)
 
-    binary = fcd.isbinary() or fco.isbinary() or fca.isbinary()
-    symlink = "l" in fcd.flags() + fco.flags()
-    changedelete = fcd.isabsent() or fco.isabsent()
-    tool, toolpath = _picktool(repo, ui, fd, binary, symlink, changedelete)
+    mctx = merge_context(fcd, fco, fca)
+    tool, toolpath = _picktool(repo, ui, mctx)
     if tool in internals and tool.startswith("internal:"):
         # normalize to new-style names (':merge' etc)
         tool = tool[len("internal") :]
-    ui.debug(
-        "picked tool '%s' for %s (binary %s symlink %s changedelete %s)\n"
-        % (
-            tool,
-            fd,
-            pycompat.bytestr(binary),
-            pycompat.bytestr(symlink),
-            pycompat.bytestr(changedelete),
-        )
-    )
+
+    ui.debug(f"picked tool '{tool}' for {mctx}\n")
 
     if tool in internals:
         func = internals[tool]
@@ -989,7 +1014,7 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
         onfailure = _("merging %s failed!\n")
         precheck = None
 
-    toolconf = tool, toolpath, binary, symlink
+    toolconf = tool, toolpath, mctx.binary, mctx.symlink
 
     if mergetype == nomerge:
         r, deleted = func(repo, mynode, orig, fcd, fco, fca, toolconf, labels)
