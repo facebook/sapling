@@ -234,6 +234,10 @@ class UnknownIdentifier(ParseError):
         self.symbols = symbols
 
 
+class EvalError(ParseError):
+    """A type/value error evaluating on of our DSLs"""
+
+
 class RepoError(Hint, Context, Exception):
     __bytes__ = _tobytes
 
