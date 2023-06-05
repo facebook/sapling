@@ -53,7 +53,6 @@ keywords = {"and", "or", "not"}
 symbols = {}
 
 
-_quoteletters = {'"', "'"}
 _simpleopletters = set(iter("()[]#:=,-|&+!~^%"))
 
 # default set of valid characters for the initial letter of symbols
@@ -123,28 +122,9 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
             pos += 1  # skip ahead
         elif c in _simpleopletters:  # handle simple operators
             yield (c, None, pos)
-        elif (
-            c in _quoteletters or c == "r" and program[pos : pos + 2] in ("r'", 'r"')
-        ):  # handle quoted strings
-            if c == "r":
-                pos += 1
-                c = program[pos]
-                decode = lambda x: x
-            else:
-                decode = parser.unescapestr
-            pos += 1
-            s = pos
-            while pos < l:  # find closing quote
-                d = program[pos]
-                if d == "\\":  # skip over escaped characters
-                    pos += 2
-                    continue
-                if d == c:
-                    yield ("string", decode(program[s:pos]), s)
-                    break
-                pos += 1
-            else:
-                raise error.ParseError(_("unterminated string"), s)
+        elif s := parser.consumestring(program, pos):
+            pos = s[0]
+            yield s[1]
         # gather up a symbol/keyword
         elif c in syminitletters:
             s = pos

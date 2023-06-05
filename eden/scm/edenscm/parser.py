@@ -318,6 +318,41 @@ def simplifyinfixops(tree, targetnodes):
     return tuple(reversed(simplified))
 
 
+stringdelimiters = {'"', "'"}
+
+
+def consumestring(text, pos):
+    """Consume string where opening delimiter starts at pos.
+
+    If a string is found, return (end, ("string", <some str>, start)) where end points to the closing delimiter.
+    If no string is found, return None.
+    """
+    c = text[pos]
+    if c in stringdelimiters or (
+        c == "r" and pos < len(text) - 1 and text[pos + 1] in stringdelimiters
+    ):
+        if c == "r":
+            pos += 1
+            c = text[pos]
+            decode = lambda x: x
+        else:
+            decode = unescapestr
+        pos += 1
+        start = pos
+        while pos < len(text):  # find closing quote
+            d = text[pos]
+            if d == "\\":  # skip over escaped characters
+                pos += 2
+                continue
+            if d == c:
+                break
+            pos += 1
+        else:
+            raise error.ParseError(_("unterminated string"), start)
+        return pos, ("string", decode(text[start:pos]), start)
+    return None
+
+
 def _buildtree(template, placeholder, replstack):
     if template == placeholder:
         return replstack.pop()
