@@ -15,7 +15,6 @@ from __future__ import absolute_import
 
 import errno
 import os
-import shutil
 from typing import Iterable, Optional, Union
 
 import bindings
