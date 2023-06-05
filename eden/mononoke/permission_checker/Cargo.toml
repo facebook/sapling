@@ -14,7 +14,7 @@ fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rus
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 itertools = "0.10.3"
 maplit = "1.0"
-openssl = "0.10.35"
+openssl = "0.10.54"
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
