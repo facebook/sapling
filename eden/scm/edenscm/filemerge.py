@@ -20,6 +20,7 @@ import tempfile
 from . import (
     encoding,
     error,
+    filemergelang,
     formatter,
     match,
     pathutil,
@@ -190,6 +191,27 @@ def _picktool(repo, ui, mctx):
     symlink = mctx.symlink
     binary = mctx.binary
 
+    def evaltool(tool):
+        if ui.configbool("merge", "enable-merge-tool-script"):
+            try:
+                got = filemergelang.eval_script(tool, mctx.local, mctx.other)
+                if got != tool:
+                    ui.debug("picktool() evaluated %r to %s\n" % (tool, got))
+                tool = got
+            except error.ParseError as ex:
+                # Hack to keep compat with HGMERGE and "--tool" inputs which can
+                # specify an arbitrary shell command. If the input doesn't
+                # contain "if(", assume it isn't merge tool script.
+                if not re.match(r"if\s*\(", tool):
+                    ui.debug(
+                        "picktool() ignoring eval error %s\nmerge tool script: %s\n"
+                        % (ex, tool)
+                    )
+                    pass
+                else:
+                    raise ex
+        return tool
+
     def supportscd(tool):
         return tool in internals and internals[tool].mergetype == nomerge
 
@@ -220,6 +242,7 @@ def _picktool(repo, ui, mctx):
     # forcemerge comes from command line arguments, highest priority
     force = ui.config("ui", "forcemerge")
     if force:
+        force = evaltool(force)
         toolpath = _findtool(ui, repo, force)
         if changedelete and not supportscd(toolpath):
             ui.debug("picktool() forcemerge :prompt\n")
@@ -236,6 +259,10 @@ def _picktool(repo, ui, mctx):
     # HGMERGE takes next precedence
     hgmerge = encoding.environ.get("HGMERGE")
     if hgmerge:
+        # Ignore errors since this doesn't go through _findtool
+        # and is allowed to contain things like "python foo.py".
+        hgmerge = evaltool(hgmerge)
+
         if changedelete and not supportscd(hgmerge):
             ui.debug("picktool() hgmerge :prompt %s\n" % hgmerge)
             return ":prompt", None
@@ -245,6 +272,7 @@ def _picktool(repo, ui, mctx):
 
     # then patterns
     for pat, tool in ui.configitems("merge-patterns"):
+        tool = evaltool(tool)
         mf = match.match(repo.root, "", [pat])
         if mf(path) and check(tool, pat, symlink, False, changedelete):
             toolpath = _findtool(ui, repo, tool)
@@ -271,6 +299,7 @@ def _picktool(repo, ui, mctx):
     if not uimerge:
         uimerge = ui.config("ui", "merge")
     if uimerge:
+        uimerge = evaltool(uimerge)
         # external tools defined in uimerge won't be able to handle
         # change/delete conflicts
         if uimerge not in names and not changedelete:

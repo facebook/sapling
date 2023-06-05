@@ -54,4 +54,7 @@ exportstack-max-bytes=20M
 [zsh]
 completion-age=7
 completion-description=false
+
+[merge]
+enable-merge-tool-script=true
 "#);
