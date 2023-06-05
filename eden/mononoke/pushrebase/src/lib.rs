@@ -71,7 +71,6 @@ use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use filenodes_derivation::FilenodesOnlyPublic;
-use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::future::try_join;
 use futures::future::try_join_all;
@@ -105,7 +104,6 @@ use pushrebase_hook::RebasedChangesets;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
-use revset::RangeNodeStream;
 use slog::info;
 use stats::prelude::*;
 use thiserror::Error;
@@ -359,8 +357,7 @@ async fn rebase_in_loop(
         }
 
         if config.casefolding_check {
-            let conflict =
-                check_case_conflicts(server_bcs.iter().rev().chain(client_bcs.iter().rev()));
+            let conflict = check_case_conflicts(server_bcs.iter().chain(client_bcs.iter()));
             if let Some(conflict) = conflict {
                 return Err(PushrebaseError::PotentialCaseConflict(conflict.1));
             }
@@ -705,19 +702,15 @@ async fn id_to_manifestid(
     Ok(hg_cs.manifestid())
 }
 
-// from larger generation number to smaller
+// from smaller generation number to larger
 async fn fetch_bonsai_range_ancestor_not_included(
     ctx: &CoreContext,
     repo: &impl Repo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
 ) -> Result<Vec<BonsaiChangeset>, PushrebaseError> {
-    if tunables()
-        .by_repo_enable_new_commit_graph_range_stream(repo.repo_identity().name())
-        .unwrap_or_default()
-    {
-        Ok(repo
-            .commit_graph()
+    Ok(
+        repo.commit_graph()
             .range_stream(ctx, ancestor, descendant)
             .await?
             .filter(|cs_id| future::ready(cs_id != &ancestor))
@@ -726,28 +719,8 @@ async fn fetch_bonsai_range_ancestor_not_included(
             })
             .buffered(100)
             .try_collect::<Vec<_>>()
-            .await?
-            .into_iter()
-            .rev()
-            .collect::<Vec<_>>())
-    } else {
-        Ok(
-            RangeNodeStream::new(
-                ctx.clone(),
-                repo.changeset_fetcher_arc(),
-                ancestor,
-                descendant,
-            )
-            .compat()
-            .try_filter(|cs_id| future::ready(cs_id != &ancestor))
-            .map(|res| async move {
-                Result::<_, Error>::Ok(res?.load(ctx, repo.repo_blobstore()).await?)
-            })
-            .buffered(100)
-            .try_collect::<Vec<_>>()
             .await?,
-        )
-    }
+    )
 }
 
 async fn find_changed_files(
@@ -756,41 +729,17 @@ async fn find_changed_files(
     ancestor: ChangesetId,
     descendant: ChangesetId,
 ) -> Result<Vec<MPath>, PushrebaseError> {
-    let id_to_bcs = if tunables()
-        .by_repo_enable_new_commit_graph_range_stream(repo.repo_identity().name())
-        .unwrap_or_default()
-    {
-        repo.commit_graph()
-            .range_stream(ctx, ancestor, descendant)
-            .await?
-            .map(|bcs_id| async move {
-                let bcs = bcs_id.load(ctx, repo.repo_blobstore()).await?;
-                anyhow::Ok((bcs_id, bcs))
-            })
-            .buffered(100)
-            .try_collect::<HashMap<_, _>>()
-            .await?
-    } else {
-        RangeNodeStream::new(
-            ctx.clone(),
-            repo.changeset_fetcher_arc(),
-            ancestor,
-            descendant,
-        )
-        .compat()
-        .map(|res| async move {
-            match res {
-                Ok(bcs_id) => {
-                    let bcs = bcs_id.load(ctx, repo.repo_blobstore()).await?;
-                    Ok((bcs_id, bcs))
-                }
-                Err(e) => Err(e),
-            }
+    let id_to_bcs = repo
+        .commit_graph()
+        .range_stream(ctx, ancestor, descendant)
+        .await?
+        .map(|bcs_id| async move {
+            let bcs = bcs_id.load(ctx, repo.repo_blobstore()).await?;
+            anyhow::Ok((bcs_id, bcs))
         })
         .buffered(100)
         .try_collect::<HashMap<_, _>>()
-        .await?
-    };
+        .await?;
 
     let ids: HashSet<_> = id_to_bcs.keys().copied().collect();
 
@@ -821,7 +770,7 @@ async fn find_changed_files(
                                 find_changed_files_between_manifests(ctx, repo, id, *p_id).await
                             }
                             (None, None) => panic!(
-                                "`RangeNodeStream` produced invalid result for: ({}, {})",
+                                "`range_stream` produced invalid result for: ({}, {})",
                                 descendant, ancestor,
                             ),
                         }
@@ -1230,11 +1179,7 @@ async fn find_rebased_set(
     root: ChangesetId,
     head: ChangesetId,
 ) -> Result<Vec<BonsaiChangeset>, PushrebaseError> {
-    let nodes = fetch_bonsai_range_ancestor_not_included(ctx, repo, root, head).await?;
-
-    let nodes = nodes.into_iter().rev().collect();
-
-    Ok(nodes)
+    fetch_bonsai_range_ancestor_not_included(ctx, repo, root, head).await
 }
 
 async fn try_move_bookmark(
@@ -2358,25 +2303,12 @@ mod tests {
             .await?
             .ok_or_else(|| Error::msg("bonsai not found"))?;
 
-        let n = RangeNodeStream::new(
-            ctx.clone(),
-            repo.changeset_fetcher_arc(),
-            ancestor,
-            descendant,
-        )
-        .compat()
-        .try_collect::<Vec<_>>()
-        .await?
-        .len();
-
-        assert_eq!(
-            n,
-            repo.commit_graph()
-                .range_stream(&ctx, ancestor, descendant)
-                .await?
-                .count()
-                .await
-        );
+        let n = repo
+            .commit_graph()
+            .range_stream(&ctx, ancestor, descendant)
+            .await?
+            .count()
+            .await;
 
         Ok(n)
     }
@@ -2492,7 +2424,7 @@ mod tests {
                 HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")?;
             let commits_between = count_commits_between(ctx, &repo, previous_master, book).await?;
 
-            // `- 1` because RangeNodeStream is inclusive
+            // `- 1` because range_stream is inclusive
             assert_eq!(commits_between - 1, num_pushes);
 
             Ok(())
@@ -2585,7 +2517,7 @@ mod tests {
             assert!(has_retry_num_bigger_1);
 
             let commits_between = count_commits_between(ctx, &repo, root, book).await?;
-            // `- 1` because RangeNodeStream is inclusive
+            // `- 1` because range_stream is inclusive
             assert_eq!(commits_between - 1, num_pushes);
 
             Ok(())

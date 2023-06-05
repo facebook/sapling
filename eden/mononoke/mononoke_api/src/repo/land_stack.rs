@@ -20,7 +20,6 @@ use commit_graph::CommitGraphRef;
 use cross_repo_sync::types::Large;
 use cross_repo_sync::types::Small;
 use cross_repo_sync::CommitSyncOutcome;
-use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::future::TryFutureExt;
 use futures::stream::StreamExt;
@@ -33,7 +32,6 @@ use pushrebase_client::LocalPushrebaseClient;
 use pushrebase_client::PushrebaseClient;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstoreRef;
-use revset::RangeNodeStream;
 use skiplist::SkiplistIndexArc;
 use unbundle::PushRedirector;
 
@@ -157,38 +155,13 @@ impl RepoContext {
         // commit and descendants of the base commit.
         let ctx = self.ctx();
         let blobstore = self.blob_repo().repo_blobstore();
-        let changesets: HashSet<_> = if tunables::tunables()
-            .by_repo_enable_new_commit_graph_range_stream(self.name())
-            .unwrap_or_default()
-        {
-            self.repo()
-                .commit_graph()
-                .range_stream(ctx, base, head)
-                .await?
-                .filter(|cs_id| future::ready(*cs_id != base))
-                .map(|cs_id| {
-                    cloned!(ctx);
-                    async move {
-                        cs_id
-                            .load(&ctx, blobstore)
-                            .map_err(MononokeError::from)
-                            .await
-                    }
-                })
-                .buffer_unordered(100)
-                .try_collect()
-                .await?
-        } else {
-            RangeNodeStream::new(
-                ctx.clone(),
-                self.blob_repo().changeset_fetcher_arc(),
-                base,
-                head,
-            )
-            .compat()
-            .map_err(MononokeError::from)
-            .try_filter(|cs_id| future::ready(*cs_id != base))
-            .map_ok(|cs_id| {
+        let changesets: HashSet<_> = self
+            .repo()
+            .commit_graph()
+            .range_stream(ctx, base, head)
+            .await?
+            .filter(|cs_id| future::ready(*cs_id != base))
+            .map(|cs_id| {
                 cloned!(ctx);
                 async move {
                     cs_id
@@ -197,10 +170,9 @@ impl RepoContext {
                         .await
                 }
             })
-            .try_buffer_unordered(100)
+            .buffer_unordered(100)
             .try_collect()
-            .await?
-        };
+            .await?;
 
         // We CANNOT do remote pushrebase here otherwise it would result in an infinite
         // loop, as this code is used for remote pushrebase. Let's use local pushrebase.

@@ -30,14 +30,11 @@ mod validation;
 pub use crate::validation::ValidateNodeStream;
 
 mod ancestors;
+use uniqueheap::UniqueHeap;
+
 pub use crate::ancestors::common_ancestors;
 pub use crate::ancestors::greatest_common_ancestor;
 pub use crate::ancestors::AncestorsNodeStream;
-
-mod range;
-use uniqueheap::UniqueHeap;
-
-pub use crate::range::RangeNodeStream;
 pub use crate::test::*;
 
 #[cfg(test)]

@@ -342,7 +342,7 @@ async fn commits_added_by_bookmark_move(
                 .await
         }
         (Some(from_id), Some(to_id)) => {
-            // If needed, this can be optimised by using RangeNodeStream when from_id is
+            // If needed, this can be optimised by using range_stream when from_id is
             // an ancestor of from_id
             repo.commit_graph()
                 .ancestors_difference_stream(ctx, vec![to_id], vec![from_id])
