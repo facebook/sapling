@@ -2401,7 +2401,7 @@ def debugnamecomplete(ui, repo, *args, **opts) -> None:
 
     age = ui.configint("zsh", "completion-age")
     draft = repo.set("sort(draft() and age('<{}d'), -date)".format(age))
-    draft = [repo.changelog.shortest(cs.hex(), 8) for cs in draft]
+    draft = [repo.changelog.shortest(cs.hex(), 9) for cs in draft]
     all_completions = []
     all_completions.extend(draft)
     all_completions.extend(sorted(n for n in names if n not in ["default", "tip"]))
