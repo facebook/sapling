@@ -23,26 +23,19 @@ use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::types::Source;
-use cross_repo_sync::types::Target;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
-use futures::compat::Future01CompatExt;
 use futures::future::try_join_all;
-use futures::future::FutureExt;
-use futures::future::TryFutureExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
-use futures_old::stream::Stream;
-use futures_old::Future;
 use futures_stats::TimedFutureExt;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
 use reachabilityindex::ReachabilityIndex;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
 use slog::info;
@@ -81,7 +74,6 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
     commit_syncer: &CommitSyncer<M, R>,
     entry: BookmarkUpdateLogEntry,
     source_skiplist_index: &Source<Arc<SkiplistIndex>>,
-    target_skiplist_index: &Target<Arc<SkiplistIndex>>,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     mut scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<SyncResult, Error> {
@@ -117,7 +109,6 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
         to_cs_id,
         Some(bookmark),
         source_skiplist_index,
-        target_skiplist_index,
         common_pushrebase_bookmarks,
         scuba_sample,
     )
@@ -134,7 +125,6 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
     to_cs_id: ChangesetId,
     maybe_bookmark: Option<BookmarkKey>,
     source_skiplist_index: &Source<Arc<SkiplistIndex>>,
-    target_skiplist_index: &Target<Arc<SkiplistIndex>>,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<SyncResult, Error> {
@@ -176,8 +166,6 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
             return sync_commits_via_pushrebase(
                 ctx,
                 commit_syncer,
-                source_skiplist_index,
-                target_skiplist_index,
                 bookmark,
                 common_pushrebase_bookmarks,
                 scuba_sample.clone(),
@@ -195,7 +183,6 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
         let synced = sync_commit_without_pushrebase(
             ctx,
             commit_syncer,
-            target_skiplist_index,
             scuba_sample.clone(),
             cs_id,
             common_pushrebase_bookmarks,
@@ -237,8 +224,6 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
 pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
-    source_skiplist_index: &Source<Arc<SkiplistIndex>>,
-    target_skiplist_index: &Target<Arc<SkiplistIndex>>,
     bookmark: &BookmarkKey,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     scuba_sample: MononokeScubaSampleBuilder,
@@ -267,10 +252,7 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
                 return Err(format_err!("only 2 parent merges are supported"));
             }
 
-            no_pushrebase.extend(
-                validate_if_new_repo_merge(ctx, source_repo, source_skiplist_index.clone(), p1, p2)
-                    .await?,
-            );
+            no_pushrebase.extend(validate_if_new_repo_merge(ctx, source_repo, p1, p2).await?);
         }
     }
 
@@ -279,7 +261,6 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
             sync_commit_without_pushrebase(
                 ctx,
                 commit_syncer,
-                target_skiplist_index,
                 scuba_sample.clone(),
                 cs_id,
                 common_pushrebase_bookmarks,
@@ -313,7 +294,6 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
 pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
-    target_skiplist_index: &Target<Arc<SkiplistIndex>>,
     scuba_sample: MononokeScubaSampleBuilder,
     cs_id: ChangesetId,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
@@ -346,7 +326,6 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
         let maybe_independent_branch = check_if_independent_branch_and_return(
             ctx,
             target_repo,
-            target_skiplist_index.0.clone(),
             parents.into_iter().flatten().collect(),
             book_values,
         )
@@ -505,7 +484,6 @@ async fn validate_if_new_repo_merge(
          + RepoIdentityRef
          + CommitGraphRef
      ),
-    skiplist_index: Source<Arc<SkiplistIndex>>,
     p1: ChangesetId,
     p2: ChangesetId,
 ) -> Result<Vec<ChangesetId>, Error> {
@@ -521,14 +499,9 @@ async fn validate_if_new_repo_merge(
 
     // Check if this is a diamond merge i.e. check if any of the ancestor of smaller_gen
     // is also ancestor of larger_gen.
-    let maybe_independent_branch = check_if_independent_branch_and_return(
-        ctx,
-        repo,
-        skiplist_index.0,
-        vec![smaller_gen],
-        vec![larger_gen],
-    )
-    .await?;
+    let maybe_independent_branch =
+        check_if_independent_branch_and_return(ctx, repo, vec![smaller_gen], vec![larger_gen])
+            .await?;
 
     let independent_branch = maybe_independent_branch.ok_or_else(err_msg)?;
 
@@ -541,44 +514,18 @@ async fn validate_if_new_repo_merge(
 async fn check_if_independent_branch_and_return(
     ctx: &CoreContext,
     repo: &(impl ChangesetFetcherArc + RepoBlobstoreRef + RepoIdentityRef + CommitGraphRef),
-    skiplist_index: Arc<SkiplistIndex>,
     branch_tips: Vec<ChangesetId>,
     other_branches: Vec<ChangesetId>,
 ) -> Result<Option<Vec<ChangesetId>>, Error> {
-    let fetcher = repo.changeset_fetcher_arc();
     let blobstore = repo.repo_blobstore();
-    let bcss = if tunables::tunables()
-        .by_repo_enable_new_commit_graph_ancestors_difference_stream(repo.repo_identity().name())
-        .unwrap_or_default()
-    {
-        repo.commit_graph()
-            .ancestors_difference_stream(ctx, branch_tips.clone(), other_branches)
-            .await?
-            .map_ok({ move |cs| async move { Ok(cs.load(ctx, blobstore).await?) } })
-            .try_buffered(100)
-            .try_collect()
-            .await?
-    } else {
-        DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-            ctx.clone(),
-            &fetcher,
-            skiplist_index,
-            branch_tips.clone(),
-            other_branches,
-        )
-        .map({
-            move |cs| {
-                { async move { cs.load(ctx, blobstore).await } }
-                    .boxed()
-                    .compat()
-                    .from_err()
-            }
-        })
-        .buffered(100)
-        .collect()
-        .compat()
+    let bcss = repo
+        .commit_graph()
+        .ancestors_difference_stream(ctx, branch_tips.clone(), other_branches)
         .await?
-    };
+        .map_ok({ move |cs| async move { Ok(cs.load(ctx, blobstore).await?) } })
+        .try_buffered(100)
+        .try_collect::<Vec<_>>()
+        .await?;
 
     let bcss: Vec<_> = bcss.into_iter().rev().collect();
     let mut cs_to_parents: HashMap<_, Vec<_>> = HashMap::new();
@@ -1110,7 +1057,6 @@ mod test {
 
         let mut res = vec![];
         let source_skiplist_index = Source(Arc::new(SkiplistIndex::new()));
-        let target_skiplist_index = Target(Arc::new(SkiplistIndex::new()));
         for entry in log_entries {
             let entry_id = entry.id;
             let single_res = sync_single_bookmark_update_log(
@@ -1118,7 +1064,6 @@ mod test {
                 commit_syncer,
                 entry,
                 &source_skiplist_index.clone(),
-                &target_skiplist_index.clone(),
                 common_pushrebase_bookmarks,
                 MononokeScubaSampleBuilder::with_discard(),
             )

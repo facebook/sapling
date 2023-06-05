@@ -140,7 +140,6 @@ use repo_sparse_profiles::ArcRepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfilesArc;
 use revset::AncestorsNodeStream;
-use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use segmented_changelog::CloneData;
 use segmented_changelog::DisabledSegmentedChangelog;
 use segmented_changelog::Location;
@@ -1082,33 +1081,14 @@ impl RepoContext {
     ) -> Result<impl Stream<Item = Result<ChangesetContext, MononokeError>> + 'a, MononokeError>
     {
         let repo = self.clone();
-        if tunables::tunables()
-            .by_repo_enable_new_commit_graph_ancestors_difference_stream(
-                repo.repo().repo_identity().name(),
-            )
-            .unwrap_or_default()
-        {
-            Ok(self
-                .repo()
-                .commit_graph()
-                .ancestors_difference_stream(&self.ctx, includes, excludes)
-                .await?
-                .map_ok(move |cs_id| ChangesetContext::new(repo.clone(), cs_id))
-                .map_err(|err| err.into())
-                .boxed())
-        } else {
-            Ok(DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                self.ctx.clone(),
-                &self.blob_repo().changeset_fetcher_arc(),
-                self.skiplist_index_arc(),
-                includes,
-                excludes,
-            )
-            .compat()
+
+        Ok(self
+            .repo()
+            .commit_graph()
+            .ancestors_difference_stream(&self.ctx, includes, excludes)
+            .await?
             .map_ok(move |cs_id| ChangesetContext::new(repo.clone(), cs_id))
-            .map_err(|err| err.into())
-            .boxed())
-        }
+            .map_err(|err| err.into()))
     }
 
     /// Get Mercurial ID for multiple changesets

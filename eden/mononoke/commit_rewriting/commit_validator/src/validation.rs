@@ -33,7 +33,6 @@ use cross_repo_sync::types::Target;
 use cross_repo_sync::validation::report_different;
 use cross_repo_sync::CommitSyncDataProvider;
 use cross_repo_sync::CommitSyncOutcome;
-use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::future::try_join_all;
 use futures::stream;
@@ -63,7 +62,6 @@ use movers::Mover;
 use ref_cast::RefCast;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use slog::error;
@@ -713,12 +711,6 @@ pub async fn unfold_bookmarks_update_log_entry(
     validation_helpers: &ValidationHelpers,
 ) -> Result<impl Stream<Item = Result<CommitEntry, Error>>, Error> {
     let bookmarks_update_log_entry_id = entry.id;
-    let changeset_fetcher = validation_helpers
-        .large_repo
-        .0
-        .blob_repo
-        .changeset_fetcher_arc();
-    let lca_hint = validation_helpers.large_repo.0.skiplist_index.clone();
     let is_master_entry = entry.bookmark_name == validation_helpers.large_repo_master_bookmark;
     let master_cs_id = validation_helpers
         .get_large_repo_master(ctx.clone())
@@ -767,31 +759,13 @@ pub async fn unfold_bookmarks_update_log_entry(
                 );
                 // This might be slow. If too many bookmakrs are being created, it can be optimised
                 // or we could just check to_cs_id as a best effort.
-                if tunables::tunables()
-                    .by_repo_enable_new_commit_graph_ancestors_difference_stream(
-                        validation_helpers.large_repo.repo_identity().name(),
-                    )
-                    .unwrap_or_default()
-                {
-                    validation_helpers
-                        .large_repo
-                        .commit_graph()
-                        .ancestors_difference_stream(ctx, vec![to_cs_id], vec![master_cs_id])
-                        .await?
-                        .collect()
-                        .await
-                } else {
-                    DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                        ctx.clone(),
-                        &changeset_fetcher,
-                        lca_hint,
-                        vec![to_cs_id],
-                        vec![master_cs_id],
-                    )
-                    .compat()
+                validation_helpers
+                    .large_repo
+                    .commit_graph()
+                    .ancestors_difference_stream(ctx, vec![to_cs_id], vec![master_cs_id])
+                    .await?
                     .collect()
                     .await
-                }
             }
         }
         (Some(from_cs_id), Some(to_cs_id)) => {
@@ -810,33 +784,11 @@ pub async fn unfold_bookmarks_update_log_entry(
                 );
                 // This might be slow. If too many bookmakrs are being non-FF moved, it can be optimised
                 // or we could just check to_cs_id as a best effort.
-                if tunables::tunables()
-                    .by_repo_enable_new_commit_graph_ancestors_difference_stream(
-                        validation_helpers.large_repo.repo_identity().name(),
-                    )
-                    .unwrap_or_default()
-                {
-                    validation_helpers
-                        .large_repo
-                        .commit_graph()
-                        .ancestors_difference_stream(
-                            ctx,
-                            vec![to_cs_id],
-                            if is_master_entry {
-                                vec![from_cs_id]
-                            } else {
-                                // Skip ancestors of master since validating master bookmark moves covers them.
-                                vec![from_cs_id, master_cs_id]
-                            },
-                        )
-                        .await?
-                        .collect()
-                        .await
-                } else {
-                    DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                        ctx.clone(),
-                        &changeset_fetcher,
-                        lca_hint,
+                validation_helpers
+                    .large_repo
+                    .commit_graph()
+                    .ancestors_difference_stream(
+                        ctx,
                         vec![to_cs_id],
                         if is_master_entry {
                             vec![from_cs_id]
@@ -845,10 +797,9 @@ pub async fn unfold_bookmarks_update_log_entry(
                             vec![from_cs_id, master_cs_id]
                         },
                     )
-                    .compat()
+                    .await?
                     .collect()
                     .await
-                }
             } else {
                 validation_helpers
                     .large_repo

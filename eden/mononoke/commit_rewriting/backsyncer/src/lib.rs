@@ -80,9 +80,7 @@ use repo_identity::RepoIdentityRef;
 use repo_update_logger::find_draft_ancestors;
 use repo_update_logger::log_new_bonsai_changesets;
 use revset::AncestorsNodeStream;
-use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use skiplist::SkiplistIndex;
-use skiplist::SkiplistIndexArc;
 use slog::debug;
 use slog::info;
 use slog::warn;
@@ -346,29 +344,11 @@ async fn commits_added_by_bookmark_move(
         (Some(from_id), Some(to_id)) => {
             // If needed, this can be optimised by using RangeNodeStream when from_id is
             // an ancestor of from_id
-            if tunables::tunables()
-                .by_repo_enable_new_commit_graph_ancestors_difference_stream(
-                    repo.repo_identity().name(),
-                )
-                .unwrap_or_default()
-            {
-                repo.commit_graph()
-                    .ancestors_difference_stream(ctx, vec![to_id], vec![from_id])
-                    .await?
-                    .try_collect()
-                    .await
-            } else {
-                DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                    ctx.clone(),
-                    &repo.changeset_fetcher_arc(),
-                    repo.skiplist_index_arc(),
-                    vec![to_id],
-                    vec![from_id],
-                )
-                .compat()
+            repo.commit_graph()
+                .ancestors_difference_stream(ctx, vec![to_id], vec![from_id])
+                .await?
                 .try_collect()
                 .await
-            }
         }
     }
 }

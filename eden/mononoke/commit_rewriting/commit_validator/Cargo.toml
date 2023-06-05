@@ -36,7 +36,6 @@ mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 ref-cast = "1.0.16"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
-revset = { version = "0.1.0", path = "../../revset" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
@@ -44,7 +43,6 @@ sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 synced_commit_mapping = { version = "0.1.0", path = "../synced_commit_mapping" }
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
-tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]
 cross_repo_sync_test_utils = { version = "0.1.0", path = "../cross_repo_sync/test_utils" }

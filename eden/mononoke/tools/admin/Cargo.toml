@@ -102,7 +102,6 @@ sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 strum_macros = "0.21"
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.6", features = ["full"] }
-tunables = { version = "0.1.0", path = "../../tunables" }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 vec1 = { version = "1", features = ["serde"] }
 

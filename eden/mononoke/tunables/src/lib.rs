@@ -368,8 +368,6 @@ pub struct MononokeTunables {
     // Enable derivation on service per repo
     enable_remote_derivation: TunableBoolByRepo,
 
-    // Enable using new commit graph ancestors difference stream in place of DifferenceOfUnionsOfAncestorsNodeStream
-    enable_new_commit_graph_ancestors_difference_stream: TunableBoolByRepo,
     // Enable using new commit graph range stream in place of RangeNodeStream
     enable_new_commit_graph_range_stream: TunableBoolByRepo,
     // Enable using the new commit graph for is_ancestor queries

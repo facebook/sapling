@@ -51,13 +51,7 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
         if log_new_public_commits_to_scribe {
             op = op.log_new_public_commits_to_scribe();
         }
-        op.run(
-            self.ctx,
-            self.authz,
-            self.repo,
-            self.lca_hint,
-            self.hook_manager,
-        )
-        .await
+        op.run(self.ctx, self.authz, self.repo, self.hook_manager)
+            .await
     }
 }

@@ -142,7 +142,6 @@ impl<'op> CreateBookmarkOp<'op> {
                 ctx,
                 authz,
                 repo,
-                lca_hint,
                 hook_manager,
                 self.bookmark,
                 self.pushvars,

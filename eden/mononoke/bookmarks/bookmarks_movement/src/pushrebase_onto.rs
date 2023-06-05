@@ -7,7 +7,6 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::sync::Arc;
 
 use anyhow::anyhow;
 use bonsai_git_mapping::BonsaiGitMappingArc;
@@ -25,7 +24,6 @@ use metaconfig_types::PushrebaseParams;
 use mononoke_types::BonsaiChangeset;
 use pushrebase_hook::PushrebaseHook;
 use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
-use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
 use repo_bookmark_attrs::RepoBookmarkAttrsRef;
@@ -116,7 +114,6 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         ctx: &'op CoreContext,
         authz: &'op AuthorizationContext,
         repo: &'op impl Repo,
-        lca_hint: &'op Arc<dyn LeastCommonAncestorsHint>,
         hook_manager: &'op HookManager,
     ) -> Result<pushrebase::PushrebaseOutcome, BookmarkMovementError> {
         let kind = self.bookmark_restrictions.check_kind(repo, self.bookmark)?;
@@ -165,7 +162,6 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
                 ctx,
                 authz,
                 repo,
-                lca_hint,
                 hook_manager,
                 self.bookmark,
                 self.pushvars,

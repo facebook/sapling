@@ -17,7 +17,6 @@ use bulkops::Direction;
 use bulkops::PublicChangesetBulkFetch;
 use bytes::Bytes;
 use changeset_fetcher::ChangesetFetcher;
-use changeset_fetcher::ChangesetFetcherArc;
 use changesets::deserialize_cs_entries;
 use changesets::serialize_cs_entries;
 use changesets::ChangesetEntry;
@@ -31,7 +30,6 @@ use clap::ValueEnum;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
-use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::stream;
 use futures::StreamExt;
@@ -43,10 +41,7 @@ use mononoke_types::ChangesetId;
 use phases::Phases;
 use phases::PhasesArc;
 use repo_identity::RepoIdentity;
-use repo_identity::RepoIdentityRef;
-use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use skiplist::SkiplistIndex;
-use skiplist::SkiplistIndexArc;
 
 use crate::commit_id::parse_commit_id;
 
@@ -207,43 +202,17 @@ impl FixedHeadsArgs {
     ) -> Result<Vec<ChangesetEntry>> {
         let changesets = repo.changesets();
 
-        let mut css: Vec<ChangesetEntry> = if tunables::tunables()
-            .by_repo_enable_new_commit_graph_ancestors_difference_stream(
-                repo.repo_identity().name(),
-            )
-            .unwrap_or_default()
-        {
-            repo.commit_graph()
-                .ancestors_difference_stream(
-                    ctx,
-                    self.head
-                        .into_iter()
-                        .map(|id| id.parse())
-                        .collect::<Result<_>>()?,
-                    vec![],
-                )
-                .await?
-                .try_chunks(1000)
-                .map_err(|stream::TryChunksError(_chunk, err)| err)
-                .map_ok(|ids| async move {
-                    let css = changesets.get_many(ctx, ids).await?;
-                    Ok(stream::iter(css.into_iter().map(anyhow::Ok)))
-                })
-                .try_buffered(5)
-                .try_flatten()
-                .try_collect()
-                .await?
-        } else {
-            DifferenceOfUnionsOfAncestorsNodeStream::new_union(
-                ctx.clone(),
-                &repo.changeset_fetcher_arc(),
-                repo.skiplist_index_arc(),
+        let mut css = repo
+            .commit_graph()
+            .ancestors_difference_stream(
+                ctx,
                 self.head
                     .into_iter()
                     .map(|id| id.parse())
                     .collect::<Result<_>>()?,
+                vec![],
             )
-            .compat()
+            .await?
             .try_chunks(1000)
             .map_err(|stream::TryChunksError(_chunk, err)| err)
             .map_ok(|ids| async move {
@@ -252,9 +221,8 @@ impl FixedHeadsArgs {
             })
             .try_buffered(5)
             .try_flatten()
-            .try_collect()
-            .await?
-        };
+            .try_collect::<Vec<_>>()
+            .await?;
 
         css.sort_by_key(|entry| entry.gen);
         Ok(css)
