@@ -15,6 +15,8 @@ pub struct FileAuxData {
     content_id: CBytes,
     content_sha1: CBytes,
     content_sha256: CBytes,
+    // Using pointer as `Option<CBytes>`
+    content_blake3: *mut CBytes,
 }
 
 impl From<ScmStoreFileAuxData> for FileAuxData {
@@ -25,7 +27,27 @@ impl From<ScmStoreFileAuxData> for FileAuxData {
             content_id: v.content_id.as_ref().to_vec().into(),
             content_sha1: v.content_sha1.as_ref().to_vec().into(),
             content_sha256: v.content_sha256.as_ref().to_vec().into(),
+            content_blake3: v.content_seeded_blake3.map_or(
+                std::ptr::null_mut(),
+                |content_blake3| {
+                    let boxed_blake3 = Box::new(content_blake3.as_ref().to_vec().into());
+                    Box::into_raw(boxed_blake3)
+                },
+            ),
         }
+    }
+}
+
+impl Drop for FileAuxData {
+    fn drop(&mut self) {
+        let content_blake3 = unsafe {
+            if self.content_blake3.is_null() {
+                None
+            } else {
+                Some(Box::from_raw(self.content_blake3))
+            }
+        };
+        drop(content_blake3);
     }
 }
 

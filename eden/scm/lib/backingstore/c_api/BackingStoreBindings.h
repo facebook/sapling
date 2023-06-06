@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<a30cb7bf224c8eec75ac63538485bcb8>>
+ * @generated SignedSource<<4947b4766dba30aa1181fea2bc183dca>>
  *
  */
 
@@ -54,6 +54,7 @@ struct FileAuxData {
   CBytes content_id;
   CBytes content_sha1;
   CBytes content_sha256;
+  CBytes *content_blake3;
 };
 
 /// The monomorphized version of `CFallible` used solely because MSVC
@@ -89,6 +90,7 @@ struct TreeEntry {
   TreeEntryType ttype;
   uint64_t *size;
   CBytes *content_sha1;
+  CBytes *content_blake3;
 };
 
 struct Tree {
@@ -96,7 +98,6 @@ struct Tree {
   /// This makes sure `entries` above is pointing to a valid memory.
   Vec<TreeEntry> *entries_ptr;
   uintptr_t length;
-  CBytes hash;
 };
 
 extern "C" {
