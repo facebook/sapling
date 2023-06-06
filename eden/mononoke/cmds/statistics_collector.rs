@@ -15,14 +15,17 @@ use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Error;
-use blobrepo::BlobRepo;
+use blobrepo::ChangesetFetcher;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Blobstore;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkKey;
+use bookmarks::Bookmarks;
 use bytes::Bytes;
 use changesets::deserialize_cs_entries;
 use changesets::ChangesetEntry;
+use changesets::Changesets;
 use clap_old::Arg;
 use clap_old::SubCommand;
 use cmdlib::args;
@@ -31,6 +34,7 @@ use cmdlib::args::MononokeMatches;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfig;
 use futures::compat::Stream01CompatExt;
 use futures::future::FutureExt;
 use futures::stream;
@@ -43,7 +47,7 @@ use futures_ext::StreamExt as OldStreamExt;
 use manifest::Diff;
 use manifest::Entry;
 use manifest::ManifestOps;
-use mercurial_derivation::DeriveHgChangeset;
+use mercurial_derivation::derive_hg_changeset;
 use mercurial_types::FileBytes;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
@@ -51,12 +55,33 @@ use mercurial_types::HgManifestId;
 use mononoke_types::FileType;
 use mononoke_types::RepositoryId;
 use redactedblobstore::ErrorKind as RedactedBlobstoreError;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedData;
+use repo_derived_data::RepoDerivedDataRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
 use slog::Logger;
 use stats::prelude::*;
 use tokio::time::sleep;
+
+#[facet::container]
+pub struct Repo {
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+    #[facet]
+    changesets: dyn Changesets,
+    #[facet]
+    bookmarks: dyn Bookmarks,
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+    #[facet]
+    changeset_fetcher: dyn ChangesetFetcher,
+    #[facet]
+    filestore_config: FilestoreConfig,
+}
 
 define_stats! {
     prefix = "mononoke.statistics_collector";
@@ -178,7 +203,7 @@ pub async fn number_of_lines_unless_redacted(
 
 pub async fn get_manifest_from_changeset(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     hg_cs_id: &HgChangesetId,
 ) -> Result<HgManifestId, Error> {
     let changeset = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
@@ -187,7 +212,7 @@ pub async fn get_manifest_from_changeset(
 
 pub async fn get_changeset_timestamp_from_changeset(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     hg_cs_id: &HgChangesetId,
 ) -> Result<i64, Error> {
     let changeset = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
@@ -197,7 +222,7 @@ pub async fn get_changeset_timestamp_from_changeset(
 // Calculates number of lines only for regular-type file
 pub async fn get_statistics_from_entry(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     entry: Entry<HgManifestId, (FileType, HgFileNodeId)>,
 ) -> Result<RepoStatistics, Error> {
     match entry {
@@ -226,7 +251,7 @@ pub async fn get_statistics_from_entry(
 
 pub async fn get_statistics_from_changeset(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     blobstore: &(impl Blobstore + Clone + 'static),
     hg_cs_id: &HgChangesetId,
 ) -> Result<RepoStatistics, Error> {
@@ -259,7 +284,7 @@ pub async fn get_statistics_from_changeset(
 
 pub async fn update_statistics<'a>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a Repo,
     statistics: RepoStatistics,
     diff: BoxStream<Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>, Error>,
 ) -> Result<RepoStatistics, Error> {
@@ -331,7 +356,7 @@ fn parse_serialized_commits<P: AsRef<Path>>(file: P) -> Result<Vec<ChangesetEntr
 
 pub async fn generate_statistics_from_file<P: AsRef<Path>>(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     in_path: &P,
 ) -> Result<(), Error> {
     // 1 day in seconds
@@ -348,7 +373,7 @@ pub async fn generate_statistics_from_file<P: AsRef<Path>>(
         .map({
             move |changeset| async move {
                 let ChangesetEntry { repo_id, cs_id, .. } = changeset;
-                let hg_cs_id = repo.derive_hg_changeset(ctx, cs_id).await?;
+                let hg_cs_id = derive_hg_changeset(ctx, repo.repo_derived_data(), cs_id).await?;
                 let cs_timestamp =
                     get_changeset_timestamp_from_changeset(ctx, repo, &hg_cs_id).await?;
                 // the error type annotation in principle should be inferred,
@@ -459,7 +484,7 @@ async fn run_statistics<'a>(
     repo_name: String,
     bookmark: BookmarkKey,
 ) -> Result<(), Error> {
-    let repo = args::not_shardmanager_compatible::open_repo(fb, logger, matches).await?;
+    let repo: Repo = args::not_shardmanager_compatible::open_repo(fb, logger, matches).await?;
 
     if let (SUBCOMMAND_STATISTICS_FROM_FILE, Some(sub_m)) = matches.subcommand() {
         // Both arguments are set to be required
@@ -597,6 +622,7 @@ mod tests {
     use tests_utils::store_files;
     use tokio::runtime::Runtime;
 
+    use super::Repo as MyRepo;
     use super::*;
 
     #[test]
@@ -652,7 +678,7 @@ mod tests {
     fn linear_test_get_statistics_from_changeset(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         runtime.block_on(async move {
-            let repo = Linear::getrepo(fb).await;
+            let repo: MyRepo = Linear::get_custom_test_repo(fb).await;
 
             let ctx = CoreContext::test_mock(fb);
             let blobstore = repo.repo_blobstore().clone();
@@ -687,7 +713,9 @@ mod tests {
             )
             .await;
 
-            let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await.unwrap();
+            let hg_cs_id = derive_hg_changeset(ctx, repo.repo_derived_data(), bcs_id)
+                .await
+                .unwrap();
 
             let stats = get_statistics_from_changeset(ctx, repo, blobstore, &hg_cs_id)
                 .await
@@ -702,7 +730,7 @@ mod tests {
     fn linear_test_get_statistics_from_entry_tree(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         runtime.block_on(async move {
-            let repo = Linear::getrepo(fb).await;
+            let repo: MyRepo = Linear::get_custom_test_repo(fb).await;
 
             let ctx = CoreContext::test_mock(fb);
             let blobstore = repo.repo_blobstore().clone();
@@ -737,7 +765,9 @@ mod tests {
             )
             .await;
 
-            let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await.unwrap();
+            let hg_cs_id = derive_hg_changeset(ctx, repo.repo_derived_data(), bcs_id)
+                .await
+                .unwrap();
 
             let manifest = get_manifest_from_changeset(ctx, repo, &hg_cs_id)
                 .await
@@ -767,7 +797,7 @@ mod tests {
     fn linear_test_update_statistics(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         runtime.block_on(async move {
-            let repo = Linear::getrepo(fb).await;
+            let repo: MyRepo = Linear::get_custom_test_repo(fb).await;
 
             let ctx = CoreContext::test_mock(fb);
             let blobstore = repo.repo_blobstore().clone();
