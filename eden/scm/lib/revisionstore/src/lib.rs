@@ -222,12 +222,9 @@ pub mod testutil;
 
 #[cfg(test)]
 mod env_lock {
-    use lazy_static::lazy_static;
     use parking_lot::Mutex;
 
-    lazy_static! {
-        pub static ref ENV_LOCK: Mutex<()> = Mutex::new(());
-    }
+    pub static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     fn env_reset() {
         for name in ["https_proxy", "http_proxy", "NO_PROXY"] {
