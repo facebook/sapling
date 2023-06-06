@@ -9,16 +9,21 @@ import type {DiffType} from '../patch/parse';
 import type {Context} from './types';
 
 import {Icon} from '../Icon';
+import {ChevronDownIcon, ChevronUpIcon} from '@primer/octicons-react';
 import {Box, Text} from '@primer/react';
 
 export function FileHeader<Id>({
   ctx,
   path,
   diffType,
+  open,
+  onChangeOpen,
 }: {
   ctx?: Context<Id>;
   path: string;
   diffType?: DiffType;
+  open?: boolean;
+  onChangeOpen?: (open: boolean) => void;
 }) {
   // Even though the enclosing <SplitDiffView> will have border-radius set, we
   // have to define it again here or things don't look right.
@@ -30,6 +35,8 @@ export function FileHeader<Id>({
   return (
     <Box
       className="split-diff-view-file-header"
+      display="flex"
+      alignItems="center"
       bg="accent.subtle"
       color={color}
       paddingX={2}
@@ -41,6 +48,11 @@ export function FileHeader<Id>({
       borderBottomColor="border.default"
       borderBottomStyle="solid"
       borderBottomWidth="1px">
+      {onChangeOpen && (
+        <Box paddingRight={2} onClick={() => onChangeOpen(!open)} sx={{cursor: 'pointer'}}>
+          {open ? <ChevronUpIcon size={24} /> : <ChevronDownIcon size={24} />}
+        </Box>
+      )}
       {diffType !== undefined && <Icon icon={diffTypeToIcon[diffType]} />}
       <Text fontFamily="mono" fontSize={12}>
         {pathParts.reduce((acc, part, idx) => {
