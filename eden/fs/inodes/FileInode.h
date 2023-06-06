@@ -103,6 +103,16 @@ struct FileInodeState {
     Hash20 getSha1(FileInode& inode);
 
     /**
+     * Get the blake3 for this inode.
+     *
+     * In the case where a blake3 is not yet cached, it will be computed and
+     * stored so future calls will be served from the cache.
+     */
+    Hash32 getBlake3(
+        FileInode& inode,
+        const std::optional<std::string>& maybeBlake3Key);
+
+    /**
      * Get the file size for this inode.
      *
      * In the case where a file size is not yet cached, it will be computed and
@@ -215,8 +225,11 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   ImmediateFuture<Hash20> getSha1(const ObjectFetchContextPtr& fetchContext);
 
+  ImmediateFuture<Hash32> getBlake3(const ObjectFetchContextPtr& fetchContext);
+
   ImmediateFuture<BlobMetadata> getBlobMetadata(
-      const ObjectFetchContextPtr& fetchContext);
+      const ObjectFetchContextPtr& fetchContext,
+      bool blake3Required = false);
 
   /**
    * Check to see if the file has the same contents as the specified blob

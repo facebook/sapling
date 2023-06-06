@@ -45,6 +45,7 @@ target_link_libraries(
   eden_inodes
   PUBLIC
     eden_config
+    eden_digest
     eden_inodes_inodenumber
     eden_inode_metadata
     eden_journal

@@ -14,6 +14,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/OpenSSL.h>
 
+#include "eden/fs/digest/Blake3.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodePtr.h"
@@ -26,6 +27,30 @@
 
 namespace facebook::eden {
 
+constexpr size_t kHashingBufSize = 8192;
+
+template <typename Hasher>
+int hash(Hasher&& hasher, const OverlayFile& file) {
+  off_t off = FileContentStore::kHeaderLength;
+  uint8_t buf[kHashingBufSize];
+  while (true) {
+    const auto ret = file.preadNoInt(&buf, sizeof(buf), off);
+    if (ret.hasError()) {
+      return ret.error();
+    }
+
+    const auto len = ret.value();
+    if (len == 0) {
+      break;
+    }
+
+    hasher(buf, len);
+    off += len;
+  }
+
+  return 0;
+}
+
 /*
  * OverlayFileAccess should be careful not to perform overlay IO operations
  * while its own state lock is held. Doing so serializes IO operations to the
@@ -36,6 +61,7 @@ void OverlayFileAccess::Entry::Info::invalidateMetadata() {
   ++version;
   size = std::nullopt;
   sha1 = std::nullopt;
+  blake3 = std::nullopt;
 }
 
 OverlayFileAccess::State::State(size_t cacheSize) : entries{cacheSize} {
@@ -49,25 +75,37 @@ OverlayFileAccess::OverlayFileAccess(Overlay* overlay, size_t cacheSize)
 
 OverlayFileAccess::~OverlayFileAccess() = default;
 
-void OverlayFileAccess::createEmptyFile(InodeNumber ino) {
+void OverlayFileAccess::createEmptyFile(
+    InodeNumber ino,
+    const std::optional<std::string>& maybeBlake3Key) {
   auto file = overlay_->createOverlayFile(ino, folly::ByteRange{});
   auto state = state_.wlock();
   XCHECK(!state->entries.exists(ino))
       << "Cannot create overlay file " << ino << " when it's already open!";
+
+  // Computing the empty BLAKE3 hash for the given key
+  auto blake3 = Blake3::create(maybeBlake3Key);
+  Hash32 emptyBlake3;
+  blake3.finalize(emptyBlake3.mutableBytes());
+
   state->entries.set(
-      ino, std::make_shared<Entry>(std::move(file), size_t{0}, kEmptySha1));
+      ino,
+      std::make_shared<Entry>(
+          std::move(file), size_t{0}, kEmptySha1, std::move(emptyBlake3)));
 }
 
 void OverlayFileAccess::createFile(
     InodeNumber ino,
     const Blob& blob,
-    const std::optional<Hash20>& sha1) {
+    const std::optional<Hash20>& sha1,
+    const std::optional<Hash32>& blake3) {
   auto file = overlay_->createOverlayFile(ino, blob.getContents());
   auto state = state_.wlock();
   XCHECK(!state->entries.exists(ino))
       << "Cannot create overlay file " << ino << " when it's already open!";
   state->entries.set(
-      ino, std::make_shared<Entry>(std::move(file), blob.getSize(), sha1));
+      ino,
+      std::make_shared<Entry>(std::move(file), blob.getSize(), sha1, blake3));
 }
 
 off_t OverlayFileAccess::getFileSize(FileInode& inode) {
@@ -133,28 +171,12 @@ Hash20 OverlayFileAccess::getSha1(FileInode& inode) {
 
   SHA_CTX ctx;
   SHA1_Init(&ctx);
-
-  off_t off = FileContentStore::kHeaderLength;
-  while (true) {
-    // Using pread here so that we don't move the file position;
-    // the file descriptor is shared between multiple file handles
-    // and while we serialize the requests to FileData, it seems
-    // like a good property of this function to avoid changing that
-    // state.
-    uint8_t buf[8192];
-    auto ret = entry->file.preadNoInt(&buf, sizeof(buf), off);
-    if (ret.hasError()) {
-      throw InodeError(
-          ret.error(),
-          inode.inodePtrFromThis(),
-          "pread failed during SHA-1 calculation");
-    }
-    auto len = ret.value();
-    if (len == 0) {
-      break;
-    }
-    SHA1_Update(&ctx, buf, len);
-    off += len;
+  if (auto r = hash(
+          [&ctx](const auto* buf, auto len) { SHA1_Update(&ctx, buf, len); },
+          entry->file);
+      r != 0) {
+    throw InodeError(
+        r, inode.inodePtrFromThis(), "pread failed during SHA-1 calculation");
   }
 
   static_assert(Hash20::RAW_SIZE == SHA_DIGEST_LENGTH);
@@ -167,6 +189,40 @@ Hash20 OverlayFileAccess::getSha1(FileInode& inode) {
     info->sha1 = sha1;
   }
   return sha1;
+}
+
+Hash32 OverlayFileAccess::getBlake3(
+    FileInode& inode,
+    const std::optional<std::string>& maybeBlake3Key) {
+  auto entry = getEntryForInode(inode.getNodeId());
+  uint64_t version;
+  {
+    auto info = entry->info.rlock();
+    if (info->blake3.has_value()) {
+      return *info->blake3;
+    }
+    version = info->version;
+  }
+
+  auto blake3 = Blake3::create(maybeBlake3Key);
+  if (auto r = hash(
+          [&blake3](const auto* buf, auto len) { blake3.update(buf, len); },
+          entry->file);
+      r != 0) {
+    throw InodeError(
+        r, inode.inodePtrFromThis(), "pread failed during BLAKE3 calculation");
+  }
+
+  static_assert(Hash32::RAW_SIZE == BLAKE3_OUT_LEN);
+  Hash32 hash;
+  blake3.finalize(hash.mutableBytes());
+
+  // Update the cache if the version still matches.
+  auto info = entry->info.wlock();
+  if (version == info->version) {
+    info->blake3 = hash;
+  }
+  return hash;
 }
 
 std::string OverlayFileAccess::readAllContents(FileInode& inode) {

@@ -40,7 +40,9 @@ class OverlayFileAccess {
    * any other OverlayFileAccess functions for this inode must occur after
    * createEmptyFile returns.
    */
-  void createEmptyFile(InodeNumber ino);
+  void createEmptyFile(
+      InodeNumber ino,
+      const std::optional<std::string>& maybeBlake3Key);
 
   /**
    * Creates a new file in the overlay populated with the contents of the given
@@ -53,7 +55,8 @@ class OverlayFileAccess {
   void createFile(
       InodeNumber ino,
       const Blob& blob,
-      const std::optional<Hash20>& sha1);
+      const std::optional<Hash20>& sha1,
+      const std::optional<Hash32>& blake3);
 
   /**
    * Return the size of the overlay file at the given inode number. The result
@@ -69,6 +72,13 @@ class OverlayFileAccess {
    * Returns the SHA-1 hash of the file contents for the given inode number.
    */
   Hash20 getSha1(FileInode& inode);
+
+  /**
+   * Returns the BLAKE3 hash of the file contents for the given inode number.
+   */
+  Hash32 getBlake3(
+      FileInode& inode,
+      const std::optional<std::string>& maybeBlake3Key);
 
   /**
    * Reads the entire file's contents into memory and returns it.
@@ -128,17 +138,22 @@ class OverlayFileAccess {
     Entry(
         OverlayFile f,
         std::optional<size_t> s,
-        const std::optional<Hash20>& h)
-        : file{std::move(f)}, info{folly::in_place, s, h} {}
+        const std::optional<Hash20>& sha1,
+        const std::optional<Hash32>& blake3 = std::nullopt)
+        : file{std::move(f)}, info{folly::in_place, s, sha1, blake3} {}
 
     struct Info {
-      Info(std::optional<size_t> s, const std::optional<Hash20>& h)
-          : size{s}, sha1{h} {}
+      Info(
+          std::optional<size_t> s,
+          const std::optional<Hash20>& sha1,
+          const std::optional<Hash32>& blake3)
+          : size{s}, sha1{sha1}, blake3{blake3} {}
 
       void invalidateMetadata();
 
       std::optional<size_t> size;
       std::optional<Hash20> sha1;
+      std::optional<Hash32> blake3;
       uint64_t version{0};
     };
 

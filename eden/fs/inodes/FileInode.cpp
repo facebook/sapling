@@ -460,7 +460,9 @@ void FileInodeState::checkInvariants() {
   // FileInode is the most allocated structure in EdenFS, make sure that its
   // size is under control.
   static_assert(sizeof(NonMaterializedState) == 32);
-  static_assert(sizeof(NonMaterializedState) >= sizeof(MaterializedState));
+  static_assert(
+      sizeof(NonMaterializedState) + sizeof(Hash32) >=
+      sizeof(MaterializedState));
 
   switch (tag) {
     case BLOB_NOT_LOADING:
@@ -497,6 +499,22 @@ Hash20 FileInodeState::MaterializedState::getSha1(FileInode& inode) {
 
   sha1_ = sha1;
   return sha1;
+}
+
+Hash32 FileInodeState::MaterializedState::getBlake3(
+    FileInode& inode,
+    const std::optional<std::string>& maybeBlake3Key) {
+  // always delegate to overlayFileAccess to save on the materialized state
+  // memory footprint
+#ifdef _WIN32
+  const auto blake3 =
+      getFileBlake3(inode.getMaterializedFilePath(), maybeBlake3Key);
+#else
+  const auto blake3 = inode.getMount()->getOverlayFileAccess()->getBlake3(
+      inode, maybeBlake3Key);
+#endif // _WIN32
+
+  return blake3;
 }
 
 uint64_t FileInodeState::MaterializedState::getSize(FileInode& inode) {
@@ -789,14 +807,19 @@ ImmediateFuture<vector<string>> FileInode::listxattr() {
 ImmediateFuture<string> FileInode::getxattr(
     StringPiece name,
     const ObjectFetchContextPtr& context) {
-  // Currently, we only support the xattr for the SHA-1 of a regular file.
-  if (name != kXattrSha1) {
-    return makeImmediateFuture<string>(
-        InodeError(kENOATTR, inodePtrFromThis()));
+  // Currently, we only support the xattr for the SHA-1 and BLAKE3 of a regular
+  // file.
+  if (name == kXattrSha1) {
+    return getSha1(context).thenValue(
+        [](Hash20 hash) { return hash.toString(); });
   }
 
-  return getSha1(context).thenValue(
-      [](Hash20 hash) { return hash.toString(); });
+  if (name == kXattrBlake3) {
+    return getBlake3(context).thenValue(
+        [](Hash32 hash) { return hash.toString(); });
+  }
+
+  return makeImmediateFuture<string>(InodeError(kENOATTR, inodePtrFromThis()));
 }
 #else
 
@@ -832,7 +855,7 @@ ImmediateFuture<Hash20> FileInode::getSha1(
   XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
 }
 
-ImmediateFuture<BlobMetadata> FileInode::getBlobMetadata(
+ImmediateFuture<Hash32> FileInode::getBlake3(
     const ObjectFetchContextPtr& fetchContext) {
   auto state = LockedState{this};
 
@@ -841,12 +864,36 @@ ImmediateFuture<BlobMetadata> FileInode::getBlobMetadata(
     case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
       // If a file is not materialized, it should have a hash value.
-      return getObjectStore().getBlobMetadata(
+      return getObjectStore().getBlobBlake3(
           state->nonMaterializedState.hash, fetchContext);
+    case State::MATERIALIZED_IN_OVERLAY:
+      return makeImmediateFutureWith([&] {
+        return state->materializedState.getBlake3(
+            *this, getMount()->getEdenConfig()->blake3Key.getValue());
+      });
+  }
+
+  XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
+}
+
+ImmediateFuture<BlobMetadata> FileInode::getBlobMetadata(
+    const ObjectFetchContextPtr& fetchContext,
+    bool blake3Required) {
+  auto state = LockedState{this};
+
+  logAccess(*fetchContext);
+  switch (state->tag) {
+    case State::BLOB_NOT_LOADING:
+    case State::BLOB_LOADING:
+      // If a file is not materialized, it should have a hash value.
+      return getObjectStore().getBlobMetadata(
+          state->nonMaterializedState.hash, fetchContext, blake3Required);
     case State::MATERIALIZED_IN_OVERLAY:
       return makeImmediateFutureWith([&] {
         return BlobMetadata{
             state->materializedState.getSha1(*this),
+            state->materializedState.getBlake3(
+                *this, getMount()->getEdenConfig()->blake3Key.getValue()),
             state->materializedState.getSize(*this)};
       });
   }
@@ -1292,14 +1339,23 @@ void FileInode::materializeNow(
     blobSha1 = std::move(blobSha1Future).get();
   }
 
-  getOverlayFileAccess(state)->createFile(getNodeId(), *blob, blobSha1);
+  auto blobBlake3Future = getObjectStore().getBlobBlake3(
+      state->nonMaterializedState.hash, fetchContext);
+  std::optional<Hash32> blobBlake3;
+  if (blobBlake3Future.isReady()) {
+    blobBlake3 = std::move(blobBlake3Future).get();
+  }
+
+  getOverlayFileAccess(state)->createFile(
+      getNodeId(), *blob, blobSha1, blobBlake3);
 
   state.setMaterialized();
 }
 
 void FileInode::materializeAndTruncate(LockedState& state) {
   XCHECK_NE(state->tag, State::MATERIALIZED_IN_OVERLAY);
-  getOverlayFileAccess(state)->createEmptyFile(getNodeId());
+  getOverlayFileAccess(state)->createEmptyFile(
+      getNodeId(), getMount()->getEdenConfig()->blake3Key.getValue());
   state.setMaterialized();
 }
 
