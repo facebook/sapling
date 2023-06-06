@@ -13,6 +13,7 @@
 from __future__ import absolute_import
 
 import copy
+import itertools
 import weakref
 
 import bindings
@@ -1481,10 +1482,10 @@ class generatorset(abstractsmartset):
             >>> list(zs.slice(0, 2))
             [40, 41]
 
-        Bad, the generatorset is not smart enough:
+        Cutoff early so count is less than 50:
 
             >>> count
-            50
+            12
     """
 
     def __init__(self, gen, iterasc=None, repo=None):
@@ -1660,6 +1661,18 @@ class generatorset(abstractsmartset):
             self._fulllist()
             return self.last()
         return next(it(), None)
+
+    def __and__(self, other):
+        if self.fastdesc:
+            other_min = other.fastmin()
+            if other_min is not None:
+                new_gen = itertools.takewhile(
+                    lambda v: v >= other_min, self._rgen.iter()
+                )
+                this = generatorset(new_gen, iterasc=False, repo=self.repo())
+                this._ascending = self._ascending
+                return super(generatorset, this).__and__(other)
+        return super().__and__(other)
 
     def __repr__(self):
         d = {False: "-", True: "+"}[self._ascending]
