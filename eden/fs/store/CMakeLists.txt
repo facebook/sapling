@@ -21,6 +21,7 @@ target_link_libraries(
     eden_model_git
     eden_service_thrift_cpp
     eden_sqlite
+    eden_utils
     fb303::fb303
     edencommon::edencommon_utils
 )

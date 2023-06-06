@@ -23,6 +23,7 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/telemetry/TaskTrace.h"
+#include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/Throw.h"
 
@@ -309,37 +310,76 @@ std::optional<BlobMetadata> ObjectStore::getBlobMetadataFromInMemoryCache(
 
 ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
     const ObjectId& id,
-    const ObjectFetchContextPtr& fetchContext) const {
+    const ObjectFetchContextPtr& fetchContext,
+    bool blake3Needed) const {
   DurationScope statScope{stats_, &ObjectStoreStats::getBlobMetadata};
 
   // Check in-memory cache
   auto inMemoryCacheBlobMetadata =
       getBlobMetadataFromInMemoryCache(id, fetchContext);
   if (inMemoryCacheBlobMetadata) {
-    return inMemoryCacheBlobMetadata.value();
+    if (blake3Needed && !inMemoryCacheBlobMetadata->blake3) {
+      return getBlob(id, fetchContext)
+          .thenValue(
+              [self = shared_from_this(),
+               id,
+               metadata = std::move(inMemoryCacheBlobMetadata).value()](
+                  auto&& blob) mutable -> ImmediateFuture<BlobMetadata> {
+                auto blake3 = self->computeBlake3(*blob);
+                // updating the metadata with the computed blake3 hash and
+                // update the cache
+                metadata.blake3.emplace(blake3);
+                self->metadataCache_.wlock()->set(id, metadata);
+                return metadata;
+              });
+    }
+
+    return std::move(inMemoryCacheBlobMetadata).value();
   }
 
   deprioritizeWhenFetchHeavy(*fetchContext);
 
-  auto self = shared_from_this();
   return ImmediateFuture<BackingStore::GetBlobMetaResult>{
       backingStore_->getBlobMetadata(id, fetchContext)}
-      .thenValue([self,
-                  fetchContext = fetchContext.copy(),
-                  id,
-                  statScope = std::move(statScope)](
-                     BackingStore::GetBlobMetaResult result) {
-        if (!result.blobMeta) {
-          self->stats_->increment(&ObjectStoreStats::getBlobMetadataFailed);
-          XLOG(DBG2) << "unable to find aux data for " << id;
-          throwf<std::domain_error>("aux data {} not found", id);
-        }
-        self->metadataCache_.wlock()->set(id, *result.blobMeta);
-        fetchContext->didFetch(
-            ObjectFetchContext::BlobMetadata, id, result.origin);
-        self->updateProcessFetch(*fetchContext);
-        return *result.blobMeta;
-      });
+      .thenValue(
+          [self = shared_from_this(),
+           fetchContext = fetchContext.copy(),
+           id,
+           statScope = std::move(statScope),
+           blake3Needed](BackingStore::GetBlobMetaResult result)
+              -> ImmediateFuture<BlobMetadata> {
+            if (!result.blobMeta) {
+              self->stats_->increment(&ObjectStoreStats::getBlobMetadataFailed);
+              XLOG(DBG2) << "unable to find aux data for " << id;
+              throwf<std::domain_error>("aux data {} not found", id);
+            }
+
+            auto metadata = std::move(result.blobMeta);
+            // likely that this case should never happen as backing store should
+            // pretty much always always return blake3 but it is better to be
+            // extra careful :)
+            if (blake3Needed && !metadata->blake3) {
+              return self->getBlob(id, fetchContext)
+                  .thenValue(
+                      [self, id, metadata = std::move(metadata)](
+                          auto&& blob) mutable
+                      -> ImmediateFuture<BlobMetadata> {
+                        auto blake3 = self->computeBlake3(*blob);
+                        // updating the metadata with the computed blake3 hash
+                        // and update the cache
+                        auto metadataCopy = *metadata;
+                        metadataCopy.blake3.emplace(blake3);
+                        self->metadataCache_.wlock()->set(id, metadataCopy);
+                        return metadataCopy;
+                      });
+            } else {
+              self->metadataCache_.wlock()->set(id, *metadata);
+              fetchContext->didFetch(
+                  ObjectFetchContext::BlobMetadata, id, result.origin);
+              self->updateProcessFetch(*fetchContext);
+              return *metadata;
+            }
+          });
 }
 
 ImmediateFuture<uint64_t> ObjectStore::getBlobSize(
@@ -356,6 +396,33 @@ ImmediateFuture<Hash20> ObjectStore::getBlobSha1(
       .thenValue([](const BlobMetadata& metadata) { return metadata.sha1; });
 }
 
+Hash32 ObjectStore::computeBlake3(const Blob& blob) const {
+  const auto content = blob.getContents();
+  const auto& maybeBlakeKey = edenConfig_->blake3Key.getValue();
+  return maybeBlakeKey ? Hash32::keyedBlake3(
+                             folly::ByteRange{folly::StringPiece{
+                                 maybeBlakeKey->data(), maybeBlakeKey->size()}},
+                             content)
+                       : Hash32::blake3(content);
+}
+
+ImmediateFuture<Hash32> ObjectStore::getBlobBlake3(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) const {
+  return getBlobMetadata(id, context, true /* blake3Needed */)
+      .thenValue(
+          [id, context = context.copy(), self = shared_from_this()](
+              const BlobMetadata& metadata) -> ImmediateFuture<Hash32> {
+            if (metadata.blake3) {
+              return *metadata.blake3;
+            }
+
+            // should never happen but better than crashing
+            EDEN_BUG() << fmt::format(
+                "Blake3 hash is not defined for id={}", id);
+          });
+}
+
 ImmediateFuture<bool> ObjectStore::areBlobsEqual(
     const ObjectId& one,
     const ObjectId& two,
@@ -368,6 +435,7 @@ ImmediateFuture<bool> ObjectStore::areBlobsEqual(
   // based on the file contents (as opposed to file contents + history)
   // then we could drop this extra load of the blob SHA-1, and rely only
   // on the blob ID comparison instead.
+  // TODO: replace with blake3 as its faster
   return collectAllSafe(getBlobSha1(one, context), getBlobSha1(two, context))
       .thenValue([](const std::tuple<Hash20, Hash20>& sha1s) {
         return std::get<0>(sha1s) == std::get<1>(sha1s);

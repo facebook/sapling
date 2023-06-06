@@ -9,6 +9,7 @@
 
 #include <initializer_list>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
@@ -29,7 +30,8 @@ class FakeBackingStore final : public BackingStore {
  public:
   struct TreeEntryData;
 
-  FakeBackingStore();
+  explicit FakeBackingStore(
+      std::optional<std::string> blake3Key = std::nullopt);
   ~FakeBackingStore() override;
 
   /*
@@ -194,6 +196,7 @@ class FakeBackingStore final : public BackingStore {
       Tree::container&& sortedEntries);
 
   folly::Synchronized<Data> data_;
+  std::optional<std::string> blake3Key_;
 };
 
 enum class FakeBlobType {

@@ -203,7 +203,8 @@ class ObjectStore : public IObjectStore,
    */
   ImmediateFuture<BlobMetadata> getBlobMetadata(
       const ObjectId& id,
-      const ObjectFetchContextPtr& context) const;
+      const ObjectFetchContextPtr& context,
+      bool blake3Needed = false) const;
 
   /**
    * Get metadata about a Blob from EdenFS's in memory BlobMetadata cache.
@@ -227,6 +228,13 @@ class ObjectStore : public IObjectStore,
    * Returns the SHA-1 hash of the contents of the blob with the given ID.
    */
   ImmediateFuture<Hash20> getBlobSha1(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) const;
+
+  /**
+   * Returns the Blake3 hash of the contents of the blob with the given ID.
+   */
+  ImmediateFuture<Hash32> getBlobBlake3(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 
@@ -288,6 +296,8 @@ class ObjectStore : public IObjectStore,
   // Forbidden copy constructor and assignment operator
   ObjectStore(ObjectStore const&) = delete;
   ObjectStore& operator=(ObjectStore const&) = delete;
+
+  Hash32 computeBlake3(const Blob& blob) const;
 
   static constexpr size_t kCacheSize = 1000000;
 

@@ -29,8 +29,8 @@ using std::make_unique;
 using std::unique_ptr;
 
 namespace facebook::eden {
-
-FakeBackingStore::FakeBackingStore() = default;
+FakeBackingStore::FakeBackingStore(std::optional<std::string> blake3Key)
+    : blake3Key_(std::move(blake3Key)) {}
 
 FakeBackingStore::~FakeBackingStore() = default;
 
@@ -139,10 +139,15 @@ FakeBackingStore::getBlobMetadata(
   }
 
   return getBlob(id, context)
-      .deferValue([](BackingStore::GetBlobResult result) {
+      .deferValue([this](BackingStore::GetBlobResult result) {
         return BackingStore::GetBlobMetaResult{
             std::make_shared<BlobMetadataPtr::element_type>(
                 Hash20::sha1(result.blob->getContents()),
+                blake3Key_ ? Hash32::keyedBlake3(
+                                 folly::ByteRange{folly::StringPiece{
+                                     blake3Key_->data(), blake3Key_->size()}},
+                                 result.blob->getContents())
+                           : Hash32::blake3(result.blob->getContents()),
                 result.blob->getSize()),
             result.origin};
       });

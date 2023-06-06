@@ -31,6 +31,7 @@ namespace {
 
 constexpr size_t kTreeCacheMaximumSize = 1000; // bytes
 constexpr size_t kTreeCacheMinimumEntries = 0;
+constexpr folly::StringPiece kBlake3Key = "19700101-1111111111111111111111#";
 
 struct ObjectStoreTest : ::testing::Test {
   void SetUp() override {
@@ -60,17 +61,47 @@ struct ObjectStoreTest : ::testing::Test {
         EdenConfig::createTestEdenConfig(),
         kPathMapDefaultCaseSensitive);
 
+    auto configWithBlake3Key = EdenConfig::createTestEdenConfig();
+    configWithBlake3Key->blake3Key.setStringValue(
+        kBlake3Key, ConfigVariables(), ConfigSourceType::UserConfig);
+    fakeBackingStoreWithKeyedBlake3 =
+        std::make_shared<FakeBackingStore>(std::string(kBlake3Key));
+    backingStoreWithKeyedBlake3 =
+        std::make_shared<LocalStoreCachedBackingStore>(
+            fakeBackingStoreWithKeyedBlake3,
+            localStore,
+            stats.copy(),
+            LocalStoreCachedBackingStore::CachingPolicy::Everything);
+    objectStoreWithBlake3Key = ObjectStore::create(
+        backingStoreWithKeyedBlake3,
+        treeCache,
+        stats.copy(),
+        std::make_shared<ProcessNameCache>(),
+        std::make_shared<NullStructuredLogger>(),
+        std::move(configWithBlake3Key),
+        kPathMapDefaultCaseSensitive);
+
     readyBlobId = putReadyBlob("readyblob");
     readyTreeId = putReadyTree();
   }
 
   ObjectId putReadyBlob(folly::StringPiece data) {
+    {
+      auto* storedBlob = fakeBackingStoreWithKeyedBlake3->putBlob(data);
+      storedBlob->setReady();
+    }
+
     StoredBlob* storedBlob = fakeBackingStore->putBlob(data);
     storedBlob->setReady();
     return storedBlob->get().getHash();
   }
 
   ObjectId putReadyTree() {
+    {
+      auto* storedBlob = fakeBackingStoreWithKeyedBlake3->putTree({});
+      storedBlob->setReady();
+    }
+
     StoredTree* storedTree = fakeBackingStore->putTree({});
     storedTree->setReady();
     return storedTree->get().getHash();
@@ -83,9 +114,12 @@ struct ObjectStoreTest : ::testing::Test {
   std::shared_ptr<LocalStore> localStore;
   std::shared_ptr<FakeBackingStore> fakeBackingStore;
   std::shared_ptr<BackingStore> backingStore;
+  std::shared_ptr<FakeBackingStore> fakeBackingStoreWithKeyedBlake3;
+  std::shared_ptr<BackingStore> backingStoreWithKeyedBlake3;
   std::shared_ptr<TreeCache> treeCache;
   EdenStatsPtr stats;
   std::shared_ptr<ObjectStore> objectStore;
+  std::shared_ptr<ObjectStore> objectStoreWithBlake3Key;
 
   ObjectId readyBlobId;
   ObjectId readyTreeId;
@@ -212,6 +246,39 @@ TEST_F(ObjectStoreTest, getBlobSha1) {
   EXPECT_EQ(expectedSha1.toString(), sha1.toString());
 }
 
+TEST_F(ObjectStoreTest, getBlobBlake3) {
+  auto data = "A"_sp;
+  ObjectId id = putReadyBlob(data);
+
+  Hash32 expectedBlake3 = Hash32::blake3(data);
+  Hash32 blake3 = objectStore->getBlobBlake3(id, context).get();
+  EXPECT_EQ(expectedBlake3.toString(), blake3.toString());
+}
+
+TEST_F(ObjectStoreTest, getBlobBlake3IsMissingInLocalStore) {
+  auto data = "A"_sp;
+  ObjectId id = putReadyBlob(data);
+  BlobMetadata blobMetadata(Hash20::sha1(data), data.size());
+  localStore->putBlobMetadata(id, blobMetadata);
+
+  const auto blake3Try =
+      objectStoreWithBlake3Key->getBlobBlake3(id, context).getTry();
+  ASSERT_TRUE(blake3Try.hasValue());
+  Hash32 expectedBlake3 =
+      Hash32::keyedBlake3(folly::ByteRange{kBlake3Key}, data);
+  EXPECT_EQ(blake3Try->toString(), expectedBlake3.toString());
+}
+
+TEST_F(ObjectStoreTest, getBlobKeyedBlake3) {
+  auto data = "A"_sp;
+  ObjectId id = putReadyBlob(data);
+
+  Hash32 expectedBlake3 =
+      Hash32::keyedBlake3(folly::ByteRange{kBlake3Key}, data);
+  Hash32 blake3 = objectStoreWithBlake3Key->getBlobBlake3(id, context).get();
+  EXPECT_EQ(expectedBlake3.toString(), blake3.toString());
+}
+
 TEST_F(ObjectStoreTest, getBlobSha1NotFound) {
   ObjectId id;
 
@@ -221,9 +288,19 @@ TEST_F(ObjectStoreTest, getBlobSha1NotFound) {
       "blob .* not found");
 }
 
-TEST_F(ObjectStoreTest, get_size_and_sha1_only_imports_blob_once) {
+TEST_F(ObjectStoreTest, getBlobBlake3NotFound) {
+  ObjectId id;
+
+  EXPECT_THROW_RE(
+      objectStore->getBlobBlake3(id, context).get(),
+      std::domain_error,
+      "blob .* not found");
+}
+
+TEST_F(ObjectStoreTest, get_size_and_sha1_and_blake3_only_imports_blob_once) {
   objectStore->getBlobSize(readyBlobId, context).get(0ms);
   objectStore->getBlobSha1(readyBlobId, context).get(0ms);
+  objectStore->getBlobBlake3(readyBlobId, context).get(0ms);
 
   EXPECT_EQ(1, fakeBackingStore->getAccessCount(readyBlobId));
 }
