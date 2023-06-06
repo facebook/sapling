@@ -854,12 +854,6 @@ def log(orig, ui, repo, *pats, **opts):
     follow = opts.get("follow")
     revs = opts.get("rev")
     if pats:
-        # Force slowpath for non-follow patterns and follows that start from
-        # non-working-copy-parent revs.
-        if not follow or revs:
-            # This forces the slowpath
-            opts["removed"] = True
-
         # If this is a non-follow log without any revs specified, recommend that
         # the user add -f to speed it up.
         if not follow and not revs:
