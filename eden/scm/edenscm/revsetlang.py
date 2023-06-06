@@ -730,6 +730,56 @@ def formatspec(expr, *args):
     return ret
 
 
+def formatlist(exprs, join_op="and"):
+    """chain multiple formatted revset expressions together
+
+    >>> formatlist(['date(1)', '2+3', 'range(4, 6)'])
+    'date(1) and (2+3) and range(4, 6)'
+    >>> formatlist(['user(1)', 'user(2)::', 'user(3)'], 'or')
+    'user(1) or (user(2)::) or user(3)'
+    """
+    assert join_op in {"or", "and"}
+    if len(exprs) == 1:
+        return exprs[0]
+    return f" {join_op} ".join(_maybe_group(e) for e in exprs)
+
+
+def _maybe_group(spec: str) -> str:
+    """optionally surround spec with () to remove ambiguity in expressions
+
+    >>> _maybe_group('abc123')
+    'abc123'
+    >>> _maybe_group('a+b')
+    '(a+b)'
+    >>> _maybe_group('a::b')
+    '(a::b)'
+    >>> _maybe_group('f((a::b-c+d),k::m,10)')
+    'f((a::b-c+d),k::m,10)'
+    >>> _maybe_group('f()+g()')
+    '(f()+g())'
+    >>> _maybe_group('(f()+g())')
+    '(f()+g())'
+    >>> _maybe_group('(f()+g())+k()')
+    '((f()+g())+k())'
+    """
+    need_group = False
+    level = 0
+    for c in spec:
+        if level == 0 and (c.isalnum() or c == "_"):
+            continue
+        elif c == "(":
+            level += 1
+        elif c == ")":
+            level -= 1
+        elif level == 0:
+            need_group = True
+            break
+    if need_group:
+        return f"({spec})"
+    else:
+        return spec
+
+
 def prettyformat(tree):
     return parser.prettyformat(tree, ("string", "symbol"))
 
