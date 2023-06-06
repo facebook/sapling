@@ -36,6 +36,10 @@ pub enum AuthorizationContext {
     /// Access is granted only for reads. All write and draft operations are forbidden.
     ReadOnlyIdentity,
 
+    /// Access is granted for reads and draft operations. Public writes are forbidden.
+    /// Represents off-VPN access.
+    DraftOnlyIdentity,
+
     /// Access is granted based on the caller acting as a named service.
     Service(String),
 }
@@ -46,8 +50,11 @@ impl AuthorizationContext {
     /// This context will use the user's identity to check whether they are
     /// authorized to perform each action.
     pub fn new(ctx: &CoreContext) -> AuthorizationContext {
+        // The order matters here since read-only is more restrictive than draft-only.
         if ctx.session().is_readonly() {
             AuthorizationContext::ReadOnlyIdentity
+        } else if ctx.session().metadata().client_untrusted() {
+            AuthorizationContext::DraftOnlyIdentity
         } else {
             AuthorizationContext::Identity
         }
@@ -98,6 +105,7 @@ impl AuthorizationContext {
             AuthorizationContext::FullAccess => true,
             AuthorizationContext::Identity
             | AuthorizationContext::ReadOnlyIdentity
+            | AuthorizationContext::DraftOnlyIdentity
             | AuthorizationContext::Service(_) => {
                 // Check the caller's identity permits read access.  Acting as
                 // a service does not change read access, so we check the
@@ -134,6 +142,7 @@ impl AuthorizationContext {
             AuthorizationContext::FullAccess => true,
             AuthorizationContext::Identity
             | AuthorizationContext::ReadOnlyIdentity
+            | AuthorizationContext::DraftOnlyIdentity
             | AuthorizationContext::Service(_) => {
                 // Check the caller's identity permits read access.  Acting as
                 // a service does not change read access, so we check the
@@ -172,6 +181,7 @@ impl AuthorizationContext {
             AuthorizationContext::FullAccess => true,
             AuthorizationContext::Identity
             | AuthorizationContext::ReadOnlyIdentity
+            | AuthorizationContext::DraftOnlyIdentity
             | AuthorizationContext::Service(_) => {
                 // Check the caller's identity permits read access.  Acting as
                 // a service does not change read access, so we check the
@@ -216,7 +226,7 @@ impl AuthorizationContext {
     ) -> AuthorizationCheckOutcome {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
-            AuthorizationContext::Identity => {
+            AuthorizationContext::Identity | AuthorizationContext::DraftOnlyIdentity => {
                 repo.repo_permission_checker()
                     .check_if_draft_access_allowed_with_tunable_enforcement(
                         ctx,
@@ -260,6 +270,18 @@ impl AuthorizationContext {
     ) -> AuthorizationCheckOutcome {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
+            AuthorizationContext::DraftOnlyIdentity => {
+                if op.is_draft() {
+                    repo.repo_permission_checker()
+                        .check_if_draft_access_allowed_with_tunable_enforcement(
+                            ctx,
+                            ctx.metadata().identities(),
+                        )
+                        .await
+                } else {
+                    false
+                }
+            }
             AuthorizationContext::Identity => {
                 if op.is_draft() {
                     repo.repo_permission_checker()
@@ -319,7 +341,9 @@ impl AuthorizationContext {
                 .repo_config()
                 .source_control_service
                 .service_write_all_paths_permitted(service_name),
-            AuthorizationContext::ReadOnlyIdentity => false,
+            AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity => {
+                false
+            }
         };
         AuthorizationCheckOutcome::from_permitted(permitted)
     }
@@ -340,17 +364,19 @@ impl AuthorizationContext {
                 .source_control_service
                 .service_write_paths_permitted(service_name, changeset)
                 .map_err(|path| self.permission_denied(ctx, DeniedAction::PathWrite(path.clone()))),
-            AuthorizationContext::ReadOnlyIdentity => Err(self.permission_denied(
-                ctx,
-                DeniedAction::PathWrite(
-                    changeset
-                        .file_changes_map()
-                        .keys()
-                        .next()
-                        .cloned()
-                        .ok_or_else(|| anyhow!("no writes allowed in readonly mode!"))?,
-                ),
-            )),
+            AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity => {
+                Err(self.permission_denied(
+                    ctx,
+                    DeniedAction::PathWrite(
+                        changeset
+                            .file_changes_map()
+                            .keys()
+                            .next()
+                            .cloned()
+                            .ok_or_else(|| anyhow!("no writes allowed in readonly mode!"))?,
+                    ),
+                ))
+            }
         }
     }
 
@@ -364,7 +390,7 @@ impl AuthorizationContext {
     ) -> AuthorizationCheckOutcome {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
-            AuthorizationContext::Identity => {
+            AuthorizationContext::Identity | AuthorizationContext::DraftOnlyIdentity => {
                 let user = ctx.metadata().unix_name().unwrap_or("svcscm");
                 repo.repo_bookmark_attrs()
                     .is_allowed_user(ctx, user, bookmark)
@@ -419,7 +445,9 @@ impl AuthorizationContext {
                     .source_control_service
                     .service_write_method_permitted(service_name, "set_git_mapping_from_changeset")
             }
-            AuthorizationContext::ReadOnlyIdentity => false,
+            AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity => {
+                false
+            }
         };
         AuthorizationCheckOutcome::from_permitted(permitted)
     }
@@ -457,7 +485,9 @@ impl AuthorizationContext {
                     .source_control_service
                     .service_write_method_permitted(service_name, GIT_IMPORT_SVC_WRITE_METHOD)
             }
-            AuthorizationContext::ReadOnlyIdentity => false,
+            AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity => {
+                false
+            }
         };
         AuthorizationCheckOutcome::from_permitted(permitted)
     }

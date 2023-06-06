@@ -22,7 +22,6 @@ use session_id::generate_session_id;
 use session_id::SessionId;
 use tokio::time::timeout;
 use trust_dns_resolver::TokioAsyncResolver;
-use tunables::tunables;
 
 #[derive(Clone, Debug, Default)]
 pub struct Metadata {
@@ -161,18 +160,8 @@ impl Metadata {
         self.client_debug
     }
 
-    pub fn ensure_client_trusted(&self) -> Result<()> {
-        if self.client_untrusted
-            && !tunables()
-                .disable_client_security_check()
-                .unwrap_or_default()
-        {
-            Err(anyhow!(
-                "Client environment is not trusted. Are you connected to VPN?"
-            ))
-        } else {
-            Ok(())
-        }
+    pub fn client_untrusted(&self) -> bool {
+        self.client_untrusted
     }
 
     pub fn client_ip(&self) -> Option<&IpAddr> {

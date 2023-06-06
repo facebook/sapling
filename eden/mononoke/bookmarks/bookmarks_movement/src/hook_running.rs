@@ -39,8 +39,6 @@ pub async fn is_admin_bypass(
         return Ok(false);
     }
 
-    ctx.metadata().ensure_client_trusted()?;
-
     if !hook_manager
         .get_admin_perm_checker()
         .is_member(ctx.metadata().identities())

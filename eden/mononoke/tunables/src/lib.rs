@@ -388,10 +388,6 @@ pub struct MononokeTunables {
     disable_large_blob_read_deduplication: TunableBool,
     // Enable double writing of Content Metadata.
     enable_content_metadata_double_writing: TunableBool,
-
-    // Disable write restrictions for untrusted clients (e.g. off VPN). Intended
-    // to be used in case of emergency.
-    disable_client_security_check: TunableBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

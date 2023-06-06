@@ -246,8 +246,6 @@ impl AffectedChangesets {
         additional_changesets: AdditionalChangesets,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<(), BookmarkMovementError> {
-        self.check_security(ctx, kind)?;
-
         self.check_extras(ctx, repo, bookmark, kind, additional_changesets)
             .await?;
 
@@ -481,17 +479,6 @@ impl AffectedChangesets {
             for cs in self.iter() {
                 authz.require_changeset_paths_write(ctx, repo, cs).await?;
             }
-        }
-        Ok(())
-    }
-
-    fn check_security(
-        &self,
-        ctx: &CoreContext,
-        kind: BookmarkKind,
-    ) -> Result<(), BookmarkMovementError> {
-        if kind != BookmarkKind::Scratch {
-            ctx.metadata().ensure_client_trusted()?;
         }
         Ok(())
     }

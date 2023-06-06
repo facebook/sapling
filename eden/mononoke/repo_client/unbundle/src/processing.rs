@@ -81,11 +81,6 @@ pub async fn run_post_resolve_action(
 ) -> Result<UnbundleResponse, BundleResolverError> {
     enforce_commit_rate_limits(ctx, &action).await?;
 
-    match action {
-        PostResolveAction::InfinitePush(_) => {}
-        _ => ctx.metadata().ensure_client_trusted()?,
-    };
-
     // FIXME: it's used not only in pushrebase, so it worth moving
     // populate_git_mapping outside of PushrebaseParams.
     let unbundle_response = match action {
@@ -610,6 +605,14 @@ async fn plain_push_bookmark(
     hook_rejection_remapper: &dyn HookRejectionRemapper,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<(), BundleResolverError> {
+    let authz = AuthorizationContext::new(ctx);
+    // Override the tunable if we know for sure writes are not allowed
+    let only_log_acl_checks = !matches!(
+        authz,
+        AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity,
+    ) && tunables()
+        .log_only_wireproto_write_acl()
+        .unwrap_or_default();
     match (bookmark_push.old, bookmark_push.new) {
         (None, Some(new_target)) => {
             let res =
@@ -618,12 +621,8 @@ async fn plain_push_bookmark(
                     .with_new_changesets(new_changesets)
                     .with_pushvars(maybe_pushvars)
                     .with_push_source(cross_repo_push_source)
-                    .only_log_acl_checks(
-                        tunables()
-                            .log_only_wireproto_write_acl()
-                            .unwrap_or_default(),
-                    )
-                    .run(ctx, &AuthorizationContext::new(ctx), repo, hook_manager)
+                    .only_log_acl_checks(only_log_acl_checks)
+                    .run(ctx, &authz, repo, hook_manager)
                     .await;
             match res {
                 Ok(()) => {}
@@ -660,12 +659,8 @@ async fn plain_push_bookmark(
             .with_new_changesets(new_changesets)
             .with_pushvars(maybe_pushvars)
             .with_push_source(cross_repo_push_source)
-            .only_log_acl_checks(
-                tunables()
-                    .log_only_wireproto_write_acl()
-                    .unwrap_or_default(),
-            )
-            .run(ctx, &AuthorizationContext::new(ctx), repo, hook_manager)
+            .only_log_acl_checks(only_log_acl_checks)
+            .run(ctx, &authz, repo, hook_manager)
             .await;
             match res {
                 Ok(()) => {}
@@ -695,12 +690,8 @@ async fn plain_push_bookmark(
             bookmarks_movement::DeleteBookmarkOp::new(&bookmark_push.name, old_target, reason)
                 .only_if_public()
                 .with_pushvars(maybe_pushvars)
-                .only_log_acl_checks(
-                    tunables()
-                        .log_only_wireproto_write_acl()
-                        .unwrap_or_default(),
-                )
-                .run(ctx, &AuthorizationContext::new(ctx), repo)
+                .only_log_acl_checks(only_log_acl_checks)
+                .run(ctx, &authz, repo)
                 .await
                 .context("Failed to delete bookmark")?;
         }
@@ -717,6 +708,14 @@ async fn infinitepush_scratch_bookmark(
     bookmark_push: &InfiniteBookmarkPush<ChangesetId>,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<()> {
+    let authz = AuthorizationContext::new(ctx);
+    // Override the tunable if we know for sure writes are not allowed
+    let only_log_acl_checks = !matches!(
+        authz,
+        AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity,
+    ) && tunables()
+        .log_only_wireproto_write_acl()
+        .unwrap_or_default();
     if bookmark_push.old.is_none() && bookmark_push.create {
         bookmarks_movement::CreateBookmarkOp::new(
             &bookmark_push.name,
@@ -725,12 +724,8 @@ async fn infinitepush_scratch_bookmark(
         )
         .only_if_scratch()
         .with_push_source(cross_repo_push_source)
-        .only_log_acl_checks(
-            tunables()
-                .log_only_wireproto_write_acl()
-                .unwrap_or_default(),
-        )
-        .run(ctx, &AuthorizationContext::new(ctx), repo, hook_manager)
+        .only_log_acl_checks(only_log_acl_checks)
+        .run(ctx, &authz, repo, hook_manager)
         .await
         .context("Failed to create scratch bookmark")?;
     } else {
@@ -755,12 +750,8 @@ async fn infinitepush_scratch_bookmark(
         )
         .only_if_scratch()
         .with_push_source(cross_repo_push_source)
-        .only_log_acl_checks(
-            tunables()
-                .log_only_wireproto_write_acl()
-                .unwrap_or_default(),
-        )
-        .run(ctx, &AuthorizationContext::new(ctx), repo, hook_manager)
+        .only_log_acl_checks(only_log_acl_checks)
+        .run(ctx, &authz, repo, hook_manager)
         .await
         .context(if bookmark_push.force {
             "Failed to move scratch bookmark"
