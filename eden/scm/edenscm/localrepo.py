@@ -626,11 +626,7 @@ class localrepository(object):
                 self._track_legacy_repo_format()
 
     def _track_legacy_repo_format(self):
-        if "remotefilelog" in self.requirements:
-            return
-        if eagerepo.iseagerepo(self):
-            return
-        if git.isgitstore(self):
+        if self.storage_format() != "revlog":
             return
         testdir = encoding.environ.get("RUNTESTDIR")
         path = f"{testdir}/.test-legacy-repo"
@@ -856,6 +852,19 @@ class localrepository(object):
                 self.ui.log(
                     "features", feature="cannot-flush-commitdata", message=str(e)
                 )
+
+    def storage_format(self):
+        """return the main storage format: remotefilelog, git, eager, revlog
+
+        In the future we might want to add lazy git storage and others.
+        """
+        if "remotefilelog" in self.requirements:
+            return "remotefilelog"
+        if git.isgitformat(self):
+            return "git"
+        if eagerepo.iseagerepo(self):
+            return "eager"
+        return "revlog"
 
     def _loadextensions(self):
         extensions.loadall(self.ui)
