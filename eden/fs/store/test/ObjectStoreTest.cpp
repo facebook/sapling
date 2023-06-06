@@ -258,7 +258,7 @@ TEST_F(ObjectStoreTest, getBlobBlake3) {
 TEST_F(ObjectStoreTest, getBlobBlake3IsMissingInLocalStore) {
   auto data = "A"_sp;
   ObjectId id = putReadyBlob(data);
-  BlobMetadata blobMetadata(Hash20::sha1(data), data.size());
+  BlobMetadata blobMetadata(Hash20::sha1(data), std::nullopt, data.size());
   localStore->putBlobMetadata(id, blobMetadata);
 
   const auto blake3Try =

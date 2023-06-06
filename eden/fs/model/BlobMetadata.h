@@ -27,9 +27,6 @@ class BlobMetadata {
   BlobMetadata(Hash20 sha1, std::optional<Hash32> blake3, uint64_t fileLength)
       : sha1(std::move(sha1)), blake3(std::move(blake3)), size(fileLength) {}
 
-  BlobMetadata(Hash20 sha1, uint64_t fileLength)
-      : sha1(std::move(sha1)), size(fileLength) {}
-
   Hash20 sha1;
   // TODO: make it non optional
   std::optional<Hash32> blake3;

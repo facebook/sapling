@@ -38,7 +38,7 @@ void getBlobMetadata(benchmark::State& st) {
   std::vector<BlobMetadata> metadata;
   metadata.reserve(N);
   for (size_t i = 0; i < N; ++i) {
-    metadata.push_back(BlobMetadata{Hash20{}, i});
+    metadata.push_back(BlobMetadata{Hash20{}, std::nullopt, i});
   }
 
   for (size_t i = 0; i < N; ++i) {

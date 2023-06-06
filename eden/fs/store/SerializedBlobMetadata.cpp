@@ -7,6 +7,8 @@
 
 #include "SerializedBlobMetadata.h"
 
+#include <optional>
+
 #include <folly/Range.h>
 #include <folly/Varint.h>
 #include <folly/lang/Bits.h>
@@ -58,7 +60,7 @@ BlobMetadataPtr unsliceLegacy(folly::ByteRange bytes) {
   bytes.advance(sizeof(uint64_t));
   auto contentsHash = Hash20{bytes};
   return std::make_shared<BlobMetadataPtr::element_type>(
-      contentsHash, folly::Endian::big(blobSizeBE));
+      contentsHash, std::nullopt, folly::Endian::big(blobSizeBE));
 }
 
 template <size_t SIZE>

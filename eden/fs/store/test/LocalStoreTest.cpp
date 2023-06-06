@@ -85,7 +85,7 @@ TEST_P(LocalStoreTest, testReadAndWriteMetadata) {
   ObjectId id = ObjectId::fromHex("3a8f8eb91101860fd8484154885838bf322964d0");
   auto sha1 = Hash20::sha1("foobar");
   size_t size = 6;
-  BlobMetadata metadata{sha1, size};
+  BlobMetadata metadata{sha1, std::nullopt, size};
   store_->putBlobMetadata(id, metadata);
 
   auto retrievedMetadata = store_->getBlobMetadata(id).get(10s);
