@@ -2809,7 +2809,6 @@ def _makelogrevset(repo, pats, opts, revs):
 
     # follow or not follow?
     follow = opts.get("follow") or opts.get("follow_first")
-    usepathhistory = _usepathhistory(repo)
     if opts.get("follow_first"):
         followfirst = 1
     else:
@@ -2825,48 +2824,109 @@ def _makelogrevset(repo, pats, opts, revs):
     # platforms without shell expansion (windows).
     wctx = repo[None]
     match, pats = scmutil.matchandpats(wctx, pats, opts)
-    slowpath = match.anypats() or (
-        (match.isexact() or match.prefix())
-        and opts.get("removed")
-        and not usepathhistory
-    )
-    # pathhistory can deal with directories and removed files.
-    if not slowpath and not usepathhistory:
-        for f in match.files():
-            if follow and f not in wctx:
-                # If the file exists, it may be a directory. The "follow"
-                # revset can handle directories fine. So no need to use
-                # the slow path.
-                if os.path.exists(repo.wjoin(f)):
-                    continue
-                else:
-                    raise error.Abort(
-                        _("cannot follow file not in parent " 'revision: "%s"') % f
-                    )
-            filelog = repo.file(f)
-            if not filelog:
-                slowpath = True
 
-        # We decided to fall back to the slowpath because at least one
-        # of the paths was not a file. Check to see if at least one of them
-        # existed in history - in that case, we'll continue down the
-        # slowpath; otherwise, we can turn off the slowpath
-        if slowpath:
-            for path in match.files():
-                if path == "." or path in repo.store:
-                    break
+    # Different strategies to calculate file history:
+    # - pathhistory: use "_pathhistory()" revset.
+    # - follow: use "follow()" revset.
+    # - filelog: use "filelog() revset (legacy).
+    # - matchfiles: general slow path that scans commits one by one.
+    # These functions return `None` if the strategy is unavailable, or a list
+    # of revset expressions to be appended to `revset_filters`.
+
+    def strategy_no_patterns():
+        if pats or opts.get("include") or opts.get("exclude"):
+            # Cannot be used when there are patterns.
+            return
+
+        if not follow:
+            return []
+        if followdescendants:
+            spec = revsetlang.formatspec("descendants(%d)", startrev)
+        else:
+            if followfirst:
+                spec = revsetlang.formatspec("_firstancestors(%d)", startrev)
             else:
-                slowpath = False
+                spec = revsetlang.formatspec("ancestors(%d)", startrev)
+        return [spec]
 
-    if slowpath:
-        # See walkchangerevs() slow path.
-        #
-        # pats/include/exclude cannot be represented as separate
-        # revset expressions as their filtering logic applies at file
-        # level. For instance "-I a -X a" matches a revision touching
-        # "a" and "b" while "file(a) and not file(b)" does
-        # not. Besides, filesets are evaluated against the working
-        # directory.
+    def strategy_pathhistory():
+        if not _usepathhistory(repo):
+            # pathhistory is currently opt-in only.
+            # we might want to make it the default later.
+            # or maybe move its implementation directly to the follow() and
+            # _followfirst() revsets (but they probably want to take multiple
+            # paths somehow).
+            return
+        if match.anypats():
+            # pathhistory does not yet support glob patterns.
+            # Maybe we can support it by extracting "prefix" and run
+            # pathhistory on the prefix, then run extra filtering later.
+            return
+
+        if pats:
+            paths = list(match.files())
+            # pathhistory: force "follow" if "pats" is given.
+            if followfirst:
+                phrevs = revsetlang.formatspec("_firstancestors(%d)", startrev)
+            else:
+                phrevs = revsetlang.formatspec("ancestors(%d)", startrev)
+            return [revsetlang.formatspec("_pathhistory(%r,%vs)", phrevs, paths)]
+
+    def strategy_follow():
+        if not follow:
+            # requires --follow or --follow-first
+            return
+        if match.anypats() or (
+            (match.isexact() or match.prefix()) and opts.get("removed")
+        ):
+            # follow does not support glob patterns, or --removed
+            return
+
+        if pats:
+            # Compatible with the old behavior. If we don't raise we might
+            # still use other strategy for the request.
+            for f in match.files():
+                if f not in wctx:
+                    # If the file exists, it may be a directory. The "follow"
+                    # revset can handle directories fine. So no need to use
+                    # the slow path.
+                    if os.path.exists(repo.wjoin(f)):
+                        continue
+                    else:
+                        raise error.Abort(
+                            _("cannot follow file not in parent " 'revision: "%s"') % f
+                        )
+
+            # follow() revset interprets its file argument as a
+            # manifest entry, so use match.files(), not pats.
+            result = []
+            if followfirst:
+                append_revset_list("_followfirst(%s)", match.files(), "or", result)
+            else:
+                append_revset_list("follow(%s)", match.files(), "or", result)
+            return result
+
+    def strategy_filelog():
+        if follow:
+            # filelog() is incompatible with "follow"
+            return None
+        if repo.storage_format() != "revlog":
+            # Only the legacy revlog format supports filelog() logging.
+            return None
+        if match.anypats() or (
+            (match.isexact() or match.prefix()) and opts.get("removed")
+        ):
+            # filelog does not support glob patterns, or --removed
+            return None
+        if any(not repo.file(f) for f in match.files()):
+            # repo.file(f) is empty
+            return None
+
+        result = []
+        append_revset_list("filelog(%s)", pats, "or", out=result)
+        return result
+
+    def strategy_matchfiles():
         matchargs = ["r:", "d:relpath"]
         for p in pats:
             matchargs.append("p:" + p)
@@ -2874,48 +2934,30 @@ def _makelogrevset(repo, pats, opts, revs):
             matchargs.append("i:" + p)
         for p in opts.get("exclude", []):
             matchargs.append("x:" + p)
-        revset_filters.append(revsetlang.formatspec("_matchfiles(%vs)", matchargs))
+        result = [revsetlang.formatspec("_matchfiles(%vs)", matchargs)]
         if followfirst:
-            revset_filters.append("_firstancestors(.)")
+            result.append("_firstancestors(.)")
         elif follow:
-            revset_filters.append("ancestors(.)")
-    else:
-        # pathhistory: force "follow" if "pats" is given.
-        if usepathhistory:
-            if pats:
-                paths = list(match.files())
-                if followfirst:
-                    phrevs = revsetlang.formatspec("_firstancestors(%d)", startrev)
-                else:
-                    phrevs = revsetlang.formatspec("ancestors(%d)", startrev)
-                revset_filters.append(
-                    revsetlang.formatspec("_pathhistory(%r,%vs)", phrevs, paths)
-                )
-        if follow:
-            if pats:
-                # pathhistory handled this above
-                if not usepathhistory:
-                    # follow() revset interprets its file argument as a
-                    # manifest entry, so use match.files(), not pats.
-                    if followfirst:
-                        append_revset_list("_followfirst(%s)", match.files(), "or")
-                    else:
-                        assert follow
-                        append_revset_list("follow(%s)", match.files(), "or")
-            else:
-                # no file patterns
-                if followdescendants:
-                    spec = revsetlang.formatspec("descendants(%d)", startrev)
-                else:
-                    if followfirst:
-                        spec = revsetlang.formatspec("_firstancestors(%d)", startrev)
-                    else:
-                        spec = revsetlang.formatspec("ancestors(%d)", startrev)
-                revset_filters.append(spec)
-        else:
-            # avoid using filelog() if pathhistory is used
-            if not usepathhistory:
-                append_revset_list("filelog(%s)", pats, "or")
+            result.append("ancestors(.)")
+        return result
+
+    strategy_candidates = [
+        strategy_no_patterns,
+        strategy_pathhistory,
+        strategy_follow,
+        strategy_filelog,
+        strategy_matchfiles,
+    ]
+    chosen_strategy = None
+    for strategy in strategy_candidates:
+        new_filters = strategy()
+        if new_filters is None:
+            continue
+        revset_filters += new_filters
+        chosen_strategy = strategy
+        break
+    if not chosen_strategy:
+        raise error.ProgrammingError("makelogrevset: no strategy chosen")
 
     filematcher = None
     if opts.get("patch") or opts.get("stat"):
@@ -2924,7 +2966,11 @@ def _makelogrevset(repo, pats, opts, revs):
         # at least one pattern/directory, so don't bother with rename tracking.
         #
         # If path history is used, avoid using filelog and linkrev.
-        if follow and not match.always() and not slowpath and not usepathhistory:
+        if (
+            follow
+            and not match.always()
+            and chosen_strategy not in {strategy_pathhistory, strategy_matchfiles}
+        ):
             # _makefollowlogfilematcher expects its files argument to be
             # relative to the repo root, so use match.files(), not pats.
             filematcher = _makefollowlogfilematcher(
