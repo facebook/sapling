@@ -159,6 +159,14 @@ class FindExeClass(object):
         )
 
     @cached_property
+    def BLAKE3_SUM(self) -> str:
+        return self._find_exe(
+            "blake3_sum",
+            env="BLAKE3_SUM",
+            buck_path="eden/integration/helpers/blake3_sum",
+        )
+
+    @cached_property
     def CHECK_WINDOWS_RENAME(self) -> str:
         return self._find_exe(
             "check_windows_rename",

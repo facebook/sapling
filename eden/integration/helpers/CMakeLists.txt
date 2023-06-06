@@ -38,4 +38,11 @@ if(WIN32)
       fmt::fmt
       Folly::folly
   )
+
+  add_executable(blake3_sum Blake3Sum.cpp)
+  target_link_libraries(
+    blake3_sum
+      eden_digest
+      Folly::folly
+  )
 endif()

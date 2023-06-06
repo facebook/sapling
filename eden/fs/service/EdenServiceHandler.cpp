@@ -2056,6 +2056,14 @@ FileAttributeDataOrErrorV2 serializeEntryAttributes(
     fileData.sha1() = std::move(sha1);
   }
 
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
+    Blake3OrError blake3;
+    if (!fillErrorRef(blake3, attributes->blake3, entryPath, "blake3")) {
+      blake3.blake3_ref() = thriftHash32(attributes->blake3.value().value());
+    }
+    fileData.blake3() = std::move(blake3);
+  }
+
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
     SizeOrError size;
     if (!fillErrorRef(size, attributes->size, entryPath, "size")) {

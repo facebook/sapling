@@ -9,11 +9,13 @@ import os
 import re
 import socket
 import stat
+import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional, Pattern, Tuple, Union
+from typing import Dict, List, Optional, Pattern, Tuple, Union
 
 from facebook.eden.ttypes import (
+    Blake3OrError,
     DirListAttributeDataOrError,
     EdenError,
     EdenErrorType,
@@ -25,6 +27,7 @@ from facebook.eden.ttypes import (
     GetAttributesFromFilesParams,
     GetAttributesFromFilesResult,
     GetAttributesFromFilesResultV2,
+    GetConfigParams,
     ObjectIdOrError,
     ReaddirParams,
     ReaddirResult,
@@ -36,6 +39,7 @@ from facebook.eden.ttypes import (
 )
 
 from .lib import testcase
+from .lib.find_executables import FindExe
 
 EdenThriftResult = Union[
     FileAttributeDataOrError,
@@ -48,6 +52,7 @@ ALL_ATTRIBUTES = (
     | FileAttributes.SHA1_HASH
     | FileAttributes.SOURCE_CONTROL_TYPE
     | FileAttributes.OBJECT_ID
+    | FileAttributes.BLAKE3_HASH
 )
 
 
@@ -66,6 +71,36 @@ class ReaddirTest(testcase.EdenRepoTest):
     slink_id: bytes
     adir_id: bytes
     cdir_subdir_id: bytes
+
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        result = super().edenfs_extra_config() or {}
+        result.setdefault("hash", []).append(
+            'blake3-key = "20220728-2357111317192329313741#"'
+        )
+        return result
+
+    def blake3_hash(self, file_path: str) -> bytes:
+        key: Optional[str] = None
+        with self.get_thrift_client_legacy() as client:
+            config = client.getConfig(GetConfigParams())
+            maybe_key = config.values.get("hash:blake3-key")
+            key = (
+                maybe_key.parsedValue
+                if maybe_key is not None and maybe_key.parsedValue != ""
+                else None
+            )
+
+            print(f"Resolved key: {maybe_key}, actual key: {key}")
+
+        cmd = [FindExe.BLAKE3_SUM, "--file", file_path]
+        if key is not None:
+            cmd.extend(["--key", key])
+
+        p = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE, encoding="ascii"
+        )
+        assert p.returncode == 0, "0 exit code is expected for blake3_sum"
+        return bytes.fromhex(p.stdout)
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
@@ -159,7 +194,11 @@ class ReaddirTest(testcase.EdenRepoTest):
     def wrap_expected_attributes(
         self,
         raw_attributes: Tuple[
-            Optional[bytes], Optional[int], Optional[SourceControlType], Optional[bytes]
+            Optional[bytes],
+            Optional[int],
+            Optional[SourceControlType],
+            Optional[bytes],
+            Optional[bytes],
         ],
     ) -> Tuple[FileAttributeDataOrError, FileAttributeDataOrErrorV2]:
         (
@@ -167,6 +206,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             raw_size,
             raw_type,
             raw_object_id,
+            raw_blake3,
         ) = raw_attributes
         data = FileAttributeData()
         data_v2 = FileAttributeDataV2()
@@ -174,6 +214,9 @@ class ReaddirTest(testcase.EdenRepoTest):
         if raw_sha1 is not None:
             data.sha1 = raw_sha1
             data_v2.sha1 = Sha1OrError(raw_sha1)
+
+        if raw_blake3 is not None:
+            data_v2.blake3 = Blake3OrError(raw_blake3)
 
         if raw_size is not None:
             data.fileSize = raw_size
@@ -254,7 +297,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         (
             expected_hello_result,
             expected_hello_result_v2,
-        ) = self.wrap_expected_attributes((None, expected_hello_size, None, None))
+        ) = self.wrap_expected_attributes((None, expected_hello_size, None, None, None))
 
         # create result object for "hello"
         expected_result = GetAttributesFromFilesResult(
@@ -278,7 +321,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         (
             expected_hello_result,
             expected_hello_result_v2,
-        ) = self.wrap_expected_attributes((None, None, expected_hello_type, None))
+        ) = self.wrap_expected_attributes((None, None, expected_hello_type, None, None))
 
         # create result object for "hello"
         expected_result = GetAttributesFromFilesResult(
@@ -318,7 +361,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         (
             expected_hello_result,
             expected_hello_result_v2,
-        ) = self.wrap_expected_attributes((expected_hello_sha1, None, None, None))
+        ) = self.wrap_expected_attributes((expected_hello_sha1, None, None, None, None))
 
         # create result object for "hello"
         expected_result = GetAttributesFromFilesResult(
@@ -337,6 +380,35 @@ class ReaddirTest(testcase.EdenRepoTest):
             expected_result_v2,
             [b"hello"],
             FileAttributes.SHA1_HASH,
+        )
+
+    def test_get_blake3_only(self) -> None:
+        # expected blake3 result for file
+        expected_hello_blake3 = self.get_expected_file_attributes("hello", None)[-1]
+        (
+            expected_hello_result,
+            expected_hello_result_v2,
+        ) = self.wrap_expected_attributes(
+            (None, None, None, None, expected_hello_blake3)
+        )
+
+        # create result object for "hello"
+        expected_result = GetAttributesFromFilesResult(
+            [
+                expected_hello_result,
+            ]
+        )
+        expected_result_v2 = GetAttributesFromFilesResultV2(
+            [
+                expected_hello_result_v2,
+            ]
+        )
+
+        self.assert_attributes_result(
+            expected_result,
+            expected_result_v2,
+            [b"hello"],
+            FileAttributes.BLAKE3_HASH,
         )
 
     def test_get_attributes_throws_for_path_with_dot_components(self) -> None:
@@ -388,6 +460,13 @@ class ReaddirTest(testcase.EdenRepoTest):
                 ),
                 SourceControlTypeOrError(SourceControlType.TREE),
                 ObjectIdOrError(self.adir_id),
+                blake3=Blake3OrError(
+                    error=EdenError(
+                        message="adir: Is a directory",
+                        errorCode=21,
+                        errorType=EdenErrorType.POSIX_ERROR,
+                    )
+                ),
             )
         )
 
@@ -435,6 +514,13 @@ class ReaddirTest(testcase.EdenRepoTest):
                     ),
                     SourceControlTypeOrError(SourceControlType.UNKNOWN),
                     ObjectIdOrError(None),
+                    blake3=Blake3OrError(
+                        error=EdenError(
+                            message="adir/asock: file is a non-source-control type: 12: Invalid argument",
+                            errorCode=22,
+                            errorType=EdenErrorType.POSIX_ERROR,
+                        )
+                    ),
                 )
             )
 
@@ -474,6 +560,13 @@ class ReaddirTest(testcase.EdenRepoTest):
                     ),
                     SourceControlTypeOrError(SourceControlType.SYMLINK),
                     ObjectIdOrError(self.slink_id),
+                    blake3=Blake3OrError(
+                        error=EdenError(
+                            message="slink: file is a symlink: Invalid argument",
+                            errorCode=22,
+                            errorType=EdenErrorType.POSIX_ERROR,
+                        )
+                    ),
                 )
             )
 
@@ -561,7 +654,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         self,
         path: str,
         object_id: Optional[bytes],
-    ) -> Tuple[bytes, int, SourceControlType, Optional[bytes]]:
+    ) -> Tuple[bytes, int, SourceControlType, Optional[bytes], bytes]:
         """Get attributes for the file with the specified path inside
         the eden repository. For now, just sha1 and file size.
         """
@@ -574,6 +667,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                 0,
                 SourceControlType.TREE,
                 object_id,
+                (0).to_bytes(32, byteorder="big"),
             )
         if stat.S_ISLNK(file_stat.st_mode):
             return (
@@ -581,6 +675,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                 0,
                 SourceControlType.SYMLINK,
                 object_id,
+                (0).to_bytes(32, byteorder="big"),
             )
         if not stat.S_ISREG(file_stat.st_mode):
             return (
@@ -588,6 +683,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                 0,
                 SourceControlType.UNKNOWN,
                 object_id,
+                (0).to_bytes(32, byteorder="big"),
             )
         if stat.S_IXUSR & file_stat.st_mode:
             file_type = SourceControlType.EXECUTABLE_FILE
@@ -597,14 +693,22 @@ class ReaddirTest(testcase.EdenRepoTest):
         sha1_hash = hashlib.sha1(file_contents).digest()
         ifile.close()
 
-        return (sha1_hash, file_size, file_type, object_id)
+        return (
+            sha1_hash,
+            file_size,
+            file_type,
+            object_id,
+            self.blake3_hash(fullpath),
+        )
 
     def get_counter(self, name: str) -> float:
         return self.get_counters()[name]
 
     def constructReaddirResult(
         self,
-        expected_attributes: Tuple[bytes, int, SourceControlType, Optional[bytes]],
+        expected_attributes: Tuple[
+            bytes, int, SourceControlType, Optional[bytes], Optional[bytes]
+        ],
         req_attr: int = ALL_ATTRIBUTES,
     ) -> FileAttributeDataOrErrorV2:
         sha1 = None
@@ -625,12 +729,19 @@ class ReaddirTest(testcase.EdenRepoTest):
         if req_attr & FileAttributes.OBJECT_ID:
             objectId = ObjectIdOrError(expected_attributes[3])
 
+        blake3 = None
+        if (req_attr & FileAttributes.BLAKE3_HASH) and expected_attributes[
+            4
+        ] is not None:
+            blake3 = Blake3OrError(blake3=expected_attributes[4])
+
         return FileAttributeDataOrErrorV2(
             fileAttributeData=FileAttributeDataV2(
                 sha1=sha1,
                 size=size,
                 sourceControlType=sourceControlType,
                 objectId=objectId,
+                blake3=blake3,
             )
         )
 
@@ -792,6 +903,8 @@ class ReaddirTest(testcase.EdenRepoTest):
     def test_readdir_single_attr_only(self) -> None:
         self.readdir_single_attr_only(FileAttributes.SHA1_HASH)
 
+        self.readdir_single_attr_only(FileAttributes.BLAKE3_HASH)
+
         self.readdir_single_attr_only(FileAttributes.FILE_SIZE)
 
         self.readdir_single_attr_only(FileAttributes.SOURCE_CONTROL_TYPE)
@@ -828,6 +941,13 @@ class ReaddirTest(testcase.EdenRepoTest):
                     objectId=ObjectIdOrError(
                         objectId=object_id,
                     ),
+                    blake3=Blake3OrError(
+                        error=EdenError(
+                            message=error_message,
+                            errorCode=error_code,
+                            errorType=EdenErrorType.POSIX_ERROR,
+                        )
+                    ),
                 )
             )
 
@@ -854,6 +974,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                     sourceControlType=SourceControlTypeOrError(
                         sourceControlType=source_control_type,
                     ),
+                    blake3=None,
                 )
             )
 

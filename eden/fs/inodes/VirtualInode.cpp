@@ -196,7 +196,7 @@ ImmediateFuture<BlobMetadata> VirtualInode::getBlobMetadata(
   return match(
       variant_,
       [&](const InodePtr& inode) {
-        return inode.asFilePtr()->getBlobMetadata(fetchContext);
+        return inode.asFilePtr()->getBlobMetadata(fetchContext, blake3Required);
       },
       [&](const TreePtr&) {
         return makeImmediateFuture<BlobMetadata>(PathError(EISDIR, path));
@@ -329,6 +329,13 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
               if (blobMetadata.hasException()) {
                 blake3 = folly::Try<Hash32>(blobMetadata.exception());
               } else {
+                if (blobMetadata.value().blake3) {
+                  blake3 =
+                      folly::Try<Hash32>(blobMetadata.value().blake3.value());
+                } else {
+                  blake3 =
+                      folly::Try<Hash32>(blobMetadata.value().blake3.value());
+                }
                 blake3 = blobMetadata.value().blake3
                     ? folly::Try<Hash32>(blobMetadata.value().blake3.value())
                     : folly::Try<Hash32>(
