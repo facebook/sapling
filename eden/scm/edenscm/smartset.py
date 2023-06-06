@@ -879,6 +879,12 @@ class nameset(abstractsmartset):
 
     fastlen = __len__
 
+    def fastmin(self):
+        return self._set.hints().get("min")
+
+    def fastmax(self):
+        return self._set.hints().get("max")
+
     def isascending(self):
         if self._reversed:
             return bool(self._set.hints().get("desc"))
