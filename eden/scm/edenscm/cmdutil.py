@@ -2840,10 +2840,6 @@ def _makelogrevset(repo, pats, opts, revs):
                     )
             filelog = repo.file(f)
             if not filelog:
-                # A zero count may be a directory or deleted file, so
-                # try to find matching entries on the slow path.
-                if follow:
-                    raise error.Abort(_('cannot follow nonexistent file: "%s"') % f)
                 slowpath = True
 
         # We decided to fall back to the slowpath because at least one
