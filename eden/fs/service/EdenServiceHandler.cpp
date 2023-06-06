@@ -690,6 +690,59 @@ EdenServiceHandler::semifuture_synchronizeWorkingCopy(
       .semi();
 }
 
+folly::SemiFuture<std::unique_ptr<std::vector<Blake3Result>>>
+EdenServiceHandler::semifuture_getBlake3(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::vector<std::string>> paths,
+    std::unique_ptr<SyncBehavior> sync) {
+  TraceBlock block("getBlake3");
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3, *mountPoint, getSyncTimeout(*sync), toLogArg(*paths));
+  auto& fetchContext = helper->getFetchContext();
+  auto mountHandle = lookupMount(mountPoint);
+
+  auto notificationFuture =
+      waitForPendingWrites(mountHandle.getEdenMount(), *sync);
+  return wrapImmediateFuture(
+             std::move(helper),
+             std::move(notificationFuture)
+                 .thenValue([this,
+                             mountHandle,
+                             paths = std::move(paths),
+                             fetchContext =
+                                 fetchContext.copy()](auto&&) mutable {
+                   std::vector<ImmediateFuture<Hash32>> futures;
+                   futures.reserve(paths->size());
+                   for (auto& path : *paths) {
+                     futures.push_back(makeImmediateFutureWith([&]() mutable {
+                       return getBlake3ForPath(
+                           mountHandle.getEdenMount(),
+                           RelativePath{std::move(path)},
+                           fetchContext);
+                     }));
+                   }
+
+                   return collectAll(std::move(futures));
+                 })
+                 .ensure([mountHandle] {})
+                 .thenValue([](std::vector<folly::Try<Hash32>> results) {
+                   auto out = std::make_unique<std::vector<Blake3Result>>();
+                   out->reserve(results.size());
+
+                   for (auto& result : results) {
+                     auto& blake3Result = out->emplace_back();
+                     if (result.hasValue()) {
+                       blake3Result.blake3_ref() = thriftHash32(result.value());
+                     } else {
+                       blake3Result.error_ref() =
+                           newEdenError(result.exception());
+                     }
+                   }
+                   return out;
+                 }))
+      .semi();
+}
+
 folly::SemiFuture<std::unique_ptr<std::vector<SHA1Result>>>
 EdenServiceHandler::semifuture_getSHA1(
     std::unique_ptr<string> mountPoint,
@@ -741,6 +794,27 @@ EdenServiceHandler::semifuture_getSHA1(
                    return out;
                  }))
       .semi();
+}
+
+ImmediateFuture<Hash32> EdenServiceHandler::getBlake3ForPath(
+    const EdenMount& edenMount,
+    RelativePath path,
+    const ObjectFetchContextPtr& fetchContext) {
+  if (path.empty()) {
+    return ImmediateFuture<Hash32>(newEdenError(
+        EINVAL,
+        EdenErrorType::ARGUMENT_ERROR,
+        "path cannot be the empty string"));
+  }
+
+  auto objectStore = edenMount.getObjectStore();
+  auto inodeFut = edenMount.getVirtualInode(path, fetchContext);
+  return std::move(inodeFut).thenValue(
+      [path = std::move(path),
+       objectStore = std::move(objectStore),
+       fetchContext = fetchContext.copy()](const VirtualInode& virtualInode) {
+        return virtualInode.getBlake3(path, objectStore, fetchContext);
+      });
 }
 
 ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPath(

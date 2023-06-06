@@ -30,6 +30,7 @@ class PrefetchFetchContext;
 namespace facebook::eden {
 
 class Hash20;
+class Hash32;
 class BlobMetadata;
 class EdenMount;
 class EdenServer;
@@ -135,6 +136,12 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   folly::SemiFuture<std::unique_ptr<std::vector<SHA1Result>>>
   semifuture_getSHA1(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::vector<std::string>> paths,
+      std::unique_ptr<SyncBehavior> sync) override;
+
+  folly::SemiFuture<std::unique_ptr<std::vector<Blake3Result>>>
+  semifuture_getBlake3(
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::vector<std::string>> paths,
       std::unique_ptr<SyncBehavior> sync) override;
@@ -407,6 +414,11 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   EdenMountHandle lookupMount(const std::string& mountId);
 
   ImmediateFuture<Hash20> getSHA1ForPath(
+      const EdenMount& edenMount,
+      RelativePath path,
+      const ObjectFetchContextPtr& fetchContext);
+
+  ImmediateFuture<Hash32> getBlake3ForPath(
       const EdenMount& edenMount,
       RelativePath path,
       const ObjectFetchContextPtr& fetchContext);

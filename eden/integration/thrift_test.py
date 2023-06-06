@@ -12,9 +12,12 @@ import socket
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional, Pattern, Tuple, TypeVar, Union
+from typing import Dict, List, Optional, Pattern, Tuple, TypeVar, Union
+
+from facebook.eden.eden_config.ttypes import ConfigReloadBehavior
 
 from facebook.eden.ttypes import (
+    Blake3Result,
     DirListAttributeDataOrError,
     EdenError,
     EdenErrorType,
@@ -26,6 +29,7 @@ from facebook.eden.ttypes import (
     GetAttributesFromFilesParams,
     GetAttributesFromFilesResult,
     GetAttributesFromFilesResultV2,
+    GetConfigParams,
     ReaddirParams,
     ReaddirResult,
     ScmFileStatus,
@@ -40,10 +44,13 @@ from facebook.eden.ttypes import (
 
 from .lib import testcase
 
+from .lib.find_executables import FindExe
+
 EdenThriftResult = TypeVar(
     "EdenThriftResult",
     Union[FileAttributeDataOrError, FileAttributeDataOrErrorV2],
     SHA1Result,
+    Blake3Result,
 )
 
 # Change this if more attributes are added
@@ -62,6 +69,35 @@ class ThriftTest(testcase.EdenRepoTest):
     commit1: str
     commit2: str
     commit3: str
+
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        result = super().edenfs_extra_config() or {}
+        result.setdefault("hash", []).append(
+            'blake3-key = "20220728-2357111317192329313741#"'
+        )
+        return result
+
+    def blake3_hash(self, blob: bytes) -> bytes:
+        key: Optional[str] = None
+        with self.get_thrift_client_legacy() as client:
+            config = client.getConfig(
+                GetConfigParams(reload=ConfigReloadBehavior.ForceReload)
+            )
+            maybe_key = config.values.get("hash:blake3-key")
+            key = (
+                maybe_key.parsedValue
+                if maybe_key is not None and maybe_key.parsedValue != ""
+                else None
+            )
+            print(f"Resolved key: {maybe_key}, actual key: {key}")
+
+        cmd = [FindExe.BLAKE3_SUM]
+        if key is not None:
+            cmd.extend(["--key", key])
+
+        p = subprocess.run(cmd, stdout=subprocess.PIPE, input=blob)
+        assert p.returncode == 0, "0 exit code is expected for blake3_sum"
+        return bytes.fromhex(p.stdout.decode("ascii"))
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
@@ -142,6 +178,23 @@ class ThriftTest(testcase.EdenRepoTest):
                 ),
             )
 
+    def test_get_blake3(self) -> None:
+        expected_blake3_for_hello = self.blake3_hash(b"hola\n")
+        result_for_hello = Blake3Result(expected_blake3_for_hello)
+
+        expected_blake3_for_adir_file = self.blake3_hash(b"foo!\n")
+        result_for_adir_file = Blake3Result(expected_blake3_for_adir_file)
+
+        with self.get_thrift_client_legacy() as client:
+            self.assertEqual(
+                [result_for_hello, result_for_adir_file],
+                client.getBlake3(
+                    self.mount_path_bytes,
+                    [b"hello", b"adir/file"],
+                    sync=SyncBehavior(),
+                ),
+            )
+
     def test_get_sha1_throws_for_path_with_dot_components(self) -> None:
         with self.get_thrift_client_legacy() as client:
             results = client.getSHA1(
@@ -155,11 +208,32 @@ class ThriftTest(testcase.EdenRepoTest):
             ),
         )
 
+    def test_get_blake3_throws_for_path_with_dot_components(self) -> None:
+        with self.get_thrift_client_legacy() as client:
+            results = client.getBlake3(
+                self.mount_path_bytes, [b"./hello"], sync=SyncBehavior()
+            )
+        self.assertEqual(1, len(results))
+        self.assert_blake3_error(
+            results[0],
+            re.compile(
+                r".*PathComponentValidationError.*: PathComponent must not be \."
+            ),
+        )
+
     def test_get_sha1_throws_for_empty_string(self) -> None:
         with self.get_thrift_client_legacy() as client:
             results = client.getSHA1(self.mount_path_bytes, [b""], sync=SyncBehavior())
         self.assertEqual(1, len(results))
         self.assert_sha1_error(results[0], "path cannot be the empty string")
+
+    def test_get_blake3_throws_for_empty_string(self) -> None:
+        with self.get_thrift_client_legacy() as client:
+            results = client.getBlake3(
+                self.mount_path_bytes, [b""], sync=SyncBehavior()
+            )
+        self.assertEqual(1, len(results))
+        self.assert_blake3_error(results[0], "path cannot be the empty string")
 
     def test_get_sha1_throws_for_directory(self) -> None:
         with self.get_thrift_client_legacy() as client:
@@ -169,6 +243,14 @@ class ThriftTest(testcase.EdenRepoTest):
         self.assertEqual(1, len(results))
         self.assert_sha1_error(results[0], "adir: Is a directory")
 
+    def test_get_blake3_throws_for_directory(self) -> None:
+        with self.get_thrift_client_legacy() as client:
+            results = client.getBlake3(
+                self.mount_path_bytes, [b"adir"], sync=SyncBehavior(60)
+            )
+        self.assertEqual(1, len(results))
+        self.assert_blake3_error(results[0], "adir: Is a directory")
+
     def test_get_sha1_throws_for_non_existent_file(self) -> None:
         with self.get_thrift_client_legacy() as client:
             results = client.getSHA1(
@@ -176,6 +258,16 @@ class ThriftTest(testcase.EdenRepoTest):
             )
         self.assertEqual(1, len(results))
         self.assert_sha1_error(results[0], "i_do_not_exist: No such file or directory")
+
+    def test_get_blake3_throws_for_non_existent_file(self) -> None:
+        with self.get_thrift_client_legacy() as client:
+            results = client.getBlake3(
+                self.mount_path_bytes, [b"i_do_not_exist"], sync=SyncBehavior()
+            )
+        self.assertEqual(1, len(results))
+        self.assert_blake3_error(
+            results[0], "i_do_not_exist: No such file or directory"
+        )
 
     def test_get_sha1_throws_for_symlink(self) -> None:
         """Fails because caller should resolve the symlink themselves."""
@@ -185,6 +277,17 @@ class ThriftTest(testcase.EdenRepoTest):
             )
         self.assertEqual(1, len(results))
         self.assert_sha1_error(results[0], "slink: file is a symlink: Invalid argument")
+
+    def test_get_blake3_throws_for_symlink(self) -> None:
+        """Fails because caller should resolve the symlink themselves."""
+        with self.get_thrift_client_legacy() as client:
+            results = client.getBlake3(
+                self.mount_path_bytes, [b"slink"], sync=SyncBehavior()
+            )
+        self.assertEqual(1, len(results))
+        self.assert_blake3_error(
+            results[0], "slink: file is a symlink: Invalid argument"
+        )
 
     def assert_eden_error(
         self, result: EdenThriftResult, error_message: Union[str, Pattern]
@@ -204,6 +307,17 @@ class ThriftTest(testcase.EdenRepoTest):
             SHA1Result.ERROR, sha1result.getType(), msg="SHA1Result must be an error"
         )
         self.assert_eden_error(sha1result, error_message)
+
+    def assert_blake3_error(
+        self, blake3_result: Blake3Result, error_message: Union[str, Pattern]
+    ) -> None:
+        self.assertIsNotNone(blake3_result, msg="Must pass a Blake3Result")
+        self.assertEqual(
+            Blake3Result.ERROR,
+            blake3_result.getType(),
+            msg="Blake3Result must be an error",
+        )
+        self.assert_eden_error(blake3_result, error_message)
 
     def test_unload_free_inodes(self) -> None:
         for i in range(100):
