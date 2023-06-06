@@ -2784,7 +2784,7 @@ def _makelogrevset(repo, pats, opts, revs):
         "_ancestors": ("ancestors(%(val)s)", None),
         "_fancestors": ("_firstancestors(%(val)s)", None),
         "_descendants": ("descendants(%(val)s)", None),
-        "_fdescendants": ("_firstdescendants(%(val)s)", None),
+        "_fdescendants": ("descendants(%(val)s)", None),
         "_matchfiles": ("_matchfiles(%(val)s)", None),
         "date": ("date(%(val)r)", None),
         "_patslog": ("filelog(%(val)r)", " or "),

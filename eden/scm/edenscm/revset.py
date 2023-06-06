@@ -1009,7 +1009,7 @@ def desc(repo, subset, x):
     )
 
 
-def _descendants(repo, subset, x, followfirst=False, startdepth=None, stopdepth=None):
+def _descendants(repo, subset, x, startdepth=None, stopdepth=None):
     roots = getset(repo, fullreposet(repo), x)
     if not roots:
         return baseset(repo=repo)
@@ -1052,13 +1052,6 @@ def descendants(repo, subset, x):
     return _descendants(
         repo, subset, args["set"], startdepth=startdepth, stopdepth=stopdepth
     )
-
-
-@predicate("_firstdescendants", safe=True)
-def _firstdescendants(repo, subset, x):
-    # ``_firstdescendants(set)``
-    # Like ``descendants(set)`` but follows only the first parents.
-    return _descendants(repo, subset, x, followfirst=True)
 
 
 @predicate("destination([set])", safe=True, weight=10)
