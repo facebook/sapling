@@ -95,10 +95,12 @@ LocalStoreCachedBackingStore::getTree(
                   for (const auto& [name, treeEntry] : *result.tree) {
                     const auto& size = treeEntry.getSize();
                     const auto& sha1 = treeEntry.getContentSha1();
+                    const auto& blake3 = treeEntry.getContentBlake3();
                     if (treeEntry.getType() == TreeEntryType::REGULAR_FILE &&
                         size && sha1) {
                       batch->putBlobMetadata(
-                          treeEntry.getHash(), BlobMetadata{*sha1, *size});
+                          treeEntry.getHash(),
+                          BlobMetadata{*sha1, blake3, *size});
                     }
                   }
                 }
@@ -159,6 +161,7 @@ LocalStoreCachedBackingStore::getBlobMetadata(
                           return GetBlobMetaResult{
                               std::make_shared<BlobMetadata>(
                                   Hash20::sha1(result.blob->getContents()),
+                                  /*blake3=*/std::nullopt,
                                   result.blob->getSize()),
                               result.origin};
                         }
