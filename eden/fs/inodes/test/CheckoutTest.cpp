@@ -1778,35 +1778,23 @@ constexpr size_t kTraceBusCapacity = 25000;
 
 class FakePrjfsChannel final : public PrjfsChannel {
  public:
-  FakePrjfsChannel(
-      ActionMap actions,
-      AbsolutePathPiece mountPath,
-      std::unique_ptr<PrjfsDispatcher> dispatcher,
-      const folly::Logger* straceLogger,
-      std::shared_ptr<ProcessNameCache> processNameCache,
-      Guid guid)
+  FakePrjfsChannel(ActionMap actions, const std::shared_ptr<EdenMount>& mount)
       : PrjfsChannel(
-            mountPath,
-            std::move(dispatcher),
-            straceLogger,
-            std::move(processNameCache),
-            guid,
-            nullptr,
-            kTraceBusCapacity),
+            mount->getPath(),
+            EdenDispatcherFactory::makePrjfsDispatcher(mount.get()),
+            mount->getServerState()->getReloadableConfig(),
+            &mount->getStraceLogger(),
+            mount->getServerState()->getProcessNameCache(),
+            mount->getCheckoutConfig()->getRepoGuid(),
+            nullptr),
         actions_{std::move(actions)} {}
 
   static void initializeFakePrjfsChannel(
       ActionMap actions,
       std::shared_ptr<EdenMount> mount) {
     auto channel = std::unique_ptr<FakePrjfsChannel, FsChannelDeleter>(
-        new FakePrjfsChannel(
-            std::move(actions),
-            mount->getPath(),
-            EdenDispatcherFactory::makePrjfsDispatcher(mount.get()),
-            &mount->getStraceLogger(),
-            mount->getServerState()->getProcessNameCache(),
-            mount->getCheckoutConfig()->getRepoGuid()));
-    channel->start(false, false, true);
+        new FakePrjfsChannel(std::move(actions), mount));
+    channel->initialize();
     mount->setTestFsChannel(std::move(channel));
   }
 

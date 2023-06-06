@@ -2003,22 +2003,16 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
 #ifdef _WIN32
         return folly::makeFutureWith([this,
                                       mountPath = std::move(mountPath),
-                                      readOnly,
                                       edenConfig]() {
                  auto channel = std::unique_ptr<PrjfsChannel, FsChannelDeleter>(
                      new PrjfsChannel(
                          mountPath,
                          EdenDispatcherFactory::makePrjfsDispatcher(this),
+                         serverState_->getReloadableConfig(),
                          &getStraceLogger(),
                          serverState_->getProcessNameCache(),
                          getCheckoutConfig()->getRepoGuid(),
-                         this->getServerState()->getNotifier(),
-                         serverState_->getEdenConfig()
-                             ->PrjfsTraceBusCapacity.getValue()));
-                 channel->start(
-                     readOnly,
-                     edenConfig->prjfsUseNegativePathCaching.getValue(),
-                     edenConfig->prjfsListenToPreConvertToFull.getValue());
+                         this->getServerState()->getNotifier()));
                  return FsChannelPtr{std::move(channel)};
                })
             .thenTry([this, mountPromise](Try<FsChannelPtr>&& channel) {

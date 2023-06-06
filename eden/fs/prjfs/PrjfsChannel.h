@@ -439,22 +439,17 @@ class PrjfsChannel : public FsChannel {
   PrjfsChannel(
       AbsolutePathPiece mountPath,
       std::unique_ptr<PrjfsDispatcher> dispatcher,
+      std::shared_ptr<ReloadableConfig> config,
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
       Guid guid,
-      std::shared_ptr<Notifier> notifier,
-      size_t prjfsTraceBusCapacity);
+      std::shared_ptr<Notifier> notifier);
 
   virtual ~PrjfsChannel();
 
   void destroy() override;
 
   folly::Future<StopFuture> initialize() override;
-
-  void start(
-      bool readOnly,
-      bool useNegativePathCaching,
-      bool prjfsListenToPreConvertToFull);
 
   /**
    * Wait for all the received notifications to be fully handled.
@@ -542,7 +537,8 @@ class PrjfsChannel : public FsChannel {
   const AbsolutePath mountPath_;
   Guid mountId_;
   bool useNegativePathCaching_{true};
-  folly::Promise<FsStopDataPtr> stopPromise_;
+  folly::Promise<FsStopDataPtr> stopPromise_{
+      folly::Promise<FsStopDataPtr>::makeEmpty()};
 
   ProcessAccessLog processAccessLog_;
 

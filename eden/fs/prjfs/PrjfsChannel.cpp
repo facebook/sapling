@@ -13,6 +13,7 @@
 
 #include "eden/common/utils/StringConv.h"
 #include "eden/common/utils/WinError.h"
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/notifications/Notifier.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
 #include "eden/fs/prjfs/PrjfsRequestContext.h"
@@ -388,8 +389,10 @@ PrjfsChannelInner::PrjfsChannelInner(
 }
 
 PrjfsChannelInner::~PrjfsChannelInner() {
-  PrjStopVirtualizing(mountChannel_);
-  deletedPromise_.setValue(folly::unit);
+  if (mountChannel_) {
+    PrjStopVirtualizing(mountChannel_);
+    deletedPromise_.setValue(folly::unit);
+  }
 }
 
 ImmediateFuture<folly::Unit> PrjfsChannelInner::waitForPendingNotifications() {
@@ -1198,14 +1201,15 @@ void PrjfsChannelInner::sendError(int32_t commandId, HRESULT result) {
 PrjfsChannel::PrjfsChannel(
     AbsolutePathPiece mountPath,
     std::unique_ptr<PrjfsDispatcher> dispatcher,
+    std::shared_ptr<ReloadableConfig> config,
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
     Guid guid,
-    std::shared_ptr<Notifier> notifier,
-    size_t prjfsTraceBusCapacity)
+    std::shared_ptr<Notifier> notifier)
     : mountPath_(mountPath),
       mountId_(std::move(guid)),
-      processAccessLog_(std::move(processNameCache)) {
+      processAccessLog_(std::move(processNameCache)),
+      config_{std::move(config)} {
   auto [innerDeletedPromise, innerDeletedFuture] =
       folly::makePromiseContract<folly::Unit>();
   innerDeleted_ = std::move(innerDeletedFuture);
@@ -1215,7 +1219,7 @@ PrjfsChannel::PrjfsChannel(
       processAccessLog_,
       std::move(innerDeletedPromise),
       std::move(notifier),
-      prjfsTraceBusCapacity));
+      config_->getEdenConfig()->PrjfsTraceBusCapacity.getValue()));
 }
 
 PrjfsChannel::~PrjfsChannel() {
@@ -1228,17 +1232,6 @@ void PrjfsChannel::destroy() {
 }
 
 folly::Future<FsChannel::StopFuture> PrjfsChannel::initialize() {
-  return folly::makeFuture<FsChannel::StopFuture>(getStopFuture());
-}
-
-void PrjfsChannel::start(
-    bool readOnly,
-    bool useNegativePathCaching,
-    bool prjfsListenToPreConvertToFull) {
-  if (readOnly) {
-    NOT_IMPLEMENTED();
-  }
-
   auto callbacks = PRJ_CALLBACKS();
   callbacks.StartDirectoryEnumerationCallback = startEnumeration;
   callbacks.EndDirectoryEnumerationCallback = endEnumeration;
@@ -1259,7 +1252,8 @@ void PrjfsChannel::start(
        L""},
   };
 
-  if (prjfsListenToPreConvertToFull) {
+  auto config = config_->getEdenConfig();
+  if (config->prjfsListenToPreConvertToFull.getValue()) {
     notificationMappings[0].NotificationBitMask |=
         PRJ_NOTIFY_FILE_PRE_CONVERT_TO_FULL;
   }
@@ -1269,8 +1263,8 @@ void PrjfsChannel::start(
   startOpts.NotificationMappingsCount =
       folly::to_narrow(std::size(notificationMappings));
 
-  useNegativePathCaching_ = useNegativePathCaching;
-  if (useNegativePathCaching) {
+  useNegativePathCaching_ = config->prjfsUseNegativePathCaching.getValue();
+  if (useNegativePathCaching_) {
     startOpts.Flags = PRJ_FLAG_USE_NEGATIVE_PATH_CACHE;
   }
 
@@ -1309,6 +1303,9 @@ void PrjfsChannel::start(
   flushNegativePathCache();
 
   XLOG(INFO) << "Started PrjfsChannel for: " << mountPath_;
+
+  stopPromise_ = folly::Promise<FsStopDataPtr>{};
+  return folly::makeFuture<FsChannel::StopFuture>(getStopFuture());
 }
 
 ImmediateFuture<folly::Unit> PrjfsChannel::waitForPendingWrites() {
