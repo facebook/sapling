@@ -8,21 +8,31 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
+
 #include "eden/fs/model/BlobMetadataFwd.h"
 #include "eden/fs/model/Hash.h"
 
 namespace facebook::eden {
 
 /**
- * A small struct containing both the size and the SHA-1 hash of
+ * A small struct containing both the size, the SHA-1 hash and Blake3 hash of
  * a Blob's contents.
  */
 class BlobMetadata {
  public:
-  BlobMetadata(Hash20 contentsHash, uint64_t fileLength)
-      : sha1(contentsHash), size(fileLength) {}
+  BlobMetadata(Hash20 sha1, Hash32 blake3, uint64_t fileLength)
+      : sha1(std::move(sha1)), blake3(std::move(blake3)), size(fileLength) {}
+
+  BlobMetadata(Hash20 sha1, std::optional<Hash32> blake3, uint64_t fileLength)
+      : sha1(std::move(sha1)), blake3(std::move(blake3)), size(fileLength) {}
+
+  BlobMetadata(Hash20 sha1, uint64_t fileLength)
+      : sha1(std::move(sha1)), size(fileLength) {}
 
   Hash20 sha1;
+  // TODO: make it non optional
+  std::optional<Hash32> blake3;
   uint64_t size;
 };
 
