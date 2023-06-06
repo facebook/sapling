@@ -2873,14 +2873,46 @@ def _makelogrevset(repo, pats, opts, revs):
             return [revsetlang.formatspec("_pathhistory(%r,%vs)", phrevs, paths)]
 
     def strategy_follow():
-        if not follow:
-            # requires --follow or --follow-first
-            return
         if match.anypats() or (
             (match.isexact() or match.prefix()) and opts.get("removed")
         ):
             # follow does not support glob patterns, or --removed
             return
+
+        maybe_startrev = []
+        if not follow:
+            # Usually, the follow strategy requires --follow or --follow-first.
+            # However, if the user passes a --rev that is known large, and has
+            # a single head, we might still want to use `follow()` to speed it
+            # up even without --follow.
+            if not opts.get("rev"):
+                # Only interested in user-provided --rev.
+                # This avoids potentially slow calculation like `heads(_all())`.
+                return None
+            threshold = repo.ui.configint(
+                "experimental", "log-implicit-follow-threshold"
+            )
+            if threshold is None or threshold < 0:
+                # Implicit follow can be disabled using a negative config.
+                return
+            revs_len = revs.fastlen()
+            if revs_len is None:
+                # Cannot figure out the size of `revs` quickly.
+                return
+            if pats:
+                # If there are many files, follow() might be not worth it.
+                files_len = len(match.files())
+                if files_len > 0:
+                    revs_len //= files_len
+            if revs_len < threshold:
+                # strategy_matchfiles is not too slow for a small `revs` set.
+                return
+            cl = repo.changelog
+            heads = cl.dag.heads(cl.tonodes(revs))
+            if len(heads) > 1:
+                # follow() requires a single head.
+                return
+            maybe_startrev = [hex(heads.first())]
 
         if pats:
             # Compatible with the old behavior. If we don't raise we might
@@ -2901,9 +2933,21 @@ def _makelogrevset(repo, pats, opts, revs):
             # manifest entry, so use match.files(), not pats.
             result = []
             if followfirst:
-                append_revset_list("_followfirst(%s)", match.files(), "or", result)
+                append_revset_list(
+                    f"_followfirst(%s,%vs)",
+                    match.files(),
+                    "or",
+                    extra_format_args=(maybe_startrev,),
+                    out=result,
+                )
             else:
-                append_revset_list("follow(%s)", match.files(), "or", result)
+                append_revset_list(
+                    f"follow(%s,%vs)",
+                    match.files(),
+                    "or",
+                    extra_format_args=(maybe_startrev,),
+                    out=result,
+                )
             return result
 
     def strategy_filelog():

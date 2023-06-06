@@ -51,6 +51,8 @@ exportstack-max-commit-count=100
 exportstack-max-file-count=400
 exportstack-max-bytes=20M
 
+log-implicit-follow-threshold=10000
+
 [zsh]
 completion-age=7
 completion-description=false

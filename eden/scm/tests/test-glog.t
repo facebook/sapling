@@ -1147,6 +1147,37 @@
           (symbol 'ancestors')
           (string '32')))))
 
+# Test implicit follow() optimization (D45936986):
+# The optimization should preserve the -r revset order and -l limit.
+
+  $ hg log -G --print-revset -r '::max(all())' a --config experimental.log-implicit-follow-threshold=1
+  ['::max(all())']
+  (func
+    (symbol 'follow')
+    (list
+      (string 'a')
+      (string '95fa8febd08adee9c9f1371553d07b0fe91c315c')))
+
+  $ hg log -G --print-revset -r '::max(all())' a --config experimental.log-implicit-follow-threshold=1000
+  ['::max(all())']
+  (func
+    (symbol 'filelog')
+    (string 'a'))
+
+  $ hg log -r '::max(all())' a -T '{rev}\n' -l 2 --config experimental.log-implicit-follow-threshold=1
+  0
+  1
+  $ hg log -r 'reverse(::max(all()))' a -T '{rev}\n' -l 2 --config experimental.log-implicit-follow-threshold=1
+  36
+  34
+
+  $ hg log -r '::max(all())' a -T '{rev}\n' -l 2 --config experimental.log-implicit-follow-threshold=1000
+  0
+  1
+  $ hg log -r 'reverse(::max(all()))' a -T '{rev}\n' -l 2 --config experimental.log-implicit-follow-threshold=1000
+  36
+  34
+
 # Dedicated repo for --follow and paths filtering. The g is crafted to
 # have 2 filelog topological heads in a linear changeset graph.
 
