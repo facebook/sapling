@@ -1457,6 +1457,12 @@ class generatorset(abstractsmartset):
     def __init__(self, gen, iterasc=None, repo=None):
         """
         gen: a generator producing the values for the generatorset.
+
+        iterasc specifies the order of the generator. It can be True (ASC),
+        False (DESC), or None (no order). The generatorset is constructed in
+        ASC order, even if iterasc is False. If you provide a DESC generator,
+        you might want to call reverse() immediately to make the iteration
+        order match the generator order.
         """
         rgen = bindings.threading.RGenerator(gen)
         self._rgen = rgen
