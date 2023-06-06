@@ -8,6 +8,7 @@
 #include "eden/fs/model/TreeEntry.h"
 
 #include <sys/stat.h>
+#include <cstdint>
 #include <ostream>
 
 #include <folly/Range.h>
@@ -135,7 +136,8 @@ std::ostream& operator<<(std::ostream& os, TreeEntryType type) {
 
 size_t TreeEntry::serializedSize(PathComponentPiece name) const {
   return sizeof(uint8_t) + sizeof(uint16_t) + hash_.size() + sizeof(uint16_t) +
-      name.view().size() + sizeof(uint64_t) + Hash20::RAW_SIZE;
+      name.view().size() + sizeof(uint64_t) + Hash20::RAW_SIZE +
+      sizeof(uint8_t) + Hash32::RAW_SIZE;
 }
 
 void TreeEntry::serialize(PathComponentPiece name, Appender& appender) const {
@@ -158,6 +160,13 @@ void TreeEntry::serialize(PathComponentPiece name, Appender& appender) const {
   } else {
     appender.push(kZeroHash.getBytes());
   }
+
+  // we need to be backward compatible with the old serialization format
+  // so adding a byte (with flipped bits) to distinguish between a possible
+  // blake3 hash and the next entry type because we have access to the entire
+  // serialized tree
+  appender.write(0xff, sizeof(uint8_t));
+  appender.push(contentBlake3_.value_or(kZeroHash32).getBytes());
 }
 
 std::optional<std::pair<PathComponent, TreeEntry>> TreeEntry::deserialize(
@@ -238,8 +247,24 @@ std::optional<std::pair<PathComponent, TreeEntry>> TreeEntry::deserialize(
     sha1 = sha1_raw;
   }
 
+  std::optional<Hash32> blake3;
+  if (!data.empty() && static_cast<uint8_t>(data.data()[0]) == 0xff) {
+    data.advance(1);
+
+    if (data.size() >= Hash32::RAW_SIZE) {
+      blake3.emplace();
+      auto blake3Bytes = blake3->mutableBytes();
+      memcpy(blake3Bytes.data(), data.data(), Hash32::RAW_SIZE);
+      data.advance(Hash32::RAW_SIZE);
+      if (*blake3 == kZeroHash32) {
+        blake3.reset();
+      }
+    }
+  }
+
   return std::pair{
-      std::move(name), TreeEntry{hash, (TreeEntryType)type, size, sha1}};
+      std::move(name),
+      TreeEntry{hash, (TreeEntryType)type, size, sha1, blake3}};
 }
 
 } // namespace facebook::eden

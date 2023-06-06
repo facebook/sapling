@@ -48,13 +48,18 @@ Tree::value_type fromRawTreeEntry(
     HgObjectIdFormat hgObjectIdFormat) {
   std::optional<uint64_t> size;
   std::optional<Hash20> contentSha1;
+  std::optional<Hash32> contentBlake3;
 
   if (entry.size != nullptr) {
     size = *entry.size;
   }
 
   if (entry.content_sha1 != nullptr) {
-    contentSha1 = Hash20{*entry.content_sha1};
+    contentSha1.emplace(*entry.content_sha1);
+  }
+
+  if (entry.content_blake3 != nullptr) {
+    contentBlake3.emplace(*entry.content_blake3);
   }
 
   auto name = PathComponent(folly::StringPiece{entry.name.asByteRange()});
@@ -64,7 +69,11 @@ Tree::value_type fromRawTreeEntry(
   auto proxyHash = HgProxyHash::store(fullPath, hash, hgObjectIdFormat);
 
   auto treeEntry = TreeEntry{
-      proxyHash, fromRawTreeEntryType(entry.ttype), size, contentSha1};
+      proxyHash,
+      fromRawTreeEntryType(entry.ttype),
+      size,
+      contentSha1,
+      contentBlake3};
   return {std::move(name), std::move(treeEntry)};
 }
 
@@ -271,8 +280,12 @@ BlobMetadataPtr HgDatapackStore::getLocalBlobMetadata(
   auto metadata =
       store_.getBlobMetadata(hgInfo.byteHash(), true /*local_only*/);
   if (metadata) {
-    return std::make_shared<BlobMetadataPtr::element_type>(
-        BlobMetadata{Hash20{metadata->content_sha1}, metadata->total_size});
+    std::optional<Hash32> blake3;
+    if (metadata->content_blake3 != nullptr) {
+      blake3.emplace(*metadata->content_blake3);
+    }
+    return std::make_shared<BlobMetadataPtr::element_type>(BlobMetadata{
+        Hash20{metadata->content_sha1}, blake3, metadata->total_size});
   }
   return nullptr;
 }
@@ -317,8 +330,13 @@ void HgDatapackStore::getBlobMetadataBatch(
               }
 
               auto& aux = auxTry.value();
+              std::optional<Hash32> blake3;
+              if (aux->content_blake3 != nullptr) {
+                blake3.emplace(*aux->content_blake3);
+              }
+
               return folly::Try{std::make_shared<BlobMetadataPtr::element_type>(
-                  Hash20{aux->content_sha1}, aux->total_size)};
+                  Hash20{aux->content_sha1}, blake3, aux->total_size)};
             });
 
         // Make sure that we're stopping this watch.

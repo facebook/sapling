@@ -42,6 +42,7 @@ struct EntryAttributes {
   // regular files, executable files, and symlinks. FIFOs or sockets for
   // example would fall into the nullopt case.
   std::optional<folly::Try<Hash20>> sha1;
+  std::optional<folly::Try<Hash32>> blake3;
   std::optional<folly::Try<uint64_t>> size;
   std::optional<folly::Try<std::optional<TreeEntryType>>> type;
   std::optional<folly::Try<std::optional<ObjectId>>> objectId;
@@ -77,11 +78,13 @@ class TreeEntry {
       const ObjectId& hash,
       TreeEntryType type,
       std::optional<uint64_t> size,
-      std::optional<Hash20> contentSha1)
+      std::optional<Hash20> contentSha1,
+      std::optional<Hash32> contentBlake3)
       : type_(type),
         hash_(std::move(hash)),
         size_(size),
-        contentSha1_(contentSha1) {}
+        contentSha1_(contentSha1),
+        contentBlake3_(contentBlake3) {}
 
   const ObjectId& getObjectId() const {
     return hash_;
@@ -142,6 +145,10 @@ class TreeEntry {
     return contentSha1_;
   }
 
+  const std::optional<Hash32>& getContentBlake3() const {
+    return contentBlake3_;
+  }
+
   /**
    * Computes exact serialized size of this entry.
    */
@@ -163,6 +170,7 @@ class TreeEntry {
   ObjectId hash_;
   std::optional<uint64_t> size_;
   std::optional<Hash20> contentSha1_;
+  std::optional<Hash32> contentBlake3_;
 
   static constexpr uint64_t NO_SIZE = std::numeric_limits<uint64_t>::max();
 };

@@ -189,8 +189,13 @@ EntryAttributes VirtualInode::getEntryAttributesForNonFile(
     objectId = folly::Try<std::optional<ObjectId>>{getObjectId()};
   }
 
+  // TODO: Add blake3 support
   return EntryAttributes{
-      std::move(sha1), std::move(size), std::move(type), std::move(objectId)};
+      std::move(sha1),
+      std::nullopt,
+      std::move(size),
+      std::move(type),
+      std::move(objectId)};
 }
 
 ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
@@ -281,8 +286,10 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
                   folly::Try<std::optional<ObjectId>>{std::move(entryObjectId)};
             }
 
+            // TODO: add blake3 support
             return EntryAttributes{
                 std::move(sha1),
+                std::nullopt,
                 std::move(size),
                 std::move(type),
                 std::move(objectId)};

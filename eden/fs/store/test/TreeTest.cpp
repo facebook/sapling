@@ -25,10 +25,16 @@ TEST_P(LocalStoreTest, testReadAndWriteTree) {
 
   StringPiece childContents("blah\n");
   auto childSha1 = Hash20::sha1(folly::ByteRange{childContents});
+  auto childBlake3 = Hash32::blake3(folly::ByteRange{childContents});
   auto size = childContents.size();
   Tree::container entries{kPathMapDefaultCaseSensitive};
   entries.emplace(
-      "entry1"_pc, childHash1, TreeEntryType::REGULAR_FILE, size, childSha1);
+      "entry1"_pc,
+      childHash1,
+      TreeEntryType::REGULAR_FILE,
+      size,
+      childSha1,
+      childBlake3);
   entries.emplace("entry2"_pc, childHash2, TreeEntryType::REGULAR_FILE);
   auto tree = Tree{std::move(entries), hash};
 
