@@ -645,6 +645,7 @@ def formatspec(expr, *args):
     %% = a literal '%'
 
     Prefixing the type with 'l' specifies a parenthesized list of that type.
+    Prefixing with 'v' for repetitive arguments separated by ','.
 
     >>> formatspec('%r:: and %lr', '10 or 11', ("this()", "that()"))
     '(10 or 11):: and ((this()) or (that()))'
@@ -660,6 +661,8 @@ def formatspec(expr, *args):
     "branch('default')"
     >>> formatspec('root(%ls)', ['a', 'b', 'c', 'd'])
     "root(_list('a\\x00b\\x00c\\x00d'))"
+    >>> formatspec('foo(%vs,%vd,%vz)', ['a', 'b'], [], [1, 2])
+    "foo('a','b',1,2)"
     """
 
     def argtype(c, arg):
@@ -720,6 +723,15 @@ def formatspec(expr, *args):
                 pos += 1
                 d = expr[pos]
                 ret += listexp(list(args[arg]), d)
+                arg += 1
+            elif d == "v":
+                pos += 1
+                d = expr[pos]
+                if args[arg]:
+                    ret += ",".join(argtype(d, a) for a in args[arg])
+                elif ret.endswith(","):
+                    # Strip trailing comma.
+                    ret = ret.rstrip(",")
                 arg += 1
             else:
                 raise error.Abort(_("unexpected revspec format character %s") % d)
