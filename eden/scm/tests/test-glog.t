@@ -1096,71 +1096,56 @@
   []
   $ hg log -G --print-revset -u test -u not-a-user
   []
-  (group
-    (group
-      (or
-        (list
-          (func
-            (symbol 'user')
-            (string 'test'))
-          (func
-            (symbol 'user')
-            (string 'not-a-user'))))))
+  (or
+    (list
+      (func
+        (symbol 'user')
+        (string 'test'))
+      (func
+        (symbol 'user')
+        (string 'not-a-user'))))
   $ hg log -G --print-revset -k expand -k merge
   []
-  (group
-    (group
-      (or
-        (list
-          (func
-            (symbol 'keyword')
-            (string 'expand'))
-          (func
-            (symbol 'keyword')
-            (string 'merge'))))))
+  (or
+    (list
+      (func
+        (symbol 'keyword')
+        (string 'expand'))
+      (func
+        (symbol 'keyword')
+        (string 'merge'))))
   $ hg log -G --print-revset --only-merges
   []
-  (group
+  (func
+    (symbol 'merge')
+    None)
+  $ hg log -G --print-revset --no-merges
+  []
+  (not
     (func
       (symbol 'merge')
       None))
-  $ hg log -G --print-revset --no-merges
-  []
-  (group
-    (not
-      (func
-        (symbol 'merge')
-        None)))
   $ hg log -G --print-revset --date '2 0 to 4 0'
   []
-  (group
-    (func
-      (symbol 'date')
-      (string '2 0 to 4 0')))
+  (func
+    (symbol 'date')
+    (string '2 0 to 4 0'))
   $ hg log -G -d 'brace ) in a date'
   hg: parse error: invalid date: 'brace ) in a date'
   [255]
   $ hg log -G --print-revset --prune 31 --prune 32
   []
-  (group
+  (and
     (group
-      (and
-        (not
-          (group
-            (or
-              (list
-                (string '31')
-                (func
-                  (symbol 'ancestors')
-                  (string '31'))))))
-        (not
-          (group
-            (or
-              (list
-                (string '32')
-                (func
-                  (symbol 'ancestors')
-                  (string '32')))))))))
+      (not
+        (func
+          (symbol 'ancestors')
+          (string '31'))))
+    (group
+      (not
+        (func
+          (symbol 'ancestors')
+          (string '32')))))
 
 # Dedicated repo for --follow and paths filtering. The g is crafted to
 # have 2 filelog topological heads in a linear changeset graph.
@@ -1206,53 +1191,47 @@
 
   $ hg log -G --print-revset a
   []
-  (group
-    (group
-      (func
-        (symbol 'filelog')
-        (string 'a'))))
+  (func
+    (symbol 'filelog')
+    (string 'a'))
   $ hg log -G --print-revset a b
   []
-  (group
-    (group
-      (or
-        (list
-          (func
-            (symbol 'filelog')
-            (string 'a'))
-          (func
-            (symbol 'filelog')
-            (string 'b'))))))
+  (or
+    (list
+      (func
+        (symbol 'filelog')
+        (string 'a'))
+      (func
+        (symbol 'filelog')
+        (string 'b'))))
 
 # Test falling back to slow path for non-existing files
 
   $ hg log -G --print-revset a c
   []
-  (group
-    (func
-      (symbol '_matchfiles')
-      (list
-        (string 'r:')
-        (string 'd:relpath')
-        (string 'p:a')
-        (string 'p:c'))))
+  (func
+    (symbol '_matchfiles')
+    (list
+      (string 'r:')
+      (string 'd:relpath')
+      (string 'p:a')
+      (string 'p:c')))
 
 # Test multiple --include/--exclude/paths
 
   $ hg log -G --print-revset --include a --include e --exclude b --exclude e a e
   []
-  (group
-    (func
-      (symbol '_matchfiles')
-      (list
-        (string 'r:')
-        (string 'd:relpath')
-        (string 'p:a')
-        (string 'p:e')
-        (string 'i:a')
-        (string 'i:e')
-        (string 'x:b')
-        (string 'x:e'))))
+  (func
+    (symbol '_matchfiles')
+    (list
+      (string 'r:')
+      (string 'd:relpath')
+      (string 'p:a')
+      (string 'p:e')
+      (string 'i:a')
+      (string 'i:e')
+      (string 'x:b')
+      (string 'x:e')))
 
 #if false
   $ hg log -G --print-revset 'a*'
@@ -1275,11 +1254,9 @@
   $ hg up -q '.^'
   $ hg log -G --print-revset -f dir
   []
-  (group
-    (group
-      (func
-        (symbol 'follow')
-        (string 'dir'))))
+  (func
+    (symbol 'follow')
+    (string 'dir'))
   $ hg up -q tip
 
 # Test --follow on file not in parent revision
@@ -1292,73 +1269,62 @@
 
   $ hg log -G --print-revset -f 'glob:*'
   []
-  (group
-    (and
-      (func
-        (symbol 'ancestors')
-        (symbol '.'))
-      (func
-        (symbol '_matchfiles')
-        (list
-          (string 'r:')
-          (string 'd:relpath')
-          (string 'p:glob:*')))))
+  (and
+    (func
+      (symbol '_matchfiles')
+      (list
+        (string 'r:')
+        (string 'd:relpath')
+        (string 'p:glob:*')))
+    (func
+      (symbol 'ancestors')
+      (symbol '.')))
 
 # Test --follow on a single rename
 
   $ hg up -q 2
   $ hg log -G --print-revset -f a
   []
-  (group
-    (group
-      (func
-        (symbol 'follow')
-        (string 'a'))))
+  (func
+    (symbol 'follow')
+    (string 'a'))
 
 # Test --follow and multiple renames
 
   $ hg up -q tip
   $ hg log -G --print-revset -f e
   []
-  (group
-    (group
-      (func
-        (symbol 'follow')
-        (string 'e'))))
+  (func
+    (symbol 'follow')
+    (string 'e'))
 
 # Test --follow and multiple filelog heads
 
   $ hg up -q 2
   $ hg log -G --print-revset -f g
   []
-  (group
-    (group
-      (func
-        (symbol 'follow')
-        (string 'g'))))
+  (func
+    (symbol 'follow')
+    (string 'g'))
   $ hg up -q tip
   $ hg log -G --print-revset -f g
   []
-  (group
-    (group
-      (func
-        (symbol 'follow')
-        (string 'g'))))
+  (func
+    (symbol 'follow')
+    (string 'g'))
 
 # Test --follow and multiple files
 
   $ hg log -G --print-revset -f g e
   []
-  (group
-    (group
-      (or
-        (list
-          (func
-            (symbol 'follow')
-            (string 'g'))
-          (func
-            (symbol 'follow')
-            (string 'e'))))))
+  (or
+    (list
+      (func
+        (symbol 'follow')
+        (string 'g'))
+      (func
+        (symbol 'follow')
+        (string 'e'))))
 
 # Test --follow null parent
 
@@ -1379,22 +1345,19 @@
   $ hg ci -m 'merge 5 and 4'
   $ hg log -G --print-revset --follow-first
   []
-  (group
+  (func
+    (symbol '_firstancestors')
     (func
-      (symbol '_firstancestors')
-      (func
-        (symbol 'rev')
-        (symbol '6'))))
+      (symbol '_intlist')
+      (string '6')))
 
 # Cannot compare with log --follow-first FILE as it never worked
 
   $ hg log -G --print-revset --follow-first e
   []
-  (group
-    (group
-      (func
-        (symbol '_followfirst')
-        (string 'e'))))
+  (func
+    (symbol '_followfirst')
+    (string 'e'))
   $ hg log -G --follow-first e --template '{rev} {desc|firstline}\n'
   @    6 merge 5 and 4
   ├─╮
@@ -1427,22 +1390,20 @@
   $ hg up -q 4
   $ hg log -G --print-revset 'set:copied()'
   []
-  (group
-    (func
-      (symbol '_matchfiles')
-      (list
-        (string 'r:')
-        (string 'd:relpath')
-        (string 'p:set:copied()'))))
+  (func
+    (symbol '_matchfiles')
+    (list
+      (string 'r:')
+      (string 'd:relpath')
+      (string 'p:set:copied()')))
   $ hg log -G --print-revset --include 'set:copied()'
   []
-  (group
-    (func
-      (symbol '_matchfiles')
-      (list
-        (string 'r:')
-        (string 'd:relpath')
-        (string 'i:set:copied()'))))
+  (func
+    (symbol '_matchfiles')
+    (list
+      (string 'r:')
+      (string 'd:relpath')
+      (string 'i:set:copied()')))
   $ hg log -G --print-revset -r 'sort(file('\''set:copied()'\''), -rev)'
   ["sort(file('set:copied()'), -rev)"]
   []
@@ -1454,26 +1415,24 @@
   []
   $ hg log -G --print-revset --removed a
   []
-  (group
+  (func
+    (symbol '_matchfiles')
+    (list
+      (string 'r:')
+      (string 'd:relpath')
+      (string 'p:a')))
+  $ hg log -G --print-revset --removed --follow a
+  []
+  (and
     (func
       (symbol '_matchfiles')
       (list
         (string 'r:')
         (string 'd:relpath')
-        (string 'p:a'))))
-  $ hg log -G --print-revset --removed --follow a
-  []
-  (group
-    (and
-      (func
-        (symbol 'ancestors')
-        (symbol '.'))
-      (func
-        (symbol '_matchfiles')
-        (list
-          (string 'r:')
-          (string 'd:relpath')
-          (string 'p:a')))))
+        (string 'p:a')))
+    (func
+      (symbol 'ancestors')
+      (symbol '.')))
 
 # Test --patch and --stat with --follow and --follow-first
 
@@ -1785,45 +1744,41 @@
   +g
   $ hg log -G --print-revset --follow -r6 -r8 -r5 -r7 -r4
   ['6', '8', '5', '7', '4']
-  (group
+  (func
+    (symbol 'descendants')
     (func
-      (symbol 'descendants')
-      (func
-        (symbol 'rev')
-        (symbol '6'))))
+      (symbol '_intlist')
+      (string '6')))
 
 # Test --follow-first and forward --rev
 
   $ hg log -G --print-revset --follow-first -r6 -r8 -r5 -r7 -r4
   ['6', '8', '5', '7', '4']
-  (group
+  (func
+    (symbol 'descendants')
     (func
-      (symbol '_firstdescendants')
-      (func
-        (symbol 'rev')
-        (symbol '6'))))
+      (symbol '_intlist')
+      (string '6')))
 
 # Test --follow and backward --rev
 
   $ hg log -G --print-revset --follow -r6 -r5 -r7 -r8 -r4
   ['6', '5', '7', '8', '4']
-  (group
+  (func
+    (symbol 'ancestors')
     (func
-      (symbol 'ancestors')
-      (func
-        (symbol 'rev')
-        (symbol '6'))))
+      (symbol '_intlist')
+      (string '6')))
 
 # Test --follow-first and backward --rev
 
   $ hg log -G --print-revset --follow-first -r6 -r5 -r7 -r8 -r4
   ['6', '5', '7', '8', '4']
-  (group
+  (func
+    (symbol '_firstancestors')
     (func
-      (symbol '_firstancestors')
-      (func
-        (symbol 'rev')
-        (symbol '6'))))
+      (symbol '_intlist')
+      (string '6')))
 
 # Test subdir
 
@@ -1831,27 +1786,22 @@
   $ cd dir
   $ hg log -G --print-revset .
   []
-  (group
-    (func
-      (symbol '_matchfiles')
-      (list
-        (string 'r:')
-        (string 'd:relpath')
-        (string 'p:.'))))
+  (func
+    (symbol '_matchfiles')
+    (list
+      (string 'r:')
+      (string 'd:relpath')
+      (string 'p:.')))
   $ hg log -G --print-revset ../b
   []
-  (group
-    (group
-      (func
-        (symbol 'filelog')
-        (string '../b'))))
+  (func
+    (symbol 'filelog')
+    (string '../b'))
   $ hg log -G --print-revset -f ../b
   []
-  (group
-    (group
-      (func
-        (symbol 'follow')
-        (string 'b'))))
+  (func
+    (symbol 'follow')
+    (string 'b'))
   $ cd ..
 
 # A template without trailing newline should do something sane

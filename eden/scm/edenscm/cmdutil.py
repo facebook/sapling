@@ -52,6 +52,7 @@ from . import (
     pycompat,
     registrar,
     revlog,
+    revsetlang,
     scmutil,
     smartset,
     templatekw,
@@ -2778,25 +2779,34 @@ def _makelogrevset(repo, pats, opts, revs):
     taking a revision number and returning a match objects filtering
     the files to be detailed when displaying the revision.
     """
-    opt2revset = {
-        "no_merges": ("not merge()", None),
-        "only_merges": ("merge()", None),
-        "_ancestors": ("ancestors(%(val)s)", None),
-        "_fancestors": ("_firstancestors(%(val)s)", None),
-        "_descendants": ("descendants(%(val)s)", None),
-        "_fdescendants": ("descendants(%(val)s)", None),
-        "_matchfiles": ("_matchfiles(%(val)s)", None),
-        "date": ("date(%(val)r)", None),
-        "_patslog": ("filelog(%(val)r)", " or "),
-        "_patsfollow": ("follow(%(val)r)", " or "),
-        "_patsfollowfirst": ("_followfirst(%(val)r)", " or "),
-        "_pathhistory": ("_pathhistory(%(val)s)", " or "),
-        "keyword": ("keyword(%(val)r)", " or "),
-        "prune": ("not (%(val)r or ancestors(%(val)r))", " and "),
-        "user": ("user(%(val)r)", " or "),
-    }
+    # Revset expressions for the log command. They will be merged using "and"
+    # later.
+    revset_filters = []
 
-    opts = dict(opts)
+    if opts.get("no_merges"):
+        revset_filters.append("not merge()")
+    if opts.get("only_merges"):
+        revset_filters.append("merge()")
+    if opts.get("date"):
+        revset_filters.append(revsetlang.formatspec("date(%s)", opts.get("date")))
+
+    def append_revset_list(
+        format_spec, values, join_op, extra_format_args=(), out=revset_filters
+    ):
+        if values:
+            spec = revsetlang.formatlist(
+                [
+                    revsetlang.formatspec(format_spec, v, *extra_format_args)
+                    for v in values
+                ],
+                join_op,
+            )
+            out.append(spec)
+
+    append_revset_list("keyword(%s)", opts.get("keyword"), "or")
+    append_revset_list("user(%s)", opts.get("user"), "or")
+    append_revset_list("not ancestors(%s)", opts.get("prune"), "and")
+
     # follow or not follow?
     follow = opts.get("follow") or opts.get("follow_first")
     usepathhistory = _usepathhistory(repo)
@@ -2848,8 +2858,6 @@ def _makelogrevset(repo, pats, opts, revs):
             else:
                 slowpath = False
 
-    fpats = ("_patsfollow", "_patsfollowfirst")
-    fnopats = (("_ancestors", "_fancestors"), ("_descendants", "_fdescendants"))
     if slowpath:
         # See walkchangerevs() slow path.
         #
@@ -2866,35 +2874,48 @@ def _makelogrevset(repo, pats, opts, revs):
             matchargs.append("i:" + p)
         for p in opts.get("exclude", []):
             matchargs.append("x:" + p)
-        matchargs = ",".join(("%r" % p) for p in matchargs)
-        opts["_matchfiles"] = matchargs
-        if follow:
-            opts[fnopats[0][followfirst]] = "."
+        revset_filters.append(revsetlang.formatspec("_matchfiles(%vs)", matchargs))
+        if followfirst:
+            revset_filters.append("_firstancestors(.)")
+        elif follow:
+            revset_filters.append("ancestors(.)")
     else:
         # pathhistory: force "follow" if "pats" is given.
         if usepathhistory:
             if pats:
                 paths = list(match.files())
                 if followfirst:
-                    phrevs = "_firstancestors(rev(%d))" % startrev
+                    phrevs = revsetlang.formatspec("_firstancestors(%d)", startrev)
                 else:
-                    phrevs = "ancestors(rev(%d))" % startrev
-                phfiles = ",".join(map(repr, paths))
-                opts["_pathhistory"] = "%s,%s" % (phrevs, phfiles)
+                    phrevs = revsetlang.formatspec("ancestors(%d)", startrev)
+                revset_filters.append(
+                    revsetlang.formatspec("_pathhistory(%r,%vs)", phrevs, paths)
+                )
         if follow:
             if pats:
                 # pathhistory handled this above
                 if not usepathhistory:
                     # follow() revset interprets its file argument as a
                     # manifest entry, so use match.files(), not pats.
-                    opts[fpats[followfirst]] = list(match.files())
+                    if followfirst:
+                        append_revset_list("_followfirst(%s)", match.files(), "or")
+                    else:
+                        assert follow
+                        append_revset_list("follow(%s)", match.files(), "or")
             else:
-                op = fnopats[followdescendants][followfirst]
-                opts[op] = "rev(%d)" % startrev
+                # no file patterns
+                if followdescendants:
+                    spec = revsetlang.formatspec("descendants(%d)", startrev)
+                else:
+                    if followfirst:
+                        spec = revsetlang.formatspec("_firstancestors(%d)", startrev)
+                    else:
+                        spec = revsetlang.formatspec("ancestors(%d)", startrev)
+                revset_filters.append(spec)
         else:
-            # avoid using filelog() (_patslog) if pathhistory is used
+            # avoid using filelog() if pathhistory is used
             if not usepathhistory:
-                opts["_patslog"] = list(pats)
+                append_revset_list("filelog(%s)", pats, "or")
 
     filematcher = None
     if opts.get("patch") or opts.get("stat"):
@@ -2914,24 +2935,8 @@ def _makelogrevset(repo, pats, opts, revs):
             if filematcher is None:
                 filematcher = lambda rev: match
 
-    expr = []
-    for op, val in sorted(pycompat.iteritems(opts)):
-        if not val:
-            continue
-        if op not in opt2revset:
-            continue
-        revop, andor = opt2revset[op]
-        if "%(val)" not in revop:
-            expr.append(revop)
-        else:
-            if not isinstance(val, list):
-                e = revop % {"val": val}
-            else:
-                e = "(" + andor.join((revop % {"val": v}) for v in val) + ")"
-            expr.append(e)
-
-    if expr:
-        expr = "(" + " and ".join(expr) + ")"
+    if revset_filters:
+        expr = revsetlang.formatlist(revset_filters, "and")
         tracing.debug("log revset: %s\n" % expr, target="log::makelogrevset")
     else:
         expr = None
