@@ -12,6 +12,8 @@
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+
+#include "eden/fs/digest/Blake3.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -126,6 +128,18 @@ struct TestFileInfo {
   Hash20 getSHA1() const {
     auto content = getContents();
     return Hash20::sha1(folly::ByteRange{content});
+  }
+
+  Hash32 getBlake3(
+      std::optional<std::string_view> maybeKey = std::nullopt) const {
+    const auto content = getContents();
+    auto hasher = Blake3::create(maybeKey);
+    hasher.update(content.data(), content.size());
+
+    Hash32 blake3;
+    hasher.finalize(blake3.mutableBytes());
+
+    return blake3;
   }
 
   mode_t getMode() const {
@@ -400,8 +414,10 @@ enum VERIFY_FLAGS {
 
   VERIFY_WITH_MODIFICATIONS = 0x0008,
 
+  VERIFY_BLAKE3 = 0x0016,
+
   VERIFY_DEFAULT = VERIFY_SHA1 | VERIFY_STAT | VERIFY_BLOB_METADATA |
-      VERIFY_WITH_MODIFICATIONS,
+      VERIFY_WITH_MODIFICATIONS | VERIFY_BLAKE3,
   VERIFY_INITIAL = VERIFY_DEFAULT & ~VERIFY_WITH_MODIFICATIONS,
 };
 
@@ -514,12 +530,30 @@ void verifyTreeState(
                                             << expected.getContents() << "\"";
       }
 
+      // Blake3 is only computed for files
+      if ((verify_flags & VERIFY_BLAKE3) &&
+          virtualInode.getDtype() == dtype_t::Regular) {
+        auto blake3Fut = virtualInode
+                             .getBlake3(
+                                 expected.path,
+                                 mount.getEdenMount()->getObjectStore(),
+                                 ObjectFetchContext::getNullContext())
+                             .semi()
+                             .via(mount.getServerExecutor().get());
+        mount.drainServerExecutor();
+        auto blake3 = std::move(blake3Fut).get(0ms);
+        EXPECT_EQ(blake3, expected.getBlake3())
+            << dbgMsg << " expected.contents=\"" << expected.getContents()
+            << "\"";
+      }
+
       if ((verify_flags & VERIFY_BLOB_METADATA) &&
           virtualInode.getDtype() == dtype_t::Regular) {
         auto metadataFut = virtualInode
                                .getEntryAttributes(
                                    ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
-                                       ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE,
+                                       ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE |
+                                       ENTRY_ATTRIBUTE_BLAKE3,
                                    expected.path,
                                    mount.getEdenMount()->getObjectStore(),
                                    ObjectFetchContext::getNullContext())
@@ -528,6 +562,8 @@ void verifyTreeState(
         mount.drainServerExecutor();
         auto metadata = std::move(metadataFut).get(0ms);
         EXPECT_EQ(metadata.sha1.value().value(), expected.getSHA1()) << dbgMsg;
+        EXPECT_EQ(metadata.blake3.value().value(), expected.getBlake3())
+            << dbgMsg;
         EXPECT_EQ(metadata.size.value().value(), expected.getContents().size())
             << dbgMsg;
         EXPECT_EQ(metadata.type.value().value(), expected.getTreeEntryType())
@@ -589,7 +625,7 @@ void verifyTreeState(
 
 TEST(VirtualInodeTest, findDoesNotChangeState) {
   TestFileDatabase files;
-  auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
+  auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
   VERIFY_TREE(flags);
 
@@ -622,7 +658,7 @@ void testRootDirAChildren(TestMount& mount) {
 
 TEST(VirtualInodeTest, getChildrenSimple) {
   TestFileDatabase files;
-  auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
+  auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
   VERIFY_TREE(flags);
 
@@ -632,7 +668,7 @@ TEST(VirtualInodeTest, getChildrenSimple) {
 
 TEST(VirtualInodeTest, getLoaded) {
   TestFileDatabase files;
-  auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
+  auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
   VERIFY_TREE(flags);
   // load inode
@@ -644,7 +680,7 @@ TEST(VirtualInodeTest, getLoaded) {
 
 TEST(VirtualInodeTest, getChildrenMaterialized) {
   TestFileDatabase files;
-  auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
+  auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
   VERIFY_TREE(flags);
   // materialize inode
@@ -659,7 +695,7 @@ TEST(VirtualInodeTest, getChildrenMaterialized) {
 
 TEST(VirtualInodeTest, getChildrenMaterializedUnloaded) {
   TestFileDatabase files;
-  auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
+  auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
   VERIFY_TREE(flags);
   // materialize inode
@@ -679,7 +715,7 @@ TEST(VirtualInodeTest, getChildrenMaterializedUnloaded) {
 
 TEST(VirtualInodeTest, getChildrenDoesNotChangeState) {
   TestFileDatabase files;
-  auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
+  auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
   VERIFY_TREE(flags);
 
@@ -699,7 +735,7 @@ TEST(VirtualInodeTest, getChildrenDoesNotChangeState) {
 
 TEST(VirtualInodeTest, getChildrenAttributes) {
   TestFileDatabase files;
-  auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
+  auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
   VERIFY_TREE(flags);
   std::vector<EntryAttributeFlags> attribute_requests{
@@ -854,11 +890,11 @@ TEST(VirtualInodeTest, getEntryAttributesDoesNotChangeState) {
   auto mount = TestMount{MakeTestTreeBuilder(files)};
 
   for (auto info : files.getOriginalItems()) {
-    VERIFY_TREE(VERIFY_DEFAULT & (~VERIFY_SHA1));
+    VERIFY_TREE(VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3);
     auto virtualInode = mount.getVirtualInode(info->path);
     EXPECT_INODE_OR(virtualInode, *info.get());
   }
-  VERIFY_TREE(VERIFY_DEFAULT & (~VERIFY_SHA1));
+  VERIFY_TREE(VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3);
 }
 
 TEST(VirtualInodeTest, getEntryAttributesAttributeError) {
@@ -893,7 +929,7 @@ TEST(VirtualInodeTest, sha1DoesNotChangeState) {
   auto mount = TestMount{MakeTestTreeBuilder(files)};
 
   const std::vector<int> verify_flag_sets{
-      VERIFY_DEFAULT & (~VERIFY_SHA1),
+      VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3,
       VERIFY_DEFAULT,
   };
   for (auto verify_flags : verify_flag_sets) {
@@ -941,7 +977,7 @@ TEST(VirtualInodeTest, unlinkMaterializesParents) {
 
   mount.deleteFile("root_dirB/child1_dirB2/child2_fileBB4");
   files.del("root_dirB/child1_dirB2/child2_fileBB4"_relpath);
-  VERIFY_TREE(VERIFY_DEFAULT & (~VERIFY_SHA1));
+  VERIFY_TREE(VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3);
 }
 
 // Materialization is different on Windows vs other platforms...

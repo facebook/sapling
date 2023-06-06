@@ -64,6 +64,50 @@ VirtualInode::ContainedType VirtualInode::testGetContainedType() const {
       [](const TreeEntry&) { return ContainedType::TreeEntry; });
 }
 
+ImmediateFuture<Hash32> VirtualInode::getBlake3(
+    RelativePathPiece path,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    const ObjectFetchContextPtr& fetchContext) const {
+  // Ensure this is a regular file.
+  // We intentionally want to refuse to compute the SHA1 of symlinks
+  switch (getDtype()) {
+    case dtype_t::Dir:
+      return makeImmediateFuture<Hash32>(PathError(EISDIR, path));
+    case dtype_t::Symlink:
+      return makeImmediateFuture<Hash32>(
+          PathError(EINVAL, path, "file is a symlink"));
+    case dtype_t::Regular:
+      break;
+    default:
+      return makeImmediateFuture<Hash32>(
+          PathError(EINVAL, path, "variant is of unhandled type"));
+  }
+
+  // This is now guaranteed to be a dtype_t::Regular file. This means there's no
+  // need for a Tree case, as Trees are always directories.
+
+  return match(
+      variant_,
+      [&](const InodePtr& inode) {
+        return inode.asFilePtr()->getBlake3(fetchContext);
+      },
+      [&](const UnmaterializedUnloadedBlobDirEntry& entry) {
+        return objectStore->getBlobBlake3(entry.getObjectId(), fetchContext);
+      },
+      [&](const TreePtr&) {
+        return makeImmediateFuture<Hash32>(PathError(EISDIR, path));
+      },
+      [&](const TreeEntry& entry) {
+        const auto& hash = entry.getContentBlake3();
+        // If available, use the TreeEntry's ContentsSha1
+        if (hash.has_value()) {
+          return ImmediateFuture<Hash32>(hash.value());
+        }
+        // Revert to querying the objectStore for the file's medatadata
+        return objectStore->getBlobBlake3(entry.getHash(), fetchContext);
+      });
+}
+
 ImmediateFuture<Hash20> VirtualInode::getSHA1(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
@@ -147,7 +191,8 @@ ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
 ImmediateFuture<BlobMetadata> VirtualInode::getBlobMetadata(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
-    const ObjectFetchContextPtr& fetchContext) const {
+    const ObjectFetchContextPtr& fetchContext,
+    bool blake3Required) const {
   return match(
       variant_,
       [&](const InodePtr& inode) {
@@ -157,7 +202,8 @@ ImmediateFuture<BlobMetadata> VirtualInode::getBlobMetadata(
         return makeImmediateFuture<BlobMetadata>(PathError(EISDIR, path));
       },
       [&](auto& entry) {
-        return objectStore->getBlobMetadata(entry.getObjectId(), fetchContext);
+        return objectStore->getBlobMetadata(
+            entry.getObjectId(), fetchContext, blake3Required);
       });
 }
 
@@ -171,6 +217,12 @@ EntryAttributes VirtualInode::getEntryAttributesForNonFile(
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
     sha1 =
         folly::Try<Hash20>{PathError{errorCode, path, additionalErrorContext}};
+  }
+
+  std::optional<folly::Try<Hash32>> blake3;
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
+    blake3 =
+        folly::Try<Hash32>{PathError{errorCode, path, additionalErrorContext}};
   }
 
   std::optional<folly::Try<uint64_t>> size;
@@ -189,10 +241,9 @@ EntryAttributes VirtualInode::getEntryAttributesForNonFile(
     objectId = folly::Try<std::optional<ObjectId>>{getObjectId()};
   }
 
-  // TODO: Add blake3 support
   return EntryAttributes{
       std::move(sha1),
-      std::nullopt,
+      std::move(blake3),
       std::move(size),
       std::move(type),
       std::move(objectId)};
@@ -240,10 +291,16 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
   }
   auto blobMetadataFuture = ImmediateFuture<BlobMetadata>{
       PathError{EINVAL, path, "neither sha1 nor size requested"}};
-  // sha1 and size come together so, there isn't much point of splitting them up
+  // sha1, blake3 and size come together so, there isn't much point of splitting
+  // them up
   if (requestedAttributes.containsAnyOf(
-          ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1)) {
-    blobMetadataFuture = getBlobMetadata(path, objectStore, fetchContext);
+          ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
+          ENTRY_ATTRIBUTE_BLAKE3)) {
+    blobMetadataFuture = getBlobMetadata(
+        path,
+        objectStore,
+        fetchContext,
+        requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3));
   }
 
   std::optional<ObjectId> objectId;
@@ -265,6 +322,19 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
               sha1 = blobMetadata.hasException()
                   ? folly::Try<Hash20>(blobMetadata.exception())
                   : folly::Try<Hash20>(blobMetadata.value().sha1);
+            }
+
+            std::optional<folly::Try<Hash32>> blake3;
+            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
+              if (blobMetadata.hasException()) {
+                blake3 = folly::Try<Hash32>(blobMetadata.exception());
+              } else {
+                blake3 = blobMetadata.value().blake3
+                    ? folly::Try<Hash32>(blobMetadata.value().blake3.value())
+                    : folly::Try<Hash32>(
+                          folly::make_exception_wrapper<std::runtime_error>(
+                              "no blake3 available"));
+              }
             }
 
             std::optional<folly::Try<uint64_t>> size;
@@ -289,7 +359,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
             // TODO: add blake3 support
             return EntryAttributes{
                 std::move(sha1),
-                std::nullopt,
+                std::move(blake3),
                 std::move(size),
                 std::move(type),
                 std::move(objectId)};

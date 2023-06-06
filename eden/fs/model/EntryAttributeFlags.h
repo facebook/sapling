@@ -33,6 +33,8 @@ inline constexpr auto ENTRY_ATTRIBUTE_SIZE =
     EntryAttributeFlags::raw(FileAttributes::FILE_SIZE);
 inline constexpr auto ENTRY_ATTRIBUTE_SHA1 =
     EntryAttributeFlags::raw(FileAttributes::SHA1_HASH);
+inline constexpr auto ENTRY_ATTRIBUTE_BLAKE3 =
+    EntryAttributeFlags::raw(FileAttributes::BLAKE3_HASH);
 inline constexpr auto ENTRY_ATTRIBUTE_OBJECT_ID =
     EntryAttributeFlags::raw(FileAttributes::OBJECT_ID);
 

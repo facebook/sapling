@@ -22,6 +22,7 @@ add_executable(
 target_link_libraries(
   eden_inodes_test
   PRIVATE
+    eden_digest
     eden_inodes
     eden_overlay_checker
     eden_testharness

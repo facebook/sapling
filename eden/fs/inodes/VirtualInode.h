@@ -112,6 +112,11 @@ class VirtualInode {
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
 
+  ImmediateFuture<Hash32> getBlake3(
+      RelativePathPiece path,
+      const std::shared_ptr<ObjectStore>& objectStore,
+      const ObjectFetchContextPtr& fetchContext) const;
+
   /**
    * Get all the available attributes for a file entry in this tree. Available
    * attributes are currently:
@@ -179,7 +184,8 @@ class VirtualInode {
   ImmediateFuture<BlobMetadata> getBlobMetadata(
       RelativePathPiece path,
       const std::shared_ptr<ObjectStore>& objectStore,
-      const ObjectFetchContextPtr& fetchContext) const;
+      const ObjectFetchContextPtr& fetchContext,
+      bool blake3Required = false) const;
 
   EntryAttributes getEntryAttributesForNonFile(
       EntryAttributeFlags requestedAttributes,
