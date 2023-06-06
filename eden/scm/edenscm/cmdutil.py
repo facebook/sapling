@@ -2787,7 +2787,6 @@ def _makelogrevset(repo, pats, opts, revs):
         "_fdescendants": ("_firstdescendants(%(val)s)", None),
         "_matchfiles": ("_matchfiles(%(val)s)", None),
         "date": ("date(%(val)r)", None),
-        "branch": ("branch(%(val)r)", " or "),
         "_patslog": ("filelog(%(val)r)", " or "),
         "_patsfollow": ("follow(%(val)r)", " or "),
         "_patsfollowfirst": ("_followfirst(%(val)r)", " or "),
@@ -2810,10 +2809,6 @@ def _makelogrevset(repo, pats, opts, revs):
     startrev = next(it)
     followdescendants = startrev < next(it, startrev)
 
-    # branch and only_branch are really aliases and must be handled at
-    # the same time
-    opts["branch"] = opts.get("branch", []) + opts.get("only_branch", [])
-    opts["branch"] = [repo.lookupbranch(b) for b in opts["branch"]]
     # pats/include/exclude are passed to match.match() directly in
     # _matchfiles() revset but walkchangerevs() builds its matcher with
     # scmutil.match(). The difference is input pats are globbed on

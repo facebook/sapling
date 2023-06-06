@@ -3966,7 +3966,7 @@ def locate(ui, repo, *pats, **opts):
             "b",
             "branch",
             [],
-            _("show changesets within the given named branch"),
+            _("show changesets within the given named branch (DEPRECATED)"),
             _("BRANCH"),
         ),
         (
