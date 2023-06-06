@@ -1452,6 +1452,39 @@ class generatorset(abstractsmartset):
     >>> assert xs.last() == xs.last()
     >>> xs.last()  # cached
     4
+
+    Normally, if the generator set iteration order does not match the generator
+    order, the generator will be consumed and break fast paths. In cases like
+    `log -l 1 -r A::B PATH`, or `A::B & follow(PATH,B)`, although the order is
+    ASC and the `follow` revset uses a DESC generator, we can still cutoff the
+    generator iteration at A, without consuming the entire generator.
+
+        Prepare a 50-rev generatorset, and a 10-rev A::B set for cutoff:
+
+            >>> count = 0
+            >>> def gen():
+            ...     global count
+            ...     for i in range(50, 0, -1):
+            ...         count += 1
+            ...         yield i
+            >>> xs = generatorset(gen(), iterasc=False, repo=repo)
+            >>> ys = baseset(list(range(40, 50)), repo=repo)
+            >>> zs = xs & ys
+
+        So far, things are lazy:
+
+            >>> count
+            0
+
+        Show the first 2 revs of the intersection set:
+
+            >>> list(zs.slice(0, 2))
+            [40, 41]
+
+        Bad, the generatorset is not smart enough:
+
+            >>> count
+            50
     """
 
     def __init__(self, gen, iterasc=None, repo=None):
