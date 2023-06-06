@@ -301,11 +301,16 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
         return orig(repo, subset, x, name, followfirst)
 
     fastlogset = smartset.generatorset(revgen, iterasc=False, repo=repo)
+    # Make the set order match generator order.
+    fastlogset.reverse()
     # Optimization: typically for "reverse(:.) & follow(path)" used by
     # "hg log". The left side is more expensive, although it has smaller
     # "weight". Make sure fastlogset is on the left side to avoid slow
     # walking through ":.".
+    # Note: this code path assumes `subset.__contains__` is fast.
     if subset.isdescending():
+        return fastlogset & subset
+    elif subset.isascending():
         fastlogset.reverse()
         return fastlogset & subset
     return subset & fastlogset
