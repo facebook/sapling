@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <optional>
+
 #include <folly/Range.h>
 
 #include <blake3.h>
@@ -23,6 +25,10 @@ struct Blake3 final {
    * table in the future
    */
   explicit Blake3(folly::ByteRange key);
+
+  static Blake3 create(std::optional<folly::ByteRange> key);
+  static Blake3 create(const std::optional<std::string>& key);
+  static Blake3 create(std::optional<folly::StringPiece> key);
 
   void update(const void* data, size_t size);
   void update(folly::ByteRange data);

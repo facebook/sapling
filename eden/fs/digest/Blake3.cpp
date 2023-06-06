@@ -28,6 +28,21 @@ Blake3::Blake3(folly::ByteRange key) {
   blake3_hasher_init_keyed(&hasher_, keyArray);
 }
 
+/* static */ Blake3 Blake3::create(std::optional<folly::ByteRange> key) {
+  return key ? Blake3(*key) : Blake3();
+}
+
+/* static */ Blake3 Blake3::create(const std::optional<std::string>& key) {
+  return key ? Blake3::create(folly::ByteRange{
+                   folly::StringPiece{key->data(), key->size()}})
+             : Blake3::create(std::optional<folly::ByteRange>());
+}
+
+/* static */ Blake3 Blake3::create(std::optional<folly::StringPiece> key) {
+  return key ? Blake3::create(folly::ByteRange{*key})
+             : Blake3::create(std::optional<folly::ByteRange>());
+}
+
 void Blake3::update(const void* data, size_t size) {
   blake3_hasher_update(&hasher_, data, size);
 }
