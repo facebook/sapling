@@ -40,6 +40,8 @@ pub use crate::args::BlobstoreArgDefaults;
 pub use crate::args::BlobstoreArgs;
 pub use crate::blobstore::make_blobstore;
 pub use crate::blobstore::make_blobstore_enumerable_with_unlink;
+pub use crate::blobstore::make_files_blobstore;
+pub use crate::blobstore::make_manifold_blobstore;
 pub use crate::blobstore::make_packblob;
 pub use crate::blobstore::make_sql_blobstore;
 pub use crate::blobstore::make_sql_blobstore_xdb;

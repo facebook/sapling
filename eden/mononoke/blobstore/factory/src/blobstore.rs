@@ -326,7 +326,7 @@ pub async fn make_packblob<'a>(
 }
 
 #[cfg(fbcode_build)]
-async fn make_manifold_blobstore(
+pub async fn make_manifold_blobstore(
     fb: FacebookInit,
     blobconfig: BlobConfig,
     blobstore_options: &BlobstoreOptions,
@@ -352,7 +352,7 @@ async fn make_manifold_blobstore(
 }
 
 #[cfg(not(fbcode_build))]
-async fn make_manifold_blobstore(
+pub async fn make_manifold_blobstore(
     _fb: FacebookInit,
     _blobconfig: BlobConfig,
     _blobstore_options: &BlobstoreOptions,
@@ -360,7 +360,7 @@ async fn make_manifold_blobstore(
     unimplemented!("This is implemented only for fbcode_build")
 }
 
-async fn make_files_blobstore(
+pub async fn make_files_blobstore(
     blobconfig: BlobConfig,
     blobstore_options: &BlobstoreOptions,
 ) -> Result<Fileblob, Error> {

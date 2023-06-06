@@ -13,6 +13,8 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::BlobstoreUnlinkOps;
+use blobstore_factory::make_files_blobstore;
+use blobstore_factory::make_manifold_blobstore;
 use blobstore_factory::make_sql_blobstore;
 use blobstore_factory::BlobstoreOptions;
 use blobstore_factory::ReadOnlyStorage;
@@ -86,17 +88,32 @@ async fn get_blobstore(
 ) -> Result<Arc<dyn BlobstoreUnlinkOps>, Error> {
     let blobconfig = get_blobconfig(storage_config.blobstore, inner_blobstore_id)?;
 
-    // TODO: Do this for all blobstores that can support unlink, not just SQLBlob
-    let sql_blob = make_sql_blobstore(
-        fb,
-        blobconfig,
-        readonly_storage,
-        blobstore_options,
-        config_store,
-    )
-    .await?;
+    use BlobConfig::*;
+    let blobstore = match blobconfig {
+        // Physical blobstores
+        Sqlite { .. } | Mysql { .. } => make_sql_blobstore(
+            fb,
+            blobconfig,
+            readonly_storage,
+            blobstore_options,
+            config_store,
+        )
+        .await
+        .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?,
+        Manifold { .. } | ManifoldWithTtl { .. } => {
+            make_manifold_blobstore(fb, blobconfig, blobstore_options)
+                .await
+                .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?
+        }
+        Files { .. } => make_files_blobstore(blobconfig, blobstore_options)
+            .await
+            .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?,
+        _ => {
+            unimplemented!("This is implemented only for some blobstores.")
+        }
+    };
 
-    Ok(Arc::new(sql_blob) as Arc<dyn BlobstoreUnlinkOps>)
+    Ok(blobstore)
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
