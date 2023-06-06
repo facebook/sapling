@@ -5,17 +5,22 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/utils/FileHash.h"
 #include <folly/portability/OpenSSL.h>
+
 #include "eden/common/utils/WinError.h"
+#include "eden/fs/digest/Blake3.h"
+#include "eden/fs/utils/FileHash.h"
 
 namespace facebook::eden {
 
 #ifdef _WIN32
 
-Hash20 getFileSha1(AbsolutePathPiece filePath) {
-  auto widePath = filePath.wide();
+namespace {
+constexpr size_t kBufSize = 8192;
 
+template <typename Hasher>
+void hash(Hasher&& hasher, AbsolutePathPiece filePath) {
+  const auto widePath = filePath.wide();
   HANDLE fileHandle = CreateFileW(
       widePath.c_str(),
       GENERIC_READ,
@@ -33,11 +38,8 @@ Hash20 getFileSha1(AbsolutePathPiece filePath) {
     CloseHandle(fileHandle);
   };
 
-  SHA_CTX ctx;
-  SHA1_Init(&ctx);
+  uint8_t buf[kBufSize];
   while (true) {
-    uint8_t buf[8192];
-
     DWORD bytesRead;
     if (!ReadFile(fileHandle, buf, sizeof(buf), &bytesRead, nullptr)) {
       throw makeWin32ErrorExplicit(
@@ -50,9 +52,31 @@ Hash20 getFileSha1(AbsolutePathPiece filePath) {
       break;
     }
 
-    SHA1_Update(&ctx, buf, bytesRead);
+    hasher(buf, bytesRead);
   }
+}
+} // namespace
 
+Hash32 getFileBlake3(
+    AbsolutePathPiece filePath,
+    const std::optional<std::string>& maybeBlake3Key) {
+  auto hasher = Blake3::create(maybeBlake3Key);
+  hash(
+      [&hasher](const auto* buf, auto len) { hasher.update(buf, len); },
+      filePath);
+  static_assert(Hash32::RAW_SIZE == BLAKE3_OUT_LEN);
+  Hash32 blake3;
+  hasher.finalize(blake3.mutableBytes());
+
+  return blake3;
+}
+
+Hash20 getFileSha1(AbsolutePathPiece filePath) {
+  SHA_CTX ctx;
+  SHA1_Init(&ctx);
+  hash(
+      [&ctx](const auto* buf, auto len) { SHA1_Update(&ctx, buf, len); },
+      filePath);
   static_assert(Hash20::RAW_SIZE == SHA_DIGEST_LENGTH);
   Hash20 sha1;
   SHA1_Final(sha1.mutableBytes().begin(), &ctx);

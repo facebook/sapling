@@ -26,6 +26,7 @@ target_link_libraries(
   eden_utils
   PUBLIC
     eden_build_config
+    eden_digest
     eden_service_thrift_cpp
     Folly::folly
     edencommon::edencommon_utils
