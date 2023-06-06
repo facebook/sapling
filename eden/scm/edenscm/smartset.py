@@ -130,7 +130,7 @@ class abstractsmartset(object):
                 break
             else:
                 raise ValueError("arg is an empty sequence")
-        self.min = lambda: v
+        self.min = self.fastmin = lambda: v
         return v
 
     def max(self):
@@ -142,7 +142,7 @@ class abstractsmartset(object):
                 break
             else:
                 raise ValueError("arg is an empty sequence")
-        self.max = lambda: v
+        self.max = self.fastmax = lambda: v
         return v
 
     def first(self):
@@ -166,6 +166,22 @@ class abstractsmartset(object):
     def fastlen(self):
         """Returns the length of the set, or None if it cannot be calculated quickly."""
         return None
+
+    def fastmin(self):
+        """Similar to min() but returns None if it cannot be answered quickly."""
+        it = self.fastasc
+        if it is not None:
+            for v in it():
+                self.fastmin = self.min = lambda: v
+                return v
+
+    def fastmax(self):
+        """Similar to min() but returns None if it cannot be answered quickly."""
+        it = self.fastdesc
+        if it is not None:
+            for v in it():
+                self.fastmax = self.max = lambda: v
+                return v
 
     def reverse(self):
         """reverse the expected iteration order"""
@@ -304,6 +320,13 @@ class baseset(abstractsmartset):
     Populate "_set" fields in the lists so set optimization may be used:
     >>> [1 in xs, 3 in ys]
     [False, True]
+
+    Min, max, len:
+
+    >>> xs.fastmin(), xs.fastmax(), xs.fastlen(), xs.min(), xs.max(), len(xs)
+    (0, 7, 4, 0, 7, 4)
+    >>> ys.min(), ys.max(), len(ys), ys.fastmin(), ys.fastmax(), ys.fastlen()
+    (3, 7, 4, 3, 7, 4)
 
     Without sort(), results won't be changed:
     >>> [list(i) for i in [xs + ys, xs & ys, xs - ys]]
@@ -1415,6 +1438,11 @@ class generatorset(abstractsmartset):
 
     >>> repo = util.refcell([])
     >>> xs = generatorset([0, 1, 4], iterasc=True, repo=repo)
+
+    fastlen, fastmax are unknown before consuming the generator:
+    >>> xs.fastlen(), xs.fastmin(), xs.fastmax()
+    (None, 0, None)
+
     >>> assert xs.last() == xs.last()
     >>> xs.last()  # cached
     4
