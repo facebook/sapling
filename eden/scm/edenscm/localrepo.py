@@ -2911,7 +2911,13 @@ class localrepository(object):
             if diffnumber is not None:
                 loginfo.update({"phabricator_diff_number": diffnumber})
 
-            self.ui.log("commit_info", node=hex(n), author=user, **loginfo)
+            self.ui.log(
+                "commit_info",
+                node=hex(n),
+                author=user,
+                repo=self.ui.config("remotefilelog", "reponame"),
+                **loginfo,
+            )
             return n
         finally:
             if tr:
