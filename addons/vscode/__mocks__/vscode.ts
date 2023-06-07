@@ -51,7 +51,7 @@ function proxyMissingFieldsWithJestFn<T extends object>(t: T): T {
         return t[key];
       }
       // make sure we keep the jest.fn() we make so it's not remade each time
-      t[key] = jest.fn().mockReturnValue(new Disposable()) as unknown as typeof t[keyof T];
+      t[key] = jest.fn().mockReturnValue(new Disposable()) as unknown as (typeof t)[keyof T];
       return t[key];
     }) as unknown as ProxyHandler<T>['get'],
   });

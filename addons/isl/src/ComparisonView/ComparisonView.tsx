@@ -176,7 +176,7 @@ function ComparisonViewHeader({comparison}: {comparison: Comparison}) {
                 ...previous,
                 comparison: {
                   type: (event as React.FormEvent<HTMLSelectElement>).currentTarget
-                    .value as typeof defaultComparisons[0],
+                    .value as (typeof defaultComparisons)[0],
                 },
               }))
             }>
@@ -185,7 +185,7 @@ function ComparisonViewHeader({comparison}: {comparison: Comparison}) {
                 <T>{labelForComparison({type: comparison})}</T>
               </VSCodeOption>
             ))}
-            {!defaultComparisons.includes(comparison.type as typeof defaultComparisons[0]) ? (
+            {!defaultComparisons.includes(comparison.type as (typeof defaultComparisons)[0]) ? (
               <VSCodeOption value={comparison.type} key={comparison.type}>
                 <T>{labelForComparison(comparison)}</T>
               </VSCodeOption>
