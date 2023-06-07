@@ -151,9 +151,16 @@ impl EntityStore<CachedChangesetEdges> for CacheRequest<'_> {
 
     fn memcache(&self) -> &MemcacheHandler {
         if self.prefetch.is_include() {
-            // If asked to prefetch, fetching from memcache is actually
-            // slower, so don't perform memcache look-ups.
-            &MemcacheHandler::Noop
+            if tunables()
+                .disable_commit_graph_memcache_for_prefetch()
+                .unwrap_or(false)
+            {
+                // If asked to prefetch, fetching from memcache is actually
+                // slower, so don't perform memcache look-ups.
+                &MemcacheHandler::Noop
+            } else {
+                &self.caching_storage.memcache
+            }
         } else {
             &self.caching_storage.memcache
         }

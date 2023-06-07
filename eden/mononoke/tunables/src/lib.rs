@@ -375,6 +375,8 @@ pub struct MononokeTunables {
 
     // Disable all prefetching in the commit graph
     disable_commit_graph_prefetch: TunableBool,
+    // Disable memcache for commit graph prefetching
+    disable_commit_graph_memcache_for_prefetch: TunableBool,
     // Max number of steps to make when prefetching
     commit_graph_prefetch_step_limit: TunableI64,
 
