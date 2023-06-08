@@ -170,6 +170,17 @@ pub(crate) fn start(
     progress: Option<Progress>,
     config: Config,
 ) -> Result<(), Error> {
+    // Defer enabling raw mode until we need it. It has some undesirable side
+    // effects for direct mode such as disabling terminal echo and consuming all
+    // pending terminal input (e.g. user types next terminal command before the
+    // current command has finished).
+    let mut in_raw_mode = false;
+    if config.startup_poll_input {
+        // We need raw mode to poll for user input during direct mode.
+        term.set_raw_mode().map_err(Error::Termwiz)?;
+        in_raw_mode = true;
+    }
+
     let outcome = {
         // Only take the first output and error. This emulates the behavior that
         // the main pager can only display one stream at a time.
@@ -204,6 +215,11 @@ pub(crate) fn start(
             }
         }
         direct::Outcome::RenderNothing => term.enter_alternate_screen().map_err(Error::Termwiz)?,
+    };
+
+    // We certainly need raw mode for fullscreen.
+    if !in_raw_mode {
+        term.set_raw_mode().map_err(Error::Termwiz)?;
     }
 
     let overlay_height = AtomicUsize::new(0);

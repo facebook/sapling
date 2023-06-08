@@ -99,8 +99,7 @@ impl Pager {
         create_term: impl FnOnce(Capabilities) -> Result<SystemTerminal>,
     ) -> Result<Self> {
         let caps = termcaps()?;
-        let mut term = create_term(caps.clone())?;
-        term.set_raw_mode().map_err(Error::Termwiz)?;
+        let term = create_term(caps.clone())?;
 
         let events = EventStream::new(term.waker());
         let files = Vec::new();

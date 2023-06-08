@@ -186,7 +186,7 @@ impl Default for Config {
             interface_mode: Default::default(),
             scroll_past_eof: true,
             read_ahead_lines: crate::file::DEFAULT_NEEDED_LINES,
-            startup_poll_input: true,
+            startup_poll_input: false,
             show_ruler: true,
             // See issue #52. With cursor hidden, scrolling is flaky in VSCode terminal.
             show_cursor: std::env::var("TERM_PROGRAM").ok().as_deref() == Some("vscode"),
