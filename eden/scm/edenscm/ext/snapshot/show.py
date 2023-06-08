@@ -5,7 +5,7 @@
 
 from typing import Optional
 
-from edenscm import error, scmutil
+from edenscm import bookmarks, error, scmutil
 from edenscm.cmdutil import changeset_printer, jsonchangeset
 from edenscm.context import memctx, memfilectx
 from edenscm.i18n import _
@@ -25,7 +25,7 @@ def _snapshot2ctx(repo, snapshot) -> memctx:
     assert isinstance(parent, bytes)
     # Fetch parent if not present locally
     if parent not in repo:
-        repo.pull(headnodes=(parent,))
+        repo.pull(bookmarknames=(bookmarks.mainbookmark(repo),), headnodes=(parent,))
 
     parents = [repo[parent]]
     path2filechange = {f[0]: f[1] for f in snapshot["file_changes"]}

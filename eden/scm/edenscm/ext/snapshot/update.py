@@ -5,7 +5,7 @@
 
 import time
 
-from edenscm import cmdutil, error, hg, perftrace, scmutil, util
+from edenscm import bookmarks, cmdutil, error, hg, perftrace, scmutil, util
 from edenscm.i18n import _
 
 from .metalog import storelatest
@@ -73,7 +73,9 @@ def _parent_update(ui, repo, parent) -> None:
     # and needs pulling from server.
     if parent not in repo:
         with perftrace.trace("Parent pull"):
-            repo.pull(headnodes=(parent,))
+            repo.pull(
+                bookmarknames=(bookmarks.mainbookmark(repo),), headnodes=(parent,)
+            )
 
     hg.updatetotally(ui, repo, parent, None, clean=False, updatecheck="abort")
     duration = time.perf_counter() - start_parent_update
