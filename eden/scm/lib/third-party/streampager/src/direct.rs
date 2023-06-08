@@ -11,6 +11,7 @@ use termwiz::surface::Position;
 use termwiz::terminal::Terminal;
 use vec_map::VecMap;
 
+use crate::action::Action;
 use crate::config::InterfaceMode;
 use crate::config::WrappingMode;
 use crate::error::Error;
@@ -179,6 +180,10 @@ pub(crate) fn direct<T: Terminal>(
                     }
                     _ => (),
                 }
+            }
+            Some(Event::Action(Action::Quit)) => {
+                term.render(&state.abort()).map_err(Error::Termwiz)?;
+                return Ok(Outcome::Interrupted);
             }
             _ => (),
         }

@@ -11,6 +11,8 @@ use std::mem;
 use std::sync::Arc;
 use std::sync::Weak;
 use std::thread::spawn;
+use std::time::Duration;
+use std::time::Instant;
 
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -574,16 +576,28 @@ impl IO {
         pager.set_progress_stream(prg_read);
 
         let pager_action_sender = pager.action_sender();
-        let pager_thread_handler = spawn(|| {
+        let pager_thread_handler = Arc::new(Mutex::new(Some(spawn(|| {
             let _ = pager.run();
-        });
+        }))));
 
+        let pager_thread_handler_wait = pager_thread_handler.clone();
         inner.pager_wait_func = Some(Box::new(move || {
-            let _ = pager_thread_handler.join();
+            if let Some(handler) = pager_thread_handler_wait.lock().take() {
+                let _ = handler.join();
+            }
         }));
 
         self.inner.pager_quit_func.lock().replace(Box::new(move || {
             let _ = pager_action_sender.send(Action::Quit);
+
+            if let Some(handler) = pager_thread_handler.lock().take() {
+                let start = Instant::now();
+
+                // Wait up to 10ms for streampager to shut down.
+                while !handler.is_finished() && start.elapsed() < Duration::from_millis(10) {
+                    std::thread::sleep(Duration::from_millis(1));
+                }
+            }
         }));
 
         Ok(())
