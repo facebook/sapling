@@ -1,18 +1,24 @@
 //! Support for `InterfaceMode::Direct` and other modes using `Direct`.
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use std::time::Instant;
 
 use bit_set::BitSet;
 use termwiz::input::InputEvent;
 use termwiz::surface::change::Change;
-use termwiz::surface::{CursorVisibility, Position};
+use termwiz::surface::CursorVisibility;
+use termwiz::surface::Position;
 use termwiz::terminal::Terminal;
 use vec_map::VecMap;
 
-use crate::config::{InterfaceMode, WrappingMode};
-use crate::error::{Error, Result};
-use crate::event::{Event, EventStream};
-use crate::file::{File, FileInfo};
+use crate::config::InterfaceMode;
+use crate::config::WrappingMode;
+use crate::error::Error;
+use crate::error::Result;
+use crate::event::Event;
+use crate::event::EventStream;
+use crate::file::File;
+use crate::file::FileInfo;
 use crate::line::Line;
 use crate::progress::Progress;
 
@@ -144,11 +150,7 @@ pub(crate) fn direct<T: Terminal>(
         let maybe_event = if poll_input {
             events.get(term, Some(interval))?
         } else {
-            events.try_recv()?.or_else(|| {
-                // Sleep to avoid busy wait
-                std::thread::sleep(interval);
-                None
-            })
+            events.try_recv(Some(interval))?
         };
         match maybe_event {
             Some(Event::Loaded(i)) => {
@@ -160,7 +162,8 @@ pub(crate) fn direct<T: Terminal>(
                 size = term.get_screen_size().map_err(Error::Termwiz)?;
             }
             Some(Event::Input(InputEvent::Key(key))) => {
-                use termwiz::input::{KeyCode::Char, Modifiers};
+                use termwiz::input::KeyCode::Char;
+                use termwiz::input::Modifiers;
                 match (key.modifiers, key.key) {
                     (Modifiers::NONE, Char('q')) | (Modifiers::CTRL, Char('C')) => {
                         term.render(&state.abort()).map_err(Error::Termwiz)?;

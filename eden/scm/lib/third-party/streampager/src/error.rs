@@ -2,7 +2,10 @@
 
 use std::ffi::OsStr;
 use std::result::Result as StdResult;
-use std::sync::mpsc::{RecvError, SendError, TryRecvError};
+use std::sync::mpsc::RecvError;
+use std::sync::mpsc::RecvTimeoutError;
+use std::sync::mpsc::SendError;
+use std::sync::mpsc::TryRecvError;
 
 use thiserror::Error;
 
@@ -47,6 +50,10 @@ pub enum Error {
     /// Try-receive error on a channel.
     #[error("channel error")]
     ChannelTryRecv(#[from] TryRecvError),
+
+    /// Receive-timeout error on a channel.
+    #[error("channel error")]
+    ChannelRecvTimeout(#[from] RecvTimeoutError),
 
     /// Send error on a channel.
     #[error("channel error")]

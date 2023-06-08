@@ -1,14 +1,17 @@
 //! Events.
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::time::Duration;
 
 use termwiz::input::InputEvent;
-use termwiz::terminal::{Terminal, TerminalWaker};
+use termwiz::terminal::Terminal;
+use termwiz::terminal::TerminalWaker;
 
-use crate::action::{Action, ActionSender};
+use crate::action::Action;
+use crate::action::ActionSender;
 use crate::error::Error;
 use crate::file::FileIndex;
 
@@ -105,15 +108,29 @@ impl EventStream {
         ActionSender::new(self.sender())
     }
 
-    pub(crate) fn try_recv(&self) -> Result<Option<Event>, Error> {
-        match self.recv.try_recv() {
-            Ok(Envelope::Normal(event)) => Ok(Some(event)),
-            Ok(Envelope::Unique(event, unique)) => {
+    /// Attempt to receive an event. If timeout is specified, wait up to timeout
+    /// for an event, returning None if there is no event. With no timeout,
+    /// return None immediately if there is no event.
+    pub(crate) fn try_recv(&self, timeout: Option<Duration>) -> Result<Option<Event>, Error> {
+        let envelope = match timeout {
+            Some(timeout) => match self.recv.recv_timeout(timeout) {
+                Ok(envelope) => envelope,
+                Err(mpsc::RecvTimeoutError::Timeout) => return Ok(None),
+                Err(e) => return Err(e.into()),
+            },
+            None => match self.recv.try_recv() {
+                Ok(envelope) => envelope,
+                Err(mpsc::TryRecvError::Empty) => return Ok(None),
+                Err(e) => return Err(e.into()),
+            },
+        };
+
+        match envelope {
+            Envelope::Normal(event) => Ok(Some(event)),
+            Envelope::Unique(event, unique) => {
                 unique.0.store(false, Ordering::SeqCst);
                 Ok(Some(event))
             }
-            Err(mpsc::TryRecvError::Empty) => Ok(None),
-            Err(e) => Err(e.into()),
         }
     }
 
@@ -124,7 +141,7 @@ impl EventStream {
         wait: Option<Duration>,
     ) -> Result<Option<Event>, Error> {
         loop {
-            if let Some(event) = self.try_recv()? {
+            if let Some(event) = self.try_recv(None)? {
                 return Ok(Some(event));
             }
 

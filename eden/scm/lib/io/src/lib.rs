@@ -505,16 +505,11 @@ impl IO {
         // Configure the pager.
         // The Hybrid mode is similar to "-FX" from "less".
         let mut interface_mode = InterfaceMode::Hybrid;
-        // Similar to "less" default.
-        let mut scroll_past_eof = false;
         // Similar to "less" behavior - lines are wrapped and copy-paste preserves long ines.
         let mut wrapping_mode = WrappingMode::GraphemeBoundary;
         if let Some(mode_str) = config.get("pager", "interface") {
             let mode = InterfaceMode::from(mode_str.as_ref());
             interface_mode = mode;
-        }
-        if let Ok(Some(past_eof)) = config.get_opt("pager", "scroll-past-eof") {
-            scroll_past_eof = past_eof;
         }
         if let Ok(Some(wrapping_mode_str)) = config.get_opt::<String>("pager", "wrapping-mode") {
             match wrapping_mode_str.to_lowercase().as_str() {
@@ -524,8 +519,17 @@ impl IO {
             }
         }
         pager.set_wrapping_mode(wrapping_mode);
-        pager.set_scroll_past_eof(scroll_past_eof);
+        // Similar to "less" default.
+        pager.set_scroll_past_eof(config.must_get("pager", "scroll-past-eof").unwrap_or(false));
         pager.set_interface_mode(interface_mode);
+        // Setting this to "false" will preserve pending terminal input in
+        // "direct" mode at the cost of disabling streampager user input
+        // handling.
+        pager.set_startup_poll_input(
+            config
+                .must_get("pager", "startup-poll-input")
+                .unwrap_or(false),
+        );
 
         let (out_read, out_write) = pipe();
         let (err_read, err_write) = pipe();
