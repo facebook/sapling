@@ -609,7 +609,9 @@ fn log_start(args: Vec<String>, now: SystemTime) -> tracing::Span {
 
     let mut parent_names = Vec::new();
     let mut parent_pids = Vec::new();
-    if !inside_test {
+    // On Windows, getting the ppid and exe name requires `CreateToolhelp32Snapshot`,
+    // which can take hundreds of milliseconds. So we skip doing that here.
+    if !inside_test && !cfg!(windows) {
         let mut ppid = procinfo::parent_pid(0);
         // In theory, the OS should not report a cyclic process graph (ex. pid 1
         // has parent pid = 1). Practically `parent_pids` takes snapshots
