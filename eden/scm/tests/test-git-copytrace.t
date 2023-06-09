@@ -67,3 +67,23 @@ Test missing files in source side
   $ hg rebase -r $C -d $B
   rebasing 470d2f079ab1 "C"
   merging x and y to y
+
+Test missing files in destination side
+
+  $ hg init --git repo2
+  $ cd repo2
+  $ setupconfig
+  $ drawdag <<'EOS'
+  > C   # C/y = 1\n (renamed from x)
+  > |   # C/C = (removed)
+  > |
+  > | B # B/x = 1\n2\n
+  > | | # B/B = (removed)
+  > |/
+  > A   # A/x = 1\n
+  >     # A/A = (removed)
+  > EOS
+
+  $ hg rebase -r $B -d $C
+  rebasing 74b913efe823 "B"
+  merging y and x to y
