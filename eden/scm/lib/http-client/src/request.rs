@@ -882,7 +882,11 @@ fn pem_to_pkcs12(
     // creating one. Here we just use an empty password since it seems like most
     // TLS engines will attempt to decrypt using the empty string if no password
     // is specified.
-    let pkcs12 = Pkcs12::builder().build("", "", &key, &cert)?;
+    let pkcs12 = Pkcs12::builder()
+        .name("")
+        .pkey(&key)
+        .cert(&cert)
+        .build2("")?;
 
     let result = pkcs12.to_der()?;
     cache.insert(cache_key, result.clone());
