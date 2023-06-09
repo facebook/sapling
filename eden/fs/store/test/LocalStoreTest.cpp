@@ -95,6 +95,24 @@ TEST_P(LocalStoreTest, testReadAndWriteMetadata) {
   EXPECT_EQ(size, retrievedMetadata->size);
 }
 
+TEST_P(LocalStoreTest, testReadAndWriteMetadataWithBlake3) {
+  ObjectId id = ObjectId::fromHex("3a8f8eb91101860fd8484154885838bf322964d0");
+  std::string content(4 << 20, 'a');
+  auto sha1 = Hash20::sha1(content);
+  auto blake3 = Hash32::blake3(content);
+  size_t size = content.size();
+  BlobMetadata metadata{sha1, blake3, size};
+  store_->putBlobMetadata(id, metadata);
+
+  auto retrievedMetadata = store_->getBlobMetadata(id).get(10s);
+  ASSERT_NE(retrievedMetadata, nullptr);
+
+  EXPECT_EQ(sha1, retrievedMetadata->sha1);
+  ASSERT_TRUE(retrievedMetadata->blake3.has_value());
+  EXPECT_EQ(blake3, *retrievedMetadata->blake3);
+  EXPECT_EQ(size, retrievedMetadata->size);
+}
+
 TEST_P(LocalStoreTest, testReadNonexistent) {
   using namespace std::chrono_literals;
 

@@ -70,9 +70,10 @@ void readHash(
     Hash<SIZE>& hash) {
   if (bytes.size() < SIZE) {
     throwf<std::invalid_argument>(
-        "Blob metadata for {} had unexpected size {}. Could not deserialize.",
+        "Blob metadata for {} had unexpected size {}. Could not deserialize the hash of size {}.",
         blobID,
-        bytes.size());
+        bytes.size(),
+        SIZE);
   }
 
   auto mutableBytes = hash.mutableBytes();
@@ -81,7 +82,7 @@ void readHash(
 }
 
 std::pair<Hash20, std::optional<Hash32>>
-unsliceV1(const ObjectId& blobID, uint8_t usedHashes, folly::ByteRange bytes) {
+unsliceV1(const ObjectId& blobID, uint8_t usedHashes, folly::ByteRange& bytes) {
   if ((usedHashes & static_cast<uint8_t>(HashType::SHA1)) == 0) {
     throwf<std::invalid_argument>(
         "Blob metadata for {} doesn't have SHA1 hash which is mandatory. Could not deserialize.",
@@ -155,6 +156,10 @@ BlobMetadataPtr unslice(const ObjectId& blobID, folly::ByteRange bytes) {
       // dead code
       XLOGF(FATAL, "Unreachable version: {}", version);
   }
+
+  XCHECK(bytes.empty()) << fmt::format(
+      "Not all bytes were used ({} bytes left) for deserialization. Corrupted data?",
+      bytes.size());
 }
 } // namespace
 
@@ -203,6 +208,10 @@ void SerializedBlobMetadata::serialize(
     write(blake3Bytes.data(), Hash32::RAW_SIZE, data.get(), off);
   }
 
+  XCHECK(size == off) << fmt::format(
+      "Serialized data mismatch: allocated {} bytes, written {} bytes",
+      size,
+      off);
   dataAndSize_ = {std::move(data), size};
 }
 
