@@ -4292,13 +4292,7 @@ def debugcopytrace(ui, repo, *files, **opts) -> None:
     csrc = scmutil.revsingle(repo, opts.get("source"))
     cdest = scmutil.revsingle(repo, opts.get("dest"))
 
-    dag_copy_trace = bindings.copytrace.dagcopytrace(
-        repo.changelog.inner,
-        repo.manifestlog.datastore,
-        repo.fileslog.filescmstore,
-        repo.changelog.dag,
-        repo.ui._rcfg,
-    )
+    dag_copy_trace = repo._dagcopytrace
 
     res = {
         src_path: dag_copy_trace.trace_rename(csrc.node(), cdest.node(), src_path)
