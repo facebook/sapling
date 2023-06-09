@@ -289,6 +289,7 @@ if sys.platform != "win32":
             "projfs_buffer.PrjFSBuffer": True,
             "projfs_enumeration.ProjFSEnumeration": True,
             "projfs_enumeration.ProjFSEnumerationInsufficientBuffer": True,
+            "prjfs_match_fs.PrjfsMatchFsTest": True,
         }
     )
 

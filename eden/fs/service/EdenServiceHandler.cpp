@@ -3017,6 +3017,52 @@ EdenServiceHandler::semifuture_getScmStatusBetweenRevisions(
       .semi();
 }
 
+folly::SemiFuture<std::unique_ptr<MatchFileSystemResponse>>
+EdenServiceHandler::semifuture_matchFilesystem(
+    std::unique_ptr<MatchFileSystemRequest> params) {
+  auto helper =
+      INSTRUMENT_THRIFT_CALL(DBG2, *params->mountPoint(), *params->paths());
+#ifdef _WIN32
+  auto mountHandle = lookupMount(params->mountPoint()->mountPoint());
+  if (auto* prjfsChannel = mountHandle.getEdenMount().getPrjfsChannel()) {
+    std::vector<ImmediateFuture<folly::Unit>> results;
+    results.reserve(params->paths()->size());
+    for (auto& path : *params->paths()) {
+      results.push_back(prjfsChannel->matchEdenViewOfFileToFS(
+          relpathFromUserPath(path), helper->getFetchContext()));
+    }
+    return wrapImmediateFuture(
+               std::move(helper),
+               ImmediateFuture{
+                   collectAll(std::move(results))
+                       .ensure([mountHandle]() {})
+                       .thenValue([](std::vector<folly::Try<folly::Unit>>
+                                         raw_results) {
+                         std::vector<MatchFilesystemPathResult> results;
+                         results.reserve(raw_results.size());
+                         for (auto& raw_result : raw_results) {
+                           MatchFilesystemPathResult result{};
+                           if (raw_result.hasException()) {
+                             result.error() =
+                                 newEdenError(raw_result.exception());
+                           }
+                           results.push_back(std::move(result));
+                         }
+                         auto final_result =
+                             std::make_unique<MatchFileSystemResponse>();
+                         final_result->results() = std::move(results);
+                         return final_result;
+                       })})
+        .semi();
+  }
+#endif
+  throw newEdenError(
+      ENOTSUP,
+      EdenErrorType::POSIX_ERROR,
+      "matchFilesystemStat only supported for PrjFs repos which {} is not",
+      *params->mountPoint());
+}
+
 void EdenServiceHandler::debugGetScmTree(
     vector<ScmTreeEntry>& entries,
     unique_ptr<string> mountPoint,

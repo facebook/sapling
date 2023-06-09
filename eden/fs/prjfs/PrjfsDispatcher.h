@@ -220,6 +220,17 @@ class PrjfsDispatcher {
       const ObjectFetchContextPtr& context) = 0;
 
   /**
+   * A file is out of sync on the Filesystem, tell EdenFS to match the state
+   * of the file on disk.
+   *
+   * The caller must guarantee that the dispatcher and EdenMount stay alive
+   * until the returned ImmediateFuture complete.
+   */
+  virtual ImmediateFuture<folly::Unit> matchEdenViewOfFileToFS(
+      RelativePath relPath,
+      const ObjectFetchContextPtr& context) = 0;
+
+  /**
    * Wait for all received notifications to complete.
    */
   virtual ImmediateFuture<folly::Unit> waitForPendingNotifications() = 0;

@@ -243,6 +243,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> oldHash,
       std::unique_ptr<std::string> newHash) override;
 
+  folly::SemiFuture<std::unique_ptr<MatchFileSystemResponse>>
+  semifuture_matchFilesystem(
+      std::unique_ptr<MatchFileSystemRequest> params) override;
+
   void debugGetScmTree(
       std::vector<ScmTreeEntry>& entries,
       std::unique_ptr<std::string> mountPoint,

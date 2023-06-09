@@ -698,10 +698,23 @@ ImmediateFuture<folly::Unit> fileNotificationImpl(
       });
 }
 
+/**
+ * Matches EdenFS's view of a file/directory to it's state on disk. This is
+ * mostly used in response to notifications about file modifications from PrjFS.
+ * But can also be used to correct EdenFS's view of a file.
+ *
+ * Most callers are not prepared to handle an error so they will use the default
+ * value for dfatal_error. When dfatal_error is true, the returned future never
+ * contains an error, but eden may crash if an exception occurs. When
+ * dfatal_error is false, the returned future may contain an exception
+ * which occurred while trying to sync Eden to the filesystem.
+ *
+ */
 ImmediateFuture<folly::Unit> fileNotification(
     EdenMount& mount,
     RelativePath path,
-    const ObjectFetchContextPtr& context) {
+    const ObjectFetchContextPtr& context,
+    bool dfatal_error = true) {
   auto receivedAt = std::chrono::steady_clock::now();
   folly::stop_watch<std::chrono::milliseconds> watch;
 
@@ -730,7 +743,8 @@ ImmediateFuture<folly::Unit> fileNotification(
             &PrjfsStats::queuedFileNotification, watch.elapsed());
         return folly::unit;
       })
-      .thenError([path, &mount](const folly::exception_wrapper& ew) {
+      .thenError([path, &mount, dfatal_error](
+                     const folly::exception_wrapper& ew) {
         if (ew.get_exception<QuietFault>()) {
           XLOG(ERR) << "While handling notification on: " << path << ": " << ew;
           return folly::unit;
@@ -744,9 +758,14 @@ ImmediateFuture<folly::Unit> fileNotification(
         mount.getServerState()->getStructuredLogger()->logEvent(
             PrjFSFileNotificationFailure{
                 folly::exceptionStr(ew).toStdString(), path.asString()});
-        XLOG(DFATAL) << "While handling notification on: " << path << ": "
-                     << ew;
-        return folly::unit;
+        if (dfatal_error) {
+          XLOG(DFATAL) << "While handling notification on: " << path << ": "
+                       << ew;
+          return folly::unit;
+        } else {
+          XLOG(ERR) << "While handling notification on: " << path << ": " << ew;
+          ew.throw_exception();
+        }
       });
 }
 
@@ -852,6 +871,13 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preFileConvertedToFull(
   // this is an asynchonous notification, so we have to treat this just like
   // all the other write notifications.
   return fileNotification(*mount_, std::move(path), context);
+}
+
+ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::matchEdenViewOfFileToFS(
+    RelativePath path,
+    const ObjectFetchContextPtr& context) {
+  return fileNotification(
+      *mount_, std::move(path), context, /*dfatal_error=*/false);
 }
 
 ImmediateFuture<folly::Unit>

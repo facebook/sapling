@@ -32,7 +32,9 @@ from eden.thrift.legacy import EdenClient
 from facebook.eden.constants import DIS_REQUIRE_LOADED, DIS_REQUIRE_MATERIALIZED
 from facebook.eden.ttypes import (
     DebugInvalidateRequest,
+    EdenError,
     GetScmStatusParams,
+    MatchFileSystemRequest,
     MountId,
     ScmFileStatus,
     SyncBehavior,
@@ -343,14 +345,51 @@ class MaterializedInodesAreInaccessible(PathsProblem):
         )
 
 
-class MissingInodesForFiles(PathsProblem):
-    def __init__(self, paths: List[Path]) -> None:
+class MissingInodesForFiles(PathsProblem, FixableProblem):
+    def __init__(self, instance: EdenInstance, mount: Path, paths: List[Path]) -> None:
+        self._instance = instance
+        self._mount = mount
+        self._paths = paths
         super().__init__(
             self.omitPathsDescription(
                 paths, " is not known to EdenFS but is accessible on disk"
             ),
             severity=ProblemSeverity.ERROR,
         )
+
+    def dry_run_msg(self) -> str:
+        return (
+            f"Would fix files present on disk but not known to EdenFS in {self._mount}"
+        )
+
+    def start_msg(self) -> str:
+        return f"Fixing files present on disk but not known to EdenFS in {self._mount}"
+
+    def perform_fix(self) -> None:
+        """Attempt to fix files not known to EdenFS.
+
+        For some reason, EdenFS isn't aware of these files. We poke Eden to
+        notice the files exist with the thrift call matchFileSystem.
+        """
+        with self._instance.get_thrift_client_legacy() as client:
+            try:
+                result = client.matchFilesystem(
+                    MatchFileSystemRequest(
+                        MountId(str(self._mount).encode()),
+                        [str(path).encode() for path in self._paths],
+                    )
+                )
+                failed = [
+                    f"{path}: {path_result.error}"
+                    for path, path_result in zip(self._paths, result.results)
+                    if path_result.error is not None
+                ]
+                if failed:
+                    errors = "\n".join(failed)
+                    print(f"Failed to remediate:\n{errors}")
+
+            except EdenError as ex:
+                print(f"Failed to remediate {self._paths}: {ex}")
 
 
 class MissingFilesForInodes(PathsProblem, FixableProblem):
@@ -526,7 +565,9 @@ def check_materialized_are_accessible(
         tracker.add_problem(DuplicateInodes(duplicate_inodes))
 
     if missing_inodes:
-        tracker.add_problem(MissingInodesForFiles(missing_inodes))
+        tracker.add_problem(
+            MissingInodesForFiles(instance, checkout.path, missing_inodes)
+        )
 
     if nonexistent_inodes:
         tracker.add_problem(MissingFilesForInodes(checkout.path, nonexistent_inodes))
@@ -670,7 +711,9 @@ def check_loaded_content(
         tracker.add_problem(LoadedFileHasDifferentContentOnDisk(errors))
 
     if missing_inodes:
-        tracker.add_problem(MissingInodesForFiles(missing_inodes))
+        tracker.add_problem(
+            MissingInodesForFiles(instance, checkout.path, missing_inodes)
+        )
 
     if not_found:
         tracker.add_problem(MissingFilesForInodes(checkout.path, not_found))

@@ -844,6 +844,16 @@ HRESULT PrjfsChannelInner::getFileData(
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
 
+ImmediateFuture<folly::Unit> PrjfsChannelInner::matchEdenViewOfFileToFS(
+    RelativePath relPath,
+    const ObjectFetchContextPtr& context) {
+  return ImmediateFuture{
+      dispatcher_->matchEdenViewOfFileToFS(std::move(relPath), context)
+          .semi()
+          .via(dispatcher_->getNotificationExecutor())
+          .semi()};
+}
+
 std::vector<PrjfsChannelInner::OutstandingRequest>
 PrjfsChannelInner::getOutstandingRequests() {
   std::vector<PrjfsChannelInner::OutstandingRequest> outstandingCalls;
@@ -1316,6 +1326,18 @@ ImmediateFuture<folly::Unit> PrjfsChannel::waitForPendingWrites() {
   }
   return inner->waitForPendingNotifications().ensure(
       [inner = std::move(inner)] {});
+}
+
+ImmediateFuture<folly::Unit> PrjfsChannel::matchEdenViewOfFileToFS(
+    RelativePath relPath,
+    const ObjectFetchContextPtr& context) {
+  auto inner = getInner();
+  if (!inner) {
+    return makeImmediateFuture<folly::Unit>(std::runtime_error(fmt::format(
+        FMT_STRING("The mount at {} has been stopped"), mountPath_)));
+  }
+  return inner->matchEdenViewOfFileToFS(std::move(relPath), context)
+      .ensure([inner = std::move(inner)] {});
 }
 
 bool PrjfsChannel::StopData::isUnmounted() {

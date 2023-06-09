@@ -318,6 +318,19 @@ class PrjfsChannelInner {
       bool isDirectory,
       const ObjectFetchContextPtr& context);
 
+  /**
+   * This is not a handler for PrjFS notifications, this method can be called by
+   * internal callers who notice that Eden's view of the filesystem is out of
+   * sync.
+   *
+   * Unlike the prjfs notification handlers, the returned future does wait
+   * for the notification to be processed. That means that Eden should be
+   * in sync with the filesystem after the returned future completes.
+   */
+  ImmediateFuture<folly::Unit> matchEdenViewOfFileToFS(
+      RelativePath relPath,
+      const ObjectFetchContextPtr& context);
+
   ProcessAccessLog& getProcessAccessLog() {
     return processAccessLog_;
   }
@@ -467,6 +480,19 @@ class PrjfsChannel : public FsChannel {
    * received notifications have completed.
    */
   ImmediateFuture<folly::Unit> waitForPendingWrites() override;
+
+  /**
+   * Background correctness checkers might notice that EdenFS has an incorrect
+   * view of a file. This can be used to make Eden pickup any changes it missed
+   * to a file.
+   *
+   * Unlike the prjfs notification handlers, the returned future does wait
+   * for the notification to be processed. That means that Eden should be
+   * in sync with the filesystem after the returned future completes.
+   */
+  ImmediateFuture<folly::Unit> matchEdenViewOfFileToFS(
+      RelativePath relPath,
+      const ObjectFetchContextPtr& context);
 
   const char* getName() const override {
     return "prjfs";

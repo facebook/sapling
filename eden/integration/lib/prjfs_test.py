@@ -70,6 +70,24 @@ class PrjFSTestBase(testcase.EdenRepoTest):
                 )
             )
 
+    def make_eden_start_processing_notifications_again(
+        self,
+        keyClass: str = "PrjfsDispatcherImpl::fileNotification",
+        keyValueRegex: str = ".*",
+    ) -> None:
+        with self.eden.get_thrift_client_legacy() as client:
+            client.removeFault(
+                RemoveFaultArg(keyClass=keyClass, keyValueRegex=keyValueRegex)
+            )
+
+    @contextmanager
+    def run_with_notifications_dropped_fault(self) -> Generator[None, None, None]:
+        self.make_eden_drop_all_notifications()
+        try:
+            yield
+        finally:
+            self.make_eden_start_processing_notifications_again()
+
     def wait_on_fault_unblock(
         self,
         numToUnblock: int = 1,

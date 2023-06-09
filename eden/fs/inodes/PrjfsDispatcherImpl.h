@@ -83,6 +83,10 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
       RelativePath relPath,
       const ObjectFetchContextPtr& context) override;
 
+  ImmediateFuture<folly::Unit> matchEdenViewOfFileToFS(
+      RelativePath relPath,
+      const ObjectFetchContextPtr& context) override;
+
   ImmediateFuture<folly::Unit> waitForPendingNotifications() override;
 
  private:
