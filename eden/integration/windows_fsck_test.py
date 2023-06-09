@@ -16,22 +16,19 @@ from facebook.eden.ttypes import (
     CheckoutConflict,
     CheckoutMode,
     CheckOutRevisionParams,
-    FaultDefinition,
-    GetScmStatusParams,
     ScmFileStatus,
     SyncBehavior,
     TreeInodeDebugInfo,
 )
 
-from .lib import testcase
+from .lib import prjfs_test, testcase
 
 
 @testcase.eden_repo_test
-class WindowsFsckTest(testcase.EdenRepoTest):
+class WindowsFsckTest(prjfs_test.PrjFSTestBase):
     """Windows fsck integration tests"""
 
     initial_commit: str = ""
-    enable_fault_injection: bool = True
 
     def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
         result = super().edenfs_extra_config() or {}
@@ -46,32 +43,14 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.repo.write_file(".gitignore", "ignored/\n")
         self.initial_commit = self.repo.commit("Initial commit.")
 
+    def get_initial_commit(self) -> str:
+        return self.initial_commit
+
     def select_storage_engine(self) -> str:
         return "sqlite"
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
         return {"eden.fs.inodes.sqlitecatalog": "DBG9"}
-
-    def _eden_status(self, listIgnored: bool = False):
-        with self.eden.get_thrift_client_legacy() as client:
-            status = client.getScmStatusV2(
-                GetScmStatusParams(
-                    mountPoint=self.mount.encode(),
-                    commit=self.initial_commit.encode(),
-                    listIgnored=listIgnored,
-                )
-            )
-            return status.status.entries
-
-    def _assertInStatus(self, *files) -> None:
-        status = self._eden_status(listIgnored=True).keys()
-        for filename in files:
-            self.assertIn(filename, status)
-
-    def _assertNotInStatus(self, *files) -> None:
-        status = self._eden_status(listIgnored=True).keys()
-        for filename in files:
-            self.assertNotIn(filename, status)
 
     def test_detect_added_file_in_full_directory(self) -> None:
         """
@@ -89,7 +68,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         (foobar / "barfoo" / "baz").write_text("baz")
         self.eden.start()
 
-        self._assertInStatus(b"foobar/foo", b"foobar/barfoo/baz")
+        self.assertInStatus(b"foobar/foo", b"foobar/barfoo/baz")
 
     def test_detect_added_files_in_ignored_full_directory(self) -> None:
         """Create a file in Full ignored directory when EdenFS is not running."""
@@ -99,7 +78,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         foobar.write_text("barfoo\n")
         self.eden.start()
 
-        self._assertInStatus(b"ignored/foobar")
+        self.assertInStatus(b"ignored/foobar")
 
     def test_detect_removed_file_from_placeholder_directory_while_running(self) -> None:
         """Remove a file in placeholder directory when EdenFS is running."""
@@ -108,7 +87,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         afile.unlink()
 
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED},
         )
 
@@ -117,7 +96,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
 
         self.assertFalse(afile.exists())
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED},
         )
 
@@ -132,7 +111,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         afile.unlink()
 
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {
                 b"adir/a_new_file": ScmFileStatus.ADDED,
                 b"adir/file": ScmFileStatus.REMOVED,
@@ -144,7 +123,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
 
         self.assertFalse(afile.exists())
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {
                 b"adir/a_new_file": ScmFileStatus.ADDED,
                 b"adir/file": ScmFileStatus.REMOVED,
@@ -156,12 +135,12 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         foo = self.mount_path / "foobar" / "foo"
         foo.parent.mkdir()
         foo.write_text("hello!!")
-        self._assertInStatus(b"foobar/foo")
+        self.assertInStatus(b"foobar/foo")
         foo.unlink()
         self.eden.shutdown()
         self.eden.start()
         self.assertFalse(foo.exists())
-        self._assertNotInStatus(b"foobar/foo")
+        self.assertNotInStatus(b"foobar/foo")
 
     def test_detect_removed_file_from_full_dir_matches_scm_not_empty_while_running(
         self,
@@ -177,7 +156,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.write_file("adir/file", "foo!\n")
         self.write_file("adir/file2", "foo!\n")
 
-        self.assertEqual(self._eden_status(), {b"adir/file2": ScmFileStatus.ADDED})
+        self.assertEqual(self.eden_status(), {b"adir/file2": ScmFileStatus.ADDED})
 
         afile = self.mount_path / "adir" / "file"
         afile.unlink()
@@ -187,7 +166,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
 
         self.assertFalse(afile.exists())
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED, b"adir/file2": ScmFileStatus.ADDED},
         )
 
@@ -204,7 +183,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.rmdir("adir")
         self.write_file("adir/file", "foo!\n")
 
-        self.assertEqual(self._eden_status(), {})
+        self.assertEqual(self.eden_status(), {})
 
         afile = self.mount_path / "adir" / "file"
         afile.unlink()
@@ -214,7 +193,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
 
         self.assertFalse(afile.exists())
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED},
         )
 
@@ -228,7 +207,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
             f.read()
 
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {b"adir/file2": ScmFileStatus.ADDED},
         )
 
@@ -239,7 +218,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
 
         self.assertFalse(afile.exists())
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED, b"adir/file2": ScmFileStatus.ADDED},
         )
 
@@ -252,7 +231,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
             f.read()
 
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {},
         )
 
@@ -263,7 +242,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
 
         self.assertFalse(afile.exists())
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED},
         )
 
@@ -272,13 +251,13 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         foo = self.mount_path / "foobar" / "foo"
         foo.parent.mkdir()
         foo.write_text("hello!!")
-        self.assertIn(b"foobar/foo", self._eden_status(listIgnored=True).keys())
-        self._assertInStatus(b"foobar/foo")
+        self.assertIn(b"foobar/foo", self.eden_status(listIgnored=True).keys())
+        self.assertInStatus(b"foobar/foo")
         self.eden.shutdown()
         foo.unlink()
         self.eden.start()
         self.assertFalse(foo.exists())
-        self._assertNotInStatus(b"foobar/foo")
+        self.assertNotInStatus(b"foobar/foo")
 
     def test_detect_removed_file_from_full_directory_scm_exists(self) -> None:
         """
@@ -291,7 +270,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.rmdir("adir")
         self.write_file("adir/file", "foo!\n")
 
-        self.assertEqual(self._eden_status(), {})
+        self.assertEqual(self.eden_status(), {})
 
         afile = self.mount_path / "adir" / "file"
         self.eden.shutdown()
@@ -300,7 +279,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
 
         self.assertFalse(afile.exists())
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED},
         )
 
@@ -316,7 +295,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         (self.mount_path / "hello").unlink()
         (self.mount_path / "adir" / "file").unlink()
         (self.mount_path / "adir").rmdir()
-        self._assertInStatus(b"hello", b"adir/file")
+        self.assertInStatus(b"hello", b"adir/file")
 
         self.eden.shutdown()
         # Tombstone should be visible now
@@ -324,7 +303,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
 
         self.eden.start()
         # We should still see these files
-        self._assertInStatus(b"hello", b"adir/file")
+        self.assertInStatus(b"hello", b"adir/file")
         # Tombstone should be invisible now
         self.assertFalse((self.mount_path / "hello").exists())
 
@@ -351,7 +330,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.assertIn(bdir, list(subdir.iterdir()))
 
     def test_fsck_dirty_dir_checking(self) -> None:
-        self.assertFalse(self._eden_status())
+        self.assertFalse(self.eden_status())
 
         subdir = self.mount_path / "subdir"
         bdir = subdir / "bdir"
@@ -370,7 +349,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.eden.start()
 
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {
                 b"subdir/foo.txt": 0,
             },
@@ -385,7 +364,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.eden.shutdown()
         self.eden.start()
 
-        self.assertEqual(self._eden_status(), {b"bdir": 0})
+        self.assertEqual(self.eden_status(), {b"bdir": 0})
 
     def test_fsck_casing(self) -> None:
         afile = self.mount_path / "adir" / "file"
@@ -394,7 +373,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.eden.shutdown()
         self.eden.start()
 
-        self.assertEqual(self._eden_status(), {})
+        self.assertEqual(self.eden_status(), {})
 
     def test_fsck_rename_with_different_case_while_stopped(self) -> None:
         # Materialize the file and its parent by removing and re-creating them.
@@ -402,7 +381,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.rmdir("adir")
         self.write_file("adir/file", "foo!\n")
 
-        self.assertEqual(self._eden_status(), {})
+        self.assertEqual(self.eden_status(), {})
 
         afile = self.mount_path / "adir" / "file"
 
@@ -410,7 +389,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         afile.rename(self.mount_path / "adir" / "File")
         self.eden.start()
 
-        self.assertEqual(self._eden_status(), {})
+        self.assertEqual(self.eden_status(), {})
 
     def test_fsck_rename(self) -> None:
         afile = self.mount_path / "adir" / "file"
@@ -420,7 +399,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.eden.start()
 
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED, b"adir/file-1": ScmFileStatus.ADDED},
         )
 
@@ -434,7 +413,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.eden.start()
 
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED, b"adir/file-1": ScmFileStatus.ADDED},
         )
 
@@ -448,7 +427,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.eden.start()
 
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED, b"adir/file-1": ScmFileStatus.ADDED},
         )
 
@@ -458,7 +437,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.rmdir("adir")
         self.write_file("adir/file", "foo!\n")
 
-        self.assertEqual(self._eden_status(), {})
+        self.assertEqual(self.eden_status(), {})
 
         afile = self.mount_path / "adir" / "file"
 
@@ -472,22 +451,9 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         print(result)
 
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED, b"adir/file-1": ScmFileStatus.ADDED},
         )
-
-    def block_notification_processing(
-        self, keyClass="PrjfsDispatcherImpl::fileNotification", keyValueRegex=".*"
-    ) -> None:
-        with self.eden.get_thrift_client_legacy() as client:
-            client.injectFault(
-                FaultDefinition(
-                    keyClass=keyClass,
-                    keyValueRegex=keyValueRegex,
-                    errorMessage="Blocked",
-                    errorType="quiet",
-                )
-            )
 
     def test_fsck_miss_rename(self) -> None:
         adir = self.mount_path / "adir"
@@ -495,7 +461,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
 
         os.listdir(adir)
 
-        self.block_notification_processing()
+        self.make_eden_drop_all_notifications()
 
         afile.rename(adir / "file-1")
 
@@ -504,7 +470,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.eden.start()
 
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED, b"adir/file-1": ScmFileStatus.ADDED},
         )
 
@@ -512,7 +478,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         hello = self.mount_path / "hello"
         afile = self.mount_path / "adir" / "file"
 
-        self.block_notification_processing()
+        self.make_eden_drop_all_notifications()
 
         hello.unlink()
         afile.rename(hello)
@@ -522,7 +488,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.eden.start()
 
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED, b"hello": ScmFileStatus.MODIFIED},
         )
 
@@ -533,7 +499,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         with hello.open() as f:
             f.read()
 
-        self.block_notification_processing()
+        self.make_eden_drop_all_notifications()
 
         hello.unlink()
         afile.rename(hello)
@@ -543,7 +509,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.eden.start()
 
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED, b"hello": ScmFileStatus.MODIFIED},
         )
 
@@ -554,7 +520,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         with hello.open("w") as f:
             f.write("")
 
-        self.block_notification_processing()
+        self.make_eden_drop_all_notifications()
 
         hello.unlink()
         afile.rename(hello)
@@ -564,7 +530,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.eden.start()
 
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {b"adir/file": ScmFileStatus.REMOVED, b"hello": ScmFileStatus.MODIFIED},
         )
 
@@ -575,7 +541,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
 
         os.listdir(adir)
 
-        self.block_notification_processing()
+        self.make_eden_drop_all_notifications()
 
         afile.unlink()
         adir.rmdir()
@@ -586,7 +552,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.eden.start()
 
         self.assertEqual(
-            self._eden_status(),
+            self.eden_status(),
             {
                 b"adir": ScmFileStatus.ADDED,
                 b"adir/file": ScmFileStatus.REMOVED,
@@ -617,11 +583,11 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.write_file("adir/File", "Bar\n")
         self.eden.start()
 
-        self.assertEqual(self._eden_status(), {b"adir/file": 1})
+        self.assertEqual(self.eden_status(), {b"adir/file": 1})
 
         # Make sure we can revert the change:
         self._update_clean()
-        self.assertEqual(self._eden_status(), {})
+        self.assertEqual(self.eden_status(), {})
 
     def test_loaded_inodes_not_loaded_on_restart(self) -> None:
         """Verifies that a loaded inode not present on disk doesn't get loaded

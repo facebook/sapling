@@ -8,125 +8,25 @@ import os
 import stat
 import subprocess
 import time
-from contextlib import contextmanager
-from pathlib import Path
 from threading import Thread
-from typing import Dict, Generator, List, Optional, Set, Tuple
+from typing import Dict, List, Optional
 
-from eden.fs.cli import util
-from facebook.eden.constants import DIS_REQUIRE_MATERIALIZED
-from facebook.eden.ttypes import (
-    FaultDefinition,
-    RemoveFaultArg,
-    SyncBehavior,
-    UnblockFaultArg,
-)
-
-from .lib import testcase
+from .lib import prjfs_test, testcase
 
 
-class PrjFSStressBase(testcase.EdenRepoTest):
-    enable_fault_injection: bool = True
+class PrjFSStressBase(prjfs_test.PrjFSTestBase):
+    initial_commit: str = ""
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
         self.repo.write_file("adir/file", "foo!\n")
-        self.repo.commit("Initial commit.")
+        self.initial_commit = self.repo.commit("Initial commit.")
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
         return {"eden.strace": "DBG7"}
 
-    def wait_on_fault_unblock(
-        self,
-        numToUnblock: int = 1,
-        keyClass: str = "PrjfsDispatcherImpl::fileNotification",
-        keyValueRegex: str = ".*",
-    ) -> None:
-        def unblock() -> Optional[bool]:
-            with self.eden.get_thrift_client_legacy() as client:
-                unblocked = client.unblockFault(
-                    UnblockFaultArg(
-                        keyClass=keyClass,
-                        keyValueRegex=keyValueRegex,
-                    )
-                )
-            if unblocked == 1:
-                return True
-            return None
-
-        for _ in range(numToUnblock):
-            util.poll_until(unblock, timeout=30)
-
-    def getAllMaterialized(self, waitTime: int = 5) -> Set[Tuple[Path, int]]:
-        """Return all the materialized files/directories minus .hg and .eden"""
-        res = set()
-
-        with self.eden.get_thrift_client_legacy() as client:
-            inodes = client.debugInodeStatus(
-                self.mount_path_bytes,
-                b"",
-                DIS_REQUIRE_MATERIALIZED,
-                SyncBehavior(waitTime),
-            )
-
-        for tree_inode in inodes:
-            parent_dir = Path(os.fsdecode(tree_inode.path))
-            for dirent in tree_inode.entries:
-                dirent_path = parent_dir / Path(os.fsdecode(dirent.name))
-                top_level_parent = dirent_path.parts[0]
-                if top_level_parent != ".hg" and top_level_parent != ".eden":
-                    res.add((dirent_path, dirent.mode))
-
-        return res
-
-    def assertNotMaterialized(self, path: str, waitTime: int = 5) -> None:
-        materialized = self.getAllMaterialized(waitTime)
-        self.assertNotIn(
-            Path(path),
-            {materialized_path for materialized_path, mode in materialized},
-            msg=f"{path} is materialized",
-        )
-
-    def assertMaterialized(self, path: str, mode: int, waitTime: int = 5) -> None:
-        materialized = self.getAllMaterialized(waitTime)
-        self.assertIn(
-            (Path(path), mode), materialized, msg=f"{path} is not materialized"
-        )
-
-    def assertAllMaterialized(
-        self, paths: Set[Tuple[str, int]], waitTime: int = 5
-    ) -> None:
-        materialized = self.getAllMaterialized(waitTime)
-        self.assertSetEqual(materialized, {(Path(path), mode) for path, mode in paths})
-
-    @contextmanager
-    def run_with_blocking_fault(
-        self, keyClass="PrjfsDispatcherImpl::fileNotification", keyValueRegex=".*"
-    ) -> Generator[None, None, None]:
-        with self.eden.get_thrift_client_legacy() as client:
-            client.injectFault(
-                FaultDefinition(
-                    keyClass=keyClass,
-                    keyValueRegex=keyValueRegex,
-                    block=True,
-                )
-            )
-
-            try:
-                yield
-            finally:
-                client.removeFault(
-                    RemoveFaultArg(
-                        keyClass=keyClass,
-                        keyValueRegex=keyValueRegex,
-                    )
-                )
-                client.unblockFault(
-                    UnblockFaultArg(
-                        keyClass=keyClass,
-                        keyValueRegex=keyValueRegex,
-                    )
-                )
+    def get_initial_commit(self) -> str:
+        return self.initial_commit
 
 
 @testcase.eden_repo_test
