@@ -1173,6 +1173,10 @@ class localrepository(object):
 
             pullheads = heads - fastpathheads
 
+            # Filter out heads that exist in the repo.
+            if pullheads:
+                pullheads -= set(self.changelog.filternodes(list(pullheads)))
+
             self.ui.log(
                 "pull",
                 fastpathheads=len(fastpathheads),
@@ -1181,10 +1185,6 @@ class localrepository(object):
                 fastpathsegments=fastpathsegments,
                 fastpathfallbacks=fastpathfallbacks,
             )
-
-            # Filter out heads that exist in the repo.
-            if pullheads:
-                pullheads -= set(self.changelog.filternodes(list(pullheads)))
 
             # Only perform a pull if heads are not empty.
             if pullheads:
