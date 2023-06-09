@@ -130,7 +130,7 @@ def gitnode(repo, subset, x):
     reponame = repo.ui.config("fbscmquery", "reponame")
     if not reponame:
         # We don't know who we are, so we can't ask for a translation
-        return subset.filter(lambda r: False)
+        return smartset.baseset([], repo=repo)
     backingrepos = repo.ui.configlist("fbscmquery", "backingrepos", default=[reponame])
 
     lasterror = None
