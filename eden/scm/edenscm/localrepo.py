@@ -1175,6 +1175,8 @@ class localrepository(object):
 
             # Filter out heads that exist in the repo.
             if pullheads:
+                if fastpathheads:
+                    self.invalidatechangelog()
                 pullheads -= set(self.changelog.filternodes(list(pullheads)))
 
             self.ui.log(
