@@ -9,8 +9,17 @@
 
 #include <fmt/core.h>
 #include <string_view>
+#include <vector>
 
 namespace facebook::eden {
+
+/**
+ * Splits a string_view into one or more components
+ *
+ * The lifetime of the returned string_views are bound by the lifetime of the
+ * argument `s`.
+ */
+std::vector<std::string_view> split(std::string_view s, char delim);
 
 constexpr inline bool starts_with(
     std::string_view haystack,
