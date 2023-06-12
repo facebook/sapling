@@ -26,12 +26,7 @@ use bytes::Bytes;
 use changesets::deserialize_cs_entries;
 use changesets::ChangesetEntry;
 use changesets::Changesets;
-use clap_old::Arg;
-use clap_old::SubCommand;
-use cmdlib::args;
-use cmdlib::args::MononokeClapApp;
-use cmdlib::args::MononokeMatches;
-use cmdlib::helpers::block_execute;
+use clap::Parser;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
@@ -52,6 +47,12 @@ use mercurial_types::FileBytes;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use mononoke_app::args::AsRepoArg;
+use mononoke_app::args::RepoArgs;
+use mononoke_app::fb303::AliveService;
+use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::MononokeApp;
+use mononoke_app::MononokeAppBuilder;
 use mononoke_types::FileType;
 use mononoke_types::RepositoryId;
 use redactedblobstore::ErrorKind as RedactedBlobstoreError;
@@ -61,7 +62,6 @@ use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
-use slog::Logger;
 use stats::prelude::*;
 use tokio::time::sleep;
 
@@ -83,51 +83,33 @@ pub struct Repo {
     filestore_config: FilestoreConfig,
 }
 
+/// Tool to calculate repo statistic
+#[derive(Parser)]
+#[clap(about = "Tool to calculate repo statistic.")]
+struct RepoStatisticsArgs {
+    /// The repo against which the repo statistic command needs to be executed
+    #[clap(flatten)]
+    repo: RepoArgs,
+    /// Bookmark from which we get statistics. Default is master.
+    #[clap(long, default_value = "master")]
+    bookmark: String,
+    /// If set, then statistics are logged to scuba
+    #[clap(long)]
+    log_to_scuba: bool,
+    /// A file with a list of bonsai changesets to calculate stats for. If this
+    /// argument is provided, then the statistics will be calculated for file based commit only.
+    #[clap(long)]
+    in_filename: Option<String>,
+}
+
 define_stats! {
     prefix = "mononoke.statistics_collector";
     calculated_changesets: timeseries(Rate, Sum),
 }
 
-const ARG_IN_FILENAME: &str = "in-filename";
-
-const SUBCOMMAND_STATISTICS_FROM_FILE: &str = "statistics-from-commits-in-file";
-
 const SCUBA_DATASET_NAME: &str = "mononoke_repository_statistics";
 // Tool doesn't count number of lines from files with size greater than 10MB
 const BIG_FILE_THRESHOLD: u64 = 10000000;
-
-fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
-    args::MononokeAppBuilder::new("Tool to calculate repo statistic")
-        .with_fb303_args()
-        .build()
-        .subcommand(
-            SubCommand::with_name(SUBCOMMAND_STATISTICS_FROM_FILE)
-                .about(
-                    "calculate statistics for commits in provided file and save them to json file",
-                )
-                .arg(
-                    Arg::with_name(ARG_IN_FILENAME)
-                        .long(ARG_IN_FILENAME)
-                        .takes_value(true)
-                        .required(true)
-                        .help("a file with a list of bonsai changesets to calculate stats for"),
-                ),
-        )
-        .arg(
-            Arg::with_name("bookmark")
-                .long("bookmark")
-                .takes_value(true)
-                .required(false)
-                .help("bookmark from which we get statistics"),
-        )
-        .arg(
-            Arg::with_name("log-to-scuba")
-                .long("log-to-scuba")
-                .takes_value(false)
-                .required(false)
-                .help("if set then statistics are logged to scuba"),
-        )
-}
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct RepoStatistics {
@@ -475,23 +457,18 @@ enum Operation {
 }
 
 #[allow(unreachable_code)]
-async fn run_statistics<'a>(
-    fb: FacebookInit,
+async fn run_statistics(
+    app: MononokeApp,
+    args: RepoStatisticsArgs,
     ctx: CoreContext,
-    logger: &Logger,
     scuba_logger: MononokeScubaSampleBuilder,
-    matches: &'a MononokeMatches<'a>,
     repo_name: String,
     bookmark: BookmarkKey,
 ) -> Result<(), Error> {
-    let repo: Repo = args::not_shardmanager_compatible::open_repo(fb, logger, matches).await?;
+    let repo: Repo = app.open_repo(&args.repo).await?;
 
-    if let (SUBCOMMAND_STATISTICS_FROM_FILE, Some(sub_m)) = matches.subcommand() {
-        // Both arguments are set to be required
-        let in_filename = sub_m
-            .value_of(ARG_IN_FILENAME)
-            .expect("missing required argument");
-        return generate_statistics_from_file(&ctx, &repo, &in_filename).await;
+    if let Some(in_filename) = args.in_filename.as_ref() {
+        return generate_statistics_from_file(&ctx, &repo, in_filename).await;
     }
 
     let blobstore = Arc::new(repo.repo_blobstore().clone());
@@ -577,33 +554,27 @@ async fn run_statistics<'a>(
     Ok(())
 }
 
-#[fbinit::main]
-fn main(fb: FacebookInit) -> Result<(), Error> {
-    let (matches, _runtime) = setup_app().get_matches(fb)?;
+async fn async_main(app: MononokeApp) -> Result<(), Error> {
+    let logger = app.logger();
+    let ctx = CoreContext::new_with_logger(app.fb, logger.clone());
 
-    let logger = matches.logger();
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let config_store = matches.config_store();
-    let bookmark = match matches.value_of("bookmark") {
-        Some(name) => name.to_string(),
-        None => String::from("master"),
-    };
-    let bookmark = BookmarkKey::new(bookmark)?;
-    let repo_name = args::not_shardmanager_compatible::get_repo_name(config_store, &matches)?;
-    let scuba_logger = if matches.is_present("log-to-scuba") {
-        MononokeScubaSampleBuilder::new(fb, SCUBA_DATASET_NAME)?
+    let args: RepoStatisticsArgs = app.args()?;
+    let bookmark = BookmarkKey::new(&args.bookmark)?;
+    let (repo_name, _) = app.repo_config(args.repo.as_repo_arg())?;
+    let scuba_logger = if args.log_to_scuba {
+        MononokeScubaSampleBuilder::new(app.fb, SCUBA_DATASET_NAME)?
     } else {
         MononokeScubaSampleBuilder::with_discard()
     };
+    run_statistics(app, args, ctx, scuba_logger, repo_name, bookmark).await
+}
 
-    block_execute(
-        run_statistics(fb, ctx, logger, scuba_logger, &matches, repo_name, bookmark),
-        fb,
-        "statistics_collector",
-        logger,
-        &matches,
-        cmdlib::monitoring::AliveService,
-    )
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<(), Error> {
+    let app = MononokeAppBuilder::new(fb)
+        .with_app_extension(Fb303AppExtension {})
+        .build::<RepoStatisticsArgs>()?;
+    app.run_with_monitoring_and_logging(async_main, "repo_statistics_collector", AliveService)
 }
 
 #[cfg(test)]

@@ -20,8 +20,7 @@ bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bytes = { version = "1.1", features = ["serde"] }
 changesets = { version = "0.1.0", path = "../changesets" }
-clap-old = { package = "clap", version = "2.33" }
-cmdlib = { version = "0.1.0", path = "../cmdlib" }
+clap = { version = "4.2.4", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -31,6 +30,7 @@ futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://gi
 manifest = { version = "0.1.0", path = "../manifest" }
 mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
+mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 redactedblobstore = { version = "0.1.0", path = "../blobstore/redactedblobstore" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
