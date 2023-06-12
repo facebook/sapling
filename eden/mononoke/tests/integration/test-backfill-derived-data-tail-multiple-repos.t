@@ -45,8 +45,7 @@ setup configuration
   $ cd "$TESTTMP"
   $ blobimport repo-hg/.hg repo
 
-Helpers to setup skiplist for repos and
-enable some more derived data types for normal usage and backfilling
+Helpers to enable some more derived data types for normal usage and backfilling
   $ function prod_setup() {
   >   ENABLED_DERIVED_DATA='["hgchangesets", "filenodes", "unodes", "fsnodes"]' \
   >     setup_mononoke_config
