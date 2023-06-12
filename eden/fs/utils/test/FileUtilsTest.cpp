@@ -43,6 +43,16 @@ TEST_F(FileUtilsTest, testWriteReadFile) {
   EXPECT_EQ(writtenContent, readContents);
 }
 
+TEST_F(FileUtilsTest, testReadFileWithNumBytes) {
+  auto filePath = getTestPath() + "testfile.txt"_pc;
+  auto writtenContent =
+      "This is the test file. We plan to read the partial contents out of it"_sp;
+
+  writeFile(filePath, writtenContent).value();
+  std::string readContents = readFile(filePath, 1024 * 1024).value();
+  EXPECT_EQ(writtenContent, readContents);
+}
+
 TEST_F(FileUtilsTest, testReadPartialFile) {
   auto filePath = getTestPath() + "testfile.txt"_pc;
   auto writtenContent =

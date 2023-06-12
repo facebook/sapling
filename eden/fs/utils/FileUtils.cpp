@@ -190,6 +190,7 @@ folly::Try<std::string> readFile(AbsolutePathPiece path, size_t num_bytes) {
     return folly::Try<std::string>{makeWin32ErrorExplicit(
         GetLastError(), fmt::format(FMT_STRING("couldn't read {}"), path))};
   }
+  ret.resize(read);
 
   return folly::Try{std::move(ret)};
 }
