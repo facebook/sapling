@@ -106,6 +106,46 @@ fn get_inner_blobstore_ids_from_multiplexing(
     Ok(blobstore_ids)
 }
 
+async fn get_single_blobstore(
+    fb: FacebookInit,
+    storage_config: StorageConfig,
+    inner_blobstore_id: u64,
+    readonly_storage: ReadOnlyStorage,
+    blobstore_options: &BlobstoreOptions,
+    config_store: &ConfigStore,
+) -> Result<Arc<dyn BlobstoreUnlinkOps>, Error> {
+    let blobconfig = get_blobconfig(storage_config.blobstore, Some(inner_blobstore_id))?;
+    use BlobConfig::*;
+    let blobstore = match blobconfig {
+        // Physical blobstores
+        Sqlite { .. } | Mysql { .. } => make_sql_blobstore(
+            fb,
+            blobconfig,
+            readonly_storage,
+            blobstore_options,
+            config_store,
+        )
+        .await
+        .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?,
+        Manifold { .. } | ManifoldWithTtl { .. } => {
+            make_manifold_blobstore(fb, blobconfig, blobstore_options)
+                .await
+                .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?
+        }
+        Files { .. } => make_files_blobstore(blobconfig, blobstore_options)
+            .await
+            .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?,
+        _ => {
+            unimplemented!(
+                "Unlink is not implemented for this blobstore with inner_blobstore_id = {}",
+                inner_blobstore_id
+            )
+        }
+    };
+
+    Ok(blobstore)
+}
+
 async fn get_blobstore(
     fb: FacebookInit,
     storage_config: StorageConfig,
