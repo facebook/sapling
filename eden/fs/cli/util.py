@@ -15,6 +15,7 @@ import os
 import random
 import re
 import shlex
+import socket
 import stat
 import subprocess
 import sys
@@ -34,6 +35,14 @@ if TYPE_CHECKING:
 
 if sys.platform != "win32":
     import pwd
+
+try:
+    from eden.fs.cli.facebook.hostcaps import normalize_hostname
+except ImportError:
+
+    def normalize_hostname(hostname: str) -> str:
+        return hostname
+
 
 # These paths are relative to the user's client directory.
 LOCK_FILE = "lock"
@@ -781,3 +790,9 @@ def hook_recursive_with_spinner(function: Callable, spinner: Spinner):
         return function(*args, **kwargs)
 
     return run
+
+
+def get_normalized_hostname() -> str:
+    """Get the system's normalized hostname for logging and telemetry purposes."""
+
+    return normalize_hostname(socket.gethostname())
