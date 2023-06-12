@@ -8,6 +8,7 @@
 use std::io::Write;
 use std::sync::Arc;
 
+use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
@@ -78,6 +79,33 @@ fn get_blobconfig(blob_config: BlobConfig, inner_blobstore_id: Option<u64>) -> R
     }
 }
 
+fn get_inner_blobstore_ids_from_multiplexing(
+    blob_config: &BlobConfig,
+) -> Result<Vec<BlobstoreId>, Error> {
+    use BlobConfig::*;
+    let blobstore_ids = match blob_config {
+        MultiplexedWal {
+            multiplex_id: _,
+            blobstores,
+            write_quorum: _,
+            queue_db: _,
+            inner_blobstores_scuba_table: _,
+            multiplex_scuba_table: _,
+            scuba_sample_rate: _,
+        } => {
+            let mut blobstore_ids: Vec<BlobstoreId> = Vec::new();
+            for actual_blobstore in blobstores {
+                blobstore_ids.push(actual_blobstore.0);
+            }
+            blobstore_ids
+        }
+        _ => {
+            bail!("This isn't a MultiplexedWal, implementation is not support this type yet")
+        }
+    };
+    Ok(blobstore_ids)
+}
+
 async fn get_blobstore(
     fb: FacebookInit,
     storage_config: StorageConfig,
@@ -108,6 +136,23 @@ async fn get_blobstore(
         Files { .. } => make_files_blobstore(blobconfig, blobstore_options)
             .await
             .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?,
+        MultiplexedWal { .. } => {
+            match get_inner_blobstore_ids_from_multiplexing(&blobconfig) {
+                Ok(blobstore_ids) => {
+                    writeln!(
+                        std::io::stdout(),
+                        "This MultiplexedWal blobstore has the following inner stores:"
+                    )?;
+                    for id in blobstore_ids {
+                        writeln!(std::io::stdout(), "Blobstore inner_id: {}", id)?;
+                    }
+                }
+                Err(error) => {
+                    bail!("Found error {}", error)
+                }
+            }
+            bail!("Lets stop here. Next step is going to build a list of blobstores from these ids")
+        }
         _ => {
             unimplemented!("This is implemented only for some blobstores.")
         }
