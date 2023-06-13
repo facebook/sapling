@@ -10,11 +10,14 @@ use std::fs;
 use std::ops::Add;
 use std::ops::Sub;
 use std::path::Path;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Error;
+use async_trait::async_trait;
 use blobrepo::ChangesetFetcher;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Blobstore;
@@ -28,6 +31,9 @@ use changesets::ChangesetEntry;
 use changesets::Changesets;
 use clap::Parser;
 use context::CoreContext;
+use executor_lib::RepoShardedProcess;
+use executor_lib::RepoShardedProcessExecutor;
+use executor_lib::ShardedProcessExecutor;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use futures::compat::Stream01CompatExt;
@@ -47,23 +53,29 @@ use mercurial_types::FileBytes;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
-use mononoke_app::args::AsRepoArg;
-use mononoke_app::args::RepoArgs;
+use mononoke_app::args::OptRepoArgs;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_types::FileType;
 use mononoke_types::RepositoryId;
+use once_cell::sync::OnceCell;
 use redactedblobstore::ErrorKind as RedactedBlobstoreError;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 use scuba_ext::MononokeScubaSampleBuilder;
+use sharding_ext::RepoShard;
+use slog::error;
 use slog::info;
+use slog::Logger;
 use stats::prelude::*;
 use tokio::time::sleep;
+
+const SM_SERVICE_SCOPE: &str = "global";
+const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 
 #[facet::container]
 pub struct Repo {
@@ -89,7 +101,7 @@ pub struct Repo {
 struct RepoStatisticsArgs {
     /// The repo against which the repo statistic command needs to be executed
     #[clap(flatten)]
-    repo: RepoArgs,
+    repo: OptRepoArgs,
     /// Bookmark from which we get statistics. Default is master.
     #[clap(long, default_value = "master")]
     bookmark: String,
@@ -100,6 +112,122 @@ struct RepoStatisticsArgs {
     /// argument is provided, then the statistics will be calculated for file based commit only.
     #[clap(long)]
     in_filename: Option<String>,
+    /// The name of ShardManager service to be used when running statistics collector in sharded setting.
+    #[clap(long, conflicts_with_all = &["repo-name", "repo-id"])]
+    pub sharded_service_name: Option<String>,
+}
+
+/// Struct representing the Statistics Collector process.
+pub struct StatisticsCollectorProcess {
+    app: MononokeApp,
+    args: Arc<RepoStatisticsArgs>,
+}
+
+impl StatisticsCollectorProcess {
+    pub fn new(app: MononokeApp) -> anyhow::Result<Self> {
+        let args: Arc<RepoStatisticsArgs> = Arc::new(app.args()?);
+        Ok(Self { app, args })
+    }
+}
+
+#[async_trait]
+impl RepoShardedProcess for StatisticsCollectorProcess {
+    async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+        let logger = self.app.repo_logger(&repo.to_string());
+        info!(
+            &logger,
+            "Setting up statistics collector for repo {}",
+            repo.to_string()
+        );
+        let statistics_collector =
+            StatisticsCollector::from_process(self, repo.repo_name.to_string(), logger).await?;
+        Ok(Arc::new(statistics_collector))
+    }
+}
+
+/// Struct representing the Statistics Collector process over the context of Repo.
+struct StatisticsCollector {
+    repo: Arc<Repo>,
+    args: Arc<RepoStatisticsArgs>,
+    ctx: CoreContext,
+    logger: Logger,
+    scuba_logger: MononokeScubaSampleBuilder,
+    repo_name: String,
+    bookmark: BookmarkKey,
+    cancellation_requested: Arc<AtomicBool>,
+}
+
+impl StatisticsCollector {
+    async fn from_process(
+        process: &StatisticsCollectorProcess,
+        repo_name: String,
+        logger: Logger,
+    ) -> anyhow::Result<Self> {
+        let ctx = CoreContext::new_with_logger(process.app.fb, logger.clone());
+        let repos = process
+            .app
+            .open_named_managed_repos(Some(repo_name.to_string()), None)
+            .await?;
+        let repo = repos
+            .repos()
+            .get_by_name(&repo_name)
+            .ok_or_else(|| anyhow::anyhow!("Repo {} is not loaded on the server", repo_name))?;
+        let args = process.args.clone();
+        let bookmark = BookmarkKey::new(&process.args.bookmark)?;
+        let scuba_logger = if process.args.log_to_scuba {
+            MononokeScubaSampleBuilder::new(process.app.fb, SCUBA_DATASET_NAME)?
+        } else {
+            MononokeScubaSampleBuilder::with_discard()
+        };
+        Ok(Self {
+            repo,
+            args,
+            ctx,
+            scuba_logger,
+            repo_name,
+            bookmark,
+            logger,
+            cancellation_requested: Arc::new(AtomicBool::new(false)),
+        })
+    }
+}
+
+#[async_trait]
+impl RepoShardedProcessExecutor for StatisticsCollector {
+    async fn execute(&self) -> anyhow::Result<()> {
+        info!(
+            self.logger,
+            "Initiating statistics collector execution for repo {}", &self.repo_name,
+        );
+
+        let val = run_statistics(
+            self.repo.clone(),
+            self.args.clone(),
+            self.ctx.clone(),
+            self.scuba_logger.clone(),
+            self.repo_name.clone(),
+            self.bookmark.clone(),
+        )
+        .await;
+        if let Err(ref e) = val {
+            error!(
+                self.logger,
+                "Statistics Collector failure in repo {}. Terminating execution. Cause: {:?}",
+                &self.repo_name,
+                e
+            );
+        };
+        Ok(())
+    }
+
+    async fn stop(&self) -> anyhow::Result<()> {
+        info!(
+            self.logger,
+            "Terminating statistics collector execution for repo {}", &self.repo_name,
+        );
+        self.cancellation_requested.store(true, Ordering::Relaxed);
+        Ok(())
+    }
 }
 
 define_stats! {
@@ -458,15 +586,13 @@ enum Operation {
 
 #[allow(unreachable_code)]
 async fn run_statistics(
-    app: MononokeApp,
-    args: RepoStatisticsArgs,
+    repo: Arc<Repo>,
+    args: Arc<RepoStatisticsArgs>,
     ctx: CoreContext,
     scuba_logger: MononokeScubaSampleBuilder,
     repo_name: String,
     bookmark: BookmarkKey,
 ) -> Result<(), Error> {
-    let repo: Repo = app.open_repo(&args.repo).await?;
-
     if let Some(in_filename) = args.in_filename.as_ref() {
         return generate_statistics_from_file(&ctx, &repo, in_filename).await;
     }
@@ -555,19 +681,57 @@ async fn run_statistics(
 }
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {
-    let logger = app.logger();
-    let ctx = CoreContext::new_with_logger(app.fb, logger.clone());
-
     let args: RepoStatisticsArgs = app.args()?;
-    let bookmark = BookmarkKey::new(&args.bookmark)?;
-    let (repo_name, _) = app.repo_config(args.repo.as_repo_arg())?;
-    let scuba_logger = if args.log_to_scuba {
-        MononokeScubaSampleBuilder::new(app.fb, SCUBA_DATASET_NAME)?
-    } else {
-        MononokeScubaSampleBuilder::with_discard()
-    };
-    run_statistics(app, args, ctx, scuba_logger, repo_name, bookmark).await
+    let process = StatisticsCollectorProcess::new(app)?;
+    match args.sharded_service_name {
+        None => {
+            let maybe_repo_arg = args.repo.as_repo_arg();
+            let (repo_name, _) = match maybe_repo_arg {
+                Some(ref repo_arg) => process.app.repo_config(repo_arg)?,
+                None => anyhow::bail!(
+                    "Repo name or ID not provided. Either sharded-service-name or repo id/name should be provided."
+                ),
+            };
+            let statistics_collector = process
+                .setup(&RepoShard::with_repo_name(repo_name.as_ref()))
+                .await?;
+            statistics_collector.execute().await
+        }
+        Some(name) => {
+            let logger = process.app.logger().clone();
+            // The service name needs to be 'static to satisfy SM contract
+            static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
+            let mut executor = ShardedProcessExecutor::new(
+                process.app.fb,
+                process.app.runtime().clone(),
+                &logger,
+                SM_SERVICE_NAME.get_or_init(|| name),
+                SM_SERVICE_SCOPE,
+                SM_CLEANUP_TIMEOUT_SECS,
+                Arc::new(process),
+                true, // enable shard (repo) level healing
+            )?;
+            executor
+                .block_and_execute(&logger, Arc::new(AtomicBool::new(false)))
+                .await
+        }
+    }
 }
+
+// async fn async_main(app: MononokeApp) -> Result<(), Error> {
+//     let logger = app.logger();
+//     let ctx = CoreContext::new_with_logger(app.fb, logger.clone());
+
+//     let args: RepoStatisticsArgs = app.args()?;
+//     let bookmark = BookmarkKey::new(args.bookmark.to_string())?;
+//     let (repo_name, _) = app.repo_config(args.repo.as_repo_arg())?;
+//     let scuba_logger = if args.log_to_scuba {
+//         MononokeScubaSampleBuilder::new(app.fb, SCUBA_DATASET_NAME)?
+//     } else {
+//         MononokeScubaSampleBuilder::with_discard()
+//     };
+//     run_statistics(app, args, ctx, scuba_logger, repo_name, bookmark).await
+// }
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
