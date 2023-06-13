@@ -28,6 +28,7 @@ use metaconfig_types::StorageConfig;
 use mononoke_app::args::AsRepoArg;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
+use BlobConfig::*;
 
 /// Unlink blobstore keys
 ///
@@ -79,33 +80,6 @@ fn get_blobconfig(blob_config: BlobConfig, inner_blobstore_id: Option<u64>) -> R
     }
 }
 
-fn get_inner_blobstore_ids_from_multiplexing(
-    blob_config: &BlobConfig,
-) -> Result<Vec<BlobstoreId>, Error> {
-    use BlobConfig::*;
-    let blobstore_ids = match blob_config {
-        MultiplexedWal {
-            multiplex_id: _,
-            blobstores,
-            write_quorum: _,
-            queue_db: _,
-            inner_blobstores_scuba_table: _,
-            multiplex_scuba_table: _,
-            scuba_sample_rate: _,
-        } => {
-            let mut blobstore_ids: Vec<BlobstoreId> = Vec::new();
-            for actual_blobstore in blobstores {
-                blobstore_ids.push(actual_blobstore.0);
-            }
-            blobstore_ids
-        }
-        _ => {
-            bail!("This isn't a MultiplexedWal, implementation is not support this type yet")
-        }
-    };
-    Ok(blobstore_ids)
-}
-
 async fn get_single_blobstore(
     fb: FacebookInit,
     storage_config: StorageConfig,
@@ -115,7 +89,7 @@ async fn get_single_blobstore(
     config_store: &ConfigStore,
 ) -> Result<Arc<dyn BlobstoreUnlinkOps>, Error> {
     let blobconfig = get_blobconfig(storage_config.blobstore, Some(inner_blobstore_id))?;
-    use BlobConfig::*;
+
     let blobstore = match blobconfig {
         // Physical blobstores
         Sqlite { .. } | Mysql { .. } => make_sql_blobstore(
@@ -136,7 +110,7 @@ async fn get_single_blobstore(
             .await
             .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?,
         _ => {
-            unimplemented!(
+            bail!(
                 "Unlink is not implemented for this blobstore with inner_blobstore_id = {}",
                 inner_blobstore_id
             )
@@ -144,6 +118,51 @@ async fn get_single_blobstore(
     };
 
     Ok(blobstore)
+}
+
+async fn get_multiple_blobstore(
+    fb: FacebookInit,
+    storage_config: StorageConfig,
+    blobconfig: BlobConfig,
+    readonly_storage: ReadOnlyStorage,
+    blobstore_options: &BlobstoreOptions,
+    config_store: &ConfigStore,
+) -> Result<Vec<Arc<dyn BlobstoreUnlinkOps>>, Error> {
+    let blobstores = match blobconfig {
+        MultiplexedWal {
+            multiplex_id: _,
+            blobstores,
+            write_quorum: _,
+            queue_db: _,
+            inner_blobstores_scuba_table: _,
+            multiplex_scuba_table: _,
+            scuba_sample_rate: _,
+        } => {
+            let mut underlying_blobstores: Vec<Arc<dyn BlobstoreUnlinkOps>> = Vec::new();
+            writeln!(
+                std::io::stdout(),
+                "This MultiplexedWal blobstore has the following inner stores:"
+            )?;
+            for record in blobstores {
+                let underlying_blobstore = get_single_blobstore(
+                    fb,
+                    storage_config.clone(),
+                    record.0.into(),
+                    readonly_storage,
+                    blobstore_options,
+                    config_store,
+                )
+                .await?;
+                underlying_blobstores.push(underlying_blobstore);
+                writeln!(std::io::stdout(), "Blobstore inner_id: {}", record.0)?;
+            }
+            underlying_blobstores
+        }
+        _ => {
+            bail!("Only the MultiplexedWal type BlobConfig is allowd to pass into this funciton")
+        }
+    };
+    Ok(blobstores)
 }
 
 async fn get_blobstore(
@@ -156,7 +175,6 @@ async fn get_blobstore(
 ) -> Result<Arc<dyn BlobstoreUnlinkOps>, Error> {
     let blobconfig = get_blobconfig(storage_config.blobstore, inner_blobstore_id)?;
 
-    use BlobConfig::*;
     let blobstore = match blobconfig {
         // Physical blobstores
         Sqlite { .. } | Mysql { .. } => make_sql_blobstore(
@@ -176,20 +194,21 @@ async fn get_blobstore(
         Files { .. } => make_files_blobstore(blobconfig, blobstore_options)
             .await
             .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?,
-        MultiplexedWal { .. } => {
-            match get_inner_blobstore_ids_from_multiplexing(&blobconfig) {
-                Ok(blobstore_ids) => {
-                    writeln!(
-                        std::io::stdout(),
-                        "This MultiplexedWal blobstore has the following inner stores:"
-                    )?;
-                    for id in blobstore_ids {
-                        writeln!(std::io::stdout(), "Blobstore inner_id: {}", id)?;
-                    }
-                }
-                Err(error) => {
-                    bail!("Found error {}", error)
-                }
+        MultiplexedWal {
+            multiplex_id: _,
+            blobstores,
+            write_quorum: _,
+            queue_db: _,
+            inner_blobstores_scuba_table: _,
+            multiplex_scuba_table: _,
+            scuba_sample_rate: _,
+        } => {
+            writeln!(
+                std::io::stdout(),
+                "This MultiplexedWal blobstore has the following inner stores:"
+            )?;
+            for record in blobstores {
+                writeln!(std::io::stdout(), "Blobstore inner_id: {}", record.0)?;
             }
             bail!("Lets stop here. Next step is going to build a list of blobstores from these ids")
         }
