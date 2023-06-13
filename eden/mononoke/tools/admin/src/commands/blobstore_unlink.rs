@@ -80,92 +80,7 @@ fn get_blobconfig(blob_config: BlobConfig, inner_blobstore_id: Option<u64>) -> R
     }
 }
 
-async fn get_single_blobstore(
-    fb: FacebookInit,
-    storage_config: StorageConfig,
-    inner_blobstore_id: u64,
-    readonly_storage: ReadOnlyStorage,
-    blobstore_options: &BlobstoreOptions,
-    config_store: &ConfigStore,
-) -> Result<Arc<dyn BlobstoreUnlinkOps>, Error> {
-    let blobconfig = get_blobconfig(storage_config.blobstore, Some(inner_blobstore_id))?;
-
-    let blobstore = match blobconfig {
-        // Physical blobstores
-        Sqlite { .. } | Mysql { .. } => make_sql_blobstore(
-            fb,
-            blobconfig,
-            readonly_storage,
-            blobstore_options,
-            config_store,
-        )
-        .await
-        .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?,
-        Manifold { .. } | ManifoldWithTtl { .. } => {
-            make_manifold_blobstore(fb, blobconfig, blobstore_options)
-                .await
-                .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?
-        }
-        Files { .. } => make_files_blobstore(blobconfig, blobstore_options)
-            .await
-            .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?,
-        _ => {
-            bail!(
-                "Unlink is not implemented for this blobstore with inner_blobstore_id = {}",
-                inner_blobstore_id
-            )
-        }
-    };
-
-    Ok(blobstore)
-}
-
-async fn get_multiple_blobstore(
-    fb: FacebookInit,
-    storage_config: StorageConfig,
-    blobconfig: BlobConfig,
-    readonly_storage: ReadOnlyStorage,
-    blobstore_options: &BlobstoreOptions,
-    config_store: &ConfigStore,
-) -> Result<Vec<Arc<dyn BlobstoreUnlinkOps>>, Error> {
-    let blobstores = match blobconfig {
-        MultiplexedWal {
-            multiplex_id: _,
-            blobstores,
-            write_quorum: _,
-            queue_db: _,
-            inner_blobstores_scuba_table: _,
-            multiplex_scuba_table: _,
-            scuba_sample_rate: _,
-        } => {
-            let mut underlying_blobstores: Vec<Arc<dyn BlobstoreUnlinkOps>> = Vec::new();
-            writeln!(
-                std::io::stdout(),
-                "This MultiplexedWal blobstore has the following inner stores:"
-            )?;
-            for record in blobstores {
-                let underlying_blobstore = get_single_blobstore(
-                    fb,
-                    storage_config.clone(),
-                    record.0.into(),
-                    readonly_storage,
-                    blobstore_options,
-                    config_store,
-                )
-                .await?;
-                underlying_blobstores.push(underlying_blobstore);
-                writeln!(std::io::stdout(), "Blobstore inner_id: {}", record.0)?;
-            }
-            underlying_blobstores
-        }
-        _ => {
-            bail!("Only the MultiplexedWal type BlobConfig is allowd to pass into this funciton")
-        }
-    };
-    Ok(blobstores)
-}
-
-async fn get_blobstore(
+async fn get_single_blobstore_impl(
     fb: FacebookInit,
     storage_config: StorageConfig,
     inner_blobstore_id: Option<u64>,
@@ -194,6 +109,26 @@ async fn get_blobstore(
         Files { .. } => make_files_blobstore(blobconfig, blobstore_options)
             .await
             .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)?,
+        _ => {
+            bail!(
+                "Unlink is not implemented for this blobstore with inner_blobstore_id = {:?}",
+                inner_blobstore_id
+            )
+        }
+    };
+
+    Ok(blobstore)
+}
+
+async fn get_multiple_blobstores(
+    fb: FacebookInit,
+    storage_config: StorageConfig,
+    blobconfig: BlobConfig,
+    readonly_storage: ReadOnlyStorage,
+    blobstore_options: &BlobstoreOptions,
+    config_store: &ConfigStore,
+) -> Result<Vec<Arc<dyn BlobstoreUnlinkOps>>, Error> {
+    let blobstores = match blobconfig {
         MultiplexedWal {
             multiplex_id: _,
             blobstores,
@@ -203,21 +138,85 @@ async fn get_blobstore(
             multiplex_scuba_table: _,
             scuba_sample_rate: _,
         } => {
+            let mut underlying_blobstores: Vec<Arc<dyn BlobstoreUnlinkOps>> = Vec::new();
             writeln!(
                 std::io::stdout(),
                 "This MultiplexedWal blobstore has the following inner stores:"
             )?;
             for record in blobstores {
+                let underlying_blobstore = get_single_blobstore_impl(
+                    fb,
+                    storage_config.clone(),
+                    Some(record.0.into()),
+                    readonly_storage,
+                    blobstore_options,
+                    config_store,
+                )
+                .await?;
+                underlying_blobstores.push(underlying_blobstore);
                 writeln!(std::io::stdout(), "Blobstore inner_id: {}", record.0)?;
             }
-            bail!("Lets stop here. Next step is going to build a list of blobstores from these ids")
+            underlying_blobstores
         }
         _ => {
-            unimplemented!("This is implemented only for some blobstores.")
+            bail!("Only the MultiplexedWal type BlobConfig is allowd to pass into this funciton")
         }
     };
+    Ok(blobstores)
+}
 
-    Ok(blobstore)
+/// This function works as follows:
+///  * If inner_blobstore_id is given, then we will only return the single inner blobstore,
+///    within the corresponding multiplexed store
+///  * If the inner_blobstore_id is not given, we will return all the inner blobstores,
+///    within the corresponding multiplexed store
+///
+/// Regarding the implementation, get_blobconfig function will return the single inner
+/// blobstore if inner_blobstore_id is given. Then we construct a blobstore for it, and return.
+/// Otherwise, the get_blobconfig function returns the multiplexed blobstore config. We then
+/// lookup all the inner blobstore ids, and construct them eventually.
+///
+/// We haven't implemented this function to be a recursive function, because we are currently
+/// not supporting nested multiplexed blobstores.
+async fn get_blobstores(
+    fb: FacebookInit,
+    storage_config: StorageConfig,
+    inner_blobstore_id: Option<u64>,
+    readonly_storage: ReadOnlyStorage,
+    blobstore_options: &BlobstoreOptions,
+    config_store: &ConfigStore,
+) -> Result<Vec<Arc<dyn BlobstoreUnlinkOps>>, Error> {
+    let blobconfig = get_blobconfig(storage_config.blobstore.clone(), inner_blobstore_id)?;
+    let blobstores = match blobconfig {
+        // Physical blobstores
+        Sqlite { .. } | Mysql { .. } | Manifold { .. } | ManifoldWithTtl { .. } | Files { .. } => {
+            let single_store = get_single_blobstore_impl(
+                fb,
+                storage_config,
+                inner_blobstore_id,
+                readonly_storage,
+                blobstore_options,
+                config_store,
+            )
+            .await?;
+            vec![single_store]
+        }
+        MultiplexedWal { .. } => {
+            get_multiple_blobstores(
+                fb,
+                storage_config,
+                blobconfig,
+                readonly_storage,
+                blobstore_options,
+                config_store,
+            )
+            .await?
+        }
+        _ => {
+            bail!("Unlink is not implemented for this blobstore")
+        }
+    };
+    Ok(blobstores)
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -225,7 +224,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     let repo_arg = args.repo_args.as_repo_arg();
     let (_repo_name, repo_config) = app.repo_config(repo_arg)?;
-    let blobstore = get_blobstore(
+    let blobstores = get_blobstores(
         app.fb,
         repo_config.storage_config,
         args.inner_blobstore_id,
@@ -237,10 +236,12 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     writeln!(std::io::stdout(), "Unlinking key {}", args.key)?;
 
-    blobstore
-        .unlink(&ctx, &args.key)
-        .await
-        .context("Failed to unlink blob")?;
+    for blobstore in blobstores {
+        blobstore
+            .unlink(&ctx, &args.key)
+            .await
+            .context("Failed to unlink blob")?;
+    }
 
     Ok(())
 }
