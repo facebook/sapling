@@ -20,9 +20,9 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use strum_macros::AsRefStr;
-use strum_macros::Display;
-use strum_macros::EnumString;
+use strum::AsRefStr;
+use strum::Display;
+use strum::EnumString;
 
 use crate::context::DerivationContext;
 

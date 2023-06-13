@@ -41,14 +41,7 @@ pub(crate) const ARG_SVNREV: &str = "svnrev";
 pub(crate) const ARG_BUBBLE_ID: &str = "bubble-id";
 pub(crate) const ARG_SNAPSHOT_ID: &str = "snapshot-id";
 
-#[derive(
-    strum_macros::EnumString,
-    strum_macros::Display,
-    Clone,
-    PartialEq,
-    Eq,
-    Hash
-)]
+#[derive(strum::EnumString, strum::Display, Clone, PartialEq, Eq, Hash)]
 #[strum(serialize_all = "kebab-case")]
 pub(crate) enum Scheme {
     Bonsai,

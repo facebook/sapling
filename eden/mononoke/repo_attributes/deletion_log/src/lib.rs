@@ -21,7 +21,7 @@ use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
-use strum_macros::Display;
+use strum::Display;
 
 pub const MYSQL_INSERT_CHUNK_SIZE: usize = 1000;
 

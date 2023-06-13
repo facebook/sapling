@@ -24,8 +24,7 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_derive = "1.0"
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-strum = "0.21"
-strum_macros = "0.21"
+strum = { version = "0.24", features = ["derive"] }
 thiserror = "1.0.36"
 trait-set = "0.3.0"
 zstd = { version = "0.11.2+zstd.1.5.2", features = ["experimental", "zstdmt"] }

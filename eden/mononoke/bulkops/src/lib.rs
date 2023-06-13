@@ -30,9 +30,9 @@ use futures::stream::TryStreamExt;
 use futures::Stream;
 use mononoke_types::ChangesetId;
 use phases::Phases;
-use strum_macros::AsRefStr;
-use strum_macros::EnumString;
-use strum_macros::EnumVariantNames;
+use strum::AsRefStr;
+use strum::EnumString;
+use strum::EnumVariantNames;
 
 #[derive(
     Clone,

@@ -22,7 +22,7 @@ use rendezvous::RendezVousOptions;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
-use strum_macros::EnumString;
+use strum::EnumString;
 use tokio::runtime::Handle;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -47,7 +47,7 @@ pub enum Caching {
     Disabled,
 }
 
-#[derive(Copy, Clone, Debug, ValueEnum, EnumString, strum_macros::Display)]
+#[derive(Copy, Clone, Debug, ValueEnum, EnumString, strum::Display)]
 pub enum WarmBookmarksCacheDerivedData {
     HgOnly,
     AllKinds,

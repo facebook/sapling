@@ -9,10 +9,10 @@ use std::collections::HashSet;
 
 use clap::ValueEnum;
 use once_cell::sync::Lazy;
+use strum::AsRefStr;
+use strum::EnumString;
+use strum::EnumVariantNames;
 use strum::IntoEnumIterator;
-use strum_macros::AsRefStr;
-use strum_macros::EnumString;
-use strum_macros::EnumVariantNames;
 
 use crate::detail::graph::NodeType;
 use crate::detail::state::InternedType;

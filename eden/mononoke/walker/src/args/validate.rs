@@ -9,9 +9,9 @@ use std::collections::HashSet;
 
 use clap::Args;
 use clap::ValueEnum;
-use strum_macros::AsRefStr;
-use strum_macros::EnumString;
-use strum_macros::EnumVariantNames;
+use strum::AsRefStr;
+use strum::EnumString;
+use strum::EnumVariantNames;
 
 use crate::detail::validate::CheckType;
 use crate::detail::validate::DEFAULT_CHECK_TYPES;

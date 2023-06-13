@@ -17,10 +17,10 @@ use futures_stats::FutureStats;
 use metaconfig_types::BlobstoreId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
-use strum_macros::AsRefStr;
-use strum_macros::Display;
-use strum_macros::EnumString;
-use strum_macros::EnumVariantNames;
+use strum::AsRefStr;
+use strum::Display;
+use strum::EnumString;
+use strum::EnumVariantNames;
 use time_ext::DurationExt;
 use tunables::tunables;
 

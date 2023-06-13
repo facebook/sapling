@@ -46,9 +46,9 @@ use phases::Phases;
 use slog::info;
 use slog::Logger;
 use strum::EnumCount;
-use strum_macros::EnumIter;
-use strum_macros::EnumString;
-use strum_macros::EnumVariantNames;
+use strum::EnumIter;
+use strum::EnumString;
+use strum::EnumVariantNames;
 
 use crate::detail::graph::EdgeType;
 use crate::detail::graph::Node;

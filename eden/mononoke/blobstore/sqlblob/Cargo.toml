@@ -34,4 +34,4 @@ xdb_gc_structs = { version = "0.1.0", path = "../../../../configerator/structs/s
 [dev-dependencies]
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-strum = "0.21"
+strum = { version = "0.24", features = ["derive"] }

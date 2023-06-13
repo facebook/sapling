@@ -53,6 +53,6 @@ slog_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-strum = "0.21"
+strum = { version = "0.24", features = ["derive"] }
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../tunables" }

@@ -20,12 +20,12 @@ use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::Globalrev;
 use mononoke_types::Svnrev;
-use strum_macros::ToString;
+use strum::Display;
 
 pub trait Repo =
     BonsaiHgMappingRef + BonsaiGitMappingRef + BonsaiGlobalrevMappingRef + BonsaiSvnrevMappingRef;
 
-#[derive(Copy, Clone, Eq, PartialEq, ValueEnum, ToString)]
+#[derive(Copy, Clone, Eq, PartialEq, ValueEnum, Display)]
 #[strum(serialize_all = "kebab_case")]
 pub enum IdentityScheme {
     /// Mononoke bonsai hash

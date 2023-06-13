@@ -31,11 +31,11 @@ use clap::ValueEnum;
 use context::CoreContext;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-use strum_macros::AsRefStr;
-use strum_macros::Display;
-use strum_macros::EnumIter;
-use strum_macros::EnumString;
-use strum_macros::IntoStaticStr;
+use strum::AsRefStr;
+use strum::Display;
+use strum::EnumIter;
+use strum::EnumString;
+use strum::IntoStaticStr;
 use thiserror::Error;
 use trait_set::trait_set;
 

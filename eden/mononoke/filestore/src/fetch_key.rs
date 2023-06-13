@@ -21,7 +21,7 @@ use mononoke_types::hash;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ContentAlias;
 use mononoke_types::ContentId;
-use strum_macros::EnumIter;
+use strum::EnumIter;
 
 /// Key for fetching - we can access with any of the supported key types
 #[derive(Debug, Copy, Clone)]

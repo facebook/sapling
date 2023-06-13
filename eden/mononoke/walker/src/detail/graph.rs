@@ -104,9 +104,9 @@ macro_rules! define_type_enum {
      (enum $enum_name:ident {
          $($variant:ident),* $(,)?
      }) => {
-         #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, strum_macros::AsRefStr,
-         strum_macros::EnumCount, strum_macros::EnumIter, strum_macros::EnumString,
-         strum_macros::EnumVariantNames, strum_macros::IntoStaticStr)]
+         #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, strum::AsRefStr,
+         strum::EnumCount, strum::EnumIter, strum::EnumString,
+         strum::EnumVariantNames, strum::IntoStaticStr)]
          pub enum $enum_name {
              $($variant),*
          }

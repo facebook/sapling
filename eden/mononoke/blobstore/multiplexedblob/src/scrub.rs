@@ -30,9 +30,9 @@ use once_cell::sync::Lazy;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
 use slog::warn;
-use strum_macros::EnumString;
-use strum_macros::EnumVariantNames;
-use strum_macros::IntoStaticStr;
+use strum::EnumString;
+use strum::EnumVariantNames;
+use strum::IntoStaticStr;
 
 use crate::base::inner_put;
 
