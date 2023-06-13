@@ -207,6 +207,7 @@ impl RepoShardedProcessExecutor for StatisticsCollector {
             self.scuba_logger.clone(),
             self.repo_name.clone(),
             self.bookmark.clone(),
+            self.cancellation_requested.clone(),
         )
         .await;
         if let Err(ref e) = val {
@@ -592,6 +593,7 @@ async fn run_statistics(
     scuba_logger: MononokeScubaSampleBuilder,
     repo_name: String,
     bookmark: BookmarkKey,
+    cancellation_requested: Arc<AtomicBool>,
 ) -> Result<(), Error> {
     if let Some(in_filename) = args.in_filename.as_ref() {
         return generate_statistics_from_file(&ctx, &repo, in_filename).await;
@@ -622,6 +624,13 @@ async fn run_statistics(
 
     // run the loop
     loop {
+        if cancellation_requested.load(Ordering::Relaxed) {
+            info!(
+                ctx.logger(),
+                "Cancellation requested for statistics collector. Exiting"
+            );
+            return Ok(());
+        }
         let prev_changeset = changeset;
         changeset = repo
             .get_bookmark_hg(ctx.clone(), &bookmark)
@@ -717,21 +726,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         }
     }
 }
-
-// async fn async_main(app: MononokeApp) -> Result<(), Error> {
-//     let logger = app.logger();
-//     let ctx = CoreContext::new_with_logger(app.fb, logger.clone());
-
-//     let args: RepoStatisticsArgs = app.args()?;
-//     let bookmark = BookmarkKey::new(args.bookmark.to_string())?;
-//     let (repo_name, _) = app.repo_config(args.repo.as_repo_arg())?;
-//     let scuba_logger = if args.log_to_scuba {
-//         MononokeScubaSampleBuilder::new(app.fb, SCUBA_DATASET_NAME)?
-//     } else {
-//         MononokeScubaSampleBuilder::with_discard()
-//     };
-//     run_statistics(app, args, ctx, scuba_logger, repo_name, bookmark).await
-// }
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
