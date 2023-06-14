@@ -184,9 +184,9 @@ def load_state(repo):
     for l in repo.localvfs.tryreadlines("bisect.state"):
         l = pycompat.decodeutf8(l)
         kind, node = l[:-1].split(" ", 1)
-        node = node if node.startswith("revset:") else repo.lookup(node)
         if kind not in state:
             raise error.Abort(_("unknown bisect kind %s") % kind)
+        node = node if node.startswith("revset:") else repo.lookup(node)
         state[kind].append(node)
     return state
 
