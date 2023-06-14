@@ -89,9 +89,10 @@ def bisect(repo, state):
     # have we narrowed it down to one entry?
     # or have all other possible candidates besides 'bad' have been skipped?
     tot = len(candidates)
-    unskipped = [c for c in candidates if (c not in skip) and (c != badrev)]
+    unskipped = {c for c in candidates if (c not in skip) and (c != badrev)}
     if tot == 1 or not unskipped:
         return ([changelog.node(c) for c in candidates], 0, good, badnode, goodnode)
+    unskipped.add(badrev)
     perfect = tot // 2
 
     # find the best node to test
@@ -110,13 +111,13 @@ def bisect(repo, state):
         x = len(a)  # number of ancestors
         y = tot - x  # number of non-ancestors
         value = min(x, y)  # how good is this test?
-        if value > best_len and rev not in skip:
+        if value > best_len and rev in unskipped:
             best_len = value
             best_rev = rev
             if value == perfect:  # found a perfect candidate? quit early
                 break
 
-        if y < perfect and rev not in skip:  # all downhill from here?
+        if y < perfect and rev in unskipped:  # all downhill from here?
             # poison children
             poison.update(children.get(rev, []))
             continue
