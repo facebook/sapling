@@ -10,7 +10,6 @@ use std::sync::Arc;
 
 use anyhow::bail;
 use anyhow::format_err;
-use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::BlobstoreUnlinkOps;
@@ -129,15 +128,7 @@ async fn get_multiple_blobstores(
     config_store: &ConfigStore,
 ) -> Result<Vec<Arc<dyn BlobstoreUnlinkOps>>, Error> {
     let blobstores = match blobconfig {
-        MultiplexedWal {
-            multiplex_id: _,
-            blobstores,
-            write_quorum: _,
-            queue_db: _,
-            inner_blobstores_scuba_table: _,
-            multiplex_scuba_table: _,
-            scuba_sample_rate: _,
-        } => {
+        MultiplexedWal { blobstores, .. } => {
             let mut underlying_blobstores: Vec<Arc<dyn BlobstoreUnlinkOps>> = Vec::new();
             writeln!(
                 std::io::stdout(),
@@ -234,13 +225,24 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     )
     .await?;
 
-    writeln!(std::io::stdout(), "Unlinking key {}", args.key)?;
-
     for blobstore in blobstores {
-        blobstore
-            .unlink(&ctx, &args.key)
-            .await
-            .context("Failed to unlink blob")?;
+        match blobstore.unlink(&ctx, &args.key).await {
+            Ok(_) => {
+                writeln!(
+                    std::io::stdout(),
+                    "Unlinking key {} successfully in one underlying blobstore",
+                    args.key
+                )?;
+            }
+            Err(e) => {
+                writeln!(
+                    std::io::stdout(),
+                    "Failed to unlink key {} in one underlying blobstore, error: {}.",
+                    args.key,
+                    e
+                )?;
+            }
+        }
     }
 
     Ok(())

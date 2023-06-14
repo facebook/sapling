@@ -35,7 +35,7 @@ doesn't construct the blobstore in the usual way, so we need to give the full
 key.
 
   $ mononoke_newadmin blobstore-unlink -R repo repo0000.somekey
-  Unlinking key repo0000.somekey
+  Unlinking key repo0000.somekey successfully in one underlying blobstore
   $ mononoke_newadmin blobstore -R repo fetch -q somekey -o "$TESTTMP/fetched_value_unlinked"
   No blob exists for somekey
 
