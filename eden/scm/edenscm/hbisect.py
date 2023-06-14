@@ -183,8 +183,8 @@ def load_state(repo):
     state = {"current": [], "good": [], "bad": [], "skip": []}
     for l in repo.localvfs.tryreadlines("bisect.state"):
         l = pycompat.decodeutf8(l)
-        kind, node = l[:-1].split()
-        node = repo.lookup(node)
+        kind, node = l[:-1].split(" ", 1)
+        node = node if node.startswith("revset:") else repo.lookup(node)
         if kind not in state:
             raise error.Abort(_("unknown bisect kind %s") % kind)
         state[kind].append(node)
@@ -196,7 +196,8 @@ def save_state(repo, state) -> None:
     with repo.wlock():
         for kind in sorted(state):
             for node in state[kind]:
-                f.writeutf8("%s %s\n" % (kind, hex(node)))
+                s = hex(node) if isinstance(node, bytes) else node
+                f.writeutf8("%s %s\n" % (kind, s))
         f.close()
 
 
