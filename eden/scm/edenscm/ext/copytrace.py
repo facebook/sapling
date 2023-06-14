@@ -40,6 +40,7 @@ from edenscm import (
     dispatch,
     extensions,
     filemerge,
+    git,
     json,
     node,
     phases,
@@ -419,7 +420,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
         if sourcecommitnum > sourcecommitlimit:
             return orig(repo, cdst, csrc, base)
 
-    if _dagcopytraceenabled(repo.ui):
+    if _dagcopytraceenabled(repo.ui) and git.isgitformat(repo):
         dag_copy_trace = repo._dagcopytrace
         srcmissingfiles = [
             f for f in changedfiles if f not in csrc and f in base and f in mdst
