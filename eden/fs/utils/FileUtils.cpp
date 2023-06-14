@@ -14,6 +14,7 @@
 #include <folly/FileUtil.h>
 
 #include "eden/common/utils/WinError.h"
+#include "eden/fs/utils/Try.h"
 
 namespace facebook::eden {
 
@@ -150,27 +151,15 @@ folly::Try<uint64_t> getHandleFileSize(
 } // namespace
 
 folly::Try<uint64_t> getMaterializedFileSize(AbsolutePathPiece path) {
-  auto tryFileHandle = openHandle(path, OpenMode::READ);
-  if (tryFileHandle.hasException()) {
-    return folly::Try<uint64_t>{std::move(tryFileHandle).exception()};
-  }
-  auto fileHandle = std::move(tryFileHandle).value();
+  EDEN_TRY(fileHandle, openHandle(path, OpenMode::READ));
   return getHandleFileSize(fileHandle, path);
 }
 
 folly::Try<std::string> readFile(AbsolutePathPiece path, size_t num_bytes) {
-  auto tryFileHandle = openHandle(path, OpenMode::READ);
-  if (tryFileHandle.hasException()) {
-    return folly::Try<std::string>{std::move(tryFileHandle).exception()};
-  }
-  auto fileHandle = std::move(tryFileHandle).value();
-
+  EDEN_TRY(fileHandle, openHandle(path, OpenMode::READ));
   if (num_bytes == std::numeric_limits<size_t>::max()) {
-    auto fileSize = getHandleFileSize(fileHandle, path);
-    if (fileSize.hasException()) {
-      return folly::Try<std::string>{std::move(fileSize).exception()};
-    }
-    num_bytes = fileSize.value();
+    EDEN_TRY(fileSize, getHandleFileSize(fileHandle, path));
+    num_bytes = fileSize;
   }
 
   // TODO(xavierd): this can only read up to 4GB.
@@ -196,12 +185,8 @@ folly::Try<std::string> readFile(AbsolutePathPiece path, size_t num_bytes) {
 }
 
 folly::Try<void> writeFile(AbsolutePathPiece path, folly::ByteRange data) {
-  auto tryFileHandle = openHandle(path, OpenMode::WRITE);
-  if (tryFileHandle.hasException()) {
-    return folly::Try<void>{std::move(tryFileHandle).exception()};
-  }
-
-  return writeToHandle(tryFileHandle.value(), data, path);
+  EDEN_TRY(fileHandle, openHandle(path, OpenMode::WRITE));
+  return writeToHandle(fileHandle, data, path);
 }
 
 folly::Try<void> writeFileAtomic(
@@ -303,12 +288,7 @@ NTSTATUS NtQueryDirectoryFileImpl(
 
 folly::Try<std::vector<PathComponent>> getAllDirectoryEntryNames(
     AbsolutePathPiece path) {
-  auto handleTry = openHandle(path, OpenMode::READ);
-  if (handleTry.hasException()) {
-    return folly::Try<std::vector<PathComponent>>{
-        std::move(handleTry).exception()};
-  }
-  const auto& handle = handleTry.value();
+  EDEN_TRY(handle, openHandle(path, OpenMode::READ));
 
   std::vector<PathComponent> direntNames;
   while (true) {
