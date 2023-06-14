@@ -94,28 +94,32 @@ folly::Future<std::vector<StoreResult>> LocalStore::getBatch(
 ImmediateFuture<TreePtr> LocalStore::getTree(const ObjectId& id) const {
   DurationScope stat{stats_, &LocalStoreStats::getTree};
   return getImmediateFuture(KeySpace::TreeFamily, id)
-      .thenValue([id, stat = std::move(stat)](StoreResult&& data) {
-        if (!data.isValid()) {
-          return std::shared_ptr<TreePtr::element_type>(nullptr);
-        }
-        auto tree = Tree::tryDeserialize(id, StringPiece{data.bytes()});
-        if (tree) {
-          return tree;
-        }
-        return deserializeGitTree(id, data.bytes());
-      });
+      .thenValue(
+          [id, stat = std::move(stat), &stats = stats_](StoreResult&& data) {
+            if (!data.isValid()) {
+              stats->increment(&LocalStoreStats::getTreeFailure);
+              return std::shared_ptr<TreePtr::element_type>(nullptr);
+            }
+            auto tree = Tree::tryDeserialize(id, StringPiece{data.bytes()});
+            if (tree) {
+              return tree;
+            }
+            return deserializeGitTree(id, data.bytes());
+          });
 }
 
 ImmediateFuture<BlobPtr> LocalStore::getBlob(const ObjectId& id) const {
   DurationScope stat{stats_, &LocalStoreStats::getBlob};
   return getImmediateFuture(KeySpace::BlobFamily, id)
-      .thenValue([id, stat = std::move(stat)](StoreResult&& data) {
-        if (!data.isValid()) {
-          return std::shared_ptr<BlobPtr::element_type>(nullptr);
-        }
-        auto buf = data.extractIOBuf();
-        return deserializeGitBlob(id, &buf);
-      });
+      .thenValue(
+          [id, stat = std::move(stat), &stats = stats_](StoreResult&& data) {
+            if (!data.isValid()) {
+              stats->increment(&LocalStoreStats::getBlobFailure);
+              return std::shared_ptr<BlobPtr::element_type>(nullptr);
+            }
+            auto buf = data.extractIOBuf();
+            return deserializeGitBlob(id, &buf);
+          });
 }
 
 ImmediateFuture<BlobMetadataPtr> LocalStore::getBlobMetadata(
@@ -123,8 +127,10 @@ ImmediateFuture<BlobMetadataPtr> LocalStore::getBlobMetadata(
   DurationScope stat{stats_, &LocalStoreStats::getBlobMetadata};
   return getImmediateFuture(KeySpace::BlobMetaDataFamily, id)
       .thenValue(
-          [id, stat = std::move(stat)](StoreResult&& data) -> BlobMetadataPtr {
+          [id, stat = std::move(stat), &stats = stats_](
+              StoreResult&& data) -> BlobMetadataPtr {
             if (!data.isValid()) {
+              stats->increment(&LocalStoreStats::getBlobMetadataFailure);
               return nullptr;
             } else {
               return SerializedBlobMetadata::parse(id, data);
