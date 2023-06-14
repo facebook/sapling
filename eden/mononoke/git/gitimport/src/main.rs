@@ -112,6 +112,9 @@ struct GitimportArgs {
     /// Use at your own risk!
     #[clap(long)]
     generate_bookmarks: bool,
+    /// When set, the gitimport tool would bypass the read-only check while creating and moving bookmarks.
+    #[clap(long)]
+    bypass_readonly: bool,
     /// Set the path to the git binary - preset to git.real
     #[clap(long)]
     git_command_path: Option<String>,
@@ -305,7 +308,15 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 } else {
                     BookmarkKey::new(&name)?
                 };
-                let pushvars = None;
+
+                let pushvars = if args.bypass_readonly {
+                    Some(HashMap::from_iter([(
+                        "BYPASS_READONLY".to_string(),
+                        bytes::Bytes::from("true"),
+                    )]))
+                } else {
+                    None
+                };
                 let old_changeset = repo_context
                     .resolve_bookmark(&bookmark_key, BookmarkFreshness::MostRecent)
                     .await
@@ -322,7 +333,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                                     final_changeset,
                                     Some(old_changeset),
                                     allow_non_fast_forward,
-                                    pushvars,
+                                    pushvars.as_ref(),
                                 )
                                 .await
                                 .with_context(|| format!("failed to move bookmark {name} from {old_changeset:?} to {final_changeset:?}"))?;
@@ -340,7 +351,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     // The bookmark doesn't yet exist. Create it.
                     None => {
                         repo_context
-                            .create_bookmark(&bookmark_key, final_changeset, pushvars)
+                            .create_bookmark(&bookmark_key, final_changeset, pushvars.as_ref())
                             .await
                             .with_context(|| {
                                 format!("failed to create bookmark {name} during gitimport")
