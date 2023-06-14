@@ -7,6 +7,8 @@
 
 #include "eden/fs/store/LocalStore.h"
 
+#include <folly/ExceptionWrapper.h>
+#include <folly/Expected.h>
 #include <folly/String.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
@@ -31,6 +33,25 @@ using std::optional;
 using std::string;
 
 namespace facebook::eden {
+
+namespace {
+template <typename T, typename C, typename F>
+FOLLY_ALWAYS_INLINE std::shared_ptr<T> parse(
+    const ObjectId& id,
+    std::string_view context,
+    const EdenStatsPtr& stats,
+    C failureCounter,
+    F&& fn) {
+  std::shared_ptr<T> def(nullptr);
+  if (auto ew = folly::try_and_catch(
+          [&def, fn = std::forward<F>(fn)]() { def = fn(); })) {
+    stats->increment(failureCounter);
+    XLOGF(ERR, "Failed to get {} for {}: {}", context, id, ew.what());
+  }
+
+  return def;
+}
+} // namespace
 
 LocalStore::LocalStore(EdenStatsPtr edenStats) : stats_{std::move(edenStats)} {}
 
@@ -95,16 +116,27 @@ ImmediateFuture<TreePtr> LocalStore::getTree(const ObjectId& id) const {
   DurationScope stat{stats_, &LocalStoreStats::getTree};
   return getImmediateFuture(KeySpace::TreeFamily, id)
       .thenValue(
-          [id, stat = std::move(stat), &stats = stats_](StoreResult&& data) {
-            if (!data.isValid()) {
-              stats->increment(&LocalStoreStats::getTreeFailure);
-              return std::shared_ptr<TreePtr::element_type>(nullptr);
+          [id, stat = std::move(stat), &stats = stats_](
+              StoreResult&& data) -> TreePtr {
+            if (data.isValid()) {
+              return parse<const Tree>(
+                  id,
+                  "Tree",
+                  stats,
+                  &LocalStoreStats::getTreeFailure,
+                  [&id, &data]() {
+                    auto tree =
+                        Tree::tryDeserialize(id, StringPiece{data.bytes()});
+                    if (tree) {
+                      return tree;
+                    }
+
+                    return deserializeGitTree(id, data.bytes());
+                  });
             }
-            auto tree = Tree::tryDeserialize(id, StringPiece{data.bytes()});
-            if (tree) {
-              return tree;
-            }
-            return deserializeGitTree(id, data.bytes());
+
+            stats->increment(&LocalStoreStats::getTreeFailure);
+            return nullptr;
           });
 }
 
@@ -112,13 +144,22 @@ ImmediateFuture<BlobPtr> LocalStore::getBlob(const ObjectId& id) const {
   DurationScope stat{stats_, &LocalStoreStats::getBlob};
   return getImmediateFuture(KeySpace::BlobFamily, id)
       .thenValue(
-          [id, stat = std::move(stat), &stats = stats_](StoreResult&& data) {
-            if (!data.isValid()) {
-              stats->increment(&LocalStoreStats::getBlobFailure);
-              return std::shared_ptr<BlobPtr::element_type>(nullptr);
+          [id, stat = std::move(stat), &stats = stats_](
+              StoreResult&& data) -> BlobPtr {
+            if (data.isValid()) {
+              return parse<const Blob>(
+                  id,
+                  "Blob",
+                  stats,
+                  &LocalStoreStats::getBlobFailure,
+                  [&id, &data]() {
+                    auto buf = data.extractIOBuf();
+                    return deserializeGitBlob(id, &buf);
+                  });
             }
-            auto buf = data.extractIOBuf();
-            return deserializeGitBlob(id, &buf);
+
+            stats->increment(&LocalStoreStats::getBlobFailure);
+            return nullptr;
           });
 }
 
@@ -129,12 +170,19 @@ ImmediateFuture<BlobMetadataPtr> LocalStore::getBlobMetadata(
       .thenValue(
           [id, stat = std::move(stat), &stats = stats_](
               StoreResult&& data) -> BlobMetadataPtr {
-            if (!data.isValid()) {
-              stats->increment(&LocalStoreStats::getBlobMetadataFailure);
-              return nullptr;
-            } else {
-              return SerializedBlobMetadata::parse(id, data);
+            if (data.isValid()) {
+              return parse<const BlobMetadata>(
+                  id,
+                  "BlobMetadata",
+                  stats,
+                  &LocalStoreStats::getBlobMetadataFailure,
+                  [&id, &data]() {
+                    return SerializedBlobMetadata::parse(id, data);
+                  });
             }
+
+            stats->increment(&LocalStoreStats::getBlobMetadataFailure);
+            return nullptr;
           });
 }
 
