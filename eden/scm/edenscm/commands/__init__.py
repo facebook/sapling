@@ -1001,16 +1001,7 @@ def bisect(
 
     # update state
     if good or bad or skip:
-        if rev:
-            nodes = [repo.lookup(i) for i in scmutil.revrange(repo, [rev])]
-        else:
-            nodes = [repo.lookup(".")]
-        if good:
-            state["good"] += nodes
-        elif bad:
-            state["bad"] += nodes
-        elif skip:
-            state["skip"] += nodes
+        _update_state(repo, state, rev, good, bad, skip)
         hbisect.save_state(repo, state)
         if not (state["good"] and state["bad"]):
             return
@@ -1180,6 +1171,19 @@ the sparse profile from the known %s changeset %s\n"
         showtestingnext(rev, node, changesets)
 
         return mayupdate(repo, node)
+
+
+def _update_state(repo, state, rev, good, bad, skip):
+    if rev:
+        nodes = [repo.lookup(i) for i in scmutil.revrange(repo, [rev])]
+    else:
+        nodes = [repo.lookup(".")]
+    if good:
+        state["good"] += nodes
+    elif bad:
+        state["bad"] += nodes
+    elif skip:
+        state["skip"] += nodes
 
 
 @command(
