@@ -6,6 +6,7 @@
  */
 
 use std::io::stderr;
+use std::io::stdout;
 use std::io::Cursor;
 use std::io::IsTerminal;
 use std::sync::Weak;
@@ -23,7 +24,7 @@ impl IsTty for std::io::Stdin {
 
 impl IsTty for std::io::Stdout {
     fn is_tty(&self) -> bool {
-        atty::is(atty::Stream::Stdout)
+        stdout().is_terminal()
     }
     fn is_stdout(&self) -> bool {
         true

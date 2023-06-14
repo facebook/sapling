@@ -8,6 +8,8 @@
 //! Command-line client for the Source Control Service.
 
 use std::env;
+use std::io::stdout;
+use std::io::IsTerminal;
 use std::process::ExitCode;
 
 use ansi_term::Colour;
@@ -107,7 +109,7 @@ async fn main_impl(fb: FacebookInit) -> anyhow::Result<()> {
     let connection_args = common_args.connection_args;
     let target = if common_args.json {
         OutputTarget::Json
-    } else if atty::is(atty::Stream::Stdout) {
+    } else if stdout().is_terminal() {
         OutputTarget::Tty
     } else {
         OutputTarget::Pipe

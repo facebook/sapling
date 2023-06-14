@@ -9,6 +9,7 @@ use std::env;
 use std::io::prelude::*;
 use std::io::stdin;
 use std::io::stdout;
+use std::io::IsTerminal;
 
 use anyhow::Result;
 use futures::prelude::*;
@@ -123,7 +124,7 @@ async fn write_response(res: AsyncResponse) -> Result<()> {
 
     let body = res.into_body().decoded().try_concat().await?;
 
-    if atty::is(atty::Stream::Stdout) {
+    if stdout().is_terminal() {
         println!("{}", String::from_utf8_lossy(&body).escape_default())
     } else {
         stdout().write_all(&body)?;
