@@ -23,7 +23,7 @@ gotham = "0.7.1"
 gotham_derive = "0.7.0"
 hex = "0.4.3"
 http = "0.2"
-hyper = { version = "0.14.26", features = ["client", "http1", "http2"] }
+hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"] }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 metadata = { version = "0.1.0", path = "../server/metadata" }
 mime = "0.3.14"
