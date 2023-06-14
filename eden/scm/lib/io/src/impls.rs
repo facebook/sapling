@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::io::stderr;
 use std::io::Cursor;
+use std::io::IsTerminal;
 use std::sync::Weak;
 
 use crate::IsTty;
@@ -30,7 +32,7 @@ impl IsTty for std::io::Stdout {
 
 impl IsTty for std::io::Stderr {
     fn is_tty(&self) -> bool {
-        atty::is(atty::Stream::Stderr)
+        stderr().is_terminal()
     }
     fn is_stderr(&self) -> bool {
         true
