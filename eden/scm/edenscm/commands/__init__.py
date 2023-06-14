@@ -1174,16 +1174,34 @@ the sparse profile from the known %s changeset %s\n"
 
 
 def _update_state(repo, state, rev, good, bad, skip):
-    if rev:
-        nodes = [repo.lookup(i) for i in scmutil.revrange(repo, [rev])]
-    else:
-        nodes = [repo.lookup(".")]
+    def get_nodes(rev):
+        nodes = (
+            [repo.lookup(i) for i in scmutil.revrange(repo, [rev])]
+            if rev
+            else [repo.lookup(".")]
+        )
+        return nodes
+
+    def get_revs(rev):
+        """lazy evaluate `rev` revset expression if it is large.
+
+        This is only used for 'skip' status now.
+        """
+        revs = scmutil.revrange(repo, [rev or "."])
+        fastlen = revs.fastlen()
+        # revset check is slower than nodes check, so avoid revset expr for small revsets.
+        # for example, user might just want to skip a single commit.
+        if fastlen is not None and fastlen < 10:
+            return list(repo.changelog.tonodes(revs))
+        else:
+            return [f"revset:{rev}"]
+
     if good:
-        state["good"] += nodes
+        state["good"] += get_nodes(rev)
     elif bad:
-        state["bad"] += nodes
+        state["bad"] += get_nodes(rev)
     elif skip:
-        state["skip"] += nodes
+        state["skip"] += get_revs(rev)
 
 
 @command(

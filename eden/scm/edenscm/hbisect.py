@@ -37,7 +37,7 @@ def bisect(repo, state):
 
     changelog = repo.changelog
     clparents = changelog.parentrevs
-    skip = set([changelog.rev(n) for n in state["skip"]])
+    skip = _state_to_revs(repo, state, "skip")
 
     def buildancestors(bad, good):
         badrev = min([changelog.rev(n) for n in bad])
@@ -219,6 +219,22 @@ def checkstate(state) -> bool:
         raise error.Abort(_("cannot bisect (no known bad revisions)"))
 
 
+def _state_to_revs(repo, state, kind):
+    items = state[kind]
+    nodes = []
+    revset_exprs = []
+
+    for item in items:
+        if isinstance(item, bytes):
+            nodes.append(item)
+        elif item.startswith("revset:"):
+            revset_exprs.append(item[7:])
+        else:
+            raise error.Abort(_("invalid node: %s, kind: %s") % (item, kind))
+
+    return repo.revs("%ln or %lr", nodes, revset_exprs)
+
+
 def get(repo, status):
     """
     Return a list of revision(s) that match the given status:
@@ -233,7 +249,7 @@ def get(repo, status):
     """
     state = load_state(repo)
     if status in ("good", "bad", "skip", "current"):
-        return list(map(repo.changelog.rev, state[status]))
+        return list(_state_to_revs(repo, state, status))
     else:
         # In the following sets, we do *not* call 'bisect()' with more
         # than one level of recursion, because that can be very, very
