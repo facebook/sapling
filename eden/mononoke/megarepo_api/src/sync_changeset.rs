@@ -21,7 +21,6 @@ use commit_transformation::create_source_to_target_multi_mover;
 use commit_transformation::rewrite_as_squashed_commit;
 use commit_transformation::rewrite_commit;
 use commit_transformation::upload_commits;
-use commit_transformation::CommitRewrittenToEmpty;
 use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
@@ -517,7 +516,7 @@ async fn sync_changeset_to_target(
                 // hg derivation. This ensures that mainline is within those two so is
                 // represented in the commit graph and the sync is a fast-forward move.
                 Some(target_cs_id),
-                CommitRewrittenToEmpty::Discard,
+                Default::default(),
             )
             .await
             .map_err(MegarepoError::internal)?

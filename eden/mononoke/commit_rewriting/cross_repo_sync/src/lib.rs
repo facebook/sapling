@@ -45,7 +45,9 @@ use commit_graph::CommitGraphRef;
 use commit_transformation::rewrite_commit as multi_mover_rewrite_commit;
 use commit_transformation::upload_commits;
 pub use commit_transformation::CommitRewrittenToEmpty;
+pub use commit_transformation::EmptyCommitFromLargeRepo;
 use commit_transformation::MultiMover;
+pub use commit_transformation::RewriteOpts;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use environment::Caching;
@@ -237,7 +239,7 @@ pub async fn rewrite_commit<'a>(
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     mover: Mover,
     source_repo: &impl Repo,
-    commit_rewritten_to_empty: CommitRewrittenToEmpty,
+    rewrite_opts: RewriteOpts,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     multi_mover_rewrite_commit(
         ctx,
@@ -246,7 +248,7 @@ pub async fn rewrite_commit<'a>(
         mover_to_multi_mover(mover),
         source_repo,
         None,
-        commit_rewritten_to_empty,
+        rewrite_opts,
     )
     .await
 }
@@ -1137,7 +1139,7 @@ where
             &remapped_parents,
             mover,
             &source_repo,
-            CommitRewrittenToEmpty::Discard,
+            Default::default(),
         )
         .await?;
         match rewritten_commit {
@@ -1273,7 +1275,7 @@ where
             &remapped_parents,
             mover,
             &source_repo,
-            CommitRewrittenToEmpty::Discard,
+            Default::default(),
         )
         .await?;
 
@@ -1518,6 +1520,10 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         Source(self.source_repo.repo_identity().id())
     }
 
+    fn source_repo_name(&self) -> Source<&str> {
+        Source(self.source_repo.repo_identity().name())
+    }
+
     pub async fn unsafe_sync_commit_in_memory(
         self,
         cs: BonsaiChangeset,
@@ -1572,7 +1578,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             &HashMap::new(),
             mover,
             self.source_repo.0,
-            CommitRewrittenToEmpty::Discard,
+            Default::default(),
         )
         .await?
         {
@@ -1651,10 +1657,24 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 let maybe_mapping_change_version = get_mapping_change_version(
                     &ChangesetInfo::derive(self.ctx, self.source_repo.0, source_cs_id).await?,
                 )?;
-                let discard_commits_rewriting_to_empty = if maybe_mapping_change_version.is_some() {
+                let commit_rewritten_to_empty = if maybe_mapping_change_version.is_some() {
                     CommitRewrittenToEmpty::Keep
                 } else {
                     CommitRewrittenToEmpty::Discard
+                };
+                // During backsyncing we provide an option to skip emmpty commits but we
+                // can only do that when they're not changing the mapping.
+                let empty_commit_from_large_repo = if !self.small_to_large
+                    && maybe_mapping_change_version.is_none()
+                    && tunables::tunables()
+                        .by_repo_cross_repo_skip_backsyncing_ordinary_empty_commits(
+                            self.source_repo_name().0,
+                        )
+                        .unwrap_or(false)
+                {
+                    EmptyCommitFromLargeRepo::Discard
+                } else {
+                    EmptyCommitFromLargeRepo::Keep
                 };
 
                 let maybe_rewritten = rewrite_commit(
@@ -1663,7 +1683,10 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                     &remapped_parents,
                     rewrite_paths,
                     self.source_repo.0,
-                    discard_commits_rewriting_to_empty,
+                    RewriteOpts {
+                        commit_rewritten_to_empty,
+                        empty_commit_from_large_repo,
+                    },
                 )
                 .await?;
                 match maybe_rewritten {
@@ -1812,7 +1835,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 &new_parents,
                 mover,
                 self.source_repo.0,
-                CommitRewrittenToEmpty::Discard,
+                Default::default(),
             )
             .await?
             {

@@ -34,7 +34,6 @@ use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::CandidateSelectionHint;
-use cross_repo_sync::CommitRewrittenToEmpty;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
@@ -233,7 +232,7 @@ async fn rewrite_file_paths(
             &remapped_parents,
             mover.clone(),
             repo,
-            CommitRewrittenToEmpty::Discard,
+            Default::default(),
         )
         .await?;
 

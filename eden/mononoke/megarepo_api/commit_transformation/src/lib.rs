@@ -238,10 +238,29 @@ async fn get_implicit_delete_file_changes<'a, I: IntoIterator<Item = ChangesetId
 /// Determines what to do in commits rewriting to empty commit in small repo.
 ///
 /// NOTE: The empty commits from large repo are kept regardless of this flag.
-#[derive(PartialEq, Debug, Copy, Clone)]
+#[derive(PartialEq, Debug, Copy, Clone, Default)]
 pub enum CommitRewrittenToEmpty {
     Keep,
+    #[default]
     Discard,
+}
+
+/// Determines what to do with commits that are empty in large repo.  They may
+/// be useful to keep them in small repo if they have some special meaning.
+///
+/// NOTE: This flag doesn't affect non-empty commits from large repo rewriting
+/// to empty commits in small repo. Use CommitsRewrittenToEmpty to control that.
+#[derive(PartialEq, Debug, Copy, Clone, Default)]
+pub enum EmptyCommitFromLargeRepo {
+    #[default]
+    Keep,
+    Discard,
+}
+
+#[derive(PartialEq, Debug, Copy, Clone, Default)]
+pub struct RewriteOpts {
+    pub commit_rewritten_to_empty: CommitRewrittenToEmpty,
+    pub empty_commit_from_large_repo: EmptyCommitFromLargeRepo,
 }
 
 /// Create a version of `cs` with `Mover` applied to all changes
@@ -267,7 +286,7 @@ pub async fn rewrite_commit<'a>(
     mover: MultiMover,
     source_repo: &'a impl Repo,
     force_first_parent: Option<ChangesetId>,
-    commit_rewritten_to_empty: CommitRewrittenToEmpty,
+    rewrite_opts: RewriteOpts,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     let delete_file_changes = if !cs.file_changes.is_empty() {
         get_implicit_delete_file_changes(
@@ -288,7 +307,7 @@ pub async fn rewrite_commit<'a>(
         mover,
         force_first_parent,
         delete_file_changes,
-        commit_rewritten_to_empty,
+        rewrite_opts,
     )
 }
 
@@ -401,7 +420,7 @@ pub async fn rewrite_stack_no_merges<'a>(
             mover.clone(),
             force_first_parent,
             implicit_deletes_file_changes,
-            CommitRewrittenToEmpty::Discard,
+            Default::default(),
         )?;
 
         let maybe_cs = maybe_cs
@@ -425,9 +444,12 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
     mover: MultiMover,
     force_first_parent: Option<ChangesetId>,
     implicit_delete_file_changes: Vec<(MPath, FileChange)>,
-    commit_rewritten_to_empty: CommitRewrittenToEmpty,
+    rewrite_opts: RewriteOpts,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
-    if !cs.file_changes.is_empty() {
+    let empty_commit = cs.file_changes.is_empty();
+    if !empty_commit
+        || rewrite_opts.empty_commit_from_large_repo == EmptyCommitFromLargeRepo::Discard
+    {
         let path_rewritten_changes: Result<Vec<Vec<_>>, _> = cs
             .file_changes
             .into_iter()
@@ -515,9 +537,12 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
         // though bonsai merge commit might not have file changes inside it can still change
         // a working copy. E.g. if p1 has fileA, p2 has fileB, then empty merge(p1, p2)
         // contains both fileA and fileB.
-        if path_rewritten_changes.is_empty()
-            && !is_merge
-            && commit_rewritten_to_empty == CommitRewrittenToEmpty::Discard
+        if !is_merge
+            && ((path_rewritten_changes.is_empty()
+                && rewrite_opts.commit_rewritten_to_empty == CommitRewrittenToEmpty::Discard)
+                || (empty_commit
+                    && rewrite_opts.empty_commit_from_large_repo
+                        == EmptyCommitFromLargeRepo::Discard))
         {
             return Ok(None);
         } else {
@@ -903,7 +928,7 @@ mod test {
             multi_mover,
             repo,
             force_first_parent,
-            CommitRewrittenToEmpty::Discard,
+            Default::default(),
         )
         .await?;
         let rewritten =

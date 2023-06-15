@@ -33,7 +33,6 @@ use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::CandidateSelectionHint;
-use cross_repo_sync::CommitRewrittenToEmpty;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncDataProvider;
 use cross_repo_sync::CommitSyncOutcome;
@@ -1348,7 +1347,7 @@ async fn init_repos(
             &empty_map,
             commit_syncer.get_mover_by_version(&version).await?,
             &source_repo,
-            CommitRewrittenToEmpty::Discard,
+            Default::default(),
         )
         .await
     }?;

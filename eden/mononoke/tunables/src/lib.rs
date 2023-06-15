@@ -390,6 +390,9 @@ pub struct MononokeTunables {
     disable_large_blob_read_deduplication: TunableBool,
     // Enable double writing of Content Metadata.
     enable_content_metadata_double_writing: TunableBool,
+
+    // Skip backsyncing for empty commits (except mapping changes via extras and merges)
+    cross_repo_skip_backsyncing_ordinary_empty_commits: TunableBoolByRepo,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

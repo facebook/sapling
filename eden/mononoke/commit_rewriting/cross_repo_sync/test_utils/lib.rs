@@ -28,7 +28,6 @@ use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::update_mapping_with_version;
-use cross_repo_sync::CommitRewrittenToEmpty;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncDataProvider;
 use cross_repo_sync::CommitSyncRepos;
@@ -143,7 +142,7 @@ where
             &map,
             mover,
             source_repo,
-            CommitRewrittenToEmpty::Discard,
+            Default::default(),
         )
         .await?
     };

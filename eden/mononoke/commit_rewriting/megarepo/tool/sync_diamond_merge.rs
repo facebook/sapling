@@ -34,7 +34,6 @@ use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::update_mapping_with_version;
 use cross_repo_sync::CandidateSelectionHint;
-use cross_repo_sync::CommitRewrittenToEmpty;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
@@ -286,7 +285,7 @@ async fn create_rewritten_merge_commit(
             .get_mover_by_version(&version_p1)
             .await?,
         syncers.small_to_large.get_source_repo(),
-        CommitRewrittenToEmpty::Discard,
+        Default::default(),
     )
     .await?;
     let mut rewritten =
