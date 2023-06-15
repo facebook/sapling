@@ -169,7 +169,7 @@ async fn get_multiple_blobstores(
 ///
 /// We haven't implemented this function to be a recursive function, because we are currently
 /// not supporting nested multiplexed blobstores.
-async fn get_blobstores(
+pub async fn get_blobstores(
     fb: FacebookInit,
     storage_config: StorageConfig,
     inner_blobstore_id: Option<u64>,
