@@ -24,7 +24,7 @@ pub struct RenameTracer {
 }
 
 impl RenameTracer {
-    /// RenameTracer is a tool for finding the vertex that added (or renmaed to)
+    /// RenameTracer is a tool for finding the vertex that added (or renamed to)
     /// the specified path. We will use this in the copy tracing component to trace
     /// a path's rename history.
     pub async fn new(

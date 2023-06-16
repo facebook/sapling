@@ -110,7 +110,7 @@ impl PathHistory {
         Self::new_internal(set, paths, root_tree_reader, tree_store, false).await
     }
 
-    /// Internal version of `PathHisotry::new` method.
+    /// Internal version of `PathHistory::new` method.
     ///
     /// This creation method adds an additional `ignore_file_content` parameter.
     /// When enabled, file content and file type (e.g. executable) will be ignored,

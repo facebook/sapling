@@ -33,6 +33,7 @@ from . import (
     crecord as crecordmod,
     dagop,
     dirstateguard,
+    eagerepo,
     edenfs,
     encoding,
     error,
