@@ -6,7 +6,6 @@
  */
 
 use arg_extensions::ArgDefaults;
-use clap::ArgAction;
 use clap::Args;
 use clap::ValueEnum;
 
@@ -39,16 +38,6 @@ pub struct CachelibArgs {
     /// Mode to initialize caching in.
     #[clap(long, value_enum, default_value_t = CacheMode::Enabled)]
     pub cache_mode: CacheMode,
-
-    /// Do not initialize cachelib and disable caches (useful for tests)
-    /// (DEPRECATED)
-    #[clap(long, hide = true)]
-    pub skip_caching: bool,
-
-    /// Run the blobstore with cachelib only (i.e., without memcache)
-    /// (DEPRECATED)
-    #[clap(long, value_name = "BOOL", default_missing_value = "true", hide = true, action = ArgAction::Set, num_args=0..=1)]
-    pub blobstore_cachelib_only: bool,
 
     #[clap(long)]
     /// Disable cacheadmin for cachelib

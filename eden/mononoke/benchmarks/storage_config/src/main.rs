@@ -102,8 +102,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
         .context("Could not make blobstore")?;
         let blobstore = match caching {
             Caching::Disabled => blobstore,
-            Caching::LocalOnly(local_cache_config)
-            | Caching::LocalBlobstoreOnly(local_cache_config) => repo_factory::cachelib_blobstore(
+            Caching::LocalOnly(local_cache_config) => repo_factory::cachelib_blobstore(
                 blobstore,
                 local_cache_config.blobstore_cache_shards,
                 &CachelibBlobstoreOptions::default(),

@@ -39,10 +39,6 @@ pub enum Caching {
     /// Caching is only enabled locally - the shared cache is disabled.
     LocalOnly(LocalCacheConfig),
 
-    /// Caching is only enabled locally, and only for the blobstore.
-    /// (DEPRECATED)
-    LocalBlobstoreOnly(LocalCacheConfig),
-
     /// Caching is not enabled.
     Disabled,
 }

@@ -389,8 +389,7 @@ impl RepoFactory {
                             &self.env.blobstore_options.cachelib_options,
                         )?
                     }
-                    Caching::LocalOnly(local_cache_config)
-                    | Caching::LocalBlobstoreOnly(local_cache_config) => {
+                    Caching::LocalOnly(local_cache_config) => {
                         blobstore = cachelib_blobstore(
                             blobstore,
                             local_cache_config.blobstore_cache_shards,
@@ -473,7 +472,7 @@ impl RepoFactory {
             Caching::LocalOnly(_) => Ok(Some(CacheHandlerFactory::Local {
                 cachelib_pool: volatile_pool(name)?,
             })),
-            Caching::LocalBlobstoreOnly(_) | Caching::Disabled => Ok(None),
+            Caching::Disabled => Ok(None),
         }
     }
 

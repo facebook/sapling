@@ -33,7 +33,6 @@ pub struct CachelibSettings {
     pub mutable_renames_cache_size: Option<usize>,
     pub sql_cache_size: Option<usize>,
     pub expected_item_size_bytes: Option<usize>,
-    pub blobstore_cachelib_only: bool,
     pub rebalancing_use_lru: bool,
     pub rebalancing_interval: Duration,
 }
@@ -45,10 +44,6 @@ impl CachelibSettings {
             (
                 "cachelib_rebalancing_interval_secs",
                 self.rebalancing_interval.as_secs().to_string(),
-            ),
-            (
-                "blobstore_cachelib_only",
-                self.blobstore_cachelib_only.to_string(),
             ),
         ];
 
@@ -201,7 +196,6 @@ impl Default for CachelibSettings {
             mutable_renames_cache_size: None,
             sql_cache_size: None,
             expected_item_size_bytes: None,
-            blobstore_cachelib_only: false,
             rebalancing_use_lru: false,
             rebalancing_interval: Duration::from_secs(300),
         }
