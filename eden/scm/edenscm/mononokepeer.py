@@ -259,8 +259,11 @@ class mononokepeer(stdiopeer.stdiopeer):
         if not (self._unix_socket_proxy or self._auth_proxy_http):
             authdata = httpconnection.readauthforuri(self._ui, path, self._user)
             if not authdata:
-                errormessage = _(
-                    "No certificates have been found to connect to Mononoke"
+                errormessage = (
+                    _(
+                        "No certificates have been found to connect to Mononoke using path: '%s'"
+                    )
+                    % path
                 )
                 self._abort(error.CertificateError(errormessage))
 
