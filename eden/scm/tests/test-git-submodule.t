@@ -8,9 +8,6 @@
   $ enable rebase
   $ export HGIDENTITY=sl
 
-FIXME(status):
-  $ setconfig status.use-rust=false
-
 Avoid local clone error "fatal: transport 'file' not allowed" in new Git versions (see CVE-2022-39253).
   $ export XDG_CONFIG_HOME=$TESTTMP
   $ git config --global protocol.file.allow always

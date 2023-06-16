@@ -84,8 +84,7 @@ Test diff:
   
 Test status:
 
-  $ LOG=status=debug hg status
-  DEBUG status_info: status_mode="rust"
+  $ hg status
   $ echo 3 > alpha
   $ hg status
   M alpha

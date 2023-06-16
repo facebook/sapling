@@ -12,6 +12,7 @@ use std::time::SystemTime;
 
 use anyhow::Result;
 use clidispatch::errors;
+use clidispatch::fallback;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use configloader::configmodel::ConfigExt;
@@ -113,15 +114,17 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         || ctx.opts.clean
     {
         tracing::debug!(target: "status_info", status_detail="unsupported_args");
-        return Err(errors::FallbackToPython(
-            "one or more unsupported options in Rust status".to_owned(),
-        )
-        .into());
+        fallback!("one or more unsupported options in Rust status");
+    }
+
+    if repo.storage_format().is_git() {
+        tracing::debug!(target: "status_info", status_detail="git");
+        fallback!("git format unsupported (submodules)");
     }
 
     if needs_morestatus_extension(repo.dot_hg_path(), wc.treestate().lock().parents().count()) {
         tracing::debug!(target: "status_info", status_detail="morestatus_needed");
-        return Err(errors::FallbackToPython("morestatus functionality needed".to_owned()).into());
+        fallback!("morestatus functionality needed");
     }
 
     let StatusOpts {
@@ -218,11 +221,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
             #[cfg(not(feature = "eden"))]
             {
                 tracing::debug!(target: "status_info", status_detail="fastpath_edenfs_disabled");
-                return Err(errors::FallbackToPython(
-                    "EdenFS disabled for Rust status and status.use-rust not set to True"
-                        .to_owned(),
-                )
-                .into());
+                fallback!("EdenFS disabled for Rust status and status.use-rust not set to True");
             }
         }
     };
