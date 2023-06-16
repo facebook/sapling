@@ -9,8 +9,6 @@ use std::fs;
 use std::fs::DirEntry;
 use std::fs::Metadata;
 use std::io;
-use std::num::NonZeroU8;
-use std::path::Path;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
@@ -91,171 +89,6 @@ impl AsRef<RepoPath> for WalkEntry {
     }
 }
 
-/// [`Walker`] traverses the working copy, starting at the root of the repo, finding
-/// files matched by the matcher.
-pub struct Walker<M>(WalkerType<M>);
-
-impl<M> Walker<M>
-where
-    M: Matcher + Clone + Send + Sync + 'static,
-{
-    /// Create a new Walker.
-    ///
-    /// If `num_threads` is 0, a single-threaded Walker will be created. Otherwise, a
-    /// multi-threaded walker will be created.
-    pub fn new(
-        root: PathBuf,
-        dot_dir: String,
-        matcher: M,
-        include_directories: bool,
-        num_threads: u8,
-    ) -> Result<Self> {
-        let inner = match NonZeroU8::new(num_threads) {
-            Some(num_threads) => WalkerType::Multi(MultiWalker::new(
-                root,
-                dot_dir,
-                matcher,
-                include_directories,
-                num_threads,
-            )?),
-            None => WalkerType::Single(SingleWalker::new(
-                root,
-                dot_dir,
-                matcher,
-                include_directories,
-            )?),
-        };
-        Ok(Walker(inner))
-    }
-}
-
-impl<M> Iterator for Walker<M>
-where
-    M: Matcher + Clone + Send + Sync + 'static,
-{
-    type Item = Result<WalkEntry>;
-    fn next(&mut self) -> Option<Self::Item> {
-        match &mut self.0 {
-            WalkerType::Single(w) => w.next(),
-            WalkerType::Multi(w) => w.next(),
-        }
-    }
-}
-
-enum WalkerType<M> {
-    Single(SingleWalker<M>),
-    Multi(MultiWalker<M>),
-}
-
-/// SingleWalker traverses the working copy, starting at the root of the repo,
-/// finding files matched by matcher
-struct SingleWalker<M> {
-    root: PathBuf,
-    dir_matches: Vec<RepoPathBuf>,
-    results: Vec<Result<WalkEntry>>,
-    matcher: M,
-    include_directories: bool,
-    dot_dir: String,
-}
-
-impl<M> SingleWalker<M>
-where
-    M: Matcher,
-{
-    pub fn new(
-        root: PathBuf,
-        dot_dir: String,
-        matcher: M,
-        include_directories: bool,
-    ) -> Result<Self> {
-        let mut dir_matches = vec![];
-        if matcher.matches_directory(&RepoPathBuf::new())? != DirectoryMatch::Nothing {
-            dir_matches.push(RepoPathBuf::new());
-        }
-        let walker = SingleWalker {
-            root,
-            dir_matches,
-            results: Vec::new(),
-            matcher,
-            include_directories,
-            dot_dir,
-        };
-        Ok(walker)
-    }
-
-    fn match_entry(&mut self, next_dir: &RepoPathBuf, entry: DirEntry) -> Result<()> {
-        // It'd be nice to move all this conversion noise to a function, but having it here saves
-        // us from allocating filename repeatedly.
-        let filename = entry.file_name();
-        let filename = filename
-            .to_str()
-            .ok_or_else(|| WalkError::FsUtf8Error(filename.to_string_lossy().into_owned()))?;
-        let filename = RepoPath::from_str(filename)
-            .map_err(|e| WalkError::RepoPathError(filename.to_owned(), e))?;
-        let filetype = entry
-            .file_type()
-            .map_err(|e| WalkError::IOError(filename.to_owned(), e))?;
-
-        let mut candidate_path = next_dir.clone();
-        candidate_path.push(filename);
-        if filetype.is_file() || filetype.is_symlink() {
-            if self.matcher.matches_file(candidate_path.as_repo_path())? {
-                self.results
-                    .push(Ok(WalkEntry::File(candidate_path, entry.metadata()?)));
-            }
-        } else if filetype.is_dir() {
-            if filename.as_str() != self.dot_dir
-                && self
-                    .matcher
-                    .matches_directory(candidate_path.as_repo_path())?
-                    != DirectoryMatch::Nothing
-            {
-                self.dir_matches.push(candidate_path);
-            }
-        } else if self.matcher.matches_file(candidate_path.as_repo_path())? {
-            return Err(WalkError::InvalidFileType(filename.to_owned()).into());
-        }
-        Ok(())
-    }
-
-    /// Lazy traversal to find matching files
-    fn walk(&mut self) -> Result<()> {
-        while self.results.is_empty() && !self.dir_matches.is_empty() {
-            let next_dir = self.dir_matches.pop().unwrap();
-            if self.include_directories {
-                self.results
-                    .push(Ok(WalkEntry::Directory(next_dir.clone())));
-            }
-            let abs_next_dir = self.root.join(next_dir.as_str());
-            // Don't process the directory if it contains a .hg directory, unless it's the root.
-            if next_dir.is_empty() || !Path::exists(&abs_next_dir.join(&self.dot_dir)) {
-                for entry in fs::read_dir(abs_next_dir)
-                    .map_err(|e| WalkError::IOError(next_dir.clone(), e))?
-                {
-                    let entry = entry.map_err(|e| WalkError::IOError(next_dir.clone(), e))?;
-                    if let Err(e) = self.match_entry(&next_dir, entry) {
-                        self.results.push(Err(e));
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-}
-
-impl<M> Iterator for SingleWalker<M>
-where
-    M: Matcher,
-{
-    type Item = Result<WalkEntry>;
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.walk() {
-            Err(e) => Some(Err(e)),
-            Ok(()) => self.results.pop(),
-        }
-    }
-}
-
 pub struct WalkerData<M> {
     result_sender: Sender<Result<WalkEntry>>,
     queue_sender: Sender<RepoPathBuf>,
@@ -279,7 +112,7 @@ impl<M> WalkerData<M> {
     }
 }
 
-struct MultiWalker<M> {
+pub struct Walker<M> {
     threads: Vec<JoinHandle<Result<()>>>,
     results: Vec<Result<WalkEntry>>,
     result_receiver: Receiver<Result<WalkEntry>>,
@@ -288,7 +121,7 @@ struct MultiWalker<M> {
     dot_dir: String,
 }
 
-impl<M> MultiWalker<M>
+impl<M> Walker<M>
 where
     M: Matcher,
     M: Clone,
@@ -303,14 +136,12 @@ where
         dot_dir: String,
         matcher: M,
         include_directories: bool,
-        num_threads: NonZeroU8,
     ) -> Result<Self> {
         let (s_results, r_results) = unbounded();
         let (s_queue, r_queue) = unbounded();
-        let num_threads = num_threads.get();
 
-        Ok(MultiWalker {
-            threads: Vec::with_capacity(num_threads.into()),
+        Ok(Walker {
+            threads: Vec::with_capacity(8),
             results: Vec::new(),
             result_receiver: r_results,
             has_walked: false,
@@ -393,7 +224,7 @@ where
                 loop {
                     let result = shared_data
                         .queue_receiver
-                        .recv_timeout(MultiWalker::<M>::RECV_TIMEOUT);
+                        .recv_timeout(Walker::<M>::RECV_TIMEOUT);
                     match result {
                         Ok(dir) => {
                             // Anonymous function so we can capture all errors returned, and decrement
@@ -415,7 +246,7 @@ where
                                 {
                                     let entry =
                                         entry.map_err(|e| WalkError::IOError(dir.clone(), e))?;
-                                    if let Err(e) = MultiWalker::match_entry_and_enqueue(
+                                    if let Err(e) = Walker::match_entry_and_enqueue(
                                         &dir,
                                         &dot_dir,
                                         entry,
@@ -463,7 +294,7 @@ where
     }
 }
 
-impl<M> Iterator for MultiWalker<M>
+impl<M> Iterator for Walker<M>
 where
     M: Matcher,
     M: Clone,
@@ -517,165 +348,15 @@ mod tests {
     }
 
     #[test]
-    fn test_singlewalker_nevermatcher() -> Result<()> {
-        let directories = vec!["dirA"];
-        let files = vec!["dirA/a.txt", "b.txt"];
-        let root_dir = create_directory(&directories, &files)?;
-        let root_path = PathBuf::from(root_dir.path());
-        let walker = SingleWalker::new(root_path, ".hg".to_string(), NeverMatcher::new(), false)?;
-        let walked_files: Result<Vec<_>> = walker.collect();
-        let walked_files = walked_files?;
-        assert!(walked_files.is_empty());
-        Ok(())
-    }
-
-    #[test]
-    fn test_singlewalker_alwaysmatcher() -> Result<()> {
-        let directories = vec!["dirA", "dirB/dirC/dirD"];
-        let files = vec!["dirA/a.txt", "dirA/b.txt", "dirB/dirC/dirD/c.txt"];
-        let root_dir = create_directory(&directories, &files)?;
-        let root_path = PathBuf::from(root_dir.path());
-        let walker = SingleWalker::new(root_path, ".hg".to_string(), AlwaysMatcher::new(), false)?;
-        let walked_files: Result<Vec<_>> = walker.collect();
-        let walked_files = walked_files?;
-        assert_eq!(walked_files.len(), 3);
-        for file in walked_files {
-            assert!(files.contains(&file.as_ref().to_string().as_str()));
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn test_singlewalker_treematcher() -> Result<()> {
-        let directories = vec!["foo", "foo/bar"];
-        let files = vec!["foo/cat.txt", "foo/bar/baz.txt"];
-        let root_dir = create_directory(&directories, &files)?;
-        let root_path = PathBuf::from(root_dir.path());
-        let walker = SingleWalker::new(
-            root_path,
-            ".hg".to_string(),
-            TreeMatcher::from_rules(["foo/bar/**"].iter(), true).unwrap(),
-            false,
-        )?;
-        let walked_files: Result<Vec<_>> = walker.collect();
-        let walked_files = walked_files?;
-        let res = vec!["foo/bar/baz.txt"];
-        assert_eq!(walked_files.len(), res.len());
-        for file in walked_files {
-            assert!(res.contains(&file.as_ref().to_string().as_str()));
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn test_singlewalker_dirs() -> Result<()> {
-        let directories = vec!["dirA", "dirB/dirC/dirD"];
-        let files = vec!["dirA/a.txt", "dirA/b.txt", "dirB/dirC/dirD/c.txt"];
-        let root_dir = create_directory(&directories, &files)?;
-        let root_path = PathBuf::from(root_dir.path());
-        let walker = SingleWalker::new(root_path, ".hg".to_string(), AlwaysMatcher::new(), true)?;
-        let walked_files: Result<Vec<_>> = walker.collect();
-        let walked_files = walked_files?;
-        // Includes root dir ""
-        let res = vec![
-            "",
-            "dirA",
-            "dirA/a.txt",
-            "dirA/b.txt",
-            "dirB",
-            "dirB/dirC",
-            "dirB/dirC/dirD",
-            "dirB/dirC/dirD/c.txt",
-        ];
-        assert_eq!(walked_files.len(), res.len());
-        for file in walked_files {
-            assert!(res.contains(&file.as_ref().to_string().as_str()));
-        }
-        Ok(())
-    }
-
-    #[test]
     fn test_multiwalker_nevermatcher() -> Result<()> {
         let directories = vec!["dirA"];
         let files = vec!["dirA/a.txt", "b.txt"];
         let root_dir = create_directory(&directories, &files)?;
         let root_path = PathBuf::from(root_dir.path());
-        let walker = MultiWalker::new(
-            root_path,
-            ".hg".to_string(),
-            NeverMatcher::new(),
-            false,
-            NonZeroU8::new(5).unwrap(),
-        )?;
+        let walker = Walker::new(root_path, ".hg".to_string(), NeverMatcher::new(), false)?;
         let walked_files: Result<Vec<_>> = walker.collect();
         let walked_files = walked_files?;
         assert!(walked_files.is_empty());
-        Ok(())
-    }
-
-    #[test]
-    fn test_multiwalker_1() -> Result<()> {
-        let directories = vec!["dirA", "dirB/dirC/dirD"];
-        let files = vec!["dirA/a.txt", "dirA/b.txt", "dirB/dirC/dirD/c.txt"];
-        let root_dir = create_directory(&directories, &files)?;
-        let root_path = PathBuf::from(root_dir.path());
-        let walker = MultiWalker::new(
-            root_path,
-            ".hg".to_string(),
-            AlwaysMatcher::new(),
-            false,
-            NonZeroU8::new(1).unwrap(),
-        )?;
-        let walked_files: Result<Vec<_>> = walker.collect();
-        let walked_files = walked_files?;
-        assert_eq!(walked_files.len(), 3);
-        for file in walked_files {
-            assert!(files.contains(&file.as_ref().to_string().as_str()));
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn test_multiwalker_2() -> Result<()> {
-        let directories = vec!["dirA", "dirB/dirC/dirD"];
-        let files = vec!["dirA/a.txt", "dirA/b.txt", "dirB/dirC/dirD/c.txt"];
-        let root_dir = create_directory(&directories, &files)?;
-        let root_path = PathBuf::from(root_dir.path());
-        let walker = MultiWalker::new(
-            root_path,
-            ".hg".to_string(),
-            AlwaysMatcher::new(),
-            false,
-            NonZeroU8::new(2).unwrap(),
-        )?;
-        let walked_files: Result<Vec<_>> = walker.collect();
-        let walked_files = walked_files?;
-        assert_eq!(walked_files.len(), 3);
-        for file in walked_files {
-            assert!(files.contains(&file.as_ref().to_string().as_str()));
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn test_multiwalker_u8max() -> Result<()> {
-        let directories = vec!["dirA", "dirB/dirC/dirD"];
-        let files = vec!["dirA/a.txt", "dirA/b.txt", "dirB/dirC/dirD/c.txt"];
-        let root_dir = create_directory(&directories, &files)?;
-        let root_path = PathBuf::from(root_dir.path());
-        let walker = MultiWalker::new(
-            root_path,
-            ".hg".to_string(),
-            AlwaysMatcher::new(),
-            false,
-            NonZeroU8::new(u8::MAX).unwrap(),
-        )?;
-        let walked_files: Result<Vec<_>> = walker.collect();
-        let walked_files = walked_files?;
-        assert_eq!(walked_files.len(), 3);
-        for file in walked_files {
-            assert!(files.contains(&file.as_ref().to_string().as_str()));
-        }
         Ok(())
     }
 
@@ -685,12 +366,11 @@ mod tests {
         let files = vec!["foo/cat.txt", "foo/bar/baz.txt"];
         let root_dir = create_directory(&directories, &files)?;
         let root_path = PathBuf::from(root_dir.path());
-        let walker = MultiWalker::new(
+        let walker = Walker::new(
             root_path,
             ".hg".to_string(),
             TreeMatcher::from_rules(["foo/bar/**"].iter(), true).unwrap(),
             false,
-            NonZeroU8::new(4).unwrap(),
         )?;
         let walked_files: Result<Vec<_>> = walker.collect();
         let walked_files = walked_files?;
@@ -708,13 +388,7 @@ mod tests {
         let files = vec!["dirA/a.txt", "dirA/b.txt", "dirB/dirC/dirD/c.txt"];
         let root_dir = create_directory(&directories, &files)?;
         let root_path = PathBuf::from(root_dir.path());
-        let walker = MultiWalker::new(
-            root_path,
-            ".hg".to_string(),
-            AlwaysMatcher::new(),
-            true,
-            NonZeroU8::new(2).unwrap(),
-        )?;
+        let walker = Walker::new(root_path, ".hg".to_string(), AlwaysMatcher::new(), true)?;
         let walked_files: Result<Vec<_>> = walker.collect();
         let walked_files = walked_files?;
         // Includes root dir ""

@@ -54,7 +54,6 @@ py_class!(class walker |py| {
         dot_dir: String,
         pymatcher: PyObject,
         include_directories: bool,
-        thread_count: u8,
     ) -> PyResult<walker> {
         let matcher = extract_matcher(py, pymatcher)?;
         let walker = Walker::new(
@@ -62,7 +61,6 @@ py_class!(class walker |py| {
             dot_dir,
             matcher,
             include_directories,
-            thread_count,
         ).map_pyerr(py)?;
         walker::create_instance(py, RefCell::new(walker), RefCell::new(Vec::new()))
     }

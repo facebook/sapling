@@ -208,7 +208,6 @@ impl WorkingCopy {
                 store.clone(),
                 treestate.clone(),
                 false,
-                8,
             )?),
             FileSystemType::Watchman => Box::new(WatchmanFileSystem::new(
                 vfs.clone(),

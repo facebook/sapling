@@ -44,7 +44,6 @@ pub struct PhysicalFileSystem {
     store: ArcReadFileContents,
     treestate: Arc<Mutex<TreeState>>,
     include_directories: bool,
-    num_threads: u8,
 }
 
 impl PhysicalFileSystem {
@@ -54,7 +53,6 @@ impl PhysicalFileSystem {
         store: ArcReadFileContents,
         treestate: Arc<Mutex<TreeState>>,
         include_directories: bool,
-        num_threads: u8,
     ) -> Result<Self> {
         Ok(PhysicalFileSystem {
             vfs,
@@ -62,7 +60,6 @@ impl PhysicalFileSystem {
             store,
             treestate,
             include_directories,
-            num_threads,
         })
     }
 }
@@ -78,13 +75,7 @@ impl PendingChangesTrait for PhysicalFileSystem {
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let root = self.vfs.root().to_path_buf();
         let ident = identity::must_sniff_dir(&root)?;
-        let walker = Walker::new(
-            root,
-            ident.dot_dir().to_string(),
-            matcher.clone(),
-            false,
-            self.num_threads,
-        )?;
+        let walker = Walker::new(root, ident.dot_dir().to_string(), matcher.clone(), false)?;
         let manifests =
             WorkingCopy::current_manifests(&self.treestate.lock(), &self.tree_resolver)?;
         let file_change_detector = FileChangeDetector::new(
