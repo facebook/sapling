@@ -21,6 +21,7 @@ pub const ARG_HG_SYNC_BACKPRESSURE: &str = "hg-sync-backpressure";
 pub const ARG_DERIVED_DATA_TYPES: &str = "derived-data-types";
 pub const ARG_SLEEP_SECS: &str = "sleep-secs";
 pub const ARG_BOOKMARK_REGEX: &str = "bookmark-regex";
+pub const ARG_PUSHREBASE_REWRITE_DATES: &str = "pushrebase-rewrite-dates";
 
 pub fn create_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     let app = args::MononokeAppBuilder::new("Mononoke cross-repo sync job")
@@ -29,12 +30,19 @@ pub fn create_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .with_source_and_target_repos()
         .build();
 
-    let app = app.arg(
-        Arg::with_name(ARG_LOG_TO_SCUBA)
-            .long(ARG_LOG_TO_SCUBA)
-            .takes_value(false)
-            .help("Whether the progress of the tailer should be logged to scuba"),
-    );
+    let app = app
+        .arg(
+            Arg::with_name(ARG_LOG_TO_SCUBA)
+                .long(ARG_LOG_TO_SCUBA)
+                .takes_value(false)
+                .help("Whether the progress of the tailer should be logged to scuba"),
+        )
+        .arg(
+            Arg::with_name(ARG_PUSHREBASE_REWRITE_DATES)
+                .long(ARG_PUSHREBASE_REWRITE_DATES)
+                .required(false)
+                .help("Rewrite date to current date while rebasing onto large repo"),
+        );
 
     let once = SubCommand::with_name(ARG_ONCE)
         .about("Syncs a single commit")

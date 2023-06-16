@@ -180,6 +180,12 @@ pub enum CommitSyncInMemoryResult {
     },
 }
 
+#[derive(PartialEq, Copy, Clone, Debug)]
+pub enum PushrebaseRewriteDates {
+    Yes,
+    No,
+}
+
 impl CommitSyncInMemoryResult {
     /// Write the changes to blobstores and mappings
     async fn write<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
@@ -1175,11 +1181,12 @@ where
         source_cs: BonsaiChangeset,
         bookmark: BookmarkKey,
         commit_sync_context: CommitSyncContext,
+        rewritedates: PushrebaseRewriteDates,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = source_cs.get_changeset_id();
         let before = Instant::now();
         let res = self
-            .unsafe_sync_commit_pushrebase_impl(ctx, source_cs, bookmark)
+            .unsafe_sync_commit_pushrebase_impl(ctx, source_cs, bookmark, rewritedates)
             .await;
         let elapsed = before.elapsed();
 
@@ -1206,6 +1213,7 @@ where
         ctx: &'a CoreContext,
         source_cs: BonsaiChangeset,
         bookmark: BookmarkKey,
+        rewritedates: PushrebaseRewriteDates,
     ) -> Result<Option<ChangesetId>, Error> {
         let hash = source_cs.get_changeset_id();
         let (source_repo, target_repo) = self.get_source_target();
@@ -1324,7 +1332,7 @@ where
                 .await?;
 
                 let pushrebase_flags = PushrebaseFlags {
-                    rewritedates: false,
+                    rewritedates: rewritedates == PushrebaseRewriteDates::Yes,
                     forbid_p2_root_rebases: false,
                     casefolding_check: false,
                     recursion_limit: None,

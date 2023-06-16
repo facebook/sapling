@@ -69,6 +69,7 @@ use context::SessionContainer;
 use cross_repo_sync::types::Source;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::ConcreteRepo as CrossRepo;
+use cross_repo_sync::PushrebaseRewriteDates;
 use derived_data_utils::derive_data_for_csids;
 use fbinit::FacebookInit;
 use filenodes::FilenodesArc;
@@ -112,6 +113,7 @@ use crate::cli::ARG_CATCH_UP_ONCE;
 use crate::cli::ARG_DERIVED_DATA_TYPES;
 use crate::cli::ARG_HG_SYNC_BACKPRESSURE;
 use crate::cli::ARG_ONCE;
+use crate::cli::ARG_PUSHREBASE_REWRITE_DATES;
 use crate::cli::ARG_TAIL;
 use crate::cli::ARG_TARGET_BOOKMARK;
 use crate::reporting::add_common_fields;
@@ -148,6 +150,7 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static, R: 
     scuba_sample: MononokeScubaSampleBuilder,
     maybe_bookmark: Option<BookmarkKey>,
     common_bookmarks: HashSet<BookmarkKey>,
+    pushrebase_rewrite_dates: PushrebaseRewriteDates,
 ) -> Result<(), Error> {
     info!(
         ctx.logger(),
@@ -172,6 +175,7 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static, R: 
         maybe_bookmark,
         &common_bookmarks,
         scuba_sample,
+        pushrebase_rewrite_dates,
     )
     .await;
 
@@ -196,6 +200,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     tailing_args: TailingArgs<M, R>,
     sleep_duration: Duration,
     maybe_bookmark_regex: Option<Regex>,
+    pushrebase_rewrite_dates: PushrebaseRewriteDates,
 ) -> Result<(), Error> {
     match tailing_args {
         TailingArgs::CatchUpOnce(commit_syncer) => {
@@ -210,6 +215,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
                 &derived_data_types,
                 sleep_duration,
                 &maybe_bookmark_regex,
+                pushrebase_rewrite_dates,
             )
             .await?;
         }
@@ -242,6 +248,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
                     &derived_data_types,
                     sleep_duration,
                     &maybe_bookmark_regex,
+                    pushrebase_rewrite_dates,
                 )
                 .await?;
 
@@ -266,6 +273,7 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     derived_data_types: &[String],
     sleep_duration: Duration,
     maybe_bookmark_regex: &Option<Regex>,
+    pushrebase_rewrite_dates: PushrebaseRewriteDates,
 ) -> Result<bool, Error> {
     let source_repo = commit_syncer.get_source_repo();
     let bookmark_update_log = source_repo.bookmark_update_log();
@@ -310,6 +318,7 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
                     entry,
                     common_pushrebase_bookmarks,
                     scuba_sample.clone(),
+                    pushrebase_rewrite_dates,
                 )
                 .timed()
                 .await;
@@ -451,6 +460,12 @@ async fn run<'a>(
     let common_commit_sync_config =
         live_commit_sync_config.get_common_config(source_repo.blob_repo.repo_identity().id())?;
 
+    let pushrebase_rewrite_dates = if matches.is_present(ARG_PUSHREBASE_REWRITE_DATES) {
+        PushrebaseRewriteDates::Yes
+    } else {
+        PushrebaseRewriteDates::No
+    };
+
     let common_bookmarks: HashSet<_> = common_commit_sync_config
         .common_pushrebase_bookmarks
         .clone()
@@ -474,6 +489,7 @@ async fn run<'a>(
                 scuba_sample,
                 maybe_target_bookmark,
                 common_bookmarks,
+                pushrebase_rewrite_dates,
             )
             .await
         }
@@ -514,6 +530,7 @@ async fn run<'a>(
                 tailing_args,
                 sleep_duration,
                 maybe_bookmark_regex,
+                pushrebase_rewrite_dates,
             )
             .await
         }

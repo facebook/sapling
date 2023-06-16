@@ -25,6 +25,7 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::PushrebaseRewriteDates;
 use futures::future::try_join_all;
 use futures::stream::TryStreamExt;
 use futures::try_join;
@@ -71,6 +72,7 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
     entry: BookmarkUpdateLogEntry,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     mut scuba_sample: MononokeScubaSampleBuilder,
+    pushrebase_rewrite_dates: PushrebaseRewriteDates,
 ) -> Result<SyncResult, Error> {
     info!(ctx.logger(), "processing log entry #{}", entry.id);
     let bookmark = commit_syncer.get_bookmark_renamer().await?(&entry.bookmark_name)
@@ -105,6 +107,7 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
         Some(bookmark),
         common_pushrebase_bookmarks,
         scuba_sample,
+        pushrebase_rewrite_dates,
     )
     .await
 
@@ -120,6 +123,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
     maybe_bookmark: Option<BookmarkKey>,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     scuba_sample: MononokeScubaSampleBuilder,
+    pushrebase_rewrite_dates: PushrebaseRewriteDates,
 ) -> Result<SyncResult, Error> {
     let (unsynced_ancestors, unsynced_ancestors_versions) =
         find_toposorted_unsynced_ancestors(ctx, commit_syncer, to_cs_id.clone()).await?;
@@ -157,6 +161,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
                 scuba_sample.clone(),
                 unsynced_ancestors,
                 &version,
+                pushrebase_rewrite_dates,
             )
             .await
             .map(SyncResult::Synced);
@@ -215,6 +220,7 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
     scuba_sample: MononokeScubaSampleBuilder,
     unsynced_ancestors: Vec<ChangesetId>,
     version: &CommitSyncConfigVersion,
+    pushrebase_rewrite_dates: PushrebaseRewriteDates,
 ) -> Result<Vec<ChangesetId>, Error> {
     let source_repo = commit_syncer.get_source_repo();
     // It stores commits that were introduced as part of current bookmark update, but that
@@ -258,9 +264,15 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
                 ctx.logger(),
                 "syncing {} via pushrebase for {}", cs_id, bookmark
             );
-            let (stats, result) = pushrebase_commit(ctx, commit_syncer, bookmark, cs_id)
-                .timed()
-                .await;
+            let (stats, result) = pushrebase_commit(
+                ctx,
+                commit_syncer,
+                bookmark,
+                cs_id,
+                pushrebase_rewrite_dates,
+            )
+            .timed()
+            .await;
             log_pushrebase_sync_single_changeset_result(
                 ctx.clone(),
                 scuba_sample.clone(),
@@ -425,11 +437,18 @@ async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     commit_syncer: &CommitSyncer<M, R>,
     bookmark: &BookmarkKey,
     cs_id: ChangesetId,
+    pushrebase_rewrite_dates: PushrebaseRewriteDates,
 ) -> Result<Option<ChangesetId>, Error> {
     let source_repo = commit_syncer.get_source_repo();
     let bcs = cs_id.load(ctx, source_repo.repo_blobstore()).await?;
     commit_syncer
-        .unsafe_sync_commit_pushrebase(ctx, bcs, bookmark.clone(), CommitSyncContext::XRepoSyncJob)
+        .unsafe_sync_commit_pushrebase(
+            ctx,
+            bcs,
+            bookmark.clone(),
+            CommitSyncContext::XRepoSyncJob,
+            pushrebase_rewrite_dates,
+        )
         .await
 }
 
@@ -709,6 +728,7 @@ mod test {
                 &ctx,
                 &commit_syncer,
                 &hashset! {BookmarkKey::new("master")?},
+                PushrebaseRewriteDates::No,
             )
             .await?;
             assert_eq!(res.last(), Some(&SyncResult::SkippedNoKnownVersion));
@@ -724,6 +744,7 @@ mod test {
                 &commit_syncer,
                 &hashset! {BookmarkKey::new("master")?},
                 &hashset! {BookmarkKey::new("newrepohead")?},
+                PushrebaseRewriteDates::No,
             )
             .await?;
 
@@ -839,6 +860,7 @@ mod test {
                 &ctx,
                 &commit_syncer,
                 &hashset! {BookmarkKey::new("master")?},
+                PushrebaseRewriteDates::No,
             )
             .await?;
             assert_eq!(res.last(), Some(&SyncResult::SkippedNoKnownVersion));
@@ -853,6 +875,7 @@ mod test {
                 &commit_syncer,
                 &hashset! {BookmarkKey::new("master")?},
                 &hashset! {BookmarkKey::new("newrepoimport")?},
+                PushrebaseRewriteDates::No,
             )
             .await?;
 
@@ -881,6 +904,7 @@ mod test {
                 &ctx,
                 &commit_syncer,
                 &hashset! {BookmarkKey::new("master")?},
+                PushrebaseRewriteDates::No,
             )
             .await?;
             assert_eq!(res.last(), Some(&SyncResult::SkippedNoKnownVersion));
@@ -896,6 +920,7 @@ mod test {
                     &commit_syncer,
                     &hashset! {BookmarkKey::new("master")?},
                     &hashset! {BookmarkKey::new("newrepohead")?, BookmarkKey::new("somebook")?},
+                    PushrebaseRewriteDates::No,
                 )
                 .await
                 .is_err()
@@ -925,6 +950,7 @@ mod test {
             &commit_syncer,
             &hashset! { BookmarkKey::new("master")?},
             &hashset! {},
+            PushrebaseRewriteDates::No,
         )
         .await?;
 
@@ -941,6 +967,7 @@ mod test {
             &ctx, &commit_syncer,
             &hashset!{ BookmarkKey::new("master")?, BookmarkKey::new("another_pushrebase_bookmark")?},
             &hashset!{},
+                PushrebaseRewriteDates::No,
         ).await?;
 
         Ok(())
@@ -955,6 +982,7 @@ mod test {
             commit_syncer,
             &hashset! {BookmarkKey::new("master")?},
             &hashset! {},
+            PushrebaseRewriteDates::No,
         )
         .await
     }
@@ -964,9 +992,16 @@ mod test {
         commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
         common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
         should_be_missing: &HashSet<BookmarkKey>,
+        pushrebase_rewrite_dates: PushrebaseRewriteDates,
     ) -> Result<(), Error> {
         let smallrepo = commit_syncer.get_source_repo();
-        sync(ctx, commit_syncer, common_pushrebase_bookmarks).await?;
+        sync(
+            ctx,
+            commit_syncer,
+            common_pushrebase_bookmarks,
+            pushrebase_rewrite_dates,
+        )
+        .await?;
 
         let actually_missing = validation::find_bookmark_diff(ctx.clone(), commit_syncer)
             .await?
@@ -993,6 +1028,7 @@ mod test {
         ctx: &CoreContext,
         commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
         common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
+        pushrebase_rewrite_dates: PushrebaseRewriteDates,
     ) -> Result<Vec<SyncResult>, Error> {
         let smallrepo = commit_syncer.get_source_repo();
         let megarepo = commit_syncer.get_target_repo();
@@ -1033,6 +1069,7 @@ mod test {
                 entry,
                 common_pushrebase_bookmarks,
                 MononokeScubaSampleBuilder::with_discard(),
+                pushrebase_rewrite_dates,
             )
             .await?;
             res.push(single_res);

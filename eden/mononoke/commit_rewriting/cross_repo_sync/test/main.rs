@@ -35,6 +35,7 @@ use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::ErrorKind;
 use cross_repo_sync::PluralCommitSyncOutcome;
+use cross_repo_sync::PushrebaseRewriteDates;
 use cross_repo_sync_test_utils::rebase_root_on_master;
 use cross_repo_sync_test_utils::TestRepo;
 use fbinit::FacebookInit;
@@ -173,7 +174,13 @@ where
         .unwrap();
 
     config
-        .unsafe_sync_commit_pushrebase(&ctx, source_bcs, bookmark_name, CommitSyncContext::Tests)
+        .unsafe_sync_commit_pushrebase(
+            &ctx,
+            source_bcs,
+            bookmark_name,
+            CommitSyncContext::Tests,
+            PushrebaseRewriteDates::No,
+        )
         .await
 }
 
@@ -977,6 +984,7 @@ async fn get_multiple_master_mapping_setup(
             small_cs.clone(),
             BookmarkKey::new("master").unwrap(),
             CommitSyncContext::Tests,
+            PushrebaseRewriteDates::No,
         )
         .await
         .expect("sync should have succeeded");
@@ -987,6 +995,7 @@ async fn get_multiple_master_mapping_setup(
             small_cs.clone(),
             BookmarkKey::new("other_branch").unwrap(),
             CommitSyncContext::Tests,
+            PushrebaseRewriteDates::No,
         )
         .await
         .expect("sync should have succeeded");
@@ -1082,6 +1091,7 @@ async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> R
             to_sync,
             BookmarkKey::new("master").unwrap(),
             CommitSyncContext::Tests,
+            PushrebaseRewriteDates::No,
         )
         .await
         .expect("sync should have succeeded");
@@ -1126,6 +1136,7 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
             to_sync,
             BookmarkKey::new("master").unwrap(),
             CommitSyncContext::Tests,
+            PushrebaseRewriteDates::No,
         )
         .await
         .expect("sync should have succeeded");
@@ -1493,6 +1504,7 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
                     small_cs.clone(),
                     BookmarkKey::new("master").unwrap(),
                     CommitSyncContext::Tests,
+                    PushrebaseRewriteDates::No,
                 )
                 .await
         }
