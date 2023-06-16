@@ -4,6 +4,7 @@ use std::fs;
 use std::path::Path;
 
 use thrift_compiler::Config;
+use thrift_compiler::GenContext;
 
 #[rustfmt::skip]
 fn main() {
@@ -20,7 +21,7 @@ source_control crate",
     ).expect("Failed to write cratemap");
 
     let conf = {
-        let mut conf = Config::from_env().expect("Failed to instantiate thrift_compiler::Config");
+        let mut conf = Config::from_env(GenContext::Lib).expect("Failed to instantiate thrift_compiler::Config");
 
         let path_from_manifest_to_base: &Path = "../../../..".as_ref();
         let cargo_manifest_dir =
@@ -44,7 +45,7 @@ source_control crate",
 
         conf.base_path(base_path);
 
-        let options = "serde";
+        let options = "types_crate=source_control__types,serde";
         if !options.is_empty() {
             conf.options(options);
         }
