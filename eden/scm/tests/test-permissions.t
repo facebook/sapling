@@ -62,7 +62,7 @@
 (fsmonitor makes "hg status" avoid accessing to "dir")
 
   $ hg status
-  dir: Permission denied (os error 13)
+  dir: Permission denied
   M a
 
 #endif

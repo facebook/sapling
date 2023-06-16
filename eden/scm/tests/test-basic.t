@@ -30,7 +30,6 @@ Create a repository:
   ui.slash=True
   web.address=localhost
   web\.ipv6=(?:True|False) (re)
-  workingcopy.enablerustwalker=True
   workingcopy.ruststatus=False
   workingcopy.use-rust=True
 

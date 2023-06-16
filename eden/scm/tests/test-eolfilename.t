@@ -29,40 +29,33 @@ test issue352
   $ echo foo > "hell
   > o"
   $ hg add
-  hell
-  o: Failed to validate "hell\no". Invalid byte: 10.
-  [1]
+  adding hell
+  o
+  abort: '\n' and '\r' disallowed in filenames: 'hell\no'
+  [255]
   $ hg ci -A -m m
-  abort: hell
-  o: Failed to validate "hell\no". Invalid byte: 10.
+  adding hell
+  o
+  abort: '\n' and '\r' disallowed in filenames: 'hell\no'
   [255]
   $ echo foo > "$A"
   $ hg debugwalk
   matcher: <alwaysmatcher>
-  hell
-  o: Failed to validate "hell\no". Invalid byte: 10.
   f  he\r (no-eol) (esc)
   llo  he\r (no-eol) (esc)
   llo
+  f  hell
+  o  hell
+  o
 
   $ echo bla > quickfox
   $ hg add quickfox
-  hell
-  o: Failed to validate "hell\no". Invalid byte: 10.
-  [1]
   $ hg ci -m 2
-  abort: hell
-  o: Failed to validate "hell\no". Invalid byte: 10.
-  [255]
   $ A=`printf 'quick\rfox'`
   $ hg cp quickfox "$A"
-  hell
-  o: Failed to validate "hell\no". Invalid byte: 10.
   abort: '\n' and '\r' disallowed in filenames: 'quick\rfox'
   [255]
   $ hg mv quickfox "$A"
-  hell
-  o: Failed to validate "hell\no". Invalid byte: 10.
   abort: '\n' and '\r' disallowed in filenames: 'quick\rfox'
   [255]
 

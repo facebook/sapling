@@ -568,9 +568,6 @@ coreconfigitem("worker", "backgroundclosethreadcount", default=4)
 coreconfigitem("worker", "enabled", default=True)
 coreconfigitem("worker", "numcpus", default=None)
 
-coreconfigitem("workingcopy", "enablerustwalker", default=False)
-coreconfigitem("workingcopy", "rustwalkerthreads", default=0)
-coreconfigitem("workingcopy", "rustpendingchanges", default=False)
 coreconfigitem("workingcopy", "ruststatus", default=False)
 coreconfigitem("workingcopy", "use-rust", default=True)
 

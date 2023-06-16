@@ -179,8 +179,6 @@ class physicalfilesystem(object):
         seen = set()
 
         walkfn = self._walk
-        if self.ui.configbool("workingcopy", "enablerustwalker"):
-            walkfn = self._rustwalk
 
         lookups = []
         with progress.bar(self.ui, _("scanning files"), _("files")) as prog:
@@ -241,53 +239,6 @@ class physicalfilesystem(object):
 
         for changed in self._processlookups(lookups):
             yield changed
-
-    @util.timefunction("fswalk", 0, "ui")
-    def _rustwalk(self, match, listignored=False):
-        join = self.opener.join
-        if not listignored:
-            # Have the matcher skip ignored files. Technically exact files
-            # provided by the user should be returned even if they're ignored.
-            # The differencematcher handles this and returns True for exact
-            # matches, even if they should be subtracted.
-            origmatch = matchmod.differencematcher(match, self.dirstate._ignore)
-            normalize = self.dirstate.normalize
-
-            class normalizematcher(object):
-                def visitdir(self, path):
-                    return origmatch.visitdir(normalize(path))
-
-                def __call__(self, path):
-                    return origmatch(normalize(path))
-
-                def bad(self, path, msg):
-                    return origmatch.bad(path, msg)
-
-            match = normalizematcher()
-            match.traversedir = origmatch.traversedir
-
-        traversedir = bool(match.traversedir)
-        threadcount = self.ui.configint("workingcopy", "rustwalkerthreads")
-        walker = workingcopy.walker(
-            join(""), self.ui.identity.dotdir(), match, traversedir, threadcount
-        )
-        for fn in walker:
-            fn = self.dirstate.normalize(fn)
-            st = util.lstat(join(fn))
-            if traversedir and stat.S_ISDIR(st.st_mode):
-                match.traversedir(fn)
-            else:
-                yield fn, st
-
-        # Sorted for test stability
-        for path, walkerror in sorted(walker.errors()):
-            # Warn about non-utf8 errors, but don't report them as bad.
-            # Ideally we'd inspect the error type, but it's lost coming from
-            # Rust. When this moves to Rust it will get easier.
-            if walkerror == "invalid file name encoding":
-                self.ui.warn(_("skipping invalid utf-8 filename: '%s'\n") % path)
-                continue
-            match.bad(path, walkerror)
 
     def _processlookups(self, lookups):
         repo = self.dirstate._repo

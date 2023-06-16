@@ -30,7 +30,6 @@ status.relative=True
 use-rust=True
 
 [workingcopy]
-enablerustwalker=True
 use-rust=True
 
 [status]
