@@ -35,6 +35,13 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
     m.add_class::<walker>(py)?;
     m.add_class::<workingcopy>(py)?;
+
+    m.add(
+        py,
+        "parsegitsubmodules",
+        py_fn!(py, parse_git_submodules(data: &PyBytes)),
+    )?;
+
     Ok(m)
 }
 
@@ -110,3 +117,11 @@ py_class!(pub class workingcopy |py| {
         )
     }
 });
+
+fn parse_git_submodules(py: Python, data: &PyBytes) -> PyResult<Vec<(String, String, String)>> {
+    Ok(rsworkingcopy::git::parse_submodules(data.data(py))
+        .map_pyerr(py)?
+        .into_iter()
+        .map(|sm| (sm.name, sm.url, sm.path))
+        .collect())
+}

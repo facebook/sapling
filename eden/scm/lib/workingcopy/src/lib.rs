@@ -11,6 +11,7 @@ pub mod edenfs;
 mod errors;
 mod filechangedetector;
 pub mod filesystem;
+pub mod git;
 mod metadata;
 pub mod physicalfs;
 pub mod sparse;

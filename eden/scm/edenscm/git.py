@@ -652,29 +652,12 @@ def parsesubmodules(ctx):
         return {}
 
     data = ctx[".gitmodules"].data()
-    # strip leading spaces
-    data = b"".join(l.strip() + b"\n" for l in data.splitlines())
-    config = bindings.configloader.config()
-    config.parse(data.decode("utf-8", "surrogateescape"), ".gitmodules")
-    prefix = 'submodule "'
-    suffix = '"'
     submodules = []
-    for section in config.sections():
-        if section.startswith(prefix) and section.endswith(suffix):
-            subname = section[len(prefix) : -len(suffix)]
-        subconfig = {}
-        for name in config.names(section):
-            value = config.get(section, name)
-            subconfig[name] = value
-        if "url" in subconfig and "path" in subconfig:
-            submodules.append(
-                Submodule(
-                    subname.replace(".", "_"),
-                    subconfig["url"],
-                    subconfig["path"],
-                    weakref.proxy(repo),
-                )
-            )
+    for (name, url, path) in bindings.workingcopy.parsegitsubmodules(data):
+        submodules.append(
+            Submodule(name, url, path, weakref.proxy(repo)),
+        )
+
     return submodules
 
 
