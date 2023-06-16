@@ -16,6 +16,7 @@ pub mod node;
 pub mod nodeinfo;
 pub mod parents;
 pub mod path;
+pub mod repo;
 pub mod serde_with;
 pub mod sha;
 

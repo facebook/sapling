@@ -44,6 +44,7 @@ use treestate::dirstate::Dirstate;
 use treestate::dirstate::TreeStateFields;
 use treestate::serialization::Serializable;
 use treestate::treestate::TreeState;
+use types::repo::StorageFormat;
 use types::HgId;
 use util::path::absolute;
 use vfs::VFS;
@@ -403,8 +404,20 @@ impl Repo {
         Ok(())
     }
 
+    pub fn storage_format(&self) -> StorageFormat {
+        if self.store_requirements.contains("remotefilelog") {
+            StorageFormat::RemoteFilelog
+        } else if self.store_requirements.contains("git") {
+            StorageFormat::Git
+        } else if self.store_requirements.contains("eagerepo") {
+            StorageFormat::Eagerepo
+        } else {
+            StorageFormat::Revlog
+        }
+    }
+
     fn git_dir(&self) -> Result<PathBuf> {
-        if !self.store_requirements.contains("git") {
+        if !self.storage_format().is_git() {
             bail!("repo is not using git");
         }
 
@@ -628,7 +641,7 @@ impl Repo {
             Arc<dyn TreeStore + Send + Sync>,
         )>,
     > {
-        if self.store_requirements.contains("git") {
+        if self.storage_format().is_git() {
             let git_store = Arc::new(
                 gitstore::GitStore::open(&self.git_dir()?).context("opening git tree store")?,
             );
@@ -637,7 +650,7 @@ impl Repo {
             self.tree_store = Some(git_store.clone());
             return Ok(Some((git_store.clone(), git_store)));
         }
-        if self.store_requirements.contains("eagerepo") {
+        if self.storage_format().is_eager() {
             let store = EagerRepoStore::open(&self.store_path.join("hgcommits").join("v1"))?;
             let store = Arc::new(store);
             self.file_store = Some(store.clone());
