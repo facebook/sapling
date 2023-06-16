@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use arg_extensions::ArgDefaults;
 use clap::ArgAction;
 use clap::Args;
 use clap::ValueEnum;
@@ -19,6 +20,18 @@ pub enum CacheMode {
 
     /// Caching is disabled.
     Disabled,
+}
+
+impl ArgDefaults for CacheMode {
+    fn arg_defaults(&self) -> Vec<(&'static str, String)> {
+        vec![(
+            "cache_mode",
+            self.to_possible_value()
+                .expect("default value must exist")
+                .get_name()
+                .to_string(),
+        )]
+    }
 }
 
 #[derive(Args, Debug)]

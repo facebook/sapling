@@ -19,6 +19,7 @@ use blobstore_factory::BlobstoreArgDefaults;
 use blobstore_factory::ReadOnlyStorage;
 use clap::ArgGroup;
 use clap::Parser;
+use cmdlib_caching::CacheMode;
 use cmdlib_caching::CachelibSettings;
 use cmdlib_scrubbing::ScrubAppExtension;
 use fbinit::FacebookInit;
@@ -63,7 +64,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let cachelib_defaults = CachelibSettings {
         cache_size: 2 * 1024 * 1024 * 1024,
-        blobstore_cachelib_only: true,
         ..Default::default()
     };
 
@@ -85,6 +85,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = MononokeAppBuilder::new(fb)
         .with_app_extension(scrub_extension)
         .with_default_cachelib_settings(cachelib_defaults)
+        .with_arg_defaults(CacheMode::LocalOnly)
         .with_arg_defaults(blobstore_defaults)
         .with_arg_defaults(read_only_storage)
         .with_app_extension(Fb303AppExtension {})
