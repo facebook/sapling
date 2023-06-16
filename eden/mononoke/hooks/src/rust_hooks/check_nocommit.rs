@@ -24,8 +24,8 @@ use crate::HookExecution;
 use crate::HookRejectionInfo;
 use crate::PushAuthoredBy;
 
-const NOCOMMIT_MARKER: &str = "\x40nocommit";
-const NOCOMIT_REGEX: &str = "\x40nocommit(\\W|_|\\z)";
+const NOCOMMIT_REGEX: &str =
+    "(?i)(\x40(nocommit|no-commit|do-not-commit|do_not_commit))(\\W|_|\\z)";
 
 #[derive(Clone, Debug)]
 pub struct CheckNocommitHook;
@@ -36,20 +36,17 @@ impl CheckNocommitHook {
     }
 }
 
-fn has_nocommit(text: &[u8]) -> bool {
-    let text = match std::str::from_utf8(text) {
-        Ok(text) => text,
-        Err(_) => {
-            // Ignore binary files
-            return false;
-        }
+fn has_nocommit(text: &[u8]) -> Option<&str> {
+    let Ok(text) = std::str::from_utf8(text) else {
+        // Ignore binary files
+        return None;
     };
 
     lazy_static! {
-        static ref RE: Regex = Regex::new(NOCOMIT_REGEX).unwrap();
+        static ref RE: Regex = Regex::new(NOCOMMIT_REGEX).unwrap();
     }
 
-    RE.is_match(text)
+    RE.captures(text).map(|caps| caps.get(1).unwrap().as_str())
 }
 
 #[async_trait]
@@ -77,8 +74,8 @@ impl FileHook for CheckNocommitHook {
 
         Ok(match maybe_text {
             Some(text) => {
-                if has_nocommit(text.as_ref()) {
-                    let msg = format!("File contains a {} marker: {}", NOCOMMIT_MARKER, path);
+                if let Some(marker) = has_nocommit(text.as_ref()) {
+                    let msg = format!("File contains a {} marker: {}", marker, path);
                     HookExecution::Rejected(HookRejectionInfo::new_long(
                         "File contains a nocommit marker",
                         msg,
@@ -108,13 +105,10 @@ impl ChangesetHook for CheckNocommitHook {
         }
         let message = changeset.message();
 
-        let execution = if has_nocommit(message.as_bytes()) {
+        let execution = if let Some(marker) = has_nocommit(message.as_bytes()) {
             HookExecution::Rejected(HookRejectionInfo::new_long(
                 "Commit message contains a nocommit marker",
-                format!(
-                    "Commit message for contains a nocommit marker: {}",
-                    NOCOMMIT_MARKER
-                ),
+                format!("Commit message for contains a nocommit marker: {}", marker),
             ))
         } else {
             HookExecution::Accepted
@@ -130,26 +124,58 @@ mod test {
 
     #[test]
     fn test_find_nocommit() {
-        assert!(has_nocommit(NOCOMMIT_MARKER.as_bytes()));
-        assert!(has_nocommit(b"foo \x40nocommit"));
-        assert!(!has_nocommit(b"foo nocommit"));
+        assert_eq!(
+            Some("\x40nocommit"),
+            has_nocommit("\x40nocommit".as_bytes())
+        );
+        assert_eq!(Some("\x40nocommit"), has_nocommit(b"foo \x40nocommit"));
+        assert_eq!(None, has_nocommit(b"foo nocommit"));
     }
 
     #[test]
     fn test_ignore_binary() {
-        assert!(!has_nocommit(b"foo \x40nocommit \x80\x81"));
+        assert_eq!(None, has_nocommit(b"foo \x40nocommit \x80\x81"));
     }
 
     #[test]
     fn test_require_word_boundaries_after() {
-        assert!(!has_nocommit(b"\x40nocommitfoo"));
-        assert!(has_nocommit(b"foo\x40nocommit"));
-        assert!(has_nocommit(b"foo_\x40nocommit\""));
+        assert_eq!(None, has_nocommit(b"\x40nocommitfoo"));
+        assert_eq!(Some("\x40nocommit"), has_nocommit(b"foo\x40nocommit"));
+        assert_eq!(Some("\x40nocommit"), has_nocommit(b"foo_\x40nocommit\""));
     }
 
     #[test]
     fn test_matches_underscores_before_and_after() {
-        assert!(has_nocommit(b"__\x40nocommit"));
-        assert!(has_nocommit(b"\x40nocommit__"));
+        assert_eq!(Some("\x40nocommit"), has_nocommit(b"__\x40nocommit"));
+        assert_eq!(Some("\x40nocommit"), has_nocommit(b"\x40nocommit__"));
+    }
+
+    #[test]
+    fn test_also_matches_no_commit() {
+        assert_eq!(Some("\x40no-commit"), has_nocommit(b"foo \x40no-commit"));
+    }
+
+    #[test]
+    fn test_also_matches_do_not_commit() {
+        assert_eq!(
+            Some("\x40do-not-commit"),
+            has_nocommit(b"foo \x40do-not-commit")
+        );
+    }
+
+    #[test]
+    fn test_also_matches_do_not_commit_with_underscores() {
+        assert_eq!(
+            Some("\x40do_not_commit"),
+            has_nocommit(b"foo \x40do_not_commit")
+        );
+    }
+
+    #[test]
+    fn test_also_matches_do_not_commit_capitalized() {
+        assert_eq!(
+            Some("\x40DO_NOT_COMMIT"),
+            has_nocommit(b"foo \x40DO_NOT_COMMIT")
+        );
     }
 }
