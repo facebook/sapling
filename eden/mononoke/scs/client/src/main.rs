@@ -8,12 +8,12 @@
 //! Command-line client for the Source Control Service.
 
 use std::env;
+use std::io::stderr;
 use std::io::stdout;
 use std::io::IsTerminal;
 use std::process::ExitCode;
 
 use ansi_term::Colour;
-use atty::Stream;
 use base_app::BaseApp;
 use clap::ArgMatches;
 use clap::CommandFactory;
@@ -127,7 +127,7 @@ async fn main_impl(fb: FacebookInit) -> anyhow::Result<()> {
 async fn main(fb: FacebookInit) -> ExitCode {
     if let Err(e) = main_impl(fb).await {
         let prog_name = env::args().next().unwrap_or_else(|| "scsc".to_string());
-        if atty::is(Stream::Stderr) {
+        if stderr().is_terminal() {
             eprintln!(
                 "{}: {} {:#}",
                 prog_name,

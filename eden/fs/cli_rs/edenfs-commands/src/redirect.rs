@@ -10,6 +10,8 @@
 use std::collections::BTreeMap;
 #[cfg(target_os = "macos")]
 use std::ffi::OsStr;
+#[cfg(target_os = "macos")]
+use std::io::IsTerminal;
 use std::path::Path;
 use std::path::PathBuf;
 #[cfg(target_os = "macos")]
@@ -477,7 +479,7 @@ impl RedirectCmd {
             return Ok(0);
         }
 
-        if atty::is(atty::Stream::Stdin) {
+        if std::io::stdin().is_terminal() {
             println!("Warning: this operation will permanently delete the following volumes:");
             for volume in stale_volumes.iter() {
                 println!("    {}", volume.as_str().unwrap_or(""));

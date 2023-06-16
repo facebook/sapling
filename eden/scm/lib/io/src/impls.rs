@@ -6,6 +6,7 @@
  */
 
 use std::io::stderr;
+use std::io::stdin;
 use std::io::stdout;
 use std::io::Cursor;
 use std::io::IsTerminal;
@@ -15,7 +16,7 @@ use crate::IsTty;
 
 impl IsTty for std::io::Stdin {
     fn is_tty(&self) -> bool {
-        atty::is(atty::Stream::Stdin)
+        stdin().is_terminal()
     }
     fn is_stdin(&self) -> bool {
         true
