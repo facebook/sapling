@@ -15,6 +15,7 @@ use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use identity::Identity;
 use io::IO;
 use manifest::FileType;
 use manifest::Manifest;
@@ -36,6 +37,7 @@ use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
+use types::repo::StorageFormat;
 use types::HgId;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -48,6 +50,7 @@ use crate::filesystem::ChangeType;
 use crate::filesystem::FileSystemType;
 use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges;
+use crate::git::parse_submodules;
 use crate::physicalfs::PhysicalFileSystem;
 use crate::status::compute_status;
 use crate::util::walk_treestate;
@@ -71,6 +74,8 @@ impl AsRef<Box<dyn PendingChanges + Send>> for FileSystem {
 
 pub struct WorkingCopy {
     vfs: VFS,
+    ident: Identity,
+    format: StorageFormat,
     treestate: Arc<Mutex<TreeState>>,
     tree_resolver: ArcReadTreeManifest,
     filesystem: Mutex<FileSystem>,
@@ -82,6 +87,7 @@ pub struct WorkingCopy {
 impl WorkingCopy {
     pub fn new(
         vfs: VFS,
+        format: StorageFormat,
         // TODO: Have constructor figure out FileSystemType
         file_system_type: FileSystemType,
         treestate: Arc<Mutex<TreeState>>,
@@ -121,6 +127,8 @@ impl WorkingCopy {
 
         Ok(WorkingCopy {
             vfs,
+            format,
+            ident,
             treestate,
             tree_resolver,
             filesystem,
@@ -270,11 +278,10 @@ impl WorkingCopy {
         if fs.file_system_type == FileSystemType::Eden {
             sparse_matchers.push(Arc::new(AlwaysMatcher::new()));
         } else {
-            let ident = identity::must_sniff_dir(&fs.vfs.root())?;
             for manifest in manifests.iter() {
                 match crate::sparse::repo_matcher(
                     &self.vfs,
-                    &fs.vfs.root().join(ident.dot_dir()),
+                    &fs.vfs.root().join(self.ident.dot_dir()),
                     manifest.read().clone(),
                     fs.file_store.clone(),
                 )? {
@@ -329,11 +336,32 @@ impl WorkingCopy {
 
         let matcher = Arc::new(DifferenceMatcher::new(matcher, ignore_matcher.clone()));
 
+        let mut ignore_dirs = vec![PathBuf::from(self.ident.dot_dir())];
+        if self.format.is_git() {
+            // Ignore file within submodules. Python has some logic additional
+            // logic layered on top to add submodule info into status results.
+            let git_modules_path = self.vfs.join(".gitmodules".try_into()?);
+            if git_modules_path.exists() {
+                ignore_dirs.extend(
+                    parse_submodules(&util::file::read(&git_modules_path)?)?
+                        .into_iter()
+                        .map(|s| PathBuf::from(s.path)),
+                );
+            }
+        }
+
         let pending_changes = self
             .filesystem
             .lock()
             .inner
-            .pending_changes(matcher.clone(), ignore_matcher, last_write, config, io)?
+            .pending_changes(
+                matcher.clone(),
+                ignore_matcher,
+                ignore_dirs,
+                last_write,
+                config,
+                io,
+            )?
             .filter_map(|result| match result {
                 Ok(PendingChangeResult::File(change_type)) => {
                     match matcher.matches_file(change_type.get_path()) {

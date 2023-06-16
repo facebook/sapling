@@ -39,6 +39,7 @@ impl PendingChanges for EdenFileSystem {
         &self,
         _matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         _ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        _ignore_dirs: Vec<PathBuf>,
         _last_write: SystemTime,
         _config: &dyn Config,
         _io: &IO,

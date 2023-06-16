@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::fs;
 use std::fs::DirEntry;
 use std::fs::Metadata;
@@ -98,6 +99,8 @@ pub struct WalkerData<M> {
     result_cnt: AtomicU64,
     root: PathBuf,
     include_directories: bool,
+    dot_dir: String,
+    skip_dirs: HashSet<RepoPathBuf>,
 }
 
 impl<M> WalkerData<M> {
@@ -118,7 +121,6 @@ pub struct Walker<M> {
     result_receiver: Receiver<Result<WalkEntry>>,
     has_walked: bool,
     payload: Arc<WalkerData<M>>,
-    dot_dir: String,
 }
 
 impl<M> Walker<M>
@@ -134,6 +136,7 @@ where
     pub fn new(
         root: PathBuf,
         dot_dir: String,
+        skip_dirs: Vec<PathBuf>,
         matcher: M,
         include_directories: bool,
     ) -> Result<Self> {
@@ -154,8 +157,12 @@ where
                 root,
                 matcher,
                 include_directories,
+                dot_dir,
+                skip_dirs: skip_dirs
+                    .into_iter()
+                    .map(|p| Ok(p.try_into()?))
+                    .collect::<Result<_>>()?,
             }),
-            dot_dir,
         })
     }
 
@@ -163,7 +170,6 @@ where
     // child and increment busy_nodes atomic.
     fn match_entry_and_enqueue(
         dir: &RepoPathBuf,
-        dot_dir: &str,
         entry: DirEntry,
         shared_data: Arc<WalkerData<M>>,
     ) -> Result<()> {
@@ -188,7 +194,7 @@ where
                     .enqueue_result(Ok(WalkEntry::File(candidate_path, entry.metadata()?)))?;
             }
         } else if filetype.is_dir() {
-            if filename.as_str() != dot_dir
+            if !shared_data.skip_dirs.contains(filename)
                 && shared_data
                     .matcher
                     .matches_directory(candidate_path.as_repo_path())?
@@ -217,7 +223,6 @@ where
 
         for _t in 0..self.threads.capacity() {
             let shared_data = self.payload.clone();
-            let dot_dir = self.dot_dir.clone();
 
             // TODO make sure that _t is different for each thread
             self.threads.push(thread::spawn(move || {
@@ -237,7 +242,9 @@ where
                                 let abs_dir_path = shared_data.root.join(dir.as_str());
 
                                 // Skip nested repos.
-                                if !dir.is_empty() && abs_dir_path.join(&dot_dir).exists() {
+                                if !dir.is_empty()
+                                    && abs_dir_path.join(&shared_data.dot_dir).exists()
+                                {
                                     return Ok(());
                                 }
 
@@ -248,7 +255,6 @@ where
                                         entry.map_err(|e| WalkError::IOError(dir.clone(), e))?;
                                     if let Err(e) = Walker::match_entry_and_enqueue(
                                         &dir,
-                                        &dot_dir,
                                         entry,
                                         shared_data.clone(),
                                     ) {
@@ -353,7 +359,13 @@ mod tests {
         let files = vec!["dirA/a.txt", "b.txt"];
         let root_dir = create_directory(&directories, &files)?;
         let root_path = PathBuf::from(root_dir.path());
-        let walker = Walker::new(root_path, ".hg".to_string(), NeverMatcher::new(), false)?;
+        let walker = Walker::new(
+            root_path,
+            ".hg".to_string(),
+            Vec::new(),
+            NeverMatcher::new(),
+            false,
+        )?;
         let walked_files: Result<Vec<_>> = walker.collect();
         let walked_files = walked_files?;
         assert!(walked_files.is_empty());
@@ -369,6 +381,7 @@ mod tests {
         let walker = Walker::new(
             root_path,
             ".hg".to_string(),
+            Vec::new(),
             TreeMatcher::from_rules(["foo/bar/**"].iter(), true).unwrap(),
             false,
         )?;
@@ -388,7 +401,13 @@ mod tests {
         let files = vec!["dirA/a.txt", "dirA/b.txt", "dirB/dirC/dirD/c.txt"];
         let root_dir = create_directory(&directories, &files)?;
         let root_path = PathBuf::from(root_dir.path());
-        let walker = Walker::new(root_path, ".hg".to_string(), AlwaysMatcher::new(), true)?;
+        let walker = Walker::new(
+            root_path,
+            ".hg".to_string(),
+            Vec::new(),
+            AlwaysMatcher::new(),
+            true,
+        )?;
         let walked_files: Result<Vec<_>> = walker.collect();
         let walked_files = walked_files?;
         // Includes root dir ""

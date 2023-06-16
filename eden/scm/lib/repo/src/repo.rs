@@ -615,6 +615,7 @@ impl Repo {
 
         Ok(WorkingCopy::new(
             vfs,
+            self.storage_format(),
             filesystem,
             treestate,
             tree_resolver,

@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashSet;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::SystemTime;
 
@@ -69,13 +70,20 @@ impl PendingChangesTrait for PhysicalFileSystem {
         &self,
         matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         _ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        ignore_dirs: Vec<PathBuf>,
         last_write: SystemTime,
         config: &dyn Config,
         _io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let root = self.vfs.root().to_path_buf();
         let ident = identity::must_sniff_dir(&root)?;
-        let walker = Walker::new(root, ident.dot_dir().to_string(), matcher.clone(), false)?;
+        let walker = Walker::new(
+            root,
+            ident.dot_dir().to_string(),
+            ignore_dirs,
+            matcher.clone(),
+            false,
+        )?;
         let manifests =
             WorkingCopy::current_manifests(&self.treestate.lock(), &self.tree_resolver)?;
         let file_change_detector = FileChangeDetector::new(

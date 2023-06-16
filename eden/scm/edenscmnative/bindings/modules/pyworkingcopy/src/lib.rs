@@ -59,6 +59,7 @@ py_class!(class walker |py| {
         let walker = Walker::new(
             root.to_path_buf(),
             dot_dir,
+            Vec::new(),
             matcher,
             include_directories,
         ).map_pyerr(py)?;

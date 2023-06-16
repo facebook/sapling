@@ -111,7 +111,11 @@ impl WatchmanFileSystem {
         })
     }
 
-    async fn query_files(&self, config: WatchmanConfig) -> Result<QueryResult<StatusQuery>> {
+    async fn query_files(
+        &self,
+        config: WatchmanConfig,
+        ignore_dirs: Vec<PathBuf>,
+    ) -> Result<QueryResult<StatusQuery>> {
         let start = std::time::Instant::now();
 
         // This starts watchman if it isn't already started.
@@ -123,11 +127,20 @@ impl WatchmanFileSystem {
             .resolve_root(CanonicalPath::canonicalize(self.vfs.root())?)
             .await?;
 
-        let ident = identity::must_sniff_dir(self.vfs.root())?;
-        let excludes = Expr::Any(vec![Expr::DirName(DirNameTerm {
-            path: PathBuf::from(ident.dot_dir()),
-            depth: None,
-        })]);
+        let mut expr = None;
+        if !ignore_dirs.is_empty() {
+            expr = Some(Expr::Not(Box::new(Expr::Any(
+                ignore_dirs
+                    .into_iter()
+                    .map(|p| {
+                        Expr::DirName(DirNameTerm {
+                            path: p,
+                            depth: None,
+                        })
+                    })
+                    .collect(),
+            ))));
+        }
 
         // The crawl is done - display a generic "we're querying" spinner.
         let _bar = ProgressBar::register_new("querying watchman", 0, "");
@@ -137,7 +150,7 @@ impl WatchmanFileSystem {
                 &resolved,
                 QueryRequestCommon {
                     since: config.clock,
-                    expression: Some(Expr::Not(Box::new(excludes))),
+                    expression: expr,
                     sync_timeout: config.sync_timeout.into(),
                     ..Default::default()
                 },
@@ -199,6 +212,7 @@ impl PendingChanges for WatchmanFileSystem {
         &self,
         matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         mut ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        ignore_dirs: Vec<PathBuf>,
         last_write: SystemTime,
         config: &dyn Config,
         io: &IO,
@@ -239,11 +253,16 @@ impl PendingChanges for WatchmanFileSystem {
             // Instrument query_files() from outside to avoid async weirdness.
             let _span = tracing::info_span!("query_files").entered();
 
-            async_runtime::block_on(self.query_files(WatchmanConfig {
-                clock: prev_clock.clone(),
-                sync_timeout:
-                    config.get_or::<Duration>("fsmonitor", "timeout", || Duration::from_secs(10))?,
-            }))?
+            async_runtime::block_on(self.query_files(
+                WatchmanConfig {
+                    clock: prev_clock.clone(),
+                    sync_timeout:
+                        config.get_or::<Duration>("fsmonitor", "timeout", || {
+                            Duration::from_secs(10)
+                        })?,
+                },
+                ignore_dirs,
+            ))?
         };
 
         progress_handle.abort();

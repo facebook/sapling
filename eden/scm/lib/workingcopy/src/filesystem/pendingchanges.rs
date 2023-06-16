@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::SystemTime;
 
@@ -43,6 +44,8 @@ pub trait PendingChanges {
         matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         // Git ignore matcher, except won't match committed files.
         ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        // Directories to always ignore such as ".sl".
+        ignore_dirs: Vec<PathBuf>,
         last_write: SystemTime,
         config: &dyn Config,
         io: &IO,
