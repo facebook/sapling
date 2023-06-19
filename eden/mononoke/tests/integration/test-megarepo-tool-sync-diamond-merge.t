@@ -205,11 +205,11 @@ Now sync with the tool
   * Preparing to sync a merge commit 46c0f70c6300f4168cb70321839ac0079c74b6d3295adb81eeb1932be4f80e9d... (glob)
   * 1 new commits are going to be merged in (glob)
   * syncing commit from new branch 0feeed653ec98bb533a2ad7fc8940ce07c4105326f07b20fcc68ebac0607abf2 (glob)
-  * uploading merge commit f38496fbd160eaf1bf6ebad1f317635ea818000bb3d634bba6eefa2c80b9666a (glob)
-  * It is recommended to run 'mononoke_admin crossrepo verify-wc' for f38496fbd160eaf1bf6ebad1f317635ea818000bb3d634bba6eefa2c80b9666a! (glob)
+  * uploading merge commit 39f339283c1910b404b40271e69e72e9de2a962e903ce9d4fe9f4488f5896242 (glob)
+  * It is recommended to run 'mononoke_admin crossrepo verify-wc' for 39f339283c1910b404b40271e69e72e9de2a962e903ce9d4fe9f4488f5896242! (glob)
 -- a mapping should've been created for the synced merge commit
   $ mononoke_admin_source_target 0 1 crossrepo map master_bookmark |& grep -v "using repo"
-  * changeset resolved as: ChangesetId(Blake2(f38496fbd160eaf1bf6ebad1f317635ea818000bb3d634bba6eefa2c80b9666a)) (glob)
+  * changeset resolved as: ChangesetId(Blake2(39f339283c1910b404b40271e69e72e9de2a962e903ce9d4fe9f4488f5896242)) (glob)
   RewrittenAs([(ChangesetId(Blake2(46c0f70c6300f4168cb70321839ac0079c74b6d3295adb81eeb1932be4f80e9d)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
   $ flush_mononoke_bookmarks
 
@@ -281,13 +281,13 @@ Merge with preserved ancestors
   * Checking if 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d is already synced 1->0 (glob)
   * 1 unsynced ancestors of 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d (glob)
   * syncing 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d via pushrebase for master_bookmark (glob)
-  * changeset 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d synced as 283f929b3e2c7d299920a8ee18b0928191fb3f5d9cc530f9fb7c0eb578e45d70 in * (glob)
+  * changeset 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d synced as 321d5cb2cf4c5e1bf7cb2e809b3aaf181a0907aa63bc69ee3575a7e6313b92e7 in * (glob)
   * successful sync (glob)
   $ mononoke_admin_source_target 1 0 crossrepo map 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d)) (glob)
-  RewrittenAs([(ChangesetId(Blake2(283f929b3e2c7d299920a8ee18b0928191fb3f5d9cc530f9fb7c0eb578e45d70)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
+  RewrittenAs([(ChangesetId(Blake2(321d5cb2cf4c5e1bf7cb2e809b3aaf181a0907aa63bc69ee3575a7e6313b92e7)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
 -- sync the merge
   $ cd "$TESTTMP"
@@ -299,8 +299,8 @@ Merge with preserved ancestors
   * 2 new commits are going to be merged in (glob)
   * syncing commit from new branch d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4 (glob)
   * syncing commit from new branch 89c0603366c60ae4bf8d8dca6da7581c741b7e89a6fcc3f49a44fdd248de3b1d (glob)
-  * uploading merge commit a530e2a1eb7ed81c57328f1c0b8fb20656190c5c272d94f7bf768a689c83670d (glob)
-  * It is recommended to run 'mononoke_admin crossrepo verify-wc' for a530e2a1eb7ed81c57328f1c0b8fb20656190c5c272d94f7bf768a689c83670d! (glob)
+  * uploading merge commit 0958bd58a03b8c799664bc0767b095a97003ee41eaa7814343ad9dcc6f90bc16 (glob)
+  * It is recommended to run 'mononoke_admin crossrepo verify-wc' for 0958bd58a03b8c799664bc0767b095a97003ee41eaa7814343ad9dcc6f90bc16! (glob)
 
 -- check that p2 was synced as preserved (note identical hashes)
   $ mononoke_admin_source_target 1 0 crossrepo map $(hg log -r pre_merge_p2 -T "{node}" --cwd "$TESTTMP/with_merge_hg")
@@ -314,13 +314,13 @@ Merge with preserved ancestors
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c)) (glob)
-  RewrittenAs([(ChangesetId(Blake2(a530e2a1eb7ed81c57328f1c0b8fb20656190c5c272d94f7bf768a689c83670d)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
+  RewrittenAs([(ChangesetId(Blake2(0958bd58a03b8c799664bc0767b095a97003ee41eaa7814343ad9dcc6f90bc16)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
 --verify the working copy
   $ mononoke_admin_source_target 1 0 crossrepo verify-wc master_bookmark
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(a530e2a1eb7ed81c57328f1c0b8fb20656190c5c272d94f7bf768a689c83670d)) (glob)
+  * changeset resolved as: ChangesetId(Blake2(0958bd58a03b8c799664bc0767b095a97003ee41eaa7814343ad9dcc6f90bc16)) (glob)
   * target repo cs id: 3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c, mapping version: TEST_VERSION_NAME (glob)
   * ### (glob)
   * ### Checking all the files from repo meg_mon that should be present in with_merge_mon (glob)

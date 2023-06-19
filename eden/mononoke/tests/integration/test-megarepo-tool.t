@@ -161,6 +161,6 @@ pull the result
 test pre-merge deletes functionality
   $ cd "$TESTTMP"
   $ megarepo_tool pre-merge-delete master author "merge preparation" --even-chunk-size 4 --commit-date-rfc3339 "$COMMIT_DATE" 2>/dev/null
-  342cc9bff69c2f71d19698aa1f48d5d260804f4b063625143dd7052768c0df24
-  1e80c201efb51b8e99fc4b16baa1ef389cf53faec8be2d42f6efb47396e20756
-  a201ac038c63e32c17457f830731bb4fed74650856a75351b15c0a5f7549554d
+  32d2e80ff176b65df5cdeadec6dc52fdf8b66264965b001b91fab99dfb7aad75
+  8807f350542a43aa815abc0c250c4a79ba35fd5bb68594e3ce6555e6630d81c2
+  090a140adb3da3f4a629014cd9625055d8bd992a967ad7fc7e4e4d74892c4b71

@@ -225,12 +225,12 @@ Prepare for the invisible merge
   >  author "merge preparation" \
   >  --even-chunk-size 2 \
   > --commit-date-rfc3339 "$COMMIT_DATE"
-  69cb4dfdec92e3b84ee1c5b064c33ac3fb980bdae0d6fba7a2a75cb0670af599
-  15f0ba01db155d0431552defe999ca51e5b8a0a632bc323cc2faeeddc4064cc1
+  bffa0e47c22b600605917892c9c9a2604d1640dbac8ae8c88530e0f32bb2c965
+  cad6246b8ea9efdb756e6adb2f1a2da2f8d9d43bdabfeceaa4a4213abd334b61
   $ get_bonsai_bookmark $FBS_REPOID ovrsource/moved_master
   0b114e8a3d0d62a31ff8f99b8894603cf37cdb6edc070d744a7a457bd360fc0a
 -- a list of commits we want to merge also includes the pre-delete commit
-  $ TOMERGES=(69cb4dfdec92e3b84ee1c5b064c33ac3fb980bdae0d6fba7a2a75cb0670af599 15f0ba01db155d0431552defe999ca51e5b8a0a632bc323cc2faeeddc4064cc1 0b114e8a3d0d62a31ff8f99b8894603cf37cdb6edc070d744a7a457bd360fc0a)
+  $ TOMERGES=(bffa0e47c22b600605917892c9c9a2604d1640dbac8ae8c88530e0f32bb2c965 cad6246b8ea9efdb756e6adb2f1a2da2f8d9d43bdabfeceaa4a4213abd334b61 0b114e8a3d0d62a31ff8f99b8894603cf37cdb6edc070d744a7a457bd360fc0a)
 -- calculate to-merge working copy sizes, they should be gradually increasing
   $ cd "$TESTTMP/fbs-hg-cnt"
   $ for TOMERGE in "${TOMERGES[@]}"; do
@@ -268,18 +268,18 @@ Do the invisible merge by gradually merging TOMERGES into master
   >  REPONAME=fbs-mon hgmn push -q --to master_bookmark
   > done
   Current: cb536a1a0bd5e1e5226a09530ab95ae790b717d7
-  To merge: 69cb4dfdec92e3b84ee1c5b064c33ac3fb980bdae0d6fba7a2a75cb0670af599
-  Merged as (bonsai): 69cc63c9e59f7cc7b6daa0c36832489632674e722a9364ff2712919af93109d7
+  To merge: bffa0e47c22b600605917892c9c9a2604d1640dbac8ae8c88530e0f32bb2c965
+  Merged as (bonsai): 1ccca1cf322891f156df9dbee891293ed9fc8fa706cb057d351f5cc560eaabcd
   Merged as (hg): 91d643697945d5bb502a2c1c2f75ec36b855f308
   file count is: 2
   Current: 51c49b0bd6828234ce57148769ca56f254e463bd
-  To merge: 15f0ba01db155d0431552defe999ca51e5b8a0a632bc323cc2faeeddc4064cc1
-  Merged as (bonsai): e0d0f35215c77449e9e63807cbec7f09368ebd0591f11adb53a133a53add4a7a
+  To merge: cad6246b8ea9efdb756e6adb2f1a2da2f8d9d43bdabfeceaa4a4213abd334b61
+  Merged as (bonsai): 67252d06a4b77e0c8a752dc199bad2441235eece95a63886048fb9ccc58d0298
   Merged as (hg): f2ac779eb5ef342aab788bcb278e57e53b2bc83e
   file count is: 4
   Current: 0eb9c5feca13f5b7c5daf2c34b659c3846569fad
   To merge: 0b114e8a3d0d62a31ff8f99b8894603cf37cdb6edc070d744a7a457bd360fc0a
-  Merged as (bonsai): 9e0bfdd3a6cd0a41697e67f00baf3d060e0e7660f7e2b0e2be34c3f5c5691984
+  Merged as (bonsai): ab96a1f9335f5757936bb540d424482dbf41284c90d89e277fee7052fb165561
   Merged as (hg): 005686fbc230dc0be4e1cc2fabf46d87bbb19001
   file count is: 6
   $ REPONAME=fbs-mon hgmn pull -q
