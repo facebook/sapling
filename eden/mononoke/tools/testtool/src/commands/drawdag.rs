@@ -123,6 +123,12 @@ enum ChangeAction {
     AuthorDate {
         author_date: DateTime,
     },
+    Committer {
+        committer: String,
+    },
+    CommitterDate {
+        committer_date: DateTime,
+    },
     Copy {
         path: Vec<u8>,
         content: Vec<u8>,
@@ -169,6 +175,22 @@ impl Action {
                     Ok(Action::Change {
                         name,
                         change: ChangeAction::AuthorDate { author_date },
+                    })
+                }
+                ("committer", [name, committer]) => {
+                    let name = name.to_string()?;
+                    let committer = committer.to_string()?;
+                    Ok(Action::Change {
+                        name,
+                        change: ChangeAction::Committer { committer },
+                    })
+                }
+                ("committer_date", [name, committer_date]) => {
+                    let name = name.to_string()?;
+                    let committer_date = DateTime::from_rfc3339(&committer_date.to_string()?)?;
+                    Ok(Action::Change {
+                        name,
+                        change: ChangeAction::CommitterDate { committer_date },
                     })
                 }
                 ("modify", [name, path, content]) => {
@@ -487,6 +509,10 @@ fn apply_changes<'a>(
             ChangeAction::Message { message } => c = c.set_message(message),
             ChangeAction::Author { author } => c = c.set_author(author),
             ChangeAction::AuthorDate { author_date } => c = c.set_author_date(author_date),
+            ChangeAction::Committer { committer } => c = c.set_committer(committer),
+            ChangeAction::CommitterDate { committer_date } => {
+                c = c.set_committer_date(committer_date)
+            }
             ChangeAction::Copy {
                 path,
                 content,
