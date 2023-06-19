@@ -191,7 +191,7 @@ impl AncestorsStreamBuilder {
 
                     let all_edges = commit_graph
                         .storage
-                        .fetch_many_edges(
+                        .fetch_many_edges_required(
                             ctx,
                             &cs_ids_not_excluded,
                             Prefetch::for_p1_linear_traversal(),

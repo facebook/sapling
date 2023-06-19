@@ -40,7 +40,7 @@ impl CommitGraph {
     ) -> Result<ChangesetFrontier> {
         let all_edges = self
             .storage
-            .fetch_many_edges(ctx, &cs_ids, Prefetch::None)
+            .fetch_many_edges_required(ctx, &cs_ids, Prefetch::None)
             .await?;
 
         cs_ids
