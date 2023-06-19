@@ -12,7 +12,6 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Result;
 use borrowed::borrowed;
 use commit_graph_types::edges::ChangesetNode;
@@ -116,9 +115,12 @@ impl CommitGraph {
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<ChangesetParents> {
-        self.changeset_parents(ctx, cs_id)
-            .await?
-            .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))
+        let edges = self.storage.fetch_edges_required(ctx, cs_id).await?;
+        Ok(edges
+            .parents
+            .into_iter()
+            .map(|parent| parent.cs_id)
+            .collect())
     }
 
     /// Returns the generation number of a single changeset.
@@ -137,9 +139,8 @@ impl CommitGraph {
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Generation> {
-        self.changeset_generation(ctx, cs_id)
-            .await?
-            .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))
+        let edges = self.storage.fetch_edges_required(ctx, cs_id).await?;
+        Ok(edges.node.generation)
     }
 
     /// Returns a frontier for the ancestors of heads
