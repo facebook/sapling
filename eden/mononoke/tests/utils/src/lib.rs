@@ -182,6 +182,8 @@ pub struct CreateCommitContext<'a, R: Repo> {
     message: Option<String>,
     author: Option<String>,
     author_date: Option<DateTime>,
+    committer: Option<String>,
+    committer_date: Option<DateTime>,
     extra: BTreeMap<String, Vec<u8>>,
 }
 
@@ -200,6 +202,8 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
             message: None,
             author: None,
             author_date: None,
+            committer: None,
+            committer_date: None,
             extra: btreemap! {},
         }
     }
@@ -215,6 +219,8 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
             message: None,
             author: None,
             author_date: None,
+            committer: None,
+            committer_date: None,
             extra: btreemap! {},
         }
     }
@@ -314,6 +320,16 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
         self
     }
 
+    pub fn set_committer(mut self, committer: impl Into<String>) -> Self {
+        self.committer = Some(committer.into());
+        self
+    }
+
+    pub fn set_committer_date(mut self, committer_date: DateTime) -> Self {
+        self.committer_date = Some(committer_date);
+        self
+    }
+
     pub async fn create_commit_object(self) -> Result<BonsaiChangesetMut, Error> {
         let parents = future::try_join_all(self.parents.into_iter().map({
             let ctx = self.ctx;
@@ -345,8 +361,8 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
             parents,
             author: self.author.unwrap_or_else(|| String::from("author")),
             author_date,
-            committer: None,
-            committer_date: None,
+            committer: self.committer,
+            committer_date: self.committer_date,
             message: self.message.unwrap_or_else(|| String::from("message")),
             hg_extra: self.extra.into(),
             git_extra_headers: None,
