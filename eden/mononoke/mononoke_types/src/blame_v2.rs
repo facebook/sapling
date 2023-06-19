@@ -193,6 +193,12 @@ impl BlameV2 {
             }
         }
     }
+    pub fn from_bytes(serialized: &[u8]) -> Result<Self> {
+        Self::from_thrift(
+            compact_protocol::deserialize(serialized)
+                .with_context(|| anyhow!("While deserializing BlameV2"))?,
+        )
+    }
 
     pub fn into_thrift(self) -> thrift::BlameV2 {
         match self {

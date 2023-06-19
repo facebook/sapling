@@ -13,6 +13,7 @@ use anyhow::Result;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use bytes::Bytes;
+use changeset_info::ChangesetInfo;
 use chrono::Local;
 use chrono::TimeZone;
 use clap::Args;
@@ -23,13 +24,23 @@ use git_types::Tree as GitTree;
 use mercurial_types::HgChangesetEnvelope;
 use mercurial_types::HgFileEnvelope;
 use mercurial_types::HgManifestEnvelope;
+use mononoke_types::basename_suffix_skeleton_manifest::BasenameSuffixSkeletonManifest;
+use mononoke_types::basename_suffix_skeleton_manifest::BssmEntry;
+use mononoke_types::blame_v2::BlameV2;
+use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
+use mononoke_types::fastlog_batch::FastlogBatch;
 use mononoke_types::fsnode::Fsnode;
+use mononoke_types::sharded_map::ShardedMapNode;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
+use mononoke_types::typed_hash::DeletedManifestV2Id;
+use mononoke_types::unode::FileUnode;
+use mononoke_types::unode::ManifestUnode;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ContentAlias;
 use mononoke_types::ContentChunk;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::FileContents;
+use mononoke_types::ThriftConvert;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
@@ -68,8 +79,15 @@ pub enum DecodeAs {
     Fsnode,
     ContentMetadataV2,
     Alias,
-    // TODO: Missing types, e.g. RedactionKeyList,  DeletedManifest,
-    // FastlogBatch, FileUnode, ManifestUnode,
+    FileUnode,
+    ManifestUnode,
+    FastlogBatch,
+    DeletedManifestV2MapNode,
+    DeletedManifestV2,
+    BlameV2,
+    BasenameSuffixSkeletonManifestMapNode,
+    BasenameSuffixSkeletonManifest,
+    ChangesetInfo,
 }
 
 impl DecodeAs {
@@ -90,6 +108,21 @@ impl DecodeAs {
                 ("fsnode.", DecodeAs::Fsnode),
                 ("content_metadata2.", DecodeAs::ContentMetadataV2),
                 ("alias.", DecodeAs::Alias),
+                ("fileunode.", DecodeAs::FileUnode),
+                ("manifestunode.", DecodeAs::ManifestUnode),
+                ("fastlogbatch.", DecodeAs::FastlogBatch),
+                (
+                    "deletedmanifest2.mapnode.",
+                    DecodeAs::DeletedManifestV2MapNode,
+                ),
+                ("deletedmanifest2.", DecodeAs::DeletedManifestV2),
+                ("blame_v2.", DecodeAs::BlameV2),
+                (
+                    "bssm.mapnode.",
+                    DecodeAs::BasenameSuffixSkeletonManifestMapNode,
+                ),
+                ("bssm.", DecodeAs::BasenameSuffixSkeletonManifest),
+                ("changeset_info.", DecodeAs::ChangesetInfo),
             ] {
                 if key[index..].starts_with(prefix) {
                     return Some(auto_decode_as);
@@ -153,6 +186,37 @@ fn decode(key: &str, data: BlobstoreGetData, mut decode_as: DecodeAs) -> Decoded
             data.into_raw_bytes().as_ref(),
         )),
         DecodeAs::Alias => Decoded::try_debug(ContentAlias::from_bytes(data.into_raw_bytes())),
+        DecodeAs::FileUnode => {
+            Decoded::try_debug(FileUnode::from_bytes(data.into_raw_bytes().as_ref()))
+        }
+        DecodeAs::ManifestUnode => {
+            Decoded::try_debug(ManifestUnode::from_bytes(data.into_raw_bytes().as_ref()))
+        }
+        DecodeAs::FastlogBatch => {
+            Decoded::try_debug(FastlogBatch::from_bytes(&data.into_raw_bytes()))
+        }
+        DecodeAs::DeletedManifestV2 => {
+            Decoded::try_debug(DeletedManifestV2::from_bytes(&data.into_raw_bytes()))
+        }
+        DecodeAs::DeletedManifestV2MapNode => {
+            Decoded::try_debug(ShardedMapNode::<DeletedManifestV2Id>::from_bytes(
+                &data.into_raw_bytes(),
+            ))
+        }
+        DecodeAs::BlameV2 => {
+            Decoded::try_debug(BlameV2::from_bytes(data.into_raw_bytes().as_ref()))
+        }
+        DecodeAs::BasenameSuffixSkeletonManifest => Decoded::try_debug(
+            BasenameSuffixSkeletonManifest::from_bytes(&data.into_raw_bytes()),
+        ),
+        DecodeAs::BasenameSuffixSkeletonManifestMapNode => {
+            Decoded::try_debug(ShardedMapNode::<BssmEntry>::from_bytes(
+                &data.into_raw_bytes(),
+            ))
+        }
+        DecodeAs::ChangesetInfo => {
+            Decoded::try_debug(ChangesetInfo::from_bytes(&data.into_raw_bytes()))
+        }
     }
 }
 

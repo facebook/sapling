@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use fbthrift::compact_protocol;
@@ -12,7 +13,6 @@ use fbthrift::compact_protocol;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::RedactionKeyListBlob;
-use crate::errors::ErrorKind;
 use crate::thrift;
 use crate::typed_hash::RedactionKeyListId;
 use crate::typed_hash::RedactionKeyListIdContext;
@@ -30,6 +30,13 @@ impl RedactionKeyList {
     fn from_thrift(t: thrift::RedactionKeyList) -> Result<Self> {
         Ok(Self { keys: t.keys })
     }
+
+    pub fn from_bytes(serialized: &[u8]) -> Result<Self> {
+        Self::from_thrift(
+            compact_protocol::deserialize(serialized)
+                .with_context(|| anyhow!("While deserializing RedactionKeyList"))?,
+        )
+    }
 }
 
 impl BlobstoreValue for RedactionKeyList {
@@ -45,8 +52,6 @@ impl BlobstoreValue for RedactionKeyList {
     }
 
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
-        let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
-            .with_context(|| ErrorKind::BlobDeserializeError("RedactionKeyList".into()))?;
-        Self::from_thrift(thrift_tc)
+        Self::from_bytes(blob.data().as_ref())
     }
 }
