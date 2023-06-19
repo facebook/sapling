@@ -61,6 +61,7 @@ use mercurial_derivation::MappedHgChangesetId;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
 use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use tests_utils::drawdag::extend_from_dag_with_changes;
@@ -119,6 +120,9 @@ enum ChangeAction {
     Author {
         author: String,
     },
+    AuthorDate {
+        author_date: DateTime,
+    },
     Copy {
         path: Vec<u8>,
         content: Vec<u8>,
@@ -157,6 +161,14 @@ impl Action {
                     Ok(Action::Change {
                         name,
                         change: ChangeAction::Author { author },
+                    })
+                }
+                ("author_date", [name, author_date]) => {
+                    let name = name.to_string()?;
+                    let author_date = DateTime::from_rfc3339(&author_date.to_string()?)?;
+                    Ok(Action::Change {
+                        name,
+                        change: ChangeAction::AuthorDate { author_date },
                     })
                 }
                 ("modify", [name, path, content]) => {
@@ -474,6 +486,7 @@ fn apply_changes<'a>(
             ChangeAction::Extra { key, value, .. } => c = c.add_extra(key, value),
             ChangeAction::Message { message } => c = c.set_message(message),
             ChangeAction::Author { author } => c = c.set_author(author),
+            ChangeAction::AuthorDate { author_date } => c = c.set_author_date(author_date),
             ChangeAction::Copy {
                 path,
                 content,

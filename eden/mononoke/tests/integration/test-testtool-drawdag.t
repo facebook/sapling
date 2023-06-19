@@ -34,6 +34,8 @@ The tool will print the commit hash of each commit.
   > # copy: B b_file new_content A a_file
   > # bookmark: M main
   > # bookmark: Z zzzz
+  > # author: Z "Test <test@meta.com>"
+  > # author_date: Z "2016-08-15T15:52:01+00:00"
   > EOF
   A=668a9d94b2464ac0676742736f60b642609faf782f9efd6346becd2d2d9d4ba4
   B=235661fd7779a9838f8e084ed7194971650f9f116ee288a17f2a6919a14841ef
@@ -60,7 +62,7 @@ The tool will print the commit hash of each commit.
   W=0d50131ffe46b4052ed85d6bc352b93e7e4ef9d5a69b3aeb6af9016f257a7a71
   X=b8eecc665a3fa0a2db4269503b8662b588cdaa0a951a5280fbefa8e1b3adb1ca
   Y=0496bee16414ecd92d98379f536e2306252990c72001f64fe01a6229a3a2c136
-  Z=996698aaf45736eedc0b2496616255ab81f822b831a01723df7a018fc98ea3ad
+  Z=5985da1af5eabf227fb0bf24d80e89b28daf8b5a36cf90576531d0db6f7cb19b
 
   $ mononoke_newadmin fetch -R repo -i $Z -p Z
   Error: Path does not exist: Z
@@ -74,6 +76,39 @@ The tool will print the commit hash of each commit.
   Git-Sha1: 24de910c13bb1e60fc5ec37a1058d356b1f2fa4d
   
   Y
+
+  $ mononoke_newadmin blobstore -R repo fetch changeset.blake2.$Z
+  Key: changeset.blake2.5985da1af5eabf227fb0bf24d80e89b28daf8b5a36cf90576531d0db6f7cb19b
+  Ctime: * (glob)
+  Size: 93
+  
+  BonsaiChangeset {
+      inner: BonsaiChangesetMut {
+          parents: [
+              ChangesetId(
+                  Blake2(0496bee16414ecd92d98379f536e2306252990c72001f64fe01a6229a3a2c136),
+              ),
+          ],
+          author: "Test <test@meta.com>",
+          author_date: DateTime(
+              2016-08-15T15:52:01+00:00,
+          ),
+          committer: None,
+          committer_date: None,
+          message: "Z",
+          hg_extra: {},
+          git_extra_headers: None,
+          file_changes: {
+              MPath("path/to/file"): Deletion,
+          },
+          is_snapshot: false,
+          git_tree_hash: None,
+          git_annotated_tag: None,
+      },
+      id: ChangesetId(
+          Blake2(5985da1af5eabf227fb0bf24d80e89b28daf8b5a36cf90576531d0db6f7cb19b),
+      ),
+  }
 
 The graph can be extended with more commits.  The node names don't
 need to match the previous graph (although it's probably a good idea).
