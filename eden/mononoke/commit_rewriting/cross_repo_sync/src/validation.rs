@@ -7,29 +7,37 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt;
 use std::fmt::Debug;
 use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Error;
+use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksMaybeStaleExt;
+use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
+use futures::future;
 use futures::future::FutureExt;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::try_join;
 use futures::TryStreamExt;
 use live_commit_sync_config::LiveCommitSyncConfig;
+use manifest::Entry;
 use manifest::ManifestOps;
 use mercurial_types::FileType;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+use mononoke_types::fsnode::FsnodeEntry;
+use mononoke_types::typed_hash::FsnodeId;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::MPath;
 use movers::Mover;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
@@ -69,12 +77,17 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static, R: Re
         Target(target_hash),
         &commit_syncer.get_mover_by_version(&version).await?,
         &commit_syncer.get_reverse_mover_by_version(&version).await?,
-        PrefixesToVisit::default(),
     )
     .await
 }
 
-// This method uses CommitSyncConfig to minimize the number of manifest traversals.
+/// Fast path verification doesn't walk every file in the repository, instead
+/// it leverages FSNodes to compare hashes of entire directories. This was if
+/// the repository verifies OK the verification is very fast.
+///
+/// NOTE: The implementation is a bit hacky due to the path mover functions
+/// being orignally designed with moving file paths not, directory paths. The
+/// hack is mostly contained to wrap_mover_result functiton.
 pub async fn verify_working_copy_fast_path<
     'a,
     M: SyncedCommitMapping + Clone + 'static,
@@ -85,33 +98,14 @@ pub async fn verify_working_copy_fast_path<
     source_hash: ChangesetId,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
-    let source_repo = commit_syncer.get_source_repo();
-    let target_repo = commit_syncer.get_target_repo();
-
     let (target_hash, version) = get_synced_commit(ctx.clone(), commit_syncer, source_hash).await?;
-
-    info!(
-        ctx.logger(),
-        "target repo cs id: {}, mapping version: {}", target_hash, version
-    );
-
-    let prefixes_to_visit = get_fast_path_prefixes(
-        source_repo,
-        commit_syncer,
-        &version,
-        live_commit_sync_config,
-    )
-    .await?;
-
-    verify_working_copy_inner(
+    verify_working_copy_with_version_fast_path(
         ctx,
-        Source(source_repo),
-        Target(target_repo),
+        commit_syncer,
         Source(source_hash),
         Target(target_hash),
-        &commit_syncer.get_mover_by_version(&version).await?,
-        &commit_syncer.get_reverse_mover_by_version(&version).await?,
-        prefixes_to_visit,
+        &version,
+        live_commit_sync_config,
     )
     .await
 }
@@ -131,21 +125,522 @@ pub async fn verify_working_copy_with_version_fast_path<
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
 
+    let source_root_fsnode_id = RootFsnodeId::derive(ctx, source_repo, source_hash.0)
+        .await?
+        .into_fsnode_id();
+    let target_root_fsnode_id = RootFsnodeId::derive(ctx, target_repo, target_hash.0)
+        .await?
+        .into_fsnode_id();
+
+    info!(
+        ctx.logger(),
+        "target repo cs id: {}, mapping version: {}", target_hash, version
+    );
+
     let prefixes_to_visit =
         get_fast_path_prefixes(source_repo, commit_syncer, version, live_commit_sync_config)
             .await?;
 
-    verify_working_copy_inner(
-        ctx,
-        Source(source_repo),
-        Target(target_repo),
-        source_hash,
-        target_hash,
-        &commit_syncer.get_mover_by_version(version).await?,
-        &commit_syncer.get_reverse_mover_by_version(version).await?,
-        prefixes_to_visit,
-    )
-    .await
+    match prefixes_to_visit {
+        PrefixesToVisit {
+            source_prefixes_to_visit: Some(source_prefixes_to_visit),
+            target_prefixes_to_visit: None,
+        } => {
+            let mover = commit_syncer.get_mover_by_version(version).await?;
+            verify_working_copy_fast_path_inner(
+                ctx,
+                Source(source_repo),
+                source_root_fsnode_id,
+                Target(target_repo),
+                target_root_fsnode_id,
+                &mover,
+                source_prefixes_to_visit.clone().into_iter().collect(),
+            )
+            .await?;
+
+            info!(ctx.logger(), "###");
+            info!(
+                ctx.logger(),
+                "### Checking all the files from repo {} that should be present in {}",
+                source_repo.repo_identity().name(),
+                target_repo.repo_identity().name(),
+            );
+            info!(ctx.logger(), "###");
+
+            let target_prefixes_to_visit = source_prefixes_to_visit
+                .into_iter()
+                .map(|prefix| wrap_mover_result(&mover, &prefix))
+                .collect::<Result<Vec<Option<Option<MPath>>>, Error>>()?;
+            let target_prefixes_to_visit = target_prefixes_to_visit.into_iter().flatten().collect();
+            verify_working_copy_fast_path_inner(
+                ctx,
+                Source(target_repo),
+                target_root_fsnode_id,
+                Target(source_repo),
+                source_root_fsnode_id,
+                &commit_syncer.get_reverse_mover_by_version(version).await?,
+                target_prefixes_to_visit,
+            )
+            .await?;
+        }
+        PrefixesToVisit {
+            source_prefixes_to_visit: None,
+            target_prefixes_to_visit: Some(target_prefixes_to_visit),
+        } => {
+            let reverse_mover = commit_syncer.get_reverse_mover_by_version(version).await?;
+            info!(ctx.logger(), "###");
+            info!(
+                ctx.logger(),
+                "### Checking all the files in repo {} are present in {}",
+                target_repo.repo_identity().name(),
+                source_repo.repo_identity().name(),
+            );
+            info!(ctx.logger(), "###");
+            verify_working_copy_fast_path_inner(
+                ctx,
+                Source(target_repo),
+                target_root_fsnode_id,
+                Target(source_repo),
+                source_root_fsnode_id,
+                &reverse_mover,
+                target_prefixes_to_visit.clone().into_iter().collect(),
+            )
+            .await?;
+
+            let source_prefixes_to_visit = target_prefixes_to_visit
+                .into_iter()
+                .map(|prefix| wrap_mover_result(&reverse_mover, &prefix))
+                .collect::<Result<Vec<Option<Option<MPath>>>, Error>>()?
+                .into_iter()
+                .flatten()
+                .collect();
+            verify_working_copy_fast_path_inner(
+                ctx,
+                Source(source_repo),
+                source_root_fsnode_id,
+                Target(target_repo),
+                target_root_fsnode_id,
+                &commit_syncer.get_mover_by_version(version).await?,
+                source_prefixes_to_visit,
+            )
+            .await?;
+        }
+        PrefixesToVisit {
+            source_prefixes_to_visit: Some(source_prefixes_to_visit),
+            target_prefixes_to_visit: Some(target_prefixes_to_visit),
+        } => {
+            let mover = commit_syncer.get_mover_by_version(version).await?;
+            info!(ctx.logger(), "###");
+            info!(
+                ctx.logger(),
+                "### Checking all the files from repo {} that should be present in {}",
+                source_repo.repo_identity().name(),
+                target_repo.repo_identity().name(),
+            );
+            info!(ctx.logger(), "###");
+            verify_working_copy_fast_path_inner(
+                ctx,
+                Source(source_repo),
+                source_root_fsnode_id,
+                Target(target_repo),
+                target_root_fsnode_id,
+                &mover,
+                source_prefixes_to_visit.clone().into_iter().collect(),
+            )
+            .await?;
+
+            info!(ctx.logger(), "###");
+            info!(
+                ctx.logger(),
+                "### Checking all the files from repo {} that should be present in {}",
+                target_repo.repo_identity().name(),
+                source_repo.repo_identity().name(),
+            );
+            info!(ctx.logger(), "###");
+            let reverse_mover = commit_syncer.get_reverse_mover_by_version(version).await?;
+            verify_working_copy_fast_path_inner(
+                ctx,
+                Source(target_repo),
+                target_root_fsnode_id,
+                Target(source_repo),
+                source_root_fsnode_id,
+                &reverse_mover,
+                target_prefixes_to_visit.clone().into_iter().collect(),
+            )
+            .await?;
+        }
+        PrefixesToVisit {
+            source_prefixes_to_visit: None,
+            target_prefixes_to_visit: None,
+        } => {
+            return Err(format_err!(
+                "programming error: fast path doesn't work with no prefixes to visit!"
+            ));
+        }
+    }
+    info!(ctx.logger(), "all is well!");
+    Ok(())
+}
+
+#[derive(Debug, Eq, PartialEq)]
+enum ValidationOutputElement {
+    File((ContentId, FileType)),
+    Directory,
+    Nothing,
+}
+
+type ValidationOutput = Vec<(
+    Source<(Option<MPath>, ValidationOutputElement)>,
+    Target<(Option<MPath>, ValidationOutputElement)>,
+)>;
+
+struct PrintableValidationOutput(Source<String>, Target<String>, ValidationOutput);
+
+impl fmt::Display for PrintableValidationOutput {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self(Source(source_name), Target(target_name), output) = self;
+        for item in output {
+            match item {
+                (
+                    Source((source_path, ValidationOutputElement::Nothing)),
+                    Target((target_path, _)),
+                ) => {
+                    writeln!(
+                        f,
+                        "{:?} is present in {}, but not in {} (under {:?})",
+                        source_path, source_name, target_name, target_path,
+                    )?;
+                }
+                (
+                    Source((source_path, _)),
+                    Target((target_path, ValidationOutputElement::Nothing)),
+                ) => {
+                    writeln!(
+                        f,
+                        "{:?} is present in {}, but not in {} (under {:?})",
+                        target_path, target_name, source_name, source_path,
+                    )?;
+                }
+                (
+                    Source((source_path, ValidationOutputElement::Directory)),
+                    Target((target_path, ValidationOutputElement::File(_))),
+                ) => {
+                    writeln!(
+                        f,
+                        "{:?} is a directory in {}, but a file in {} (under {:?})",
+                        source_path, source_name, target_name, target_path,
+                    )?;
+                }
+                (
+                    Source((source_path, ValidationOutputElement::File(_))),
+                    Target((target_path, ValidationOutputElement::Directory)),
+                ) => {
+                    writeln!(
+                        f,
+                        "{:?} is a directory in {}, but a file in {} (under {:?})",
+                        target_path, target_name, source_name, source_path,
+                    )?;
+                }
+                (
+                    Source((source_path, ValidationOutputElement::File((source_id, source_type)))),
+                    Target((target_path, ValidationOutputElement::File((target_id, target_type)))),
+                ) => {
+                    writeln!(
+                        f,
+                        "file differs between {} (path: {:?}, content_id: {:?}, type: {:?}) and {} (path: {:?}, content_id: {:?}, type: {:?})",
+                        source_name,
+                        source_path,
+                        source_id,
+                        source_type,
+                        target_name,
+                        target_path,
+                        target_id,
+                        target_type,
+                    )?;
+                }
+                (Source((source_path, _)), Target((target_path, _))) => {
+                    writeln!(
+                        f,
+                        "path differs between {} (path: {:?}) and {} (path: {:?})",
+                        source_name, source_path, target_name, target_path,
+                    )?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+async fn verify_working_copy_fast_path_inner<'a>(
+    ctx: &'a CoreContext,
+    source_repo: Source<
+        &'a (
+                impl RepoIdentityRef
+                + RepoDerivedDataRef
+                + RepoBlobstoreRef
+                + RepoBlobstoreArc
+                + Send
+                + Sync
+            ),
+    >,
+    source_root_fsnode_id: FsnodeId,
+    target_repo: Target<
+        &'a (
+                impl RepoIdentityRef
+                + RepoDerivedDataRef
+                + RepoBlobstoreRef
+                + RepoBlobstoreArc
+                + Send
+                + Sync
+            ),
+    >,
+    target_root_fsnode_id: FsnodeId,
+    mover: &Mover,
+    prefixes_to_visit: Vec<Option<MPath>>,
+) -> Result<(), Error> {
+    let prefix_set: HashSet<_> = prefixes_to_visit
+        .iter()
+        .cloned()
+        .filter_map(|p| p)
+        .collect();
+    let out = stream::iter(prefixes_to_visit.into_iter().map(|path| {
+        verify_dir(
+            ctx,
+            source_repo,
+            path,
+            source_root_fsnode_id.clone(),
+            target_repo,
+            target_root_fsnode_id.clone(),
+            mover,
+            &prefix_set,
+        )
+    }))
+    .buffer_unordered(100)
+    .try_fold(vec![], |mut acc, new_out| {
+        acc.extend(new_out);
+        future::ready(Ok(acc))
+    })
+    .await?;
+
+    let len = out.len();
+    if !out.is_empty() {
+        error!(
+            ctx.logger(),
+            "Verification failed!!!\n{}",
+            PrintableValidationOutput(
+                Source(source_repo.0.repo_identity().name().to_string()),
+                Target(target_repo.0.repo_identity().name().to_string()),
+                out
+            ),
+        );
+        return Err(format_err!(
+            "verification failed, found {} differences",
+            len
+        ));
+    }
+    Ok(())
+}
+
+// ACHTUNG, HACK AHEAD!
+// Movers were originally created to map file paths to file paths.  In
+// validators we're abusing them to map directory path, in that case the case
+// where dir is rewritten into repo root is a valid case and needs to be handled
+// properly rather than error.
+//
+// This function returns:
+//  * None when the path shouln't be present after rewrite
+//  * Some(None) when the dir should be rewritten into repo root
+//  * Some(Some(path)) when the dir should be rewritten into path
+//
+// This function contains the "directory" rewriting to just validation crate
+// while keeping all other mover code strict and safe. The alternative would be
+// to make moves more lax and be able to deal with root paths (large refactor).
+//
+// Also, the function assumes that the repo root always rewrites to repo root.
+// (which is true in the only usecase here: preserve mode)
+fn wrap_mover_result(mover: &Mover, path: &Option<MPath>) -> Result<Option<Option<MPath>>, Error> {
+    match path {
+        Some(mpath) => match mover(mpath) {
+            Ok(opt_mpath) => Ok(opt_mpath.map(Some)),
+            Err(err) => {
+                for cause in err.chain() {
+                    if let Some(movers::ErrorKind::RemovePrefixWholePathFailure) =
+                        cause.downcast_ref::<movers::ErrorKind>()
+                    {
+                        return Ok(Some(None));
+                    }
+                }
+                Err(err)
+            }
+        },
+        None => Ok(None),
+    }
+}
+
+async fn verify_dir<'a>(
+    ctx: &'a CoreContext,
+    source_repo: Source<
+        &'a (
+                impl RepoIdentityRef
+                + RepoDerivedDataRef
+                + RepoBlobstoreRef
+                + RepoBlobstoreArc
+                + Send
+                + Sync
+            ),
+    >,
+    source_path: Option<MPath>,
+    source_root_fsnode_id: FsnodeId,
+    target_repo: Target<
+        &'a (
+                impl RepoIdentityRef
+                + RepoDerivedDataRef
+                + RepoBlobstoreRef
+                + RepoBlobstoreArc
+                + Send
+                + Sync
+            ),
+    >,
+    target_root_fsnode_id: FsnodeId,
+    mover: &Mover,
+    prefixes_to_visit: &HashSet<MPath>,
+) -> Result<ValidationOutput, Error> {
+    let source_blobstore = source_repo.repo_blobstore_arc();
+    let target_blobstore = target_repo.repo_blobstore_arc();
+    let maybe_source_manifest_entry = source_root_fsnode_id
+        .find_entry(ctx.clone(), source_blobstore.clone(), source_path.clone())
+        .await?;
+
+    let inits = match maybe_source_manifest_entry {
+        Some(source_entry) => match source_entry {
+            Entry::Leaf(source_leaf) => {
+                vec![(
+                    source_path.clone().expect("leaf path can't be empty!"),
+                    FsnodeEntry::File(source_leaf),
+                )]
+            }
+            Entry::Tree(source_dir_fsnode_id) => {
+                let source_dir = source_dir_fsnode_id.load(ctx, &source_blobstore).await?;
+                source_dir
+                    .into_subentries()
+                    .into_iter()
+                    .map(|(elem, entry)| {
+                        (MPath::join_opt_element(source_path.as_ref(), &elem), entry)
+                    })
+                    .collect::<Vec<_>>()
+            }
+        },
+        None => vec![],
+    };
+    let start_source_path = source_path;
+
+    let mut outs = vec![];
+    for init in inits {
+        cloned!(start_source_path, source_blobstore, target_blobstore);
+        let out = bounded_traversal::bounded_traversal(
+            256,
+            init,
+            move |(source_path, source_entry)| {
+                cloned!(start_source_path, source_blobstore, target_blobstore);
+                Box::pin(async move {
+                    let target_path = wrap_mover_result(mover, &Some(source_path.clone()))?;
+
+                    if start_source_path.map_or(false, |p| p != source_path)
+                        && (prefixes_to_visit.contains(&source_path))
+                    {
+                        return Ok((vec![], vec![]));
+                    }
+
+                    let target_path = if let Some(target_path) = target_path {
+                        target_path
+                    } else {
+                        return Ok((vec![], vec![]));
+                    };
+
+                    let target_fsnode = target_root_fsnode_id
+                        .find_entry(ctx.clone(), target_blobstore.clone(), target_path.clone())
+                        .await?;
+
+                    if let (
+                        FsnodeEntry::Directory(source_dir),
+                        Some(Entry::Tree(target_dir_fsnode_id)),
+                    ) = (&source_entry, target_fsnode)
+                    {
+                        let target_dir = target_dir_fsnode_id.load(ctx, &target_blobstore).await?;
+                        let recurse = if source_dir.summary().simple_format_sha256
+                            != target_dir.summary().simple_format_sha256
+                        {
+                            source_dir
+                                .id()
+                                .load(ctx, &source_blobstore)
+                                .await?
+                                .into_subentries()
+                                .into_iter()
+                                .map(|(elem, entry)| (source_path.join_element(Some(&elem)), entry))
+                                .collect()
+                        } else {
+                            vec![]
+                        };
+                        return Ok((vec![], recurse));
+                    }
+                    // The dir might not to map to the other side but if all subdirs map then we're good.
+                    if let (FsnodeEntry::Directory(source_dir), None) =
+                        (&source_entry, target_fsnode)
+                    {
+                        let recurse = source_dir
+                            .id()
+                            .load(ctx, &source_blobstore)
+                            .await?
+                            .into_subentries()
+                            .into_iter()
+                            .map(|(elem, entry)| (source_path.join_element(Some(&elem)), entry))
+                            .collect();
+                        return Ok((vec![], recurse));
+                    }
+
+                    let source_elem = match source_entry {
+                        FsnodeEntry::File(source_file) => ValidationOutputElement::File((
+                            source_file.content_id().clone(),
+                            source_file.file_type().clone(),
+                        )),
+                        FsnodeEntry::Directory(_dir) => ValidationOutputElement::Directory,
+                    };
+
+                    let target_elem = match target_fsnode {
+                        Some(Entry::Leaf(target_file)) => ValidationOutputElement::File((
+                            target_file.content_id().clone(),
+                            target_file.file_type().clone(),
+                        )),
+                        Some(Entry::Tree(_id)) => ValidationOutputElement::Directory,
+                        None => ValidationOutputElement::Nothing,
+                    };
+
+                    let output = if source_elem != target_elem {
+                        vec![(
+                            Source((Some(source_path), source_elem)),
+                            Target((target_path, target_elem)),
+                        )]
+                    } else {
+                        vec![]
+                    };
+
+                    Ok((output, vec![]))
+                })
+            },
+            |mut output, child_outputs| {
+                Box::pin(future::ready({
+                    for child_output in child_outputs {
+                        output.extend(child_output)
+                    }
+                    Ok::<_, Error>(output)
+                }))
+            },
+        )
+        .await?;
+        outs.extend(out.into_iter());
+    }
+
+    Ok(outs)
 }
 
 // Returns list of prefixes that need to be visited in both large and small
@@ -169,32 +664,41 @@ async fn get_fast_path_prefixes<'a, M: SyncedCommitMapping + Clone + 'static, R:
         )
     })?;
 
+    // Gets a list of large repo paths that small repo paths can map to.
+    // All other large repo paths don't need visiting. Except for `Preserve` aciton.
+    let mut prefixes_to_visit = small_repo_config
+        .map
+        .values()
+        .cloned()
+        .map(Some)
+        .collect::<Vec<_>>();
     match &small_repo_config.default_action {
-        DefaultSmallToLargeCommitSyncPathAction::Preserve => Ok(PrefixesToVisit::default()),
-        DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(prefix) => {
-            // Gets a list of large repo paths that small repo paths can map to.
-            // All other large repo paths don't need visiting.
-            let mut prefixes_to_visit = small_repo_config.map.values().cloned().collect::<Vec<_>>();
-            prefixes_to_visit.push(prefix.clone());
-            if small_repo_id == source_repo.repo_identity().id() {
-                Ok(PrefixesToVisit {
-                    source_prefixes_to_visit: None,
-                    target_prefixes_to_visit: Some(prefixes_to_visit),
-                })
-            } else {
-                Ok(PrefixesToVisit {
-                    source_prefixes_to_visit: Some(prefixes_to_visit),
-                    target_prefixes_to_visit: None,
-                })
-            }
+        DefaultSmallToLargeCommitSyncPathAction::Preserve => {
+            prefixes_to_visit.push(None);
         }
+        DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(prefix) => {
+            prefixes_to_visit.push(Some(prefix.clone()));
+        }
+    }
+
+    if let DefaultSmallToLargeCommitSyncPathAction::Preserve = &small_repo_config.default_action {}
+    if small_repo_id == source_repo.repo_identity().id() {
+        Ok(PrefixesToVisit {
+            source_prefixes_to_visit: None,
+            target_prefixes_to_visit: Some(prefixes_to_visit),
+        })
+    } else {
+        Ok(PrefixesToVisit {
+            source_prefixes_to_visit: Some(prefixes_to_visit),
+            target_prefixes_to_visit: None,
+        })
     }
 }
 
 #[derive(Default)]
 pub struct PrefixesToVisit {
-    source_prefixes_to_visit: Option<Vec<MPath>>,
-    target_prefixes_to_visit: Option<Vec<MPath>>,
+    source_prefixes_to_visit: Option<Vec<Option<MPath>>>,
+    target_prefixes_to_visit: Option<Vec<Option<MPath>>>,
 }
 
 pub async fn verify_working_copy_inner<'a>(
@@ -209,13 +713,7 @@ pub async fn verify_working_copy_inner<'a>(
     target_hash: Target<ChangesetId>,
     mover: &Mover,
     reverse_mover: &Mover,
-    prefixes_to_visit: PrefixesToVisit,
 ) -> Result<(), Error> {
-    let PrefixesToVisit {
-        source_prefixes_to_visit,
-        target_prefixes_to_visit,
-    } = prefixes_to_visit;
-
     let moved_source_repo_entries = get_maybe_moved_contents_and_types(
         ctx,
         source_repo.0,
@@ -226,14 +724,14 @@ pub async fn verify_working_copy_inner<'a>(
             // No need to move any paths, because this commit was preserved as is
             None
         },
-        source_prefixes_to_visit,
+        None,
     );
     let target_repo_entries = get_maybe_moved_contents_and_types(
         ctx,
         target_repo.0,
         *target_hash,
         Some(GetMaybeMovedFilenodesPolicy::CheckThatRewritesIntoSomeButDontMove(reverse_mover)),
-        target_prefixes_to_visit,
+        None,
     );
 
     let (moved_source_repo_entries, target_repo_entries) =
@@ -944,7 +1442,6 @@ mod test {
             Target(target_cs_id),
             &mover,
             &reverse_mover,
-            PrefixesToVisit::default(),
         )
         .await;
 
@@ -982,27 +1479,10 @@ mod test {
             Target(target_cs_id),
             &mover,
             &reverse_mover,
-            PrefixesToVisit::default(),
         )
         .await;
 
         assert!(res.is_err());
-
-        // Now limit the paths we need to verify
-        verify_working_copy_inner(
-            &ctx,
-            Source(&source),
-            Target(&target),
-            Source(source_cs_id),
-            Target(target_cs_id),
-            &mover,
-            &reverse_mover,
-            PrefixesToVisit {
-                source_prefixes_to_visit: Some(vec![MPath::new("prefix/sub")?]),
-                target_prefixes_to_visit: Some(vec![MPath::new("sub")?]),
-            },
-        )
-        .await?;
 
         Ok(())
     }

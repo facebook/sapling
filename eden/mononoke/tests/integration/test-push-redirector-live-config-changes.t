@@ -281,7 +281,8 @@ Again, normal pushrebase with one commit
   specialsmallrepofolder_after_change/f
 
   $ EXPECTED_RC=1 quiet_grep "MPath" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V1
-  * Execution error: MPath("special/f") exists in small-mon-1 but not in large-mon (glob)
+  Some(MPath("specialsmallrepofolder1/f")) is present in large-mon, but not in small-mon-1 (under Some(MPath("special/f")))
+  Some(MPath("specialsmallrepofolder1/f")) is present in large-mon, but not in small-mon-1 (under Some(MPath("special/f")))
   [1]
   $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V2
   * all is well! (glob)

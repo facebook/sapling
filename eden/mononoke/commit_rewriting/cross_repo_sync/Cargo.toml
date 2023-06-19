@@ -18,10 +18,12 @@ blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmark_renaming = { version = "0.1.0", path = "../bookmark_renaming" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
 changesets = { version = "0.1.0", path = "../../changesets" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 commit_transformation = { version = "0.1.0", path = "../../megarepo_api/commit_transformation" }
 context = { version = "0.1.0", path = "../../server/context" }

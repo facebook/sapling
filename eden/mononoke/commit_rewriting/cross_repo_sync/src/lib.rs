@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#![feature(async_closure)]
 #![feature(trait_alias)]
 #![feature(never_type)]
 
