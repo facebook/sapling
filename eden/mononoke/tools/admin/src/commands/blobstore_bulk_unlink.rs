@@ -16,6 +16,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -212,15 +213,18 @@ impl BlobstoreBulkUnlinker {
         )?;
 
         if let Ok(lines) = self.read_lines(path) {
+            let now = Instant::now();
             for line in lines {
                 if let Ok(key) = line {
                     self.unlink_the_key_from_blobstore(&key).await?;
                 }
             }
+            let elapsed = now.elapsed();
             writeln!(
                 std::io::stdout(),
-                "Progress: {:.3}%",
-                (cur + 1) as f32 * 100.0 / total_file_count as f32
+                "Progress: {:.3}%\tprocessing took {:.2?}",
+                (cur + 1) as f32 * 100.0 / total_file_count as f32,
+                elapsed
             )?;
         }
 
