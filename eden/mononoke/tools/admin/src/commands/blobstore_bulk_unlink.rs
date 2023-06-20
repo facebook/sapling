@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::fs;
 use std::fs::metadata;
 use std::fs::File;
@@ -52,6 +53,7 @@ struct BlobstoreBulkUnlinker {
     keys_dir: String,
     dry_run: bool,
     verbose: bool,
+    repo_to_blobstores: HashMap<RepositoryId, Vec<Arc<dyn BlobstoreUnlinkOps>>>,
 }
 
 impl BlobstoreBulkUnlinker {
@@ -66,6 +68,7 @@ impl BlobstoreBulkUnlinker {
             keys_dir,
             dry_run,
             verbose,
+            repo_to_blobstores: HashMap::new(),
         }
     }
 
@@ -106,27 +109,35 @@ impl BlobstoreBulkUnlinker {
     }
 
     async fn get_blobstores_from_repo_id(
-        &self,
+        &mut self,
         repo_id: RepositoryId,
-    ) -> Result<Vec<Arc<dyn BlobstoreUnlinkOps>>> {
-        let (_repo_name, repo_config) = self.app.repo_config(&RepoArg::Id(repo_id))?;
-        let blobstores = get_blobstores(
-            self.app.fb,
-            repo_config.storage_config,
-            None,
-            self.app.environment().readonly_storage,
-            &self.app.environment().blobstore_options,
-            self.app.config_store(),
-        )
-        .await?;
-        Ok(blobstores)
+    ) -> Result<&Vec<Arc<dyn BlobstoreUnlinkOps>>> {
+        use std::collections::hash_map::Entry::Vacant;
+        if let Vacant(e) = self.repo_to_blobstores.entry(repo_id) {
+            let (_repo_name, repo_config) = self.app.repo_config(&RepoArg::Id(repo_id))?;
+            let blobstores = get_blobstores(
+                self.app.fb,
+                repo_config.storage_config,
+                None,
+                self.app.environment().readonly_storage,
+                &self.app.environment().blobstore_options,
+                self.app.config_store(),
+            )
+            .await?;
+
+            e.insert(blobstores);
+        }
+        return Ok(self.repo_to_blobstores.get(&repo_id).unwrap());
     }
 
-    async fn unlink_the_key_from_blobstore(&self, key: &str) -> Result<()> {
+    async fn unlink_the_key_from_blobstore(&mut self, key: &str) -> Result<()> {
         if self.dry_run {
             writeln!(std::io::stdout(), "\tUnlink key: {}", key)?;
             return Ok(());
         }
+
+        let context = self.app.new_basic_context().clone();
+        let verbose = self.verbose.clone();
 
         if let (Ok(repo_id), Ok(blobstore_key)) = (
             self.extract_repo_id_from_key(key),
@@ -137,10 +148,7 @@ impl BlobstoreBulkUnlinker {
             let mut num_errors = 0;
             let num_blobstores = blobstores.len();
             for blobstore in blobstores {
-                match blobstore
-                    .unlink(&self.app.new_basic_context(), &blobstore_key)
-                    .await
-                {
+                match blobstore.unlink(&context, &blobstore_key).await {
                     Ok(_) => {}
                     Err(e) => {
                         num_errors += 1;
@@ -148,7 +156,7 @@ impl BlobstoreBulkUnlinker {
                         if !error_msg.contains("does not exist in the blobstore")
                             && !error_msg.contains("[404] Path not found")
                         {
-                            if self.verbose.clone() {
+                            if verbose.clone() {
                                 writeln!(
                                     std::io::stdout(),
                                     "Failed to unlink key {} in one underlying blobstore, error: {}.",
@@ -171,7 +179,7 @@ impl BlobstoreBulkUnlinker {
                 }
             }
         } else {
-            if self.verbose.clone() {
+            if verbose.clone() {
                 writeln!(std::io::stdout(), "\tSkip invalid key: {}", key)?;
             }
             return Ok(());
@@ -181,7 +189,7 @@ impl BlobstoreBulkUnlinker {
     }
 
     async fn bulk_unlink_keys_in_file(
-        &self,
+        &mut self,
         path: &PathBuf,
         cur: usize,
         total_file_count: usize,
@@ -219,7 +227,7 @@ impl BlobstoreBulkUnlinker {
         Ok(())
     }
 
-    async fn start_unlink(&self) -> Result<()> {
+    async fn start_unlink(&mut self) -> Result<()> {
         let entries = fs::read_dir(self.keys_dir.clone())?
             .map(|res| res.map(|e| e.path()))
             .collect::<Result<Vec<_>, io::Error>>()?;
@@ -245,7 +253,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         )?;
     }
 
-    let unlinker = BlobstoreBulkUnlinker::new(app, keys_dir.clone(), dry_run, verbose);
+    let mut unlinker = BlobstoreBulkUnlinker::new(app, keys_dir.clone(), dry_run, verbose);
     unlinker.start_unlink().await?;
 
     Ok(())
