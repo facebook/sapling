@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -91,7 +92,27 @@ async fn create_key_list(
     keys: Vec<String>,
     output_file: Option<&Path>,
 ) -> Result<()> {
-    redaction::create_key_list(ctx, app, keys, output_file).await
+    let redaction_blobstore = app.redaction_config_blobstore().await?;
+    let darkstorm_blobstore = app.redaction_config_blobstore_for_darkstorm().await?;
+    let key_list_id =
+        redaction::create_key_list(ctx, &redaction_blobstore, &darkstorm_blobstore, keys).await?;
+    if let Some(output_file) = output_file {
+        let mut output = File::create(output_file).with_context(|| {
+            format!(
+                "Failed to open output file '{}'",
+                output_file.to_string_lossy()
+            )
+        })?;
+        output
+            .write_all(key_list_id.to_string().as_bytes())
+            .with_context(|| {
+                format!(
+                    "Failed to write to output file '{}'",
+                    output_file.to_string_lossy()
+                )
+            })?;
+    }
+    Ok(())
 }
 
 /// Returns the content keys for the given paths.
