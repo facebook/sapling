@@ -7,6 +7,7 @@
 
 use anyhow::bail;
 use anyhow::Result;
+use blobstore::Loadable;
 use blobstore::Storable;
 use context::CoreContext;
 use futures::future::try_join;
@@ -41,4 +42,12 @@ pub async fn create_key_list(
         "scm/mononoke/redaction/redaction_sets.cconf in configerator"
     ));
     Ok(id1)
+}
+
+pub async fn fetch_key_list(
+    ctx: &CoreContext,
+    redaction_blobstore: &RedactionConfigBlobstore,
+    redaction_id: RedactionKeyListId,
+) -> Result<RedactionKeyList> {
+    Ok(redaction_id.load(ctx, redaction_blobstore).await?)
 }

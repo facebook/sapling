@@ -92,6 +92,10 @@ Redact file 'c' in commit '7389ca6413976090442f3003d4329990bc688ef7'
   Redaction saved as: db4bf834eb70b32345de6a2ad146811a6d0591e24cc507b81e30070d01bf2798
   To finish the redaction process, you need to commit this id to scm/mononoke/redaction/redaction_sets.cconf in configerator
 
+  $ mononoke_newadmin redaction fetch-key-list -R repo --output-file "$TESTTMP/keys" db4bf834eb70b32345de6a2ad146811a6d0591e24cc507b81e30070d01bf2798
+  $ cat "$TESTTMP/keys"
+  content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2
+
 Attempt to redact file 'b' in commit '14961831bd3af3a6331fef7e63367d61cb6c9f6b'
 This initially fails because it is still reachable in 'master'
   $ mononoke_newadmin redaction create-key-list -R repo -i 14961831bd3af3a6331fef7e63367d61cb6c9f6b b --main-bookmark master_bookmark
@@ -135,8 +139,7 @@ Restart mononoke
   $ killandwait $MONONOKE_PID
   $ rm -rf "$TESTTMP/mononoke-config"
   $ setup_common_config blob_files
-  $ mononoke
-  $ wait_for_mononoke
+  $ start_and_wait_for_mononoke_server --enable-wbc-with no-derivation
 
   $ cd "$TESTTMP/repo-pull2"
   $ hgmn pull -q

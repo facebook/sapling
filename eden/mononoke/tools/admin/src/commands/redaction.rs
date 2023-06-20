@@ -18,6 +18,7 @@ use clap::Parser;
 use clap::Subcommand;
 use create_key_list::RedactionCreateKeyListArgs;
 use create_key_list::RedactionCreateKeyListFromIdsArgs;
+use create_key_list::RedactionFetchKeyListArgs;
 use list::RedactionListArgs;
 use metaconfig_types::RepoConfig;
 use mononoke_app::MononokeApp;
@@ -66,6 +67,8 @@ pub enum RedactionSubcommand {
     CreateKeyListFromIds(RedactionCreateKeyListFromIdsArgs),
     /// List the redacted files in a commit.
     List(RedactionListArgs),
+    /// Fetch a key list from its key list id.
+    FetchKeyList(RedactionFetchKeyListArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -79,6 +82,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             create_key_list::create_key_list_from_blobstore_keys(&ctx, &app, create_args).await?
         }
         RedactionSubcommand::List(list_args) => list::list(&ctx, &app, list_args).await?,
+        RedactionSubcommand::FetchKeyList(fetch_args) => {
+            create_key_list::fetch_key_list(&ctx, &app, fetch_args).await?
+        }
     }
 
     Ok(())

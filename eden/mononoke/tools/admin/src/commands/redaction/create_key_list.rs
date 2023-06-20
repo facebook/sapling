@@ -30,6 +30,7 @@ use manifest::ManifestOps;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::args::RepoBlobstoreArgs;
 use mononoke_app::MononokeApp;
+use mononoke_types::typed_hash::RedactionKeyListId;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
@@ -84,6 +85,48 @@ pub struct RedactionCreateKeyListFromIdsArgs {
     /// Name of a file to write the new key to.
     #[clap(long)]
     output_file: Option<PathBuf>,
+}
+
+#[derive(Args)]
+pub struct RedactionFetchKeyListArgs {
+    #[clap(flatten)]
+    repo_blobstore_args: RepoBlobstoreArgs,
+
+    /// Redaction key list id, as obtained from `create-key-list` or `create-key-list-from-id`
+    #[clap(value_name = "KEY LIST ID")]
+    key_list_id: RedactionKeyListId,
+
+    /// Name of a file to write the key list to.
+    #[clap(long)]
+    output_file: Option<PathBuf>,
+}
+
+pub async fn fetch_key_list(
+    ctx: &CoreContext,
+    app: &MononokeApp,
+    args: RedactionFetchKeyListArgs,
+) -> Result<()> {
+    let redaction_blobstore = app.redaction_config_blobstore().await?;
+    let key_list = redaction::fetch_key_list(ctx, &redaction_blobstore, args.key_list_id).await?;
+    if let Some(output_file) = args.output_file.as_deref() {
+        let mut output = File::create(output_file).with_context(|| {
+            format!(
+                "Failed to open output file '{}'",
+                output_file.to_string_lossy()
+            )
+        })?;
+        for key in key_list.keys {
+            output
+                .write(format!("{}\n", key).as_bytes())
+                .with_context(|| {
+                    format!(
+                        "Failed to write to output file '{}'",
+                        output_file.to_string_lossy()
+                    )
+                })?;
+        }
+    }
+    Ok(())
 }
 
 async fn create_key_list(
