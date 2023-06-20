@@ -66,12 +66,31 @@ impl BlobstoreBulkUnlinker {
     }
 
     fn extract_repo_id_from_key(&self, key: &str) -> Result<RepositoryId, Error> {
+        self.check_if_key_valid(key)?;
         let re = Regex::new(r".*repo([0-9]+)..*")?;
         let caps = re
             .captures(key)
             .with_context(|| format!("Failed to capture lambda for key {}", key))?;
         let repo_id_str = caps.get(1).map_or("", |m| m.as_str());
         RepositoryId::from_str(repo_id_str)
+    }
+
+    fn extract_blobstore_key_from(&self, key: &str) -> Result<String, Error> {
+        self.check_if_key_valid(key)?;
+        let re = Regex::new(r".*(repo[0-9]+..*)")?;
+        let caps = re
+            .captures(key)
+            .with_context(|| format!("Failed to capture lambda for key {}", key))?;
+        let blobstore_key = caps.get(1).map_or("", |m| m.as_str());
+        Ok(blobstore_key.to_string())
+    }
+
+    fn check_if_key_valid(&self, key: &str) -> Result<(), Error> {
+        let re = Regex::new(r".*repo([0-9]+)..*")?;
+        let caps = re
+            .captures(key)
+            .with_context(|| format!("Invalid blobstore key {}", key))?;
+        Ok(())
     }
 
     async fn get_blobstores_from_repo_id(
@@ -97,16 +116,24 @@ impl BlobstoreBulkUnlinker {
             return Ok(());
         }
 
-        let repo_id = self.extract_repo_id_from_key(key)?;
-        let blobstores = self.get_blobstores_from_repo_id(repo_id).await?;
-        writeln!(
-            std::io::stdout(),
-            "for key: {} -> repo_id {}, stored in {} different places",
-            key,
-            repo_id,
-            blobstores.len()
-        )?;
-        bail!("unimplemented unlink {} from blobstore yet!", key)
+        if let (Ok(repo_id), Ok(blobstore_key)) = (
+            self.extract_repo_id_from_key(key),
+            self.extract_blobstore_key_from(key),
+        ) {
+            let blobstores = self.get_blobstores_from_repo_id(repo_id).await?;
+            writeln!(
+                std::io::stdout(),
+                "for blobstore key: {} -> repo_id {}, stored in {} different places",
+                blobstore_key,
+                repo_id,
+                blobstores.len()
+            )?;
+        } else {
+            writeln!(std::io::stdout(), "\tSkip invalid key: {}", key)?;
+            return Ok(());
+        }
+
+        Ok(())
     }
 
     async fn bulk_unlink_keys_in_file(
