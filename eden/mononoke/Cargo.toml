@@ -262,6 +262,7 @@ members = [
   "derived_data/utils",
   "edenapi_service",
   "features/history_traversal",
+  "features/redaction",
   "features/repo_update_logger",
   "filenodes",
   "filenodes/if",

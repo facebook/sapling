@@ -10,7 +10,6 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
-use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -18,14 +17,12 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
-use blobstore::Storable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use clap::ArgGroup;
 use clap::Args;
 use context::CoreContext;
 use fsnodes::RootFsnodeId;
-use futures::future::try_join;
 use futures::stream::TryStreamExt;
 use manifest::Entry;
 use manifest::ManifestOps;
@@ -33,10 +30,8 @@ use mononoke_app::args::RepoArgs;
 use mononoke_app::args::RepoBlobstoreArgs;
 use mononoke_app::MononokeApp;
 use mononoke_types::BlobstoreKey;
-use mononoke_types::BlobstoreValue;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
-use mononoke_types::RedactionKeyList;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 
@@ -96,45 +91,7 @@ async fn create_key_list(
     keys: Vec<String>,
     output_file: Option<&Path>,
 ) -> Result<()> {
-    let redaction_blobstore = app.redaction_config_blobstore().await?;
-    let darkstorm_blobstore = app.redaction_config_blobstore_for_darkstorm().await?;
-
-    let blob = RedactionKeyList { keys }.into_blob();
-    let (id1, id2) = try_join(
-        blob.clone().store(ctx, &redaction_blobstore),
-        blob.store(ctx, &darkstorm_blobstore),
-    )
-    .await?;
-    if id1 != id2 {
-        bail!(
-            "Id mismatch on darkstorm and non-darkstorm blobstores: {} vs {}",
-            id1,
-            id2
-        );
-    }
-
-    println!("Redaction saved as: {}", id1);
-    println!(concat!(
-        "To finish the redaction process, you need to commit this id to ",
-        "scm/mononoke/redaction/redaction_sets.cconf in configerator"
-    ));
-    if let Some(output_file) = output_file {
-        let mut output = File::create(output_file).with_context(|| {
-            format!(
-                "Failed to open output file '{}'",
-                output_file.to_string_lossy()
-            )
-        })?;
-        output
-            .write_all(id1.to_string().as_bytes())
-            .with_context(|| {
-                format!(
-                    "Failed to write to output file '{}'",
-                    output_file.to_string_lossy()
-                )
-            })?;
-    }
-    Ok(())
+    redaction::create_key_list(ctx, app, keys, output_file).await
 }
 
 /// Returns the content keys for the given paths.
