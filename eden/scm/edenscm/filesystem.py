@@ -75,9 +75,15 @@ class physicalfilesystem(object):
             mode = t[1]
             size = t[2]
             time = t[3]
+
+            exec_changed = False
             if size >= 0 and (
                 (size != st.st_size and size != st.st_size & _rangemask)
-                or ((mode ^ st.st_mode) & 0o100 and self.dirstate._checkexec)
+                or (
+                    exec_changed := (
+                        (mode ^ st.st_mode) & 0o100 and self.dirstate._checkexec
+                    )
+                )
             ):
                 if self.mtolog > 0:
                     reasons = []
@@ -96,7 +102,7 @@ class physicalfilesystem(object):
                                 )
                             except Exception as ex:
                                 reasons.append("os.stat failed (%s)" % ex)
-                    if mode != st.st_mode:
+                    if exec_changed:
                         reasons.append("mode changed (%s -> %s)" % (mode, st.st_mode))
                     self.ui.log("status", "M %s: %s" % (fn, ", ".join(reasons)))
 
