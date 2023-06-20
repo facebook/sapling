@@ -241,7 +241,7 @@ impl DeltaCache {
         async move {
             let bytes = bytes.await?;
 
-            let fsize = (mem::size_of::<u8>() * bytes.as_ref().len()) as i64;
+            let fsize = mem::size_of_val(&bytes) as i64;
             STATS::deltacache_fsize.add_value(fsize);
             STATS::deltacache_fsize_large.add_value(fsize);
 

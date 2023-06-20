@@ -85,7 +85,7 @@ impl fmt::Display for BookmarkLogEntry {
             [(_, id)] => write!(fmt, " {}", id)?,
             ids => {
                 for (scheme, id) in ids {
-                    write!(fmt, " {}={}", scheme.to_string(), id)?;
+                    write!(fmt, " {}={}", scheme, id)?;
                 }
             }
         }

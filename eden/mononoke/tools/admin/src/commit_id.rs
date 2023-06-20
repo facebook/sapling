@@ -227,7 +227,7 @@ pub async fn print_commit_id(
         schemes => {
             for scheme in schemes {
                 if let Some(commit_id) = scheme.map_commit_id(ctx, repo, cs_id).await? {
-                    println!("{}: {}", scheme.to_string(), commit_id);
+                    println!("{}: {}", scheme, commit_id);
                 }
             }
         }

@@ -147,7 +147,7 @@ fn create_bonsai_changeset_only(
 ) -> Result<BonsaiChangeset, Error> {
     BonsaiChangesetMut {
         parents,
-        author: author.clone(),
+        author,
         author_date: datetime,
         committer: None,
         committer_date: None,

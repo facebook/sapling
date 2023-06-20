@@ -181,14 +181,16 @@ mod test {
         let store = SqlBookmarksBuilder::with_sqlite_in_memory()
             .unwrap()
             .with_repo_id(repo_id);
-        let conn = store.connections.write_connection.clone();
 
         let rows = bookmarks
             .iter()
             .map(|(bookmark, (kind, changeset_id))| (&repo_id, bookmark, changeset_id, kind));
 
-        rt.block_on(crate::transaction::insert_bookmarks(&conn, rows))
-            .expect("insert failed");
+        rt.block_on(crate::transaction::insert_bookmarks(
+            &store.connections.write_connection,
+            rows,
+        ))
+        .expect("insert failed");
 
         let response = store
             .list(

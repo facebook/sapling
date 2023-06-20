@@ -828,7 +828,7 @@ mod tests {
 
             let bcs_id = create_commit(
                 ctx.clone(),
-                repo.clone(),
+                repo,
                 parents,
                 store_files(
                     ctx,
@@ -880,7 +880,7 @@ mod tests {
 
             let bcs_id = create_commit(
                 ctx.clone(),
-                repo.clone(),
+                repo,
                 parents,
                 store_files(
                     ctx,
