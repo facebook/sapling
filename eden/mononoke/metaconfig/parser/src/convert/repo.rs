@@ -295,6 +295,15 @@ impl Convert for RawPushrebaseParams {
                 casefolding_check: self
                     .casefolding_check
                     .unwrap_or(default.flags.casefolding_check),
+                casefolding_check_excluded_paths: self
+                    .casefolding_check_excluded_paths
+                    .map(|raw| {
+                        raw.into_iter()
+                            .map(|path| MPath::new_opt(path.as_bytes()))
+                            .collect::<Result<PrefixTrie>>()
+                    })
+                    .transpose()?
+                    .unwrap_or_default(),
                 not_generated_filenodes_limit: 500,
                 monitoring_bookmark: self.monitoring_bookmark,
             },

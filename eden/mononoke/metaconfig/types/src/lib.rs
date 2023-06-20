@@ -625,6 +625,8 @@ pub struct PushrebaseFlags {
     pub forbid_p2_root_rebases: bool,
     /// Whether to do chasefolding check during pushrebase
     pub casefolding_check: bool,
+    /// Whether to do chasefolding check during pushrebase
+    pub casefolding_check_excluded_paths: PrefixTrie,
     /// How many commits are allowed to not have filenodes generated.
     pub not_generated_filenodes_limit: u64,
     /// Which bookmark to track in ODS
@@ -638,6 +640,7 @@ impl Default for PushrebaseFlags {
             recursion_limit: Some(16384), // this number is fairly arbirary
             forbid_p2_root_rebases: true,
             casefolding_check: true,
+            casefolding_check_excluded_paths: PrefixTrie::new(),
             not_generated_filenodes_limit: 500,
             monitoring_bookmark: None,
         }

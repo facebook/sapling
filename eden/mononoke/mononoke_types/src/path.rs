@@ -1086,16 +1086,18 @@ impl FromIterator<Option<MPath>> for PrefixTrie {
     }
 }
 
-pub struct CaseConflictTrie {
-    children: HashMap<MPathElement, CaseConflictTrie>,
+pub struct CaseConflictTrie<'a> {
+    children: HashMap<MPathElement, CaseConflictTrie<'a>>,
     lowercase_to_original: HashMap<String, MPathElement>,
+    exclusions: &'a PrefixTrie,
 }
 
-impl CaseConflictTrie {
-    fn new() -> CaseConflictTrie {
+impl<'a> CaseConflictTrie<'a> {
+    fn new(exclusions: &'a PrefixTrie) -> CaseConflictTrie {
         CaseConflictTrie {
-            children: HashMap::new(),
-            lowercase_to_original: HashMap::new(),
+            children: Default::default(),
+            lowercase_to_original: Default::default(),
+            exclusions,
         }
     }
 
@@ -1103,18 +1105,29 @@ impl CaseConflictTrie {
         self.children.is_empty()
     }
 
-    /// Returns `true` if element was added successfully, or `false`
+    /// Returns Ok(()) if element was added successfully, or Err
     /// if trie already contains case conflicting entry.
-    fn add<'p, P: IntoIterator<Item = &'p MPathElement>>(
-        &mut self,
-        path: P,
-    ) -> Result<(), ReverseMPath> {
+    fn add<'p, P>(&mut self, path: P) -> Result<(), ReverseMPath>
+    where
+        P: IntoIterator<Item = &'p MPathElement> + Clone,
+    {
+        if self.exclusions.contains_prefix(path.clone().into_iter()) {
+            return Ok(());
+        }
+
+        self.add_internal(path)
+    }
+
+    fn add_internal<'p, P>(&mut self, path: P) -> Result<(), ReverseMPath>
+    where
+        P: IntoIterator<Item = &'p MPathElement>,
+    {
         let mut iter = path.into_iter();
         match iter.next() {
             None => Ok(()),
             Some(element) => {
                 if let Some(child) = self.children.get_mut(element) {
-                    return child.add(iter).map_err(|mut e| {
+                    return child.add_internal(iter).map_err(|mut e| {
                         e.elements.push(element.clone());
                         e
                     });
@@ -1132,8 +1145,8 @@ impl CaseConflictTrie {
 
                 self.children
                     .entry(element.clone())
-                    .or_insert_with(CaseConflictTrie::new)
-                    .add(iter)
+                    .or_insert_with(|| CaseConflictTrie::new(self.exclusions))
+                    .add_internal(iter)
             }
         }
     }
@@ -1141,14 +1154,28 @@ impl CaseConflictTrie {
     /// Remove path from a trie
     ///
     /// Returns `true` if path was removed, otherwise `false`.
-    fn remove<'p, P: IntoIterator<Item = &'p MPathElement>>(&mut self, path: P) -> bool {
+    fn remove<'p, P>(&mut self, path: P) -> bool
+    where
+        P: IntoIterator<Item = &'p MPathElement> + Clone,
+    {
+        if self.exclusions.contains_prefix(path.clone().into_iter()) {
+            return true;
+        }
+
+        self.remove_internal(path)
+    }
+
+    fn remove_internal<'p, P>(&mut self, path: P) -> bool
+    where
+        P: IntoIterator<Item = &'p MPathElement>,
+    {
         let mut iter = path.into_iter();
         match iter.next() {
             None => true,
             Some(element) => {
                 let (found, remove) = match self.children.get_mut(element) {
                     None => return false,
-                    Some(child) => (child.remove(iter), child.is_empty()),
+                    Some(child) => (child.remove_internal(iter), child.is_empty()),
                 };
                 if remove {
                     self.children.remove(element);
@@ -1221,12 +1248,12 @@ impl<'a> CaseConflictTrieUpdate for &'a BonsaiChangeset {
 
 /// Returns first path pair that would introduce a case-conflict, if any. The first element is the
 /// first one that was added into the Trie, and the second is the last.
-pub fn check_case_conflicts<P, I>(iter: I) -> Option<(MPath, MPath)>
+pub fn check_case_conflicts<P, I>(iter: I, exclusions: &PrefixTrie) -> Option<(MPath, MPath)>
 where
     P: CaseConflictTrieUpdate,
     I: IntoIterator<Item = P>,
 {
-    let mut trie = CaseConflictTrie::new();
+    let mut trie = CaseConflictTrie::new(exclusions);
     for update in iter {
         let conflict = update.apply(&mut trie);
         if conflict.is_some() {
@@ -1234,20 +1261,6 @@ where
         }
     }
     None
-}
-
-// TODO: Do we need this? Why?
-impl<P> FromIterator<P> for CaseConflictTrie
-where
-    P: CaseConflictTrieUpdate,
-{
-    fn from_iter<I: IntoIterator<Item = P>>(iter: I) -> Self {
-        let mut trie = CaseConflictTrie::new();
-        for update in iter {
-            let _ = update.apply(&mut trie);
-        }
-        trie
-    }
 }
 
 #[cfg(test)]
@@ -1509,8 +1522,11 @@ mod test {
             MPath::new(mpath).unwrap()
         }
 
-        let mut trie: CaseConflictTrie = vec!["a/b/c", "a/d", "c/d/a"].into_iter().map(m).collect();
-
+        let exclusions = Default::default();
+        let mut trie = CaseConflictTrie::new(&exclusions);
+        assert!(trie.add(&m("a/b/c")).is_ok());
+        assert!(trie.add(&m("a/d")).is_ok());
+        assert!(trie.add(&m("c/d/a")).is_ok());
         assert!(trie.add(&m("a/b/c")).is_ok());
         assert!(trie.add(&m("a/B/d")).is_err());
         assert!(trie.add(&m("a/b/C")).is_err());
@@ -1525,11 +1541,11 @@ mod test {
             m("a/c"),
         ];
         assert_eq!(
-            check_case_conflicts(paths.iter()), // works from &MPath
+            check_case_conflicts(paths.iter(), &Default::default()), // works from &MPath
             Some((m("a/b"), m("a/B/d"))),
         );
         assert_eq!(
-            check_case_conflicts(paths.into_iter()), // works from MPath
+            check_case_conflicts(paths.into_iter(), &Default::default()), // works from MPath
             Some((m("a/b"), m("a/B/d"))),
         );
     }

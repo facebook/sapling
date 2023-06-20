@@ -1156,6 +1156,7 @@ mod test {
                         recursion_limit: Some(1024),
                         forbid_p2_root_rebases: false,
                         casefolding_check: false,
+                        casefolding_check_excluded_paths: Default::default(),
                         not_generated_filenodes_limit: 500,
                         monitoring_bookmark: None,
                     },

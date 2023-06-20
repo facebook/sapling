@@ -357,7 +357,10 @@ async fn rebase_in_loop(
         }
 
         if config.casefolding_check {
-            let conflict = check_case_conflicts(server_bcs.iter().chain(client_bcs.iter()));
+            let conflict = check_case_conflicts(
+                server_bcs.iter().chain(client_bcs.iter()),
+                &config.casefolding_check_excluded_paths,
+            );
             if let Some(conflict) = conflict {
                 return Err(PushrebaseError::PotentialCaseConflict(conflict.1));
             }
@@ -1266,6 +1269,7 @@ mod tests {
     use maplit::hashset;
     use mononoke_types::BonsaiChangesetMut;
     use mononoke_types::FileType;
+    use mononoke_types::PrefixTrie;
     use mononoke_types::RepositoryId;
     use mutable_counters::MutableCounters;
     use mutable_counters::MutableCountersRef;
@@ -2151,6 +2155,101 @@ mod tests {
             )
             .await?;
 
+            Ok(())
+        })
+    }
+    #[fbinit::test]
+
+    fn pushrebase_case_conflict_exclusion(fb: FacebookInit) -> Result<(), Error> {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo: PushrebaseTestRepo = ManyFilesDirs::get_custom_test_repo(fb).await;
+            let root = repo
+                .bonsai_hg_mapping()
+                .get_bonsai_from_hg(
+                    &ctx,
+                    HgChangesetId::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8")?,
+                )
+                .await?
+                .ok_or_else(|| Error::msg("Root is missing"))?;
+
+            let bcs1 = CreateCommitContext::new(&ctx, &repo, vec![root])
+                .add_file("dir1/File_1_in_dir1", "data")
+                .commit()
+                .await?;
+
+            let hgcs1 = hashset![repo.derive_hg_changeset(&ctx, bcs1).await?];
+
+            let bcs2 = CreateCommitContext::new(&ctx, &repo, vec![root])
+                .add_file("dir2/File_1_in_dir2", "data")
+                .commit()
+                .await?;
+
+            let hgcs2 = hashset![repo.derive_hg_changeset(&ctx, bcs2).await?];
+
+            let book = master_bookmark();
+            set_bookmark(
+                ctx.clone(),
+                &repo,
+                &book,
+                "2f866e7e549760934e31bf0420a873f65100ad63",
+            )
+            .await?;
+
+            let result = do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcs1).await;
+            match result {
+                Err(PushrebaseError::PotentialCaseConflict(conflict)) => {
+                    assert_eq!(conflict, MPath::new("dir1/File_1_in_dir1")?)
+                }
+                _ => panic!("push-rebase should have failed with case conflict"),
+            };
+
+            // make sure that it is succeeds with exclusion
+            do_pushrebase(
+                &ctx,
+                &repo,
+                &PushrebaseFlags {
+                    casefolding_check: true,
+                    casefolding_check_excluded_paths: PrefixTrie::from_iter(
+                        vec![Some(MPath::new("dir1")?)].into_iter(),
+                    ),
+                    ..Default::default()
+                },
+                &book,
+                &hgcs1,
+            )
+            .await?;
+
+            // revert bookmark back
+            set_bookmark(
+                ctx.clone(),
+                &repo,
+                &book,
+                "2f866e7e549760934e31bf0420a873f65100ad63",
+            )
+            .await?;
+            // make sure that exclusion doesn't exclude too much
+            let result = do_pushrebase(
+                &ctx,
+                &repo,
+                &PushrebaseFlags {
+                    casefolding_check: true,
+                    casefolding_check_excluded_paths: PrefixTrie::from_iter(
+                        vec![Some(MPath::new("dir1")?)].into_iter(),
+                    ),
+                    ..Default::default()
+                },
+                &book,
+                &hgcs2,
+            )
+            .await;
+            match result {
+                Err(PushrebaseError::PotentialCaseConflict(conflict)) => {
+                    assert_eq!(conflict, MPath::new("dir2/File_1_in_dir2")?)
+                }
+                _ => panic!("push-rebase should have failed with case conflict"),
+            };
             Ok(())
         })
     }
