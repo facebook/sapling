@@ -16,7 +16,6 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -39,6 +38,12 @@ pub struct CommandArgs {
     /// If we're dry running the command, print out the blobstore keys to be deleted
     #[arg(short, long, default_value_t = true, action = ArgAction::Set)]
     dry_run: bool,
+
+    /// If we should print out the error message when we see:
+    ///  * failed to parse a key
+    ///  * failed to unlink a key
+    #[arg(short, long, default_value_t = false, action = ArgAction::Set)]
+    verbose: bool,
 }
 
 #[allow(dead_code)]
@@ -46,14 +51,21 @@ struct BlobstoreBulkUnlinker {
     app: MononokeApp,
     keys_dir: String,
     dry_run: bool,
+    verbose: bool,
 }
 
 impl BlobstoreBulkUnlinker {
-    fn new(app: MononokeApp, keys_dir: String, dry_run: bool) -> BlobstoreBulkUnlinker {
+    fn new(
+        app: MononokeApp,
+        keys_dir: String,
+        dry_run: bool,
+        verbose: bool,
+    ) -> BlobstoreBulkUnlinker {
         BlobstoreBulkUnlinker {
             app,
             keys_dir,
             dry_run,
+            verbose,
         }
     }
 
@@ -87,7 +99,7 @@ impl BlobstoreBulkUnlinker {
 
     fn check_if_key_valid(&self, key: &str) -> Result<(), Error> {
         let re = Regex::new(r".*repo([0-9]+)..*")?;
-        let caps = re
+        let _caps = re
             .captures(key)
             .with_context(|| format!("Invalid blobstore key {}", key))?;
         Ok(())
@@ -121,15 +133,47 @@ impl BlobstoreBulkUnlinker {
             self.extract_blobstore_key_from(key),
         ) {
             let blobstores = self.get_blobstores_from_repo_id(repo_id).await?;
-            writeln!(
-                std::io::stdout(),
-                "for blobstore key: {} -> repo_id {}, stored in {} different places",
-                blobstore_key,
-                repo_id,
-                blobstores.len()
-            )?;
+
+            let mut num_errors = 0;
+            let num_blobstores = blobstores.len();
+            for blobstore in blobstores {
+                match blobstore
+                    .unlink(&self.app.new_basic_context(), &blobstore_key)
+                    .await
+                {
+                    Ok(_) => {}
+                    Err(e) => {
+                        num_errors += 1;
+                        let error_msg = e.to_string();
+                        if !error_msg.contains("does not exist in the blobstore")
+                            && !error_msg.contains("[404] Path not found")
+                        {
+                            if self.verbose.clone() {
+                                writeln!(
+                                    std::io::stdout(),
+                                    "Failed to unlink key {} in one underlying blobstore, error: {}.",
+                                    blobstore_key,
+                                    error_msg
+                                )?;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if num_errors == num_blobstores {
+                if self.verbose.clone() {
+                    writeln!(
+                        std::io::stdout(),
+                        "For key {}, no blobstore contained this key.",
+                        blobstore_key,
+                    )?;
+                }
+            }
         } else {
-            writeln!(std::io::stdout(), "\tSkip invalid key: {}", key)?;
+            if self.verbose.clone() {
+                writeln!(std::io::stdout(), "\tSkip invalid key: {}", key)?;
+            }
             return Ok(());
         }
 
@@ -192,6 +236,7 @@ impl BlobstoreBulkUnlinker {
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let keys_dir = args.keys_dir;
     let dry_run = args.dry_run;
+    let verbose = args.verbose;
 
     if dry_run {
         writeln!(
@@ -200,7 +245,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         )?;
     }
 
-    let unlinker = BlobstoreBulkUnlinker::new(app, keys_dir.clone(), dry_run);
+    let unlinker = BlobstoreBulkUnlinker::new(app, keys_dir.clone(), dry_run, verbose);
     unlinker.start_unlink().await?;
 
     Ok(())
