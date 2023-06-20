@@ -13,12 +13,22 @@ use std::io::BufRead;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
 use anyhow::Result;
+use blobstore::BlobstoreUnlinkOps;
 use clap::ArgAction;
 use clap::Parser;
+use mononoke_app::args::RepoArg;
 use mononoke_app::MononokeApp;
+use mononoke_types::RepositoryId;
+use regex::Regex;
+
+use crate::commands::blobstore_unlink::get_blobstores;
 
 #[derive(Parser)]
 pub struct CommandArgs {
@@ -55,11 +65,47 @@ impl BlobstoreBulkUnlinker {
         Ok(io::BufReader::new(file).lines())
     }
 
+    fn extract_repo_id_from_key(&self, key: &str) -> Result<RepositoryId, Error> {
+        let re = Regex::new(r".*repo([0-9]+)..*")?;
+        let caps = re
+            .captures(key)
+            .with_context(|| format!("Failed to capture lambda for key {}", key))?;
+        let repo_id_str = caps.get(1).map_or("", |m| m.as_str());
+        RepositoryId::from_str(repo_id_str)
+    }
+
+    async fn get_blobstores_from_repo_id(
+        &self,
+        repo_id: RepositoryId,
+    ) -> Result<Vec<Arc<dyn BlobstoreUnlinkOps>>> {
+        let (_repo_name, repo_config) = self.app.repo_config(&RepoArg::Id(repo_id))?;
+        let blobstores = get_blobstores(
+            self.app.fb,
+            repo_config.storage_config,
+            None,
+            self.app.environment().readonly_storage,
+            &self.app.environment().blobstore_options,
+            self.app.config_store(),
+        )
+        .await?;
+        Ok(blobstores)
+    }
+
     async fn unlink_the_key_from_blobstore(&self, key: &str) -> Result<()> {
         if self.dry_run {
             writeln!(std::io::stdout(), "\tUnlink key: {}", key)?;
             return Ok(());
         }
+
+        let repo_id = self.extract_repo_id_from_key(key)?;
+        let blobstores = self.get_blobstores_from_repo_id(repo_id).await?;
+        writeln!(
+            std::io::stdout(),
+            "for key: {} -> repo_id {}, stored in {} different places",
+            key,
+            repo_id,
+            blobstores.len()
+        )?;
         bail!("unimplemented unlink {} from blobstore yet!", key)
     }
 
@@ -117,8 +163,6 @@ impl BlobstoreBulkUnlinker {
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
-    let _ctx = app.new_basic_context();
-
     let keys_dir = args.keys_dir;
     let dry_run = args.dry_run;
 
