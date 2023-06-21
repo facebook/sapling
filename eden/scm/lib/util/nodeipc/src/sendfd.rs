@@ -44,6 +44,37 @@ impl NodeIpc {
             return self.send(payload);
         }
 
+        #[cfg(unix)]
+        {
+            use std::mem;
+
+            use filedescriptor::AsRawFileDescriptor;
+
+            let fds_byte_size = mem::size_of_val(fds);
+            let (mut cmsgs, opaque, hdr) = cmsg_vec_and_msghdr(fds_byte_size);
+
+            let cmsg = &mut cmsgs[0];
+            cmsg.cmsg_level = libc::SOL_SOCKET;
+            cmsg.cmsg_type = libc::SCM_RIGHTS;
+            cmsg.cmsg_len = unsafe { libc::CMSG_LEN(fds_byte_size as u32) } as _;
+
+            // The man page warns that `CMSG_DATA` is not aligned (to `RawFileDescriptor`)
+            // and suggests `memcpy`.
+            let cmsg_data = unsafe { libc::CMSG_DATA(cmsg) };
+            unsafe { libc::memcpy(cmsg_data as *mut _, fds.as_ptr() as *const _, fds_byte_size) };
+
+            let w = self.w.lock().unwrap();
+            let socket_fd = w.as_raw_file_descriptor();
+            let ret = unsafe { libc::sendmsg(socket_fd, &hdr, 0) };
+            if ret < 0 {
+                return Err(std::io::Error::last_os_error())
+                    .with_context(|| format!("Failed to sendmsg with fds {:?}", &fds));
+            }
+            drop((cmsgs, opaque));
+
+            return Ok(());
+        }
+
         #[allow(unreachable_code)]
         {
             anyhow::bail!("platform is not supported for sending file descriptors.");
@@ -52,6 +83,12 @@ impl NodeIpc {
 
     /// The other end of `send_fd_vec`. Return `SendFdPayload` with `raw_fds`
     /// containing the received fds.
+    ///
+    /// This cannot be used to receive handles sent via nodejs'
+    /// `subprocess.send(message, sendHandle)` API.
+    ///
+    /// On POSIX systems, at most 32 fds can be received once.
+    /// See `MAX_FD_COUNT` below.
     pub fn recv_fd_vec(&self) -> anyhow::Result<SendFdPayload> {
         self.check_sendfd_compatibility()?;
 
@@ -141,6 +178,51 @@ impl NodeIpc {
             return Ok(payload);
         }
 
+        #[cfg(unix)]
+        unsafe {
+            use std::mem;
+
+            use filedescriptor::AsRawFileDescriptor;
+
+            const MAX_FD_COUNT: usize = 32;
+            let fds_byte_size = mem::size_of::<RawFileDescriptor>() * MAX_FD_COUNT;
+            let (cmsgs, opaque, mut hdr) = cmsg_vec_and_msghdr(fds_byte_size);
+
+            let r = self.r.lock().unwrap();
+            assert!(r.buffer().is_empty());
+            let socket_fd = r.get_ref().as_raw_file_descriptor();
+
+            let ret = libc::recvmsg(socket_fd, &mut hdr, 0);
+            if ret < 0 {
+                return Err(std::io::Error::last_os_error()).context("Failed to recvmsg");
+            }
+
+            let mut received_fds = Vec::<RawFileDescriptor>::new();
+            let mut cmsg = libc::CMSG_FIRSTHDR(&hdr);
+            while !cmsg.is_null() {
+                if (*cmsg).cmsg_level == libc::SOL_SOCKET && (*cmsg).cmsg_type == libc::SCM_RIGHTS {
+                    let data = libc::CMSG_DATA(cmsg);
+                    let data_size: usize = (*cmsg).cmsg_len - libc::CMSG_LEN(0) as usize;
+                    let mut fds = vec![
+                        -1 as RawFileDescriptor;
+                        data_size / mem::size_of::<RawFileDescriptor>()
+                    ];
+                    assert_eq!(fds.len() * mem::size_of::<RawFileDescriptor>(), data_size);
+                    // `data` might be not aligned. Use `memcpy` to copy.
+                    libc::memcpy(fds.as_mut_ptr() as *mut _, data as *const _, data_size);
+                    received_fds.extend(fds);
+                }
+                cmsg = libc::CMSG_NXTHDR(&hdr, cmsg);
+            }
+            drop((cmsgs, opaque));
+
+            let payload = SendFdPayload {
+                raw_fds: received_fds,
+            };
+
+            return Ok(payload);
+        }
+
         #[allow(unreachable_code)]
         {
             anyhow::bail!("platform is not supported for receiving file descriptors.");
@@ -200,4 +282,45 @@ mod serde_raw_fds {
             seq.into_iter().map(|v| v as RawFileDescriptor).collect();
         Ok(raw_fds)
     }
+}
+
+/// Create a `cmsg` buffer for `msghdr.msg_control`. Then create a `msghdr` that refers to `cmsg`
+/// buffer, with a dummy iov buffer.
+///
+/// Returns `(cmsgs, opaque, msghdr)`.
+/// The callsite needs to keep `cmsgs` and `opaque` alive before dropping `msghdr`,
+/// since `msghdr` contains pointers to them.
+/// The callsite might want to modify `cmsgs[0]` to customize the control message.
+/// Note the `cmsgs` is actually a union with bytes payload, so `cmsgs[1]` should
+/// not be used.
+#[cfg(unix)]
+fn cmsg_vec_and_msghdr(
+    byte_size: usize,
+) -> (Vec<libc::cmsghdr>, (impl Drop, impl Drop), libc::msghdr) {
+    use std::mem;
+
+    // See `man cmsg`.
+    let cmsg_space: usize = unsafe { libc::CMSG_SPACE(byte_size as _) } as _;
+    let cmsg_vec_len: usize = {
+        let cmsghdr_byte_size = mem::size_of::<libc::cmsghdr>();
+        (cmsg_space + cmsghdr_byte_size - 1) / cmsghdr_byte_size
+    };
+    assert!(cmsg_vec_len >= 1);
+    let mut cmsg_buf: Vec<libc::cmsghdr> = vec![unsafe { mem::zeroed() }; cmsg_vec_len];
+
+    // See `man sendmsg`. We need a non-empty dummy message to actually send information out.
+    let mut iov_buf = vec![b'\n'];
+    let mut dummy_iov = Box::new(libc::iovec {
+        iov_base: iov_buf.as_mut_ptr() as *mut _,
+        iov_len: iov_buf.len(),
+    });
+    let hdr = libc::msghdr {
+        msg_iov: dummy_iov.as_mut(),
+        msg_iovlen: 1,
+        msg_control: cmsg_buf.as_mut_ptr() as *mut _,
+        msg_controllen: cmsg_buf.len() * mem::size_of_val(&cmsg_buf[0]),
+        ..unsafe { mem::zeroed() }
+    };
+
+    (cmsg_buf, (iov_buf, dummy_iov), hdr)
 }

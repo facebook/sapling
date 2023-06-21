@@ -66,6 +66,13 @@ fn parent_main() {
         use winapi::um::winbase::HANDLE_FLAG_INHERIT;
         SetHandleInformation(client_raw_fd as _, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
     }
+    #[cfg(unix)]
+    unsafe {
+        let flags = libc::fcntl(client_raw_fd, libc::F_GETFD);
+        let new_flags = flags & !libc::FD_CLOEXEC;
+        let ret = libc::fcntl(client_raw_fd, libc::F_SETFD, new_flags);
+        assert!(ret == 0);
+    }
 
     let ipc = NodeIpc::from_socket(server_socket).unwrap();
 
