@@ -5,12 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Context;
+use filedescriptor::AsRawFileDescriptor;
 use filedescriptor::RawFileDescriptor;
 use serde::Deserialize;
 use serde::Serialize;
 
 use crate::nodeipc::NodeIpc;
+use crate::singleton::IPC;
 
 impl NodeIpc {
     /// Send a list of fd (or HANDLE on Windows).
@@ -47,8 +51,6 @@ impl NodeIpc {
         #[cfg(unix)]
         {
             use std::mem;
-
-            use filedescriptor::AsRawFileDescriptor;
 
             let fds_byte_size = mem::size_of_val(fds);
             let (mut cmsgs, opaque, hdr) = cmsg_vec_and_msghdr(fds_byte_size);
@@ -182,8 +184,6 @@ impl NodeIpc {
         unsafe {
             use std::mem;
 
-            use filedescriptor::AsRawFileDescriptor;
-
             const MAX_FD_COUNT: usize = 32;
             let fds_byte_size = mem::size_of::<RawFileDescriptor>() * MAX_FD_COUNT;
             let (cmsgs, opaque, mut hdr) = cmsg_vec_and_msghdr(fds_byte_size);
@@ -227,6 +227,79 @@ impl NodeIpc {
         {
             anyhow::bail!("platform is not supported for receiving file descriptors.");
         }
+    }
+
+    /// Send the stdio and optionally the `NODE_CHANNEL_FD` file descriptor
+    /// (the singleton) for the other end to "attach".
+    pub fn send_stdio(&self) -> anyhow::Result<()> {
+        let mut fds = Vec::with_capacity(4);
+
+        #[cfg(windows)]
+        unsafe {
+            use winapi::um::processenv::GetStdHandle;
+
+            fds.extend(
+                stdio_constants()
+                    .iter()
+                    .map(|&h| GetStdHandle(h) as RawFileDescriptor),
+            );
+        }
+
+        #[cfg(unix)]
+        {
+            fds.extend_from_slice(stdio_constants())
+        }
+
+        // Optionally, include the singleton file descriptor.
+        if let Some(ipc) = crate::get_singleton() {
+            if let Ok(w) = ipc.w.lock() {
+                fds.push(w.as_raw_file_descriptor());
+            }
+        }
+
+        self.send_fd_vec(&fds)?;
+        Ok(())
+    }
+
+    /// Replace the stdio using the one sent from the other end.
+    /// Update the singleton to match the sender.
+    pub fn recv_stdio(&self) -> anyhow::Result<()> {
+        let payload = self.recv_fd_vec()?;
+
+        // Replace the stdio.
+        #[cfg(unix)]
+        {
+            for (&received_fd, &std_fd) in payload.raw_fds.iter().zip(stdio_constants()) {
+                if received_fd > 0 && received_fd != std_fd {
+                    unsafe {
+                        libc::dup2(received_fd, std_fd);
+                        libc::close(received_fd);
+                    }
+                }
+            }
+        }
+
+        #[cfg(windows)]
+        {
+            use winapi::um::processenv::SetStdHandle;
+
+            for (&received_handle, &std_constant) in payload.raw_fds.iter().zip(stdio_constants()) {
+                if !received_handle.is_null() {
+                    unsafe { SetStdHandle(std_constant, received_handle as _) };
+                }
+            }
+        }
+
+        // Replace the singleton.
+        let mut ipc = IPC.write().unwrap();
+        if let Some(&raw_fd) = payload.raw_fds.get(stdio_constants().len()) {
+            let new_ipc = NodeIpc::from_raw_file_descriptor(raw_fd)?.with_libuv_compat();
+            *ipc = Some(Some(Arc::new(new_ipc)));
+        } else {
+            *ipc = Some(None);
+        }
+
+        Ok(())
     }
 
     fn check_sendfd_compatibility(&self) -> anyhow::Result<()> {
@@ -323,4 +396,29 @@ fn cmsg_vec_and_msghdr(
     };
 
     (cmsg_buf, (iov_buf, dummy_iov), hdr)
+}
+
+#[cfg(windows)]
+type StdioConstant = winapi::shared::minwindef::DWORD;
+#[cfg(unix)]
+type StdioConstant = RawFileDescriptor;
+
+fn stdio_constants() -> &'static [StdioConstant] {
+    #[cfg(windows)]
+    {
+        use winapi::um::winbase;
+        return &[
+            winbase::STD_INPUT_HANDLE,
+            winbase::STD_OUTPUT_HANDLE,
+            winbase::STD_ERROR_HANDLE,
+        ];
+    }
+
+    #[cfg(unix)]
+    {
+        return &[libc::STDIN_FILENO, libc::STDOUT_FILENO, libc::STDERR_FILENO];
+    }
+
+    #[allow(unreachable_code)]
+    &[]
 }

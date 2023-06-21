@@ -20,7 +20,7 @@
 
 pub(crate) mod nodeipc;
 mod sendfd;
-mod singleton;
+pub(crate) mod singleton;
 
 pub use self::nodeipc::NodeIpc;
 pub use self::singleton::get_singleton;
