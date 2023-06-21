@@ -116,7 +116,7 @@ ImmediateFuture<TreePtr> LocalStore::getTree(const ObjectId& id) const {
   DurationScope stat{stats_, &LocalStoreStats::getTree};
   return getImmediateFuture(KeySpace::TreeFamily, id)
       .thenValue(
-          [id, stat = std::move(stat), &stats = stats_](
+          [id, stat = std::move(stat), stats = stats_.copy()](
               StoreResult&& data) -> TreePtr {
             if (data.isValid()) {
               return parse<const Tree>(
@@ -144,7 +144,7 @@ ImmediateFuture<BlobPtr> LocalStore::getBlob(const ObjectId& id) const {
   DurationScope stat{stats_, &LocalStoreStats::getBlob};
   return getImmediateFuture(KeySpace::BlobFamily, id)
       .thenValue(
-          [id, stat = std::move(stat), &stats = stats_](
+          [id, stat = std::move(stat), stats = stats_.copy()](
               StoreResult&& data) -> BlobPtr {
             if (data.isValid()) {
               return parse<const Blob>(
@@ -168,7 +168,7 @@ ImmediateFuture<BlobMetadataPtr> LocalStore::getBlobMetadata(
   DurationScope stat{stats_, &LocalStoreStats::getBlobMetadata};
   return getImmediateFuture(KeySpace::BlobMetaDataFamily, id)
       .thenValue(
-          [id, stat = std::move(stat), &stats = stats_](
+          [id, stat = std::move(stat), stats = stats_.copy()](
               StoreResult&& data) -> BlobMetadataPtr {
             if (data.isValid()) {
               return parse<const BlobMetadata>(
