@@ -27,7 +27,7 @@ use serde::Serialize;
 // This is different from RawFileDescriptor, which is
 // RawHandle on Windows, and requires conversion using
 // `libc::get_osfhandle`.
-type LibcFd = libc::c_int;
+pub type LibcFd = libc::c_int;
 
 /// State needed to communicate with nodejs `child_process` IPC.
 /// Search `'ipc'` in https://nodejs.org/api/child_process.html
@@ -39,11 +39,11 @@ type LibcFd = libc::c_int;
 pub struct NodeIpc {
     // Mutex is used so the static singleton is easier to use
     // (send and recv do not take &mut self).
-    w: Mutex<FileDescriptor>,
-    r: Mutex<io::BufReader<FileDescriptor>>,
+    pub(crate) w: Mutex<FileDescriptor>,
+    pub(crate) r: Mutex<io::BufReader<FileDescriptor>>,
     // Whether compatible with libuv.
     // If true, on Windows, we'll add extra frame headers per message.
-    libuv_compat: bool,
+    pub(crate) libuv_compat: bool,
 }
 
 impl NodeIpc {
