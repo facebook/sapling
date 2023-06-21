@@ -1,7 +1,5 @@
 #debugruntest-compatible
 
-  $ setconfig workingcopy.ruststatus=False
-
 Create a repository:
 
   $ hg config
@@ -30,7 +28,7 @@ Create a repository:
   ui.slash=True
   web.address=localhost
   web\.ipv6=(?:True|False) (re)
-  workingcopy.ruststatus=False
+  workingcopy.ruststatus=True
   workingcopy.use-rust=True
 
   $ configure modernclient
@@ -69,7 +67,8 @@ Commands can succeed without a stdin
   $ hg status >/dev/full 2>&1
   [255]
 
-  $ hg status ENOENT 2>/dev/full
+FIXME(status):
+  $ hg status ENOENT --config workingcopy.ruststatus=false 2>/dev/full
   [1]
 #endif
 

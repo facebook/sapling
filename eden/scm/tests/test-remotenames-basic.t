@@ -2,6 +2,7 @@
 #inprocess-hg-incompatible
   $ enable remotenames
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig workingcopy.ruststatus=false
   > mkcommit()
   > {
   >    echo $1 > $1

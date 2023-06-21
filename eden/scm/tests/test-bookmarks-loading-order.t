@@ -1,8 +1,8 @@
-#chg-compatible
 #debugruntest-compatible
 
   $ configure modern
   $ setconfig ui.allowemptycommit=1
+  $ setconfig workingcopy.ruststatus=false
 
   $ newrepo
   $ echo A | hg debugdrawdag

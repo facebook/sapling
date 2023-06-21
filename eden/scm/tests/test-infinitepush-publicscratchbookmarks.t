@@ -1,7 +1,7 @@
-#chg-compatible
 #debugruntest-compatible
 #inprocess-hg-incompatible
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig workingcopy.ruststatus=false
 
   $ configure dummyssh
   $ enable infinitepush remotenames

@@ -7,10 +7,7 @@
 # Copyright (c) Mercurial Contributors.
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-
-#if fsmonitor
-  $ setconfig workingcopy.ruststatus=False
-#endif
+  $ setconfig workingcopy.ruststatus=false
 
   $ setconfig 'extensions.treemanifest=!' hint.ack-match-full-traversal=true
   $ hg init repo

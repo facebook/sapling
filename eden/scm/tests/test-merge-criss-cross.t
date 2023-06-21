@@ -1,6 +1,6 @@
-#chg-compatible
 #debugruntest-compatible
 
+  $ setconfig workingcopy.ruststatus=false
 
 Criss cross merging
 

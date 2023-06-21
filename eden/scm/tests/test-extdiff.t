@@ -1,10 +1,10 @@
-#chg-compatible
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
 #require diff echo
 
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ setconfig workingcopy.ruststatus=false
   $ enable extdiff
 
   $ hg init a

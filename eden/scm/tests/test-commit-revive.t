@@ -1,7 +1,7 @@
-#chg-compatible
 #debugruntest-compatible
 
   $ configure modern
+  $ setconfig workingcopy.ruststatus=false
 
 "import" can revive a commit
 

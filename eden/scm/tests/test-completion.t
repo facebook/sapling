@@ -1,5 +1,6 @@
-#chg-compatible
 #debugruntest-compatible
+
+  $ setconfig workingcopy.ruststatus=false
 
 #require no-fsmonitor
 

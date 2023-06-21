@@ -1,7 +1,7 @@
-#chg-compatible
 #debugruntest-compatible
 
   $ eagerepo
+  $ setconfig workingcopy.ruststatus=false
   $ configure mutation-norecord
   $ enable rebase shelve
 

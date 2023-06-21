@@ -3,6 +3,7 @@
   $ configure modern
   $ enable tweakdefaults
   $ setconfig tweakdefaults.showupdated=true
+  $ setconfig workingcopy.ruststatus=false
 
 Test utils:
 

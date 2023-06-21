@@ -1,5 +1,4 @@
 #debugruntest-compatible
-#chg-compatible
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # Copyright (c) Mercurial Contributors.
 #
@@ -8,9 +7,7 @@
 #inprocess-hg-incompatible
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-#if fsmonitor
   $ setconfig workingcopy.ruststatus=False
-#endif
 
   $ setconfig experimental.allowfilepeer=True
   $ hg init t

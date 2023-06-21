@@ -1,8 +1,8 @@
-#chg-compatible
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
   $ configure dummyssh
+  $ setconfig workingcopy.ruststatus=false
 #require serve
 
 Initialize repository

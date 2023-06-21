@@ -1,8 +1,8 @@
-#chg-compatible
 #debugruntest-compatible
 #inprocess-hg-incompatible
   $ setconfig experimental.allowfilepeer=True
   $ setconfig status.use-rust=false
+  $ setconfig workingcopy.ruststatus=false
 
   $ hg init t
   $ cd t

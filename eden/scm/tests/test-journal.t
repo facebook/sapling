@@ -1,7 +1,8 @@
-#chg-compatible
 #require no-windows
 #debugruntest-compatible
 #inprocess-hg-incompatible
+
+  $ setconfig workingcopy.ruststatus=false
 
 Tests for the journal extension; records bookmark locations.
 

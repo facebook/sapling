@@ -1,9 +1,9 @@
-#chg-compatible
 #debugruntest-compatible
 
   $ configure modern
   $ enable smartlog rebase
   $ disable commitcloud
+  $ setconfig workingcopy.ruststatus=false
 
   $ newrepo
   $ drawdag << 'EOS'

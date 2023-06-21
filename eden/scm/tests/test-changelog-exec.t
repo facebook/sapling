@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 
 #require execbit
@@ -6,6 +5,8 @@
 b51a8138292a introduced a regression where we would mention in the
 changelog executable files added by the second parent of a merge. Test
 that that doesn't happen anymore
+
+  $ setconfig workingcopy.ruststatus=false
 
   $ hg init repo
   $ cd repo

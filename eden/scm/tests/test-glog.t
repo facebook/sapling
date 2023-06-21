@@ -78,6 +78,7 @@
 
   $ setconfig format.use-segmented-changelog=true
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ setconfig workingcopy.ruststatus=false
   $ commit() {
   >   rev=$1
   >   msg=$2

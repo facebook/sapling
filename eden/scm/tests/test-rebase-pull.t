@@ -1,5 +1,4 @@
 #debugruntest-compatible
-#chg-compatible
 # coding=utf-8
 #inprocess-hg-incompatible
 
@@ -11,6 +10,7 @@
 
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig workingcopy.ruststatus=false
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > rebase=

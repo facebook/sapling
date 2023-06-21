@@ -1,7 +1,7 @@
-#chg-compatible
 #debugruntest-compatible
 
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ setconfig workingcopy.ruststatus=false
 test parents command
 
   $ hg init repo

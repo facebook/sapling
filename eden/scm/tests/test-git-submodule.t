@@ -2,7 +2,6 @@
 #require git no-windows
 #debugruntest-compatible
 
-  $ setconfig workingcopy.ruststatus=true
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=true ui.allowemptycommit=true
   $ enable rebase

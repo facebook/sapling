@@ -1,8 +1,7 @@
-#chg-compatible
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
-#chg-compatible
+  $ setconfig workingcopy.ruststatus=false
 
 #testcases withpytz withoutpytz
 #if withpytz

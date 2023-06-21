@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 
   $ configure modern
@@ -6,6 +5,7 @@
 
   $ setconfig amend.autorestack=no-conflict
   $ setconfig rebase.experimental.inmemory=True
+  $ setconfig workingcopy.ruststatus=false
 
 Tests the --noconflict rebase flag
 

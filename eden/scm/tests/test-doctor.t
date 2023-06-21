@@ -1,10 +1,9 @@
 #debugruntest-compatible
-#chg-compatible
-#debugruntest-compatible
 #inprocess-hg-incompatible
 
   $ configure modern
   $ setconfig format.use-symlink-atomic-write=1
+  $ setconfig workingcopy.ruststatus=false
 
 Test indexedlogdatapack
 

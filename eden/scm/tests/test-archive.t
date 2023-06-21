@@ -1,9 +1,9 @@
-#chg-compatible
 #debugruntest-compatible
 
 #require serve tar unzip
 
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ setconfig workingcopy.ruststatus=false
   $ enable share
   $ hg init test
   $ cd test

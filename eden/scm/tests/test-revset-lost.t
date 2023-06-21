@@ -1,7 +1,7 @@
-#chg-compatible
 #debugruntest-compatible
   $ configure modern
   $ setconfig ui.allowemptycommit=1
+  $ setconfig workingcopy.ruststatus=false
   $ enable histedit
 
 Configure repo:

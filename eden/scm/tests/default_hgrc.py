@@ -31,6 +31,7 @@ use-rust=True
 
 [workingcopy]
 use-rust=True
+ruststatus=True
 
 [status]
 use-rust=True
@@ -71,9 +72,6 @@ detectrace=True
 [scmstore]
 enableshim=True
 contentstorefallback=True
-
-[workingcopy]
-ruststatus=True
 """
 
     return content
