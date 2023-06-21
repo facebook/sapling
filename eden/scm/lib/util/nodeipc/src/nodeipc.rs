@@ -192,10 +192,22 @@ impl NodeIpc {
     fn recv_line(&self) -> anyhow::Result<Option<String>> {
         let mut r = self.r.lock().unwrap();
         if cfg!(windows) && self.libuv_compat {
-            // libuv adds frame headers on Windows. Skip them.
+            // Use unbuffered read to avoid over reading.
+            assert!(r.buffer().is_empty());
+            let r = r.get_mut();
             let mut libuv_pipe_frame_header = [0u8; std::mem::size_of::<UvPipeWin32FrameHeader>()];
             r.read_exact(&mut libuv_pipe_frame_header)
                 .context("in NodeIpc::recv, when reading frame header")?;
+            let header: UvPipeWin32FrameHeader =
+                unsafe { std::mem::transmute(libuv_pipe_frame_header) };
+            let size = header.data_length as usize;
+            if size == 0 {
+                return Ok(None);
+            }
+            let mut buf = vec![0u8; size];
+            r.read_exact(&mut buf).context("in NodeIpc::recv")?;
+            let line = String::from_utf8(buf).context("in NodeIpc::recv")?;
+            return Ok(Some(line));
         }
         let mut line = String::new();
         let n = r.read_line(&mut line).context("in NodeIpc::recv")?;
