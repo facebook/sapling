@@ -94,13 +94,7 @@ impl NodeIpc {
         raw_file_descriptor: RawFileDescriptor,
     ) -> anyhow::Result<Self> {
         let get_fd = || unsafe { FileDescriptor::from_raw_file_descriptor(raw_file_descriptor) };
-        let mut fd = get_fd();
-        // On Windows, fd is already non-blocking.
-        if cfg!(unix) {
-            fd.set_non_blocking(false).with_context(|| {
-                format!("in NodeIpc::from_fd, when setting non_blocking on fd {fd:?}")
-            })?;
-        }
+        let fd = get_fd();
 
         let r = Mutex::new(io::BufReader::new(fd));
         let w = Mutex::new(get_fd());
@@ -130,7 +124,7 @@ impl NodeIpc {
     /// and the other side is not receiving the message.
     pub fn send(&self, message: impl Serialize) -> anyhow::Result<()> {
         let mut line = serde_json::to_string(&message)
-            .context("in NodeIpc::send, when coverting message to JSON")?;
+            .context("in NodeIpc::send, when converting message to JSON")?;
         line.push('\n');
         self.send_line(line)
     }
