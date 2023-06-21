@@ -79,10 +79,6 @@ impl Metadata {
         }
     }
 
-    pub fn is_dir(&self) -> bool {
-        self.flags.intersects(MetadataFlags::IS_DIR)
-    }
-
     pub fn from_stat(mode: u32, size: u64, mtime: i64) -> Self {
         // Watchman sends mode_t even on Windows where they aren't fully
         // reflected in libc. Let's just hardcode the values we need.

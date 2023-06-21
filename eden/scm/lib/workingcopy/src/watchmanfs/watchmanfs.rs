@@ -316,10 +316,6 @@ impl PendingChanges for WatchmanFileSystem {
                             file.size.into_inner(),
                             file.mtime.into_inner(),
                         );
-                        if meta.is_dir() {
-                            // Filter directories out of results.
-                            return None;
-                        }
 
                         let fs_meta = if *file.exists {
                             if use_watchman_metadata {
