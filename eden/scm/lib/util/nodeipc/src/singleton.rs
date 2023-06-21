@@ -6,12 +6,14 @@
  */
 
 use std::sync::Arc;
-
-use once_cell::sync::Lazy;
+use std::sync::RwLock;
 
 use crate::NodeIpc;
 
-static IPC: Lazy<Option<Arc<NodeIpc>>> = Lazy::new(|| NodeIpc::from_env().map(Arc::new));
+// None: Not initialized yet.
+// Some(None): Initialized and got None.
+// Some(Some(...)): Initialized and has the value.
+pub(crate) static IPC: RwLock<Option<Option<Arc<NodeIpc>>>> = RwLock::new(None);
 
 /// [`NodeIpc`] initialized from the environment variable on demand.
 ///
@@ -19,5 +21,17 @@ static IPC: Lazy<Option<Arc<NodeIpc>>> = Lazy::new(|| NodeIpc::from_env().map(Ar
 /// the first time might have side effects on environment variables.
 /// So it's recommended to access this before creating threads.
 pub fn get_singleton() -> Option<Arc<NodeIpc>> {
-    IPC.clone()
+    let ipc = IPC.read().unwrap();
+    if let Some(ref ipc) = *ipc {
+        return ipc.clone();
+    }
+    drop(ipc);
+
+    let mut ipc = IPC.write().unwrap();
+    if let Some(ref ipc) = *ipc {
+        return ipc.clone();
+    }
+    let new_ipc = NodeIpc::from_env().map(Arc::new);
+    *ipc = Some(new_ipc.clone());
+    new_ipc
 }
