@@ -1,10 +1,8 @@
-#chg-compatible
 #debugruntest-compatible
 
 #require no-icasefs
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=False
 test file addition with colliding case
 
   $ hg init repo1

@@ -454,12 +454,21 @@ class casecollisionauditor(object):
         fl = encoding.lower(f)
         ds = self._dirstate
         shouldwarn = False
-        if ds._istreestate:
+        if ds._istreestate and f not in ds:
             dmap = ds._map
-            candidates = dmap.getfiltered(fl, encoding.lower)
-            # Note: fl might be outside dirstate, but got "tested" here. In
-            # that case, the next "if" would catch it.
-            shouldwarn = any(f not in ds and candidate != f for candidate in candidates)
+
+            for candidate in dmap.getfiltered(fl, encoding.lower):
+                if candidate == f:
+                    continue
+                node = dmap.get(candidate)
+
+                # Don't warn regarding untracked files.
+                if not node or node[0] == "?":
+                    continue
+
+                shouldwarn = True
+                break
+
         if not shouldwarn:
             shouldwarn = fl in self._loweredfiles and f not in ds
             self._loweredfiles.add(fl)
