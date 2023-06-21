@@ -96,11 +96,12 @@ struct PrjfsLiveRequest {
       std::shared_ptr<TraceBus<PrjfsTraceEvent>> traceBus,
       const std::atomic<size_t>& traceDetailedArguments,
       PrjfsTraceCallType callType,
-      const PRJ_CALLBACK_DATA& data)
+      const PRJ_CALLBACK_DATA& data,
+      LPCWSTR destinationFileName)
       : traceBus_{std::move(traceBus)}, type_{callType}, data_{data} {
     if (traceDetailedArguments.load(std::memory_order_acquire)) {
       traceBus_->publish(PrjfsTraceEvent::start(
-          callType, data_, formatTraceEventString(data)));
+          callType, data_, formatTraceEventString(data, destinationFileName)));
     } else {
       traceBus_->publish(PrjfsTraceEvent::start(callType, data_));
     }
@@ -115,15 +116,49 @@ struct PrjfsLiveRequest {
     }
   }
 
-  std::string formatTraceEventString(const PRJ_CALLBACK_DATA& data) {
+  std::string formatTraceEventString(
+      const PRJ_CALLBACK_DATA& data,
+      LPCWSTR destinationFileName) {
+    // Most events only have data.FilePathName set to a repo-relative path,
+    // describing the file that is related to the event.
+    //
+    // This path can be the empty string L"" if the operation is in the repo
+    // root directory, such as `dir %REPO_ROOT%`. In these cases,
+    // destinationFileName is nullptr, either pass explicitly in this codebase,
+    // or given to the ::notification() function (which is implmentation of
+    // PRJ_NOTIFICATION_CB).
+    //
+    // Some operations have both a src and destination path, like *RENAME or
+    // *SET_HARDLINK. In these cases, destinationFileName may be a pointer to a
+    // string. This string is zero-length if the destination file in question is
+    // outside the repo. To make this more readable in the logs, if
+    // destinationFileName is provided (non-nullptr), we convert zero-length
+    // paths to `nonRepoPath` below. This conversion is not done when
+    // destinationFileName is nullptr, because we don't want to falsely
+    // represent other operations on the repo root as operating on a non-repo
+    // path.
+    static const wchar_t nonRepoPath[] = L"<non-repo-path>";
+    LPCWSTR relativeFileName = data.FilePathName;
+    if (destinationFileName != nullptr) {
+      if (relativeFileName && !relativeFileName[0]) {
+        relativeFileName = nonRepoPath;
+      }
+      if (destinationFileName && !destinationFileName[0]) {
+        destinationFileName = nonRepoPath;
+      }
+    }
+
     return fmt::format(
-        "{} from {}({}): {}({})",
+        "{} from {}({}): {}({}{}{})",
         data_.commandId,
         processPathToName(data.TriggeringProcessImageFileName),
         data_.pid,
         apache::thrift::util::enumName(type_, "(unknown)"),
-        data.FilePathName == nullptr ? RelativePath{}
-                                     : RelativePath(data.FilePathName));
+        relativeFileName == nullptr ? RelativePath{}
+                                    : RelativePath(relativeFileName),
+        (destinationFileName && relativeFileName) ? "=>" : "",
+        destinationFileName == nullptr ? RelativePath{}
+                                       : RelativePath(destinationFileName));
   }
 
  private:
@@ -149,6 +184,7 @@ HRESULT runCallback(
     Method method,
     PrjfsTraceCallType callType,
     const PRJ_CALLBACK_DATA* callbackData,
+    LPCWSTR destinationFileName,
     Args&&... args) noexcept {
   try {
     if (disallowMisbehavingApplications(
@@ -168,7 +204,8 @@ HRESULT runCallback(
         channelPtr->getTraceBusPtr(),
         channelPtr->getTraceDetailedArguments(),
         callType,
-        *callbackData);
+        *callbackData,
+        destinationFileName);
     return (channelPtr->*method)(
         std::move(context),
         callbackData,
@@ -205,6 +242,7 @@ HRESULT startEnumeration(
       &PrjfsChannelInner::startEnumeration,
       PrjfsTraceCallType::START_ENUMERATION,
       callbackData,
+      nullptr,
       enumerationId);
 }
 
@@ -216,6 +254,7 @@ HRESULT endEnumeration(
       &PrjfsChannelInner::endEnumeration,
       PrjfsTraceCallType::END_ENUMERATION,
       callbackData,
+      nullptr,
       enumerationId);
 }
 
@@ -229,6 +268,7 @@ HRESULT getEnumerationData(
       &PrjfsChannelInner::getEnumerationData,
       PrjfsTraceCallType::GET_ENUMERATION_DATA,
       callbackData,
+      nullptr,
       enumerationId,
       searchExpression,
       dirEntryBufferHandle);
@@ -239,7 +279,8 @@ HRESULT getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   return runCallback(
       &PrjfsChannelInner::getPlaceholderInfo,
       PrjfsTraceCallType::GET_PLACEHOLDER_INFO,
-      callbackData);
+      callbackData,
+      nullptr);
 }
 
 HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
@@ -247,7 +288,8 @@ HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   return runCallback(
       &PrjfsChannelInner::queryFileName,
       PrjfsTraceCallType::QUERY_FILE_NAME,
-      callbackData);
+      callbackData,
+      nullptr);
 }
 
 HRESULT getFileData(
@@ -259,6 +301,7 @@ HRESULT getFileData(
       &PrjfsChannelInner::getFileData,
       PrjfsTraceCallType::GET_FILE_DATA,
       callbackData,
+      nullptr,
       byteOffset,
       length);
 }
@@ -320,7 +363,8 @@ HRESULT notification(
         channelPtr->getTraceBusPtr(),
         channelPtr->getTraceDetailedArguments(),
         nType,
-        *callbackData};
+        *callbackData,
+        destinationFileName};
     return channelPtr->notification(
         std::move(context),
         callbackData,
