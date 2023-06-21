@@ -1,6 +1,6 @@
-#chg-compatible
-#require mkfifo
 #debugruntest-compatible
+
+  $ eagerepo
 
   $ hg init t
   $ cd t
@@ -453,7 +453,7 @@ Test patterns:
   matcher: <patternmatcher patterns='(?:NOEXIST(?:/|$))'>
   NOEXIST: * (glob)
 
-#if fifo
+#if mkfifo
   $ mkfifo fifo
   $ hg debugwalk fifo
   matcher: <patternmatcher patterns='(?:fifo(?:/|$))'>

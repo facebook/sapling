@@ -30,23 +30,28 @@ pub fn mark_needs_check(ts: &mut TreeState, path: &RepoPathBuf) -> Result<bool> 
         Some(filestate) => {
             let filestate = filestate.clone();
             if filestate.state.intersects(StateFlags::NEED_CHECK) {
+                tracing::trace!(%path, "already NEED_CHECK");
                 // It's already marked need_check, so return early so we don't mutate the
                 // treestate.
                 return Ok(false);
             }
+            tracing::trace!(%path, "marking NEED_CHECK");
             FileStateV2 {
                 state: filestate.state | StateFlags::NEED_CHECK,
                 ..filestate
             }
         }
         // The file is currently untracked
-        None => FileStateV2 {
-            state: StateFlags::NEED_CHECK,
-            mode: 0o666,
-            size: -1,
-            mtime: -1,
-            copied: None,
-        },
+        None => {
+            tracing::trace!(%path, "inserting NEED_CHECK");
+            FileStateV2 {
+                state: StateFlags::NEED_CHECK,
+                mode: 0o666,
+                size: -1,
+                mtime: -1,
+                copied: None,
+            }
+        }
     };
     ts.insert(path, &filestate)?;
     Ok(true)
@@ -57,6 +62,7 @@ pub fn clear_needs_check(ts: &mut TreeState, path: &RepoPathBuf) -> Result<bool>
     if let Some(filestate) = state {
         let filestate = filestate.clone();
         if !filestate.state.intersects(StateFlags::NEED_CHECK) {
+            tracing::trace!(%path, "already not NEED_CHECK");
             // It's already clear.
             return Ok(false);
         }
@@ -69,8 +75,10 @@ pub fn clear_needs_check(ts: &mut TreeState, path: &RepoPathBuf) -> Result<bool>
             // No other flags means it was ignored/untracked, but now we don't
             // care about it (either it was deleted, or we aren't tracking
             // ignored files anymore).
+            tracing::trace!(%path, "empty after unsetting NEED_CHECK");
             ts.remove(path)?;
         } else {
+            tracing::trace!(%path, "unsetting NEED_CHECK");
             ts.insert(path, &filestate)?;
         }
         return Ok(true);

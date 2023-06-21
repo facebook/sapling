@@ -373,11 +373,8 @@ class physicalfilesystem(object):
                                 # unknown file
                                 yield (nf, st)
                         else:
-                            # This can happen for unusual file types, like named
-                            # piped. We treat them as if they were missing, so
-                            # report them as missing. Covered in test-symlinks.t
-                            if nf in explicitfiles:
-                                badfn(nf, badtype(kind))
+                            # Invalid file types invoke match.bad in dirstate.py.
+                            pass
 
     def purge(self, match, removefiles, removedirs, removeignored, dryrun):
         """Deletes untracked files and directories from the filesystem.

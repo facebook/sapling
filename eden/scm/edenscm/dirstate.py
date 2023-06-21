@@ -17,7 +17,7 @@ from __future__ import absolute_import
 import contextlib
 import errno
 import os
-import tempfile
+import stat
 import weakref
 from typing import (
     BinaryIO,
@@ -950,18 +950,27 @@ class dirstate(object):
         pass
 
     def _ruststatus(
-        self, match: "Callable[[str], bool]", ignored: bool, clean: bool, unknown: bool
+        self, match: matchmod.basematcher, ignored: bool, clean: bool, unknown: bool
     ) -> "scmutil.status":
-        if ignored or clean:
+        if ignored:
             raise self.FallbackToPythonStatus
 
-        return self._repo._rsrepo.workingcopy().status(
+        status = self._repo._rsrepo.workingcopy().status(
             match, self._lastnormaltime, self._ui._rcfg
         )
 
+        if not unknown:
+            status.unknown.clear()
+
+        self._add_clean_and_trigger_bad_matches(
+            match, status, self._repo[None].p1(), clean
+        )
+
+        return status
+
     @perftrace.tracefunc("Status")
     def status(
-        self, match: "Callable[[str], bool]", ignored: bool, clean: bool, unknown: bool
+        self, match: matchmod.basematcher, ignored: bool, clean: bool, unknown: bool
     ) -> "scmutil.status":
         """Determine the status of the working copy relative to the
         dirstate and return a scmutil.status.
@@ -995,7 +1004,6 @@ class dirstate(object):
         iadd = ignoredpaths.append
         radd = removed.append
         dadd = deleted.append
-        cadd = cleanpaths.append
         ignore = self._ignore
         copymap = self._map.copymap
 
@@ -1153,28 +1161,8 @@ class dirstate(object):
         )
 
         # Step 3: If clean files were requested, add those to the results
-        seenset = set()
-        for files in status:
-            seenset.update(files)
-            seenset.update(util.dirs(files))
-
-        if listclean:
-            for fn in pctx.manifest().matches(match):
-                assert isinstance(fn, str)
-                if fn not in seenset:
-                    cadd(fn)
-            seenset.update(cleanpaths)
-
         # Step 4: Report any explicitly requested files that don't exist
-        # pyre-fixme[16]: Anonymous callable has no attribute `files`.
-        for path in sorted(match.files()):
-            try:
-                if path in seenset:
-                    continue
-                os.lstat(os.path.join(self._root, path))
-            except OSError as ex:
-                # pyre-fixme[16]: Anonymous callable has no attribute `bad`.
-                match.bad(path, encoding.strtolocal(ex.strerror))
+        self._add_clean_and_trigger_bad_matches(match, status, pctx, listclean)
 
         # TODO: fire this inside filesystem. fixup is a list of files that
         # checklookup says are clean
@@ -1187,6 +1175,40 @@ class dirstate(object):
         if len(ignoredpaths) > 0:
             perftrace.tracevalue("Ignored Files", len(ignoredpaths))
         return status
+
+    def _add_clean_and_trigger_bad_matches(
+        self,
+        match: matchmod.basematcher,
+        status: scmutil.status,
+        pctx: context.changectx,
+        listclean: bool,
+    ) -> None:
+        seenset = set()
+        for files in status:
+            seenset.update(files)
+            seenset.update(util.dirs(files))
+
+        if listclean:
+            clean = status.clean
+            for fn in pctx.manifest().matches(match):
+                assert isinstance(fn, str)
+                if fn not in seenset:
+                    clean.append(fn)
+            seenset.update(clean)
+
+        for path in sorted(match.files()):
+            try:
+                st = os.lstat(os.path.join(self._root, path))
+            except OSError as ex:
+                if path not in seenset:
+                    # This handles does-not-exist, permission error, etc.
+                    match.bad(path, encoding.strtolocal(ex.strerror))
+                continue
+
+            typ = stat.S_IFMT(st.st_mode)
+            if not typ & (stat.S_IFDIR | stat.S_IFREG | stat.S_IFLNK):
+                # This handles invalid types like named pipe.
+                match.bad(path, filesystem.badtype(typ))
 
     def _poststatusfixup(
         self, status: "scmutil.status", wctx: "context.workingctx", oldid: object
@@ -1284,7 +1306,7 @@ class dirstate(object):
                 self._repo.clearpostdsstatus()
                 self._repo._insidepoststatusfixup = False
 
-    def matches(self, match: "matchmod.basematcher") -> "Iterable[str]":
+    def matches(self, match: matchmod.basematcher) -> "Iterable[str]":
         """
         return files in the dirstate (in whatever state) filtered by match
         """

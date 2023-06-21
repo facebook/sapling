@@ -64,7 +64,9 @@ def checkvers(name, desc, vers):
 
 
 def checkexe(name):
-    f = lambda name=name: os.path.isfile(f"/bin/{name}")
+    f = lambda name=name: os.path.isfile(f"/bin/{name}") or os.path.isfile(
+        f"/usr/bin/{name}"
+    )
     checks[name] = (f, f"{name} executable")
     exes.add(name)
 

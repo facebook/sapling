@@ -299,6 +299,7 @@ handling of untracked directories and missing files
   removing d1/a
 
   $ hg rm --after nosuch
+  nosuch: $ENOENT$
   [1]
 
 handling root path in remove with matcher

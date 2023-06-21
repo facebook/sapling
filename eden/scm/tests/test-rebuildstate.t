@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ setconfig workingcopy.ruststatus=false
 
   $ eagerepo
   $ newext adddrop <<EOF
