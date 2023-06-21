@@ -17,6 +17,7 @@ use std::sync::Mutex;
 use anyhow::Context;
 use filedescriptor::FileDescriptor;
 use filedescriptor::FromRawFileDescriptor;
+use filedescriptor::IntoRawSocketDescriptor;
 use filedescriptor::RawFileDescriptor;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -106,6 +107,15 @@ impl NodeIpc {
         let libuv_compat = false;
         let ipc = Self { r, w, libuv_compat };
         Ok(ipc)
+    }
+
+    /// Initialize `NodeIpc` from a socket-ish. A socket-ish provides the raw socket
+    /// fd (or handle) that supports read and write.
+    ///
+    /// `NodeIpc` will consume `socket` and close the underlying socket on drop.
+    pub fn from_socket(socket: impl IntoRawSocketDescriptor) -> anyhow::Result<Self> {
+        let raw_file_descriptor = socket.into_socket_descriptor();
+        Self::from_raw_file_descriptor(raw_file_descriptor as _)
     }
 
     /// Enable libuv pipe compatibility.
