@@ -23,4 +23,4 @@ mod sendfd;
 mod singleton;
 
 pub use self::nodeipc::NodeIpc;
-pub use self::singleton::IPC;
+pub use self::singleton::get_singleton;

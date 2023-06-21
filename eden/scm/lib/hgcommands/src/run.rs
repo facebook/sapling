@@ -850,5 +850,5 @@ fn setup_ctrlc() {
 
 fn setup_nodeipc() {
     // Trigger `Lazy` initialization.
-    let _ = &*nodeipc::IPC;
+    let _ = nodeipc::get_singleton();
 }

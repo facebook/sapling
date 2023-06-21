@@ -5,23 +5,25 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use cpython::*;
 use cpython_ext::convert::Serde;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
-use nodeipc::IPC;
+use nodeipc::get_singleton;
 use serde_json::Value;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "nodeipc"].join(".");
     let m = PyModule::new(py, &name)?;
-    let ipc = NodeIpc::create_instance(py, Box::new(|| IPC.as_ref()))?;
+    let ipc = NodeIpc::create_instance(py, Box::new(get_singleton))?;
     m.add(py, "IPC", ipc)?;
     Ok(m)
 }
 
 py_class!(class NodeIpc |py| {
-    data inner: Box<dyn Fn() -> Option<&'static nodeipc::NodeIpc> + Send>;
+    data inner: Box<dyn Fn() -> Option<Arc<nodeipc::NodeIpc>> + Send>;
 
     /// send(json_like) -> None
     ///

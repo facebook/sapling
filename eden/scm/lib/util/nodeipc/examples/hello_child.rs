@@ -5,12 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use nodeipc::IPC;
 use serde_json::json;
 use serde_json::Value;
 
 fn main() {
-    if let Some(ipc) = &*IPC {
+    if let Some(ipc) = nodeipc::get_singleton() {
         ipc.send("HELLO FROM CHILD").unwrap();
         while let Some(message) = ipc.recv::<Value>().unwrap() {
             println!("[Child] Got message from parent: {:?}", message);
