@@ -12,6 +12,7 @@ use std::io;
 use std::io::BufRead;
 use std::io::Read;
 use std::io::Write;
+use std::mem::ManuallyDrop;
 use std::sync::Mutex;
 
 use anyhow::Context;
@@ -39,7 +40,9 @@ pub type LibcFd = libc::c_int;
 pub struct NodeIpc {
     // Mutex is used so the static singleton is easier to use
     // (send and recv do not take &mut self).
-    pub(crate) w: Mutex<FileDescriptor>,
+    // `r` and `w` share a same file descriptor. `FileDescriptor` closes the underlying
+    // fd on drop. Use `ManuallyDrop` to avoid duplicated closing.
+    pub(crate) w: Mutex<ManuallyDrop<FileDescriptor>>,
     pub(crate) r: Mutex<io::BufReader<FileDescriptor>>,
     // Whether compatible with libuv.
     // If true, on Windows, we'll add extra frame headers per message.
@@ -90,6 +93,10 @@ impl NodeIpc {
 
     /// Initialize `NodeIpc` from a OS raw file descriptor.
     /// The `RawFileDescriptor` is libc fd on POSIX, or `HANDLE` on Windows.
+    ///
+    /// Note: `NodeIpc` will close the underlying file descriptor on drop.
+    /// So the callsite needs to "forget" the file descriptor if it does not
+    /// want to close it twice.
     pub fn from_raw_file_descriptor(
         raw_file_descriptor: RawFileDescriptor,
     ) -> anyhow::Result<Self> {
@@ -97,7 +104,7 @@ impl NodeIpc {
         let fd = get_fd();
 
         let r = Mutex::new(io::BufReader::new(fd));
-        let w = Mutex::new(get_fd());
+        let w = Mutex::new(ManuallyDrop::new(get_fd()));
         let libuv_compat = false;
         let ipc = Self { r, w, libuv_compat };
         Ok(ipc)
