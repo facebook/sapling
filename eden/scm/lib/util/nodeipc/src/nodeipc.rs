@@ -120,6 +120,7 @@ impl NodeIpc {
 
     /// Enable libuv pipe compatibility.
     /// On Windows, frame headers are added per message.
+    /// On Unix, frame headers are disabled.
     pub fn with_libuv_compat(mut self) -> Self {
         self.libuv_compat = true;
         self
@@ -159,12 +160,15 @@ impl NodeIpc {
     fn send_line(&self, line: String) -> anyhow::Result<()> {
         let mut w = self.w.lock().unwrap();
 
-        let payload = if cfg!(windows) && self.libuv_compat {
-            // Emulate libuv pipe frame header on Windows.
+        let payload = if cfg!(windows) || !self.libuv_compat {
+            // Emulate libuv pipe frame header on Windows, or if libuv_compat is false.
+            // The header provides a hint about the payload size, which can be useful
+            // to prevent over-read that loses special control messages from sendmsg().
             // See https://github.com/libuv/libuv/blob/e1143f12657444c750e47ab3e1fb70ae6a030620/src/win/pipe.c#L1745-L1752
             let mut header = UvPipeWin32FrameHeader::default();
             let len = line.len();
             if len > 0 {
+                assert!(len <= u32::MAX as usize);
                 const UV__IPC_FRAME_HAS_DATA: u32 = 1;
                 header.flags |= UV__IPC_FRAME_HAS_DATA;
                 header.data_length = len as u32;
@@ -191,7 +195,7 @@ impl NodeIpc {
     #[inline(never)]
     fn recv_line(&self) -> anyhow::Result<Option<String>> {
         let mut r = self.r.lock().unwrap();
-        if cfg!(windows) && self.libuv_compat {
+        if cfg!(windows) || !self.libuv_compat {
             // Use unbuffered read to avoid over reading.
             assert!(r.buffer().is_empty());
             let r = r.get_mut();
