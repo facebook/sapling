@@ -122,6 +122,7 @@ members = [
   "lib/util/hgplain",
   "lib/util/nodeipc",
   "lib/util/testutil",
+  "lib/util/udsipc",
   "lib/version",
   "lib/vfs",
   "lib/vlqencoding",
