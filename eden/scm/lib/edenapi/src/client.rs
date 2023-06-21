@@ -446,7 +446,13 @@ impl Client {
 
         let guards = vec![FILES_INFLIGHT.entrance_guard(keys.len())];
 
-        let url = self.build_url(paths::FILES2)?;
+        let mut url = self.build_url(paths::FILES2)?;
+
+        if self.config().try_route_consistently && keys.len() == 1 {
+            url.set_query(Some(&format!("routing_file={}", keys.first().unwrap())));
+            tracing::debug!("Requesting file with a routing key: {}", url);
+        }
+
         let requests = self.prepare_requests(&url, keys, self.config().max_files, |keys| {
             let req = FileRequest { keys, reqs: vec![] };
             self.log_request(&req, "files");
@@ -467,7 +473,13 @@ impl Client {
             return Ok(Response::empty());
         }
 
-        let url = self.build_url(paths::TREES)?;
+        let mut url = self.build_url(paths::TREES)?;
+
+        if self.config().try_route_consistently && keys.len() == 1 {
+            url.set_query(Some(&format!("routing_tree={}", keys.first().unwrap())));
+            tracing::debug!("Requesting tree with a routing key: {}", url);
+        }
+
         let requests = self.prepare_requests(&url, keys, self.config().max_trees, |keys| {
             let req = TreeRequest {
                 keys,

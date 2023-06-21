@@ -134,6 +134,7 @@ pub struct HttpClientBuilder {
     headers: HashMap<String, String>,
     max_files: Option<usize>,
     max_trees: Option<usize>,
+    try_route_consistently: bool,
     max_history: Option<usize>,
     max_location_to_hash: Option<usize>,
     max_commit_mutations: Option<usize>,
@@ -189,6 +190,8 @@ impl HttpClientBuilder {
         let max_requests = get_config(config, "edenapi", "maxrequests")?;
         let max_files = get_config(config, "edenapi", "maxfiles")?;
         let max_trees = get_config(config, "edenapi", "maxtrees")?;
+        let try_route_consistently =
+            get_config(config, "edenapi", "try-route-consistently")?.unwrap_or_default();
         let max_history = get_config(config, "edenapi", "maxhistory")?;
         let max_location_to_hash = get_config(config, "edenapi", "maxlocationtohash")?;
         let max_commit_mutations = get_config(config, "edenapi", "maxcommitmutations")?;
@@ -233,6 +236,7 @@ impl HttpClientBuilder {
             headers,
             max_files,
             max_trees,
+            try_route_consistently,
             max_history,
             max_location_to_hash,
             max_commit_mutations,
@@ -392,6 +396,7 @@ pub(crate) struct Config {
     pub(crate) headers: HashMap<String, String>,
     pub(crate) max_files: Option<usize>,
     pub(crate) max_trees: Option<usize>,
+    pub(crate) try_route_consistently: bool,
     pub(crate) max_history: Option<usize>,
     pub(crate) max_location_to_hash: Option<usize>,
     pub(crate) max_commit_mutations: Option<usize>,
@@ -418,6 +423,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             headers,
             max_files,
             max_trees,
+            try_route_consistently,
             max_history,
             max_location_to_hash,
             max_commit_mutations,
@@ -455,6 +461,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             headers,
             max_files,
             max_trees,
+            try_route_consistently,
             max_history,
             max_location_to_hash,
             max_commit_mutations,
