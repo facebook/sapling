@@ -19,6 +19,7 @@
 //! [2]: https://github.com/nodejs/node/commit/db6253f94a7e499b2bacf5998a246c7cd06f7245
 
 pub(crate) mod nodeipc;
+mod sendfd;
 mod singleton;
 
 pub use self::nodeipc::NodeIpc;
