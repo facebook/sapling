@@ -603,7 +603,7 @@ fn validate_component(s: &str) -> Result<(), ValidationError> {
         return Err(InvalidPathComponent::Parent.into());
     }
     for b in s.bytes() {
-        if b == 0u8 || b == 1u8 || b == b'\n' || b == b'/' {
+        if b == 0u8 || b == 1u8 || b == b'\n' || b == b'\r' || b == b'/' {
             return Err(ValidationError::InvalidByte(b));
         }
     }
@@ -1044,6 +1044,10 @@ mod tests {
         assert_eq!(
             format!("{}", validate_path("\n").unwrap_err()),
             "Invalid byte: 10."
+        );
+        assert_eq!(
+            format!("{}", validate_path("\r").unwrap_err()),
+            "Invalid byte: 13."
         );
         assert_eq!(
             format!("{}", RepoPath::from_str("\n").unwrap_err()),
