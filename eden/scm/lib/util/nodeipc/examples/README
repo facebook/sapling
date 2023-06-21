@@ -1,0 +1,24 @@
+Examples serve as tests.
+
+NodeIpc has multiple features:
+A. Integrate to nodejs as a child process (singleton).
+B. Send/receive messages (native, or compatible with nodejs).
+C. Send/receive file descriptors (incompatible with nodejs).
+D. Send/receive stdio (console) and nodejs IPC channel.
+
+Different example combinations exercise different features:
+- hello_parent.js + hello_child.rs exercises feature A + B
+  Run (hello_parent.js calls cargo build):
+    node hello_parent.js
+- spawn_sendfd.rs exercises feature B + C + D
+  Run:
+    cargo run --example spawn_sendfd
+    cargo run --example spawn_sendfd 1>b.txt
+- hello_parent.js + hello_child.rs + spawn_sendfd.rs exercises feature A + B + C + D
+  Run:
+    node hello_parent.js spawn_sendfd
+
+Panic or error messages indicate something went wrong.
+
+Windows and Unix are significantly different so the commands should be checked
+on both platforms.

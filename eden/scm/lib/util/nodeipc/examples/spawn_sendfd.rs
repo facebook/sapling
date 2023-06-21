@@ -15,6 +15,8 @@ use filedescriptor::FileDescriptor;
 use filedescriptor::FromRawFileDescriptor;
 use filedescriptor::RawFileDescriptor;
 use nodeipc::NodeIpc;
+use serde_json::json;
+use serde_json::Value;
 
 fn main() {
     let is_child = env::args().nth(1).as_deref() == Some("child");
@@ -53,6 +55,25 @@ fn child_main() {
         // Do not make FileDescriptor close the handle. We might still need it for `println!`.
         mem::forget(fd);
     }
+
+    ipc.recv_stdio().unwrap();
+    println!("Child: got stdio");
+    eprintln!("Child: write to stderr");
+
+    if let Some(ipc) = nodeipc::get_singleton() {
+        println!("Child: has IPC singleton");
+        ipc.send("HELLO FROM CHILD").unwrap();
+        while let Some(message) = ipc.recv::<Value>().unwrap() {
+            println!("Child: Got message: {:?}", message);
+            if message.as_str() == Some("BYE") {
+                break;
+            } else {
+                ipc.send(json!(["Echo from child", message])).unwrap();
+            }
+        }
+    } else {
+        println!("Child: no IPC singleton");
+    }
 }
 
 fn parent_main() {
@@ -88,15 +109,17 @@ fn parent_main() {
     println!("Parent: sending hello");
     ipc.send("hello").unwrap();
 
-    println!("Parent: sending stdio and a.txt file descriptors");
-    let mut fds = stdio_fd_vec();
+    println!("Parent: sending a.txt file descriptor");
     let file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
         .open("a.txt")
         .unwrap();
-    fds.push(file.as_raw_file_descriptor());
+    let fds = [file.as_raw_file_descriptor()];
     ipc.send_fd_vec(&fds).unwrap();
+
+    println!("Parent: sending stdio");
+    ipc.send_stdio().unwrap();
 
     println!("Parent: waiting for child to exit");
     child.wait().unwrap();
@@ -115,29 +138,4 @@ fn maybe_init_winsock() {
         );
         assert_eq!(ret, 0, "failed to initialize winsock");
     }
-}
-
-fn stdio_fd_vec() -> Vec<RawFileDescriptor> {
-    let mut result = Vec::new();
-
-    #[cfg(windows)]
-    unsafe {
-        use winapi::um::processenv::GetStdHandle;
-        use winapi::um::winbase::STD_ERROR_HANDLE;
-        use winapi::um::winbase::STD_INPUT_HANDLE;
-        use winapi::um::winbase::STD_OUTPUT_HANDLE;
-
-        result.push(GetStdHandle(STD_INPUT_HANDLE) as _);
-        result.push(GetStdHandle(STD_OUTPUT_HANDLE) as _);
-        result.push(GetStdHandle(STD_ERROR_HANDLE) as _);
-    }
-
-    #[cfg(unix)]
-    {
-        result.push(libc::STDIN_FILENO);
-        result.push(libc::STDOUT_FILENO);
-        result.push(libc::STDERR_FILENO);
-    }
-
-    result
 }

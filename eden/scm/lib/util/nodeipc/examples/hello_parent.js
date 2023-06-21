@@ -7,7 +7,8 @@
 
 const {spawn, spawnSync} = require('child_process');
 
-const build = spawnSync('cargo', ['build', '--message-format=json', '--release', '--example', 'hello_child'], {stdio: [0, 'pipe', 2]});
+const example = process.argv[2] ?? 'hello_child';
+const build = spawnSync('cargo', ['build', '--message-format=json', '--release', '--example', example], {stdio: [0, 'pipe', 2]});
 const output = build.stdout.toString();
 
 let executable = null;
