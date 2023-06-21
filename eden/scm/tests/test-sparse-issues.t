@@ -5,7 +5,6 @@
 # GNU General Public License version 2.
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=False
 
   $ enable sparse
   $ newrepo

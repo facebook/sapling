@@ -1,7 +1,6 @@
 #chg-compatible
 #debugruntest-compatible
 #inprocess-hg-incompatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
   $ disable treemanifest

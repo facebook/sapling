@@ -5,7 +5,6 @@ Testing templating for rebase command
 
 Setup
 
-  $ setconfig workingcopy.ruststatus=False
   $ configure mutation-norecord
   $ enable rebase
 

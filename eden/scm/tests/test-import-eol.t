@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ setconfig workingcopy.ruststatus=False
 
   $ cat > makepatch.py <<EOF
   > f = open('eol.diff', 'wb')

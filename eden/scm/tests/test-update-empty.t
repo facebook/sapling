@@ -5,7 +5,6 @@
 
 # Empty update fails with a helpful error:
 
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig 'ui.disallowemptyupdate=True'
   $ configure modernclient

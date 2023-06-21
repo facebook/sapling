@@ -8,9 +8,6 @@
   $ configure modernclient
   $ setconfig commands.update.requiredest=True
 
-#if fsmonitor
-  $ setconfig workingcopy.ruststatus=False
-#endif
 
 # Test update.requiredest
 

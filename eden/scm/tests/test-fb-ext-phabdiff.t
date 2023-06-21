@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=False
   $ enable phabdiff
 
 Setup repo

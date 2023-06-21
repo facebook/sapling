@@ -2,7 +2,6 @@
 #debugruntest-compatible
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=False
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable histedit

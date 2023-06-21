@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ setconfig workingcopy.ruststatus=False
   $ configure modernclient
   $ newclientrepo repo
 

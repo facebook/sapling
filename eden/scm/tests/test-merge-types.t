@@ -5,7 +5,6 @@
 #require symlink execbit
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=False
   $ tellmeabout() {
   >   f -Dxt "$@"
   > }

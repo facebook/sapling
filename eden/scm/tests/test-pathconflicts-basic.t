@@ -2,7 +2,6 @@
 #debugruntest-compatible
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=False
 Turn on treestate
 
 

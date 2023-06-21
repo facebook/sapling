@@ -2,7 +2,6 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
-  $ setconfig workingcopy.ruststatus=False
   $ disable treemanifest
 test command parsing and dispatch
 

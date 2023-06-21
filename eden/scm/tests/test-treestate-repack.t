@@ -3,7 +3,6 @@
   $ eagerepo
 Fsmonitor makes the size numbers less predicatable.
 
-  $ setconfig workingcopy.ruststatus=False
 
 #require no-fsmonitor
 

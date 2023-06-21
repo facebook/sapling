@@ -5,7 +5,6 @@
   $ export SL_TEST_GH_URL=https://github.com/facebook/test_github_repo.git
   $ setconfig ghrevset.autopull=True
   $ enable smartlog amend github ghstack
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig extensions.mock_ghrevset=$TESTDIR/github/mock_ghrevset.py
   $ setconfig templatealias.sl_github="\"{desc} {node|short} {if(github_pull_request_url, '#{github_pull_request_number}')}\""
 

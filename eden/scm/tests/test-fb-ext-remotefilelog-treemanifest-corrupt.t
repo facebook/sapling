@@ -1,5 +1,4 @@
 #chg-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ . "$TESTDIR/library.sh"
 
   $ hginit master

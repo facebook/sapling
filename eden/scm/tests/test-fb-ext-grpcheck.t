@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=False
   $ enable grpcheck
   $ setconfig config.use-rust=false
 

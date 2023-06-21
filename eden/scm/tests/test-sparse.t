@@ -1,6 +1,9 @@
 #chg-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ configure modernclient
+
+#if fsmonitor
+  $ setconfig workingcopy.ruststatus=false
+#endif
 
 BUG: this shouldn't be necessary, but currently "hg add -s ..." or "hg sparse
 include ..." doesn't work for untracked files not previously in the sparse

@@ -6,9 +6,7 @@
 
   $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
-#if fsmonitor
-  $ setconfig workingcopy.ruststatus=False
-#endif
+
   $ newrepo
   $ mkdir -p dirA/subdirA dirA/subdirB dirB
   $ touch dirA/subdirA/file1 dirA/subdirB/file2 dirB/file3 file4

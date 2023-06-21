@@ -2,7 +2,6 @@
 
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=False
   $ cat > writepatterns.py <<EOF
   > import sys
   > 

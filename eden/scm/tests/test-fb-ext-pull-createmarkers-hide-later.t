@@ -2,7 +2,6 @@
 
 Setup
 
-  $ setconfig workingcopy.ruststatus=False
   $ configure mutation-norecord dummyssh phabstatus
   $ enable amend pullcreatemarkers pushrebase rebase remotenames
   $ setconfig ui.username="nobody <no.reply@fb.com>" experimental.rebaseskipobsolete=true

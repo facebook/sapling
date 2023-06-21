@@ -2,7 +2,6 @@
 
 Setup the extension
 
-  $ setconfig workingcopy.ruststatus=False
   $ enable simplecache
   $ setconfig simplecache.showdebug=true simplecache.cachedir="$TESTTMP/hgsimplecache"
 

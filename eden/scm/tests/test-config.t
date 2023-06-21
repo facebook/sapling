@@ -2,7 +2,6 @@
 #chg-compatible
 
 hide outer repo
-  $ setconfig workingcopy.ruststatus=False config.use-rust=True
   $ hg init
 
 Invalid syntax: no value
