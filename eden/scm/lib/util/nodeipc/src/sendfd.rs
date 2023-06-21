@@ -100,8 +100,6 @@ impl NodeIpc {
             use winapi::um::handleapi::DuplicateHandle;
             use winapi::um::processthreadsapi::GetCurrentProcess;
             use winapi::um::processthreadsapi::OpenProcess;
-            use winapi::um::wincon::AttachConsole;
-            use winapi::um::wincon::FreeConsole;
             use winapi::um::winnt::DUPLICATE_SAME_ACCESS;
             use winapi::um::winnt::HANDLE;
             use winapi::um::winnt::PROCESS_DUP_HANDLE;
@@ -121,13 +119,6 @@ impl NodeIpc {
             }
 
             let mut close_on_drop = None;
-
-            if payload.raw_fds.iter().any(|h| h.is_null()) {
-                unsafe {
-                    FreeConsole();
-                    AttachConsole(payload.pid)
-                };
-            }
 
             for source_handle in payload.raw_fds {
                 if source_handle.is_null() {
@@ -263,6 +254,8 @@ impl NodeIpc {
 
     /// Replace the stdio using the one sent from the other end.
     /// Update the singleton to match the sender.
+    ///
+    /// On Windows, the console might be replaced to the sender's.
     pub fn recv_stdio(&self) -> anyhow::Result<()> {
         let payload = self.recv_fd_vec()?;
 
@@ -282,6 +275,15 @@ impl NodeIpc {
         #[cfg(windows)]
         {
             use winapi::um::processenv::SetStdHandle;
+            use winapi::um::wincon::AttachConsole;
+            use winapi::um::wincon::FreeConsole;
+
+            if payload.raw_fds.iter().any(|h| h.is_null()) {
+                unsafe {
+                    FreeConsole();
+                    AttachConsole(payload.pid)
+                };
+            }
 
             for (&received_handle, &std_constant) in payload.raw_fds.iter().zip(stdio_constants()) {
                 if !received_handle.is_null() {
