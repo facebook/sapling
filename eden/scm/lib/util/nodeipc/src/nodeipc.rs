@@ -84,12 +84,20 @@ impl NodeIpc {
     /// things.
     pub fn from_libc_fd(libc_fd: LibcFd) -> anyhow::Result<Self> {
         let os_raw_fd: RawFileDescriptor = libc_fd_to_raw_filedescriptor(libc_fd)?;
-        let get_fd = || unsafe { FileDescriptor::from_raw_file_descriptor(os_raw_fd) };
+        Self::from_raw_file_descriptor(os_raw_fd)
+    }
+
+    /// Initialize `NodeIpc` from a OS raw file descriptor.
+    /// The `RawFileDescriptor` is libc fd on POSIX, or `HANDLE` on Windows.
+    pub fn from_raw_file_descriptor(
+        raw_file_descriptor: RawFileDescriptor,
+    ) -> anyhow::Result<Self> {
+        let get_fd = || unsafe { FileDescriptor::from_raw_file_descriptor(raw_file_descriptor) };
         let mut fd = get_fd();
         // On Windows, fd is already non-blocking.
         if cfg!(unix) {
             fd.set_non_blocking(false).with_context(|| {
-                format!("in NodeIpc::from_fd, when setting non_blocking on fd {libc_fd:?}")
+                format!("in NodeIpc::from_fd, when setting non_blocking on fd {fd:?}")
             })?;
         }
 
