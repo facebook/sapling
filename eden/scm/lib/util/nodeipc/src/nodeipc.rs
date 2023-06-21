@@ -66,8 +66,8 @@ impl NodeIpc {
             }
         }
 
-        let raw_fd: LibcFd = fd_str.to_str()?.parse().ok()?;
-        let ipc = Self::from_raw_fd(raw_fd).ok()?.with_libuv_compat();
+        let libc_fd: LibcFd = fd_str.to_str()?.parse().ok()?;
+        let ipc = Self::from_libc_fd(libc_fd).ok()?.with_libuv_compat();
 
         env::remove_var("NODE_CHANNEL_FD");
         if serialization_mode.is_some() {
@@ -77,19 +77,19 @@ impl NodeIpc {
         Some(ipc)
     }
 
-    /// Initialize `NodeIpc` from a file descriptor directly.
+    /// Initialize `NodeIpc` from a libc file descriptor directly.
     /// This is lower level than `from_env` and might be useful
     /// for non-nodejs use-cases. For example, setting up IPC
     /// channel with other processes for talking about other
     /// things.
-    pub fn from_raw_fd(raw_fd: LibcFd) -> anyhow::Result<Self> {
-        let os_raw_fd: RawFileDescriptor = libc_fd_to_raw_filedescriptor(raw_fd)?;
+    pub fn from_libc_fd(libc_fd: LibcFd) -> anyhow::Result<Self> {
+        let os_raw_fd: RawFileDescriptor = libc_fd_to_raw_filedescriptor(libc_fd)?;
         let get_fd = || unsafe { FileDescriptor::from_raw_file_descriptor(os_raw_fd) };
         let mut fd = get_fd();
         // On Windows, fd is already non-blocking.
         if cfg!(unix) {
             fd.set_non_blocking(false).with_context(|| {
-                format!("in NodeIpc::from_fd, when setting non_blocking on fd {raw_fd:?}")
+                format!("in NodeIpc::from_fd, when setting non_blocking on fd {libc_fd:?}")
             })?;
         }
 
