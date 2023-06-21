@@ -8,4 +8,5 @@
 //! Unix-domain socket IPC, with `NodeIpc` integration.
 
 pub mod ipc;
+pub mod pool;
 pub mod uds;
