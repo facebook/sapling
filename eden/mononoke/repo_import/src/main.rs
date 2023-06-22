@@ -1000,6 +1000,7 @@ async fn repo_import(
     recovery_fields: &mut RecoveryFields,
     configs: &RepoConfigs,
     env: &MononokeEnvironment,
+    no_merge: bool,
 ) -> Result<(), Error> {
     let arg_git_repo_path = recovery_fields.git_repo_path.clone();
     let path = Path::new(&arg_git_repo_path);
@@ -1283,6 +1284,12 @@ async fn repo_import(
         save_importing_state(recovery_fields).await?;
     }
 
+    if no_merge {
+        return Err(format_err!(
+            "Done everything but actual merge. Please resume without --no-merge flag"
+        ));
+    }
+
     if recovery_fields.import_stage == ImportStage::MergeCommits {
         let maybe_merged_cs_id = Some(
             merge_imported_commit(
@@ -1538,7 +1545,17 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         _ => return Err(format_err!("Invalid subcommand")),
     };
 
-    match repo_import(&app, ctx, repo, &mut recovery_fields, &configs, env).await {
+    match repo_import(
+        &app,
+        ctx,
+        repo,
+        &mut recovery_fields,
+        &configs,
+        env,
+        args.no_merge,
+    )
+    .await
+    {
         Ok(()) => Ok(()),
         Err(e) => {
             save_importing_state(&recovery_fields).await?;

@@ -92,6 +92,10 @@ pub struct MononokeRepoImportArgs {
     /// The repository name or ID
     #[clap(flatten)]
     pub repo: RepoArgs,
+    /// Error out before the actual merge step. Useful for running all the a
+    /// earlier steps to prepare for merge time.
+    #[clap(long)]
+    pub no_merge: bool,
     #[clap(subcommand)]
     pub command: Option<Commands>,
 }
