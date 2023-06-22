@@ -11,7 +11,6 @@ import collections
 import copy
 import datetime
 import os
-import socket
 import time
 from enum import Enum
 from textwrap import wrap
@@ -20,6 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from facebook.eden.ttypes import AccessCounts
 
 from . import cmd_util
+from .hostname import get_normalized_hostname
 from .util import format_cmd, format_mount
 
 
@@ -617,7 +617,7 @@ class Top:
     def render_top_bar(self, window: Window) -> None:
         width = window.get_width()
         TITLE = "eden top"
-        hostname = socket.gethostname()[:width]
+        hostname = get_normalized_hostname()[:width]
         date = datetime.datetime.now().strftime("%x %X")[:width]
         extra_space = width - len(TITLE + hostname + date)
 

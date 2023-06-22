@@ -12,7 +12,6 @@ import platform
 import re
 import shlex
 import shutil
-import socket
 import subprocess
 import sys
 import traceback
@@ -23,6 +22,7 @@ from typing import Callable, cast, Dict, Generator, IO, List, Optional, Tuple
 from . import (
     debug as debug_mod,
     doctor as doctor_mod,
+    hostname as hostname_mod,
     redirect as redirect_mod,
     stats as stats_mod,
     top as top_mod,
@@ -114,7 +114,7 @@ def print_diagnostic_info(
 ) -> None:
     section_title("System info:", out)
     user = getpass.getuser()
-    host = socket.gethostname()
+    host = hostname_mod.get_normalized_hostname()
     header = (
         f"User                    : {user}\n"
         f"Hostname                : {host}\n"

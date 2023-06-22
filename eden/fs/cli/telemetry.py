@@ -12,14 +12,13 @@ import json
 import logging
 import platform
 import random
-import socket
 import subprocess
 import time
 import types
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Type, Union
 
-from . import version
+from . import hostname, version
 
 
 log: logging.Logger = logging.getLogger(__name__)
@@ -141,7 +140,7 @@ class TelemetryLogger(abc.ABC):
             log.warning(f"error determining username for telemetry logging: {ex}")
             self.user = ""
         try:
-            self.hostname = socket.gethostname()
+            self.hostname = hostname.get_normalized_hostname()
         except Exception as ex:
             log.warning(f"error determining hostname for telemetry logging: {ex}")
             self.hostname = ""
