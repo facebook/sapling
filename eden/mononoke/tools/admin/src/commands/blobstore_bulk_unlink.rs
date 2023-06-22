@@ -39,6 +39,10 @@ pub struct CommandArgs {
     /// If we're dry running the command, print out the blobstore keys to be deleted
     #[arg(short, long, default_value_t = true, action = ArgAction::Set)]
     dry_run: bool,
+
+    /// regex that is used to check if the key is suppose to be deleted
+    #[arg(short, long)]
+    sanitise_regex: String,
 }
 
 #[allow(dead_code)]
@@ -46,15 +50,22 @@ struct BlobstoreBulkUnlinker {
     app: MononokeApp,
     keys_dir: String,
     dry_run: bool,
+    sanitise_regex: String,
     repo_to_blobstores: HashMap<RepositoryId, Vec<Arc<dyn BlobstoreUnlinkOps>>>,
 }
 
 impl BlobstoreBulkUnlinker {
-    fn new(app: MononokeApp, keys_dir: String, dry_run: bool) -> BlobstoreBulkUnlinker {
+    fn new(
+        app: MononokeApp,
+        keys_dir: String,
+        dry_run: bool,
+        sanitise_regex: String,
+    ) -> BlobstoreBulkUnlinker {
         BlobstoreBulkUnlinker {
             app,
             keys_dir,
             dry_run,
+            sanitise_regex,
             repo_to_blobstores: HashMap::new(),
         }
     }
@@ -107,18 +118,32 @@ impl BlobstoreBulkUnlinker {
         return Ok(self.repo_to_blobstores.get(&repo_id).unwrap());
     }
 
-    async fn unlink_the_key_from_blobstore(&mut self, key: &str) -> Result<()> {
-        if self.dry_run {
-            println!("\tUnlink key: {}", key);
-            return Ok(());
+    fn sanitise_check(&self, key: &str) -> Result<()> {
+        let re = Regex::new(&self.sanitise_regex).unwrap();
+        if !re.is_match(key) {
+            panic!(
+                "Key {} does not match the sanitise checking regex {}",
+                key, &self.sanitise_regex
+            );
         }
+        Ok(())
+    }
 
+    async fn unlink_the_key_from_blobstore(&mut self, key: &str) -> Result<()> {
         let context = self.app.new_basic_context().clone();
 
         if let (Ok(repo_id), Ok(blobstore_key)) = (
             self.extract_repo_id_from_key(key),
             self.extract_blobstore_key_from(key),
         ) {
+            // do a sanitising check before we start deleting
+            self.sanitise_check(&blobstore_key).unwrap();
+
+            if self.dry_run {
+                println!("\tUnlink key: {}", key);
+                return Ok(());
+            }
+
             let blobstores = self.get_blobstores_from_repo_id(repo_id).await?;
 
             let mut num_errors = 0;
@@ -208,6 +233,7 @@ impl BlobstoreBulkUnlinker {
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let keys_dir = args.keys_dir;
     let dry_run = args.dry_run;
+    let sanitise_regex = args.sanitise_regex;
 
     if dry_run {
         println!(
@@ -215,7 +241,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         );
     }
 
-    let mut unlinker = BlobstoreBulkUnlinker::new(app, keys_dir.clone(), dry_run);
+    let mut unlinker = BlobstoreBulkUnlinker::new(app, keys_dir.clone(), dry_run, sanitise_regex);
     unlinker.start_unlink().await?;
 
     Ok(())
