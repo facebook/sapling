@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE IF NOT EXISTS `deletion_log` (
+CREATE TABLE IF NOT EXISTS `deletion_plan` (
   `repo_id` int NOT NULL,
   `cs_id` varbinary(32) NOT NULL,
   `blob_key` varchar(255) NOT NULL,
@@ -15,5 +15,5 @@ CREATE TABLE IF NOT EXISTS `deletion_log` (
   PRIMARY KEY (`repo_id`, `cs_id`, `blob_key`, `reason`)
 );
 
-CREATE INDEX IF NOT EXISTS `repo_id_reason` ON deletion_log (`repo_id`, `reason`);
-CREATE INDEX IF NOT EXISTS `reason` ON deletion_log (`reason`);
+CREATE INDEX IF NOT EXISTS `repo_id_reason` ON deletion_plan (`repo_id`, `reason`);
+CREATE INDEX IF NOT EXISTS `reason` ON deletion_plan (`reason`);

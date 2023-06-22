@@ -32,18 +32,18 @@ pub const MYSQL_INSERT_CHUNK_SIZE: usize = 1000;
 mononoke_queries! {
     write InsertCandidate(values: (repo_id: RepositoryId, cs_id: ChangesetId, blob_key: String, reason: String, stage: String, timestamp: Timestamp)) {
     insert_or_ignore,
-    "{insert_or_ignore} INTO deletion_log (repo_id, cs_id, blob_key, reason, stage, timestamp) VALUES {values}"
+    "{insert_or_ignore} INTO deletion_plan (repo_id, cs_id, blob_key, reason, stage, timestamp) VALUES {values}"
     }
 
     write UpdateCandidate(values: (repo_id: RepositoryId, cs_id: ChangesetId, blob_key: String, reason: String, stage: String, timestamp: Timestamp)) {
         none,
-        mysql("INSERT INTO deletion_log
+        mysql("INSERT INTO deletion_plan
             (repo_id, cs_id, blob_key, reason, stage, timestamp)
         VALUES {values}
         ON DUPLICATE KEY UPDATE
             stage = VALUES(stage),
             timestamp = VALUES(timestamp)")
-        sqlite("INSERT INTO deletion_log
+        sqlite("INSERT INTO deletion_plan
             (repo_id, cs_id, blob_key, reason, stage, timestamp)
         VALUES {values}
         ON CONFLICT(repo_id, cs_id, blob_key, reason) DO UPDATE SET
@@ -52,11 +52,11 @@ mononoke_queries! {
     }
 
     read GetBlobKeysForRequest(repo_id: RepositoryId, reason: String) -> (ChangesetId, String, String) {
-        "SELECT cs_id, blob_key, stage FROM deletion_log WHERE repo_id = {repo_id} AND reason = {reason}"
+        "SELECT cs_id, blob_key, stage FROM deletion_plan WHERE repo_id = {repo_id} AND reason = {reason}"
     }
 
     read GetBlobKeysForRequestAndStage(repo_id: RepositoryId, reason: String, stage: String) -> (ChangesetId, String) {
-        "SELECT cs_id, blob_key FROM deletion_log WHERE repo_id = {repo_id} AND reason = {reason} AND stage = {stage}"
+        "SELECT cs_id, blob_key FROM deletion_plan WHERE repo_id = {repo_id} AND reason = {reason} AND stage = {stage}"
     }
 }
 
@@ -162,7 +162,7 @@ pub struct SqlDeletionLog {
 }
 
 impl SqlConstruct for SqlDeletionLog {
-    const LABEL: &'static str = "deletion_log";
+    const LABEL: &'static str = "deletion_plan";
 
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-deletion-log.sql");
 
