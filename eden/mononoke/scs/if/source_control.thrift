@@ -2127,7 +2127,9 @@ service SourceControlService extends fb303_core.BaseService {
   /// Repository write methods
   /// ========================
 
-  /// Create a new commit.
+  /// Create a new (draft) commit.
+  /// IMPORTANT: This method doesn't push the commit to any bookmark. To get the
+  /// commit to mainline you should use this method followed by repo_land_stack.
   RepoCreateCommitResponse repo_create_commit(
     1: RepoSpecifier repo,
     2: RepoCreateCommitParams params,
