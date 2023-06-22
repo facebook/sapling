@@ -33,7 +33,13 @@ from . import (
 from .config import EdenInstance
 
 try:
-    from .facebook.rage import find_fb_cdb, get_ods_url, get_scuba_url, setup_fb_env
+    from .facebook.rage import (
+        find_fb_cdb,
+        get_host_dashboard_url,
+        get_ods_url,
+        get_scuba_url,
+        setup_fb_env,
+    )
 
 except ImportError:
 
@@ -47,6 +53,9 @@ except ImportError:
         return None
 
     def get_ods_url(host: str) -> Optional[str]:
+        return None
+
+    def get_host_dashboard_url(normalized_hostname: str) -> Optional[str]:
         return None
 
 
@@ -142,6 +151,11 @@ def print_diagnostic_info(
     # We will disable this until we figure out a work-around.
     # TODO(T113845692)
     # print_eden_doctor_report(instance, out)
+
+    host_dashboard_url = get_host_dashboard_url(host)
+    if host_dashboard_url:
+        section_title("Host dashboard:", out)
+        out.write(b"%s\n" % host_dashboard_url.encode())
 
     scuba_url = get_scuba_url(user)
     if scuba_url:
