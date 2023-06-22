@@ -80,7 +80,7 @@ pub mod facebook {
     pub use crate::oss::SharedConnectionPool;
 
     /// MySQL global shared connection pool configuration.
-    #[derive(Clone)]
+    #[derive(Clone, Default)]
     pub struct MysqlOptions {
         pub pool: SharedConnectionPool,
         // pool config is used only once when the shared connection pool is being created
@@ -112,7 +112,7 @@ pub mod facebook {
     }
 
     /// Mirrors facebook::db::InstanceRequirement enum for DBLocator
-    #[derive(Copy, Clone, Debug)]
+    #[derive(Copy, Clone, Debug, Default)]
     pub enum ReadConnectionType {
         /// Choose master or replica, whatever is closest and available.
         /// Use this if both master and replica are in the same region, and reads
@@ -120,6 +120,7 @@ pub mod facebook {
         Closest,
         /// Choose replicas only, avoiding the master, even if it means going to a
         /// remote region.
+        #[default]
         ReplicaOnly,
         /// Choose master only (typically for writes). Will never connect to replica.
         Master,

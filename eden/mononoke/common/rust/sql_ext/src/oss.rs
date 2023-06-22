@@ -23,7 +23,7 @@ macro_rules! fb_unimplemented {
     };
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Default)]
 pub struct PoolConfig;
 
 impl PoolConfig {

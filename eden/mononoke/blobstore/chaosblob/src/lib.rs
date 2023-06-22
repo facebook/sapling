@@ -26,7 +26,7 @@ pub use crate::errors::ErrorKind;
 const NEVER_CHAOS_THRESHOLD: f32 = 1.0;
 const ALWAYS_CHAOS_THRESHOLD: f32 = -1.0;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ChaosOptions {
     error_sample_read: Option<NonZeroU32>,
     error_sample_write: Option<NonZeroU32>,

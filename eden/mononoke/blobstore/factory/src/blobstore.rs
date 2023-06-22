@@ -108,6 +108,24 @@ impl BlobstoreOptions {
         }
     }
 
+    #[cfg(fbcode_build)]
+    pub fn manifold_blobstore(
+        manifold_options: ManifoldOptions,
+        put_behaviour: PutBehaviour,
+    ) -> Self {
+        Self {
+            manifold_options,
+            put_behaviour,
+            chaos_options: Default::default(),
+            delay_options: Default::default(),
+            throttle_options: Default::default(),
+            pack_options: Default::default(),
+            cachelib_options: Default::default(),
+            scrub_options: None,
+            sqlblob_mysql_options: Default::default(),
+        }
+    }
+
     pub fn set_scrub_options(&mut self, scrub_options: ScrubOptions) {
         self.scrub_options = Some(scrub_options);
     }
