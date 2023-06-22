@@ -33,13 +33,7 @@ from . import (
 from .config import EdenInstance
 
 try:
-    from .facebook.rage import (
-        find_fb_cdb,
-        get_host_dashboard_url,
-        get_ods_url,
-        get_scuba_url,
-        setup_fb_env,
-    )
+    from .facebook.rage import find_fb_cdb, get_host_dashboard_url, setup_fb_env
 
 except ImportError:
 
@@ -48,12 +42,6 @@ except ImportError:
 
     def setup_fb_env(env: Dict[str, str]) -> Dict[str, str]:
         return env
-
-    def get_scuba_url(user: str) -> Optional[str]:
-        return None
-
-    def get_ods_url(host: str) -> Optional[str]:
-        return None
 
     def get_host_dashboard_url(normalized_hostname: str) -> Optional[str]:
         return None
@@ -156,16 +144,6 @@ def print_diagnostic_info(
     if host_dashboard_url:
         section_title("Host dashboard:", out)
         out.write(b"%s\n" % host_dashboard_url.encode())
-
-    scuba_url = get_scuba_url(user)
-    if scuba_url:
-        section_title("Scuba samples:", out)
-        out.write(b"%s\n" % scuba_url.encode())
-
-    ods_url = get_ods_url(host)
-    if ods_url:
-        section_title("ODS samples:", out)
-        out.write(b"%s\n" % ods_url.encode())
 
     processor = instance.get_config_value("rage.reporter", default="")
     if not dry_run and processor:
