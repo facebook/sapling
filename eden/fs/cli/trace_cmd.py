@@ -58,8 +58,9 @@ Event Type:
 \u2193 FINISH
 
 Resource Type:
-\U0001F954 BLOB
-\U0001F332 TREE
+\U0001F954 Blob (file content)
+\U0001F332 Tree (directory content)
+\U0001F4DB Blob Metadata (sha1, size, blake3)
 
 Import Priority (--verbose):
 \U0001F7E5 LOW
