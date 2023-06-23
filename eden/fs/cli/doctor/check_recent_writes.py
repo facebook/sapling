@@ -128,7 +128,7 @@ def format_output_message(result: Dict[str, int], minWriteThreshold: int) -> str
 
     message = (
         f"We have detected {totalCounts} write operations to the virtual repo.\n"
-        "These are expensive operations and you may be able to increaes your performance by using a redirect\n"
+        "These are expensive operations and you may be able to increase your performance by using a redirect\n"
         "for non-source controlled items such as build products or temporary files:\n"
         f"See: {get_elevated_recent_writes_error_message_link()}"
     )
