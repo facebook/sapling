@@ -193,7 +193,7 @@ impl NodeIpc {
             while !cmsg.is_null() {
                 if (*cmsg).cmsg_level == libc::SOL_SOCKET && (*cmsg).cmsg_type == libc::SCM_RIGHTS {
                     let data = libc::CMSG_DATA(cmsg);
-                    let data_size: usize = (*cmsg).cmsg_len - libc::CMSG_LEN(0) as usize;
+                    let data_size = (*cmsg).cmsg_len as usize - libc::CMSG_LEN(0) as usize;
                     let mut fds = vec![
                         -1 as RawFileDescriptor;
                         data_size / mem::size_of::<RawFileDescriptor>()
@@ -393,7 +393,7 @@ fn cmsg_vec_and_msghdr(
         msg_iov: dummy_iov.as_mut(),
         msg_iovlen: 1,
         msg_control: cmsg_buf.as_mut_ptr() as *mut _,
-        msg_controllen: cmsg_buf.len() * mem::size_of_val(&cmsg_buf[0]),
+        msg_controllen: (cmsg_buf.len() * mem::size_of_val(&cmsg_buf[0])) as _,
         ..unsafe { mem::zeroed() }
     };
 
