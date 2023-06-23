@@ -15,6 +15,60 @@ from . import json, pycompat, sshpeer, util
 
 class connectionpool(object):
     def __init__(self, repo):
+        self._real_connection_pool = realconnectionpool(repo)
+
+    def get(self, path, opts=None, reason="default"):
+        return lazyconnection(self._real_connection_pool, path, opts, reason)
+
+    def close(self):
+        self._real_connection_pool.close()
+
+
+# Internal implementation would connect lazily.
+
+
+class lazyconnection(object):
+    def __init__(self, connection_pool, path, opts, reason):
+        self.peer = lazypeer(connection_pool, path, opts, reason)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        if self.peer._real_connection:
+            self.peer._real_connection.__exit__(type, value, traceback)
+
+    def close(self):
+        if self.peer._real_connection:
+            self.peer._real_connection.close()
+
+
+class lazypeer(object):
+    def __init__(self, connection_pool, path, opts, reason):
+        self._real_connection_pool = connection_pool
+        self._path = path
+        self._opts = opts
+        self._reason = reason
+        self._url = path
+        self._real_peer = None
+        self._real_connection = None
+
+    def url(self):
+        if self._real_peer:
+            return self._real_peer.url()
+        return self._url
+
+    def __getattr__(self, name):
+        if not self._real_peer:
+            self._real_connection = self._real_connection_pool.get(
+                self._path, self._opts, self._reason
+            )
+            self._real_peer = self._real_connection.peer
+        return getattr(self._real_peer, name)
+
+
+class realconnectionpool(object):
+    def __init__(self, repo):
         self._repo = repo
         self._poolpid = os.getpid()
         self._pool = dict()
@@ -71,7 +125,7 @@ class connectionpool(object):
 
         if conn is None:
             peer = hg.peer(self._repo.ui, {}, path)
-            conn = connection(self._repo.ui, pathpool, peer, path)
+            conn = realconnection(self._repo.ui, pathpool, peer, path)
         else:
             self._repo.ui.debug("reusing connection from pool\n")
 
@@ -143,7 +197,7 @@ class standaloneconnection(object):
             self.peer._cleanup()
 
 
-class connection(object):
+class realconnection(object):
     def __init__(self, ui, pool, peer, path):
         self._ui = ui
         self._pool = pool

@@ -52,16 +52,12 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 975},
-                        write : { bytes : 608}}}}
+                        read : { bytes : 1104},
+                        write : { bytes : 594}}}}
 
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
-  { metrics : { ssh : { connections : 1,
-                        getpack : { calls : 1,  revs : 1},
-                        read : { bytes : 625},
-                        write : { bytes : 147}}}}
 
   $ cat y
   y
@@ -86,9 +82,9 @@ the server supports our custom getfiles method.
   adding file changes
   4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over 0.00s (?)
   { metrics : { ssh : { connections : 2,
-                        getpack : { calls : 3,  revs : 3},
-                        read : { bytes : 1403},
-                        write : { bytes : 337}}}}
+                        getpack : { calls : 2,  revs : 2},
+                        read : { bytes : 1250},
+                        write : { bytes : 294}}}}
 
 # pull from shallow to shallow (ssh)
 
@@ -100,14 +96,10 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
-  remote: { metrics : { ssh : { connections : 1,
-  remote:                       getpack : { calls : 1,  revs : 1},
-  remote:                       read : { bytes : 625},
-  remote:                       write : { bytes : 147}}}}
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 1},
                         read : { bytes : 2848},
-                        write : { bytes : 755}}}}
+                        write : { bytes : 741}}}}
 
   $ hg up
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -233,7 +225,7 @@ the server supports our custom getfiles method.
   adding file changes
   { metrics : { ssh : { connections : 1,
                         read : { bytes : 2883},
-                        write : { bytes : 608}}}}
+                        write : { bytes : 594}}}}
 
   $ hg up -q 'desc(c22)'
   $ hg log -f -T '{node}\n' c

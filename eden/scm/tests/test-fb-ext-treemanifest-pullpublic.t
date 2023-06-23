@@ -89,7 +89,7 @@ Pull exactly up to d into the client
   { metrics : { scmstore : { file : { api : { hg : { prefetch : { calls : 1}}}}},
                 ssh : { connections : 1,
                         read : { bytes : 1086},
-                        write : { bytes : 680}}}}
+                        write : { bytes : 666}}}}
 
 Test error message about MissingNodesError
   $ drawdag --config paths.default=ssh://user@dummy/master-lagged --config remotefilelog.debug=0 --config devel.print-metrics=0 << 'EOS'

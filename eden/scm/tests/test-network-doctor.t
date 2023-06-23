@@ -35,12 +35,7 @@ Set up fake cert paths so we don't hit "missing certs" error.
     no corp connectivity: TCP error: test
   
   Original error:
-  failed to connect to 169.254.1.2:443
-   reason: * (glob)
-   cn:     169.254.1.2
-   cert:   $TESTTMP/stub
-   key:    $TESTTMP/stub
-  
+  [6] Couldn't resolve host name (Could not resolve host: test_fail)
   [1]
 
 
