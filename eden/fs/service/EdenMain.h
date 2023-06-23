@@ -50,6 +50,7 @@ class EdenMain {
   virtual std::string getLocalHostname() = 0;
   virtual void didFollyInit() = 0;
   virtual void prepare(const EdenServer& server) = 0;
+  virtual void prepareConfig(EdenConfig&) {}
   virtual void cleanup() = 0;
   virtual ActivityRecorderFactory getActivityRecorderFactory() = 0;
   virtual std::shared_ptr<IHiveLogger> getHiveLogger(

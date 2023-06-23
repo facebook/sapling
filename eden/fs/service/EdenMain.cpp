@@ -318,6 +318,8 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     return kExitCodeError;
   }
 
+  main.prepareConfig(*edenConfig);
+
   auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
   auto logPath = getLogPath(edenConfig->edenDir.getValue());
   auto startupLogger = daemonizeIfRequested(

@@ -13,6 +13,7 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/digest/Blake3.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
@@ -130,8 +131,7 @@ struct TestFileInfo {
     return Hash20::sha1(folly::ByteRange{content});
   }
 
-  Hash32 getBlake3(
-      std::optional<std::string_view> maybeKey = std::nullopt) const {
+  Hash32 getBlake3(std::optional<std::string_view> maybeKey) const {
     const auto content = getContents();
     auto hasher = Blake3::create(maybeKey);
     hasher.update(content.data(), content.size());
@@ -441,6 +441,7 @@ void verifyTreeState(
     }
   }
 
+  auto blake3Key = mount.getEdenMount()->getEdenConfig()->blake3Key.getValue();
   for (auto expected_ : infos) {
     auto& expected = *expected_;
     const char* type = files.isModified(expected) ? "MOD" : "ORIG";
@@ -542,7 +543,7 @@ void verifyTreeState(
                              .via(mount.getServerExecutor().get());
         mount.drainServerExecutor();
         auto blake3 = std::move(blake3Fut).get(0ms);
-        EXPECT_EQ(blake3, expected.getBlake3())
+        EXPECT_EQ(blake3, expected.getBlake3(blake3Key))
             << dbgMsg << " expected.contents=\"" << expected.getContents()
             << "\"";
       }
@@ -562,7 +563,8 @@ void verifyTreeState(
         mount.drainServerExecutor();
         auto metadata = std::move(metadataFut).get(0ms);
         EXPECT_EQ(metadata.sha1.value().value(), expected.getSHA1()) << dbgMsg;
-        EXPECT_EQ(metadata.blake3.value().value(), expected.getBlake3())
+        EXPECT_EQ(
+            metadata.blake3.value().value(), expected.getBlake3(blake3Key))
             << dbgMsg;
         EXPECT_EQ(metadata.size.value().value(), expected.getContents().size())
             << dbgMsg;
