@@ -6,6 +6,8 @@
 import os
 import stat
 
+import bindings
+
 from eden.dirstate import MERGE_STATE_BOTH_PARENTS, MERGE_STATE_OTHER_PARENT
 
 from . import (
@@ -76,7 +78,7 @@ class eden_dirstate(dirstate.dirstate):
         This includes non-normal files (e.g., files marked for addition or
         removal), as well as normal files that have merge state information.
         """
-        return pycompat.iteritems(self._map._map)
+        return self._map._items()
 
     def _p1_ctx(self):
         """Return the context object for the first parent commit."""
@@ -131,11 +133,11 @@ class eden_dirstate(dirstate.dirstate):
         # or any child of this path as a directory name.
         # (This handles the case where an untracked file was added with
         # 'hg add' but then deleted from disk.)
-        if path in self._map._map:
+        if path in self._map._tree:
             return True
 
         dirpath = path + "/"
-        for entry in self._map._map:
+        for entry in self._map._keys():
             if entry.startswith(dirpath):
                 return True
 
@@ -160,7 +162,7 @@ class eden_dirstate(dirstate.dirstate):
 
         # Augument the results with anything modified in the dirstate,
         # to take care of added/removed files.
-        for path in self._map._map.keys():
+        for path in self._map._keys():
             if match(path):
                 results.add(path)
 
@@ -175,7 +177,7 @@ class eden_dirstate(dirstate.dirstate):
 
         # Augument the results with anything modified in the dirstate,
         # to take care of added/removed files.
-        for path, state in self._map._map.items():
+        for path, state in self._map._items():
             if match(path):
                 if state[0] == "r":
                     results.discard(path)
@@ -202,12 +204,13 @@ class eden_dirstate(dirstate.dirstate):
             # in state 'm' (-1) or coming from other parent (-2) before
             # being removed, restore that state.
             #
-            # Note that we intentionally use self._map._map.get() here
+            # Note that we intentionally use self._map._tree.get() here
             # rather than self._map.get() to avoid making a thrift call to Eden
             # if this file is already normal.
-            entry = self._map._map.get(f)
+            entry = self._map._tree.get(f, None)
             if entry is not None:
-                status, mode, merge_state, _dummy_mtime = entry
+                status, _mode, merge_state, *_ = entry
+                status = bindings.treestate.tohgstate(status)
                 if status == "r" and merge_state in (
                     MERGE_STATE_BOTH_PARENTS,
                     MERGE_STATE_OTHER_PARENT,

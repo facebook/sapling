@@ -182,7 +182,9 @@ class dirstate(object):
             # pyre-ignore
             self._mapcls = make_treestate
         else:
-            if "eden" not in repo.requirements:
+            if "eden" in repo.requirements:
+                self._istreestate = True
+            else:
                 ui.deprecate("dirstatemap", "dirstatemap is replaced by treestate")
             self._mapcls: "DirstateMapClassType" = dirstatemap
         self._fs = filesystem.physicalfilesystem(root, self)

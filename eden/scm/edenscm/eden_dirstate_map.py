@@ -9,11 +9,21 @@ import errno
 import stat
 from typing import BinaryIO, Dict
 
-import eden.dirstate as eden_dirstate_serializer
+import bindings
 
+import eden.dirstate as eden_dirstate_serializer
 from edenscmnative import parsers
 
-from . import dirstate, EdenThriftClient, localrepo, pycompat, ui as ui_mod, util, vfs
+from . import (
+    EdenThriftClient,
+    localrepo,
+    node,
+    pycompat,
+    treestate,
+    ui as ui_mod,
+    util,
+    vfs,
+)
 
 
 MERGE_STATE_NOT_APPLICABLE: int = eden_dirstate_serializer.MERGE_STATE_NOT_APPLICABLE
@@ -29,7 +39,7 @@ modefromflag: Dict[str, int] = {
 }
 
 
-class eden_dirstate_map(dirstate.dirstatemap):
+class eden_dirstate_map(treestate.treestatemap):
     def __init__(
         self,
         ui: "ui_mod.ui",
@@ -38,9 +48,41 @@ class eden_dirstate_map(dirstate.dirstatemap):
         thrift_client: "EdenThriftClient.EdenThriftClient",
         repo: "localrepo.localrepository",
     ) -> None:
-        super(eden_dirstate_map, self).__init__(ui, opener, root)
         self._thrift_client = thrift_client
         self._repo = repo
+
+        # ignore HG_PENDING because identity is used only for writing
+        self._identity = util.filestat.frompath(opener.join("dirstate"))
+
+        # Each time we load the treestate, make sure we have the latest
+        # version.
+        repo._rsrepo.invalidateworkingcopy()
+
+        super().__init__(ui, opener, root, repo._rsrepo.workingcopy().treestate())
+
+    @property
+    def identity(self):  # override
+        return self._identity
+
+    def _keys(self):
+        return self._tree.tracked("")
+
+    def _items(self):
+        """Iterate treestate, converting treestate "flags" into legacy merge state enum."""
+        for k in self._keys():
+            entry = self._tree.get(k, None)
+            if entry is None:
+                continue
+            flags, mode, _, mtime, *_ = entry
+            yield (
+                k,
+                (
+                    bindings.treestate.tohgstate(flags),
+                    mode,
+                    _merge_state_from_flags(flags),
+                    mtime,
+                ),
+            )
 
     def write(self, st: "BinaryIO", now: int) -> None:  # override
         parents = self.parents()
@@ -49,7 +91,7 @@ class eden_dirstate_map(dirstate.dirstatemap):
         # never allow these to be inserted into self._map in the first place.)
         m = {
             k: (v[0], v[1], v[2])
-            for k, v in self._map.items()
+            for k, v in self._items()
             if not (v[0] == "n" and v[2] == MERGE_STATE_NOT_APPLICABLE)
         }
         eden_dirstate_serializer.write(st, parents, m, self.copymap)
@@ -65,36 +107,28 @@ class eden_dirstate_map(dirstate.dirstatemap):
             need_flush=False,
             p1manifest=self._repo[parents[0]].manifestnode(),
         )
-        self._dirtyparents = False
-        self.nonnormalset, self.otherparentset = self.nonnormalentries()
 
-    def read(self):  # override
-        # ignore HG_PENDING because identity is used only for writing
-        self.identity = util.filestat.frompath(self._opener.join(self._filename))
+    def _read(self, tree):  # override
+        self._tree = tree
 
-        try:
-            fp = self._opendirstatefile()
-            try:
-                parents, dirstate_tuples, copymap = eden_dirstate_serializer.read(
-                    fp, self._filename
-                )
-            finally:
-                fp.close()
-        except IOError as e:
-            if e.errno != errno.ENOENT:
-                raise
-            else:
-                # If the dirstate file does not exist, then we silently ignore
-                # the error because that's what Mercurial's dirstate does.
-                return
+        metadata = treestate._unpackmetadata(self._tree.getmetadata())
 
-        if not self._dirtyparents:
-            self.setparents(*parents)
-        self._map = {
-            n: parsers.dirstatetuple(v[0], v[1], v[2], DUMMY_MTIME)
-            for n, v in dirstate_tuples.items()
-        }
-        self.copymap = copymap
+        self._parents = (
+            node.bin(metadata.get("p1") or node.nullhex),
+            node.bin(metadata.get("p2") or node.nullhex),
+        )
+
+        # These shouldn't be needed since we never write out a treestate.
+        self._threshold = 0
+        self._rootid = 0
+
+    def clear(self):
+        # This seems to only be called for EdenFS "hg up -C ...".
+        # Let's just manually remove tracked entries since self._tree.reset()
+        # doesn't do the right thing with our in-memory treestate.
+        self.setparents(node.nullid, node.nullid)
+        for k in self._keys():
+            self._tree.remove(k)
 
     def iteritems(self):
         raise RuntimeError(
@@ -110,27 +144,30 @@ class eden_dirstate_map(dirstate.dirstatemap):
     def keys(self):
         raise RuntimeError("Should not invoke keys() on eden_dirstate_map!")
 
-    def get(self, key, default=None):
-        try:
-            return self.__getitem__(key)
-        except KeyError:
-            return default
-
     def __contains__(self, key):
         return self.get(key) is not None
 
-    def __getitem__(self, filename):
-        # type(str) -> parsers.dirstatetuple
-        entry = self._map.get(filename)
+    # For eden we store a sparse dirstate with only added/removed files.
+    # For "normal" files, we need to infer their state from the manifest.
+    def _get(self, path, default=None):
+        entry = super()._get(path, None)
         if entry is not None:
             return entry
 
-        # edenfs only tracks one parent
         commitctx = self._repo["."]
-        node, flag = commitctx._fileinfo(filename)
 
-        mode = modefromflag[flag]
-        return parsers.dirstatetuple("n", mode, MERGE_STATE_NOT_APPLICABLE, DUMMY_MTIME)
+        try:
+            _node, flag = commitctx._fileinfo(path)
+        except KeyError:
+            return default
+
+        return (
+            bindings.treestate.EXIST_P1 | bindings.treestate.EXIST_NEXT,
+            modefromflag[flag],
+            MERGE_STATE_NOT_APPLICABLE,
+            DUMMY_MTIME,
+            None,
+        )
 
     def hastrackeddir(self, d):  # override
         # TODO(mbolin): Unclear whether it is safe to hardcode this to False.
@@ -140,24 +177,20 @@ class eden_dirstate_map(dirstate.dirstatemap):
         # TODO(mbolin): Unclear whether it is safe to hardcode this to False.
         return False
 
-    def _insert_tuple(self, filename, state, mode, size, mtime):  # override
-        if size != MERGE_STATE_BOTH_PARENTS and size != MERGE_STATE_OTHER_PARENT:
-            merge_state = MERGE_STATE_NOT_APPLICABLE
+
+def _merge_state_from_flags(flags):
+    # Convert treestate flags back into legacy merge state enum. This mirrors
+    # logic in treestate::legacy_eden_dirstate::serialize_entry.
+    p1 = flags & bindings.treestate.EXIST_P1
+    p2 = flags & bindings.treestate.EXIST_P2
+    nxt = flags & bindings.treestate.EXIST_NEXT
+
+    if p2:
+        if p1:
+            return MERGE_STATE_BOTH_PARENTS
         else:
-            merge_state = size
-
-        self._map[filename] = parsers.dirstatetuple(
-            state, mode, merge_state, DUMMY_MTIME
-        )
-
-    def nonnormalentries(self):
-        """Returns a set of filenames."""
-        # type() -> Tuple[Set[str], Set[str]]
-        nonnorm = set()
-        otherparent = set()
-        for path, entry in pycompat.iteritems(self._map):
-            if entry[0] != "n":
-                nonnorm.add(path)
-            elif entry[2] == MERGE_STATE_OTHER_PARENT:
-                otherparent.add(path)
-        return nonnorm, otherparent
+            return MERGE_STATE_OTHER_PARENT
+    elif not p1 and nxt:
+        return MERGE_STATE_BOTH_PARENTS
+    else:
+        return MERGE_STATE_NOT_APPLICABLE

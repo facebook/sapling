@@ -1135,7 +1135,7 @@ def debugstate(ui, repo, **opts) -> Optional[int]:
             ui.write("\n")
             return
 
-        for path, dirstate_tuple in sorted(pycompat.iteritems(repo.dirstate._map._map)):
+        for path, dirstate_tuple in repo.dirstate._map._items():
             status, mode, merge_state, _dummymtime = dirstate_tuple
             if mode & 0o20000:
                 display_mode = "lnk"

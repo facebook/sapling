@@ -98,7 +98,7 @@ class treestatemap(object):
     def copymap(self):
         result = {}
         for path in self._tree.walk(treestate.COPIED, 0):
-            copied = self._tree.get(path, None)[-1]
+            copied = self._get(path)[-1]
             if not copied:
                 raise error.Abort(
                     _(
@@ -128,7 +128,7 @@ class treestatemap(object):
         return len(self._tree)
 
     def get(self, key, default=None):
-        entry = self._tree.get(key, None)
+        entry = self._get(key)
         if entry is None or len(entry) != 5:
             return default
         flags, mode, size, mtime, _copied = entry
@@ -174,7 +174,7 @@ class treestatemap(object):
         self._tree.insert(f, state, mode, size, mtime, None)
 
     def removefile(self, f, oldstate, size):
-        existing = self._tree.get(f, None)
+        existing = self._get(f)
         if existing:
             # preserve "copied" information
             state, mode, size, mtime, copied = existing
@@ -221,7 +221,7 @@ class treestatemap(object):
             # Typically, dropfile is used in 2 cases:
             # - "hg forget": mark the file as "untracked".
             # - "hg update": remove files only tracked by old commit.
-            entry = self._tree.get(f, None)
+            entry = self._get(f)
             if not entry:
                 return False
             else:
@@ -517,7 +517,7 @@ class treestatemap(object):
     def copy(self, source, dest):
         if source == dest:
             return
-        existing = self._tree.get(dest, None)
+        existing = self._get(dest)
         if existing:
             state, mode, size, mtime, copied = existing
             if copied != source:
@@ -544,7 +544,7 @@ class treestatemap(object):
 
         Return True if the file was changed, False if it's already marked.
         """
-        existing = self._tree.get(path, None)
+        existing = self._get(path)
         if not existing:
             # The file was not in dirstate (untracked). Add it.
             state = treestate.NEED_CHECK
@@ -566,7 +566,7 @@ class treestatemap(object):
         Return True if the file was changed, False if the file does not have
         NEED_CHECK.
         """
-        existing = self._tree.get(path, None)
+        existing = self._get(path)
         if existing:
             state, mode, size, mtime, copied = existing
             if treestate.NEED_CHECK & state:
@@ -579,12 +579,15 @@ class treestatemap(object):
         """Return the copysource for path. Return None if it's not copied, or
         path does not exist.
         """
-        existing = self._tree.get(path, None)
+        existing = self._get(path)
         if existing:
             _state, _mode, _size, _mtime, copied = existing
             return copied
         else:
             return None
+
+    def _get(self, path, default=None):
+        return self._tree.get(path, default)
 
 
 def currentversion(repo):
