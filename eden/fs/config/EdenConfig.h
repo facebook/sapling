@@ -1212,6 +1212,12 @@ class EdenConfig : private ConfigSettingManager {
   /**
    * The key to use for blake3 hash computation.
    * The key must be exactly 32 bytes.
+   *
+   * !!!IMPORATNT!!!
+   * The value of this config must be kept in sync with the source control
+   * server as well as all the tools that will compute a Blake3 hash from file
+   * content. To this effect, this config is overwritten early at startup in
+   * Meta's environment to prevent any mismatch.
    */
   ConfigSetting<std::optional<std::string>> blake3Key{
       "hash:blake3-key",
