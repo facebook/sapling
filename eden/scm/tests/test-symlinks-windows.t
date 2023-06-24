@@ -3,6 +3,7 @@
 
   $ configure modern
   $ setconfig experimental.windows-symlinks=True
+  $ setconfig workingcopy.ruststatus=False
 
 Creating a commit on Windows should replace backslashes with forward slashes on symlinks
 

@@ -2,6 +2,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig workingcopy.ruststatus=False
 
 
   $ configure dummyssh
