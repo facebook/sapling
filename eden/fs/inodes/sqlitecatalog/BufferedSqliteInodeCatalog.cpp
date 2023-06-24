@@ -134,7 +134,7 @@ void BufferedSqliteInodeCatalog::process(
     size_t captureSize,
     InodeNumber operationKey,
     OperationType operationType,
-    std::optional<overlay::OverlayDir>&& odir) {
+    std::optional<std::string>&& odir) {
   size_t size = captureSize + sizeof(fn) + fn.heapAllocatedMemory();
   std::unique_ptr<Work> work =
       std::make_unique<Work>(std::move(fn), std::move(odir), size);
@@ -210,7 +210,8 @@ std::optional<overlay::OverlayDir> BufferedSqliteInodeCatalog::loadOverlayDir(
     auto operationIter = state->waitingOperation.find(inodeNumber);
     if (operationIter != state->waitingOperation.end()) {
       if (operationIter->second.operationType == OperationType::Write) {
-        return operationIter->second.work->odir.value();
+        return apache::thrift::CompactSerializer::deserialize<
+            overlay::OverlayDir>(operationIter->second.work->odir.value());
       } else {
         return std::nullopt;
       }
@@ -219,7 +220,8 @@ std::optional<overlay::OverlayDir> BufferedSqliteInodeCatalog::loadOverlayDir(
     operationIter = state->inflightOperation.find(inodeNumber);
     if (operationIter != state->inflightOperation.end()) {
       if (operationIter->second.operationType == OperationType::Write) {
-        return operationIter->second.work->odir.value();
+        return apache::thrift::CompactSerializer::deserialize<
+            overlay::OverlayDir>(operationIter->second.work->odir.value());
       } else {
         return std::nullopt;
       }
@@ -237,7 +239,9 @@ BufferedSqliteInodeCatalog::loadAndRemoveOverlayDir(InodeNumber inodeNumber) {
     auto operationIter = state->waitingOperation.find(inodeNumber);
     if (operationIter != state->waitingOperation.end()) {
       if (operationIter->second.operationType == OperationType::Write) {
-        overlay::OverlayDir odir = operationIter->second.work->odir.value();
+        overlay::OverlayDir odir =
+            apache::thrift::CompactSerializer::deserialize<overlay::OverlayDir>(
+                operationIter->second.work->odir.value());
         state.unlock();
         process(
             [this, inodeNumber]() {
@@ -256,7 +260,9 @@ BufferedSqliteInodeCatalog::loadAndRemoveOverlayDir(InodeNumber inodeNumber) {
     operationIter = state->inflightOperation.find(inodeNumber);
     if (operationIter != state->inflightOperation.end()) {
       if (operationIter->second.operationType == OperationType::Write) {
-        overlay::OverlayDir odir = operationIter->second.work->odir.value();
+        overlay::OverlayDir odir =
+            apache::thrift::CompactSerializer::deserialize<overlay::OverlayDir>(
+                operationIter->second.work->odir.value());
         state.unlock();
         process(
             [this, inodeNumber]() {
@@ -279,30 +285,30 @@ BufferedSqliteInodeCatalog::loadAndRemoveOverlayDir(InodeNumber inodeNumber) {
 void BufferedSqliteInodeCatalog::saveOverlayDir(
     InodeNumber inodeNumber,
     overlay::OverlayDir&& odir) {
-  // Serializing and deserialzing the OverlayDir has similar runtime to
-  // copying the structure directly but is more memory efficient.
-  // This can be measured by running the OverlayDirSerializerBenchmark
-  // using `/usr/bin/time -v`. If memory usage becomes an issue, it may be
-  // worth serializing instead of moving the structure
+  auto serializedOverlayDir =
+      apache::thrift::CompactSerializer::serialize<std::string>(odir);
 
-  // captureSize is multiplied here since odir is copied to store both in the
+  // captureSize is multiplied here since odir is copied and stored both in the
   // folly::function and directly in the Work struct
-  size_t captureSize = estimateIndirectMemoryUsage<
-                           overlay::PathComponent,
-                           overlay::OverlayEntry>(*odir.entries()) *
-      2;
+  size_t captureSize =
+      estimateIndirectMemoryUsage<std::string>(serializedOverlayDir) * 2;
 
-  overlay::OverlayDir odirTemp = odir;
-
+  auto serializedOverlayDirCopy = serializedOverlayDir;
   process(
-      [this, inodeNumber, odir = std::move(odirTemp)]() mutable {
-        SqliteInodeCatalog::saveOverlayDir(inodeNumber, std::move(odir));
+      [this,
+       inodeNumber,
+       odir = std::move(serializedOverlayDirCopy)]() mutable {
+        auto deserializedOverlayDir =
+            apache::thrift::CompactSerializer::deserialize<overlay::OverlayDir>(
+                std::move(odir));
+        SqliteInodeCatalog::saveOverlayDir(
+            inodeNumber, std::move(deserializedOverlayDir));
         return false;
       },
       captureSize,
       inodeNumber,
       OperationType::Write,
-      std::move(odir));
+      std::move(serializedOverlayDir));
 }
 
 void BufferedSqliteInodeCatalog::removeOverlayDir(InodeNumber inodeNumber) {

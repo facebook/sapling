@@ -88,13 +88,13 @@ class BufferedSqliteInodeCatalog : public SqliteInodeCatalog {
   struct Work {
     explicit Work(
         folly::Function<bool()> operation,
-        std::optional<overlay::OverlayDir> odir,
+        std::optional<std::string> odir,
         size_t estimateIndirectMemoryUsage)
         : operation(std::move(operation)),
           odir(std::move(odir)),
           estimateIndirectMemoryUsage(estimateIndirectMemoryUsage) {}
     folly::Function<bool()> operation;
-    std::optional<overlay::OverlayDir> odir;
+    std::optional<std::string> odir;
     size_t estimateIndirectMemoryUsage;
   };
 
@@ -142,7 +142,7 @@ class BufferedSqliteInodeCatalog : public SqliteInodeCatalog {
       size_t captureSize,
       InodeNumber operationKey,
       OperationType operationType,
-      std::optional<overlay::OverlayDir>&& odir = std::nullopt);
+      std::optional<std::string>&& odir = std::nullopt);
 
   /**
    * Uses the workerThread_ to process writes to the SqliteInodeCatalog
