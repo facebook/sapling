@@ -26,14 +26,16 @@ class SqliteDatabase {
   constexpr static struct InMemory {
   } inMemory{};
 
-  /** Open a handle to the database at the specified path.
+  /**
+   * Open a handle to the database at the specified path.
    * Will throw an exception if the database fails to open.
    * The database will be created if it didn't already exist.
    */
   explicit SqliteDatabase(AbsolutePathPiece path)
       : SqliteDatabase(path.copy().value()) {}
 
-  /** Constructs the SqliteDatabase object with out opening the database.
+  /**
+   * Constructs the SqliteDatabase object with out opening the database.
    * openDb must be called before any other method.
    */
   SqliteDatabase(AbsolutePathPiece path, DelayOpeningDB);
@@ -59,15 +61,20 @@ class SqliteDatabase {
   SqliteDatabase(SqliteDatabase&&) = default;
   SqliteDatabase& operator=(SqliteDatabase&&) = default;
 
-  /** Close the handle.
+  /**
+   * Close the handle.
    * This will happen implicitly at destruction but is provided
-   * here for convenience. */
+   * here for convenience.
+   */
   void close();
 
   ~SqliteDatabase();
 
-  /** Obtain a locked database pointer suitable for passing
-   * to the SqliteStatement class. */
+  /**
+   * Obtain a locked database pointer suitable for passing to the
+   * SqliteStatement class to ensure the database is not closed during
+   * transactions.
+   */
   LockedSqliteConnection lock();
 
   /**
@@ -78,7 +85,7 @@ class SqliteDatabase {
    * Example usage:
    *
    * ```
-   * db_->transaction([](auto& conn) {
+   * conn_->transaction([](auto& conn) {
    *   SqliteStatement(conn, "SELECT * ...").step();
    *   SqliteStatement(conn, "INSERT INTO ...").step();
    * };
@@ -95,7 +102,7 @@ class SqliteDatabase {
 
   std::string dbPath_;
 
-  folly::Synchronized<SqliteConnection> db_;
+  folly::Synchronized<SqliteConnection> conn_;
 
   std::unique_ptr<StatementCache> cache_;
 };

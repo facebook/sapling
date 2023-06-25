@@ -12,10 +12,10 @@
 
 namespace facebook::eden {
 struct SqliteDatabase::StatementCache {
-  explicit StatementCache(LockedSqliteConnection& db)
-      : beginTransaction{db, "BEGIN"},
-        commitTransaction{db, "COMMIT"},
-        rollbackTransaction{db, "ROLLBACK"} {}
+  explicit StatementCache(LockedSqliteConnection& conn)
+      : beginTransaction{conn, "BEGIN"},
+        commitTransaction{conn, "COMMIT"},
+        rollbackTransaction{conn, "ROLLBACK"} {}
 
   PersistentSqliteStatement beginTransaction;
   PersistentSqliteStatement commitTransaction;
@@ -45,15 +45,15 @@ void checkSqliteResult(sqlite3* db, int result) {
 }
 
 SqliteDatabase::SqliteDatabase(AbsolutePathPiece path, DelayOpeningDB)
-    : dbPath_(path.copy().value()), db_{}, cache_{nullptr} {}
+    : dbPath_(path.copy().value()), conn_{}, cache_{nullptr} {}
 
 SqliteDatabase::SqliteDatabase(std::string addr)
-    : dbPath_(std::move(addr)), db_{} {
+    : dbPath_(std::move(addr)), conn_{} {
   openDb();
 }
 
 void SqliteDatabase::openDb() {
-  auto lockedState = db_.wlock();
+  auto lockedState = conn_.wlock();
   switch (lockedState->status) {
     case SqliteDbStatus::CLOSED:
       throw std::runtime_error("Sqlite Db already closed before open.");
@@ -81,7 +81,7 @@ void SqliteDatabase::openDb() {
 }
 
 void SqliteDatabase::close() {
-  auto db = db_.wlock();
+  auto db = conn_.wlock();
   db->status = SqliteDbStatus::CLOSED;
   // We must clear the cached statement before closing the database. Otherwise
   // `sqlite3_close` will fail with `SQLITE_BUSY`. This rule applies to any
@@ -98,7 +98,7 @@ SqliteDatabase::~SqliteDatabase() {
 }
 
 LockedSqliteConnection SqliteDatabase::lock() {
-  auto db = db_.wlock();
+  auto db = conn_.wlock();
   switch (db->status) {
     case SqliteDbStatus::OPEN:
       break;
@@ -130,7 +130,7 @@ void SqliteDatabase::transaction(
 }
 
 void SqliteDatabase::checkpoint() {
-  if (auto conn = db_.tryWLock()) {
+  if (auto conn = conn_.tryWLock()) {
     XLOG(DBG6) << "Checkpoint thread acquired SQLite lock";
     try {
       int pnLog, pnCkpt;
