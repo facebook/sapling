@@ -197,6 +197,24 @@ SqliteTreeStore::SqliteTreeStore(
   auto dbLock = db_->lock();
   SqliteStatement(dbLock, "PRAGMA journal_mode=WAL").step();
 
+  // The temporary files associated with transaction control, namely the
+  // rollback journal, super-journal, write-ahead log (WAL) files, and
+  // shared-memory files, are always written to disk. Memory-based storage will
+  // make temporary databases equivalent to in-memory databases. File-based
+  // databases will initially be in-memory databases, until they outgrow the
+  // page cache.
+  // https://www.sqlite.org/tempfiles.html
+  // https://www.oreilly.com/library/view/using-sqlite/9781449394592/re206.html
+  SqliteStatement(dbLock, "PRAGMA temp_store=MEMORY").step();
+
+  // In NORMAL locking-mode (the default), a database connection unlocks the
+  // database file at the conclusion of each read or write transaction. When the
+  // locking-mode is set to EXCLUSIVE, the database connection never releases
+  // file-locks. WAL databases can be accessed in EXCLUSIVE mode without the use
+  // of shared memory.
+  // https://www.sqlite.org/pragma.html#pragma_locking_mode
+  SqliteStatement(dbLock, "PRAGMA locking_mode=EXCLUSIVE").step();
+
   if (synchronous_mode == SqliteTreeStore::SynchronousMode::Off) {
     XLOG(INFO)
         << "Synchronous mode is off. Data loss may happen when system crashes.";
