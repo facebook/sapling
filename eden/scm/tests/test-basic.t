@@ -8,6 +8,7 @@ Create a repository:
   devel.all-warnings=True
   devel.collapse-traceback=True
   devel.default-date=0 0
+  experimental.use-rust-changelog=True
   extensions.fsmonitor= (fsmonitor !)
   extensions.treemanifest=
   fsmonitor.detectrace=True (fsmonitor !)

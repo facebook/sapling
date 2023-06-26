@@ -1862,7 +1862,11 @@ class localrepository(object):
                 # Rust may use it's own copies of stores, so we need to
                 # invalidate those when a transaction commits successfully.
                 repo._rsrepo.invalidatestores()
-                self._rsrepo.invalidatechangelog()
+
+                # Don't invalidate Rust if Rust and Python are sharing the changelog object.
+                # Python's invalidation will cover it.
+                if not repo.ui.configbool("experimental", "use-rust-changelog"):
+                    self._rsrepo.invalidatechangelog()
             else:
                 # discard all changes (including ones already written
                 # out) in this transaction
@@ -2229,7 +2233,13 @@ class localrepository(object):
 
     def invalidatechangelog(self):
         """Invalidates the changelog. Discard pending changes."""
-        self._rsrepo.invalidatechangelog()
+
+        # Don't reload Rust here if Rust and Python are sharing the
+        # same changelog object. The Rust changelog will be reloaded
+        # as the Python changelog is reloaded on next access.
+        if not self.ui.configbool("experimental", "use-rust-changelog"):
+            self._rsrepo.invalidatechangelog()
+
         if "changelog" in self._filecache:
             del self._filecache["changelog"]
         if "changelog" in self.__dict__:
@@ -3433,6 +3443,10 @@ def _openchangelog(repo):
         )
 
     if repo.ui.configbool("experimental", "use-rust-changelog"):
+        # Refresh Rust changelog object every time we (re)load the
+        # changelog. This is the simplest thing which matches all the
+        # Python cache invalidation logic exactly.
+        repo._rsrepo.invalidatechangelog()
         inner = repo._rsrepo.changelog()
         return changelog2.changelog(repo, inner, repo.ui.uiconfig())
 

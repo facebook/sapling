@@ -56,6 +56,9 @@ ack-match-full-traversal=True
 
 [scmstore]
 contentstorefallback=True
+
+[experimental]
+use-rust-changelog=True
 """
     if use_watchman:
         content += """
