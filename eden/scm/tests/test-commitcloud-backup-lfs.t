@@ -13,7 +13,7 @@ Setup common infinitepush
 Setup lfs
   $ enable lfs
   $ setconfig experimental.changegroup3=true
-  $ setconfig lfs.threshold=10B lfs.url="file:$TESTTMP/dummy-remote/"
+  $ setconfig lfs.threshold=10B lfs.url="file:$TESTTMP/dummy-remote/" scmstore.enableshim=True
 
 Setup server repo
   $ hg init repo

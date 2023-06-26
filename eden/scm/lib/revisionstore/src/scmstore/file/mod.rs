@@ -134,7 +134,13 @@ impl FileStore {
         fetch_mode: FetchMode,
     ) -> FetchResults<StoreFile> {
         let (found_tx, found_rx) = unbounded();
-        let mut state = FetchState::new(keys, attrs, &self, found_tx);
+        let mut state = FetchState::new(
+            keys,
+            attrs,
+            self,
+            found_tx,
+            self.lfs_threshold_bytes.is_some(),
+        );
 
         let keys_len = state.pending_len();
 
@@ -309,7 +315,7 @@ impl FileStore {
         // TODO(meyer): Don't fail the whole batch for a single write error.
         let mut metrics = FileStoreWriteMetrics::default();
         for (key, bytes, meta) in entries {
-            if meta.is_lfs() {
+            if meta.is_lfs() && self.lfs_threshold_bytes.is_some() {
                 metrics.lfsptr.item(1);
                 if let Err(e) = self.write_lfsptr(key, bytes) {
                     metrics.lfsptr.err(1);

@@ -851,6 +851,7 @@ mod tests {
         let mut store = FileStore::empty();
         store.indexedlog_local = Some(Arc::new(log));
         store.extstored_policy = ExtStoredPolicy::Use;
+        store.lfs_threshold_bytes = Some(123);
 
         let fetched = store.fetch(
             vec![lfs_key.clone(), nonlfs_key.clone()].into_iter(),
@@ -911,6 +912,7 @@ mod tests {
         let mut store = FileStore::empty();
         store.indexedlog_local = Some(Arc::new(log));
         store.extstored_policy = ExtStoredPolicy::Ignore;
+        store.lfs_threshold_bytes = Some(123);
 
         let fetched = store.fetch(
             vec![lfs_key.clone(), nonlfs_key.clone()].into_iter(),

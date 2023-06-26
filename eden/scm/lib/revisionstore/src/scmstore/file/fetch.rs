@@ -85,6 +85,8 @@ pub struct FetchState {
     // Config
     extstored_policy: ExtStoredPolicy,
     compute_aux_data: bool,
+
+    lfs_enabled: bool,
 }
 
 impl FetchState {
@@ -93,6 +95,7 @@ impl FetchState {
         attrs: FileAttributes,
         file_store: &FileStore,
         found_tx: Sender<Result<(Key, StoreFile), KeyFetchError>>,
+        lfs_enabled: bool,
     ) -> Self {
         FetchState {
             common: CommonFetchState::new(keys, attrs, found_tx),
@@ -107,6 +110,7 @@ impl FetchState {
             extstored_policy: file_store.extstored_policy,
             compute_aux_data: true,
             lfs_progress: file_store.lfs_progress.clone(),
+            lfs_enabled,
         }
     }
 
@@ -216,7 +220,7 @@ impl FetchState {
     }
 
     fn found_indexedlog(&mut self, key: Key, entry: Entry, typ: StoreType) {
-        if entry.metadata().is_lfs() {
+        if entry.metadata().is_lfs() && self.lfs_enabled {
             if self.extstored_policy == ExtStoredPolicy::Use {
                 match entry.try_into() {
                     Ok(ptr) => self.found_pointer(key, ptr, typ, true),
