@@ -43,7 +43,9 @@ except ImportError:
     def setup_fb_env(env: Dict[str, str]) -> Dict[str, str]:
         return env
 
-    def get_host_dashboard_url(normalized_hostname: str) -> Optional[str]:
+    def get_host_dashboard_url(
+        normalized_hostname: str, period_end: datetime
+    ) -> Optional[str]:
         return None
 
 
@@ -140,7 +142,7 @@ def print_diagnostic_info(
     # TODO(T113845692)
     # print_eden_doctor_report(instance, out)
 
-    host_dashboard_url = get_host_dashboard_url(host)
+    host_dashboard_url = get_host_dashboard_url(host, datetime.now())
     if host_dashboard_url:
         section_title("Host dashboard:", out)
         out.write(b"%s\n" % host_dashboard_url.encode())
