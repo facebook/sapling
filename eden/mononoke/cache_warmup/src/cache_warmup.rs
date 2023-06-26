@@ -14,6 +14,7 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::PerfCounterType;
 use derived_data::BonsaiDerived;
@@ -192,6 +193,25 @@ async fn changesets_warmup(
     Ok(())
 }
 
+async fn commit_graph_segments_warmup(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bcs_id: ChangesetId,
+) -> Result<(), Error> {
+    info!(
+        ctx.logger(),
+        "about to start warming up commit graph segments cache"
+    );
+
+    repo.commit_graph()
+        .ancestors_difference_segments(ctx, vec![bcs_id], vec![])
+        .await?;
+
+    debug!(ctx.logger(), "finished commit graph segments warmup");
+
+    Ok(())
+}
+
 async fn do_cache_warmup(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -229,10 +249,22 @@ async fn do_cache_warmup(
         }
     });
 
-    let (stats, res) = future::try_join(blobstore_warmup, cs_warmup).timed().await;
-    let (blobstore_warmup, cs_warmup) = res?;
+    let commit_graph_segments_warmup = task::spawn({
+        cloned!(ctx, repo);
+        async move {
+            commit_graph_segments_warmup(&ctx, &repo, bcs_id)
+                .await
+                .context("While warming up commit graph segments")
+        }
+    });
+
+    let (stats, res) = future::try_join3(blobstore_warmup, cs_warmup, commit_graph_segments_warmup)
+        .timed()
+        .await;
+    let (blobstore_warmup, cs_warmup, commit_graph_segments_warmup) = res?;
     blobstore_warmup?;
     cs_warmup?;
+    commit_graph_segments_warmup?;
 
     info!(ctx.logger(), "finished initial warmup");
 
