@@ -7,4 +7,5 @@
 
 pub mod edges;
 pub mod frontier;
+pub mod segments;
 pub mod storage;

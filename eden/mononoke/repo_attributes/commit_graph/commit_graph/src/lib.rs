@@ -35,6 +35,7 @@ mod ancestors_stream;
 mod compat;
 mod core;
 mod frontier;
+mod segments;
 
 /// Commit Graph.
 ///

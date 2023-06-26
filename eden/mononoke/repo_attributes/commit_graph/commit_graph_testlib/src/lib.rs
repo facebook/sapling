@@ -42,6 +42,8 @@ macro_rules! impl_commit_graph_tests {
             test_common_base,
             test_slice_ancestors,
             test_children,
+            test_ancestors_difference_segments_1,
+            test_ancestors_difference_segments_2,
         );
     };
 }
@@ -888,6 +890,85 @@ pub async fn test_children(ctx: CoreContext, storage: Arc<dyn CommitGraphStorage
     assert_children(&graph, &ctx, "L", vec!["M", "N"]).await?;
     assert_children(&graph, &ctx, "M", vec![]).await?;
     assert_children(&graph, &ctx, "N", vec![]).await?;
+
+    Ok(())
+}
+
+pub async fn test_ancestors_difference_segments_1(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorage>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r##"
+        A-B-C-D-E---L------N----O
+           \         \    /
+            F-G-H     M  /
+             \       /  /
+              I-J---K--/
+                 \
+                  \---------P
+        "##,
+        storage,
+    )
+    .await?;
+
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["N"], vec![], 3).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["N"], vec!["D"], 3).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["H"], vec!["G"], 1).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["M"], vec![], 3).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["M"], vec!["H"], 3).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["N"], vec!["E", "J"], 3).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["O", "P"], vec![], 4).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["O", "P"], vec!["H"], 4).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["O", "P"], vec!["D", "I"], 4).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["F"], vec!["H"], 0).await?;
+
+    Ok(())
+}
+
+pub async fn test_ancestors_difference_segments_2(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorage>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r##"
+        A--B------C----E---J---K
+         \  \      \
+          \  \--D   \-----F----L
+           \  \            \
+            \  \--G---H     \--M
+             \     \
+              \-P   \--I--N----O
+        "##,
+        storage,
+    )
+    .await?;
+
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["K"], vec![], 1).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["L"], vec![], 1).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["M"], vec![], 1).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["O"], vec![], 1).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["K", "L"], vec![], 2).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["K", "L", "M", "O"], vec![], 4).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["K", "L"], vec!["M"], 2).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["K", "L", "H"], vec!["M", "O"], 3)
+        .await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["C"], vec!["M"], 0).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["A", "B", "E"], vec![], 1).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["B", "H", "O"], vec!["D"], 2).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["E", "L", "K"], vec!["J"], 2).await?;
+    assert_ancestors_difference_segments(
+        &ctx,
+        &graph,
+        vec![
+            "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P",
+        ],
+        vec![],
+        7,
+    )
+    .await?;
 
     Ok(())
 }

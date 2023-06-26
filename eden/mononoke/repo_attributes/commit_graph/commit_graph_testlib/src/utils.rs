@@ -404,3 +404,24 @@ pub async fn assert_children(
     );
     Ok(())
 }
+
+pub async fn assert_ancestors_difference_segments(
+    ctx: &CoreContext,
+    graph: &CommitGraph,
+    heads: Vec<&str>,
+    common: Vec<&str>,
+    segments_count: usize,
+) -> Result<()> {
+    let heads: Vec<_> = heads.into_iter().map(name_cs_id).collect();
+    let common: Vec<_> = common.into_iter().map(name_cs_id).collect();
+
+    assert!(
+        graph
+            .verified_ancestors_difference_segments(ctx, heads, common)
+            .await?
+            .len()
+            == segments_count
+    );
+
+    Ok(())
+}

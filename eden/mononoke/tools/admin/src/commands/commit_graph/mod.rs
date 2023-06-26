@@ -12,6 +12,7 @@ mod checkpoints;
 mod children;
 mod common_base;
 mod range_stream;
+mod segments;
 mod slice_ancestors;
 mod update_preloaded;
 
@@ -36,6 +37,7 @@ use mononoke_app::MononokeApp;
 use range_stream::RangeStreamArgs;
 use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
+use segments::SegmentsArgs;
 use slice_ancestors::SliceAncestorsArgs;
 use update_preloaded::UpdatePreloadedArgs;
 
@@ -54,9 +56,11 @@ pub enum CommitGraphSubcommand {
     Backfill(BackfillArgs),
     /// Backfill a commit and all of its missing ancestors.
     BackfillOne(BackfillOneArgs),
-    /// Display ids of all commits that are ancestors of one set of commits (heads), excluding ancestors of another set of commits (common) in reverse topological order.
+    /// Display ids of all commits that are ancestors of one set of commits (heads),
+    /// excluding ancestors of another set of commits (common) in reverse topological order.
     AncestorsDifference(AncestorsDifferenceArgs),
-    /// Display ids of all commits that are simultaneously a descendant of one commit (start) and an ancestor of another (end) in topological order.
+    /// Display ids of all commits that are simultaneously a descendant of one commit (start)
+    /// and an ancestor of another (end) in topological order.
     RangeStream(RangeStreamArgs),
     /// Update preloaded commit graph and upload it to blobstore.
     UpdatePreloaded(UpdatePreloadedArgs),
@@ -66,6 +70,9 @@ pub enum CommitGraphSubcommand {
     SliceAncestors(SliceAncestorsArgs),
     /// Display ids of all children commits of a given commit.
     Children(ChildrenArgs),
+    /// Display segments representing ancestors of one set of commits (heads), excluding
+    /// ancestors of another set of commits (common) in reverse topological order.
+    Segments(SegmentsArgs),
 }
 
 #[facet::container]
@@ -126,5 +133,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             slice_ancestors::slice_ancestors(&ctx, &repo, args).await
         }
         CommitGraphSubcommand::Children(args) => children::children(&ctx, &repo, args).await,
+        CommitGraphSubcommand::Segments(args) => segments::segments(&ctx, &repo, args).await,
     }
 }
