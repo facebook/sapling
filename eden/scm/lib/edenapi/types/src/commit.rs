@@ -128,6 +128,41 @@ pub struct CommitGraphRequest {
     pub heads: Vec<HgId>,
 }
 
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct CommitGraphSegmentsEntry {
+    #[id(1)]
+    pub head: HgId,
+    #[id(2)]
+    pub base: HgId,
+    #[id(3)]
+    pub length: u64,
+    #[id(4)]
+    pub parents: Vec<CommitGraphSegmentParent>,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct CommitGraphSegmentParent {
+    #[id(1)]
+    pub hgid: HgId,
+    #[id(2)]
+    pub location: Option<Location<HgId>>,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct CommitGraphSegmentsRequest {
+    #[id(1)]
+    pub common: Vec<HgId>,
+    #[id(2)]
+    pub heads: Vec<HgId>,
+}
+
 /// The list of Mercurial commit identifiers for which we want the commit data to be returned.
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]

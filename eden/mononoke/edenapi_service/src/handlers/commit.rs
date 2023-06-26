@@ -23,6 +23,9 @@ use edenapi_types::Batch;
 use edenapi_types::BonsaiFileChange;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitGraphRequest;
+use edenapi_types::CommitGraphSegmentParent;
+use edenapi_types::CommitGraphSegmentsEntry;
+use edenapi_types::CommitGraphSegmentsRequest;
 use edenapi_types::CommitHashLookupRequest;
 use edenapi_types::CommitHashLookupResponse;
 use edenapi_types::CommitHashToLocationResponse;
@@ -666,6 +669,60 @@ impl EdenApiHandler for GraphHandlerV2 {
                 })
             });
         Ok(stream::iter(graph_entries).boxed())
+    }
+}
+
+pub struct GraphSegmentsHandler;
+
+#[async_trait]
+impl EdenApiHandler for GraphSegmentsHandler {
+    type Request = CommitGraphSegmentsRequest;
+    type Response = CommitGraphSegmentsEntry;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::CommitGraphSegments;
+    const ENDPOINT: &'static str = "/commit/graph_segments";
+
+    async fn handler(
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
+        let heads: Vec<_> = request
+            .heads
+            .into_iter()
+            .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
+            .collect();
+        let common: Vec<_> = request
+            .common
+            .into_iter()
+            .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
+            .collect();
+
+        let graph_segment_entries =
+            repo.graph_segments(common, heads)
+                .await?
+                .into_iter()
+                .map(|segment| {
+                    Ok(CommitGraphSegmentsEntry {
+                        head: HgId::from(segment.head.into_nodehash()),
+                        base: HgId::from(segment.base.into_nodehash()),
+                        length: segment.length,
+                        parents: segment
+                            .parents
+                            .into_iter()
+                            .map(|parent| CommitGraphSegmentParent {
+                                hgid: HgId::from(parent.hgid.into_nodehash()),
+                                location: parent.location.map(|location| {
+                                    location.map_descendant(|descendant| {
+                                        HgId::from(descendant.into_nodehash())
+                                    })
+                                }),
+                            })
+                            .collect(),
+                    })
+                });
+        Ok(stream::iter(graph_segment_entries).boxed())
     }
 }
 
