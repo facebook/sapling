@@ -38,7 +38,7 @@ from eden.fs.cli.util import (
 )
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
 from facebook.eden import EdenService
-from facebook.eden.ttypes import MountState
+from facebook.eden.ttypes import ChangeOwnershipRequest, MountState
 from fb303_core.ttypes import fb303_status
 
 from . import (
@@ -1356,7 +1356,14 @@ class ChownCmd(Subcmd):
         instance, checkout, _rel_path = require_checkout(args, args.path)
         with instance.get_thrift_client_legacy() as client:
             print("Chowning EdenFS repository...", end="", flush=True)
-            client.chown(args.path, uid, gid)
+            try:
+                request = ChangeOwnershipRequest(mountPoint=args.path, uid=uid, gid=gid)
+                client.changeOwnership(request)
+            except thrift.Thrift.TApplicationException as exc:
+                if exc.type == thrift.Thrift.TApplicationException.UNKNOWN_METHOD:
+                    client.chown(args.path, uid, gid)
+                else:
+                    raise exc
             print("done")
 
         if not args.skip_redirection:

@@ -2920,6 +2920,23 @@ folly::SemiFuture<struct folly::Unit> EdenServiceHandler::semifuture_chown(
 #endif // !_WIN32
 }
 
+folly::SemiFuture<std::unique_ptr<ChangeOwnershipResponse>>
+EdenServiceHandler::semifuture_changeOwnership(
+    unique_ptr<ChangeOwnershipRequest> request) {
+#ifndef _WIN32
+  auto handle = lookupMount(*request->mountPoint_ref());
+  return handle.getEdenMount()
+      .chown(*request->uid(), *request->gid())
+      .ensure([handle] {})
+      .thenValue([](folly::Unit&&) {
+        return std::make_unique<ChangeOwnershipResponse>();
+      })
+      .semi();
+#else
+  NOT_IMPLEMENTED();
+#endif // !_WIN32
+}
+
 folly::SemiFuture<std::unique_ptr<GetScmStatusResult>>
 EdenServiceHandler::semifuture_getScmStatusV2(
     unique_ptr<GetScmStatusParams> params) {

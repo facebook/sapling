@@ -205,6 +205,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       int32_t uid,
       int32_t gid) override;
 
+  folly::SemiFuture<std::unique_ptr<ChangeOwnershipResponse>>
+  semifuture_changeOwnership(
+      std::unique_ptr<ChangeOwnershipRequest> request) override;
+
   apache::thrift::ServerStream<JournalPosition> subscribeStreamTemporary(
       std::unique_ptr<std::string> mountPoint) override;
 
