@@ -749,6 +749,20 @@ mononoke_queries! {
     }
 
     // The only difference between mysql and sqlite is the FORCE INDEX
+    read SelectManyChangesetsIdsInIdRange(repo_id: RepositoryId, start_id: u64, end_id: u64, limit: u64) -> (ChangesetId) {
+        mysql("SELECT cs.cs_id
+        FROM commit_graph_edges cs FORCE INDEX(repo_id_id)
+        WHERE cs.repo_id = {repo_id} AND cs.id >= {start_id} AND cs.id <= {end_id}
+        ORDER BY cs.id ASC
+        LIMIT {limit}")
+        sqlite("SELECT cs.cs_id
+        FROM commit_graph_edges cs
+        WHERE cs.repo_id = {repo_id} AND cs.id >= {start_id} AND cs.id <= {end_id}
+        ORDER BY cs.id ASC
+        LIMIT {limit}")
+    }
+
+    // The only difference between mysql and sqlite is the FORCE INDEX
     read SelectMaxIdInRange(repo_id: RepositoryId, start_id: u64, end_id: u64, limit: u64) -> (u64) {
         mysql("SELECT MAX(id)
         FROM (
@@ -1027,6 +1041,13 @@ impl SqlCommitGraphStorage {
 
     // Lower level APIs for quickly iterating over all changeset edges
 
+    fn read_conn(&self, read_from_master: bool) -> &Connection {
+        match read_from_master {
+            true => &self.read_master_connection.conn,
+            false => &self.read_connection.conn,
+        }
+    }
+
     /// Fetch a maximum of `limit` changeset edges for changesets having
     /// auto-increment ids between `start_id` and `end_id`.
     pub async fn fetch_many_edges_in_id_range(
@@ -1035,10 +1056,11 @@ impl SqlCommitGraphStorage {
         start_id: u64,
         end_id: u64,
         limit: u64,
+        read_from_master: bool,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         Ok(Self::collect_changeset_edges(
             &SelectManyChangesetsInIdRange::query(
-                &self.read_connection.conn,
+                self.read_conn(read_from_master),
                 &self.repo_id,
                 &start_id,
                 &end_id,
@@ -1048,28 +1070,52 @@ impl SqlCommitGraphStorage {
         ))
     }
 
+    /// Fetch a maximum of `limit` changeset ids for changesets having
+    /// auto-increment ids between `start_id` and `end_id`.
+    pub async fn fetch_many_cs_ids_in_id_range(
+        &self,
+        ctx: &CoreContext,
+        start_id: u64,
+        end_id: u64,
+        limit: u64,
+        read_from_master: bool,
+    ) -> Result<Vec<ChangesetId>> {
+        Ok(SelectManyChangesetsIdsInIdRange::query(
+            self.read_conn(read_from_master),
+            &self.repo_id,
+            &start_id,
+            &end_id,
+            &limit,
+        )
+        .await?
+        .into_iter()
+        .map(|(cs_id,)| cs_id)
+        .collect())
+    }
+
     /// Returns the maximum auto-increment id for any changeset in the repo,
     /// or `None` if there are no changesets.
-    pub async fn max_id(&self, ctx: &CoreContext) -> Result<Option<u64>> {
+    pub async fn max_id(&self, ctx: &CoreContext, read_from_master: bool) -> Result<Option<u64>> {
         Ok(
-            SelectMaxId::query(&self.read_connection.conn, &self.repo_id)
+            SelectMaxId::query(self.read_conn(read_from_master), &self.repo_id)
                 .await?
                 .first()
                 .map(|(id,)| *id),
         )
     }
 
-    /// Returns the maximum auto-increment id changesets having auto-increment
-    /// ids between `start_id` and `end_id`, or `None` if there are no changesets.
+    /// Returns the maximum auto-increment id of changesets having auto-increment
+    /// ids between `start_id` and `end_id`, or `None` if there are no such changesets.
     pub async fn max_id_in_range(
         &self,
         ctx: &CoreContext,
         start_id: u64,
         end_id: u64,
         limit: u64,
+        read_from_master: bool,
     ) -> Result<Option<u64>> {
         Ok(SelectMaxIdInRange::query(
-            &self.read_connection.conn,
+            self.read_conn(read_from_master),
             &self.repo_id,
             &start_id,
             &end_id,

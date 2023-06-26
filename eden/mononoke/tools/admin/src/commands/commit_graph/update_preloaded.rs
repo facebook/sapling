@@ -70,7 +70,7 @@ async fn try_fetch_chunk(
 ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
     loop {
         match sql_storage
-            .fetch_many_edges_in_id_range(ctx, start_id, end_id, chunk_size)
+            .fetch_many_edges_in_id_range(ctx, start_id, end_id, chunk_size, false)
             .await
         {
             Ok(edges) => return Ok(edges),
@@ -124,7 +124,7 @@ pub(super) async fn update_preloaded(
         .map_or(1, |id| id.saturating_add(1));
     // Query the maximum sql id for this repo only once to avoid tailing
     // new changesets.
-    let end_id = sql_storage.max_id(ctx).await?.unwrap_or(0);
+    let end_id = sql_storage.max_id(ctx, false).await?.unwrap_or(0);
 
     println!(
         "Updating with changesets having sql ids between {} and {} inclusive",
@@ -155,7 +155,7 @@ pub(super) async fn update_preloaded(
         // Query the maximum sql id from the fetched chunk to fetch the next
         // chunks from after it.
         let max_id_in_chunk = sql_storage
-            .max_id_in_range(ctx, start_id, end_id, edges_chunk.len() as u64)
+            .max_id_in_range(ctx, start_id, end_id, edges_chunk.len() as u64, false)
             .await?
             .ok_or_else(|| anyhow!("Chunk is not empty but couldn't find max id"))?;
 
