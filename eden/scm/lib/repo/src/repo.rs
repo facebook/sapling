@@ -29,6 +29,7 @@ use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use repolock::RepoLocker;
+use revisionstore::scmstore;
 use revisionstore::scmstore::FileStoreBuilder;
 use revisionstore::scmstore::TreeStoreBuilder;
 use revisionstore::trait_impls::ArcFileStore;
@@ -75,7 +76,9 @@ pub struct Repo {
     eden_api: Option<Arc<dyn EdenApi>>,
     dag_commits: Option<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
     file_store: Option<Arc<dyn RefreshableReadFileContents<Error = anyhow::Error> + Send + Sync>>,
+    file_scm_store: Option<Arc<scmstore::FileStore>>,
     tree_store: Option<Arc<dyn RefreshableTreeStore + Send + Sync>>,
+    tree_scm_store: Option<Arc<scmstore::TreeStore>>,
     locker: Arc<RepoLocker>,
 }
 
@@ -191,7 +194,9 @@ impl Repo {
             eden_api: None,
             dag_commits: None,
             file_store: None,
+            file_scm_store: None,
             tree_store: None,
+            tree_scm_store: None,
             locker,
         })
     }
@@ -470,12 +475,20 @@ impl Repo {
 
         tracing::trace!(target: "repo::file_store", "building file store");
         let file_store = file_builder.build().context("when building FileStore")?;
-        let fs = Arc::new(ArcFileStore(Arc::new(file_store)));
+
+        let fs = Arc::new(file_store);
+        self.file_scm_store = Some(fs.clone());
+
+        let fs = Arc::new(ArcFileStore(fs));
 
         self.file_store = Some(fs.clone());
         tracing::trace!(target: "repo::file_store", "filestore created");
 
         Ok(fs)
+    }
+
+    pub fn file_scm_store(&self) -> Option<Arc<scmstore::FileStore>> {
+        self.file_scm_store.clone()
     }
 
     pub fn tree_store(&mut self) -> Result<Arc<dyn TreeStore + Send + Sync>> {
@@ -500,8 +513,13 @@ impl Repo {
             tree_builder = tree_builder.override_edenapi(false);
         }
         let ts = Arc::new(tree_builder.build()?);
+        self.tree_scm_store = Some(ts.clone());
         self.tree_store = Some(ts.clone());
         Ok(ts)
+    }
+
+    pub fn tree_scm_store(&self) -> Option<Arc<scmstore::TreeStore>> {
+        self.tree_scm_store.clone()
     }
 
     pub fn tree_resolver(&mut self) -> Result<TreeManifestResolver> {
