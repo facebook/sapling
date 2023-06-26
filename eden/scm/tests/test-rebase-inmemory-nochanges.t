@@ -42,21 +42,12 @@
   rebasing 811ec875201f "b" (b)
   note: rebase of 811ec875201f created no changes to commit
 
-# Without IMM, this behavior is semi-broken: the commit is not rebased out and the
-# created commit is empty. (D8676355)
+# Without IMM, confirm empty commit issue (D8676355) is fixed
 
   $ cd ../without-imm
 
   $ setconfig 'rebase.experimental.inmemory=0'
+  $ setconfig 'copytrace.skipduplicatecopies=True'
   $ hg rebase -r b -d a
   rebasing 811ec875201f "b" (b)
-  warning: can't find ancestor for 'file_new' copied from 'file'!
-
-  $ hg export tip
-  # HG changeset patch
-  # User test
-  # Date 0 0
-  #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 0fe513c05d7fe2819c3ceccb072e74940604af36
-  # Parent  24483d5afe6cb1a13b3642b4d8622e91f4d1bec1
-  b
+  note: rebase of 811ec875201f created no changes to commit

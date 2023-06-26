@@ -927,16 +927,21 @@ def duplicatecopies(repo, wctx, rev, fromrev, skiprev=None):
     skiprev will not be duplicated, even if they appear in the set of
     copies between fromrev and rev.
     """
-    exclude = {}
-    if skiprev is not None and repo.ui.config("experimental", "copytrace") != "off":
-        # copytrace='off' skips this line, but not the entire function because
-        # the line below is O(size of the repo) during a rebase, while the rest
-        # of the function is much faster (and is required for carrying copy
-        # metadata across the rebase anyway).
-        exclude = pathcopies(repo[fromrev], repo[skiprev])
+    dagcopytrace = _get_dagcopytrace(repo, wctx, skiprev)
     for dst, src in pycompat.iteritems(pathcopies(repo[fromrev], repo[rev])):
-        # copies.pathcopies returns backward renames, so dst might not
-        # actually be in the dirstate
-        if dst in exclude:
+        if dagcopytrace and dagcopytrace.trace_rename(
+            repo[skiprev].node(), repo[fromrev].node(), dst
+        ):
             continue
         wctx[dst].markcopied(src)
+
+
+def _get_dagcopytrace(repo, wctx, skiprev):
+    """this is for fixing empty commit issue in non-IMM case"""
+    if (
+        skiprev is None
+        or wctx.isinmemory()
+        or not repo.ui.configbool("copytrace", "skipduplicatecopies")
+    ):
+        return None
+    return repo._dagcopytrace
