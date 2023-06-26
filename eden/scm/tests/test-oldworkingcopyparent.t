@@ -1,4 +1,4 @@
-#chg-compatible
+#debugruntest-compatible
 
   $ configure modernclient
   $ newclientrepo repo

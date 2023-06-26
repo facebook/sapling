@@ -86,6 +86,11 @@ def extsetup(ui):
 
 # Wrappers
 
+# Track pid of _runcommandwrapper caller. This is so we can avoid nested undo
+# activity without unwrapping "runcommand". Unwrapping breaks compatibility with
+# "debugruntest".
+_pid = None
+
 
 def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
     # For chg, do not wrap the "serve" runcommand call. Otherwise everything
@@ -97,9 +102,26 @@ def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
     if "CHGINTERNALMARK" in encoding.environ or cmd == "debugrebuildchangelog":
         return orig(lui, repo, cmd, fullargs, *args)
 
-    # Unwrap _runcommandwrapper so nested "runcommand" (ex. "hg continue")
-    # would work.
-    extensions.unwrapfunction(dispatch, "runcommand", _runcommandwrapper)
+    global _pid
+    pid = util.getpid()
+    if _pid == pid:
+        # Avoid nested undo activity from in-process "runcommand" invocations (e.g. "hg continue").
+        return orig(lui, repo, cmd, fullargs, *args)
+
+    _pid = pid
+
+    _orig = orig
+
+    def origunsetpid(*args, **opts):
+        try:
+            return _orig(*args, **opts)
+        finally:
+            # Unset _pid after command finishes. Further "runcommand"
+            # invocations in this process will use "undo" normally.
+            global _pid
+            _pid = None
+
+    orig = origunsetpid
 
     # For non-repo command, it's unnecessary to go through the undo logic
     if repo is None:

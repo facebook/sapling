@@ -1,4 +1,4 @@
-#chg-compatible
+#debugruntest-compatible
 
   $ eagerepo
   $ configure mutation

@@ -257,7 +257,7 @@ _drawdagcount=0
 drawdag() {
   _drawdagcount=$((_drawdagcount+1))
   local env_path="$TESTTMP/.drawdag-${_drawdagcount}"
-  hg debugdrawdag "$@" --config remotenames.autopullhoistpattern= --no-bookmarks --write-env="$env_path" "$@"
+  hg debugdrawdag --config remotenames.autopullhoistpattern= --no-bookmarks --write-env="$env_path" "$@"
   local _exitcode="$?"
   [[ -f "$env_path" ]] && source "$env_path"
   return $_exitcode
