@@ -33,6 +33,7 @@ use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::CommitGraphEntry;
+use edenapi_types::CommitGraphSegmentsEntry;
 use edenapi_types::CommitHashLookupResponse;
 use edenapi_types::CommitHashToLocationResponse;
 use edenapi_types::CommitKnownResponse;
@@ -316,6 +317,20 @@ pub trait EdenApiPyExt: EdenApi {
     ) -> PyResult<Serde<Vec<CommitGraphEntry>>> {
         let responses = py
             .allow_threads(|| block_unless_interrupted(self.commit_graph(heads, common)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+
+        Ok(Serde(responses))
+    }
+
+    fn commit_graph_segments_py(
+        &self,
+        py: Python,
+        heads: Vec<HgId>,
+        common: Vec<HgId>,
+    ) -> PyResult<Serde<Vec<CommitGraphSegmentsEntry>>> {
+        let responses = py
+            .allow_threads(|| block_unless_interrupted(self.commit_graph_segments(heads, common)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
 

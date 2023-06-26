@@ -19,6 +19,7 @@ use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BookmarkEntry;
 use edenapi_types::CloneData;
 use edenapi_types::CommitGraphEntry;
+use edenapi_types::CommitGraphSegmentsEntry;
 use edenapi_types::CommitHashLookupResponse;
 use edenapi_types::CommitHashToLocationResponse;
 use edenapi_types::CommitId;
@@ -173,6 +174,20 @@ pub trait EdenApi: Send + Sync + 'static {
         heads: Vec<HgId>,
         common: Vec<HgId>,
     ) -> Result<Vec<CommitGraphEntry>, EdenApiError> {
+        let _ = (heads, common);
+        Err(EdenApiError::NotSupported)
+    }
+
+    /// Returns a segmented representation of the part of the commit graph
+    /// consisting of ancestors of `heads`, excluding ancestors of `common`.
+    ///
+    /// If any of the nodes in `heads` and `common` are unknown by the server,
+    /// it should be an error.
+    async fn commit_graph_segments(
+        &self,
+        heads: Vec<HgId>,
+        common: Vec<HgId>,
+    ) -> Result<Vec<CommitGraphSegmentsEntry>, EdenApiError> {
         let _ = (heads, common);
         Err(EdenApiError::NotSupported)
     }

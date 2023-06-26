@@ -31,6 +31,8 @@ use edenapi_types::BookmarkRequest;
 use edenapi_types::CloneData;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitGraphRequest;
+use edenapi_types::CommitGraphSegmentsEntry;
+use edenapi_types::CommitGraphSegmentsRequest;
 use edenapi_types::CommitHashLookupRequest;
 use edenapi_types::CommitHashLookupResponse;
 use edenapi_types::CommitHashToLocationRequestBatch;
@@ -142,6 +144,7 @@ mod paths {
     pub const COMMIT_HASH_TO_LOCATION: &str = "commit/hash_to_location";
     pub const COMMIT_HASH_LOOKUP: &str = "commit/hash_lookup";
     pub const COMMIT_GRAPH_V2: &str = "commit/graph_v2";
+    pub const COMMIT_GRAPH_SEGMENTS: &str = "commit/graph_segments";
     pub const COMMIT_MUTATIONS: &str = "commit/mutations";
     pub const COMMIT_TRANSLATE_ID: &str = "commit/translate_id";
     pub const BOOKMARKS: &str = "bookmarks";
@@ -1008,6 +1011,31 @@ impl EdenApi for Client {
 
         let prog = ProgressBar::register_new("commit graph", 0, "commits fetched");
         self.fetch_vec_with_retry_and_prog::<CommitGraphEntry>(vec![req], prog)
+            .await
+    }
+
+    async fn commit_graph_segments(
+        &self,
+        heads: Vec<HgId>,
+        common: Vec<HgId>,
+    ) -> Result<Vec<CommitGraphSegmentsEntry>, EdenApiError> {
+        tracing::info!(
+            "Requesting commit graph segments with {} heads and {} common",
+            heads.len(),
+            common.len(),
+        );
+        let url = self.build_url(paths::COMMIT_GRAPH_SEGMENTS)?;
+        let graph_req = CommitGraphSegmentsRequest { heads, common };
+        self.log_request(&graph_req, "commit_graph_segments");
+        let wire_graph_req = graph_req.to_wire();
+
+        let req = self
+            .configure_request(self.inner.client.post(url))?
+            .min_transfer_speed(None)
+            .cbor(&wire_graph_req)
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        self.fetch_vec_with_retry::<CommitGraphSegmentsEntry>(vec![req])
             .await
     }
 

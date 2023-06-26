@@ -29,6 +29,7 @@ use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::BlameResult;
 use edenapi_types::CommitGraphEntry;
+use edenapi_types::CommitGraphSegmentsEntry;
 use edenapi_types::CommitHashLookupResponse;
 use edenapi_types::CommitHashToLocationResponse;
 use edenapi_types::CommitId;
@@ -276,6 +277,13 @@ py_class!(pub class client |py| {
         -> PyResult<Serde<Vec<CommitGraphEntry>>>
     {
         self.inner(py).as_ref().commit_graph2_py(py, heads.0, common.0)
+    }
+
+    /// commitgraphsegments(heads: [bytes], common: [bytes]) -> [{'head': bytes, 'base': bytes, 'parents': [bytes]}]
+    def commitgraphsegments(&self, heads: Serde<Vec<HgId>>, common: Serde<Vec<HgId>>)
+        -> PyResult<Serde<Vec<CommitGraphSegmentsEntry>>>
+    {
+        self.inner(py).as_ref().commit_graph_segments_py(py, heads.0, common.0)
     }
 
     /// clonedata() -> PyCell
