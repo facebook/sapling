@@ -219,11 +219,34 @@ impl FetchState {
         Ok(LazyFile::IndexedLog(mmap_entry))
     }
 
-    fn found_indexedlog(&mut self, key: Key, entry: Entry, typ: StoreType) {
+    fn found_indexedlog(
+        &mut self,
+        key: Key,
+        entry: Entry,
+        typ: StoreType,
+        lfs_store: Option<&LfsStore>,
+    ) {
         if entry.metadata().is_lfs() && self.lfs_enabled {
             if self.extstored_policy == ExtStoredPolicy::Use {
                 match entry.try_into() {
-                    Ok(ptr) => self.found_pointer(key, ptr, typ, true),
+                    Ok(ptr) => {
+                        if let Some(lfs_store) = lfs_store {
+                            // Promote this indexedlog LFS pointer to the
+                            // pointer store if it isn't already present. This
+                            // should only happen when the Python LFS extension
+                            // is in play.
+                            if let Ok(None) = lfs_store.fetch_available(&key.clone().into()) {
+                                if let Err(err) = lfs_store.add_pointer(ptr) {
+                                    self.errors.keyed_error(key, err);
+                                }
+                            }
+                        } else {
+                            // If we don't have somewhere to upgrade pointer,
+                            // track as a "found" pointer so it will be fetched
+                            // from the remote store subsequently.
+                            self.found_pointer(key, ptr, typ, true)
+                        }
+                    }
                     Err(err) => self.errors.keyed_error(key, err),
                 }
             }
@@ -232,7 +255,12 @@ impl FetchState {
         }
     }
 
-    pub(crate) fn fetch_indexedlog(&mut self, store: &IndexedLogHgIdDataStore, typ: StoreType) {
+    pub(crate) fn fetch_indexedlog(
+        &mut self,
+        store: &IndexedLogHgIdDataStore,
+        lfs_store: Option<&LfsStore>,
+        typ: StoreType,
+    ) {
         let pending = self.pending_nonlfs(FileAttributes::CONTENT);
         if pending.is_empty() {
             return;
@@ -263,7 +291,7 @@ impl FetchState {
                 Ok(Some(entry)) => {
                     self.metrics.indexedlog.store(typ).hit(1);
                     found += 1;
-                    self.found_indexedlog(key, entry, typ)
+                    self.found_indexedlog(key, entry, typ, lfs_store)
                 }
                 Ok(None) => {
                     self.metrics.indexedlog.store(typ).miss(1);

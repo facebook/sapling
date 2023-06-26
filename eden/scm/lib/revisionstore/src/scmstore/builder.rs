@@ -139,20 +139,12 @@ impl<'a> FileStoreBuilder<'a> {
     }
 
     fn get_extstored_policy(&self) -> Result<ExtStoredPolicy> {
-        let enable_lfs = self.config.get_or_default::<bool>("remotefilelog", "lfs")?;
-        let extstored_policy = if enable_lfs {
-            if self
-                .config
-                .get_or_default::<bool>("remotefilelog", "useextstored")?
-            {
-                ExtStoredPolicy::Use
-            } else {
-                ExtStoredPolicy::Ignore
-            }
-        } else {
-            ExtStoredPolicy::Use
-        };
-        Ok(extstored_policy)
+        // This is to keep compatibility w/ the Python lfs extension.
+        // Contentstore would "upgrade" Python LFS pointers from the pack store
+        // to indexedlog store during repack, but scmstore doesn't have a repack
+        // notion. It doesn't seem bad to just always allow LFS pointers stored
+        // in the non-LFS pointer storage.
+        Ok(ExtStoredPolicy::Use)
     }
 
     fn get_lfs_threshold(&self) -> Result<Option<ByteCount>> {

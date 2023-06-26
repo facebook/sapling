@@ -180,11 +180,19 @@ impl FileStore {
             }
 
             if let Some(ref indexedlog_cache) = indexedlog_cache {
-                state.fetch_indexedlog(indexedlog_cache, StoreType::Shared);
+                state.fetch_indexedlog(
+                    indexedlog_cache,
+                    lfs_cache.as_ref().map(|v| v.as_ref()),
+                    StoreType::Shared,
+                );
             }
 
             if let Some(ref indexedlog_local) = indexedlog_local {
-                state.fetch_indexedlog(indexedlog_local, StoreType::Local);
+                state.fetch_indexedlog(
+                    indexedlog_local,
+                    lfs_local.as_ref().map(|v| v.as_ref()),
+                    StoreType::Local,
+                );
             }
 
             if let Some(ref lfs_cache) = lfs_cache {
