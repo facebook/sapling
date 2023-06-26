@@ -33,13 +33,17 @@ use slog::o;
 
 /// Updates segmented changelog assets
 #[derive(Parser)]
+// `MultiRepoArgs` fields conflict with `repo_names` (`--repo`).
+// See https://github.com/clap-rs/clap/issues/3269 for why this is the only implementation.
+#[clap(mut_arg("repo_id", |a| a.conflicts_with("repo_names")))]
+#[clap(mut_arg("repo_name", |a| a.conflicts_with("repo_names")))]
 struct SegmentedChangelogTailerArgs {
     /// Repository to warm-up
     #[clap(flatten)]
     repos: MultiRepoArgs,
     /// Repository name to warm-up. Deprecated, use --repo-name/--repo-id instead
     // Deprecated, use repos instead
-    #[clap(long = "repo")]
+    #[clap(long = "repo", conflicts_with_all = ["repo_id", "repo_name"])]
     repo_names: Vec<String>,
     /// When set, the tailer will perform a single incremental build run. If no previous version exists it will perform full reseed instead
     #[clap(long)]

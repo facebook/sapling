@@ -190,7 +190,6 @@ repo_args_optional!(
 #[clap(group(
     ArgGroup::new("multirepos")
         .multiple(true)
-        .conflicts_with("repo")
         .args(&["repo_id", "repo_name"]),
 ))]
 pub struct MultiRepoArgs {
