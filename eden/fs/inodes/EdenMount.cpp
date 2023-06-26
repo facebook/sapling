@@ -1627,21 +1627,25 @@ ImmediateFuture<folly::Unit> EdenMount::flushInvalidations() {
 
 #ifndef _WIN32
 ImmediateFuture<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
-  // 1) Ensure we are running in a fuse mount
-  auto fuseChannel = getFuseChannel();
+  // 1) Ensure we are running in either a fuse or nfs mount
+  Nfsd3* nfsChannel = nullptr;
+  FuseChannel* fuseChannel = getFuseChannel();
   if (!fuseChannel) {
-    return makeFuture<Unit>(newEdenError(
-        EdenErrorType::GENERIC_ERROR,
-        "chown is not currently implemented for NFS mounts"));
+    nfsChannel = getNfsdChannel();
+    if (!nfsChannel) {
+      return makeFuture<Unit>(newEdenError(
+          EdenErrorType::GENERIC_ERROR,
+          "chown is currently implemented for FUSE and NFS mounts only"));
+    }
   }
 
   // 2) Ensure that all future opens will by default provide this owner
   setOwner(uid, gid);
 
   // 3) Modify all uids/gids of files stored in the overlay
-  auto metadata = getInodeMetadataTable();
-  XDCHECK(metadata) << "Unexpected null Metadata Table";
-  metadata->forEachModify([&](auto& /* unusued */, auto& record) {
+  auto metadataTable = getInodeMetadataTable();
+  XDCHECK(metadataTable) << "Unexpected null Metadata Table";
+  metadataTable->forEachModify([&](auto& /* unusued */, auto& record) {
     record.uid = uid;
     record.gid = gid;
   });
@@ -1651,10 +1655,48 @@ ImmediateFuture<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
   // consistent with the behavior of chown
 
   // 4) Invalidate all inodes that the kernel holds a reference to
-  auto inodesToInvalidate = getInodeMap()->getReferencedInodes();
-  fuseChannel->invalidateInodes(folly::range(inodesToInvalidate));
+  auto inodeMap = getInodeMap();
+  auto inodesToInvalidate = inodeMap->getReferencedInodes();
+  if (fuseChannel) {
+    fuseChannel->invalidateInodes(folly::range(inodesToInvalidate));
+    return fuseChannel->completeInvalidations();
+  } else {
+    // Load all Inodes - there should only be a few
+    // as chown is called primarily in Sandcastle workflows
+    // where the repo has just been cloned.
+    std::vector<ImmediateFuture<InodePtr>> futures;
+    futures.reserve(inodesToInvalidate.size());
+    for (const auto& ino : inodesToInvalidate) {
+      futures.emplace_back(inodeMap->lookupInode(ino));
+    }
 
-  return fuseChannel->completeInvalidations();
+    return collectAllSafe(std::move(futures))
+        .thenValue([this, nfsChannel, metadataTable](auto&& inodes) {
+          auto renameLock = acquireRenameLock();
+          auto root = getPath();
+
+          std::vector<std::pair<AbsolutePath, mode_t>> pathsAndModes;
+          for (auto& inode : inodes) {
+            auto metadata = metadataTable->getOptional(inode->getNodeId());
+            if (!metadata.has_value()) {
+              XLOGF(
+                  WARNING,
+                  "Inode ({}) not found in metadata table",
+                  inode->getNodeId());
+              continue;
+            }
+
+            auto path = inode->getPath();
+            if (path.has_value()) {
+              pathsAndModes.emplace_back(
+                  root + path.value(), metadata.value().mode);
+            }
+          }
+
+          nfsChannel->invalidateInodes(std::move(pathsAndModes));
+          return nfsChannel->completeInvalidations();
+        });
+  }
 }
 #endif
 

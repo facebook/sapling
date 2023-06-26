@@ -192,6 +192,18 @@ class Nfsd3 final : public FsChannel {
     return folly::unit;
   }
 
+  /*
+   * Request that the kernel invalidate its cached data for the specified
+   * paths+modes.
+   *
+   * This operation is performed asynchronously.  flushInvalidations() can be
+   * called if you need to determine when this operation has completed.
+   *
+   * @param pathsAndModes a vector of each inodes path and mode to invalidate.
+   */
+  void invalidateInodes(
+      const std::vector<std::pair<AbsolutePath, mode_t>>& pathsAndModes);
+
   /**
    * Wait for all pending invalidation to complete.
    *

@@ -2084,6 +2084,13 @@ uint32_t Nfsd3::getProgramVersion() {
   return kNfsd3ProgVersion;
 }
 
+void Nfsd3::invalidateInodes(
+    const std::vector<std::pair<AbsolutePath, mode_t>>& pathsAndModes) {
+  for (auto& pathAndMode : pathsAndModes) {
+    invalidate(pathAndMode.first, pathAndMode.second);
+  }
+}
+
 ImmediateFuture<folly::Unit> Nfsd3::completeInvalidations() {
   folly::Promise<folly::Unit> promise;
   auto result = promise.getFuture();
