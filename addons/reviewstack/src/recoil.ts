@@ -35,7 +35,6 @@ import type {
   VersionCommit,
 } from './github/types';
 import type {LineToPosition} from './lineToPosition';
-import type {SaplingPullRequestBody} from './saplingStack';
 import type {RecoilValueReadOnly} from 'recoil';
 
 import {lineToPosition} from './diffServiceClient';
@@ -289,64 +288,12 @@ export const gitHubPullRequestCommitBaseParent = selectorFamily<
     },
 });
 
-/**
- * If we are at the bottom PR in a Sapling stack, we can generally treat it
- * like any other pull request.
- */
-function isBottomOfSaplingStack(saplingStack: SaplingPullRequestBody): boolean {
-  const index = saplingStack.currentStackEntry;
-  // saplingStack.stack has the top of the stack at the front of the array.
-  return index === saplingStack.stack.length - 1;
-}
-
 export const gitHubPullRequestVersions = selector<Version[]>({
   key: 'gitHubPullRequestVersions',
   get: ({get}) => {
     const [forcePushes, commits] = get(
       waitForAll([gitHubPullRequestForcePushes, gitHubPullRequestCommits]),
     );
-
-    // For now, we special-case Sapling and ignore versions for the moment.
-    const stackedPR = get(stackedPullRequest);
-    if (stackedPR.type === 'sapling' && !isBottomOfSaplingStack(stackedPR.body)) {
-      const fragments = get(stackedPullRequestFragments);
-      if (fragments.length !== stackedPR.body.stack.length) {
-        // This is unexpected: bail out.
-        return [];
-      }
-
-      const index = stackedPR.body.currentStackEntry;
-      const parentFragment = fragments[index + 1];
-
-      const saplingStack = stackedPR.body;
-      const {numCommits} = saplingStack.stack[saplingStack.currentStackEntry];
-      // We need to separate the commits that were designed to be part of this
-      // PR from the ones below in the stack.
-      const commitFragmentsForPR = commits.slice(commits.length - numCommits);
-
-      // Find gitHubCommit() for each.
-      const commitsForPR = get(
-        waitForAll(commitFragmentsForPR.map(c => gitHubCommit(c.oid))),
-      ) as Commit[];
-      const versionCommits = commitsForPR.map(c => ({
-        author: null,
-        commit: c.oid,
-        committedDate: c.committedDate,
-        title: c.messageHeadline,
-        parents: c.parents,
-      }));
-
-      const headCommit = commitsForPR[commitsForPR.length - 1];
-      return [
-        {
-          headCommit: headCommit.oid,
-          headCommittedDate: headCommit.committedDate,
-          baseParent: parentFragment.headRefOid,
-          baseParentCommittedDate: null,
-          commits: versionCommits,
-        },
-      ];
-    }
 
     // The "before" commit should represent the head of the latest version of
     // the PR immediately prior to the force push.
@@ -360,6 +307,101 @@ export const gitHubPullRequestVersions = selector<Version[]>({
     const latestCommit = commits[commits.length - 1];
     if (latestCommit != null) {
       versions.push(latestCommit);
+    }
+
+    // For now, we special-case Sapling stacks as each version may contain more
+    // than one commit.
+    const stackedPR = get(stackedPullRequest);
+    if (stackedPR.type === 'sapling') {
+      const fragments = get(stackedPullRequestFragments);
+      if (fragments.length !== stackedPR.body.stack.length) {
+        // This is unexpected: bail out.
+        return [];
+      }
+      versions.reverse();
+
+      const index = stackedPR.body.currentStackEntry;
+      const parentFragment = fragments[index + 1];
+
+      const saplingStack = stackedPR.body;
+
+      let cumulativeCommits = 0;
+      let previous = commits.length;
+
+      const pr_versions = versions.map(version => {
+        const {numCommits} = saplingStack.stack[saplingStack.currentStackEntry];
+        cumulativeCommits += numCommits;
+
+        // We need to separate the commits that were designed to be part of this
+        // PR from the ones below in the stack.
+        const start = commits.length - cumulativeCommits;
+        const commitFragmentsForPRVersion = commits.slice(start, previous);
+        previous = start;
+
+        // Find gitHubCommit() for each.
+        const commitsForPRVersion = get(
+          waitForAll(commitFragmentsForPRVersion.map(c => gitHubCommit(c.oid))),
+        ) as Commit[];
+
+        const versionCommits = [];
+        for (let i = 0; i < forcePushes.length; i++) {
+          const f = forcePushes[i];
+          if (f.beforeCommit === version.oid) {
+            break;
+          }
+          versionCommits.push({
+            author: null,
+            commit: f.beforeCommit,
+            committedDate: f.beforeCommittedDate,
+            title: 'Version ' + (i + 1),
+            parents: f.beforeParents,
+          });
+        }
+
+        commitsForPRVersion.forEach(c =>
+          versionCommits.push({
+            author: null,
+            commit: c.oid,
+            committedDate: c.committedDate,
+            title: c.messageHeadline,
+            parents: c.parents,
+          }),
+        );
+
+        let headCommittedDate = null;
+        const headCommit = commitsForPRVersion[commitsForPRVersion.length - 1];
+        if (headCommit == null) {
+          headCommittedDate = latestCommit.committedDate;
+        } else {
+          headCommittedDate = headCommit.committedDate;
+        }
+
+        let baseParent = null;
+        let baseParentCommittedDate = null;
+        if (parentFragment == null) {
+          // the first PR in stack case
+          if (commitsForPRVersion.length > 0) {
+            baseParent = commitsForPRVersion[0].parents[0];
+          } else if (forcePushes.length > 0) {
+            baseParent = forcePushes[0].beforeParents[0];
+            baseParentCommittedDate = forcePushes[0].beforeCommittedDate;
+          }
+        } else {
+          // the not first PR in stack case
+          baseParent = parentFragment.headRefOid;
+        }
+
+        return {
+          headCommit: version.oid,
+          headCommittedDate,
+          baseParent,
+          baseParentCommittedDate,
+          commits: versionCommits,
+        };
+      });
+
+      pr_versions.reverse();
+      return pr_versions;
     }
 
     // Get the base parent and all commits for each version branch.
@@ -836,26 +878,6 @@ export const gitHubPullRequestSelectedVersionCommits = selector<VersionCommit[]>
 export const gitHubPullRequestVersionDiff = selector<DiffWithCommitIDs | null>({
   key: 'gitHubPullRequestVersionDiff',
   get: ({get}) => {
-    // For now, we special-case Sapling and ignore versions for the moment.
-    const stackedPR = get(stackedPullRequest);
-    if (stackedPR.type === 'sapling' && !isBottomOfSaplingStack(stackedPR.body)) {
-      const fragments = get(stackedPullRequestFragments);
-      if (fragments.length !== stackedPR.body.stack.length) {
-        // This is unexpected: bail out.
-        return null;
-      }
-
-      const {currentStackEntry: index} = stackedPR.body;
-      const commitID = fragments[index].headRefOid;
-      const baseCommitID = fragments[index + 1].headRefOid;
-      return get(
-        gitHubDiffForCommits({
-          baseCommitID,
-          commitID,
-        }),
-      );
-    }
-
     const [client, comparableVersions] = get(
       waitForAll([gitHubClient, gitHubPullRequestComparableVersions]),
     );
