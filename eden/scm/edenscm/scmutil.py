@@ -58,15 +58,26 @@ class status(tuple):
     and 'ignored' properties are only relevant to the working copy.
     """
 
-    __slots__ = ()
+    def __new__(
+        cls,
+        modified,
+        added,
+        removed,
+        deleted,
+        unknown,
+        ignored,
+        clean,
+        invalid_path=None,
+    ):
 
-    def __new__(cls, modified, added, removed, deleted, unknown, ignored, clean):
         for files in (modified, added, removed, deleted, unknown, ignored, clean):
             assert all(isinstance(f, str) for f in files)
 
-        return tuple.__new__(
+        self = super().__new__(
             cls, (modified, added, removed, deleted, unknown, ignored, clean)
         )
+        self.invalid_path = invalid_path or []
+        return self
 
     @property
     def modified(self):
@@ -279,6 +290,7 @@ def callcatch(ui, req, func):
         ui.warn(_("(try '@prog@ doctor' to attempt to fix it)\n"))
     except (
         error.ConfigError,
+        error.InvalidRepoPath,
         error.NonUTF8PathError,
         error.RepoInitError,
         error.WorkingCopyError,

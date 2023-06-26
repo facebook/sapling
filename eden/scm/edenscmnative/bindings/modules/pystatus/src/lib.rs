@@ -99,9 +99,24 @@ pub fn to_python_status(py: Python, status: &Status) -> PyResult<PyObject> {
         list.append(py, pypath.into_py_object(py).into_object());
     }
 
+    let invalid_path: Vec<String> = status
+        .invalid_path()
+        .iter()
+        .map(|p| util::utf8::escape_non_utf8(p))
+        .collect();
+
     // Create the Python-native status object.
     let scmutil_module = py.import("edenscm.scmutil")?;
     let status_class = scmutil_module.get(py, "status")?;
-    let lists = (modified, added, removed, deleted, unknown, ignored, clean);
+    let lists = (
+        modified,
+        added,
+        removed,
+        deleted,
+        unknown,
+        ignored,
+        clean,
+        invalid_path.to_py_object(py),
+    );
     status_class.call(py, lists, None)
 }

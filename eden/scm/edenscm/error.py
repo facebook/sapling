@@ -32,6 +32,7 @@ ConfigError = bindings.error.ConfigError
 FetchError = bindings.error.FetchError
 HttpError = bindings.error.HttpError
 IndexedLogError = bindings.error.IndexedLogError
+InvalidRepoPath = bindings.error.InvalidRepoPath
 LockContendedError = bindings.error.LockContendedError
 MetaLogError = bindings.error.MetaLogError
 NeedSlowPathError = bindings.error.NeedSlowPathError

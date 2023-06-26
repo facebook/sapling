@@ -239,7 +239,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
     let mut lgr = ctx.logger();
     for invalid in status.invalid_path() {
         lgr.warn(format!(
-            "skipping invalid utf-8 filename: '{}'",
+            "skipping invalid filename: '{}'",
             util::utf8::escape_non_utf8(invalid)
         ));
     }

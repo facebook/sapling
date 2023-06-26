@@ -14,6 +14,7 @@ py_exception!(error, ConfigError);
 py_exception!(error, FetchError, exc::KeyError);
 py_exception!(error, HttpError);
 py_exception!(error, IndexedLogError);
+py_exception!(error, InvalidRepoPath);
 py_exception!(error, LockContendedError);
 py_exception!(error, MetaLogError);
 py_exception!(error, NeedSlowPathError);
@@ -32,6 +33,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "FetchError", py.get_type::<FetchError>())?;
     m.add(py, "HttpError", py.get_type::<HttpError>())?;
     m.add(py, "IndexedLogError", py.get_type::<IndexedLogError>())?;
+    m.add(py, "InvalidRepoPath", py.get_type::<InvalidRepoPath>())?;
     m.add(
         py,
         "LockContendedError",
@@ -172,6 +174,11 @@ fn register_error_handlers() {
             ))
         } else if e.is::<cpython_ext::Error>() {
             Some(PyErr::new::<NonUTF8Path, _>(
+                py,
+                cpython_ext::Str::from(format!("{:?}", e)),
+            ))
+        } else if e.is::<types::path::ParseError>() {
+            Some(PyErr::new::<InvalidRepoPath, _>(
                 py,
                 cpython_ext::Str::from(format!("{:?}", e)),
             ))

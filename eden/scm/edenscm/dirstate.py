@@ -964,6 +964,9 @@ class dirstate(object):
         if not unknown:
             status.unknown.clear()
 
+        for invalid in status.invalid_path:
+            self._ui.warn(_("skipping invalid path %r\n") % invalid)
+
         self._add_clean_and_trigger_bad_matches(
             match, status, self._repo[None].p1(), clean
         )

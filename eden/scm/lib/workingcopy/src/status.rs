@@ -77,10 +77,22 @@ pub fn compute_status(
 
                 let e = match e.downcast::<WalkError>() {
                     Ok(walk_err) => {
-                        if let WalkError::InvalidFileType(path) = walk_err {
-                            invalid_type.push(path);
-                            continue;
+                        match walk_err {
+                            WalkError::InvalidFileType(path) => {
+                                invalid_type.push(path);
+                                continue;
+                            }
+                            WalkError::RepoPathError(_, err) => {
+                                invalid_path.push(err.into_path_bytes());
+                                continue;
+                            }
+                            WalkError::FsUtf8Error(path) => {
+                                invalid_path.push(path.into_bytes());
+                                continue;
+                            }
+                            _ => {}
                         }
+
                         walk_err.into()
                     }
                     Err(e) => e,
