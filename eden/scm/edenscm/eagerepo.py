@@ -95,7 +95,38 @@ class eagerfilelog(object):
         return self._get_content(node)
 
     def commonancestorsheads(self, a, b):
-        return list(ancestor.commonancestorsheads(self.parents, a, b))
+        # Super stupid implementation just to get copytracing not
+        # crashing. It may not be correct.
+        if a == nullid or b == nullid:
+            return nullid
+
+        def _child_map(node, ancs=None):
+            # Build map of {node: children}
+            if ancs is None:
+                ancs = {}
+            if node not in ancs:
+                ancs[node] = []
+            for p in self.parents(node):
+                if p == nullid:
+                    continue
+                if p not in ancs:
+                    ancs[p] = []
+                ancs[p].append(node)
+                _child_map(p, ancs)
+            return ancs
+
+        a_ancs = _child_map(a)
+        b_ancs = _child_map(b)
+
+        # Reduce to map of common nodes.
+        common = {n: c for (n, c) in a_ancs.items() if n in b_ancs}
+
+        # Remove children entries that aren't common ancestors.
+        for n in common:
+            common[n] = [c for c in common[n] if c in common]
+
+        # Common heads are any common node with no common children.
+        return {n for n in common if not common[n]}
 
     def _get_sha1_blob(self, node):
         """get the SHA1 prefixed (sorted([p1, p2])) content"""

@@ -165,7 +165,7 @@ Test multiple parents
   $ echo a > a && hg add a && hg commit -m a
   $ hg merge 'desc(r5)' -q && hg commit -m merge
   $ showgraph
-  @    e558e738a45f merge
+  @    55f23eb33584 merge
   ├─╮
   │ o  8305126fd490 a
   │ │
@@ -181,7 +181,7 @@ Test multiple parents
   │
   o  fdaccbb26270 r0
   $ hg previous
-  changeset e558e738a45f has multiple parents, namely:
+  changeset 55f23eb33584 has multiple parents, namely:
   [f2987e] (top) r5
   [830512] a
   abort: ambiguous previous changeset
@@ -190,7 +190,7 @@ Test multiple parents
   $ hg --config ui.interactive=true previous 3 <<EOF
   > 1
   > EOF
-  changeset e558e738a45f has multiple parents, namely:
+  changeset 55f23eb33584 has multiple parents, namely:
   (1) [f2987e] (top) r5
   (2) [830512] a
   which changeset to move to [1-2/(c)ancel]?  1
@@ -200,7 +200,7 @@ Test multiple parents
   $ hg --config ui.interactive=true previous 3 <<EOF
   > 2
   > EOF
-  changeset e558e738a45f has multiple parents, namely:
+  changeset 55f23eb33584 has multiple parents, namely:
   (1) [f2987e] (top) r5
   (2) [830512] a
   which changeset to move to [1-2/(c)ancel]?  2

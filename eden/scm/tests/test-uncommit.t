@@ -395,7 +395,7 @@ Add and expect uncommit to fail on both merge working dir and merge changeset
 
   $ hg status
   $ hg log -G -T '{node} {desc}' --hidden
-  @    5ea672be68aacdb668a7d1ae7b953aee43045e53 merge a and b
+  @    c03b9c37bc67bf504d4912061cfb527b47a63c6e merge a and b
   ├─╮
   │ o  2cd56cdde163ded2fbb16ba2f918c96046ab0bf2 b 3
   │ │
