@@ -1,6 +1,6 @@
 #chg-compatible
   $ setconfig experimental.allowfilepeer=True
-
+  $ setconfig workingcopy.ruststatus=False
 
   $ . "$TESTDIR/library.sh"
 
