@@ -606,7 +606,6 @@ httpcommitlookup=True
 
 [scmstore]
 backingstore=True
-enableshim=True
 contentstorefallback=False
 lfsptrwrites=True
 auxindexedlog=True

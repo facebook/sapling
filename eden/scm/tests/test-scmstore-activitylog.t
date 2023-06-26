@@ -3,7 +3,6 @@
 
   $ newserver server
   $ newremoterepo
-  $ setconfig scmstore.enableshim=True
 
   $ echo c > f
   $ hg ci -A -m 0 -q

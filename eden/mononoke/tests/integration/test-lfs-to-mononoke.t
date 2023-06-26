@@ -6,9 +6,6 @@
 
   $ CACHEDIR=$PWD/cachepath
   $ . "${TEST_FIXTURES}/library.sh"
-# scmstore shim disabled due to test's reliance on pack files
-  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False scmstore.enableshim=False
-
 
 Setup repo config (we use blob_files to share across Mononoke and API Server):
   $ LFS_THRESHOLD="1000" setup_common_config "blob_files"
@@ -187,11 +184,17 @@ Change "sha256:oid" to an another valid oid to check sha1 consisnency
   $ echo "${LONG}inconsistent" > inconsistent_file
   $ hg commit -Aqm "hash check"
 
-  $ PACK_TO_CORRUPT=".hg/store/packs/53030272778e08be8e520a61c0848183520e58ba.datapack"
-  $ chmod 666 "$PACK_TO_CORRUPT"
-  $ sed -i s/sha256:f79cf994214182953d15cd20b2a92731052ddc9a02f4c60518dc78d7a005cca9/sha256:e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d/ "$PACK_TO_CORRUPT"
+Corrupt file contents via an extension:
+  $ cat > $TESTTMP/corrupt.py <<EOF
+  > def _revision(orig, rfl, node, raw=False):
+  >     return orig(rfl, node, raw).replace(b"sha256:f79cf994214182953d15cd20b2a92731052ddc9a02f4c60518dc78d7a005cca9", b"sha256:e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d")
+  > from edenscm import extensions
+  > from edenscm.ext import remotefilelog
+  > def uisetup(ui):
+  >     extensions.wrapfunction(remotefilelog.remotefilelog.remotefilelog, "revision", _revision)
+  > EOF
 
-  $ hgmn push -r . --to master_bookmark -v
+  $ hgmn push -r . --to master_bookmark -v --config extensions.corrupt=$TESTTMP/corrupt.py
   pushing rev 77f499cb0645 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   validated revset for rebase

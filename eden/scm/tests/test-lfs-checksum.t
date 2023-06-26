@@ -2,7 +2,7 @@
   $ setconfig experimental.allowfilepeer=True
 
   $ enable lfs remotefilelog
-  $ setconfig lfs.url=file://$TESTTMP/cache lfs.threshold=1 remotefilelog.cachepath=$TESTTMP/rflcache scmstore.enableshim=False
+  $ setconfig lfs.url=file://$TESTTMP/cache lfs.threshold=1 remotefilelog.cachepath=$TESTTMP/rflcache
 
 Write a LFS file to the repo
 

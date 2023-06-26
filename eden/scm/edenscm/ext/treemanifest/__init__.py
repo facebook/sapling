@@ -601,10 +601,7 @@ class basetreemanifestlog(object):
                 "manifests",
                 correlator=correlator,
             )
-            if self._repo.ui.configbool("scmstore", "enableshim"):
-                self.datastore = self.treescmstore
-            else:
-                self.datastore = self.treescmstore.get_contentstore()
+            self.datastore = self.treescmstore
             self.historystore = revisionstore.metadatastore(
                 self._repo.svfs.vfs.base,
                 self.ui._rcfg,

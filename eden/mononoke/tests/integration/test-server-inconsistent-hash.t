@@ -50,18 +50,20 @@
   $ echo "hello_world" > file
   $ hg commit -Aqm "commit"
 
-# remotefilelog is True, so reference to filenodes are by hashes (SHA1)
-  $ PACK_TO_CORRUPT=".hg/store/packs/dee3d9750ad87ede865d69e20330c34e51ec83d5.datapack"
-# change access to file, as it is readonly
-  $ chmod 666 "$PACK_TO_CORRUPT"
-  $ sed -i s/hello_world/aaaaaaaaaaa/ "$PACK_TO_CORRUPT"
-# TODO(meyer): Corrupt indexedlog instead and disable integrity checks
-#  $ chmod 666 .hg/store/indexedlogdatastore/log
-#  $ sed -i s/hello_world/aaaaaaaaaaa/ .hg/store/indexedlogdatastore/log
+Corrupt file contents via an extension:
+  $ cat > $TESTTMP/corrupt.py <<EOF
+  > def _revision(orig, rfl, node, raw=False):
+  >     return orig(rfl, node, raw).replace(b"hello_world", b"aaaaaaaaaaa")
+  > from edenscm import extensions
+  > from edenscm.ext import remotefilelog
+  > def uisetup(ui):
+  >     extensions.wrapfunction(remotefilelog.remotefilelog.remotefilelog, "revision", _revision)
+  > EOF
+
 
 Do a push, but disable cache verification on the client side, otherwise
 filenode won't be send at all
-  $ hgmn push -r . --to master_bookmark -v --config remotefilelog.validatecachehashes=False
+  $ hgmn push -r . --to master_bookmark -v --config remotefilelog.validatecachehashes=False --config extensions.corrupt=$TESTTMP/corrupt.py
   pushing rev cb67355f2348 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   validated revset for rebase

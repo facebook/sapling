@@ -580,24 +580,14 @@ class remotefileslog(filelog.fileslog):
 
         mask = os.umask(0o002)
         try:
-            if repo.ui.configbool("scmstore", "enableshim"):
-                sharedonlycontentstore = revisionstore.filescmstore(
-                    None,
-                    repo.ui._rcfg,
-                    sharedonlyremotestore,
-                    memcachestore,
-                    edenapistore,
-                    correlator=correlator,
-                )
-            else:
-                sharedonlycontentstore = revisionstore.contentstore(
-                    None,
-                    repo.ui._rcfg,
-                    sharedonlyremotestore,
-                    memcachestore,
-                    edenapistore,
-                    correlator=correlator,
-                )
+            sharedonlycontentstore = revisionstore.filescmstore(
+                None,
+                repo.ui._rcfg,
+                sharedonlyremotestore,
+                memcachestore,
+                edenapistore,
+                correlator=correlator,
+            )
             sharedonlymetadatastore = revisionstore.metadatastore(
                 None,
                 repo.ui._rcfg,
@@ -628,10 +618,7 @@ class remotefileslog(filelog.fileslog):
                 edenapistore,
                 correlator=correlator,
             )
-            if repo.ui.configbool("scmstore", "enableshim"):
-                self.contentstore = self.filescmstore
-            else:
-                self.contentstore = self.filescmstore.get_contentstore()
+            self.contentstore = self.filescmstore
             self.metadatastore = revisionstore.metadatastore(
                 repo.svfs.vfs.base,
                 repo.ui._rcfg,

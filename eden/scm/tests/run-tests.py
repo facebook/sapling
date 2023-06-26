@@ -1584,7 +1584,6 @@ class Test(unittest.TestCase):
         content = default_hgrc.get_content(
             use_watchman=self._watchman,
             use_ipv6=self._useipv6,
-            is_run_tests_py=True,
         )
         with open(path, "w") as hgrc:
             hgrc.write(content)

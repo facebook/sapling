@@ -3,9 +3,7 @@ Default config file for testing
 """
 
 
-def get_content(
-    use_watchman: bool = False, use_ipv6: bool = False, is_run_tests_py: bool = False
-) -> str:
+def get_content(use_watchman: bool = False, use_ipv6: bool = False) -> str:
     content = f"""
 [ui]
 slash=True
@@ -55,6 +53,9 @@ record=False
 
 [hint]
 ack-match-full-traversal=True
+
+[scmstore]
+contentstorefallback=True
 """
     if use_watchman:
         content += """
@@ -63,15 +64,6 @@ fsmonitor=
 
 [fsmonitor]
 detectrace=True
-"""
-
-    # Extra configs for run-tests.py.
-    # For compatibility. Ideally this does not exist.
-    if is_run_tests_py:
-        content += """
-[scmstore]
-enableshim=True
-contentstorefallback=True
 """
 
     return content

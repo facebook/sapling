@@ -6,10 +6,6 @@
 
   $ CACHEDIR=$PWD/cachepath
   $ . "${TEST_FIXTURES}/library.sh"
-# Disable scmstore because this tests specifically legacy LFS
-# TODO(meyer): Not removing because I think we should be able to make this work as it does with
-# remotefilelog only.
-  $ setconfig scmstore.enableshim=False
 
 # Setup a repository config, with LFS enabled
   $ LFS_THRESHOLD=1000 setup_common_config
