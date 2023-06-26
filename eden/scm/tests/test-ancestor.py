@@ -253,12 +253,13 @@ dagtests = [
 
 def test_gca():
     u = uimod.ui.load()
+    u.setconfig("devel", "segmented-changelog-rev-compat", "true")
     for i, (dag, tests) in enumerate(dagtests):
         repo = hg.repository(u, "gca%d" % i, create=1)
+        debugcommands.debugbuilddag(u, repo, dag)
         cl = repo.changelog
         torevs = cl.torevs
         tonodes = cl.tonodes
-        debugcommands.debugbuilddag(u, repo, dag)
         # Compare the results of the Python and C versions. This does not
         # include choosing a winner when more than one gca exists -- we make
         # sure both return exactly the same set of gcas.
