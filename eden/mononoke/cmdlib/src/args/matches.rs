@@ -396,44 +396,45 @@ fn create_root_log_drain(
         true, // Log messages which have no tags
     )?;
 
-    let root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>> = match matches
-        .value_of(LOGVIEW_CATEGORY)
-    {
-        Some(category) => {
-            #[cfg(fbcode_build)]
-            {
-                // Sometimes scribe writes can fail due to backpressure - it's OK to drop these
-                // since logview is sampled anyway.
-                let logview_drain = ::slog_logview::LogViewDrain::new(fb, category).ignore_res();
-                match matches.value_of(LOGVIEW_ADDITIONAL_LEVEL_FILTER) {
-                    Some(log_level_str) => {
-                        let logview_level = Level::from_str(log_level_str)
-                            .map_err(|_| format_err!("Unknown log level: {}", log_level_str))?;
+    let root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>> =
+        match matches.value_of(LOGVIEW_CATEGORY) {
+            Some(category) => {
+                #[cfg(fbcode_build)]
+                {
+                    // Sometimes scribe writes can fail due to backpressure - it's OK to drop these
+                    // since logview is sampled anyway.
+                    let mut logview_drain = ::slog_logview::LogViewDrain::new(fb, category);
+                    logview_drain.with_thrift_serialization();
+                    let logview_drain = logview_drain.ignore_res();
+                    match matches.value_of(LOGVIEW_ADDITIONAL_LEVEL_FILTER) {
+                        Some(log_level_str) => {
+                            let logview_level = Level::from_str(log_level_str)
+                                .map_err(|_| format_err!("Unknown log level: {}", log_level_str))?;
 
-                        let drain = slog::Duplicate::new(
-                            glog_drain,
-                            logview_drain.filter_level(logview_level).ignore_res(),
-                        );
-                        Arc::new(drain.ignore_res())
-                    }
-                    None => {
-                        let drain = slog::Duplicate::new(glog_drain, logview_drain);
-                        Arc::new(drain.ignore_res())
+                            let drain = slog::Duplicate::new(
+                                glog_drain,
+                                logview_drain.filter_level(logview_level).ignore_res(),
+                            );
+                            Arc::new(drain.ignore_res())
+                        }
+                        None => {
+                            let drain = slog::Duplicate::new(glog_drain, logview_drain);
+                            Arc::new(drain.ignore_res())
+                        }
                     }
                 }
+                #[cfg(not(fbcode_build))]
+                {
+                    let _unused = LOGVIEW_ADDITIONAL_LEVEL_FILTER;
+                    let _ = (fb, category);
+                    unimplemented!(
+                        "Passed --{}, but it is supported only for fbcode builds",
+                        LOGVIEW_CATEGORY
+                    )
+                }
             }
-            #[cfg(not(fbcode_build))]
-            {
-                let _unused = LOGVIEW_ADDITIONAL_LEVEL_FILTER;
-                let _ = (fb, category);
-                unimplemented!(
-                    "Passed --{}, but it is supported only for fbcode builds",
-                    LOGVIEW_CATEGORY
-                )
-            }
-        }
-        None => Arc::new(glog_drain),
-    };
+            None => Arc::new(glog_drain),
+        };
 
     let root_log_drain = if let Some(filter_fn) = log_filter_fn {
         Arc::new(slog::IgnoreResult::new(slog::Filter::new(
