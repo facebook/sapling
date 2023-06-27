@@ -274,6 +274,8 @@ class ProjFSEnumerationInsufficientBuffer(testcase.EdenRepoTest):
     """
 
     def setUp(self):
+        # TODO: Remove this once there are no weird batch hacks around Buck the buck-built hg
+        self.disableBuckHgForTests(["test_many_directory_entries"])
         self.filenames = []
         for i in range(1000):
             self.filenames.append("file-{:08}".format(i))

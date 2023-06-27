@@ -144,8 +144,20 @@ class HgRepository(repobase.Repository):
         check: bool = True,
         traceback: bool = True,
     ) -> subprocess.CompletedProcess:
-        cmd = [self.hg_bin] + (["--traceback"] if traceback else []) + list(args)
         env = self.hg_environment
+        argslist = list(args)
+        if sys.platform == "win32" and "EDEN_HG_BINARY" in env:
+            # If the EDEN_HG_BINARY env var is set, that means that the test is using the Buck-built hg rather than the system one.
+            # Currently calling hg through Buck goes through three layers of batch scripts, which makes it necessary to escape certain characters in arguments.
+            # Newlines need an additional backward slash to be properly escaped.
+            # As for the 7 and 8 carets (^) used for replace ^ and |, these are necessary since each batch layer essentially halves the ammount of carets
+            # necessary for the next layer. 3 layers means we need 2^3 = 8 carets.
+            for i in range(len(argslist)):
+                argslist[i] = argslist[i].replace("\n", r"\n")
+                argslist[i] = argslist[i].replace("^", r"^^^^^^^^")
+                argslist[i] = argslist[i].replace("|", r"^^^^^^^|")
+        cmd = [self.hg_bin] + (["--traceback"] if traceback else []) + argslist
+        print(f"Trying to run {cmd}")
         if hgeditor is not None:
             env = dict(env)
             env["HGEDITOR"] = hgeditor

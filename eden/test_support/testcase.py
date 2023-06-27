@@ -5,11 +5,12 @@
 # GNU General Public License version 2.
 
 import contextlib
+import os
 import sys
 import unittest
 import warnings
 from pathlib import Path
-from typing import cast, Optional, Union
+from typing import cast, List, Optional, Union
 
 from . import environment_variable as env_module
 from .temporary_directory import TempFileManager
@@ -60,6 +61,13 @@ class EdenTestCaseBase(IsolatedAsyncioTestCase):
         self.temp_mgr = self.exit_stack.enter_context(
             TempFileManager(self._get_tmp_prefix())
         )
+
+    def disableBuckHgForTests(self, testnames: List[str]) -> None:
+        """Forces tests in the `testnames` list to use the hg bundled with the system rather than the one built with Buck"""
+        if self._testMethodName in testnames:
+            # Both EdenFS and the integration tests use these two env vars for determining where to find hg
+            os.environ.pop("EDEN_HG_BINARY", None)
+            os.environ.pop("HG_REAL_BIN", None)
 
     def _callSetUp(self):
         with no_warnings(self):
