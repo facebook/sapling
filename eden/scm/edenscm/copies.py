@@ -929,8 +929,12 @@ def duplicatecopies(repo, wctx, rev, fromrev, skiprev=None):
     """
     dagcopytrace = _get_dagcopytrace(repo, wctx, skiprev)
     for dst, src in pycompat.iteritems(pathcopies(repo[fromrev], repo[rev])):
-        if dagcopytrace and dagcopytrace.trace_rename(
-            repo[skiprev].node(), repo[fromrev].node(), dst
+        if (
+            dagcopytrace
+            and dst in repo[skiprev]
+            and dagcopytrace.trace_rename(
+                repo[skiprev].node(), repo[fromrev].node(), dst
+            )
         ):
             continue
         wctx[dst].markcopied(src)

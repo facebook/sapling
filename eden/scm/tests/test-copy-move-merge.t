@@ -5,6 +5,7 @@ Test for the full copytracing algorithm
 =======================================
 
   $ eagerepo
+  $ setconfig copytrace.skipduplicatecopies=True
 
   $ newclientrepo t
 
