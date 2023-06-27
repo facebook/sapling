@@ -1861,7 +1861,8 @@ class localrepository(object):
 
                 # Rust may use it's own copies of stores, so we need to
                 # invalidate those when a transaction commits successfully.
-                repo._rsrepo.invalidatestores()
+                if not eagerepo.iseagerepo(self):
+                    repo._rsrepo.invalidatestores()
 
                 # Don't invalidate Rust if Rust and Python are sharing the changelog object.
                 # Python's invalidation will cover it.

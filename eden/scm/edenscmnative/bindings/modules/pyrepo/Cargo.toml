@@ -13,6 +13,7 @@ util = { path = "../../../../lib/util" }
 parking_lot = "0.12.1"
 pyconfigloader = { path = "../pyconfigloader" }
 pydag = { path = "../pydag" }
+pyeagerepo = { path = "../pyeagerepo" }
 pyedenapi = { path = "../pyedenapi" }
 pymetalog = { path = "../pymetalog" }
 pyworkingcopy = { path = "../pyworkingcopy" }

@@ -79,6 +79,7 @@ pub struct Repo {
     file_scm_store: Option<Arc<scmstore::FileStore>>,
     tree_store: Option<Arc<dyn RefreshableTreeStore + Send + Sync>>,
     tree_scm_store: Option<Arc<scmstore::TreeStore>>,
+    eager_store: Option<EagerRepoStore>,
     locker: Arc<RepoLocker>,
 }
 
@@ -197,6 +198,7 @@ impl Repo {
             file_scm_store: None,
             tree_store: None,
             tree_scm_store: None,
+            eager_store: None,
             locker,
         })
     }
@@ -487,6 +489,7 @@ impl Repo {
         Ok(fs)
     }
 
+    // This should only be used to share stores with Python.
     pub fn file_scm_store(&self) -> Option<Arc<scmstore::FileStore>> {
         self.file_scm_store.clone()
     }
@@ -518,8 +521,14 @@ impl Repo {
         Ok(ts)
     }
 
+    // This should only be used to share stores with Python.
     pub fn tree_scm_store(&self) -> Option<Arc<scmstore::TreeStore>> {
         self.tree_scm_store.clone()
+    }
+
+    // This should only be used to share stores with Python.
+    pub fn eager_store(&self) -> Option<EagerRepoStore> {
+        self.eager_store.clone()
     }
 
     pub fn tree_resolver(&mut self) -> Result<TreeManifestResolver> {
@@ -671,6 +680,7 @@ impl Repo {
         }
         if self.storage_format().is_eager() {
             let store = EagerRepoStore::open(&self.store_path.join("hgcommits").join("v1"))?;
+            self.eager_store = Some(store.clone());
             let store = Arc::new(store);
             self.file_store = Some(store.clone());
             self.tree_store = Some(store.clone());

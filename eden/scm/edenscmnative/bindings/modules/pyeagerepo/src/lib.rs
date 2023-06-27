@@ -124,7 +124,7 @@ py_class!(class EagerRepo |py| {
     }
 });
 
-py_class!(pub(crate) class EagerRepoStore |py| {
+py_class!(pub class EagerRepoStore |py| {
     data inner: RustEagerRepoStore;
 
     /// Construct `EagerRepoStore` from a directory.

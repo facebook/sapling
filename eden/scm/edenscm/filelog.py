@@ -163,7 +163,7 @@ class fileslog(object):
             self.contentstore = gitstore
             self.filescmstore = gitstore
         elif eagerepo.iseagerepo(repo):
-            store = eagerepo.openstore(repo)
+            store = repo._rsrepo.eagerstore()
             self.contentstore = store
             self.filescmstore = store
         elif util.istest():

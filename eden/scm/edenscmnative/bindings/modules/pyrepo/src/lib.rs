@@ -22,6 +22,7 @@ use cpython_ext::PyPathBuf;
 use parking_lot::RwLock;
 use pyconfigloader::config;
 use pydag::commits::commits as PyCommits;
+use pyeagerepo::EagerRepoStore as PyEagerRepoStore;
 use pyedenapi::PyClient as PyEdenApi;
 use pymetalog::metalog as PyMetaLog;
 use pyworkingcopy::workingcopy as PyWorkingCopy;
@@ -147,6 +148,12 @@ py_class!(pub class repo |py| {
         } else {
             repolock::create_instance(py, Cell::new(Some(lock)))
         }
+    }
+
+    def eagerstore(&self) -> PyResult<PyEagerRepoStore> {
+        let mut repo = self.inner(py).write();
+        let _ = repo.file_store().map_pyerr(py)?;
+        PyEagerRepoStore::create_instance(py, repo.eager_store().unwrap())
     }
 });
 
