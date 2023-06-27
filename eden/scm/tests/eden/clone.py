@@ -89,3 +89,34 @@ class TestEdenClone(BaseTest):
             )
         except CommandFailure as err:
             self.assertIn('failed to execute "missing.exe"', str(err))
+
+    @hgtest
+    def test_clone_symlink_ready(self, repo: Repo, wc: WorkingCopy) -> None:
+        self.config.add("experimental", "windows-symlinks", "True")
+        wc.file()
+        master_commit = wc.commit()
+        wc.hg.push(rev=master_commit.hash, to="master", create=True)
+
+        checkout_dir = new_dir()
+        repo.hg.clone(
+            repo.url,
+            checkout_dir,
+            eden=True,
+        )
+        eden_repo = Repo(checkout_dir, repo.url, repo.name)
+        eden_wc = WorkingCopy(eden_repo, checkout_dir)
+
+        # Make sure that the working copy requirements file contains
+        # windowssymlinks in its list
+        requires = eden_wc[".hg/requires"]
+        self.assertTrue("windowssymlinks" in requires.content().split("\n"))
+
+        # Make sure that the EdenFS saved that the repo should be symlink ready
+        # for the repo config.toml file.
+        # This file only exists on POSIX for EdenFS. Windows instead uses
+        # .eden\\config, which contains the actual location of the EdenFS
+        # toml config file
+        config_toml = eden_wc[".eden/client/config.toml"]
+        self.assertTrue(
+            "enable-windows-symlinks = true" in config_toml.content().split("\n")
+        )

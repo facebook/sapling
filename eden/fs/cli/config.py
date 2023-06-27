@@ -182,6 +182,7 @@ class CheckoutConfig(typing.NamedTuple):
     enable_sqlite_overlay: bool
     use_write_back_cache: bool
     re_use_case: str
+    enable_windows_symlinks: bool
 
 
 class ListMountInfo(typing.NamedTuple):
@@ -1235,6 +1236,7 @@ class EdenCheckout:
                 "require-utf8-path": checkout_config.require_utf8_path,
                 "enable-sqlite-overlay": checkout_config.enable_sqlite_overlay,
                 "use-write-back-cache": checkout_config.use_write_back_cache,
+                "enable-windows-symlinks": checkout_config.enable_windows_symlinks,
             },
             "redirections": redirections,
             "profiles": {
@@ -1391,6 +1393,10 @@ class EdenCheckout:
             if recas.get("use-case") is not None:
                 re_use_case = str(recas.get("use-case"))
 
+        enable_windows_symlinks = repository.get("enable-windows-symlinks")
+        if not isinstance(enable_windows_symlinks, bool):
+            enable_windows_symlinks = False
+
         return CheckoutConfig(
             backing_repo=Path(get_field("path")),
             scm_type=scm_type,
@@ -1408,6 +1414,7 @@ class EdenCheckout:
             enable_sqlite_overlay=enable_sqlite_overlay,
             use_write_back_cache=use_write_back_cache,
             re_use_case=re_use_case,
+            enable_windows_symlinks=enable_windows_symlinks,
         )
 
     def get_snapshot(self) -> SnapshotState:

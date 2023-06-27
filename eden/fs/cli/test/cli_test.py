@@ -90,6 +90,7 @@ class ListTest(unittest.TestCase):
                 enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
+                enable_windows_symlinks=False,
             )
         )
 
@@ -114,6 +115,7 @@ class ListTest(unittest.TestCase):
                 enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
+                enable_windows_symlinks=False,
             )
         )
 
@@ -138,6 +140,7 @@ class ListTest(unittest.TestCase):
                 enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
+                enable_windows_symlinks=False,
             )
         )
 
@@ -162,6 +165,7 @@ class ListTest(unittest.TestCase):
                 enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
+                enable_windows_symlinks=False,
             )
         )
 
@@ -186,6 +190,7 @@ class ListTest(unittest.TestCase):
                 enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
+                enable_windows_symlinks=False,
             )
         )
 
@@ -311,6 +316,7 @@ class ListTest(unittest.TestCase):
                 enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
+                enable_windows_symlinks=False,
             )
         )
 
@@ -335,6 +341,7 @@ class ListTest(unittest.TestCase):
                 enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
+                enable_windows_symlinks=False,
             )
         )
 
@@ -359,6 +366,7 @@ class ListTest(unittest.TestCase):
                 enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
+                enable_windows_symlinks=False,
             )
         )
 
@@ -475,6 +483,7 @@ class ListTest(unittest.TestCase):
                 enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
+                enable_windows_symlinks=False,
             )
         )
 
@@ -499,6 +508,7 @@ class ListTest(unittest.TestCase):
                 enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
+                enable_windows_symlinks=False,
             )
         )
 

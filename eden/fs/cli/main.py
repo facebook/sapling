@@ -760,6 +760,12 @@ class CloneCmd(Subcmd):
             help="The Remote Execuation use-case to use when --backing-store=recas",
         )
 
+        parser.add_argument(
+            "--enable-windows-symlinks",
+            action="store_true",
+            help="Enable symlink support for the cloned mount",
+        )
+
         case_group = parser.add_mutually_exclusive_group()
         case_group.add_argument(
             "--case-sensitive",
@@ -856,6 +862,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
                 args.overlay_type,
                 args.backing_store,
                 args.re_use_case,
+                args.enable_windows_symlinks,
             )
         except RepoError as ex:
             print_stderr("error: {}", ex)
@@ -978,6 +985,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
         overlay_type: Optional[str],
         backing_store_type: Optional[str] = None,
         re_use_case: Optional[str] = None,
+        enable_windows_symlinks: bool = False,
     ) -> Tuple[util.Repo, config_mod.CheckoutConfig]:
         # Check to see if repo_arg points to an existing EdenFS mount
         checkout_config = instance.get_checkout_config_for_path(repo_arg)
@@ -1017,6 +1025,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
             enable_sqlite_overlay=enable_sqlite_overlay,
             use_write_back_cache=False,
             re_use_case=re_use_case or "buck2-default",
+            enable_windows_symlinks=enable_windows_symlinks,
         )
 
         return repo, repo_config

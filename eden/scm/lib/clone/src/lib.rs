@@ -199,6 +199,10 @@ pub fn eden_clone(backing_repo: &Repo, working_copy: &Path, target: Option<HgId>
         working_copy.as_os_str(),
     ]);
 
+    if config.get_or_default("experimental", "windows-symlinks")? {
+        clone_command.args(["--enable-windows-symlinks".to_string()]);
+    }
+
     if let Some(rev) = target {
         clone_command.args(["-r", &rev.to_hex()]);
     } else {

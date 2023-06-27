@@ -2054,6 +2054,7 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                          &getStraceLogger(),
                          serverState_->getProcessNameCache(),
                          getCheckoutConfig()->getRepoGuid(),
+                         getCheckoutConfig()->getEnableWindowsSymlinks(),
                          this->getServerState()->getNotifier()));
                  return FsChannelPtr{std::move(channel)};
                })

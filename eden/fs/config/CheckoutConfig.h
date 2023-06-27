@@ -151,6 +151,11 @@ class CheckoutConfig {
   Guid getRepoGuid() const {
     return repoGuid_;
   }
+
+  /** Whether symlinks are enabled or not */
+  bool getEnableWindowsSymlinks() const {
+    return enableWindowsSymlinks_;
+  }
 #endif
 
  private:
@@ -171,6 +176,7 @@ class CheckoutConfig {
 
 #ifdef _WIN32
   Guid repoGuid_;
+  bool enableWindowsSymlinks_;
 #endif
 };
 

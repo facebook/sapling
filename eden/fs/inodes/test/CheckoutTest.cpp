@@ -1786,6 +1786,7 @@ class FakePrjfsChannel final : public PrjfsChannel {
             &mount->getStraceLogger(),
             mount->getServerState()->getProcessNameCache(),
             mount->getCheckoutConfig()->getRepoGuid(),
+            mount->getCheckoutConfig()->getEnableWindowsSymlinks(),
             nullptr),
         actions_{std::move(actions)} {}
 

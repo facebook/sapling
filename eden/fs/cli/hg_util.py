@@ -116,6 +116,9 @@ def get_requires_data(checkout: EdenCheckout) -> str:
     requires.discard("sqldirstate")
     requires.discard("treedirstate")
 
+    if checkout.get_config().enable_windows_symlinks:
+        requires.add("windowssymlinks")
+
     return "\n".join(sorted(requires)) + "\n"
 
 

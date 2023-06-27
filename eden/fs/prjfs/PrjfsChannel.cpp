@@ -1259,9 +1259,11 @@ PrjfsChannel::PrjfsChannel(
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
     Guid guid,
+    bool enableWindowsSymlinks,
     std::shared_ptr<Notifier> notifier)
     : mountPath_(mountPath),
       mountId_(std::move(guid)),
+      enableSymlinks_(enableWindowsSymlinks),
       processAccessLog_(std::move(processNameCache)),
       config_{std::move(config)} {
   auto [innerDeletedPromise, innerDeletedFuture] =

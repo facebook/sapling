@@ -456,6 +456,7 @@ class PrjfsChannel : public FsChannel {
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
       Guid guid,
+      bool enableWindowsSymlinks,
       std::shared_ptr<Notifier> notifier);
 
   virtual ~PrjfsChannel();
@@ -562,6 +563,7 @@ class PrjfsChannel : public FsChannel {
  private:
   const AbsolutePath mountPath_;
   Guid mountId_;
+  bool enableSymlinks_;
   bool useNegativePathCaching_{true};
   folly::Promise<FsStopDataPtr> stopPromise_{
       folly::Promise<FsStopDataPtr>::makeEmpty()};
