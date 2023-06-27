@@ -575,7 +575,7 @@ impl SpanSet {
         if self.spans.is_empty() {
             self.spans.push_back(span);
         } else {
-            let mut last = &mut self.spans[0];
+            let last = &mut self.spans[0];
             // | last |
             //     | span |  | span |
             debug_assert!(span.low >= last.low);
@@ -620,7 +620,7 @@ impl SpanSet {
                 // 30->22 20->12 last H->L
                 //               span H------>L union [Case 1]
                 //                         H->L new   [Case 2]
-                let mut last = &mut self.spans[len - 1];
+                let last = &mut self.spans[len - 1];
                 if last.high >= span.high {
                     if last.low <= span.high + 1 {
                         // Union spans in-place [Case 1]
@@ -638,7 +638,7 @@ impl SpanSet {
                 // span  H------>L union [Case 3]
                 //       H->L      new   [Case 4]
                 // Fast path: pushing to the first span.
-                let mut first = &mut self.spans[0];
+                let first = &mut self.spans[0];
                 if span.low >= first.low {
                     if span.low <= first.high + 1 {
                         // Union [Case 3]
@@ -684,7 +684,7 @@ impl SpanSet {
                             }
                         }
                         // Passed all checks. Merge the span.
-                        let mut cur = &mut self.spans[idx];
+                        let cur = &mut self.spans[idx];
                         cur.high = cur.high.max(span.high);
                         cur.low = cur.low.min(span.low);
                         return;
@@ -733,7 +733,7 @@ fn push_with_union(spans: &mut VecDeque<Span>, span: Span) {
         spans.push_back(span);
     } else {
         let len = spans.len();
-        let mut last = &mut spans[len - 1];
+        let last = &mut spans[len - 1];
         debug_assert!(last.high >= span.high);
         if last.low <= span.high + 1 {
             // Union spans in-place.

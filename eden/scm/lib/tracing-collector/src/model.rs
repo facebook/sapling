@@ -1339,7 +1339,7 @@ impl TracingData {
                             let duration = ctx.tree_spans[child_id].duration;
                             assert_eq!(ctx.tree_spans[child_id].call_count, 1);
                             ctx.tree_spans[child_id].call_count -= 1;
-                            let mut merged = &mut ctx.tree_spans[existing_child_id];
+                            let merged = &mut ctx.tree_spans[existing_child_id];
                             merged.call_count += 1;
                             merged.duration += duration;
                         }
