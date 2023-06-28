@@ -25,6 +25,7 @@ use metaconfig_parser::StorageConfigs;
 use repos::RawRepoConfigs;
 use slog::error;
 use slog::info;
+use slog::trace;
 use slog::Logger;
 use stats::prelude::*;
 use tokio::runtime::Handle;
@@ -170,9 +171,9 @@ async fn watch_and_update(
             Ok(raw_repo_configs) => {
                 info!(
                     logger,
-                    "Raw Repo Configs changed in config store, applying update: {:?}",
-                    raw_repo_configs
+                    "Raw Repo Configs changed in config store, applying update"
                 );
+                trace!(logger, "Applied configs: {:?}", raw_repo_configs);
                 match load_configs_from_raw(Arc::unwrap_or_clone(raw_repo_configs)) {
                     Ok((new_repo_configs, new_storage_configs)) => {
                         let new_repo_configs = Arc::new(new_repo_configs);
