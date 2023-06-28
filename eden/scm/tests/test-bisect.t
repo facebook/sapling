@@ -451,11 +451,17 @@
   $ hg up -qr 0
   $ hg bisect --command "hg debugshell -c \"sys.exit(1 if (repo['.'].rev() < 6) else 0)\""
   changeset b99c7b9c8e11: bad
+  Testing changeset e7fa0811edb0 (31 changesets remaining, ~4 tests)
   changeset e7fa0811edb0: good
+  Testing changeset 03750880c6b5 (15 changesets remaining, ~3 tests)
   changeset 03750880c6b5: good
+  Testing changeset b53bea5e2fcb (7 changesets remaining, ~2 tests)
   changeset b53bea5e2fcb: bad
+  Testing changeset 7874a09ea728 (4 changesets remaining, ~2 tests)
   changeset 7874a09ea728: bad
+  Testing changeset a3d5c6fdf0d3 (2 changesets remaining, ~1 tests)
   changeset a3d5c6fdf0d3: good
+  Testing changeset a3d5c6fdf0d3 (0 changesets remaining, ~0 tests)
   The first good revision is:
   commit:      a3d5c6fdf0d3
   user:        test
@@ -479,10 +485,15 @@
   Testing changeset e7fa0811edb0 (31 changesets remaining, ~4 tests)
   $ hg bisect --command 'sh script.sh and some params' --noupdate
   changeset e7fa0811edb0: good
+  Testing changeset 03750880c6b5 (15 changesets remaining, ~3 tests)
   changeset 03750880c6b5: good
+  Testing changeset b53bea5e2fcb (7 changesets remaining, ~2 tests)
   changeset b53bea5e2fcb: bad
+  Testing changeset 7874a09ea728 (4 changesets remaining, ~2 tests)
   changeset 7874a09ea728: bad
+  Testing changeset a3d5c6fdf0d3 (2 changesets remaining, ~1 tests)
   changeset a3d5c6fdf0d3: good
+  Testing changeset a3d5c6fdf0d3 (0 changesets remaining, ~0 tests)
   The first good revision is:
   commit:      a3d5c6fdf0d3
   user:        test
@@ -504,11 +515,17 @@
   $ hg up -qr 0
   $ hg bisect --command 'sh script.sh and some params'
   changeset b99c7b9c8e11: bad
+  Testing changeset e7fa0811edb0 (31 changesets remaining, ~4 tests)
   changeset e7fa0811edb0: good
+  Testing changeset 03750880c6b5 (15 changesets remaining, ~3 tests)
   changeset 03750880c6b5: good
+  Testing changeset b53bea5e2fcb (7 changesets remaining, ~2 tests)
   changeset b53bea5e2fcb: bad
+  Testing changeset 7874a09ea728 (4 changesets remaining, ~2 tests)
   changeset 7874a09ea728: bad
+  Testing changeset a3d5c6fdf0d3 (2 changesets remaining, ~1 tests)
   changeset a3d5c6fdf0d3: good
+  Testing changeset a3d5c6fdf0d3 (0 changesets remaining, ~0 tests)
   The first good revision is:
   commit:      a3d5c6fdf0d3
   user:        test

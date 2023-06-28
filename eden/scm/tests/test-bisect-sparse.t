@@ -132,7 +132,9 @@ verify skipping works with --command flag
   the sparse profile from the known good changeset a75e20cc7b2a
   Skipping changeset 6b9461e31152 as there are no changes inside
   the sparse profile from the known bad changeset d910e57b873b
+  Testing changeset 2ecc2db0df15 (2 changesets remaining, ~1 tests)
   changeset 2ecc2db0df15: good
+  Testing changeset 6b9461e31152 (0 changesets remaining, ~0 tests)
   The first bad revision is:
   commit:      6b9461e31152
   user:        test

@@ -1014,6 +1014,16 @@ def bisect(
         cmdutil.bailifchanged(repo)
         return hg.clean(repo, node, show_stats=show_stats)
 
+    def showtestingnext(rev, node, changesets):
+        # compute the approximate number of remaining tests
+        tests, size = 0, 2
+        while size <= changesets:
+            tests, size = tests + 1, size * 2
+        ui.write(
+            _("Testing changeset %s " "(%d changesets remaining, ~%d tests)\n")
+            % (short(node), changesets, tests)
+        )
+
     def sparseskip(node, changesets, bgood, badnode, goodnode):
         """
         Skip testing next nodes if nothing was changed since last good or bad node
@@ -1105,6 +1115,7 @@ the sparse profile from the known %s changeset %s\n"
                         nodes = [node]
                         break
 
+                showtestingnext(repo.changelog.rev(node), node, changesets)
                 mayupdate(repo, node, show_stats=False)
         finally:
             state["current"] = [node]
@@ -1116,16 +1127,6 @@ the sparse profile from the known %s changeset %s\n"
 
     # actually bisect
     nodes, changesets, good, badnode, goodnode = hbisect.bisect(repo, state)
-
-    def showtestingnext(rev, node, changesets):
-        # compute the approximate number of remaining tests
-        tests, size = 0, 2
-        while size <= changesets:
-            tests, size = tests + 1, size * 2
-        ui.write(
-            _("Testing changeset %s " "(%d changesets remaining, ~%d tests)\n")
-            % (short(node), changesets, tests)
-        )
 
     # update to next check
     if extend:
