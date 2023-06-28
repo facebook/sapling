@@ -146,10 +146,16 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                 Some(Ok(WalkEntry::File(mut path, metadata))) => {
                     let mut ts = self.treestate.lock();
 
-                    // On case insensitive systems, normalize the path so duplicate paths with
-                    // different case can be detected in the seen set.
+                    // On case insensitive systems, normalize the path so
+                    // duplicate paths with different case can be detected in
+                    // the seen set, but only if the dirstate entry hasn't been
+                    // deleted.
                     let (normalized, ts_state) = ts.normalize_path_and_get(path.as_ref())?;
-                    if normalized != path.as_byte_slice() {
+                    if normalized != path.as_byte_slice()
+                        && ts_state
+                            .as_ref()
+                            .map_or(false, |s| s.state.intersects(StateFlags::EXIST_NEXT))
+                    {
                         path = RepoPathBuf::from_utf8(normalized.into_owned())?;
                     }
                     self.seen.insert(path.clone());

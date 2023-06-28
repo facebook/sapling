@@ -1,9 +1,7 @@
-#chg-compatible
 #debugruntest-compatible
 #inprocess-hg-incompatible
   $ setconfig experimental.nativecheckout=true
   $ setconfig commands.update.check=noconflict
-  $ setconfig workingcopy.ruststatus=false
   $ newserver server
 
   $ newremoterepo myrepo
