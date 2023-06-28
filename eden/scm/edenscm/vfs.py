@@ -362,7 +362,7 @@ class abstractvfs(pycompat.ABC):
         if not isinstance(
             # pyre isn't aware of threading._MainThread
             # Once we are Python 3 only we should switch to threading.main_thread()
-            threading.currentThread(),
+            threading.current_thread(),
             threading._MainThread,  # pyre-fixme
         ):
             # pyre-fixme[7]: Expected `ContextManager[backgroundfilecloser]` but got
@@ -535,7 +535,7 @@ class vfs(abstractvfs):
             fp = checkambigatclosing(fp)
 
         if backgroundclose and isinstance(
-            threading.currentThread(), threading._MainThread  # pyre-fixme
+            threading.current_thread(), threading._MainThread  # pyre-fixme
         ):
             if not self._backgroundfilecloser:
                 raise error.Abort(
