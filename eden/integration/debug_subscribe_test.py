@@ -51,7 +51,6 @@ class DebugSubscribeTest(testcase.EdenRepoTest):
             env=env,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
             cwd=self.mount,
         )
 
