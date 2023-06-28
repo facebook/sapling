@@ -1,22 +1,19 @@
-#chg-compatible
 #debugruntest-compatible
-#inprocess-hg-incompatible
-  $ setconfig workingcopy.ruststatus=False status.use-rust=false
   $ setconfig experimental.allowfilepeer=True
 
   $ HGMERGE=true; export HGMERGE
 
-  $ hg init r1
+  $ eagerepo
+
+  $ hg init r1 --config format.use-eager-repo=True
   $ cd r1
   $ echo a > a
   $ hg addremove
   adding a
   $ hg commit -m "1"
+  $ hg book main
 
-  $ hg clone . ../r2
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd ../r2
+  $ newclientrepo r2 ~/r1 main
   $ hg up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo abc > a
@@ -36,7 +33,9 @@
   $ hg commit -m "2"
 
   $ cd ../r2
-  $ hg -q pull ../r1
+  $ hg pull
+  pulling from $TESTTMP/r1
+  searching for changes
   $ hg status
   M a
   $ hg parents
@@ -44,8 +43,8 @@
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
-  
-  $ hg --debug up
+
+  $ hg --debug up 'desc(2)' --merge
     searching for copies back to c19d34741b0a
     unmatched files in other:
      b
@@ -53,8 +52,6 @@
    branchmerge: False, force: False, partial: False
    ancestor: c19d34741b0a, local: c19d34741b0a+, remote: 1e71731e6fbb
    preserving a for resolve of a
-   b: remote created -> g
-  getting b
    a: versions differ -> m (premerge)
   picktool() hgmerge true
   picked tool 'true' for path=a binary=False symlink=False changedelete=False
@@ -69,11 +66,12 @@
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ hg parents
   commit:      1e71731e6fbb
+  bookmark:    remote/main
+  hoistedname: main
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
-  
-  $ hg --debug up 'desc(1)'
+  $ hg --debug up 'desc(1)' --merge
     searching for copies back to c19d34741b0a
     unmatched files in local (from topological common ancestor):
      b
@@ -81,8 +79,6 @@
    branchmerge: False, force: False, partial: False
    ancestor: 1e71731e6fbb, local: 1e71731e6fbb+, remote: c19d34741b0a
    preserving a for resolve of a
-   b: other deleted -> r
-  removing b
    a: versions differ -> m (premerge)
   picktool() hgmerge true
   picked tool 'true' for path=a binary=False symlink=False changedelete=False
@@ -109,8 +105,6 @@
    branchmerge: False, force: False, partial: False
    ancestor: c19d34741b0a, local: c19d34741b0a+, remote: 1e71731e6fbb
    preserving a for resolve of a
-   b: remote created -> g
-  getting b
    a: versions differ -> m (premerge)
   picktool() hgmerge true
   picked tool 'true' for path=a binary=False symlink=False changedelete=False
@@ -125,12 +119,15 @@
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ hg parents
   commit:      1e71731e6fbb
+  bookmark:    remote/main
+  hoistedname: main
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
-  
   $ hg -v history
   commit:      1e71731e6fbb
+  bookmark:    remote/main
+  hoistedname: main
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       a b
@@ -144,8 +141,6 @@
   files:       a
   description:
   1
-  
-  
   $ hg diff --nodates
   diff -r 1e71731e6fbb a
   --- a/a
@@ -160,6 +155,7 @@ create a second head
   $ cd ../r1
   $ hg up 'desc(1)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark main)
   $ echo b2 > b
   $ echo a3 > a
   $ hg addremove
@@ -172,14 +168,13 @@ create a second head
   M a
   $ hg parents
   commit:      1e71731e6fbb
+  bookmark:    remote/main
+  hoistedname: main
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
-  
-  $ hg --debug up
+  $ hg --debug up main
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated to "1e71731e6fbb: 2"
-  1 other heads for branch "default"
 
 test conflicting untracked files
 
@@ -215,19 +210,17 @@ test a local add
 
   $ cd ..
   $ hg init a
-  $ hg init b
-  $ echo a > a/a
+  $ newclientrepo b ~/a
+  $ cd ..
   $ echo a > b/a
+  $ echo a > a/a
   $ hg --cwd a commit -A -m a
   adding a
+  $ hg --cwd a book main
   $ cd b
   $ hg add a
-  $ hg pull -u ../a
-  pulling from ../a
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
+  $ hg pull -u -B main
+  pulling from $TESTTMP/a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st
 
