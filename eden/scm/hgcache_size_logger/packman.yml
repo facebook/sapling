@@ -4,6 +4,6 @@ packages:
     packager: source_control
     build_architectures: [x86_64, aarch64]
     rules:
-      buck:eden/scm/hgcache_size_logger:hgcache_size_logger:
+      buck2:eden/scm/hgcache_size_logger:hgcache_size_logger:
         eden/scm/hgcache_size_logger/hgcache_size_logger.par:
           path: /usr/local/bin/hgcache_size_logger
