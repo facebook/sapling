@@ -606,18 +606,9 @@ class remotefileslog(filelog.fileslog):
         memcachestore = self.memcachestore(repo)
         edenapistore = self.edenapistore(repo)
 
-        correlator = clienttelemetry.correlator(repo.ui)
-
         mask = os.umask(0o002)
         try:
-            self.filescmstore = revisionstore.filescmstore(
-                repo.svfs.vfs.base,
-                repo.ui._rcfg,
-                remotestore,
-                memcachestore,
-                edenapistore,
-                correlator=correlator,
-            )
+            self.filescmstore = repo._rsrepo.filescmstore(remotestore)
             self.contentstore = self.filescmstore
             self.metadatastore = revisionstore.metadatastore(
                 repo.svfs.vfs.base,

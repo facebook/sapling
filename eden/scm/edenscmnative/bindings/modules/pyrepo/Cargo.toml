@@ -5,6 +5,7 @@ edition = "2021"
 
 
 [dependencies]
+configmodel = { path = "../../../../lib/config/model" }
 cpython_ext = { path = "../../../../lib/cpython-ext" }
 cpython = { version = "0.7", default-features = false }
 repo = { path = "../../../../lib/repo" }
@@ -16,5 +17,7 @@ pydag = { path = "../pydag" }
 pyeagerepo = { path = "../pyeagerepo" }
 pyedenapi = { path = "../pyedenapi" }
 pymetalog = { path = "../pymetalog" }
+pyrevisionstore = { path = "../pyrevisionstore" }
 pyworkingcopy = { path = "../pyworkingcopy" }
+revisionstore = { path = "../../../../lib/revisionstore" }
 workingcopy = { path = "../../../../lib/workingcopy" }

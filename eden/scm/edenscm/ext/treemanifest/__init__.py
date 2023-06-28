@@ -581,25 +581,10 @@ class basetreemanifestlog(object):
     def makeruststore(self):
         assert not self._iseager
         remotestore = revisionstore.pyremotestore(remotetreestore(self._repo))
-        correlator = clienttelemetry.correlator(self._repo.ui)
-        edenapistore = self.edenapistore(self._repo)
-
-        if self.ui.configbool("treemanifest", "fetchauxdata"):
-            filestore = self._repo.fileslog.filescmstore
-        else:
-            filestore = None
-
         mask = os.umask(0o002)
         try:
-            self.treescmstore = revisionstore.treescmstore(
-                self._repo.svfs.vfs.base,
-                self.ui._rcfg,
+            self.treescmstore = self._repo._rsrepo.treescmstore(
                 remotestore,
-                None,
-                edenapistore,
-                filestore,
-                "manifests",
-                correlator=correlator,
             )
             self.datastore = self.treescmstore
             self.historystore = revisionstore.metadatastore(

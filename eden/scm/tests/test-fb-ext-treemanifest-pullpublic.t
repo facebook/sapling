@@ -29,11 +29,11 @@ Clone it
                                                      getmeta : { calls : 2},
                                                      getmissing : { calls : 1,
                                                                     keys : 2},
-                                                     prefetch : { calls : 2,
-                                                                  keys : 2}}},
-                                      fetch : { indexedlog : { cache : { hits : 8,
-                                                                         keys : 8,
-                                                                         requests : 6}}}}},
+                                                     prefetch : { calls : 7,
+                                                                  keys : 4}}},
+                                      fetch : { indexedlog : { cache : { hits : 10,
+                                                                         keys : 10,
+                                                                         requests : 7}}}}},
                 ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 2},
                         gettreepack : { basemfnodes : 0,
@@ -85,7 +85,7 @@ Pull exactly up to d into the client
   adding changesets
   adding manifests
   adding file changes
-  { metrics : { scmstore : { file : { api : { hg : { prefetch : { calls : 1}}}}},
+  { metrics : { scmstore : { file : { api : { hg : { prefetch : { calls : 3}}}}},
                 ssh : { connections : 1,
                         read : { bytes : 1086},
                         write : { bytes : 666}}}}

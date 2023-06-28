@@ -67,6 +67,7 @@ use crate::RepackLocation;
 use crate::StoreKey;
 use crate::StoreResult;
 
+#[derive(Clone)]
 pub struct FileStore {
     // Config
     // TODO(meyer): Move these to a separate config struct with default impl, etc.
@@ -436,6 +437,20 @@ impl FileStore {
             lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
             flush_on_drop: true,
         }
+    }
+
+    pub fn indexedlog_local(&self) -> Option<Arc<IndexedLogHgIdDataStore>> {
+        self.indexedlog_local.clone()
+    }
+
+    pub fn indexedlog_cache(&self) -> Option<Arc<IndexedLogHgIdDataStore>> {
+        self.indexedlog_cache.clone()
+    }
+
+    pub fn with_content_store(&self, cs: Arc<ContentStore>) -> Self {
+        let mut clone = self.clone();
+        clone.contentstore = Some(cs);
+        clone
     }
 }
 

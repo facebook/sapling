@@ -1859,11 +1859,6 @@ class localrepository(object):
                 repo.dirstate.write(None)
                 repo._txnreleased = True
 
-                # Rust may use it's own copies of stores, so we need to
-                # invalidate those when a transaction commits successfully.
-                if not eagerepo.iseagerepo(self):
-                    repo._rsrepo.invalidatestores()
-
                 # Don't invalidate Rust if Rust and Python are sharing the changelog object.
                 # Python's invalidation will cover it.
                 if not repo.ui.configbool("experimental", "use-rust-changelog"):
@@ -2229,8 +2224,6 @@ class localrepository(object):
             # causes inconsistency. We should make in-memory store
             # changes detectable, and abort if changed.
             self.store.invalidatecaches()
-
-        self._rsrepo.invalidatestores()
 
     def invalidatechangelog(self):
         """Invalidates the changelog. Discard pending changes."""

@@ -1,6 +1,5 @@
 #debugruntest-compatible
 
-  $ setconfig workingcopy.ruststatus=False
   $ enable amend rebase undo directaccess shelve
   $ setconfig experimental.evolution=obsolete
   $ setconfig visibility.enabled=true visibility.verbose=true

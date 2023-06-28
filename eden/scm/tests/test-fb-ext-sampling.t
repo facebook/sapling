@@ -208,9 +208,9 @@ Metrics is logged to blackbox:
   atexit handler executed
   $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"metrics"}}'
   [legacy][metrics] {'metrics': {'watchmanfilecount': 3, 'watchmanfreshinstances': 0}} (?)
-  [legacy][metrics] {'metrics': {'scmstore': {'file': {'api': {'hg': {'add': {'calls': 1}, 'prefetch': {'calls': 1}}}, 'write': {'nonlfs': {'items': 1, 'ok': 1}}}}}}
-  [legacy][metrics] {'metrics': {'scmstore': {'file': {'api': {'hg': {'add': {'calls': 1}, 'prefetch': {'calls': 1}}}, 'write': {'nonlfs': {'items': 1, 'ok': 1}}}}}}
-  [legacy][metrics] {'metrics': {'scmstore': {'file': {'api': {'hg': {'add': {'calls': 1}, 'prefetch': {'calls': 1}}}, 'write': {'nonlfs': {'items': 1, 'ok': 1}}}}}}
+  [legacy][metrics] {'metrics': {'scmstore': {'file': {'api': {'hg': {'add': {'calls': 3}, 'prefetch': {'calls': 3}}}, 'write': {'nonlfs': {'items': 3, 'ok': 3}}}}}}
+  [legacy][metrics] {'metrics': {'scmstore': {'file': {'api': {'hg': {'add': {'calls': 3}, 'prefetch': {'calls': 3}}}, 'write': {'nonlfs': {'items': 3, 'ok': 3}}}}}}
+  [legacy][metrics] {'metrics': {'scmstore': {'file': {'api': {'hg': {'add': {'calls': 3}, 'prefetch': {'calls': 3}}}, 'write': {'nonlfs': {'items': 3, 'ok': 3}}}}}}
   [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
   [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
   [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}

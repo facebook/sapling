@@ -52,6 +52,7 @@ use crate::RepackLocation;
 use crate::StoreKey;
 use crate::StoreResult;
 
+#[derive(Clone)]
 pub struct TreeStore {
     /// The "local" indexedlog store. Stores content that is created locally.
     pub indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
@@ -363,6 +364,12 @@ impl TreeStore {
             contentstore.refresh()?;
         }
         self.flush()
+    }
+
+    pub fn with_content_store(&self, cs: Arc<ContentStore>) -> Self {
+        let mut clone = self.clone();
+        clone.contentstore = Some(cs);
+        clone
     }
 }
 

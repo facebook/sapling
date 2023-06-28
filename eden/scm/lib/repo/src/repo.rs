@@ -688,6 +688,10 @@ impl Repo {
         }
         return Ok(None);
     }
+
+    pub fn correlator(&self) -> &'static str {
+        edenapi::DEFAULT_CORRELATOR.as_str()
+    }
 }
 
 fn read_sharedpath(dot_path: &Path) -> Result<Option<(PathBuf, identity::Identity)>> {
