@@ -152,6 +152,11 @@ export interface VersionCommit {
    */
   title: string;
   parents: GitObjectID[];
+
+  /**
+   * Which version of the PR does this commit belong to. Used for labeling
+   */
+  version: number | null;
 }
 
 export interface Version {

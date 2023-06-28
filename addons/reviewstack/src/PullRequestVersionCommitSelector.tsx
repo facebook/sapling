@@ -72,8 +72,14 @@ function getIndex(
 }
 
 function commitsLabel(commits: VersionCommit[], beforeIndex: number, afterIndex: number): string {
-  return [commits[beforeIndex]?.commit, commits[afterIndex]?.commit]
+  return [commits[beforeIndex], commits[afterIndex]]
     .filter(notEmpty)
-    .map(shortOid)
+    .map(c => {
+      if (c.version == null) {
+        return shortOid(c.commit);
+      } else {
+        return 'V' + c.version + ' ' + shortOid(c.commit);
+      }
+    })
     .join(' vs. ');
 }
