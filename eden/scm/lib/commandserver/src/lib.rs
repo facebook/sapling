@@ -8,6 +8,8 @@
 //! Client-server with the ability to preload content server-side to reduce
 //! startup overhead.
 
+pub mod client;
 mod ipc;
+pub mod server;
 mod spawn;
 mod util;
