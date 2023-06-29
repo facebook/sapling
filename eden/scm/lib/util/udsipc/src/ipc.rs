@@ -26,7 +26,7 @@ use crate::uds::UnixListener;
 pub fn serve(path: PathBuf) -> anyhow::Result<Incoming> {
     let _ = fs::remove_file(&path);
     let listener = uds::bind(&path)?;
-    let private_path = path.with_extension(".private");
+    let private_path = path.with_extension("private");
     let incoming = Incoming {
         listener,
         path,

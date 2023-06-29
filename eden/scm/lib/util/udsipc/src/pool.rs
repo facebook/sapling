@@ -78,7 +78,7 @@ impl ConnectablePath {
     /// Make the path exclusive by renaming the file to `.private`.
     pub fn exclusive(mut self) -> anyhow::Result<Self> {
         let path = &self.path;
-        let new_path = path.with_extension(".private");
+        let new_path = path.with_extension("private");
         fs::rename(path, &new_path)?;
         self.path = new_path;
         Ok(self)
