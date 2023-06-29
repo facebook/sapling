@@ -95,6 +95,11 @@ pub fn list_uds_paths(dir: &Path) -> Box<dyn Iterator<Item = ConnectablePath> + 
         let entry = entry.ok()?;
         let path = entry.path();
 
+        // Skip ".lock" files.
+        if path.extension().unwrap_or_default() == "lock" {
+            return None;
+        }
+
         // "Taken" by other process?
         if path.extension().unwrap_or_default() == "private" {
             // Remove stale files.
