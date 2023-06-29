@@ -21,65 +21,61 @@ message and override some other config items.
     overrides.chgserver.idletimeout = 2
 """
 
-import grp
 import os
 
-from edenscm import registrar
+if os.name != "nt":
+    import grp
 
+    from edenscm import registrar
 
-testedwith = "ships-with-fb-ext"
+    testedwith = "ships-with-fb-ext"
 
-_missinggroup = None
+    _missinggroup = None
 
-configtable = {}
-configitem = registrar.configitem(configtable)
+    configtable = {}
+    configitem = registrar.configitem(configtable)
 
-configitem("grpcheck", "groups", default=[])
+    configitem("grpcheck", "groups", default=[])
 
+    def _grpname2gid(name):
+        try:
+            return grp.getgrnam(name).gr_gid
+        except KeyError:
+            return None
 
-def _grpname2gid(name):
-    try:
-        return grp.getgrnam(name).gr_gid
-    except KeyError:
-        return None
+    def _firstmissinggroup(groupnames):
+        usergids = set(os.getgroups())
+        for name in groupnames:
+            expectedgid = _grpname2gid(name)
+            # ignore unknown groups
+            if expectedgid is not None and expectedgid not in usergids:
+                return name
 
+    def _overrideconfigs(ui):
+        for k, v in ui.configitems("grpcheck"):
+            if not k.startswith("overrides."):
+                continue
+            section, name = k[len("overrides.") :].split(".", 1)
+            ui.setconfig(section, name, v)
 
-def _firstmissinggroup(groupnames):
-    usergids = set(os.getgroups())
-    for name in groupnames:
-        expectedgid = _grpname2gid(name)
-        # ignore unknown groups
-        if expectedgid is not None and expectedgid not in usergids:
-            return name
-
-
-def _overrideconfigs(ui):
-    for k, v in ui.configitems("grpcheck"):
-        if not k.startswith("overrides."):
-            continue
-        section, name = k[len("overrides.") :].split(".", 1)
-        ui.setconfig(section, name, v)
-
-
-def extsetup(ui):
-    groupnames = ui.configlist("grpcheck", "groups")
-    if not groupnames:
-        return
-    missing = _firstmissinggroup(groupnames)
-    if not missing:
-        return
-    message = ui.config("grpcheck", "warning")
-    if message and not ui.plain():
-        if "%s" in message:
-            message = message % missing
-        ui.warn(message + "\n")
-    _overrideconfigs(ui)
-    # re-used by reposetup. groups information is immutable for a process,
-    # so we can re-use the "missing" calculation result safely.
-    global _missinggroup
-    _missinggroup = missing
-
-
-def reposetup(ui, repo):
-    if _missinggroup:
+    def extsetup(ui):
+        groupnames = ui.configlist("grpcheck", "groups")
+        if not groupnames:
+            return
+        missing = _firstmissinggroup(groupnames)
+        if not missing:
+            return
+        message = ui.config("grpcheck", "warning")
+        if message and not ui.plain():
+            if "%s" in message:
+                message = message % missing
+            ui.warn(message + "\n")
         _overrideconfigs(ui)
+        # re-used by reposetup. groups information is immutable for a process,
+        # so we can re-use the "missing" calculation result safely.
+        global _missinggroup
+        _missinggroup = missing
+
+    def reposetup(ui, repo):
+        if _missinggroup:
+            _overrideconfigs(ui)
