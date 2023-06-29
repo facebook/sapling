@@ -136,6 +136,24 @@ Test "%unset"
   $ hg showconfig unsettest
   unsettest.set-after-unset=should be set (.hg/hgrc)
 
+  $ hg showconfig unsettest.both
+  [1]
+  $ hg showconfig unsettest.both --debug
+  *: <%unset> (glob)
+
+  $ hg showconfig unsettest.both -Tjson
+  [
+  ]
+  [1]
+  $ hg showconfig unsettest.both -Tjson --debug
+  [
+  {
+    "name": "unsettest.both",
+    "source": "*", (glob)
+    "value": null
+  }
+  ]
+
 Test exit code when no config matches
 
   $ hg config Section.idontexist

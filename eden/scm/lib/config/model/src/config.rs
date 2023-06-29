@@ -225,7 +225,7 @@ pub struct ValueLocation {
 }
 
 impl ValueSource {
-    /// Return the actual value stored in this config value, or `None` if uset.
+    /// Return the actual value stored in this config value, or `None` if unset.
     pub fn value(&self) -> &Option<Text> {
         &self.value
     }
