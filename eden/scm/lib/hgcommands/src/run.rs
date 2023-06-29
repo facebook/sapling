@@ -330,20 +330,15 @@ fn current_dir(io: &IO) -> io::Result<PathBuf> {
     result
 }
 
-fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mutex<TracingData>>> {
-    // Setup TracingData singleton (currently owned by pytracing).
-    {
-        let mut data = pytracing::DATA.lock();
-        // Only recreate TracingData if pid has changed (ex. chgserver's case
-        // where it forks and runs commands - we want to log to different
-        // blackbox trace events).  This makes it possible to use multiple
-        // `run()`s in a single process
-        if data.process_id() != unsafe { libc::getpid() } as u64 {
-            *data.deref_mut() = TracingData::new();
-        }
-    }
-    let data = pytracing::DATA.clone();
-
+/// Make tracing write logs to `io` if `LOG` environment is set.
+/// Return `true` if it is set, or `false` if nothing happens.
+///
+/// `collector` is used to integrate with the `TracingCollector`,
+/// which can integrate with Python via bindings.
+fn setup_tracing_io(
+    io: &IO,
+    collector: Option<tracing_collector::TracingCollector>,
+) -> Result<bool> {
     let is_test = is_inside_test();
     let mut env_filter_dirs: Option<String> = identity::debug_env_var("LOG").map(|v| v.1);
 
@@ -362,7 +357,6 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mute
         // This might error out if called 2nd time per process.
         let env_filter = tracing_reload::reloadable_env_filter()?;
 
-        let collector = tracing_collector::TracingCollector::new(data.clone());
         let env_logger = FmtLayer::new()
             .with_span_events(FmtSpan::ACTIVE)
             .with_ansi(can_color)
@@ -370,17 +364,58 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mute
         if is_test {
             // In tests, disable color and timestamps for cleaner output.
             let env_logger = env_logger.without_time().with_ansi(false);
-            let subscriber = tracing_subscriber::Registry::default()
-                .with(collector.and_then(env_logger).with_filter(env_filter))
-                .with(SamplingLayer::new());
-            tracing::subscriber::set_global_default(subscriber)?;
+            match collector {
+                None => {
+                    let subscriber = tracing_subscriber::Registry::default()
+                        .with(env_logger.with_filter(env_filter))
+                        .with(SamplingLayer::new());
+                    tracing::subscriber::set_global_default(subscriber)?;
+                }
+                Some(collector) => {
+                    let subscriber = tracing_subscriber::Registry::default()
+                        .with(collector.and_then(env_logger).with_filter(env_filter))
+                        .with(SamplingLayer::new());
+                    tracing::subscriber::set_global_default(subscriber)?;
+                }
+            };
         } else {
-            let subscriber = tracing_subscriber::Registry::default()
-                .with(collector.and_then(env_logger).with_filter(env_filter))
-                .with(SamplingLayer::new());
-            tracing::subscriber::set_global_default(subscriber)?;
+            match collector {
+                None => {
+                    let subscriber = tracing_subscriber::Registry::default()
+                        .with(env_logger.with_filter(env_filter))
+                        .with(SamplingLayer::new());
+                    tracing::subscriber::set_global_default(subscriber)?;
+                }
+                Some(collector) => {
+                    let subscriber = tracing_subscriber::Registry::default()
+                        .with(collector.and_then(env_logger).with_filter(env_filter))
+                        .with(SamplingLayer::new());
+                    tracing::subscriber::set_global_default(subscriber)?;
+                }
+            }
         }
+        Ok(true)
     } else {
+        Ok(false)
+    }
+}
+
+fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mutex<TracingData>>> {
+    // Setup TracingData singleton (currently owned by pytracing).
+    {
+        let mut data = pytracing::DATA.lock();
+        // Only recreate TracingData if pid has changed (ex. chgserver's case
+        // where it forks and runs commands - we want to log to different
+        // blackbox trace events).  This makes it possible to use multiple
+        // `run()`s in a single process
+        if data.process_id() != unsafe { libc::getpid() } as u64 {
+            *data.deref_mut() = TracingData::new();
+        }
+    }
+    let data = pytracing::DATA.clone();
+
+    let collector = tracing_collector::TracingCollector::new(data.clone());
+    if !setup_tracing_io(io, Some(collector))? {
         let level = identity::debug_env_var("TRACE_LEVEL")
             .map(|v| v.1)
             .and_then(|s| Level::from_str(&s).ok())
