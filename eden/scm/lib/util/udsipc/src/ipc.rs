@@ -65,7 +65,7 @@ pub fn connect(path: &Path) -> anyhow::Result<NodeIpc> {
 /// Similar to `std::net::Incoming` but:
 /// - Owns `listener`. Does not use lifetime.
 /// - Deletes the domain sockets on drop.
-/// - Provides `is_alive()` to check if the socket file is still on disk.
+/// - Provides `get_is_alive_func()` to check if the socket file is still on disk.
 pub struct Incoming {
     listener: UnixListener,
     path: PathBuf,
@@ -73,10 +73,12 @@ pub struct Incoming {
 }
 
 impl Incoming {
-    /// Check if the socket file is still on disk.
+    /// Get a function to check if the socket file is still on disk.
     /// This can be useful to decide whether to exit in a loop.
-    pub fn is_alive(&self) -> bool {
-        self.path.exists() || self.private_path.exists()
+    pub fn get_is_alive_func(&self) -> Box<dyn (Fn() -> bool) + Send + Sync + 'static> {
+        let path = self.path.clone();
+        let private_path = self.private_path.clone();
+        Box::new(move || path.exists() || private_path.exists())
     }
 }
 
