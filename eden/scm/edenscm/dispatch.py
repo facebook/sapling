@@ -236,7 +236,6 @@ def _preimportmodules():
         "revset",
         "revsetlang",
         "rewriteutil",
-        "scmposix",
         "scmutil",
         "server",
         "setdiscovery",
