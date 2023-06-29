@@ -21,6 +21,7 @@ members = [
   "lib/clientinfo",
   "lib/cliparser",
   "lib/clone",
+  "lib/commandserver",
   "lib/commitcloudsubscriber",
   "lib/config/hgrc-parser",
   "lib/config/loader",
