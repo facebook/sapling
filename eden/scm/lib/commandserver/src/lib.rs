@@ -9,4 +9,5 @@
 //! startup overhead.
 
 mod ipc;
+mod spawn;
 mod util;
