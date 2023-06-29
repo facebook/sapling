@@ -18,6 +18,7 @@
 //! [1]: https://github.com/nodejs/node/blob/fe514bf960ca1243b71657af662e7df29f5b57cf/lib/internal/child_process/serialization.js#L54
 //! [2]: https://github.com/nodejs/node/commit/db6253f94a7e499b2bacf5998a246c7cd06f7245
 
+pub mod derive;
 pub(crate) mod nodeipc;
 mod sendfd;
 pub(crate) mod singleton;
