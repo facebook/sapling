@@ -196,6 +196,7 @@ mod tests {
     use std::thread;
 
     use super::*;
+    use crate::ipc;
     use crate::NodeIpc;
 
     #[test]
@@ -216,12 +217,11 @@ mod tests {
             }
         }
 
-        define_ipc! {
-            impl OddService {
-                pub fn is_odd(&self, n: u32) -> bool {
-                    // self.is_even() is provided by the generated EvenServiceIpc trait.
-                    self.is_even(n - 1).unwrap()
-                }
+        #[ipc(test)]
+        impl OddService {
+            pub fn is_odd(&self, n: u32) -> bool {
+                // self.is_even() is provided by the generated EvenServiceIpc trait.
+                self.is_even(n - 1).unwrap()
             }
         }
 

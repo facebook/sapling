@@ -23,5 +23,8 @@ pub(crate) mod nodeipc;
 mod sendfd;
 pub(crate) mod singleton;
 
+/// Shortcut for the `define_ipc!` macro.
+pub use nodeipc_derive::ipc;
+
 pub use self::nodeipc::NodeIpc;
 pub use self::singleton::get_singleton;
