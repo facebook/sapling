@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
 use std::collections::BTreeSet;
 
 use anyhow::bail;
@@ -16,6 +17,7 @@ use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use configloader::Config;
 use configmodel::ConfigExt;
+use configmodel::ValueSource;
 use formatter::formatter::FormatOptions;
 use formatter::formatter::Formattable;
 use formatter::formatter::ListFormatter;
@@ -97,6 +99,7 @@ pub fn run(ctx: ReqCtx<ConfigOpts>, repo: &mut OptionalRepo) -> Result<u8> {
 
 struct ConfigItem<'a> {
     source: String,
+    all_sources: Cow<'a, [ValueSource]>,
     section: &'a str,
     key: &'a str,
     value: Option<String>,
@@ -149,6 +152,22 @@ impl<'a> Formattable for ConfigItem<'a> {
             kv_section,
             value.replace('\n', "\\n")
         )?;
+
+        if options.debug && options.verbose {
+            for s in self.all_sources.iter().rev().skip(1) {
+                let value = match &s.value {
+                    None => Text::from_static("<%unset>"),
+                    Some(value) => value.clone(),
+                };
+                write!(
+                    writer,
+                    "  {}: {kv_section}{}\n",
+                    source_to_display_string(s),
+                    value.replace('\n', "\\n"),
+                )?;
+            }
+        }
+
         Ok(())
     }
 }
@@ -160,12 +179,12 @@ fn get_config_item<'a>(
     single_item: bool,
     debug: bool,
 ) -> Option<ConfigItem<'a>> {
-    let sources_list = config.get_sources(section, key);
-    let config_value_source = match sources_list.last() {
+    let all_sources = config.get_sources(section, key);
+    let config_value_source = match all_sources.last() {
         None => {
             return None;
         }
-        Some(s) => s,
+        Some(last) => last,
     };
 
     let value = config_value_source.value();
@@ -175,11 +194,22 @@ fn get_config_item<'a>(
         return None;
     }
 
-    let builtin = config_value_source.source().starts_with("builtin:");
-    let source = config_value_source
+    Some(ConfigItem {
+        source: source_to_display_string(config_value_source),
+        section,
+        key,
+        value: value.as_ref().map(|v| v.to_string()),
+        single_item,
+        builtin: config_value_source.source().starts_with("builtin:"),
+        all_sources,
+    })
+}
+
+fn source_to_display_string(source: &ValueSource) -> String {
+    source
         .location()
         .and_then(|(location, range)| {
-            config_value_source.file_content().map(|file| {
+            source.file_content().map(|file| {
                 let line = 1 + file
                     .slice(0..range.start)
                     .chars()
@@ -188,21 +218,11 @@ fn get_config_item<'a>(
                 if !location.as_os_str().is_empty() {
                     format!("{}:{}", location.display(), line)
                 } else {
-                    let source = config_value_source.source();
-                    format!("{}:{}", source, line)
+                    format!("{}:{}", source.source(), line)
                 }
             })
         })
-        .unwrap_or_else(|| config_value_source.source().to_string());
-
-    Some(ConfigItem {
-        source,
-        section,
-        key,
-        value: value.as_ref().map(|v| v.to_string()),
-        single_item,
-        builtin,
-    })
+        .unwrap_or_else(|| source.source().to_string())
 }
 
 fn show_configs(

@@ -365,3 +365,28 @@ Warn about duplicate entries:
   b = 1
   [a]
   b = 3
+
+Can see all sources w/ --debug and --verbose:
+  $ newrepo sources
+  $ cat > .hg/hgrc << EOF
+  > %include $TESTTMP/sources.rc
+  > [foo]
+  > bar = 1
+  > [foo]
+  > bar = 2
+  > EOF
+
+  $ cat > $TESTTMP/sources.rc << EOF
+  > [foo]
+  > bar = 3
+  > EOF
+
+  $ hg config foo.bar --debug --verbose
+  $TESTTMP/sources/.hg/hgrc:*: 2 (glob)
+    $TESTTMP/sources/.hg/hgrc:*: 1 (glob)
+    $TESTTMP/sources.rc:*: 3 (glob)
+
+  $ hg config foo --debug --verbose
+  $TESTTMP/sources/.hg/hgrc:*: foo.bar=2 (glob)
+    $TESTTMP/sources/.hg/hgrc:*: foo.bar=1 (glob)
+    $TESTTMP/sources.rc:*: foo.bar=3 (glob)
