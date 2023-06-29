@@ -1,6 +1,7 @@
 [patch.crates-io]
 abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2afa2aedc64d61f3f4273e8d1e454642" }
 curve25519-dalek = { git = "https://github.com/hariria/curve25519-dalek", rev = "1f39e7b369dc70f432370c9703229a45bfa9664e" }
+dachshund = { git = "https://github.com/facebookresearch/dachshund", rev = "ec4cc35bc5afb0db5f791ee9e3168e7586986c88" }
 graphql-parser = { git = "https://github.com/graphql-rust//graphql-parser", rev = "8d76425d83c40670570cc325f57c730262f07456" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d174c6796d736b2b61dab0297670390f8" }
 mysql_async = { git = "https://github.com/mzr/mysql_async", rev = "76b6fa05d7bb3408402033e6f94042a756ab55ab" }
