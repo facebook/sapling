@@ -46,11 +46,11 @@ Update. Check for multiple requests
   $ cat "$lfs_log"
   IN  > POST /repo/objects/batch -
   OUT < POST /repo/objects/batch 200 OK
-  IN  > GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9 -
-  OUT < GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9 206 Partial Content
-  IN  > GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9 -
-  OUT < GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9 206 Partial Content
-  IN  > GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9 -
-  OUT < GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9 206 Partial Content
-  IN  > GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9 -
-  OUT < GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9 206 Partial Content
+  IN  > GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9?server_hostname=* - (glob)
+  OUT < GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9?server_hostname=* 206 Partial Content (glob)
+  IN  > GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9?server_hostname=* - (glob)
+  OUT < GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9?server_hostname=* 206 Partial Content (glob)
+  IN  > GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9?server_hostname=* - (glob)
+  OUT < GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9?server_hostname=* 206 Partial Content (glob)
+  IN  > GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9?server_hostname=* - (glob)
+  OUT < GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9?server_hostname=* 206 Partial Content (glob)

@@ -44,12 +44,10 @@ Update. Check for compression. It shouldn't be used.
   76903e148255cbd5ba91d3f47fe04759afcffdf64104977fc83f688892ac0dfd  large
 
   $ wait_for_json_record_count "$TESTTMP/scuba.json" 2
-  $ jq .int.response_content_length < "$TESTTMP/scuba.json"
-  280|276 (re)
-  2097152
-  $ jq .int.response_bytes_sent < "$TESTTMP/scuba.json"
-  280|276 (re)
-  2097152
+  $ jq '(.int.response_content_length|tostring) + " " + .normal.http_path' < "$TESTTMP/scuba.json" | grep "download"
+  "2097152 /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9"
+  $ jq '(.int.response_bytes_sent|tostring) + " " + .normal.http_path' < "$TESTTMP/scuba.json" | grep "download"
+  "2097152 /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9"
   $ jq .normal.response_content_encoding < "$TESTTMP/scuba.json"
   null
   null
@@ -71,13 +69,10 @@ Update again. This time, we should have compression.
   76903e148255cbd5ba91d3f47fe04759afcffdf64104977fc83f688892ac0dfd  large
 
   $ wait_for_json_record_count "$TESTTMP/scuba.json" 2
-  $ jq .int.response_content_length < "$TESTTMP/scuba.json"
-  280|276 (re)
-  null
-  $ jq .int.response_bytes_sent < "$TESTTMP/scuba.json"
-  280|276 (re)
-  202
+  $ jq '(.int.response_content_length|tostring) + " " + .normal.http_path' < "$TESTTMP/scuba.json" | grep "download"
+  "null /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9"
+  $ jq '(.int.response_bytes_sent|tostring) + " " + .normal.http_path' < "$TESTTMP/scuba.json" | grep "download"
+  "202 /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9"
   $ jq .normal.response_content_encoding < "$TESTTMP/scuba.json"
   null
   "zstd"
-  $ truncate -s 0 "$TESTTMP/scuba.json"

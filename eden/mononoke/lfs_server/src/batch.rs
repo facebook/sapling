@@ -706,6 +706,8 @@ mod test {
     use crate::lfs_server_context::ServerUris;
     use crate::Repo;
 
+    const SERVER_HOSTNAME: &str = "mzr.re";
+
     fn obj(oid: Sha256, size: u64) -> RequestObject {
         RequestObject {
             oid: oid.into(),
@@ -877,8 +879,8 @@ mod test {
 
     fn upload_uri(object: &RequestObject) -> Result<Uri, Error> {
         let r = format!(
-            "http://foo.com/repo123/upload/{}/{}",
-            object.oid, object.size
+            "http://foo.com/repo123/upload/{}/{}?server_hostname={}",
+            object.oid, object.size, SERVER_HOSTNAME
         )
         .parse()?;
         Ok(r)
@@ -915,6 +917,7 @@ mod test {
             repository: "repo123".to_string(),
             server: Arc::new(server),
             host: "foo.com".to_string(),
+            server_hostname: Arc::new(SERVER_HOSTNAME.to_string()),
         };
 
         let res = batch_upload_response_objects(

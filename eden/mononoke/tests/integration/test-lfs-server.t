@@ -30,12 +30,12 @@
   $ cat "$lfs_log"
   IN  > POST /lfs1/objects/batch -
   OUT < POST /lfs1/objects/batch 200 OK
-  IN  > PUT /lfs1/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048 -
-  OUT < PUT /lfs1/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048 200 OK
+  IN  > PUT /lfs1/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048?server_hostname=* - (glob)
+  OUT < PUT /lfs1/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048?server_hostname=* 200 OK (glob)
   IN  > POST /lfs1/objects/batch -
   OUT < POST /lfs1/objects/batch 200 OK
-  IN  > GET /lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d -
-  OUT < GET /lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d 200 OK
+  IN  > GET /lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?server_hostname=* - (glob)
+  OUT < GET /lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?server_hostname=* 200 OK (glob)
   IN  > POST /lfs1/objects/batch -
   OUT < POST /lfs1/objects/batch 200 OK
 
@@ -93,5 +93,5 @@
   {"message":"Host abcd is not allowlisted","request_id":"*"} (glob)
   400 (no-eol)
   $ curl -s -w "\n%{http_code}" "${lfs_uri}/objects/batch/" --data-binary "@request"
-  {"transfer":"basic","objects":[{"oid":"ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746","size":2048,"authenticated":false,"actions":{"download":{"href":"http://$LOCALIP:*/lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d"}}}]} (glob)
+  {"transfer":"basic","objects":[{"oid":"ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746","size":2048,"authenticated":false,"actions":{"download":{"href":"http://$LOCALIP:*/lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?server_hostname=*"}}}]} (glob)
   200 (no-eol)

@@ -27,6 +27,7 @@ futures-util = "0.3.7"
 gotham = "0.7.1"
 gotham_derive = "0.7.0"
 gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
+hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 http = "0.2"
 hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"] }
 hyper-openssl = "0.9"
