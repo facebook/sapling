@@ -522,7 +522,7 @@ where
     V: Default,
 {
     pub fn insert(&mut self, path: Option<MPath>, value: V) {
-        let mut node = path.into_iter().flatten().fold(self, |node, element| {
+        let node = path.into_iter().flatten().fold(self, |node, element| {
             node.subentries
                 .entry(element)
                 .or_insert_with(Default::default)
@@ -554,7 +554,7 @@ where
     }
 
     pub fn insert_and_prune(&mut self, path: Option<MPath>, value: V) {
-        let mut node = path.into_iter().flatten().fold(self, |node, element| {
+        let node = path.into_iter().flatten().fold(self, |node, element| {
             node.subentries
                 .entry(element)
                 .or_insert_with(Default::default)

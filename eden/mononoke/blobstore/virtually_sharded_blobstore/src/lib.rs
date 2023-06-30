@@ -783,7 +783,7 @@ mod test {
                 value: BlobstoreBytes,
             ) -> Result<()> {
                 let mut data = self.data.lock().unwrap();
-                let mut blob = data.entry(key).or_default();
+                let blob = data.entry(key).or_default();
                 blob.puts += 1;
                 blob.data = Some(BlobData::Bytes(value));
                 Ok(())
@@ -835,7 +835,7 @@ mod test {
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let mut blob = data.entry(key.to_owned()).or_default();
+                let blob = data.entry(key.to_owned()).or_default();
                 assert_eq!(blob.gets, 10);
                 blob.data = Some(BlobData::Bytes(BlobstoreBytes::from_bytes("foo")));
             }
@@ -877,7 +877,7 @@ mod test {
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let mut blob = data.entry(key.to_owned()).or_default();
+                let blob = data.entry(key.to_owned()).or_default();
                 blob.data = Some(BlobData::Bytes(val.clone()));
             }
 
@@ -945,7 +945,7 @@ mod test {
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let mut blob = data.entry(key.to_owned()).or_default();
+                let blob = data.entry(key.to_owned()).or_default();
                 blob.data = Some(BlobData::Channel(sender.clone()));
             }
 
@@ -1103,7 +1103,7 @@ mod test {
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let mut blob = data.entry(key.to_owned()).or_default();
+                let blob = data.entry(key.to_owned()).or_default();
                 blob.data = Some(BlobData::Bytes(val0.clone()));
             }
 
@@ -1156,7 +1156,7 @@ mod test {
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let mut blob = data.entry(key.to_owned()).or_default();
+                let blob = data.entry(key.to_owned()).or_default();
                 blob.data = Some(BlobData::Bytes(val0.clone()));
             };
 

@@ -89,7 +89,7 @@ where
         self.total_progress += 1;
         // By type
         let k = n.get_type();
-        let mut entry = self.stats_by_type.entry(k).or_insert((0, SS::default()));
+        let entry = self.stats_by_type.entry(k).or_insert((0, SS::default()));
         entry.0 += 1;
         match opt {
             Some(ss) => {

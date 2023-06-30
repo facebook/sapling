@@ -296,7 +296,7 @@ where
         };
         let no_children_left = {
             // update parent
-            let mut children = children
+            let children = children
                 .as_mut()
                 .expect("`update_location` referenced not blocked node");
             debug_assert!(children.children[loc.child_index].is_none());

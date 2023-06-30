@@ -79,7 +79,7 @@ pub trait TryAssemblyLine: TryStream + Sized {
         // This is always true, not sure why I need this bound
         Self: Stream<Item = Result<Self::Ok, Self::Error>>,
     {
-        NextStep::new(self, ResultWrapper(step_fn, PhantomData::default()))
+        NextStep::new(self, ResultWrapper(step_fn, PhantomData))
     }
 }
 
