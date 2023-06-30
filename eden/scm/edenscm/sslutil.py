@@ -385,10 +385,7 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
     # bundle with a specific CA cert removed. If the system/default CA bundle
     # is loaded and contains that removed CA, you've just undone the user's
     # choice.
-    sslcontext = SSLContext(settings["protocol"])
-
-    # This is a no-op unless using modern ssl.
-    sslcontext.options |= settings["ctxoptions"]
+    sslcontext = SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
     # This still works on our fake SSLContext.
     sslcontext.verify_mode = settings["verifymode"]
@@ -603,8 +600,7 @@ def wrapserversocket(
         # We /could/ use create_default_context() here since it doesn't load
         # CAs when configured for client auth. However, it is hard-coded to
         # use ssl.PROTOCOL_SSLv23 which may not be appropriate here.
-        sslcontext = SSLContext(protocol)
-        sslcontext.options |= options
+        sslcontext = SSLContext(ssl.PROTOCOL_TLS_SERVER)
 
         # Improve forward secrecy.
         sslcontext.options |= getattr(ssl, "OP_SINGLE_DH_USE", 0)
@@ -617,7 +613,7 @@ def wrapserversocket(
             #  `_RESTRICTED_SERVER_CIPHERS`.
             sslcontext.set_ciphers(ssl._RESTRICTED_SERVER_CIPHERS)
     else:
-        sslcontext = SSLContext(ssl.PROTOCOL_TLSv1)
+        sslcontext = SSLContext(ssl.PROTOCOL_TLS_SERVER)
 
     if requireclientcert:
         sslcontext.verify_mode = ssl.CERT_REQUIRED
