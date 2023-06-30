@@ -316,6 +316,11 @@ async def create_serial_strategy_params(
     next_pull_request_number = None
     repository: Optional[Repository] = None
 
+    user_prefix = ui.config(
+        "github", "pr-prefix", ui.config("github", "pr_prefix")
+    )
+    prefix = f"{user_prefix}/pr" if user_prefix else "pr"
+
     # Note that `partitions` is ordered from the top of the stack to the bottom,
     # but we want to create PRs from the bottom to the top so the PR numbers are
     # created in ascending order.
@@ -352,7 +357,7 @@ async def create_serial_strategy_params(
             else:
                 next_pull_request_number += 1
             # Consider including username in branch_name?
-            branch_name = f"pr{next_pull_request_number}"
+            branch_name = f"{prefix}_{next_pull_request_number}"
             refs_to_update.append(f"{hex(top.node)}:refs/heads/{branch_name}")
             top.head_branch_name = branch_name
             pull_requests_to_create.append((top, branch_name))
