@@ -106,6 +106,7 @@ Show debug commands if there are no other candidates
   debugcleanremotenames
   debugcolor
   debugcommands
+  debugcommitmessage
   debugcompactmetalog
   debugcomplete
   debugconfig
@@ -436,6 +437,7 @@ Show all commands + options
   debugcleanremotenames: 
   debugcolor: style
   debugcommands: 
+  debugcommitmessage: 
   debugcompactmetalog: 
   debugcomplete: options
   debugcopytrace: source, dest

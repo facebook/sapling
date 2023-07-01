@@ -272,7 +272,6 @@ def _preimportmodules():
         "conflictinfo",
         "copytrace",
         "crdump",
-        "debugcommitmessage",
         "debugshell",
         "dialect",
         "dirsync",

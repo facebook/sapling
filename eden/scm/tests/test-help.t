@@ -304,8 +304,6 @@ Test extension help:
        commitcloud   back up and sync changesets via the cloud
        copytrace     extension that does copytracing fast
        crdump        (no help text available)
-       debugcommitmessage
-                     (no help text available)
        debugnetwork  test network connections to the server
        dialect       replace terms with more widely used equivalents
        dirsync
@@ -941,6 +939,8 @@ Test list of internal help commands
    debugcolor    show available color, effects or style
    debugcommands
                  list all available commands and options
+   debugcommitmessage
+                 show commit template
    debugcompactmetalog
                  compact the metalog by dropping history
    debugcomplete
@@ -1378,14 +1378,12 @@ Test -e / -c / -k combinations
   Commands:
   $ hg help -e|grep -E '^[A-Z].*:|^ debug'
   Extensions:
-   debugcommitmessage            (no help text available)
    debugnetwork                  test network connections to the server
    debugshell                    a python shell with repo, changelog & manifest
   $ hg help -k|grep -E '^[A-Z].*:|^ debug'
   Topics:
   Commands:
   Extensions:
-   debugcommitmessage            (no help text available)
    debugnetwork                  test network connections to the server
    debugshell                    a python shell with repo, changelog & manifest
   Extension Commands:

@@ -565,7 +565,7 @@ export default class ServerToClientAPI {
       }
       case 'fetchCommitMessageTemplate': {
         repo
-          .runCommand(['debugcommitmessage'])
+          .runCommand(['debugcommitmessage', 'isl'])
           .then(result => {
             const template = result.stdout
               .replace(repo.IGNORE_COMMIT_MESSAGE_LINES_REGEX, '')

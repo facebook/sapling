@@ -44,6 +44,7 @@ _ignoreextensions = {
     "color",
     "configwarn",
     "convert",
+    "debugcommitmessage",
     "directaccess",
     "eden",
     "eol",
