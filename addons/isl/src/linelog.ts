@@ -35,7 +35,7 @@ import type {LRUWithStats} from 'shared/LRU';
 import {assert} from './utils';
 // Read D43857949 about the choice of the diff library.
 import diffSequences from 'diff-sequences';
-import {hash, List, Record} from 'immutable';
+import {hash, List, Record, Set as ImSet} from 'immutable';
 import {cached, LRU} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
 import {unwrap} from 'shared/utils';
@@ -152,12 +152,14 @@ interface LineInfo {
 }
 
 /** A "flatten" line. Result of `LineLog.flatten()`. */
-interface FlattenLine {
+type FlattenLineProps = {
   /** The line is present in the given revisions. */
-  revs: Readonly<Set<Rev>>;
+  revs: ImSet<Rev>;
   /** Content of the line, including `\n`. */
   data: string;
-}
+};
+const FlattenLine = Record<FlattenLineProps>({revs: ImSet(), data: ''});
+type FlattenLine = RecordOf<FlattenLineProps>;
 
 /**
  * List of instructions.
@@ -660,7 +662,7 @@ class LineLog extends SelfUpdate<LineLogRecord> {
    * a single view.
    */
   @cached({cacheSize: 1000})
-  public flatten(): Readonly<FlattenLine[]> {
+  public flatten(): List<FlattenLine> {
     const result: FlattenLine[] = [];
 
     // See the comments in calculateDepMap for what the stacks mean.
@@ -689,7 +691,7 @@ class LineLog extends SelfUpdate<LineLogRecord> {
     const insStack: Frame[] = [{rev: 0, endPc: -1}];
     const delStack: Frame[] = [];
     const maxDelRev = this.maxRev + 1;
-    const getCurrentRevs = (): Readonly<Set<Rev>> => {
+    const getCurrentRevs = (): ImSet<Rev> => {
       const insRev = insStack.at(-1)?.rev ?? 0;
       const delRev = delStack.at(-1)?.rev ?? maxDelRev;
       return revRangeToSet(insRev, delRev);
@@ -714,7 +716,7 @@ class LineLog extends SelfUpdate<LineLogRecord> {
           patience = -1;
           break;
         case Op.LINE:
-          result.push({data: code.data, revs: currentRevs});
+          result.push(FlattenLine({data: code.data, revs: currentRevs}));
           pc += 1;
           break;
         case Op.J:
@@ -739,7 +741,7 @@ class LineLog extends SelfUpdate<LineLogRecord> {
       assert(false, 'bug: code does not end in time');
     }
 
-    return result;
+    return List(result);
   }
 
   /**
@@ -912,12 +914,12 @@ function stringsToInts(linesArray: string[][]): number[][] {
 
 /** Turn (3, 6) to Set([3, 4, 5]). */
 const revRangeToSet = cached(
-  (startRev, endRev: Rev): Readonly<Set<Rev>> => {
-    const result = new Set<Rev>();
+  (startRev, endRev: Rev): ImSet<Rev> => {
+    const result: Rev[] = [];
     for (let rev = startRev; rev < endRev; rev++) {
-      result.add(rev);
+      result.push(rev);
     }
-    return result;
+    return ImSet(result);
   },
   {cacheSize: 1000},
 );

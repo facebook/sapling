@@ -285,7 +285,7 @@ describe('LineLog', () => {
     const textList = ['a\nb\nc\n', 'b\nc\nd\ne\n', 'a\nc\nd\nf\n'];
     const log = logFromTextList(textList);
     const lines = log.flatten();
-    expect(lines).toEqual(
+    expect(lines.toJS()).toEqual(
       [
         ['a', [1]],
         ['a', [3]],
@@ -294,7 +294,7 @@ describe('LineLog', () => {
         ['d', [2, 3]],
         ['f', [3]],
         ['e', [2]],
-      ].map(([line, revs]) => ({revs: new Set(revs as number[]), data: `${line}\n`})),
+      ].map(([line, revs]) => ({revs, data: `${line}\n`})),
     );
     // Verify the flatten lines against definition - if "revs" contains the rev,
     // then the line is included in "rev".

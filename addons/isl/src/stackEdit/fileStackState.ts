@@ -151,13 +151,18 @@ export class FileStackState extends SelfUpdate<State> {
     excludeRevs?: Rev[],
   ): FileStackState {
     const lines = this.convertToFlattenLines().toArray();
-    const editLine = (line: FlattenLine) => {
-      if (includeRevs) {
-        includeRevs.forEach(rev => line.revs.add(rev));
-      }
-      if (excludeRevs) {
-        excludeRevs.forEach(rev => line.revs.delete(rev));
-      }
+    const editLine = (line: FlattenLine): FlattenLine => {
+      const newRevs = line.revs.withMutations(mutRevs => {
+        let revs = mutRevs;
+        if (includeRevs) {
+          revs = revs.union(includeRevs);
+        }
+        if (excludeRevs) {
+          revs = revs.subtract(excludeRevs);
+        }
+        return revs;
+      });
+      return line.set('revs', newRevs);
     };
 
     // Note `lineStart` and `lineEnd` are for lines in `rev`.
@@ -167,7 +172,7 @@ export class FileStackState extends SelfUpdate<State> {
       const line = lines[i];
       if (line.revs.has(aRev)) {
         if (revLineIdx >= a1 && revLineIdx < a2) {
-          editLine(line);
+          lines[i] = editLine(line);
         }
         revLineIdx += 1;
         if (revLineIdx >= a2) {
