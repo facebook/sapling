@@ -496,7 +496,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
                       if (!ok) {
                         return;
                       }
-                      if (deselectedFiles.size === 0) {
+                      if (allFilesSelected) {
                         // all changes selected -> use clean goto rather than reverting each file. This is generally faster.
 
                         // to "discard", we need to both remove uncommitted changes
@@ -546,14 +546,13 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
                   const title =
                     (commitTitleRef.current as HTMLInputElement | null)?.value ||
                     t('Temporary Commit');
-                  const filesToCommit =
-                    deselectedFiles.size === 0
-                      ? // all files
-                        undefined
-                      : // only files not unchecked
-                        uncommittedChanges
-                          .filter(file => !deselectedFiles.has(file.path))
-                          .map(file => file.path);
+                  const filesToCommit = allFilesSelected
+                    ? // all files
+                      undefined
+                    : // only files not unchecked
+                      uncommittedChanges
+                        .filter(file => !deselectedFiles.has(file.path))
+                        .map(file => file.path);
                   runOperation(
                     new CommitOperation(
                       title, // just the title, no description / other fields
@@ -588,14 +587,13 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
                 disabled={noFilesSelected}
                 data-testid="uncommitted-changes-quick-amend-button"
                 onClick={() => {
-                  const filesToCommit =
-                    deselectedFiles.size === 0
-                      ? // all files
-                        undefined
-                      : // only files not unchecked
-                        uncommittedChanges
-                          .filter(file => !deselectedFiles.has(file.path))
-                          .map(file => file.path);
+                  const filesToCommit = allFilesSelected
+                    ? // all files
+                      undefined
+                    : // only files not unchecked
+                      uncommittedChanges
+                        .filter(file => !deselectedFiles.has(file.path))
+                        .map(file => file.path);
                   runOperation(new AmendOperation(filesToCommit));
                 }}>
                 <Icon slot="start" icon="debug-step-into" />
