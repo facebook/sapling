@@ -322,6 +322,11 @@ def debugimportstack(ui, repo, **opts):
     - No ``relevantFiles``.
     - No ``node``. Use ``mark`` instead. ``parents`` can refer to marks.
     - Has ``predecessors``.
+    - File can be ``.``, which means reading it from the working copy.
+    - ``copyFrom`` can be ``.``, which means reading from the working copy.
+    - ``flags`` can be ``.``, which means reading from the working copy,
+      or the parent of the working copy, if the file is in "R" or "!"
+      status.
 
     Bookmarks will be moved if they become obsoleted (referred by
     ``predecessors``).
@@ -551,6 +556,19 @@ def _filectxfn(repo, mctx, path, files_dict):
             data = base64.b85decode(file_info["dataBase85"])
         copied = file_info.get("copyFrom")
         flags = file_info.get("flags", "")
+        if copied == ".":
+            # Read copied from dirstate.
+            renamed = repo[None][path].renamed()
+            if renamed:
+                copied = renamed[0]
+            else:
+                copied = None
+        if flags == ".":
+            # Read flags from wdir(), or ".".
+            if repo.wvfs.lexists(path):
+                flags = repo[None][path].flags()
+            else:
+                flags = repo["."][path].flags()
         return context.memfilectx(
             repo,
             mctx,

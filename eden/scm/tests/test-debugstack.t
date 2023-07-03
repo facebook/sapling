@@ -264,6 +264,7 @@ Import stack:
         $ hg debugimportstack << EOS | marks
         > [["commit", {"text": "H", "mark": ":8", "files": {"y": "."}, "parents": `marks :7`}],
         >  ["goto", {"mark": ":8"}]]
+        > EOS
         {":8": "9d8fe7c75ea2d88aa6e3242283443a8904991ed7"}
 
         $ hg log -p -T '{desc}\n' -fr . --config diff.git=true
@@ -287,6 +288,73 @@ Import stack:
         +++ b/x
         @@ -0,0 +1,1 @@
         +content
+
+      # Refer to working copy copyFrom.
+
+        $ hg mv x x1
+        $ hg debugimportstack << EOS | marks
+        > [["commit", {"text": "I", "mark": ":9", "files": {"x1": {"data": "x1\n", "copyFrom": "."}}, "parents": `marks :8`}],
+        >  ["goto", {"mark": ":9"}]]
+        > EOS
+        {":9": "f01615cc474d26aa1116ce3528c5d5f5f9651c89"}
+
+        $ hg status --copies --change .
+        A x1
+          x
+        $ hg cat -r . x1
+        x1
+
+      # Refer to working copy flags.
+
+        if hasfeature("execbit"):
+            # Add 'x' flag to 'x1'
+            $ hg debugimportstack << EOS | marks
+            > [["commit", {"text": "J", "mark": ":10", "files": {"x1": {"data": "x1\n", "flags": "x", "copyFrom": "."}}, "parents": `marks :9`}],
+            >  ["goto", {"mark": ":10"}]]
+            > EOS
+            {":10": "e78b6e74635f227cf2323f607a32a015c951d121"}
+
+            # Reuse x1 flag from the working copy.
+            $ hg debugimportstack << EOS | marks
+            > [["commit", {"text": "K", "mark": ":11", "files": {"x1": {"data": "x2\n", "flags": "."}}, "parents": `marks :10`}],
+            >  ["goto", {"mark": ":11"}]]
+            > EOS
+            {":11": "55a92b921ebb52f5f6c67896d61c83da3178bd92"}
+
+            # Reuse x1 flag from the working copy parent, when x is deleted.
+            $ rm x1
+            $ hg debugimportstack << EOS | marks
+            > [["commit", {"text": "L", "mark": ":12", "files": {"x1": {"data": "x2\n", "flags": "."}}, "parents": `marks :11`}],
+            >  ["goto", {"mark": ":12"}]]
+            > EOS
+            {":12": "435dcd38184bec24509ee35a54b89ce1e8e3314e"}
+
+            # Check the 'x' flag is present on x1 in the above commits.
+            $ hg debugexportstack -r '.^+.' | pprint
+            [{'author': 'test', 'date': [0.0, 0], 'immutable': False, 'node': 'e78b6e74635f227cf2323f607a32a015c951d121', 'relevantFiles': {'x1': {'data': 'x1\n', 'flags': 'x'}}, 'requested': False, 'text': 'J'},
+             {'author': 'test',
+              'date': [0.0, 0],
+              'files': {'x1': {'data': 'x2\n', 'flags': 'x'}},
+              'immutable': False,
+              'node': '55a92b921ebb52f5f6c67896d61c83da3178bd92',
+              'parents': ['e78b6e74635f227cf2323f607a32a015c951d121'],
+              'requested': True,
+              'text': 'K'},
+             {'author': 'test',
+              'date': [0.0, 0],
+              'files': {},
+              'immutable': False,
+              'node': '435dcd38184bec24509ee35a54b89ce1e8e3314e',
+              'parents': ['55a92b921ebb52f5f6c67896d61c83da3178bd92'],
+              'requested': True,
+              'text': 'L'}]
+        else:
+            # Still exercise the code paths to get coverage test pass, but do not test the result.
+            $ touch x2
+            $ rm x1
+            $ hg debugimportstack > /dev/null << EOS
+            > [["commit", {"text": "J1", "mark": ":10.1", "files": {"x1": {"data": "x1\n", "flags": ".", "copyFrom": "."}, "x2": {"data": "x2\n", "flags": "."}}, "parents": `marks :9`}]]
+            > EOS
 
       # Error cases.
 
