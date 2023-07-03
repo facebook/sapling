@@ -18,11 +18,7 @@ import {numPendingImageUploads} from '../ImageUpload';
 import {OperationDisabledButton} from '../OperationDisabledButton';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
-import {
-  ChangedFiles,
-  deselectedUncommittedChanges,
-  UncommittedChanges,
-} from '../UncommittedChanges';
+import {ChangedFiles, UncommittedChanges} from '../UncommittedChanges';
 import {allDiffSummaries, codeReviewProvider} from '../codeReview/CodeReviewInfo';
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {t, T} from '../i18n';
@@ -32,6 +28,7 @@ import {CommitOperation} from '../operations/CommitOperation';
 import {GhStackSubmitOperation} from '../operations/GhStackSubmitOperation';
 import {PrSubmitOperation} from '../operations/PrSubmitOperation';
 import {SetConfigOperation} from '../operations/SetConfigOperation';
+import {useUncommittedSelection} from '../partialSelection';
 import platform from '../platform';
 import {CommitPreview, treeWithPreviews, uncommittedChangesWithPreviews} from '../previews';
 import {selectedCommitInfos, selectedCommits} from '../selection';
@@ -327,9 +324,9 @@ function ActionsBar({
 }) {
   const isAnythingBeingEdited = Object.values(fieldsBeingEdited).some(Boolean);
   const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
-  const deselected = useRecoilValue(deselectedUncommittedChanges);
+  const selection = useUncommittedSelection();
   const anythingToCommit =
-    !(deselected.size > 0 && deselected.size === uncommittedChanges.length) &&
+    !selection.isNothingSelected() &&
     ((!isCommitMode && isAnythingBeingEdited) || uncommittedChanges.length > 0);
 
   const provider = useRecoilValue(codeReviewProvider);
@@ -375,13 +372,15 @@ function ActionsBar({
   );
   const doAmendOrCommit = () => {
     const message = commitMessageFieldsToString(schema, assertNonOptimistic(editedMessage).fields);
-    const filesToCommit =
-      deselected.size === 0
-        ? // all files
-          undefined
-        : // only files not unchecked
-          uncommittedChanges.filter(file => !deselected.has(file.path)).map(file => file.path);
+    const filesToCommit = selection.isEverythingSelected()
+      ? // all files
+        undefined
+      : // only files not unchecked
+        uncommittedChanges
+          .filter(file => selection.isFullyOrPartiallySelected(file.path))
+          .map(file => file.path);
 
+    // TODO(quark): Need support for partial selection.
     const operation = isCommitMode
       ? new CommitOperation(message, commit.hash, filesToCommit)
       : new AmendOperation(filesToCommit, message);
@@ -425,10 +424,10 @@ function ActionsBar({
               areImageUploadsOngoing
                 ? t('Image uploads are still pending')
                 : isCommitMode
-                ? deselected.size === 0
+                ? selection.isEverythingSelected()
                   ? t('No changes to commit')
                   : t('No selected changes to commit')
-                : deselected.size === 0
+                : selection.isEverythingSelected()
                 ? t('No changes to amend')
                 : t('No selected changes to amend')
             }

@@ -5,12 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {UseUncommittedSelection} from './partialSelection';
 import type {PathTree} from './pathTree';
 import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} from './types';
 import type {MutableRefObject} from 'react';
-import type {SetterOrUpdater} from 'recoil';
 import type {Comparison} from 'shared/Comparison';
-import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import {
   ChangedFileDisplayTypePicker,
@@ -43,6 +42,7 @@ import {ForgetOperation} from './operations/ForgetOperation';
 import {PurgeOperation} from './operations/PurgeOperation';
 import {ResolveOperation, ResolveTool} from './operations/ResolveOperation';
 import {RevertOperation} from './operations/RevertOperation';
+import {useUncommittedSelection} from './partialSelection';
 import {buildPathTree} from './pathTree';
 import platform from './platform';
 import {
@@ -50,7 +50,6 @@ import {
   uncommittedChangesWithPreviews,
   useIsOperationRunningOrQueued,
 } from './previews';
-import {clearOnCwdChange} from './recoilUtils';
 import {selectedCommits} from './selection';
 import {
   latestHeadCommit,
@@ -59,8 +58,8 @@ import {
   useRunOperation,
 } from './serverAPIState';
 import {VSCodeButton, VSCodeCheckbox, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
-import {useEffect, useRef, useState} from 'react';
-import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
+import {useRef, useState} from 'react';
+import {useRecoilCallback, useRecoilValue} from 'recoil';
 import {revsetForComparison, ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {useDeepMemo} from 'shared/hooks';
@@ -148,12 +147,11 @@ const sortKeyForStatus: Record<VisualChangedFileType, number> = {
   Resolved: 8,
 };
 
-export function ChangedFiles(
-  props: {files: Array<ChangedFile>; comparison: Comparison} & EnsureAssignedTogether<{
-    deselectedFiles?: Set<string>;
-    setDeselectedFiles?: (newDeselected: Set<string>) => unknown;
-  }>,
-) {
+export function ChangedFiles(props: {
+  files: Array<ChangedFile>;
+  comparison: Comparison;
+  selection?: UseUncommittedSelection;
+}) {
   const displayType = useRecoilValue(changedFilesDisplayType);
   const {files, ...rest} = props;
   const processedFiles = useDeepMemo(() => processCopiesAndRenames(files), [files]);
@@ -172,8 +170,7 @@ function LinearFileList(props: {
   files: Array<UIChangedFile>;
   displayType: ChangedFilesDisplayType;
   comparison: Comparison;
-  deselectedFiles?: Set<string>;
-  setDeselectedFiles?: (newDeselected: Set<string>) => unknown;
+  selection?: UseUncommittedSelection;
 }) {
   const {files, ...rest} = props;
 
@@ -190,8 +187,7 @@ function FileTree(props: {
   files: Array<UIChangedFile>;
   displayType: ChangedFilesDisplayType;
   comparison: Comparison;
-  deselectedFiles?: Set<string>;
-  setDeselectedFiles?: (newDeselected: Set<string>) => unknown;
+  selection?: UseUncommittedSelection;
 }) {
   const {files, ...rest} = props;
 
@@ -245,14 +241,12 @@ function File({
   file,
   displayType,
   comparison,
-  deselectedFiles,
-  setDeselectedFiles,
+  selection,
 }: {
   file: UIChangedFile;
   displayType: ChangedFilesDisplayType;
   comparison: Comparison;
-  deselectedFiles?: Set<string>;
-  setDeselectedFiles?: (newDeselected: Set<string>) => unknown;
+  selection?: UseUncommittedSelection;
 }) {
   // Renamed files are files which have a copy field, where that path was also removed.
   // Visually show renamed files as if they were modified, even though sl treats them as added.
@@ -269,11 +263,7 @@ function File({
           platform.openFile(file.path);
         }
       }}>
-      <FileSelectionCheckbox
-        file={file}
-        deselectedFiles={deselectedFiles}
-        setDeselectedFiles={setDeselectedFiles}
-      />
+      <FileSelectionCheckbox file={file} selection={selection} />
       <span
         className="changed-file-path"
         onClick={() => {
@@ -302,37 +292,23 @@ function File({
 
 function FileSelectionCheckbox({
   file,
-  deselectedFiles,
-  setDeselectedFiles,
+  selection,
 }: {
   file: UIChangedFile;
-  deselectedFiles?: Set<string>;
-  setDeselectedFiles?: (newDeselected: Set<string>) => unknown;
+  selection?: UseUncommittedSelection;
 }) {
-  return deselectedFiles == null ? null : (
+  return selection == null ? null : (
     <VSCodeCheckbox
-      checked={!deselectedFiles.has(file.path)}
+      checked={selection.isFullyOrPartiallySelected(file.path)}
+      indeterminate={selection.isPartiallySelected(file.path)}
       // Note: Using `onClick` instead of `onChange` since onChange apparently fires when the controlled `checked` value changes,
       // which means this fires when using "select all" / "deselect all"
       onClick={e => {
-        const newDeselected = new Set(deselectedFiles);
         const checked = (e.target as HTMLInputElement).checked;
         if (checked) {
-          if (newDeselected.has(file.path)) {
-            newDeselected.delete(file.path);
-            if (file.renamedFrom != null) {
-              newDeselected.delete(file.renamedFrom); // checkbox applies to original part of renamed files too
-            }
-            setDeselectedFiles?.(newDeselected);
-          }
+          selection.select(file.path);
         } else {
-          if (!newDeselected.has(file.path)) {
-            newDeselected.add(file.path);
-            if (file.renamedFrom != null) {
-              newDeselected.add(file.renamedFrom); // checkbox applies to original part of renamed files too
-            }
-            setDeselectedFiles?.(newDeselected);
-          }
+          selection.deselect(file.path);
         }
       }}
     />
@@ -348,7 +324,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
 
   const conflicts = useRecoilValue(optimisticMergeConflicts);
 
-  const [deselectedFiles, setDeselectedFiles] = useDeselectedFiles(uncommittedChanges);
+  const selection = useUncommittedSelection();
   const commitTitleRef = useRef<HTMLTextAreaElement | undefined>(null);
 
   const runOperation = useRunOperation();
@@ -387,8 +363,8 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
   if (uncommittedChanges.length === 0) {
     return null;
   }
-  const allFilesSelected = deselectedFiles.size === 0;
-  const noFilesSelected = deselectedFiles.size === uncommittedChanges.length;
+  const allFilesSelected = selection.isEverythingSelected();
+  const noFilesSelected = selection.isNothingSelected();
 
   const allConflictsResolved =
     conflicts?.files?.every(conflict => conflict.status === 'Resolved') ?? false;
@@ -411,7 +387,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
             ? []
             : uncommittedChanges
                 .filter(file => UNTRACKED_OR_MISSING.includes(file.status))
-                .filter(file => !deselectedFiles.has(file.path))
+                .filter(file => selection.isFullyOrPartiallySelected(file.path))
                 .map(file => file.path);
           runOperation(new AddRemoveOperation(filesToAddRemove));
         }}>
@@ -461,7 +437,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
               key="select-all"
               disabled={allFilesSelected}
               onClick={() => {
-                setDeselectedFiles(new Set());
+                selection.selectAll();
               }}>
               <Icon slot="start" icon="check-all" />
               <T>Select All</T>
@@ -472,7 +448,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
               data-testid="deselect-all-button"
               disabled={noFilesSelected}
               onClick={() => {
-                setDeselectedFiles(new Set(uncommittedChanges.map(file => file.path)));
+                selection.deselectAll();
               }}>
               <Icon slot="start" icon="close-all" />
               <T>Deselect All</T>
@@ -487,8 +463,9 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
                 appearance="icon"
                 disabled={noFilesSelected}
                 onClick={() => {
+                  // TODO(quark): [Discard] does not work for partial selection yet.
                   const selectedFiles = uncommittedChanges
-                    .filter(file => !deselectedFiles.has(file.path))
+                    .filter(file => selection.isFullyOrPartiallySelected(file.path))
                     .map(file => file.path);
                   platform.confirm(t('confirmDiscardChanges')).then(ok => {
                     if (!ok) {
@@ -525,8 +502,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
       ) : (
         <ChangedFiles
           files={uncommittedChanges}
-          deselectedFiles={deselectedFiles}
-          setDeselectedFiles={setDeselectedFiles}
+          selection={selection}
           comparison={{
             type: ComparisonType.UncommittedChanges,
           }}
@@ -549,8 +525,9 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
                       undefined
                     : // only files not unchecked
                       uncommittedChanges
-                        .filter(file => !deselectedFiles.has(file.path))
+                        .filter(file => selection.isFullyOrPartiallySelected(file.path))
                         .map(file => file.path);
+                  // TODO(quark): [Commit] does not work for partial selection yet.
                   runOperation(
                     new CommitOperation(
                       title, // just the title, no description / other fields
@@ -590,8 +567,9 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
                       undefined
                     : // only files not unchecked
                       uncommittedChanges
-                        .filter(file => !deselectedFiles.has(file.path))
+                        .filter(file => selection.isFullyOrPartiallySelected(file.path))
                         .map(file => file.path);
+                  // TODO(quark): [Amend] does not work for partial selection yet.
                   runOperation(new AmendOperation(filesToCommit));
                 }}>
                 <Icon slot="start" icon="debug-step-into" />
@@ -840,38 +818,6 @@ function FileActions({comparison, file}: {comparison: Comparison; file: UIChange
       {actions}
     </div>
   );
-}
-
-/**
- * The subset of uncommitted changes which have been unchecked in the list.
- * Deselected files won't be committed or amended.
- */
-export const deselectedUncommittedChanges = atom<Set<RepoRelativePath>>({
-  key: 'deselectedUncommittedChanges',
-  default: new Set(),
-  effects: [clearOnCwdChange()],
-});
-
-function useDeselectedFiles(
-  files: Array<ChangedFile>,
-): [Set<RepoRelativePath>, SetterOrUpdater<Set<RepoRelativePath>>] {
-  const [deselectedFiles, setDeselectedFiles] = useRecoilState(deselectedUncommittedChanges);
-  useEffect(() => {
-    const allPaths = new Set(files.map(file => file.path));
-    const updatedDeselected = new Set(deselectedFiles);
-    let anythingChanged = false;
-    for (const deselected of deselectedFiles) {
-      if (!allPaths.has(deselected)) {
-        // invariant: deselectedFiles is a subset of uncommittedChangesWithPreviews
-        updatedDeselected.delete(deselected);
-        anythingChanged = true;
-      }
-    }
-    if (anythingChanged) {
-      setDeselectedFiles(updatedDeselected);
-    }
-  }, [files, deselectedFiles, setDeselectedFiles]);
-  return [deselectedFiles, setDeselectedFiles];
 }
 
 /**
