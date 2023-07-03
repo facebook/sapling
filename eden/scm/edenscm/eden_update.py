@@ -103,12 +103,18 @@ def update(
             # but since this is a force update it will have already replaced
             # the conflicts with the destination file state, so we don't have
             # to do anything with them here.
+            #
+            # UPDATE: when Mononoke is throttling, eden can generate conflict
+            # errors, which causes wrong data problem. Adding logic to abort on
+            # those conflict types.
             with progress.spinner(repo.ui, _("updating")):
                 conflicts = repo.dirstate.eden_client.checkout(
                     destctx.node(),
                     CheckoutMode.FORCE,
                     manifest=destctx.manifestnode(),
                 )
+                if conflicts:
+                    _abort_on_eden_conflict_error(repo, conflicts)
             # We do still need to make sure to update the merge state though.
             # In the non-force code path the merge state is updated in
             # _handle_update_conflicts().
@@ -172,6 +178,22 @@ def _handle_update_conflicts(repo, wctx, src, dest, labels, conflicts, force):
     return _applyupdates(repo, actions, wctx, dest, labels, conflicts)
 
 
+def _abort_on_eden_conflict_error(repo, conflicts):
+    """abort if there is a ConflictType.ERROR type of conflicts"""
+    if not _is_abort_on_eden_conflict_error_enabled(repo):
+        return
+
+    for conflict in conflicts:
+        if conflict.type == ConflictType.ERROR:
+            repo.ui.metrics.gauge("abort_on_eden_conflict_error", 1)
+            path = pycompat.decodeutf8(conflict.path)
+            raise error.Abort(_("error updating %s: %s") % (path, conflict.message))
+
+
+def _is_abort_on_eden_conflict_error_enabled(repo) -> bool:
+    return repo.ui.configbool("experimental", "abort-on-eden-conflict-error")
+
+
 def _determine_actions_for_conflicts(repo, src, conflicts):
     """Calculate the actions for _applyupdates()."""
     # Build a list of actions to pass to mergemod.applyupdates()
@@ -202,11 +224,17 @@ def _determine_actions_for_conflicts(repo, src, conflicts):
         path = pycompat.decodeutf8(conflict.path)
 
         if conflict.type == ConflictType.ERROR:
-            # We don't record this as a conflict for now.
-            # We will report the error, but the file will show modified in
-            # the working directory status after the update returns.
-            repo.ui.write_err(_("error updating %s: %s\n") % (path, conflict.message))
-            continue
+            if _is_abort_on_eden_conflict_error_enabled(repo):
+                repo.ui.metrics.gauge("abort_on_eden_conflict_error", 1)
+                raise error.Abort(_("error updating %s: %s") % (path, conflict.message))
+            else:
+                # We don't record this as a conflict for now.
+                # We will report the error, but the file will show modified in
+                # the working directory status after the update returns.
+                repo.ui.write_err(
+                    _("error updating %s: %s\n") % (path, conflict.message)
+                )
+                continue
         elif conflict.type == ConflictType.MODIFIED_REMOVED:
             action_type = "cd"
             action = (path, None, path, False, src.node())
