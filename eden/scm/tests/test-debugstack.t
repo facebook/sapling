@@ -167,7 +167,7 @@ Import stack:
       # Fold
 
         $ hg debugimportstack << EOS | marks
-        > [["commit", {"author": "test", "date": [0, 0], "text": "D", "mark": ":4",
+        > [["commit", {"text": "D", "mark": ":4",
         >   "parents": [], "predecessors": `marks :1 :2 :3`, "operation": "fold",
         >   "files": {"D": {"data": "D"}}}],
         >  ["goto", {"mark": ":4"}]]
