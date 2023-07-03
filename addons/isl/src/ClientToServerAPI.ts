@@ -56,6 +56,7 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
   onMessageOfType<T extends IncomingMessage['type']>(
     type: T,
     handler: (event: IncomingMessage & {type: T}) => void | Promise<void>,
+    dispose?: () => void,
   ): Disposable {
     let found = this.listenersByType.get(type);
     if (found == null) {
@@ -67,10 +68,89 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
       dispose: () => {
         const found = this.listenersByType.get(type);
         if (found) {
+          dispose?.();
           found.delete(handler as (event: IncomingMessage) => void | Promise<void>);
         }
       },
     };
+  }
+
+  /**
+   * Async generator that yields the given type of events.
+   * The generator ends when the connection is dropped, or if the callsite
+   * uses `break`, `return`, or `throw` to exit the loop body.
+   *
+   * The event listener will be set up immediately after calling this function,
+   * before the first iteration, and teared down when exiting the loop.
+   *
+   * Typically used in an async function, like:
+   *
+   * ```
+   * async function foo() {
+   *   // Set up the listener before sending the request.
+   *   const iter = clientToServerAPI.iterateMessageOfType('ResponseType');
+   *   clientToServerAPI.postMessage('RequestType', ...);
+   *   // Check responses until getting the one we look for.
+   *   for await (const event of iter) {
+   *     if (matchesRequest(event)) {
+   *        if (isGood(event)) {
+   *          return ...
+   *        } else {
+   *          throw ...
+   *        }
+   *     }
+   *   }
+   * }
+   * ```
+   */
+  iterateMessageOfType<T extends IncomingMessage['type']>(
+    type: T,
+  ): AsyncGenerator<IncomingMessage & {type: T}, undefined> {
+    // Setup the listener before the first `next()`.
+    type Event = IncomingMessage & {type: T};
+    const pendingEvents: Event[] = [];
+    const pendingPromises: [(value: Event) => void, (reason: Error) => void][] = [];
+    let listening = true;
+    const listener = this.onMessageOfType(
+      type,
+      event => {
+        const resolveReject = pendingPromises.shift();
+        if (resolveReject) {
+          resolveReject[0](event);
+        } else {
+          pendingEvents.push(event);
+        }
+      },
+      () => {
+        for (const [, reject] of pendingPromises) {
+          reject(new Error('Connection was dropped'));
+        }
+        pendingPromises.length = 0;
+        listening = false;
+      },
+    );
+
+    // This is a separate function because we want to set the listener
+    // immediately when the callsite calls `iterateMessageOfType`.
+    return (async function* (): AsyncGenerator<Event, undefined> {
+      try {
+        while (listening) {
+          const event = pendingEvents.shift();
+          if (event === undefined) {
+            yield new Promise<Event>((resolve, reject) => {
+              pendingPromises.push([resolve, reject]);
+            });
+          } else {
+            yield event;
+          }
+        }
+      } catch {
+        // ex. connection dropped.
+      } finally {
+        listener.dispose();
+      }
+      return undefined;
+    })();
   }
 
   /**
