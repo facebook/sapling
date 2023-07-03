@@ -1,12 +1,9 @@
 {
-  "confirmDiscardChanges_one": "Are you sure you want to discard your 1 selected change? Discarded changes cannot be recovered.",
-  "confirmDiscardChanges_other": "Are you sure you want to discard your $count selected changes? Discarded changes cannot be recovered.",
+  "confirmDiscardChanges": "Are you sure you want to discard your selected changes? Discarded changes cannot be recovered.",
   "numImagesUploading_one": "Uploading 1 file",
   "numImagesUploading_other": "Uploading $count files",
   "imageUploadFailed_one": "1 file upload failed",
   "imageUploadFailed_other": "$count file uploads failed",
-  "discardTooltip_one": "Discard the selected uncommitted changed file, even if untracked.\n\nNote: Changes to this file will be irreversably lost.",
-  "discardTooltip_other": "Discard $count selected uncommitted changes, including untracked files.\n\nNote: Changes will be irreversably lost.",
   "whetherToSubmitDiffAsDraft_one": "Whether to submit this diff as a draft",
   "whetherToSubmitDiffAsDraft_other": "Whether to submit these $count diffs as a draft"
 }

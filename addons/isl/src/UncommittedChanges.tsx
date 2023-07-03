@@ -480,9 +480,9 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
             {addremoveButton}
             <Tooltip
               delayMs={DOCUMENTATION_DELAY}
-              title={t('discardTooltip', {
-                count: uncommittedChanges.length - deselectedFiles.size,
-              })}>
+              title={t(
+                'Discard selected uncommitted changes, including untracked files.\n\nNote: Changes will be irreversibly lost.',
+              )}>
               <VSCodeButton
                 appearance="icon"
                 disabled={noFilesSelected}
@@ -490,25 +490,23 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
                   const selectedFiles = uncommittedChanges
                     .filter(file => !deselectedFiles.has(file.path))
                     .map(file => file.path);
-                  platform
-                    .confirm(t('confirmDiscardChanges', {count: selectedFiles.length}))
-                    .then(ok => {
-                      if (!ok) {
-                        return;
-                      }
-                      if (allFilesSelected) {
-                        // all changes selected -> use clean goto rather than reverting each file. This is generally faster.
+                  platform.confirm(t('confirmDiscardChanges')).then(ok => {
+                    if (!ok) {
+                      return;
+                    }
+                    if (allFilesSelected) {
+                      // all changes selected -> use clean goto rather than reverting each file. This is generally faster.
 
-                        // to "discard", we need to both remove uncommitted changes
-                        runOperation(new DiscardOperation());
-                        // ...and delete untracked files.
-                        // Technically we only need to do the purge when we have untracked files, though there's a chance there's files we don't know about yet while status is running.
-                        runOperation(new PurgeOperation());
-                      } else {
-                        // only a subset of files selected -> we need to revert selected files individually
-                        runOperation(new RevertOperation(selectedFiles));
-                      }
-                    });
+                      // to "discard", we need to both remove uncommitted changes
+                      runOperation(new DiscardOperation());
+                      // ...and delete untracked files.
+                      // Technically we only need to do the purge when we have untracked files, though there's a chance there's files we don't know about yet while status is running.
+                      runOperation(new PurgeOperation());
+                    } else {
+                      // only a subset of files selected -> we need to revert selected files individually
+                      runOperation(new RevertOperation(selectedFiles));
+                    }
+                  });
                 }}>
                 <Icon slot="start" icon="trashcan" />
                 <T>Discard</T>
