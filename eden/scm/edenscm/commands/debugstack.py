@@ -9,7 +9,7 @@ import base64, collections, functools, stat
 
 from .. import context, hg, json, mutation, scmutil, smartset, visibility
 from ..i18n import _
-from ..node import bin, hex, wdirhex, wdirrev
+from ..node import bin, hex, nullid, wdirhex, wdirrev
 from .cmdtable import command
 
 
@@ -286,7 +286,9 @@ def debugimportstack(ui, repo, **opts):
 
          // Parent nodes or marks. They must be known already.
          // Do not refer to commits after this commit.
-         "parents": [node | mark],
+         // "." means the current working parent, before making any
+         // new commits.
+         "parents": [node | mark | "."],
 
          // Predecessors that will be obsoleted. Optional.
          "predecessors": [node | mark],
@@ -358,8 +360,8 @@ def debugimportstack(ui, repo, **opts):
     There might be extra output caused by the "goto" operation after the first
     line. Those should be ignored by automation.
     """
-    marks = Marks()
     wnode = repo["."].node()
+    marks = Marks(wnode)
 
     try:
         try:
@@ -408,8 +410,9 @@ def debugimportstack(ui, repo, **opts):
 class Marks:
     """Track marks (pending commit hashes)"""
 
-    def __init__(self):
+    def __init__(self, wnode):
         self._mark_to_node = {}  # {mark: node}
+        self._wnode = wnode
 
     def to_nodes(self, items):
         """Resolve hex or marks to (binary) nodes"""
@@ -420,6 +423,10 @@ class Marks:
                 if not node:
                     raise ValueError(f"cannot resolve mark {item} to node")
                 result.append(node)
+            elif item == ".":
+                node = self._wnode
+                if node != nullid:
+                    result.append(node)
             else:
                 node = bin(item)
                 result.append(node)
