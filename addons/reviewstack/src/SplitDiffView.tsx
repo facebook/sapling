@@ -107,28 +107,24 @@ export default function SplitDiffView({
     ]),
   );
 
-  if (loadable.state === 'hasValue') {
-    const [{patch, tokenization}, allThreads, newCommentInputCallbacks, commitIDs] =
-      loadable.contents;
-    return (
-      <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
-        <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />
-        {open && (
-          <SplitDiffViewTable
-            path={path}
-            beforeOID={before}
-            tokenization={tokenization}
-            patch={patch}
-            allThreads={allThreads}
-            newCommentInputCallbacks={newCommentInputCallbacks}
-            commitIDs={commitIDs}
-          />
-        )}
-      </Box>
-    );
-  } else {
-    return <div />;
-  }
+  const [{patch, tokenization}, allThreads, newCommentInputCallbacks, commitIDs] =
+    loadable.getValue();
+  return (
+    <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
+      <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />
+      {open && (
+        <SplitDiffViewTable
+          path={path}
+          beforeOID={before}
+          tokenization={tokenization}
+          patch={patch}
+          allThreads={allThreads}
+          newCommentInputCallbacks={newCommentInputCallbacks}
+          commitIDs={commitIDs}
+        />
+      )}
+    </Box>
+  );
 }
 
 const SplitDiffViewTable = React.memo(

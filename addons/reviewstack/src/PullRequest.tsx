@@ -141,10 +141,15 @@ function PullRequestDetails() {
 
 function PullRequestVersionDiff() {
   const loadable = useRecoilValueLoadable(gitHubPullRequestVersionDiff);
-  const diff = loadable.valueMaybe();
+  const diff = loadable.getValue();
 
   if (diff != null) {
-    return <DiffView diff={diff.diff} isPullRequest={true} />;
+    return (
+      <Suspense
+        fallback={<CenteredSpinner message={'Loading ' + diff.diff.length + ' changes...'} />}>
+        <DiffView diff={diff.diff} isPullRequest={true} />
+      </Suspense>
+    );
   } else {
     return null;
   }
