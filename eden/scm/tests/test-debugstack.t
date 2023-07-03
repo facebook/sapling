@@ -130,6 +130,7 @@ Import stack:
       debugstack._create_commits,
       debugstack._filectxfn,
       debugstack._reset,
+      debugstack._write_files,
     ):
       # Simple linear stack
         $ newrepo
@@ -355,6 +356,26 @@ Import stack:
             $ hg debugimportstack > /dev/null << EOS
             > [["commit", {"text": "J1", "mark": ":10.1", "files": {"x1": {"data": "x1\n", "flags": ".", "copyFrom": "."}, "x2": {"data": "x2\n", "flags": "."}}, "parents": `marks :9`}]]
             > EOS
+
+      # Write files.
+
+        $ newrepo
+        $ echo 1 > a
+        $ echo 3 > c
+        $ hg debugimportstack << EOS
+        > [["write", {"a": {"data": "2\n"}, "b": {"dataBase85": "GYS"}, "c": null}]]
+        > EOS
+        {}
+        $ f --dump a b c
+        a:
+        >>>
+        2
+        <<<
+        b:
+        >>>
+        3
+        <<<
+        c: file not found
 
       # Error cases.
 

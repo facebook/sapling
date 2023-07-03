@@ -5,7 +5,7 @@
 
 from __future__ import absolute_import
 
-import base64, collections, functools
+import base64, collections, functools, stat
 
 from .. import context, hg, json, mutation, scmutil, smartset, visibility
 from ..i18n import _
@@ -260,7 +260,8 @@ def debugimportstack(ui, repo, **opts):
          ["commit", commit_info],
          ["goto", {"mark": mark}],
          ["reset", {"mark": mark}],
-         ["hide", {"nodes": [node]}]]
+         ["hide", {"nodes": [node]}],
+         ["write", {path: file_info}]]
 
     "goto" performs a checkout that will overwrite conflicted files.
 
@@ -315,6 +316,9 @@ def debugimportstack(ui, repo, **opts):
            ...
          }
         }
+
+    "write" can be used to write files to the working copy.
+    It will be executed after creating commits.
 
     The format of "commit_info" is similar to the output of
     ``debugexportstack``, with some differences:
@@ -383,6 +387,8 @@ def debugimportstack(ui, repo, **opts):
                     _reset(repo, node)
                 elif action_name == "hide":
                     to_hide += [bin(n) for n in action[1]["nodes"]]
+                elif action_name == "write":
+                    _write_files(repo.wvfs, action[1])
                 else:
                     raise ValueError(f"unsupported action: {action}")
 
@@ -578,3 +584,33 @@ def _filectxfn(repo, mctx, path, files_dict):
             isexec="x" in flags,
             copied=copied,
         )
+
+
+def _write_files(wvfs, file_infos):
+    for path, file_info in file_infos.items():
+        if file_info is None:
+            # Delete this file.
+            wvfs.tryunlink(path)
+        else:
+            if "data" in file_info:
+                data = file_info["data"].encode()
+            else:
+                data = base64.b85decode(file_info["dataBase85"])
+            flags = file_infos.get("flags")
+            if flags is None or flags == ".":
+                flags = _existing_flags(wvfs, path)
+            wvfs.write(path, data)
+            wvfs.setflags(path, l="l" in flags, x="x" in flags)
+
+
+def _existing_flags(wvfs, path):
+    flags = ""
+    try:
+        st = wvfs.lstat(path)
+        if stat.S_ISLNK(st.st_mode):
+            flags = "l"
+        elif (st.st_mode & 0o111) != 0:
+            flags = "x"
+    except FileNotFoundError:
+        pass
+    return flags
