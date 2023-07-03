@@ -18,7 +18,6 @@ from . import (
     encoding,
     localrepo,
     match as matchmod,
-    pycompat,
     ui as ui_mod,
     util,
 )
