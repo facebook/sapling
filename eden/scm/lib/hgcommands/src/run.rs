@@ -931,12 +931,14 @@ fn commandserver_serve(args: &[String], io: &IO) -> i32 {
         return 1;
     }
 
-    let run_func = |_server: &Server, args: Vec<String>| -> i32 {
+    let run_func = |server: &Server, args: Vec<String>| -> i32 {
         tracing::debug!("commandserver is about to run command: {:?}", &args);
+        if let Err(e) = python.setup_ui_system(&server) {
+            tracing::warn!("cannot setup ui.system:\n{:?}", &e);
+        }
         run_command(args, io)
     };
 
-    // TODO(quark): We need to route `ui.system` through IPC.
     tracing::debug!("commandserver is about to serve");
     if let Err(e) = commandserver::server::serve_one_client(&run_func) {
         tracing::warn!("cannot serve:\n{:?}", &e);

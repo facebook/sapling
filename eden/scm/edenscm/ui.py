@@ -1479,6 +1479,19 @@ class ui(object):
     def _runsystem(self, cmd, environ, cwd, out):
         """actually execute the given shell command (can be overridden by
         extensions like chg)"""
+        if out is self.fout and not self._buffers:
+            system = getattr(bindings.commands, "system", None)
+            if system is not None:
+                try:
+                    cmdenv = {
+                        "env": list(util.shellenviron(environ).items()),
+                        "cwd": cwd or os.getcwd(),
+                    }
+                    return system(cmdenv, cmd)
+                except ValueError:
+                    # IPC was closed.
+                    pass
+
         return util.rawsystem(cmd, environ=environ, cwd=cwd, out=out)
 
     def traceback(self, exc=None, force=False):
