@@ -226,7 +226,7 @@ fn dispatch_command(
         .map_err(|err| errors::triage_error(config, err, command.map(|c| c.main_alias())))
     {
         Ok(exit_code) => exit_code as i32,
-        Err(err) => {
+        Err(err) => 'fallback: {
             let should_fallback = err.is::<errors::FallbackToPython>() ||
                 // XXX: Right now the Rust command table does not have all Python
                 // commands. Therefore Rust "UnknownCommand" needs a fallback.
@@ -244,6 +244,20 @@ fn dispatch_command(
                 // Change the current dir back to the original so it is not surprising to the Python
                 // code.
                 let _ = env::set_current_dir(cwd);
+
+                if !IS_COMMANDSERVER.load(Ordering::Acquire)
+                    && config
+                        .get_or_default::<bool>("commandserver", "enabled")
+                        .unwrap_or_default()
+                {
+                    // Attempt to connect to an existing command server.
+                    let args = dispatcher.args();
+                    if let Ok(ret) =
+                        commandserver::client::run_via_commandserver(args.to_vec(), &config)
+                    {
+                        break 'fallback ret;
+                    }
+                }
 
                 let mut interp = HgPython::new(dispatcher.args());
                 if dispatcher.global_opts().trace {
