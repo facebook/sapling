@@ -13,6 +13,7 @@ use filedescriptor::RawFileDescriptor;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::nodeipc::LibcFd;
 use crate::nodeipc::NodeIpc;
 use crate::singleton::IPC;
 
@@ -223,7 +224,7 @@ impl NodeIpc {
     /// Send the stdio and optionally the `NODE_CHANNEL_FD` file descriptor
     /// (the singleton) for the other end to "attach".
     pub fn send_stdio(&self) -> anyhow::Result<()> {
-        let mut fds = Vec::with_capacity(4);
+        let mut fds = Vec::<RawFileDescriptor>::with_capacity(4);
 
         #[cfg(windows)]
         unsafe {
@@ -232,13 +233,17 @@ impl NodeIpc {
             fds.extend(
                 stdio_constants()
                     .iter()
-                    .map(|&h| GetStdHandle(h) as RawFileDescriptor),
+                    .map(|c| GetStdHandle(c.win_constant) as RawFileDescriptor),
             );
         }
 
         #[cfg(unix)]
         {
-            fds.extend_from_slice(stdio_constants())
+            fds.extend(
+                stdio_constants()
+                    .iter()
+                    .map(|c| c.libc_fd as RawFileDescriptor),
+            )
         }
 
         // Optionally, include the singleton file descriptor.
@@ -262,10 +267,10 @@ impl NodeIpc {
         // Replace the stdio.
         #[cfg(unix)]
         {
-            for (&received_fd, &std_fd) in payload.raw_fds.iter().zip(stdio_constants()) {
-                if received_fd > 0 && received_fd != std_fd {
+            for (&received_fd, std_constant) in payload.raw_fds.iter().zip(stdio_constants()) {
+                if received_fd > 0 && received_fd != std_constant.libc_fd as RawFileDescriptor {
                     unsafe {
-                        libc::dup2(received_fd, std_fd);
+                        libc::dup2(received_fd, std_constant.libc_fd as _);
                         libc::close(received_fd);
                     }
                 }
@@ -287,12 +292,7 @@ impl NodeIpc {
                 };
             }
 
-            for ((&received_handle, &std_constant), (std_libc_fd, win_name)) in payload
-                .raw_fds
-                .iter()
-                .zip(stdio_constants())
-                .zip([(0, "CONIN$"), (1, "CONOUT$"), (2, "CONOUT$")])
-            {
+            for (&received_handle, std_constant) in payload.raw_fds.iter().zip(stdio_constants()) {
                 let mut std_handle = received_handle;
                 if received_handle.is_null() {
                     // This is a "console" handle. In case stdio was redirected to `NULL`, we need
@@ -311,9 +311,10 @@ impl NodeIpc {
                     let file = std::fs::OpenOptions::new()
                         .read(true)
                         .write(true)
-                        .open(win_name)
-                        .with_context(|| format!("Cannot open {}", win_name))?;
+                        .open(std_constant.win_file_name)
+                        .with_context(|| format!("Cannot open {}", std_constant.win_file_name))?;
                     let handle = file.as_raw_handle();
+                    let std_libc_fd = std_constant.libc_fd;
                     std_handle = handle as _;
 
                     // File      HANDLE          LibcFd         Note
@@ -330,9 +331,9 @@ impl NodeIpc {
                         return Err(std::io::Error::last_os_error())
                             .context("Cannot open_osfhandle");
                     }
-                    if new_libc_fd >= 0 && new_libc_fd != std_libc_fd {
+                    if new_libc_fd >= 0 && new_libc_fd as LibcFd != std_libc_fd {
                         // Replace `std_libc_fd` using `dup2`.
-                        let dup_success = unsafe { libc::dup2(new_libc_fd, std_libc_fd) } == 0;
+                        let dup_success = unsafe { libc::dup2(new_libc_fd, std_libc_fd as _) } == 0;
                         if !dup_success {
                             return Err(std::io::Error::last_os_error()).context("Cannot dup2");
                         }
@@ -350,7 +351,7 @@ impl NodeIpc {
                     std::mem::forget(file);
                 }
 
-                unsafe { SetStdHandle(std_constant, std_handle as _) };
+                unsafe { SetStdHandle(std_constant.win_constant, std_handle as _) };
             }
         }
 
@@ -462,27 +463,55 @@ fn cmsg_vec_and_msghdr(
     (cmsg_buf, (iov_buf, dummy_iov), hdr)
 }
 
-#[cfg(windows)]
-type StdioConstant = winapi::shared::minwindef::DWORD;
-#[cfg(unix)]
-type StdioConstant = RawFileDescriptor;
+struct StdioConstant {
+    libc_fd: LibcFd,
+    // Constant used by SetStdHandle, GetStdHandle.
+    #[cfg(windows)]
+    win_constant: winapi::shared::minwindef::DWORD,
+    // File name to create the console handle.
+    // See also https://learn.microsoft.com/en-us/windows/console/console-handles
+    #[cfg(windows)]
+    win_file_name: &'static str,
+}
 
 fn stdio_constants() -> &'static [StdioConstant] {
     #[cfg(windows)]
-    {
-        use winapi::um::winbase;
-        return &[
-            winbase::STD_INPUT_HANDLE,
-            winbase::STD_OUTPUT_HANDLE,
-            winbase::STD_ERROR_HANDLE,
-        ];
-    }
+    use winapi::um::winbase;
 
+    // libc::STDIN_FILENO etc are undefined on Windows.
+    // So we just use 0, 1, 2 numbers below.
+    // Statically assert the libc constants match 0, 1, 2.
     #[cfg(unix)]
-    {
-        return &[libc::STDIN_FILENO, libc::STDOUT_FILENO, libc::STDERR_FILENO];
-    }
+    // We do want the code to be optimized out by the compiler.
+    #[allow(clippy::assertions_on_constants)]
+    const _: () = {
+        assert!(libc::STDIN_FILENO == 0);
+        assert!(libc::STDOUT_FILENO == 1);
+        assert!(libc::STDERR_FILENO == 2);
+    };
 
-    #[allow(unreachable_code)]
-    &[]
+    &[
+        StdioConstant {
+            libc_fd: 0,
+            #[cfg(windows)]
+            win_constant: winbase::STD_INPUT_HANDLE,
+            #[cfg(windows)]
+            win_file_name: "CONIN$",
+        },
+        StdioConstant {
+            libc_fd: 1,
+            #[cfg(windows)]
+            win_constant: winbase::STD_OUTPUT_HANDLE,
+            #[cfg(windows)]
+            win_file_name: "CONOUT$",
+        },
+        StdioConstant {
+            libc_fd: 2,
+            #[cfg(windows)]
+            win_constant: winbase::STD_ERROR_HANDLE,
+            // There is no CONERR$.
+            #[cfg(windows)]
+            win_file_name: "CONOUT$",
+        },
+    ]
 }
