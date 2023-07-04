@@ -15,6 +15,7 @@ use std::ops::DerefMut;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Arc;
 use std::sync::Weak;
@@ -59,10 +60,17 @@ use crate::HgPython;
 pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     let start_time = SystemTime::now();
 
-    // The pfcserver does not want tracing or blackbox or ctrlc setup,
+    // The pfcserver or commandserver do not want tracing or blackbox or ctrlc setup,
     // or going through the Rust command table. Bypass them.
-    if args.get(1).map(|s| s.as_ref()) == Some("start-pfc-server") {
-        return HgPython::new(&args).run_hg(args, io, &ConfigSet::new());
+    if let Some(arg1) = args.get(1).map(|s| s.as_ref()) {
+        match arg1 {
+            "start-pfc-server" => return HgPython::new(&args).run_hg(args, io, &ConfigSet::new()),
+            "start-commandserver" => {
+                commandserver_serve(&args, io);
+                return 0;
+            }
+            _ => {}
+        }
     }
 
     // Initialize NodeIpc:
@@ -886,4 +894,39 @@ fn setup_ctrlc() {
 fn setup_nodeipc() {
     // Trigger `Lazy` initialization.
     let _ = nodeipc::get_singleton();
+}
+
+// Useful to prevent a commandserver connecting to another commandserver.
+static IS_COMMANDSERVER: AtomicBool = AtomicBool::new(false);
+
+fn commandserver_serve(args: &[String], io: &IO) -> i32 {
+    IS_COMMANDSERVER.store(true, Ordering::Release);
+
+    #[cfg(unix)]
+    unsafe {
+        libc::setsid();
+    }
+
+    let _ = setup_tracing_io(io, None);
+    tracing::debug!("preparing commandserver");
+
+    let python = HgPython::new(args);
+    if let Err(e) = python.pre_import_modules() {
+        tracing::warn!("cannot pre-import modules:\n{:?}", &e);
+        return 1;
+    }
+
+    let run_func = |args: Vec<String>| -> i32 {
+        tracing::debug!("commandserver is about to run command: {:?}", &args);
+        run_command(args, io)
+    };
+
+    // TODO(quark): We need to route `ui.system` through IPC.
+    tracing::debug!("commandserver is about to serve");
+    if let Err(e) = commandserver::server::serve_one_client(&run_func) {
+        tracing::warn!("cannot serve:\n{:?}", &e);
+        return 1;
+    }
+    tracing::debug!("commandserver is about to exit cleanly");
+    0
 }

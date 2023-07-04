@@ -17,6 +17,7 @@ clidispatch = { version = "0.1.0", path = "../clidispatch" }
 cliparser = { version = "0.1.0", path = "../cliparser", features = ["python"] }
 clone = { version = "0.1.0", path = "../clone" }
 comfy-table = "6.1.4"
+commandserver = { version = "0.1.0", path = "../commandserver" }
 configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 cpython = { version = "0.7.1", default-features = false }

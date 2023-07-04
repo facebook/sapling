@@ -229,6 +229,17 @@ impl HgPython {
             1
         }
     }
+
+    /// Pre-import Python modules.
+    /// Returns after importing the modules.
+    pub fn pre_import_modules(&self) -> Result<(), cpython_ext::PyErr> {
+        // cpython_ext::PyErr can render traceback when RUST_BACKTRACE=1.
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let dispatch = py.import("edenscm.dispatch")?;
+        dispatch.call(py, "_preimportmodules", NoArgs, None)?;
+        Ok(())
+    }
 }
 
 impl Drop for HgPython {
