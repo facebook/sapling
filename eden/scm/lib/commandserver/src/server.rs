@@ -54,6 +54,7 @@ pub fn serve_one_client<'a>(
         });
 
         tracing::debug!("waiting for client connection");
+        #[allow(clippy::never_loop)]
         for ipc in incoming {
             tracing::debug!("got client connection");
             is_waiting.store(false, Ordering::Release);
@@ -61,7 +62,10 @@ pub fn serve_one_client<'a>(
                 tracing::warn!("failed to get client stdio:\n{:?}", &e);
             } else {
                 tracing::debug!("server got client stdio");
-                let server = Server { ipc, run_func };
+                let server = Server {
+                    ipc: ipc.into(),
+                    run_func,
+                };
                 let _ = server.serve();
             }
             break;

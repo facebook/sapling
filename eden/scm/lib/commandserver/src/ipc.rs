@@ -8,6 +8,8 @@
 use std::collections::HashSet;
 use std::path::Path;
 use std::process::Command;
+use std::sync::Arc;
+use std::sync::Weak;
 
 use nodeipc::derive::HasIpc;
 use nodeipc::ipc;
@@ -36,7 +38,7 @@ pub struct Client {
 }
 
 pub struct Server<'a> {
-    pub ipc: NodeIpc,
+    pub ipc: Arc<NodeIpc>,
     pub run_func: &'a (dyn (Fn(&'_ Server<'a>, Vec<String>) -> i32) + Send + Sync),
 }
 
@@ -140,6 +142,15 @@ impl Server<'_> {
         // To avoid circular dependency, we cannot call hgcommands here.
         // Instead, rely on hgcommands to provide Server::run_func.
         (self.run_func)(self, argv)
+    }
+}
+
+impl Server<'_> {
+    /// Get the weak reference of the `NodeIpc` owned by the server.
+    /// This is useful if the callsite wants a lifetime-free version of `NodeIpc`
+    /// and use it in Python bindings.
+    pub fn ipc_weakref(&self) -> Weak<NodeIpc> {
+        Arc::downgrade(&self.ipc.clone())
     }
 }
 
