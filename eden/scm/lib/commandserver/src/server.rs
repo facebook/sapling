@@ -23,8 +23,8 @@ use crate::ipc::Server;
 /// are connected.
 ///
 /// Returns if completes serving a client.
-pub fn serve_one_client(
-    run_func: &(dyn (Fn(Vec<String>) -> i32) + Send + Sync),
+pub fn serve_one_client<'a>(
+    run_func: &'a (dyn (Fn(&'_ Server<'a>, Vec<String>) -> i32) + Send + Sync),
 ) -> anyhow::Result<()> {
     let dir = crate::util::runtime_dir()?;
     let prefix = crate::util::prefix();

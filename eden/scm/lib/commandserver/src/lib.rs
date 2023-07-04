@@ -9,7 +9,7 @@
 //! startup overhead.
 
 pub mod client;
-mod ipc;
+pub mod ipc;
 pub mod server;
 mod spawn;
 mod util;

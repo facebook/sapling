@@ -37,7 +37,7 @@ pub struct Client {
 
 pub struct Server<'a> {
     pub ipc: NodeIpc,
-    pub run_func: &'a (dyn (Fn(Vec<String>) -> i32) + Send + Sync),
+    pub run_func: &'a (dyn (Fn(&'_ Server<'a>, Vec<String>) -> i32) + Send + Sync),
 }
 
 #[ipc]
@@ -139,7 +139,7 @@ impl Server<'_> {
         tracing::debug!("server::run_command {:?}", &argv);
         // To avoid circular dependency, we cannot call hgcommands here.
         // Instead, rely on hgcommands to provide Server::run_func.
-        (self.run_func)(argv)
+        (self.run_func)(self, argv)
     }
 }
 

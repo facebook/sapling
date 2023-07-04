@@ -32,6 +32,7 @@ use clidispatch::errors;
 use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::io::IsTty;
 use clidispatch::io::IO;
+use commandserver::ipc::Server;
 use configloader::config::ConfigSet;
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -930,7 +931,7 @@ fn commandserver_serve(args: &[String], io: &IO) -> i32 {
         return 1;
     }
 
-    let run_func = |args: Vec<String>| -> i32 {
+    let run_func = |_server: &Server, args: Vec<String>| -> i32 {
         tracing::debug!("commandserver is about to run command: {:?}", &args);
         run_command(args, io)
     };
