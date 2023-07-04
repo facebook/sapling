@@ -85,6 +85,24 @@ pub(crate) fn runtime_dir() -> anyhow::Result<PathBuf> {
     Ok(dir)
 }
 
+/// Get the number of groups.
+fn groups_count() -> usize {
+    #[cfg(unix)]
+    {
+        let mut ngroups: libc::c_int = 0;
+        if unsafe { libc::getgroups(0, std::ptr::null_mut()) } == -1 {
+            ngroups = unsafe { libc::getgroups(0, std::ptr::null_mut()) };
+            if ngroups <= 0 {
+                return 0;
+            }
+        }
+        return ngroups as usize;
+    }
+
+    #[allow(unreachable_code)]
+    0
+}
+
 /// Get a sorted list of group ids on POSIX.
 ///
 /// If the client and the server have different lists of groups,
@@ -92,16 +110,9 @@ pub(crate) fn runtime_dir() -> anyhow::Result<PathBuf> {
 pub fn groups() -> Option<Vec<u32>> {
     #[cfg(unix)]
     {
-        let mut ngroups: libc::c_int = 0;
-        if unsafe { libc::getgroups(0, std::ptr::null_mut()) } == -1 {
-            ngroups = unsafe { libc::getgroups(0, std::ptr::null_mut()) };
-            if ngroups <= 0 {
-                return None;
-            }
-        }
-
-        let mut groups: Vec<libc::gid_t> = vec![0; ngroups as usize];
-        ngroups = unsafe { libc::getgroups(ngroups, groups.as_mut_ptr()) };
+        let ngroups = groups_count();
+        let mut groups: Vec<libc::gid_t> = vec![0; ngroups];
+        let ngroups = unsafe { libc::getgroups(ngroups as _, groups.as_mut_ptr()) };
         if ngroups < 0 {
             return None;
         }
