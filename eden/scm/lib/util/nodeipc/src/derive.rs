@@ -74,6 +74,18 @@ impl<T: HasIpc + Call> Serve for T {
     }
 }
 
+impl HasIpc for NodeIpc {
+    fn ipc(&self) -> &NodeIpc {
+        self
+    }
+}
+
+impl Call for NodeIpc {
+    fn call(&self, _value: CallArgs) -> anyhow::Result<Value> {
+        anyhow::bail!("Call::call is not supported on NodeIpc")
+    }
+}
+
 /// Derive IPC methods.
 ///
 /// For example, the following code:
