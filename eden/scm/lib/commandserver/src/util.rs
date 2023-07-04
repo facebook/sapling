@@ -42,7 +42,10 @@ pub(crate) fn prefix() -> &'static str {
 /// The directory contains `SOCKET_DIR_NAME` in its path.
 #[context("Creating a runtime directory")]
 pub(crate) fn runtime_dir() -> anyhow::Result<PathBuf> {
-    let parent = match dirs::runtime_dir().or_else(dirs::data_local_dir) {
+    let parent = match dirs::runtime_dir().or_else(|| {
+        // ~/.local/share, AppData\Local
+        dirs::data_local_dir().map(|local| local.join("CommandServer"))
+    }) {
         None => {
             #[allow(unused_mut)]
             let mut dir = std::env::temp_dir();
@@ -71,7 +74,7 @@ pub(crate) fn runtime_dir() -> anyhow::Result<PathBuf> {
     };
 
     let dir = parent.join(&*SOCKET_DIR_NAME);
-    match fs::create_dir(&dir) {
+    match fs::create_dir_all(&dir) {
         Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {}
         Err(e) => {
             return Err(e).with_context(|| format!("Creating a directory at {}", dir.display()));
