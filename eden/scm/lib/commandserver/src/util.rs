@@ -30,7 +30,14 @@ static PREFIX: Lazy<String> = Lazy::new(|| {
             Some((_, rest)) => rest,
             None => version::VERSION,
         };
-    short_version.to_string()
+    // Include number of groups in prefix so long running processes
+    // with different groups can co-exist with new processes.
+    let ngroups = groups_count();
+    if ngroups == 0 {
+        short_version.to_string()
+    } else {
+        format!("{}n{}", short_version, ngroups)
+    }
 });
 
 /// Return the "prefix" useful as the prefix of the uds files.
