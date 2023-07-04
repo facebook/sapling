@@ -10,6 +10,7 @@ use std::time::Duration;
 
 use anyhow::Error;
 use fbinit::FacebookInit;
+use slog::error;
 use stats::prelude::*;
 use time_window_counter::BoxGlobalTimeWindowCounter;
 use time_window_counter::GlobalTimeWindowCounterBuilder;
@@ -115,8 +116,9 @@ pub async fn consistent_routing<B: PopularityBuilder>(
             // Shouldn't be reached as we require to have a ring with popularity
             // threshold 0. Let's default to 1 anyway.
         }
-        Ok(Err(_)) => {
+        Ok(Err(e)) => {
             // Errored
+            error!(ctx.logger(), "popularity metric failed: {:?}", e);
             STATS::error.add_value(1);
         }
         Err(..) => {
