@@ -9,6 +9,7 @@ use std::env;
 use std::io::Write;
 use std::mem;
 use std::process::Command;
+use std::process::Stdio;
 
 use filedescriptor::AsRawFileDescriptor;
 use filedescriptor::FileDescriptor;
@@ -101,6 +102,7 @@ fn parent_main() {
     let mut child = Command::new(env::current_exe().unwrap())
         .arg("child")
         .arg((client_raw_fd as u64).to_string())
+        .stderr(Stdio::null())
         .spawn()
         .unwrap();
 

@@ -274,6 +274,8 @@ impl NodeIpc {
 
         #[cfg(windows)]
         {
+            use std::os::windows::io::AsRawHandle;
+
             use winapi::um::processenv::SetStdHandle;
             use winapi::um::wincon::AttachConsole;
             use winapi::um::wincon::FreeConsole;
@@ -285,10 +287,70 @@ impl NodeIpc {
                 };
             }
 
-            for (&received_handle, &std_constant) in payload.raw_fds.iter().zip(stdio_constants()) {
-                if !received_handle.is_null() {
-                    unsafe { SetStdHandle(std_constant, received_handle as _) };
+            for ((&received_handle, &std_constant), (std_libc_fd, win_name)) in payload
+                .raw_fds
+                .iter()
+                .zip(stdio_constants())
+                .zip([(0, "CONIN$"), (1, "CONOUT$"), (2, "CONOUT$")])
+            {
+                let mut std_handle = received_handle;
+                if received_handle.is_null() {
+                    // This is a "console" handle. In case stdio was redirected to `NULL`, we need
+                    // extra steps to restore them:
+                    // - Get the console handle by via CreateFile win_name.
+                    // - Set the libc fd to the handle.
+                    //   Failing to do so affects programs using libc (ex. printf), for example,
+                    //   `less.exe` run as a child might not be able to write anything.
+                    // - SetStdHandle to update the std handle to the console handle.
+                    //   Failing to do means things like `println!` won't work in this process.
+                    //   If you run the `spawn_sendfd` example, the child won't print
+                    //   "Child: write to stderr".
+
+                    // According to https://learn.microsoft.com/en-us/windows/console/console-handles,
+                    // the std handles have GENERIC_READ | GENERIC_WRITE access.
+                    let file = std::fs::OpenOptions::new()
+                        .read(true)
+                        .write(true)
+                        .open(win_name)
+                        .with_context(|| format!("Cannot open {}", win_name))?;
+                    let handle = file.as_raw_handle();
+                    std_handle = handle as _;
+
+                    // File      HANDLE          LibcFd         Note
+                    // ---------------------------------------------------------------------
+                    // [file] => [handle]     => [new_libc_fd]  fd allocated by libc
+                    //                              |
+                    //           [new_handle] <- [std_libc_fd]  fd specified by us (0, 1, 2)
+                    //
+                    // [A] => [B]: Transfer ownership from A to B. B takes care of closing.
+                    // [A] <- [B]: Derive A from B. B takes care of closing.
+                    // |         : Duplicate. Different rows are backed by different LibcFds.
+                    let new_libc_fd = unsafe { libc::open_osfhandle(handle as _, libc::O_RDWR) };
+                    if new_libc_fd == -1 {
+                        return Err(std::io::Error::last_os_error())
+                            .context("Cannot open_osfhandle");
+                    }
+                    if new_libc_fd >= 0 && new_libc_fd != std_libc_fd {
+                        // Replace `std_libc_fd` using `dup2`.
+                        let dup_success = unsafe { libc::dup2(new_libc_fd, std_libc_fd) } == 0;
+                        if !dup_success {
+                            return Err(std::io::Error::last_os_error()).context("Cannot dup2");
+                        }
+                        // We want to close `new_libc_fd`, which will close `handle`.
+                        // So we need to get the newly "dup"ed handle first.
+                        let new_handle = unsafe { libc::get_osfhandle(std_libc_fd) };
+                        if new_handle >= 0 {
+                            std_handle = new_handle as _;
+                            unsafe { libc::close(new_libc_fd) };
+                        }
+                    }
+
+                    // The underlying handle of `file` is either owned (and closed) by libc,
+                    // or being used by StdHandle. Do not close it.
+                    std::mem::forget(file);
                 }
+
+                unsafe { SetStdHandle(std_constant, std_handle as _) };
             }
         }
 
