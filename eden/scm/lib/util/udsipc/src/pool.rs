@@ -72,7 +72,11 @@ pub struct ConnectablePath {
 impl ConnectablePath {
     /// Connect to this path.
     pub fn connect(self) -> anyhow::Result<NodeIpc> {
-        ipc::connect(&self.path)
+        let result = ipc::connect(&self.path);
+        if self.path.extension().unwrap_or_default() == "private" {
+            let _ = fs::remove_file(&self.path);
+        }
+        result
     }
 
     /// Make the path exclusive by renaming the file to `.private`.
