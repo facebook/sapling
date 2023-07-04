@@ -51,18 +51,18 @@ impl Client {
             path.is_absolute() && !path.exists()
         };
         let mut cmd = if need_shell {
-            if cfg!(windows) {
+            let mut cmd = if cfg!(windows) {
                 let cmd_spec = std::env::var("ComSpec");
                 Command::new(cmd_spec.unwrap_or_else(|_| "cmd.exe".to_owned()))
             } else {
                 Command::new("/bin/sh")
-            }
+            };
+            cmd.arg(if cfg!(windows) { "/c" } else { "-c" })
+                .arg(command);
+            cmd
         } else {
             Command::new(command)
         };
-        if need_shell {
-            cmd.arg(if cfg!(windows) { "/c" } else { "-c" });
-        }
 
         let CommandEnv { cwd, env } = env;
         cmd.env_clear().envs(env).current_dir(cwd);
