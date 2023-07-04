@@ -19,13 +19,16 @@ use crate::util;
 /// servers running in background.
 pub fn spawn_pool(pool_size: usize) -> anyhow::Result<()> {
     let dir = util::runtime_dir()?;
+    let prefix = util::prefix();
     let spawn_lock = fs::OpenOptions::new()
         .create(true)
         .write(true)
         .open(dir.join("spawn.lock"))?;
     spawn_lock.lock_exclusive()?;
 
-    let existing = udsipc::pool::list_uds_paths(&dir).take(pool_size).count();
+    let existing = udsipc::pool::list_uds_paths(&dir, prefix)
+        .take(pool_size)
+        .count();
     let needed = pool_size.saturating_sub(existing);
 
     tracing::debug!("spawning {} command servers", needed);

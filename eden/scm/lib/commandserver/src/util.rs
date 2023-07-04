@@ -15,19 +15,28 @@ use anyhow::Context;
 use fn_error_context::context;
 use once_cell::sync::Lazy;
 
-// The socket directory name contains version and identity
+// The socket directory and prefix contain identity and version
 // so we can have multiple servers running with different
-// identities or versions, and we don't need to check versions
+// identities. or versions, and we don't need to check versions
 // and invalidate servers manually.
 static SOCKET_DIR_NAME: Lazy<String> = Lazy::new(|| {
+    let cli_name = identity::default().cli_name();
+    format!("{}-cmdserver", cli_name)
+});
+
+static PREFIX: Lazy<String> = Lazy::new(|| {
     let short_version: &str =
         match version::VERSION.rsplit_once(|ch: char| !ch.is_ascii_alphanumeric()) {
             Some((_, rest)) => rest,
             None => version::VERSION,
         };
-    let cli_name = identity::default().cli_name();
-    format!("{}-cmdserver-{}", cli_name, short_version)
+    short_version.to_string()
 });
+
+/// Return the "prefix" useful as the prefix of the uds files.
+pub(crate) fn prefix() -> &'static str {
+    &PREFIX
+}
 
 /// Create and return a runtime directory intended for uds files.
 /// The directory contains `SOCKET_DIR_NAME` in its path.

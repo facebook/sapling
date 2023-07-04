@@ -8,6 +8,7 @@
 //! Connection "pool" by having multiple uds files in a directory.
 
 use std::fs;
+use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -27,13 +28,13 @@ macro_rules! or {
     };
 }
 
-/// Serve in the given directory.
+/// Serve in the given directory, with the given prefix.
 ///
 /// The callsite might want to use `is_alive` to check if it should exit.
 #[context("Serving at directory {}", dir.display())]
-pub fn serve(dir: &Path) -> anyhow::Result<ipc::Incoming> {
+pub fn serve(dir: &Path, prefix: &str) -> anyhow::Result<ipc::Incoming> {
     std::fs::create_dir_all(dir)?;
-    let path = dir.join(format!("server-{}", std::process::id()));
+    let path = dir.join(format!("{}-{}", prefix, std::process::id()));
     ipc::serve(path)
 }
 
@@ -42,10 +43,10 @@ pub fn serve(dir: &Path) -> anyhow::Result<ipc::Incoming> {
 /// If `exclusive` is set, the uds file is first renamed to ".private"
 /// to ensure that one uds file only serves one client.
 #[context("Connecting to any server socket in {}", dir.display())]
-pub fn connect(dir: &Path, exclusive: bool) -> anyhow::Result<NodeIpc> {
+pub fn connect(dir: &Path, prefix: &str, exclusive: bool) -> anyhow::Result<NodeIpc> {
     let mut attempts = Vec::new();
 
-    for mut path in list_uds_paths(dir) {
+    for mut path in list_uds_paths(dir, prefix) {
         if exclusive {
             path = or!(path.exclusive(), continue);
         }
@@ -90,13 +91,25 @@ impl ConnectablePath {
 }
 
 /// List uds paths that are potentially connectable in a directory.
+/// The files are started with the given prefix.
 ///
 /// Errors are ignored.
-pub fn list_uds_paths(dir: &Path) -> Box<dyn Iterator<Item = ConnectablePath> + Send> {
+pub fn list_uds_paths<'a>(
+    dir: &Path,
+    prefix: &'a str,
+) -> Box<dyn Iterator<Item = ConnectablePath> + Send + 'a> {
     let dir = or!(fs::read_dir(dir), return Box::new(std::iter::empty()));
 
-    let iter = dir.filter_map(|entry| {
+    let iter = dir.filter_map(move |entry| {
         let entry = entry.ok()?;
+        let name = entry.file_name();
+        let name = name.to_str().unwrap_or_default();
+        if !name.starts_with(prefix) {
+            // Remove stale uds files if they are older than 12 hours.
+            let _ = maybe_remove_stale_file(&entry, Duration::from_secs(43200));
+            return None;
+        }
+
         let path = entry.path();
 
         // Skip ".lock" files.
@@ -108,11 +121,7 @@ pub fn list_uds_paths(dir: &Path) -> Box<dyn Iterator<Item = ConnectablePath> + 
         if path.extension().unwrap_or_default() == "private" {
             // Remove stale files.
             // Rename bumps "accessed" time. Use it to detect stale files.
-            let metadata = entry.metadata().ok()?;
-            let accessed = metadata.accessed().ok()?;
-            if accessed.elapsed().unwrap_or_default() > Duration::from_secs(60) {
-                let _ = fs::remove_file(path);
-            }
+            let _ = maybe_remove_stale_file(&entry, Duration::from_secs(60));
             return None;
         }
 
@@ -120,4 +129,13 @@ pub fn list_uds_paths(dir: &Path) -> Box<dyn Iterator<Item = ConnectablePath> + 
     });
 
     Box::new(iter)
+}
+
+fn maybe_remove_stale_file(entry: &fs::DirEntry, duration: Duration) -> io::Result<()> {
+    let metadata = entry.metadata()?;
+    let accessed = metadata.accessed()?;
+    if accessed.elapsed().unwrap_or_default() > duration {
+        fs::remove_file(entry.path())?;
+    }
+    Ok(())
 }

@@ -32,10 +32,11 @@ pub fn run_via_commandserver(args: Vec<String>, config: &dyn Config) -> anyhow::
     // For now, the server does not fork and can only be used with "exclusive".
     let exclusive = true;
     let dir = util::runtime_dir()?;
-    let ipc = match pool::connect(&dir, exclusive) {
+    let prefix = util::prefix();
+    let ipc = match pool::connect(&dir, prefix, exclusive) {
         Err(e) => {
             tracing::debug!("no server to connect:\n{:?}", &e);
-            if pool::list_uds_paths(&dir).next().is_none() {
+            if pool::list_uds_paths(&dir, prefix).next().is_none() {
                 // No servers are running. Spawn a pool of servers.
                 let pool_size = config.get_or::<usize>("commandserver", "pool-size", || 2)?;
                 let _ = spawn::spawn_pool(pool_size);

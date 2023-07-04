@@ -27,8 +27,9 @@ pub fn serve_one_client(
     run_func: &(dyn (Fn(Vec<String>) -> i32) + Send + Sync),
 ) -> anyhow::Result<()> {
     let dir = crate::util::runtime_dir()?;
-    tracing::debug!("serving at {}", dir.display());
-    let incoming = udsipc::pool::serve(&dir)?;
+    let prefix = crate::util::prefix();
+    tracing::debug!("serving at {}/{}", dir.display(), prefix);
+    let incoming = udsipc::pool::serve(&dir, prefix)?;
 
     let is_uds_alive = incoming.get_is_alive_func();
     let is_waiting = AtomicBool::new(true);
