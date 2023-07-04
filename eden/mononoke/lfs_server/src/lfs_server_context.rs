@@ -7,6 +7,7 @@
 
 use std::fmt::Arguments;
 use std::fmt::Write;
+use std::num::NonZeroU16;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -447,11 +448,16 @@ impl UriBuilder {
         &self,
         content_id: &ContentId,
         routing_key: String,
+        tasks_per_content: NonZeroU16,
     ) -> Result<Uri, ErrorKind> {
         self.pick_uri()?
             .build(format_args!(
-                "{}/download/{}?routing={}&server_hostname={}",
-                &self.repository, content_id, routing_key, self.server_hostname
+                "{}/download/{}?routing={}&server_hostname={}&tpc={}",
+                &self.repository,
+                content_id,
+                routing_key,
+                self.server_hostname,
+                tasks_per_content.get(),
             ))
             .map_err(|e| ErrorKind::UriBuilderFailed("consistent_download_uri", e))
     }
@@ -786,10 +792,14 @@ mod test {
             "foo.com".to_string(),
         )?;
         assert_eq!(
-            b.consistent_download_uri(&content_id()?, format!("{}", oid()?))?
-                .to_string(),
+            b.consistent_download_uri(
+                &content_id()?,
+                format!("{}", oid()?),
+                1.try_into().unwrap()
+            )?
+            .to_string(),
             format!(
-                "http://foo.com/repo123/download/{}?routing={}&server_hostname={}",
+                "http://foo.com/repo123/download/{}?routing={}&server_hostname={}&tpc=1",
                 ONES_HASH, TWOS_HASH, SERVER_HOSTNAME
             ),
         );

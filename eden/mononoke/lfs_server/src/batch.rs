@@ -330,7 +330,7 @@ async fn internal_objects(
                 let uri = if let Some(consistent_routing) = consistent_routing && ctx.config.enable_consistent_routing() {
                     let routing_key = generate_routing_key(consistent_routing, obj.oid);
                     ctx.uri_builder
-                        .consistent_download_uri(&obj.id, routing_key)
+                        .consistent_download_uri(&obj.id, routing_key, consistent_routing)
                 } else {
                     ctx.uri_builder.download_uri(&obj.id)
                 };
