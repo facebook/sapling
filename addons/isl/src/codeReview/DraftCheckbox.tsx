@@ -39,7 +39,11 @@ export function SubmitAsDraftCheckbox({commitsToBeSubmit}: {commitsToBeSubmit: A
       className="submit-as-draft-checkbox"
       checked={isDraft}
       onChange={e => setIsDraft((e.target as HTMLInputElement).checked)}>
-      <Tooltip title={t('whetherToSubmitDiffAsDraft', {count: commitsToBeSubmit.length})}>
+      <Tooltip
+        title={t('whetherToSubmitDiffAsDraft', {
+          // we don't actually support submitting zero commits, instead this means we're submitting the head commit.
+          count: commitsToBeSubmit.length || 1,
+        })}>
         <T>Submit as Draft</T>
       </Tooltip>
     </VSCodeCheckbox>
