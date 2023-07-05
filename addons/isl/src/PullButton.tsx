@@ -32,7 +32,9 @@ export function PullButton() {
     '\n\n' +
     (lastSync == null
       ? ''
-      : t('Last synced with remote: $date', {replace: {$date: relativeDate(lastSync, {})}}));
+      : t('Latest fetched commit is $date old', {
+          replace: {$date: relativeDate(lastSync, {useRelativeForm: true})},
+        }));
 
   const isRunningPull = useIsOperationRunningOrQueued(PullOperation);
   if (isRunningPull === 'queued') {
