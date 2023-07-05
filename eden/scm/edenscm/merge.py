@@ -44,7 +44,7 @@ from . import (
     worker,
 )
 from .i18n import _
-from .node import addednodeid, bin, hex, nullhex, nullid
+from .node import addednodeid, bin, hex, nullhex, nullid, wdirhex
 from .pycompat import decodeutf8, encodeutf8
 
 _pack = struct.pack
@@ -1863,7 +1863,14 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 command=command,
                 repo=reponame,
             )
-
+            if files:
+                repo.ui.log(
+                    "merge_conflicts",
+                    dest_hex=_gethex(wctx),
+                    src_hex=_gethex(mctx),
+                    repo=reponame,
+                    manual_merge_files_count=len(files),
+                )
         finally:
             ms.commit()
 
@@ -2812,3 +2819,8 @@ def graft(repo, ctx, pctx, labels, keepparent=False):
         # fix up dirstate for copies and renames
         copies.duplicatecopies(repo, repo[None], ctx.rev(), pctx.rev())
     return stats
+
+
+def _gethex(ctx):
+    # for workingctx return p1 hex
+    return ctx.hex() if ctx.hex() != wdirhex else ctx.p1().hex()
