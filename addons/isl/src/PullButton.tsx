@@ -5,17 +5,37 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Operation} from './operations/Operation';
+
+import {Internal} from './Internal';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
+import {VSCodeButtonDropdown} from './VSCodeButtonDropdown';
 import {t, T} from './i18n';
 import {PullOperation} from './operations/PullOperation';
 import {useIsOperationRunningOrQueued} from './previews';
 import {relativeDate, RelativeDate} from './relativeDate';
 import {latestCommitTree, useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useRecoilValue} from 'recoil';
+import {atom, useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 import './PullButton.css';
+
+const DEFAULT_PULL_BUTTON = {
+  id: 'pull',
+  label: <T>Pull</T>,
+  getOperation: () => new PullOperation(),
+};
+const pullButtonChoiceKey = atom<string>({
+  key: 'pullButtonChoiceKey',
+  default: DEFAULT_PULL_BUTTON.id,
+});
+
+export type PullButtonOption = {
+  id: string;
+  label: React.ReactNode;
+  getOperation: () => Operation;
+};
 
 export function PullButton() {
   const runOperation = useRunOperation();
@@ -43,18 +63,37 @@ export function PullButton() {
     title += '\n\n' + t('Pull is already scheduled.');
   }
 
+  const pullButtonOptions: Array<PullButtonOption> = [];
+  pullButtonOptions.push(DEFAULT_PULL_BUTTON, ...(Internal.additionalPullOptions ?? []));
+
+  const [dropdownChoiceKey, setDropdownChoiceKey] = useRecoilState(pullButtonChoiceKey);
+  const currentChoice =
+    pullButtonOptions.find(option => option.id === dropdownChoiceKey) ?? pullButtonOptions[0];
+
   return (
     <Tooltip placement="bottom" delayMs={DOCUMENTATION_DELAY} title={title}>
       <div className="pull-info">
-        <VSCodeButton
-          appearance="secondary"
-          disabled={!!isRunningPull}
-          onClick={() => {
-            runOperation(new PullOperation());
-          }}>
-          <Icon slot="start" icon={isRunningPull ? 'loading' : 'cloud-download'} />
-          <T>Pull</T>
-        </VSCodeButton>
+        {pullButtonOptions.length > 1 ? (
+          <VSCodeButtonDropdown
+            appearance="secondary"
+            buttonDisabled={!!isRunningPull}
+            options={pullButtonOptions}
+            onClick={() => runOperation(currentChoice.getOperation())}
+            onChangeSelected={choice => setDropdownChoiceKey(choice.id)}
+            selected={currentChoice}
+            icon={<Icon slot="start" icon={isRunningPull ? 'loading' : 'cloud-download'} />}
+          />
+        ) : (
+          <VSCodeButton
+            appearance="secondary"
+            disabled={!!isRunningPull}
+            onClick={() => {
+              runOperation(new PullOperation());
+            }}>
+            <Icon slot="start" icon={isRunningPull ? 'loading' : 'cloud-download'} />
+            <T>Pull</T>
+          </VSCodeButton>
+        )}
         {lastSync && <RelativeDate date={lastSync} useShortVariant />}
       </div>
     </Tooltip>
