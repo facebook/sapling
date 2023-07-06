@@ -16,6 +16,9 @@ import type {ReactNode} from 'react';
 export interface UICodeReviewProvider {
   name: string;
 
+  /** name used to run commands provider-specific commands */
+  cliName?: string;
+
   DiffBadgeContent(props: {diff?: DiffSummary; children?: ReactNode}): JSX.Element | null;
   formatDiffNumber(diffId: DiffId): string;
 

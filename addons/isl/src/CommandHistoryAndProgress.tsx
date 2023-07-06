@@ -10,6 +10,7 @@ import type {ValidatedRepoInfo} from './types';
 
 import {Delayed} from './Delayed';
 import {Tooltip} from './Tooltip';
+import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T, t} from './i18n';
 import {
   operationList,
@@ -34,6 +35,8 @@ function OperationDescription(props: {
   const {info, operation, className} = props;
   const desc = operation.getDescriptionForDisplay();
 
+  const reviewProvider = useRecoilValue(codeReviewProvider);
+
   if (desc?.description) {
     return <span className={className}>{desc.description}</span>;
   }
@@ -41,11 +44,14 @@ function OperationDescription(props: {
   const commandName =
     operation.runner === CommandRunner.Sapling
       ? /[^\\/]+$/.exec(info.command)?.[0] ?? 'sl'
-      : // TODO: we currently don't know the command name when it's not sapling
-        '';
+      : operation.runner === CommandRunner.CodeReviewProvider
+      ? reviewProvider?.cliName
+      : operation.runner === CommandRunner.InternalArcanist
+      ? CommandRunner.InternalArcanist
+      : null;
   return (
     <code className={className}>
-      {commandName +
+      {(commandName ?? '') +
         ' ' +
         operation
           .getArgs()
