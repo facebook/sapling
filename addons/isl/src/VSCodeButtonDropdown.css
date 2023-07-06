@@ -1,0 +1,74 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.vscode-button-dropdown {
+  --chevron-width: 20px;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+.vscode-button-dropdown-chevron {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 1px;
+  height: 26px;
+  border-left: 1px solid var(--button-secondary-foreground);
+  pointer-events: visible;
+  padding: 0 var(--halfpad);
+
+  background: var(--button-secondary-background);
+  color: var(--button-secondary-foreground);
+  vertical-align: middle;
+  display: flex;
+  align-items: center;
+}
+
+.vscode-button-dropdown:before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+.vscode-button-dropdown select {
+  background-color: var(--button-secondary-background);
+  color: var(--button-secondary-foreground);
+
+  cursor: pointer;
+  width: 24px;
+  border: none;
+  border-radius: 0px 2px 2px 0px; /* meet with button */
+  outline: none;
+  padding: 4px;
+  outline-offset: 2px;
+  height: 26px;
+  vertical-align: bottom;
+  appearance: none;
+  line-height: 0;
+  /* Embed image for chevron, since we can't add children to <select> */
+  background-repeat: no-repeat;
+  background-position: center;
+  background-image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik03Ljk3NjEyIDEwLjA3MTlMMTIuMzMzNCA1LjcxNDZMMTIuOTUyMSA2LjMzMzMyTDguMjg1NDggMTFMNy42NjY3NiAxMUwzLjAwMDEgNi4zMzMzMkwzLjYxODgyIDUuNzE0Nkw3Ljk3NjEyIDEwLjA3MTlaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K);
+
+  border-left: 1px solid var(--button-secondary-foreground);
+}
+
+.vscode-button-dropdown vscode-button {
+  border-radius: 2px 0 0 2px;
+}
+
+.vscode-button-dropdown select:focus {
+  outline: 1px solid var(--focus-border);
+}
+.vscode-button-dropdown select:disabled {
+  cursor: not-allowed;
+}
+
+.vscode-button-dropdown select:not(:disabled):hover {
+  background-color: var(--button-secondary-hover-background);
+}
