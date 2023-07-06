@@ -230,6 +230,9 @@ export class Repository {
               signal,
             ) ?? Promise.resolve()
           );
+        } else if (operation.runner === CommandRunner.InternalArcanist) {
+          const normalizedArgs = this.normalizeOperationArgs(cwd, operation.args);
+          Internal.runArcanistCommand?.(cwd, normalizedArgs, handleCommandProgress, signal);
         }
         return Promise.resolve();
       },

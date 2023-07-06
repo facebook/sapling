@@ -21,6 +21,7 @@ export type TrackEventName =
   | 'AddRemoveOperation'
   | 'AmendMessageOperation'
   | 'AmendOperation'
+  | 'ArcPullOperation'
   | 'CommitOperation'
   | 'ContinueMergeOperation'
   | 'CreateEmptyInitialCommit'

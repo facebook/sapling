@@ -203,6 +203,8 @@ export enum CommandRunner {
    * such as a non-sapling external submit command
    */
   CodeReviewProvider = 'codeReviewProvider',
+  /** Internal arcanist commands */
+  InternalArcanist = 'arc',
 }
 
 /**
