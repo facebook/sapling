@@ -13,7 +13,7 @@ import {VSCodeButtonDropdown} from './VSCodeButtonDropdown';
 import {t, T} from './i18n';
 import {PullOperation} from './operations/PullOperation';
 import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
-import {useIsOperationRunningOrQueued} from './previews';
+import {useMostRecentPendingOperation} from './previews';
 import {relativeDate, RelativeDate} from './relativeDate';
 import {latestCommitTree, useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -26,6 +26,7 @@ const DEFAULT_PULL_BUTTON = {
   id: 'pull',
   label: <T>Pull</T>,
   getOperation: () => new PullOperation(),
+  isRunning: (op: Operation) => op instanceof PullOperation,
 };
 const pullButtonChoiceKey = atom<string>({
   key: 'pullButtonChoiceKey',
@@ -37,6 +38,7 @@ export type PullButtonOption = {
   id: string;
   label: React.ReactNode;
   getOperation: () => Operation;
+  isRunning: (op: Operation) => boolean;
 };
 
 export function PullButton() {
@@ -58,19 +60,18 @@ export function PullButton() {
           replace: {$date: relativeDate(lastSync, {useRelativeForm: true})},
         }));
 
-  const isRunningPull = useIsOperationRunningOrQueued(PullOperation);
-  if (isRunningPull === 'queued') {
-    title += '\n\n' + t('Pull is currently running.');
-  } else if (isRunningPull === 'running') {
-    title += '\n\n' + t('Pull is already scheduled.');
-  }
-
   const pullButtonOptions: Array<PullButtonOption> = [];
   pullButtonOptions.push(DEFAULT_PULL_BUTTON, ...(Internal.additionalPullOptions ?? []));
 
   const [dropdownChoiceKey, setDropdownChoiceKey] = useRecoilState(pullButtonChoiceKey);
   const currentChoice =
     pullButtonOptions.find(option => option.id === dropdownChoiceKey) ?? pullButtonOptions[0];
+
+  const pendingOperation = useMostRecentPendingOperation();
+  const isRunningPull = pendingOperation != null && currentChoice.isRunning(pendingOperation);
+  if (isRunningPull) {
+    title += '\n\n' + t('Pull is already running.');
+  }
 
   return (
     <Tooltip placement="bottom" delayMs={DOCUMENTATION_DELAY} title={title}>
