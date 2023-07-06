@@ -9,8 +9,10 @@ use std::collections::HashMap;
 use std::fs;
 use std::fs::metadata;
 use std::fs::File;
+use std::fs::OpenOptions;
 use std::io;
 use std::io::BufRead;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -45,6 +47,23 @@ pub struct CommandArgs {
     /// regex that is used to check if the key is suppose to be deleted
     #[arg(short, long)]
     sanitise_regex: String,
+
+    /// The file, we're going to log the error into
+    #[arg(short, long)]
+    error_log_file: String,
+}
+
+fn create_error_log_file(error_log_file_path: String) -> File {
+    let path = std::path::Path::new(&error_log_file_path);
+    let prefix = path.parent().unwrap();
+    std::fs::create_dir_all(prefix).unwrap();
+    let mut file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .append(true)
+        .open(&error_log_file_path)
+        .unwrap();
+    file
 }
 
 #[allow(dead_code)]
@@ -54,6 +73,7 @@ struct BlobstoreBulkUnlinker {
     dry_run: bool,
     sanitise_regex: String,
     repo_to_blobstores: HashMap<RepositoryId, Vec<Arc<dyn BlobstoreUnlinkOps>>>,
+    error_log_file: File,
 }
 
 impl BlobstoreBulkUnlinker {
@@ -62,6 +82,7 @@ impl BlobstoreBulkUnlinker {
         keys_dir: String,
         dry_run: bool,
         sanitise_regex: String,
+        error_log_file_path: String,
     ) -> BlobstoreBulkUnlinker {
         BlobstoreBulkUnlinker {
             app,
@@ -69,6 +90,7 @@ impl BlobstoreBulkUnlinker {
             dry_run,
             sanitise_regex,
             repo_to_blobstores: HashMap::new(),
+            error_log_file: create_error_log_file(error_log_file_path),
         }
     }
 
@@ -195,10 +217,7 @@ impl BlobstoreBulkUnlinker {
             "key": key,
             "message": msg
         });
-        eprintln!(
-            "To implement logging error into a file: {}",
-            error_record.to_string()
-        );
+        writeln!(&self.error_log_file, "{}", error_record.to_string());
     }
 
     async fn bulk_unlink_keys_in_file(
@@ -255,6 +274,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let keys_dir = args.keys_dir;
     let dry_run = args.dry_run;
     let sanitise_regex = args.sanitise_regex;
+    let error_log_file = args.error_log_file;
 
     if dry_run {
         println!(
@@ -262,7 +282,13 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         );
     }
 
-    let mut unlinker = BlobstoreBulkUnlinker::new(app, keys_dir.clone(), dry_run, sanitise_regex);
+    let mut unlinker = BlobstoreBulkUnlinker::new(
+        app,
+        keys_dir.clone(),
+        dry_run,
+        sanitise_regex,
+        error_log_file,
+    );
     unlinker.start_unlink().await?;
 
     Ok(())
