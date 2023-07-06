@@ -12,6 +12,7 @@ import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {VSCodeButtonDropdown} from './VSCodeButtonDropdown';
 import {t, T} from './i18n';
 import {PullOperation} from './operations/PullOperation';
+import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {useIsOperationRunningOrQueued} from './previews';
 import {relativeDate, RelativeDate} from './relativeDate';
 import {latestCommitTree, useRunOperation} from './serverAPIState';
@@ -29,6 +30,7 @@ const DEFAULT_PULL_BUTTON = {
 const pullButtonChoiceKey = atom<string>({
   key: 'pullButtonChoiceKey',
   default: DEFAULT_PULL_BUTTON.id,
+  effects: [persistAtomToConfigEffect('isl.pull-button-choice')],
 });
 
 export type PullButtonOption = {

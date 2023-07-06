@@ -366,6 +366,7 @@ export type ConfigName =
   | 'isl.changedFilesDisplayType'
   | 'isl.hasShownGettingStarted'
   // sapling config prefers foo-bar naming.
+  | 'isl.pull-button-choice'
   | 'isl.experimental-features';
 
 export type ClientToServerMessage =
