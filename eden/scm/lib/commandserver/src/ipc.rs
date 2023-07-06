@@ -59,8 +59,15 @@ impl Client {
             } else {
                 Command::new("/bin/sh")
             };
-            cmd.arg(if cfg!(windows) { "/c" } else { "-c" })
-                .arg(command);
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                cmd.arg("/c").raw_arg(command);
+            }
+            #[cfg(not(windows))]
+            {
+                cmd.arg("-c").arg(command);
+            }
             cmd
         } else {
             Command::new(command)
