@@ -17,6 +17,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Instant;
 
+use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -27,6 +28,7 @@ use mononoke_app::args::RepoArg;
 use mononoke_app::MononokeApp;
 use mononoke_types::RepositoryId;
 use regex::Regex;
+use serde_json::json;
 
 use crate::commands::blobstore_unlink::get_blobstores;
 
@@ -144,40 +146,59 @@ impl BlobstoreBulkUnlinker {
                 return Ok(());
             }
 
-            let blobstores = self.get_blobstores_from_repo_id(repo_id).await?;
-
-            let mut num_errors = 0;
-            let num_blobstores = blobstores.len();
-            for blobstore in blobstores {
-                match blobstore.unlink(&context, &blobstore_key).await {
-                    Ok(_) => {}
-                    Err(e) => {
-                        num_errors += 1;
-                        let error_msg = e.to_string();
-                        if !error_msg.contains("does not exist in the blobstore")
-                            && !error_msg.contains("[404] Path not found")
-                        {
-                            eprintln!(
-                                "Failed to unlink key {} in one underlying blobstore, error: {}.",
-                                blobstore_key, error_msg
-                            );
+            if let Ok(blobstores) = self.get_blobstores_from_repo_id(repo_id).await {
+                let mut num_errors = 0;
+                let num_blobstores = blobstores.len();
+                for blobstore in blobstores {
+                    match blobstore.unlink(&context, &blobstore_key).await {
+                        Ok(_) => {}
+                        Err(e) => {
+                            num_errors += 1;
+                            let error_msg = e.to_string();
+                            if !error_msg.contains("does not exist in the blobstore")
+                                && !error_msg.contains("[404] Path not found")
+                            {
+                                bail!(
+                                    "Failed to unlink key {} in one underlying blobstore, error: {}.",
+                                    blobstore_key,
+                                    error_msg
+                                );
+                            }
                         }
                     }
                 }
-            }
-
-            if num_errors == num_blobstores {
-                eprintln!(
-                    "For key {}, no blobstore contained this key.",
-                    blobstore_key
-                );
+                // When we see this error, we want to log this into a file. We don't want to crash
+                // here because the program can be running with after a retry, and some keys have
+                // already been deleted.
+                if num_errors == num_blobstores {
+                    self.log_error_to_file(key, "no blobstore contains this key.")
+                        .await;
+                }
+            } else {
+                // We log this error into a file. so that we can tackle them later together.
+                self.log_error_to_file(
+                    key,
+                    "Skip key because its repo id is not found in the given repo config.",
+                )
+                .await;
             }
         } else {
-            eprintln!("Skip invalid key: {}", key);
-            return Ok(());
+            self.log_error_to_file(key, "Skip key because it is invalid.")
+                .await;
         }
 
         Ok(())
+    }
+
+    async fn log_error_to_file(&self, key: &str, msg: &str) {
+        let error_record = json!({
+            "key": key,
+            "message": msg
+        });
+        eprintln!(
+            "To implement logging error into a file: {}",
+            error_record.to_string()
+        );
     }
 
     async fn bulk_unlink_keys_in_file(
