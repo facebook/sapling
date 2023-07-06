@@ -57,7 +57,7 @@ fn create_error_log_file(error_log_file_path: String) -> File {
     let path = std::path::Path::new(&error_log_file_path);
     let prefix = path.parent().unwrap();
     std::fs::create_dir_all(prefix).unwrap();
-    let mut file = OpenOptions::new()
+    let file = OpenOptions::new()
         .create(true)
         .write(true)
         .append(true)
