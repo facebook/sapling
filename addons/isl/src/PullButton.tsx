@@ -27,6 +27,7 @@ const DEFAULT_PULL_BUTTON = {
   label: <T>Pull</T>,
   getOperation: () => new PullOperation(),
   isRunning: (op: Operation) => op instanceof PullOperation,
+  tooltip: t('Fetch latest repository and branch information from remote.'),
 };
 const pullButtonChoiceKey = atom<string>({
   key: 'pullButtonChoiceKey',
@@ -39,6 +40,7 @@ export type PullButtonOption = {
   label: React.ReactNode;
   getOperation: () => Operation;
   isRunning: (op: Operation) => boolean;
+  tooltip: string;
 };
 
 export function PullButton() {
@@ -51,15 +53,6 @@ export function PullButton() {
       ? null
       : Math.max(...latestCommits.map(commit => commit.info.date.valueOf()));
 
-  let title =
-    t('Fetch latest repository and branch information from remote.') +
-    '\n\n' +
-    (lastSync == null
-      ? ''
-      : t('Latest fetched commit is $date old', {
-          replace: {$date: relativeDate(lastSync, {useRelativeForm: true})},
-        }));
-
   const pullButtonOptions: Array<PullButtonOption> = [];
   pullButtonOptions.push(DEFAULT_PULL_BUTTON, ...(Internal.additionalPullOptions ?? []));
 
@@ -67,14 +60,23 @@ export function PullButton() {
   const currentChoice =
     pullButtonOptions.find(option => option.id === dropdownChoiceKey) ?? pullButtonOptions[0];
 
+  let tooltip =
+    currentChoice.tooltip +
+    '\n\n' +
+    (lastSync == null
+      ? ''
+      : t('Latest fetched commit is $date old', {
+          replace: {$date: relativeDate(lastSync, {useRelativeForm: true})},
+        }));
+
   const pendingOperation = useMostRecentPendingOperation();
   const isRunningPull = pendingOperation != null && currentChoice.isRunning(pendingOperation);
   if (isRunningPull) {
-    title += '\n\n' + t('Pull is already running.');
+    tooltip += '\n\n' + t('Pull is already running.');
   }
 
   return (
-    <Tooltip placement="bottom" delayMs={DOCUMENTATION_DELAY} title={title}>
+    <Tooltip placement="bottom" delayMs={DOCUMENTATION_DELAY} title={tooltip}>
       <div className="pull-info">
         {pullButtonOptions.length > 1 ? (
           <VSCodeButtonDropdown
