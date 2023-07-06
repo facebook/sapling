@@ -37,49 +37,50 @@ namespace facebook::eden {
  * form a d_type.
  */
 static_assert(S_IFMT == 0xF000, "The S_IFMT on Windows should be 0xF000");
+#define POSIX_BIT_SHIFT 12
 
 #define DT_UNKNOWN 0
-#define DT_FIFO ((_S_IFIFO) >> 12)
-#define DT_CHR ((_S_IFCHR) >> 12)
-#define DT_DIR ((_S_IFDIR) >> 12)
-#define DT_REG ((_S_IFREG) >> 12)
+#define DT_FIFO ((_S_IFIFO) >> POSIX_BIT_SHIFT)
+#define DT_CHR ((_S_IFCHR) >> POSIX_BIT_SHIFT)
+#define DT_DIR ((_S_IFDIR) >> POSIX_BIT_SHIFT)
+#define DT_REG ((_S_IFREG) >> POSIX_BIT_SHIFT)
 
 // Windows CRT does not define _S_IFLNK and _S_IFSOCK. So we arbitrarily define
 // it here.
 #define _S_IFLNK 0xA000
-#define DT_LNK (_S_IFLNK >> 12)
+#define DT_LNK (_S_IFLNK >> POSIX_BIT_SHIFT)
 
 #define _S_IFSOCK 0xC000
-#define DT_SOCK (_S_IFSOCK >> 12)
+#define DT_SOCK (_S_IFSOCK >> POSIX_BIT_SHIFT)
 
 #define _S_IFBLK 0x3000
-#define DT_BLK (_S_IFBLK >> 12)
+#define DT_BLK (_S_IFBLK >> POSIX_BIT_SHIFT)
 
-#define IFTODT(mode) (((mode)&_S_IFMT) >> 12)
-#define DTTOIF(type) (((type) << 12) & _S_IFMT)
+#define IFTODT(mode) (((mode)&_S_IFMT) >> POSIX_BIT_SHIFT)
+#define DTTOIF(type) (((type) << POSIX_BIT_SHIFT) & _S_IFMT)
 
 #ifndef S_ISDIR
-#define S_ISDIR(mode) (((mode) & (_S_IFDIR)) == (_S_IFDIR) ? 1 : 0)
+#define S_ISDIR(mode) ((mode >> POSIX_BIT_SHIFT) == DT_DIR)
 #endif
 
 #ifndef S_ISREG
-#define S_ISREG(mode) (((mode) & (_S_IFREG)) == (_S_IFREG) ? 1 : 0)
+#define S_ISREG(mode) ((mode >> POSIX_BIT_SHIFT) == DT_REG)
 #endif
 
 #ifndef S_ISBLK
-#define S_ISBLK(mode) (((mode) & (_S_IFBLK)) == (_S_IFBLK) ? 1 : 0)
+#define S_ISBLK(mode) ((mode >> POSIX_BIT_SHIFT) == DT_BLK)
 #endif
 
 #ifndef S_ISCHR
-#define S_ISCHR(mode) (((mode) & (_S_IFCHR)) == (_S_IFCHR) ? 1 : 0)
+#define S_ISCHR(mode) ((mode >> POSIX_BIT_SHIFT) == DT_CHR)
 #endif
 
 #ifndef S_ISFIFO
-#define S_ISFIFO(mode) (((mode) & (_S_IFIFO)) == (_S_IFIFO) ? 1 : 0)
+#define S_ISFIFO(mode) ((mode >> POSIX_BIT_SHIFT) == DT_FIFO)
 #endif
 
-#define S_ISSOCK(mode) (((mode) & (_S_IFSOCK)) == (_S_IFSOCK) ? 1 : 0)
-#define S_ISLNK(mode) (((mode) & (_S_IFLNK)) == (_S_IFLNK) ? 1 : 0)
+#define S_ISSOCK(mode) ((mode >> POSIX_BIT_SHIFT) == DT_SOCK)
+#define S_ISLNK(mode) ((mode >> POSIX_BIT_SHIFT) == DT_LNK)
 
 /**
  * We only use d_type from dirent on Windows.
