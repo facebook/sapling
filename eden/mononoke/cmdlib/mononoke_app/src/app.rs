@@ -415,6 +415,17 @@ impl MononokeApp {
         }
     }
 
+    /// Get repo id based on user-provided arguments.
+    pub fn repo_id(&self, repo_arg: &RepoArg) -> Result<RepositoryId> {
+        match repo_arg {
+            RepoArg::Id(repo_id) => Ok(*repo_id),
+            RepoArg::Name(repo_name) => {
+                let repo_config = self.repo_config_by_name(repo_name)?;
+                Ok(repo_config.repoid)
+            }
+        }
+    }
+
     /// Get repo configs based on user-provided arguments.
     pub fn multi_repo_configs(&self, repo_args: Vec<RepoArg>) -> Result<Vec<(String, RepoConfig)>> {
         let mut repos = vec![];
@@ -493,12 +504,23 @@ impl MononokeApp {
 
     /// Create a new repo object -- for local instances, expect its contents to be empty.
     /// Makes sure that the opened repo has redaction DISABLED
-    pub async fn create_repo_unredacted<Repo>(&self, repo_arg: &impl AsRepoArg) -> Result<Repo>
+    pub async fn create_repo_unredacted<Repo>(
+        &self,
+        repo_arg: &impl AsRepoArg,
+        maybe_inner_blobstore_id: Option<u64>,
+    ) -> Result<Repo>
     where
         Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
     {
         let (repo_name, mut repo_config) = self.repo_config(repo_arg.as_repo_arg())?;
         let common_config = self.repo_configs().common.clone();
+        if let Some(id) = maybe_inner_blobstore_id {
+            self.override_blobconfig(&mut repo_config.storage_config.blobstore, id)?;
+        }
+        info!(
+            self.logger().clone(),
+            "using repo \"{}\" repoid {:?}", repo_name, repo_config.repoid
+        );
 
         match &repo_config.storage_config.blobstore {
             BlobConfig::Files { path } | BlobConfig::Sqlite { path } => {
@@ -723,7 +745,7 @@ impl MononokeApp {
     ) -> Result<Arc<dyn Blobstore>> {
         let repo_configs = self.repo_configs();
         let storage_configs = self.storage_configs();
-        let (mut repo_id, redaction, storage_config) =
+        let (mut repo_id, redaction, mut storage_config) =
             if let Some(repo_id) = repo_blobstore_args.repo_id {
                 let repo_id = RepositoryId::new(repo_id);
                 let (_repo_name, repo_config) = repo_configs
@@ -754,28 +776,8 @@ impl MononokeApp {
                 return Err(anyhow!("Expected a storage argument"));
             };
 
-        let blob_config = match repo_blobstore_args.inner_blobstore_id {
-            None => storage_config.blobstore,
-            Some(id) => match storage_config.blobstore {
-                BlobConfig::MultiplexedWal { blobstores, .. } => {
-                    let sought_id = BlobstoreId::new(id);
-                    blobstores
-                        .into_iter()
-                        .find_map(|(blobstore_id, _, blobstore)| {
-                            if blobstore_id == sought_id {
-                                Some(blobstore)
-                            } else {
-                                None
-                            }
-                        })
-                        .ok_or_else(|| anyhow!("could not find a blobstore with id {}", id))?
-                }
-                _ => {
-                    return Err(anyhow!(
-                        "inner-blobstore-id supplied by blobstore is not multiplexed"
-                    ));
-                }
-            },
+        if let Some(id) = repo_blobstore_args.inner_blobstore_id {
+            self.override_blobconfig(&mut storage_config.blobstore, id)?;
         };
 
         if repo_blobstore_args.no_prefix {
@@ -784,7 +786,7 @@ impl MononokeApp {
 
         let blobstore = blobstore_factory::make_blobstore(
             self.env.fb,
-            blob_config,
+            storage_config.blobstore,
             &self.env.mysql_options,
             self.env.readonly_storage,
             &self.env.blobstore_options,
@@ -856,6 +858,31 @@ impl MononokeApp {
         }
 
         Ok(builder)
+    }
+
+    fn override_blobconfig(&self, blob_config: &mut BlobConfig, id: u64) -> Result<()> {
+        match blob_config {
+            BlobConfig::MultiplexedWal { ref blobstores, .. } => {
+                let sought_id = BlobstoreId::new(id);
+                let inner_blob_config = blobstores
+                    .iter()
+                    .find_map(|(blobstore_id, _, blobstore)| {
+                        if blobstore_id == &sought_id {
+                            Some(blobstore.clone())
+                        } else {
+                            None
+                        }
+                    })
+                    .ok_or_else(|| anyhow!("could not find a blobstore with id {}", id))?;
+                *blob_config = inner_blob_config;
+            }
+            _ => {
+                return Err(anyhow!(
+                    "inner-blobstore-id supplied but blobstore is not multiplexed"
+                ));
+            }
+        }
+        Ok(())
     }
 }
 
