@@ -64,6 +64,6 @@ thiserror = "1.0.36"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
 tokio-openssl = "0.6"
-tokio-util = { version = "0.6", features = ["full"] }
+tokio-util = { version = "0.7.8", features = ["full"] }
 tunables = { version = "0.1.0", path = "../../tunables" }
 wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }
