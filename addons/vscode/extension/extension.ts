@@ -8,6 +8,7 @@
 import type {Logger} from 'isl-server/src/logger';
 
 import packageJson from '../package.json';
+import {registerBlameAnnotationProvider} from './BlameAnnotationProvider';
 import {registerSaplingDiffContentProvider} from './DiffContentProvider';
 import {watchAndCreateRepositoriesForWorkspaceFolders} from './VSCodeRepo';
 import {registerCommands} from './commands';
@@ -28,6 +29,7 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(outputChannel);
     context.subscriptions.push(watchAndCreateRepositoriesForWorkspaceFolders(logger));
     context.subscriptions.push(registerSaplingDiffContentProvider(logger));
+    context.subscriptions.push(registerBlameAnnotationProvider(logger));
     context.subscriptions.push(...registerCommands(extensionTracker));
     extensionTracker.track('VSCodeExtensionActivated', {duration: Date.now() - start});
   } catch (error) {

@@ -19,6 +19,8 @@ type DiffSummaries = Map<DiffId, DiffSummary>;
  * API to fetch data from Remote Code Review system, like GitHub and Phabricator.
  */
 export interface CodeReviewProvider {
+  getDiffUrl(diffId: DiffId): string;
+
   triggerDiffSummariesFetch(diffs: Array<DiffId>): unknown;
 
   onChangeDiffSummaries(callback: (result: Result<DiffSummaries>) => unknown): Disposable;

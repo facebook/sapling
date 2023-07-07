@@ -457,3 +457,10 @@ export type Disposable = {
 export type ComparisonData = {
   diff: Result<string>;
 };
+
+export type BlameInfo = {
+  user: string;
+  node: string;
+  date: string;
+  line: string;
+}[];

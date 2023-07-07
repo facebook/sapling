@@ -55,6 +55,10 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     };
   }
 
+  getDiffUrl(diffId: string): string {
+    return `https://${this.codeReviewSystem.hostname}/${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}/pull/${diffId}`;
+  }
+
   triggerDiffSummariesFetch = debounce(
     async () => {
       try {
