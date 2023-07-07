@@ -223,9 +223,17 @@ impl EagerRepo {
         let metalog = MetaLog::open(store_dir.join("metalog"), None)?;
         // Write "requires" files.
         let windows_symlinks = config.map_or(false, |config| {
-            config
-                .get_or_default("experimental", "windows-symlinks")
-                .unwrap_or_default()
+            if let Ok(enabled_everywhere) =
+                config.get_or_default::<bool>("experimental", "windows-symlinks")
+            {
+                enabled_everywhere
+            } else {
+                // Assume intent was to just enable symlinks
+                !config
+                    .get_or_default::<Vec<String>>("experimental", "windows-symlinks")
+                    .unwrap_or_default()
+                    .is_empty()
+            }
         });
         write_requires(
             &hg_dir,

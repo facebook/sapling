@@ -199,7 +199,16 @@ pub fn eden_clone(backing_repo: &Repo, working_copy: &Path, target: Option<HgId>
         working_copy.as_os_str(),
     ]);
 
-    if config.get_or_default("experimental", "windows-symlinks")? {
+    let enable_windows_symlinks = if let Ok(enabled_everywhere) =
+        config.get_or_default::<bool>("experimental", "windows-symlinks")
+    {
+        enabled_everywhere
+    } else {
+        config
+            .get_or_default::<Vec<String>>("experimental", "windows-symlinks")?
+            .contains(&"edenfs".to_owned())
+    };
+    if enable_windows_symlinks {
         clone_command.args(["--enable-windows-symlinks".to_string()]);
     }
 

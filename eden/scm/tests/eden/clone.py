@@ -92,7 +92,7 @@ class TestEdenClone(BaseTest):
 
     @hgtest
     def test_clone_symlink_ready(self, repo: Repo, wc: WorkingCopy) -> None:
-        self.config.add("experimental", "windows-symlinks", "True")
+        self.config.add("experimental", "windows-symlinks", "edenfs")
         wc.file()
         master_commit = wc.commit()
         wc.hg.push(rev=master_commit.hash, to="master", create=True)

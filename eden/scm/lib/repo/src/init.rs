@@ -137,10 +137,20 @@ fn write_requirements(path: &Path, config: &ConfigSet) -> Result<(), InitError> 
     {
         requirements.insert("generaldelta");
     }
-    if config
-        .get_or_default("experimental", "windows-symlinks")
-        .unwrap_or_default()
+    let enable_windows_symlinks = if let Ok(enabled_everywhere) =
+        config.get_or_default::<bool>("experimental", "windows-symlinks")
     {
+        enabled_everywhere
+    } else if let Ok(places_enabled) =
+        config.get_or_default::<Vec<String>>("experimental", "windows-symlinks")
+    {
+        // Config for EdenFS lives in clone crate
+        places_enabled.contains(&"watchman".to_owned())
+            || places_enabled.contains(&"no-fsmonitor".to_owned())
+    } else {
+        false
+    };
+    if enable_windows_symlinks {
         requirements.insert("windowssymlinks");
     }
 
