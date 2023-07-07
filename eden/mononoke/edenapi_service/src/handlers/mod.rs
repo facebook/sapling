@@ -87,7 +87,6 @@ use self::handler::EdenApiContext;
 pub enum EdenApiMethod {
     Blame,
     Capabilities,
-    Files,
     Files2,
     Lookup,
     UploadFile,
@@ -122,7 +121,6 @@ impl fmt::Display for EdenApiMethod {
         let name = match self {
             Self::Blame => "blame",
             Self::Capabilities => "capabilities",
-            Self::Files => "files",
             Self::Files2 => "files2",
             Self::Trees => "trees",
             Self::History => "history",
@@ -428,7 +426,6 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<commit::UploadBonsaiChangesetHandler>(route);
         Handlers::setup::<commit::LocationToHashHandler>(route);
         Handlers::setup::<commit::HashLookupHandler>(route);
-        Handlers::setup::<files::FilesHandler>(route);
         Handlers::setup::<files::Files2Handler>(route);
         Handlers::setup::<files::UploadHgFilenodesHandler>(route);
         Handlers::setup::<bookmarks::BookmarksHandler>(route);

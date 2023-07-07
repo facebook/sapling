@@ -82,59 +82,6 @@ pub struct UploadFileQueryString {
 }
 
 /// Fetch the content of the files requested by the client.
-pub struct FilesHandler;
-
-#[async_trait]
-impl EdenApiHandler for FilesHandler {
-    type Request = FileRequest;
-    type Response = FileEntry;
-
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::Files;
-    const ENDPOINT: &'static str = "/files";
-
-    fn sampling_rate(request: &Self::Request) -> NonZeroU64 {
-        // Sample trivial requests
-        if request.keys.len() + request.reqs.len() == 1 {
-            nonzero_ext::nonzero!(100u64)
-        } else {
-            nonzero_ext::nonzero!(1u64)
-        }
-    }
-
-    async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
-        request: Self::Request,
-    ) -> HandlerResult<'async_trait, Self::Response> {
-        let repo = ectx.repo();
-        let ctx = repo.ctx().clone();
-
-        let len = request.keys.len() + request.reqs.len();
-        let reqs = request
-            .keys
-            .into_iter()
-            .map(|key| FileSpec {
-                key,
-                attrs: FileAttributes {
-                    content: true,
-                    aux_data: false,
-                },
-            })
-            .chain(request.reqs.into_iter());
-        ctx.perf_counters()
-            .add_to_counter(PerfCounterType::EdenapiFiles, len as i64);
-        let fetches = reqs.map(move |FileSpec { key, attrs }| fetch_file(repo.clone(), key, attrs));
-
-        Ok(stream::iter(fetches)
-            .buffer_unordered(MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST)
-            .inspect_ok(move |_| {
-                ctx.session().bump_load(Metric::GetpackFiles, 1.0);
-            })
-            .boxed())
-    }
-}
-
-/// Fetch the content of the files requested by the client.
 pub struct Files2Handler;
 
 #[async_trait]
