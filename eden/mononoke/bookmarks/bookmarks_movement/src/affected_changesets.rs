@@ -171,7 +171,7 @@ impl AffectedChangesets {
                         count += 1;
                         if count > limit {
                             future::ready(Err(anyhow!(
-                                "hooks additional changesets limit reached at {}",
+                                "bookmark movement additional changesets limit reached at {}",
                                 bcs_id
                             )))
                         } else {
@@ -288,7 +288,7 @@ impl AffectedChangesets {
         {
             self.load_additional_changesets(ctx, repo, bookmark, additional_changesets)
                 .await
-                .context("Failed to load additional affected changesets")?;
+                .context("Failed to load additional affected changesets to check extras")?;
 
             for bcs in self.iter() {
                 if bcs
@@ -326,7 +326,7 @@ impl AffectedChangesets {
         {
             self.load_additional_changesets(ctx, repo, bookmark, additional_changesets)
                 .await
-                .context("Failed to load additional affected changesets")?;
+                .context("Failed to load additional affected changesets to check case conflicts")?;
 
             stream::iter(self.iter().map(Ok))
                 .try_for_each_concurrent(100, |bcs| async move {
@@ -406,7 +406,7 @@ impl AffectedChangesets {
             if hook_manager.hooks_exist_for_bookmark(bookmark) {
                 self.load_additional_changesets(ctx, repo, bookmark, additional_changesets)
                     .await
-                    .context("Failed to load additional affected changesets")?;
+                    .context("Failed to load additional affected changesets to check hooks")?;
 
                 let skip_running_hooks_if_public: bool = repo
                     .repo_bookmark_attrs()
@@ -474,7 +474,9 @@ impl AffectedChangesets {
             // touched by the changesets are permitted.
             self.load_additional_changesets(ctx, repo, bookmark, additional_changesets)
                 .await
-                .context("Failed to load additional affected changesets")?;
+                .context(
+                    "Failed to load additional affected changesets to check path permissions",
+                )?;
 
             for cs in self.iter() {
                 authz.require_changeset_paths_write(ctx, repo, cs).await?;
