@@ -2353,6 +2353,32 @@ void EdenServer::detectNfsCrawl() {
         readThreshold,
         readDirCount,
         readDirThreshold);
+
+    auto mountPoints = getMountPoints();
+    for (auto& mountPointHandle : mountPoints) {
+      folly::via(
+          getServerState()->getThreadPool().get(), [this, mountPointHandle]() {
+            auto& mountPoint = mountPointHandle.getEdenMount();
+            if (mountPoint.isNfsdChannel()) {
+              auto pids =
+                  proc_util::readProcessIdsForPath(mountPoint.getPath());
+              XLOGF(
+                  INFO,
+                  "NFS crawl detection found {} processes opening files in mount point: {}",
+                  pids.size(),
+                  mountPoint.getPath());
+              for (auto pid : pids) {
+                auto processNameHandle =
+                    serverState_->getProcessNameCache()->lookup(pid);
+                XLOGF(
+                    INFO,
+                    "NFS detected process: {} ({})",
+                    processNameHandle.get(),
+                    pid);
+              }
+            }
+          });
+    }
   }
 }
 

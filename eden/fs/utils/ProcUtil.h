@@ -119,5 +119,16 @@ std::optional<size_t> calculatePrivateBytes(
 
 #endif
 
+/**
+ * Stores a list of process IDs.
+ */
+using ProcessList = std::vector<pid_t>;
+
+/**
+ * Looks up the list of process IDs that have at least one open file in the
+ * specified path.
+ */
+ProcessList readProcessIdsForPath(const AbsolutePath& path);
+
 } // namespace proc_util
 } // namespace facebook::eden

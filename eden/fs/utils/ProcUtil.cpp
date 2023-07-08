@@ -19,6 +19,7 @@
 #include "eden/fs/utils/FileUtils.h"
 
 #ifdef __APPLE__
+#include <libproc.h> // @manual
 #include <mach/mach_init.h> // @manual
 #include <mach/task.h> // @manual
 #include <mach/task_info.h> // @manual
@@ -233,4 +234,54 @@ std::optional<size_t> calculatePrivateBytes() {
   return std::nullopt;
 #endif
 }
+
+ProcessList readProcessIdsForPath(FOLLY_MAYBE_UNUSED const AbsolutePath& path) {
+  ProcessList pids;
+#ifdef __APPLE__
+  // Obtain the number of bytes to allocate for the pids buffer.
+  int32_t pids_size = proc_listpidspath(
+      PROC_ALL_PIDS,
+      0,
+      path.c_str(),
+      PROC_LISTPIDSPATH_PATH_IS_VOLUME,
+      nullptr,
+      0);
+
+  // There is a race-condition here, where processes could be started after the
+  // call above to compute the amount of storage required. The maximum number of
+  // processes for a given machine is based on both OS version and hardware
+  // constraints so there is not a known compile time value nor does there a
+  // known OS call to obtain. However, calling proc_listpidspath with less
+  // storage than required does not result in a buffer overflow or an error -
+  // rather it truncates the results to fit within the buffer provided. This is
+  // acceptable in most use cases as this is expected to be a rare occurance.
+  if (pids_size > 0) {
+    // Resize buffer and fetch pids.
+    pids.resize(pids_size / sizeof(pid_t));
+    pids_size = proc_listpidspath(
+        PROC_ALL_PIDS,
+        0,
+        path.c_str(),
+        PROC_LISTPIDSPATH_PATH_IS_VOLUME,
+        pids.data(),
+        pids_size);
+  }
+
+  // If anything went wrong, resize buffer to 0 size.
+  if (pids_size < 0) {
+    XLOGF(
+        WARNING,
+        "proc_listpidspath failed: {} ()",
+        folly::errnoStr(pids_size),
+        pids_size);
+    pids.resize(0);
+  } else {
+    // Resize buffer to actual size.
+    pids.resize(pids_size / sizeof(pid_t));
+  }
+#endif
+
+  return pids;
+}
+
 } // namespace facebook::eden::proc_util
