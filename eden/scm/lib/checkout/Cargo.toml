@@ -20,7 +20,7 @@ pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 progress-model = { version = "0.1.0", path = "../progress/model" }
 repo = { version = "0.1.0", path = "../repo" }
 repolock = { version = "0.1.0", path = "../repolock" }
-serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 status = { version = "0.1.0", path = "../status" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 thiserror = "1.0.36"

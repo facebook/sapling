@@ -13,9 +13,9 @@ quickcheck = { version = "1.0", optional = true }
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 rand = { version = "0.8", features = ["small_rng"], optional = true }
 ref-cast = "1.0.16"
-serde = { version = "1.0.136", features = ["derive", "rc"] }
+serde = { version = "1.0.167", features = ["derive", "rc"] }
 serde_bytes = "0.11"
-serde_derive = "1.0"
+serde_derive = "1.0.167"
 sha1 = "0.10.5"
 thiserror = "1.0.36"
 util = { version = "0.1.0", path = "../util" }
@@ -26,7 +26,7 @@ lazy_static = "1.4"
 quickcheck = "1.0"
 rand = { version = "0.8", features = ["small_rng"] }
 serde_cbor = "0.11"
-serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 
 [features]
 default = ["for-tests"]

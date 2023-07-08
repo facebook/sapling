@@ -73,9 +73,9 @@ repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 revset = { version = "0.1.0", path = "../revset" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
-serde = { version = "1.0.136", features = ["derive", "rc"] }
-serde_derive = "1.0"
-serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
+serde = { version = "1.0.167", features = ["derive", "rc"] }
+serde_derive = "1.0.167"
+serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manifest" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

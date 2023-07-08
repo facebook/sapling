@@ -31,8 +31,8 @@ regex = "1.6.0"
 reqwest = { version = "0.11.18", features = ["blocking", "json", "multipart", "rustls-tls", "rustls-tls-native-roots", "stream"] }
 reqwest-eventsource = "0.4.0"
 rust-ini = { version = "0.17", features = ["inline-comment"] }
-serde = { version = "1.0.136", features = ["derive", "rc"] }
-serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
+serde = { version = "1.0.167", features = ["derive", "rc"] }
+serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 thiserror = "1.0.36"
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
 

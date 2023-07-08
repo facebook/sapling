@@ -9,7 +9,7 @@ license = "MIT"
 [dependencies]
 bytes = { version = "1.1", features = ["serde"], optional = true }
 memmap2 = { version = "0.5.10", optional = true }
-serde = { version = "1.0.136", features = ["derive", "rc"] }
+serde = { version = "1.0.167", features = ["derive", "rc"] }
 
 [dev-dependencies]
 quickcheck = "1.0"

@@ -86,8 +86,8 @@ retry = { version = "0.1.0", path = "common/retry" }
 revset = { version = "0.1.0", path = "revset" }
 scuba_ext = { version = "0.1.0", path = "common/scuba_ext" }
 segmented_changelog = { version = "0.1.0", path = "segmented_changelog" }
-serde = { version = "1.0.136", features = ["derive", "rc"] }
-serde_derive = "1.0"
+serde = { version = "1.0.167", features = ["derive", "rc"] }
+serde_derive = "1.0.167"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql_construct = { version = "0.1.0", path = "common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "common/rust/sql_ext" }
