@@ -626,6 +626,9 @@ class EdenServer : private TakeoverHandler {
   // Run a garbage collection cycle over the inodes hierarchy.
   void garbageCollectAllMounts();
 
+  // Detects when NFS backed repos are being crawled.
+  void detectNfsCrawl();
+
   // Cancel all subscribers on all mounts so that we can tear
   // down the thrift server without blocking
   void shutdownSubscribers();
@@ -814,5 +817,8 @@ class EdenServer : private TakeoverHandler {
   PeriodicFnTask<&EdenServer::garbageCollectAllMounts> gcTask_{
       this,
       "working_copy_gc"};
+  PeriodicFnTask<&EdenServer::detectNfsCrawl> detectNfsCrawlTask_{
+      this,
+      "detect_nfs_crawl"};
 };
 } // namespace facebook::eden

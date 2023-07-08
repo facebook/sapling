@@ -346,6 +346,11 @@ class EdenServer::ThriftServerEventHandler
 };
 
 static constexpr folly::StringPiece kBlobCacheMemory{"blob_cache.memory"};
+static constexpr folly::StringPiece kNfsReadCount60{"nfs.read_us.count.60"};
+static constexpr folly::StringPiece kNfsReadDirCount60{
+    "nfs.readdir_us.count.60"};
+static constexpr folly::StringPiece kNfsReadDirPlusCount60{
+    "nfs.readdirplus_us.count.60"};
 
 EdenServer::EdenServer(
     std::vector<std::string> originalCommandLine,
@@ -746,6 +751,19 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
     gcTask_.updateInterval(
         std::chrono::duration_cast<std::chrono::milliseconds>(
             config.gcPeriod.getValue()));
+  }
+
+  if (config.enableNfsServer.getValue() &&
+      config.enableNfsCrawlDetection.getValue()) {
+    auto interval = config.nfsCrawlInterval.getValue();
+    XLOGF(
+        INFO,
+        "NFS crawl detection enabled. Using interval = {}ns",
+        interval.count());
+    detectNfsCrawlTask_.updateInterval(
+        std::chrono::duration_cast<std::chrono::milliseconds>(interval));
+  } else {
+    detectNfsCrawlTask_.updateInterval(0s);
   }
 }
 
@@ -2307,6 +2325,34 @@ void EdenServer::garbageCollectAllMounts() {
               context);
         })
         .ensure([mountHandle] {});
+  }
+}
+
+void EdenServer::detectNfsCrawl() {
+  auto edenConfig = config_->getEdenConfig();
+  auto readThreshold = edenConfig->nfsCrawlReadThreshold.getValue();
+  auto readDirThreshold = edenConfig->nfsCrawlReadDirThreshold.getValue();
+  auto readCount = fb303::ServiceData::get()
+                       ->getCounterIfExists(kNfsReadCount60)
+                       .value_or(0);
+  // At runtime, use-readdirplus can change, but this does not change the state
+  // of the current mounts. Therefore, sum readdir and readdirplus counters and
+  // compare that to the readdir threshold.
+  auto readDirCount = fb303::ServiceData::get()
+                          ->getCounterIfExists(kNfsReadDirCount60)
+                          .value_or(0) +
+      fb303::ServiceData::get()
+          ->getCounterIfExists(kNfsReadDirPlusCount60)
+          .value_or(0);
+  if (readCount > readThreshold || readDirCount > readDirThreshold) {
+    XLOGF(
+        INFO,
+        "Nfs crawl detected, initiating process discovery and attribution: "
+        "[nfs.read_us.count.60 = {} > {} or nfs.readdir[plus]_us.count.60 = {} > {}.",
+        readCount,
+        readThreshold,
+        readDirCount,
+        readDirThreshold);
   }
 }
 

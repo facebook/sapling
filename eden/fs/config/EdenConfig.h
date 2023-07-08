@@ -905,6 +905,50 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Controls whether EdenFS detects proceses that crawl an NFS checkout. Only
+   * affects EdenFS if experimental:enable-nfs-server is also true. When NFS
+   * crawl detection is enabled, EdenFS will perioically check
+   * (experimental:nfs-crawl-interval) whether NFS read or readdir counters
+   * exceed the configured thresholds (experimental:nfs-crawl-read-threshold and
+   * experimental:nfs-crawl-readdir-threshold, respectively). If they do exceed,
+   * EdenFS will determine which processes appear to be preforming the crawl and
+   * record their information to the log file and structured logging. Currently,
+   * this information is expected to be useful in diagnosing slowness when using
+   * NFS. Future, work in this area may provided more immediate feedback to
+   * users initiating these processes.
+   */
+  ConfigSetting<bool> enableNfsCrawlDetection{
+      "experimental:enable-nfs-crawl-detection",
+      false,
+      this};
+
+  /**
+   * Sets the interval at which EdenFS detects NFS crawling.
+   */
+  ConfigSetting<std::chrono::nanoseconds> nfsCrawlInterval{
+      "experimental:nfs-crawl-interval",
+      std::chrono::minutes(1),
+      this};
+
+  /**
+   * Sets the read threshold at which EdenFS determines NFS crawling is
+   * occuring.
+   */
+  ConfigSetting<uint32_t> nfsCrawlReadThreshold{
+      "experimental:nfs-crawl-read-threshold",
+      500,
+      this};
+
+  /**
+   * Sets the readdir threshold at which EdenFS determines NFS crawling is
+   * occuring.
+   */
+  ConfigSetting<uint32_t> nfsCrawlReadDirThreshold{
+      "experimental:nfs-crawl-readdir-threshold",
+      100,
+      this};
+
+  /**
    * Controls whether EdenFS uses EdenApi to import data from remote.
    *
    * TODO: Remove once this config value is no longer written.
