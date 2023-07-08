@@ -14,6 +14,7 @@
 #include <atomic>
 #include <fstream>
 #include <functional>
+#include <iterator>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -757,7 +758,7 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
       config.enableNfsCrawlDetection.getValue()) {
     auto interval = config.nfsCrawlInterval.getValue();
     XLOGF(
-        INFO,
+        DBG2,
         "NFS crawl detection enabled. Using interval = {}ns",
         interval.count());
     detectNfsCrawlTask_.updateInterval(
@@ -2346,38 +2347,63 @@ void EdenServer::detectNfsCrawl() {
           .value_or(0);
   if (readCount > readThreshold || readDirCount > readDirThreshold) {
     XLOGF(
-        INFO,
-        "Nfs crawl detected, initiating process discovery and attribution: "
-        "[nfs.read_us.count.60 = {} > {} or nfs.readdir[plus]_us.count.60 = {} > {}.",
+        DBG2,
+        "NFS crawl detected, initiating process discovery and attribution: "
+        "[nfs.read_us.count.60 = {} > {} or nfs.readdir[plus]_us.count.60 = {} > {}]",
         readCount,
         readThreshold,
         readDirCount,
         readDirThreshold);
 
+    // Get list of excluded process names
+    auto exclusions = edenConfig->nfsCrawlExcludedProcessNames.getValue();
+
+    // Iterate over each mount
     auto mountPoints = getMountPoints();
     for (auto& mountPointHandle : mountPoints) {
-      folly::via(
-          getServerState()->getThreadPool().get(), [this, mountPointHandle]() {
-            auto& mountPoint = mountPointHandle.getEdenMount();
-            if (mountPoint.isNfsdChannel()) {
-              auto pids =
-                  proc_util::readProcessIdsForPath(mountPoint.getPath());
-              XLOGF(
-                  INFO,
-                  "NFS crawl detection found {} processes opening files in mount point: {}",
-                  pids.size(),
-                  mountPoint.getPath());
+      if (mountPointHandle.getEdenMount().isNfsdChannel()) {
+        folly::via(
+            getServerState()->getThreadPool().get(),
+            [serverState = serverState_, mountPointHandle, exclusions]() {
+              const auto& mount = mountPointHandle.getEdenMount();
+
+              // Get list of pids that have open files/paths on the mount
+              auto pids = proc_util::readProcessIdsForPath(mount.getPath());
               for (auto pid : pids) {
-                auto processNameHandle =
-                    serverState_->getProcessNameCache()->lookup(pid);
-                XLOGF(
-                    INFO,
-                    "NFS detected process: {} ({})",
-                    processNameHandle.get(),
-                    pid);
+                auto simpleName = proc_util::readProcessSimpleName(pid);
+                if (simpleName.has_value()) {
+                  if (exclusions.find(simpleName.value()) == exclusions.end()) {
+                    // Log process hierarchy
+                    auto hierarchy = proc_util::getProcessHierarchy(
+                        serverState->getProcessNameCache(), pid);
+                    XCHECK(
+                        !hierarchy.empty(),
+                        "proc_util::getProcessHierarchy returned an empty list.");
+                    auto [_pid, sname, pname] = std::move(hierarchy.top());
+                    hierarchy.pop();
+                    std::string output = fmt::format(
+                        "NFS crawl detection found process with open files in mount point: {}\n  {} ({}): {}",
+                        mount.getPath(),
+                        sname,
+                        _pid,
+                        pname);
+                    while (!hierarchy.empty()) {
+                      fmt::format_to(std::back_inserter(output), "\n");
+                      auto [_pid, sname, pname] = std::move(hierarchy.top());
+                      hierarchy.pop();
+                      fmt::format_to(
+                          std::back_inserter(output),
+                          "  ->{}({}): {}",
+                          sname,
+                          _pid,
+                          pname);
+                    }
+                    XLOGF(DBG2, output);
+                  }
+                }
               }
-            }
-          });
+            });
+      }
     }
   }
 }

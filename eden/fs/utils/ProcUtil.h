@@ -8,9 +8,12 @@
 #pragma once
 #include <folly/Range.h>
 #include <optional>
+#include <stack>
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "eden/common/utils/ProcessName.h"
+#include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
@@ -129,6 +132,32 @@ using ProcessList = std::vector<pid_t>;
  * specified path.
  */
 ProcessList readProcessIdsForPath(const AbsolutePath& path);
+
+/**
+ * Stores a simple process name - just the name of the process. This is in
+ * contrast to ProcessName which stores the process command line minus the
+ * process path.
+ */
+using ProcessSimpleName = std::string;
+
+/**
+ * Fetches the process name for the specified process ID. If the pid is invalid
+ * or an error occurs while fetching, returns std::nullopt.
+ */
+std::optional<ProcessSimpleName> readProcessSimpleName(pid_t pid);
+
+/**
+ * Get the parent process ID of the specified process ID, if one exists.
+ */
+std::optional<pid_t> getParentProcessId(pid_t pid);
+
+/**
+ * Get the process hierarchy, as a stack of tuples of pid, simple name and
+ * ProcessName, of the specified process ID.
+ */
+std::stack<std::tuple<pid_t, std::string, ProcessName>> getProcessHierarchy(
+    std::shared_ptr<ProcessNameCache> processNameCache,
+    pid_t pid);
 
 } // namespace proc_util
 } // namespace facebook::eden

@@ -949,6 +949,14 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Sets the process name exclusions NFS crawling to ignore.
+   */
+  ConfigSetting<std::unordered_set<std::string>> nfsCrawlExcludedProcessNames{
+      "experimental:nfs-crawl-excluded-process-names",
+      {},
+      this};
+
+  /**
    * Controls whether EdenFS uses EdenApi to import data from remote.
    *
    * TODO: Remove once this config value is no longer written.
