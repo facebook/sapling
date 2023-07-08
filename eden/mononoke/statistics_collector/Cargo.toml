@@ -12,8 +12,8 @@ name = "statistics_collector"
 path = "../cmds/statistics_collector.rs"
 
 [dependencies]
-anyhow = "1.0.65"
-async-trait = "0.1.58"
+anyhow = "1.0.71"
+async-trait = "0.1.71"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }

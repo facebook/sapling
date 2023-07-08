@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.65"
+anyhow = "1.0.71"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
@@ -33,7 +33,7 @@ mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 movers = { version = "0.1.0", path = "../movers" }
 mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
-ref-cast = "1.0.16"
+ref-cast = "1.0.18"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }

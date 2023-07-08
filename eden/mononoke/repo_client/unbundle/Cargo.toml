@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.65"
+anyhow = "1.0.71"
 ascii = "1.0"
 backsyncer = { version = "0.1.0", path = "../../commit_rewriting/backsyncer" }
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
@@ -56,7 +56,7 @@ sha2 = "0.10.6"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
-thiserror = "1.0.36"
+thiserror = "1.0.43"
 time_window_counter = { version = "0.1.0", path = "../../time_window_counter" }
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }

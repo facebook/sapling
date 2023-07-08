@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.65"
+anyhow = "1.0.71"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bytes = { version = "1.1", features = ["serde"] }
 context = { version = "0.1.0", path = "../../server/context" }
@@ -18,4 +18,4 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
-thiserror = "1.0.36"
+thiserror = "1.0.43"

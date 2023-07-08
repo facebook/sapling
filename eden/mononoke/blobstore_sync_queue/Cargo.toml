@@ -12,8 +12,8 @@ name = "blobstore_sync_queue_test"
 path = "test/main.rs"
 
 [dependencies]
-anyhow = "1.0.65"
-async-trait = "0.1.58"
+anyhow = "1.0.71"
+async-trait = "0.1.71"
 auto_impl = "0.4"
 context = { version = "0.1.0", path = "../server/context" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }

@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.65"
+anyhow = "1.0.71"
 atomicfile = { version = "0.1.0", path = "../atomicfile" }
 dirs = "2.0"
 fs2 = "0.4"
@@ -17,7 +17,7 @@ once_cell = "1.12"
 rand = { version = "0.8", features = ["small_rng"] }
 shellexpand = "2.1.2"
 tempfile = "3.5"
-thiserror = "1.0.36"
+thiserror = "1.0.43"
 
 [dev-dependencies]
 memmap2 = "0.5.10"

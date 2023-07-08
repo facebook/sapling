@@ -11,7 +11,7 @@ license = "GPLv2+"
 path = "../logging/lib.rs"
 
 [dependencies]
-anyhow = "1.0.65"
+anyhow = "1.0.71"
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 clap = { version = "4.3.5", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 env_logger = "0.10"

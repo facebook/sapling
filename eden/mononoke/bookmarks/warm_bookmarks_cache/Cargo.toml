@@ -11,8 +11,8 @@ license = "GPLv2+"
 path = "lib.rs"
 
 [dependencies]
-anyhow = "1.0.65"
-async-trait = "0.1.58"
+anyhow = "1.0.71"
+async-trait = "0.1.71"
 basename_suffix_skeleton_manifest = { version = "0.1.0", path = "../../derived_data/basename_suffix_skeleton_manifest" }
 blame = { version = "0.1.0", path = "../../derived_data/blame" }
 bookmarks = { version = "0.1.0", path = ".." }

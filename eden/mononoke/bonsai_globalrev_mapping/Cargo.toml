@@ -14,8 +14,8 @@ path = "test/main.rs"
 [dependencies]
 abomonation = { version = "0.7", features = ["smallvec"] }
 abomonation_derive = "0.5"
-anyhow = "1.0.65"
-async-trait = "0.1.58"
+anyhow = "1.0.71"
+async-trait = "0.1.71"
 bonsai_globalrev_mapping_thrift = { version = "0.1.0", path = "if" }
 bytes = { version = "1.1", features = ["serde"] }
 caching_ext = { version = "0.1.0", path = "../common/rust/caching_ext" }
@@ -28,7 +28,7 @@ slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
-thiserror = "1.0.36"
+thiserror = "1.0.43"
 
 [dev-dependencies]
 assert_matches = "1.5"

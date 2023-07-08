@@ -8,8 +8,8 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.65"
-async-trait = "0.1.58"
+anyhow = "1.0.71"
+async-trait = "0.1.71"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
@@ -49,7 +49,7 @@ repo_permission_checker = { version = "0.1.0", path = "../../repo_attributes/rep
 repo_update_logger = { version = "0.1.0", path = "../../features/repo_update_logger" }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "1.0.36"
+thiserror = "1.0.43"
 tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]

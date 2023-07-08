@@ -16,8 +16,8 @@ name = "hooks_tests"
 path = "hooks-tests/src/lib.rs"
 
 [dependencies]
-anyhow = "1.0.65"
-async-trait = "0.1.58"
+anyhow = "1.0.71"
+async-trait = "0.1.71"
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bytes = { version = "1.1", features = ["serde"] }
 context = { version = "0.1.0", path = "../server/context" }
@@ -45,7 +45,7 @@ serde_derive = "1.0.167"
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "1.0.36"
+thiserror = "1.0.43"
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../tunables" }
 

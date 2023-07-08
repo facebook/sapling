@@ -18,7 +18,7 @@ description = """
 """
 
 [dependencies]
-anyhow = "1.0.65"
+anyhow = "1.0.71"
 filetime = "0.2.9"
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -33,7 +33,7 @@ reqwest-eventsource = "0.4.0"
 rust-ini = { version = "0.17", features = ["inline-comment"] }
 serde = { version = "1.0.167", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
-thiserror = "1.0.36"
+thiserror = "1.0.43"
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]

@@ -6,13 +6,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.65"
+anyhow = "1.0.71"
 clap = "2.33"
 commitcloudsubscriber = { version = "0.1.0", path = "../../lib/commitcloudsubscriber" }
 env_logger = "0.10"
 libc = "0.2.139"
 log = { version = "0.4.17", features = ["kv_unstable", "kv_unstable_std"] }
 serde = { version = "1.0.167", features = ["derive", "rc"] }
-thiserror = "1.0.36"
+thiserror = "1.0.43"
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
 toml = "0.7.3"

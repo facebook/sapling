@@ -11,12 +11,12 @@ license = "GPLv2+"
 path = "lib.rs"
 
 [dependencies]
-anyhow = "1.0.65"
-async-trait = "0.1.58"
+anyhow = "1.0.71"
+async-trait = "0.1.71"
 context = { version = "0.1.0", path = "../../server/context" }
 dag = { version = "0.1.0", path = "../../../scm/lib/dag" }
 dag-types = { version = "0.1.0", path = "../../../scm/lib/dag/dag-types", features = ["for-tests", "serialize-abomonation"] }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-thiserror = "1.0.36"
+thiserror = "1.0.43"

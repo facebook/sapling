@@ -11,9 +11,9 @@ license = "GPLv2+"
 path = "lib.rs"
 
 [dependencies]
-anyhow = "1.0.65"
+anyhow = "1.0.71"
 async-recursion = "1.0.2"
-async-trait = "0.1.58"
+async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -38,7 +38,7 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 strum = { version = "0.24", features = ["derive"] }
-thiserror = "1.0.36"
+thiserror = "1.0.43"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }

@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.65"
+anyhow = "1.0.71"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 fail = { version = "0.4", features = ["failpoints"] }
@@ -23,7 +23,7 @@ repolock = { version = "0.1.0", path = "../repolock" }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 status = { version = "0.1.0", path = "../status" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
-thiserror = "1.0.36"
+thiserror = "1.0.43"
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
 tracing = "0.1.35"
 treestate = { version = "0.1.0", path = "../treestate" }
@@ -33,7 +33,7 @@ vfs = { version = "0.1.0", path = "../vfs" }
 workingcopy = { version = "0.1.0", path = "../workingcopy" }
 
 [dev-dependencies]
-async-trait = "0.1.58"
+async-trait = "0.1.71"
 manifest-tree = { version = "0.1.0", path = "../manifest-tree", features = ["for-tests"] }
 quickcheck = "1.0"
 tempfile = "3.5"
