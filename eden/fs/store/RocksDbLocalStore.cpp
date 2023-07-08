@@ -388,8 +388,6 @@ void RocksDbLocalStore::clearKeySpace(KeySpace keySpace) {
   auto handlesLock = getHandles();
   auto& handles = handlesLock->handles;
   auto columnFamily = handles->columns[keySpace->index].get();
-  std::unique_ptr<rocksdb::Iterator> it{
-      handles->db->NewIterator(ReadOptions(), columnFamily)};
   XLOG(DBG2) << "clearing column family \"" << columnFamily->GetName() << "\"";
   std::string rangeStorage;
   const auto fullRange = getFullRange(rangeStorage);
