@@ -367,4 +367,24 @@ struct SqliteIntegrityCheck {
   }
 };
 
+struct NfsCrawlDetected {
+  static constexpr const char* type = "nfs_crawl_detected";
+
+  int64_t readCount = 0;
+  int64_t readThreshold = 0;
+  int64_t readDirCount = 0;
+  int64_t readDirThreshold = 0;
+  // root->leaf formatted as:
+  //   "[simple_name (pid): full_name] -> [simple_name (pid): full_name] -> ..."
+  std::string processHierarchy = "";
+
+  void populate(DynamicEvent& event) const {
+    event.addInt("read_count", readCount);
+    event.addInt("read_threshold", readThreshold);
+    event.addInt("readdir_count", readDirCount);
+    event.addInt("readdir_threshold", readDirThreshold);
+    event.addString("process_hierarchy", processHierarchy);
+  }
+};
+
 } // namespace facebook::eden

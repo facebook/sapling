@@ -2364,7 +2364,13 @@ void EdenServer::detectNfsCrawl() {
       if (mountPointHandle.getEdenMount().isNfsdChannel()) {
         folly::via(
             getServerState()->getThreadPool().get(),
-            [serverState = serverState_, mountPointHandle, exclusions]() {
+            [mountPointHandle,
+             exclusions,
+             serverState = serverState_,
+             readCount,
+             readThreshold,
+             readDirCount,
+             readDirThreshold]() {
               const auto& mount = mountPointHandle.getEdenMount();
 
               // Get list of pids that have open files/paths on the mount
@@ -2381,24 +2387,31 @@ void EdenServer::detectNfsCrawl() {
                         "proc_util::getProcessHierarchy returned an empty list.");
                     auto [_pid, sname, pname] = std::move(hierarchy.top());
                     hierarchy.pop();
-                    std::string output = fmt::format(
-                        "NFS crawl detection found process with open files in mount point: {}\n  {} ({}): {}",
-                        mount.getPath(),
-                        sname,
-                        _pid,
-                        pname);
+                    std::string output =
+                        fmt::format("[{}({}): {}]", sname, _pid, pname);
                     while (!hierarchy.empty()) {
-                      fmt::format_to(std::back_inserter(output), "\n");
+                      fmt::format_to(std::back_inserter(output), " -> ");
                       auto [_pid, sname, pname] = std::move(hierarchy.top());
                       hierarchy.pop();
                       fmt::format_to(
                           std::back_inserter(output),
-                          "  ->{}({}): {}",
+                          "[{}({}): {}]",
                           sname,
                           _pid,
                           pname);
                     }
-                    XLOGF(DBG2, output);
+                    XLOGF(
+                        DBG2,
+                        "NFS crawl detection found process with open files in mount point: {}\n  {}",
+                        mount.getPath(),
+                        output);
+                    serverState->getStructuredLogger()->logEvent(
+                        NfsCrawlDetected{
+                            readCount,
+                            readThreshold,
+                            readDirCount,
+                            readDirThreshold,
+                            output});
                   }
                 }
               }
