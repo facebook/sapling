@@ -617,6 +617,18 @@ _hg_cmd_forget() {
   '*:file:_hg_files'
 }
 
+_hg_cmd_goto() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--clean -C)'{-C,--clean}'[discard uncommitted changes (no backup)]' \
+  '(--check -c)'{-c,--check}'[require clean working copy]' \
+  '(--merge -m)'{-m,--merge}'[merge uncommitted changes]' \
+  '(--rev -r)'{-r+,--rev=}'[revision]:revision:_hg_labels' \
+  '--inactive[update without activating bookmarks]' \
+  '(--bookmark -B)'{-B+,--bookmark=}'[create new bookmark]:text:' \
+  '(--tool -t)'{-t+,--tool=}'[specify merge tool]:text:' \
+  '*:revision:_hg_labels'
+}
+
 _hg_cmd_graft() {
   _arguments -s -w : $_hg_global_opts $_hg_dryrun_opts \
                      $_hg_date_user_opts $_hg_mergetool_opts \
