@@ -1064,7 +1064,7 @@
 
   $ commit 36 'buggy merge: identical parents' 35 35
   $ hg log -G -l5
-  @  commit:      95fa8febd08a
+  @  commit:      75678d8b2851
   │  user:        test
   │  date:        Thu Jan 01 00:00:36 1970 +0000
   │  summary:     (36) buggy merge: identical parents
@@ -1157,7 +1157,7 @@
     (symbol 'follow')
     (list
       (string 'a')
-      (string '95fa8febd08adee9c9f1371553d07b0fe91c315c')))
+      (string '75678d8b2851cc8f5e76f08b9049374044a677da')))
 
   $ hg log -G --print-revset -r '::max(all())' a --config experimental.log-implicit-follow-threshold=1000
   ['::max(all())']
@@ -1922,7 +1922,7 @@
   > graphstyle.missing =
   > EOF
   $ hg log -G -r 'file("a")' -m
-  @  commit:      95fa8febd08a
+  @  commit:      75678d8b2851
   ╷  user:        test
   ╷  date:        Thu Jan 01 00:00:36 1970 +0000
   ╷  summary:     (36) buggy merge: identical parents
@@ -2065,7 +2065,7 @@
 # Setting HGPLAIN sets graphmod styling to ASCII:
 
   $ HGPLAIN=1 hg log -G -r 'file("a")' -m
-  @  commit:      95fa8febd08a
+  @  commit:      75678d8b2851
   .  user:        test
   .  date:        Thu Jan 01 00:00:36 1970 +0000
   .  summary:     (36) buggy merge: identical parents
@@ -2208,7 +2208,7 @@
 # .. unless HGPLAINEXCEPT=graph is set:
 
   $ HGPLAIN=1 HGPLAINEXCEPT=graph hg log -G -r 'file("a")' -m
-  @  commit:      95fa8febd08a
+  @  commit:      75678d8b2851
   ╷  user:        test
   ╷  date:        Thu Jan 01 00:00:36 1970 +0000
   ╷  summary:     (36) buggy merge: identical parents
@@ -2361,7 +2361,7 @@
   > graphstyle.missing =
   > EOF
   $ hg log -G -r '36:18 & file("a")' -m
-  @  commit:      95fa8febd08a
+  @  commit:      75678d8b2851
   ╷  user:        test
   ╷  date:        Thu Jan 01 00:00:36 1970 +0000
   ╷  summary:     (36) buggy merge: identical parents
@@ -2440,7 +2440,7 @@
   > graphstyle.missing =
   > EOF
   $ hg log -G -r '36:18 & file("a")' -m
-  @  commit:      95fa8febd08a
+  @  commit:      75678d8b2851
   ╷  user:        test
   ╷  date:        Thu Jan 01 00:00:36 1970 +0000
   ╷  summary:     (36) buggy merge: identical parents

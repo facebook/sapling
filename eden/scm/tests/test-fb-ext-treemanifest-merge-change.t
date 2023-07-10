@@ -42,6 +42,4 @@ Check the index for the common directory.  The merge should have a single parent
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      47     -1       0 0c8dfc956404 000000000000 000000000000
        1        47      47     -1       1 8b23b78bfba6 0c8dfc956404 000000000000
-       2        94      47     -1       3 11f32cea9849 8b23b78bfba6 8b23b78bfba6
-
-BUG! Revision 2 has two parents with the same hash.
+       2        94      47     -1       3 62d4c611b5da 8b23b78bfba6 000000000000

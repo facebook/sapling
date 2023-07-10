@@ -480,7 +480,9 @@ impl TreeManifest {
                         Leaf(_) | Ephemeral(_) => unreachable!(),
                         Durable(entry) => entry.hgid,
                     };
-                    parent_nodes.push(hgid);
+                    if !parent_nodes.contains(&hgid) {
+                        parent_nodes.push(hgid);
+                    }
                 }
                 Ok(parent_nodes)
             }
