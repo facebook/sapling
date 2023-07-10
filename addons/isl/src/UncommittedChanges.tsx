@@ -306,9 +306,19 @@ function FileSelectionCheckbox({
       onClick={e => {
         const checked = (e.target as HTMLInputElement).checked;
         if (checked) {
-          selection.select(file.path);
+          if (file.renamedFrom != null) {
+            // Selecting a renamed file also selects the original, so they are committed/amended together
+            // the UI merges them visually anyway.
+            selection.select(file.renamedFrom, file.path);
+          } else {
+            selection.select(file.path);
+          }
         } else {
-          selection.deselect(file.path);
+          if (file.renamedFrom != null) {
+            selection.deselect(file.renamedFrom, file.path);
+          } else {
+            selection.deselect(file.path);
+          }
         }
       }}
     />

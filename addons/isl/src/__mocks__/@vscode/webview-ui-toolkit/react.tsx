@@ -32,12 +32,20 @@ export const VSCodeDivider = (p: React.PropsWithChildren<typeof VSCodeDividerTyp
 );
 
 export const VSCodeCheckbox = (
-  p: {onChange?: () => void} & React.PropsWithChildren<typeof VSCodeCheckboxType>,
+  p: {onChange?: () => void; indeterminate?: boolean} & React.PropsWithChildren<
+    typeof VSCodeCheckboxType
+  >,
 ) => {
-  const {onChange, children, ...rest} = p;
+  const ref = useRef(null);
+  const {onChange, children, indeterminate, ...rest} = p;
+  useEffect(() => {
+    if (indeterminate && ref.current) {
+      (ref.current as HTMLInputElement).indeterminate = indeterminate;
+    }
+  }, [indeterminate, ref]);
   return (
     <div>
-      <input type="checkbox" {...rest} onChange={onChange ?? (() => undefined)} />
+      <input ref={ref} type="checkbox" {...rest} onChange={onChange ?? (() => undefined)} />
       <label>{children}</label>
     </div>
   );

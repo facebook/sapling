@@ -299,6 +299,12 @@ describe('CommitInfoView', () => {
       });
 
       it('amend button stops editing', () => {
+        act(() =>
+          simulateUncommittedChangedFiles({
+            value: [{path: 'src/file1.js', status: 'M'}],
+          }),
+        );
+
         clickToEditTitle();
         clickToEditDescription();
         expectIsEditingTitle();
@@ -308,7 +314,7 @@ describe('CommitInfoView', () => {
           screen.getByTestId('commit-info-actions-bar'),
         ).queryByText('Amend');
         expect(amendButton).toBeInTheDocument();
-        expect(amendButton?.disabled).not.toBe(true);
+        expect(amendButton?.disabled).not.toEqual(true);
 
         act(() => {
           fireEvent.click(amendButton!);
@@ -544,6 +550,12 @@ describe('CommitInfoView', () => {
 
         describe('amend', () => {
           it('runs amend with changed message', () => {
+            act(() =>
+              simulateUncommittedChangedFiles({
+                value: [{path: 'src/file1.js', status: 'M'}],
+              }),
+            );
+
             clickToEditTitle();
             clickToEditDescription();
 
@@ -575,6 +587,12 @@ describe('CommitInfoView', () => {
           });
 
           it('deselects head when running amend', () => {
+            act(() =>
+              simulateUncommittedChangedFiles({
+                value: [{path: 'src/file1.js', status: 'M'}],
+              }),
+            );
+
             // even though 'b' is already shown when nothing is selected,
             // we want to use auto-selection after amending even if you previously selected something
             clickToSelectCommit('b');
@@ -989,6 +1007,12 @@ describe('CommitInfoView', () => {
         });
 
         it('does not confirm when clearing for amend', async () => {
+          act(() =>
+            simulateUncommittedChangedFiles({
+              value: [{path: 'src/file1.js', status: 'M'}],
+            }),
+          );
+
           clickToEditDescription();
           const confirmSpy = jest.spyOn(platform, 'confirm');
 
@@ -1142,6 +1166,12 @@ describe('CommitInfoView', () => {
         });
 
         it('renders amend operation smoothly', () => {
+          act(() =>
+            simulateUncommittedChangedFiles({
+              value: [{path: 'src/file1.js', status: 'M'}],
+            }),
+          );
+
           clickToEditTitle();
           clickToEditDescription();
           act(() => {

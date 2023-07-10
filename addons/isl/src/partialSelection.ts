@@ -203,8 +203,11 @@ export class UseUncommittedSelection {
   }
 
   /** Explicitly select a file. */
-  select(path: RepoRelativePath) {
-    const newSelection = this.selection.select(path);
+  select(...paths: Array<RepoRelativePath>) {
+    let newSelection = this.selection;
+    for (const path of paths) {
+      newSelection = newSelection.select(path);
+    }
     this.setSelection(newSelection);
   }
 
@@ -214,10 +217,13 @@ export class UseUncommittedSelection {
   }
 
   /** Explicitly deselect a file. Also drops the related file content cache. */
-  deselect(path: RepoRelativePath) {
+  deselect(...paths: Array<RepoRelativePath>) {
+    let newSelection = this.selection;
     const cache = UseUncommittedSelection.fileContentCache;
-    cache.files.delete(path);
-    const newSelection = this.selection.deselect(path);
+    for (const path of paths) {
+      cache.files.delete(path);
+      newSelection = newSelection.deselect(path);
+    }
     this.setSelection(newSelection);
   }
 
