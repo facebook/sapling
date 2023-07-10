@@ -24,6 +24,7 @@ use crate::error::CopyTraceError;
 use crate::CopyTrace;
 use crate::RenameFinder;
 use crate::SearchDirection;
+use crate::TraceResult;
 
 pub struct DagCopyTrace {
     /* Input */
@@ -122,14 +123,14 @@ impl DagCopyTrace {
 
     async fn check_path(
         &self,
-        commit: &dag::Vertex,
+        target_commit: &dag::Vertex,
         path: RepoPathBuf,
-    ) -> Result<Option<RepoPathBuf>> {
-        let tree = self.vertex_to_tree_manifest(commit).await?;
+    ) -> Result<TraceResult> {
+        let tree = self.vertex_to_tree_manifest(target_commit).await?;
         if tree.get(&path)?.is_some() {
-            Ok(Some(path))
+            Ok(TraceResult::Renamed(path))
         } else {
-            Ok(None)
+            Ok(TraceResult::NotFound)
         }
     }
 }
@@ -141,7 +142,7 @@ impl CopyTrace for DagCopyTrace {
         src: dag::Vertex,
         dst: dag::Vertex,
         src_path: RepoPathBuf,
-    ) -> Result<Option<RepoPathBuf>> {
+    ) -> Result<TraceResult> {
         tracing::debug!(?src, ?dst, ?src_path, "trace_reanme");
         if self.dag.is_ancestor(src.clone(), dst.clone()).await? {
             return self
@@ -158,19 +159,23 @@ impl CopyTrace for DagCopyTrace {
                 None => {
                     tracing::trace!("no common base");
                     increment_counter("copytrace_noCommonBase", 1);
-                    return Ok(None);
+                    return Ok(TraceResult::NotFound);
                 }
             };
             tracing::trace!(?base);
-            let base_path = self
+            let base_result = self
                 .trace_rename_backward(base.clone(), src, src_path)
                 .await?;
-            tracing::trace!(?base_path);
-            if let Some(base_path) = base_path {
-                return self.trace_rename_forward(base, dst, base_path).await;
-            } else {
-                increment_counter("copytrace_notInCommonBase", 1);
-                return Ok(None);
+            tracing::trace!(?base_result);
+            match base_result {
+                TraceResult::Renamed(base_path) => {
+                    self.trace_rename_forward(base, dst, base_path).await
+                }
+                TraceResult::Deleted(_) => {
+                    increment_counter("copytrace_notInCommonBase", 1);
+                    Ok(base_result)
+                }
+                _ => Ok(base_result),
             }
         }
     }
@@ -180,7 +185,7 @@ impl CopyTrace for DagCopyTrace {
         src: dag::Vertex,
         dst: dag::Vertex,
         dst_path: RepoPathBuf,
-    ) -> Result<Option<RepoPathBuf>> {
+    ) -> Result<TraceResult> {
         tracing::trace!(?src, ?dst, ?dst_path, "trace_rename_backward");
         let (mut curr, target, mut curr_path) = (dst, src, dst_path);
 
@@ -196,11 +201,11 @@ impl CopyTrace for DagCopyTrace {
             tracing::trace!(?rename_commit, " found");
 
             if rename_commit == target {
-                return Ok(Some(curr_path));
+                return Ok(TraceResult::Renamed(curr_path));
             }
             let (next_path, next_commit) = self
                 .find_renames_in_direction(
-                    rename_commit,
+                    rename_commit.clone(),
                     curr_path.as_repo_path(),
                     SearchDirection::Backward,
                 )
@@ -210,7 +215,7 @@ impl CopyTrace for DagCopyTrace {
                 curr_path = next_path;
             } else {
                 // no rename info for curr_path
-                return Ok(None);
+                return Ok(TraceResult::Deleted(rename_commit));
             }
         }
     }
@@ -220,7 +225,7 @@ impl CopyTrace for DagCopyTrace {
         src: dag::Vertex,
         dst: dag::Vertex,
         src_path: RepoPathBuf,
-    ) -> Result<Option<RepoPathBuf>> {
+    ) -> Result<TraceResult> {
         tracing::trace!(?src, ?dst, ?src_path, "trace_rename_forward");
         let (mut curr, target, mut curr_path) = (src, dst, src_path);
 
@@ -236,11 +241,11 @@ impl CopyTrace for DagCopyTrace {
             tracing::trace!(?rename_commit, " found");
 
             if rename_commit == curr {
-                return Ok(Some(curr_path));
+                return Ok(TraceResult::Renamed(curr_path));
             }
             let (next_path, next_commit) = self
                 .find_renames_in_direction(
-                    rename_commit,
+                    rename_commit.clone(),
                     curr_path.as_repo_path(),
                     SearchDirection::Forward,
                 )
@@ -250,7 +255,7 @@ impl CopyTrace for DagCopyTrace {
                 curr_path = next_path;
             } else {
                 // no rename info for curr_path
-                return Ok(None);
+                return Ok(TraceResult::Deleted(rename_commit));
             }
         }
     }

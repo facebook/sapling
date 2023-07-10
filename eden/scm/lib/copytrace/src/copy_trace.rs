@@ -11,7 +11,6 @@ use dag::Vertex;
 use types::RepoPathBuf;
 
 /// Tracing Result of CopyTrace's trace_XXX method.
-#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum TraceResult {
     /// Found the renamed-to path of the given source file, return it.
@@ -36,7 +35,7 @@ pub trait CopyTrace {
         src: Vertex,
         dst: Vertex,
         src_path: RepoPathBuf,
-    ) -> Result<Option<RepoPathBuf>>;
+    ) -> Result<TraceResult>;
 
     /// Trace the corresponding path of `dst_path` in `src` commit across renames.
     /// It will search backward, i.e. from `dst` to `src` vertex.
@@ -45,7 +44,7 @@ pub trait CopyTrace {
         src: Vertex,
         dst: Vertex,
         dst_path: RepoPathBuf,
-    ) -> Result<Option<RepoPathBuf>>;
+    ) -> Result<TraceResult>;
 
     /// Trace the corresponding path of `src_path` in `dst` commit across renames.
     /// It will search forward, i.e. from `src` to `dst` vertex.
@@ -54,5 +53,5 @@ pub trait CopyTrace {
         src: Vertex,
         dst: Vertex,
         src_path: RepoPathBuf,
-    ) -> Result<Option<RepoPathBuf>>;
+    ) -> Result<TraceResult>;
 }

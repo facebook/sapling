@@ -19,6 +19,7 @@ use copytrace::CopyTrace;
 use copytrace::DagCopyTrace;
 use copytrace::MetadataRenameFinder;
 use copytrace::RenameFinder;
+use copytrace::TraceResult;
 use cpython::*;
 use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
@@ -99,7 +100,10 @@ py_class!(pub class dagcopytrace |py| {
         let src = Vertex::copy_from(src.data(py));
         let dst = Vertex::copy_from(dst.data(py));
         let src_path = src_path.to_repo_path_buf().map_pyerr(py)?;
-        let path = block_on(self.inner(py).trace_rename(src, dst, src_path)).map_pyerr(py)?;
-        Ok(path.map(|v| v.to_string()))
+        let trace_result = block_on(self.inner(py).trace_rename(src, dst, src_path)).map_pyerr(py)?;
+        match trace_result {
+            TraceResult::Renamed(path) => Ok(Some(path.to_string())),
+            _ => Ok(None),
+        }
     }
 });

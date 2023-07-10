@@ -37,6 +37,7 @@ use types::RepoPathBuf;
 use crate::CopyTrace;
 use crate::DagCopyTrace;
 use crate::MetadataRenameFinder;
+use crate::TraceResult;
 
 #[derive(Clone)]
 struct CopyTraceTestCase {
@@ -267,7 +268,11 @@ macro_rules! assert_trace_rename {
             p => Some(RepoPath::from_str(p).unwrap().to_owned()),
         };
 
-        let res = $copy_trace.trace_rename(src, dst, src_path).await.unwrap();
+        let trace_result = $copy_trace.trace_rename(src, dst, src_path).await.unwrap();
+        let res = match trace_result {
+            TraceResult::Renamed(path) => Some(path),
+            _ => None,
+        };
 
         assert_eq!(res, dst_path);
     }};
