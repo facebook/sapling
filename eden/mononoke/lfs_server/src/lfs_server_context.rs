@@ -44,9 +44,12 @@ use lfs_protocol::RequestObject;
 use lfs_protocol::ResponseBatch;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::ContentId;
+#[cfg(fbcode_build)]
+use network_util::get_device_network_speed_bits;
 use qps::Qps;
 use repo_authorization::AuthorizationContext;
 use repo_permission_checker::RepoPermissionCheckerRef;
+use slog::info;
 use slog::Logger;
 use tokio::runtime::Handle;
 
@@ -73,6 +76,7 @@ struct LfsServerContextInner {
     logger: Logger,
     qps: Arc<Option<Qps>>,
     server_hostname: Arc<String>,
+    bandwidth: Option<i64>,
 }
 
 #[derive(Clone, StateData)]
@@ -91,6 +95,7 @@ impl LfsServerContext {
         config_handle: ConfigHandle<ServerConfig>,
         logger: Logger,
         qps: Option<Qps>,
+        bandwidth: Option<i64>,
     ) -> Result<Self, Error> {
         let connector = HttpsConnector::new()
             .map_err(Error::from)
@@ -109,6 +114,7 @@ impl LfsServerContext {
             logger,
             qps: Arc::new(qps),
             server_hostname,
+            bandwidth,
         };
 
         Ok(LfsServerContext {
@@ -132,6 +138,7 @@ impl LfsServerContext {
             max_upload_size,
             config,
             server_hostname,
+            bandwidth,
         ) = {
             let inner = self.inner.lock().expect("poisoned lock");
 
@@ -144,6 +151,7 @@ impl LfsServerContext {
                     inner.max_upload_size,
                     inner.config_handle.get(),
                     inner.server_hostname.clone(),
+                    inner.bandwidth,
                 ),
                 None => {
                     return Err(LfsServerContextErrorKind::RepositoryDoesNotExist(
@@ -171,6 +179,7 @@ impl LfsServerContext {
             config,
             always_wait_for_upstream,
             max_upload_size,
+            bandwidth,
         })
     }
 
@@ -199,6 +208,23 @@ impl LfsServerContext {
     pub fn will_exit(&self) -> bool {
         self.will_exit.load(Ordering::Relaxed)
     }
+}
+#[cfg(fbcode_build)]
+pub fn get_bandwidth(logger: &Logger) -> Option<i64> {
+    // We want to return None on error because the ratelimit metric fails open
+    get_device_network_speed_bits("eth0").map_or_else(
+        |e| {
+            info!(logger, "Failed to get network speed {}", e);
+            None
+        },
+        Some,
+    )
+}
+
+#[cfg(not(fbcode_build))]
+pub fn get_bandwidth(logger: &Logger) -> Option<i64> {
+    info!(logger, "Could not determine network speed");
+    None
 }
 
 async fn acl_check(
@@ -237,6 +263,7 @@ pub struct RepositoryRequestContext {
     always_wait_for_upstream: bool,
     max_upload_size: Option<u64>,
     client: HttpClient,
+    bandwidth: Option<i64>,
 }
 
 pub struct HttpClientResponse<S: Stream<Item = Result<Bytes, Error>> + Send + 'static> {
@@ -324,6 +351,10 @@ impl RepositoryRequestContext {
 
     pub fn max_upload_size(&self) -> Option<u64> {
         self.max_upload_size
+    }
+
+    pub fn bandwidth(&self) -> Option<i64> {
+        self.bandwidth
     }
 
     pub async fn dispatch(
@@ -622,6 +653,7 @@ mod test {
                 always_wait_for_upstream: false,
                 max_upload_size: None,
                 client: HttpClient::Disabled,
+                bandwidth: None,
             })
         }
     }

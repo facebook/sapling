@@ -62,6 +62,7 @@ use repo_permission_checker::RepoPermissionChecker;
 use slog::info;
 use tokio::net::TcpListener;
 
+use crate::lfs_server_context::get_bandwidth;
 use crate::lfs_server_context::LfsServerContext;
 use crate::lfs_server_context::ServerUris;
 use crate::middleware::OdsMiddleware;
@@ -308,6 +309,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
             let server_uris = ServerUris::new(self_urls, upstream_url)?;
 
+            let bandwidth = get_bandwidth(&logger);
+
             let ctx = LfsServerContext::new(
                 repos,
                 server_uris,
@@ -317,6 +320,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 config_handle.clone(),
                 logger.clone(),
                 qps,
+                bandwidth,
             )?;
             let enforce_authentication = ctx.get_config().enforce_authentication();
 

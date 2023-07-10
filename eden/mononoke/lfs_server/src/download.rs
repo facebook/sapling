@@ -50,6 +50,12 @@ define_stats! {
         Sum;
         Duration::from_secs(5), Duration::from_secs(15), Duration::from_secs(60)
     ),
+    net_util: timeseries(
+        "net_util";
+        Average;
+        Duration::from_secs(5), Duration::from_secs(15), Duration::from_secs(60)
+    ),
+    load_shed_counter: dynamic_singleton_counter("{}", (key: String)),
 }
 #[derive(Deserialize, StateData, StaticResponseExtender)]
 pub struct DownloadParamsContentId {
@@ -145,7 +151,17 @@ async fn fetch_by_key(
 
     let stream = if ctx.config.track_bytes_sent() {
         stream
-            .inspect_ok(|bytes| STATS::size_bytes_sent.add_value(bytes.len() as i64))
+            .inspect_ok(move |bytes| {
+                STATS::size_bytes_sent.add_value(bytes.len() as i64);
+                if let Some(bandwidth) = ctx.bandwidth() {
+                    if let Some(bytes_sent) = STATS::load_shed_counter
+                        .get_value(ctx.ctx.fb, ("size_bytes_sent.sum.15".to_string(),))
+                    {
+                        let bits_per_second = bytes_sent * 8 / 15;
+                        STATS::net_util.add_value(100 * bits_per_second / bandwidth);
+                    }
+                }
+            })
             .left_stream()
     } else {
         stream.right_stream()
