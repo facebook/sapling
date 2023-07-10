@@ -21,6 +21,7 @@ target_link_libraries(
     eden_model_git
     eden_service_thrift_cpp
     eden_sqlite
+    eden_store_filter
     eden_utils
     fb303::fb303
     edencommon::edencommon_utils
@@ -33,6 +34,7 @@ target_link_libraries(
 )
 
 add_subdirectory(hg)
+add_subdirectory(filter)
 
 if("${EDEN_HAVE_GIT}")
   add_subdirectory(git)

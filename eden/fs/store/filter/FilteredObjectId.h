@@ -88,6 +88,8 @@ class FilteredObjectId {
    * bytes from the passed in ObjectId is in the form of a FilteredObjectId.
    */
   static FilteredObjectId fromObjectId(const ObjectId& id) {
+    XLOGF(
+        DBG9, "Constructing FilteredObjectId from ObjectId {}", id.asString());
     return FilteredObjectId{id.getBytes()};
   }
 
@@ -160,7 +162,8 @@ class FilteredObjectId {
 
  private:
   static std::string constructFromByteRange(folly::ByteRange bytes) {
-    return std::string{(const char*)bytes.data(), bytes.size()};
+    auto v = std::string{(const char*)bytes.data(), bytes.size()};
+    return v;
   }
 
   /**

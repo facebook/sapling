@@ -41,22 +41,10 @@ std::string FilteredObjectId::serializeTree(
   size_t pathLen = path.value().length();
   uint8_t pathVarint[folly::kMaxVarintLength64] = {};
   size_t pathVarintLen = folly::encodeVarint(pathLen, pathVarint);
-  XLOGF(
-      DBG9,
-      "pathLen: {}, pathVarint: {}, pathVarintLen: {}",
-      pathLen,
-      pathVarint,
-      pathVarintLen);
 
   size_t filterLen = filterId.length();
   uint8_t filterVarint[folly::kMaxVarintLength64] = {};
   size_t filterVarintLen = folly::encodeVarint(filterLen, filterVarint);
-  XLOGF(
-      INFO,
-      "filterLen: {}, filterVarint: {}, pathVarintLen: {}",
-      filterLen,
-      filterVarint,
-      filterVarintLen);
   uint8_t objectType = FilteredObjectId::OBJECT_TYPE_TREE;
 
   buf.reserve(
