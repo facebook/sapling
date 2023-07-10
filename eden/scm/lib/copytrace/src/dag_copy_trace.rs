@@ -171,7 +171,7 @@ impl CopyTrace for DagCopyTrace {
                 TraceResult::Renamed(base_path) => {
                     self.trace_rename_forward(base, dst, base_path).await
                 }
-                TraceResult::Deleted(_) => {
+                TraceResult::Added(_) => {
                     increment_counter("copytrace_notInCommonBase", 1);
                     Ok(base_result)
                 }
@@ -215,7 +215,7 @@ impl CopyTrace for DagCopyTrace {
                 curr_path = next_path;
             } else {
                 // no rename info for curr_path
-                return Ok(TraceResult::Deleted(rename_commit));
+                return Ok(TraceResult::Added(rename_commit));
             }
         }
     }
