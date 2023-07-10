@@ -10,6 +10,21 @@ use async_trait::async_trait;
 use dag::Vertex;
 use types::RepoPathBuf;
 
+/// Tracing Result of CopyTrace's trace_XXX method.
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+pub enum TraceResult {
+    /// Found the renamed-to path of the given source file, return it.
+    Renamed(RepoPathBuf),
+    /// Did not find the target path, return the commit that deleted the given
+    /// source file.
+    Deleted(Vertex),
+    /// Did not find the renamed-to path and the deletion commit, for example:
+    /// - there is no common ancestor between source and destination commits
+    /// - the source given source file is not in the source commit
+    NotFound,
+}
+
 /// Tracing the rename history of a file for rename detection in rebase, amend etc
 #[async_trait]
 pub trait CopyTrace {
