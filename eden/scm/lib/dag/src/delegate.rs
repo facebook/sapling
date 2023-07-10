@@ -353,5 +353,4 @@ mod impls {
 
     delegate!(IdConvert | PrefixLookup, Arc<dyn IdConvert + Send + Sync> => self.deref());
     delegate!(DagAlgorithm, Arc<dyn DagAlgorithm + Send + Sync> => self.deref());
-    delegate!(DagAlgorithm, &(dyn DagAlgorithm + Send + Sync) => self.deref());
 }
