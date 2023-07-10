@@ -83,6 +83,7 @@ Fake land the commit
   >           "nodes": [
   >             {
   >               "number": 1234,
+  >               "diff_status_name": "Closed",
   >               "phabricator_versions": {
   >                 "nodes": [
   >                   {"local_commits": []}

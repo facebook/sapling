@@ -26,6 +26,7 @@ Test that hg pull creates obsolescence markers for landed diffs
   > }
   $ landed_graphql() {
   >   printf '{"number": %s, ' $1
+  >   printf '"diff_status_name": "Closed",'
   >   printf '"phabricator_versions": { "nodes": [] }, "phabricator_diff_commit": '
   >   printf '{ "nodes": [{"commit_identifier": "%s"}]}}' $2
   > }

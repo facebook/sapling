@@ -71,8 +71,8 @@ def _cleanuplanded(repo, dryrun=False):
                 break
 
     try:
-        difftopublic, difftolocal = client.getlandednodes(
-            repo, list(difftodraft.keys())
+        difftopublic, difftolocal = client.getnodes(
+            repo, list(difftodraft.keys()), "Closed"
         )
     except Exception as ex:
         ui.warn(

@@ -191,8 +191,8 @@ class Client(object):
 
         return latest
 
-    def getlandednodes(self, repo, diffids, timeout=10):
-        """Get landed nodes for diffids. Return {diffid: node}, {diffid: set(node)}"""
+    def getnodes(self, repo, diffids, diff_status, timeout=10):
+        """Get nodes for diffids for the given status. Return {diffid: node}, {diffid: set(node)}"""
         if not diffids:
             return {}, {}
         if self._mock:
@@ -206,6 +206,7 @@ class Client(object):
                         results {
                             nodes {
                                 number
+                                diff_status_name
                                 phabricator_versions {
                                     nodes {
                                         local_commits {
@@ -232,6 +233,7 @@ class Client(object):
             #     "phabricator_diff_query": [
             #       { "results": {"nodes": [{
             #               "number": 123,
+            #               "diff_status_name": "Closed",
             #               "phabricator_versions": {
             #                 "nodes": [
             #                   {"local_commits": [{"primary_commit": {"commit_identifier": "d131c2d7408acf233a4b2db04382005434346421"}}]},
@@ -240,25 +242,27 @@ class Client(object):
             #               "phabricator_diff_commit": {
             #                 "nodes": [
             #                   { "commit_identifier": "9396e4a63208eb034b8b9cca909f9914cb2fbe85" } ] } } ] } } ] } }
-        return self._getlandednodes(repo, ret)
+        return self._getnodes(repo, ret, diff_status)
 
-    def _getlandednodes(self, repo, ret):
+    def _getnodes(self, repo, ret, diff_status):
         difftolocalcommits = {}  # {str: set(node)}
         diffidentifiers = {}
         for result in ret["data"]["phabricator_diff_query"][0]["results"]["nodes"]:
             try:
                 diffid = "%s" % result["number"]
-                nodes = result["phabricator_diff_commit"]["nodes"]
-                for n in nodes:
-                    diffidentifiers[n["commit_identifier"]] = diffid
+                _status = result["diff_status_name"]
+                if _status == diff_status:
+                    nodes = result["phabricator_diff_commit"]["nodes"]
+                    for n in nodes:
+                        diffidentifiers[n["commit_identifier"]] = diffid
 
-                allversionnodes = result["phabricator_versions"]["nodes"]
-                for version in allversionnodes:
-                    versioncommits = version["local_commits"]
-                    for commit in versioncommits:
-                        difftolocalcommits.setdefault(diffid, set()).add(
-                            bin(commit["primary_commit"]["commit_identifier"])
-                        )
+                    allversionnodes = result["phabricator_versions"]["nodes"]
+                    for version in allversionnodes:
+                        versioncommits = version["local_commits"]
+                        for commit in versioncommits:
+                            difftolocalcommits.setdefault(diffid, set()).add(
+                                bin(commit["primary_commit"]["commit_identifier"])
+                            )
             except (KeyError, IndexError, TypeError):
                 # Not fatal.
                 continue

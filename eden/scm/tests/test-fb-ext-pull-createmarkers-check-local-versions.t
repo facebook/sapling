@@ -44,6 +44,7 @@ Setup phabricator response
   >           "nodes": [
   >             {
   >               "number": 123,
+  >               "diff_status_name": "Closed",
   >               "phabricator_versions": {
   >                 "nodes": [
   >                   {"local_commits": [{"primary_commit": {"commit_identifier": "d131c2d7408acf233a4b2db04382005434346421"}}]},
