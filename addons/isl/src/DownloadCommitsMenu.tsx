@@ -8,7 +8,10 @@
 import {DropdownFields} from './DropdownFields';
 import {Tooltip} from './Tooltip';
 import {t, T} from './i18n';
+import {PullRevOperation} from './operations/PullRevOperation';
+import {useRunOperation} from './serverAPIState';
 import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
+import {useState} from 'react';
 import {Icon} from 'shared/Icon';
 
 import './DownloadCommitsMenu.css';
@@ -28,14 +31,25 @@ export function DownloadCommitsTooltipButton() {
 }
 
 function DownloadCommitsTooltip() {
+  const [enteredDiffNum, setEnteredDiffNum] = useState('');
+  const runOperation = useRunOperation();
   return (
     <DropdownFields
       title={<T>Download Commits</T>}
       icon="cloud-download"
       data-testid="settings-dropdown">
       <div className="download-commits-input-row">
-        <VSCodeTextField placeholder={t('Hash, Diff Number, ...')} />
-        <VSCodeButton appearance="secondary" data-testid="download-commit-button">
+        <VSCodeTextField
+          placeholder={t('Hash, Diff Number, ...')}
+          value={enteredDiffNum}
+          onChange={e => setEnteredDiffNum((e.target as unknown as {value: string})?.value ?? '')}
+        />
+        <VSCodeButton
+          appearance="secondary"
+          data-testid="download-commit-button"
+          onClick={() => {
+            runOperation(new PullRevOperation(enteredDiffNum));
+          }}>
           <T>Pull</T>
         </VSCodeButton>
       </div>
