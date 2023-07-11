@@ -6,6 +6,7 @@
  */
 
 import {DropdownFields} from './DropdownFields';
+import {Internal} from './Internal';
 import {Tooltip} from './Tooltip';
 import {t, T} from './i18n';
 import {PullRevOperation} from './operations/PullRevOperation';
@@ -33,6 +34,7 @@ export function DownloadCommitsTooltipButton() {
 function DownloadCommitsTooltip() {
   const [enteredDiffNum, setEnteredDiffNum] = useState('');
   const runOperation = useRunOperation();
+  const supportsDiffDownload = Internal.diffDownloadOperation != null;
   return (
     <DropdownFields
       title={<T>Download Commits</T>}
@@ -40,7 +42,7 @@ function DownloadCommitsTooltip() {
       data-testid="settings-dropdown">
       <div className="download-commits-input-row">
         <VSCodeTextField
-          placeholder={t('Hash, Diff Number, ...')}
+          placeholder={supportsDiffDownload ? t('Hash, Diff Number, ...') : t('Hash, revset, ...')}
           value={enteredDiffNum}
           onChange={e => setEnteredDiffNum((e.target as unknown as {value: string})?.value ?? '')}
         />
@@ -48,7 +50,11 @@ function DownloadCommitsTooltip() {
           appearance="secondary"
           data-testid="download-commit-button"
           onClick={() => {
-            runOperation(new PullRevOperation(enteredDiffNum));
+            if (Internal.diffDownloadOperation != null) {
+              runOperation(Internal.diffDownloadOperation(enteredDiffNum));
+            } else {
+              runOperation(new PullRevOperation(enteredDiffNum));
+            }
           }}>
           <T>Pull</T>
         </VSCodeButton>

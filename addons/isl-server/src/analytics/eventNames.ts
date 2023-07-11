@@ -46,7 +46,8 @@ export type TrackEventName =
   | 'ShowBugButtonNux'
   | 'StackEditMetrics'
   | 'UncommitOperation'
-  // @fb-only
+  | 'JfSubmitOperation'
+  | 'JfGetOperation'
   | 'OptimisticFilesStateForceResolved'
   | 'OptimisticCommitsStateForceResolved'
   | 'OptimisticConflictsStateForceResolved'
