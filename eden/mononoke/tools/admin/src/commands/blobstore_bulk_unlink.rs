@@ -54,9 +54,6 @@ pub struct CommandArgs {
 }
 
 fn create_error_log_file(error_log_file_path: String) -> File {
-    let path = std::path::Path::new(&error_log_file_path);
-    let prefix = path.parent().unwrap();
-    std::fs::create_dir_all(prefix).unwrap();
     let file = OpenOptions::new()
         .create(true)
         .write(true)
@@ -218,7 +215,7 @@ impl BlobstoreBulkUnlinker {
             "key": key,
             "message": msg
         });
-        writeln!(&self.error_log_file, "{}", error_record.to_string());
+        writeln!(&self.error_log_file, "{}", error_record);
     }
 
     async fn bulk_unlink_keys_in_file(

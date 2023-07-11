@@ -30,6 +30,7 @@ Check we can upload and fetch an arbitrary blob.
 
 Prepare the input directory for the bulk unlinking tool
   $ mkdir -p "$TESTTMP/key_inputs"
+  $ mkdir -p "$TESTTMP/unlink_log"
 
 Prepare the input file that only contains a bad-format key for the bulk unlinking tool
   $ echo some-invliad-key  > "$TESTTMP/key_inputs/bad_format_key_file_0"
