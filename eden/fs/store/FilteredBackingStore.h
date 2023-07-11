@@ -8,6 +8,7 @@
 #pragma once
 
 #include "eden/fs/store/BackingStore.h"
+#include "eden/fs/store/filter/Filter.h"
 #include "eden/fs/store/filter/FilteredObjectId.h"
 #include "eden/fs/utils/PathMap.h"
 #include "eden/fs/utils/RefPtr.h"
@@ -15,10 +16,6 @@
 namespace facebook::eden {
 
 class BackingStore;
-
-// True if path is filtered in the given filterId, false otherwise.
-using FilterCallback = std::function<
-    bool(folly::StringPiece /*filterId*/, RelativePathPiece /*path*/)>;
 
 /**
  * Implementation of a BackingStore that allows filtering sets odf paths from
@@ -34,7 +31,7 @@ class FilteredBackingStore
  public:
   FilteredBackingStore(
       std::shared_ptr<BackingStore> backingStore,
-      FilterCallback filterCallback);
+      std::unique_ptr<Filter> filter);
 
   ~FilteredBackingStore() override;
 
@@ -105,7 +102,7 @@ class FilteredBackingStore
   // Allows FilteredBackingStore creator to specify how they want to filter
   // paths. This returns true if the given path is filtered in the given
   // filterId
-  FilterCallback filterCallback_;
+  std::unique_ptr<Filter> filter_;
 
   /*
    * Does the actual filtering logic for tree and root-tree objects.
@@ -113,7 +110,17 @@ class FilteredBackingStore
   PathMap<TreeEntry> filterImpl(
       const TreePtr unfilteredTree,
       RelativePathPiece treePath,
-      folly::StringPiece filter);
+      folly::StringPiece filterId);
+
+  /*
+   * Determine whether a path is affected by a filter change from One -> Two or
+   * vice versa.
+   */
+  bool pathAffectedByFilterChange(
+      RelativePathPiece pathOne,
+      RelativePathPiece pathTwo,
+      folly::StringPiece filterIdOne,
+      folly::StringPiece filterIdTwo);
 };
 
 } // namespace facebook::eden

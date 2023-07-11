@@ -16,7 +16,7 @@
 
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/store/FilteredBackingStore.h"
-#include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/testharness/FakeFilter.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -36,9 +36,9 @@ class FilteredBackingStoreTest : public ::testing::Test {
  protected:
   void SetUp() override {
     wrappedStore_ = std::make_shared<FakeBackingStore>();
-    stats_ = makeRefPtr<EdenStats>();
+    auto fakeFilter = std::make_unique<FakeFilter>();
     filteredStore_ = std::make_shared<FilteredBackingStore>(
-        wrappedStore_, defaultFilterCallback);
+        wrappedStore_, std::move(fakeFilter));
   }
 
   void TearDown() override {
@@ -46,15 +46,7 @@ class FilteredBackingStoreTest : public ::testing::Test {
   }
 
   std::shared_ptr<FakeBackingStore> wrappedStore_;
-  EdenStatsPtr stats_;
   std::shared_ptr<FilteredBackingStore> filteredStore_;
-
- private:
-  static bool defaultFilterCallback(
-      const folly::StringPiece filterId,
-      const RelativePathPiece& path) {
-    return path.view().find(filterId) != std::string::npos;
-  }
 };
 
 /**

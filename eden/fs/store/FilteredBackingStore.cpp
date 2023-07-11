@@ -12,29 +12,23 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/filter/FilteredObjectId.h"
 #include "eden/fs/utils/ImmediateFuture.h"
-#include "eden/fs/utils/NotImplemented.h"
 
 namespace facebook::eden {
 
 FilteredBackingStore::FilteredBackingStore(
     std::shared_ptr<BackingStore> backingStore,
-    FilterCallback filterCallback)
-    : backingStore_{std::move(backingStore)},
-      filterCallback_{filterCallback} {};
+    std::unique_ptr<Filter> filter)
+    : backingStore_{std::move(backingStore)}, filter_{std::move(filter)} {};
 
 FilteredBackingStore::~FilteredBackingStore() {}
 
-namespace {
-// Determine whether a path is affected by a filter change from One -> Two or
-// vice versa.
-bool pathAffectedByFilterChange(
+bool FilteredBackingStore::pathAffectedByFilterChange(
     RelativePathPiece pathOne,
     RelativePathPiece pathTwo,
-    folly::StringPiece filterOne,
-    folly::StringPiece filterTwo,
-    FilterCallback filterCallback) {
-  auto pathOneIncluded = filterCallback(filterOne, pathOne);
-  auto pathTwoIncluded = filterCallback(filterTwo, pathTwo);
+    folly::StringPiece filterIdOne,
+    folly::StringPiece filterIdTwo) {
+  auto pathOneIncluded = filter_->isPathFiltered(pathOne, filterIdOne);
+  auto pathTwoIncluded = filter_->isPathFiltered(pathTwo, filterIdTwo);
   // If a path is in neither or both filters, then it wouldn't be affected by
   // any change (it is present in both or absent in both).
   if (pathOneIncluded == pathTwoIncluded) {
@@ -57,7 +51,6 @@ std::tuple<std::string, RootId> parseFilterIdFromRootId(const RootId& rootId) {
   auto filterId = rootId.value().substr(separatorIdx + 1);
   return {std::move(filterId), std::move(root)};
 }
-} // namespace
 
 ObjectComparison FilteredBackingStore::compareObjectsById(
     const ObjectId& one,
@@ -111,8 +104,7 @@ ObjectComparison FilteredBackingStore::compareObjectsById(
         filteredOne.path(),
         filteredTwo.path(),
         filteredOne.filter(),
-        filteredTwo.filter(),
-        filterCallback_);
+        filteredTwo.filter());
     if (pathAffected) {
       return ObjectComparison::Different;
     } else {
@@ -143,14 +135,15 @@ ObjectComparison FilteredBackingStore::compareObjectsById(
 PathMap<TreeEntry> FilteredBackingStore::filterImpl(
     const TreePtr unfilteredTree,
     RelativePathPiece treePath,
-    folly::StringPiece filter) {
+    folly::StringPiece filterId) {
   auto pathMap = PathMap<TreeEntry>{unfilteredTree->getCaseSensitivity()};
   for (const auto& [path, entry] : *unfilteredTree) {
     auto relPath = RelativePath{treePath} + path;
-    if (!filterCallback_(filter, relPath.piece())) {
+    if (!filter_->isPathFiltered(relPath.piece(), filterId)) {
       ObjectId oid;
       if (entry.getType() == TreeEntryType::TREE) {
-        auto foid = FilteredObjectId(relPath.piece(), filter, entry.getHash());
+        auto foid =
+            FilteredObjectId(relPath.piece(), filterId, entry.getHash());
         oid = ObjectId{foid.getValue()};
       } else {
         auto foid = FilteredObjectId{entry.getHash()};
@@ -167,9 +160,9 @@ PathMap<TreeEntry> FilteredBackingStore::filterImpl(
 ImmediateFuture<TreePtr> FilteredBackingStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& context) {
-  auto [filter, parsedRootId] = parseFilterIdFromRootId(rootId);
+  auto [filterId, parsedRootId] = parseFilterIdFromRootId(rootId);
   return backingStore_->getRootTree(parsedRootId, context)
-      .thenValue([filterId = filter,
+      .thenValue([filterId = filterId,
                   self = shared_from_this()](TreePtr rootTree) {
         if (!rootTree) {
           return rootTree;
