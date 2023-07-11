@@ -8,6 +8,7 @@
 import {BugButton} from './BugButton';
 import serverAPI from './ClientToServerAPI';
 import {CwdSelector} from './CwdSelector';
+import {DownloadCommitsTooltipButton} from './DownloadCommitsMenu';
 import {PullButton} from './PullButton';
 import {SettingsGearButton} from './SettingsTooltip';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
@@ -36,6 +37,7 @@ export function TopBar() {
       <span className="button-group">
         {canPush && <PullButton />}
         <CwdSelector />
+        <DownloadCommitsTooltipButton />
         <FetchingDataIndicator />
       </span>
       <span className="button-group">

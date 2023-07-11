@@ -86,7 +86,7 @@ export function PullButton() {
             onClick={() => runOperation(currentChoice.getOperation())}
             onChangeSelected={choice => setDropdownChoiceKey(choice.id)}
             selected={currentChoice}
-            icon={<Icon slot="start" icon={isRunningPull ? 'loading' : 'cloud-download'} />}
+            icon={<Icon slot="start" icon={isRunningPull ? 'loading' : 'repo'} />}
           />
         ) : (
           <VSCodeButton

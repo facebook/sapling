@@ -38,14 +38,15 @@ export function DropdownFields({
 export function DropdownField({
   title,
   children,
+  ...rest
 }: {
   title: React.ReactNode;
   children: React.ReactNode;
-}) {
+} & Omit<React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>, 'title'>) {
   return (
     <div className="dropdown-field">
       <strong>{title}</strong>
-      <div>{children}</div>
+      <div {...rest}>{children}</div>
     </div>
   );
 }
