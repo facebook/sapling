@@ -41,6 +41,14 @@ function DownloadCommitsTooltip() {
       (downloadDiffTextArea.current as HTMLTextAreaElement).focus();
     }
   }, [downloadDiffTextArea]);
+
+  const doCommitDownload = () => {
+    if (Internal.diffDownloadOperation != null) {
+      runOperation(Internal.diffDownloadOperation(enteredDiffNum));
+    } else {
+      runOperation(new PullRevOperation(enteredDiffNum));
+    }
+  };
   return (
     <DropdownFields
       title={<T>Download Commits</T>}
@@ -50,19 +58,21 @@ function DownloadCommitsTooltip() {
         <VSCodeTextField
           placeholder={supportsDiffDownload ? t('Hash, Diff Number, ...') : t('Hash, revset, ...')}
           value={enteredDiffNum}
-          onChange={e => setEnteredDiffNum((e.target as unknown as {value: string})?.value ?? '')}
+          onKeyUp={e => {
+            if (e.key === 'Enter') {
+              if (enteredDiffNum.trim().length > 0) {
+                doCommitDownload();
+              }
+            } else {
+              setEnteredDiffNum((e.target as unknown as {value: string})?.value ?? '');
+            }
+          }}
           ref={downloadDiffTextArea}
         />
         <VSCodeButton
           appearance="secondary"
           data-testid="download-commit-button"
-          onClick={() => {
-            if (Internal.diffDownloadOperation != null) {
-              runOperation(Internal.diffDownloadOperation(enteredDiffNum));
-            } else {
-              runOperation(new PullRevOperation(enteredDiffNum));
-            }
-          }}>
+          onClick={doCommitDownload}>
           <T>Pull</T>
         </VSCodeButton>
       </div>
