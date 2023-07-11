@@ -21,7 +21,7 @@ export function DownloadCommitsTooltipButton() {
   return (
     <Tooltip
       trigger="click"
-      component={() => <DownloadCommitsTooltip />}
+      component={dismiss => <DownloadCommitsTooltip dismiss={dismiss} />}
       placement="bottom"
       title={t('Download commits')}>
       <VSCodeButton appearance="icon" data-testid="download-commits-tooltip-button">
@@ -31,7 +31,7 @@ export function DownloadCommitsTooltipButton() {
   );
 }
 
-function DownloadCommitsTooltip() {
+function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
   const [enteredDiffNum, setEnteredDiffNum] = useState('');
   const runOperation = useRunOperation();
   const supportsDiffDownload = Internal.diffDownloadOperation != null;
@@ -48,6 +48,7 @@ function DownloadCommitsTooltip() {
     } else {
       runOperation(new PullRevOperation(enteredDiffNum));
     }
+    dismiss();
   };
   return (
     <DropdownFields
