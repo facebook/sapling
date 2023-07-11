@@ -130,10 +130,6 @@ async fn get_multiple_blobstores(
     let blobstores = match blobconfig {
         MultiplexedWal { blobstores, .. } => {
             let mut underlying_blobstores: Vec<Arc<dyn BlobstoreUnlinkOps>> = Vec::new();
-            writeln!(
-                std::io::stdout(),
-                "This MultiplexedWal blobstore has the following inner stores:"
-            )?;
             for record in blobstores {
                 let underlying_blobstore = get_single_blobstore_impl(
                     fb,
@@ -145,7 +141,6 @@ async fn get_multiple_blobstores(
                 )
                 .await?;
                 underlying_blobstores.push(underlying_blobstore);
-                writeln!(std::io::stdout(), "Blobstore inner_id: {}", record.0)?;
             }
             underlying_blobstores
         }
