@@ -145,9 +145,10 @@ impl BlobstoreBulkUnlinker {
     fn sanitise_check(&self, key: &str) -> Result<()> {
         let re = Regex::new(&self.sanitise_regex).unwrap();
         if !re.is_match(key) {
-            panic!(
+            bail!(
                 "Key {} does not match the sanitise checking regex {}",
-                key, &self.sanitise_regex
+                key,
+                &self.sanitise_regex
             );
         }
         Ok(())
@@ -161,7 +162,7 @@ impl BlobstoreBulkUnlinker {
             self.extract_blobstore_key_from(key),
         ) {
             // do a sanitising check before we start deleting
-            self.sanitise_check(&blobstore_key).unwrap();
+            self.sanitise_check(&blobstore_key)?;
 
             if self.dry_run {
                 println!("\tUnlink key: {}", key);

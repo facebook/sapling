@@ -43,3 +43,12 @@ Run the bulk unliking tool, we're expecting to see an error saying the key is in
 Clean up the test files
   $ rm -rf "$TESTTMP/key_inputs/*"
   $ rm -rf "$TESTTMP/unlink_log/*"
+
+Prepare the input that is in a correct format, but doesn't match the regex
+  $ echo repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8 > "$TESTTMP/key_inputs/bad_format_key_file_0"
+
+Run the bulk unliking tool, we're expecting to see program stop
+  $ mononoke_newadmin blobstore-bulk-unlink --keys-dir "$TESTTMP/key_inputs" --dry-run false --sanitise-regex '^repo[0-9]+\.rawbundle2\..*' --error-log-file "$TESTTMP/unlink_log/log_file"
+  Processing keys in file (with dry-run=false): $TESTTMP/key_inputs/bad_format_key_file_0
+  Error: Key repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8 does not match the sanitise checking regex ^repo[0-9]+\.rawbundle2\..*
+  [1]
