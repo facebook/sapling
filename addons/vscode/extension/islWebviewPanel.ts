@@ -86,7 +86,11 @@ export function registerISLCommands(
       }
     }),
     registerDeserializer(context, logger),
-    vscode.window.registerWebviewViewProvider(viewType, webviewViewProvider),
+    vscode.window.registerWebviewViewProvider(viewType, webviewViewProvider, {
+      webviewOptions: {
+        retainContextWhenHidden: true,
+      },
+    }),
     vscode.workspace.onDidChangeConfiguration(e => {
       // if we start using ISL as a view, dispose the panel
       if (e.affectsConfiguration('sapling.isl.showInSidebar')) {
