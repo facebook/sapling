@@ -12,7 +12,7 @@ import {t, T} from './i18n';
 import {PullRevOperation} from './operations/PullRevOperation';
 import {useRunOperation} from './serverAPIState';
 import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
-import {useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {Icon} from 'shared/Icon';
 
 import './DownloadCommitsMenu.css';
@@ -35,6 +35,12 @@ function DownloadCommitsTooltip() {
   const [enteredDiffNum, setEnteredDiffNum] = useState('');
   const runOperation = useRunOperation();
   const supportsDiffDownload = Internal.diffDownloadOperation != null;
+  const downloadDiffTextArea = useRef(null);
+  useEffect(() => {
+    if (downloadDiffTextArea.current) {
+      (downloadDiffTextArea.current as HTMLTextAreaElement).focus();
+    }
+  }, [downloadDiffTextArea]);
   return (
     <DropdownFields
       title={<T>Download Commits</T>}
@@ -45,6 +51,7 @@ function DownloadCommitsTooltip() {
           placeholder={supportsDiffDownload ? t('Hash, Diff Number, ...') : t('Hash, revset, ...')}
           value={enteredDiffNum}
           onChange={e => setEnteredDiffNum((e.target as unknown as {value: string})?.value ?? '')}
+          ref={downloadDiffTextArea}
         />
         <VSCodeButton
           appearance="secondary"
