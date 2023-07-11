@@ -78,9 +78,6 @@ export interface Tree extends Node, GitObject {
 export interface TreeEntry {
   oid: GitObjectID;
 
-  /** Entry file object. */
-  object: GitObject | null;
-
   /** Entry file name. */
   name: string;
 

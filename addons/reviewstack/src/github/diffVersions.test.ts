@@ -137,7 +137,6 @@ function createAddChange(path: string): CommitChange {
     basePath,
     entry: {
       oid,
-      object: null,
       name,
       path,
       type: 'blob',
@@ -156,7 +155,6 @@ function createModifyChange(path: string): CommitChange {
     basePath,
     before: {
       oid: beforeOid,
-      object: null,
       name,
       path,
       type: 'blob',
@@ -164,7 +162,6 @@ function createModifyChange(path: string): CommitChange {
     },
     after: {
       oid: afterOid,
-      object: null,
       name,
       path,
       type: 'blob',

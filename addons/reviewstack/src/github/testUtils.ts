@@ -27,7 +27,6 @@ export function createTreeEntryFromMock(mockEntry: MockTreeEntry, path: string):
   return {
     ...mockEntry,
     path,
-    object: null,
     mode: 0o100644,
   };
 }
