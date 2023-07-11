@@ -42,14 +42,48 @@ Run the bulk unliking tool, we're expecting to see an error saying the key is in
   $ cat "$TESTTMP/unlink_log/log_file"
   {"key":"some-invliad-key","message":"Skip key because it is invalid."}
 Clean up the test files
-  $ rm -rf "$TESTTMP/key_inputs/*"
-  $ rm -rf "$TESTTMP/unlink_log/*"
+  $ rm -rf "$TESTTMP/key_inputs"
+  $ rm -rf "$TESTTMP/unlink_log"
+  $ mkdir -p "$TESTTMP/key_inputs"
+  $ mkdir -p "$TESTTMP/unlink_log"
 
 Prepare the input that is in a correct format, but doesn't match the regex
-  $ echo repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8 > "$TESTTMP/key_inputs/bad_format_key_file_0"
+  $ echo repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8 > "$TESTTMP/key_inputs/bad_regex_key_file_0"
 
 Run the bulk unliking tool, we're expecting to see program stop
   $ mononoke_newadmin blobstore-bulk-unlink --keys-dir "$TESTTMP/key_inputs" --dry-run false --sanitise-regex '^repo[0-9]+\.rawbundle2\..*' --error-log-file "$TESTTMP/unlink_log/log_file"
-  Processing keys in file (with dry-run=false): $TESTTMP/key_inputs/bad_format_key_file_0
+  Processing keys in file (with dry-run=false): $TESTTMP/key_inputs/bad_regex_key_file_0
   Error: Key repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8 does not match the sanitise checking regex ^repo[0-9]+\.rawbundle2\..*
   [1]
+
+Clean up the test files
+  $ rm -rf "$TESTTMP/key_inputs"
+  $ rm -rf "$TESTTMP/unlink_log"
+  $ mkdir -p "$TESTTMP/key_inputs"
+  $ mkdir -p "$TESTTMP/unlink_log"
+
+Prepare the input that is in a correct format
+  $ echo repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8 > "$TESTTMP/key_inputs/good_format_key_file_0"
+Run the bulk unliking tool, we're expecting to see a success
+  $ mononoke_newadmin blobstore-bulk-unlink --keys-dir "$TESTTMP/key_inputs" --dry-run false --sanitise-regex '^repo[0-9]+\.content\..*' --error-log-file "$TESTTMP/unlink_log/log_file"
+  Processing keys in file (with dry-run=false): $TESTTMP/key_inputs/good_format_key_file_0
+  Progress: 100.000%	processing took * (glob)
+  $ cat "$TESTTMP/unlink_log/log_file" | wc -l
+  0
+
+Clean up the test files
+  $ rm -rf "$TESTTMP/key_inputs"
+  $ rm -rf "$TESTTMP/unlink_log"
+  $ mkdir -p "$TESTTMP/key_inputs"
+  $ mkdir -p "$TESTTMP/unlink_log"
+
+Prepare the input that is in a correct format, but we have deleted it before
+  $ echo repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8 > "$TESTTMP/key_inputs/good_format_key_file_0"
+  $ echo repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8 >> "$TESTTMP/key_inputs/good_format_key_file_0"
+Run the bulk unliking tool, we're expecting to see an error saying no blobstore contains this key twice
+  $ mononoke_newadmin blobstore-bulk-unlink --keys-dir "$TESTTMP/key_inputs" --dry-run false --sanitise-regex '^repo[0-9]+\.content\..*' --error-log-file "$TESTTMP/unlink_log/log_file"
+  Processing keys in file (with dry-run=false): $TESTTMP/key_inputs/good_format_key_file_0
+  Progress: 100.000%	processing took * (glob)
+  $ cat "$TESTTMP/unlink_log/log_file"
+  {"key":"repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8","message":"no blobstore contains this key."}
+  {"key":"repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8","message":"no blobstore contains this key."}
