@@ -24257,7 +24257,7 @@ export type YourPullRequestsQueryVariables = Exact<{
 }>;
 
 
-export type YourPullRequestsQueryData = { __typename?: 'Query', search: { __typename?: 'SearchResultItemConnection', nodes?: Array<{ __typename?: 'App' } | { __typename?: 'Discussion' } | { __typename?: 'Issue' } | { __typename?: 'MarketplaceListing' } | { __typename?: 'Organization' } | { __typename: 'PullRequest', number: number, title: string, state: PullRequestState, isDraft: boolean, url: string, comments: { __typename?: 'IssueCommentConnection', totalCount: number }, commits: { __typename?: 'PullRequestCommitConnection', nodes?: Array<{ __typename?: 'PullRequestCommit', commit: { __typename?: 'Commit', checkSuites?: { __typename?: 'CheckSuiteConnection', nodes?: Array<{ __typename?: 'CheckSuite', conclusion?: CheckConclusionState | null, status: CheckStatusState } | null> | null } | null } } | null> | null } } | { __typename?: 'Repository' } | { __typename?: 'User' } | null> | null } };
+export type YourPullRequestsQueryData = { __typename?: 'Query', search: { __typename?: 'SearchResultItemConnection', nodes?: Array<{ __typename?: 'App' } | { __typename?: 'Discussion' } | { __typename?: 'Issue' } | { __typename?: 'MarketplaceListing' } | { __typename?: 'Organization' } | { __typename: 'PullRequest', number: number, title: string, state: PullRequestState, isDraft: boolean, url: string, comments: { __typename?: 'IssueCommentConnection', totalCount: number }, commits: { __typename?: 'PullRequestCommitConnection', nodes?: Array<{ __typename?: 'PullRequestCommit', commit: { __typename?: 'Commit', statusCheckRollup?: { __typename?: 'StatusCheckRollup', state: StatusState } | null } } | null> | null } } | { __typename?: 'Repository' } | { __typename?: 'User' } | null> | null } };
 
 
 export const YourPullRequestsQuery = `
@@ -24277,11 +24277,8 @@ export const YourPullRequestsQuery = `
         commits(last: 1) {
           nodes {
             commit {
-              checkSuites(first: 100) {
-                nodes {
-                  conclusion
-                  status
-                }
+              statusCheckRollup {
+                state
               }
             }
           }

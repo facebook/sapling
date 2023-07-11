@@ -14,11 +14,8 @@ query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
         commits(last: 1) {
           nodes {
             commit {
-              checkSuites(first: 100) {
-                nodes {
-                  conclusion
-                  status
-                }
+              statusCheckRollup {
+                state
               }
             }
           }
