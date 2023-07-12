@@ -377,6 +377,24 @@ Import stack:
         <<<
         c: file not found
 
+      # Amend
+      # Update Y to Y1, edit content of file Y to Y1, add new file P:
+
+        $ newrepo
+        $ drawdag << 'EOS'
+        > X-Y  # Y/X=X1
+        > EOS
+        $ hg debugimportstack << EOS
+        > [["amend", {"node": "$Y", "mark": ":1", "text": "Y1", "files": {"Y": {"data": "Y1"}, "P": {"data": "P"}}}]]
+        > EOS
+        {":1": "8567a23e6951126a1fc726a73324ee76ff5ed2cc"}
+        $ hg log -Gr 'all()' -T '{desc}'
+        o  Y1
+        │
+        o  X
+        $ hg cat -r 'desc(Y)' P X Y
+        PX1Y1 (no-eol)
+
       # Error cases.
 
         $ hg debugimportstack << EOS

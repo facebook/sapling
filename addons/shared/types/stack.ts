@@ -51,6 +51,7 @@ export type ImportStack = ImportAction[];
 
 export type ImportAction =
   | ['commit', ImportCommit]
+  | ['amend', ImportAmendCommit]
   | ['goto', ImportGoto]
   | ['reset', ImportReset]
   | ['hide', ImportHide];
@@ -67,6 +68,23 @@ export type ImportCommit = {
   /** Why predecessors are obsoleted? For example, 'amend', 'split', 'histedit'. */
   operation?: string;
   files: {[path: RepoPath]: ExportFile | '.' | null};
+};
+
+/** Amend a commit. Similar to `ImportCommit` but many fields are optional. */
+export type ImportAmendCommit = {
+  /** Commit to amend. */
+  node: Hash;
+  /** Placeholder commit hash. Must start with ":". */
+  mark: Mark;
+  author?: Author;
+  date?: DateTuple;
+  /** Commit message. */
+  text?: string;
+  parents?: (Hash | Mark)[];
+  predecessors?: (Hash | Mark)[];
+  /** Why predecessors are obsoleted? For example, 'amend', 'split', 'histedit'. */
+  operation?: string;
+  files?: {[path: RepoPath]: ExportFile | '.' | null};
 };
 
 /** Update the "current commit" without changing the working copy. */

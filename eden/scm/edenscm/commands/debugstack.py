@@ -258,6 +258,7 @@ def debugimportstack(ui, repo, **opts):
 
         [["commit", commit_info],
          ["commit", commit_info],
+         ["amend", {"node": node, ..commit_info}],
          ["goto", {"mark": mark}],
          ["reset", {"mark": mark}],
          ["hide", {"nodes": [node]}],
@@ -319,6 +320,11 @@ def debugimportstack(ui, repo, **opts):
          }
         }
 
+    "amend" is similar to commit, but it will reuse the old commit's
+    messages, parents, files by default. The "files" field will merge
+    with (not replace) the old commit's "files". The "node" field is
+    required to specify the old commit.
+
     "write" can be used to write files to the working copy.
     It will be executed after creating commits.
 
@@ -371,14 +377,18 @@ def debugimportstack(ui, repo, **opts):
 
         with repo.wlock(), repo.lock(), repo.transaction("importstack"):
             # Create commits.
-            commit_infos = [action[1] for action in actions if action[0] == "commit"]
+            commit_infos = [action[1] for action in actions if action[0] in "commit"]
             _create_commits(repo, commit_infos, marks)
+
+            # Handle "amend"
+            commit_infos = [action[1] for action in actions if action[0] in "amend"]
+            _create_commits(repo, commit_infos, marks, amend=True)
 
             # Handle "goto" or "reset".
             to_hide = []
             for action in actions:
                 action_name = action[0]
-                if action_name == "commit":
+                if action_name in {"commit", "amend"}:
                     # Handled by _create_commits already.
                     continue
                 elif action_name == "goto":
@@ -446,11 +456,33 @@ class Marks:
         return self._mark_to_node[mark]
 
 
-def _create_commits(repo, commit_infos, marks: Marks):
-    """Create commits based on commit_infos.
+def _create_commits(repo, commit_infos, marks: Marks, amend=False):
+    """Create or amend commits based on commit_infos.
     Do not change the working copy.
     Assumes inside a transaction.
     """
+    if amend:
+        # Merge commit_info with information from the original commit.
+        new_commit_infos = []
+        for commit_info in commit_infos:
+            node = commit_info["node"]
+            ctx = repo[node]
+            files = commit_info.get("files", {})
+            for path in ctx.files():
+                if path not in files:
+                    files[path] = _file_obj(ctx, path)
+            commit_info["files"] = files
+            new_commit_info = {
+                "author": ctx.user(),
+                "text": ctx.description(),
+                "parents": [p.hex() for p in ctx.parents()],
+                "predecessors": [node],
+                "operation": "amend",
+                **commit_info,
+            }
+            new_commit_infos.append(new_commit_info)
+        commit_infos = new_commit_infos
+
     # Split pre-processing.
     # When A is split into A1 and A2, both A1 and A2 have
     # the same predecessor A. The mutation information only
