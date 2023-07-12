@@ -246,6 +246,7 @@ class TestTmp:
         self._updateglobalstate = updateglobalstate
         self._origpathenv = os.getenv("PATH") or os.defpath
         self._setup(tmpprefix)
+        self._lastout = ""
 
     def atexit(self, func):
         # register a function to be called during tearing down
@@ -271,6 +272,7 @@ class TestTmp:
             if not reason:
                 reason = f"{code.strip()} exited 80"
             raise unittest.SkipTest(reason)
+        self._lastout = out
         return out
 
     def pydoceval(self, code: str, mode: str = "single") -> Optional[str]:
@@ -280,17 +282,26 @@ class TestTmp:
         sys.stdout = io.StringIO()
         try:
             compiled = compile(code, "<pydoceval>", mode)
+            # Provide "_" as the output from the last command.
+            globals_env = {**f.f_globals, "_": self._lastout}
             with shext.shellenv(self.shenv):
                 # run code using the parent frame globals and locals
-                exec(compiled, f.f_globals, f.f_locals)
+                exec(compiled, globals_env, f.f_locals)
             # pyre-fixme[16]: `TextIO` has no attribute `getvalue`.
             out = sys.stdout.getvalue()
+        except AssertionError as e:
+            msg = str(e)
+            if msg:
+                out = f"AssertionError: {msg}\n"
+            else:
+                out = "AssertionError!\n"
         except Exception as e:
             out = str(e)
         finally:
             sys.stdout = origout
             f = None
         out = self._applysubstitutions(out)
+        self._lastout = out
         if out:
             return out
 

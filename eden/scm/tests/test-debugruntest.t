@@ -21,6 +21,16 @@ Classic .t test:
   >   not found as expected
   > EOF
 
+Refer to last output as "_":
+
+  $ cat > test-last.t << 'EOF'
+  >   $ echo 123
+  >   123
+  >   >>> _ == "123\n"
+  >   True
+  >   >>> assert _ == "True\n"
+  > EOF
+
 Vanilla Python test:
 
   $ cat > test-py-vanilla.t << 'EOF'
@@ -112,7 +122,7 @@ Test output:
   Failed 1 test (this test is broken):
     test-py-exc.t
   
-  # Ran 8 tests, 1 skipped, 4 failed.
+  # Ran 9 tests, 1 skipped, 4 failed.
   [1]
 
 Autofix:
