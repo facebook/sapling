@@ -1,6 +1,4 @@
-#chg-compatible
-This test is broken while conch_parser is broken
-#require false
+#debugruntest-compatible
 
 
 Classic .t test:
@@ -26,21 +24,21 @@ Classic .t test:
 Vanilla Python test:
 
   $ cat > test-py-vanilla.t << 'EOF'
-  > a = 1
-  > b = 2
-  > assert a != b
+  >     a = 1
+  >     b = 2
+  >     assert a != b
   > EOF
 
 Python / .t hybrid:
 
   $ cat > test-py-hybrid.t << 'EOF'
-  > for i in range(3):
-  >     setenv("A", str(i))
-  >     setenv("B", str(i))
-  >     $ [ $A -eq $B ] && echo same
-  >     same
-  >     $ echo $A
-  >     [012] (re)
+  >     for i in range(3):
+  >         setenv("A", str(i))
+  >         setenv("B", str(i))
+  >         $ [ $A -eq $B ] && echo same
+  >         same
+  >         $ echo $A
+  >         [012] (re)
   > EOF
 
 Diff output:
@@ -66,7 +64,7 @@ Skip:
 Exception:
 
   $ cat > test-py-exc.t << 'EOF'
-  > raise ValueError('this test is broken')
+  >     raise ValueError('this test is broken')
   > EOF
 
 Test output:
@@ -140,8 +138,6 @@ Autofix:
     * (glob)
     3
 
-
-#if no-bash
 Doctest:
 
   $ cat >> testmodule.py << 'EOF'
@@ -226,4 +222,3 @@ The doctest passes with the autofix changes:
   $ hg debugruntest doctest:testmodule
   # Ran 1 tests, 0 skipped, 0 failed.
 
-#endif
