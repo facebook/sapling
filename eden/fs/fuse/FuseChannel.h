@@ -48,6 +48,7 @@ namespace facebook::eden {
 class Notifier;
 class FsEventLogger;
 class FuseRequestContext;
+class PrivHelper;
 
 #ifndef _WIN32
 
@@ -235,6 +236,7 @@ class FuseChannel final : public FsChannel {
    * kernel and set up the thread pool.
    */
   FuseChannel(
+      PrivHelper* privHelper,
       folly::File fuseDevice,
       AbsolutePathPiece mountPath,
       size_t numThreads,
@@ -249,6 +251,11 @@ class FuseChannel final : public FsChannel {
       int32_t maximumBackgroundRequests,
       bool useWriteBackCache,
       size_t fuseTraceBusCapacity);
+
+  FuseChannel(const FuseChannel&) = delete;
+  FuseChannel(FuseChannel&&) = delete;
+  FuseChannel& operator=(const FuseChannel&) = delete;
+  FuseChannel& operator=(FuseChannel&&) = delete;
 
   /**
    * Destroy the FuseChannel.
@@ -313,9 +320,15 @@ class FuseChannel final : public FsChannel {
    */
   StopFuture initializeFromTakeover(fuse_init_out connInfo);
 
-  // Forbidden copy constructor and assignment operator
-  FuseChannel(FuseChannel const&) = delete;
-  FuseChannel& operator=(FuseChannel const&) = delete;
+  /**
+   * Uses the configured PrivHelper to unmount this FUSE mount from the
+   * filesystem.
+   *
+   * That kicks off an ENODEV error from the FUSE device, and shuts down the
+   * FuseChannel. The future returned by initialize() will be fulfilled with a
+   * non-takeover StopData.
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit> unmount();
 
   /**
    * Request that the FuseChannel stop processing new requests, and prepare
@@ -759,6 +772,8 @@ class FuseChannel final : public FsChannel {
   void requestSessionExit(
       const folly::Synchronized<State>::LockedPtr& state,
       StopReason reason);
+
+  PrivHelper* const privHelper_;
 
   /*
    * Constant state that does not change for the lifetime of the FuseChannel

@@ -1016,8 +1016,14 @@ folly::Future<folly::Unit> EdenMount::unmount() {
           // TODO: teach windows to unmount NFS
           if (getNfsdChannel() != nullptr) {
             return serverState_->getPrivHelper()->nfsUnmount(getPath().view());
+          } else if (auto* fuseChannel = getFuseChannel()) {
+            // TODO: Is it safe to call FuseChannel::unmount if the FuseChannel
+            // is in the process of starting? Or can we assume that
+            // mountResult.hasException() above covers that case?
+            return fuseChannel->unmount();
           } else {
-            return serverState_->getPrivHelper()->fuseUnmount(getPath().view());
+            throw std::runtime_error(
+                "attempting to unmount() an EdenMount without an FsChannel");
           }
 #endif
         })
@@ -1898,6 +1904,7 @@ std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(
     folly::File fuseFd) {
   auto edenConfig = mount->getEdenConfig();
   return makeFuseChannel(
+      mount->getServerState()->getPrivHelper(),
       std::move(fuseFd),
       mount->getPath(),
       FLAGS_fuseNumThreads,

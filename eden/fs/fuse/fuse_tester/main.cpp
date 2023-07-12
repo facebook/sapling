@@ -130,6 +130,7 @@ int main(int argc, char** argv) {
   folly::Logger straceLogger{"eden.strace"};
 
   auto channel = makeFuseChannel(
+      privHelper.get(),
       std::move(fuseDevice),
       mountPath,
       FLAGS_numFuseThreads,

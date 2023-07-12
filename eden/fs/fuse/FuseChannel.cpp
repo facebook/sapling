@@ -21,6 +21,7 @@
 #include "eden/fs/fuse/FuseDirList.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/fuse/FuseRequestContext.h"
+#include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/telemetry/FsEventLogger.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/IDGen.h"
@@ -779,6 +780,7 @@ void FuseChannel::sendRawReply(const iovec iov[], size_t count) const {
 }
 
 FuseChannel::FuseChannel(
+    PrivHelper* privHelper,
     folly::File fuseDevice,
     AbsolutePathPiece mountPath,
     size_t numThreads,
@@ -793,7 +795,8 @@ FuseChannel::FuseChannel(
     int32_t maximumBackgroundRequests,
     bool useWriteBackCache,
     size_t fuseTraceBusCapacity)
-    : bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
+    : privHelper_{privHelper},
+      bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
       numThreads_(numThreads),
       dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
@@ -881,6 +884,12 @@ FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
              << ", want=" << capsFlagsToLabel(connInfo_->flags);
   startWorkerThreads();
   return sessionCompletePromise_.getFuture();
+}
+
+folly::Future<folly::Unit> FuseChannel::unmount() {
+  // TODO: This does not handle the situation where the mount has been moved by,
+  // for example, renaming a parent directory, or `mount --move`.
+  return privHelper_->fuseUnmount(mountPath_.view());
 }
 
 void FuseChannel::startWorkerThreads() {

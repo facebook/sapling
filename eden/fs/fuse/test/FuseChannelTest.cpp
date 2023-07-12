@@ -70,6 +70,7 @@ class FuseChannelTest : public ::testing::Test {
     auto testDispatcher = std::make_unique<TestDispatcher>(stats_.copy());
     dispatcher_ = testDispatcher.get();
     return makeFuseChannel(
+        nullptr,
         fuse_.start(),
         mountPath_,
         numThreads,
