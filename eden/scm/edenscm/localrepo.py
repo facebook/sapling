@@ -1228,11 +1228,6 @@ class localrepository(object):
                 if heads:
                     visibility.add(self, heads)
 
-        # Force recalculating `public()` so the `VerLink` can be compatible
-        # with the updated dag, to enable fast paths.
-        if heads or remotenamechanges:
-            self.invalidatevolatilesets()
-
     def conn(self, source="default", **opts):
         """Create a connection from the connection pool"""
         from . import hg  # avoid cycle
