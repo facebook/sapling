@@ -30,18 +30,7 @@ enum class ChronoParseError {
 /**
  * Get a human-readable string describing a ChronoParseError code.
  */
-folly::StringPiece chronoParseErrorToString(ChronoParseError error);
-
-/**
- * Append the human-readable description of a ChronoParseError to a string.
- *
- * This allows ChronoParseError arguments to be used with
- * folly::to<std::string>().
- */
-template <typename String>
-void toAppend(ChronoParseError error, String* result) {
-  toAppend(chronoParseErrorToString(error), result);
-}
+std::string_view chronoParseErrorToString(ChronoParseError error);
 
 /**
  * Parse a string to a std::chrono::nanoseconds duration.

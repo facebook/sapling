@@ -143,29 +143,29 @@ ChronoParseError conversionCodeToParseError(ConversionCode code) {
 
 namespace facebook::eden {
 
-StringPiece chronoParseErrorToString(ChronoParseError error) {
+std::string_view chronoParseErrorToString(ChronoParseError error) {
   switch (error) {
     case ChronoParseError::UnknownUnit:
-      return "unknown duration unit specifier"_sp;
+      return "unknown duration unit specifier";
     case ChronoParseError::InvalidChronoUnitOrder:
-      return "duration units must be listed from largest to smallest"_sp;
+      return "duration units must be listed from largest to smallest";
     case ChronoParseError::Overflow:
-      return "overflow"_sp;
+      return "overflow";
     case ChronoParseError::EmptyInputString:
-      return "empty input string"_sp;
+      return "empty input string";
     case ChronoParseError::InvalidLeadingChar:
-      return "invalid leading character"_sp;
+      return "invalid leading character";
     case ChronoParseError::NoDigits:
-      return "no digits found in input string"_sp;
+      return "no digits found in input string";
     case ChronoParseError::NonDigitChar:
-      return "non-digit character found"_sp;
+      return "non-digit character found";
     case ChronoParseError::NonWhitespaceAfterEnd:
-      return "non-whitespace character found after end of input"_sp;
+      return "non-whitespace character found after end of input";
     case ChronoParseError::OtherError:
-      return "other error"_sp;
+      return "other error";
   }
 
-  return "unexpected error"_sp;
+  return "unexpected error";
 }
 
 Expected<std::chrono::nanoseconds, ChronoParseError> stringToDuration(

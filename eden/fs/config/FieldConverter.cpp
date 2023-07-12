@@ -106,7 +106,8 @@ FieldConverter<std::chrono::nanoseconds>::fromString(
   if (result.hasValue()) {
     return result.value();
   }
-  return folly::makeUnexpected(chronoParseErrorToString(result.error()).str());
+  return folly::makeUnexpected(
+      std::string{chronoParseErrorToString(result.error())});
 }
 
 std::string FieldConverter<std::chrono::nanoseconds>::toDebugString(

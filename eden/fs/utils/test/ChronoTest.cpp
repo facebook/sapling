@@ -18,7 +18,7 @@ using folly::StringPiece;
 TEST(Chrono, chronoErrorToString) {
   EXPECT_EQ(
       "unknown duration unit specifier",
-      folly::to<std::string>(ChronoParseError::UnknownUnit));
+      chronoParseErrorToString(ChronoParseError::UnknownUnit));
   EXPECT_EQ(
       "duration units must be listed from largest to smallest",
       chronoParseErrorToString(ChronoParseError::InvalidChronoUnitOrder));
