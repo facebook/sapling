@@ -224,3 +224,59 @@ Make a commit on tip, and amend. They do not trigger remote lookups:
   TRACE dag::cache: cached missing 893a1eb784b46325fb3062573ba15a22780ebe4a (definitely missing)
   DEBUG dag::cache: reusing cache (1 missing)
   DEBUG dag::cache: reusing cache (1 missing)
+
+Test that auto pull invalidates public() properly:
+
+# Server: Prepare public (P20, master) and draft (D9) branches
+
+    $ cd
+    $ hg init server-autopull --config format.use-eager-repo=True
+    $ drawdag --cwd server-autopull << 'EOS'
+    >     D9
+    >     :
+    > P20 D1  # bookmark master = P20
+    >  : /
+    > P10
+    >  :
+    > P01
+    > EOS
+
+# Client: Fetch the initial master, using lazy changelog.
+
+    $ cd
+    $ newremoterepo
+    $ setconfig paths.default=test:server-autopull
+    $ hg debugchangelog --migrate lazy
+    $ LOG= hg pull -q -B master
+
+# Server: Move "master" forward P20 -> P99.
+
+    $ drawdag --cwd ~/server-autopull << 'EOS'
+    > P99  # bookmark master = P99
+    >  :
+    > P21
+    >  |
+    > desc(P20)
+    > EOS
+
+# Client: autopull D9 and move master forward, then calculate a revset
+# containing "public()" should not require massive "resolve remotely" requests.
+# There should be no "DEBUG dag::protocol: resolve ids (76) remotely" below.
+
+    $ LOG=dag::protocol=debug hg log -r "only($D9,public())" -T '{desc}\n'
+    DEBUG dag::protocol: resolve names [428b6ef7fec737262ee83ba89e4fab5e3a07db44] remotely
+    pulling '428b6ef7fec737262ee83ba89e4fab5e3a07db44' from 'test:server-autopull'
+    DEBUG dag::protocol: resolve names [a81a182e51718edfeccb2f62846c28c7b83de6f1] remotely
+    DEBUG dag::protocol: resolve names [428b6ef7fec737262ee83ba89e4fab5e3a07db44] remotely
+    DEBUG dag::protocol: resolve ids [97] remotely
+    DEBUG dag::protocol: resolve ids (76) remotely
+    D1
+    D2
+    D3
+    D4
+    D5
+    D6
+    D7
+    D8
+    D9
+
