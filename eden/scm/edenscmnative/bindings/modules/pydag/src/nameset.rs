@@ -184,6 +184,12 @@ py_class!(pub class nameset |py| {
         if let Some(dag) = hints.dag() {
             result.insert("dagid", dag.dag_id().to_py_object(py).into_object());
         }
+        if let Some(version) = hints.id_map_version() {
+            result.insert("map_version", crate::VerLink::create_instance(py, version.clone())?.into_object());
+        }
+        if let Some(version) = hints.dag_version() {
+            result.insert("dag_version", crate::VerLink::create_instance(py, version.clone())?.into_object());
+        }
         Ok(result)
     }
 });

@@ -19,10 +19,12 @@ mod impl_into;
 pub mod nameset;
 mod parents;
 pub mod spanset;
+mod verlink;
 
 pub use nameset::Names;
 pub use spanset::spans;
 pub use spanset::Spans;
+pub(crate) use verlink::VerLink;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "dag"].join(".");
