@@ -357,11 +357,14 @@ Import stack:
             > [["commit", {"text": "J1", "mark": ":10.1", "files": {"x1": {"data": "x1\n", "flags": ".", "copyFrom": "."}, "x2": {"data": "x2\n", "flags": "."}}, "parents": `marks :9`}]]
             > EOS
 
-      # Write files.
+      # Write or delete files.
+      # Deleted files will remove "A" status.
+      # Written files will remove "R" status.
 
-        $ newrepo
+        $ newrepo repo-write --config format.use-eager-repo=True
         $ echo 1 > a
         $ echo 3 > c
+        $ hg add c
         $ hg debugimportstack << EOS
         > [["write", {"a": {"data": "2\n"}, "b": {"dataBase85": "GYS"}, "c": null}]]
         > EOS
@@ -376,6 +379,18 @@ Import stack:
         3
         <<<
         c: file not found
+        $ hg st  # no "A c" or "! c"
+        ? a
+        ? b
+        $ hg commit -m 'Add a, b' -A a b
+
+        $ hg rm a
+        $ hg debugimportstack << EOS
+        > [["write", {"a": {"data": "3\n"}}]]
+        > EOS
+        {}
+        $ hg st  # no "R a"
+        M a
 
       # Amend
       # Update Y to Y1, edit content of file Y to Y1, add new file P:
@@ -394,6 +409,22 @@ Import stack:
         o  X
         $ hg cat -r 'desc(Y)' P X Y
         PX1Y1 (no-eol)
+
+      # Refer to working copy parent.
+      # X is reverted from "XXX" to "X1"
+      # Z is reverted from "Z" to "not found"
+
+        $ hg up -q 'desc(Y)'
+        $ echo XXX > X
+        $ echo Z > Z
+        $ hg debugimportstack << EOS
+        > [["write", {"Z": ".", "X": "."}]]
+        > EOS
+        {}
+        $ cat X Z
+        cat: Z: $ENOENT$
+        X1 (no-eol)
+        [1]
 
       # Error cases.
 

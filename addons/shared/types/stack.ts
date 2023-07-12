@@ -54,7 +54,8 @@ export type ImportAction =
   | ['amend', ImportAmendCommit]
   | ['goto', ImportGoto]
   | ['reset', ImportReset]
-  | ['hide', ImportHide];
+  | ['hide', ImportHide]
+  | ['write', {[path: RepoPath]: ExportFile | '.' | null}];
 
 export type ImportCommit = {
   /** Placeholder commit hash. Must start with ":". */

@@ -400,7 +400,7 @@ def debugimportstack(ui, repo, **opts):
                 elif action_name == "hide":
                     to_hide += [bin(n) for n in action[1]["nodes"]]
                 elif action_name == "write":
-                    _write_files(repo.wvfs, action[1])
+                    _write_files(repo, action[1])
                 else:
                     raise ValueError(f"unsupported action: {action}")
 
@@ -625,21 +625,49 @@ def _filectxfn(repo, mctx, path, files_dict):
         )
 
 
-def _write_files(wvfs, file_infos):
+def _write_files(repo, file_infos):
+    wvfs = repo.wvfs
+    unlinked = set()
     for path, file_info in file_infos.items():
         if file_info is None:
             # Delete this file.
             wvfs.tryunlink(path)
+            unlinked.add(path)
         else:
-            if "data" in file_info:
-                data = file_info["data"].encode()
+            if file_info == ".":
+                # Use the file from the working *parent*.
+                ctx = repo["."]
+                if path in ctx:
+                    fctx = ctx[path]
+                    data = fctx.data()
+                    flags = fctx.flags()
+                else:
+                    wvfs.tryunlink(path)
+                    unlinked.add(path)
+                    continue
             else:
-                data = base64.b85decode(file_info["dataBase85"])
-            flags = file_infos.get("flags")
-            if flags is None or flags == ".":
-                flags = _existing_flags(wvfs, path)
+                if "data" in file_info:
+                    data = file_info["data"].encode()
+                else:
+                    data = base64.b85decode(file_info["dataBase85"])
+                flags = file_infos.get("flags")
+                if flags is None or flags == ".":
+                    flags = _existing_flags(wvfs, path)
             wvfs.write(path, data)
             wvfs.setflags(path, l="l" in flags, x="x" in flags)
+
+    # Update dirstate. Forget deleted files, undelete written files.
+    with repo.wlock():
+        ds = repo.dirstate
+        for path in file_infos:
+            if path in unlinked:
+                # forget
+                if ds[path] == "a":
+                    ds.untrack(path)
+            else:
+                # undelete
+                if ds[path] == "r":
+                    ds.normallookup(path)
 
 
 def _existing_flags(wvfs, path):
