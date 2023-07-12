@@ -19,55 +19,79 @@ import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {ComparisonType} from 'shared/Comparison';
 import * as vscode from 'vscode';
 
-/**
- * Construct Repositories and VSCodeRepos for every workspace folder.
- * Treats repositoryCache as the source of truth for re-using repositories.
- */
-export function watchAndCreateRepositoriesForWorkspaceFolders(logger: Logger): vscode.Disposable {
-  const knownRepos = new Map<string, RepositoryReference>();
-  const vscodeRepos = new Map<string, VSCodeRepo>();
-  function updateRepos(
+export class VSCodeReposList {
+  private knownRepos = new Map</* attached folder root */ string, RepositoryReference>();
+  private vscodeRepos = new Map</* repo root path */ string, VSCodeRepo>();
+  private disposables: Array<vscode.Disposable> = [];
+
+  private reposByPath = new Map</* arbitrary subpath of repo */ string, VSCodeRepo>();
+
+  constructor(private logger: Logger) {
+    if (vscode.workspace.workspaceFolders) {
+      this.updateRepos(vscode.workspace.workspaceFolders, []);
+    }
+    this.disposables.push(
+      vscode.workspace.onDidChangeWorkspaceFolders(e => {
+        this.updateRepos(e.added, e.removed);
+      }),
+    );
+    // TODO: consider also listening for vscode.workspace.onDidOpenTextDocument to support repos
+    // for ad-hoc non-workspace-folder files
+  }
+
+  private updateRepos(
     added: ReadonlyArray<vscode.WorkspaceFolder>,
     removed: ReadonlyArray<vscode.WorkspaceFolder>,
   ) {
     for (const add of added) {
       const {fsPath} = add.uri;
-      if (knownRepos.has(fsPath)) {
+      if (this.knownRepos.has(fsPath)) {
         throw new Error(`Attempted to add workspace folder path twice: ${fsPath}`);
       }
-      const repoReference = repositoryCache.getOrCreate(getCLICommand(), logger, fsPath);
-      knownRepos.set(fsPath, repoReference);
+      const repoReference = repositoryCache.getOrCreate(getCLICommand(), this.logger, fsPath);
+      this.knownRepos.set(fsPath, repoReference);
       repoReference.promise.then(repo => {
         if (repo instanceof Repository) {
           const root = repo?.info.repoRoot;
-          const existing = vscodeRepos.get(root);
+          const existing = this.vscodeRepos.get(root);
           if (existing) {
             return;
           }
-          const vscodeRepo = new VSCodeRepo(repo, logger);
-          vscodeRepos.set(root, vscodeRepo);
+          const vscodeRepo = new VSCodeRepo(repo, this.logger);
+          this.vscodeRepos.set(root, vscodeRepo);
           repo.onDidDispose(() => {
             vscodeRepo.dispose();
-            vscodeRepos.delete(root);
+            this.vscodeRepos.delete(root);
           });
         }
       });
     }
     for (const remove of removed) {
       const {fsPath} = remove.uri;
-      const repo = knownRepos.get(fsPath);
+      const repo = this.knownRepos.get(fsPath);
       repo?.unref();
-      knownRepos.delete(fsPath);
+      this.knownRepos.delete(fsPath);
     }
   }
-  if (vscode.workspace.workspaceFolders) {
-    updateRepos(vscode.workspace.workspaceFolders, []);
+
+  /** return the VSCodeRepo that contains the given path */
+  public repoForPath(path: string): VSCodeRepo | undefined {
+    if (this.reposByPath.has(path)) {
+      return this.reposByPath.get(path);
+    }
+    for (const value of this.vscodeRepos.values()) {
+      if (path.startsWith(value.rootPath)) {
+        return value;
+      }
+    }
+    return undefined;
   }
-  return vscode.workspace.onDidChangeWorkspaceFolders(e => {
-    updateRepos(e.added, e.removed);
-  });
-  // TODO: consider also listening for vscode.workspace.onDidOpenTextDocument to support repos
-  // for ad-hoc non-workspace-folder files
+
+  public dispose() {
+    for (const disposable of this.disposables) {
+      disposable.dispose();
+    }
+  }
 }
 
 /**
@@ -81,11 +105,13 @@ export class VSCodeRepo implements vscode.QuickDiffProvider {
     'changes' | 'untracked' | 'unresolved' | 'resolved',
     vscode.SourceControlResourceGroup
   >;
-  private rootUri: vscode.Uri;
+  public rootUri: vscode.Uri;
+  public rootPath: string;
 
   constructor(public repo: Repository, private logger: Logger) {
     repo.onDidDispose(() => this.dispose());
     this.rootUri = vscode.Uri.file(repo.info.repoRoot);
+    this.rootPath = repo.info.repoRoot;
 
     this.sourceControl = vscode.scm.createSourceControl(
       'sapling',
@@ -226,5 +252,3 @@ const themeColors = {
   untracked: new vscode.ThemeColor('gitDecoration.untrackedResourceForeground'),
   conflicting: new vscode.ThemeColor('gitDecoration.conflictingResourceForeground'),
 };
-
-export const __TEST__ = {watchAndCreateRepositoriesForWorkspaceFolders};
