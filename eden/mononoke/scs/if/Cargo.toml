@@ -25,9 +25,8 @@ futures = { version = "0.3.28", features = ["async-await", "compat"] }
 megarepo_configs = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/megarepo" }
 once_cell = "1.12"
 ref-cast = "1.0.18"
-serde = { version = "1.0.167", features = ["derive", "rc"] }
-serde_derive = "1.0.167"
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
+source_control__types = { package = "source_control_types", version = "0.1.0", path = "types" }
 thiserror = "1.0.43"
 tracing = "0.1.35"
 tracing-futures = { version = "0.2.5", features = ["futures-03"] }

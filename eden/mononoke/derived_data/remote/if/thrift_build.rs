@@ -49,22 +49,27 @@ mononoke_types_thrift mononoke_types_thrift",
 
         conf.base_path(base_path);
 
-        let options = "types_crate=derived_data_service_if__types";
+        conf.types_crate("derived_data_service_if__types");
+
+        let options = "";
         if !options.is_empty() {
             conf.options(options);
         }
 
-        let include_srcs = vec![
+        let lib_include_srcs = vec![
             
         ];
-        conf.include_srcs(include_srcs);
+        let types_include_srcs = vec![
+            
+        ];
+        conf.lib_include_srcs(lib_include_srcs);
+        conf.types_include_srcs(types_include_srcs);
 
         conf
     };
 
-    conf
-        .run(&[
-            "derived_data_service.thrift"
-        ])
-        .expect("Failed while running thrift compilation");
+    let srcs: &[&str] = &[
+        "derived_data_service.thrift"
+    ];
+    conf.run(srcs).expect("Failed while running thrift compilation");
 }

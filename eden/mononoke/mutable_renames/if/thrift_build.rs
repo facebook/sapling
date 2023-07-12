@@ -44,22 +44,27 @@ mutable_rename crate",
 
         conf.base_path(base_path);
 
-        let options = "types_crate=mutable-rename-thrift__types";
+        conf.types_crate("mutable-rename-thrift__types");
+
+        let options = "";
         if !options.is_empty() {
             conf.options(options);
         }
 
-        let include_srcs = vec![
+        let lib_include_srcs = vec![
             
         ];
-        conf.include_srcs(include_srcs);
+        let types_include_srcs = vec![
+            
+        ];
+        conf.lib_include_srcs(lib_include_srcs);
+        conf.types_include_srcs(types_include_srcs);
 
         conf
     };
 
-    conf
-        .run(&[
-            "mutable_rename.thrift"
-        ])
-        .expect("Failed while running thrift compilation");
+    let srcs: &[&str] = &[
+        "mutable_rename.thrift"
+    ];
+    conf.run(srcs).expect("Failed while running thrift compilation");
 }

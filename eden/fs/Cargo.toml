@@ -30,7 +30,11 @@ members = [
   "cli_rs/stack-config",
   "cli_rs/stack-config-derive",
   "config",
+  "config/types",
   "inodes/overlay",
+  "inodes/overlay/types",
   "service",
   "service/thrift_streaming",
+  "service/thrift_streaming/types",
+  "service/types",
 ]
