@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::marker::PhantomData;
 use std::time::Duration;
 
 use anyhow::Error;
@@ -13,46 +14,110 @@ use context::CoreContext;
 use context::PerfCounters;
 use derived_data_constants::*;
 use futures_stats::FutureStats;
+use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::warn;
 use time_ext::DurationExt;
 
 use super::derive::DerivationOutcome;
+use super::util::DiscoveryStats;
 use super::DerivedDataManager;
 use crate::derivable::BonsaiDerivable;
 use crate::error::DerivationError;
 
+pub(super) struct DerivedDataScuba<Derivable> {
+    /// Scuba sample builder to log to the derived data table.
+    scuba: MononokeScubaSampleBuilder,
+
+    /// Description of what is being derived.
+    description: Option<String>,
+
+    phantom: PhantomData<Derivable>,
+}
+
 impl DerivedDataManager {
-    /// Log the start of derivation to both the request and derived data scuba
-    /// tables.
-    pub(super) fn log_derivation_start<Derivable>(
-        &self,
-        ctx: &CoreContext,
-        derived_data_scuba: &mut MononokeScubaSampleBuilder,
-        csid: ChangesetId,
-    ) where
+    pub(super) fn derived_data_scuba<Derivable>(&self) -> DerivedDataScuba<Derivable>
+    where
         Derivable: BonsaiDerivable,
     {
-        ctx.scuba().clone().log_with_msg(
-            DERIVATION_START,
-            Some(format!("{} {}", Derivable::NAME, csid)),
-        );
-        derived_data_scuba.log_with_msg(DERIVATION_START, None);
+        let mut scuba = self.inner.scuba.clone();
+        scuba.add("derived_data", Derivable::NAME);
+        DerivedDataScuba {
+            scuba,
+            description: None,
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
+    // Temporary during migration to `DerivedDataScuba`.
+    pub(super) fn unwrap(self) -> MononokeScubaSampleBuilder {
+        self.scuba
+    }
+
+    /// Description of this operation to log (derived data type and affected
+    /// changesets).
+    fn description(&self) -> String {
+        self.description
+            .clone()
+            .unwrap_or_else(|| Derivable::NAME.to_string())
+    }
+
+    /// Add a single changeset to the logger.
+    pub(super) fn add_changeset(&mut self, csid: ChangesetId) {
+        self.scuba.add("changeset", csid.to_string());
+        self.description = Some(format!("{} {csid}", Derivable::NAME));
+    }
+
+    /// Add a batch of changesets to the logger.
+    pub(super) fn add_changesets(&mut self, changesets: &[BonsaiChangeset]) {
+        let csids = changesets
+            .iter()
+            .map(|bcs| bcs.get_changeset_id().to_string())
+            .collect::<Vec<_>>();
+        match csids.as_slice() {
+            [] => {}
+            [csid] => self.description = Some(format!("{} {csid}", Derivable::NAME)),
+            [first, .., last] => {
+                self.description = Some(format!("{} {first}-{last}", Derivable::NAME))
+            }
+        };
+        self.scuba.add("changesets", csids);
+    }
+
+    /// Add values for the parameters controlling batched derivation to the
+    /// scuba logger.
+    pub(super) fn add_batch_parameters(&mut self, parallel: bool, gap_size: Option<usize>) {
+        self.scuba.add("parallel", parallel);
+        if let Some(gap_size) = gap_size {
+            self.scuba.add("gap_size", gap_size);
+        }
+    }
+
+    /// Add statistics from derivation discovery to the scuba logger.
+    pub(super) fn add_discovery_stats(&mut self, discovery_stats: &DiscoveryStats) {
+        discovery_stats.add_scuba_fields(&mut self.scuba);
+    }
+
+    /// Log the start of derivation to both the request and derived data scuba
+    /// tables.
+    pub(super) fn log_derivation_start(&mut self, ctx: &CoreContext) {
+        ctx.scuba()
+            .clone()
+            .log_with_msg(DERIVATION_START, Some(self.description()));
+        self.scuba.log_with_msg(DERIVATION_START, None);
     }
 
     /// Log the end of derivation to both the request and derived data scuba
     /// tables.
-    pub(super) fn log_derivation_end<Derivable>(
-        &self,
+    pub(super) fn log_derivation_end(
+        &mut self,
         ctx: &CoreContext,
-        derived_data_scuba: &mut MononokeScubaSampleBuilder,
-        csid: ChangesetId,
         stats: &FutureStats,
         error: Option<&Error>,
-    ) where
-        Derivable: BonsaiDerivable,
-    {
+    ) {
         let (tag, error_str) = match error {
             None => (DERIVATION_END, None),
             Some(error) => (FAILED_DERIVATION, Some(format!("{:#}", error))),
@@ -62,97 +127,78 @@ impl DerivedDataManager {
         ctx_scuba.add_future_stats(stats);
         if let Some(error_str) = &error_str {
             ctx_scuba.add("Derive error", error_str.as_str());
-        };
-        ctx_scuba.log_with_msg(tag, Some(format!("{} {}", Derivable::NAME, csid)));
+        }
+        ctx_scuba.log_with_msg(tag, Some(self.description()));
 
-        ctx.perf_counters().insert_perf_counters(derived_data_scuba);
-
-        derived_data_scuba.add_future_stats(stats);
-        derived_data_scuba.log_with_msg(tag, error_str);
+        ctx.perf_counters().insert_perf_counters(&mut self.scuba);
+        self.scuba.add_future_stats(stats);
+        self.scuba.log_with_msg(tag, error_str);
     }
 
     /// Log the start of batch derivation to both the request and derived data
     /// scuba tables.
-    pub(super) fn log_batch_derivation_start<Derivable>(
-        &self,
-        ctx: &CoreContext,
-        derived_data_scuba: &mut MononokeScubaSampleBuilder,
-        csid_range: Option<(ChangesetId, ChangesetId)>,
-    ) where
-        Derivable: BonsaiDerivable,
-    {
-        if let Some((first, last)) = csid_range {
-            ctx.scuba().clone().log_with_msg(
-                DERIVATION_START_BATCH,
-                Some(format!("{} {}-{}", Derivable::NAME, first, last)),
-            );
-            derived_data_scuba.log_with_msg(DERIVATION_START_BATCH, None);
-        }
+    pub(super) fn log_batch_derivation_start(&mut self, ctx: &CoreContext) {
+        ctx.scuba()
+            .clone()
+            .log_with_msg(DERIVATION_START_BATCH, Some(self.description()));
+        self.scuba.log_with_msg(DERIVATION_START_BATCH, None);
     }
 
     /// Log the end of derivation to both the request and derived data scuba
     /// tables.
-    pub(super) fn log_batch_derivation_end<Derivable>(
-        &self,
+    pub(super) fn log_batch_derivation_end(
+        &mut self,
         ctx: &CoreContext,
-        derived_data_scuba: &mut MononokeScubaSampleBuilder,
-        csid_range: Option<(ChangesetId, ChangesetId)>,
         stats: &FutureStats,
         error: Option<&Error>,
-    ) where
-        Derivable: BonsaiDerivable,
-    {
-        if let Some((first, last)) = csid_range {
-            let (tag, error_str) = match error {
-                None => (DERIVATION_END_BATCH, None),
-                Some(error) => (FAILED_DERIVATION_BATCH, Some(format!("{:#}", error))),
-            };
+    ) {
+        let (tag, error_str) = match error {
+            None => (DERIVATION_END_BATCH, None),
+            Some(error) => (FAILED_DERIVATION_BATCH, Some(format!("{:#}", error))),
+        };
 
-            let mut ctx_scuba = ctx.scuba().clone();
-            ctx_scuba.add_future_stats(stats);
-            if let Some(error_str) = &error_str {
-                ctx_scuba.add("Derive error", error_str.as_str());
-            };
-            ctx_scuba.log_with_msg(tag, Some(format!("{} {}-{}", Derivable::NAME, first, last)));
+        let mut ctx_scuba = ctx.scuba().clone();
+        ctx_scuba.add_future_stats(stats);
+        if let Some(error_str) = &error_str {
+            ctx_scuba.add("Derive error", error_str.as_str());
+        };
+        ctx_scuba.log_with_msg(tag, Some(self.description()));
 
-            ctx.perf_counters().insert_perf_counters(derived_data_scuba);
-
-            derived_data_scuba.add_future_stats(stats);
-            derived_data_scuba.log_with_msg(tag, error_str);
-        }
+        ctx.perf_counters().insert_perf_counters(&mut self.scuba);
+        self.scuba.add_future_stats(stats);
+        self.scuba.log_with_msg(tag, error_str);
     }
 
     /// Log the insertion of a new derived data mapping to the derived data
     /// scuba table.
-    pub(super) fn log_mapping_insertion<Derivable>(
-        &self,
+    pub(super) fn log_mapping_insertion(
+        &mut self,
         ctx: &CoreContext,
-        derived_data_scuba: &mut MononokeScubaSampleBuilder,
         value: Option<&Derivable>,
         stats: &FutureStats,
         error: Option<&Error>,
-    ) where
-        Derivable: BonsaiDerivable,
-    {
+    ) {
         let (tag, error_str) = match error {
             None => (INSERTED_MAPPING, None),
             Some(error) => (FAILED_INSERTING_MAPPING, Some(format!("{:#}", error))),
         };
 
-        ctx.perf_counters().insert_perf_counters(derived_data_scuba);
+        ctx.perf_counters().insert_perf_counters(&mut self.scuba);
 
         if let Some(value) = value {
             // Limit how much we log to scuba.
             let value = format!("{:1000?}", value);
-            derived_data_scuba.add("mapping_value", value);
+            self.scuba.add("mapping_value", value);
         }
 
-        derived_data_scuba
+        self.scuba
             .add_future_stats(stats)
             .log_with_msg(tag, error_str);
     }
+}
 
-    pub(super) fn should_log_slow_derivation(&self, duration: Duration) -> bool {
+impl DerivedDataManager {
+    fn should_log_slow_derivation(&self, duration: Duration) -> bool {
         let threshold = tunables::tunables()
             .derived_data_slow_derivation_threshold_secs()
             .unwrap_or_default();
@@ -163,6 +209,7 @@ impl DerivedDataManager {
         duration > Duration::from_secs(threshold)
     }
 
+    /// Log an instance of slow derivation to the request table.
     pub(super) fn log_slow_derivation<Derivable>(
         &self,
         ctx: &CoreContext,
@@ -173,6 +220,10 @@ impl DerivedDataManager {
     ) where
         Derivable: BonsaiDerivable,
     {
+        if !self.should_log_slow_derivation(stats.completion_time) {
+            return;
+        }
+
         let mut scuba = ctx.scuba().clone();
         pc.insert_perf_counters(&mut scuba);
 

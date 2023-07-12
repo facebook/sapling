@@ -153,7 +153,7 @@ impl DerivedDataManager {
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
         csid: ChangesetId,
-        discovery_stats: &Option<DiscoveryStats>,
+        discovery_stats: &DiscoveryStats,
     ) -> Result<(ChangesetId, Derivable)>
     where
         Derivable: BonsaiDerivable,
@@ -207,9 +207,10 @@ impl DerivedDataManager {
 
                 // The derivation process is additionally logged to the derived
                 // data scuba table.
-                let mut derived_data_scuba = self.derived_data_scuba::<Derivable>(discovery_stats);
-                derived_data_scuba.add("changeset", csid.to_string());
-                self.log_derivation_start::<Derivable>(&ctx, &mut derived_data_scuba, csid);
+                let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
+                derived_data_scuba.add_changeset(csid);
+                derived_data_scuba.add_discovery_stats(discovery_stats);
+                derived_data_scuba.log_derivation_start(&ctx);
 
                 let (derive_stats, derived) = async {
                     let bonsai = bonsai?;
@@ -219,13 +220,7 @@ impl DerivedDataManager {
                 .timed()
                 .await;
 
-                self.log_derivation_end::<Derivable>(
-                    &ctx,
-                    &mut derived_data_scuba,
-                    csid,
-                    &derive_stats,
-                    derived.as_ref().err(),
-                );
+                derived_data_scuba.log_derivation_end(&ctx, &derive_stats, derived.as_ref().err());
 
                 let derived = derived?;
 
@@ -237,9 +232,8 @@ impl DerivedDataManager {
                     .timed()
                     .await;
 
-                self.log_mapping_insertion(
+                derived_data_scuba.log_mapping_insertion(
                     &ctx,
-                    &mut derived_data_scuba,
                     Some(&derived),
                     &persist_stats,
                     persisted.as_ref().err(),
@@ -349,10 +343,10 @@ impl DerivedDataManager {
         .try_timed()
         .await?;
 
-        let stats = Some(DiscoveryStats {
+        let stats = DiscoveryStats {
             find_underived_completion_time: find_underived_stats.completion_time,
             commits_discovered: dag_traversal.len() as u32,
-        });
+        };
         let mut dag_traversal = TopoSortedDagTraversal::new(dag_traversal);
 
         let buffer_size = self.max_parallel_derivations();
@@ -522,7 +516,8 @@ impl DerivedDataManager {
                 tunables::tunables().by_repo_enable_remote_derivation(self.repo_name())
             {
                 if started.elapsed() >= fallback_timeout {
-                    self.derived_data_scuba::<Derivable>(&None)
+                    self.derived_data_scuba::<Derivable>()
+                        .unwrap()
                         .add("changeset", csid.to_string())
                         .log_with_msg(
                             "Derived data service failed",
@@ -543,7 +538,8 @@ impl DerivedDataManager {
                             return Ok(data);
                         }
                         // not yet derived, so request derivation
-                        self.derived_data_scuba::<Derivable>(&None)
+                        self.derived_data_scuba::<Derivable>()
+                            .unwrap()
                             .add("changeset", csid.to_string())
                             .log_with_msg("Requesting remote derivation", None);
                         client.derive_remotely(&request).await
@@ -560,7 +556,8 @@ impl DerivedDataManager {
                         }
                         // Derivation succeeded, return
                         (RequestStatus::SUCCESS, Some(data)) => {
-                            self.derived_data_scuba::<Derivable>(&None)
+                            self.derived_data_scuba::<Derivable>()
+                                .unwrap()
                                 .add("changeset", csid.to_string())
                                 .log_with_msg("Remote derivation finished", None);
                             return Ok(Derivable::from_thrift(data)?);
@@ -573,7 +570,8 @@ impl DerivedDataManager {
                         }
                         // should not happen, reported success but data wasn't derived
                         (RequestStatus::SUCCESS, None) => {
-                            self.derived_data_scuba::<Derivable>(&None)
+                            self.derived_data_scuba::<Derivable>()
+                                .unwrap()
                                 .add("changeset", csid.to_string())
                                 .log_with_msg(
                                     "Derived data service failed",
@@ -582,7 +580,8 @@ impl DerivedDataManager {
                             break;
                         }
                         (RequestStatus(n), _) => {
-                            self.derived_data_scuba::<Derivable>(&None)
+                            self.derived_data_scuba::<Derivable>()
+                                .unwrap()
                                 .add("changeset", csid.to_string())
                                 .log_with_msg(
                                     "Derived data service failed",
@@ -593,7 +592,8 @@ impl DerivedDataManager {
                     },
                     Err(e) => {
                         if attempt >= RETRY_ATTEMPTS_LIMIT {
-                            self.derived_data_scuba::<Derivable>(&None)
+                            self.derived_data_scuba::<Derivable>()
+                                .unwrap()
                                 .add("changeset", csid.to_string())
                                 .log_with_msg("Derived data service failed", format!("{:#}", e));
                             break;
@@ -646,10 +646,8 @@ impl DerivedDataManager {
                 self.repo_name().to_string(),
             )),
             (stats, res) = self.derive_underived(ctx, Arc::new(derivation_ctx), csid).timed().fuse() => {
-                if self.should_log_slow_derivation(stats.completion_time) {
-                    self.log_slow_derivation(ctx, csid, &stats, &pc, &res);
-                }
-            res.map(|r| r.derived)
+                self.log_slow_derivation(ctx, csid, &stats, &pc, &res);
+                res.map(|r| r.derived)
             }
         }
     }
@@ -813,23 +811,14 @@ impl DerivedDataManager {
             None
         };
 
-        let mut derived_data_scuba = self.derived_data_scuba::<Derivable>(&None);
-        derived_data_scuba.add(
-            "changesets",
-            bonsais
-                .iter()
-                .map(|bonsai| bonsai.get_changeset_id().to_string())
-                .collect::<Vec<_>>(),
-        );
-        self.log_batch_derivation_start::<Derivable>(ctx, &mut derived_data_scuba, csid_range);
+        let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
+        derived_data_scuba.add_changesets(&bonsais);
+        derived_data_scuba.log_batch_derivation_start(ctx);
         let (overall_stats, result) = async {
             let derivation_ctx_ref = &derivation_ctx;
             let (batch_stats, derived) = match batch_options {
                 BatchDeriveOptions::Parallel { gap_size } => {
-                    derived_data_scuba.add("parallel", true);
-                    if let Some(gap_size) = gap_size {
-                        derived_data_scuba.add("gap_size", gap_size);
-                    }
+                    derived_data_scuba.add_batch_parameters(true, gap_size);
                     let (stats, derived) =
                         Derivable::derive_batch(ctx, derivation_ctx_ref, bonsais, gap_size)
                             .try_timed()
@@ -849,7 +838,7 @@ impl DerivedDataManager {
                     (BatchDeriveStats::Parallel(stats.completion_time), derived)
                 }
                 BatchDeriveOptions::Serial => {
-                    derived_data_scuba.add("parallel", false);
+                    derived_data_scuba.add_batch_parameters(false, None);
                     let mut per_commit_stats = Vec::new();
                     let mut per_commit_derived = HashMap::new();
                     for bonsai in bonsais {
@@ -907,9 +896,8 @@ impl DerivedDataManager {
             .timed()
             .await;
 
-            self.log_mapping_insertion::<Derivable>(
+            derived_data_scuba.log_mapping_insertion(
                 ctx,
-                &mut derived_data_scuba,
                 None,
                 &persist_stats,
                 persisted.as_ref().err(),
@@ -926,13 +914,7 @@ impl DerivedDataManager {
         .timed()
         .await;
 
-        self.log_batch_derivation_end::<Derivable>(
-            ctx,
-            &mut derived_data_scuba,
-            csid_range,
-            &overall_stats,
-            result.as_ref().err(),
-        );
+        derived_data_scuba.log_batch_derivation_end(ctx, &overall_stats, result.as_ref().err());
 
         let batch_stats = result?;
 

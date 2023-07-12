@@ -23,7 +23,7 @@ pub struct DiscoveryStats {
 }
 
 impl DiscoveryStats {
-    fn add_scuba_fields(&self, builder: &mut MononokeScubaSampleBuilder) {
+    pub(crate) fn add_scuba_fields(&self, builder: &mut MononokeScubaSampleBuilder) {
         builder.add(
             "find_underived_completion_time_ms",
             self.find_underived_completion_time.as_millis() as u64,
@@ -44,23 +44,6 @@ impl DerivedDataManager {
                 .override_session_class(SessionClass::BackgroundUnlessTooSlow);
         }
         ctx
-    }
-
-    /// Construct a scuba sample builder for logging derivation of this
-    /// changeset to the derived data scuba table.
-    pub(super) fn derived_data_scuba<Derivable>(
-        &self,
-        discovery_stats: &Option<DiscoveryStats>,
-    ) -> MononokeScubaSampleBuilder
-    where
-        Derivable: BonsaiDerivable,
-    {
-        let mut scuba = self.inner.scuba.clone();
-        scuba.add("derived_data", Derivable::NAME);
-        if let Some(discovery_stats) = discovery_stats {
-            discovery_stats.add_scuba_fields(&mut scuba);
-        }
-        scuba
     }
 
     pub(super) fn check_enabled<Derivable>(&self) -> Result<(), DerivationError>
