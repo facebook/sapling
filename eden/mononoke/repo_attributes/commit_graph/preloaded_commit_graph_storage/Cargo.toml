@@ -20,7 +20,7 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 reloader = { version = "0.1.0", path = "../../../common/reloader" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../../../tunables" }
 vec1 = { version = "1", features = ["serde"] }
 
