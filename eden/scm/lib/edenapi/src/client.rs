@@ -452,7 +452,10 @@ impl Client {
         let mut url = self.build_url(paths::FILES2)?;
 
         if self.config().try_route_consistently && keys.len() == 1 {
-            url.set_query(Some(&format!("routing_file={}", keys.first().unwrap())));
+            url.set_query(Some(&format!(
+                "routing_file={}",
+                keys.first().unwrap().hgid
+            )));
             tracing::debug!("Requesting file with a routing key: {}", url);
         }
 
@@ -479,7 +482,10 @@ impl Client {
         let mut url = self.build_url(paths::TREES)?;
 
         if self.config().try_route_consistently && keys.len() == 1 {
-            url.set_query(Some(&format!("routing_tree={}", keys.first().unwrap())));
+            url.set_query(Some(&format!(
+                "routing_tree={}",
+                keys.first().unwrap().hgid
+            )));
             tracing::debug!("Requesting tree with a routing key: {}", url);
         }
 
@@ -509,7 +515,10 @@ impl Client {
 
         let mut url = self.build_url(paths::FILES2)?;
         if self.config().try_route_consistently && reqs.len() == 1 {
-            url.set_query(Some(&format!("routing_file={}", reqs.first().unwrap().key)));
+            url.set_query(Some(&format!(
+                "routing_file={}",
+                reqs.first().unwrap().key.hgid
+            )));
             tracing::debug!("Requesting file with a routing key: {}", url);
         }
 
