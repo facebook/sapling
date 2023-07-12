@@ -926,10 +926,8 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
     doingTakeover = true;
   }
   auto thriftRunningFuture = createThriftServer();
-#ifndef _WIN32
   // Start the PrivHelper client, using our main event base to drive its I/O
   serverState_->getPrivHelper()->attachEventBase(mainEventBase_);
-#endif
 
   startPeriodicTasks();
 
@@ -1315,7 +1313,6 @@ Future<Unit> EdenServer::performNormalShutdown() {
 }
 
 void EdenServer::shutdownPrivhelper() {
-#ifndef _WIN32
   // Explicitly stop the privhelper process so we can verify that it
   // exits normally.
   const auto privhelperExitCode = serverState_->getPrivHelper()->stop();
@@ -1328,7 +1325,6 @@ void EdenServer::shutdownPrivhelper() {
                 << privhelperExitCode;
     }
   }
-#endif
 }
 
 void EdenServer::addToMountPoints(std::shared_ptr<EdenMount> edenMount) {
