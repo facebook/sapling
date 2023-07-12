@@ -985,7 +985,7 @@ folly::SemiFuture<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
       });
 }
 
-folly::Future<folly::Unit> EdenMount::unmount() {
+folly::SemiFuture<folly::Unit> EdenMount::unmount() {
   return folly::makeFutureWith([this] {
     auto mountingUnmountingState = mountingUnmountingState_.wlock();
     if (mountingUnmountingState->fsChannelUnmountStarted()) {

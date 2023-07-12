@@ -260,14 +260,14 @@ class EdenServer : private TakeoverHandler {
   /**
    * Unmount an EdenMount.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> unmount(
+  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> unmount(
       AbsolutePathPiece mountPath);
 
   /**
    * Unmount all mount points maintained by this server, and wait for them to
    * be completely unmounted.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> unmountAll();
+  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> unmountAll();
 
   /**
    * Stop all mount points maintained by this server so that they can then be
@@ -582,7 +582,7 @@ class EdenServer : private TakeoverHandler {
       EdenMount* mountPoint,
       std::optional<TakeoverData::MountInfo> takeover);
 
-  FOLLY_NODISCARD folly::Future<folly::Unit> performNormalShutdown();
+  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> performNormalShutdown();
   void shutdownPrivhelper();
 
   // Performs a takeover initialization for the provided mount, loading the

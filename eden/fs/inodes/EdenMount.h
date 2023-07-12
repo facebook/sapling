@@ -363,7 +363,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * function immediately returns a Future which will complete at the same time
    * the original call to unmount() completes.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> unmount();
+  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> unmount();
 
   /**
    * Get the current state of this mount.

@@ -567,8 +567,8 @@ size_t EdenServer::ProgressManager::registerEntry(
   return progressIndex;
 }
 
-Future<Unit> EdenServer::unmountAll() {
-  std::vector<Future<Unit>> futures;
+folly::SemiFuture<Unit> EdenServer::unmountAll() {
+  std::vector<folly::SemiFuture<Unit>> futures;
   {
     const auto mountPoints = mountPoints_->wlock();
     for (auto& entry : *mountPoints) {
@@ -578,7 +578,7 @@ Future<Unit> EdenServer::unmountAll() {
       // is important to ensure that the EdenMount object cannot be destroyed
       // before EdenMount::unmount() completes.
       auto mount = info.edenMount;
-      auto future = mount->unmount().thenTry(
+      auto future = mount->unmount().defer(
           [mount, unmountFuture = info.unmountPromise.getFuture()](
               auto&& result) mutable {
             if (result.hasValue()) {
@@ -595,7 +595,7 @@ Future<Unit> EdenServer::unmountAll() {
   }
   // Use collectAll() rather than collect() to wait for all of the unmounts
   // to complete, and only check for errors once everything has finished.
-  return folly::collectAll(futures).toUnsafeFuture().thenValue(
+  return folly::collectAll(futures).deferValue(
       [](std::vector<folly::Try<Unit>> results) {
         for (const auto& result : results) {
           result.throwUnlessValue();
@@ -1253,7 +1253,8 @@ bool EdenServer::performCleanup() {
         DaemonStop{shutdownTimeInSeconds, takeover, shutdownSuccess});
   };
 
-  auto shutdownFuture = folly::Future<std::optional<TakeoverData>>::makeEmpty();
+  auto shutdownFuture =
+      folly::SemiFuture<std::optional<TakeoverData>>::makeEmpty();
   {
     auto state = runningState_.wlock();
     takeover = state->shutdownFuture.valid();
@@ -1264,8 +1265,8 @@ bool EdenServer::performCleanup() {
     state->state = RunState::SHUTTING_DOWN;
   }
   if (!takeover) {
-    shutdownFuture =
-        performNormalShutdown().thenValue([](auto&&) { return std::nullopt; });
+    shutdownFuture = performNormalShutdown().deferValue(
+        [](auto&&) -> std::optional<TakeoverData> { return std::nullopt; });
   }
 
   XCHECK(shutdownFuture.valid())
@@ -1273,7 +1274,8 @@ bool EdenServer::performCleanup() {
 
   // Drive the main event base until shutdownFuture completes
   XCHECK_EQ(mainEventBase_, folly::EventBaseManager::get()->getEventBase());
-  auto shutdownResult = std::move(shutdownFuture).getTryVia(mainEventBase_);
+  auto shutdownResult =
+      std::move(shutdownFuture).via(mainEventBase_).getTryVia(mainEventBase_);
 
 #ifndef _WIN32
   shutdownSuccess = !shutdownResult.hasException();
@@ -1303,7 +1305,7 @@ bool EdenServer::performCleanup() {
   return true;
 }
 
-Future<Unit> EdenServer::performNormalShutdown() {
+folly::SemiFuture<Unit> EdenServer::performNormalShutdown() {
 #ifndef _WIN32
   takeoverServer_.reset();
 #endif // !_WIN32
@@ -1667,15 +1669,15 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       });
 }
 
-Future<Unit> EdenServer::unmount(AbsolutePathPiece mountPath) {
-  return makeFutureWith([&] {
+folly::SemiFuture<Unit> EdenServer::unmount(AbsolutePathPiece mountPath) {
+  return folly::makeSemiFutureWith([&] {
            auto future = Future<Unit>::makeEmpty();
            auto mount = std::shared_ptr<EdenMount>{};
            {
              const auto mountPoints = mountPoints_->wlock();
              const auto it = mountPoints->find(mountPath);
              if (it == mountPoints->end()) {
-               return makeFuture<Unit>(std::out_of_range(
+               return folly::makeSemiFuture<Unit>(std::out_of_range(
                    fmt::format("no such mount point {}", mountPath)));
              }
              future = it->second.unmountPromise.getFuture();
@@ -1684,15 +1686,15 @@ Future<Unit> EdenServer::unmount(AbsolutePathPiece mountPath) {
 
            // We capture the mount shared_ptr in the lambda to keep the
            // EdenMount object alive during the call to unmount.
-           return mount->unmount().thenValue(
+           return mount->unmount().deferValue(
                [mount, f = std::move(future)](auto&&) mutable {
                  return std::move(f);
                });
          })
-      .thenError([path = mountPath.copy()](folly::exception_wrapper&& ew) {
+      .deferError([path = mountPath.copy()](folly::exception_wrapper&& ew) {
         XLOG(ERR) << "Failed to perform unmount for \"" << path
                   << "\": " << folly::exceptionStr(ew);
-        return makeFuture<Unit>(std::move(ew));
+        return folly::makeSemiFuture<Unit>(std::move(ew));
       });
 }
 
