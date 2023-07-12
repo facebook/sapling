@@ -512,20 +512,19 @@ impl DerivedDataManager {
                 derivation_type: DerivationType::derive_underived(DeriveUnderived {}),
             };
             let mut request_state = DerivationState::NotRequested;
+            let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
+            derived_data_scuba.add_changeset(csid);
             while let Some(true) =
                 tunables::tunables().by_repo_enable_remote_derivation(self.repo_name())
             {
                 if started.elapsed() >= fallback_timeout {
-                    self.derived_data_scuba::<Derivable>()
-                        .unwrap()
-                        .add("changeset", csid.to_string())
-                        .log_with_msg(
-                            "Derived data service failed",
-                            format!(
-                                "Fallback to local derivation after timeout {:?}",
-                                fallback_timeout
-                            ),
-                        );
+                    derived_data_scuba.log_remote_derivation_end(
+                        ctx,
+                        Some(format!(
+                            "Fallback to local derivation after timeout {:?}",
+                            fallback_timeout
+                        )),
+                    );
                     break;
                 }
 
@@ -538,10 +537,7 @@ impl DerivedDataManager {
                             return Ok(data);
                         }
                         // not yet derived, so request derivation
-                        self.derived_data_scuba::<Derivable>()
-                            .unwrap()
-                            .add("changeset", csid.to_string())
-                            .log_with_msg("Requesting remote derivation", None);
+                        derived_data_scuba.log_remote_derivation_start(ctx);
                         client.derive_remotely(&request).await
                     }
                     DerivationState::InProgress => client.poll(&request).await,
@@ -556,10 +552,7 @@ impl DerivedDataManager {
                         }
                         // Derivation succeeded, return
                         (RequestStatus::SUCCESS, Some(data)) => {
-                            self.derived_data_scuba::<Derivable>()
-                                .unwrap()
-                                .add("changeset", csid.to_string())
-                                .log_with_msg("Remote derivation finished", None);
+                            derived_data_scuba.log_remote_derivation_end(ctx, None);
                             return Ok(Derivable::from_thrift(data)?);
                         }
                         // Either data was already derived or wasn't requested
@@ -570,32 +563,24 @@ impl DerivedDataManager {
                         }
                         // should not happen, reported success but data wasn't derived
                         (RequestStatus::SUCCESS, None) => {
-                            self.derived_data_scuba::<Derivable>()
-                                .unwrap()
-                                .add("changeset", csid.to_string())
-                                .log_with_msg(
-                                    "Derived data service failed",
-                                    "Request succeeded but derived data is None".to_string(),
-                                );
+                            derived_data_scuba.log_remote_derivation_end(
+                                ctx,
+                                Some("Request succeeded but derived data is None".to_string()),
+                            );
                             break;
                         }
                         (RequestStatus(n), _) => {
-                            self.derived_data_scuba::<Derivable>()
-                                .unwrap()
-                                .add("changeset", csid.to_string())
-                                .log_with_msg(
-                                    "Derived data service failed",
-                                    format!("Response with unknown state: {n}"),
-                                );
+                            derived_data_scuba.log_remote_derivation_end(
+                                ctx,
+                                Some(format!("Response with unknown state: {n}")),
+                            );
                             break;
                         }
                     },
                     Err(e) => {
                         if attempt >= RETRY_ATTEMPTS_LIMIT {
-                            self.derived_data_scuba::<Derivable>()
-                                .unwrap()
-                                .add("changeset", csid.to_string())
-                                .log_with_msg("Derived data service failed", format!("{:#}", e));
+                            derived_data_scuba
+                                .log_remote_derivation_end(ctx, Some(format!("{:#}", e)));
                             break;
                         }
                         attempt += 1;

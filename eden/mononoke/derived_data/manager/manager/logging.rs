@@ -52,11 +52,6 @@ impl DerivedDataManager {
 }
 
 impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
-    // Temporary during migration to `DerivedDataScuba`.
-    pub(super) fn unwrap(self) -> MononokeScubaSampleBuilder {
-        self.scuba
-    }
-
     /// Description of this operation to log (derived data type and affected
     /// changesets).
     fn description(&self) -> String {
@@ -167,6 +162,23 @@ impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
         ctx.perf_counters().insert_perf_counters(&mut self.scuba);
         self.scuba.add_future_stats(stats);
         self.scuba.log_with_msg(tag, error_str);
+    }
+
+    /// Log the start of remote derivation to the derived data scuba table.
+    pub(super) fn log_remote_derivation_start(&mut self, _ctx: &CoreContext) {
+        self.scuba
+            .log_with_msg("Requesting remote derivation", None);
+    }
+
+    /// Log the end of remote derivation to the derived data scuba table.
+    pub(super) fn log_remote_derivation_end(&mut self, ctx: &CoreContext, error: Option<String>) {
+        let tag = match error {
+            None => "Remote derivation finished",
+            Some(_) => "Derived data service failed",
+        };
+
+        ctx.perf_counters().insert_perf_counters(&mut self.scuba);
+        self.scuba.log_with_msg(tag, error);
     }
 
     /// Log the insertion of a new derived data mapping to the derived data
