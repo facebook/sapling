@@ -269,7 +269,6 @@ Test that auto pull invalidates public() properly:
     DEBUG dag::protocol: resolve names [a81a182e51718edfeccb2f62846c28c7b83de6f1] remotely
     DEBUG dag::protocol: resolve names [428b6ef7fec737262ee83ba89e4fab5e3a07db44] remotely
     DEBUG dag::protocol: resolve ids [97] remotely
-    DEBUG dag::protocol: resolve ids (76) remotely
     D1
     D2
     D3
