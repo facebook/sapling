@@ -382,6 +382,7 @@ Import stack:
         $ hg st  # no "A c" or "! c"
         ? a
         ? b
+        >>> assert "c" not in _
         $ hg commit -m 'Add a, b' -A a b
 
         $ hg rm a
@@ -391,6 +392,7 @@ Import stack:
         {}
         $ hg st  # no "R a"
         M a
+        >>> assert "R a" not in _
 
       # Amend
       # Update Y to Y1, edit content of file Y to Y1, add new file P:
