@@ -1014,8 +1014,8 @@ folly::Future<folly::Unit> EdenMount::unmount() {
           }
 #else
           // TODO: teach windows to unmount NFS
-          if (getNfsdChannel() != nullptr) {
-            return serverState_->getPrivHelper()->nfsUnmount(getPath().view());
+          if (auto* nfsChannel = getNfsdChannel()) {
+            return nfsChannel->unmount();
           } else if (auto* fuseChannel = getFuseChannel()) {
             // TODO: Is it safe to call FuseChannel::unmount if the FuseChannel
             // is in the process of starting? Or can we assume that

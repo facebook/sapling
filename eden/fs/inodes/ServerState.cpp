@@ -60,6 +60,7 @@ ServerState::ServerState(
       nfs_{
           initialConfig.enableNfsServer.getValue()
               ? std::make_shared<NfsServer>(
+                    privHelper_.get(),
                     mainEventBase,
                     initialConfig.numNfsThreads.getValue(),
                     initialConfig.maxNfsInflightRequests.getValue(),

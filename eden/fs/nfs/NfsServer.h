@@ -22,6 +22,7 @@ namespace facebook::eden {
 
 class Notifier;
 class ProcessNameCache;
+class PrivHelper;
 
 class NfsServer {
  public:
@@ -38,6 +39,7 @@ class NfsServer {
    * of its own mount point which greatly simplifies it.
    */
   NfsServer(
+      PrivHelper* privHelper,
       folly::EventBase* evb,
       uint64_t numServicingThreads,
       uint64_t maxInflightRequests,
@@ -111,6 +113,7 @@ class NfsServer {
   NfsServer& operator=(NfsServer&&) = delete;
 
  private:
+  PrivHelper* const privHelper_;
   folly::EventBase* evb_;
   std::shared_ptr<folly::Executor> threadPool_;
   std::shared_ptr<Rpcbindd> rpcbindd_;

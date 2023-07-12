@@ -24,6 +24,7 @@ class Executor;
 namespace facebook::eden {
 
 class Notifier;
+class PrivHelper;
 class ProcessNameCache;
 class FsEventLogger;
 class StructuredLogger;
@@ -126,6 +127,8 @@ class Nfsd3 final : public FsChannel {
    * is not necessary for a properly behaving EdenFS.
    */
   Nfsd3(
+      PrivHelper* privHelper,
+      AbsolutePath mountPath,
       folly::EventBase* evb,
       std::shared_ptr<folly::Executor> threadPool,
       std::unique_ptr<NfsDispatcher> dispatcher,
@@ -149,6 +152,16 @@ class Nfsd3 final : public FsChannel {
 
   void initialize(folly::SocketAddress addr, bool registerWithRpcbind);
   void initialize(folly::File connectedSocket);
+
+  /**
+   * Uses the configured PrivHelper to unmount this NFS mount from the
+   * filesystem.
+   *
+   * That causes Nfsd3's RpcServer to receive EOF from the NFS socket, which
+   * shuts down the Nfsd3. The future returned by initialize() will be fulfilled
+   * with a non-takeover StopData.
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit> unmount();
 
   /**
    * Trigger an invalidation for the given path.
@@ -271,6 +284,9 @@ class Nfsd3 final : public FsChannel {
    * when the privhelper or a user runs umount.
    */
   ~Nfsd3();
+
+  PrivHelper* const privHelper_;
+  AbsolutePath mountPath_;
 
   folly::Synchronized<TelemetryState> telemetryState_;
   std::vector<TraceSubscriptionHandle<NfsTraceEvent>> traceSubscriptionHandles_;

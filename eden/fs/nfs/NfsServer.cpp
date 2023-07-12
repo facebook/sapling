@@ -14,12 +14,14 @@
 namespace facebook::eden {
 
 NfsServer::NfsServer(
+    PrivHelper* privHelper,
     folly::EventBase* evb,
     uint64_t numServicingThreads,
     uint64_t maxInflightRequests,
     bool shouldRunOurOwnRpcbindServer,
     const std::shared_ptr<StructuredLogger>& structuredLogger)
-    : evb_(evb),
+    : privHelper_{privHelper},
+      evb_(evb),
       threadPool_(std::make_shared<folly::CPUThreadPoolExecutor>(
           numServicingThreads,
           std::make_unique<EdenTaskQueue>(maxInflightRequests),
@@ -73,6 +75,8 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
     uint32_t iosize,
     size_t traceBusCapacity) {
   auto nfsd = std::unique_ptr<Nfsd3, FsChannelDeleter>{new Nfsd3{
+      privHelper_,
+      AbsolutePath{path},
       evb_,
       threadPool_,
       std::move(dispatcher),
