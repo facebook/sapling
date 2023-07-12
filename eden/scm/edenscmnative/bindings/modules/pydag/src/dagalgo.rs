@@ -198,6 +198,11 @@ py_class!(pub class dagalgo |py| {
         let segments = id_dag.id_set_to_id_segments_with_max_level(&id_set, maxlevel).map_pyerr(py)?;
         Ok(Serde(segments))
     }
+
+    /// Obtain the `VerLink` of the dag.
+    def version(&self) -> PyResult<crate::VerLink> {
+        crate::VerLink::create_instance(py, self.dag(py).dag_version().clone())
+    }
 });
 
 impl dagalgo {
