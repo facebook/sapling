@@ -51,6 +51,9 @@ describe('WatchForChanges', () => {
     watch = new WatchForChanges(mockInfo, mockLogger, focusTracker, onChange);
     // pretend watchman is not running for most tests
     (watch.watchman.status as string) = 'errored';
+    // change is triggered on first subscription
+    expect(onChange).toHaveBeenCalledTimes(1);
+    onChange.mockClear();
   });
 
   afterEach(() => {
@@ -206,6 +209,8 @@ describe('WatchForChanges', () => {
       unwatch: jest.fn(),
     } as unknown as Watchman;
     watch = new WatchForChanges(mockInfo, mockLogger, focusTracker, onChange, mockWatchman);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    onChange.mockClear();
 
     // wait an actual async tick so mock subscriptions are set up
     const setImmediate = jest.requireActual('timers').setImmediate;

@@ -8,7 +8,6 @@
 import type {ServerSideTracker} from '../analytics/serverSideTracker';
 import type {FullTrackData} from '../analytics/types';
 import type {ServerPlatform} from '../serverPlatform';
-import type {ValidatedRepoInfo} from 'isl/src/types';
 
 import {Repository} from '../Repository';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
@@ -64,13 +63,18 @@ describe('track', () => {
   it('allows setting repository', () => {
     const repo = new Repository(
       {
+        type: 'success',
         codeReviewSystem: {
           type: 'github',
           repo: 'sapling',
           owner: 'facebook',
           hostname: 'github.com',
         },
-      } as ValidatedRepoInfo,
+        command: 'sl',
+        repoRoot: '/path',
+        dotdir: '/path/.sl',
+        pullRequestDomain: undefined,
+      },
       mockLogger,
     );
     tracker.context.setRepo(repo);

@@ -44,6 +44,8 @@ export class WatchForChanges {
     this.setupWatchmanSubscriptions();
     this.setupPolling();
     this.pageFocusTracker.onChange(this.poll.bind(this));
+    // poll right away so we get data immediately, without waiting for timeout on startup
+    this.poll('force');
   }
 
   private timeout: NodeJS.Timeout | undefined;
