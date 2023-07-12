@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+#![feature(error_generic_member_access)]
+#![feature(provide_any)]
+
 pub mod mode;
 
 mod thrift {
@@ -23,8 +26,10 @@ mod tree;
 pub use object::ObjectKind;
 
 pub use crate::blob::BlobHandle;
+pub use crate::errors::GitError;
 pub use crate::nodehash::GitSha1Prefix;
 pub use crate::nodehash::GitSha1sResolvedFromPrefix;
+pub use crate::store::upload_git_object;
 pub use crate::tree::Tree;
 pub use crate::tree::TreeBuilder;
 pub use crate::tree::TreeHandle;

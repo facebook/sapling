@@ -16,8 +16,8 @@ use filestore::Sha1IncrementalHasher;
 use git_hash::ObjectId;
 use git_object::Tag;
 use git_object::WriteTo;
+use git_types::GitError;
 
-use crate::repo::git::GitError;
 use crate::CoreContext;
 use crate::RepoContext;
 

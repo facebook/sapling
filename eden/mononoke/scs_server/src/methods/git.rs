@@ -7,8 +7,8 @@
 
 use bytes::Bytes;
 use context::CoreContext;
+use git_types::GitError;
 use mononoke_api::errors::MononokeError;
-use mononoke_api::repo::git::GitError;
 use mononoke_api::ChangesetId;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTag;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTagTarget;

@@ -8,8 +8,8 @@
 use std::backtrace::BacktraceStatus;
 use std::error::Error as StdError;
 
+use git_types::GitError;
 use megarepo_error::MegarepoError;
-use mononoke_api::repo::git::GitError;
 use mononoke_api::MononokeError;
 use source_control as thrift;
 use source_control::services::source_control_service as service;
