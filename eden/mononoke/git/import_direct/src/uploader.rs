@@ -214,7 +214,7 @@ where
         oid: ObjectId,
         git_bytes: Bytes,
     ) -> Result<(), Error> {
-        upload_git_object(ctx, &*self.inner, &oid, git_bytes.to_vec())
+        upload_git_object(ctx, self.inner.repo_blobstore(), &oid, git_bytes.to_vec())
             .await
             .map_err(|e| {
                 anyhow::anyhow!(

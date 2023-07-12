@@ -24,6 +24,7 @@ use mononoke_types::hash::GitSha1;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::DateTime as MononokeDateTime;
+use repo_blobstore::RepoBlobstoreRef;
 use thiserror::Error;
 
 use crate::changeset::ChangesetContext;
@@ -120,7 +121,13 @@ impl RepoContext {
         git_hash: &git_hash::oid,
         raw_content: Vec<u8>,
     ) -> anyhow::Result<(), GitError> {
-        upload_git_object(&self.ctx, self.inner_repo(), git_hash, raw_content).await
+        upload_git_object(
+            &self.ctx,
+            self.inner_repo().repo_blobstore(),
+            git_hash,
+            raw_content,
+        )
+        .await
     }
 
     /// Create Mononoke counterpart of Git tree object
@@ -156,12 +163,15 @@ impl RepoContext {
 }
 
 /// Free function for uploading serialized git objects
-pub async fn upload_git_object(
+pub async fn upload_git_object<B>(
     ctx: &CoreContext,
-    repo: &impl repo_blobstore::RepoBlobstoreRef,
+    blobstore: &B,
     git_hash: &git_hash::oid,
     raw_content: Vec<u8>,
-) -> anyhow::Result<(), GitError> {
+) -> anyhow::Result<(), GitError>
+where
+    B: Blobstore + Clone,
+{
     // Check if the provided Sha1 hash (i.e. ObjectId) of the bytes actually corresponds to the hash of the bytes
     let bytes = bytes::Bytes::from(raw_content);
     let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), &bytes);
@@ -189,7 +199,7 @@ pub async fn upload_git_object(
     // The bytes are valid, upload to blobstore with the key:
     // git_object_{hex-value-of-hash}
     let blobstore_key = format!("{}{}{}", GIT_OBJECT_PREFIX, SEPARATOR, git_hash.to_hex());
-    repo.repo_blobstore()
+    blobstore
         .put(ctx, blobstore_key, blobstore_bytes)
         .await
         .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))

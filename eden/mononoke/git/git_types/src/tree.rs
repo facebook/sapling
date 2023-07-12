@@ -39,7 +39,7 @@ impl TreeHandle {
     }
 
     pub fn blobstore_key(&self) -> String {
-        format!("git.tree.{}", self.oid)
+        format!("git_tree.{}", self.oid)
     }
 }
 
