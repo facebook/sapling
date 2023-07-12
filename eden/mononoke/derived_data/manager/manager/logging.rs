@@ -165,7 +165,10 @@ impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
     }
 
     /// Log the start of remote derivation to the derived data scuba table.
-    pub(super) fn log_remote_derivation_start(&mut self, _ctx: &CoreContext) {
+    pub(super) fn log_remote_derivation_start(&mut self, ctx: &CoreContext) {
+        ctx.scuba()
+            .clone()
+            .log_with_msg("Requesting remote derivation", Some(self.description()));
         self.scuba
             .log_with_msg("Requesting remote derivation", None);
     }
@@ -176,6 +179,12 @@ impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
             None => "Remote derivation finished",
             Some(_) => "Derived data service failed",
         };
+
+        let mut ctx_scuba = ctx.scuba().clone();
+        if let Some(error) = error.as_deref() {
+            ctx_scuba.add("Derive error", error);
+        };
+        ctx_scuba.log_with_msg(tag, Some(self.description()));
 
         ctx.perf_counters().insert_perf_counters(&mut self.scuba);
         self.scuba.log_with_msg(tag, error);
