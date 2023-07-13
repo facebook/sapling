@@ -8,10 +8,12 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use dag::Vertex;
+use serde::Serialize;
 use types::RepoPathBuf;
 
 /// Tracing Result of CopyTrace's trace_XXX method.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(tag = "t", content = "c")]
 pub enum TraceResult {
     /// Found the renamed-to path of the given source file, return it.
     Renamed(RepoPathBuf),

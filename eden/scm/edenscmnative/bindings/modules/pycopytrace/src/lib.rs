@@ -89,8 +89,10 @@ py_class!(pub class dagcopytrace |py| {
         Self::create_instance(py, Arc::new(copytrace))
     }
 
-    /// trace_rename(src: node, dst: node, src_path: str) -> Optional[str].
-    /// Find the renamed path in `dst` that is from the `src_path` in `src` commit.
+    /// trace_rename(src: node, dst: node, src_path: str) -> Optional[dst_path]
+    ///
+    /// Find the renamed-to path of `src_path` from `src` commit to `dst` commit.
+    /// If not found, return None.
     def trace_rename(
         &self,
         src: PyBytes,
@@ -105,5 +107,22 @@ py_class!(pub class dagcopytrace |py| {
             TraceResult::Renamed(path) => Ok(Some(path.to_string())),
             _ => Ok(None),
         }
+    }
+
+    /// trace_rename(src: node, dst: node, src_path: str) -> TraceResult
+    ///
+    /// Find the renamed-to path of `src_path` from `src` commit to `dst` commit.
+    /// If not found, return the commit that added/deleted the given source file.
+    def trace_rename_ex(
+        &self,
+        src: PyBytes,
+        dst: PyBytes,
+        src_path: PyPathBuf,
+    ) -> PyResult<Serde<TraceResult>> {
+        let src = Vertex::copy_from(src.data(py));
+        let dst = Vertex::copy_from(dst.data(py));
+        let src_path = src_path.to_repo_path_buf().map_pyerr(py)?;
+        let trace_result = block_on(self.inner(py).trace_rename(src, dst, src_path)).map_pyerr(py)?;
+        Ok(Serde(trace_result))
     }
 });
