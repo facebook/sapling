@@ -1334,7 +1334,7 @@ ImmediateFuture<folly::Unit> EdenMount::waitForPendingWrites() const {
 folly::Future<CheckoutResult> EdenMount::checkout(
     TreeInodePtr rootInode,
     const RootId& snapshotHash,
-    std::optional<pid_t> clientPid,
+    OptionalProcessId clientPid,
     folly::StringPiece thriftMethodCaller,
     CheckoutMode checkoutMode) {
   const folly::stop_watch<> stopWatch;

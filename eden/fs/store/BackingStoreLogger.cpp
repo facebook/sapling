@@ -37,7 +37,7 @@ void BackingStoreLogger::logImport(
 
   std::optional<std::string> cmdline;
   if (pid) {
-    cmdline = processNameCache_->getProcessName(pid.value());
+    cmdline = processNameCache_->getProcessName(pid.value().get());
   }
 
   std::string cause_string = "<invalid>";

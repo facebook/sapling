@@ -17,14 +17,14 @@ namespace facebook::eden {
 
 class PrjfsObjectFetchContext : public FsObjectFetchContext {
  public:
-  PrjfsObjectFetchContext(pid_t pid) : pid_{pid} {}
+  PrjfsObjectFetchContext(ProcessId pid) : pid_{pid} {}
 
-  std::optional<pid_t> getClientPid() const override {
+  OptionalProcessId getClientPid() const override {
     return pid_;
   }
 
  private:
-  pid_t pid_;
+  ProcessId pid_;
 };
 
 class PrjfsRequestContext : public RequestContext {
@@ -40,7 +40,7 @@ class PrjfsRequestContext : public RequestContext {
       : RequestContext(
             channel->getProcessAccessLog(),
             makeRefPtr<PrjfsObjectFetchContext>(
-                static_cast<pid_t>(prjfsData.TriggeringProcessId))),
+                ProcessId{prjfsData.TriggeringProcessId})),
         channel_(std::move(channel)),
         commandId_(prjfsData.CommandId) {}
 

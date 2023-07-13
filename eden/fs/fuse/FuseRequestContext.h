@@ -11,6 +11,7 @@
 #include <atomic>
 #include <utility>
 
+#include "eden/common/os/ProcessId.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/RequestContext.h"
 #include "eden/fs/store/ImportPriority.h"
@@ -23,10 +24,10 @@ namespace facebook::eden {
 
 class FuseObjectFetchContext : public FsObjectFetchContext {
  public:
-  FuseObjectFetchContext(pid_t pid, uint32_t opcode)
+  FuseObjectFetchContext(ProcessId pid, uint32_t opcode)
       : pid_{pid}, opcode_{opcode} {}
 
-  std::optional<pid_t> getClientPid() const override {
+  OptionalProcessId getClientPid() const override {
     return pid_;
   }
 
@@ -35,7 +36,7 @@ class FuseObjectFetchContext : public FsObjectFetchContext {
   }
 
  private:
-  pid_t pid_;
+  ProcessId pid_;
   uint32_t opcode_;
 };
 

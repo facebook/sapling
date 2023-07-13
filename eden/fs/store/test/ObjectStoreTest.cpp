@@ -307,9 +307,9 @@ TEST_F(ObjectStoreTest, get_size_and_sha1_and_blake3_only_imports_blob_once) {
 
 class PidFetchContext final : public ObjectFetchContext {
  public:
-  PidFetchContext(pid_t pid) : ObjectFetchContext{}, pid_{pid} {}
+  explicit PidFetchContext(ProcessId pid) : ObjectFetchContext{}, pid_{pid} {}
 
-  std::optional<pid_t> getClientPid() const override {
+  OptionalProcessId getClientPid() const override {
     return pid_;
   }
 
@@ -323,13 +323,13 @@ class PidFetchContext final : public ObjectFetchContext {
   }
 
  private:
-  pid_t pid_;
+  ProcessId pid_;
 };
 
 TEST_F(ObjectStoreTest, test_process_access_counts) {
-  pid_t pid0{10000};
+  auto pid0 = ProcessId(10000);
   ObjectFetchContextPtr pidContext0 = makeRefPtr<PidFetchContext>(pid0);
-  pid_t pid1{10001};
+  auto pid1 = ProcessId(10001);
   ObjectFetchContextPtr pidContext1 = makeRefPtr<PidFetchContext>(pid1);
 
   // first fetch increments fetch count for pid0

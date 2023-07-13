@@ -709,7 +709,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   folly::Future<CheckoutResult> checkout(
       TreeInodePtr rootInode,
       const RootId& snapshotHash,
-      std::optional<pid_t> clientPid,
+      OptionalProcessId clientPid,
       folly::StringPiece thriftMethodCaller,
       CheckoutMode checkoutMode = CheckoutMode::NORMAL);
 

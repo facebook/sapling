@@ -9,6 +9,7 @@
 
 #include <fb303/BaseService.h>
 #include <optional>
+#include "eden/common/os/ProcessId.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/inodes/EdenMountHandle.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
@@ -56,18 +57,18 @@ struct ThriftRequestTraceEvent : TraceEventBase {
   static ThriftRequestTraceEvent start(
       uint64_t requestId,
       folly::StringPiece method,
-      std::optional<pid_t> clientPid);
+      OptionalProcessId clientPid);
 
   static ThriftRequestTraceEvent finish(
       uint64_t requestId,
       folly::StringPiece method,
-      std::optional<pid_t> clientPid);
+      OptionalProcessId clientPid);
 
   ThriftRequestTraceEvent(
       Type type,
       uint64_t requestId,
       folly::StringPiece method,
-      std::optional<pid_t> clientPid)
+      OptionalProcessId clientPid)
       : type(type),
         requestId(requestId),
         method(method),
@@ -77,7 +78,7 @@ struct ThriftRequestTraceEvent : TraceEventBase {
   uint64_t requestId;
   // Safe to use StringPiece because method names are string literals.
   folly::StringPiece method;
-  std::optional<pid_t> clientPid;
+  OptionalProcessId clientPid;
 };
 
 /*
@@ -411,7 +412,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
    * This must be run from a Thrift worker thread, because the calling pid is
    * stored in a thread local variable.
    */
-  std::optional<pid_t> getAndRegisterClientPid();
+  OptionalProcessId getAndRegisterClientPid();
 
  private:
   EdenMountHandle lookupMount(const MountId& mountId);

@@ -92,8 +92,9 @@ void ObjectStore::updateProcessFetch(
   }
 }
 
-void ObjectStore::sendFetchHeavyEvent(pid_t pid, uint64_t fetch_count) const {
-  auto processName = processNameCache_->getProcessName(pid);
+void ObjectStore::sendFetchHeavyEvent(ProcessId pid, uint64_t fetch_count)
+    const {
+  auto processName = processNameCache_->getProcessName(pid.get());
   if (processName) {
     std::replace(processName->begin(), processName->end(), '\0', ' ');
     XLOG(WARN) << "Heavy fetches (" << fetch_count << ") from process "
@@ -108,8 +109,7 @@ void ObjectStore::sendFetchHeavyEvent(pid_t pid, uint64_t fetch_count) const {
 
 void ObjectStore::deprioritizeWhenFetchHeavy(
     ObjectFetchContext& context) const {
-  auto pid = context.getClientPid();
-  if (pid.has_value()) {
+  if (auto pid = context.getClientPid()) {
     auto fetch_count = pidFetchCounts_->getCountByPid(pid.value());
     auto threshold = edenConfig_->fetchHeavyThreshold.getValue();
     if (threshold && fetch_count >= threshold) {

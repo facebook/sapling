@@ -11,7 +11,7 @@
 namespace facebook::eden {
 
 StatsFetchContext::StatsFetchContext(
-    std::optional<pid_t> pid,
+    OptionalProcessId pid,
     Cause cause,
     std::string_view causeDetail,
     const std::unordered_map<std::string, std::string>* requestInfo)
@@ -129,7 +129,7 @@ FetchStatistics StatsFetchContext::computeStatistics() const {
   return result;
 }
 
-std::optional<pid_t> StatsFetchContext::getClientPid() const {
+OptionalProcessId StatsFetchContext::getClientPid() const {
   return clientPid_;
 }
 

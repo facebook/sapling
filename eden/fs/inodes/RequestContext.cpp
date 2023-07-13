@@ -35,20 +35,23 @@ RequestContext::~RequestContext() noexcept {
       switch (fsObjectFetchContext_->getEdenTopStats().getFetchOrigin()) {
         case ObjectFetchContext::Origin::FromMemoryCache:
           pal_.recordAccess(
-              *pid, ProcessAccessLog::AccessType::FsChannelMemoryCacheImport);
+              pid.value().get(),
+              ProcessAccessLog::AccessType::FsChannelMemoryCacheImport);
           break;
         case ObjectFetchContext::Origin::FromDiskCache:
           pal_.recordAccess(
-              *pid, ProcessAccessLog::AccessType::FsChannelDiskCacheImport);
+              pid.value().get(),
+              ProcessAccessLog::AccessType::FsChannelDiskCacheImport);
           break;
         case ObjectFetchContext::Origin::FromNetworkFetch:
           pal_.recordAccess(
-              *pid, ProcessAccessLog::AccessType::FsChannelBackingStoreImport);
+              pid.value().get(),
+              ProcessAccessLog::AccessType::FsChannelBackingStoreImport);
           break;
         default:
           break;
       }
-      pal_.recordDuration(*pid, diff_ns);
+      pal_.recordDuration(pid.value().get(), diff_ns);
     }
   } catch (const std::exception& ex) {
     XLOG(WARN) << "Failed to complete request: " << folly::exceptionStr(ex);

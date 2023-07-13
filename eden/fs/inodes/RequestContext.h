@@ -65,8 +65,8 @@ class FsObjectFetchContext : public ObjectFetchContext {
     ImportPriority prev = priority_.load(std::memory_order_acquire);
     priority_.compare_exchange_strong(
         prev, prev.adjusted(-delta), std::memory_order_acq_rel);
-    if (getClientPid().has_value()) {
-      XLOG(DBG7) << "priority for " << getClientPid().value()
+    if (auto client_pid = getClientPid()) {
+      XLOG(DBG7) << "priority for " << client_pid.value()
                  << " has changed to: " << priority_.load().value();
     }
   }

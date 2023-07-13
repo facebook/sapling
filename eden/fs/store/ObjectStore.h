@@ -38,9 +38,9 @@ enum class ObjectComparison : uint8_t;
 using EdenStatsPtr = RefPtr<EdenStats>;
 
 struct PidFetchCounts {
-  folly::Synchronized<std::unordered_map<pid_t, uint64_t>> map_;
+  folly::Synchronized<std::unordered_map<ProcessId, uint64_t>> map_;
 
-  uint64_t recordProcessFetch(pid_t pid) {
+  uint64_t recordProcessFetch(ProcessId pid) {
     auto map_lock = map_.wlock();
     auto fetch_count = (*map_lock)[pid]++;
     return fetch_count;
@@ -50,7 +50,7 @@ struct PidFetchCounts {
     map_.wlock()->clear();
   }
 
-  uint64_t getCountByPid(pid_t pid) {
+  uint64_t getCountByPid(ProcessId pid) {
     auto rl = map_.rlock();
     auto fetch_count = rl->find(pid);
     if (fetch_count != rl->end()) {
@@ -99,7 +99,7 @@ class ObjectStore : public IObjectStore,
    * send a FetchHeavy log event to Scuba. If either processNameCache_
    * or structuredLogger_ is nullptr, this function does nothing.
    */
-  void sendFetchHeavyEvent(pid_t pid, uint64_t fetch_count) const;
+  void sendFetchHeavyEvent(ProcessId pid, uint64_t fetch_count) const;
 
   /**
    * Check fetch count of the process using this fetchContext before using
@@ -275,7 +275,8 @@ class ObjectStore : public IObjectStore,
    */
   bool areObjectsKnownIdentical(const ObjectId& one, const ObjectId& two) const;
 
-  folly::Synchronized<std::unordered_map<pid_t, uint64_t>>& getPidFetches() {
+  folly::Synchronized<std::unordered_map<ProcessId, uint64_t>>&
+  getPidFetches() {
     return pidFetchCounts_->map_;
   }
 

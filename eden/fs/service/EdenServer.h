@@ -8,6 +8,7 @@
 #pragma once
 
 #include <chrono>
+#include <condition_variable>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -319,7 +320,7 @@ class EdenServer : private TakeoverHandler {
       AbsolutePathPiece mountPath,
       std::string& rootHash,
       std::optional<folly::StringPiece> rootHgManifest,
-      std::optional<pid_t> clientPid,
+      OptionalProcessId clientPid,
       folly::StringPiece callerName,
       CheckoutMode checkoutMode);
 

@@ -1804,7 +1804,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
     AbsolutePathPiece mountPath,
     std::string& rootHash,
     std::optional<folly::StringPiece> rootHgManifest,
-    std::optional<pid_t> clientPid,
+    OptionalProcessId clientPid,
     StringPiece callerName,
     CheckoutMode checkoutMode) {
   auto mountHandle = getMount(mountPath);

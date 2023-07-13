@@ -44,7 +44,7 @@ class StatsFetchContext : public ObjectFetchContext {
  public:
   StatsFetchContext() = default;
   StatsFetchContext(
-      std::optional<pid_t> pid,
+      OptionalProcessId pid,
       Cause cause,
       std::string_view causeDetail,
       const std::unordered_map<std::string, std::string>* requestInfo);
@@ -57,7 +57,7 @@ class StatsFetchContext : public ObjectFetchContext {
 
   void didFetch(ObjectType type, const ObjectId& id, Origin origin) override;
 
-  std::optional<pid_t> getClientPid() const override;
+  OptionalProcessId getClientPid() const override;
 
   Cause getCause() const override;
 
@@ -81,7 +81,7 @@ class StatsFetchContext : public ObjectFetchContext {
  private:
   std::atomic<uint64_t> counts_[ObjectFetchContext::kObjectTypeEnumMax]
                                [ObjectFetchContext::kOriginEnumMax] = {};
-  std::optional<pid_t> clientPid_ = std::nullopt;
+  OptionalProcessId clientPid_;
   Cause cause_ = Cause::Unknown;
   std::string_view causeDetail_;
   std::unordered_map<std::string, std::string> requestInfo_;

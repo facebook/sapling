@@ -25,7 +25,7 @@ class LoggingFetchContext : public ObjectFetchContext {
     requests.emplace_back(type, hash, origin);
   }
 
-  std::optional<pid_t> getClientPid() const override {
+  OptionalProcessId getClientPid() const override {
     return std::nullopt;
   }
 

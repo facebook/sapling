@@ -42,7 +42,7 @@ class CheckoutContext {
   CheckoutContext(
       EdenMount* mount,
       CheckoutMode checkoutMode,
-      std::optional<pid_t> clientPid,
+      OptionalProcessId clientPid,
       folly::StringPiece thriftMethodName,
       const std::unordered_map<std::string, std::string>* requestInfo =
           nullptr);

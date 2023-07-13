@@ -12,6 +12,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "eden/common/os/ProcessId.h"
+
 namespace facebook::eden {
 
 class DynamicEvent {
@@ -92,12 +94,12 @@ struct FetchHeavy {
   static constexpr const char* type = "fetch_heavy";
 
   std::string client_cmdline;
-  pid_t pid;
+  ProcessId pid;
   uint64_t fetch_count;
 
   void populate(DynamicEvent& event) const {
     event.addString("client_cmdline", client_cmdline);
-    event.addInt("client_pid", pid);
+    event.addInt("client_pid", pid.get());
     event.addInt("fetch_count", fetch_count);
   }
 };
@@ -246,7 +248,7 @@ struct ServerDataFetch {
   static constexpr const char* type = "server_data_fetch";
 
   std::string cause;
-  std::optional<pid_t> client_pid;
+  OptionalProcessId client_pid;
   std::optional<std::string> client_cmdline;
   std::string fetched_path;
   std::string fetched_object_type;
@@ -254,7 +256,7 @@ struct ServerDataFetch {
   void populate(DynamicEvent& event) const {
     event.addString("interface", cause);
     if (client_pid) {
-      event.addInt("client_pid", client_pid.value());
+      event.addInt("client_pid", client_pid.value().get());
     }
     if (client_cmdline) {
       event.addString("client_cmdline", client_cmdline.value());

@@ -11,8 +11,7 @@
 #include <string_view>
 #include <unordered_map>
 
-#include <folly/portability/SysTypes.h>
-
+#include "eden/common/os/ProcessId.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/utils/RefPtr.h"
 
@@ -70,7 +69,7 @@ class ObjectFetchContext : public RefCounted {
 
   virtual void didFetch(ObjectType, const ObjectId&, Origin) {}
 
-  virtual std::optional<pid_t> getClientPid() const {
+  virtual OptionalProcessId getClientPid() const {
     return std::nullopt;
   }
 

@@ -25,7 +25,7 @@ FuseRequestContext::FuseRequestContext(
     : RequestContext(
           channel->getProcessAccessLog(),
           makeRefPtr<FuseObjectFetchContext>(
-              static_cast<pid_t>(fuseHeader.pid),
+              ProcessId{fuseHeader.pid},
               fuseHeader.opcode)),
       channel_(channel),
       fuseHeader_(fuseHeader) {}

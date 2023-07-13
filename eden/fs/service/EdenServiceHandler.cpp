@@ -131,11 +131,11 @@ std::string toLogArg(const std::vector<std::string>& args) {
 class ThriftFetchContext : public ObjectFetchContext {
  public:
   explicit ThriftFetchContext(
-      std::optional<pid_t> pid,
+      OptionalProcessId pid,
       folly::StringPiece endpoint)
       : pid_(pid), endpoint_(endpoint) {}
 
-  std::optional<pid_t> getClientPid() const override {
+  OptionalProcessId getClientPid() const override {
     return pid_;
   }
 
@@ -163,7 +163,7 @@ class ThriftFetchContext : public ObjectFetchContext {
   }
 
  private:
-  std::optional<pid_t> pid_;
+  OptionalProcessId pid_;
   std::string_view endpoint_;
   std::unordered_map<std::string, std::string> requestInfo_;
 };
@@ -171,11 +171,11 @@ class ThriftFetchContext : public ObjectFetchContext {
 class PrefetchFetchContext : public ObjectFetchContext {
  public:
   explicit PrefetchFetchContext(
-      std::optional<pid_t> pid,
+      OptionalProcessId pid,
       std::string_view endpoint)
       : pid_(pid), endpoint_(endpoint) {}
 
-  std::optional<pid_t> getClientPid() const override {
+  OptionalProcessId getClientPid() const override {
     return pid_;
   }
 
@@ -197,7 +197,7 @@ class PrefetchFetchContext : public ObjectFetchContext {
   }
 
  private:
-  std::optional<pid_t> pid_;
+  OptionalProcessId pid_;
   std::string_view endpoint_;
 };
 
@@ -218,7 +218,7 @@ class ThriftRequestScope {
       SourceLocation sourceLocation,
       EdenStatsPtr edenStats,
       ThriftStats::DurationPtr statPtr,
-      std::optional<pid_t> pid,
+      OptionalProcessId pid,
       JoinFn&& join)
       : traceBus_{std::move(traceBus)},
         requestId_(generateUniqueID()),
@@ -387,7 +387,7 @@ facebook::eden::InodePtr inodeFromUserPath(
 ThriftRequestTraceEvent ThriftRequestTraceEvent::start(
     uint64_t requestId,
     folly::StringPiece method,
-    std::optional<pid_t> clientPid) {
+    OptionalProcessId clientPid) {
   return ThriftRequestTraceEvent{
       ThriftRequestTraceEvent::START, requestId, method, clientPid};
 }
@@ -395,7 +395,7 @@ ThriftRequestTraceEvent ThriftRequestTraceEvent::start(
 ThriftRequestTraceEvent ThriftRequestTraceEvent::finish(
     uint64_t requestId,
     folly::StringPiece method,
-    std::optional<pid_t> clientPid) {
+    OptionalProcessId clientPid) {
   return ThriftRequestTraceEvent{
       ThriftRequestTraceEvent::FINISH, requestId, method, clientPid};
 }
@@ -1114,8 +1114,8 @@ ThriftRequestMetadata populateThriftRequestMetadata(
   ThriftRequestMetadata thriftRequestMetadata;
   thriftRequestMetadata.requestId() = request.requestId;
   thriftRequestMetadata.method() = request.method;
-  if (request.clientPid.has_value()) {
-    thriftRequestMetadata.clientPid() = request.clientPid.value();
+  if (auto client_pid = request.clientPid) {
+    thriftRequestMetadata.clientPid() = client_pid.value().get();
   }
   return thriftRequestMetadata;
 }
@@ -2614,13 +2614,13 @@ void maybeLogExpensiveGlob(
   if (shouldLogExpensiveGlob) {
     auto logString = globber.logString(globs);
     std::string client_cmdline;
-    std::optional<pid_t> clientPid = context->getClientPid();
-    if (clientPid) {
+    if (auto clientPid = context->getClientPid()) {
       // TODO: we should look up client scope here instead of command line
       // since it will give move context into the overarching process or
       // system producing the expensive query
-      client_cmdline =
-          serverState->getProcessNameCache()->lookup(clientPid.value()).get();
+      client_cmdline = serverState->getProcessNameCache()
+                           ->lookup(clientPid.value().get())
+                           .get();
       std::replace(client_cmdline.begin(), client_cmdline.end(), '\0', ' ');
     }
 
@@ -3705,7 +3705,7 @@ void EdenServiceHandler::getAccessCounts(
 
     auto pidFetchesLockedPtr = pidFetches.rlock();
     for (auto& [pid, fetchCount] : *pidFetchesLockedPtr) {
-      ma.fetchCountsByPid_ref()[pid] = fetchCount;
+      ma.fetchCountsByPid_ref()[pid.get()] = fetchCount;
     }
   }
 }
@@ -4342,7 +4342,7 @@ void EdenServiceHandler::getConfig(
   result = config->toThriftConfigData();
 }
 
-std::optional<pid_t> EdenServiceHandler::getAndRegisterClientPid() {
+OptionalProcessId EdenServiceHandler::getAndRegisterClientPid() {
 #ifndef _WIN32
   // The Cpp2RequestContext for a thrift request is kept in a thread local
   // on the thread which the request originates. This means this must be run
@@ -4354,10 +4354,11 @@ std::optional<pid_t> EdenServiceHandler::getAndRegisterClientPid() {
     pid_t clientPid =
         connectionContext->getConnectionContext()->getPeerEffectiveCreds()->pid;
     server_->getServerState()->getProcessNameCache()->add(clientPid);
-    return clientPid;
+    return ProcessId(clientPid);
   }
   return std::nullopt;
 #else
+  // Unix domain sockets on Windows don't support peer credentials.
   return std::nullopt;
 #endif
 }
