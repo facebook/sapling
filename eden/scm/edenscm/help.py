@@ -592,7 +592,7 @@ class _helpdispatch(object):
             "\n",
             "@prog@ COMMAND [OPTIONS]\n",
             "\n",
-            "These are some common @Product@ commands.  Use '@prog@ help commands' to list all "
+            "These are some super common @Product@ commands.  Use '@prog@ help commands' to list all "
             "commands, and '@prog@ help COMMAND' to get help on a specific command.\n",
             "\n",
         ]
