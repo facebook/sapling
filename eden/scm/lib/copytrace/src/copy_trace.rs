@@ -16,9 +16,9 @@ pub enum TraceResult {
     /// Found the renamed-to path of the given source file, return it.
     Renamed(RepoPathBuf),
     /// The file was deleted by a commit between common ancestor and destination commits.
-    Deleted(Vertex),
+    Deleted(Vertex, RepoPathBuf),
     /// The file was added by a commit between common ancestor and source commits.
-    Added(Vertex),
+    Added(Vertex, RepoPathBuf),
     /// Did not find the renamed-to path and the deletion commit, for example:
     /// - there is no common ancestor between source and destination commits
     /// - the source given source file is not in the source commit
