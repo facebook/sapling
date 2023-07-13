@@ -273,13 +273,16 @@
 .commit-info-tokenized-field .token {
   padding: 0;
   background-color: var(--tooltip-background);
-  padding-left: var(--pad);
-  padding-right: 1px;
+  padding: 0 var(--pad);
   border: 1px solid var(--tooltip-border);
   display: flex;
   align-items: center;
   gap: var(--halfpad);
   min-height: calc(var(--token-height) - 2px);
+}
+
+.commit-info-tokenized-field .token vscode-button {
+  margin-right: calc(-1 * var(--pad));
 }
 
 .commit-info-tokenized-field .typeahead-suggestions {

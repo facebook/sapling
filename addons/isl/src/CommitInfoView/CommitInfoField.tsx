@@ -12,6 +12,7 @@ import {T} from '../i18n';
 import {SeeMoreContainer} from './SeeMoreContainer';
 import {CommitInfoTextArea} from './TextArea';
 import {CommitInfoTextField} from './TextField';
+import {extractTokens, TokensList} from './Tokens';
 import {Section, SmallCapsTitle} from './utils';
 import {Fragment} from 'react';
 import {Icon} from 'shared/Icon';
@@ -115,7 +116,15 @@ export function CommitInfoField({
               )}
             </SmallCapsTitle>
             {content ? (
-              <div>{content}</div>
+              field.type === 'field' ? (
+                <div className="commit-info-tokenized-field">
+                  <TokensList
+                    tokens={Array.isArray(content) ? content : extractTokens(content)[0]}
+                  />
+                </div>
+              ) : (
+                <div>{content}</div>
+              )
             ) : (
               <span className="empty-description subtle">
                 {readonly ? (

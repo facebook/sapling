@@ -9,23 +9,12 @@ import type {TypeaheadKind, TypeaheadResult} from './types';
 
 import serverApi from '../ClientToServerAPI';
 import {Subtle} from '../Subtle';
+import {extractTokens, TokensList, tokensToString} from './Tokens';
 import {getInnerTextareaForVSCodeTextArea} from './utils';
-import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useRef, useEffect, useState} from 'react';
 import {Icon} from 'shared/Icon';
 import {randomId} from 'shared/utils';
-
-/** Extract comma-separated tokens into an array, plus any remaining non-tokenized text */
-function extractTokens(raw: string): [Array<string>, string] {
-  const tokens = raw.split(',');
-  const remaining = tokens.length === 0 ? raw : tokens.pop();
-  return [tokens.map(token => token.trim()), remaining ?? ''];
-}
-
-/** Combine tokens back into a string to be stored in the commit message */
-function tokensToString(tokens: Array<string>, remaining: string): string {
-  return tokens.length === 0 ? remaining : tokens.join(',') + ',' + remaining;
-}
 
 export function CommitInfoTextField({
   name,
@@ -115,26 +104,18 @@ export function CommitInfoTextField({
           saveNewValue(values[selectedSuggestionIndex].value);
         }
       }}>
-      {tokens
-        .filter(token => token != '')
-        .map((token, i) => (
-          <span key={i} className="token">
-            {token}
-            <VSCodeButton
-              appearance="icon"
-              onClick={() => {
-                setEditedCommitMessage(
-                  tokensToString(
-                    tokens.filter(t => t !== token),
-                    // keep anything already typed in
-                    (ref.current as HTMLInputElement | null)?.value ?? '',
-                  ),
-                );
-              }}>
-              <Icon icon="x" />
-            </VSCodeButton>
-          </span>
-        ))}
+      <TokensList
+        tokens={tokens}
+        onClickX={(token: string) => {
+          setEditedCommitMessage(
+            tokensToString(
+              tokens.filter(t => t !== token),
+              // keep anything already typed in
+              (ref.current as HTMLInputElement | null)?.value ?? '',
+            ),
+          );
+        }}
+      />
       <div className="commit-info-field-with-typeahead">
         <VSCodeTextField
           ref={ref}
