@@ -221,35 +221,37 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
         className="commit-info-view-main-content"
         // remount this if we change to commit mode
         key={mode}>
-        {schema.map(field => (
-          <CommitInfoField
-            key={field.key}
-            field={field}
-            content={parsedFields[field.key as keyof CommitMessageFields]}
-            autofocus={topmostEditedField === field.key}
-            readonly={editedMessage.type === 'optimistic' || isPublic}
-            isBeingEdited={fieldsBeingEdited[field.key]}
-            startEditingField={() => startEditingField(field.key)}
-            editedField={editedMessage.fields?.[field.key]}
-            setEditedField={(newVal: string) =>
-              setEditedCommitMesage(val =>
-                val.type === 'optimistic'
-                  ? val
-                  : {
-                      fields: {
-                        ...val.fields,
-                        [field.key]: field.type === 'field' ? [newVal] : newVal,
+        {schema
+          .filter(field => mode !== 'commit' || field.type !== 'read-only')
+          .map(field => (
+            <CommitInfoField
+              key={field.key}
+              field={field}
+              content={parsedFields[field.key as keyof CommitMessageFields]}
+              autofocus={topmostEditedField === field.key}
+              readonly={editedMessage.type === 'optimistic' || isPublic}
+              isBeingEdited={fieldsBeingEdited[field.key]}
+              startEditingField={() => startEditingField(field.key)}
+              editedField={editedMessage.fields?.[field.key]}
+              setEditedField={(newVal: string) =>
+                setEditedCommitMesage(val =>
+                  val.type === 'optimistic'
+                    ? val
+                    : {
+                        fields: {
+                          ...val.fields,
+                          [field.key]: field.type === 'field' ? [newVal] : newVal,
+                        },
                       },
-                    },
-              )
-            }
-            extra={
-              mode !== 'commit' && field.key === 'Title' ? (
-                <CommitTitleByline commit={commit} />
-              ) : undefined
-            }
-          />
-        ))}
+                )
+              }
+              extra={
+                mode !== 'commit' && field.key === 'Title' ? (
+                  <CommitTitleByline commit={commit} />
+                ) : undefined
+              }
+            />
+          ))}
         <VSCodeDivider />
         {commit.isHead && !isPublic ? (
           <Section data-testid="changes-to-amend">

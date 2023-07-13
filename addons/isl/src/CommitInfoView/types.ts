@@ -63,8 +63,9 @@ export type FieldConfig = {
        * textarea => long form content, with extra buttons for image uploading, etc. Supports vertical resize.
        * field => single-line, tokenized field
        * title => non-resizeable textarea for the title, which has special rendering.
+       * read-only => this field should be parsed from the commit message but you don't need to edit it. Usually, it's something added by automation.
        */
-      type: 'title' | 'textarea';
+      type: 'title' | 'textarea' | 'read-only';
     }
   | {
       type: 'field';

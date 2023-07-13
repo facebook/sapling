@@ -74,8 +74,12 @@ export function CommitInfoField({
       </>
     );
   } else {
-    const Wrapper = field.type === 'field' ? Fragment : SeeMoreContainer;
-    return isBeingEdited ? (
+    const Wrapper = field.type === 'textarea' ? SeeMoreContainer : Fragment;
+    if (field.type === 'read-only' && !content) {
+      // don't render empty read-only fields, since you can't "click to edit"
+      return null;
+    }
+    return field.type !== 'read-only' && isBeingEdited ? (
       <Section className="commit-info-field-section">
         <SmallCapsTitle>
           <Icon icon={field.icon} />
@@ -156,23 +160,23 @@ function ClickToEditField({
   /** function to run when you click to edit. If null, the entire field will be non-editable. */
   startEditingField?: () => void;
   fieldKey: string;
-  kind: 'title' | 'field' | 'textarea';
+  kind: 'title' | 'field' | 'textarea' | 'read-only';
 }) {
-  const editable = startEditingField != null;
+  const editable = startEditingField != null && kind !== 'read-only';
   const renderKey = fieldKey.toLowerCase().replace(/\s/g, '-');
   return (
     <div
       className={`commit-info-rendered-${kind}${editable ? '' : ' non-editable'}`}
       data-testid={`commit-info-rendered-${renderKey}`}
       onClick={
-        startEditingField != null
+        startEditingField != null && kind !== 'read-only'
           ? () => {
               startEditingField();
             }
           : undefined
       }
       onKeyPress={
-        startEditingField != null
+        startEditingField != null && kind !== 'read-only'
           ? e => {
               if (e.key === 'Enter') {
                 startEditingField();
