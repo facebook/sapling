@@ -4274,7 +4274,7 @@ void EdenServiceHandler::fillDaemonInfo(DaemonInfo& info) {
                << enumValue(server_->getStatus());
   }();
 
-  info.pid_ref() = getpid();
+  info.pid_ref() = ProcessId::current().get();
   info.commandLine_ref() = originalCommandLine_;
   info.status_ref() = status;
 
@@ -4324,7 +4324,7 @@ void EdenServiceHandler::checkPrivHelper(PrivHelperInfo& result) {
 }
 
 int64_t EdenServiceHandler::getPid() {
-  return getpid();
+  return ProcessId::current().get();
 }
 
 void EdenServiceHandler::initiateShutdown(std::unique_ptr<std::string> reason) {

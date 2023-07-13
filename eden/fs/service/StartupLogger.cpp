@@ -6,8 +6,6 @@
  */
 
 #include "eden/fs/service/StartupLogger.h"
-#include "eden/fs/service/EdenInit.h"
-#include "eden/fs/telemetry/SessionId.h"
 
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
@@ -17,8 +15,11 @@
 #include <folly/portability/Unistd.h>
 #include <sys/types.h>
 
+#include "eden/common/os/ProcessId.h"
 #include "eden/fs/privhelper/PrivHelper.h"
+#include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/StartupStatusSubscriber.h"
+#include "eden/fs/telemetry/SessionId.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 
@@ -97,7 +98,7 @@ void StartupLogger::success(uint64_t startTimeInSeconds) {
       folly::LogLevel::INFO,
       fmt::format(
           "Started EdenFS (pid {}, session_id {}) in {}s",
-          getpid(),
+          ProcessId::current(),
           getSessionId(),
           startTimeInSeconds));
 
