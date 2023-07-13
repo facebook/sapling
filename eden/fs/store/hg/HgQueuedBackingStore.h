@@ -52,9 +52,10 @@ struct HgImportTraceEvent : TraceEventBase {
       ResourceType resourceType,
       const HgProxyHash& proxyHash,
       ImportPriority::Class priority,
-      ObjectFetchContext::Cause cause) {
+      ObjectFetchContext::Cause cause,
+      OptionalProcessId pid) {
     return HgImportTraceEvent{
-        unique, QUEUE, resourceType, proxyHash, priority, cause};
+        unique, QUEUE, resourceType, proxyHash, priority, cause, pid};
   }
 
   static HgImportTraceEvent start(
@@ -62,9 +63,10 @@ struct HgImportTraceEvent : TraceEventBase {
       ResourceType resourceType,
       const HgProxyHash& proxyHash,
       ImportPriority::Class priority,
-      ObjectFetchContext::Cause cause) {
+      ObjectFetchContext::Cause cause,
+      OptionalProcessId pid) {
     return HgImportTraceEvent{
-        unique, START, resourceType, proxyHash, priority, cause};
+        unique, START, resourceType, proxyHash, priority, cause, pid};
   }
 
   static HgImportTraceEvent finish(
@@ -72,9 +74,10 @@ struct HgImportTraceEvent : TraceEventBase {
       ResourceType resourceType,
       const HgProxyHash& proxyHash,
       ImportPriority::Class priority,
-      ObjectFetchContext::Cause cause) {
+      ObjectFetchContext::Cause cause,
+      OptionalProcessId pid) {
     return HgImportTraceEvent{
-        unique, FINISH, resourceType, proxyHash, priority, cause};
+        unique, FINISH, resourceType, proxyHash, priority, cause, pid};
   }
 
   HgImportTraceEvent(
@@ -83,7 +86,8 @@ struct HgImportTraceEvent : TraceEventBase {
       ResourceType resourceType,
       const HgProxyHash& proxyHash,
       ImportPriority::Class priority,
-      ObjectFetchContext::Cause cause);
+      ObjectFetchContext::Cause cause,
+      OptionalProcessId pid);
 
   // Simple accessor that hides the internal memory representation of paths.
   std::string getPath() const {
@@ -94,6 +98,8 @@ struct HgImportTraceEvent : TraceEventBase {
   // queue, start, and finish. Used to correlate events to a request.
   uint64_t unique;
   // Always null-terminated, and saves space in the trace event structure.
+  // TODO: Replace with a single pointer to a reference-counted string to save 8
+  // bytes in this struct.
   std::shared_ptr<char[]> path;
   // The HG manifest node ID.
   Hash20 manifestNodeId;
@@ -101,6 +107,7 @@ struct HgImportTraceEvent : TraceEventBase {
   ResourceType resourceType;
   ImportPriority::Class importPriority;
   ObjectFetchContext::Cause importCause;
+  OptionalProcessId pid;
 };
 
 /**

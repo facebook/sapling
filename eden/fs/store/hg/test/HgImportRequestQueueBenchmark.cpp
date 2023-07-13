@@ -29,7 +29,11 @@ std::shared_ptr<HgImportRequest> makeBlobImportRequest(
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
   auto hash = proxyHash.sha1();
   return HgImportRequest::makeBlobImportRequest(
-      hash, std::move(proxyHash), priority, ObjectFetchContext::Cause::Unknown);
+      hash,
+      std::move(proxyHash),
+      priority,
+      ObjectFetchContext::Cause::Unknown,
+      std::nullopt);
 }
 
 void enqueue(benchmark::State& state) {

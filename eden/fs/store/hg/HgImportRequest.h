@@ -31,9 +31,10 @@ namespace facebook::eden {
  */
 class HgImportRequest {
  public:
-  struct BlobImport {
-    using Response = BlobPtr;
-    BlobImport(ObjectId hash, HgProxyHash proxyHash)
+  template <typename ResponseT>
+  struct BaseImport {
+    using Response = ResponseT;
+    BaseImport(ObjectId hash, HgProxyHash proxyHash)
         : hash{std::move(hash)}, proxyHash{std::move(proxyHash)} {}
 
     ObjectId hash;
@@ -44,29 +45,9 @@ class HgImportRequest {
     std::vector<folly::Promise<Response>> promises;
   };
 
-  struct TreeImport {
-    using Response = TreePtr;
-    TreeImport(ObjectId hash, HgProxyHash proxyHash)
-        : hash{std::move(hash)}, proxyHash{std::move(proxyHash)} {}
-
-    ObjectId hash;
-    HgProxyHash proxyHash;
-
-    // See the comment above for BlobImport::promises
-    std::vector<folly::Promise<Response>> promises;
-  };
-
-  struct BlobMetaImport {
-    using Response = BlobMetadataPtr;
-    BlobMetaImport(ObjectId hash, HgProxyHash proxyHash)
-        : hash{std::move(hash)}, proxyHash{std::move(proxyHash)} {}
-
-    ObjectId hash;
-    HgProxyHash proxyHash;
-
-    // See the comment above for BlobImport::promises
-    std::vector<folly::Promise<Response>> promises;
-  };
+  using BlobImport = BaseImport<BlobPtr>;
+  using TreeImport = BaseImport<TreePtr>;
+  using BlobMetaImport = BaseImport<BlobMetadataPtr>;
 
   /**
    * Allocate a blob request.
@@ -75,7 +56,8 @@ class HgImportRequest {
       const ObjectId& hash,
       const HgProxyHash& proxyHash,
       ImportPriority priority,
-      ObjectFetchContext::Cause cause);
+      ObjectFetchContext::Cause cause,
+      OptionalProcessId pid);
 
   /**
    * Allocate a tree request.
@@ -84,23 +66,26 @@ class HgImportRequest {
       const ObjectId& hash,
       const HgProxyHash& proxyHash,
       ImportPriority priority,
-      ObjectFetchContext::Cause cause);
+      ObjectFetchContext::Cause cause,
+      OptionalProcessId pid);
 
   static std::shared_ptr<HgImportRequest> makeBlobMetaImportRequest(
       const ObjectId& hash,
       const HgProxyHash& proxyHash,
       ImportPriority priority,
-      ObjectFetchContext::Cause cause);
+      ObjectFetchContext::Cause cause,
+      OptionalProcessId pid);
 
   /**
-   * Implementation detail of the make*Request functions from above. Do not use
-   * directly.
+   * Implementation detail of the make*Request functions from above. Do not
+   * use directly.
    */
   template <typename RequestType>
   HgImportRequest(
       RequestType request,
       ImportPriority priority,
       ObjectFetchContext::Cause cause,
+      OptionalProcessId pid,
       folly::Promise<typename RequestType::Response>&& promise);
 
   ~HgImportRequest() = default;
@@ -128,6 +113,10 @@ class HgImportRequest {
 
   ObjectFetchContext::Cause getCause() const noexcept {
     return cause_;
+  }
+
+  OptionalProcessId getPid() const noexcept {
+    return pid_;
   }
 
   void setPriority(ImportPriority priority) noexcept {
@@ -160,6 +149,7 @@ class HgImportRequest {
   static std::shared_ptr<HgImportRequest> makeRequest(
       ImportPriority priority,
       ObjectFetchContext::Cause cause,
+      OptionalProcessId pid,
       Input&&... input);
 
   HgImportRequest(const HgImportRequest&) = delete;
@@ -174,6 +164,7 @@ class HgImportRequest {
   Request request_;
   ImportPriority priority_;
   ObjectFetchContext::Cause cause_;
+  OptionalProcessId pid_;
   Response promise_;
   uint64_t unique_ = generateUniqueID();
   std::chrono::steady_clock::time_point requestTime_ =

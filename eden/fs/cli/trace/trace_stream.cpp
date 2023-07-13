@@ -241,22 +241,40 @@ void print_hg_event(
   const char* importCauseStr =
       folly::get_default(kImportCauses, importCause, "?");
 
+  std::string processInfo;
+  if (auto requestInfo = evt.requestInfo()) {
+    auto* pid = requestInfo.value().get_pid();
+    auto* processName = requestInfo.value().get_processName();
+    if (pid && processName) {
+      processInfo = fmt::format("{}({})", *pid, processName->c_str());
+    } else if (pid) {
+      processInfo = fmt::to_string(*pid);
+    } else if (processName) {
+      processInfo = fmt::to_string(processName->c_str());
+    }
+  }
+  if (!processInfo.empty()) {
+    processInfo = " by " + processInfo;
+  }
+
   if (FLAGS_verbose) {
     fmt::print(
-        "{} {} {} {} {}{}\n",
+        "{} {} {} {} {}{}{}\n",
         eventTypeStr,
         resourceTypeStr,
         importPriorityStr,
         importCauseStr,
         *evt.path(),
-        timeAnnotation);
+        timeAnnotation,
+        processInfo);
   } else {
     fmt::print(
-        "{} {} {}{}\n",
+        "{} {} {}{}{}\n",
         eventTypeStr,
         resourceTypeStr,
         *evt.path(),
-        timeAnnotation);
+        timeAnnotation,
+        processInfo);
   }
 }
 

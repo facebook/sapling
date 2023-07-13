@@ -59,7 +59,8 @@ std::pair<ObjectId, std::shared_ptr<HgImportRequest>> makeBlobImportRequest(
           hash,
           std::move(proxyHash),
           priority,
-          ObjectFetchContext::Cause::Unknown));
+          ObjectFetchContext::Cause::Unknown,
+          std::nullopt));
 }
 
 std::pair<ObjectId, std::shared_ptr<HgImportRequest>>
@@ -71,7 +72,8 @@ makeBlobImportRequestWithHash(ImportPriority priority, HgProxyHash proxyHash) {
           hash,
           std::move(proxyHash),
           priority,
-          ObjectFetchContext::Cause::Unknown));
+          ObjectFetchContext::Cause::Unknown,
+          std::nullopt));
 }
 
 std::pair<ObjectId, std::shared_ptr<HgImportRequest>>
@@ -85,7 +87,8 @@ makeBlobMetaImportRequestWithHash(
           hash,
           std::move(proxyHash),
           priority,
-          ObjectFetchContext::Cause::Unknown));
+          ObjectFetchContext::Cause::Unknown,
+          std::nullopt));
 }
 
 std::pair<ObjectId, std::shared_ptr<HgImportRequest>> makeTreeImportRequest(
@@ -99,7 +102,8 @@ std::pair<ObjectId, std::shared_ptr<HgImportRequest>> makeTreeImportRequest(
           hash,
           std::move(proxyHash),
           priority,
-          ObjectFetchContext::Cause::Unknown));
+          ObjectFetchContext::Cause::Unknown,
+          std::nullopt));
 }
 
 ObjectId insertBlobImportRequest(

@@ -43,7 +43,13 @@
 namespace facebook::eden {
 
 namespace {
-static_assert(CheckSize<HgImportTraceEvent, 64>());
+// 100,000 hg object fetches in a short term is plausible.
+constexpr size_t kTraceBusCapacity = 100000;
+static_assert(CheckSize<HgImportTraceEvent, 72>());
+// TraceBus is double-buffered, so the following capacity should be doubled.
+// 10 MB overhead per backing repo is tolerable.
+static_assert(
+    CheckEqual<7200000, kTraceBusCapacity * sizeof(HgImportTraceEvent)>());
 } // namespace
 
 HgImportTraceEvent::HgImportTraceEvent(
@@ -52,13 +58,15 @@ HgImportTraceEvent::HgImportTraceEvent(
     ResourceType resourceType,
     const HgProxyHash& proxyHash,
     ImportPriority::Class priority,
-    ObjectFetchContext::Cause cause)
+    ObjectFetchContext::Cause cause,
+    OptionalProcessId pid)
     : unique{unique},
       manifestNodeId{proxyHash.revHash()},
       eventType{eventType},
       resourceType{resourceType},
       importPriority{priority},
-      importCause{cause} {
+      importCause{cause},
+      pid{pid} {
   auto hgPath = proxyHash.path().view();
   // TODO: If HgProxyHash (and correspondingly ObjectId) used an immutable,
   // refcounted string, we wouldn't need to allocate here.
@@ -128,7 +136,8 @@ void HgQueuedBackingStore::processBlobImportRequests(
         HgImportTraceEvent::BLOB,
         blobImport->proxyHash,
         request->getPriority().getClass(),
-        request->getCause()));
+        request->getCause(),
+        request->getPid()));
 
     XLOGF(DBG4, "Processing blob request for {}", blobImport->hash);
   }
@@ -184,7 +193,8 @@ void HgQueuedBackingStore::processTreeImportRequests(
         HgImportTraceEvent::TREE,
         treeImport->proxyHash,
         request->getPriority().getClass(),
-        request->getCause()));
+        request->getCause(),
+        request->getPid()));
 
     XLOGF(DBG4, "Processing tree request for {}", treeImport->hash);
   }
@@ -241,7 +251,8 @@ void HgQueuedBackingStore::processBlobMetaImportRequests(
         HgImportTraceEvent::BLOBMETA,
         blobMetaImport->proxyHash,
         request->getPriority().getClass(),
-        request->getCause()));
+        request->getCause(),
+        request->getPid()));
 
     XLOGF(DBG4, "Processing blob meta request for {}", blobMetaImport->hash);
   }
@@ -417,7 +428,11 @@ HgQueuedBackingStore::getTreeImpl(
     const ObjectFetchContextPtr& context) {
   auto getTreeFuture = folly::makeFutureWith([&] {
     auto request = HgImportRequest::makeTreeImportRequest(
-        id, proxyHash, context->getPriority(), context->getCause());
+        id,
+        proxyHash,
+        context->getPriority(),
+        context->getCause(),
+        context->getClientPid());
     uint64_t unique = request->getUnique();
 
     auto importTracker =
@@ -427,7 +442,8 @@ HgQueuedBackingStore::getTreeImpl(
         HgImportTraceEvent::TREE,
         proxyHash,
         context->getPriority().getClass(),
-        context->getCause()));
+        context->getCause(),
+        context->getClientPid()));
 
     return queue_.enqueueTree(std::move(request))
         .ensure([this,
@@ -440,7 +456,8 @@ HgQueuedBackingStore::getTreeImpl(
               HgImportTraceEvent::TREE,
               proxyHash,
               context->getPriority().getClass(),
-              context->getCause()));
+              context->getCause(),
+              context->getClientPid()));
         });
   });
 
@@ -491,7 +508,11 @@ HgQueuedBackingStore::getBlobImpl(
                << ", hash is:" << id;
 
     auto request = HgImportRequest::makeBlobImportRequest(
-        id, proxyHash, context->getPriority(), context->getCause());
+        id,
+        proxyHash,
+        context->getPriority(),
+        context->getCause(),
+        context->getClientPid());
     auto unique = request->getUnique();
 
     auto importTracker =
@@ -501,7 +522,8 @@ HgQueuedBackingStore::getBlobImpl(
         HgImportTraceEvent::BLOB,
         proxyHash,
         context->getPriority().getClass(),
-        context->getCause()));
+        context->getCause(),
+        context->getClientPid()));
 
     return queue_.enqueueBlob(std::move(request))
         .ensure([this,
@@ -514,7 +536,8 @@ HgQueuedBackingStore::getBlobImpl(
               HgImportTraceEvent::BLOB,
               proxyHash,
               context->getPriority().getClass(),
-              context->getCause()));
+              context->getCause(),
+              context->getClientPid()));
         });
   });
 
@@ -572,7 +595,11 @@ HgQueuedBackingStore::getBlobMetadataImpl(
                << ", hash is:" << id;
 
     auto request = HgImportRequest::makeBlobMetaImportRequest(
-        id, proxyHash, context->getPriority(), context->getCause());
+        id,
+        proxyHash,
+        context->getPriority(),
+        context->getCause(),
+        context->getClientPid());
     auto unique = request->getUnique();
 
     auto importTracker =
@@ -582,7 +609,8 @@ HgQueuedBackingStore::getBlobMetadataImpl(
         HgImportTraceEvent::BLOBMETA,
         proxyHash,
         context->getPriority().getClass(),
-        context->getCause()));
+        context->getCause(),
+        context->getClientPid()));
 
     return queue_.enqueueBlobMeta(std::move(request))
         .ensure([this,
@@ -595,7 +623,8 @@ HgQueuedBackingStore::getBlobMetadataImpl(
               HgImportTraceEvent::BLOBMETA,
               proxyHash,
               context->getPriority().getClass(),
-              context->getCause()));
+              context->getCause(),
+              context->getClientPid()));
         });
   });
 

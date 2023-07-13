@@ -979,14 +979,12 @@ TraceEventTimes thriftTraceEventTimes(const TraceEventBase& event) {
   return times;
 }
 
-#ifndef _WIN32
 RequestInfo thriftRequestInfo(pid_t pid, ProcessNameCache& processNameCache) {
   RequestInfo info;
   info.pid_ref() = pid;
   info.processName_ref().from_optional(processNameCache.getProcessName(pid));
   return info;
 }
-#endif
 
 template <typename T>
 class ThriftStreamPublisherOwner {
@@ -1417,6 +1415,7 @@ std::shared_ptr<HgQueuedBackingStore> castToHgQueuedBackingStore(
  */
 void convertHgImportTraceEventToHgEvent(
     const HgImportTraceEvent& event,
+    ProcessNameCache& processNameCache,
     HgEvent& te) {
   te.times_ref() = thriftTraceEventTimes(event);
   switch (event.eventType) {
@@ -1475,8 +1474,10 @@ void convertHgImportTraceEventToHgEvent(
   te.manifestNodeId_ref() = event.manifestNodeId.toString();
   te.path_ref() = event.getPath();
 
-  // TODO: trace requesting pid
-  // te.requestInfo_ref() = thriftRequestInfo(pid);
+  if (auto pid = event.pid) {
+    te.requestInfo_ref() =
+        thriftRequestInfo(pid.value().get(), processNameCache);
+  }
 }
 
 apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
@@ -1502,10 +1503,13 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
   context->subHandle = hgBackingStore->getTraceBus().subscribeFunction(
       fmt::format(
           "hgtrace-{}", mountHandle.getEdenMount().getPath().basename()),
-      [publisher = ThriftStreamPublisherOwner{std::move(publisher)}](
+      [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
+       processNameCache =
+           mountHandle.getEdenMount().getServerState()->getProcessNameCache()](
           const HgImportTraceEvent& event) {
         HgEvent thriftEvent;
-        convertHgImportTraceEventToHgEvent(event, thriftEvent);
+        convertHgImportTraceEventToHgEvent(
+            event, *processNameCache, thriftEvent);
         publisher.next(thriftEvent);
       });
 
@@ -4111,7 +4115,8 @@ void EdenServiceHandler::getRetroactiveHgEvents(
   thriftEvents.reserve(bufferEvents.size());
   for (auto const& event : bufferEvents) {
     HgEvent thriftEvent{};
-    convertHgImportTraceEventToHgEvent(event, thriftEvent);
+    convertHgImportTraceEventToHgEvent(
+        event, *server_->getServerState()->getProcessNameCache(), thriftEvent);
     thriftEvents.push_back(std::move(thriftEvent));
   }
 
