@@ -14,19 +14,19 @@
 
 namespace facebook::eden {
 
-std::string getxattr(folly::StringPiece path, folly::StringPiece name) {
+std::string getxattr(std::string_view path, std::string_view name) {
   folly::File file(path, O_RDONLY);
   return fgetxattr(file.fd(), name);
 }
 
-std::string fgetxattr(int fd, folly::StringPiece name) {
+std::string fgetxattr(int fd, std::string_view name) {
   std::string result;
 
   // Reasonable ballpark for most attributes we might want; this saves
   // us from an extra syscall to query the size in the common case.
   result.resize(64, 0);
 
-  auto namestr = name.str();
+  std::string namestr{name};
 
   // We loop until we either hit a hard error or succeed in extracting
   // the requested information.
@@ -75,8 +75,8 @@ std::string fgetxattr(int fd, folly::StringPiece name) {
   }
 }
 
-void fsetxattr(int fd, folly::StringPiece name, folly::StringPiece value) {
-  auto namestr = name.str();
+void fsetxattr(int fd, std::string_view name, std::string_view value) {
+  std::string namestr{name};
 
   folly::checkUnixError(::fsetxattr(
       fd,
@@ -92,9 +92,9 @@ void fsetxattr(int fd, folly::StringPiece name, folly::StringPiece value) {
       ));
 }
 
-std::vector<std::string> listxattr(folly::StringPiece path) {
+std::vector<std::string> listxattr(std::string_view path) {
   std::string buf;
-  auto pathStr = path.str();
+  std::string pathStr{path};
 
   buf.resize(128, 0);
 
@@ -115,7 +115,7 @@ std::vector<std::string> listxattr(folly::StringPiece path) {
       std::vector<std::string> result;
       // Don't include the final terminator in the size, as that just causes
       // the split array to contain a final empty name.
-      folly::split('\0', folly::StringPiece(buf.data(), size - 1), result);
+      folly::split('\0', std::string_view(buf.data(), size - 1), result);
       return result;
     }
 
