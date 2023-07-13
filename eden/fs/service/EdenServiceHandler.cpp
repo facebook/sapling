@@ -4356,10 +4356,12 @@ OptionalProcessId EdenServiceHandler::getAndRegisterClientPid() {
   // if connectionContext will be a null pointer in an async method, so we
   // need to check for this
   if (connectionContext) {
-    pid_t clientPid =
-        connectionContext->getConnectionContext()->getPeerEffectiveCreds()->pid;
-    server_->getServerState()->getProcessNameCache()->add(clientPid);
-    return ProcessId(clientPid);
+    if (auto peerCreds = connectionContext->getConnectionContext()
+                             ->getPeerEffectiveCreds()) {
+      pid_t clientPid = peerCreds->pid;
+      server_->getServerState()->getProcessNameCache()->add(clientPid);
+      return ProcessId(clientPid);
+    }
   }
   return std::nullopt;
 #else
