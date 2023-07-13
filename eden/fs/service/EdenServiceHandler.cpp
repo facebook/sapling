@@ -839,9 +839,9 @@ ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPath(
 }
 
 folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_addBindMount(
-    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
-    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> repoPathStr,
-    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> targetPath) {
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::string> repoPathStr,
+    std::unique_ptr<std::string> targetPath) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto mountHandle = lookupMount(mountPoint);
 
@@ -862,8 +862,8 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_addBindMount(
 }
 
 folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeBindMount(
-    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
-    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> repoPathStr) {
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::string> repoPathStr) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto mountHandle = lookupMount(mountPoint);
 
@@ -3501,8 +3501,8 @@ void EdenServiceHandler::debugOutstandingFuseCalls(
 }
 
 void EdenServiceHandler::debugOutstandingNfsCalls(
-    FOLLY_MAYBE_UNUSED std::vector<NfsCall>& outstandingCalls,
-    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint) {
+    std::vector<NfsCall>& outstandingCalls,
+    std::unique_ptr<std::string> mountPoint) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
 
   auto mountHandle = lookupMount(mountPoint);
@@ -3536,8 +3536,7 @@ void EdenServiceHandler::debugOutstandingPrjfsCalls(
 }
 
 void EdenServiceHandler::debugOutstandingThriftRequests(
-    FOLLY_MAYBE_UNUSED std::vector<ThriftRequestMetadata>&
-        outstandingRequests) {
+    std::vector<ThriftRequestMetadata>& outstandingRequests) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
 
   const auto requestsLockedPtr = outstandingThriftRequests_.rlock();
