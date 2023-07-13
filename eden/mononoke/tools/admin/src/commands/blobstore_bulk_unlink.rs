@@ -20,6 +20,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::bail;
+use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -187,12 +188,13 @@ impl BlobstoreBulkUnlinker {
                         }
                     }
                 }
-                // When we see this error, we want to log this into a file. We don't want to crash
-                // here because the program can be running with after a retry, and some keys have
-                // already been deleted.
+                // We don't want to quit with an error if the key is not present in any blobstore
+                // because this could be a retry attempt and the key could already have been deleted.
+                // In that case, we want to log and continue. Note that a failure in logging will result
+                // in program termination to avoid loss of errors.
                 if num_errors == num_blobstores {
                     self.log_error_to_file(key, "no blobstore contains this key.")
-                        .await;
+                        .await?;
                 }
             } else {
                 // We log this error into a file. so that we can tackle them later together.
@@ -200,22 +202,23 @@ impl BlobstoreBulkUnlinker {
                     key,
                     "Skip key because its repo id is not found in the given repo config.",
                 )
-                .await;
+                .await?;
             }
         } else {
             self.log_error_to_file(key, "Skip key because it is invalid.")
-                .await;
+                .await?;
         }
 
         Ok(())
     }
 
-    async fn log_error_to_file(&self, key: &str, msg: &str) {
+    async fn log_error_to_file(&self, key: &str, msg: &str) -> Result<()> {
         let error_record = json!({
             "key": key,
             "message": msg
         });
-        writeln!(&self.error_log_file, "{}", error_record);
+        writeln!(&self.error_log_file, "{}", error_record)
+            .with_context(|| format_err!("Error while writing to file {:?}", self.error_log_file))
     }
 
     async fn bulk_unlink_keys_in_file(
