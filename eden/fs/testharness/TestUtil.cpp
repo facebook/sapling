@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "TestUtil.h"
+#include "eden/fs/testharness/TestUtil.h"
 
 #include <cstring>
 #include <stdexcept>

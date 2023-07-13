@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "GlobNode.h"
+#include "eden/fs/inodes/GlobNode.h"
 #include <iomanip>
 #include <iostream>
 #include "eden/fs/inodes/TreeInode.h"

@@ -182,8 +182,8 @@ class TestDir {
       number = overlay_->allocateInodeNumber().get();
     }
     auto& entry = insertResult.first->second;
-    *entry.mode_ref() = mode;
-    *entry.inodeNumber_ref() = static_cast<int64_t>(number);
+    entry.mode_ref() = mode;
+    entry.inodeNumber_ref() = static_cast<int64_t>(number);
     if (hash) {
       auto hashBytes = hash->getBytes();
       entry.hash_ref() = std::string{

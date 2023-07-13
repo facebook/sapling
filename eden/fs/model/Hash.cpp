@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "Hash.h"
+#include "eden/fs/model/Hash.h"
 
 #include <string>
 

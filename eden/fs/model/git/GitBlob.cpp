@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "GitBlob.h"
+#include "eden/fs/model/git/GitBlob.h"
 
 #include <folly/Conv.h>
 #include <folly/io/Cursor.h>

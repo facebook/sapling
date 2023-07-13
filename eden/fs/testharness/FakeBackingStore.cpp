@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "FakeBackingStore.h"
+#include "eden/fs/testharness/FakeBackingStore.h"
 
 #include <fmt/format.h>
 #include <folly/MapUtil.h>

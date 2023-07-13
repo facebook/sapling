@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "ObjectStore.h"
+#include "eden/fs/store/ObjectStore.h"
 
 #include <folly/Conv.h>
 #include <folly/futures/Future.h>

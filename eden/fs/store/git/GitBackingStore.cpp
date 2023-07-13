@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "GitBackingStore.h"
+#include "eden/fs/store/git/GitBackingStore.h"
 
 #include <folly/Conv.h>
 #include <folly/futures/Future.h>

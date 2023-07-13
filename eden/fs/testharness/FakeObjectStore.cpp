@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "FakeObjectStore.h"
+#include "eden/fs/testharness/FakeObjectStore.h"
 
 #include <folly/MapUtil.h>
 #include <folly/String.h>

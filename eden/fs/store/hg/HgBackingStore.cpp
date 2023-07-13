@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "HgBackingStore.h"
+#include "eden/fs/store/hg/HgBackingStore.h"
 
 #include <memory>
 

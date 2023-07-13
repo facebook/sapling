@@ -228,9 +228,9 @@ void loadInodes(
 CheckoutConflict
 makeConflict(ConflictType type, StringPiece path, StringPiece message = "") {
   CheckoutConflict conflict;
-  *conflict.type_ref() = type;
-  *conflict.path_ref() = path.str();
-  *conflict.message_ref() = message.str();
+  conflict.type_ref() = type;
+  conflict.path_ref() = path.str();
+  conflict.message_ref() = message.str();
   return conflict;
 }
 

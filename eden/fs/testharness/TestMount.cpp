@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "TestMount.h"
+#include "eden/fs/testharness/TestMount.h"
 
 #include <folly/FileUtil.h>
 #include <folly/executors/ManualExecutor.h>

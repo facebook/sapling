@@ -561,8 +561,7 @@ size_t EdenServer::ProgressManager::registerEntry(
     std::string&& mountPath,
     std::string&& localDir) {
   auto progressIndex = progresses.size();
-  progresses.emplace_back(
-      ProgressState(std::move(mountPath), std::move(localDir)));
+  progresses.emplace_back(std::move(mountPath), std::move(localDir));
   totalInProgress++;
   return progressIndex;
 }

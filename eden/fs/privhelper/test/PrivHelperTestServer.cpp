@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "PrivHelperTestServer.h"
+#include "eden/fs/privhelper/test/PrivHelperTestServer.h"
 
 #include <boost/filesystem.hpp>
 #include <folly/Conv.h>

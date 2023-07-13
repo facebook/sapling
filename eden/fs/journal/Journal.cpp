@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "Journal.h"
+#include "eden/fs/journal/Journal.h"
 #include <folly/logging/xlog.h>
 #include "eden/fs/journal/JournalDelta.h"
 
@@ -509,8 +509,8 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
           auto& changeInfo = entry.second;
 
           DebugPathChangeInfo debugChangeInfo;
-          *debugChangeInfo.existedBefore_ref() = changeInfo.existedBefore;
-          *debugChangeInfo.existedAfter_ref() = changeInfo.existedAfter;
+          debugChangeInfo.existedBefore_ref() = changeInfo.existedBefore;
+          debugChangeInfo.existedAfter_ref() = changeInfo.existedAfter;
           delta.changedPaths_ref()->emplace(path.asString(), debugChangeInfo);
         }
 

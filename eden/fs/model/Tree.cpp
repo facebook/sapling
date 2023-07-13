@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "Tree.h"
+#include "eden/fs/model/Tree.h"
 #include <folly/io/IOBuf.h>
 
 namespace facebook::eden {

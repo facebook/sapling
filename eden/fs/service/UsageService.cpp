@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "UsageService.h"
+#include "eden/fs/service/UsageService.h"
 #include <folly/logging/xlog.h>
 
 namespace facebook::eden {

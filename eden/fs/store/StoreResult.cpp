@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "StoreResult.h"
+#include "eden/fs/store/StoreResult.h"
 #include "eden/fs/store/KeySpace.h"
 #include "folly/String.h"
 

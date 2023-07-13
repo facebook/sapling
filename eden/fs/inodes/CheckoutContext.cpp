@@ -116,8 +116,8 @@ void CheckoutContext::addConflict(ConflictType type, RelativePathPiece path) {
       << "attempted to add error using addConflict(): " << path;
 
   CheckoutConflict conflict;
-  *conflict.path_ref() = std::string{path.value()};
-  *conflict.type_ref() = type;
+  conflict.path_ref() = std::string{path.value()};
+  conflict.type_ref() = type;
   conflicts_.wlock()->push_back(std::move(conflict));
 }
 
@@ -152,9 +152,9 @@ void CheckoutContext::addError(
 
   auto path = parentPath + name;
   CheckoutConflict conflict;
-  *conflict.path_ref() = path.value();
-  *conflict.type_ref() = ConflictType::ERROR;
-  *conflict.message_ref() = folly::exceptionStr(ew).toStdString();
+  conflict.path_ref() = path.value();
+  conflict.type_ref() = ConflictType::ERROR;
+  conflict.message_ref() = folly::exceptionStr(ew).toStdString();
   conflicts_.wlock()->push_back(std::move(conflict));
 }
 } // namespace facebook::eden

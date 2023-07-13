@@ -880,7 +880,7 @@ void EdenServiceHandler::getCurrentJournalPosition(
   auto mountHandle = lookupMount(mountPoint);
   auto latest = mountHandle.getEdenMount().getJournal().getLatest();
 
-  *out.mountGeneration_ref() = mountHandle.getEdenMount().getMountGeneration();
+  out.mountGeneration_ref() = mountHandle.getEdenMount().getMountGeneration();
   if (latest) {
     out.sequenceNumber_ref() = latest->sequenceID;
     out.snapshotHash_ref() =

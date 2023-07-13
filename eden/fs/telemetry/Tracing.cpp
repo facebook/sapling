@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "Tracing.h"
+#include "eden/fs/telemetry/Tracing.h"
 
 namespace facebook::eden {
 namespace detail {

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "OverlayTestUtil.h"
+#include "eden/fs/inodes/test/OverlayTestUtil.h"
 
 namespace facebook::eden {
 

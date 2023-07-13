@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-#include "GitIgnore.h"
+#include "eden/fs/model/git/GitIgnore.h"
 
 #include <algorithm>
-#include "GitIgnorePattern.h"
+#include "eden/fs/model/git/GitIgnorePattern.h"
 
 using folly::StringPiece;
 using std::string;

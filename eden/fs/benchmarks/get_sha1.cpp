@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
   }
 
   const auto socket_path = repo_path / ".eden" / "socket";
-  const unsigned nthreads = FLAGS_threads;
+  const size_t nthreads = FLAGS_threads;
   // This number should stay a power of two, to avoid cache line ping-ponging
   // on the boundaries.
   const unsigned samples_per_thread = 8192;

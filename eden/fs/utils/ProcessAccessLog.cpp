@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "ProcessAccessLog.h"
+#include "eden/fs/utils/ProcessAccessLog.h"
 
 #include <folly/Exception.h>
 #include <folly/MapUtil.h>

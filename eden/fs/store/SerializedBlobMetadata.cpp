@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "SerializedBlobMetadata.h"
+#include "eden/fs/store/SerializedBlobMetadata.h"
 
 #include <optional>
 

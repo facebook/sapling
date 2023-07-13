@@ -241,7 +241,7 @@ void SpawnedProcess::Options::dup2(FileDescriptor&& fd, int targetFd) {
     fd = fd.duplicate();
   }
 #endif
-  descriptors_.emplace(std::make_pair(targetFd, std::move(fd)));
+  descriptors_.emplace(targetFd, std::move(fd));
 }
 
 FileDescriptor::system_handle_type SpawnedProcess::Options::inheritDescriptor(
@@ -309,7 +309,7 @@ FileDescriptor::system_handle_type SpawnedProcess::Options::inheritDescriptor(
 #else
   auto target = fd.systemHandle();
 #endif
-  descriptors_.emplace(std::make_pair(target, std::move(fd)));
+  descriptors_.emplace(target, std::move(fd));
   return target;
 }
 
@@ -336,10 +336,10 @@ void SpawnedProcess::Options::pipe(int targetFd, bool childRead) {
   Pipe pipe;
 
   if (childRead) {
-    pipes_.emplace(std::make_pair(targetFd, std::move(pipe.write)));
+    pipes_.emplace(targetFd, std::move(pipe.write));
     dup2(std::move(pipe.read), targetFd);
   } else {
-    pipes_.emplace(std::make_pair(targetFd, std::move(pipe.read)));
+    pipes_.emplace(targetFd, std::move(pipe.read));
     dup2(std::move(pipe.write), targetFd);
   }
 }
@@ -1041,7 +1041,7 @@ std::pair<std::string, std::string> SpawnedProcess::pollingCommunicate(
       // We only want output streams here
       continue;
     }
-    outputs.emplace(std::make_pair(it.first, ""));
+    outputs.emplace(it.first, "");
   }
 
   std::vector<pollfd> pfds;

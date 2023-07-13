@@ -6,7 +6,6 @@
  */
 
 #include <folly/portability/GTest.h>
-#include <iostream>
 #include <string>
 #include "eden/common/utils/WinError.h"
 

@@ -540,8 +540,8 @@ IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
 
     SerializedMountInfo serializedMount;
 
-    *serializedMount.mountPath_ref() = mount.mountPath.asString();
-    *serializedMount.stateDirectory_ref() = mount.stateDirectory.asString();
+    serializedMount.mountPath_ref() = mount.mountPath.asString();
+    serializedMount.stateDirectory_ref() = mount.stateDirectory.asString();
 
     if (auto fuseChannelInfo =
             std::get_if<FuseChannelData>(&mount.channelInfo)) {
@@ -555,7 +555,7 @@ IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
           sizeof(fuseChannelInfo->connInfo)};
     }
 
-    *serializedMount.inodeMap_ref() = mount.inodeMap;
+    serializedMount.inodeMap_ref() = mount.inodeMap;
 
     serializedMount.mountProtocol_ref() = mountProtocol;
 

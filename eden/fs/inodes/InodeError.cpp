@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "InodeError.h"
+#include "eden/fs/inodes/InodeError.h"
 
 #include <folly/String.h>
 #include "eden/fs/inodes/TreeInode.h"

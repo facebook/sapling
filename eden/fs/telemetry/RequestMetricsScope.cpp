@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "RequestMetricsScope.h"
+#include "eden/fs/telemetry/RequestMetricsScope.h"
 
 #include <algorithm>
 #include <numeric>

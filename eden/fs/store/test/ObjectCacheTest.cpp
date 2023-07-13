@@ -6,7 +6,7 @@
  */
 
 #include "eden/fs/store/ObjectCache.h"
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 
 using namespace folly::literals;
 using namespace facebook::eden;
