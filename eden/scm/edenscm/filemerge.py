@@ -427,6 +427,7 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
                         )
 
             ui.metrics.gauge("filemerge_prompt_localdeleted", 1)
+            prompts["hint"] = _hint_for_missing_file(repo, fcd, fco, fd)
             index = ui.promptchoice(_otherchangedlocaldeletedmsg % prompts, 2)
             choice = ["other", "local", "unresolved", "rename"][index]
         else:
@@ -474,6 +475,39 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
     except error.ResponseExpected:
         ui.write("\n")
         return _ifail(repo, mynode, orig, fcd, fco, fca, toolconf, labels)
+
+
+def _hint_for_missing_file(repo, fcd, fco, fd):
+    def get_node(fctx):
+        # for workingctx return p1's node
+        ctx = fctx.changectx()
+        return ctx.node() if ctx.node() else ctx.p1().node()
+
+    default_hint = _(
+        "if this is due to a renamed file, you can manually input the renamed path"
+    )
+    # enable it in tests by default
+    if not repo.ui.configbool("copytrace", "hint-with-commit", util.istest()):
+        return default_hint
+
+    dagcopytrace = repo._dagcopytrace
+    trace_result = dagcopytrace.trace_rename_ex(get_node(fco), get_node(fcd), fd)
+    type_ = trace_result["t"].lower()
+    if type_ in ("added", "deleted"):
+        node, path = trace_result["c"]
+        label = _("being rebased" if type_ == "added" else "rebasing onto")
+        if path == fd:
+            path_info = ""
+        else:
+            path_info = _(" with name '%s'") % path
+        return _("the missing file was probably %s by commit %s%s in the branch %s") % (
+            type_,
+            short(node),
+            path_info,
+            label,
+        )
+    else:
+        return default_hint
 
 
 @internaltool("local", nomerge)

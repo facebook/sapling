@@ -84,8 +84,8 @@ Make sure filename heuristics do not when they are not related
 
   $ hg rebase -s . -d 'desc(rm)'
   rebasing d526312210b9 "mode a"
-  other [source] changed a which local [dest] deleted
-  hint: if this is due to a renamed file, you can manually input the renamed path, or re-run the command using --config=experimental.copytrace=on to make hg figure out renamed path automatically (which is very slow, and you will need to be patient)
+  other [source] changed a which local [dest] is missing
+  hint: the missing file was probably deleted by commit 46985f76c7e5 in the branch rebasing onto
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
@@ -315,8 +315,8 @@ Too many move candidates
 
   $ hg rebase -s 'desc(mod)' -d 'desc(rm)'
   rebasing ef716627c70b "mod a"
-  other [source] changed a which local [dest] deleted
-  hint: if this is due to a renamed file, you can manually input the renamed path, or re-run the command using --config=experimental.copytrace=on to make hg figure out renamed path automatically (which is very slow, and you will need to be patient)
+  other [source] changed a which local [dest] is missing
+  hint: the missing file was probably deleted by commit d133babe0b73 in the branch rebasing onto
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]

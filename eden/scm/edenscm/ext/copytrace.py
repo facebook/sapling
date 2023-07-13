@@ -88,10 +88,8 @@ def extsetup(ui) -> None:
     )
 
     filemerge._otherchangedlocaldeletedmsg = _(
-        "other%(o)s changed %(fd)s which local%(l)s deleted\n"
-        "hint: if this is due to a renamed file, you can manually input the renamed path, or "
-        "re-run the command using --config=experimental.copytrace=on to make @prog@ figure out "
-        "renamed path automatically (which is very slow, and you will need to be patient)\n"
+        "other%(o)s changed %(fd)s which local%(l)s is missing\n"
+        "hint: %(hint)s\n"
         "use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path?"
         "$$ &Changed $$ &Deleted $$ &Unresolved $$ &Renamed"
     )

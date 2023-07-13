@@ -236,8 +236,8 @@ Test amend copytrace can be disabled
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg rebase --restack
   rebasing ad25e018afa9 "mod a"
-  other [source] changed a which local [dest] deleted
-  hint: if this is due to a renamed file, you can manually input the renamed path, or re-run the command using --config=experimental.copytrace=on to make hg figure out renamed path automatically (which is very slow, and you will need to be patient)
+  other [source] changed a which local [dest] is missing
+  hint: the missing file was probably added by commit 9f815da0cfb3 in the branch being rebased
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]

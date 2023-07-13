@@ -31,8 +31,8 @@
   $ hg ci -m dest
   $ hg rebase -s 1 -d .
   rebasing 812796267395 "2"
-  other [source] changed 1 which local [dest] deleted
-  hint: if this is due to a renamed file, you can manually input the renamed path, or re-run the command using --config=experimental.copytrace=on to make hg figure out renamed path automatically (which is very slow, and you will need to be patient)
+  other [source] changed 1 which local [dest] is missing
+  hint: if this is due to a renamed file, you can manually input the renamed path
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
