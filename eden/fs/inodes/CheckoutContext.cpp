@@ -33,7 +33,9 @@ CheckoutContext::CheckoutContext(
           clientPid,
           ObjectFetchContext::Cause::Thrift,
           thriftMethodName,
-          requestInfo)} {}
+          requestInfo)},
+      windowsSymlinksEnabled_{
+          mount_->getCheckoutConfig()->getEnableWindowsSymlinks()} {}
 
 CheckoutContext::~CheckoutContext() {}
 

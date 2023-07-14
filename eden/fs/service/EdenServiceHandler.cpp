@@ -1658,6 +1658,7 @@ ImmediateFuture<folly::Unit> diffBetweenRoots(
       cancellation,
       true,
       checkoutConfig.getCaseSensitive(),
+      checkoutConfig.getEnableWindowsSymlinks(),
       objectStore,
       nullptr);
   auto fut = diffRoots(diffContext.get(), fromRoot, toRoot);

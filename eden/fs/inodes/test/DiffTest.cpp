@@ -89,6 +89,7 @@ class DiffTest {
         folly::CancellationToken{},
         listIgnored,
         caseSensitive,
+        true,
         mount_.getEdenMount()->getObjectStore(),
         std::make_unique<TopLevelIgnores>(
             systemWideIgnoreFileContents, userIgnoreFileContents)};
@@ -2091,6 +2092,7 @@ TEST(DiffTest, multiTreeDiff) {
       folly::CancellationToken{},
       false, // listIgnored
       kPathMapDefaultCaseSensitive,
+      true,
       testMount.getEdenMount()->getObjectStore(),
       std::make_unique<TopLevelIgnores>("", "")};
 

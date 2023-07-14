@@ -80,6 +80,16 @@ mode_t modeFromTreeEntryType(TreeEntryType ft) {
   XLOG(FATAL) << "illegal file type " << enumValue(ft);
 }
 
+TreeEntryType filteredEntryType(TreeEntryType ft, bool windowsSymlinksEnabled) {
+  if (folly::kIsWindows) {
+    if (ft != TreeEntryType::SYMLINK) {
+      return ft;
+    }
+    return windowsSymlinksEnabled ? ft : TreeEntryType::REGULAR_FILE;
+  }
+  return ft;
+}
+
 std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode) {
   if (S_ISREG(mode)) {
 #ifdef _WIN32

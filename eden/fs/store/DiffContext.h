@@ -40,6 +40,7 @@ class DiffContext {
       folly::CancellationToken cancellation,
       bool listIgnored,
       CaseSensitivity caseSensitive,
+      bool windowsSymlinksEnabled,
       std::shared_ptr<ObjectStore> os,
       std::unique_ptr<TopLevelIgnores> topLevelIgnores);
 
@@ -75,6 +76,11 @@ class DiffContext {
     return caseSensitive_;
   }
 
+  // Whether symlinks are enabled or not
+  bool getWindowsSymlinksEnabled() const {
+    return windowsSymlinksEnabled_;
+  }
+
  private:
   std::unique_ptr<TopLevelIgnores> topLevelIgnores_;
   const folly::CancellationToken cancellation_;
@@ -88,6 +94,8 @@ class DiffContext {
 
   // Controls the case sensitivity of the diff operation.
   CaseSensitivity caseSensitive_;
+
+  bool windowsSymlinksEnabled_;
 };
 
 } // namespace facebook::eden

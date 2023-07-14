@@ -151,12 +151,16 @@ class CheckoutConfig {
   Guid getRepoGuid() const {
     return repoGuid_;
   }
+#endif
 
   /** Whether symlinks are enabled or not */
   bool getEnableWindowsSymlinks() const {
+#ifdef _WIN32
     return enableWindowsSymlinks_;
-  }
+#else
+    return true;
 #endif
+  }
 
  private:
   const AbsolutePath clientDirectory_;

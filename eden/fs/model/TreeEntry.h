@@ -69,6 +69,8 @@ mode_t modeFromTreeEntryType(TreeEntryType ft);
  */
 std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode);
 
+TreeEntryType filteredEntryType(TreeEntryType ft, bool windowsSymlinksEnabled);
+
 class TreeEntry {
  public:
   explicit TreeEntry(const ObjectId& hash, TreeEntryType type)
@@ -106,7 +108,6 @@ class TreeEntry {
     switch (type_) {
       case TreeEntryType::REGULAR_FILE:
       case TreeEntryType::EXECUTABLE_FILE:
-      case TreeEntryType::SYMLINK:
         return TreeEntryType::REGULAR_FILE;
       default:
         return type_;
@@ -124,12 +125,7 @@ class TreeEntry {
       case TreeEntryType::EXECUTABLE_FILE:
         return dtype_t::Regular;
       case TreeEntryType::SYMLINK:
-#ifndef _WIN32
         return dtype_t::Symlink;
-#else
-        // On Windows, scm symlinks are treated as normal files.
-        return dtype_t::Regular;
-#endif
       default:
         return dtype_t::Unknown;
     }

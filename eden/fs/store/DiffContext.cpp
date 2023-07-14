@@ -9,7 +9,7 @@
 
 #include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
-#include "eden/fs/store/IObjectStore.h"
+#include "eden/fs/store/ObjectStore.h"
 
 namespace facebook::eden {
 
@@ -18,6 +18,7 @@ DiffContext::DiffContext(
     folly::CancellationToken cancellation,
     bool listIgnored,
     CaseSensitivity caseSensitive,
+    bool windowsSymlinksEnabled,
     std::shared_ptr<ObjectStore> os,
     std::unique_ptr<TopLevelIgnores> topLevelIgnores)
     : callback{cb},
@@ -25,7 +26,8 @@ DiffContext::DiffContext(
       listIgnored{listIgnored},
       topLevelIgnores_(std::move(topLevelIgnores)),
       cancellation_{std::move(cancellation)},
-      caseSensitive_{caseSensitive} {}
+      caseSensitive_{caseSensitive},
+      windowsSymlinksEnabled_{windowsSymlinksEnabled} {}
 
 DiffContext::~DiffContext() = default;
 
