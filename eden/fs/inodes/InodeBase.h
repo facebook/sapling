@@ -72,6 +72,10 @@ class InodeBase {
     return getType() == dtype_t::Dir;
   }
 
+  bool isSymlink() const {
+    return getType() == dtype_t::Symlink;
+  }
+
   /**
    * Increment the number of references to this inode by its inode number.
    *

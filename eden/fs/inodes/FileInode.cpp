@@ -666,7 +666,11 @@ std::optional<bool> FileInode::isSameAsFast(
   // Note: the Windows-specific version of getMode() is safe to call here even
   // though we are holding the state_ lock.  On non-Windows getMetadataLocked()
   // must be used instead when holding the lock.
-  if (entryType != treeEntryTypeFromMode(getMode())) {
+  if (entryType == TreeEntryType::SYMLINK) {
+    if (!isSymlink()) {
+      return false;
+    }
+  } else if (entryType != TreeEntryType::REGULAR_FILE) {
     return false;
   }
 #endif // !_WIN32

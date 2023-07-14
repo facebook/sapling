@@ -23,6 +23,7 @@
 
 #ifdef _WIN32
 #include <ProjectedFSLib.h> // @manual
+#include <libloaderapi.h> // @manual
 #endif
 
 namespace facebook::eden {
@@ -44,6 +45,26 @@ struct PrjfsLiveRequest;
 
 using TraceDetailedArgumentsHandle = std::shared_ptr<void>;
 
+typedef enum __PRJ_EXT_INFO_TYPE {
+  PRJ_EXT_INFO_TYPE_SYMLINK = 1
+} _PRJ_EXT_INFO_TYPE;
+
+typedef struct _PRJ_EXTENDED_INFO {
+  _PRJ_EXT_INFO_TYPE InfoType;
+  ULONG NextInfoOffset;
+  union {
+    struct {
+      PCWSTR TargetName;
+    } Symlink;
+  } DUMMYUNIONNAME;
+} PRJ_EXTENDED_INFO;
+
+typedef HRESULT(WINAPI* PPWPI2)(
+    [in] PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT,
+    [in] PCWSTR,
+    [in] const PRJ_PLACEHOLDER_INFO*,
+    [in] UINT32,
+    const _PRJ_EXTENDED_INFO*);
 struct PrjfsTraceEvent : TraceEventBase {
   enum Type : unsigned char {
     START,
@@ -379,6 +400,12 @@ class PrjfsChannelInner {
     return dispatcher_->getStats();
   }
 
+  void initializeSymlinkSupport();
+
+  bool symlinksSupported() {
+    return symlinksSupported_;
+  }
+
  private:
   const folly::Logger& getStraceLogger() const {
     return *straceLogger_;
@@ -440,6 +467,8 @@ class PrjfsChannelInner {
   // The TraceBus must be the last member because its subscribed functions may
   // close over `this` and can run until the TraceBus itself is deallocated.
   std::shared_ptr<TraceBus<PrjfsTraceEvent>> traceBus_;
+
+  bool symlinksSupported_ = false;
 };
 
 class PrjfsChannel : public FsChannel {

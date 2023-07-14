@@ -65,7 +65,9 @@ std::string makeDotEdenConfig(EdenMount& mount) {
 PrjfsDispatcherImpl::PrjfsDispatcherImpl(EdenMount* mount)
     : PrjfsDispatcher(mount->getStats().copy()),
       mount_{mount},
-      dotEdenConfig_{makeDotEdenConfig(*mount)} {}
+      dotEdenConfig_{makeDotEdenConfig(*mount)},
+      symlinksEnabled_{
+          mount_->getCheckoutConfig()->getEnableWindowsSymlinks()} {}
 
 EdenTimestamp PrjfsDispatcherImpl::getLastCheckoutTime() const {
   return mount_->getLastCheckoutTime();
@@ -155,17 +157,44 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
               bool isDir = std::holds_alternative<std::shared_ptr<const Tree>>(
                   treeOrTreeEntry);
               auto pathFut = mount_->canonicalizePathFromTree(path, context);
-              auto sizeFut = isDir
-                  ? ImmediateFuture<uint64_t>{0ull}
-                  : mount_->getObjectStore()->getBlobSize(
-                        std::get<TreeEntry>(treeOrTreeEntry).getHash(),
-                        context);
+              auto treeEntry = isDir
+                  ? std::nullopt
+                  : std::make_optional(std::get<TreeEntry>(treeOrTreeEntry));
+              auto sizeFut = isDir ? ImmediateFuture<uint64_t>{0ull}
+                                   : mount_->getObjectStore()->getBlobSize(
+                                         treeEntry->getHash(), context);
+              bool isSymlink = !symlinksEnabled_ || isDir
+                  ? false
+                  : treeEntry->getDtype() == dtype_t::Symlink;
 
-              return collectAllSafe(pathFut, sizeFut)
+              auto symlinkDestinationFut = isSymlink
+                  ? mount_->getObjectStore()
+                        ->getBlob(treeEntry->getHash(), context)
+                        .thenValue(
+                            [](std::shared_ptr<const Blob> blob)
+                                -> std::optional<std::string> {
+                              auto content = blob->asString();
+                              // ProjectedFS does consider / as a valid
+                              // separator, but trying to open symlinks with
+                              // forward slashes on Windows generally doesn't
+                              // work. This also applies to having symlinks in
+                              // places other than EdenFS. So we replace them
+                              // with backslashes.
+                              std::replace(
+                                  content.begin(), content.end(), '/', '\\');
+                              return std::move(content);
+                            })
+                  : ImmediateFuture<std::optional<std::string>>{std::nullopt};
+
+              return collectAllSafe(pathFut, sizeFut, symlinkDestinationFut)
                   .thenValue([this, isDir, context = context.copy()](
-                                 std::tuple<RelativePath, uint64_t> res) {
-                    auto [path, size] = std::move(res);
-                    auto lookupResult = LookupResult{path, size, isDir};
+                                 std::tuple<
+                                     RelativePath,
+                                     uint64_t,
+                                     std::optional<std::string>>&& res) {
+                    auto [path, size, symlinkDestination] = std::move(res);
+                    auto lookupResult = LookupResult{
+                        path, size, isDir, std::move(symlinkDestination)};
 
                     // We need to run the following asynchronously to avoid the
                     // risk of deadlocks when EdenFS recursively triggers this
@@ -207,10 +236,13 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
                     if (isEnoent(*exc)) {
                       if (path == kDotEdenConfigPath) {
                         return folly::Try{std::optional{LookupResult{
-                            std::move(path), dotEdenConfig_.length(), false}}};
+                            std::move(path),
+                            dotEdenConfig_.length(),
+                            false,
+                            std::nullopt}}};
                       } else if (path == kDotEdenRelativePath) {
-                        return folly::Try{std::optional{
-                            LookupResult{std::move(path), 0, true}}};
+                        return folly::Try{std::optional{LookupResult{
+                            std::move(path), 0, true, std::nullopt}}};
                       } else {
                         XLOG(DBG6) << path << ": File not found";
                         return folly::Try<std::optional<LookupResult>>{

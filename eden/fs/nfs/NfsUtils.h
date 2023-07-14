@@ -53,11 +53,7 @@ inline mode_t ftype3ToMode(ftype3 type) {
     case ftype3::NF3CHR:
       return S_IFCHR;
     case ftype3::NF3LNK:
-#ifdef _WIN32
-      return _S_IFLNK;
-#else
       return S_IFLNK;
-#endif
     case ftype3::NF3SOCK:
 #ifdef _WIN32
       return _S_IFSOCK;

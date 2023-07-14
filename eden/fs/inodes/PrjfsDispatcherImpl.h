@@ -94,6 +94,8 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
   EdenMount* const mount_;
 
   const std::string dotEdenConfig_;
+
+  bool symlinksEnabled_;
 };
 
 } // namespace facebook::eden

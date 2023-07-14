@@ -27,7 +27,7 @@ _EDENFS_POSIX_CAPS = {
 }
 
 _EDENFS_WINDOWS_CAPS = {
-    SYMLINK: False,
+    SYMLINK: True,
     HARDLINK: False,
     EXECBIT: False,
     ALWAYSCASESENSITIVE: False,

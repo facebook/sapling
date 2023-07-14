@@ -68,14 +68,7 @@ mode_t modeFromTreeEntryType(TreeEntryType ft) {
     case TreeEntryType::EXECUTABLE_FILE:
       return S_IFREG | 0755;
     case TreeEntryType::SYMLINK:
-#ifdef _WIN32
-      // On Windows, we report symlinks as files. The behaviour here is same as
-      // Mercurial.
-      // TODO: would be nice to log some useful context here!
-      return S_IFREG | 0755;
-#else
       return S_IFLNK | 0755;
-#endif
   }
   XLOG(FATAL) << "illegal file type " << enumValue(ft);
 }
@@ -94,14 +87,14 @@ std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode) {
   if (S_ISREG(mode)) {
 #ifdef _WIN32
     // On Windows, S_ISREG only means regular file and doesn't support
-    // TreeEntryType::EXECUTABLE_FILE and TreeEntryType::SYMLINK
+    // TreeEntryType::EXECUTABLE_FILE
     return TreeEntryType::REGULAR_FILE;
 #else
     return mode & S_IXUSR ? TreeEntryType::EXECUTABLE_FILE
                           : TreeEntryType::REGULAR_FILE;
+#endif
   } else if (S_ISLNK(mode)) {
     return TreeEntryType::SYMLINK;
-#endif
   } else if (S_ISDIR(mode)) {
     return TreeEntryType::TREE;
   } else {

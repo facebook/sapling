@@ -45,10 +45,10 @@ static_assert(S_IFMT == 0xF000, "The S_IFMT on Windows should be 0xF000");
 #define DT_DIR ((_S_IFDIR) >> POSIX_BIT_SHIFT)
 #define DT_REG ((_S_IFREG) >> POSIX_BIT_SHIFT)
 
-// Windows CRT does not define _S_IFLNK and _S_IFSOCK. So we arbitrarily define
+// Windows CRT does not define S_IFLNK and _S_IFSOCK. So we arbitrarily define
 // it here.
-#define _S_IFLNK 0xA000
-#define DT_LNK (_S_IFLNK >> POSIX_BIT_SHIFT)
+#define S_IFLNK 0xA000
+#define DT_LNK (S_IFLNK >> POSIX_BIT_SHIFT)
 
 #define _S_IFSOCK 0xC000
 #define DT_SOCK (_S_IFSOCK >> POSIX_BIT_SHIFT)

@@ -35,6 +35,7 @@ struct LookupResult {
   RelativePath path;
   size_t size;
   bool isDir;
+  std::optional<std::string> symlinkDestination;
 };
 
 class PrjfsDispatcher {
