@@ -293,7 +293,7 @@ void runConcurrentModificationAndReaddirIteration(
   TestMount mount{builder};
   auto root = mount.getEdenMount()->getRootInode();
 
-  off_t lastOffset = 0;
+  FileOffset lastOffset = 0;
 
   std::unordered_map<std::string, unsigned> seen;
 

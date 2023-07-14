@@ -31,7 +31,7 @@ constexpr size_t kHashingBufSize = 8192;
 
 template <typename Hasher>
 int hash(Hasher&& hasher, const OverlayFile& file) {
-  off_t off = FileContentStore::kHeaderLength;
+  FileOffset off = FileContentStore::kHeaderLength;
   uint8_t buf[kHashingBufSize];
   while (true) {
     const auto ret = file.preadNoInt(&buf, sizeof(buf), off);
@@ -108,11 +108,11 @@ void OverlayFileAccess::createFile(
       std::make_shared<Entry>(std::move(file), blob.getSize(), sha1, blake3));
 }
 
-off_t OverlayFileAccess::getFileSize(FileInode& inode) {
+FileOffset OverlayFileAccess::getFileSize(FileInode& inode) {
   return getFileSize(inode.getNodeId(), &inode);
 }
 
-off_t OverlayFileAccess::getFileSize(InodeNumber ino, InodeBase* inode) {
+FileOffset OverlayFileAccess::getFileSize(InodeNumber ino, InodeBase* inode) {
   auto entry = getEntryForInode(ino);
   uint64_t version;
   {
@@ -133,7 +133,7 @@ off_t OverlayFileAccess::getFileSize(InodeNumber ino, InodeBase* inode) {
         "unable to fstat overlay file");
   }
   auto st = ret.value();
-  if (st.st_size < static_cast<off_t>(FileContentStore::kHeaderLength)) {
+  if (st.st_size < static_cast<FileOffset>(FileContentStore::kHeaderLength)) {
     // Truncated overlay files can sometimes occur after a hard reboot
     // where the overlay file data was not flushed to disk before the
     // system powered off.
@@ -145,7 +145,8 @@ off_t OverlayFileAccess::getFileSize(InodeNumber ino, InodeBase* inode) {
         "corrupt overlay file");
   }
 
-  auto size = st.st_size - static_cast<off_t>(FileContentStore::kHeaderLength);
+  auto size =
+      st.st_size - static_cast<FileOffset>(FileContentStore::kHeaderLength);
 
   // Update the cache if the version still matches.
   auto info = entry->info.wlock();
@@ -257,7 +258,7 @@ std::string OverlayFileAccess::readAllContents(FileInode& inode) {
   return result.value();
 }
 
-BufVec OverlayFileAccess::read(FileInode& inode, size_t size, off_t off) {
+BufVec OverlayFileAccess::read(FileInode& inode, size_t size, FileOffset off) {
   auto entry = getEntryForInode(inode.getNodeId());
 
   auto buf = folly::IOBuf::createCombined(size);
@@ -279,7 +280,7 @@ size_t OverlayFileAccess::write(
     FileInode& inode,
     const struct iovec* iov,
     size_t iovcnt,
-    off_t off) {
+    FileOffset off) {
   auto entry = getEntryForInode(inode.getNodeId());
 
   auto xfer =
@@ -296,7 +297,7 @@ size_t OverlayFileAccess::write(
   return xfer.value();
 }
 
-void OverlayFileAccess::truncate(FileInode& inode, off_t size) {
+void OverlayFileAccess::truncate(FileInode& inode, FileOffset size) {
   auto entry = getEntryForInode(inode.getNodeId());
   auto result = entry->file.ftruncate(size + FileContentStore::kHeaderLength);
   if (result.hasError()) {

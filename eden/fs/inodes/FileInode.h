@@ -11,6 +11,7 @@
 #include <folly/futures/SharedPromise.h>
 #include <chrono>
 #include <optional>
+#include "eden/common/utils/FileOffset.h"
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/BlobMetadata.h"
@@ -315,10 +316,12 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * May throw exceptions on error.
    */
   ImmediateFuture<std::tuple<BufVec, bool>>
-  read(size_t size, off_t off, const ObjectFetchContextPtr& context);
+  read(size_t size, FileOffset off, const ObjectFetchContextPtr& context);
 
-  ImmediateFuture<size_t>
-  write(BufVec&& buf, off_t off, const ObjectFetchContextPtr& fetchContext);
+  ImmediateFuture<size_t> write(
+      BufVec&& buf,
+      FileOffset off,
+      const ObjectFetchContextPtr& fetchContext);
 
 #ifdef _WIN32
   // This function will update the FileInode's state as materialized. This is a
@@ -329,7 +332,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   ImmediateFuture<size_t> write(
       folly::StringPiece data,
-      off_t off,
+      FileOffset off,
       const ObjectFetchContextPtr& fetchContext);
 
   void fsync(bool datasync);
@@ -514,7 +517,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       LockedState& state,
       const struct iovec* iov,
       size_t numIovecs,
-      off_t off);
+      FileOffset off);
 #endif // !_WIN32
 
   /**

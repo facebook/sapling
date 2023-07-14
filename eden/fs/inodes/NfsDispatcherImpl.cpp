@@ -116,7 +116,7 @@ ImmediateFuture<std::string> NfsDispatcherImpl::readlink(
 ImmediateFuture<NfsDispatcher::ReadRes> NfsDispatcherImpl::read(
     InodeNumber ino,
     size_t size,
-    off_t offset,
+    FileOffset offset,
     const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
       [context = context.copy(), size, offset](const FileInodePtr& inode) {
@@ -132,7 +132,7 @@ ImmediateFuture<NfsDispatcher::ReadRes> NfsDispatcherImpl::read(
 ImmediateFuture<NfsDispatcher::WriteRes> NfsDispatcherImpl::write(
     InodeNumber ino,
     std::unique_ptr<folly::IOBuf> data,
-    off_t offset,
+    FileOffset offset,
     const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
       [data = std::move(data), offset, context = context.copy()](
@@ -316,7 +316,7 @@ ImmediateFuture<NfsDispatcher::RenameRes> NfsDispatcherImpl::rename(
 
 ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdir(
     InodeNumber dir,
-    off_t offset,
+    FileOffset offset,
     uint32_t count,
     const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(dir).thenValue(
@@ -329,7 +329,7 @@ ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdir(
 
 ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdirplus(
     InodeNumber dir,
-    off_t offset,
+    FileOffset offset,
     uint32_t count,
     const ObjectFetchContextPtr& context) {
 #ifndef _WIN32

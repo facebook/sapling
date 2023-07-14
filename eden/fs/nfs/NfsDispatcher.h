@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "eden/common/utils/FileOffset.h"
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/nfs/NfsDirList.h"
@@ -119,7 +120,7 @@ class NfsDispatcher {
   virtual ImmediateFuture<ReadRes> read(
       InodeNumber ino,
       size_t size,
-      off_t offset,
+      FileOffset offset,
       const ObjectFetchContextPtr& context) = 0;
 
   /**
@@ -144,7 +145,7 @@ class NfsDispatcher {
   virtual ImmediateFuture<WriteRes> write(
       InodeNumber ino,
       std::unique_ptr<folly::IOBuf> data,
-      off_t offset,
+      FileOffset offset,
       const ObjectFetchContextPtr& context) = 0;
 
   /**
@@ -351,7 +352,7 @@ class NfsDispatcher {
    */
   virtual ImmediateFuture<ReaddirRes> readdir(
       InodeNumber dir,
-      off_t offset,
+      FileOffset offset,
       uint32_t count,
       const ObjectFetchContextPtr& context) = 0;
 
@@ -366,7 +367,7 @@ class NfsDispatcher {
    */
   virtual ImmediateFuture<ReaddirRes> readdirplus(
       InodeNumber dir,
-      off_t offset,
+      FileOffset offset,
       uint32_t count,
       const ObjectFetchContextPtr& context) = 0;
 

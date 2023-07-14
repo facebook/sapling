@@ -42,13 +42,13 @@ class NfsDispatcherImpl : public NfsDispatcher {
   ImmediateFuture<NfsDispatcher::ReadRes> read(
       InodeNumber ino,
       size_t size,
-      off_t offset,
+      FileOffset offset,
       const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<NfsDispatcher::WriteRes> write(
       InodeNumber ino,
       std::unique_ptr<folly::IOBuf> data,
-      off_t offset,
+      FileOffset offset,
       const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<NfsDispatcher::CreateRes> create(
@@ -95,13 +95,13 @@ class NfsDispatcherImpl : public NfsDispatcher {
 
   ImmediateFuture<NfsDispatcher::ReaddirRes> readdir(
       InodeNumber dir,
-      off_t offset,
+      FileOffset offset,
       uint32_t count,
       const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<NfsDispatcher::ReaddirRes> readdirplus(
       InodeNumber dir,
-      off_t offset,
+      FileOffset offset,
       uint32_t count,
       const ObjectFetchContextPtr& context) override;
 

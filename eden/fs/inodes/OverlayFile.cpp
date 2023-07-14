@@ -33,7 +33,7 @@ folly::Expected<struct stat, int> OverlayFile::fstat() const {
 }
 
 folly::Expected<ssize_t, int>
-OverlayFile::preadNoInt(void* buf, size_t n, off_t offset) const {
+OverlayFile::preadNoInt(void* buf, size_t n, FileOffset offset) const {
   std::shared_ptr<Overlay> overlay = overlay_.lock();
   if (!overlay) {
     return folly::makeUnexpected(EIO);
@@ -47,7 +47,9 @@ OverlayFile::preadNoInt(void* buf, size_t n, off_t offset) const {
   return ret;
 }
 
-folly::Expected<off_t, int> OverlayFile::lseek(off_t offset, int whence) const {
+folly::Expected<FileOffset, int> OverlayFile::lseek(
+    FileOffset offset,
+    int whence) const {
   std::shared_ptr<Overlay> overlay = overlay_.lock();
   if (!overlay) {
     return folly::makeUnexpected(EIO);
@@ -62,7 +64,7 @@ folly::Expected<off_t, int> OverlayFile::lseek(off_t offset, int whence) const {
 }
 
 folly::Expected<ssize_t, int>
-OverlayFile::pwritev(const iovec* iov, int iovcnt, off_t offset) const {
+OverlayFile::pwritev(const iovec* iov, int iovcnt, FileOffset offset) const {
   std::shared_ptr<Overlay> overlay = overlay_.lock();
   if (!overlay) {
     return folly::makeUnexpected(EIO);
@@ -76,7 +78,7 @@ OverlayFile::pwritev(const iovec* iov, int iovcnt, off_t offset) const {
   return ret;
 }
 
-folly::Expected<int, int> OverlayFile::ftruncate(off_t length) const {
+folly::Expected<int, int> OverlayFile::ftruncate(FileOffset length) const {
   std::shared_ptr<Overlay> overlay = overlay_.lock();
   if (!overlay) {
     return folly::makeUnexpected(EIO);
@@ -104,8 +106,9 @@ folly::Expected<int, int> OverlayFile::fsync() const {
   return folly::makeExpected<int>(ret);
 }
 
-folly::Expected<int, int> OverlayFile::fallocate(off_t offset, off_t length)
-    const {
+folly::Expected<int, int> OverlayFile::fallocate(
+    FileOffset offset,
+    FileOffset length) const {
 #ifdef __linux__
   std::shared_ptr<Overlay> overlay = overlay_.lock();
   if (!overlay) {

@@ -136,21 +136,21 @@ folly::Try<void> writeToHandle(
   return folly::Try<void>{};
 }
 
-folly::Try<uint64_t> getHandleFileSize(
+folly::Try<FileOffset> getHandleFileSize(
     const FileHandle& handle,
     AbsolutePathPiece path) {
   LARGE_INTEGER fileSize;
   if (!GetFileSizeEx(handle.get(), &fileSize)) {
-    return folly::Try<uint64_t>{makeWin32ErrorExplicit(
+    return folly::Try<FileOffset>{makeWin32ErrorExplicit(
         GetLastError(),
         fmt::format(FMT_STRING("couldn't obtain the file size of {}"), path))};
   }
-  return folly::Try{folly::to_unsigned(fileSize.QuadPart)};
+  return folly::Try{fileSize.QuadPart};
 }
 
 } // namespace
 
-folly::Try<uint64_t> getMaterializedFileSize(AbsolutePathPiece path) {
+folly::Try<FileOffset> getMaterializedFileSize(AbsolutePathPiece path) {
   EDEN_TRY(fileHandle, openHandle(path, OpenMode::READ));
   return getHandleFileSize(fileHandle, path);
 }

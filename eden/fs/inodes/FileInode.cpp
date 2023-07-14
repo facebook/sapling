@@ -959,7 +959,7 @@ void FileInode::updateBlockCount(FOLLY_MAYBE_UNUSED struct stat& st) {
   // Compute a value to store in st_blocks based on st_size.
   // Note that st_blocks always refers to 512 byte blocks, regardless of the
   // value we report in st.st_blksize.
-  static constexpr off_t kBlockSize = 512;
+  static constexpr FileOffset kBlockSize = 512;
   st.st_blocks = ((st.st_size + kBlockSize - 1) / kBlockSize);
 #endif
 }
@@ -1044,8 +1044,10 @@ ImmediateFuture<string> FileInode::readAll(
       });
 }
 
-ImmediateFuture<std::tuple<BufVec, bool>>
-FileInode::read(size_t size, off_t off, const ObjectFetchContextPtr& context) {
+ImmediateFuture<std::tuple<BufVec, bool>> FileInode::read(
+    size_t size,
+    FileOffset off,
+    const ObjectFetchContextPtr& context) {
 #ifndef _WIN32
   XDCHECK_GE(off, 0);
   return runWhileDataLoaded(
@@ -1113,7 +1115,7 @@ FileInode::read(size_t size, off_t off, const ObjectFetchContextPtr& context) {
 
 ImmediateFuture<size_t> FileInode::write(
     BufVec&& buf,
-    off_t off,
+    FileOffset off,
     const ObjectFetchContextPtr& fetchContext) {
 #ifndef _WIN32
   return runWhileMaterialized(
@@ -1203,7 +1205,7 @@ size_t FileInode::writeImpl(
     LockedState& state,
     const struct iovec* iov,
     size_t numIovecs,
-    off_t off) {
+    FileOffset off) {
   XDCHECK_EQ(state->tag, State::MATERIALIZED_IN_OVERLAY);
 
   auto xfer = getOverlayFileAccess(state)->write(*this, iov, numIovecs, off);
@@ -1219,7 +1221,7 @@ size_t FileInode::writeImpl(
 
 ImmediateFuture<size_t> FileInode::write(
     folly::StringPiece data,
-    off_t off,
+    FileOffset off,
     const ObjectFetchContextPtr& fetchContext) {
   auto state = LockedState{this};
 

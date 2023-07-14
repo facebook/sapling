@@ -633,7 +633,7 @@ FileInodePtr TestMount::overwriteFile(
   desired.size = 0;
   (void)file->setattr(desired, ObjectFetchContext::getNullContext()).get(0ms);
 
-  off_t offset = 0;
+  FileOffset offset = 0;
   file->write(contents, offset, ObjectFetchContext::getNullContext()).get(0ms);
   file->fsync(/*datasync*/ true);
 #endif

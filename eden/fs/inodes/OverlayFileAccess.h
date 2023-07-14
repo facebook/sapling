@@ -65,8 +65,8 @@ class OverlayFileAccess {
    * The inode parameter is used for error messages when the underlying overlay
    * data has been corrupted.
    */
-  off_t getFileSize(FileInode& inode);
-  off_t getFileSize(InodeNumber ino, InodeBase* inode);
+  FileOffset getFileSize(FileInode& inode);
+  FileOffset getFileSize(InodeNumber ino, InodeBase* inode);
 
   /**
    * Returns the SHA-1 hash of the file contents for the given inode number.
@@ -89,19 +89,22 @@ class OverlayFileAccess {
    * Reads a range from the file. At EOF, may return a BufVec smaller than the
    * requested size.
    */
-  BufVec read(FileInode& inode, size_t size, off_t off);
+  BufVec read(FileInode& inode, size_t size, FileOffset off);
 
   /**
    * Writes data into the file at the specified offset. Returns the number of
    * bytes written.
    */
-  size_t
-  write(FileInode& inode, const struct iovec* iov, size_t iovcnt, off_t off);
+  size_t write(
+      FileInode& inode,
+      const struct iovec* iov,
+      size_t iovcnt,
+      FileOffset off);
 
   /**
    * Sets the size of the file in the overlay.
    */
-  void truncate(FileInode& inode, off_t size = 0);
+  void truncate(FileInode& inode, FileOffset size = 0);
 
   /**
    * If datasync is true, only the user data should be flushed, not the

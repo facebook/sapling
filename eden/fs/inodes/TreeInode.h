@@ -6,10 +6,12 @@
  */
 
 #pragma once
+
 #include <folly/File.h>
 #include <folly/Portability.h>
 #include <folly/Synchronized.h>
 #include <optional>
+#include "eden/common/utils/FileOffset.h"
 #include "eden/fs/fuse/Invalidation.h"
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/DirEntry.h"
@@ -193,7 +195,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 #ifndef _WIN32
   FuseDirList fuseReaddir(
       FuseDirList&& list,
-      off_t off,
+      FileOffset off,
       const ObjectFetchContextPtr& context);
 #endif
 

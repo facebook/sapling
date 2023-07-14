@@ -11,6 +11,7 @@
 #include <folly/Try.h>
 #include <limits>
 #include <string>
+#include "eden/common/utils/FileOffset.h"
 #include "eden/common/utils/Handle.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -71,7 +72,7 @@ getAllDirectoryEntryNames(AbsolutePathPiece path);
 /**
  * For Windows only, returns the file size of the materialized file.
  */
-folly::Try<uint64_t> getMaterializedFileSize(AbsolutePathPiece pathToFile);
+folly::Try<FileOffset> getMaterializedFileSize(AbsolutePathPiece pathToFile);
 #endif // _WIN32
 
 } // namespace facebook::eden
