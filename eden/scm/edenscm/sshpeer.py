@@ -353,8 +353,12 @@ def _popen4testhgserve(path, env=None, newlines: bool = False, bufsize: int = -1
             return True
 
         with open(file, "rb") as file:
-            start = file.read(12)
-            return (b"#!/bin/bash" in start) or (b"#!/bin/sh" in start)
+            start = file.read(32)
+            return (
+                (b"#!/bin/bash" in start)
+                or (b"#!/bin/sh" in start)
+                or b"env bash" in start
+            )
         return False
 
     # Append "defpath" (ex. /bin) to PATH.  Needed for buck test (the main hg
