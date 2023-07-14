@@ -320,23 +320,6 @@ class phasecache(object):
             self._phasesets[draft] = ps
         self._loadedrevslen = len(cl)
 
-    def _is_dag_compatible(self, repo):
-        """Returns False if the cached revs are incompatible with the repo's current dag.
-
-        When the dag is incompatible, the Rust NameSet falls back to O(N) slow
-        paths. For example, `xs - public()` might be O(len(xs)) and trigger
-        hash lookups in `public()` instead of O(1)-ish without remote lookups.
-        To avoid the slow paths, we recalculate `public()`.
-        """
-        try:
-            # _publicrevs is None: AttributeError
-            # No hints on "dag_version": KeyError
-            cached_version = self._publicrevs._set.hints()["dag_version"]
-            current_version = repo.changelog.dag.version()
-            return cached_version.cmp(current_version) in {0, -1}
-        except (AttributeError, KeyError):
-            return False
-
     def draftrevs(self, repo):
         if not self._headbased:
             raise error.ProgrammingError(
@@ -354,7 +337,7 @@ class phasecache(object):
                 "non-headbased phases should use loadphaserevs"
             )
 
-        if self._publicrevs is None or not self._is_dag_compatible(repo):
+        if self._publicrevs is None:
             cl = repo.changelog
             publicheadnodes = repo.heads(includepublic=True, includedraft=False)
             draftheadnodes = repo.heads(includepublic=False, includedraft=True)
