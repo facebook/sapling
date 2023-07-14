@@ -379,7 +379,10 @@ class changelog(object):
         """
         short version of read that only returns the files modified by the cset
         """
-        text = self.revision(node)
+        # For performance we skip verifying the commit hash, which can trigger
+        # remote lookups of the parent hashes. A real-world example is:
+        # log -r " reverse(master~1000::master) & not(file(r're:.*'))"
+        text = self.revision(node, verify=False)
         return readfiles(text)
 
     def add(
@@ -479,6 +482,7 @@ class changelog(object):
         nodeorrev: "Union[int, bytes]",
         _df: "Optional[IO]" = None,
         raw: bool = False,
+        verify: bool = True,
     ) -> bytes:
         if nodeorrev in {nullid, nullrev}:
             return b""
@@ -490,7 +494,7 @@ class changelog(object):
         if text is None:
             raise error.LookupError(node, self.indexfile, _("no node"))
         # Do not verify hg hash if git hash is being used.
-        if not self._isgit:
+        if verify and not self._isgit:
             # check HG SHA1 hash
             p1, p2 = self.parents(node)[:2]
             if revlog.hash(text, p1, p2) != node:
