@@ -414,9 +414,9 @@ class localrepository(object):
         """Instantiate local repo object, optionally creating a new repo on disk if `create` is True.
         If specified, `initial_config` is added to the created repo's config."""
 
-        # Simplify things by keepning identity cache scoped at max to
+        # Simplify things by keeping identity cache scoped at max to
         # a single repo's lifetime. In particular this is necessary
-        # wrt git submodules.
+        # with respect to git submodules.
         identity.sniffdir.cache_clear()
 
         if create:
