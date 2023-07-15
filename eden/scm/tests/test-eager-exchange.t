@@ -279,3 +279,30 @@ Test that auto pull invalidates public() properly:
     D8
     D9
 
+Test that filtering revset does not use sequential fetches.
+
+  $ cd
+  $ hg init server-filtering-revset --config format.use-eager-repo=True
+  $ drawdag --cwd ~/server-filtering-revset << 'EOS'
+  > P01  # bookmark master = P01
+  > EOS
+
+  $ cd
+  $ newremoterepo
+  $ setconfig paths.default=test:server-filtering-revset
+  $ hg debugchangelog --migrate lazy
+  $ LOG= hg pull -q -B master
+
+  $ drawdag --cwd ~/server-filtering-revset << 'EOS'
+  > P30  # bookmark master = P30
+  >  :
+  > P01
+  > EOS
+
+  $ LOG= hg pull -q -B master
+
+  $ LOG=dag::protocol=trace,eagerepo::api=debug hg log -r "reverse(master~20::master) & not(file(r're:.*'))"
+  DEBUG dag::protocol: resolve ids [9] remotely
+  DEBUG dag::protocol: resolve ids [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27] remotely
+  DEBUG eagerepo::api: revlog_data * (glob)
+  >>> assert _.count('revlog_data') == 1 and 0 < _.count('resolve id') < 3

@@ -211,9 +211,8 @@ class abstractsmartset(object):
 
         This is part of the mandatory API for smartset."""
         c = other.__contains__
-        return self.filter(
-            lambda r: not c(r), condrepr=("<not %r>", other), cache=False
-        )
+        r = self.filter(lambda r: not c(r), condrepr=("<not %r>", other), cache=False)
+        return r.prefetch(*other.prefetchfields())
 
     def filter(self, condition, condrepr=None, cache=True):
         """Returns this smartset filtered by condition as a new smartset.
