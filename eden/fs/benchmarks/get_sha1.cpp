@@ -176,7 +176,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-#ifdef WIN32
+#ifdef _WIN32
   if (shouldRecordFilesystemSamples(FLAGS_interface)) {
     std::cerr << "Filesystem sha1 not currently supported" << std::endl;
     return 1;
