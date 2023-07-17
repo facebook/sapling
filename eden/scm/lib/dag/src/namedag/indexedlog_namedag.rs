@@ -18,9 +18,9 @@ use crate::errors::bug;
 use crate::iddag::IdDag;
 use crate::iddagstore::IndexedLogStore;
 use crate::idmap::IdMap;
-use crate::ops::IntVersion;
 use crate::ops::Open;
 use crate::ops::Persist;
+use crate::ops::StorageVersion;
 use crate::ops::TryClone;
 use crate::Result;
 
@@ -115,8 +115,8 @@ impl Persist for NameDagState {
     }
 }
 
-impl IntVersion for NameDagState {
-    fn int_version(&self) -> (u64, u64) {
+impl StorageVersion for NameDagState {
+    fn storage_version(&self) -> (u64, u64) {
         match &self.mlog {
             Some(mlog) => mlog.version(),
             None => (0, 0),

@@ -608,11 +608,18 @@ pub trait Open: Clone {
     fn open(&self) -> Result<Self::OpenTarget>;
 }
 
-/// Has an integer tuple version that can be used to test if the data was
-/// changed. If the first number changes, it means incompatible changes.
-/// If only the second number increases, it means append-only changes.
-pub trait IntVersion {
-    fn int_version(&self) -> (u64, u64);
+/// Has a tuple version that can be used to test if the data was changed.
+pub trait StorageVersion {
+    /// Version tracked by the underlying low-level storage (ex. indexedlog).
+    /// `(epoch, length)`.
+    /// - If `epoch` is changed, then a non-append-only change has happened,
+    ///   all caches should be invalidated.
+    /// - If `length` is increased but `epoch` has changed, then the storage
+    ///   layer got an append-only change. Note: the append-only change at
+    ///   the storage layer does *not* mean append-only at the commit graph
+    ///   layer, since the strip operation that removes commits could be
+    ///   implemented by appending special data to the storage layer.
+    fn storage_version(&self) -> (u64, u64);
 }
 
 /// Fallible clone.

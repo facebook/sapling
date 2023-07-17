@@ -54,11 +54,11 @@ use crate::ops::DagPersistent;
 use crate::ops::DagStrip;
 use crate::ops::IdConvert;
 use crate::ops::IdMapSnapshot;
-use crate::ops::IntVersion;
 use crate::ops::Open;
 use crate::ops::Parents;
 use crate::ops::Persist;
 use crate::ops::PrefixLookup;
+use crate::ops::StorageVersion;
 use crate::ops::ToIdSet;
 use crate::ops::TryClone;
 use crate::protocol;
@@ -170,7 +170,7 @@ where
     IdDag<IS>: TryClone + 'static,
     M: TryClone + IdMapAssignHead + Persist + Send + Sync + 'static,
     P: Open<OpenTarget = Self> + Send + Sync + 'static,
-    S: TryClone + IntVersion + Persist + Send + Sync + 'static,
+    S: TryClone + StorageVersion + Persist + Send + Sync + 'static,
 {
     /// Add vertexes and their ancestors to the on-disk DAG.
     ///
@@ -194,12 +194,12 @@ where
         // checked there are no in-memory changes at the beginning.
         //
         // Also see comments in `NameDagState::lock()`.
-        let old_version = self.state.int_version();
+        let old_version = self.state.storage_version();
         let lock = self.state.lock()?;
         let map_lock = self.map.lock()?;
         let dag_lock = self.dag.lock()?;
         self.state.reload(&lock)?;
-        let new_version = self.state.int_version();
+        let new_version = self.state.storage_version();
         if old_version != new_version {
             self.invalidate_snapshot();
             self.invalidate_missing_vertex_cache();
@@ -365,12 +365,12 @@ where
     IS: Send + Sync + 'static,
     M: Send + Sync + 'static,
     P: Send + Sync + 'static,
-    S: IntVersion + Send + Sync + 'static,
+    S: StorageVersion + Send + Sync + 'static,
 {
     /// Attempt to reuse caches from `other` if two `NameDag`s are compatible.
     /// Usually called when `self` is newly created.
     fn maybe_reuse_caches_from(&mut self, other: &Self) {
-        if self.state.int_version() != other.state.int_version()
+        if self.state.storage_version() != other.state.storage_version()
             || self.persisted_id_set.as_spans() != other.persisted_id_set.as_spans()
         {
             tracing::debug!(target: "dag::cache", "cannot reuse cache");
@@ -498,7 +498,7 @@ where
     IdDag<IS>: TryClone,
     M: TryClone + Persist + IdMapWrite + IdConvert + Send + Sync + 'static,
     P: TryClone + Open<OpenTarget = Self> + Send + Sync + 'static,
-    S: TryClone + IntVersion + Persist + Send + Sync + 'static,
+    S: TryClone + StorageVersion + Persist + Send + Sync + 'static,
 {
     async fn strip(&mut self, set: &NameSet) -> Result<()> {
         if !self.pending_heads.is_empty() {
@@ -687,7 +687,7 @@ where
     IdDag<IS>: TryClone,
     M: TryClone + IdMapAssignHead + Persist + Send + Sync + 'static,
     P: Open<OpenTarget = Self> + TryClone + Send + Sync + 'static,
-    S: IntVersion + TryClone + Persist + Send + Sync + 'static,
+    S: StorageVersion + TryClone + Persist + Send + Sync + 'static,
 {
     async fn import_pull_data(
         &mut self,

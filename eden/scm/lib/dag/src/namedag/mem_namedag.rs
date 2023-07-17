@@ -13,9 +13,9 @@ use super::NameDagBuilder;
 use crate::iddag::IdDag;
 use crate::iddagstore::InProcessStore;
 use crate::idmap::MemIdMap;
-use crate::ops::IntVersion;
 use crate::ops::Open;
 use crate::ops::Persist;
+use crate::ops::StorageVersion;
 use crate::Result;
 
 /// In-memory version of [`NameDag`].
@@ -82,8 +82,8 @@ impl Persist for MemNameDagState {
     }
 }
 
-impl IntVersion for MemNameDagState {
-    fn int_version(&self) -> (u64, u64) {
+impl StorageVersion for MemNameDagState {
+    fn storage_version(&self) -> (u64, u64) {
         self.version
     }
 }

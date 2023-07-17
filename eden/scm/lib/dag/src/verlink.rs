@@ -63,6 +63,10 @@ impl VerLink {
     }
 
     /// Bumps the `VerLink` for backward-compatible (ex. append-only) changes.
+    /// Note the "append-only" means only adding commits without "stripping"
+    /// or "rewriting" commits. It is different from the "append-only" concept
+    /// from the storage layer, because the "stripping" or "rewriting" might
+    /// be implemented as "appending" special data on the storage layer.
     pub fn bump(&mut self) {
         match Arc::get_mut(&mut self.inner) {
             // This is an optimization to avoid increasing the length of the
