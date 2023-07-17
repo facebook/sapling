@@ -980,6 +980,10 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
             self.assertFalse(os.path.exists(self.get_path("dir2")))
 
         def test_file_locked_change_content(self) -> None:
+            # TODO(zhaolong): remove this once this option is enabled everywhere.
+            self.hg(
+                "config", "--local", "experimental.abort-on-eden-conflict-error", "True"
+            )
             self.repo.update(self.commit1)
 
             with open_locked(self.get_path("dir/file2")):
@@ -987,9 +991,14 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
                     self.repo.update(self.commit4)
 
             self.assertEqual(self.read_file("dir/file2"), "new")
-            self.assert_status({"dir/file2": "M"})
+            with self.assertRaises(hgrepo.HgError):
+                self.repo.status()
 
         def test_file_locked_removal(self) -> None:
+            # TODO(zhaolong): remove this once this option is enabled everywhere.
+            self.hg(
+                "config", "--local", "experimental.abort-on-eden-conflict-error", "True"
+            )
             self.repo.update(self.commit3)
             self.assertEqual(self.read_file("dir/file3"), "three")
             with open_locked(self.get_path("dir/file3")):
@@ -997,4 +1006,5 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
                     self.repo.update(self.commit4)
 
             self.assertEqual(self.read_file("dir/file3"), "three")
-            self.assert_status({"dir/file3": "?"})
+            with self.assertRaises(hgrepo.HgError):
+                self.repo.status()
