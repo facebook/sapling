@@ -5,14 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {PartialSelection} from '../partialSelection';
 import type {
   ApplyPreviewsFuncType,
   ApplyUncommittedChangesPreviewsFuncType,
   PreviewContext,
   UncommittedChangesPreviewContext,
 } from '../previews';
-import type {CommandArg, RepoRelativePath, UncommittedChanges} from '../types';
+import type {CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
+import type {ImportAmendCommit, ImportStack} from 'shared/types/stack';
 
+import {t} from '../i18n';
 import {Operation} from './Operation';
 
 export class AmendOperation extends Operation {
@@ -100,5 +103,69 @@ export class AmendOperation extends Operation {
       }
     };
     return func;
+  }
+}
+
+export class PartialAmendOperation extends Operation {
+  /**
+   * See also `AmendOperation`. This operation takes a `PartialSelection` and
+   * uses `debugimportstack` under the hood, to achieve `amend -i` effect.
+   */
+  constructor(
+    private message: string | undefined,
+    private originalHeadHash: Hash,
+    private selection: PartialSelection,
+    // We need "selected" or "all" files since `selection` only tracks deselected files.
+    private allFiles: Array<RepoRelativePath>,
+  ) {
+    super('PartialAmendOperation');
+  }
+
+  getArgs(): CommandArg[] {
+    return ['debugimportstack'];
+  }
+
+  getStdin(): string | undefined {
+    const files = this.selection.calculateImportStackFiles(this.allFiles);
+    const commitInfo: ImportAmendCommit = {
+      mark: ':1',
+      node: this.originalHeadHash,
+      files,
+    };
+    if (this.message) {
+      commitInfo.text = this.message;
+    }
+    const importStack: ImportStack = [
+      ['amend', commitInfo],
+      ['reset', {mark: ':1'}],
+    ];
+    return JSON.stringify(importStack);
+  }
+
+  getDescriptionForDisplay() {
+    return {
+      description: t('Amending selected changes'),
+      tooltip: t(
+        'This operation does not have a traditional command line equivalent. \n' +
+          'You can use `amend -i` on the command line to select changes to amend.',
+      ),
+    };
+  }
+}
+
+/** Choose `PartialAmendOperation` or `AmendOperation` based on input. */
+export function getAmendOperation(
+  message: string | undefined,
+  originalHeadHash: Hash,
+  selection: PartialSelection,
+  allFiles: Array<RepoRelativePath>,
+): AmendOperation | PartialAmendOperation {
+  if (selection.hasChunkSelection()) {
+    return new PartialAmendOperation(message, originalHeadHash, selection, allFiles);
+  } else if (selection.isEverythingSelected(() => allFiles)) {
+    return new AmendOperation(undefined, message);
+  } else {
+    const selectedFiles = allFiles.filter(path => selection.isFullyOrPartiallySelected(path));
+    return new AmendOperation(selectedFiles, message);
   }
 }
