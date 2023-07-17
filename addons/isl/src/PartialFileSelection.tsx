@@ -5,8 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {RangeInfo} from './TextEditable';
 import type {ChunkSelectState} from './stackEdit/chunkSelectState';
 
+import {TextEditable} from './TextEditable';
 import {T, t} from './i18n';
 import {Set as ImSet, Range} from 'immutable';
 import {useRef, useState} from 'react';
@@ -19,6 +21,7 @@ export function PartialFileSelection(props: {
 }) {
   // States for context line expansion.
   const [expandedALines, setExpandedALines] = useState<ImSet<number>>(ImSet);
+  const [currentCaretLine, setCurrentSelLine] = useState<number>(-1);
 
   // State for range selection.
   const lastLine = useRef(-1);
@@ -64,12 +67,20 @@ export function PartialFileSelection(props: {
   const contextCount = 2;
   const skipLines = Array<boolean>(lines.length + contextCount).fill(true);
   lines.forEach((line, i) => {
-    if (line.sign !== '' || expandedALines.has(line.aLine ?? -1)) {
+    if (
+      line.sign !== '' ||
+      expandedALines.has(line.aLine ?? -1) ||
+      line.selLine === currentCaretLine
+    ) {
       for (let j = i + contextCount; j >= 0 && j >= i - contextCount && skipLines[j]; j--) {
         skipLines[j] = false;
       }
     }
   });
+
+  // Needed by TextEditable. Ranges of text on the right side.
+  const rangeInfos: RangeInfo[] = [];
+  let start = 0;
 
   // Render the rows.
   const lineAContent: JSX.Element[] = [];
@@ -106,6 +117,15 @@ export function PartialFileSelection(props: {
   };
 
   lines.forEach((line, i) => {
+    let dataRangeId = undefined;
+    // Provide `RangeInfo` for editing, if the line exists in the selection version.
+    if (line.selLine !== null) {
+      const end = start + line.data.length;
+      dataRangeId = rangeInfos.length;
+      rangeInfos.push({start, end});
+      start = end;
+    }
+
     if (skipLines[i]) {
       if (!skipping) {
         skipStart = i;
@@ -124,20 +144,19 @@ export function PartialFileSelection(props: {
 
     // Draw the actual line and line numbers.
     let aLineData = line.data;
-    let bLineData = line.data;
-    if (line.sign === '+' || line.sign === '!+') {
+    const bLineData = dataRangeId === undefined ? '\n' : line.data;
+    if (line.sign === '+') {
       if (line.selected) {
         aLineData = '\n';
-      } else {
-        bLineData = '\n';
       }
       rowClass += ' line-add';
-    }
-    if (line.sign === '-' || line.sign === '!-') {
-      if (line.selected) {
-        bLineData = '\n';
-      }
+    } else if (line.sign === '!+') {
+      aLineData = '\n';
+      rowClass += ' line-force-add';
+    } else if (line.sign === '-') {
       rowClass += ' line-del';
+    } else if (line.sign === '!-') {
+      rowClass += ' line-force-del';
     }
 
     const lineNumberProps = {
@@ -160,7 +179,7 @@ export function PartialFileSelection(props: {
       </div>,
     );
     lineBContent.push(
-      <div key={i} className={`line line-b ${rowClass}`}>
+      <div key={i} className={`line line-b ${rowClass}`} data-range-id={dataRangeId}>
         {bLineData}
       </div>,
     );
@@ -182,6 +201,22 @@ export function PartialFileSelection(props: {
     skipping = false;
   }
 
+  const textValue = props.chunkSelection.getSelectedText();
+  const handleTextChange = (text: string) => {
+    const newChunkSelect = props.chunkSelection.setSelectedText(text);
+    props.setChunkSelection(newChunkSelect);
+  };
+  const handleSelChange = (start: number, end: number) => {
+    // Expand the line of the cursor. But do not expand on range selection (ex. Ctrl+A).
+    if (start === end) {
+      let selLine = countLines(textValue.substring(0, start));
+      if (start == textValue.length && textValue.endsWith('\n')) {
+        selLine -= 1;
+      }
+      setCurrentSelLine(selLine);
+    }
+  };
+
   return (
     <div className="partial-file-selection-width-min-content">
       <div className="partial-file-selection-scroll-y">
@@ -192,14 +227,35 @@ export function PartialFileSelection(props: {
           <pre className="column-a-number">{lineANumber}</pre>
           <pre className="column-b-number">{lineBNumber}</pre>
           <div className="partial-file-selection-scroll-x">
-            <pre className="column-b">{lineBContent}</pre>
+            <TextEditable
+              value={textValue}
+              rangeInfos={rangeInfos}
+              onTextChange={handleTextChange}
+              onSelectChange={handleSelChange}>
+              <pre className="column-b">{lineBContent}</pre>
+            </TextEditable>
           </div>
         </div>
       </div>
       <div className="partial-file-selection-tip">
         <T>Click lines on the left side, or line numbers to toggle selection. </T>
         <T>The right side shows the selection result.</T>
+        <br />
+        <T>
+          You can also edit the code on the right side. Edit affects partial selection. Files on
+          disk are not affected.
+        </T>
       </div>
     </div>
   );
+}
+
+function countLines(text: string): number {
+  let result = 1;
+  for (const ch of text) {
+    if (ch === '\n') {
+      result++;
+    }
+  }
+  return result;
 }

@@ -94,7 +94,15 @@
   background: var(--diffEditor-insertedLineBackground);
 }
 
+.partial-file-selection .line-force-add.line.line-b {
+  background: var(--diffEditor-insertedLineBackground);
+}
+
 .partial-file-selection .line-del {
+  background: var(--diffEditor-removedLineBackground);
+}
+
+.partial-file-selection .line-force-del.line.line-a {
   background: var(--diffEditor-removedLineBackground);
 }
 
