@@ -43,6 +43,7 @@ export function VSCodeButtonDropdown<T extends {label: ReactNode; id: string}>({
       </VSCodeButton>
       <select
         disabled={pickerDisabled}
+        value={selectedOption.id}
         onClick={e => e.stopPropagation()}
         onChange={event => {
           const matching = options.find(opt => opt.id === (event.target.value as T['id']));
@@ -51,7 +52,7 @@ export function VSCodeButtonDropdown<T extends {label: ReactNode; id: string}>({
           }
         }}>
         {options.map(option => (
-          <option key={option.id} value={option.id} selected={option.id === selected.id}>
+          <option key={option.id} value={option.id}>
             {option.label}
           </option>
         ))}
