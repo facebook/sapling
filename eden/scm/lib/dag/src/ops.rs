@@ -644,6 +644,7 @@ impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
         // Fast path: extract IdSet from IdStaticSet.
         if let Some(set) = set.as_any().downcast_ref::<IdStaticSet>() {
             if None < version && version <= Some(self.map_version()) {
+                tracing::debug!(target: "dag::algo::to_id_set", "{:6?} (fast path)", set);
                 return Ok(set.spans.clone());
             }
         }
@@ -651,6 +652,7 @@ impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
         // Convert IdLazySet to IdStaticSet. Bypass hash lookups.
         if let Some(set) = set.as_any().downcast_ref::<IdLazySet>() {
             if None < version && version <= Some(self.map_version()) {
+                tracing::warn!(target: "dag::algo::to_id_set", "{:6?} (slow path 1)", set);
                 let set: IdStaticSet = set.to_static()?;
                 return Ok(set.spans);
             }
@@ -660,6 +662,7 @@ impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
         // IdSet. Does not bypass hash lookups.
         let mut spans = IdSet::empty();
         let mut iter = set.iter().await?.chunks(1 << 17);
+        tracing::warn!(target: "dag::algo::to_id_set", "{:6?} (slow path 2)", set);
         while let Some(names) = iter.next().await {
             let names = names.into_iter().collect::<Result<Vec<_>>>()?;
             let ids = self.vertex_id_batch(&names).await?;

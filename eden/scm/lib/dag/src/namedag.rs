@@ -1650,8 +1650,10 @@ where
             && matches!(hints.dag_version(), Some(v) if v <= self.dag_version())
             && matches!(hints.id_map_version(), Some(v) if v <= self.map_version())
         {
+            tracing::debug!(target: "dag::algo::sort", "sort({:6?}) (fast path)", set);
             Ok(set.clone())
         } else {
+            tracing::warn!(target: "dag::algo::sort", "sort({:6?}) (slow path)", set);
             let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_version());
             let mut spans = IdSet::empty();
             let mut iter = set.iter().await?.chunks(1 << 17);

@@ -180,6 +180,7 @@ impl NameSet {
             && self.hints().dag_version() > None
         {
             tracing::debug!(
+                target: "dag::algo::difference",
                 "difference(x={:.6?}, y={:.6?}) = () (fast path 1)",
                 self,
                 other
@@ -188,6 +189,7 @@ impl NameSet {
         }
         if self.hints().contains(Flags::EMPTY) || other.hints().contains(Flags::EMPTY) {
             tracing::debug!(
+                target: "dag::algo::difference",
                 "difference(x={:.6?}, y={:.6?}) = x (fast path 2)",
                 self,
                 other
@@ -207,6 +209,7 @@ impl NameSet {
                     this.dag.clone(),
                 );
                 tracing::debug!(
+                    target: "dag::algo::difference",
                     "difference(x={:.6?}, y={:.6?}) = {:.6?} (fast path 3)",
                     self,
                     other,
@@ -215,7 +218,9 @@ impl NameSet {
                 return result;
             }
         }
-        tracing::debug!("difference(x={:.6?}, y={:.6?}) (slow path)", self, other);
+        tracing::warn!(
+                target: "dag::algo::difference",
+            "difference(x={:.6?}, y={:.6?}) (slow path)", self, other);
         Self::from_query(difference::DifferenceSet::new(self.clone(), other.clone()))
     }
 
@@ -226,6 +231,7 @@ impl NameSet {
             && other.hints().dag_version() > None
         {
             tracing::debug!(
+                target: "dag::algo::intersection",
                 "intersection(x={:.6?}, y={:.6?}) = y (fast path 1)",
                 self,
                 other
@@ -237,6 +243,7 @@ impl NameSet {
             && self.hints().dag_version() > None
         {
             tracing::debug!(
+                target: "dag::algo::intersection",
                 "intersection(x={:.6?}, y={:.6?}) = x (fast path 2)",
                 self,
                 other
@@ -245,6 +252,7 @@ impl NameSet {
         }
         if self.hints().contains(Flags::EMPTY) || other.hints().contains(Flags::EMPTY) {
             tracing::debug!(
+                target: "dag::algo::intersection",
                 "intersection(x={:.6?}, y={:.6?}) = () (fast path 3)",
                 self,
                 other
@@ -264,6 +272,7 @@ impl NameSet {
                     pick(order, &this.dag, &other.dag).clone(),
                 );
                 tracing::debug!(
+                    target: "dag::algo::intersection",
                     "intersection(x={:.6?}, y={:.6?}) = {:?} (IdStatic fast path)",
                     self,
                     other,
@@ -272,7 +281,9 @@ impl NameSet {
                 return result;
             }
         }
-        tracing::debug!("intersection(x={:.6?}, y={:.6?}) (slow path)", self, other,);
+        tracing::warn!(
+            target: "dag::algo::intersection",
+            "intersection(x={:.6?}, y={:.6?}) (slow path)", self, other);
         Self::from_query(intersection::IntersectionSet::new(
             self.clone(),
             other.clone(),
@@ -286,7 +297,9 @@ impl NameSet {
             && other.hints().dag_version() > None)
             || other.hints().contains(Flags::EMPTY)
         {
-            tracing::debug!("union(x={:.6?}, y={:.6?}) = x (fast path 1)", self, other);
+            tracing::debug!(
+                target: "dag::algo::union",
+                "union(x={:.6?}, y={:.6?}) = x (fast path 1)", self, other);
             return self.clone();
         }
         if self.hints().contains(Flags::EMPTY)
@@ -294,7 +307,9 @@ impl NameSet {
                 && other.hints().dag_version() >= self.hints().dag_version()
                 && self.hints().dag_version() > None)
         {
-            tracing::debug!("union(x={:.6?}, y={:.6?}) = y (fast path 2)", self, other);
+            tracing::debug!(
+                target: "dag::algo::union",
+                "union(x={:.6?}, y={:.6?}) = y (fast path 2)", self, other);
             return other.clone();
         }
         if let (Some(this), Some(other)) = (
@@ -310,6 +325,7 @@ impl NameSet {
                     pick(order, &this.dag, &other.dag).clone(),
                 );
                 tracing::debug!(
+                    target: "dag::algo::union",
                     "union(x={:.6?}, y={:.6?}) = {:.6?} (fast path 3)",
                     self,
                     other,
@@ -318,7 +334,9 @@ impl NameSet {
                 return result;
             }
         }
-        tracing::debug!("union(x={:.6?}, y={:.6?}) (slow path)", self, other);
+        tracing::warn!(
+            target: "dag::algo::union",
+            "union(x={:.6?}, y={:.6?}) (slow path)", self, other);
         Self::from_query(union::UnionSet::new(self.clone(), other.clone()))
     }
 
