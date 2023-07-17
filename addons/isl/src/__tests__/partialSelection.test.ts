@@ -75,4 +75,26 @@ describe('PartialSelection', () => {
       expect(select.isEverythingSelected(() => ['path1'])).toBe(false);
     });
   });
+
+  it('calculates ImportStackFiles', () => {
+    [true, false].forEach(selectByDefault => {
+      const select = PartialSelection.empty({selectByDefault})
+        .select('path1')
+        .deselect('path2')
+        .startChunkSelect('path3', 'a\n', 'b\n', 'a\n')
+        .startChunkSelect('path4', 'a\n', 'b\n', 'b\n')
+        .startChunkSelect('path5', 'a\n', 'b\n', 'c\n');
+      const allPaths = ['path1', 'path2', 'path3', 'path4', 'path5', 'path6'];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const expected: any = {
+        path1: '.',
+        path4: {data: 'b\n', copyFrom: '.', flags: '.'},
+        path5: {data: 'c\n', copyFrom: '.', flags: '.'},
+      };
+      if (selectByDefault) {
+        expected.path6 = '.';
+      }
+      expect(select.calculateImportStackFiles(allPaths)).toMatchObject(expected);
+    });
+  });
 });

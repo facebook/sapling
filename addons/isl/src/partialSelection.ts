@@ -8,7 +8,7 @@
 import type {RepoRelativePath} from './types';
 import type {SetterOrUpdater} from 'recoil';
 import type {Hash, RepoPath} from 'shared/types/common';
-import type {ExportFile} from 'shared/types/stack';
+import type {ExportFile, ImportCommit} from 'shared/types/stack';
 
 import clientToServerAPI from './ClientToServerAPI';
 import {t} from './i18n';
@@ -149,6 +149,38 @@ export class PartialSelection extends SelfUpdate<PartialSelectionRecord> {
     const record = this.inner;
     const paths = record.selectByDefault ? getAllPaths() : record.fileMap.keySeq();
     return paths.every(p => this.getSimplifiedSelection(p) === false);
+  }
+
+  /**
+   * Produce a `ImportStack['files']` useful for the `debugimportstack` command
+   * to create commits.
+   *
+   * `allPaths` provides extra file paths to be considered. This is useful
+   * when we only track "deselected files".
+   */
+  calculateImportStackFiles(allPaths: Array<RepoRelativePath>): ImportCommit['files'] {
+    const files: ImportCommit['files'] = {};
+    // Process files in the fileMap. Note: this map might only contain the "deselected"
+    // files, depending on selectByDefault.
+    const fileMap = this.inner.fileMap;
+    fileMap.forEach((fileSelection, path) => {
+      if (fileSelection instanceof ChunkSelectState) {
+        const text = fileSelection.getSelectedText();
+        if (text != fileSelection.a) {
+          // The file is edited. Use the changed content.
+          files[path] = {data: text, copyFrom: '.', flags: '.'};
+        }
+      } else if (fileSelection === true) {
+        files[path] = '.';
+      }
+    });
+    // Process files outside the fileMap.
+    allPaths.forEach(path => {
+      if (!fileMap.has(path) && this.getSimplifiedSelection(path) !== false) {
+        files[path] = '.';
+      }
+    });
+    return files;
   }
 
   /** If any file is partially selected. */
