@@ -46,6 +46,7 @@ import execa from 'execa';
 import {CommandRunner} from 'isl/src/types';
 import os from 'os';
 import path from 'path';
+import {LRU} from 'shared/LRU';
 import {RateLimiter} from 'shared/RateLimiter';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {exists} from 'shared/fs';
@@ -653,6 +654,77 @@ export class Repository {
       return (await this.runCommand(['cat', file, '--rev', rev], /*cwd=*/ undefined, options))
         .stdout;
     });
+  }
+
+  /**
+   * Returns line-by-line blame information for a file at a given commit.
+   * Returns the line content and commit info.
+   * Note: the line will including trailing newline.
+   */
+  public async blame(
+    filePath: string,
+    hash: string,
+  ): Promise<Array<[line: string, info: CommitInfo | undefined]>> {
+    const t1 = Date.now();
+    const output = await this.runCommand(['blame', filePath, '-Tjson', '--change', '--rev', hash]);
+    const blame = JSON.parse(output.stdout) as Array<{lines: Array<{line: string; node: string}>}>;
+    const t2 = Date.now();
+
+    if (blame.length === 0) {
+      // no blame for file, perhaps it was added or untracked
+      return [];
+    }
+
+    const hashes = new Set<string>();
+    for (const line of blame[0].lines) {
+      hashes.add(line.node);
+    }
+    // We don't get all the info we need from the  blame command, so we run `sl log` on the hashes.
+    // TODO: we could make the blame command return this directly, which is probably faster.
+    // TODO: We don't actually need all the fields in FETCH_TEMPLATE for blame. Reducing this template may speed it up as well.
+    const commits = await this.lookupCommits([...hashes]);
+    const t3 = Date.now();
+    this.logger.info(
+      `Fetched ${commits.size} commits for blame. Blame took ${(t2 - t1) / 1000}s, commits took ${
+        (t3 - t2) / 1000
+      }s`,
+    );
+    return blame[0].lines.map(({node, line}) => [line, commits.get(node)]);
+  }
+
+  private commitCache = new LRU<string, CommitInfo>(100); // TODO: normal commits fetched from smartlog() aren't put in this cache---this is mostly for blame right now.
+  public async lookupCommits(hashes: Array<string>): Promise<Map<string, CommitInfo>> {
+    const hashesToFetch = hashes.filter(hash => this.commitCache.get(hash) == undefined);
+
+    const commits =
+      hashesToFetch.length === 0
+        ? [] // don't bother running log
+        : await this.runCommand([
+            'log',
+            '--template',
+            FETCH_TEMPLATE,
+            '--rev',
+            hashesToFetch.join('+'),
+          ]).then(output => {
+            return parseCommitInfoOutput(this.logger, output.stdout.trim());
+          });
+
+    const result = new Map();
+    for (const hash of hashes) {
+      const found = this.commitCache.get(hash);
+      if (found != undefined) {
+        result.set(hash, found);
+      }
+    }
+
+    for (const commit of commits) {
+      if (commit) {
+        this.commitCache.set(commit.hash, commit);
+        result.set(commit.hash, commit);
+      }
+    }
+
+    return result;
   }
 
   public getAllDiffIds(): Array<DiffId> {

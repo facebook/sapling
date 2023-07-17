@@ -43,6 +43,11 @@
           "default": "",
           "description": "%settings.commandPath.description%"
         },
+        "sapling.showInlineBlame": {
+          "type": "boolean",
+          "default": false,
+          "description": "%settings.showInlineBlame.description%"
+        },
         "sapling.isl.showInSidebar": {
           "type": "boolean",
           "default": false,

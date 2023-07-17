@@ -60,9 +60,11 @@ export type TrackEventName =
   | 'UploadImage'
   | 'RunVSCodeCommand'
   | 'UnsubmittedStarRating'
+  | 'BlameLoaded'
   | 'VSCodeExtensionActivated';
 
 export type TrackErrorName =
+  | 'BlameError'
   | 'DiffFetchFailed'
   | 'InvalidCwd'
   | 'InvalidCommand'

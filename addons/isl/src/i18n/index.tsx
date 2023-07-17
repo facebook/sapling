@@ -29,7 +29,8 @@ declare global {
   }
 }
 
-let currentLanguage: LanguageId = window.saplingLanguage ?? 'en';
+let currentLanguage: LanguageId =
+  (typeof window !== 'undefined' ? window.saplingLanguage : null) ?? 'en';
 
 const I18nContext = createContext(currentLanguage);
 export const onChangeLanguage = new EventEmitter();
