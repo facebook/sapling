@@ -95,11 +95,12 @@ impl IdMap {
     pub(crate) fn open_from_log(log: log::Log) -> Result<Self> {
         let path = log.path().as_opt_path().unwrap().to_path_buf();
         let map_id = format!("ilog:{}", path.display());
+        let map_version = VerLink::from_storage_version_or_new(&map_id, log.version());
         Ok(Self {
             log,
             path,
             map_id,
-            map_version: VerLink::new(),
+            map_version,
         })
     }
 
@@ -484,6 +485,8 @@ impl Persist for IdMap {
 
     fn persist(&mut self, _lock: &Self::Lock) -> Result<()> {
         self.log.sync()?;
+        self.map_version
+            .associate_storage_version(self.map_id.clone(), self.log.version());
         Ok(())
     }
 }

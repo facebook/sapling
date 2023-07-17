@@ -17,6 +17,7 @@ use crate::spanset::Span;
 use crate::IdSet;
 use crate::Level;
 use crate::Result;
+use crate::VerLink;
 
 mod in_process_store;
 
@@ -350,6 +351,16 @@ pub trait IdDagStore: Send + Sync + 'static {
         );
 
         Ok(Some(merged))
+    }
+
+    /// Obtain the `VerLink` associated with this store.
+    fn verlink(&self) -> VerLink {
+        VerLink::new()
+    }
+
+    /// Associate the verlink with the storage version.
+    fn cache_verlink(&self, verlink: &VerLink) {
+        let _ = verlink;
     }
 }
 

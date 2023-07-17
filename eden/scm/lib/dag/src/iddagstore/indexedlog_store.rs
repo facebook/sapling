@@ -39,6 +39,7 @@ use crate::spanset::Span;
 use crate::IdSet;
 use crate::Level;
 use crate::Result;
+use crate::VerLink;
 
 pub struct IndexedLogStore {
     log: log::Log,
@@ -372,6 +373,18 @@ impl IdDagStore for IndexedLogStore {
     ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
         let iter = self.iter_flat_segments_with_parent_span(parent.into())?;
         Ok(Box::new(iter.map(|item| item.map(|(_, seg)| seg))))
+    }
+
+    fn verlink(&self) -> VerLink {
+        let str_id = self.path.display().to_string();
+        let version = self.log.version();
+        VerLink::from_storage_version_or_new(&str_id, version)
+    }
+
+    fn cache_verlink(&self, verlink: &VerLink) {
+        let str_id = self.path.display().to_string();
+        let version = self.log.version();
+        verlink.associate_storage_version(str_id, version);
     }
 }
 

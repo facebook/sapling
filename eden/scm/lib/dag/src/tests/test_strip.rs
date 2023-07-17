@@ -6,6 +6,8 @@
  */
 
 use super::TestDag;
+use crate::ops::DagAlgorithm;
+use crate::ops::IdConvert;
 
 #[tokio::test]
 async fn test_strip_basic() {
@@ -190,4 +192,29 @@ async fn test_reinsert_then_create_higher_level() {
         Lv2: |N0 N1 N2|  |N4 N5 N6 N7|N8 N9 N10 N11|N12 N13 N14 N15|
         Lv3: |N0 N1 N2|  |N4 N5 N6 N7 N8 N9 N10 N11|"#
     );
+}
+
+#[tokio::test]
+async fn test_strip_update_version() {
+    let mut t = TestDag::draw_client("A..E").await;
+
+    let dag_version = t.dag.dag_version().clone();
+    let map_version = t.dag.map_version().clone();
+
+    // Version is not changed after reopen.
+    t.reopen();
+    assert_eq!(&dag_version, t.dag.dag_version());
+    assert_eq!(&map_version, t.dag.map_version());
+
+    // Version is compatible after appending.
+    t.drawdag("E-F", &[]);
+    t.flush("").await;
+
+    assert!(&dag_version < t.dag.dag_version());
+    assert!(&map_version < t.dag.map_version());
+
+    // Version is incompatible after strip.
+    t.strip("D").await;
+    assert_eq!(dag_version.partial_cmp(t.dag.dag_version()), None);
+    assert_eq!(map_version.partial_cmp(t.dag.map_version()), None);
 }

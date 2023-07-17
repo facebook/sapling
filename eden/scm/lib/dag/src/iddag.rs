@@ -136,10 +136,11 @@ impl IdDag<InProcessStore> {
 
 impl<Store: IdDagStore> IdDag<Store> {
     pub(crate) fn open_from_store(store: Store) -> Result<Self> {
+        let version = store.verlink();
         let dag = Self {
             store,
             new_seg_size: default_seg_size(),
-            version: VerLink::new(),
+            version,
         };
         Ok(dag)
     }
@@ -1854,7 +1855,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     }
 }
 
-impl<Store: Persist> Persist for IdDag<Store> {
+impl<Store: Persist + IdDagStore> Persist for IdDag<Store> {
     type Lock = <Store as Persist>::Lock;
 
     fn lock(&mut self) -> Result<Self::Lock> {
@@ -1866,7 +1867,9 @@ impl<Store: Persist> Persist for IdDag<Store> {
     }
 
     fn persist(&mut self, lock: &Self::Lock) -> Result<()> {
-        self.store.persist(lock)
+        self.store.persist(lock)?;
+        self.store.cache_verlink(&self.version);
+        Ok(())
     }
 }
 
