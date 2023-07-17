@@ -6,10 +6,13 @@
  */
 
 use std::cmp;
+use std::collections::HashMap;
 use std::fmt;
 use std::sync::atomic;
 use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
+use std::sync::OnceLock;
+use std::sync::RwLock;
 
 /// A linked list tracking a logic "version" with compatibility rules:
 /// - Append-only changes bump the version, the new version is backwards
@@ -142,6 +145,55 @@ impl fmt::Debug for VerLink {
     }
 }
 
+/// A small cache that associate `storage_version` with `VerLink`.
+/// Useful to "restore" `VerLink` after reading the same content from disk.
+/// For each filesystem path we only cache its latest version to reduce memory
+/// "leak" caused by a static state.
+static CACHE: OnceLock<RwLock<HashMap<String, ((u64, u64), VerLink)>>> = OnceLock::new();
+
+fn storage_version_cache() -> &'static RwLock<HashMap<String, ((u64, u64), VerLink)>> {
+    CACHE.get_or_init(Default::default)
+}
+
+// Cache related.
+impl VerLink {
+    /// Clear the cache that maps storage version to VerLink.
+    pub fn clear_storage_version_cache() {
+        let mut cache = storage_version_cache().write().unwrap();
+        cache.clear();
+    }
+
+    /// Lookup a `VerLink` from a given storage version.
+    pub fn from_storage_version(str_id: &str, version: (u64, u64)) -> Option<VerLink> {
+        let cache = storage_version_cache().read().unwrap();
+        let (cached_version, verlink) = cache.get(str_id)?;
+        if cached_version == &version {
+            Some(verlink.clone())
+        } else {
+            None
+        }
+    }
+
+    /// Associate the `VerLink` with a storage version.
+    pub fn associate_storage_version(&self, str_id: String, version: (u64, u64)) {
+        let mut cache = storage_version_cache().write().unwrap();
+        cache.insert(str_id, (version, self.clone()));
+    }
+
+    /// Lookup a `VerLink` from a given storage version, or create a new `VerLink`
+    /// and remember it in cache.
+    pub fn from_storage_version_or_new(str_id: &str, version: (u64, u64)) -> VerLink {
+        match Self::from_storage_version(str_id, version) {
+            Some(v) => v,
+            None => {
+                let v = Self::new();
+                v.associate_storage_version(str_id.to_string(), version);
+                v
+            }
+        }
+    }
+}
+
 fn next_id() -> u32 {
     static ID: AtomicU32 = AtomicU32::new(0);
     ID.fetch_add(1, atomic::Ordering::AcqRel)
@@ -210,6 +262,20 @@ mod tests {
         b.bump(); // Does not change chain len.
         b.bump();
         assert_eq!(b.chain_len(), 2);
+    }
+
+    #[test]
+    fn test_storage_version_cache() {
+        let a = VerLink::new();
+        let v = (100, 200);
+        assert!(VerLink::from_storage_version("x", v).is_none());
+        a.associate_storage_version("x".to_string(), v);
+        assert_eq!(VerLink::from_storage_version("x", v).unwrap(), a);
+
+        let b = VerLink::from_storage_version_or_new("y", v);
+        assert_ne!(&b, &a);
+        let c = VerLink::from_storage_version_or_new("y", v);
+        assert_eq!(&b, &c);
     }
 
     /// Find the more compatible version.
