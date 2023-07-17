@@ -324,7 +324,7 @@ Test detection of unintentional 'matchctx.existing()' invocation
   > EOF
 
   $ fileset 'existingcaller()' 2>&1 | tail -1
-  AssertionError: unexpected existing() invocation
+  edenscm.error.ProgrammingError: unexpected existing() invocation
 
 Test 'revs(...)'
 ================
