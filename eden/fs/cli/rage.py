@@ -714,10 +714,10 @@ def print_third_party_vscode_extensions(out: IO[bytes]) -> None:
 
     section_title("Visual Studio Code Extensions:", out)
 
-    out.write(b"Blocked extensions installed:\n")
-    for extension in problematic_extensions.blocked:
+    out.write(b"Harmful extensions installed:\n")
+    for extension in problematic_extensions.harmful:
         out.write(f"{extension}\n".encode())
-    if len(problematic_extensions.blocked) == 0:
+    if len(problematic_extensions.harmful) == 0:
         out.write(b"None\n")
 
     out.write(b"\nUnsupported extensions installed:\n")
