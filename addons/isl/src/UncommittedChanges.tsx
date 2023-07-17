@@ -39,7 +39,7 @@ import {AddRemoveOperation} from './operations/AddRemoveOperation';
 import {getAmendOperation} from './operations/AmendOperation';
 import {getCommitOperation} from './operations/CommitOperation';
 import {ContinueOperation} from './operations/ContinueMergeOperation';
-import {DiscardOperation} from './operations/DiscardOperation';
+import {DiscardOperation, PartialDiscardOperation} from './operations/DiscardOperation';
 import {ForgetOperation} from './operations/ForgetOperation';
 import {PurgeOperation} from './operations/PurgeOperation';
 import {ResolveOperation, ResolveTool} from './operations/ResolveOperation';
@@ -493,6 +493,11 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
                       // ...and delete untracked files.
                       // Technically we only need to do the purge when we have untracked files, though there's a chance there's files we don't know about yet while status is running.
                       runOperation(new PurgeOperation());
+                    } else if (selection.hasChunkSelection()) {
+                      // TODO(quark): Make PartialDiscardOperation replace the above and below cases.
+                      const allFiles = uncommittedChanges.map(file => file.path);
+                      const operation = new PartialDiscardOperation(selection.selection, allFiles);
+                      runOperation(operation);
                     } else {
                       // only a subset of files selected -> we need to revert selected files individually
                       runOperation(new RevertOperation(selectedFiles));
