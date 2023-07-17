@@ -27,4 +27,8 @@
   --github-closed-bg: #cf222e;
   --github-merged-bg: #8250df;
   --github-neutral-bg: #6e7781;
+
+  /* Editor colors */
+  --diffEditor-insertedLineBackground: rgba(35, 134, 54, 0.2);
+  --diffEditor-removedLineBackground: rgba(218, 54, 51, 0.2);
 }

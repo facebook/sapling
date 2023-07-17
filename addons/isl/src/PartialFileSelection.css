@@ -1,0 +1,120 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.partial-file-selection-scroll-y {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.partial-file-selection-scroll-x {
+  max-width: 500px;
+  overflow-x: auto;
+  scrollbar-width: none; /* not yet in Chrome (https://bugs.chromium.org/p/chromium/issues/detail?id=891944) */
+}
+
+.partial-file-selection-scroll-x::-webkit-scrollbar {
+  display: none;
+}
+
+.partial-file-selection {
+  background: var(--background);
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+
+.partial-file-selection pre {
+  padding: 0;
+  margin: 0;
+  /* This ensures the green or red background for added or deleted lines extends horizontally for long lines */
+  width: fit-content;
+  /* Set line-height explicitly to avoid dynamic line heights based on (different) fonts decided by text content. */
+  line-height: 1.2;
+}
+
+.partial-file-selection .line-context {
+  user-select: none;
+  text-align: center;
+  margin-top: var(--halfpad);
+  margin-bottom: var(--halfpad);
+}
+
+.partial-file-selection .line-context {
+  height: var(--pad);
+}
+
+.partial-file-selection .line.line-context {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 20'%3E%3Cpath d='M0 10 Q10 15 20 10 Q30 5 40 10' stroke='grey' fill='transparent' /%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  cursor: pointer;
+}
+
+.partial-file-selection .line-number {
+  padding-left: var(--halfpad);
+  padding-right: var(--halfpad);
+}
+
+.partial-file-selection .selected.line.line-a,
+.partial-file-selection .deselected.line.line-a,
+.partial-file-selection .selected.line-number,
+.partial-file-selection .deselected.line-number {
+  cursor: pointer;
+}
+
+.partial-file-selection .column-a-number {
+  border-left: 1px solid var(--tooltip-border);
+}
+
+.partial-file-selection .column-b-number {
+  border-right: 1px solid var(--tooltip-border);
+}
+
+.partial-file-selection .column-a-number,
+.partial-file-selection .column-b-number {
+  text-align: right;
+  color: grey;
+}
+
+.partial-file-selection .column-a-number,
+.partial-file-selection .column-b-number {
+  user-select: none;
+}
+
+.partial-file-selection .line {
+  padding-left: var(--halfpad);
+  padding-right: var(--halfpad);
+  min-width: 100px;
+}
+
+.partial-file-selection .line-add {
+  background: var(--diffEditor-insertedLineBackground);
+}
+
+.partial-file-selection .line-del {
+  background: var(--diffEditor-removedLineBackground);
+}
+
+.partial-file-selection .deselected.line.line-b {
+  background: var(--background);
+}
+
+.partial-file-selection .selected.line-number {
+  color: var(--list-active-selection-foreground);
+  background: var(--list-active-selection-background);
+}
+
+.partial-file-selection .selected.line-del.line-b {
+  user-select: none;
+}
+
+.partial-file-selection-tip {
+  padding-top: var(--pad);
+}
+
+.partial-file-selection-width-min-content {
+  width: min-content;
+}

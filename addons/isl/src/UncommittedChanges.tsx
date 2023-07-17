@@ -28,6 +28,8 @@ import {
 } from './CommitInfoView/CommitMessageFields';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {ErrorNotice} from './ErrorNotice';
+import {PartialFileSelection} from './PartialFileSelection';
+import {SuspenseBoundary} from './SuspenseBoundary';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {islDrawerState} from './drawerState';
 import {T, t} from './i18n';
@@ -52,13 +54,15 @@ import {
 } from './previews';
 import {selectedCommits} from './selection';
 import {
+  hasExperimentalFeatures,
   latestHeadCommit,
   operationList,
   uncommittedChangesFetchError,
   useRunOperation,
 } from './serverAPIState';
+import {usePromise} from './usePromise';
 import {VSCodeButton, VSCodeCheckbox, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
-import {useRef, useState} from 'react';
+import React, {useRef, useState} from 'react';
 import {useRecoilCallback, useRecoilValue} from 'recoil';
 import {revsetForComparison, ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
@@ -625,6 +629,7 @@ function MergeConflictButtons({
   const isRunningAbort = !!useIsOperationRunningOrQueued(AbortMergeOperation);
   const shouldDisableButtons =
     isRunningContinue || isRunningAbort || justFinishedContinue || justFinishedAbort;
+
   return (
     <>
       <VSCodeButton
@@ -656,6 +661,8 @@ const revertableStatues = new Set(['M', 'R', '!']);
 const conflictStatuses = new Set<ChangedFileType>(['U', 'Resolved']);
 function FileActions({comparison, file}: {comparison: Comparison; file: UIChangedFile}) {
   const runOperation = useRunOperation();
+  const hasExperimental = useRecoilValue(hasExperimentalFeatures);
+
   const actions: Array<React.ReactNode> = [];
 
   if (platform.openDiff != null && !conflictStatuses.has(file.status)) {
@@ -822,11 +829,50 @@ function FileActions({comparison, file}: {comparison: Comparison; file: UIChange
         </Tooltip>,
       );
     }
+
+    if (hasExperimental) {
+      actions.push(<PartialSelectionAction file={file} key="partial-selection" />);
+    }
   }
   return (
     <div className="file-actions" data-testid="file-actions">
       {actions}
     </div>
+  );
+}
+
+function PartialSelectionAction({file}: {file: UIChangedFile}) {
+  const getPanel = () => {
+    return (
+      <SuspenseBoundary>
+        <PartialSelectionPanel file={file} />
+      </SuspenseBoundary>
+    );
+  };
+
+  return (
+    <Tooltip
+      title={t('Select partial changes')}
+      component={getPanel}
+      trigger="click"
+      placement="bottom">
+      <VSCodeButton className="file-show-on-hover" appearance="icon">
+        <Icon icon="diff" />
+      </VSCodeButton>
+    </Tooltip>
+  );
+}
+
+function PartialSelectionPanel({file}: {file: UIChangedFile}) {
+  const path = file.path;
+  const selection = useUncommittedSelection();
+  const chunkSelect = usePromise(selection.getChunkSelect(path));
+
+  return (
+    <PartialFileSelection
+      chunkSelection={chunkSelect}
+      setChunkSelection={state => selection.editChunkSelect(path, state)}
+    />
   );
 }
 
