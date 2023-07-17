@@ -273,9 +273,6 @@ pub trait IdDagStore: Send + Sync + 'static {
         parent: Id,
     ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>>;
 
-    /// Remove all non master Group identifiers from the DAG.
-    fn remove_non_master(&mut self) -> Result<()>;
-
     /// Attempt to merge the flat `segment` with the last flat segment to reduce
     /// fragmentation.
     ///
@@ -612,10 +609,6 @@ pub(crate) mod tests {
         assert_eq!(all_id_str(store, &[M]), "0..=70");
         assert_eq!(all_id_str(store, &[N]), "N0..=N30");
         assert_eq!(all_id_str(store, &[M, N]), "0..=70 N0..=N30");
-
-        store.remove_non_master().unwrap();
-        assert_eq!(all_id_str(store, &[N]), "");
-        assert_eq!(all_id_str(store, &[M, N]), "0..=70");
     }
 
     fn test_all_ids_in_segment_level(store: &mut dyn IdDagStore) {
@@ -839,30 +832,6 @@ pub(crate) mod tests {
         let answer = lookup(Id(9));
         let expected = segments_to_owned(&[&LEVEL0_HEAD13, &LEVEL0_HEADN4]);
         assert_eq!(answer, expected);
-    }
-
-    fn test_remove_non_master(store: &mut dyn IdDagStore) {
-        store.remove_non_master().unwrap();
-
-        assert!(
-            store
-                .find_segment_by_head_and_level(nid(2), 0 as Level)
-                .unwrap()
-                .is_none()
-        );
-        assert!(
-            store
-                .find_flat_segment_including_id(nid(1))
-                .unwrap()
-                .is_none()
-        );
-        assert!(
-            store
-                .iter_flat_segments_with_parent_span(nid(2).into())
-                .unwrap()
-                .next()
-                .is_none()
-        );
     }
 
     pub(crate) fn test_remove_segment(store: &mut dyn IdDagStore) {
@@ -1143,11 +1112,6 @@ P->C: 50->N100, 50->N300"#
     #[test]
     fn test_multi_stores_iter_flat_segments_with_parent() {
         for_each_store(|store| test_store_iter_flat_segments_with_parent(store));
-    }
-
-    #[test]
-    fn test_multi_stores_remove_non_master() {
-        for_each_store(|store| test_remove_non_master(store));
     }
 
     #[test]

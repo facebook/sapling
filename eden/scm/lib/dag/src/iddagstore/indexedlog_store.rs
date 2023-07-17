@@ -373,16 +373,6 @@ impl IdDagStore for IndexedLogStore {
         let iter = self.iter_flat_segments_with_parent_span(parent.into())?;
         Ok(Box::new(iter.map(|item| item.map(|(_, seg)| seg))))
     }
-
-    /// Mark non-master ids as "removed".
-    fn remove_non_master(&mut self) -> Result<()> {
-        self.log.append(Self::MAGIC_CLEAR_NON_MASTER)?;
-        let non_master_ids = self.all_ids_in_groups(&[Group::NON_MASTER])?;
-        if !non_master_ids.is_empty() {
-            return bug("remove_non_master did not take effect");
-        }
-        Ok(())
-    }
 }
 
 impl Persist for IndexedLogStore {

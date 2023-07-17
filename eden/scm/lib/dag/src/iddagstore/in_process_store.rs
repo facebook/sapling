@@ -206,26 +206,6 @@ impl IdDagStore for InProcessStore {
         Ok(())
     }
 
-    fn remove_non_master(&mut self) -> Result<()> {
-        for segment in self.non_master_segments.iter() {
-            let level = segment.level()?;
-            let head = segment.head()?;
-            self.level_head_index
-                .get_mut(level as usize)
-                .map(|head_index| head_index.remove(&head));
-        }
-        let group = Group::NON_MASTER;
-        for (_key, children) in self
-            .parent_index
-            .range_mut((group, group.min_id())..=(group, group.max_id()))
-        {
-            children.clear();
-        }
-        self.non_master_segments = Vec::new();
-        self.id_set_by_group[Group::NON_MASTER.0] = IdSet::empty();
-        Ok(())
-    }
-
     fn all_ids_in_groups(&self, groups: &[Group]) -> Result<IdSet> {
         let mut result = IdSet::empty();
         for group in groups {

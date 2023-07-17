@@ -1757,13 +1757,6 @@ impl<Store: IdDagStore> IdDag<Store> {
         Ok(parents)
     }
 
-    /// Remove all non master Group identifiers from the DAG.
-    pub fn remove_non_master(&mut self) -> Result<()> {
-        // Non-append-only change. Use a new incompatible version.
-        self.version = VerLink::new();
-        self.store.remove_non_master()
-    }
-
     /// Remove `set` and their descendants. Return `descendents(set)`.
     ///
     /// The returned `descendants(set)` is usually used to remove
