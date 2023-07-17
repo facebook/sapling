@@ -23,8 +23,8 @@ import {allDiffSummaries, codeReviewProvider} from '../codeReview/CodeReviewInfo
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {t, T} from '../i18n';
 import {AmendMessageOperation} from '../operations/AmendMessageOperation';
-import {AmendOperation} from '../operations/AmendOperation';
-import {CommitOperation} from '../operations/CommitOperation';
+import {getAmendOperation} from '../operations/AmendOperation';
+import {getCommitOperation} from '../operations/CommitOperation';
 import {GhStackSubmitOperation} from '../operations/GhStackSubmitOperation';
 import {PrSubmitOperation} from '../operations/PrSubmitOperation';
 import {SetConfigOperation} from '../operations/SetConfigOperation';
@@ -32,7 +32,7 @@ import {useUncommittedSelection} from '../partialSelection';
 import platform from '../platform';
 import {CommitPreview, treeWithPreviews, uncommittedChangesWithPreviews} from '../previews';
 import {selectedCommitInfos, selectedCommits} from '../selection';
-import {repositoryInfo, useRunOperation} from '../serverAPIState';
+import {latestHeadCommit, repositoryInfo, useRunOperation} from '../serverAPIState';
 import {useModal} from '../useModal';
 import {assert, firstOfIterable} from '../utils';
 import {CommitInfoField} from './CommitInfoField';
@@ -336,6 +336,7 @@ function ActionsBar({
   const diffSummaries = useRecoilValue(allDiffSummaries);
   const shouldSubmitAsDraft = useRecoilValue(submitAsDraft);
   const schema = useRecoilValue(commitMessageFieldsSchema);
+  const headCommit = useRecoilValue(latestHeadCommit);
 
   // after committing/amending, if you've previously selected the head commit,
   // we should show you the newly amended/committed commit instead of the old one.
@@ -374,18 +375,17 @@ function ActionsBar({
   );
   const doAmendOrCommit = () => {
     const message = commitMessageFieldsToString(schema, assertNonOptimistic(editedMessage).fields);
-    const filesToCommit = selection.isEverythingSelected()
-      ? // all files
-        undefined
-      : // only files not unchecked
-        uncommittedChanges
-          .filter(file => selection.isFullyOrPartiallySelected(file.path))
-          .map(file => file.path);
+    const headHash = headCommit?.hash ?? '.';
+    const allFiles = uncommittedChanges.map(file => file.path);
 
-    // TODO(quark): Need support for partial selection.
     const operation = isCommitMode
-      ? new CommitOperation(message, commit.hash, filesToCommit)
-      : new AmendOperation(filesToCommit, message);
+      ? getCommitOperation(message, headHash, selection.selection, allFiles)
+      : getAmendOperation(message, headHash, selection.selection, allFiles);
+
+    // TODO(quark): We need better invalidation for chunk selected files.
+    if (selection.hasChunkSelection()) {
+      selection.clear();
+    }
 
     clearEditedCommitMessage(/* skip confirmation */ true);
     // reset to amend mode now that the commit has been made
