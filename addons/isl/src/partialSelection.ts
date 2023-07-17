@@ -158,19 +158,27 @@ export class PartialSelection extends SelfUpdate<PartialSelectionRecord> {
    * `allPaths` provides extra file paths to be considered. This is useful
    * when we only track "deselected files".
    */
-  calculateImportStackFiles(allPaths: Array<RepoRelativePath>): ImportCommit['files'] {
+  calculateImportStackFiles(
+    allPaths: Array<RepoRelativePath>,
+    inverse = false,
+  ): ImportCommit['files'] {
     const files: ImportCommit['files'] = {};
     // Process files in the fileMap. Note: this map might only contain the "deselected"
     // files, depending on selectByDefault.
     const fileMap = this.inner.fileMap;
     fileMap.forEach((fileSelection, path) => {
       if (fileSelection instanceof ChunkSelectState) {
-        const text = fileSelection.getSelectedText();
-        if (text != fileSelection.a) {
+        const text = inverse ? fileSelection.getInverseText() : fileSelection.getSelectedText();
+        if (inverse || text !== fileSelection.a) {
           // The file is edited. Use the changed content.
           files[path] = {data: text, copyFrom: '.', flags: '.'};
         }
       } else if (fileSelection === true) {
+        // '.' can be used for both inverse = true and false.
+        // - For inverse = true, '.' is used with the 'write' debugimportstack command.
+        //   The 'write' command treats '.' as "working parent" to "revert" changes.
+        // - For inverse = false, '.' is used with the 'commit' or 'amend' debugimportstack
+        //   commands. They treat '.' as "working copy" to "commit/amend" changes.
         files[path] = '.';
       }
     });
