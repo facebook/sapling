@@ -91,3 +91,12 @@
   word-wrap: break-word;
   white-space: pre-wrap;
 }
+
+.progress-container-last-output {
+  max-height: 5rem;
+  overflow-y: auto;
+}
+
+.progress-container-last-output code {
+  white-space: pre-wrap;
+}

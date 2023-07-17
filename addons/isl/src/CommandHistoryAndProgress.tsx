@@ -179,7 +179,7 @@ export function CommandHistoryAndProgress() {
         </div>
         {showLastLineOfOutput ? (
           <div className="progress-container-row">
-            <div>
+            <div className="progress-container-last-output">
               {progress.commandOutput?.slice(-1).map((line, i) => (
                 <code key={i}>{line}</code>
               ))}
