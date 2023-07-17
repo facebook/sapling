@@ -92,7 +92,11 @@ def checkoutput(
     """
     hasfeature = sys._getframe(1).f_globals.get("hasfeature")
     matcher = MultiLineMatcher(b, hasfeature)
-    if not matcher.match(a):
+    # AssertionError usually means the test is already broken.
+    # Report it as a mismatch to fail the test. Note: we don't raise here
+    # to provide better error messages (ex. show line number of the assertion)
+    force_mismatch = a.startswith("AssertionError")
+    if force_mismatch or not matcher.match(a):
         a, b = matcher.normalize(a)
         # collect the output mismatch in 'mismatchmap'
         mismatch = Mismatch(

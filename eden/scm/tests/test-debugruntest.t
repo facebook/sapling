@@ -77,6 +77,13 @@ Exception:
   >     raise ValueError('this test is broken')
   > EOF
 
+AssertionError fails the test even if output matches:
+
+  $ cat > test-assert.t << 'EOF'
+  >   >>> assert False
+  >   AssertionError!
+  > EOF
+
 Test output:
 
   $ hg debugruntest test-sh.t
@@ -89,6 +96,9 @@ Test output:
   # Ran 1 tests, 0 skipped, 0 failed.
 
   $ hg debugruntest -j1 test-*.t test-foo.t test-bar.t
+  test-assert.t ----------------------------------------------------------------
+     1 >>> assert False
+  
   test-fail-sh.t ---------------------------------------------------------------
      1 $ seq 3
       -0
@@ -116,13 +126,14 @@ Test output:
     test-bar.t
     test-foo.t
   
-  Failed 1 test (output mismatch):
+  Failed 2 tests (output mismatch):
+    test-assert.t
     test-fail-sh.t
   
   Failed 1 test (this test is broken):
     test-py-exc.t
   
-  # Ran 9 tests, 1 skipped, 4 failed.
+  # Ran 10 tests, 1 skipped, 5 failed.
   [1]
 
 Autofix:
