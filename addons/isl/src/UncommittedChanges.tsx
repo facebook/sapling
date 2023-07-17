@@ -36,7 +36,7 @@ import {T, t} from './i18n';
 import {AbortMergeOperation} from './operations/AbortMergeOperation';
 import {AddOperation} from './operations/AddOperation';
 import {AddRemoveOperation} from './operations/AddRemoveOperation';
-import {AmendOperation} from './operations/AmendOperation';
+import {getAmendOperation} from './operations/AmendOperation';
 import {getCommitOperation} from './operations/CommitOperation';
 import {ContinueOperation} from './operations/ContinueMergeOperation';
 import {DiscardOperation} from './operations/DiscardOperation';
@@ -566,18 +566,22 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
             <div className="button-row">
               <VSCodeButton
                 appearance="icon"
-                disabled={noFilesSelected}
+                disabled={noFilesSelected || !headCommit}
                 data-testid="uncommitted-changes-quick-amend-button"
                 onClick={() => {
-                  const filesToCommit = allFilesSelected
-                    ? // all files
-                      undefined
-                    : // only files not unchecked
-                      uncommittedChanges
-                        .filter(file => selection.isFullyOrPartiallySelected(file.path))
-                        .map(file => file.path);
-                  // TODO(quark): [Amend] does not work for partial selection yet.
-                  runOperation(new AmendOperation(filesToCommit));
+                  const hash = headCommit?.hash ?? '.';
+                  const allFiles = uncommittedChanges.map(file => file.path);
+                  const operation = getAmendOperation(
+                    undefined,
+                    hash,
+                    selection.selection,
+                    allFiles,
+                  );
+                  // TODO(quark): We need better invalidation for chunk selected files.
+                  if (selection.hasChunkSelection()) {
+                    selection.clear();
+                  }
+                  runOperation(operation);
                 }}>
                 <Icon slot="start" icon="debug-step-into" />
                 <T>Amend</T>
