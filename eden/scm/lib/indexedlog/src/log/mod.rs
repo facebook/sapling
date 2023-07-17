@@ -1373,6 +1373,17 @@ impl Log {
         &self.dir
     }
 
+    /// Return the version in `(epoch, length)` form.
+    ///
+    /// The version is maintained exclusively by indexedlog and cannot be
+    /// changed directly via public APIs. Appending data bumps `length`.
+    /// Rewriting data changes `epoch`.
+    ///
+    /// See also [`crate::multi::MultiLog::version`].
+    pub fn version(&self) -> (u64, u64) {
+        (self.meta.epoch, self.meta.primary_len)
+    }
+
     /// Load a single index.
     fn load_index(
         dir: &GenericPath,

@@ -244,14 +244,15 @@ impl MultiLog {
         result.context("in MultiLog::write_meta")
     }
 
-    /// Return the version in `(a, b)` form.
-    ///
-    /// Version `(a, b)` only has append-only data than version `(c, d)`, if
-    /// `a == c` and `b > d`.
-    ///
-    /// Version `(a, _)` is incompatible with version `(b, _)` if `a != b`.
+    /// Return the version in `(epoch, length)` form.
     ///
     /// Version gets updated on `write_meta`.
+    ///
+    /// The version is maintained exclusively by indexedlog and cannot be
+    /// changed directly via public APIs. Appending data bumps `length`.
+    /// Rewriting data changes `epoch`.
+    ///
+    /// See also [`crate::log::Log::version`].
     pub fn version(&self) -> (u64, u64) {
         self.multimeta.version
     }
