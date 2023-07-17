@@ -1,0 +1,68 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.text-editable-group {
+  position: relative;
+}
+
+.text-editable-overlay {
+  position: absolute;
+  pointer-events: none;
+}
+
+.text-editable-hidden-textarea {
+  overflow: hidden;
+  white-space: pre;
+  padding: 0;
+  margin: 0;
+  /* Comment out the following to make textarea visible to debug */
+  position: absolute;
+  height: 0px;
+  width: 0px;
+  opacity: 0;
+}
+
+.text-editable-hidden-textarea:active,
+.text-editable-hidden-textarea:focus {
+  outline: none;
+}
+
+.text-editable-container *::selection {
+  background: none;
+}
+
+@keyframes blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.text-editable-caret {
+  position: absolute;
+  width: 1px;
+  height: 0px;
+  background: var(--foreground);
+  transition: transform 0.06s ease-out;
+  animation: blink 1.2s steps(1) infinite;
+}
+
+.text-editable-selection-highlight {
+  position: absolute;
+  opacity: 0.4;
+}
+
+.text-editable-selection-highlight-line {
+  position: absolute;
+  background: var(--editor-selectionBackground);
+  transition: left 0.06s ease-out, width 0.06s ease-out;
+}

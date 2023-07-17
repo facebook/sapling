@@ -31,6 +31,7 @@
   /* Editor colors */
   --diffEditor-insertedLineBackground: rgba(35, 134, 54, 0.2);
   --diffEditor-removedLineBackground: rgba(218, 54, 51, 0.2);
+  --editor-selectionBackground: #264f78;
 
   /* VS Code Webview UI Toolkit includes dark theme colors already */
 }
