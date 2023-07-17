@@ -157,6 +157,25 @@ describe('ChunkSelectState', () => {
       }
     });
   });
+
+  describe('getInverseText()', () => {
+    it('produces changes with inverse selection', () => {
+      const state = ChunkSelectState.fromText(a, b, a).setSelectedLines([
+        [0, true],
+        [4, true],
+      ]);
+      expect(renderLines(state)).toMatchObject([
+        '[x] -  1    aa',
+        '[ ] -  2    bb',
+        '       3  1 cc',
+        '       4  2 dd',
+        '[x] +     3 ee',
+        '[ ] +     4 ff',
+      ]);
+      expect(state.getSelectedText()).toBe('bb\ncc\ndd\nee\n');
+      expect(state.getInverseText()).toBe('aa\ncc\ndd\nff\n');
+    });
+  });
 });
 
 /** Visualize line selections in ASCII. */

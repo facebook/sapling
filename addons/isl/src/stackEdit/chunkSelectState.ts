@@ -213,6 +213,25 @@ export class ChunkSelectState extends SelfUpdate<ChunkSelectRecord> {
   }
 
   /**
+   * Calculate the "inverse" of selected text. Useful for `revert -i` or "Discard".
+   *
+   * A Selected B | Inverse Note
+   * 0        0 1 | 1       + not selected, preserve B
+   * 0        1 0 | 0       = preserve B
+   * 0        1 1 | 0       + selected, drop B, preserve A
+   * 1        0 0 | 1       - selected, drop B, preserve A
+   * 1        0 1 | 1       = preserve B
+   * 1        1 0 | 0       - not selected, preserve B
+   * 1        1 1 | 1       = preserve B
+   */
+  getInverseText(): string {
+    return this.inner.lines
+      .filter(l => [0b001, 0b100, 0b101, 0b111].includes(l.bits))
+      .map(l => l.data)
+      .join('');
+  }
+
+  /**
    * Select or deselect lines.
    *
    * `selects` is a list of tuples. Each tuple has a `rawIndex` and whether that
