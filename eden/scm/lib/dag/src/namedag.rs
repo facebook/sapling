@@ -971,6 +971,9 @@ where
         new.dag
             .build_segments_from_prepared_flat_segments(&prepared_client_segments)?;
 
+        // Some "missing" vertexes might be imported.
+        new.invalidate_missing_vertex_cache();
+
         if cfg!(debug_assertions) {
             new.verify_missing().await?;
         }

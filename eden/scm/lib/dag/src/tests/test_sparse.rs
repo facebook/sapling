@@ -374,6 +374,23 @@ async fn test_pull_no_pending_changes() {
 }
 
 #[tokio::test]
+async fn test_pull_invalidate_cache() {
+    let mut server = TestDag::draw("A # master: A");
+    let mut client = server.client_cloned_data().await;
+
+    for name in ["B", "C", "D"] {
+        assert!(!client.dag.contains_vertex_name(&name.into()).await.unwrap());
+    }
+
+    server.drawdag("A..D", &["D"]);
+    client.pull_ff_master(&server, "A", "D").await.unwrap();
+
+    for name in ["B", "C", "D"] {
+        assert!(client.dag.contains_vertex_name(&name.into()).await.unwrap());
+    }
+}
+
+#[tokio::test]
 async fn test_flush_reassign_master() {
     // Test remote calls when flush() causes id reassignment
     // from non-master to master.
