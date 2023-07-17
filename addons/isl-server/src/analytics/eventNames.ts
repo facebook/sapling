@@ -35,6 +35,7 @@ export type TrackEventName =
   | 'GoBackToOldISLReason'
   | 'HideOperation'
   | 'ImportStackOperation'
+  | 'PartialCommitOperation'
   | 'PrSubmitOperation'
   | 'PullOperation'
   | 'PullRevOperation'

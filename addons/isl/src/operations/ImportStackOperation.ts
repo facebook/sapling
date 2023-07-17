@@ -162,7 +162,6 @@ export class ImportStackOperation extends Operation {
       }
     };
 
-    // Figure out the tree that
     // Hide duplicated stack
     return func;
   }

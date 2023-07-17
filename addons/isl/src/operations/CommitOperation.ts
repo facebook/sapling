@@ -6,6 +6,7 @@
  */
 
 import type {CommitTree} from '../getCommitTree';
+import type {PartialSelection} from '../partialSelection';
 import type {
   ApplyPreviewsFuncType,
   ApplyUncommittedChangesPreviewsFuncType,
@@ -13,7 +14,9 @@ import type {
   UncommittedChangesPreviewContext,
 } from '../previews';
 import type {CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
+import type {ImportStack} from 'shared/types/stack';
 
+import {t} from '../i18n';
 import {Operation} from './Operation';
 
 export class CommitOperation extends Operation {
@@ -113,5 +116,69 @@ export class CommitOperation extends Operation {
       }
     };
     return func;
+  }
+}
+
+export class PartialCommitOperation extends Operation {
+  /**
+   * See also `CommitOperation`. This operation takes a `PartialSelection` and
+   * uses `debugimportstack` under the hood, to achieve `commit -i` effect.
+   */
+  constructor(
+    private message: string,
+    private originalHeadHash: Hash,
+    private selection: PartialSelection,
+    // We need "selected" or "all" files since `selection` only tracks deselected files.
+    private allFiles: Array<RepoRelativePath>,
+  ) {
+    super('PartialCommitOperation');
+  }
+
+  getArgs(): CommandArg[] {
+    return ['debugimportstack'];
+  }
+
+  getStdin(): string | undefined {
+    const files = this.selection.calculateImportStackFiles(this.allFiles);
+    const importStack: ImportStack = [
+      [
+        'commit',
+        {
+          mark: ':1',
+          text: this.message,
+          parents: [this.originalHeadHash],
+          files,
+        },
+      ],
+      ['reset', {mark: ':1'}],
+    ];
+    return JSON.stringify(importStack);
+  }
+
+  getDescriptionForDisplay() {
+    return {
+      description: t('Committing selected changes'),
+      tooltip: t(
+        'This operation does not have a traditional command line equivalent. \n' +
+          'You can use `commit -i` on the command line to select changes to commit.',
+      ),
+    };
+  }
+}
+
+/** Choose `PartialCommitOperation` or `CommitOperation` based on input. */
+export function getCommitOperation(
+  message: string,
+  originalHeadHash: Hash,
+  selection: PartialSelection,
+  allFiles: Array<RepoRelativePath>,
+): CommitOperation | PartialCommitOperation {
+  if (selection.hasChunkSelection()) {
+    return new PartialCommitOperation(message, originalHeadHash, selection, allFiles);
+  } else if (selection.isEverythingSelected(() => allFiles)) {
+    return new CommitOperation(message, originalHeadHash);
+  } else {
+    const selectedFiles = allFiles.filter(path => selection.isFullyOrPartiallySelected(path));
+    return new CommitOperation(message, originalHeadHash, selectedFiles);
   }
 }
