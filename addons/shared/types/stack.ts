@@ -60,8 +60,8 @@ export type ImportAction =
 export type ImportCommit = {
   /** Placeholder commit hash. Must start with ":". */
   mark: Mark;
-  author: Author;
-  date: DateTuple;
+  author?: Author;
+  date?: DateTuple;
   /** Commit message. */
   text: string;
   parents: (Hash | Mark)[];
