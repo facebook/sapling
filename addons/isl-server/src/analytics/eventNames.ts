@@ -37,6 +37,7 @@ export type TrackEventName =
   | 'ImportStackOperation'
   | 'PartialCommitOperation'
   | 'PartialAmendOperation'
+  | 'PartialDiscardOperation'
   | 'PrSubmitOperation'
   | 'PullOperation'
   | 'PullRevOperation'
