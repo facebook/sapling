@@ -204,16 +204,21 @@ function RenderTooltipOnto({
   const tooltipRef = useRef<HTMLDivElement | null>(null);
 
   let effectivePlacement = placement;
+  const viewportDimensions = document.body.getBoundingClientRect();
 
   // to center the tooltip over the tooltip-creator, we need to measure its final rendered size
   const renderedDimensions = useRenderedDimensions(tooltipRef, children);
-  const position = offsetsForPlacement(placement, sourceBoundingRect, renderedDimensions);
+  const position = offsetsForPlacement(
+    placement,
+    sourceBoundingRect,
+    renderedDimensions,
+    viewportDimensions,
+  );
   effectivePlacement = position.autoPlacement ?? placement;
   // The tooltip may end up overflowing off the screen, since it's rendered absolutely.
   // We can push it back as needed with an additional offet.
   const viewportAdjust = getViewportAdjustedDelta(effectivePlacement, position, renderedDimensions);
 
-  const viewportDimensions = document.body.getBoundingClientRect();
   const style: React.CSSProperties = {
     animationDelay: delayMs ? `${delayMs}ms` : undefined,
   };
@@ -280,6 +285,12 @@ export const __TEST__ = {
   },
 };
 
+type OffsetPlacement = {
+  top: number;
+  left: number;
+  autoPlacement?: Placement;
+};
+
 /**
  * Offset tooltip from tooltipCreator's absolute position using `placement`,
  * such that it is centered and on the correct side.
@@ -305,47 +316,69 @@ function offsetsForPlacement(
   placement: Placement,
   tooltipCreatorRect: DOMRect,
   tooltipDimensions: {width: number; height: number},
-): {top: number; left: number; autoPlacement?: Placement} {
+  viewportDimensions: DOMRect,
+): OffsetPlacement {
   const padding = 5;
-  switch (placement) {
-    case 'top': {
-      const top = tooltipCreatorRect.top - padding - tooltipDimensions.height;
-      const left =
-        tooltipCreatorRect.left + tooltipCreatorRect.width / 2 - tooltipDimensions.width / 2;
-      if (top < 0) {
-        // Placing the tooltip here would overflow off the top of the page,
-        // let's instead place it on the bottom.
-        // TODO: we could do this for the other directions too.
-        return {
-          top: tooltipCreatorRect.top + tooltipCreatorRect.height + padding,
-          left,
-          autoPlacement: 'bottom',
+  let result: OffsetPlacement = {top: 0, left: 0};
+  let currentPlacement = placement;
+  for (let i = 0; i <= 2; i++) {
+    switch (currentPlacement) {
+      case 'top': {
+        result = {
+          top: tooltipCreatorRect.top - padding - tooltipDimensions.height,
+          left:
+            tooltipCreatorRect.left + tooltipCreatorRect.width / 2 - tooltipDimensions.width / 2,
         };
+        if (result.top < 0) {
+          currentPlacement = 'bottom';
+          continue;
+        }
+        break;
       }
-      return {
-        top,
-        left,
-      };
+      case 'bottom': {
+        result = {
+          top: tooltipCreatorRect.top + tooltipCreatorRect.height + padding,
+          left:
+            tooltipCreatorRect.left + tooltipCreatorRect.width / 2 - tooltipDimensions.width / 2,
+        };
+        if (result.top + tooltipDimensions.height > viewportDimensions.height) {
+          currentPlacement = 'top';
+          continue;
+        }
+        break;
+      }
+      case 'left': {
+        result = {
+          top:
+            tooltipCreatorRect.top + tooltipCreatorRect.height / 2 - tooltipDimensions.height / 2,
+          left: tooltipCreatorRect.left - tooltipDimensions.width - padding,
+        };
+        if (result.left < 0) {
+          currentPlacement = 'right';
+          continue;
+        }
+        break;
+      }
+      case 'right': {
+        result = {
+          top:
+            tooltipCreatorRect.top + tooltipCreatorRect.height / 2 - tooltipDimensions.height / 2,
+          left: tooltipCreatorRect.right + padding,
+        };
+        if (result.left + tooltipDimensions.width > viewportDimensions.width) {
+          currentPlacement = 'left';
+          continue;
+        }
+        break;
+      }
     }
-    case 'bottom': {
-      return {
-        top: tooltipCreatorRect.top + tooltipCreatorRect.height + padding,
-        left: tooltipCreatorRect.left + tooltipCreatorRect.width / 2 - tooltipDimensions.width / 2,
-      };
-    }
-    case 'left': {
-      return {
-        top: tooltipCreatorRect.top + tooltipCreatorRect.height / 2 - tooltipDimensions.height / 2,
-        left: tooltipCreatorRect.left - tooltipDimensions.width - padding,
-      };
-    }
-    case 'right': {
-      return {
-        top: tooltipCreatorRect.top + tooltipCreatorRect.height / 2 - tooltipDimensions.height / 2,
-        left: tooltipCreatorRect.right + padding,
-      };
-    }
+    break;
   }
+  // Set autoPlacement if we chose a different placement.
+  if (currentPlacement !== placement) {
+    result.autoPlacement = currentPlacement;
+  }
+  return result;
 }
 
 /**
