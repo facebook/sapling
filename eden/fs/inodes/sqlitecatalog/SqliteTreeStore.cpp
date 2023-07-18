@@ -146,7 +146,7 @@ std::unique_ptr<SqliteDatabase> openAndVerifyDb(
     folly::stop_watch<> integrityCheckRuntime;
     {
       auto dbLock = db->lock();
-      auto stmt = SqliteStatement(dbLock, "PRAGMA integrity_check");
+      auto stmt = SqliteStatement(dbLock, "PRAGMA quick_check");
       while (stmt.step()) {
         errors.push_back(stmt.columnBlob(0).str());
       }
