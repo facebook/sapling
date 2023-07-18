@@ -689,6 +689,7 @@ std::optional<bool> FileInode::isSameAsFast(
     case ObjectComparison::Different:
       return false;
   }
+  EDEN_BUG() << "unexpected ObjectComparison result";
 }
 
 ImmediateFuture<bool> FileInode::isSameAsSlow(

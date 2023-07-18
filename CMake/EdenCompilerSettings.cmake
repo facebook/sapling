@@ -8,7 +8,7 @@ if (WIN32)
 endif()
 
 if (NOT WIN32)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-completeness")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-completeness -Wno-unknown-pragmas")
 endif()
 
 # TODO: this should be a configure-time check. Linux and libstdc++
