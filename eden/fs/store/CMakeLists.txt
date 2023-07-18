@@ -16,6 +16,7 @@ add_library(
 target_link_libraries(
   eden_store
   PUBLIC
+    edencommon::edencommon_os
     eden_config
     eden_model
     eden_model_git

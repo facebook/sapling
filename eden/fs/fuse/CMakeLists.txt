@@ -17,5 +17,6 @@ target_link_libraries(
     eden_request_context
     eden_telemetry
     Folly::folly
+    edencommon::edencommon_os
     edencommon::edencommon_utils
 )
