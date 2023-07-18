@@ -80,10 +80,6 @@ def _xrepotranslate(repo, commithash):
     if not _commithashre.match(commithash):
         return None
 
-    xrepo = repo.ui.config("megarepo", "transparent-lookup")
-    if not xrepo:
-        return None
-
     if not repo.nullableedenapi:
         return None
 
@@ -99,21 +95,28 @@ def _xrepotranslate(repo, commithash):
     if commithash in cache:
         return cache[commithash]
 
-    if len(commithash) == 40:
-        xnode = bin(commithash)
-    else:
-        try:
-            repo.ui.note_err(
-                _("looking up prefix %s in repo %s\n") % (commithash, xrepo)
-            )
-            xnode = next(repo._http_prefix_lookup([commithash], reponame=xrepo))
-        except error.RepoLookupError:
-            xnode = None
+    commit_ids = {commithash}
 
     localnode = None
-    if xnode is not None:
+    for xrepo in repo.ui.configlist("megarepo", "transparent-lookup"):
+        if xrepo == repo.ui.config("remotefilelog", "reponame"):
+            continue
+
+        if len(commithash) == 40:
+            xnode = bin(commithash)
+        else:
+            try:
+                repo.ui.note_err(
+                    _("looking up prefix %s in repo %s\n") % (commithash, xrepo)
+                )
+                xnode = next(repo._http_prefix_lookup([commithash], reponame=xrepo))
+            except error.RepoLookupError:
+                continue
+
         if xnode in cache:
             return cache[xnode]
+
+        commit_ids.add(xnode)
 
         repo.ui.note_err(_("translating %s from repo %s\n") % (hex(xnode), xrepo))
         translated = list(
@@ -125,11 +128,12 @@ def _xrepotranslate(repo, commithash):
                 _("translated %s@%s to %s\n") % (hex(xnode), xrepo, hex(localnode))
             )
 
-        # Cache negative result.
-        cache[xnode] = localnode
+        if localnode:
+            break
 
-    # Cache by original input as well, just in case.
-    cache[commithash] = localnode
+    for commit_id in commit_ids:
+        # Cache negative value (i.e. localnode=None) to avoid repeated queries.
+        cache[commit_id] = localnode
 
     return localnode
 
