@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs;
 use std::fs::metadata;
 use std::fs::File;
@@ -52,9 +53,13 @@ pub struct CommandArgs {
     /// The file, we're going to log the error into
     #[arg(short, long)]
     error_log_file: String,
+
+    /// The file, we're going to track which key file has been processed
+    #[arg(short, long)]
+    progress_track_file: String,
 }
 
-fn create_error_log_file(error_log_file_path: String) -> File {
+fn create_or_open_file(error_log_file_path: String) -> File {
     let file = OpenOptions::new()
         .create(true)
         .write(true)
@@ -72,6 +77,8 @@ struct BlobstoreBulkUnlinker {
     sanitise_regex: String,
     repo_to_blobstores: HashMap<RepositoryId, Vec<Arc<dyn BlobstoreUnlinkOps>>>,
     error_log_file: File,
+    progress_track_file: File,
+    already_processed_files: HashSet<String>,
 }
 
 impl BlobstoreBulkUnlinker {
@@ -81,6 +88,7 @@ impl BlobstoreBulkUnlinker {
         dry_run: bool,
         sanitise_regex: String,
         error_log_file_path: String,
+        progress_track_path: String,
     ) -> BlobstoreBulkUnlinker {
         BlobstoreBulkUnlinker {
             app,
@@ -88,7 +96,9 @@ impl BlobstoreBulkUnlinker {
             dry_run,
             sanitise_regex,
             repo_to_blobstores: HashMap::new(),
-            error_log_file: create_error_log_file(error_log_file_path),
+            error_log_file: create_or_open_file(error_log_file_path),
+            progress_track_file: create_or_open_file(progress_track_path),
+            already_processed_files: HashSet::new(),
         }
     }
 
@@ -276,6 +286,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let dry_run = args.dry_run;
     let sanitise_regex = args.sanitise_regex;
     let error_log_file = args.error_log_file;
+    let progress_track_file = args.progress_track_file;
 
     if dry_run {
         println!(
@@ -289,6 +300,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         dry_run,
         sanitise_regex,
         error_log_file,
+        progress_track_file,
     );
     unlinker.start_unlink().await?;
 
