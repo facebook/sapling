@@ -226,7 +226,13 @@ class lock(object):
 
         self.delay = self.lock()
         if self.acquirefn:
-            self.acquirefn()
+            try:
+                self.acquirefn()
+            except:  # re-raises
+                # Release ourself immediately so locks are released in reverse order
+                # if acquirefn crashes for second lock in a "with" statement.
+                self.release()
+                raise
 
     def __enter__(self):
         return self

@@ -39,14 +39,16 @@ class teststate(object):
         self.vfs = vfsmod.vfs(dir, audit=False)
         self._pidoffset = pidoffset
 
-    def makelock(self, *args, **kwargs):
+    def makelock(self, name=testlockname, **kwargs):
+        if "releasefn" not in kwargs:
+            kwargs["releasefn"] = self.releasefn
+        if "acquirefn" not in kwargs:
+            kwargs["acquirefn"] = self.acquirefn
+
         l = lockwrapper(
             self._pidoffset,
             self.vfs,
-            testlockname,
-            releasefn=self.releasefn,
-            acquirefn=self.acquirefn,
-            *args,
+            name,
             **kwargs,
         )
         l.postrelease.append(self.postreleasefn)
@@ -139,6 +141,31 @@ class testlock(unittest.TestCase):
         state.assertreleasecalled(True)
         state.assertpostreleasecalled(True)
         state.assertlockexists(False)
+
+    def testunlockordering(self):
+        state = teststate(self, tempfile.mkdtemp(dir=os.getcwd()))
+
+        def raiseexception():
+            raise Exception("oops")
+
+        unlocks = []
+
+        def recordunlock(name):
+            def _record():
+                unlocks.append(name)
+
+            return _record
+
+        with self.assertRaisesRegex(Exception, "oops"):
+            with state.makelock("one", releasefn=recordunlock("one")), state.makelock(
+                "two", releasefn=recordunlock("two")
+            ), state.makelock(
+                "three", releasefn=recordunlock("three"), acquirefn=raiseexception
+            ):
+                pass
+
+        # Make sure we release in reverse order.
+        self.assertEqual(unlocks, ["three", "two", "one"])
 
     if not pycompat.iswindows:
 
