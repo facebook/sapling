@@ -105,6 +105,15 @@ new mode 120000
 """,
         )
 
+    def test_directory_listing(self) -> None:
+        self.repo.update(self.symlink_commit)
+        files = os.scandir(self.mount)
+        checkedSymlink = False
+        for file in files:
+            if file.name == "symlink":
+                checkedSymlink = file.is_symlink()
+        self.assertTrue(checkedSymlink)
+
 
 @hg_test
 # pyre-ignore[13]: T62487924

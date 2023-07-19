@@ -36,6 +36,7 @@ namespace {
 static_assert(CheckSize<PrjfsTraceEvent, 48>());
 
 PPWPI2 placeholderExtendedInfo2_{nullptr};
+PPFDEB2 prjFillDirEntryBuffer2_{nullptr};
 
 // TODO: Remove once the build has switched to a more recent SDK
 HRESULT PrjWritePlaceholderInfo2(
@@ -50,6 +51,15 @@ HRESULT PrjWritePlaceholderInfo2(
       placeholderInfo,
       placeholderInfoSize,
       ExtendedInfo);
+}
+
+HRESULT PrjFillDirEntryBuffer2(
+    [in] PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle,
+    [in] PCWSTR fileName,
+    [ in, optional ] PRJ_FILE_BASIC_INFO* fileBasicInfo,
+    [ in, optional ] PRJ_EXTENDED_INFO* extendedInfo) {
+  return prjFillDirEntryBuffer2_(
+      dirEntryBufferHandle, fileName, fileBasicInfo, extendedInfo);
 }
 
 folly::ReadMostlySharedPtr<PrjfsChannelInner> getChannel(
@@ -591,8 +601,21 @@ HRESULT PrjfsChannelInner::getEnumerationData(
                 PathComponent(entry.name),
                 fileInfo.FileSize);
 
-            auto result =
-                PrjFillDirEntryBuffer(entry.name.c_str(), &fileInfo, buffer);
+            HRESULT result = 0;
+            if (entry.symlinkTarget.has_value()) {
+              auto content = entry.symlinkTarget.value();
+              fileInfo.FileSize = 0;
+              _PRJ_EXTENDED_INFO extInfo;
+              extInfo.Symlink.TargetName =
+                  std::wstring(content.begin(), content.end()).c_str();
+              extInfo.InfoType = _PRJ_EXT_INFO_TYPE::PRJ_EXT_INFO_TYPE_SYMLINK;
+              extInfo.NextInfoOffset = 0;
+              result = PrjFillDirEntryBuffer2(
+                  buffer, entry.name.c_str(), &fileInfo, &extInfo);
+            } else {
+              result =
+                  PrjFillDirEntryBuffer(entry.name.c_str(), &fileInfo, buffer);
+            }
             if (FAILED(result)) {
               if (result == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER) &&
                   added) {
@@ -1585,7 +1608,12 @@ void PrjfsChannelInner::initializeSymlinkSupport() {
         GetModuleHandle(TEXT("ProjectedFSLib.dll")),
         "PrjWritePlaceholderInfo2");
   }
-  if (placeholderExtendedInfo2_ == nullptr) {
+  if (prjFillDirEntryBuffer2_ == nullptr) {
+    prjFillDirEntryBuffer2_ = (PPFDEB2)GetProcAddress(
+        GetModuleHandle(TEXT("ProjectedFSLib.dll")), "PrjFillDirEntryBuffer2");
+  }
+  if (placeholderExtendedInfo2_ == nullptr ||
+      prjFillDirEntryBuffer2_ == nullptr) {
     throw makeHResultErrorExplicit(
         255,
         "Failed to start the mount point: support for symlink requested but PrjFS does not support symlinks in the current system");

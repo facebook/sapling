@@ -14,6 +14,7 @@
 #include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
+#include <optional>
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -83,8 +84,11 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
                      auto&&) mutable {
         bool isRoot = path.empty();
         return mount_->getTreeOrTreeEntry(path, context)
-            .thenValue([isRoot,
+            .thenValue([path,
+                        isRoot,
                         objectStore = mount_->getObjectStore(),
+                        symlinksSupported = mount_->getCheckoutConfig()
+                                                ->getEnableWindowsSymlinks(),
                         context = context.copy()](
                            std::variant<std::shared_ptr<const Tree>, TreeEntry>
                                treeOrTreeEntry) mutable {
@@ -96,11 +100,35 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
               for (const auto& treeEntry : *tree) {
                 if (treeEntry.second.isTree()) {
                   ret.emplace_back(
-                      treeEntry.first, true, ImmediateFuture<uint64_t>(0ull));
+                      treeEntry.first,
+                      true,
+                      std::nullopt,
+                      ImmediateFuture<uint64_t>(0ull));
                 } else {
-                  auto sizeFut = objectStore->getBlobSize(
-                      treeEntry.second.getHash(), context);
-                  ret.emplace_back(treeEntry.first, false, std::move(sizeFut));
+                  auto optSymlinkTargetFut =
+                      (symlinksSupported &&
+                       treeEntry.second.getDtype() == dtype_t::Symlink)
+                      ? std::make_optional(
+                            objectStore
+                                ->getBlob(
+                                    treeEntry.second.getHash(), context.copy())
+                                .thenValue(
+                                    [](std::shared_ptr<const Blob> blob) {
+                                      auto content = blob->asString();
+                                      std::replace(
+                                          content.begin(),
+                                          content.end(),
+                                          '/',
+                                          '\\');
+                                      return content;
+                                    }))
+                      : std::nullopt;
+                  ret.emplace_back(
+                      treeEntry.first,
+                      false,
+                      std::move(optSymlinkTargetFut),
+                      objectStore->getBlobSize(
+                          treeEntry.second.getHash(), context.copy()));
                 }
               }
 
@@ -108,6 +136,7 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
                 ret.emplace_back(
                     kDotEdenPathComponent,
                     true,
+                    std::nullopt,
                     ImmediateFuture<uint64_t>(0ull));
               }
 
@@ -123,6 +152,7 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
                     ret.emplace_back(
                         PathComponent{kConfigTable},
                         false,
+                        std::nullopt,
                         ImmediateFuture<uint64_t>(dotEdenConfig_.size()));
                     return folly::Try{ret};
                   } else {

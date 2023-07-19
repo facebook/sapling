@@ -9,6 +9,9 @@
 
 #include "eden/fs/prjfs/Enumerator.h"
 
+#include <optional>
+#include <string>
+
 #include <ProjectedFSLib.h> // @manual
 #include <folly/executors/GlobalExecutor.h>
 #include <folly/portability/Windows.h>
@@ -18,22 +21,40 @@ namespace facebook::eden {
 PrjfsDirEntry::PrjfsDirEntry(
     PathComponentPiece name,
     bool isDir,
+    std::optional<ImmediateFuture<std::string>> symlinkTarget,
     ImmediateFuture<uint64_t> sizeFuture)
     : name_{name.wide()},
       // In the case where the future isn't ready yet, we want to start
       // driving it immediately, thus convert it to a Future.
       sizeFuture_{
           std::move(sizeFuture).semi().via(folly::getGlobalCPUExecutor())},
-      isDir_{isDir} {}
+      isDir_{isDir},
+      symlinkTarget_{
+          symlinkTarget.has_value()
+              ? std::make_optional(std::move(symlinkTarget.value())
+                                       .semi()
+                                       .via(folly::getGlobalCPUExecutor()))
+              : std::nullopt} {}
 
 bool PrjfsDirEntry::matchPattern(const std::wstring& pattern) const {
   return PrjFileNameMatch(name_.c_str(), pattern.c_str());
 }
 
 ImmediateFuture<PrjfsDirEntry::Ready> PrjfsDirEntry::getFuture() {
-  return ImmediateFuture{sizeFuture_.getSemiFuture()}.thenValue(
-      [name = name_, isDir = isDir_](uint64_t size) {
-        return Ready{std::move(name), size, isDir};
+  auto sizeFuture = ImmediateFuture{sizeFuture_.getSemiFuture()};
+  auto symlinkTargetFuture = symlinkTarget_.has_value()
+      ? (ImmediateFuture{symlinkTarget_.value().getSemiFuture()})
+            .thenValue(
+                [](std::string target)
+                    -> ImmediateFuture<std::optional<std::string>> {
+                  return target;
+                })
+      : ImmediateFuture<std::optional<std::string>>{std::nullopt};
+  return collectAllSafe(sizeFuture, symlinkTargetFuture)
+      .thenValue([name = name_, isDir = isDir_](
+                     std::tuple<uint64_t, std::optional<std::string>>&& ret) {
+        auto&& [size, symlinkTarget] = std::move(ret);
+        return Ready{std::move(name), size, isDir, std::move(symlinkTarget)};
       });
 }
 
