@@ -52,12 +52,12 @@ class SymlinkTest(EdenHgTestCase):
         self.repo.update(self.symlink_commit)
         self.assertEqual(
             self.repo.hg("log", "-r", ".", "--template", "{node}", "--patch"),
-            """3f0b136eff77afd59a710c48d6e5f178793d08cediff --git a/symlink b/symlink
+            f"""3f0b136eff77afd59a710c48d6e5f178793d08cediff --git a/symlink b/symlink
 new file mode 120000
 --- /dev/null
 +++ b/symlink
 @@ -0,0 +1,1 @@
-+adir/hello.txt
++{os.path.join('adir', 'hello.txt')}
 \\ No newline at end of file
 
 """,
@@ -70,6 +70,40 @@ new file mode 120000
         os.remove(self.get_path("symlink"))
         self.repo.symlink("symlink", os.path.join("adir", "true_hola.txt"))
         self.assert_status({"adir/true_hola.txt": "?", "symlink": "M"})
+        self.assertEqual(
+            self.repo.hg("diff"),
+            f"""diff --git a/symlink b/symlink
+--- a/symlink
++++ b/symlink
+@@ -1,1 +1,1 @@
+-{os.path.join('adir', 'hello.txt')}
+\\ No newline at end of file
++{os.path.join('adir', 'true_hola.txt')}
+\\ No newline at end of file
+""",
+        )
+
+    def test_symlink_diff(self) -> None:
+        self.repo.update(self.symlink_commit)
+        os.remove(self.get_path("symlink"))
+        self.write_file("symlink", os.path.join("adir", "hello.txt"))
+        self.assertEqual(
+            self.repo.hg("diff"),
+            """diff --git a/symlink b/symlink
+old mode 120000
+new mode 100644
+""",
+        )
+        self.repo.update(self.quasi_symlink_commit, clean=True)
+        os.remove(self.get_path("symlink"))
+        self.repo.symlink("symlink", os.path.join("adir", "hello.txt"))
+        self.assertEqual(
+            self.repo.hg("diff"),
+            """diff --git a/symlink b/symlink
+old mode 100644
+new mode 120000
+""",
+        )
 
 
 @hg_test
