@@ -1,6 +1,5 @@
 #debugruntest-compatible
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
   $ setconfig experimental.windows-symlinks=True
 
@@ -198,11 +197,13 @@ This avoids same-second race condition that leaves files as NEED_CHECK.
   $ hg ci -Ama
   adding foo/a
 
+#if fsmonitor
 Make sure files are _not_ NEED_CHECK and have metadata. This is the tricky
 case for "status" to detect the new symlink.
   $ hg debugtree list
   a/b/c/demo: 01207* 23 + EXIST_P1 EXIST_NEXT  (glob)
   foo/a: 0100644 0 + EXIST_P1 EXIST_NEXT 
+#endif
 
   $ mv foo bar
   $ ln -s bar foo
