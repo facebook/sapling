@@ -1601,16 +1601,13 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
         return (optionalTakeover ? performTakeoverStart(
                                        edenMount, std::move(*optionalTakeover))
                                  : edenMount->startFsChannel(readOnly))
-            .thenTry([edenMount, doTakeover, this](
-                         folly::Try<Unit>&& result) mutable {
+            .thenError([this, edenMount](folly::exception_wrapper ew) {
               // Call mountFinished() if an error occurred during FUSE
               // initialization.
-              if (result.hasException()) {
-                mountFinished(edenMount.get(), std::nullopt);
-                return makeFuture<shared_ptr<EdenMount>>(
-                    std::move(result).exception());
-              }
-
+              mountFinished(edenMount.get(), std::nullopt);
+              return makeFuture<folly::Unit>(std::move(ew));
+            })
+            .thenValue([edenMount, doTakeover, this](folly::Unit) mutable {
               registerStats(edenMount);
 
               // Now that we've started the workers, arrange to call
