@@ -219,6 +219,8 @@ impl PendingChanges for WatchmanFileSystem {
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let ts = &mut *self.treestate.lock();
 
+        let treestate_started_dirty = ts.dirty();
+
         let ts_metadata = ts.metadata()?;
         let mut prev_clock = get_clock(&ts_metadata)?;
 
@@ -381,7 +383,15 @@ impl PendingChanges for WatchmanFileSystem {
             set_clock(ts, result.clock)?;
         }
 
-        maybe_flush_treestate(config, self.vfs.root(), ts, &self.locker)?;
+        // Don't flush treestate if it was already dirty. If we are inside a
+        // Python transaction with uncommitted, substantial dirstate changes,
+        // those changes should not be written out until the transaction
+        // finishes.
+        if treestate_started_dirty {
+            tracing::debug!("treestate was dirty - skipping flush");
+        } else {
+            maybe_flush_treestate(config, self.vfs.root(), ts, &self.locker)?;
+        }
 
         Ok(Box::new(pending_changes.into_iter()))
     }
