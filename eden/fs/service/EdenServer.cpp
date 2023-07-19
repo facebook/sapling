@@ -1585,21 +1585,19 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
 
   // Now actually begin starting the mount point
   return std::move(initFuture)
-      .thenTry([this,
-                doTakeover,
-                readOnly,
-                edenMount,
-                mountStopWatch,
-                optionalTakeover = std::move(optionalTakeover)](
-                   folly::Try<Unit>&& result) mutable {
-        if (result.hasException()) {
-          XLOG(ERR) << "error initializing " << edenMount->getPath() << ": "
-                    << result.exception().what();
-          mountFinished(edenMount.get(), std::nullopt);
-          return makeFuture<shared_ptr<EdenMount>>(
-              std::move(result).exception());
-        }
-
+      .thenError([this, edenMount](folly::exception_wrapper ew) {
+        XLOG(ERR) << "error initializing " << edenMount->getPath() << ": "
+                  << ew.what();
+        mountFinished(edenMount.get(), std::nullopt);
+        return makeFuture<folly::Unit>(std::move(ew));
+      })
+      .thenValue([this,
+                  doTakeover,
+                  readOnly,
+                  edenMount,
+                  mountStopWatch,
+                  optionalTakeover =
+                      std::move(optionalTakeover)](folly::Unit) mutable {
         return (optionalTakeover ? performTakeoverStart(
                                        edenMount, std::move(*optionalTakeover))
                                  : edenMount->startFsChannel(readOnly))
