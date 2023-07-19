@@ -182,13 +182,7 @@ where
     None
 }
 
-fn log_stats<H: ScubaHandler>(
-    mut scuba: MononokeScubaSampleBuilder,
-    state: &mut State,
-    status_code: &StatusCode,
-) -> Option<()> {
-    scuba.add(HttpScubaKey::HttpStatus, status_code.as_u16());
-
+fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
     if let Some(uri) = Uri::try_borrow_from(state) {
         scuba.add(HttpScubaKey::HttpPath, uri.path());
         if let Some(query) = uri.query() {
@@ -202,7 +196,7 @@ fn log_stats<H: ScubaHandler>(
 
     if let Some(headers) = HeaderMap::try_borrow_from(state) {
         add_header(
-            &mut scuba,
+            scuba,
             headers,
             HttpScubaKey::HttpHost,
             header::HOST,
@@ -210,7 +204,7 @@ fn log_stats<H: ScubaHandler>(
         );
 
         add_header(
-            &mut scuba,
+            scuba,
             headers,
             HttpScubaKey::RequestContentLength,
             header::CONTENT_LENGTH,
@@ -218,7 +212,7 @@ fn log_stats<H: ScubaHandler>(
         );
 
         add_header(
-            &mut scuba,
+            scuba,
             headers,
             HttpScubaKey::HttpUserAgent,
             header::USER_AGENT,
@@ -226,7 +220,7 @@ fn log_stats<H: ScubaHandler>(
         );
 
         add_header(
-            &mut scuba,
+            scuba,
             headers,
             HttpScubaKey::ClientCorrelator,
             CLIENT_CORRELATOR,
@@ -251,6 +245,14 @@ fn log_stats<H: ScubaHandler>(
     }
 
     scuba.add(HttpScubaKey::RequestId, state.short_request_id());
+}
+
+fn log_stats<H: ScubaHandler>(
+    mut scuba: MononokeScubaSampleBuilder,
+    state: &mut State,
+    status_code: &StatusCode,
+) -> Option<()> {
+    scuba.add(HttpScubaKey::HttpStatus, status_code.as_u16());
 
     if let Some(HeadersDuration(duration)) = HeadersDuration::try_borrow_from(state) {
         scuba.add(
@@ -368,7 +370,10 @@ impl ScubaMiddlewareState {
 impl<H: ScubaHandler> Middleware for ScubaMiddleware<H> {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
         // Reset the scuba sequence counter for each request.
-        let scuba = self.scuba.clone().with_seq("seq");
+        let mut scuba = self.scuba.clone().with_seq("seq");
+
+        // Populate the sample builder with values available at the start of the request.
+        populate_scuba(&mut scuba, state);
 
         // Ensure we log if the request is cancelled.
         let scuba = scopeguard::guard(
