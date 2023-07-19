@@ -1216,9 +1216,6 @@ FileInodePtr TreeInode::symlink(
     PathComponentPiece name,
     folly::StringPiece symlinkTarget,
     InvalidationRequired invalidate) {
-#ifndef _WIN32
-  // Eden doesn't support symlinks on Windows
-
   // symlink creates a newly materialized file in createImpl. We count this as
   // an inode materialization event to publish to TraceBus, which we begin
   // timing here before the parent tree inode materializes
@@ -1239,12 +1236,6 @@ FileInodePtr TreeInode::symlink(
         invalidate,
         startTime);
   }
-#else
-  (void)name;
-  (void)symlinkTarget;
-  (void)invalidate;
-  NOT_IMPLEMENTED();
-#endif
 }
 
 FileInodePtr TreeInode::mknod(

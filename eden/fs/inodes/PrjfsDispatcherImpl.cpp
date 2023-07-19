@@ -400,11 +400,29 @@ ImmediateFuture<TreeInodePtr> createDirInode(
       });
 }
 
-enum class OnDiskState {
+enum class OnDiskStateTypes {
   MaterializedFile,
+  MaterializedSymlink,
   MaterializedDirectory,
   NotPresent,
 };
+
+struct OnDiskState {
+  OnDiskStateTypes type;
+  std::optional<boost::filesystem::path> symlinkTarget;
+
+  explicit OnDiskState(
+      OnDiskStateTypes _type,
+      std::optional<boost::filesystem::path> _target = std::nullopt)
+      : type(_type), symlinkTarget(_target) {}
+};
+
+ImmediateFuture<OnDiskState> recheckDiskState(
+    const EdenMount& mount,
+    RelativePathPiece path,
+    std::chrono::steady_clock::time_point receivedAt,
+    int retry,
+    OnDiskStateTypes expectedType);
 
 ImmediateFuture<OnDiskState> getOnDiskState(
     const EdenMount& mount,
@@ -418,34 +436,35 @@ ImmediateFuture<OnDiskState> getOnDiskState(
   auto fileType = boost::filesystem::symlink_status(boostPath, ec).type();
 
   if (fileType == boost::filesystem::regular_file) {
-    return OnDiskState::MaterializedFile;
+    return recheckDiskState(
+        mount, path, receivedAt, retry, OnDiskStateTypes::MaterializedFile);
   } else if (fileType == boost::filesystem::symlink_file) {
-    return OnDiskState::MaterializedFile;
+    if (mount.getCheckoutConfig()->getEnableWindowsSymlinks()) {
+      auto symlinkTarget = boost::filesystem::read_symlink(boostPath, ec);
+      if (ec.value() == 0) {
+        return OnDiskState(
+            OnDiskStateTypes::MaterializedSymlink, symlinkTarget);
+      }
+      return getOnDiskState(mount, path, receivedAt, retry + 1);
+    }
+    return OnDiskState(OnDiskStateTypes::MaterializedFile);
   } else if (fileType == boost::filesystem::reparse_file) {
     // Boost reports anything that is a reparse point which is not a symlink a
     // reparse_file. In particular, socket are reported as such.
-    return OnDiskState::MaterializedFile;
+    return OnDiskState(OnDiskStateTypes::MaterializedFile);
   } else if (fileType == boost::filesystem::directory_file) {
-    const auto elapsed = std::chrono::steady_clock::now() - receivedAt;
-    const auto delay =
-        mount.getEdenConfig()->prjfsDirectoryCreationDelay.getValue();
-    if (elapsed < delay) {
-      // See comment on EdenConfig::prjfsDirectoryCreationDelay for what's going
-      // on here.
-      auto timeToSleep =
-          std::chrono::duration_cast<folly::HighResDuration>(delay - elapsed);
-      return ImmediateFuture{folly::futures::sleep(timeToSleep)}.thenValue(
-          [&mount, path = path.copy(), retry, receivedAt](folly::Unit&&) {
-            return getOnDiskState(mount, path, receivedAt, retry);
-          });
-    }
-    return OnDiskState::MaterializedDirectory;
+    return recheckDiskState(
+        mount,
+        path,
+        receivedAt,
+        retry,
+        OnDiskStateTypes::MaterializedDirectory);
   } else if (fileType == boost::filesystem::file_not_found) {
-    return OnDiskState::NotPresent;
+    return OnDiskState(OnDiskStateTypes::NotPresent);
   } else if (fileType == boost::filesystem::status_error) {
     if (retry == 5) {
       XLOG(WARN) << "Assuming path is not present: " << path;
-      return OnDiskState::NotPresent;
+      return OnDiskState(OnDiskStateTypes::NotPresent);
     }
     XLOG(WARN) << "Error: " << ec.message() << " for path: " << path;
     return ImmediateFuture{folly::futures::sleep(retry * 5ms)}.thenValue(
@@ -456,6 +475,30 @@ ImmediateFuture<OnDiskState> getOnDiskState(
     return makeImmediateFuture<OnDiskState>(std::logic_error(
         fmt::format("Unknown file type {} for file {}", fileType, path)));
   }
+}
+
+ImmediateFuture<OnDiskState> recheckDiskState(
+    const EdenMount& mount,
+    RelativePathPiece path,
+    std::chrono::steady_clock::time_point receivedAt,
+    int retry,
+    OnDiskStateTypes expectedType) {
+  if (mount.getCheckoutConfig()->getEnableWindowsSymlinks()) {
+    const auto elapsed = std::chrono::steady_clock::now() - receivedAt;
+    const auto delay =
+        mount.getEdenConfig()->prjfsDirectoryCreationDelay.getValue();
+    if (elapsed < delay) {
+      // See comment on EdenConfig::prjfsDirectoryCreationDelay for what's
+      // going on here.
+      auto timeToSleep =
+          std::chrono::duration_cast<folly::HighResDuration>(delay - elapsed);
+      return ImmediateFuture{folly::futures::sleep(timeToSleep)}.thenValue(
+          [&mount, path = path.copy(), retry, receivedAt](folly::Unit&&) {
+            return getOnDiskState(mount, path, receivedAt, retry);
+          });
+    }
+  }
+  return OnDiskState(expectedType);
 }
 
 ImmediateFuture<folly::Unit> fileNotificationImpl(
@@ -488,7 +531,7 @@ ImmediateFuture<folly::Unit> handleNotPresentFileNotification(
           .thenValue(
               [this, &mount, receivedAt](
                   OnDiskState state) mutable -> ImmediateFuture<RelativePath> {
-                if (state == OnDiskState::MaterializedDirectory) {
+                if (state.type == OnDiskStateTypes::MaterializedDirectory) {
                   return currentPrefix_.copy();
                 }
 
@@ -603,13 +646,15 @@ ImmediateFuture<folly::Unit> recursivelyUpdateChildrens(
 ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
     const EdenMount& mount,
     RelativePath path,
-    InodeType inodeType,
+    OnDiskStateTypes diskStateType,
+    std::optional<boost::filesystem::path> symlinkTarget,
     std::chrono::steady_clock::time_point receivedAt,
     const ObjectFetchContextPtr& context) {
   return createDirInode(mount, path.dirname().copy(), context)
       .thenValue([&mount,
                   path = std::move(path),
-                  inodeType,
+                  diskStateType,
+                  symlinkTarget = std::move(symlinkTarget),
                   receivedAt,
                   context =
                       context.copy()](const TreeInodePtr treeInode) mutable {
@@ -619,7 +664,8 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                 [&mount,
                  path = std::move(path),
                  treeInode,
-                 inodeType,
+                 diskStateType,
+                 symlinkTarget = std::move(symlinkTarget),
                  receivedAt,
                  context = context.copy()](folly::Try<InodePtr> try_) mutable
                 -> ImmediateFuture<folly::Unit> {
@@ -628,7 +674,8 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                     if (auto* exc =
                             try_.tryGetExceptionObject<std::system_error>()) {
                       if (isEnoent(*exc)) {
-                        if (inodeType == InodeType::TREE) {
+                        if (diskStateType ==
+                            OnDiskStateTypes::MaterializedDirectory) {
                           auto child = treeInode->mkdir(
                               basename, _S_IFDIR, InvalidationRequired::No);
                           child->incFsRefcount();
@@ -638,6 +685,14 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                               std::move(path),
                               receivedAt,
                               context);
+                        } else if (
+                            diskStateType ==
+                            OnDiskStateTypes::MaterializedSymlink) {
+                          auto child = treeInode->symlink(
+                              basename,
+                              symlinkTarget.value().string(),
+                              InvalidationRequired::No);
+                          child->incFsRefcount();
                         } else {
                           auto child = treeInode->mknod(
                               basename, _S_IFREG, 0, InvalidationRequired::No);
@@ -650,8 +705,8 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                   }
 
                   auto inode = std::move(try_).value();
-                  switch (inodeType) {
-                    case InodeType::TREE: {
+                  switch (diskStateType) {
+                    case OnDiskStateTypes::MaterializedDirectory: {
                       if (auto inodePtr = inode.asTreePtrOrNull()) {
                         // In the case where this is already a directory, we
                         // still need to recursively add all the childrens.
@@ -699,7 +754,9 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                                 context);
                           });
                     }
-                    case InodeType::FILE: {
+                    case OnDiskStateTypes::NotPresent:
+                    case OnDiskStateTypes::MaterializedFile:
+                    case OnDiskStateTypes::MaterializedSymlink: {
                       if (auto fileInode = inode.asFilePtrOrNull()) {
                         fileInode->materialize();
                         return folly::unit;
@@ -710,7 +767,9 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                           ->removeRecursively(
                               basename, InvalidationRequired::No, context)
                           .thenTry(
-                              [basename = basename.copy(),
+                              [diskStateType,
+                               symlinkTarget,
+                               basename = basename.copy(),
                                treeInode](folly::Try<folly::Unit> try_)
                                   -> ImmediateFuture<folly::Unit> {
                                 if (auto* exc = try_.tryGetExceptionObject<
@@ -720,12 +779,21 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                                         try_.exception());
                                   }
                                 }
-                                auto child = treeInode->mknod(
-                                    basename,
-                                    _S_IFREG,
-                                    0,
-                                    InvalidationRequired::No);
-                                child->incFsRefcount();
+                                if (diskStateType ==
+                                    OnDiskStateTypes::MaterializedSymlink) {
+                                  auto child = treeInode->symlink(
+                                      basename,
+                                      symlinkTarget.value().string(),
+                                      InvalidationRequired::No);
+                                  child->incFsRefcount();
+                                } else {
+                                  auto child = treeInode->mknod(
+                                      basename,
+                                      _S_IFREG,
+                                      0,
+                                      InvalidationRequired::No);
+                                  child->incFsRefcount();
+                                }
                                 return folly::unit;
                               });
                     }
@@ -746,14 +814,25 @@ ImmediateFuture<folly::Unit> fileNotificationImpl(
                   path = std::move(path),
                   receivedAt,
                   context = context.copy()](OnDiskState state) mutable {
-        switch (state) {
-          case OnDiskState::MaterializedFile:
+        switch (state.type) {
+          case OnDiskStateTypes::MaterializedDirectory:
+          case OnDiskStateTypes::MaterializedFile:
             return handleMaterializedFileNotification(
-                mount, std::move(path), InodeType::FILE, receivedAt, context);
-          case OnDiskState::MaterializedDirectory:
+                mount,
+                std::move(path),
+                state.type,
+                std::nullopt,
+                receivedAt,
+                context);
+          case OnDiskStateTypes::MaterializedSymlink:
             return handleMaterializedFileNotification(
-                mount, std::move(path), InodeType::TREE, receivedAt, context);
-          case OnDiskState::NotPresent:
+                mount,
+                std::move(path),
+                OnDiskStateTypes::MaterializedSymlink,
+                std::move(state.symlinkTarget),
+                receivedAt,
+                context);
+          case OnDiskStateTypes::NotPresent:
             return handleNotPresentFileNotification(
                 mount, std::move(path), receivedAt, context);
         }
