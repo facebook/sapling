@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::convert::AsRef;
+
 use blake3::Hasher as Blake3;
 use bytes::Bytes;
 use digest::Digest;
@@ -14,7 +16,7 @@ use mononoke_types::ContentId;
 use sha1::Sha1;
 use sha2::Sha256;
 
-pub fn hash_bytes<H>(mut hasher: impl Hasher<H>, bytes: &Bytes) -> H {
+pub fn hash_bytes<H>(mut hasher: impl Hasher<H>, bytes: impl AsRef<[u8]>) -> H {
     hasher.update(bytes);
     hasher.finish()
 }

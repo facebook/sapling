@@ -483,6 +483,12 @@ impl_hash!(GitSha1, 20, InvalidGitSha1Input);
 impl_hash!(Blake3, 32, InvalidBlake3Input);
 impl_arbitrary_for_hash!(Blake2, 32);
 
+impl From<Sha1> for GitSha1 {
+    fn from(value: Sha1) -> Self {
+        Self(value.0)
+    }
+}
+
 impl Blake3 {
     #[inline]
     pub fn from_thrift(b: thrift::Blake3) -> Result<Self> {

@@ -45,8 +45,7 @@ async fn basic_upload_git_object(fb: FacebookInit) -> Result<()> {
     let mut bytes = tag.loose_header().into_vec();
     tag.write_to(bytes.by_ref())?;
 
-    let bytes_to_hash = bytes::Bytes::from(bytes.clone());
-    let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), &bytes_to_hash);
+    let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), bytes.as_slice());
     let output = repo_ctx
         .upload_git_object(git_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
         .await;
@@ -64,8 +63,7 @@ async fn blob_upload_git_object(fb: FacebookInit) -> Result<()> {
     };
     let mut bytes = blob.loose_header().into_vec();
     blob.write_to(bytes.by_ref())?;
-    let bytes_to_hash = bytes::Bytes::from(bytes.clone());
-    let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), &bytes_to_hash);
+    let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), bytes.as_slice());
     let output = repo_ctx
         .upload_git_object(git_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
         .await;
@@ -92,8 +90,7 @@ async fn invalid_bytes_upload_git_object(fb: FacebookInit) -> Result<()> {
     let mut bytes = Vec::new();
     tag.write_to(bytes.by_ref())?;
 
-    let bytes_to_hash = bytes::Bytes::from(bytes.clone());
-    let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), &bytes_to_hash);
+    let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), bytes.as_slice());
     let output = repo_ctx
         .upload_git_object(git_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
         .await;
@@ -146,8 +143,7 @@ async fn blobstore_check_upload_git_object(fb: FacebookInit) -> Result<()> {
     let mut bytes = tag.loose_header().into_vec();
     tag.write_to(bytes.by_ref())?;
 
-    let bytes_to_hash = bytes::Bytes::from(bytes.clone());
-    let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), &bytes_to_hash);
+    let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), bytes.as_slice());
     let blobstore_key = format!("git_object.{}", sha1_hash.to_hex());
     repo_ctx
         .upload_git_object(git_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
@@ -169,8 +165,7 @@ async fn basic_create_git_tree(fb: FacebookInit) -> Result<()> {
     let mut bytes = tree.loose_header().into_vec();
     tree.write_to(bytes.by_ref())?;
 
-    let bytes_to_hash = bytes::Bytes::from(bytes.clone());
-    let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), &bytes_to_hash);
+    let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), bytes.as_slice());
     let git_tree_hash = git_hash::oid::try_from_bytes(sha1_hash.as_ref())?;
     repo_ctx.upload_git_object(git_tree_hash, bytes).await?;
 
