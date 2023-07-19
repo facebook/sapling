@@ -70,6 +70,10 @@ class ThriftTest(testcase.EdenRepoTest):
     commit2: str
     commit3: str
 
+    def setup_eden_test(self) -> None:
+        self.enable_windows_symlinks = True
+        super().setup_eden_test()
+
     def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
         result = super().edenfs_extra_config() or {}
         result.setdefault("hash", []).append(

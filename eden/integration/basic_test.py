@@ -19,28 +19,21 @@ from .lib import testcase
 # pyre-ignore[13]: T62487924
 class BasicTestBase(testcase.EdenRepoTest):
     expected_mount_entries: Set[str]
-    created_symlink: bool
+
+    def setup_eden_test(self) -> None:
+        self.enable_windows_symlinks = True
+        super().setup_eden_test()
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
         self.repo.write_file("adir/file", "foo!\n")
         self.repo.write_file("bdir/test.sh", "#!/bin/bash\necho test\n", mode=0o755)
         self.repo.write_file("bdir/noexec.sh", "#!/bin/bash\necho test\n")
-
-        self.created_symlink = False
-        # TODO(xavierd): EdenFS on Windows doesn't yet support symlinks
-        if sys.platform != "win32":
-            try:
-                self.repo.symlink("slink", "hello")
-                self.created_symlink = True
-            except OSError:
-                pass
+        self.repo.symlink("slink", os.path.join("adir", "file"))
 
         self.repo.commit("Initial commit.")
 
-        self.expected_mount_entries = {".eden", "adir", "bdir", "hello"}
-        if self.created_symlink:
-            self.expected_mount_entries.add("slink")
+        self.expected_mount_entries = {".eden", "adir", "bdir", "hello", "slink"}
         if self.repo.get_type() == "hg":
             self.expected_mount_entries.add(".hg")
 
@@ -109,14 +102,13 @@ class BasicTest(BasicTestBase):
         st = os.lstat(hello)
         self.assertTrue(stat.S_ISREG(st.st_mode))
 
-        if self.created_symlink:
-            slink = os.path.join(self.mount, "slink")
-            st = os.lstat(slink)
-            self.assertTrue(stat.S_ISLNK(st.st_mode))
+        slink = os.path.join(self.mount, "slink")
+        st = os.lstat(slink)
+        self.assertTrue(stat.S_ISLNK(st.st_mode))
 
     def test_symlinks(self) -> None:
         slink = os.path.join(self.mount, "slink")
-        self.assertEqual(os.readlink(slink), "hello")
+        self.assertEqual(os.readlink(slink), os.path.join("adir", "file"))
 
     def test_regular(self) -> None:
         hello = os.path.join(self.mount, "hello")

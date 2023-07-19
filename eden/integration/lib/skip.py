@@ -26,9 +26,6 @@ if sys.platform == "win32":
         #
         # Test classes from the main integration test binary
         #
-        "basic_test.BasicTest": [
-            "test_symlinks",
-        ],
         "basic_test.PosixTest": True,
         "chown_test.ChownTest": True,
         "clone_test.CloneFakeEdenFSTestAdHoc": True,
@@ -95,7 +92,6 @@ if sys.platform == "win32":
         "takeover_test.TakeoverTestHg": True,
         "takeover_test.TakeoverTestNoNFSServerHg": True,
         "thrift_test.ThriftTestHg": [
-            "test_get_sha1_throws_for_symlink",
             "test_get_blake3_throws_for_symlink",
             "test_pid_fetch_counts",
             "test_unload_free_inodes",
@@ -290,6 +286,7 @@ if sys.platform != "win32":
             "projfs_enumeration.ProjFSEnumeration": True,
             "projfs_enumeration.ProjFSEnumerationInsufficientBuffer": True,
             "prjfs_match_fs.PrjfsMatchFsTest": True,
+            "hg.symlink_test.SymlinkWindowsDisabledTest": True,
         }
     )
 

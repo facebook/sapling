@@ -82,6 +82,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
 
     repo: hgrepo.HgRepository
     backing_repo: hgrepo.HgRepository
+    enable_windows_symlinks: bool = False
 
     def setup_eden_test(self) -> None:
         super().setup_eden_test()
@@ -91,14 +92,23 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
 
         # Edit the edenrc file to set up post-clone hooks that will correctly
         # populate the .hg directory inside the eden client.
-        self.eden.clone(self.backing_repo.path, self.mount, allow_empty=True)
+        self.eden.clone(
+            self.backing_repo.path,
+            self.mount,
+            allow_empty=True,
+            enable_windows_symlinks=self.enable_windows_symlinks,
+        )
 
         # Now create the repository object that refers to the eden client
         self.repo = hgrepo.HgRepository(self.mount, system_hgrc=self.system_hgrc)
 
     def create_backing_repo(self) -> hgrepo.HgRepository:
+        if self.enable_windows_symlinks:
+            init_configs = ["experimental.windows-symlinks=True"]
+        else:
+            init_configs = []
         hgrc = self.get_hgrc()
-        repo = self.create_hg_repo("main", hgrc=hgrc)
+        repo = self.create_hg_repo("main", hgrc=hgrc, init_configs=init_configs)
         self.populate_backing_repo(repo)
         return repo
 

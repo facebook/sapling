@@ -418,6 +418,8 @@ class EdenRepoTest(EdenTestCase):
     # case sensitivities on a single platform.
     is_case_sensitive: Optional[bool] = None
 
+    enable_windows_symlinks: bool = False
+
     def setup_eden_test(self) -> None:
         super().setup_eden_test()
 
@@ -427,7 +429,10 @@ class EdenRepoTest(EdenTestCase):
         self.report_time("repository setup done")
 
         self.eden.clone(
-            self.repo.path, self.mount, case_sensitive=self.is_case_sensitive
+            self.repo.path,
+            self.mount,
+            case_sensitive=self.is_case_sensitive,
+            enable_windows_symlinks=self.enable_windows_symlinks,
         )
         self.report_time("eden clone done")
         actual_case_sensitive = self.eden.is_case_sensitive(self.mount)
@@ -650,7 +655,9 @@ class HgRepoTestMixin:
         # it before the real create_hg_repo() name.  We can't change the MRO without
         # breaking resolution of create_repo().
         # pyre-fixme[16]: `HgRepoTestMixin` has no attribute `create_hg_repo`.
-        return self.create_hg_repo(name)
+        return self.create_hg_repo(
+            name, init_configs=["experimental.windows-symlinks=True"]
+        )
 
 
 class GitRepoTestMixin:

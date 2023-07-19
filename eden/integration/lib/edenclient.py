@@ -596,6 +596,7 @@ class EdenFS(object):
         path: Union[str, os.PathLike],
         allow_empty: bool = False,
         case_sensitive: Optional[bool] = None,
+        enable_windows_symlinks: bool = False,
     ) -> None:
         """
         Run "eden clone"
@@ -607,6 +608,8 @@ class EdenFS(object):
             params.append("--case-sensitive")
         elif case_sensitive is False:  # Can also be None
             params.append("--case-insensitive")
+        if enable_windows_symlinks:
+            params.append("--enable-windows-symlinks")
         self.run_cmd(*params)
 
     def is_case_sensitive(self, path: Union[str, os.PathLike]) -> bool:

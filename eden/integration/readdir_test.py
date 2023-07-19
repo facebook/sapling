@@ -72,6 +72,10 @@ class ReaddirTest(testcase.EdenRepoTest):
     adir_id: bytes
     cdir_subdir_id: bytes
 
+    def setup_eden_test(self) -> None:
+        self.enable_windows_symlinks = True
+        super().setup_eden_test()
+
     def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
         result = super().edenfs_extra_config() or {}
         result.setdefault("hash", []).append(
@@ -538,63 +542,47 @@ class ReaddirTest(testcase.EdenRepoTest):
     def test_get_attributes_symlink(self) -> None:
         results = self.get_all_attributes([b"slink"])
         self.assertEqual(1, len(results.res))
-        if sys.platform != "win32":
-            self.assert_attribute_error(
-                results, "slink: file is a symlink: Invalid argument", 0
+        self.assert_attribute_error(
+            results, "slink: file is a symlink: Invalid argument", 0
+        )
+        expected_slink_result_v2 = FileAttributeDataOrErrorV2(
+            FileAttributeDataV2(
+                Sha1OrError(
+                    error=EdenError(
+                        message="slink: file is a symlink: Invalid argument",
+                        errorCode=22,
+                        errorType=EdenErrorType.POSIX_ERROR,
+                    )
+                ),
+                SizeOrError(
+                    error=EdenError(
+                        message="slink: file is a symlink: Invalid argument",
+                        errorCode=22,
+                        errorType=EdenErrorType.POSIX_ERROR,
+                    )
+                ),
+                SourceControlTypeOrError(SourceControlType.SYMLINK),
+                ObjectIdOrError(self.slink_id),
+                blake3=Blake3OrError(
+                    error=EdenError(
+                        message="slink: file is a symlink: Invalid argument",
+                        errorCode=22,
+                        errorType=EdenErrorType.POSIX_ERROR,
+                    )
+                ),
             )
-            expected_slink_result_v2 = FileAttributeDataOrErrorV2(
-                FileAttributeDataV2(
-                    Sha1OrError(
-                        error=EdenError(
-                            message="slink: file is a symlink: Invalid argument",
-                            errorCode=22,
-                            errorType=EdenErrorType.POSIX_ERROR,
-                        )
-                    ),
-                    SizeOrError(
-                        error=EdenError(
-                            message="slink: file is a symlink: Invalid argument",
-                            errorCode=22,
-                            errorType=EdenErrorType.POSIX_ERROR,
-                        )
-                    ),
-                    SourceControlTypeOrError(SourceControlType.SYMLINK),
-                    ObjectIdOrError(self.slink_id),
-                    blake3=Blake3OrError(
-                        error=EdenError(
-                            message="slink: file is a symlink: Invalid argument",
-                            errorCode=22,
-                            errorType=EdenErrorType.POSIX_ERROR,
-                        )
-                    ),
-                )
-            )
+        )
 
-            expected_result_v2 = GetAttributesFromFilesResultV2(
-                [
-                    expected_slink_result_v2,
-                ]
-            )
-            print(f"expected v2: \n{expected_result_v2}")
-            results_v2 = self.get_all_attributes_v2([b"slink"])
-            print(f"actual v2: \n{results_v2}")
-            self.assertEqual(1, len(results_v2.res))
-            self.assertEqual(expected_result_v2, results_v2)
-
-        else:  # one windows symlinks don't report as symlinks but rather regular files.
-            (expected_result, expected_result_v2,) = self.wrap_expected_attributes(
-                self.get_expected_file_attributes("slink", self.slink_id)
-            )
-
-            results = self.get_all_attributes([b"slink"])
-            self.assertEqual(1, len(results.res))
-            self.assertEqual(GetAttributesFromFilesResult([expected_result]), results)
-
-            results_v2 = self.get_all_attributes_v2([b"slink"])
-            self.assertEqual(1, len(results_v2.res))
-            self.assertEqual(
-                GetAttributesFromFilesResultV2([expected_result_v2]), results_v2
-            )
+        expected_result_v2 = GetAttributesFromFilesResultV2(
+            [
+                expected_slink_result_v2,
+            ]
+        )
+        print(f"expected v2: \n{expected_result_v2}")
+        results_v2 = self.get_all_attributes_v2([b"slink"])
+        print(f"actual v2: \n{results_v2}")
+        self.assertEqual(1, len(results_v2.res))
+        self.assertEqual(expected_result_v2, results_v2)
 
     def test_get_attributes_no_files(self) -> None:
         results = self.get_all_attributes([])
@@ -1017,33 +1005,14 @@ class ReaddirTest(testcase.EdenRepoTest):
                     object_id=None,
                 )
 
-            self.readdir_no_size_or_sha1(
-                parent_name=b"",
-                entry_name=b"slink",
-                error_message="slink: file is a symlink: Invalid argument",
-                error_code=22,
-                source_control_type=SourceControlType.SYMLINK,
-                object_id=self.slink_id,
-            )
-        else:
-            with self.get_thrift_client_legacy() as client:
-                actual = client.readdir(
-                    ReaddirParams(
-                        self.mount_path_bytes,
-                        [b""],
-                        requestedAttributes=ALL_ATTRIBUTES,
-                        sync=SyncBehavior(),
-                    )
-                )
-
-                expected = self.constructReaddirResult(
-                    self.get_expected_file_attributes("slink", self.slink_id)
-                )
-
-                self.assertEqual(
-                    expected,
-                    actual.dirLists[0].get_dirListAttributeData()[b"slink"],
-                )
+        self.readdir_no_size_or_sha1(
+            parent_name=b"",
+            entry_name=b"slink",
+            error_message="slink: file is a symlink: Invalid argument",
+            error_code=22,
+            source_control_type=SourceControlType.SYMLINK,
+            object_id=self.slink_id,
+        )
 
     def test_materialized_files_return_no_object_id(self) -> None:
         self.write_file("adir/file", "new contents\n")
