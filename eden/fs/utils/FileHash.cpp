@@ -6,6 +6,7 @@
  */
 
 #include <folly/portability/OpenSSL.h>
+#include <filesystem>
 
 #include "eden/common/utils/WinError.h"
 #include "eden/fs/digest/Blake3.h"
@@ -21,6 +22,22 @@ constexpr size_t kBufSize = 8192;
 template <typename Hasher>
 void hash(Hasher&& hasher, AbsolutePathPiece filePath) {
   const auto widePath = filePath.wide();
+
+  std::error_code ec;
+  auto stdPath = std::filesystem::path(widePath);
+  auto lnk = std::filesystem::read_symlink(stdPath, ec);
+  if (ec.value() == 0) {
+    std::wstring lnkW = lnk.wstring();
+    std::string content;
+    std::transform(
+        lnkW.begin(), lnkW.end(), std::back_inserter(content), [](wchar_t c) {
+          return (char)c;
+        });
+    std::replace(content.begin(), content.end(), '\\', '/');
+    hasher(content.c_str(), content.size());
+    return;
+  }
+
   HANDLE fileHandle = CreateFileW(
       widePath.c_str(),
       GENERIC_READ,

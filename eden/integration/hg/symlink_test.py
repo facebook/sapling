@@ -28,13 +28,13 @@ class SymlinkTest(EdenHgTestCase):
 
         repo.symlink("symlink", os.path.join("adir", "hello.txt"))
         self.symlink_commit = repo.commit("Add symlink pointing to adir/hello.txt")
-        repo.update(self.simple_commit, clean=True)
+        repo.update(self.simple_commit)
 
         repo.write_file("symlink", os.path.join("adir", "hello.txt"))
         self.quasi_symlink_commit = repo.commit(
             "Add symlink lookalike 'pointing' to adir/hello.txt"
         )
-        repo.update(self.simple_commit, clean=True)
+        repo.update(self.simple_commit)
 
     def test_update_to_symlink(self) -> None:
         self.repo.update(self.quasi_symlink_commit)
@@ -59,6 +59,29 @@ new file mode 120000
 @@ -0,0 +1,1 @@
 +{os.path.join('adir', 'hello.txt')}
 \\ No newline at end of file
+
+""",
+        )
+
+    def test_hg_mv_symlink_file(self) -> None:
+        self.repo.update(self.symlink_commit)
+        self.repo.hg("mv", "symlink", "symbolic_link")
+        self.repo.commit("Moving symlink")
+        self.assertEqual(self.read_file("symbolic_link"), "hola")
+        self.assert_status_empty()
+        self.assertEqual(
+            self.repo.hg("show"),
+            """commit:      b80dd1449ad6
+user:        A. Person <person@example.com>
+date:        Sat Jan 01 08:00:00 2000 +0000
+files:       symbolic_link symlink
+description:
+Moving symlink
+
+
+diff --git a/symlink b/symbolic_link
+rename from symlink
+rename to symbolic_link
 
 """,
         )
@@ -114,6 +137,30 @@ new mode 120000
                 checkedSymlink = file.is_symlink()
         self.assertTrue(checkedSymlink)
 
+    def test_revert(self) -> None:
+        self.repo.update(self.symlink_commit)
+        os.remove(self.get_path("symlink"))
+        self.assert_status({"symlink": "!"})
+        self.repo.hg("revert", "--all")
+        self.assert_status_empty()
+        self.assertEqual("hola", self.read_file("symlink"))
+
+    def test_manually_restoring_symlink(self) -> None:
+        self.repo.update(self.symlink_commit)
+        os.remove(self.get_path("symlink"))
+        self.assert_status({"symlink": "!"})
+        self.repo.symlink("symlink", os.path.join("adir", "hello.txt"))
+        self.assert_status_empty()
+        self.assertEqual("hola", self.read_file("symlink"))
+
+    def test_hg_update_works_with_symlink_feature(self) -> None:
+        # Tests that what didn't work on test_failing_update works with symlinks enabled
+        self.repo.update(self.symlink_commit)
+        self.repo.symlink("symlink3", os.path.join("adir", "hello.txt"))
+        self.repo.commit("Another commit with a symlink")
+        self.repo.update(self.simple_commit)
+        self.assert_status_empty()
+
 
 @hg_test
 # pyre-ignore[13]: T62487924
@@ -152,8 +199,8 @@ class SymlinkWindowsDisabledTest(EdenHgTestCase):
         self.assertEqual("contents2", self.read_file("symlink2"))
         os.remove(self.get_path("symlink2"))
         symlink_commit = self.repo.symlink("symlink2", "contents2")
-        # Actual symlink should show up as modified in `hg status`
-        self.assert_status({"symlink2": "M"})
+        # This used to fail when we weren't properly calculating the SHA1 of symlinks on Windows
+        self.assert_status_empty()
 
     def test_status_empty_after_fresh_clone(self) -> None:
         self.assert_status_empty()
