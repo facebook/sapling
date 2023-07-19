@@ -313,6 +313,10 @@ def share(
 
     r = repository(ui, destwvfs.base)
     postshare(srcrepo, r, bookmarks=bookmarks, defaultpath=defaultpath)
+
+    # Reload repo so Rust repo picks up paths.default.
+    r = repository(ui, destwvfs.base)
+
     _postshareupdate(r, update, checkout=checkout)
     return r
 

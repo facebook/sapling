@@ -409,6 +409,8 @@ fn clone_metadata(
         .iter()
         .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY);
 
+    let mut repo_needs_reload = false;
+
     if segmented_changelog {
         repo.add_store_requirement("lazychangelog")?;
 
@@ -424,10 +426,21 @@ fn clone_metadata(
             bookmark_names,
         )?;
         logger.verbose(|| format!("Pulled bookmarks {:?}", bookmark_ids));
+
+        if config.get_or_default("devel", "segmented-changelog-rev-compat")? {
+            // "lazytext" (vs "lazy") is required for rev compat mode, so let's
+            // migrate automatically. This migration only works for tests.
+            migrate_to_lazytext(ctx, repo.config(), repo.path())?;
+            repo_needs_reload = true;
+        }
     } else {
         revlog_clone(repo.config(), logger, ctx, destination)?;
         // reload the repo to pick up any changes written out by the revlog clone
         // such as metalog remotenames writes
+        repo_needs_reload = true;
+    }
+
+    if repo_needs_reload {
         repo = Repo::load(
             destination,
             &ctx.global_opts().config,
@@ -477,6 +490,25 @@ pub fn revlog_clone(
         hg_python.run_hg(args, ctx.io(), config) != 0,
         "Cloning revlog failed"
     );
+    Ok(())
+}
+
+fn migrate_to_lazytext(ctx: &ReqCtx<CloneOpts>, config: &ConfigSet, root: &Path) -> Result<()> {
+    let args = vec![
+        identity::cli_name().to_string(),
+        "debugchangelog".to_string(),
+        "--migrate".to_string(),
+        "lazytext".to_string(),
+        "-R".to_string(),
+        root.to_str().unwrap().to_string(),
+    ];
+
+    let hg_python = HgPython::new(&args);
+    abort_if!(
+        hg_python.run_hg(args, ctx.io(), config) != 0,
+        "rev compat lazytext migration failed"
+    );
+
     Ok(())
 }
 
