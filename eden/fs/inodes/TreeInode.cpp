@@ -2623,6 +2623,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
 
   std::vector<std::unique_ptr<DeferredDiffEntry>> deferredEntries;
   auto self = inodePtrFromThis();
+  bool windowsSymlinksEnabled = context->getWindowsSymlinksEnabled();
 
   // Grab the contents_ lock, and loop to find children that might be
   // different.  In this first pass we primarily build the list of children to
@@ -2852,7 +2853,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
           // janky hashing scheme for mercurial data, we should be able just
           // immediately assume the file is different here, without checking.
           if (treeEntryTypeFromMode(inodeEntry->getInitialMode()) !=
-              scmEntry.getType()) {
+              filteredEntryType(scmEntry.getType(), windowsSymlinksEnabled)) {
             // The mode is definitely modified
             XLOG(DBG5) << "diff: file modified due to mode change: "
                        << entryPath;
