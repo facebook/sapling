@@ -49,7 +49,7 @@ impl FileChangeDetectorTrait for TestFileChangeDetector {
                 ))));
         } else {
             self.results
-                .push(Ok(ResolvedFileChangeResult::No(file.path)));
+                .push(Ok(ResolvedFileChangeResult::No((file.path, None))));
         }
     }
 }

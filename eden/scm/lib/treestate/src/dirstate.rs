@@ -7,10 +7,11 @@
 
 //! Directory State.
 
-use std::io::Write;
 use std::path::Path;
+use std::time::SystemTime;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use repolock::RepoLocker;
 use types::hgid::NULL_ID;
@@ -38,7 +39,12 @@ pub struct TreeStateFields {
     pub repack_threshold: Option<u64>,
 }
 
-pub fn flush(root: &Path, treestate: &mut TreeState, locker: &RepoLocker) -> Result<()> {
+pub fn flush(
+    root: &Path,
+    treestate: &mut TreeState,
+    locker: &RepoLocker,
+    write_time: Option<i64>,
+) -> Result<()> {
     if treestate.dirty() {
         tracing::debug!("flushing dirty treestate");
         let id = identity::must_sniff_dir(root)?;
@@ -80,15 +86,33 @@ pub fn flush(root: &Path, treestate: &mut TreeState, locker: &RepoLocker) -> Res
             )
         })?;
 
+        let mut dirstate_file = util::file::atomic_open(&dirstate_path)?;
+
+        let write_time = match write_time {
+            Some(t) => t,
+            None => dirstate_file
+                .as_file()
+                .metadata()?
+                .modified()?
+                .duration_since(SystemTime::UNIX_EPOCH)?
+                .as_secs()
+                .try_into()?,
+        };
+
+        // Invalidate entries with mtime >= now so we can notice size preserving
+        // edits to files in the same second the dirstate is written (and wlock is released).
+        treestate
+            .invalidate_mtime(write_time.try_into()?)
+            .context("error invalidating dirstate mtime")?;
+
         let root_id = treestate.flush()?;
         treestate_fields.tree_filename = treestate.file_name()?;
         treestate_fields.tree_root_id = root_id;
 
-        let mut dirstate_output: Vec<u8> = Vec::new();
-        dirstate.serialize(&mut dirstate_output).unwrap();
-        util::file::atomic_write(&dirstate_path, |file| file.write_all(&dirstate_output))
-            .map_err(|e| anyhow!(e))
-            .map(|_| ())
+        dirstate.serialize(dirstate_file.as_file())?;
+        dirstate_file.save()?;
+
+        Ok(())
     } else {
         tracing::debug!("skipping treestate flush - it is not dirty");
         Ok(())

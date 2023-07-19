@@ -319,6 +319,11 @@ impl VFS {
 
     // Reads file content
     pub fn read(&self, path: &RepoPath) -> Result<Bytes> {
+        Ok(self.read_with_metadata(path)?.0)
+    }
+
+    // Reads file content and metadata
+    pub fn read_with_metadata(&self, path: &RepoPath) -> Result<(Bytes, Metadata)> {
         let filepath = self.inner.auditor.audit(path)?;
         let metadata = self.metadata(path)?;
         let content = if metadata.is_symlink() {
@@ -329,7 +334,7 @@ impl VFS {
         } else {
             std::fs::read(filepath)?
         };
-        Ok(content.into())
+        Ok((content.into(), metadata))
     }
 
     /// Removes file, but unlike Self::remove, does not delete empty directories.

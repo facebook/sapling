@@ -1,10 +1,10 @@
-#chg-compatible
 #debugruntest-compatible
 
+NEED_CHECK only applies to the watchman case.
+For non-watchman, everything is implicitly NEED_CHECK all the time.
+#require fsmonitor
+
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=False
-FIXME(status):
-  $ setconfig status.use-rust=false
 
 Emulate situations where NEED_CHECK was added to normal files and there should
 be a way to remove them.
@@ -57,7 +57,7 @@ When removing "B", fsmonitor+treestate will mark it as "NEED_CHECK" instead
 
   $ hg debugtree list
   A: 0100644 1 + EXIST_P1 EXIST_NEXT 
-  B: 0100644 1 + NEED_CHECK  (fsmonitor !)
+  B: 0100644 1 + NEED_CHECK 
 
 Force NEED_CHECK on files outside sparse
 
@@ -76,6 +76,9 @@ Run "hg status" and NEED_CHECK can be removed:
   $ sleep 1
   $ hg status
 
+Rust status completely ignores "B" since it is outside the matcher, and thus
+doesn't remove NEED_CHECK. This behavior seems okay since it saves work and
+doesn't hurt anything.
   $ hg debugtree list
   A: 0100644 1 + EXIST_P1 EXIST_NEXT 
-  B: 0100644 1 + EXIST_P1 EXIST_NEXT 
+  B: 0100644 1 -1 EXIST_P1 EXIST_NEXT NEED_CHECK 

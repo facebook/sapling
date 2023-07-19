@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use configmodel::Config;
 use pathmatcher::Matcher;
 use repolock::RepoLocker;
 use treestate::dirstate;
@@ -22,9 +23,10 @@ use types::path::ParseError;
 use types::RepoPathBuf;
 use watchman_client::prelude::*;
 
+use crate::metadata::Metadata;
 use crate::util::walk_treestate;
 
-pub fn mark_needs_check(ts: &mut TreeState, path: &RepoPathBuf) -> Result<bool> {
+pub(crate) fn mark_needs_check(ts: &mut TreeState, path: &RepoPathBuf) -> Result<bool> {
     let state = ts.get(path)?;
     let filestate = match state {
         Some(filestate) => {
@@ -57,7 +59,11 @@ pub fn mark_needs_check(ts: &mut TreeState, path: &RepoPathBuf) -> Result<bool> 
     Ok(true)
 }
 
-pub fn clear_needs_check(ts: &mut TreeState, path: &RepoPathBuf) -> Result<bool> {
+pub(crate) fn clear_needs_check(
+    ts: &mut TreeState,
+    path: &RepoPathBuf,
+    fs_meta: Option<Metadata>,
+) -> Result<bool> {
     let state = ts.get(path)?;
     if let Some(filestate) = state {
         let filestate = filestate.clone();
@@ -66,10 +72,16 @@ pub fn clear_needs_check(ts: &mut TreeState, path: &RepoPathBuf) -> Result<bool>
             // It's already clear.
             return Ok(false);
         }
-        let filestate = FileStateV2 {
+        let mut filestate = FileStateV2 {
             state: filestate.state & !StateFlags::NEED_CHECK,
             ..filestate
         };
+
+        if let Some(mtime) = fs_meta.and_then(|m| m.mtime()) {
+            if let Ok(mtime) = mtime.try_into() {
+                filestate.mtime = mtime;
+            }
+        }
 
         if filestate.state.is_empty() {
             // No other flags means it was ignored/untracked, but now we don't
@@ -86,7 +98,7 @@ pub fn clear_needs_check(ts: &mut TreeState, path: &RepoPathBuf) -> Result<bool>
     Ok(false)
 }
 
-pub fn set_clock(ts: &mut TreeState, clock: Clock) -> Result<()> {
+pub(crate) fn set_clock(ts: &mut TreeState, clock: Clock) -> Result<()> {
     let clock_string = match clock {
         Clock::Spec(ClockSpec::StringClock(string)) => Ok(string),
         clock => Err(anyhow!(
@@ -101,8 +113,23 @@ pub fn set_clock(ts: &mut TreeState, clock: Clock) -> Result<()> {
 }
 
 #[tracing::instrument(skip_all)]
-pub fn maybe_flush_treestate(root: &Path, ts: &mut TreeState, locker: &RepoLocker) -> Result<()> {
-    match dirstate::flush(root, ts, locker) {
+pub(crate) fn maybe_flush_treestate(
+    config: &dyn Config,
+    root: &Path,
+    ts: &mut TreeState,
+    locker: &RepoLocker,
+) -> Result<()> {
+    // Respect test fakedirstatewritetime extension.
+    let time_override = if matches!(config.get("extensions", "fakedirstatewritetime"), Some(v) if v != "!")
+    {
+        config
+            .get("fakedirstatewritetime", "fakenow")
+            .map(|time| hgtime::HgTime::parse(time.as_ref()).unwrap().unixtime)
+    } else {
+        None
+    };
+
+    match dirstate::flush(root, ts, locker, time_override) {
         Ok(()) => Ok(()),
         // If the dirstate was changed before we flushed, that's ok. Let the other write win
         // since writes during status are just optimizations.
@@ -114,7 +141,7 @@ pub fn maybe_flush_treestate(root: &Path, ts: &mut TreeState, locker: &RepoLocke
 }
 
 #[tracing::instrument(skip_all)]
-pub fn list_needs_check(
+pub(crate) fn list_needs_check(
     ts: &mut TreeState,
     matcher: Arc<dyn Matcher + Send + Sync + 'static>,
 ) -> Result<(Vec<RepoPathBuf>, Vec<ParseError>)> {
@@ -134,7 +161,7 @@ pub fn list_needs_check(
     Ok((needs_check, parse_errs))
 }
 
-pub fn get_clock(metadata: &BTreeMap<String, String>) -> Result<Option<Clock>> {
+pub(crate) fn get_clock(metadata: &BTreeMap<String, String>) -> Result<Option<Clock>> {
     Ok(metadata
         .get(&"clock".to_string())
         .map(|clock| Clock::Spec(ClockSpec::StringClock(clock.clone()))))

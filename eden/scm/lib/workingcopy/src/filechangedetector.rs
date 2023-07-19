@@ -46,9 +46,9 @@ impl FileChangeResult {
 }
 
 #[derive(Debug)]
-pub enum ResolvedFileChangeResult {
+pub(crate) enum ResolvedFileChangeResult {
     Yes(ChangeType),
-    No(RepoPathBuf),
+    No((RepoPathBuf, Option<Metadata>)),
 }
 
 impl ResolvedFileChangeResult {
@@ -64,7 +64,7 @@ pub(crate) trait FileChangeDetectorTrait:
     fn total_work_hint(&self, _hint: u64) {}
 }
 
-pub struct FileChangeDetector {
+pub(crate) struct FileChangeDetector {
     vfs: VFS,
     last_write: HgModifiedTime,
     results: Vec<Result<ResolvedFileChangeResult>>,
@@ -235,11 +235,11 @@ fn compare_repo_bytes_to_disk(
     repo_bytes: Bytes,
     path: RepoPathBuf,
 ) -> Result<ResolvedFileChangeResult> {
-    match vfs.read(&path) {
-        Ok(disk_bytes) => {
+    match vfs.read_with_metadata(&path) {
+        Ok((disk_bytes, metadata)) => {
             if disk_bytes == repo_bytes {
                 tracing::trace!(?path, "no (contents match)");
-                Ok(ResolvedFileChangeResult::No(path))
+                Ok(ResolvedFileChangeResult::No((path, Some(metadata.into()))))
             } else {
                 tracing::trace!(?path, "changed (contents mismatch)");
                 Ok(ResolvedFileChangeResult::Yes(ChangeType::Changed(path)))
@@ -288,7 +288,8 @@ impl FileChangeDetectorTrait for FileChangeDetector {
                 }
                 FileChangeResult::No(path) => {
                     self.progress.increase_position(1);
-                    self.results.push(Ok(ResolvedFileChangeResult::No(path)))
+                    self.results
+                        .push(Ok(ResolvedFileChangeResult::No((path, None))))
                 }
                 FileChangeResult::Maybe((path, meta)) => {
                     self.lookups.insert(path, meta);

@@ -381,7 +381,7 @@ impl PendingChanges for WatchmanFileSystem {
             set_clock(ts, result.clock)?;
         }
 
-        maybe_flush_treestate(self.vfs.root(), ts, &self.locker)?;
+        maybe_flush_treestate(config, self.vfs.root(), ts, &self.locker)?;
 
         Ok(Box::new(pending_changes.into_iter()))
     }
@@ -439,7 +439,7 @@ pub(crate) fn detect_changes(
 
     let mut pending_changes: Vec<Result<PendingChangeResult>> =
         ts_errors.into_iter().map(|e| Err(anyhow!(e))).collect();
-    let mut needs_clear = Vec::new();
+    let mut needs_clear: Vec<(RepoPathBuf, Option<Metadata>)> = Vec::new();
     let mut needs_mark = Vec::new();
 
     tracing::debug!(
@@ -521,9 +521,9 @@ pub(crate) fn detect_changes(
                     pending_changes.push(Ok(PendingChangeResult::File(change)));
                 }
             }
-            Ok(ResolvedFileChangeResult::No(path)) => {
+            Ok(ResolvedFileChangeResult::No((path, fs_meta))) => {
                 if ts_need_check.contains(&path) {
-                    needs_clear.push(path);
+                    needs_clear.push((path, fs_meta));
                 }
             }
             Err(e) => pending_changes.push(Err(e)),
@@ -561,7 +561,7 @@ pub(crate) fn detect_changes(
             StateFlags::EXIST_NEXT | StateFlags::EXIST_P1 | StateFlags::EXIST_P2,
             |path, _state| {
                 if !wm_seen.contains(&path) {
-                    needs_clear.push(path);
+                    needs_clear.push((path, None));
                 }
                 Ok(())
             },
@@ -615,7 +615,7 @@ pub(crate) fn detect_changes(
 
 pub struct WatchmanPendingChanges {
     pending_changes: Vec<Result<PendingChangeResult>>,
-    needs_clear: Vec<RepoPathBuf>,
+    needs_clear: Vec<(RepoPathBuf, Option<Metadata>)>,
     needs_mark: Vec<RepoPathBuf>,
 }
 
@@ -629,8 +629,8 @@ impl WatchmanPendingChanges {
         );
 
         let mut wrote = false;
-        for path in self.needs_clear.iter() {
-            match clear_needs_check(ts, path) {
+        for (path, fs_meta) in self.needs_clear.drain(..) {
+            match clear_needs_check(ts, &path, fs_meta) {
                 Ok(v) => wrote |= v,
                 Err(e) =>
                 // We can still build a valid result if we fail to clear the

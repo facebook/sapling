@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::num::TryFromIntError;
 #[cfg(unix)]
 use std::os::unix::prelude::PermissionsExt;
 use std::time::SystemTime;
@@ -207,6 +208,14 @@ impl From<u64> for HgModifiedTime {
 impl From<u32> for HgModifiedTime {
     fn from(value: u32) -> Self {
         HgModifiedTime(value.into())
+    }
+}
+
+impl TryFrom<HgModifiedTime> for i32 {
+    type Error = TryFromIntError;
+
+    fn try_from(value: HgModifiedTime) -> Result<Self, Self::Error> {
+        i32::try_from(value.0)
     }
 }
 
