@@ -494,6 +494,10 @@
 
   $ hg clone repo11 repo12 --noupdate
   $ cd repo12
+
+# Clear out store entries copied during the clone.
+  $ rm -rf .hg/store/lfs/objects
+
   $ hg log --removed -p a -T '{desc}\n' --config diff.nobinary=1 --git
   2
   diff --git a/a b/a

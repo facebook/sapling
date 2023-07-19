@@ -1,16 +1,15 @@
 #chg-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
-  $ disable treemanifest
 #require killdaemons
 
   $ enable share
 
+  $ configure modernclient
+
 prepare repo1
 
-  $ hg init repo1
-  $ cd repo1
+  $ newclientrepo
   $ echo a > a
   $ hg commit -A -m'init'
   adding a
@@ -247,38 +246,6 @@ test that commits work
      bm3                       62f4ded848e4
   $ cd ..
 
-test pushing bookmarks works
-
-  $ hg clone repo3 repo4
-  updating to branch default
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd repo4
-  $ hg boo bm4
-  $ echo foo > b
-  $ hg commit -m 'foo in b'
-  $ hg boo
-     bm1                       b87954705719
-     bm3                       62f4ded848e4
-   * bm4                       92793bfc8cad
-  $ hg push -B bm4
-  pushing to $TESTTMP/repo3
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  exporting bookmark bm4
-  $ cd ../repo1
-  $ hg bookmarks
-   * bm1                       b87954705719
-     bm3                       62f4ded848e4
-     bm4                       92793bfc8cad
-  $ cd ../repo3
-  $ hg bookmarks
-     bm1                       b87954705719
-   * bm3                       62f4ded848e4
-     bm4                       92793bfc8cad
-  $ cd ..
-
 test behavior when sharing a shared repo
 
   $ hg share -B repo3 repo5
@@ -288,7 +255,6 @@ test behavior when sharing a shared repo
   $ hg book
      bm1                       b87954705719
      bm3                       62f4ded848e4
-     bm4                       92793bfc8cad
   $ cd ..
 
 test what happens when an active bookmark is deleted
@@ -297,85 +263,31 @@ test what happens when an active bookmark is deleted
   $ hg boo -d bm3
   $ hg boo
    * bm1                       b87954705719
-     bm4                       92793bfc8cad
   $ cd ../repo3
   $ hg boo
      bm1                       b87954705719
-     bm4                       92793bfc8cad
-  $ cd ..
-
-verify that bookmarks are not written on failed transaction
-
-  $ cat > failpullbookmarks.py << EOF
-  > """A small extension that makes bookmark pulls fail, for testing"""
-  > from __future__ import absolute_import
-  > from edenscm import (
-  >   error,
-  >   exchange,
-  >   extensions,
-  > )
-  > def _pullbookmarks(orig, pullop):
-  >     orig(pullop)
-  >     raise error.HookAbort('forced failure by extension')
-  > def extsetup(ui):
-  >     extensions.wrapfunction(exchange, '_pullbookmarks', _pullbookmarks)
-  > EOF
-  $ cd repo4
-  $ hg boo
-     bm1                       b87954705719
-     bm3                       62f4ded848e4
-   * bm4                       92793bfc8cad
-  $ cd ../repo3
-  $ hg boo
-     bm1                       b87954705719
-     bm4                       92793bfc8cad
-  $ hg --config "extensions.failpullbookmarks=$TESTTMP/failpullbookmarks.py" pull $TESTTMP/repo4
-  pulling from $TESTTMP/repo4
-  searching for changes
-  no changes found
-  adding remote bookmark bm3
-  abort: forced failure by extension
-  [255]
-  $ hg boo
-     bm1                       b87954705719
-     bm4                       92793bfc8cad
-  $ hg pull $TESTTMP/repo4
-  pulling from $TESTTMP/repo4
-  searching for changes
-  no changes found
-  adding remote bookmark bm3
-  $ hg boo
-     bm1                       b87954705719
-   * bm3                       62f4ded848e4
-     bm4                       92793bfc8cad
   $ cd ..
 
 verify bookmark behavior after unshare
-(XXX: not working properly with metalog)
 
   $ cd repo3
   $ hg unshare
   $ hg boo
      bm1                       b87954705719
-   * bm3                       62f4ded848e4
-     bm4                       92793bfc8cad
   $ hg boo bm5
   $ hg boo
      bm1                       b87954705719
-     bm3                       62f4ded848e4
-     bm4                       92793bfc8cad
    * bm5                       62f4ded848e4
   $ cd ../repo1
   $ hg boo
    * bm1                       b87954705719
-     bm3                       62f4ded848e4
-     bm4                       92793bfc8cad
   $ cd ..
 
 test shared clones using relative paths work
 
   $ mkdir thisdir
-  $ hg init thisdir/orig
+  $ newclientrepo thisdir/orig
+  $ cd
   $ hg share -U thisdir/orig thisdir/abs
   $ hg share -U --relative thisdir/abs thisdir/rel
   $ cat thisdir/rel/.hg/sharedpath

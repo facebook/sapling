@@ -718,9 +718,9 @@ class fncachestore(basicstore):
 
     def copylist(self):
         d = (
-            "data meta dh fncache phaseroots visibleheads"
+            "data meta dh fncache indexedlogdatastore indexedloghistorystore phaseroots visibleheads"
             " 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
-            " segments hgcommits mutation metalog"
+            " segments hgcommits lfs manifests mutation metalog"
         )
         return ["requires", "00changelog.i", "store/requires"] + [
             "store/" + f for f in d.split()
