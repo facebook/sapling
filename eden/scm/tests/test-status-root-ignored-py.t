@@ -2,8 +2,7 @@
 #require fsmonitor
 
   $ configure modernclient
-  $ setconfig status.use-rust=False workingcopy.ruststatus=False
-  $ newrepo
+  $ newclientrepo
 
 Ensure that, when files in the root are ignored and there is an exclusion, that hg status returns the correct value
 

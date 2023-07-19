@@ -2,10 +2,9 @@
 
 test sparse
 
-  $ setconfig workingcopy.ruststatus=False
   $ configure modernclient
   $ enable sparse rebase
-  $ newclientrepo myrepo
+  $ newclientrepo
 
   $ echo a > index.html
   $ echo x > data.py
@@ -303,12 +302,9 @@ warning message can be suppressed by setting missingwarning = false in
   (if the path is a typo, use 'hg sparse disableprofile' to remove it)
   warning: sparse profile 'backend.sparse' not found in rev 42b23bc43905 - ignoring it
 
-  $ cd ..
-
 Test file permissions changing across a sparse profile change
-  $ hg init sparseperm
-  $ cd sparseperm
-  $ cat > .hg/hgrc <<EOF
+  $ newclientrepo
+  $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > sparse=
   > EOF
@@ -329,12 +325,9 @@ Test file permissions changing across a sparse profile change
   $ f -m b
   b: mode=755
 
-  $ cd ..
-
 Test profile discovery
-  $ hg init sparseprofiles
-  $ cd sparseprofiles
-  $ cat > .hg/hgrc <<EOF
+  $ newclientrepo
+  $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > sparse=
   > [hint]
@@ -864,8 +857,8 @@ File count and size data for hg explain is cached in the simplecache extension:
   sparseprofile:profiles__bar__ham:*:v2 (glob)
 
 Test non-existing profiles are properly reported
-  $ newrepo sparsenoprofile
-  $ cat > .hg/hgrc <<EOF
+  $ newclientrepo
+  $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > sparse=
   > EOF
@@ -946,11 +939,9 @@ Test non-existing profiles are properly reported
     "type": "profile"
    }
   ]
-  $ cd $TESTTMP
 
 Verify that removing from a sparse profile removes from disk
-  $ hg init remove_test_repo
-  $ cd remove_test_repo
+  $ newclientrepo
   $ echo x > data.py
   $ cat > webpage.sparse <<EOF
   > [metadata]

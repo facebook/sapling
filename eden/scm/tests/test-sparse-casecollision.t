@@ -3,9 +3,10 @@
 
 #require no-icasefs
 
-  $ setconfig workingcopy.ruststatus=False
 Test sparse profiles in combination with case-collisions outside of the
 profile.
+
+  $ eagerepo
 
   $ cat > force_case_insensitivity.py <<EOF
   > # We force the issue at update time, by monkey-patching util.fscasesensitive

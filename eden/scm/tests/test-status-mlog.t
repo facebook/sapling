@@ -1,10 +1,9 @@
-#chg-compatible
 #debugruntest-compatible
 
   $ eagerepo
 FIXME(status):
   $ setconfig status.use-rust=false
-  $ setconfig workingcopy.ruststatus=False
+  $ setconfig workingcopy.ruststatus=false
 Test logging of "M" entries
 
   $ newrepo

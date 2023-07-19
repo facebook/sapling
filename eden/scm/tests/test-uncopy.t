@@ -1,9 +1,9 @@
 #debugruntest-compatible
-  $ setconfig workingcopy.ruststatus=False
 set up test repo
 
-  $ hg init uncopytest
-  $ cd uncopytest
+  $ configure modernclient
+
+  $ newclientrepo
   $ echo testcontents > testfile.txt
   $ mkdir testdir
   $ echo dircontents1 > testdir/dirfile1.txt

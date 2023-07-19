@@ -1,7 +1,7 @@
-#chg-compatible
+#debugruntest-compatible
 
-  $ setconfig status.use-rust=True workingcopy.use-rust=True
-  $ setconfig workingcopy.ruststatus=False
+#require diff
+
   $ configure modernclient
   $ setconfig ui.color=always color.mode=ansi
 Terminfo codes compatibility fix

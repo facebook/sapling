@@ -1,8 +1,5 @@
 #debugruntest-compatible
-#chg-compatible
 #require fsmonitor
-
-  $ setconfig status.use-rust=true workingcopy.use-rust=true workingcopy.ruststatus=false
 
   $ configure modernclient
   $ newclientrepo

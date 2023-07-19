@@ -1,7 +1,6 @@
 #chg-compatible
 #require git gpg2 no-windows
 
-  $ setconfig workingcopy.ruststatus=False
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=true ui.allowemptycommit=true
 

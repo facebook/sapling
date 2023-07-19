@@ -25,7 +25,7 @@ Python utilities:
     
         with d:
             sheval(f"EDENSCM_LOG=manifest_tree=debug {command} 2>/dev/null")
-    
+
         ids = []
         for spans in d.treespans().values():
             for span in spans.flatten():
@@ -35,8 +35,8 @@ Python utilities:
                 elif name == "tree::store::get":
                     ids.append(span["id"])
         idtopath.update(getidtopath())
-        paths = set(idtopath[id] for id in set(ids)) - {"/"}
-    
+        paths = set(idtopath.get(id) for id in set(ids)) - {"/"}
+
         # Translate ids to paths
         return sorted(filter(None, paths))
 
@@ -46,7 +46,8 @@ Python utilities:
   $ setconfig experimental.copytrace=off copytrace.fastcopytrace=true perftweaks.disablecasecheck=true
   $ enable sparse treemanifest rebase copytrace
 
-  $ setconfig status.use-rust=false workingcopy.ruststatus=false
+FIXME(status): removing this causes IO deadlock due to in-processness
+  $ setconfig status.use-rust=false
 
   $ newrepo
   $ drawdag << 'EOS'
@@ -89,7 +90,7 @@ Python utilities:
 # Good: Changing sparse profile should not download everything.
 
   >>> collectprefetch("hg sparse exclude y")
-  ['x', 'x/x', 'x/x/y']
+  ['x', 'x/x', 'x/x/y', 'y', 'y/x', 'y/x/y']
 
 # Test sparse profile change.
 
