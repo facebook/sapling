@@ -7,7 +7,6 @@
 
   $ configure modernclient
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig workingcopy.ruststatus=False status.use-rust=false
 
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]

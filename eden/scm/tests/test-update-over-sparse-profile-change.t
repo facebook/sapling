@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
   $ setconfig experimental.nativecheckout=true
+  $ setconfig workingcopy.ruststatus=false
   $ newserver server
 
 test sparse

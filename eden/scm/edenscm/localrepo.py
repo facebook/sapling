@@ -1865,7 +1865,7 @@ class localrepository(object):
                 # Don't invalidate Rust if Rust and Python are sharing the changelog object.
                 # Python's invalidation will cover it.
                 if not repo.ui.configbool("experimental", "use-rust-changelog"):
-                    self._rsrepo.invalidatechangelog()
+                    repo._rsrepo.invalidatechangelog()
             else:
                 # discard all changes (including ones already written
                 # out) in this transaction

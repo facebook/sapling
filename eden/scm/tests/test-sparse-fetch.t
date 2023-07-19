@@ -90,7 +90,7 @@ FIXME(status): removing this causes IO deadlock due to in-processness
 # Good: Changing sparse profile should not download everything.
 
   >>> collectprefetch("hg sparse exclude y")
-  ['x', 'x/x', 'x/x/y', 'y', 'y/x', 'y/x/y']
+  ['x', 'x/x', 'x/x/y']
 
 # Test sparse profile change.
 
