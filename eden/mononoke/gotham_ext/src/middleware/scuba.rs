@@ -21,6 +21,7 @@ use hyper::Method;
 use hyper::Response;
 use hyper::StatusCode;
 use hyper::Uri;
+use scopeguard::ScopeGuard;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 use time_ext::DurationExt;
@@ -181,9 +182,11 @@ where
     None
 }
 
-fn log_stats<H: ScubaHandler>(state: &mut State, status_code: &StatusCode) -> Option<()> {
-    let mut scuba = state.try_take::<ScubaMiddlewareState>()?.0;
-
+fn log_stats<H: ScubaHandler>(
+    mut scuba: MononokeScubaSampleBuilder,
+    state: &mut State,
+    status_code: &StatusCode,
+) -> Option<()> {
     scuba.add(HttpScubaKey::HttpStatus, status_code.as_u16());
 
     if let Some(uri) = Uri::try_borrow_from(state) {
@@ -304,8 +307,15 @@ fn log_stats<H: ScubaHandler>(state: &mut State, status_code: &StatusCode) -> Op
     Some(())
 }
 
+fn log_cancelled(mut scuba: MononokeScubaSampleBuilder) {
+    scuba.add("log_tag", "EdenAPI Request Cancelled");
+    scuba.log();
+}
+
 #[derive(StateData)]
-pub struct ScubaMiddlewareState(MononokeScubaSampleBuilder);
+pub struct ScubaMiddlewareState(
+    ScopeGuard<MononokeScubaSampleBuilder, Box<dyn FnOnce(MononokeScubaSampleBuilder) + Send>>,
+);
 
 impl ScubaMiddlewareState {
     pub fn add<K, V>(&mut self, key: K, value: V) -> &mut Self
@@ -358,17 +368,32 @@ impl ScubaMiddlewareState {
 impl<H: ScubaHandler> Middleware for ScubaMiddleware<H> {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
         // Reset the scuba sequence counter for each request.
-        state.put(ScubaMiddlewareState(self.scuba.clone().with_seq("seq")));
+        let scuba = self.scuba.clone().with_seq("seq");
+
+        // Ensure we log if the request is cancelled.
+        let scuba = scopeguard::guard(
+            scuba,
+            Box::new(|scuba| {
+                log_cancelled(scuba);
+            }) as Box<dyn FnOnce(MononokeScubaSampleBuilder) + Send>,
+        );
+
+        state.put(ScubaMiddlewareState(scuba));
         None
     }
 
     async fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
-        if let Some(uri) = Uri::try_borrow_from(state) {
-            if uri.path() == "/health_check" {
-                return;
-            }
-        }
+        if let Some(scuba_middleware) = state.try_take::<ScubaMiddlewareState>() {
+            // Defuse the scopeguard so that we will no longer log cancellation.
+            let scuba = ScopeGuard::into_inner(scuba_middleware.0);
 
-        log_stats::<H>(state, &response.status());
+            if let Some(uri) = Uri::try_borrow_from(state) {
+                if uri.path() == "/health_check" {
+                    return;
+                }
+            }
+
+            log_stats::<H>(scuba, state, &response.status());
+        }
     }
 }
