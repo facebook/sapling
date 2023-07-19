@@ -51,6 +51,18 @@ impl Middleware for LoadMiddleware {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
         let old_request_count = self.requests.fetch_add(1, Ordering::Relaxed);
         state.put(RequestLoad(old_request_count + 1));
+
+        // Create a guard to decrement the request load once this request
+        // either completes or is cancelled.
+        let guard = scopeguard::guard(self.requests.clone(), |requests| {
+            requests.fetch_sub(1, Ordering::Relaxed);
+        });
+
+        if let Some(callbacks) = state.try_borrow_mut::<PostResponseCallbacks>() {
+            callbacks.add(move |_| {
+                drop(guard);
+            });
+        }
         None
     }
 
@@ -58,15 +70,6 @@ impl Middleware for LoadMiddleware {
         if let Some(request_load) = state.try_take::<RequestLoad>() {
             let headers = response.headers_mut();
             headers.insert("X-Load", request_load.0.into());
-        }
-
-        if let Some(callbacks) = state.try_borrow_mut::<PostResponseCallbacks>() {
-            callbacks.add({
-                let requests = self.requests.clone();
-                move |_| {
-                    requests.fetch_sub(1, Ordering::Relaxed);
-                }
-            });
         }
     }
 }
