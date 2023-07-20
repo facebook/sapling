@@ -411,6 +411,19 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
     </Tooltip>
   ) : null;
 
+  const onConfirmQuickCommit = () => {
+    const title =
+      (commitTitleRef.current as HTMLInputElement | null)?.value || t('Temporary Commit');
+    const hash = headCommit?.hash ?? '.';
+    const allFiles = uncommittedChanges.map(file => file.path);
+    const operation = getCommitOperation(title, hash, selection.selection, allFiles);
+    // TODO(quark): We need better invalidation for chunk selected files.
+    if (selection.hasChunkSelection()) {
+      selection.clear();
+    }
+    runOperation(operation);
+  };
+
   return (
     <div className="uncommitted-changes">
       {conflicts != null ? (
@@ -535,19 +548,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
                 appearance="icon"
                 disabled={noFilesSelected}
                 data-testid="quick-commit-button"
-                onClick={() => {
-                  const title =
-                    (commitTitleRef.current as HTMLInputElement | null)?.value ||
-                    t('Temporary Commit');
-                  const hash = headCommit?.hash ?? '.';
-                  const allFiles = uncommittedChanges.map(file => file.path);
-                  const operation = getCommitOperation(title, hash, selection.selection, allFiles);
-                  // TODO(quark): We need better invalidation for chunk selected files.
-                  if (selection.hasChunkSelection()) {
-                    selection.clear();
-                  }
-                  runOperation(operation);
-                }}>
+                onClick={onConfirmQuickCommit}>
                 <Icon slot="start" icon="plus" />
                 <T>Commit</T>
               </VSCodeButton>
@@ -555,6 +556,11 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
                 data-testid="quick-commit-title"
                 placeholder="Title"
                 ref={commitTitleRef as MutableRefObject<null>}
+                onKeyPress={e => {
+                  if (e.key === 'Enter' && !(e.ctrlKey || e.metaKey || e.altKey || e.shiftKey)) {
+                    onConfirmQuickCommit();
+                  }
+                }}
               />
             </span>
             <VSCodeButton
