@@ -71,5 +71,9 @@ export type FieldConfig = {
       type: 'field';
       typeaheadKind: TypeaheadKind;
       maxTokens?: number;
+      /** pre-process value in commit message to extract token values */
+      extractValues?: (text: string) => Array<string>;
+      /** post-process token values before placing it in the actual commit message */
+      formatValues?: (tokens: Array<string>) => string | undefined;
     }
 );

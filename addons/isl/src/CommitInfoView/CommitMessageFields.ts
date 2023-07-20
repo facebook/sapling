@@ -61,10 +61,14 @@ export function commitMessageFieldsToString(
         // stringified messages of the form Key: value, except the title or generic description don't need a label
         (config.key === 'Title' || config.key === 'Description' ? '' : config.key + ': ') +
         (config.type === 'field'
-          ? (fields[config.key] as Array<string>).join(', ')
+          ? (config.formatValues ?? joinWithComma)(fields[config.key] as Array<string>)
           : fields[config.key]),
     )
     .join('\n\n');
+}
+
+function joinWithComma(tokens: Array<string>): string {
+  return tokens.join(', ');
 }
 
 function commaSeparated(s: string | undefined): Array<string> {
@@ -121,7 +125,10 @@ export function parseCommitMessageFields(
         // or configured as part of the overall schema "parseMethod", to support formats other than "Key: Value"
         return ['Description', description];
       }
-      return [config.key, config.type === 'field' ? commaSeparated(found) : found];
+      return [
+        config.key,
+        config.type === 'field' ? (config.extractValues ?? commaSeparated)(found) : found,
+      ];
     }),
   );
   // title won't get parsed automatically, manually insert it
