@@ -390,7 +390,7 @@ pub async fn make_files_blobstore(
     }
 }
 
-async fn make_blobstore_unlink_ops<'a>(
+pub async fn make_blobstore_unlink_ops<'a>(
     fb: FacebookInit,
     blobconfig: BlobConfig,
     readonly_storage: ReadOnlyStorage,
