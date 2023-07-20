@@ -197,6 +197,11 @@ fn dispatch_command(
 ) -> i32 {
     log_repo_path_and_exe_version(dispatcher.repo());
 
+    if let Some(repo) = dispatcher.repo() {
+        tracing::info!(target: "symlink_info",
+                       symlinks_enabled=cfg!(unix) || repo.requirements.contains("windowssymlinks"));
+    }
+
     let run_logger =
         match runlog::Logger::from_repo(dispatcher.repo(), dispatcher.args()[1..].to_vec()) {
             Ok(logger) => Some(logger),
