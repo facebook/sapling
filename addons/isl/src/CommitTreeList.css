@@ -102,11 +102,10 @@
   transition: transform 0.2s, box-shadow 0.3s;
 }
 
-/*
-avatar may render below the top of the border,
-cover up the border that peeks out the top with background color,
-but only on the top commit of a stack
-*/
+/* Avatar may render below the top of the border,
+ * cover up the border that peeks out the top with background color,
+ * but only on the top commit of a stack
+ */
 .commit.topmost .commit-details:before {
   left: -15px;
   top: 0;
@@ -115,6 +114,15 @@ but only on the top commit of a stack
   height: calc(50%);
   background-color: var(--background);
   position: absolute;
+}
+.commit.topmost .selected-commit .commit-details:before {
+  /* Weird hack: we need to cover up the extra border so the line doesn't continue past the top.
+   * But the color we need it to be is the partially transparent selected bg on top of the background. If we use
+   * the selected background directly, it would be doubly dark. So we first apply a layer of background (e.g. pure white)
+   * and then reapply the selection color on top of that so it matches.
+   */
+  background: var(--background)
+    linear-gradient(0deg, var(--selected-commit-background), var(--selected-commit-background));
 }
 .commit.topmost.head-commit .commit-details:before {
   background-color: var(--button-primary-hover-background);
