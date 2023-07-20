@@ -70,15 +70,8 @@ new file mode 120000
         self.assertEqual(self.read_file("symbolic_link"), "hola")
         self.assert_status_empty()
         self.assertEqual(
-            self.repo.hg("show"),
-            """commit:      b80dd1449ad6
-user:        A. Person <person@example.com>
-date:        Sat Jan 01 08:00:00 2000 +0000
-files:       symbolic_link symlink
-description:
-Moving symlink
-
-
+            self.repo.hg("log", "-r", ".", "--template", "{node}\\n", "--patch"),
+            """b80dd1449ad6a2d0ae67936c905fa1e79d9ba65a
 diff --git a/symlink b/symbolic_link
 rename from symlink
 rename to symbolic_link
