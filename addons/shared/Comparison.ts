@@ -76,6 +76,6 @@ export function labelForComparison(comparison: Comparison): string {
     case ComparisonType.StackChanges:
       return 'Stack Changes';
     case ComparisonType.Committed:
-      return `In ${comparison.hash}`;
+      return `In ${comparison.hash.slice(0, 12)}`;
   }
 }

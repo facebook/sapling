@@ -16,6 +16,10 @@ export const Box = (p: React.PropsWithChildren<{as?: 'tr' | 'td'; onClick?: () =
 export const Text = (p: React.PropsWithChildren) => <div>{p.children}</div>;
 export const BaseStyles = (p: React.PropsWithChildren) => <div>{p.children}</div>;
 export const ThemeProvider = (p: React.PropsWithChildren) => <div>{p.children}</div>;
+export const IconButton = ({icon: _, ...p}: React.PropsWithChildren & {icon?: unknown}) => (
+  <button {...p} />
+);
+export const Tooltip = (p: React.PropsWithChildren) => <div {...p} />;
 export const Spinner = () => <div />;
 
 export function useTheme() {

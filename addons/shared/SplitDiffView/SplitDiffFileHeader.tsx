@@ -9,8 +9,8 @@ import type {DiffType} from '../patch/parse';
 import type {Context} from './types';
 
 import {Icon} from '../Icon';
-import {ChevronDownIcon, ChevronUpIcon} from '@primer/octicons-react';
-import {Box, Text} from '@primer/react';
+import {ChevronDownIcon, ChevronUpIcon, FileSymlinkFileIcon} from '@primer/octicons-react';
+import {Box, IconButton, Text, Tooltip} from '@primer/react';
 
 export function FileHeader<Id>({
   ctx,
@@ -31,6 +31,34 @@ export function FileHeader<Id>({
 
   const pathSeparator = '/';
   const pathParts = path.split(pathSeparator);
+
+  const t = ctx?.translate ?? (s => s);
+  const copy = ctx?.copy;
+
+  const filePathParts = (
+    <Text fontFamily="mono" fontSize={12} sx={{flexGrow: 1}}>
+      {pathParts.reduce((acc, part, idx) => {
+        // Nest path parts in a particular way so we can use plain CSS
+        // hover selectors to underline nested sub-paths.
+        const pathSoFar = pathParts.slice(idx).join(pathSeparator);
+        return (
+          <span className={copy && 'file-header-copyable-path'} key={idx}>
+            {acc}
+            <Tooltip
+              // TODO: better translate API that supports templates.
+              aria-label={copy && t('Copy $path').replace('$path', pathSoFar)}
+              direction="se"
+              className="file-header-path-element">
+              <span onClick={copy && (() => copy(pathSoFar))}>
+                {part}
+                {idx < pathParts.length - 1 ? pathSeparator : ''}
+              </span>
+            </Tooltip>
+          </span>
+        );
+      }, <span />)}
+    </Text>
+  );
 
   return (
     <Box
@@ -54,30 +82,21 @@ export function FileHeader<Id>({
         </Box>
       )}
       {diffType !== undefined && <Icon icon={diffTypeToIcon[diffType]} />}
-      <Text fontFamily="mono" fontSize={12}>
-        {pathParts.reduce((acc, part, idx) => {
-          // Nest path parts in a particular way so we can use plain CSS
-          // hover selectors to underline nested sub-paths.
-          const pathSoFar = pathParts.slice(idx).join(pathSeparator);
-
-          const copy = ctx?.copy;
-          const t = ctx?.translate ?? (s => s);
-
-          return (
-            <span className={copy && 'file-header-copyable-path'} key={idx}>
-              {acc}
-              <span
-                // TODO: better translate API that supports templates.
-                title={copy && t('Copy $path}').replace('$path', pathSoFar)}
-                onClick={copy && (() => copy(pathSoFar))}
-                className={'file-header-path-element'}>
-                {part}
-                {idx < pathParts.length - 1 ? pathSeparator : ''}
-              </span>
-            </span>
-          );
-        }, <span />)}
-      </Text>
+      <Box sx={{display: 'flex', flexGrow: 1}}>{filePathParts}</Box>
+      {ctx?.openFile && (
+        <Tooltip aria-label={t('Open file')} direction={'sw'} sx={{display: 'flex'}}>
+          <IconButton
+            size="S"
+            variant="invisible"
+            area-label={t('Open file')}
+            icon={FileSymlinkFileIcon}
+            sx={{color: 'initial', opacity: '0.7'}}
+            onClick={() => {
+              ctx.openFile?.();
+            }}
+          />
+        </Tooltip>
+      )}
     </Box>
   );
 }

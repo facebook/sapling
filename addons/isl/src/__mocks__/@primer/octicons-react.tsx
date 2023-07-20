@@ -6,3 +6,6 @@
  */
 
 export const UnfoldIcon = (p: React.PropsWithChildren) => <div>{p.children}</div>;
+export const FileSymlinkFileIcon = (p: React.PropsWithChildren) => <div>{p.children}</div>;
+export const ChevronDownIcon = (p: React.PropsWithChildren) => <div>{p.children}</div>;
+export const ChevronUpIcon = (p: React.PropsWithChildren) => <div>{p.children}</div>;

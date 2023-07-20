@@ -218,6 +218,7 @@ function ComparisonViewFile({diff, comparison}: {diff: ParsedDiff; comparison: C
     atoms: {lineRange},
     translate: t,
     copy: platform.clipboardCopy,
+    openFile: () => platform.openFile(path),
     // only offer clickable line numbers for comparisons against head, otherwise line numbers will be inaccurate
     openFileToLine: comparisonIsAgainstHead(comparison)
       ? (line: number) => platform.openFile(path, {line})
