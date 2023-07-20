@@ -692,11 +692,6 @@ class InodeBase {
    * However, to update location data you must acquire both the mount point's
    * global rename lock and acquire this Synchronized object's write lock.
    * (acquire the mount-point rename lock first).
-   *
-   * TODO: The mount point rename lock does not exist yet.  We need to add it
-   * in a future diff, and update rename() and unlink() operations to always
-   * hold it before updating location data.  Currently rename() and unlink()
-   * don't ever update parent pointers or names yet.
    */
   folly::Synchronized<LocationInfo> location_;
 
