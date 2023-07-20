@@ -373,7 +373,6 @@ pub fn create_dir_all_with_mode(path: impl AsRef<Path>, mode: u32) -> io::Result
     while let Some(dir) = to_create.pop() {
         match create_dir_with_mode(dir, mode) {
             Ok(()) => continue,
-            Err(err) if err.kind() == io::ErrorKind::AlreadyExists => continue,
             Err(err) if err.kind() == io::ErrorKind::NotFound => {
                 to_create.push(dir);
                 match dir.parent() {
@@ -652,6 +651,21 @@ mod tests {
             let metadata = path.metadata()?;
             assert_eq!(metadata.permissions().mode(), mode);
         }
+
+        // Sanity that there is no error if directory already exists.
+        create_fn(&path)?;
+
+        let broken_symlink = tempdir.path().join("foo").join("bar").join("oops");
+        symlink_file(&tempdir.path().join("doesnt_exist"), &broken_symlink)?;
+
+        // Don't get stuck in a loop due to broken symlink.
+        assert!(create_fn(&broken_symlink.join("nope")).is_err());
+
+        // Sanity that we get errors if there is a regular file in the way.
+        let regular_file = tempdir.path().join("regular_file");
+        File::create(&regular_file)?;
+        assert!(create_fn(&regular_file).is_err());
+        assert!(create_fn(&regular_file.join("no_can_do")).is_err());
 
         Ok(())
     }
