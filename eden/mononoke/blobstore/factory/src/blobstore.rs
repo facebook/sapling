@@ -322,7 +322,7 @@ pub async fn make_packblob<'a>(
         blobconfig,
     } = blobconfig
     {
-        let store = make_blobstore_with_link(
+        let store = make_blobstore_unlink_ops(
             fb,
             *blobconfig,
             readonly_storage,
@@ -390,7 +390,7 @@ pub async fn make_files_blobstore(
     }
 }
 
-async fn make_blobstore_with_link<'a>(
+async fn make_blobstore_unlink_ops<'a>(
     fb: FacebookInit,
     blobconfig: BlobConfig,
     readonly_storage: ReadOnlyStorage,
