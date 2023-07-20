@@ -64,7 +64,7 @@ fn create_or_open_file(error_log_file_path: String) -> File {
         .create(true)
         .write(true)
         .append(true)
-        .open(&error_log_file_path)
+        .open(error_log_file_path)
         .unwrap();
     file
 }
