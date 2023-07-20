@@ -19,7 +19,7 @@ anyhow = "1.0.71"
 assembly_line = { version = "0.1.0", path = "../common/assembly_line" }
 async-stream = "0.3"
 async-trait = "0.1.71"
-base64 = "0.11.0"
+base64 = "0.13"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
