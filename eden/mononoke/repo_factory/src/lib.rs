@@ -21,9 +21,11 @@ use anyhow::Result;
 use async_once_cell::AsyncOnceCell;
 use blobstore::Blobstore;
 use blobstore::BlobstoreEnumerableWithUnlink;
+use blobstore::BlobstoreUnlinkOps;
 use blobstore_factory::default_scrub_handler;
 use blobstore_factory::make_blobstore;
 use blobstore_factory::make_blobstore_enumerable_with_unlink;
+use blobstore_factory::make_blobstore_unlink_ops;
 pub use blobstore_factory::BlobstoreOptions;
 use blobstore_factory::ComponentSamplingHandler;
 use blobstore_factory::MetadataSqlFactory;
@@ -128,7 +130,9 @@ use redactedblobstore::RedactionConfigBlobstore;
 use redactedblobstore::SqlRedactedContentStore;
 use rendezvous::RendezVousOptions;
 use repo_blobstore::ArcRepoBlobstore;
+use repo_blobstore::ArcRepoBlobstoreUnlinkOps;
 use repo_blobstore::RepoBlobstore;
+use repo_blobstore::RepoBlobstoreUnlinkOps;
 use repo_bookmark_attrs::ArcRepoBookmarkAttrs;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::ArcRepoCrossRepo;
@@ -357,6 +361,44 @@ impl RepoFactory {
         Ok(repo_blobstore)
     }
 
+    async fn repo_blobstore_unlink_ops_from_blobstore_unlink_ops(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+        blobstore: &Arc<dyn BlobstoreUnlinkOps>,
+        common_config: &ArcCommonConfig,
+    ) -> Result<RepoBlobstoreUnlinkOps> {
+        let mut blobstore = blobstore.clone();
+        if self.env.readonly_storage.0 {
+            blobstore = Arc::new(ReadOnlyBlobstore::new(blobstore));
+        }
+
+        let redacted_blobs = match repo_config.redaction {
+            Redaction::Enabled => {
+                let redacted_blobs = self
+                    .redacted_blobs(
+                        self.ctx(None),
+                        &repo_config.storage_config.metadata,
+                        common_config,
+                    )
+                    .await?;
+                Some(redacted_blobs)
+            }
+            Redaction::Disabled => None,
+        };
+
+        let censored_scuba_builder = self.censored_scuba_builder(common_config)?;
+
+        let repo_blobstore = RepoBlobstoreUnlinkOps::new(
+            blobstore,
+            redacted_blobs,
+            repo_identity.id(),
+            censored_scuba_builder,
+        );
+
+        Ok(repo_blobstore)
+    }
+
     async fn blobstore_enumerable_with_unlink(
         &self,
         config: &BlobConfig,
@@ -406,6 +448,22 @@ impl RepoFactory {
                 Ok(blobstore)
             })
             .await
+    }
+
+    async fn blobstore_unlink_ops(
+        &self,
+        config: &BlobConfig,
+    ) -> Result<Arc<dyn BlobstoreUnlinkOps>> {
+        make_blobstore_unlink_ops(
+            self.env.fb,
+            config.clone(),
+            self.env.readonly_storage,
+            &self.env.blobstore_options,
+            &self.env.logger,
+            &self.env.config_store,
+        )
+        .watched(&self.env.logger)
+        .await
     }
 
     pub async fn redacted_blobs(
@@ -1031,6 +1089,26 @@ impl RepoFactory {
             .await?;
         Ok(Arc::new(
             self.repo_blobstore_from_blobstore(
+                repo_identity,
+                repo_config,
+                &blobstore,
+                common_config,
+            )
+            .await?,
+        ))
+    }
+
+    pub async fn repo_blobstore_unlink_ops(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+        common_config: &ArcCommonConfig,
+    ) -> Result<ArcRepoBlobstoreUnlinkOps> {
+        let blobstore = self
+            .blobstore_unlink_ops(&repo_config.storage_config.blobstore)
+            .await?;
+        Ok(Arc::new(
+            self.repo_blobstore_unlink_ops_from_blobstore_unlink_ops(
                 repo_identity,
                 repo_config,
                 &blobstore,
