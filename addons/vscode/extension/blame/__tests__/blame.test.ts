@@ -5,9 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Repository} from 'isl-server/src/Repository';
 import type {CommitInfo} from 'isl/src/types';
 
+import {getDiffBlameHoverMarkup} from '../blameHover';
 import {getRealignedBlameInfo} from '../blameUtils';
+import {GitHubCodeReviewProvider} from 'isl-server/src/github/githubCodeReviewProvider';
+import {mockLogger} from 'shared/testUtils';
 
 describe('blame', () => {
   describe('getRealignedBlameInfo', () => {
@@ -50,6 +54,73 @@ G
 
       const result = getRealignedBlameInfo(blame, after);
       expect(result).toEqual(expected);
+    });
+  });
+
+  describe('blame hover', () => {
+    const mockRepo = {
+      codeReviewProvider: new GitHubCodeReviewProvider(
+        {type: 'github', owner: 'facebook', repo: 'sapling', hostname: 'github.com'},
+        mockLogger,
+      ),
+    } as unknown as Repository;
+    const mockCommit = {
+      hash: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
+      date: new Date(),
+      author: 'person',
+      title: 'My cool PR',
+    } as unknown as CommitInfo;
+    it('renders attachec PR links', () => {
+      expect(
+        getDiffBlameHoverMarkup(mockRepo, {
+          ...mockCommit,
+          date: new Date(),
+          description: 'added some stuff',
+          diffId: '1234',
+        } as unknown as CommitInfo),
+      ).toEqual(
+        `\
+**person** - [#1234](https://github.com/facebook/sapling/pull/1234) (just now)
+
+**My cool PR**
+
+
+added some stuff`,
+      );
+    });
+
+    it('renders detected PR links', () => {
+      expect(
+        getDiffBlameHoverMarkup(mockRepo, {
+          ...mockCommit,
+          description: 'added some stuff in #1234',
+        } as unknown as CommitInfo),
+      ).toEqual(
+        `\
+**person** - [#1234](https://github.com/facebook/sapling/pull/1234) (just now)
+
+**My cool PR**
+
+
+added some stuff in #1234`,
+      );
+    });
+
+    it('falls back to commit hash', () => {
+      expect(
+        getDiffBlameHoverMarkup(mockRepo, {
+          ...mockCommit,
+          description: 'added some stuff',
+        } as unknown as CommitInfo),
+      ).toEqual(
+        `\
+**person** - [\`a1b2c3d4e5f6\`](https://github.com/facebook/sapling/commit/a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2) (just now)
+
+**My cool PR**
+
+
+added some stuff`,
+      );
     });
   });
 });

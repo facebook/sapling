@@ -376,7 +376,7 @@ export class InlineBlameProvider implements Disposable {
         commit.date,
         {},
       )} ${DOT} ${commit.title.trim()}`;
-      const hover = getDiffBlameHoverMarkup(commit);
+      const hover = getDiffBlameHoverMarkup(this.currentRepo, commit);
       const blameText = {inline, hover};
       return blameText;
     } catch (err) {

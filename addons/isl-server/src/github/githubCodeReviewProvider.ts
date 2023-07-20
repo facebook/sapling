@@ -111,6 +111,16 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   public getSummaryName(): string {
     return `github:${this.codeReviewSystem.hostname}/${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}`;
   }
+
+  public getDiffUrlMarkdown(diffId: DiffId): string {
+    return `[#${diffId}](https://${this.codeReviewSystem.hostname}/${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}/pull/${diffId})`;
+  }
+
+  public getCommitHashUrlMarkdown(hash: string): string {
+    return `[\`${hash.slice(0, 12)}\`](https://${this.codeReviewSystem.hostname}/${
+      this.codeReviewSystem.owner
+    }/${this.codeReviewSystem.repo}/commit/${hash})`;
+  }
 }
 
 function githubStatusRollupStateToCIStatus(state: StatusState | undefined): DiffSignalSummary {

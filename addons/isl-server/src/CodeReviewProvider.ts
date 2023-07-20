@@ -37,4 +37,7 @@ export interface CodeReviewProvider {
   getSummaryName(): string;
 
   typeahead?(kind: TypeaheadKind, query: string): Promise<Array<TypeaheadResult>>;
+
+  getDiffUrlMarkdown(diffId: DiffId): string;
+  getCommitHashUrlMarkdown(hash: string): string;
 }
