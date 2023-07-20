@@ -1265,7 +1265,18 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
     // differ.
     RootId workingCopyParentRootId;
     bool checkoutInProgress = false;
+    /**
+     * When checkout was previously interruptd, this holds the RootId of the
+     * working copy prior to checkout, as well as the destination RootId.
+     */
     std::optional<std::tuple<RootId, RootId>> checkoutOriginalTrees;
+
+    /**
+     * pid of the EdenFS process that triggered the checkout.
+     *
+     * This is expected to be different from the current EdenFS process only
+     * when checkout was previously interrupted.
+     */
     std::optional<pid_t> checkoutPid;
   };
 

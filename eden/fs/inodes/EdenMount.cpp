@@ -1371,12 +1371,17 @@ folly::Future<CheckoutResult> EdenMount::checkout(
             "another checkout operation is still in progress"));
       }
     } else {
+      oldParent = parentLock->workingCopyParentRootId;
       // Set checkoutInProgress and release the lock. An alternative way of
       // achieving the same would be to hold the lock during the checkout
       // operation, but this might lead to deadlocks on Windows due to callbacks
       // needing to access the parent commit to service callbacks.
       parentLock->checkoutInProgress = true;
-      oldParent = parentLock->workingCopyParentRootId;
+    }
+    if (checkoutMode != CheckoutMode::DRY_RUN) {
+      // Also make sure that when checkout is resumed post checkout, a
+      // concurrent checkout will hit the CHECKOUT_IN_PROGRESS case.
+      parentLock->checkoutPid = folly::get_cached_pid();
     }
   }
 

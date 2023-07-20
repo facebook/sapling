@@ -9,15 +9,18 @@ import os
 import re
 import sys
 import threading
+from contextlib import contextmanager
 from multiprocessing import Process
 from textwrap import dedent
-from typing import Dict, List, Optional, Set
+from typing import Dict, Generator, List, Optional, Set
 
 from eden.fs.cli import util
 from eden.integration.hg.lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from eden.integration.lib import hgrepo
 from facebook.eden.constants import DIS_ENABLE_FLAGS
 from facebook.eden.ttypes import (
+    CheckoutMode,
+    CheckOutRevisionParams,
     EdenError,
     EdenErrorType,
     FaultDefinition,
@@ -409,29 +412,12 @@ class UpdateTest(EdenHgTestCase):
         self.assertFalse(os.path.exists(self.get_path("foo/bar/a.txt")))
         self.assertTrue(os.path.exists(self.get_path("foo/bar/b.txt")))
 
-    def test_mount_state_during_unmount_with_in_progress_checkout(self) -> None:
-        mounts = self.eden.run_cmd("list")
-        self.assertEqual(f"{self.mount}\n", mounts)
+    def wait_for_checkout_in_progress(self) -> None:
+        hg_parent = self.hg("log", "-r.", "-T{node}")
 
-        self.backing_repo.write_file("foo/bar.txt", "new contents")
-        new_commit = self.backing_repo.commit("Update foo/bar.txt")
-
-        with self.eden.get_thrift_client_legacy() as client:
-            client.injectFault(
-                FaultDefinition(
-                    keyClass="inodeCheckout", keyValueRegex=".*", block=True
-                )
-            )
-
-            # Run a checkout
-            p1 = Process(target=self.repo.update, args=(new_commit,))
-            p1.start()
-
-            hg_parent = self.hg("log", "-r.", "-T{node}")
-
-            # Ensure the checkout has started
-            def checkout_in_progress() -> Optional[bool]:
-                try:
+        def checkout_in_progress() -> Optional[bool]:
+            try:
+                with self.eden.get_thrift_client_legacy() as client:
                     client.getScmStatusV2(
                         GetScmStatusParams(
                             mountPoint=bytes(self.mount, encoding="utf-8"),
@@ -439,14 +425,49 @@ class UpdateTest(EdenHgTestCase):
                             listIgnored=False,
                         )
                     )
-                except EdenError as ex:
-                    if ex.errorType == EdenErrorType.CHECKOUT_IN_PROGRESS:
+            except EdenError as ex:
+                if ex.errorType == EdenErrorType.CHECKOUT_IN_PROGRESS:
+                    if "checkout is currently in progress" in ex.message:
                         return True
                     else:
-                        raise ex
-                return None
+                        return None
+                else:
+                    raise ex
+            return None
 
-            util.poll_until(checkout_in_progress, timeout=30)
+        util.poll_until(checkout_in_progress, timeout=30)
+
+    @contextmanager
+    def block_checkout(self) -> Generator[None, None, None]:
+        with self.eden.get_thrift_client_legacy() as client:
+            client.injectFault(
+                FaultDefinition(
+                    keyClass="inodeCheckout", keyValueRegex=".*", block=True
+                )
+            )
+
+        try:
+            yield
+        finally:
+            with self.eden.get_thrift_client_legacy() as client:
+                client.unblockFault(
+                    UnblockFaultArg(keyClass="inodeCheckout", keyValueRegex=".*")
+                )
+
+    def test_mount_state_during_unmount_with_in_progress_checkout(self) -> None:
+        mounts = self.eden.run_cmd("list")
+        self.assertEqual(f"{self.mount}\n", mounts)
+
+        self.backing_repo.write_file("foo/bar.txt", "new contents")
+        new_commit = self.backing_repo.commit("Update foo/bar.txt")
+
+        with self.block_checkout():
+            # Run a checkout
+            p1 = Process(target=self.repo.update, args=(new_commit,))
+            p1.start()
+
+            # Ensure the checkout has started
+            self.wait_for_checkout_in_progress()
 
             p2 = Process(target=self.eden.unmount, args=(self.mount,))
             p2.start()
@@ -465,16 +486,12 @@ class UpdateTest(EdenHgTestCase):
                 return None
 
             util.poll_until(state_shutting_down, timeout=30)
-
             # Unblock the server shutdown and wait for the checkout to complete.
-            client.unblockFault(
-                UnblockFaultArg(keyClass="inodeCheckout", keyValueRegex=".*")
-            )
 
-            # join the checkout before the unmount because the unmount call
-            # won't finish until the checkout has finished
-            p1.join()
-            p2.join()
+        # join the checkout before the unmount because the unmount call
+        # won't finish until the checkout has finished
+        p1.join()
+        p2.join()
 
     def test_dir_locking(self) -> None:
         """
@@ -712,6 +729,29 @@ class UpdateTest(EdenHgTestCase):
         self.read_dir("foo/subdir")
         self.repo.update(commit4)
 
+    def kill_eden_during_checkout_and_restart(self, commit: str, keyValue: str) -> None:
+        with self.eden.get_thrift_client_legacy() as client:
+            client.injectFault(
+                FaultDefinition(
+                    keyClass="TreeInode::checkout",
+                    keyValueRegex=keyValue,
+                    kill=True,
+                )
+            )
+
+            try:
+                self.repo.update(commit)
+            except Exception:
+                pass
+            else:
+                self.fail("'hg update' should've failed if eden crashes")
+
+        # Restart eden
+        if self.eden._process is not None:
+            util.poll_until(self.eden._process.poll, timeout=30)
+        self.eden = self.init_eden_client()
+        self.eden.start()
+
     def test_resume_interrupted_update(self) -> None:
         """
         Test resuming a hg checkout after Eden was killed mid-checkout
@@ -739,28 +779,7 @@ class UpdateTest(EdenHgTestCase):
         # dir3 were not materialized during the resumed checkout.
         self.repo.write_file("dir2/bar.txt", "Content 3")
 
-        self.maxDiff = None
-        with self.eden.get_thrift_client_legacy() as client:
-            client.injectFault(
-                FaultDefinition(
-                    keyClass="TreeInode::checkout",
-                    keyValueRegex="dir2, false",
-                    kill=True,
-                )
-            )
-
-            try:
-                self.repo.update(bottom)
-            except Exception:
-                pass
-            else:
-                self.fail("'hg update' should've failed if eden crashes")
-
-        # Restart eden
-        if self.eden._process is not None:
-            util.poll_until(self.eden._process.poll, timeout=30)
-        self.eden = self.init_eden_client()
-        self.eden.start()
+        self.kill_eden_during_checkout_and_restart(bottom, "dir2, false")
 
         with self.assertRaisesRegex(
             hgrepo.HgError, f"checkout is in progress.*{bottom}"
@@ -786,6 +805,35 @@ class UpdateTest(EdenHgTestCase):
             self.assertNotIn("dir1", inodes)
             self.assertFalse(inodes["dir2"].materialized)
             self.assertNotIn("dir3", inodes)
+
+    def test_resume_interrupted_with_concurrent_update(self) -> None:
+        self.repo.write_file("foo/baz.txt", "Content 3")
+        self.kill_eden_during_checkout_and_restart(self.commit1, "foo, false")
+
+        def start_force_checkout(commit: str) -> None:
+            with self.eden.get_thrift_client_legacy() as client:
+                client.checkOutRevision(
+                    mountPoint=self.mount_path_bytes,
+                    snapshotHash=commit.encode(),
+                    checkoutMode=CheckoutMode.FORCE,
+                    params=CheckOutRevisionParams(),
+                )
+
+        with self.block_checkout():
+            first_update = threading.Thread(
+                target=start_force_checkout, args=(self.commit1,)
+            )
+            first_update.start()
+
+            self.wait_for_checkout_in_progress()
+
+            # Now let's run update a second time.
+            with self.assertRaisesRegex(
+                EdenError, "another checkout operation is still in progress"
+            ):
+                start_force_checkout(self.commit1)
+
+        first_update.join()
 
 
 @hg_test
