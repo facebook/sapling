@@ -128,3 +128,25 @@ Clean up the test files
   $ rm -rf "$TESTTMP/unlink_log"
   $ mkdir -p "$TESTTMP/key_inputs"
   $ mkdir -p "$TESTTMP/unlink_log"
+
+Going to test progress tracking
+Prepare the input that is in a correct format
+  $ echo repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8 > "$TESTTMP/key_inputs/key_file_for_track"
+Run the bulk unliking tool for the first time
+  $ mononoke_newadmin blobstore-bulk-unlink --keys-dir "$TESTTMP/key_inputs" --dry-run false --sanitise-regex '^repo[0-9]+\.content\..*' --error-log-file "$TESTTMP/unlink_log/log_file" --progress-track-file "$TESTTMP/unlink_log/progress"
+  Processing keys in file (with dry-run=false): $TESTTMP/key_inputs/key_file_for_track
+  Progress: 100.000%	processing took * (glob)
+  $ cat "$TESTTMP/unlink_log/progress"
+  $TESTTMP/key_inputs/key_file_for_track
+Run the bulk unliking tool for the second time
+  $ mononoke_newadmin blobstore-bulk-unlink --keys-dir "$TESTTMP/key_inputs" --dry-run false --sanitise-regex '^repo[0-9]+\.content\..*' --error-log-file "$TESTTMP/unlink_log/log_file" --progress-track-file "$TESTTMP/unlink_log/progress"
+  File $TESTTMP/key_inputs/key_file_for_track has already been processed, skip.
+  Progress: 100.000%	processing took 0 seconds.
+  $ cat "$TESTTMP/unlink_log/progress"
+  $TESTTMP/key_inputs/key_file_for_track
+
+Clean up the test files
+  $ rm -rf "$TESTTMP/key_inputs"
+  $ rm -rf "$TESTTMP/unlink_log"
+  $ mkdir -p "$TESTTMP/key_inputs"
+  $ mkdir -p "$TESTTMP/unlink_log"

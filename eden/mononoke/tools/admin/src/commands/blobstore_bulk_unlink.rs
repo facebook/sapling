@@ -59,9 +59,10 @@ pub struct CommandArgs {
     progress_track_file: String,
 }
 
-fn create_or_open_file(error_log_file_path: String) -> File {
+fn create_or_open_file(error_log_file_path: String, read_before_write: bool) -> File {
     let file = OpenOptions::new()
         .create(true)
+        .read(read_before_write)
         .write(true)
         .append(true)
         .open(error_log_file_path)
@@ -96,8 +97,8 @@ impl BlobstoreBulkUnlinker {
             dry_run,
             sanitise_regex,
             repo_to_blobstores: HashMap::new(),
-            error_log_file: create_or_open_file(error_log_file_path),
-            progress_track_file: create_or_open_file(progress_track_path),
+            error_log_file: create_or_open_file(error_log_file_path, false),
+            progress_track_file: create_or_open_file(progress_track_path, true),
             already_processed_files: HashSet::new(),
         }
     }
@@ -231,6 +232,15 @@ impl BlobstoreBulkUnlinker {
             .with_context(|| format_err!("Error while writing to file {:?}", self.error_log_file))
     }
 
+    async fn log_processed_file(&self, path: &str) -> Result<()> {
+        writeln!(&self.progress_track_file, "{}", path).with_context(|| {
+            format_err!(
+                "Error while recording progress to file {:?}",
+                self.progress_track_file
+            )
+        })
+    }
+
     async fn bulk_unlink_keys_in_file(
         &mut self,
         path: &PathBuf,
@@ -268,14 +278,32 @@ impl BlobstoreBulkUnlinker {
     }
 
     async fn start_unlink(&mut self) -> Result<()> {
+        let lines = io::BufReader::new(&self.progress_track_file).lines();
+        for line in lines {
+            if let Ok(key_file_path) = line {
+                self.already_processed_files
+                    .insert(key_file_path.to_string());
+            }
+        }
+
         let entries = fs::read_dir(self.keys_dir.clone())?
             .map(|res| res.map(|e| e.path()))
             .collect::<Result<Vec<_>, io::Error>>()?;
 
         let total_file_count = entries.len();
         for (cur, entry) in entries.iter().enumerate() {
+            let path_to_record = entry.display().to_string();
+            if self.already_processed_files.contains(&path_to_record) {
+                println!("File {} has already been processed, skip.", entry.display());
+                println!(
+                    "Progress: {:.3}%\tprocessing took 0 seconds.",
+                    (cur + 1) as f32 * 100.0 / total_file_count as f32
+                );
+                continue;
+            }
             self.bulk_unlink_keys_in_file(entry, cur, total_file_count)
                 .await?;
+            self.log_processed_file(&path_to_record).await?;
         }
         Ok(())
     }
