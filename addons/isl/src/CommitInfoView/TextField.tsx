@@ -22,12 +22,14 @@ export function CommitInfoTextField({
   editedMessage,
   setEditedCommitMessage,
   typeaheadKind,
+  maxTokens,
 }: {
   name: string;
   autoFocus: boolean;
   editedMessage: string;
   setEditedCommitMessage: (fieldValue: string) => unknown;
   typeaheadKind: TypeaheadKind;
+  maxTokens?: number;
 }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -116,40 +118,43 @@ export function CommitInfoTextField({
           );
         }}
       />
-      <div className="commit-info-field-with-typeahead">
-        <VSCodeTextField
-          ref={ref}
-          value={remaining}
-          data-testid={`commit-info-${fieldKey}-field`}
-          onInput={onInput}
-        />
-        {typeaheadSuggestions?.type === 'loading' ||
-        (typeaheadSuggestions?.values?.length ?? 0) > 0 ? (
-          <div className="typeahead-suggestions tooltip tooltip-bottom">
-            <div className="tooltip-arrow tooltip-arrow-bottom" />
-            {typeaheadSuggestions?.type === 'loading' ? (
-              <Icon icon="loading" />
-            ) : (
-              typeaheadSuggestions?.values.map((suggestion, index) => (
-                <span
-                  key={suggestion.value}
-                  className={
-                    'suggestion' + (index === selectedSuggestionIndex ? ' selected-suggestion' : '')
-                  }
-                  onMouseDown={() => {
-                    saveNewValue(suggestion.value);
-                  }}>
-                  {suggestion.image && <ImageWithFallback src={suggestion.image} />}
-                  <span className="suggestion-label">
-                    <span>{suggestion.label}</span>
-                    {suggestion.label !== suggestion.value && <Subtle>{suggestion.value}</Subtle>}
+      {tokens.length >= (maxTokens ?? Infinity) ? null : (
+        <div className="commit-info-field-with-typeahead">
+          <VSCodeTextField
+            ref={ref}
+            value={remaining}
+            data-testid={`commit-info-${fieldKey}-field`}
+            onInput={onInput}
+          />
+          {typeaheadSuggestions?.type === 'loading' ||
+          (typeaheadSuggestions?.values?.length ?? 0) > 0 ? (
+            <div className="typeahead-suggestions tooltip tooltip-bottom">
+              <div className="tooltip-arrow tooltip-arrow-bottom" />
+              {typeaheadSuggestions?.type === 'loading' ? (
+                <Icon icon="loading" />
+              ) : (
+                typeaheadSuggestions?.values.map((suggestion, index) => (
+                  <span
+                    key={suggestion.value}
+                    className={
+                      'suggestion' +
+                      (index === selectedSuggestionIndex ? ' selected-suggestion' : '')
+                    }
+                    onMouseDown={() => {
+                      saveNewValue(suggestion.value);
+                    }}>
+                    {suggestion.image && <ImageWithFallback src={suggestion.image} />}
+                    <span className="suggestion-label">
+                      <span>{suggestion.label}</span>
+                      {suggestion.label !== suggestion.value && <Subtle>{suggestion.value}</Subtle>}
+                    </span>
                   </span>
-                </span>
-              ))
-            )}
-          </div>
-        ) : null}
-      </div>
+                ))
+              )}
+            </div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

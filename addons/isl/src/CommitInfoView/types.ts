@@ -70,5 +70,6 @@ export type FieldConfig = {
   | {
       type: 'field';
       typeaheadKind: TypeaheadKind;
+      maxTokens?: number;
     }
 );

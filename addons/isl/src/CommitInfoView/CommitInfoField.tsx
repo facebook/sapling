@@ -92,6 +92,7 @@ export function CommitInfoField({
             editedMessage={editedFieldContent}
             setEditedCommitMessage={setEditedField}
             typeaheadKind={field.typeaheadKind}
+            maxTokens={field.maxTokens}
           />
         ) : (
           <CommitInfoTextArea
