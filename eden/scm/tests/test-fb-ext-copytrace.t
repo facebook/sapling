@@ -9,7 +9,7 @@
   $ setconfig experimental.copytrace=off
 
   $ initclient() {
-  >   setconfig copytrace.remote=false copytrace.enablefilldb=true copytrace.fastcopytrace=true
+  >   setconfig copytrace.remote=false copytrace.enablefilldb=true
   >   setconfig experimental.copytrace=off
   >   setconfig copytrace.dagcopytrace=True
   > }

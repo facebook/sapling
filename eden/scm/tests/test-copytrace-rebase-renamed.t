@@ -1,6 +1,6 @@
 #debugruntest-compatible
   $ enable amend copytrace rebase
-  $ setconfig copytrace.fastcopytrace=true experimental.copytrace=off
+  $ setconfig experimental.copytrace=off
   $ setconfig workingcopy.ruststatus=false
   $ newrepo
 

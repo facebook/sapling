@@ -8,9 +8,6 @@
 ::
 
     [copytrace]
-    # whether to enable fast copytracing or not
-    fastcopytrace = False
-
     # limits the number of commits in the source "branch" i. e. "branch".
     # that is rebased or merged. These are the commits from base up to csrc
     # (see _mergecopies docblock below).
@@ -18,8 +15,7 @@
     # many commits in this "branch".
     sourcecommitlimit = 100
 
-    # whether to enable fast copytracing during amends (requires fastcopytrace
-    # to be enabled.)
+    # whether to enable fast copytracing during amends
     enableamendcopytrace = True
 
     # how many previous commits to search through when looking for amend
@@ -56,7 +52,6 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("copytrace", "sourcecommitlimit", default=100)
-configitem("copytrace", "fastcopytrace", default=False)
 configitem("copytrace", "enableamendcopytrace", default=True)
 configitem("copytrace", "amendcopytracecommitlimit", default=100)
 configitem("copytrace", "dagcopytrace", default=False)
@@ -330,7 +325,6 @@ def _mergecopies(orig, repo, cdst, csrc, base):
             "copytracingduration",
             "",
             copytracingduration=time.time() - start,
-            fastcopytraceenabled=_fastcopytraceenabled(repo.ui),
         )
 
 
@@ -387,9 +381,6 @@ def _domergecopies(orig, repo, cdst, csrc, base):
 
     if repo.ui.config("experimental", "copytrace") == "on":
         # user explicitly enabled copytracing - use it
-        return orig(repo, cdst, csrc, base)
-
-    if not _fastcopytraceenabled(repo.ui):
         return orig(repo, cdst, csrc, base)
 
     # avoid silly behavior for parent -> working dir
@@ -493,10 +484,6 @@ def _filtercopies(copies, cdst, csrc, base):
                 continue
             newcopies[fdst] = fsrc
     return newcopies
-
-
-def _fastcopytraceenabled(ui):
-    return ui.configbool("copytrace", "fastcopytrace")
 
 
 def _dagcopytraceenabled(ui):

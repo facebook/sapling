@@ -7,7 +7,6 @@
   $ enable rebase copytrace
 
   $ setupconfig() {
-  >   setconfig copytrace.fastcopytrace=True
   >   setconfig copytrace.dagcopytrace=True
   > }
 
