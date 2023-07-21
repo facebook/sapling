@@ -632,11 +632,12 @@ folly::SemiFuture<folly::File> RpcServer::takeoverStop() {
   for (auto& handler : handlers) {
     futures.emplace_back(handler->takeoverStop());
   }
+
+  auto fd = serverSocket_->getNetworkSocket().toFd();
   return collectAll(futures)
       .via(evb_) // make sure we are running on the eventbase to do some more
                  // socket operations
-      .thenValue([this](auto&&) {
-        auto fd = this->serverSocket_->getNetworkSocket().toFd();
+      .thenValue([fd](auto&&) {
         if (fd == -1) {
           return folly::File{};
         }
