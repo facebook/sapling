@@ -330,6 +330,8 @@ def get_edenfs_environment() -> Dict[str, str]:
         "CONFIGERATOR_PRETEND_NOT_PROD",
         # Ensure EdenFS respects redirecting which cache directory to write to
         "XDG_CACHE_HOME",
+        # EdenFS should be able to pick-up Mercurial's test config
+        "HG_TEST_REMOTE_CONFIG",
     ]
 
     if sys.platform == "win32":
