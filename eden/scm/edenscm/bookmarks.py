@@ -1139,6 +1139,7 @@ def saveremotenames(repo, remotebookmarks, override: bool = True) -> None:
 
         # Old paths have been deleted, refresh remotenames
         if util.safehasattr(repo, "_remotenames"):
+            # This will bump _changecount.
             repo._remotenames.clearnames()
 
         # If narrowheads is enabled, updating remotenames can affect phases

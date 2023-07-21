@@ -1209,10 +1209,12 @@ class localrepository(object):
                 remotename = bookmarks.remotenameforurl(
                     self.ui, remote.url()
                 )  # ex. 'default' or 'remote'
+                # saveremotenames will invalidate self.heads by bumping
+                # _remotenames.changecount, and invalidate phase sets
+                # like `public()` by calling invalidatevolatilesets.
                 bookmarks.saveremotenames(
                     self, {remotename: remotenamechanges}, override=False
                 )
-                self.invalidate(True)
 
             # Update visibleheads:
             if heads:
