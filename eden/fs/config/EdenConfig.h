@@ -896,14 +896,6 @@ class EdenConfig : private ConfigSettingManager {
   // [experimental]
 
   /**
-   * Controls whether interrupted checkouts can be resumed.
-   */
-  ConfigSetting<bool> allowResumeCheckout{
-      "experimental:allow-resume-checkout",
-      true,
-      this};
-
-  /**
    * Controls whether EdenFS detects proceses that crawl an NFS checkout. Only
    * affects EdenFS if experimental:enable-nfs-server is also true. When NFS
    * crawl detection is enabled, EdenFS will perioically check

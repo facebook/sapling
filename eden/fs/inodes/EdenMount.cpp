@@ -1345,10 +1345,9 @@ folly::Future<CheckoutResult> EdenMount::checkout(
   {
     auto parentLock = parentState_.wlock();
     if (parentLock->checkoutInProgress) {
-      auto allowResume = getEdenConfig()->allowResumeCheckout.getValue();
       auto optPid = parentLock->checkoutPid;
       auto optTrees = parentLock->checkoutOriginalTrees;
-      if (allowResume && optTrees.has_value() && optPid.has_value() &&
+      if (optTrees.has_value() && optPid.has_value() &&
           optPid.value() != folly::get_cached_pid()) {
         auto originalTrees = optTrees.value();
         auto [src, dest] = originalTrees;
@@ -1761,17 +1760,13 @@ ImmediateFuture<Unit> EdenMount::diff(
         return makeImmediateFuture<Unit>(newEdenError(
             EdenErrorType::CHECKOUT_IN_PROGRESS,
             "cannot compute status while a checkout is currently in progress"));
-      } else if (getEdenConfig()->allowResumeCheckout.getValue()) {
+      } else {
         auto [fromCommit, toCommit] = *parentInfo->checkoutOriginalTrees;
         return makeImmediateFuture<Unit>(newEdenError(
             EdenErrorType::CHECKOUT_IN_PROGRESS,
             fmt::format(
                 "cannot compute status while a checkout is in progress - please run 'hg update --clean {}' to resume it",
                 toCommit)));
-      } else {
-        return makeImmediateFuture<Unit>(newEdenError(
-            EdenErrorType::CHECKOUT_IN_PROGRESS,
-            "cannot compute status for an interrupted checkout operation"));
       }
     }
 

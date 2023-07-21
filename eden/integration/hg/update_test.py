@@ -50,11 +50,6 @@ class UpdateTest(EdenHgTestCase):
             "eden.fs.inodes.CheckoutContext": "DBG5",
         }
 
-    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
-        result = super().edenfs_extra_config() or {}
-        result.setdefault("experimental", []).append("allow-resume-checkout = true")
-        return result
-
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("hello.txt", "hola")
         repo.write_file(".gitignore", "ignoreme\n")

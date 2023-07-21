@@ -338,14 +338,7 @@ class AbandonedTransactionChecker(HgChecker):
 
 class PreviousEdenFSCrashedDuringCheckout(Problem):
     def __init__(self, checkout: EdenCheckout, ex: InProgressCheckoutError) -> None:
-        if checkout.instance.get_config_bool(
-            "experimental.allow-resume-checkout", False
-        ):
-            remediation = f"""\
-EdenFS was killed or crashed during a checkout/update operation. This can be recovered by running:
-    hg update --clean {ex.to_commit}"""
-        else:
-            remediation = f"""\
+        remediation = f"""\
 EdenFS was killed or crashed during a checkout/update operation. This is unfortunately not recoverable at this time and recloning the repository is necessary.
 {reclone_remediation(checkout.path)}"""
 
