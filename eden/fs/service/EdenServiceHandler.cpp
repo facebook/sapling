@@ -1243,7 +1243,8 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
     context->argHandle = nfsdChannel->traceDetailedArguments();
   } else {
     EDEN_BUG() << "tracing isn't supported yet for the "
-               << edenMount.getCheckoutConfig()->getMountProtocol()
+               << fmt::underlying(
+                      edenMount.getCheckoutConfig()->getMountProtocol())
                << " filesystem type";
   }
 #endif // _WIN32

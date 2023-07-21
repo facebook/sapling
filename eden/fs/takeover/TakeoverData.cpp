@@ -253,7 +253,8 @@ void TakeoverData::serializeFd(
       fileToSerialize = &mountdServerSocket.value();
       break;
     default:
-      throwf<std::runtime_error>("Unexpected FileDescriptorType {}", type);
+      throwf<std::runtime_error>(
+          "Unexpected FileDescriptorType {}", fmt::underlying(type));
   }
 
   XLOG(DBG7, "serializing file type: {} fd: {}", type, fileToSerialize->fd());
@@ -273,7 +274,8 @@ void TakeoverData::deserializeFd(FileDescriptorType type, folly::File& file) {
       mountdServerSocket = std::move(file);
       return;
     default:
-      throwf<std::runtime_error>("Unexpected FileDescriptorType {}", type);
+      throwf<std::runtime_error>(
+          "Unexpected FileDescriptorType {}", fmt::underlying(type));
   }
 }
 
@@ -501,7 +503,7 @@ void checkCanSerDeMountType(
         " {}",
         protocolCapabilities,
         mountPath,
-        mountProtocol);
+        fmt::underlying(mountProtocol));
   }
 }
 

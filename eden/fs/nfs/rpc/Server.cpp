@@ -136,7 +136,7 @@ folly::SemiFuture<folly::Unit> RpcConnectionHandler::takeoverStop() {
       return folly::makeSemiFutureWith([&] {
         throwf<std::runtime_error>(
             "Takeover attempt failed: RpcServer already shutting down because {}",
-            *state.stopReason);
+            fmt::underlying(*state.stopReason));
       });
     }
   }

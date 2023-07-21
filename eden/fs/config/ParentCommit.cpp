@@ -47,7 +47,7 @@ std::optional<RootId> ParentCommit::getLastCheckoutId(
             case ParentCommit::RootIdPreference::OnlyStable:
               return std::nullopt;
           }
-          EDEN_BUG() << "unexpected preference " << preference;
+          EDEN_BUG() << "unexpected preference " << fmt::underlying(preference);
         }
       },
       state_);

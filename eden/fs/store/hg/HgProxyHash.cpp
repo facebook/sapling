@@ -126,7 +126,8 @@ ObjectId HgProxyHash::store(
     case HgObjectIdFormat::HashOnly:
       return makeEmbeddedProxyHash2(hgRevHash);
   }
-  EDEN_BUG() << "Unsupported hgObjectIdFormat: " << hgObjectIdFormat;
+  EDEN_BUG() << "Unsupported hgObjectIdFormat: "
+             << fmt::underlying(hgObjectIdFormat);
 }
 
 ObjectId HgProxyHash::makeEmbeddedProxyHash1(

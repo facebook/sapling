@@ -954,7 +954,7 @@ folly::SemiFuture<SerializedInodeMap> EdenMount::shutdown(
       !tryToTransitionState(State::INIT_ERROR, State::SHUTTING_DOWN) &&
       !tryToTransitionState(State::FUSE_ERROR, State::SHUTTING_DOWN)) {
     EDEN_BUG() << "attempted to call shutdown() on a non-running EdenMount: "
-               << "state was " << getState();
+               << "state was " << fmt::underlying(getState());
   }
 
   // The caller calls us with the EdenServer::mountPoints_ lock, make sure that

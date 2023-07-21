@@ -189,7 +189,7 @@ void FilteredObjectId::validate() {
     auto msg = fmt::format(
         "failed to decode filter id VarInt when validating FilteredObjectId {}: {}",
         value_,
-        expectedSize.error());
+        fmt::underlying(expectedSize.error()));
     throw std::invalid_argument(msg);
   }
   infoBytes.advance(*expectedSize);
@@ -199,7 +199,7 @@ void FilteredObjectId::validate() {
     auto msg = fmt::format(
         "failed to decode path length VarInt when validating FilteredObjectId {}: {}",
         value_,
-        expectedSize.error());
+        fmt::underlying(expectedSize.error()));
     throw std::invalid_argument(msg);
   }
 }
