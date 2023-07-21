@@ -720,4 +720,28 @@ TEST(ImmediateFuture, then_with_Future) {
   EXPECT_EQ(10, std::move(result).get());
 }
 
+TEST(ImmediateFuture, QueuedImmediateExecutor_is_unsafe) {
+  auto [p, sf] = folly::makePromiseContract<int>();
+  auto imm = ImmediateFuture<int>{std::move(sf)};
+  EXPECT_FALSE(imm.isReady());
+
+  std::vector<int> sideEffects;
+
+  std::move(imm)
+      .thenValue([&](int value) {
+        sideEffects.push_back(value);
+        return folly::unit;
+      })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
+
+  EXPECT_EQ(0, sideEffects.size());
+  p.setValue(5);
+  // The callback ran on the promise fulfiller's thread, which breaks the rules
+  // that SemiFuture tries to provide. Folly's guidance since 2019 is that
+  // InlineExecutor and QueuedImmediateExecutor should not be used for this
+  // reason.
+  EXPECT_EQ(1, sideEffects.size());
+}
+
 } // namespace
