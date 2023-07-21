@@ -77,6 +77,10 @@ class Mountd {
    * Obtain the address that this mountd program is listening on.
    */
   folly::SocketAddress getAddr() const;
+
+  /**
+   * Must be called on the Mountd's EventBase.
+   */
   folly::SemiFuture<folly::File> takeoverStop();
 
   Mountd(const Mountd&) = delete;

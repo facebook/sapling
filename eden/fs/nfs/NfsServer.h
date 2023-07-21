@@ -108,6 +108,9 @@ class NfsServer {
     return evb_;
   }
 
+  /**
+   * Must be called on the NfsServer's EventBase.
+   */
   folly::SemiFuture<folly::File> takeoverStop();
 
   NfsServer(const NfsServer&) = delete;

@@ -303,6 +303,8 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
   /**
    * Stop reading new requests, wait for pending requests, and detach and return
    * the connected socket for handoff to a new process.
+   *
+   * Must be called on the RpcServer's EventBase.
    */
   folly::SemiFuture<folly::File> takeoverStop();
 
