@@ -10,7 +10,6 @@ use std::collections::HashSet;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
-use base64::encode as b64encode;
 use bytes::Bytes;
 use fbinit::FacebookInit;
 use gotham::state::FromState;
@@ -135,7 +134,7 @@ impl RequestDumper {
             self.log_action = LogAction::BodyTooBig;
             return;
         }
-        self.logger.add("body", b64encode(&body[..]));
+        self.logger.add("body", base64::encode(&body[..]));
     }
 
     // If the request is very small, log the request in human readable format.

@@ -480,7 +480,7 @@ fn calculate_websocket_accept(headers: &HeaderMap<HeaderValue>) -> String {
     }
     sha1.update(WEBSOCKET_MAGIC_KEY.as_bytes());
     let hash: [u8; 20] = sha1.finalize().into();
-    base64::encode(&hash)
+    base64::encode(hash)
 }
 
 #[cfg(not(fbcode_build))]

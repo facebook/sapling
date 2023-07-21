@@ -375,7 +375,7 @@ where
     fn get_cache_key(&self, key: &Key) -> String {
         // We just need a unique representation of the key as a String.
         // Let's use base64 as it's smaller than just .to_string()
-        base64::encode(&key.to_ne_bytes())
+        base64::encode(key.to_ne_bytes())
     }
 
     async fn get_from_db(&self, keys: HashSet<Key>) -> Result<HashMap<Key, V>> {
