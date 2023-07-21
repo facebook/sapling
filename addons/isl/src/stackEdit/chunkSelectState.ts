@@ -9,7 +9,7 @@ import type {FlattenLine, LineIdx} from '../linelog';
 import type {RecordOf} from 'immutable';
 
 import {FileStackState} from './fileStackState';
-import {List, Record} from 'immutable';
+import {List, Record, Set as ImSet} from 'immutable';
 import {cached} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
 
@@ -194,6 +194,63 @@ export class ChunkSelectState extends SelfUpdate<ChunkSelectRecord> {
   }
 
   /**
+   * Get the line regions. By default, unchanged lines are collapsed.
+   *
+   * `config.contextLines` sets how many lines to expand around
+   * changed or current lines.
+   *
+   * `config.expanded` and `config.caretLine` specify lines to
+   * expanded.
+   */
+  getLineRegions(config?: {
+    contextLines?: number;
+    /** Line numbers on the "A" side to expand. */
+    expandedALines: ImSet<number>;
+    /** Line number on the "M" (selection) side to expand. */
+    expandedSelLine?: number;
+  }): Readonly<LineRegion[]> {
+    const contextLines = config?.contextLines ?? 2;
+    const lines = this.getLines();
+    const expandedSelLine = config?.expandedSelLine ?? -1;
+    const expandedALines = config?.expandedALines ?? ImSet();
+    const regions: LineRegion[] = [];
+
+    // Figure out indexes of `lines` to collapse (skip).
+    const collapsedLines = Array<boolean>(lines.length + contextLines).fill(true);
+    lines.forEach((line, i) => {
+      if (
+        line.bits !== 0b111 ||
+        expandedALines.has(line.aLine ?? -1) ||
+        line.selLine === expandedSelLine
+      ) {
+        for (let j = i + contextLines; j >= 0 && j >= i - contextLines && collapsedLines[j]; j--) {
+          collapsedLines[j] = false;
+        }
+      }
+    });
+
+    // Scan through regions.
+    let currentRegion: LineRegion | null = null;
+    lines.forEach((line, i) => {
+      const same = line.bits === 0b111;
+      const collapsed = collapsedLines[i];
+      if (currentRegion?.same === same && currentRegion?.collapsed === collapsed) {
+        currentRegion.lines.push(line);
+      } else {
+        if (currentRegion !== null) {
+          regions.push(currentRegion);
+        }
+        currentRegion = {lines: [line], same, collapsed};
+      }
+    });
+    if (currentRegion !== null) {
+      regions.push(currentRegion);
+    }
+
+    return regions;
+  }
+
+  /**
    * Get the text of selected lines. It is the editing result.
    *
    * Note: passing `getSelectedText` to `fromText` does not maintain the selection
@@ -319,6 +376,21 @@ export type SelectLine = {
 
   /** Content of the line. */
   data: string;
+};
+
+/**
+ * A contiguous range of lines that share same properties.
+ * Properties include: "same for all version", "collapsed".
+ */
+export type LineRegion = {
+  /** Lines in the region. */
+  lines: SelectLine[];
+
+  /** If the region has the same content for all versions. */
+  same: boolean;
+
+  /** If the region is collapsed. */
+  collapsed: boolean;
 };
 
 /** '-': deletion; '+': insertion; '': unchanged; '!+', '!-': forced insertion or deletion, not selectable. */

@@ -176,6 +176,65 @@ describe('ChunkSelectState', () => {
       expect(state.getInverseText()).toBe('aa\ncc\ndd\nff\n');
     });
   });
+
+  describe('getLineRegions()', () => {
+    it('produces a region when nothing is changed', () => {
+      const state = ChunkSelectState.fromText(a, a, a);
+      expect(state.getLineRegions()).toMatchObject([
+        {
+          lines: state.getLines(),
+          same: true,
+          collapsed: true,
+        },
+      ]);
+    });
+
+    it('produces a region when everything is changed', () => {
+      const a = 'a\na\na\n';
+      const b = 'b\nb\nb\nb\n';
+      [a, b].forEach(m => {
+        const state = ChunkSelectState.fromText(a, b, m);
+        expect(state.getLineRegions()).toMatchObject([
+          {
+            lines: state.getLines(),
+            same: false,
+            collapsed: false,
+          },
+        ]);
+      });
+    });
+
+    it('produces regions with complex changes', () => {
+      const state = ChunkSelectState.fromText(
+        '1\n2\n3\n4\n8\n9\n',
+        '1\n2\n3\n5\n8\n9\n',
+        '1\n2\n3\n5\n8\n9\n',
+      );
+      const lines = state.getLines();
+      expect(state.getLineRegions()).toMatchObject([
+        {
+          lines: lines.slice(0, 1),
+          collapsed: true,
+          same: true,
+        },
+        {
+          lines: lines.slice(1, 3),
+          collapsed: false,
+          same: true,
+        },
+        {
+          lines: lines.slice(3, 5),
+          collapsed: false,
+          same: false,
+        },
+        {
+          lines: lines.slice(5, 7),
+          collapsed: false,
+          same: true,
+        },
+      ]);
+    });
+  });
 });
 
 /** Visualize line selections in ASCII. */
