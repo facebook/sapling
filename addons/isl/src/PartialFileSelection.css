@@ -20,6 +20,14 @@
   display: none;
 }
 
+.partial-file-selection-border {
+  border: 1px solid var(--tooltip-border);
+}
+
+.partial-file-selection-width-min-content {
+  width: min-content;
+}
+
 .partial-file-selection {
   background: var(--background);
   display: flex;
@@ -47,9 +55,13 @@
   height: var(--pad);
 }
 
-.partial-file-selection .line.line-context {
+.partial-file-selection.checkboxes .line.line-context,
+.partial-file-selection .column-m .line.line-context {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 20'%3E%3Cpath d='M0 10 Q10 15 20 10 Q30 5 40 10' stroke='grey' fill='transparent' /%3E%3C/svg%3E");
   background-repeat: repeat-x;
+}
+
+.partial-file-selection .column-m .line.line-context {
   cursor: pointer;
 }
 
@@ -58,29 +70,26 @@
   padding-right: var(--halfpad);
 }
 
-.partial-file-selection .selected.line.line-a,
-.partial-file-selection .deselected.line.line-a,
-.partial-file-selection .selected.line-number,
-.partial-file-selection .deselected.line-number {
+.partial-file-selection .selectable.line-number {
   cursor: pointer;
 }
 
-.partial-file-selection .column-a-number {
+.partial-file-selection.free-form .readonly {
+  background: var(--tooltip-background);
+}
+
+.partial-file-selection.free-form .column-m-number {
+  border-left: 1px solid var(--tooltip-border);
+}
+.partial-file-selection.free-form .column-b-number {
   border-left: 1px solid var(--tooltip-border);
 }
 
-.partial-file-selection .column-b-number {
-  border-right: 1px solid var(--tooltip-border);
-}
-
 .partial-file-selection .column-a-number,
-.partial-file-selection .column-b-number {
+.partial-file-selection .column-b-number,
+.partial-file-selection .column-m-number {
   text-align: right;
   color: grey;
-}
-
-.partial-file-selection .column-a-number,
-.partial-file-selection .column-b-number {
   user-select: none;
 }
 
@@ -90,39 +99,45 @@
   min-width: 100px;
 }
 
-.partial-file-selection .line-add {
+.partial-file-selection .column-a .region-same,
+.partial-file-selection .column-b .region-same {
+  opacity: 0.3;
+}
+
+.partial-file-selection .line.line-unique {
+  background: rgba(234, 92, 0, 0.2);
+}
+
+.partial-file-selection .column-unified .line-add,
+.partial-file-selection .column-b .line-add {
   background: var(--diffEditor-insertedLineBackground);
 }
 
-.partial-file-selection .line-force-add.line.line-b {
-  background: var(--diffEditor-insertedLineBackground);
-}
-
-.partial-file-selection .line-del {
+.partial-file-selection .column-unified .line-del,
+.partial-file-selection .column-a .line-del {
   background: var(--diffEditor-removedLineBackground);
 }
 
-.partial-file-selection .line-force-del.line.line-a {
-  background: var(--diffEditor-removedLineBackground);
+.partial-file-selection .line-number.selectable {
+  cursor: pointer;
 }
 
-.partial-file-selection .deselected.line.line-b {
-  background: var(--background);
-}
-
-.partial-file-selection .selected.line-number {
+.partial-file-selection .line-number.selectable.selected {
   color: var(--list-active-selection-foreground);
   background: var(--list-active-selection-background);
 }
 
-.partial-file-selection .selected.line-del.line-b {
-  user-select: none;
+.partial-file-selection .column-checkbox {
+  min-width: 40px;
 }
 
-.partial-file-selection-tip {
-  padding-top: var(--pad);
+.partial-file-selection .checkbox-anchor {
+  position: relative;
+  height: 0;
 }
 
-.partial-file-selection-width-min-content {
-  width: min-content;
+.partial-file-selection .checkbox-container {
+  position: absolute;
+  padding-left: var(--pad);
+  white-space: normal; /* needed for <VSCodeCheckbox /> */
 }
