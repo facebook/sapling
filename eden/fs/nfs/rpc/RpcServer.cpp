@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/nfs/rpc/Server.h"
+#include "eden/fs/nfs/rpc/RpcServer.h"
 
 #include <tuple>
 

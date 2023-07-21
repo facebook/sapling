@@ -17,7 +17,6 @@
 #include "eden/fs/nfs/NfsRequestContext.h"
 #include "eden/fs/nfs/NfsUtils.h"
 #include "eden/fs/nfs/NfsdRpc.h"
-#include "eden/fs/nfs/rpc/Server.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/FsEventLogger.h"

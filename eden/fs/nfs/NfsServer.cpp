@@ -9,6 +9,7 @@
 
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include "eden/fs/nfs/Nfsd3.h"
+#include "eden/fs/nfs/portmap/Rpcbindd.h"
 #include "eden/fs/utils/EdenTaskQueue.h"
 
 namespace facebook::eden {

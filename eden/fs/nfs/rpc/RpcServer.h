@@ -17,7 +17,6 @@
 #include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/nfs/portmap/PortmapClient.h"
 #include "eden/fs/nfs/rpc/Rpc.h"
-#include "eden/fs/nfs/rpc/Server.h"
 #include "eden/fs/utils/EventBaseState.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 

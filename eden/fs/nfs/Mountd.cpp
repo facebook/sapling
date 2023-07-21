@@ -14,6 +14,7 @@
 #include <folly/Utility.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/nfs/MountdRpc.h"
+#include "eden/fs/nfs/rpc/RpcServer.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
@@ -249,6 +250,10 @@ void Mountd::registerMount(AbsolutePathPiece path, InodeNumber ino) {
 
 void Mountd::unregisterMount(AbsolutePathPiece path) {
   proc_->unregisterMount(path);
+}
+
+folly::SocketAddress Mountd::getAddr() const {
+  return server_->getAddr();
 }
 
 folly::SemiFuture<folly::File> Mountd::takeoverStop() {

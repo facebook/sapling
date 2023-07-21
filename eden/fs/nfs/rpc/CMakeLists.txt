@@ -20,8 +20,8 @@ target_link_libraries(
 
 add_library(
   eden_nfs_rpc_server STATIC
-  "Server.cpp"
-  "Server.h"
+  "RpcServer.cpp"
+  "RpcServer.h"
 )
 
 target_link_libraries(

@@ -10,17 +10,22 @@
 // Implementation of the mount protocol as described in:
 // https://tools.ietf.org/html/rfc1813#page-106
 
+#include <folly/File.h>
+#include <folly/SocketAddress.h>
+#include <folly/futures/Future.h>
 #include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/nfs/rpc/Server.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 class Executor;
-}
+class EventBase;
+} // namespace folly
 
 namespace facebook::eden {
 
 class MountdServerProcessor;
+class RpcServer;
+class StructuredLogger;
 
 class Mountd {
  public:
@@ -71,10 +76,7 @@ class Mountd {
   /**
    * Obtain the address that this mountd program is listening on.
    */
-  folly::SocketAddress getAddr() const {
-    return server_->getAddr();
-  }
-
+  folly::SocketAddress getAddr() const;
   folly::SemiFuture<folly::File> takeoverStop();
 
   Mountd(const Mountd&) = delete;

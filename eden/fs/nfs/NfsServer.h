@@ -10,8 +10,7 @@
 #include <tuple>
 #include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/nfs/Mountd.h"
-#include "eden/fs/nfs/Nfsd3.h"
-#include "eden/fs/nfs/portmap/Rpcbindd.h"
+#include "eden/fs/nfs/rpc/RpcServer.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 
 namespace folly {
@@ -20,9 +19,13 @@ class Executor;
 
 namespace facebook::eden {
 
+class FsEventLogger;
 class Notifier;
+class NfsDispatcher;
 class ProcessNameCache;
 class PrivHelper;
+class Rpcbindd;
+class Nfsd3;
 
 class NfsServer {
  public:

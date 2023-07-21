@@ -12,7 +12,7 @@
 
 #include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/nfs/NfsDispatcher.h"
-#include "eden/fs/nfs/rpc/Server.h"
+#include "eden/fs/nfs/rpc/RpcServer.h"
 #include "eden/fs/telemetry/TraceBus.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/ProcessAccessLog.h"

@@ -11,17 +11,18 @@
 // https://tools.ietf.org/html/rfc1813#page-106
 
 #include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/nfs/Mountd.h"
-#include "eden/fs/nfs/rpc/Server.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
+class EventBase;
 class Executor;
-}
+} // namespace folly
 
 namespace facebook::eden {
 
 class RpcbinddServerProcessor;
+class StructuredLogger;
+class RpcServer;
 
 class Rpcbindd {
  public:
