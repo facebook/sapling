@@ -111,6 +111,7 @@ export class ChunkSelectState extends SelfUpdate<ChunkSelectRecord> {
               // then remove this line.
               otherLine.bits = 0b101;
               otherLine.selected = null;
+              otherLine.bLine = line.bLine;
               otherLine.sign = '!-';
               line.bits = 0;
               break;

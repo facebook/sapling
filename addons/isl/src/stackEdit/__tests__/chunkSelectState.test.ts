@@ -58,8 +58,8 @@ describe('ChunkSelectState', () => {
       expect(renderLines(state)).toMatchObject([
         '[x] -  1    aa',
         '[x] -  2    bb',
-        '   !-  3    cc',
-        '   !-  4    dd',
+        '   !-  3  1 cc',
+        '   !-  4  2 dd',
         '[ ] +     3 ee',
         '[ ] +     4 ff',
       ]);
