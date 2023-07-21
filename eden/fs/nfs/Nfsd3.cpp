@@ -2061,7 +2061,7 @@ void Nfsd3::initialize(folly::File connectedSocket) {
   server_->initializeConnectedSocket(std::move(connectedSocket));
 }
 
-folly::Future<folly::Unit> Nfsd3::unmount() {
+folly::SemiFuture<folly::Unit> Nfsd3::unmount() {
   return privHelper_->nfsUnmount(mountPath_.view());
 }
 

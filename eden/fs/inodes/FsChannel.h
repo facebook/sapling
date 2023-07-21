@@ -44,21 +44,6 @@ class FsChannel {
 
  public:
   /**
-   * Returns a short, human-readable (or at least loggable) name for this
-   * FsChannel type.
-   *
-   * e.g. "fuse", "nfs3", "prjfs"
-   */
-  virtual const char* getName() const = 0;
-
-  /**
-   * Ask this FsChannel to stop for a takeover request.
-   *
-   * Returns true if takeover is supported and a takeover attempt has begun.
-   */
-  virtual bool takeoverStop() = 0;
-
-  /**
    * Neither FuseChannel and Nfsd3 can be deleted from arbitrary threads.
    *
    * destroy() initiates the destruction process, but the delete will occur on
@@ -67,6 +52,14 @@ class FsChannel {
    * The FsChannel may not be accessed after destroy() is called.
    */
   virtual void destroy() = 0;
+
+  /**
+   * Returns a short, human-readable (or at least loggable) name for this
+   * FsChannel type.
+   *
+   * e.g. "fuse", "nfs3", "prjfs"
+   */
+  virtual const char* getName() const = 0;
 
   /**
    * An FsChannel must be initialized after construction. This process begins
@@ -78,6 +71,18 @@ class FsChannel {
    * process is initiated by the kernel and not by FuseChannel.
    */
   FOLLY_NODISCARD virtual folly::Future<StopFuture> initialize() = 0;
+
+  /**
+   * Ask this FsChannel to remove itself from the filesystem.
+   */
+  FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> unmount() = 0;
+
+  /**
+   * Ask this FsChannel to stop for a takeover request.
+   *
+   * Returns true if takeover is supported and a takeover attempt has begun.
+   */
+  virtual bool takeoverStop() = 0;
 
   /**
    * Returns the ProcessAccessLog used to track this channel's filesystem

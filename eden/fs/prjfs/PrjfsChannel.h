@@ -535,11 +535,6 @@ class PrjfsChannel : public FsChannel {
     return "prjfs";
   }
 
-  bool takeoverStop() override {
-    // ProjFS does not support takeover.
-    return false;
-  }
-
   /**
    * Stop the PrjfsChannel.
    *
@@ -549,7 +544,12 @@ class PrjfsChannel : public FsChannel {
    * PrjfsChannel must not be destructed until the returned future is
    * fulfilled.
    */
-  folly::SemiFuture<folly::Unit> stop();
+  folly::SemiFuture<folly::Unit> unmount() override;
+
+  bool takeoverStop() override {
+    // ProjFS does not support takeover.
+    return false;
+  }
 
   struct StopData : FsStopData {
     bool isUnmounted() override;

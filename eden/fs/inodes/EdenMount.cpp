@@ -986,58 +986,47 @@ folly::SemiFuture<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
 }
 
 folly::SemiFuture<folly::Unit> EdenMount::unmount() {
-  return folly::makeFutureWith([this] {
-    auto mountingUnmountingState = mountingUnmountingState_.wlock();
-    if (mountingUnmountingState->fsChannelUnmountStarted()) {
-      return mountingUnmountingState->fsChannelUnmountPromise->getFuture();
-    }
-    mountingUnmountingState->fsChannelUnmountPromise.emplace();
-    if (!mountingUnmountingState->fsChannelMountStarted()) {
-      return folly::makeFuture();
-    }
-    auto mountFuture =
-        mountingUnmountingState->fsChannelMountPromise->getFuture();
-    mountingUnmountingState.unlock();
+  auto mountingUnmountingState = mountingUnmountingState_.wlock();
+  if (mountingUnmountingState->fsChannelUnmountStarted()) {
+    return mountingUnmountingState->fsChannelUnmountPromise->getFuture();
+  }
+  mountingUnmountingState->fsChannelUnmountPromise.emplace();
+  if (!mountingUnmountingState->fsChannelMountStarted()) {
+    return folly::makeFuture();
+  }
+  auto mountFuture =
+      mountingUnmountingState->fsChannelMountPromise->getFuture();
+  mountingUnmountingState.unlock();
 
-    return std::move(mountFuture)
-        .thenTry([this](Try<Unit>&& mountResult) {
-          if (mountResult.hasException()) {
-            return folly::makeFuture();
-          }
-#ifdef _WIN32
-          if (auto* channel = getPrjfsChannel()) {
-            return channel->stop()
-                .via(getServerThreadPool().get())
-                .ensure([this] { channel_.reset(); });
-          } else {
-            return folly::makeFutureWith([]() { NOT_IMPLEMENTED(); });
-          }
-#else
-          // TODO: teach windows to unmount NFS
-          if (auto* nfsChannel = getNfsdChannel()) {
-            return nfsChannel->unmount();
-          } else if (auto* fuseChannel = getFuseChannel()) {
-            // TODO: Is it safe to call FuseChannel::unmount if the FuseChannel
-            // is in the process of starting? Or can we assume that
-            // mountResult.hasException() above covers that case?
-            return fuseChannel->unmount();
-          } else {
-            throw std::runtime_error(
-                "attempting to unmount() an EdenMount without an FsChannel");
-          }
-#endif
-        })
-        .thenTry([this](Try<Unit>&& result) noexcept -> folly::Future<Unit> {
-          auto mountingUnmountingState = mountingUnmountingState_.wlock();
-          XDCHECK(mountingUnmountingState->fsChannelUnmountPromise.has_value());
-          folly::SharedPromise<folly::Unit>* unsafeUnmountPromise =
-              &*mountingUnmountingState->fsChannelUnmountPromise;
-          mountingUnmountingState.unlock();
+  return std::move(mountFuture)
+      .thenTry([this](Try<Unit>&& mountResult) {
+        if (mountResult.hasException()) {
+          return folly::makeSemiFuture();
+        }
+        if (!channel_) {
+          throw std::runtime_error(
+              "attempting to unmount() an EdenMount without an FsChannel");
+        }
+        // If a Future then callback returns a SemiFuture, that SemiFuture is
+        // attached to the implied InlineExecutor.
+        // Therefore, the the following callback will be guaranteed to be fixup
+        // the mountingUnmountingState, even if the returned SemiFuture is
+        // dropped.
+        // TODO: Is it safe to call FsChannel::unmount if the FuseChannel
+        // is in the process of starting? Or can we assume that
+        // mountResult.hasException() above covers that case?
+        return channel_->unmount();
+      })
+      .thenTry([this](Try<Unit>&& result) noexcept -> folly::Future<Unit> {
+        auto mountingUnmountingState = mountingUnmountingState_.wlock();
+        XDCHECK(mountingUnmountingState->fsChannelUnmountPromise.has_value());
+        folly::SharedPromise<folly::Unit>* unsafeUnmountPromise =
+            &*mountingUnmountingState->fsChannelUnmountPromise;
+        mountingUnmountingState.unlock();
 
-          unsafeUnmountPromise->setTry(Try<Unit>{result});
-          return folly::makeFuture<folly::Unit>(std::move(result));
-        });
-  });
+        unsafeUnmountPromise->setTry(Try<Unit>{result});
+        return folly::makeFuture<folly::Unit>(std::move(result));
+      });
 }
 
 const shared_ptr<UnboundedQueueExecutor>& EdenMount::getServerThreadPool()
