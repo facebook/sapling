@@ -6,77 +6,64 @@
  */
 
 import type {RangeInfo} from './TextEditable';
-import type {ChunkSelectState} from './stackEdit/chunkSelectState';
+import type {ChunkSelectState, LineRegion, SelectLine} from './stackEdit/chunkSelectState';
 
 import {TextEditable} from './TextEditable';
 import {T, t} from './i18n';
-import {Set as ImSet, Range} from 'immutable';
+import {Set as ImSet} from 'immutable';
 import {useRef, useState} from 'react';
+import {notEmpty} from 'shared/utils';
 
 import './PartialFileSelection.css';
 
-export function PartialFileSelection(props: {
+type Props = {
   chunkSelection: ChunkSelectState;
   setChunkSelection: (state: ChunkSelectState) => void;
-}) {
+};
+
+export function PartialFileSelection(props: Props) {
   // States for context line expansion.
   const [expandedALines, setExpandedALines] = useState<ImSet<number>>(ImSet);
   const [currentCaretLine, setCurrentSelLine] = useState<number>(-1);
 
   // State for range selection.
-  const lastLine = useRef(-1);
+  const lastLine = useRef<SelectLine | null>(null);
 
-  const lines = props.chunkSelection.getLines();
+  const lineRegions = props.chunkSelection.getLineRegions({
+    expandedALines,
+    expandedSelLine: currentCaretLine,
+  });
 
+  // Toggle selection of a line or a region.
   const handlePointerDown = (
-    lineIdx: number,
-    chunk = false,
+    line: SelectLine,
+    region: LineRegion | null,
     e: React.PointerEvent<HTMLDivElement>,
   ) => {
-    const line = lines[lineIdx];
     if (e.isPrimary && line.selected !== null) {
       const selected = !line.selected;
       const lineSelects: Array<[number, boolean]> = [];
-      if (chunk) {
-        // "Flood fill" surrounding lines with the same selection state.
-        for (let i = lineIdx + 1; i < lines.length && lines[i].selected === line.selected; i++) {
-          lineSelects.push([lines[i].rawIndex, selected]);
-        }
-        for (let i = lineIdx; i >= 0 && lines[i].selected === line.selected; i--) {
-          lineSelects.push([lines[i].rawIndex, selected]);
-        }
+      if (region) {
+        region.lines.forEach(line => {
+          lineSelects.push([line.rawIndex, selected]);
+        });
       } else {
         lineSelects.push([line.rawIndex, selected]);
       }
       const newSelection = props.chunkSelection.setSelectedLines(lineSelects);
-      lastLine.current = lineIdx;
+      lastLine.current = line;
       props.setChunkSelection(newSelection);
     }
   };
 
-  const handlePointerEnter = (lineIdx: number, e: React.PointerEvent<HTMLDivElement>) => {
-    const line = lines[lineIdx];
-    if (e.buttons === 1 && line.selected !== null && lastLine.current !== lineIdx) {
+  // Toogle selection of a single line.
+  const handlePointerEnter = (line: SelectLine, e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.buttons === 1 && line.selected !== null && lastLine.current?.rawIndex !== line.rawIndex) {
       const newSelection = props.chunkSelection.setSelectedLines([[line.rawIndex, !line.selected]]);
-      lastLine.current = lineIdx;
+      lastLine.current = line;
       props.setChunkSelection(newSelection);
     }
   };
-
-  // Skip unchanged lines.
-  const contextCount = 2;
-  const skipLines = Array<boolean>(lines.length + contextCount).fill(true);
-  lines.forEach((line, i) => {
-    if (
-      line.sign !== '' ||
-      expandedALines.has(line.aLine ?? -1) ||
-      line.selLine === currentCaretLine
-    ) {
-      for (let j = i + contextCount; j >= 0 && j >= i - contextCount && skipLines[j]; j--) {
-        skipLines[j] = false;
-      }
-    }
-  });
 
   // Needed by TextEditable. Ranges of text on the right side.
   const rangeInfos: RangeInfo[] = [];
@@ -88,22 +75,19 @@ export function PartialFileSelection(props: {
   const lineANumber: JSX.Element[] = [];
   const lineBNumber: JSX.Element[] = [];
 
-  let skipping = false;
-  let skipStart = -1;
-
-  const insertContextLines = (i: number) => {
+  const insertContextLines = (lines: Readonly<SelectLine[]>) => {
     // Capture `skipStart` and `i` in a local variable inside loop body.
-    const skipRange = Range(skipStart, i);
     const handleExpand = () => {
       // Only the "unchanged" lines need expansion.
       // We use line numbers on the "a" side, which remains "stable" regardless of editing.
-      const newLines = skipRange.map(j => lines[j].aLine ?? -1).filter(i => i >= 0);
+      const newLines = lines.map(l => l.aLine).filter(notEmpty);
       const newSet = expandedALines.union(newLines);
       setExpandedALines(newSet);
     };
+    const key = lines[0].rawIndex;
     const contextLineContent = (
       <div
-        key={i - 1}
+        key={key}
         className="line line-context"
         title={t('Click to expand lines.')}
         onClick={handleExpand}
@@ -111,95 +95,89 @@ export function PartialFileSelection(props: {
     );
     lineAContent.push(contextLineContent);
     lineBContent.push(contextLineContent);
-    const contextLineNumber = <div key={i - 1} className="line-number line-context" />;
+    const contextLineNumber = <div key={key} className="line-number line-context" />;
     lineANumber.push(contextLineNumber);
     lineBNumber.push(contextLineNumber);
   };
 
-  lines.forEach((line, i) => {
-    let dataRangeId = undefined;
-    // Provide `RangeInfo` for editing, if the line exists in the selection version.
-    if (line.selLine !== null) {
-      const end = start + line.data.length;
-      dataRangeId = rangeInfos.length;
-      rangeInfos.push({start, end});
-      start = end;
+  lineRegions.forEach(region => {
+    if (region.collapsed) {
+      // Draw "~~~" between chunks.
+      insertContextLines(region.lines);
     }
 
-    if (skipLines[i]) {
-      if (!skipping) {
-        skipStart = i;
+    region.lines.forEach(line => {
+      let dataRangeId = undefined;
+      // Provide `RangeInfo` for editing, if the line exists in the selection version.
+      if (line.selLine !== null) {
+        const end = start + line.data.length;
+        dataRangeId = rangeInfos.length;
+        rangeInfos.push({start, end});
+        start = end;
       }
-      skipping = true;
-      return;
-    }
-    let rowClass =
-      line.selected === null ? 'unselectable' : line.selected ? 'selected ' : 'deselected';
 
-    // Draw "~~~" between chunks.
-    if (skipping) {
-      insertContextLines(i);
-      skipping = false;
-    }
+      if (region.collapsed) {
+        return;
+      }
 
-    // Draw the actual line and line numbers.
-    let aLineData = line.data;
-    const bLineData = dataRangeId === undefined ? '\n' : line.data;
-    if (line.sign === '+') {
-      if (line.selected) {
+      let rowClass =
+        line.selected === null ? 'unselectable' : line.selected ? 'selected ' : 'deselected';
+
+      // Draw the actual line and line numbers.
+      let aLineData = line.data;
+      const bLineData = dataRangeId === undefined ? '\n' : line.data;
+      if (line.sign === '+') {
+        if (line.selected) {
+          aLineData = '\n';
+        }
+        rowClass += ' line-add';
+      } else if (line.sign === '!+') {
         aLineData = '\n';
+        rowClass += ' line-force-add';
+      } else if (line.sign === '-') {
+        rowClass += ' line-del';
+      } else if (line.sign === '!-') {
+        rowClass += ' line-force-del';
       }
-      rowClass += ' line-add';
-    } else if (line.sign === '!+') {
-      aLineData = '\n';
-      rowClass += ' line-force-add';
-    } else if (line.sign === '-') {
-      rowClass += ' line-del';
-    } else if (line.sign === '!-') {
-      rowClass += ' line-force-del';
-    }
 
-    const lineNumberProps = {
-      onPointerDown: handlePointerDown.bind(null, i, false),
-      onPointerEnter: handlePointerEnter.bind(null, i),
-      title:
-        line.selected == null
-          ? undefined
-          : t('Click to toggle line selection. Drag for range selection.'),
-    };
+      const lineNumberProps = {
+        onPointerDown: handlePointerDown.bind(null, line, null),
+        onPointerEnter: handlePointerEnter.bind(null, line),
+        title:
+          line.selected == null
+            ? undefined
+            : t('Click to toggle line selection. Drag for range selection.'),
+      };
 
-    const lineContentProps = {
-      onPointerDown: handlePointerDown.bind(null, i, true),
-      title: line.selected == null ? undefined : t('Click to toggle chunk selection.'),
-    };
+      const lineContentProps = {
+        onPointerDown: handlePointerDown.bind(null, line, region),
+        title: line.selected == null ? undefined : t('Click to toggle chunk selection.'),
+      };
 
-    lineAContent.push(
-      <div key={i} className={`line line-a ${rowClass}`} {...lineContentProps}>
-        {aLineData}
-      </div>,
-    );
-    lineBContent.push(
-      <div key={i} className={`line line-b ${rowClass}`} data-range-id={dataRangeId}>
-        {bLineData}
-      </div>,
-    );
+      const key = line.rawIndex;
+      lineAContent.push(
+        <div key={key} className={`line line-a ${rowClass}`} {...lineContentProps}>
+          {aLineData}
+        </div>,
+      );
+      lineBContent.push(
+        <div key={key} className={`line line-b ${rowClass}`} data-range-id={dataRangeId}>
+          {bLineData}
+        </div>,
+      );
 
-    lineANumber.push(
-      <div key={i} className={`line-number line-a ${rowClass}`} {...lineNumberProps}>
-        {line.aLine ?? '\n'}
-      </div>,
-    );
-    lineBNumber.push(
-      <div key={i} className={`line-number line-b ${rowClass}`} {...lineNumberProps}>
-        {line.selLine ?? '\n'}
-      </div>,
-    );
+      lineANumber.push(
+        <div key={key} className={`line-number line-a ${rowClass}`} {...lineNumberProps}>
+          {line.aLine ?? '\n'}
+        </div>,
+      );
+      lineBNumber.push(
+        <div key={key} className={`line-number line-b ${rowClass}`} {...lineNumberProps}>
+          {line.selLine ?? '\n'}
+        </div>,
+      );
+    });
   });
-
-  if (skipping) {
-    insertContextLines(lines.length);
-    skipping = false;
-  }
 
   const textValue = props.chunkSelection.getSelectedText();
   const handleTextChange = (text: string) => {
