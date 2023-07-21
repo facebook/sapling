@@ -1228,11 +1228,6 @@ class localrepository(object):
                 if heads:
                     visibility.add(self, heads)
 
-        # Force recalculating `public()` so the `VerLink` can be compatible
-        # with the updated dag, to enable fast paths.
-        if heads or remotenamechanges:
-            self.invalidatevolatilesets()
-
     def conn(self, source="default", **opts):
         """Create a connection from the connection pool"""
         from . import hg  # avoid cycle
@@ -1844,6 +1839,16 @@ class localrepository(object):
                 if node != nullid:
                     mainnodes.append(node)
             cl.inner.flush(mainnodes)
+
+            # flush(mainnodes) might reassign ids that makes the cached `public()`
+            # incompatible (force slow paths). Invalidate cached `public()` to
+            # avoid slow paths.
+            # Note: invalidation is not done in the phase cache. See D47478975
+            # and S353203.
+            new_version = cl.dag.version()
+            old_version = repo.dageval(lambda: public()).hints().get("dag_version")
+            if old_version is None or old_version.cmp(new_version) is None:
+                repo.invalidatevolatilesets()
 
         def writependingchangelog(tr):
             repo = reporef()

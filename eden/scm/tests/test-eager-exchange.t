@@ -278,6 +278,7 @@ Test that auto pull invalidates public() properly:
     D7
     D8
     D9
+    >>> assert 'resolve ids (' not in _
 
 Test that filtering revset does not use sequential fetches.
 
