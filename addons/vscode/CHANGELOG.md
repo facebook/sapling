@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.18
+
+- Allow pressing Enter to quick commit
+- Add button to open a file in the comparison view
+- Add tooltip to copy filenames in the comparison view
+- Fix white line artifact when selecting a commit
+- Fix PR links in blame hover
+
 ## 0.1.17
 
 - Add dropdown to pull a specific commit from remote
