@@ -41,11 +41,11 @@ def shellenv(env: Env, stdin=None, stdout=None, stderr=None):
             pass
         sys.argv = env.args
         if stdin is not None:
-            sys.stdin = WrapStdIO(stdin)
+            sys.stdin = WrapStdIO(stdin, newline="\n")
         if stdout is not None:
-            sys.stdout = WrapStdIO(stdout)
+            sys.stdout = WrapStdIO(stdout, newline="\n")
         if stderr is not None:
-            sys.stderr = WrapStdIO(stderr)
+            sys.stderr = WrapStdIO(stderr, newline="\n")
         yield
     finally:
         try:
