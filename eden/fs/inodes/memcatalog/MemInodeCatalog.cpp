@@ -183,4 +183,14 @@ std::optional<fsck::InodeInfo> MemInodeCatalog::loadInodeInfo(
     FOLLY_MAYBE_UNUSED InodeNumber number) {
   return std::nullopt;
 }
+
+InodeNumber MemInodeCatalog::scanLocalChanges(
+    FOLLY_MAYBE_UNUSED std::shared_ptr<const EdenConfig> config,
+    FOLLY_MAYBE_UNUSED AbsolutePathPiece mountPath,
+    FOLLY_MAYBE_UNUSED InodeCatalog::LookupCallback& callback) {
+#ifdef _WIN32
+  windowsFsckScanLocalChanges(config, *this, mountPath, callback);
+#endif
+  return InodeNumber{nextInode_.load()};
+}
 } // namespace facebook::eden

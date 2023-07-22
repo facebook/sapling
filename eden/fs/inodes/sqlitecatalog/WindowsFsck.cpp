@@ -80,9 +80,7 @@ std::optional<overlay::OverlayEntry> getEntryFromOverlayDir(
   }
 }
 
-void removeChildRecursively(
-    SqliteInodeCatalog& inodeCatalog,
-    InodeNumber inode) {
+void removeChildRecursively(InodeCatalog& inodeCatalog, InodeNumber inode) {
   XLOGF(DBG9, "Removing directory inode = {} ", inode);
   if (auto dir = inodeCatalog.loadOverlayDir(inode)) {
     const auto& entries = dir->entries_ref();
@@ -102,7 +100,7 @@ void removeChildRecursively(
 // This is different from `inodeCatalog.removeChild` as it does not remove
 // directory recursively.
 void removeOverlayEntry(
-    SqliteInodeCatalog& inodeCatalog,
+    InodeCatalog& inodeCatalog,
     InodeNumber parent,
     PathComponentPiece name,
     const overlay::OverlayEntry& entry) {
@@ -310,7 +308,7 @@ void populateScmState(FsckFileState& state, const TreeEntry& treeEntry) {
 }
 
 InodeNumber addOrUpdateOverlay(
-    SqliteInodeCatalog& inodeCatalog,
+    InodeCatalog& inodeCatalog,
     InodeNumber parentInodeNum,
     PathComponentPiece name,
     dtype_t dtype,
@@ -346,7 +344,7 @@ enum class DirectoryOnDiskState { Full, Placeholder };
 
 std::optional<InodeNumber> fixup(
     FsckFileState& state,
-    SqliteInodeCatalog& inodeCatalog,
+    InodeCatalog& inodeCatalog,
     RelativePathPiece path,
     InodeNumber parentInodeNum,
     const PathMap<overlay::OverlayEntry>& insensitiveOverlayDir,
@@ -511,13 +509,13 @@ PathMap<FsckFileState> populateOnDiskChildrenState(
  * the path and scmTree argument, this function will copy them if needed.
  */
 ImmediateFuture<bool> processChildren(
-    SqliteInodeCatalog& inodeCatalog,
+    InodeCatalog& inodeCatalog,
     RelativePathPiece path,
     AbsolutePathPiece root,
     InodeNumber inodeNumber,
     const PathMap<overlay::OverlayEntry>& insensitiveOverlayDir,
     const std::shared_ptr<const Tree>& scmTree,
-    const OverlayChecker::LookupCallback& callback,
+    const InodeCatalog::LookupCallback& callback,
     uint64_t logFrequency,
     std::atomic<uint64_t>& traversedDirectories,
     bool fsckRenamedFiles,
@@ -672,9 +670,9 @@ ImmediateFuture<bool> processChildren(
 
 void windowsFsckScanLocalChanges(
     std::shared_ptr<const EdenConfig> config,
-    SqliteInodeCatalog& inodeCatalog,
+    InodeCatalog& inodeCatalog,
     AbsolutePathPiece mountPath,
-    OverlayChecker::LookupCallback& callback) {
+    InodeCatalog::LookupCallback& callback) {
   XLOGF(INFO, "Start scanning {}", mountPath);
   if (auto view = inodeCatalog.loadOverlayDir(kRootNodeId)) {
     auto insensitiveOverlayDir = toPathMap(*view);

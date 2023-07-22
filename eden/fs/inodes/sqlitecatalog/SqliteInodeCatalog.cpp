@@ -119,7 +119,7 @@ std::vector<InodeNumber> SqliteInodeCatalog::getAllParentInodeNumbers() {
 InodeNumber SqliteInodeCatalog::scanLocalChanges(
     std::shared_ptr<const EdenConfig> config,
     AbsolutePathPiece mountPath,
-    FOLLY_MAYBE_UNUSED OverlayChecker::LookupCallback& callback) {
+    FOLLY_MAYBE_UNUSED InodeCatalog::LookupCallback& callback) {
 #ifdef _WIN32
   windowsFsckScanLocalChanges(config, *this, mountPath, callback);
 #else

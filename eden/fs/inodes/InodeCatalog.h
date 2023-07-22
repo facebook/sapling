@@ -12,7 +12,9 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/OverlayCheckerUtil.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
+#include "eden/fs/model/Tree.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifdef __APPLE__
@@ -28,6 +30,8 @@ class IOBuf;
 } // namespace folly
 
 namespace facebook::eden {
+
+class EdenConfig;
 
 /**
  * Interface for tracking inode relationships.
@@ -147,6 +151,28 @@ class InodeCatalog {
       InodeNumber /* dst */,
       PathComponentPiece /* srcName */,
       PathComponentPiece /* destName */) {
+    EDEN_BUG() << "UNIMPLEMENTED";
+  }
+
+  virtual InodeNumber nextInodeNumber() {
+    EDEN_BUG() << "UNIMPLEMENTED";
+  }
+
+  using LookupCallbackValue =
+      std::variant<std::shared_ptr<const Tree>, TreeEntry>;
+  using LookupCallback = std::function<ImmediateFuture<LookupCallbackValue>(
+      const std::shared_ptr<const Tree>&,
+      RelativePathPiece)>;
+
+  /**
+   * Scan filesystem changes when EdenFS is not running. This is only required
+   * on Windows as ProjectedFS allows user to make changes under certain
+   * directory when EdenFS is not running.
+   */
+  virtual InodeNumber scanLocalChanges(
+      FOLLY_MAYBE_UNUSED std::shared_ptr<const EdenConfig> config,
+      FOLLY_MAYBE_UNUSED AbsolutePathPiece mountPath,
+      FOLLY_MAYBE_UNUSED LookupCallback& callback) {
     EDEN_BUG() << "UNIMPLEMENTED";
   }
 

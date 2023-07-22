@@ -218,7 +218,7 @@ folly::SemiFuture<Unit> Overlay::initialize(
     std::shared_ptr<const EdenConfig> config,
     std::optional<AbsolutePath> mountPath,
     OverlayChecker::ProgressCallback&& progressCallback,
-    OverlayChecker::LookupCallback&& lookupCallback) {
+    InodeCatalog::LookupCallback&& lookupCallback) {
   // The initOverlay() call is potentially slow, so we want to avoid
   // performing it in the current thread and blocking returning to our caller.
   //
@@ -257,7 +257,7 @@ void Overlay::initOverlay(
     std::shared_ptr<const EdenConfig> config,
     std::optional<AbsolutePath> mountPath,
     FOLLY_MAYBE_UNUSED const OverlayChecker::ProgressCallback& progressCallback,
-    FOLLY_MAYBE_UNUSED OverlayChecker::LookupCallback& lookupCallback) {
+    FOLLY_MAYBE_UNUSED InodeCatalog::LookupCallback& lookupCallback) {
   IORequest req{this};
   auto optNextInodeNumber =
       inodeCatalog_->initOverlay(/*createIfNonExisting=*/true);
@@ -321,9 +321,8 @@ void Overlay::initOverlay(
   // here to skip scanning in that case.
   if (folly::kIsWindows && mountPath.has_value()) {
     folly::stop_watch<> fsckRuntime;
-    optNextInodeNumber =
-        dynamic_cast<SqliteInodeCatalog*>(inodeCatalog_.get())
-            ->scanLocalChanges(std::move(config), *mountPath, lookupCallback);
+    optNextInodeNumber = inodeCatalog_->scanLocalChanges(
+        std::move(config), *mountPath, lookupCallback);
     auto fsckRuntimeInSeconds =
         std::chrono::duration<double>{fsckRuntime.elapsed()}.count();
     structuredLogger_->logEvent(Fsck{

@@ -47,14 +47,14 @@ struct OverlayChecker::Impl {
   InodeCatalog* const inodeCatalog;
   FileContentStore* const fcs;
   std::optional<InodeNumber> loadedNextInodeNumber;
-  LookupCallback& lookupCallback;
+  InodeCatalog::LookupCallback& lookupCallback;
   std::unordered_map<InodeNumber, InodeInfo> inodes;
 
   Impl(
       InodeCatalog* inodeCatalog,
       FileContentStore* fcs,
       std::optional<InodeNumber> nextInodeNumber,
-      LookupCallback& lookupCallback)
+      InodeCatalog::LookupCallback& lookupCallback)
       : inodeCatalog{inodeCatalog},
         fcs{fcs},
         loadedNextInodeNumber{nextInodeNumber},
@@ -747,7 +747,7 @@ OverlayChecker::OverlayChecker(
     InodeCatalog* inodeCatalog,
     FileContentStore* fcs,
     optional<InodeNumber> nextInodeNumber,
-    LookupCallback& lookupCallback)
+    InodeCatalog::LookupCallback& lookupCallback)
     : impl_{std::make_unique<Impl>(
           inodeCatalog,
           fcs,

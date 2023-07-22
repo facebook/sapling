@@ -92,7 +92,7 @@ class SqliteInodeCatalog : public InodeCatalog {
       PathComponentPiece srcName,
       PathComponentPiece dstName) override;
 
-  InodeNumber nextInodeNumber();
+  InodeNumber nextInodeNumber() override;
 
   /**
    * Scan filesystem changes when EdenFS is not running. This is only required
@@ -102,7 +102,7 @@ class SqliteInodeCatalog : public InodeCatalog {
   InodeNumber scanLocalChanges(
       std::shared_ptr<const EdenConfig> config,
       AbsolutePathPiece mountPath,
-      OverlayChecker::LookupCallback& callback);
+      InodeCatalog::LookupCallback& callback) override;
 
   void maintenance() override {
     store_.maintenance();

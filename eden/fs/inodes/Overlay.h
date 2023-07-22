@@ -129,9 +129,9 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       std::shared_ptr<const EdenConfig> config,
       std::optional<AbsolutePath> mountPath = std::nullopt,
       OverlayChecker::ProgressCallback&& progressCallback = [](auto) {},
-      OverlayChecker::LookupCallback&& lookupCallback =
+      InodeCatalog::LookupCallback&& lookupCallback =
           [](auto, auto) {
-            return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+            return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
                 std::runtime_error("no lookup callback"));
           });
 
@@ -340,7 +340,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       std::shared_ptr<const EdenConfig> config,
       std::optional<AbsolutePath> mountPath,
       const OverlayChecker::ProgressCallback& progressCallback,
-      OverlayChecker::LookupCallback& lookupCallback);
+      InodeCatalog::LookupCallback& lookupCallback);
   void gcThread() noexcept;
   void handleGCRequest(GCRequest& request);
 

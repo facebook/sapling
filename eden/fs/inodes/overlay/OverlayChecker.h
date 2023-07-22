@@ -53,11 +53,6 @@ class OverlayChecker {
   };
 
   using ProgressCallback = std::function<void(uint16_t)>;
-  using LookupCallbackValue =
-      std::variant<std::shared_ptr<const Tree>, TreeEntry>;
-  using LookupCallback = std::function<ImmediateFuture<LookupCallbackValue>(
-      const std::shared_ptr<const Tree>&,
-      RelativePathPiece)>;
 
   /**
    * Create a new OverlayChecker.
@@ -71,7 +66,7 @@ class OverlayChecker {
       InodeCatalog* inodeCatalog,
       FileContentStore* fcs,
       std::optional<InodeNumber> nextInodeNumber,
-      LookupCallback& lookupCallback);
+      InodeCatalog::LookupCallback& lookupCallback);
 
   ~OverlayChecker();
 

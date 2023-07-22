@@ -376,8 +376,8 @@ TEST_P(FsckTest, testNoErrors) {
     nextInode = catalog->initOverlay(/*createIfNonExisting=*/true);
     fcs.initialize(/*createIfNonExisting=*/false);
   }
-  OverlayChecker::LookupCallback lookup = [](auto&&, auto&&) {
-    return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+  InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
   OverlayChecker checker(catalog, &fcs, nextInode, lookup);
@@ -420,8 +420,8 @@ TEST_P(FsckTest, testMissingNextInodeNumber) {
   auto nextInode = catalog->initOverlay(/*createIfNonExisting=*/false);
   // Confirm there is no next inode data
   EXPECT_FALSE(nextInode.has_value());
-  OverlayChecker::LookupCallback lookup = [](auto&&, auto&&) {
-    return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+  InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
   OverlayChecker checker(catalog, &fcs, nextInode, lookup);
@@ -454,8 +454,8 @@ TEST_P(FsckTest, testBadNextInodeNumber) {
   InodeCatalog* catalog = testOverlay->inodeCatalog();
   auto nextInode = catalog->initOverlay(/*createIfNonExisting=*/false);
   EXPECT_EQ(2, nextInode ? nextInode->get() : 0);
-  OverlayChecker::LookupCallback lookup = [](auto&&, auto&&) {
-    return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+  InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
   OverlayChecker checker(catalog, &fcs, nextInode, lookup);
@@ -478,8 +478,8 @@ TEST_P(FsckTest, testBadFileData) {
   std::string badHeader(FileContentStore::kHeaderLength, 0x55);
   testOverlay->corruptInodeHeader(layout.src_foo_testTxt.number(), badHeader);
 
-  OverlayChecker::LookupCallback lookup = [](auto&&, auto&&) {
-    return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+  InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
   OverlayChecker checker(
@@ -531,8 +531,8 @@ TEST_P(FsckTest, testTruncatedDirData) {
   auto srcDataFile = testOverlay->fcs().openFileNoVerify(layout.src.number());
   folly::checkUnixError(ftruncate(srcDataFile.fd(), 0), "truncate failed");
 
-  OverlayChecker::LookupCallback lookup = [](auto&&, auto&&) {
-    return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+  InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
   OverlayChecker checker(
@@ -629,8 +629,8 @@ TEST_P(FsckTest, testMissingDirData) {
   // subtree.
   testOverlay->inodeCatalog()->removeOverlayDir(layout.src_foo_x.number());
 
-  OverlayChecker::LookupCallback lookup = [](auto&&, auto&&) {
-    return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+  InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
   OverlayChecker checker(
@@ -719,8 +719,8 @@ TEST_P(FsckTest, testHardLink) {
   layout.src_foo.linkFile(layout.src_foo_x_y_zTxt.number(), "also_z.txt");
   layout.src_foo.save();
 
-  OverlayChecker::LookupCallback lookup = [](auto&&, auto&&) {
-    return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+  InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
   OverlayChecker checker(

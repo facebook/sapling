@@ -97,7 +97,17 @@ class MemInodeCatalog : public InodeCatalog {
       PathComponentPiece srcName,
       PathComponentPiece dstName) override;
 
-  InodeNumber nextInodeNumber();
+  InodeNumber nextInodeNumber() override;
+
+  /**
+   * Scan filesystem changes when EdenFS is not running. This is only required
+   * on Windows as ProjectedFS allows user to make changes under certain
+   * directory when EdenFS is not running.
+   */
+  InodeNumber scanLocalChanges(
+      std::shared_ptr<const EdenConfig> config,
+      AbsolutePathPiece mountPath,
+      InodeCatalog::LookupCallback& callback) override;
 
   std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number) override;
 
