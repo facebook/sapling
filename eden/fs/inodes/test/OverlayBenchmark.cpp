@@ -12,6 +12,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/DirEntry.h"
+#include "eden/fs/inodes/InodeCatalogType.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
@@ -20,10 +21,16 @@ using namespace facebook::eden;
 using namespace folly::string_piece_literals;
 
 DEFINE_string(overlayPath, "", "Directory where the test overlay is created");
+DEFINE_string(
+    overlayType,
+    kDefaultInodeCatalogType == InodeCatalogType::Sqlite ? "Sqlite" : "Legacy",
+    "Type of overlay to be used. Defaults: Windows - Sqlite; Linux|macOS - Legacy");
 
 namespace {
 
-void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
+void benchmarkOverlayTreeWrites(
+    AbsolutePathPiece overlayPath,
+    InodeCatalogType overlayType) {
   // A large mount will contain 500,000 trees. If they're all loaded, they
   // will all be written into the overlay. This benchmark simulates that
   // workload and measures how long it takes.
@@ -34,7 +41,7 @@ void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
   auto overlay = Overlay::create(
       overlayPath,
       kPathMapDefaultCaseSensitive,
-      kDefaultInodeCatalogType,
+      overlayType,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
@@ -112,7 +119,8 @@ int main(int argc, char* argv[]) {
   }
 
   auto overlayPath = normalizeBestEffort(FLAGS_overlayPath.c_str());
-  benchmarkOverlayTreeWrites(overlayPath);
+  auto overlayType = inodeCatalogTypeFromString(FLAGS_overlayType);
+  benchmarkOverlayTreeWrites(overlayPath, overlayType.value());
 
   return 0;
 }
