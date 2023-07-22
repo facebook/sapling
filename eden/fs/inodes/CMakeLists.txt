@@ -49,6 +49,7 @@ target_link_libraries(
     eden_inodes_inodenumber
     eden_inode_metadata
     eden_journal
+    eden_mem_catalog
     eden_model_git
     eden_nfs_dispatcher
     eden_nfs_nfsd3
@@ -114,5 +115,6 @@ target_link_libraries(
 
 add_subdirectory(overlay)
 add_subdirectory(fscatalog)
+add_subdirectory(memcatalog)
 add_subdirectory(sqlitecatalog)
 add_subdirectory(test)
