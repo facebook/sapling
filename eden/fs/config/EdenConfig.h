@@ -12,8 +12,6 @@
 #include <optional>
 #include <vector>
 
-#include <folly/portability/SysStat.h>
-#include <folly/portability/Unistd.h>
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
 
 #include "common/rust/shed/hostcaps/hostcaps.h"
