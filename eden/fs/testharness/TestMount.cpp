@@ -273,7 +273,7 @@ void TestMount::initialize(
     const RootId& initialCommitHash,
     FakeTreeBuilder& rootBuilder,
     bool startReady,
-    Overlay::InodeCatalogType inodeCatalogType) {
+    InodeCatalogType inodeCatalogType) {
   createMountWithoutInitializing(
       initialCommitHash, rootBuilder, startReady, inodeCatalogType);
   initializeEdenMount();
@@ -288,7 +288,7 @@ void TestMount::createMountWithoutInitializing(
     const RootId& initialCommitHash,
     FakeTreeBuilder& rootBuilder,
     bool startReady,
-    Overlay::InodeCatalogType inodeCatalogType) {
+    InodeCatalogType inodeCatalogType) {
   // Finalize rootBuilder and get the root Tree
   rootBuilder.finalize(backingStore_, startReady);
   auto rootTree = rootBuilder.getRoot();
@@ -303,7 +303,7 @@ void TestMount::createMountWithoutInitializing(
   createMount(inodeCatalogType);
 }
 
-void TestMount::createMount(Overlay::InodeCatalogType inodeCatalogType) {
+void TestMount::createMount(InodeCatalogType inodeCatalogType) {
   shared_ptr<ObjectStore> objectStore = ObjectStore::create(
       backingStore_,
       treeCache_,
@@ -343,7 +343,7 @@ void TestMount::initialize(FakeTreeBuilder& rootBuilder, bool startReady) {
 
 void TestMount::initialize(
     FakeTreeBuilder& rootBuilder,
-    Overlay::InodeCatalogType inodeCatalogType) {
+    InodeCatalogType inodeCatalogType) {
   initialize(
       nextCommitHash(), rootBuilder, /* startReady */ true, inodeCatalogType);
 }

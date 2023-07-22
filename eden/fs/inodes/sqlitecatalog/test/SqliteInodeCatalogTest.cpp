@@ -31,9 +31,9 @@
 namespace facebook::eden {
 
 class SqliteInodeCatalogTest
-    : public ::testing::TestWithParam<Overlay::InodeCatalogType> {
+    : public ::testing::TestWithParam<InodeCatalogType> {
  protected:
-  Overlay::InodeCatalogType overlayType() const {
+  InodeCatalogType overlayType() const {
     return GetParam();
   }
 
@@ -81,15 +81,15 @@ INSTANTIATE_TEST_SUITE_P(
     SqliteInodeCatalogTest,
     SqliteInodeCatalogTest,
     ::testing::Values(
-        Overlay::InodeCatalogType::Sqlite,
-        Overlay::InodeCatalogType::SqliteBuffered));
+        InodeCatalogType::Sqlite,
+        InodeCatalogType::SqliteBuffered));
 
 TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
-      Overlay::InodeCatalogType::Sqlite,
+      InodeCatalogType::Sqlite,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
@@ -102,7 +102,7 @@ TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean_buffered) {
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
-      Overlay::InodeCatalogType::SqliteBuffered,
+      InodeCatalogType::SqliteBuffered,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
@@ -116,7 +116,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean) {
     auto overlay = Overlay::create(
         canonicalPath(testDir.path().string()),
         kPathMapDefaultCaseSensitive,
-        Overlay::InodeCatalogType::Sqlite,
+        InodeCatalogType::Sqlite,
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
@@ -125,7 +125,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean) {
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
-      Overlay::InodeCatalogType::Sqlite,
+      InodeCatalogType::Sqlite,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
@@ -139,7 +139,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean_buffered) {
     auto overlay = Overlay::create(
         canonicalPath(testDir.path().string()),
         kPathMapDefaultCaseSensitive,
-        Overlay::InodeCatalogType::SqliteBuffered,
+        InodeCatalogType::SqliteBuffered,
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
@@ -148,7 +148,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean_buffered) {
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
-      Overlay::InodeCatalogType::SqliteBuffered,
+      InodeCatalogType::SqliteBuffered,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
@@ -163,7 +163,7 @@ TEST(PlainSqliteInodeCatalogTest, close_overlay_with_no_capacity_buffered) {
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
-      Overlay::InodeCatalogType::SqliteBuffered,
+      InodeCatalogType::SqliteBuffered,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
       *config);
@@ -181,7 +181,7 @@ TEST(
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
-      Overlay::InodeCatalogType::SqliteBuffered,
+      InodeCatalogType::SqliteBuffered,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
       *config);
@@ -204,14 +204,14 @@ TEST(
 }
 
 class RawSqliteInodeCatalogTest
-    : public ::testing::TestWithParam<Overlay::InodeCatalogType> {
+    : public ::testing::TestWithParam<InodeCatalogType> {
  public:
   RawSqliteInodeCatalogTest()
       : testDir_{makeTempDir("eden_raw_overlay_test_")} {
     loadOverlay();
   }
 
-  Overlay::InodeCatalogType overlayType() const {
+  InodeCatalogType overlayType() const {
     return GetParam();
   }
 
@@ -349,7 +349,7 @@ TEST_P(RawSqliteInodeCatalogTest, manual_recursive_delete) {
   DirContents subdir2Contents(kPathMapDefaultCaseSensitive);
   overlay->saveOverlayDir(subdirIno2, subdir2Contents);
 
-  if (overlayType() == Overlay::InodeCatalogType::SqliteBuffered) {
+  if (overlayType() == InodeCatalogType::SqliteBuffered) {
     // Empty the write queue
     static_cast<BufferedSqliteInodeCatalog*>(overlay->getRawInodeCatalog())
         ->flush();
@@ -391,13 +391,13 @@ INSTANTIATE_TEST_SUITE_P(
     RawSqliteInodeCatalogTest,
     RawSqliteInodeCatalogTest,
     ::testing::Values(
-        Overlay::InodeCatalogType::Sqlite,
-        Overlay::InodeCatalogType::SqliteBuffered));
+        InodeCatalogType::Sqlite,
+        InodeCatalogType::SqliteBuffered));
 
 class DebugDumpSqliteInodeCatalogInodesTest
-    : public ::testing::TestWithParam<Overlay::InodeCatalogType> {
+    : public ::testing::TestWithParam<InodeCatalogType> {
  public:
-  Overlay::InodeCatalogType overlayType() const {
+  InodeCatalogType overlayType() const {
     return GetParam();
   }
 
@@ -414,7 +414,7 @@ class DebugDumpSqliteInodeCatalogInodesTest
   }
 
   void flush() {
-    if (overlayType() == Overlay::InodeCatalogType::SqliteBuffered) {
+    if (overlayType() == InodeCatalogType::SqliteBuffered) {
       static_cast<BufferedSqliteInodeCatalog*>(overlay->getRawInodeCatalog())
           ->flush();
       // A second flush is needed here to ensure the worker thread has a chance
@@ -539,7 +539,7 @@ INSTANTIATE_TEST_SUITE_P(
     DebugDumpSqliteInodeCatalogInodesTest,
     DebugDumpSqliteInodeCatalogInodesTest,
     ::testing::Values(
-        Overlay::InodeCatalogType::Sqlite,
-        Overlay::InodeCatalogType::SqliteBuffered));
+        InodeCatalogType::Sqlite,
+        InodeCatalogType::SqliteBuffered));
 
 } // namespace facebook::eden

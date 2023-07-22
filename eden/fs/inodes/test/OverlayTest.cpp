@@ -44,8 +44,7 @@ using namespace folly::string_piece_literals;
 
 namespace facebook::eden {
 
-constexpr Overlay::InodeCatalogType kInodeCatalogType =
-    Overlay::InodeCatalogType::Legacy;
+constexpr InodeCatalogType kInodeCatalogType = InodeCatalogType::Legacy;
 
 TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   // eden/test-data/overlay-v2.tgz contains a saved copy of an overlay

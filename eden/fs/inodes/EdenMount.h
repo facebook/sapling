@@ -27,6 +27,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/FsChannel.h"
+#include "eden/fs/inodes/InodeCatalogType.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/inodes/InodeTimestamps.h"
@@ -293,7 +294,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       std::shared_ptr<ServerState> serverState,
       std::unique_ptr<Journal> journal,
       EdenStatsPtr stats,
-      std::optional<Overlay::InodeCatalogType> inodeCatalogType = std::nullopt);
+      std::optional<InodeCatalogType> inodeCatalogType = std::nullopt);
 
   /**
    * Asynchronous EdenMount initialization - post instantiation.
@@ -1105,8 +1106,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   /**
    * Returns overlay type based on settings.
    */
-  Overlay::InodeCatalogType getInodeCatalogType(
-      std::optional<Overlay::InodeCatalogType> inodeCatalogType);
+  InodeCatalogType getInodeCatalogType(
+      std::optional<InodeCatalogType> inodeCatalogType);
 
   EdenMount(
       std::unique_ptr<CheckoutConfig> checkoutConfig,
@@ -1115,7 +1116,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       std::shared_ptr<ServerState> serverState,
       std::unique_ptr<Journal> journal,
       EdenStatsPtr stats,
-      std::optional<Overlay::InodeCatalogType> inodeCatalogType = std::nullopt);
+      std::optional<InodeCatalogType> inodeCatalogType = std::nullopt);
 
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;

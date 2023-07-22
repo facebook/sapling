@@ -42,43 +42,40 @@ constexpr uint64_t ioClosedMask = 1ull << 63;
 
 std::unique_ptr<InodeCatalog> makeInodeCatalog(
     AbsolutePathPiece localDir,
-    Overlay::InodeCatalogType inodeCatalogType,
+    InodeCatalogType inodeCatalogType,
     const EdenConfig& config,
     IFileContentStore* fileContentStore,
     const std::shared_ptr<StructuredLogger>& logger) {
-  if (inodeCatalogType == Overlay::InodeCatalogType::Sqlite) {
+  if (inodeCatalogType == InodeCatalogType::Sqlite) {
     return std::make_unique<SqliteInodeCatalog>(localDir, logger);
-  } else if (inodeCatalogType == Overlay::InodeCatalogType::SqliteInMemory) {
+  } else if (inodeCatalogType == InodeCatalogType::SqliteInMemory) {
     XLOG(WARN) << "In-memory overlay requested. This will cause data loss.";
     return std::make_unique<SqliteInodeCatalog>(
         std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory));
-  } else if (
-      inodeCatalogType == Overlay::InodeCatalogType::SqliteSynchronousOff) {
+  } else if (inodeCatalogType == InodeCatalogType::SqliteSynchronousOff) {
     return std::make_unique<SqliteInodeCatalog>(
         localDir, logger, SqliteTreeStore::SynchronousMode::Off);
-  } else if (inodeCatalogType == Overlay::InodeCatalogType::SqliteBuffered) {
+  } else if (inodeCatalogType == InodeCatalogType::SqliteBuffered) {
     XLOG(DBG4) << "Buffered overlay being used";
     return std::make_unique<BufferedSqliteInodeCatalog>(
         localDir, logger, config);
-  } else if (
-      inodeCatalogType == Overlay::InodeCatalogType::SqliteInMemoryBuffered) {
+  } else if (inodeCatalogType == InodeCatalogType::SqliteInMemoryBuffered) {
     XLOG(WARN)
         << "In-memory buffered overlay requested. This will cause data loss.";
     return std::make_unique<BufferedSqliteInodeCatalog>(
         std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory), config);
   } else if (
-      inodeCatalogType ==
-      Overlay::InodeCatalogType::SqliteSynchronousOffBuffered) {
+      inodeCatalogType == InodeCatalogType::SqliteSynchronousOffBuffered) {
     XLOG(DBG2) << "Buffered overlay being used with synchronous-mode = off";
     return std::make_unique<BufferedSqliteInodeCatalog>(
         localDir, logger, config, SqliteTreeStore::SynchronousMode::Off);
-  } else if (inodeCatalogType == Overlay::InodeCatalogType::InMemory) {
+  } else if (inodeCatalogType == InodeCatalogType::InMemory) {
     XLOG(DBG2) << "In-memory overlay being used.";
     return std::make_unique<MemInodeCatalog>();
   }
 #ifdef _WIN32
   (void)fileContentStore;
-  if (inodeCatalogType == Overlay::InodeCatalogType::Legacy) {
+  if (inodeCatalogType == InodeCatalogType::Legacy) {
     throw std::runtime_error(
         "Legacy overlay type is not supported. Please reclone.");
   }

@@ -38,7 +38,7 @@ class TestDir;
 
 class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
  public:
-  explicit TestOverlay(Overlay::InodeCatalogType type);
+  explicit TestOverlay(InodeCatalogType type);
 
   /*
    * Initialize the TestOverlay object.
@@ -71,7 +71,7 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
 
   void closeCleanly() {
     inodeCatalog_->close(getNextInodeNumber());
-    if (type_ != Overlay::InodeCatalogType::Legacy) {
+    if (type_ != InodeCatalogType::Legacy) {
       fcs_.close();
     }
   }
@@ -91,7 +91,7 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
   AbsolutePath tmpDirPath_;
   FileContentStore fcs_;
   std::unique_ptr<InodeCatalog> inodeCatalog_;
-  Overlay::InodeCatalogType type_;
+  InodeCatalogType type_;
   uint64_t nextInodeNumber_{0};
 };
 
@@ -199,7 +199,7 @@ class TestDir {
   overlay::OverlayDir contents_;
 };
 
-TestOverlay::TestOverlay(Overlay::InodeCatalogType type)
+TestOverlay::TestOverlay(InodeCatalogType type)
     : tmpDir_(makeTempDir()),
       tmpDirPath_(canonicalPath(tmpDir_.path().string())),
       // fsck will write its output in a sibling directory to the overlay,
@@ -207,7 +207,7 @@ TestOverlay::TestOverlay(Overlay::InodeCatalogType type)
       // temporary directory
       fcs_(tmpDirPath_ + "overlay"_pc),
       type_(type) {
-  if (type != Overlay::InodeCatalogType::Legacy) {
+  if (type != InodeCatalogType::Legacy) {
     inodeCatalog_ = std::make_unique<SqliteInodeCatalog>(
         tmpDirPath_ + "overlay"_pc, std::make_shared<NullStructuredLogger>());
   } else {
@@ -216,7 +216,7 @@ TestOverlay::TestOverlay(Overlay::InodeCatalogType type)
 }
 
 void TestOverlay::recreateSqliteInodeCatalog() {
-  if (type_ != Overlay::InodeCatalogType::Legacy) {
+  if (type_ != InodeCatalogType::Legacy) {
     inodeCatalog_ = std::make_unique<SqliteInodeCatalog>(
         tmpDirPath_ + "overlay"_pc, std::make_shared<NullStructuredLogger>());
   }
@@ -225,7 +225,7 @@ void TestOverlay::recreateSqliteInodeCatalog() {
 TestDir TestOverlay::init() {
   auto nextInodeNumber =
       inodeCatalog_->initOverlay(/*createIfNonExisting=*/true);
-  if (type_ != Overlay::InodeCatalogType::Legacy) {
+  if (type_ != InodeCatalogType::Legacy) {
     fcs_.initialize(/*createIfNonExisting=*/true);
   }
   XCHECK(nextInodeNumber.has_value());
@@ -353,9 +353,9 @@ std::string readLostNFoundFile(
 
 } // namespace
 
-class FsckTest : public ::testing::TestWithParam<Overlay::InodeCatalogType> {
+class FsckTest : public ::testing::TestWithParam<InodeCatalogType> {
  protected:
-  Overlay::InodeCatalogType overlayType() const {
+  InodeCatalogType overlayType() const {
     return GetParam();
   }
 };
@@ -370,7 +370,7 @@ TEST_P(FsckTest, testNoErrors) {
   FileContentStore& fcs = testOverlay->fcs();
   InodeCatalog* catalog = testOverlay->inodeCatalog();
   std::optional<InodeNumber> nextInode;
-  if (overlayType() == Overlay::InodeCatalogType::Legacy) {
+  if (overlayType() == InodeCatalogType::Legacy) {
     nextInode = catalog->initOverlay(/*createIfNonExisting=*/false);
   } else {
     nextInode = catalog->initOverlay(/*createIfNonExisting=*/true);
@@ -405,8 +405,8 @@ TEST_P(FsckTest, testNoErrors) {
 TEST_P(FsckTest, testMissingNextInodeNumber) {
   // This test is not applicable for Sqlite and InMemory backed overlays since
   // they implicitly track the next inode number
-  if (overlayType() == Overlay::InodeCatalogType::Sqlite ||
-      overlayType() == Overlay::InodeCatalogType::InMemory) {
+  if (overlayType() == InodeCatalogType::Sqlite ||
+      overlayType() == InodeCatalogType::InMemory) {
     return;
   }
   auto testOverlay = make_shared<TestOverlay>(overlayType());
@@ -438,8 +438,8 @@ TEST_P(FsckTest, testMissingNextInodeNumber) {
 TEST_P(FsckTest, testBadNextInodeNumber) {
   // This test is not applicable for SQLite and InMemory backed overlays since
   // they implicitly track the next inode number
-  if (overlayType() == Overlay::InodeCatalogType::Sqlite ||
-      overlayType() == Overlay::InodeCatalogType::InMemory) {
+  if (overlayType() == InodeCatalogType::Sqlite ||
+      overlayType() == InodeCatalogType::InMemory) {
     return;
   }
   auto testOverlay = make_shared<TestOverlay>(overlayType());
@@ -519,8 +519,8 @@ TEST_P(FsckTest, testTruncatedDirData) {
   // This test doesn't work for SQLite or InMemory backed overlays because it
   // directly manipluates the written overlay data on disk to simulate file
   // corruption, which is not applicable for sqlite backed overlays
-  if (overlayType() == Overlay::InodeCatalogType::Sqlite ||
-      overlayType() == Overlay::InodeCatalogType::InMemory) {
+  if (overlayType() == InodeCatalogType::Sqlite ||
+      overlayType() == InodeCatalogType::InMemory) {
     return;
   }
   auto testOverlay = make_shared<TestOverlay>(overlayType());
@@ -609,8 +609,8 @@ TEST_P(FsckTest, testMissingDirData) {
   // This test doesn't work for SQLite or InMemory backed overlays because it
   // directly manipluates the written overlay metadata data on disk to simulate
   // file corruption, which is not applicable for sqlite backed overlays
-  if (overlayType() == Overlay::InodeCatalogType::Sqlite ||
-      overlayType() == Overlay::InodeCatalogType::InMemory) {
+  if (overlayType() == InodeCatalogType::Sqlite ||
+      overlayType() == InodeCatalogType::InMemory) {
     return;
   }
   auto testOverlay = make_shared<TestOverlay>(overlayType());
@@ -741,6 +741,6 @@ INSTANTIATE_TEST_SUITE_P(
     FsckTest,
     FsckTest,
     ::testing::Values(
-        Overlay::InodeCatalogType::Legacy,
-        Overlay::InodeCatalogType::Sqlite,
-        Overlay::InodeCatalogType::InMemory));
+        InodeCatalogType::Legacy,
+        InodeCatalogType::Sqlite,
+        InodeCatalogType::InMemory));

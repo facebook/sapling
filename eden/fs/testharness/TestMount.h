@@ -166,11 +166,11 @@ class TestMount {
       const RootId& initialCommitHash,
       FakeTreeBuilder& rootBuilder,
       bool startReady = true,
-      Overlay::InodeCatalogType inodeCatalogType = kDefaultInodeCatalogType);
+      InodeCatalogType inodeCatalogType = kDefaultInodeCatalogType);
   void initialize(FakeTreeBuilder& rootBuilder, bool startReady = true);
   void initialize(
       FakeTreeBuilder& rootBuilder,
-      Overlay::InodeCatalogType inodeCatalogType);
+      InodeCatalogType inodeCatalogType);
 
   /**
    * Like initialize, except EdenMount::initialize is not called.
@@ -181,7 +181,7 @@ class TestMount {
       const RootId& initialCommitHash,
       FakeTreeBuilder& rootBuilder,
       bool startReady,
-      Overlay::InodeCatalogType inodeCatalogType = kDefaultInodeCatalogType);
+      InodeCatalogType inodeCatalogType = kDefaultInodeCatalogType);
   void createMountWithoutInitializing(
       FakeTreeBuilder& rootBuilder,
       bool startReady = true);
@@ -389,7 +389,7 @@ class TestMount {
 
  private:
   void createMount(
-      Overlay::InodeCatalogType InodeCatalogType = kDefaultInodeCatalogType);
+      InodeCatalogType InodeCatalogType = kDefaultInodeCatalogType);
   void initTestDirectory(CaseSensitivity caseSensitivity);
   void setInitialCommit(const RootId& commitHash);
   void setInitialCommit(const RootId& commitHash, ObjectId rootTreeHash);

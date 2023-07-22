@@ -230,7 +230,7 @@ std::shared_ptr<EdenMount> EdenMount::create(
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal,
     EdenStatsPtr stats,
-    std::optional<Overlay::InodeCatalogType> inodeCatalogType) {
+    std::optional<InodeCatalogType> inodeCatalogType) {
   return std::shared_ptr<EdenMount>{
       new EdenMount{
           std::move(config),
@@ -250,7 +250,7 @@ EdenMount::EdenMount(
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal,
     EdenStatsPtr stats,
-    std::optional<Overlay::InodeCatalogType> inodeCatalogType)
+    std::optional<InodeCatalogType> inodeCatalogType)
     : checkoutConfig_{std::move(checkoutConfig)},
       serverState_{std::move(serverState)},
 #ifdef _WIN32
@@ -288,8 +288,8 @@ EdenMount::EdenMount(
   subscribeInodeActivityBuffer();
 }
 
-Overlay::InodeCatalogType EdenMount::getInodeCatalogType(
-    std::optional<Overlay::InodeCatalogType> inodeCatalogType) {
+InodeCatalogType EdenMount::getInodeCatalogType(
+    std::optional<InodeCatalogType> inodeCatalogType) {
   if (inodeCatalogType.has_value()) {
     return inodeCatalogType.value();
   }
@@ -297,24 +297,24 @@ Overlay::InodeCatalogType EdenMount::getInodeCatalogType(
   if (checkoutConfig_->getEnableSqliteOverlay()) {
     if (getEdenConfig()->unsafeInMemoryOverlay.getValue()) {
       if (getEdenConfig()->overlayBuffered.getValue()) {
-        return Overlay::InodeCatalogType::SqliteInMemoryBuffered;
+        return InodeCatalogType::SqliteInMemoryBuffered;
       } else {
-        return Overlay::InodeCatalogType::SqliteInMemory;
+        return InodeCatalogType::SqliteInMemory;
       }
     }
     if (getEdenConfig()->overlaySynchronousMode.getValue() == "off") {
       if (getEdenConfig()->overlayBuffered.getValue()) {
-        return Overlay::InodeCatalogType::SqliteSynchronousOffBuffered;
+        return InodeCatalogType::SqliteSynchronousOffBuffered;
       } else {
-        return Overlay::InodeCatalogType::SqliteSynchronousOff;
+        return InodeCatalogType::SqliteSynchronousOff;
       }
     }
     if (getEdenConfig()->overlayBuffered.getValue()) {
-      return Overlay::InodeCatalogType::SqliteBuffered;
+      return InodeCatalogType::SqliteBuffered;
     }
-    return Overlay::InodeCatalogType::Sqlite;
+    return InodeCatalogType::Sqlite;
   } else {
-    return Overlay::InodeCatalogType::Legacy;
+    return InodeCatalogType::Legacy;
   }
 }
 
