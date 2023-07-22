@@ -83,6 +83,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
     SqliteBuffered = 4,
     SqliteInMemoryBuffered = 5,
     SqliteSynchronousOffBuffered = 6,
+    InMemory = 7,
   };
 
   /**

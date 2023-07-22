@@ -15,6 +15,7 @@
 #include <folly/portability/GTest.h>
 
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
+#include "eden/fs/inodes/memcatalog/MemInodeCatalog.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 #include "eden/fs/model/ObjectId.h"
@@ -402,9 +403,10 @@ TEST_P(FsckTest, testNoErrors) {
 }
 
 TEST_P(FsckTest, testMissingNextInodeNumber) {
-  // This test is not applicable for Sqlite backed overlays since they
-  // implicitly track the next inode number
-  if (overlayType() == Overlay::InodeCatalogType::Sqlite) {
+  // This test is not applicable for Sqlite and InMemory backed overlays since
+  // they implicitly track the next inode number
+  if (overlayType() == Overlay::InodeCatalogType::Sqlite ||
+      overlayType() == Overlay::InodeCatalogType::InMemory) {
     return;
   }
   auto testOverlay = make_shared<TestOverlay>(overlayType());
@@ -434,9 +436,10 @@ TEST_P(FsckTest, testMissingNextInodeNumber) {
 }
 
 TEST_P(FsckTest, testBadNextInodeNumber) {
-  // This test is not applicable for Sqlite backed overlays since they
-  // implicitly track the next inode number
-  if (overlayType() == Overlay::InodeCatalogType::Sqlite) {
+  // This test is not applicable for SQLite and InMemory backed overlays since
+  // they implicitly track the next inode number
+  if (overlayType() == Overlay::InodeCatalogType::Sqlite ||
+      overlayType() == Overlay::InodeCatalogType::InMemory) {
     return;
   }
   auto testOverlay = make_shared<TestOverlay>(overlayType());
@@ -513,10 +516,11 @@ TEST_P(FsckTest, testBadFileData) {
 }
 
 TEST_P(FsckTest, testTruncatedDirData) {
-  // This test doesn't work for sqlite backed overlays because it directly
-  // manipluates the written overlay data on disk to simulate file corruption,
-  // which is not applicable for sqlite backed overlays
-  if (overlayType() == Overlay::InodeCatalogType::Sqlite) {
+  // This test doesn't work for SQLite or InMemory backed overlays because it
+  // directly manipluates the written overlay data on disk to simulate file
+  // corruption, which is not applicable for sqlite backed overlays
+  if (overlayType() == Overlay::InodeCatalogType::Sqlite ||
+      overlayType() == Overlay::InodeCatalogType::InMemory) {
     return;
   }
   auto testOverlay = make_shared<TestOverlay>(overlayType());
@@ -602,10 +606,11 @@ TEST_P(FsckTest, testTruncatedDirData) {
 }
 
 TEST_P(FsckTest, testMissingDirData) {
-  // This test doesn't work for sqlite backed overlays because it directly
-  // manipluates the written overlay metadata data on disk to simulate file
-  // corruption, which is not applicable for sqlite backed overlays
-  if (overlayType() == Overlay::InodeCatalogType::Sqlite) {
+  // This test doesn't work for SQLite or InMemory backed overlays because it
+  // directly manipluates the written overlay metadata data on disk to simulate
+  // file corruption, which is not applicable for sqlite backed overlays
+  if (overlayType() == Overlay::InodeCatalogType::Sqlite ||
+      overlayType() == Overlay::InodeCatalogType::InMemory) {
     return;
   }
   auto testOverlay = make_shared<TestOverlay>(overlayType());
@@ -737,4 +742,5 @@ INSTANTIATE_TEST_SUITE_P(
     FsckTest,
     ::testing::Values(
         Overlay::InodeCatalogType::Legacy,
-        Overlay::InodeCatalogType::Sqlite));
+        Overlay::InodeCatalogType::Sqlite,
+        Overlay::InodeCatalogType::InMemory));

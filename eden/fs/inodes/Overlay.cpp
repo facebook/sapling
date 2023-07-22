@@ -26,6 +26,7 @@
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/inodes/memcatalog/MemInodeCatalog.h"
 #include "eden/fs/inodes/sqlitecatalog/BufferedSqliteInodeCatalog.h"
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 #include "eden/fs/sqlite/SqliteDatabase.h"
@@ -71,6 +72,9 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     XLOG(DBG2) << "Buffered overlay being used with synchronous-mode = off";
     return std::make_unique<BufferedSqliteInodeCatalog>(
         localDir, logger, config, SqliteTreeStore::SynchronousMode::Off);
+  } else if (inodeCatalogType == Overlay::InodeCatalogType::InMemory) {
+    XLOG(DBG2) << "In-memory overlay being used.";
+    return std::make_unique<MemInodeCatalog>();
   }
 #ifdef _WIN32
   (void)fileContentStore;
