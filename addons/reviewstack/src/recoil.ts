@@ -852,11 +852,11 @@ export const gitHubPullRequestComparableVersions = atom<ComparableVersions>({
       const [versions, selectedVersionIndex] = get(
         waitForAll([gitHubPullRequestVersions, gitHubPullRequestSelectedVersionIndex]),
       );
-      const latestCommit = versions[selectedVersionIndex].headCommit;
+      const version = versions[selectedVersionIndex];
 
       return {
-        beforeCommitID: null,
-        afterCommitID: latestCommit,
+        beforeCommitID: version.baseParent,
+        afterCommitID:  version.headCommit,
       };
     },
   }),
