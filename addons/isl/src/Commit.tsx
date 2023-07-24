@@ -15,6 +15,7 @@ import {InlineBadge} from './InlineBadge';
 import {Tooltip} from './Tooltip';
 import {UncommitButton} from './UncommitButton';
 import {UncommittedChanges} from './UncommittedChanges';
+import {latestCommitMessage} from './codeReview/CodeReviewInfo';
 import {DiffInfo} from './codeReview/DiffBadge';
 import {islDrawerState} from './drawerState';
 import {isDescendant} from './getCommitTree';
@@ -106,6 +107,8 @@ export const Commit = memo(
     const actionsPrevented = previewPreventsActions(previewType);
 
     const isNarrow = useRecoilValue(isNarrowCommitTree);
+
+    const [title] = useRecoilValue(latestCommitMessage(commit.hash));
 
     const isNonActionable = previewType === CommitPreview.NON_ACTIONABLE_COMMIT;
 
@@ -244,7 +247,7 @@ export const Commit = memo(
             <div className="commit-avatar" />
             {isPublic ? null : (
               <span className="commit-title">
-                <span>{commit.title}</span>
+                <span>{title}</span>
                 <CommitDate date={commit.date} />
               </span>
             )}
