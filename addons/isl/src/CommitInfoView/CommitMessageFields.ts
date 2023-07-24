@@ -71,6 +71,17 @@ function joinWithComma(tokens: Array<string>): string {
   return tokens.join(', ');
 }
 
+/**
+ * Look through the message fields for a diff number
+ */
+export function findEditedDiffNumber(field: CommitMessageFields): string | undefined {
+  const found = field['Differential Revision'];
+  if (Array.isArray(found)) {
+    return found[0];
+  }
+  return found;
+}
+
 function commaSeparated(s: string | undefined): Array<string> {
   if (s == null || s.trim() === '') {
     return [];

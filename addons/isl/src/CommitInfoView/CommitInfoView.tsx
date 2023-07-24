@@ -28,7 +28,7 @@ import {
 } from '../codeReview/CodeReviewInfo';
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {t, T} from '../i18n';
-import {messageSyncingEnabledState} from '../messageSyncing';
+import {messageSyncingEnabledState, updateRemoteMessage} from '../messageSyncing';
 import {AmendMessageOperation} from '../operations/AmendMessageOperation';
 import {getAmendOperation} from '../operations/AmendOperation';
 import {getCommitOperation} from '../operations/CommitOperation';
@@ -41,7 +41,7 @@ import {CommitPreview, treeWithPreviews, uncommittedChangesWithPreviews} from '.
 import {selectedCommitInfos, selectedCommits} from '../selection';
 import {latestHeadCommit, repositoryInfo, useRunOperation} from '../serverAPIState';
 import {useModal} from '../useModal';
-import {assert, firstOfIterable} from '../utils';
+import {assert, firstLine, firstOfIterable} from '../utils';
 import {CommitInfoField} from './CommitInfoField';
 import {
   assertNonOptimistic,
@@ -57,6 +57,7 @@ import {
   allFieldsBeingEdited,
   findFieldsBeingEdited,
   noFieldsBeingEdited,
+  findEditedDiffNumber,
 } from './CommitMessageFields';
 import {CommitTitleByline, getTopmostEditedField, Section, SmallCapsTitle} from './utils';
 import {
@@ -592,10 +593,23 @@ function ActionsBar({
               data-testid="amend-message-button"
               disabled={!isAnythingBeingEdited || editedMessage == null || areImageUploadsOngoing}
               runOperation={() => {
-                const operation = new AmendMessageOperation(
-                  commit.hash,
-                  commitMessageFieldsToString(schema, assertNonOptimistic(editedMessage).fields),
-                );
+                const messageFields = assertNonOptimistic(editedMessage).fields;
+                const stringifiedMessage = commitMessageFieldsToString(schema, messageFields);
+                const diffId = findEditedDiffNumber(messageFields) ?? commit.diffId;
+                // if there's a diff attached, we should also update the remote message
+                if (messageSyncEnabled && diffId) {
+                  if (diffId !== commit.diffId) {
+                    // The attached diff changed!
+                    // TODO: ask user if they want to push message to newly attached diff
+                  }
+                  const title = firstLine(stringifiedMessage);
+                  const description = stringifiedMessage.slice(title.length);
+                  // don't wait for the update mutation to go through, just let it happen in parallel with the metaedit
+                  updateRemoteMessage(diffId, title, description).catch(() => {
+                    // TODO: We should notify about this in the UI
+                  });
+                }
+                const operation = new AmendMessageOperation(commit.hash, stringifiedMessage);
                 clearEditedCommitMessage(/* skip confirmation */ true);
                 return operation;
               }}>
