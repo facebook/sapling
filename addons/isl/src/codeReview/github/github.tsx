@@ -21,6 +21,7 @@ import './GitHubPRBadge.css';
 
 export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   name = 'github';
+  label = t('GitHub');
 
   constructor(
     private system: CodeReviewSystem & {type: 'github'},

@@ -389,3 +389,7 @@
   font-size: 120%;
   background-color: rgba(0, 0, 0, 0.1);
 }
+
+.commit-info-view-main-content > .tooltip-creator {
+  width: 100%;
+}

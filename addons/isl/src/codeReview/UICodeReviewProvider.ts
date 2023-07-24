@@ -15,6 +15,7 @@ import type {ReactNode} from 'react';
  */
 export interface UICodeReviewProvider {
   name: string;
+  label: string;
 
   /** name used to run commands provider-specific commands */
   cliName?: string;

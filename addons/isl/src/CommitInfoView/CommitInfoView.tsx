@@ -7,9 +7,10 @@
 
 import type {CommitInfo} from '../types';
 import type {CommitInfoMode, EditedMessageUnlessOptimistic} from './CommitInfoState';
-import type {CommitMessageFields, FieldsBeingEdited} from './types';
+import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types';
 import type {Dispatch, SetStateAction} from 'react';
 
+import {Banner} from '../Banner';
 import serverAPI from '../ClientToServerAPI';
 import {Commit} from '../Commit';
 import {OpenComparisonViewButton} from '../ComparisonView/OpenComparisonViewButton';
@@ -278,7 +279,10 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
               }
               extra={
                 mode !== 'commit' && field.key === 'Title' ? (
-                  <CommitTitleByline commit={commit} />
+                  <>
+                    <CommitTitleByline commit={commit} />
+                    <ShowingRemoteMessageBanner commit={commit} latestFields={parsedFields} />
+                  </>
                 ) : undefined
               }
             />
@@ -337,6 +341,67 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Two parsed commit messages are considered unchanged if all the textareas (summary, test plan) are unchanged.
+ * This avoids marking tiny changes like adding a reviewer as substatively changing the message.
+ */
+function areTextFieldsUnchanged(
+  schema: Array<FieldConfig>,
+  a: CommitMessageFields,
+  b: CommitMessageFields,
+) {
+  for (const field of schema) {
+    if (field.type === 'textarea') {
+      if (a[field.key] !== b[field.key]) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function ShowingRemoteMessageBanner({
+  commit,
+  latestFields,
+}: {
+  commit: CommitInfo;
+  latestFields: CommitMessageFields;
+}) {
+  const provider = useRecoilValue(codeReviewProvider);
+  const schema = useRecoilValue(commitMessageFieldsSchema);
+
+  if (!provider) {
+    return null;
+  }
+
+  const originalFields = parseCommitMessageFields(schema, commit.title, commit.description);
+
+  if (areTextFieldsUnchanged(schema, originalFields, latestFields)) {
+    return null;
+  }
+  return (
+    <>
+      <Banner
+        icon={<Icon icon="info" />}
+        tooltip={t(
+          'Viewing the newer commit message from $provider. You can also load the local message instead.',
+          {replace: {$provider: provider.label}},
+        )}
+        buttons={
+          <VSCodeButton
+            appearance="icon"
+            onClick={() => {
+              /* TODO: dropdown menu to confirm loading the local message */
+            }}>
+            <Icon icon="ellipsis" />
+          </VSCodeButton>
+        }>
+        <T replace={{$provider: provider.label}}>Showing latest commit message from $provider</T>
+      </Banner>
+    </>
   );
 }
 
