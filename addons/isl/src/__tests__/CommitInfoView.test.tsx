@@ -486,7 +486,7 @@ describe('CommitInfoView', () => {
             clickToEditDescription();
           });
 
-          it('runs metaedit', () => {
+          it('runs metaedit', async () => {
             clickToSelectCommit('a');
 
             clickToEditTitle();
@@ -505,27 +505,28 @@ describe('CommitInfoView', () => {
             act(() => {
               fireEvent.click(amendMessageButton!);
             });
-
-            expectMessageSentToServer({
-              type: 'runOperation',
-              operation: {
-                args: [
-                  'metaedit',
-                  '--rev',
-                  SucceedableRevset('a'),
-                  '--message',
-                  expect.stringMatching(
-                    /^My Commit hello new title\n+Summary: First commit in the stack\nhello new text/,
-                  ),
-                ],
-                id: expect.anything(),
-                runner: CommandRunner.Sapling,
-                trackEventName: 'AmendMessageOperation',
-              },
-            });
+            await waitFor(() =>
+              expectMessageSentToServer({
+                type: 'runOperation',
+                operation: {
+                  args: [
+                    'metaedit',
+                    '--rev',
+                    SucceedableRevset('a'),
+                    '--message',
+                    expect.stringMatching(
+                      /^My Commit hello new title\n+Summary: First commit in the stack\nhello new text/,
+                    ),
+                  ],
+                  id: expect.anything(),
+                  runner: CommandRunner.Sapling,
+                  trackEventName: 'AmendMessageOperation',
+                },
+              }),
+            );
           });
 
-          it('disables metaedit button with spinner while running', () => {
+          it('disables metaedit button with spinner while running', async () => {
             clickToSelectCommit('a');
 
             clickToEditTitle();
@@ -544,7 +545,7 @@ describe('CommitInfoView', () => {
               fireEvent.click(amendMessageButton!);
             });
 
-            expect(amendMessageButton).toBeDisabled();
+            await waitFor(() => expect(amendMessageButton).toBeDisabled());
           });
         });
 
@@ -1054,7 +1055,7 @@ describe('CommitInfoView', () => {
           expect(withinCommitInfo().queryByText('You are here')).not.toBeInTheDocument();
         });
 
-        it('renders metaedit operation smoothly', () => {
+        it('renders metaedit operation smoothly', async () => {
           clickToSelectCommit('a');
 
           clickToEditTitle();
@@ -1071,15 +1072,17 @@ describe('CommitInfoView', () => {
             fireEvent.click(amendMessageButton!);
           });
 
-          expectIsNOTEditingTitle();
-          expectIsNOTEditingDescription();
+          await waitFor(() => {
+            expectIsNOTEditingTitle();
+            expectIsNOTEditingDescription();
 
-          expect(withinCommitInfo().getByText('My Commit with change!')).toBeInTheDocument();
-          expect(
-            withinCommitInfo().getByText(/First commit in the stack\nmore stuff!/, {
-              collapseWhitespace: false,
-            }),
-          ).toBeInTheDocument();
+            expect(withinCommitInfo().getByText('My Commit with change!')).toBeInTheDocument();
+            expect(
+              withinCommitInfo().getByText(/First commit in the stack\nmore stuff!/, {
+                collapseWhitespace: false,
+              }),
+            ).toBeInTheDocument();
+          });
         });
 
         it('renders commit operation smoothly', () => {
