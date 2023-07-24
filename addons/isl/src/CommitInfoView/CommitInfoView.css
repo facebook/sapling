@@ -84,6 +84,7 @@
   transition: background-color 0.1s;
   border-radius: var(--pad);
   padding: var(--pad);
+  word-break: break-word;
 }
 
 .commit-info-section .see-more-container {
