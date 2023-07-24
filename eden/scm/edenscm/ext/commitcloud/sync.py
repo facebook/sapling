@@ -452,6 +452,46 @@ def _prefetchexpensivebookmarks(repo, remotepath, remotebookmarknewnames):
 
 @perftrace.tracefunc("Apply Cloud Changes")
 def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state, tr):
+    main = bookmarks.mainbookmark(repo)
+    if (
+        main
+        and repo.ui.configbool("pull", "master-fastpath")
+        and "lazychangelog" in repo.storerequirements
+    ):
+        mainhash = cloudrefs.remotebookmarks.get(f"remote/{main}")
+        oldmainnode = repo._remotenames["bookmarks"].get(f"remote/{main}")
+        if oldmainnode:
+            oldmainnode = oldmainnode[0]
+        mainnode = mainhash and nodemod.bin(mainhash)
+        if (
+            mainnode
+            and oldmainnode
+            and mainnode != oldmainnode
+            and mainnode not in repo
+        ):
+            repo.ui.status(
+                _("pulling %s (%s -> %s) via fast path\n")
+                % (main, nodemod.short(oldmainnode), nodemod.short(mainnode))
+            )
+            try:
+                fastpulldata = repo.edenapi.pullfastforwardmaster(oldmainnode, mainnode)
+            except Exception as e:
+                repo.ui.status_err(_("failed to get fast pull data (%s)\n") % (e,))
+            else:
+                vertexopts = {"reserve_size": 0, "highest_group": 0}
+                try:
+                    commits, segments = repo.changelog.inner.importpulldata(
+                        fastpulldata, [(mainnode, vertexopts)]
+                    )
+                    repo.ui.status(
+                        _("imported commit graph for %s commit(s) (%s segment(s))\n")
+                        % (commits, segments)
+                    )
+                except Exception as e:
+                    repo.ui.status_err(
+                        _("failed to apply fast pull data (%s)\n") % (e,)
+                    )
+
     # Pull all the new heads and any bookmark hashes we don't have. We need to
     # filter cloudrefs before pull as pull doesn't check if a rev is present
     # locally.
