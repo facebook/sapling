@@ -190,6 +190,20 @@ impl TreeBuilder {
     pub fn new(members: HashMap<MPathElement, TreeMember>) -> Self {
         Self { members }
     }
+
+    pub fn into_tree_with_bytes(self) -> (Vec<u8>, Tree) {
+        let mut object_buff = Vec::new();
+        self.write_serialized_object(&mut object_buff)
+            .expect("Writes to Vec cannot fail");
+
+        let oid = ObjectKind::Tree.create_oid(&object_buff);
+
+        let tree = Tree {
+            handle: TreeHandle { oid },
+            members: self.members,
+        };
+        (object_buff, tree)
+    }
 }
 
 impl From<TreeBuilder> for Tree {

@@ -7,6 +7,8 @@
 
 use anyhow::anyhow;
 use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -30,6 +32,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 
 use crate::errors::ErrorKind;
+use crate::upload_git_object;
 use crate::BlobHandle;
 use crate::Tree;
 use crate::TreeBuilder;
@@ -127,10 +130,24 @@ async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
                     .map(|(p, (_, entry))| (p, entry.into()))
                     .collect();
 
-                let tree: Tree = TreeBuilder::new(members).into();
-
+                let builder = TreeBuilder::new(members);
+                let (mut tree_bytes_without_header, tree) = builder.into_tree_with_bytes();
                 cloned!(ctx, blobstore);
                 async move {
+                    // Store the raw git tree before storing the thrift version
+                    let oid = tree.handle().oid();
+                    let git_hash =
+                        git_hash::oid::try_from_bytes(oid.as_ref()).with_context(|| {
+                            format_err!(
+                                "Failure while converting Git hash {} into Git Object ID",
+                                oid
+                            )
+                        })?;
+                    // Need to prepend the object header before storing the Git tree
+                    let mut raw_tree_bytes = oid.prefix();
+                    raw_tree_bytes.append(&mut tree_bytes_without_header);
+                    upload_git_object(&ctx, &blobstore, git_hash, raw_tree_bytes).await?;
+                    // Upload the thrift Git Tree
                     let handle = tree.store(&ctx, &blobstore).await?;
                     Ok(((), handle))
                 }
