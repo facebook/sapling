@@ -127,6 +127,9 @@ pub async fn fetch_manifest_envelope_opt<B: Blobstore>(
     blobstore: &B,
     node_id: HgManifestId,
 ) -> Result<Option<HgManifestEnvelope>> {
+    if node_id == HgManifestId::new(NULL_HASH) {
+        return Ok(None);
+    }
     let blobstore_key = node_id.blobstore_key();
     let bytes = blobstore
         .get(ctx, &blobstore_key)
