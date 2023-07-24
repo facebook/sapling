@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {DiffId} from './types';
+
+import serverAPI from './ClientToServerAPI';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {selector} from 'recoil';
 
@@ -15,3 +18,18 @@ export const messageSyncingEnabledState = selector({
     return provider?.enableMessageSyncing ?? false;
   },
 });
+
+export async function updateRemoteMessage(
+  diffId: DiffId,
+  title: string,
+  description: string,
+): Promise<void> {
+  serverAPI.postMessage({type: 'updateRemoteDiffMessage', diffId, title, description});
+  const response = await serverAPI.nextMessageMatching(
+    'updatedRemoteDiffMessage',
+    msg => msg.diffId === diffId,
+  );
+  if (response.error != null) {
+    throw new Error(response.error);
+  }
+}

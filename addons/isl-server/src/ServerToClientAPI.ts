@@ -593,6 +593,15 @@ export default class ServerToClientAPI {
         repo.codeReviewProvider?.triggerDiffSummariesFetch(data.diffIds ?? repo.getAllDiffIds());
         break;
       }
+      case 'updateRemoteDiffMessage': {
+        repo.codeReviewProvider
+          ?.updateDiffMessage?.(data.diffId, data.title, data.description)
+          ?.catch(err => err)
+          ?.then((error: string | undefined) => {
+            this.postMessage({type: 'updatedRemoteDiffMessage', diffId: data.diffId, error});
+          });
+        break;
+      }
       case 'loadMoreCommits': {
         const rangeInDays = repo.nextVisibleCommitRangeInDays();
         this.postMessage({type: 'commitsShownRange', rangeInDays});

@@ -40,4 +40,6 @@ export interface CodeReviewProvider {
 
   getDiffUrlMarkdown(diffId: DiffId): string;
   getCommitHashUrlMarkdown(hash: string): string;
+
+  updateDiffMessage?(diffId: DiffId, newTitle: string, newDescription: string): Promise<void>;
 }
