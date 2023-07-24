@@ -180,7 +180,7 @@ describe('CommitInfoView', () => {
         expect(amendButton?.disabled).not.toBe(true);
       });
 
-      it('runs amend with selected files', () => {
+      it('runs amend with selected files', async () => {
         expect(withinCommitInfo().queryByText('file1.js')).toBeInTheDocument();
         expect(withinCommitInfo().queryByText('file2.js')).toBeInTheDocument();
 
@@ -200,21 +200,23 @@ describe('CommitInfoView', () => {
           fireEvent.click(amendButton!);
         });
 
-        expectMessageSentToServer({
-          type: 'runOperation',
-          operation: {
-            args: [
-              'amend',
-              '--addremove',
-              {type: 'repo-relative-file', path: 'src/file2.js'},
-              '--message',
-              expect.stringMatching(/^Head Commit/),
-            ],
-            id: expect.anything(),
-            runner: CommandRunner.Sapling,
-            trackEventName: 'AmendOperation',
-          },
-        });
+        await waitFor(() =>
+          expectMessageSentToServer({
+            type: 'runOperation',
+            operation: {
+              args: [
+                'amend',
+                '--addremove',
+                {type: 'repo-relative-file', path: 'src/file2.js'},
+                '--message',
+                expect.stringMatching(/^Head Commit/),
+              ],
+              id: expect.anything(),
+              runner: CommandRunner.Sapling,
+              trackEventName: 'AmendOperation',
+            },
+          }),
+        );
       });
 
       it('disallows amending when all uncommitted changes deselected', () => {
@@ -298,7 +300,7 @@ describe('CommitInfoView', () => {
         expectIsNOTEditingDescription();
       });
 
-      it('amend button stops editing', () => {
+      it('amend button stops editing', async () => {
         act(() =>
           simulateUncommittedChangedFiles({
             value: [{path: 'src/file1.js', status: 'M'}],
@@ -319,6 +321,15 @@ describe('CommitInfoView', () => {
         act(() => {
           fireEvent.click(amendButton!);
         });
+
+        await waitFor(() =>
+          expectMessageSentToServer({
+            type: 'runOperation',
+            operation: expect.objectContaining({
+              args: expect.arrayContaining(['amend']),
+            }),
+          }),
+        );
 
         expectIsNOTEditingTitle();
         expectIsNOTEditingDescription();
@@ -550,7 +561,7 @@ describe('CommitInfoView', () => {
         });
 
         describe('amend', () => {
-          it('runs amend with changed message', () => {
+          it('runs amend with changed message', async () => {
             act(() =>
               simulateUncommittedChangedFiles({
                 value: [{path: 'src/file1.js', status: 'M'}],
@@ -569,25 +580,27 @@ describe('CommitInfoView', () => {
 
             clickAmendButton();
 
-            expectMessageSentToServer({
-              type: 'runOperation',
-              operation: {
-                args: [
-                  'amend',
-                  '--addremove',
-                  '--message',
-                  expect.stringMatching(
-                    /^Head Commit hello new title\n+Summary: stacked commit\nhello new text/,
-                  ),
-                ],
-                id: expect.anything(),
-                runner: CommandRunner.Sapling,
-                trackEventName: 'AmendOperation',
-              },
-            });
+            await waitFor(() =>
+              expectMessageSentToServer({
+                type: 'runOperation',
+                operation: {
+                  args: [
+                    'amend',
+                    '--addremove',
+                    '--message',
+                    expect.stringMatching(
+                      /^Head Commit hello new title\n+Summary: stacked commit\nhello new text/,
+                    ),
+                  ],
+                  id: expect.anything(),
+                  runner: CommandRunner.Sapling,
+                  trackEventName: 'AmendOperation',
+                },
+              }),
+            );
           });
 
-          it('deselects head when running amend', () => {
+          it('deselects head when running amend', async () => {
             act(() =>
               simulateUncommittedChangedFiles({
                 value: [{path: 'src/file1.js', status: 'M'}],
@@ -609,7 +622,9 @@ describe('CommitInfoView', () => {
             clickAmendButton();
 
             // no commit is selected anymore
-            expect(screen.queryByTestId('selected-commit')).not.toBeInTheDocument();
+            await waitFor(() =>
+              expect(screen.queryByTestId('selected-commit')).not.toBeInTheDocument(),
+            );
           });
 
           it('does not deselect non-head commits after running amend', () => {
@@ -740,7 +755,7 @@ describe('CommitInfoView', () => {
           expect(commitButton!.disabled).not.toBe(true);
         });
 
-        it('runs commit with message', () => {
+        it('runs commit with message', async () => {
           act(() => {
             simulateUncommittedChangedFiles({
               value: [
@@ -759,23 +774,25 @@ describe('CommitInfoView', () => {
 
           clickCommitButton();
 
-          expectMessageSentToServer({
-            type: 'runOperation',
-            operation: {
-              args: [
-                'commit',
-                '--addremove',
-                '--message',
-                expect.stringMatching(/^new commit title\n+(Summary: )?my description/),
-              ],
-              id: expect.anything(),
-              runner: CommandRunner.Sapling,
-              trackEventName: 'CommitOperation',
-            },
-          });
+          await waitFor(() =>
+            expectMessageSentToServer({
+              type: 'runOperation',
+              operation: {
+                args: [
+                  'commit',
+                  '--addremove',
+                  '--message',
+                  expect.stringMatching(/^new commit title\n+(Summary: )?my description/),
+                ],
+                id: expect.anything(),
+                runner: CommandRunner.Sapling,
+                trackEventName: 'CommitOperation',
+              },
+            }),
+          );
         });
 
-        it('resets to amend mode after committing', () => {
+        it('resets to amend mode after committing', async () => {
           act(() => {
             simulateUncommittedChangedFiles({
               value: [
@@ -793,6 +810,15 @@ describe('CommitInfoView', () => {
           });
 
           clickCommitButton();
+
+          await waitFor(() =>
+            expectMessageSentToServer({
+              type: 'runOperation',
+              operation: expect.objectContaining({
+                args: expect.arrayContaining(['commit']),
+              }),
+            }),
+          );
 
           const commitButtonAfter = within(
             screen.getByTestId('commit-info-actions-bar'),
@@ -1026,8 +1052,8 @@ describe('CommitInfoView', () => {
           await waitFor(() => {
             expectIsNOTEditingTitle();
             expectIsNOTEditingDescription();
+            expect(confirmSpy).not.toHaveBeenCalled();
           });
-          expect(confirmSpy).not.toHaveBeenCalled();
         });
       });
 
@@ -1085,7 +1111,7 @@ describe('CommitInfoView', () => {
           });
         });
 
-        it('renders commit operation smoothly', () => {
+        it('renders commit operation smoothly', async () => {
           act(() => {
             simulateUncommittedChangedFiles({
               value: [{path: 'src/file1.js', status: 'M'}],
@@ -1103,12 +1129,14 @@ describe('CommitInfoView', () => {
           // optimistic state should now be rendered, so we show a fake commit with the new title,
           // but not in editing mode anymore
 
-          expectIsNOTEditingTitle();
-          expectIsNOTEditingDescription();
+          await waitFor(() => {
+            expectIsNOTEditingTitle();
+            expectIsNOTEditingDescription();
 
-          expect(withinCommitInfo().queryByText('New Commit')).toBeInTheDocument();
-          expect(withinCommitInfo().queryByText(/Message!/)).toBeInTheDocument();
-          expect(withinCommitInfo().queryByText('You are here')).toBeInTheDocument();
+            expect(withinCommitInfo().queryByText('New Commit')).toBeInTheDocument();
+            expect(withinCommitInfo().queryByText(/Message!/)).toBeInTheDocument();
+            expect(withinCommitInfo().queryByText('You are here')).toBeInTheDocument();
+          });
 
           // finish commit operation with hg log
           act(() => {
@@ -1129,7 +1157,7 @@ describe('CommitInfoView', () => {
           expect(withinCommitInfo().queryByText('You are here')).toBeInTheDocument();
         });
 
-        it('doesnt let you edit on optimistic commit', () => {
+        it('doesnt let you edit on optimistic commit', async () => {
           act(() => {
             simulateUncommittedChangedFiles({
               value: [{path: 'src/file1.js', status: 'M'}],
@@ -1142,6 +1170,15 @@ describe('CommitInfoView', () => {
             userEvent.type(getDescriptionEditor(), 'Message!');
           });
           clickCommitButton();
+
+          await waitFor(() =>
+            expectMessageSentToServer({
+              type: 'runOperation',
+              operation: expect.objectContaining({
+                args: expect.arrayContaining(['commit']),
+              }),
+            }),
+          );
 
           clickToEditTitle();
           clickToEditDescription();
@@ -1168,7 +1205,7 @@ describe('CommitInfoView', () => {
           expectIsEditingDescription();
         });
 
-        it('renders amend operation smoothly', () => {
+        it('renders amend operation smoothly', async () => {
           act(() =>
             simulateUncommittedChangedFiles({
               value: [{path: 'src/file1.js', status: 'M'}],
@@ -1187,16 +1224,18 @@ describe('CommitInfoView', () => {
           // optimistic state should now be rendered, so we update the head commit
           // but not in editing mode anymore
 
-          expectIsNOTEditingTitle();
-          expectIsNOTEditingDescription();
+          await waitFor(() => {
+            expectIsNOTEditingTitle();
+            expectIsNOTEditingDescription();
 
-          expect(withinCommitInfo().getByText('Head Commit Hey')).toBeInTheDocument();
-          expect(
-            withinCommitInfo().getByText(/stacked commit\nHello/, {
-              collapseWhitespace: false,
-            }),
-          ).toBeInTheDocument();
-          expect(withinCommitInfo().getByText('You are here')).toBeInTheDocument();
+            expect(withinCommitInfo().getByText('Head Commit Hey')).toBeInTheDocument();
+            expect(
+              withinCommitInfo().getByText(/stacked commit\nHello/, {
+                collapseWhitespace: false,
+              }),
+            ).toBeInTheDocument();
+            expect(withinCommitInfo().getByText('You are here')).toBeInTheDocument();
+          });
 
           // finish amend operation with hg log
           act(() => {

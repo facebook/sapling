@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitInfo} from '../types';
+import type {CommitInfo, DiffId} from '../types';
 import type {CommitInfoMode, EditedMessageUnlessOptimistic} from './CommitInfoState';
 import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types';
 import type {Dispatch, SetStateAction} from 'react';
@@ -579,7 +579,24 @@ function ActionsBar({
               contextKey={isCommitMode ? 'commit' : 'amend'}
               appearance="secondary"
               disabled={!anythingToCommit || editedMessage == null || areImageUploadsOngoing}
-              runOperation={doAmendOrCommit}>
+              runOperation={async () => {
+                if (!isCommitMode) {
+                  const messageFields = assertNonOptimistic(editedMessage).fields;
+                  const stringifiedMessage = commitMessageFieldsToString(schema, messageFields);
+                  const diffId = findEditedDiffNumber(messageFields) ?? commit.diffId;
+                  // if there's a diff attached, we should also update the remote message
+                  if (messageSyncEnabled && diffId) {
+                    await tryToUpdateRemoteMessage(
+                      commit,
+                      diffId,
+                      stringifiedMessage,
+                      showOptionModal,
+                    );
+                  }
+                }
+
+                return doAmendOrCommit();
+              }}>
               {isCommitMode ? <T>Commit</T> : <T>Amend</T>}
             </OperationDisabledButton>
           </Tooltip>
@@ -598,41 +615,12 @@ function ActionsBar({
                 const diffId = findEditedDiffNumber(messageFields) ?? commit.diffId;
                 // if there's a diff attached, we should also update the remote message
                 if (messageSyncEnabled && diffId) {
-                  let optedOutOfSync = false;
-                  if (diffId !== commit.diffId) {
-                    const buttons = [
-                      t('Cancel') as 'Cancel',
-                      t('Use Remote Message'),
-                      t('Sync New Message'),
-                    ] as const;
-                    const cancel = buttons[0];
-                    const syncButton = buttons[2];
-                    const answer = await showOptionModal({
-                      type: 'confirm',
-                      icon: 'warning',
-                      title: t('Sync message for newly attached Diff?'),
-                      message: (
-                        <T>
-                          You're changing the attached Diff for this commit. Would you like you sync
-                          your new local message up to the remote Diff, or just use the existing
-                          remote message for this Diff?
-                        </T>
-                      ),
-                      buttons,
-                    });
-                    if (answer === cancel || answer == null) {
-                      return;
-                    }
-                    optedOutOfSync = answer !== syncButton;
-                  }
-                  if (!optedOutOfSync) {
-                    const title = firstLine(stringifiedMessage);
-                    const description = stringifiedMessage.slice(title.length);
-                    // don't wait for the update mutation to go through, just let it happen in parallel with the metaedit
-                    updateRemoteMessage(diffId, title, description).catch(() => {
-                      // TODO: We should notify about this in the UI
-                    });
-                  }
+                  await tryToUpdateRemoteMessage(
+                    commit,
+                    diffId,
+                    stringifiedMessage,
+                    showOptionModal,
+                  );
                 }
                 const operation = new AmendMessageOperation(commit.hash, stringifiedMessage);
                 clearEditedCommitMessage(/* skip confirmation */ true);
@@ -764,4 +752,49 @@ function ActionsBar({
       </div>
     </div>
   );
+}
+
+async function tryToUpdateRemoteMessage(
+  commit: CommitInfo,
+  diffId: DiffId,
+  latestMessageString: string,
+  showOptionModal: ReturnType<typeof useModal>,
+): Promise<void> {
+  // TODO: we could skip the update if the new message matches the old one,
+  // which is possible when amending changes without changing the commit message
+
+  let optedOutOfSync = false;
+  if (diffId !== commit.diffId) {
+    const buttons = [
+      t('Cancel') as 'Cancel',
+      t('Use Remote Message'),
+      t('Sync New Message'),
+    ] as const;
+    const cancel = buttons[0];
+    const syncButton = buttons[2];
+    const answer = await showOptionModal({
+      type: 'confirm',
+      icon: 'warning',
+      title: t('Sync message for newly attached Diff?'),
+      message: (
+        <T>
+          You're changing the attached Diff for this commit. Would you like you sync your new local
+          message up to the remote Diff, or just use the existing remote message for this Diff?
+        </T>
+      ),
+      buttons,
+    });
+    if (answer === cancel || answer == null) {
+      return;
+    }
+    optedOutOfSync = answer !== syncButton;
+  }
+  if (!optedOutOfSync) {
+    const title = firstLine(latestMessageString);
+    const description = latestMessageString.slice(title.length);
+    // don't wait for the update mutation to go through, just let it happen in parallel with the metaedit
+    updateRemoteMessage(diffId, title, description).catch(() => {
+      // TODO: We should notify about this in the UI
+    });
+  }
 }

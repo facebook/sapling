@@ -413,15 +413,17 @@ describe('Image upload inside TextArea ', () => {
       act(() => {
         fireEvent.click(CommitInfoTestUtils.withinCommitActionBar().getByText('Commit'));
       });
-      expectMessageSentToServer({
-        type: 'runOperation',
-        operation: expect.objectContaining({
-          args: expect.arrayContaining([
-            'commit',
-            expect.stringMatching('hi\n+(Summary: )?hey\nhttps://image.example.com/1111'),
-          ]),
+      await waitFor(() =>
+        expectMessageSentToServer({
+          type: 'runOperation',
+          operation: expect.objectContaining({
+            args: expect.arrayContaining([
+              'commit',
+              expect.stringMatching('hi\n+(Summary: )?hey\nhttps://image.example.com/1111'),
+            ]),
+          }),
         }),
-      });
+      );
     });
   });
 });
