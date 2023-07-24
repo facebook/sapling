@@ -437,6 +437,7 @@ function ShowingRemoteMessageBanner({
         buttons={
           <VSCodeButton
             appearance="icon"
+            data-testid="message-sync-banner-context-menu"
             onClick={e => {
               contextMenu(e);
             }}>
@@ -592,13 +593,16 @@ function ActionsBar({
                   const diffId = findEditedDiffNumber(messageFields) ?? commit.diffId;
                   // if there's a diff attached, we should also update the remote message
                   if (messageSyncEnabled && diffId) {
-                    await tryToUpdateRemoteMessage(
+                    const shouldAbort = await tryToUpdateRemoteMessage(
                       commit,
                       diffId,
                       stringifiedMessage,
                       showOptionModal,
                       'amend',
                     );
+                    if (shouldAbort) {
+                      return;
+                    }
                   }
                 }
 
@@ -632,13 +636,16 @@ function ActionsBar({
                 const diffId = findEditedDiffNumber(messageFields) ?? commit.diffId;
                 // if there's a diff attached, we should also update the remote message
                 if (messageSyncEnabled && diffId) {
-                  await tryToUpdateRemoteMessage(
+                  const shouldAbort = await tryToUpdateRemoteMessage(
                     commit,
                     diffId,
                     stringifiedMessage,
                     showOptionModal,
                     'amendMessage',
                   );
+                  if (shouldAbort) {
+                    return;
+                  }
                 }
                 const operation = new AmendMessageOperation(commit.hash, stringifiedMessage);
                 clearEditedCommitMessage(/* skip confirmation */ true);
@@ -783,7 +790,7 @@ async function tryToUpdateRemoteMessage(
   latestMessageString: string,
   showOptionModal: ReturnType<typeof useModal>,
   reason: 'amend' | 'amendMessage',
-): Promise<void> {
+): Promise<boolean> {
   // TODO: we could skip the update if the new message matches the old one,
   // which is possible when amending changes without changing the commit message
 
@@ -814,7 +821,7 @@ async function tryToUpdateRemoteMessage(
       },
     });
     if (answer === cancel || answer == null) {
-      return;
+      return true; // abort
     }
     optedOutOfSync = answer !== syncButton;
   }
@@ -830,4 +837,5 @@ async function tryToUpdateRemoteMessage(
         // TODO: We should notify about this in the UI
       });
   }
+  return false;
 }

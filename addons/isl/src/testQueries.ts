@@ -74,6 +74,16 @@ export const CommitInfoTestUtils = {
     });
   },
 
+  clickAmendMessageButton() {
+    const amendMessageButton: HTMLButtonElement | null = within(
+      screen.getByTestId('commit-info-actions-bar'),
+    ).queryByText('Amend Message');
+    expect(amendMessageButton).toBeInTheDocument();
+    act(() => {
+      fireEvent.click(unwrap(amendMessageButton));
+    });
+  },
+
   clickCommitButton() {
     const commitButton: HTMLButtonElement | null = within(
       screen.getByTestId('commit-info-actions-bar'),
