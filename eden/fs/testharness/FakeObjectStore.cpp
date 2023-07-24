@@ -29,9 +29,8 @@ void FakeObjectStore::addTree(Tree&& tree) {
   trees_.emplace(std::move(treeHash), std::move(tree));
 }
 
-void FakeObjectStore::addBlob(Blob&& blob) {
-  auto blobHash = blob.getHash();
-  blobs_.emplace(blobHash, std::move(blob));
+void FakeObjectStore::addBlob(ObjectId id, Blob&& blob) {
+  blobs_.emplace(std::move(id), std::move(blob));
 }
 
 void FakeObjectStore::setTreeForCommit(const RootId& commitID, Tree&& tree) {

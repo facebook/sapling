@@ -91,7 +91,6 @@ TEST_F(FilteredBackingStoreTest, getBlob) {
   // Add a blob to the tree
   auto hash = makeTestHash("1");
   auto* storedBlob = wrappedStore_->putBlob(hash, "foobar");
-  EXPECT_EQ(hash, storedBlob->get().getHash());
   EXPECT_EQ("foobar", blobContents(storedBlob->get()));
 
   // The blob is not ready yet, so calling getBlob() should yield not-ready
@@ -157,18 +156,19 @@ TEST_F(FilteredBackingStoreTest, getBlob) {
 
 TEST_F(FilteredBackingStoreTest, getTree) {
   // Populate some files in the store
-  auto* runme = wrappedStore_->putBlob("#!/bin/sh\necho 'hello world!'\n");
-  auto* foo = wrappedStore_->putBlob(makeTestHash("f00"), "this is foo\n");
-  EXPECT_EQ(makeTestHash("f00"), foo->get().getHash());
-  auto* bar = wrappedStore_->putBlob("barbarbarbar\n");
+  auto [runme, runme_id] =
+      wrappedStore_->putBlob("#!/bin/sh\necho 'hello world!'\n");
+  auto foo_id = makeTestHash("f00");
+  (void)wrappedStore_->putBlob(foo_id, "this is foo\n");
+  auto [bar, bar_id] = wrappedStore_->putBlob("barbarbarbar\n");
 
   // Populate a couple directories as well
   auto* dir1 = wrappedStore_->putTree(
       makeTestHash("abc"),
       {
           // "foo" will be filtered once the filter is applied
-          {"foo", foo},
-          {"runme", runme, FakeBlobType::EXECUTABLE_FILE},
+          {"foo", foo_id},
+          {"runme", runme_id, FakeBlobType::EXECUTABLE_FILE},
       });
   EXPECT_EQ(makeTestHash("abc"), dir1->get().getHash());
   auto* dir2 = wrappedStore_->putTree(
@@ -181,12 +181,12 @@ TEST_F(FilteredBackingStoreTest, getTree) {
   auto* rootDir = wrappedStore_->putTree(
       rootHash,
       {
-          {"bar", bar},
+          {"bar", bar_id},
           {"dir1", dir1},
           {"readonly", dir2},
-          {"zzz", foo, FakeBlobType::REGULAR_FILE},
+          {"zzz", foo_id, FakeBlobType::REGULAR_FILE},
           // this "foo" will also be filtered once the filter is applied.
-          {"foo", foo, FakeBlobType::REGULAR_FILE},
+          {"foo", foo_id, FakeBlobType::REGULAR_FILE},
       });
 
   // Try getting the root tree but fail it with triggerError()
@@ -232,7 +232,7 @@ TEST_F(FilteredBackingStoreTest, getTree) {
   // We expect runme to exist in the subtree
   auto [runmeName, runmeTreeEntry] = *subTree->find("runme"_pc);
   EXPECT_EQ("runme"_pc, runmeName);
-  auto runmeFOID = FilteredObjectId(runme->get().getHash());
+  auto runmeFOID = FilteredObjectId(runme_id);
   if (folly::kIsWindows) {
     // Windows executables show up as regular files
     EXPECT_EQ(TreeEntryType::REGULAR_FILE, runmeTreeEntry.getType());
@@ -246,7 +246,7 @@ TEST_F(FilteredBackingStoreTest, getTree) {
 
   // Finally, test that all other entries in the root tree are valid.
   EXPECT_EQ("bar"_pc, barName);
-  auto barFOID = FilteredObjectId(bar->get().getHash());
+  auto barFOID = FilteredObjectId(bar_id);
   EXPECT_EQ(barFOID.getValue(), barTreeEntry.getHash().asString());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, barTreeEntry.getType());
 
@@ -263,7 +263,7 @@ TEST_F(FilteredBackingStoreTest, getTree) {
   EXPECT_EQ(TreeEntryType::TREE, readonlyTreeEntry.getType());
 
   EXPECT_EQ("zzz"_pc, zzzName);
-  auto zzzFOID = FilteredObjectId{foo->get().getHash()};
+  auto zzzFOID = FilteredObjectId{foo_id};
   EXPECT_EQ(zzzFOID.getValue(), zzzTreeEntry.getHash().asString());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, zzzTreeEntry.getType());
 
@@ -356,16 +356,17 @@ TEST_F(FilteredBackingStoreTest, getRootTree) {
 }
 
 TEST_F(FilteredBackingStoreTest, maybePutBlob) {
-  auto foo1 = wrappedStore_->maybePutBlob("foo\n");
-  EXPECT_TRUE(foo1.second);
-  auto foo2 = wrappedStore_->maybePutBlob("foo\n");
-  EXPECT_FALSE(foo2.second);
-  EXPECT_EQ(foo1.first, foo2.first);
+  auto [foo1, foo1_id, foo1_inserted] = wrappedStore_->maybePutBlob("foo\n");
+  EXPECT_TRUE(foo1_inserted);
+  auto [foo2, foo2_id, foo2_inserted] = wrappedStore_->maybePutBlob("foo\n");
+  EXPECT_FALSE(foo2_inserted);
+  EXPECT_EQ(foo1, foo2);
+  EXPECT_EQ(foo1_id, foo2_id);
 }
 
 TEST_F(FilteredBackingStoreTest, maybePutTree) {
-  auto* foo = wrappedStore_->putBlob("foo\n");
-  auto* bar = wrappedStore_->putBlob("bar\n");
+  auto foo = wrappedStore_->putBlob("foo\n");
+  auto bar = wrappedStore_->putBlob("bar\n");
 
   auto dir1 = wrappedStore_->maybePutTree({
       {"foo", foo},
@@ -391,29 +392,29 @@ TEST_F(FilteredBackingStoreTest, testCompareBlobObjectsById) {
   // in order for two blobs to be equal, their hashes (NOT their contents) need
   // to be equal.
   auto foobarHash = makeTestHash("f00");
-  auto* foobarBlob = wrappedStore_->putBlob(foobarHash, "foobar");
+  (void)wrappedStore_->putBlob(foobarHash, "foobar");
   auto footballHash = makeTestHash("f001ba11");
-  auto* footballBlob = wrappedStore_->putBlob(footballHash, "football");
+  (void)wrappedStore_->putBlob(footballHash, "football");
 
   // populate some trees
   auto rootDirHash = makeTestHash("f00d");
   auto* rootDirTree = wrappedStore_->putTree(
       rootDirHash,
       {
-          {"foobar1", foobarBlob},
-          {"foobar2", foobarBlob},
-          {"football1", footballBlob},
-          {"football2", footballBlob},
+          {"foobar1", foobarHash},
+          {"foobar2", foobarHash},
+          {"football1", footballHash},
+          {"football2", footballHash},
       });
   auto fooDirExtendedHash = makeTestHash("f00d1e");
   auto* fooDirExtendedTree = wrappedStore_->putTree(
       fooDirExtendedHash,
       {
-          {"foobar1", foobarBlob},
-          {"foobar2", foobarBlob},
-          {"foobar3", foobarBlob},
-          {"football1", footballBlob},
-          {"football2", footballBlob},
+          {"foobar1", foobarHash},
+          {"foobar2", foobarHash},
+          {"foobar3", foobarHash},
+          {"football1", footballHash},
+          {"football2", footballHash},
       });
 
   // Set up one commit with a root tree
@@ -509,21 +510,21 @@ TEST_F(FilteredBackingStoreTest, testCompareTreeObjectsById) {
   // in order for two blobs to be equal, their hashes (NOT their contents) need
   // to be equal.
   auto foobarHash = makeTestHash("f00");
-  auto* foobarBlob = wrappedStore_->putBlob(foobarHash, "foobar");
+  (void)wrappedStore_->putBlob(foobarHash, "foobar");
   auto footballHash = makeTestHash("f001ba11");
-  auto* footballBlob = wrappedStore_->putBlob(footballHash, "football");
+  (void)wrappedStore_->putBlob(footballHash, "football");
   auto bazbarHash = makeTestHash("ba5ba4");
-  auto* bazbarBlob = wrappedStore_->putBlob(bazbarHash, "bazbar");
+  (void)wrappedStore_->putBlob(bazbarHash, "bazbar");
   auto bazballHash = makeTestHash("ba5ba11");
-  auto* bazballBlob = wrappedStore_->putBlob(bazballHash, "bazball");
+  (void)wrappedStore_->putBlob(bazballHash, "bazball");
 
   // populate some trees
   auto grandchildTreeHash = makeTestHash("ba5");
   auto grandchildTree = wrappedStore_->putTree(
       grandchildTreeHash,
       {
-          {"bazbar", bazbarBlob},
-          {"bazball", bazballBlob},
+          {"bazbar", bazbarHash},
+          {"bazball", bazballHash},
       });
   auto childTreeHash = makeTestHash("f00ba5");
   auto childTree =
@@ -531,15 +532,15 @@ TEST_F(FilteredBackingStoreTest, testCompareTreeObjectsById) {
   auto modifiedChildTreeHash = makeTestHash("f00ba52");
   auto modifiedChildTree = wrappedStore_->putTree(
       modifiedChildTreeHash,
-      {{"grandchild", grandchildTree}, {"newentry", foobarBlob}});
+      {{"grandchild", grandchildTree}, {"newentry", foobarHash}});
   auto rootDirHash = makeTestHash("f00d");
   auto* rootDirTree = wrappedStore_->putTree(
       rootDirHash,
       {
-          {"foobar1", foobarBlob},
-          {"foobar2", foobarBlob},
-          {"football1", footballBlob},
-          {"football2", footballBlob},
+          {"foobar1", foobarHash},
+          {"foobar2", foobarHash},
+          {"football1", footballHash},
+          {"football2", footballHash},
           {"child", childTree},
       });
 
@@ -547,10 +548,10 @@ TEST_F(FilteredBackingStoreTest, testCompareTreeObjectsById) {
   auto* modifiedRootDirTree = wrappedStore_->putTree(
       modifiedRootDirHash,
       {
-          {"foobar1", foobarBlob},
-          {"foobar2", foobarBlob},
-          {"football1", footballBlob},
-          {"football2", footballBlob},
+          {"foobar1", foobarHash},
+          {"foobar2", foobarHash},
+          {"football1", footballHash},
+          {"football2", footballHash},
           {"child", modifiedChildTree},
       });
 

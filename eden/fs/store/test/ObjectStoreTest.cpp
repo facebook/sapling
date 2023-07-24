@@ -87,13 +87,13 @@ struct ObjectStoreTest : ::testing::Test {
 
   ObjectId putReadyBlob(folly::StringPiece data) {
     {
-      auto* storedBlob = fakeBackingStoreWithKeyedBlake3->putBlob(data);
+      auto [storedBlob, id] = fakeBackingStoreWithKeyedBlake3->putBlob(data);
       storedBlob->setReady();
     }
 
-    StoredBlob* storedBlob = fakeBackingStore->putBlob(data);
+    auto [storedBlob, id] = fakeBackingStore->putBlob(data);
     storedBlob->setReady();
-    return storedBlob->get().getHash();
+    return id;
   }
 
   ObjectId putReadyTree() {
@@ -400,10 +400,9 @@ TEST_F(
   auto context = makeRefPtr<FetchContext>();
 
   auto one = putReadyBlob("foo");
-  auto storedBlob =
-      fakeBackingStore->putBlob(ObjectId{"not_a_content_hash"}, "foo");
+  auto two = ObjectId{"not_a_constant_hash"};
+  auto storedBlob = fakeBackingStore->putBlob(two, "foo");
   storedBlob->setReady();
-  auto two = storedBlob->get().getHash();
 
   auto fut =
       objectStore->areBlobsEqual(one, two, context.as<ObjectFetchContext>());

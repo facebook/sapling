@@ -282,8 +282,8 @@ StoredTree* FakeTreeBuilder::EntryInfo::finalizeTree(
       auto* storedTree = entryInfo.finalizeTree(builder, setReady);
       hash = storedTree->get().getHash();
     } else {
-      auto* storedBlob = entryInfo.finalizeBlob(builder, setReady);
-      hash = storedBlob->get().getHash();
+      auto [storedBlob, id] = entryInfo.finalizeBlob(builder, setReady);
+      hash = id;
     }
     treeEntries.emplace(e.first, hash, entryInfo.type);
   }
@@ -295,16 +295,16 @@ StoredTree* FakeTreeBuilder::EntryInfo::finalizeTree(
   return storedTree;
 }
 
-StoredBlob* FakeTreeBuilder::EntryInfo::finalizeBlob(
+std::pair<StoredBlob*, ObjectId> FakeTreeBuilder::EntryInfo::finalizeBlob(
     FakeTreeBuilder* builder,
     bool setReady) const {
   XCHECK(type != TreeEntryType::TREE);
-  auto* storedBlob = objectId
-      ? builder->store_->maybePutBlob(objectId.value(), contents).first
-      : builder->store_->maybePutBlob(contents).first;
+  auto [storedBlob, id, inserted] = objectId
+      ? builder->store_->maybePutBlob(objectId.value(), contents)
+      : builder->store_->maybePutBlob(contents);
   if (setReady) {
     storedBlob->setReady();
   }
-  return storedBlob;
+  return {storedBlob, id};
 }
 } // namespace facebook::eden

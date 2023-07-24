@@ -240,6 +240,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * able to perform a simple hash check if the file is not materialized.
    */
   ImmediateFuture<bool> isSameAs(
+      const ObjectId& blobID,
       const Blob& blob,
       TreeEntryType entryType,
       const ObjectFetchContextPtr& fetchContext);

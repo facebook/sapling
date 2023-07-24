@@ -71,7 +71,6 @@ TEST_P(LocalStoreTest, testReadAndWriteBlob) {
   store_->putBlob(hash, &inBlob);
 
   auto outBlob = store_->getBlob(hash).get(10s);
-  EXPECT_EQ(hash.asHexString(), outBlob->getHash().asHexString());
   EXPECT_EQ(
       contents, outBlob->getContents().clone()->moveToFbString().toStdString());
 

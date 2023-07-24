@@ -44,10 +44,9 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   // Test getBlob().
   auto buf1 = IOBuf();
   Blob blob1(blobHash, buf1);
-  store.addBlob(std::move(blob1));
+  store.addBlob(blobHash, std::move(blob1));
   auto foundBlob = store.getBlob(blobHash).get();
   EXPECT_TRUE(foundBlob);
-  EXPECT_EQ(blobHash, foundBlob->getHash());
 
   // Test getTreeForCommit().
   Tree::container entries2{kPathMapDefaultCaseSensitive};

@@ -707,10 +707,11 @@ ImmediateFuture<bool> FileInode::isSameAsSlow(
 }
 
 ImmediateFuture<bool> FileInode::isSameAs(
+    const ObjectId& id,
     const Blob& blob,
     TreeEntryType entryType,
     const ObjectFetchContextPtr& fetchContext) {
-  auto result = isSameAsFast(blob.getHash(), entryType);
+  auto result = isSameAsFast(id, entryType);
   if (result.has_value()) {
     return result.value();
   }
@@ -1082,9 +1083,9 @@ ImmediateFuture<std::tuple<BufVec, bool>> FileInode::read(
 
         state->readByteRanges.add(off, off + size);
         if (state->readByteRanges.covers(0, blob->getSize())) {
-          XLOG(DBG4) << "Inode " << self->getNodeId()
-                     << " dropping interest for blob " << blob->getHash()
-                     << " because it's been fully read.";
+          XLOG(DBG4)
+              << "Inode " << self->getNodeId()
+              << " dropping interest for blob because it's been fully read.";
           state->interestHandle.reset();
           state->readByteRanges.clear();
         }

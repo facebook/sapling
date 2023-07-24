@@ -14,7 +14,6 @@ namespace facebook::eden {
 
 class Blob;
 class ObjectId;
-class Hash20;
 class Tree;
 
 template <typename T>

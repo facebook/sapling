@@ -35,7 +35,6 @@ TEST(GitBlob, testDeserializeUnmanaged) {
 
   IOBuf buf(IOBuf::WRAP_BUFFER, gitBlobObject);
   auto blob = deserializeGitBlob(hash, &buf);
-  EXPECT_EQ(hash, blob->getHash());
   EXPECT_FALSE(blob->getContents().isShared())
       << "deserializeGitBlob() must make a copy of the buffer given "
       << "an unmanaged IOBuf as input";
@@ -64,7 +63,6 @@ TEST(GitBlob, testDeserializeManaged) {
   EXPECT_FALSE(buf->isShared()) << "newly created IOBuf should not be shared";
 
   auto blob = deserializeGitBlob(hash, buf.get());
-  EXPECT_EQ(hash, blob->getHash());
   EXPECT_TRUE(buf->isShared())
       << "deserializeGitBlob() should return a blob that shares the same "
       << "IOBuf data, instead of copying it";

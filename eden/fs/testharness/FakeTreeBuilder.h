@@ -262,7 +262,9 @@ class FakeTreeBuilder {
     EntryInfo(ExplicitClone, const EntryInfo& orig);
 
     StoredTree* finalizeTree(FakeTreeBuilder* builder, bool setReady) const;
-    StoredBlob* finalizeBlob(FakeTreeBuilder* builder, bool setReady) const;
+    std::pair<StoredBlob*, ObjectId> finalizeBlob(
+        FakeTreeBuilder* builder,
+        bool setReady) const;
 
     TreeEntryType type;
     std::unique_ptr<PathMap<EntryInfo>> entries;

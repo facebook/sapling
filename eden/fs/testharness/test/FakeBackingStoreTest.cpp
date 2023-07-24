@@ -70,7 +70,6 @@ TEST_F(FakeBackingStoreTest, getBlob) {
   // Add a blob to the tree
   auto hash = makeTestHash("1");
   auto* storedBlob = store_->putBlob(hash, "foobar");
-  EXPECT_EQ(hash, storedBlob->get().getHash());
   EXPECT_EQ("foobar", blobContents(storedBlob->get()));
 
   // The blob is not ready yet, so calling getBlob() should yield not-ready
@@ -130,28 +129,31 @@ TEST_F(FakeBackingStoreTest, getBlob) {
 
 TEST_F(FakeBackingStoreTest, getTree) {
   // Populate some files and directories in the store
-  auto* runme = store_->putBlob("#!/bin/sh\necho 'hello world!'\n");
-  auto* foo = store_->putBlob(makeTestHash("f00"), "this is foo\n");
-  EXPECT_EQ(makeTestHash("f00"), foo->get().getHash());
-  auto* bar = store_->putBlob("barbarbarbar\n");
+  auto [runme, runme_id] = store_->putBlob("#!/bin/sh\necho 'hello world!'\n");
+  auto foo_id = makeTestHash("f00");
+  auto* foo = store_->putBlob(foo_id, "this is foo\n");
+  auto [bar, bar_id] = store_->putBlob("barbarbarbar\n");
+
+  (void)foo;
 
   auto* dir1 = store_->putTree(
       makeTestHash("abc"),
       {
-          {"foo", foo},
-          {"runme", runme, FakeBlobType::EXECUTABLE_FILE},
+          {"foo", foo_id},
+          {"runme", runme_id, FakeBlobType::EXECUTABLE_FILE},
       });
   EXPECT_EQ(makeTestHash("abc"), dir1->get().getHash());
-  auto* dir2 = store_->putTree({{"README", store_->putBlob("docs go here")}});
+  auto* dir2 =
+      store_->putTree({{"README", store_->putBlob("docs go here").second}});
 
   auto rootHash = makeTestHash("10101010");
   auto* rootDir = store_->putTree(
       rootHash,
       {
-          {"bar", bar},
+          {"bar", bar_id},
           {"dir1", dir1},
           {"readonly", dir2},
-          {"zzz", foo, FakeBlobType::REGULAR_FILE},
+          {"zzz", foo_id, FakeBlobType::REGULAR_FILE},
       });
 
   // Try getting the root tree but failing it with triggerError()
@@ -181,8 +183,8 @@ TEST_F(FakeBackingStoreTest, getTree) {
   auto [readonlyName, readonlyTreeEntry] = *tree2->find("readonly"_pc);
   auto [zzzName, zzzTreeEntry] = *tree2->find("zzz"_pc);
   EXPECT_EQ("bar"_pc, barName);
-  EXPECT_EQ(bar->get().getHash(), barTreeEntry.getHash());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, barTreeEntry.getType());
+  EXPECT_EQ(bar_id, barTreeEntry.getObjectId());
   EXPECT_EQ("dir1"_pc, dir1Name);
   EXPECT_EQ(dir1->get().getHash(), dir1TreeEntry.getHash());
   EXPECT_EQ(TreeEntryType::TREE, dir1TreeEntry.getType());
@@ -192,7 +194,7 @@ TEST_F(FakeBackingStoreTest, getTree) {
   // input the permissions as 0500 above this really ends up returning 0755
   EXPECT_EQ(TreeEntryType::TREE, readonlyTreeEntry.getType());
   EXPECT_EQ("zzz"_pc, zzzName);
-  EXPECT_EQ(foo->get().getHash(), zzzTreeEntry.getHash());
+  EXPECT_EQ(foo_id, zzzTreeEntry.getHash());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, zzzTreeEntry.getType());
 
   EXPECT_EQ(rootHash, std::move(future3).get().tree->getHash());
@@ -214,7 +216,8 @@ TEST_F(FakeBackingStoreTest, getTree) {
 TEST_F(FakeBackingStoreTest, getRootTree) {
   // Set up one commit with a root tree
   auto dir1Hash = makeTestHash("abc");
-  auto* dir1 = store_->putTree(dir1Hash, {{"foo", store_->putBlob("foo\n")}});
+  auto* dir1 =
+      store_->putTree(dir1Hash, {{"foo", store_->putBlob("foo\n").second}});
   auto* commit1 = store_->putCommit(RootId{"1"}, dir1);
   // Set up a second commit, but don't actually add the tree object for this one
   auto* commit2 = store_->putCommit(RootId{"2"}, makeTestHash("3"));
@@ -274,28 +277,28 @@ TEST_F(FakeBackingStoreTest, getRootTree) {
 }
 
 TEST_F(FakeBackingStoreTest, maybePutBlob) {
-  auto foo1 = store_->maybePutBlob("foo\n");
-  EXPECT_TRUE(foo1.second);
-  auto foo2 = store_->maybePutBlob("foo\n");
-  EXPECT_FALSE(foo2.second);
-  EXPECT_EQ(foo1.first, foo2.first);
+  auto [foo1, foo1_id, foo1_inserted] = store_->maybePutBlob("foo\n");
+  EXPECT_TRUE(foo1_inserted);
+  auto [foo2, foo2_id, foo2_inserted] = store_->maybePutBlob("foo\n");
+  EXPECT_FALSE(foo2_inserted);
+  EXPECT_EQ(foo1, foo2);
 }
 
 TEST_F(FakeBackingStoreTest, maybePutTree) {
-  auto* foo = store_->putBlob("foo\n");
-  auto* bar = store_->putBlob("bar\n");
+  auto [foo, foo_id] = store_->putBlob("foo\n");
+  auto [bar, bar_id] = store_->putBlob("bar\n");
 
   auto dir1 = store_->maybePutTree({
-      {"foo", foo},
-      {"bar", bar},
+      {"foo", foo_id},
+      {"bar", bar_id},
   });
   EXPECT_TRUE(dir1.second);
 
   // Listing the entries in a different order should still
   // result in the same tree.
   auto dir2 = store_->maybePutTree({
-      {"bar", bar},
-      {"foo", foo},
+      {"bar", bar_id},
+      {"foo", foo_id},
   });
   EXPECT_FALSE(dir2.second);
   EXPECT_EQ(dir1.first, dir2.first);

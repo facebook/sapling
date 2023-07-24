@@ -36,10 +36,6 @@ class Blob {
         contents_{folly::IOBuf::COPY_BUFFER, contents.data(), contents.size()},
         size_{contents.size()} {}
 
-  const ObjectId& getHash() const {
-    return hash_;
-  }
-
   const folly::IOBuf& getContents() const {
     return contents_;
   }

@@ -30,7 +30,7 @@ class FakeObjectStore final : public IObjectStore {
   ~FakeObjectStore() override;
 
   void addTree(Tree&& tree);
-  void addBlob(Blob&& blob);
+  void addBlob(ObjectId id, Blob&& blob);
   void setTreeForCommit(const RootId& commitID, Tree&& tree);
 
   ImmediateFuture<std::shared_ptr<const Tree>> getRootTree(
