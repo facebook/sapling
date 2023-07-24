@@ -3172,7 +3172,7 @@ EdenServiceHandler::semifuture_debugGetBlob(
             id,
             folly::Try<BlobPtr>{hgBackingStore->getHgBackingStore()
                                     .getDatapackStore()
-                                    .getBlobLocal(id, proxyHash)},
+                                    .getBlobLocal(proxyHash)},
             DataFetchOrigin::LOCAL_BACKING_STORE)});
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {

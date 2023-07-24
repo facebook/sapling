@@ -488,8 +488,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlob(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::Blob);
 
-  if (auto blob =
-          backingStore_->getDatapackStore().getBlobLocal(id, proxyHash)) {
+  if (auto blob = backingStore_->getDatapackStore().getBlobLocal(proxyHash)) {
     return folly::makeSemiFuture(GetBlobResult{
         std::move(blob), ObjectFetchContext::Origin::FromDiskCache});
   }

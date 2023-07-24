@@ -246,8 +246,6 @@ void HgDatapackStore::getBlobBatch(
 
         XLOGF(DBG9, "Imported node={}", folly::hexlify(requests[index]));
         auto& importRequest = importRequests[index];
-        auto* blobRequest =
-            importRequest->getRequest<HgImportRequest::BlobImport>();
         // A proposed folly::Try::and_then would make the following much
         // simpler.
         importRequest->getPromise<BlobPtr>()->setWith(
@@ -255,8 +253,8 @@ void HgDatapackStore::getBlobBatch(
               if (content.hasException()) {
                 return folly::Try<BlobPtr>{std::move(content).exception()};
               }
-              return folly::Try{std::make_shared<BlobPtr::element_type>(
-                  blobRequest->hash, *content.value())};
+              return folly::Try{
+                  std::make_shared<BlobPtr::element_type>(*content.value())};
             });
 
         // Make sure that we're stopping this watch.
@@ -264,12 +262,10 @@ void HgDatapackStore::getBlobBatch(
       });
 }
 
-BlobPtr HgDatapackStore::getBlobLocal(
-    const ObjectId& id,
-    const HgProxyHash& hgInfo) {
+BlobPtr HgDatapackStore::getBlobLocal(const HgProxyHash& hgInfo) {
   auto content = store_.getBlob(hgInfo.byteHash(), true);
   if (content) {
-    return std::make_shared<BlobPtr::element_type>(id, std::move(*content));
+    return std::make_shared<BlobPtr::element_type>(std::move(*content));
   }
 
   return nullptr;

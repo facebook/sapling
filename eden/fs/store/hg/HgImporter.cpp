@@ -313,10 +313,7 @@ BlobPtr HgImporter::importFileContents(
 
   XLOG(DBG4) << "imported blob " << blobHash << " (" << path << ", " << blobHash
              << "); length=" << bodyLength;
-  auto blobId =
-      ObjectId{blobHash.getBytes()}; // fixme: this is a curious case where we
-                                     // create blob using HgId as an Id
-  return std::make_shared<BlobPtr::element_type>(blobId, std::move(buf));
+  return std::make_shared<BlobPtr::element_type>(std::move(buf));
 }
 
 std::unique_ptr<IOBuf> HgImporter::fetchTree(

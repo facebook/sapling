@@ -171,7 +171,7 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriority) {
         expected, request->getRequest<HgImportRequest::BlobImport>()->hash);
 
     auto blob = folly::makeTryWith([expected]() {
-      return std::make_shared<BlobPtr::element_type>(expected, folly::IOBuf{});
+      return std::make_shared<BlobPtr::element_type>(folly::IOBuf{});
     });
 
     queue.markImportAsFinished<BlobPtr::element_type>(
@@ -183,9 +183,8 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriority) {
       smallHash,
       smallRequestDequeue->getRequest<HgImportRequest::BlobImport>()->hash);
 
-  folly::Try<BlobPtr> smallBlob = folly::makeTryWith([smallHash = smallHash]() {
-    return std::make_shared<BlobPtr::element_type>(smallHash, folly::IOBuf{});
-  });
+  folly::Try<BlobPtr> smallBlob = folly::makeTryWith(
+      [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
 
   queue.markImportAsFinished<BlobPtr::element_type>(
       smallRequestDequeue->getRequest<HgImportRequest::BlobImport>()->hash,
@@ -214,9 +213,8 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriorityReverse) {
       largeHash,
       largeHashDequeue->getRequest<HgImportRequest::BlobImport>()->hash);
 
-  folly::Try<BlobPtr> largeBlob = folly::makeTryWith([largeHash = largeHash]() {
-    return std::make_shared<BlobPtr::element_type>(largeHash, folly::IOBuf{});
-  });
+  folly::Try<BlobPtr> largeBlob = folly::makeTryWith(
+      [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
   queue.markImportAsFinished<BlobPtr::element_type>(
       largeHashDequeue->getRequest<HgImportRequest::BlobImport>()->hash,
       largeBlob);
@@ -230,9 +228,8 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriorityReverse) {
     EXPECT_EQ(
         expected, request->getRequest<HgImportRequest::BlobImport>()->hash);
 
-    auto blob = folly::makeTryWith([expected]() {
-      return std::make_shared<BlobPtr::element_type>(expected, folly::IOBuf{});
-    });
+    auto blob = folly::makeTryWith(
+        [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
     queue.markImportAsFinished<BlobPtr::element_type>(
         request->getRequest<HgImportRequest::BlobImport>()->hash, blob);
   }
@@ -300,10 +297,7 @@ TEST_F(HgImportRequestQueueTest, mixedPriority) {
             .value()); // assert blob requests of priority 9, 8, and 7
 
     auto blob = folly::makeTryWith(
-        [hash = dequeuedRequest->getRequest<HgImportRequest::BlobImport>()
-                    ->hash]() {
-          return std::make_shared<BlobPtr::element_type>(hash, folly::IOBuf{});
-        });
+        [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
     queue.markImportAsFinished<BlobPtr::element_type>(
         dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
   }
@@ -360,10 +354,7 @@ TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
         enqueued_blob.end());
 
     auto blob = folly::makeTryWith(
-        [hash = dequeuedRequest->getRequest<HgImportRequest::BlobImport>()
-                    ->hash]() {
-          return std::make_shared<BlobPtr::element_type>(hash, folly::IOBuf{});
-        });
+        [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
     queue.markImportAsFinished<BlobPtr::element_type>(
         dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
   }
@@ -397,9 +388,8 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterEnqueue) {
       expected,
       dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash);
 
-  auto blob = folly::makeTryWith([hash = proxyHash.sha1()]() {
-    return std::make_shared<BlobPtr::element_type>(hash, folly::IOBuf{});
-  });
+  auto blob = folly::makeTryWith(
+      [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
   queue.markImportAsFinished<BlobPtr::element_type>(
       dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
 }
@@ -434,9 +424,8 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterDequeue) {
       dequeuedRequest->getRequest<HgImportRequest::BlobImport>()
           ->promises.size());
 
-  auto blob = folly::makeTryWith([hash = proxyHash.sha1()]() {
-    return std::make_shared<BlobPtr::element_type>(hash, folly::IOBuf{});
-  });
+  auto blob = folly::makeTryWith(
+      [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
   queue.markImportAsFinished<BlobPtr::element_type>(
       dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
 }
@@ -468,9 +457,8 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterMarkedDone) {
       expected,
       dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash);
 
-  auto blob = folly::makeTryWith([hash = proxyHash.sha1()]() {
-    return std::make_shared<BlobPtr::element_type>(hash, folly::IOBuf{});
-  });
+  auto blob = folly::makeTryWith(
+      [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
   queue.markImportAsFinished<BlobPtr::element_type>(
       dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
 }
@@ -513,9 +501,8 @@ TEST_F(HgImportRequestQueueTest, multipleDuplicateRequests) {
       dequeuedRequest->getRequest<HgImportRequest::BlobImport>()
           ->promises.size());
 
-  auto blob = folly::makeTryWith([hash = proxyHash.sha1()]() {
-    return std::make_shared<BlobPtr::element_type>(hash, folly::IOBuf{});
-  });
+  auto blob = folly::makeTryWith(
+      [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
   queue.markImportAsFinished<BlobPtr::element_type>(
       dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
 }
@@ -568,9 +555,8 @@ TEST_F(HgImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
     EXPECT_EQ(
         expected, request->getRequest<HgImportRequest::BlobImport>()->hash);
 
-    auto blob = folly::makeTryWith([expected]() {
-      return std::make_shared<BlobPtr::element_type>(expected, folly::IOBuf{});
-    });
+    auto blob = folly::makeTryWith(
+        [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
     queue.markImportAsFinished<BlobPtr::element_type>(
         request->getRequest<HgImportRequest::BlobImport>()->hash, blob);
   }
@@ -580,9 +566,8 @@ TEST_F(HgImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
   EXPECT_EQ(
       lowPriHash, expLowPri->getRequest<HgImportRequest::BlobImport>()->hash);
 
-  auto blob = folly::makeTryWith([lowPriHash = lowPriHash]() {
-    return std::make_shared<BlobPtr::element_type>(lowPriHash, folly::IOBuf{});
-  });
+  auto blob = folly::makeTryWith(
+      [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
   queue.markImportAsFinished<BlobPtr::element_type>(
       expLowPri->getRequest<HgImportRequest::BlobImport>()->hash, blob);
 
@@ -595,9 +580,8 @@ TEST_F(HgImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
     EXPECT_EQ(
         expected, request->getRequest<HgImportRequest::BlobImport>()->hash);
 
-    auto expBlob = folly::makeTryWith([expected]() {
-      return std::make_shared<BlobPtr::element_type>(expected, folly::IOBuf{});
-    });
+    auto expBlob = folly::makeTryWith(
+        [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
     queue.markImportAsFinished<BlobPtr::element_type>(
         request->getRequest<HgImportRequest::BlobImport>()->hash, expBlob);
   }

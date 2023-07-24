@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
       std::make_shared<NullStructuredLogger>(),
       &faultInjector);
   localStore.open();
-  Blob blob(blobID, IOBuf());
+  Blob blob{IOBuf()};
   localStore.putBlob(blobID, &blob);
 
   return 0;

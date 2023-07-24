@@ -17,7 +17,7 @@ using std::invalid_argument;
 
 namespace facebook::eden {
 
-BlobPtr deserializeGitBlob(const ObjectId& hash, const IOBuf* data) {
+BlobPtr deserializeGitBlob(const IOBuf* data) {
   folly::io::Cursor cursor(data);
 
   // Find the end of the header and extract the size.
@@ -54,7 +54,7 @@ BlobPtr deserializeGitBlob(const ObjectId& hash, const IOBuf* data) {
     }
   }
 
-  return std::make_shared<BlobPtr::element_type>(hash, std::move(contents));
+  return std::make_shared<BlobPtr::element_type>(std::move(contents));
 }
 
 } // namespace facebook::eden

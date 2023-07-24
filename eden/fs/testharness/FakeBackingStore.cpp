@@ -154,12 +154,7 @@ FakeBackingStore::getBlobMetadata(
 }
 
 Blob FakeBackingStore::makeBlob(folly::StringPiece contents) {
-  return makeBlob(ObjectId::sha1(contents), contents);
-}
-
-Blob FakeBackingStore::makeBlob(ObjectId hash, folly::StringPiece contents) {
-  auto buf = IOBuf{IOBuf::COPY_BUFFER, ByteRange{contents}};
-  return Blob(hash, std::move(buf));
+  return Blob{IOBuf{IOBuf::COPY_BUFFER, ByteRange{contents}}};
 }
 
 std::pair<StoredBlob*, ObjectId> FakeBackingStore::putBlob(
@@ -187,7 +182,7 @@ std::tuple<StoredBlob*, ObjectId, bool> FakeBackingStore::maybePutBlob(
 std::tuple<StoredBlob*, ObjectId, bool> FakeBackingStore::maybePutBlob(
     ObjectId hash,
     folly::StringPiece contents) {
-  auto storedBlob = make_unique<StoredBlob>(makeBlob(hash, contents));
+  auto storedBlob = make_unique<StoredBlob>(makeBlob(contents));
 
   {
     auto data = data_.wlock();

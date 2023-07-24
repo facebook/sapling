@@ -43,7 +43,7 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
 
   // Test getBlob().
   auto buf1 = IOBuf();
-  Blob blob1(blobHash, buf1);
+  Blob blob1(buf1);
   store.addBlob(blobHash, std::move(blob1));
   auto foundBlob = store.getBlob(blobHash).get();
   EXPECT_TRUE(foundBlob);

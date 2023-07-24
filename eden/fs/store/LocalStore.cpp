@@ -152,9 +152,9 @@ ImmediateFuture<BlobPtr> LocalStore::getBlob(const ObjectId& id) const {
                   "Blob",
                   stats,
                   &LocalStoreStats::getBlobFailure,
-                  [&id, &data]() {
+                  [&data]() {
                     auto buf = data.extractIOBuf();
-                    return deserializeGitBlob(id, &buf);
+                    return deserializeGitBlob(&buf);
                   });
             }
 

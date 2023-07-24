@@ -20,8 +20,7 @@ class ObjectId;
 
 /**
  * Creates an Eden Blob from the serialized version of a Git blob object.
- * As such, the SHA-1 of the gitBlobObject should match the hash.
  */
-BlobPtr deserializeGitBlob(const ObjectId& hash, const folly::IOBuf* data);
+BlobPtr deserializeGitBlob(const folly::IOBuf* data);
 
 } // namespace facebook::eden

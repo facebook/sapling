@@ -244,7 +244,7 @@ BlobPtr GitBackingStore::getBlobImpl(const ObjectId& id) {
       blob);
 
   // Create the blob
-  return std::make_shared<BlobPtr::element_type>(id, std::move(buf));
+  return std::make_shared<BlobPtr::element_type>(std::move(buf));
 }
 
 folly::SemiFuture<BackingStore::GetBlobMetaResult>

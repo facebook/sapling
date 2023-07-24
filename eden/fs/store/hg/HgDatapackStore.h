@@ -63,7 +63,7 @@ class HgDatapackStore {
    * Imports the blob identified by the given hash from the local store.
    * Returns nullptr if not found.
    */
-  BlobPtr getBlobLocal(const ObjectId& id, const HgProxyHash& hgInfo);
+  BlobPtr getBlobLocal(const HgProxyHash& hgInfo);
 
   /**
    * Reads blob metadata from hg cache.

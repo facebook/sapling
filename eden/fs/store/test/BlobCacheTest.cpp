@@ -27,11 +27,11 @@ const auto hash9 =
 
 // Each blob's name corresponds to its length in bytes.
 
-const auto blob3 = std::make_shared<Blob>(hash3, "333"_sp);
-const auto blob4 = std::make_shared<Blob>(hash4, "4444"_sp);
-const auto blob5 = std::make_shared<Blob>(hash5, "55555"_sp);
-const auto blob6 = std::make_shared<Blob>(hash6, "666666"_sp);
-const auto blob9 = std::make_shared<Blob>(hash9, "999999999"_sp);
+const auto blob3 = std::make_shared<Blob>("333"_sp);
+const auto blob4 = std::make_shared<Blob>("4444"_sp);
+const auto blob5 = std::make_shared<Blob>("55555"_sp);
+const auto blob6 = std::make_shared<Blob>("666666"_sp);
+const auto blob9 = std::make_shared<Blob>("999999999"_sp);
 } // namespace
 
 TEST(BlobCache, evicts_oldest_on_insertion) {
@@ -79,11 +79,11 @@ TEST(BlobCache, can_forget_cached_entries) {
   auto cache = BlobCache::create(100, 0);
   auto handle3 = cache->insert(
       hash3,
-      std::make_shared<Blob>(hash3, "blob3"_sp),
+      std::make_shared<Blob>("blob3"_sp),
       BlobCache::Interest::WantHandle);
   auto handle4 = cache->insert(
       hash4,
-      std::make_shared<Blob>(hash4, "blob4"_sp),
+      std::make_shared<Blob>("blob4"_sp),
       BlobCache::Interest::WantHandle);
 
   // The use of WantHandle causes these reset() calls to evict from the cache.
@@ -96,7 +96,7 @@ TEST(BlobCache, can_forget_cached_entries) {
 
 TEST(BlobCache, does_not_forget_blob_until_last_handle_is_forgotten) {
   auto cache = BlobCache::create(100, 0);
-  auto blob = std::make_shared<Blob>(hash6, "newblob"_sp);
+  auto blob = std::make_shared<Blob>("newblob"_sp);
   auto weak = std::weak_ptr<const Blob>{blob};
   cache->insert(hash6, blob, BlobCache::Interest::UnlikelyNeededAgain);
   auto handle0 = cache->insert(hash6, blob, BlobCache::Interest::WantHandle);

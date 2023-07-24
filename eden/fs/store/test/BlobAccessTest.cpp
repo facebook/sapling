@@ -35,10 +35,10 @@ const auto hash5 =
 const auto hash6 =
     ObjectId::fromHex("0000000000000000000000000000000000000003");
 
-const auto blob3 = std::make_shared<Blob>(hash3, "333"_sp);
-const auto blob4 = std::make_shared<Blob>(hash4, "4444"_sp);
-const auto blob5 = std::make_shared<Blob>(hash5, "55555"_sp);
-const auto blob6 = std::make_shared<Blob>(hash6, "666666"_sp);
+const auto blob3 = std::make_shared<Blob>("333"_sp);
+const auto blob4 = std::make_shared<Blob>("4444"_sp);
+const auto blob5 = std::make_shared<Blob>("55555"_sp);
+const auto blob6 = std::make_shared<Blob>("666666"_sp);
 
 constexpr size_t kTreeCacheMaximumSize = 1000; // bytes
 constexpr size_t kTreeCacheMinimumEntries = 0;

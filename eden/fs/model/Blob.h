@@ -17,23 +17,19 @@ namespace facebook::eden {
 
 class Blob {
  public:
-  Blob(const ObjectId& hash, folly::IOBuf&& contents)
-      : hash_{hash},
-        contents_{std::move(contents)},
+  Blob(folly::IOBuf&& contents)
+      : contents_{std::move(contents)},
         size_{contents_.computeChainDataLength()} {}
 
-  Blob(const ObjectId& hash, const folly::IOBuf& contents)
-      : hash_{hash},
-        contents_{contents},
-        size_{contents_.computeChainDataLength()} {}
+  Blob(const folly::IOBuf& contents)
+      : contents_{contents}, size_{contents_.computeChainDataLength()} {}
 
   /**
    * Convenience constructor for unit tests. Always copies the given
    * StringPiece.
    */
-  Blob(const ObjectId& hash, folly::StringPiece contents)
-      : hash_{hash},
-        contents_{folly::IOBuf::COPY_BUFFER, contents.data(), contents.size()},
+  Blob(folly::StringPiece contents)
+      : contents_{folly::IOBuf::COPY_BUFFER, contents.data(), contents.size()},
         size_{contents.size()} {}
 
   const folly::IOBuf& getContents() const {
@@ -55,7 +51,6 @@ class Blob {
   }
 
  private:
-  const ObjectId hash_;
   const folly::IOBuf contents_;
   const size_t size_;
 };

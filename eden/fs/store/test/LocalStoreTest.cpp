@@ -67,7 +67,7 @@ TEST_P(LocalStoreTest, testReadAndWriteBlob) {
   auto buf =
       folly::IOBuf{folly::IOBuf::WRAP_BUFFER, folly::ByteRange{contents}};
 
-  auto inBlob = Blob{hash, std::move(buf)};
+  auto inBlob = Blob{std::move(buf)};
   store_->putBlob(hash, &inBlob);
 
   auto outBlob = store_->getBlob(hash).get(10s);

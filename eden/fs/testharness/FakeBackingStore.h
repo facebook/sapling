@@ -96,7 +96,6 @@ class FakeBackingStore final : public BackingStore {
       folly::StringPiece contents);
 
   static Blob makeBlob(folly::StringPiece contents);
-  static Blob makeBlob(ObjectId hash, folly::StringPiece contents);
 
   /**
    * Helper functions for building a tree.
