@@ -110,19 +110,18 @@ export const latestCommitMessage = selectorFamily<[title: string, description: s
         return ['', ''];
       }
 
-      const localTitle = commit.title;
-      const localDescription = commit.description;
+      let remoteTitle = commit.title;
+      let remoteDescription = commit.description;
+      if (commit.diffId) {
+        // use the diff's commit message instead of the local one, if available
+        const summary = get(diffSummary(commit.diffId));
+        if (summary?.value) {
+          remoteTitle = summary.value.title;
+          remoteDescription = summary.value.commitMessage;
+        }
+      }
 
-      const remoteTitle = commit.diffId
-        ? // TODO: try to get the commit title from the latest data for this commit's diff fetched from the remote
-          localTitle
-        : localTitle;
-      const remoteDescription = commit.diffId
-        ? // TODO: try to get the commit message from the latest data for this commit's diff fetched from the remote
-          localDescription
-        : localDescription;
-
-      return [remoteTitle ?? localTitle, remoteDescription ?? localDescription];
+      return [remoteTitle, remoteDescription];
     },
 });
 
