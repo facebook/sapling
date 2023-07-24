@@ -23,6 +23,7 @@
 #include "eden/fs/inodes/EdenDispatcherFactory.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/journal/Journal.h"
@@ -41,22 +42,16 @@
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeClock.h"
+#include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/FileUtils.h"
+#include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/utils/UserInfo.h"
-
-#ifdef _WIN32
-#include "eden/fs/utils/Guid.h"
-#else
-#include "eden/common/utils/ProcessNameCache.h"
-#include "eden/fs/inodes/InodeTable.h"
-#include "eden/fs/testharness/FakeFuse.h"
-#endif
 
 using folly::Future;
 using folly::makeFuture;

@@ -16,6 +16,8 @@
 
 namespace facebook::eden {
 
+#ifndef _WIN32
+
 /**
  * FakeFuse helps implement a fake FUSE device.
  *
@@ -109,5 +111,7 @@ class FakeFuse {
    */
   uint32_t requestID_{0};
 };
+
+#endif
 
 } // namespace facebook::eden
