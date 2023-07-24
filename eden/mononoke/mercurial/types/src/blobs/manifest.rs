@@ -113,6 +113,9 @@ pub async fn fetch_manifest_envelope<B: Blobstore>(
     blobstore: &B,
     manifest_id: HgManifestId,
 ) -> Result<HgManifestEnvelope> {
+    if manifest_id == HgManifestId::new(NULL_HASH) {
+        return Err(ErrorKind::HgContentMissing(manifest_id.into_nodehash(), Type::Tree).into());
+    }
     let envelope = fetch_manifest_envelope_opt(ctx, blobstore, manifest_id).await?;
     Ok(envelope
         .ok_or_else(move || ErrorKind::HgContentMissing(manifest_id.into_nodehash(), Type::Tree))?)
