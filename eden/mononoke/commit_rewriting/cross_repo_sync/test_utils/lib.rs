@@ -15,6 +15,7 @@ use ascii::AsciiString;
 use blobrepo::AsBlobRepo;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
@@ -73,6 +74,7 @@ pub struct TestRepo {
         dyn Bookmarks,
         dyn BookmarkUpdateLog,
         dyn BonsaiHgMapping,
+        dyn BonsaiGitMapping,
         dyn Changesets,
         dyn ChangesetFetcher,
         dyn Filenodes,

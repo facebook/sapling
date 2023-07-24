@@ -9,6 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.71"
+bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 changesets = { version = "0.1.0", path = "../../changesets" }

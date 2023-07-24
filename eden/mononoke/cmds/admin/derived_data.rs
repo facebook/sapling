@@ -15,6 +15,7 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::Loadable;
+use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarksRef;
@@ -410,6 +411,7 @@ async fn count_underived(
     + RepoIdentityRef
     + BonsaiHgMappingArc
     + BonsaiHgMappingRef
+    + BonsaiGitMappingArc
     + BookmarksRef
     + ChangesetsArc
     + ChangesetsRef

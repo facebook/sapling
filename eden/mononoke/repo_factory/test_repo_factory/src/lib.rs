@@ -567,6 +567,7 @@ impl TestRepoFactory {
         changesets: &ArcChangesets,
         commit_graph: &ArcCommitGraph,
         bonsai_hg_mapping: &ArcBonsaiHgMapping,
+        bonsai_git_mapping: &ArcBonsaiGitMapping,
         filenodes: &ArcFilenodes,
         repo_blobstore: &ArcRepoBlobstore,
     ) -> Result<ArcRepoDerivedData> {
@@ -580,6 +581,7 @@ impl TestRepoFactory {
             changesets.clone(),
             commit_graph.clone(),
             bonsai_hg_mapping.clone(),
+            bonsai_git_mapping.clone(),
             filenodes.clone(),
             repo_blobstore.as_ref().clone(),
             lease,
@@ -707,6 +709,7 @@ impl TestRepoFactory {
         changesets: &ArcChangesets,
         commit_graph: &ArcCommitGraph,
         bonsai_hg_mapping: &ArcBonsaiHgMapping,
+        bonsai_git_mapping: &ArcBonsaiGitMapping,
         filenodes: &ArcFilenodes,
         repo_blobstore: &ArcRepoBlobstore,
     ) -> Result<ArcDerivedDataManagerSet> {
@@ -723,6 +726,7 @@ impl TestRepoFactory {
             changesets.clone(),
             commit_graph.clone(),
             bonsai_hg_mapping.clone(),
+            bonsai_git_mapping.clone(),
             filenodes.clone(),
             repo_blobstore.as_ref().clone(),
             lease,

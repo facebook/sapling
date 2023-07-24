@@ -16,6 +16,7 @@ async-trait = "0.1.71"
 basename_suffix_skeleton_manifest = { version = "0.1.0", path = "../basename_suffix_skeleton_manifest" }
 blame = { version = "0.1.0", path = "../blame" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }
 changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }

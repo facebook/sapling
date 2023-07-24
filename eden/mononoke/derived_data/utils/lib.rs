@@ -23,6 +23,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use blame::RootBlameV2;
+use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_info::ChangesetInfo;
@@ -131,6 +132,7 @@ pub trait Repo = RepoDerivedDataArc
     + RepoIdentityRef
     + ChangesetsArc
     + BonsaiHgMappingArc
+    + BonsaiGitMappingArc
     + FilenodesArc
     + RepoBlobstoreRef
     + CommitGraphArc;
@@ -249,6 +251,7 @@ impl<Derivable> DerivedUtilsFromManager<Derivable> {
             repo.changesets_arc(),
             repo.commit_graph_arc(),
             repo.bonsai_hg_mapping_arc(),
+            repo.bonsai_git_mapping_arc(),
             repo.filenodes_arc(),
             repo.repo_blobstore().clone(),
             lease,
@@ -1040,6 +1043,7 @@ mod tests {
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering;
 
+    use bonsai_git_mapping::BonsaiGitMapping;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkKey;
     use bookmarks::Bookmarks;
@@ -1067,6 +1071,8 @@ mod tests {
     struct TestRepo {
         #[facet]
         bonsai_hg_mapping: dyn BonsaiHgMapping,
+        #[facet]
+        bonsai_git_mapping: dyn BonsaiGitMapping,
         #[facet]
         bookmarks: dyn Bookmarks,
         #[facet]

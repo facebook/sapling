@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
+use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use cacheblob::LeaseOps;
 use changesets::Changesets;
@@ -46,6 +47,7 @@ pub struct DerivedDataManagerInner {
     changesets: Arc<dyn Changesets>,
     commit_graph: Arc<CommitGraph>,
     bonsai_hg_mapping: Option<Arc<dyn BonsaiHgMapping>>,
+    _bonsai_git_mapping: Option<Arc<dyn BonsaiGitMapping>>,
     filenodes: Option<Arc<dyn Filenodes>>,
     repo_blobstore: RepoBlobstore,
     lease: DerivedDataLease,
@@ -90,6 +92,7 @@ impl DerivedDataManager {
         changesets: Arc<dyn Changesets>,
         commit_graph: Arc<CommitGraph>,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+        bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
         filenodes: Arc<dyn Filenodes>,
         repo_blobstore: RepoBlobstore,
         lease: Arc<dyn LeaseOps>,
@@ -108,6 +111,7 @@ impl DerivedDataManager {
                 changesets,
                 commit_graph,
                 bonsai_hg_mapping: Some(bonsai_hg_mapping),
+                _bonsai_git_mapping: Some(bonsai_git_mapping),
                 filenodes: Some(filenodes),
                 repo_blobstore,
                 lease,
