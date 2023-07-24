@@ -637,7 +637,12 @@ function ActionsBar({
             </OperationDisabledButton>
           </Tooltip>
         )}
-        {commit.isHead || canSubmitIndividualDiffs ? (
+        {(commit.isHead && (anythingToCommit || !isAnythingBeingEdited)) ||
+        (!commit.isHead &&
+          canSubmitIndividualDiffs &&
+          // For non-head commits, "submit" doesn't update the message, which is confusing.
+          // Just hide the submit button so you're encouraged to "amend message" first.
+          !isAnythingBeingEdited) ? (
           <Tooltip
             title={
               areImageUploadsOngoing
