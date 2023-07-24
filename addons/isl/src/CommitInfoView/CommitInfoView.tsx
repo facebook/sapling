@@ -19,7 +19,11 @@ import {OperationDisabledButton} from '../OperationDisabledButton';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
 import {ChangedFiles, UncommittedChanges} from '../UncommittedChanges';
-import {allDiffSummaries, codeReviewProvider} from '../codeReview/CodeReviewInfo';
+import {
+  allDiffSummaries,
+  codeReviewProvider,
+  latestCommitMessage,
+} from '../codeReview/CodeReviewInfo';
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {t, T} from '../i18n';
 import {AmendMessageOperation} from '../operations/AmendMessageOperation';
@@ -168,7 +172,9 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     setFieldsBeingEdited({...fieldsBeingEdited, [field]: true});
   };
 
-  const parsedFields = parseCommitMessageFields(schema, commit.title, commit.description);
+  const [latestTitle, latestMessage] = useRecoilValue(latestCommitMessage(commit.hash));
+
+  const parsedFields = parseCommitMessageFields(schema, latestTitle, latestMessage);
 
   useEffect(() => {
     if (editedMessage.type === 'optimistic') {

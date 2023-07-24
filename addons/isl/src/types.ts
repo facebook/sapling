@@ -68,11 +68,6 @@ export type DiffSummary = GitHubDiffSummary | InternalTypes['PhabricatorDiffSumm
  */
 export type DiffSignalSummary = 'running' | 'pass' | 'failed' | 'warning' | 'no-signal';
 
-/**
- * Detailed info about a Diff fetched individually when looking at the details
- */
-// TODO: export type DiffDetails = {};
-
 /** An error causing the entire Repository to not be accessible */
 export type RepositoryError =
   | {

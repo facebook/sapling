@@ -9,6 +9,7 @@ import type {Hash} from '../types';
 import type {CommitMessageFields, FieldsBeingEdited} from './types';
 
 import serverAPI from '../ClientToServerAPI';
+import {latestCommitMessage} from '../codeReview/CodeReviewInfo';
 import {latestCommitTreeMap} from '../serverAPIState';
 import {firstLine} from '../utils';
 import {
@@ -98,11 +99,8 @@ export const editedCommitMessages = atomFamily<EditedMessageUnlessOptimistic, Ha
         if (info == null) {
           return {type: 'optimistic'};
         }
-        const fields = parseCommitMessageFields(
-          get(commitMessageFieldsSchema),
-          info.title,
-          info.description,
-        );
+        const [title, description] = get(latestCommitMessage(info.hash));
+        const fields = parseCommitMessageFields(get(commitMessageFieldsSchema), title, description);
         return {fields};
       },
   }),
@@ -120,14 +118,9 @@ export const hasUnsavedEditedCommitMessage = selectorFamily<boolean, Hash | 'hea
       if (hash === 'head') {
         return Object.values(edited).some(Boolean);
       }
-      // TODO: T149536695 use treeWithPreviews so this indicator is accurate on top of previews
-      const original = get(latestCommitTreeMap).get(hash)?.info;
+      const [originalTitle, originalDescription] = get(latestCommitMessage(hash));
       const schema = get(commitMessageFieldsSchema);
-      const parsed = parseCommitMessageFields(
-        schema,
-        original?.title ?? '',
-        original?.description ?? '',
-      );
+      const parsed = parseCommitMessageFields(schema, originalTitle, originalDescription);
       return Object.values(findFieldsBeingEdited(schema, edited.fields, parsed)).some(Boolean);
     },
 });

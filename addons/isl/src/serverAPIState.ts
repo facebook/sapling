@@ -29,7 +29,7 @@ import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {clearOnCwdChange} from './recoilUtils';
 import {initialParams} from './urlParams';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
-import {atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
+import {selectorFamily, atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
 import {randomId} from 'shared/utils';
 
 const repositoryData = atom<{info: RepoInfo | undefined; cwd: string | undefined}>({
@@ -176,6 +176,19 @@ export const latestCommitsData = atom<{
       }));
     }),
   ],
+});
+
+/**
+ * Lookup a commit by hash, *WITHOUT PREVIEWS*.
+ * Generally, you'd want to look up WITH previews, which you can use treeWithPreviews for.
+ */
+export const commitByHash = selectorFamily<CommitInfo | undefined, string>({
+  key: 'commitByHash',
+  get:
+    (hash: string) =>
+    ({get}) => {
+      return get(latestCommits).find(commit => commit.hash === hash);
+    },
 });
 
 export const latestCommits = selector<Array<CommitInfo>>({

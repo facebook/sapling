@@ -87,7 +87,7 @@ const SL_COMMIT_MESSAGE_REGEX = /^(HG:.*)|(SL:.*)/gm;
  */
 export function parseCommitMessageFields(
   schema: Array<FieldConfig>,
-  title: string,
+  title: string, // TODO: remove title and just pass title\ndescription in one thing
   description: string,
 ): CommitMessageFields {
   const map: Partial<Record<string, string>> = {};

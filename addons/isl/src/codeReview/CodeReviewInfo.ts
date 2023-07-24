@@ -10,7 +10,8 @@ import type {UICodeReviewProvider} from './UICodeReviewProvider';
 
 import serverAPI from '../ClientToServerAPI';
 import {Internal} from '../Internal';
-import {repositoryInfo} from '../serverAPIState';
+import {treeWithPreviews} from '../previews';
+import {commitByHash, repositoryInfo} from '../serverAPIState';
 import {GithubUICodeReviewProvider} from './github/github';
 import {atom, selector, selectorFamily} from 'recoil';
 import {debounce} from 'shared/debounce';
@@ -75,6 +76,54 @@ export const allDiffSummaries = atom<Result<Map<DiffId, DiffSummary> | null>>({
         }),
       ),
   ],
+});
+
+/**
+ * Latest commit message (title,description) for a hash.
+ * There's multiple competing values, in order of priority:
+ * (1) the optimistic commit's message
+ * (2) the latest commit message on the server (phabricator/github)
+ * (3) the local commit's message
+ *
+ * Remote messages preferred above local messages, so you see remote changes accounted for.
+ * Optimistic changes preferred above remote changes, since we should always
+ * async update the remote message to match the optimistic state anyway, but the UI will
+ * be smoother if we use the optimistic one before the remote has gotten the update propagated.
+ * This is only necessary if the optimistic message is different than the local message.
+ */
+export const latestCommitMessage = selectorFamily<[title: string, description: string], string>({
+  key: 'latestCommitMessage',
+  get:
+    (hash: string) =>
+    ({get}) => {
+      const commit = get(commitByHash(hash));
+      const preview = get(treeWithPreviews).treeMap.get(hash)?.info;
+
+      if (
+        preview != null &&
+        (preview.title !== commit?.title || preview.description !== commit?.description)
+      ) {
+        return [preview.title, preview.description];
+      }
+
+      if (!commit) {
+        return ['', ''];
+      }
+
+      const localTitle = commit.title;
+      const localDescription = commit.description;
+
+      const remoteTitle = commit.diffId
+        ? // TODO: try to get the commit title from the latest data for this commit's diff fetched from the remote
+          localTitle
+        : localTitle;
+      const remoteDescription = commit.diffId
+        ? // TODO: try to get the commit message from the latest data for this commit's diff fetched from the remote
+          localDescription
+        : localDescription;
+
+      return [remoteTitle ?? localTitle, remoteDescription ?? localDescription];
+    },
 });
 
 export const pageVisibility = atom<PageVisibility>({
