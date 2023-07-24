@@ -382,7 +382,7 @@ export type ClientToServerMessage =
   | {type: 'typeahead'; kind: TypeaheadKind; query: string; id: string}
   | {type: 'requestRepoInfo'}
   | {type: 'requestApplicationInfo'}
-  | {type: 'fetchDiffSummaries'}
+  | {type: 'fetchDiffSummaries'; diffIds?: Array<string>}
   | {type: 'pageVisibility'; state: PageVisibility}
   | {
       type: 'requestComparison';

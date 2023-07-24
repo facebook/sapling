@@ -10,6 +10,7 @@ import type {CommitInfoMode, EditedMessageUnlessOptimistic} from './CommitInfoSt
 import type {CommitMessageFields, FieldsBeingEdited} from './types';
 import type {Dispatch, SetStateAction} from 'react';
 
+import serverAPI from '../ClientToServerAPI';
 import {Commit} from '../Commit';
 import {OpenComparisonViewButton} from '../ComparisonView/OpenComparisonViewButton';
 import {Center} from '../ComponentUtils';
@@ -68,6 +69,7 @@ import {useEffect} from 'react';
 import {useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
+import {debounce} from 'shared/debounce';
 import {notEmpty, unwrap} from 'shared/utils';
 
 import './CommitInfoView.css';
@@ -150,6 +152,27 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
   );
 }
 
+const debouncedDiffFetch = debounce(
+  (diffId: string) => {
+    serverAPI.postMessage({
+      type: 'fetchDiffSummaries',
+      diffIds: [diffId],
+    });
+  },
+  10_000,
+  undefined,
+  /* leading */ true,
+);
+function useDebounceFetchDiffDetails(diffId?: string) {
+  useEffect(() => {
+    // reset debouncing any time the current diff changes
+    debouncedDiffFetch.reset();
+  }, [diffId]);
+  if (diffId != null) {
+    debouncedDiffFetch(diffId);
+  }
+}
+
 export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const [mode, setMode] = useRecoilState(commitMode);
   const isCommitMode = commit.isHead && mode === 'commit';
@@ -171,6 +194,8 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     );
     setFieldsBeingEdited({...fieldsBeingEdited, [field]: true});
   };
+
+  useDebounceFetchDiffDetails(commit.diffId);
 
   const [latestTitle, latestMessage] = useRecoilValue(latestCommitMessage(commit.hash));
 

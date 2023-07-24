@@ -13,8 +13,9 @@ import {Internal} from '../Internal';
 import {treeWithPreviews} from '../previews';
 import {commitByHash, repositoryInfo} from '../serverAPIState';
 import {GithubUICodeReviewProvider} from './github/github';
-import {atom, selector, selectorFamily} from 'recoil';
+import {atom, DefaultValue, selector, selectorFamily} from 'recoil';
 import {debounce} from 'shared/debounce';
+import {unwrap} from 'shared/utils';
 
 export const codeReviewProvider = selector<UICodeReviewProvider | null>({
   key: 'codeReviewProvider',
@@ -65,7 +66,29 @@ export const allDiffSummaries = atom<Result<Map<DiffId, DiffSummary> | null>>({
   effects: [
     ({setSelf}) => {
       const disposable = serverAPI.onMessageOfType('fetchedDiffSummaries', event => {
-        setSelf(event.summaries);
+        setSelf(existing => {
+          if (existing instanceof DefaultValue) {
+            return event.summaries;
+          }
+          if (existing.error) {
+            // TODO: if we only fetch one diff, but had an error on the overall fetch... should we still somehow show that error...?
+            // Right now, this will reset all other diffs to "loading" instead of error
+            // Probably, if all diffs fail to fetch, so will individual diffs.
+            return event.summaries;
+          }
+
+          if (event.summaries.error || existing.value == null) {
+            return event.summaries;
+          }
+
+          // merge old values with newly fetched ones
+          return {
+            value: new Map([
+              ...unwrap(existing.value).entries(),
+              ...event.summaries.value.entries(),
+            ]),
+          };
+        });
       });
       return () => disposable.dispose();
     },

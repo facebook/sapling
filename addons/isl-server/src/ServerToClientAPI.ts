@@ -590,7 +590,7 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fetchDiffSummaries': {
-        repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
+        repo.codeReviewProvider?.triggerDiffSummariesFetch(data.diffIds ?? repo.getAllDiffIds());
         break;
       }
       case 'loadMoreCommits': {
