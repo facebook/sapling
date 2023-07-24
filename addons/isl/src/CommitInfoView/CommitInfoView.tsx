@@ -21,6 +21,7 @@ import {OperationDisabledButton} from '../OperationDisabledButton';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
 import {ChangedFiles, UncommittedChanges} from '../UncommittedChanges';
+import {tracker} from '../analytics';
 import {
   allDiffSummaries,
   codeReviewProvider,
@@ -591,6 +592,7 @@ function ActionsBar({
                       diffId,
                       stringifiedMessage,
                       showOptionModal,
+                      'amend',
                     );
                   }
                 }
@@ -620,6 +622,7 @@ function ActionsBar({
                     diffId,
                     stringifiedMessage,
                     showOptionModal,
+                    'amendMessage',
                   );
                 }
                 const operation = new AmendMessageOperation(commit.hash, stringifiedMessage);
@@ -759,6 +762,7 @@ async function tryToUpdateRemoteMessage(
   diffId: DiffId,
   latestMessageString: string,
   showOptionModal: ReturnType<typeof useModal>,
+  reason: 'amend' | 'amendMessage',
 ): Promise<void> {
   // TODO: we could skip the update if the new message matches the old one,
   // which is possible when amending changes without changing the commit message
@@ -784,6 +788,11 @@ async function tryToUpdateRemoteMessage(
       ),
       buttons,
     });
+    tracker.track('ConfirmSyncNewDiffNumber', {
+      extras: {
+        choice: answer,
+      },
+    });
     if (answer === cancel || answer == null) {
       return;
     }
@@ -793,8 +802,12 @@ async function tryToUpdateRemoteMessage(
     const title = firstLine(latestMessageString);
     const description = latestMessageString.slice(title.length);
     // don't wait for the update mutation to go through, just let it happen in parallel with the metaedit
-    updateRemoteMessage(diffId, title, description).catch(() => {
-      // TODO: We should notify about this in the UI
-    });
+    tracker
+      .operation('SyncDiffMessageMutation', 'SyncMessageError', {extras: {reason}}, () =>
+        updateRemoteMessage(diffId, title, description),
+      )
+      .catch(() => {
+        // TODO: We should notify about this in the UI
+      });
   }
 }
