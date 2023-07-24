@@ -476,6 +476,8 @@ function ActionsBar({
   const schema = useRecoilValue(commitMessageFieldsSchema);
   const headCommit = useRecoilValue(latestHeadCommit);
 
+  const messageSyncEnabled = useRecoilValue(messageSyncingEnabledState);
+
   // after committing/amending, if you've previously selected the head commit,
   // we should show you the newly amended/committed commit instead of the old one.
   const deselectIfHeadIsSelected = useRecoilCallback(({snapshot, reset}) => () => {
@@ -621,6 +623,9 @@ function ActionsBar({
               runOperation={async () => {
                 let amendOrCommitOp;
                 if (anythingToCommit) {
+                  // TODO: we should also amend if there are pending commit message changes, and change the button
+                  // to amend message & submit.
+                  // Or just remove the submit button if you start editing since we'll update the remote message anyway...
                   amendOrCommitOp = doAmendOrCommit();
                 }
 
@@ -690,10 +695,17 @@ function ActionsBar({
 
                   return [amendOrCommitOp, rememberConfigOp, submitOp].filter(notEmpty);
                 }
+
+                // Only do message sync if we're amending the local commit in some way.
+                // If we're just doing a submit, we expect the message to have been synced previously
+                // during another amend or amend message.
+                const shouldUpdateMessage = !isCommitMode && messageSyncEnabled && anythingToCommit;
+
                 const submitOp = unwrap(provider).submitOperation(
                   commit.isHead ? [] : [commit], // [] means to submit the head commit
                   {
                     draft: shouldSubmitAsDraft,
+                    updateFields: shouldUpdateMessage,
                   },
                 );
                 return [amendOrCommitOp, submitOp].filter(notEmpty);

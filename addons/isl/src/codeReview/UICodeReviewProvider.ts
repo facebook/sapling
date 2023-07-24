@@ -30,6 +30,8 @@ export interface UICodeReviewProvider {
       draft?: boolean;
       /** If this diff is being resubmitted, this message will be added as a comment to explain what has changed */
       updateMessage?: string;
+      /** Whether to update the remote message with the local commit message */
+      updateFields?: boolean;
     },
   ): Operation;
 
