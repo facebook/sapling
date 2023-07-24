@@ -379,6 +379,7 @@ function ShowingRemoteMessageBanner({
 }) {
   const provider = useRecoilValue(codeReviewProvider);
   const schema = useRecoilValue(commitMessageFieldsSchema);
+  const runOperation = useRunOperation();
 
   const loadLocalMessage = useRecoilCallback(({set}) => () => {
     const originalFields = parseCommitMessageFields(schema, commit.title, commit.description);
@@ -395,8 +396,19 @@ function ShowingRemoteMessageBanner({
   const contextMenu = useContextMenu(() => {
     return [
       {
-        label: <T>Load local commit message</T>,
+        label: <T>Load local commit message instead</T>,
         onClick: loadLocalMessage,
+      },
+      {
+        label: <T>Sync local commit to match remote</T>,
+        onClick: () => {
+          runOperation(
+            new AmendMessageOperation(
+              commit.hash,
+              commitMessageFieldsToString(schema, latestFields),
+            ),
+          );
+        },
       },
     ];
   });
