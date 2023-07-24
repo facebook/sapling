@@ -64,11 +64,12 @@ import {usePromise} from './usePromise';
 import {VSCodeButton, VSCodeCheckbox, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import React, {useRef, useState} from 'react';
 import {useRecoilCallback, useRecoilValue} from 'recoil';
-import {revsetForComparison, ComparisonType} from 'shared/Comparison';
+import {labelForComparison, revsetForComparison, ComparisonType} from 'shared/Comparison';
+import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {useDeepMemo} from 'shared/hooks';
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
-import {notEmpty} from 'shared/utils';
+import {basename, notEmpty} from 'shared/utils';
 
 import './UncommittedChanges.css';
 
@@ -256,10 +257,28 @@ function File({
   // Visually show renamed files as if they were modified, even though sl treats them as added.
   const [statusName, icon] = nameAndIconForFileStatus[file.visualStatus];
 
+  const contextMenu = useContextMenu(() => {
+    const options = [
+      {label: t('Copy File Path'), onClick: () => platform.clipboardCopy(file.path)},
+      {label: t('Copy Filename'), onClick: () => platform.clipboardCopy(basename(file.path))},
+      {label: t('Open File'), onClick: () => platform.openFile(file.path)},
+    ];
+    if (platform.openDiff != null) {
+      options.push({
+        label: t('Open Diff View ($comparison)', {
+          replace: {$comparison: labelForComparison(comparison)},
+        }),
+        onClick: () => platform.openDiff?.(file.path, comparison),
+      });
+    }
+    return options;
+  });
+
   return (
     <div
       className={`changed-file file-${statusName}`}
       data-testid={`changed-file-${file.path}`}
+      onContextMenu={contextMenu}
       key={file.path}
       tabIndex={0}
       onKeyPress={e => {
