@@ -18,11 +18,11 @@ template <typename ObjectType>
 ObjectInterestHandle<ObjectType>::ObjectInterestHandle(
     std::weak_ptr<ObjectCache<ObjectType, ObjectCacheFlavor::InterestHandle>>
         objectCache,
-    const ObjectId& hash,
+    ObjectId hash,
     std::weak_ptr<const ObjectType> object,
     uint64_t generation) noexcept
     : objectCache_{std::move(objectCache)},
-      hash_{hash},
+      hash_{std::move(hash)},
       object_{std::move(object)},
       cacheItemGeneration_{generation} {}
 
@@ -167,9 +167,10 @@ typename std::enable_if_t<
     F == ObjectCacheFlavor::InterestHandle,
     ObjectInterestHandle<ObjectType>>
 ObjectCache<ObjectType, Flavor>::insertInterestHandle(
+    ObjectId id,
     ObjectPtr object,
     Interest interest) {
-  XLOG(DBG6) << "ObjectCache::insertInterestHandle " << object->getHash();
+  XLOG(DBG6) << "ObjectCache::insertInterestHandle " << id;
   // Acquires ObjectCache's lock upon destruction by calling dropInterestHandle,
   // so ensure that, if an exception is thrown below, the ~ObjectInterestHandle
   // runs after the lock is released.
@@ -180,10 +181,7 @@ ObjectCache<ObjectType, Flavor>::insertInterestHandle(
   if (interest == Interest::WantHandle) {
     // This can throw, so do it before inserting into items.
     interestHandle = ObjectInterestHandle<ObjectType>{
-        this->shared_from_this(),
-        object->getHash(),
-        object,
-        cacheItemGeneration};
+        this->shared_from_this(), id, object, cacheItemGeneration};
   } else {
     interestHandle.object_ = object;
   }
@@ -191,7 +189,7 @@ ObjectCache<ObjectType, Flavor>::insertInterestHandle(
   XLOG(DBG6) << "  creating entry with generation=" << cacheItemGeneration;
 
   auto state = state_.lock();
-  auto [item, inserted] = insertImpl(std::move(object), *state);
+  auto [item, inserted] = insertImpl(std::move(id), std::move(object), *state);
   switch (interest) {
     case Interest::UnlikelyNeededAgain:
       break;
@@ -217,24 +215,28 @@ template <typename ObjectType, ObjectCacheFlavor Flavor>
 template <ObjectCacheFlavor F>
 typename std::enable_if_t<F == ObjectCacheFlavor::Simple, void>
 ObjectCache<ObjectType, Flavor>::insertSimple(
+    ObjectId id,
     ObjectCache<ObjectType, Flavor>::ObjectPtr object) {
-  XLOG(DBG6) << "ObjectCache::insertSimple " << object->getHash();
+  XLOG(DBG6) << "ObjectCache::insertSimple " << id;
   auto state = state_.lock();
-  insertImpl(std::move(object), *state);
+  insertImpl(std::move(id), std::move(object), *state);
 }
 
 template <typename ObjectType, ObjectCacheFlavor Flavor>
 std::pair<typename ObjectCache<ObjectType, Flavor>::CacheItem*, bool>
-ObjectCache<ObjectType, Flavor>::insertImpl(ObjectPtr object, State& state) {
-  XLOG(DBG6) << "ObjectCache::insertImpl " << object->getHash();
+ObjectCache<ObjectType, Flavor>::insertImpl(
+    ObjectId id,
+    ObjectPtr object,
+    State& state) {
+  XLOG(DBG6) << "ObjectCache::insertImpl " << id;
 
-  auto hash = object->getHash();
   auto size = object->getSizeBytes();
+  ObjectId key = id;
 
   // the following should be no except
 
-  auto [iter, inserted] =
-      state.items.try_emplace(std::move(hash), std::move(object));
+  auto [iter, inserted] = state.items.try_emplace(
+      std::move(key), CacheItem{std::move(id), std::move(object)});
 
   auto* itemPtr = &iter->second;
   if (inserted) {
@@ -343,15 +345,14 @@ void ObjectCache<ObjectType, Flavor>::evictItem(
     State& state,
     const CacheItem& item) noexcept {
   XLOG(DBG6) << "ObjectCache::evictItem "
-             << "evicting " << item.object->getHash()
-             << " generation=" << item.generation;
+             << "evicting " << item.id << " generation=" << item.generation;
   auto size = item.object->getSizeBytes();
   // TODO: Releasing this ObjectPtr here can run arbitrary deleters which
   // could, in theory, try to reacquire the ObjectCache's lock. The object
   // could be scheduled for deletion in a deletion queue but then it's hard to
   // ensure that scheduling is noexcept. Instead, ObjectPtr should be replaced
   // with an refcounted pointer that doesn't allow running custom deleters.
-  state.items.erase(item.object->getHash());
+  state.items.erase(item.id);
   state.totalSize -= size;
 }
 } // namespace facebook::eden

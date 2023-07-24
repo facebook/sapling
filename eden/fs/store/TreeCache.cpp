@@ -19,7 +19,7 @@ std::shared_ptr<const Tree> TreeCache::get(const ObjectId& hash) {
 
 void TreeCache::insert(std::shared_ptr<const Tree> tree) {
   if (config_->getEdenConfig()->enableInMemoryTreeCaching.getValue()) {
-    return insertSimple(tree);
+    return insertSimple(tree->getHash(), tree);
   }
 }
 

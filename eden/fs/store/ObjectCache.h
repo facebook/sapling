@@ -56,7 +56,7 @@ class ObjectInterestHandle {
   ObjectInterestHandle(
       std::weak_ptr<ObjectCache<ObjectType, ObjectCacheFlavor::InterestHandle>>
           objectCache,
-      const ObjectId& hash,
+      ObjectId hash,
       std::weak_ptr<const ObjectType> object,
       uint64_t generation) noexcept;
 
@@ -197,6 +197,7 @@ class ObjectCache
       F == ObjectCacheFlavor::InterestHandle,
       ObjectInterestHandle<ObjectType>>
   insertInterestHandle(
+      ObjectId id,
       ObjectPtr object,
       Interest interest = Interest::LikelyNeededAgain);
 
@@ -207,6 +208,7 @@ class ObjectCache
    */
   template <ObjectCacheFlavor F = Flavor>
   typename std::enable_if_t<F == ObjectCacheFlavor::Simple, void> insertSimple(
+      ObjectId id,
       ObjectPtr object);
 
   /**
@@ -244,16 +246,18 @@ class ObjectCache
     // WARNING: leaves index unset. Since the items map and evictionQueue are
     // circular, initialization of index must happen after the CacheItem is
     // constructed.
-    explicit CacheItem(ObjectPtr b) : object{std::move(b)} {}
+    explicit CacheItem(ObjectId id, ObjectPtr b)
+        : id{std::move(id)}, object{std::move(b)} {}
 
     // The folly::SafeIntrusiveListHook needs special handling to be
     // copied/moved, removing the move/copy constructor and assignement to
     // avoid unexpected copies/moves.
-    CacheItem(CacheItem&&) = delete;
+    CacheItem(CacheItem&&) = default;
     CacheItem(const CacheItem&) = delete;
-    CacheItem& operator=(CacheItem&&) = delete;
+    CacheItem& operator=(CacheItem&&) = default;
     CacheItem& operator=(const CacheItem&) = delete;
 
+    ObjectId id;
     ObjectPtr object;
     folly::SafeIntrusiveListHook hook;
 
@@ -296,7 +300,8 @@ class ObjectCache
    *
    * Does not do anything related to InterestHandles
    */
-  std::pair<CacheItem*, bool> insertImpl(ObjectPtr object, State& state);
+  std::pair<CacheItem*, bool>
+  insertImpl(ObjectId id, ObjectPtr object, State& state);
 
   void dropInterestHandle(const ObjectId& hash, uint64_t generation) noexcept;
 

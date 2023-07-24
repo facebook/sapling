@@ -14,18 +14,9 @@ using namespace facebook::eden;
 
 class Object {
  public:
-  explicit Object(ObjectId hash) : hash_{std::move(hash)} {}
-
-  const ObjectId& getHash() const {
-    return hash_;
-  }
-
   size_t getSizeBytes() const {
     return 1;
   }
-
- private:
-  ObjectId hash_;
 };
 
 using SimpleObjectCache = ObjectCache<Object, ObjectCacheFlavor::Simple>;
@@ -52,8 +43,8 @@ void getSimple(benchmark::State& st, const std::string& objectBase) {
   for (size_t i = 0u; i < numObjects; ++i) {
     ids.push_back(
         ObjectId{ObjectId::sha1(fmt::to_string(i)).asString() + objectBase});
-    auto object = std::make_shared<Object>(ids[i]);
-    cache->insertSimple(object);
+    auto object = std::make_shared<Object>();
+    cache->insertSimple(ids[i], object);
   }
 
   size_t i = 0;
@@ -87,12 +78,12 @@ void insertSimple(benchmark::State& st, const std::string& objectBase) {
   for (size_t i = 0; i < numObjects; ++i) {
     ids.push_back(
         ObjectId{ObjectId::sha1(fmt::to_string(i)).asString() + objectBase});
-    vec.push_back(std::make_shared<Object>(ids[i]));
+    vec.push_back(std::make_shared<Object>());
   }
 
   size_t i = 0;
   for (auto _ : st) {
-    cache->insertSimple(vec[i]);
+    cache->insertSimple(ids[i], vec[i]);
     if (++i == numObjects) {
       i = 0;
     }
