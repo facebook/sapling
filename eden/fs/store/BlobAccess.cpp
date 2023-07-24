@@ -31,9 +31,10 @@ folly::Future<BlobCache::GetResult> BlobAccess::getBlob(
   }
 
   return objectStore_->getBlob(hash, context)
-      .thenValue([blobCache = blobCache_,
-                  interest](std::shared_ptr<const Blob> blob) {
-        auto interestHandle = blobCache->insert(blob, interest);
+      .thenValue([blobCache = blobCache_, hash = hash, interest](
+                     std::shared_ptr<const Blob> blob) mutable {
+        auto interestHandle =
+            blobCache->insert(std::move(hash), blob, interest);
         return BlobCache::GetResult{std::move(blob), std::move(interestHandle)};
       })
       .semi()
