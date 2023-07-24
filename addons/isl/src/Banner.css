@@ -1,0 +1,33 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+  width: 100%;
+  font-size: 90%;
+  margin: var(--halfpad) var(--halfpad);
+  padding: var(--halfpad) var(--pad);
+  background-color: var(--tooltip-background);
+  border-radius: var(--pad);
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+  flex-grow: 1;
+}
+
+.banner > .banner-buttons {
+  opacity: 0%;
+  transition: opacity 0.2s;
+}
+.banner:hover > .banner-buttons {
+  opacity: 100%;
+}
