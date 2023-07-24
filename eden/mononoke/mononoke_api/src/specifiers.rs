@@ -110,7 +110,7 @@ pub type ChangesetIdPrefix = mononoke_types::ChangesetIdPrefix;
 
 /// A prefix of a Mercurial changeset ID.
 pub type HgChangesetIdPrefix = mercurial_types::HgChangesetIdPrefix;
-pub type GitSha1Prefix = git_types::GitSha1Prefix;
+pub type GitSha1Prefix = bonsai_git_mapping::GitSha1Prefix;
 
 /// This is prefix that may be used to resolve a changeset
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
@@ -181,9 +181,9 @@ impl From<mercurial_types::HgChangesetIdsResolvedFromPrefix>
     }
 }
 
-impl From<git_types::GitSha1sResolvedFromPrefix> for ChangesetSpecifierPrefixResolution {
-    fn from(resolved: git_types::GitSha1sResolvedFromPrefix) -> Self {
-        use git_types::GitSha1sResolvedFromPrefix::*;
+impl From<bonsai_git_mapping::GitSha1sResolvedFromPrefix> for ChangesetSpecifierPrefixResolution {
+    fn from(resolved: bonsai_git_mapping::GitSha1sResolvedFromPrefix) -> Self {
+        use bonsai_git_mapping::GitSha1sResolvedFromPrefix::*;
         use ChangesetSpecifier::*;
         match resolved {
             Single(id) => Self::Single(GitSha1(id)),

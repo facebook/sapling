@@ -10,17 +10,18 @@ use anyhow::Result;
 use ascii::AsciiStr;
 use async_trait::async_trait;
 use context::CoreContext;
-use git_types::GitSha1Prefix;
-use git_types::GitSha1sResolvedFromPrefix;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use slog::warn;
 
 mod errors;
+mod nodehash;
 mod sql;
 
 pub use crate::errors::AddGitMappingErrorKind;
+pub use crate::nodehash::GitSha1Prefix;
+pub use crate::nodehash::GitSha1sResolvedFromPrefix;
 pub use crate::sql::SqlBonsaiGitMapping;
 pub use crate::sql::SqlBonsaiGitMappingBuilder;
 

@@ -18,7 +18,7 @@ use mononoke_types::hash::GitSha1;
 use mononoke_types::sha1_hash::Sha1;
 use mononoke_types::sha1_hash::Sha1Prefix;
 
-/// An identifier for a changeset hash prefix in Nercurial.
+/// An identifier for a changeset hash prefix in Git.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Abomonation)]
 pub struct GitSha1Prefix(Sha1Prefix);
