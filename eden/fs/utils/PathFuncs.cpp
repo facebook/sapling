@@ -14,6 +14,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/Stdlib.h>
 #include <folly/portability/Unistd.h>
+#include <folly/portability/Windows.h>
 
 #include <optional>
 
