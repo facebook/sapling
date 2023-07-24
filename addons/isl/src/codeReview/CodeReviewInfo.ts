@@ -10,6 +10,7 @@ import type {UICodeReviewProvider} from './UICodeReviewProvider';
 
 import serverAPI from '../ClientToServerAPI';
 import {Internal} from '../Internal';
+import {messageSyncingEnabledState} from '../messageSyncing';
 import {treeWithPreviews} from '../previews';
 import {commitByHash, repositoryInfo} from '../serverAPIState';
 import {GithubUICodeReviewProvider} from './github/github';
@@ -133,9 +134,11 @@ export const latestCommitMessage = selectorFamily<[title: string, description: s
         return ['', ''];
       }
 
+      const syncEnabled = get(messageSyncingEnabledState);
+
       let remoteTitle = commit.title;
       let remoteDescription = commit.description;
-      if (commit.diffId) {
+      if (syncEnabled && commit.diffId) {
         // use the diff's commit message instead of the local one, if available
         const summary = get(diffSummary(commit.diffId));
         if (summary?.value) {

@@ -59,4 +59,6 @@ export interface UICodeReviewProvider {
     commits: Array<CommitInfo>,
     allDiffSummaries: Map<string, DiffSummary>,
   ): Array<CommitInfo>;
+
+  enableMessageSyncing: boolean;
 }

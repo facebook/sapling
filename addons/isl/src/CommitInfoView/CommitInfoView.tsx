@@ -28,6 +28,7 @@ import {
 } from '../codeReview/CodeReviewInfo';
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {t, T} from '../i18n';
+import {messageSyncingEnabledState} from '../messageSyncing';
 import {AmendMessageOperation} from '../operations/AmendMessageOperation';
 import {getAmendOperation} from '../operations/AmendOperation';
 import {getCommitOperation} from '../operations/CommitOperation';
@@ -380,6 +381,7 @@ function ShowingRemoteMessageBanner({
   const provider = useRecoilValue(codeReviewProvider);
   const schema = useRecoilValue(commitMessageFieldsSchema);
   const runOperation = useRunOperation();
+  const syncingEnabled = useRecoilValue(messageSyncingEnabledState);
 
   const loadLocalMessage = useRecoilCallback(({set}) => () => {
     const originalFields = parseCommitMessageFields(schema, commit.title, commit.description);
@@ -413,7 +415,7 @@ function ShowingRemoteMessageBanner({
     ];
   });
 
-  if (!provider) {
+  if (!syncingEnabled || !provider) {
     return null;
   }
 
@@ -427,7 +429,7 @@ function ShowingRemoteMessageBanner({
       <Banner
         icon={<Icon icon="info" />}
         tooltip={t(
-          'Viewing the newer commit message from $provider. You can also load the local message instead.',
+          'Viewing the newer commit message from $provider. This message will be used when your code is landed. You can also load the local message instead.',
           {replace: {$provider: provider.label}},
         )}
         buttons={
