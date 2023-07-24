@@ -18,6 +18,7 @@ import {debounce} from 'shared/debounce';
 export type GitHubDiffSummary = {
   type: 'github';
   title: string;
+  commitMessage: string;
   state: PullRequestState | 'DRAFT';
   number: DiffId;
   url: string;
@@ -69,9 +70,11 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
         for (const summary of allSummaries.search.nodes) {
           if (summary != null && summary.__typename === 'PullRequest') {
             const id = String(summary.number);
+            const commitMessage = summary.body.slice(summary.title.length + 1);
             map.set(id, {
               type: 'github',
               title: summary.title,
+              commitMessage,
               // For some reason, `isDraft` is a separate boolean and not a state,
               // but we generally treat it as its own state in the UI.
               state:

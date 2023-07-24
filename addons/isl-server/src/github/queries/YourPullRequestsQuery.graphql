@@ -5,6 +5,7 @@ query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
         __typename
         number
         title
+        body
         state
         isDraft
         url
