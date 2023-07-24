@@ -648,18 +648,28 @@ describe('CommitInfoView', () => {
             ).toBeInTheDocument();
           });
 
-          it('disables amend button with spinner while running', () => {
-            clickToEditTitle();
-            clickToEditDescription();
-
-            {
-              act(() => {
-                userEvent.type(getTitleEditor(), ' hello new title');
-                userEvent.type(getDescriptionEditor(), '\nhello new text');
+          it('disables amend button with spinner while running', async () => {
+            act(() => {
+              simulateUncommittedChangedFiles({
+                value: [{path: 'src/file1.js', status: 'M'}],
               });
-            }
+            });
 
             clickAmendButton();
+            await waitFor(() =>
+              expectMessageSentToServer({
+                type: 'runOperation',
+                operation: expect.objectContaining({
+                  args: expect.arrayContaining(['amend']),
+                }),
+              }),
+            );
+
+            act(() => {
+              simulateUncommittedChangedFiles({
+                value: [{path: 'src/file2.js', status: 'M'}],
+              });
+            });
 
             const amendMessageButton = within(
               screen.getByTestId('commit-info-actions-bar'),
@@ -669,6 +679,36 @@ describe('CommitInfoView', () => {
             });
 
             expect(amendMessageButton).toBeDisabled();
+          });
+
+          it('shows amend message instead of amend when there are only message changes', async () => {
+            act(() => {
+              simulateUncommittedChangedFiles({
+                value: [{path: 'src/file1.js', status: 'M'}],
+              });
+            });
+
+            expect(
+              within(screen.getByTestId('commit-info-actions-bar')).queryByText('Amend'),
+            ).toBeInTheDocument();
+
+            act(() => {
+              simulateUncommittedChangedFiles({
+                value: [],
+              });
+            });
+
+            expect(
+              within(screen.getByTestId('commit-info-actions-bar')).queryByText('Amend'),
+            ).toBeInTheDocument();
+
+            clickToEditTitle();
+            clickToEditDescription();
+
+            // no uncommitted changes, and message is being changed
+            expect(
+              within(screen.getByTestId('commit-info-actions-bar')).queryByText('Amend Message'),
+            ).toBeInTheDocument();
           });
         });
       });

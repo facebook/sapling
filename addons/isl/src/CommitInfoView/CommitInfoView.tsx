@@ -550,6 +550,10 @@ function ActionsBar({
   const ongoingImageUploads = useRecoilValue(numPendingImageUploads);
   const areImageUploadsOngoing = ongoingImageUploads > 0;
 
+  // Generally "Amend"/"Commit" for head commit, but if there's no changes while amending, just use "Amend message"
+  const showCommitOrAmend =
+    commit.isHead && (isCommitMode || anythingToCommit || !isAnythingBeingEdited);
+
   return (
     <div className="commit-info-actions-bar" data-testid="commit-info-actions-bar">
       <div className="commit-info-actions-bar-left">
@@ -562,7 +566,7 @@ function ActionsBar({
           </VSCodeButton>
         ) : null}
 
-        {commit.isHead ? (
+        {showCommitOrAmend ? (
           <Tooltip
             title={
               areImageUploadsOngoing
