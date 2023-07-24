@@ -539,10 +539,11 @@ function ActionsBar({
 
   const showOptionModal = useModal();
 
-  const codeReviewProviderName =
+  const codeReviewProviderName = provider?.label;
+  const codeReviewProviderType =
     repoInfo?.type === 'success' ? repoInfo.codeReviewSystem.type : 'unknown';
   const canSubmitWithCodeReviewProvider =
-    codeReviewProviderName !== 'none' && codeReviewProviderName !== 'unknown';
+    codeReviewProviderType !== 'none' && codeReviewProviderType !== 'unknown';
   const submittable =
     diffSummaries.value && provider?.getSubmittableDiffs([commit], diffSummaries.value);
   const canSubmitIndividualDiffs = submittable && submittable.length > 0;
@@ -608,8 +609,18 @@ function ActionsBar({
           </Tooltip>
         ) : (
           <Tooltip
-            title={t('Image uploads are still pending')}
-            trigger={areImageUploadsOngoing ? 'hover' : 'disabled'}>
+            title={
+              areImageUploadsOngoing
+                ? t('Image uploads are still pending')
+                : !isAnythingBeingEdited
+                ? t('No message edits to amend')
+                : messageSyncEnabled && commit.diffId != null
+                ? t(
+                    'Amend the commit message with the newly entered message, then sync that message up to $provider.',
+                    {replace: {$provider: codeReviewProviderName ?? 'remote'}},
+                  )
+                : t('Amend the commit message with the newly entered message.')
+            }>
             <OperationDisabledButton
               contextKey={`amend-message-${commit.hash}`}
               appearance="secondary"
@@ -649,7 +660,7 @@ function ActionsBar({
                 ? t('Image uploads are still pending')
                 : canSubmitWithCodeReviewProvider
                 ? t('Submit for code review with $provider', {
-                    replace: {$provider: codeReviewProviderName},
+                    replace: {$provider: codeReviewProviderName ?? 'remote'},
                   })
                 : t(
                     'Submitting for code review is currently only supported for GitHub-backed repos',
