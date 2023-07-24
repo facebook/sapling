@@ -69,6 +69,7 @@ import {
 import {useEffect} from 'react';
 import {useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
+import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {debounce} from 'shared/debounce';
 import {notEmpty, unwrap} from 'shared/utils';
@@ -281,7 +282,11 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                 mode !== 'commit' && field.key === 'Title' ? (
                   <>
                     <CommitTitleByline commit={commit} />
-                    <ShowingRemoteMessageBanner commit={commit} latestFields={parsedFields} />
+                    <ShowingRemoteMessageBanner
+                      commit={commit}
+                      latestFields={parsedFields}
+                      editedCommitMessageKey={isCommitMode ? 'head' : commit.hash}
+                    />
                   </>
                 ) : undefined
               }
@@ -366,12 +371,35 @@ function areTextFieldsUnchanged(
 function ShowingRemoteMessageBanner({
   commit,
   latestFields,
+  editedCommitMessageKey,
 }: {
   commit: CommitInfo;
   latestFields: CommitMessageFields;
+  editedCommitMessageKey: string;
 }) {
   const provider = useRecoilValue(codeReviewProvider);
   const schema = useRecoilValue(commitMessageFieldsSchema);
+
+  const loadLocalMessage = useRecoilCallback(({set}) => () => {
+    const originalFields = parseCommitMessageFields(schema, commit.title, commit.description);
+    const beingEdited = findFieldsBeingEdited(schema, originalFields, latestFields);
+    set(commitFieldsBeingEdited, beingEdited);
+    set(editedCommitMessages(editedCommitMessageKey), previous => {
+      if (previous.type === 'optimistic') {
+        return previous;
+      }
+      return {fields: originalFields};
+    });
+  });
+
+  const contextMenu = useContextMenu(() => {
+    return [
+      {
+        label: <T>Load local commit message</T>,
+        onClick: loadLocalMessage,
+      },
+    ];
+  });
 
   if (!provider) {
     return null;
@@ -393,8 +421,8 @@ function ShowingRemoteMessageBanner({
         buttons={
           <VSCodeButton
             appearance="icon"
-            onClick={() => {
-              /* TODO: dropdown menu to confirm loading the local message */
+            onClick={e => {
+              contextMenu(e);
             }}>
             <Icon icon="ellipsis" />
           </VSCodeButton>
