@@ -18,6 +18,10 @@ struct TreeHandle {
   2: i64 size;
 } (rust.exhaustive)
 
+struct MappedGitCommitId {
+  1: mononoke_types_thrift.GitSha1 oid;
+} (rust.exhaustive)
+
 union TreeMember {
   1: BlobHandle Blob;
   2: TreeHandle Tree;
