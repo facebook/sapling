@@ -11,6 +11,59 @@ import {T} from '../i18n';
 
 import './SuggestedReviewers.css';
 
+const tryParse = (s: string | null): Array<[string, number]> | undefined => {
+  if (s == null) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(s);
+  } catch {
+    return undefined;
+  }
+};
+
+const MAX_VISIBLE_RECENT_REVIEWERS = 3;
+const RECENT_REVIEWERS_STORAGE_KEY = 'ISL_RECENT_REVIEWERS';
+/**
+ * Simple counter for most used recent reviewers, persisted to localstorage if possible.
+ * TODO: use "frecency": combined heuristic for least-recently-used plus most-often-used.
+ */
+class RecentReviewers {
+  private recent: Map<string, number>;
+
+  constructor() {
+    try {
+      this.recent = new Map(tryParse(localStorage.getItem(RECENT_REVIEWERS_STORAGE_KEY)) ?? []);
+    } catch {
+      this.recent = new Map();
+    }
+  }
+
+  private persist() {
+    try {
+      localStorage.setItem(
+        RECENT_REVIEWERS_STORAGE_KEY,
+        JSON.stringify([...this.recent.entries()]),
+      );
+    } catch {}
+  }
+
+  public useReviewer(reviewer: string) {
+    const existing = this.recent.get(reviewer) ?? 0;
+    this.recent.set(reviewer, existing + 1);
+    this.persist();
+  }
+
+  public getRecent(): Array<string> {
+    return [...this.recent.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, MAX_VISIBLE_RECENT_REVIEWERS)
+      .map(([k]) => k);
+  }
+}
+
+export const recentReviewers = new RecentReviewers();
+
 export function SuggestedReviewers({
   existingReviewers,
   addReviewer,
@@ -21,9 +74,7 @@ export function SuggestedReviewers({
   const suggested = ['muirdm', 'quark', 'person1', 'person2', 'person3'].filter(
     s => !existingReviewers.includes(s),
   );
-  const recent = ['#isl', 'quark', 'person1', 'person2', 'person3'].filter(
-    s => !existingReviewers.includes(s),
-  );
+  const recent = recentReviewers.getRecent().filter(s => !existingReviewers.includes(s));
   return (
     <div className="suggested-reviewers">
       <div>

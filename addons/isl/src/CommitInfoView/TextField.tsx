@@ -9,7 +9,7 @@ import type {TypeaheadKind, TypeaheadResult} from './types';
 
 import serverApi from '../ClientToServerAPI';
 import {Subtle} from '../Subtle';
-import {SuggestedReviewers} from './SuggestedReviewers';
+import {recentReviewers, SuggestedReviewers} from './SuggestedReviewers';
 import {extractTokens, TokensList, tokensToString} from './Tokens';
 import {getInnerTextareaForVSCodeTextArea} from './utils';
 import {VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
@@ -64,6 +64,8 @@ export function CommitInfoTextField({
 
   const fieldKey = name.toLowerCase().replace(/\s/g, '-');
 
+  const isReviewers = fieldKey === 'reviewers';
+
   const saveNewValue = (value: string | undefined) => {
     if (value) {
       setEditedCommitMessage(
@@ -75,6 +77,11 @@ export function CommitInfoTextField({
       );
       // clear out typeahead
       setTypeaheadSuggestions({type: 'success', values: [], timestamp: Date.now()});
+
+      // save as recent reviewer, if applicable
+      if (isReviewers) {
+        recentReviewers.useReviewer(value);
+      }
     }
   };
 
@@ -160,9 +167,7 @@ export function CommitInfoTextField({
           </div>
         )}
       </div>
-      {fieldKey === 'reviewers' && (
-        <SuggestedReviewers existingReviewers={tokens} addReviewer={saveNewValue} />
-      )}
+      {isReviewers && <SuggestedReviewers existingReviewers={tokens} addReviewer={saveNewValue} />}
     </>
   );
 }
