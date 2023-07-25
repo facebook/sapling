@@ -64,7 +64,7 @@ The Sapling CLI currently builds and runs on Linux, Mac, and Windows. It can be
 built by running `make oss` in the `eden/scm` directory and running the
 resulting `sl` executable.
 
-Building the Sapling CLI requires Python 3.8, Rust, cmake, and OpenSSL for the main cli, and
+Building the Sapling CLI requires Python 3.8, Rust, CMake, and OpenSSL for the main cli, and
 Node and Yarn for the ISL web UI.
 
 # License
