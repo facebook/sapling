@@ -54,6 +54,7 @@ use filenodes_derivation::FilenodesOnlyPublic;
 use filestore::ArcFilestoreConfig;
 use filestore::FilestoreConfig;
 use fsnodes::RootFsnodeId;
+use git_types::MappedGitCommitId;
 use git_types::TreeHandle;
 use hooks::ArcHookManager;
 use hooks::HookManager;
@@ -174,6 +175,7 @@ pub fn default_test_repo_config() -> RepoConfig {
             RootDeletedManifestV2Id::NAME.to_string(),
             RootUnodeManifestId::NAME.to_string(),
             TreeHandle::NAME.to_string(),
+            MappedGitCommitId::NAME.to_string(),
             MappedHgChangesetId::NAME.to_string(),
             RootSkeletonManifestId::NAME.to_string(),
             RootBasenameSuffixSkeletonManifest::NAME.to_string(),

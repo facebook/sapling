@@ -29,6 +29,7 @@ pub use object::ObjectKind;
 pub use crate::blob::BlobHandle;
 pub use crate::commit::MappedGitCommitId;
 pub use crate::errors::GitError;
+pub use crate::store::fetch_git_object;
 pub use crate::store::upload_git_object;
 pub use crate::tree::Tree;
 pub use crate::tree::TreeBuilder;

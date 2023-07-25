@@ -34,6 +34,7 @@ thiserror = "1.0.43"
 
 [dev-dependencies]
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+changesets = { version = "0.1.0", path = "../../changesets" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 futures-util = "0.3.7"

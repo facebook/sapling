@@ -45,13 +45,14 @@ fn get_signature(id_str: &str, time: &DateTime) -> Result<Signature> {
 }
 
 fn get_name_and_email<'a>(input: &'a str) -> Result<(&'a str, &'a str)> {
-    let regex = regex::Regex::new(r"(?<name>.*)<(?<email>.*)>")
+    let regex = regex::Regex::new(r"((?<name>.*)<(?<email>.*)>)|(?<name_without_email>.*)")
         .context("Invalid regex for parsing name and email")?;
     let captures = regex
         .captures(input)
         .ok_or_else(|| anyhow::anyhow!("The name and email does not match regex"))?;
     let name = captures
         .name("name")
+        .or(captures.name("name_without_email"))
         .ok_or_else(|| anyhow::anyhow!("The name cannot be empty"))?
         .as_str();
     let email = captures.name("email").map_or("", |m| m.as_str()); // The email can be empty
@@ -184,3 +185,161 @@ impl BonsaiDerivable for MappedGitCommitId {
 }
 
 impl_bonsai_derived_via_manager!(MappedGitCommitId);
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashSet;
+    use std::str::FromStr;
+
+    use anyhow::format_err;
+    use blobstore::Loadable;
+    use bonsai_git_mapping::BonsaiGitMappingRef;
+    use bookmarks::BookmarkKey;
+    use bookmarks::BookmarksRef;
+    use changesets::ChangesetsRef;
+    use derived_data::BonsaiDerived;
+    use fbinit::FacebookInit;
+    use fixtures::TestRepoFixture;
+    use futures_util::stream::TryStreamExt;
+    use mononoke_types::hash::GitSha1;
+    use repo_blobstore::RepoBlobstoreArc;
+    use repo_derived_data::RepoDerivedDataRef;
+
+    use super::*;
+    use crate::fetch_git_object;
+
+    async fn compare_commits(
+        repo: &(impl RepoBlobstoreArc + BonsaiGitMappingRef),
+        ctx: &CoreContext,
+        bonsai_commit_id: ChangesetId,
+        git_commit_id: GitSha1,
+    ) -> Result<()> {
+        let blobstore = repo.repo_blobstore();
+        let git_hash =
+            git_hash::oid::try_from_bytes(git_commit_id.as_ref()).with_context(|| {
+                format_err!(
+                    "Failure while converting hash {:?} into Git ObjectId.",
+                    git_commit_id.to_hex()
+                )
+            })?;
+        let bonsai_commit = bonsai_commit_id.load(ctx, blobstore).await?;
+        let git_commit = fetch_git_object(ctx, blobstore, git_hash)
+            .await?
+            .into_commit();
+        // Validate that the parents match
+        let bonsai_parent_set: HashSet<ChangesetId> = HashSet::from_iter(bonsai_commit.parents());
+        assert_eq!(bonsai_parent_set.len(), git_commit.parents.len());
+        for git_parent in git_commit.parents {
+            let parent_csid = repo
+                .bonsai_git_mapping()
+                .get_bonsai_from_git_sha1(ctx, GitSha1::from_bytes(git_parent.as_slice())?)
+                .await?
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Couldn't find bonsai changeset for git commit {}",
+                        git_parent.to_hex()
+                    )
+                })?;
+            assert!(
+                bonsai_parent_set.contains(&parent_csid),
+                "Parent of Git commit {:?} and Bonsai changeset {:?} do not match",
+                git_commit_id.to_hex(),
+                bonsai_commit_id
+            );
+        }
+        // Validate the commit message matches
+        assert_eq!(
+            bonsai_commit.message(),
+            git_commit.message.to_string().as_str()
+        );
+        // Validate the author signature matches
+        let bonsai_author = get_signature(bonsai_commit.author(), bonsai_commit.author_date())?;
+        assert_eq!(bonsai_author, git_commit.author);
+        // Validate the committer signature matches
+        let bonsai_committer = if let (Some(committer), Some(committer_date)) =
+            (bonsai_commit.committer(), bonsai_commit.committer_date())
+        {
+            get_signature(committer, committer_date)?
+        } else {
+            bonsai_author
+        };
+        assert_eq!(bonsai_committer, git_commit.committer);
+        Ok(())
+    }
+
+    /// This function generates Git commits for each bonsai commit in the fixture starting from
+    /// the fixture's master Bonsai bookmark. It then checks that the Git commit and the Bonsai commit
+    /// represent the same data.
+    async fn run_commit_derivation_for_fixture(
+        fb: FacebookInit,
+        repo: impl BookmarksRef
+        + RepoBlobstoreArc
+        + RepoDerivedDataRef
+        + ChangesetsRef
+        + BonsaiGitMappingRef
+        + Send
+        + Sync,
+    ) -> Result<(), anyhow::Error> {
+        let ctx = CoreContext::test_mock(fb);
+
+        let bcs_id = repo
+            .bookmarks()
+            .get(ctx.clone(), &BookmarkKey::from_str("master")?)
+            .await?
+            .ok_or_else(|| format_err!("no master"))?;
+
+        // Validate that the derivation of the Git commit was successful
+        MappedGitCommitId::derive(&ctx, &repo, bcs_id).await?;
+        // All the generated git commit IDs would be stored in BonsaiGitMapping. For all such commits, validate
+        // parity with its Bonsai counterpart.
+        repo.changesets()
+            .list_enumeration_range(&ctx, 0, u64::MAX, None, false)
+            .try_filter_map(|(bcs_id, _)| {
+                let repo = &repo;
+                let ctx: &CoreContext = &ctx;
+                async move {
+                    match repo
+                        .bonsai_git_mapping()
+                        .get_git_sha1_from_bonsai(ctx, bcs_id.clone())
+                        .await?
+                    {
+                        Some(git_sha1) => Ok(Some((bcs_id, git_sha1))),
+                        None => Ok(None),
+                    }
+                }
+            })
+            .map_ok(|(bcs_id, git_sha1)| {
+                let repo = &repo;
+                let ctx = &ctx;
+                async move { compare_commits(repo, ctx, bcs_id, git_sha1).await }
+            })
+            .try_buffer_unordered(100)
+            .try_collect::<Vec<_>>()
+            .await?;
+        Ok(())
+    }
+
+    macro_rules! impl_test {
+        ($test_name:ident, $fixture:ident) => {
+            #[fbinit::test]
+            fn $test_name(fb: FacebookInit) -> Result<(), anyhow::Error> {
+                let runtime = tokio::runtime::Runtime::new()?;
+                runtime.block_on(async move {
+                    let repo = fixtures::$fixture::getrepo(fb).await;
+                    run_commit_derivation_for_fixture(fb, repo).await
+                })
+            }
+        };
+    }
+
+    impl_test!(linear, Linear);
+    impl_test!(branch_even, BranchEven);
+    impl_test!(branch_uneven, BranchUneven);
+    impl_test!(branch_wide, BranchWide);
+    impl_test!(merge_even, MergeEven);
+    impl_test!(many_files_dirs, ManyFilesDirs);
+    impl_test!(merge_uneven, MergeUneven);
+    impl_test!(unshared_merge_even, UnsharedMergeEven);
+    impl_test!(unshared_merge_uneven, UnsharedMergeUneven);
+    impl_test!(many_diamonds, ManyDiamonds);
+}

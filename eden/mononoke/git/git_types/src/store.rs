@@ -70,3 +70,28 @@ where
         .await
         .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))
 }
+
+/// Free function for fetching stored git objects
+pub async fn fetch_git_object<B>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    git_hash: &git_hash::oid,
+) -> anyhow::Result<git_object::Object, GitError>
+where
+    B: Blobstore + Clone,
+{
+    let blobstore_key = format!("{}{}{}", GIT_OBJECT_PREFIX, SEPARATOR, git_hash.to_hex());
+    let object_bytes = blobstore
+        .get(ctx, &blobstore_key)
+        .await
+        .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))?
+        .ok_or_else(|| GitError::NonExistentObject(git_hash.to_hex().to_string()))?;
+    let object =
+        git_object::ObjectRef::from_loose(object_bytes.as_raw_bytes().as_ref()).map_err(|e| {
+            GitError::InvalidContent(
+                git_hash.to_hex().to_string(),
+                anyhow::anyhow!(e.to_string()).into(),
+            )
+        })?;
+    Ok(object.into())
+}

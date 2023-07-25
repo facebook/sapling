@@ -32,6 +32,7 @@ mod tests {
     use derived_data_utils::derived_data_utils;
     use fbinit::FacebookInit;
     use futures::stream::TryStreamExt;
+    use git_types::MappedGitCommitId;
     use git_types::TreeHandle;
     use live_commit_sync_config::CfgrLiveCommitSyncConfig;
     use live_commit_sync_config::LiveCommitSyncConfig;
@@ -102,12 +103,13 @@ mod tests {
     async fn create_repo(fb: FacebookInit, id: i32) -> Result<Repo> {
         let repo: Repo = TestRepoFactory::new(fb)?
             .with_config_override(|config| {
-                config
+                let config = config
                     .derived_data_config
                     .get_active_config()
-                    .expect("No enabled derived data types config")
-                    .types
-                    .remove(TreeHandle::NAME);
+                    .expect("No enabled derived data types config");
+
+                config.types.remove(TreeHandle::NAME);
+                config.types.remove(MappedGitCommitId::NAME);
             })
             .with_id(RepositoryId::new(id))
             .build()
