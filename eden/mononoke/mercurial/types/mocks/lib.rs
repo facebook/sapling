@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-pub mod errors;
 pub mod hash;
 pub mod nodehash;
 
