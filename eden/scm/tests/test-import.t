@@ -844,21 +844,21 @@ Python utility:
   old mode 100644
   new mode 100755
 #else
-sh % "hg diff --git -c tip" == r"""
-    diff --git a/lib/place-holder b/lib/place-holder
-    new file mode 100644
-    --- /dev/null
-    +++ b/lib/place-holder
-    @@ -0,0 +1,2 @@
-    +perforce does not maintain empty directories.
-    +this file helps.
-    diff --git a/pkg/place-holder b/pkg/place-holder
-    new file mode 100644
-    --- /dev/null
-    +++ b/pkg/place-holder
-    @@ -0,0 +1,2 @@
-    +perforce does not maintain empty directories.
-    +this file helps."""
+  $ hg diff --git -c tip
+  diff --git a/lib/place-holder b/lib/place-holder
+  new file mode 100644
+  --- /dev/null
+  +++ b/lib/place-holder
+  @@ -0,0 +1,2 @@
+  +perforce does not maintain empty directories.
+  +this file helps.
+  diff --git a/pkg/place-holder b/pkg/place-holder
+  new file mode 100644
+  --- /dev/null
+  +++ b/pkg/place-holder
+  @@ -0,0 +1,2 @@
+  +perforce does not maintain empty directories.
+  +this file helps.
 
 # /* The mode change for mksys.bash is missing here, because on platforms  */
 # /* that don't support execbits, mode changes in patches are ignored when */
