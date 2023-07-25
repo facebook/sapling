@@ -8,6 +8,7 @@
 import type {ReactNode} from 'react';
 
 import serverAPI from '../ClientToServerAPI';
+import {tracker} from '../analytics';
 import {codeReviewProvider} from '../codeReview/CodeReviewInfo';
 import {T} from '../i18n';
 import {uncommittedChangesWithPreviews} from '../previews';
@@ -75,7 +76,7 @@ const suggestedReviewersForCommit = selectorFamily<Array<string>, string>({
   key: 'suggestedReviewersForCommit',
   get:
     (hashOrHead: string | 'head' | undefined) =>
-    async ({get}) => {
+    ({get}) => {
       if (hashOrHead == null) {
         return [];
       }
@@ -94,17 +95,19 @@ const suggestedReviewersForCommit = selectorFamily<Array<string>, string>({
         context.paths.push(...(commit?.filesSample.slice(0, 10).map(change => change.path) ?? []));
       }
 
-      serverAPI.postMessage({
-        type: 'getSuggestedReviewers',
-        key: hashOrHead,
-        context,
-      });
+      return tracker.operation('GetSuggestedReviewers', 'FetchError', undefined, async () => {
+        serverAPI.postMessage({
+          type: 'getSuggestedReviewers',
+          key: hashOrHead,
+          context,
+        });
 
-      const response = await serverAPI.nextMessageMatching(
-        'gotSuggestedReviewers',
-        message => message.key === hashOrHead,
-      );
-      return response.reviewers;
+        const response = await serverAPI.nextMessageMatching(
+          'gotSuggestedReviewers',
+          message => message.key === hashOrHead,
+        );
+        return response.reviewers;
+      });
     },
 });
 
@@ -126,13 +129,12 @@ export function SuggestedReviewers({
 
   const filteredSuggestions = suggestedReviewers
     .valueMaybe()
-    ?.filter(s => !existingReviewers.includes(s))
-    .filter(() => false);
+    ?.filter(s => !existingReviewers.includes(s));
 
   return (
     <div className="suggested-reviewers">
       {provider?.supportsSuggestedReviewers &&
-      (filteredSuggestions == null || filteredSuggestions.length) > 0 ? (
+      (filteredSuggestions == null || filteredSuggestions.length > 0) ? (
         <div>
           <div className="suggestion-header">
             <T>Suggested</T>
