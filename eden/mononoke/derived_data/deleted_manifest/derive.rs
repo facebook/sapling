@@ -737,154 +737,187 @@ impl<Root: RootDeletedManifestIdCommon> RootDeletedManifestDeriver<Root> {
 #[cfg(test)]
 mod test {
     use anyhow::Result;
+    use derived_data_manager::BonsaiDerivable;
     use fbinit::FacebookInit;
     use maplit::btreemap;
-    use memblob::Memblob;
-    use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
-    use mononoke_types::hash::Blake2;
     use mononoke_types::DeletedManifestV2Id;
     use pretty_assertions::assert_eq;
-    use PathChange::*;
+    use repo_blobstore::RepoBlobstoreArc;
+    use repo_derived_data::RepoDerivedDataRef;
+    use tests_utils::drawdag::changes;
+    use tests_utils::drawdag::create_from_dag_with_changes;
+    use tests_utils::drawdag::extend_from_dag_with_changes;
 
     use super::*;
+    use crate::test_utils::build_repo;
+    use crate::test_utils::TestRepo;
+    use crate::RootDeletedManifestV2Id;
     type Id = DeletedManifestV2Id;
-
-    fn csid(x: u8) -> ChangesetId {
-        ChangesetId::new(Blake2::from_byte_array([x; 32]))
-    }
+    type Root = RootDeletedManifestV2Id;
 
     async fn assert_derive_stack(
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
-        parent: Option<Id>,
-        changes_by_cs: BTreeMap<ChangesetId, BTreeMap<&str, PathChange>>,
-    ) -> Result<Id> {
-        let all_changes: Vec<(ChangesetId, Vec<(MPath, PathChange)>)> = changes_by_cs
-            .iter()
-            .map(|(k, changes)| {
-                let changes = changes
-                    .iter()
-                    .map(|(name, change)| Ok((MPath::new(name)?, change.clone())))
-                    .collect::<Result<Vec<_>>>()?;
-                Ok((*k, changes))
-            })
-            .collect::<Result<_>>()?;
-        let stack = DeletedManifestDeriver::<DeletedManifestV2>::derive_simple_stack(
+        derivation_ctx: &DerivationContext,
+        stacked_bonsais: Vec<BonsaiChangeset>,
+    ) -> Result<()> {
+        let mut derived_stack: HashMap<ChangesetId, Root> = Default::default();
+        let parent_dm: Option<Id> = if let Some(parent_cs_id) = stacked_bonsais[0].parents().next()
+        {
+            let root: Root = derivation_ctx.fetch_dependency(ctx, parent_cs_id).await?;
+            Some(*root.id())
+        } else {
+            None
+        };
+
+        RootDeletedManifestDeriver::<Root>::derive_single_stack(
             ctx,
-            blobstore,
-            parent,
-            all_changes.clone(),
+            derivation_ctx,
+            stacked_bonsais.clone(),
+            parent_dm.into_iter().collect(),
+            &mut derived_stack,
         )
         .await?;
-        let mut parent = parent;
-        let mut single = Vec::with_capacity(changes_by_cs.len());
-        for (csid, changes) in all_changes {
-            let node = DeletedManifestDeriver::<DeletedManifestV2>::derive(
-                ctx,
-                blobstore,
-                csid,
-                parent.iter().cloned().collect(),
-                PathTree::from_iter(changes.into_iter().map(|(k, v)| (k, Some(v)))),
-            )
-            .await?;
-            single.push(node);
-            parent = Some(node);
+
+        let mut derived_serially: HashMap<ChangesetId, Root> = Default::default();
+        RootDeletedManifestDeriver::<Root>::derive_serially(
+            ctx,
+            derivation_ctx,
+            stacked_bonsais.clone(),
+            &mut derived_serially,
+        )
+        .await?;
+
+        for bonsai in stacked_bonsais {
+            let cs_id = bonsai.get_changeset_id().clone();
+            assert_eq!(derived_stack.get(&cs_id), derived_serially.get(&cs_id));
+
+            // we need to persist as subsequent calls will be reading the mapping
+            derived_stack
+                .get(&cs_id)
+                .expect("changeset missing in derived stack")
+                .store_mapping(ctx, derivation_ctx, cs_id)
+                .await?;
         }
-        assert_eq!(stack, single);
-        let last = stack.last().unwrap().clone();
-        Ok(last)
+        Ok(())
     }
 
     #[fbinit::test]
     async fn test_stack_derive(fb: FacebookInit) -> Result<()> {
-        let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let repo: TestRepo = build_repo(fb).await.unwrap();
+        let blobstore = repo.repo_blobstore_arc() as Arc<dyn Blobstore>;
+        let derivation_ctx = &repo.repo_derived_data().manager().derivation_context(None);
+
         let ctx = CoreContext::test_mock(fb);
 
-        let derive =
-            |parent: Option<Id>, changes| assert_derive_stack(&ctx, &blobstore, parent, changes);
-
-        let id = derive(
-            None,
-            btreemap! {
-                csid(1) => btreemap! {
-                    "/dira/a" => Add,
-                },
-                csid(2) => btreemap!{
-                    "/dirb/b" => Add,
-                },
-                csid(3) => btreemap!{
-                    "/dira/a" => Remove,
-                },
-                csid(4) => btreemap!{
-                    "/dira/a" => Add,
-                    "/dirc/c" => Add,
-                }
+        let commits = create_from_dag_with_changes(
+            &ctx,
+            &repo,
+            r##"
+                A-B-C-D-E-F-G-H
+            "##,
+            changes! {
+                "A" => |c| c.add_file("dira/a", "a"),
+                "B" => |c| c.add_file("dirb/b", "b"),
+                "C" => |c| c.delete_file("dira/a"),
+                "D" => |c| c.add_file("dira/a", "aa").add_file("dirc/c", "c"),
+                "E" => |c| c.delete_file("dirb/b").delete_file("dirc/c"),
+                "F" => |c| c.add_file("dirc/d", "d").add_file("dirc/c/inner_c", "c").add_file("new_file", "new"),
+                "G" => |c| c.delete_file("dirc/c/inner_c").add_file("dird/d/inner_d", "d"),
+                "H" => |c| c.delete_file("dird/d/inner_d").delete_file("new_file").add_file("newer_file", "nwer"),
             },
         )
         .await?;
 
-        derive(
-            Some(id),
-            btreemap! {
-                csid(5) => btreemap! {
-                    "/dirb/b" => Remove,
-                    "/dirc/c" => Remove,
-                },
-                csid(6) => btreemap! {
-                    "/dird/d" => Add,
-                    "/dirc/c/inner_c" => Add,
-                    "/new_file" => Add,
-                },
-                csid(7) => btreemap! {
-                    "/dird/d" => FileDirConflict,
-                    "/dird/d/inner_d" => Add,
-                    "/dir/c/inner_c" => Remove,
-                },
-                csid(8) => btreemap! {
-                    "/dird/d/inner_d" => Remove,
-                    "/new_file" => Remove,
-                    "/newer_file" => Add,
-                }
-            },
-        )
-        .await?;
+        borrowed!(ctx, commits);
+        let blobstore: &Arc<dyn Blobstore> = &blobstore;
+
+        let derive = async move |stack: Vec<&'static str>| {
+            let bonsais = future::try_join_all(stack.iter().map(|c| {
+                commits
+                    .get(*c)
+                    .expect("commit doesn't exist")
+                    .load(ctx, blobstore)
+            }))
+            .await?;
+            assert_derive_stack(ctx, derivation_ctx, bonsais).await
+        };
+
+        derive(vec!["A", "B", "C", "D"]).await?;
+        derive(vec!["E", "F", "G", "H"]).await?;
 
         // Let's try to get many operations on a single node, basically
         // by deleting and re-adding the same files over and over again
         let files = ["/dir/a", "/dir/b", "/dir/c", "/dir/d", "/other_dir/e"];
-        let mut has = vec![true; files.len()];
-        let mut changes: BTreeMap<ChangesetId, BTreeMap<&str, PathChange>> = BTreeMap::new();
-        // Initially add all files
-        changes.insert(csid(0), files.iter().map(|name| (*name, Add)).collect());
+        let mut has = vec![false; files.len()];
+
+        let mut last = *commits.get("H").expect("h doesn't exist");
+        let mut new_commits = vec![];
+
         for idx in 1..100usize {
             let idx1 = idx % files.len();
             let idx2 = (idx * 173) % files.len();
-            let mut change = BTreeMap::new();
             let has1 = has[idx1];
-            change.insert(files[idx1], if has1 { Remove } else { Add });
+            let has2 = has[idx2];
+            cloned!(files);
             has[idx1] = !has1;
             if idx2 != idx1 {
-                let has2 = has[idx2];
-                change.insert(files[idx2], if has2 { Remove } else { Add });
                 has[idx2] = !has2;
             }
-            changes.insert(csid(idx as u8), change);
+            let (commits, _dag) = extend_from_dag_with_changes(
+                ctx,
+                &repo,
+                r##"
+                    LAST - NEW
+                "##,
+                changes! {
+                    "NEW" => |c| {
+                        let c = if has1 {
+                            c.delete_file(files[idx1])
+                        } else {
+                            c.add_file(files[idx1], "contents")
+                        };
+                        if idx2 != idx1 {
+                            if has2 {
+                                c.delete_file(files[idx2])
+
+                            } else {
+                                c.add_file(files[idx2], "contents")
+                            }
+                        } else {
+                            c
+                        }
+                    },
+                },
+                btreemap! {
+                    "LAST".to_string() => last,
+                },
+                false,
+            )
+            .await?;
+            last = commits
+                .into_values()
+                .next()
+                .expect("commit was not created!");
+            new_commits.push(last);
         }
-        let id = derive(None, changes.clone()).await?;
+        let bonsais =
+            future::try_join_all(new_commits.iter().map(|nc| nc.load(ctx, blobstore))).await?;
+        assert_derive_stack(ctx, derivation_ctx, bonsais[..50].to_vec()).await?;
+        assert_derive_stack(ctx, derivation_ctx, bonsais[50..].to_vec()).await?;
+        let root: Root = derivation_ctx
+            .fetch_dependency(
+                ctx,
+                bonsais
+                    .last()
+                    .expect("this vec can't be empty")
+                    .get_changeset_id(),
+            )
+            .await?;
         // DM format shouldn't change easily, let's store it in a test.
         assert_eq!(
-            id.blobstore_key(),
-            "deletedmanifest2.blake2.e95435b8be02a31dcc28465f7e9ba5d9eddd67be782f0c900b00b214d39f0395"
+            root.id().blobstore_key(),
+            "deletedmanifest2.blake2.00c7baf3502624a9a0a5f5a76083f86427a3c00181aa28d7763afc485824f4d6"
         );
-        // Let's also try it in two batches and see if it works the same.
-        let mut i = 0usize;
-        let (batch1, batch2) = changes.into_iter().partition::<BTreeMap<_, _>, _>(|_| {
-            i += 1;
-            i <= 50
-        });
-        let id1 = derive(None, batch1).await?;
-        let id2 = derive(Some(id1), batch2).await?;
-        assert_eq!(id, id2);
 
         Ok(())
     }

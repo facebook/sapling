@@ -56,7 +56,7 @@ use crate::ops::DeletedManifestOps;
 
 #[derive(Clone)]
 #[facet::container]
-struct TestRepo {
+pub(crate) struct TestRepo {
     #[facet]
     bonsai_hg_mapping: dyn BonsaiHgMapping,
     #[facet]
@@ -109,7 +109,7 @@ macro_rules! impl_deleted_manifest_tests {
 }
 pub(crate) use impl_deleted_manifest_tests;
 
-async fn build_repo(fb: FacebookInit) -> Result<TestRepo, Error> {
+pub(crate) async fn build_repo(fb: FacebookInit) -> Result<TestRepo, Error> {
     Ok(test_repo_factory::TestRepoFactory::new(fb)?.build().await?)
 }
 
