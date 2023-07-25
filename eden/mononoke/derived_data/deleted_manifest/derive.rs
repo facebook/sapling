@@ -12,9 +12,10 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
+use atomic_counter::AtomicCounter;
+use atomic_counter::RelaxedCounter;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use borrowed::borrowed;
@@ -35,12 +36,16 @@ use manifest::Diff;
 use manifest::ManifestOps;
 use manifest::PathTree;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
+use mononoke_types::unode::ManifestUnode;
+use mononoke_types::unode::UnodeEntry;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::ManifestUnodeId;
+use multimap::MultiMap;
+use slog::debug;
 use tokio::sync::Mutex;
 use tunables::tunables;
 use unodes::RootUnodeManifestId;
@@ -48,7 +53,7 @@ use unodes::RootUnodeManifestId;
 use crate::mapping::RootDeletedManifestIdCommon;
 
 /// Derives deleted manifest for bonsai changeset `cs_id` given parent deleted files
-/// manifests and the changes associated with the changeset. Parent deleted manifests should be
+/// manifests, unodes and the current changeset. Parent deleted manifests should be
 /// constructed for each parent of the given changeset.
 ///
 /// Deleted manifest is a recursive data structure that starts with a root manifest and
@@ -61,31 +66,44 @@ use crate::mapping::RootDeletedManifestIdCommon;
 /// directory where some of the subentries (directories or files) have been deleted. There cannot
 /// be a manifest without linknode and with no subentries.
 ///
-/// Changes represent creations and deletions for both files and directories. They are applied
-/// recursively starting from the root of parent manifest.
+/// The derivation is done as a bounded traversal that traverses (in lockstep)
+/// any changes included in bonsai's file_changes. It also keeps track of traversed
+/// paths parents deleleted manifest and unodes and based on their contents it may
+/// recurse into more entries.
 ///
-/// 1. If no files were deleted or created on the current path or any subpaths
-///    - if there was corresponding deleted manifest, reuse it;
-///    - otherwise, there is no need to create a new node.
-/// 2. If no change ends on the current path BUT there are creations/deletions on the subpaths,
-///    recurse to the parent subentries and the current subpaths' changes
-///    - if there are deleted subpaths (subentries are not empty), create a live manifest (manifest
-///      without an empty linknode);
-///    - if subentries are empty (all subpaths were restored), delete the current node.
-/// 3. If current path was deleted, recurse to the parent subentries and the current subpaths'
-///    changes
-///   - create a deleted manifest for the current path and set linknode to the current changeset id.
-/// 4. If current path was created, recurse to the parent subentries and the current subpaths'
-///    changes
-///   - if there was a corresponding manifest and there are no subentries, delete the node;
-///   - if there are subentries, create a live manifest or mark the existing node as live.
-/// 5. If there was a file/dir conflict (file was replaced with directory or other way round),
-///    recurse to the parent subentries and the current subpaths' changes
-///   - if there are subentries, create a live manifest or mark the existing node as live.
+/// We attempt to avoid traversing entire manifest so we don't descend into
+/// subtree if the manifest can be reused.
 ///
+/// 1. If the path exists in current unode - we may need to delete the node from deleted manifest.
+/// 2. If the path doesn't exist in the current commit, and we have a single
+/// deleted parent manifest for it we can safely reuse it.
+/// 3. If the path doesn't exist but existed in any of the parents we need to
+///    create a new deleted manifest node.
+/// 4. If there are many different parent manifests and path doesn't exist in
+/// current commit we need to:
+///    - create a new deleted manifest node
+///    - recurse into the deleted manifests trees to merge them
+///
+/// We also recurse into additional paths in the following scenarios:
+///
+/// 1. When one of the parents unodes has entry for path that other parent has
+/// deleted manifest for. In this case the other parent is resurrecting that
+/// entry and we have to accomodate for that.
+///
+/// 2. When the the path is a directory in one of the parents but a file in
+/// unode for current commit. In this case we descend into all paths in replaced
+/// directory.
 pub(crate) struct DeletedManifestDeriver<Manifest: DeletedManifestCommon>(
     std::marker::PhantomData<Manifest>,
 );
+
+#[derive(Default, Debug)]
+struct DebugCounters {
+    bonsai: RelaxedCounter,
+    file_dir: RelaxedCounter,
+    merge_intersect: RelaxedCounter,
+    dfm_merge: RelaxedCounter,
+}
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub(crate) enum PathChange {
@@ -105,6 +123,7 @@ pub(crate) enum DeletedManifestChangeType {
     Reuse,
 }
 
+#[derive(Debug, Clone)]
 struct DeletedManifestChange<Manifest: DeletedManifestCommon> {
     /// Which change happened.
     change_type: DeletedManifestChangeType,
@@ -113,45 +132,81 @@ struct DeletedManifestChange<Manifest: DeletedManifestCommon> {
     copy_subentries_from: Option<Manifest>,
 }
 
+#[derive(Debug, Clone)]
 struct DeletedManifestUnfoldNode<Manifest: DeletedManifestCommon> {
     path_element: Option<MPathElement>,
-    changes: PathTree<Option<PathChange>>,
-    // set is used to automatically deduplicate parents that have equal ancestors
-    parents: HashSet<Manifest::Id>,
+    changes: PathTree<()>,
+    parent_deleted_manifests: MultiMap<Manifest::Id, ChangesetId>,
+    parent_unodes: MultiMap<UnodeEntry, ChangesetId>,
+    current_unode: Option<UnodeEntry>,
+}
+
+pub(crate) fn get_changes_bonsai(bonsai: &BonsaiChangeset) -> Result<PathTree<()>, Error> {
+    Ok(PathTree::from_iter(
+        bonsai
+            .file_changes()
+            .map(|(path, _change)| (path.clone(), ())),
+    ))
 }
 
 impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
+    /// Derives a Deleted Manifest for a single commit.
     pub(crate) async fn derive(
         ctx: &CoreContext,
         blobstore: &Arc<dyn Blobstore>,
-        cs_id: ChangesetId,
-        parents: Vec<Manifest::Id>,
-        changes: PathTree<Option<PathChange>>,
+        bonsai: BonsaiChangeset,
+        parents: Vec<(ChangesetId, Manifest::Id, ManifestUnodeId)>,
+        current_unode: ManifestUnodeId,
     ) -> Result<Manifest::Id, Error> {
+        let changes: PathTree<()> = get_changes_bonsai(&bonsai)?;
+
         // Stream is used to batch writes to blobstore
         let (sender, receiver) = mpsc::unbounded();
         let created = Arc::new(Mutex::new(HashSet::new()));
         cloned!(blobstore, ctx);
+        let cs_id = bonsai.get_changeset_id().clone();
+        let counters: Arc<DebugCounters> = Arc::new(Default::default());
+
         let f = async move {
-            borrowed!(ctx, blobstore);
+            borrowed!(ctx, blobstore, counters);
             let manifest_opt = bounded_traversal(
                 256,
                 DeletedManifestUnfoldNode {
                     path_element: None,
                     changes,
-                    parents: parents.into_iter().collect(),
+                    parent_deleted_manifests: parents
+                        .iter()
+                        .map(|(cs_id, parent_mf_id, _)| (*parent_mf_id, *cs_id))
+                        .collect(),
+                    current_unode: Some(UnodeEntry::Directory(current_unode)),
+                    parent_unodes: parents
+                        .iter()
+                        .map(|(cs_id, _, parent_unode_id)| {
+                            (UnodeEntry::Directory(*parent_unode_id), *cs_id)
+                        })
+                        .collect(),
                 },
                 // unfold
                 {
                     move |DeletedManifestUnfoldNode {
                               path_element,
                               changes,
-                              parents,
+                              parent_deleted_manifests,
+                              parent_unodes,
+                              current_unode,
                           }| {
                         // -> ((Option<MPathElement>, DeletedManifestChange), Vec<UnfoldNode>)
                         async move {
-                            let (mf_change, next_states) =
-                                Self::do_unfold(ctx, blobstore, changes, parents).await?;
+                            let (mf_change, next_states) = Self::do_unfold(
+                                ctx,
+                                blobstore,
+                                changes,
+                                parent_deleted_manifests,
+                                parent_unodes,
+                                current_unode,
+                                counters,
+                            )
+                            .await?;
                             Ok(((path_element, mf_change), next_states))
                         }
                         .boxed()
@@ -171,7 +226,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                         // (_, None) means a leaf node was deleted because the file was recreated.
                         // (None, _) means the path is empty and should only happen on the root.
                     | {
-                        cloned!(cs_id, sender, created);
+                        cloned!(sender, created, cs_id);
                         async move {
                             let mut subentries_to_update = BTreeMap::new();
                             for entry in subentries_iter {
@@ -207,6 +262,10 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             )
             .await?;
 
+            debug!(
+                ctx.logger(),
+                "deleted manifest derivation perf counters {:?}", counters
+            );
             debug_assert!(manifest_opt.0.is_none());
             match manifest_opt {
                 (_, Some(mf_id)) => Ok(mf_id),
@@ -243,8 +302,11 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
     async fn do_unfold(
         ctx: &CoreContext,
         blobstore: &Arc<dyn Blobstore>,
-        changes: PathTree<Option<PathChange>>,
-        parents: HashSet<Manifest::Id>,
+        mut changes: PathTree<()>,
+        parents_dm_ids: MultiMap<Manifest::Id, ChangesetId>,
+        parents_unode_ids: MultiMap<UnodeEntry, ChangesetId>,
+        current_unode_id: Option<UnodeEntry>,
+        counters: &Arc<DebugCounters>,
     ) -> Result<
         (
             DeletedManifestChange<Manifest>,
@@ -252,112 +314,159 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
         ),
         Error,
     > {
-        let PathTree {
-            value: change,
-            subentries,
-        } = changes;
+        // We're assuming that the commits have hanful of parents in (in most
+        // cases <= 2) and iterating over all of them won't be a problem.
+        // (which is the case for all our current repos)
+        let parent_manifests: Vec<(Manifest, Vec<ChangesetId>)> = future::try_join_all(
+            parents_dm_ids
+                .iter_all()
+                .map(|(mf_id, parent_cs_ids)| async {
+                    Ok::<(Manifest, Vec<ChangesetId>), Error>((
+                        mf_id.load(ctx, blobstore).await?,
+                        parent_cs_ids.clone(),
+                    ))
+                }),
+        )
+        .await?;
 
-        let parent_manifests =
-            future::try_join_all(parents.iter().map(|mf_id| mf_id.load(ctx, blobstore))).await?;
+        // Load unodes for parents where they exist and are trees
+        let parent_tree_unodes: Vec<(ManifestUnode, Vec<ChangesetId>)> =
+            stream::iter(parents_unode_ids.iter_all())
+                .map(Ok::<_, Error>)
+                .try_filter_map(
+                    async move |(unode_entry, parent_cs_ids)| match unode_entry {
+                        UnodeEntry::Directory(mf_unode) => Ok(Some((
+                            mf_unode.load(ctx, blobstore).await?,
+                            parent_cs_ids.clone(),
+                        ))),
+                        _ => Ok::<_, Error>(None),
+                    },
+                )
+                .try_collect()
+                .await?;
 
-        let check_consistency = |manifests: &[Manifest]| {
-            let mut it = manifests.iter().map(|mf| mf.is_deleted());
-            if let Some(status) = it.next() {
-                if it.all(|st| st == status) {
-                    return Ok(status);
-                }
-                return Err(format_err!(
-                    "parent deleted manifests have different node status, but no changes were provided"
-                ));
-            }
-            Ok(false)
-        };
+        let path_exists_in_current_commit = current_unode_id.is_some();
+        let path_exists_in_any_parent = !parents_unode_ids.is_empty();
 
-        let change_type = match change {
-            None => {
-                if subentries.is_empty() {
-                    // nothing changed in the current node and in the subentries
-                    // if parent manifests are equal, we can reuse them
-                    match parent_manifests.as_slice() {
-                        [] => {
-                            return Ok((
-                                DeletedManifestChange {
-                                    change_type: DeletedManifestChangeType::Reuse,
-                                    copy_subentries_from: None,
-                                },
-                                vec![],
-                            ));
-                        }
-                        [parent] => {
-                            return Ok((
-                                DeletedManifestChange {
-                                    change_type: DeletedManifestChangeType::Reuse,
-                                    copy_subentries_from: Some(parent.clone()),
-                                },
-                                vec![],
-                            ));
-                        }
-                        parents => {
-                            // parent manifests are different, we need to merge them
-                            // let's check that the node status is consistent across parents
-                            let is_deleted = check_consistency(parents)?;
-                            if is_deleted {
-                                DeletedManifestChangeType::CreateDeleted
-                            } else {
-                                DeletedManifestChangeType::RemoveIfNowEmpty
-                            }
-                        }
+        let change_type = if path_exists_in_current_commit {
+            // Path exists in current commit. Either DFM doesn't exist for the
+            // parents - there's nothing to do. Or it exists and might need to
+            // be modified for reuse if there are any children.
+            DeletedManifestChangeType::RemoveIfNowEmpty
+        } else {
+            // Path was deleted in some parent, now is still deleted. If
+            // it didn't exist in any other parent we can reuse. If it did we
+            // need to mark this commit as deletion and recurse.
+            if parent_manifests.len() == 1 {
+                if let Some((parent, _parent_cs_ids)) = parent_manifests.first() {
+                    if !path_exists_in_any_parent {
+                        return Ok((
+                            DeletedManifestChange {
+                                change_type: DeletedManifestChangeType::Reuse,
+                                copy_subentries_from: Some(parent.clone()),
+                            },
+                            vec![],
+                        ));
                     }
-                } else {
-                    // some paths might be added/deleted
-                    DeletedManifestChangeType::RemoveIfNowEmpty
                 }
             }
-            Some(PathChange::Add) => {
-                // the path was added
-                DeletedManifestChangeType::RemoveIfNowEmpty
-            }
-            Some(PathChange::Remove) => {
-                // the path was removed
-                DeletedManifestChangeType::CreateDeleted
-            }
-            Some(PathChange::FileDirConflict) => {
-                // This is a file/dir conflict: either a file was replaced by directory or other way
-                // round. In both cases one of the paths is being deleted and recreated as other
-                // type. To keep this in history, we need to mark the path as deleted in the deleted
-                // files manifest.
-                DeletedManifestChangeType::RemoveIfNowEmpty
-            }
+            // Either there are more parents and we have to merge or there
+            // are no deleted parent so the file was just deleted.  Either
+            // way we need to construct new DM.
+            DeletedManifestChangeType::CreateDeleted
         };
 
-        // Base traversal for all modified subentries
+        // Special case of bonsais where a file is replacing a tree in the
+        // parent. We need to recurse into that parent tree to mark the whole
+        // thing as deleted even though newly deleted files weren't listed
+        // in bonsai's changes.
+        if let Some(UnodeEntry::File(_mf_unode)) = current_unode_id {
+            for (parent_unode_entry, _parent_cs_ids) in parents_unode_ids.iter() {
+                if let UnodeEntry::Directory(parent_unode) = parent_unode_entry {
+                    let entries: Vec<_> = parent_unode
+                        .list_all_entries(ctx.clone(), blobstore.clone())
+                        .try_collect()
+                        .await?;
+                    for (path, _) in entries {
+                        counters.file_dir.inc();
+                        changes.insert(path, ());
+                    }
+                }
+            }
+        }
+        let subentries = changes.subentries;
+
+        // Base traversal for all entries included in `changes` arg
         let mut recurse_entries = subentries
             .into_iter()
             .map(|(path, change_tree)| {
+                counters.bonsai.inc();
                 (
                     path.clone(),
                     DeletedManifestUnfoldNode {
                         path_element: Some(path),
                         changes: change_tree,
-                        parents: HashSet::new(),
+                        parent_deleted_manifests: MultiMap::new(),
+                        parent_unodes: MultiMap::new(),
+                        current_unode: None,
                     },
                 )
             })
             .collect::<BTreeMap<_, _>>();
 
+        // Find intersections between parents manifests and unodes. Each such intersection means
+        // that there's path that's deleted in one parent but still present in another parent.
+        // In this case the merge commit will be undeleting the path so we have to recurse into
+        // it to create a new deleted manifest with that path removed.
+        for (parent, dfm_parent_cs_ids) in parent_manifests.iter() {
+            for (other_parent_unode, unode_parent_cs_ids) in parent_tree_unodes.iter() {
+                if dfm_parent_cs_ids.len() == 1 && dfm_parent_cs_ids == unode_parent_cs_ids {
+                    continue;
+                }
+                let mut deleted_entries = parent.clone().into_subentries(ctx, blobstore).fuse();
+                let mut unode_entries = other_parent_unode.subentries().iter();
+
+                let mut deleted_entry = deleted_entries.next().await.transpose()?;
+                let mut unode_entry = unode_entries.next();
+                while let (
+                    Some((deleted_mpath_elem, _deleted_id)),
+                    Some((unode_mpath_elem, _uid)),
+                ) = (&deleted_entry, unode_entry)
+                {
+                    if deleted_mpath_elem == unode_mpath_elem {
+                        counters.merge_intersect.inc();
+                        recurse_entries
+                            .entry(deleted_mpath_elem.clone())
+                            .or_insert_with(|| DeletedManifestUnfoldNode {
+                                path_element: Some(deleted_mpath_elem.clone()),
+                                changes: Default::default(),
+                                parent_deleted_manifests: MultiMap::new(),
+                                parent_unodes: MultiMap::new(),
+                                current_unode: None,
+                            });
+                    }
+                    if deleted_mpath_elem <= unode_mpath_elem {
+                        deleted_entry = deleted_entries.next().await.transpose()?;
+                    } else {
+                        unode_entry = unode_entries.next();
+                    }
+                }
+            }
+        }
         let fold_node = match parent_manifests.as_slice() {
             [] => DeletedManifestChange {
                 change_type,
                 copy_subentries_from: None,
             },
-            [parent] => {
+            [(parent, parent_cs_ids)] => {
                 // If there's one parent, we can "copy" its subentries
                 // and modify only a few fields. Important if we're doing few
                 // changes on a big node and need to optimise.
                 stream::iter(recurse_entries.iter_mut().map(anyhow::Ok))
                     .try_for_each_concurrent(100, |(path, node)| async move {
                         if let Some(subentry_id) = parent.lookup(ctx, blobstore, path).await? {
-                            node.parents.insert(subentry_id);
+                            node.parent_deleted_manifests
+                                .insert_many(subentry_id, parent_cs_ids.iter().cloned());
                         }
                         anyhow::Ok(())
                     })
@@ -371,18 +480,23 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             _ => {
                 // If there are multiple parents and they're different, we need to
                 // merge all different subentries. So let's just look at all of them.
-                for parent in parent_manifests {
+                for (parent, parent_cs_ids) in parent_manifests {
                     parent
                         .into_subentries(ctx, blobstore)
                         .try_for_each(|(path, mf_id)| {
                             let entry = recurse_entries.entry(path.clone()).or_insert_with(|| {
+                                counters.dfm_merge.inc();
                                 DeletedManifestUnfoldNode {
                                     path_element: Some(path),
                                     changes: Default::default(),
-                                    parents: HashSet::new(),
+                                    parent_deleted_manifests: MultiMap::new(),
+                                    parent_unodes: MultiMap::new(),
+                                    current_unode: None,
                                 }
                             });
-                            entry.parents.insert(mf_id);
+                            entry
+                                .parent_deleted_manifests
+                                .insert_many(mf_id, parent_cs_ids.iter().cloned());
                             async { Ok(()) }
                         })
                         .await?;
@@ -393,6 +507,23 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 }
             }
         };
+
+        for (parent_unode, parent_cs_ids) in parent_tree_unodes.iter() {
+            for (path, unode_entry) in parent_unode.subentries() {
+                if let Some(node) = recurse_entries.get_mut(path) {
+                    node.parent_unodes
+                        .insert_many(unode_entry.clone(), parent_cs_ids.iter().cloned());
+                }
+            }
+        }
+        if let Some(UnodeEntry::Directory(mf_unode)) = current_unode_id {
+            let current_unode = mf_unode.load(ctx, blobstore).await?;
+            for (path, unode_entry) in current_unode.subentries() {
+                if let Some(node) = recurse_entries.get_mut(path) {
+                    node.current_unode = Some(unode_entry.clone());
+                }
+            }
+        }
 
         Ok((fold_node, recurse_entries.into_values().collect::<Vec<_>>()))
     }
@@ -470,20 +601,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
     }
 }
 
-pub(crate) async fn get_changes(
-    ctx: &CoreContext,
-    derivation_ctx: &DerivationContext,
-    bonsai: BonsaiChangeset,
-) -> Result<PathTree<Option<PathChange>>, Error> {
-    let changes = get_changes_list(ctx, derivation_ctx, bonsai).await?;
-    Ok(PathTree::from_iter(
-        changes
-            .into_iter()
-            .map(|(path, change)| (path, Some(change))),
-    ))
-}
-
-async fn get_changes_list(
+pub(crate) async fn get_changes_list(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
@@ -583,19 +701,23 @@ impl<Root: RootDeletedManifestIdCommon> RootDeletedManifestDeriver<Root> {
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
-        parents: Vec<Root>,
+        parent_manifests: Vec<Root>,
     ) -> Result<Root, Error> {
-        let bcs_id = bonsai.get_changeset_id();
-        let changes = get_changes(ctx, derivation_ctx, bonsai).await?;
+        let (current_unode, parent_unodes) = get_unodes(ctx, derivation_ctx, &bonsai).await?;
+        let parents = bonsai
+            .parents()
+            .zip(parent_manifests.into_iter())
+            .zip(parent_unodes.into_iter())
+            .map(|((bcs_id, parent_dm), parent_unode)| {
+                (bcs_id, parent_dm.id().clone(), parent_unode)
+            })
+            .collect();
         let id = DeletedManifestDeriver::<Root::Manifest>::derive(
             ctx,
             derivation_ctx.blobstore(),
-            bcs_id,
-            parents
-                .into_iter()
-                .map(|root_mf_id| root_mf_id.id().clone())
-                .collect(),
-            changes,
+            bonsai,
+            parents,
+            current_unode,
         )
         .await
         .with_context(|| format!("Deriving {}", Root::NAME))?;
@@ -732,6 +854,34 @@ impl<Root: RootDeletedManifestIdCommon> RootDeletedManifestDeriver<Root> {
             .map(TryInto::try_into)
             .transpose()
     }
+}
+
+/// Returns root unode manifests for changeset and its parents.
+pub(crate) async fn get_unodes(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    bonsai: &BonsaiChangeset,
+) -> Result<(ManifestUnodeId, Vec<ManifestUnodeId>), Error> {
+    let parent_cs_ids: Vec<_> = bonsai.parents().collect();
+    let parent_unodes = parent_cs_ids.into_iter().map({
+        move |cs_id| async move {
+            let root_mf_id = derivation_ctx
+                .derive_dependency::<RootUnodeManifestId>(ctx, cs_id)
+                .await?;
+            Ok(root_mf_id.manifest_unode_id().clone())
+        }
+    });
+
+    let (root_unode_mf_id, parent_unodes) = future::try_join(
+        derivation_ctx.derive_dependency::<RootUnodeManifestId>(ctx, bonsai.get_changeset_id()),
+        // We're assuming that the commits have hanful of parents in (in most
+        // cases <= 2) and iterating over all of them won't be a problem.
+        // (which is the case for all our current repos)
+        future::try_join_all(parent_unodes),
+    )
+    .await?;
+
+    Ok((root_unode_mf_id.manifest_unode_id().clone(), parent_unodes))
 }
 
 #[cfg(test)]

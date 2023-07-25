@@ -14,6 +14,7 @@ path = "lib.rs"
 anyhow = "1.0.71"
 async-stream = "0.3"
 async-trait = "0.1.71"
+atomic-counter = "1.0"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }
@@ -29,8 +30,10 @@ itertools = "0.10.3"
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+multimap = "0.8.1"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../../tunables" }
 unodes = { version = "0.1.0", path = "../unodes" }

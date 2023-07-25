@@ -49,7 +49,7 @@ use repo_derived_data::RepoDerivedDataRef;
 use sorted_vector_map::SortedVectorMap;
 use tests_utils::CreateCommitContext;
 
-use crate::derive::get_changes;
+use crate::derive::get_unodes;
 use crate::derive::DeletedManifestDeriver;
 use crate::mapping::RootDeletedManifestIdCommon;
 use crate::ops::DeletedManifestOps;
@@ -819,19 +819,24 @@ async fn derive_manifest<Root: RootDeletedManifestIdCommon>(
     let blobstore = repo.repo_blobstore_arc() as Arc<dyn Blobstore>;
     let bcs_id = bcs.get_changeset_id();
 
-    let changes = get_changes(
+    let (current_unode, parent_unodes) = get_unodes(
         ctx,
         &repo.repo_derived_data().manager().derivation_context(None),
-        bcs,
+        &bcs,
     )
-    .await
-    .unwrap();
+    .await?;
+    let parents = bcs
+        .parents()
+        .zip(parent_mf_ids.into_iter())
+        .zip(parent_unodes.into_iter())
+        .map(|((parent, parent_dm), parent_unode)| (parent, parent_dm, parent_unode))
+        .collect();
     let f = DeletedManifestDeriver::<Root::Manifest>::derive(
         ctx,
         &blobstore,
-        bcs_id,
-        parent_mf_ids,
-        changes,
+        bcs,
+        parents,
+        current_unode,
     );
 
     let dfm_id = f.await.unwrap();
