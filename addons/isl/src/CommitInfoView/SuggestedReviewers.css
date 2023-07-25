@@ -41,4 +41,10 @@
   width: fit-content;
   max-width: fit-content;
   box-sizing: border-box;
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.suggested-reviewers .suggestion:hover {
+  background-color: var(--hover-darken);
 }

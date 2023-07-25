@@ -11,9 +11,19 @@ import {T} from '../i18n';
 
 import './SuggestedReviewers.css';
 
-export function SuggestedReviewers() {
-  const suggested = ['muirdm', 'quark', 'person1', 'person2', 'person3'];
-  const recent = ['#isl', 'quark', 'person1', 'person2', 'person3'];
+export function SuggestedReviewers({
+  existingReviewers,
+  addReviewer,
+}: {
+  existingReviewers: Array<string>;
+  addReviewer: (value: string) => unknown;
+}) {
+  const suggested = ['muirdm', 'quark', 'person1', 'person2', 'person3'].filter(
+    s => !existingReviewers.includes(s),
+  );
+  const recent = ['#isl', 'quark', 'person1', 'person2', 'person3'].filter(
+    s => !existingReviewers.includes(s),
+  );
   return (
     <div className="suggested-reviewers">
       <div>
@@ -22,7 +32,9 @@ export function SuggestedReviewers() {
         </div>
         <div className="suggestions">
           {suggested.map(s => (
-            <Suggestion key={s}>{s}</Suggestion>
+            <Suggestion key={s} onClick={() => addReviewer(s)}>
+              {s}
+            </Suggestion>
           ))}
         </div>
       </div>
@@ -33,7 +45,9 @@ export function SuggestedReviewers() {
           </div>
           <div className="suggestions">
             {recent.map(s => (
-              <Suggestion key={s}>{s}</Suggestion>
+              <Suggestion key={s} onClick={() => addReviewer(s)}>
+                {s}
+              </Suggestion>
             ))}
           </div>
         </div>
@@ -42,6 +56,10 @@ export function SuggestedReviewers() {
   );
 }
 
-function Suggestion({children}: {children: ReactNode}) {
-  return <span className="suggestion token">{children}</span>;
+function Suggestion({children, onClick}: {children: ReactNode; onClick: () => unknown}) {
+  return (
+    <button className="suggestion token" onClick={onClick}>
+      {children}
+    </button>
+  );
 }

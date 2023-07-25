@@ -60,7 +60,6 @@ import {
   noFieldsBeingEdited,
   findEditedDiffNumber,
 } from './CommitMessageFields';
-import {SuggestedReviewers} from './SuggestedReviewers';
 import {CommitTitleByline, getTopmostEditedField, Section, SmallCapsTitle} from './utils';
 import {
   VSCodeBadge,
@@ -260,44 +259,45 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
         key={mode}>
         {schema
           .filter(field => mode !== 'commit' || field.type !== 'read-only')
-          .map(field => (
-            <CommitInfoField
-              key={field.key}
-              field={field}
-              content={parsedFields[field.key as keyof CommitMessageFields]}
-              autofocus={topmostEditedField === field.key}
-              readonly={editedMessage.type === 'optimistic' || isPublic}
-              isBeingEdited={fieldsBeingEdited[field.key]}
-              startEditingField={() => startEditingField(field.key)}
-              editedField={editedMessage.fields?.[field.key]}
-              setEditedField={(newVal: string) =>
-                setEditedCommitMesage(val =>
-                  val.type === 'optimistic'
-                    ? val
-                    : {
-                        fields: {
-                          ...val.fields,
-                          [field.key]: field.type === 'field' ? [newVal] : newVal,
-                        },
+          .map(field => {
+            const setField = (newVal: string) =>
+              setEditedCommitMesage(val =>
+                val.type === 'optimistic'
+                  ? val
+                  : {
+                      fields: {
+                        ...val.fields,
+                        [field.key]: field.type === 'field' ? [newVal] : newVal,
                       },
-                )
-              }
-              extra={
-                mode !== 'commit' && field.key === 'Title' ? (
-                  <>
-                    <CommitTitleByline commit={commit} />
-                    <ShowingRemoteMessageBanner
-                      commit={commit}
-                      latestFields={parsedFields}
-                      editedCommitMessageKey={isCommitMode ? 'head' : commit.hash}
-                    />
-                  </>
-                ) : field.key === 'Reviewers' && fieldsBeingEdited[field.key] ? (
-                  <SuggestedReviewers />
-                ) : undefined
-              }
-            />
-          ))}
+                    },
+              );
+
+            return (
+              <CommitInfoField
+                key={field.key}
+                field={field}
+                content={parsedFields[field.key as keyof CommitMessageFields]}
+                autofocus={topmostEditedField === field.key}
+                readonly={editedMessage.type === 'optimistic' || isPublic}
+                isBeingEdited={fieldsBeingEdited[field.key]}
+                startEditingField={() => startEditingField(field.key)}
+                editedField={editedMessage.fields?.[field.key]}
+                setEditedField={setField}
+                extra={
+                  mode !== 'commit' && field.key === 'Title' ? (
+                    <>
+                      <CommitTitleByline commit={commit} />
+                      <ShowingRemoteMessageBanner
+                        commit={commit}
+                        latestFields={parsedFields}
+                        editedCommitMessageKey={isCommitMode ? 'head' : commit.hash}
+                      />
+                    </>
+                  ) : undefined
+                }
+              />
+            );
+          })}
         <VSCodeDivider />
         {commit.isHead && !isPublic ? (
           <Section data-testid="changes-to-amend">
