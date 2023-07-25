@@ -1,0 +1,44 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.suggested-reviewers {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: var(--pad);
+  overflow: hidden;
+}
+
+.suggested-reviewers > div:nth-child(2) {
+  flex-shrink: 2;
+}
+
+.suggested-reviewers .suggestion-header {
+  font-size: 90%;
+  font-variant: all-small-caps;
+}
+
+.suggested-reviewers .suggestions {
+  display: flex;
+  flex-direction: row;
+  gap: var(--halfpad);
+
+  --suggestion-height: 25px;
+
+  overflow: hidden;
+  flex-wrap: wrap;
+  height: var(--suggestion-height);
+}
+
+.suggested-reviewers .suggestion {
+  display: block;
+  flex: 1 0 var(--suggestion-height);
+  height: var(--suggestion-height);
+  width: fit-content;
+  max-width: fit-content;
+  box-sizing: border-box;
+}

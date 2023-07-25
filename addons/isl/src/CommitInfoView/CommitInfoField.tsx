@@ -103,6 +103,7 @@ export function CommitInfoField({
             setEditedCommitMessage={setEditedField}
           />
         )}
+        {extra}
       </Section>
     ) : (
       <Section>
@@ -145,6 +146,7 @@ export function CommitInfoField({
               </span>
             )}
           </ClickToEditField>
+          {extra}
         </Wrapper>
       </Section>
     );

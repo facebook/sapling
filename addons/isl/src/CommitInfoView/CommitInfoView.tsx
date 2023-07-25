@@ -60,6 +60,7 @@ import {
   noFieldsBeingEdited,
   findEditedDiffNumber,
 } from './CommitMessageFields';
+import {SuggestedReviewers} from './SuggestedReviewers';
 import {CommitTitleByline, getTopmostEditedField, Section, SmallCapsTitle} from './utils';
 import {
   VSCodeBadge,
@@ -291,6 +292,8 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                       editedCommitMessageKey={isCommitMode ? 'head' : commit.hash}
                     />
                   </>
+                ) : field.key === 'Reviewers' && fieldsBeingEdited[field.key] ? (
+                  <SuggestedReviewers />
                 ) : undefined
               }
             />

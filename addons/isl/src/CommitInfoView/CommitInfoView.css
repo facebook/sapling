@@ -271,7 +271,8 @@
   height: var(--token-height);
 }
 
-.commit-info-tokenized-field .token {
+.commit-info-tokenized-field .token,
+.suggested-reviewers .token {
   padding: 0;
   background-color: var(--tooltip-background);
   padding: 0 var(--pad);
