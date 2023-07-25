@@ -38,13 +38,14 @@ import {PrSubmitOperation} from '../operations/PrSubmitOperation';
 import {SetConfigOperation} from '../operations/SetConfigOperation';
 import {useUncommittedSelection} from '../partialSelection';
 import platform from '../platform';
-import {CommitPreview, treeWithPreviews, uncommittedChangesWithPreviews} from '../previews';
-import {selectedCommitInfos, selectedCommits} from '../selection';
+import {CommitPreview, uncommittedChangesWithPreviews} from '../previews';
+import {selectedCommits} from '../selection';
 import {latestHeadCommit, repositoryInfo, useRunOperation} from '../serverAPIState';
 import {useModal} from '../useModal';
 import {assert, firstLine, firstOfIterable} from '../utils';
 import {CommitInfoField} from './CommitInfoField';
 import {
+  commitInfoViewCurrentCommits,
   assertNonOptimistic,
   commitFieldsBeingEdited,
   commitMode,
@@ -80,15 +81,9 @@ import {notEmpty, unwrap} from 'shared/utils';
 import './CommitInfoView.css';
 
 export function CommitInfoSidebar() {
-  const selected = useRecoilValue(selectedCommitInfos);
+  const commitsToShow = useRecoilValue(commitInfoViewCurrentCommits);
 
-  const {headCommit} = useRecoilValue(treeWithPreviews);
-
-  // show selected commit, if there's exactly 1
-  const selectedCommit = selected.length === 1 ? selected[0] : undefined;
-  const commit = selectedCommit ?? headCommit;
-
-  if (commit == null) {
+  if (commitsToShow == null) {
     return (
       <div className="commit-info-view" data-testid="commit-info-view-loading">
         <Center>
@@ -97,12 +92,12 @@ export function CommitInfoSidebar() {
       </div>
     );
   } else {
-    if (selected.length > 1) {
-      return <MultiCommitInfo selectedCommits={selected} />;
+    if (commitsToShow.length > 1) {
+      return <MultiCommitInfo selectedCommits={commitsToShow} />;
     }
 
     // only one commit selected
-    return <CommitInfoDetails commit={commit} />;
+    return <CommitInfoDetails commit={commitsToShow[0]} />;
   }
 }
 

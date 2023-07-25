@@ -5,11 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Hash} from '../types';
+import type {CommitInfo, Hash} from '../types';
 import type {CommitMessageFields, FieldsBeingEdited} from './types';
 
 import serverAPI from '../ClientToServerAPI';
 import {latestCommitMessage} from '../codeReview/CodeReviewInfo';
+import {treeWithPreviews} from '../previews';
+import {selectedCommitInfos} from '../selection';
 import {latestCommitTreeMap} from '../serverAPIState';
 import {firstLine} from '../utils';
 import {
@@ -18,7 +20,7 @@ import {
   findFieldsBeingEdited,
   emptyCommitMessageFields,
 } from './CommitMessageFields';
-import {atomFamily, selectorFamily, atom} from 'recoil';
+import {atomFamily, selectorFamily, atom, selector} from 'recoil';
 
 export type EditedMessage = {fields: CommitMessageFields};
 
@@ -133,4 +135,23 @@ export const commitFieldsBeingEdited = atom<FieldsBeingEdited>({
 export const commitMode = atom<CommitInfoMode>({
   key: 'commitMode',
   default: 'amend',
+});
+
+export const commitInfoViewCurrentCommits = selector<Array<CommitInfo> | null>({
+  key: 'commitInfoViewCurrentCommits',
+  get: ({get}) => {
+    const selected = get(selectedCommitInfos);
+
+    const {headCommit} = get(treeWithPreviews);
+
+    // show selected commit, if there's exactly 1
+    const selectedCommit = selected.length === 1 ? selected[0] : undefined;
+    const commit = selectedCommit ?? headCommit;
+
+    if (commit == null) {
+      return null;
+    } else {
+      return selected.length > 1 ? selected : [commit];
+    }
+  },
 });
