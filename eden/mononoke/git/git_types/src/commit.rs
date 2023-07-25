@@ -14,6 +14,10 @@ use crate::thrift;
 pub struct MappedGitCommitId(GitSha1);
 
 impl MappedGitCommitId {
+    pub fn new(sha1: GitSha1) -> Self {
+        Self(sha1)
+    }
+
     pub fn oid(&self) -> &GitSha1 {
         &self.0
     }

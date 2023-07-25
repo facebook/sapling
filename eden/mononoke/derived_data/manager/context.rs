@@ -12,6 +12,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use blobstore::Blobstore;
+use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use cacheblob::MemWritesBlobstore;
 use context::CoreContext;
@@ -205,6 +206,10 @@ impl DerivationContext {
 
     pub fn bonsai_hg_mapping(&self) -> Result<&dyn BonsaiHgMapping> {
         self.manager.bonsai_hg_mapping()
+    }
+
+    pub fn bonsai_git_mapping(&self) -> Result<&dyn BonsaiGitMapping> {
+        self.manager.bonsai_git_mapping()
     }
 
     pub fn filenodes(&self) -> Result<&dyn Filenodes> {

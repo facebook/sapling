@@ -47,7 +47,7 @@ pub struct DerivedDataManagerInner {
     changesets: Arc<dyn Changesets>,
     commit_graph: Arc<CommitGraph>,
     bonsai_hg_mapping: Option<Arc<dyn BonsaiHgMapping>>,
-    _bonsai_git_mapping: Option<Arc<dyn BonsaiGitMapping>>,
+    bonsai_git_mapping: Option<Arc<dyn BonsaiGitMapping>>,
     filenodes: Option<Arc<dyn Filenodes>>,
     repo_blobstore: RepoBlobstore,
     lease: DerivedDataLease,
@@ -111,7 +111,7 @@ impl DerivedDataManager {
                 changesets,
                 commit_graph,
                 bonsai_hg_mapping: Some(bonsai_hg_mapping),
-                _bonsai_git_mapping: Some(bonsai_git_mapping),
+                bonsai_git_mapping: Some(bonsai_git_mapping),
                 filenodes: Some(filenodes),
                 repo_blobstore,
                 lease,
@@ -238,6 +238,13 @@ impl DerivedDataManager {
             .bonsai_hg_mapping
             .as_deref()
             .context("Missing BonsaiHgMapping")
+    }
+
+    pub fn bonsai_git_mapping(&self) -> Result<&dyn BonsaiGitMapping> {
+        self.inner
+            .bonsai_git_mapping
+            .as_deref()
+            .context("Missing BonsaiGitMapping")
     }
 
     pub fn filenodes(&self) -> Result<&dyn Filenodes> {
