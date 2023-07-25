@@ -45,7 +45,7 @@ use slog::Logger;
 use stats::prelude::*;
 use time_ext::DurationExt;
 
-use super::errors::ErrorKind;
+use super::errors::MononokeHgBlobError;
 use super::filenode_lookup::lookup_filenode_id;
 use super::filenode_lookup::store_filenode_id;
 use super::filenode_lookup::FileNodeIdPointer;
@@ -128,7 +128,7 @@ impl UploadHgTreeEntry {
             UploadHgNodeHash::Supplied(node_id) => node_id,
             UploadHgNodeHash::Checked(node_id) => {
                 if node_id != computed_node_id {
-                    bail!(ErrorKind::InconsistentEntryHashForPath(
+                    bail!(MononokeHgBlobError::InconsistentEntryHashForPath(
                         path,
                         node_id,
                         computed_node_id
@@ -384,7 +384,7 @@ impl UploadHgFileContents {
                 Result::<_>::Ok(
                     filestore::peek(&blobstore, &ctx, &FetchKey::Canonical(content_id), META_SZ)
                         .await?
-                        .ok_or(ErrorKind::ContentBlobMissing(content_id))?,
+                        .ok_or(MononokeHgBlobError::ContentBlobMissing(content_id))?,
                 )
             }
             .await
@@ -411,7 +411,7 @@ impl UploadHgFileContents {
         let file_bytes = async_stream::stream! {
             let stream = filestore::fetch(&blobstore, ctx, &FetchKey::Canonical(content_id))
                 .await?
-                .ok_or(ErrorKind::ContentBlobMissing(content_id))?;
+                .ok_or(MononokeHgBlobError::ContentBlobMissing(content_id))?;
 
             pin_mut!(stream);
             while let Some(value) = stream.next().await {
@@ -473,12 +473,12 @@ impl UploadHgFileEntry {
                     let node_id = HgFileNodeId::new(node_id);
                     if node_id != computed_node_id {
                         let err = match path {
-                            Some(path) => ErrorKind::InconsistentEntryHashForPath(
+                            Some(path) => MononokeHgBlobError::InconsistentEntryHashForPath(
                                 RepoPath::FilePath((*path).clone()),
                                 node_id.into_nodehash(),
                                 computed_node_id.into_nodehash(),
                             ),
-                            None => ErrorKind::InconsistentEntryHash(
+                            None => MononokeHgBlobError::InconsistentEntryHash(
                                 node_id.into_nodehash(),
                                 computed_node_id.into_nodehash(),
                             ),

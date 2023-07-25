@@ -71,7 +71,7 @@ impl HgChangesetEnvelope {
         };
 
         catch_block().with_context(|| {
-            ErrorKind::InvalidThrift(
+            MononokeHgError::InvalidThrift(
                 "HgChangesetEnvelope".into(),
                 "Invalid Changeset envelope".into(),
             )
@@ -80,7 +80,7 @@ impl HgChangesetEnvelope {
 
     pub fn from_blob(blob: HgEnvelopeBlob) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.0.as_ref())
-            .with_context(|| ErrorKind::BlobDeserializeError("HgChangesetEnvelope".into()))?;
+            .with_context(|| MononokeHgError::BlobDeserializeError("HgChangesetEnvelope".into()))?;
         Self::from_thrift(thrift_tc)
     }
 

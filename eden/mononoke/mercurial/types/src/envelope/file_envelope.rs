@@ -20,7 +20,7 @@ use quickcheck::Arbitrary;
 use quickcheck::Gen;
 
 use super::HgEnvelopeBlob;
-use crate::errors::*;
+use crate::errors::MononokeHgError;
 use crate::nodehash::HgFileNodeId;
 use crate::nodehash::HgNodeHash;
 use crate::thrift;
@@ -91,13 +91,13 @@ impl HgFileEnvelope {
         };
 
         catch_block().with_context(|| {
-            ErrorKind::InvalidThrift("HgFileEnvelope".into(), "Invalid file envelope".into())
+            MononokeHgError::InvalidThrift("HgFileEnvelope".into(), "Invalid file envelope".into())
         })
     }
 
     pub fn from_blob(blob: HgEnvelopeBlob) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.0.as_ref())
-            .with_context(|| ErrorKind::BlobDeserializeError("HgFileEnvelope".into()))?;
+            .with_context(|| MononokeHgError::BlobDeserializeError("HgFileEnvelope".into()))?;
         Self::from_thrift(thrift_tc)
     }
 

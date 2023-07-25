@@ -22,7 +22,7 @@ use context::CoreContext;
 use itertools::Itertools;
 use mononoke_types::hash::Sha256;
 
-use super::errors::ErrorKind;
+use super::errors::MononokeHgBlobError;
 use crate::FileBytes;
 use crate::HgBlob;
 use crate::HgBlobNode;
@@ -232,7 +232,7 @@ impl File {
             .and_then(|s| str::from_utf8(s).ok())
             .map(|s| s.to_string())
             .ok_or_else(|| {
-                ErrorKind::IncorrectLfsFileContent(
+                MononokeHgBlobError::IncorrectLfsFileContent(
                     "VERSION mandatory field parsing failed in Lfs file content".to_string(),
                 )
             })?;
@@ -252,7 +252,7 @@ impl File {
             })
             .and_then(|s| Sha256::from_str(&s).ok())
             .ok_or_else(|| {
-                ErrorKind::IncorrectLfsFileContent(
+                MononokeHgBlobError::IncorrectLfsFileContent(
                     "OID mandatory field parsing failed in Lfs file content".to_string(),
                 )
             })?;
@@ -261,7 +261,7 @@ impl File {
             .and_then(|s| str::from_utf8(s).ok())
             .and_then(|s| s.parse::<u64>().ok())
             .ok_or_else(|| {
-                ErrorKind::IncorrectLfsFileContent(
+                MononokeHgBlobError::IncorrectLfsFileContent(
                     "SIZE mandatory field parsing failed in Lfs file content".to_string(),
                 )
             })?;

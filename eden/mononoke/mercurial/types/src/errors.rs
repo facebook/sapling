@@ -8,7 +8,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum MononokeHgError {
     #[error("invalid sha-1 input: {0}")]
     InvalidSha1Input(String),
     #[error("invalid fragment list: {0}")]

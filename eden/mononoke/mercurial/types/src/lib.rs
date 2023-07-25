@@ -87,7 +87,7 @@ pub use crate::envelope::HgFileEnvelope;
 pub use crate::envelope::HgFileEnvelopeMut;
 pub use crate::envelope::HgManifestEnvelope;
 pub use crate::envelope::HgManifestEnvelopeMut;
-pub use crate::errors::ErrorKind;
+pub use crate::errors::MononokeHgError;
 pub use crate::file::FileBytes;
 pub use crate::flags::parse_rev_flags;
 pub use crate::flags::RevFlags;

@@ -9,7 +9,7 @@ mod envelope;
 pub use envelope::HgBlobEnvelope;
 
 mod errors;
-pub use errors::ErrorKind;
+pub use errors::MononokeHgBlobError;
 
 pub mod file;
 pub use file::File;

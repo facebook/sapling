@@ -74,7 +74,7 @@ impl HgManifestEnvelope {
         };
 
         catch_block().with_context(|| {
-            ErrorKind::InvalidThrift(
+            MononokeHgError::InvalidThrift(
                 "HgManifestEnvelope".into(),
                 "Invalid manifest envelope".into(),
             )
@@ -83,7 +83,7 @@ impl HgManifestEnvelope {
 
     pub fn from_blob(blob: HgEnvelopeBlob) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.0.as_ref())
-            .with_context(|| ErrorKind::BlobDeserializeError("HgManifestEnvelope".into()))?;
+            .with_context(|| MononokeHgError::BlobDeserializeError("HgManifestEnvelope".into()))?;
         Self::from_thrift(thrift_tc)
     }
 

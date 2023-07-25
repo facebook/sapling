@@ -19,7 +19,7 @@ use rand_distr::LogNormal;
 
 use super::delta_apply::mpatch_fold;
 use super::delta_apply::wrap_deltas;
-use crate::errors::ErrorKind;
+use crate::errors::MononokeHgError;
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Default)]
 pub struct Delta {
@@ -69,7 +69,7 @@ impl Delta {
         let mut prev_frag: Option<&Fragment> = None;
         for (i, frag) in frags.iter().enumerate() {
             frag.verify().with_context(|| {
-                ErrorKind::InvalidFragmentList(format!("invalid fragment {}", i))
+                MononokeHgError::InvalidFragmentList(format!("invalid fragment {}", i))
             })?;
             if let Some(prev) = prev_frag {
                 if frag.start < prev.end {
@@ -77,7 +77,7 @@ impl Delta {
                         "fragment {}: previous end {} overlaps with start {}",
                         i, prev.end, frag.start
                     );
-                    bail!(ErrorKind::InvalidFragmentList(msg));
+                    bail!(MononokeHgError::InvalidFragmentList(msg));
                 }
             }
             prev_frag = Some(frag);

@@ -10,7 +10,7 @@ use std::fmt;
 use anyhow::Result;
 use bitflags::bitflags;
 
-use crate::errors::ErrorKind;
+use crate::errors::MononokeHgError;
 
 bitflags! {
     // names are from hg revlog.py
@@ -29,7 +29,7 @@ pub fn parse_rev_flags(flags: Option<u16>) -> Result<RevFlags> {
     match flags {
         Some(value) => match RevFlags::from_bits(value) {
             Some(value) => Ok(value),
-            None => Err(ErrorKind::UnknownRevFlags.into()),
+            None => Err(MononokeHgError::UnknownRevFlags.into()),
         },
         None => Ok(RevFlags::REVIDX_DEFAULT_FLAGS),
     }

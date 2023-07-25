@@ -14,7 +14,7 @@ use crate::HgNodeHash;
 use crate::Type;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum MononokeHgBlobError {
     #[error("Corrupt hg filenode returned: {expected} != {actual}")]
     CorruptHgFileNode {
         expected: HgFileNodeId,
