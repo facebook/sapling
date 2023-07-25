@@ -31,7 +31,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 
-use crate::errors::ErrorKind;
+use crate::errors::MononokeGitError;
 use crate::upload_git_object;
 use crate::BlobHandle;
 use crate::Tree;
@@ -161,7 +161,7 @@ async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
             |leaf_info| {
                 let leaf = leaf_info
                     .leaf
-                    .ok_or_else(|| ErrorKind::TreeDerivationFailed.into())
+                    .ok_or_else(|| MononokeGitError::TreeDerivationFailed.into())
                     .map(|l| ((), l));
                 ready(leaf)
             }
@@ -195,7 +195,7 @@ pub async fn get_file_changes<B: Blobstore + Clone>(
                         let k = FetchKey::Canonical(fc.content_id());
 
                         let r = filestore::get_metadata(&blobstore, &ctx, &k).await?;
-                        let m = r.ok_or(ErrorKind::ContentMissing(k))?;
+                        let m = r.ok_or(MononokeGitError::ContentMissing(k))?;
                         Ok((mpath, Some(BlobHandle::new(m, t))))
                     }
                     None => Ok((mpath, None)),

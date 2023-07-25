@@ -10,7 +10,7 @@ use megarepo_error::cloneable_error;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum MononokeGitError {
     #[error("Could not locate content: {0:?}")]
     ContentMissing(FetchKey),
     #[error("Tree Derivation Failed")]

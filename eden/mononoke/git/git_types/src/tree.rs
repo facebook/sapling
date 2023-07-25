@@ -18,7 +18,7 @@ use anyhow::Error;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::MPathElement;
 
-use crate::errors::ErrorKind;
+use crate::errors::MononokeGitError;
 use crate::mode;
 use crate::thrift;
 use crate::BlobHandle;
@@ -118,7 +118,7 @@ impl TryFrom<thrift::TreeMember> for TreeMember {
         match t {
             thrift::TreeMember::Blob(blob) => Ok(Self::Blob(blob.try_into()?)),
             thrift::TreeMember::Tree(tree) => Ok(Self::Tree(tree.try_into()?)),
-            thrift::TreeMember::UnknownField(..) => Err(ErrorKind::InvalidThrift.into()),
+            thrift::TreeMember::UnknownField(..) => Err(MononokeGitError::InvalidThrift.into()),
         }
     }
 }
