@@ -262,7 +262,7 @@ macro_rules! impl_typed_hash_no_context {
                 // case.
                 match h.0 {
                     $crate::private::thrift::IdType::Blake2(blake2) => Ok(Self::new($crate::private::Blake2::from_thrift(blake2)?)),
-                    $crate::private::thrift::IdType::UnknownField(x) => $crate::private::anyhow::bail!($crate::private::ErrorKind::InvalidThrift(
+                    $crate::private::thrift::IdType::UnknownField(x) => $crate::private::anyhow::bail!($crate::private::MononokeTypeError::InvalidThrift(
                         stringify!($typed).into(),
                         format!("unknown id type field: {}", x)
                     )),

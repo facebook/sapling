@@ -11,7 +11,7 @@ macro_rules! thrift_field {
     ($struct:ident, $thrift:ident, $field:ident) => {
         $thrift
             .$field
-            .ok_or($crate::errors::ErrorKind::InvalidThrift(
+            .ok_or($crate::errors::MononokeTypeError::InvalidThrift(
                 stringify!($struct).into(),
                 format!("Missing field: {}", stringify!($field)),
             ))

@@ -16,7 +16,7 @@ use blobstore::LoadableError;
 use blobstore::Storable;
 use context::CoreContext;
 use edenapi_types::AnyFileContentId;
-use mononoke_types::errors::ErrorKind;
+use mononoke_types::errors::MononokeTypeError;
 use mononoke_types::hash;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ContentAlias;
@@ -157,7 +157,7 @@ impl Loadable for Alias {
 
         ContentAlias::from_bytes(blob.into_raw_bytes())
             .map(|alias| alias.content_id())
-            .with_context(|| ErrorKind::BlobKeyError(key.clone()))
+            .with_context(|| MononokeTypeError::BlobKeyError(key.clone()))
             .map_err(LoadableError::Error)
     }
 }

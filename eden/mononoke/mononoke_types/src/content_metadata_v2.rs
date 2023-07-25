@@ -19,7 +19,7 @@ use quickcheck::Gen;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::ContentMetadataV2Blob;
-use crate::errors::ErrorKind;
+use crate::errors::MononokeTypeError;
 use crate::hash;
 use crate::thrift;
 use crate::thrift_field;
@@ -39,7 +39,7 @@ impl ContentAlias {
 
     pub fn from_bytes(blob: Bytes) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.as_ref())
-            .with_context(|| ErrorKind::BlobDeserializeError("ContentAlias".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("ContentAlias".into()))?;
         Self::from_thrift(thrift_tc)
     }
 
@@ -48,7 +48,7 @@ impl ContentAlias {
             thrift::ContentAlias::ContentId(id) => {
                 Ok(Self::from_content_id(ContentId::from_thrift(id)?))
             }
-            thrift::ContentAlias::UnknownField(x) => bail!(ErrorKind::InvalidThrift(
+            thrift::ContentAlias::UnknownField(x) => bail!(MononokeTypeError::InvalidThrift(
                 "ContentAlias".into(),
                 format!("unknown content alias field: {}", x)
             )),
@@ -87,7 +87,7 @@ pub struct ContentMetadataV2 {
 impl ContentMetadataV2 {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(bytes)
-            .with_context(|| ErrorKind::BlobDeserializeError("ContentMetadataV2".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("ContentMetadataV2".into()))?;
         Self::from_thrift(thrift_tc)
     }
 
@@ -191,7 +191,7 @@ impl BlobstoreValue for ContentMetadataV2 {
 
     fn from_blob(blob: ContentMetadataV2Blob) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
-            .with_context(|| ErrorKind::BlobDeserializeError("ContentMetadataV2".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("ContentMetadataV2".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

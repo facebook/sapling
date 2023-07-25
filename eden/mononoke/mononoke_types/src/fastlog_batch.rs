@@ -23,7 +23,7 @@ use itertools::Itertools;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::FastlogBatchBlob;
-use crate::errors::ErrorKind;
+use crate::errors::MononokeTypeError;
 use crate::thrift;
 use crate::typed_hash::ChangesetId;
 use crate::typed_hash::FastlogBatchId;
@@ -145,7 +145,7 @@ impl FastlogBatch {
 
     pub fn from_bytes(serialized: &Bytes) -> Result<FastlogBatch> {
         let thrift_entry: Result<thrift::FastlogBatch> = compact_protocol::deserialize(serialized)
-            .map_err(|err| ErrorKind::BlobDeserializeError(format!("{}", err)).into());
+            .map_err(|err| MononokeTypeError::BlobDeserializeError(format!("{}", err)).into());
         thrift_entry.and_then(Self::from_thrift)
     }
 
@@ -235,7 +235,7 @@ impl BlobstoreValue for FastlogBatch {
 
     fn from_blob(blob: FastlogBatchBlob) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
-            .with_context(|| ErrorKind::BlobDeserializeError("FastlogBatch".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("FastlogBatch".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

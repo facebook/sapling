@@ -15,7 +15,7 @@ use context::CoreContext;
 use futures::future;
 use futures::task::Poll;
 use futures::TryFutureExt;
-use mononoke_types::private::ErrorKind;
+use mononoke_types::errors::MononokeTypeError;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::ContentAlias;
@@ -57,11 +57,11 @@ pub async fn get_metadata<B: Blobstore>(
     if let Ok(Some(_)) = metadata {
         return metadata;
     } else if let Err(e) = metadata {
-        match e.downcast_ref::<ErrorKind>() {
+        match e.downcast_ref::<MononokeTypeError>() {
             // The backfilling for ContentMetadataV2 has happened in different stages.
             // If any of the later fields are missing, we get invalid thrift error. In
             // that case we need to rebuild the metadata, so do not return.
-            Some(ErrorKind::InvalidThrift(..)) => {
+            Some(MononokeTypeError::InvalidThrift(..)) => {
                 let key = ContentMetadataV2Id::from(content_id).blobstore_key();
                 let msg = format!(
                     "Invalid ContentMetadataV2 format exists in blobstore for key {}. Error: {}",

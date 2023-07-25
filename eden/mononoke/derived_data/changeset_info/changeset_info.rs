@@ -13,7 +13,7 @@ use blobstore::BlobstoreGetData;
 use bytes::Bytes;
 use derived_data_thrift as thrift;
 use fbthrift::compact_protocol;
-use mononoke_types::errors::ErrorKind;
+use mononoke_types::errors::MononokeTypeError;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
@@ -210,7 +210,10 @@ impl ChangesetInfo {
         };
 
         catch_block().with_context(|| {
-            ErrorKind::InvalidThrift("ChangesetInfo".into(), "Invalid changeset info".into())
+            MononokeTypeError::InvalidThrift(
+                "ChangesetInfo".into(),
+                "Invalid changeset info".into(),
+            )
         })
     }
 
@@ -239,7 +242,7 @@ impl ChangesetInfo {
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(bytes)
-            .with_context(|| ErrorKind::BlobDeserializeError("ChangesetInfo".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("ChangesetInfo".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

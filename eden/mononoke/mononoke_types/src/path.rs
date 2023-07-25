@@ -32,7 +32,7 @@ use serde_derive::Serialize;
 use smallvec::SmallVec;
 
 use crate::bonsai_changeset::BonsaiChangeset;
-use crate::errors::ErrorKind;
+use crate::errors::MononokeTypeError;
 use crate::hash::Blake2;
 use crate::hash::Context;
 use crate::thrift;
@@ -231,20 +231,20 @@ impl MPathElement {
     #[inline]
     pub fn from_thrift(element: thrift::MPathElement) -> Result<MPathElement> {
         Self::verify(&element.0).with_context(|| {
-            ErrorKind::InvalidThrift("MPathElement".into(), "invalid path element".into())
+            MononokeTypeError::InvalidThrift("MPathElement".into(), "invalid path element".into())
         })?;
         Ok(MPathElement(element.0))
     }
 
     fn verify(p: &[u8]) -> Result<()> {
         if p.is_empty() {
-            bail!(ErrorKind::InvalidPath(
+            bail!(MononokeTypeError::InvalidPath(
                 "".into(),
                 "path elements cannot be empty".into()
             ));
         }
         if p.contains(&0) {
-            bail!(ErrorKind::InvalidPath(
+            bail!(MononokeTypeError::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "path elements cannot contain '\\0'".into(),
             ));
@@ -253,25 +253,25 @@ impl MPathElement {
             // MPath can not contain '\x01', in particular if mpath ends with '\x01'
             // and it is part of move metadata, because key-value pairs are separated
             // by '\n', you will get '\x01\n' which is also metadata separator.
-            bail!(ErrorKind::InvalidPath(
+            bail!(MononokeTypeError::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "path elements cannot contain '\\1'".into(),
             ));
         }
         if p.contains(&b'/') {
-            bail!(ErrorKind::InvalidPath(
+            bail!(MononokeTypeError::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "path elements cannot contain '/'".into(),
             ));
         }
         if p.contains(&b'\n') {
-            bail!(ErrorKind::InvalidPath(
+            bail!(MononokeTypeError::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "path elements cannot contain '\\n'".into(),
             ));
         }
         if p == b"." || p == b".." {
-            bail!(ErrorKind::InvalidPath(
+            bail!(MononokeTypeError::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "path elements cannot be . or .. to avoid traversal attacks".into(),
             ));
@@ -282,7 +282,7 @@ impl MPathElement {
 
     fn check_len(p: &[u8]) -> Result<()> {
         if p.len() > MPATH_ELEMENT_MAX_LENGTH {
-            bail!(ErrorKind::InvalidPath(
+            bail!(MononokeTypeError::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 format!(
                     "path elements cannot exceed {} bytes",
@@ -441,7 +441,7 @@ impl MPath {
             .map(MPathElement::new_from_slice)
             .collect::<Result<_, _>>()?;
         if elements.is_empty() {
-            bail!(ErrorKind::InvalidPath(
+            bail!(MononokeTypeError::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "path cannot be empty".into()
             ));
@@ -777,7 +777,7 @@ impl MPathHash {
     pub fn from_thrift(thrift_path: thrift::MPathHash) -> Result<MPathHash> {
         match thrift_path.0 {
             thrift::IdType::Blake2(blake2) => Ok(MPathHash(Blake2::from_thrift(blake2)?)),
-            thrift::IdType::UnknownField(x) => bail!(ErrorKind::InvalidThrift(
+            thrift::IdType::UnknownField(x) => bail!(MononokeTypeError::InvalidThrift(
                 "MPathHash".into(),
                 format!("unknown id type field: {}", x)
             )),
@@ -846,7 +846,7 @@ where
     for (path, is_changed) in sorted_paths {
         if let Some(last_changed_path) = last_changed_path {
             if last_changed_path.is_prefix_of(path) {
-                bail!(ErrorKind::NotPathConflictFree(
+                bail!(MononokeTypeError::NotPathConflictFree(
                     last_changed_path.clone(),
                     path.clone(),
                 ));

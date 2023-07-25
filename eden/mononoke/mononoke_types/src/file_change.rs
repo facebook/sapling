@@ -18,7 +18,7 @@ use quickcheck::Gen;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
-use crate::errors::ErrorKind;
+use crate::errors::MononokeTypeError;
 use crate::path::MPath;
 use crate::thrift;
 use crate::typed_hash::ChangesetId;
@@ -123,7 +123,7 @@ impl TrackedFileChange {
         };
 
         catch_block().with_context(|| {
-            ErrorKind::InvalidThrift(
+            MononokeTypeError::InvalidThrift(
                 "FileChange".into(),
                 format!("Invalid changed entry for path {}", mpath),
             )
@@ -362,7 +362,7 @@ impl FileType {
             thrift::FileType::Regular => FileType::Regular,
             thrift::FileType::Executable => FileType::Executable,
             thrift::FileType::Symlink => FileType::Symlink,
-            thrift::FileType(x) => bail!(ErrorKind::InvalidThrift(
+            thrift::FileType(x) => bail!(MononokeTypeError::InvalidThrift(
                 "FileType".into(),
                 format!("unknown file type '{}'", x)
             )),

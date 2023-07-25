@@ -20,7 +20,7 @@ use quickcheck::Gen;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::RawBundle2Blob;
-use crate::errors::ErrorKind;
+use crate::errors::MononokeTypeError;
 use crate::thrift;
 use crate::typed_hash::RawBundle2Id;
 use crate::typed_hash::RawBundle2IdContext;
@@ -39,7 +39,7 @@ impl RawBundle2 {
     pub(crate) fn from_thrift(fc: thrift::RawBundle2) -> Result<Self> {
         match fc {
             thrift::RawBundle2::Bytes(bytes) => Ok(RawBundle2::Bytes(bytes.into())),
-            thrift::RawBundle2::UnknownField(x) => bail!(ErrorKind::InvalidThrift(
+            thrift::RawBundle2::UnknownField(x) => bail!(MononokeTypeError::InvalidThrift(
                 "RawBundle2".into(),
                 format!("unknown rawbundle2 field: {}", x)
             )),
@@ -81,7 +81,7 @@ impl RawBundle2 {
 
     pub fn from_encoded_bytes(encoded_bytes: Bytes) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(encoded_bytes.as_ref())
-            .with_context(|| ErrorKind::BlobDeserializeError("RawBundle2".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("RawBundle2".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }
@@ -100,7 +100,7 @@ impl BlobstoreValue for RawBundle2 {
 
     fn from_blob(blob: RawBundle2Blob) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
-            .with_context(|| ErrorKind::BlobDeserializeError("RawBundle2".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("RawBundle2".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

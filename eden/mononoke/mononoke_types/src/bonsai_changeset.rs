@@ -22,7 +22,7 @@ use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::ChangesetBlob;
 use crate::datetime::DateTime;
-use crate::errors::ErrorKind;
+use crate::errors::MononokeTypeError;
 use crate::file_change::BasicFileChange;
 use crate::file_change::FileChange;
 use crate::hash::GitSha1;
@@ -175,7 +175,7 @@ impl BonsaiChangesetMut {
         for (path, fc) in &self.file_changes {
             if let Some((copy_from_path, copy_from_id)) = fc.copy_from() {
                 if !self.parents.contains(copy_from_id) {
-                    bail!(ErrorKind::InvalidBonsaiChangeset(format!(
+                    bail!(MononokeTypeError::InvalidBonsaiChangeset(format!(
                         "copy information for path '{}' (from '{}') has parent {} which isn't \
                              recognized",
                         path, copy_from_path, copy_from_id
@@ -190,14 +190,16 @@ impl BonsaiChangesetMut {
                 .iter()
                 .map(|(path, change)| (path, change.is_changed())),
         )
-        .with_context(|| ErrorKind::InvalidBonsaiChangeset("invalid file change list".into()))?;
+        .with_context(|| {
+            MononokeTypeError::InvalidBonsaiChangeset("invalid file change list".into())
+        })?;
 
         // Check that this changeset has untracked/missing files only if it is a snapshot
         if !self.is_snapshot {
             for (_, fc) in &self.file_changes {
                 match fc {
                     FileChange::UntrackedDeletion | FileChange::UntrackedChange(_) => {
-                        bail!(ErrorKind::InvalidBonsaiChangeset(
+                        bail!(MononokeTypeError::InvalidBonsaiChangeset(
                             "untracked changes present in non-snapshot changeset".to_string()
                         ));
                     }
@@ -210,19 +212,19 @@ impl BonsaiChangesetMut {
         if self.git_tree_hash.is_some()
             && !(self.parents.is_empty() && self.file_changes.is_empty())
         {
-            bail!(ErrorKind::InvalidBonsaiChangeset("bonsai changeset representing a git tree should not have any parents or file changes".to_string()))
+            bail!(MononokeTypeError::InvalidBonsaiChangeset("bonsai changeset representing a git tree should not have any parents or file changes".to_string()))
         }
 
         // If the changeset is a git annotated tag, it should not have any parents or file changes
         if self.git_annotated_tag.is_some()
             && !(self.parents.is_empty() && self.file_changes.is_empty())
         {
-            bail!(ErrorKind::InvalidBonsaiChangeset("bonsai changeset representing a git annotated tag should not have any parents or file changes".to_string()))
+            bail!(MononokeTypeError::InvalidBonsaiChangeset("bonsai changeset representing a git annotated tag should not have any parents or file changes".to_string()))
         }
 
         // The changeset is either a git tree or a git annotated tag, but it cannot be both
         if self.git_tree_hash.is_some() && self.git_annotated_tag.is_some() {
-            bail!(ErrorKind::InvalidBonsaiChangeset("bonsai changeset cannot represent both git tree and git annotated tag at the same time".to_string()))
+            bail!(MononokeTypeError::InvalidBonsaiChangeset("bonsai changeset cannot represent both git tree and git annotated tag at the same time".to_string()))
         }
 
         Ok(())
@@ -253,7 +255,7 @@ impl BonsaiChangeset {
             context.finish()
         };
         let thrift_tc = compact_protocol::deserialize(data)
-            .with_context(|| ErrorKind::BlobDeserializeError("BonsaiChangeset".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("BonsaiChangeset".into()))?;
         let bcs = Self::from_thrift_with_id(thrift_tc, id)?;
         Ok(bcs)
     }
@@ -266,7 +268,7 @@ impl BonsaiChangeset {
         };
 
         catch_block().with_context(|| {
-            ErrorKind::InvalidThrift("BonsaiChangeset".into(), "Invalid changeset".into())
+            MononokeTypeError::InvalidThrift("BonsaiChangeset".into(), "Invalid changeset".into())
         })
     }
 
@@ -378,7 +380,7 @@ impl BlobstoreValue for BonsaiChangeset {
 
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
-            .with_context(|| ErrorKind::BlobDeserializeError("BonsaiChangeset".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("BonsaiChangeset".into()))?;
         let bcs = Self::from_thrift_with_id(thrift_tc, *blob.id())?;
         Ok(bcs)
     }
@@ -497,10 +499,12 @@ impl BonsaiAnnotatedTagTarget {
             thrift::BonsaiAnnotatedTagTarget::Content(id) => Ok(BonsaiAnnotatedTagTarget::Content(
                 ContentId::from_thrift(id)?,
             )),
-            thrift::BonsaiAnnotatedTagTarget::UnknownField(x) => bail!(ErrorKind::InvalidThrift(
-                "BonsaiAnnotatedTagTarget".into(),
-                format!("unknown bonsai annotated tag target field: {}", x)
-            )),
+            thrift::BonsaiAnnotatedTagTarget::UnknownField(x) => {
+                bail!(MononokeTypeError::InvalidThrift(
+                    "BonsaiAnnotatedTagTarget".into(),
+                    format!("unknown bonsai annotated tag target field: {}", x)
+                ))
+            }
         }
     }
 

@@ -122,7 +122,7 @@ pub mod private {
     pub use serde::Serialize;
     pub use serde::Serializer;
 
-    pub use crate::errors::ErrorKind;
+    pub use crate::errors::MononokeTypeError;
     pub use crate::hash::Blake2;
     pub use crate::thrift;
     pub use crate::typed_hash::Blake2HexVisitor;

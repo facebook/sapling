@@ -20,7 +20,7 @@ use quickcheck::Gen;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::ContentChunkBlob;
-use crate::errors::ErrorKind;
+use crate::errors::MononokeTypeError;
 use crate::file_contents::ContentChunkPointer;
 use crate::thrift;
 use crate::typed_hash::ContentChunkId;
@@ -38,7 +38,7 @@ impl ContentChunk {
     pub(crate) fn from_thrift(fc: thrift::ContentChunk) -> Result<Self> {
         match fc {
             thrift::ContentChunk::Bytes(bytes) => Ok(ContentChunk(bytes)),
-            thrift::ContentChunk::UnknownField(x) => bail!(ErrorKind::InvalidThrift(
+            thrift::ContentChunk::UnknownField(x) => bail!(MononokeTypeError::InvalidThrift(
                 "ContentChunk".into(),
                 format!("unknown ContentChunk variant: {}", x)
             )),
@@ -51,7 +51,7 @@ impl ContentChunk {
 
     pub fn from_encoded_bytes(encoded_bytes: Bytes) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(encoded_bytes)
-            .with_context(|| ErrorKind::BlobDeserializeError("ContentChunk".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("ContentChunk".into()))?;
         Self::from_thrift(thrift_tc)
     }
 
@@ -82,7 +82,7 @@ impl BlobstoreValue for ContentChunk {
 
     fn from_blob(blob: ContentChunkBlob) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.data())
-            .with_context(|| ErrorKind::BlobDeserializeError("ContentChunk".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("ContentChunk".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

@@ -15,7 +15,7 @@ use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::FileUnodeBlob;
 use crate::blob::ManifestUnodeBlob;
-use crate::errors::ErrorKind;
+use crate::errors::MononokeTypeError;
 use crate::file_change::FileType;
 use crate::path::MPathElement;
 use crate::path::MPathHash;
@@ -167,7 +167,7 @@ impl FileUnode {
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(bytes)
-            .with_context(|| ErrorKind::BlobDeserializeError("FileUnode".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("FileUnode".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }
@@ -186,7 +186,7 @@ impl BlobstoreValue for FileUnode {
 
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
-            .with_context(|| ErrorKind::BlobDeserializeError("FileUnode".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("FileUnode".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }
@@ -281,7 +281,7 @@ impl ManifestUnode {
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(bytes)
-            .with_context(|| ErrorKind::BlobDeserializeError("ManifestUnode".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("ManifestUnode".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

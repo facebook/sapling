@@ -14,7 +14,7 @@ use sorted_vector_map::SortedVectorMap;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::FsnodeBlob;
-use crate::errors::ErrorKind;
+use crate::errors::MononokeTypeError;
 use crate::file_change::FileType;
 use crate::hash::Sha1;
 use crate::hash::Sha256;
@@ -122,7 +122,7 @@ impl Fsnode {
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(bytes)
-            .with_context(|| ErrorKind::BlobDeserializeError("Fsnode".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("Fsnode".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

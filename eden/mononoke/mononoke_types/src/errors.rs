@@ -10,7 +10,7 @@ use thiserror::Error;
 use crate::path::MPath;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum MononokeTypeError {
     #[error("invalid blake2 input: {0}")]
     InvalidBlake2Input(String),
     #[error("invalid sha1 input: {0}")]

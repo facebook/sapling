@@ -16,7 +16,7 @@ use fbthrift::compact_protocol::CompactProtocolSerializer;
 use fbthrift::Deserialize;
 use fbthrift::Serialize;
 
-use crate::errors::ErrorKind;
+use crate::errors::MononokeTypeError;
 
 pub trait ThriftConvert: Sized {
     const NAME: &'static str;
@@ -27,7 +27,7 @@ pub trait ThriftConvert: Sized {
     fn into_thrift(self) -> Self::Thrift;
     fn from_bytes(bytes: &Bytes) -> Result<Self> {
         let thrift = compact_protocol::deserialize(bytes)
-            .with_context(|| ErrorKind::BlobDeserializeError(Self::NAME.to_string()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError(Self::NAME.to_string()))?;
         Self::from_thrift(thrift)
     }
     fn into_bytes(self) -> Bytes {

@@ -21,7 +21,7 @@ use quickcheck::Gen;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::ContentBlob;
-use crate::errors::ErrorKind;
+use crate::errors::MononokeTypeError;
 use crate::thrift;
 use crate::typed_hash::ContentChunkId;
 use crate::typed_hash::ContentId;
@@ -48,7 +48,7 @@ impl FileContents {
                 let contents = ChunkedFileContents::from_thrift(chunked)?;
                 Ok(FileContents::Chunked(contents))
             }
-            thrift::FileContents::UnknownField(x) => bail!(ErrorKind::InvalidThrift(
+            thrift::FileContents::UnknownField(x) => bail!(MononokeTypeError::InvalidThrift(
                 "FileContents".into(),
                 format!("unknown file contents field: {}", x)
             )),
@@ -64,7 +64,7 @@ impl FileContents {
 
     pub fn from_encoded_bytes(encoded_bytes: Bytes) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(encoded_bytes)
-            .with_context(|| ErrorKind::BlobDeserializeError("FileContents".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("FileContents".into()))?;
         Self::from_thrift(thrift_tc)
     }
 
@@ -115,7 +115,7 @@ impl BlobstoreValue for FileContents {
 
     fn from_blob(blob: ContentBlob) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.data())
-            .with_context(|| ErrorKind::BlobDeserializeError("FileContents".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("FileContents".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }
@@ -173,8 +173,9 @@ impl ChunkedFileContents {
     }
 
     pub fn from_bytes(blob: Bytes) -> Result<Self> {
-        let thrift_chunked = compact_protocol::deserialize(blob)
-            .with_context(|| ErrorKind::BlobDeserializeError("ChunkedFileContents".into()))?;
+        let thrift_chunked = compact_protocol::deserialize(blob).with_context(|| {
+            MononokeTypeError::BlobDeserializeError("ChunkedFileContents".into())
+        })?;
         Self::from_thrift(thrift_chunked)
     }
 
@@ -243,8 +244,9 @@ impl ContentChunkPointer {
     }
 
     pub fn from_bytes(blob: Bytes) -> Result<Self> {
-        let thrift_chunk = compact_protocol::deserialize(blob)
-            .with_context(|| ErrorKind::BlobDeserializeError("ContentChunkPointer".into()))?;
+        let thrift_chunk = compact_protocol::deserialize(blob).with_context(|| {
+            MononokeTypeError::BlobDeserializeError("ContentChunkPointer".into())
+        })?;
         Self::from_thrift(thrift_chunk)
     }
 

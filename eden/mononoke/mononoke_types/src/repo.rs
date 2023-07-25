@@ -15,7 +15,7 @@ use regex::Regex;
 use serde_derive::Serialize;
 use sql::mysql;
 
-use crate::errors::ErrorKind;
+use crate::errors::MononokeTypeError;
 
 pub const REPO_ID_PREFIX: &str = "repo";
 pub const REPO_ID_SUFFIX: &str = ".";
@@ -86,7 +86,7 @@ impl FromStr for RepositoryId {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         s.parse::<u32>()
-            .map_err(|_| ErrorKind::FailedToParseRepositoryId(s.to_owned()).into())
+            .map_err(|_| MononokeTypeError::FailedToParseRepositoryId(s.to_owned()).into())
             .map(|repoid| Self::new(repoid as i32))
     }
 }

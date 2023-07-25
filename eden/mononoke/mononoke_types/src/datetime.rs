@@ -29,7 +29,7 @@ use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use sql::mysql;
 
-use crate::errors::ErrorKind;
+use crate::errors::MononokeTypeError;
 use crate::thrift;
 
 #[derive(
@@ -59,11 +59,14 @@ impl DateTime {
 
     pub fn from_timestamp(secs: i64, tz_offset_secs: i32) -> Result<Self> {
         let tz = FixedOffset::west_opt(tz_offset_secs).ok_or_else(|| {
-            ErrorKind::InvalidDateTime(format!("timezone offset out of range: {}", tz_offset_secs))
+            MononokeTypeError::InvalidDateTime(format!(
+                "timezone offset out of range: {}",
+                tz_offset_secs
+            ))
         })?;
         let dt = match tz.timestamp_opt(secs, 0) {
             LocalResult::Single(dt) => dt,
-            _ => bail!(ErrorKind::InvalidDateTime(format!(
+            _ => bail!(MononokeTypeError::InvalidDateTime(format!(
                 "seconds out of range: {}",
                 secs
             ))),
@@ -77,7 +80,7 @@ impl DateTime {
     /// <https://tools.ietf.org/html/rfc3339>.
     pub fn from_rfc3339(rfc3339: &str) -> Result<Self> {
         let dt = ChronoDateTime::parse_from_rfc3339(rfc3339)
-            .with_context(|| ErrorKind::InvalidDateTime("while parsing rfc3339".into()))?;
+            .with_context(|| MononokeTypeError::InvalidDateTime("while parsing rfc3339".into()))?;
         Ok(Self::new(dt))
     }
 

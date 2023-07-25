@@ -34,7 +34,7 @@ use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use sql::mysql;
 
-use crate::errors::ErrorKind;
+use crate::errors::MononokeTypeError;
 use crate::thrift;
 
 // There is no NULL_HASH for Blake2 hashes. Any places that need a null hash should use an
@@ -74,7 +74,7 @@ impl Blake2 {
     pub fn from_bytes<B: AsRef<[u8]>>(bytes: B) -> Result<Self> {
         let bytes = bytes.as_ref();
         if bytes.len() != BLAKE2_HASH_LENGTH_BYTES {
-            bail!(ErrorKind::InvalidBlake2Input(format!(
+            bail!(MononokeTypeError::InvalidBlake2Input(format!(
                 "need exactly {} bytes",
                 BLAKE2_HASH_LENGTH_BYTES
             )));
@@ -94,7 +94,7 @@ impl Blake2 {
     #[inline]
     pub fn from_thrift(b: thrift::Blake2) -> Result<Self> {
         if b.0.len() != BLAKE2_HASH_LENGTH_BYTES {
-            bail!(ErrorKind::InvalidThrift(
+            bail!(MononokeTypeError::InvalidThrift(
                 "Blake2".into(),
                 format!(
                     "wrong length: expected {}, got {}",
@@ -191,7 +191,7 @@ impl FromStr for Blake2 {
 
     fn from_str(s: &str) -> Result<Self> {
         if s.len() != BLAKE2_HASH_LENGTH_HEX {
-            bail!(ErrorKind::InvalidBlake2Input(format!(
+            bail!(MononokeTypeError::InvalidBlake2Input(format!(
                 "need exactly {} hex digits",
                 BLAKE2_HASH_LENGTH_HEX
             )));
@@ -200,7 +200,9 @@ impl FromStr for Blake2 {
         let mut ret = Blake2([0; BLAKE2_HASH_LENGTH_BYTES]);
         match hex_decode(s.as_bytes(), &mut ret.0) {
             Ok(_) => Ok(ret),
-            Err(_) => bail!(ErrorKind::InvalidBlake2Input("bad hex character".into())),
+            Err(_) => bail!(MononokeTypeError::InvalidBlake2Input(
+                "bad hex character".into()
+            )),
         }
     }
 }
@@ -237,7 +239,7 @@ impl Blake2Prefix {
     pub fn from_bytes<B: AsRef<[u8]> + ?Sized>(bytes: &B) -> Result<Self> {
         let bytes = bytes.as_ref();
         if bytes.len() > BLAKE2_HASH_LENGTH_BYTES {
-            bail!(ErrorKind::InvalidBlake2Input(format!(
+            bail!(MononokeTypeError::InvalidBlake2Input(format!(
                 "prefix needs to be less or equal to {} bytes",
                 BLAKE2_HASH_LENGTH_BYTES
             )))
@@ -304,7 +306,7 @@ impl FromStr for Blake2Prefix {
     type Err = Error;
     fn from_str(s: &str) -> Result<Blake2Prefix> {
         if s.len() > BLAKE2_HASH_LENGTH_HEX {
-            bail!(ErrorKind::InvalidBlake2Input(format!(
+            bail!(MononokeTypeError::InvalidBlake2Input(format!(
                 "prefix needs to be less or equal {} hex digits",
                 BLAKE2_HASH_LENGTH_HEX
             )));
@@ -351,7 +353,7 @@ macro_rules! impl_hash {
             pub fn from_bytes(bytes: impl AsRef<[u8]>) -> Result<Self> {
                 let bytes = bytes.as_ref();
                 if bytes.len() != $size {
-                    Err(ErrorKind::$error(format!("need exactly {} bytes", $size)).into())
+                    Err(MononokeTypeError::$error(format!("need exactly {} bytes", $size)).into())
                 } else {
                     let mut ret = [0; $size];
                     ret.copy_from_slice(bytes);
@@ -417,7 +419,7 @@ macro_rules! impl_hash {
 
             fn from_str(s: &str) -> Result<Self> {
                 if s.len() != $size * 2 {
-                    bail!(ErrorKind::$error(format!(
+                    bail!(MononokeTypeError::$error(format!(
                         "must be {} hex digits",
                         $size * 2
                     )));
@@ -427,7 +429,7 @@ macro_rules! impl_hash {
 
                 let ret = match hex_decode(s.as_bytes(), &mut ret.0) {
                     Ok(_) => ret,
-                    Err(_) => bail!(ErrorKind::$error("bad digit".into())),
+                    Err(_) => bail!(MononokeTypeError::$error("bad digit".into())),
                 };
 
                 Ok(ret)

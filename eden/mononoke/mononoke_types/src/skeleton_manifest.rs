@@ -29,7 +29,7 @@ use sorted_vector_map::SortedVectorMap;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::SkeletonManifestBlob;
-use crate::errors::ErrorKind;
+use crate::errors::MononokeTypeError;
 use crate::path::MPath;
 use crate::path::MPathElement;
 use crate::thrift;
@@ -333,7 +333,7 @@ impl SkeletonManifest {
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(bytes)
-            .with_context(|| ErrorKind::BlobDeserializeError("SkeletonManifest".into()))?;
+            .with_context(|| MononokeTypeError::BlobDeserializeError("SkeletonManifest".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

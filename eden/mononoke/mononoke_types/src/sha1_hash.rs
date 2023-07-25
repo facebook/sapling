@@ -25,7 +25,7 @@ use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use sha1::Digest;
 
-use crate::errors::ErrorKind;
+use crate::errors::MononokeTypeError;
 use crate::thrift;
 
 pub const SHA1_HASH_LENGTH_BYTES: usize = 20;
@@ -47,7 +47,7 @@ impl Sha1 {
     pub fn from_bytes<B: AsRef<[u8]>>(bytes: B) -> Result<Sha1> {
         let bytes = bytes.as_ref();
         if bytes.len() != SHA1_HASH_LENGTH_BYTES {
-            bail!(ErrorKind::InvalidSha1Input(format!(
+            bail!(MononokeTypeError::InvalidSha1Input(format!(
                 "need exactly {} bytes",
                 SHA1_HASH_LENGTH_BYTES
             )));
@@ -60,7 +60,7 @@ impl Sha1 {
 
     pub fn from_thrift(h: thrift::Sha1) -> Result<Self> {
         if h.0.len() != SHA1_HASH_LENGTH_BYTES {
-            bail!(ErrorKind::InvalidThrift(
+            bail!(MononokeTypeError::InvalidThrift(
                 "Sha1".into(),
                 format!(
                     "wrong length: expected {}, got {}",
@@ -136,7 +136,7 @@ impl FromStr for Sha1 {
 
     fn from_str(s: &str) -> Result<Sha1> {
         if s.len() != SHA1_HASH_LENGTH_HEX {
-            bail!(ErrorKind::InvalidSha1Input(format!(
+            bail!(MononokeTypeError::InvalidSha1Input(format!(
                 "need exactly {} hex digits",
                 SHA1_HASH_LENGTH_HEX
             )));
@@ -145,7 +145,9 @@ impl FromStr for Sha1 {
         let mut ret = Sha1([0; SHA1_HASH_LENGTH_BYTES]);
         match hex_decode(s.as_bytes(), &mut ret.0) {
             Ok(_) => Ok(ret),
-            Err(_) => bail!(ErrorKind::InvalidSha1Input("bad hex character".into())),
+            Err(_) => bail!(MononokeTypeError::InvalidSha1Input(
+                "bad hex character".into()
+            )),
         }
     }
 }
@@ -193,7 +195,7 @@ impl Sha1Prefix {
     pub fn from_bytes<B: AsRef<[u8]> + ?Sized>(bytes: &B) -> Result<Self> {
         let bytes = bytes.as_ref();
         if bytes.len() > SHA1_HASH_LENGTH_BYTES {
-            bail!(ErrorKind::InvalidSha1Input(format!(
+            bail!(MononokeTypeError::InvalidSha1Input(format!(
                 "prefix needs to be less or equal to {} bytes",
                 SHA1_HASH_LENGTH_BYTES
             )))
@@ -252,7 +254,7 @@ impl FromStr for Sha1Prefix {
     type Err = Error;
     fn from_str(s: &str) -> Result<Sha1Prefix> {
         if s.len() > SHA1_HASH_LENGTH_HEX {
-            bail!(ErrorKind::InvalidSha1Input(format!(
+            bail!(MononokeTypeError::InvalidSha1Input(format!(
                 "prefix needs to be less or equal {} hex digits",
                 SHA1_HASH_LENGTH_HEX
             )));
