@@ -1231,7 +1231,8 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
     context->argHandle = prjfsChannel->traceDetailedArguments();
   } else {
     EDEN_BUG() << "tracing isn't supported yet for the "
-               << edenMount.getCheckoutConfig()->getMountProtocol()
+               << fmt::underlying(
+                      edenMount.getCheckoutConfig()->getMountProtocol())
                << " filesystem type";
   }
 #else

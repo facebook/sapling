@@ -69,6 +69,7 @@ target_link_libraries(
     eden_model
     eden_nfs_server
     eden_store
+    eden_takeover
     eden_telemetry
     ${EDEN_STORE_IMPLEMENTATIONS}
     ${YARPL_LIBRARIES}
@@ -83,7 +84,6 @@ if (NOT WIN32)
     PUBLIC
       eden_fuse
       eden_notifications
-      eden_takeover
   )
 endif()
 

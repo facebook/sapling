@@ -8,17 +8,23 @@ add_fbthrift_cpp_library(
   takeover.thrift
 )
 
+file(GLOB TAKEOVER_SRCS "*.cpp")
+add_library(
+  eden_takeover STATIC
+  ${TAKEOVER_SRCS}
+)
+target_link_libraries(
+  eden_takeover
+  PUBLIC
+  eden_config
+  eden_utils
+  eden_takeover_thrift
+)
+
 if (NOT WIN32)
-  file(GLOB TAKEOVER_SRCS "*.cpp")
-  add_library(
-    eden_takeover STATIC
-      ${TAKEOVER_SRCS}
-  )
   target_link_libraries(
-    eden_takeover
+    eden_service
     PUBLIC
       eden_fuse
-      eden_utils
-      eden_takeover_thrift
   )
 endif()

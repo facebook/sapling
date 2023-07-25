@@ -60,17 +60,17 @@ typedef struct _PRJ_EXTENDED_INFO {
 } PRJ_EXTENDED_INFO;
 
 typedef HRESULT(WINAPI* PPWPI2)(
-    [in] PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT,
-    [in] PCWSTR,
-    [in] const PRJ_PLACEHOLDER_INFO*,
-    [in] UINT32,
+    PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT,
+    PCWSTR,
+    const PRJ_PLACEHOLDER_INFO*,
+    UINT32,
     const _PRJ_EXTENDED_INFO*);
 
 typedef HRESULT(WINAPI* PPFDEB2)(
-    [in] PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle,
-    [in] PCWSTR fileName,
-    [ in, optional ] PRJ_FILE_BASIC_INFO* fileBasicInfo,
-    [ in, optional ] PRJ_EXTENDED_INFO* extendedInfo);
+    PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle,
+    PCWSTR fileName,
+    PRJ_FILE_BASIC_INFO* fileBasicInfo,
+    PRJ_EXTENDED_INFO* extendedInfo);
 
 struct PrjfsTraceEvent : TraceEventBase {
   enum Type : unsigned char {

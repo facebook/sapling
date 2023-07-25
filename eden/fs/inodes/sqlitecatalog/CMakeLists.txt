@@ -21,6 +21,7 @@ target_link_libraries(
 
   PRIVATE
     eden_config
+    eden_inodes_inodenumber
     eden_overlay_thrift_cpp
     eden_utils
     Folly::folly
@@ -37,6 +38,7 @@ target_link_libraries(
   PRIVATE
     cpptoml
     eden_sqlite_catalog
+    eden_telemetry
     eden_utils
     Folly::folly
 )

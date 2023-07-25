@@ -14,6 +14,7 @@ endif()
 if (POLICY CMP0057)
   cmake_policy(SET CMP0057 NEW)
 endif()
+cmake_policy(SET CMP0079 NEW)
 
 # Project information
 project("eden" LANGUAGES CXX C)

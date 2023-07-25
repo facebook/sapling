@@ -23,6 +23,7 @@ target_link_libraries(
     eden_service_thrift_cpp
     eden_sqlite
     eden_store_filter
+    eden_telemetry
     eden_utils
     fb303::fb303
     edencommon::edencommon_utils

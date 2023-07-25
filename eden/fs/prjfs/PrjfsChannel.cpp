@@ -40,10 +40,10 @@ PPFDEB2 prjFillDirEntryBuffer2_{nullptr};
 
 // TODO: Remove once the build has switched to a more recent SDK
 HRESULT PrjWritePlaceholderInfo2(
-    [in] PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT namespaceVirtualizationContext,
-    [in] PCWSTR destinationFileName,
-    [in] const PRJ_PLACEHOLDER_INFO* placeholderInfo,
-    [in] UINT32 placeholderInfoSize,
+    PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT namespaceVirtualizationContext,
+    PCWSTR destinationFileName,
+    const PRJ_PLACEHOLDER_INFO* placeholderInfo,
+    UINT32 placeholderInfoSize,
     const PRJ_EXTENDED_INFO* ExtendedInfo) {
   return placeholderExtendedInfo2_(
       namespaceVirtualizationContext,
@@ -54,10 +54,10 @@ HRESULT PrjWritePlaceholderInfo2(
 }
 
 HRESULT PrjFillDirEntryBuffer2(
-    [in] PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle,
-    [in] PCWSTR fileName,
-    [ in, optional ] PRJ_FILE_BASIC_INFO* fileBasicInfo,
-    [ in, optional ] PRJ_EXTENDED_INFO* extendedInfo) {
+    PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle,
+    PCWSTR fileName,
+    PRJ_FILE_BASIC_INFO* fileBasicInfo,
+    PRJ_EXTENDED_INFO* extendedInfo) {
   return prjFillDirEntryBuffer2_(
       dirEntryBufferHandle, fileName, fileBasicInfo, extendedInfo);
 }

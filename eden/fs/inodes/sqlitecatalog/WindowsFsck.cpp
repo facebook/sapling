@@ -412,8 +412,8 @@ std::optional<InodeNumber> fixup(
       XLOGF(
           DBG9,
           "overlayDtype={} vs desiredDtype={}, overlayHash={} vs desiredHash={}",
-          state.overlayDtype,
-          state.desiredDtype,
+          fmt::underlying(state.overlayDtype),
+          fmt::underlying(state.desiredDtype),
           state.overlayHash ? state.overlayHash->toLogString() : "<null>",
           state.desiredHash ? state.desiredHash->toLogString() : "<null>");
       if (state.inOverlay && state.overlayDtype != state.desiredDtype) {
