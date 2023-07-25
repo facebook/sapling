@@ -188,7 +188,7 @@ macro_rules! __drawdag_changes {
             let mut changes: std::collections::BTreeMap<String, Box<$crate::drawdag::ChangeFn<_>>> =
                 std::collections::BTreeMap::new();
             $(
-                changes.insert(String::from($key), Box::new(|$c: $crate::CreateCommitContext<_>, _: &'_ std::collections::BTreeMap<String, ::mononoke_types::ChangesetId>| $body));
+                changes.insert(String::from($key), Box::new(move |$c: $crate::CreateCommitContext<_>, _: &'_ std::collections::BTreeMap<String, ::mononoke_types::ChangesetId>| $body));
             )*
             changes
         }
@@ -198,7 +198,7 @@ macro_rules! __drawdag_changes {
             let mut changes: std::collections::BTreeMap<String, Box<$crate::drawdag::ChangeFn<_>>> =
                 std::collections::BTreeMap::new();
             $(
-                changes.insert(String::from($key), Box::new(|$c: $crate::CreateCommitContext<_>, $d: &'_ std::collections::BTreeMap<String, ::mononoke_types::ChangesetId>| $body));
+                changes.insert(String::from($key), Box::new(move |$c: $crate::CreateCommitContext<_>, $d: &'_ std::collections::BTreeMap<String, ::mononoke_types::ChangesetId>| $body));
             )*
             changes
         }
