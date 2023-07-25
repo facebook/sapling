@@ -15,6 +15,8 @@ mod thrift {
 }
 
 mod blob;
+mod commit;
+mod derive_commit;
 mod derive_tree;
 mod errors;
 mod manifest;
@@ -25,6 +27,7 @@ mod tree;
 pub use object::ObjectKind;
 
 pub use crate::blob::BlobHandle;
+pub use crate::commit::MappedGitCommitId;
 pub use crate::errors::GitError;
 pub use crate::store::upload_git_object;
 pub use crate::tree::Tree;

@@ -56,6 +56,7 @@ use futures::Stream;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
+use git_types::MappedGitCommitId;
 use git_types::TreeHandle;
 use lazy_static::lazy_static;
 use lock_ext::LockExt;
@@ -83,6 +84,7 @@ pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     FilenodesOnlyPublic::NAME,
     RootSkeletonManifestId::NAME,
     TreeHandle::NAME,
+    MappedGitCommitId::NAME,
     RootDeletedManifestV2Id::NAME,
     RootBasenameSuffixSkeletonManifest::NAME,
 ];
@@ -498,6 +500,11 @@ fn derived_data_utils_impl(
             repo, config, enabled_config_name
         ))),
         TreeHandle::NAME => Ok(Arc::new(DerivedUtilsFromManager::<TreeHandle>::new(
+            repo,
+            config,
+            enabled_config_name,
+        ))),
+        MappedGitCommitId::NAME => Ok(Arc::new(DerivedUtilsFromManager::<MappedGitCommitId>::new(
             repo,
             config,
             enabled_config_name,
@@ -1026,6 +1033,11 @@ pub async fn check_derived(
         }
         DerivableType::GitTree => {
             ddm.fetch_derived::<TreeHandle>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        DerivableType::GitCommit => {
+            ddm.fetch_derived::<MappedGitCommitId>(ctx, head_cs_id, None)
                 .map_ok(|res| res.is_some())
                 .await
         }
