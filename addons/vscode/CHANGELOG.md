@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.19
+
+- Add context menu to files to copy paths and open diff views
+- Fix visual overflow in commit messages
+- Allow amending with only message changes
+
 ## 0.1.18
 
 - Allow pressing Enter to quick commit
