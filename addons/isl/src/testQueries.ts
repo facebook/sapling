@@ -157,6 +157,15 @@ export const CommitInfoTestUtils = {
     });
   },
 
+  /** Internal tests only, since GitHub's message schema does not include this field */
+  clickToEditReviewers() {
+    act(() => {
+      const title = screen.getByTestId('commit-info-rendered-reviewers');
+      expect(title).toBeInTheDocument();
+      fireEvent.click(title);
+    });
+  },
+
   expectIsEditingTitle() {
     const titleEditor = screen.queryByTestId('commit-info-title-field') as HTMLInputElement;
     expect(titleEditor).toBeInTheDocument();

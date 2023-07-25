@@ -150,10 +150,10 @@ export function SuggestedReviewers({
     ?.filter(s => !existingReviewers.includes(s));
 
   return (
-    <div className="suggested-reviewers">
+    <div className="suggested-reviewers" data-testid="suggested-reviewers">
       {provider?.supportsSuggestedReviewers &&
       (filteredSuggestions == null || filteredSuggestions.length > 0) ? (
-        <div>
+        <div data-testid="suggested-reviewers-list">
           <div className="suggestion-header">
             <T>Suggested</T>
           </div>
@@ -172,7 +172,7 @@ export function SuggestedReviewers({
         </div>
       ) : null}
       {recent.length > 0 ? (
-        <div>
+        <div data-testid="recent-reviewers-list">
           <div className="suggestion-header">
             <T>Recent</T>
           </div>

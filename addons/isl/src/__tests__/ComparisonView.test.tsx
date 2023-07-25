@@ -8,6 +8,7 @@
 import App from '../App';
 import platform from '../platform';
 import {
+  clearAllRecoilSelectorCaches,
   closeCommitInfoSidebar,
   COMMIT,
   expectMessageSentToServer,
@@ -17,7 +18,6 @@ import {
   simulateUncommittedChangedFiles,
 } from '../testUtils';
 import {act, screen, render, waitFor, fireEvent, cleanup, within} from '@testing-library/react';
-import {selector, snapshot_UNSTABLE} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 
 afterEach(cleanup);
@@ -58,20 +58,9 @@ diff --git -r a1b2c3d4e5f6 some/path/foo.go
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-const clearSelectorCachesState = selector({
-  key: 'clearSelectorCachesState',
-  get: ({getCallback}) =>
-    getCallback(({snapshot, refresh}) => () => {
-      for (const node of snapshot.getNodes_UNSTABLE()) {
-        refresh(node);
-      }
-    }),
-});
-
 // reset recoil caches between test runs
 afterEach(() => {
-  const clearSelectorCaches = snapshot_UNSTABLE().getLoadable(clearSelectorCachesState).getValue();
-  clearSelectorCaches();
+  clearAllRecoilSelectorCaches();
 });
 
 describe('ComparisonView', () => {
