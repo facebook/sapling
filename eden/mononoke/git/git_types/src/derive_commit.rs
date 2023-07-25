@@ -102,14 +102,15 @@ impl BonsaiDerivable for MappedGitCommitId {
             .collect::<Result<Vec<_>>>()?;
         let author = get_signature(bonsai.author(), bonsai.author_date())?;
         // Git always needs a committer whereas Mononoke may or may not have a separate committer. If the Mononoke
-        // commit has no committer, then re-use the author as committer.
-        // NOTE: If either the committer name OR date are empty, then the committer is assumed to be the author.
+        // commit has no committer, then use an empty Git signature. This way converting the git commit back to
+        // Mononoke would maintain a valid mapping.
+        // NOTE: If either the committer name OR date are empty, then the committer is assumed to be empty.
         let committer = if let (Some(committer), Some(committer_date)) =
             (bonsai.committer(), bonsai.committer_date())
         {
             get_signature(committer, committer_date)?
         } else {
-            author.clone()
+            Signature::empty()
         };
         let git_commit = Commit {
             tree: commit_tree_id.into(),
@@ -261,7 +262,7 @@ mod test {
         {
             get_signature(committer, committer_date)?
         } else {
-            bonsai_author
+            Signature::empty()
         };
         assert_eq!(bonsai_committer, git_commit.committer);
         Ok(())
