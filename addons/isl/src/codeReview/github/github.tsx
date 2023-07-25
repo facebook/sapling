@@ -85,6 +85,8 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   supportSubmittingAsDraft = 'newDiffsOnly' as const;
 
   enableMessageSyncing = false;
+
+  supportsSuggestedReviewers = false;
 }
 
 type BadgeState = PullRequestState | 'ERROR' | 'DRAFT';

@@ -593,6 +593,16 @@ export default class ServerToClientAPI {
         repo.codeReviewProvider?.triggerDiffSummariesFetch(data.diffIds ?? repo.getAllDiffIds());
         break;
       }
+      case 'getSuggestedReviewers': {
+        repo.codeReviewProvider?.getSuggestedReviewers?.(data.context).then(reviewers => {
+          this.postMessage({
+            type: 'gotSuggestedReviewers',
+            reviewers,
+            key: data.key,
+          });
+        });
+        break;
+      }
       case 'updateRemoteDiffMessage': {
         repo.codeReviewProvider
           ?.updateDiffMessage?.(data.diffId, data.title, data.description)

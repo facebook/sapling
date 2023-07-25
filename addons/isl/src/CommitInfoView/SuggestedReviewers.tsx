@@ -7,7 +7,14 @@
 
 import type {ReactNode} from 'react';
 
+import serverAPI from '../ClientToServerAPI';
+import {codeReviewProvider} from '../codeReview/CodeReviewInfo';
 import {T} from '../i18n';
+import {uncommittedChangesWithPreviews} from '../previews';
+import {commitByHash} from '../serverAPIState';
+import {commitInfoViewCurrentCommits, commitMode} from './CommitInfoState';
+import {selectorFamily, useRecoilValue, useRecoilValueLoadable} from 'recoil';
+import {Icon} from 'shared/Icon';
 
 import './SuggestedReviewers.css';
 
@@ -64,6 +71,43 @@ class RecentReviewers {
 
 export const recentReviewers = new RecentReviewers();
 
+const suggestedReviewersForCommit = selectorFamily<Array<string>, string>({
+  key: 'suggestedReviewersForCommit',
+  get:
+    (hashOrHead: string | 'head' | undefined) =>
+    async ({get}) => {
+      if (hashOrHead == null) {
+        return [];
+      }
+      const context = {
+        paths: [] as Array<string>,
+      };
+      if (hashOrHead === 'head') {
+        const uncommittedChanges = get(uncommittedChangesWithPreviews);
+        context.paths.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
+      } else {
+        const commit = get(commitByHash(hashOrHead));
+        if (commit?.isHead) {
+          const uncommittedChanges = get(uncommittedChangesWithPreviews);
+          context.paths.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
+        }
+        context.paths.push(...(commit?.filesSample.slice(0, 10).map(change => change.path) ?? []));
+      }
+
+      serverAPI.postMessage({
+        type: 'getSuggestedReviewers',
+        key: hashOrHead,
+        context,
+      });
+
+      const response = await serverAPI.nextMessageMatching(
+        'gotSuggestedReviewers',
+        message => message.key === hashOrHead,
+      );
+      return response.reviewers;
+    },
+});
+
 export function SuggestedReviewers({
   existingReviewers,
   addReviewer,
@@ -71,24 +115,42 @@ export function SuggestedReviewers({
   existingReviewers: Array<string>;
   addReviewer: (value: string) => unknown;
 }) {
-  const suggested = ['muirdm', 'quark', 'person1', 'person2', 'person3'].filter(
-    s => !existingReviewers.includes(s),
-  );
+  const provider = useRecoilValue(codeReviewProvider);
   const recent = recentReviewers.getRecent().filter(s => !existingReviewers.includes(s));
+  const mode = useRecoilValue(commitMode);
+  const currentCommitInfoViewCommit = useRecoilValue(commitInfoViewCurrentCommits);
+  const currentCommit = currentCommitInfoViewCommit?.[0]; // assume we only have one commit
+
+  const key = currentCommit?.isHead && mode === 'commit' ? 'head' : currentCommit?.hash ?? '';
+  const suggestedReviewers = useRecoilValueLoadable(suggestedReviewersForCommit(key));
+
+  const filteredSuggestions = suggestedReviewers
+    .valueMaybe()
+    ?.filter(s => !existingReviewers.includes(s))
+    .filter(() => false);
+
   return (
     <div className="suggested-reviewers">
-      <div>
-        <div className="suggestion-header">
-          <T>Suggested</T>
+      {provider?.supportsSuggestedReviewers &&
+      (filteredSuggestions == null || filteredSuggestions.length) > 0 ? (
+        <div>
+          <div className="suggestion-header">
+            <T>Suggested</T>
+          </div>
+          <div className="suggestions">
+            {suggestedReviewers.state === 'loading' && (
+              <div className="suggestions-loading">
+                <Icon icon="loading" />
+              </div>
+            )}
+            {filteredSuggestions?.map(s => (
+              <Suggestion key={s} onClick={() => addReviewer(s)}>
+                {s}
+              </Suggestion>
+            )) ?? null}
+          </div>
         </div>
-        <div className="suggestions">
-          {suggested.map(s => (
-            <Suggestion key={s} onClick={() => addReviewer(s)}>
-              {s}
-            </Suggestion>
-          ))}
-        </div>
-      </div>
+      ) : null}
       {recent.length > 0 ? (
         <div>
           <div className="suggestion-header">

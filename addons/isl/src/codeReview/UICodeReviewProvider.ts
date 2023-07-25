@@ -63,4 +63,6 @@ export interface UICodeReviewProvider {
   ): Array<CommitInfo>;
 
   enableMessageSyncing: boolean;
+
+  supportsSuggestedReviewers: boolean;
 }

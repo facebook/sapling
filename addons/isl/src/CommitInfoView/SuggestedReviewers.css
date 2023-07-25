@@ -48,3 +48,8 @@
 .suggested-reviewers .suggestion:hover {
   background-color: var(--hover-darken);
 }
+
+.suggestions-loading {
+  height: var(--suggestion-height);
+  margin: var(--halfpad);
+}

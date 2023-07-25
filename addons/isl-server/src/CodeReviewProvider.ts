@@ -42,4 +42,6 @@ export interface CodeReviewProvider {
   getCommitHashUrlMarkdown(hash: string): string;
 
   updateDiffMessage?(diffId: DiffId, newTitle: string, newDescription: string): Promise<void>;
+
+  getSuggestedReviewers?(context: {paths: Array<string>}): Promise<Array<string>>;
 }

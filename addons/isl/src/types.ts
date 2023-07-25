@@ -383,6 +383,7 @@ export type ClientToServerMessage =
   | {type: 'requestRepoInfo'}
   | {type: 'requestApplicationInfo'}
   | {type: 'fetchDiffSummaries'; diffIds?: Array<DiffId>}
+  | {type: 'getSuggestedReviewers'; context: {paths: Array<string>}; key: string}
   | {type: 'updateRemoteDiffMessage'; diffId: DiffId; title: string; description: string}
   | {type: 'pageVisibility'; state: PageVisibility}
   | {
@@ -432,6 +433,7 @@ export type ServerToClientMessage =
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}
   | {type: 'repoError'; error: RepositoryError | undefined}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
+  | {type: 'gotSuggestedReviewers'; reviewers: Array<string>; key: string}
   | {type: 'updatedRemoteDiffMessage'; diffId: DiffId; error?: string}
   | {type: 'uploadFileResult'; id: string; result: Result<string>}
   | {type: 'comparison'; comparison: Comparison; data: ComparisonData}
