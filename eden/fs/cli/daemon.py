@@ -332,6 +332,8 @@ def get_edenfs_environment() -> Dict[str, str]:
         "XDG_CACHE_HOME",
         # EdenFS should be able to pick-up Mercurial's test config
         "HG_TEST_REMOTE_CONFIG",
+        # In some environment, this is used instead of the USER variable
+        "CLOUD2PROD_IDENTITY",
     ]
 
     if sys.platform == "win32":
