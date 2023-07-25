@@ -72,6 +72,16 @@ class RecentReviewers {
 
 export const recentReviewers = new RecentReviewers();
 
+/**
+ * Since we use a selector to fetch suggestions, it will attempt to refetch
+ * when any dependency (uncommitted changes, list of changed files) changes.
+ * While technically suggestions could change if any edited path changes,
+ * the UI flickers way to much. So let's cache the result within some time window.
+ * using a time window ensures we don't overcache (for example,
+ * in commit mode, where two commits may have totally different changes.)
+ */
+const cachedSuggestions = new Map<string, {lastFetch: number; reviewers: Array<string>}>();
+const MAX_SUGGESTION_CACHE_AGE = 2 * 60 * 1000;
 const suggestedReviewersForCommit = selectorFamily<Array<string>, string>({
   key: 'suggestedReviewersForCommit',
   get:
@@ -83,6 +93,13 @@ const suggestedReviewersForCommit = selectorFamily<Array<string>, string>({
       const context = {
         paths: [] as Array<string>,
       };
+      const cached = cachedSuggestions.get(hashOrHead);
+      if (cached) {
+        if (Date.now() - cached.lastFetch < MAX_SUGGESTION_CACHE_AGE) {
+          return cached.reviewers;
+        }
+      }
+
       if (hashOrHead === 'head') {
         const uncommittedChanges = get(uncommittedChangesWithPreviews);
         context.paths.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
@@ -106,6 +123,7 @@ const suggestedReviewersForCommit = selectorFamily<Array<string>, string>({
           'gotSuggestedReviewers',
           message => message.key === hashOrHead,
         );
+        cachedSuggestions.set(hashOrHead, {lastFetch: Date.now(), reviewers: response.reviewers});
         return response.reviewers;
       });
     },
