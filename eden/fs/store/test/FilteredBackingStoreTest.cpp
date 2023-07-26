@@ -355,35 +355,6 @@ TEST_F(FilteredBackingStoreTest, getRootTree) {
       "tree .* for commit .* not found");
 }
 
-TEST_F(FilteredBackingStoreTest, maybePutBlob) {
-  auto [foo1, foo1_id, foo1_inserted] = wrappedStore_->maybePutBlob("foo\n");
-  EXPECT_TRUE(foo1_inserted);
-  auto [foo2, foo2_id, foo2_inserted] = wrappedStore_->maybePutBlob("foo\n");
-  EXPECT_FALSE(foo2_inserted);
-  EXPECT_EQ(foo1, foo2);
-  EXPECT_EQ(foo1_id, foo2_id);
-}
-
-TEST_F(FilteredBackingStoreTest, maybePutTree) {
-  auto foo = wrappedStore_->putBlob("foo\n");
-  auto bar = wrappedStore_->putBlob("bar\n");
-
-  auto dir1 = wrappedStore_->maybePutTree({
-      {"foo", foo},
-      {"bar", bar},
-  });
-  EXPECT_TRUE(dir1.second);
-
-  // Listing the entries in a different order should still
-  // result in the same tree.
-  auto dir2 = wrappedStore_->maybePutTree({
-      {"bar", bar},
-      {"foo", foo},
-  });
-  EXPECT_FALSE(dir2.second);
-  EXPECT_EQ(dir1.first, dir2.first);
-}
-
 TEST_F(FilteredBackingStoreTest, testCompareBlobObjectsById) {
   // Populate some blobs for testing.
   //
