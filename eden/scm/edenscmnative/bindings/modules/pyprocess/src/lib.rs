@@ -39,6 +39,17 @@ py_class!(class Command |py| {
         self.mutate_then_clone(py, |c| c.arg(arg))
     }
 
+    /// On Windows, add a "raw" argument for cases like cmd.exe.
+    /// On non-Windows, behave the same as `arg`.
+    def rawarg(&self, arg: &str) -> PyResult<Self> {
+        self.mutate_then_clone(py, |c| {
+            #[cfg(windows)]
+            return std::os::windows::process::CommandExt::raw_arg(c, arg);
+            #[cfg(not(windows))]
+            return c.arg(arg);
+        })
+    }
+
     /// Adds multiple arguments to pass to the program.
     def args(&self, args: Vec<String>) -> PyResult<Self> {
         self.mutate_then_clone(py, |c| c.args(args))
@@ -52,6 +63,11 @@ py_class!(class Command |py| {
     /// Adds or updates multiple environment variable mappings.
     def envs(&self, items: Vec<(String, String)>) -> PyResult<Self> {
         self.mutate_then_clone(py, |c| c.envs(items))
+    }
+
+    /// Removes an explicitly set environment variable.
+    def envremove(&self, key: &str) -> PyResult<Self> {
+        self.mutate_then_clone(py, |c| c.env_remove(key))
     }
 
     /// Clears the entire environment map for the child process.
