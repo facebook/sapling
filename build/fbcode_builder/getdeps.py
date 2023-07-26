@@ -795,6 +795,12 @@ class BuildCmd(ProjectCmdBase):
             action="store_true",
             default=False,
         )
+        parser.add_argument(
+            "--clean-intermediate",
+            help="Clean up intermediate files if possible to reduce disk usage",
+            action="store_true",
+            default=False,
+        )
 
 
 @cmd("fixup-dyn-deps", "Adjusts dynamic dependencies for packaging purposes")
@@ -1059,6 +1065,11 @@ jobs:
                     out.write("    - name: Fetch %s\n" % m.name)
                     out.write(f"      run: {getdepscmd}{allow_sys_arg} fetch --no-tests {m.name}\n")
 
+            if build_opts.clean_intermediate:
+                clean_intermediate = "--clean-intermediate "
+            else:
+                clean_intermediate = ""
+
             for m in projects:
                 if m != manifest:
                     if m.name == "rust":
@@ -1072,7 +1083,7 @@ jobs:
                             has_same_repo_dep = True
                         out.write("    - name: Build %s\n" % m.name)
                         out.write(
-                            f"      run: {getdepscmd}{allow_sys_arg} build {src_dir_arg}--no-tests {m.name}\n"
+                            f"      run: {getdepscmd}{allow_sys_arg} build {src_dir_arg}{clean_intermediate}--no-tests {m.name}\n"
                         )
 
             out.write("    - name: Build %s\n" % manifest.name)
@@ -1165,6 +1176,12 @@ jobs:
             type=str,
             help="add a prefix to all job names",
             default=None,
+        )
+        parser.add_argument(
+            "--clean-intermediate",
+            help="Clean up intermediate files if possible to reduce disk usage",
+            action="store_true",
+            default=False,
         )
 
 
