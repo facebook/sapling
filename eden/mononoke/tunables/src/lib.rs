@@ -393,6 +393,9 @@ pub struct MononokeTunables {
 
     // Skip backsyncing for empty commits (except mapping changes via extras and merges)
     cross_repo_skip_backsyncing_ordinary_empty_commits: TunableBoolByRepo,
+
+    // Assigning global revs with small gaps
+    global_rev_increment_with_gaps: TunableBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
