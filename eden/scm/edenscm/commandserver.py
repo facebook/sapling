@@ -604,10 +604,13 @@ class unixforkingservice(object):
             _serverequest(self.ui, self.repo, conn, h.createcmdserver)
         finally:
             # Explicitly disable progress. The progress is cleared on dropping
-            # IO in hgmain. However, that "drop" logic does not run with
+            # IO in hgmain. However, that "drop" logic *might* not run with
             # os._exit here. So let's explicitly clear the progress before
             # os._exit.
-            util.mainio.disable_progress()
+            try:
+                util.mainio.disable_progress()
+            except Exception:
+                pass
             # os._exit bypasses Rust `atexit::drop_queued`. Call `drop_queued`
             # explicitly.
             bindings.atexit.drop_queued()
