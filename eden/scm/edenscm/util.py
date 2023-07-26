@@ -4800,9 +4800,18 @@ def gcdir(path, mtimethreshold):
             tryunlink(path)
 
 
-def spawndetached(args, cwd=None, env=None):
-    cmd = bindings.process.Command.new(args[0])
-    cmd.args(args[1:])
+def spawndetached(args, cwd=None, env=None, shell=False):
+    Command = bindings.process.Command
+    if shell:
+        assert isinstance(args, str), "args must be str with shell=True"
+        if os.name == "nt":
+            comspec = os.getenv("ComSpec") or "cmd.exe"
+            cmd = Command.new(comspec).arg("/c").rawarg(args)
+        else:
+            cmd = Command.new("/bin/sh").arg("-c").arg(args)
+    else:
+        assert isinstance(args, list), "args must be List[str] with shell=False"
+        cmd = Command.new(args[0]).args(args[1:])
     if cwd is not None:
         cmd.currentdir(cwd)
     if env is not None:
