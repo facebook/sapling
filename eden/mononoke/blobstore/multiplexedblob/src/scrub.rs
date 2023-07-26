@@ -16,7 +16,7 @@ use std::time::Duration;
 use anyhow::Result;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreMetadata;
-use blobstore::BlobstorePutOps;
+use blobstore::BlobstoreUnlinkOps;
 use blobstore::PutBehaviour;
 use chrono::Duration as ChronoDuration;
 use clap::ValueEnum;
@@ -167,7 +167,7 @@ async fn put_and_mark_repaired(
     scuba: &MononokeScubaSampleBuilder,
     order: &AtomicUsize,
     id: BlobstoreId,
-    store: &dyn BlobstorePutOps,
+    store: &dyn BlobstoreUnlinkOps,
     key: &str,
     value: &BlobstoreGetData,
     scrub_handler: &dyn ScrubHandler,
@@ -194,7 +194,7 @@ pub async fn maybe_repair<F: Future<Output = Result<bool>>>(
     value: BlobstoreGetData,
     missing_main: Arc<HashSet<BlobstoreId>>,
     missing_write_only: Arc<HashSet<BlobstoreId>>,
-    scrub_stores: &HashMap<BlobstoreId, Arc<dyn BlobstorePutOps>>,
+    scrub_stores: &HashMap<BlobstoreId, Arc<dyn BlobstoreUnlinkOps>>,
     scrub_handler: &dyn ScrubHandler,
     scrub_options: &ScrubOptions,
     scuba: &MononokeScubaSampleBuilder,
@@ -213,7 +213,7 @@ pub async fn maybe_repair<F: Future<Output = Result<bool>>>(
         _ => {}
     }
 
-    let mut needs_repair: HashMap<BlobstoreId, (PutBehaviour, &dyn BlobstorePutOps)> =
+    let mut needs_repair: HashMap<BlobstoreId, (PutBehaviour, &dyn BlobstoreUnlinkOps)> =
         HashMap::new();
 
     // For write only stores we can chose not to do the scrub action

@@ -16,7 +16,7 @@ use anyhow::Result;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
-use blobstore::BlobstorePutOps;
+use blobstore::BlobstoreUnlinkOps;
 use blobstore_sync_queue::BlobstoreWal;
 use blobstore_sync_queue::BlobstoreWalEntry;
 use blobstore_sync_queue::SqlBlobstoreWal;
@@ -67,7 +67,7 @@ async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {
             .map(|id| {
                 (
                     BlobstoreId::new(id),
-                    Arc::new(Tickable::new()) as Arc<dyn BlobstorePutOps>,
+                    Arc::new(Tickable::new()) as Arc<dyn BlobstoreUnlinkOps>,
                 )
             })
             .collect();
@@ -76,7 +76,7 @@ async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {
             .map(|id| {
                 (
                     BlobstoreId::new(id),
-                    Arc::new(Tickable::new()) as Arc<dyn BlobstorePutOps>,
+                    Arc::new(Tickable::new()) as Arc<dyn BlobstoreUnlinkOps>,
                 )
             })
             .collect();
@@ -841,7 +841,7 @@ fn setup_blobstores(
     num: u64,
 ) -> (
     Vec<(BlobstoreId, Arc<TickableBytes>)>,
-    Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
+    Vec<(BlobstoreId, Arc<dyn BlobstoreUnlinkOps>)>,
 ) {
     let tickable_blobstores: Vec<_> = (0..num)
         .map(|id| (BlobstoreId::new(id), Arc::new(TickableBytes::new())))
@@ -849,7 +849,7 @@ fn setup_blobstores(
     let blobstores = tickable_blobstores
         .clone()
         .into_iter()
-        .map(|(id, store)| (id, store as Arc<dyn BlobstorePutOps>))
+        .map(|(id, store)| (id, store as Arc<dyn BlobstoreUnlinkOps>))
         .collect();
     (tickable_blobstores, blobstores)
 }

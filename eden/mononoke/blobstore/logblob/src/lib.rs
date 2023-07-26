@@ -13,11 +13,13 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstorePutOps;
+use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use blobstore_stats::record_get_stats;
 use blobstore_stats::record_is_present_stats;
 use blobstore_stats::record_put_stats;
+use blobstore_stats::record_unlink_stats;
 use blobstore_stats::OperationType;
 use context::CoreContext;
 use context::PerfCounterType;
@@ -204,5 +206,32 @@ impl<B: BlobstorePutOps> BlobstorePutOps for LogBlob<B> {
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
         self.put_impl(ctx, key, value, None).await
+    }
+}
+
+#[async_trait]
+impl<B: BlobstoreUnlinkOps> BlobstoreUnlinkOps for LogBlob<B> {
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        let mut ctx = ctx.clone();
+        let mut scuba = self.scuba.clone();
+
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::BlobUnlinks);
+
+        let pc = ctx.fork_perf_counters();
+
+        let (stats, result) = self.inner.unlink(&ctx, key).timed().await;
+        record_unlink_stats(
+            &mut scuba,
+            &pc,
+            stats,
+            result.as_ref(),
+            key,
+            ctx.metadata().session_id().as_str(),
+            None,
+            &self.inner,
+        );
+
+        result
     }
 }

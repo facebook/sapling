@@ -15,4 +15,6 @@ pub enum ErrorKind {
     InjectedChaosPut(String),
     #[error("Injected failure in is_present to ChaosBlobstore for key {0}")]
     InjectedChaosIsPresent(String),
+    #[error("Injected failure in unlink to ChaosBlobstore for key {0}")]
+    InjectedChaosUnlink(String),
 }

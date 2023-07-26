@@ -17,7 +17,7 @@ use std::time::Duration;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::BlobstoreGetData;
-use blobstore::BlobstorePutOps;
+use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use blobstore_stats::record_put_stats;
@@ -222,7 +222,7 @@ pub async fn inner_put(
     mut scuba: MononokeScubaSampleBuilder,
     write_order: &AtomicUsize,
     blobstore_id: BlobstoreId,
-    blobstore: &dyn BlobstorePutOps,
+    blobstore: &dyn BlobstoreUnlinkOps,
     key: String,
     value: BlobstoreBytes,
     put_behaviour: Option<PutBehaviour>,

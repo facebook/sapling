@@ -235,6 +235,41 @@ pub fn record_put_stats(
     scuba.log();
 }
 
+pub fn record_unlink_stats(
+    scuba: &mut MononokeScubaSampleBuilder,
+    pc: &PerfCounters,
+    stats: FutureStats,
+    result: Result<&(), &Error>,
+    key: &str,
+    session: &str,
+    blobstore_id: Option<BlobstoreId>,
+    blobstore_type: impl ToString,
+) {
+    add_common_values(
+        scuba,
+        pc,
+        key,
+        session,
+        stats,
+        OperationType::Unlink,
+        blobstore_id,
+        blobstore_type,
+    );
+
+    match result {
+        Ok(()) => {
+            // The common values are enough to describe the unlink. Nothing else to record here
+        }
+        Err(error) => {
+            // Always log errors
+            scuba.unsampled();
+            scuba.add(ERROR, format!("{:#}", error));
+        }
+    };
+
+    scuba.log();
+}
+
 pub fn record_queue_stats(
     scuba: &mut MononokeScubaSampleBuilder,
     pc: &PerfCounters,

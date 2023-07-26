@@ -457,10 +457,14 @@ impl RepoFactory {
         make_blobstore_unlink_ops(
             self.env.fb,
             config.clone(),
+            &self.env.mysql_options,
             self.env.readonly_storage,
             &self.env.blobstore_options,
             &self.env.logger,
             &self.env.config_store,
+            &self.scrub_handler,
+            self.blobstore_component_sampler.as_ref(),
+            None,
         )
         .watched(&self.env.logger)
         .await

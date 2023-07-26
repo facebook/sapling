@@ -13,6 +13,7 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstorePutOps;
+use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
@@ -128,17 +129,26 @@ pub trait ComponentSamplingHandler: std::fmt::Debug + Send + Sync {
     ) -> Result<()> {
         Ok(())
     }
+
+    fn sample_unlink(
+        &self,
+        _ctx: &CoreContext,
+        _key: &str,
+        _inner_id: Option<BlobstoreId>,
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 /// A lower level sampler that can provide BlobstoreId
 #[derive(Debug)]
-pub struct SamplingBlobstorePutOps<T> {
+pub struct SamplingBlobstoreUnlinkOps<T> {
     inner: T,
     inner_id: Option<BlobstoreId>,
     handler: Arc<dyn ComponentSamplingHandler>,
 }
 
-impl<T: std::fmt::Display> std::fmt::Display for SamplingBlobstorePutOps<T> {
+impl<T: std::fmt::Display> std::fmt::Display for SamplingBlobstoreUnlinkOps<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
@@ -148,7 +158,7 @@ impl<T: std::fmt::Display> std::fmt::Display for SamplingBlobstorePutOps<T> {
     }
 }
 
-impl<T> SamplingBlobstorePutOps<T> {
+impl<T> SamplingBlobstoreUnlinkOps<T> {
     pub fn new(
         inner: T,
         inner_id: Option<BlobstoreId>,
@@ -163,7 +173,7 @@ impl<T> SamplingBlobstorePutOps<T> {
 }
 
 #[async_trait]
-impl<T: Blobstore + BlobstorePutOps> Blobstore for SamplingBlobstorePutOps<T> {
+impl<T: Blobstore + BlobstorePutOps> Blobstore for SamplingBlobstoreUnlinkOps<T> {
     #[inline]
     async fn get<'a>(
         &'a self,
@@ -203,7 +213,7 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for SamplingBlobstorePutOps<T> {
 }
 
 #[async_trait]
-impl<T: BlobstorePutOps> BlobstorePutOps for SamplingBlobstorePutOps<T> {
+impl<T: BlobstorePutOps> BlobstorePutOps for SamplingBlobstoreUnlinkOps<T> {
     async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -225,6 +235,14 @@ impl<T: BlobstorePutOps> BlobstorePutOps for SamplingBlobstorePutOps<T> {
     ) -> Result<OverwriteStatus> {
         self.handler.sample_put(ctx, &key, &value, self.inner_id)?;
         self.inner.put_with_status(ctx, key, value).await
+    }
+}
+
+#[async_trait]
+impl<T: BlobstoreUnlinkOps> BlobstoreUnlinkOps for SamplingBlobstoreUnlinkOps<T> {
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.handler.sample_unlink(ctx, key, self.inner_id)?;
+        self.inner.unlink(ctx, key).await
     }
 }
 
@@ -362,7 +380,7 @@ mod test {
             sampled: AtomicBool::new(false),
             looking_for: sample_this,
         });
-        let wrapper = SamplingBlobstorePutOps::new(
+        let wrapper = SamplingBlobstoreUnlinkOps::new(
             base.clone(),
             None,
             handler.clone() as Arc<dyn ComponentSamplingHandler>,

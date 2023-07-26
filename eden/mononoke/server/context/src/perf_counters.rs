@@ -66,6 +66,9 @@ define_perf_counters! {
         BlobPutsMaxLatency,
         BlobPutsDeduplicated,
         BlobPutsTotalSize,
+        BlobUnlinks,
+        BlobUnlinksMaxLatency,
+        BlobUnlinksTotalSize,
         BytesSent,
         CachelibHits,
         CachelibMisses,
@@ -133,6 +136,9 @@ impl PerfCounterType {
             | BlobPuts
             | BlobPutsMaxLatency
             | BlobPutsTotalSize
+            | BlobUnlinks
+            | BlobUnlinksMaxLatency
+            | BlobUnlinksTotalSize
             | CachelibHits
             | CachelibMisses
             | GetpackNumPossibleLFSFiles
@@ -164,6 +170,8 @@ impl PerfCounterType {
             | BlobPutsShardAccessWait
             | BlobPutsDeduplicated
             | BlobPutsTotalSize
+            | BlobUnlinks
+            | BlobUnlinksTotalSize
             | BytesSent
             | CachelibHits
             | CachelibMisses
@@ -210,6 +218,7 @@ impl PerfCounterType {
             | BlobGetsNotFoundMaxLatency
             | BlobPresenceChecksMaxLatency
             | BlobPutsMaxLatency
+            | BlobUnlinksMaxLatency
             | GetpackMaxFileSize => PerfCounterTypeUpdateFunc::Max,
         }
     }

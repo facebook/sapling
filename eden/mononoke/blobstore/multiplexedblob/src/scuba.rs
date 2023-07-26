@@ -70,6 +70,26 @@ pub fn record_put<T>(
     scuba.log();
 }
 
+pub fn record_unlink(
+    ctx: &CoreContext,
+    scuba: &mut MononokeScubaSampleBuilder,
+    multiplex_id: &MultiplexId,
+    key: &str,
+    stats: FutureStats,
+    result: &Result<()>,
+) {
+    let op = OperationType::Unlink;
+    record_scuba_common(ctx.clone(), scuba, multiplex_id, key, stats, op);
+
+    if let Err(error) = result.as_ref() {
+        scuba.unsampled();
+        scuba.add(ERROR, format!("{:#}", error)).add(SUCCESS, false);
+    } else {
+        scuba.add(SUCCESS, true);
+    }
+    scuba.log();
+}
+
 pub fn record_get(
     ctx: &CoreContext,
     scuba: &mut MononokeScubaSampleBuilder,

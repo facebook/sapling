@@ -14,12 +14,13 @@ use anyhow::Result;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
-use blobstore::BlobstorePutOps;
+use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use blobstore_stats::record_get_stats;
 use blobstore_stats::record_is_present_stats;
 use blobstore_stats::record_put_stats;
+use blobstore_stats::record_unlink_stats;
 use blobstore_stats::OperationType;
 use context::CoreContext;
 use futures::Future;
@@ -58,7 +59,7 @@ impl MultiplexTimeout {
 #[derive(Clone)]
 pub(crate) struct TimedStore {
     id: BlobstoreId,
-    inner: Arc<dyn BlobstorePutOps>,
+    inner: Arc<dyn BlobstoreUnlinkOps>,
     /// Timeout enforced on the read/write futures, including those running in the background
     timeout: MultiplexTimeout,
 }
@@ -78,7 +79,7 @@ impl std::fmt::Display for TimedStore {
 impl TimedStore {
     pub(crate) fn new(
         id: BlobstoreId,
-        inner: Arc<dyn BlobstorePutOps>,
+        inner: Arc<dyn BlobstoreUnlinkOps>,
         timeout: MultiplexTimeout,
     ) -> Self {
         Self { id, inner, timeout }
@@ -118,6 +119,30 @@ impl TimedStore {
             Some(self.id.clone()),
             self.inner.clone(),
             None,
+        );
+
+        result.map_err(|er| (self.id.clone(), er))
+    }
+
+    pub(crate) async fn unlink(
+        &self,
+        ctx: &CoreContext,
+        key: &str,
+        mut scuba: MononokeScubaSampleBuilder,
+    ) -> Result<(), (BlobstoreId, Error)> {
+        let unlink_fut = self.inner.unlink(ctx, key);
+        let pc = ctx.clone().fork_perf_counters();
+        let (stats, result) = with_timeout(unlink_fut, self.timeout.write).timed().await;
+
+        record_unlink_stats(
+            &mut scuba,
+            &pc,
+            stats,
+            result.as_ref(),
+            key,
+            ctx.metadata().session_id().as_str(),
+            Some(self.id.clone()),
+            self.inner.clone(),
         );
 
         result.map_err(|er| (self.id.clone(), er))
@@ -177,7 +202,7 @@ impl TimedStore {
 }
 
 pub(crate) fn with_timed_stores(
-    blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
+    blobstores: Vec<(BlobstoreId, Arc<dyn BlobstoreUnlinkOps>)>,
     to: MultiplexTimeout,
 ) -> Vec<TimedStore> {
     blobstores

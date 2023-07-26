@@ -42,6 +42,9 @@
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)
       "BlobPutsTotalSize": 0,
+      "BlobUnlinks": 0,
+      "BlobUnlinksMaxLatency": *, (glob)
+      "BlobUnlinksTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -95,6 +98,9 @@
       "BlobPuts": 211,
       "BlobPutsMaxLatency": *, (glob)
       "BlobPutsTotalSize": *, (glob)
+      "BlobUnlinks": 0,
+      "BlobUnlinksMaxLatency": *, (glob)
+      "BlobUnlinksTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -145,6 +151,9 @@
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)
       "BlobPutsTotalSize": 0,
+      "BlobUnlinks": 0,
+      "BlobUnlinksMaxLatency": *, (glob)
+      "BlobUnlinksTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -200,6 +209,9 @@
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)
       "BlobPutsTotalSize": 0,
+      "BlobUnlinks": 0,
+      "BlobUnlinksMaxLatency": *, (glob)
+      "BlobUnlinksTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -256,6 +268,9 @@
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)
       "BlobPutsTotalSize": 0,
+      "BlobUnlinks": 0,
+      "BlobUnlinksMaxLatency": *, (glob)
+      "BlobUnlinksTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,

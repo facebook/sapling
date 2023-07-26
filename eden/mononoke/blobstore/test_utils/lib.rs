@@ -20,6 +20,7 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreMetadata;
 use blobstore::BlobstorePutOps;
+use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use blobstore_sync_queue::BlobstoreWal;
@@ -108,6 +109,12 @@ impl Tickable<(BlobstoreBytes, u64)> {
             s.insert(key, (value, ctime));
         })
     }
+
+    pub fn remove(&self, key: &str) {
+        self.storage.with(|s| {
+            s.remove(key);
+        })
+    }
 }
 
 #[async_trait]
@@ -166,6 +173,15 @@ impl BlobstorePutOps for Tickable<(BlobstoreBytes, u64)> {
     ) -> Result<OverwriteStatus> {
         self.put_explicit(ctx, key, value, PutBehaviour::Overwrite)
             .await
+    }
+}
+
+#[async_trait]
+impl BlobstoreUnlinkOps for Tickable<(BlobstoreBytes, u64)> {
+    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.on_tick().await?;
+        self.remove(key);
+        Ok(())
     }
 }
 
