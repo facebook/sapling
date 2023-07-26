@@ -117,6 +117,12 @@ fn should_run_remotely(args: &[String]) -> (bool, &'static str) {
         return (false, "!stdin.is_tty() && stdout.is_tty()");
     }
 
+    if let Some(val) = std::env::var_os("CHGDISABLE") {
+        if val == "1" {
+            return (false, "CHGDISABLE=1");
+        }
+    }
+
     (true, "")
 }
 
