@@ -1331,6 +1331,11 @@ be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
    will have an empty value under Unix-like platforms for non-merge
    changesets, while it will not be available at all under Windows.
 
+.. note::
+
+    A hook can start with ``background:``. It will be spawned in the
+    background and its result will be discarded.
+
 The syntax for Python hooks is as follows::
 
   hookname = python:modulename.submodule.callable

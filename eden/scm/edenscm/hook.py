@@ -114,7 +114,7 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
     return r, False
 
 
-def _exthook(ui, repo, htype, name, cmd, args, throw):
+def _exthook(ui, repo, htype, name, cmd, args, throw, background=False):
     ui.note(_("running hook %s: %s\n") % (name, cmd))
 
     starttime = util.timer()
@@ -147,6 +147,15 @@ def _exthook(ui, repo, htype, name, cmd, args, throw):
         cwd = repo.root
     else:
         cwd = pycompat.getcwd()
+
+    if background:
+        full_env = util.shellenviron(env)
+        try:
+            util.spawndetached(cmd, cwd=cwd, env=full_env, shell=True)
+        except Exception as e:
+            ui.warn(_("warning: %s hook failed to run: %r\n") % (name, e))
+            return 1
+        return 0
 
     r = ui.system(cmd, environ=env, cwd=cwd, blockedtag="exthook")
 
@@ -265,6 +274,13 @@ def runhooks(ui, repo, htype, hooks, throw: bool = False, **args):
                     if hookfn.startswith("ext."):
                         hookfn = "edenscm." + hookfn
                 r, raised = _pythonhook(ui, repo, htype, hname, hookfn, args, throw)
+            elif cmd.startswith("background:"):
+                # Run a shell command in background. Do not throw.
+                cmd = cmd.split(":", 1)[1]
+                r = _exthook(
+                    ui, repo, htype, hname, cmd, args, throw=False, background=True
+                )
+                raised = False
             else:
                 r = _exthook(ui, repo, htype, hname, cmd, args, throw)
                 raised = False
