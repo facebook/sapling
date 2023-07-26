@@ -56,7 +56,7 @@ pyconfigloader = { path = "../../edenscmnative/bindings/modules/pyconfigloader" 
 python3-sys = "0.7.1"
 pytracing = { path = "../../edenscmnative/bindings/modules/pytracing", default-features = false }
 rand = { version = "0.8", features = ["small_rng"] }
-repo = { version = "0.1.0", path = "../repo" }
+repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }
 repo_name = { version = "0.1.0", path = "../repo_name" }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
 revsets = { version = "0.1.0", path = "../revsets" }

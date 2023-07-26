@@ -11,6 +11,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+#[cfg(feature = "wdir")]
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
@@ -26,6 +27,7 @@ use edenapi::EdenApiError;
 use hgcommits::DagCommits;
 use metalog::MetaLog;
 use once_cell::sync::Lazy;
+#[cfg(feature = "wdir")]
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use repolock::RepoLocker;
@@ -41,15 +43,21 @@ use storemodel::ReadFileContents;
 use storemodel::RefreshableReadFileContents;
 use storemodel::RefreshableTreeStore;
 use storemodel::TreeStore;
+#[cfg(feature = "wdir")]
 use treestate::dirstate::Dirstate;
+#[cfg(feature = "wdir")]
 use treestate::dirstate::TreeStateFields;
+#[cfg(feature = "wdir")]
 use treestate::serialization::Serializable;
 use treestate::treestate::TreeState;
 use types::repo::StorageFormat;
 use types::HgId;
 use util::path::absolute;
+#[cfg(feature = "wdir")]
 use vfs::VFS;
+#[cfg(feature = "wdir")]
 use workingcopy::filesystem::FileSystemType;
+#[cfg(feature = "wdir")]
 use workingcopy::workingcopy::WorkingCopy;
 
 use crate::commits::open_dag_commits;
@@ -558,6 +566,7 @@ impl Repo {
         Ok(())
     }
 
+    #[cfg(feature = "wdir")]
     pub fn working_copy(&mut self, path: &Path) -> Result<WorkingCopy, errors::InvalidWorkingCopy> {
         let is_eden = self.requirements.contains("eden");
         let fsmonitor_ext = self.config.get("extensions", "fsmonitor");
