@@ -18,6 +18,8 @@ pub use facebook::is_corp;
 pub use facebook::is_lab;
 #[cfg(any(fbcode_build, feature = "fb"))]
 pub use facebook::is_prod;
+#[cfg(any(fbcode_build, feature = "fb"))]
+pub use facebook::Env;
 
 lazy_static! {
     pub static ref IN_PROD: bool = is_prod();
