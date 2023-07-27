@@ -25,8 +25,8 @@ git_types_thrift = { version = "0.1.0", path = "../../../../git/git_types/if" }
 mercurial_thrift = { version = "0.1.0", path = "../../../../mercurial/types/if" }
 mononoke_types_thrift = { version = "0.1.0", path = "../../../../mononoke_types/if" }
 ref-cast = "1.0.18"
-serde = { version = "1.0.167", features = ["derive", "rc"] }
-serde_derive = "1.0.167"
+serde = { version = "1.0.176", features = ["derive", "rc"] }
+serde_derive = "1.0.176"
 thiserror = "1.0.43"
 
 [build-dependencies]

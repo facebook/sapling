@@ -20,8 +20,8 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 megarepo_configs = { version = "0.1.0", path = "../.." }
 ref-cast = "1.0.18"
-serde = { version = "1.0.167", features = ["derive", "rc"] }
-serde_derive = "1.0.167"
+serde = { version = "1.0.176", features = ["derive", "rc"] }
+serde_derive = "1.0.176"
 thiserror = "1.0.43"
 
 [build-dependencies]

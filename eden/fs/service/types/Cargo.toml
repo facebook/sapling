@@ -21,8 +21,8 @@ fb303_core = { version = "0.0.0", git = "https://github.com/facebook/fb303.git",
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 ref-cast = "1.0.18"
-serde = { version = "1.0.167", features = ["derive", "rc"] }
-serde_derive = "1.0.167"
+serde = { version = "1.0.176", features = ["derive", "rc"] }
+serde_derive = "1.0.176"
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.43"
 
