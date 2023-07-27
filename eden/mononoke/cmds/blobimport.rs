@@ -10,6 +10,7 @@
 use std::collections::HashMap;
 use std::fs::read;
 use std::path::Path;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -19,20 +20,15 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiString;
+use blobimport_lib::BookmarkImportPolicy;
 use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
 use changeset_fetcher::ChangesetFetcherRef;
-use clap_old::Arg;
-use clap_old::ArgGroup;
-use cmdlib::args;
-use cmdlib::args::MononokeClapApp;
-use cmdlib::args::MononokeMatches;
-use cmdlib::args::RepoRequirement;
-use cmdlib::helpers::block_execute;
+use clap::Parser;
+use cmdlib::monitoring::AliveService;
 use context::CoreContext;
 use context::SessionContainer;
 use derived_data_manager::BonsaiDerivable;
-use derived_data_utils::POSSIBLE_DERIVED_TYPES;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use filenodes_derivation::FilenodesOnlyPublic;
@@ -42,6 +38,11 @@ use futures::future::TryFutureExt;
 use mercurial_revlog::revlog::RevIdx;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
+use mononoke_app::args::AsRepoArg;
+use mononoke_app::args::RepoArgs;
+use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::MononokeApp;
+use mononoke_app::MononokeAppBuilder;
 use mononoke_types::ChangesetId;
 use mutable_counters::MutableCountersRef;
 use repo_identity::RepoIdentityRef;
@@ -49,109 +50,9 @@ use slog::error;
 use slog::info;
 use slog::warn;
 use slog::Logger;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use wireproto_handler::BackupSourceRepo;
-
-const ARG_DERIVED_DATA_TYPE: &str = "derived-data-type";
-const ARG_EXCLUDE_DERIVED_DATA_TYPE: &str = "exclude-derived-data-type";
-const ARG_FIND_ALREADY_IMPORTED_REV_ONLY: &str = "find-already-imported-rev-only";
-const BACKUP_REPO_GROUP: &str = "backup-from-repo";
-const BACKUP_FROM_REPO_ID: &str = "backup-from-repo-id";
-const BACKUP_FROM_REPO_NAME: &str = "backup-from-repo-name";
-
-fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
-    args::MononokeAppBuilder::new("revlog to blob importer")
-        .with_repo_required(RepoRequirement::ExactlyOne)
-        .with_source_repos()
-        .with_scuba_logging_args()
-        .with_fb303_args()
-        .build()
-        .about("Import a revlog-backed Mercurial repo into Mononoke blobstore.")
-        .args_from_usage(
-            r#"
-            <INPUT>                          'input revlog repo'
-            --changeset [HASH]               'if provided, the only changeset to be imported'
-            --no-bookmark                    'if provided won't update bookmarks'
-            --prefix-bookmark [PREFIX]       'if provided will update bookmarks, but prefix them with PREFIX'
-            --no-create                      'if provided won't create a new repo (only meaningful for local)'
-            --lfs-helper [LFS_HELPER]        'if provided, path to an executable that accepts OID SIZE and returns a LFS blob to stdout'
-            --concurrent-changesets [LIMIT]  'if provided, max number of changesets to upload concurrently'
-            --concurrent-blobs [LIMIT]       'if provided, max number of blobs to process concurrently'
-            --concurrent-lfs-imports [LIMIT] 'if provided, max number of LFS files to import concurrently'
-            --has-globalrev                  'if provided will update globalrev'
-            --manifold-next-rev-to-import [KEY] 'if provided then this manifold key will be updated with the next revision to import'
-            --manifold-bucket [BUCKET]        'can only be used if --manifold-next-rev-to-import is set'
-        "#,
-        )
-        .arg(
-            Arg::from_usage("--skip [SKIP]  'skips commits from the beginning'")
-                .conflicts_with("changeset"),
-        )
-        .arg(
-            Arg::from_usage(
-                "--commits-limit [LIMIT] 'import only LIMIT first commits from revlog repo'",
-            )
-            .conflicts_with("changeset"),
-        )
-        .arg(
-            Arg::with_name("fix-parent-order")
-                .long("fix-parent-order")
-                .value_name("FILE")
-                .takes_value(true)
-                .required(false)
-                .help(
-                    "file which fixes order or parents for commits in format 'HG_CS_ID P1_CS_ID [P2_CS_ID]'\
-                     This is useful in case of merge commits - mercurial ignores order of parents of the merge commit \
-                     while Mononoke doesn't ignore it. That might result in different bonsai hashes for the same \
-                     Mercurial commit. Using --fix-parent-order allows to fix order of the parents."
-                 )
-        )
-        .arg(
-            Arg::with_name(ARG_DERIVED_DATA_TYPE)
-                .long(ARG_DERIVED_DATA_TYPE)
-                .takes_value(true)
-                .multiple(true)
-                .required(false)
-                .possible_values(POSSIBLE_DERIVED_TYPES)
-                .help("Derived data type to be backfilled. Note - 'filenodes' will always be derived unless excluded")
-        )
-        .arg(
-            Arg::with_name(ARG_EXCLUDE_DERIVED_DATA_TYPE)
-                .long(ARG_EXCLUDE_DERIVED_DATA_TYPE)
-                .takes_value(true)
-                .multiple(true)
-                .required(false)
-                .possible_values(POSSIBLE_DERIVED_TYPES)
-                .help("Exclude derived data types explicitly")
-        )
-        .arg(
-            Arg::with_name(ARG_FIND_ALREADY_IMPORTED_REV_ONLY)
-                .long(ARG_FIND_ALREADY_IMPORTED_REV_ONLY)
-                .takes_value(false)
-                .multiple(false)
-                .required(false)
-                .help("Does not do any import. Just finds the rev that was already imported rev and \
-                      updates manifold-next-rev-to-import if it's set. Note that we might have \
-                      a situation where revision i is imported, i+1 is not and i+2 is imported. \
-                      In that case this function would return i.")
-        )
-        .arg(
-            Arg::with_name(BACKUP_FROM_REPO_ID)
-            .long(BACKUP_FROM_REPO_ID)
-            .value_name("ID")
-            .help("numeric ID of backup source of truth mononoke repository (used only for backup jobs to sync bonsai changesets)"),
-        )
-        .arg(
-            Arg::with_name(BACKUP_FROM_REPO_NAME)
-            .long(BACKUP_FROM_REPO_NAME)
-            .value_name("NAME")
-            .help("Name of backup source of truth mononoke repository (used only for backup jobs to sync bonsai changesets)"),
-        )
-        .group(
-            ArgGroup::with_name(BACKUP_REPO_GROUP)
-                .args(&[BACKUP_FROM_REPO_ID, BACKUP_FROM_REPO_NAME])
-        )
-}
 
 fn parse_fixed_parent_order<P: AsRef<Path>>(
     logger: &Logger,
@@ -269,90 +170,40 @@ mod facebook {
     }
 }
 
-async fn run_blobimport<'a>(
-    fb: FacebookInit,
-    ctx: &CoreContext,
-    logger: &Logger,
-    matches: &'a MononokeMatches<'a>,
-) -> Result<()> {
-    let config_store = matches.config_store();
+async fn async_main(app: MononokeApp) -> Result<()> {
+    let args: MononokeBlobImportArgs = app.args()?;
+    let env = app.environment();
+    let ctx = &SessionContainer::new_with_defaults(app.fb)
+        .new_context(app.logger().clone(), env.scuba_sample_builder.clone());
 
-    let revlogrepo_path = matches
-        .value_of("INPUT")
-        .expect("input is not specified")
-        .into();
+    let changeset = args
+        .changeset
+        .map(|hash| HgNodeHash::from_str(&hash).unwrap());
 
-    let changeset = match matches.value_of("changeset") {
-        None => None,
-        Some(hash) => Some(HgNodeHash::from_str(hash)?),
-    };
-
-    let skip = if !matches.is_present("skip") {
-        None
-    } else {
-        Some(args::get_usize(matches, "skip", 0))
-    };
-
-    let commits_limit = if !matches.is_present("commits-limit") {
-        None
-    } else {
-        Some(args::get_usize(matches, "commits-limit", 0))
-    };
-
-    let manifold_key = matches
-        .value_of("manifold-next-rev-to-import")
-        .map(|s| s.to_string());
-
-    let manifold_bucket = matches.value_of("manifold-bucket").map(|s| s.to_string());
-
-    let manifold_key_bucket = match (manifold_key, manifold_bucket) {
+    let manifold_key_bucket = match (args.manifold_next_rev_to_import, args.manifold_bucket) {
         (Some(key), Some(bucket)) => Some((key, bucket)),
-        (None, None) => None,
-        _ => {
-            return Err(format_err!(
-                "invalid manifold parameters: bucket and key should either both be specified or none"
-            ));
-        }
+        _ => None,
     };
 
-    let no_bookmark = matches.is_present("no-bookmark");
-    let prefix_bookmark = matches.value_of("prefix-bookmark");
-    if no_bookmark && prefix_bookmark.is_some() {
-        return Err(format_err!(
-            "--no-bookmark is incompatible with --prefix-bookmark"
-        ));
-    }
-
-    let bookmark_import_policy = if no_bookmark {
-        blobimport_lib::BookmarkImportPolicy::Ignore
+    let bookmark_import_policy = if args.no_bookmark {
+        BookmarkImportPolicy::Ignore
     } else {
-        let prefix = match prefix_bookmark {
+        let prefix = match args.prefix_bookmark {
             Some(prefix) => AsciiString::from_ascii(prefix).unwrap(),
             None => AsciiString::new(),
         };
-        blobimport_lib::BookmarkImportPolicy::Prefix(prefix)
+        BookmarkImportPolicy::Prefix(prefix)
     };
 
-    let lfs_helper = matches.value_of("lfs-helper").map(|l| l.to_string());
-
-    let concurrent_changesets = args::get_usize(matches, "concurrent-changesets", 100);
-    let concurrent_blobs = args::get_usize(matches, "concurrent-blobs", 100);
-    let concurrent_lfs_imports = args::get_usize(matches, "concurrent-lfs-imports", 10);
-
-    let fixed_parent_order = if let Some(path) = matches.value_of("fix-parent-order") {
-        parse_fixed_parent_order(logger, path)
+    let fixed_parent_order = if let Some(path) = args.fix_parent_order {
+        parse_fixed_parent_order(ctx.logger(), path)
             .context("while parsing file with fixed parent order")?
     } else {
         HashMap::new()
     };
 
-    let mut derived_data_types = matches
-        .values_of(ARG_DERIVED_DATA_TYPE)
-        .map_or(vec![], |v| v.map(|d| d.to_string()).collect());
-
-    let excluded_derived_data_types = matches
-        .values_of(ARG_EXCLUDE_DERIVED_DATA_TYPE)
-        .map_or(vec![], |v| v.map(|d| d.to_string()).collect());
+    let mut derived_data_types = args.derived_data_type;
+    let excluded_derived_data_types = args.exclude_derived_data_type;
 
     for v in &excluded_derived_data_types {
         if derived_data_types.contains(v) {
@@ -368,69 +219,73 @@ async fn run_blobimport<'a>(
         derived_data_types.push(filenodes_derived_name);
     }
 
-    let has_globalrev = matches.is_present("has-globalrev");
+    let repo_arg = args.repo.as_repo_arg();
+    let (_, repo_config) = app.repo_config(repo_arg)?;
 
-    let (_repo_name, repo_config) =
-        args::not_shardmanager_compatible::get_config(config_store, matches)?;
-    let populate_git_mapping = repo_config.pushrebase.populate_git_mapping.clone();
+    let globalrevs_store_builder = SqlBonsaiGlobalrevMappingBuilder::with_metadata_database_config(
+        app.fb,
+        &repo_config.storage_config.metadata,
+        &env.mysql_options,
+        env.readonly_storage.0,
+    )?;
+    let synced_commit_mapping = SqlSyncedCommitMapping::with_metadata_database_config(
+        app.fb,
+        &repo_config.storage_config.metadata,
+        &env.mysql_options,
+        env.readonly_storage.0,
+    )?;
 
-    let small_repo_id =
-        args::not_shardmanager_compatible::get_source_repo_id_opt(config_store, matches)?;
-
-    let globalrevs_store_builder = args::not_shardmanager_compatible::open_sql::<
-        SqlBonsaiGlobalrevMappingBuilder,
-    >(fb, config_store, matches)?;
-    let synced_commit_mapping = args::not_shardmanager_compatible::open_sql::<
-        SqlSyncedCommitMapping,
-    >(fb, config_store, matches)?;
-
-    let blobrepo: BlobRepo = if matches.is_present("no-create") {
-        args::not_shardmanager_compatible::open_repo_unredacted(fb, ctx.logger(), matches).await?
+    let blobrepo: BlobRepo = if args.no_create {
+        app.open_repo_unredacted(repo_arg).await?
     } else {
-        args::not_shardmanager_compatible::create_repo_unredacted(fb, ctx.logger(), matches).await?
+        app.create_repo_unredacted(repo_arg, None).await?
     };
 
-    let origin_repo: Option<BlobRepo> =
-        if matches.is_present(BACKUP_FROM_REPO_ID) || matches.is_present(BACKUP_FROM_REPO_NAME) {
-            let repo_id = args::not_shardmanager_compatible::get_repo_id_from_value(
-                config_store,
-                matches,
-                BACKUP_FROM_REPO_ID,
-                BACKUP_FROM_REPO_NAME,
-            )?;
-            Some(args::open_repo_with_repo_id(fb, logger, repo_id, matches).await?)
-        } else {
-            None
-        };
+    let small_repo_id = match (args.source_repo_id, args.source_repo_name) {
+        (Some(id), _) => Some(RepoArgs::from_repo_id(id.parse()?)),
+        (_, Some(name)) => Some(RepoArgs::from_repo_name(name)),
+        _ => None,
+    }
+    .map(|source_repo_args| app.repo_id(source_repo_args.as_repo_arg()).unwrap());
 
+    let backup_from_repo_args = match (args.backup_from_repo_id, args.backup_from_repo_name) {
+        (Some(id), _) => Some(RepoArgs::from_repo_id(id.parse()?)),
+        (_, Some(name)) => Some(RepoArgs::from_repo_name(name)),
+        _ => None,
+    };
+    let origin_repo = match backup_from_repo_args {
+        Some(backup_from_repo_args) => {
+            Some(app.open_repo(backup_from_repo_args.as_repo_arg()).await?)
+        }
+        _ => None,
+    };
     let globalrevs_store = Arc::new(globalrevs_store_builder.build(blobrepo.repo_identity().id()));
     let synced_commit_mapping = Arc::new(synced_commit_mapping);
 
-    let find_latest_imported_rev_only = matches.is_present(ARG_FIND_ALREADY_IMPORTED_REV_ONLY);
     async move {
         let blobimport = blobimport_lib::Blobimport {
             ctx,
             blobrepo: blobrepo.clone(),
-            revlogrepo_path,
+            revlogrepo_path: args.input,
             changeset,
-            skip,
-            commits_limit,
+            skip: args.skip,
+            commits_limit: args.commits_limit,
             bookmark_import_policy,
             globalrevs_store,
             synced_commit_mapping,
-            lfs_helper,
-            concurrent_changesets,
-            concurrent_blobs,
-            concurrent_lfs_imports,
+            lfs_helper: args.lfs_helper,
+            concurrent_changesets: args.concurrent_changesets,
+            concurrent_blobs: args.concurrent_blobs,
+            concurrent_lfs_imports: args.concurrent_lfs_imports,
             fixed_parent_order,
-            has_globalrev,
-            populate_git_mapping,
+            has_globalrev: args.has_globalrev,
+            populate_git_mapping: repo_config.pushrebase.populate_git_mapping,
             small_repo_id,
             derived_data_types,
             origin_repo: origin_repo.map(|repo| BackupSourceRepo::from_blob_repo(&repo)),
         };
 
-        let maybe_latest_imported_rev = if find_latest_imported_rev_only {
+        let maybe_latest_imported_rev = if args.find_already_imported_rev_only {
             blobimport.find_already_imported_revision().await?
         } else {
             blobimport.import().await?
@@ -447,7 +302,7 @@ async fn run_blobimport<'a>(
                 {
                     if let Some((manifold_key, bucket)) = manifold_key_bucket {
                         facebook::update_manifold_key(
-                            fb,
+                            app.fb,
                             latest_imported_rev,
                             &manifold_key,
                             &bucket,
@@ -472,7 +327,6 @@ async fn run_blobimport<'a>(
             }
             None => info!(ctx.logger(), "didn't import any commits"),
         };
-
         Ok(())
     }
     .map_err({
@@ -536,21 +390,90 @@ async fn maybe_update_highest_imported_generation_number(
     Ok(())
 }
 
+#[derive(Parser, Debug)]
+#[clap(about = "Import a revlog-backed Mercurial repo into Mononoke blobstore.")]
+struct MononokeBlobImportArgs {
+    /// Input revlog repo
+    input: PathBuf,
+
+    /// If provided, the only changeset to be imported
+    #[clap(long)]
+    changeset: Option<String>,
+    /// Skips commits from the beginning
+    #[clap(long)]
+    skip: Option<usize>,
+    /// Import only LIMIT first commits from revlog repo
+    #[clap(long)]
+    commits_limit: Option<usize>,
+    /// If provided then this manifold key will be updated with the next revision to import
+    #[clap(long, requires = "manifold_bucket")]
+    manifold_next_rev_to_import: Option<String>,
+    /// Can only be used if --manifold-next-rev-to-import is set
+    #[clap(long, requires = "manifold_next_rev_to_import")]
+    manifold_bucket: Option<String>,
+    /// If provided won't update bookmarks
+    #[clap(long, conflicts_with = "prefix_bookmark")]
+    no_bookmark: bool,
+    /// If provided will update bookmarks, but prefix them with PREFIX
+    #[clap(long)]
+    prefix_bookmark: Option<String>,
+    /// If provided, path to an executable that accepts OID SIZE and returns a LFS blob to stdout
+    #[clap(long)]
+    lfs_helper: Option<String>,
+    /// If provided, max number of changesets to upload concurrently
+    #[clap(long, default_value_t = 100)]
+    concurrent_changesets: usize,
+    /// If provided, max number of blobs to process concurrently
+    #[clap(long, default_value_t = 100)]
+    concurrent_blobs: usize,
+    /// If provided, max number of LFS files to import concurrently
+    #[clap(long, default_value_t = 10)]
+    concurrent_lfs_imports: usize,
+    /// File which fixes order or parents for commits in format 'HG_CS_ID P1_CS_ID [P2_CS_ID]'
+    /// This is useful in case of merge commits - mercurial ignores order of parents of the merge commit
+    /// while Mononoke doesn't ignore it. That might result in different bonsai hashes for the same
+    /// Mercurial commit. Using --fix-parent-order allows to fix order of the parents.
+    #[clap(long)]
+    fix_parent_order: Option<PathBuf>,
+    /// If provided will update globalrev
+    #[clap(long)]
+    has_globalrev: bool,
+    /// If provided won't create a new repo (only meaningful for local)
+    #[clap(long)]
+    no_create: bool,
+    /// Does not do any import. Just finds the rev that was already imported rev and
+    /// updates manifold-next-rev-to-import if it's set. Note that we might have
+    /// a situation where revision i is imported, i+1 is not and i+2 is imported.
+    /// In that case this function would return i.
+    #[clap(long)]
+    find_already_imported_rev_only: bool,
+    /// Derived data type to be backfilled. Note - 'filenodes' will always be derived unless excluded
+    #[clap(long)]
+    derived_data_type: Vec<String>,
+    /// Exclude derived data types explicitly
+    #[clap(long)]
+    exclude_derived_data_type: Vec<String>,
+    /// Numeric ID of backup source of truth mononoke repository (used only for backup jobs to sync bonsai changesets)
+    #[clap(long, conflicts_with = "backup_from_repo_name")]
+    backup_from_repo_id: Option<String>,
+    /// Name of backup source of truth mononoke repository (used only for backup jobs to sync bonsai changesets)
+    #[clap(long)]
+    backup_from_repo_name: Option<String>,
+    /// Numeric ID and Name of repository
+    #[clap(flatten)]
+    repo: RepoArgs,
+    /// Numeric ID of source repository (used only for commands that operate on more than one repo)
+    #[clap(long, conflicts_with = "source_repo_name")]
+    source_repo_id: Option<String>,
+    /// Name of source repository (used only for commands that operate on more than one repo)
+    #[clap(long)]
+    source_repo_name: Option<String>,
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let (matches, _runtime) = setup_app().get_matches(fb)?;
-
-    let logger = matches.logger();
-    let scuba = matches.scuba_sample_builder();
-
-    let ctx = &SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba);
-
-    block_execute(
-        run_blobimport(fb, ctx, logger, &matches),
-        fb,
-        "blobimport",
-        logger,
-        &matches,
-        cmdlib::monitoring::AliveService,
-    )
+    let app = MononokeAppBuilder::new(fb)
+        .with_app_extension(Fb303AppExtension {})
+        .build::<MononokeBlobImportArgs>()?;
+    app.run_with_monitoring_and_logging(async_main, "blobimport", AliveService)
 }
