@@ -108,9 +108,9 @@ Full rebase all the way back from branching point:
   rebasing 1e48f4172d62 "dev1"
   rebasing aeae94a564c6 "dev2"
   rebasing da5b1609fcb1 "devmerge1"
-  note: rebase of da5b1609fcb1 created no changes to commit
+  note: not rebasing da5b1609fcb1, its destination (rebasing onto) commit already has all its changes
   rebasing bea5bcfda5f9 "devmerge2"
-  note: rebase of bea5bcfda5f9 created no changes to commit
+  note: not rebasing bea5bcfda5f9, its destination (rebasing onto) commit already has all its changes
   $ tglog
   o  f66b059fae0f 'dev2'
   │
@@ -133,9 +133,9 @@ Grafty cherry picking rebasing:
   > EOF
   rebasing aeae94a564c6 "dev2"
   rebasing da5b1609fcb1 "devmerge1"
-  note: rebase of da5b1609fcb1 created no changes to commit
+  note: not rebasing da5b1609fcb1, its destination (rebasing onto) commit already has all its changes
   rebasing bea5bcfda5f9 "devmerge2"
-  note: rebase of bea5bcfda5f9 created no changes to commit
+  note: not rebasing bea5bcfda5f9, its destination (rebasing onto) commit already has all its changes
   $ tglog
   o  9cdc50ee9a9d 'dev2'
   │

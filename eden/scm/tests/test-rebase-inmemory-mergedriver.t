@@ -98,5 +98,4 @@ we expect to see "generators version = NEW".
   rebasing * "prefix FILE with 0" (base_1) (glob)
   generators version = NEW
   new_required_arg = new_required
-  note: rebase of * created no changes to commit (glob)
-
+  note: not rebasing *, its destination (rebasing onto) commit already has all its changes (glob)

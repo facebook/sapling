@@ -457,7 +457,7 @@
   rebasing shelved changes
   rebasing * "shelve changes to: second" (glob)
   merging a/a
-  note: rebase of * created no changes to commit (glob)
+  note: not rebasing *, its destination (rebasing onto) commit already has all its changes (glob)
   $ hg shelve -l
   $ hg status
   M a/a
@@ -774,7 +774,7 @@
   continue: hg unshelve --continue
   $ hg unshelve -c
   rebasing * "shelve changes to: second" (glob)
-  note: rebase of * created no changes to commit (glob)
+  note: not rebasing *, its destination (rebasing onto) commit already has all its changes (glob)
   unshelve of 'default' complete
   $ hg bookmark
   * test                      * (glob)

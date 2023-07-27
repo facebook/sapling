@@ -40,7 +40,7 @@
   $ hg rebase -r b -d a
   rebasing in-memory!
   rebasing 811ec875201f "b" (b)
-  note: rebase of 811ec875201f created no changes to commit
+  note: not rebasing 811ec875201f, its destination (rebasing onto) commit already has all its changes
 
 # Without IMM, confirm empty commit issue (D8676355) is fixed
 
@@ -50,4 +50,4 @@
   $ setconfig 'copytrace.skipduplicatecopies=True'
   $ hg rebase -r b -d a
   rebasing 811ec875201f "b" (b)
-  note: rebase of 811ec875201f created no changes to commit
+  note: not rebasing 811ec875201f, its destination (rebasing onto) commit already has all its changes

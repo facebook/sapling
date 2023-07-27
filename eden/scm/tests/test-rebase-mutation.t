@@ -162,10 +162,10 @@ set.
   grafting b3325c91a4d9 "D"
   $ hg rebase  -s 'min(desc(B))' -d .
   rebasing 27547f69f254 "B"
-  note: rebase of 27547f69f254 created no changes to commit
+  note: not rebasing 27547f69f254, its destination (rebasing onto) commit already has all its changes
   rebasing f838bfaca5c7 "C"
   rebasing b3325c91a4d9 "D"
-  note: rebase of b3325c91a4d9 created no changes to commit
+  note: not rebasing b3325c91a4d9, its destination (rebasing onto) commit already has all its changes
   $ hg log -G
   o  47afe0acbe69 C
   │
@@ -1285,7 +1285,7 @@ Rebase merge where successor of one parent is ancestor of destination
   note: not rebasing 7fb047a69f22 "E", already in destination as 112478962961 "B"
   rebasing b18e25de2cf5 "D"
   rebasing 66f1a38021c9 "F"
-  note: rebase of 66f1a38021c9 created no changes to commit
+  note: not rebasing 66f1a38021c9, its destination (rebasing onto) commit already has all its changes
   $ hg log -G
   o  8f47515dda15 D
   │
@@ -1314,7 +1314,7 @@ Rebase merge where successor of other parent is ancestor of destination
   rebasing 7fb047a69f22 "E"
   note: not rebasing b18e25de2cf5 "D", already in destination as 112478962961 "B"
   rebasing 66f1a38021c9 "F"
-  note: rebase of 66f1a38021c9 created no changes to commit
+  note: not rebasing 66f1a38021c9, its destination (rebasing onto) commit already has all its changes
 
   $ hg log -G
   o  533690786a86 E

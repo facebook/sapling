@@ -338,7 +338,7 @@ Make sure merge state is cleaned up after a no-op rebase merge (issue5494)
   continue: hg rebase --continue
   $ hg rebase --continue
   rebasing fdaca8533b86 "b"
-  note: rebase of fdaca8533b86 created no changes to commit
+  note: not rebasing fdaca8533b86, its destination (rebasing onto) commit already has all its changes
   $ hg resolve --list
   $ test -f .hg/merge
   [1]

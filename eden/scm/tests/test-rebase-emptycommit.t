@@ -49,9 +49,9 @@ With --keep, bookmark should move
 
   $ hg rebase -r 'e7b3f00ed42ef8977173765eccff8a861809549b+"BOOK-E"' -d 'max(desc(E))' --keep
   rebasing e7b3f00ed42e "D" (BOOK-D)
-  note: rebase of e7b3f00ed42e created no changes to commit
+  note: not rebasing e7b3f00ed42e, its destination (rebasing onto) commit already has all its changes
   rebasing 69a34c08022a "E" (BOOK-E)
-  note: rebase of 69a34c08022a created no changes to commit
+  note: not rebasing 69a34c08022a, its destination (rebasing onto) commit already has all its changes
   $ hg log -G -T '{desc} {bookmarks}'
   o  E BOOK-D BOOK-E
   │
@@ -82,9 +82,9 @@ still introduced by an ancestor of changeset on B-NEW. In the below case,
   $ hg rebase -s 'desc(C)' -d 'max(desc(E))'
   rebasing dc0947a82db8 "C" (BOOK-C)
   rebasing e7b3f00ed42e "D" (BOOK-D)
-  note: rebase of e7b3f00ed42e created no changes to commit
+  note: not rebasing e7b3f00ed42e, its destination (rebasing onto) commit already has all its changes
   rebasing 69a34c08022a "E" (BOOK-E)
-  note: rebase of 69a34c08022a created no changes to commit
+  note: not rebasing 69a34c08022a, its destination (rebasing onto) commit already has all its changes
   rebasing 6b2aeab91270 "F" (BOOK-F)
   $ hg log -G -T '{desc} {bookmarks}'
   o  F BOOK-F
@@ -125,11 +125,11 @@ Merge and its ancestors all become empty
 
   $ hg rebase -r '(desc(A)::)-(desc(B)::)-desc(A)' -d 'desc(H)'
   rebasing b18e25de2cf5 "D" (BOOK-D)
-  note: rebase of b18e25de2cf5 created no changes to commit
+  note: not rebasing b18e25de2cf5, its destination (rebasing onto) commit already has all its changes
   rebasing dc0947a82db8 "C" (BOOK-C)
-  note: rebase of dc0947a82db8 created no changes to commit
+  note: not rebasing dc0947a82db8, its destination (rebasing onto) commit already has all its changes
   rebasing 86a1f6686812 "E" (BOOK-E)
-  note: rebase of 86a1f6686812 created no changes to commit
+  note: not rebasing 86a1f6686812, its destination (rebasing onto) commit already has all its changes
 
   $ hg log -G -T '{desc} {bookmarks}'
   o  H BOOK-C BOOK-D BOOK-E H
@@ -170,11 +170,11 @@ Part of ancestors of a merge become empty
 
   $ hg rebase -r '(desc(A)::)-(desc(B)::)-desc(A)' -d 'desc(H)'
   rebasing dc0947a82db8 "C" (BOOK-C)
-  note: rebase of dc0947a82db8 created no changes to commit
+  note: not rebasing dc0947a82db8, its destination (rebasing onto) commit already has all its changes
   rebasing 03ca77807e91 "E" (BOOK-E)
   rebasing b18e25de2cf5 "D" (BOOK-D)
   rebasing ad6717a6a58e "F" (BOOK-F)
-  note: rebase of ad6717a6a58e created no changes to commit
+  note: not rebasing ad6717a6a58e, its destination (rebasing onto) commit already has all its changes
   rebasing c58e8bdac1f4 "G" (BOOK-G)
 
   $ hg log -G -T '{desc} {bookmarks}'
