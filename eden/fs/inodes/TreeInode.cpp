@@ -47,6 +47,7 @@
 #include "eden/fs/store/DiffCallback.h"
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/Tracing.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/CaseSensitivity.h"
@@ -197,6 +198,15 @@ ImmediateFuture<struct stat> TreeInode::stat(
 
 #ifndef _WIN32
   getMetadataLocked(contents->entries).applyToStat(st);
+  if (UNLIKELY(S_ISREG(st.st_mode))) {
+    // TODO(T159626416): Log the path of the tree that is being misinterpreted
+    // as a regular file. We should only do this if these events are infrequent.
+    getMount()->getServerState()->getStructuredLogger()->logEvent(
+        InodeMetadataMismatch{
+            st.st_mode,
+            st.st_ino,
+        });
+  }
 #endif
 
   // For directories, nlink is the number of entries including the

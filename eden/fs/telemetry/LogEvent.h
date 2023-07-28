@@ -321,6 +321,18 @@ struct MetadataSizeMismatch {
   }
 };
 
+struct InodeMetadataMismatch {
+  uint64_t mode;
+  uint64_t ino;
+
+  static constexpr const char* type = "inode_metadata_mismatch";
+
+  void populate(DynamicEvent& event) const {
+    event.addInt("st_mode", mode);
+    event.addInt("ino", ino);
+  }
+};
+
 struct EMenuStartupFailure {
   static constexpr const char* type = "emenu_startup_failure";
 
