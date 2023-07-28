@@ -158,7 +158,7 @@ def wraprepo(repo) -> None:
 
             if files:
                 results = [(path, hex(fnode)) for (path, fnode) in files]
-                self.fileservice.prefetch(results)
+                self.fileservice.prefetch(results, fetchhistory=False)
 
     repo.__class__ = shallowrepository
 
