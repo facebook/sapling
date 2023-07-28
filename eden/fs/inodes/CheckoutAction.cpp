@@ -342,7 +342,9 @@ Future<bool> CheckoutAction::hasConflict() {
         ->isSameAs(
             oldScmEntry_.value().second.getHash(),
             oldBlobSha1_.value(),
-            oldScmEntry_.value().second.getType(),
+            filteredEntryType(
+                oldScmEntry_.value().second.getType(),
+                ctx_->getWindowsSymlinksEnabled()),
             ctx_->getFetchContext())
         .thenValue([this](bool isSame) {
           if (isSame) {

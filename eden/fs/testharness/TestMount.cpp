@@ -306,6 +306,7 @@ void TestMount::createMount(InodeCatalogType inodeCatalogType) {
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
       edenConfig_,
+      config_->getEnableWindowsSymlinks(),
       config_->getCaseSensitive());
   auto journal = std::make_unique<Journal>(stats_.copy());
   edenMount_ = EdenMount::create(
@@ -433,6 +434,7 @@ void TestMount::remount() {
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
       edenConfig_,
+      config->getEnableWindowsSymlinks(),
       config->getCaseSensitive());
 
   auto journal = std::make_unique<Journal>(stats_.copy());
@@ -472,6 +474,7 @@ void TestMount::remountGracefully() {
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
       edenConfig_,
+      config->getEnableWindowsSymlinks(),
       config->getCaseSensitive());
 
   auto journal = std::make_unique<Journal>(stats_.copy());

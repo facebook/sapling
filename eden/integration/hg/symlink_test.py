@@ -204,12 +204,10 @@ class SymlinkWindowsDisabledTest(EdenHgTestCase):
     def test_disabled_symlinks_update(self) -> None:
         self.repo.symlink("symlink2", "contents2")
         self.repo.commit("Another commit with a symlink")
-        with self.assertRaises(hgrepo.HgError) as context:
-            self.repo.update(self.initial_commit)
-        self.assertIn(
-            b"conflicting changes:\n  symlink2",
-            context.exception.stderr,
-        )
+        # There shouldn't be issues when updating now that the SHA1 is being properly calculated and everything symlink related is gated
+        self.repo.update(self.initial_commit)
+        self.assert_status_empty()
+        self.assertEqual("contents1", self.read_file("symlink"))
 
     def test_modified_fake_symlink_target(self) -> None:
         self.assert_status_empty()

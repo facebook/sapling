@@ -154,7 +154,8 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
 
 ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
     RelativePathPiece path,
-    const ObjectFetchContextPtr& fetchContext) const {
+    const ObjectFetchContextPtr& fetchContext,
+    bool windowsSymlinksEnabled) const {
   using R = ImmediateFuture<std::optional<TreeEntryType>>;
   return match(
       variant_,
@@ -169,6 +170,9 @@ ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
             return TreeEntryType::TREE;
           case dtype_t::Regular:
             return TreeEntryType::REGULAR_FILE;
+          case dtype_t::Symlink:
+            return windowsSymlinksEnabled ? TreeEntryType::SYMLINK
+                                          : TreeEntryType::REGULAR_FILE;
           default:
             return std::nullopt;
         }
@@ -185,7 +189,9 @@ ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
         });
       },
       [&](const TreePtr&) -> R { return TreeEntryType::TREE; },
-      [&](const TreeEntry& entry) -> R { return entry.getType(); });
+      [&](const TreeEntry& entry) -> R {
+        return filteredEntryType(entry.getType(), windowsSymlinksEnabled);
+      });
 }
 
 ImmediateFuture<BlobMetadata> VirtualInode::getBlobMetadata(
@@ -254,6 +260,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
+  bool windowsSymlinksEnabled = objectStore->getWindowsSymlinksEnabled();
   // For non regular files we return errors for hashes and sizes.
   // We intentionally want to refuse to compute the SHA1 of symlinks.
   auto dtype = getDtype();
@@ -287,7 +294,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
   auto entryTypeFuture = ImmediateFuture<std::optional<TreeEntryType>>{
       PathError{EINVAL, path, "type not requested"}};
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
-    entryTypeFuture = getTreeEntryType(path, fetchContext);
+    entryTypeFuture =
+        getTreeEntryType(path, fetchContext, windowsSymlinksEnabled);
   }
   auto blobMetadataFuture = ImmediateFuture<BlobMetadata>{
       PathError{EINVAL, path, "neither sha1 nor size requested"}};
@@ -430,7 +438,8 @@ ImmediateFuture<struct stat> VirtualInode::stat(
           return st;
         } else if constexpr (std::is_same_v<T, TreeEntry>) {
           objectId = arg.getHash();
-          mode = modeFromTreeEntryType(arg.getType());
+          mode = modeFromTreeEntryType(filteredEntryType(
+              arg.getType(), objectStore->getWindowsSymlinksEnabled()));
           // fallthrough
         } else {
           static_assert(always_false_v<T>, "non-exhaustive visitor!");

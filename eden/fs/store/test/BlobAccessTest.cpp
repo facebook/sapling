@@ -102,6 +102,7 @@ struct BlobAccessTest : ::testing::Test {
         std::make_shared<ProcessNameCache>(),
         std::make_shared<NullStructuredLogger>(),
         rawEdenConfig,
+        true,
         kPathMapDefaultCaseSensitive);
 
     blobAccess = std::make_shared<BlobAccess>(objectStore, blobCache);

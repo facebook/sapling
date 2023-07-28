@@ -135,6 +135,7 @@ void processBothPresent(
   auto entryPath = currentPath + scmEntry.first;
   bool isTreeSCM = scmEntry.second.isTree();
   bool isTreeWD = wdEntry.second.isTree();
+  bool windowsSymlinksEnabled = context->getWindowsSymlinksEnabled();
 
   // If wdEntry and scmEntry are both files (or symlinks) then we don't need
   // to bother computing the ignore status: the file is explicitly tracked in
@@ -207,7 +208,9 @@ void processBothPresent(
       // changed and then later reverted. In that case, the contents would be
       // the same but the blobs would have different hashes
       // If the types are different, then this entry is definitely modified
-      if (scmEntry.second.getType() != wdEntry.second.getType()) {
+      if (filteredEntryType(
+              scmEntry.second.getType(), windowsSymlinksEnabled) !=
+          filteredEntryType(wdEntry.second.getType(), windowsSymlinksEnabled)) {
         context->callback->modifiedPath(entryPath, wdEntry.second.getDtype());
       } else {
         auto compareEntryContents =

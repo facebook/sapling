@@ -1559,6 +1559,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       serverState_->getProcessNameCache(),
       serverState_->getStructuredLogger(),
       serverState_->getReloadableConfig()->getEdenConfig(),
+      initialConfig->getEnableWindowsSymlinks(),
       initialConfig->getCaseSensitive());
   auto journal = std::make_unique<Journal>(getStats().copy());
 

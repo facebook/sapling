@@ -46,6 +46,7 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
     std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::shared_ptr<const EdenConfig> edenConfig,
+    bool windowsSymlinksEnabled,
     CaseSensitivity caseSensitive) {
   return std::shared_ptr<ObjectStore>{new ObjectStore{
       std::move(backingStore),
@@ -54,6 +55,7 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
       processNameCache,
       structuredLogger,
       edenConfig,
+      windowsSymlinksEnabled,
       caseSensitive}};
 }
 
@@ -64,6 +66,7 @@ ObjectStore::ObjectStore(
     std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::shared_ptr<const EdenConfig> edenConfig,
+    bool windowsSymlinksEnabled,
     CaseSensitivity caseSensitive)
     : metadataCache_{folly::in_place, kCacheSize},
       treeCache_{std::move(treeCache)},
@@ -73,7 +76,8 @@ ObjectStore::ObjectStore(
       processNameCache_(processNameCache),
       structuredLogger_(structuredLogger),
       edenConfig_(edenConfig),
-      caseSensitive_{caseSensitive} {
+      caseSensitive_{caseSensitive},
+      windowsSymlinksEnabled_{windowsSymlinksEnabled} {
   XCHECK(backingStore_);
   XCHECK(stats_);
 }

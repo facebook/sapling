@@ -59,6 +59,7 @@ struct ObjectStoreTest : ::testing::Test {
         std::make_shared<ProcessNameCache>(),
         std::make_shared<NullStructuredLogger>(),
         EdenConfig::createTestEdenConfig(),
+        true,
         kPathMapDefaultCaseSensitive);
 
     auto configWithBlake3Key = EdenConfig::createTestEdenConfig();
@@ -79,6 +80,7 @@ struct ObjectStoreTest : ::testing::Test {
         std::make_shared<ProcessNameCache>(),
         std::make_shared<NullStructuredLogger>(),
         std::move(configWithBlake3Key),
+        true,
         kPathMapDefaultCaseSensitive);
 
     readyBlobId = putReadyBlob("readyblob");
@@ -212,6 +214,7 @@ TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
       EdenConfig::createTestEdenConfig(),
+      true,
       kPathMapDefaultCaseSensitive);
 
   size_t expectedSize = data.size();

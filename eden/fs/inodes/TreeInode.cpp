@@ -2795,7 +2795,8 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
               // source-control-visible metadata changes will cause the inode to
               // be materialized, and the previous path will be taken.
               treeEntryTypeFromMode(inodeEntry->getInitialMode()) ==
-                  scmEntry.getType() &&
+                  filteredEntryType(
+                      scmEntry.getType(), windowsSymlinksEnabled) &&
               getObjectStore().areObjectsKnownIdentical(
                   inodeEntry->getHash(), scmEntry.getHash())) {
             exactMatch = true;
@@ -3313,7 +3314,12 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   // revert them to the desired state if they were modified in the local
   // filesystem.
   if (!ctx->forceUpdate() && oldScmEntry && newScmEntry &&
-      oldScmEntry->second.getType() == newScmEntry->second.getType() &&
+      // TODO: This is technically incorrect for files that go from SYMLINK to
+      // REGULAR (or vice versa).
+      filteredEntryType(
+          oldScmEntry->second.getType(), windowsSymlinksEnabled) ==
+          filteredEntryType(
+              newScmEntry->second.getType(), windowsSymlinksEnabled) &&
       getObjectStore().areObjectsKnownIdentical(
           oldScmEntry->second.getHash(), newScmEntry->second.getHash())) {
     // TODO: Should we perhaps fall through anyway to report conflicts for
