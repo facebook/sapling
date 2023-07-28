@@ -1942,11 +1942,18 @@ EdenServiceHandler::semifuture_getEntryInformation(
                  .thenValue([mountHandle,
                              paths = std::move(paths),
                              fetchContext = fetchContext.copy()](auto&&) {
+                   bool windowsSymlinksEnabled =
+                       mountHandle.getEdenMount()
+                           .getCheckoutConfig()
+                           ->getEnableWindowsSymlinks();
                    return collectAll(applyToVirtualInode(
                                          mountHandle.getRootInode(),
                                          *paths,
-                                         [](const VirtualInode& inode) {
-                                           return inode.getDtype();
+                                         [windowsSymlinksEnabled](
+                                             const VirtualInode& inode) {
+                                           return filteredEntryDtype(
+                                               inode.getDtype(),
+                                               windowsSymlinksEnabled);
                                          },
                                          mountHandle.getObjectStorePtr(),
                                          fetchContext))

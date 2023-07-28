@@ -83,6 +83,16 @@ TreeEntryType filteredEntryType(TreeEntryType ft, bool windowsSymlinksEnabled) {
   return ft;
 }
 
+dtype_t filteredEntryDtype(dtype_t mode, bool windowsSymlinksEnabled) {
+  if (folly::kIsWindows) {
+    if (mode != dtype_t::Symlink) {
+      return mode;
+    }
+    return windowsSymlinksEnabled ? mode : dtype_t::Regular;
+  }
+  return mode;
+}
+
 std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode) {
   if (S_ISREG(mode)) {
 #ifdef _WIN32

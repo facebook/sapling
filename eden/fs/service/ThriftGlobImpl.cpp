@@ -43,6 +43,8 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     std::shared_ptr<ServerState> serverState,
     std::vector<std::string> globs,
     const ObjectFetchContextPtr& fetchContext) {
+  bool windowsSymlinksEnabled =
+      edenMount->getCheckoutConfig()->getEnableWindowsSymlinks();
   // Compile the list of globs into a tree
   auto globRoot = std::make_shared<GlobNode>(
       includeDotfiles_,
@@ -188,6 +190,7 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                suppressFileList = suppressFileList_,
                listOnlyFiles = listOnlyFiles_,
                fetchContext = fetchContext.copy(),
+               windowsSymlinksEnabled = windowsSymlinksEnabled,
                config = serverState->getEdenConfig()](
                   std::vector<GlobNode::GlobResult>&& results) mutable
               -> ImmediateFuture<std::unique_ptr<Glob>> {
@@ -201,8 +204,13 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                           entry.name.asString());
 
                       if (wantDtype) {
+                        auto dtype = entry.dtype;
+                        if (folly::kIsWindows && dtype == dtype_t::Symlink &&
+                            !windowsSymlinksEnabled) {
+                          dtype = dtype_t::Regular;
+                        }
                         out->dtypes_ref()->emplace_back(
-                            static_cast<OsDtype>(entry.dtype));
+                            static_cast<OsDtype>(dtype));
                       }
 
                       out->originHashes_ref()->emplace_back(

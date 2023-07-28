@@ -168,6 +168,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
   }
 
   ImmediateFuture<folly::Unit> runForScmBlob(const InodePtr& inode) {
+    bool windowsSymlinksEnabled = context_->getWindowsSymlinksEnabled();
     XCHECK_GT(scmEntries_.size(), 0ull) << "scmEntries must have values";
     auto fileInode = inode.asFilePtrOrNull();
     if (!fileInode) {
@@ -177,7 +178,10 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       // tree as untracked/ignored.
       auto path = getPath();
       XLOG(DBG5) << "removed file: " << path;
-      context_->callback->removedPath(path, scmEntries_[0].getDtype());
+      context_->callback->removedPath(
+          path,
+          filteredEntryDtype(
+              scmEntries_[0].getDtype(), windowsSymlinksEnabled));
       context_->callback->addedPath(path, inode->getType());
       auto treeInode = inode.asTreePtr();
       if (isIgnored_ && !context_->listIgnored) {

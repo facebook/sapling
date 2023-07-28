@@ -92,6 +92,7 @@ TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean) {
       InodeCatalogType::Sqlite,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
+      true,
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   EXPECT_TRUE(overlay->hadCleanStartup());
@@ -105,6 +106,7 @@ TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean_buffered) {
       InodeCatalogType::SqliteBuffered,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
+      true,
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   EXPECT_TRUE(overlay->hadCleanStartup());
@@ -119,6 +121,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean) {
         InodeCatalogType::Sqlite,
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
+        true,
         *EdenConfig::createTestEdenConfig());
     overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }
@@ -128,6 +131,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean) {
       InodeCatalogType::Sqlite,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
+      true,
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   EXPECT_TRUE(overlay->hadCleanStartup());
@@ -142,6 +146,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean_buffered) {
         InodeCatalogType::SqliteBuffered,
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
+        true,
         *EdenConfig::createTestEdenConfig());
     overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }
@@ -151,6 +156,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean_buffered) {
       InodeCatalogType::SqliteBuffered,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
+      true,
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   EXPECT_TRUE(overlay->hadCleanStartup());
@@ -166,6 +172,7 @@ TEST(PlainSqliteInodeCatalogTest, close_overlay_with_no_capacity_buffered) {
       InodeCatalogType::SqliteBuffered,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
+      true,
       *config);
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   overlay->close();
@@ -184,6 +191,7 @@ TEST(
       InodeCatalogType::SqliteBuffered,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
+      true,
       *config);
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
 
@@ -232,6 +240,7 @@ class RawSqliteInodeCatalogTest
         overlayType(),
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
+        true,
         *EdenConfig::createTestEdenConfig());
     overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }
@@ -409,6 +418,7 @@ class DebugDumpSqliteInodeCatalogInodesTest
         overlayType(),
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
+        true,
         *EdenConfig::createTestEdenConfig());
     overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }

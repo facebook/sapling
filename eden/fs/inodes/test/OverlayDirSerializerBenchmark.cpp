@@ -150,6 +150,7 @@ void benchmarkOverlayDirSerialization(
       overlayType,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
+      true,
       *EdenConfig::createTestEdenConfig());
   printf("Initalizing Overlay...\n");
 

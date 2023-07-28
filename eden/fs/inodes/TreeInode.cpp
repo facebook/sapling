@@ -2665,10 +2665,14 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
 
       if (!entryIgnored) {
         XLOG(DBG8) << "diff: untracked file: " << entryPath;
-        context->callback->addedPath(entryPath, inodeEntry->getDtype());
+        context->callback->addedPath(
+            entryPath,
+            filteredEntryDtype(inodeEntry->getDtype(), windowsSymlinksEnabled));
       } else if (context->listIgnored) {
         XLOG(DBG9) << "diff: ignored file: " << entryPath;
-        context->callback->ignoredPath(entryPath, inodeEntry->getDtype());
+        context->callback->ignoredPath(
+            entryPath,
+            filteredEntryDtype(inodeEntry->getDtype(), windowsSymlinksEnabled));
       } else {
         // Don't bother reporting this ignored file since
         // listIgnored is false.
@@ -2721,7 +2725,9 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
     auto processRemoved = [&](const Tree::value_type& scmEntry) {
       XLOG(DBG5) << "diff: removed file: " << currentPath + scmEntry.first;
       context->callback->removedPath(
-          currentPath + scmEntry.first, scmEntry.second.getDtype());
+          currentPath + scmEntry.first,
+          filteredEntryDtype(
+              scmEntry.second.getDtype(), windowsSymlinksEnabled));
       if (scmEntry.second.isTree()) {
         deferredEntries.emplace_back(DeferredDiffEntry::createRemovedScmEntry(
             context, currentPath + scmEntry.first, scmEntry.second.getHash()));
@@ -2831,13 +2837,21 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
           if (entryIgnored) {
             if (context->listIgnored) {
               XLOG(DBG6) << "diff: directory --> ignored file: " << entryPath;
-              context->callback->ignoredPath(entryPath, inodeEntry->getDtype());
+              context->callback->ignoredPath(
+                  entryPath,
+                  filteredEntryDtype(
+                      inodeEntry->getDtype(), windowsSymlinksEnabled));
             }
           } else {
             XLOG(DBG6) << "diff: directory --> untracked file: " << entryPath;
-            context->callback->addedPath(entryPath, inodeEntry->getDtype());
+            context->callback->addedPath(
+                entryPath,
+                filteredEntryDtype(
+                    inodeEntry->getDtype(), windowsSymlinksEnabled));
           }
-          context->callback->removedPath(entryPath, scmEntry.getDtype());
+          context->callback->removedPath(
+              entryPath,
+              filteredEntryDtype(scmEntry.getDtype(), windowsSymlinksEnabled));
           deferredEntries.emplace_back(DeferredDiffEntry::createRemovedScmEntry(
               context, entryPath, scmEntry.getHash()));
         } else {
@@ -2859,7 +2873,10 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
             // The mode is definitely modified
             XLOG(DBG5) << "diff: file modified due to mode change: "
                        << entryPath;
-            context->callback->modifiedPath(entryPath, inodeEntry->getDtype());
+            context->callback->modifiedPath(
+                entryPath,
+                filteredEntryDtype(
+                    inodeEntry->getDtype(), windowsSymlinksEnabled));
           } else {
             // TODO: Hopefully at some point we will track file sizes in the
             // parent TreeInode::Entry and the TreeEntry.  Once we have file
@@ -2870,7 +2887,8 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
                 entryPath,
                 scmEntry,
                 inodeEntry->getHash(),
-                inodeEntry->getDtype()));
+                filteredEntryDtype(
+                    inodeEntry->getDtype(), windowsSymlinksEnabled)));
           }
         }
       }

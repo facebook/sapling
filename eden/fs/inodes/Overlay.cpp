@@ -106,6 +106,7 @@ std::shared_ptr<Overlay> Overlay::create(
     InodeCatalogType inodeCatalogType,
     std::shared_ptr<StructuredLogger> logger,
     EdenStatsPtr stats,
+    bool windowsSymlinksEnabled,
     const EdenConfig& config) {
   // This allows us to access the private constructor.
   struct MakeSharedEnabler : public Overlay {
@@ -115,6 +116,7 @@ std::shared_ptr<Overlay> Overlay::create(
         InodeCatalogType inodeCatalogType,
         std::shared_ptr<StructuredLogger> logger,
         EdenStatsPtr stats,
+        bool windowsSymlinksEnabled,
         const EdenConfig& config)
         : Overlay(
               localDir,
@@ -122,6 +124,7 @@ std::shared_ptr<Overlay> Overlay::create(
               inodeCatalogType,
               logger,
               std::move(stats),
+              windowsSymlinksEnabled,
               config) {}
   };
   return std::make_shared<MakeSharedEnabler>(
@@ -130,6 +133,7 @@ std::shared_ptr<Overlay> Overlay::create(
       inodeCatalogType,
       logger,
       std::move(stats),
+      windowsSymlinksEnabled,
       config);
 }
 
@@ -139,6 +143,7 @@ Overlay::Overlay(
     InodeCatalogType inodeCatalogType,
     std::shared_ptr<StructuredLogger> logger,
     EdenStatsPtr stats,
+    bool windowsSymlinksEnabled,
     const EdenConfig& config)
     : fileContentStore_{makeFileContentStore(localDir)},
       inodeCatalog_{makeInodeCatalog(
@@ -154,7 +159,8 @@ Overlay::Overlay(
       localDir_{localDir},
       caseSensitive_{caseSensitive},
       structuredLogger_{logger},
-      stats_{std::move(stats)} {}
+      stats_{std::move(stats)},
+      windowsSymlinksEnabled_(windowsSymlinksEnabled) {}
 
 Overlay::~Overlay() {
   close();

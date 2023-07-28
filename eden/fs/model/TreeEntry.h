@@ -71,6 +71,8 @@ std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode);
 
 TreeEntryType filteredEntryType(TreeEntryType ft, bool windowsSymlinksEnabled);
 
+dtype_t filteredEntryDtype(dtype_t mode, bool windowsSymlinksEnabled);
+
 class TreeEntry {
  public:
   explicit TreeEntry(const ObjectId& hash, TreeEntryType type)

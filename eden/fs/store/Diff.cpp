@@ -64,7 +64,9 @@ void processRemovedSide(
     RelativePathPiece currentPath,
     const Tree::value_type& scmEntry) {
   context->callback->removedPath(
-      currentPath + scmEntry.first, scmEntry.second.getDtype());
+      currentPath + scmEntry.first,
+      filteredEntryDtype(
+          scmEntry.second.getDtype(), context->getWindowsSymlinksEnabled()));
   if (!scmEntry.second.isTree()) {
     return;
   }
@@ -90,6 +92,7 @@ void processAddedSide(
     bool isIgnored) {
   bool entryIgnored = isIgnored;
   auto entryPath = currentPath + wdEntry.first;
+  bool windowsSymlinksEnabled = context->getWindowsSymlinksEnabled();
   if (!isIgnored && ignore) {
     auto fileType =
         wdEntry.second.isTree() ? GitIgnore::TYPE_DIR : GitIgnore::TYPE_FILE;
@@ -103,9 +106,13 @@ void processAddedSide(
   }
 
   if (!entryIgnored) {
-    context->callback->addedPath(entryPath, wdEntry.second.getDtype());
+    context->callback->addedPath(
+        entryPath,
+        filteredEntryDtype(wdEntry.second.getDtype(), windowsSymlinksEnabled));
   } else if (context->listIgnored) {
-    context->callback->ignoredPath(entryPath, wdEntry.second.getDtype());
+    context->callback->ignoredPath(
+        entryPath,
+        filteredEntryDtype(wdEntry.second.getDtype(), windowsSymlinksEnabled));
   } else {
     // Don't bother reporting this ignored file since
     // listIgnored is false.
@@ -178,10 +185,16 @@ void processBothPresent(
       // Add a ADDED entry for this path and a removal of the directory
       if (entryIgnored) {
         if (context->listIgnored) {
-          context->callback->ignoredPath(entryPath, wdEntry.second.getDtype());
+          context->callback->ignoredPath(
+              entryPath,
+              filteredEntryDtype(
+                  wdEntry.second.getDtype(), windowsSymlinksEnabled));
         }
       } else {
-        context->callback->addedPath(entryPath, wdEntry.second.getDtype());
+        context->callback->addedPath(
+            entryPath,
+            filteredEntryDtype(
+                wdEntry.second.getDtype(), windowsSymlinksEnabled));
       }
 
       // Report everything in scmTree as REMOVED
@@ -194,7 +207,10 @@ void processBothPresent(
     if (isTreeWD) {
       // file-to-tree
       // Add a REMOVED entry for this path
-      context->callback->removedPath(entryPath, scmEntry.second.getDtype());
+      context->callback->removedPath(
+          entryPath,
+          filteredEntryDtype(
+              scmEntry.second.getDtype(), windowsSymlinksEnabled));
 
       // Report everything in wdEntry as ADDED
       context->callback->addedPath(entryPath, wdEntry.second.getDtype());
@@ -211,7 +227,10 @@ void processBothPresent(
       if (filteredEntryType(
               scmEntry.second.getType(), windowsSymlinksEnabled) !=
           filteredEntryType(wdEntry.second.getType(), windowsSymlinksEnabled)) {
-        context->callback->modifiedPath(entryPath, wdEntry.second.getDtype());
+        context->callback->modifiedPath(
+            entryPath,
+            filteredEntryDtype(
+                wdEntry.second.getDtype(), windowsSymlinksEnabled));
       } else {
         auto compareEntryContents =
             context->store
@@ -221,7 +240,9 @@ void processBothPresent(
                     context->getFetchContext())
                 .thenValue([entryPath = entryPath.copy(),
                             context,
-                            dtype = scmEntry.second.getDtype()](bool equal) {
+                            dtype = filteredEntryDtype(
+                                scmEntry.second.getDtype(),
+                                windowsSymlinksEnabled)](bool equal) {
                   if (!equal) {
                     context->callback->modifiedPath(entryPath, dtype);
                   }

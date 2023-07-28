@@ -70,7 +70,8 @@ ImmediateFuture<Hash32> VirtualInode::getBlake3(
     const ObjectFetchContextPtr& fetchContext) const {
   // Ensure this is a regular file.
   // We intentionally want to refuse to compute the SHA1 of symlinks
-  switch (getDtype()) {
+  switch (filteredEntryDtype(
+      getDtype(), objectStore->getWindowsSymlinksEnabled())) {
     case dtype_t::Dir:
       return makeImmediateFuture<Hash32>(PathError(EISDIR, path));
     case dtype_t::Symlink:
@@ -114,7 +115,8 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
     const ObjectFetchContextPtr& fetchContext) const {
   // Ensure this is a regular file.
   // We intentionally want to refuse to compute the SHA1 of symlinks
-  switch (getDtype()) {
+  switch (filteredEntryDtype(
+      getDtype(), objectStore->getWindowsSymlinksEnabled())) {
     case dtype_t::Dir:
       return makeImmediateFuture<Hash20>(PathError(EISDIR, path));
     case dtype_t::Symlink:
@@ -263,7 +265,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
   bool windowsSymlinksEnabled = objectStore->getWindowsSymlinksEnabled();
   // For non regular files we return errors for hashes and sizes.
   // We intentionally want to refuse to compute the SHA1 of symlinks.
-  auto dtype = getDtype();
+  auto dtype = filteredEntryDtype(getDtype(), windowsSymlinksEnabled);
   switch (dtype) {
     case dtype_t::Regular:
       break;
