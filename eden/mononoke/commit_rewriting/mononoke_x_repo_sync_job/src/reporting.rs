@@ -11,6 +11,7 @@ use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Repo as CrossRepo;
 use futures_stats::FutureStats;
 use mononoke_types::ChangesetId;
+use mononoke_types::Timestamp;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::error;
 use slog::info;
@@ -28,6 +29,7 @@ const SOURCE_CS_ID: &str = "source_cs_id";
 const SYNC_TYPE_ARG: &str = "sync_type";
 const TARGET_CS_ID: &str = "target_cs_id";
 const DURATION_MS: &str = "duration_ms";
+const DELAY_SECONDS: &str = "delay_seconds";
 const ERROR: &str = "error";
 const SUCCESS: &str = "success";
 
@@ -48,6 +50,7 @@ fn log_success_to_scuba(
     source_cs_id: ChangesetId,
     maybe_synced_cs_id: Option<ChangesetId>,
     stats: FutureStats,
+    bookmark_update_timestamp: Option<Timestamp>,
 ) {
     scuba_sample
         .add(DURATION_MS, stats.completion_time.as_millis() as u64)
@@ -58,6 +61,9 @@ fn log_success_to_scuba(
         // when syncing just dropped all the changes in the commit
         scuba_sample.add(TARGET_CS_ID, format!("{}", cs_id));
     }
+    if let Some(timestamp) = bookmark_update_timestamp {
+        scuba_sample.add(DELAY_SECONDS, timestamp.since_seconds() as u64);
+    }
     scuba_sample.log();
 }
 
@@ -67,10 +73,14 @@ fn log_error_to_scuba(
     source_cs_id: ChangesetId,
     stats: FutureStats,
     error_string: String,
+    bookmark_update_timestamp: Option<Timestamp>,
 ) {
     scuba_sample.add(SUCCESS, 0).add(ERROR, error_string);
     scuba_sample.add(DURATION_MS, stats.completion_time.as_millis() as u64);
     scuba_sample.add(SOURCE_CS_ID, format!("{}", source_cs_id));
+    if let Some(timestamp) = bookmark_update_timestamp {
+        scuba_sample.add(DELAY_SECONDS, timestamp.since_seconds() as u64);
+    }
     scuba_sample.log();
 }
 
@@ -79,13 +89,20 @@ fn log_success_to_logger(
     source_cs_id: &ChangesetId,
     maybe_synced_cs_id: &Option<ChangesetId>,
     stats: &FutureStats,
+    bookmark_update_timestamp: Option<Timestamp>,
 ) {
     let duration = stats.completion_time.as_millis();
+    let delay = if let Some(timestamp) = bookmark_update_timestamp {
+        format!(" (delay {}s)", timestamp.since_seconds())
+    } else {
+        "".to_string()
+    };
+
     match maybe_synced_cs_id {
         Some(synced_cs_id) => {
             info!(
                 logger,
-                "changeset {} synced as {} in {}ms", source_cs_id, synced_cs_id, duration,
+                "changeset {} synced as {} in {}ms{}", source_cs_id, synced_cs_id, duration, delay,
             );
         }
         None => {
@@ -120,16 +137,29 @@ fn log_sync_single_changeset_result(
     bcs_id: ChangesetId,
     res: &Result<Option<ChangesetId>, Error>,
     stats: FutureStats,
+    bookmark_update_timestamp: Option<Timestamp>,
 ) {
     match res {
         Ok(maybe_synced_cs_id) => {
-            log_success_to_logger(ctx.logger(), &bcs_id, maybe_synced_cs_id, &stats);
-            log_success_to_scuba(scuba_sample, bcs_id, *maybe_synced_cs_id, stats);
+            log_success_to_logger(
+                ctx.logger(),
+                &bcs_id,
+                maybe_synced_cs_id,
+                &stats,
+                bookmark_update_timestamp,
+            );
+            log_success_to_scuba(
+                scuba_sample,
+                bcs_id,
+                *maybe_synced_cs_id,
+                stats,
+                bookmark_update_timestamp,
+            );
         }
         Err(e) => {
             let es = format!("{}", e);
             log_error_to_logger(ctx.logger(), "Syncing", &bcs_id, &stats, &es);
-            log_error_to_scuba(scuba_sample, bcs_id, stats, es);
+            log_error_to_scuba(scuba_sample, bcs_id, stats, es, bookmark_update_timestamp);
         }
     }
 }
@@ -140,9 +170,17 @@ pub fn log_pushrebase_sync_single_changeset_result(
     bcs_id: ChangesetId,
     res: &Result<Option<ChangesetId>, Error>,
     stats: FutureStats,
+    bookmark_update_timestamp: Option<Timestamp>,
 ) {
     scuba_sample.add(SYNC_TYPE_ARG, "pushrebase");
-    log_sync_single_changeset_result(ctx, scuba_sample, bcs_id, res, stats)
+    log_sync_single_changeset_result(
+        ctx,
+        scuba_sample,
+        bcs_id,
+        res,
+        stats,
+        bookmark_update_timestamp,
+    )
 }
 
 pub fn log_non_pushrebase_sync_single_changeset_result(
@@ -151,15 +189,24 @@ pub fn log_non_pushrebase_sync_single_changeset_result(
     bcs_id: ChangesetId,
     res: &Result<Option<ChangesetId>, Error>,
     stats: FutureStats,
+    bookmark_update_timestamp: Option<Timestamp>,
 ) {
     scuba_sample.add(SYNC_TYPE_ARG, "non-pushrebase");
-    log_sync_single_changeset_result(ctx, scuba_sample, bcs_id, res, stats)
+    log_sync_single_changeset_result(
+        ctx,
+        scuba_sample,
+        bcs_id,
+        res,
+        stats,
+        bookmark_update_timestamp,
+    )
 }
 
 pub fn log_bookmark_deletion_result(
     mut scuba_sample: MononokeScubaSampleBuilder,
     res: &Result<(), Error>,
     stats: FutureStats,
+    bookmark_update_timestamp: Option<Timestamp>,
 ) {
     scuba_sample.add(SYNC_TYPE_ARG, "bookmark_deletion");
     match res {
@@ -171,6 +218,9 @@ pub fn log_bookmark_deletion_result(
         }
     }
     scuba_sample.add(DURATION_MS, stats.completion_time.as_millis() as u64);
+    if let Some(timestamp) = bookmark_update_timestamp {
+        scuba_sample.add(DELAY_SECONDS, timestamp.since_seconds() as u64);
+    }
     scuba_sample.log();
 }
 

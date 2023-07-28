@@ -178,6 +178,7 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static, R: 
         &common_bookmarks,
         scuba_sample,
         pushrebase_rewrite_dates,
+        None,
     )
     .await;
 

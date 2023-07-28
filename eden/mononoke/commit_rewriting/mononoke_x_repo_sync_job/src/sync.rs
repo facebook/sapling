@@ -32,6 +32,7 @@ use futures::try_join;
 use futures_stats::TimedFutureExt;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
+use mononoke_types::Timestamp;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -92,6 +93,7 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
                 scuba_sample,
                 &bookmark,
                 common_pushrebase_bookmarks,
+                Some(entry.timestamp),
             )
             .await?;
 
@@ -108,6 +110,7 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
         common_pushrebase_bookmarks,
         scuba_sample,
         pushrebase_rewrite_dates,
+        Some(entry.timestamp),
     )
     .await
 
@@ -124,6 +127,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     scuba_sample: MononokeScubaSampleBuilder,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
+    bookmark_update_timestamp: Option<Timestamp>,
 ) -> Result<SyncResult, Error> {
     let (unsynced_ancestors, unsynced_ancestors_versions) =
         find_toposorted_unsynced_ancestors(ctx, commit_syncer, to_cs_id.clone()).await?;
@@ -162,6 +166,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
                 unsynced_ancestors,
                 &version,
                 pushrebase_rewrite_dates,
+                bookmark_update_timestamp,
             )
             .await
             .map(SyncResult::Synced);
@@ -178,6 +183,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
             cs_id,
             common_pushrebase_bookmarks,
             &version,
+            bookmark_update_timestamp,
         )
         .await?;
         res.extend(synced);
@@ -221,6 +227,7 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
     unsynced_ancestors: Vec<ChangesetId>,
     version: &CommitSyncConfigVersion,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
+    bookmark_update_timestamp: Option<Timestamp>,
 ) -> Result<Vec<ChangesetId>, Error> {
     let source_repo = commit_syncer.get_source_repo();
     // It stores commits that were introduced as part of current bookmark update, but that
@@ -257,6 +264,7 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
                 cs_id,
                 common_pushrebase_bookmarks,
                 version,
+                bookmark_update_timestamp,
             )
             .await?
         } else {
@@ -279,6 +287,7 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
                 cs_id,
                 &result,
                 stats,
+                bookmark_update_timestamp,
             );
             let maybe_new_cs_id = result?;
             maybe_new_cs_id.into_iter().collect()
@@ -296,6 +305,7 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
     cs_id: ChangesetId,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     version: &CommitSyncConfigVersion,
+    bookmark_update_timestamp: Option<Timestamp>,
 ) -> Result<Vec<ChangesetId>, Error> {
     info!(ctx.logger(), "syncing {}", cs_id);
     let bcs = cs_id
@@ -366,6 +376,7 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
         cs_id,
         &result,
         stats,
+        bookmark_update_timestamp,
     );
 
     let maybe_cs_id = result?;
@@ -378,6 +389,7 @@ async fn process_bookmark_deletion<M: SyncedCommitMapping + Clone + 'static, R: 
     scuba_sample: MononokeScubaSampleBuilder,
     bookmark: &BookmarkKey,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
+    bookmark_update_timestamp: Option<Timestamp>,
 ) -> Result<(), Error> {
     if common_pushrebase_bookmarks.contains(bookmark) {
         Err(format_err!(
@@ -390,7 +402,7 @@ async fn process_bookmark_deletion<M: SyncedCommitMapping + Clone + 'static, R: 
             delete_bookmark(ctx.clone(), commit_syncer.get_target_repo(), bookmark)
                 .timed()
                 .await;
-        log_bookmark_deletion_result(scuba_sample, &result, stats);
+        log_bookmark_deletion_result(scuba_sample, &result, stats, bookmark_update_timestamp);
         result
     }
 }
