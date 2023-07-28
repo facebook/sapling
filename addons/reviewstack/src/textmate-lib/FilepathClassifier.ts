@@ -25,7 +25,7 @@ export default class FilepathClassifier {
 
   constructor(
     private grammars: {[scopeName: string]: Grammar},
-    languages: {[language: string]: LanguageConfiguration},
+    private languages: {[language: string]: LanguageConfiguration},
   ) {
     this.index = createIndex(languages);
   }
@@ -86,6 +86,46 @@ export default class FilepathClassifier {
       }
     }
 
+    return null;
+  }
+
+  /**
+   * Makes a best-effort to map the specified language id (like `fsharp`) to a
+   * name that is more familiar to the user (like `F#`). Also supports alises
+   * so that both `py` and `python` are mapped to `Python`.
+   */
+  getDisplayNameForLanguageId(languageIdOrAlias: string): string {
+    const scopeName = this.findScopeNameForAlias(languageIdOrAlias);
+    if (scopeName == null) {
+      return languageIdOrAlias;
+    }
+
+    return this.findDisplayNameForScopeName(scopeName) ?? languageIdOrAlias;
+  }
+
+  /**
+   * Try to return a human-readable name for the specified scope name.
+   * Unfortunately, VS Code does not currently expose the language name
+   * directly: https://github.com/microsoft/vscode/issues/109919. As a
+   * workaround, we make our best guess from the available aliases associated
+   * with the scope name.
+   */
+  findDisplayNameForScopeName(scopeName: string): string | null {
+    const {language} = this.grammars[scopeName];
+    if (language != null) {
+      const aliases = this.languages[language].aliases ?? [];
+      // As a braindead heuristic, we pick the first alias that starts with a
+      // capital letter.
+      for (const alias of aliases) {
+        const firstChar = alias.charAt(0);
+        if (firstChar.toUpperCase() === firstChar) {
+          return alias;
+        }
+      }
+
+      // If none of the aliases start with a capital letter, pick the first.
+      return aliases[0] ?? null;
+    }
     return null;
   }
 }

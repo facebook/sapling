@@ -29,3 +29,25 @@ describe('findScopeNameForAlias', () => {
     expect(findScopeNameForAlias('rs')).toBe('source.rust');
   });
 });
+
+describe('getDisplayNameForLanguageId', () => {
+  it('verify tags from fenced code blocks get mapped to a human-readable name', () => {
+    const classifier = new FilepathClassifier(grammars, languages);
+    const getDisplayNameForLanguageId = (alias: string) =>
+      classifier.getDisplayNameForLanguageId(alias);
+    expect(getDisplayNameForLanguageId('')).toBe('');
+    expect(getDisplayNameForLanguageId('cpp')).toBe('C++');
+    expect(getDisplayNameForLanguageId('csharp')).toBe('C#');
+    expect(getDisplayNameForLanguageId('fsharp')).toBe('F#');
+    expect(getDisplayNameForLanguageId('javascript')).toBe('JavaScript');
+    expect(getDisplayNameForLanguageId('js')).toBe('JavaScript');
+    expect(getDisplayNameForLanguageId('kotlin')).toBe('Kotlin');
+    expect(getDisplayNameForLanguageId('objective-c')).toBe('Objective-C');
+    expect(getDisplayNameForLanguageId('php')).toBe('Hack');
+    expect(getDisplayNameForLanguageId('py')).toBe('Python');
+    expect(getDisplayNameForLanguageId('python')).toBe('Python');
+    expect(getDisplayNameForLanguageId('rs')).toBe('Rust');
+    expect(getDisplayNameForLanguageId('rust')).toBe('Rust');
+    expect(getDisplayNameForLanguageId('swift')).toBe('Swift');
+  });
+});
