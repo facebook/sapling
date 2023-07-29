@@ -18,8 +18,6 @@ and O(changes) merge between branches.
 
 from __future__ import absolute_import
 
-import binascii
-import collections
 import errno
 import hashlib
 import heapq
@@ -473,8 +471,6 @@ class revlog(object):
         self.index, nodemap, self._chunkcache = d
         if nodemap is not None:
             self.nodemap = self._nodecache = nodemap
-        if not self._chunkcache:
-            self._chunkclear()
         # revnum -> (chain-length, sum-delta-length)
         self._chaininfocache = {}
         # revlog header -> revlog compressor
@@ -488,12 +484,6 @@ class revlog(object):
     @util.propertycache
     def _compressor(self):
         return util.compengines[self._compengine].revlogcompressor()
-
-    def tip(self) -> bytes:
-        return self.node(len(self.index) - 2)
-
-    def __contains__(self, rev):
-        return 0 <= rev < len(self)
 
     def __len__(self) -> int:
         return len(self.index) - 1
@@ -511,25 +501,6 @@ class revlog(object):
         else:
             stop = len(self)
         return range(start, stop, step)
-
-    @util.propertycache
-    def nodemap(self):
-        self.rev(self.node(0))
-        return self._nodecache
-
-    def hasnode(self, node):
-        try:
-            self.rev(node)
-            return True
-        except KeyError:
-            return False
-
-    def filternodes(self, nodes, inverse=False):
-        contains = self.nodemap.__contains__
-        if inverse:
-            return [n for n in nodes if not contains(n)]
-        else:
-            return [n for n in nodes if contains(n)]
 
     def clearcaches(self):
         self._cache = None
@@ -645,9 +616,6 @@ class revlog(object):
         d = i[self.rev(node)]
         return i[d[5]][7], i[d[6]][7]  # map revisions to nodes inline
 
-    def chainlen(self, rev):
-        return self._chaininfo(rev)[0]
-
     def _chaininfo(self, rev):
         chaininfocache = self._chaininfocache
         if rev in chaininfocache:
@@ -751,296 +719,11 @@ class revlog(object):
                     yield i
                     break
 
-    def findcommonmissing(self, common=None, heads=None):
-        """Return a tuple of the ancestors of common and the ancestors of heads
-        that are not ancestors of common. In revset terminology, we return the
-        tuple:
-
-          ::common, (::heads) - (::common)
-
-        The list is sorted by revision number, meaning it is
-        topologically sorted.
-
-        'heads' and 'common' are both lists of node IDs.  If heads is
-        not supplied, uses all of the revlog's heads.  If common is not
-        supplied, uses nullid."""
-        if common is None:
-            common = [nullid]
-        if heads is None:
-            heads = self.heads()
-
-        common = [self.rev(n) for n in common]
-        heads = [self.rev(n) for n in heads]
-
-        # we want the ancestors, but inclusive
-        class lazyset(object):
-            def __init__(self, lazyvalues):
-                self.addedvalues = set()
-                self.lazyvalues = lazyvalues
-
-            def __contains__(self, value):
-                return value in self.addedvalues or value in self.lazyvalues
-
-            def __iter__(self):
-                added = self.addedvalues
-                for r in added:
-                    yield r
-                for r in self.lazyvalues:
-                    if not r in added:
-                        yield r
-
-            def add(self, value):
-                self.addedvalues.add(value)
-
-            def update(self, values):
-                self.addedvalues.update(values)
-
-        has = lazyset(self.ancestors(common))
-        has.add(nullrev)
-        has.update(common)
-
-        # take all ancestors from heads that aren't in has
-        missing = set()
-        visit = collections.deque(r for r in heads if r not in has)
-        while visit:
-            r = visit.popleft()
-            if r in missing:
-                continue
-            else:
-                missing.add(r)
-                for p in self.parentrevs(r):
-                    if p not in has:
-                        visit.append(p)
-        missing = list(missing)
-        missing.sort()
-        return has, [self.node(miss) for miss in missing]
-
-    def incrementalmissingrevs(self, common=None):
-        """Return an object that can be used to incrementally compute the
-        revision numbers of the ancestors of arbitrary sets that are not
-        ancestors of common. This is an ancestor.incrementalmissingancestors
-        object.
-
-        'common' is a list of revision numbers. If common is not supplied, uses
-        nullrev.
-        """
-        if common is None:
-            common = [nullrev]
-
-        return ancestor.incrementalmissingancestors(self.parentrevs, common)
-
-    def findmissingrevs(self, common=None, heads=None):
-        """Return the revision numbers of the ancestors of heads that
-        are not ancestors of common.
-
-        More specifically, return a list of revision numbers corresponding to
-        nodes N such that every N satisfies the following constraints:
-
-          1. N is an ancestor of some node in 'heads'
-          2. N is not an ancestor of any node in 'common'
-
-        The list is sorted by revision number, meaning it is
-        topologically sorted.
-
-        'heads' and 'common' are both lists of revision numbers.  If heads is
-        not supplied, uses all of the revlog's heads.  If common is not
-        supplied, uses nullid."""
-        if common is None:
-            common = [nullrev]
-        if heads is None:
-            heads = self.headrevs()
-
-        inc = self.incrementalmissingrevs(common=common)
-        return inc.missingancestors(heads)
-
-    def findmissing(self, common=None, heads=None):
-        """Return the ancestors of heads that are not ancestors of common.
-
-        More specifically, return a list of nodes N such that every N
-        satisfies the following constraints:
-
-          1. N is an ancestor of some node in 'heads'
-          2. N is not an ancestor of any node in 'common'
-
-        The list is sorted by revision number, meaning it is
-        topologically sorted.
-
-        'heads' and 'common' are both lists of node IDs.  If heads is
-        not supplied, uses all of the revlog's heads.  If common is not
-        supplied, uses nullid."""
-        if common is None:
-            common = [nullid]
-        if heads is None:
-            heads = self.heads()
-
-        common = [self.rev(n) for n in common]
-        heads = [self.rev(n) for n in heads]
-
-        inc = self.incrementalmissingrevs(common=common)
-        return [self.node(r) for r in inc.missingancestors(heads)]
-
-    def nodesbetween(self, roots=None, heads=None):
-        """Return a topological path from 'roots' to 'heads'.
-
-        Return a tuple (nodes, outroots, outheads) where 'nodes' is a
-        topologically sorted list of all nodes N that satisfy both of
-        these constraints:
-
-          1. N is a descendant of some node in 'roots'
-          2. N is an ancestor of some node in 'heads'
-
-        Every node is considered to be both a descendant and an ancestor
-        of itself, so every reachable node in 'roots' and 'heads' will be
-        included in 'nodes'.
-
-        'outroots' is the list of reachable nodes in 'roots', i.e., the
-        subset of 'roots' that is returned in 'nodes'.  Likewise,
-        'outheads' is the subset of 'heads' that is also in 'nodes'.
-
-        'roots' and 'heads' are both lists of node IDs.  If 'roots' is
-        unspecified, uses nullid as the only root.  If 'heads' is
-        unspecified, uses list of all of the revlog's heads."""
-        nonodes = ([], [], [])
-        if roots is not None:
-            roots = list(roots)
-            if not roots:
-                return nonodes
-            lowestrev = min([self.rev(n) for n in roots])
-        else:
-            roots = [nullid]  # Everybody's a descendant of nullid
-            lowestrev = nullrev
-        if (lowestrev == nullrev) and (heads is None):
-            # We want _all_ the nodes!
-            return ([self.node(r) for r in self], [nullid], list(self.heads()))
-        if heads is None:
-            # All nodes are ancestors, so the latest ancestor is the last
-            # node.
-            highestrev = len(self) - 1
-            # Set ancestors to None to signal that every node is an ancestor.
-            ancestors = None
-            # Set heads to an empty dictionary for later discovery of heads
-            heads = {}
-        else:
-            heads = list(heads)
-            if not heads:
-                return nonodes
-            ancestors = set()
-            # Turn heads into a dictionary so we can remove 'fake' heads.
-            # Also, later we will be using it to filter out the heads we can't
-            # find from roots.
-            heads = dict.fromkeys(heads, False)
-            # Start at the top and keep marking parents until we're done.
-            nodestotag = set(heads)
-            # Remember where the top was so we can use it as a limit later.
-            highestrev = max([self.rev(n) for n in nodestotag])
-            while nodestotag:
-                # grab a node to tag
-                n = nodestotag.pop()
-                # Never tag nullid
-                if n == nullid:
-                    continue
-                # A node's revision number represents its place in a
-                # topologically sorted list of nodes.
-                r = self.rev(n)
-                if r >= lowestrev:
-                    if n not in ancestors:
-                        # If we are possibly a descendant of one of the roots
-                        # and we haven't already been marked as an ancestor
-                        ancestors.add(n)  # Mark as ancestor
-                        # Add non-nullid parents to list of nodes to tag.
-                        nodestotag.update([p for p in self.parents(n) if p != nullid])
-                    elif n in heads:  # We've seen it before, is it a fake head?
-                        # So it is, real heads should not be the ancestors of
-                        # any other heads.
-                        heads.pop(n)
-            if not ancestors:
-                return nonodes
-            # Now that we have our set of ancestors, we want to remove any
-            # roots that are not ancestors.
-
-            # If one of the roots was nullid, everything is included anyway.
-            if lowestrev > nullrev:
-                # But, since we weren't, let's recompute the lowest rev to not
-                # include roots that aren't ancestors.
-
-                # Filter out roots that aren't ancestors of heads
-                roots = [root for root in roots if root in ancestors]
-                # Recompute the lowest revision
-                if roots:
-                    lowestrev = min([self.rev(root) for root in roots])
-                else:
-                    # No more roots?  Return empty list
-                    return nonodes
-            else:
-                # We are descending from nullid, and don't need to care about
-                # any other roots.
-                lowestrev = nullrev
-                roots = [nullid]
-        # Transform our roots list into a set.
-        descendants = set(roots)
-        # Also, keep the original roots so we can filter out roots that aren't
-        # 'real' roots (i.e. are descended from other roots).
-        roots = descendants.copy()
-        # Our topologically sorted list of output nodes.
-        orderedout = []
-        # Don't start at nullid since we don't want nullid in our output list,
-        # and if nullid shows up in descendants, empty parents will look like
-        # they're descendants.
-        for r in self.revs(start=max(lowestrev, 0), stop=highestrev + 1):
-            n = self.node(r)
-            isdescendant = False
-            if lowestrev == nullrev:  # Everybody is a descendant of nullid
-                isdescendant = True
-            elif n in descendants:
-                # n is already a descendant
-                isdescendant = True
-                # This check only needs to be done here because all the roots
-                # will start being marked is descendants before the loop.
-                if n in roots:
-                    # If n was a root, check if it's a 'real' root.
-                    p = tuple(self.parents(n))
-                    # If any of its parents are descendants, it's not a root.
-                    if (p[0] in descendants) or (p[1] in descendants):
-                        roots.remove(n)
-            else:
-                p = tuple(self.parents(n))
-                # A node is a descendant if either of its parents are
-                # descendants.  (We seeded the dependents list with the roots
-                # up there, remember?)
-                if (p[0] in descendants) or (p[1] in descendants):
-                    descendants.add(n)
-                    isdescendant = True
-            if isdescendant and ((ancestors is None) or (n in ancestors)):
-                # Only include nodes that are both descendants and ancestors.
-                orderedout.append(n)
-                if (ancestors is not None) and (n in heads):
-                    # We're trying to figure out which heads are reachable
-                    # from roots.
-                    # Mark this head as having been reached
-                    heads[n] = True
-                elif ancestors is None:
-                    # Otherwise, we're trying to discover the heads.
-                    # Assume this is a head because if it isn't, the next step
-                    # will eventually remove it.
-                    heads[n] = True
-                    # But, obviously its parents aren't.
-                    for p in self.parents(n):
-                        heads.pop(p, None)
-        heads = [head for head, flag in pycompat.iteritems(heads) if flag]
-        roots = list(roots)
-        assert orderedout
-        assert roots
-        assert heads
-        return (orderedout, roots, heads)
-
     def headrevs(self):
         try:
             return self.index.headrevs()
         except AttributeError:
             return self._headrevs()
-
-    def computephases(self, roots):
-        return self.index.computephasesmapsets(roots)
 
     def _headrevs(self):
         count = len(self)
@@ -1089,30 +772,6 @@ class revlog(object):
 
         return [self.node(r) for r in heads]
 
-    def children(self, node):
-        """find the children of a given node"""
-        c = []
-        p = self.rev(node)
-        for r in self.revs(start=p + 1):
-            prevs = [pr for pr in self.parentrevs(r) if pr != nullrev]
-            if prevs:
-                for pr in prevs:
-                    if pr == p:
-                        c.append(self.node(r))
-            elif p == nullrev:
-                c.append(self.node(r))
-        return c
-
-    def descendant(self, start, end):
-        if start == nullrev:
-            return True
-        for i in self.descendants([start]):
-            if i == end:
-                return True
-            elif i > end:
-                break
-        return False
-
     def commonancestorsheads(self, a, b):
         """calculate all the heads of the common ancestors of nodes a and b"""
         a, b = self.rev(a), self.rev(b)
@@ -1121,26 +780,6 @@ class revlog(object):
         except (AttributeError, OverflowError):  # C implementation failed
             ancs = ancestor.commonancestorsheads(self.parentrevs, a, b)
         return pycompat.maplist(self.node, ancs)
-
-    def isancestor(self, a, b):
-        """return True if node a is an ancestor of node b
-
-        The implementation of this is trivial but the use of
-        commonancestorsheads is not."""
-        return a in self.commonancestorsheads(a, b)
-
-    def ancestor(self, a, b):
-        """calculate the "best" common ancestor of nodes a and b"""
-
-        a, b = self.rev(a), self.rev(b)
-        try:
-            ancs = self.index.ancestors(a, b)
-        except (AttributeError, OverflowError):
-            ancs = ancestor.ancestors(self.parentrevs, a, b)
-        if ancs:
-            # choose a consistent winner when there's a tie
-            return min(map(self.node, ancs))
-        return nullid
 
     def _match(self, id):
         if isinstance(id, int):
@@ -1176,51 +815,6 @@ class revlog(object):
             except (TypeError, LookupError):
                 pass
 
-    def _partialmatch(self, id):
-        maybewdir = wdirhex.startswith(id)
-        try:
-            partial = self.index.partialmatch(id)
-            if partial and self.hasnode(partial):
-                if maybewdir:
-                    # single 'ff...' match in radix tree, ambiguous with wdir
-                    raise RevlogError
-                return partial
-            if maybewdir:
-                # no 'ff...' match in radix tree, wdir identified
-                raise error.WdirUnsupported
-            return None
-        except RevlogError:
-            # parsers.c radix tree lookup gave multiple matches
-            # fast path: for unfiltered changelog, radix tree is accurate
-            raise error.RepoLookupError(
-                _("%s@%s: ambiguous identifier") % (self.indexfile, id)
-            )
-            # fall through to slow path that filters hidden revisions
-        except (AttributeError, ValueError):
-            # we are pure python, or key was too short to search radix tree
-            pass
-
-        if id in self._pcache:
-            return self._pcache[id]
-
-        if len(id) < 40:
-            try:
-                # hex(node)[:...]
-                l = len(id) // 2  # grab an even number of digits
-                prefix = bbin(id[: l * 2])
-                nl = [e[7] for e in self.index if e[7].startswith(prefix)]
-                nl = [n for n in nl if hex(n).startswith(id) and self.hasnode(n)]
-                if len(nl) > 0:
-                    if len(nl) == 1 and not maybewdir:
-                        self._pcache[id] = nl[0]
-                        return nl[0]
-                    raise LookupError(id, self.indexfile, _("ambiguous identifier"))
-                if maybewdir:
-                    raise error.WdirUnsupported
-                return None
-            except (TypeError, binascii.Error):
-                pass
-
     def lookup(self, id: "Union[int, str, bytes]") -> bytes:
         """locate a node based on:
         - revision number or str(revision number)
@@ -1229,54 +823,7 @@ class revlog(object):
         n = self._match(id)
         if n is not None:
             return n
-        # only call _partialmatch if id might be a hex prefix:
-        if isinstance(id, str):
-            n = self._partialmatch(id)
-            if n:
-                return n
-
         raise LookupError(id, self.indexfile, _("no match found"))
-
-    def shortest(self, hexnode: str, minlength: int = 1) -> str:
-        """Find the shortest unambiguous prefix that matches hexnode."""
-
-        def isvalid(test):
-            try:
-                if self._partialmatch(test) is None:
-                    return False
-
-                try:
-                    i = int(test)
-                    # if we are a pure int, then starting with zero will not be
-                    # confused as a rev; or, obviously, if the int is larger
-                    # than the value of the tip rev
-                    if test[0] == "0" or i > len(self):
-                        return True
-                    return False
-                except ValueError:
-                    return True
-            except error.RepoLookupError:
-                return False
-            except error.RevlogError:
-                return False
-            except error.WdirUnsupported:
-                # single 'ff...' match
-                return True
-
-        shortest = hexnode
-        startlength = max(6, minlength)
-        length = startlength
-        while True:
-            test = hexnode[:length]
-            if isvalid(test):
-                shortest = test
-                if length == minlength or length > startlength:
-                    return shortest
-                length -= 1
-            else:
-                length += 1
-                if len(shortest) <= length:
-                    return shortest
 
     def cmp(self, node, text):
         """compare text with a given file revision
@@ -1454,10 +1001,6 @@ class revlog(object):
                 ladd(decomp(buffer(data, chunkstart - offset, chunklength)))
 
         return l
-
-    def _chunkclear(self):
-        """Clear the raw chunk cache."""
-        self._chunkcache = (0, b"")
 
     def candelta(self, baserev, rev):
         """whether two revisions (prev, rev) can be delta-ed or not"""
@@ -2226,141 +1769,6 @@ class revlog(object):
         """Quickly check if a delta produces a censored revision."""
         return False
 
-    def getstrippoint(self, minlink):
-        """find the minimum rev that must be stripped to strip the linkrev
-
-        Returns a tuple containing the minimum rev and a set of all revs that
-        have linkrevs that will be broken by this strip.
-        """
-        brokenrevs = set()
-        strippoint = len(self)
-
-        heads = {}
-        futurelargelinkrevs = set()
-        # Bypass narrow-heads. This low-level operatoin requires "full" heads.
-        for head in self.index.headrevs():
-            headlinkrev = self.linkrev(head)
-            heads[head] = headlinkrev
-            if headlinkrev >= minlink:
-                futurelargelinkrevs.add(headlinkrev)
-
-        # This algorithm involves walking down the rev graph, starting at the
-        # heads. Since the revs are topologically sorted according to linkrev,
-        # once all head linkrevs are below the minlink, we know there are
-        # no more revs that could have a linkrev greater than minlink.
-        # So we can stop walking.
-        while futurelargelinkrevs:
-            strippoint -= 1
-            linkrev = heads.pop(strippoint)
-
-            if linkrev < minlink:
-                brokenrevs.add(strippoint)
-            else:
-                futurelargelinkrevs.remove(linkrev)
-
-            for p in self.parentrevs(strippoint):
-                if p != nullrev:
-                    plinkrev = self.linkrev(p)
-                    heads[p] = plinkrev
-                    if plinkrev >= minlink:
-                        futurelargelinkrevs.add(plinkrev)
-
-        return strippoint, brokenrevs
-
-    def strip(self, minlink, transaction):
-        """truncate the revlog on the first revision with a linkrev >= minlink
-
-        This function is called when we're stripping revision minlink and
-        its descendants from the repository.
-
-        We have to remove all revisions with linkrev >= minlink, because
-        the equivalent changelog revisions will be renumbered after the
-        strip.
-
-        So we truncate the revlog on the first of these revisions, and
-        trust that the caller has saved the revisions that shouldn't be
-        removed and that it'll re-add them after this truncation.
-        """
-        if len(self) == 0:
-            return
-
-        if self._bypasstransaction:
-            return
-
-        rev, _ = self.getstrippoint(minlink)
-        if rev == len(self):
-            return
-
-        # first truncate the files on disk
-        end = self.start(rev)
-        if not self._inline:
-            transaction.add(self.datafile, end)
-            end = rev * self._io.size
-        else:
-            end += rev * self._io.size
-
-        transaction.add(self.indexfile, end)
-
-        # then reset internal state in memory to forget those revisions
-        self._cache = None
-        self._chaininfocache = {}
-        self._chunkclear()
-        for x in range(rev, len(self)):
-            del self.nodemap[self.node(x)]
-
-        del self.index[rev:-1]
-
-        # index2 does not support `del`. Reload it directly.
-        index2 = getattr(self, "index2", None)
-        if index2 is not None:
-            nodemapfile = self.indexfile[:-2] + ".nodemap"
-            self.index2 = bindings.revlogindex.revlogindex(
-                self.opener.join(self.indexfile), self.opener.join(nodemapfile)
-            )
-
-    def checksize(self):
-        expected = 0
-        if len(self):
-            expected = max(0, self.end(len(self) - 1))
-
-        try:
-            f = self.opener(self.datafile)
-            f.seek(0, 2)
-            actual = f.tell()
-            f.close()
-            dd = actual - expected
-        except IOError as inst:
-            if inst.errno != errno.ENOENT:
-                raise
-            dd = 0
-
-        try:
-            f = self.opener(self.indexfile)
-            f.seek(0, 2)
-            actual = f.tell()
-            f.close()
-            s = self._io.size
-            i = max(0, actual // s)
-            di = actual - (i * s)
-            if self._inline:
-                databytes = 0
-                for r in self:
-                    databytes += max(0, self.length(r))
-                dd = 0
-                di = actual - len(self) * s - databytes
-        except IOError as inst:
-            if inst.errno != errno.ENOENT:
-                raise
-            di = 0
-
-        return (dd, di)
-
-    def files(self):
-        res = [self.indexfile]
-        if not self._inline:
-            res.append(self.datafile)
-        return res
-
     DELTAREUSEALWAYS = "always"
     DELTAREUSESAMEREVS = "samerevs"
     DELTAREUSENEVER = "never"
@@ -2368,129 +1776,3 @@ class revlog(object):
     DELTAREUSEFULLADD = "fulladd"
 
     DELTAREUSEALL = {"always", "samerevs", "never", "fulladd"}
-
-    def clone(
-        self, tr, destrevlog, deltareuse=DELTAREUSESAMEREVS, aggressivemergedeltas=None
-    ):
-        """Copy this revlog to another, possibly with format changes.
-
-        The destination revlog will contain the same revisions and nodes.
-        However, it may not be bit-for-bit identical due to e.g. delta encoding
-        differences.
-
-        The ``deltareuse`` argument control how deltas from the existing revlog
-        are preserved in the destination revlog. The argument can have the
-        following values:
-
-        DELTAREUSEALWAYS
-           Deltas will always be reused (if possible), even if the destination
-           revlog would not select the same revisions for the delta. This is the
-           fastest mode of operation.
-        DELTAREUSESAMEREVS
-           Deltas will be reused if the destination revlog would pick the same
-           revisions for the delta. This mode strikes a balance between speed
-           and optimization.
-        DELTAREUSENEVER
-           Deltas will never be reused. This is the slowest mode of execution.
-           This mode can be used to recompute deltas (e.g. if the diff/delta
-           algorithm changes).
-
-        Delta computation can be slow, so the choice of delta reuse policy can
-        significantly affect run time.
-
-        The default policy (``DELTAREUSESAMEREVS``) strikes a balance between
-        two extremes. Deltas will be reused if they are appropriate. But if the
-        delta could choose a better revision, it will do so. This means if you
-        are converting a non-generaldelta revlog to a generaldelta revlog,
-        deltas will be recomputed if the delta's parent isn't a parent of the
-        revision.
-
-        In addition to the delta policy, the ``aggressivemergedeltas`` argument
-        controls whether to compute deltas against both parents for merges.
-        By default, the current default is used.
-        """
-        if deltareuse not in self.DELTAREUSEALL:
-            raise ValueError(_("value for deltareuse invalid: %s") % deltareuse)
-
-        if len(destrevlog):
-            raise ValueError(_("destination revlog is not empty"))
-
-        # lazydeltabase controls whether to reuse a cached delta, if possible.
-        oldlazydeltabase = destrevlog._lazydeltabase
-        oldamd = destrevlog._aggressivemergedeltas
-
-        try:
-            if deltareuse == self.DELTAREUSEALWAYS:
-                destrevlog._lazydeltabase = True
-            elif deltareuse == self.DELTAREUSESAMEREVS:
-                destrevlog._lazydeltabase = False
-
-            destrevlog._aggressivemergedeltas = aggressivemergedeltas or oldamd
-
-            populatecachedelta = deltareuse in (
-                self.DELTAREUSEALWAYS,
-                self.DELTAREUSESAMEREVS,
-            )
-
-            index = self.index
-            for rev in self:
-                entry = index[rev]
-
-                # Some classes override linkrev to take filtered revs into
-                # account. Use raw entry from index.
-                flags = entry[0] & 0xFFFF
-                linkrev = entry[4]
-                p1 = index[entry[5]][7]
-                p2 = index[entry[6]][7]
-                node = entry[7]
-
-                # (Possibly) reuse the delta from the revlog if allowed and
-                # the revlog chunk is a delta.
-                cachedelta = None
-                rawtext = None
-                if populatecachedelta:
-                    dp = self.deltaparent(rev)
-                    if dp != nullrev:
-                        cachedelta = (dp, str(self._chunk(rev)))
-
-                if not cachedelta:
-                    rawtext = self.revision(rev, raw=True)
-
-                if deltareuse == self.DELTAREUSEFULLADD:
-                    destrevlog.addrevision(
-                        rawtext,
-                        tr,
-                        linkrev,
-                        p1,
-                        p2,
-                        cachedelta=cachedelta,
-                        node=node,
-                        flags=flags,
-                    )
-                else:
-                    ifh = destrevlog.opener(
-                        destrevlog.indexfile, "a+", checkambig=False
-                    )
-                    dfh = None
-                    if not destrevlog._inline:
-                        dfh = destrevlog.opener(destrevlog.datafile, "a+")
-                    try:
-                        destrevlog._addrevision(
-                            node,
-                            rawtext,
-                            tr,
-                            linkrev,
-                            p1,
-                            p2,
-                            flags,
-                            cachedelta,
-                            ifh,
-                            dfh,
-                        )
-                    finally:
-                        if dfh:
-                            dfh.close()
-                        ifh.close()
-        finally:
-            destrevlog._lazydeltabase = oldlazydeltabase
-            destrevlog._aggressivemergedeltas = oldamd
