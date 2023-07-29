@@ -1,10 +1,12 @@
 #debugruntest-compatible
 
-  $ configure modernclient
-  $ newclientrepo repo
-  $ enable undo
+  $ eagerepo
+  $ enable undo rebase 
 
+  $ newrepo
   $ drawdag <<'EOS'
+  > G K
+  > :/
   > E
   > |\
   > C D
@@ -59,3 +61,28 @@ test undo commands
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -r . -T '{desc}\n'
   X
+
+test amend command (fixme: 'hg go -' should go back to commit D)
+  $ hg go $D -q
+  $ hg go $K -q
+  $ echo 1 >> K
+  $ hg amend
+  $ hg go -
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -r . -T '{desc}\n'
+  K
+
+test amend & restack commands (fixme: 'hg go -' should go back to commit D)
+
+  $ hg go $D -q
+  $ hg go $F -q
+  $ echo 1 >> F
+  $ hg amend
+  hint[amend-restack]: descendants of 8059b7e18560 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
+  $ hg rebase --restack
+  rebasing bffd6b0484a3 "G"
+  $ hg go -
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -r . -T '{desc}\n'
+  F
