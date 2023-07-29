@@ -17,7 +17,7 @@ Config::
     # Phabricator. Locally modified commits won't be hidden.
     check-local-versions = true
 """
-from .. import commands, extensions, mutation, phases, registrar, visibility
+from .. import commands, mutation, phases, registrar, visibility
 from ..i18n import _, _n
 from ..node import short
 from .extlib.phabricator import arcconfig, diffprops, graphql
