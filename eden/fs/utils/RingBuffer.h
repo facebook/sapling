@@ -8,6 +8,7 @@
 #pragma once
 
 #include <vector>
+#include <stddef.h>
 
 namespace facebook::eden {
 
