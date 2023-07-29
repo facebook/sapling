@@ -113,7 +113,7 @@ const generatedCommitMessages = selectorFamily<Result<string>, string>({
 
       const editedFields = get(editedCommitMessages(hashOrHead));
       const latestWrittenTitle =
-        editedFields.type === 'optimistic' ? undefined : (editedFields.fields.Title as string);
+        editedFields.type === 'optimistic' ? '(none)' : (editedFields.fields.Title as string);
 
       const resultPromise = tracker.operation(
         'GenerateAICommitMessage',

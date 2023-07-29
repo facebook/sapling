@@ -407,8 +407,7 @@ export type ClientToServerMessage =
   | {
       type: 'generateAICommitMessage';
       id: string;
-      title?: string;
-      reason?: string;
+      title: string;
       hashOrHead: Hash | 'head';
     }
   | PlatformSpecificClientToServerMessages;
