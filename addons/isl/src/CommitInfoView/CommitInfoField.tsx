@@ -51,6 +51,7 @@ export function CommitInfoField({
             </SmallCapsTitle>
             <CommitInfoTextArea
               kind={field.type}
+              fieldConfig={field}
               name={field.key}
               autoFocus={autofocus ?? false}
               editedMessage={editedFieldContent}
@@ -97,6 +98,7 @@ export function CommitInfoField({
         ) : (
           <CommitInfoTextArea
             kind={field.type}
+            fieldConfig={field}
             name={field.key}
             autoFocus={autofocus ?? false}
             editedMessage={editedFieldContent}
