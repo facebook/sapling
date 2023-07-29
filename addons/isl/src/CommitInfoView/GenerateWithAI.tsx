@@ -15,7 +15,7 @@ import {Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
 import {T, t} from '../i18n';
 import {uncommittedChangesWithPreviews} from '../previews';
-import {commitByHash} from '../serverAPIState';
+import {commitByHash, latestHeadCommit} from '../serverAPIState';
 import {commitInfoViewCurrentCommits, commitMode} from './CommitInfoState';
 import {getInnerTextareaForVSCodeTextArea} from './utils';
 import {VSCodeButton, VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
@@ -64,7 +64,10 @@ export function GenerateAICommitMesageButton({
   );
 }
 
-const cachedSuggestions = new Map<string, {lastFetch: number; message: Result<string>}>();
+const cachedSuggestions = new Map<
+  string,
+  {lastFetch: number; message: Result<string>; baseHash?: string}
+>();
 const ONE_HOUR = 60 * 60 * 1000;
 const MAX_SUGGESTION_CACHE_AGE = 24 * ONE_HOUR; // cache aggressively since we have an explicit button to invalidate
 const generatedCommitMessages = selectorFamily<Result<string>, string>({
@@ -78,15 +81,26 @@ const generatedCommitMessages = selectorFamily<Result<string>, string>({
 
       const cached = cachedSuggestions.get(hashOrHead);
       if (cached) {
-        if (Date.now() - cached.lastFetch < MAX_SUGGESTION_CACHE_AGE) {
+        if (hashOrHead === 'head') {
+          // only cache in commit mode if the base is the same
+          const currentBase = get(latestHeadCommit)?.hash;
+          if (
+            currentBase === cached.baseHash &&
+            Date.now() - cached.lastFetch < MAX_SUGGESTION_CACHE_AGE
+          ) {
+            return cached.message;
+          }
+        } else if (Date.now() - cached.lastFetch < MAX_SUGGESTION_CACHE_AGE) {
           return cached.message;
         }
       }
 
       const fileChanges = [];
+      let baseHash: string | undefined;
       if (hashOrHead === 'head') {
         const uncommittedChanges = get(uncommittedChangesWithPreviews);
         fileChanges.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
+        baseHash = get(latestHeadCommit)?.hash;
       } else {
         const commit = get(commitByHash(hashOrHead));
         if (commit?.isHead) {
@@ -104,7 +118,11 @@ const generatedCommitMessages = selectorFamily<Result<string>, string>({
           message => message.hashOrHead === hashOrHead,
         );
 
-        cachedSuggestions.set(hashOrHead, {lastFetch: Date.now(), message: response.message});
+        cachedSuggestions.set(hashOrHead, {
+          lastFetch: Date.now(),
+          message: response.message,
+          baseHash,
+        });
         return response.message;
       });
     },
