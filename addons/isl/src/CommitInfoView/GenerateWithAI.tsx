@@ -57,7 +57,7 @@ export function GenerateAICommitMesageButton({
           />
         )}
         title={t('Generate a commit message suggestion with AI')}>
-        <VSCodeButton appearance="icon">
+        <VSCodeButton appearance="icon" data-testid="generate-commit-message-button">
           <ThoughtBubbleIcon />
         </VSCodeButton>
       </Tooltip>
@@ -67,7 +67,7 @@ export function GenerateAICommitMesageButton({
 
 const cachedSuggestions = new Map<
   string,
-  {lastFetch: number; message: Result<string>; baseHash?: string}
+  {lastFetch: number; messagePromise: Promise<Result<string>>; baseHash?: string}
 >();
 const ONE_HOUR = 60 * 60 * 1000;
 const MAX_SUGGESTION_CACHE_AGE = 24 * ONE_HOUR; // cache aggressively since we have an explicit button to invalidate
@@ -77,7 +77,7 @@ const generatedCommitMessages = selectorFamily<Result<string>, string>({
     (hashOrHead: string | 'head' | undefined) =>
     ({get}) => {
       if (hashOrHead == null || Internal.generateAICommitMessage == null) {
-        return {value: ''};
+        return Promise.resolve({value: ''});
       }
 
       const cached = cachedSuggestions.get(hashOrHead);
@@ -89,10 +89,10 @@ const generatedCommitMessages = selectorFamily<Result<string>, string>({
             currentBase === cached.baseHash &&
             Date.now() - cached.lastFetch < MAX_SUGGESTION_CACHE_AGE
           ) {
-            return cached.message;
+            return cached.messagePromise;
           }
         } else if (Date.now() - cached.lastFetch < MAX_SUGGESTION_CACHE_AGE) {
-          return cached.message;
+          return cached.messagePromise;
         }
       }
 
@@ -115,21 +115,29 @@ const generatedCommitMessages = selectorFamily<Result<string>, string>({
       const latestWrittenTitle =
         editedFields.type === 'optimistic' ? undefined : (editedFields.fields.Title as string);
 
-      return tracker.operation('GenerateAICommitMessage', 'FetchError', undefined, async () => {
-        Internal.generateAICommitMessage?.({hashOrHead, title: latestWrittenTitle});
+      const resultPromise = tracker.operation(
+        'GenerateAICommitMessage',
+        'FetchError',
+        undefined,
+        async () => {
+          Internal.generateAICommitMessage?.({hashOrHead, title: latestWrittenTitle});
 
-        const response = await serverAPI.nextMessageMatching(
-          'generatedAICommitMessage',
-          message => message.hashOrHead === hashOrHead,
-        );
+          const response = await serverAPI.nextMessageMatching(
+            'generatedAICommitMessage',
+            message => message.hashOrHead === hashOrHead,
+          );
 
-        cachedSuggestions.set(hashOrHead, {
-          lastFetch: Date.now(),
-          message: response.message,
-          baseHash,
-        });
-        return response.message;
+          return response.message;
+        },
+      );
+
+      cachedSuggestions.set(hashOrHead, {
+        lastFetch: Date.now(),
+        messagePromise: resultPromise,
+        baseHash,
       });
+
+      return resultPromise;
     },
 });
 
