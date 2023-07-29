@@ -45,6 +45,55 @@ def _cleanuplanded(repo, dryrun=False):
     This uses mutation and visibility directly.
     """
     ui = repo.ui
+    difftodraft = _get_diff_to_draft(repo)
+    query_result = _query_phabricator(repo, list(difftodraft.keys()), "Closed")
+    if query_result is None:
+        return None
+    difftopublic, difftolocal = query_result
+
+    mutationentries = []
+    tohide = set()
+    markedcount = 0
+    checklocalversions = ui.configbool("pullcreatemarkers", "check-local-versions")
+    for diffid, draftnodes in sorted(difftodraft.items()):
+        markedcount += _process_landed(
+            repo,
+            diffid,
+            draftnodes,
+            difftopublic,
+            difftolocal,
+            checklocalversions,
+            tohide,
+            mutationentries,
+        )
+    if markedcount:
+        ui.status(
+            _n(
+                "marked %d commit as landed\n",
+                "marked %d commits as landed\n",
+                markedcount,
+            )
+            % markedcount
+        )
+
+    _hide_commits(repo, tohide, mutationentries, dryrun)
+
+
+def _get_diff_to_draft(repo):
+    limit = repo.ui.configint("pullcreatemarkers", "diff-limit", 100)
+    difftodraft = {}  # {str: {node}}
+    for ctx in repo.set("sort(draft() - obsolete(), -rev)"):
+        diffid = diffprops.parserevfromcommitmsg(ctx.description())  # str or None
+        if diffid and not _isrevert(ctx.description(), diffid):
+            difftodraft.setdefault(diffid, set()).add(ctx.node())
+            # Bound the number of diffs we query from Phabricator.
+            if len(difftodraft) >= limit:
+                break
+    return difftodraft
+
+
+def _query_phabricator(repo, diffids, diff_status_list):
+    ui = repo.ui
     try:
         client = graphql.Client(repo=repo)
     except arcconfig.ArcConfigError:
@@ -60,20 +109,8 @@ def _cleanuplanded(repo, dryrun=False):
         )
         return
 
-    limit = repo.ui.configint("pullcreatemarkers", "diff-limit", 100)
-    difftodraft = {}  # {str: {node}}
-    for ctx in repo.set("sort(draft() - obsolete(), -rev)"):
-        diffid = diffprops.parserevfromcommitmsg(ctx.description())  # str or None
-        if diffid and not _isrevert(ctx.description(), diffid):
-            difftodraft.setdefault(diffid, set()).add(ctx.node())
-            # Bound the number of diffs we query from Phabricator.
-            if len(difftodraft) >= limit:
-                break
-
     try:
-        difftopublic, difftolocal = client.getnodes(
-            repo, list(difftodraft.keys()), "Closed"
-        )
+        return client.getnodes(repo, diffids, diff_status_list)
     except Exception as ex:
         ui.warn(
             _(
@@ -81,47 +118,48 @@ def _cleanuplanded(repo, dryrun=False):
             )
             % ex
         )
-        return
-    mutationentries = []
-    tohide = set()
-    markedcount = 0
-    checklocalversions = ui.configbool("pullcreatemarkers", "check-local-versions")
-    for diffid, draftnodes in sorted(difftodraft.items()):
-        publicnode = difftopublic.get(diffid)
-        if publicnode is None or publicnode not in repo:
-            continue
-        # skip it if the local repo does not think it's a public commit.
-        if repo[publicnode].phase() != phases.public:
-            continue
-        # sanity check - the public commit should have a sane commit message.
-        if diffprops.parserevfromcommitmsg(repo[publicnode].description()) != diffid:
-            continue
 
-        if checklocalversions:
-            draftnodes = draftnodes & difftolocal.get(diffid, set())
-        draftnodestr = ", ".join(
-            short(d) for d in sorted(draftnodes)
-        )  # making output deterministic
-        if ui.verbose:
-            ui.write(
-                _("marking D%s (%s) as landed as %s\n")
-                % (diffid, draftnodestr, short(publicnode))
-            )
-        markedcount += len(draftnodes)
-        for draftnode in draftnodes:
-            tohide.add(draftnode)
-            mutationentries.append(
-                mutation.createsyntheticentry(repo, [draftnode], publicnode, "land")
-            )
-    if markedcount:
-        ui.status(
-            _n(
-                "marked %d commit as landed\n",
-                "marked %d commits as landed\n",
-                markedcount,
-            )
-            % markedcount
+
+def _process_landed(
+    repo,
+    diffid,
+    draftnodes,
+    difftopublic,
+    difftolocal,
+    checklocalversions,
+    tohide,
+    mutationentries,
+):
+    ui = repo.ui
+    publicnode = difftopublic.get(diffid)
+    if publicnode is None or publicnode not in repo:
+        return 0
+    # skip it if the local repo does not think it's a public commit.
+    if repo[publicnode].phase() != phases.public:
+        return 0
+    # sanity check - the public commit should have a sane commit message.
+    if diffprops.parserevfromcommitmsg(repo[publicnode].description()) != diffid:
+        return 0
+
+    if checklocalversions:
+        draftnodes = draftnodes & difftolocal.get(diffid, set())
+    draftnodestr = ", ".join(
+        short(d) for d in sorted(draftnodes)
+    )  # making output deterministic
+    if ui.verbose:
+        ui.write(
+            _("marking D%s (%s) as landed as %s\n")
+            % (diffid, draftnodestr, short(publicnode))
         )
+    for draftnode in draftnodes:
+        tohide.add(draftnode)
+        mutationentries.append(
+            mutation.createsyntheticentry(repo, [draftnode], publicnode, "land")
+        )
+    return len(draftnodes)
+
+
+def _hide_commits(repo, tohide, mutationentries, dryrun):
     if not tohide:
         return
     if not dryrun:
