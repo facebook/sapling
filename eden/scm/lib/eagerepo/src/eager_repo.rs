@@ -283,6 +283,7 @@ impl EagerRepo {
             } else {
                 Path::new(path).to_path_buf()
             };
+            tracing::trace!("url_to_dir {} => {}", value, path.display());
             return Some(path);
         }
         let prefix = "test:";
@@ -291,6 +292,7 @@ impl EagerRepo {
             if let Ok(tmp) = std::env::var("TESTTMP") {
                 let tmp: &Path = Path::new(&tmp);
                 let path = tmp.join(path);
+                tracing::trace!("url_to_dir {} => {}", value, path.display());
                 return Some(path);
             }
         }
@@ -302,9 +304,11 @@ impl EagerRepo {
                     path.join(ident.dot_dir()).join("store").join("requires");
                 if let Ok(s) = std::fs::read_to_string(store_requirement_path) {
                     if s.lines().any(|s| s == "eagerepo") {
+                        tracing::trace!("url_to_dir {} => {}", value, path.display());
                         return Some(path.to_path_buf());
                     }
                 }
+                tracing::trace!("url_to_dir {}: missing 'eagerepo' requirment", value);
             }
         }
         None

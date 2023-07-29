@@ -420,7 +420,7 @@ impl Repo {
     }
 
     pub fn storage_format(&self) -> StorageFormat {
-        if self.store_requirements.contains("remotefilelog") {
+        let format = if self.store_requirements.contains("remotefilelog") {
             StorageFormat::RemoteFilelog
         } else if self.store_requirements.contains("git") {
             StorageFormat::Git
@@ -428,7 +428,9 @@ impl Repo {
             StorageFormat::Eagerepo
         } else {
             StorageFormat::Revlog
-        }
+        };
+        tracing::trace!("storage_format is {:?}", &format);
+        format
     }
 
     fn git_dir(&self) -> Result<PathBuf> {
@@ -685,6 +687,7 @@ impl Repo {
             // Set both stores to share underlying git store.
             self.file_store = Some(git_store.clone());
             self.tree_store = Some(git_store.clone());
+            tracing::trace!(target: "repo::file_store", "creating git file and tree store");
             return Ok(Some((git_store.clone(), git_store)));
         }
         if self.storage_format().is_eager() {
@@ -693,6 +696,7 @@ impl Repo {
             let store = Arc::new(store);
             self.file_store = Some(store.clone());
             self.tree_store = Some(store.clone());
+            tracing::trace!(target: "repo::file_store", "creating EagerRepo file and tree store");
             return Ok(Some((store.clone(), store)));
         }
         return Ok(None);

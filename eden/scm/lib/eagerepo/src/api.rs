@@ -506,6 +506,13 @@ impl EagerRepo {
 pub fn edenapi_from_config(config: &dyn Config) -> edenapi::Result<Option<Arc<dyn EdenApi>>> {
     for (section, name) in [("paths", "default"), ("edenapi", "url")] {
         if let Ok(value) = config.get_or_default::<String>(section, name) {
+            trace!(
+                target: "eagerepo::edenapi_from_config",
+                "attempt to create EagerRepo as EdenApi from config {}.{}={}",
+                section,
+                name,
+                &value
+            );
             if let Some(path) = EagerRepo::url_to_dir(&value) {
                 let repo = EagerRepo::open(&path, None)
                     .map_err(|e| edenapi::EdenApiError::Other(e.into()))?;

@@ -3,7 +3,7 @@
   $ configure modern
 
   $ setconfig paths.default=test:e1 ui.traceback=1
-  $ export LOG=edenscm::eagerpeer=trace,eagerepo=trace
+  $ export LOG=edenscm::eagerpeer=trace,eagerepo::api=trace
 
 Disable SSH:
 
