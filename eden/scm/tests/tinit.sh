@@ -86,12 +86,11 @@ newserver() {
   else
     mkdir "$TESTTMP/$reponame"
     cd "$TESTTMP/$reponame"
-    hg --config extensions.lz4revlog= \
-      --config extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py \
+    hg --config extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py \
       --config experimental.narrow-heads=false \
       --config visibility.enabled=false \
       init
-    enable lz4revlog remotefilelog remotenames
+    enable remotefilelog remotenames
     setconfig \
        remotefilelog.reponame="$reponame" remotefilelog.server=True \
        treemanifest.rustmanifest=True \
@@ -119,7 +118,6 @@ clone() {
 
   hg clone -q --shallow "$serverurl" "$clientname" "$@" \
     --config "init.use-rust=True" \
-    --config "extensions.lz4revlog=" \
     --config "extensions.remotefilelog=" \
     --config "extensions.remotenames=" \
     --config "extensions.treemanifest=" \

@@ -1644,7 +1644,6 @@ remotefilelog=
 remotenames=
 smartlog=
 clienttelemetry=
-lz4revlog=
 [treemanifest]
 flatcompat=False
 sendtrees=True
@@ -1657,7 +1656,7 @@ EOF
 }
 
 function hgmn_clone() {
-  quiet hgmn clone --shallow  --config remotefilelog.reponame="$REPONAME" "$@" --config extensions.treemanifest= --config treemanifest.treeonly=True --config extensions.lz4revlog= && \
+  quiet hgmn clone --shallow  --config remotefilelog.reponame="$REPONAME" "$@" --config extensions.treemanifest= --config treemanifest.treeonly=True && \
   cat >> "$2"/.hg/hgrc <<EOF
 [extensions]
 treemanifest=
@@ -1665,7 +1664,6 @@ remotefilelog=
 remotenames=
 smartlog=
 clienttelemetry=
-lz4revlog=
 [treemanifest]
 flatcompat=False
 sendtrees=True

@@ -39,7 +39,7 @@ Clone it
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
                                         mfnodes : 1},
-                        read : { bytes : 2520},
+                        read : { bytes : 2500},
                         write : { bytes : 909}}}}
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
@@ -87,7 +87,7 @@ Pull exactly up to d into the client
   adding file changes
   { metrics : { scmstore : { file : { api : { hg : { prefetch : { calls : 3}}}}},
                 ssh : { connections : 1,
-                        read : { bytes : 1086},
+                        read : { bytes : 1076},
                         write : { bytes : 666}}}}
 
 Test error message about MissingNodesError

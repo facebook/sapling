@@ -292,7 +292,6 @@ def _preimportmodules():
         "journal",
         "lfs",
         "logginghelper",
-        "lz4revlog",
         "mergedriver",
         "morestatus",
         "myparent",

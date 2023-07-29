@@ -325,7 +325,13 @@ class localrepository(object):
     reduces the amount of stat-like system calls and thus saves time.
     This option should be safe if symlinks are not used in the repo"""
 
-    supportedformats = {"revlogv1", "generaldelta", "treemanifest"}
+    supportedformats = {
+        "revlogv1",
+        "generaldelta",
+        "treemanifest",
+        # no longer used, but needed to preserve compatibility
+        "lz4revlog",
+    }
     _basesupported = supportedformats | {
         edenfs.requirement,
         "store",

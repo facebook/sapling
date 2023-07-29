@@ -277,7 +277,6 @@ Test extension help:
        errorredirect
                      redirect error message
        githelp       try mapping git commands to Mercurial commands
-       lz4revlog     store revlog deltas using lz4 compression
        mergedriver   custom merge drivers for autoresolved files
        progressfile  allows users to have JSON progress bar information written
                      to a path

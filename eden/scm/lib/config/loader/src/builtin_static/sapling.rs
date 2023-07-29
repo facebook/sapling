@@ -147,7 +147,6 @@ histedit=
 infinitepush=!
 journal=
 logginghelper=
-lz4revlog=
 morestatus=
 myparent=
 obsshelve=

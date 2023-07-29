@@ -26,8 +26,8 @@
 
   $ hgcloneshallow ssh://user@dummy/master shallow --noupdate
   streaming all changes
-  1 files to transfer, 302 bytes of data
-  transferred 302 bytes in 0.0 seconds (295 KB/sec)
+  1 files to transfer, 283 bytes of data
+  transferred 283 bytes in 0.0 seconds (276 KB/sec)
   requesting all changes
   adding changesets
   adding manifests
@@ -74,15 +74,15 @@
 
   $ hgcloneshallow ssh://user@dummy/master shallow2
   streaming all changes
-  1 files to transfer, 302 bytes of data
-  transferred 302 bytes in 0.0 seconds (295 KB/sec)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
+  1 files to transfer, 283 bytes of data
+  transferred 283 bytes in 0.0 seconds (276 KB/sec)
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   $ cd shallow2
   $ printf "[extensions]\nsparse=\n" >> .hg/hgrc
 

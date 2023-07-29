@@ -337,14 +337,14 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      50     -1       0 5fbe397e5ac6 000000000000 000000000000
        1        50      50     -1       1 7e265a5dc522 5fbe397e5ac6 000000000000
-       2       100      63      0       2 9bd1ef658bef 5fbe397e5ac6 000000000000
-       3       163      55      1       3 14bce01d0d73 7e265a5dc522 000000000000
+       2       100      62      0       2 9bd1ef658bef 5fbe397e5ac6 000000000000
+       3       162      55      1       3 14bce01d0d73 7e265a5dc522 000000000000
   $ hg debugindex .hg/store/00manifesttree.i
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      50     -1       0 5fbe397e5ac6 000000000000 000000000000
        1        50      50     -1       1 7e265a5dc522 5fbe397e5ac6 000000000000
-       2       100      63      0       2 9bd1ef658bef 5fbe397e5ac6 000000000000
-       3       163      55      1       3 14bce01d0d73 7e265a5dc522 000000000000
+       2       100      62      0       2 9bd1ef658bef 5fbe397e5ac6 000000000000
+       3       162      55      1       3 14bce01d0d73 7e265a5dc522 000000000000
 - Verify the manifest data is accessible
   $ hg log -r tip --stat
   commit:      dad1be784127
@@ -609,8 +609,8 @@ with pullprefetchrevs configured.
   $ hg pull
   pulling from ssh://user@dummy/master
   streaming all changes
-  5 files to transfer, 2.05 KB of data
-  transferred 2.05 KB in 0.0 seconds (2.01 MB/sec)
+  5 files to transfer, 2.04 KB of data
+  transferred 2.04 KB in 0.0 seconds (1.99 MB/sec)
   requesting all changes
   adding changesets
   adding manifests
