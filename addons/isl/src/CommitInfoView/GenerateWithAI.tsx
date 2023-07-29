@@ -167,6 +167,7 @@ function GenerateAICommitMessageModal({
           disabled={content.state === 'loading' || error != null}
           appearance="secondary"
           onClick={() => {
+            tracker.track('RetryGeneratedAICommitMessage');
             cachedSuggestions.delete(hashOrHead); // make sure we don't re-use cached value
             refetch();
           }}>
@@ -180,6 +181,7 @@ function GenerateAICommitMessageModal({
             if (value) {
               appendToTextArea(value);
             }
+            tracker.track('AcceptGeneratedAICommitMessage');
             dismiss();
           }}>
           <Icon icon="check" slot="start" />
