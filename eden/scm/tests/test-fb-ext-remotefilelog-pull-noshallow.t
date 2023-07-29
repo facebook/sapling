@@ -40,10 +40,10 @@ the server supports our custom getfiles method.
   $ cd master
   $ echo 'hello' | hg -R . serve --stdio
   * (glob)
-  capabilities: lookup * remotefilelog getflogheads getfile (glob)
+  capabilities: lookup * remotefilelog getfile (glob)
   $ echo 'capabilities' | hg -R . serve --stdio ; echo
   * (glob)
-  * remotefilelog getflogheads getfile (glob)
+  * remotefilelog getfile (glob)
 
 Pull to the child repository.  Use our custom setupremotefilelog extension
 to ensure that remotefilelog.onetimeclientsetup() gets triggered.  (Without

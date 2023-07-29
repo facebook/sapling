@@ -20,11 +20,11 @@
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 1},
-                        read : { bytes : 1712},
+                        read : { bytes : 1686},
                         write : { bytes : 697}}}}
   $ hgcloneshallow ssh://user@dummy/master shallow2 -q
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 1097},
+                        read : { bytes : 1084},
                         write : { bytes : 550}}}}
 
 We should see the remotefilelog capability here, which advertises that
@@ -33,10 +33,10 @@ the server supports our custom getfiles method.
   $ cd master
   $ echo 'hello' | hg -R . serve --stdio
   * (glob)
-  capabilities: lookup * remotefilelog getflogheads getfile (glob)
+  capabilities: lookup * remotefilelog getfile (glob)
   $ echo 'capabilities' | hg -R . serve --stdio ; echo
   * (glob)
-  * remotefilelog getflogheads getfile (glob)
+  * remotefilelog getfile (glob)
 
 # pull to shallow from full
 
@@ -51,7 +51,7 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 1094},
+                        read : { bytes : 1081},
                         write : { bytes : 594}}}}
 
   $ hg up
@@ -82,7 +82,7 @@ the server supports our custom getfiles method.
   4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over 0.00s (?)
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 2,  revs : 2},
-                        read : { bytes : 1230},
+                        read : { bytes : 1204},
                         write : { bytes : 294}}}}
 
 # pull from shallow to shallow (ssh)
@@ -97,7 +97,7 @@ the server supports our custom getfiles method.
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 1},
-                        read : { bytes : 2828},
+                        read : { bytes : 2802},
                         write : { bytes : 741}}}}
 
   $ hg up
@@ -122,7 +122,7 @@ the server supports our custom getfiles method.
   remote: adding manifests
   remote: adding file changes
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 602},
+                        read : { bytes : 589},
                         write : { bytes : 991}}}}
 
   $ cd ../shallow2
@@ -142,7 +142,7 @@ the server supports our custom getfiles method.
   remote: adding manifests
   remote: adding file changes
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 582},
+                        read : { bytes : 569},
                         write : { bytes : 1513}}}}
 
   $ cd ../master
@@ -223,7 +223,7 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 2873},
+                        read : { bytes : 2860},
                         write : { bytes : 594}}}}
 
   $ hg up -q 'desc(c22)'
