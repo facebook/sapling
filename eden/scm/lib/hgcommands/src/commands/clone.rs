@@ -392,13 +392,13 @@ fn clone_metadata(
         }
     }
 
+    config.set("format", "use-remotefilelog", Some("true"), &"clone".into());
     let mut repo = Repo::init(
         destination,
         config,
         Some(repo_config_file_content),
         &ctx.global_opts().config,
     )?;
-    repo.add_requirement("remotefilelog")?;
 
     let edenapi = repo.eden_api()?;
 

@@ -513,11 +513,15 @@ def clone(
         cleanup_path = os.path.join(dest, ui.identity.dotdir())
 
     with bindings.atexit.AtExit.rmtree(cleanup_path) as atexit_rmtree:
+        config_overrides = {}
+        if shallow:
+            config_overrides[("format", "use-remotefilelog")] = "true"
         # Create the destination repo before we even open the connection to the
         # source, so we can use any repo-specific configuration for the connection.
         try:
             # Note: This triggers hgrc.dynamic generation with empty repo hgrc.
-            destpeer = repository(ui, dest, create=True)
+            with ui.configoverride(config_overrides):
+                destpeer = repository(ui, dest, create=True)
         except OSError as inst:
             if inst.errno == errno.EEXIST:
                 raise error.Abort(_("destination '%s' already exists") % dest)
@@ -544,21 +548,15 @@ def clone(
             destrepo.ui.reloadconfigs(destrepo.root)
 
             if shallow:
-                from edenscm.ext.remotefilelog.shallowrepo import requirement
-
-                if requirement not in destrepo.requirements:
-                    with destrepo.lock():
-                        destrepo.requirements.add(requirement)
-                        destrepo._writerequirements()
-                    # Reopen the repo so reposetup in extensions can see the added
-                    # requirement.
-                    # To keep command line config overrides, reuse the ui from the
-                    # old repo object. A cleaner way might be figuring out the
-                    # overrides and then set them, in case extensions changes the
-                    # class of the ui object.
-                    origui = destrepo.ui
-                    destrepo = repository(ui, dest)
-                    destrepo.ui = origui
+                # Reopen the repo so reposetup in extensions can see the added
+                # requirement.
+                # To keep command line config overrides, reuse the ui from the
+                # old repo object. A cleaner way might be figuring out the
+                # overrides and then set them, in case extensions changes the
+                # class of the ui object.
+                origui = destrepo.ui
+                destrepo = repository(ui, dest)
+                destrepo.ui = origui
 
         # Construct the srcpeer after the destpeer, so we can use the destrepo.ui
         # configs.
