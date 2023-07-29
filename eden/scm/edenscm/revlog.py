@@ -502,18 +502,6 @@ class revlog(object):
             stop = len(self)
         return range(start, stop, step)
 
-    def clearcaches(self):
-        self._cache = None
-        self._chainbasecache.clear()
-        self._chunkcache = (0, b"")
-        self._pcache = {}
-
-        try:
-            self._nodecache.clearcaches()
-        except AttributeError:
-            self._nodecache = {nullid: nullrev}
-            self._nodepos = None
-
     def rev(self, node):
         try:
             return self._nodecache[node]
@@ -697,80 +685,6 @@ class revlog(object):
         return ancestor.lazyancestors(
             self.parentrevs, revs, stoprev=stoprev, inclusive=inclusive
         )
-
-    def descendants(self, revs):
-        """Generate the descendants of 'revs' in revision order.
-
-        Yield a sequence of revision numbers starting with a child of
-        some rev in revs, i.e., each revision is *not* considered a
-        descendant of itself.  Results are ordered by revision number (a
-        topological sort)."""
-        first = min(revs)
-        if first == nullrev:
-            for i in self:
-                yield i
-            return
-
-        seen = set(revs)
-        for i in self.revs(start=first + 1):
-            for x in self.parentrevs(i):
-                if x != nullrev and x in seen:
-                    seen.add(i)
-                    yield i
-                    break
-
-    def headrevs(self):
-        try:
-            return self.index.headrevs()
-        except AttributeError:
-            return self._headrevs()
-
-    def _headrevs(self):
-        count = len(self)
-        if not count:
-            return [nullrev]
-        # we won't iter over filtered rev so nobody is a head at start
-        ishead = [0] * (count + 1)
-        index = self.index
-        for r in self:
-            ishead[r] = 1  # I may be an head
-            e = index[r]
-            ishead[e[5]] = ishead[e[6]] = 0  # my parent are not
-        return [r for r, val in enumerate(ishead) if val]
-
-    def heads(self, start=None, stop=None):
-        """return the list of all nodes that have no children
-
-        if start is specified, only heads that are descendants of
-        start will be returned
-        if stop is specified, it will consider all the revs from stop
-        as if they had no children
-        """
-        if start is None and stop is None:
-            if not len(self):
-                return [nullid]
-            return [self.node(r) for r in self.headrevs()]
-
-        if start is None:
-            start = nullid
-        if stop is None:
-            stop = []
-        stoprevs = set([self.rev(n) for n in stop])
-        startrev = self.rev(start)
-        reachable = {startrev}
-        heads = {startrev}
-
-        parentrevs = self.parentrevs
-        for r in self.revs(start=startrev + 1):
-            for p in parentrevs(r):
-                if p in reachable:
-                    if r not in stoprevs:
-                        reachable.add(r)
-                    heads.add(r)
-                if p in heads and p not in stoprevs:
-                    heads.remove(p)
-
-        return [self.node(r) for r in heads]
 
     def commonancestorsheads(self, a, b):
         """calculate all the heads of the common ancestors of nodes a and b"""
