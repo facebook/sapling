@@ -58,3 +58,9 @@ pub enum InitError {
     #[error(transparent)]
     UnsupportedRequirements(#[from] UnsupportedRequirements),
 }
+
+impl From<configmodel::Error> for InitError {
+    fn from(e: configmodel::Error) -> Self {
+        Self::ConfigLoadingError(e.into())
+    }
+}

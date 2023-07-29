@@ -148,6 +148,12 @@ fn write_requirements(path: &Path, config: &ConfigSet) -> Result<(), InitError> 
         requirements.insert("windowssymlinks");
     }
 
+    if config.get_or_default("format", "use-remotefilelog")? {
+        // For historical reason this is a repo requirement.
+        // It should be a store requirement.
+        requirements.insert("remotefilelog");
+    }
+
     write_requirements_file(path, requirements)
 }
 
