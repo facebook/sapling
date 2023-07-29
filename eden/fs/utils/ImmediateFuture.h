@@ -281,16 +281,11 @@ class ImmediateFuture {
     return kind_ == Kind::Immediate;
   }
 
- private:
-  using Try = folly::Try<T>;
-  using SemiFuture = folly::SemiFuture<T>;
-
-  struct Empty {};
-  explicit ImmediateFuture(Empty) noexcept;
-
   /**
    * Define the behavior of the SemiFuture constructor and continuation when
    * dealing with ready SemiFuture.
+   * 
+   * gcc 11.3 on ubuntu complains if this is in private section.
    */
   enum class SemiFutureReadiness {
     /**
@@ -306,6 +301,13 @@ class ImmediateFuture {
      */
     LazySemiFuture,
   };
+
+ private:
+  using Try = folly::Try<T>;
+  using SemiFuture = folly::SemiFuture<T>;
+
+  struct Empty {};
+  explicit ImmediateFuture(Empty) noexcept;
 
   ImmediateFuture(SemiFuture fut, SemiFutureReadiness readiness) noexcept;
 
