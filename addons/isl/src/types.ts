@@ -408,7 +408,7 @@ export type ClientToServerMessage =
       type: 'generateAICommitMessage';
       id: string;
       title: string;
-      hashOrHead: Hash | 'head';
+      comparison: Comparison;
     }
   | PlatformSpecificClientToServerMessages;
 
@@ -457,7 +457,6 @@ export type ServerToClientMessage =
   | {type: 'importedStack'; imported: ImportedStack; error: string | undefined}
   | {
       type: 'generatedAICommitMessage';
-      hashOrHead: Hash | 'head';
       message: Result<string>;
       id: string;
     }

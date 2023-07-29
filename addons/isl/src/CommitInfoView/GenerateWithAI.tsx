@@ -7,8 +7,8 @@
 
 import type {Result} from '../types';
 import type {MutableRefObject} from 'react';
+import type {Comparison} from 'shared/Comparison';
 
-import serverAPI from '../ClientToServerAPI';
 import {ErrorNotice} from '../ErrorNotice';
 import {Internal} from '../Internal';
 import {ThoughtBubbleIcon} from '../ThoughtBubbleIcon';
@@ -16,7 +16,7 @@ import {Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
 import {T, t} from '../i18n';
 import {uncommittedChangesWithPreviews} from '../previews';
-import {commitByHash, latestHeadCommit} from '../serverAPIState';
+import {commitByHash} from '../serverAPIState';
 import {commitInfoViewCurrentCommits, commitMode, editedCommitMessages} from './CommitInfoState';
 import {getInnerTextareaForVSCodeTextArea} from './utils';
 import {VSCodeButton, VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
@@ -26,9 +26,14 @@ import {
   useRecoilValue,
   useRecoilValueLoadable,
 } from 'recoil';
+import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
+import {unwrap} from 'shared/utils';
 
 import './GenerateWithAI.css';
+
+/** Either a commit hash or "commit/aaaaa" when making a new commit on top of hash aaaaa  */
+type HashKey = `commit/${string}` | string;
 
 export function GenerateAICommitMesageButton({
   textAreaRef,
@@ -42,7 +47,7 @@ export function GenerateAICommitMesageButton({
   if (currentCommit == null) {
     return null;
   }
-  const hashOrHead = mode === 'commit' ? 'head' : currentCommit.hash;
+  const hashKey: HashKey = mode === 'commit' ? `commit/${currentCommit.hash}` : currentCommit.hash;
   return (
     <span key="generate-ai-commit-message-button">
       <Tooltip
@@ -51,7 +56,7 @@ export function GenerateAICommitMesageButton({
         component={(dismiss: () => void) => (
           <GenerateAICommitMessageModal
             dismiss={dismiss}
-            hashOrHead={hashOrHead}
+            hashKey={hashKey}
             textArea={getInnerTextareaForVSCodeTextArea(textAreaRef.current as HTMLElement)}
             appendToTextArea={appendToTextArea}
           />
@@ -67,43 +72,30 @@ export function GenerateAICommitMesageButton({
 
 const cachedSuggestions = new Map<
   string,
-  {lastFetch: number; messagePromise: Promise<Result<string>>; baseHash?: string}
+  {lastFetch: number; messagePromise: Promise<Result<string>>}
 >();
 const ONE_HOUR = 60 * 60 * 1000;
 const MAX_SUGGESTION_CACHE_AGE = 24 * ONE_HOUR; // cache aggressively since we have an explicit button to invalidate
-const generatedCommitMessages = selectorFamily<Result<string>, string>({
+const generatedCommitMessages = selectorFamily<Result<string>, HashKey>({
   key: 'generatedCommitMessages',
   get:
-    (hashOrHead: string | 'head' | undefined) =>
+    (hashKey: string | undefined) =>
     ({get}) => {
-      if (hashOrHead == null || Internal.generateAICommitMessage == null) {
+      if (hashKey == null || Internal.generateAICommitMessage == null) {
         return Promise.resolve({value: ''});
       }
 
-      const cached = cachedSuggestions.get(hashOrHead);
-      if (cached) {
-        if (hashOrHead === 'head') {
-          // only cache in commit mode if the base is the same
-          const currentBase = get(latestHeadCommit)?.hash;
-          if (
-            currentBase === cached.baseHash &&
-            Date.now() - cached.lastFetch < MAX_SUGGESTION_CACHE_AGE
-          ) {
-            return cached.messagePromise;
-          }
-        } else if (Date.now() - cached.lastFetch < MAX_SUGGESTION_CACHE_AGE) {
-          return cached.messagePromise;
-        }
+      const cached = cachedSuggestions.get(hashKey);
+      if (cached && Date.now() - cached.lastFetch < MAX_SUGGESTION_CACHE_AGE) {
+        return cached.messagePromise;
       }
 
       const fileChanges = [];
-      let baseHash: string | undefined;
-      if (hashOrHead === 'head') {
+      if (hashKey === 'head') {
         const uncommittedChanges = get(uncommittedChangesWithPreviews);
         fileChanges.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
-        baseHash = get(latestHeadCommit)?.hash;
       } else {
-        const commit = get(commitByHash(hashOrHead));
+        const commit = get(commitByHash(hashKey));
         if (commit?.isHead) {
           const uncommittedChanges = get(uncommittedChangesWithPreviews);
           fileChanges.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
@@ -111,6 +103,7 @@ const generatedCommitMessages = selectorFamily<Result<string>, string>({
         fileChanges.push(...(commit?.filesSample.slice(0, 10).map(change => change.path) ?? []));
       }
 
+      const hashOrHead = hashKey.startsWith('commit/') ? 'head' : hashKey;
       const editedFields = get(editedCommitMessages(hashOrHead));
       const latestWrittenTitle =
         editedFields.type === 'optimistic' ? '(none)' : (editedFields.fields.Title as string);
@@ -120,21 +113,21 @@ const generatedCommitMessages = selectorFamily<Result<string>, string>({
         'FetchError',
         undefined,
         async () => {
-          Internal.generateAICommitMessage?.({hashOrHead, title: latestWrittenTitle});
+          const comparison: Comparison = hashKey.startsWith('commit/')
+            ? {type: ComparisonType.UncommittedChanges}
+            : {type: ComparisonType.Committed, hash: hashKey};
+          const response = await unwrap(Internal.generateAICommitMessage)({
+            comparison,
+            title: latestWrittenTitle,
+          });
 
-          const response = await serverAPI.nextMessageMatching(
-            'generatedAICommitMessage',
-            message => message.hashOrHead === hashOrHead,
-          );
-
-          return response.message;
+          return response;
         },
       );
 
-      cachedSuggestions.set(hashOrHead, {
+      cachedSuggestions.set(hashKey, {
         lastFetch: Date.now(),
         messagePromise: resultPromise,
-        baseHash,
       });
 
       return resultPromise;
@@ -142,17 +135,17 @@ const generatedCommitMessages = selectorFamily<Result<string>, string>({
 });
 
 function GenerateAICommitMessageModal({
-  hashOrHead,
+  hashKey,
   dismiss,
   appendToTextArea,
 }: {
-  hashOrHead: string;
+  hashKey: HashKey;
   textArea: HTMLElement | null;
   dismiss: () => unknown;
   appendToTextArea: (toAdd: string) => unknown;
 }) {
-  const content = useRecoilValueLoadable(generatedCommitMessages(hashOrHead));
-  const refetch = useRecoilRefresher_UNSTABLE(generatedCommitMessages(hashOrHead));
+  const content = useRecoilValueLoadable(generatedCommitMessages(hashKey));
+  const refetch = useRecoilRefresher_UNSTABLE(generatedCommitMessages(hashKey));
 
   const error = content.state === 'hasError' ? content.errorOrThrow() : content.valueMaybe()?.error;
 
@@ -176,7 +169,7 @@ function GenerateAICommitMessageModal({
           appearance="secondary"
           onClick={() => {
             tracker.track('RetryGeneratedAICommitMessage');
-            cachedSuggestions.delete(hashOrHead); // make sure we don't re-use cached value
+            cachedSuggestions.delete(hashKey); // make sure we don't re-use cached value
             refetch();
           }}>
           <Icon icon="refresh" slot="start" />

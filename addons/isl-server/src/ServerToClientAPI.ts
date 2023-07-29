@@ -31,7 +31,7 @@ import {repositoryCache} from './RepositoryCache';
 import {findPublicAncestor, parseExecJson} from './utils';
 import fs from 'fs';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
-import {ComparisonType, revsetForComparison} from 'shared/Comparison';
+import {revsetForComparison} from 'shared/Comparison';
 import {randomId, unwrap} from 'shared/utils';
 import {Readable} from 'stream';
 
@@ -639,28 +639,20 @@ export default class ServerToClientAPI {
         if (Internal.generateAICommitMessage == null) {
           break;
         }
-        repo
-          .runDiff(
-            data.hashOrHead === 'head'
-              ? {type: ComparisonType.UncommittedChanges}
-              : {type: ComparisonType.Committed, hash: data.hashOrHead},
-            /* context lines */ 4,
-          )
-          .then(diff => {
-            Internal.generateAICommitMessage?.(logger, {
-              title: data.title,
-              context: diff,
-            })
-              .catch((error: Error) => ({error}))
-              .then((result: Result<string>) => {
-                this.postMessage({
-                  type: 'generatedAICommitMessage',
-                  hashOrHead: data.hashOrHead,
-                  message: result,
-                  id: data.id,
-                });
+        repo.runDiff(data.comparison, /* context lines */ 4).then(diff => {
+          Internal.generateAICommitMessage?.(logger, {
+            title: data.title,
+            context: diff,
+          })
+            .catch((error: Error) => ({error}))
+            .then((result: Result<string>) => {
+              this.postMessage({
+                type: 'generatedAICommitMessage',
+                message: result,
+                id: data.id,
               });
-          });
+            });
+        });
         break;
       }
       default: {
