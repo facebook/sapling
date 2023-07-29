@@ -82,20 +82,19 @@ def _cleanuplanded(repo, dryrun=False):
             % ex
         )
         return
-    unfi = repo
     mutationentries = []
     tohide = set()
     markedcount = 0
     checklocalversions = ui.configbool("pullcreatemarkers", "check-local-versions")
     for diffid, draftnodes in sorted(difftodraft.items()):
         publicnode = difftopublic.get(diffid)
-        if publicnode is None or publicnode not in unfi:
+        if publicnode is None or publicnode not in repo:
             continue
         # skip it if the local repo does not think it's a public commit.
-        if unfi[publicnode].phase() != phases.public:
+        if repo[publicnode].phase() != phases.public:
             continue
         # sanity check - the public commit should have a sane commit message.
-        if diffprops.parserevfromcommitmsg(unfi[publicnode].description()) != diffid:
+        if diffprops.parserevfromcommitmsg(repo[publicnode].description()) != diffid:
             continue
 
         if checklocalversions:
@@ -112,7 +111,7 @@ def _cleanuplanded(repo, dryrun=False):
         for draftnode in draftnodes:
             tohide.add(draftnode)
             mutationentries.append(
-                mutation.createsyntheticentry(unfi, [draftnode], publicnode, "land")
+                mutation.createsyntheticentry(repo, [draftnode], publicnode, "land")
             )
     if markedcount:
         ui.status(
@@ -126,18 +125,18 @@ def _cleanuplanded(repo, dryrun=False):
     if not tohide:
         return
     if not dryrun:
-        with unfi.lock(), unfi.transaction("pullcreatemarkers"):
+        with repo.lock(), repo.transaction("pullcreatemarkers"):
             # Any commit hash's added to the idmap in the earlier code will have
             # been dropped by the repo.invalidate() that happens at lock time.
             # Let's refetch those hashes now. If we don't then the
             # mutation/obsolete computation will fail to consider this mutation
             # marker, since it ignores markers for which we don't have the hash
             # for the mutation target.
-            unfi.changelog.filternodes(list(e.succ() for e in mutationentries))
-            if mutation.enabled(unfi):
-                mutation.recordentries(unfi, mutationentries, skipexisting=False)
-            if visibility.tracking(unfi):
-                visibility.remove(unfi, tohide)
+            repo.changelog.filternodes(list(e.succ() for e in mutationentries))
+            if mutation.enabled(repo):
+                mutation.recordentries(repo, mutationentries, skipexisting=False)
+            if visibility.tracking(repo):
+                visibility.remove(repo, tohide)
 
 
 @command("debugmarklanded", commands.dryrunopts)
@@ -194,8 +193,7 @@ def createmarkers(pullres, repo, start, stop, fromdrafts=True):
     if not tocreate:
         return
 
-    unfi = repo
-    with unfi.lock(), unfi.transaction("pullcreatemarkers"):
+    with repo.lock(), repo.transaction("pullcreatemarkers"):
         if mutation.enabled(repo) or visibility.tracking(repo):
             mutationentries = []
             tohide = []
@@ -207,14 +205,14 @@ def createmarkers(pullres, repo, start, stop, fromdrafts=True):
                     continue
                 mutationentries.append(
                     mutation.createsyntheticentry(
-                        unfi, [pred.node()], succs[0].node(), "land"
+                        repo, [pred.node()], succs[0].node(), "land"
                     )
                 )
                 tohide.append(pred.node())
-            if mutation.enabled(unfi):
-                mutation.recordentries(unfi, mutationentries, skipexisting=False)
-            if visibility.tracking(unfi):
-                visibility.remove(unfi, tohide)
+            if mutation.enabled(repo):
+                mutation.recordentries(repo, mutationentries, skipexisting=False)
+            if visibility.tracking(repo):
+                visibility.remove(repo, tohide)
 
 
 def getlandeddiffs(repo, start, stop, onlypublic=True):
@@ -238,10 +236,9 @@ def getmarkers(repo, landeddiffs):
 
 def getmarkersfromdrafts(repo, landeddiffs):
     tocreate = []
-    unfiltered = repo
 
-    for rev in unfiltered.revs("draft() - obsolete() - hidden()"):
-        ctx = unfiltered[rev]
+    for rev in repo.revs("draft() - obsolete() - hidden()"):
+        ctx = repo[rev]
         diff = getdiff(ctx)
 
         if (
