@@ -237,7 +237,7 @@ ImmediateFuture<T>::thenTry(Func&& func) && {
       return std::move(semiFut).deferValue(
           [](auto&& immFut) { return std::move(immFut).semi(); });
     } else {
-      return std::move(semiFut);
+      return semiFut;
     }
   }
 }
@@ -353,7 +353,7 @@ ImmediateFuture<std::vector<folly::Try<T>>> collectAll(
   if (semis.empty()) {
     // All the ImmediateFuture were immediate, let's return an ImmediateFuture
     // that holds an immediate vector too.
-    return std::move(res);
+    return res;
   }
 
   return folly::collectAll(std::move(semis))
