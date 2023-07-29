@@ -114,6 +114,9 @@ def canperformstreamclone(
             return False, None
         requirements = streamreqs
 
+    if repo.storage_format() == "remotefilelog":
+        requirements.add("remotefilelog")
+
     return True, requirements
 
 
