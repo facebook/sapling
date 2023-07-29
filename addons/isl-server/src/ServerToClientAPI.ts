@@ -31,7 +31,7 @@ import {repositoryCache} from './RepositoryCache';
 import {findPublicAncestor, parseExecJson} from './utils';
 import fs from 'fs';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
-import {revsetArgsForComparison, revsetForComparison} from 'shared/Comparison';
+import {ComparisonType, revsetForComparison} from 'shared/Comparison';
 import {randomId, unwrap} from 'shared/utils';
 import {Readable} from 'stream';
 
@@ -499,19 +499,9 @@ export default class ServerToClientAPI {
       }
       case 'requestComparison': {
         const {comparison} = data;
-        const DIFF_CONTEXT_LINES = 4;
         const diff: Promise<Result<string>> = repo
-          .runCommand([
-            'diff',
-            ...revsetArgsForComparison(comparison),
-            // don't include a/ and b/ prefixes on files
-            '--noprefix',
-            '--no-binary',
-            '--nodate',
-            '--unified',
-            String(DIFF_CONTEXT_LINES),
-          ])
-          .then(o => ({value: o.stdout}))
+          .runDiff(comparison)
+          .then(value => ({value}))
           .catch(error => {
             logger?.error('error running diff', error.toString());
             return {error};
@@ -643,6 +633,34 @@ export default class ServerToClientAPI {
           this.postMessage({type: 'importedStack', imported: imported ?? [], error});
         };
         parseExecJson(exec, reply);
+        break;
+      }
+      case 'generateAICommitMessage': {
+        if (Internal.generateAICommitMessage == null) {
+          break;
+        }
+        repo
+          .runDiff(
+            data.hashOrHead === 'head'
+              ? {type: ComparisonType.UncommittedChanges}
+              : {type: ComparisonType.Committed, hash: data.hashOrHead},
+            /* context lines */ 4,
+          )
+          .then(diff => {
+            Internal.generateAICommitMessage?.(logger, {
+              title: data.title,
+              reason: data.reason,
+              // TODO: if we truncate the context, we should probably at least list the changed file names for the LLM?
+              context: diff.slice(0, 1000),
+            }).then((result: Result<string>) => {
+              this.postMessage({
+                type: 'generatedAICommitMessage',
+                hashOrHead: data.hashOrHead,
+                message: result,
+                id: data.id,
+              });
+            });
+          });
         break;
       }
       default: {

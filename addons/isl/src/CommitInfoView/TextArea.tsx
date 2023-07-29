@@ -14,7 +14,9 @@ import {
   PendingImageUploads,
 } from '../ImageUpload';
 import {Internal} from '../Internal';
+import {insertAtCursor} from '../textareaUtils';
 import {assert} from '../utils';
+import {GenerateAICommitMesageButton} from './GenerateWithAI';
 import {getInnerTextareaForVSCodeTextArea} from './utils';
 import {VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
 import {forwardRef, useRef, useEffect} from 'react';
@@ -119,6 +121,12 @@ export function CommitInfoTextArea({
     <div className="commit-info-field">
       <EditorToolbar
         uploadFiles={supportsImageUpload ? uploadFiles : undefined}
+        appendToTextArea={(toAdd: string) => {
+          if (ref.current) {
+            insertAtCursor(ref.current, toAdd);
+            onInput({target: ref.current});
+          }
+        }}
         textAreaRef={ref}
       />
       <Component
@@ -153,14 +161,25 @@ export function CommitInfoTextArea({
 export function EditorToolbar({
   textAreaRef,
   uploadFiles,
+  appendToTextArea,
 }: {
   uploadFiles?: (files: Array<File>) => unknown;
   textAreaRef: MutableRefObject<unknown>;
+  appendToTextArea: (toAdd: string) => unknown;
 }) {
   const parts: Array<ReactNode> = [];
   if (uploadFiles != null) {
     parts.push(<PendingImageUploads key="pending-uploads" textAreaRef={textAreaRef} />);
     parts.push(<FilePicker key="picker" uploadFiles={uploadFiles} />);
+  }
+  if (Internal.generateAICommitMessage != null) {
+    parts.push(
+      <GenerateAICommitMesageButton
+        textAreaRef={textAreaRef}
+        appendToTextArea={appendToTextArea}
+        key="gen-ai-message"
+      />,
+    );
   }
   if (parts.length === 0) {
     return null;

@@ -404,6 +404,13 @@ export type ClientToServerMessage =
   | {type: 'unsubscribe'; kind: SubscriptionKind; subscriptionID: string}
   | {type: 'exportStack'; revs: string; assumeTracked?: Array<string>}
   | {type: 'importStack'; stack: ImportStack}
+  | {
+      type: 'generateAICommitMessage';
+      id: string;
+      title?: string;
+      reason?: string;
+      hashOrHead: Hash | 'head';
+    }
   | PlatformSpecificClientToServerMessages;
 
 export type SubscriptionResultsData = {
@@ -449,6 +456,12 @@ export type ServerToClientMessage =
       error: string | undefined;
     }
   | {type: 'importedStack'; imported: ImportedStack; error: string | undefined}
+  | {
+      type: 'generatedAICommitMessage';
+      hashOrHead: Hash | 'head';
+      message: Result<string>;
+      id: string;
+    }
   | OperationProgressEvent
   | PlatformSpecificServerToClientMessages;
 

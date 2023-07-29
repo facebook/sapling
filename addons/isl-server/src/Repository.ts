@@ -33,6 +33,7 @@ import type {
   FetchedUncommittedChanges,
   FetchedCommits,
 } from 'isl/src/types';
+import type {Comparison} from 'shared/Comparison';
 
 import {Internal} from './Internal';
 import {OperationQueue} from './OperationQueue';
@@ -46,6 +47,7 @@ import execa from 'execa';
 import {CommandRunner} from 'isl/src/types';
 import os from 'os';
 import path from 'path';
+import {revsetArgsForComparison} from 'shared/Comparison';
 import {LRU} from 'shared/LRU';
 import {RateLimiter} from 'shared/RateLimiter';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
@@ -733,6 +735,20 @@ export class Repository {
         ?.commits.value?.map(commit => commit.diffId)
         .filter(notEmpty) ?? []
     );
+  }
+
+  public async runDiff(comparison: Comparison, contextLines = 4): Promise<string> {
+    const output = await this.runCommand([
+      'diff',
+      ...revsetArgsForComparison(comparison),
+      // don't include a/ and b/ prefixes on files
+      '--noprefix',
+      '--no-binary',
+      '--nodate',
+      '--unified',
+      String(contextLines),
+    ]);
+    return output.stdout;
   }
 
   public runCommand(args: Array<string>, cwd?: string, options?: execa.Options) {

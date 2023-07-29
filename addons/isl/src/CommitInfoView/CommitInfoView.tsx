@@ -176,9 +176,8 @@ function useDebounceFetchDiffDetails(diffId?: string) {
 export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const [mode, setMode] = useRecoilState(commitMode);
   const isCommitMode = commit.isHead && mode === 'commit';
-  const [editedMessage, setEditedCommitMesage] = useRecoilState(
-    editedCommitMessages(isCommitMode ? 'head' : commit.hash),
-  );
+  const hashOrHead = isCommitMode ? 'head' : commit.hash;
+  const [editedMessage, setEditedCommitMesage] = useRecoilState(editedCommitMessages(hashOrHead));
   const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
   const schema = useRecoilValue(commitMessageFieldsSchema);
 
