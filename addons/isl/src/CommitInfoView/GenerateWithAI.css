@@ -14,13 +14,19 @@
   height: 300px;
 }
 
-.generated-ai-commit-message-modal vscode-text-area {
+.generated-ai-commit-message-modal vscode-text-area,
+.generated-ai-commit-message-modal .error-notice {
   position: relative;
-  width: 100%;
   height: 100%;
   flex-grow: 1;
   margin: 2px;
+  overflow-y: scroll;
 }
+
+.generated-ai-commit-message-modal vscode-text-area {
+  width: 100%;
+}
+
 .generated-ai-commit-message-modal vscode-text-area::part(control) {
   border: unset;
   width: calc(100% - 4px);

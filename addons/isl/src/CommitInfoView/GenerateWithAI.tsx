@@ -9,6 +9,7 @@ import type {Result} from '../types';
 import type {MutableRefObject} from 'react';
 
 import serverAPI from '../ClientToServerAPI';
+import {ErrorNotice} from '../ErrorNotice';
 import {Internal} from '../Internal';
 import {ThoughtBubbleIcon} from '../ThoughtBubbleIcon';
 import {Tooltip} from '../Tooltip';
@@ -141,19 +142,25 @@ function GenerateAICommitMessageModal({
   const content = useRecoilValueLoadable(generatedCommitMessages(hashOrHead));
   const refetch = useRecoilRefresher_UNSTABLE(generatedCommitMessages(hashOrHead));
 
+  const error = content.state === 'hasError' ? content.errorOrThrow() : content.valueMaybe()?.error;
+
   return (
     <div className="generated-ai-commit-message-modal">
       <VSCodeButton appearance="icon" className="dismiss-modal" onClick={dismiss}>
         <Icon icon="x" />
       </VSCodeButton>
       <b>Generate Summary</b>
-      <div className="generated-message-textarea-container">
-        <VSCodeTextArea readOnly value={content.valueMaybe()?.value ?? ''} rows={14} />
-        {content.state === 'loading' && <Icon icon="loading" />}
-      </div>
+      {error ? (
+        <ErrorNotice error={error} title={t('Unable to generate commit message')}></ErrorNotice>
+      ) : (
+        <div className="generated-message-textarea-container">
+          <VSCodeTextArea readOnly value={content.valueMaybe()?.value ?? ''} rows={14} />
+          {content.state === 'loading' && <Icon icon="loading" />}
+        </div>
+      )}
       <div className="generated-message-button-bar">
         <VSCodeButton
-          disabled={content.state === 'loading'}
+          disabled={content.state === 'loading' || error != null}
           appearance="secondary"
           onClick={() => {
             cachedSuggestions.delete(hashOrHead); // make sure we don't re-use cached value
@@ -163,7 +170,7 @@ function GenerateAICommitMessageModal({
           <T>Try Again</T>
         </VSCodeButton>
         <VSCodeButton
-          disabled={content.state === 'loading'}
+          disabled={content.state === 'loading' || error != null}
           onClick={() => {
             const value = content.state === 'hasValue' ? content.valueOrThrow().value : null;
             if (value) {

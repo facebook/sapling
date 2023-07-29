@@ -652,14 +652,16 @@ export default class ServerToClientAPI {
               reason: data.reason,
               // TODO: if we truncate the context, we should probably at least list the changed file names for the LLM?
               context: diff.slice(0, 1000),
-            }).then((result: Result<string>) => {
-              this.postMessage({
-                type: 'generatedAICommitMessage',
-                hashOrHead: data.hashOrHead,
-                message: result,
-                id: data.id,
+            })
+              .catch((error: Error) => ({error}))
+              .then((result: Result<string>) => {
+                this.postMessage({
+                  type: 'generatedAICommitMessage',
+                  hashOrHead: data.hashOrHead,
+                  message: result,
+                  id: data.id,
+                });
               });
-            });
           });
         break;
       }
