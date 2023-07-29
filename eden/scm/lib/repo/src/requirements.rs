@@ -98,6 +98,11 @@ impl Requirements {
         }
         Ok(())
     }
+
+    /// Clone as a `HashSet`.
+    pub fn to_set(&self) -> HashSet<String> {
+        self.requirements.clone()
+    }
 }
 
 #[cfg(test)]

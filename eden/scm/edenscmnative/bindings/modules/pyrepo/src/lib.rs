@@ -13,6 +13,7 @@ extern crate workingcopy as rsworkingcopy;
 
 use std::cell::Cell;
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use configmodel::config::ConfigExt;
@@ -86,6 +87,26 @@ py_class!(pub class repo |py| {
         let path = String::from(repo_ref.metalog_path().to_string_lossy());
         let log_ref = repo_ref.metalog().map_pyerr(py)?;
         PyMetaLog::create_instance(py, log_ref, path)
+    }
+
+    @property
+    def requirements(&self) -> PyResult<HashSet<String>> {
+        let repo_ref = self.inner(py).read();
+        Ok(repo_ref.requirements.to_set())
+    }
+
+    @property
+    def store_requirements(&self) -> PyResult<HashSet<String>> {
+        let repo_ref = self.inner(py).read();
+        Ok(repo_ref.store_requirements.to_set())
+    }
+
+    @property
+    def storage_format(&self) -> PyResult<String> {
+        let repo_ref = self.inner(py).read();
+        let format = repo_ref.storage_format();
+        let lower_case = format!("{:?}", format).to_lowercase();
+        Ok(lower_case)
     }
 
     def invalidatemetalog(&self) -> PyResult<PyNone> {
