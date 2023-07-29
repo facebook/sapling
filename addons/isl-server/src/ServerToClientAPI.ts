@@ -649,9 +649,7 @@ export default class ServerToClientAPI {
           .then(diff => {
             Internal.generateAICommitMessage?.(logger, {
               title: data.title,
-              reason: data.reason,
-              // TODO: if we truncate the context, we should probably at least list the changed file names for the LLM?
-              context: diff.slice(0, 1000),
+              context: diff,
             })
               .catch((error: Error) => ({error}))
               .then((result: Result<string>) => {

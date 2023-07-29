@@ -17,7 +17,7 @@ import {tracker} from '../analytics';
 import {T, t} from '../i18n';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {commitByHash, latestHeadCommit} from '../serverAPIState';
-import {commitInfoViewCurrentCommits, commitMode} from './CommitInfoState';
+import {commitInfoViewCurrentCommits, commitMode, editedCommitMessages} from './CommitInfoState';
 import {getInnerTextareaForVSCodeTextArea} from './utils';
 import {VSCodeButton, VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
 import {
@@ -111,8 +111,12 @@ const generatedCommitMessages = selectorFamily<Result<string>, string>({
         fileChanges.push(...(commit?.filesSample.slice(0, 10).map(change => change.path) ?? []));
       }
 
+      const editedFields = get(editedCommitMessages(hashOrHead));
+      const latestWrittenTitle =
+        editedFields.type === 'optimistic' ? undefined : (editedFields.fields.Title as string);
+
       return tracker.operation('GenerateAICommitMessage', 'FetchError', undefined, async () => {
-        Internal.generateAICommitMessage?.({hashOrHead});
+        Internal.generateAICommitMessage?.({hashOrHead, title: latestWrittenTitle});
 
         const response = await serverAPI.nextMessageMatching(
           'generatedAICommitMessage',
