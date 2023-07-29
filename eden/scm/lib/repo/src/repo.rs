@@ -420,7 +420,7 @@ impl Repo {
     }
 
     pub fn storage_format(&self) -> StorageFormat {
-        let format = if self.store_requirements.contains("remotefilelog") {
+        let format = if self.requirements.contains("remotefilelog") {
             StorageFormat::RemoteFilelog
         } else if self.store_requirements.contains("git") {
             StorageFormat::Git
