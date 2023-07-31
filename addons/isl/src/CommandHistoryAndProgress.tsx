@@ -7,6 +7,7 @@
 
 import type {Operation} from './operations/Operation';
 import type {ValidatedRepoInfo} from './types';
+import type {ReactNode} from 'react';
 
 import {Delayed} from './Delayed';
 import {Tooltip} from './Tooltip';
@@ -180,14 +181,50 @@ export function CommandHistoryAndProgress() {
         {showLastLineOfOutput ? (
           <div className="progress-container-row">
             <div className="progress-container-last-output">
-              {progress.commandOutput?.slice(-1).map((line, i) => (
-                <code key={i}>{line}</code>
-              ))}
+              {progress.currentProgress != null ? (
+                <ProgressLine
+                  progress={progress.currentProgress.progress}
+                  progressTotal={progress.currentProgress.progressTotal}>
+                  {progress.currentProgress.message}
+                </ProgressLine>
+              ) : (
+                progress.commandOutput
+                  ?.slice(-1)
+                  .map((line, i) => <ProgressLine key={i}>{line}</ProgressLine>)
+              )}
             </div>
           </div>
         ) : null}
         {abort}
       </Tooltip>
     </div>
+  );
+}
+
+function ProgressLine({
+  children,
+  progress,
+  progressTotal,
+}: {
+  children: ReactNode;
+  progress?: number;
+  progressTotal?: number;
+}) {
+  return (
+    <span className="progress-line">
+      {progress != null && progressTotal != null ? (
+        <ProgressBar progress={progress} progressTotal={progressTotal} />
+      ) : null}
+      <code>{children}</code>
+    </span>
+  );
+}
+
+function ProgressBar({progress, progressTotal}: {progress: number; progressTotal: number}) {
+  const pct = progress / progressTotal;
+  return (
+    <span className="progress-bar">
+      <span className="progress-bar-filled" style={{width: `${Math.round(100 * pct)}%`}} />
+    </span>
   );
 }
