@@ -600,6 +600,121 @@ async fn test_is_present_missing(fb: FacebookInit) -> Result<()> {
 }
 
 #[fbinit::test]
+async fn test_unlink(fb: FacebookInit) -> Result<()> {
+    async fn setup_multiplex_for_unlink(
+        ctx: &CoreContext,
+    ) -> Result<(
+        Vec<(BlobstoreId, Arc<Tickable<(BlobstoreBytes, u64)>>)>,
+        WalMultiplexedBlobstore,
+        &'static str,
+    )> {
+        let (tickable_queue, tickable_blobstores, multiplex) = setup_multiplex(3, 2, None)?;
+
+        // Two blobstores have the key, one failed to write: [ ] [x] [ ]
+        let v = make_value("v1");
+        let k = "k1";
+
+        let mut put_fut = multiplex.put(ctx, k.to_owned(), v.clone()).boxed();
+        assert_pending(&mut put_fut).await;
+
+        // wal queue write succeeds
+        tickable_queue.tick(None);
+        assert_pending(&mut put_fut).await;
+
+        tickable_blobstores[0].1.tick(None);
+        tickable_blobstores[1].1.tick(Some("bs1 failed"));
+        tickable_blobstores[2].1.tick(None);
+
+        // multiplexed put succeeds: write quorum achieved
+        assert!(put_fut.await.is_ok());
+        Ok((tickable_blobstores, multiplex, k))
+    }
+
+    let ctx = CoreContext::test_mock(fb);
+
+    // all unlinks succeed, multiplexed unlink succeeds
+    {
+        let (tickable_blobstores, multiplex, k) = setup_multiplex_for_unlink(&ctx).await?;
+        let mut unlink_fut = multiplex.unlink(&ctx, k).boxed();
+        assert_pending(&mut unlink_fut).await;
+
+        // first blobstore unlinks successfully
+        tickable_blobstores[0].1.tick(None);
+        assert_pending(&mut unlink_fut).await;
+        // second blobstore unlinks successfully
+        tickable_blobstores[1].1.tick(None);
+        assert_pending(&mut unlink_fut).await;
+        // third blobstore unlinks successfully
+        tickable_blobstores[2].1.tick(None);
+        assert!(unlink_fut.await.is_ok());
+    }
+
+    // all unlinks succeed, except blobstore 1 for which the write failed, multiplexed unlink succeeds
+    {
+        let (tickable_blobstores, multiplex, k) = setup_multiplex_for_unlink(&ctx).await?;
+        let mut unlink_fut = multiplex.unlink(&ctx, k).boxed();
+        assert_pending(&mut unlink_fut).await;
+
+        // first blobstore unlinks successfully
+        tickable_blobstores[0].1.tick(None);
+        assert_pending(&mut unlink_fut).await;
+        // second blobstore fails to unlink
+        tickable_blobstores[1].1.tick(Some("bs1 failed"));
+        assert_pending(&mut unlink_fut).await;
+        // but the blob is absent, so it's a success anyway
+        tickable_blobstores[1].1.tick(None);
+        assert_pending(&mut unlink_fut).await;
+        // third blobstore unlinks successfully
+        tickable_blobstores[2].1.tick(None);
+        assert!(unlink_fut.await.is_ok());
+    }
+
+    // all unlinks succeed, except blobstore 1 for which the write failed. The is_present call fails,
+    // multiplexed unlink fails as we don't have a way to know that the blob is not present in blobstore 1
+    {
+        let (tickable_blobstores, multiplex, k) = setup_multiplex_for_unlink(&ctx).await?;
+        let mut unlink_fut = multiplex.unlink(&ctx, k).boxed();
+        assert_pending(&mut unlink_fut).await;
+
+        // first blobstore unlinks successfully
+        tickable_blobstores[0].1.tick(None);
+        assert_pending(&mut unlink_fut).await;
+        // second blobstore fails to unlink
+        tickable_blobstores[1].1.tick(Some("bs1 unlink failed"));
+        assert_pending(&mut unlink_fut).await;
+        // and the is_present call fails
+        tickable_blobstores[1].1.tick(Some("bs1 is_present failed"));
+        assert_pending(&mut unlink_fut).await;
+        // third blobstore unlinks successfully
+        tickable_blobstores[2].1.tick(None);
+        assert!(unlink_fut.await.is_err());
+    }
+
+    // all unlinks succeed, except blobstore 0 for which the write succeeded, multiplexed unlink
+    // fails as the blob in blobstore 0 remains
+    {
+        let (tickable_blobstores, multiplex, k) = setup_multiplex_for_unlink(&ctx).await?;
+        let mut unlink_fut = multiplex.unlink(&ctx, k).boxed();
+        assert_pending(&mut unlink_fut).await;
+
+        // first blobstore unlinks successfully
+        tickable_blobstores[0].1.tick(Some("bs0 failed"));
+        assert_pending(&mut unlink_fut).await;
+        // and the blob is present, so the unlink failed
+        tickable_blobstores[0].1.tick(None);
+        assert_pending(&mut unlink_fut).await;
+        // second blobstore fails to unlink
+        tickable_blobstores[1].1.tick(None);
+        assert_pending(&mut unlink_fut).await;
+        // third blobstore unlinks successfully
+        tickable_blobstores[2].1.tick(None);
+        assert!(unlink_fut.await.is_err());
+    }
+
+    Ok(())
+}
+
+#[fbinit::test]
 async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (tickable_queue, tickable_blobstores, multiplex) = setup_multiplex(3, 2, None)?;
