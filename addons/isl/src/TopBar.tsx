@@ -13,6 +13,7 @@ import {PullButton} from './PullButton';
 import {SettingsGearButton} from './SettingsTooltip';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {tracker} from './analytics';
+import {DebugToolsButton} from './debug/DebugToolsButton';
 import {t} from './i18n';
 import {
   haveCommitsLoadedYet,
@@ -41,6 +42,7 @@ export function TopBar() {
         <FetchingDataIndicator />
       </span>
       <span className="button-group">
+        <DebugToolsButton />
         <BugButton />
         <SettingsGearButton />
         <RefreshButton />
