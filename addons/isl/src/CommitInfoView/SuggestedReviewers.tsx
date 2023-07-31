@@ -16,19 +16,9 @@ import {commitByHash} from '../serverAPIState';
 import {commitInfoViewCurrentCommits, commitMode} from './CommitInfoState';
 import {selectorFamily, useRecoilValue, useRecoilValueLoadable} from 'recoil';
 import {Icon} from 'shared/Icon';
+import {tryJsonParse} from 'shared/utils';
 
 import './SuggestedReviewers.css';
-
-const tryParse = (s: string | null): Array<[string, number]> | undefined => {
-  if (s == null) {
-    return undefined;
-  }
-  try {
-    return JSON.parse(s);
-  } catch {
-    return undefined;
-  }
-};
 
 const MAX_VISIBLE_RECENT_REVIEWERS = 3;
 const RECENT_REVIEWERS_STORAGE_KEY = 'ISL_RECENT_REVIEWERS';
@@ -41,7 +31,11 @@ class RecentReviewers {
 
   constructor() {
     try {
-      this.recent = new Map(tryParse(localStorage.getItem(RECENT_REVIEWERS_STORAGE_KEY)) ?? []);
+      this.recent = new Map(
+        (tryJsonParse(localStorage.getItem(RECENT_REVIEWERS_STORAGE_KEY) ?? '[]') as Array<
+          [string, number]
+        >) ?? [],
+      );
     } catch {
       this.recent = new Map();
     }

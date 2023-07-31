@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Json} from './typeUtils';
+
 export function notEmpty<T>(value: T | null | undefined): value is T {
   return value !== null && value !== undefined;
 }
@@ -140,4 +142,12 @@ export function truncate(text: string, maxLength = 100): string {
 
 export function isPromise<T>(o: unknown): o is Promise<T> {
   return typeof (o as {then?: () => void})?.then === 'function';
+}
+
+export function tryJsonParse(s: string): Json | undefined {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return undefined;
+  }
 }
