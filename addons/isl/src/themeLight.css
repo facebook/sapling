@@ -32,4 +32,9 @@
   --diffEditor-insertedLineBackground: rgba(35, 134, 54, 0.2);
   --diffEditor-removedLineBackground: rgba(218, 54, 51, 0.2);
   --editor-selectionBackground: #add6ff;
+
+  --signal-good-bg: #2da44e;
+  --signal-medium-bg: #d5b14e;
+  --signal-bad-bg: #cf222e;
+  --signal-fg: white;
 }

@@ -5,15 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactNode} from 'react';
+
 import {debugLogMessageTraffic} from '../ClientToServerAPI';
 import {DropdownField, DropdownFields} from '../DropdownFields';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
 import {t, T} from '../i18n';
+import {RelativeDate} from '../relativeDate';
+import {latestCommitsData, latestUncommittedChangesData, mergeConflicts} from '../serverAPIState';
 import {getAllRecoilStateJson} from './getAllRecoilStateJson';
-import {VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeBadge, VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
 import {useState} from 'react';
-import {atom, useRecoilCallback, useRecoilState} from 'recoil';
+import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 
 import './DebugToolsMenu.css';
 
@@ -24,6 +28,9 @@ export default function DebugToolsMenu() {
       icon="pulse"
       data-testid="internal-debug-tools-dropdown"
       className="internal-debug-tools-dropdown">
+      <DropdownField title={<T>Performance</T>}>
+        <DebugPerfInfo />
+      </DropdownField>
       <DropdownField title={<T>Internal Recoil State</T>}>
         <InternalState />
       </DropdownField>
@@ -80,6 +87,49 @@ function ServerClientMessageLogging() {
         onChange={e => setShouldLog((e.target as HTMLInputElement).checked)}>
         <T>Log messages</T>
       </VSCodeCheckbox>
+    </div>
+  );
+}
+
+function DebugPerfInfo() {
+  const latestStatus = useRecoilValue(latestUncommittedChangesData);
+  const latestLog = useRecoilValue(latestCommitsData);
+  const latestConflicts = useRecoilValue(mergeConflicts);
+  return (
+    <div>
+      <FetchDurationInfo
+        name={<T>Status</T>}
+        start={latestStatus.fetchStartTimestamp}
+        end={latestStatus.fetchCompletedTimestamp}
+      />
+      <FetchDurationInfo
+        name={<T>Log</T>}
+        start={latestLog.fetchStartTimestamp}
+        end={latestLog.fetchCompletedTimestamp}
+      />
+      <FetchDurationInfo
+        name={<T>Merge Conflicts</T>}
+        start={latestConflicts?.fetchStartTimestamp}
+        end={latestConflicts?.fetchCompletedTimestamp}
+      />
+    </div>
+  );
+}
+
+function FetchDurationInfo({name, start, end}: {name: ReactNode; start?: number; end?: number}) {
+  const deltaMs = end == null || start == null ? null : end - start;
+  const assessment =
+    deltaMs == null ? 'none' : deltaMs < 1000 ? 'fast' : deltaMs < 3000 ? 'ok' : 'slow';
+  return (
+    <div className={`fetch-duration-info fetch-duration-${assessment}`}>
+      {name} <VSCodeBadge>{deltaMs == null ? 'N/A' : `${deltaMs}ms`}</VSCodeBadge>
+      {end == null ? null : (
+        <Subtle>
+          <Tooltip title={new Date(end).toLocaleString()} placement="right">
+            <RelativeDate date={end} />
+          </Tooltip>
+        </Subtle>
+      )}
     </div>
   );
 }

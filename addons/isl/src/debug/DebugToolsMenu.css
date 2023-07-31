@@ -14,3 +14,23 @@
   gap: var(--pad);
   align-items: center;
 }
+
+.internal-debug-tools-dropdown .fetch-duration-info {
+  display: flex;
+  gap: var(--pad);
+  align-items: center;
+}
+
+.fetch-duration-slow vscode-badge::part(control) {
+  color: var(--signal-fg);
+  background-color: var(--signal-bad-bg);
+}
+.fetch-duration-ok vscode-badge::part(control) {
+  color: var(--signal-fg);
+  background-color: var(--scm-modified-foreground);
+  background-color: var(--signal-medium-bg);
+}
+.fetch-duration-fast vscode-badge::part(control) {
+  color: var(--signal-fg);
+  background-color: var(--signal-good-bg);
+}

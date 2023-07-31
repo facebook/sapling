@@ -33,5 +33,11 @@
   --diffEditor-removedLineBackground: rgba(218, 54, 51, 0.2);
   --editor-selectionBackground: #264f78;
 
+  /* Signal colors */
+  --signal-good-bg: #2da44e;
+  --signal-medium-bg: #e0d12d;
+  --signal-bad-bg: #cf222e;
+  --signal-fg: white;
+
   /* VS Code Webview UI Toolkit includes dark theme colors already */
 }
