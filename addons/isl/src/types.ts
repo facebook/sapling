@@ -288,11 +288,27 @@ export type OperationProgress =
   | {id: string; kind: 'spawn'; queue: Array<string>}
   | {id: string; kind: 'stderr'; message: string}
   | {id: string; kind: 'stdout'; message: string}
+  // overally progress information, typically for a progress bar or progress not found directly in the stdout
+  | {id: string; kind: 'progress'; progress: ProgressStep}
+  // progress information for a specific commit, shown inline
+  | {id: string; kind: 'inlineProgress'; hash: string; message: string}
   | {id: string; kind: 'exit'; exitCode: number; timestamp: number}
   | {id: string; kind: 'error'; error: string};
 
+export type ProgressStep = {
+  message: string;
+  progress?: number;
+  progressTotal?: number;
+};
+
 export type OperationCommandProgressReporter = (
-  ...args: ['spawn'] | ['stdout', string] | ['stderr', string] | ['exit', number]
+  ...args:
+    | ['spawn']
+    | ['stdout', string]
+    | ['stderr', string]
+    | [type: 'inlineProgress', hash: string, message: string]
+    | ['progress', ProgressStep]
+    | ['exit', number]
 ) => void;
 
 export type OperationProgressEvent = {type: 'operationProgress'} & OperationProgress;

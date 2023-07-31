@@ -13,6 +13,7 @@ import type {
   CommitInfo,
   Hash,
   MergeConflicts,
+  ProgressStep,
   RepoInfo,
   SmartlogCommits,
   SubscriptionKind,
@@ -414,6 +415,7 @@ export type OperationInfo = {
   operation: Operation;
   startTime?: Date;
   commandOutput?: Array<string>;
+  currentProgress?: ProgressStep;
   /** if true, we have sent "abort" request, the process might have exited or is going to exit soon */
   aborting?: boolean;
   /** if true, the operation process has exited AND there's no more optimistic commit state to show */
@@ -489,6 +491,26 @@ export const operationList = atom<OperationList>({
                 currentOperation: {
                   ...currentOperation,
                   commandOutput: [...(currentOperation?.commandOutput ?? []), progress.message],
+                  currentProgress: undefined, // hide progress on new stdout, so it doesn't appear stuck
+                },
+              };
+            });
+            break;
+          case 'progress':
+            setSelf(current => {
+              if (current == null || current instanceof DefaultValue) {
+                return current;
+              }
+              const currentOperation = current.currentOperation;
+              if (currentOperation == null) {
+                return current;
+              }
+
+              return {
+                ...current,
+                currentOperation: {
+                  ...currentOperation,
+                  currentProgress: progress.progress,
                 },
               };
             });
