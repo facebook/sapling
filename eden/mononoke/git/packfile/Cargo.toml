@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.71"
 bytes = { version = "1.1", features = ["serde"] }
-flate2 = { version = "1.0.22", features = ["rust_backend", "tokio"], default-features = false }
+flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
 git-hash = "0.10"
 git-object = "0.23"
 sha1 = "0.10.5"
