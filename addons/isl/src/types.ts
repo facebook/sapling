@@ -122,6 +122,11 @@ export type CodeReviewSystem =
 
 export type PreferredSubmitCommand = 'pr' | 'ghstack';
 
+export type StableCommitMetadata = {
+  value: string;
+  description: string;
+};
+
 export type CommitInfo = {
   title: string;
   hash: Hash;
@@ -156,7 +161,7 @@ export type CommitInfo = {
   totalFileCount: number;
   /** @see {@link DiffId} */
   diffId?: DiffId;
-  stableCommitMetadata?: string;
+  stableCommitMetadata?: Array<StableCommitMetadata>;
 };
 export type SuccessorInfo = {
   hash: string;

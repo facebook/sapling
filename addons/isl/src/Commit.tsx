@@ -259,13 +259,15 @@ export const Commit = memo(
               <VSCodeTag key={remoteBookmarks}>{remoteBookmarks}</VSCodeTag>
             ))}
             {commit?.stableCommitMetadata != null ? (
-              <Tooltip title={commit.stableCommitMetadata}>
-                <div className="stable-commit-metadata">
-                  <VSCodeTag key={commit.stableCommitMetadata}>
-                    {commit.stableCommitMetadata}
-                  </VSCodeTag>
-                </div>
-              </Tooltip>
+              <>
+                {commit.stableCommitMetadata.map(stable => (
+                  <Tooltip title={stable.description} key={stable.value}>
+                    <div className="stable-commit-metadata">
+                      <VSCodeTag>{stable.value}</VSCodeTag>
+                    </div>
+                  </Tooltip>
+                ))}
+              </>
             ) : null}
             {isPublic ? <CommitDate date={commit.date} /> : null}
             {previewType === CommitPreview.REBASE_OPTIMISTIC_ROOT ? (

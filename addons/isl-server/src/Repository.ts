@@ -80,7 +80,7 @@ const FIELDS = {
   cloesestPredecessors: '{predecessors % "{node},"}',
   // This would be more elegant as a new built-in template
   diffId: '{if(phabdiff, phabdiff, github_pull_request_number)}',
-  stableCommitMetadata: Internal.stableCommitTemplate ?? '',
+  stableCommitMetadata: Internal.stableCommitConfig?.template ?? '',
   // Description must be last
   description: '{desc}',
 };
@@ -953,7 +953,7 @@ export function parseCommitInfoOutput(logger: Logger, output: string): SmartlogC
         diffId: lines[FIELD_INDEX.diffId] != '' ? lines[FIELD_INDEX.diffId] : undefined,
         stableCommitMetadata:
           lines[FIELD_INDEX.stableCommitMetadata] != ''
-            ? lines[FIELD_INDEX.stableCommitMetadata]
+            ? Internal.stableCommitConfig?.parse(lines[FIELD_INDEX.stableCommitMetadata])
             : undefined,
       });
     } catch (err) {

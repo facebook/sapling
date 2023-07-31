@@ -249,6 +249,10 @@
   pointer-events: none;
 }
 
+.stable-commit-metadata {
+  display: flex;
+}
+
 .stable-commit-metadata vscode-tag::part(control) {
   background-color: var(--list-hover-background);
   color: var(--list-hover-foreground);
