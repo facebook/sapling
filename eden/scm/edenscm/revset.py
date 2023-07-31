@@ -351,7 +351,7 @@ def keyvaluepair(repo, subset, k, v, order):
     raise error.ParseError(_("can't use a key-value pair in this context"))
 
 
-def oldworkingcopyparentset(repo, subset, x, order):
+def oldnonobsworkingcopyparentset(repo, subset, x, order):
     func = symbols.get("oldnonobsworkingcopyparent")
     if func is None:
         raise error.ParseError(
@@ -2594,7 +2594,7 @@ methods = {
     "ancestor": ancestorspec,
     "parent": parentspec,
     "parentpost": parentpost,
-    "oldworkingcopyparent": oldworkingcopyparentset,
+    "oldnonobsworkingcopyparent": oldnonobsworkingcopyparentset,
 }
 
 

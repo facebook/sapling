@@ -27,7 +27,7 @@ elements = {
     "##": (20, None, None, ("_concat", 20), None),
     "~": (18, None, None, ("ancestor", 18), None),
     "^": (18, None, None, ("parent", 18), "parentpost"),
-    "-": (5, "oldworkingcopyparent", ("negate", 19), ("minus", 5), None),
+    "-": (5, "oldnonobsworkingcopyparent", ("negate", 19), ("minus", 5), None),
     "::": (17, "dagrangeall", ("dagrangepre", 17), ("dagrange", 17), "dagrangepost"),
     "..": (17, "dagrangeall", ("dagrangepre", 17), ("dagrange", 17), "dagrangepost"),
     ":": (15, "rangeall", ("rangepre", 15), ("range", 15), "rangepost"),
@@ -327,7 +327,7 @@ def _analyze(x):
     elif op == "negate":
         s = getstring(x[1], _("can't negate that"))
         return _analyze(("string", "-" + s))
-    elif op in ("string", "symbol", "oldworkingcopyparent"):
+    elif op in ("string", "symbol", "oldnonobsworkingcopyparent"):
         return x
     elif op == "rangeall":
         return (op, None)
@@ -376,7 +376,7 @@ def _optimize(x):
         return 0, x
 
     op = x[0]
-    if op in ("string", "symbol", "oldworkingcopyparent"):
+    if op in ("string", "symbol", "oldnonobsworkingcopyparent"):
         return 0.5, x  # single revisions are small
     elif op == "and":
         wa, ta = _optimize(x[1])
