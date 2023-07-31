@@ -59,6 +59,12 @@ export class OperationQueue {
         case 'stdout':
           onProgress({id: operation.id, kind: 'stdout', message: args[1]});
           break;
+        case 'progress':
+          onProgress({id: operation.id, kind: 'progress', progress: args[1]});
+          break;
+        case 'inlineProgress':
+          onProgress({id: operation.id, kind: 'inlineProgress', hash: args[1], message: args[2]});
+          break;
         case 'stderr':
           onProgress({id: operation.id, kind: 'stderr', message: args[1]});
           break;
