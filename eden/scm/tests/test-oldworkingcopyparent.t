@@ -62,17 +62,17 @@ test undo commands
   $ hg log -r . -T '{desc}\n'
   X
 
-test amend command (fixme: 'hg go -' should go back to commit D)
+test amend command
   $ hg go $D -q
   $ hg go $K -q
   $ echo 1 >> K
   $ hg amend
   $ hg go -
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg log -r . -T '{desc}\n'
-  K
+  D
 
-test amend & restack commands (fixme: 'hg go -' should go back to commit D)
+test amend & restack commands
 
   $ hg go $D -q
   $ hg go $F -q
@@ -83,6 +83,6 @@ test amend & restack commands (fixme: 'hg go -' should go back to commit D)
   $ hg rebase --restack
   rebasing bffd6b0484a3 "G"
   $ hg go -
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg log -r . -T '{desc}\n'
-  F
+  D

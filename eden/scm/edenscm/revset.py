@@ -352,11 +352,13 @@ def keyvaluepair(repo, subset, k, v, order):
 
 
 def oldworkingcopyparentset(repo, subset, x, order):
-    # "oldworkingcopyparent" revset func is defined in undo extension
-    func = symbols.get("oldworkingcopyparent")
+    func = symbols.get("oldnonobsworkingcopyparent")
     if func is None:
         raise error.ParseError(
-            _("please enable 'undo' extension to use '-' as old working copy parent")
+            _(
+                "please enable 'undo' extension to use '-' as old non-obsolete "
+                "working copy parent"
+            )
         )
     else:
         return func(repo, subset, x)
