@@ -145,6 +145,18 @@ class hgtests(unittest.TestCase):
             excluded = None
         else:
             excluded = re.compile(r"\A%s\Z" % os.environ.get("HGTEST_EXCLUDED", ""))
+
+        blocklist_env = os.environ.get("HGTEST_BLOCKLIST", None)
+        testdir_env = os.environ.get("HGTEST_DIR", None)
+        blocklist = set()
+        if blocklist_env and testdir_env:
+            blocklist_env = os.path.join(testdir_env, blocklist_env)
+            with open(blocklist_env, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if len(line) > 0 and line[0] != "#":
+                        blocklist.add(line)
+
         # Randomize the port so a stress run of a single test would be fine
         port = random.randint(10000, 60000)
         with chdir(path):
@@ -154,6 +166,8 @@ class hgtests(unittest.TestCase):
                 if included and not included.match(method_name):
                     continue
                 if excluded and excluded.match(method_name):
+                    continue
+                if name in blocklist:
                     continue
                 # Running a lot run-tests.py in parallel will trigger race
                 # condition of the original port detection logic. So allocate
