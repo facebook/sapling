@@ -8,3 +8,9 @@
 .internal-debug-tools-dropdown {
   width: 500px;
 }
+
+.internal-debug-tools-recoil-state .tooltip-creator {
+  display: flex;
+  gap: var(--pad);
+  align-items: center;
+}
