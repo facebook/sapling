@@ -19,6 +19,8 @@ import {defer} from 'shared/utils';
 export type IncomingMessage = ServerToClientMessage;
 export type OutgoingMessage = ClientToServerMessage | ClientToServerMessageWithPayload;
 
+export const debugLogMessageTraffic = {shoudlLog: false};
+
 export interface ClientToServerAPI {
   dispose(): void;
   onMessageOfType<T extends IncomingMessage['type']>(
@@ -41,6 +43,10 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
   >();
   private incomingListener = messageBus.onMessage(event => {
     const data = deserializeFromString(event.data as string) as IncomingMessage;
+    if (debugLogMessageTraffic.shoudlLog) {
+      // eslint-disable-next-line no-console
+      console.log('%c ⬅ Incoming ', 'color:white;background-color:tomato', data);
+    }
     const {type} = data;
     const listeners = this.listenersByType.get(type);
     if (!listeners) {
@@ -174,6 +180,10 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
 
   postMessage(message: ClientToServerMessage) {
     messageBus.postMessage(serializeToString(message));
+    if (debugLogMessageTraffic.shoudlLog) {
+      // eslint-disable-next-line no-console
+      console.log('%c Outgoing ⮕ ', 'color:white;background-color:royalblue', message);
+    }
   }
 
   /**
