@@ -21,6 +21,7 @@ use anyhow::Context;
 use anyhow::Result;
 use base_app::BaseApp;
 use blobstore::Blobstore;
+use blobstore::BlobstoreUnlinkOps;
 use blobstore_factory::BlobstoreOptions;
 use blobstore_factory::ReadOnlyStorage;
 use cached_config::ConfigStore;
@@ -822,6 +823,15 @@ impl MononokeApp {
         };
 
         Ok(blobstore)
+    }
+
+    pub async fn open_blobstore_unlink_ops_with_overriden_blob_config(
+        &self,
+        config: &BlobConfig,
+    ) -> Result<Arc<dyn BlobstoreUnlinkOps>> {
+        self.repo_factory
+            .blobstore_unlink_ops_with_overriden_blob_config(config)
+            .await
     }
 
     pub async fn redaction_config_blobstore(&self) -> Result<Arc<RedactionConfigBlobstore>> {

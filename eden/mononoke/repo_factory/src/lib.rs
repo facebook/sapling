@@ -450,7 +450,7 @@ impl RepoFactory {
             .await
     }
 
-    async fn blobstore_unlink_ops(
+    pub async fn blobstore_unlink_ops_with_overriden_blob_config(
         &self,
         config: &BlobConfig,
     ) -> Result<Arc<dyn BlobstoreUnlinkOps>> {
@@ -1111,7 +1111,7 @@ impl RepoFactory {
         common_config: &ArcCommonConfig,
     ) -> Result<ArcRepoBlobstoreUnlinkOps> {
         let blobstore = self
-            .blobstore_unlink_ops(&repo_config.storage_config.blobstore)
+            .blobstore_unlink_ops_with_overriden_blob_config(&repo_config.storage_config.blobstore)
             .await?;
         Ok(Arc::new(
             self.repo_blobstore_unlink_ops_from_blobstore_unlink_ops(

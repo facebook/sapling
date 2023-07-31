@@ -30,9 +30,8 @@ Check we can upload and fetch an arbitrary blob.
 
 Test we can unlink a blob
 
-NOTE: The blobstore-unlink command currently only works for sqlblob, and
-doesn't construct the blobstore in the usual way, so we need to give the full
-key.
+NOTE: The blobstore-unlink command doesn't construct the blobstore in the usual way,
+so we need to give the full key.
 
   $ mononoke_newadmin blobstore-unlink -R repo repo0000.somekey
   Unlinking key repo0000.somekey successfully in one underlying blobstore

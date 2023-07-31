@@ -34,7 +34,7 @@ use mononoke_types::RepositoryId;
 use regex::Regex;
 use serde_json::json;
 
-use crate::commands::blobstore_unlink::get_blobstores;
+use crate::commands::blobstore_unlink::get_blobconfig;
 
 #[derive(Parser)]
 pub struct CommandArgs {
@@ -76,7 +76,7 @@ struct BlobstoreBulkUnlinker {
     keys_dir: String,
     dry_run: bool,
     sanitise_regex: String,
-    repo_to_blobstores: HashMap<RepositoryId, Vec<Arc<dyn BlobstoreUnlinkOps>>>,
+    repo_to_blobstore: HashMap<RepositoryId, Arc<dyn BlobstoreUnlinkOps>>,
     error_log_file: File,
     progress_track_file: File,
     already_processed_files: HashSet<String>,
@@ -96,7 +96,7 @@ impl BlobstoreBulkUnlinker {
             keys_dir,
             dry_run,
             sanitise_regex,
-            repo_to_blobstores: HashMap::new(),
+            repo_to_blobstore: HashMap::new(),
             error_log_file: create_or_open_file(error_log_file_path, false),
             progress_track_file: create_or_open_file(progress_track_path, true),
             already_processed_files: HashSet::new(),
@@ -129,26 +129,21 @@ impl BlobstoreBulkUnlinker {
         Ok(blobstore_key.to_string())
     }
 
-    async fn get_blobstores_from_repo_id(
+    async fn get_blobstore_from_repo_id(
         &mut self,
         repo_id: RepositoryId,
-    ) -> Result<&Vec<Arc<dyn BlobstoreUnlinkOps>>> {
+    ) -> Result<&dyn BlobstoreUnlinkOps> {
         use std::collections::hash_map::Entry::Vacant;
-        if let Vacant(e) = self.repo_to_blobstores.entry(repo_id) {
+        if let Vacant(e) = self.repo_to_blobstore.entry(repo_id) {
             let (_repo_name, repo_config) = self.app.repo_config(&RepoArg::Id(repo_id))?;
-            let blobstores = get_blobstores(
-                self.app.fb,
-                repo_config.storage_config,
-                None,
-                self.app.environment().readonly_storage,
-                &self.app.environment().blobstore_options,
-                self.app.config_store(),
-            )
-            .await?;
-
-            e.insert(blobstores);
+            let blob_config = get_blobconfig(repo_config.storage_config.blobstore, None)?;
+            let blobstore = self
+                .app
+                .open_blobstore_unlink_ops_with_overriden_blob_config(&blob_config)
+                .await?;
+            e.insert(blobstore);
         }
-        return Ok(self.repo_to_blobstores.get(&repo_id).unwrap());
+        return Ok(self.repo_to_blobstore.get(&repo_id).unwrap());
     }
 
     fn sanitise_check(&self, key: &str) -> Result<()> {
@@ -178,34 +173,25 @@ impl BlobstoreBulkUnlinker {
                 return Ok(());
             }
 
-            if let Ok(blobstores) = self.get_blobstores_from_repo_id(repo_id).await {
-                let mut num_errors = 0;
-                let num_blobstores = blobstores.len();
-                for blobstore in blobstores {
-                    match blobstore.unlink(&context, &blobstore_key).await {
-                        Ok(_) => {}
-                        Err(e) => {
-                            num_errors += 1;
-                            let error_msg = e.to_string();
-                            if !error_msg.contains("does not exist in the blobstore")
-                                && !error_msg.contains("[404] Path not found")
-                            {
-                                bail!(
-                                    "Failed to unlink key {} in one underlying blobstore, error: {}.",
-                                    blobstore_key,
-                                    error_msg
-                                );
-                            }
-                        }
+            if let Ok(blobstore) = self.get_blobstore_from_repo_id(repo_id).await {
+                // Note that the implementation of unlink on a multiplexed blobstore won't fail if
+                // the key is already absent.
+                let result = blobstore.unlink(&context, &blobstore_key).await;
+                if let Err(err) = result {
+                    let error_msg = err.to_string();
+                    if error_msg.contains("does not exist in the blobstore")
+                        || error_msg.contains("[404] Path not found")
+                    {
+                        // If the blobstore is not multiplexed, unlink can fail because the key is
+                        // not already present.
+                        // If that's the case, we don't want to fail as we're already in the
+                        // desired state.
+                        // Instead, log the error to a file and continue.
+                        self.log_error_to_file(key, "no blobstore contains this key.")
+                            .await?;
+                    } else {
+                        bail!(err.context(format!("Failed to unlink key {}", blobstore_key)));
                     }
-                }
-                // We don't want to quit with an error if the key is not present in any blobstore
-                // because this could be a retry attempt and the key could already have been deleted.
-                // In that case, we want to log and continue. Note that a failure in logging will result
-                // in program termination to avoid loss of errors.
-                if num_errors == num_blobstores {
-                    self.log_error_to_file(key, "no blobstore contains this key.")
-                        .await?;
                 }
             } else {
                 // We log this error into a file. so that we can tackle them later together.
