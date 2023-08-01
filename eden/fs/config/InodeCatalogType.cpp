@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/inodes/InodeCatalogType.h"
+#include "eden/fs/config/InodeCatalogType.h"
 
 namespace facebook::eden {
 

@@ -10,6 +10,7 @@
 #include <folly/Portability.h>
 #include <folly/dynamic.h>
 #include <optional>
+#include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/ParentCommit.h"
 #include "eden/fs/model/RootId.h"
@@ -132,6 +133,18 @@ class CheckoutConfig {
     return requireUtf8Path_;
   }
 
+  /**
+   * Get the inode catalog type that this mount's overlay should be using. The
+   * type defaults to `std::nullopt` when not specified, inidcating the
+   * behavior should be to use the default inode catalog type behavior. On Linux
+   * and MacOS this is the `InodeCatalogType::Legacy` and on Windows this is
+   * some variant of `InodeCatalogType::Sqlite` where additional `EdenConfig`
+   * flags determine the behavior.
+   */
+  std::optional<InodeCatalogType> getInodeCatalogType() const {
+    return inodeCatalogType_;
+  }
+
   /** Whether this repository is using tree overlay */
   bool getEnableSqliteOverlay() const {
     return enableSqliteOverlay_;
@@ -168,6 +181,7 @@ class CheckoutConfig {
   std::string repoType_;
   std::string repoSource_;
   MountProtocol mountProtocol_{kMountProtocolDefault};
+  std::optional<InodeCatalogType> inodeCatalogType_;
   CaseSensitivity caseSensitive_{kPathMapDefaultCaseSensitive};
   bool requireUtf8Path_{true};
 

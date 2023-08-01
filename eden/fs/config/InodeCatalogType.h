@@ -14,8 +14,8 @@ namespace facebook::eden {
 /**
  * NOTE: We should consider revisiting this. Fundamentally,
  * there are three types: Legacy, Sqlite and InMemory. The remaining are flags
- * that control the Sqlite runtime. They could be moved to separated into flags
- * that are available for InodeCatalogs that support them.
+ * that control the Sqlite runtime. They could be separated into flags that are
+ * available for InodeCatalogs that support them.
  */
 enum class InodeCatalogType : uint8_t {
   Legacy = 0,

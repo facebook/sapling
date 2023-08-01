@@ -70,6 +70,16 @@ const SNAPSHOT_MAGIC_4: &[u8] = b"eden\x00\x00\x00\x04";
 
 const SUPPORTED_REPOS: &[&str] = &["git", "hg", "recas"];
 const SUPPORTED_MOUNT_PROTOCOLS: &[&str] = &["fuse", "nfs", "prjfs"];
+const SUPPORTED_INODE_CATALOG_TYPES: &[&str] = &[
+    "legacy",
+    "sqlite",
+    "sqliteinmemory",
+    "sqlitesynchronousoff",
+    "sqlitebuffered",
+    "sqliteinmemorybuffered",
+    "sqlitesynchronousoffbuffered",
+    "inmemory",
+];
 
 #[derive(Deserialize, Serialize, Debug)]
 struct Repository {
@@ -102,6 +112,16 @@ struct Repository {
 
     #[serde(rename = "use-write-back-cache", default)]
     use_write_back_cache: bool,
+
+    #[serde(rename = "enable-windows-symlinks", default)]
+    enable_windows_symlinks: bool,
+
+    #[serde(
+        rename = "inode-catalog-type",
+        default = "default_inode_catalog_type",
+        deserialize_with = "deserialize_inode_catalog_type"
+    )]
+    inode_catalog_type: Option<String>,
 }
 
 fn default_sqlite_overlay() -> bool {
@@ -135,6 +155,33 @@ where
             s,
             SUPPORTED_REPOS.join(", ")
         )))
+    }
+}
+
+fn default_inode_catalog_type() -> Option<String> {
+    None
+}
+
+fn deserialize_inode_catalog_type<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = Option::<String>::deserialize(deserializer)?;
+
+    match s {
+        None => Ok(None),
+        Some(mut s) => {
+            s = s.to_lowercase();
+            if SUPPORTED_INODE_CATALOG_TYPES.iter().any(|v| v == &s) {
+                Ok(Some(s))
+            } else {
+                Err(serde::de::Error::custom(format!(
+                    "Unsupported value: `{}`. Must be one of: {}",
+                    s,
+                    SUPPORTED_INODE_CATALOG_TYPES.join(", ")
+                )))
+            }
+        }
     }
 }
 

@@ -14,6 +14,7 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/json.h>
+#include <optional>
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathMap.h"
 #include "eden/fs/utils/SystemError.h"
@@ -34,6 +35,7 @@ constexpr folly::StringPiece kRepoSourceKey{"path"};
 constexpr folly::StringPiece kRepoTypeKey{"type"};
 constexpr folly::StringPiece kRepoCaseSensitiveKey{"case-sensitive"};
 constexpr folly::StringPiece kMountProtocol{"protocol"};
+constexpr folly::StringPiece kInodeCatalogType{"inode-catalog-type"};
 constexpr folly::StringPiece kRequireUtf8Path{"require-utf8-path"};
 constexpr folly::StringPiece kEnableSqliteOverlay{"enable-sqlite-overlay"};
 constexpr folly::StringPiece kUseWriteBackCache{"use-write-back-cache"};
@@ -300,11 +302,11 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
   config->repoType_ = *repository->get_as<std::string>(kRepoTypeKey.str());
   config->repoSource_ = *repository->get_as<std::string>(kRepoSourceKey.str());
 
-  FieldConverter<MountProtocol> converter;
+  FieldConverter<MountProtocol> mountProtocolConverter;
   MountProtocol mountProtocol = kMountProtocolDefault;
   auto mountProtocolStr = repository->get_as<std::string>(kMountProtocol.str());
   if (mountProtocolStr) {
-    mountProtocol = converter.fromString(*mountProtocolStr, {})
+    mountProtocol = mountProtocolConverter.fromString(*mountProtocolStr, {})
                         .value_or(kMountProtocolDefault);
   }
   config->mountProtocol_ = mountProtocol;
@@ -317,6 +319,19 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
 
   auto requireUtf8Path = repository->get_as<bool>(kRequireUtf8Path.str());
   config->requireUtf8Path_ = requireUtf8Path ? *requireUtf8Path : true;
+
+  FieldConverter<InodeCatalogType> inodeCatalogTypeConverter;
+  std::optional<InodeCatalogType> inodeCatalogType;
+  auto inodeCatalogTypeStr =
+      repository->get_as<std::string>(kInodeCatalogType.str());
+  if (inodeCatalogTypeStr) {
+    auto result =
+        inodeCatalogTypeConverter.fromString(*inodeCatalogTypeStr, {});
+    if (result.hasValue()) {
+      inodeCatalogType = result.value();
+    }
+  }
+  config->inodeCatalogType_ = inodeCatalogType;
 
   // TODO(xavierd): Remove the Windows check once D44683911 has been rolled out
   // for several months at which point all the CheckoutConfig will have been

@@ -16,7 +16,7 @@
 #include <condition_variable>
 #include <optional>
 #include <thread>
-#include "eden/fs/inodes/InodeCatalogType.h"
+#include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"

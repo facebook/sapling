@@ -25,9 +25,9 @@
 #include <stdexcept>
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/FsChannel.h"
-#include "eden/fs/inodes/InodeCatalogType.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/inodes/InodeTimestamps.h"

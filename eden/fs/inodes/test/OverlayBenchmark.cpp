@@ -11,8 +11,8 @@
 #include <stdlib.h>
 
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/inodes/DirEntry.h"
-#include "eden/fs/inodes/InodeCatalogType.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"

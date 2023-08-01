@@ -91,6 +91,7 @@ class ListTest(unittest.TestCase):
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
+                inode_catalog_type=None,
             )
         )
 
@@ -116,6 +117,7 @@ class ListTest(unittest.TestCase):
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
+                inode_catalog_type=None,
             )
         )
 
@@ -141,6 +143,7 @@ class ListTest(unittest.TestCase):
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
+                inode_catalog_type=None,
             )
         )
 
@@ -166,6 +169,7 @@ class ListTest(unittest.TestCase):
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
+                inode_catalog_type=None,
             )
         )
 
@@ -191,6 +195,7 @@ class ListTest(unittest.TestCase):
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
+                inode_catalog_type=None,
             )
         )
 
@@ -317,6 +322,7 @@ class ListTest(unittest.TestCase):
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
+                inode_catalog_type=None,
             )
         )
 
@@ -342,6 +348,7 @@ class ListTest(unittest.TestCase):
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
+                inode_catalog_type=None,
             )
         )
 
@@ -367,6 +374,7 @@ class ListTest(unittest.TestCase):
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
+                inode_catalog_type=None,
             )
         )
 
@@ -484,6 +492,7 @@ class ListTest(unittest.TestCase):
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
+                inode_catalog_type=None,
             )
         )
 
@@ -509,6 +518,7 @@ class ListTest(unittest.TestCase):
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
+                inode_catalog_type=None,
             )
         )
 

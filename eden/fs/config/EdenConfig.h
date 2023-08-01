@@ -20,6 +20,7 @@
 #include "eden/fs/config/ConfigVariables.h"
 #include "eden/fs/config/FileChangeMonitor.h"
 #include "eden/fs/config/HgObjectIdFormat.h"
+#include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/ReaddirPrefetch.h"
 #include "eden/fs/eden-config.h"
@@ -1140,6 +1141,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   // [overlay]
+
+  /**
+   * The `InodeCatalogType` to use when creating new `Overlay`s, unless
+   * specified by parameter during creation via CLI or otherwise.
+   */
+  ConfigSetting<InodeCatalogType> inodeCatalogType{
+      "overlay:inode-catalog-type",
+      kInodeCatalogTypeDefault,
+      this};
 
   /**
    * DANGER: this option will put overlay into memory and skip persisting any

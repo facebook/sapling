@@ -1026,6 +1026,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
             use_write_back_cache=False,
             re_use_case=re_use_case or "buck2-default",
             enable_windows_symlinks=enable_windows_symlinks,
+            inode_catalog_type=None,
         )
 
         return repo, repo_config

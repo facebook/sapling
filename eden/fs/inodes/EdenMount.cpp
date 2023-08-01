@@ -290,8 +290,22 @@ EdenMount::EdenMount(
 
 InodeCatalogType EdenMount::getInodeCatalogType(
     std::optional<InodeCatalogType> inodeCatalogType) {
+  // InodCatalogType is determined by:
+  //   1. optional parameter (`inodeCatalogType`) provided by caller - used by
+  //        test code
+  //   2. optional inode-catalog-type setting in CheckoutConfig
+  //        (`checkoutConfig_->getInodeCatalogType()`)
+  //   3. enable-sqlite-overlay setting in CheckoutConfig
+  //        (`checkoutConfig_->getEnableSqliteOverlay()`)
+  //     a. True -> variant of Sqlite
+  //     b. False -> Legacy
+
   if (inodeCatalogType.has_value()) {
     return inodeCatalogType.value();
+  }
+
+  if (checkoutConfig_->getInodeCatalogType().has_value()) {
+    return checkoutConfig_->getInodeCatalogType().value();
   }
 
   if (checkoutConfig_->getEnableSqliteOverlay()) {

@@ -104,6 +104,17 @@ SUPPORTED_MOUNT_PROTOCOLS: Set[str] = {
     PRJFS_MOUNT_PROTOCOL_STRING,
 }
 
+SUPPORTED_INODE_CATALOG_TYPES: Set[str] = {
+    "legacy",
+    "sqlite",
+    "sqliteinmemory",
+    "sqlitesynchronousoff",
+    "sqlitebuffered",
+    "sqliteinmemorybuffered",
+    "sqlitesynchronousoffbuffered",
+    "inmemory",
+}
+
 # Create a readme file with this name in the mount point directory.
 # The intention is for this to contain instructions telling users what to do if their
 # EdenFS mount is not currently mounted.
@@ -183,6 +194,7 @@ class CheckoutConfig(typing.NamedTuple):
     use_write_back_cache: bool
     re_use_case: str
     enable_windows_symlinks: bool
+    inode_catalog_type: Optional[str]
 
 
 class ListMountInfo(typing.NamedTuple):
@@ -1237,6 +1249,7 @@ class EdenCheckout:
                 "enable-sqlite-overlay": checkout_config.enable_sqlite_overlay,
                 "use-write-back-cache": checkout_config.use_write_back_cache,
                 "enable-windows-symlinks": checkout_config.enable_windows_symlinks,
+                "inode-catalog-type": checkout_config.inode_catalog_type,
             },
             "redirections": redirections,
             "profiles": {
@@ -1397,6 +1410,16 @@ class EdenCheckout:
         if not isinstance(enable_windows_symlinks, bool):
             enable_windows_symlinks = False
 
+        inode_catalog_type = repository.get("inode-catalog-type")
+        if inode_catalog_type is not None:
+            inode_catalog_type = inode_catalog_type.lower()
+            if inode_catalog_type not in SUPPORTED_INODE_CATALOG_TYPES:
+                raise Exception(
+                    f'repository "{config_path}" has unsupported inode catalog type '
+                    f'"{inode_catalog_type}". Support inode catalog types are: '
+                    f'{", ".join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}.'
+                )
+
         return CheckoutConfig(
             backing_repo=Path(get_field("path")),
             scm_type=scm_type,
@@ -1415,6 +1438,7 @@ class EdenCheckout:
             use_write_back_cache=use_write_back_cache,
             re_use_case=re_use_case,
             enable_windows_symlinks=enable_windows_symlinks,
+            inode_catalog_type=inode_catalog_type,
         )
 
     def get_snapshot(self) -> SnapshotState:
