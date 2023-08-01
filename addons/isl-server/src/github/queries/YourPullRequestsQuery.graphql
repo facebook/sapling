@@ -9,6 +9,7 @@ query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
         state
         isDraft
         url
+        reviewDecision
         comments {
           totalCount
         }
