@@ -389,11 +389,16 @@ export const latestCommitTreeMap = selector<Map<Hash, CommitTree>>({
   },
 });
 
+/**
+ * No longer in the "loading" state:
+ * - Either the list of commits has successfully loaded
+ * - or there was an error during the fetch
+ */
 export const haveCommitsLoadedYet = selector<boolean>({
   key: 'haveCommitsLoadedYet',
   get: ({get}) => {
-    const commits = get(latestCommits);
-    return commits.length > 0;
+    const data = get(latestCommitsData);
+    return data.commits.length > 0 || data.error != null;
   },
 });
 

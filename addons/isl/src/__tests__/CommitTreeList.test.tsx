@@ -32,6 +32,19 @@ describe('CommitTreeList', () => {
     expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
   });
 
+  it('shows bug button even on error', () => {
+    render(<App />);
+
+    act(() => {
+      simulateCommits({
+        error: new Error('invalid certificate'),
+      });
+    });
+
+    expect(screen.getByTestId('bug-button')).toBeInTheDocument();
+    expect(screen.getByText('invalid certificate')).toBeInTheDocument();
+  });
+
   describe('after commits loaded', () => {
     beforeEach(() => {
       render(<App />);

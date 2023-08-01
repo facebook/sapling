@@ -70,18 +70,20 @@ export function CommitTreeList() {
   ) : (
     <>
       {fetchError ? <CommitFetchError error={fetchError} /> : null}
-      <div
-        className="commit-tree-root commit-group with-vertical-line"
-        data-testid="commit-tree-root">
-        <MainLineEllipsis />
-        {trees.map(tree => (
-          <SubTree key={tree.info.hash} tree={tree} depth={0} />
-        ))}
-        <MainLineEllipsis>
-          <FetchingAdditionalCommitsButton />
-          <FetchingAdditionalCommitsIndicator />
-        </MainLineEllipsis>
-      </div>
+      {trees.length === 0 ? null : (
+        <div
+          className="commit-tree-root commit-group with-vertical-line"
+          data-testid="commit-tree-root">
+          <MainLineEllipsis />
+          {trees.map(tree => (
+            <SubTree key={tree.info.hash} tree={tree} depth={0} />
+          ))}
+          <MainLineEllipsis>
+            <FetchingAdditionalCommitsButton />
+            <FetchingAdditionalCommitsIndicator />
+          </MainLineEllipsis>
+        </div>
+      )}
     </>
   );
 }
