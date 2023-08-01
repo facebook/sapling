@@ -279,22 +279,14 @@ A draft stack at the top
 
 Different number of lines per node
 
-  $ hg smartlog -T '{node|short}\n{bookmarks}\n{desc}\n{author}\n{date|isodate}\n' --all --config smartlog.indentnonpublic=1
-    o  2dc09a01254d
+  $ hg smartlog -T '{node|short} {bookmarks} {desc} {author} {date|isodate}' --all --config smartlog.indentnonpublic=1
+    o  2dc09a01254d  r3 debugbuilddag 1970-01-01 00:00 +0000
     │
-    │  r3
-    │  debugbuilddag
-    │  1970-01-01 00:00 +0000
-    o  01241442b3c2
+    o  01241442b3c2  r2 debugbuilddag 1970-01-01 00:00 +0000
   ╭─╯
-  │    r2
-  │    debugbuilddag
-  │    1970-01-01 00:00 +0000
-  o  66f7d451a68b
-  │  master
-  ~  r1
-     debugbuilddag
-     1970-01-01 00:00 +0000
+  o  66f7d451a68b master r1 debugbuilddag 1970-01-01 00:00 +0000
+  │
+  ~
 
 Add other draft stacks
   $ hg up 'desc(r1)' -q
