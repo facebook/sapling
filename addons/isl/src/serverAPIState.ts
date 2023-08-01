@@ -29,6 +29,7 @@ import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {clearOnCwdChange} from './recoilUtils';
 import {initialParams} from './urlParams';
+import {short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {selectorFamily, atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
 import {randomId} from 'shared/utils';
@@ -416,6 +417,8 @@ export type OperationInfo = {
   startTime?: Date;
   commandOutput?: Array<string>;
   currentProgress?: ProgressStep;
+  /** progress message shown next to a commit */
+  inlineProgress?: Map<Hash, string>;
   /** if true, we have sent "abort" request, the process might have exited or is going to exit soon */
   aborting?: boolean;
   /** if true, the operation process has exited AND there's no more optimistic commit state to show */
@@ -496,6 +499,44 @@ export const operationList = atom<OperationList>({
               };
             });
             break;
+          case 'inlineProgress':
+            setSelf(current => {
+              if (current == null || current instanceof DefaultValue) {
+                return current;
+              }
+              const currentOperation = current.currentOperation;
+              if (currentOperation == null) {
+                return current;
+              }
+
+              let inlineProgress: undefined | Map<string, string> =
+                current.currentOperation?.inlineProgress ?? new Map();
+              if (progress.hash) {
+                if (progress.message) {
+                  inlineProgress.set(progress.hash, progress.message);
+                } else {
+                  inlineProgress.delete(progress.hash);
+                }
+              } else {
+                inlineProgress = undefined;
+              }
+
+              const newCommandOutput = [...(currentOperation?.commandOutput ?? [])];
+              if (progress.hash && progress.message) {
+                // also add inline progress message as if it was on stdout,
+                // so you can see it when reading back the final output
+                newCommandOutput.push(`${progress.hash} - ${progress.message}\n`);
+              }
+
+              return {
+                ...current,
+                currentOperation: {
+                  ...currentOperation,
+                  inlineProgress,
+                },
+              };
+            });
+            break;
           case 'progress':
             setSelf(current => {
               if (current == null || current instanceof DefaultValue) {
@@ -540,6 +581,7 @@ export const operationList = atom<OperationList>({
                   ...currentOperation,
                   exitCode: progress.exitCode,
                   endTime: new Date(progress.timestamp),
+                  inlineProgress: undefined, // inline progress never lasts after exiting
                 },
               };
             });
@@ -549,6 +591,21 @@ export const operationList = atom<OperationList>({
       return () => disposable.dispose();
     },
   ],
+});
+
+export const inlineProgressByHash = selectorFamily<string | undefined, string>({
+  key: 'inlineProgressByHash',
+  get:
+    (hash: string) =>
+    ({get}) => {
+      const info = get(operationList);
+      const inlineProgress = info.currentOperation?.inlineProgress;
+      if (inlineProgress == null) {
+        return undefined;
+      }
+      const shortHash = short(hash); // progress messages come indexed by short hash
+      return inlineProgress.get(shortHash);
+    },
 });
 
 // We don't send entire operations to the server, since not all fields are serializable.

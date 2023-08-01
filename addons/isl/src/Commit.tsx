@@ -30,6 +30,7 @@ import {RelativeDate} from './relativeDate';
 import {isNarrowCommitTree} from './responsive';
 import {useCommitSelection} from './selection';
 import {
+  inlineProgressByHash,
   isFetchingUncommittedChanges,
   latestCommitTreeMap,
   latestUncommittedChanges,
@@ -103,6 +104,8 @@ export const Commit = memo(
     const handlePreviewedOperation = useRunPreviewedOperation();
     const runOperation = useRunOperation();
     const isHighlighted = useRecoilValue(highlightedCommits).has(commit.hash);
+
+    const inlineProgress = useRecoilValue(inlineProgressByHash(commit.hash));
 
     const {isSelected, onClickToSelect} = useCommitSelection(commit.hash);
     const actionsPrevented = previewPreventsActions(previewType);
@@ -271,17 +274,22 @@ export const Commit = memo(
               </>
             ) : null}
             {isPublic ? <CommitDate date={commit.date} /> : null}
-            {previewType === CommitPreview.REBASE_OPTIMISTIC_ROOT ? (
-              <span className="commit-inline-operation-progress">
-                <Icon icon="loading" /> <T>rebasing...</T>
-              </span>
-            ) : null}
             {isNarrow ? commitActions : null}
           </DraggableCommit>
           <DivIfChildren className="commit-second-row">
             {commit.diffId && !isPublic ? <DiffInfo diffId={commit.diffId} /> : null}
             {commit.successorInfo != null ? (
               <SuccessorInfoToDisplay successorInfo={commit.successorInfo} />
+            ) : null}
+            {inlineProgress && (
+              <span className="commit-inline-operation-progress">
+                <Icon icon="loading" /> <T>{inlineProgress}</T>
+              </span>
+            )}
+            {previewType === CommitPreview.REBASE_OPTIMISTIC_ROOT ? (
+              <span className="commit-inline-operation-progress">
+                <Icon icon="loading" /> <T>rebasing...</T>
+              </span>
             ) : null}
           </DivIfChildren>
           {!isNarrow ? commitActions : null}
