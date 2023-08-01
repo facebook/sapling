@@ -57,7 +57,7 @@ class bundlerevlog(revlog.revlog):
         # (start). The base of the delta is stored in the base field.
         #
         # To differentiate a rev in the bundle from a rev in the revlog, we
-        # check revision against repotiprev.
+        # check revision against bundlerevs.
         opener = vfsmod.readonlyvfs(opener)
         # bundlechangelog might have called revlog.revlog.__init__ already.
         # avoid re-init the revlog.
@@ -68,7 +68,7 @@ class bundlerevlog(revlog.revlog):
         index2 = getattr(self, "index2", None)
         self.bundle = cgunpacker
         n = len(self)
-        self.repotiprev = n - 1
+        self.bundlenewrevs = set()
         self.bundlerevs = set()  # used by 'bundle()' revset expression
         self.bundleheads = set()  # used by visibility
         for deltadata in cgunpacker.deltaiter():
@@ -115,6 +115,7 @@ class bundlerevlog(revlog.revlog):
                 inner.addcommits([(node, parentnodes, bytes(text))])
             self.nodemap[node] = n
             self.bundlerevs.add(n)
+            self.bundlenewrevs.add(n)
             self.bundleheads.add(n)
             self.bundleheads.discard(p1rev)
             self.bundleheads.discard(p2rev)
@@ -125,20 +126,18 @@ class bundlerevlog(revlog.revlog):
         # Warning: in case of bundle, the diff is against what we stored as
         # delta base, not against rev - 1
         # XXX: could use some caching
-        if rev <= self.repotiprev:
+        if rev not in self.bundlenewrevs:
             return revlog.revlog._chunk(self, rev)
         self.bundle.seek(self.start(rev))
         return self.bundle.read(self.length(rev))
 
     def revdiff(self, rev1, rev2):
         """return or calculate a delta between two revisions"""
-        if rev1 > self.repotiprev and rev2 > self.repotiprev:
+        if rev1 in self.bundlenewrevs and rev2 in self.bundlenewrevs:
             # hot path for bundle
             revb = self.index[rev2][3]
             if revb == rev1:
                 return self._chunk(rev2)
-        elif rev1 <= self.repotiprev and rev2 <= self.repotiprev:
-            return revlog.revlog.revdiff(self, rev1, rev2)
 
         return mdiff.textdiff(
             self.revision(rev1, raw=True), self.revision(rev2, raw=True)
@@ -168,7 +167,7 @@ class bundlerevlog(revlog.revlog):
         iterrev = rev
         cache = self._cache
         # reconstruct the revision if it is from a changegroup
-        while iterrev > self.repotiprev:
+        while iterrev in self.bundlenewrevs:
             if cache is not None:
                 if cache[1] == iterrev:
                     rawtext = cache[2]
