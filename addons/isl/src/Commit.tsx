@@ -286,11 +286,6 @@ export const Commit = memo(
                 <Icon icon="loading" /> <T>{inlineProgress}</T>
               </span>
             )}
-            {previewType === CommitPreview.REBASE_OPTIMISTIC_ROOT ? (
-              <span className="commit-inline-operation-progress">
-                <Icon icon="loading" /> <T>rebasing...</T>
-              </span>
-            ) : null}
           </DivIfChildren>
           {!isNarrow ? commitActions : null}
         </div>

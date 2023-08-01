@@ -454,7 +454,14 @@ function startNewOperation(newOperation: Operation, list: OperationList): Operat
     if (list.currentOperation != null) {
       operationHistory.push(list.currentOperation);
     }
-    const currentOperation = {operation: newOperation, startTime: new Date()};
+    const inlineProgress: Array<[string, string]> | undefined = newOperation
+      .getInitialInlineProgress?.()
+      ?.map(([k, v]) => [short(k), v]); // inline progress is keyed by short hashes, but let's do that conversion on behalf of operations.
+    const currentOperation: OperationInfo = {
+      operation: newOperation,
+      startTime: new Date(),
+      inlineProgress: inlineProgress == null ? undefined : new Map(inlineProgress),
+    };
     return {...list, operationHistory, currentOperation};
   }
 }

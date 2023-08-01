@@ -43,6 +43,12 @@ export abstract class Operation {
     return undefined;
   }
 
+  /**
+   * When the operation starts running, prefill inline progress messages to show up next to one or more commits.
+   * Note: most operations/runners never report additional inline progress, meaning this is typically shown for the duration of the operation.
+   */
+  getInitialInlineProgress?(): Array<[hash: string, message: string]>;
+
   public runner: CommandRunner = CommandRunner.Sapling;
 
   /** Used to preview how this operation would affect the tree, if you ran it. */

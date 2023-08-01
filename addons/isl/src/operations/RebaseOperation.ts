@@ -8,6 +8,7 @@
 import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
 import type {Hash, Revset} from '../types';
 
+import {t} from '../i18n';
 import {CommitPreview} from '../previews';
 import {SucceedableRevset} from '../types';
 import {Operation} from './Operation';
@@ -27,6 +28,10 @@ export class RebaseOperation extends Operation {
       '-d',
       SucceedableRevset(this.destination),
     ];
+  }
+
+  getInitialInlineProgress(): Array<[string, string]> {
+    return [[this.source, t('rebasing...')]];
   }
 
   makePreviewApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
