@@ -267,6 +267,52 @@ struct SetPathObjectIdObjectAndPath {
   }
 };
 
+struct ParentCommitState {
+  /** RootId that the working copy is checked out to */
+  RootId checkedOutRootId;
+  std::shared_ptr<const Tree> checkedOutRootTree;
+  /**
+   * RootId that the working copy is reset to. This is usually the same as
+   * checkedOutRootId, except when a reset is done, in which case it will
+   * differ.
+   */
+  RootId workingCopyParentRootId;
+
+  /**
+   * No NORMAL or FORCE checkout are currently ongoing. A DRY_RUN might be
+   * started.
+   */
+  struct NoOngoingCheckout {};
+
+  /** A NORMAL or FORCE checkout is ongoing. */
+  struct CheckoutInProgress {};
+
+  /** A checkout was previously interrupted */
+  struct InterruptedCheckout {
+    RootId fromCommit;
+    RootId toCommit;
+  };
+
+  /**
+   * At mount time, the checkoutState can either be in the NoOngoingCheckout,
+   * or in the InterruptedCheckout state in the case where EdenFS got killed or
+   * crashed during a checkout operation.
+   *
+   * At the beginning of (non DRY_RUN) checkout, the checkoutState will be set
+   * to CheckoutInProgress, and reset to NoOngoingCheckout at the end of it.
+   *
+   * The other allowed transition is from InterruptedCheckout to
+   * CheckoutInProgress when resuming an interrupted checkout operation.
+   */
+  using CheckoutState =
+      std::variant<NoOngoingCheckout, CheckoutInProgress, InterruptedCheckout>;
+  CheckoutState checkoutState;
+
+  bool isCheckoutInProgressOrInterrupted() const {
+    return !std::holds_alternative<NoOngoingCheckout>(checkoutState);
+  }
+};
+
 /**
  * EdenMount contains all of the data about a specific eden mount point.
  *
@@ -1256,30 +1302,6 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * hold the rename lock.
    */
   folly::SharedMutex renameMutex_;
-
-  struct ParentCommitState {
-    // RootId that the working copy is checked out to
-    RootId checkedOutRootId;
-    std::shared_ptr<const Tree> checkedOutRootTree;
-    // RootId that the working copy is reset to. This is usually the same as
-    // checkedOutRootId, except when a reset is done, in which case it will
-    // differ.
-    RootId workingCopyParentRootId;
-    bool checkoutInProgress = false;
-    /**
-     * When checkout was previously interruptd, this holds the RootId of the
-     * working copy prior to checkout, as well as the destination RootId.
-     */
-    std::optional<std::tuple<RootId, RootId>> checkoutOriginalTrees;
-
-    /**
-     * pid of the EdenFS process that triggered the checkout.
-     *
-     * This is expected to be different from the current EdenFS process only
-     * when checkout was previously interrupted.
-     */
-    std::optional<pid_t> checkoutPid;
-  };
 
   /**
    * The IDs of the parent commit of the working directory.

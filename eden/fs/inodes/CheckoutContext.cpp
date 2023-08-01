@@ -50,7 +50,8 @@ void CheckoutContext::start(
   if (!isDryRun()) {
     std::optional<RootId> oldParent;
     if (parentLock) {
-      XCHECK(parentLock->checkoutInProgress);
+      XCHECK(std::holds_alternative<ParentCommitState::CheckoutInProgress>(
+          parentLock->checkoutState));
       oldParent = parentLock->workingCopyParentRootId;
       // Update the in-memory snapshot ID
       parentLock->checkedOutRootId = newSnapshot;
