@@ -154,6 +154,55 @@ new mode 120000
         self.repo.update(self.simple_commit)
         self.assert_status_empty()
 
+    def test_file_symlink_chain(self) -> None:
+        self.repo.symlink("f1", os.path.join("adir", "hello.txt"))
+        self.repo.symlink("f2", "f1")
+        self.repo.symlink("f3", "f2")
+        file_symlink_chain_commit = self.repo.commit(
+            "Chain of symlinks pointing to a file in a dir"
+        )
+        self.assert_status({})
+        self.repo.update(self.simple_commit, clean=True)
+        self.repo.update(file_symlink_chain_commit)
+        self.assertTrue(os.path.isfile(self.get_path("f3")))
+        self.assertEqual("hola", self.read_file("f3"))
+
+    def test_dir_symlink_chain(self) -> None:
+        self.repo.symlink("d1", "adir", target_is_directory=True)
+        self.repo.symlink("d2", "d1", target_is_directory=True)
+        self.repo.symlink("d3", "d2", target_is_directory=True)
+        self.assertTrue(os.path.isdir(self.get_path("d3")))
+        dir_symlink_chain_commit = self.repo.commit(
+            "Chain of symlinks pointing to a directory"
+        )
+        self.assert_status({})
+        self.repo.update(self.simple_commit, clean=True)
+        self.repo.update(dir_symlink_chain_commit)
+        self.assertTrue(os.path.isdir(self.get_path("d3")))
+        self.assertEqual("hola", self.read_file(os.path.join("d3", "hello.txt")))
+
+    def test_symlink_cycle(self) -> None:
+        self.repo.symlink("s0", "s2")
+        self.repo.symlink("s1", "s0")
+        self.repo.symlink("s2", "s1")
+        cycle_symlink_commit = self.repo.commit(
+            "Cycle of symlinks; type should be unresolvable"
+        )
+        self.assert_status({})
+        self.repo.update(self.simple_commit, clean=True)
+        self.repo.update(cycle_symlink_commit)
+        for i in range(3):
+            curpath = self.get_path(f"s{i}")
+            self.assertFalse(os.path.isfile(curpath))
+            self.assertFalse(os.path.isdir(curpath))
+            self.assertEqual(f"s{(i+2)%3}", os.readlink(curpath))
+
+    def test_status_on_dir_symlink(self) -> None:
+        self.repo.symlink("dirlink", "adir", target_is_directory=True)
+        self.repo.commit("Really simple commit w/ repo")
+        self.repo.write_file("adir/hello.txt", "saluton")
+        self.assert_status({"adir/hello.txt": "M"})
+
 
 @hg_test
 # pyre-ignore[13]: T62487924

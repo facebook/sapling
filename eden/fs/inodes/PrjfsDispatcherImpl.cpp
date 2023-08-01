@@ -84,7 +84,8 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
                      auto&&) mutable {
         bool isRoot = path.empty();
         return mount_->getTreeOrTreeEntry(path, context)
-            .thenValue([path,
+            .thenValue([this,
+                        path,
                         isRoot,
                         objectStore = mount_->getObjectStore(),
                         symlinksSupported = mount_->getCheckoutConfig()
@@ -113,14 +114,28 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
                                 ->getBlob(
                                     treeEntry.second.getHash(), context.copy())
                                 .thenValue(
-                                    [](std::shared_ptr<const Blob> blob) {
+                                    [this,
+                                     name = treeEntry.first,
+                                     path,
+                                     context = context.copy()](
+                                        std::shared_ptr<const Blob> blob) {
                                       auto content = blob->asString();
                                       std::replace(
                                           content.begin(),
                                           content.end(),
                                           '/',
                                           '\\');
-                                      return content;
+                                      auto symlinkPath = path.empty()
+                                          ? RelativePath(name)
+                                          : path;
+                                      return isFinalSymlinkPathDirectory(
+                                                 symlinkPath, content, context)
+                                          .thenValue(
+                                              [content = std::move(content)](
+                                                  bool isDir) {
+                                                return std::make_pair(
+                                                    content, isDir);
+                                              });
                                     }))
                       : std::nullopt;
                   ret.emplace_back(
@@ -172,6 +187,92 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
       });
 }
 
+ImmediateFuture<bool> PrjfsDispatcherImpl::isFinalSymlinkPathDirectory(
+    RelativePath symlink,
+    std::string_view targetStringView,
+    const ObjectFetchContextPtr& context,
+    const int remainingRecursionDepth) {
+  if (remainingRecursionDepth == 0) {
+    return false;
+  }
+
+  bool newCheck = true;
+  {
+    // We need to mark symlinks as visited to avoid infinite loops.
+    auto sptr = symlinkCheck_.wlock();
+    auto rs = sptr->emplace(symlink);
+    newCheck = rs.second;
+  }
+  if (!newCheck) {
+    return false;
+  }
+
+  return makeImmediateFutureWith([&]() -> ImmediateFuture<bool> {
+           auto targetString = fmt::format(
+               "{}{}{}",
+               mount_->getPath() + symlink.dirname(),
+               kDirSeparatorStr,
+               targetStringView);
+           AbsolutePath absTarget;
+           try {
+             absTarget = canonicalPath(targetString);
+           } catch (const std::exception& exc) {
+             XLOG(DBG6) << "unable to resolve target for symlink "
+                        << symlink.asString() << ": " << exc.what();
+             return false;
+           }
+           RelativePath target;
+           try {
+             target = RelativePath(mount_->getPath().relativize(absTarget));
+           } catch (const std::exception&) {
+             // Symlink points outside of EdenFS; make the system solve it for
+             // us
+             boost::system::error_code ec;
+             auto boostPath = boost::filesystem::path(absTarget.asString());
+             auto fileType = boost::filesystem::status(boostPath, ec).type();
+             return fileType == boost::filesystem::directory_file;
+           }
+           // This recursively goes through symlinks until it gets the first
+           // entry that is not a symlink. Symlink cycles are prevented by the
+           // check above.
+           return mount_->getTreeOrTreeEntry(target, context)
+               .thenValue(
+                   [this,
+                    target,
+                    context = context.copy(),
+                    remainingRecursionDepth](
+                       std::variant<std::shared_ptr<const Tree>, TreeEntry>
+                           treeOrTreeEntry) mutable -> ImmediateFuture<bool> {
+                     if (std::holds_alternative<std::shared_ptr<const Tree>>(
+                             treeOrTreeEntry)) {
+                       return true;
+                     }
+                     auto entry = std::get<TreeEntry>(treeOrTreeEntry);
+                     if (entry.getDtype() != dtype_t::Symlink) {
+                       return false;
+                     }
+                     return mount_->getObjectStore()
+                         ->getBlob(entry.getHash(), context)
+                         .thenValue([this,
+                                     context = context.copy(),
+                                     path = target,
+                                     remainingRecursionDepth](
+                                        std::shared_ptr<const Blob> blob) {
+                           auto content = blob->asString();
+                           return isFinalSymlinkPathDirectory(
+                               path,
+                               content,
+                               context,
+                               remainingRecursionDepth - 1);
+                         });
+                   });
+         })
+      .ensure([this, symlink] {
+        auto sptr = symlinkCheck_.wlock();
+        sptr->erase(symlink);
+      });
+}
+
 ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
     RelativePath path,
     const ObjectFetchContextPtr& context) {
@@ -197,12 +298,17 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
                   ? false
                   : treeEntry->getDtype() == dtype_t::Symlink;
 
-              auto symlinkDestinationFut = isSymlink
+              auto symlinkAttrsFut = isSymlink
                   ? mount_->getObjectStore()
                         ->getBlob(treeEntry->getHash(), context)
                         .thenValue(
-                            [](std::shared_ptr<const Blob> blob)
-                                -> std::optional<std::string> {
+                            [this,
+                             path = path.copy(),
+                             context = context.copy()](
+                                std::shared_ptr<const Blob> blob)
+                                -> ImmediateFuture<std::pair<
+                                    std::optional<std::string>,
+                                    bool>> {
                               auto content = blob->asString();
                               // ProjectedFS does consider / as a valid
                               // separator, but trying to open symlinks with
@@ -212,50 +318,69 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
                               // with backslashes.
                               std::replace(
                                   content.begin(), content.end(), '/', '\\');
-                              return std::move(content);
+                              return isFinalSymlinkPathDirectory(
+                                         path, content, context)
+                                  .thenValue(
+                                      [content = std::move(content)](bool isDir)
+                                          -> std::pair<
+                                              std::optional<std::string>,
+                                              bool> {
+                                        return {content, isDir};
+                                      });
                             })
-                  : ImmediateFuture<std::optional<std::string>>{std::nullopt};
+                  : ImmediateFuture<
+                        std::pair<std::optional<std::string>, bool>>{
+                        {std::nullopt, false}};
 
-              return collectAllSafe(pathFut, sizeFut, symlinkDestinationFut)
-                  .thenValue([this, isDir, context = context.copy()](
-                                 std::tuple<
-                                     RelativePath,
-                                     uint64_t,
-                                     std::optional<std::string>>&& res) {
-                    auto [path, size, symlinkDestination] = std::move(res);
-                    auto lookupResult = LookupResult{
-                        path, size, isDir, std::move(symlinkDestination)};
+              return collectAllSafe(pathFut, sizeFut, symlinkAttrsFut)
+                  .thenValue(
+                      [this, isDir, context = context.copy()](
+                          std::tuple<
+                              RelativePath,
+                              uint64_t,
+                              std::pair<std::optional<std::string>, bool>>
+                              res) {
+                        auto [path, size, symlinkAttrs] = std::move(res);
+                        auto symlinkDestination = symlinkAttrs.first;
+                        auto symlinkIsDirectory = symlinkAttrs.second;
+                        auto lookupResult = LookupResult{
+                            path,
+                            size,
+                            isDir || symlinkIsDirectory,
+                            std::move(symlinkDestination)};
 
-                    // We need to run the following asynchronously to avoid the
-                    // risk of deadlocks when EdenFS recursively triggers this
-                    // lookup call. In rare situation, this might happen during
-                    // a checkout operation which is already holding locks that
-                    // the code below also need.
-                    folly::via(
-                        getNotificationExecutor(),
-                        [&mount = *mount_,
-                         path = std::move(path),
-                         context = context.copy()]() {
-                          // Finally, let's tell the TreeInode that this file
-                          // needs invalidation during update. This is run in a
-                          // separate executor to avoid deadlocks. This is
-                          // guaranteed to 1) run before any other changes to
-                          // this inode, and 2) before checkout starts
-                          // invalidating files/directories. This also cannot
-                          // race with a decFsRefcount from
-                          // TreeInode::invalidateChannelEntryCache due to
-                          // getInodeSlow needing to acquire the content lock
-                          // that invalidateChannelEntryCache is already
-                          // holding.
-                          mount.getInodeSlow(path, context)
-                              .thenValue([](InodePtr inode) {
-                                inode->incFsRefcount();
-                              })
-                              .get();
-                        });
+                        // We need to run the following asynchronously to
+                        // avoid the risk of deadlocks when EdenFS recursively
+                        // triggers this lookup call. In rare situation, this
+                        // might happen during a checkout operation which is
+                        // already holding locks that the code below also
+                        // need.
+                        folly::via(
+                            getNotificationExecutor(),
+                            [&mount = *mount_,
+                             path = std::move(path),
+                             context = context.copy()]() {
+                              // Finally, let's tell the TreeInode that this
+                              // file needs invalidation during update. This
+                              // is run in a separate executor to avoid
+                              // deadlocks. This is guaranteed to 1) run
+                              // before any other changes to this inode, and
+                              // 2) before checkout starts invalidating
+                              // files/directories. This also cannot race with
+                              // a decFsRefcount from
+                              // TreeInode::invalidateChannelEntryCache due to
+                              // getInodeSlow needing to acquire the content
+                              // lock that invalidateChannelEntryCache is
+                              // already holding.
+                              mount.getInodeSlow(path, context)
+                                  .thenValue([](InodePtr inode) {
+                                    inode->incFsRefcount();
+                                  })
+                                  .get();
+                            });
 
-                    return std::optional{std::move(lookupResult)};
-                  });
+                        return std::optional{std::move(lookupResult)};
+                      });
             })
             .thenTry(
                 [this, path = std::move(path)](
@@ -328,7 +453,8 @@ ImmediateFuture<std::string> PrjfsDispatcherImpl::read(
               auto& treeEntry = std::get<TreeEntry>(treeOrTreeEntry);
               return objectStore->getBlob(treeEntry.getHash(), context)
                   .thenValue([](std::shared_ptr<const Blob> blob) {
-                    // TODO(xavierd): directly return the Blob to the caller.
+                    // TODO(xavierd): directly return the Blob to the
+                    // caller.
                     std::string res;
                     blob->getContents().appendTo(res);
                     return res;
@@ -368,9 +494,9 @@ ImmediateFuture<TreeInodePtr> createDirInode(
           /*
            * ProjectedFS notifications are asynchronous and sent after the
            * fact. This means that we can get a notification on a
-           * file/directory before the parent directory notification has been
-           * completed. This should be a very rare event and thus the code
-           * below is pessimistic and will try to create all parent
+           * file/directory before the parent directory notification has
+           * been completed. This should be a very rare event and thus the
+           * code below is pessimistic and will try to create all parent
            * directories.
            */
 

@@ -21,7 +21,7 @@ namespace facebook::eden {
 PrjfsDirEntry::PrjfsDirEntry(
     PathComponentPiece name,
     bool isDir,
-    std::optional<ImmediateFuture<std::string>> symlinkTarget,
+    std::optional<ImmediateFuture<std::pair<std::string, bool>>> symlinkTarget,
     ImmediateFuture<uint64_t> sizeFuture)
     : name_{name.wide()},
       // In the case where the future isn't ready yet, we want to start
@@ -45,16 +45,27 @@ ImmediateFuture<PrjfsDirEntry::Ready> PrjfsDirEntry::getFuture() {
   auto symlinkTargetFuture = symlinkTarget_.has_value()
       ? (ImmediateFuture{symlinkTarget_.value().getSemiFuture()})
             .thenValue(
-                [](std::string target)
-                    -> ImmediateFuture<std::optional<std::string>> {
+                [](std::pair<std::string, bool> target)
+                    -> ImmediateFuture<
+                        std::optional<std::pair<std::string, bool>>> {
                   return target;
                 })
-      : ImmediateFuture<std::optional<std::string>>{std::nullopt};
+      : ImmediateFuture<std::optional<std::pair<std::string, bool>>>{
+            std::nullopt};
   return collectAllSafe(sizeFuture, symlinkTargetFuture)
       .thenValue([name = name_, isDir = isDir_](
-                     std::tuple<uint64_t, std::optional<std::string>>&& ret) {
+                     std::tuple<
+                         uint64_t,
+                         std::optional<std::pair<std::string, bool>>>&& ret) {
         auto&& [size, symlinkTarget] = std::move(ret);
-        return Ready{std::move(name), size, isDir, std::move(symlinkTarget)};
+        if (symlinkTarget.has_value()) {
+          return Ready{
+              std::move(name),
+              size,
+              symlinkTarget.value().second,
+              std::make_optional(std::move(symlinkTarget.value().first))};
+        }
+        return Ready{std::move(name), size, isDir, std::nullopt};
       });
 }
 

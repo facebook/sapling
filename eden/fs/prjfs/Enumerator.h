@@ -24,7 +24,8 @@ class PrjfsDirEntry {
   PrjfsDirEntry(
       PathComponentPiece name,
       bool isDir,
-      std::optional<ImmediateFuture<std::string>> symlinkTarget,
+      std::optional<ImmediateFuture<std::pair<std::string, bool>>>
+          symlinkTarget,
       ImmediateFuture<uint64_t> sizeFuture);
 
   /**
@@ -70,7 +71,8 @@ class PrjfsDirEntry {
   std::wstring name_;
   folly::FutureSplitter<uint64_t> sizeFuture_;
   bool isDir_;
-  std::optional<folly::FutureSplitter<std::string>> symlinkTarget_;
+  std::optional<folly::FutureSplitter<std::pair<std::string, bool>>>
+      symlinkTarget_;
 };
 
 /**

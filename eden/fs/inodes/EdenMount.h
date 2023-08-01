@@ -91,6 +91,8 @@ class TreeEntry;
 class RenameLock;
 class SharedRenameLock;
 
+constexpr int kMaxSymlinkChainDepth = 40; // max depth of symlink chain
+
 /**
  * Represents an inode state transition and the duration it took for the event
  * to occur. Currently this tracks inode loads and inode materializations. This
@@ -1245,8 +1247,6 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 
   friend class TreePrefetchLease;
   void treePrefetchFinished() noexcept;
-
-  static constexpr int kMaxSymlinkChainDepth = 40; // max depth of symlink chain
 
   const std::unique_ptr<const CheckoutConfig> checkoutConfig_;
 

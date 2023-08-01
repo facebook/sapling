@@ -119,7 +119,13 @@ class Repository(object):
         if add:
             self.add_file(path)
 
-    def symlink(self, path: str, contents: str, add: bool = True) -> None:
+    def symlink(
+        self,
+        path: str,
+        contents: str,
+        add: bool = True,
+        target_is_directory: bool = False,
+    ) -> None:
         """
         Create a symlink at the specified path, pointed at the given
         destination path contents.
@@ -132,7 +138,7 @@ class Repository(object):
             if ex.errno != errno.ENOENT:
                 raise
 
-        os.symlink(contents, full_path)
+        os.symlink(contents, full_path, target_is_directory=target_is_directory)
         if add:
             self.add_file(path)
 

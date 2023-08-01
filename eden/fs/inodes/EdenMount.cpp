@@ -204,7 +204,6 @@ class EdenMount::JournalDiffCallback : public DiffCallback {
   folly::Synchronized<Data> data_;
 };
 
-constexpr int EdenMount::kMaxSymlinkChainDepth;
 static constexpr folly::StringPiece kEdenStracePrefix = "eden.strace.";
 
 // We compute this when the process is initialized, but stash a copy
