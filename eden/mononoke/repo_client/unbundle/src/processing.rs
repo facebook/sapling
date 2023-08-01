@@ -388,6 +388,16 @@ async fn run_bookmark_only_pushrebase(
 
     let part_id = bookmark_push.part_id;
 
+    if bookmark_push.old == bookmark_push.new {
+        debug!(
+            ctx.logger(),
+            "pushrebase is a noop, returning success early."
+        );
+        return Ok(UnbundleBookmarkOnlyPushRebaseResponse {
+            bookmark_push_part_id: part_id,
+        });
+    }
+
     // This is a bookmark-only push, so there are no new changesets.
     let new_changesets = HashMap::new();
 

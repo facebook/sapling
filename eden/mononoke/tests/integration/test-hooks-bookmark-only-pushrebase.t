@@ -167,7 +167,6 @@ bypass the hook too, and it should work
   updating bookmark main
 
 Noopp bookmark-only push doesn't need to bypass hooks to go through.
-It does add the entry to bookmark update log like any other push.
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
   7
   $ hgmn push -r . --to main
@@ -176,7 +175,7 @@ It does add the entry to bookmark update log like any other push.
   no changes found
   updating bookmark main
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
-  8
+  7
 
 attempt a move to a completely unrelated commit (no common ancestor), with an ancestor that
 fails the hook

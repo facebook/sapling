@@ -80,7 +80,7 @@ Noop bookmark-only pushrebase
      default/master_bookmark   ce81c7d38286
      default/master_bookmark_2 11f848659bfc
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
-  7
+  6
 
 -- this is not a `common_pushrebase_bookmark`, so should be prefixed
   $ cd "$TESTTMP/large-hg-client"
