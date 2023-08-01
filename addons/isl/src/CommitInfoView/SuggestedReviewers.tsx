@@ -158,7 +158,12 @@ export function SuggestedReviewers({
               </div>
             )}
             {filteredSuggestions?.map(s => (
-              <Suggestion key={s} onClick={() => addReviewer(s)}>
+              <Suggestion
+                key={s}
+                onClick={() => {
+                  addReviewer(s);
+                  tracker.track('AcceptSuggestedReviewer', {extras: {type: 'suggested'}});
+                }}>
                 {s}
               </Suggestion>
             )) ?? null}
@@ -172,7 +177,12 @@ export function SuggestedReviewers({
           </div>
           <div className="suggestions">
             {recent.map(s => (
-              <Suggestion key={s} onClick={() => addReviewer(s)}>
+              <Suggestion
+                key={s}
+                onClick={() => {
+                  addReviewer(s);
+                  tracker.track('AcceptSuggestedReviewer', {extras: {type: 'recent'}});
+                }}>
                 {s}
               </Suggestion>
             ))}

@@ -29,6 +29,7 @@ export type TrackEventName =
   | 'ForgetOperation'
   | 'GettingStartedInteraction'
   | 'GetSuggestedReviewers'
+  | 'AcceptSuggestedReviewer'
   | 'GenerateAICommitMessage'
   | 'AcceptGeneratedAICommitMessage'
   | 'RetryGeneratedAICommitMessage'
