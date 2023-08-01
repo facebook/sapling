@@ -103,37 +103,37 @@ if sys.platform == "win32":
         #
         # Test classes from the hg integration test binary
         #
-        "hg.debug_clear_local_caches_test.DebugClearLocalCachesTestTreeOnly": [
+        "hg.debug_clear_local_caches_test.DebugClearLocalCachesTest": [
             # Graceful restart is not implemented on Windows
             "test_contents_are_the_same_if_handle_is_held_open",
         ],
-        "hg.debug_get_parents.DebugGetParentsTestTreeOnly": True,
-        "hg.debug_hg_dirstate_test.DebugHgDirstateTestTreeOnly": True,
-        "hg.diff_test.DiffTestTreeOnly": True,
-        "hg.grep_test.GrepTestTreeOnly": [
+        "hg.debug_get_parents.DebugGetParentsTest": True,
+        "hg.debug_hg_dirstate_test.DebugHgDirstateTest": True,
+        "hg.diff_test.DiffTest": True,
+        "hg.grep_test.GrepTest": [
             "test_grep_directory_from_root",
             "test_grep_directory_from_subdirectory",
         ],
-        "hg.rebase_test.RebaseTestTreeOnly": [
+        "hg.rebase_test.RebaseTest": [
             "test_rebase_commit_with_independent_folder"
         ],
-        "hg.rm_test.RmTestTreeOnly": [
+        "hg.rm_test.RmTest": [
             "test_rm_directory_with_modification",
             "test_rm_modified_file_permissions",
         ],
-        "hg.split_test.SplitTestTreeOnly": ["test_split_one_commit_into_two"],
-        "hg.status_deadlock_test.StatusDeadlockTestTreeOnly": True,
-        "hg.status_test.StatusTestTreeOnly": [
+        "hg.split_test.SplitTest": ["test_split_one_commit_into_two"],
+        "hg.status_deadlock_test.StatusDeadlockTest": True,
+        "hg.status_test.StatusTest": [
             # TODO: Opening a file with O_TRUNC inside an EdenFS mount fails on Windows
             "test_partial_truncation_after_open_modifies_file",
             # TODO: These tests do not report the file as modified after truncation
             "test_truncation_after_open_modifies_file",
             "test_truncation_upon_open_modifies_file",
         ],
-        "hg.update_test.UpdateCacheInvalidationTestTreeOnly": [
+        "hg.update_test.UpdateCacheInvalidationTest": [
             "test_changing_file_contents_creates_new_inode_and_flushes_dcache"
         ],
-        "hg.update_test.UpdateTestTreeOnly": [
+        "hg.update_test.UpdateTest": [
             # TODO: A \r\n is used
             "test_mount_state_during_unmount_with_in_progress_checkout",
         ],
