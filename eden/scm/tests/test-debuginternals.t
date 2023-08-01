@@ -10,8 +10,8 @@
   $ hg debuginternals
   *	blackbox (glob)
   *	store/hgcommits (glob)
-  *	store/indexedlogdatastore (glob)
-  *	store/manifests (glob)
+  *	store/indexedlogdatastore (glob) (?)
+  *	store/manifests (glob) (?)
   *	store/metalog (glob)
   *	store/mutation (glob)
   *	store/segments (glob)
