@@ -317,14 +317,14 @@ Fail to push a backup by setting the server maxbundlesize very low
   remote:     0ff831d99e2e  ssh1
   remote:     eec37aac152b  ssh2
   remote:     73e861ba66d5  toobig
-  push failed: bundle is too big: 1488 bytes. max allowed size is 0 MB
+  push failed: bundle is too big: * bytes. max allowed size is 0 MB (glob)
   retrying push with discovery
   searching for changes
   remote: pushing 3 commits:
   remote:     0ff831d99e2e  ssh1
   remote:     eec37aac152b  ssh2
   remote:     73e861ba66d5  toobig
-  push of head 73e861ba66d5 failed: bundle is too big: 1488 bytes. max allowed size is 0 MB
+  push of head 73e861ba66d5 failed: bundle is too big: * bytes. max allowed size is 0 MB (glob)
   commitcloud: failed to back up 1 commit
   [2]
   $ hg cloud check -r .
@@ -348,7 +348,7 @@ Set the limit back high, and try again
   $ hg cloud check -r . --json
   {"73e861ba66d5dc1998052f3ae2cf8cf7924ed863": true} (no-eol)
   $ scratchnodes | grep 73e861ba66d5dc1998052f3ae2cf8cf7924ed863
-  73e861ba66d5dc1998052f3ae2cf8cf7924ed863 1b5db94fc7daec8da5284b7b989fff125cb6f35b
+  73e861ba66d5dc1998052f3ae2cf8cf7924ed863 * (glob)
 
 Remove the backup state file
   $ rm .hg/commitcloud/backedupheads.f6bce706
