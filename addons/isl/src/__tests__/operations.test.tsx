@@ -513,4 +513,100 @@ describe('operations', () => {
       expect(screen.queryByText('You were here...')).not.toBeInTheDocument();
     });
   });
+
+  describe('progress messages', () => {
+    it('shows progress messages', () => {
+      mockNextOperationId('1');
+      clickGoto('c');
+
+      act(() => {
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: '1',
+          kind: 'spawn',
+          queue: [],
+        });
+
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: '1',
+          kind: 'progress',
+          progress: {message: 'doing the thing', progress: 3, progressTotal: 7},
+        });
+      });
+
+      expect(
+        within(screen.getByTestId('progress-container')).getByText('doing the thing'),
+      ).toBeInTheDocument();
+    });
+
+    it('hide progress on new stdout', () => {
+      mockNextOperationId('1');
+      clickGoto('c');
+
+      act(() => {
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: '1',
+          kind: 'spawn',
+          queue: [],
+        });
+
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: '1',
+          kind: 'progress',
+          progress: {message: 'doing the thing'},
+        });
+      });
+
+      expect(
+        within(screen.getByTestId('progress-container')).getByText('doing the thing'),
+      ).toBeInTheDocument();
+
+      act(() => {
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: '1',
+          kind: 'stdout',
+          message: 'hello',
+        });
+      });
+
+      expect(
+        within(screen.getByTestId('progress-container')).queryByText('doing the thing'),
+      ).not.toBeInTheDocument();
+      expect(
+        within(screen.getByTestId('progress-container')).getByText('hello'),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('inline progress', () => {
+    it('shows progress messages next to commits', () => {
+      mockNextOperationId('1');
+      clickGoto('c');
+
+      act(() => {
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: '1',
+          kind: 'spawn',
+          queue: [],
+        });
+
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: '1',
+          kind: 'inlineProgress',
+          hash: 'c',
+          message: 'going...', // not a real thing for goto operation, but we support arbitrary progress
+        });
+      });
+
+      expect(
+        within(screen.getByTestId('commit-tree-root')).getByText('going...'),
+      ).toBeInTheDocument();
+    });
+  });
 });
