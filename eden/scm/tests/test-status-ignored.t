@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 #require fsmonitor
 
   $ setconfig status.use-rust=true workingcopy.use-rust=true
@@ -16,7 +17,8 @@ Avoid dirstate race condition where added files end up as NEED_CHECK.
 
 We want the ignore files to be present in our treestate.
   $ hg debugtree list
-  .gitignore: 0100644 4 + EXIST_P1 EXIST_NEXT 
+  .gitignore: 0100644 4 + EXIST_P1 EXIST_NEXT  (no-windows !)
+  .gitignore: 0100666 4 + EXIST_P1 EXIST_NEXT  (windows !)
   foo/a: 00 -1 -1 NEED_CHECK 
   foo/b: 00 -1 -1 NEED_CHECK 
   foo/c: 00 -1 -1 NEED_CHECK 
