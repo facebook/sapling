@@ -10,6 +10,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
+#include "eden/fs/utils/String.h"
 
 namespace facebook::eden {
 
@@ -92,7 +93,7 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
 
   ImmediateFuture<bool> isFinalSymlinkPathDirectory(
       RelativePath symlink,
-      std::string_view targetStringView,
+      string_view targetStringView,
       const ObjectFetchContextPtr& context,
       const int remainingRecursionDepth = kMaxSymlinkChainDepth);
 

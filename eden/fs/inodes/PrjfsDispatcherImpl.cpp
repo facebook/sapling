@@ -189,7 +189,7 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
 
 ImmediateFuture<bool> PrjfsDispatcherImpl::isFinalSymlinkPathDirectory(
     RelativePath symlink,
-    std::string_view targetStringView,
+    string_view targetStringView,
     const ObjectFetchContextPtr& context,
     const int remainingRecursionDepth) {
   if (remainingRecursionDepth == 0) {
@@ -208,11 +208,19 @@ ImmediateFuture<bool> PrjfsDispatcherImpl::isFinalSymlinkPathDirectory(
   }
 
   return makeImmediateFutureWith([&]() -> ImmediateFuture<bool> {
-           auto targetString = fmt::format(
-               "{}{}{}",
-               mount_->getPath() + symlink.dirname(),
-               kDirSeparatorStr,
-               targetStringView);
+           // Creating absolute path symlinks with a variety of tools (e.g.,
+           // mklink on Windows or os.symlink on Python) makes the created
+           // symlinks start with an UNC prefix. However, there could be tools
+           // that create symlinks that don't add this prefix.
+           // TODO: Make this line also consider tools that do not add an UNC
+           // prefix to absolute path symlinks.
+           auto targetString = targetStringView.starts_with(detail::kUNCPrefix)
+               ? std::string(targetStringView)
+               : fmt::format(
+                     "{}{}{}",
+                     mount_->getPath() + symlink.dirname(),
+                     kDirSeparatorStr,
+                     targetStringView);
            AbsolutePath absTarget;
            try {
              absTarget = canonicalPath(targetString);
@@ -316,6 +324,22 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
                               // work. This also applies to having symlinks in
                               // places other than EdenFS. So we replace them
                               // with backslashes.
+                              //
+                              // Additionally, since creating a commit
+                              // normalizes backward slashes to forward slashes
+                              // in the commit itself, we need to normalize to
+                              // turn them back into backtward ones. We need to
+                              // do this here due to the fact that this also
+                              // applies to absolute paths which most of the
+                              // time contain UNC prefixes. For instance, if we
+                              // created a symlink to the directory "C:\foo" and
+                              // then tried to create a commit containing this
+                              // symlink, we would end up with "//?/C:/foo" in
+                              // the commit itself, and when checking out this
+                              // commit, we would need to convert it to
+                              // "\\?\C:\foo" so that we can properly check that
+                              // this symlinks is a directory in
+                              // `isFinalSymlinkPathDirectory`
                               std::replace(
                                   content.begin(), content.end(), '/', '\\');
                               return isFinalSymlinkPathDirectory(

@@ -203,6 +203,32 @@ new mode 120000
         self.repo.write_file("adir/hello.txt", "saluton")
         self.assert_status({"adir/hello.txt": "M"})
 
+    def test_abspath_symlink(self) -> None:
+        if os.name == "nt":
+            targetisdir = True
+        else:
+            targetisdir = False
+        self.repo.symlink("symlink", self.get_path("adir/hello.txt"))
+        self.assertEqual("hola", self.read_file("symlink"))
+        filecommit = self.repo.commit("Create a symlink to absolute path")
+        self.assert_status({})
+        self.repo.update(self.simple_commit)
+        self.repo.symlink(
+            "symlink", self.get_path("adir"), target_is_directory=targetisdir
+        )
+        dircommit = self.repo.commit("Create a symlink to absolute path")
+        self.assert_status({})
+        self.repo.update(self.simple_commit)
+        self.repo.update(dircommit)
+        self.assertTrue(os.path.isdir(self.get_path("symlink")))
+        self.assertEqual(
+            ["hello.txt"],
+            [entry.name for entry in os.scandir(self.get_path("symlink"))],
+        )
+        self.repo.update(filecommit, clean=True)
+        self.assertTrue(os.path.isfile(self.get_path("symlink")))
+        self.assertEqual("hola", self.read_file("symlink"))
+
 
 @hg_test
 # pyre-ignore[13]: T62487924
