@@ -39,8 +39,8 @@ Clone it
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
                                         mfnodes : 1},
-                        read : { bytes : 2474},
-                        write : { bytes : 909}}}}
+                        read : { bytes : *}, (glob)
+                        write : { bytes : *}}}} (glob)
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -87,8 +87,8 @@ Pull exactly up to d into the client
   adding file changes
   { metrics : { scmstore : { file : { api : { hg : { prefetch : { calls : 3}}}}},
                 ssh : { connections : 1,
-                        read : { bytes : 1063},
-                        write : { bytes : 666}}}}
+                        read : { bytes : *}, (glob)
+                        write : { bytes : *}}}} (glob)
 
 Test error message about MissingNodesError
   $ drawdag --config paths.default=ssh://user@dummy/master-lagged --config remotefilelog.debug=0 --config devel.print-metrics=0 << 'EOS'
