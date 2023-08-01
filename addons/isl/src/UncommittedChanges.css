@@ -169,6 +169,7 @@
   opacity: 1;
 }
 
+.changed-file-list .button-rows,
 .uncommitted-changes .button-rows {
   display: flex;
   flex-direction: column;
@@ -176,6 +177,7 @@
   margin: var(--halfpad) 0;
 }
 
+.changed-file-list .button-row,
 .uncommitted-changes .button-row {
   display: flex;
   flex-wrap: wrap;

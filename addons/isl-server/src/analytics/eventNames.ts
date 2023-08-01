@@ -62,6 +62,7 @@ export type TrackEventName =
   | 'OptimisticCommitsStateForceResolved'
   | 'OptimisticConflictsStateForceResolved'
   | 'OptInToNewISLAgain'
+  | 'OpenAllFiles'
   | 'QueueOperation'
   | 'UploadImage'
   | 'RunVSCodeCommand'

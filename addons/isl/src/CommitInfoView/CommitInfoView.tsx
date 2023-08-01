@@ -315,9 +315,22 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
               <VSCodeBadge>{commit.totalFileCount}</VSCodeBadge>
             </SmallCapsTitle>
             <div className="changed-file-list">
-              <OpenComparisonViewButton
-                comparison={{type: ComparisonType.Committed, hash: commit.hash}}
-              />
+              <div className="button-row">
+                <OpenComparisonViewButton
+                  comparison={{type: ComparisonType.Committed, hash: commit.hash}}
+                />
+                <VSCodeButton
+                  appearance="icon"
+                  onClick={() => {
+                    tracker.track('OpenAllFiles');
+                    for (const file of commit.filesSample) {
+                      platform.openFile(file.path);
+                    }
+                  }}>
+                  <Icon icon="go-to-file" slot="start" />
+                  <T>Open All Files</T>
+                </VSCodeButton>
+              </div>
               <ChangedFiles
                 files={commit.filesSample}
                 comparison={
