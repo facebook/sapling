@@ -1377,13 +1377,6 @@ def debugfilerevision(ui, repo, *pats, **opts) -> None:
     If '--verbose' is set, also print raw content.
     """
 
-    def deltachainshortnodes(flog, fctx):
-        chain = flog._deltachain(fctx.filerev())[0]
-        # chain could be using revs or nodes, convert to short nodes
-        if chain and isinstance(chain[0], int):
-            chain = [flog.node(x) for x in chain]
-        return [short(x) for x in chain]
-
     for rev in scmutil.revrange(repo, opts.get("rev") or ["."]):
         ctx = repo[rev]
         ui.write(_x("%s: %s\n") % (short(ctx.node()), ctx.description().split("\n")[0]))
@@ -1401,7 +1394,6 @@ def debugfilerevision(ui, repo, *pats, **opts) -> None:
                 ("flag", lambda: "%x" % fctx.rawflags()),
                 ("size", lambda: "%d" % fctx.size()),
                 ("copied", lambda: "%r" % (fctx.renamed() or ("",))[0]),
-                ("chain", lambda: ",".join(deltachainshortnodes(flog, fctx))),
             ]
             msg = " %s:" % fctx.path()
             for name, func in fields:

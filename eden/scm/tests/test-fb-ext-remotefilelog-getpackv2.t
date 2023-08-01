@@ -40,7 +40,7 @@ Shallow clone from full
 
   $ hg debugfilerev -v
   79c51fb96423: y
-   dir/y: bin=0 lnk=0 flag=0 size=2 copied='' chain=076f5e2225b3
+   dir/y: bin=0 lnk=0 flag=0 size=2 copied=''
     rawdata: 'y\n'
 
 Now try prefetchchunksize option, and expect that two getpackv2 calls were made
