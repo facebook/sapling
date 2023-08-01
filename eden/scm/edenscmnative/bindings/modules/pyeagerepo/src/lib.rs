@@ -157,6 +157,13 @@ py_class!(pub class EagerRepoStore |py| {
         Ok(PyBytes::new(py, id.as_ref()))
     }
 
+    /// (node, data). This can be used to insert data with mismatched SHA1.
+    def add_arbitrary_blob(&self, node: Serde<HgId>, data: PyBytes) -> PyResult<PyNone> {
+        let inner = self.inner(py);
+        inner.add_arbitrary_blob(node.0, data.data(py)).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
     /// (node) -> Optional[bytes].
     ///
     /// Get the raw text with p1, p2 prefix.

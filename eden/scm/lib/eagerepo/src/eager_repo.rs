@@ -117,6 +117,14 @@ impl EagerRepoStore {
         Ok(inner.insert(data, bases)?)
     }
 
+    /// Insert arbitrary blob with an `id`.
+    /// This is usually used for hg's LFS data.
+    pub fn add_arbitrary_blob(&self, id: Id20, data: &[u8]) -> Result<()> {
+        let mut inner = self.inner.write();
+        inner.insert_arbitary(id, data, &[])?;
+        Ok(())
+    }
+
     /// Read SHA1 blob from zstore.
     pub fn get_sha1_blob(&self, id: Id20) -> Result<Option<Bytes>> {
         let inner = self.inner.read();
