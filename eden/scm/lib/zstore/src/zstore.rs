@@ -133,6 +133,17 @@ impl Zstore {
             return Ok(id);
         }
 
+        self.insert_arbitary(id, data, candidate_base_ids)?;
+        Ok(id)
+    }
+
+    /// Insert arbitrary data that might not match its SHA1 content.
+    pub fn insert_arbitary(
+        &mut self,
+        id: Id20,
+        data: &[u8],
+        candidate_base_ids: &[Id20],
+    ) -> crate::Result<()> {
         debug_span!(
             "Zstore::insert",
             data_len = data.len(),
@@ -163,7 +174,7 @@ impl Zstore {
             // Insert the delta to the blob store.
             let bytes = mincode::serialize(&best_delta)?;
             self.log.append(bytes)?;
-            Ok(id)
+            Ok(())
         })
     }
 
@@ -914,5 +925,18 @@ Chain Len| Depth |Subchain Len| Chain ID
        2 |     2 |          0 |   a078da
 "#
         );
+    }
+
+    #[test]
+    fn test_insert_arbitary() {
+        let dir = TempDir::new().unwrap();
+        let mut zstore = Zstore::open(&dir).unwrap();
+
+        let data1 = b"123456";
+        let data2 = b"abcdef";
+        let id1 = zstore.insert(&data1[..], &[]).unwrap();
+        zstore.insert_arbitary(id1, &data2[..], &[]).unwrap();
+
+        assert_eq!(zstore.get(id1).unwrap().unwrap(), data2,);
     }
 }
