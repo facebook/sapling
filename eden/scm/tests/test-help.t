@@ -954,8 +954,6 @@ Test list of internal help commands
    debugdatapack
                  (no help text available)
    debugdate     parse and display a date
-   debugdeltachain
-                 dump information about delta chains in a revlog
    debugdetectissues
                  various repository integrity and health checks. for automatic
                  remediation, use doctor.
@@ -1076,7 +1074,6 @@ Test list of internal help commands
    debugrename   dump rename information
    debugresetheads
                  reset heads of repo so it looks like after a fresh clone
-   debugrevlog   show data and statistics about a revlog
    debugrevlogclone
                  download revlog and bookmarks into a newly initialized repo
    debugrevset   resolves a single revset and outputs its commit hash
