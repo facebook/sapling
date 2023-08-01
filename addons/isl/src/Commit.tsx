@@ -6,6 +6,7 @@
  */
 
 import type {CommitInfo, SuccessorInfo} from './types';
+import type {Snapshot} from 'recoil';
 
 import {BranchIndicator} from './BranchIndicator';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
@@ -38,7 +39,7 @@ import {
 } from './serverAPIState';
 import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
-import React, {memo} from 'react';
+import React, {memo, useEffect, useState} from 'react';
 import {useRecoilCallback, useRecoilValue, useSetRecoilState} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
@@ -425,6 +426,7 @@ function DraggableCommit({
   onDoubleClick?: (e: React.MouseEvent<HTMLDivElement>) => unknown;
   onContextMenu?: React.MouseEventHandler<HTMLDivElement>;
 }) {
+  const [dragDisabledMessage, setDragDisabledMessage] = useState<string | null>(null);
   const handleDragEnter = useRecoilCallback(
     ({snapshot, set}) =>
       () => {
@@ -462,10 +464,8 @@ function DraggableCommit({
     ({snapshot}) =>
       (event: React.DragEvent<HTMLDivElement>) => {
         // can't rebase with uncommitted changes
-        const loadable = snapshot.getLoadable(latestUncommittedChanges);
-        const hasUncommittedChanges = loadable.state === 'hasValue' && loadable.contents.length > 0;
-
-        if (hasUncommittedChanges) {
+        if (hasUncommittedChanges(snapshot)) {
+          setDragDisabledMessage(t('Cannot drag to rebase with uncommitted changes.'));
           event.preventDefault();
         }
 
@@ -480,6 +480,13 @@ function DraggableCommit({
       },
     [commit],
   );
+
+  useEffect(() => {
+    if (dragDisabledMessage) {
+      const timeout = setTimeout(() => setDragDisabledMessage(null), 1500);
+      return () => clearTimeout(timeout);
+    }
+  }, [dragDisabledMessage]);
 
   return (
     <div
@@ -497,8 +504,24 @@ function DraggableCommit({
       onContextMenu={onContextMenu}
       tabIndex={0}
       data-testid={'draggable-commit'}>
-      {children}
+      {dragDisabledMessage != null ? (
+        <Tooltip trigger="manual" shouldShow title={dragDisabledMessage}>
+          {children}
+        </Tooltip>
+      ) : (
+        children
+      )}
     </div>
+  );
+}
+
+function hasUncommittedChanges(snapshot: Snapshot): boolean {
+  const loadable = snapshot.getLoadable(latestUncommittedChanges);
+  return (
+    loadable.state === 'hasValue' &&
+    loadable.contents.filter(
+      commit => commit.status !== '?', // untracked files are ok
+    ).length > 0
   );
 }
 

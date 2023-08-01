@@ -167,6 +167,11 @@
   user-select: none;
 }
 
+.commit-details > .tooltip-creator {
+  display: flex;
+  align-items: center;
+}
+
 .commit-second-row {
   display: flex;
   gap: var(--pad);

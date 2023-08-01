@@ -17,6 +17,7 @@ import {
   closeCommitInfoSidebar,
   TEST_COMMIT_HISTORY,
   dragAndDropCommits,
+  simulateUncommittedChangedFiles,
 } from '../../testUtils';
 import {CommandRunner, SucceedableRevset} from '../../types';
 import {fireEvent, render, screen, within} from '@testing-library/react';
@@ -147,6 +148,21 @@ describe('rebase operation', () => {
       type: 'runOperation',
       operation: expect.anything(),
     });
+  });
+
+  it('cannot drag with uncommitted changes', () => {
+    act(() => simulateUncommittedChangedFiles({value: [{path: 'file1.txt', status: 'M'}]}));
+    dragAndDropCommits('d', '2');
+
+    expect(screen.queryByText('Run Rebase')).not.toBeInTheDocument();
+    expect(screen.getByText('Cannot drag to rebase with uncommitted changes.')).toBeInTheDocument();
+  });
+
+  it('can drag with untracked changes', () => {
+    act(() => simulateUncommittedChangedFiles({value: [{path: 'file1.txt', status: '?'}]}));
+    dragAndDropCommits('d', '2');
+
+    expect(screen.queryByText('Run Rebase')).toBeInTheDocument();
   });
 
   describe('stacking optimistic state', () => {
