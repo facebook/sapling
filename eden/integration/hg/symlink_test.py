@@ -79,6 +79,26 @@ rename to symbolic_link
 """,
         )
 
+    def test_hg_mv_symlink_dir(self) -> None:
+        self.repo.symlink("symlink", "adir", target_is_directory=True)
+        self.repo.commit("Created directory symlink")
+        self.repo.hg("mv", "symlink", "symbolic_link")
+        self.repo.commit("Moving symlink")
+        self.assertEqual(
+            ["hello.txt"],
+            [entry.name for entry in os.scandir(self.get_path("symbolic_link"))],
+        )
+        self.assert_status_empty()
+        self.assertEqual(
+            self.repo.hg("log", "-r", ".", "--template", "{node}\\n", "--patch"),
+            """08ba755d91dc22433da9e170bcb95bc87da38aab
+diff --git a/symlink b/symbolic_link
+rename from symlink
+rename to symbolic_link
+
+""",
+        )
+
     def test_modified_symlink_target(self) -> None:
         self.repo.update(self.symlink_commit)
         self.assert_status_empty()
