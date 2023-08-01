@@ -471,6 +471,8 @@ class revlog(object):
         self.index, nodemap, self._chunkcache = d
         if nodemap is not None:
             self.nodemap = self._nodecache = nodemap
+        if not self._chunkcache:
+            self._chunkclear()
         # revnum -> (chain-length, sum-delta-length)
         self._chaininfocache = {}
         # revlog header -> revlog compressor
@@ -915,6 +917,10 @@ class revlog(object):
                 ladd(decomp(buffer(data, chunkstart - offset, chunklength)))
 
         return l
+
+    def _chunkclear(self):
+        """Clear the raw chunk cache."""
+        self._chunkcache = (0, b"")
 
     def candelta(self, baserev, rev):
         """whether two revisions (prev, rev) can be delta-ed or not"""
