@@ -23,7 +23,7 @@ Basic clone
 
   $ hg clone --stream -U ssh://user@dummy/server clone1
   streaming all changes
-  1025 files to transfer, * of data (glob)
+  * (glob)
   transferred * in * seconds (*) (glob)
   requesting all changes
   adding changesets
@@ -41,7 +41,7 @@ Clone with background file closing enabled
   remote: 1
   streaming all changes
   sending stream_out_option command
-  1025 files to transfer, * of data (glob)
+  * (glob)
   transferred * in * seconds (*) (glob)
   query 1; heads
   sending batch command

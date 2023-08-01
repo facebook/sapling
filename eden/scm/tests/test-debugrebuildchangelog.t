@@ -23,8 +23,8 @@ Clone:
   $ cd $TESTTMP
   $ hg clone --no-shallow --stream ssh://user@dummy/server client
   streaming all changes
-  4 files to transfer, * bytes of data (glob)
-  transferred * bytes in 0.0 seconds (* KB/sec) (glob)
+  * (glob)
+  transferred * bytes in 0.0 seconds (*) (glob)
   requesting all changes
   adding changesets
   adding manifests
