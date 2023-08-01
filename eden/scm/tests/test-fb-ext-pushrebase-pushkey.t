@@ -86,8 +86,8 @@ Push without pushrebase, and check that the hook sees the commit that was actual
   remote: adding file changes
   remote: log bookmarks master commitA -> commitC
   remote: pushkey-abort: prepushkey.log hook failed
-  remote: transaction abort!
-  remote: rollback completed
+  remote: transaction abort! (?)
+  remote: rollback completed (?)
   abort: updating bookmark master failed!
   [255]
 
@@ -114,7 +114,7 @@ Then, pushrebase. This time, we expect the pushkey to be updated
   remote: 2 new changesets from the server will be downloaded
   remote: log bookmarks master commitX -> commitC
   remote: pushkey-abort: prepushkey.log hook failed
-  remote: transaction abort!
-  remote: rollback completed
+  remote: transaction abort! (?)
+  remote: rollback completed (?)
   abort: updating bookmark master failed!
   [255]
