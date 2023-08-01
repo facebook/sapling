@@ -34,6 +34,7 @@ pub const CONFIG_PATH: &str = "mononoke-config-path";
 pub const REPO_ID: &str = "repo-id";
 pub const REPO_NAME: &str = "repo-name";
 pub const SHARDED_SERVICE_NAME: &str = "sharded-service-name";
+pub const SHARDED_SCOPE_NAME: &str = "sharded-scope-name";
 pub const SOURCE_REPO_GROUP: &str = "source-repo";
 pub const SOURCE_REPO_ID: &str = "source-repo-id";
 pub const SOURCE_REPO_NAME: &str = "source-repo-name";
@@ -550,8 +551,19 @@ impl MononokeAppBuilder {
                 .help("The name of SM service to be used when the command needs to be executed in a sharded setting")
                 .conflicts_with_all(repo_conflicts);
 
+            // Technically, this should be a required arg if SHARDED_SERVICE_NAME is required.
+            // We are intentionally not enforcing this to avoid breaking backward compatibility with
+            // legacy tools. This entire framework is legacy anyway and will go away once we're
+            // done migrating to modern clap.
+            let sharded_scope_name_arg = Arg::with_name(SHARDED_SCOPE_NAME)
+                .long(SHARDED_SCOPE_NAME)
+                .value_name("NAME")
+                .multiple(false)
+                .help("The scope of the ShardManager service that this service corresponds to")
+                .conflicts_with_all(repo_conflicts);
+
             let group_args = if self.dynamic_repos {
-                vec![REPO_ID, REPO_NAME, SHARDED_SERVICE_NAME]
+                vec![REPO_ID, REPO_NAME, SHARDED_SERVICE_NAME, SHARDED_SCOPE_NAME]
             } else {
                 vec![REPO_ID, REPO_NAME]
             };
@@ -566,6 +578,7 @@ impl MononokeAppBuilder {
             }
             app = if self.dynamic_repos {
                 app.arg(sharded_service_name_arg)
+                    .arg(sharded_scope_name_arg)
                     .arg(repo_id_arg)
                     .arg(repo_name_arg)
                     .group(repo_group)

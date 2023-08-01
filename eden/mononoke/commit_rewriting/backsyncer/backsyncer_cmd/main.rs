@@ -86,7 +86,7 @@ define_stats! {
     ),
 }
 
-const SM_SERVICE_SCOPE: &str = "global";
+const DEFAULT_SHARDED_SCOPE_NAME: &str = "global";
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 const APP_NAME: &str = "backsyncer cmd-line tool";
 
@@ -407,10 +407,18 @@ fn log_delay(ctx: &CoreContext, delay: &Delay, source_repo_name: &str, target_re
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let process = BacksyncProcess::new(fb)?;
-    match process.matches.value_of("sharded-service-name") {
+    match process.matches.value_of(cmdlib::args::SHARDED_SERVICE_NAME) {
         Some(service_name) => {
+            // Don't fail if the scope name is missing, but use global. This allows us to be
+            // backward compatible with the old tw setup.
+            // TODO (Pierre): Once the tw jobs have been updated, we can be less lenient here.
+            let scope_name = process
+                .matches
+                .value_of(cmdlib::args::SHARDED_SCOPE_NAME)
+                .unwrap_or(DEFAULT_SHARDED_SCOPE_NAME);
             // The service name needs to be 'static to satisfy SM contract
             static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
+            static SM_SERVICE_SCOPE_NAME: OnceCell<String> = OnceCell::new();
             let logger = process.matches.logger().clone();
             let matches = Arc::clone(&process.matches);
             let mut executor = ShardedProcessExecutor::new(
@@ -418,7 +426,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 process.matches.runtime().clone(),
                 &logger,
                 SM_SERVICE_NAME.get_or_init(|| service_name.to_string()),
-                SM_SERVICE_SCOPE,
+                SM_SERVICE_SCOPE_NAME.get_or_init(|| scope_name.to_string()),
                 SM_CLEANUP_TIMEOUT_SECS,
                 Arc::new(process),
                 true, // enable shard (repo) level healing

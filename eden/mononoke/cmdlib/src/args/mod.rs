@@ -46,6 +46,8 @@ use self::app::CONFIG_PATH;
 use self::app::REPO_ID;
 use self::app::REPO_NAME;
 use self::app::SCRIBE_LOGGING_DIRECTORY;
+pub use self::app::SHARDED_SCOPE_NAME;
+pub use self::app::SHARDED_SERVICE_NAME;
 use self::app::SOURCE_REPO_ID;
 use self::app::SOURCE_REPO_NAME;
 use self::app::TARGET_REPO_ID;
