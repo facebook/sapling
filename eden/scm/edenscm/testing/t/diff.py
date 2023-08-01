@@ -58,9 +58,11 @@ class ExpectLine:
                     excluded = True
         if body.endswith(" (esc)"):
             body = unescape(body[:-6])
+
         # normalize path separator on windows
-        if os.name == "nt":
+        if os.name == "nt" and not body.endswith(" (re)"):
             body = body.replace("\\", "/")
+
         if body.endswith(" (glob)"):
             # translate to re pattern
             isre = True
