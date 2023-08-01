@@ -69,6 +69,19 @@ Bookmark-only pushrebase (Create a new bookmark, do not push commits)
   no bookmarks set
      default/master_bookmark   ce81c7d38286
      default/master_bookmark_2 11f848659bfc
+
+Noop bookmark-only pushrebase
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
+  6
+  $ REPONAME=small-mon hgmn push -r master_bookmark^ --to master_bookmark_2 |& grep updating
+  updating bookmark master_bookmark_2
+  $ hg book --all
+  no bookmarks set
+     default/master_bookmark   ce81c7d38286
+     default/master_bookmark_2 11f848659bfc
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
+  7
+
 -- this is not a `common_pushrebase_bookmark`, so should be prefixed
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q

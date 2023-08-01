@@ -140,7 +140,6 @@ attempt a non-fast-forward move, it should fail
   remote:     }
   abort: unexpected EOL, expected netstring digit
   [255]
-
 specify the pushvar to allow the non-fast-forward move.
   $ hgmn push -r . --to main --pushvar NON_FAST_FORWARD=true
   pushing rev af09fbbc2f05 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
@@ -166,6 +165,18 @@ bypass the hook too, and it should work
   searching for changes
   no changes found
   updating bookmark main
+
+Noopp bookmark-only push doesn't need to bypass hooks to go through.
+It does add the entry to bookmark update log like any other push.
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
+  7
+  $ hgmn push -r . --to main
+  pushing rev af09fbbc2f05 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
+  searching for changes
+  no changes found
+  updating bookmark main
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
+  8
 
 attempt a move to a completely unrelated commit (no common ancestor), with an ancestor that
 fails the hook
