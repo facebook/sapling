@@ -17,10 +17,10 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use bytes::Bytes;
-use git_hash::ObjectId;
-use git_object::Kind;
-use git_object::Object;
-use git_object::ObjectRef;
+use gix_hash::ObjectId;
+use gix_object::Kind;
+use gix_object::Object;
+use gix_object::ObjectRef;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
@@ -112,7 +112,7 @@ impl GitRepoReader {
     }
 
     /// Read `oid` from the git store
-    pub fn get_object(&self, oid: &git_hash::oid) -> impl Future<Output = Result<ObjectContent>> {
+    pub fn get_object(&self, oid: &gix_hash::oid) -> impl Future<Output = Result<ObjectContent>> {
         let outstanding_requests = self.outstanding_requests.clone();
         let send_request = self.send_request.clone();
         let oid = oid.to_owned();

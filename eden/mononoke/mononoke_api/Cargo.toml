@@ -49,8 +49,8 @@ fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 futures_lazy_shared = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-git-hash = "0.10"
 git_types = { version = "0.1.0", path = "../git/git_types" }
+gix-hash = "0.11"
 history_traversal = { version = "0.1.0", path = "../features/history_traversal" }
 hooks = { version = "0.1.0", path = "../hooks" }
 itertools = "0.10.3"
@@ -114,6 +114,6 @@ cross_repo_sync_test_utils = { version = "0.1.0", path = "../commit_rewriting/cr
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
-git-object = "0.23"
+gix-object = "0.33"
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }

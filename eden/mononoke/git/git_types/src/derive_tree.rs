@@ -137,7 +137,7 @@ async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
                     // Store the raw git tree before storing the thrift version
                     let oid = tree.handle().oid();
                     let git_hash =
-                        git_hash::oid::try_from_bytes(oid.as_ref()).with_context(|| {
+                        gix_hash::oid::try_from_bytes(oid.as_ref()).with_context(|| {
                             format_err!(
                                 "Failure while converting Git hash {} into Git Object ID",
                                 oid

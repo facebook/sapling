@@ -18,7 +18,7 @@ use futures::stream;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use git_hash::ObjectId;
+use gix_hash::ObjectId;
 use http::Uri;
 use hyper::body;
 use hyper::client::connect::HttpConnector;

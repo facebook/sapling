@@ -20,7 +20,7 @@ context = { version = "0.1.0", path = "../../server/context" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-git-hash = "0.10"
+gix-hash = "0.11"
 import_tools = { version = "0.1.0", path = "../import_tools" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

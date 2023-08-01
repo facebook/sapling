@@ -14,7 +14,7 @@ use anyhow::format_err;
 use anyhow::Error;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use context::CoreContext;
-use git_hash::ObjectId;
+use gix_hash::ObjectId;
 use import_tools::oid_to_sha1;
 use import_tools::GitRepoReader;
 use import_tools::GitimportTarget;
@@ -92,7 +92,7 @@ pub async fn missing_for_commit(
 async fn commit_in_mononoke(
     ctx: &CoreContext,
     hg_repo: &impl BonsaiGitMappingRef,
-    commit_id: &git_hash::oid,
+    commit_id: &gix_hash::oid,
 ) -> Result<Option<ChangesetId>, Error> {
     let changeset = hg_repo
         .bonsai_git_mapping()

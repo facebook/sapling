@@ -39,7 +39,7 @@ impl SourceControlServiceImpl {
             .await
             .map_err(MononokeError::from)?;
         // Validate that the bytes correspond to a valid git hash.
-        let git_hash = git_hash::oid::try_from_bytes(&params.git_hash)
+        let git_hash = gix_hash::oid::try_from_bytes(&params.git_hash)
             .map_err(|_| GitError::InvalidHash(format!("{:x?}", params.git_hash)))?;
         repo_ctx
             .upload_git_object(git_hash, params.raw_content)
@@ -69,7 +69,7 @@ impl SourceControlServiceImpl {
             .await
             .map_err(MononokeError::from)?;
         // Validate that the provided byte content constitutes a hash.
-        let git_tree_hash = git_hash::oid::try_from_bytes(&params.git_tree_hash)
+        let git_tree_hash = gix_hash::oid::try_from_bytes(&params.git_tree_hash)
             .map_err(|_| GitError::InvalidHash(format!("{:x?}", params.git_tree_hash)))?;
         repo_ctx.create_git_tree(git_tree_hash).await?;
         Ok(thrift::CreateGitTreeResponse {

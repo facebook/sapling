@@ -1149,7 +1149,7 @@ async fn repo_import(
             let stdout = BufReader::new(child.stdout.take().context("stdout not set up")?);
             let mut lines = stdout.lines();
             if let Some(line) = lines.next_line().await? {
-                git_hash::ObjectId::from_hex(line.as_bytes())
+                gix_hash::ObjectId::from_hex(line.as_bytes())
                     .context("Parsing git rev-parse output")?
             } else {
                 bail!("No lines returned by git rev-parse");

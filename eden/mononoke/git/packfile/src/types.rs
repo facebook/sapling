@@ -12,11 +12,11 @@ use bytes::Bytes;
 use bytes::BytesMut;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
-use git_hash::oid;
-use git_hash::ObjectId;
-use git_object::Object;
-use git_object::ObjectRef;
-use git_object::WriteTo;
+use gix_hash::oid;
+use gix_hash::ObjectId;
+use gix_object::Object;
+use gix_object::ObjectRef;
+use gix_object::WriteTo;
 use sha1::Digest;
 use sha1::Sha1;
 
@@ -58,7 +58,7 @@ impl PackfileItem {
     /// The 20-byte SHA1 hash (ObjectId) of the Git object contained within the
     /// pack item.
     #[allow(dead_code)]
-    pub fn hash(&self) -> &git_hash::oid {
+    pub fn hash(&self) -> &gix_hash::oid {
         self.hash.as_ref()
     }
 

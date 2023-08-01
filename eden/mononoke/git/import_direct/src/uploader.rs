@@ -23,7 +23,7 @@ use filestore::StoreRequest;
 use futures::stream;
 use futures::stream::Stream;
 use futures_stats::TimedTryFutureExt;
-use git_hash::ObjectId;
+use gix_hash::ObjectId;
 use import_tools::CommitMetadata;
 use import_tools::GitImportLfs;
 use import_tools::GitUploader;
@@ -100,7 +100,7 @@ where
     async fn check_commit_uploaded(
         &self,
         ctx: &CoreContext,
-        oid: &git_hash::oid,
+        oid: &gix_hash::oid,
     ) -> Result<Option<ChangesetId>, Error> {
         if self.reupload_commits.reupload_commit() {
             return Ok(None);

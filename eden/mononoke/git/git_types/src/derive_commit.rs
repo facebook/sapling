@@ -23,9 +23,9 @@ use derived_data_manager::DerivationContext;
 use derived_data_service_if::types as thrift;
 use filestore::hash_bytes;
 use filestore::Sha1IncrementalHasher;
-use git_actor::Signature;
-use git_object::Commit;
-use git_object::WriteTo;
+use gix_actor::Signature;
+use gix_object::Commit;
+use gix_object::WriteTo;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
@@ -36,7 +36,7 @@ use crate::TreeHandle;
 
 fn get_signature(id_str: &str, time: &DateTime) -> Result<Signature> {
     let (name, email) = get_name_and_email(id_str)?;
-    let signature_time = git_actor::Time::new(time.timestamp_secs() as u32, time.tz_offset_secs());
+    let signature_time = gix_date::Time::new(time.timestamp_secs(), time.tz_offset_secs());
     Ok(Signature {
         name: name.into(),
         email: email.into(),
@@ -80,7 +80,7 @@ impl BonsaiDerivable for MappedGitCommitId {
         let tree_handle = derivation_ctx
             .derive_dependency::<TreeHandle>(ctx, bonsai.get_changeset_id())
             .await?;
-        let commit_tree_id = git_hash::oid::try_from_bytes(tree_handle.oid().as_ref())
+        let commit_tree_id = gix_hash::oid::try_from_bytes(tree_handle.oid().as_ref())
             .with_context(|| {
                 format_err!(
                     "Failure while converting Git hash {} into Git Object ID",
@@ -90,7 +90,7 @@ impl BonsaiDerivable for MappedGitCommitId {
         let commit_parent_ids = parents
             .into_iter()
             .map(|c| {
-                git_hash::oid::try_from_bytes(c.oid().as_ref())
+                gix_hash::oid::try_from_bytes(c.oid().as_ref())
                     .with_context(|| {
                         format_err!(
                             "Failure while converting Git hash {} into Git Object ID",
@@ -110,7 +110,7 @@ impl BonsaiDerivable for MappedGitCommitId {
         {
             get_signature(committer, committer_date)?
         } else {
-            Signature::empty()
+            Signature::default()
         };
         let git_commit = Commit {
             tree: commit_tree_id.into(),
@@ -125,7 +125,7 @@ impl BonsaiDerivable for MappedGitCommitId {
         let mut raw_commit_bytes = git_commit.loose_header().into_vec();
         git_commit.write_to(raw_commit_bytes.by_ref())?;
         let git_hash = hash_bytes(Sha1IncrementalHasher::new(), raw_commit_bytes.as_slice());
-        let oid = git_hash::oid::try_from_bytes(git_hash.as_ref()).with_context(|| {
+        let oid = gix_hash::oid::try_from_bytes(git_hash.as_ref()).with_context(|| {
             format_err!(
                 "Failure while converting hash {} into Git Object Id",
                 git_hash
@@ -217,7 +217,7 @@ mod test {
     ) -> Result<()> {
         let blobstore = repo.repo_blobstore();
         let git_hash =
-            git_hash::oid::try_from_bytes(git_commit_id.as_ref()).with_context(|| {
+            gix_hash::oid::try_from_bytes(git_commit_id.as_ref()).with_context(|| {
                 format_err!(
                     "Failure while converting hash {:?} into Git ObjectId.",
                     git_commit_id.to_hex()
@@ -262,7 +262,7 @@ mod test {
         {
             get_signature(committer, committer_date)?
         } else {
-            Signature::empty()
+            Signature::default()
         };
         assert_eq!(bonsai_committer, git_commit.committer);
         Ok(())

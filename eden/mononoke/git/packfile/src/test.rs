@@ -12,10 +12,10 @@ use std::io::Write;
 use bytes::Bytes;
 use bytes::BytesMut;
 use flate2::write::ZlibDecoder;
-use git_hash::ObjectId;
-use git_object::Object;
-use git_object::ObjectRef;
-use git_object::Tag;
+use gix_hash::ObjectId;
+use gix_object::Object;
+use gix_object::ObjectRef;
+use gix_object::Tag;
 
 use crate::types::to_vec_bytes;
 use crate::types::PackfileItem;
@@ -24,8 +24,8 @@ use crate::types::PackfileItem;
 fn validate_packitem_creation() -> anyhow::Result<()> {
     // Create a Git object
     let tag = Tag {
-        target: ObjectId::empty_tree(git_hash::Kind::Sha1),
-        target_kind: git_object::Kind::Tree,
+        target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
+        target_kind: gix_object::Kind::Tree,
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
@@ -43,8 +43,8 @@ fn validate_packitem_creation() -> anyhow::Result<()> {
 fn validate_packfile_item_encoding() -> anyhow::Result<()> {
     // Create a Git object
     let tag = Tag {
-        target: ObjectId::empty_tree(git_hash::Kind::Sha1),
-        target_kind: git_object::Kind::Tree,
+        target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
+        target_kind: gix_object::Kind::Tree,
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),

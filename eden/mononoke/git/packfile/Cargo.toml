@@ -11,6 +11,6 @@ license = "GPLv2+"
 anyhow = "1.0.71"
 bytes = { version = "1.1", features = ["serde"] }
 flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
-git-hash = "0.10"
-git-object = "0.23"
+gix-hash = "0.11"
+gix-object = "0.33"
 sha1 = "0.10.5"

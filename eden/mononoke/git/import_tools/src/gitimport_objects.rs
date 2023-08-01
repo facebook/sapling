@@ -23,12 +23,12 @@ use context::CoreContext;
 use encoding_rs::Encoding;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
-use git_hash::ObjectId;
-use git_object::bstr::BString;
-use git_object::tree;
-use git_object::Commit;
-use git_object::Tag;
-use git_object::Tree;
+use gix_hash::ObjectId;
+use gix_object::bstr::BString;
+use gix_object::tree;
+use gix_object::Commit;
+use gix_object::Tag;
+use gix_object::Tree;
 use manifest::Entry;
 use manifest::Manifest;
 use manifest::StoreLoadable;
@@ -73,7 +73,7 @@ impl Manifest for GitManifest {
     }
 }
 
-async fn read_tree(reader: &GitRepoReader, oid: &git_hash::oid) -> Result<Tree, Error> {
+async fn read_tree(reader: &GitRepoReader, oid: &gix_hash::oid) -> Result<Tree, Error> {
     let object = reader.get_object(oid).await?;
     object
         .parsed
@@ -81,7 +81,7 @@ async fn read_tree(reader: &GitRepoReader, oid: &git_hash::oid) -> Result<Tree, 
         .map_err(|_| format_err!("{} is not a tree", oid))
 }
 
-async fn load_git_tree(oid: &git_hash::oid, reader: &GitRepoReader) -> Result<GitManifest, Error> {
+async fn load_git_tree(oid: &gix_hash::oid, reader: &GitRepoReader) -> Result<GitManifest, Error> {
     let tree = read_tree(reader, oid).await?;
 
     let elements = tree
@@ -162,7 +162,7 @@ impl Default for GitimportPreferences {
     }
 }
 
-pub fn oid_to_sha1(oid: &git_hash::oid) -> Result<hash::GitSha1, Error> {
+pub fn oid_to_sha1(oid: &gix_hash::oid) -> Result<hash::GitSha1, Error> {
     hash::GitSha1::from_bytes(oid.as_bytes())
 }
 
@@ -350,7 +350,7 @@ pub struct ExtractedCommit {
     pub original_commit: Bytes,
 }
 
-pub(crate) async fn read_tag(reader: &GitRepoReader, oid: &git_hash::oid) -> Result<Tag, Error> {
+pub(crate) async fn read_tag(reader: &GitRepoReader, oid: &gix_hash::oid) -> Result<Tag, Error> {
     let object = reader.get_object(oid).await?;
     object
         .parsed
@@ -360,7 +360,7 @@ pub(crate) async fn read_tag(reader: &GitRepoReader, oid: &git_hash::oid) -> Res
 
 pub(crate) async fn read_commit(
     reader: &GitRepoReader,
-    oid: &git_hash::oid,
+    oid: &gix_hash::oid,
 ) -> Result<Commit, Error> {
     let object = reader.get_object(oid).await?;
     object
@@ -371,7 +371,7 @@ pub(crate) async fn read_commit(
 
 pub(crate) async fn read_raw_object(
     reader: &GitRepoReader,
-    oid: &git_hash::oid,
+    oid: &gix_hash::oid,
 ) -> Result<Bytes, Error> {
     reader
         .get_object(oid)
@@ -380,7 +380,7 @@ pub(crate) async fn read_raw_object(
         .with_context(|| format!("Error while fetching Git object for ID {}", oid))
 }
 
-fn format_signature(sig: git_actor::SignatureRef) -> String {
+fn format_signature(sig: gix_actor::SignatureRef) -> String {
     format!("{} <{}>", sig.name, sig.email)
 }
 
@@ -486,11 +486,8 @@ impl ExtractedCommit {
     }
 }
 
-pub fn convert_time_to_datetime(time: &git_actor::Time) -> Result<DateTime, Error> {
-    DateTime::from_timestamp(
-        time.seconds_since_unix_epoch.into(),
-        -time.offset_in_seconds,
-    )
+pub fn convert_time_to_datetime(time: &gix_date::Time) -> Result<DateTime, Error> {
+    DateTime::from_timestamp(time.seconds, -time.offset)
 }
 
 #[async_trait]
@@ -510,7 +507,7 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
     async fn check_commit_uploaded(
         &self,
         ctx: &CoreContext,
-        oid: &git_hash::oid,
+        oid: &gix_hash::oid,
     ) -> Result<Option<ChangesetId>, Error>;
 
     /// Upload a single file to the repo

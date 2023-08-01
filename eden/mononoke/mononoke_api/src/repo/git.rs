@@ -77,7 +77,7 @@ impl RepoContext {
     /// Upload serialized git objects
     pub async fn upload_git_object(
         &self,
-        git_hash: &git_hash::oid,
+        git_hash: &gix_hash::oid,
         raw_content: Vec<u8>,
     ) -> anyhow::Result<(), GitError> {
         upload_git_object(
@@ -92,7 +92,7 @@ impl RepoContext {
     /// Create Mononoke counterpart of Git tree object
     pub async fn create_git_tree(
         &self,
-        git_tree_hash: &git_hash::oid,
+        git_tree_hash: &gix_hash::oid,
     ) -> anyhow::Result<(), GitError> {
         create_git_tree(&self.ctx, self.inner_repo(), git_tree_hash).await
     }
@@ -125,7 +125,7 @@ impl RepoContext {
 pub async fn upload_git_object<B>(
     ctx: &CoreContext,
     blobstore: &B,
-    git_hash: &git_hash::oid,
+    git_hash: &gix_hash::oid,
     raw_content: Vec<u8>,
 ) -> anyhow::Result<(), GitError>
 where
@@ -138,7 +138,7 @@ where
 pub async fn create_git_tree(
     ctx: &CoreContext,
     repo: &(impl changesets::ChangesetsRef + repo_blobstore::RepoBlobstoreRef),
-    git_tree_hash: &git_hash::oid,
+    git_tree_hash: &gix_hash::oid,
 ) -> anyhow::Result<(), GitError> {
     let blobstore_key = format!(
         "{}{}{}",

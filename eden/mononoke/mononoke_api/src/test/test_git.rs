@@ -13,10 +13,10 @@ use blobstore::Blobstore;
 use fbinit::FacebookInit;
 use filestore::hash_bytes;
 use filestore::Sha1IncrementalHasher;
-use git_hash::ObjectId;
-use git_object::Tag;
-use git_object::WriteTo;
 use git_types::GitError;
+use gix_hash::ObjectId;
+use gix_object::Tag;
+use gix_object::WriteTo;
 
 use crate::CoreContext;
 use crate::RepoContext;
@@ -35,8 +35,8 @@ async fn basic_upload_git_object(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo_ctx = init_repo(&ctx).await?;
     let tag = Tag {
-        target: ObjectId::empty_tree(git_hash::Kind::Sha1),
-        target_kind: git_object::Kind::Tree,
+        target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
+        target_kind: gix_object::Kind::Tree,
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
@@ -47,7 +47,7 @@ async fn basic_upload_git_object(fb: FacebookInit) -> Result<()> {
 
     let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), bytes.as_slice());
     let output = repo_ctx
-        .upload_git_object(git_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
+        .upload_git_object(gix_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
         .await;
     output.expect("Expected git object to be uploaded successfully");
     Ok(())
@@ -58,14 +58,14 @@ async fn basic_upload_git_object(fb: FacebookInit) -> Result<()> {
 async fn blob_upload_git_object(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo_ctx = init_repo(&ctx).await?;
-    let blob = git_object::Blob {
+    let blob = gix_object::Blob {
         data: "Some file content".as_bytes().to_vec(),
     };
     let mut bytes = blob.loose_header().into_vec();
     blob.write_to(bytes.by_ref())?;
     let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), bytes.as_slice());
     let output = repo_ctx
-        .upload_git_object(git_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
+        .upload_git_object(gix_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
         .await;
     assert!(matches!(
         output.expect_err("Expected error during git object upload"),
@@ -80,8 +80,8 @@ async fn invalid_bytes_upload_git_object(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo_ctx = init_repo(&ctx).await?;
     let tag = Tag {
-        target: ObjectId::empty_tree(git_hash::Kind::Sha1),
-        target_kind: git_object::Kind::Tree,
+        target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
+        target_kind: gix_object::Kind::Tree,
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
@@ -92,7 +92,7 @@ async fn invalid_bytes_upload_git_object(fb: FacebookInit) -> Result<()> {
 
     let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), bytes.as_slice());
     let output = repo_ctx
-        .upload_git_object(git_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
+        .upload_git_object(gix_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
         .await;
     assert!(matches!(
         output.expect_err("Expected error during git object upload"),
@@ -107,8 +107,8 @@ async fn invalid_hash_upload_git_object(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo_ctx = init_repo(&ctx).await?;
     let tag = Tag {
-        target: ObjectId::empty_tree(git_hash::Kind::Sha1),
-        target_kind: git_object::Kind::Tree,
+        target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
+        target_kind: gix_object::Kind::Tree,
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
@@ -118,7 +118,7 @@ async fn invalid_hash_upload_git_object(fb: FacebookInit) -> Result<()> {
     tag.write_to(bytes.by_ref())?;
 
     let output = repo_ctx
-        .upload_git_object(&ObjectId::empty_tree(git_hash::Kind::Sha1), bytes)
+        .upload_git_object(&ObjectId::empty_tree(gix_hash::Kind::Sha1), bytes)
         .await;
     assert!(matches!(
         output.expect_err("Expected error during git object upload"),
@@ -133,8 +133,8 @@ async fn blobstore_check_upload_git_object(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo_ctx = init_repo(&ctx).await?;
     let tag = Tag {
-        target: ObjectId::empty_tree(git_hash::Kind::Sha1),
-        target_kind: git_object::Kind::Tree,
+        target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
+        target_kind: gix_object::Kind::Tree,
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
@@ -146,7 +146,7 @@ async fn blobstore_check_upload_git_object(fb: FacebookInit) -> Result<()> {
     let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), bytes.as_slice());
     let blobstore_key = format!("git_object.{}", sha1_hash.to_hex());
     repo_ctx
-        .upload_git_object(git_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
+        .upload_git_object(gix_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
         .await?;
     let output = repo_ctx.repo_blobstore().get(&ctx, &blobstore_key).await?;
     output.expect("Expected git object to be uploaded successfully");
@@ -161,12 +161,12 @@ async fn basic_create_git_tree(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo_ctx = init_repo(&ctx).await?;
 
-    let tree = git_object::Tree { entries: vec![] };
+    let tree = gix_object::Tree { entries: vec![] };
     let mut bytes = tree.loose_header().into_vec();
     tree.write_to(bytes.by_ref())?;
 
     let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), bytes.as_slice());
-    let git_tree_hash = git_hash::oid::try_from_bytes(sha1_hash.as_ref())?;
+    let git_tree_hash = gix_hash::oid::try_from_bytes(sha1_hash.as_ref())?;
     repo_ctx.upload_git_object(git_tree_hash, bytes).await?;
 
     let output = repo_ctx.create_git_tree(git_tree_hash).await;
@@ -179,7 +179,7 @@ async fn basic_create_git_tree(fb: FacebookInit) -> Result<()> {
 async fn invalid_create_git_tree(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo_ctx = init_repo(&ctx).await?;
-    let git_tree_hash = git_hash::ObjectId::empty_tree(git_hash::Kind::Sha1);
+    let git_tree_hash = gix_hash::ObjectId::empty_tree(gix_hash::Kind::Sha1);
 
     let output = repo_ctx.create_git_tree(&git_tree_hash).await;
     assert!(matches!(

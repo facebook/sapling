@@ -32,7 +32,7 @@ const SEPARATOR: &str = ".";
 pub async fn upload_git_object<B>(
     ctx: &CoreContext,
     blobstore: &B,
-    git_hash: &git_hash::oid,
+    git_hash: &gix_hash::oid,
     raw_content: Vec<u8>,
 ) -> anyhow::Result<(), GitError>
 where
@@ -49,7 +49,7 @@ where
     };
     // Check if the bytes actually correspond to a valid Git object
     let blobstore_bytes = BlobstoreBytes::from_bytes(bytes.clone());
-    let git_obj = git_object::ObjectRef::from_loose(bytes.as_ref()).map_err(|e| {
+    let git_obj = gix_object::ObjectRef::from_loose(bytes.as_ref()).map_err(|e| {
         GitError::InvalidContent(
             git_hash.to_hex().to_string(),
             anyhow::anyhow!(e.to_string()).into(),
@@ -57,7 +57,7 @@ where
     })?;
     // Check if the git object is not a raw content blob. Raw content blobs are uploaded directly through
     // LFS. This method supports git commits, trees, tags, notes and similar pointer objects.
-    if let git_object::ObjectRef::Blob(_) = git_obj {
+    if let gix_object::ObjectRef::Blob(_) = git_obj {
         return Err(GitError::DisallowedBlobObject(
             git_hash.to_hex().to_string(),
         ));
@@ -75,8 +75,8 @@ where
 pub async fn fetch_git_object<B>(
     ctx: &CoreContext,
     blobstore: &B,
-    git_hash: &git_hash::oid,
-) -> anyhow::Result<git_object::Object, GitError>
+    git_hash: &gix_hash::oid,
+) -> anyhow::Result<gix_object::Object, GitError>
 where
     B: Blobstore + Clone,
 {
@@ -87,7 +87,7 @@ where
         .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))?
         .ok_or_else(|| GitError::NonExistentObject(git_hash.to_hex().to_string()))?;
     let object =
-        git_object::ObjectRef::from_loose(object_bytes.as_raw_bytes().as_ref()).map_err(|e| {
+        gix_object::ObjectRef::from_loose(object_bytes.as_raw_bytes().as_ref()).map_err(|e| {
             GitError::InvalidContent(
                 git_hash.to_hex().to_string(),
                 anyhow::anyhow!(e.to_string()).into(),

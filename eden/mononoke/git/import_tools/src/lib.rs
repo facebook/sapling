@@ -28,8 +28,8 @@ use futures::Stream;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
-use git_hash::ObjectId;
-use git_object::Object;
+use gix_hash::ObjectId;
+use gix_object::Object;
 use linked_hash_map::LinkedHashMap;
 use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
@@ -131,7 +131,7 @@ impl GitimportAccumulator {
         self.inner.insert(oid, cs_id);
     }
 
-    pub fn get(&self, oid: &git_hash::oid) -> Option<ChangesetId> {
+    pub fn get(&self, oid: &gix_hash::oid) -> Option<ChangesetId> {
         self.inner.get(oid).copied()
     }
 }

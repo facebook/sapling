@@ -59,7 +59,7 @@ use crate::mem_writes_changesets::MemWritesChangesets;
 async fn derive_hg(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    import_map: impl Iterator<Item = (&git_hash::ObjectId, &ChangesetId)>,
+    import_map: impl Iterator<Item = (&gix_hash::ObjectId, &ChangesetId)>,
 ) -> Result<(), Error> {
     let mut hg_manifests = HashMap::new();
 
