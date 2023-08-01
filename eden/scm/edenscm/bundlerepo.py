@@ -64,6 +64,7 @@ class bundlerevlog(revlog.revlog):
         if not util.safehasattr(self, "opener"):
             index2 = indexfile.startswith("00changelog")
             revlog.revlog.__init__(self, opener, indexfile, index2=index2)
+        self.bundlenode2rawtext = {}
         inner = getattr(self, "inner", None)
         index2 = getattr(self, "index2", None)
         self.bundle = cgunpacker
@@ -78,10 +79,11 @@ class bundlerevlog(revlog.revlog):
             start = cgunpacker.tell() - size
 
             link = linkmapper(cs)
+            exists = False
             if node in self.nodemap:
                 # this can happen if two branches make the same change
                 self.bundlerevs.add(self.nodemap[node])
-                continue
+                exists = True
 
             for p in (p1, p2):
                 if p not in self.nodemap:
@@ -89,6 +91,15 @@ class bundlerevlog(revlog.revlog):
 
             if deltabase not in self.nodemap:
                 raise LookupError(deltabase, self.indexfile, _("unknown delta base"))
+
+            # figure out the text
+            parentnodes = [p for p in (p1, p2) if p != nullid]
+            basetext = self.revision(deltabase)
+            text = bytes(mdiff.patches(basetext, [delta]))
+            self.bundlenode2rawtext[node] = text
+
+            if exists:
+                continue
 
             baserev = self.rev(deltabase)
             p1rev = self.rev(p1)
@@ -109,10 +120,7 @@ class bundlerevlog(revlog.revlog):
             if index2 is not None:
                 index2.insert(node, [p for p in (p1rev, p2rev) if p >= 0])
             if inner is not None:
-                parentnodes = [p for p in (p1, p2) if p != nullid]
-                basetext = self.revision(deltabase)
-                text = mdiff.patches(basetext, [delta])
-                inner.addcommits([(node, parentnodes, bytes(text))])
+                inner.addcommits([(node, parentnodes, text)])
             self.nodemap[node] = n
             self.bundlerevs.add(n)
             self.bundlenewrevs.add(n)
@@ -127,7 +135,7 @@ class bundlerevlog(revlog.revlog):
         # delta base, not against rev - 1
         # XXX: could use some caching
         if rev not in self.bundlenewrevs:
-            return revlog.revlog._chunk(self, rev)
+            return super()._chunk(self, rev)
         self.bundle.seek(self.start(rev))
         return self.bundle.read(self.length(rev))
 
@@ -162,24 +170,25 @@ class bundlerevlog(revlog.revlog):
         if node == nullid:
             return b""
 
-        rawtext = None
-        chain = []
-        iterrev = rev
-        cache = self._cache
-        # reconstruct the revision if it is from a changegroup
-        while iterrev in self.bundlenewrevs:
-            if cache is not None:
-                if cache[1] == iterrev:
-                    rawtext = cache[2]
-                    break
-            chain.append(iterrev)
-            iterrev = self.index[iterrev][3]
+        rawtext = self.bundlenode2rawtext.get(node)
         if rawtext is None:
-            rawtext = self.baserevision(iterrev)
+            chain = []
+            iterrev = rev
+            cache = self._cache
+            # reconstruct the revision if it is from a changegroup
+            while iterrev in self.bundlenewrevs:
+                if cache is not None:
+                    if cache[1] == iterrev:
+                        rawtext = cache[2]
+                        break
+                chain.append(iterrev)
+                iterrev = self.index[iterrev][3]
+            if rawtext is None:
+                rawtext = self.baserevision(iterrev)
 
-        while chain:
-            delta = self._chunk(chain.pop())
-            rawtext = mdiff.patches(rawtext, [delta])
+            while chain:
+                delta = self._chunk(chain.pop())
+                rawtext = mdiff.patches(rawtext, [delta])
 
         text, validatehash = self._processflags(
             rawtext, self.flags(rev), "read", raw=raw
@@ -190,10 +199,7 @@ class bundlerevlog(revlog.revlog):
         return text
 
     def baserevision(self, nodeorrev):
-        # Revlog subclasses may override 'revision' method to modify format of
-        # content retrieved from revlog. To use bundlerevlog with such class one
-        # needs to override 'baserevision' and make more specific call here.
-        return revlog.revlog.revision(self, nodeorrev, raw=True)
+        return super().revision(self, nodeorrev, raw=True)
 
     def addrevision(self, *args, **kwargs):
         raise NotImplementedError
