@@ -138,10 +138,10 @@ def backgroundbackup(repo, reason=None):
     """start background backup"""
     ui = repo.ui
     if workspace.currentworkspace(repo):
-        background_cmd = ["hg", "cloud", "sync", "--best-effort"]
+        background_cmd = util.hgcmd() + ["cloud", "sync", "--best-effort"]
         background_cmd += ["--reason", reason]
     else:
-        background_cmd = ["hg", "cloud", "backup"]
+        background_cmd = util.hgcmd() + ["cloud", "backup"]
     infinitepush_bgssh = ui.config("infinitepush", "bgssh")
     if infinitepush_bgssh:
         background_cmd += ["--config", "ui.ssh=%s" % infinitepush_bgssh]
