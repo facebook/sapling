@@ -79,9 +79,9 @@ revision 4
   79d7492df40aa0fa093ec4209be78043c181f094 644   b
 
   $ hg debugindex a
-     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
-       0         0       5  .....       0 2ed2a3912a0b 000000000000 000000000000 (re)
-       1         5       6  .....       1 79d7492df40a 2ed2a3912a0b 000000000000 (re)
+     rev linkrev nodeid       p1           p2
+       0       0 2ed2a3912a0b 000000000000 000000000000
+       1       1 79d7492df40a 2ed2a3912a0b 000000000000
 
   $ hg verify
   warning: verify does not actually check anything in this repo

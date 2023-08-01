@@ -68,9 +68,9 @@
   $ hg ci -m "merge"
 
   $ hg debugindex b
-     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
-       0         0      67  .....       1 57eacc201a7f 000000000000 000000000000 (re)
-       1        67      72  .....       3 4727ba907962 000000000000 57eacc201a7f (re)
+     rev linkrev nodeid       p1           p2
+       0       1 57eacc201a7f 000000000000 000000000000
+       1       3 4727ba907962 000000000000 57eacc201a7f
 
   $ hg debugrename b
   b renamed from a:dd03b83622e78778b403775d0d074b9ac7387a66

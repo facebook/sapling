@@ -1743,17 +1743,13 @@ def debugindex(ui, repo, file_=None, **opts) -> None:
 
     if format == 0:
         ui.write(
-            ("   rev    offset  length " + basehdr + " linkrev" " %s %s p2\n")
-            % ("nodeid".ljust(idlen), "p1".ljust(idlen))
+            ("% 6s % 7s %s %s %s\n")
+            % ("rev", "linkrev", "nodeid".ljust(idlen), "p1".ljust(idlen), "p2")
         )
     elif format == 1:
         ui.write(
-            (
-                "   rev flag   offset   length"
-                "     size " + basehdr + "   link     p1     p2"
-                " %s\n"
-            )
-            % "nodeid".rjust(idlen)
+            ("% 6s %4s % 6s % 6s % 6s %s\n")
+            % ("rev", "flag", "link", "p1", "p2", "nodeid".rjust(idlen))
         )
 
     for i in r:
@@ -1768,12 +1764,9 @@ def debugindex(ui, repo, file_=None, **opts) -> None:
             except Exception:
                 pp = [nullid, nullid]
             ui.write(
-                "% 6d % 9d % 7d % 6d % 7d %s %s %s\n"
+                "% 6d % 7d %s %s %s\n"
                 % (
                     i,
-                    r.start(i),
-                    r.length(i),
-                    base,
                     r.linkrev(i),
                     shortfn(node),
                     shortfn(pp[0]),
@@ -1783,14 +1776,10 @@ def debugindex(ui, repo, file_=None, **opts) -> None:
         elif format == 1:
             pr = r.parentrevs(i)
             ui.write(
-                "% 6d %04x % 8d % 8d % 8d % 6d % 6d % 6d % 6d %s\n"
+                "% 6d %04x % 6d % 6d % 6d %s\n"
                 % (
                     i,
                     r.flags(i),
-                    r.start(i),
-                    r.length(i),
-                    r.rawsize(i),
-                    base,
                     r.linkrev(i),
                     pr[0],
                     pr[1],

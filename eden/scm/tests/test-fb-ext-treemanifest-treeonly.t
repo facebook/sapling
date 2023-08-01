@@ -334,17 +334,17 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
 
 - Verify the received tree was written down as a flat
   $ hg debugindex -m
-     rev    offset  length  delta linkrev nodeid       p1           p2
-       0         0      50     -1       0 5fbe397e5ac6 000000000000 000000000000
-       1        50      50     -1       1 7e265a5dc522 5fbe397e5ac6 000000000000
-       2       100      62      0       2 9bd1ef658bef 5fbe397e5ac6 000000000000
-       3       162      55      1       3 14bce01d0d73 7e265a5dc522 000000000000
+     rev linkrev nodeid       p1           p2
+       0       0 5fbe397e5ac6 000000000000 000000000000
+       1       1 7e265a5dc522 5fbe397e5ac6 000000000000
+       2       2 9bd1ef658bef 5fbe397e5ac6 000000000000
+       3       3 14bce01d0d73 7e265a5dc522 000000000000
   $ hg debugindex .hg/store/00manifesttree.i
-     rev    offset  length  delta linkrev nodeid       p1           p2
-       0         0      50     -1       0 5fbe397e5ac6 000000000000 000000000000
-       1        50      50     -1       1 7e265a5dc522 5fbe397e5ac6 000000000000
-       2       100      62      0       2 9bd1ef658bef 5fbe397e5ac6 000000000000
-       3       162      55      1       3 14bce01d0d73 7e265a5dc522 000000000000
+     rev linkrev nodeid       p1           p2
+       0       0 5fbe397e5ac6 000000000000 000000000000
+       1       1 7e265a5dc522 5fbe397e5ac6 000000000000
+       2       2 9bd1ef658bef 5fbe397e5ac6 000000000000
+       3       3 14bce01d0d73 7e265a5dc522 000000000000
 - Verify the manifest data is accessible
   $ hg log -r tip --stat
   commit:      dad1be784127

@@ -51,7 +51,7 @@ this should not mention bar but should mention foo:
   
 
   $ hg debugindex bar
-     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
-       0         0       5  .....       1 b004912a8510 000000000000 000000000000 (re)
+     rev linkrev nodeid       p1           p2
+       0       1 b004912a8510 000000000000 000000000000
 
   $ cd ..
