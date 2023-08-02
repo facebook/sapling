@@ -211,6 +211,13 @@ def _summarizepathconflicts(self, path) -> Optional[Dict[str, Any]]:
     }
 
 
+def _decodeutf8ornone(data):
+    try:
+        return pycompat.decodeutf8(data)
+    except UnicodeDecodeError:
+        return None
+
+
 # To become filemerge.summarize().
 def _summarize(repo, workingfilectx, otherctx, basectx) -> Dict[str, Any]:
     origfile = (
@@ -228,7 +235,7 @@ def _summarize(repo, workingfilectx, otherctx, basectx) -> Dict[str, Any]:
                 "issymlink": None,
             }
         return {
-            "contents": pycompat.decodeutf8(context.data()),
+            "contents": _decodeutf8ornone(context.data()),
             "exists": True,
             "isexec": context.isexec(),
             "issymlink": context.islink(),
@@ -245,7 +252,7 @@ def _summarize(repo, workingfilectx, otherctx, basectx) -> Dict[str, Any]:
         #
         # Test cases affected in test-merge-conflict-cornercases.t: #0
         local = {
-            "contents": pycompat.decodeutf8(util.readfile(origfile)),
+            "contents": _decodeutf8ornone(util.readfile(origfile)),
             "exists": True,
             "isexec": util.isexec(origfile),
             "issymlink": util.statislink(filestat.stat),

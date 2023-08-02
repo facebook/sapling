@@ -533,7 +533,7 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
   ]
 Test case 9: Source is a binary file, dest is a file (base is still a file)
   $ reset
-  $ printf '\0' > file
+  $ printf '\0\xE1' > file # 0xE1 is an unfinished 2-byte utf-8 sequence
   $ hg commit -Aqm "source"
   $ hg up -q 'desc(base)'
   $ echo "change" > file
@@ -544,7 +544,7 @@ Test case 9: Source is a binary file, dest is a file (base is still a file)
   │  affected: file
   │  deleted:
   │
-  │ o  (b6e55a03a5dc98e4ce5ef82f8f967f2188b32608) source
+  │ o  (f974f4b40bb140e46fe56a47978cfabe5fd82916) source
   ├─╯  affected: file
   │    deleted:
   │
@@ -554,7 +554,7 @@ Test case 9: Source is a binary file, dest is a file (base is still a file)
   
 
   $ hg rebase -d 'desc(dest)' -s 'desc(source)'
-  rebasing b6e55a03a5dc "source"
+  rebasing f974f4b40bb1 "source"
   merging file
   warning: ([^\s]+) looks like a binary file. (re)
   warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
@@ -567,7 +567,7 @@ Test case 9: Source is a binary file, dest is a file (base is still a file)
    {
     "command": "rebase",
     "command_details": {"cmd": "rebase", "to_abort": "rebase --abort", "to_continue": "rebase --continue"},
-    "conflicts": [{"base": {"contents": "base\n", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": "change\n", "exists": true, "isexec": false, "issymlink": false}, "other": {"contents": "\u0000", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": "change\n", "exists": true, "isexec": false, "issymlink": false, "path": "$TESTTMP/foo/file"}, "path": "file"}],
+    "conflicts": [{"base": {"contents": "base\n", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": "change\n", "exists": true, "isexec": false, "issymlink": false}, "other": {"contents": null, "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": "change\n", "exists": true, "isexec": false, "issymlink": false, "path": "$TESTTMP/foo/file"}, "path": "file"}],
     "pathconflicts": []
    }
   ]
@@ -576,11 +576,11 @@ Test case 10: Source is a file, dest is a binary file (base is still a file)
   $ echo "change" > file
   $ hg commit -Aqm "source"
   $ hg up -q 'desc(base)'
-  $ printf '\0' > file
+  $ printf '\0\xE1' > file # 0xE1 is an unfinished 2-byte utf-8 sequence
   $ hg commit -Aqm "dest"
   $ hg up -q 'desc(dest)'
   $ logg
-  @  (48fb032ebb6733fb9b62d0a11c1b4a538c4840a1) dest
+  @  (dba9f6032ce22b062d671e030ed4650cc74e3c85) dest
   │  affected: file
   │  deleted:
   │
@@ -600,14 +600,12 @@ Test case 10: Source is a file, dest is a binary file (base is still a file)
   warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
-  $ cat -v file
-  ^@ (no-eol)
   $ hg resolve --tool=internal:dumpjson --all
   [
    {
     "command": "rebase",
     "command_details": {"cmd": "rebase", "to_abort": "rebase --abort", "to_continue": "rebase --continue"},
-    "conflicts": [{"base": {"contents": "base\n", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": "\u0000", "exists": true, "isexec": false, "issymlink": false}, "other": {"contents": "change\n", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": "\u0000", "exists": true, "isexec": false, "issymlink": false, "path": "$TESTTMP/foo/file"}, "path": "file"}],
+    "conflicts": [{"base": {"contents": "base\n", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": null, "exists": true, "isexec": false, "issymlink": false}, "other": {"contents": "change\n", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": null, "exists": true, "isexec": false, "issymlink": false, "path": "$TESTTMP/foo/file"}, "path": "file"}],
     "pathconflicts": []
    }
   ]
