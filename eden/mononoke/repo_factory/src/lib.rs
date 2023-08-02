@@ -127,7 +127,6 @@ use readonlyblob::ReadOnlyBlobstore;
 use redactedblobstore::ArcRedactionConfigBlobstore;
 use redactedblobstore::RedactedBlobs;
 use redactedblobstore::RedactionConfigBlobstore;
-use redactedblobstore::SqlRedactedContentStore;
 use rendezvous::RendezVousOptions;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::ArcRepoBlobstoreUnlinkOps;
@@ -478,27 +477,16 @@ impl RepoFactory {
     ) -> Result<Arc<RedactedBlobs>> {
         self.redacted_blobs
             .get_or_try_init(db_config, || async move {
-                let redacted_blobs = if tunables().redaction_config_from_xdb().unwrap_or_default() {
-                    let sql_factory = self.sql_factory(db_config).await?;
-                    let redacted_content_store =
-                        sql_factory.open::<SqlRedactedContentStore>().await?;
-                    // Fetch redacted blobs in a separate task so that slow polls
-                    // in repo construction don't interfere with the SQL query.
-                    tokio::task::spawn(async move {
-                        redacted_content_store.get_all_redacted_blobs().await
-                    })
-                    .await??
-                } else {
-                    let blobstore = self.redaction_config_blobstore(common_config).await?;
+                let blobstore = self.redaction_config_blobstore(common_config).await?;
+                Ok(Arc::new(
                     RedactedBlobs::from_configerator(
                         &self.env.config_store,
                         &common_config.redaction_config.redaction_sets_location,
                         ctx,
                         blobstore,
                     )
-                    .await?
-                };
-                Ok(Arc::new(redacted_blobs))
+                    .await?,
+                ))
             })
             .await
     }

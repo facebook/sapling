@@ -21,9 +21,6 @@ redaction_set = { version = "0.1.0", path = "../../../../configerator/structs/sc
 reloader = { version = "0.1.0", path = "../../common/reloader" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
-sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 thiserror = "1.0.43"
 tunables = { version = "0.1.0", path = "../../tunables" }
 

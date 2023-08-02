@@ -34,7 +34,6 @@ pub use crate::redaction_config_blobstore::ArcRedactionConfigBlobstore;
 pub use crate::redaction_config_blobstore::RedactionConfigBlobstore;
 pub use crate::store::RedactedBlobs;
 pub use crate::store::RedactedMetadata;
-pub use crate::store::SqlRedactedContentStore;
 
 pub mod config {
     pub const GET_OPERATION: &str = "GET";
@@ -360,7 +359,7 @@ mod test {
         borrowed!(ctx);
 
         let inner = Memblob::default();
-        let redacted_pairs = RedactedBlobs::FromSql(Arc::new(hashmap! {
+        let redacted_pairs = RedactedBlobs::FromHashMapForTests(Arc::new(hashmap! {
             redacted_key.to_owned() => RedactedMetadata {
                 task: redacted_task.to_owned(),
                 log_only: false,
@@ -421,7 +420,7 @@ mod test {
         borrowed!(ctx);
 
         let inner = Memblob::default();
-        let redacted_pairs = RedactedBlobs::FromSql(Arc::new(hashmap! {
+        let redacted_pairs = RedactedBlobs::FromHashMapForTests(Arc::new(hashmap! {
             redacted_log_only_key.to_owned() => RedactedMetadata {
                 task: redacted_task.to_owned(),
                 log_only: true,

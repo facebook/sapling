@@ -250,7 +250,7 @@ mod test {
         let reason = "test reason";
 
         let repo = TestRepoFactory::new(fb)?
-            .redacted(Some(RedactedBlobs::FromSql(Arc::new(
+            .redacted(Some(RedactedBlobs::FromHashMapForTests(Arc::new(
                 hashmap! { content_id.blobstore_key() => RedactedMetadata {
                    task: reason.to_string(),
                    log_only: false,

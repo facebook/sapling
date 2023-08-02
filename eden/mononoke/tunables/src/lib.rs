@@ -117,7 +117,6 @@ pub struct MononokeTunables {
     // When false error logs are never sampled
     scs_error_log_sampling: TunableBool,
     redacted_logging_sampling_rate: TunableI64,
-    redaction_config_from_xdb: TunableBool,
     repo_client_bookmarks_timeout_secs: TunableI64,
     repo_client_clone_timeout_secs: TunableI64,
     repo_client_default_timeout_secs: TunableI64,

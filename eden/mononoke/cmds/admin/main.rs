@@ -27,7 +27,6 @@ use crate::error::SubcommandError;
 use crate::filenodes::subcommand_filenodes;
 use crate::hash_convert::subcommand_hash_convert;
 use crate::hg_changeset::subcommand_hg_changeset;
-use crate::redaction::subcommand_redaction;
 
 mod blobstore_fetch;
 mod blobstore_upload;
@@ -41,7 +40,6 @@ mod error;
 mod filenodes;
 mod hash_convert;
 mod hg_changeset;
-mod redaction;
 mod rsync;
 mod subcommand_blame;
 mod subcommand_deleted_manifest;
@@ -66,7 +64,6 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(bookmarks_manager::build_subcommand())
         .subcommand(hg_changeset::build_subcommand())
         .subcommand(hash_convert::build_subcommand())
-        .subcommand(redaction::build_subcommand())
         .subcommand(filenodes::build_subcommand())
         .subcommand(subcommand_phases::build_subcommand())
         .subcommand(subcommand_unodes::build_subcommand())
@@ -116,9 +113,6 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (hash_convert::HASH_CONVERT, Some(sub_m)) => {
                 subcommand_hash_convert(fb, logger, &matches, sub_m).await
-            }
-            (redaction::REDACTION, Some(sub_m)) => {
-                subcommand_redaction(fb, logger, &matches, sub_m).await
             }
             (filenodes::FILENODES, Some(sub_m)) => {
                 subcommand_filenodes(fb, logger, &matches, sub_m).await

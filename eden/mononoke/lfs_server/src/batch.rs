@@ -1059,12 +1059,14 @@ mod test {
 
         // Now, create a new blob repo with the same blob store, but with some data redacted.
         let repo = factory
-            .redacted(Some(RedactedBlobs::FromSql(Arc::new(hashmap! {
-                meta.content_id.blobstore_key() => RedactedMetadata {
-                    task: "test".to_string(),
-                    log_only: false,
-                }
-            }))))
+            .redacted(Some(RedactedBlobs::FromHashMapForTests(Arc::new(
+                hashmap! {
+                    meta.content_id.blobstore_key() => RedactedMetadata {
+                        task: "test".to_string(),
+                        log_only: false,
+                    }
+                },
+            ))))
             .build()
             .await?;
 

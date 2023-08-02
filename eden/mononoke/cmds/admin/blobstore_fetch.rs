@@ -44,7 +44,6 @@ use redactedblobstore::RedactedBlobs;
 use redactedblobstore::RedactedBlobstore;
 use redactedblobstore::RedactedBlobstoreConfig;
 use redactedblobstore::RedactionConfigBlobstore;
-use redactedblobstore::SqlRedactedContentStore;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
 use slog::warn;
@@ -52,7 +51,6 @@ use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
-use tunables::tunables;
 
 use crate::error::SubcommandError;
 
@@ -204,34 +202,27 @@ pub async fn subcommand_blobstore_fetch<'a>(
     let maybe_redacted_blobs_fut = async {
         match redaction {
             Redaction::Enabled => {
-                let redacted_blobs = if tunables().redaction_config_from_xdb().unwrap_or_default() {
-                    let redacted_blobs_db = args::not_shardmanager_compatible::open_sql::<
-                        SqlRedactedContentStore,
-                    >(fb, config_store, matches)?;
-                    redacted_blobs_db.get_all_redacted_blobs().await?
-                } else {
-                    let redaction_config_blobstore = Arc::new(RedactionConfigBlobstore::new(
-                        make_blobstore(
-                            fb,
-                            common_config.redaction_config.blobstore.clone(),
-                            mysql_options,
-                            *readonly_storage,
-                            blobstore_options,
-                            &logger,
-                            config_store,
-                            &blobstore_factory::default_scrub_handler(),
-                            None,
-                        )
-                        .await?,
-                    ));
-                    RedactedBlobs::from_configerator(
+                let redaction_config_blobstore = Arc::new(RedactionConfigBlobstore::new(
+                    make_blobstore(
+                        fb,
+                        common_config.redaction_config.blobstore.clone(),
+                        mysql_options,
+                        *readonly_storage,
+                        blobstore_options,
+                        &logger,
                         config_store,
-                        &common_config.redaction_config.redaction_sets_location,
-                        ctx.clone(),
-                        redaction_config_blobstore,
+                        &blobstore_factory::default_scrub_handler(),
+                        None,
                     )
-                    .await?
-                };
+                    .await?,
+                ));
+                let redacted_blobs = RedactedBlobs::from_configerator(
+                    config_store,
+                    &common_config.redaction_config.redaction_sets_location,
+                    ctx.clone(),
+                    redaction_config_blobstore,
+                )
+                .await?;
                 Ok(Some(Arc::new(redacted_blobs)))
             }
             Redaction::Disabled => Ok(None),
