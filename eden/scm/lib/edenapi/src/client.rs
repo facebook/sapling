@@ -694,7 +694,16 @@ impl EdenApi for Client {
             return Ok(Response::empty());
         }
 
-        let url = self.build_url(paths::HISTORY)?;
+        let mut url = self.build_url(paths::HISTORY)?;
+
+        if self.config().try_route_consistently && keys.len() == 1 {
+            url.set_query(Some(&format!(
+                "routing_file={}",
+                keys.first().unwrap().hgid
+            )));
+            tracing::debug!("Requesting history for 1 file with a routing key: {}", url);
+        }
+
         let requests = self.prepare_requests(&url, keys, self.config().max_history, |keys| {
             let req = HistoryRequest { keys, length };
             self.log_request(&req, "history");
