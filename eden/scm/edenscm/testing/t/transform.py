@@ -42,7 +42,7 @@ from __future__ import annotations
 
 import textwrap
 from dataclasses import dataclass
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Tuple
 
 
 def transform(
@@ -241,6 +241,14 @@ def rewriteblocks(
         ... #endif
         ...   $ echo 5
         ...   5
+        ... #if no-tar
+        ...   $ echo 6
+        ...   6
+        ... #if foo
+        ...   $ echo 7
+        ...   7
+        ... #endif
+        ... #endif
         ... end''', hasfeature=lambda f: f in ['git', 'fsmonitor', 'tar']))
         raise __import__("unittest").SkipTest('missing feature: no-windows')
         <BLANKLINE>
@@ -257,6 +265,10 @@ def rewriteblocks(
         #endif
         <BLANKLINE>
         checkoutput(sheval('echo 5\n'), '5\n', src='$ echo 5\n', srcloc=16, outloc=17, endloc=18, indent=2, filename='')
+        <BLANKLINE>
+        #if no-tar
+        <BLANKLINE>
+        #endif
         <BLANKLINE>
         # end
 
@@ -279,14 +291,22 @@ def rewriteblocks(
         lastblocktype = blocktype
 
     # "#if" support:
-    # - None: no "#if"
+    # conditionstack is used for keeping a stack of "#if" results.
+    # Each element it contains has a pair of bools that shows the result of
+    # evaluating the last "#if" value on the first part of the value and the
+    # result of "and"ing all the first values on the stack on the second one.
+    # The meaning of these values is as follow:
     # - True: lines should be taken until #else or #endif
     # - False: lines should be ignored until #else or #endif
-    conditionstack = []
+    # If it's empty, it means there are no "#if"s.
+    conditionstack: List[Tuple[bool, bool]] = []
+
+    def conditionstacktopeval() -> bool:
+        nonlocal conditionstack
+        return conditionstack[-1][1] if conditionstack else True
 
     def appendline(line):
-        condition = conditionstack[-1] if conditionstack else None
-        if condition is not False:
+        if conditionstacktopeval():
             newlines.append(line)
 
     while i < n:
@@ -342,11 +362,15 @@ def rewriteblocks(
                 condition = True
             else:
                 condition = False
-            conditionstack.append(condition)
+            conditionstack.append((condition, condition and conditionstacktopeval()))
         elif info.line == "#else\n":
             maybeseparate("if")
             if conditionstack:
-                conditionstack[-1] = not conditionstack[-1]
+                condition = not conditionstack[-1][0]
+                conditionstack.pop()
+                conditionstack.append(
+                    (condition, condition and conditionstacktopeval())
+                )
             appendline(info.line)
         elif info.line == "#endif\n":
             maybeseparate("if")
