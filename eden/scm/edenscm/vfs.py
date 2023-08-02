@@ -271,7 +271,8 @@ class abstractvfs(pycompat.ABC):
         return util.rename(srcpath, dstpath)
 
     def readlink(self, path: str) -> str:
-        return os.readlink(self.join(path))
+        target = os.readlink(self.join(path))
+        return target.replace("\\", "/") if os.name == "nt" else target
 
     def removedirs(self, path: "Optional[str]" = None) -> None:
         """Remove a leaf directory and all empty intermediate ones"""
@@ -560,6 +561,11 @@ class vfs(abstractvfs):
 
         if self._cansymlink:
             try:
+                if os.name == "nt":
+                    if type(src) == "str":
+                        src = src.replace("/", "\\")
+                    else:
+                        src = src.replace(b"/", b"\\")
                 os.symlink(src, linkname)
             except OSError as err:
                 raise OSError(

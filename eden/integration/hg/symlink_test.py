@@ -52,12 +52,12 @@ class SymlinkTest(EdenHgTestCase):
         self.repo.update(self.symlink_commit)
         self.assertEqual(
             self.repo.hg("log", "-r", ".", "--template", "{node}", "--patch"),
-            f"""3f0b136eff77afd59a710c48d6e5f178793d08cediff --git a/symlink b/symlink
+            """3f0b136eff77afd59a710c48d6e5f178793d08cediff --git a/symlink b/symlink
 new file mode 120000
 --- /dev/null
 +++ b/symlink
 @@ -0,0 +1,1 @@
-+{os.path.join('adir', 'hello.txt')}
++adir/hello.txt
 \\ No newline at end of file
 
 """,
@@ -108,14 +108,14 @@ rename to symbolic_link
         self.assert_status({"adir/true_hola.txt": "?", "symlink": "M"})
         self.assertEqual(
             self.repo.hg("diff"),
-            f"""diff --git a/symlink b/symlink
+            r"""diff --git a/symlink b/symlink
 --- a/symlink
 +++ b/symlink
 @@ -1,1 +1,1 @@
--{os.path.join('adir', 'hello.txt')}
-\\ No newline at end of file
-+{os.path.join('adir', 'true_hola.txt')}
-\\ No newline at end of file
+-adir/hello.txt
+\ No newline at end of file
++adir/true_hola.txt
+\ No newline at end of file
 """,
         )
 
@@ -128,6 +128,18 @@ rename to symbolic_link
             """diff --git a/symlink b/symlink
 old mode 120000
 new mode 100644
+"""
+            if os.name != "nt"
+            else r"""diff --git a/symlink b/symlink
+old mode 120000
+new mode 100644
+--- a/symlink
++++ b/symlink
+@@ -1,1 +1,1 @@
+-adir/hello.txt
+\ No newline at end of file
++adir\hello.txt
+\ No newline at end of file
 """,
         )
         self.repo.update(self.quasi_symlink_commit, clean=True)
@@ -138,6 +150,18 @@ new mode 100644
             """diff --git a/symlink b/symlink
 old mode 100644
 new mode 120000
+"""
+            if os.name != "nt"
+            else r"""diff --git a/symlink b/symlink
+old mode 100644
+new mode 120000
+--- a/symlink
++++ b/symlink
+@@ -1,1 +1,1 @@
+-adir\hello.txt
+\ No newline at end of file
++adir/hello.txt
+\ No newline at end of file
 """,
         )
 

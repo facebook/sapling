@@ -1430,14 +1430,7 @@ class filectx(basefilectx):
             text = "Subproject commit %s\n" % hex(self._filenode)
             return text.encode("utf-8")
         try:
-            result = self._filelog.read(self._filenode)
-            if (
-                pycompat.iswindows
-                and "l" in self.flags()
-                and self._repo.wvfs._cansymlink
-            ):
-                return result.replace(b"/", b"\\")
-            return result
+            return self._filelog.read(self._filenode)
         except error.CensoredNodeError:
             if self._repo.ui.config("censor", "policy") == "ignore":
                 return b""
