@@ -379,8 +379,15 @@ if sys.platform.startswith("linux"):
 
 if "SANDCASTLE" in os.environ:
     # This test seems to leave behind unkillable processes on sandcastle.
-    # Disable it for now.
-    TEST_DISABLED["hg.update_test.UpdateTest"] = ["test_dir_locking"]
+    # Disable it for now. Append to TEST_DISABLED below to preserve existing disabled tests.
+    class_name = "hg.update_test.UpdateTest"
+    method_name = "test_dir_locking"
+    class_skipped = TEST_DISABLED.get(class_name)
+    if class_skipped is None:
+        TEST_DISABLED[class_name] = [method_name]
+    elif isinstance(class_skipped, list):
+        if method_name not in class_skipped:
+            class_skipped.append(method_name)
 
 try:
     from eden.integration.facebook.lib.skip import add_fb_specific_skips
