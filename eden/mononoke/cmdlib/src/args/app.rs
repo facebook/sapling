@@ -563,7 +563,7 @@ impl MononokeAppBuilder {
                 .conflicts_with_all(repo_conflicts);
 
             let group_args = if self.dynamic_repos {
-                vec![REPO_ID, REPO_NAME, SHARDED_SERVICE_NAME, SHARDED_SCOPE_NAME]
+                vec![REPO_ID, REPO_NAME, SHARDED_SERVICE_NAME]
             } else {
                 vec![REPO_ID, REPO_NAME]
             };
