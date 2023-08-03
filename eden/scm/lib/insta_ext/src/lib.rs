@@ -12,10 +12,11 @@ pub fn setup() {
     const WORKSPACE: &str = "INSTA_WORKSPACE_ROOT";
     const UPDATE: &str = "INSTA_UPDATE";
     if std::env::var(WORKSPACE).is_err() {
-        let mut root = std::path::Path::new(file!());
-        root = root.strip_prefix("fbcode").unwrap();
-        root = root.parent().unwrap();
-        root = root.parent().unwrap();
+        // This depends on targets setting:
+        //      test_labels = ["buck2_run_from_project_root"]
+        let mut root = std::path::PathBuf::from(file!());
+        assert!(root.pop());
+        assert!(root.pop());
         std::env::set_var(WORKSPACE, root);
     }
     if std::env::var(UPDATE).is_err() {
