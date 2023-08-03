@@ -101,11 +101,15 @@ class OSFS(ShellFS):
             shutil.copytree(src, dst, symlinks=True)
 
     def link(self, src: str, dst: str):
+        if os.name == "nt":
+            src = src.replace("/", "\\")
         src = self._absjoin(src)
         dst = self._absjoin(dst)
         os.link(src, dst)
 
     def symlink(self, src: str, dst: str):
+        if os.name == "nt":
+            src = src.replace("/", "\\")
         dst = self._absjoin(dst)
         os.symlink(src, dst)
 

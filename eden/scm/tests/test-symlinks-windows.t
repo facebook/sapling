@@ -1,5 +1,4 @@
 #debugruntest-compatible
-#require windows
 
   $ configure modern
   $ setconfig experimental.windows-symlinks=True
@@ -8,7 +7,7 @@
 Creating a commit on Windows should replace backslashes with forward slashes on symlinks
 
   $ newrepo
-  $ ln -s 'foo\bar' foobar
+  $ ln -s foo/bar foobar
   $ hg add -q
   $ hg commit -m "Created a symlink"
   $ hg show --git
@@ -30,7 +29,7 @@ Creating a commit on Windows should replace backslashes with forward slashes on 
 
 The same should be true for amend
   $ rm foobar
-  $ ln -s 'foo\bar\baz' foobar
+  $ ln -s foo/bar/baz foobar
   $ hg amend -q
   $ hg show --git
   commit:      974ac4f002aa
