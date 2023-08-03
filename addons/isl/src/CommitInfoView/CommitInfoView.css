@@ -145,6 +145,10 @@
   pointer-events: none;
 }
 
+.commit-info-view-multi-commit .commit-list .commit-details:before {
+  display: none;
+}
+
 .hover-edit-button {
   opacity: 0;
   transition: opacity 0.1s;
