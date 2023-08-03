@@ -10,6 +10,7 @@
 
 use std::borrow::Borrow;
 
+use anyhow::anyhow;
 use anyhow::Error;
 use blobstore::Blobstore;
 use blobstore::Loadable;
@@ -333,20 +334,27 @@ pub async fn fetch<'a, B: Blobstore + Clone + 'a>(
     Ok(res.map(|(stream, _len)| stream))
 }
 
-/// Fetch the contents of a blob concatenated together. This bad for buffering, and you shouldn't
-/// add new callsites. This is only for compatibility with existin callsites.
-pub async fn fetch_concat_opt<B: Blobstore>(
+/// Fetch the contents of a blob concatenated together.
+async fn fetch_concat_impl<B: Blobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     key: &FetchKey,
+    size: Option<u64>,
 ) -> Result<Option<Bytes>, Error> {
     let res = fetch_with_size(blobstore, ctx, key).await?;
 
     match res {
         Some((stream, len)) => {
+            if let Some(size) = size {
+                if len != size {
+                    return Err(anyhow!(
+                        "Fetched content length ({len}) is not the expected size ({size})"
+                    ));
+                }
+            }
             let len = len
                 .try_into()
-                .map_err(|_| anyhow::format_err!("Cannot fetch file with length {}", len))?;
+                .map_err(|_| anyhow!("Cannot fetch file with length {len}"))?;
 
             let buf = BytesMut::with_capacity(len);
 
@@ -363,6 +371,16 @@ pub async fn fetch_concat_opt<B: Blobstore>(
     }
 }
 
+/// Fetch the contents of a blob concatenated together. This bad for buffering, and you shouldn't
+/// add new callsites. This is only for compatibility with existin callsites.
+pub async fn fetch_concat_opt<B: Blobstore>(
+    blobstore: &B,
+    ctx: &CoreContext,
+    key: &FetchKey,
+) -> Result<Option<Bytes>, Error> {
+    fetch_concat_impl(blobstore, ctx, key, None).await
+}
+
 /// Similar to `fetch_concat_opt`, but requires the blob to be present, or errors out.
 pub async fn fetch_concat<B: Blobstore>(
     blobstore: &B,
@@ -370,8 +388,22 @@ pub async fn fetch_concat<B: Blobstore>(
     key: impl Into<FetchKey>,
 ) -> Result<Bytes, Error> {
     let key: FetchKey = key.into();
-    let bytes = fetch_concat_opt(blobstore, ctx, &key).await?;
+    let bytes = fetch_concat_impl(blobstore, ctx, &key, None).await?;
     bytes.ok_or_else(|| errors::ErrorKind::MissingContent(key).into())
+}
+
+/// Similar to `fetch_concat, but requires the content to be a known exact
+/// size.  Suitable for use when the size is known and relatively small.
+pub async fn fetch_concat_exact<'a, B: Blobstore>(
+    blobstore: &'a B,
+    ctx: &'a CoreContext,
+    key: impl Into<FetchKey>,
+    size: u64,
+) -> Result<Bytes, Error> {
+    let key = key.into();
+    fetch_concat_impl(blobstore, ctx, &key, Some(size))
+        .await?
+        .ok_or_else(|| errors::ErrorKind::MissingContent(key).into())
 }
 
 /// Fetch content associated with the key as a stream
