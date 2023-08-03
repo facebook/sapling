@@ -318,6 +318,9 @@ class ShellFS(ABC):
     def link(self, src: str, dst: str):
         raise NotImplementedError
 
+    def readlink(self, slink: str) -> str:
+        raise NotImplementedError
+
     def symlink(self, src: str, dst: str):
         raise NotImplementedError
 

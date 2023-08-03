@@ -616,6 +616,25 @@ def rm(args: List[str], fs: ShellFS):
 
 
 @command
+def readlink(
+    args: List[str], stdout: BinaryIO, stdin: BinaryIO, stderr: BinaryIO, fs: ShellFS
+) -> int:
+    exitcode = 0
+    flags = []
+    for arg in args:
+        if arg.startswith("-"):
+            flags.append(arg)
+    if flags:
+        raise NotImplementedError(f"readlink {','.join(flags)}")
+    for slink in args:
+        try:
+            stdout.write(f"{fs.readlink(slink)}\n".encode())
+        except FileNotFoundError:
+            exitcode = 1
+    return exitcode
+
+
+@command
 def ln(args: List[str], fs: ShellFS):
     symlink = False
     force = False

@@ -107,6 +107,12 @@ class OSFS(ShellFS):
         dst = self._absjoin(dst)
         os.link(src, dst)
 
+    def readlink(self, slink: str) -> str:
+        target = os.readlink(self._absjoin(slink))
+        if os.name == "nt":
+            target = target.replace("\\", "/")
+        return target
+
     def symlink(self, src: str, dst: str):
         if os.name == "nt":
             src = src.replace("/", "\\")

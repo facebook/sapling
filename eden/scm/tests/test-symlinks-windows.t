@@ -8,6 +8,8 @@ Creating a commit on Windows should replace backslashes with forward slashes on 
 
   $ newrepo
   $ ln -s foo/bar foobar
+  $ readlink foobar
+  foo/bar
   $ hg add -q
   $ hg commit -m "Created a symlink"
   $ hg show --git
