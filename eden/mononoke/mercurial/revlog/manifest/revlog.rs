@@ -6,7 +6,6 @@
  */
 
 use std::collections::BTreeMap;
-use std::io;
 use std::io::Write;
 use std::str;
 use std::vec;
@@ -129,7 +128,7 @@ impl ManifestContent {
         })
     }
 
-    pub fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
+    pub fn generate<W: Write>(&self, out: &mut W) -> Result<()> {
         for (k, v) in &self.files {
             k.generate(out)?;
             out.write_all(&b"\0"[..])?;
@@ -181,7 +180,7 @@ impl RevlogManifest {
         &self.parents
     }
 
-    pub fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
+    pub fn generate<W: Write>(&self, out: &mut W) -> Result<()> {
         self.content.generate(out)
     }
 
@@ -250,8 +249,11 @@ impl Details {
         Ok(Details { hash, flag })
     }
 
-    fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
-        write!(out, "{}{}", self.hash, self.flag.manifest_suffix())
+    fn generate<W: Write>(&self, out: &mut W) -> Result<()> {
+        let suffix = self.flag.manifest_suffix()?;
+        write!(out, "{}", self.hash)?;
+        out.write_all(suffix)?;
+        Ok(())
     }
 
     pub fn entryid(&self) -> HgEntryId {

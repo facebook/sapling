@@ -7,7 +7,6 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::io::Write;
 use std::sync::Arc;
 
 use anyhow::format_err;
@@ -36,6 +35,7 @@ use mercurial_types::blobs::UploadHgFileContents;
 use mercurial_types::blobs::UploadHgFileEntry;
 use mercurial_types::blobs::UploadHgNodeHash;
 use mercurial_types::blobs::UploadHgTreeEntry;
+use mercurial_types::manifest::Type as HgManifestType;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_types::ChangesetId;
@@ -243,17 +243,19 @@ async fn create_hg_manifest(
         contents.extend(name.as_ref());
         let subentry: Entry<_, _> = subentry.into();
         let (tag, hash) = match subentry {
-            Entry::Tree(manifest_id) => ("t", manifest_id.into_nodehash()),
+            Entry::Tree(manifest_id) => (
+                HgManifestType::Tree.manifest_suffix()?,
+                manifest_id.into_nodehash(),
+            ),
             Entry::Leaf((file_type, filenode_id)) => {
-                let tag = match file_type {
-                    FileType::Symlink => "l",
-                    FileType::Executable => "x",
-                    FileType::Regular => "",
-                };
+                let tag = HgManifestType::File(file_type).manifest_suffix()?;
                 (tag, filenode_id.into_nodehash())
             }
         };
-        write!(&mut contents, "\0{}{}\n", hash, tag).expect("write to memory failed");
+        contents.push(b'\0');
+        contents.extend(hash.to_hex().as_bytes());
+        contents.extend(tag);
+        contents.push(b'\n')
     }
 
     let path = match path {
