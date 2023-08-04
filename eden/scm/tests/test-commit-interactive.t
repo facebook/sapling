@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 
   $ eagerepo
@@ -155,6 +154,10 @@ Delete empty file
 
 Add binary file
 
+  $ function sed_hashes() {
+  >   sed 's/\b[0-9a-f]{12}\b/aaaaaaaaaaaa/g'
+  > }
+
   $ hg bundle --base -2 tip.bundle
   1 changesets found
   $ hg add tip.bundle
@@ -165,17 +168,15 @@ Add binary file
   new file mode 100644
   this is a binary file
   examine changes to 'tip.bundle'? [Ynesfdaq?] y
-  
 
-  $ hg tip -p
-  commit:      72e9d7d0ef46
+  $ hg tip -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
   summary:     binary
   
-  diff -r b39a238f01a1 -r 72e9d7d0ef46 tip.bundle
+  diff -r aaaaaaaaaaaa -r aaaaaaaaaaaa tip.bundle
   Binary file tip.bundle has changed
-  
 
 Change binary file
 
@@ -187,17 +188,15 @@ Change binary file
   diff --git a/tip.bundle b/tip.bundle
   this modifies a binary file (all or nothing)
   examine changes to 'tip.bundle'? [Ynesfdaq?] y
-  
 
-  $ hg tip -p
-  commit:      c0f95062740f
+  $ hg tip -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:05 1970 +0000
   summary:     binary-change
   
-  diff -r 72e9d7d0ef46 -r c0f95062740f tip.bundle
+  diff -r aaaaaaaaaaaa -r aaaaaaaaaaaa tip.bundle
   Binary file tip.bundle has changed
-  
 
 Rename and change binary file
 
@@ -212,17 +211,16 @@ Rename and change binary file
   rename to top.bundle
   this modifies a binary file (all or nothing)
   examine changes to 'tip.bundle' and 'top.bundle'? [Ynesfdaq?] y
-  
 
-  $ hg tip -p
-  commit:      8010fe31f3b2
+  $ hg tip -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:06 1970 +0000
   summary:     binary-change-rename
   
-  diff -r c0f95062740f -r 8010fe31f3b2 tip.bundle
+  diff -r aaaaaaaaaaaa -r aaaaaaaaaaaa tip.bundle
   Binary file tip.bundle has changed
-  diff -r c0f95062740f -r 8010fe31f3b2 top.bundle
+  diff -r aaaaaaaaaaaa -r aaaaaaaaaaaa top.bundle
   Binary file top.bundle has changed
 
 Add plain file
@@ -253,13 +251,13 @@ Add plain file
   +10
   record this change to 'plain'? [Ynesfdaq?] y
   
-  $ hg tip -p
-  commit:      a9b8edc30675
+  $ hg tip -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:07 1970 +0000
   summary:     plain
   
-  diff -r 8010fe31f3b2 -r a9b8edc30675 plain
+  diff -r aaaaaaaaaaaa -r aaaaaaaaaaaa plain
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:07 1970 +0000
   @@ -0,0 +1,10 @@
@@ -305,7 +303,7 @@ Modify end of plain file, also test that diffopts are accounted for
 
 Modify end of plain file, no EOL
 
-  $ hg tip --template '{node}' >> plain
+  $ echo -n 9b5b0d948b4337a6766950f9da247b44068e38b2 >> plain
   $ hg commit -i -d '9 0' -m noeol plain <<EOF
   > y
   > y
@@ -318,7 +316,7 @@ Modify end of plain file, no EOL
    9
    10
    11
-  +00ddd3d9b33c5a4a7922edfe5a0c5222954aedce
+  +9b5b0d948b4337a6766950f9da247b44068e38b2
   \ No newline at end of file
   record this change to 'plain'? [Ynesfdaq?] y
 
@@ -459,9 +457,9 @@ Modify end of plain file, add EOL
    9
    10
    11
-  -00ddd3d9b33c5a4a7922edfe5a0c5222954aedce
+  -9b5b0d948b4337a6766950f9da247b44068e38b2
   \ No newline at end of file
-  +00ddd3d9b33c5a4a7922edfe5a0c5222954aedce
+  +9b5b0d948b4337a6766950f9da247b44068e38b2
   record change 1/2 to 'plain'? [Ynesfdaq?] y
   
   diff --git a/plain2 b/plain2
@@ -504,7 +502,7 @@ changes numbering
    9
    10
   -11
-  -00ddd3d9b33c5a4a7922edfe5a0c5222954aedce
+  -9b5b0d948b4337a6766950f9da247b44068e38b2
   record change 2/3 to 'plain'? [Ynesfdaq?] y
   
   diff --git a/plain2 b/plain2
@@ -516,13 +514,13 @@ changes numbering
   +2
   record change 3/3 to 'plain2'? [Ynesfdaq?] y
 
-  $ hg tip -p
-  commit:      b569ab03dbee
+  $ hg tip -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:10 1970 +0000
   summary:     begin-and-end
   
-  diff -r dc1f1077bf9f -r b569ab03dbee plain
+  diff -r aaaaaaaaaaaa -r aaaaaaaaaaaa plain
   --- a/plain	Thu Jan 01 00:00:10 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:10 1970 +0000
   @@ -1,4 +1,4 @@
@@ -536,8 +534,8 @@ changes numbering
    9
    10
   -11
-  -00ddd3d9b33c5a4a7922edfe5a0c5222954aedce
-  diff -r dc1f1077bf9f -r b569ab03dbee plain2
+  -9b5b0d948b4337a6766950f9da247b44068e38b2
+  diff -r aaaaaaaaaaaa -r aaaaaaaaaaaa plain2
   --- a/plain2	Thu Jan 01 00:00:10 1970 +0000
   +++ b/plain2	Thu Jan 01 00:00:10 1970 +0000
   @@ -1,1 +1,2 @@
@@ -586,13 +584,13 @@ Record end
   record change 2/2 to 'plain'? [Ynesfdaq?] y
   
 
-  $ hg tip -p
-  commit:      e9da96cfc0f8
+  $ hg tip -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:11 1970 +0000
   summary:     end-only
   
-  diff -r b569ab03dbee -r e9da96cfc0f8 plain
+  diff -r aaaaaaaaaaaa -r aaaaaaaaaaaa plain
   --- a/plain	Thu Jan 01 00:00:10 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:11 1970 +0000
   @@ -7,4 +7,4 @@
@@ -622,13 +620,13 @@ Record beginning
   record this change to 'plain'? [Ynesfdaq?] y
   
 
-  $ hg tip -p
-  commit:      7f2da95f4096
+  $ hg tip -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:12 1970 +0000
   summary:     begin-only
   
-  diff -r e9da96cfc0f8 -r 7f2da95f4096 plain
+  diff -r aaaaaaaaaaaa -r aaaaaaaaaaaa plain
   --- a/plain	Thu Jan 01 00:00:11 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:12 1970 +0000
   @@ -1,6 +1,3 @@
@@ -728,13 +726,13 @@ Record beginning, middle, and test that format-breaking diffopts are ignored
   record change 3/3 to 'plain'? [Ynesfdaq?] n
   
 
-  $ hg tip -p
-  commit:      a5c0a12f0235
+  $ hg tip -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:14 1970 +0000
   summary:     middle-only
   
-  diff -r 88ce78cf17b7 -r a5c0a12f0235 plain
+  diff -r aaaaaaaaaaaa -r aaaaaaaaaaaa plain
   --- a/plain	Thu Jan 01 00:00:13 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:14 1970 +0000
   @@ -1,5 +1,10 @@
@@ -768,13 +766,13 @@ Record end
   record this change to 'plain'? [Ynesfdaq?] y
   
 
-  $ hg tip -p
-  commit:      4ffeb9282c99
+  $ hg tip -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:15 1970 +0000
   summary:     end-only
   
-  diff -r a5c0a12f0235 -r 4ffeb9282c99 plain
+  diff -r aaaaaaaaaaaa -r aaaaaaaaaaaa plain
   --- a/plain	Thu Jan 01 00:00:14 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:15 1970 +0000
   @@ -9,3 +9,5 @@
@@ -805,13 +803,13 @@ Record end
   record this change to 'subdir/a'? [Ynesfdaq?] y
   
 
-  $ hg tip -p
-  commit:      6309590ad942
+  $ hg tip -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:16 1970 +0000
   summary:     subdir-change
   
-  diff -r 27c5b0b459d7 -r 6309590ad942 subdir/a
+  diff -r aaaaaaaaaaaa -r aaaaaaaaaaaa subdir/a
   --- a/subdir/a	Thu Jan 01 00:00:16 1970 +0000
   +++ b/subdir/a	Thu Jan 01 00:00:16 1970 +0000
   @@ -1,1 +1,2 @@
@@ -911,13 +909,13 @@ s, all
   examine changes to 'subdir/f2'? [Ynesfdaq?] a
   
 
-  $ hg tip -p
-  commit:      f139a299e085
+  $ hg tip -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:18 1970 +0000
   summary:     x
   
-  diff -r ad5a0baef030 -r f139a299e085 subdir/f2
+  diff -r aaaaaaaaaaaa -r aaaaaaaaaaaa subdir/f2
   --- a/subdir/f2	Thu Jan 01 00:00:17 1970 +0000
   +++ b/subdir/f2	Thu Jan 01 00:00:18 1970 +0000
   @@ -1,1 +1,2 @@
@@ -934,13 +932,13 @@ f
   examine changes to 'subdir/f1'? [Ynesfdaq?] f
   
 
-  $ hg tip -p
-  commit:      d135c576a1ac
+  $ hg tip -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:19 1970 +0000
   summary:     y
   
-  diff -r f139a299e085 -r d135c576a1ac subdir/f1
+  diff -r aaaaaaaaaaaa -r aaaaaaaaaaaa subdir/f1
   --- a/subdir/f1	Thu Jan 01 00:00:18 1970 +0000
   +++ b/subdir/f1	Thu Jan 01 00:00:19 1970 +0000
   @@ -1,1 +1,2 @@
@@ -971,8 +969,8 @@ Preserve chmod +x
   record this change to 'subdir/f1'? [Ynesfdaq?] y
   
 
-  $ hg tip --config diff.git=True -p
-  commit:      06001480afb9
+  $ hg tip --config diff.git=True -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:20 1970 +0000
   summary:     z
@@ -1007,8 +1005,8 @@ Preserve execute permission on original
   record this change to 'subdir/f1'? [Ynesfdaq?] y
   
 
-  $ hg tip --config diff.git=True -p
-  commit:      449e13be65cb
+  $ hg tip --config diff.git=True -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:21 1970 +0000
   summary:     aa
@@ -1045,8 +1043,8 @@ Preserve chmod -x
   record this change to 'subdir/f1'? [Ynesfdaq?] y
   
 
-  $ hg tip --config diff.git=True -p
-  commit:      3ab8e829a226
+  $ hg tip --config diff.git=True -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:22 1970 +0000
   summary:     ab
@@ -1457,8 +1455,8 @@ Ignore win32text deprecation warning for now:
 
   $ hg status -A subdir/f1
   C subdir/f1
-  $ hg tip -p
-  commit:      0fe2b8cdc42b
+  $ hg tip -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:24 1970 +0000
   summary:     w1
@@ -1525,8 +1523,8 @@ Moving files
 The #if execbit block above changes the hash here on some systems
   $ hg status -A plain3
   C plain3
-  $ hg tip
-  commit:      70045e73aa67
+  $ hg tip | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:23 1970 +0000
   summary:     moving_files
@@ -1588,8 +1586,8 @@ Add new file from within a subdirectory
   record this change to 'folder/bar'? [Ynesfdaq?] y
   
 The #if execbit block above changes the hashes here on some systems
-  $ hg tip -p
-  commit:      a33d5b0962c3
+  $ hg tip -p | sed_hashes
+  commit:      aaaaaaaaaaaa
   user:        test
   date:        Thu Jan 01 00:00:23 1970 +0000
   summary:     newfilesubdir
