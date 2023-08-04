@@ -39,32 +39,14 @@ template.
     # undefined behaviour.
     startrev = 0
 
-    # If this configuration is true, we use a cached mapping from `globalrev ->
-    # hash` to enable fast lookup of commits based on the globalrev. This
-    # mapping can be built using the `updateglobalrevmeta` command.
-    fastlookup = False
-
     # If this configuration is true, we use ScmQuery to lookup the mapping from
     # `globalrev->hash` to enable fast lookup of the commits based on the
-    # globalrev. This configuration is only effective on the clients. For
-    # speedup on the servers, the `fastlookup` configuration should be used.
+    # globalrev. This configuration is only effective on the clients.
     scmquerylookup = False
 """
 from __future__ import absolute_import
 
-import struct
-
-from bindings import nodemap as nodemapmod
-from edenscm import (
-    error,
-    extensions,
-    localrepo,
-    namespaces,
-    progress,
-    pycompat,
-    registrar,
-    revset,
-)
+from edenscm import error, extensions, localrepo, namespaces, registrar, revset
 from edenscm.i18n import _
 from edenscm.namespaces import namespace
 
@@ -75,7 +57,6 @@ from .pushrebase import isnonpushrebaseblocked
 configtable = {}
 configitem = registrar.configitem(configtable)
 configitem("format", "useglobalrevs", default=False)
-configitem("globalrevs", "fastlookup", default=False)
 configitem("globalrevs", "onlypushrebase", default=True)
 configitem("globalrevs", "readonly", default=False)
 configitem("globalrevs", "reponame", default=None)
@@ -91,8 +72,6 @@ templatekeyword = registrar.templatekeyword()
 
 EXTRASCONVERTKEY = "convert_revision"
 EXTRASGLOBALREVKEY = "global_rev"
-LASTREVFILE = "globalrev-nodemap/last-rev"
-MAPFILE = "globalrev-nodemap"
 
 
 @templatekeyword("globalrev")
@@ -251,40 +230,6 @@ def _sqllocalrepowrapper(orig, repo) -> None:
     repo.__class__ = globalrevsrepo
 
 
-_u64lestruct = struct.Struct("<Q")
-_bin2u64le = _u64lestruct.unpack
-_u64le2bin = _u64lestruct.pack
-
-
-class _globalrevmap(object):
-    def __init__(self, repo):
-        self.lastrev = int(repo.sharedvfs.tryread(LASTREVFILE) or "0")
-        self.map = nodemapmod.nodemap(repo.sharedvfs.join(MAPFILE))
-        self.repo = repo
-
-    @staticmethod
-    def _globalrevtonode(grev):
-        return _u64le2bin(grev).ljust(20, b"\0")
-
-    @staticmethod
-    def _nodetoglobalrev(grevnode):
-        return _bin2u64le(grevnode[:8])
-
-    def add(self, grev, hgnode):
-        self.map.add(self._globalrevtonode(grev), hgnode)
-
-    def gethgnode(self, grev):
-        return self.map.lookupbyfirst(self._globalrevtonode(grev))
-
-    def getglobalrev(self, hgnode):
-        grevnode = self.map.lookupbysecond(hgnode)
-        return self._nodetoglobalrev(grevnode) if grevnode is not None else None
-
-    def save(self):
-        self.map.flush()
-        self.repo.sharedvfs.write(LASTREVFILE, pycompat.encodeutf8("%s" % self.lastrev))
-
-
 def _lookupglobalrev(repo, grev):
     # A `globalrev` < 0 will never resolve to any commit.
     if grev < 0:
@@ -310,14 +255,6 @@ def _lookupglobalrev(repo, grev):
 
         return isequal(globalrev, grev) or isequal(svnrev, grev)
 
-    usefastlookup = ui.configbool("globalrevs", "fastlookup")
-    if usefastlookup:
-        globalrevmap = _globalrevmap(repo)
-        lastrev = globalrevmap.lastrev
-        hgnode = globalrevmap.gethgnode(grev)
-        if hgnode:
-            return [hgnode]
-
     useedenapi = ui.configbool("globalrevs", "edenapilookup")
     if useedenapi and repo.nullableedenapi is not None:
         rsp = list(repo.edenapi.committranslateids([{"Globalrev": grev}], "Hg"))
@@ -340,13 +277,6 @@ def _lookupglobalrev(repo, grev):
     matchedrevs = []
 
     for rev in repo.revs("reverse(all())"):
-        # While using fast lookup, we have already searched the indexed commits
-        # upto lastrev and therefore, we can safely say that there is no commit
-        # which has the specified globalrev if we are looking at a revision
-        # before the lastrev.
-        if usefastlookup and rev < lastrev:
-            break
-
         if matchglobalrev(rev):
             matchedrevs.append(tonode(rev))
             break
@@ -419,42 +349,6 @@ def _getsvnrev(commitextra):
     # ex. svn:uuid/path@1234
     if convertrev and "svn:" in convertrev:
         return convertrev.rsplit("@", 1)[-1]
-
-
-@command("updateglobalrevmeta", [], _("@prog@ gotoglobalrevmeta"))
-def updateglobalrevmeta(ui, repo, *args, **opts) -> None:
-    """Reads globalrevs from the latest @prog@ commits and adds them to the
-    globalrev-hg mapping."""
-    with repo.wlock(), repo.lock():
-        unfi = repo
-        clnode = unfi.changelog.node
-        clrevision = unfi.changelog.changelogrevision
-        globalrevmap = _globalrevmap(unfi)
-
-        lastrev = globalrevmap.lastrev
-        repolen = len(unfi)
-        with progress.bar(ui, _("indexing"), _("revs"), repolen - lastrev) as prog:
-
-            def addtoglobalrevmap(grev, node):
-                if grev:
-                    globalrevmap.add(int(grev), node)
-
-            for rev in range(lastrev, repolen):  # noqa: F821
-                hgnode = clnode(rev)
-                commitdata = clrevision(rev)
-                extra = commitdata.extra
-
-                svnrev = _getsvnrev(extra)
-                addtoglobalrevmap(svnrev, hgnode)
-
-                globalrev = _getglobalrev(ui, extra)
-                if globalrev != svnrev:
-                    addtoglobalrevmap(globalrev, hgnode)
-
-                prog.value += 1
-
-        globalrevmap.lastrev = repolen
-        globalrevmap.save()
 
 
 @command("globalrev", [], _("@prog@ globalrev"))
