@@ -9,13 +9,29 @@
 import re
 from typing import Any, List, Pattern
 
-from edenscm import extensions, namespaces, node, registrar, revset, smartset, templater
+from edenscm import (
+    extensions,
+    namespaces,
+    node,
+    registrar,
+    revset,
+    smartset,
+    templater,
+    ui as uimod,
+)
 from edenscm.i18n import _, _x
 from edenscm.namespaces import namespace
 from edenscm.node import bin
 
 from .extlib.phabricator import arcconfig, graphql
 
+
+cmdtable = {}
+command = registrar.command(cmdtable)
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+configitem("fbscmquery", "auto-username", "true")
 
 namespacepredicate = registrar.namespacepredicate()
 
@@ -43,6 +59,17 @@ def uisetup(ui) -> None:
 
     revset.symbols["gitnode"] = gitnode
     gitnode._weight = 10
+
+    if ui.configbool("fbscmquery", "auto-username"):
+
+        def _auto_username(orig, ui):
+            try:
+                client = graphql.Client(ui=ui)
+                return client.get_username()
+            except Exception:
+                return None
+
+        extensions.wrapfunction(uimod, "_auto_username", _auto_username)
 
 
 @templater.templatefunc("mirrornode")
@@ -216,3 +243,15 @@ def _scmquerylookupglobalrev(orig, repo, rev):
             )
 
     return orig(repo, rev)
+
+
+@command(
+    "debuginternusername",
+    [("u", "unixname", "", _("unixname to lookup"))],
+    norepo=True,
+)
+def debuginternusername(ui, **opts):
+    client = graphql.Client(ui=ui)
+    unixname = opts.get("unixname") or None
+    name = client.get_username(unixname=unixname)
+    ui.write("%s\n" % name)
