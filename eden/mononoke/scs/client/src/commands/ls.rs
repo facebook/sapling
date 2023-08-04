@@ -229,9 +229,13 @@ fn list_output(
                         bail!("malformed response format for '{}'", entry.name);
                     }
                 };
+                let r#type = match entry.r#type {
+                    thrift::EntryType::GIT_SUBMODULE => "gitm".to_string(),
+                    value => value.to_string().to_lowercase(),
+                };
                 Ok(LsOutput {
                     name: entry.name,
-                    r#type: entry.r#type.to_string().to_lowercase(),
+                    r#type,
                     entry: entry_output,
                 })
             }
