@@ -200,6 +200,19 @@ impl Identity {
         paths
     }
 
+    /// Return the first user config path that exists.
+    /// If none of the paths exist, return the first user config path.
+    /// Might return `None` if `CONFIG` does not specify user config paths.
+    pub fn user_config_path(&self) -> Option<PathBuf> {
+        let paths = self.user_config_paths();
+        paths
+            .iter()
+            .filter(|p| p.exists())
+            .next()
+            .cloned()
+            .or_else(|| paths.into_iter().next())
+    }
+
     pub fn system_config_paths(&self) -> Vec<PathBuf> {
         // Read from "CONFIG" env var
         if let Some(Ok(rcpath)) = self.env_var("CONFIG") {
