@@ -8,28 +8,13 @@
 //! DrawDAG for Integration Tests
 //!
 //! A DrawDAG specification consists of an ASCII graph (either left-to-right
-//! or bottom-to-top), and a series of comments that define additional
-//! properties for each commit.
+//! or bottom-to-top), and a series of comments that define actions that apply
+//! to that graph.
 //!
-//! Valid properties are:
+//! See documentation of `Action` for actions that affect the repository, and
+//! `ChangeAction` for actions that change commits.
 //!
-//! * Set a known changeset id for an already-existing commit
-//!     # exists: COMMIT id
-//!
-//! * Set a bookmark on a commit
-//!     # bookmark: COMMIT name
-//!
-//! * Set the content of a file.
-//!     # modify: COMMIT path/to/file "content"
-//!
-//! * Mark a file as deleted.
-//!     # delete: COMMIT path/to/file
-//!
-//! * Forget file that was about to be added (useful for getting rid of files
-//!   that are added by default):
-//!     # forget: COMMIT path/to/file
-//!
-//! Paths can be surrounded by quotes if they contain special characters.
+//! Values that contain special characters can be surrounded by quotes.
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -91,50 +76,72 @@ pub struct CommandArgs {
     print_hg_hashes: bool,
 }
 
+/// An action that affects the graph.
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum Action {
+    /// Set a known changeset id for an already-existing commit.  This commit
+    /// will not be created, but other commits in the graph that relate to it
+    /// will be related to this existing commit.
+    ///
+    ///     # exists: COMMIT id
     Exists { name: String, id: ChangesetId },
+    /// Set a bookmark on a commit
+    ///
+    ///     # bookmark: COMMIT name
     Bookmark { name: String, bookmark: BookmarkKey },
+    /// Change a commit
     Change { name: String, change: ChangeAction },
 }
 
+/// An action that changes one of the commits in the graph.
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum ChangeAction {
-    Modify {
-        path: Vec<u8>,
-        content: Vec<u8>,
-    },
-    Delete {
-        path: Vec<u8>,
-    },
-    Forget {
-        path: Vec<u8>,
-    },
-    Extra {
-        key: String,
-        value: Vec<u8>,
-    },
-    Message {
-        message: String,
-    },
-    Author {
-        author: String,
-    },
-    AuthorDate {
-        author_date: DateTime,
-    },
-    Committer {
-        committer: String,
-    },
-    CommitterDate {
-        committer_date: DateTime,
-    },
+    /// Set the content of a file.
+    ///
+    ///     # modify: COMMIT path/to/file "content"
+    Modify { path: Vec<u8>, content: Vec<u8> },
+    /// Mark a file as deleted.
+    ///
+    ///     # delete: COMMIT path/to/file
+    Delete { path: Vec<u8> },
+    /// Forget file that was about to be added (useful for getting rid of files
+    /// that are added by default).
+    ///
+    ///     # forget: COMMIT path/to/file
+    Forget { path: Vec<u8> },
+    /// Mark a file as a copy of another file.
+    ///
+    ///     # copy: COMMIT path/to/file "content" PARENT_COMMIT_ID path/copied/from
     Copy {
         path: Vec<u8>,
         content: Vec<u8>,
         parent: String,
         parent_path: Vec<u8>,
     },
+    /// Set a Mercurial commit extra on a commit.
+    ///
+    ///     # extra: COMMIT "key" "value"
+    Extra { key: String, value: Vec<u8> },
+    /// Set the commit message.
+    ///
+    ///     # message: COMMIT "message"
+    Message { message: String },
+    /// Set the author.
+    ///
+    ///     # author: COMMIT "Author Name <email@domain>"
+    Author { author: String },
+    /// Set the author date (in RFC3339 format).
+    ///
+    ///     # author_date: COMMIT "YYYY-mm-ddTHH:MM:SS+ZZ:ZZ"
+    AuthorDate { author_date: DateTime },
+    /// Set the committer.
+    ///
+    ///     # comitter: COMMIT "Committer Name <email@domain>"
+    Committer { committer: String },
+    /// Set the committer date (in RFC3339 format).
+    ///
+    ///     # committer_date: COMMIT "YYYY-mm-ddTHH:MM:SS+ZZ:ZZ"
+    CommitterDate { committer_date: DateTime },
 }
 
 impl Action {
