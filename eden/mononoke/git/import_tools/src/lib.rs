@@ -34,6 +34,7 @@ use linked_hash_map::LinkedHashMap;
 use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
 use mononoke_types::ChangesetId;
+use mononoke_types::FileType;
 use mononoke_types::MPath;
 use slog::debug;
 use slog::info;
@@ -83,7 +84,12 @@ where
                     match change {
                         BonsaiDiffFileChange::Changed(path, ty, GitLeaf(oid))
                         | BonsaiDiffFileChange::ChangedReusedId(path, ty, GitLeaf(oid)) => {
-                            let git_bytes = {
+                            let git_bytes = if ty == FileType::GitSubmodule {
+                                // The OID for a submodule is a commit in
+                                // another repository, so there is no data to
+                                // store.
+                                Bytes::new()
+                            } else {
                                 let object = reader.get_object(&oid).await?;
                                 let blob = object
                                     .parsed

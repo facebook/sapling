@@ -121,36 +121,47 @@ where
         oid: ObjectId,
         git_bytes: Bytes,
     ) -> Result<Self::Change, Error> {
-        let meta_ret = if let Some(lfs_meta) = lfs.is_lfs_file(&git_bytes, oid) {
+        let meta = if ty == FileType::GitSubmodule {
+            // The file is a git submodule.  In Mononoke, we store the commit
+            // id of the submodule as the content of the file.
+            let oid_bytes = Bytes::copy_from_slice(oid.as_slice());
+            filestore::store(
+                self.inner.repo_blobstore(),
+                *self.inner.filestore_config(),
+                ctx,
+                &StoreRequest::new(oid_bytes.len() as u64),
+                stream::once(async move { Ok(oid_bytes) }),
+            )
+            .await?
+        } else if let Some(lfs_meta) = lfs.is_lfs_file(&git_bytes, oid) {
             let blobstore = self.inner.repo_blobstore();
             let filestore_config = *self.inner.filestore_config();
             cloned!(ctx, lfs, blobstore, path);
-            Ok(lfs
-                .with(
-                    ctx,
-                    lfs_meta,
-                    move |ctx, lfs_meta, req, bstream| async move {
-                        info!(
-                            ctx.logger(),
-                            "Uploading LFS {} sha256:{} size:{}",
-                            path,
-                            lfs_meta.sha256.to_brief(),
-                            lfs_meta.size,
-                        );
-                        filestore::store(&blobstore, filestore_config, &ctx, &req, bstream).await
-                    },
-                )
-                .await?)
+            lfs.with(
+                ctx,
+                lfs_meta,
+                move |ctx, lfs_meta, req, bstream| async move {
+                    info!(
+                        ctx.logger(),
+                        "Uploading LFS {} sha256:{} size:{}",
+                        path,
+                        lfs_meta.sha256.to_brief(),
+                        lfs_meta.size,
+                    );
+                    filestore::store(&blobstore, filestore_config, &ctx, &req, bstream).await
+                },
+            )
+            .await?
         } else {
             let (req, bstream) = git_store_request(ctx, oid, git_bytes)?;
-            Ok(filestore::store(
+            filestore::store(
                 self.inner.repo_blobstore(),
                 *self.inner.filestore_config(),
                 ctx,
                 &req,
                 bstream,
             )
-            .await?)
+            .await?
         };
         debug!(
             ctx.logger(),
@@ -158,7 +169,12 @@ where
             path,
             oid.to_hex_with_len(8),
         );
-        meta_ret.map(|meta| FileChange::tracked(meta.content_id, ty, meta.total_size, None))
+        Ok(FileChange::tracked(
+            meta.content_id,
+            ty,
+            meta.total_size,
+            None,
+        ))
     }
 
     async fn generate_changeset_for_commit(
