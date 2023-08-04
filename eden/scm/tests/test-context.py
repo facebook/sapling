@@ -172,11 +172,6 @@ for i in ["1", "2", "3"]:
     n = repo.commitctx(ctx)
     print("commit %s: %s" % (i, hex(n)))
 
-    # touch 00manifest.i mtime so storecache could expire.
-    # repo.__dict__['manifestlog'] is deleted by transaction releasefn.
-    st = repo.svfs.stat("00manifest.i")
-    repo.svfs.utime("00manifest.i", (st.st_mtime + 1, st.st_mtime + 1))
-
     # read the file just committed
     try:
         if pycompat.decodeutf8(repo[n][i].data()) != i:
