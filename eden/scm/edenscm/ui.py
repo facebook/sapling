@@ -61,7 +61,6 @@ samplehgrcs = {
 [ui]
 # name and email, e.g.
 # username = Jane Doe <jdoe@example.com>
-username =
 
 # uncomment to disable color in command output
 # (see '@prog@ help color' for details)

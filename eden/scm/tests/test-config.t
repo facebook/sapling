@@ -336,7 +336,7 @@ config editing without an editor
   b = 2
 
 system config (make sure it tries the right file)
-  $ PROGRAMDATA=C:\\ProgramData\\Facebook\\Mercurial\\ HGEDITOR=false hg config --system
+  $ HGEDITOR=false hg config --system
   opening $TESTTMP/hgrc for editing...
   abort: edit failed: false exited with status 1
   [255]

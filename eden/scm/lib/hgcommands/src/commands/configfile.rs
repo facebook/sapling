@@ -7,14 +7,11 @@
 
 use std::io::Write;
 
-use anyhow::Context;
 use clidispatch::abort;
 use clidispatch::abort_if;
 use clidispatch::OptionalRepo;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
-use configloader::hg::all_existing_system_paths;
-use configloader::hg::default_user_config_path;
 
 use super::Result;
 
@@ -43,24 +40,24 @@ pub fn run(ctx: ReqCtx<DebugConfigLocationOpts>, repo: &mut OptionalRepo) -> Res
     );
 
     let show_all = optcnt == 0;
+    let mut out = ctx.io().output();
 
     if show_all || ctx.opts.user {
-        if show_all {
-            write!(ctx.io().output(), "User config path: ")?;
+        let id = identity::default();
+        if let Some(path) = id.user_config_path() {
+            if show_all {
+                write!(out, "User config path: ")?;
+            }
+            write!(out, "{}\n", path.display(),)?;
         }
-        write!(
-            ctx.io().output(),
-            "{}\n",
-            default_user_config_path()?.display()
-        )?;
     }
 
     if show_all || ctx.opts.local {
         if let OptionalRepo::Some(repo) = repo {
             if show_all {
-                write!(ctx.io().output(), "Repo config path: ")?;
+                write!(out, "Repo config path: ")?;
             }
-            write!(ctx.io().output(), "{}\n", repo.config_path().display())?;
+            write!(out, "{}\n", repo.config_path().display())?;
         } else if !show_all {
             abort!("--local must be used inside a repo");
         }
@@ -68,14 +65,13 @@ pub fn run(ctx: ReqCtx<DebugConfigLocationOpts>, repo: &mut OptionalRepo) -> Res
 
     if show_all || ctx.opts.system {
         let id = identity::default();
-        let path = all_existing_system_paths(&id)
-            .chain(id.system_config_paths().into_iter())
-            .next()
-            .with_context(|| "unable to determine system config location")?;
-        if show_all {
-            write!(ctx.io().output(), "System config path: ")?;
+        let paths = id.system_config_paths();
+        if let Some(path) = paths.first() {
+            if show_all {
+                write!(out, "System config path: ")?;
+            }
+            write!(out, "{}\n", path.display())?;
         }
-        write!(ctx.io().output(), "{}\n", path.display())?;
     }
 
     Ok(0)
