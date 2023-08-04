@@ -12,7 +12,7 @@ from __future__ import absolute_import
 
 import operator
 
-from edenscm import encoding, json, pycompat, util
+from edenscm import encoding, error, json, pycompat, util
 from edenscm.node import bin, hex
 
 from . import arcconfig, phabricator_graphql_client, phabricator_graphql_client_urllib
@@ -34,10 +34,14 @@ class GraphQLConfigError(Exception):
 
 
 class Client(object):
-    def __init__(self, repodir=None, repo=None):
+    def __init__(self, repodir=None, repo=None, ui=None):
         if repo is not None:
             if repodir is None:
                 repodir = repo.root
+            ui = ui or repo.ui
+        else:
+            if ui is None:
+                raise error.ProgrammingError("either repo or ui needs to be provided")
         if not repodir:
             repodir = pycompat.getcwd()
         self._mock = "HG_ARC_CONDUIT_MOCK" in encoding.environ
@@ -54,20 +58,20 @@ class Client(object):
         self._catslocation = None
         self._cats = None
         self._applyarcconfig(
-            arcconfig.loadforpath(repodir), repo.ui.config("phabricator", "arcrc_host")
+            arcconfig.loadforpath(repodir), ui.config("phabricator", "arcrc_host")
         )
         if not self._mock:
-            app_id = repo.ui.config("phabricator", "graphql_app_id")
-            self._host = repo.ui.config("phabricator", "graphql_host")
+            app_id = ui.config("phabricator", "graphql_app_id")
+            self._host = ui.config("phabricator", "graphql_host")
             if app_id is None or self._host is None:
                 raise GraphQLConfigError(
                     "GraphQL unavailable because of missing configuration"
                 )
 
             # phabricator.use-unix-socket is escape hatch in case something breaks.
-            unix_socket_path = repo.ui.configbool(
+            unix_socket_path = ui.configbool(
                 "phabricator", "use-unix-socket", default=True
-            ) and repo.ui.config("auth_proxy", "unix_socket_path")
+            ) and ui.config("auth_proxy", "unix_socket_path")
 
             self._client = phabricator_graphql_client.PhabricatorGraphQLClient(
                 phabricator_graphql_client_urllib.PhabricatorGraphQLClientRequests(
