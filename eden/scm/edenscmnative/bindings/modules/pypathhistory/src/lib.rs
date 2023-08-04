@@ -7,8 +7,8 @@
 
 #![allow(non_camel_case_types)]
 
-use std::cell::RefCell;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use ::pathhistory::PathHistory;
 use async_runtime::try_block_unless_interrupted as block_on;
@@ -30,7 +30,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 py_class!(class pathhistory |py| {
-    data inner: RefCell<PathHistory>;
+    data inner: Arc<Mutex<PathHistory>>;
 
     def __new__(
         _cls,
@@ -43,13 +43,16 @@ py_class!(class pathhistory |py| {
         let paths: Vec<RepoPathBuf> = paths.into_iter().map(|p| p.to_repo_path_buf()).collect::<Result<Vec<_>, _>>().map_pyerr(py)?;
         let root_tree_reader = roottreereader.into();
         let tree_store = treestore.into();
-        let history = block_on(PathHistory::new(set, paths, root_tree_reader, tree_store)).map_pyerr(py)?;
-        Self::create_instance(py, RefCell::new(history))
+        let history = py.allow_threads(|| block_on(PathHistory::new(set, paths, root_tree_reader, tree_store))).map_pyerr(py)?;
+        Self::create_instance(py, Arc::new(Mutex::new(history)))
     }
 
     def __next__(&self) -> PyResult<Option<PyBytes>> {
-        let mut inner = self.inner(py).borrow_mut();
-        let next: Option<Vertex> = block_on(inner.next()).map_pyerr(py)?;
+        let inner: Arc<_> = self.inner(py).clone();
+        let next: Option<Vertex> = py.allow_threads(|| {
+            let mut inner = inner.lock().unwrap();
+            block_on(inner.next())
+        }).map_pyerr(py)?;
         Ok(next.map(|v| PyBytes::new(py, v.as_ref())))
     }
 
