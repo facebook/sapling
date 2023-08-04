@@ -257,6 +257,7 @@ enum FileType {
   Regular = 0,
   Executable = 1,
   Symlink = 2,
+  GitSubmodule = 3,
 }
 
 struct FileChangeOpt {

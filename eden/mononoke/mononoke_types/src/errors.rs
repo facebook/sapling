@@ -39,4 +39,6 @@ pub enum MononokeTypeError {
     FailedToParseRepositoryId(String),
     #[error("invalid blake3 input: {0}")]
     InvalidBlake3Input(String),
+    #[error("Git submodules not supported")]
+    GitSubmoduleNotSupported,
 }

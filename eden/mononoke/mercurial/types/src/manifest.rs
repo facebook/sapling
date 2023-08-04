@@ -7,6 +7,7 @@
 
 use std::fmt;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use mononoke_types::FileType;
 use serde_derive::Serialize;
@@ -39,6 +40,7 @@ impl Type {
             Type::File(FileType::Symlink) => Ok(b"l"),
             Type::File(FileType::Executable) => Ok(b"x"),
             Type::File(FileType::Regular) => Ok(b""),
+            Type::File(FileType::GitSubmodule) => Err(anyhow!("Git submodules not supported")),
         }
     }
 }

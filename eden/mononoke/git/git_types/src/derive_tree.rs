@@ -22,7 +22,6 @@ use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
 use derived_data_service_if::types as thrift;
-use filestore::FetchKey;
 use futures::future::ready;
 use futures::stream::FuturesUnordered;
 use futures::stream::TryStreamExt;
@@ -186,20 +185,13 @@ pub async fn get_file_changes<B: Blobstore + Clone>(
     bcs.into_mut()
         .file_changes
         .into_iter()
-        .map(|(mpath, file_change)| {
-            cloned!(ctx, blobstore);
-            async move {
-                match file_change.simplify() {
-                    Some(fc) => {
-                        let t = fc.file_type();
-                        let k = FetchKey::Canonical(fc.content_id());
-
-                        let r = filestore::get_metadata(&blobstore, &ctx, &k).await?;
-                        let m = r.ok_or(MononokeGitError::ContentMissing(k))?;
-                        Ok((mpath, Some(BlobHandle::new(m, t))))
-                    }
-                    None => Ok((mpath, None)),
-                }
+        .map(|(mpath, file_change)| async move {
+            match file_change.simplify() {
+                Some(basic_file_change) => Ok((
+                    mpath,
+                    Some(BlobHandle::new(ctx, blobstore, basic_file_change).await?),
+                )),
+                None => Ok((mpath, None)),
             }
         })
         .collect::<FuturesUnordered<_>>()
@@ -220,6 +212,7 @@ mod test {
     use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
     use filestore::Alias;
+    use filestore::FetchKey;
     use fixtures::TestRepoFixture;
     use futures_util::stream::TryStreamExt;
     use git2::Oid;

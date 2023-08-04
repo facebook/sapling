@@ -497,7 +497,7 @@ impl EdenApiHandler for FetchSnapshotHandler {
                                     )),
                                     Some(bubble_id.into()),
                                 ),
-                                file_type: tc.file_type().into(),
+                                file_type: tc.file_type().try_into()?,
                             },
                             FileChange::UntrackedChange(uc) => BonsaiFileChange::UntrackedChange {
                                 upload_token: UploadToken::new_fake_token(
@@ -506,7 +506,7 @@ impl EdenApiHandler for FetchSnapshotHandler {
                                     )),
                                     Some(bubble_id.into()),
                                 ),
-                                file_type: uc.file_type().into(),
+                                file_type: uc.file_type().try_into()?,
                             },
                         },
                     ))

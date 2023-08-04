@@ -419,6 +419,7 @@ where
                     FileType::Regular => b" file ",
                     FileType::Executable => b" exec ",
                     FileType::Symlink => b" link ",
+                    FileType::GitSubmodule => b" gitm ",
                 });
             }
             FsnodeEntry::Directory(dir) => {

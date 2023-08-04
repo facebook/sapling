@@ -397,6 +397,9 @@ impl RevlogEntry {
                             FileType::Regular => EntryContent::File(f),
                             FileType::Executable => EntryContent::File(f),
                             FileType::Symlink => EntryContent::File(f),
+                            FileType::GitSubmodule => {
+                                bail!("GitSubmodule not supported");
+                            }
                         };
                         Ok(content)
                     }

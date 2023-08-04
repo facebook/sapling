@@ -24,6 +24,7 @@ use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::MPath;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::FileType;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::Logger;
@@ -95,6 +96,20 @@ pub async fn subcommand_content_fetch<'a>(
             .await?;
             let content = String::from_utf8(bytes.to_vec()).expect("non-utf8 file content");
             println!("{}", content);
+        }
+        Entry::Leaf((FileType::GitSubmodule, id)) => {
+            let envelope = id
+                .load(&ctx, repo.repo_blobstore())
+                .await
+                .map_err(Error::from)?;
+            let bytes = filestore::fetch_concat(
+                &repo.repo_blobstore().clone(),
+                &ctx,
+                envelope.content_id(),
+            )
+            .await?;
+            let git_commit = GitSha1::from_bytes(bytes).expect("Invalid Git hash");
+            println!("Git submodule commit {}", git_commit);
         }
         Entry::Tree(id) => {
             let manifest = id

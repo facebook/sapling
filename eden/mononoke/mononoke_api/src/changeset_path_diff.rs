@@ -456,6 +456,11 @@ impl ChangesetPathDiffContext {
                         FileType::Regular => xdiff::FileType::Regular,
                         FileType::Executable => xdiff::FileType::Executable,
                         FileType::Symlink => xdiff::FileType::Symlink,
+                        FileType::GitSubmodule => {
+                            return Err(MononokeError::from(Error::msg(
+                                "Git submodules not supported",
+                            )));
+                        }
                     };
                     let contents = match mode {
                         UnifiedDiffMode::Inline => {

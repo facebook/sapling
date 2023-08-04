@@ -6,10 +6,14 @@
  */
 
 use anyhow::Error;
+use blobstore::Blobstore;
+use context::CoreContext;
+use filestore::FetchKey;
 use mononoke_types::hash::RichGitSha1;
-use mononoke_types::ContentMetadataV2;
+use mononoke_types::BasicFileChange;
 use mononoke_types::FileType;
 
+use crate::errors::MononokeGitError;
 use crate::mode;
 use crate::thrift;
 use crate::ObjectKind;
@@ -21,11 +25,26 @@ pub struct BlobHandle {
 }
 
 impl BlobHandle {
-    pub fn new(metadata: ContentMetadataV2, file_type: FileType) -> Self {
-        Self {
-            oid: metadata.git_sha1,
-            file_type,
-        }
+    pub async fn new<B: Blobstore + Clone>(
+        ctx: &CoreContext,
+        blobstore: &B,
+        file_change: &BasicFileChange,
+    ) -> Result<Self, Error> {
+        let file_type = file_change.file_type();
+
+        let oid = if file_type == FileType::GitSubmodule {
+            let bytes =
+                filestore::fetch_concat_exact(blobstore, ctx, file_change.content_id(), 20).await?;
+            RichGitSha1::from_bytes(&bytes, ObjectKind::Commit.as_str(), 0)?
+        } else {
+            let key = FetchKey::Canonical(file_change.content_id());
+            let metadata = filestore::get_metadata(blobstore, ctx, &key)
+                .await?
+                .ok_or(MononokeGitError::ContentMissing(key))?;
+            metadata.git_sha1
+        };
+
+        Ok(Self { oid, file_type })
     }
 
     pub fn filemode(&self) -> i32 {
@@ -33,6 +52,7 @@ impl BlobHandle {
             FileType::Regular => mode::GIT_FILEMODE_BLOB,
             FileType::Executable => mode::GIT_FILEMODE_BLOB_EXECUTABLE,
             FileType::Symlink => mode::GIT_FILEMODE_LINK,
+            FileType::GitSubmodule => mode::GIT_FILEMODE_COMMIT,
         }
     }
 

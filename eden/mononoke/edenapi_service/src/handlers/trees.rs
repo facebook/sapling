@@ -208,7 +208,7 @@ async fn fetch_child_file_metadata(
     Ok(TreeChildEntry::new_file_entry(
         child_key,
         FileMetadata {
-            file_type: Some(file_type.into()),
+            file_type: Some(file_type.try_into()?),
             size: Some(metadata.total_size),
             content_sha1: Some(metadata.sha1.into()),
             content_sha256: Some(metadata.sha256.into()),
