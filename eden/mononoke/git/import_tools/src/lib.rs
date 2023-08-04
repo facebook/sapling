@@ -12,7 +12,6 @@ mod gitimport_objects;
 mod gitlfs;
 
 use std::collections::BTreeMap;
-use std::collections::HashSet;
 use std::path::Path;
 use std::process::Stdio;
 use std::sync::RwLock;
@@ -31,7 +30,6 @@ use futures::TryStreamExt;
 use gix_hash::ObjectId;
 use gix_object::Object;
 use linked_hash_map::LinkedHashMap;
-use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
@@ -263,39 +261,30 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
             async move {
                 task::spawn({
                     async move {
-                        let ExtractedCommit {
-                            metadata,
-                            tree,
-                            parent_trees,
-                            original_commit,
-                        } = ExtractedCommit::new(&ctx, oid, &reader)
+                        let extracted_commit = ExtractedCommit::new(&ctx, oid, &reader)
                             .await
                             .with_context(|| format!("While extracting {}", oid))?;
 
-                        let file_changes = find_file_changes(
-                            &ctx,
-                            &lfs,
-                            &reader,
-                            uploader,
-                            bonsai_diff(ctx.clone(), reader.clone(), tree, parent_trees),
-                        )
-                        .await?;
+                        let diff = extracted_commit.diff(&ctx, &reader, false);
+                        let file_changes =
+                            find_file_changes(&ctx, &lfs, &reader, uploader, diff).await?;
 
-                        Result::<_, Error>::Ok((metadata, file_changes, original_commit, tree))
+                        Result::<_, Error>::Ok((extracted_commit, file_changes))
                     }
                 })
                 .await?
             }
         })
         .try_buffered(prefs.concurrency)
-        .and_then(|(metadata, file_changes, original_commit, tree)| {
+        .and_then(|(extracted_commit, file_changes)| {
             let acc = &acc;
             let uploader = &uploader;
             let repo_name = &repo_name;
             let reader = &reader;
             async move {
-                let oid = metadata.oid;
-                let bonsai_parents = metadata
+                let oid = extracted_commit.metadata.oid;
+                let bonsai_parents = extracted_commit
+                    .metadata
                     .parents
                     .iter()
                     .map(|p| {
@@ -315,31 +304,36 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
 
                 // Before generating the corresponding changeset at Mononoke end, upload the raw git commit
                 // and the git tree pointed to by the git commit.
-                let tree_for_commit =
-                    read_raw_object(reader, &tree.0).await.with_context(|| {
-                        format_err!("Failed to fetch git tree {} for commit {}", tree.0, oid)
+                let tree_for_commit = read_raw_object(reader, &extracted_commit.tree_oid)
+                    .await
+                    .with_context(|| {
+                        format_err!(
+                            "Failed to fetch git tree {} for commit {}",
+                            extracted_commit.tree_oid,
+                            oid
+                        )
                     })?;
                 // Upload Git Tree
                 uploader
-                    .upload_object(ctx, tree.0, tree_for_commit)
+                    .upload_object(ctx, extracted_commit.tree_oid, tree_for_commit)
                     .await
                     .with_context(|| {
                         format_err!(
                             "Failed to upload raw git tree {} for commit {}",
-                            tree.0,
+                            extracted_commit.tree_oid,
                             oid
                         )
                     })?;
                 // Upload Git commit
                 uploader
-                    .upload_object(ctx, oid, original_commit)
+                    .upload_object(ctx, oid, extracted_commit.original_commit)
                     .await
                     .with_context(|| format_err!("Failed to upload raw git commit {}", oid))?;
                 let (int_cs, bcs_id) = uploader
                     .generate_changeset_for_commit(
                         ctx,
                         bonsai_parents,
-                        metadata,
+                        extracted_commit.metadata,
                         file_changes,
                         dry_run,
                     )
@@ -474,32 +468,27 @@ pub async fn import_tree_as_single_bonsai_changeset(
 
     let sha1 = oid_to_sha1(&git_cs_id)?;
 
-    let ExtractedCommit {
-        tree,
-        metadata,
-        original_commit,
-        ..
-    } = ExtractedCommit::new(ctx, git_cs_id, &reader)
+    let extracted_commit = ExtractedCommit::new(ctx, git_cs_id, &reader)
         .await
         .with_context(|| format!("While extracting {}", git_cs_id))?;
 
-    let file_changes = find_file_changes(
-        ctx,
-        &prefs.lfs,
-        &reader.clone(),
-        uploader.clone(),
-        bonsai_diff(ctx.clone(), reader, tree, HashSet::new()),
-    )
-    .await?;
+    let diff = extracted_commit.diff_root(ctx, &reader, false);
+    let file_changes = find_file_changes(ctx, &prefs.lfs, &reader, uploader.clone(), diff).await?;
 
     // Before generating the corresponding changeset at Mononoke end, upload the raw git commit.
     uploader
-        .upload_object(ctx, git_cs_id, original_commit)
+        .upload_object(ctx, git_cs_id, extracted_commit.original_commit)
         .await
         .with_context(|| format_err!("Failed to upload raw git commit {}", git_cs_id))?;
 
     uploader
-        .generate_changeset_for_commit(ctx, vec![], metadata, file_changes, prefs.dry_run)
+        .generate_changeset_for_commit(
+            ctx,
+            vec![],
+            extracted_commit.metadata,
+            file_changes,
+            prefs.dry_run,
+        )
         .and_then(|(cs, id)| {
             uploader
                 .finalize_batch(ctx, prefs.dry_run, vec![(cs, sha1)])
