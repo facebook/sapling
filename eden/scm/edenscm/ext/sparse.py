@@ -258,12 +258,12 @@ def _checksparse(repo) -> None:
             )
         )
 
-    if not util.safehasattr(repo, "sparsematch"):
+    if not hasattr(repo, "sparsematch"):
         raise error.Abort(_("this is not a sparse repository"))
 
 
 def _hassparse(repo):
-    return "eden" not in repo.requirements and util.safehasattr(repo, "sparsematch")
+    return "eden" not in repo.requirements and hasattr(repo, "sparsematch")
 
 
 def _setupupdates(_ui) -> None:
@@ -279,7 +279,7 @@ def _setupupdates(_ui) -> None:
         # If the working context is in memory (virtual), there's no need to
         # apply the user's sparse rules at all (and in fact doing so would
         # cause unexpected behavior in the real working copy).
-        if not util.safehasattr(repo, "sparsematch") or wctx.isinmemory():
+        if not hasattr(repo, "sparsematch") or wctx.isinmemory():
             return actions, diverge, renamedelete
 
         files = set()
@@ -357,7 +357,7 @@ def _setupupdates(_ui) -> None:
                 fullprefetchonsparseprofilechange = ui.configbool(
                     "sparse", "force_full_prefetch_on_sparse_profile_change"
                 )
-                fullprefetchonsparseprofilechange |= not util.safehasattr(mf, "walk")
+                fullprefetchonsparseprofilechange |= not hasattr(mf, "walk")
 
                 with ui.configoverride(
                     {("treemanifest", "ondemandfetch"): True}, "sparseprofilechange"
@@ -367,7 +367,7 @@ def _setupupdates(_ui) -> None:
                         # use, we should prefetch. Since our tree might be incomplete
                         # (and its root could be unknown to the server if this is a
                         # local commit), we use BFS prefetching to "complete" our tree.
-                        if util.safehasattr(repo, "forcebfsprefetch"):
+                        if hasattr(repo, "forcebfsprefetch"):
                             repo.forcebfsprefetch([mctx.manifestnode()])
 
                         iter = mf
@@ -398,7 +398,7 @@ def _setupupdates(_ui) -> None:
 
         # If we're updating to a location, clean up any stale temporary includes
         # (ex: this happens during hg rebase --abort).
-        if not branchmerge and util.safehasattr(repo, "sparsematch"):
+        if not branchmerge and hasattr(repo, "sparsematch"):
             repo.prunetemporaryincludes()
 
         return results
@@ -411,7 +411,7 @@ def _setupupdates(_ui) -> None:
         if repo.ui.configbool("perftweaks", "disablecasecheck"):
             return orig(repo, wmf, actions)
 
-        if util.safehasattr(repo, "sparsematch"):
+        if hasattr(repo, "sparsematch"):
             # Only check for collisions on files and directories in the
             # sparse profile
             wmf = wmf.matches(repo.sparsematch())
@@ -428,7 +428,7 @@ def _setupcommit(ui) -> None:
         # Use unfiltered to avoid computing hidden commits
         repo = self._repo
 
-        if util.safehasattr(repo, "sparsematch"):
+        if hasattr(repo, "sparsematch"):
             ctx = repo[node]
             profiles = getsparsepatterns(repo, ctx.rev()).allprofiles()
             if profiles & set(ctx.files()):
@@ -493,7 +493,7 @@ def _tracksparseprofiles(lui: "uimod.ui", repo: "localrepo.localrepository") -> 
     # Reading the sparse profile from the repo can potentially trigger
     # tree or file fetchings that are quite expensive. Do not read
     # them. Only read the sparse file on the filesystem.
-    if util.safehasattr(repo, "getactiveprofiles"):
+    if hasattr(repo, "getactiveprofiles"):
         profile = repo.localvfs.tryread("sparse")
         lui.log("sparse_profiles", "", active_profiles=pycompat.decodeutf8(profile))
 
@@ -616,9 +616,9 @@ def _setupdirstate(ui) -> None:
             self.sparsematch = None
 
         def __get__(self, obj, type=None):
-            repo = obj.repo if util.safehasattr(obj, "repo") else None
+            repo = obj.repo if hasattr(obj, "repo") else None
             origignore = self.orig.__get__(obj)
-            if repo is None or not util.safehasattr(repo, "sparsematch"):
+            if repo is None or not hasattr(repo, "sparsematch"):
                 return origignore
 
             sparsematch = repo.sparsematch()
@@ -644,9 +644,7 @@ def _setupdirstate(ui) -> None:
             # skips O(working copy) scans, and affect absorb perf.
             return orig(self, parent, allfiles, changedfiles, exact=exact)
 
-        if util.safehasattr(self, "repo") and util.safehasattr(
-            self.repo, "sparsematch"
-        ):
+        if hasattr(self, "repo") and hasattr(self.repo, "sparsematch"):
             with progress.spinner(ui, "applying sparse profile"):
                 matcher = self.repo.sparsematch()
                 allfiles = allfiles.matches(matcher)
@@ -673,9 +671,9 @@ def _setupdirstate(ui) -> None:
     for func in editfuncs:
 
         def _wrapper(orig, self, *args):
-            if util.safehasattr(self, "repo"):
+            if hasattr(self, "repo"):
                 repo = self.repo
-                if util.safehasattr(repo, "sparsematch"):
+                if hasattr(repo, "sparsematch"):
                     dirstate = repo.dirstate
                     sparsematch = repo.sparsematch()
                     for f in args:
@@ -699,9 +697,9 @@ def _setupdirstate(ui) -> None:
         unknown: bool,
     ) -> "scmutil.status":
         st = orig(self, match, ignored, clean, unknown)
-        if util.safehasattr(self, "repo"):
+        if hasattr(self, "repo"):
             repo = self.repo
-            if util.safehasattr(repo, "sparsematch"):
+            if hasattr(repo, "sparsematch"):
                 sparsematch = repo.sparsematch()
                 st = scmutil.status(
                     *([f for f in files if sparsematch(f)] for files in st)
@@ -723,7 +721,7 @@ def _setupdiff(ui) -> None:
             return orig(self)
         except IOError:
             # Then try working copy parent if the file is outside sparse.
-            if util.safehasattr(self._repo, "sparsematch"):
+            if hasattr(self._repo, "sparsematch"):
                 sparsematch = self._repo.sparsematch()
                 if not sparsematch(self._path):
                     basectx = self._changectx._parents[0]
@@ -738,7 +736,7 @@ def _setupdiff(ui) -> None:
             return orig(self)
         except IOError:
             # Then try working copy parent if the file is outside sparse.
-            if util.safehasattr(self._repo, "sparsematch"):
+            if hasattr(self._repo, "sparsematch"):
                 sparsematch = self._repo.sparsematch()
                 if not sparsematch(self._path):
                     basectx = self._changectx._parents[0]
@@ -3170,7 +3168,7 @@ class negatematcher(matchmod.basematcher):
 
 
 def _hashmatcher(matcher):
-    if util.safehasattr(matcher, "hash"):
+    if hasattr(matcher, "hash"):
         return matcher.hash()
 
     sha1 = hashlib.sha1()

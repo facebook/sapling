@@ -250,7 +250,7 @@ class physicalfilesystem(object):
         repo = self.dirstate._repo
         p1 = self.dirstate.p1()
 
-        if util.safehasattr(repo, "fileservice"):
+        if hasattr(repo, "fileservice"):
             p1mf = repo[p1].manifest()
             lookupmatcher = matchmod.exact(repo.root, repo.root, lookups)
             # We fetch history because we know _compareondisk() uses

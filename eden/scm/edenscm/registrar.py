@@ -68,7 +68,7 @@ class _funcregistrarbase(object):
             msg = 'duplicate registration for name: "%s"' % name
             raise error.ProgrammingError(msg)
 
-        if func.__doc__ and not util.safehasattr(func, "_origdoc"):
+        if func.__doc__ and not hasattr(func, "_origdoc"):
             doc = func.__doc__.strip()
             func._origdoc = doc
             func.__doc__ = self._formatdoc(decl, doc)

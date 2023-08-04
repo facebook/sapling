@@ -23,7 +23,7 @@ class future(object):
     """placeholder for a value to be set later"""
 
     def set(self, value):
-        if util.safehasattr(self, "value"):
+        if hasattr(self, "value"):
             raise error.RepoError("future is already set")
         self.value = value
 

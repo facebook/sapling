@@ -250,7 +250,7 @@ class localpeer(repository.peer):
             try:
                 cg = exchange.readbundle(self.ui, cg, None)
                 ret = exchange.unbundle(self._repo, cg, heads, "push", url)
-                if util.safehasattr(ret, "getchunks"):
+                if hasattr(ret, "getchunks"):
                     # This is a bundle20 object, turn it into an unbundler.
                     # This little dance should be dropped eventually when the
                     # API is finally improved.
@@ -554,7 +554,7 @@ class localrepository(object):
         if self.ui.configbool("devel", "all-warnings") or self.ui.configbool(
             "devel", "check-locks"
         ):
-            if util.safehasattr(self.svfs, "vfs"):  # this is filtervfs
+            if hasattr(self.svfs, "vfs"):  # this is filtervfs
                 self.svfs.vfs.audit = self._getsvfsward(self.svfs.vfs.audit)
             else:  # standard vfs
                 self.svfs.audit = self._getsvfsward(self.svfs.audit)
@@ -751,8 +751,8 @@ class localrepository(object):
             repo = rref()
             if (
                 repo is None
-                or not util.safehasattr(repo, "_wlockref")
-                or not util.safehasattr(repo, "_lockref")
+                or not hasattr(repo, "_wlockref")
+                or not hasattr(repo, "_lockref")
             ):
                 return
             if mode in (None, "r", "rb"):
@@ -794,7 +794,7 @@ class localrepository(object):
         def checksvfs(path, mode=None):
             ret = origfunc(path, mode=mode)
             repo = rref()
-            if repo is None or not util.safehasattr(repo, "_lockref"):
+            if repo is None or not hasattr(repo, "_lockref"):
                 return
             if mode in (None, "r", "rb"):
                 return
@@ -822,7 +822,7 @@ class localrepository(object):
         return supported
 
     def close(self):
-        if util.safehasattr(self, "connectionpool"):
+        if hasattr(self, "connectionpool"):
             self.connectionpool.close()
 
         self.commitpending()
@@ -2559,10 +2559,10 @@ class localrepository(object):
             metamatched
             and node is not None
             # some filectxs do not support rawdata or flags
-            and util.safehasattr(fctx, "rawdata")
-            and util.safehasattr(fctx, "rawflags")
+            and hasattr(fctx, "rawdata")
+            and hasattr(fctx, "rawflags")
             # some (external) filelogs do not have addrawrevision
-            and util.safehasattr(flog, "addrawrevision")
+            and hasattr(flog, "addrawrevision")
             # parents must match to be able to reuse rawdata
             and fctx.filelog().parents(node) == (fparent1, fparent2)
         ):
@@ -2830,7 +2830,7 @@ class localrepository(object):
                 if not isgit:
                     # Prefetch rename data, since _filecommit will look for it.
                     # (git does not need this step)
-                    if util.safehasattr(self.fileslog, "metadatastore"):
+                    if hasattr(self.fileslog, "metadatastore"):
                         keys = []
                         for f in added:
                             fctx = ctx[f]

@@ -61,7 +61,7 @@ class bundlerevlog(revlog.revlog):
         opener = vfsmod.readonlyvfs(opener)
         # bundlechangelog might have called revlog.revlog.__init__ already.
         # avoid re-init the revlog.
-        if not util.safehasattr(self, "opener"):
+        if not hasattr(self, "opener"):
             index2 = indexfile.startswith("00changelog")
             revlog.revlog.__init__(self, opener, indexfile, index2=index2)
         self.bundlenode2rawtext = {}
@@ -309,7 +309,7 @@ class bundlepeer(localrepo.localpeer):
 class bundlephasecache(phases.phasecache):
     def __init__(self, *args, **kwargs):
         super(bundlephasecache, self).__init__(*args, **kwargs)
-        if util.safehasattr(self, "opener"):
+        if hasattr(self, "opener"):
             self.opener = vfsmod.readonlyvfs(self.opener)
 
     def write(self):

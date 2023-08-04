@@ -223,7 +223,7 @@ def _expull(orig, repo, remote, heads=None, force=False, **kwargs):
 def pullremotenames(repo, remote, bookmarks):
     # when working between multiple local repos which do not all have
     # remotenames enabled, do this work only for those with it enabled
-    if not util.safehasattr(repo, "_remotenames"):
+    if not hasattr(repo, "_remotenames"):
         return
 
     path = activepath(repo.ui, remote)
@@ -255,7 +255,7 @@ def pullremotenames(repo, remote, bookmarks):
 def blockerhook(orig, repo, *args, **kwargs):
     blockers = orig(repo)
 
-    unblock = util.safehasattr(repo, "_unblockhiddenremotenames")
+    unblock = hasattr(repo, "_unblockhiddenremotenames")
     if not unblock:
         return blockers
 
@@ -463,7 +463,7 @@ def extsetup(ui):
     extensions.wrapfunction(exchange, "pull", expull)
     extensions.wrapfunction(bookmarks, "updatefromremote", exupdatefromremote)
     extensions.wrapfunction(bookmarks, "reachablerevs", exreachablerevs)
-    if util.safehasattr(bookmarks, "activate"):
+    if hasattr(bookmarks, "activate"):
         extensions.wrapfunction(bookmarks, "activate", exactivate)
     else:
         extensions.wrapfunction(bookmarks, "setcurrent", exactivate)
@@ -471,7 +471,7 @@ def extsetup(ui):
     extensions.wrapfunction(hg, "updaterepo", exupdate)
     extensions.wrapfunction(localrepo.localrepository, "commit", excommit)
 
-    if util.safehasattr(discovery, "_nowarnheads"):
+    if hasattr(discovery, "_nowarnheads"):
         extensions.wrapfunction(discovery, "_nowarnheads", exnowarnheads)
 
     if _tracking(ui):
@@ -1484,7 +1484,7 @@ def precachedistance(repo):
     """
     # when working between multiple local repos which do not all have
     # remotenames enabled, do this work only for those with it enabled
-    if not util.safehasattr(repo, "_remotenames"):
+    if not hasattr(repo, "_remotenames"):
         return
 
     # to avoid stale namespaces, let's reload

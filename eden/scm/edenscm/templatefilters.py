@@ -398,7 +398,7 @@ def stringify(thing):
     thing = templatekw.unwraphybrid(thing)
     if isinstance(thing, bytes):
         return pycompat.decodeutf8(thing)
-    if util.safehasattr(thing, "__iter__") and not isinstance(thing, str):
+    if hasattr(thing, "__iter__") and not isinstance(thing, str):
         return "".join([stringify(t) for t in thing if t is not None])
     if thing is None:
         return ""
@@ -414,7 +414,7 @@ def byteify(thing):
         return thing
     if isinstance(thing, str):
         return pycompat.encodeutf8(thing)
-    if util.safehasattr(thing, "__iter__"):
+    if hasattr(thing, "__iter__"):
         return b"".join([byteify(t) for t in thing if t is not None])
     if thing is None:
         return b""

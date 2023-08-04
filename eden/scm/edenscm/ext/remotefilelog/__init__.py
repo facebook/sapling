@@ -207,7 +207,7 @@ configitem("edenapi", "url", default=None)
 testedwith = "ships-with-fb-ext"
 
 repoclass = localrepo.localrepository
-if util.safehasattr(repoclass, "_basesupported"):
+if hasattr(repoclass, "_basesupported"):
     repoclass._basesupported.add(shallowrepo.requirement)
 else:
     # hg <= 2.7
@@ -268,9 +268,9 @@ def wrappackers():
     changegroup.cg1packer = shallowbundle.shallowcg1packer
 
     packermap = None
-    if util.safehasattr(changegroup, "packermap"):
+    if hasattr(changegroup, "packermap"):
         packermap = changegroup.packermap
-    elif util.safehasattr(changegroup, "_packermap"):
+    elif hasattr(changegroup, "_packermap"):
         packermap = changegroup._packermap
 
     if packermap:
@@ -349,12 +349,12 @@ def onetimeclientsetup(ui):
         return
     clientonetime = True
 
-    if util.safehasattr(changegroup, "_addchangegroupfiles"):
+    if hasattr(changegroup, "_addchangegroupfiles"):
         fn = "_addchangegroupfiles"  # hg >= 3.6
     else:
         fn = "addchangegroupfiles"  # hg <= 3.5
     wrapfunction(changegroup, fn, shallowbundle.addchangegroupfiles)
-    if util.safehasattr(changegroup, "getchangegroup"):
+    if hasattr(changegroup, "getchangegroup"):
         wrapfunction(changegroup, "getchangegroup", shallowbundle.getchangegroup)
     else:
         wrapfunction(changegroup, "makechangegroup", shallowbundle.makechangegroup)
@@ -657,7 +657,7 @@ def onetimeclientsetup(ui):
 
     wrapfunction(patch, "trydiff", trydiff)
 
-    if util.safehasattr(cmdutil, "_revertprefetch"):
+    if hasattr(cmdutil, "_revertprefetch"):
         wrapfunction(cmdutil, "_revertprefetch", _revertprefetch)
     else:
         wrapfunction(cmdutil, "revert", revert)
@@ -896,9 +896,9 @@ def exchangepull(orig, repo, remote, *args, **kwargs):
         bundlecaps.add("remotefilelog")
         return orig(source, heads=heads, common=common, bundlecaps=bundlecaps, **kwargs)
 
-    if util.safehasattr(remote, "_callstream"):
+    if hasattr(remote, "_callstream"):
         remote._localrepo = repo
-    elif util.safehasattr(remote, "getbundle"):
+    elif hasattr(remote, "getbundle"):
         wrapfunction(remote, "getbundle", localgetbundle)
 
     return orig(repo, remote, *args, **kwargs)

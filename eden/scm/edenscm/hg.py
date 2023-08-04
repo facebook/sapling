@@ -82,7 +82,7 @@ def addbranchrevs(lrepo, other, branches, revs):
     hashbranch, branches = branches
     if not hashbranch and not branches:
         x = revs or None
-        if util.safehasattr(revs, "first"):
+        if hasattr(revs, "first"):
             y = revs.first()
         elif revs:
             y = revs[0]
@@ -151,7 +151,7 @@ def _peerlookup(path):
     except TypeError:
         # we can't test callable(thing) because 'thing' can be an unloaded
         # module that implements __call__
-        if not util.safehasattr(thing, "instance"):
+        if not hasattr(thing, "instance"):
             raise
         return thing
 
@@ -1031,7 +1031,7 @@ def merge(
 def remoteui(src, opts):
     "build a remote ui from ui or repo and opts"
 
-    if util.safehasattr(src, "ui"):  # looks like a repository
+    if hasattr(src, "ui"):  # looks like a repository
         # drop repo-specific config
         dst = src.ui.copywithoutrepo()
         # to copy target options from repo

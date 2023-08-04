@@ -176,7 +176,7 @@ def _gen_sendfile(orgsend):
     return _sendfile
 
 
-has_https = util.safehasattr(urlreq, "httpshandler")
+has_https = hasattr(urlreq, "httpshandler")
 
 
 class httpconnection(keepalive.HTTPConnection):

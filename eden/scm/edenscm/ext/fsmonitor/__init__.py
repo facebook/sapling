@@ -440,7 +440,7 @@ def _innerwalk(self, match, event, span):
     matchfn = match.matchfn
     matchalways = match.always()
     dmap = self.dirstate._map
-    if util.safehasattr(dmap, "_map"):
+    if hasattr(dmap, "_map"):
         # for better performance, directly access the inner dirstate map if the
         # standard dirstate implementation is in use.
         dmap = dmap._map
@@ -1186,7 +1186,7 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
 def wrapdirstate(orig, self):
     ds = orig(self)
     # only override the dirstate when Watchman is available for the repo
-    if util.safehasattr(self, "_fsmonitorstate"):
+    if hasattr(self, "_fsmonitorstate"):
         makedirstate(self, ds)
     return ds
 

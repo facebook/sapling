@@ -39,7 +39,7 @@ class unionmetadatastore(object):
 
     def markforrefresh(self):
         for store in self.stores:
-            if util.safehasattr(store, "markforrefresh"):
+            if hasattr(store, "markforrefresh"):
                 store.markforrefresh()
 
     def addstore(self, store):
@@ -50,5 +50,5 @@ class unionmetadatastore(object):
 
     def flush(self):
         for store in self.stores:
-            if util.safehasattr(store, "flush"):
+            if hasattr(store, "flush"):
                 store.flush()

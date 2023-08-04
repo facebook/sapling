@@ -275,7 +275,7 @@ def usehttpfetching(repo):
 
 def hgupdate(orig, repo, node, quietempty=False, updatecheck=None):
     oldfallbackpath = getattr(repo, "fallbackpath", None)
-    if util.safehasattr(repo, "stickypushpath"):
+    if hasattr(repo, "stickypushpath"):
         repo.fallbackpath = repo.stickypushpath
 
     try:
@@ -706,7 +706,7 @@ def setuptreestores(repo, mfl):
         mfl.makeruststore()
         return
 
-    if not util.safehasattr(repo, "name"):
+    if not hasattr(repo, "name"):
         repo.name = ui.config("remotefilelog", "reponame", "unknown")
     packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
     _prunesharedpacks(repo, packpath)
@@ -1076,7 +1076,7 @@ class hybridmanifestlog(manifest.manifestlog):
         self.datastore = self.treemanifestlog.datastore
         self.historystore = self.treemanifestlog.historystore
 
-        if util.safehasattr(self.treemanifestlog, "shareddatastores"):
+        if hasattr(self.treemanifestlog, "shareddatastores"):
             self.shareddatastores = self.treemanifestlog.shareddatastores
             self.localdatastores = self.treemanifestlog.localdatastores
             self.sharedhistorystores = self.treemanifestlog.sharedhistorystores
@@ -1117,7 +1117,7 @@ def _getparenttree(manifestlog, node=None):
     if node is None or node == nullid:
         return None
     tree = manifestlog[node].read()
-    if util.safehasattr(tree, "_treemanifest"):
+    if hasattr(tree, "_treemanifest"):
         # Detect hybrid manifests and unwrap them
         tree = tree._treemanifest()
     return tree
@@ -1246,7 +1246,7 @@ def serverreposetup(repo):
         caps = _addservercaps(repo, caps)
         return caps
 
-    if util.safehasattr(wireproto, "_capabilities"):
+    if hasattr(wireproto, "_capabilities"):
         extensions.wrapfunction(wireproto, "_capabilities", _capabilities)
     else:
         extensions.wrapfunction(wireproto, "capabilities", _capabilities)
@@ -1369,7 +1369,7 @@ def _writemanifestwrapper(orig, self, tr, link, p1, p2, added, removed):
 
     mfl = self._manifestlog
     if (
-        util.safehasattr(mfl._revlog.opener, "treemanifestserver")
+        hasattr(mfl._revlog.opener, "treemanifestserver")
         and mfl._revlog.opener.treemanifestserver
     ):
         # Since we're adding the root flat manifest, let's add the corresponding
@@ -1426,7 +1426,7 @@ def backfillmanifestrevlog(ui, repo, *args, **opts):
         remote = conn.peer
 
         # _localrepo is needed for remotefilelog to work
-        if util.safehasattr(remote, "_callstream"):
+        if hasattr(remote, "_callstream"):
             remote._localrepo = repo
 
         cl = repo.changelog
@@ -1671,7 +1671,7 @@ def _unpackmanifestscg1(orig, self, repo, revmap, trp, numchanges):
             linkrev = mfrevlog.linkrev(mfrevlog.rev(mfnode))
             _converttotree(trp, mfl, tmfl, mfl[mfnode], linkrev=linkrev, torevlog=True)
 
-    if util.safehasattr(repo.manifestlog, "datastore") and repo.ui.configbool(
+    if hasattr(repo.manifestlog, "datastore") and repo.ui.configbool(
         "treemanifest", "autocreatetrees"
     ):
 
@@ -2207,7 +2207,7 @@ def createtreepackpart(repo, outgoing, partname, sendtrees=shallowbundle.AllTree
 
 
 def getfallbackpath(repo):
-    if util.safehasattr(repo, "fallbackpath"):
+    if hasattr(repo, "fallbackpath"):
         return repo.fallbackpath
     else:
         path = repo.ui.config("paths", "default")

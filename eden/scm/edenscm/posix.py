@@ -638,7 +638,7 @@ def _safehasattr(thing, attr):
     # deferred import to avoid circular import
     from . import util
 
-    return util.safehasattr(thing, attr)
+    return hasattr(thing, attr)
 
 
 def syncfile(fp):

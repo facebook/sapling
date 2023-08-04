@@ -75,7 +75,7 @@ class shallowcg1packer(changegroup.cg1packer):
         if "treeonly" in self._bundlecaps or "True" in self._b2caps.get("treeonly", []):
             return False
 
-        if not util.safehasattr(repo.manifestlog, "_revlog"):
+        if not hasattr(repo.manifestlog, "_revlog"):
             return False
 
         if treeonly(repo):
@@ -344,7 +344,7 @@ class shallowcg1packer(changegroup.cg1packer):
         yield delta
 
 
-if util.safehasattr(changegroup, "cg2packer"):
+if hasattr(changegroup, "cg2packer"):
     # Mercurial >= 3.3
     @shallowutil.interposeclass(changegroup, "cg2packer")
     class shallowcg2packer(changegroup.cg2packer, shallowcg1packer):
@@ -360,7 +360,7 @@ if util.safehasattr(changegroup, "cg2packer"):
             )
 
 
-if util.safehasattr(changegroup, "cg3packer"):
+if hasattr(changegroup, "cg3packer"):
 
     @shallowutil.interposeclass(changegroup, "cg3packer")
     class shallowcg3packer(changegroup.cg3packer, shallowcg1packer):

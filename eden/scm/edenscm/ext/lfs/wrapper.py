@@ -228,7 +228,7 @@ def vfsinit(orig, self, othervfs):
     # also copy lfs blobstores. note: this can run before reposetup, so lfs
     # blobstore attributes are not always ready at this time.
     for name in ["lfslocalblobstore", "lfsremoteblobstore"]:
-        if util.safehasattr(othervfs, name):
+        if hasattr(othervfs, name):
             setattr(self, name, getattr(othervfs, name))
 
 

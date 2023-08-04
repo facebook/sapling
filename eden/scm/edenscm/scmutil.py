@@ -304,9 +304,9 @@ def callcatch(ui, req, func):
         elif m in "zlib".split():
             ui.warn(_("(is your Python install correct?)\n"))
     except IOError as inst:
-        if util.safehasattr(inst, "code"):
+        if hasattr(inst, "code"):
             ui.warn(_("%s\n") % inst, error=_("abort"))
-        elif util.safehasattr(inst, "reason"):
+        elif hasattr(inst, "reason"):
             try:  # usually it is in the form (errno, strerror)
                 reason = inst.reason.args[1]
             except (AttributeError, IndexError):
@@ -316,9 +316,7 @@ def callcatch(ui, req, func):
                 # SSLError of Python 2.7.9 contains a unicode
                 reason = encoding.unitolocal(reason)
             ui.warn(_("error: %s\n") % reason, error=_("abort"))
-        elif (
-            util.safehasattr(inst, "args") and inst.args and inst.args[0] == errno.EPIPE
-        ):
+        elif hasattr(inst, "args") and inst.args and inst.args[0] == errno.EPIPE:
             pass
         elif getattr(inst, "strerror", None):
             filename = getattr(inst, "filename", None)
@@ -813,7 +811,7 @@ def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
         return {}
 
     # translate mapping's other forms
-    if not util.safehasattr(replacements, "items"):
+    if not hasattr(replacements, "items"):
         replacements = {n: () for n in replacements}
 
     # Calculate bookmark movements

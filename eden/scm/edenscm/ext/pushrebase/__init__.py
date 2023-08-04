@@ -285,7 +285,7 @@ def unbundle(orig, repo, cg, heads, source, url, replaydata=None, respondlightly
     # Preload the manifests that the client says we'll need. This happens
     # outside the lock, thus cutting down on our lock time and increasing commit
     # throughput.
-    if util.safehasattr(cg, "params"):
+    if hasattr(cg, "params"):
         preloadmfs = cg.params.get("preloadmanifests")
         if preloadmfs:
             for mfnode in preloadmfs.split(","):
@@ -344,7 +344,7 @@ def validaterevset(repo, revset, onto):
 
 def getrebaseparts(repo, peer, outgoing, onto):
     parts = []
-    if util.safehasattr(repo.manifestlog, "datastore"):
+    if hasattr(repo.manifestlog, "datastore"):
         try:
             treemod = extensions.find("treemanifest")
         except KeyError:

@@ -681,7 +681,7 @@ def unfilteredcmd(orig, *args, **opts):
     #   args = [ui, repo, ...] for commands.bookmark
     #   args = [orig, ui, repo, ...] for remotenames.exbookmarks
     for i in [1, 2]:
-        if len(args) > i and util.safehasattr(args[i], "unfiltered"):
+        if len(args) > i and hasattr(args[i], "unfiltered"):
             args = list(args)
             args = tuple(args)
     return orig(*args, **opts)

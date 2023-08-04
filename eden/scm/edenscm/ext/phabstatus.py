@@ -47,7 +47,7 @@ def memoize(f):
 
     def helper(*args):
         repo = args[0]
-        if not hgutil.safehasattr(repo, "_phabstatuscache"):
+        if not hasattr(repo, "_phabstatuscache"):
             repo._phabstatuscache = {}
         if args not in repo._phabstatuscache:
             u = f(*args)
@@ -117,13 +117,10 @@ def populateresponseforphab(repo, diffnum) -> None:
     """:populateresponse: Runs the memoization function
     for use of phabstatus and sync status
     """
-    if not hgutil.safehasattr(repo, "_phabstatusrevs"):
+    if not hasattr(repo, "_phabstatusrevs"):
         return
 
-    if (
-        hgutil.safehasattr(repo, "_phabstatuscache")
-        and (repo, diffnum) in repo._phabstatuscache
-    ):
+    if hasattr(repo, "_phabstatuscache") and (repo, diffnum) in repo._phabstatuscache:
         # We already have cached data for this diff
         return
 

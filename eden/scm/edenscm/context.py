@@ -3118,7 +3118,7 @@ class overlayfilectx(committablefilectx):
             # copy extra fields from originalfctx
             attrs = ["rawdata", "rawflags", "_filenode", "_filerev"]
             for attr_ in attrs:
-                if util.safehasattr(originalfctx, attr_):
+                if hasattr(originalfctx, attr_):
                     setattr(self, attr_, getattr(originalfctx, attr_))
 
     def data(self):

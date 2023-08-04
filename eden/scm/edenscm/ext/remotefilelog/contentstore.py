@@ -144,7 +144,7 @@ class unioncontentstore(object):
 
     def markforrefresh(self):
         for store in self.stores:
-            if util.safehasattr(store, "markforrefresh"):
+            if hasattr(store, "markforrefresh"):
                 store.markforrefresh()
 
     def addstore(self, store):
@@ -155,13 +155,13 @@ class unioncontentstore(object):
 
     def prefetch(self, keys):
         for store in self.stores:
-            if util.safehasattr(store, "prefetch"):
+            if hasattr(store, "prefetch"):
                 store.prefetch(keys)
                 break
 
     def flush(self):
         for store in self.stores:
-            if util.safehasattr(store, "flush"):
+            if hasattr(store, "flush"):
                 store.flush()
 
 

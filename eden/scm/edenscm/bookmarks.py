@@ -1138,7 +1138,7 @@ def saveremotenames(repo, remotebookmarks, override: bool = True) -> None:
         _recordbookmarksupdate(repo, journal)
 
         # Old paths have been deleted, refresh remotenames
-        if util.safehasattr(repo, "_remotenames"):
+        if hasattr(repo, "_remotenames"):
             # This will bump _changecount.
             repo._remotenames.clearnames()
 
@@ -1414,7 +1414,7 @@ def _recordbookmarksupdate(repo, changes) -> None:
     """writes remotebookmarks changes to the journal
 
     'changes' - is a list of tuples '(remotebookmark, oldnode, newnode)''"""
-    if util.safehasattr(repo, "journal"):
+    if hasattr(repo, "journal"):
         repo.journal.recordmany(journalremotebookmarktype, changes)
 
 

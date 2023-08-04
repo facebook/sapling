@@ -107,9 +107,7 @@ class realconnectionpool(object):
                 conn = pathpool.pop()
                 peer = conn.peer
                 # If the connection has died, drop it
-                if isinstance(peer, sshpeer.sshpeer) and util.safehasattr(
-                    peer, "_subprocess"
-                ):
+                if isinstance(peer, sshpeer.sshpeer) and hasattr(peer, "_subprocess"):
                     proc = peer._subprocess
                     if proc.poll() is not None:
                         conn = None
@@ -193,7 +191,7 @@ class standaloneconnection(object):
         self.close()
 
     def close(self):
-        if util.safehasattr(self.peer, "_cleanup"):
+        if hasattr(self.peer, "_cleanup"):
             self.peer._cleanup()
 
 
@@ -227,5 +225,5 @@ class realconnection(object):
         return self.expiry is not None and time.time() > self.expiry
 
     def close(self):
-        if util.safehasattr(self.peer, "_cleanup"):
+        if hasattr(self.peer, "_cleanup"):
             self.peer._cleanup()

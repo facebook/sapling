@@ -96,7 +96,7 @@ class request(object):
     def _runexithandlers(self):
         # Silence potential EPIPE or SIGPIPE errors when writing to stdout or
         # stderr.
-        if util.safehasattr(signal, "SIGPIPE"):
+        if hasattr(signal, "SIGPIPE"):
             try:
                 util.signal(signal.SIGPIPE, signal.SIG_IGN)
             except ValueError:
@@ -162,13 +162,13 @@ def run(args=None, fin=None, fout=None, ferr=None, config=None):
     except error.StdioError as e:
         err = e
         status = -1
-    if util.safehasattr(req.ui, "fout"):
+    if hasattr(req.ui, "fout"):
         try:
             req.ui.fout.flush()
         except IOError as e:
             err = e
             status = -1
-    if util.safehasattr(req.ui, "ferr"):
+    if hasattr(req.ui, "ferr"):
         if err is not None and err.errno != errno.EPIPE:
             errormsg = pycompat.encodeutf8(err.strerror)
             req.ui.ferr.write(b"abort: %s\n" % errormsg)

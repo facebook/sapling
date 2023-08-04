@@ -457,9 +457,9 @@ class _helpdispatch(object):
 
         if not doc:
             doc = _("(no help text available)")
-        if util.safehasattr(entry[0], "definition"):  # aliased command
+        if hasattr(entry[0], "definition"):  # aliased command
             aliasdoc = ""
-            if util.safehasattr(entry[0], "aliasdoc") and entry[0].aliasdoc is not None:
+            if hasattr(entry[0], "aliasdoc") and entry[0].aliasdoc is not None:
                 lines = entry[0].aliasdoc.splitlines()
                 if lines:
                     aliasdoc = (
@@ -512,7 +512,7 @@ class _helpdispatch(object):
             )
 
         # subcommands
-        if util.safehasattr(entry[0], "subcommands") and entry[0].subcommands:
+        if hasattr(entry[0], "subcommands") and entry[0].subcommands:
             rst.extend(
                 makesubcmdlist(
                     cmd,
@@ -534,7 +534,7 @@ class _helpdispatch(object):
         return rst
 
     def _helpcmddoc(self, cmd, doc):
-        if util.safehasattr(cmd, "aliasdoc") and cmd.aliasdoc is not None:
+        if hasattr(cmd, "aliasdoc") and cmd.aliasdoc is not None:
             return gettext(templater.unquotestring(cmd.aliasdoc.splitlines()[0]))
         doc = gettext(doc)
         if doc:

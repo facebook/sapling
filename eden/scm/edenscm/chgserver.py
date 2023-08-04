@@ -293,7 +293,7 @@ class chgcmdserver(commandserver.server):
         }
     )
 
-    if util.safehasattr(util, "setprocname"):
+    if hasattr(util, "setprocname"):
 
         def setprocname(self):
             """Change process title"""

@@ -85,7 +85,7 @@ def _clienttelemetry(repo, proto, args) -> str:
 
 def getclienttelemetry(repo) -> Dict[str, Any]:
     kwargs = {}
-    if util.safehasattr(repo, "clienttelemetry"):
+    if hasattr(repo, "clienttelemetry"):
         clienttelemetry = repo.clienttelemetry
         fields = ["client_fullcommand", "client_hostname"]
         for f in fields:

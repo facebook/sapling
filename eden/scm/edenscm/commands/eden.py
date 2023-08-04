@@ -223,7 +223,7 @@ class HgServer(object):
         self._commands = {}
         for member_name in dir(self):
             value = getattr(self, member_name)
-            if not util.safehasattr(value, "__COMMAND_ID__"):
+            if not hasattr(value, "__COMMAND_ID__"):
                 continue
             self._commands[value.__COMMAND_ID__] = value
 
@@ -820,7 +820,7 @@ class HgServer(object):
         # Some repos may not have remotefilelog enabled; for example,
         # the watchman integration tests have no remote server and no
         # remotefilelog.
-        if not util.safehasattr(self.repo, "fileservice"):
+        if not hasattr(self.repo, "fileservice"):
             logging.debug("ignoring prefetch request in non-remotefilelog repository")
             return
 

@@ -1050,7 +1050,7 @@ class dirstate(object):
 
         # Fetch the nonnormalset after iterating over pendingchanges, since the
         # iteration may change the nonnormalset as lookup states are resolved.
-        if util.safehasattr(dmap, "nonnormalsetfiltered"):
+        if hasattr(dmap, "nonnormalsetfiltered"):
             # treestate has a fast path to filter out ignored directories.
             ignorevisitdir: "Callable[[str], Union[str, bool]]" = ignore.visitdir
 
@@ -1718,7 +1718,7 @@ class dirstatemap(object):
         if not st:
             return
 
-        if util.safehasattr(parsers, "dict_new_presized"):
+        if hasattr(parsers, "dict_new_presized"):
             # Make an estimate of the number of files in the dirstate based on
             # its size. From a linear regression on a set of real-world repos,
             # all over 10,000 files, the size of a dirstate entry is 85

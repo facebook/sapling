@@ -294,12 +294,6 @@ def checklink(path: str) -> bool:
             return False
 
 
-def safehasattr(thing, attr):
-    # Use instead of the builtin ``hasattr``. (See
-    # https://hynek.me/articles/hasattr/)
-    return getattr(thing, attr, _notset) is not _notset
-
-
 def bitsfrom(container):
     bits = 0
     for bit in container:
@@ -1235,7 +1229,7 @@ def mainfrozen():
     The code supports py2exe (most common, Windows only) and tools/freeze
     (portable, not much used).
     """
-    return safehasattr(sys, "frozen") or safehasattr(
+    return hasattr(sys, "frozen") or hasattr(
         sys, "importers"
     )  # new py2exe  # tools/freeze
 
@@ -1973,7 +1967,7 @@ class atomictempfile(BinaryIO):
             self._fp.close()
 
     def __del__(self) -> None:
-        if safehasattr(self, "_fp"):  # constructor actually did something
+        if hasattr(self, "_fp"):  # constructor actually did something
             self.discard()
 
     def __enter__(self) -> "atomictempfile":
@@ -4154,10 +4148,10 @@ def timefunction(key, uiposition=None, uiname=None):
                 uiarg = getattr(uiarg, uiname)
             if uiarg is None:
                 for arg in list(args) + list(kwargs.values()):
-                    if safehasattr(arg, "timesection"):
+                    if hasattr(arg, "timesection"):
                         uiarg = arg
                         break
-                    elif safehasattr(arg, "ui"):
+                    elif hasattr(arg, "ui"):
                         uiarg = arg.ui
                         break
             assert uiarg

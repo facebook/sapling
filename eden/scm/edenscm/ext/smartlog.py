@@ -361,7 +361,7 @@ def interestingheads(repo, subset, x):
             heads.add(rev(books[b]))
 
     # add 'interesting' remote bookmarks as well
-    if util.safehasattr(repo, "names") and "remotebookmarks" in repo.names:
+    if hasattr(repo, "names") and "remotebookmarks" in repo.names:
         ns = repo.names["remotebookmarks"]
         for name in _reposnames(repo.ui):
             nodes = ns.namemap(repo, name)
@@ -376,7 +376,7 @@ def interestingmaster(repo, subset, x):
     """Interesting 'master' commit"""
 
     names = set(bookmarks.bmstore(repo).keys())
-    if util.safehasattr(repo, "names") and "remotebookmarks" in repo.names:
+    if hasattr(repo, "names") and "remotebookmarks" in repo.names:
         names.update(set(repo.names["remotebookmarks"].listnames(repo)))
 
     for name in _reposnames(repo.ui):

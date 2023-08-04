@@ -538,7 +538,7 @@ def _dagcopytraceenabled(ui):
 
 
 def _getreponame(repo, ui):
-    reporoot = repo.origroot if util.safehasattr(repo, "origroot") else ""
+    reporoot = repo.origroot if hasattr(repo, "origroot") else ""
     reponame = ui.config("paths", "default") or reporoot
     if reponame:
         reponame = os.path.basename(reponame)

@@ -570,7 +570,7 @@ def _getolddrafts(repo, reverseindex):
 
 
 def _cachedgetolddrafts(repo, nodedict):
-    if not util.safehasattr(repo, "_undoolddraftcache"):
+    if not hasattr(repo, "_undoolddraftcache"):
         repo._undoolddraftcache = {}
     cache = repo._undoolddraftcache
     if repo.ui.configbool("experimental", "narrow-heads"):
@@ -650,7 +650,7 @@ def _getoldworkingcopyparent(repo, reverseindex):
 
 
 def _cachedgetoldworkingcopyparent(repo, wkpnode):
-    if not util.safehasattr(repo, "_undooldworkingparentcache"):
+    if not hasattr(repo, "_undooldworkingparentcache"):
         repo._undooldworkingparentcache = {}
     cache = repo._undooldworkingparentcache
     key = wkpnode

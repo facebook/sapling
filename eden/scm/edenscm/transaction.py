@@ -238,9 +238,7 @@ class transaction(util.transactional):
         self._abortcallback = {}
         # Reload metalog state when entering transaction.
         metalog = (
-            opener.invalidatemetalog()
-            if util.safehasattr(opener, "invalidatemetalog")
-            else None
+            opener.invalidatemetalog() if hasattr(opener, "invalidatemetalog") else None
         )
         if metalog and metalog.isdirty():
             # |<- A ->|<----------- repo lock --------->|
@@ -692,7 +690,7 @@ class transaction(util.transactional):
 
         # Discard metalog state when exiting transaction.
         svfs = self._vfsmap[""]
-        if util.safehasattr(svfs, "invalidatemetalog"):
+        if hasattr(svfs, "invalidatemetalog"):
             svfs.invalidatemetalog()
 
         try:

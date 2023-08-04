@@ -148,7 +148,7 @@ def unwraphybrid(thing):
 
 def unwrapvalue(thing):
     """Move the inner value object out of the wrapper"""
-    if not util.safehasattr(thing, "_value"):
+    if not hasattr(thing, "_value"):
         return thing
     return thing._value
 
@@ -162,7 +162,7 @@ def wraphybridvalue(container, key, value: _mappable) -> _mappable:
     makemap = getattr(container, "_makemap", None)
     if makemap is None:
         return value
-    if util.safehasattr(value, "_makemap"):
+    if hasattr(value, "_makemap"):
         # a nested hybrid list/dict, which has its own way of map operation
         return value
     return _mappable(None, key, value, makemap)

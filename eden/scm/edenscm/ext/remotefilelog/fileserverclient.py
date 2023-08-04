@@ -58,7 +58,7 @@ def peersetup(ui, peer):
                 return
             if "remotefilelog" not in shallowutil.peercapabilities(self):
                 return
-            if not util.safehasattr(self, "_localrepo"):
+            if not hasattr(self, "_localrepo"):
                 return
             if constants.REQUIREMENT not in self._localrepo.requirements:
                 return
@@ -259,7 +259,7 @@ class fileserverclient(object):
 
     @perftrace.tracefunc("LFS Prefetch")
     def _lfsprefetch(self, fileids):
-        if not _lfsmod or not util.safehasattr(self.repo.svfs, "lfslocalblobstore"):
+        if not _lfsmod or not hasattr(self.repo.svfs, "lfslocalblobstore"):
             return
         if not _lfsmod.wrapper.candownload(self.repo):
             return

@@ -877,7 +877,7 @@ def findsubcmd(args, table, partial=False):
     cmd, args, level = args[0], args[1:], 1
     aliases, entry = findcmd(cmd, table)
     cmd = aliases[0]
-    while args and entry[0] and util.safehasattr(entry[0], "subcommands"):
+    while args and entry[0] and hasattr(entry[0], "subcommands"):
         try:
             subaliases, subentry = findcmd(args[0], entry[0].subcommands)
         except error.UnknownCommand as e:
@@ -888,7 +888,7 @@ def findsubcmd(args, table, partial=False):
         else:
             aliases, entry = subaliases, subentry
             cmd, args, level = "%s %s" % (cmd, aliases[0]), args[1:], level + 1
-    if not partial and util.safehasattr(entry[0], "subonly") and entry[0].subonly:
+    if not partial and hasattr(entry[0], "subonly") and entry[0].subonly:
         raise error.UnknownSubcommand(cmd, None, None)
     return cmd, args, aliases, entry, level
 

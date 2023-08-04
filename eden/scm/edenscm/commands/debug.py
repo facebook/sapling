@@ -119,20 +119,20 @@ def _flattenresponse(response: Sized, sort: bool = False):
     if (
         isinstance(response, tuple)
         and len(response) == 2
-        and util.safehasattr(response[1], "wait")
+        and hasattr(response[1], "wait")
     ):
         response = list(response[0])
     # Resolve async stream into list(stream).
     elif (
         not isinstance(response, list)
-        and util.safehasattr(response, "__iter__")
-        and util.safehasattr(response, "typename")
+        and hasattr(response, "__iter__")
+        and hasattr(response, "typename")
     ):
         # pyre-fixme[6]: For 1st param expected `Iterable[Variable[_T]]` but got
         #  `Union[tuple[typing.Any], Sized]`.
         response = list(response)
     # Resolve PyCell (opaque data) to PyObject.
-    elif util.safehasattr(response, "export"):
+    elif hasattr(response, "export"):
         # pyre-fixme[16]: Item `List` of `Union[List[typing.Any], tuple[typing.Any],
         #  Sized]` has no attribute `export`.
         response = response.export()
@@ -3398,7 +3398,7 @@ def debugcheckcasecollisions(ui, repo, *testfiles, **opts) -> int:
     # with anything in the list of files.  We can do this faster with a
     # treemanifest, so let's see if we've got one of those.
     treemanifest = _findtreemanifest(ctx)
-    if treemanifest and util.safehasattr(treemanifest, "listdir"):
+    if treemanifest and hasattr(treemanifest, "listdir"):
         for lowertf, (tf, tff) in lowertfs.items():
             if "/" in tf:
                 dir, base = tf.rsplit("/", 1)

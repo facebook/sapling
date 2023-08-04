@@ -35,7 +35,7 @@ def cleandict(d):
     return dict(
         (k, cleandict(v))
         for k, v in pycompat.iteritems(d)
-        if (v is not None and not (util.safehasattr(v, "__len__") and len(v) == 0))
+        if (v is not None and not (hasattr(v, "__len__") and len(v) == 0))
     )
 
 

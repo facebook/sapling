@@ -26,7 +26,7 @@ def createclientforrepo(repo):
     not already have one. Note that creating the client may raise an exception.
 
     To get the client associated with the repo, use getclientforrepo()."""
-    if not util.safehasattr(repo, "_watchmanclient"):
+    if not hasattr(repo, "_watchmanclient"):
         repo._watchmanclient = client(repo)
 
 
@@ -35,7 +35,7 @@ def getclientforrepo(repo):
 
     createclientforrepo() must have be called previously to create the
     client."""
-    if util.safehasattr(repo, "_watchmanclient"):
+    if hasattr(repo, "_watchmanclient"):
         return repo._watchmanclient
     else:
         return None
@@ -117,7 +117,7 @@ class client(object):
 
     def getcurrentclock(self):
         result = self.command("clock")
-        if not util.safehasattr(result, "clock"):
+        if not hasattr(result, "clock"):
             raise Unavailable("clock result is missing clock value", invalidate=True)
         return result.clock
 
@@ -385,7 +385,7 @@ class state_update(object):
             self.oldnode = self.repo["."].node()
 
         if self.repo.currentwlock() is None:
-            if util.safehasattr(self.repo, "wlocknostateupdate"):
+            if hasattr(self.repo, "wlocknostateupdate"):
                 self._lock = self.repo.wlocknostateupdate()
             else:
                 self._lock = self.repo.wlock()

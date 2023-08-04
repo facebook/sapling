@@ -170,7 +170,7 @@ def usehttpfetching(repo):
 
 def hgupdate(orig, repo, node, quietempty=False, updatecheck=None):
     oldfallbackpath = getattr(repo, "fallbackpath", None)
-    if util.safehasattr(repo, "stickypushpath"):
+    if hasattr(repo, "stickypushpath"):
         repo.fallbackpath = repo.stickypushpath
 
     try:
@@ -648,7 +648,7 @@ def _getparenttree(manifestlog, node=None):
     if node is None or node == nullid:
         return None
     tree = manifestlog[node].read()
-    if util.safehasattr(tree, "_treemanifest"):
+    if hasattr(tree, "_treemanifest"):
         # Detect hybrid manifests and unwrap them
         tree = tree._treemanifest()
     return tree
@@ -1138,7 +1138,7 @@ def createtreepackpart(repo, outgoing, partname, sendtrees=shallowbundle.AllTree
 
 
 def getfallbackpath(repo):
-    if util.safehasattr(repo, "fallbackpath"):
+    if hasattr(repo, "fallbackpath"):
         return repo.fallbackpath
     else:
         path = repo.ui.config("paths", "default")

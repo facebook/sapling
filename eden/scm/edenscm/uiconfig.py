@@ -153,7 +153,7 @@ class uiconfig(object):
     def setconfig(self, section, name, value, source=""):
         if isinstance(value, (str, int, float, bool)):
             value = str(value)
-        elif util.safehasattr(value, "__iter__"):
+        elif hasattr(value, "__iter__"):
 
             def escape(v):
                 if '"' in v:

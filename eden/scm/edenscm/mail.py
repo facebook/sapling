@@ -90,7 +90,7 @@ def _smtp(ui):
     # backward compatible: when tls = true, we use starttls.
     starttls = tls == "starttls" or util.parsebool(tls)
     smtps = tls == "smtps"
-    if (starttls or smtps) and not util.safehasattr(socket, "ssl"):
+    if (starttls or smtps) and not hasattr(socket, "ssl"):
         raise error.Abort(_("can't use TLS: Python SSL support not installed"))
     mailhost = ui.config("smtp", "host")
     if not mailhost:

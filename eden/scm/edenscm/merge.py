@@ -1112,11 +1112,11 @@ def manifestmerge(
         matcher = matchmod.intersectmatchers(matcher, sparsematcher)
 
     with perftrace.trace("Manifest Diff"):
-        if util.safehasattr(repo, "resettreefetches"):
+        if hasattr(repo, "resettreefetches"):
             repo.resettreefetches()
         diff = m1.diff(m2, matcher=matcher)
         perftrace.tracevalue("Differences", len(diff))
-        if util.safehasattr(repo, "resettreefetches"):
+        if hasattr(repo, "resettreefetches"):
             perftrace.tracevalue("Tree Fetches", repo.resettreefetches())
 
     if matcher is None:
@@ -2331,7 +2331,7 @@ def update(
                 fallbackcheckout = (
                     "Working copy is dirty and --clean specified - not supported yet"
                 )
-            elif not util.safehasattr(repo.fileslog, "contentstore"):
+            elif not hasattr(repo.fileslog, "contentstore"):
                 fallbackcheckout = "Repo does not have remotefilelog"
             elif type(repo.dirstate._map) != treestate.treestatemap:
                 fallbackcheckout = "Repo repo.dirstate._map: %s" % type(
@@ -2575,7 +2575,7 @@ def update(
                 # Ideally this would be part of some wider transaction framework
                 # that ensures these things all happen atomically, but that
                 # doesn't exist for the dirstate right now.
-                if util.safehasattr(repo, "_persistprofileconfigs"):
+                if hasattr(repo, "_persistprofileconfigs"):
                     repo._persistprofileconfigs()
 
                 if not branchmerge:
@@ -2752,7 +2752,7 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
             # Ideally this would be part of some wider transaction framework
             # that ensures these things all happen atomically, but that
             # doesn't exist for the dirstate right now.
-            if util.safehasattr(repo, "_persistprofileconfigs"):
+            if hasattr(repo, "_persistprofileconfigs"):
                 repo._persistprofileconfigs()
 
     if not partial:

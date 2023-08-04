@@ -58,7 +58,7 @@ def extsetup(ui):
     extensions.wrapfunction(exchange, "getbundlechunks", getbundlechunks)
     extensions.wrapfunction(bundle2, "processparts", processparts)
 
-    if util.safehasattr(wireproto, "_capabilities"):
+    if hasattr(wireproto, "_capabilities"):
         extensions.wrapfunction(wireproto, "_capabilities", _capabilities)
     else:
         extensions.wrapfunction(wireproto, "capabilities", _capabilities)

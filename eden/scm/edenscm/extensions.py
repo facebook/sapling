@@ -296,7 +296,7 @@ def _validatecmdtable(ui, cmdtable):
                 "registrar.command to register '%s'" % c,
                 "4.6",
             )
-        missing = [a for a in _cmdfuncattrs if not util.safehasattr(f, a)]
+        missing = [a for a in _cmdfuncattrs if not hasattr(f, a)]
         if not missing:
             for option in e[1]:
                 default = option[2]
@@ -976,9 +976,9 @@ def notloaded():
 
 def moduleversion(module):
     """return version information from given module as a string"""
-    if util.safehasattr(module, "getversion") and callable(module.getversion):
+    if hasattr(module, "getversion") and callable(module.getversion):
         version = module.getversion()
-    elif util.safehasattr(module, "__version__"):
+    elif hasattr(module, "__version__"):
         version = module.__version__
     else:
         version = ""

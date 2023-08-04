@@ -239,7 +239,7 @@ def reposetup(ui, repo) -> None:
     if not repo.local():
         return
 
-    if util.safehasattr(ui, "setrepo"):
+    if hasattr(ui, "setrepo"):
         ui.setrepo(repo)
 
         # Set lastui even if ui.log is not called. This gives blackbox a

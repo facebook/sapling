@@ -472,7 +472,7 @@ class manifestrevlog(revlog.revlog):
         return self._dirlogcache[dir]
 
     def add(self, m, transaction, link, p1, p2, added, removed, readtree=None):
-        if p1 in self.fulltextcache and util.safehasattr(m, "fastdelta"):
+        if p1 in self.fulltextcache and hasattr(m, "fastdelta"):
             # If our first parent is in the manifest cache, we can
             # compute a delta here using properties we know about the
             # manifest up-front, which may save time later for the

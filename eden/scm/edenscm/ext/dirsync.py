@@ -83,7 +83,7 @@ def extsetup(ui) -> None:
 
 
 def reposetup(ui, repo) -> None:
-    if not repo.local() or not util.safehasattr(repo, "dirstate"):
+    if not repo.local() or not hasattr(repo, "dirstate"):
         return
 
     # If dirstate is updated to a commit that has 'mirrored' paths without

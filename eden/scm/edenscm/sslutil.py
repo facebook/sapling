@@ -39,9 +39,9 @@ hassni: bool = getattr(ssl, "HAS_SNI", False)
 # TLS 1.1 and 1.2 may not be supported if the OpenSSL Python is compiled
 # against doesn't support them.
 supportedprotocols = {"tls1.0"}
-if util.safehasattr(ssl, "PROTOCOL_TLSv1_1"):
+if hasattr(ssl, "PROTOCOL_TLSv1_1"):
     supportedprotocols.add("tls1.1")
-if util.safehasattr(ssl, "PROTOCOL_TLSv1_2"):
+if hasattr(ssl, "PROTOCOL_TLSv1_2"):
     supportedprotocols.add("tls1.2")
 
 try:
@@ -49,7 +49,7 @@ try:
     # SSL/TLS features are available.
     SSLContext = ssl.SSLContext
     modernssl = True
-    _canloaddefaultcerts = util.safehasattr(SSLContext, "load_default_certs")
+    _canloaddefaultcerts = hasattr(SSLContext, "load_default_certs")
 except AttributeError:
     modernssl = False
     _canloaddefaultcerts = False
@@ -458,7 +458,7 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
         except ssl.SSLError:
             pass
         # Try to print more helpful error messages for known failures.
-        if util.safehasattr(e, "reason"):
+        if hasattr(e, "reason"):
             # This error occurs when the client and server don't share a
             # common/supported SSL/TLS protocol. We've disabled SSLv2 and SSLv3
             # outright. Hopefully the reason for this error is that we require
@@ -607,7 +607,7 @@ def wrapserversocket(
         sslcontext.options |= getattr(ssl, "OP_SINGLE_ECDH_USE", 0)
 
         # Use the list of more secure ciphers if found in the ssl module.
-        if util.safehasattr(ssl, "_RESTRICTED_SERVER_CIPHERS"):
+        if hasattr(ssl, "_RESTRICTED_SERVER_CIPHERS"):
             sslcontext.options |= getattr(ssl, "OP_CIPHER_SERVER_PREFERENCE", 0)
             # pyre-fixme[16]: Module `ssl` has no attribute
             #  `_RESTRICTED_SERVER_CIPHERS`.

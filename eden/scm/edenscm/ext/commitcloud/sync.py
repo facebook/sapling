@@ -84,7 +84,7 @@ def _getremotebookmarks(repo):
         return {}
 
     remotebookmarks = {}
-    if util.safehasattr(repo, "names") and "remotebookmarks" in repo.names:
+    if hasattr(repo, "names") and "remotebookmarks" in repo.names:
         ns = repo.names["remotebookmarks"]
         rbooknames = ns.listnames(repo)
         for book in rbooknames:

@@ -451,7 +451,7 @@ class wirepeer(repository.legacypeer):
         else:
             heads = encodelist(heads)
 
-        if util.safehasattr(cg, "deltaheader"):
+        if hasattr(cg, "deltaheader"):
             # this a bundle10, do the old style call sequence
             ret, output = self._callpush("unbundle", cg, heads=heads)
             if ret == "":
@@ -1163,7 +1163,7 @@ def pushkey(repo, proto, namespace, key, old, new):
     else:
         new = encoding.tolocal(new)  # normal path
 
-    if util.safehasattr(proto, "restore"):
+    if hasattr(proto, "restore"):
 
         proto.redirect()
 
@@ -1330,7 +1330,7 @@ def unbundleimpl(repo, proto, heads, replaydata=None, respondlightly=False):
                 replaydata=replaydata,
                 respondlightly=respondlightly,
             )
-            if util.safehasattr(r, "addpart"):
+            if hasattr(r, "addpart"):
                 # The return looks streamable, we are in the bundle2 case and
                 # should return a stream.
                 return streamres(gen=r.getchunks())

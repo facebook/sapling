@@ -89,7 +89,7 @@ def _setupdirstate(repo, dirstate) -> None:
 def wrapdirstate(orig, repo):
     """Make journal storage available to the dirstate object"""
     dirstate = orig(repo)
-    if util.safehasattr(repo, "journal"):
+    if hasattr(repo, "journal"):
         _setupdirstate(repo, dirstate)
     return dirstate
 
@@ -98,7 +98,7 @@ def recorddirstateparents(dirstate, old, new) -> None:
     """Records all dirstate parent changes in the journal."""
     old = list(old)
     new = list(new)
-    if util.safehasattr(dirstate, "journalstorage"):
+    if hasattr(dirstate, "journalstorage"):
         # only record two hashes if there was a merge
         oldhashes = old[:1] if old[1] == node.nullid else old
         newhashes = new[:1] if new[1] == node.nullid else new
@@ -109,7 +109,7 @@ def recorddirstateparents(dirstate, old, new) -> None:
 def recordbookmarks(orig, store, fp):
     """Records all bookmark changes in the journal."""
     repo = store._repo
-    if util.safehasattr(repo, "journal"):
+    if hasattr(repo, "journal"):
         oldmarks = bookmarks.bmstore(repo)
         for mark, value in pycompat.iteritems(store):
             oldvalue = oldmarks.get(mark, node.nullid)
@@ -157,7 +157,7 @@ def wrappostshare(orig, sourcerepo, destrepo, **kwargs) -> None:
 
 def unsharejournal(orig, ui, repo, repopath):
     """Copy shared journal entries into this repo when unsharing"""
-    if repo.path == repopath and repo.shared() and util.safehasattr(repo, "journal"):
+    if repo.path == repopath and repo.shared() and hasattr(repo, "journal"):
         if repo.shared() and "journal" in repo.sharedfeatures:
             # there is a shared repository and there are shared journal entries
             # to copy. move shared data over from source to destination but

@@ -103,7 +103,7 @@ def _manifestrepack(repo, incremental) -> None:
     if repo.ui.configbool("treemanifest", "server"):
         # This code path is no longer used. Will be deleted soon.
         pass
-    elif util.safehasattr(repo.manifestlog, "datastore"):
+    elif hasattr(repo.manifestlog, "datastore"):
         if repo.ui.configbool("treemanifest", "useruststore"):
             # Shared
             _shareddatastoresrepack(repo, incremental, constants.TREEPACK_CATEGORY)
@@ -299,7 +299,7 @@ def _cleanuppacks(ui, packpath, limit) -> None:
 
 
 def repacklockvfs(repo):
-    if util.safehasattr(repo, "name"):
+    if hasattr(repo, "name"):
         # Lock in the shared cache so repacks across multiple copies of the same
         # repo are coordinated.
         sharedcachepath = shallowutil.getcachepackpath(

@@ -111,7 +111,7 @@ contextlibimp = __import__("contextlib", globals(), locals(), ["unknownattr"])
 print("__import__('contextlib', ..., ['unknownattr']) =", f(contextlibimp))
 print(
     "hasattr(contextlibimp, 'unknownattr') =",
-    util.safehasattr(contextlibimp, "unknownattr"),
+    hasattr(contextlibimp, "unknownattr"),
 )
 
 os.environ["HGDEMANDIMPORT"] = "disable"

@@ -518,7 +518,7 @@ def buildmap(exp, context):
 def runmap(context, mapping, data):
     darg, targ = data
     d = evalrawexp(context, mapping, darg)
-    if util.safehasattr(d, "itermaps"):
+    if hasattr(d, "itermaps"):
         diter = d.itermaps()
     else:
         try:
@@ -553,11 +553,11 @@ def buildmember(exp, context):
 def runmember(context, mapping, data):
     darg, memb = data
     d = evalrawexp(context, mapping, darg)
-    if util.safehasattr(d, "tomap"):
+    if hasattr(d, "tomap"):
         lm = mapping.copy()
         lm.update(d.tomap())
         return runsymbol(context, lm, memb)
-    if util.safehasattr(d, "get"):
+    if hasattr(d, "get"):
         return _getdictitem(d, memb)
 
     sym = findsymbolicname(darg)
@@ -867,7 +867,7 @@ def get(context, mapping, args):
         raise error.ParseError(_("get() expects two or three arguments"))
 
     dictarg = evalfuncarg(context, mapping, args[0])
-    if not util.safehasattr(dictarg, "get"):
+    if not hasattr(dictarg, "get"):
         # i18n: "get" is a keyword
         raise error.ParseError(_("get() expects a dict as first argument"))
 
@@ -1519,7 +1519,7 @@ def _flatten(thing):
         yield thing
     elif thing is None:
         pass
-    elif not util.safehasattr(thing, "__iter__"):
+    elif not hasattr(thing, "__iter__"):
         yield pycompat.encodeutf8(str(thing))
     else:
         for i in thing:

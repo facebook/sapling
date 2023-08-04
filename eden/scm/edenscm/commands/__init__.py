@@ -2353,7 +2353,7 @@ def files(ui, repo, *pats, **opts):
     fmt = "%s" + end
 
     m = scmutil.match(ctx, pats, opts)
-    if isinstance(ctx, context.workingctx) and util.safehasattr(repo, "sparsematch"):
+    if isinstance(ctx, context.workingctx) and hasattr(repo, "sparsematch"):
         m = matchmod.intersectmatchers(m, repo.sparsematch())
 
     ui.pager("files")

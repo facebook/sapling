@@ -976,7 +976,7 @@ class unbundle20(unpackermixin):
 
     def close(self) -> None:
         """close underlying file"""
-        if util.safehasattr(self._fp, "close"):
+        if hasattr(self._fp, "close"):
             return self._fp.close()
 
 
@@ -1023,8 +1023,8 @@ class bundlepart(object):
             self.type = parttype
             assert (
                 isinstance(data, bytes)
-                or util.safehasattr(data, "next")
-                or util.safehasattr(data, "__next__")
+                or hasattr(data, "next")
+                or hasattr(data, "__next__")
             )
 
             self._data = data
@@ -1062,7 +1062,7 @@ class bundlepart(object):
 
         The new part have the very same content but no partid assigned yet.
         Parts with generated data cannot be copied."""
-        assert not util.safehasattr(self.data, "next")
+        assert not hasattr(self.data, "next")
         return self.__class__(
             self.type,
             self._mandatoryparams,
@@ -1080,10 +1080,7 @@ class bundlepart(object):
     def data(self, data):
         if self._generated is not None:
             raise error.ReadOnlyPartError("part is being generated")
-        if not (
-            util.safehasattr(self.data, "next")
-            or util.safehasattr(self.data, "__next__")
-        ):
+        if not (hasattr(self.data, "next") or hasattr(self.data, "__next__")):
             assert isinstance(data, bytes)
         self._data = data
 
@@ -1136,9 +1133,7 @@ class bundlepart(object):
                 msg.append(")")
             if not self.data:
                 msg.append(" empty payload")
-            elif util.safehasattr(self.data, "next") or util.safehasattr(
-                self.data, "__next__"
-            ):
+            elif hasattr(self.data, "next") or hasattr(self.data, "__next__"):
                 msg.append(" streamed payload")
             else:
                 msg.append(" %i bytes payload" % len(self.data))
@@ -1233,7 +1228,7 @@ class bundlepart(object):
         if isinstance(data, bytes) and len(data) > chunkthreshold:
             data = iter([self.data])
 
-        if util.safehasattr(data, "next") or util.safehasattr(data, "__next__"):
+        if hasattr(data, "next") or hasattr(data, "__next__"):
             buff = util.chunkbuffer(data)
             chunk = buff.read(preferedchunksize)
             while chunk:
@@ -1367,7 +1362,7 @@ class unbundlepart(unpackermixin):
 
     def __init__(self, ui, header, fp):
         super(unbundlepart, self).__init__(fp)
-        self._seekable = util.safehasattr(fp, "seek") and util.safehasattr(fp, "tell")
+        self._seekable = hasattr(fp, "seek") and hasattr(fp, "tell")
         self.ui = ui
         # unbundle state attr
         self._headerdata = header

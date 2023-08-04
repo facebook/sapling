@@ -127,7 +127,7 @@ class sshserver(wireproto.abstractserverproto):
         cmd = self.fin.readline()[:-1]
         cmd = decodeutf8(cmd)
         if cmd:
-            if util.safehasattr(util, "setprocname"):
+            if hasattr(util, "setprocname"):
                 client = encoding.environ.get("SSH_CLIENT", "").split(" ")[0]
                 # Resolve IP to hostname
                 try:

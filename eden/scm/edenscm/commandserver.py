@@ -261,7 +261,7 @@ class server(object):
             # any kind of interaction must use server channels, but chg may
             # replace channels by fully functional tty files. so nontty is
             # enforced only if cin is a channel.
-            if not util.safehasattr(self.cin, "fileno"):
+            if not hasattr(self.cin, "fileno"):
                 ui.setconfig("ui", "nontty", "true", "commandserver")
 
         req = dispatch.request(
@@ -308,7 +308,7 @@ class server(object):
         if versionmod:
             hellomsg += "\n"
             hellomsg += "versionhash: %s" % versionmod.versionhash
-        if util.safehasattr(os, "getpgid"):
+        if hasattr(os, "getpgid"):
             hellomsg += "\n"
             hellomsg += "pgid: %d" % os.getpgid(0)
         try:
@@ -480,7 +480,7 @@ class unixforkingservice(object):
         self.ui = ui
         self.repo = repo
         self.address = opts["address"]
-        if not util.safehasattr(socket, "AF_UNIX"):
+        if not hasattr(socket, "AF_UNIX"):
             raise error.Abort(_("unsupported platform"))
         if not self.address:
             raise error.Abort(_("no socket path specified with --address"))
@@ -503,7 +503,7 @@ class unixforkingservice(object):
             flags |= fcntl.FD_CLOEXEC
             fcntl.fcntl(self._sock.fileno(), fcntl.F_SETFD, flags)
         self._servicehandler.bindsocket(self._sock, self.address)
-        if util.safehasattr(util, "unblocksignal"):
+        if hasattr(util, "unblocksignal"):
             util.unblocksignal(signal.SIGCHLD)
         o = util.signal(signal.SIGCHLD, self._sigchldhandler)
         self._oldsigchldhandler = o

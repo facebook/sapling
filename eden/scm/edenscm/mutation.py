@@ -356,19 +356,19 @@ class obsoletecache(object):
 
 
 def isobsolete(repo, node):
-    if not util.safehasattr(repo, "_mutationobsolete"):
+    if not hasattr(repo, "_mutationobsolete"):
         repo._mutationobsolete = obsoletecache()
     return repo._mutationobsolete.isobsolete(repo, node)
 
 
 def obsoletenodes(repo):
-    if not util.safehasattr(repo, "_mutationobsolete"):
+    if not hasattr(repo, "_mutationobsolete"):
         repo._mutationobsolete = obsoletecache()
     return repo._mutationobsolete.obsoletenodes(repo)
 
 
 def clearobsoletecache(repo) -> None:
-    if util.safehasattr(repo, "_mutationobsolete"):
+    if hasattr(repo, "_mutationobsolete"):
         del repo._mutationobsolete
 
 
