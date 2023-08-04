@@ -19,8 +19,7 @@ Test locating user config
   $ hg configfile
   User config path: $TESTTMP/.hgrc
   Repo config path: $TESTTMP/repo/.hg/hgrc
-  System config path: /etc/mercurial/system.rc (no-windows !)
-  System config path: C:\ProgramData\Facebook\Mercurial\Facebook\Mercurial\system.rc (windows !)
+  System config path: $TESTTMP/hgrc
   $ hg configfile --user
   $TESTTMP/.hgrc
   $ sl configfile --user
@@ -35,12 +34,10 @@ Test locating other configs
   $ hg configfile --local
   $TESTTMP/repo/.hg/hgrc
   $ hg configfile --system
-  /etc/mercurial/system.rc (no-windows !)
-  C:\ProgramData\Facebook\Mercurial\Facebook\Mercurial\system.rc (windows !)
+  $TESTTMP/hgrc
 
 Test outside a repo
   $ cd
   $ hg configfile
   User config path: $TESTTMP/.hgrc
-  System config path: /etc/mercurial/system.rc (no-windows !)
-  System config path: C:\ProgramData\Facebook\Mercurial\Facebook\Mercurial\system.rc (windows !)
+  System config path: $TESTTMP/hgrc
