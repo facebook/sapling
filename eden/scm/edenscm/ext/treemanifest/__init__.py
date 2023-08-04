@@ -82,6 +82,7 @@ from edenscm import (
     git,
     hg,
     localrepo,
+    mdiff,
     perftrace,
     phases,
     progress,
@@ -423,7 +424,8 @@ def setuptreestores(repo, mfl):
         mfl._isgit = False
         mfl._iseager = True
         store = repo.fileslog.contentstore
-        mfl.datastore = store
+        mfl.datastore = EagerDataStore(store)
+        mfl.historystore = mfl.datastore.historystore
         if not isinstance(store, bindings.eagerepo.EagerRepoStore):
             raise error.ProgrammingError(
                 "incompatible eagerrepo store: %r (expect EagerRepoStore)" % store
@@ -1411,6 +1413,88 @@ def _existonserver(repo, mfnode):
     except Exception:
         # The error type story isn't great for now.
         return False
+
+
+class EagerHistoryStore:
+    def __init__(self, store):
+        self._store = store
+        self._added = {}
+
+    # This API is needed so the client can know the p1, p2 of mfnode.
+    # Without p1, p2 the client won't be able to send those trees via
+    # bundle2.
+    def getnodeinfo(self, dir, mfnode):
+        added = self._added.get((dir, mfnode))
+        if added is not None:
+            return added
+        p1p2 = self._store.get_sha1_blob(mfnode)[:40]
+        p1 = p1p2[:20]
+        p2 = p1p2[20:]
+        if p1 == nullid:
+            p1, p2 = p2, p1
+        # Fake linknode and copyfrom.
+        return p1, p2, nullid, None
+
+    # used by remotefilelog.wirepack.receivepack
+    def add(self, filename, node, p1, p2, linknode, copyfrom):
+        self._added[(filename, node)] = (p1, p2, linknode, copyfrom)
+
+
+class EagerDataStore:
+    def __init__(self, store):
+        self._store = store
+        # need the historystore to provide p1, p2 information
+        self.historystore = EagerHistoryStore(store)
+
+    def get(self, dir, node):
+        rawtext = self._store.get_content(node)
+        if rawtext is None:
+            raise KeyError("EagerDataStore does not have %s:%s" % (dir, hex(node)))
+        return rawtext
+
+    def getmissing(self, lst):
+        missing = []
+        for item in lst:
+            if self._store.get_sha1_blob(item[1]) is None:
+                missing.append(item)
+        return missing
+
+    # used by unioncontentstore
+    def getdeltachain(self, name, node):
+        content = self.get(name, node)
+        return [(name, node, "", nullid, content)]
+
+    # used by remotefilelog.wirepack.receivepack
+    def add(self, name, node, deltabase, delta, metadata):
+        if deltabase == nullid:
+            # unlike revlog2.addgroup, delta == nullid needs special
+            # handling here.
+            rawtext = delta
+        else:
+            # apply delta
+            basetext = self._store.get_content(deltabase)
+            rawtext = mdiff.patch(basetext, delta)
+        # get p1, p2 from the history store
+        p1, p2 = self.historystore.getnodeinfo(name, node)[:2]
+        blob = revlog.textwithheader(rawtext, p1, p2)
+        if hashlib.sha1(blob).digest() == node:
+            bases = []
+            if deltabase != nullid:
+                bases.append(deltabase)
+            new_node = self._store.add_sha1_blob(blob, bases)
+            assert new_node == node
+        else:
+            # root manifest might have a faked hash for flat
+            # manifest compatibility
+            assert name == ""
+            self._store.add_arbitrary_blob(node, blob)
+
+    def prefetch(self, items):
+        # EagerRepoStore is not lazy.
+        pass
+
+    def __getattr__(self, name):
+        return getattr(self._store, name)
 
 
 def _generatepackstream(
