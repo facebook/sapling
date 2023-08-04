@@ -2137,18 +2137,23 @@ def _registerbundle2parts():
         **kwargs,
     ):
         """add parts containing trees being pulled"""
-        if (
-            "True" not in b2caps.get("treemanifest", [])
-            or not treeenabled(repo.ui)
-            or repo.svfs.treemanifestserver
-            or not kwargs.get("cg", True)
-        ):
-            return
-
-        outgoing = exchange._computeoutgoing(repo, heads, common)
-        sendtrees = shallowbundle.cansendtrees(
-            repo, outgoing.missing, bundlecaps=bundlecaps, b2caps=b2caps
-        )
+        # If the client is not shallow, send all trees.
+        client_shallow = "remotefilelog" in b2caps
+        if client_shallow:
+            if (
+                "True" not in b2caps.get("treemanifest", [])
+                or not treeenabled(repo.ui)
+                or repo.svfs.treemanifestserver
+                or not kwargs.get("cg", True)
+            ):
+                return
+            outgoing = exchange._computeoutgoing(repo, heads, common)
+            sendtrees = shallowbundle.cansendtrees(
+                repo, outgoing.missing, bundlecaps=bundlecaps, b2caps=b2caps
+            )
+        else:
+            outgoing = exchange._computeoutgoing(repo, heads, common)
+            sendtrees = shallowbundle.AllTrees
         if sendtrees != shallowbundle.NoTrees:
             try:
                 part = createtreepackpart(
