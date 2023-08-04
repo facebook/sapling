@@ -172,6 +172,8 @@ pub struct GitimportPreferences {
     /// useful when several repos are imported simultainously.
     pub gitrepo_name: Option<String>,
     pub concurrency: usize,
+    /// Whether submodules should be imported instead of dropped.
+    pub submodules: bool,
     pub lfs: GitImportLfs,
     pub git_command_path: PathBuf,
 }
@@ -182,6 +184,7 @@ impl Default for GitimportPreferences {
             dry_run: false,
             gitrepo_name: None,
             concurrency: 20,
+            submodules: true,
             lfs: GitImportLfs::default(),
             git_command_path: PathBuf::from("/usr/bin/git.real"),
         }

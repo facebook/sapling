@@ -257,7 +257,7 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
             }
         })
         .map_ok(|oid| {
-            cloned!(ctx, reader, uploader, prefs.lfs);
+            cloned!(ctx, reader, uploader, prefs.lfs, prefs.submodules);
             async move {
                 task::spawn({
                     async move {
@@ -265,7 +265,7 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
                             .await
                             .with_context(|| format!("While extracting {}", oid))?;
 
-                        let diff = extracted_commit.diff(&ctx, &reader, false);
+                        let diff = extracted_commit.diff(&ctx, &reader, submodules);
                         let file_changes =
                             find_file_changes(&ctx, &lfs, &reader, uploader, diff).await?;
 
@@ -472,7 +472,7 @@ pub async fn import_tree_as_single_bonsai_changeset(
         .await
         .with_context(|| format!("While extracting {}", git_cs_id))?;
 
-    let diff = extracted_commit.diff_root(ctx, &reader, false);
+    let diff = extracted_commit.diff_root(ctx, &reader, prefs.submodules);
     let file_changes = find_file_changes(ctx, &prefs.lfs, &reader, uploader.clone(), diff).await?;
 
     // Before generating the corresponding changeset at Mononoke end, upload the raw git commit.

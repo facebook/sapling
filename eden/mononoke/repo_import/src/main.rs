@@ -1124,7 +1124,11 @@ async fn repo_import(
 
     // Importing process starts here
     if recovery_fields.import_stage == ImportStage::GitImport {
-        let prefs = GitimportPreferences::default();
+        // Import without submodules.
+        let prefs = GitimportPreferences {
+            submodules: false,
+            ..Default::default()
+        };
         let target = GitimportTarget::full();
         info!(ctx.logger(), "Started importing git commits to Mononoke");
         let uploader = import_direct::DirectUploader::new(
