@@ -339,6 +339,29 @@ where
         self.emit(b" differ\n");
     }
 
+    fn emit_submodule_changes(
+        &mut self,
+        old_commit_hash: Option<&str>,
+        new_commit_hash: Option<&str>,
+    ) {
+        if old_commit_hash.is_some() {
+            self.emit(b"@@ -1 ");
+        } else {
+            self.emit(b"@@ -0,0 ");
+        }
+        if new_commit_hash.is_some() {
+            self.emit(b"+1 @@\n");
+        } else {
+            self.emit(b"+0,0 @@\n");
+        }
+        if let Some(hash) = old_commit_hash {
+            self.emit(format!("-Subproject commit {hash}\n").as_bytes());
+        }
+        if let Some(hash) = new_commit_hash {
+            self.emit(format!("+Subproject commit {hash}\n").as_bytes());
+        }
+    }
+
     pub fn collect(self) -> S {
         self.seed.unwrap()
     }
@@ -516,6 +539,7 @@ pub enum FileType {
     Regular,
     Executable,
     Symlink,
+    GitSubmodule,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -523,16 +547,25 @@ pub enum FileContent<C>
 where
     C: AsRef<[u8]>,
 {
-    // The file content was not fetched (for example, if it's too large), though we still want to produce a placeholder diff for it.
-    // `content_id` is hash of a file file content.
-    Omitted { content_hash: String },
+    /// The file content was not fetched (for example, if it's too large), though we still want
+    /// to produce a placeholder diff for it.
+    Omitted {
+        /// The hash of the file contents.
+        content_hash: String,
+    },
     Inline(C),
+    /// The file refers to a submodule, and a corresponding placeholder should be generated for
+    /// it.
+    Submodule {
+        /// The commit hash of the submodule commit.
+        commit_hash: String,
+    },
 }
 
 impl<C: AsRef<[u8]>> FileContent<C> {
     fn as_bytes(&self) -> Option<&[u8]> {
         match self {
-            FileContent::Omitted { .. } => None,
+            FileContent::Omitted { .. } | FileContent::Submodule { .. } => None,
             FileContent::Inline(c) => Some(c.as_ref()),
         }
     }
@@ -540,7 +573,14 @@ impl<C: AsRef<[u8]>> FileContent<C> {
     fn is_omitted(&self) -> bool {
         match self {
             FileContent::Omitted { .. } => true,
-            FileContent::Inline(_) => false,
+            _ => false,
+        }
+    }
+
+    fn submodule_commit_hash(&self) -> Option<&str> {
+        match self {
+            FileContent::Submodule { commit_hash } => Some(commit_hash),
+            _ => None,
         }
     }
 }
@@ -599,6 +639,17 @@ where
     }
 }
 
+fn file_is_submodule<P, C>(file: &Option<DiffFile<P, C>>) -> bool
+where
+    P: AsRef<[u8]>,
+    C: AsRef<[u8]>,
+{
+    match file {
+        Some(file) => file.file_type == FileType::GitSubmodule,
+        _ => false,
+    }
+}
+
 /// Computes a diff between two files `old_file` and `new_file`,
 /// the number of `context` lines can be set in `opts` struct.
 ///
@@ -616,16 +667,29 @@ where
     P: AsRef<[u8]>,
     P: Clone,
     C: AsRef<[u8]> + PartialEq + Eq,
-    F: Fn(S, &[u8]) -> S,
+    F: Fn(S, &[u8]) -> S + Clone,
 {
-    let mut state = DiffState::new(seed, reduce);
     fn file_type_to_mode(file_type: FileType) -> &'static [u8] {
         match file_type {
             FileType::Executable => b"100755",
             FileType::Symlink => b"120000",
             FileType::Regular => b"100644",
+            FileType::GitSubmodule => b"160000",
         }
     }
+
+    // If the file is changed to or from a git submodule, this always
+    // shows up as a delete folled by an add.
+    if let (Some(old), Some(new)) = (&old_file, &new_file) {
+        if (old.file_type == FileType::GitSubmodule) != (new.file_type == FileType::GitSubmodule) {
+            let seed = gen_diff_unified(old_file, None, diff_opts.clone(), seed, reduce.clone());
+            let seed = gen_diff_unified(None, new_file, diff_opts, seed, reduce);
+            return seed;
+        }
+    }
+
+    let mut state = DiffState::new(seed, reduce);
+
     if let (None, None) = (&old_file, &new_file) {
         return state.collect();
     }
@@ -735,6 +799,19 @@ where
     } else {
         state.emit(b"+++ /dev/null\n");
     }
+
+    if file_is_submodule(&old_file) || file_is_submodule(&new_file) {
+        state.emit_submodule_changes(
+            old_file
+                .as_ref()
+                .and_then(|file| file.contents.submodule_commit_hash()),
+            new_file
+                .as_ref()
+                .and_then(|file| file.contents.submodule_commit_hash()),
+        );
+        return state.collect();
+    }
+
     // All headers emitted, now emit the actual diff.
     let (reduce, seed) = state.unwrap();
     match (
@@ -1122,5 +1199,103 @@ Binary file x has changed
                 );
             });
         });
+    }
+
+    #[test]
+    fn test_diff_unified_submodule_add() {
+        assert_eq!(
+            String::from_utf8_lossy(&diff_unified(
+                None,
+                Some(DiffFile {
+                    contents: FileContent::<Vec<u8>>::Submodule {
+                        commit_hash: String::from("abcdef")
+                    },
+                    path: "x",
+                    file_type: FileType::GitSubmodule,
+                }),
+                DiffOpts {
+                    context: 10,
+                    copy_info: CopyInfo::None,
+                }
+            )),
+            r"diff --git a/x b/x
+new file mode 160000
+--- /dev/null
++++ b/x
+@@ -0,0 +1 @@
++Subproject commit abcdef
+"
+        );
+    }
+
+    #[test]
+    fn test_diff_unified_submodule_change() {
+        assert_eq!(
+            String::from_utf8_lossy(&diff_unified(
+                Some(DiffFile {
+                    contents: FileContent::<Vec<u8>>::Submodule {
+                        commit_hash: String::from("abcdef1000")
+                    },
+                    path: "x",
+                    file_type: FileType::GitSubmodule,
+                }),
+                Some(DiffFile {
+                    contents: FileContent::Submodule {
+                        commit_hash: String::from("abcdef2000")
+                    },
+                    path: "x",
+                    file_type: FileType::GitSubmodule,
+                }),
+                DiffOpts {
+                    context: 10,
+                    copy_info: CopyInfo::None,
+                }
+            )),
+            r"diff --git a/x b/x
+--- a/x
++++ b/x
+@@ -1 +1 @@
+-Subproject commit abcdef1000
++Subproject commit abcdef2000
+"
+        );
+    }
+
+    #[test]
+    fn test_diff_unified_submodule_replace() {
+        let a = "a\n";
+        assert_eq!(
+            String::from_utf8_lossy(&diff_unified(
+                Some(DiffFile {
+                    contents: FileContent::Submodule {
+                        commit_hash: String::from("abcdef")
+                    },
+                    path: "x",
+                    file_type: FileType::GitSubmodule,
+                }),
+                Some(DiffFile {
+                    contents: FileContent::Inline(&a),
+                    path: "x",
+                    file_type: FileType::Executable,
+                }),
+                DiffOpts {
+                    context: 10,
+                    copy_info: CopyInfo::None,
+                }
+            )),
+            r"diff --git a/x b/x
+deleted file mode 160000
+--- a/x
++++ /dev/null
+@@ -1 +0,0 @@
+-Subproject commit abcdef
+diff --git a/x b/x
+new file mode 100755
+--- /dev/null
++++ b/x
+@@ -0,0 +1,1 @@
++a
+"
+        );
     }
 }

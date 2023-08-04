@@ -13,6 +13,7 @@ use anyhow::Error;
 use bytes::Bytes;
 use futures::try_join;
 use lazy_static::lazy_static;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::ContentMetadataV2;
 use regex::Regex;
 pub use xdiff::CopyInfo;
@@ -456,18 +457,23 @@ impl ChangesetPathDiffContext {
                         FileType::Regular => xdiff::FileType::Regular,
                         FileType::Executable => xdiff::FileType::Executable,
                         FileType::Symlink => xdiff::FileType::Symlink,
-                        FileType::GitSubmodule => {
-                            return Err(MononokeError::from(Error::msg(
-                                "Git submodules not supported",
-                            )));
-                        }
+                        FileType::GitSubmodule => xdiff::FileType::GitSubmodule,
                     };
-                    let contents = match mode {
-                        UnifiedDiffMode::Inline => {
+                    let contents = match (file_type, mode) {
+                        (xdiff::FileType::GitSubmodule, _) => {
+                            let commit_hash_bytes = file.content_concat().await?;
+                            let commit_hash = GitSha1::from_bytes(commit_hash_bytes)
+                                .with_context(|| {
+                                    format!("Invalid commit hash for submodule at {}", path.path())
+                                })?
+                                .to_string();
+                            xdiff::FileContent::Submodule { commit_hash }
+                        }
+                        (_, UnifiedDiffMode::Inline) => {
                             let contents = file.content_concat().await?;
                             xdiff::FileContent::Inline(contents)
                         }
-                        UnifiedDiffMode::OmitContent => {
+                        (_, UnifiedDiffMode::OmitContent) => {
                             let content_id = file.metadata().await?.content_id;
                             xdiff::FileContent::Omitted {
                                 content_hash: format!("{}", content_id),
