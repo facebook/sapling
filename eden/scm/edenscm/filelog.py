@@ -162,7 +162,7 @@ class fileslog(object):
             gitstore = git.openstore(repo)
             self.contentstore = gitstore
             self.filescmstore = gitstore
-        elif eagerepo.iseagerepo(repo):
+        elif eagerepo.iseagerepo(repo) or repo.storage_format() == "revlog":
             store = repo._rsrepo.eagerstore()
             self.contentstore = store
             self.filescmstore = store

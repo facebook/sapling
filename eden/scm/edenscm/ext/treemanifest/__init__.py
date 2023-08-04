@@ -364,6 +364,8 @@ def wraprepo(repo):
         def prefetchtrees(self, mfnodes, basemfnodes=None):
             if not treeenabled(self.ui):
                 return
+            if self.storage_format() == "revlog":
+                return
 
             mfnodes = list(mfnodes)
             perftrace.tracevalue("Keys", len(mfnodes))
@@ -422,7 +424,7 @@ def setuptreestores(repo, mfl):
         mfl._isgit = True
         mfl._iseager = False
         mfl.datastore = git.openstore(repo)
-    elif eagerepo.iseagerepo(repo):
+    elif eagerepo.iseagerepo(repo) or repo.storage_format() == "revlog":
         mfl._isgit = False
         mfl._iseager = True
         store = repo.fileslog.contentstore
@@ -1170,7 +1172,7 @@ def pull(orig, ui, repo, *pats, **opts):
 def _postpullprefetch(ui, repo):
     if "default" not in repo.ui.paths:
         return
-    if git.isgitstore(repo) or eagerepo.iseagerepo(repo):
+    if repo.storage_format() != "remotefilelog":
         return
 
     ctxs = []

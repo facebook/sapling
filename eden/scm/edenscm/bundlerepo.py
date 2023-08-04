@@ -116,7 +116,8 @@ class bundlerevlog(revlog.revlog):
                 node,
             )
             if self.index is not None:
-                self.index.insert(-1, e)
+                new_rev = self.index.insert(-1, e)
+                assert new_rev == n
             if index2 is not None:
                 index2.insert(node, [p for p in (p1rev, p2rev) if p >= 0])
             if inner is not None:

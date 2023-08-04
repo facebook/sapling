@@ -614,6 +614,15 @@ class localrepository(object):
 
         self._eventreporting = True
 
+        # needed by revlog2
+        sfmt = self.storage_format()
+        if sfmt == "revlog" or not extensions.isenabled(self.ui, "treemanifest"):
+            from . import revlog2
+
+            revlog2.patch_types()
+
+            self.svfs._reporef = weakref.ref(self)
+
         try:
             self._treestatemigration()
             self._visibilitymigration()
