@@ -22,12 +22,14 @@ import {getInnerTextareaForVSCodeTextArea} from './utils';
 import {VSCodeButton, VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
 import {
   selectorFamily,
+  useRecoilCallback,
   useRecoilRefresher_UNSTABLE,
   useRecoilValue,
   useRecoilValueLoadable,
 } from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
+import {useThrottledEffect} from 'shared/hooks';
 import {unwrap} from 'shared/utils';
 
 import './GenerateWithAI.css';
@@ -44,10 +46,38 @@ export function GenerateAICommitMesageButton({
 }) {
   const currentCommit = useRecoilValue(commitInfoViewCurrentCommits)?.[0];
   const mode = useRecoilValue(commitMode);
-  if (currentCommit == null) {
+  useThrottledEffect(
+    () => {
+      if (currentCommit != null) {
+        tracker.track('GenerateAICommitMessageButtonImpression');
+      }
+    },
+    100,
+    [currentCommit?.hash, mode],
+  );
+
+  const hashKey: HashKey | undefined =
+    currentCommit == null
+      ? undefined
+      : mode === 'commit'
+      ? `commit/${currentCommit.hash}`
+      : currentCommit.hash;
+  const onDismiss = useRecoilCallback(
+    ({snapshot}) =>
+      () => {
+        if (hashKey != null) {
+          const content = snapshot.getLoadable(generatedCommitMessages(hashKey));
+          if (content.state !== 'hasValue') {
+            tracker.track('DismissGeneratedAICommitMessageModal');
+          }
+        }
+      },
+    [hashKey],
+  );
+
+  if (hashKey == null) {
     return null;
   }
-  const hashKey: HashKey = mode === 'commit' ? `commit/${currentCommit.hash}` : currentCommit.hash;
   return (
     <span key="generate-ai-commit-message-button">
       <Tooltip
@@ -61,6 +91,7 @@ export function GenerateAICommitMesageButton({
             appendToTextArea={appendToTextArea}
           />
         )}
+        onDismiss={onDismiss}
         title={t('Generate a commit message suggestion with AI')}>
         <VSCodeButton appearance="icon" data-testid="generate-commit-message-button">
           <ThoughtBubbleIcon />
