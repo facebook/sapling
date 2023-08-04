@@ -237,6 +237,9 @@ enum EntryType {
 
   /// Sub-directory
   TREE = 4,
+
+  /// Git submodule
+  GIT_SUBMODULE = 5,
 }
 
 struct FileInfo {
@@ -439,6 +442,9 @@ enum MetadataDiffFileType {
 
   /// A symbolic link (equivalent to mode "120000")
   LINK = 3,
+
+  /// A git submodule
+  GIT_SUBMODULE = 4,
 }
 
 enum MetadataDiffFileContentType {
@@ -810,6 +816,9 @@ enum RepoCreateCommitParamsFileType {
 
   /// Symbolic link
   LINK = 3,
+
+  /// Git submodule
+  GIT_SUBMODULE = 4,
 }
 
 union RepoCreateCommitParamsFileContent {
@@ -1832,7 +1841,7 @@ struct CommitPathInfoResponse {
   /// Whether an item exists at this path.
   1: bool exists;
 
-  /// The type of the item at this path (file, link, exec, or directory).
+  /// The type of the item at this path (file, link, exec, directory or submodule).
   2: optional EntryType type;
 
   /// The info for the item.

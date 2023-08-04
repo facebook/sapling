@@ -305,6 +305,7 @@ impl FromRequest<thrift::RepoCreateCommitParamsFileType> for FileType {
             thrift::RepoCreateCommitParamsFileType::FILE => Ok(FileType::Regular),
             thrift::RepoCreateCommitParamsFileType::EXEC => Ok(FileType::Executable),
             thrift::RepoCreateCommitParamsFileType::LINK => Ok(FileType::Symlink),
+            thrift::RepoCreateCommitParamsFileType::GIT_SUBMODULE => Ok(FileType::GitSubmodule),
             val => Err(errors::invalid_request(format!(
                 "unsupported file type ({})",
                 val

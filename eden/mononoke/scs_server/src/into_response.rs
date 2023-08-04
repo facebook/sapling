@@ -83,8 +83,7 @@ impl IntoResponse<thrift::EntryType> for FileType {
             FileType::Regular => thrift::EntryType::FILE,
             FileType::Executable => thrift::EntryType::EXEC,
             FileType::Symlink => thrift::EntryType::LINK,
-            // TODO(mbthomas): support git submodules
-            FileType::GitSubmodule => todo!(),
+            FileType::GitSubmodule => thrift::EntryType::GIT_SUBMODULE,
         }
     }
 }
@@ -96,8 +95,7 @@ impl IntoResponse<Option<thrift::MetadataDiffFileType>> for Option<FileType> {
             Some(FileType::Regular) => Some(thrift::MetadataDiffFileType::FILE),
             Some(FileType::Executable) => Some(thrift::MetadataDiffFileType::EXEC),
             Some(FileType::Symlink) => Some(thrift::MetadataDiffFileType::LINK),
-            // TODO(mbthomas): support git submodules
-            Some(FileType::GitSubmodule) => todo!(),
+            Some(FileType::GitSubmodule) => Some(thrift::MetadataDiffFileType::GIT_SUBMODULE),
         }
     }
 }
