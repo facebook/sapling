@@ -225,6 +225,21 @@ new mode 120000
         self.assertTrue(os.path.isdir(self.get_path("d3")))
         self.assertEqual("hola", self.read_file(os.path.join("d3", "hello.txt")))
 
+    def test_symlink_chain_directory_listing(self) -> None:
+        self.repo.write_file("a/b/hello.txt", "hola")
+        self.repo.write_file("a/b/bye.txt", "adios")
+        self.repo.symlink("x/y/z/w", "../../../a/b", target_is_directory=True)
+        self.assertEqual("adios", self.read_file("x/y/z/w/bye.txt"))
+        scommit = self.repo.commit("Commit that adds symlinks")
+        # We first run update to make the symlink disappear
+        self.repo.update(self.simple_commit)
+        # And then again to making sure it is are materialized properly
+        self.repo.update(scommit)
+        self.assertEqual(
+            {"bye.txt", "hello.txt"},
+            {p.name for p in os.scandir(os.path.join(self.mount, "x/y/z/w"))},
+        )
+
     def test_symlink_cycle(self) -> None:
         self.repo.symlink("s0", "s2")
         self.repo.symlink("s1", "s0")

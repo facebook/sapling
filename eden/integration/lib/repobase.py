@@ -138,6 +138,8 @@ class Repository(object):
             if ex.errno != errno.ENOENT:
                 raise
 
+        if os.name == "nt":
+            contents = contents.replace("/", "\\")
         os.symlink(contents, full_path, target_is_directory=target_is_directory)
         if add:
             self.add_file(path)

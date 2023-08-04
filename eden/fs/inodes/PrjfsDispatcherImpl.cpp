@@ -127,7 +127,7 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
                                           '\\');
                                       auto symlinkPath = path.empty()
                                           ? RelativePath(name)
-                                          : path;
+                                          : path + name;
                                       return isFinalSymlinkPathDirectory(
                                                  symlinkPath, content, context)
                                           .thenValue(
