@@ -75,3 +75,4 @@ builtins =
   roots,
   sort,
   tonodes,
+  parentnames,

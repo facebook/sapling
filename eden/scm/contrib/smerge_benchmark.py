@@ -25,11 +25,13 @@ class BenchStats:
     changed_files: int = 0
     unresolved_files: int = 0
     unmatched_files: int = 0
+    octopus_merges: int = 0
+    criss_cross_merges: int = 0
 
 
 @command("smerge_bench", commands.dryrunopts)
 def smerge_bench(ui, repo, **opts):
-    merge_commits = repo.dageval(lambda: merges(all()))  # noqa
+    merge_commits = repo.dageval(lambda dag: dag.merges(dag.all()))
     ui.write(f"len(merge_commits)={len(merge_commits)}\n")
 
     for m3merger in [Merge3Text, SmartMerge3Text]:
@@ -37,15 +39,47 @@ def smerge_bench(ui, repo, **opts):
         start = time.time()
         bench_stats = BenchStats()
         for i, merge_commit in enumerate(merge_commits, start=1):
+            parents = repo.dageval(lambda: parentnames(merge_commit))
+
+            if len(parents) != 2:
+                # skip octopus merge
+                #    a
+                #  / | \
+                # b  c  d
+                #  \ | /
+                #    e
+                bench_stats.octopus_merges += 1
+                continue
+
+            p1, p2 = parents
+            gcas = repo.dageval(lambda: gcaall([p1, p2]))
+            if len(gcas) != 1:
+                # skip criss cross merge
+                #    a
+                #   / \
+                #  b1  c1
+                #  |\ /|
+                #  | X |
+                #  |/ \|
+                #  b2  c2
+                bench_stats.criss_cross_merges += 1
+                continue
+
+            basectx = repo[gcas[0]]
+            p1ctx, p2ctx = repo[p1], repo[p2]
             mergectx = repo[merge_commit]
-            p1, p2 = mergectx.p1(), mergectx.p2()
-            base = repo.dageval(lambda: gcaone([p1.node(), p2.node()]))
-            basectx = repo[base]
 
             for filepath in mergectx.files():
-                if all(filepath in ctx for ctx in [basectx, p1, p2]):
+                if all(filepath in ctx for ctx in [basectx, p1ctx, p2ctx]):
                     merge_file(
-                        repo, p1, p2, basectx, mergectx, filepath, m3merger, bench_stats
+                        repo,
+                        p1ctx,
+                        p2ctx,
+                        basectx,
+                        mergectx,
+                        filepath,
+                        m3merger,
+                        bench_stats,
                     )
 
             if i % 100 == 0:
