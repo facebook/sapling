@@ -10,6 +10,7 @@ import type {RepositoryReference} from './RepositoryCache';
 import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {Logger} from './logger';
 import type {ServerPlatform} from './serverPlatform';
+import type {Serializable} from 'isl/src/serialize';
 import type {
   ServerToClientMessage,
   ClientToServerMessage,
@@ -639,6 +640,13 @@ export default class ServerToClientAPI {
         Internal.fetchFeatureFlag?.(data.name).then((passes: boolean) => {
           this.logger.info(`feature flag ${data.name} ${passes ? 'PASSES' : 'FAILS'}`);
           this.postMessage({type: 'fetchedFeatureFlag', name: data.name, passes});
+        });
+        break;
+      }
+      case 'fetchInternalUserInfo': {
+        Internal.fetchUserInfo?.().then((info: Serializable) => {
+          this.logger.info('user info:', info);
+          this.postMessage({type: 'fetchedInternalUserInfo', info});
         });
         break;
       }

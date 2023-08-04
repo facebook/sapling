@@ -7,8 +7,9 @@
 
 import type {TrackErrorName, TrackEventName} from './eventNames';
 
+type JSONSerializableObject = {[key: string]: JSONSerializable};
 type JSONSerializable =
-  | {[key: string]: JSONSerializable}
+  | JSONSerializableObject
   | Array<JSONSerializable>
   | string
   | number
@@ -31,7 +32,7 @@ export type TrackData = {
   /** duration of the event in ms */
   duration?: number;
   /** additional fields and custom data for this event */
-  extras?: JSONSerializable;
+  extras?: JSONSerializableObject;
   /** string enum describing what category of error this is */
   errorName?: TrackErrorName;
   /** thrown error message */

@@ -13,7 +13,7 @@ import {ErrorNotice} from '../ErrorNotice';
 import {Internal} from '../Internal';
 import {ThoughtBubbleIcon} from '../ThoughtBubbleIcon';
 import {Tooltip} from '../Tooltip';
-import {tracker} from '../analytics';
+import {tracker as originalTracker} from '../analytics';
 import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
 import {uncommittedChangesWithPreviews} from '../previews';
@@ -34,6 +34,10 @@ import {useThrottledEffect} from 'shared/hooks';
 import {unwrap} from 'shared/utils';
 
 import './GenerateWithAI.css';
+
+// We want to log the user id for all generated AI events,
+// use this special tracker to do it. But we can't make this null, or else tracker.operation won't run.
+const tracker = Internal?.trackerWithUserInfo ?? originalTracker;
 
 /** Either a commit hash or "commit/aaaaa" when making a new commit on top of hash aaaaa  */
 type HashKey = `commit/${string}` | string;

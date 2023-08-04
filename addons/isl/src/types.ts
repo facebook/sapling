@@ -7,6 +7,7 @@
 
 import type {TypeaheadKind, TypeaheadResult} from './CommitInfoView/types';
 import type {InternalTypes} from './InternalTypes';
+import type {Serializable} from './serialize';
 import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 import type {TrackDataWithEventName} from 'isl-server/src/analytics/types';
 import type {GitHubDiffSummary} from 'isl-server/src/github/githubCodeReviewProvider';
@@ -427,6 +428,7 @@ export type ClientToServerMessage =
   | {type: 'exportStack'; revs: string; assumeTracked?: Array<string>}
   | {type: 'importStack'; stack: ImportStack}
   | {type: 'fetchFeatureFlag'; name: string}
+  | {type: 'fetchInternalUserInfo'}
   | {
       type: 'generateAICommitMessage';
       id: string;
@@ -479,6 +481,7 @@ export type ServerToClientMessage =
     }
   | {type: 'importedStack'; imported: ImportedStack; error: string | undefined}
   | {type: 'fetchedFeatureFlag'; name: string; passes: boolean}
+  | {type: 'fetchedInternalUserInfo'; info: Serializable}
   | {
       type: 'generatedAICommitMessage';
       message: Result<string>;
