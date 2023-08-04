@@ -1,6 +1,5 @@
 #require git no-windows
 #debugruntest-compatible
-#chg-compatible
 
 Dedicated test about rebase with submodule involved.
 

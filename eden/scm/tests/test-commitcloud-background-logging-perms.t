@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True
 

@@ -1,4 +1,3 @@
-#chg-compatible
 #require git no-windows execbit
 #debugruntest-compatible
 

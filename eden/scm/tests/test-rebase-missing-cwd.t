@@ -1,5 +1,4 @@
 #debugruntest-compatible
-#chg-compatible
 
   $ configure mutation-norecord
 #require rmcwd

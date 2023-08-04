@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 
   $ enable amend rebase remotenames

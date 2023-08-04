@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 
 Pushrebase still needs filepeer.

@@ -1,7 +1,6 @@
 #debugruntest-compatible
   $ eagerepo
-`#chg-compatible
-
+`
   $ newext showhint << EOF
   > from edenscm import (
   >     cmdutil,

@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 
 Revert interactive tests

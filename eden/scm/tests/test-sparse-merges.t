@@ -1,4 +1,3 @@
-#chg-compatible
 #require no-windows
 #debugruntest-compatible
 #inprocess-hg-incompatible

@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 
   $ setconfig format.use-segmented-changelog=true

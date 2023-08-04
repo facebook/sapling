@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 
 Set up a repo

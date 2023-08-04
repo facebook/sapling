@@ -1,6 +1,5 @@
 #require git
 #debugruntest-compatible
-#chg-compatible
 
 Test that we validate certain username errors.
 

@@ -1,5 +1,4 @@
 #debugruntest-compatible
-#chg-compatible
 
   $ eagerepo
   $ enable tweakdefaults

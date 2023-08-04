@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 
 #if no-windows no-osx

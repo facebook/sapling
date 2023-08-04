@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 
   $ . "$TESTDIR/library.sh"

@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
   $ eagerepo
   $ configure dummyssh modernclient

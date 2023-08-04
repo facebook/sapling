@@ -1,5 +1,4 @@
 #debugruntest-compatible
-#chg-compatible
 
 hide outer repo
   $ hg init

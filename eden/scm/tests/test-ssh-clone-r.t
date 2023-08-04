@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 #inprocess-hg-incompatible
   $ setconfig devel.segmented-changelog-rev-compat=true

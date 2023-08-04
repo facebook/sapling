@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 
 test clone with lazy pull

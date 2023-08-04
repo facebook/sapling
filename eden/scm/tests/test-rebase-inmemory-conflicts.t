@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 
 Test new conflict switching:

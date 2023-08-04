@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 
 # Here we create a simple DAG which has just enough of the required

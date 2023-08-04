@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 
 Test adding, removing, changing files in both merge parents, without telling

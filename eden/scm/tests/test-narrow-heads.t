@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
   $ eagerepo
 'narrow-heads' requires remotenames and visibility

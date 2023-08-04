@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 #inprocess-hg-incompatible
   $ setconfig experimental.allowfilepeer=True clone.use-rust=1 commands.force-rust=clone

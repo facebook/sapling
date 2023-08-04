@@ -1,6 +1,5 @@
 #require git no-windows
 #debugruntest-compatible
-#chg-compatible
 
 Test that committer and author can be set separately. Committer is updated when
 rewriting commits.

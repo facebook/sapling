@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 
 Test log FILE history handling with renames / file node collisions.

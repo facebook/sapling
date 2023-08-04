@@ -1,4 +1,3 @@
-#chg-compatible
 #debugruntest-compatible
 
 This is needed to avoid treemanifestserver extension "leaking" into client repos.

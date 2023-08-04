@@ -1,5 +1,4 @@
 #debugruntest-compatible
-#chg-compatible
   $ setconfig experimental.allowfilepeer=True
 
 #require symlink

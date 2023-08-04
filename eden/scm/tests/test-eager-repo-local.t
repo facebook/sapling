@@ -1,5 +1,4 @@
 #debugruntest-compatible
-#chg-compatible
 
   $ configure modern
   $ setconfig format.use-eager-repo=True
