@@ -31,6 +31,12 @@ type TooltipProps = {
    * The delay is only on the leading-edge; disappearing is always instant.
    */
   delayMs?: number;
+  /**
+   * Callback to run when the tooltip is dismissed for any reason.
+   * For 'click' tooltips that also have a 'title', this only fires when the 'click' tooltip is dismissed.
+   * Note: `onDismiss` will not run if the entire <Tooltip> is unmounted while the tooltip is visible.
+   */
+  onDismiss?: () => unknown;
 } & ExclusiveOr<
   ExclusiveOr<{trigger: 'manual'; shouldShow: boolean}, {trigger?: 'hover' | 'disabled'}> &
     ExclusiveOr<{component: (dismiss: () => void) => JSX.Element}, {title: string}>,
@@ -73,10 +79,21 @@ export function Tooltip({
   trigger: triggerProp,
   delayMs,
   shouldShow,
+  onDismiss,
 }: TooltipProps) {
   const trigger = triggerProp ?? 'hover';
   const placement = placementProp ?? 'top';
   const [visible, setVisible] = useState<VisibleState>(false);
+
+  // trigger onDismiss when visibility newly becomes false
+  const lastVisible = useRef(false);
+  useEffect(() => {
+    if (!visible && lastVisible.current === true) {
+      onDismiss?.();
+    }
+    lastVisible.current = visible === true;
+  }, [visible, onDismiss, lastVisible]);
+
   const ref = useRef<HTMLDivElement>(null);
   const getContent = () => {
     if (visible === 'title') {

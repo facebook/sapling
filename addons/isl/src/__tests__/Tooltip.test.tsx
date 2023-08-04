@@ -5,8 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactNode} from 'react';
+
 import App from '../App';
-import {__TEST__} from '../Tooltip';
+import {Tooltip, __TEST__} from '../Tooltip';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -22,7 +24,7 @@ import {act} from 'react-dom/test-utils';
 
 jest.mock('../MessageBus');
 
-describe('tooltips', () => {
+describe('tooltips in ISL', () => {
   let unmount: () => void;
   beforeEach(() => {
     resetTestMessages();
@@ -140,6 +142,121 @@ describe('tooltips', () => {
       expect(
         within(screen.getByTestId('tooltip-root-container')).queryByText(REFRESH_BUTTON_HOVER_TEXT),
       ).not.toBeInTheDocument();
+    });
+  });
+});
+
+describe('tooltip', () => {
+  function renderCustom(node: ReactNode) {
+    render(
+      <div className="isl-root">
+        <div className="tooltip-root-container" data-testid="tooltip-root-container">
+          {node}
+        </div>
+      </div>,
+    );
+  }
+  afterEach(() => {
+    __TEST__.resetMemoizedTooltipContainer();
+  });
+
+  describe('onDismiss', () => {
+    it('calls onDismiss when hover leaves', () => {
+      const onDismiss = jest.fn();
+      renderCustom(
+        <Tooltip trigger="hover" title="hi" onDismiss={onDismiss}>
+          hover me
+        </Tooltip>,
+      );
+      const tooltip = screen.getByText('hover me');
+      userEvent.hover(tooltip);
+      expect(onDismiss).not.toHaveBeenCalled();
+      userEvent.unhover(tooltip);
+      expect(onDismiss).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onDismiss when pressing escape', () => {
+      const onDismiss = jest.fn();
+      renderCustom(
+        <Tooltip trigger="hover" title="hi" onDismiss={onDismiss}>
+          hover me
+        </Tooltip>,
+      );
+      const tooltip = screen.getByText('hover me');
+      userEvent.hover(tooltip);
+      expect(onDismiss).not.toHaveBeenCalled();
+      userEvent.keyboard('{Escape}');
+      expect(onDismiss).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onDismiss when clicking outside', () => {
+      const onDismiss = jest.fn();
+      renderCustom(
+        <div>
+          <div>something else</div>
+          <Tooltip trigger="click" component={() => <div>hi</div>} onDismiss={onDismiss}>
+            click me
+          </Tooltip>
+        </div>,
+      );
+      const tooltip = screen.getByText('click me');
+      fireEvent.click(tooltip);
+      expect(onDismiss).not.toHaveBeenCalled();
+      const other = screen.getByText('something else');
+      fireEvent.click(other);
+      expect(onDismiss).toHaveBeenCalledTimes(1);
+    });
+
+    it('title fields on click tooltips does not trigger onDismiss', () => {
+      const onDismiss = jest.fn();
+      renderCustom(
+        <div>
+          <div>something else</div>
+          <Tooltip
+            trigger="click"
+            component={() => <div>hi</div>}
+            title="hovered"
+            onDismiss={onDismiss}>
+            click me
+          </Tooltip>
+        </div>,
+      );
+      const tooltip = screen.getByText('click me');
+      userEvent.hover(tooltip);
+      expect(onDismiss).not.toHaveBeenCalled();
+      userEvent.unhover(tooltip);
+      expect(onDismiss).not.toHaveBeenCalled();
+    });
+
+    it('dismiss prop in tooltip components calls onDismiss', () => {
+      const onDismiss = jest.fn();
+      renderCustom(
+        <Tooltip
+          trigger="click"
+          component={dismiss => (
+            <>
+              <div>hi</div>
+              <button onClick={dismiss}>my button</button>
+            </>
+          )}
+          title="hovered"
+          onDismiss={onDismiss}>
+          click me
+        </Tooltip>,
+      );
+      const tooltip = screen.getByText('click me');
+      fireEvent.click(tooltip);
+      expect(onDismiss).not.toHaveBeenCalled();
+
+      // clicking inside tooltip is fine
+      const innerText = screen.getByText('hi');
+      fireEvent.click(innerText);
+      expect(onDismiss).not.toHaveBeenCalled();
+
+      // action that causes dismiss prop causes onDismiss
+      const innerDismiss = screen.getByText('my button');
+      fireEvent.click(innerDismiss);
+      expect(onDismiss).toHaveBeenCalledTimes(1);
     });
   });
 });
