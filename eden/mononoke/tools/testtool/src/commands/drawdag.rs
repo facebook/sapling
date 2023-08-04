@@ -15,6 +15,8 @@
 //! `ChangeAction` for actions that change commits.
 //!
 //! Values that contain special characters can be surrounded by quotes.
+//! Values that require binary data can prefix a hex string with `&`, e.g.
+//! `&face` becomes a two byte string with the values `FA CE`.
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -302,7 +304,7 @@ impl ActionArg {
     }
 
     fn parse_args(args: &str) -> Result<Vec<Self>> {
-        let mut iter = args.trim().chars();
+        let mut iter = args.trim().chars().peekable();
         let mut args = Vec::new();
         let mut arg = ActionArg::new();
         let mut in_quotes = false;
@@ -337,6 +339,11 @@ impl ActionArg {
                     }
                     ch if ch.is_alphanumeric() || "_-./".contains(ch) => {
                         arg.push(ch);
+                    }
+                    '&' => {
+                        while iter.peek().map_or(false, |ch| !ch.is_whitespace()) {
+                            arg.push_hex(&mut iter)?;
+                        }
                     }
                     ch => return Err(anyhow!("Unexpected character: '{}'", ch)),
                 }
@@ -614,6 +621,16 @@ mod test {
                 change: ChangeAction::Modify {
                     path: b"path/to/file".to_vec(),
                     content: b"this has \xaa content\n\ton \x02 lines with \"quotes\"".to_vec(),
+                }
+            }
+        );
+        assert_eq!(
+            Action::new("modify: _1 path/to/binary/file &Faceb00c")?,
+            Action::Change {
+                name: "_1".to_string(),
+                change: ChangeAction::Modify {
+                    path: b"path/to/binary/file".to_vec(),
+                    content: b"\xfa\xce\xb0\x0c".to_vec(),
                 }
             }
         );
