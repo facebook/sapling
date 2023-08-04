@@ -102,7 +102,8 @@ py_class!(pub class dagcopytrace |py| {
         let src = Vertex::copy_from(src.data(py));
         let dst = Vertex::copy_from(dst.data(py));
         let src_path = src_path.to_repo_path_buf().map_pyerr(py)?;
-        let trace_result = block_on(self.inner(py).trace_rename(src, dst, src_path)).map_pyerr(py)?;
+        let inner = self.inner(py).clone();
+        let trace_result = py.allow_threads(|| block_on(inner.trace_rename(src, dst, src_path))).map_pyerr(py)?;
         match trace_result {
             TraceResult::Renamed(path) => Ok(Some(path.to_string())),
             _ => Ok(None),
@@ -122,7 +123,8 @@ py_class!(pub class dagcopytrace |py| {
         let src = Vertex::copy_from(src.data(py));
         let dst = Vertex::copy_from(dst.data(py));
         let src_path = src_path.to_repo_path_buf().map_pyerr(py)?;
-        let trace_result = block_on(self.inner(py).trace_rename(src, dst, src_path)).map_pyerr(py)?;
+        let inner = self.inner(py).clone();
+        let trace_result = py.allow_threads(|| block_on(inner.trace_rename(src, dst, src_path))).map_pyerr(py)?;
         Ok(Serde(trace_result))
     }
 });
