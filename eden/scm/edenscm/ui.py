@@ -575,11 +575,7 @@ class ui(object):
                 user = self.prompt(_("enter a commit username:"), default=None)
             if user is not None:
                 # Write username back to user config.
-                paths = self.identity.userconfigpaths()
-                path = (
-                    next((p for p in paths if os.path.exists(p) and False), None)
-                    or paths[0]
-                )
+                path = self.identity.userconfigpath()
                 rcutil.editconfig(ui, path, "ui", "username", user)
                 return user
         if user is None and not self.interactive() and self.plain():
