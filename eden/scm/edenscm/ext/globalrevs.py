@@ -261,6 +261,8 @@ def _lookupglobalrev(repo, grev):
         if rsp:
             hgnode = rsp[0]["translated"]["Hg"]
             return [hgnode]
+        elif ui.configbool("globalrevs", "edenapi-authoritative", True):
+            return []
 
     for rev in repo.revs("head()"):
         globalrev, svnrev = getglobalrev_and_svnrev(rev)
