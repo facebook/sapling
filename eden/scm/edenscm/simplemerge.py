@@ -28,10 +28,6 @@ from .i18n import _
 from .pycompat import range
 
 
-class CantReprocessAndShowBase(Exception):
-    pass
-
-
 def intersect(ra, rb):
     """Given two ranges return the range where they intersect or None.
 

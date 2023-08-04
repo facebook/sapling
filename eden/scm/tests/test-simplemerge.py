@@ -43,9 +43,6 @@ class Merge3(simplemerge.Merge3Text):
         self.b = b
 
 
-CantReprocessAndShowBase = simplemerge.CantReprocessAndShowBase
-
-
 def split_lines(t):
     return util.stringio(t).readlines()
 
