@@ -306,12 +306,6 @@ pypats = [
         ),
         (r"^\s*(while|if) [01]:", "use True/False for constant Boolean expression"),
         (r"^\s*if False(:| +and)", "Remove code instead of using `if False`"),
-        (
-            r"(?:(?<!def)\s+|\()hasattr\(",
-            "hasattr(foo, bar) is broken on py2, use util.safehasattr(foo, bar) "
-            "instead",
-            r"#.*hasattr-py3-only",
-        ),
         (r"opener\([^)]*\).read\(", "use opener.read() instead"),
         (r"opener\([^)]*\).write\(", "use opener.write() instead"),
         (r"[ \t\(](open|file)\([^)]*\)\.read\(", "use util.readfile() instead"),
