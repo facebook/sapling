@@ -11,8 +11,10 @@
 from __future__ import absolute_import
 
 import operator
+import os
 
 from edenscm import encoding, error, json, pycompat, util
+from edenscm.i18n import _
 from edenscm.node import bin, hex
 
 from . import arcconfig, phabricator_graphql_client, phabricator_graphql_client_urllib
@@ -583,6 +585,23 @@ class Client(object):
         ret = self._client.query(timeout, query, json.dumps(params))
         self._raise_errors(ret)
         return ret["data"]["query"]
+
+    def get_username(self, unixname=None, timeout=10) -> str:
+        """Get a string suitable for ui.username, like "Foo bar <foobar@example.com>"."""
+        if unixname is None:
+            unixname = os.getenv("USER") or os.getenv("USERNAME")
+        if not unixname:
+            raise error.Abort(_("unknown unixname"))
+        query = 'query($u: String!) { intern_user_for_unixname(unixname: $u) { access_name email } }'
+        params = {'u': unixname}
+        # {'data': {'intern_user_for_unixname': {'access_name': 'Name', 'email': 'foo@example.com'}}}
+        ret = self._client.query(timeout, query, json.dumps(params))
+        self._raise_errors(ret)
+        data = ret["data"]["intern_user_for_unixname"]
+        if not data:
+            raise error.Abort(_("no internal user for unixname '%s'") % unixname)
+        username = f"{data['access_name']} <{data['email']}>"
+        return username
 
     def _raise_errors(self, response):
         try:
