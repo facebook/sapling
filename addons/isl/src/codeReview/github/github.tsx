@@ -14,7 +14,7 @@ import {Tooltip} from '../../Tooltip';
 import {t, T} from '../../i18n';
 import {GhStackSubmitOperation} from '../../operations/GhStackSubmitOperation';
 import {PrSubmitOperation} from '../../operations/PrSubmitOperation';
-import {PullRequestState} from 'isl-server/src/github/generated/graphql';
+import {PullRequestReviewDecision, PullRequestState} from 'isl-server/src/github/generated/graphql';
 import {Icon} from 'shared/Icon';
 
 import './GitHubPRBadge.css';
@@ -39,13 +39,18 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
       return null;
     }
     return (
-      <div
-        className={'github-diff-status' + (diff?.state ? ` github-diff-status-${diff.state}` : '')}>
-        <Tooltip title={t('Click to open Pull Request in GitHub')} delayMs={500}>
-          {diff && <Icon icon={iconForPRState(diff.state)} />}
-          {diff?.state && <PRStateLabel state={diff.state} />}
-          {children}
-        </Tooltip>
+      <div className="github-diff-info">
+        <div
+          className={
+            'github-diff-status' + (diff?.state ? ` github-diff-status-${diff.state}` : '')
+          }>
+          <Tooltip title={t('Click to open Pull Request in GitHub')} delayMs={500}>
+            {diff && <Icon icon={iconForPRState(diff.state)} />}
+            {diff?.state && <PRStateLabel state={diff.state} />}
+            {children}
+          </Tooltip>
+        </div>
+        {diff?.reviewDecision && <ReviewDecision decision={diff.reviewDecision} />}
       </div>
     );
   }
@@ -123,4 +128,25 @@ function PRStateLabel({state}: {state: BadgeState}) {
     default:
       return <T>{state}</T>;
   }
+}
+
+function reviewDecisionLabel(decision: PullRequestReviewDecision) {
+  switch (decision) {
+    case PullRequestReviewDecision.Approved:
+      return <T>Approved</T>;
+    case PullRequestReviewDecision.ChangesRequested:
+      return <T>Changes Requested</T>;
+    case PullRequestReviewDecision.ReviewRequired:
+      return <T>Review Required</T>;
+    default:
+      return <T>{decision}</T>;
+  }
+}
+
+function ReviewDecision({decision}: {decision: PullRequestReviewDecision}) {
+  return (
+    <div className={`github-review-decision github-review-decision-${decision}`}>
+      {reviewDecisionLabel(decision)}
+    </div>
+  );
 }

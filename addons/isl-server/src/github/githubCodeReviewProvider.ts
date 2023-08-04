@@ -7,7 +7,11 @@
 
 import type {CodeReviewProvider} from '../CodeReviewProvider';
 import type {Logger} from '../logger';
-import type {YourPullRequestsQueryData, YourPullRequestsQueryVariables} from './generated/graphql';
+import type {
+  PullRequestReviewDecision,
+  YourPullRequestsQueryData,
+  YourPullRequestsQueryVariables,
+} from './generated/graphql';
 import type {CodeReviewSystem, DiffSignalSummary, DiffId, Disposable, Result} from 'isl/src/types';
 
 import {PullRequestState, StatusState, YourPullRequestsQuery} from './generated/graphql';
@@ -25,6 +29,7 @@ export type GitHubDiffSummary = {
   commentCount: number;
   anyUnresolvedComments: false;
   signalSummary?: DiffSignalSummary;
+  reviewDecision?: PullRequestReviewDecision;
 };
 
 type GitHubCodeReviewSystem = CodeReviewSystem & {type: 'github'};
@@ -88,6 +93,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
               signalSummary: githubStatusRollupStateToCIStatus(
                 summary.commits.nodes?.[0]?.commit.statusCheckRollup?.state,
               ),
+              reviewDecision: summary.reviewDecision ?? undefined,
             });
           }
         }
