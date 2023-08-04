@@ -163,13 +163,15 @@ impl Identity {
             .collect()
     }
 
-    pub fn system_config_path(&self) -> Option<PathBuf> {
+    pub fn system_config_paths(&self) -> Vec<PathBuf> {
         if cfg!(windows) {
-            std::env::var("PROGRAMDATA")
-                .ok()
-                .map(|p| PathBuf::from(p).join(self.user.config_system_path))
+            let mut result = Vec::new();
+            if let Some(dir) = std::env::var_os("PROGRAMDATA") {
+                result.push(PathBuf::from(dir).join(self.user.config_system_path))
+            }
+            result
         } else {
-            Some(self.user.config_system_path.into())
+            vec![self.user.config_system_path.into()]
         }
     }
 

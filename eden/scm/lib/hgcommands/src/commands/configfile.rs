@@ -69,7 +69,7 @@ pub fn run(ctx: ReqCtx<DebugConfigLocationOpts>, repo: &mut OptionalRepo) -> Res
     if show_all || ctx.opts.system {
         let id = identity::default();
         let path = all_existing_system_paths(&id)
-            .chain(id.system_config_path().into_iter())
+            .chain(id.system_config_paths().into_iter())
             .next()
             .with_context(|| "unable to determine system config location")?;
         if show_all {

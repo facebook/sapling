@@ -954,7 +954,7 @@ pub fn all_existing_system_paths<'a>(id: &'a Identity) -> impl Iterator<Item = P
     Some(id)
         .into_iter()
         .chain(identity::all())
-        .filter_map(|id| id.system_config_path().filter(|p| p.exists()))
+        .flat_map(|id| id.system_config_paths().into_iter().filter(|p| p.exists()))
 }
 
 pub fn all_existing_user_paths<'a>(id: &'a Identity) -> impl Iterator<Item = PathBuf> + 'a {

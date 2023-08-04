@@ -1891,10 +1891,9 @@ def editconfig(ui, repo, *values, **opts):
             raise error.Abort(_("can't use --local outside a repository"))
         paths = [repo.localvfs.join(ident.configrepofile())]
     elif target == "system":
-        path = ident.systemconfigpath()
-        if not path:
+        paths = ident.systemconfigpaths()
+        if not paths:
             raise error.Abort(_("can't determine system config path"))
-        paths = [path]
     elif target == "user":
         paths = ident.userconfigpaths()
     else:
