@@ -721,6 +721,7 @@ class fncachestore(basicstore):
             "data meta dh fncache indexedlogdatastore indexedloghistorystore phaseroots visibleheads"
             " 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
             " segments hgcommits lfs manifests mutation metalog"
+            " revlogmeta"
         )
         return ["requires", "00changelog.i", "store/requires"] + [
             "store/" + f for f in d.split()
