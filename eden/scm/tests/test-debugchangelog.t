@@ -183,7 +183,8 @@ To revlog:
 
 The revlog backend does not need segmented data.
 
-  $ rm -rf .hg/store/segments .hg/store/hgcommits
+  $ rm -rf .hg/store/segments
+  $ mv .hg/store/hgcommits{,.bak}
   $ hg log -Gr 'all()' -T '{desc}'
   o  B
   │
@@ -201,6 +202,10 @@ The revlog backend does not need segmented data.
   │
   o  G
   
+Note revlog2 uses hgcommits for trees and files, so we need to restore it.
+
+  $ mv .hg/store/hgcommits{.bak,}
+
 To doublewrite:
 
   $ hg debugchangelog --migrate lazytext --unless doublewrite --unless revlog
