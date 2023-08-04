@@ -635,6 +635,13 @@ export default class ServerToClientAPI {
         parseExecJson(exec, reply);
         break;
       }
+      case 'fetchFeatureFlag': {
+        Internal.fetchFeatureFlag?.(data.name).then((passes: boolean) => {
+          this.logger.info(`feature flag ${data.name} ${passes ? 'PASSES' : 'FAILS'}`);
+          this.postMessage({type: 'fetchedFeatureFlag', name: data.name, passes});
+        });
+        break;
+      }
       case 'generateAICommitMessage': {
         if (Internal.generateAICommitMessage == null) {
           break;

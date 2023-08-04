@@ -14,6 +14,7 @@ import {Internal} from '../Internal';
 import {ThoughtBubbleIcon} from '../ThoughtBubbleIcon';
 import {Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
+import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {commitByHash} from '../serverAPIState';
@@ -46,14 +47,16 @@ export function GenerateAICommitMesageButton({
 }) {
   const currentCommit = useRecoilValue(commitInfoViewCurrentCommits)?.[0];
   const mode = useRecoilValue(commitMode);
+  const featureEnabled = useFeatureFlagSync(Internal.featureFlags?.GeneratedAICommitMessages);
+
   useThrottledEffect(
     () => {
-      if (currentCommit != null) {
+      if (currentCommit != null && featureEnabled) {
         tracker.track('GenerateAICommitMessageButtonImpression');
       }
     },
     100,
-    [currentCommit?.hash, mode],
+    [currentCommit?.hash, mode, featureEnabled],
   );
 
   const hashKey: HashKey | undefined =
@@ -75,7 +78,7 @@ export function GenerateAICommitMesageButton({
     [hashKey],
   );
 
-  if (hashKey == null) {
+  if (hashKey == null || !featureEnabled) {
     return null;
   }
   return (

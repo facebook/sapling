@@ -426,6 +426,7 @@ export type ClientToServerMessage =
   | {type: 'unsubscribe'; kind: SubscriptionKind; subscriptionID: string}
   | {type: 'exportStack'; revs: string; assumeTracked?: Array<string>}
   | {type: 'importStack'; stack: ImportStack}
+  | {type: 'fetchFeatureFlag'; name: string}
   | {
       type: 'generateAICommitMessage';
       id: string;
@@ -477,6 +478,7 @@ export type ServerToClientMessage =
       error: string | undefined;
     }
   | {type: 'importedStack'; imported: ImportedStack; error: string | undefined}
+  | {type: 'fetchedFeatureFlag'; name: string; passes: boolean}
   | {
       type: 'generatedAICommitMessage';
       message: Result<string>;
