@@ -64,7 +64,19 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-1
   
-# test prompt username
+# test no .hg/hgrc (uses generated non-interactive username)
+
+  $ echo space > asdf
+  $ rm .hg/hgrc
+  $ HGPLAIN=1 hg commit -m commit-1
+  no username found, using '[^']*' instead (re)
+
+  $ echo space2 > asdf
+  $ hg commit -u ' ' -m commit-1
+  abort: empty username!
+  [255]
+
+# test prompt username and it gets stored
 
   $ cat > .hg/hgrc <<EOF
   > [ui]
@@ -78,23 +90,13 @@
   > EOF
   enter a commit username: Asked User <ask@example.com>
   $ hg tip
-  commit:      84c91d963b70
+  commit:      dd27023cdf97
   user:        Asked User <ask@example.com>
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     ask
-  
 
-# test no .hg/hgrc (uses generated non-interactive username)
-
-  $ echo space > asdf
-  $ rm .hg/hgrc
-  $ HGPLAIN=1 hg commit -m commit-1
-  no username found, using '[^']*' instead (re)
-
-  $ echo space2 > asdf
-  $ hg commit -u ' ' -m commit-1
-  abort: empty username!
-  [255]
+  $ hg config ui.username --debug
+  $TESTTMP/.hgrc:*: Asked User <ask@example.com> (glob)
 
 # don't add tests here, previous test is unstable
 

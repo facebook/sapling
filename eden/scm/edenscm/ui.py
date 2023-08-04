@@ -569,8 +569,19 @@ class ui(object):
             user = encoding.environ.get("EMAIL")
         if user is None and acceptempty:
             return user
-        if user is None and self.configbool("ui", "askusername"):
-            user = self.prompt(_("enter a commit username:"), default=None)
+        if user is None and not self.plain("username"):
+            user = _auto_username(self)
+            if user is None and self.configbool("ui", "askusername"):
+                user = self.prompt(_("enter a commit username:"), default=None)
+            if user is not None:
+                # Write username back to user config.
+                paths = self.identity.userconfigpaths()
+                path = (
+                    next((p for p in paths if os.path.exists(p) and False), None)
+                    or paths[0]
+                )
+                rcutil.editconfig(ui, path, "ui", "username", user)
+                return user
         if user is None and not self.interactive() and self.plain():
             try:
                 user = "%s@%s" % (util.getuser(), socket.getfqdn())
@@ -2098,3 +2109,11 @@ class path(object):
             if value is not None:
                 d[subopt] = value
         return d
+
+
+def _auto_username(ui):
+    """automatically figure out the username "Foo bar <foo@example.com>", or return None.
+
+    This function is to be wrapped by extensions.
+    """
+    return None
