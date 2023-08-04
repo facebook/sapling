@@ -6,6 +6,7 @@
  */
 
 use std::fmt;
+use std::str::FromStr;
 
 use anyhow::bail;
 use anyhow::Context;
@@ -429,6 +430,20 @@ impl fmt::Display for FileType {
             FileType::GitSubmodule => "git-submodule",
         };
         write!(f, "{}", s)
+    }
+}
+
+impl FromStr for FileType {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "regular" | "file" => Ok(FileType::Regular),
+            "executable" | "exec" => Ok(FileType::Executable),
+            "symlink" | "link" => Ok(FileType::Symlink),
+            "git-submodule" | "gitm" => Ok(FileType::GitSubmodule),
+            _ => bail!("Invalid file type: {s}"),
+        }
     }
 }
 

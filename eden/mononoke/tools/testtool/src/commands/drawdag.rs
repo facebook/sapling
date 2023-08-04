@@ -49,6 +49,7 @@ use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
+use mononoke_types::FileType;
 use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use tests_utils::drawdag::extend_from_dag_with_changes;
@@ -98,10 +99,14 @@ enum Action {
 /// An action that changes one of the commits in the graph.
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum ChangeAction {
-    /// Set the content of a file.
+    /// Set the content of a file (optionally with file type).
     ///
-    ///     # modify: COMMIT path/to/file "content"
-    Modify { path: Vec<u8>, content: Vec<u8> },
+    ///     # modify: COMMIT path/to/file [TYPE] "content"
+    Modify {
+        path: Vec<u8>,
+        file_type: FileType,
+        content: Vec<u8>,
+    },
     /// Mark a file as deleted.
     ///
     ///     # delete: COMMIT path/to/file
@@ -111,11 +116,12 @@ enum ChangeAction {
     ///
     ///     # forget: COMMIT path/to/file
     Forget { path: Vec<u8> },
-    /// Mark a file as a copy of another file.
+    /// Mark a file as a copy of another file (optionally with file type).
     ///
-    ///     # copy: COMMIT path/to/file "content" PARENT_COMMIT_ID path/copied/from
+    ///     # copy: COMMIT path/to/file [TYPE] "content" PARENT_COMMIT_ID path/copied/from
     Copy {
         path: Vec<u8>,
+        file_type: FileType,
         content: Vec<u8>,
         parent: String,
         parent_path: Vec<u8>,
@@ -202,13 +208,21 @@ impl Action {
                         change: ChangeAction::CommitterDate { committer_date },
                     })
                 }
-                ("modify", [name, path, content]) => {
+                ("modify", [name, path, rest @ .., content]) if rest.len() < 2 => {
                     let name = name.to_string()?;
                     let path = path.to_bytes();
+                    let file_type = match rest.get(0) {
+                        Some(file_type) => file_type.to_string()?.parse()?,
+                        None => FileType::Regular,
+                    };
                     let content = content.to_bytes();
                     Ok(Action::Change {
                         name,
-                        change: ChangeAction::Modify { path, content },
+                        change: ChangeAction::Modify {
+                            path,
+                            file_type,
+                            content,
+                        },
                     })
                 }
                 ("delete", [name, path]) => {
@@ -236,9 +250,15 @@ impl Action {
                         change: ChangeAction::Extra { key, value },
                     })
                 }
-                ("copy", [name, path, content, parent, parent_path]) => {
+                ("copy", [name, path, rest @ .., content, parent, parent_path])
+                    if rest.len() < 2 =>
+                {
                     let name = name.to_string()?;
                     let path = path.to_bytes();
+                    let file_type = match rest.get(0) {
+                        Some(file_type) => file_type.to_string()?.parse()?,
+                        None => FileType::Regular,
+                    };
                     let content = content.to_bytes();
                     let parent = parent.to_string()?;
                     let parent_path = parent_path.to_bytes();
@@ -246,6 +266,7 @@ impl Action {
                         name,
                         change: ChangeAction::Copy {
                             path,
+                            file_type,
                             content,
                             parent,
                             parent_path,
@@ -516,7 +537,12 @@ fn apply_changes<'a>(
 ) -> CreateCommitContext<'a, BlobRepo> {
     for change in changes {
         match change {
-            ChangeAction::Modify { path, content, .. } => c = c.add_file(path.as_slice(), content),
+            ChangeAction::Modify {
+                path,
+                file_type,
+                content,
+                ..
+            } => c = c.add_file_with_type(path.as_slice(), content, file_type),
             ChangeAction::Delete { path, .. } => c = c.delete_file(path.as_slice()),
             ChangeAction::Forget { path, .. } => c = c.forget_file(path.as_slice()),
             ChangeAction::Extra { key, value, .. } => c = c.add_extra(key, value),
@@ -620,16 +646,18 @@ mod test {
                 name: "_1".to_string(),
                 change: ChangeAction::Modify {
                     path: b"path/to/file".to_vec(),
+                    file_type: FileType::Regular,
                     content: b"this has \xaa content\n\ton \x02 lines with \"quotes\"".to_vec(),
                 }
             }
         );
         assert_eq!(
-            Action::new("modify: _1 path/to/binary/file &Faceb00c")?,
+            Action::new("modify: _1 path/to/binary/file exec &Faceb00c")?,
             Action::Change {
                 name: "_1".to_string(),
                 change: ChangeAction::Modify {
                     path: b"path/to/binary/file".to_vec(),
+                    file_type: FileType::Executable,
                     content: b"\xfa\xce\xb0\x0c".to_vec(),
                 }
             }
