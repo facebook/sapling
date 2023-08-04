@@ -173,6 +173,7 @@ from edenscm import (
     registrar,
     repair,
     revlog,
+    revlog2,
     revsetlang,
     scmutil,
     sshserver,
@@ -315,6 +316,7 @@ def uisetup(ui):
         exchange, "_pullbundle2extraprepare", pullbundle2extraprepare
     )
     extensions.wrapfunction(revlog.revlog, "checkhash", _checkhash)
+    extensions.wrapfunction(revlog2.revlog2, "checkhash", _checkhash)
 
     extensions.wrapfilecache(localrepo.localrepository, "manifestlog", getmanifestlog)
     extensions.wrapfilecache(
