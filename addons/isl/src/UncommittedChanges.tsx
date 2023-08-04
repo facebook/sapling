@@ -689,6 +689,7 @@ const conflictStatuses = new Set<ChangedFileType>(['U', 'Resolved']);
 function FileActions({comparison, file}: {comparison: Comparison; file: UIChangedFile}) {
   const runOperation = useRunOperation();
   const hasExperimental = useRecoilValue(hasExperimentalFeatures);
+  const conflicts = useRecoilValue(optimisticMergeConflicts);
 
   const actions: Array<React.ReactNode> = [];
 
@@ -857,7 +858,7 @@ function FileActions({comparison, file}: {comparison: Comparison; file: UIChange
       );
     }
 
-    if (hasExperimental) {
+    if (hasExperimental && conflicts == null) {
       actions.push(<PartialSelectionAction file={file} key="partial-selection" />);
     }
   }
