@@ -2783,15 +2783,16 @@ HGMERGE
     (deprecated, see :prog:`help config.ui.merge`)
 
 HGRCPATH
-    A list of files or directories to search for configuration
-    files. Item separator is ":" on Unix, ";" on Windows. If HGRCPATH
+    A list of files to search for configuration files.
+    Item separator is ":" on Unix, ";" on Windows. If HGRCPATH
     is not set, platform default search path is used. If empty, only
     the current repository config is read.
 
-    For each element in HGRCPATH:
-
-    - if it's a directory, all files ending with .rc are added
-    - otherwise, the file itself will be added
+    Each element in HGRCPATH could start with an optional prefix
+    "sys=" or "user=" to specify whether it's considered as a system
+    or user config file. A special "sys=." or "user=." indicates
+    reusing the existing system or user config paths. Paths without
+    "sys=" or or "user=" prefixes are considered as system configs.
 
 HGPLAIN
     When set, this disables any configuration settings that might
