@@ -1356,12 +1356,13 @@ function wait_for_scs {
 # Because of warm bookmark cache the SCS bookmark updates are async.
 # This function allows to wait for them.
 function wait_for_bookmark_update() {
-  local repo=$1
-  local bookmark=$2
-  local target=$3
+  local repo="$1"
+  local bookmark="$2"
+  local target="$3"
+  local scheme="${4:-hg}"
   local attempt=1
   sleep 2
-  while [[ "$(scsc lookup -R $repo -B $bookmark)" != "$target" ]]
+  while [[ "$(scsc lookup -S "$scheme" -R "$repo" -B "$bookmark")" != "$target" ]]
   do
     attempt=$((attempt + 1))
     if [[ $attempt -gt 5 ]]
