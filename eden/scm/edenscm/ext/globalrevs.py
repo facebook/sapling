@@ -46,7 +46,7 @@ template.
 """
 from __future__ import absolute_import
 
-from edenscm import error, extensions, localrepo, namespaces, registrar, revset
+from edenscm import error, extensions, localrepo, namespaces, registrar, revset, util
 from edenscm.i18n import _
 from edenscm.namespaces import namespace
 
@@ -240,21 +240,6 @@ def _lookupglobalrev(repo, grev):
     tonode = cl.node
     ui = repo.ui
 
-    def getglobalrev_and_svnrev(rev):
-        commitextra = changelogrevision(rev).extra
-        globalrev = _getglobalrev(ui, commitextra)
-        svnrev = _getsvnrev(commitextra)
-
-        return (globalrev, svnrev)
-
-    def matchglobalrev(rev):
-        globalrev, svnrev = getglobalrev_and_svnrev(rev)
-
-        def isequal(strrev, rev):
-            return strrev is not None and int(strrev) == rev
-
-        return isequal(globalrev, grev) or isequal(svnrev, grev)
-
     useedenapi = ui.configbool("globalrevs", "edenapilookup")
     if useedenapi and repo.nullableedenapi is not None:
         rsp = list(repo.edenapi.committranslateids([{"Globalrev": grev}], "Hg"))
@@ -264,26 +249,31 @@ def _lookupglobalrev(repo, grev):
         elif ui.configbool("globalrevs", "edenapi-authoritative", True):
             return []
 
-    for rev in repo.revs("head()"):
-        globalrev, svnrev = getglobalrev_and_svnrev(rev)
-        globalrev = globalrev or svnrev
-        if globalrev:
-            globalrev = int(globalrev)
-            if grev <= globalrev:
-                break
-    else:
-        # grev is bigger than every head.
-        # That means that `grev` is not in the repo and we can exit early
-        return []
+    for rev in repo.revs("reverse(public())").prefetch("text"):
+        commitextra = changelogrevision(rev).extra
 
-    matchedrevs = []
+        # _getglobalrev returns "globalrev or svnrev"
+        globalrev = _getglobalrev(ui, commitextra)
+        if globalrev is None:
+            continue
 
-    for rev in repo.revs("reverse(all())"):
-        if matchglobalrev(rev):
-            matchedrevs.append(tonode(rev))
-            break
+        globalrev = int(globalrev)
+        if globalrev == grev:
+            return [tonode(rev)]
+        elif globalrev < grev:
+            # globalrev is always bigger than svnrev if both are present.
+            # globalrev will only get smaller from here on out, so we can
+            # return early.
+            return []
 
-    return matchedrevs
+        # In case commit has both globalrev and svnrev, we already
+        # checked globalrev above, so now we need to check svnrev
+        # directly.
+        svnrev = _getsvnrev(commitextra)
+        if svnrev is not None and int(svnrev) == grev:
+            return [tonode(rev)]
+
+    return []
 
 
 def _lookupname(repo, name):
