@@ -27,13 +27,17 @@ define_flags! {
 pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: &mut Repo) -> Result<u8> {
     #[cfg(feature = "fb")]
     {
+        use configloader::fb::FbConfigMode;
         let username = repo
             .config()
             .get("ui", "username")
             .and_then(|u| Some(u.to_string()))
             .unwrap_or_else(|| "".to_string());
 
+        let mode = FbConfigMode::default();
+
         generate_dynamicconfig(
+            mode,
             Some(repo.shared_dot_hg_path()),
             repo.repo_name(),
             ctx.opts.canary,

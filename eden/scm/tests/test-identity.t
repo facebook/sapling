@@ -22,7 +22,6 @@ Init can create a ".sl" repo.
   [1]
   $ ls .sl
   00changelog.i
-  hgrc.dynamic
   reponame
   requires
   store
@@ -48,7 +47,6 @@ Clone can create a ".sl" repo.
   00changelog.i
   config
   dirstate
-  hgrc.dynamic
   reponame
   requires
   store

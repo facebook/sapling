@@ -35,6 +35,8 @@ use crate::config::ConfigSet;
 use crate::config::Options;
 use crate::error::Error;
 use crate::error::Errors;
+#[cfg(feature = "fb")]
+use crate::fb::FbConfigMode;
 
 pub trait OptionsHgExt {
     /// Drop configs according to `$HGPLAIN` and `$HGPLAINEXCEPT`.
@@ -318,7 +320,7 @@ impl ConfigSetHgExt for ConfigSet {
 
         // This is the out-of-orderness. We load the dynamic config on a
         // detached ConfigSet then combine it into our "secondary" config
-        // sources to maintian the correct priority.
+        // sources to maintain the correct priority.
         errors.append(
             &mut dynamic
                 .load_dynamic(
@@ -379,6 +381,13 @@ impl ConfigSetHgExt for ConfigSet {
         use crate::fb::dynamicconfig::vpnless_config_path;
 
         let mut errors = Vec::new();
+        let mode = FbConfigMode::from_identity(identity);
+
+        tracing::debug!("FbConfigMode is {:?}", &mode);
+
+        if !mode.need_dynamic_generator() {
+            return Ok(errors);
+        }
 
         // Compute path
         let dynamic_path = get_config_dir(repo_path)?.join("hgrc.dynamic");
@@ -428,8 +437,14 @@ impl ConfigSetHgExt for ConfigSet {
             };
 
             // Regen inline
-            let res =
-                generate_dynamicconfig(repo_path, repo_name, None, user_name, proxy_sock_path);
+            let res = generate_dynamicconfig(
+                mode,
+                repo_path,
+                repo_name,
+                None,
+                user_name,
+                proxy_sock_path,
+            );
             if let Err(e) = res {
                 let is_perm_error = e
                     .chain()
@@ -825,6 +840,7 @@ fn get_config_dir(repo_path: Option<&Path>) -> Result<PathBuf, Error> {
 
 #[cfg(feature = "fb")]
 pub fn calculate_dynamicconfig(
+    mode: FbConfigMode,
     config_dir: PathBuf,
     repo_name: Option<impl AsRef<str>>,
     canary: Option<String>,
@@ -832,11 +848,12 @@ pub fn calculate_dynamicconfig(
     proxy_sock_path: Option<String>,
 ) -> Result<ConfigSet> {
     use crate::fb::dynamicconfig::Generator;
-    Generator::new(repo_name, config_dir, user_name, proxy_sock_path)?.execute(canary)
+    Generator::new(mode, repo_name, config_dir, user_name, proxy_sock_path)?.execute(canary)
 }
 
 #[cfg(feature = "fb")]
 pub fn generate_dynamicconfig(
+    mode: FbConfigMode,
     repo_path: Option<&Path>,
     repo_name: Option<impl AsRef<str>>,
     canary: Option<String>,
@@ -887,6 +904,7 @@ pub fn generate_dynamicconfig(
     let global_config_dir = get_config_dir(None)?;
 
     let config = calculate_dynamicconfig(
+        mode,
         global_config_dir,
         repo_name,
         canary,

@@ -26,6 +26,9 @@ define_flags! {
         /// host name to fetch a canary config from
         canary: Option<String>,
 
+        /// config mode
+        mode: String,
+
         #[args]
         args: Vec<String>,
     }
@@ -34,6 +37,8 @@ define_flags! {
 pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>, config: &mut ConfigSet) -> Result<u8> {
     #[cfg(feature = "fb")]
     {
+        use configloader::fb::FbConfigMode;
+
         let reponame = ctx.opts.reponame;
         let mut username = ctx.opts.username;
         if username.is_empty() {
@@ -42,7 +47,13 @@ pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>, config: &mut ConfigSet) -> Result<u
         let canary = ctx.opts.canary;
 
         let temp_dir = std::env::temp_dir();
+        let mode = if ctx.opts.mode.is_empty() {
+            FbConfigMode::default()
+        } else {
+            FbConfigMode::from_str(&ctx.opts.mode)
+        };
         let generated = calculate_dynamicconfig(
+            mode,
             temp_dir,
             reponame,
             canary,

@@ -89,11 +89,8 @@
   > Asked User <ask@example.com>
   > EOF
   enter a commit username: Asked User <ask@example.com>
-  $ hg tip
-  commit:      dd27023cdf97
-  user:        Asked User <ask@example.com>
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     ask
+  $ hg log -r. -T '{author}\n'
+  Asked User <ask@example.com>
 
   $ hg config ui.username --debug
   $TESTTMP/.hgrc:*: Asked User <ask@example.com> (glob)

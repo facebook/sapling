@@ -44,8 +44,11 @@ pub(crate) fn builtin_system(opts: Options, ident: &Identity) -> UnionConfig {
     }
 
     #[cfg(feature = "fb")]
-    if !is_test || force_prod {
-        configs.push(Arc::new(&crate::fb::static_system::CONFIG));
+    {
+        let mode = crate::fb::FbConfigMode::from_identity(ident);
+        if mode.need_static() {
+            configs.push(Arc::new(&crate::fb::static_system::CONFIG));
+        }
     }
 
     // Include a test static config so it's easy for unit and

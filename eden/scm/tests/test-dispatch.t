@@ -81,7 +81,8 @@ However, we can't prevent it from loading extensions and configs:
   $ mkdir -p badrepo/.hg
   $ echo 'invalid-syntax' > badrepo/.hg/hgrc
   $ hg log -b -Rbadrepo default
-  hg: parse errors: unable to read repo config to get repo name
+  hg: parse errors: "$TESTTMP/a/badrepo/.hg/hgrc":
+  line 1: expect '[section]' or 'name = value'
   
   [255]
 

@@ -452,7 +452,7 @@ Show all commands + options
   debugdiscovery: rev
   debugdrawdag: print, bookmarks, files, write-env
   debugdryup: 
-  debugdumpdynamicconfig: reponame, username, canary
+  debugdumpdynamicconfig: reponame, username, canary, mode
   debugdumpindexedlog: 
   debugdumptrace: time-range, session-id, output-path
   debugduplicatedconfig: style, template

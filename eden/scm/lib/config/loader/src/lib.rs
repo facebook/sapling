@@ -29,6 +29,6 @@ pub use error::Errors;
 pub use minibytes::Text;
 
 #[cfg(feature = "fb")]
-mod fb;
+pub mod fb;
 
 mod builtin_static;
