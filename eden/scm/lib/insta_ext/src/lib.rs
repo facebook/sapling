@@ -12,8 +12,6 @@ pub fn setup() {
     const WORKSPACE: &str = "INSTA_WORKSPACE_ROOT";
     const UPDATE: &str = "INSTA_UPDATE";
     if std::env::var(WORKSPACE).is_err() {
-        // This depends on targets setting:
-        //      test_labels = ["buck2_run_from_project_root"]
         let mut root = std::path::PathBuf::from(file!());
         assert!(root.pop());
         assert!(root.pop());
