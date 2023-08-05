@@ -29,7 +29,7 @@ gix-object = "0.33"
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-regex = "1.6.0"
+regex = "1.9.2"
 sha1 = "0.10.5"
 thiserror = "1.0.43"
 

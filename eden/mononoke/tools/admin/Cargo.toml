@@ -82,7 +82,7 @@ pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_muta
 question = "0.2.2"
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
 redaction = { version = "0.1.0", path = "../../features/redaction" }
-regex = "1.6.0"
+regex = "1.9.2"
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_bookmark_attrs = { version = "0.1.0", path = "../../repo_attributes/repo_bookmark_attrs" }

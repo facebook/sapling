@@ -18,7 +18,7 @@ indexmap = { version = "1.9.2", features = ["arbitrary", "rayon", "serde-1"] }
 lazy_static = "1.4"
 lru = "0.10.0"
 memmap2 = "0.5.10"
-regex = "1.6.0"
+regex = "1.9.2"
 scopeguard = "1.0.0"
 serde = { version = "1.0.176", features = ["derive", "rc"] }
 smallvec = { version = "1.6.1", default-features = false }

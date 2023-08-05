@@ -22,6 +22,6 @@ context = { version = "0.1.0", path = "../../server/context" }
 hooks = { version = "0.1.0", path = "../../hooks" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 pushrebase = { version = "0.1.0", path = ".." }
-regex = "1.6.0"
+regex = "1.9.2"
 repo_authorization = { version = "0.1.0", path = "../../repo_authorization" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
