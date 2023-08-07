@@ -16,6 +16,7 @@ use configmodel::ConfigExt;
 use io::IO;
 use manifest_tree::ReadTreeManifest;
 use parking_lot::Mutex;
+use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
 use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
@@ -68,8 +69,8 @@ impl PhysicalFileSystem {
 impl PendingChangesTrait for PhysicalFileSystem {
     fn pending_changes(
         &self,
-        matcher: Arc<dyn Matcher + Send + Sync + 'static>,
-        _ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        matcher: DynMatcher,
+        _ignore_matcher: DynMatcher,
         ignore_dirs: Vec<PathBuf>,
         last_write: SystemTime,
         config: &dyn Config,

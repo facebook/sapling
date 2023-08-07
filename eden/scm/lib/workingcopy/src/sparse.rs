@@ -22,8 +22,8 @@ use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;
 use parking_lot::Mutex;
+use pathmatcher::DynMatcher;
 use pathmatcher::ExactMatcher;
-use pathmatcher::Matcher;
 use pathmatcher::UnionMatcher;
 pub use sparse::Root;
 use storemodel::futures::StreamExt;
@@ -41,7 +41,7 @@ pub fn repo_matcher(
     dot_path: &Path,
     manifest: impl Manifest + Send + Sync + 'static,
     store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
-) -> anyhow::Result<Option<(Arc<dyn Matcher + Send + Sync + 'static>, u64)>> {
+) -> anyhow::Result<Option<(DynMatcher, u64)>> {
     repo_matcher_with_overrides(vfs, dot_path, manifest, store, &disk_overrides(dot_path)?)
 }
 
@@ -51,7 +51,7 @@ pub fn repo_matcher_with_overrides(
     manifest: impl Manifest + Send + Sync + 'static,
     store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
     overrides: &HashMap<String, String>,
-) -> anyhow::Result<Option<(Arc<dyn Matcher + Send + Sync + 'static>, u64)>> {
+) -> anyhow::Result<Option<(DynMatcher, u64)>> {
     let prof = match util::file::read(dot_path.join("sparse")) {
         Ok(contents) => sparse::Root::from_bytes(contents, ".hg/sparse".to_string())?,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
@@ -79,7 +79,7 @@ fn build_matcher(
     manifest: impl Manifest + Send + Sync + 'static,
     store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
     overrides: &HashMap<String, String>,
-) -> anyhow::Result<(Arc<dyn Matcher + Send + Sync + 'static>, u64)> {
+) -> anyhow::Result<(DynMatcher, u64)> {
     let manifest = Arc::new(manifest);
 
     let hasher = Mutex::new(DefaultHasher::new());
@@ -133,7 +133,7 @@ fn build_matcher(
         }
     }))?;
 
-    let mut matcher: Arc<dyn Matcher + Send + Sync + 'static> = Arc::new(matcher);
+    let mut matcher: DynMatcher = Arc::new(matcher);
 
     match util::file::read_to_string(dot_path.join(MERGE_FILE_OVERRIDES)) {
         Ok(temp) => {

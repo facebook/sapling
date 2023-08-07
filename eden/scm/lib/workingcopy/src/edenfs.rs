@@ -6,14 +6,13 @@
  */
 
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::SystemTime;
 
 use anyhow::anyhow;
 use anyhow::Result;
 use configmodel::Config;
 use io::IO;
-use pathmatcher::Matcher;
+use pathmatcher::DynMatcher;
 use thrift_types::edenfs::ScmFileStatus;
 use types::RepoPathBuf;
 use vfs::VFS;
@@ -37,8 +36,8 @@ impl EdenFileSystem {
 impl PendingChanges for EdenFileSystem {
     fn pending_changes(
         &self,
-        _matcher: Arc<dyn Matcher + Send + Sync + 'static>,
-        _ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        _matcher: DynMatcher,
+        _ignore_matcher: DynMatcher,
         _ignore_dirs: Vec<PathBuf>,
         _last_write: SystemTime,
         _config: &dyn Config,

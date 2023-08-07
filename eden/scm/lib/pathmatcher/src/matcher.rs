@@ -13,15 +13,13 @@ use anyhow::Result;
 use crate::pattern::Pattern;
 use crate::AlwaysMatcher;
 use crate::DifferenceMatcher;
+use crate::DynMatcher;
 use crate::Error;
 use crate::IntersectMatcher;
-use crate::Matcher;
 use crate::PatternKind;
 use crate::RegexMatcher;
 use crate::TreeMatcher;
 use crate::UnionMatcher;
-
-type DynMatcher = Arc<dyn 'static + Matcher + Send + Sync>;
 
 /// Build matcher from normalized patterns.
 ///

@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use pathmatcher::AlwaysMatcher;
-use pathmatcher::Matcher;
+use pathmatcher::DynMatcher;
 use pathmatcher::NeverMatcher;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
@@ -129,7 +129,7 @@ fn check(mut tc: TestCase) -> Result<()> {
         wm_changes.push(path.clone());
     }
 
-    let matcher: Arc<dyn Matcher + Send + Sync + 'static> = match tc.matcher {
+    let matcher: DynMatcher = match tc.matcher {
         Always => Arc::new(AlwaysMatcher::new()),
         Never => Arc::new(NeverMatcher::new()),
     };

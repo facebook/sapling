@@ -15,8 +15,8 @@ use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::DifferenceMatcher;
+use pathmatcher::DynMatcher;
 use pathmatcher::ExactMatcher;
-use pathmatcher::Matcher;
 use status::StatusBuilder;
 use tracing::trace;
 use treestate::filestate::StateFlags;
@@ -45,7 +45,7 @@ pub fn compute_status(
     p1_manifest: &impl Manifest,
     treestate: Arc<Mutex<TreeState>>,
     pending_changes: impl Iterator<Item = Result<ChangeType>>,
-    matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+    matcher: DynMatcher,
 ) -> Result<StatusBuilder> {
     let mut modified = vec![];
     let mut added = vec![];
@@ -272,6 +272,7 @@ pub fn compute_status(
 
 #[cfg(test)]
 mod tests {
+    use pathmatcher::Matcher;
     use status::FileStatus;
     use status::Status;
     use tempdir::TempDir;

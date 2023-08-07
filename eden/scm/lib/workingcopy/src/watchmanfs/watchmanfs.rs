@@ -20,6 +20,7 @@ use io::IO;
 use manifest_tree::ReadTreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::AlwaysMatcher;
+use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::NeverMatcher;
 use progress_model::ProgressBar;
@@ -210,8 +211,8 @@ impl PendingChanges for WatchmanFileSystem {
     #[tracing::instrument(skip_all)]
     fn pending_changes(
         &self,
-        matcher: Arc<dyn Matcher + Send + Sync + 'static>,
-        mut ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        matcher: DynMatcher,
+        mut ignore_matcher: DynMatcher,
         ignore_dirs: Vec<PathBuf>,
         last_write: SystemTime,
         config: &dyn Config,
@@ -431,8 +432,8 @@ fn warn_about_fresh_instance(io: &IO, old_pid: Option<u32>, new_pid: Option<u32>
 // in the treestate.
 #[tracing::instrument(skip_all)]
 pub(crate) fn detect_changes(
-    matcher: Arc<dyn Matcher + Send + Sync + 'static>,
-    ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+    matcher: DynMatcher,
+    ignore_matcher: DynMatcher,
     mut file_change_detector: impl FileChangeDetectorTrait + 'static,
     ts: &mut TreeState,
     wm_need_check: Vec<metadata::File>,

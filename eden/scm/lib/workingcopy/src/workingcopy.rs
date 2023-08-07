@@ -25,6 +25,7 @@ use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::DifferenceMatcher;
+use pathmatcher::DynMatcher;
 use pathmatcher::GitignoreMatcher;
 use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher;
@@ -268,13 +269,10 @@ impl WorkingCopy {
         Ok(added_files)
     }
 
-    fn sparse_matcher(
-        &self,
-        manifests: &Vec<Arc<RwLock<TreeManifest>>>,
-    ) -> Result<Arc<dyn Matcher + Send + Sync + 'static>> {
+    fn sparse_matcher(&self, manifests: &[Arc<RwLock<TreeManifest>>]) -> Result<DynMatcher> {
         let fs = &self.filesystem.lock();
 
-        let mut sparse_matchers: Vec<Arc<dyn Matcher + Send + Sync + 'static>> = Vec::new();
+        let mut sparse_matchers: Vec<DynMatcher> = Vec::new();
         if fs.file_system_type == FileSystemType::Eden {
             sparse_matchers.push(Arc::new(AlwaysMatcher::new()));
         } else {
@@ -300,7 +298,7 @@ impl WorkingCopy {
 
     pub fn status(
         &self,
-        matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        matcher: DynMatcher,
         last_write: SystemTime,
         config: &dyn Config,
         io: &IO,
@@ -309,8 +307,7 @@ impl WorkingCopy {
 
         let manifests =
             WorkingCopy::current_manifests(&self.treestate.lock(), &self.tree_resolver)?;
-        let mut manifest_matchers: Vec<Arc<dyn Matcher + Send + Sync + 'static>> =
-            Vec::with_capacity(manifests.len());
+        let mut manifest_matchers: Vec<DynMatcher> = Vec::with_capacity(manifests.len());
 
         let case_sensitive = self.vfs.case_sensitive();
 
@@ -449,10 +446,7 @@ impl WorkingCopy {
         Ok(status_builder)
     }
 
-    pub fn copymap(
-        &self,
-        matcher: Arc<dyn Matcher + Send + Sync + 'static>,
-    ) -> Result<Vec<(RepoPathBuf, RepoPathBuf)>> {
+    pub fn copymap(&self, matcher: DynMatcher) -> Result<Vec<(RepoPathBuf, RepoPathBuf)>> {
         let mut copied: Vec<(RepoPathBuf, RepoPathBuf)> = Vec::new();
 
         walk_treestate(

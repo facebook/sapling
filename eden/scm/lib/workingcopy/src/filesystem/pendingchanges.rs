@@ -6,13 +6,12 @@
  */
 
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::SystemTime;
 
 use anyhow::Result;
 use configmodel::Config;
 use io::IO;
-use pathmatcher::Matcher;
+use pathmatcher::DynMatcher;
 use serde::Serialize;
 use types::RepoPathBuf;
 
@@ -41,9 +40,9 @@ pub trait PendingChanges {
     fn pending_changes(
         &self,
         // The full matcher including user specified filters.
-        matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        matcher: DynMatcher,
         // Git ignore matcher, except won't match committed files.
-        ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        ignore_matcher: DynMatcher,
         // Directories to always ignore such as ".sl".
         ignore_dirs: Vec<PathBuf>,
         last_write: SystemTime,

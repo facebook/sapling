@@ -46,6 +46,8 @@ pub trait Matcher {
     fn matches_file(&self, path: &RepoPath) -> Result<bool>;
 }
 
+pub type DynMatcher = Arc<dyn 'static + Matcher + Send + Sync>;
+
 /// Allows for fast code paths when dealing with patterns selecting directories.
 /// `Everything` means that all the files in the subtree of the given directory need to be part
 /// of the returned file set.

@@ -5,10 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Arc;
-
 use anyhow::Result;
 use pathmatcher::DirectoryMatch;
+use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
@@ -21,7 +20,7 @@ use types::RepoPathBuf;
 /// and none of the flags in [`state_none`]. Returns errors parsing invalid paths, if any.
 pub fn walk_treestate(
     treestate: &mut TreeState,
-    matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+    matcher: DynMatcher,
     state_all: StateFlags,
     state_none: StateFlags,
     mut callback: impl FnMut(RepoPathBuf, &FileStateV2) -> Result<()>,

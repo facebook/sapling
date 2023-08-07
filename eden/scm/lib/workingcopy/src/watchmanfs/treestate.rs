@@ -7,12 +7,11 @@
 
 use std::collections::BTreeMap;
 use std::path::Path;
-use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
 use configmodel::Config;
-use pathmatcher::Matcher;
+use pathmatcher::DynMatcher;
 use repolock::RepoLocker;
 use treestate::dirstate;
 use treestate::filestate::FileStateV2;
@@ -143,7 +142,7 @@ pub(crate) fn maybe_flush_treestate(
 #[tracing::instrument(skip_all)]
 pub(crate) fn list_needs_check(
     ts: &mut TreeState,
-    matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+    matcher: DynMatcher,
 ) -> Result<(Vec<RepoPathBuf>, Vec<ParseError>)> {
     let mut needs_check = Vec::new();
 
@@ -169,6 +168,8 @@ pub(crate) fn get_clock(metadata: &BTreeMap<String, String>) -> Result<Option<Cl
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use pathmatcher::ExactMatcher;
     use types::RepoPath;
 
