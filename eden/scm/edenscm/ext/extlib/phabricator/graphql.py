@@ -592,8 +592,8 @@ class Client(object):
             unixname = os.getenv("USER") or os.getenv("USERNAME")
         if not unixname:
             raise error.Abort(_("unknown unixname"))
-        query = 'query($u: String!) { intern_user_for_unixname(unixname: $u) { access_name email } }'
-        params = {'u': unixname}
+        query = "query($u: String!) { intern_user_for_unixname(unixname: $u) { access_name email } }"
+        params = {"u": unixname}
         # {'data': {'intern_user_for_unixname': {'access_name': 'Name', 'email': 'foo@example.com'}}}
         ret = self._client.query(timeout, query, json.dumps(params))
         self._raise_errors(ret)
