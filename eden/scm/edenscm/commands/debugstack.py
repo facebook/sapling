@@ -237,7 +237,7 @@ def _file_obj(ctx, path, set_copy_from=None, limiter=None):
         try:
             file_obj["data"] = bdata.decode("utf-8")
         except UnicodeDecodeError:
-            file_obj["dataBase85"] = base64.b85encode(bdata)
+            file_obj["dataBase85"] = base64.b85encode(bdata).decode()
         if copy_from_path:
             file_obj["copyFrom"] = copy_from_path
         flags = fctx.flags()
