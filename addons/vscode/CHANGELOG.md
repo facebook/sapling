@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.20
+
+- Add badge for review decision for GitHub PRs
+- Add button to open all changed files in a commit
+- Add debugging tools
+- Fix missing help buttons if commits fail to load
+
 ## 0.1.19
 
 - Add context menu to files to copy paths and open diff views
