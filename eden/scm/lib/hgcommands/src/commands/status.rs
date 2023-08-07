@@ -11,7 +11,6 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use anyhow::Result;
-use clidispatch::errors;
 use clidispatch::fallback;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
@@ -98,6 +97,11 @@ define_flags! {
 }
 
 pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Result<u8> {
+    if !repo.config().get_or_default("status", "use-rust")? {
+        tracing::debug!(target: "status_info", status_detail="use_rust_disabled");
+        fallback!("status.use-rust=false");
+    }
+
     let rev_check = ctx.opts.rev.is_empty() || (ctx.opts.rev.len() == 1 && ctx.opts.rev[0] == ".");
 
     let args_check =
@@ -173,58 +177,20 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
             .unwrap_or_else(|| hgplain::is_plain(None)),
     };
 
-    let (status, copymap) = match repo.config().get_or_default("status", "use-rust")? {
-        true => {
-            tracing::debug!(target: "status_info", status_mode="rust");
+    tracing::debug!(target: "status_info", status_mode="rust");
 
-            let matcher = Arc::new(AlwaysMatcher::new());
-            let status = wc.status(
-                matcher.clone(),
-                SystemTime::UNIX_EPOCH,
-                repo.config(),
-                ctx.io(),
-            )?;
+    let matcher = Arc::new(AlwaysMatcher::new());
+    let status = wc.status(
+        matcher.clone(),
+        SystemTime::UNIX_EPOCH,
+        repo.config(),
+        ctx.io(),
+    )?;
 
-            // This should be passed the "full" matcher including
-            // ignores, sparse, etc., but in practice probably doesn't
-            // make a difference.
-            let copymap = wc.copymap(matcher)?.into_iter().collect();
-
-            (status, copymap)
-        }
-        false => {
-            #[cfg(feature = "eden")]
-            {
-                use anyhow::anyhow;
-
-                tracing::debug!(target: "status_info", status_mode="fastpath");
-
-                // Attempt to fetch status information from EdenFS.
-                let (status, copymap) = edenfs_client::status::maybe_status_fastpath(
-                    repo.dot_hg_path(),
-                    ctx.io(),
-                    print_config.status_types.ignored,
-                )
-                .map_err(|e| match e
-                    .downcast_ref::<edenfs_client::status::OperationNotSupported>()
-                {
-                    Some(_) => {
-                        tracing::debug!(target: "status_info", status_detail="fastpath_edenfs_error");
-                        anyhow!(errors::FallbackToPython(
-                            "unsupported edenfs operation".to_owned()
-                        ))
-                    },
-                    None => e,
-                })?;
-                (status, copymap)
-            }
-            #[cfg(not(feature = "eden"))]
-            {
-                tracing::debug!(target: "status_info", status_detail="fastpath_edenfs_disabled");
-                fallback!("EdenFS disabled for Rust status and status.use-rust not set to True");
-            }
-        }
-    };
+    // This should be passed the "full" matcher including
+    // ignores, sparse, etc., but in practice probably doesn't
+    // make a difference.
+    let copymap = wc.copymap(matcher)?.into_iter().collect();
 
     let cwd = std::env::current_dir()?;
     let relativizer = RepoPathRelativizer::new(cwd, repo.path());

@@ -27,7 +27,6 @@ dag = { version = "0.1.0", path = "../dag" }
 debugtop = { version = "0.1.0", path = "../debugtop" }
 eagerepo = { version = "0.1.0", path = "../eagerepo" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
-edenfs_client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 exchange = { version = "0.1.0", path = "../exchange" }
 fail = { version = "0.4", features = ["failpoints"] }
 flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
@@ -81,5 +80,5 @@ zstd = { version = "0.11.2+zstd.1.5.2", features = ["experimental", "zstdmt"] }
 
 [features]
 default = []
-eden = ["clidispatch/eden", "edenfs_client"]
+eden = ["clidispatch/eden"]
 fb = ["configloader/fb"]

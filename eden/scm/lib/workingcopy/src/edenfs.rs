@@ -14,6 +14,7 @@ use configmodel::Config;
 use io::IO;
 use pathmatcher::DynMatcher;
 use thrift_types::edenfs::ScmFileStatus;
+use types::HgId;
 use types::RepoPathBuf;
 use vfs::VFS;
 
@@ -23,11 +24,13 @@ use crate::filesystem::PendingChanges;
 
 pub struct EdenFileSystem {
     root: PathBuf,
+    p1: HgId,
 }
 
 impl EdenFileSystem {
-    pub fn new(vfs: VFS) -> Result<Self> {
+    pub fn new(vfs: VFS, p1: HgId) -> Result<Self> {
         Ok(EdenFileSystem {
+            p1,
             root: vfs.root().to_path_buf(),
         })
     }
@@ -43,7 +46,7 @@ impl PendingChanges for EdenFileSystem {
         _config: &dyn Config,
         _io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
-        let result = edenfs_client::status::get_status(&self.root)?;
+        let result = edenfs_client::status::get_status(&self.root, self.p1)?;
         Ok(Box::new(result.status.entries.into_iter().filter_map(
             |(path, status)| {
                 {
