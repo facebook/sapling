@@ -181,8 +181,15 @@ it still doesn't have any data derived
   $ quiet_grep Derived -- mononoke_admin derived-data exists changeset_info 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
   Not Derived: 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
 
-and tried again, this time in dry run mode
-  $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks --no-bookmark-updates| strip_glog | sort
+and tried again, this time in dry run mode with limit 0 to ensure such command wouldn't do anything
+  $ crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks --no-bookmark-updates --limit 0|& grep bookmark | strip_glog | sort
+
+it still doesn't have any data derived
+  $ quiet_grep Derived -- mononoke_admin derived-data exists changeset_info 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
+  Not Derived: 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
+
+and tried again, this time in dry run mode with no limit
+  $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks --no-bookmark-updates --limit 2| strip_glog | sort
   setting ovrsource/forgotten_bookmark 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
   skipping master_bookmark because it's a common bookmark
 

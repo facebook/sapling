@@ -94,6 +94,7 @@ const VERIFY_BOOKMARKS_SUBCOMMAND: &str = "verify-bookmarks";
 const HASH_ARG: &str = "HASH";
 const LARGE_REPO_HASH_ARG: &str = "large-repo-hash";
 const UPDATE_LARGE_REPO_BOOKMARKS: &str = "update-large-repo-bookmarks";
+const LIMIT_ARG: &str = "limit";
 const NO_BOOKMARK_UPDATES: &str = "no-bookmark-updates";
 const LARGE_REPO_BOOKMARK_ARG: &str = "large-repo-bookmark";
 const CHANGE_MAPPING_VERSION_SUBCOMMAND: &str = "change-mapping-version";
@@ -120,9 +121,13 @@ enum UpdateLargeRepoBookmarksMode {
     DryRun,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 enum VerifyRunMode {
     JustVerify,
-    UpdateLargeRepoBookmarks(UpdateLargeRepoBookmarksMode),
+    UpdateLargeRepoBookmarks {
+        limit: Option<usize>,
+        mode: UpdateLargeRepoBookmarksMode,
+    },
 }
 
 pub async fn subcommand_crossrepo<'a>(
@@ -195,13 +200,18 @@ pub async fn subcommand_crossrepo<'a>(
                 get_source_target_repos_and_mapping(fb, logger, matches).await?;
 
             let mode = if sub_sub_m.is_present(UPDATE_LARGE_REPO_BOOKMARKS) {
-                VerifyRunMode::UpdateLargeRepoBookmarks(
-                    if sub_sub_m.is_present(NO_BOOKMARK_UPDATES) {
+                VerifyRunMode::UpdateLargeRepoBookmarks {
+                    mode: if sub_sub_m.is_present(NO_BOOKMARK_UPDATES) {
                         UpdateLargeRepoBookmarksMode::DryRun
                     } else {
                         UpdateLargeRepoBookmarksMode::Real
                     },
-                )
+                    limit: sub_sub_m
+                        .value_of(LIMIT_ARG)
+                        .map(str::parse::<usize>)
+                        .transpose()
+                        .map_err(anyhow::Error::msg)?,
+                }
             } else {
                 VerifyRunMode::JustVerify
             };
@@ -1051,8 +1061,8 @@ async fn subcommand_verify_bookmarks(
     }
 
     match run_mode {
-        VerifyRunMode::UpdateLargeRepoBookmarks(update_mode) => {
-            update_large_repo_bookmarks(ctx.clone(), &diff, &syncers, &common_config, update_mode)
+        VerifyRunMode::UpdateLargeRepoBookmarks { mode, limit } => {
+            update_large_repo_bookmarks(ctx.clone(), &diff, &syncers, &common_config, mode, limit)
                 .await?;
             Ok(())
         }
@@ -1112,16 +1122,32 @@ async fn update_large_repo_bookmarks(
     syncers: &Syncers<SqlSyncedCommitMapping, CrossRepo>,
     common_commit_sync_config: &CommonCommitSyncConfig,
     update_mode: UpdateLargeRepoBookmarksMode,
+    limit: Option<usize>,
 ) -> Result<(), Error> {
-    warn!(
-        ctx.logger(),
-        "found {} inconsistencies, trying to update them...",
-        diff.len()
-    );
     let large_repo = syncers.small_to_large.get_large_repo();
     let mut book_txn = large_repo.bookmarks().create_transaction(ctx.clone());
 
     let bookmark_renamer = syncers.small_to_large.get_bookmark_renamer().await?;
+
+    let diff: Box<dyn Iterator<Item = &BookmarkDiff>> = match limit {
+        Some(limit) => {
+            warn!(
+                ctx.logger(),
+                "found {} inconsistencies, will update at most {} of them...",
+                diff.len(),
+                limit
+            );
+            Box::new(diff.iter().take(limit))
+        }
+        None => {
+            warn!(
+                ctx.logger(),
+                "found {} inconsistencies, trying to update them...",
+                diff.len()
+            );
+            Box::new(diff.iter())
+        }
+    };
     for d in diff {
         if common_commit_sync_config
             .common_pushrebase_bookmarks
@@ -1243,6 +1269,13 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
             .required(false)
             .takes_value(false)
             .help("update any inconsistencies between bookmarks (except for the common bookmarks between large and small repo e.g. 'master')"),
+    ).arg(
+        Arg::with_name(LIMIT_ARG)
+            .long(LIMIT_ARG)
+            .required(false)
+            .requires(UPDATE_LARGE_REPO_BOOKMARKS)
+            .takes_value(true)
+            .help("update up to N bookmarks in large repo. Default value is unlimited"),
     ).arg(
         Arg::with_name(NO_BOOKMARK_UPDATES)
             .long(NO_BOOKMARK_UPDATES)
@@ -1591,6 +1624,7 @@ mod test {
                 &syncers,
                 &common_config,
                 UpdateLargeRepoBookmarksMode::Real,
+                None,
             )
             .await?;
 
@@ -1619,6 +1653,7 @@ mod test {
                 &syncers,
                 &common_config,
                 UpdateLargeRepoBookmarksMode::Real,
+                None,
             )
             .await?;
             let actual_diff = find_bookmark_diff(ctx.clone(), &syncers.large_to_small).await?;
