@@ -41,6 +41,7 @@ use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::PluralCommitSyncOutcome;
 use cross_repo_sync::Syncers;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
+use derived_data_utils::derive_all_enabled_datatypes_for_csids;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfigRef;
 use futures::stream;
@@ -1173,6 +1174,8 @@ async fn update_large_repo_bookmarks(
                 };
 
                 if let Some(large_cs_id) = new_value {
+                    derive_all_enabled_datatypes_for_csids(&ctx, large_repo, vec![large_cs_id])?
+                        .await?;
                     let reason = BookmarkUpdateReason::XRepoSync;
                     let large_bookmark = bookmark_renamer(target_bookmark).ok_or_else(|| {
                         format_err!("small bookmark {} remaps to nothing", target_bookmark)

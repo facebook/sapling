@@ -58,6 +58,7 @@ use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use git_types::MappedGitCommitId;
 use git_types::TreeHandle;
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use lock_ext::LockExt;
 use mercurial_derivation::MappedHgChangesetId;
@@ -66,6 +67,7 @@ use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataArc;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::RootSkeletonManifestId;
@@ -131,6 +133,7 @@ lazy_static! {
 }
 
 pub trait Repo = RepoDerivedDataArc
+    + RepoDerivedDataRef
     + RepoIdentityRef
     + ChangesetsArc
     + BonsaiHgMappingArc
@@ -172,6 +175,20 @@ pub fn derive_data_for_csids(
         derivations.try_for_each(|_| ready(Ok(()))).await?;
         Ok(())
     })
+}
+
+pub fn derive_all_enabled_datatypes_for_csids(
+    ctx: &CoreContext,
+    repo: &(impl Repo + Clone + Send + Sync + 'static),
+    csids: Vec<ChangesetId>,
+) -> Result<impl Future<Output = Result<(), Error>>, Error> {
+    let active_config = repo.repo_derived_data().active_config();
+    derive_data_for_csids(
+        ctx,
+        repo,
+        csids,
+        &active_config.types.iter().cloned().collect_vec(),
+    )
 }
 
 #[async_trait]
