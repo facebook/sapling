@@ -89,60 +89,6 @@ class changelog(object):
         inner = bindings.dag.commits.opensegments(segmentsdir, hgcommitsdir)
         return cls(repo, inner, uiconfig)
 
-    @classmethod
-    def opendoublewrite(cls, repo, uiconfig):
-        svfs = repo.svfs
-        revlogdir = svfs.join("")
-        segmentsdir = _segmentsdir(svfs)
-        hgcommitsdir = svfs.join(HGCOMMITS_DIR)
-        inner = bindings.dag.commits.opendoublewrite(
-            revlogdir, segmentsdir, hgcommitsdir
-        )
-        return cls(repo, inner, uiconfig)
-
-    @classmethod
-    def openhybrid(cls, repo):
-        return cls._openhybrid(repo, userevlog=True)
-
-    @classmethod
-    def openlazytext(cls, repo):
-        return cls._openhybrid(repo, userevlog=False)
-
-    @classmethod
-    def openlazy(cls, repo):
-        return cls._openhybrid(repo, userevlog=False, lazyhash=True)
-
-    @classmethod
-    def _openhybrid(cls, repo, userevlog, lazyhash=False):
-        svfs = repo.svfs
-        uiconfig = repo.ui.uiconfig()
-        if userevlog:
-            revlogdir = svfs.join("")
-        else:
-            revlogdir = None
-        segmentsdir = _segmentsdir(svfs)
-        hgcommitsdir = svfs.join(HGCOMMITS_DIR)
-        # special file for testing lazy hash backend
-        lazyhashdir = svfs.tryread("lazyhashdir") or None
-        inner = bindings.dag.commits.openhybrid(
-            revlogdir,
-            segmentsdir,
-            hgcommitsdir,
-            repo.edenapi,
-            lazyhash=lazyhash,
-            lazyhashdir=lazyhashdir,
-        )
-        return cls(repo, inner, uiconfig)
-
-    @classmethod
-    def opengitsegments(cls, repo, uiconfig):
-        svfs = repo.svfs
-        segmentsdir = _segmentsdir(svfs)
-        gitdir = git.readgitdir(repo)
-        metalog = repo.metalog()
-        inner = bindings.dag.commits.opengitsegments(gitdir, segmentsdir, metalog)
-        return cls(repo, inner, uiconfig)
-
     @property
     def dag(self):
         """Get the DAG with algorithms. Require rust-commit."""

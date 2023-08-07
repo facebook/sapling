@@ -1884,11 +1884,6 @@ class localrepository(object):
                 # transaction running
                 repo.dirstate.write(None)
                 repo._txnreleased = True
-
-                # Don't invalidate Rust if Rust and Python are sharing the changelog object.
-                # Python's invalidation will cover it.
-                if not repo.ui.configbool("experimental", "use-rust-changelog"):
-                    repo._rsrepo.invalidatechangelog()
             else:
                 # discard all changes (including ones already written
                 # out) in this transaction
@@ -2253,12 +2248,6 @@ class localrepository(object):
 
     def invalidatechangelog(self):
         """Invalidates the changelog. Discard pending changes."""
-
-        # Don't reload Rust here if Rust and Python are sharing the
-        # same changelog object. The Rust changelog will be reloaded
-        # as the Python changelog is reloaded on next access.
-        if not self.ui.configbool("experimental", "use-rust-changelog"):
-            self._rsrepo.invalidatechangelog()
 
         if "changelog" in self._filecache:
             del self._filecache["changelog"]
@@ -3455,37 +3444,9 @@ def _openchangelog(repo):
             )
         )
 
-    if repo.ui.configbool("experimental", "use-rust-changelog"):
-        # Refresh Rust changelog object every time we (re)load the
-        # changelog. This is the simplest thing which matches all the
-        # Python cache invalidation logic exactly.
-        repo._rsrepo.invalidatechangelog()
-        inner = repo._rsrepo.changelog()
-        return changelog2.changelog(repo, inner, repo.ui.uiconfig())
-
-    if git.isgitstore(repo):
-        repo.ui.log("changelog_info", changelog_backend="git")
-        return changelog2.changelog.opengitsegments(repo, repo.ui.uiconfig())
-    if "lazytextchangelog" in repo.storerequirements:
-        repo.ui.log("changelog_info", changelog_backend="lazytext")
-        return changelog2.changelog.openlazytext(repo)
-    if "lazychangelog" in repo.storerequirements:
-        repo.ui.log("changelog_info", changelog_backend="lazy")
-        return changelog2.changelog.openlazy(repo)
-    if "hybridchangelog" in repo.storerequirements:
-        repo.ui.log("changelog_info", changelog_backend="hybrid")
-        return changelog2.changelog.openhybrid(repo)
-    if "doublewritechangelog" in repo.storerequirements:
-        if repo.ui.configbool("experimental", "lazy-commit-data"):
-            # alias of hybridchangelog
-            repo.ui.log("changelog_info", changelog_backend="hybrid")
-            return changelog2.changelog.openhybrid(repo)
-        else:
-            repo.ui.log("changelog_info", changelog_backend="doublewrite")
-            return changelog2.changelog.opendoublewrite(repo, repo.ui.uiconfig())
-    if "segmentedchangelog" in repo.storerequirements:
-        repo.ui.log("changelog_info", changelog_backend="segments")
-        return changelog2.changelog.opensegments(repo, repo.ui.uiconfig())
-
-    repo.ui.log("changelog_info", changelog_backend="rustrevlog")
-    return changelog2.changelog.openrevlog(repo, repo.ui.uiconfig())
+    # Refresh Rust changelog object every time we (re)load the
+    # changelog. This is the simplest thing which matches all the
+    # Python cache invalidation logic exactly.
+    repo._rsrepo.invalidatechangelog()
+    inner = repo._rsrepo.changelog()
+    return changelog2.changelog(repo, inner, repo.ui.uiconfig())
