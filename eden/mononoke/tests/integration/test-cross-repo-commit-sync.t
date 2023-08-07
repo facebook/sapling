@@ -176,6 +176,12 @@ but let's  say we synced that commit manually
   * changeset resolved as: ChangesetId(Blake2(a30a90f6e3e887c6ee6451dc4c7f9cd352c20495407eb912f9017641e300ca9a)) (glob)
   * changeset resolved as: ChangesetId(Blake2(36a934b2f08adf9ed2331b0e0dce29522584d085748a9f42d1ca7d1c7787306a)) (glob)
   * target cs id is Some(ChangesetId(Blake2(5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb))) (glob)
+
+and tried again, this time in dry run mode
+  $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks --no-bookmark-updates| strip_glog | sort
+  setting ovrsource/forgotten_bookmark 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
+  skipping master_bookmark because it's a common bookmark
+
 and tried again
   $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks | strip_glog | sort
   setting ovrsource/forgotten_bookmark 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
