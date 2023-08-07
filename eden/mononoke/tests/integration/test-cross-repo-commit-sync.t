@@ -63,8 +63,18 @@
   $ hg -q ci -m 'non-master commit'
   $ REPONAME=fbs-mon hgmn push -r . --to somebook --create -q
 
--- push from ovrsource
+-- create unrelated bookmark in ovrsource that we'll intentionally skip
   $ cd "$TESTTMP/ovr-hg-cnt"
+  $ hg up -q master_bookmark
+  $ hg book forgotten_bookmark
+  $ hg up -q forgotten_bookmark
+  $ createfile unrelated_file
+  $ hg -q ci -m "unrelated ovrsource commit"
+  $ REPONAME=ovr-mon hgmn push -r . --to forgotten_bookmark --create -q
+  $ export FORGOTTEN=$(hg whereami)
+
+-- push from ovrsource
+  $ hg up -q master_bookmark
   $ REPONAME=ovr-mon hgmn up -q master_bookmark
   $ createfile arvr/arvrfile2_ovrsource
   $ createfile fbcode/fbcodefile2_ovrsource
@@ -83,9 +93,8 @@
   $ REPOIDLARGE=0 REPOIDSMALL=1 verify_wc fbsource/somebook
 
 -- sync ovrsource
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_2', 0)";
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_2', 2)"
   $ mononoke_x_repo_sync 2 0 tail --catch-up-once |& grep processing
-  * processing log entry * (glob)
   * processing log entry * (glob)
   $ REPOIDLARGE=0 REPOIDSMALL=2 verify_wc master_bookmark
 
@@ -119,6 +128,7 @@
    e0cb430152c2dcc47b93a516344e3814ece60d4b 1970-01-01 fbsource commit 10
   default/fbsource/somebook d692e38644b938ccccc4192bd2f507955f3888c5 1970-01-01 non-master commit
   default/master_bookmark * 20*-*-* fbsource commit resume (glob)
+  $ export FORGOTTEN_PARENT=$(hg log -T "{node}" -r b0474d400edddcabef0a27ead293a6b99ae59490^)
 
 -- Validate the synced entries
   $ REPOIDLARGE=0 validate_commit_sync 10 |& grep "Validated entry"
@@ -140,3 +150,41 @@ Query synced commit mapping, check that automatically inserted mappings have ver
   > WHERE small_bcs_id NOT IN (X'$FBSOURCE_MASTER_BONSAI', X'$OVRSOURCE_MASTER_BONSAI');
   > EOQ
   TEST_VERSION_NAME
+
+fbsource should be fully in sync
+  $ crossrepo_verify_bookmarks 0 1
+  * using repo "meg-mon" repoid RepositoryId(0) (glob)
+  * using repo "fbs-mon" repoid RepositoryId(1) (glob)
+  * all is well! (glob)
+
+ovrsource has two problems
+(master not matching is not a real problem though)
+  $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 | strip_glog | sort
+  'ovr-mon' has a bookmark master_bookmark but it points to a commit that has no equivalent in 'meg-mon'. If it's a shared bookmark (e.g. master) that might mean that it points to a commit from another repository
+  inconsistent value of forgotten_bookmark: 'ovr-mon' has 36a934b2f08adf9ed2331b0e0dce29522584d085748a9f42d1ca7d1c7787306a, but 'meg-mon' bookmark points to None
+
+update-large-repo-bookmarks won't create commits by itself 
+only the syncer can create the commit or they have to be imported some other way
+  $ quiet_grep Missing -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks 
+  * Missing outcome for 36a934b2f08adf9ed2331b0e0dce29522584d085748a9f42d1ca7d1c7787306a from small repo (glob)
+  [1]
+
+but let's  say we synced that commit manually
+  $ megarepo_tool_multirepo --source-repo-id 2 --target-repo-id 0 manual-commit-sync --commit $FORGOTTEN --parents $FORGOTTEN_PARENT --mapping-version-name TEST_VERSION_NAME
+  * using repo "ovr-mon" repoid RepositoryId(2) (glob)
+  * using repo "meg-mon" repoid RepositoryId(0) (glob)
+  * changeset resolved as: ChangesetId(Blake2(a30a90f6e3e887c6ee6451dc4c7f9cd352c20495407eb912f9017641e300ca9a)) (glob)
+  * changeset resolved as: ChangesetId(Blake2(36a934b2f08adf9ed2331b0e0dce29522584d085748a9f42d1ca7d1c7787306a)) (glob)
+  * target cs id is Some(ChangesetId(Blake2(5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb))) (glob)
+and tried again
+  $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks | strip_glog | sort
+  setting ovrsource/forgotten_bookmark 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
+  skipping master_bookmark because it's a common bookmark
+
+now the verfication shouldn't return that error
+  $ crossrepo_verify_bookmarks 0 2
+  * using repo "meg-mon" repoid RepositoryId(0) (glob)
+  * using repo "ovr-mon" repoid RepositoryId(2) (glob)
+  * 'ovr-mon' has a bookmark master_bookmark but it points to a commit that has no equivalent in 'meg-mon'. If it's a shared bookmark (e.g. master) that might mean that it points to a commit from another repository (glob)
+  * found 1 inconsistencies (glob)
+  [1]

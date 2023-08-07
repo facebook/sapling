@@ -1939,6 +1939,15 @@ function add_synced_commit_mapping_entry() {
     --version-name "$version"
 }
 
+function crossrepo_verify_bookmarks() {
+  local small_repo_id large_repo_id
+  small_repo_id="$1"
+  shift
+  large_repo_id="$1"
+  shift
+  mononoke_admin_source_target "$small_repo_id" "$large_repo_id" crossrepo verify-bookmarks "$@"
+}
+
 function read_blobstore_wal_queue_size() {
   if [[ -n "$DB_SHARD_NAME" ]]; then
     echo "SELECT COUNT(*) FROM blobstore_write_ahead_log;" | db "$DB_SHARD_NAME" 2> /dev/null | grep -v COUNT
