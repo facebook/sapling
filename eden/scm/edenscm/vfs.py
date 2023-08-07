@@ -562,7 +562,7 @@ class vfs(abstractvfs):
         if self._cansymlink:
             try:
                 if os.name == "nt":
-                    if type(src) == "str":
+                    if isinstance(src, str):
                         src = src.replace("/", "\\")
                     else:
                         src = src.replace(b"/", b"\\")
