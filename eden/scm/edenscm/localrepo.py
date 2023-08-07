@@ -19,6 +19,7 @@ import random
 import time
 import weakref
 from contextlib import contextmanager
+from functools import partial
 from typing import Optional, Set
 
 import bindings
@@ -2304,20 +2305,13 @@ class localrepository(object):
             timeout = self.ui.configint("ui", "timeout")
             warntimeout = self.ui.configint("ui", "timeout.warn")
 
-        rsrepo = self._rsrepo
-
-        def trywlock():
-            return rsrepo.trywlock(vfs.base)
-
-        def trylock():
-            return rsrepo.trylock()
-
+        # Defer to Rust to acquire repo and wc locks. This allows lock sharing
+        # between Python and Rust.
         trylockfn = None
-        if self.ui.configbool("experimental", "share-locks", True):
-            if lockname == "lock":
-                trylockfn = trylock
-            elif lockname == "wlock":
-                trylockfn = trywlock
+        if lockname == "lock":
+            trylockfn = self._rsrepo.trylock
+        elif lockname == "wlock":
+            trylockfn = partial(self._rsrepo.trywlock, vfs.base)
 
         return lockmod.trylock(
             self.ui,
