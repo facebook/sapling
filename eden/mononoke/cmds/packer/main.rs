@@ -53,8 +53,8 @@ struct MononokePackerArgs {
 
     #[clap(
         long,
-        default_value_t = 10,
-        help = "Maximum number of parallel packs to work on. Default 10"
+        default_value_t = 1,
+        help = "Maximum number of parallel packs to work on. Default 1"
     )]
     scheduled_max: usize,
 }
