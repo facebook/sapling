@@ -58,8 +58,7 @@ def compare_range(a, astart, aend, b, bstart, bend):
     for ia, ib in zip(range(astart, aend), range(bstart, bend)):
         if a[ia] != b[ib]:
             return False
-    else:
-        return True
+    return True
 
 
 class CantShowWordConflicts(Exception):
