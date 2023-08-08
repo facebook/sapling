@@ -1219,6 +1219,88 @@ Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>f
             self.assertEqual(problemDescriptions, set())
 
         @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
+        def test_materialized_file_as_symlink(self, mock_debugInodeStatus) -> None:
+            instance = FakeEdenInstance(self.make_temporary_directory())
+            checkout = instance.create_test_mount("path1")
+            mount = checkout.path
+            os.makedirs(mount / "a")
+            with open(mount / "a" / "b", "wb") as f:
+                f.write(b"foobar")
+            os.symlink("b", mount / "a" / "c")
+            mock_debugInodeStatus.return_value = [
+                TreeInodeDebugInfo(
+                    1,
+                    b"a",
+                    True,
+                    b"abcd",
+                    [
+                        TreeInodeEntryDebugInfo(
+                            b"b", 2, stat.S_IFREG, False, True, b"dcba"
+                        ),
+                        TreeInodeEntryDebugInfo(
+                            b"c", 3, stat.S_IFREG, False, True, b"dcba"
+                        ),
+                    ],
+                    1,
+                ),
+            ]
+            tracker = ProblemCollector(instance)
+            check_materialized_are_accessible(
+                tracker,
+                typing.cast(EdenInstance, instance),
+                checkout,
+                lambda p: os.lstat(p).st_mode,
+            )
+            problemDescriptions = {
+                problem.description() for problem in tracker.problems
+            }
+            self.assertEqual(problemDescriptions, set())
+
+        @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
+        def test_materialized_symlink_as_file(self, mock_debugInodeStatus) -> None:
+            instance = FakeEdenInstance(self.make_temporary_directory())
+            checkout = instance.create_test_mount("path1")
+            checkoutconfig = checkout.get_config()
+            # Enable symlinks on Windows
+            checkoutconfig._replace(enable_windows_symlinks=True)
+            checkout.save_config(checkoutconfig)
+            mount = checkout.path
+            os.makedirs(mount / "a")
+            with open(mount / "a" / "b", "wb") as f:
+                f.write(b"foobar")
+            with open(mount / "a" / "c", "wb") as f:
+                f.write(b"b")
+            mock_debugInodeStatus.return_value = [
+                TreeInodeDebugInfo(
+                    1,
+                    b"a",
+                    True,
+                    b"abcd",
+                    [
+                        TreeInodeEntryDebugInfo(
+                            b"b", 2, stat.S_IFREG, False, True, b"dcba"
+                        ),
+                        TreeInodeEntryDebugInfo(
+                            b"c", 3, stat.S_IFLNK, False, True, b"dcba"
+                        ),
+                    ],
+                    1,
+                ),
+            ]
+            tracker = ProblemCollector(instance)
+            check_materialized_are_accessible(
+                tracker,
+                typing.cast(EdenInstance, instance),
+                checkout,
+                lambda p: os.lstat(p).st_mode,
+            )
+            self.assertEqual(len(tracker.problems), 1)
+            self.assertEqual(
+                tracker.problems[0].description(),
+                f"{Path('a/c')} has an unexpected file type: known to EdenFS as a symlink, but is a file on disk",
+            )
+
+        @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
         def test_materialized_junction(self, mock_debugInodeStatus) -> None:
             instance = FakeEdenInstance(self.make_temporary_directory())
             checkout = instance.create_test_mount("path1")

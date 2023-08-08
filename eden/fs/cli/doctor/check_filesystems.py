@@ -483,6 +483,7 @@ def check_materialized_are_accessible(
             return
 
     case_sensitive = checkout.get_config().case_sensitive
+    windows_symlinks_enabled = checkout.get_config().enable_windows_symlinks
     for materialized_dir in materialized:
         materialized_name = os.fsdecode(materialized_dir.path)
         path = Path(materialized_name)
@@ -534,8 +535,8 @@ def check_materialized_are_accessible(
 
                 if sys.platform == "win32":
                     if stat.S_ISLNK(dirent_mode):
-                        # TODO(xavierd): Symlinks are for now recognized as files.
-                        dirent_mode = stat.S_IFREG
+                        if not windows_symlinks_enabled:
+                            dirent_mode = stat.S_IFREG
                     elif stat.S_ISDIR(dirent_mode):
                         # Python considers junctions as directory.
                         import ctypes
