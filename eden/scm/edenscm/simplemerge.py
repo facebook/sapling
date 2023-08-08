@@ -178,8 +178,8 @@ class Merge3Text(object):
                     for i in range(t[5], t[6]):
                         yield self.b[i]
                 else:
-                    self.conflicts = True
                     if self.wordmerge is wordmergemode.enforced:
+                        self.conflicts = True
                         raise CantShowWordConflicts()
                     elif self.wordmerge is wordmergemode.ondemand:
                         # Try resolve the conflicted region using word merge
@@ -191,6 +191,7 @@ class Merge3Text(object):
                             for line in text.splitlines(True):
                                 yield line
                             continue
+                    self.conflicts = True
                     self.conflictscount += 1
                     if start_marker is not None:
                         yield start_marker + newline
