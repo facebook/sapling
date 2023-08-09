@@ -197,7 +197,8 @@ ImmediateFuture<struct stat> TreeInode::stat(
   auto contents = contents_.rlock();
 
 #ifndef _WIN32
-  getMetadataLocked(contents->entries).applyToStat(st);
+  auto metadata = getMetadataLocked(contents->entries);
+  metadata.applyToStat(st);
   if (UNLIKELY(S_ISREG(st.st_mode))) {
     // TODO(T159626416): Log the path of the tree that is being misinterpreted
     // as a regular file. We should only do this if these events are infrequent.
@@ -205,8 +206,14 @@ ImmediateFuture<struct stat> TreeInode::stat(
         InodeMetadataMismatch{
             st.st_mode,
             st.st_ino,
+            metadata.gid,
+            metadata.uid,
+            metadata.timestamps.atime.asRawRepresentation(),
+            metadata.timestamps.ctime.asRawRepresentation(),
+            metadata.timestamps.mtime.asRawRepresentation(),
         });
   }
+
 #endif
 
   // For directories, nlink is the number of entries including the

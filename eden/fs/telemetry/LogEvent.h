@@ -324,12 +324,22 @@ struct MetadataSizeMismatch {
 struct InodeMetadataMismatch {
   uint64_t mode;
   uint64_t ino;
+  uint64_t gid;
+  uint64_t uid;
+  uint64_t atime;
+  uint64_t ctime;
+  uint64_t mtime;
 
   static constexpr const char* type = "inode_metadata_mismatch";
 
   void populate(DynamicEvent& event) const {
     event.addInt("st_mode", mode);
     event.addInt("ino", ino);
+    event.addInt("gid", gid);
+    event.addInt("uid", uid);
+    event.addInt("atime", atime);
+    event.addInt("ctime", ctime);
+    event.addInt("mtime", mtime);
   }
 };
 
