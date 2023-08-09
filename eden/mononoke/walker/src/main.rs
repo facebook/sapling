@@ -62,7 +62,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let service = ReadyFlagService::new();
 
-    let cachelib_defaults = CachelibSettings {
+    let cachelib_settings = CachelibSettings {
         cache_size: 2 * 1024 * 1024 * 1024,
         ..Default::default()
     };
@@ -84,7 +84,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let subcommands = commands::subcommands();
     let app = MononokeAppBuilder::new(fb)
         .with_app_extension(scrub_extension)
-        .with_default_cachelib_settings(cachelib_defaults)
+        .with_cachelib_settings(cachelib_settings)
         .with_arg_defaults(CacheMode::LocalOnly)
         .with_arg_defaults(blobstore_defaults)
         .with_arg_defaults(read_only_storage)

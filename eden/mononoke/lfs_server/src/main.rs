@@ -192,7 +192,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = MononokeAppBuilder::new(fb)
         .with_app_extension(Fb303AppExtension {})
         .with_app_extension(RepoFilterAppExtension {})
-        .with_default_cachelib_settings(cachelib_settings)
+        .with_cachelib_settings(cachelib_settings)
         .build::<LfsServerArgs>()?;
 
     let args: LfsServerArgs = app.args()?;

@@ -154,7 +154,7 @@ impl MononokeAppBuilder {
         self
     }
 
-    pub fn with_default_cachelib_settings(mut self, cachelib_settings: CachelibSettings) -> Self {
+    pub fn with_cachelib_settings(mut self, cachelib_settings: CachelibSettings) -> Self {
         self.cachelib_settings = cachelib_settings;
         self
     }
