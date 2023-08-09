@@ -5,12 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Heartbeat} from '../heartbeat';
 import type {ReactNode} from 'react';
+import type {ExclusiveOr} from 'shared/typeUtils';
 
 import {debugLogMessageTraffic} from '../ClientToServerAPI';
 import {DropdownField, DropdownFields} from '../DropdownFields';
+import {InlineErrorBadge} from '../ErrorNotice';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
+import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
 import {RelativeDate} from '../relativeDate';
 import {latestCommitsData, latestUncommittedChangesData, mergeConflicts} from '../serverAPIState';
@@ -95,8 +99,19 @@ function DebugPerfInfo() {
   const latestStatus = useRecoilValue(latestUncommittedChangesData);
   const latestLog = useRecoilValue(latestCommitsData);
   const latestConflicts = useRecoilValue(mergeConflicts);
+  const heartbeat = useHeartbeat();
   return (
     <div>
+      {heartbeat.type === 'timeout' ? (
+        <InlineErrorBadge error={new Error(t('Heartbeat timeout'))}>
+          <T>Heartbeat timed out</T>
+        </InlineErrorBadge>
+      ) : (
+        <FetchDurationInfo
+          name={<T>Ping</T>}
+          duration={(heartbeat as Heartbeat & {type: 'success'})?.rtt}
+        />
+      )}
       <FetchDurationInfo
         name={<T>Status</T>}
         start={latestStatus.fetchStartTimestamp}
@@ -116,8 +131,12 @@ function DebugPerfInfo() {
   );
 }
 
-function FetchDurationInfo({name, start, end}: {name: ReactNode; start?: number; end?: number}) {
-  const deltaMs = end == null || start == null ? null : end - start;
+function FetchDurationInfo(
+  props: {name: ReactNode} & ExclusiveOr<{start?: number; end?: number}, {duration: number}>,
+) {
+  const {name} = props;
+  const {end, start, duration} = props;
+  const deltaMs = duration != null ? duration : end == null || start == null ? null : end - start;
   const assessment =
     deltaMs == null ? 'none' : deltaMs < 1000 ? 'fast' : deltaMs < 3000 ? 'ok' : 'slow';
   return (
