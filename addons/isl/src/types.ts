@@ -101,6 +101,12 @@ export type ValidatedRepoInfo = {
   preferredSubmitCommand?: PreferredSubmitCommand;
 };
 
+export type ApplicationInfo = {
+  platformName: string;
+  version: string;
+  logFilePath: string;
+};
+
 export type CodeReviewSystem =
   | {
       type: 'github';
@@ -390,6 +396,7 @@ export type ConfigName =
   | 'isl.experimental-features';
 
 export type ClientToServerMessage =
+  | {type: 'heartbeat'; id: string}
   | {
       type: 'refresh';
     }
@@ -457,10 +464,11 @@ export type ServerToClientMessage =
   | BeganFetchingSmartlogCommitsEvent
   | BeganFetchingUncommittedChangesEvent
   | FileABugProgressMessage
+  | {type: 'heartbeat'; id: string}
   | {type: 'gotConfig'; name: ConfigName; value: string | undefined}
   | {type: 'fetchedCommitMessageTemplate'; template: string}
   | {type: 'typeaheadResult'; id: string; result: Array<TypeaheadResult>}
-  | {type: 'applicationInfo'; platformName: string; version: string}
+  | {type: 'applicationInfo'; info: ApplicationInfo}
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}
   | {type: 'repoError'; error: RepositoryError | undefined}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}

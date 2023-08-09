@@ -9,6 +9,7 @@ import type {MessageBusStatus} from './MessageBus';
 import type {CommitTree} from './getCommitTree';
 import type {Operation} from './operations/Operation';
 import type {
+  ApplicationInfo,
   ChangedFile,
   CommitInfo,
   Hash,
@@ -67,13 +68,13 @@ export const repositoryInfo = selector<RepoInfo | undefined>({
   },
 });
 
-export const applicationinfo = atom<{platformName: string; version: string} | undefined>({
+export const applicationinfo = atom<ApplicationInfo | undefined>({
   key: 'applicationinfo',
   default: undefined,
   effects: [
     ({setSelf}) => {
       const disposable = serverAPI.onMessageOfType('applicationInfo', event => {
-        setSelf(event);
+        setSelf(event.info);
       });
       return () => disposable.dispose();
     },

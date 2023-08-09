@@ -42,6 +42,7 @@ export type OutgoingMessage = ServerToClientMessage;
 
 type GeneralMessage = IncomingMessage &
   (
+    | {type: 'heartbeat'}
     | {type: 'changeCwd'}
     | {type: 'requestRepoInfo'}
     | {type: 'requestApplicationInfo'}
@@ -293,6 +294,10 @@ export default class ServerToClientAPI {
    */
   private handleIncomingGeneralMessage(data: GeneralMessage) {
     switch (data.type) {
+      case 'heartbeat': {
+        this.postMessage({type: 'heartbeat', id: data.id});
+        break;
+      }
       case 'track': {
         this.tracker.trackData(data.data);
         break;
@@ -319,8 +324,11 @@ export default class ServerToClientAPI {
       case 'requestApplicationInfo': {
         this.postMessage({
           type: 'applicationInfo',
-          platformName: this.platform.platformName,
-          version: this.connection.version,
+          info: {
+            platformName: this.platform.platformName,
+            version: this.connection.version,
+            logFilePath: this.connection.logFileLocation ?? '(no log file, logging to stdout)',
+          },
         });
         break;
       }
