@@ -87,6 +87,10 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
     return diff.state === PullRequestState.Closed;
   }
 
+  isDiffEligibleForCleanup(diff: DiffSummary & {type: 'github'}): boolean {
+    return diff.state === PullRequestState.Closed;
+  }
+
   supportSubmittingAsDraft = 'newDiffsOnly' as const;
 
   enableMessageSyncing = false;

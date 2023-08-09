@@ -5,8 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {UICodeReviewProvider} from './codeReview/UICodeReviewProvider';
 import type {CommitTreeWithPreviews} from './getCommitTree';
-import type {Hash} from './types';
+import type {CommitInfo, DiffSummary, Hash} from './types';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
 import {BranchIndicator} from './BranchIndicator';
@@ -22,6 +23,7 @@ import {allDiffSummaries, codeReviewProvider, pageVisibility} from './codeReview
 import {isTreeLinear, walkTreePostorder} from './getCommitTree';
 import {T, t} from './i18n';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
+import {HideOperation} from './operations/HideOperation';
 import {ImportStackOperation} from './operations/ImportStackOperation';
 import {treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {useArrowKeysToChangeSelection} from './selection';
@@ -45,7 +47,7 @@ import {ErrorShortMessages} from 'isl-server/src/constants';
 import {useRecoilState, useRecoilValue, useSetRecoilState} from 'recoil';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
-import {generatorContains, notEmpty} from 'shared/utils';
+import {generatorContains, notEmpty, unwrap} from 'shared/utils';
 
 import './CommitTreeList.css';
 
@@ -225,6 +227,30 @@ function FetchingAdditionalCommitsButton() {
   );
 }
 
+function isStackEligibleForCleanup(
+  tree: CommitTreeWithPreviews,
+  diffMap: Map<string, DiffSummary>,
+  provider: UICodeReviewProvider,
+): boolean {
+  if (
+    tree.info.diffId == null ||
+    tree.info.isHead || // don't allow hiding a stack you're checked out on
+    diffMap.get(tree.info.diffId) == null ||
+    !provider.isDiffEligibleForCleanup(unwrap(diffMap.get(tree.info.diffId)))
+  ) {
+    return false;
+  }
+
+  // any child not eligible -> don't show
+  for (const subtree of tree.children) {
+    if (!isStackEligibleForCleanup(subtree, diffMap, provider)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElement | null {
   const reviewProvider = useRecoilValue(codeReviewProvider);
   const diffMap = useRecoilValue(allDiffSummaries);
@@ -242,6 +268,11 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
     stackHashes.size > 0 &&
     loadingState.state === 'hasValue' &&
     generatorContains(walkTreePostorder([tree]), v => stackHashes.has(v.info.hash));
+
+  const showCleanupButton =
+    reviewProvider == null || diffMap?.value == null
+      ? false
+      : isStackEligibleForCleanup(tree, diffMap.value, reviewProvider);
 
   const contextMenu = useContextMenu(() => moreActions);
   if (reviewProvider !== null && !isStackEditingActivated) {
@@ -315,6 +346,12 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
     actions.push(<StackEditButton key="edit-stack" tree={tree} />);
   }
 
+  if (showCleanupButton) {
+    actions.push(
+      <CleanupButton key="cleanup" commit={tree.info} hasChildren={tree.children.length > 0} />,
+    );
+  }
+
   if (actions.length === 0) {
     return null;
   }
@@ -329,6 +366,28 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
       {actions}
       {moreActionsButton}
     </div>
+  );
+}
+
+function CleanupButton({commit, hasChildren}: {commit: CommitInfo; hasChildren: boolean}) {
+  const runOperation = useRunOperation();
+  return (
+    <Tooltip
+      title={
+        hasChildren
+          ? t('You can safely "clean up" by hiding this stack of commits.')
+          : t('You can safely "clean up" by hiding this commit.')
+      }
+      placement="bottom">
+      <VSCodeButton
+        appearance="icon"
+        onClick={() => {
+          runOperation(new HideOperation(commit.hash));
+        }}>
+        <Icon icon="eye-closed" slot="start" />
+        {hasChildren ? <T>Clean up stack</T> : <T>Clean up</T>}
+      </VSCodeButton>
+    </Tooltip>
   );
 }
 

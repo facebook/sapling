@@ -39,6 +39,8 @@ export interface UICodeReviewProvider {
 
   isDiffClosed(summary: DiffSummary): boolean;
 
+  isDiffEligibleForCleanup(summary: DiffSummary): boolean;
+
   /**
    * Defines when this review provider can submit diffs as drafts,
    * submitting for the first time or also when resubmitting.
