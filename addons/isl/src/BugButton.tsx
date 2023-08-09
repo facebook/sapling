@@ -5,13 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Heartbeat} from './heartbeat';
+
 import {Copyable} from './Copyable';
 import {DropdownFields} from './DropdownFields';
-import {ErrorBoundary} from './ErrorNotice';
+import {ErrorBoundary, ErrorNotice} from './ErrorNotice';
 import {Internal} from './Internal';
 import {Tooltip} from './Tooltip';
 import {tracker} from './analytics';
-import {T} from './i18n';
+import {DEFAULT_HEARTBEAT_TIMEOUT_MS, useHeartbeat} from './heartbeat';
+import {t, T} from './i18n';
 import platform from './platform';
 import {applicationinfo} from './serverAPIState';
 import {VSCodeButton, VSCodeDivider} from '@vscode/webview-ui-toolkit/react';
@@ -87,13 +90,13 @@ function MaybeBugButtonNux({children}: {children: JSX.Element}) {
 }
 
 function BugDropdown({dismiss}: {dismiss: () => void}) {
-  const info = useRecoilValue(applicationinfo);
-
   const setBugButtonNux = useSetRecoilState(bugButtonNux);
   useEffect(() => {
     // unset nux if you open the bug menu
     setBugButtonNux(null);
   }, [setBugButtonNux]);
+
+  const heartbeat = useHeartbeat();
 
   const AdditionalDebugContent = platform.AdditionalDebugContent;
   return (
@@ -102,23 +105,10 @@ function BugDropdown({dismiss}: {dismiss: () => void}) {
       icon="bug"
       data-testid="bug-dropdown"
       className="bug-dropdown">
-      {info == null ? (
-        <Icon icon="loading" />
-      ) : (
-        <div className="bug-dropdown-version">
-          <Copyable children={`ISL version ${info.version} (${info.platformName})`} />
-        </div>
-      )}
+      <ISLVersion />
+      <HeartbeatWarning heartbeat={heartbeat} />
       <div className="bug-dropdown-actions">
-        <VSCodeButton
-          appearance="secondary"
-          onClick={() => {
-            platform.openExternalLink('https://sapling-scm.com/docs/addons/isl');
-          }}>
-          <Icon icon="book" slot="start" />
-          <T>View Documentation</T>
-        </VSCodeButton>
-        <FileABug dismissBugDropdown={dismiss} />
+        <FileABug dismissBugDropdown={dismiss} heartbeat={heartbeat} />
         {AdditionalDebugContent && (
           <div className="additional-debug-content">
             <VSCodeDivider />
@@ -130,34 +120,61 @@ function BugDropdown({dismiss}: {dismiss: () => void}) {
           </div>
         )}
       </div>
-      {/*
-      // TODO: enable these debug actions
-      <div className="bug-dropdown-debug-actions">
-        <VSCodeButton
-          appearance="icon"
-          onClick={() => {
-            // TODO: platform-specific log file action
-          }}>
-          <Icon icon="go-to-file" slot="start" />
-
-          <T>Reveal log file</T>
-        </VSCodeButton>
-        <VSCodeButton
-          appearance="icon"
-          onClick={() => {
-            // TODO: pull all recoil state
-          }}>
-          <Icon icon="copy" slot="start" />
-          <T>Copy UI debug information</T>
-        </VSCodeButton>
-      </div> */}
     </DropdownFields>
   );
 }
 
-function FileABug({dismissBugDropdown}: {dismissBugDropdown: () => void}) {
+function ISLVersion() {
+  const info = useRecoilValue(applicationinfo);
+  if (info == null) {
+    return <Icon icon="loading" />;
+  }
+
+  return (
+    <div className="bug-dropdown-version">
+      <Copyable children={`ISL version ${info.version} (${info.platformName})`} />
+    </div>
+  );
+}
+
+function HeartbeatWarning({heartbeat}: {heartbeat: Heartbeat}) {
+  const appInfo = useRecoilValue(applicationinfo);
+  if (heartbeat.type === 'timeout') {
+    return (
+      <>
+        <ErrorNotice
+          error={new Error(t(`Heartbeat timed out after ${DEFAULT_HEARTBEAT_TIMEOUT_MS}ms`))}
+          title={t("Can't reach server — most features won't work")}
+          description={t('The ISL server needs to be restarted')}></ErrorNotice>
+        {appInfo && (
+          <div>
+            <T
+              replace={{
+                $logfile: (
+                  <code>
+                    <Copyable className="log-file-path">{appInfo.logFilePath}</Copyable>
+                  </code>
+                ),
+              }}>
+              Your log file is located at: $logfile
+            </T>
+          </div>
+        )}
+      </>
+    );
+  }
+  return null;
+}
+
+function FileABug({
+  dismissBugDropdown,
+  heartbeat,
+}: {
+  dismissBugDropdown: () => void;
+  heartbeat: Heartbeat;
+}) {
   return Internal.FileABugButton != null ? (
-    <Internal.FileABugButton dismissBugDropdown={dismissBugDropdown} />
+    <Internal.FileABugButton dismissBugDropdown={dismissBugDropdown} heartbeat={heartbeat} />
   ) : (
     <OSSFileABug />
   );
@@ -166,6 +183,14 @@ function FileABug({dismissBugDropdown}: {dismissBugDropdown: () => void}) {
 function OSSFileABug() {
   return (
     <>
+      <VSCodeButton
+        appearance="secondary"
+        onClick={() => {
+          platform.openExternalLink('https://sapling-scm.com/docs/addons/isl');
+        }}>
+        <Icon icon="book" slot="start" />
+        <T>View Documentation</T>
+      </VSCodeButton>
       <VSCodeButton
         appearance="secondary"
         onClick={() => {

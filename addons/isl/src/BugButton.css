@@ -49,3 +49,11 @@
   align-items: center;
   gap: var(--pad);
 }
+
+.bug-dropdown .error-notice {
+  margin: 0;
+}
+
+.bug-dropdown .log-file-path {
+  font-size: 80%;
+}
