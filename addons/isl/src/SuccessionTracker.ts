@@ -10,7 +10,8 @@ import type {SmartlogCommits} from './types';
 import {atom, DefaultValue} from 'recoil';
 import {unwrap} from 'shared/utils';
 
-type SuccessionCallback = (oldHash: string, newHash: string) => unknown;
+type Successions = Array<[oldHash: string, newHash: string]>;
+type SuccessionCallback = (successions: Successions) => unknown;
 
 /**
  * When a commit is amended or rebased or otherwise modified, the old commit
@@ -37,7 +38,7 @@ export class SuccessionTracker {
    * Run a callback when a succession is detected for the first time.
    * Returns a dispose function.
    */
-  public onSuccession(cb: SuccessionCallback): () => void {
+  public onSuccessions(cb: SuccessionCallback): () => void {
     this.callbacks.add(cb);
     return () => {
       this.callbacks.delete(cb);
@@ -50,6 +51,7 @@ export class SuccessionTracker {
    * in order to find successions and run callbacks on them.
    */
   public findNewSuccessionsFromCommits(commits: SmartlogCommits) {
+    const successions: Successions = [];
     for (const commit of commits) {
       if (commit.phase === 'public') {
         continue;
@@ -66,14 +68,18 @@ export class SuccessionTracker {
       if (oldHashes != null && !this.seenHashes.has(newHash)) {
         for (const oldHash of oldHashes) {
           if (this.seenHashes.has(oldHash)) {
-            for (const cb of this.callbacks) {
-              cb(oldHash, newHash);
-            }
+            successions.push([oldHash, newHash]);
           }
         }
       }
 
       this.seenHashes.add(newHash);
+    }
+
+    if (successions.length > 0) {
+      for (const cb of this.callbacks) {
+        cb(successions);
+      }
     }
   }
 
@@ -91,10 +97,12 @@ export const latestSuccessorsMap = atom<Map<string, string>>({
   default: new Map(),
   effects: [
     ({setSelf}) => {
-      return successionTracker.onSuccession((oldHash, newHash) => {
+      return successionTracker.onSuccessions(successions => {
         setSelf(existing => {
           const map = existing instanceof DefaultValue ? new Map() : new Map(existing);
-          map.set(oldHash, newHash);
+          for (const [oldHash, newHash] of successions) {
+            map.set(oldHash, newHash);
+          }
           return map;
         });
       });

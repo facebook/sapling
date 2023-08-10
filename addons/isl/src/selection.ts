@@ -26,13 +26,15 @@ export const selectedCommits = atom<Set<string>>({
   default: new Set(),
   effects: [
     ({setSelf, getLoadable}) => {
-      return successionTracker.onSuccession((oldHash: string, newHash: string) => {
-        const value = getLoadable(selectedCommits).valueMaybe();
-        if (value?.has(oldHash)) {
-          value.delete(oldHash);
-          value.add(newHash);
-          setSelf(value);
+      return successionTracker.onSuccessions(successions => {
+        const value = new Set(getLoadable(selectedCommits).valueMaybe());
+        for (const [oldHash, newHash] of successions) {
+          if (value?.has(oldHash)) {
+            value.delete(oldHash);
+            value.add(newHash);
+          }
         }
+        setSelf(value);
       });
     },
   ],

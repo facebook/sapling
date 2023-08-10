@@ -12,7 +12,7 @@ describe('SuccessionTracker', () => {
   it('finds successions', () => {
     const onSuccession = jest.fn();
     const tracker = new SuccessionTracker();
-    const dispose = tracker.onSuccession(onSuccession);
+    const dispose = tracker.onSuccessions(onSuccession);
 
     tracker.findNewSuccessionsFromCommits([
       COMMIT('111', 'Public commit', '0', {}),
@@ -27,7 +27,7 @@ describe('SuccessionTracker', () => {
       COMMIT('bbb', 'Commit B', '1', {}),
     ]);
     expect(onSuccession).toHaveBeenCalledTimes(1);
-    expect(onSuccession).toHaveBeenCalledWith('aaa', 'aaa2');
+    expect(onSuccession).toHaveBeenCalledWith([['aaa', 'aaa2']]);
 
     dispose();
   });
@@ -35,7 +35,7 @@ describe('SuccessionTracker', () => {
   it('only reports successions once', () => {
     const onSuccession = jest.fn();
     const tracker = new SuccessionTracker();
-    const dispose = tracker.onSuccession(onSuccession);
+    const dispose = tracker.onSuccessions(onSuccession);
 
     tracker.findNewSuccessionsFromCommits([
       COMMIT('111', 'Public commit', '0', {}),
@@ -54,7 +54,7 @@ describe('SuccessionTracker', () => {
       COMMIT('bbb', 'Commit B', '1', {}),
     ]);
     expect(onSuccession).toHaveBeenCalledTimes(1);
-    expect(onSuccession).toHaveBeenCalledWith('aaa', 'aaa2');
+    expect(onSuccession).toHaveBeenCalledWith([['aaa', 'aaa2']]);
 
     dispose();
   });
@@ -62,7 +62,7 @@ describe('SuccessionTracker', () => {
   it('skips new commits even if they have predecessors', () => {
     const onSuccession = jest.fn();
     const tracker = new SuccessionTracker();
-    const dispose = tracker.onSuccession(onSuccession);
+    const dispose = tracker.onSuccessions(onSuccession);
 
     tracker.findNewSuccessionsFromCommits([
       COMMIT('111', 'Public commit', '0', {}),
@@ -76,7 +76,7 @@ describe('SuccessionTracker', () => {
   it('handles multiple predecessors (e.g. from fold)', () => {
     const onSuccession = jest.fn();
     const tracker = new SuccessionTracker();
-    const dispose = tracker.onSuccession(onSuccession);
+    const dispose = tracker.onSuccessions(onSuccession);
 
     tracker.findNewSuccessionsFromCommits([
       COMMIT('111', 'Public commit', '0', {}),
@@ -91,9 +91,11 @@ describe('SuccessionTracker', () => {
       COMMIT('aaa', 'Commit A', '1', {}),
       COMMIT('bc', 'Fold B & C', '1', {closestPredecessors: ['bbb', 'ccc']}),
     ]);
-    expect(onSuccession).toHaveBeenCalledTimes(2);
-    expect(onSuccession).toHaveBeenCalledWith('bbb', 'bc');
-    expect(onSuccession).toHaveBeenCalledWith('ccc', 'bc');
+    expect(onSuccession).toHaveBeenCalledTimes(1);
+    expect(onSuccession).toHaveBeenCalledWith([
+      ['bbb', 'bc'],
+      ['ccc', 'bc'],
+    ]);
 
     dispose();
   });

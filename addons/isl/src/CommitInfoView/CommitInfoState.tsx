@@ -109,10 +109,12 @@ export const editedCommitMessages = atomFamily<EditedMessageUnlessOptimistic, Ha
       },
   }),
 });
-successionTracker.onSuccession((oldHash: string, newHash: string) => {
-  const existing = globalRecoil().getLoadable(editedCommitMessages(oldHash));
-  if (existing.state === 'hasValue') {
-    globalRecoil().set(editedCommitMessages(newHash), existing.valueOrThrow());
+successionTracker.onSuccessions(successions => {
+  for (const [oldHash, newHash] of successions) {
+    const existing = globalRecoil().getLoadable(editedCommitMessages(oldHash));
+    if (existing.state === 'hasValue') {
+      globalRecoil().set(editedCommitMessages(newHash), existing.valueOrThrow());
+    }
   }
 });
 
