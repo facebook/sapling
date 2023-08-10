@@ -8,7 +8,9 @@
 import type {CommitInfo, Hash} from '../types';
 import type {CommitMessageFields, FieldsBeingEdited} from './types';
 
+import {globalRecoil} from '../AccessGlobalRecoil';
 import serverAPI from '../ClientToServerAPI';
+import {successionTracker} from '../SuccessionTracker';
 import {latestCommitMessage} from '../codeReview/CodeReviewInfo';
 import {treeWithPreviews} from '../previews';
 import {selectedCommitInfos} from '../selection';
@@ -106,6 +108,12 @@ export const editedCommitMessages = atomFamily<EditedMessageUnlessOptimistic, Ha
         return {fields};
       },
   }),
+});
+successionTracker.onSuccession((oldHash: string, newHash: string) => {
+  const existing = globalRecoil().getLoadable(editedCommitMessages(oldHash));
+  if (existing.state === 'hasValue') {
+    globalRecoil().set(editedCommitMessages(newHash), existing.valueOrThrow());
+  }
 });
 
 export const hasUnsavedEditedCommitMessage = selectorFamily<boolean, Hash | 'head'>({
