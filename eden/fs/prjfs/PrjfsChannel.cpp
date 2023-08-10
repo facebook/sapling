@@ -336,6 +336,8 @@ HRESULT getFileData(
 void cancelCommand(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   allowRecursiveCallbacks(callbackData);
   // TODO(T67329233): Interrupt the future.
+  XLOG(DBG6) << "Cancellation requested for command: "
+             << callbackData->CommandId;
 }
 
 namespace {
