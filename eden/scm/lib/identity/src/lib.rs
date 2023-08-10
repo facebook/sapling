@@ -271,10 +271,10 @@ fn split_rcpath<'a>(
     rcpath: &'a str,
     prefix_list: &'static [&'static str],
 ) -> impl Iterator<Item = &'a str> {
-    const KNOWN_PREFIXES: &[&str] = if cfg!(feature = "sl_only") {
-        &["sys", "user"]
-    } else {
+    const KNOWN_PREFIXES: &[&str] = if cfg!(feature = "fb") {
         &["sys", "user", "fb" /* See D48042830 */]
+    } else {
+        &["sys", "user"]
     };
     let paths = rcpath.split(RCPATH_SEP);
     paths.filter_map(|path| {
