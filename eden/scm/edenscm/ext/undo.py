@@ -837,7 +837,7 @@ def oldworkingparenttemplate(context, mapping, args):
         ("p", "preview", False, _("see smartlog-like preview of future undo " "state")),
     ],
 )
-def undo(ui, repo, *args, **opts):
+def undo(ui, repo, **opts):
     """undo the last local command
 
     Reverse the effects of the last local command. A local command is one that
@@ -950,7 +950,7 @@ def undo(ui, repo, *args, **opts):
                 del opts["interactive"]
                 opts["absolute"] = "absolute"
                 opts["step"] = self.index
-                undo(ui, repo, *args, **opts)
+                undo(ui, repo, **opts)
                 return
 
         viewobj = undopreview(ui, repo, reverseindex)

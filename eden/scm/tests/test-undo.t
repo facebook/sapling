@@ -44,4 +44,10 @@
   in the future, you can use 'hg uncommit' instead of 'hg undo' to keep changes
   hint[hint-ack]: use 'hg hint --ack undo-uncommit-unamend' to silence these hints
 
+  $ hg undo foo
+  hg undo: invalid arguments
+  (use 'hg undo -h' to get help)
+  [255]
+
+
 
