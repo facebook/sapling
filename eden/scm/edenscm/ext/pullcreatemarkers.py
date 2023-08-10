@@ -46,36 +46,61 @@ def _cleanuplanded(repo, dryrun=False):
     """
     ui = repo.ui
     difftodraft = _get_diff_to_draft(repo)
-    query_result = _query_phabricator(repo, list(difftodraft.keys()), "Closed")
+    query_result = _query_phabricator(
+        repo, list(difftodraft.keys()), ["Closed", "Abandoned"]
+    )
     if query_result is None:
         return None
-    difftopublic, difftolocal = query_result
-
+    difftopublic, difftolocal, difftostatus = query_result
     mutationentries = []
     tohide = set()
-    markedcount = 0
+    markedcount_landed = 0
+    markedcount_abandoned = 0
+
     checklocalversions = ui.configbool("pullcreatemarkers", "check-local-versions")
     for diffid, draftnodes in sorted(difftodraft.items()):
-        markedcount += _process_landed(
-            repo,
-            diffid,
-            draftnodes,
-            difftopublic,
-            difftolocal,
-            checklocalversions,
-            tohide,
-            mutationentries,
-        )
-    if markedcount:
+        status = difftostatus.get(diffid)
+        if not status:
+            continue
+        if status == "Closed":
+            markedcount_landed += _process_landed(
+                repo,
+                diffid,
+                draftnodes,
+                difftopublic,
+                difftolocal,
+                checklocalversions,
+                tohide,
+                mutationentries,
+            )
+        if status == "Abandoned":
+            markedcount_abandoned += _process_abandonded(
+                repo,
+                diffid,
+                draftnodes,
+                difftolocal,
+                checklocalversions,
+                tohide,
+            )
+
+    if markedcount_landed:
         ui.status(
             _n(
                 "marked %d commit as landed\n",
                 "marked %d commits as landed\n",
-                markedcount,
+                markedcount_landed,
             )
-            % markedcount
+            % markedcount_landed
         )
-
+    if markedcount_abandoned:
+        ui.status(
+            _n(
+                "marked %d commit as abandoned\n",
+                "marked %d commits as abandoned\n",
+                markedcount_abandoned,
+            )
+            % markedcount_abandoned
+        )
     _hide_commits(repo, tohide, mutationentries, dryrun)
 
 
@@ -110,7 +135,9 @@ def _query_phabricator(repo, diffids, diff_status_list):
         return
 
     try:
+
         return client.getnodes(repo, diffids, diff_status_list)
+
     except Exception as ex:
         ui.warn(
             _(
@@ -118,6 +145,24 @@ def _query_phabricator(repo, diffids, diff_status_list):
             )
             % ex
         )
+
+
+def _process_abandonded(
+    repo,
+    diffid,
+    draftnodes,
+    difftolocal,
+    checklocalversions,
+    tohide,
+):
+    ui = repo.ui
+    if checklocalversions:
+        draftnodes = draftnodes & difftolocal.get(diffid, set())
+    draftnodestr = ", ".join(short(d) for d in sorted(draftnodes))
+    if ui.verbose:
+        ui.write(_("marking D%s (%s) as abandoned\n") % (diffid, draftnodestr))
+    tohide |= set(draftnodes)
+    return len(draftnodes)
 
 
 def _process_landed(
@@ -156,6 +201,7 @@ def _process_landed(
         mutationentries.append(
             mutation.createsyntheticentry(repo, [draftnode], publicnode, "land")
         )
+
     return len(draftnodes)
 
 

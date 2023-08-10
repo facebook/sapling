@@ -198,9 +198,9 @@ class Client(object):
         return latest
 
     def getnodes(self, repo, diffids, diff_status, timeout=10):
-        """Get nodes for diffids for the given status. Return {diffid: node}, {diffid: set(node)}"""
+        """Get nodes for diffids for a list of diff  status. Return {diffid: node}, {diffid: set(node)}"""
         if not diffids:
-            return {}, {}
+            return {}, {}, {}
         if self._mock:
             ret = self._mocked_responses.pop()
         else:
@@ -253,11 +253,13 @@ class Client(object):
     def _getnodes(self, repo, ret, diff_status):
         difftolocalcommits = {}  # {str: set(node)}
         diffidentifiers = {}
+        difftostatus = {}
         for result in ret["data"]["phabricator_diff_query"][0]["results"]["nodes"]:
             try:
                 diffid = "%s" % result["number"]
                 _status = result["diff_status_name"]
-                if _status == diff_status:
+                difftostatus[diffid] = _status
+                if _status in diff_status:
                     nodes = result["phabricator_diff_commit"]["nodes"]
                     for n in nodes:
                         diffidentifiers[n["commit_identifier"]] = diffid
@@ -272,7 +274,6 @@ class Client(object):
             except (KeyError, IndexError, TypeError):
                 # Not fatal.
                 continue
-
         difftonode = {}
         maybehash = [bin(i) for i in diffidentifiers if len(i) == 40]
         # Batch up node existence checks using filternodes() in case
@@ -327,7 +328,7 @@ class Client(object):
                     node = globalrevtonode.get(globalrev)
                     if node:
                         difftonode[diffid] = node
-        return difftonode, difftolocalcommits
+        return difftonode, difftolocalcommits, difftostatus
 
     def getrevisioninfo(self, timeout, signalstatus, *revision_numbers):
         rev_numbers = self._normalizerevisionnumbers(revision_numbers)
