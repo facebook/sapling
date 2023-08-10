@@ -152,10 +152,18 @@ std::optional<ProcessSimpleName> readProcessSimpleName(pid_t pid);
 std::optional<pid_t> getParentProcessId(pid_t pid);
 
 /**
+ * Stores a process hierarchy - front = bottom and back = top of the hierarchy,
+ * respectively. Each entry in the hierarchy is a tuple of the process ID,
+ * simple process name and full process name.
+ */
+using ProcessHierarchy =
+    std::vector<std::tuple<pid_t, std::string, ProcessName>>;
+
+/**
  * Get the process hierarchy, as a stack of tuples of pid, simple name and
  * ProcessName, of the specified process ID.
  */
-std::stack<std::tuple<pid_t, std::string, ProcessName>> getProcessHierarchy(
+ProcessHierarchy getProcessHierarchy(
     std::shared_ptr<ProcessNameCache> processNameCache,
     pid_t pid);
 

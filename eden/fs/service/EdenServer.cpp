@@ -8,6 +8,7 @@
 #include "eden/fs/service/EdenServer.h"
 
 #include <cpptoml.h>
+#include <algorithm>
 #include <chrono>
 
 #include <sys/stat.h>
@@ -2366,47 +2367,99 @@ void EdenServer::detectNfsCrawl() {
              readDirThreshold]() {
               const auto& mount = mountPointHandle.getEdenMount();
 
+              // Track pids that have been seen in a process hierarchy
+              std::unordered_set<pid_t> seenPids;
+
+              // Collect process hierarchies, keeping only the longest for each
+              // pid that is not excluded. For example: a->b->c would be
+              // replaced with a->b->c->d.
+              std::vector<proc_util::ProcessHierarchy> hierarchies;
+
               // Get list of pids that have open files/paths on the mount
               auto pids = proc_util::readProcessIdsForPath(mount.getPath());
               for (auto pid : pids) {
+                // Skip pid if seen before in previous hierarchy
+                if (seenPids.find(pid) != seenPids.end()) {
+                  continue;
+                }
+                seenPids.insert(pid);
+
                 auto simpleName = proc_util::readProcessSimpleName(pid);
                 if (simpleName.has_value()) {
                   if (exclusions.find(simpleName.value()) == exclusions.end()) {
-                    // Log process hierarchy
                     auto hierarchy = proc_util::getProcessHierarchy(
                         serverState->getProcessNameCache(), pid);
-                    XCHECK(
-                        !hierarchy.empty(),
-                        "proc_util::getProcessHierarchy returned an empty list.");
-                    auto [_pid, sname, pname] = std::move(hierarchy.top());
-                    hierarchy.pop();
-                    std::string output =
-                        fmt::format("[{}({}): {}]", sname, _pid, pname);
-                    while (!hierarchy.empty()) {
-                      fmt::format_to(std::back_inserter(output), " -> ");
-                      auto [_pid, sname, pname] = std::move(hierarchy.top());
-                      hierarchy.pop();
-                      fmt::format_to(
-                          std::back_inserter(output),
-                          "[{}({}): {}]",
-                          sname,
-                          _pid,
-                          pname);
+
+                    // Mark pids as seen
+                    std::for_each(
+                        hierarchy.begin(),
+                        hierarchy.end(),
+                        [&seenPids](const auto& e) {
+                          seenPids.insert(std::get<pid_t>(e));
+                        });
+
+                    // Detect duplicate hierarchies, replace if hiearchy is
+                    // longer and a duplicate
+                    bool isDuplicate = false;
+                    for (auto itr = hierarchies.begin();
+                         itr != hierarchies.end();
+                         itr++) {
+                      const auto& existing = *itr;
+                      auto isLonger = (existing).size() < hierarchy.size();
+                      const auto& shorter = isLonger ? existing : hierarchy;
+                      const auto& longer = isLonger ? hierarchy : existing;
+                      if (std::equal(
+                              shorter.rbegin(),
+                              shorter.rend(),
+                              longer.rbegin(),
+                              [](const auto& s, const auto& l) {
+                                return std::get<pid_t>(s) == std::get<pid_t>(l);
+                              })) {
+                        isDuplicate = true;
+                        if (isLonger) {
+                          std::swap(*itr, hierarchy);
+                        }
+                        break;
+                      }
                     }
-                    XLOGF(
-                        DBG2,
-                        "NFS crawl detection found process with open files in mount point: {}\n  {}",
-                        mount.getPath(),
-                        output);
-                    serverState->getStructuredLogger()->logEvent(
-                        NfsCrawlDetected{
-                            readCount,
-                            readThreshold,
-                            readDirCount,
-                            readDirThreshold,
-                            output});
+                    if (!isDuplicate) {
+                      hierarchies.emplace_back(std::move(hierarchy));
+                    }
                   }
                 }
+              }
+
+              // Log process hierarchies
+              for (auto& hierarchy : hierarchies) {
+                XCHECK(
+                    !hierarchy.empty(),
+                    "proc_util::getProcessHierarchy returned an empty list.");
+                auto [pid, sname, pname] = std::move(hierarchy.back());
+                hierarchy.pop_back();
+                std::string output =
+                    fmt::format("[{}({}): {}]", sname, pid, pname);
+                while (!hierarchy.empty()) {
+                  fmt::format_to(std::back_inserter(output), " -> ");
+                  auto [pid, sname, pname] = std::move(hierarchy.back());
+                  hierarchy.pop_back();
+                  fmt::format_to(
+                      std::back_inserter(output),
+                      "[{}({}): {}]",
+                      sname,
+                      pid,
+                      pname);
+                }
+                XLOGF(
+                    DBG2,
+                    "NFS crawl detection found process with open files in mount point: {}\n  {}",
+                    mount.getPath(),
+                    output);
+                serverState->getStructuredLogger()->logEvent(NfsCrawlDetected{
+                    readCount,
+                    readThreshold,
+                    readDirCount,
+                    readDirThreshold,
+                    output});
               }
             });
       }

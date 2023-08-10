@@ -344,13 +344,13 @@ std::optional<pid_t> getParentProcessId(FOLLY_MAYBE_UNUSED pid_t pid) {
   return ppid;
 }
 
-std::stack<std::tuple<pid_t, std::string, ProcessName>> getProcessHierarchy(
+ProcessHierarchy getProcessHierarchy(
     std::shared_ptr<ProcessNameCache> processNameCache,
     pid_t pid) {
-  std::stack<std::tuple<pid_t, std::string, ProcessName>> hierarchy;
+  ProcessHierarchy hierarchy;
   do {
     auto simpleName = proc_util::readProcessSimpleName(pid);
-    hierarchy.emplace(
+    hierarchy.emplace_back(
         pid,
         simpleName.value_or("<unknown>"),
         processNameCache->lookup(pid).get());
