@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+pub mod bundle;
 mod hash_writer;
 pub mod pack;
 mod test;
