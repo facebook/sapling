@@ -18,6 +18,7 @@ pub use crate::args::CacheMode;
 pub use crate::args::CachelibArgs;
 pub use crate::settings::CachelibSettings;
 
+/// Initializes cachelib with settings that are patched beforehand with args
 pub fn init_cachelib(
     fb: FacebookInit,
     settings: &CachelibSettings,
