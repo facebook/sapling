@@ -19,12 +19,11 @@ use crate::Matcher;
 
 /// Pattern matcher constructed by an regular expression.
 ///
-/// The regular expression syntax is same as regex crate with below limitations
-/// due to the underlying RE lib (regex_automata):
-///     1. Anchors \A, \z. RegexMatcher checks for a match only at the beginning
-///        of the string by default, so '^' is not required.
-///     2. Word boundary assertions such as \b and \B.
-///     3. Lacks a few features like look around and backreferences (e.g. '?!').
+/// The regular expression syntax [1] is same as regex crate with below limitations:
+///   * Lacks a few features like look around and backreferences (e.g. '?!').
+///   * Does not support Unicode word boundaries.
+///
+/// [1] https://docs.rs/regex/1.9.3/regex/#syntax
 ///
 /// The [RegexMatcher::match_prefix] method can be used to rule out
 /// unnecessary directory visit early.
@@ -47,10 +46,9 @@ pub struct RegexMatcher {
 
 impl RegexMatcher {
     pub fn new(pattern: &str, case_sensitive: bool) -> Result<Self> {
-        // The RE library doesn't support ^, we use this `Builder::anchored` to
-        // make the search anchored at the beginning of the input. By default,
-        // the regex will act as if the pattern started with a .*?, which enables
-        // a match to appear anywhere.
+        // `StartKind::Anchored` makes the dfa searching at the beginning of the
+        // string. This is similar to Python's `re.match` behavior, which is
+        // used in the match.py
         let dfa = dense::Builder::new()
             .configure(dense::DFA::config().start_kind(StartKind::Anchored))
             .syntax(syntax::Config::new().case_insensitive(!case_sensitive))
@@ -71,6 +69,10 @@ impl RegexMatcher {
         }
 
         let bytes = dir.as_bytes();
+        // safety: `unwrap` is okay because `start_state_forward` returns error when:
+        // - explicitly set quit bytes
+        // - Anchored mode does not match
+        // both of them cannot happen in our use case.
         let mut state = self
             .dfa
             .start_state_forward(&Input::new(dir).anchored(Anchored::Yes))
@@ -109,6 +111,10 @@ impl RegexMatcher {
             return true;
         }
 
+        // safety: `unwrap` is okay because `start_state_forward` returns error when:
+        // - explicitly set quit bytes
+        // - Anchored mode does not match
+        // both of them cannot happen in our use case.
         let mut state = self
             .dfa
             .start_state_forward(&Input::new(path).anchored(Anchored::Yes))
@@ -123,9 +129,6 @@ impl RegexMatcher {
             }
         }
 
-        // At this point, it means we are not in 'match' or 'dead' state, then
-        // we add '\0' to check if the pattern is expecting EOL. Check the
-        // comment of [RegexMatcher.pattern] for more details.
         state = self.dfa.next_eoi_state(state);
         self.dfa.is_match_state(state)
     }
