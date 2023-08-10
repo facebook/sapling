@@ -26,6 +26,7 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
+import {successionTracker} from './SuccessionTracker';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {clearOnCwdChange} from './recoilUtils';
@@ -177,6 +178,9 @@ export const latestCommitsData = atom<{
           [],
         error: data.commits.error,
       }));
+      if (data.commits.value) {
+        successionTracker.findNewSuccessionsFromCommits(data.commits.value);
+      }
     }),
   ],
 });

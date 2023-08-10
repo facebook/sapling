@@ -10,6 +10,7 @@ import type {CommitInfo} from './types';
 import type React from 'react';
 
 import {useCommand} from './ISLShortcuts';
+import {successionTracker} from './SuccessionTracker';
 import {treeWithPreviews} from './previews';
 import {latestCommitTreeMap} from './serverAPIState';
 import {atom, selector, useRecoilCallback, useRecoilValue} from 'recoil';
@@ -23,6 +24,18 @@ import {notEmpty} from 'shared/utils';
 export const selectedCommits = atom<Set<string>>({
   key: 'selectedCommits',
   default: new Set(),
+  effects: [
+    ({setSelf, getLoadable}) => {
+      return successionTracker.onSuccession((oldHash: string, newHash: string) => {
+        const value = getLoadable(selectedCommits).valueMaybe();
+        if (value?.has(oldHash)) {
+          value.delete(oldHash);
+          value.add(newHash);
+          setSelf(value);
+        }
+      });
+    },
+  ],
 });
 
 const previouslySelectedCommit = atom<undefined | string>({
