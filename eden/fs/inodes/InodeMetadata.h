@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/portability/SysStat.h>
+#include <folly/portability/SysTypes.h>
 #include <optional>
 #include "eden/fs/inodes/InodeTimestamps.h"
 

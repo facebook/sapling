@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/portability/SysTypes.h>
 #include <optional>
 #include <variant>
 #include "eden/fs/model/RootId.h"
