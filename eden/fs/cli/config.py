@@ -107,11 +107,6 @@ SUPPORTED_MOUNT_PROTOCOLS: Set[str] = {
 SUPPORTED_INODE_CATALOG_TYPES: Set[str] = {
     "legacy",
     "sqlite",
-    "sqliteinmemory",
-    "sqlitesynchronousoff",
-    "sqlitebuffered",
-    "sqliteinmemorybuffered",
-    "sqlitesynchronousoffbuffered",
     "inmemory",
 }
 
@@ -1412,12 +1407,25 @@ class EdenCheckout:
 
         inode_catalog_type = repository.get("inode-catalog-type")
         if inode_catalog_type is not None:
-            inode_catalog_type = inode_catalog_type.lower()
-            if inode_catalog_type not in SUPPORTED_INODE_CATALOG_TYPES:
+            if (
+                not isinstance(inode_catalog_type, str)
+                or inode_catalog_type.lower() not in SUPPORTED_INODE_CATALOG_TYPES
+            ):
                 raise Exception(
-                    f'repository "{config_path}" has unsupported inode catalog type '
-                    f'"{inode_catalog_type}". Support inode catalog types are: '
+                    f'repository "{config_path}" has unsupported inode catalog (overlay) type '
+                    f'"{inode_catalog_type}". Supported inode catalog (overlay) types are: '
                     f'{", ".join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}.'
+                )
+            inode_catalog_type = inode_catalog_type.lower()
+            if sys.platform == "win32" and inode_catalog_type == "legacy":
+                raise Exception(
+                    "Legacy inode catalog (overlay) type not supported on Windows. "
+                    "Use Sqlite or InMemory on Windows."
+                )
+            elif sys.platform != "win32" and inode_catalog_type == "inmemory":
+                raise Exception(
+                    "InMemory inode catalog (overlay) type is only supported on Windows. "
+                    "Use Legacy or Sqlite on Linux and MacOS."
                 )
 
         return CheckoutConfig(

@@ -745,7 +745,7 @@ class CloneCmd(Subcmd):
 
         parser.add_argument(
             "--overlay-type",
-            choices=("sqlite"),
+            choices=sorted(config_mod.SUPPORTED_INODE_CATALOG_TYPES),
             default=None,
             help="Specify overlay type",
         )
@@ -1008,6 +1008,31 @@ is case-sensitive. This is not recommended and is intended only for testing."""
 
         enable_sqlite_overlay = self._get_enable_sqlite_overlay(instance, overlay_type)
 
+        if overlay_type is None:
+            # Not specified - read from EdenConfig, fallback to default.
+            overlay_type = instance.get_config_value(
+                "overlay.inode-catalog-type",
+                # SqliteOverlay is default on Windows
+                "sqlite" if sys.platform == "win32" else "legacy",
+            )
+            if overlay_type not in config_mod.SUPPORTED_INODE_CATALOG_TYPES:
+                raise Exception(
+                    f"Eden config has unsupported overlay (inode catalog) type "
+                    f'"{overlay_type}". Supported overlay (inode catalog) types are: '
+                    f'{", ".join(sorted(config_mod.SUPPORTED_INODE_CATALOG_TYPES))}.'
+                )
+        overlay_type = overlay_type.lower()
+        if sys.platform == "win32" and overlay_type == "legacy":
+            raise Exception(
+                "Legacy overlay (inode catalog) type not supported on Windows. "
+                "Use Sqlite or InMemory on Windows."
+            )
+        elif sys.platform != "win32" and overlay_type == "inmemory":
+            raise Exception(
+                "InMemory overlay (inode catalog) type is only supported on Windows. "
+                "Use Legacy or Sqlite on Linux and MacOS."
+            )
+
         # This is a valid repository path.
         # Prepare a CheckoutConfig object for it.
         repo_config = config_mod.CheckoutConfig(
@@ -1026,7 +1051,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
             use_write_back_cache=False,
             re_use_case=re_use_case or "buck2-default",
             enable_windows_symlinks=enable_windows_symlinks,
-            inode_catalog_type=None,
+            inode_catalog_type=overlay_type,
         )
 
         return repo, repo_config
