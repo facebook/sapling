@@ -49,11 +49,9 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     const std::shared_ptr<StructuredLogger>& logger) {
   if (inodeCatalogType == InodeCatalogType::Sqlite) {
     // Controlled via EdenConfig::unsafeInMemoryOverlay
-    if ((inodeCatalogOptions & INODE_CATALOG_UNSAFE_IN_MEMORY) ==
-        INODE_CATALOG_UNSAFE_IN_MEMORY) {
+    if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_UNSAFE_IN_MEMORY)) {
       // Controlled via EdenConfig::overlayBuffered
-      if ((inodeCatalogOptions & INODE_CATALOG_BUFFERED) ==
-          INODE_CATALOG_BUFFERED) {
+      if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_BUFFERED)) {
         XLOG(WARN)
             << "In-memory Sqlite buffered overlay requested. This will cause data loss.";
         return std::make_unique<BufferedSqliteInodeCatalog>(
@@ -66,11 +64,9 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
       }
     }
     // Controlled via EdenConfig::overlaySynchronousMode
-    if ((inodeCatalogOptions & INODE_CATALOG_SYNCHRONOUS_OFF) ==
-        INODE_CATALOG_SYNCHRONOUS_OFF) {
+    if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_SYNCHRONOUS_OFF)) {
       // Controlled via EdenConfig::overlayBuffered
-      if ((inodeCatalogOptions & INODE_CATALOG_BUFFERED) ==
-          INODE_CATALOG_BUFFERED) {
+      if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_BUFFERED)) {
         XLOG(DBG2)
             << "Buffered Sqlite overlay being used with synchronous-mode = off";
         return std::make_unique<BufferedSqliteInodeCatalog>(
@@ -82,8 +78,7 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
       }
     }
     // Controlled via EdenConfig::overlayBuffered
-    if ((inodeCatalogOptions & INODE_CATALOG_BUFFERED) ==
-        INODE_CATALOG_BUFFERED) {
+    if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_BUFFERED)) {
       XLOG(DBG4) << "Buffered Sqlite overlay being used";
       return std::make_unique<BufferedSqliteInodeCatalog>(
           localDir, logger, config);
