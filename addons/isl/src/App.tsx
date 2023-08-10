@@ -7,6 +7,7 @@
 
 import type {RepositoryError} from './types';
 
+import {AccessGlobalRecoil} from './AccessGlobalRecoil';
 import {CommandHistoryAndProgress} from './CommandHistoryAndProgress';
 import {CommitInfoSidebar} from './CommitInfoView/CommitInfoView';
 import {CommitTreeList} from './CommitTreeList';
@@ -40,6 +41,7 @@ export default function App() {
     <React.StrictMode>
       <I18nSupport>
         <RecoilRoot>
+          <AccessGlobalRecoil />
           <ThemeRoot>
             <ISLCommandContext>
               <ErrorBoundary>
