@@ -54,18 +54,18 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
     <DropdownFields
       title={<T>Download Commits</T>}
       icon="cloud-download"
-      data-testid="settings-dropdown">
+      data-testid="download-commits-dropdown">
       <div className="download-commits-input-row">
         <VSCodeTextField
           placeholder={supportsDiffDownload ? t('Hash, Diff Number, ...') : t('Hash, revset, ...')}
           value={enteredDiffNum}
-          onKeyUp={e => {
+          data-testid="download-commits-input"
+          onInput={e => setEnteredDiffNum((e.target as unknown as {value: string})?.value ?? '')}
+          onKeyDown={e => {
             if (e.key === 'Enter') {
               if (enteredDiffNum.trim().length > 0) {
                 doCommitDownload();
               }
-            } else {
-              setEnteredDiffNum((e.target as unknown as {value: string})?.value ?? '');
             }
           }}
           ref={downloadDiffTextArea}
@@ -73,6 +73,7 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
         <VSCodeButton
           appearance="secondary"
           data-testid="download-commit-button"
+          disabled={enteredDiffNum.trim().length === 0}
           onClick={doCommitDownload}>
           <T>Pull</T>
         </VSCodeButton>
