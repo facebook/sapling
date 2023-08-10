@@ -17,4 +17,5 @@ tempfile = "3.5"
 
 [features]
 default = []
+fb = []
 sl_only = []

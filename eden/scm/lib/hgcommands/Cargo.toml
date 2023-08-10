@@ -81,4 +81,4 @@ zstd = { version = "0.11.2+zstd.1.5.2", features = ["experimental", "zstdmt"] }
 [features]
 default = []
 eden = ["clidispatch/eden"]
-fb = ["configloader/fb"]
+fb = ["configloader/fb", "identity/fb"]
