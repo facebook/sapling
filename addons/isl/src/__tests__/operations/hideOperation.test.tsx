@@ -87,4 +87,24 @@ describe('hide operation', () => {
     expect(screen.queryByTestId('commit-d')).not.toBeInTheDocument();
     expect(screen.queryByTestId('commit-e')).not.toBeInTheDocument();
   });
+
+  it('does not show uninteresting public base during optimistic hide', () => {
+    rightClickAndChooseFromContextMenu(screen.getByText('Commit A'), 'Hide Commit and Descendents');
+
+    const runHideButton = screen.getByText('Hide');
+    fireEvent.click(runHideButton);
+
+    // the whole subtree is hidden, so the parent commit is not even rendered
+    expect(screen.queryByTestId('commit-1')).not.toBeInTheDocument();
+  });
+
+  it('does show interesting public base during optimistic hide', () => {
+    rightClickAndChooseFromContextMenu(screen.getByText('Commit X'), 'Hide Commit and Descendents');
+
+    const runHideButton = screen.getByText('Hide');
+    fireEvent.click(runHideButton);
+
+    // the whole subtree is hidden, but this commit has the remote/master bookmark so it's shown anyway.
+    expect(screen.queryByTestId('commit-2')).toBeInTheDocument();
+  });
 });

@@ -6,7 +6,7 @@
  */
 
 import type {UICodeReviewProvider} from './codeReview/UICodeReviewProvider';
-import type {CommitTreeWithPreviews} from './getCommitTree';
+import type {CommitTree, CommitTreeWithPreviews} from './getCommitTree';
 import type {CommitInfo, DiffSummary, Hash} from './types';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
@@ -77,7 +77,7 @@ export function CommitTreeList() {
           className="commit-tree-root commit-group with-vertical-line"
           data-testid="commit-tree-root">
           <MainLineEllipsis />
-          {trees.map(tree => (
+          {trees.filter(shouldShowPublicCommit).map(tree => (
             <SubTree key={tree.info.hash} tree={tree} depth={0} />
           ))}
           <MainLineEllipsis>
@@ -87,6 +87,21 @@ export function CommitTreeList() {
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * Ensure only relevant public commits are shown.
+ * `sl log` does this kind of filtering for us anyway, but
+ * if a commit is hidden due to previews or optimistic state,
+ * we can violate these conditions.
+ */
+function shouldShowPublicCommit(tree: CommitTree) {
+  return (
+    tree.children.length > 0 ||
+    tree.info.bookmarks.length > 0 ||
+    tree.info.remoteBookmarks.length > 0 ||
+    (tree.info.stableCommitMetadata?.length ?? 0) > 0
   );
 }
 
