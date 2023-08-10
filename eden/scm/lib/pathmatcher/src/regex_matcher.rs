@@ -5,15 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
-
 use anyhow::Result;
-use regex_automata::dense::Builder;
-use regex_automata::DenseDFA;
-use regex_automata::DFA;
-use regex_syntax::ast::parse;
-use regex_syntax::ast::AssertionKind;
-use regex_syntax::ast::Ast;
+use regex_automata::dfa::dense;
+use regex_automata::dfa::Automaton;
+use regex_automata::dfa::StartKind;
+use regex_automata::util::syntax;
+use regex_automata::Anchored;
+use regex_automata::Input;
 use types::RepoPath;
 
 use crate::DirectoryMatch;
@@ -30,14 +28,10 @@ use crate::Matcher;
 ///
 /// The [RegexMatcher::match_prefix] method can be used to rule out
 /// unnecessary directory visit early.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 #[allow(dead_code)]
 pub struct RegexMatcher {
-    // Transformed regular expression pattern after replacing '$' (End-Of-Line) with '\0'.
-    //
-    // The underlying regex engine doesn't support '$' (EOL), we workaround this limitation
-    // by replacing '$' with '\0' (which cannot occur in a path) in the pattern. Then have
-    // `matches` API add a '\0' for testing when needed.
+    // The regular expression pattern.
     pattern: String,
 
     // A table-based deterministic finite automaton (DFA) constructed by regular
@@ -48,23 +42,24 @@ pub struct RegexMatcher {
     // start of a match. Since we only need to detect whether something matched,
     // we use a dense::Builder to construct a single DFA here, which is cheaper
     // than building two DFAs.
-    dfa: DenseDFA<Vec<usize>, usize>,
+    dfa: dense::DFA<Vec<u32>>,
 }
 
 impl RegexMatcher {
     pub fn new(pattern: &str, case_sensitive: bool) -> Result<Self> {
-        let pattern = handle_sol_eol(pattern)?;
-
         // The RE library doesn't support ^, we use this `Builder::anchored` to
         // make the search anchored at the beginning of the input. By default,
         // the regex will act as if the pattern started with a .*?, which enables
         // a match to appear anywhere.
-        let dfa = Builder::new()
-            .anchored(true)
-            .case_insensitive(!case_sensitive)
-            .build(&pattern)?;
+        let dfa = dense::Builder::new()
+            .configure(dense::DFA::config().start_kind(StartKind::Anchored))
+            .syntax(syntax::Config::new().case_insensitive(!case_sensitive))
+            .build(pattern)?;
 
-        Ok(RegexMatcher { pattern, dfa })
+        Ok(RegexMatcher {
+            pattern: pattern.to_string(),
+            dfa,
+        })
     }
 
     /// Return `Some(bool)` if the end state of the DFA is 'match' or 'dead' state.
@@ -74,24 +69,33 @@ impl RegexMatcher {
         if dir.is_empty() {
             return None;
         }
+
         let bytes = dir.as_bytes();
-        let mut state = self.dfa.start_state();
+        let mut state = self
+            .dfa
+            .start_state_forward(&Input::new(dir).anchored(Anchored::Yes))
+            .unwrap();
 
         for b in bytes {
             state = self.dfa.next_state(state, *b);
-            if self.dfa.is_match_or_dead_state(state) {
-                break;
+            if self.dfa.is_dead_state(state) {
+                return Some(false);
+            } else if self.dfa.is_match_state(state) {
+                return Some(true);
             }
         }
         // Adding trailing '/' to handle cases like: if the pattern is `aa/bb`, then
         // it should return `Some(false)` for input "a"
-        if !self.dfa.is_match_or_dead_state(state) && bytes.last() != Some(&b'/') {
+        if bytes.last() != Some(&b'/') {
             state = self.dfa.next_state(state, b'/');
         }
 
         if self.dfa.is_dead_state(state) {
             return Some(false);
-        } else if self.dfa.is_match_state(state) {
+        }
+
+        state = self.dfa.next_eoi_state(state);
+        if self.dfa.is_match_state(state) {
             return Some(true);
         }
         None
@@ -99,92 +103,31 @@ impl RegexMatcher {
 
     /// Return if `path` matches with the matcher.
     pub fn matches(&self, path: &str) -> bool {
-        let bytes = path.as_bytes();
-        let mut state = self.dfa.start_state();
-
-        // This handles two special cases:
-        // 1. empty regex pattern (""), which describes the empty language. The empty language is
-        //    a sub-language of every other language. So it will true without checking the input.
-        // 2. it is possible to write a regex that is the opposite of the empty set, i.e., one that
-        //    will not match anything. You could write it like so: [a&&b] -- intersection of a and b,
-        //    which is empty. Currently though, such patterns won't compile in Rust Regex parser.
-        if self.dfa.is_match_or_dead_state(state) {
-            return self.dfa.is_match_state(state);
+        // empty regex pattern (""), which describes the empty language. The empty language is
+        // a sub-language of every other language. So it will true without checking the input.
+        if self.pattern.is_empty() {
+            return true;
         }
 
-        for &b in bytes {
-            // We are using `next_state_unchecked` method here for speed, this follows
-            // the implementation of DFA.is_match_at API:
-            // https://github.com/BurntSushi/regex-automata/blob/0.1.10/src/dfa.rs#L220
-            state = unsafe { self.dfa.next_state_unchecked(state, b) };
-            if self.dfa.is_match_or_dead_state(state) {
-                return self.dfa.is_match_state(state);
+        let mut state = self
+            .dfa
+            .start_state_forward(&Input::new(path).anchored(Anchored::Yes))
+            .unwrap();
+
+        for &b in path.as_bytes() {
+            state = self.dfa.next_state(state, b);
+            if self.dfa.is_dead_state(state) {
+                return false;
+            } else if self.dfa.is_match_state(state) {
+                return true;
             }
         }
 
         // At this point, it means we are not in 'match' or 'dead' state, then
         // we add '\0' to check if the pattern is expecting EOL. Check the
         // comment of [RegexMatcher.pattern] for more details.
-        state = unsafe { self.dfa.next_state_unchecked(state, b'\0') };
+        state = self.dfa.next_eoi_state(state);
         self.dfa.is_match_state(state)
-    }
-}
-
-/// Handle sol (start-of-line) and eol (end-of-line) since regex-automata doesn't support '^' and '$'.
-///   1. sol ('^'), we just remove it, RegexMatcher will only match at the beginning of the string.
-///   2. eol ('$'), we replace it with '\0'
-fn handle_sol_eol(pattern: &str) -> Result<String> {
-    fn traverse_ast(ast: &Ast, pattern: &mut String, sol_indices: &mut HashSet<usize>) {
-        match ast {
-            Ast::Group(group) => traverse_ast(&group.ast, pattern, sol_indices),
-            Ast::Assertion(assertion) => {
-                if assertion.kind == AssertionKind::EndLine {
-                    let start = assertion.span.start.offset;
-                    let end = assertion.span.end.offset;
-                    assert_eq!(start + 1, end, "$ (end of line) should be 1 char");
-                    pattern.replace_range(start..end, "\0");
-                } else if assertion.kind == AssertionKind::StartLine {
-                    let start = assertion.span.start.offset;
-                    let end = assertion.span.end.offset;
-                    assert_eq!(start + 1, end, "^ (start of line) should be 1 char");
-                    sol_indices.insert(start);
-                }
-            }
-            Ast::Repetition(repeat) => {
-                traverse_ast(&repeat.ast, pattern, sol_indices);
-            }
-            Ast::Alternation(alternation) => {
-                for t in &alternation.asts {
-                    traverse_ast(t, pattern, sol_indices);
-                }
-            }
-            Ast::Concat(concat) => {
-                for t in &concat.asts {
-                    traverse_ast(t, pattern, sol_indices);
-                }
-            }
-            // Ast::Empty, Ast::Flags, Ast::Literal, Ast::Dot, Ast::Class
-            _ => {}
-        }
-    }
-
-    let ast = parse::Parser::new().parse(pattern)?;
-    let mut new_pattern = pattern.to_string();
-    let mut sol_indices = HashSet::new();
-
-    traverse_ast(&ast, &mut new_pattern, &mut sol_indices);
-
-    if sol_indices.is_empty() {
-        Ok(new_pattern)
-    } else {
-        let bytes = new_pattern
-            .as_bytes()
-            .iter()
-            .enumerate()
-            .filter(|(i, _)| !sol_indices.contains(i))
-            .map(|(_, e)| *e)
-            .collect::<Vec<u8>>();
-        Ok(String::from_utf8(bytes)?)
     }
 }
 
@@ -297,32 +240,6 @@ mod tests {
         assert!(!m.matches("a/t.pyc"));
         assert!(m.matches(r"a^.txt"));
         assert!(m.matches(r"a^.txt1"));
-    }
-
-    #[test]
-    fn test_re_handle_sol_eol() {
-        assert!(handle_sol_eol(r"*").is_err());
-        assert_eq!(handle_sol_eol(r"a.py").unwrap(), "a.py");
-        assert_eq!(handle_sol_eol(r"a.py\$").unwrap(), r"a.py\$");
-        assert_eq!(handle_sol_eol(r"a.py$").unwrap(), "a.py\0");
-        assert_eq!(handle_sol_eol(r"a.py$|a.txt").unwrap(), "a.py\0|a.txt");
-        assert_eq!(handle_sol_eol(r"a.py$|a.txt$").unwrap(), "a.py\0|a.txt\0");
-        assert_eq!(
-            handle_sol_eol(r"(a.py$|a.txt$)|b.py").unwrap(),
-            "(a.py\0|a.txt\0)|b.py"
-        );
-        assert_eq!(
-            handle_sol_eol(r"(a$[b$]c$|d\$)e$").unwrap(),
-            "(a\0[b$]c\0|d\\$)e\0"
-        );
-
-        assert_eq!(
-            handle_sol_eol(r"(?:^a[^xyz]\^b$|^abc)").unwrap(),
-            "(?:a[^xyz]\\^b\0|abc)"
-        );
-        // this is the edge case of current implementation of '^' support, which
-        // should be rare since the regular expression is actually "wrong".
-        assert_eq!(handle_sol_eol(r"^ab^c").unwrap(), "abc");
     }
 
     #[test]
