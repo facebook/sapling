@@ -121,4 +121,32 @@ describe('GotoOperation', () => {
       ).toBeInTheDocument();
     });
   });
+
+  describe('succession', () => {
+    it('handles successions', () => {
+      clickGoto('c');
+
+      // get a new batch of commits from some other operation like rebase, which
+      // rewrites a,b,c into a1,b2,c2
+      act(() => {
+        simulateCommits({
+          value: [
+            COMMIT('2', 'master', '00', {phase: 'public', remoteBookmarks: ['remote/master']}),
+            COMMIT('1', 'Commit 1', '0', {phase: 'public'}),
+            COMMIT('a2', 'Commit A', '1', {closestPredecessors: ['a']}),
+            COMMIT('b2', 'Commit B', 'a2', {isHead: true, closestPredecessors: ['b']}),
+            COMMIT('c2', 'Commit C', 'b2', {closestPredecessors: ['c']}),
+          ],
+        });
+      });
+
+      // the previews should stay intact
+      expect(
+        within(screen.getByTestId('commit-c2')).queryByText("You're moving here..."),
+      ).toBeInTheDocument();
+      expect(
+        within(screen.getByTestId('commit-b2')).queryByText('You were here...'),
+      ).toBeInTheDocument();
+    });
+  });
 });

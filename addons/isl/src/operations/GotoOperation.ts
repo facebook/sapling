@@ -8,6 +8,7 @@
 import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
 import type {Hash} from '../types';
 
+import {latestSuccessor} from '../SuccessionTracker';
 import {CommitPreview} from '../previews';
 import {SucceedableRevset} from '../types';
 import {Operation} from './Operation';
@@ -27,7 +28,7 @@ export class GotoOperation extends Operation {
   makeOptimisticApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
     const headCommitHash = context.headCommit?.hash;
     if (
-      headCommitHash === this.destination ||
+      headCommitHash === latestSuccessor(context, this.destination) ||
       context.headCommit?.remoteBookmarks?.includes(this.destination)
     ) {
       // head is destination => the goto completed
@@ -36,7 +37,7 @@ export class GotoOperation extends Operation {
 
     const func: ApplyPreviewsFuncType = (tree, _previewType) => {
       if (
-        tree.info.hash === this.destination ||
+        tree.info.hash === latestSuccessor(context, this.destination) ||
         tree.info.remoteBookmarks?.includes(this.destination)
       ) {
         const modifiedInfo = {...tree.info, isHead: true};

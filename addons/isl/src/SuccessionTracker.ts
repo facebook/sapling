@@ -7,6 +7,9 @@
 
 import type {SmartlogCommits} from './types';
 
+import {atom, DefaultValue} from 'recoil';
+import {unwrap} from 'shared/utils';
+
 type SuccessionCallback = (oldHash: string, newHash: string) => unknown;
 
 /**
@@ -82,3 +85,35 @@ export class SuccessionTracker {
 }
 
 export const successionTracker = new SuccessionTracker();
+
+export const latestSuccessorsMap = atom<Map<string, string>>({
+  key: 'latestSuccessorsMap',
+  default: new Map(),
+  effects: [
+    ({setSelf}) => {
+      return successionTracker.onSuccession((oldHash, newHash) => {
+        setSelf(existing => {
+          const map = existing instanceof DefaultValue ? new Map() : new Map(existing);
+          map.set(oldHash, newHash);
+          return map;
+        });
+      });
+    },
+  ],
+});
+
+/**
+ * Get the latest successor hash of the given hash,
+ * traversing multiple successions if necessary.
+ * Returns original hash if no successors were found.
+ *
+ * Useful for previews to ensure they're working with the latest version of a commit,
+ * given that they may have been queued up while another operation ran and eventually caused succession.
+ */
+export function latestSuccessor(ctx: {successorMap: Map<string, string>}, oldHash: string): string {
+  let hash = oldHash;
+  while (ctx.successorMap.has(hash)) {
+    hash = unwrap(ctx.successorMap.get(hash));
+  }
+  return hash;
+}

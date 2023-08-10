@@ -10,6 +10,7 @@ import type {Operation} from './operations/Operation';
 import type {OperationInfo, OperationList} from './serverAPIState';
 import type {ChangedFile, CommitInfo, Hash, MergeConflicts, UncommittedChanges} from './types';
 
+import {latestSuccessorsMap} from './SuccessionTracker';
 import {getTracker} from './analytics/globalTracker';
 import {getOpName} from './operations/Operation';
 import {
@@ -310,6 +311,7 @@ export const treeWithPreviews = selector({
 
     let headCommit = get(latestHeadCommit);
     let treeMap = get(latestCommitTreeMap);
+    const successorMap = get(latestSuccessorsMap);
 
     // apply in order
     if (appliersSources.length) {
@@ -320,6 +322,7 @@ export const treeWithPreviews = selector({
           trees: finalTrees,
           headCommit,
           treeMap,
+          successorMap,
         };
         let nextHeadCommit = headCommit;
         const nextTreeMap = new Map<Hash, CommitTree>();
@@ -376,6 +379,7 @@ export function useMarkOperationsCompleted(): void {
   const treeMap = useRecoilValue(latestCommitTreeMap);
   const uncommittedChanges = useRecoilValue(latestUncommittedChangesData);
   const conflicts = useRecoilValue(mergeConflicts);
+  const successorMap = useRecoilValue(latestSuccessorsMap);
 
   const [list, setOperationList] = useRecoilState(operationList);
 
@@ -388,6 +392,7 @@ export function useMarkOperationsCompleted(): void {
       trees,
       headCommit,
       treeMap,
+      successorMap,
     };
     const uncommittedContext = {
       uncommittedChanges: uncommittedChanges.files ?? [],
@@ -529,6 +534,7 @@ export function useMarkOperationsCompleted(): void {
     uncommittedChanges,
     conflicts,
     fetchedCommits,
+    successorMap,
   ]);
 }
 
@@ -537,6 +543,7 @@ export type PreviewContext = {
   trees: Array<CommitTree>;
   headCommit?: CommitInfo;
   treeMap: Map<string, CommitTree>;
+  successorMap: Map<string, string>;
 };
 
 export type UncommittedChangesPreviewContext = {
