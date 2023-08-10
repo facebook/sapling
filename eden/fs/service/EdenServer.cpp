@@ -2367,87 +2367,88 @@ void EdenServer::detectNfsCrawl() {
              readDirThreshold]() {
               const auto& mount = mountPointHandle.getEdenMount();
 
-              // Track pids that have been seen in a process hierarchy
-              std::unordered_set<pid_t> seenPids;
+              struct ProcessHierarchyRecord {
+                pid_t pid;
+                pid_t ppid;
+                proc_util::ProcessSimpleName simpleName;
+                ProcessName processName;
+              };
 
-              // Collect process hierarchies, keeping only the longest for each
-              // pid that is not excluded. For example: a->b->c would be
-              // replaced with a->b->c->d.
-              std::vector<proc_util::ProcessHierarchy> hierarchies;
+              // Information about the processes we've observed accessing the
+              // mount and their parents. This represents a subtree of the
+              // processes running at the time of crawl detection with edges
+              // indicated by the ppid field. The init process (PID 1) is the
+              // implicit root of the tree.
+              std::unordered_map<pid_t, ProcessHierarchyRecord> processRecords;
+
+              // We'll keep track of PIDs known not to be leaves in our tree to
+              // simplify traversal below.
+              std::unordered_set<pid_t> nonLeafPids;
 
               // Get list of pids that have open files/paths on the mount
-              auto pids = proc_util::readProcessIdsForPath(mount.getPath());
-              for (auto pid : pids) {
-                // Skip pid if seen before in previous hierarchy
-                if (seenPids.find(pid) != seenPids.end()) {
-                  continue;
-                }
-                seenPids.insert(pid);
+              auto mountPids =
+                  proc_util::readProcessIdsForPath(mount.getPath());
 
-                auto simpleName = proc_util::readProcessSimpleName(pid);
-                if (simpleName.has_value()) {
-                  if (exclusions.find(simpleName.value()) == exclusions.end()) {
-                    auto hierarchy = proc_util::getProcessHierarchy(
-                        serverState->getProcessNameCache(), pid);
+              for (pid_t pid : mountPids) {
+                // Walk up the process hierarchy from the PID seen accessing the
+                // mount until we hit either init or a process we've already
+                // recorded.
+                while (pid > 1 &&
+                       processRecords.find(pid) == processRecords.end()) {
+                  auto processName =
+                      serverState->getProcessNameCache()->lookup(pid).get();
+                  auto ppid = proc_util::getParentProcessId(pid).value_or(0);
+                  nonLeafPids.insert(ppid);
+                  processRecords.insert(
+                      {pid,
+                       ProcessHierarchyRecord{
+                           .pid = pid,
+                           .ppid = ppid,
+                           .simpleName =
+                               proc_util::readProcessSimpleName(pid).value_or(
+                                   "<unknown>"),
+                           .processName = processName}});
 
-                    // Mark pids as seen
-                    std::for_each(
-                        hierarchy.begin(),
-                        hierarchy.end(),
-                        [&seenPids](const auto& e) {
-                          seenPids.insert(std::get<pid_t>(e));
-                        });
-
-                    // Detect duplicate hierarchies, replace if hiearchy is
-                    // longer and a duplicate
-                    bool isDuplicate = false;
-                    for (auto itr = hierarchies.begin();
-                         itr != hierarchies.end();
-                         itr++) {
-                      const auto& existing = *itr;
-                      auto isLonger = (existing).size() < hierarchy.size();
-                      const auto& shorter = isLonger ? existing : hierarchy;
-                      const auto& longer = isLonger ? hierarchy : existing;
-                      if (std::equal(
-                              shorter.rbegin(),
-                              shorter.rend(),
-                              longer.rbegin(),
-                              [](const auto& s, const auto& l) {
-                                return std::get<pid_t>(s) == std::get<pid_t>(l);
-                              })) {
-                        isDuplicate = true;
-                        if (isLonger) {
-                          std::swap(*itr, hierarchy);
-                        }
-                        break;
-                      }
-                    }
-                    if (!isDuplicate) {
-                      hierarchies.emplace_back(std::move(hierarchy));
-                    }
-                  }
+                  pid = ppid;
                 }
               }
 
-              // Log process hierarchies
-              for (auto& hierarchy : hierarchies) {
-                XCHECK(
-                    !hierarchy.empty(),
-                    "proc_util::getProcessHierarchy returned an empty list.");
-                auto [pid, sname, pname] = std::move(hierarchy.back());
+              // Iterate over leaf PIDs and walk up their process hierarchies
+              // for logging.
+              for (const auto& pair : processRecords) {
+                auto pid = pair.first;
+                auto record = pair.second;
+                if (nonLeafPids.find(pid) != nonLeafPids.end() ||
+                    exclusions.find(record.simpleName) != exclusions.end()) {
+                  continue;
+                }
+
+                // Gather hierarchy into a stack so we can log in the order of
+                // "parent -> child -> grandchild".
+                std::vector<ProcessHierarchyRecord> hierarchy;
+                decltype(processRecords)::iterator itr;
+                while (pid > 1 &&
+                       (itr = processRecords.find(pid)) !=
+                           processRecords.end()) {
+                  pid = itr->second.ppid;
+                  hierarchy.push_back(std::move(itr->second));
+                }
+
+                // Log process hierarchies
+                auto r = std::move(hierarchy.back());
                 hierarchy.pop_back();
-                std::string output =
-                    fmt::format("[{}({}): {}]", sname, pid, pname);
+                std::string output = fmt::format(
+                    "[{}({}): {}]", r.simpleName, r.pid, r.processName);
                 while (!hierarchy.empty()) {
                   fmt::format_to(std::back_inserter(output), " -> ");
-                  auto [pid, sname, pname] = std::move(hierarchy.back());
+                  r = std::move(hierarchy.back());
                   hierarchy.pop_back();
                   fmt::format_to(
                       std::back_inserter(output),
                       "[{}({}): {}]",
-                      sname,
-                      pid,
-                      pname);
+                      r.simpleName,
+                      r.pid,
+                      r.processName);
                 }
                 XLOGF(
                     DBG2,
