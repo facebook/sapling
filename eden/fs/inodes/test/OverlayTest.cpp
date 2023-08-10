@@ -45,6 +45,7 @@ using namespace folly::string_piece_literals;
 namespace facebook::eden {
 
 constexpr InodeCatalogType kInodeCatalogType = InodeCatalogType::Legacy;
+constexpr InodeCatalogOptions kInodeCatalogOptions = INODE_CATALOG_DEFAULT;
 
 TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   // eden/test-data/overlay-v2.tgz contains a saved copy of an overlay
@@ -70,6 +71,7 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
       realpath(tmpdir.path().string()) + "overlay-v2"_pc,
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
+      kInodeCatalogOptions,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
       true,
@@ -252,6 +254,7 @@ TEST(PlainOverlayTest, new_overlay_is_clean) {
       canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
+      kInodeCatalogOptions,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
       true,
@@ -267,6 +270,7 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
         canonicalPath(testDir.path().string()),
         kPathMapDefaultCaseSensitive,
         kInodeCatalogType,
+        kInodeCatalogOptions,
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
         true,
@@ -278,6 +282,7 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
       canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
+      kInodeCatalogOptions,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
       true,
@@ -295,6 +300,7 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
         localDir,
         kPathMapDefaultCaseSensitive,
         kInodeCatalogType,
+        kInodeCatalogOptions,
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
         true,
@@ -310,6 +316,7 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
       localDir,
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
+      kInodeCatalogOptions,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
       true,
@@ -354,6 +361,7 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
         getLocalDir(),
         kPathMapDefaultCaseSensitive,
         kInodeCatalogType,
+        kInodeCatalogOptions,
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
         true,
@@ -766,6 +774,7 @@ class DebugDumpOverlayInodesTest : public ::testing::Test {
             canonicalPath(testDir_.path().string()),
             kPathMapDefaultCaseSensitive,
             kInodeCatalogType,
+            kInodeCatalogOptions,
             std::make_shared<NullStructuredLogger>(),
             makeRefPtr<EdenStats>(),
             true,

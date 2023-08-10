@@ -46,6 +46,7 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
       overlayPath,
       CaseSensitivity::Sensitive,
       InodeCatalogType::Legacy,
+      kDefaultInodeCatalogOptions,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
       true,

@@ -42,6 +42,7 @@ void benchmarkOverlayTreeWrites(
       overlayPath,
       kPathMapDefaultCaseSensitive,
       overlayType,
+      kDefaultInodeCatalogOptions,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
       true,

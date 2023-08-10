@@ -166,11 +166,13 @@ class TestMount {
       const RootId& initialCommitHash,
       FakeTreeBuilder& rootBuilder,
       bool startReady = true,
-      InodeCatalogType inodeCatalogType = kDefaultInodeCatalogType);
+      InodeCatalogType inodeCatalogType = kDefaultInodeCatalogType,
+      InodeCatalogOptions inodeCatalogOptions = kDefaultInodeCatalogOptions);
   void initialize(FakeTreeBuilder& rootBuilder, bool startReady = true);
   void initialize(
       FakeTreeBuilder& rootBuilder,
-      InodeCatalogType inodeCatalogType);
+      InodeCatalogType inodeCatalogType,
+      InodeCatalogOptions inodeCatalogOptions);
 
   /**
    * Like initialize, except EdenMount::initialize is not called.
@@ -181,7 +183,8 @@ class TestMount {
       const RootId& initialCommitHash,
       FakeTreeBuilder& rootBuilder,
       bool startReady,
-      InodeCatalogType inodeCatalogType = kDefaultInodeCatalogType);
+      InodeCatalogType inodeCatalogType = kDefaultInodeCatalogType,
+      InodeCatalogOptions inodeCatalogOptions = kDefaultInodeCatalogOptions);
   void createMountWithoutInitializing(
       FakeTreeBuilder& rootBuilder,
       bool startReady = true);
@@ -389,7 +392,8 @@ class TestMount {
 
  private:
   void createMount(
-      InodeCatalogType InodeCatalogType = kDefaultInodeCatalogType);
+      InodeCatalogType InodeCatalogType = kDefaultInodeCatalogType,
+      InodeCatalogOptions inodeCatalogOptions = kDefaultInodeCatalogOptions);
   void initTestDirectory(CaseSensitivity caseSensitivity);
   void setInitialCommit(const RootId& commitHash);
   void setInitialCommit(const RootId& commitHash, ObjectId rootTreeHash);

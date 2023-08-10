@@ -15,17 +15,6 @@ constexpr auto inodeCatalogTypeStr = [] {
   std::array<string_view, 8> mapping{};
   mapping[folly::to_underlying(InodeCatalogType::Legacy)] = "Legacy";
   mapping[folly::to_underlying(InodeCatalogType::Sqlite)] = "Sqlite";
-  mapping[folly::to_underlying(InodeCatalogType::SqliteInMemory)] =
-      "SqliteInMemory";
-  mapping[folly::to_underlying(InodeCatalogType::SqliteSynchronousOff)] =
-      "SqliteSynchronousOff";
-  mapping[folly::to_underlying(InodeCatalogType::SqliteBuffered)] =
-      "SqliteBuffered";
-  mapping[folly::to_underlying(InodeCatalogType::SqliteInMemoryBuffered)] =
-      "SqliteInMemoryBuffered";
-  mapping[folly::to_underlying(
-      InodeCatalogType::SqliteSynchronousOffBuffered)] =
-      "SqliteSynchronousOffBuffered";
   mapping[folly::to_underlying(InodeCatalogType::InMemory)] = "InMemory";
   return mapping;
 }();

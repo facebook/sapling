@@ -16,6 +16,7 @@
 #include <condition_variable>
 #include <optional>
 #include <thread>
+#include "eden/fs/config/InodeCatalogOptions.h"
 #include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
@@ -86,6 +87,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       AbsolutePathPiece localDir,
       CaseSensitivity caseSensitive,
       InodeCatalogType inodeCatalogType,
+      InodeCatalogOptions inodeCatalogOptions,
       std::shared_ptr<StructuredLogger> logger,
       EdenStatsPtr stats,
       bool windowsSymlinksEnabled,
@@ -299,6 +301,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       AbsolutePathPiece localDir,
       CaseSensitivity caseSensitive,
       InodeCatalogType inodeCatalogType,
+      InodeCatalogOptions inodeCatalogOptions,
       std::shared_ptr<StructuredLogger> logger,
       EdenStatsPtr stats,
       bool windowsSymlinksEnabled_,
@@ -361,6 +364,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   std::unique_ptr<IFileContentStore> fileContentStore_;
   std::unique_ptr<InodeCatalog> inodeCatalog_;
   InodeCatalogType inodeCatalogType_;
+  InodeCatalogOptions inodeCatalogOptions_;
 
   /**
    * Indicates if the backing overlay supports semantic operations, see
@@ -421,6 +425,8 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
 constexpr InodeCatalogType kDefaultInodeCatalogType =
     folly::kIsWindows ? InodeCatalogType::Sqlite : InodeCatalogType::Legacy;
+constexpr InodeCatalogOptions kDefaultInodeCatalogOptions =
+    INODE_CATALOG_DEFAULT;
 
 /**
  * Used to reference count IO requests. In any place that there

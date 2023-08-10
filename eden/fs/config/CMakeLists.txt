@@ -18,6 +18,8 @@ add_library(
 target_link_libraries(
   eden_config
   PUBLIC
+    Folly::folly
+    edencommon::edencommon_utils
     eden_config_thrift_cpp
     eden_model
     eden_utils

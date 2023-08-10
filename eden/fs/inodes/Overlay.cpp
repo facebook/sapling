@@ -43,34 +43,55 @@ constexpr uint64_t ioClosedMask = 1ull << 63;
 std::unique_ptr<InodeCatalog> makeInodeCatalog(
     AbsolutePathPiece localDir,
     InodeCatalogType inodeCatalogType,
+    InodeCatalogOptions inodeCatalogOptions,
     const EdenConfig& config,
     IFileContentStore* fileContentStore,
     const std::shared_ptr<StructuredLogger>& logger) {
   if (inodeCatalogType == InodeCatalogType::Sqlite) {
+    // Controlled via EdenConfig::unsafeInMemoryOverlay
+    if ((inodeCatalogOptions & INODE_CATALOG_UNSAFE_IN_MEMORY) ==
+        INODE_CATALOG_UNSAFE_IN_MEMORY) {
+      // Controlled via EdenConfig::overlayBuffered
+      if ((inodeCatalogOptions & INODE_CATALOG_BUFFERED) ==
+          INODE_CATALOG_BUFFERED) {
+        XLOG(WARN)
+            << "In-memory Sqlite buffered overlay requested. This will cause data loss.";
+        return std::make_unique<BufferedSqliteInodeCatalog>(
+            std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory), config);
+      } else {
+        XLOG(WARN)
+            << "In-memory Sqlite overlay requested. This will cause data loss.";
+        return std::make_unique<SqliteInodeCatalog>(
+            std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory));
+      }
+    }
+    // Controlled via EdenConfig::overlaySynchronousMode
+    if ((inodeCatalogOptions & INODE_CATALOG_SYNCHRONOUS_OFF) ==
+        INODE_CATALOG_SYNCHRONOUS_OFF) {
+      // Controlled via EdenConfig::overlayBuffered
+      if ((inodeCatalogOptions & INODE_CATALOG_BUFFERED) ==
+          INODE_CATALOG_BUFFERED) {
+        XLOG(DBG2)
+            << "Buffered Sqlite overlay being used with synchronous-mode = off";
+        return std::make_unique<BufferedSqliteInodeCatalog>(
+            localDir, logger, config, SqliteTreeStore::SynchronousMode::Off);
+      } else {
+        XLOG(DBG2) << "Sqlite overlay being used with synchronous-mode = off";
+        return std::make_unique<SqliteInodeCatalog>(
+            localDir, logger, SqliteTreeStore::SynchronousMode::Off);
+      }
+    }
+    // Controlled via EdenConfig::overlayBuffered
+    if ((inodeCatalogOptions & INODE_CATALOG_BUFFERED) ==
+        INODE_CATALOG_BUFFERED) {
+      XLOG(DBG4) << "Buffered Sqlite overlay being used";
+      return std::make_unique<BufferedSqliteInodeCatalog>(
+          localDir, logger, config);
+    }
+    XLOG(DBG4) << "Sqlite overlay being used.";
     return std::make_unique<SqliteInodeCatalog>(localDir, logger);
-  } else if (inodeCatalogType == InodeCatalogType::SqliteInMemory) {
-    XLOG(WARN) << "In-memory overlay requested. This will cause data loss.";
-    return std::make_unique<SqliteInodeCatalog>(
-        std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory));
-  } else if (inodeCatalogType == InodeCatalogType::SqliteSynchronousOff) {
-    return std::make_unique<SqliteInodeCatalog>(
-        localDir, logger, SqliteTreeStore::SynchronousMode::Off);
-  } else if (inodeCatalogType == InodeCatalogType::SqliteBuffered) {
-    XLOG(DBG4) << "Buffered overlay being used";
-    return std::make_unique<BufferedSqliteInodeCatalog>(
-        localDir, logger, config);
-  } else if (inodeCatalogType == InodeCatalogType::SqliteInMemoryBuffered) {
-    XLOG(WARN)
-        << "In-memory buffered overlay requested. This will cause data loss.";
-    return std::make_unique<BufferedSqliteInodeCatalog>(
-        std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory), config);
-  } else if (
-      inodeCatalogType == InodeCatalogType::SqliteSynchronousOffBuffered) {
-    XLOG(DBG2) << "Buffered overlay being used with synchronous-mode = off";
-    return std::make_unique<BufferedSqliteInodeCatalog>(
-        localDir, logger, config, SqliteTreeStore::SynchronousMode::Off);
   } else if (inodeCatalogType == InodeCatalogType::InMemory) {
-    XLOG(DBG2) << "In-memory overlay being used.";
+    XLOG(DBG4) << "In-memory overlay being used.";
     return std::make_unique<MemInodeCatalog>();
   }
 #ifdef _WIN32
@@ -79,8 +100,10 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     throw std::runtime_error(
         "Legacy overlay type is not supported. Please reclone.");
   }
+  XLOG(DBG4) << "Sqlite overlay being used.";
   return std::make_unique<SqliteInodeCatalog>(localDir, logger);
 #else
+  XLOG(DBG4) << "Legacy overlay being used.";
   return std::make_unique<FsInodeCatalog>(
       static_cast<FileContentStore*>(fileContentStore));
 #endif
@@ -104,6 +127,7 @@ std::shared_ptr<Overlay> Overlay::create(
     AbsolutePathPiece localDir,
     CaseSensitivity caseSensitive,
     InodeCatalogType inodeCatalogType,
+    InodeCatalogOptions inodeCatalogOptions,
     std::shared_ptr<StructuredLogger> logger,
     EdenStatsPtr stats,
     bool windowsSymlinksEnabled,
@@ -114,6 +138,7 @@ std::shared_ptr<Overlay> Overlay::create(
         AbsolutePathPiece localDir,
         CaseSensitivity caseSensitive,
         InodeCatalogType inodeCatalogType,
+        InodeCatalogOptions inodeCatalogOptions,
         std::shared_ptr<StructuredLogger> logger,
         EdenStatsPtr stats,
         bool windowsSymlinksEnabled,
@@ -122,6 +147,7 @@ std::shared_ptr<Overlay> Overlay::create(
               localDir,
               caseSensitive,
               inodeCatalogType,
+              inodeCatalogOptions,
               logger,
               std::move(stats),
               windowsSymlinksEnabled,
@@ -131,6 +157,7 @@ std::shared_ptr<Overlay> Overlay::create(
       localDir,
       caseSensitive,
       inodeCatalogType,
+      inodeCatalogOptions,
       logger,
       std::move(stats),
       windowsSymlinksEnabled,
@@ -141,6 +168,7 @@ Overlay::Overlay(
     AbsolutePathPiece localDir,
     CaseSensitivity caseSensitive,
     InodeCatalogType inodeCatalogType,
+    InodeCatalogOptions inodeCatalogOptions,
     std::shared_ptr<StructuredLogger> logger,
     EdenStatsPtr stats,
     bool windowsSymlinksEnabled,
@@ -149,10 +177,12 @@ Overlay::Overlay(
       inodeCatalog_{makeInodeCatalog(
           localDir,
           inodeCatalogType,
+          inodeCatalogOptions,
           config,
           fileContentStore_ ? fileContentStore_.get() : nullptr,
           logger)},
       inodeCatalogType_{inodeCatalogType},
+      inodeCatalogOptions_(inodeCatalogOptions),
       supportsSemanticOperations_{inodeCatalog_->supportsSemanticOperations()},
       filterAppleDouble_{
           folly::kIsApple && !config.allowAppleDouble.getValue()},

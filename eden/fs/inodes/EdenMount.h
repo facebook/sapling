@@ -25,6 +25,7 @@
 #include <stdexcept>
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/InodeCatalogOptions.h"
 #include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/FsChannel.h"
@@ -342,7 +343,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       std::shared_ptr<ServerState> serverState,
       std::unique_ptr<Journal> journal,
       EdenStatsPtr stats,
-      std::optional<InodeCatalogType> inodeCatalogType = std::nullopt);
+      std::optional<InodeCatalogType> inodeCatalogType = std::nullopt,
+      std::optional<InodeCatalogOptions> inodeCatalogOptions = std::nullopt);
 
   /**
    * Asynchronous EdenMount initialization - post instantiation.
@@ -1157,6 +1159,12 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   InodeCatalogType getInodeCatalogType(
       std::optional<InodeCatalogType> inodeCatalogType);
 
+  /**
+   * Returns InodeCatalogOptions options based on settings.
+   */
+  InodeCatalogOptions getInodeCatalogOptions(
+      std::optional<InodeCatalogOptions> inodeCatalogOptions);
+
   EdenMount(
       std::unique_ptr<CheckoutConfig> checkoutConfig,
       std::shared_ptr<ObjectStore> objectStore,
@@ -1164,7 +1172,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       std::shared_ptr<ServerState> serverState,
       std::unique_ptr<Journal> journal,
       EdenStatsPtr stats,
-      std::optional<InodeCatalogType> inodeCatalogType = std::nullopt);
+      std::optional<InodeCatalogType> inodeCatalogType = std::nullopt,
+      std::optional<InodeCatalogOptions> inodeCatalogOptions = std::nullopt);
 
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;

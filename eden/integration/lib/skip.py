@@ -137,6 +137,10 @@ if sys.platform == "win32":
             # TODO: A \r\n is used
             "test_mount_state_during_unmount_with_in_progress_checkout",
         ],
+        "hg.update_test.UpdateTestTreeOnlyInMemory": [
+            # kill and restart Eden
+            "test_resume_interrupted_update"
+        ],
         "stale_inode_test.StaleInodeTestHgNFS": True,
         "windows_fsck_test.WindowsFsckTestHg": [
             # T146967686

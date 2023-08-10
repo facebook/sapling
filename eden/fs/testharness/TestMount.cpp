@@ -268,9 +268,14 @@ void TestMount::initialize(
     const RootId& initialCommitHash,
     FakeTreeBuilder& rootBuilder,
     bool startReady,
-    InodeCatalogType inodeCatalogType) {
+    InodeCatalogType inodeCatalogType,
+    InodeCatalogOptions inodeCatalogOptions) {
   createMountWithoutInitializing(
-      initialCommitHash, rootBuilder, startReady, inodeCatalogType);
+      initialCommitHash,
+      rootBuilder,
+      startReady,
+      inodeCatalogType,
+      inodeCatalogOptions);
   initializeEdenMount();
 }
 
@@ -283,7 +288,8 @@ void TestMount::createMountWithoutInitializing(
     const RootId& initialCommitHash,
     FakeTreeBuilder& rootBuilder,
     bool startReady,
-    InodeCatalogType inodeCatalogType) {
+    InodeCatalogType inodeCatalogType,
+    InodeCatalogOptions inodeCatalogOptions) {
   // Finalize rootBuilder and get the root Tree
   rootBuilder.finalize(backingStore_, startReady);
   auto rootTree = rootBuilder.getRoot();
@@ -295,10 +301,12 @@ void TestMount::createMountWithoutInitializing(
   setInitialCommit(initialCommitHash, rootTree->get().getHash());
 
   // Create edenMount_
-  createMount(inodeCatalogType);
+  createMount(inodeCatalogType, inodeCatalogOptions);
 }
 
-void TestMount::createMount(InodeCatalogType inodeCatalogType) {
+void TestMount::createMount(
+    InodeCatalogType inodeCatalogType,
+    InodeCatalogOptions inodeCatalogOptions) {
   shared_ptr<ObjectStore> objectStore = ObjectStore::create(
       backingStore_,
       treeCache_,
@@ -316,7 +324,8 @@ void TestMount::createMount(InodeCatalogType inodeCatalogType) {
       serverState_,
       std::move(journal),
       stats_.copy(),
-      inodeCatalogType);
+      inodeCatalogType,
+      inodeCatalogOptions);
 #ifndef _WIN32
   dispatcher_ = EdenDispatcherFactory::makeFuseDispatcher(edenMount_.get());
 #endif
@@ -339,9 +348,14 @@ void TestMount::initialize(FakeTreeBuilder& rootBuilder, bool startReady) {
 
 void TestMount::initialize(
     FakeTreeBuilder& rootBuilder,
-    InodeCatalogType inodeCatalogType) {
+    InodeCatalogType inodeCatalogType,
+    InodeCatalogOptions inodeCatalogOptions) {
   initialize(
-      nextCommitHash(), rootBuilder, /* startReady */ true, inodeCatalogType);
+      nextCommitHash(),
+      rootBuilder,
+      /* startReady */ true,
+      inodeCatalogType,
+      inodeCatalogOptions);
 }
 
 void TestMount::createMountWithoutInitializing(
