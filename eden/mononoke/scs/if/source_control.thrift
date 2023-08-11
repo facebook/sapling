@@ -1057,9 +1057,9 @@ struct RepoLandStackParams {
 enum DerivedDataType {
   /// Derive fsnode data
   /// DEPRECATED: Thrift enums should not start at 0.
-  FSNODE = 0,
-  /// Derive fsnode data (this will be the new enum value once the server supports it).
-  FSNODE_NEW = 1,
+  FSNODE_OLD = 0,
+  /// Derive fsnode data
+  FSNODE = 1,
   /// Derive skeleton manifest data
   SKELETON_MANIFEST = 9,
 }

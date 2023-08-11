@@ -385,7 +385,7 @@ impl FromRequest<thrift::DateTime> for DateTime<FixedOffset> {
 impl FromRequest<thrift::DerivedDataType> for DerivableType {
     fn from_request(data_type: &thrift::DerivedDataType) -> Result<Self, thrift::RequestError> {
         match *data_type {
-            thrift::DerivedDataType::FSNODE | thrift::DerivedDataType::FSNODE_NEW => {
+            thrift::DerivedDataType::FSNODE | thrift::DerivedDataType::FSNODE_OLD => {
                 Ok(DerivableType::Fsnodes)
             }
             thrift::DerivedDataType::SKELETON_MANIFEST => Ok(DerivableType::SkeletonManifests),
