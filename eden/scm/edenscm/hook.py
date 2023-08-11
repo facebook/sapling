@@ -217,6 +217,9 @@ def hook(ui, repo, htype, throw: bool = False, **args) -> bool:
         if hname.split(".")[0] == htype and cmd:
             hooks.append((hname, cmd))
 
+    if not hooks:
+        return False
+
     res = runhooks(ui, repo, htype, hooks, throw=throw, **args)
     r = False
     for hname, cmd in hooks:
