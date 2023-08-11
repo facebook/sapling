@@ -509,8 +509,10 @@ async fn move_bookmark(
                 Arc::new(AtomicBool::new(false)),
                 CommitSyncContext::RepoImport,
                 false,
+                Box::new(future::ready(())),
             )
-            .await?;
+            .await?
+            .await;
             let small_repo_cs_id = small_repo_back_sync_vars
                 .small_repo
                 .bookmarks()

@@ -26,6 +26,7 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
+use futures::future;
 use futures::future::try_join_all;
 use futures::future::FutureExt;
 use futures::try_join;
@@ -480,18 +481,24 @@ impl<R: Repo> PushRedirector<R> {
     }
 
     pub async fn backsync_latest(&self, ctx: &CoreContext) -> Result<(), Error> {
-        backsync_latest(
-            ctx.clone(),
-            self.large_to_small_commit_syncer.clone(),
-            self.target_repo_dbs.clone(),
-            BacksyncLimit::NoLimit,
-            Arc::new(AtomicBool::new(false)),
-            CommitSyncContext::PushRedirector,
-            // Disable leases because this is the push path and we want
-            // it as fast as possible
-            true,
-        )
-        .await?;
+        // backsync_latest returns a tokio-spawned future which contains the
+        // non-blocking extra syncing done. We don't need to wait for it.
+        std::mem::drop(
+            backsync_latest(
+                ctx.clone(),
+                self.large_to_small_commit_syncer.clone(),
+                self.target_repo_dbs.clone(),
+                BacksyncLimit::NoLimit,
+                Arc::new(AtomicBool::new(false)),
+                CommitSyncContext::PushRedirector,
+                // Disable leases because this is the push path and we want
+                // it as fast as possible
+                true,
+                // We don't chain successive backsyncs here.
+                Box::new(future::ready(())),
+            )
+            .await?,
+        );
         Ok(())
     }
 

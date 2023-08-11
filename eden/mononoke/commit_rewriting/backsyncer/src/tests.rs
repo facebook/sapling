@@ -43,6 +43,7 @@ use cross_repo_sync_test_utils::TestRepo;
 use fbinit::FacebookInit;
 use fixtures::Linear;
 use fixtures::TestRepoFixture;
+use futures::future;
 use futures::FutureExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
@@ -168,7 +169,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
         let target_repo_dbs = Arc::new(target_repo_dbs);
         // Backsync a few entries
         let ctx = CoreContext::test_mock(fb);
-        backsync_latest(
+        let fut = backsync_latest(
             ctx.clone(),
             commit_syncer.clone(),
             target_repo_dbs.clone(),
@@ -176,6 +177,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
             Arc::new(AtomicBool::new(false)),
             CommitSyncContext::Backsyncer,
             false,
+            Box::new(future::ready(())),
         )
         .map_err(Error::from)
         .await?;
@@ -199,8 +201,10 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
             Arc::new(AtomicBool::new(false)),
             CommitSyncContext::Backsyncer,
             false,
+            fut,
         )
-        .await?;
+        .await?
+        .await;
 
         let latest_log_id = next_log_entries.len() as i64;
 
@@ -399,9 +403,11 @@ async fn backsync_two_small_repos(fb: FacebookInit) -> Result<(), Error> {
             Arc::new(AtomicBool::new(false)),
             CommitSyncContext::Backsyncer,
             false,
+            Box::new(future::ready(())),
         )
         .map_err(Error::from)
-        .await?;
+        .await?
+        .await;
 
         println!("verifying small repo#{}", small_repo_id.id());
         verify_mapping_and_all_wc(
@@ -623,7 +629,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
     )
     .await?;
 
-    backsync_latest(
+    let fut = backsync_latest(
         ctx.clone(),
         commit_syncer.clone(),
         target_repo_dbs.clone(),
@@ -631,6 +637,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
         Arc::new(AtomicBool::new(false)),
         CommitSyncContext::Backsyncer,
         false,
+        Box::new(future::ready(())),
     )
     .await?;
 
@@ -661,8 +668,10 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
         Arc::new(AtomicBool::new(false)),
         CommitSyncContext::Backsyncer,
         false,
+        fut,
     )
-    .await?;
+    .await?
+    .await;
     let maybe_outcome = commit_syncer
         .get_commit_sync_outcome(&ctx, new_master)
         .await?;
@@ -804,8 +813,9 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
         Arc::new(AtomicBool::new(false)),
         CommitSyncContext::Backsyncer,
         false,
+        Box::new(future::ready(())),
     );
-    with_tunables_async(tunables, f.boxed()).await?;
+    with_tunables_async(tunables, f.boxed()).await?.await;
 
     let commit_sync_outcome = commit_syncer
         .get_commit_sync_outcome(&ctx, before_mapping_change)
@@ -915,12 +925,13 @@ async fn backsync_and_verify_master_wc(
             Arc::new(AtomicBool::new(false)),
             CommitSyncContext::Backsyncer,
             false,
+            Box::new(future::ready(())),
         ))
         .flatten_err();
         futs.push(f);
     }
 
-    futures::future::try_join_all(futs).await?;
+    futures::future::join_all(futures::future::try_join_all(futs).await?).await;
 
     // Check that counter was moved
     let fetched_value = target_repo_dbs

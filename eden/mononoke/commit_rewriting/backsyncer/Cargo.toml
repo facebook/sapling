@@ -36,6 +36,7 @@ sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-s
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 synced_commit_mapping = { version = "0.1.0", path = "../synced_commit_mapping" }
 thiserror = "1.0.43"
+tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }
 
 [dev-dependencies]
@@ -59,5 +60,4 @@ pretty_assertions = { version = "1.2", features = ["alloc"], default-features = 
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
-tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../../tunables" }

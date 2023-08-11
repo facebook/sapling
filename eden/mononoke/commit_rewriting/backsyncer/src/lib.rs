@@ -60,6 +60,7 @@ use cross_repo_sync::CommitSyncer;
 use filestore::FilestoreConfig;
 use futures::compat::Stream01CompatExt;
 use futures::stream;
+use futures::Future;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -81,6 +82,7 @@ use repo_update_logger::find_draft_ancestors;
 use repo_update_logger::log_new_bonsai_changesets;
 use revset::AncestorsNodeStream;
 use slog::debug;
+use slog::error;
 use slog::info;
 use slog::warn;
 use sql::Transaction;
@@ -132,7 +134,8 @@ pub async fn backsync_latest<M, R>(
     cancellation_requested: Arc<AtomicBool>,
     sync_context: CommitSyncContext,
     disable_lease: bool,
-) -> Result<(), Error>
+    commit_only_backsync_future: Box<dyn Future<Output = ()> + Send + Unpin>,
+) -> Result<Box<dyn Future<Output = ()> + Send + Unpin>, Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
     R: RepoLike + Send + Sync + Clone + 'static,
@@ -172,12 +175,12 @@ where
     // requested. If yes, then exit early.
     if cancellation_requested.load(Ordering::Relaxed) {
         info!(ctx.logger(), "sync stopping due to cancellation request");
-        return Ok(());
+        return Ok(commit_only_backsync_future);
     }
 
     if next_entries.is_empty() {
         debug!(ctx.logger(), "nothing to sync");
-        Ok(())
+        Ok(commit_only_backsync_future)
     } else {
         sync_entries(
             ctx,
@@ -188,6 +191,7 @@ where
             cancellation_requested,
             sync_context,
             disable_lease,
+            commit_only_backsync_future,
         )
         .await
     }
@@ -202,7 +206,8 @@ async fn sync_entries<M, R>(
     cancellation_requested: Arc<AtomicBool>,
     sync_context: CommitSyncContext,
     disable_lease: bool,
-) -> Result<(), Error>
+    mut commit_only_backsync_future: Box<dyn Future<Output = ()> + Send + Unpin>,
+) -> Result<Box<dyn Future<Output = ()> + Send + Unpin>, Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
     R: RepoLike + Send + Sync + Clone + 'static,
@@ -212,13 +217,64 @@ where
         // been requested and exit if that's the case.
         if cancellation_requested.load(Ordering::Relaxed) {
             info!(ctx.logger(), "sync stopping due to cancellation request");
-            return Ok(());
+            return Ok(commit_only_backsync_future);
         }
         let entry_id = entry.id;
         if counter >= entry_id {
             continue;
         }
         debug!(ctx.logger(), "backsyncing {} ...", entry_id);
+
+        if commit_syncer.get_bookmark_renamer().await?(&entry.bookmark_name).is_none() {
+            // For the bookmarks that don't remap to small repos we can skip. But it's
+            // still valuable to have commit mapping ready for them. That's why we spawn
+            // a commit backsync future that we don't wait for here. Each of such futures
+            // waits for result of previous commmit-only backsync so we don't duplicate
+            // work unnecesarily.
+            debug!(ctx.logger(), "Renamed bookmark is None. No sync happening.");
+            target_repo_dbs
+                .counters
+                .set_counter(
+                    &ctx,
+                    &format_counter(&commit_syncer.get_source_repo().repo_identity().id()),
+                    entry.id,
+                    Some(counter),
+                )
+                .await?;
+            counter = entry.id;
+            if let Some(to_cs_id) = entry.to_changeset_id {
+                commit_only_backsync_future = Box::new({
+                    cloned!(ctx, sync_context, to_cs_id, commit_syncer);
+                    tokio::spawn(async move {
+                        commit_only_backsync_future.await;
+                        let res = commit_syncer
+                            .sync_commit(
+                                &ctx,
+                                to_cs_id.clone(),
+                                // Backsyncer is always used in the large-to-small direction,
+                                // therefore there can be at most one remapped candidate,
+                                // so `CandidateSelectionHint::Only` is a safe choice
+                                CandidateSelectionHint::Only,
+                                sync_context,
+                                disable_lease,
+                            )
+                            .await;
+                        if let Err(err) = res {
+                            error!(
+                                ctx.logger(),
+                                "Failed to backsync {} pointing to {}: {}",
+                                entry.bookmark_name,
+                                to_cs_id,
+                                err
+                            );
+                        }
+                    })
+                    .map(|_| ())
+                });
+            }
+
+            continue;
+        }
 
         let mut scuba_sample = ctx.scuba().clone();
         scuba_sample.add("backsyncer_bookmark_log_entry_id", entry.id);
@@ -320,7 +376,7 @@ where
             }
         }
     }
-    Ok(())
+    Ok(commit_only_backsync_future)
 }
 
 /// All "new" commits on this bookmark move. Use with care, creating a bookmark

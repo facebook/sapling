@@ -44,6 +44,7 @@ use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
 use executor_lib::ShardedProcessExecutor;
 use fbinit::FacebookInit;
+use futures::future;
 use futures::future::FutureExt;
 use futures::stream;
 use futures::stream::StreamExt;
@@ -301,6 +302,8 @@ where
 {
     let target_repo_id = commit_syncer.get_target_repo_id();
     let live_commit_sync_config = Arc::new(live_commit_sync_config);
+    let mut commit_only_backsync_future: Box<dyn futures::Future<Output = ()> + Send + Unpin> =
+        Box::new(future::ready(()));
 
     loop {
         // Before initiating loop, check if cancellation has been
@@ -322,7 +325,7 @@ where
             } else {
                 debug!(ctx.logger(), "backsyncing...");
 
-                backsync_latest(
+                commit_only_backsync_future = backsync_latest(
                     ctx.clone(),
                     commit_syncer.clone(),
                     target_repo_dbs.clone(),
@@ -330,6 +333,7 @@ where
                     Arc::clone(&cancellation_requested),
                     CommitSyncContext::Backsyncer,
                     false,
+                    commit_only_backsync_future,
                 )
                 .await?
             }
@@ -528,9 +532,11 @@ async fn run(
                 cancellation_requested,
                 CommitSyncContext::Backsyncer,
                 false,
+                Box::new(future::ready(())),
             )
             .boxed()
-            .await?;
+            .await?
+            .await;
         }
         (ARG_MODE_BACKSYNC_FOREVER, _) => {
             let target_repo_dbs = Arc::new(
