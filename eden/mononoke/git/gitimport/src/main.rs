@@ -245,15 +245,21 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             .await
             .context("read_git_refs failed")?;
         let mapping = refs
-            .iter()
+            .into_iter()
             .map(|(git_ref, commit)| {
-                (
+                Ok((
                     git_ref.maybe_tag_id,
-                    String::from_utf8_lossy(&git_ref.name),
-                    gitimport_result.get(commit),
-                )
+                    String::from_utf8(git_ref.name).map_err(|err| {
+                        anyhow::anyhow!(
+                            "Failed to parse git ref name {:?} due to invalid UTF-8 encoding, Cause: {}",
+                            err.as_bytes(),
+                            err.utf8_error()
+                        )
+                    })?,
+                    gitimport_result.get(&commit),
+                ))
             })
-            .collect::<Vec<_>>();
+            .collect::<anyhow::Result<Vec<_>>>()?;
         if !args.suppress_ref_mapping {
             for (_, name, changeset) in &mapping {
                 info!(ctx.logger(), "Ref: {:?}: {:?}", name, changeset);
