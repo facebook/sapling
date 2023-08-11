@@ -6,7 +6,7 @@
 import time
 from dataclasses import dataclass
 
-from edenscm import commands, registrar
+from edenscm import commands, mdiff, registrar
 from edenscm.simplemerge import Merge3Text, wordmergemode
 
 
@@ -34,7 +34,7 @@ def smerge_bench(ui, repo, **opts):
     merge_commits = repo.dageval(lambda dag: dag.merges(dag.all()))
     ui.write(f"len(merge_commits)={len(merge_commits)}\n")
 
-    for m3merger in [Merge3Text, SmartMerge3Text]:
+    for m3merger in [SmartMerge3Text, Merge3Text]:
         ui.write(f"\n============== {m3merger.__name__} ==============\n")
         start = time.time()
         bench_stats = BenchStats()
@@ -107,5 +107,40 @@ def merge_file(
 
     if m3.conflictscount:
         bench_stats.unresolved_files += 1
-    elif mergedtext != mergectx[filepath].data():
-        bench_stats.unmatched_files += 1
+    else:
+        expectedtext = mergectx[filepath].data()
+        if mergedtext != expectedtext:
+            bench_stats.unmatched_files += 1
+            repo.ui.write(
+                f"\nUnmatched_file: {filepath} {dstctx} {srcctx} {basectx} {mergectx}\n"
+            )
+            difftext = unidiff(mergedtext, expectedtext, filepath).decode("utf8")
+            repo.ui.write(f"{difftext}\n")
+
+
+def unidiff(atext, btext, filepath="") -> bytes:
+    """
+    generate unified diff between two texts.
+
+    >>> basetext = b"a\\nb\\nc\\n"
+    >>> atext = b"a\\nd\\nc\\n"
+    >>> print(unidiff(basetext, atext).decode("utf8")) # doctest: +NORMALIZE_WHITESPACE
+    --- a/
+    +++ b/
+    @@ -1,3 +1,3 @@
+     a
+    -b
+    +d
+     c
+    """
+    headers, hunks = mdiff.unidiff(atext, "", btext, "", filepath, filepath)
+    result = headers
+    for hunk in hunks:
+        result.append(b"".join(hunk[1]))
+    return b"\n".join(result)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
