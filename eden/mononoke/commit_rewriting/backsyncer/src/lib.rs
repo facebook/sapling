@@ -59,6 +59,7 @@ use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
 use filestore::FilestoreConfig;
 use futures::compat::Stream01CompatExt;
+use futures::future;
 use futures::stream;
 use futures::Future;
 use futures::FutureExt;
@@ -495,10 +496,18 @@ where
                         let cs = bcs_id.load(ctx, blobstore).await?;
                         // When pushrebasing into the large repo, this commit
                         // should've gotten a globalrev
-                        let globalrev = Globalrev::from_bcs(&cs)?;
-                        anyhow::Ok(BonsaiGlobalrevMappingEntry { bcs_id, globalrev })
+                        // But if it doesn't it's better to skip assigning the globalrev
+                        // than to break the backsync process. (The commit was already acknowledged
+                        // and we have not much choice on whether to sync it).
+                        let globalrev = Globalrev::from_bcs(&cs).ok();
+                        if let Some(globalrev) = globalrev {
+                            anyhow::Ok(Some(BonsaiGlobalrevMappingEntry { bcs_id, globalrev }))
+                        } else {
+                            anyhow::Ok(None)
+                        }
                     })
                     .buffer_unordered(100)
+                    .try_filter_map(|res| future::ready(Ok(res)))
                     .try_collect()
                     .await?
             } else {
