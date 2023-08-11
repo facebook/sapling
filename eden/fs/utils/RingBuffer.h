@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <vector>
 
 namespace facebook::eden {

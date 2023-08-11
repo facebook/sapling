@@ -281,13 +281,6 @@ class ImmediateFuture {
     return kind_ == Kind::Immediate;
   }
 
- private:
-  using Try = folly::Try<T>;
-  using SemiFuture = folly::SemiFuture<T>;
-
-  struct Empty {};
-  explicit ImmediateFuture(Empty) noexcept;
-
   /**
    * Define the behavior of the SemiFuture constructor and continuation when
    * dealing with ready SemiFuture.
@@ -306,6 +299,13 @@ class ImmediateFuture {
      */
     LazySemiFuture,
   };
+
+ private:
+  using Try = folly::Try<T>;
+  using SemiFuture = folly::SemiFuture<T>;
+
+  struct Empty {};
+  explicit ImmediateFuture(Empty) noexcept;
 
   ImmediateFuture(SemiFuture fut, SemiFutureReadiness readiness) noexcept;
 
