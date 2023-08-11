@@ -250,7 +250,7 @@ class Client(object):
             #                   { "commit_identifier": "9396e4a63208eb034b8b9cca909f9914cb2fbe85" } ] } } ] } } ] } }
         return self._getnodes(repo, ret, diff_status)
 
-    def _getnodes(self, repo, ret, diff_status):
+    def _getnodes(self, repo, ret, diff_status_list):
         difftolocalcommits = {}  # {str: set(node)}
         diffidentifiers = {}
         difftostatus = {}
@@ -258,8 +258,8 @@ class Client(object):
             try:
                 diffid = "%s" % result["number"]
                 _status = result["diff_status_name"]
-                difftostatus[diffid] = _status
-                if _status in diff_status:
+                if _status in diff_status_list:
+                    difftostatus[diffid] = _status
                     nodes = result["phabricator_diff_commit"]["nodes"]
                     for n in nodes:
                         diffidentifiers[n["commit_identifier"]] = diffid

@@ -67,7 +67,7 @@ def _cleanuplanded(repo, dryrun=False):
                 tohide,
                 mutationentries,
             )
-        if status == "Abandoned":
+        elif status == "Abandoned":
             markedcount_abandoned += _process_abandonded(
                 repo,
                 diffid,
