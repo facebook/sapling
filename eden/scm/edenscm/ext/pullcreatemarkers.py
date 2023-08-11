@@ -9,10 +9,6 @@ mark commits as "Landed" on pull
 Config::
 
     [pullcreatemarkers]
-    # Use graphql to query what diffs are landed, instead of scanning
-    # through pulled commits.
-    use-graphql = true
-
     # Make sure commits being hidden matches the commit hashes in
     # Phabricator. Locally modified commits won't be hidden.
     check-local-versions = true
@@ -21,7 +17,6 @@ from .. import commands, mutation, phases, registrar, visibility
 from ..i18n import _, _n
 from ..node import short
 from .extlib.phabricator import arcconfig, diffprops, graphql
-from .phabstatus import COMMITTEDSTATUS, getdiffstatus
 
 
 cmdtable = {}
@@ -30,7 +25,6 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 configitem("pullcreatemarkers", "check-local-versions", default=False)
-configitem("pullcreatemarkers", "use-graphql", default=True)
 
 
 def _isrevert(message, diffid):
@@ -232,118 +226,5 @@ def debugmarklanded(ui, repo, **opts):
         ui.status(_("(this is a dry-run, nothing was actually done)\n"))
 
 
-def getdiff(rev):
-    phabrev = diffprops.parserevfromcommitmsg(rev.description())
-    return int(phabrev) if phabrev else None
-
-
 def uisetup(ui):
     ui.setconfig("hooks", "post-pull.marklanded", _("@prog@ debugmarklanded"))
-
-
-def _pull(orig, ui, repo, *args, **opts):
-    if not mutation.enabled(repo) and not visibility.tracking(repo):
-        return orig(ui, repo, *args, **opts)
-
-    maxrevbeforepull = len(repo.changelog)
-    r = orig(ui, repo, *args, **opts)
-    maxrevafterpull = len(repo.changelog)
-
-    # With lazy pull fast path the legacy "createmarkers" path will trigger
-    # one-by-one resolution for all newly pulled commits. That's unusably slow
-    # and is incompatible with the lazy pull. Force GraphQL code path in that
-    # case.
-    if ui.configbool("pullcreatemarkers", "use-graphql") or ui.configbool(
-        "pull", "master-fastpath"
-    ):
-        _cleanuplanded(repo)
-    else:
-        createmarkers(r, repo, maxrevbeforepull, maxrevafterpull)
-    return r
-
-
-def createmarkers(pullres, repo, start, stop, fromdrafts=True):
-    landeddiffs = getlandeddiffs(repo, start, stop, onlypublic=fromdrafts)
-
-    if not landeddiffs:
-        return
-
-    tocreate = (
-        getmarkersfromdrafts(repo, landeddiffs)
-        if fromdrafts
-        else getmarkers(repo, landeddiffs)
-    )
-
-    if not tocreate:
-        return
-
-    with repo.lock(), repo.transaction("pullcreatemarkers"):
-        if mutation.enabled(repo) or visibility.tracking(repo):
-            mutationentries = []
-            tohide = []
-            for (pred, succs) in tocreate:
-                if not succs:
-                    continue
-                mutdag = mutation.getdag(repo, succs[0].node())
-                if pred.node() in mutdag.all():
-                    continue
-                mutationentries.append(
-                    mutation.createsyntheticentry(
-                        repo, [pred.node()], succs[0].node(), "land"
-                    )
-                )
-                tohide.append(pred.node())
-            if mutation.enabled(repo):
-                mutation.recordentries(repo, mutationentries, skipexisting=False)
-            if visibility.tracking(repo):
-                visibility.remove(repo, tohide)
-
-
-def getlandeddiffs(repo, start, stop, onlypublic=True):
-    landeddiffs = {}
-
-    for rev in range(start, stop):
-        if rev not in repo:
-            # it may be hidden (e.g. a snapshot rev)
-            continue
-        rev = repo[rev]
-        if not onlypublic or rev.phase() == phases.public:
-            diff = getdiff(rev)
-            if diff is not None:
-                landeddiffs[diff] = rev
-    return landeddiffs
-
-
-def getmarkers(repo, landeddiffs):
-    return [(landeddiffs[rev], tuple()) for rev in getlandedrevsiter(repo, landeddiffs)]
-
-
-def getmarkersfromdrafts(repo, landeddiffs):
-    tocreate = []
-
-    for rev in repo.revs("draft() - obsolete() - hidden()"):
-        ctx = repo[rev]
-        diff = getdiff(ctx)
-
-        if (
-            diff in landeddiffs
-            and not _isrevert(ctx.description(), str(diff))
-            and landeddiffs[diff].rev() != ctx.rev()
-        ):
-            marker = (ctx, (landeddiffs[diff],))
-            tocreate.append(marker)
-    return tocreate
-
-
-def getlandedrevsiter(repo, landeddiffs):
-    statuses = (
-        status
-        for status in getdiffstatus(repo, *landeddiffs.keys())
-        if status != "Error"
-    )
-
-    return (
-        diff
-        for status, diff in zip(statuses, landeddiffs.keys())
-        if status["status"] == COMMITTEDSTATUS
-    )
