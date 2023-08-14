@@ -16,9 +16,6 @@ use syn::Fields;
 use syn::Ident;
 use syn::Type;
 
-const UNIMPLEMENTED_MSG: &str = "Only AtomicBool and AtomicI64 are supported";
-const STRUCT_FIELD_MSG: &str = "Only implemented for named fields of a struct";
-
 #[derive(Clone, PartialEq)]
 enum TunableType {
     Bool,
@@ -267,34 +264,32 @@ fn parse_names_and_types(data: Data) -> Vec<(Ident, TunableType)> {
                 .into_iter()
                 .filter_map(|f| f.clone().ident.map(|i| (i, resolve_type(f.ty))))
                 .collect::<Vec<_>>(),
-            _ => unimplemented!("{}", STRUCT_FIELD_MSG),
+            _ => unimplemented!("Tunables requires named fields in structs"),
         },
-        _ => unimplemented!("{}", STRUCT_FIELD_MSG),
+        _ => unimplemented!("Tunables are only implemented for structs"),
     }
 }
 
 fn resolve_type(ty: Type) -> TunableType {
-    // TODO: Handle full paths to the types, such as
-    // std::sync::atomic::AtomicBool, rather than just the type name.
+    // Tunables must use the tunable type aliases so that these can be parsed.
     if let Type::Path(p) = ty {
         if let Some(ident) = p.path.get_ident() {
             match &ident.to_string()[..] {
                 "TunableBool" => return TunableType::Bool,
                 "TunableI64" => return TunableType::I64,
                 "TunableVecOfStrings" => return TunableType::VecOfStrings,
-                // TunableString is a type alias of ArcSwap<String>.
-                // p.path.get_ident() returns None for ArcSwap<String>
-                // and it makes it harder to parse it.
-                // We use TunableString as a workaround
                 "TunableString" => return TunableType::String,
                 "TunableBoolByRepo" => return TunableType::ByRepoBool,
                 "TunableI64ByRepo" => return TunableType::ByRepoI64,
                 "TunableStringByRepo" => return TunableType::ByRepoString,
                 "TunableVecOfStringsByRepo" => return TunableType::ByRepoVecOfStrings,
-                _ => unimplemented!("{}, found: {}", UNIMPLEMENTED_MSG, &ident.to_string()[..]),
+                _ => unimplemented!(
+                    "Tunables type aliases must be used, found: {}",
+                    &ident.to_string()[..]
+                ),
             }
         }
     }
 
-    unimplemented!("{}", UNIMPLEMENTED_MSG);
+    unimplemented!("Tunables type aliases must be used")
 }
