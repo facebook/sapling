@@ -41,8 +41,7 @@ use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
 use slog::debug;
 use topo_sort::TopoSortedDagTraversal;
-use tunables::get_duration_from_tunable_or;
-use tunables::MononokeTunables;
+use tunables::tunables;
 
 use super::DerivationAssignment;
 use super::DerivedDataManager;
@@ -486,22 +485,22 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
-        const RETRY_DELAY_MS: u64 = 100;
-        const RETRY_ATTEMPTS_LIMIT: u8 = 10;
-        const FALLBACK_TIMEOUT_SECS: u64 = 15;
+        // How long to wait between requests to the remote derivation service, either to
+        // check for completion of ongoing remote derivation or after failures.
+        const RETRY_DELAY: Duration = Duration::from_millis(100);
+        // The maximum number of times to try remote derivation before giving up.
+        const RETRY_ATTEMPTS_LIMIT: u32 = 10;
+        // Total time to wait for remote derivation before giving up and deriving locally.
+        const FALLBACK_TIMEOUT: Duration = Duration::from_secs(15);
         if let Some(client) = self.derivation_service_client() {
             let mut attempt = 0;
             let started = Instant::now();
-            let fallback_timeout = get_duration_from_tunable_or(
-                MononokeTunables::remote_derivation_fallback_timeout_secs,
-                Duration::from_secs,
-                FALLBACK_TIMEOUT_SECS,
-            );
-            let retry_delay = get_duration_from_tunable_or(
-                MononokeTunables::derivation_request_retry_delay,
-                Duration::from_millis,
-                RETRY_DELAY_MS,
-            );
+            let fallback_timeout = tunables()
+                .remote_derivation_fallback_timeout_secs()
+                .map_or(FALLBACK_TIMEOUT, Duration::from_secs);
+            let retry_delay = tunables()
+                .derivation_request_retry_delay()
+                .map_or(RETRY_DELAY, Duration::from_millis);
             let request = DeriveRequest {
                 repo_name: self.repo_name().to_string(),
                 derived_data_type: DerivedDataType {
@@ -1019,11 +1018,10 @@ fn emergency_disabled(repo_name: &str, derivable_name: &str) -> bool {
 }
 
 async fn derivation_disabled_watcher(repo_name: &str, derivable_name: &'static str) {
-    let delay_duration = get_duration_from_tunable_or(
-        MononokeTunables::derived_data_disabled_watcher_delay_secs,
-        Duration::from_secs,
-        10,
-    );
+    const DELAY_DURATION: Duration = Duration::from_secs(10);
+    let delay_duration = tunables()
+        .derived_data_disabled_watcher_delay_secs()
+        .map_or(DELAY_DURATION, Duration::from_secs);
     while !emergency_disabled(repo_name, derivable_name) {
         tokio::time::sleep(delay_duration).await;
     }

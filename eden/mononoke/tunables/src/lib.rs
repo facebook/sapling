@@ -10,7 +10,6 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
 use std::thread_local;
-use std::time::Duration;
 
 use anyhow::Result;
 use arc_swap::ArcSwap;
@@ -196,27 +195,27 @@ pub struct MononokeTunables {
     all_derived_data_disabled: TunableBoolByRepo,
     derived_data_types_disabled: TunableVecOfStringsByRepo,
     // How often to check if derived data is disabled or not
-    derived_data_disabled_watcher_delay_secs: TunableI64,
+    derived_data_disabled_watcher_delay_secs: TunableU64,
 
     // Stops deriving on derivation workers. Will not drain Derivation Queue
     derived_data_disable_derivation_workers: TunableBool,
 
     // How long to wait before worker retries in case of an error
-    // or empty Derivation queue.
-    derivation_worker_sleep_duration: TunableI64,
+    // or empty Derivation queue (ms).
+    derivation_worker_sleep_duration: TunableU64,
 
-    // How long client should wait between polls of Derived data service
-    derivation_request_retry_delay: TunableI64,
+    // How long client should wait between polls of Derived data service (ms)
+    derivation_request_retry_delay: TunableU64,
 
     // Sets the size of the batch for derivaiton.
     derivation_batch_size: TunableI64,
 
     // Maximum time to wait for remote derivation request to finish in secs
     // before falling back to local derivation
-    remote_derivation_fallback_timeout_secs: TunableI64,
+    remote_derivation_fallback_timeout_secs: TunableU64,
 
     // Timeout for derivation request on service.
-    dds_request_timeout: TunableI64,
+    dds_request_timeout: TunableU64,
 
     // Disable the parallel derivation for DM and default to serial
     deleted_manifest_disable_new_parallel_derivation: TunableBool,
@@ -545,16 +544,6 @@ pub fn with_tunables_async_arc<Out, Fut: Future<Output = Out> + Unpin>(
 
 pub fn override_tunables(new_tunables: Option<Arc<MononokeTunables>>) {
     TUNABLES_OVERRIDE.with(|t| *t.borrow_mut() = new_tunables);
-}
-
-/// Get a duration from a tunable or a provided default
-/// value if the tunable is not set.
-pub fn get_duration_from_tunable_or(
-    get_tunable: impl Fn(&MononokeTunables) -> Option<i64>,
-    into_duration: impl Fn(u64) -> Duration,
-    default: u64,
-) -> Duration {
-    into_duration(get_tunable(tunables().deref()).map_or(default, |i| i as u64))
 }
 
 #[cfg(test)]
