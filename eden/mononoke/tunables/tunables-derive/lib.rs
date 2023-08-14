@@ -66,31 +66,6 @@ impl TunableType {
         }
     }
 
-    fn by_repo_value_type(&self) -> TokenStream {
-        match self {
-            Self::Bool | Self::I64 | Self::String | Self::VecOfStrings => {
-                panic!("Expected ByRepo flavor of tunable")
-            }
-            Self::ByRepoBool => quote! { bool },
-            Self::ByRepoI64 => quote! { i64 },
-            Self::ByRepoString => quote! { String },
-            Self::ByRepoVecOfStrings => quote! { Vec<String> },
-        }
-    }
-
-    fn update_container_type(&self) -> TokenStream {
-        match self {
-            Self::Bool => quote! { HashMap<String, bool> },
-            Self::I64 => quote! { HashMap<String, i64> },
-            Self::String => quote! { HashMap<String, String> },
-            Self::VecOfStrings => quote! { HashMap<String, Vec<String>> },
-            Self::ByRepoBool => quote! { HashMap<String, HashMap<String, bool>> },
-            Self::ByRepoString => quote! { HashMap<String, HashMap<String, String>> },
-            Self::ByRepoI64 => quote! { HashMap<String, HashMap<String, i64>> },
-            Self::ByRepoVecOfStrings => quote! { HashMap<String, HashMap<String, Vec<String>>> },
-        }
-    }
-
     fn generate_getter_method(&self, name: Ident) -> TokenStream {
         let external_type = self.external_type();
 
@@ -147,48 +122,56 @@ where
         names_and_types.clone(),
         TunableType::Bool,
         quote::format_ident!("update_bools"),
+        quote! { HashMap<String, bool> },
     ));
 
     methods.extend(generate_updater_method(
         names_and_types.clone(),
         TunableType::I64,
         quote::format_ident!("update_ints"),
+        quote! { HashMap<String, i64> },
     ));
 
     methods.extend(generate_updater_method(
         names_and_types.clone(),
         TunableType::String,
         quote::format_ident!("update_strings"),
+        quote! { HashMap<String, String> },
     ));
 
     methods.extend(generate_updater_method(
         names_and_types.clone(),
         TunableType::VecOfStrings,
         quote::format_ident!("update_vec_of_strings"),
+        quote! { HashMap<String, Vec<String>> },
     ));
 
     methods.extend(generate_updater_method(
         names_and_types.clone(),
         TunableType::ByRepoBool,
         quote::format_ident!("update_by_repo_bools"),
+        quote! { HashMap<String, HashMap<String, bool>> },
     ));
 
     methods.extend(generate_updater_method(
         names_and_types.clone(),
         TunableType::ByRepoString,
         quote::format_ident!("update_by_repo_strings"),
+        quote! { HashMap<String, HashMap<String, String>> },
     ));
 
     methods.extend(generate_updater_method(
         names_and_types.clone(),
         TunableType::ByRepoI64,
         quote::format_ident!("update_by_repo_ints"),
+        quote! { HashMap<String, HashMap<String, i64>> },
     ));
 
     methods.extend(generate_updater_method(
         names_and_types,
         TunableType::ByRepoVecOfStrings,
         quote::format_ident!("update_by_repo_vec_of_strings"),
+        quote! { HashMap<String, HashMap<String, Vec<String>>> },
     ));
 
     methods
@@ -198,6 +181,7 @@ fn generate_updater_method<I>(
     names_and_types: I,
     ty: TunableType,
     method_name: Ident,
+    update_container_type: TokenStream,
 ) -> TokenStream
 where
     I: Iterator<Item = (Ident, TunableType)> + std::clone::Clone,
@@ -227,10 +211,9 @@ where
             | TunableType::ByRepoString
             | TunableType::ByRepoI64
             | TunableType::ByRepoVecOfStrings => {
-                let by_repo_value_type = ty.by_repo_value_type();
                 body.extend(quote! {
                     #(
-                        let mut new_values_by_repo: HashMap<String, #by_repo_value_type> = HashMap::new();
+                        let mut new_values_by_repo: HashMap<String, _> = HashMap::new();
                         for (repo, val_by_tunable) in tunables {
                                 for (tunable, val) in val_by_tunable {
                                     match tunable.as_ref() {
@@ -248,7 +231,6 @@ where
         }
     }
 
-    let update_container_type = ty.update_container_type();
     quote! {
         pub fn #method_name(&self, tunables: &#update_container_type) {
             #body
