@@ -67,14 +67,15 @@ pub fn tunables() -> TunablesReference {
 // These types exist to simplify code generation in tunables-derive
 pub type TunableBool = ArcSwapOption<bool>;
 pub type TunableI64 = ArcSwapOption<i64>;
-
+pub type TunableU64 = ArcSwapOption<u64>;
 pub type TunableString = ArcSwapOption<String>;
 pub type TunableVecOfStrings = ArcSwapOption<Vec<String>>;
 
 pub type TunableBoolByRepo = ArcSwap<HashMap<String, bool>>;
+pub type TunableI64ByRepo = ArcSwap<HashMap<String, i64>>;
+pub type TunableU64ByRepo = ArcSwap<HashMap<String, u64>>;
 pub type TunableStringByRepo = ArcSwap<HashMap<String, String>>;
 pub type TunableVecOfStringsByRepo = ArcSwap<HashMap<String, Vec<String>>>;
-pub type TunableI64ByRepo = ArcSwap<HashMap<String, i64>>;
 
 #[derive(Tunables, Default, Debug)]
 pub struct MononokeTunables {
@@ -568,6 +569,7 @@ mod test {
     struct TestTunables {
         boolean: TunableBool,
         num: TunableI64,
+        unum: TunableU64,
         string: TunableString,
         vecofstrings: TunableVecOfStrings,
 
@@ -576,6 +578,7 @@ mod test {
 
         repoint: TunableI64ByRepo,
         repoint2: TunableI64ByRepo,
+        repouint: TunableU64ByRepo,
 
         repostr: TunableStringByRepo,
         repostr2: TunableStringByRepo,
@@ -608,12 +611,10 @@ mod test {
 
     #[test]
     fn test_empty_tunables() {
-        let bools = HashMap::new();
-        let ints = HashMap::new();
         let empty = EmptyTunables::default();
 
-        empty.update_bools(&bools);
-        empty.update_ints(&ints);
+        empty.update_bools(&HashMap::new());
+        empty.update_ints(&HashMap::new());
         empty.update_strings(&HashMap::new());
         empty.update_vec_of_strings(&HashMap::new());
     }
@@ -645,11 +646,13 @@ mod test {
 
         // ints
         let test = TestTunables::default();
-        test.update_ints(&hashmap! { s("num") => 1});
-        assert_eq!(test.num(), Some(1));
+        test.update_ints(&hashmap! { s("num") => 1, s("unum") => 2});
+        assert_eq!(test.num(), Some(1i64));
+        assert_eq!(test.unum(), Some(2u64));
 
         test.update_ints(&hashmap! {});
         assert_eq!(test.num(), None);
+        assert_eq!(test.unum(), None);
 
         // strings
         let test = TestTunables::default();
@@ -683,11 +686,16 @@ mod test {
     fn test_update_int() {
         let mut d = HashMap::new();
         d.insert(s("num"), 10);
+        // We store very large unsigned numbers as their bit-wise signed
+        // equivalent, so a value like `u64::MAX` will be stored as -1.
+        d.insert(s("unum"), -1);
 
         let test = TestTunables::default();
         assert!(test.num().is_none());
+        assert!(test.unum().is_none());
         test.update_ints(&d);
         assert_eq!(test.num(), Some(10));
+        assert_eq!(test.unum(), Some(u64::MAX));
     }
 
     #[test]
@@ -697,8 +705,10 @@ mod test {
 
         let test = TestTunables::default();
         assert!(test.num().is_none());
+        assert!(test.unum().is_none());
         test.update_ints(&d);
         assert!(test.num().is_none());
+        assert!(test.unum().is_none());
     }
 
     #[test]
@@ -936,6 +946,57 @@ mod test {
 
         assert_eq!(test.by_repo_repoint("repo"), Some(4));
         assert_eq!(test.by_repo_repoint("repo2"), Some(4));
+    }
+
+    #[test]
+    fn update_by_repo_uint() {
+        let test = TestTunables::default();
+
+        assert_eq!(test.by_repo_repouint("repo"), None);
+        assert_eq!(test.by_repo_repouint("repo2"), None);
+
+        test.update_by_repo_ints(&hashmap! {
+            s("repo") => hashmap! {
+                s("repouint") => 1,
+            },
+            s("repo2") => hashmap! {
+                s("repouint") => 2,
+            },
+        });
+        assert_eq!(test.by_repo_repouint("repo"), Some(1));
+        assert_eq!(test.by_repo_repouint("repo2"), Some(2));
+
+        test.update_by_repo_ints(&hashmap! {
+            s("repo") => hashmap! {
+                s("repouint") => 3,
+            },
+        });
+        assert_eq!(test.by_repo_repouint("repo"), Some(3));
+        assert_eq!(test.by_repo_repouint("repo2"), None);
+
+        test.update_by_repo_ints(&hashmap! {
+            s(":default:") => hashmap! {
+                s("repouint") => 4
+            },
+            s("repo") => hashmap! {
+                s("repouint") => 1,
+            },
+        });
+
+        assert_eq!(test.by_repo_repouint("repo"), Some(1));
+        assert_eq!(test.by_repo_repouint("repo2"), Some(4));
+
+        test.update_by_repo_ints(&hashmap! {
+            s(":override:") => hashmap! {
+                s("repouint") => 4
+            },
+            s("repo") => hashmap! {
+                s("repouint") => 1,
+            },
+        });
+
+        assert_eq!(test.by_repo_repouint("repo"), Some(4));
+        assert_eq!(test.by_repo_repouint("repo2"), Some(4));
     }
 
     #[test]

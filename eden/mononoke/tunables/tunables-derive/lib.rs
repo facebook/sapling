@@ -20,11 +20,13 @@ use syn::Type;
 enum TunableType {
     Bool,
     I64,
+    U64,
     String,
     VecOfStrings,
     ByRepoBool,
-    ByRepoString,
     ByRepoI64,
+    ByRepoU64,
+    ByRepoString,
     ByRepoVecOfStrings,
 }
 
@@ -57,11 +59,13 @@ impl TunableType {
         match self {
             Self::Bool => quote! { bool },
             Self::I64 => quote! { i64 },
+            Self::U64 => quote! { u64 },
             Self::String => quote! { Arc<String> },
             Self::VecOfStrings => quote! { Arc<Vec<String>> },
             Self::ByRepoBool => quote! { bool },
-            Self::ByRepoString => quote! { String },
             Self::ByRepoI64 => quote! { i64 },
+            Self::ByRepoU64 => quote! { u64 },
+            Self::ByRepoString => quote! { String },
             Self::ByRepoVecOfStrings => quote! { Vec<String> },
         }
     }
@@ -70,7 +74,7 @@ impl TunableType {
         let external_type = self.external_type();
 
         match &self {
-            Self::Bool | Self::I64 => {
+            Self::Bool | Self::I64 | Self::U64 => {
                 quote! {
                     pub fn #name(&self) -> Option<#external_type> {
                         self.#name.load_full().map(|arc_v| *arc_v)
@@ -84,7 +88,11 @@ impl TunableType {
                     }
                 }
             }
-            Self::ByRepoBool | Self::ByRepoI64 | Self::ByRepoString | Self::ByRepoVecOfStrings => {
+            Self::ByRepoBool
+            | Self::ByRepoI64
+            | Self::ByRepoU64
+            | Self::ByRepoString
+            | Self::ByRepoVecOfStrings => {
                 let by_repo_method = quote::format_ident!("by_repo_{}", name);
                 quote! {
                     pub fn #by_repo_method(&self, repo: &str) -> Option<#external_type> {
@@ -120,56 +128,56 @@ where
 
     methods.extend(generate_updater_method(
         names_and_types.clone(),
-        TunableType::Bool,
+        &[TunableType::Bool],
         quote::format_ident!("update_bools"),
         quote! { HashMap<String, bool> },
     ));
 
     methods.extend(generate_updater_method(
         names_and_types.clone(),
-        TunableType::I64,
+        &[TunableType::I64, TunableType::U64],
         quote::format_ident!("update_ints"),
         quote! { HashMap<String, i64> },
     ));
 
     methods.extend(generate_updater_method(
         names_and_types.clone(),
-        TunableType::String,
+        &[TunableType::String],
         quote::format_ident!("update_strings"),
         quote! { HashMap<String, String> },
     ));
 
     methods.extend(generate_updater_method(
         names_and_types.clone(),
-        TunableType::VecOfStrings,
+        &[TunableType::VecOfStrings],
         quote::format_ident!("update_vec_of_strings"),
         quote! { HashMap<String, Vec<String>> },
     ));
 
     methods.extend(generate_updater_method(
         names_and_types.clone(),
-        TunableType::ByRepoBool,
+        &[TunableType::ByRepoBool],
         quote::format_ident!("update_by_repo_bools"),
         quote! { HashMap<String, HashMap<String, bool>> },
     ));
 
     methods.extend(generate_updater_method(
         names_and_types.clone(),
-        TunableType::ByRepoString,
-        quote::format_ident!("update_by_repo_strings"),
-        quote! { HashMap<String, HashMap<String, String>> },
-    ));
-
-    methods.extend(generate_updater_method(
-        names_and_types.clone(),
-        TunableType::ByRepoI64,
+        &[TunableType::ByRepoI64, TunableType::ByRepoU64],
         quote::format_ident!("update_by_repo_ints"),
         quote! { HashMap<String, HashMap<String, i64>> },
     ));
 
     methods.extend(generate_updater_method(
+        names_and_types.clone(),
+        &[TunableType::ByRepoString],
+        quote::format_ident!("update_by_repo_strings"),
+        quote! { HashMap<String, HashMap<String, String>> },
+    ));
+
+    methods.extend(generate_updater_method(
         names_and_types,
-        TunableType::ByRepoVecOfStrings,
+        &[TunableType::ByRepoVecOfStrings],
         quote::format_ident!("update_by_repo_vec_of_strings"),
         quote! { HashMap<String, HashMap<String, Vec<String>>> },
     ));
@@ -179,60 +187,50 @@ where
 
 fn generate_updater_method<I>(
     names_and_types: I,
-    ty: TunableType,
+    update_types: &[TunableType],
     method_name: Ident,
     update_container_type: TokenStream,
 ) -> TokenStream
 where
     I: Iterator<Item = (Ident, TunableType)> + std::clone::Clone,
 {
-    let names = names_and_types.filter(|(_, t)| *t == ty).map(|(n, _)| n);
-
-    let mut names = names.peekable();
     let mut body = TokenStream::new();
-
-    if names.peek().is_some() {
-        match ty {
-            TunableType::I64 | TunableType::Bool => {
-                body.extend(quote! {
-                    #(
-                        self.#names.swap(tunables.get(stringify!(#names)).map(|v| Arc::new(*v)));
-                    )*
-                });
-            }
-            TunableType::String | TunableType::VecOfStrings => {
-                body.extend(quote! {
-                    #(
-                        self.#names.swap(tunables.get(stringify!(#names)).map(|v| Arc::new(v.clone()))
-                    );)*
-                });
-            }
-            TunableType::ByRepoBool
-            | TunableType::ByRepoString
-            | TunableType::ByRepoI64
-            | TunableType::ByRepoVecOfStrings => {
-                body.extend(quote! {
-                    #(
+    for (name, ty) in names_and_types {
+        if update_types.contains(&ty) {
+            match ty {
+                TunableType::I64 | TunableType::U64 | TunableType::Bool => {
+                    let external_type = ty.external_type();
+                    body.extend(quote! {
+                        self.#name.swap(new_tunables.get(stringify!(#name)).map(|v| Arc::new(*v as #external_type)));
+                    });
+                }
+                TunableType::String | TunableType::VecOfStrings => {
+                    body.extend(quote! {
+                        self.#name.swap(new_tunables.get(stringify!(#name)).map(|v| Arc::new(v.clone())));
+                    });
+                }
+                TunableType::ByRepoBool
+                | TunableType::ByRepoI64
+                | TunableType::ByRepoU64
+                | TunableType::ByRepoString
+                | TunableType::ByRepoVecOfStrings => {
+                    let external_type = ty.external_type();
+                    body.extend(quote! {
                         let mut new_values_by_repo: HashMap<String, _> = HashMap::new();
-                        for (repo, val_by_tunable) in tunables {
-                                for (tunable, val) in val_by_tunable {
-                                    match tunable.as_ref() {
-                                        stringify!(#names) => {
-                                            new_values_by_repo.insert((*repo).clone(), (*val).clone());
-                                        }
-                                        _ => {}
-                                    }
+                        for (repo, val_by_tunable) in new_tunables {
+                                if let Some(val) = val_by_tunable.get(stringify!(#name)) {
+                                    new_values_by_repo.insert((*repo).clone(), (*val).clone() as #external_type);
                                 }
                         }
-                        self.#names.swap(Arc::new(new_values_by_repo));
-                    )*
-                });
+                        self.#name.swap(Arc::new(new_values_by_repo));
+                    });
+                }
             }
         }
     }
 
     quote! {
-        pub fn #method_name(&self, tunables: &#update_container_type) {
+        pub fn #method_name(&self, new_tunables: &#update_container_type) {
             #body
         }
     }
@@ -259,10 +257,12 @@ fn resolve_type(ty: Type) -> TunableType {
             match &ident.to_string()[..] {
                 "TunableBool" => return TunableType::Bool,
                 "TunableI64" => return TunableType::I64,
+                "TunableU64" => return TunableType::U64,
                 "TunableVecOfStrings" => return TunableType::VecOfStrings,
                 "TunableString" => return TunableType::String,
                 "TunableBoolByRepo" => return TunableType::ByRepoBool,
                 "TunableI64ByRepo" => return TunableType::ByRepoI64,
+                "TunableU64ByRepo" => return TunableType::ByRepoU64,
                 "TunableStringByRepo" => return TunableType::ByRepoString,
                 "TunableVecOfStringsByRepo" => return TunableType::ByRepoVecOfStrings,
                 _ => unimplemented!(
