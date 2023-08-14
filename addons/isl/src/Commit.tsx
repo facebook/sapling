@@ -544,6 +544,6 @@ export function SuccessorInfoToDisplay({successorInfo}: {successorInfo: Successo
     case 'histedit':
       return <T>Histedited as a newer commit</T>;
     default:
-      return <T>Rewritten as a newer commi'</T>;
+      return <T>Rewritten as a newer commit</T>;
   }
 }
