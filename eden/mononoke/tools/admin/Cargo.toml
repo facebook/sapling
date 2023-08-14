@@ -55,10 +55,12 @@ fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rus
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 fileblob = { version = "0.1.0", path = "../../blobstore/fileblob" }
 filestore = { version = "0.1.0", path = "../../filestore" }
+flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
+gix-hash = "0.11"
 itertools = "0.10.3"
 live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }
@@ -74,6 +76,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../../mutable_renames" }
 once_cell = "1.12"
+packfile = { version = "0.1.0", path = "../../git/packfile" }
 phases = { version = "0.1.0", path = "../../phases" }
 preloaded_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/preloaded_commit_graph_storage" }
 prettytable-rs = "0.10"
@@ -106,6 +109,7 @@ tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.7.8", features = ["full"] }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 vec1 = { version = "1", features = ["serde"] }
+walkdir = "2.3"
 
 [dev-dependencies]
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

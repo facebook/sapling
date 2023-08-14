@@ -25,4 +25,5 @@ mononoke_app::subcommands! {
     mod dump_changesets;
     mod async_requests;
     mod mutable_counters;
+    mod git_bundle;
 }
