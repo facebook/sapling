@@ -422,6 +422,13 @@ function mononoke_testtool {
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }
 
+function mononoke_backfill_bonsai_blob_mapping {
+  GLOG_minloglevel=5 "$MONONOKE_BACKFILL_BONSAI_BLOB_MAPPING" \
+    "${CACHE_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
+    --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
+}
+
 function mononoke_admin_source_target {
   local source_repo_id=$1
   shift
