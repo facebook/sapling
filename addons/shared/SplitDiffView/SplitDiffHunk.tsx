@@ -7,11 +7,12 @@
 
 import type {Context, LineRangeParams, OneIndexedLineNumber} from './types';
 import type {Hunk, ParsedDiff} from 'diff';
+import type {ReactNode} from 'react';
 
 import SplitDiffRow from './SplitDiffRow';
 import organizeLinesIntoGroups from './organizeLinesIntoGroups';
 import {UnfoldIcon} from '@primer/octicons-react';
-import {Box, Spinner, Text} from '@primer/react';
+import {Spinner} from '@primer/react';
 import {diffChars} from 'diff';
 import React, {useCallback, useState} from 'react';
 import {useRecoilValueLoadable} from 'recoil';
@@ -113,16 +114,12 @@ export const SplitDiffTable = React.memo(
       });
     } else {
       rows.push(
-        <SeparatorRow key={'show-deleted'}>
-          <Box
-            display="inline-block"
+        <SeparatorRow>
+          <InlineRowButton
+            key={'show-deleted'}
+            label={t('Show deleted file')}
             onClick={() => setDeletedFileExpanded(true)}
-            padding={1}
-            sx={{cursor: 'pointer', ':hover': {bg: 'accent.emphasis', color: 'fg.onEmphasis'}}}>
-            <UnfoldIcon size={16} />
-            <Text paddingX={4}>{t('Show deleted file')}</Text>
-            <UnfoldIcon size={16} />
-          </Box>
+          />
         </SeparatorRow>,
       );
     }
@@ -223,6 +220,17 @@ function addRowsForHunk(
   });
 }
 
+function InlineRowButton({onClick, label}: {onClick: () => unknown; label: ReactNode}) {
+  return (
+    // TODO: tabindex or make this a button for accessibility
+    <div className="split-diff-view-inline-row-button" onClick={onClick}>
+      <UnfoldIcon size={16} />
+      <span className="inline-row-button-label">{label}</span>
+      <UnfoldIcon size={16} />
+    </div>
+  );
+}
+
 /**
  * Adds new rows to the supplied `rows` array.
  */
@@ -312,15 +320,7 @@ function HunkSeparator({
   const label = numLines === 1 ? t('Expand 1 line') : t(`Expand ${numLines} lines`);
   return (
     <SeparatorRow>
-      <Box
-        display="inline-block"
-        onClick={onExpand}
-        padding={1}
-        sx={{cursor: 'pointer', ':hover': {bg: 'accent.emphasis', color: 'fg.onEmphasis'}}}>
-        <UnfoldIcon size={16} />
-        <Text paddingX={4}>{label}</Text>
-        <UnfoldIcon size={16} />
-      </Box>
+      <InlineRowButton label={label} onClick={onExpand} />
     </SeparatorRow>
   );
 }
@@ -365,35 +365,19 @@ function ExpandingSeparator<Id>({
     case 'loading': {
       return (
         <SeparatorRow>
-          <Box
-            padding={1}
-            display="flex"
-            flexDirection="row"
-            justifyContent="center"
-            alignItems="center">
-            <Box display="flex" alignItems="center">
-              <Spinner size="small" />
-              <Text marginLeft={2}>{t('Loading...')}</Text>
-            </Box>
-          </Box>
+          <div className="split-diff-view-loading-row">
+            <Spinner size="small" />
+            <span>{t('Loading...')}</span>
+          </div>
         </SeparatorRow>
       );
     }
     case 'hasError': {
       return (
         <SeparatorRow>
-          <Box
-            padding={1}
-            display="flex"
-            flexDirection="row"
-            justifyContent="center"
-            alignItems="center">
-            <Box display="flex" alignItems="center">
-              <Text>
-                {t('Error:')} {loadable.contents.message}
-              </Text>
-            </Box>
-          </Box>
+          <div className="split-diff-view-error-row">
+            {t('Error:')} {loadable.contents.message}
+          </div>
         </SeparatorRow>
       );
     }

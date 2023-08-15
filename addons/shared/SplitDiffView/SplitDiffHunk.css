@@ -40,6 +40,41 @@
   padding: 1px;
 }
 
+.split-diff-view-hunk-separator {
+  display: inline-block;
+  padding: 0 var(--pad);
+  cursor: pointer;
+}
+.split-diff-view-hunk-separator:hover {
+  color: var(--highlight-foreground);
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.split-diff-view-inline-row-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  display: inline-block;
+  padding: 2px var(--pad);
+  cursor: pointer;
+}
+.split-diff-view-inline-row-button .inline-row-button-label {
+  margin: 0 calc(2 * var(--pad));
+}
+.split-diff-view-inline-row-button:hover {
+  color: var(--highlight-foreground);
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.split-diff-view-loading-row,
+.split-diff-view-error-row {
+  padding: 2px var(--pad);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--pad);
+}
+
 .SplitDiffView-hunk-table {
   border-spacing: 0;
   table-layout: fixed;
@@ -72,9 +107,18 @@
 
 .SplitDiffView-hunk-table td.separator {
   line-height: 20px;
-  padding-top: 0;
-  padding-bottom: 0;
+  padding: 0;
   text-align: center;
+}
+
+.split-diff-view-show-deleted {
+  display: inline-block;
+  padding: var(--pad);
+  cursor: pointer;
+}
+.split-diff-view-show-deleted:hover {
+  color: var(--highlight-foreground);
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .patch-word-begin {
