@@ -402,10 +402,10 @@ function ExpandingSeparator<Id>({
 
 function SeparatorRow({children}: {children: React.ReactNode}): React.ReactElement {
   return (
-    <Box as="tr" bg="accent.subtle" color="fg.muted" height={12}>
-      <Box as="td" colSpan={4} className="separator">
+    <tr className="separator-row">
+      <td colSpan={4} className="separator">
         {children}
-      </Box>
-    </Box>
+      </td>
+    </tr>
   );
 }

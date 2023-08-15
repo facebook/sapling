@@ -29,8 +29,11 @@
   --github-neutral-bg: #6e7781;
 
   /* Editor colors */
-  --diffEditor-insertedLineBackground: rgba(35, 134, 54, 0.2);
-  --diffEditor-removedLineBackground: rgba(218, 54, 51, 0.2);
+  --diffEditor-foreground: rgb(201, 209, 217);
+  --diffEditor-insertedLineBackground: #5fff8422;
+  --diffEditor-insertedLineHighlightBackground: #5fff8433;
+  --diffEditor-removedLineBackground: #fa7e7c33;
+  --diffEditor-removedLineHighlightBackground: #fa7e7c55;
   --editor-selectionBackground: #264f78;
 
   /* Signal colors */

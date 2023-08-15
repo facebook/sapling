@@ -17,18 +17,10 @@ import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import platform from '../platform';
 import {latestHeadCommit} from '../serverAPIState';
-import {themeState} from '../theme';
 import {currentComparisonMode} from './atoms';
-import {ThemeProvider, BaseStyles} from '@primer/react';
 import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
 import {useCallback, useEffect} from 'react';
-import {
-  atomFamily,
-  selectorFamily,
-  useRecoilState,
-  useRecoilValue,
-  useSetRecoilState,
-} from 'recoil';
+import {atomFamily, selectorFamily, useRecoilState, useSetRecoilState} from 'recoil';
 import {comparisonIsAgainstHead, labelForComparison, ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {SplitDiffView} from 'shared/SplitDiffView';
@@ -125,30 +117,24 @@ export default function ComparisonView({comparison}: {comparison: Comparison}) {
   // any time the comparison changes, fetch the diff
   useEffect(reloadComparison, [comparison, reloadComparison]);
 
-  const theme = useRecoilValue(themeState);
-
   return (
     <div data-testid="comparison-view" className="comparison-view">
-      <ThemeProvider colorMode={theme === 'light' ? 'day' : 'night'}>
-        <BaseStyles className="comparison-view-base-styles">
-          <ComparisonViewHeader comparison={comparison} />
-          <div className="comparison-view-details">
-            {compared.data == null ? (
-              <Icon icon="loading" />
-            ) : compared.data.error != null ? (
-              <ErrorNotice error={compared.data.error} title={t('Unable to load comparison')} />
-            ) : compared.data.value.length === 0 ? (
-              <EmptyState>
-                <T>No Changes</T>
-              </EmptyState>
-            ) : (
-              compared.data.value.map((parsed, i) => (
-                <ComparisonViewFile diff={parsed} comparison={comparison} key={i} />
-              ))
-            )}
-          </div>
-        </BaseStyles>
-      </ThemeProvider>
+      <ComparisonViewHeader comparison={comparison} />
+      <div className="comparison-view-details">
+        {compared.data == null ? (
+          <Icon icon="loading" />
+        ) : compared.data.error != null ? (
+          <ErrorNotice error={compared.data.error} title={t('Unable to load comparison')} />
+        ) : compared.data.value.length === 0 ? (
+          <EmptyState>
+            <T>No Changes</T>
+          </EmptyState>
+        ) : (
+          compared.data.value.map((parsed, i) => (
+            <ComparisonViewFile diff={parsed} comparison={comparison} key={i} />
+          ))
+        )}
+      </div>
     </div>
   );
 }

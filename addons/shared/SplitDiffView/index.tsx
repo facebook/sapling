@@ -14,7 +14,6 @@ import type {Context} from './types';
 import {DiffType} from '../patch/parse';
 import {FileHeader} from './SplitDiffFileHeader';
 import {SplitDiffTable} from './SplitDiffHunk';
-import {Box} from '@primer/react';
 
 export function SplitDiffView<Id>({
   ctx,
@@ -55,24 +54,19 @@ export function SplitDiffView<Id>({
   }
 
   return (
-    <Box
-      className="split-diff-view"
-      borderWidth="1px"
-      borderStyle="solid"
-      borderColor="border.default"
-      borderRadius={2}>
+    <div className="split-diff-view">
       <FileHeader ctx={ctx} path={fileName} diffType={patch.type} />
       <TypedSplitDiffTable ctx={ctx} path={path} patch={patch} preamble={preamble} />
-    </Box>
+    </div>
   );
 }
 
 function FileStatusBanner({children}: {children: React.ReactNode}): React.ReactElement {
   return (
-    <Box as="tr" bg="attention.subtle" color="fg.muted" height={12}>
-      <Box as="td" colSpan={4} className="separator">
-        <Box padding={1}>{children}</Box>
-      </Box>
-    </Box>
+    <tr className="split-diff-view-file-status-banner">
+      <td colSpan={4} className="separator">
+        <div className="split-diff-view-">{children}</div>
+      </td>
+    </tr>
   );
 }

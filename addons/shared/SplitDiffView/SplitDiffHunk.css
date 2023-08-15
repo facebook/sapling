@@ -5,6 +5,41 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+.split-diff-view {
+  border: 1px solid var(--tooltip-border);
+  border-radius: 2px;
+  color: var(--diffEditor-foreground);
+  font-family: var(--monospace-fontFamily);
+}
+
+.split-diff-view-file-header {
+  display: flex;
+  align-items: center;
+  color: var(--diffEditor-foreground);
+  background-color: var(--tooltip-background);
+  padding: var(--halfpad) var(--pad);
+  line-height: 2em;
+  border-top-right-radius: 2px;
+  border-top-left-radius: 2px;
+  border-bottom: 1px solid var(--tooltip-border);
+}
+
+.split-diff-view-file-path-parts {
+  display: flex;
+  flex-grow: 1;
+  font-size: 12px;
+}
+
+.split-diff-view-file-status-banner {
+  background-color: var(--background);
+  color: var(--foreground);
+  height: 12px;
+}
+
+.split-diff-view-file-status-banner .separator > div {
+  padding: 1px;
+}
+
 .SplitDiffView-hunk-table {
   border-spacing: 0;
   table-layout: fixed;
@@ -30,9 +65,59 @@
   white-space: nowrap;
 }
 
+.SplitDiffView-hunk-table tr.separator-row {
+  background-color: var(--tooltip-background);
+  height: 12px;
+}
+
 .SplitDiffView-hunk-table td.separator {
   line-height: 20px;
   padding-top: 0;
   padding-bottom: 0;
   text-align: center;
+}
+
+.patch-word-begin {
+  border-top-left-radius: 0.2em;
+  border-bottom-left-radius: 0.2em;
+}
+
+.patch-word-end {
+  border-top-right-radius: 0.2em;
+  border-bottom-right-radius: 0.2em;
+}
+
+.patch-add-line {
+  background-color: var(--diffEditor-insertedLineBackground);
+}
+
+.patch-add-line-number,
+.patch-add-word {
+  background-color: var(--diffEditor-insertedLineHighlightBackground);
+}
+
+.patch-remove-line {
+  background-color: var(--diffEditor-removedLineBackground);
+}
+
+.patch-remove-line-number,
+.patch-remove-word {
+  background-color: var(--diffEditor-removedLineHighlightBackground);
+}
+
+.patch-expanded,
+.patch-expanded-number {
+  background-color: var(--background);
+}
+
+.patch-expanded-number {
+  color: var(--foreground);
+}
+
+.lineNumber.clickable {
+  cursor: pointer;
+}
+
+.lineNumber.clickable:hover {
+  text-decoration: underline;
 }
