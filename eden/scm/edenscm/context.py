@@ -310,7 +310,6 @@ class basectx(object):
         exclude=None,
         default="glob",
         badfn=None,
-        emptyalways=True,
         warn=None,
     ):
         r = self._repo
@@ -324,7 +323,6 @@ class basectx(object):
             auditor=r.nofsauditor,
             ctx=self,
             badfn=badfn,
-            emptyalways=emptyalways,
             warn=warn,
         )
 
@@ -1894,7 +1892,6 @@ class workingctx(committablectx):
         exclude=None,
         default="glob",
         badfn=None,
-        emptyalways=True,
         warn=None,
     ):
         r = self._repo
@@ -1913,7 +1910,6 @@ class workingctx(committablectx):
             ctx=self,
             badfn=badfn,
             icasefs=icasefs,
-            emptyalways=emptyalways,
             warn=warn,
         )
 

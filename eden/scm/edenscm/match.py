@@ -126,7 +126,6 @@ def match(
     warn=None,
     badfn=None,
     icasefs: bool = False,
-    emptyalways: bool = True,
 ):
     """build an object to match a set of file patterns
 
@@ -142,8 +141,6 @@ def match(
     badfn - optional bad() callback for this matcher instead of the default
     icasefs - make a matcher for wdir on case insensitive filesystems, which
         normalizes the given patterns to the case in the filesystem
-    emptyalways - decides what matcher to choose if pattern is empty:
-        alwaysmatcher if True, nevermatcher if False
 
     a pattern is one of:
     'glob:<glob>' - a glob relative to cwd
@@ -191,12 +188,7 @@ def match(
     if exact:
         m = exactmatcher(root, cwd, patterns, badfn)
     elif not patterns:
-        # It's a little strange that no patterns means to match everything.
-        # Consider changing this to match nothing (probably using nevermatcher).
-        if emptyalways or include:
-            m = alwaysmatcher(root, cwd, badfn)
-        else:
-            m = nevermatcher(root, cwd, badfn)
+        m = alwaysmatcher(root, cwd, badfn)
 
     patternskindpats = not m and normalize(patterns, default, root, cwd, auditor, warn)
     includekindpats = include and normalize(include, "glob", root, cwd, auditor, warn)
@@ -205,7 +197,6 @@ def match(
     # Try to use Rust dyn matcher if possible. Currently, Rust dyn matcher is
     # missing below features:
     # * exact matcher
-    # * emptyalways parameter
     # * explicit files in Matcher trait
     # * pattern kinds other than 'glob' and 're'
     if _usedynmatcher and not m:

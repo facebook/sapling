@@ -653,7 +653,6 @@ def matchandpats(
     globbed=False,
     default="relpath",
     badfn=None,
-    emptyalways=True,
 ):
     """Return a matcher and the patterns that were used.
     The matcher will warn about bad matches, unless an alternate badfn callback
@@ -677,7 +676,6 @@ def matchandpats(
         opts.get("exclude"),
         default,
         badfn=badfn,
-        emptyalways=emptyalways,
         warn=ctx.repo().ui.warn,
     )
 
@@ -693,12 +691,9 @@ def match(
     globbed=False,
     default="relpath",
     badfn=None,
-    emptyalways=True,
 ):
     """Return a matcher that will warn about bad matches."""
-    m = matchandpats(
-        ctx, pats, opts, globbed, default, badfn=badfn, emptyalways=emptyalways
-    )[0]
+    m = matchandpats(ctx, pats, opts, globbed, default, badfn=badfn)[0]
 
     # Test some rare dirs that probably wouldn't match unless the
     # matcher matches everything. Test for "visitdir is True" which
