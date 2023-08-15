@@ -171,11 +171,18 @@ def merge_file(
         expectedtext = mergectx[filepath].data()
         if mergedtext != expectedtext:
             bench_stats.unmatched_files += 1
-            repo.ui.write(
-                f"\nUnmatched_file: {filepath} {dstctx} {srcctx} {basectx} {mergectx}\n"
-            )
-            difftext = unidiff(mergedtext, expectedtext, filepath).decode("utf8")
-            repo.ui.write(f"{difftext}\n")
+            mergedtext_baseline = b""
+
+            if m3merger != Merge3Text:
+                m3_baseline = Merge3Text(basetext, dsttext, srctext)
+                mergedtext_baseline = b"".join(m3_baseline.merge_lines())
+
+            if mergedtext != mergedtext_baseline:
+                repo.ui.write(
+                    f"\nUnmatched_file: {filepath} {dstctx} {srcctx} {basectx} {mergectx}\n"
+                )
+                difftext = unidiff(mergedtext, expectedtext, filepath).decode("utf8")
+                repo.ui.write(f"{difftext}\n")
 
 
 def unidiff(atext, btext, filepath="") -> bytes:
