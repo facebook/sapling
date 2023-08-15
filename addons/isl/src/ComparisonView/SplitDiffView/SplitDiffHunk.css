@@ -59,12 +59,12 @@
 }
 
 .split-diff-view-inline-row-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   display: inline-block;
   padding: 2px var(--pad);
   cursor: pointer;
+}
+.split-diff-view-inline-row-button .codicon {
+  vertical-align: sub;
 }
 .split-diff-view-inline-row-button .inline-row-button-label {
   margin: 0 calc(2 * var(--pad));

@@ -10,11 +10,10 @@ import type {Hunk, ParsedDiff} from 'diff';
 import type {ReactNode} from 'react';
 
 import SplitDiffRow from './SplitDiffRow';
-import {UnfoldIcon} from '@primer/octicons-react';
-import {Spinner} from '@primer/react';
 import {diffChars} from 'diff';
 import React, {useCallback, useState} from 'react';
 import {useRecoilValueLoadable} from 'recoil';
+import {Icon} from 'shared/Icon';
 import organizeLinesIntoGroups from 'shared/SplitDiffView/organizeLinesIntoGroups';
 
 const MAX_INPUT_LENGTH_FOR_INTRALINE_DIFF = 300;
@@ -224,9 +223,9 @@ function InlineRowButton({onClick, label}: {onClick: () => unknown; label: React
   return (
     // TODO: tabindex or make this a button for accessibility
     <div className="split-diff-view-inline-row-button" onClick={onClick}>
-      <UnfoldIcon size={16} />
+      <Icon icon="unfold" />
       <span className="inline-row-button-label">{label}</span>
-      <UnfoldIcon size={16} />
+      <Icon icon="unfold" />
     </div>
   );
 }
@@ -366,7 +365,7 @@ function ExpandingSeparator<Id>({
       return (
         <SeparatorRow>
           <div className="split-diff-view-loading-row">
-            <Spinner size="small" />
+            <Icon icon="loading" />
             <span>{t('Loading...')}</span>
           </div>
         </SeparatorRow>

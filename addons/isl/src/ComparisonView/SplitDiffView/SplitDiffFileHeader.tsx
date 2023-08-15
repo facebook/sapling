@@ -8,8 +8,8 @@
 import type {Context} from './types';
 import type {DiffType} from 'shared/patch/parse';
 
-import {FileSymlinkFileIcon} from '@primer/octicons-react';
-import {IconButton, Tooltip} from '@primer/react';
+import {Tooltip} from '../../Tooltip';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {Icon} from 'shared/Icon';
 
 export function FileHeader<Id>({
@@ -43,18 +43,24 @@ export function FileHeader<Id>({
         // hover selectors to underline nested sub-paths.
         const pathSoFar = pathParts.slice(idx).join(pathSeparator);
         return (
-          <span className={copy && 'file-header-copyable-path'} key={idx}>
+          <span className={'file-header-copyable-path'} key={idx}>
             {acc}
-            <Tooltip
-              // TODO: better translate API that supports templates.
-              aria-label={copy && t('Copy $path').replace('$path', pathSoFar)}
-              direction="se"
-              className="file-header-path-element">
-              <span onClick={copy && (() => copy(pathSoFar))}>
-                {part}
-                {idx < pathParts.length - 1 ? pathSeparator : ''}
-              </span>
-            </Tooltip>
+            {
+              <Tooltip
+                // TODO: better translate API that supports templates.
+                component={() => (
+                  <span className="file-header-copyable-path-hover">
+                    {t('Copy $path').replace('$path', pathSoFar)}
+                  </span>
+                )}
+                delayMs={100}
+                placement="bottom">
+                <span onClick={copy && (() => copy(pathSoFar))}>
+                  {part}
+                  {idx < pathParts.length - 1 ? pathSeparator : ''}
+                </span>
+              </Tooltip>
+            }
           </span>
         );
       }, <span />)}
@@ -73,18 +79,15 @@ export function FileHeader<Id>({
       {diffType !== undefined && <Icon icon={diffTypeToIcon[diffType]} />}
       <div className="split-diff-view-file-path-parts">{filePathParts}</div>
       {ctx?.openFile && (
-        <Tooltip aria-label={t('Open file')} direction={'sw'} sx={{display: 'flex'}}>
-          <IconButton
-            size="S"
-            variant="invisible"
+        <Tooltip title={t('Open file')} placement={'bottom'}>
+          <VSCodeButton
+            appearance="icon"
             className="split-diff-view-file-header-open-button"
-            area-label={t('Open file')}
-            icon={FileSymlinkFileIcon}
-            sx={{opacity: '0.7'}}
             onClick={() => {
               ctx.openFile?.();
-            }}
-          />
+            }}>
+            <Icon icon="go-to-file" />
+          </VSCodeButton>
         </Tooltip>
       )}
     </div>

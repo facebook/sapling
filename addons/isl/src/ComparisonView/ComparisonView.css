@@ -63,8 +63,13 @@
 
 .file-header-copyable-path {
   cursor: pointer;
+  display: inherit;
 }
 
-.file-header-copyable-path:hover > .file-header-path-element {
+.file-header-copyable-path:hover > .tooltip-creator {
   text-decoration: underline;
+}
+
+.file-header-copyable-path-hover {
+  font-size: 90%;
 }
