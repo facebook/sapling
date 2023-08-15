@@ -22,7 +22,6 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
 mutable_rename_thrift__types = { package = "mutable_rename_thrift_types", version = "0.1.0", path = "types" }
-once_cell = "1.12"
 ref-cast = "1.0.18"
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 thiserror = "1.0.43"

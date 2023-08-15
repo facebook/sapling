@@ -23,7 +23,6 @@ filenodes_if__types = { package = "filenodes_if_types", version = "0.1.0", path 
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 mercurial_thrift = { version = "0.1.0", path = "../../mercurial/types/if" }
 mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
-once_cell = "1.12"
 ref-cast = "1.0.18"
 thiserror = "1.0.43"
 tracing = "0.1.35"
