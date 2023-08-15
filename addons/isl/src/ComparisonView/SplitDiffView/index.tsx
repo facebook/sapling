@@ -13,6 +13,7 @@ import type {ParsedDiff} from 'shared/patch/parse';
 
 import {FileHeader} from './SplitDiffFileHeader';
 import {SplitDiffTable} from './SplitDiffHunk';
+import {useState} from 'react';
 import {DiffType} from 'shared/patch/parse';
 
 export function SplitDiffView<Id>({
@@ -24,6 +25,8 @@ export function SplitDiffView<Id>({
   path: string;
   patch: ParsedDiff;
 }) {
+  const [open, setOpen] = useState(true);
+
   const fileName = patch.newFileName ?? patch.oldFileName ?? '/dev/null';
 
   // Type hack to get a templatized version of a React.memo-ized component
@@ -55,8 +58,14 @@ export function SplitDiffView<Id>({
 
   return (
     <div className="split-diff-view">
-      <FileHeader ctx={ctx} path={fileName} diffType={patch.type} />
-      <TypedSplitDiffTable ctx={ctx} path={path} patch={patch} preamble={preamble} />
+      <FileHeader
+        ctx={ctx}
+        path={fileName}
+        diffType={patch.type}
+        open={open}
+        onChangeOpen={open => setOpen(open)}
+      />
+      {open && <TypedSplitDiffTable ctx={ctx} path={path} patch={patch} preamble={preamble} />}
     </div>
   );
 }

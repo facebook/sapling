@@ -6,6 +6,7 @@
  */
 
 import type {Context} from './types';
+import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import type {DiffType} from 'shared/patch/parse';
 
 import {Tooltip} from '../../Tooltip';
@@ -22,9 +23,10 @@ export function FileHeader<Id>({
   ctx?: Context<Id>;
   path: string;
   diffType?: DiffType;
-  open?: boolean;
-  onChangeOpen?: (open: boolean) => void;
-}) {
+} & EnsureAssignedTogether<{
+  open: boolean;
+  onChangeOpen: (open: boolean) => void;
+}>) {
   // Even though the enclosing <SplitDiffView> will have border-radius set, we
   // have to define it again here or things don't look right.
   const color =
@@ -68,13 +70,16 @@ export function FileHeader<Id>({
   );
 
   return (
-    <div className="split-diff-view-file-header" style={{color}}>
+    <div
+      className={`split-diff-view-file-header file-header-${open ? 'open' : 'collapsed'}`}
+      style={{color}}>
       {onChangeOpen && (
-        <span
-          className="split-diff-view-file-header-toggle-open"
+        <VSCodeButton
+          appearance="icon"
+          className="split-diff-view-file-header-open-button"
           onClick={() => onChangeOpen(!open)}>
-          <Icon icon={open ? 'chevron-up' : 'chevron-down'} />
-        </span>
+          <Icon icon={open ? 'chevron-down' : 'chevron-right'} />
+        </VSCodeButton>
       )}
       {diffType !== undefined && <Icon icon={diffTypeToIcon[diffType]} />}
       <div className="split-diff-view-file-path-parts">{filePathParts}</div>

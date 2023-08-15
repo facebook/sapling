@@ -28,6 +28,10 @@
   cursor: pointer;
 }
 
+.split-diff-view-file-header.file-header-collapsed {
+  border-bottom-width: 0;
+}
+
 .split-diff-view-file-header-open-button {
   color: var(--foreground);
 }
