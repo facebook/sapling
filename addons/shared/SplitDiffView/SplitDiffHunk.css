@@ -23,6 +23,14 @@
   border-top-left-radius: 2px;
   border-bottom: 1px solid var(--tooltip-border);
 }
+.split-diff-view-file-header-toggle-open {
+  padding-right: 2px;
+  cursor: pointer;
+}
+
+.split-diff-view-file-header-open-button {
+  color: var(--foreground);
+}
 
 .split-diff-view-file-path-parts {
   display: flex;
@@ -98,6 +106,10 @@
   padding-right: 10px;
   text-align: right;
   white-space: nowrap;
+}
+
+.SplitDiffView-hunk-table td.lineNumber-RIGHT {
+  border-left: 1px solid var(--tooltip-border);
 }
 
 .SplitDiffView-hunk-table tr.separator-row {

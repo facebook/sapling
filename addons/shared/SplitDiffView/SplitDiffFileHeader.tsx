@@ -9,8 +9,8 @@ import type {DiffType} from '../patch/parse';
 import type {Context} from './types';
 
 import {Icon} from '../Icon';
-import {ChevronDownIcon, ChevronUpIcon, FileSymlinkFileIcon} from '@primer/octicons-react';
-import {Box, IconButton, Tooltip} from '@primer/react';
+import {FileSymlinkFileIcon} from '@primer/octicons-react';
+import {IconButton, Tooltip} from '@primer/react';
 
 export function FileHeader<Id>({
   ctx,
@@ -64,9 +64,11 @@ export function FileHeader<Id>({
   return (
     <div className="split-diff-view-file-header" style={{color}}>
       {onChangeOpen && (
-        <Box paddingRight={2} onClick={() => onChangeOpen(!open)} sx={{cursor: 'pointer'}}>
-          {open ? <ChevronUpIcon size={24} /> : <ChevronDownIcon size={24} />}
-        </Box>
+        <span
+          className="split-diff-view-file-header-toggle-open"
+          onClick={() => onChangeOpen(!open)}>
+          <Icon icon={open ? 'chevron-up' : 'chevron-down'} />
+        </span>
       )}
       {diffType !== undefined && <Icon icon={diffTypeToIcon[diffType]} />}
       <div className="split-diff-view-file-path-parts">{filePathParts}</div>
@@ -75,9 +77,10 @@ export function FileHeader<Id>({
           <IconButton
             size="S"
             variant="invisible"
+            className="split-diff-view-file-header-open-button"
             area-label={t('Open file')}
             icon={FileSymlinkFileIcon}
-            sx={{color: 'initial', opacity: '0.7'}}
+            sx={{opacity: '0.7'}}
             onClick={() => {
               ctx.openFile?.();
             }}

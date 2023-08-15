@@ -7,8 +7,6 @@
 
 import type {OneIndexedLineNumber} from './types';
 
-import {Box} from '@primer/react';
-
 type Props = {
   beforeLineNumber: number | null;
   before: React.ReactFragment | null;
@@ -100,33 +98,20 @@ type SideProps = {
 };
 
 function SplitDiffRowSide({className, content, lineNumber, path, side, openFileToLine}: SideProps) {
-  const lineNumberBorderStyle = side === 'RIGHT' ? extraRightLineNumberCellProps : {};
   const clickableLineNumber = openFileToLine != null && lineNumber != null;
   const extraClassName =
     (className != null ? ` ${className}-number` : '') + (clickableLineNumber ? ' clickable' : '');
   return (
     <>
-      <Box
-        as="td"
-        className={`lineNumber${extraClassName}`}
+      <td
+        className={`lineNumber${extraClassName} lineNumber-${side}`}
         data-line-number={lineNumber}
         data-path={path}
         data-side={side}
-        onClick={clickableLineNumber ? () => openFileToLine(lineNumber) : undefined}
-        {...lineNumberBorderStyle}>
+        onClick={clickableLineNumber ? () => openFileToLine(lineNumber) : undefined}>
         {lineNumber}
-      </Box>
+      </td>
       <td className={className}>{content}</td>
     </>
   );
 }
-
-const extraRightLineNumberCellProps: {
-  borderLeftWidth?: string | undefined;
-  borderLeftStyle?: 'solid' | undefined;
-  borderLeftColor?: string | undefined;
-} = {
-  borderLeftWidth: '1px',
-  borderLeftStyle: 'solid',
-  borderLeftColor: 'border.default',
-};
