@@ -7,13 +7,13 @@
 
 import './SplitDiffHunk.css';
 
-import type {ParsedDiff} from '../patch/parse';
 import type {SplitDiffTableProps} from './SplitDiffHunk';
 import type {Context} from './types';
+import type {ParsedDiff} from 'shared/patch/parse';
 
-import {DiffType} from '../patch/parse';
 import {FileHeader} from './SplitDiffFileHeader';
 import {SplitDiffTable} from './SplitDiffHunk';
+import {DiffType} from 'shared/patch/parse';
 
 export function SplitDiffView<Id>({
   ctx,

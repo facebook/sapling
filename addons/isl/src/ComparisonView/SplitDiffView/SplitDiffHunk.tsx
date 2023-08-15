@@ -10,12 +10,12 @@ import type {Hunk, ParsedDiff} from 'diff';
 import type {ReactNode} from 'react';
 
 import SplitDiffRow from './SplitDiffRow';
-import organizeLinesIntoGroups from './organizeLinesIntoGroups';
 import {UnfoldIcon} from '@primer/octicons-react';
 import {Spinner} from '@primer/react';
 import {diffChars} from 'diff';
 import React, {useCallback, useState} from 'react';
 import {useRecoilValueLoadable} from 'recoil';
+import organizeLinesIntoGroups from 'shared/SplitDiffView/organizeLinesIntoGroups';
 
 const MAX_INPUT_LENGTH_FOR_INTRALINE_DIFF = 300;
 

@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DiffType} from '../patch/parse';
 import type {Context} from './types';
+import type {DiffType} from 'shared/patch/parse';
 
-import {Icon} from '../Icon';
 import {FileSymlinkFileIcon} from '@primer/octicons-react';
 import {IconButton, Tooltip} from '@primer/react';
+import {Icon} from 'shared/Icon';
 
 export function FileHeader<Id>({
   ctx,

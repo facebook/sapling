@@ -17,13 +17,13 @@ import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import platform from '../platform';
 import {latestHeadCommit} from '../serverAPIState';
+import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
 import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
 import {useCallback, useEffect} from 'react';
 import {atomFamily, selectorFamily, useRecoilState, useSetRecoilState} from 'recoil';
 import {comparisonIsAgainstHead, labelForComparison, ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
-import {SplitDiffView} from 'shared/SplitDiffView';
 import {parsePatch} from 'shared/patch/parse';
 
 import './ComparisonView.css';
