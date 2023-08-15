@@ -11,10 +11,10 @@
   $ start_and_wait_for_mononoke_server
 #if http2
   $ sslcurl -X POST -fsS "https://localhost:$MONONOKE_SOCKET/control/drop_bookmarks_cache"
-  curl: (22) The requested URL returned error: 403 
+  curl: (22) The requested URL returned error: 403* (glob)
   [22]
 #else
   $ sslcurl -X POST -fsS "https://localhost:$MONONOKE_SOCKET/control/drop_bookmarks_cache" --http1.1
-  curl: (22) The requested URL returned error: 403 Forbidden
+  curl: (22) The requested URL returned error: 403* (glob)
   [22]
 #endif
