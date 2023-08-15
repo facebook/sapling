@@ -41,6 +41,10 @@ pub struct RepoBlobstoreArgs {
     /// Don't prepend the repo prefix to the key
     #[clap(long)]
     pub no_prefix: bool,
+
+    /// Bypass redaction when opening this blobstore
+    #[clap(long)]
+    pub bypass_redaction: bool,
 }
 
 #[derive(Copy, Clone, Debug, ValueEnum, Eq, PartialEq)]

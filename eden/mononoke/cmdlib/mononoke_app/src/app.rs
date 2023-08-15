@@ -746,7 +746,7 @@ impl MononokeApp {
     ) -> Result<Arc<dyn Blobstore>> {
         let repo_configs = self.repo_configs();
         let storage_configs = self.storage_configs();
-        let (mut repo_id, redaction, mut storage_config) =
+        let (mut repo_id, mut redaction, mut storage_config) =
             if let Some(repo_id) = repo_blobstore_args.repo_id {
                 let repo_id = RepositoryId::new(repo_id);
                 let (_repo_name, repo_config) = repo_configs
@@ -803,6 +803,10 @@ impl MononokeApp {
         } else {
             PrefixBlobstore::new(blobstore, String::new())
         };
+
+        if repo_blobstore_args.bypass_redaction {
+            redaction = Redaction::Disabled;
+        }
 
         let blobstore = if redaction == Redaction::Enabled {
             let redacted_blobs = self
