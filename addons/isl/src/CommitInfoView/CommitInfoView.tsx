@@ -104,7 +104,6 @@ export function CommitInfoSidebar() {
 export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<CommitInfo>}) {
   const provider = useRecoilValue(codeReviewProvider);
   const diffSummaries = useRecoilValue(allDiffSummaries);
-  const runOperation = useRunOperation();
   const shouldSubmitAsDraft = useRecoilValue(submitAsDraft);
   const submittable =
     (diffSummaries.value != null
@@ -134,16 +133,16 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
         <div className="commit-info-actions-bar-right">
           {submittable.length === 0 ? null : (
             <HighlightCommitsWhileHovering toHighlight={submittable}>
-              <VSCodeButton
-                onClick={() => {
-                  runOperation(
-                    unwrap(provider).submitOperation(selectedCommits, {
-                      draft: shouldSubmitAsDraft,
-                    }),
-                  );
+              <OperationDisabledButton
+                contextKey={'submit-selected'}
+                appearance="secondary"
+                runOperation={() => {
+                  return unwrap(provider).submitOperation(selectedCommits, {
+                    draft: shouldSubmitAsDraft,
+                  });
                 }}>
                 <T>Submit Selected Commits</T>
-              </VSCodeButton>
+              </OperationDisabledButton>
             </HighlightCommitsWhileHovering>
           )}
         </div>
