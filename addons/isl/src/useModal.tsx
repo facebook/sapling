@@ -32,7 +32,7 @@ type ModalConfig<T> =
     }
   | {
       type: 'custom';
-      component: React.FC<{returnResultAndDismiss: (data: T) => void}>;
+      component: (props: {returnResultAndDismiss: (data: T) => void}) => React.ReactNode;
       /** Optional codicon to show next to the title */
       icon?: string;
       title: React.ReactNode;
@@ -102,15 +102,12 @@ export function ModalContainer() {
       </>
     );
   } else if (modal.config.type === 'custom') {
-    const Component = modal.config.component;
-    content = (
-      <Component
-        returnResultAndDismiss={data => {
-          modal.deferred.resolve(data);
-          setModal({...modal, visible: false});
-        }}
-      />
-    );
+    content = modal.config.component({
+      returnResultAndDismiss: data => {
+        modal.deferred.resolve(data);
+        setModal({...modal, visible: false});
+      },
+    });
   }
 
   return (
