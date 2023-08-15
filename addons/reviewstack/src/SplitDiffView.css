@@ -35,3 +35,10 @@
   padding-bottom: 0;
   text-align: center;
 }
+
+.file-header-copyable-path {
+  cursor: pointer;
+}
+.file-header-copyable-path:hover > .file-header-path-element {
+  text-decoration: underline;
+}

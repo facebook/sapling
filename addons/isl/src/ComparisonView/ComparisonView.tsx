@@ -6,8 +6,8 @@
  */
 
 import type {Result} from '../types';
+import type {LineRangeParams} from './SplitDiffView/types';
 import type {Comparison} from 'shared/Comparison';
-import type {LineRangeParams} from 'shared/SplitDiffView/types';
 import type {ParsedDiff} from 'shared/patch/parse';
 
 import serverAPI from '../ClientToServerAPI';

@@ -5,18 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Context} from 'shared/SplitDiffView/types';
+import {ChevronDownIcon, ChevronRightIcon} from '@primer/octicons-react';
+import {Box, Text, Tooltip} from '@primer/react';
 
-import {ChevronDownIcon, ChevronUpIcon, FileSymlinkFileIcon} from '@primer/octicons-react';
-import {Box, IconButton, Text, Tooltip} from '@primer/react';
-
-export function FileHeader<Id>({
-  ctx,
+export function FileHeader({
   path,
   open,
   onChangeOpen,
 }: {
-  ctx?: Context<Id>;
   path: string;
   open?: boolean;
   onChangeOpen?: (open: boolean) => void;
@@ -28,9 +24,6 @@ export function FileHeader<Id>({
   const pathSeparator = '/';
   const pathParts = path.split(pathSeparator);
 
-  const t = ctx?.translate ?? (s => s);
-  const copy = ctx?.copy;
-
   const filePathParts = (
     <Text fontFamily="mono" fontSize={12} sx={{flexGrow: 1}}>
       {pathParts.reduce((acc, part, idx) => {
@@ -38,14 +31,16 @@ export function FileHeader<Id>({
         // hover selectors to underline nested sub-paths.
         const pathSoFar = pathParts.slice(idx).join(pathSeparator);
         return (
-          <span className={copy && 'file-header-copyable-path'} key={idx}>
+          <span className="file-header-copyable-path" key={idx}>
             {acc}
             <Tooltip
-              // TODO: better translate API that supports templates.
-              aria-label={copy && t('Copy $path').replace('$path', pathSoFar)}
+              aria-label={`Copy ${pathSoFar}`}
               direction="se"
               className="file-header-path-element">
-              <span onClick={copy && (() => copy(pathSoFar))}>
+              <span
+                onClick={() => {
+                  navigator.clipboard.writeText(pathSoFar);
+                }}>
                 {part}
                 {idx < pathParts.length - 1 ? pathSeparator : ''}
               </span>
@@ -73,25 +68,17 @@ export function FileHeader<Id>({
       borderBottomStyle="solid"
       borderBottomWidth="1px">
       {onChangeOpen && (
-        <Box paddingRight={2} onClick={() => onChangeOpen(!open)} sx={{cursor: 'pointer'}}>
-          {open ? <ChevronUpIcon size={24} /> : <ChevronDownIcon size={24} />}
+        <Box
+          paddingRight={2}
+          onClick={() => onChangeOpen(!open)}
+          sx={{
+            cursor: 'pointer',
+            display: 'flex',
+          }}>
+          {open ? <ChevronDownIcon size={16} /> : <ChevronRightIcon size={16} />}
         </Box>
       )}
       <Box sx={{display: 'flex', flexGrow: 1}}>{filePathParts}</Box>
-      {ctx?.openFile && (
-        <Tooltip aria-label={t('Open file')} direction={'sw'} sx={{display: 'flex'}}>
-          <IconButton
-            size="S"
-            variant="invisible"
-            area-label={t('Open file')}
-            icon={FileSymlinkFileIcon}
-            sx={{color: 'initial', opacity: '0.7'}}
-            onClick={() => {
-              ctx.openFile?.();
-            }}
-          />
-        </Tooltip>
-      )}
     </Box>
   );
 }
