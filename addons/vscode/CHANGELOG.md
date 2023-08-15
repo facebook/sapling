@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.21
+
+- Selection and copying from comparison view stays within the before/after sides
+- Support collapsing files in the comparison view
+- More consistent styling in the comparison view
+- Add succession tracking for smoother previews of goto
+- Propagate unsaved edited commit messages when a commit is amended
+- Improved optimistic state when hiding commits
+- Add "cleanup" button to quickly hide landed commits
+- Fix commit download box missing some inputs
+- Fix tab ordering in commit info view
+
 ## 0.1.20
 
 - Add badge for review decision for GitHub PRs
