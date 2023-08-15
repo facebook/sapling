@@ -123,7 +123,6 @@ from . import (
     backupstate,
     checkoutlocations,
     commands as cccommands,
-    debughiddencommit,
     dependencies,
     status,
     sync,
@@ -131,8 +130,6 @@ from . import (
     util as ccutil,
     workspace,
 )
-
-debughiddencommit.command  # Suppressing "unused import" lint
 
 cmdtable = cccommands.cmdtable
 
