@@ -6,7 +6,8 @@
 import time
 from dataclasses import dataclass
 
-from edenscm import commands, mdiff, registrar
+from edenscm import commands, error, mdiff, registrar
+from edenscm.i18n import _
 from edenscm.simplemerge import Merge3Text, wordmergemode
 
 
@@ -15,6 +16,10 @@ command = registrar.command(cmdtable)
 
 
 class SmartMerge3Text(Merge3Text):
+    """
+    SmergeMerge3Text uses vairable automerge algorithms to resolve conflicts.
+    """
+
     def __init__(self, basetext, atext, btext, wordmerge=wordmergemode.ondemand):
         # a dummy implementation by enabling wordmerge in `Merge3Text`
         Merge3Text.__init__(self, basetext, atext, btext, wordmerge=wordmerge)
@@ -27,6 +32,61 @@ class BenchStats:
     unmatched_files: int = 0
     octopus_merges: int = 0
     criss_cross_merges: int = 0
+
+
+@command(
+    "sresolve",
+    [
+        (
+            "s",
+            "smart",
+            None,
+            _("use the smart merge for resolving conflicts"),
+        ),
+        (
+            "o",
+            "output",
+            "/tmp/sresolve.txt",
+            _("output file path of the resolved text"),
+        ),
+    ],
+    _("[OPTION]... <FILEPATH> <DEST> <SRC> <BASE>"),
+)
+def sresolve(ui, repo, *args, **opts):
+    """
+    sresolve resolves file conficts based on the specified dest, src and base revisions.
+
+    This is for manually verifying the correctness of merge conflict resolution. The input
+    arguments order `<FILEPATH> <DEST> <SRC> <BASE>` matches the output of `smerge_bench`
+    command.
+    """
+    if len(args) != 4:
+        raise error.CommandError("smerge", _("invalid arguments"))
+
+    filepath, dest, src, base = args
+    desttext = repo[dest][filepath].data()
+    srctext = repo[src][filepath].data()
+    basetext = repo[base][filepath].data()
+
+    if opts.get("smart"):
+        m3 = SmartMerge3Text(basetext, desttext, srctext)
+    else:
+        m3 = Merge3Text(basetext, desttext, srctext)
+
+    extrakwargs = {}
+    extrakwargs["base_marker"] = b"|||||||"
+    extrakwargs["name_base"] = b"base"
+    extrakwargs["minimize"] = False
+
+    mergedtext = b"".join(
+        m3.merge_lines(name_a=b"dest", name_b=b"src", **extrakwargs)
+    ).decode("utf8")
+
+    if output := opts.get("output"):
+        with open(output, "wb") as f:
+            f.write(mergedtext.encode("utf8"))
+    else:
+        ui.write(mergedtext)
 
 
 @command("smerge_bench", commands.dryrunopts)
