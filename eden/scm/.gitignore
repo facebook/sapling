@@ -16,6 +16,7 @@
 *.prof
 *.zip
 .cargo/config
+.cargo/config.toml
 .shim/
 tests/.coverage*
 tests/.test*

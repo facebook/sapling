@@ -295,7 +295,7 @@ replace-with = "vendored-sources"
         except OSError as e:
             if e.errno != errno.EEXIST:
                 raise
-        with open(".cargo/config", "w") as f:
+        with open(".cargo/config.toml", "w") as f:
             f.write(config)
 
     def build_target(self, target):
