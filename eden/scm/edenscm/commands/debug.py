@@ -3219,7 +3219,6 @@ def debugvisibleheads(ui, repo, **opts) -> None:
 def debugwalk(ui, repo, *pats, **opts) -> None:
     """show how files match on given patterns"""
     m = scmutil.match(repo[None], pats, opts)
-    ui.write(_x("matcher: %r\n" % m))
     items = list(repo[None].walk(m))
     if not items:
         return

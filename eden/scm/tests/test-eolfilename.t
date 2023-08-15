@@ -40,7 +40,6 @@ Do error out if the naughty file is explicitly referenced:
   [1]
   $ echo foo > "$A"
   $ hg debugwalk
-  matcher: <alwaysmatcher>
   skipping invalid path 'he\rllo'
   skipping invalid path 'hell\no'
 
