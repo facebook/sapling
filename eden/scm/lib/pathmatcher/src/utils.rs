@@ -132,7 +132,7 @@ pub fn expand_curly_brackets(pat: &str) -> Vec<String> {
 
 /// Normalize a less strict glob pattern to a strict glob pattern.
 ///
-/// In a strict glob pattern, `**` can only be a single directory component.
+/// In a strict glob pattern, `**` must be alone as a directory component.
 pub fn normalize_glob(pat: &str) -> String {
     let mut result = String::with_capacity(pat.len());
     let chars: Vec<_> = pat.chars().collect();
@@ -172,7 +172,7 @@ pub fn plain_to_glob(plain: &str) -> String {
     }
     for ch in plain.chars() {
         match ch {
-            '\\' | '*' | '{' | '}' | '[' | ']' => result.push('\\'),
+            '\\' | '*' | '{' | '}' | '[' | ']' | '?' => result.push('\\'),
             _ => {}
         }
         result.push(ch);
@@ -197,8 +197,9 @@ mod tests {
 
     #[test]
     fn test_plain_to_glob() {
-        assert_eq!(plain_to_glob("a[b{c*d\\e}]"), "a\\[b\\{c\\*d\\\\e\\}\\]");
+        assert_eq!(plain_to_glob(r"a[b{c*d\e}]"), r"a\[b\{c\*d\\e\}\]");
         assert_eq!(plain_to_glob(""), "");
-        assert_eq!(plain_to_glob("!a!"), "\\!a!");
+        assert_eq!(plain_to_glob("!a!"), r"\!a!");
+        assert_eq!(plain_to_glob("foo.jpe?g"), r"foo.jpe\?g");
     }
 }
