@@ -15,8 +15,8 @@ import type {
 } from './github/pullRequestTimelineTypes';
 import type {GitObjectID} from './github/types';
 import type {NewCommentInputCallbacks} from './recoil';
-import type {HighlightedToken} from './textmate-lib/tokenize';
 import type {Hunk, ParsedDiff} from 'diff';
+import type {HighlightedToken} from 'shared/textmate-lib/tokenize';
 
 import {FileHeader} from './SplitDiffFileHeader';
 import SplitDiffRow from './SplitDiffRow';
@@ -37,7 +37,6 @@ import {
   gitHubThreadsForDiffFile,
   nullAtom,
 } from './recoil';
-import FilepathClassifier from './textmate-lib/FilepathClassifier';
 import {primerColorMode} from './themeState';
 import {groupBy} from './utils';
 import {UnfoldIcon} from '@primer/octicons-react';
@@ -46,6 +45,7 @@ import {diffChars} from 'diff';
 import React, {useCallback, useEffect, useState} from 'react';
 import {useRecoilValue, useRecoilValueLoadable, waitForAll} from 'recoil';
 import organizeLinesIntoGroups from 'shared/SplitDiffView/organizeLinesIntoGroups';
+import FilepathClassifier from 'shared/textmate-lib/FilepathClassifier';
 import {unwrap} from 'shared/utils';
 
 /**

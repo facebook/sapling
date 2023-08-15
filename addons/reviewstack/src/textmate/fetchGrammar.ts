@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TextMateGrammar} from '../textmate-lib/types';
+import type {TextMateGrammar} from 'shared/textmate-lib/types';
 
 export default async function fetchGrammar(
   moduleName: string,

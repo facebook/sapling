@@ -391,7 +391,7 @@ function createTextMateGrammarManifest(
  * @${'generated'}
  */
 
-import type {Grammar, LanguageConfiguration} from '../../textmate-lib/types';
+import type {Grammar, LanguageConfiguration} from 'shared/textmate-lib/types';
 
 const grammars: {[scopeName: string]: Grammar} = {
   ${grammars.map(createGrammarsEntry).join('')}

@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Grammar} from '../textmate-lib/types';
+import type {Grammar} from 'shared/textmate-lib/types';
 import type {IRawTheme} from 'vscode-textmate';
 
-import GrammarStore from '../textmate-lib/GrammarStore';
-import createTextMateRegistry from '../textmate-lib/createTextMateRegistry';
 import fetchGrammar from './fetchGrammar';
+import GrammarStore from 'shared/textmate-lib/GrammarStore';
+import createTextMateRegistry from 'shared/textmate-lib/createTextMateRegistry';
 import {loadWASM} from 'vscode-oniguruma';
 
 /**

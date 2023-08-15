@@ -9,10 +9,10 @@ import type {BroadcastMessage} from './broadcast';
 import type GitHubClient from './github/GitHubClient';
 import type {Blob, GitObjectID} from './github/types';
 import type {LineToPosition} from './lineToPosition';
-import type GrammarStore from './textmate-lib/GrammarStore';
-import type {HighlightedToken} from './textmate-lib/tokenize';
 import type {SupportedPrimerColorMode} from './themeState';
 import type {ParsedDiff} from 'diff';
+import type GrammarStore from 'shared/textmate-lib/GrammarStore';
+import type {HighlightedToken} from 'shared/textmate-lib/tokenize';
 
 import {AVAILABILITY_METHOD, createDiffServiceBroadcastChannel} from './broadcast';
 import {NUM_LINES_OF_CONTEXT} from './constants';
@@ -21,12 +21,12 @@ import CachingGitHubClient, {openDatabase} from './github/CachingGitHubClient';
 import RejectingGitHubClient from './github/RejectingGitHubClient';
 import {subscribeToLogout} from './github/logoutBroadcastChannel';
 import lineToPosition from './lineToPosition';
-import {tokenizeFileContents} from './textmate-lib/tokenize';
 import VSCodeDarkPlusTheme from './textmate/VSCodeDarkPlusTheme';
 import VSCodeLightPlusTheme from './textmate/VSCodeLightPlusTheme';
 import createGrammarStore from './textmate/createGrammarStore';
 import {structuredPatch} from 'diff';
 import lazyInit from 'shared/lazyInit';
+import {tokenizeFileContents} from 'shared/textmate-lib/tokenize';
 
 /*
  * This file is the entry point for a SharedWorker that provides support for

@@ -8,8 +8,8 @@
 import type {Loadable} from 'recoil';
 
 import {colorMap} from './diffServiceClient';
-import {updateTextMateGrammarCSS} from './textmate-lib/textmateStyles';
 import {atom, noWait, selector} from 'recoil';
+import {updateTextMateGrammarCSS} from 'shared/textmate-lib/textmateStyles';
 
 /**
  * See https://primer.style/react/theming#color-modes-and-color-schemes
