@@ -18,6 +18,7 @@ import type {NewCommentInputCallbacks} from './recoil';
 import type {HighlightedToken} from './textmate-lib/tokenize';
 import type {Hunk, ParsedDiff} from 'diff';
 
+import {FileHeader} from './SplitDiffFileHeader';
 import SplitDiffRow from './SplitDiffRow';
 import {
   applyTokenizationToLine,
@@ -44,7 +45,6 @@ import {Box, Spinner, Text} from '@primer/react';
 import {diffChars} from 'diff';
 import React, {useCallback, useEffect, useState} from 'react';
 import {useRecoilValue, useRecoilValueLoadable, waitForAll} from 'recoil';
-import {FileHeader} from 'shared/SplitDiffView/SplitDiffFileHeader';
 import organizeLinesIntoGroups from 'shared/SplitDiffView/organizeLinesIntoGroups';
 import {unwrap} from 'shared/utils';
 

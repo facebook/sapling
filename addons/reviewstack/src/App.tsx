@@ -15,13 +15,13 @@ import LoginDialog from './LoginDialog';
 import PrimerStyles from './PrimerStyles';
 import PullRequestLayout from './PullRequestLayout';
 import PullsView from './PullsView';
+import SplitDiffViewPrimerStyles from './SplitDiffViewPrimerStyles';
 import UserHomePage from './UserHomePage';
 import {gitHubTokenPersistence} from './github/gitHubCredentials';
 import {primerColorMode} from './themeState';
 import {BaseStyles, Box, Text, useTheme} from '@primer/react';
 import React, {useEffect} from 'react';
 import {useRecoilValue, useRecoilValueLoadable} from 'recoil';
-import SplitDiffViewPrimerStyles from 'shared/SplitDiffView/PrimerStyles';
 
 type Page =
   | {type: 'home'}

@@ -32,7 +32,6 @@ import {
 import {comparisonIsAgainstHead, labelForComparison, ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {SplitDiffView} from 'shared/SplitDiffView';
-import SplitDiffViewPrimerStyles from 'shared/SplitDiffView/PrimerStyles';
 import {parsePatch} from 'shared/patch/parse';
 
 import './ComparisonView.css';
@@ -131,7 +130,6 @@ export default function ComparisonView({comparison}: {comparison: Comparison}) {
   return (
     <div data-testid="comparison-view" className="comparison-view">
       <ThemeProvider colorMode={theme === 'light' ? 'day' : 'night'}>
-        <SplitDiffViewPrimerStyles />
         <BaseStyles className="comparison-view-base-styles">
           <ComparisonViewHeader comparison={comparison} />
           <div className="comparison-view-details">

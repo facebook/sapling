@@ -8,12 +8,12 @@
 import type {CommitChange, Diff, ModifyChange} from './github/diffTypes';
 import type {GitObjectID} from './github/types';
 
+import {FileHeader} from './SplitDiffFileHeader';
 import SplitDiffView from './SplitDiffView';
 import joinPath from './joinPath';
 import {fileContentsDelta, gitHubBlob} from './recoil';
 import {Box, Text} from '@primer/react';
 import {useRecoilValueLoadable} from 'recoil';
-import {FileHeader} from 'shared/SplitDiffView/SplitDiffFileHeader';
 
 export default function DiffView({diff, isPullRequest}: {diff: Diff; isPullRequest: boolean}) {
   if (diff != null) {
