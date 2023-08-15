@@ -1,0 +1,20 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.single-column-selection-table.selected-column-0 td:not([data-column='0']) {
+  user-select: none;
+}
+.single-column-selection-table.selected-column-1 td:not([data-column='1']) {
+  user-select: none;
+}
+.single-column-selection-table.selected-column-2 td:not([data-column='2']) {
+  user-select: none;
+}
+.single-column-selection-table.selected-column-3 td:not([data-column='3']) {
+  user-select: none;
+}
+/* ...you could keep going if you have more columns... */

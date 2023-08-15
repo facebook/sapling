@@ -10,6 +10,7 @@ import type {Hunk, ParsedDiff} from 'diff';
 import type {ReactNode} from 'react';
 
 import SplitDiffRow from './SplitDiffRow';
+import {useTableColumnSelection} from './copyFromSelectedColumn';
 import {diffChars} from 'diff';
 import React, {useCallback, useState} from 'react';
 import {useRecoilValueLoadable} from 'recoil';
@@ -39,6 +40,8 @@ export const SplitDiffTable = React.memo(
       },
       [expandedSeparators, setExpandedSeparators],
     );
+
+    const {className: tableSelectionClassName, ...tableSelectionProps} = useTableColumnSelection();
 
     const t = ctx.translate ?? (s => s);
 
@@ -124,7 +127,9 @@ export const SplitDiffTable = React.memo(
     }
 
     return (
-      <table className="SplitDiffView-hunk-table">
+      <table
+        className={'SplitDiffView-hunk-table ' + (tableSelectionClassName ?? '')}
+        {...tableSelectionProps}>
         <colgroup>
           <col width={50} />
           <col width={'50%'} />

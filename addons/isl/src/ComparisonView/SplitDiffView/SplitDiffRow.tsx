@@ -108,10 +108,13 @@ function SplitDiffRowSide({className, content, lineNumber, path, side, openFileT
         data-line-number={lineNumber}
         data-path={path}
         data-side={side}
+        data-column={side === 'LEFT' ? '0' : '2'}
         onClick={clickableLineNumber ? () => openFileToLine(lineNumber) : undefined}>
         {lineNumber}
       </td>
-      <td className={className}>{content}</td>
+      <td data-column={side === 'LEFT' ? '1' : '3'} className={className}>
+        {content}
+      </td>
     </>
   );
 }
