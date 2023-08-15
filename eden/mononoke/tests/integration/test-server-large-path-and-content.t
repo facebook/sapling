@@ -10,121 +10,67 @@ setup configuration
 
   $ setup_common_config
 
-  $ cd $TESTTMP
-  $ LONG_PATH='this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/blobimport/as/well/as/mononoke/works/correctly/when/given/such/a/long/path/which/I/hope/will/have/enough/characters/for/the/purpose/of/testing/I/need/few/more/to/go/pass/255/chars'
-  $ LONG_FILENAME='this_is_a_very_long_file_name_that_we_want_to_test_in_order_to_ensure_our_blobimport_as_well_as_mononoke_works_correctly_when_given_such_a_long_path_which_I_hope_will_have_enough_characters_for_the_purpose_of_testing_I_need_few_more_to_go_pass_255_chars'
-
-init repo-hg
-
-  $ hginit_treemanifest repo-hg
-
-setup repo2 and repo3
-
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo3
-
-setup repo-hg
-
-  $ cd repo-hg
-  $ mkdir -p ${LONG_PATH}
-  $ dd if=/dev/zero of=${LONG_PATH}/${LONG_FILENAME} bs=150M count=1
-  1+0 records in
-  1+0 records out
-  157286400 bytes (157 MB* (glob)
-  $ hg add ${LONG_PATH}/${LONG_FILENAME}
-  $ hg ci -mlong
-  $ hg log
-  commit:      b8119d283b73
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     long
-   (re)
-
-create master bookmark
-  $ hg bookmark master_bookmark -r tip
-
-blobimport and start mononoke
+create a repo with some long paths and filenames
 
   $ cd $TESTTMP
-  $ blobimport repo-hg/.hg repo
+  $ LONG_PATH='very/long/path/one/two/three/four/five/six/seven/eight/nine/ten/eleven/twelve/thirteen/fourteen/fifteen/sixteen/seventeen/eighteen/nineteen/twenty/@special@/ONE/TWO/THREE/FOUR/FIVE/SIX/SEVEN/EIGHT/NINE/TEN/ELEVEN/TWELVE/THIRTEEN/FOURTEEN/FIFTEEN/SIXTEEN'
+  $ LONG_FILENAME='very_long_filename_to_test_Mononoke_can_handle_both_long_paths_and_file_names_This_path_name_will_have_two_hundred_and_fifty_three_characters_in_order_to_fully_test_the_limits_of_what_Mononoke_can_handle_and_to_ensure_we_dont_introduce_unexpected_limits'
+
+  $ testtool_drawdag -R repo --no-default-files --derive-all <<EOF
+  > A
+  > # bookmark: A master_bookmark
+  > # message: A long
+  > # modify: A "$LONG_PATH/$LONG_FILENAME" "content"
+  > EOF
+  A=7597083f87f7a184567da47f40aca6c27fce394a39f58f94a36caf65715cbb4c
+
   $ start_and_wait_for_mononoke_server
-pull on repo2
 
-  $ cd $TESTTMP/repo2
-  $ hgmn pull --config ui.disable-stream-clone=true
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
-  warning: stream clone is disabled
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  adding remote bookmark master_bookmark
+clone the repo and check that mercurial can access the file
+
+  $ cd $TESTTMP
+  $ hgmn_clone mononoke://$(mononoke_address)/repo repo-hg
+  $ cd repo-hg
   $ hgmn log
-  commit:      b8119d283b73
+  commit:      41c590dc2a01
   bookmark:    master_bookmark
-  user:        test
+  user:        author
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long
-   (re)
-  $ hgmn update -r master_bookmark
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark master_bookmark)
-  $ du ${LONG_PATH}/${LONG_FILENAME}
-  153600	this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/blobimport/as/well/as/mononoke/works/correctly/when/given/such/a/long/path/which/I/hope/will/have/enough/characters/for/the/purpose/of/testing/I/need/few/more/to/go/pass/255/chars/this_is_a_very_long_file_name_that_we_want_to_test_in_order_to_ensure_our_blobimport_as_well_as_mononoke_works_correctly_when_given_such_a_long_path_which_I_hope_will_have_enough_characters_for_the_purpose_of_testing_I_need_few_more_to_go_pass_255_chars
+  
 
-push one more long path from repo2
+  $ du "$LONG_PATH/$LONG_FILENAME"
+  4	very/long/path/one/two/three/four/five/six/seven/eight/nine/ten/eleven/twelve/thirteen/fourteen/fifteen/sixteen/seventeen/eighteen/nineteen/twenty/@special@/ONE/TWO/THREE/FOUR/FIVE/SIX/SEVEN/EIGHT/NINE/TEN/ELEVEN/TWELVE/THIRTEEN/FOURTEEN/FIFTEEN/SIXTEEN/very_long_filename_to_test_Mononoke_can_handle_both_long_paths_and_file_names_This_path_name_will_have_two_hundred_and_fifty_three_characters_in_order_to_fully_test_the_limits_of_what_Mononoke_can_handle_and_to_ensure_we_dont_introduce_unexpected_limits
 
-  $ mkdir -p ${LONG_PATH}2
-  $ dd if=/dev/zero of=${LONG_PATH}2/${LONG_FILENAME}2 bs=151M count=1
+push another long path with a large file
+
+  $ mkdir -p "${LONG_PATH}2"
+  $ dd if=/dev/zero of="${LONG_PATH}2/${LONG_FILENAME}2" bs=10M count=1
   1+0 records in
   1+0 records out
-  158334976 bytes (158 MB* (glob)
-  $ hg add ${LONG_PATH}2/${LONG_FILENAME}2
+  10485760 bytes (10 MB, 10 MiB) copied* (glob)
+  $ hg add "${LONG_PATH}2/${LONG_FILENAME}2"
   $ hg ci -mlong2
   $ hg log
-  commit:      8fffbbe6af55
-  bookmark:    master_bookmark
+  commit:      bddcd6316ae7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long2
-   (re)
-  commit:      b8119d283b73
-  user:        test
+  
+  commit:      41c590dc2a01
+  bookmark:    master_bookmark
+  user:        author
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long
-   (re)
-  $ hgmn push
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  
+  $ hgmn push --to master_bookmark
+  pushing rev bddcd6316ae7 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
 
-pull on repo3
+  $ cd $TESTTMP
+  $ hgmn_clone mononoke://$(mononoke_address)/repo repo-hg2
+  $ cd repo-hg2
+  $ du "${LONG_PATH}2/${LONG_FILENAME}2"
+  10240	very/long/path/one/two/three/four/five/six/seven/eight/nine/ten/eleven/twelve/thirteen/fourteen/fifteen/sixteen/seventeen/eighteen/nineteen/twenty/@special@/ONE/TWO/THREE/FOUR/FIVE/SIX/SEVEN/EIGHT/NINE/TEN/ELEVEN/TWELVE/THIRTEEN/FOURTEEN/FIFTEEN/SIXTEEN2/very_long_filename_to_test_Mononoke_can_handle_both_long_paths_and_file_names_This_path_name_will_have_two_hundred_and_fifty_three_characters_in_order_to_fully_test_the_limits_of_what_Mononoke_can_handle_and_to_ensure_we_dont_introduce_unexpected_limits2
 
-  $ cd $TESTTMP/repo3
-  $ hgmn pull --config ui.disable-stream-clone=true
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
-  warning: stream clone is disabled
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  adding remote bookmark master_bookmark
-  $ hgmn log
-  commit:      8fffbbe6af55
-  bookmark:    master_bookmark
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     long2
-   (re)
-  commit:      b8119d283b73
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     long
-   (re)
-  $ hgmn update -r master_bookmark
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark master_bookmark)
-  $ du ${LONG_PATH}/${LONG_FILENAME}
-  153600	this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/blobimport/as/well/as/mononoke/works/correctly/when/given/such/a/long/path/which/I/hope/will/have/enough/characters/for/the/purpose/of/testing/I/need/few/more/to/go/pass/255/chars/this_is_a_very_long_file_name_that_we_want_to_test_in_order_to_ensure_our_blobimport_as_well_as_mononoke_works_correctly_when_given_such_a_long_path_which_I_hope_will_have_enough_characters_for_the_purpose_of_testing_I_need_few_more_to_go_pass_255_chars
-  $ du ${LONG_PATH}2/${LONG_FILENAME}2
-  154624	this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/blobimport/as/well/as/mononoke/works/correctly/when/given/such/a/long/path/which/I/hope/will/have/enough/characters/for/the/purpose/of/testing/I/need/few/more/to/go/pass/255/chars2/this_is_a_very_long_file_name_that_we_want_to_test_in_order_to_ensure_our_blobimport_as_well_as_mononoke_works_correctly_when_given_such_a_long_path_which_I_hope_will_have_enough_characters_for_the_purpose_of_testing_I_need_few_more_to_go_pass_255_chars2
