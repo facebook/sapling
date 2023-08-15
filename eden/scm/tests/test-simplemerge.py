@@ -389,7 +389,6 @@ import {cached, LRU} from 'shared/LRU';
         )
         m_lines = m3.merge_lines(b"OTHER", b"THIS")
         self.assertEqual(expected.splitlines(True), list(m_lines))
-        self.assertFalse(m3.conflicts)
         self.assertEqual(0, m3.conflictscount)
 
 

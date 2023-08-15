@@ -1050,7 +1050,7 @@ def _simplemerge(ui, basectx, ctx, p1ctx, manifestbuilder):
         if merged != localtext:
             ui.status(_("merging %s\n") % file)
 
-        if m3.conflicts:
+        if m3.conflictscount:
             conflicts.append(file)
         else:
             resolved[file] = merged

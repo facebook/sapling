@@ -142,7 +142,6 @@ class Merge3Text(object):
         minimize=False,
     ):
         """Return merge in cvs-like form."""
-        self.conflicts = False
         self.conflictscount = 0
         newline = b"\n"
         if len(self.a) > 0:
@@ -179,7 +178,7 @@ class Merge3Text(object):
                         yield self.b[i]
                 else:
                     if self.wordmerge is wordmergemode.enforced:
-                        self.conflicts = True
+                        self.conflictscount += 1
                         raise CantShowWordConflicts()
                     elif self.wordmerge is wordmergemode.ondemand:
                         # Try resolve the conflicted region using word merge
@@ -191,7 +190,6 @@ class Merge3Text(object):
                             for line in text.splitlines(True):
                                 yield line
                             continue
-                    self.conflicts = True
                     self.conflictscount += 1
                     if start_marker is not None:
                         yield start_marker + newline
@@ -608,7 +606,7 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
         lines, conflicts = _mergediff(m3, name_a, name_b, name_base)
     else:
         lines = list(m3.merge_lines(name_a=name_a, name_b=name_b, **extrakwargs))
-        conflicts = m3.conflicts
+        conflicts = bool(m3.conflictscount)
     mergedtext = b"".join(lines)
     if opts.get("print"):
         ui.fout.write(mergedtext)
