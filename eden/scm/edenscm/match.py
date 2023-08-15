@@ -120,7 +120,6 @@ def match(
     include=None,
     exclude=None,
     default: str = "glob",
-    exact: bool = False,
     auditor: Optional[pathauditor] = None,
     ctx=None,
     warn=None,
@@ -136,7 +135,6 @@ def match(
     include - patterns to include (unless they are excluded)
     exclude - patterns to exclude (even if they are included)
     default - if a pattern in patterns has no explicit type, assume this one
-    exact - patterns are actually filenames (include/exclude still apply)
     warn - optional function used for printing warnings
     badfn - optional bad() callback for this matcher instead of the default
     icasefs - make a matcher for wdir on case insensitive filesystems, which
@@ -162,10 +160,6 @@ def match(
         auditor = pathutil.pathauditor(root)
     normalize = _donormalize
     if icasefs:
-        if exact:
-            raise error.ProgrammingError(
-                "a case-insensitive exact matcher " "doesn't make sense"
-            )
         dirstate = ctx.repo().dirstate
         dsnormalize = dirstate.normalize
 
@@ -185,9 +179,7 @@ def match(
             return kindpats
 
     m = None
-    if exact:
-        m = exactmatcher(root, cwd, patterns, badfn)
-    elif not patterns:
+    if not patterns:
         m = alwaysmatcher(root, cwd, badfn)
 
     patternskindpats = not m and normalize(patterns, default, root, cwd, auditor, warn)
@@ -196,7 +188,6 @@ def match(
 
     # Try to use Rust dyn matcher if possible. Currently, Rust dyn matcher is
     # missing below features:
-    # * exact matcher
     # * explicit files in Matcher trait
     # * pattern kinds other than 'glob' and 're'
     if _usedynmatcher and not m:
