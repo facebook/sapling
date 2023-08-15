@@ -126,6 +126,13 @@ pub fn symlink_file(src: &Path, dst: &Path) -> io::Result<()> {
     ));
 }
 
+/// Create symlink for a dir.
+pub fn symlink_dir(src: &Path, dst: &Path) -> io::Result<()> {
+    #[cfg(windows)]
+    return std::os::windows::fs::symlink_dir(src, dst);
+    symlink_file(src, dst)
+}
+
 /// Removes the UNC prefix `\\?\` on Windows. Does nothing on unices.
 pub fn strip_unc_prefix(path: &Path) -> &Path {
     path.strip_prefix(r"\\?\").unwrap_or(path)
@@ -215,6 +222,37 @@ pub fn normalize(path: &Path) -> PathBuf {
     }
 
     result
+}
+
+/// Given cwd, return `path` relative to `root`, or None if `path` is not under `root`.
+/// This is analagous to pathutil.canonpath() in Python.
+pub fn root_relative_path(root: &Path, cwd: &Path, path: &Path) -> IOResult<Option<PathBuf>> {
+    // Make `path` absolute. I'm not sure why `root` is included - maybe in case `cwd` is empty?
+    let path = normalize(&root.join(cwd).join(path));
+
+    // Handle easy case when `path` lexically starts w/ `root`.
+    if let Ok(suffix) = path.strip_prefix(root) {
+        return Ok(Some(suffix.to_path_buf()));
+    }
+
+    // Resolve symlinks in `root` so we can do lexical `strip_prefix` below.
+    let root = root.canonicalize().path_context("canonicalizing", root)?;
+
+    // Test parents of `path` looking for symlinks that point under `root`.
+    let mut test = PathBuf::new();
+    let mut path_parts = path.components();
+    while let Some(part) = path_parts.next() {
+        test.push(part);
+        if test.is_symlink() {
+            // TODO: this makes our loop O(n^2)
+            test = test.canonicalize().path_context("canonicalizing", &test)?;
+        }
+        if let Ok(suffix) = test.strip_prefix(&root) {
+            return Ok(Some(suffix.join(path_parts)));
+        }
+    }
+
+    Ok(None)
 }
 
 /// Remove the file pointed by `path`.
@@ -523,6 +561,7 @@ pub fn relativize(base: &Path, path: &Path) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::create_dir_all;
     use std::fs::File;
 
     use anyhow::Result;
@@ -831,5 +870,49 @@ mod tests {
         let cwd = Path::new(".").canonicalize().unwrap();
         let result = relativize(&cwd, &cwd.join("a").join("b"));
         assert_eq!(result, Path::new("a").join("b"));
+    }
+
+    #[test]
+    fn test_root_relative_path() -> Result<()> {
+        let tempdir = TempDir::new()?;
+
+        let parent = tempdir.path().join("parent");
+        let root = parent.join("root");
+        let child = root.join("child");
+        create_dir_all(&child)?;
+
+        assert_eq!(
+            root_relative_path(&root, &root, ".".as_ref())?,
+            Some(PathBuf::from(""))
+        );
+        assert_eq!(
+            root_relative_path(&root, &child, ".".as_ref())?,
+            Some(PathBuf::from("child"))
+        );
+        assert_eq!(
+            root_relative_path(&root, &child, "foo".as_ref())?,
+            Some(["child", "foo"].iter().collect::<PathBuf>()),
+        );
+
+        let symlink_to_root = parent.join("symlink_to_root");
+        symlink_dir(&root, &symlink_to_root)?;
+        assert_eq!(
+            root_relative_path(&root, &root, &symlink_to_root.join("child"))?,
+            Some(PathBuf::from("child")),
+        );
+
+        let symlink_to_child = parent.join("symlink_to_child");
+        symlink_dir(&child, &symlink_to_child)?;
+        assert_eq!(
+            root_relative_path(&root, &root, &symlink_to_child.join("foo"))?,
+            Some(["child", "foo"].iter().collect::<PathBuf>()),
+        );
+
+        assert!(root_relative_path(&root, &parent, "foo".as_ref())?.is_none());
+
+        // Sanity that we don't treat "root" as prefix of "rootbeer".
+        assert!(root_relative_path(&root, &root, &parent.join("rootbeer"))?.is_none());
+
+        Ok(())
     }
 }
