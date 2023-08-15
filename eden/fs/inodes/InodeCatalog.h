@@ -172,6 +172,7 @@ class InodeCatalog {
   virtual InodeNumber scanLocalChanges(
       FOLLY_MAYBE_UNUSED std::shared_ptr<const EdenConfig> config,
       FOLLY_MAYBE_UNUSED AbsolutePathPiece mountPath,
+      FOLLY_MAYBE_UNUSED bool windowsSymlinksEnabled,
       FOLLY_MAYBE_UNUSED LookupCallback& callback) {
     EDEN_BUG() << "UNIMPLEMENTED";
   }

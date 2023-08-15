@@ -208,14 +208,17 @@ void populateDiskState(
     RelativePathPiece path,
     FsckFileState& state,
     const WIN32_FIND_DATAW& findFileData,
+    bool windowsSymlinksEnabled,
     bool fsckRenamedFiles) {
   dtype_t dtype =
       dtypeFromAttrs(findFileData.dwFileAttributes, findFileData.dwReserved0);
   if (dtype != dtype_t::Dir && dtype != dtype_t::Regular) {
     state.onDisk = true;
-    // On Windows, EdenFS consider all special files (symlinks, sockets, etc)
-    // to be regular.
-    state.diskDtype = dtype_t::Regular;
+    // On Windows, EdenFS consider most special files (sockets, etc)
+    // to be regular (but not symlinks)
+    state.diskDtype = windowsSymlinksEnabled && dtype == dtype_t::Symlink
+        ? dtype_t::Symlink
+        : dtype_t::Regular;
     state.populatedOrFullOrTomb = true;
     return;
   }
@@ -457,6 +460,7 @@ std::optional<InodeNumber> fixup(
 PathMap<FsckFileState> populateOnDiskChildrenState(
     AbsolutePathPiece root,
     RelativePathPiece path,
+    bool windowsSymlinksEnabled,
     bool fsckRenamedFiles) {
   PathMap<FsckFileState> children{CaseSensitivity::Insensitive};
   auto absPath = (root + path + "*"_pc).wide();
@@ -487,7 +491,12 @@ PathMap<FsckFileState> populateOnDiskChildrenState(
     PathComponent name{findFileData.cFileName};
     auto& childState = children[name];
     populateDiskState(
-        root, path + name, childState, findFileData, fsckRenamedFiles);
+        root,
+        path + name,
+        childState,
+        findFileData,
+        windowsSymlinksEnabled,
+        fsckRenamedFiles);
   } while (FindNextFileW(h, &findFileData) != 0);
 
   auto error = GetLastError();
@@ -519,6 +528,7 @@ ImmediateFuture<bool> processChildren(
     uint64_t logFrequency,
     std::atomic<uint64_t>& traversedDirectories,
     bool fsckRenamedFiles,
+    bool windowsSymlinksEnabled,
     DirectoryOnDiskState parentOnDiskState) {
   XLOGF(DBG9, "processChildren - {}", path);
 
@@ -530,7 +540,8 @@ ImmediateFuture<bool> processChildren(
     XLOGF(INFO, "{} directories scanned", traversed);
   }
 
-  auto children = populateOnDiskChildrenState(root, path, fsckRenamedFiles);
+  auto children = populateOnDiskChildrenState(
+      root, path, windowsSymlinksEnabled, fsckRenamedFiles);
 
   for (const auto& [name, overlayEntry] : insensitiveOverlayDir) {
     auto& childState = children[name];
@@ -602,6 +613,7 @@ ImmediateFuture<bool> processChildren(
                           logFrequency,
                           &traversedDirectories,
                           childInodeNumber = *childInodeNumberOpt,
+                          windowsSymlinksEnabled = windowsSymlinksEnabled,
                           fsckRenamedFiles](
                              const std::shared_ptr<const Tree>& childScmTree) {
                 auto childOverlayDir =
@@ -619,6 +631,7 @@ ImmediateFuture<bool> processChildren(
                     logFrequency,
                     traversedDirectories,
                     fsckRenamedFiles,
+                    windowsSymlinksEnabled,
                     isFull ? DirectoryOnDiskState::Full
                            : DirectoryOnDiskState::Placeholder);
               })
@@ -672,6 +685,7 @@ void windowsFsckScanLocalChanges(
     std::shared_ptr<const EdenConfig> config,
     InodeCatalog& inodeCatalog,
     AbsolutePathPiece mountPath,
+    bool windowsSymlinksEnabled,
     InodeCatalog::LookupCallback& callback) {
   XLOGF(INFO, "Start scanning {}", mountPath);
   if (auto view = inodeCatalog.loadOverlayDir(kRootNodeId)) {
@@ -694,6 +708,7 @@ void windowsFsckScanLocalChanges(
              &traversedDirectories,
              &callback,
              logFrequency = config->fsckLogFrequency.getValue(),
+             windowsSymlinksEnabled = windowsSymlinksEnabled,
              fsckRenamedFiles = config->prjfsFsckDetectRenames.getValue()](
                 std::variant<std::shared_ptr<const Tree>, TreeEntry> scmEntry) {
               auto scmTree =
@@ -709,6 +724,7 @@ void windowsFsckScanLocalChanges(
                          logFrequency,
                          traversedDirectories,
                          fsckRenamedFiles,
+                         windowsSymlinksEnabled,
                          DirectoryOnDiskState::Placeholder)
                   .semi();
             })

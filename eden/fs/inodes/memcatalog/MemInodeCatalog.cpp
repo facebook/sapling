@@ -187,9 +187,11 @@ std::optional<fsck::InodeInfo> MemInodeCatalog::loadInodeInfo(
 InodeNumber MemInodeCatalog::scanLocalChanges(
     FOLLY_MAYBE_UNUSED std::shared_ptr<const EdenConfig> config,
     FOLLY_MAYBE_UNUSED AbsolutePathPiece mountPath,
+    FOLLY_MAYBE_UNUSED bool windowsSymlinksEnabled,
     FOLLY_MAYBE_UNUSED InodeCatalog::LookupCallback& callback) {
 #ifdef _WIN32
-  windowsFsckScanLocalChanges(config, *this, mountPath, callback);
+  windowsFsckScanLocalChanges(
+      config, *this, mountPath, windowsSymlinksEnabled, callback);
 #endif
   return InodeNumber{nextInode_.load()};
 }

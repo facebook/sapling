@@ -350,7 +350,7 @@ void Overlay::initOverlay(
   if (folly::kIsWindows && mountPath.has_value()) {
     folly::stop_watch<> fsckRuntime;
     optNextInodeNumber = inodeCatalog_->scanLocalChanges(
-        std::move(config), *mountPath, lookupCallback);
+        std::move(config), *mountPath, windowsSymlinksEnabled_, lookupCallback);
     auto fsckRuntimeInSeconds =
         std::chrono::duration<double>{fsckRuntime.elapsed()}.count();
     structuredLogger_->logEvent(Fsck{

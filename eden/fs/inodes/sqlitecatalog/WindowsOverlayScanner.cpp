@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
         std::runtime_error("no lookup callback"));
   };
   inodeCatalog.scanLocalChanges(
-      EdenConfig::createTestEdenConfig(), mountPath, lookup);
+      EdenConfig::createTestEdenConfig(), mountPath, true, lookup);
   XLOG(INFO) << "scanning end";
 
   return 0;

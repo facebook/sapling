@@ -54,6 +54,7 @@ void windowsFsckScanLocalChanges(
     std::shared_ptr<const EdenConfig> config,
     InodeCatalog& overlay,
     AbsolutePathPiece mountPath,
+    bool windowsSymlinksEnabled,
     InodeCatalog::LookupCallback& callback);
 
 } // namespace facebook::eden
