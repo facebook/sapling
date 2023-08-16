@@ -54,6 +54,8 @@ use filenodes_derivation::FilenodesOnlyPublic;
 use filestore::ArcFilestoreConfig;
 use filestore::FilestoreConfig;
 use fsnodes::RootFsnodeId;
+use git_symbolic_refs::ArcGitSymbolicRefs;
+use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
 use git_types::MappedGitCommitId;
 use git_types::TreeHandle;
 use hooks::ArcHookManager;
@@ -266,6 +268,7 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlBonsaiSvnrevMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiTagMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiHgMappingBuilder::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlGitSymbolicRefsBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlPhasesBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlPushrebaseMutationMappingConnection::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlLongRunningRequestsQueue::CREATION_QUERY)?;
@@ -494,6 +497,15 @@ impl TestRepoFactory {
     ) -> Result<ArcBonsaiTagMapping> {
         Ok(Arc::new(
             SqlBonsaiTagMappingBuilder::from_sql_connections(self.metadata_db.clone())
+                .build(repo_identity.id()),
+        ))
+    }
+
+    /// Construct Git Symbolic Refs using the in-memory metadata
+    /// database.
+    pub fn git_symbolic_refs(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcGitSymbolicRefs> {
+        Ok(Arc::new(
+            SqlGitSymbolicRefsBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(repo_identity.id()),
         ))
     }

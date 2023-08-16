@@ -38,6 +38,7 @@ filenodes = { version = "0.1.0", path = "../../filenodes" }
 filenodes_derivation = { version = "0.1.0", path = "../../derived_data/filenodes_derivation" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
+git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 hooks = { version = "0.1.0", path = "../../hooks" }
 hooks_content_stores = { version = "0.1.0", path = "../../hooks/content-stores" }

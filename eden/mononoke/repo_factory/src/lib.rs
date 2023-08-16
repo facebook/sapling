@@ -92,6 +92,8 @@ use filenodes::ArcFilenodes;
 use filestore::ArcFilestoreConfig;
 use filestore::FilestoreConfig;
 use futures_watchdog::WatchdogExt;
+use git_symbolic_refs::ArcGitSymbolicRefs;
+use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
 use hooks::hook_loader::load_hooks;
 use hooks::ArcHookManager;
 use hooks::HookManager;
@@ -620,6 +622,9 @@ pub enum RepoFactoryError {
     #[error("Error opening bonsai-tag mapping")]
     BonsaiTagMapping,
 
+    #[error("Error opening git-symbolic-refs")]
+    GitSymbolicRefs,
+
     #[error("Error opening pushrebase mutation mapping")]
     PushrebaseMutationMapping,
 
@@ -886,6 +891,20 @@ impl RepoFactory {
             .build(repo_identity.id());
         // Caching is not enabled for now, but can be added later if required.
         Ok(Arc::new(bonsai_tag_mapping))
+    }
+
+    pub async fn git_symbolic_refs(
+        &self,
+        repo_config: &ArcRepoConfig,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcGitSymbolicRefs> {
+        let git_symbolic_refs = self
+            .open_sql::<SqlGitSymbolicRefsBuilder>(repo_config)
+            .await
+            .context(RepoFactoryError::GitSymbolicRefs)?
+            .build(repo_identity.id());
+        // Caching is not enabled for now, but can be added later if required.
+        Ok(Arc::new(git_symbolic_refs))
     }
 
     pub async fn pushrebase_mutation_mapping(
