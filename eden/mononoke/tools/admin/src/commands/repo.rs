@@ -6,7 +6,6 @@
  */
 
 mod info;
-mod lock;
 
 use anyhow::Result;
 use bookmarks::Bookmarks;
@@ -15,7 +14,6 @@ use clap::Subcommand;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use repo_identity::RepoIdentity;
-use repo_lock::RepoLock;
 
 /// Operations over a whole repo
 #[derive(Parser)]
@@ -27,6 +25,12 @@ pub struct CommandArgs {
     subcommand: RepoSubcommand,
 }
 
+#[derive(Subcommand)]
+pub enum RepoSubcommand {
+    /// Show information about a repository
+    Info(info::RepoInfoArgs),
+}
+
 #[derive(Clone)]
 #[facet::container]
 pub struct Repo {
@@ -35,21 +39,6 @@ pub struct Repo {
 
     #[facet]
     bookmarks: dyn Bookmarks,
-
-    #[facet]
-    lock: dyn RepoLock,
-}
-
-#[derive(Subcommand)]
-pub enum RepoSubcommand {
-    /// Show information about a repository
-    Info(info::RepoInfoArgs),
-    /// Lock a repository
-    Lock(lock::RepoLockArgs),
-    /// Unlock a repository
-    Unlock(lock::RepoUnlockArgs),
-    /// Show current lock status of a repository
-    ShowLock(lock::RepoShowLockArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -59,9 +48,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     use RepoSubcommand::*;
     match args.subcommand {
         Info(args) => info::repo_info(&ctx, &repo, args).await?,
-        Lock(args) => lock::repo_lock(&app, &repo, args).await?,
-        Unlock(args) => lock::repo_unlock(&app, &repo, args).await?,
-        ShowLock(args) => lock::repo_show_lock(&app, &repo, args).await?,
     }
     Ok(())
 }

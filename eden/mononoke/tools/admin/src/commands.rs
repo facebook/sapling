@@ -17,6 +17,7 @@ mononoke_app::subcommands! {
     mod fetch;
     mod filestore;
     mod hg_sync;
+    mod locking;
     mod mutable_renames;
     mod redaction;
     mod repo;

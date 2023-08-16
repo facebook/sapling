@@ -62,7 +62,6 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 gix-hash = "0.11"
 itertools = "0.10.3"
-live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_api = { version = "0.1.0", path = "../../megarepo_api" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
@@ -82,7 +81,6 @@ preloaded_commit_graph_storage = { version = "0.1.0", path = "../../repo_attribu
 prettytable-rs = "0.10"
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
-question = "0.2.2"
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
 redaction = { version = "0.1.0", path = "../../features/redaction" }
 regex = "1.9.2"
