@@ -18,6 +18,7 @@ use manifest_tree::ReadTreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
+use repolock::RepoLocker;
 use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
@@ -32,6 +33,9 @@ use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges as PendingChangesTrait;
 use crate::metadata;
+use crate::metadata::HgModifiedTime;
+use crate::util::dirstate_write_time_override;
+use crate::util::maybe_flush_treestate;
 use crate::walker::WalkEntry;
 use crate::walker::Walker;
 use crate::workingcopy::WorkingCopy;
@@ -46,6 +50,7 @@ pub struct PhysicalFileSystem {
     store: ArcReadFileContents,
     treestate: Arc<Mutex<TreeState>>,
     include_directories: bool,
+    locker: Arc<RepoLocker>,
 }
 
 impl PhysicalFileSystem {
@@ -55,6 +60,7 @@ impl PhysicalFileSystem {
         store: ArcReadFileContents,
         treestate: Arc<Mutex<TreeState>>,
         include_directories: bool,
+        locker: Arc<RepoLocker>,
     ) -> Result<Self> {
         Ok(PhysicalFileSystem {
             vfs,
@@ -62,6 +68,7 @@ impl PhysicalFileSystem {
             store,
             treestate,
             include_directories,
+            locker,
         })
     }
 }
@@ -104,6 +111,10 @@ impl PendingChangesTrait for PhysicalFileSystem {
             tree_iter: None,
             lookup_iter: None,
             file_change_detector: Some(file_change_detector),
+            update_mtime: Vec::new(),
+            locker: self.locker.clone(),
+            dirstate_write_time: dirstate_write_time_override(config),
+            vfs: self.vfs.clone(),
         };
         Ok(Box::new(pending_changes))
     }
@@ -117,8 +128,12 @@ pub struct PendingChanges<M: Matcher + Clone + Send + Sync + 'static> {
     include_directories: bool,
     seen: HashSet<RepoPathBuf>,
     tree_iter: Option<Box<dyn Iterator<Item = Result<PendingChangeResult>> + Send>>,
-    lookup_iter: Option<Box<dyn Iterator<Item = Result<PendingChangeResult>> + Send>>,
+    lookup_iter: Option<Box<dyn Iterator<Item = Result<ResolvedFileChangeResult>> + Send>>,
     file_change_detector: Option<FileChangeDetector>,
+    update_mtime: Vec<(RepoPathBuf, HgModifiedTime)>,
+    locker: Arc<RepoLocker>,
+    dirstate_write_time: Option<i64>,
+    vfs: VFS,
 }
 
 #[derive(PartialEq)]
@@ -262,23 +277,27 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
     }
 
     fn next_lookup(&mut self) -> Option<Result<PendingChangeResult>> {
-        self.lookup_iter
-            .get_or_insert_with(|| {
-                let iter = self
-                    .file_change_detector
-                    .take()
-                    .unwrap()
-                    .into_iter()
-                    .filter_map(|result| match result {
-                        Ok(ResolvedFileChangeResult::Yes(change_type)) => {
-                            Some(Ok(PendingChangeResult::File(change_type)))
-                        }
-                        Ok(ResolvedFileChangeResult::No(_)) => None,
-                        Err(e) => Some(Err(e)),
-                    });
-                Box::new(iter)
-            })
-            .next()
+        loop {
+            let next = self
+                .lookup_iter
+                .get_or_insert_with(|| {
+                    Box::new(self.file_change_detector.take().unwrap().into_iter())
+                })
+                .next()?;
+
+            match next {
+                Ok(ResolvedFileChangeResult::Yes(change_type)) => {
+                    return Some(Ok(PendingChangeResult::File(change_type)));
+                }
+                Ok(ResolvedFileChangeResult::No((path, fs_meta))) => {
+                    if let Some(mtime) = fs_meta.and_then(|m| m.mtime()) {
+                        self.update_mtime.push((path, mtime));
+                    }
+                    continue;
+                }
+                Err(e) => return Some(Err(e)),
+            }
+        }
     }
 }
 
@@ -301,8 +320,44 @@ impl<M: Matcher + Clone + Send + Sync + 'static> Iterator for PendingChanges<M> 
 
             self.stage = self.stage.next();
             if self.stage == PendingChangesStage::Finished {
+                if let Err(err) = self.update_treestate_mtimes() {
+                    return Some(Err(err));
+                }
+
                 return None;
             }
         }
+    }
+}
+
+impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
+    fn update_treestate_mtimes(&mut self) -> Result<()> {
+        let mut ts = self.treestate.lock();
+        let was_dirty = ts.dirty();
+
+        for (path, mtime) in self.update_mtime.drain(..) {
+            if let Some(state) = ts.get(&path)? {
+                if let Ok(mtime) = mtime.try_into() {
+                    let mut state = state.clone();
+                    state.mtime = mtime;
+                    ts.insert(&path, &state)?;
+                }
+            }
+        }
+
+        // Don't flush treestate if it was already dirty. If we are inside a
+        // Python transaction with uncommitted, substantial dirstate changes,
+        // those changes should not be written out until the transaction
+        // finishes.
+        if !was_dirty {
+            maybe_flush_treestate(
+                self.vfs.root(),
+                &mut ts,
+                &self.locker,
+                self.dirstate_write_time.clone(),
+            )?;
+        }
+
+        Ok(())
     }
 }

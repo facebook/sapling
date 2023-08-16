@@ -46,10 +46,11 @@ use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges;
 use crate::metadata;
 use crate::metadata::Metadata;
+use crate::util::dirstate_write_time_override;
+use crate::util::maybe_flush_treestate;
 use crate::util::walk_treestate;
 use crate::watchmanfs::treestate::get_clock;
 use crate::watchmanfs::treestate::list_needs_check;
-use crate::watchmanfs::treestate::maybe_flush_treestate;
 use crate::workingcopy::WorkingCopy;
 
 type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
@@ -391,7 +392,12 @@ impl PendingChanges for WatchmanFileSystem {
         if treestate_started_dirty {
             tracing::debug!("treestate was dirty - skipping flush");
         } else {
-            maybe_flush_treestate(config, self.vfs.root(), ts, &self.locker)?;
+            maybe_flush_treestate(
+                self.vfs.root(),
+                ts,
+                &self.locker,
+                dirstate_write_time_override(config),
+            )?;
         }
 
         Ok(Box::new(pending_changes.into_iter()))

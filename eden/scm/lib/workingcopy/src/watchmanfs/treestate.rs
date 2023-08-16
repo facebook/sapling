@@ -6,18 +6,13 @@
  */
 
 use std::collections::BTreeMap;
-use std::path::Path;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use configmodel::Config;
 use pathmatcher::DynMatcher;
-use repolock::RepoLocker;
-use treestate::dirstate;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
-use treestate::ErrorKind;
 use types::path::ParseError;
 use types::RepoPathBuf;
 use watchman_client::prelude::*;
@@ -109,34 +104,6 @@ pub(crate) fn set_clock(ts: &mut TreeState, clock: Clock) -> Result<()> {
     ts.update_metadata(&[("clock".to_string(), Some(clock_string))])?;
 
     Ok(())
-}
-
-#[tracing::instrument(skip_all)]
-pub(crate) fn maybe_flush_treestate(
-    config: &dyn Config,
-    root: &Path,
-    ts: &mut TreeState,
-    locker: &RepoLocker,
-) -> Result<()> {
-    // Respect test fakedirstatewritetime extension.
-    let time_override = if matches!(config.get("extensions", "fakedirstatewritetime"), Some(v) if v != "!")
-    {
-        config
-            .get("fakedirstatewritetime", "fakenow")
-            .map(|time| hgtime::HgTime::parse(time.as_ref()).unwrap().unixtime)
-    } else {
-        None
-    };
-
-    match dirstate::flush(root, ts, locker, time_override) {
-        Ok(()) => Ok(()),
-        // If the dirstate was changed before we flushed, that's ok. Let the other write win
-        // since writes during status are just optimizations.
-        Err(e) => match e.downcast_ref::<ErrorKind>() {
-            Some(e) if *e == ErrorKind::TreestateOutOfDate => Ok(()),
-            _ => Err(e),
-        },
-    }
 }
 
 #[tracing::instrument(skip_all)]

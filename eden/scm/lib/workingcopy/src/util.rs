@@ -5,13 +5,19 @@
  * GNU General Public License version 2.
  */
 
+use std::path::Path;
+
 use anyhow::Result;
+use configmodel::Config;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
+use repolock::RepoLocker;
+use treestate::dirstate;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
+use treestate::ErrorKind;
 use types::path::ParseError;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -68,4 +74,33 @@ pub fn walk_treestate(
     )?;
 
     Ok(path_errors)
+}
+
+pub(crate) fn dirstate_write_time_override(config: &dyn Config) -> Option<i64> {
+    // Respect test fakedirstatewritetime extension.
+    if matches!(config.get("extensions", "fakedirstatewritetime"), Some(v) if v != "!") {
+        config
+            .get("fakedirstatewritetime", "fakenow")
+            .map(|time| hgtime::HgTime::parse(time.as_ref()).unwrap().unixtime)
+    } else {
+        None
+    }
+}
+
+#[tracing::instrument(skip_all)]
+pub(crate) fn maybe_flush_treestate(
+    root: &Path,
+    ts: &mut TreeState,
+    locker: &RepoLocker,
+    time_override: Option<i64>,
+) -> Result<()> {
+    match dirstate::flush(root, ts, locker, time_override) {
+        Ok(()) => Ok(()),
+        // If the dirstate was changed before we flushed, that's ok. Let the other write win
+        // since writes during status are just optimizations.
+        Err(e) => match e.downcast_ref::<ErrorKind>() {
+            Some(e) if *e == ErrorKind::TreestateOutOfDate => Ok(()),
+            _ => Err(e),
+        },
+    }
 }
