@@ -32,8 +32,8 @@ pub enum RevsetLookupError {
     #[error("error reading from treestate: `{0}`")]
     TreeStateError(anyhow::Error),
 
-    #[error("unable to decode '{0}' from '{1}': {2}")]
-    BookmarkDecodeError(String, String, std::io::Error),
+    #[error("error decoding metalog '{0}': {1}")]
+    BookmarkDecodeError(String, std::io::Error),
 
     #[error("error parsing commit hex hash {0}: `{1}`")]
     CommitHexParseError(String, CommitHexParseError),

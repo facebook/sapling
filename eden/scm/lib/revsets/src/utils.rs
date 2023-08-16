@@ -8,6 +8,7 @@
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
+use configmodel::Config;
 use dag::ops::IdConvert;
 use metalog::MetaLog;
 use refencode::decode_bookmarks;
@@ -22,15 +23,18 @@ struct LookupArgs<'a> {
     id_map: &'a dyn IdConvert,
     metalog: &'a MetaLog,
     treestate: Option<&'a TreeState>,
+    config: &'a dyn Config,
 }
 
 pub fn resolve_single(
+    config: &dyn Config,
     change_id: &str,
     id_map: &dyn IdConvert,
     metalog: &MetaLog,
     treestate: Option<&TreeState>,
 ) -> Result<HgId, RevsetLookupError> {
     let args = LookupArgs {
+        config,
         change_id,
         id_map,
         metalog,
@@ -131,36 +135,37 @@ fn resolve_hash_prefix(args: &LookupArgs) -> Result<Option<HgId>, RevsetLookupEr
 }
 
 fn resolve_bookmark(args: &LookupArgs) -> Result<Option<HgId>, RevsetLookupError> {
-    if let Some(hash) =
-        resolve_metalog_bookmark(args.change_id, args.metalog, "bookmarks", decode_bookmarks)?
-    {
+    let mut local_bookmarks = metalog_bookmarks(args.metalog, "bookmarks", decode_bookmarks)?;
+    if let Some(hash) = local_bookmarks.remove(args.change_id) {
         return Ok(Some(hash));
     }
-    if let Some(hash) = resolve_metalog_bookmark(
-        args.change_id,
-        args.metalog,
-        "remotenames",
-        decode_remotenames,
-    )? {
+
+    let mut remote_bookmarks = metalog_bookmarks(args.metalog, "remotenames", decode_remotenames)?;
+    if let Some(hash) = remote_bookmarks.remove(args.change_id) {
         return Ok(Some(hash));
     }
+
+    if let Some(hoist) = args.config.get("remotenames", "hoist") {
+        if let Some(hash) = remote_bookmarks.remove(&format!("{}/{}", hoist, args.change_id)) {
+            return Ok(Some(hash));
+        }
+    }
+
     Ok(None)
 }
 
-fn resolve_metalog_bookmark(
-    change_id: &str,
+fn metalog_bookmarks(
     metalog: &MetaLog,
     bookmark_type: &str,
     decoder: fn(&[u8]) -> std::io::Result<BTreeMap<String, HgId>>,
-) -> Result<Option<HgId>, RevsetLookupError> {
+) -> Result<BTreeMap<String, HgId>, RevsetLookupError> {
     let raw_bookmarks = match metalog.get(bookmark_type)? {
         None => {
-            return Ok(None);
+            return Ok(Default::default());
         }
         Some(raw_bookmarks) => raw_bookmarks.into_vec(),
     };
-    let mut bookmark_map = decoder(raw_bookmarks.as_slice()).map_err(|err| {
-        RevsetLookupError::BookmarkDecodeError(change_id.to_owned(), bookmark_type.to_owned(), err)
-    })?;
-    Ok(bookmark_map.remove(change_id))
+
+    Ok(decoder(raw_bookmarks.as_slice())
+        .map_err(|err| RevsetLookupError::BookmarkDecodeError(bookmark_type.to_owned(), err))?)
 }

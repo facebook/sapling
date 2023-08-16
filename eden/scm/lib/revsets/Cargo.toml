@@ -9,6 +9,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.71"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
+configmodel = { version = "0.1.0", path = "../config/model" }
 dag = { version = "0.1.0", path = "../dag" }
 metalog = { version = "0.1.0", path = "../metalog" }
 refencode = { version = "0.1.0", path = "../refencode" }

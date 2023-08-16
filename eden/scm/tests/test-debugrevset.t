@@ -6,7 +6,7 @@
 Setup repo:
   $ newclientrepo repo1
   $ drawdag << 'EOS'
-  > G
+  > G # bookmark master = G
   > |
   > F
   > |
@@ -46,6 +46,10 @@ Test bookmark lookup
   $ hg book -r 'desc(C)' mybookmark
   $ hg debugrevset mybookmark
   26805aba1e600a82e93661149f2313866a221a7b
+
+Test remote bookmark lookup
+  $ hg debugrevset master
+  43195508e3bb704c08d24c40375bdd826789dd72
 
 Test dot revset lookup
   $ hg debugrevset .
