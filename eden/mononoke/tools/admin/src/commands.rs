@@ -20,7 +20,7 @@ mononoke_app::subcommands! {
     mod locking;
     mod mutable_renames;
     mod redaction;
-    mod repo;
+    mod repo_info;
     mod repos;
     mod ephemeral_store;
     mod dump_changesets;

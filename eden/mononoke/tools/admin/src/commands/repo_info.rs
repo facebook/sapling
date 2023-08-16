@@ -8,17 +8,39 @@
 use anyhow::Context;
 use anyhow::Result;
 use bookmarks::BookmarkKey;
+use bookmarks::Bookmarks;
 use bookmarks::BookmarksRef;
-use clap::Args;
-use context::CoreContext;
+use clap::Parser;
+use mononoke_app::args::RepoArgs;
+use mononoke_app::MononokeApp;
+use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 
-use super::Repo;
+/// Show information about a repository
+#[derive(Parser)]
+pub struct CommandArgs {
+    #[clap(flatten)]
+    repo: RepoArgs,
+}
 
-#[derive(Args)]
-pub struct RepoInfoArgs {}
+#[derive(Clone)]
+#[facet::container]
+pub struct Repo {
+    #[facet]
+    repo_identity: RepoIdentity,
 
-pub async fn repo_info(ctx: &CoreContext, repo: &Repo, _args: RepoInfoArgs) -> Result<()> {
+    #[facet]
+    bookmarks: dyn Bookmarks,
+}
+
+pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
+    let ctx = app.new_basic_context();
+
+    let repo: Repo = app
+        .open_repo(&args.repo)
+        .await
+        .context("Failed to open repo")?;
+
     println!("Repo: {}", repo.repo_identity().name());
     println!("Repo-Id: {}", repo.repo_identity().id());
     let main_bookmark = BookmarkKey::new("master")?;
