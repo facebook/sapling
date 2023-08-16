@@ -417,19 +417,20 @@ where
         visitor: &mut F,
         visit_dir: &VD,
         visit_file: &VF,
-    ) -> Result<VisitorResult>
+    ) -> Result<(VisitorResult, u64)>
     where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<VisitorResult>,
         VD: Fn(&Vec<KeyRef>, &Node<T>) -> bool,
         VF: Fn(&Vec<KeyRef>, &T) -> bool,
     {
+        let mut result = VisitorResult::NotChanged;
+        let mut change_count = 0;
+
         // visit_dir wants aggregated_state to be populated to do quick filtering.
         self.load_aggregated_state(store)?;
         if !visit_dir(path.as_ref(), self) {
-            return Ok(VisitorResult::NotChanged);
+            return Ok((result, change_count));
         }
-
-        let mut result = VisitorResult::NotChanged;
 
         let entries: &mut NodeEntryMap<T> = {
             self.load_entries(store)?;
@@ -438,20 +439,21 @@ where
 
         for (name, entry) in entries.iter_mut() {
             let mut path = path.push(name);
-            let sub_result = match entry {
+            let (sub_result, count) = match entry {
                 &mut NodeEntry::Directory(ref mut node) => {
                     node.visit(store, &mut path, visitor, visit_dir, visit_file)?
                 }
                 &mut NodeEntry::File(ref mut file) => {
                     if visit_file(path.as_ref(), file) {
-                        visitor(path.as_ref(), file)?
+                        (visitor(path.as_ref(), file)?, 1)
                     } else {
-                        VisitorResult::NotChanged
+                        (VisitorResult::NotChanged, 0)
                     }
                 }
             };
             if sub_result == VisitorResult::Changed {
                 result = VisitorResult::Changed;
+                change_count += count;
             }
         }
 
@@ -459,7 +461,7 @@ where
             self.id = None;
             self.aggregated_state.set(None);
         }
-        Ok(result)
+        Ok((result, change_count))
     }
 
     /// Get the first file in the subtree under this node.  If the subtree is not empty, returns a
@@ -947,7 +949,7 @@ where
         visitor: &mut F,
         visit_dir: &VD,
         visit_file: &VF,
-    ) -> Result<()>
+    ) -> Result<u64>
     where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<VisitorResult>,
         VD: Fn(&Vec<KeyRef>, &Node<T>) -> bool,
@@ -955,16 +957,21 @@ where
     {
         let mut path = Vec::new();
         let mut path = VecStack::new(&mut path);
-        self.root
-            .visit(store, &mut path, visitor, visit_dir, visit_file)?;
-        Ok(())
+        match self
+            .root
+            .visit(store, &mut path, visitor, visit_dir, visit_file)?
+        {
+            (VisitorResult::Changed, changed) => Ok(changed),
+            _ => Ok(0),
+        }
     }
 
     pub fn visit<F>(&mut self, store: &dyn StoreView, visitor: &mut F) -> Result<()>
     where
         F: FnMut(&Vec<KeyRef>, &mut T) -> Result<VisitorResult>,
     {
-        self.visit_advanced(store, visitor, &|_, _| true, &|_, _| true)
+        self.visit_advanced(store, visitor, &|_, _| true, &|_, _| true)?;
+        Ok(())
     }
 
     pub fn visit_changed<F>(&mut self, store: &dyn StoreView, visitor: &mut F) -> Result<()>
@@ -976,7 +983,8 @@ where
             visitor,
             &|_, dir: &Node<T>| dir.is_changed(),
             &|_, _| true,
-        )
+        )?;
+        Ok(())
     }
 
     pub fn get_first<'a>(&'a mut self, store: &dyn StoreView) -> Result<Option<(Key, &'a T)>> {

@@ -53,6 +53,7 @@ pub struct TreeState {
     // TODO: Remove once EdenFS has migrated to treestate.
     eden_dirstate_path: Option<PathBuf>,
     case_sensitive: bool,
+    pending_change_count: u64,
 }
 
 impl fmt::Debug for TreeState {
@@ -82,6 +83,7 @@ impl TreeState {
             original_root_id: root_id,
             eden_dirstate_path: None,
             case_sensitive,
+            pending_change_count: 0,
         })
     }
 
@@ -102,6 +104,7 @@ impl TreeState {
             original_root_id: BlockId(0),
             eden_dirstate_path: None,
             case_sensitive,
+            pending_change_count: 0,
         };
         tracing::trace!(target: "treestate::create", "flushing treestate");
         let root_id = treestate.flush()?;
@@ -133,6 +136,7 @@ impl TreeState {
             original_root_id: BlockId(0),
             eden_dirstate_path: Some(path),
             case_sensitive,
+            pending_change_count: 0,
         };
 
         treestate.set_metadata(metadata)?;
@@ -165,6 +169,11 @@ impl TreeState {
 
     pub fn dirty(&self) -> bool {
         self.tree.dirty() || self.root.dirty()
+    }
+
+    /// Return approximate number of pending insertions, removals and mutations.
+    pub fn pending_change_count(&self) -> u64 {
+        self.pending_change_count
     }
 
     /// Flush dirty entries. Return new `root_id` that can be passed to `open`.
@@ -204,6 +213,7 @@ impl TreeState {
         }
 
         self.original_root_id = result;
+        self.pending_change_count = 0;
         Ok(result)
     }
 
@@ -223,11 +233,19 @@ impl TreeState {
 
     /// Create or replace the existing entry.
     pub fn insert<K: AsRef<[u8]>>(&mut self, path: K, state: &FileStateV2) -> Result<()> {
-        self.tree.add(&self.store, path.as_ref(), state)
+        let res = self.tree.add(&self.store, path.as_ref(), state);
+        if res.is_ok() {
+            self.pending_change_count += 1;
+        }
+        res
     }
 
     pub fn remove<K: AsRef<[u8]>>(&mut self, path: K) -> Result<bool> {
-        self.tree.remove(&self.store, path.as_ref())
+        let res = self.tree.remove(&self.store, path.as_ref());
+        if res.is_ok() {
+            self.pending_change_count += 1;
+        }
+        res
     }
 
     pub fn get<K: AsRef<[u8]>>(&mut self, path: K) -> Result<Option<&FileStateV2>> {
@@ -380,8 +398,10 @@ impl TreeState {
         VD: Fn(&Vec<KeyRef>, &Node<FileStateV2>) -> bool,
         VF: Fn(&Vec<KeyRef>, &FileStateV2) -> bool,
     {
-        self.tree
-            .visit_advanced(&self.store, visitor, visit_dir, visit_file)
+        self.pending_change_count +=
+            self.tree
+                .visit_advanced(&self.store, visitor, visit_dir, visit_file)?;
+        Ok(())
     }
 
     pub fn get_filtered_key<F>(
@@ -884,5 +904,34 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_pending_change_count() -> Result<()> {
+        let dir = tempdir()?;
+
+        let mut ts = TreeState::new(dir.path(), true)?.0;
+        assert_eq!(ts.pending_change_count(), 0);
+
+        let mut rng = ChaChaRng::from_seed([0; 32]);
+        ts.insert("foo", &rng.gen())?;
+        ts.insert("bar", &rng.gen())?;
+        ts.insert("baz", &rng.gen())?;
+        assert_eq!(ts.pending_change_count(), 3);
+
+        ts.remove("foo")?;
+        assert_eq!(ts.pending_change_count(), 4);
+
+        ts.visit(
+            &mut |_, _| Ok(VisitorResult::Changed),
+            &|_, _| true,
+            &|_, _| true,
+        )?;
+        assert_eq!(ts.pending_change_count(), 6);
+
+        ts.flush()?;
+        assert_eq!(ts.pending_change_count(), 0);
+
+        Ok(())
     }
 }
