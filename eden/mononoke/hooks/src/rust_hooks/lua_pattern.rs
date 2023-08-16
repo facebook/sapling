@@ -163,6 +163,13 @@ impl LuaPattern {
 impl TryFrom<&str> for LuaPattern {
     type Error = Error;
     fn try_from(other: &str) -> Result<Self, Error> {
+        if let Some(other) = other.strip_prefix("re:") {
+            let regex = Regex::new(other)?;
+            return Ok(Self {
+                original: other.to_string(),
+                regex,
+            });
+        }
         let regex = Regex::new(&pattern_to_regex(other))?;
         Ok(Self {
             original: other.to_string(),
@@ -174,6 +181,13 @@ impl TryFrom<&str> for LuaPattern {
 impl TryFrom<String> for LuaPattern {
     type Error = Error;
     fn try_from(other: String) -> Result<Self, Error> {
+        if let Some(other) = other.strip_prefix("re:") {
+            let regex = Regex::new(other)?;
+            return Ok(Self {
+                original: other.to_string(),
+                regex,
+            });
+        }
         let regex = Regex::new(&pattern_to_regex(&other))?;
         Ok(Self {
             original: other,
@@ -228,6 +242,21 @@ mod tests {
         assert!(!pattern.is_match("./git/foo"));
 
         let pattern: LuaPattern = "^buck%-out/"
+            .try_into()
+            .expect("Could not map pattern to regex");
+        assert!(pattern.is_match("buck-out/file"));
+        assert!(!pattern.is_match("/buck-out/file"));
+    }
+
+    #[test]
+    fn test_re_matching() {
+        let pattern: LuaPattern = "re:^[.]git/"
+            .try_into()
+            .expect("Could not map pattern to regex");
+        assert!(pattern.is_match(".git/foo"));
+        assert!(!pattern.is_match("./git/foo"));
+
+        let pattern: LuaPattern = "re:^buck-out/"
             .try_into()
             .expect("Could not map pattern to regex");
         assert!(pattern.is_match("buck-out/file"));
