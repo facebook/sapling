@@ -24,6 +24,7 @@ use context::CoreContext;
 use ephemeral_blobstore::Bubble;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
+use git_symbolic_refs::GitSymbolicRefs;
 use mercurial_mutation::HgMutationStore;
 use mononoke_types::BonsaiChangeset;
 use mutable_counters::MutableCounters;
@@ -68,6 +69,9 @@ pub struct BlobRepoInner {
 
     #[facet]
     pub bonsai_tag_mapping: dyn BonsaiTagMapping,
+
+    #[facet]
+    pub git_symbolic_refs: dyn GitSymbolicRefs,
 
     #[facet]
     pub bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
@@ -132,6 +136,7 @@ pub struct BlobRepo {
         dyn Phases,
         FilestoreConfig,
         dyn Filenodes,
+        dyn GitSymbolicRefs,
         dyn HgMutationStore,
         RepoDerivedData,
         dyn MutableCounters,

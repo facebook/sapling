@@ -27,6 +27,7 @@ use futures::Stream;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
+use git_symbolic_refs::GitSymbolicRefsEntry;
 use gix_hash::ObjectId;
 use gix_object::Object;
 use linked_hash_map::LinkedHashMap;
@@ -61,6 +62,10 @@ pub use crate::gitlfs::LfsMetaData;
 pub const HGGIT_MARKER_EXTRA: &str = "hg-git-rename-source";
 pub const HGGIT_MARKER_VALUE: &[u8] = b"git";
 pub const HGGIT_COMMIT_ID_EXTRA: &str = "convert_revision";
+pub const BRANCH_REF: &str = "branch";
+pub const TAG_REF: &str = "tag";
+pub const BRANCH_REF_PREFIX: &str = "refs/heads/";
+pub const TAG_REF_PREFIX: &str = "refs/tags/";
 
 // TODO: Try to produce copy-info?
 async fn find_file_changes<S, U>(
@@ -394,6 +399,52 @@ impl GitRef {
             maybe_tag_id: None,
         }
     }
+}
+
+/// Read symbolic references from git
+pub async fn read_symref(
+    symref_name: &str,
+    path: &Path,
+    prefs: &GitimportPreferences,
+) -> Result<GitSymbolicRefsEntry, Error> {
+    let mut command = Command::new(&prefs.git_command_path)
+        .current_dir(path)
+        .env_clear()
+        .kill_on_drop(false)
+        .stdout(Stdio::piped())
+        .arg(format!("symbolic-ref {}", symref_name))
+        .spawn()
+        .with_context(|| format!("failed to run git with {:?}", prefs.git_command_path))?;
+    let mut stdout = BufReader::new(command.stdout.take().context("stdout not set up")?);
+    let mut ref_mapping = String::new();
+    stdout.read_line(&mut ref_mapping).await.with_context(|| {
+        format!(
+            "failed to get output of git symbolic-ref for ref {} at path {}",
+            symref_name,
+            path.display()
+        )
+    })?;
+    let ref_mapping = ref_mapping.trim();
+    let symref_entry = match ref_mapping.strip_prefix(BRANCH_REF_PREFIX) {
+        Some(branch_name) => GitSymbolicRefsEntry::new(
+            symref_name.to_string(),
+            branch_name.to_string(),
+            BRANCH_REF.to_string(),
+        )?,
+        None => match ref_mapping.strip_prefix(TAG_REF_PREFIX) {
+            Some(tag_name) => GitSymbolicRefsEntry::new(
+                symref_name.to_string(),
+                tag_name.to_string(),
+                TAG_REF.to_string(),
+            )?,
+            None => anyhow::bail!(
+                "Unexpected ref format {} for symref {}",
+                ref_mapping,
+                symref_name
+            ),
+        },
+    };
+    Ok(symref_entry)
 }
 
 pub async fn read_git_refs(

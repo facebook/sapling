@@ -53,6 +53,8 @@ use slog::info;
 
 use crate::mem_writes_changesets::MemWritesChangesets;
 
+pub const HEAD_SYMREF: &str = "head";
+
 // Refactor this a bit. Use a thread pool for git operations. Pass that wherever we use store repo.
 // Transform the walk into a stream of commit + file changes.
 
@@ -112,6 +114,9 @@ struct GitimportArgs {
     /// Use at your own risk!
     #[clap(long)]
     generate_bookmarks: bool,
+    /// If set, will record the HEAD symref in Mononoke for the given repo
+    #[clap(long)]
+    record_head_symref: bool,
     /// When set, the gitimport tool would bypass the read-only check while creating and moving bookmarks.
     #[clap(long)]
     bypass_readonly: bool,
@@ -239,7 +244,16 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             .await
             .context("derive_hg failed")?;
     }
-
+    if args.record_head_symref {
+        let symref_entry = import_tools::read_symref(HEAD_SYMREF, path, &prefs)
+            .await
+            .context("read_symrefs failed")?;
+        repo.inner()
+            .git_symbolic_refs
+            .add_or_update_entries(vec![symref_entry])
+            .await
+            .context("failed to add symbolic ref entries")?;
+    }
     if !args.suppress_ref_mapping || args.generate_bookmarks {
         let refs = import_tools::read_git_refs(path, &prefs)
             .await
