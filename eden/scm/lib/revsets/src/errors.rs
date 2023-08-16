@@ -23,15 +23,6 @@ pub enum RevsetLookupError {
     #[error("ambiguous identifier for '{0}': {1} available")]
     AmbiguousIdentifier(String, String),
 
-    #[error(transparent)]
-    DagError(#[from] dag::Error),
-
-    #[error(transparent)]
-    MetalogError(#[from] metalog::Error),
-
-    #[error("error reading from treestate: `{0}`")]
-    TreeStateError(anyhow::Error),
-
     #[error("error decoding metalog '{0}': {1}")]
     BookmarkDecodeError(String, std::io::Error),
 

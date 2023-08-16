@@ -8,6 +8,7 @@
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
+use anyhow::Result;
 use configmodel::Config;
 use dag::ops::IdConvert;
 use metalog::MetaLog;
@@ -32,7 +33,7 @@ pub fn resolve_single(
     id_map: &dyn IdConvert,
     metalog: &MetaLog,
     treestate: Option<&TreeState>,
-) -> Result<HgId, RevsetLookupError> {
+) -> Result<HgId> {
     let args = LookupArgs {
         config,
         change_id,
@@ -53,10 +54,10 @@ pub fn resolve_single(
         }
     }
 
-    Err(RevsetLookupError::RevsetNotFound(change_id.to_owned()))
+    Err(RevsetLookupError::RevsetNotFound(change_id.to_owned()).into())
 }
 
-fn resolve_special(args: &LookupArgs) -> Result<Option<HgId>, RevsetLookupError> {
+fn resolve_special(args: &LookupArgs) -> Result<Option<HgId>> {
     if args.change_id == "null" {
         return Ok(Some(HgId::null_id().clone()));
     }
@@ -71,33 +72,28 @@ fn resolve_special(args: &LookupArgs) -> Result<Option<HgId>, RevsetLookupError>
             } else {
                 HgId::from_slice(&tip).map_err(|err| {
                     let tip = String::from_utf8_lossy(&tip).to_string();
-                    RevsetLookupError::CommitHexParseError(tip, err.into())
+                    RevsetLookupError::CommitHexParseError(tip, err.into()).into()
                 })
             }
         })
         .transpose()
 }
 
-fn resolve_dot(args: &LookupArgs) -> Result<Option<HgId>, RevsetLookupError> {
+fn resolve_dot(args: &LookupArgs) -> Result<Option<HgId>> {
     if args.change_id != "." && !args.change_id.is_empty() {
         return Ok(None);
     }
 
     match args.treestate {
-        Some(treestate) => treestate.parents().next().map_or_else(
-            || Ok(Some(HgId::null_id().clone())),
-            |first_commit| {
-                first_commit.map_or_else(
-                    |err| Err(RevsetLookupError::TreeStateError(err)),
-                    |c| Ok(Some(c)),
-                )
-            },
-        ),
+        Some(treestate) => match treestate.parents().next() {
+            None => Ok(Some(HgId::null_id().clone())),
+            Some(hgid) => Ok(Some(hgid?)),
+        },
         None => Ok(None),
     }
 }
 
-fn resolve_hash_prefix(args: &LookupArgs) -> Result<Option<HgId>, RevsetLookupError> {
+fn resolve_hash_prefix(args: &LookupArgs) -> Result<Option<HgId>> {
     if !args
         .change_id
         .chars()
@@ -126,7 +122,8 @@ fn resolve_hash_prefix(args: &LookupArgs) -> Result<Option<HgId>, RevsetLookupEr
         return Err(RevsetLookupError::AmbiguousIdentifier(
             args.change_id.to_owned(),
             possible_identifiers.join(", "),
-        ));
+        )
+        .into());
     }
 
     Ok(Some(HgId::from_str(&vertex).map_err(|err| {
@@ -134,7 +131,7 @@ fn resolve_hash_prefix(args: &LookupArgs) -> Result<Option<HgId>, RevsetLookupEr
     })?))
 }
 
-fn resolve_bookmark(args: &LookupArgs) -> Result<Option<HgId>, RevsetLookupError> {
+fn resolve_bookmark(args: &LookupArgs) -> Result<Option<HgId>> {
     let mut local_bookmarks = metalog_bookmarks(args.metalog, "bookmarks", decode_bookmarks)?;
     if let Some(hash) = local_bookmarks.remove(args.change_id) {
         return Ok(Some(hash));
@@ -158,7 +155,7 @@ fn metalog_bookmarks(
     metalog: &MetaLog,
     bookmark_type: &str,
     decoder: fn(&[u8]) -> std::io::Result<BTreeMap<String, HgId>>,
-) -> Result<BTreeMap<String, HgId>, RevsetLookupError> {
+) -> Result<BTreeMap<String, HgId>> {
     let raw_bookmarks = match metalog.get(bookmark_type)? {
         None => {
             return Ok(Default::default());
