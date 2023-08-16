@@ -41,6 +41,7 @@ use segments::SegmentsArgs;
 use slice_ancestors::SliceAncestorsArgs;
 use update_preloaded::UpdatePreloadedArgs;
 
+/// Query and manage the commit graph
 #[derive(Parser)]
 pub struct CommandArgs {
     #[clap(flatten)]

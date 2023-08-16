@@ -31,15 +31,14 @@ struct AdminArgs {
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    #[cfg(not(fbcode_build))]
-    let subcommands = commands::subcommands();
+    let mut subcommands = commands::subcommands();
 
     #[cfg(fbcode_build)]
-    let subcommands = {
-        let mut subcommands = commands::subcommands();
+    {
         subcommands.extend(facebook::commands::subcommands());
-        subcommands
-    };
+    }
+
+    subcommands.sort_unstable_by(|a, b| a.get_name().cmp(b.get_name()));
 
     let app = MononokeAppBuilder::new(fb)
         .with_app_extension(ScrubAppExtension::new())

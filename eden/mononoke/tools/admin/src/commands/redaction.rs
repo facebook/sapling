@@ -25,7 +25,7 @@ use mononoke_app::MononokeApp;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 
-/// Manage repository bookmarks
+/// Manage redaction of repository contents
 #[derive(Parser)]
 pub struct CommandArgs {
     #[clap(subcommand)]

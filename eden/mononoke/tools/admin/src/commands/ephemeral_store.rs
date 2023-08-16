@@ -21,7 +21,7 @@ use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use repo_identity::RepoIdentity;
 
-/// Cleanup, list or describe the contents of ephemeral store.
+/// Examine and maintain the contents of the ephemeral store.
 #[derive(Parser)]
 pub struct CommandArgs {
     /// The repository name or ID. Any changesets provided for

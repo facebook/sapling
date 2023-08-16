@@ -36,6 +36,7 @@ use serde_json::json;
 
 use crate::commands::blobstore_unlink::get_blobconfig;
 
+/// Unlink large numbers of blobstore keys
 #[derive(Parser)]
 pub struct CommandArgs {
     /// The directory that contains all the key files
