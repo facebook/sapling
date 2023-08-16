@@ -59,6 +59,30 @@ async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
+async fn test_add_and_delete(_: FacebookInit) -> Result<(), Error> {
+    let symrefs = SqlGitSymbolicRefsBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let symref_name = "HEAD";
+    let ref_name = "master";
+    let ref_type = "branch";
+    let entry = GitSymbolicRefsEntry::new(
+        symref_name.to_string(),
+        ref_name.to_string(),
+        ref_type.to_string(),
+    )?;
+    symrefs.add_or_update_entries(vec![entry.clone()]).await?;
+
+    let result = symrefs.get_ref_by_symref(entry.symref_name.clone()).await?;
+    assert_eq!(result, Some(entry.clone()));
+
+    symrefs
+        .delete_symrefs(vec![entry.symref_name.clone()])
+        .await?;
+    let result = symrefs.get_ref_by_symref(entry.symref_name.clone()).await?;
+    assert_eq!(result, None);
+    Ok(())
+}
+
+#[fbinit::test]
 async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
     let symrefs = SqlGitSymbolicRefsBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let symref_name = "HEAD";

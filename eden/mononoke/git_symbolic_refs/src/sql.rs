@@ -29,6 +29,15 @@ mononoke_queries! {
         "REPLACE INTO git_symbolic_refs (repo_id, symref_name, ref_name, ref_type) VALUES {values}"
     }
 
+    write DeleteGitSymbolicRefs(
+        repo_id: RepositoryId,
+        >list symrefs: String
+    ) {
+        none,
+        "DELETE FROM git_symbolic_refs WHERE
+        repo_id = {repo_id} AND symref_name IN {symrefs}"
+    }
+
     read SelectRefBySymref(
         repo_id: RepositoryId,
         symref_name: String
@@ -171,6 +180,23 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
                     self.repo_id, entries,
                 )
             })?;
+        Ok(())
+    }
+
+    /// Delete the entry corresponding to the given symref if its exists
+    async fn delete_symrefs(&self, symref: Vec<String>) -> Result<()> {
+        DeleteGitSymbolicRefs::query(
+            &self.connections.write_connection,
+            &self.repo_id,
+            symref.as_slice(),
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to delete symrefs {:?} in repo {}",
+                symref, self.repo_id
+            )
+        })?;
         Ok(())
     }
 }

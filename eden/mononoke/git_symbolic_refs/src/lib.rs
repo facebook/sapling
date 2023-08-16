@@ -84,4 +84,7 @@ pub trait GitSymbolicRefs: Send + Sync {
 
     /// Add new symrefs to ref mappings or update existing symrefs
     async fn add_or_update_entries(&self, entries: Vec<GitSymbolicRefsEntry>) -> Result<()>;
+
+    /// Delete symrefs if they exists
+    async fn delete_symrefs(&self, symrefs: Vec<String>) -> Result<()>;
 }
