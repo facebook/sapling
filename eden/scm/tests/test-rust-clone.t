@@ -209,6 +209,8 @@ Can clone eagerepo without scheme:
    INFO get_update_target: hgcommands::commands::clone: exit
   Checking out 'master'
   5 files updated
+  $ grep remote no_scheme/.hg/requires
+  remotefilelog
 Make sure we wrote out the absolute path.
   $ hg -R no_scheme config paths.default
   $TESTTMP/e1
@@ -224,3 +226,34 @@ Can clone non-shallow:
    INFO get_update_target: hgcommands::commands::clone: exit
   Checking out 'master'
   5 files updated
+  $ grep eager non_shallow/.hg/store/requires
+  eagerepo
+
+Can pick bookmark or commit using -u:
+  $ hg clone -u $D test:e1 d_clone --config experimental.rust-clone-updaterev=true
+  Cloning test-repo into $TESTTMP/d_clone
+  TRACE hgcommands::commands::clone: performing rust clone
+   INFO clone_metadata{repo="test-repo"}: hgcommands::commands::clone: enter
+  TRACE clone_metadata{repo="test-repo"}: hgcommands::commands::clone: fetching lazy commit data and bookmarks
+   INFO clone_metadata{repo="test-repo"}: hgcommands::commands::clone: exit
+   INFO get_update_target: hgcommands::commands::clone: enter
+   INFO get_update_target: hgcommands::commands::clone: return=Some((HgId("f585351a92f85104bff7c284233c338b10eb1df7"), "f585351a92f85104bff7c284233c338b10eb1df7"))
+   INFO get_update_target: hgcommands::commands::clone: exit
+  Checking out 'f585351a92f85104bff7c284233c338b10eb1df7'
+  4 files updated
+  $ hg whereami -R d_clone
+  f585351a92f85104bff7c284233c338b10eb1df7
+
+  $ hg clone -u stable test:e1 stable_clone --config remotenames.selectivepulldefault='master, stable' --config experimental.rust-clone-updaterev=true
+  Cloning test-repo into $TESTTMP/stable_clone
+  TRACE hgcommands::commands::clone: performing rust clone
+   INFO clone_metadata{repo="test-repo"}: hgcommands::commands::clone: enter
+  TRACE clone_metadata{repo="test-repo"}: hgcommands::commands::clone: fetching lazy commit data and bookmarks
+   INFO clone_metadata{repo="test-repo"}: hgcommands::commands::clone: exit
+   INFO get_update_target: hgcommands::commands::clone: enter
+   INFO get_update_target: hgcommands::commands::clone: return=Some((HgId("26805aba1e600a82e93661149f2313866a221a7b"), "stable"))
+   INFO get_update_target: hgcommands::commands::clone: exit
+  Checking out 'stable'
+  3 files updated
+  $ hg whereami -R stable_clone
+  26805aba1e600a82e93661149f2313866a221a7b

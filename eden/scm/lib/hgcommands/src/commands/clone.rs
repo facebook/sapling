@@ -229,11 +229,12 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         },
     };
 
-    if !ctx.opts.updaterev.is_empty()
-        || !ctx.opts.rev.is_empty()
+    if !ctx.opts.rev.is_empty()
         || ctx.opts.pull
         || ctx.opts.stream
         || ctx.opts.git
+        // Allow Rust clone to handle --updaterev if experimental.rust-clone-updaterev is set.
+        || (!ctx.opts.updaterev.is_empty() && !config.get_or_default("experimental", "rust-clone-updaterev")?)
     {
         abort_if!(
             ctx.opts.eden,
@@ -357,23 +358,29 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
     } else {
         let mut repo = try_clone_metadata(&ctx, &mut logger, config, &reponame, &destination)?;
 
-        let target_rev = get_update_target(&mut logger, &mut repo, &ctx.opts)?;
-        if let Some((target_rev, bm)) = &target_rev {
-            logger.info(format!("Checking out '{}'", bm));
-            logger.verbose(|| {
-                format!(
-                    "Initializing non-EdenFS working copy to commit {}",
-                    target_rev.to_hex(),
-                )
-            });
-        } else {
-            logger.verbose("Initializing empty non-EdenFS working copy");
-        }
+        let target_rev = match get_update_target(&mut logger, &mut repo, &ctx.opts)? {
+            Some((id, name)) => {
+                logger.info(format!("Checking out '{}'", name));
+
+                logger.verbose(|| {
+                    format!(
+                        "Initializing non-EdenFS working copy to commit {}",
+                        id.to_hex(),
+                    )
+                });
+
+                Some(id)
+            }
+            None => {
+                logger.verbose("Initializing empty non-EdenFS working copy");
+                None
+            }
+        };
 
         clone::init_working_copy(
             &mut logger,
             &mut repo,
-            target_rev.map(|(rev, _)| rev),
+            target_rev,
             ctx.opts.enable_profile.clone(),
         )?;
     }
@@ -682,6 +689,14 @@ fn get_update_target(
     if clone_opts.noupdate {
         return Ok(None);
     }
+
+    if !clone_opts.updaterev.is_empty() {
+        return Ok(Some((
+            repo.resolve_commit(None, &clone_opts.updaterev)?,
+            clone_opts.updaterev.clone(),
+        )));
+    }
+
     let selective_bookmarks = get_selective_bookmarks(repo)?;
     let main_bookmark = selective_bookmarks
         .first()
@@ -690,15 +705,12 @@ fn get_update_target(
         })?
         .clone();
 
-    let remote_bookmark = exchange::convert_to_remote(repo.config(), &main_bookmark)?;
-    let remote_bookmarks = repo.remote_bookmarks()?;
-
-    match remote_bookmarks.get(&remote_bookmark) {
-        Some(rev) => Ok(Some((rev.clone(), main_bookmark))),
+    match repo.resolve_commit_opt(None, &main_bookmark)? {
+        Some(id) => return Ok(Some((id, main_bookmark))),
         None => {
             logger.info(format!(
                 "Server has no '{}' bookmark - skipping checkout.",
-                remote_bookmark,
+                main_bookmark,
             ));
             Ok(None)
         }

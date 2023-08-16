@@ -38,6 +38,7 @@ use revisionstore::trait_impls::ArcFileStore;
 use revisionstore::EdenApiFileStore;
 use revisionstore::EdenApiTreeStore;
 use revisionstore::MemcacheStore;
+use revsets::errors::RevsetLookupError;
 use revsets::utils as revset_utils;
 use storemodel::ReadFileContents;
 use storemodel::RefreshableReadFileContents;
@@ -579,6 +580,20 @@ impl Repo {
             treestate,
             edenapi.as_deref(),
         )
+    }
+
+    pub fn resolve_commit_opt(
+        &mut self,
+        treestate: Option<&TreeState>,
+        change_id: &str,
+    ) -> Result<Option<HgId>> {
+        match self.resolve_commit(treestate, change_id) {
+            Ok(id) => Ok(Some(id)),
+            Err(err) => match err.downcast_ref::<RevsetLookupError>() {
+                Some(RevsetLookupError::RevsetNotFound(_)) => Ok(None),
+                _ => Err(err),
+            },
+        }
     }
 
     pub fn invalidate_stores(&mut self) -> Result<()> {
