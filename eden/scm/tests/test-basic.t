@@ -2,37 +2,6 @@
 
 Create a repository:
 
-  $ hg config
-  commands.status.relative=True
-  config.use-rust=True
-  devel.all-warnings=True
-  devel.collapse-traceback=True
-  devel.default-date=0 0
-  experimental.use-rust-changelog=True
-  extensions.fsmonitor= (fsmonitor !)
-  extensions.treemanifest=
-  fsmonitor.detectrace=True (fsmonitor !)
-  hint.ack-match-full-traversal=True
-  mutation.record=False
-  remotefilelog.cachepath=$TESTTMP/default-hgcache
-  remotefilelog.localdatarepack=True
-  remotefilelog.reponame=reponame-default
-  scmstore.contentstorefallback=True
-  status.use-rust=True
-  treemanifest.rustmanifest=True
-  treemanifest.sendtrees=True
-  treemanifest.treeonly=True
-  treemanifest.useruststore=True
-  ui.ignore.test=$RUNTESTDIR/gitignore
-  ui.interactive=False
-  ui.mergemarkers=detailed
-  ui.promptecho=True
-  ui.slash=True
-  web.address=localhost
-  web\.ipv6=(?:True|False) (re)
-  workingcopy.ruststatus=True
-  workingcopy.use-rust=True
-
   $ configure modernclient
   $ newclientrepo t
 
