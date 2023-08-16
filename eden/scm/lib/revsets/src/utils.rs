@@ -6,11 +6,14 @@
  */
 
 use std::collections::BTreeMap;
-use std::str::FromStr;
 
+use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Result;
 use configmodel::Config;
 use dag::ops::IdConvert;
+use dag::Vertex;
+use edenapi::EdenApi;
 use metalog::MetaLog;
 use refencode::decode_bookmarks;
 use refencode::decode_remotenames;
@@ -25,6 +28,7 @@ struct LookupArgs<'a> {
     metalog: &'a MetaLog,
     treestate: Option<&'a TreeState>,
     config: &'a dyn Config,
+    edenapi: Option<&'a dyn EdenApi>,
 }
 
 pub fn resolve_single(
@@ -33,6 +37,7 @@ pub fn resolve_single(
     id_map: &dyn IdConvert,
     metalog: &MetaLog,
     treestate: Option<&TreeState>,
+    edenapi: Option<&dyn EdenApi>,
 ) -> Result<HgId> {
     let args = LookupArgs {
         config,
@@ -40,6 +45,7 @@ pub fn resolve_single(
         id_map,
         metalog,
         treestate,
+        edenapi,
     };
     let fns = [
         resolve_special,
@@ -94,41 +100,96 @@ fn resolve_dot(args: &LookupArgs) -> Result<Option<HgId>> {
 }
 
 fn resolve_hash_prefix(args: &LookupArgs) -> Result<Option<HgId>> {
-    if !args
-        .change_id
+    let change_id = args.change_id;
+
+    if !change_id
         .chars()
         .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
     {
         return Ok(None);
     }
-    let mut vertices = async_runtime::block_on(async {
+
+    let hgid = match change_id.len() {
+        l if l > 40 => return Ok(None),
+        l if l == 40 => HgId::from_hex(change_id.as_bytes())?,
+        _ => {
+            if let Some(id) = local_hash_prefix_lookup(args)? {
+                // We found it locally - no need to do any more work.
+                return Ok(Some(id));
+            }
+
+            match remote_hash_prefix_lookup(args)? {
+                Some(id) => id,
+                None => return Ok(None),
+            }
+        }
+    };
+
+    if async_runtime::block_on(async {
+        args.id_map
+            .contains_vertex_name(&Vertex::copy_from(hgid.as_ref()))
+            .await
+    })? {
+        Ok(Some(hgid))
+    } else {
+        Ok(None)
+    }
+}
+
+fn local_hash_prefix_lookup(args: &LookupArgs) -> Result<Option<HgId>> {
+    let hgids = async_runtime::block_on(async {
         args.id_map
             .vertexes_by_hex_prefix(args.change_id.as_bytes(), 5)
             .await
     })?
-    .into_iter();
+    .into_iter()
+    .map(|v| {
+        Ok(HgId::from_byte_array(v.0.into_vec().try_into().map_err(
+            |v| anyhow!("unexpected vertex name length: {:?}", v),
+        )?))
+    })
+    .collect::<Result<Vec<_>>>()?;
 
-    let vertex = if let Some(v) = vertices.next() {
-        v.to_hex()
-    } else {
-        return Ok(None);
+    error_if_ambiguous(args.change_id, hgids)
+}
+
+fn remote_hash_prefix_lookup(args: &LookupArgs) -> Result<Option<HgId>> {
+    let edenapi = match args.edenapi {
+        Some(edenapi) => edenapi,
+        None => return Ok(None),
     };
 
-    if let Some(vertex2) = vertices.next() {
-        let mut possible_identifiers = vec![vertex, vertex2.to_hex()];
-        for vertex in vertices {
-            possible_identifiers.push(vertex.to_hex());
-        }
-        return Err(RevsetLookupError::AmbiguousIdentifier(
-            args.change_id.to_owned(),
-            possible_identifiers.join(", "),
-        )
-        .into());
+    let mut response = async_runtime::block_on(async {
+        edenapi
+            .hash_prefixes_lookup(vec![args.change_id.to_string()])
+            .await
+    })?;
+
+    let hgids = response.pop().map(|r| r.hgids).unwrap_or_default();
+
+    if !response.is_empty() {
+        bail!("unexpected hash_prefixes_lookup response");
     }
 
-    Ok(Some(HgId::from_str(&vertex).map_err(|err| {
-        RevsetLookupError::CommitHexParseError(vertex, err.into())
-    })?))
+    error_if_ambiguous(args.change_id, hgids)
+}
+
+fn error_if_ambiguous(input: &str, hgids: Vec<HgId>) -> Result<Option<HgId>> {
+    if hgids.is_empty() {
+        Ok(None)
+    } else if hgids.len() == 1 {
+        Ok(Some(hgids[0]))
+    } else {
+        Err(RevsetLookupError::AmbiguousIdentifier(
+            input.to_owned(),
+            hgids
+                .into_iter()
+                .map(|v| v.to_hex())
+                .collect::<Vec<_>>()
+                .join(", "),
+        )
+        .into())
+    }
 }
 
 fn resolve_bookmark(args: &LookupArgs) -> Result<Option<HgId>> {

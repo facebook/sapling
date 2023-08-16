@@ -1,10 +1,8 @@
 #debugruntest-compatible
-
-  $ configure modern
-  $ setconfig workingcopy.use-rust=True
+  $ eagerepo
 
 Setup repo:
-  $ newclientrepo repo1
+  $ newclientrepo
   $ drawdag << 'EOS'
   > G # bookmark master = G
   > |
@@ -77,3 +75,30 @@ Test resolution priority
   43195508e3bb704c08d24c40375bdd826789dd72
   $ hg debugrevset null
   0000000000000000000000000000000000000000
+
+
+Test remote/lazy hash prefix lookup:
+  $ newrepo remote
+  $ drawdag << 'EOS'
+  > C # bookmark master = C
+  > |
+  > B
+  > |
+  > A
+  > EOS
+  $ hg log -T "{node}\n"
+  26805aba1e600a82e93661149f2313866a221a7b
+  112478962961147124edd43549aedd1a335e44bf
+  426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+
+  $ newclientrepo client test:remote
+
+  $ hg debugrevset 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+  426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+
+  $ hg debugrevset zzzbada5c67598ca65036d57d9e4b64b0c1ce7a0
+  abort: unknown revision 'zzzbada5c67598ca65036d57d9e4b64b0c1ce7a0'
+  [255]
+
+  $ hg debugrevset 11
+  112478962961147124edd43549aedd1a335e44bf

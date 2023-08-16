@@ -570,8 +570,15 @@ impl Repo {
         let id_map = self.dag_commits()?.read().id_map_snapshot()?;
         let metalog = self.metalog()?;
         let metalog = metalog.read();
-        revset_utils::resolve_single(&self.config, change_id, &id_map, &metalog, treestate)
-            .map_err(|e| e.into())
+        let edenapi = self.optional_eden_api()?;
+        revset_utils::resolve_single(
+            &self.config,
+            change_id,
+            &id_map,
+            &metalog,
+            treestate,
+            edenapi.as_deref(),
+        )
     }
 
     pub fn invalidate_stores(&mut self) -> Result<()> {
