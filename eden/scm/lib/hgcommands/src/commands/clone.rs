@@ -709,9 +709,16 @@ fn get_update_target(
         Some(id) => return Ok(Some((id, main_bookmark))),
         None => {
             logger.info(format!(
-                "Server has no '{}' bookmark - skipping checkout.",
+                "Server has no '{}' bookmark - trying tip.",
                 main_bookmark,
             ));
+
+            if let Some(tip) = repo.resolve_commit_opt(None, "tip")? {
+                return Ok(Some((tip, "tip".to_string())));
+            }
+
+            logger.info(format!("Skipping checkout - no commits available."));
+
             Ok(None)
         }
     }

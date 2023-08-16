@@ -257,3 +257,17 @@ Can pick bookmark or commit using -u:
   3 files updated
   $ hg whereami -R stable_clone
   26805aba1e600a82e93661149f2313866a221a7b
+
+
+Default to "tip" if selectivepulldefault not available.
+  $ hg clone --no-shallow ./e1 no_bookmark --config remotenames.selectivepulldefault=banana
+  Cloning test-repo into $TESTTMP/no_bookmark
+  TRACE hgcommands::commands::clone: performing rust clone
+   INFO clone_metadata{repo="test-repo"}: hgcommands::commands::clone: enter
+   INFO clone_metadata{repo="test-repo"}: hgcommands::commands::clone: exit
+   INFO get_update_target: hgcommands::commands::clone: enter
+  Server has no 'banana' bookmark - trying tip.
+   INFO get_update_target: hgcommands::commands::clone: return=Some((HgId("9bc730a19041f9ec7cb33c626e811aa233efb18c"), "tip"))
+   INFO get_update_target: hgcommands::commands::clone: exit
+  Checking out 'tip'
+  5 files updated
