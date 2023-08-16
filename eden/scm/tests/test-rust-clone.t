@@ -198,7 +198,7 @@ Don't delete repo on error if --debug:
 
 Can clone eagerepo without scheme:
   $ cd
-  $ hg clone ./e1 no_scheme
+  $ hg clone --shallow ./e1 no_scheme
   Cloning test-repo into $TESTTMP/no_scheme
   TRACE hgcommands::commands::clone: performing rust clone
    INFO clone_metadata{repo="test-repo"}: hgcommands::commands::clone: enter
@@ -212,3 +212,15 @@ Can clone eagerepo without scheme:
 Make sure we wrote out the absolute path.
   $ hg -R no_scheme config paths.default
   $TESTTMP/e1
+
+Can clone non-shallow:
+  $ hg clone ./e1 non_shallow
+  Cloning test-repo into $TESTTMP/non_shallow
+  TRACE hgcommands::commands::clone: performing rust clone
+   INFO clone_metadata{repo="test-repo"}: hgcommands::commands::clone: enter
+   INFO clone_metadata{repo="test-repo"}: hgcommands::commands::clone: exit
+   INFO get_update_target: hgcommands::commands::clone: enter
+   INFO get_update_target: hgcommands::commands::clone: return=Some((HgId("9bc730a19041f9ec7cb33c626e811aa233efb18c"), "master"))
+   INFO get_update_target: hgcommands::commands::clone: exit
+  Checking out 'master'
+  5 files updated

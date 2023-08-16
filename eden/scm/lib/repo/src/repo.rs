@@ -407,6 +407,20 @@ impl Repo {
         }
     }
 
+    pub fn set_remote_bookmarks(&mut self, names: &BTreeMap<String, HgId>) -> Result<()> {
+        self.metalog()?
+            .write()
+            .set("remotenames", &refencode::encode_remotenames(names))?;
+        Ok(())
+    }
+
+    pub fn local_bookmarks(&mut self) -> Result<BTreeMap<String, HgId>> {
+        match self.metalog()?.read().get("bookmarks")? {
+            Some(rn) => Ok(refencode::decode_bookmarks(&rn)?),
+            None => Err(errors::RemotenamesMetalogKeyError.into()),
+        }
+    }
+
     pub fn add_requirement(&mut self, requirement: &str) -> Result<()> {
         self.requirements.add(requirement);
         self.requirements.flush()?;

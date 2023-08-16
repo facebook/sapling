@@ -39,6 +39,7 @@ hostname = "0.3"
 identity = { version = "0.1.0", path = "../identity" }
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
 libc = "0.2.139"
+metalog = { version = "0.1.0", path = "../metalog" }
 metrics-render = { version = "0.1.0", path = "../metrics/render" }
 migration = { version = "0.1.0", path = "../migration" }
 mincode = { version = "0.1.0", path = "../mincode" }

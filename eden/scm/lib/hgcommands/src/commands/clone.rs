@@ -5,10 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::fs;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use async_runtime::block_unless_interrupted as block_on;
 use clidispatch::abort;
@@ -23,13 +26,16 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::ValueSource;
 use eagerepo::is_eager_repo;
+use exchange::convert_to_remote;
 use migration::feature::deprecate;
 use repo::repo::Repo;
 use repo_name::encode_repo_name;
 use tracing::instrument;
 use types::HgId;
 use url::Url;
+use util::file::atomic_write;
 use util::path::absolute;
+use util::path::create_shared_dir_all;
 
 use super::ConfigSet;
 use super::Result;
@@ -60,7 +66,7 @@ define_flags! {
         stream: bool,
 
         /// "use remotefilelog (only turn it off in legacy tests) (ADVANCED)"
-        shallow: bool = true,
+        shallow: Option<bool>,
 
         /// "use git protocol (EXPERIMENTAL)"
         git: bool,
@@ -196,6 +202,11 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         "--noupdate is not compatible with --eden",
     );
 
+    abort_if!(
+        ctx.opts.eden && ctx.opts.shallow == Some(false),
+        "--shallow is required with --eden",
+    );
+
     let force_rust = config
         .get_or_default::<Vec<String>>("commands", "force-rust")?
         .contains(&"clone".to_owned());
@@ -222,7 +233,6 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         || !ctx.opts.rev.is_empty()
         || ctx.opts.pull
         || ctx.opts.stream
-        || !ctx.opts.shallow
         || ctx.opts.git
     {
         abort_if!(
@@ -425,7 +435,7 @@ fn clone_metadata(
     }
 
     let source = ctx.opts.source(config)?;
-    if let Some(bm) = source.default_bookmark {
+    if let Some(bm) = &source.default_bookmark {
         config.set(
             "remotenames",
             "selectivepulldefault",
@@ -451,7 +461,30 @@ fn clone_metadata(
         }
     }
 
-    config.set("format", "use-remotefilelog", Some("true"), &"clone".into());
+    let eager_format: bool = config.get_or_default("format", "use-eager-repo")?;
+
+    let shallow = match ctx.opts.shallow {
+        Some(shallow) => shallow,
+        // Infer non-shallow for eager->eager clone.
+        None => !eager_format || source.scheme != "eager",
+    };
+
+    if shallow {
+        config.set("format", "use-remotefilelog", Some("true"), &"clone".into());
+    } else {
+        if !eager_format {
+            fallback!("non-shallow && non-eagerepo");
+        }
+
+        abort_if!(
+            source.scheme != "eager",
+            "don't know how to clone {} into eagerepo",
+            source.path,
+        );
+
+        return eager_clone(ctx, config, source, destination);
+    }
+
     let mut repo = Repo::init(
         destination,
         config,
@@ -511,6 +544,69 @@ fn clone_metadata(
         abort!("Injected clone failure");
     });
     Ok(repo)
+}
+
+fn eager_clone(
+    ctx: &ReqCtx<CloneOpts>,
+    config: &ConfigSet,
+    source: CloneSource,
+    dest: &Path,
+) -> Result<Repo> {
+    let source_path = eagerepo::EagerRepo::url_to_dir(&source.path)
+        .ok_or_else(|| anyhow!("no eagerepo at {}", source.path))?;
+    let source_dot_dir = source_path.join(identity::must_sniff_dir(&source_path)?.dot_dir());
+
+    let dest_ident = identity::default();
+    let dest_dot_dir = dest.join(dest_ident.dot_dir());
+
+    // Copy over store files.
+    recursive_copy(&source_dot_dir.join("store"), &dest_dot_dir.join("store"))?;
+    // Init working copy.
+    eagerepo::EagerRepo::open(dest, Some(config))?;
+
+    let config_path = dest_dot_dir.join(dest_ident.config_repo_file());
+    atomic_write(&config_path, |f| {
+        f.write_all(format!("[paths]\ndefault = {}\n", source.path).as_bytes())
+    })?;
+
+    let mut repo = Repo::load(
+        dest,
+        &ctx.global_opts().config,
+        &ctx.global_opts().configfile,
+    )?;
+
+    // Convert bookmarks to remotenames.
+    let remote_names: BTreeMap<String, HgId> = repo
+        .local_bookmarks()?
+        .iter()
+        .map(|(bm, id)| Ok((convert_to_remote(config, bm)?, id.clone())))
+        .collect::<Result<_>>()?;
+
+    repo.set_remote_bookmarks(&remote_names)?;
+
+    let ml = repo.metalog()?;
+    let mut ml = ml.write();
+    ml.set("bookmarks", b"")?;
+    let mut opts = metalog::CommitOptions::default();
+    opts.message = "eager clone";
+    ml.commit(opts)?;
+
+    Ok(repo)
+}
+
+fn recursive_copy(from: &Path, to: &Path) -> std::io::Result<()> {
+    create_shared_dir_all(to)?;
+
+    for entry in fs::read_dir(from)? {
+        let entry = entry?;
+        if entry.file_type()?.is_dir() {
+            recursive_copy(&entry.path(), &to.join(entry.file_name()))?;
+        } else {
+            fs::copy(entry.path(), to.join(entry.file_name()))?;
+        }
+    }
+
+    Ok(())
 }
 
 pub fn revlog_clone(
