@@ -102,9 +102,6 @@ pub struct SerializableBonsaiChangeset {
     pub author: String,
     pub author_date: DateTime,
     pub committer: Option<String>,
-    // XXX should committer date always be recorded? If so, it should probably be a
-    // monotonically increasing value:
-    // max(author date, max(committer date of parents) + epsilon)
     pub committer_date: Option<DateTime>,
     pub message: String,
     pub hg_extra: BTreeMap<String, Vec<u8>>,
