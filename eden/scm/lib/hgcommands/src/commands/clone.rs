@@ -87,12 +87,31 @@ define_flags! {
     }
 }
 
+struct CloneSource {
+    // Effective scheme, taking into account "schemes" config.
+    scheme: String,
+    // What should be used as paths.default.
+    path: String,
+    // Default bookmark (inferred from url fragment).
+    default_bookmark: Option<String>,
+}
+
 impl CloneOpts {
-    fn source_url(&self) -> Result<(Url, Option<String>)> {
+    fn source(&self, config: &dyn Config) -> Result<CloneSource> {
         let mut url = Url::parse(&self.source)?;
+
+        // Fragment is only used for choosing default bookmark during clone - we
+        // don't want to persist it.
         let frag = url.fragment().map(|f| f.to_string());
         url.set_fragment(None);
-        Ok((url, frag))
+
+        Ok(CloneSource {
+            scheme: resolve_custom_scheme(config, url.clone())?
+                .scheme()
+                .to_string(),
+            path: url.to_string(),
+            default_bookmark: frag,
+        })
     }
 }
 
@@ -151,10 +170,10 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         fallback!("clone.use-rust not set to True");
     }
 
-    let source_url = match ctx.opts.source_url() {
+    let source = match ctx.opts.source(config) {
         Err(_) => fallback!("invalid URL"),
-        Ok((url, _)) => match resolve_custom_scheme(config, url.clone())?.scheme() {
-            "mononoke" | "eager" | "test" => url,
+        Ok(source) => match source.scheme.as_ref() {
+            "mononoke" | "eager" | "test" => source,
             _ => fallback!("unsupported URL scheme"),
         },
     };
@@ -175,7 +194,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         fallback!("one or more unsupported options in Rust clone");
     }
 
-    config.set("paths", "default", Some(source_url.as_str()), &"arg".into());
+    config.set("paths", "default", Some(&source.path), &"arg".into());
 
     let reponame = match config.get_opt::<String>("remotefilelog", "reponame")? {
         // This gets the reponame from the --configfile config. Ignore
@@ -365,17 +384,17 @@ fn clone_metadata(
         repo_config_file_content.push('\n');
     }
 
-    let (url, frag) = ctx.opts.source_url()?;
-    if let Some(frag) = frag {
+    let source = ctx.opts.source(config)?;
+    if let Some(bm) = source.default_bookmark {
         config.set(
             "remotenames",
             "selectivepulldefault",
-            Some(frag),
+            Some(bm),
             &"clone source".into(),
         );
     }
 
-    repo_config_file_content.push_str(format!("[paths]\ndefault = {}\n", url.as_str()).as_str());
+    repo_config_file_content.push_str(format!("[paths]\ndefault = {}\n", source.path).as_str());
 
     // Some config values are inherent to the repo and should be persisted if passed to clone.
     // This is analagous to persisting the --configfile args above.
@@ -463,7 +482,7 @@ pub fn revlog_clone(
     let mut args = vec![
         identity::cli_name().to_string(),
         "debugrevlogclone".to_string(),
-        ctx.opts.source_url()?.0.to_string(),
+        ctx.opts.source(config)?.path,
         "-R".to_string(),
         root.to_string_lossy().to_string(),
     ];
