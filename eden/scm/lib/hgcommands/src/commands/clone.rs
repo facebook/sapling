@@ -22,6 +22,7 @@ use configloader::hg::resolve_custom_scheme;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::ValueSource;
+use eagerepo::is_eager_repo;
 use migration::feature::deprecate;
 use repo::repo::Repo;
 use repo_name::encode_repo_name;
@@ -98,6 +99,20 @@ struct CloneSource {
 
 impl CloneOpts {
     fn source(&self, config: &dyn Config) -> Result<CloneSource> {
+        if let Some(local_path) = local_path(&self.source)? {
+            let scheme = if is_eager_repo(&local_path) {
+                "eager"
+            } else {
+                "file"
+            };
+            return Ok(CloneSource {
+                scheme: scheme.to_string(),
+                // Came from self.source, so should be UTF-8.
+                path: local_path.into_os_string().into_string().unwrap(),
+                default_bookmark: None,
+            });
+        }
+
         let mut url = Url::parse(&self.source)?;
 
         // Fragment is only used for choosing default bookmark during clone - we
@@ -113,6 +128,31 @@ impl CloneOpts {
             default_bookmark: frag,
         })
     }
+}
+
+fn local_path(s: &str) -> Result<Option<PathBuf>> {
+    if looks_like_windows_path(s)
+        || matches!(Url::parse(s), Err(url::ParseError::RelativeUrlWithoutBase))
+    {
+        Ok(Some(util::path::absolute(s)?))
+    } else {
+        Ok(None)
+    }
+}
+
+fn looks_like_windows_path(s: &str) -> bool {
+    if !cfg!(windows) {
+        return false;
+    }
+
+    // UNC prefix
+    if s.starts_with(r"\\") {
+        return true;
+    }
+
+    // Drive prefix (e.g. "c:")
+    let bytes = s.as_bytes();
+    bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':'
 }
 
 pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {

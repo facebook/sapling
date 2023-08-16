@@ -27,6 +27,7 @@ mod errors;
 mod trait_impls;
 
 pub use api::edenapi_from_config;
+pub use eager_repo::is_eager_repo;
 pub use eager_repo::EagerRepo;
 pub use eager_repo::EagerRepoStore;
 pub use errors::Error;

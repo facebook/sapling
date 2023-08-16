@@ -2,10 +2,9 @@
 
 test rust clone
 
-  $ configure modern
+  $ eagerepo
   $ setconfig clone.use-rust=True
   $ setconfig remotefilelog.reponame=test-repo
-  $ setconfig format.use-eager-repo=True
   $ export LOG=hgcommands::commands::clone
 
 
@@ -196,3 +195,20 @@ Don't delete repo on error if --debug:
   $ FAILPOINTS=run::clone=return hg clone -Uq test:e1 $TESTTMP/debug-failure --debug &>/dev/null
   [255]
   $ ls $TESTTMP/debug-failure
+
+Can clone eagerepo without scheme:
+  $ cd
+  $ hg clone ./e1 no_scheme
+  Cloning test-repo into $TESTTMP/no_scheme
+  TRACE hgcommands::commands::clone: performing rust clone
+   INFO clone_metadata{repo="test-repo"}: hgcommands::commands::clone: enter
+  TRACE clone_metadata{repo="test-repo"}: hgcommands::commands::clone: fetching lazy commit data and bookmarks
+   INFO clone_metadata{repo="test-repo"}: hgcommands::commands::clone: exit
+   INFO get_update_target: hgcommands::commands::clone: enter
+   INFO get_update_target: hgcommands::commands::clone: return=Some((HgId("9bc730a19041f9ec7cb33c626e811aa233efb18c"), "master"))
+   INFO get_update_target: hgcommands::commands::clone: exit
+  Checking out 'master'
+  5 files updated
+Make sure we wrote out the absolute path.
+  $ hg -R no_scheme config paths.default
+  $TESTTMP/e1

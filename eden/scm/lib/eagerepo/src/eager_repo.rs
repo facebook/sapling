@@ -305,19 +305,8 @@ impl EagerRepo {
             }
         }
         let path = Path::new(value);
-        if path.is_absolute() && path.is_dir() {
-            if let Ok(Some(ident)) = identity::sniff_dir(path) {
-                // Check store requirements
-                let store_requirement_path =
-                    path.join(ident.dot_dir()).join("store").join("requires");
-                if let Ok(s) = std::fs::read_to_string(store_requirement_path) {
-                    if s.lines().any(|s| s == "eagerepo") {
-                        tracing::trace!("url_to_dir {} => {}", value, path.display());
-                        return Some(path.to_path_buf());
-                    }
-                }
-                tracing::trace!("url_to_dir {}: missing 'eagerepo' requirment", value);
-            }
+        if is_eager_repo(path) {
+            return Some(path.to_path_buf());
         }
         None
     }
@@ -470,6 +459,29 @@ impl EagerRepo {
     pub fn store(&self) -> EagerRepoStore {
         self.store.clone()
     }
+}
+
+pub fn is_eager_repo(path: &Path) -> bool {
+    if !path.is_absolute() || !path.is_dir() {
+        return false;
+    }
+
+    if let Ok(Some(ident)) = identity::sniff_dir(path) {
+        // Check store requirements
+        let store_requirement_path = path.join(ident.dot_dir()).join("store").join("requires");
+        if let Ok(s) = std::fs::read_to_string(store_requirement_path) {
+            if s.lines().any(|s| s == "eagerepo") {
+                tracing::trace!("url_to_dir {} => {}", path.display(), path.display());
+                return true;
+            }
+        }
+        tracing::trace!(
+            "url_to_dir {}: missing 'eagerepo' requirment",
+            path.display()
+        );
+    }
+
+    false
 }
 
 /// Convert parents and raw_text to HG SHA1 text format.
