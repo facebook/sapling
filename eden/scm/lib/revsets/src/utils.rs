@@ -21,14 +21,14 @@ struct LookupArgs<'a> {
     change_id: &'a str,
     id_map: &'a dyn IdConvert,
     metalog: &'a MetaLog,
-    treestate: &'a TreeState,
+    treestate: Option<&'a TreeState>,
 }
 
 pub fn resolve_single(
     change_id: &str,
     id_map: &dyn IdConvert,
     metalog: &MetaLog,
-    treestate: &TreeState,
+    treestate: Option<&TreeState>,
 ) -> Result<HgId, RevsetLookupError> {
     let args = LookupArgs {
         change_id,
@@ -78,15 +78,19 @@ fn resolve_dot(args: &LookupArgs) -> Result<Option<HgId>, RevsetLookupError> {
     if args.change_id != "." && !args.change_id.is_empty() {
         return Ok(None);
     }
-    args.treestate.parents().next().map_or_else(
-        || Ok(Some(HgId::null_id().clone())),
-        |first_commit| {
-            first_commit.map_or_else(
-                |err| Err(RevsetLookupError::TreeStateError(err)),
-                |c| Ok(Some(c)),
-            )
-        },
-    )
+
+    match args.treestate {
+        Some(treestate) => treestate.parents().next().map_or_else(
+            || Ok(Some(HgId::null_id().clone())),
+            |first_commit| {
+                first_commit.map_or_else(
+                    |err| Err(RevsetLookupError::TreeStateError(err)),
+                    |c| Ok(Some(c)),
+                )
+            },
+        ),
+        None => Ok(None),
+    }
 }
 
 fn resolve_hash_prefix(args: &LookupArgs) -> Result<Option<HgId>, RevsetLookupError> {

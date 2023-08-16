@@ -105,7 +105,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         .into());
     }
 
-    let target = match repo.resolve_commit(&wc.treestate().lock(), &dest) {
+    let target = match repo.resolve_commit(Some(&wc.treestate().lock()), &dest) {
         Ok(target) => target,
         Err(_) => {
             return Err(errors::FallbackToPython(

@@ -562,7 +562,11 @@ impl Repo {
         ))
     }
 
-    pub fn resolve_commit(&mut self, treestate: &TreeState, change_id: &str) -> Result<HgId> {
+    pub fn resolve_commit(
+        &mut self,
+        treestate: Option<&TreeState>,
+        change_id: &str,
+    ) -> Result<HgId> {
         revset_utils::resolve_single(
             change_id,
             self.dag_commits()?.read().id_map_snapshot()?.as_ref(),
