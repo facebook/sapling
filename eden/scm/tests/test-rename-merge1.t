@@ -1,8 +1,7 @@
 #debugruntest-compatible
 
-  $ setconfig workingcopy.ruststatus=False status.use-rust=false
-  $ hg init repo
-  $ cd repo
+  $ configure modernclient
+  $ newclientrepo
 
   $ setconfig merge.followcopies=1
 
@@ -43,8 +42,6 @@
    b2
    preserving a for resolve of b
   removing a
-   b2: remote created -> g
-  getting b2
    b: remote moved from a -> m (premerge)
   picktool() hgmerge internal:merge
   picked tool ':merge' for path=b binary=False symlink=False changedelete=False
@@ -65,11 +62,6 @@
   blahblah
 
   $ hg ci -m "merge"
-
-  $ hg debugindex b
-     rev linkrev nodeid       p1           p2
-       0       1 57eacc201a7f 000000000000 000000000000
-       1       3 4727ba907962 000000000000 57eacc201a7f
 
   $ hg debugrename b
   b renamed from a:dd03b83622e78778b403775d0d074b9ac7387a66
@@ -98,8 +90,7 @@ We'd rather not warn on divergent renames done in the same changeset (issue2113)
 
 Check for issue2642
 
-  $ hg init t
-  $ cd t
+  $ newclientrepo
 
   $ echo c0 > f1
   $ hg ci -Aqm0
@@ -126,8 +117,7 @@ Check for issue2642
 
 Check for issue2089
 
-  $ hg init repo2089
-  $ cd repo2089
+  $ newclientrepo
 
   $ echo c0 > f1
   $ hg ci -Aqm0
@@ -158,8 +148,7 @@ Check for issue2089
 
 Check for issue3074
 
-  $ hg init repo3074
-  $ cd repo3074
+  $ newclientrepo
   $ echo foo > file
   $ hg add file
   $ hg commit -m "added file"
@@ -181,8 +170,6 @@ Check for issue3074
    ancestor: 19d7f95df299, local: 0084274f6b67+, remote: 5d32493049f0
   note: possible conflict - file was deleted and renamed to:
    newfile
-   newfile: remote created -> g
-  getting newfile
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg status

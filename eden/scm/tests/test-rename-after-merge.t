@@ -1,49 +1,30 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
-  $ setconfig workingcopy.ruststatus=False status.use-rust=false
   $ setconfig experimental.allowfilepeer=True
 
-  $ disable treemanifest
+  $ configure modernclient
   $ enable amend
 
 Issue746: renaming files brought by the second parent of a merge was
 broken.
 
-Create source repository:
+  $ newclientrepo
 
-  $ hg init t
-  $ cd t
   $ echo a > a
   $ hg ci -Am a
   adding a
-  $ cd ..
 
-Fork source repository:
-
-  $ hg clone t t2
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd t2
   $ echo b > b
   $ hg ci -Am b
   adding b
 
-Update source repository:
-
-  $ cd ../t
+  $ hg goto -q 'desc(a)'
   $ echo a >> a
   $ hg ci -m a2
 
-Merge repositories:
+Merge branches:
 
-  $ hg pull ../t2
-  pulling from ../t2
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-
-  $ hg merge
+  $ hg merge 'desc(b)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -68,8 +49,7 @@ Rename back c as b:
 Issue 1476: renaming a first parent file into another first parent
 file while none of them belong to the second parent was broken
 
-  $ hg init repo1476
-  $ cd repo1476
+  $ newclientrepo
   $ echo a > a
   $ hg ci -Am adda
   adding a

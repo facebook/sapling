@@ -9,7 +9,6 @@
 
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=False
 
 # Prepare test functions
 

@@ -1,11 +1,10 @@
 #debugruntest-compatible
 
-  $ setconfig workingcopy.ruststatus=False
-  $ configure modern
+  $ configure modernclient
 
 File to dir:
 
-  $ newrepo
+  $ newclientrepo
   $ echo A | drawdag
   $ hg up -q $A
   $ rm A
@@ -18,7 +17,7 @@ File to dir:
 
 File to parent dir:
 
-  $ newrepo
+  $ newclientrepo
   $ drawdag << 'EOS'
   > A  # A/D/D/D/1=1
   > EOS
