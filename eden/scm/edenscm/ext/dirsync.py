@@ -81,11 +81,25 @@ def extsetup(ui) -> None:
 
     extensions.afterloaded("shelve", wrapshelve)
 
+    extensions.wrapfilecache(localrepo.localrepository, "dirstate", _wrapdirstate)
+
 
 def reposetup(ui, repo) -> None:
     if not repo.local() or not hasattr(repo, "dirstate"):
         return
 
+    dirstate, cached = localrepo.isfilecached(repo, "dirstate")
+    if cached:
+        _setupdirstate(repo, dirstate)
+
+
+def _wrapdirstate(orig, repo):
+    dirstate = orig(repo)
+    _setupdirstate(repo, dirstate)
+    return dirstate
+
+
+def _setupdirstate(repo, dirstate):
     # If dirstate is updated to a commit that has 'mirrored' paths without
     # going though regular checkout code path, write the mirrored files to disk
     # and mark them as clean (or remove mirrored deletions).
@@ -124,7 +138,7 @@ def reposetup(ui, repo) -> None:
         # The working copy is in sync. No need to fixup again.
         _nodemirrored.clear()
 
-    repo.dirstate.addparentchangecallback("dirsync", dirsyncfixup)
+    dirstate.addparentchangecallback("dirsync", dirsyncfixup)
 
 
 def _bypassdirsync(orig, ui, repo, *args, **kwargs):

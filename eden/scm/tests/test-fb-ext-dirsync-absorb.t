@@ -1,9 +1,5 @@
 #debugruntest-compatible
 
-#if fsmonitor
-  $ setconfig workingcopy.ruststatus=false
-#endif
-
   $ configure modernclient
   $ enable dirsync absorb
 
