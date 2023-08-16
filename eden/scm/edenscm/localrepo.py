@@ -454,12 +454,6 @@ class localrepository(object):
         self.svfs = None
         self.path = self._rsrepo.dotpath()
         self.origroot = path
-        # This is only used by context.workingctx.match in order to
-        # detect files in forbidden paths.
-        self.auditor = pathutil.pathauditor(self.root)
-        # This is only used by context.basectx.match in order to detect
-        # files in forbidden paths..
-        self.nofsauditor = pathutil.pathauditor(self.root, realfs=False, cached=True)
         # localvfs: rooted at .hg, used to access repo files outside of
         # the store that are local to this working copy.
         self.localvfs = vfsmod.vfs(self.path, cacheaudited=True)

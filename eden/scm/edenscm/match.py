@@ -18,7 +18,6 @@ import re
 from typing import List, Optional, Pattern, Sized, Tuple
 
 from bindings import pathmatcher
-from edenscm.pathutil import pathauditor
 
 from . import error, pathutil, pycompat, util
 from .i18n import _
@@ -120,7 +119,6 @@ def match(
     include=None,
     exclude=None,
     default: str = "glob",
-    auditor: Optional[pathauditor] = None,
     ctx=None,
     warn=None,
     badfn=None,
@@ -156,15 +154,13 @@ def match(
                           the same directory
     '<something>' - a pattern of the specified default type
     """
-    if auditor is None:
-        auditor = pathutil.pathauditor(root)
     normalize = _donormalize
     if icasefs:
         dirstate = ctx.repo().dirstate
         dsnormalize = dirstate.normalize
 
-        def normalize(patterns, default, root, cwd, auditor, warn):
-            kp = _donormalize(patterns, default, root, cwd, auditor, warn)
+        def normalize(patterns, default, root, cwd, warn):
+            kp = _donormalize(patterns, default, root, cwd, warn)
             kindpats = []
             for kind, pats, source in kp:
                 if kind not in ("re", "relre"):  # regex can't be normalized
@@ -182,9 +178,9 @@ def match(
     if not patterns:
         m = alwaysmatcher(root, cwd, badfn)
 
-    patternskindpats = not m and normalize(patterns, default, root, cwd, auditor, warn)
-    includekindpats = include and normalize(include, "glob", root, cwd, auditor, warn)
-    excludekindpats = exclude and normalize(exclude, "glob", root, cwd, auditor, warn)
+    patternskindpats = not m and normalize(patterns, default, root, cwd, warn)
+    includekindpats = include and normalize(include, "glob", root, cwd, warn)
+    excludekindpats = exclude and normalize(exclude, "glob", root, cwd, warn)
 
     # Try to use Rust dyn matcher if possible. Currently, Rust dyn matcher is
     # missing below features:
@@ -327,7 +323,7 @@ def badmatch(match, badfn):
     return m
 
 
-def _donormalize(patterns, default, root, cwd, auditor, warn):
+def _donormalize(patterns, default, root, cwd, warn):
     """Convert 'kind:pat' from the patterns list to tuples with kind and
     normalized and rooted patterns and with listfiles expanded."""
     kindpats = []
@@ -341,7 +337,7 @@ def _donormalize(patterns, default, root, cwd, auditor, warn):
             )
 
         if kind in cwdrelativepatternkinds:
-            pat = pathutil.canonpath(root, cwd, pat, auditor)
+            pat = pathutil.canonpath(root, cwd, pat)
         elif kind in ("relglob", "path", "rootfilesin"):
             pat = util.normpath(pat)
         elif kind in ("listfile", "listfile0"):
@@ -359,16 +355,14 @@ def _donormalize(patterns, default, root, cwd, auditor, warn):
                 if warn:
                     warn(_("empty %s %s matches nothing\n") % (kind, pat))
 
-            for k, p, source in _donormalize(files, default, root, cwd, auditor, warn):
+            for k, p, source in _donormalize(files, default, root, cwd, warn):
                 kindpats.append((k, p, pat))
             continue
         elif kind == "include":
             try:
                 fullpath = os.path.join(root, util.localpath(pat))
                 includepats = readpatternfile(fullpath, warn)
-                for k, p, source in _donormalize(
-                    includepats, default, root, cwd, auditor, warn
-                ):
+                for k, p, source in _donormalize(includepats, default, root, cwd, warn):
                     kindpats.append((k, p, source or pat))
             except error.Abort as inst:
                 raise error.Abort("%s: %s" % (pat, inst[0]))
@@ -873,8 +867,7 @@ def rulesmatch(root, cwd, rules, ruledetails=None) -> "treematcher":
         else:
             strippedrules.append(rule)
 
-    auditor = pathutil.pathauditor(root)
-    kindpats = _donormalize(strippedrules, "glob", root, cwd, auditor, None)
+    kindpats = _donormalize(strippedrules, "glob", root, cwd, None)
     globs = _kindpatstoglobs(kindpats, recursive=True)
     if globs is None:
         raise error.Abort(

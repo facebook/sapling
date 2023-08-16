@@ -968,7 +968,11 @@ class dirstate(object):
             self._ui.warn(_("skipping invalid path %r\n") % invalid)
 
         self._add_clean_and_trigger_bad_matches(
-            match, status, self._repo[None].p1(), clean
+            match,
+            status,
+            self._repo[None].p1(),
+            clean,
+            pathutil.pathauditor(self._root, cached=True),
         )
 
         return status
@@ -1167,7 +1171,9 @@ class dirstate(object):
 
         # Step 3: If clean files were requested, add those to the results
         # Step 4: Report any explicitly requested files that don't exist
-        self._add_clean_and_trigger_bad_matches(match, status, pctx, listclean)
+        self._add_clean_and_trigger_bad_matches(
+            match, status, pctx, listclean, auditpath
+        )
 
         # TODO: fire this inside filesystem. fixup is a list of files that
         # checklookup says are clean
@@ -1187,6 +1193,7 @@ class dirstate(object):
         status: scmutil.status,
         pctx: context.changectx,
         listclean: bool,
+        auditor: pathutil.pathauditor,
     ) -> None:
         seenset = set()
         for files in status:
@@ -1202,6 +1209,10 @@ class dirstate(object):
             seenset.update(clean)
 
         for path in sorted(match.files()):
+            # path can be "". Rust doesn't do this, so this "if" can go away later.
+            if path:
+                auditor(path)
+
             try:
                 st = os.lstat(os.path.join(self._root, path))
             except OSError as ex:

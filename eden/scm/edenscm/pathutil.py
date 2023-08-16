@@ -151,13 +151,12 @@ class pathauditor(object):
             return False
 
 
-def canonpath(root, cwd, myname, auditor=None):
+def canonpath(root, cwd, myname):
     """return the canonical path of myname, given cwd and root
 
     >>> def check(root, cwd, myname):
-    ...     a = pathauditor(root, realfs=False)
     ...     try:
-    ...         return canonpath(root, cwd, myname, a)
+    ...         return canonpath(root, cwd, myname)
     ...     except error.Abort:
     ...         return 'aborted'
     >>> def unixonly(root, cwd, myname, expected='aborted'):
@@ -201,11 +200,8 @@ def canonpath(root, cwd, myname, auditor=None):
     if not os.path.isabs(name):
         name = os.path.join(root, cwd, name)
     name = os.path.normpath(name)
-    if auditor is None:
-        auditor = pathauditor(root)
     if name != rootsep and name.startswith(rootsep):
         name = name[len(rootsep) :]
-        auditor(name)
         return util.pconvert(name)
     elif name == root:
         return ""
@@ -228,7 +224,6 @@ def canonpath(root, cwd, myname, auditor=None):
                     return ""
                 tail.reverse()
                 name = os.path.join(*tail)
-                auditor(name)
                 return util.pconvert(name)
             dirname, basename = util.split(head)
             if dirname == head:
@@ -269,7 +264,7 @@ def canonpath(root, cwd, myname, auditor=None):
         hint = None
         try:
             if cwd != root:
-                canonpath(root, root, myname, auditor)
+                canonpath(root, root, myname)
                 relpath = util.pathto(root, cwd, "")
                 if relpath[-1] == pycompat.ossep:
                     relpath = relpath[:-1]

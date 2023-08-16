@@ -1205,6 +1205,7 @@ def copy(ui, repo, pats, opts, rename=False):
     after = opts.get("after")
     dryrun = opts.get("dry_run")
     wctx = repo[None]
+    auditor = pathutil.pathauditor(repo.root)
 
     def walkpat(pat):
         srcs = []
@@ -1236,6 +1237,7 @@ def copy(ui, repo, pats, opts, rename=False):
     # otarget: ossep
     def copyfile(abssrc, relsrc, otarget, exact):
         abstarget = pathutil.canonpath(repo.root, cwd, otarget)
+        auditor(abstarget)
         if "/" in abstarget:
             # We cannot normalize abstarget itself, this would prevent
             # case only renames, like a => A.

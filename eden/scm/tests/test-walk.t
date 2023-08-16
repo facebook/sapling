@@ -288,6 +288,9 @@
   $ hg debugwalk .hg
   abort: path contains illegal component: .hg
   [255]
+  $ hg debugwalk path:.hg
+  abort: path contains illegal component: .hg
+  [255]
   $ hg debugwalk beans/../.hg
   abort: path contains illegal component: .hg
   [255]
