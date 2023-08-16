@@ -164,6 +164,9 @@ def testsetup(t: TestTmp):
         t.command(hg)
 
 
+_checkedenvironment = False
+
+
 def _checkenvironment():
     """check the python global state is clean"""
     # - "edenscm.dispatch" module is not yet imported. This happens if run via
@@ -173,6 +176,13 @@ def _checkenvironment():
     # - "edenscm.dispatch" module is imported, and ischgserver is False.
     #   This is the regular "hg" command path. It's not okay since uisetup()s
     #   might be called and Python global state is no longer clean.
+
+    # Only check the first time.
+    global _checkedenvironment
+    if _checkedenvironment:
+        return
+    _checkedenvironment = True
+
     mod = sys.modules.get("edenscm.dispatch")
     assert (
         mod is None or mod.ischgserver

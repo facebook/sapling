@@ -325,7 +325,19 @@ def runttest(testid: TestId, exts: List[str], mismatchcb: Callable[[Mismatch], N
             exeneeded.add(feature)
         return result
 
-    body = transform(tcode, indent=4, filename=str(path), hasfeature=hasfeaturetracked)
+    testcases = []
+
+    body = transform(
+        tcode,
+        indent=8,
+        filename=str(path),
+        hasfeature=hasfeaturetracked,
+        registertestcase=testcases.append,
+    )
+
+    testcases = [f"_run_once(_testcase='{tc}')\n" for tc in testcases]
+    if not testcases:
+        testcases.append("_run_once()\n")
 
     extcode = []
     for ext in exts:
@@ -335,30 +347,44 @@ __import__({repr(ext)})
 sys.modules[{repr(ext)}].testsetup(t)
 """
         )
-    header = f"""
+
+    extcode = textwrap.indent("".join(extcode).strip(), "    ")
+
+    pycode = f"""
 import sys
 from edenscm.testing.t.runtime import TestTmp
 
 TESTFILE = {repr(str(path))}
 TESTDIR = {repr(str(testdir))}
 
-t = TestTmp(tmpprefix={repr(path.name)})
-t.setenv("TESTFILE", TESTFILE)
-t.setenv("TESTDIR", TESTDIR)
-t.setenv("RUNTESTDIR", TESTDIR)  # compatibility: path of run-tests.py
+def _run_once(_testcase=None):
+    t = TestTmp(tmpprefix={repr(path.name)})
+    t.setenv("TESTFILE", TESTFILE)
+    t.setenv("TESTDIR", TESTDIR)
+    t.setenv("RUNTESTDIR", TESTDIR)  # compatibility: path of run-tests.py
 
-for exe in {sorted(exeneeded)}:
-    t.requireexe(exe)
+    for exe in {sorted(exeneeded)}:
+        t.requireexe(exe)
 
-sys.path += [TESTDIR, str(t.path)]
+    sys.path += [TESTDIR, str(t.path)]
 
-{"".join(extcode)}
+{extcode}
 
-with t:
-    globals().update(t.pyenv)
+    with t:
+        _pristine_globals = dict(globals())
+        globals().update(t.pyenv)
+
+{body}
+
+        # Restore globals since pydoceval locals are persisted as
+        # global variables (and we don't want variables crossing test
+        # cases).
+        globals().clear()
+        globals().update(_pristine_globals)
+
+{"".join(testcases)}
 """
 
-    pycode = header + body
     pypath = (path.parent / "__pycache__" / "ttest" / path.name).with_suffix(".py")
 
     # write it down for easier investigation

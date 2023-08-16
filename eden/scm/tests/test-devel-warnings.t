@@ -96,6 +96,7 @@
   devel-warn: "wlock" acquired after "lock" at:
    * (glob) (?)
    * (glob) (?)
+   * (glob) (?)
 #endif
   $ hg properlocking
   $ hg nowaitlocking
@@ -125,6 +126,7 @@ Stripping from a transaction
   $ hg oldanddeprecated --traceback 2>&1 | egrep '(buggylocking|devel-warn)'
   devel-warn: foorbar is deprecated, go shopping
    * (glob)
+   * (glob) (?)
    * (glob) (?)
 
 #if no-chg normal-layout no-fsmonitor

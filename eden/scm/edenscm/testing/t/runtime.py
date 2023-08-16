@@ -280,17 +280,25 @@ class TestTmp:
         return out
 
     def pydoceval(self, code: str, mode: str = "single") -> Optional[str]:
-        """evalualte python code in this TestTmp context"""
+        """evaluate python code in this TestTmp context"""
         f = sys._getframe(1)
         origout = sys.stdout
         sys.stdout = io.StringIO()
         try:
             compiled = compile(code, "<pydoceval>", mode)
+            # Mutating globals() works, but not locals() (it works at the module
+            # level because locals() is globals()). We aren't at the module
+            # scope because we are inside the _run_once function.
+            #
+            # Work around by passing in globals() as exec's locals so newly
+            # defined variables will become globals. To make the actual locals
+            # available, we mix them into globals_env.
+
             # Provide "_" as the output from the last command.
-            globals_env = {**f.f_globals, "_": self._lastout}
+            globals_env = {**f.f_globals, "_": self._lastout, **f.f_locals}
             with shext.shellenv(self.shenv):
                 # run code using the parent frame globals and locals
-                exec(compiled, globals_env, f.f_locals)
+                exec(compiled, globals_env, f.f_globals)
             # pyre-fixme[16]: `TextIO` has no attribute `getvalue`.
             out = sys.stdout.getvalue()
         except AssertionError as e:
