@@ -37,8 +37,6 @@ allpatternkinds = (
     "listfile",
     "listfile0",
     "set",
-    "include",
-    "subinclude",
     "rootfilesin",
 )
 cwdrelativepatternkinds = ("relpath", "glob")
@@ -71,31 +69,6 @@ def _expandsets(kindpats, ctx):
             continue
         other.append((kind, pat, source))
     return fset, other
-
-
-def _expandsubinclude(kindpats, root):
-    """Returns the list of subinclude matcher args and the kindpats without the
-    subincludes in it."""
-    relmatchers = []
-    other = []
-
-    for kind, pat, source in kindpats:
-        if kind == "subinclude":
-            sourceroot = pathutil.dirname(util.normpath(source))
-            pat = util.pconvert(pat)
-            path = pathutil.join(sourceroot, pat)
-
-            newroot = pathutil.dirname(path)
-            matcherargs = (newroot, "", [], ["include:%s" % path])
-
-            prefix = pathutil.canonpath(root, root, newroot)
-            if prefix:
-                prefix += "/"
-            relmatchers.append((prefix, matcherargs))
-        else:
-            other.append((kind, pat, source))
-
-    return relmatchers, other
 
 
 def _kindpatsalwaysmatch(kindpats) -> bool:
@@ -149,9 +122,6 @@ def match(
     'relpath:<path>' - a path relative to cwd
     'relre:<regexp>' - a regexp that needn't match the start of a name
     'set:<fileset>' - a fileset expression
-    'include:<path>' - a file of patterns to read and include
-    'subinclude:<path>' - a file of patterns to match against files under
-                          the same directory
     '<something>' - a pattern of the specified default type
     """
     normalize = _donormalize
@@ -358,21 +328,7 @@ def _donormalize(patterns, default, root, cwd, warn):
             for k, p, source in _donormalize(files, default, root, cwd, warn):
                 kindpats.append((k, p, pat))
             continue
-        elif kind == "include":
-            try:
-                fullpath = os.path.join(root, util.localpath(pat))
-                includepats = readpatternfile(fullpath, warn)
-                for k, p, source in _donormalize(includepats, default, root, cwd, warn):
-                    kindpats.append((k, p, source or pat))
-            except error.Abort as inst:
-                raise error.Abort("%s: %s" % (pat, inst[0]))
-            except IOError as inst:
-                if warn:
-                    warn(
-                        _("skipping unreadable pattern file '%s': %s\n")
-                        % (pat, inst.strerror)
-                    )
-            continue
+
         # else: re or relre - which cannot be normalized
         kindpats.append((kind, pat, ""))
     return kindpats
@@ -1774,24 +1730,6 @@ def _buildmatch(ctx, kindpats, globsuffix, root):
     globsuffix is appended to the regexp of globs."""
     matchfuncs = []
 
-    subincludes, kindpats = _expandsubinclude(kindpats, root)
-    if subincludes:
-        submatchers = {}
-
-        def matchsubinclude(f):
-            for prefix, matcherargs in subincludes:
-                if f.startswith(prefix):
-                    mf = submatchers.get(prefix)
-                    if mf is None:
-                        mf = match(*matcherargs)
-                        submatchers[prefix] = mf
-
-                    if mf(f[len(prefix) :]):
-                        return True
-            return False
-
-        matchfuncs.append(matchsubinclude)
-
     fset, kindpats = _expandsets(kindpats, ctx)
     if fset:
         matchfuncs.append(fset.__contains__)
@@ -1936,84 +1874,6 @@ def _prefix(kindpats) -> bool:
         if kind not in ("path", "relpath"):
             return False
     return True
-
-
-_commentre = None
-
-
-def readpatternfile(filepath, warn, sourceinfo: bool = False):
-    """parse a pattern file, returning a list of
-    patterns. These patterns should be given to compile()
-    to be validated and converted into a match function.
-
-    trailing white space is dropped.
-    the escape character is backslash.
-    comments start with #.
-    empty lines are skipped.
-
-    lines can be of the following formats:
-
-    syntax: regexp # defaults following lines to non-rooted regexps
-    syntax: glob   # defaults following lines to non-rooted globs
-    re:pattern     # non-rooted regular expression
-    glob:pattern   # non-rooted glob
-    pattern        # pattern of the current default type
-
-    if sourceinfo is set, returns a list of tuples:
-    (pattern, lineno, originalline). This is useful to debug ignore patterns.
-    """
-
-    syntaxes = {
-        "re": "relre:",
-        "regexp": "relre:",
-        "glob": "relglob:",
-        "include": "include",
-        "subinclude": "subinclude",
-    }
-    syntax = "relre:"
-    patterns = []
-
-    fp = open(filepath, "rb")
-    for lineno, line in enumerate(util.iterfile(fp), start=1):
-        if "#" in line:
-            global _commentre
-            if not _commentre:
-                _commentre = util.re.compile(rb"((?:^|[^\\])(?:\\\\)*)#.*")
-            # remove comments prefixed by an even number of escapes
-            m = _commentre.search(line)
-            if m:
-                line = line[: m.end(1)]
-            # fixup properly escaped comments that survived the above
-            line = line.replace("\\#", "#")
-        line = line.rstrip()
-        if not line:
-            continue
-
-        if line.startswith("syntax:"):
-            s = line[7:].strip()
-            try:
-                syntax = syntaxes[s]
-            except KeyError:
-                if warn:
-                    warn(_("%s: ignoring invalid syntax '%s'\n") % (filepath, s))
-            continue
-
-        linesyntax = syntax
-        for s, rels in pycompat.iteritems(syntaxes):
-            if line.startswith(rels):
-                linesyntax = rels
-                line = line[len(rels) :]
-                break
-            elif line.startswith(s + ":"):
-                linesyntax = rels
-                line = line[len(s) + 1 :]
-                break
-        if sourceinfo:
-            patterns.append((linesyntax + line, lineno, line))
-        else:
-            patterns.append(linesyntax + line)
-    fp.close()
-    return patterns
 
 
 _usetreematcher = True

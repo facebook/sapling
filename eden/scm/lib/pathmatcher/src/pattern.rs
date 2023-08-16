@@ -40,12 +40,6 @@ pub enum PatternKind {
     /// a fileset expression
     Set,
 
-    /// a file of patterns to read and include
-    Include,
-
-    /// a file of patterns to match against files under the same directory
-    SubInclude,
-
     /// a path relative to repository root, which is matched non-recursively (will
     /// not match subdirectories)
     RootFilesIn,
@@ -63,8 +57,6 @@ impl PatternKind {
             PatternKind::ListFile => "listfile",
             PatternKind::ListFile0 => "listfile0",
             PatternKind::Set => "set",
-            PatternKind::Include => "include",
-            PatternKind::SubInclude => "subinclude",
             PatternKind::RootFilesIn => "rootfilesin",
         }
     }
@@ -84,8 +76,6 @@ impl std::str::FromStr for PatternKind {
             "listfile" => Ok(PatternKind::ListFile),
             "listfile0" => Ok(PatternKind::ListFile0),
             "set" => Ok(PatternKind::Set),
-            "include" => Ok(PatternKind::Include),
-            "subinclude" => Ok(PatternKind::SubInclude),
             "rootfilesin" => Ok(PatternKind::RootFilesIn),
             _ => Err(Error::UnsupportedPatternKind(s.to_string())),
         }
@@ -186,7 +176,7 @@ where
                     result.push(p);
                 }
             }
-            PatternKind::Set | PatternKind::Include | PatternKind::SubInclude => {
+            PatternKind::Set => {
                 return Err(Error::UnsupportedPatternKind(kind.name().to_string()));
             }
             _ => result.push(Pattern::new(kind, pat.to_string())),
@@ -284,8 +274,6 @@ mod tests {
     #[test]
     fn test_normalize_patterns_unsupported_kind() {
         assert!(normalize_patterns(vec!["set:added()"], PatternKind::Glob).is_err());
-        assert!(normalize_patterns(vec!["include:/a/b.txt"], PatternKind::Glob).is_err());
-        assert!(normalize_patterns(vec!["subinclude:/a/b.txt"], PatternKind::Glob).is_err());
     }
 
     #[test]
