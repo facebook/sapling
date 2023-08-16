@@ -5,9 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::path::Path;
 use std::str::FromStr;
 
+use anyhow::Result;
+
 use crate::error::Error;
+use crate::expand_curly_brackets;
+use crate::normalize_glob;
+use crate::plain_to_glob;
+use crate::utils::make_glob_recursive;
 
 #[derive(Debug, PartialEq, Copy, Clone, Hash, Eq)]
 pub enum PatternKind {
@@ -59,6 +66,30 @@ impl PatternKind {
             PatternKind::Set => "set",
             PatternKind::RootFilesIn => "rootfilesin",
         }
+    }
+
+    pub fn is_glob(&self) -> bool {
+        matches!(self, Self::Glob | Self::RelGlob)
+    }
+
+    pub fn is_path(&self) -> bool {
+        matches!(self, Self::Path | Self::RelPath | Self::RootFilesIn)
+    }
+
+    pub fn is_regex(&self) -> bool {
+        matches!(self, Self::RE | Self::RelRE)
+    }
+
+    pub fn is_recursive(&self) -> bool {
+        matches!(self, Self::Path | Self::RelPath)
+    }
+
+    pub fn is_cwd_relative(&self) -> bool {
+        matches!(self, Self::RelPath | Self::Glob)
+    }
+
+    pub fn is_free(&self) -> bool {
+        matches!(self, Self::RelGlob | Self::RelRE)
     }
 }
 
@@ -138,54 +169,134 @@ pub fn split_pattern<'a>(pattern: &'a str, default_kind: PatternKind) -> (Patter
     }
 }
 
-// TODO: refactor this code to avoid the overhead of monomorphization by
-// using a wrapper function.
-#[allow(dead_code)]
+#[tracing::instrument(level = "debug", ret)]
 pub(crate) fn normalize_patterns<I>(
     patterns: I,
     default_kind: PatternKind,
-) -> Result<Vec<Pattern>, Error>
+    root: &Path,
+    cwd: &Path,
+    force_recursive_glob: bool,
+) -> Result<Vec<Pattern>>
 where
-    I: IntoIterator,
-    I::Item: AsRef<str>,
+    I: IntoIterator + std::fmt::Debug,
+    I::Item: AsRef<str> + std::fmt::Debug,
 {
-    let mut result: Vec<Pattern> = Vec::new();
+    let mut result = Vec::new();
+
     for pattern in patterns {
-        let pattern = pattern.as_ref();
-        let (kind, pat) = split_pattern(pattern, default_kind);
-        match kind {
-            PatternKind::RelPath | PatternKind::Glob => {
-                // TODO: need to implement pathutil.pathauditor and pathutil.canonpath
-                // https://fburl.com/code/0q9sgvbj
-                result.push(Pattern::new(kind, pat.to_string()));
-            }
-            PatternKind::RelGlob | PatternKind::Path | PatternKind::RootFilesIn => {
-                let normalized_pat = normalize_path_pattern(pat);
-                result.push(Pattern::new(kind, normalized_pat));
-            }
-            PatternKind::ListFile | PatternKind::ListFile0 => {
-                let contents = util::file::read_to_string(pat)?;
-                let sep = if kind == PatternKind::ListFile {
-                    '\n'
-                } else {
-                    '\0'
+        let (kind, pat) = split_pattern(pattern.as_ref(), default_kind);
+
+        // Expand curlies in globs (e.g. "foo/{bar/baz, qux}" to ["foo/bar/baz", "foo/qux"]).
+        // Do this early so they aren't naively treated as paths. Note that we haven't
+        // normalized "\" to "/", so a Windows path separator might be misinterpreted as a
+        // curly escape. The alternative is to normalize "\" to "/" first, but that will
+        // certainly break curly escapes.
+        let pats = if kind.is_glob() {
+            expand_curly_brackets(pat)
+        } else {
+            vec![pat.to_string()]
+        };
+
+        for mut pat in pats {
+            // Normalize CWD-relative patterns to be relative to repo root.
+            if kind.is_cwd_relative() {
+                pat = match util::path::root_relative_path(root, cwd, pat.as_ref())? {
+                    Some(pat) => pat
+                        .into_os_string()
+                        .into_string()
+                        .map_err(|s| Error::NonUtf8(s.to_string_lossy().to_string()))?,
+                    None => {
+                        return Err(Error::PathOutsideRoot(
+                            pat.to_string(),
+                            root.to_string_lossy().to_string(),
+                        )
+                        .into());
+                    }
                 };
-                let lines = contents.split(sep);
-                for p in normalize_patterns(lines, default_kind)? {
-                    let p = p.with_source(pat.to_string());
-                    result.push(p);
+            }
+
+            // Clean up path and normalize to "/" path separator.
+            if kind.is_glob() || kind.is_path() {
+                pat = normalize_path_pattern(&pat);
+
+                // Path normalization yields "." for empty paths, which we don't want.
+                if pat == "." {
+                    pat = String::new();
                 }
             }
-            PatternKind::Set => {
-                return Err(Error::UnsupportedPatternKind(kind.name().to_string()));
+
+            // Escape glob characters so we can convert non-glob patterns into globs.
+            if kind.is_path() {
+                pat = plain_to_glob(&pat);
             }
-            _ => result.push(Pattern::new(kind, pat.to_string())),
+
+            // Make our loose globbing compatible with the tree matcher's strict globbing.
+            if kind.is_glob() {
+                pat = normalize_glob(&pat);
+            }
+
+            if kind.is_recursive() {
+                pat = make_glob_recursive(&pat);
+            }
+
+            // This is to make "-I" and "-X" globs recursive by default.
+            if force_recursive_glob && kind.is_glob() {
+                pat = make_glob_recursive(&pat);
+            }
+
+            if kind.is_glob() && kind.is_free() {
+                if !pat.is_empty() {
+                    // relglob is unrooted, so give it a leading "**".
+                    pat = format!("**/{pat}");
+                }
+            }
+
+            // rootfilesin matches a directory non-recursively
+            if kind == PatternKind::RootFilesIn {
+                pat = if pat.is_empty() {
+                    "*".to_string()
+                } else {
+                    format!("{pat}/*")
+                };
+            }
+
+            if kind.is_regex() {
+                let anchored = pat.starts_with('^');
+
+                // "^" is not required - strip it.
+                if anchored {
+                    pat = pat[1..].to_string();
+                }
+
+                // relre without "^" needs leading ".*?" to become unanchored.
+                if !anchored && kind.is_free() {
+                    pat = format!(".*?{pat}");
+                }
+            }
+
+            if kind.is_glob() || kind.is_path() || kind.is_regex() {
+                result.push(Pattern::new(kind, pat));
+            } else if matches!(kind, PatternKind::ListFile | PatternKind::ListFile0) {
+                let contents = util::file::read_to_string(&pat)?;
+
+                let patterns = if kind == PatternKind::ListFile {
+                    normalize_patterns(contents.lines(), default_kind, root, cwd, false)?
+                } else {
+                    normalize_patterns(contents.split('\0'), default_kind, root, cwd, false)?
+                };
+                for p in patterns {
+                    result.push(p.with_source(pat.clone()));
+                }
+            } else {
+                return Err(Error::UnsupportedPatternKind(kind.name().to_string()).into());
+            }
         }
     }
+
     Ok(result)
 }
 
-/// A wrapper of `util::path::normalize` function by adding path separator convertion,
+/// A wrapper of `util::path::normalize` function by adding path separator conversion,
 /// yields normalized [String] if the pattern is valid unicode.
 ///
 /// This function normalize the path difference on Windows by converting
@@ -196,14 +307,14 @@ fn normalize_path_pattern(pattern: &str) -> String {
     // SAFTEY: In Rust, values of type String are always valid UTF-8.
     // Our input pattern is a &str, and we don't add invalid chars in
     // out `util::path::normalize` function, so it should be safe here.
-    let pattern_str = pattern.to_string_lossy();
+    let pattern = pattern.into_os_string().into_string().unwrap();
     if cfg!(windows) {
-        pattern_str.replace(
+        pattern.replace(
             std::path::MAIN_SEPARATOR,
             &types::path::SEPARATOR.to_string(),
         )
     } else {
-        pattern_str.to_string()
+        pattern
     }
 }
 
@@ -244,36 +355,114 @@ mod tests {
         );
     }
 
+    #[track_caller]
+    fn assert_normalize(pat: &str, expected: &[&str], root: &str, cwd: &str, recursive: bool) {
+        let kind = pat.split_once(':').unwrap().0;
+
+        let got: Vec<String> = normalize_patterns(
+            vec![pat],
+            PatternKind::Glob,
+            root.as_ref(),
+            cwd.as_ref(),
+            recursive,
+        )
+        .unwrap()
+        .into_iter()
+        .map(|p| {
+            assert_eq!(p.kind.name(), kind);
+            p.pattern
+        })
+        .collect();
+
+        assert_eq!(got, expected);
+    }
+
     #[test]
     fn test_normalize_patterns() {
+        #[track_caller]
+        fn check(pat: &str, expected: &[&str]) {
+            assert_normalize(pat, expected, "/root", "/root/cwd", false);
+        }
+
+        check("glob:", &["cwd"]);
+        check("glob:.", &["cwd"]);
+        check("glob:..", &[""]);
+        check("glob:a", &["cwd/a"]);
+        check("glob:../a{b,c}d", &["abd", "acd"]);
+        check("glob:/root/foo/*.c", &["foo/*.c"]);
+
+        check("relglob:", &[""]);
+        check("relglob:.", &[""]);
+        check("relglob:*.c", &["**/*.c"]);
+
+        check("path:", &["**"]);
+        check("path:.", &["**"]);
+        check("path:foo", &["foo/**"]);
+        check("path:foo*", &[r"foo\*/**"]);
+
+        check("relpath:", &["cwd/**"]);
+        check("relpath:.", &["cwd/**"]);
+        check("relpath:foo", &["cwd/foo/**"]);
+        check("relpath:../foo*", &[r"foo\*/**"]);
+
+        check(r"re:a.*\.py", &[r"a.*\.py"]);
+
+        check(r"relre:a.*\.py", &[r".*?a.*\.py"]);
+        check(r"relre:^foo(bar|baz)", &[r"foo(bar|baz)"]);
+
+        check("rootfilesin:", &["*"]);
+        check("rootfilesin:.", &["*"]);
+        check("rootfilesin:foo*", &[r"foo\*/*"]);
+    }
+
+    #[test]
+    fn test_normalize_multiple() {
+        let got: Vec<(PatternKind, String)> = normalize_patterns(
+            vec!["naked", "relpath:foo/b{a}r", "glob:a{b,c}"],
+            PatternKind::RelGlob,
+            "/root".as_ref(),
+            "/root/cwd".as_ref(),
+            false,
+        )
+        .unwrap()
+        .into_iter()
+        .map(|p| (p.kind, p.pattern))
+        .collect();
+
         assert_eq!(
-            normalize_patterns(
-                vec!["glob:/a/*", r"re:a.*\.py", "path:foo/bar/../baz/"],
-                PatternKind::Glob
-            )
-            .unwrap(),
-            [
-                Pattern::new(PatternKind::Glob, "/a/*".to_string()),
-                Pattern::new(PatternKind::RE, r"a.*\.py".to_string()),
-                Pattern::new(PatternKind::Path, "foo/baz".to_string()),
+            got,
+            vec![
+                (PatternKind::RelGlob, "**/naked".to_string()),
+                (PatternKind::RelPath, "cwd/foo/b\\{a\\}r/**".to_string()),
+                (PatternKind::Glob, "cwd/ab".to_string()),
+                (PatternKind::Glob, "cwd/ac".to_string()),
             ]
-        );
-        assert_eq!(
-            normalize_patterns(vec!["/a/*", r"re:a.*\.py"], PatternKind::Glob).unwrap(),
-            [
-                Pattern::new(PatternKind::Glob, "/a/*".to_string()),
-                Pattern::new(PatternKind::RE, r"a.*\.py".to_string()),
-            ]
-        );
-        assert_eq!(
-            normalize_patterns(vec!["relglob:*.c"], PatternKind::Glob).unwrap(),
-            [Pattern::new(PatternKind::RelGlob, "*.c".to_string()),]
         );
     }
 
     #[test]
+    fn test_recursive_normalize() {
+        #[track_caller]
+        fn check(pat: &str, expected: &[&str]) {
+            assert_normalize(pat, expected, "/root", "/root/cwd", true);
+        }
+
+        check("glob:", &["cwd/**"]);
+        check("glob:/root", &["**"]);
+    }
+
+    #[test]
     fn test_normalize_patterns_unsupported_kind() {
-        assert!(normalize_patterns(vec!["set:added()"], PatternKind::Glob).is_err());
+        assert!(
+            normalize_patterns(
+                vec!["set:added()"],
+                PatternKind::Glob,
+                "".as_ref(),
+                "".as_ref(),
+                false,
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -292,6 +481,7 @@ mod tests {
     #[test]
     fn test_normalize_patterns_listfile() {
         test_normalize_patterns_listfile_helper("\n");
+        test_normalize_patterns_listfile_helper("\r\n");
     }
 
     #[test]
@@ -309,10 +499,17 @@ mod tests {
 
         let outer_patterns = vec![format!(
             "listfile{}:{}",
-            if sep == "\n" { "" } else { "0" },
+            if sep == "\0" { "0" } else { "" },
             path_str
         )];
-        let result = normalize_patterns(outer_patterns, PatternKind::Glob).unwrap();
+        let result = normalize_patterns(
+            outer_patterns,
+            PatternKind::Glob,
+            "".as_ref(),
+            "".as_ref(),
+            false,
+        )
+        .unwrap();
 
         assert_eq!(
             result,

@@ -10,6 +10,9 @@ pub enum Error {
     #[error("unsuppported pattern kind {0}")]
     UnsupportedPatternKind(String),
 
-    #[error(transparent)]
-    IOError(#[from] util::errors::IOError),
+    #[error("{0} not under root '{1}'")]
+    PathOutsideRoot(String, String),
+
+    #[error("non-utf8 path '{0}' when building pattern")]
+    NonUtf8(String),
 }
