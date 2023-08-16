@@ -1,9 +1,11 @@
 #chg-compatible
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig workingcopy.ruststatus=False
+
+  $ eagerepo
+  $ setconfig remotenames.rename.default=
+  $ setconfig remotenames.hoist=default
 
 Set up extension and repos
-  $ enable remotenames
   $ hg init repo1
   $ cd repo1
   $ echo a > a
@@ -12,15 +14,10 @@ Set up extension and repos
   $ hg boo bm1
   $ hg boo bm2
   $ cd ..
-  $ hg clone repo1 repo2
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd repo2
-  $ setconfig paths.default-push="$TESTTMP/repo1"
+  $ newclientrepo repo2 test:repo1 bm1
+  $ setconfig 'remotenames.selectivepulldefault=bm1 bm2'
   $ hg pull
-  pulling from $TESTTMP/repo1 (glob)
-  searching for changes
-  no changes found
+  pulling from test:repo1
   $ hg log -l 1 -T '{node|short} {remotenames}\n'
   cb9a9f314b8b default/bm1 default/bm2
 
@@ -29,9 +26,7 @@ Test renaming
   $ hg dbsh -c 'with repo.lock(), repo.transaction("tr"): repo.svfs.writeutf8("remotenames","")'
   $ setglobalconfig remotenames.rename.default=remote
   $ hg pull
-  pulling from $TESTTMP/repo1 (glob)
-  searching for changes
-  no changes found
+  pulling from test:repo1
   $ hg log -l 1 -T '{node|short} {remotenames}\n'
   cb9a9f314b8b remote/bm1 remote/bm2
 
@@ -50,9 +45,7 @@ Test hoisting name lookup
   $ hg log -r . -T '{hoistedbookmarks}\n'
   
   $ hg pull
-  pulling from $TESTTMP/repo1 (glob)
-  searching for changes
-  no changes found
+  pulling from test:repo1
   $ hg log -r bm1 -T '{node|short} - {bookmarks} - {hoistednames} - {remotebookmarks}\n'
   cb9a9f314b8b -  - bm1 bm2 - remote/bm1 remote/bm2
   $ hg log -r bm2 -T '{node|short} - {bookmarks} - {hoistednames} - {remotebookmarks}\n'
@@ -72,9 +65,7 @@ Test transition bookmark deletion
      stable                    cb9a9f314b8b
   $ setglobalconfig remotenames.transitionbookmarks="master, stable, other"
   $ hg pull
-  pulling from $TESTTMP/repo1 (glob)
-  searching for changes
-  no changes found
+  pulling from test:repo1
   $ hg bookmarks
      notdeleted                d2ae7f538514
 
@@ -109,7 +100,7 @@ Test transition bookmark disallowed
 
 Test push to renamed dest
   $ hg push remote
-  pushing to $TESTTMP/repo1 (glob)
+  pushing to test:repo1
   searching for changes
   abort: push would create new anonymous heads (d2ae7f538514)
   (use --allow-anon to override this warning)
@@ -117,7 +108,5 @@ Test push to renamed dest
 
 Test pull from renamed source
   $ hg pull remote
-  pulling from $TESTTMP/repo1 (glob)
-  searching for changes
-  no changes found
+  pulling from test:repo1
 

@@ -1,5 +1,4 @@
 #chg-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
 Tests for the journal extension integration with remotenames.
@@ -8,8 +7,8 @@ Skip if journal is not available in mercurial
 
   $ hg help -e journal &>/dev/null || exit 80
 
-  $ enable journal remotenames
-  $ setconfig remotenames.rename.default=remote
+  $ eagerepo
+  $ enable journal
 
   $ hg init remote
   $ cd remote
@@ -21,11 +20,10 @@ Skip if journal is not available in mercurial
 Test journal with remote bookmarks works on clone
 
   $ cd ..
-  $ hg clone remote local -q
-  $ cd local
+  $ newclientrepo local test:remote bm bmwillnotmove
   $ hg journal remote/bm
   previous locations of 'remote/bm':
-  94cf1ae9e2c8  clone remote local -q
+  94cf1ae9e2c8  pull -q -B bm
 
 Test journal with remote bookmarks works on pull
 
@@ -38,7 +36,7 @@ Test journal with remote bookmarks works on pull
   $ hg journal remote/bm
   previous locations of 'remote/bm':
   b720e98e7160  pull -q
-  94cf1ae9e2c8  clone remote local -q
+  94cf1ae9e2c8  pull -q -B bm
 
 Test journal with remote bookmarks works after push
 
@@ -50,11 +48,11 @@ Test journal with remote bookmarks works after push
   previous locations of 'remote/bm':
   869ef7e9b417  push --to bm -q
   b720e98e7160  pull -q
-  94cf1ae9e2c8  clone remote local -q
+  94cf1ae9e2c8  pull -q -B bm
 
 Test second remotebookmark has not been clobbered or has moved since clone
 
   $ hg journal remote/bmwillnotmove
   previous locations of 'remote/bmwillnotmove':
-  94cf1ae9e2c8  clone remote local -q
+  94cf1ae9e2c8  pull -q -B bmwillnotmove
 

@@ -1125,9 +1125,9 @@ class localrepository(object):
             # Resolve headnames to heads.
             if headnames:
                 if (
-                    self.ui.configbool("pull", "httphashprefix")
-                    and self.nullableedenapi is not None
-                ):
+                    eagerepo.iseagerepo(self)
+                    or self.ui.configbool("pull", "httphashprefix")
+                ) and self.nullableedenapi is not None:
                     for name in headnames:
                         # check if headname can be a hex hash prefix
                         if any(n not in "abcdefg1234567890" for n in name.lower()):

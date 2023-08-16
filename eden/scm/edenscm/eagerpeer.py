@@ -171,6 +171,7 @@ class eagerpeer(repository.peer):
 
     def listkeys(self, namespace):
         if namespace == "bookmarks":
+            # FIXME: this is the server's selectivepulldefault instead of the client's
             patterns = self.ui.configlist("remotenames", "selectivepulldefault")
         else:
             patterns = []

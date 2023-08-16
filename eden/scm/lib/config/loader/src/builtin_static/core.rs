@@ -59,4 +59,12 @@ completion-description=false
 
 [merge]
 enable-merge-tool-script=true
+
+[remotenames]
+autocleanupthreshold=50
+selectivepulldefault=master
+selectivepulldiscovery=true
+autopullhoistpattern=
+autopullpattern=re:^(?:default|remote)/[A-Za-z0-9._/-]+$
+hoist=default
 "#);

@@ -3676,6 +3676,8 @@
     default
    remotebookmarks color=remotebookmark builtin=True
     
+   hoistednames color=hoistedname builtin=True
+    
    revnames color=revname builtin=False
     r2
   
@@ -3686,6 +3688,8 @@
     default
    remotebookmarks color=remotebookmark builtin=True
     
+   hoistednames color=hoistedname builtin=True
+    
    revnames color=revname builtin=False
     r1
   
@@ -3695,6 +3699,8 @@
    branches color=branch builtin=True
     default
    remotebookmarks color=remotebookmark builtin=True
+    
+   hoistednames color=hoistedname builtin=True
     
    revnames color=revname builtin=False
     r0
@@ -3708,6 +3714,7 @@
   bookmarks: bar foo text.{rev}
   branches: default
   remotebookmarks: 
+  hoistednames: 
   $ hg log -r2 -T '{namespaces % "{namespace}:\n{names % " {name}\n"}"}'
   bookmarks:
    bar
@@ -3716,6 +3723,7 @@
   branches:
    default
   remotebookmarks:
+  hoistednames:
   $ hg log -r2 -T '{get(namespaces, "bookmarks") % "{name}\n"}'
   bar
   foo

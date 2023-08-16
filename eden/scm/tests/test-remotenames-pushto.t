@@ -1,16 +1,15 @@
 #chg-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
 Set up extension and repos
 
-  $ enable remotenames
+  $ eagerepo
   $ setconfig phases.publish=false
-  $ hg init repo1
-  $ hg clone repo1 repo2
-  updating to branch default
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd repo2
+  $ setconfig remotenames.rename.default=
+For convenience. The test was written without selectivepull and uses the "@" bookmark.
+  $ setconfig remotenames.selectivepulldefault=master,@
+
+  $ newclientrepo repo2 test:repo1
 
 Test that anonymous heads are disallowed by default
 
@@ -18,7 +17,7 @@ Test that anonymous heads are disallowed by default
   $ hg add a
   $ hg commit -m a
   $ hg push
-  pushing to $TESTTMP/repo1 (glob)
+  pushing to test:repo1
   searching for changes
   abort: push would create new anonymous heads (cb9a9f314b8b)
   (use --allow-anon to override this warning)
@@ -35,13 +34,13 @@ Test that config changes what is pushed by default
   $ hg add c
   $ hg commit -m c
   $ hg push -r 'head()'
-  pushing to $TESTTMP/repo1 (glob)
+  pushing to test:repo1
   searching for changes
   abort: push would create new anonymous heads (d2ae7f538514, d36c0562f908)
   (use --allow-anon to override this warning)
   [255]
   $ hg push -r .
-  pushing to $TESTTMP/repo1 (glob)
+  pushing to test:repo1
   searching for changes
   abort: push would create new anonymous heads (d36c0562f908)
   (use --allow-anon to override this warning)
@@ -52,11 +51,8 @@ Test that config changes what is pushed by default
 Test that config allows anonymous heads to be pushed
 
   $ hg push --config remotenames.pushanonheads=True
-  pushing to $TESTTMP/repo1 (glob)
+  pushing to test:repo1
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
 
 Test that forceto works
 
@@ -81,29 +77,24 @@ Test that --to limits other options
 Test that --create is required to create new bookmarks
 
   $ hg push --to @
-  pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
+  pushing rev 1846eede8b68 to destination test:repo1 bookmark @
   searching for changes
   abort: not creating new remote bookmark
   (use --create to create a new bookmark)
   [255]
   $ hg push --to @ --create
-  pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
+  pushing rev 1846eede8b68 to destination test:repo1 bookmark @
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   exporting bookmark @
 
 Test that --non-forward-move is required to move bookmarks to odd locations
 
   $ hg push --to @
-  pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
+  pushing rev 1846eede8b68 to destination test:repo1 bookmark @
   searching for changes
   remote bookmark already points at pushed rev
-  no changes found
-  [1]
   $ hg push --to @ -r ".^"
-  pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
+  pushing rev cb9a9f314b8b to destination test:repo1 bookmark @
   searching for changes
   abort: pushed rev is not in the foreground of remote bookmark
   (use --non-forward-move flag to complete arbitrary moves)
@@ -113,7 +104,7 @@ Test that --non-forward-move is required to move bookmarks to odd locations
   $ echo c >> a
   $ hg commit -m c
   $ hg push --to @
-  pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
+  pushing rev cc61aa6be3dc to destination test:repo1 bookmark @
   searching for changes
   abort: pushed rev is not in the foreground of remote bookmark
   (use --non-forward-move flag to complete arbitrary moves)
@@ -131,45 +122,36 @@ Test that --non-forward-move allows moving bookmark around arbitrarily
   o  a
   
   $ hg push --to @ -r headb
-  pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
+  pushing rev 1846eede8b68 to destination test:repo1 bookmark @
   searching for changes
   remote bookmark already points at pushed rev
-  no changes found
-  [1]
   $ hg push --to @ -r headb
-  pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
+  pushing rev 1846eede8b68 to destination test:repo1 bookmark @
   searching for changes
   remote bookmark already points at pushed rev
-  no changes found
-  [1]
   $ hg push --to @ -r headc
-  pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
+  pushing rev cc61aa6be3dc to destination test:repo1 bookmark @
   searching for changes
   abort: pushed rev is not in the foreground of remote bookmark
   (use --non-forward-move flag to complete arbitrary moves)
   [255]
   $ hg push --to @ -r headc --non-forward-move --force
-  pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
+  pushing rev cc61aa6be3dc to destination test:repo1 bookmark @
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   updating bookmark @
   $ hg push --to @ -r 'desc(a)'
-  pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
+  pushing rev cb9a9f314b8b to destination test:repo1 bookmark @
   searching for changes
   abort: pushed rev is not in the foreground of remote bookmark
   (use --non-forward-move flag to complete arbitrary moves)
   [255]
   $ hg push --to @ -r 'desc(a)' --non-forward-move
-  pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
+  pushing rev cb9a9f314b8b to destination test:repo1 bookmark @
   searching for changes
-  no changes found
   updating bookmark @
   $ hg push --to @ -r headb
-  pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
+  pushing rev 1846eede8b68 to destination test:repo1 bookmark @
   searching for changes
-  no changes found
   updating bookmark @
 
 Test that local must have rev of remote to push --to without --non-forward-move
@@ -179,33 +161,18 @@ Test that local must have rev of remote to push --to without --non-forward-move
   $ hg debugstrip -r headb
   $ hg book -d headb
   $ hg push --to @ -r headc
-  pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
+  pushing rev cc61aa6be3dc to destination test:repo1 bookmark @
   searching for changes
   abort: remote bookmark revision is not in local repo
   (pull and merge or rebase or use --non-forward-move)
   [255]
 
-Clean up repo1
-
-  $ cd ../repo1
-  $ hg log -G -T '{desc} {bookmarks}\n'
-  o  c
-  │
-  │ o  b @
-  ├─╯
-  o  a
-  
-  $ hg debugstrip 'desc(c)'
-  $ cd ../repo2
 
 Test that rebasing and pushing works as expected
 
   $ hg pull
-  pulling from $TESTTMP/repo1 (glob)
+  pulling from test:repo1
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   o  c headc
   │
@@ -235,11 +202,8 @@ Test that rebasing and pushing works as expected
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark headc)
   $ hg push --to @
-  pushing rev 6683576730c5 to destination $TESTTMP/repo1 bookmark @
+  pushing rev 6683576730c5 to destination test:repo1 bookmark @
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   updating bookmark @
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  c headc default/@

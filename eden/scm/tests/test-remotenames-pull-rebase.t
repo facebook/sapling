@@ -1,14 +1,16 @@
 #chg-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
-  $ enable remotenames
+  $ eagerepo
+  $ setconfig remotenames.rename.default=
+
 
   $ mkcommit()
   > {
   >    echo $1 > $1
   >    hg add $1
   >    hg ci -m "$1" -q
+  >    export $1=$(hg log -T '{node}' -r .)
   > }
 
   $ printdag()
@@ -22,9 +24,7 @@ Test hg pull --rebase degrades gracefully if rebase extension is not loaded
   $ mkcommit root
   $ hg book bookmarkonremote
 
-  $ cd ..
-  $ hg clone -q remoterepo localrepo
-  $ cd localrepo
+  $ newclientrepo localrepo test:remoterepo bookmarkonremote
 
 Make sure to enable tracking
   $ hg book bmtrackingremote --track default/bookmarkonremote
@@ -59,7 +59,7 @@ Create local changes and checkout tracking bookmark
   o  root |  | default/bookmarkonremote
   
 Pull remote changes and rebase local changes with tracked bookmark onto them
-  $ hg pull -q --rebase
+  $ hg pull -q --rebase -r $untrackedremotecommit
   $ printdag
   @  localcommit | bmtrackingremote |
   │
@@ -82,11 +82,8 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   o  root |  |
   
   $ hg pull --rebase
-  pulling from $TESTTMP/remoterepo (glob)
+  pulling from test:remoterepo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   updating to active bookmark bmnottracking
   nothing to rebase
   $ hg rebase -d 'desc(untrackedremotecommit)'
@@ -109,11 +106,8 @@ Tests the behavior of a pull followed by a pull --rebase
   $ cd ../localrepo
   $ hg book -t default/bookmarkonremote tracking
   $ hg pull
-  pulling from $TESTTMP/remoterepo (glob)
+  pulling from test:remoterepo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg debugmakepublic 4557926d2166
 
 Tests that there are no race condition between pulling changesets and remote bookmarks
@@ -174,11 +168,8 @@ Test pull with --rebase and --tool
   o  root |  |
   
   $ hg pull --rebase --tool internal:union
-  pulling from $TESTTMP/remoterepo (glob)
+  pulling from test:remoterepo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   rebasing 1d01e32a0efb "somelocalchanges" (tracking2)
   merging editedbyboth
   $ printdag

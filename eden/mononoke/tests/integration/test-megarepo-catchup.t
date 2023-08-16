@@ -149,6 +149,7 @@ blobimport
   @  commit:      * (glob)
   │  bookmark:    head_bookmark
   │  bookmark:    default/head_bookmark
+  │  hoistedname: head_bookmark
   │  user:        user
   │  date:        * (glob)
   │  summary:     [MEGAREPO CATCHUP DELETE] deletion commit (1)
@@ -161,6 +162,7 @@ blobimport
   │ o  commit:      f910c17f2a72
   │ │  bookmark:    small_repo_head_bookmark
   │ │  bookmark:    default/small_repo_head_bookmark
+  │ │  hoistedname: small_repo_head_bookmark
   │ │  user:        test
   │ │  date:        Thu Jan 01 00:00:00 1970 +0000
   │ │  summary:     change files
@@ -188,6 +190,7 @@ blobimport
   o  commit:      * (glob)
   │  bookmark:    pre_merge_head_bookmark
   │  bookmark:    default/pre_merge_head_bookmark
+  │  hoistedname: pre_merge_head_bookmark
   │  user:        test
   │  date:        Thu Jan 01 00:00:00 1970 +0000
   │  summary:     large repo second commit

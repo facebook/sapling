@@ -4,21 +4,17 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-#if fsmonitor
-  $ setconfig workingcopy.ruststatus=False
-#endif
+  $ eagerepo
+
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig 'extensions.treemanifest=!'
+  $ setconfig remotenames.hoist=default
+  $ setconfig remotenames.rename.default=
 
 # Set up extension and repos
 
-  $ echo '[extensions]' >> $HGRCPATH
-  $ echo 'remotenames=' >> $HGRCPATH
-  $ echo 'color=' >> $HGRCPATH
-  $ echo '[color]' >> $HGRCPATH
-  $ echo 'log.remotebookmark = yellow' >> $HGRCPATH
-  $ echo 'log.remotebranch = red' >> $HGRCPATH
-  $ echo 'log.hoistedname = blue' >> $HGRCPATH
+  $ enable color
+  $ setconfig color.log.remotebookmark=yellow color.log.remotebranch=red color.log.hoistedname=blue
+
   $ hg init repo1
   $ cd repo1
   $ echo a > a
@@ -26,10 +22,7 @@
   $ hg commit -qm a
   $ hg boo bm2
   $ cd ..
-  $ hg clone repo1 repo2
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd repo2
+  $ newclientrepo repo2 test:repo1 bm2
   $ hg bookmark local
 
 # Test colors

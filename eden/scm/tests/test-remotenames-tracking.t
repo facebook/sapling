@@ -1,11 +1,11 @@
 #chg-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig experimental.allowfilepeer=True
 
 Set up extension and repos
 
-  $ enable remotenames
+  $ eagerepo
+  $ setconfig remotenames.rename.default=
   $ setconfig phases.publish=false
   $ hg init repo1
 
@@ -67,10 +67,8 @@ Create a tracking bookmark
 Test push tracking
 
   $ cd ..
-  $ hg clone repo1 repo2
-  updating to branch default
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd repo2
+  $ newclientrepo repo2 test:repo1 a b
+  $ setconfig 'remotenames.selectivepulldefault=a b'
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  b  default/b
   │
@@ -93,11 +91,8 @@ Test push tracking
   o  a1
   
   $ hg push
-  pushing rev e305ab9fea99 to destination $TESTTMP/repo1 bookmark b
+  pushing rev e305ab9fea99 to destination test:repo1 bookmark b
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   updating bookmark b
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  c c default/b
@@ -111,11 +106,9 @@ Test push tracking
 Test push with explicit default path
 
   $ hg push `hg paths default`
-  pushing rev e305ab9fea99 to destination $TESTTMP/repo1 bookmark b
+  pushing rev e305ab9fea99 to destination test:repo1 bookmark b
   searching for changes
   remote bookmark already points at pushed rev
-  no changes found
-  [1]
 
 Test that we don't try to push if tracking bookmark isn't a remote bookmark
 
@@ -131,9 +124,7 @@ Test renaming a remote and tracking
   $ hg dbsh -c "with repo.lock(), repo.transaction('tr'): repo.svfs.writeutf8('remotenames', '')"
   $ setglobalconfig remotenames.rename.default=remote
   $ hg pull
-  pulling from $TESTTMP/repo1 (glob)
-  searching for changes
-  no changes found
+  pulling from test:repo1
   $ hg book c -t remote/a
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  c c remote/b
@@ -145,9 +136,8 @@ Test renaming a remote and tracking
   o  a1
   
   $ hg push
-  pushing rev e305ab9fea99 to destination $TESTTMP/repo1 bookmark a
+  pushing rev e305ab9fea99 to destination test:repo1 bookmark a
   searching for changes
-  no changes found
   updating bookmark a
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  c c remote/a remote/b

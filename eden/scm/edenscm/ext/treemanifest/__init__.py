@@ -362,7 +362,7 @@ def wraprepo(repo):
     class treerepository(repo.__class__):
         @perftrace.tracefunc("Prefetch Trees")
         def prefetchtrees(self, mfnodes, basemfnodes=None):
-            if not treeenabled(self.ui):
+            if not treeenabled(self.ui) or eagerepo.iseagerepo(self):
                 return
             if self.storage_format() == "revlog":
                 return
