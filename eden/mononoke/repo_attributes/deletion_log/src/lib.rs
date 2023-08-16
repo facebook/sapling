@@ -61,6 +61,7 @@ mononoke_queries! {
 }
 
 #[derive(Clone, Display, Debug, EnumString, PartialEq, Eq, Hash)]
+#[strum(serialize_all = "snake_case")]
 pub enum DeletionStage {
     Planned,
     Staged,
