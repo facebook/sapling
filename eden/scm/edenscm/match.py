@@ -136,16 +136,16 @@ def match(
         def normalize(patterns, default, root, cwd, warn):
             kp = _donormalize(patterns, default, root, cwd, warn)
             kindpats = []
-            for kind, pats, source in kp:
+            for kind, pat, source in kp:
                 if kind not in ("re", "relre"):  # regex can't be normalized
-                    p = pats
-                    pats = dsnormalize(pats)
+                    p = pat
+                    pat = dsnormalize(pat)
 
                     # Preserve the original to handle a case only rename.
-                    if p != pats and p in dirstate:
+                    if p != pat and p in dirstate:
                         kindpats.append((kind, p, source))
 
-                kindpats.append((kind, pats, source))
+                kindpats.append((kind, pat, source))
             return kindpats
 
     m = None
