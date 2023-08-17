@@ -39,6 +39,7 @@ mononoke_app::subcommands! {
     mod fetch;
     mod filestore;
     mod git_bundle;
+    mod git_symref;
     mod hg_sync;
     mod list_repos;
     mod locking;
