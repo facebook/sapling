@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -58,26 +59,30 @@ impl Snapshot {
         FilenodesStream: Stream<Item = PreparedFilenode>,
         ChangesetsStream: Stream<Item = ChangesetEntry>,
     {
+        let mut seen_filenodes = HashSet::new();
         let filenodes = filenodes.fold(Vec::new(), |mut v, c| {
             let PreparedFilenode { path, info } = c;
 
-            let t = thrift::FilenodeSnapshot {
-                path: Some(path.into_thrift()),
-                filenode: Some(info.filenode.into_nodehash().into_thrift()),
-                p1: info.p1.map(|p| p.into_nodehash().into_thrift()),
-                p2: info.p2.map(|p| p.into_nodehash().into_thrift()),
-                copyfrom: info.copyfrom.map(|copyfrom| thrift::CopyInfoSnapshot {
-                    path: Some(copyfrom.0.into_thrift()),
-                    filenode: Some(copyfrom.1.into_nodehash().into_thrift()),
-                }),
-                linknode: Some(info.linknode.into_nodehash().into_thrift()),
-            };
+            if seen_filenodes.insert((path.clone(), info.filenode.clone())) {
+                let t = thrift::FilenodeSnapshot {
+                    path: Some(path.into_thrift()),
+                    filenode: Some(info.filenode.into_nodehash().into_thrift()),
+                    p1: info.p1.map(|p| p.into_nodehash().into_thrift()),
+                    p2: info.p2.map(|p| p.into_nodehash().into_thrift()),
+                    copyfrom: info.copyfrom.map(|copyfrom| thrift::CopyInfoSnapshot {
+                        path: Some(copyfrom.0.into_thrift()),
+                        filenode: Some(copyfrom.1.into_nodehash().into_thrift()),
+                    }),
+                    linknode: Some(info.linknode.into_nodehash().into_thrift()),
+                };
 
-            v.push(t);
+                v.push(t);
+            }
 
             future::ready(v)
         });
 
+        let mut seen_changesets = HashSet::new();
         let changesets = changesets.fold(Vec::new(), |mut v, c| {
             let ChangesetEntry {
                 repo_id: _,
@@ -86,16 +91,18 @@ impl Snapshot {
                 gen,
             } = c;
 
-            let t = thrift::ChangesetSnapshot {
-                cs_id: Some(cs_id.into_thrift()),
-                parents: Some(parents.into_iter().map(|p| p.into_thrift()).collect()),
-                // NOTE: We expect this conversion (and the reverse one) between u64 and i64 to
-                // succeed because the generation number is >= 0, but also not so large that it
-                // cannot fit in a i64.
-                gen: Some(gen.try_into().unwrap()),
-            };
+            if seen_changesets.insert(cs_id) {
+                let t = thrift::ChangesetSnapshot {
+                    cs_id: Some(cs_id.into_thrift()),
+                    parents: Some(parents.into_iter().map(|p| p.into_thrift()).collect()),
+                    // NOTE: We expect this conversion (and the reverse one) between u64 and i64 to
+                    // succeed because the generation number is >= 0, but also not so large that it
+                    // cannot fit in a i64.
+                    gen: Some(gen.try_into().unwrap()),
+                };
 
-            v.push(t);
+                v.push(t);
+            }
 
             future::ready(v)
         });
