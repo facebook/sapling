@@ -292,6 +292,7 @@ def callcatch(ui, req, func):
         error.ConfigError,
         error.InvalidRepoPath,
         error.NonUTF8PathError,
+        error.PathMatcherError,
         error.RepoInitError,
         error.WorkingCopyError,
     ) as inst:

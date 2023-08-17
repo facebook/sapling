@@ -37,6 +37,7 @@ LockContendedError = bindings.error.LockContendedError
 MetaLogError = bindings.error.MetaLogError
 NeedSlowPathError = bindings.error.NeedSlowPathError
 NonUTF8PathError = bindings.error.NonUTF8Path
+PathMatcherError = bindings.error.PathMatcherError
 WorkingCopyError = bindings.error.WorkingCopyError
 RepoInitError = bindings.error.RepoInitError
 UncategorizedNativeError = bindings.error.UncategorizedNativeError

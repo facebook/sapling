@@ -14,6 +14,7 @@ hgcommits = { path = "../../../../lib/hgcommits" }
 http-client = { path = "../../../../lib/http-client" }
 indexedlog = { path = "../../../../lib/indexedlog" }
 metalog = { path = "../../../../lib/metalog" }
+pathmatcher = { path = "../../../../lib/pathmatcher" }
 repo = { path = "../../../../lib/repo" }
 repolock = { path = "../../../../lib/repolock" }
 revisionstore = { path = "../../../../lib/revisionstore" }

@@ -19,6 +19,7 @@ py_exception!(error, LockContendedError);
 py_exception!(error, MetaLogError);
 py_exception!(error, NeedSlowPathError);
 py_exception!(error, NonUTF8Path);
+py_exception!(error, PathMatcherError);
 py_exception!(error, WorkingCopyError);
 py_exception!(error, RepoInitError);
 py_exception!(error, UncategorizedNativeError);
@@ -41,6 +42,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     )?;
     m.add(py, "MetaLogError", py.get_type::<MetaLogError>())?;
     m.add(py, "NeedSlowPathError", py.get_type::<NeedSlowPathError>())?;
+    m.add(py, "PathMatcherError", py.get_type::<PathMatcherError>())?;
     m.add(
         py,
         "UncategorizedNativeError",
@@ -224,6 +226,11 @@ fn register_error_handlers() {
                     cpython_ext::Str::from(e.0.to_string()),
                 ))
             })
+        } else if e.is::<pathmatcher::Error>() {
+            Some(PyErr::new::<PathMatcherError, _>(
+                py,
+                cpython_ext::Str::from(format!("{:?}", e)),
+            ))
         } else if let Some(e) = e.downcast_ref::<cpython_ext::PyErr>() {
             Some(e.clone(py).into())
         } else {
