@@ -485,6 +485,31 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
+        if let Some(value) = self.fetch_derived(ctx, csid, rederivation.clone()).await? {
+            Ok(value)
+        } else if let Some(value) = self
+            .derive_remotely(ctx, csid, rederivation.clone())
+            .await?
+        {
+            Ok(value)
+        } else {
+            self.derive_locally(ctx, csid, rederivation).await
+        }
+    }
+
+    // Derive remotely if possible.
+    //
+    // Returns `None` if remote derivation is not enabled, failed or timed out, and
+    // local derivation should be attempted.
+    pub async fn derive_remotely<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<Option<Derivable>, DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
         // How long to wait between requests to the remote derivation service, either to
         // check for completion of ongoing remote derivation or after failures.
         const RETRY_DELAY: Duration = Duration::from_millis(100);
@@ -513,27 +538,36 @@ impl DerivedDataManager {
             let mut request_state = DerivationState::NotRequested;
             let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
             derived_data_scuba.add_changeset(csid);
-            while let Some(true) =
-                tunables::tunables().by_repo_enable_remote_derivation(self.repo_name())
-            {
+
+            // Try to perform remote derivation.  Capture the error so that we
+            // can decide what to do.
+            let derivation_error = loop {
+                if !tunables()
+                    .by_repo_enable_remote_derivation(self.repo_name())
+                    .unwrap_or_default()
+                {
+                    // Remote derivation has been disabled, fall back to local derivation.
+                    return Ok(None);
+                }
+
                 if started.elapsed() >= fallback_timeout {
                     derived_data_scuba.log_remote_derivation_end(
                         ctx,
                         Some(format!(
-                            "Fallback to local derivation after timeout {:?}",
+                            "Remote derivation timed out after {:?}",
                             fallback_timeout
                         )),
                     );
-                    break;
+                    break DerivationError::Timeout(Derivable::NAME, fallback_timeout);
                 }
 
-                let res = match request_state {
+                let service_response = match request_state {
                     DerivationState::NotRequested => {
                         // return if already derived
                         if let Some(data) =
                             self.fetch_derived(ctx, csid, rederivation.clone()).await?
                         {
-                            return Ok(data);
+                            return Ok(Some(data));
                         }
                         // not yet derived, so request derivation
                         derived_data_scuba.log_remote_derivation_start(ctx);
@@ -542,54 +576,67 @@ impl DerivedDataManager {
                     DerivationState::InProgress => client.poll(&request).await,
                 };
 
-                match res {
+                match service_response {
                     Ok(DeriveResponse { data, status }) => match (status, data) {
-                        // Derivation was requested, set state InProgress and wait
+                        // Derivation was requested, set state InProgress and wait.
                         (RequestStatus::IN_PROGRESS, _) => {
                             request_state = DerivationState::InProgress;
                             tokio::time::sleep(retry_delay).await
                         }
-                        // Derivation succeeded, return
+                        // Derivation succeeded, return.
                         (RequestStatus::SUCCESS, Some(data)) => {
                             derived_data_scuba.log_remote_derivation_end(ctx, None);
-                            return Ok(Derivable::from_thrift(data)?);
+                            return Ok(Some(Derivable::from_thrift(data)?));
                         }
-                        // Either data was already derived or wasn't requested
-                        // wait before requesting again
+                        // Either data was already derived or wasn't requested.
+                        // Wait before requesting again.
                         (RequestStatus::DOES_NOT_EXIST, _) => {
                             request_state = DerivationState::NotRequested;
                             tokio::time::sleep(retry_delay).await
                         }
-                        // should not happen, reported success but data wasn't derived
+                        // Should not happen, reported success but data wasn't derived.
                         (RequestStatus::SUCCESS, None) => {
                             derived_data_scuba.log_remote_derivation_end(
                                 ctx,
                                 Some("Request succeeded but derived data is None".to_string()),
                             );
-                            break;
+                            return Ok(None);
                         }
+                        // Should not happen, derived data service returned an invalid status.
                         (RequestStatus(n), _) => {
                             derived_data_scuba.log_remote_derivation_end(
                                 ctx,
                                 Some(format!("Response with unknown state: {n}")),
                             );
-                            break;
+                            return Ok(None);
                         }
                     },
                     Err(e) => {
                         if attempt >= RETRY_ATTEMPTS_LIMIT {
                             derived_data_scuba
                                 .log_remote_derivation_end(ctx, Some(format!("{:#}", e)));
-                            break;
+                            break DerivationError::Failed(Derivable::NAME, attempt, e);
                         }
                         attempt += 1;
                         tokio::time::sleep(retry_delay).await;
                     }
                 }
-            }
-        }
+            };
 
-        self.derive_locally(ctx, csid, rederivation).await
+            // Derivation has failed or timed out.  Consider falling back to local derivation.
+            if tunables()
+                .remote_derivation_fallback_enabled()
+                .unwrap_or_default()
+            {
+                // Discard the error and fall back to local derivation.
+                Ok(None)
+            } else {
+                Err(derivation_error)
+            }
+        } else {
+            // Derivation is not enabled, perform local derivation.
+            Ok(None)
+        }
     }
 
     pub async fn derive_locally<Derivable>(

@@ -511,8 +511,8 @@ pub async fn derive_hg_changeset(
     let start_timestamp = Instant::now();
     let result = match derived_data.derive::<MappedHgChangesetId>(ctx, cs_id).await {
         Ok(id) => Ok(id.hg_changeset_id()),
-        Err(err @ DerivationError::Disabled(..)) => Err(err.into()),
         Err(DerivationError::Error(err)) => Err(err),
+        Err(err) => Err(err.into()),
     };
     STATS::generate_hg_from_bonsai_total_latency_ms
         .add_value(start_timestamp.elapsed().as_millis() as i64);

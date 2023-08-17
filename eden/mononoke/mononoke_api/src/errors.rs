@@ -106,7 +106,7 @@ impl From<DeriveError> for MononokeError {
     fn from(e: DeriveError) -> Self {
         match e {
             e @ DeriveError::Disabled(..) => MononokeError::NotAvailable(e.to_string()),
-            DeriveError::Error(e) => MononokeError::from(e),
+            e => MononokeError::from(anyhow::Error::from(e)),
         }
     }
 }

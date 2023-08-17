@@ -214,6 +214,9 @@ pub struct MononokeTunables {
     // before falling back to local derivation
     remote_derivation_fallback_timeout_secs: TunableU64,
 
+    // Allow fallback to local derivation if remote derivation failed.
+    remote_derivation_fallback_enabled: TunableBool,
+
     // Timeout for derivation request on service.
     dds_request_timeout: TunableU64,
 
