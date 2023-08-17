@@ -8,7 +8,7 @@
 use std::fmt;
 
 use anyhow::Error;
-use regex::Regex;
+use fancy_regex::Regex;
 
 enum TranslationOutput {
     Literal(String),
@@ -151,7 +151,7 @@ pub struct LuaPattern {
 
 impl LuaPattern {
     pub fn is_match(&self, s: &str) -> bool {
-        self.regex.is_match(s)
+        self.regex.is_match(s).unwrap_or(false)
     }
 
     #[allow(dead_code)]
@@ -261,5 +261,14 @@ mod tests {
             .expect("Could not map pattern to regex");
         assert!(pattern.is_match("buck-out/file"));
         assert!(!pattern.is_match("/buck-out/file"));
+    }
+
+    #[test]
+    fn test_fancy_re_matching() {
+        let pattern: LuaPattern = "re:^www/(?!html/(xplat-react|megarepo))"
+            .try_into()
+            .expect("Could not map pattern to regex");
+        assert!(pattern.is_match("www/html/foo"));
+        assert!(!pattern.is_match("www/html/xplat-react"));
     }
 }
