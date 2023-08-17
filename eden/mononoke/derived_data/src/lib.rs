@@ -62,7 +62,7 @@ use repo_identity::RepoIdentityRef;
 
 pub mod batch;
 
-pub use derived_data_manager::DerivationError as DeriveError;
+pub use derived_data_manager::DerivationError;
 pub use metaconfig_types::DerivedDataTypesConfig;
 
 pub mod macro_export {
@@ -74,7 +74,7 @@ pub mod macro_export {
     pub use repo_derived_data::RepoDerivedDataRef;
 
     pub use super::BonsaiDerived;
-    pub use super::DeriveError;
+    pub use super::DerivationError;
 }
 
 /// Trait for accessing data that can be derived from bonsai changesets, such
@@ -97,7 +97,7 @@ pub trait BonsaiDerived: Sized + Send + Sync + Clone + 'static {
         ctx: &CoreContext,
         repo: &(impl RepoDerivedDataRef + Send + Sync),
         csid: ChangesetId,
-    ) -> Result<Self, DeriveError>;
+    ) -> Result<Self, DerivationError>;
 
     /// Fetch the derived data in cases where we might not want to trigger
     /// derivation, e.g. when scrubbing.
@@ -113,7 +113,7 @@ pub trait BonsaiDerived: Sized + Send + Sync + Clone + 'static {
         ctx: &CoreContext,
         repo: &(impl RepoDerivedDataRef + Send + Sync),
         csid: &ChangesetId,
-    ) -> Result<bool, DeriveError> {
+    ) -> Result<bool, DerivationError> {
         Ok(Self::fetch_derived(ctx, repo, csid).await?.is_some())
     }
 
@@ -127,7 +127,7 @@ pub trait BonsaiDerived: Sized + Send + Sync + Clone + 'static {
         repo: &(impl RepoDerivedDataRef + Send + Sync),
         csid: &ChangesetId,
         limit: u64,
-    ) -> Result<u64, DeriveError>;
+    ) -> Result<u64, DerivationError>;
 }
 
 #[macro_export]
@@ -142,7 +142,7 @@ macro_rules! impl_bonsai_derived_via_manager {
                 ctx: &$crate::macro_export::CoreContext,
                 repo: &(impl $crate::macro_export::RepoDerivedDataRef + Send + Sync),
                 csid: $crate::macro_export::ChangesetId,
-            ) -> Result<Self, $crate::macro_export::DeriveError> {
+            ) -> Result<Self, $crate::macro_export::DerivationError> {
                 repo.repo_derived_data().derive::<Self>(ctx, csid).await
             }
 
@@ -162,7 +162,7 @@ macro_rules! impl_bonsai_derived_via_manager {
                 repo: &(impl $crate::macro_export::RepoDerivedDataRef + Send + Sync),
                 csid: &$crate::macro_export::ChangesetId,
                 limit: u64,
-            ) -> Result<u64, $crate::macro_export::DeriveError> {
+            ) -> Result<u64, $crate::macro_export::DerivationError> {
                 repo.repo_derived_data()
                     .count_underived::<Self>(ctx, *csid, Some(limit))
                     .await

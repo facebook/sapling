@@ -25,7 +25,7 @@ use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::PathState;
 use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data::BonsaiDerived;
-use derived_data::DeriveError;
+use derived_data::DerivationError;
 use fastlog::fetch_fastlog_batch_by_unode_id;
 use fastlog::fetch_flattened;
 use fastlog::FastlogParent;
@@ -65,7 +65,7 @@ pub enum FastlogError {
     #[error("Internal error: {0}")]
     InternalError(String),
     #[error(transparent)]
-    DeriveError(#[from] DeriveError),
+    DerivationError(#[from] DerivationError),
     #[error(transparent)]
     LoadableError(#[from] LoadableError),
     #[error(transparent)]

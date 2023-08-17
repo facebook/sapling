@@ -18,7 +18,7 @@ use blobstore::LoadableError;
 use bookmarks_movement::describe_hook_rejections;
 use bookmarks_movement::BookmarkMovementError;
 use bookmarks_movement::HookRejection;
-use derived_data::DeriveError;
+use derived_data::DerivationError;
 use itertools::Itertools;
 use megarepo_error::MegarepoError;
 use pushrebase::PushrebaseError;
@@ -102,10 +102,10 @@ impl From<LoadableError> for MononokeError {
     }
 }
 
-impl From<DeriveError> for MononokeError {
-    fn from(e: DeriveError) -> Self {
+impl From<DerivationError> for MononokeError {
+    fn from(e: DerivationError) -> Self {
         match e {
-            e @ DeriveError::Disabled(..) => MononokeError::NotAvailable(e.to_string()),
+            e @ DerivationError::Disabled(..) => MononokeError::NotAvailable(e.to_string()),
             e => MononokeError::from(anyhow::Error::from(e)),
         }
     }
@@ -147,7 +147,7 @@ impl From<BlameError> for MononokeError {
             NoSuchPath(_) | IsDirectory(_) | Rejected(_) => {
                 MononokeError::InvalidRequest(e.to_string())
             }
-            DeriveError(e) => MononokeError::from(e),
+            DerivationError(e) => MononokeError::from(e),
             _ => MononokeError::from(anyhow::Error::from(e)),
         }
     }

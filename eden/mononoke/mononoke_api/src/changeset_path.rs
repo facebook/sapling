@@ -711,7 +711,7 @@ impl ChangesetPathHistoryContext {
         .await
         .map_err(|error| match error {
             FastlogError::InternalError(e) => MononokeError::from(anyhow!(e)),
-            FastlogError::DeriveError(e) => MononokeError::from(e),
+            FastlogError::DerivationError(e) => MononokeError::from(e),
             FastlogError::LoadableError(e) => MononokeError::from(e),
             FastlogError::Error(e) => MononokeError::from(e),
         })?;
