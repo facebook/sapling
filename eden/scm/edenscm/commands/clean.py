@@ -90,6 +90,15 @@ def clean(ui, repo, *dirs, **opts):
 
     match = scmutil.match(repo[None], dirs, opts)
 
+    if removedirs and "eden" in repo.requirements:
+        if ui.plain("purge-dirs") or ui.configbool("devel", "eden-ignore-purge-dirs"):
+            # Silently ignore --dirs which maintains the previous behavior.
+            removedirs = False
+        else:
+            raise error.Abort(
+                _("'--dirs' is not supported on EdenFS because it walks the filesystem")
+            )
+
     files, dirs, errors = repo.dirstate._fs.purge(
         match, removefiles, removedirs, removeignored, not act
     )
