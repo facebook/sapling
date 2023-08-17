@@ -59,7 +59,6 @@ rand = { version = "0.8", features = ["small_rng"] }
 repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }
 repo_name = { version = "0.1.0", path = "../repo_name" }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
-revsets = { version = "0.1.0", path = "../revsets" }
 runlog = { version = "0.1.0", path = "../runlog" }
 sampling = { version = "0.1.0", path = "../sampling" }
 serde = { version = "1.0.176", features = ["derive", "rc"] }
