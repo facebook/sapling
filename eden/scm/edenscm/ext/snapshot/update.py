@@ -37,7 +37,7 @@ def _fullclean(ui, repo, exclude) -> None:
         repo.dirstate._fs.purge(
             scmutil.match(repo[None], opts={"exclude": exclude}),
             removefiles=True,
-            removedirs=True,
+            removedirs=False,
             removeignored=False,
             dryrun=False,
         )
