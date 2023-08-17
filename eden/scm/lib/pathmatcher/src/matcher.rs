@@ -6,20 +6,56 @@
  */
 
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Result;
 
+use crate::pattern::normalize_patterns;
 use crate::pattern::Pattern;
 use crate::AlwaysMatcher;
 use crate::DifferenceMatcher;
 use crate::DynMatcher;
 use crate::Error;
+use crate::HintedMatcher;
 use crate::IntersectMatcher;
 use crate::PatternKind;
 use crate::RegexMatcher;
 use crate::TreeMatcher;
 use crate::UnionMatcher;
+
+/// Create top level matcher from non-normalized CLI input.
+pub fn cli_matcher(
+    patterns: &[String],
+    include: &[String],
+    exclude: &[String],
+    default_pattern_type: PatternKind,
+    case_sensitive: bool,
+    root: &Path,
+    cwd: &Path,
+) -> Result<HintedMatcher> {
+    let pattern_matcher = HintedMatcher::from_patterns(
+        &normalize_patterns(patterns, default_pattern_type, root, cwd, false)?,
+        true,
+        case_sensitive,
+    )?;
+
+    let include_matcher = HintedMatcher::from_patterns(
+        &normalize_patterns(include, PatternKind::Glob, root, cwd, true)?,
+        true,
+        case_sensitive,
+    )?;
+
+    let exclude_matcher = HintedMatcher::from_patterns(
+        &normalize_patterns(exclude, PatternKind::Glob, root, cwd, true)?,
+        false,
+        case_sensitive,
+    )?;
+
+    Ok(pattern_matcher
+        .include(&include_matcher)
+        .exclude(&exclude_matcher))
+}
 
 /// Build matcher from normalized patterns.
 ///
@@ -99,6 +135,7 @@ mod tests {
 
     use super::*;
     use crate::DirectoryMatch;
+    use crate::Matcher;
 
     macro_rules! path {
         ($s:expr) => {
@@ -201,5 +238,22 @@ mod tests {
             m.matches_directory(path!("a/t11")).unwrap(),
             DirectoryMatch::ShouldTraverse
         );
+    }
+
+    #[test]
+    fn test_cli_matcher_exact_precedence() -> Result<()> {
+        let m = cli_matcher(
+            &vec!["path:foo".to_string()],
+            &[],
+            &vec!["path:".to_string()],
+            PatternKind::Glob,
+            true,
+            "/root".as_ref(),
+            "/root/cwd".as_ref(),
+        )?;
+
+        assert!(m.matches_file(RepoPath::from_str("foo")?)?);
+
+        Ok(())
     }
 }

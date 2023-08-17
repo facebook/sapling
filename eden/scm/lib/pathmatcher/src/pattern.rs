@@ -244,6 +244,7 @@ where
             // This is the best moment to look for "exact" files. We have
             // expanded glob curlies, but haven't glob-escaped paths.
             let exact_file = exact_file(kind, &pat)?;
+            tracing::trace!(?exact_file);
 
             // Escape glob characters so we can convert non-glob patterns into globs.
             if kind.is_path() {

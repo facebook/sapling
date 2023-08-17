@@ -8,6 +8,7 @@
 #![allow(non_camel_case_types)]
 
 use std::path::Path;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -24,6 +25,7 @@ use pathmatcher::AlwaysMatcher;
 use pathmatcher::DifferenceMatcher;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::GitignoreMatcher;
+use pathmatcher::HintedMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::NeverMatcher;
 use pathmatcher::PatternKind;
@@ -39,6 +41,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<treematcher>(py)?;
     m.add_class::<regexmatcher>(py)?;
     m.add_class::<dynmatcher>(py)?;
+    m.add_class::<hintedmatcher>(py)?;
     m.add(py, "normalizeglob", py_fn!(py, normalize_glob(path: &str)))?;
     m.add(py, "plaintoglob", py_fn!(py, plain_to_glob(path: &str)))?;
     m.add(
@@ -174,7 +177,62 @@ py_class!(pub class dynmatcher |py| {
             }
         }
     }
+});
 
+py_class!(pub class hintedmatcher |py| {
+    data matcher: HintedMatcher;
+
+    def __new__(_cls,
+        patterns: Vec<String>,
+        include: Vec<String>,
+        exclude: Vec<String>,
+        default_pattern_type: String,
+        case_sensitive: bool,
+        root: &PyPath,
+        cwd: &PyPath,
+    ) -> PyResult<Self> {
+        let matcher = pathmatcher::cli_matcher(
+            &patterns,
+            &include,
+            &exclude,
+            PatternKind::from_str(&default_pattern_type).map_pyerr(py)?,
+            case_sensitive,
+            root.as_path(),
+            cwd.as_path(),
+        ).map_pyerr(py)?;
+        Self::create_instance(py, matcher)
+    }
+
+    def matches_file(&self, path: &PyPath) -> PyResult<bool> {
+        let repo_path = path.to_repo_path().map_pyerr(py)?;
+        self.matcher(py).matches_file(repo_path).map_pyerr(py)
+    }
+
+    def matches_directory(&self, path: &PyPath) -> PyResult<Option<bool>> {
+        let repo_path = path.to_repo_path().map_pyerr(py)?;
+        let directory_match = self.matcher(py).matches_directory(repo_path).map_pyerr(py)?;
+        match directory_match {
+            DirectoryMatch::Everything => Ok(Some(true)),
+            DirectoryMatch::Nothing => Ok(Some(false)),
+            DirectoryMatch::ShouldTraverse => Ok(None)
+        }
+    }
+
+    def exact_files(&self) -> PyResult<Vec<PyPathBuf>> {
+        Ok(self.matcher(py).exact_files().iter().map(|p| p.clone().into()).collect())
+    }
+
+    def always_matches(&self) -> PyResult<bool> {
+        Ok(self.matcher(py).always_matches())
+    }
+
+    def never_matches(&self) -> PyResult<bool> {
+        Ok(self.matcher(py).never_matches())
+    }
+
+    def all_recursive_paths(&self) -> PyResult<bool> {
+        Ok(self.matcher(py).all_recursive_paths())
+    }
 });
 
 impl ExtractInnerRef for dynmatcher {
