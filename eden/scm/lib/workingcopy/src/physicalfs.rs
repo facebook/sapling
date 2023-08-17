@@ -73,9 +73,9 @@ impl PendingChangesTrait for PhysicalFileSystem {
     fn pending_changes(
         &self,
         matcher: DynMatcher,
-        _ignore_matcher: DynMatcher,
+        ignore_matcher: DynMatcher,
         ignore_dirs: Vec<PathBuf>,
-        _include_ignored: bool,
+        include_ignored: bool,
         last_write: SystemTime,
         config: &dyn Config,
         _io: &IO,
@@ -101,6 +101,8 @@ impl PendingChangesTrait for PhysicalFileSystem {
         let pending_changes = PendingChanges {
             walker,
             matcher,
+            ignore_matcher,
+            include_ignored,
             treestate: self.treestate.clone(),
             stage: PendingChangesStage::Walk,
             seen: HashSet::new(),
@@ -119,6 +121,8 @@ impl PendingChangesTrait for PhysicalFileSystem {
 pub struct PendingChanges<M: Matcher + Clone + Send + Sync + 'static> {
     walker: Walker<M>,
     matcher: M,
+    ignore_matcher: M,
+    include_ignored: bool,
     treestate: Arc<Mutex<TreeState>>,
     stage: PendingChangesStage,
     seen: HashSet<RepoPathBuf>,
@@ -155,6 +159,10 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
         loop {
             match self.walker.next() {
                 Some(Ok(WalkEntry::File(mut path, metadata))) => {
+                    if self.include_ignored && self.ignore_matcher.matches_file(&path)? {
+                        return Ok(Some(PendingChange::Ignored(path)));
+                    }
+
                     let mut ts = self.treestate.lock();
 
                     // On case insensitive systems, normalize the path so
