@@ -251,7 +251,7 @@ pub fn compute_status(
     walk_treestate(
         &mut treestate,
         matcher.clone(),
-        StateFlags::COPIED,
+        StateFlags::COPIED | StateFlags::EXIST_NEXT,
         StateFlags::empty(),
         |path, state| {
             trace!(%path, "modified (marked copy, not in pending changes)");

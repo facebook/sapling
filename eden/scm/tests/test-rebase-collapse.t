@@ -1,5 +1,4 @@
 #debugruntest-compatible
-  $ setconfig workingcopy.ruststatus=False status.use-rust=false
   $ setconfig experimental.allowfilepeer=True
 
   $ configure mutation
