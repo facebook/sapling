@@ -32,6 +32,7 @@ use pathmatcher::PatternKind;
 use pathmatcher::RegexMatcher;
 use pathmatcher::TreeMatcher;
 use pathmatcher::UnionMatcher;
+use tracing::debug;
 use types::RepoPath;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -338,19 +339,27 @@ fn matches_file_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) -> PyRe
 /// When possible it converts it into a pure-Rust matcher.
 pub fn extract_matcher(py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matcher + Sync + Send>> {
     if let Ok(matcher) = treematcher::downcast_from(py, matcher.clone_ref(py)) {
+        debug!("treematcher downcast");
         return Ok(matcher.extract_inner(py));
     }
     if let Ok(matcher) = gitignorematcher::downcast_from(py, matcher.clone_ref(py)) {
+        debug!("gitignorematcher downcast");
         return Ok(matcher.extract_inner(py));
     }
     if let Ok(matcher) = regexmatcher::downcast_from(py, matcher.clone_ref(py)) {
+        debug!("regexmatcher downcast");
         return Ok(matcher.extract_inner(py));
     }
     if let Ok(matcher) = dynmatcher::downcast_from(py, matcher.clone_ref(py)) {
+        debug!("dynmatcher downcast");
         return Ok(matcher.extract_inner(py));
     }
+
     let py_type = matcher.get_type(py);
     let type_name = py_type.name(py);
+
+    debug!(%type_name);
+
     if type_name.as_ref() == "treematcher" {
         return extract_matcher(py, matcher.getattr(py, "_matcher")?);
     }
