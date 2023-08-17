@@ -22,7 +22,7 @@ use types::Key;
 use types::RepoPathBuf;
 use vfs::VFS;
 
-use crate::filesystem::ChangeType;
+use crate::filesystem::PendingChange;
 use crate::metadata;
 use crate::metadata::HgModifiedTime;
 use crate::metadata::Metadata;
@@ -30,30 +30,30 @@ use crate::metadata::Metadata;
 pub type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 
 pub(crate) enum FileChangeResult {
-    Yes(ChangeType),
+    Yes(PendingChange),
     No(RepoPathBuf),
     Maybe((RepoPathBuf, Metadata)),
 }
 
 impl FileChangeResult {
     fn changed(path: RepoPathBuf) -> Self {
-        Self::Yes(ChangeType::Changed(path))
+        Self::Yes(PendingChange::Changed(path))
     }
 
     fn deleted(path: RepoPathBuf) -> Self {
-        Self::Yes(ChangeType::Deleted(path))
+        Self::Yes(PendingChange::Deleted(path))
     }
 }
 
 #[derive(Debug)]
 pub(crate) enum ResolvedFileChangeResult {
-    Yes(ChangeType),
+    Yes(PendingChange),
     No((RepoPathBuf, Option<Metadata>)),
 }
 
 impl ResolvedFileChangeResult {
     fn changed(path: RepoPathBuf) -> Self {
-        Self::Yes(ChangeType::Changed(path))
+        Self::Yes(PendingChange::Changed(path))
     }
 }
 
@@ -242,20 +242,20 @@ fn compare_repo_bytes_to_disk(
                 Ok(ResolvedFileChangeResult::No((path, Some(metadata.into()))))
             } else {
                 tracing::trace!(?path, "changed (contents mismatch)");
-                Ok(ResolvedFileChangeResult::Yes(ChangeType::Changed(path)))
+                Ok(ResolvedFileChangeResult::Yes(PendingChange::Changed(path)))
             }
         }
         Err(e) => {
             if let Some(e) = e.downcast_ref::<std::io::Error>() {
                 if e.kind() == std::io::ErrorKind::NotFound {
                     tracing::trace!(?path, "deleted (file missing)");
-                    return Ok(ResolvedFileChangeResult::Yes(ChangeType::Deleted(path)));
+                    return Ok(ResolvedFileChangeResult::Yes(PendingChange::Deleted(path)));
                 }
             }
 
             if let Some(vfs::AuditError::ThroughSymlink(_)) = e.downcast_ref::<vfs::AuditError>() {
                 tracing::trace!(?path, "deleted (read through symlink)");
-                return Ok(ResolvedFileChangeResult::Yes(ChangeType::Deleted(path)));
+                return Ok(ResolvedFileChangeResult::Yes(PendingChange::Deleted(path)));
             }
 
             Err(e)

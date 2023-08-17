@@ -41,8 +41,7 @@ use crate::filechangedetector::ArcReadFileContents;
 use crate::filechangedetector::FileChangeDetector;
 use crate::filechangedetector::FileChangeDetectorTrait;
 use crate::filechangedetector::ResolvedFileChangeResult;
-use crate::filesystem::ChangeType;
-use crate::filesystem::PendingChangeResult;
+use crate::filesystem::PendingChange;
 use crate::filesystem::PendingChanges;
 use crate::metadata;
 use crate::metadata::Metadata;
@@ -218,7 +217,7 @@ impl PendingChanges for WatchmanFileSystem {
         last_write: SystemTime,
         config: &dyn Config,
         io: &IO,
-    ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
+    ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
         let ts = &mut *self.treestate.lock();
 
         let treestate_started_dirty = ts.dirty();
@@ -454,7 +453,7 @@ pub(crate) fn detect_changes(
     // necessarily contain all NEED_CHECK entries in the treestate.
     let ts_need_check: HashSet<_> = ts_need_check.into_iter().collect();
 
-    let mut pending_changes: Vec<Result<PendingChangeResult>> =
+    let mut pending_changes: Vec<Result<PendingChange>> =
         ts_errors.into_iter().map(|e| Err(anyhow!(e))).collect();
     let mut needs_clear: Vec<(RepoPathBuf, Option<Metadata>)> = Vec::new();
     let mut needs_mark = Vec::new();
@@ -529,13 +528,13 @@ pub(crate) fn detect_changes(
         match result {
             Ok(ResolvedFileChangeResult::Yes(change)) => {
                 let path = change.get_path();
-                if let ChangeType::Deleted(path) = change {
+                if let PendingChange::Deleted(path) = change {
                     deletes.push(path);
                 } else {
                     if !ts_need_check.contains(path) {
                         needs_mark.push(path.clone());
                     }
-                    pending_changes.push(Ok(PendingChangeResult::File(change)));
+                    pending_changes.push(Ok(change));
                 }
             }
             Ok(ResolvedFileChangeResult::No((path, fs_meta))) => {
@@ -619,7 +618,7 @@ pub(crate) fn detect_changes(
             if !ts_need_check.contains(&d) {
                 needs_mark.push(d.clone());
             }
-            pending_changes.push(Ok(PendingChangeResult::File(ChangeType::Deleted(d))));
+            pending_changes.push(Ok(PendingChange::Deleted(d)));
         }
     }
 
@@ -631,7 +630,7 @@ pub(crate) fn detect_changes(
 }
 
 pub struct WatchmanPendingChanges {
-    pending_changes: Vec<Result<PendingChangeResult>>,
+    pending_changes: Vec<Result<PendingChange>>,
     needs_clear: Vec<(RepoPathBuf, Option<Metadata>)>,
     needs_mark: Vec<RepoPathBuf>,
 }
@@ -671,7 +670,7 @@ impl WatchmanPendingChanges {
 }
 
 impl IntoIterator for WatchmanPendingChanges {
-    type Item = Result<PendingChangeResult>;
+    type Item = Result<PendingChange>;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {

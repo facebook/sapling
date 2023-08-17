@@ -16,24 +16,18 @@ use serde::Serialize;
 use types::RepoPathBuf;
 
 #[derive(Debug, Serialize)]
-pub enum ChangeType {
+pub enum PendingChange {
     Changed(RepoPathBuf),
     Deleted(RepoPathBuf),
 }
 
-impl ChangeType {
+impl PendingChange {
     pub fn get_path(&self) -> &RepoPathBuf {
         match self {
-            ChangeType::Changed(path) => path,
-            ChangeType::Deleted(path) => path,
+            Self::Changed(path) => path,
+            Self::Deleted(path) => path,
         }
     }
-}
-
-#[derive(Serialize)]
-pub enum PendingChangeResult {
-    File(ChangeType),
-    SeenDirectory(RepoPathBuf),
 }
 
 pub trait PendingChanges {
@@ -48,5 +42,5 @@ pub trait PendingChanges {
         last_write: SystemTime,
         config: &dyn Config,
         io: &IO,
-    ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>>;
+    ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>>;
 }

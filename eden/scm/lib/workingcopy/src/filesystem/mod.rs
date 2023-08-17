@@ -7,8 +7,7 @@
 
 mod pendingchanges;
 
-pub use pendingchanges::ChangeType;
-pub use pendingchanges::PendingChangeResult;
+pub use pendingchanges::PendingChange;
 pub use pendingchanges::PendingChanges;
 
 #[derive(PartialEq)]

@@ -48,9 +48,8 @@ use vfs::VFS;
 #[cfg(feature = "eden")]
 use crate::edenfs::EdenFileSystem;
 use crate::errors;
-use crate::filesystem::ChangeType;
 use crate::filesystem::FileSystemType;
-use crate::filesystem::PendingChangeResult;
+use crate::filesystem::PendingChange;
 use crate::filesystem::PendingChanges;
 use crate::git::parse_submodules;
 use crate::physicalfs::PhysicalFileSystem;
@@ -217,7 +216,6 @@ impl WorkingCopy {
                 tree_resolver,
                 store.clone(),
                 treestate.clone(),
-                false,
                 locker,
             )?),
             FileSystemType::Watchman => Box::new(WatchmanFileSystem::new(
@@ -369,18 +367,15 @@ impl WorkingCopy {
                 io,
             )?
             .filter_map(|result| match result {
-                Ok(PendingChangeResult::File(change_type)) => {
-                    match matcher.matches_file(change_type.get_path()) {
-                        Ok(true) => {
-                            tracing::trace!(?change_type, "pending change");
-                            Some(Ok(change_type))
-                        }
-                        Err(e) => Some(Err(e)),
-                        _ => None,
+                Ok(change_type) => match matcher.matches_file(change_type.get_path()) {
+                    Ok(true) => {
+                        tracing::trace!(?change_type, "pending change");
+                        Some(Ok(change_type))
                     }
-                }
+                    Err(e) => Some(Err(e)),
+                    _ => None,
+                },
                 Err(e) => Some(Err(e)),
-                _ => None,
             })
             // fs.pending_changes() won't return ignored files, but we want added ignored files to
             // show up in the results, so let's inject them here.
@@ -388,7 +383,7 @@ impl WorkingCopy {
                 match self.ignore_matcher.matches_file(&path) {
                     Ok(result) if result => match self.vfs.metadata(&path) {
                         Ok(ref attr) if attr.is_dir() => None,
-                        Ok(_) => Some(Ok(ChangeType::Changed(path))),
+                        Ok(_) => Some(Ok(PendingChange::Changed(path))),
                         Err(_) => None,
                     },
                     Ok(_) => None,

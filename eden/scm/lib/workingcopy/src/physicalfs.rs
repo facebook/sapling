@@ -29,8 +29,7 @@ use vfs::VFS;
 use crate::filechangedetector::FileChangeDetector;
 use crate::filechangedetector::FileChangeResult;
 use crate::filechangedetector::ResolvedFileChangeResult;
-use crate::filesystem::ChangeType;
-use crate::filesystem::PendingChangeResult;
+use crate::filesystem::PendingChange;
 use crate::filesystem::PendingChanges as PendingChangesTrait;
 use crate::metadata;
 use crate::metadata::HgModifiedTime;
@@ -49,7 +48,6 @@ pub struct PhysicalFileSystem {
     tree_resolver: ArcReadTreeManifest,
     store: ArcReadFileContents,
     treestate: Arc<Mutex<TreeState>>,
-    include_directories: bool,
     locker: Arc<RepoLocker>,
 }
 
@@ -59,7 +57,6 @@ impl PhysicalFileSystem {
         tree_resolver: ArcReadTreeManifest,
         store: ArcReadFileContents,
         treestate: Arc<Mutex<TreeState>>,
-        include_directories: bool,
         locker: Arc<RepoLocker>,
     ) -> Result<Self> {
         Ok(PhysicalFileSystem {
@@ -67,7 +64,6 @@ impl PhysicalFileSystem {
             tree_resolver,
             store,
             treestate,
-            include_directories,
             locker,
         })
     }
@@ -82,7 +78,7 @@ impl PendingChangesTrait for PhysicalFileSystem {
         last_write: SystemTime,
         config: &dyn Config,
         _io: &IO,
-    ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
+    ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
         let root = self.vfs.root().to_path_buf();
         let ident = identity::must_sniff_dir(&root)?;
         let walker = Walker::new(
@@ -106,7 +102,6 @@ impl PendingChangesTrait for PhysicalFileSystem {
             matcher,
             treestate: self.treestate.clone(),
             stage: PendingChangesStage::Walk,
-            include_directories: self.include_directories,
             seen: HashSet::new(),
             tree_iter: None,
             lookup_iter: None,
@@ -125,9 +120,8 @@ pub struct PendingChanges<M: Matcher + Clone + Send + Sync + 'static> {
     matcher: M,
     treestate: Arc<Mutex<TreeState>>,
     stage: PendingChangesStage,
-    include_directories: bool,
     seen: HashSet<RepoPathBuf>,
-    tree_iter: Option<Box<dyn Iterator<Item = Result<PendingChangeResult>> + Send>>,
+    tree_iter: Option<Box<dyn Iterator<Item = Result<PendingChange>> + Send>>,
     lookup_iter: Option<Box<dyn Iterator<Item = Result<ResolvedFileChangeResult>> + Send>>,
     file_change_detector: Option<FileChangeDetector>,
     update_mtime: Vec<(RepoPathBuf, HgModifiedTime)>,
@@ -156,7 +150,7 @@ impl PendingChangesStage {
 }
 
 impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
-    fn next_walk(&mut self) -> Result<Option<PendingChangeResult>> {
+    fn next_walk(&mut self) -> Result<Option<PendingChange>> {
         loop {
             match self.walker.next() {
                 Some(Ok(WalkEntry::File(mut path, metadata))) => {
@@ -186,13 +180,11 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                         })?;
 
                     if let FileChangeResult::Yes(change_type) = changed {
-                        return Ok(Some(PendingChangeResult::File(change_type)));
+                        return Ok(Some(change_type));
                     }
                 }
-                Some(Ok(WalkEntry::Directory(dir))) => {
-                    if self.include_directories {
-                        return Ok(Some(PendingChangeResult::SeenDirectory(dir)));
-                    }
+                Some(Ok(WalkEntry::Directory(_))) => {
+                    // Shouldn't happen since we don't request directories.
                 }
                 Some(Err(e)) => {
                     return Err(e);
@@ -204,7 +196,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
         }
     }
 
-    fn next_tree(&mut self) -> Option<Result<PendingChangeResult>> {
+    fn next_tree(&mut self) -> Option<Result<PendingChange>> {
         if self.tree_iter.is_none() {
             self.tree_iter = Some(Box::new(self.get_tree_entries().into_iter()));
         }
@@ -212,7 +204,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
         self.tree_iter.as_mut().unwrap().next()
     }
 
-    fn get_tree_entries(&mut self) -> Vec<Result<PendingChangeResult>> {
+    fn get_tree_entries(&mut self) -> Vec<Result<PendingChange>> {
         let tracked = match self.get_tracked_from_p1() {
             Err(e) => return vec![Err(e)],
             Ok(tracked) => tracked,
@@ -247,9 +239,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                 }
 
                 // This path is EXIST_P1 but not on disk - emit deleted event.
-                Some(Ok(PendingChangeResult::File(ChangeType::Deleted(
-                    path.to_owned(),
-                ))))
+                Some(Ok(PendingChange::Deleted(path.to_owned())))
             })
             .collect()
     }
@@ -276,7 +266,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
         Ok(result)
     }
 
-    fn next_lookup(&mut self) -> Option<Result<PendingChangeResult>> {
+    fn next_lookup(&mut self) -> Option<Result<PendingChange>> {
         loop {
             let next = self
                 .lookup_iter
@@ -287,7 +277,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
 
             match next {
                 Ok(ResolvedFileChangeResult::Yes(change_type)) => {
-                    return Some(Ok(PendingChangeResult::File(change_type)));
+                    return Some(Ok(change_type));
                 }
                 Ok(ResolvedFileChangeResult::No((path, fs_meta))) => {
                     if let Some(mtime) = fs_meta.and_then(|m| m.mtime()) {
@@ -302,7 +292,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
 }
 
 impl<M: Matcher + Clone + Send + Sync + 'static> Iterator for PendingChanges<M> {
-    type Item = Result<PendingChangeResult>;
+    type Item = Result<PendingChange>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // TODO: Try to make this into a chain instead of a manual state machine

@@ -24,7 +24,7 @@ use treestate::treestate::TreeState;
 use types::HgId;
 use types::RepoPathBuf;
 
-use crate::filesystem::ChangeType;
+use crate::filesystem::PendingChange;
 use crate::util::walk_treestate;
 use crate::walker::WalkError;
 
@@ -44,7 +44,7 @@ impl ReadTreeManifest for FakeTreeResolver {
 pub fn compute_status(
     p1_manifest: &impl Manifest,
     treestate: Arc<Mutex<TreeState>>,
-    pending_changes: impl Iterator<Item = Result<ChangeType>>,
+    pending_changes: impl Iterator<Item = Result<PendingChange>>,
     matcher: DynMatcher,
 ) -> Result<StatusBuilder> {
     let mut modified = vec![];
@@ -64,8 +64,8 @@ pub fn compute_status(
     let mut manifest_files = HashMap::<RepoPathBuf, (bool, bool)>::new();
     for change in pending_changes {
         let (path, is_deleted) = match change {
-            Ok(ChangeType::Changed(path)) => (path, false),
-            Ok(ChangeType::Deleted(path)) => (path, true),
+            Ok(PendingChange::Changed(path)) => (path, false),
+            Ok(PendingChange::Deleted(path)) => (path, true),
             Err(e) => {
                 let e = match e.downcast::<types::path::ParseError>() {
                     Ok(parse_err) => {
@@ -390,9 +390,9 @@ mod tests {
         let changes = changes.iter().map(|&(path, is_deleted)| {
             let path = RepoPathBuf::from_string(path.to_string()).expect("path");
             if is_deleted {
-                Ok(ChangeType::Deleted(path))
+                Ok(PendingChange::Deleted(path))
             } else {
-                Ok(ChangeType::Changed(path))
+                Ok(PendingChange::Changed(path))
             }
         });
 

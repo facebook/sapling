@@ -18,8 +18,7 @@ use types::HgId;
 use types::RepoPathBuf;
 use vfs::VFS;
 
-use crate::filesystem::ChangeType;
-use crate::filesystem::PendingChangeResult;
+use crate::filesystem::PendingChange;
 use crate::filesystem::PendingChanges;
 
 pub struct EdenFileSystem {
@@ -45,7 +44,7 @@ impl PendingChanges for EdenFileSystem {
         _last_write: SystemTime,
         _config: &dyn Config,
         _io: &IO,
-    ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
+    ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
         let result = edenfs_client::status::get_status(&self.root, self.p1)?;
         Ok(Box::new(result.status.entries.into_iter().filter_map(
             |(path, status)| {
@@ -56,13 +55,9 @@ impl PendingChanges for EdenFileSystem {
                         Err(err) => return Some(Err(anyhow!(err))),
                     };
                     match status {
-                        ScmFileStatus::REMOVED => Some(Ok(PendingChangeResult::File(
-                            ChangeType::Deleted(repo_path),
-                        ))),
+                        ScmFileStatus::REMOVED => Some(Ok(PendingChange::Deleted(repo_path))),
                         ScmFileStatus::IGNORED => None,
-                        _ => Some(Ok(PendingChangeResult::File(ChangeType::Changed(
-                            repo_path,
-                        )))),
+                        _ => Some(Ok(PendingChange::Changed(repo_path))),
                     }
                 }
             },
