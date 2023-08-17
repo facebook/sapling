@@ -23,16 +23,14 @@ use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
 #[cfg(fbcode_build)]
-use edenfs_telemetry::redirect::RedirectionOverwriteSample;
-#[cfg(fbcode_build)]
 use edenfs_telemetry::send;
+#[cfg(fbcode_build)]
+use edenfs_telemetry::EDEN_EVENTS_SCUBA;
 use edenfs_utils::is_buckd_running_for_path;
 use edenfs_utils::metadata::MetadataExt;
 use edenfs_utils::remove_symlink;
 use edenfs_utils::stop_buckd_for_path;
 use edenfs_utils::stop_buckd_for_repo;
-#[cfg(fbcode_build)]
-use fbinit::expect_init;
 #[cfg(target_os = "windows")]
 use mkscratch::zzencode;
 use pathdiff::diff_paths;
@@ -1448,12 +1446,11 @@ pub async fn try_add_redirection(
             );
             #[cfg(fbcode_build)]
             {
-                let sample = RedirectionOverwriteSample::build(
-                    expect_init(),
+                let sample = edenfs_telemetry::redirect::build(
                     &redir.repo_path.to_string_lossy(),
                     &checkout.path().to_string_lossy(),
                 );
-                send(sample.builder);
+                send(EDEN_EVENTS_SCUBA.to_string(), sample);
             }
         } else {
             println!(

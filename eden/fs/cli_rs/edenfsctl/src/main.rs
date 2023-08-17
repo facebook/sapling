@@ -19,6 +19,8 @@ use edenfs_commands::is_command_enabled;
 use edenfs_telemetry::cli_usage::CliUsageSample;
 #[cfg(fbcode_build)]
 use edenfs_telemetry::send;
+#[cfg(fbcode_build)]
+use edenfs_telemetry::EDENFSCTL_CLI_USAGE;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
 use fbinit::FacebookInit;
@@ -224,7 +226,7 @@ fn main(_fb: FacebookInit) -> Result<()> {
     // NOTE: if you are considering passing `FacebookInit` down, you may want to check
     // [`fbinit::expect_init`].
     #[cfg(fbcode_build)]
-    let mut sample = CliUsageSample::build(_fb);
+    let mut sample = CliUsageSample::build();
 
     let code = match wrapper_main() {
         Ok(code) => Ok(code),
@@ -238,7 +240,7 @@ fn main(_fb: FacebookInit) -> Result<()> {
     #[cfg(fbcode_build)]
     {
         sample.set_exit_code(*code.as_ref().unwrap_or(&1));
-        send(sample.builder);
+        send(EDENFSCTL_CLI_USAGE.to_string(), sample.sample);
     }
 
     match code {

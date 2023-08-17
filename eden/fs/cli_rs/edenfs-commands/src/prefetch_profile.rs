@@ -22,11 +22,9 @@ use edenfs_client::checkout::find_checkout;
 use edenfs_client::checkout::CheckoutConfig;
 use edenfs_client::EdenFsInstance;
 #[cfg(fbcode_build)]
-use edenfs_telemetry::prefetch_profile::PrefetchProfileSample;
-#[cfg(fbcode_build)]
 use edenfs_telemetry::send;
 #[cfg(fbcode_build)]
-use fbinit::expect_init;
+use edenfs_telemetry::EDEN_EVENTS_SCUBA;
 use hg_util::path::expand_path;
 
 use crate::util::expand_path_or_cwd;
@@ -274,15 +272,11 @@ impl PrefetchCmd {
         let directories_only = options.directories_only || options.skip_prefetch;
 
         #[cfg(fbcode_build)]
-        let mut sample = {
-            let sample = PrefetchProfileSample::activate_event(
-                expect_init(),
-                profile_name,
-                client_name.as_str(),
-                directories_only,
-            );
-            sample
-        };
+        let mut sample = edenfs_telemetry::prefetch_profile::activate_event(
+            profile_name,
+            client_name.as_str(),
+            directories_only,
+        );
 
         let config_dir = instance.config_directory(&client_name);
         let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
@@ -291,7 +285,7 @@ impl PrefetchCmd {
         match result {
             Ok(res) => {
                 #[cfg(fbcode_build)]
-                send(sample.builder);
+                send(EDEN_EVENTS_SCUBA.to_string(), sample);
                 if !res {
                     return Ok(0);
                 }
@@ -300,7 +294,7 @@ impl PrefetchCmd {
                 #[cfg(fbcode_build)]
                 {
                     sample.fail(&e.to_string());
-                    send(sample.builder);
+                    send(EDEN_EVENTS_SCUBA.to_string(), sample);
                 }
                 return Err(anyhow::Error::new(e));
             }
@@ -355,15 +349,11 @@ impl PrefetchCmd {
         let directories_only = options.directories_only || options.skip_prefetch;
 
         #[cfg(fbcode_build)]
-        let mut sample = {
-            let sample = PrefetchProfileSample::activate_predictive_event(
-                expect_init(),
-                client_name.as_str(),
-                directories_only,
-                num_dirs,
-            );
-            sample
-        };
+        let mut sample = edenfs_telemetry::prefetch_profile::activate_predictive_event(
+            client_name.as_str(),
+            directories_only,
+            num_dirs,
+        );
 
         let config_dir = instance.config_directory(&client_name);
         let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
@@ -374,12 +364,12 @@ impl PrefetchCmd {
             #[cfg(fbcode_build)]
             {
                 sample.fail(&e.to_string());
-                send(sample.builder);
+                send(EDEN_EVENTS_SCUBA.to_string(), sample);
             }
             return Err(anyhow::Error::new(e));
         }
         #[cfg(fbcode_build)]
-        send(sample.builder);
+        send(EDEN_EVENTS_SCUBA.to_string(), sample);
 
         let checkout = find_checkout(instance, &options.checkout).with_context(|| {
             anyhow!(
@@ -428,14 +418,10 @@ impl PrefetchCmd {
         })?;
 
         #[cfg(fbcode_build)]
-        let mut sample = {
-            let sample = PrefetchProfileSample::deactivate_event(
-                expect_init(),
-                profile_name,
-                client_name.as_str(),
-            );
-            sample
-        };
+        let mut sample = edenfs_telemetry::prefetch_profile::deactivate_event(
+            profile_name,
+            client_name.as_str(),
+        );
 
         let config_dir = instance.config_directory(&client_name);
         let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
@@ -445,12 +431,12 @@ impl PrefetchCmd {
             #[cfg(fbcode_build)]
             {
                 sample.fail(&e.to_string());
-                send(sample.builder);
+                send(EDEN_EVENTS_SCUBA.to_string(), sample);
             }
             return Err(anyhow::Error::new(e));
         }
         #[cfg(fbcode_build)]
-        send(sample.builder);
+        send(EDEN_EVENTS_SCUBA.to_string(), sample);
         Ok(0)
     }
 
@@ -464,13 +450,8 @@ impl PrefetchCmd {
         })?;
 
         #[cfg(fbcode_build)]
-        let mut sample = {
-            let sample = PrefetchProfileSample::deactivate_predictive_event(
-                expect_init(),
-                client_name.as_str(),
-            );
-            sample
-        };
+        let mut sample =
+            edenfs_telemetry::prefetch_profile::deactivate_predictive_event(client_name.as_str());
 
         let config_dir = instance.config_directory(&client_name);
         let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
@@ -480,12 +461,12 @@ impl PrefetchCmd {
             #[cfg(fbcode_build)]
             {
                 sample.fail(&e.to_string());
-                send(sample.builder);
+                send(EDEN_EVENTS_SCUBA.to_string(), sample);
             }
             return Err(anyhow::Error::new(e));
         }
         #[cfg(fbcode_build)]
-        send(sample.builder);
+        send(EDEN_EVENTS_SCUBA.to_string(), sample);
         Ok(0)
     }
 
