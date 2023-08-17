@@ -348,7 +348,7 @@ class basemanifesttests(object):
         """Tests matches() for what should be a full match."""
         m = self.parsemanifest(A_DEEPER_MANIFEST)
 
-        match = matchmod.match("/", "", [""])
+        match = matchmod.match("/", "", [""], default="path")
         m2 = m.matches(match)
 
         self.assertEqual(m.keys(), m2.keys())

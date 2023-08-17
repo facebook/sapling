@@ -78,9 +78,13 @@ def _kindpatsalwaysmatch(kindpats) -> bool:
     if not kindpats:
         return False
 
+    emptymeansalways = {"relpath"}
+    if _emptyglobalwaysmatches:
+        emptymeansalways.add("glob")
+
     for kind, pat, source in kindpats:
         # TODO: update me?
-        if pat != "" or kind not in ["relpath", "glob"]:
+        if pat != "" or kind not in emptymeansalways:
             return False
     return True
 
@@ -1879,6 +1883,7 @@ def _prefix(kindpats) -> bool:
 _usetreematcher = True
 _useregexmatcher = True
 _usedynmatcher = True
+_emptyglobalwaysmatches = False
 
 
 def init(ui) -> None:
@@ -1888,3 +1893,5 @@ def init(ui) -> None:
     _useregexmatcher = ui.configbool("experimental", "regexmatcher")
     global _usedynmatcher
     _usedynmatcher = ui.configbool("experimental", "dynmatcher")
+    global _emptyglobalwaysmatches
+    _emptyglobalwaysmatches = ui.configbool("experimental", "empty-glob-always-matches")

@@ -447,3 +447,22 @@ Test split patterns on overflow
   f  fennel     fennel     exact
   f  fenugreek  fenugreek  exact
   $ cd ..
+
+Test empty glob behavior:
+
+  $ cd t
+  $ hg debugwalk 'glob:'
+  $ hg debugwalk 'relglob:'
+Config knob to fall back to buggy behavior, just in case:
+  $ hg debugwalk 'glob:' --config experimental.empty-glob-always-matches=true | wc -l
+  18
+  $ cd mammals
+  $ hg debugwalk 'glob:'
+  $ hg debugwalk 'relglob:'
+-I makes glob recursive by default:
+  $ hg debugwalk -I 'glob:'
+  f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
+  f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
+  f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
+  f  mammals/skunk                   skunk
+  $ cd ..
