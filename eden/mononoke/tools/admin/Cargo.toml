@@ -44,7 +44,6 @@ dag-types = { version = "0.1.0", path = "../../../scm/lib/dag/dag-types", featur
 deletion_log = { version = "0.1.0", path = "../../repo_attributes/deletion_log" }
 environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
-executor_lib = { version = "0.1.0", path = "../../cmdlib/sharding" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
@@ -66,11 +65,9 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
-mononoke_repos = { version = "0.1.0", path = "../../mononoke_repos" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../../mutable_renames" }
-once_cell = "1.12"
 packfile = { version = "0.1.0", path = "../../git/packfile" }
 phases = { version = "0.1.0", path = "../../phases" }
 preloaded_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/preloaded_commit_graph_storage" }
@@ -90,7 +87,6 @@ repo_lock = { version = "0.1.0", path = "../../repo_attributes/repo_lock/repo_lo
 revset = { version = "0.1.0", path = "../../revset" }
 serde = { version = "1.0.176", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
-sharding_ext = { version = "0.1.0", path = "../../cmdlib/sharding_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 source_control = { version = "0.1.0", path = "../../scs/if" }
