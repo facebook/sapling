@@ -1681,6 +1681,18 @@ def concludenode(
                 mutinfo=mutinfo,
             )
 
+        if newnode and p2 == nullrev:
+            # log the newnode of a rebase operation, this data is used for
+            # merge conflicts analysis.
+            reponame = repo.ui.config("remotefilelog", "reponame", "unknown")
+            repo.ui.log(
+                "merge_conflicts",
+                dest_hex=repo[p1].hex(),
+                src_hex=ctx.hex(),
+                newnode_hex=hex(newnode),
+                repo=reponame,
+            )
+
         repo.dirstate.setbranch(repo[newnode].branch())
         return newnode
 
