@@ -1,8 +1,5 @@
 #chg-compatible
-  $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig workingcopy.ruststatus=False
-  $ setconfig experimental.allowfilepeer=True
-
+  $ eagerepo
   $ configure mutation-norecord dummyssh
   $ enable rebase
   $ setconfig phases.publish=false ui.allowemptycommit=True
@@ -14,56 +11,51 @@
 
   $ hg init a
   $ cd a
-  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
-  $ setconfig treemanifest.server=True
-  $ hg commit -qm "A"
-  $ hg commit -qm "B"
-  $ hg commit -qm "C"
-  $ hg commit -qm "D"
-  $ hg up -q .~3
-  $ hg commit -qm "E"
-  $ hg book E
-  $ hg up -q .~1
-  $ hg commit -qm "F"
-  $ hg merge -q E
-  $ hg book -d E
-  $ hg commit -qm "G"
-  $ hg up -q .^
-  $ hg commit -qm "H"
-
-  $ echo I > I
-  $ hg ci -AmI
-  adding I
+  $ drawdag <<'EOS'
+  > I   D # I/I = I
+  > |   | # bookmark master = I
+  > H G C
+  > |/| |
+  > F E B
+  >  \|/
+  >   A
+  > EOS
 
   $ tglog
-  @  442d0c3a332a 'I'
+  o  f585351a92f8 'D'
   │
-  o  23a00112b28c 'H'
-  │
-  │ o  319f51d6224e 'G'
-  ╭─┤
-  o │  971baba67099 'F'
-  │ │
-  │ o  0e89a44ca1b2 'E'
+  │ o    c6001eacfde5 'G'
+  │ ├─╮
+  o │ │  26805aba1e60 'C'
+  │ │ │
+  │ │ o  7fb047a69f22 'E'
+  │ │ │
+  o │ │  112478962961 'B'
+  ├───╯
+  │ │ o  3e65a434aea7 'I' master
+  │ │ │
+  │ │ o  4ea5b230dea3 'H'
+  │ ├─╯
+  │ o  8908a377a434 'F'
   ├─╯
-  │ o  9da08f1f4bcc 'D'
-  │ │
-  │ o  9b96ea441fce 'C'
-  │ │
-  │ o  f68855660cff 'B'
-  ├─╯
-  o  7b3f3d5e5faf 'A'
+  o  426bada5c675 'A'
   
+
   $ cd ..
 
 Version with only two heads (to allow default destination to work)
 
-  $ hg clone -q -u tip ssh://user@dummy/a a2heads -r 3 -r 8
+  $ newclientrepo a2heads test:a
+  $ hg pull -r $D
+  pulling from test:a
+  searching for changes
 
 These fail:
 
-  $ hg clone -q -u tip ssh://user@dummy/a a0
-  $ cd a0
+  $ newclientrepo a0 test:a
+  $ hg pull -r $I -r $G -r $D
+  pulling from test:a
+  searching for changes
 
   $ hg rebase -s 'desc(I)' -d 'desc(H)'
   nothing to rebase
@@ -109,15 +101,15 @@ These fail:
   nothing to rebase - working directory parent is also destination
 
   $ hg rebase -b . --dest 'desc(I)'
-  nothing to rebase - 442d0c3a332a is both "base" and destination
+  nothing to rebase - 3e65a434aea7 is both "base" and destination
 
   $ hg up -q 'desc(H)'
 
   $ hg rebase --dest 'desc(I)' --traceback
-  nothing to rebase - working directory parent is already an ancestor of destination 442d0c3a332a
+  nothing to rebase - working directory parent is already an ancestor of destination 3e65a434aea7
 
   $ hg rebase --dest 'desc(I)' -b.
-  nothing to rebase - "base" 23a00112b28c is already an ancestor of destination 442d0c3a332a
+  nothing to rebase - "base" 4ea5b230dea3 is already an ancestor of destination 3e65a434aea7
 
   $ hg rebase --dest 'desc(B) & !desc(B)'
   abort: empty revision set
@@ -133,24 +125,24 @@ Rebase with no arguments (from 3 onto 8):
   $ hg up -q -C 'desc(D)'
 
   $ hg rebase
-  rebasing f68855660cff "B"
-  rebasing 9b96ea441fce "C"
-  rebasing 9da08f1f4bcc "D"
+  rebasing 112478962961 "B"
+  rebasing 26805aba1e60 "C"
+  rebasing f585351a92f8 "D"
 
   $ tglog
-  @  c691b1d40ebc 'D'
+  @  9ddd1ab93e66 'D'
   │
-  o  f5101d28cadd 'C'
+  o  5c73b5224523 'C'
   │
-  o  4ff9cf5957f0 'B'
+  o  0f744df8b10a 'B'
   │
-  o  442d0c3a332a 'I'
+  o  3e65a434aea7 'I'
   │
-  o  23a00112b28c 'H'
+  o  4ea5b230dea3 'H'
   │
-  o  971baba67099 'F'
+  o  8908a377a434 'F'
   │
-  o  7b3f3d5e5faf 'A'
+  o  426bada5c675 'A'
   
   $ cd ..
 
@@ -161,56 +153,24 @@ Rebase with base == '.' => same as no arguments (from 3 onto 8):
   $ hg goto -q 'desc(D)'
 
   $ hg rebase --base .
-  rebasing f68855660cff "B"
-  rebasing 9b96ea441fce "C"
-  rebasing 9da08f1f4bcc "D"
+  rebasing 112478962961 "B"
+  rebasing 26805aba1e60 "C"
+  rebasing f585351a92f8 "D"
 
   $ tglog
-  @  c691b1d40ebc 'D'
+  @  9ddd1ab93e66 'D'
   │
-  o  f5101d28cadd 'C'
+  o  5c73b5224523 'C'
   │
-  o  4ff9cf5957f0 'B'
+  o  0f744df8b10a 'B'
   │
-  o  442d0c3a332a 'I'
+  o  3e65a434aea7 'I'
   │
-  o  23a00112b28c 'H'
+  o  4ea5b230dea3 'H'
   │
-  o  971baba67099 'F'
+  o  8908a377a434 'F'
   │
-  o  7b3f3d5e5faf 'A'
-  
-  $ cd ..
-
-
-Rebase with dest == branch(.) => same as no arguments (from 3 onto 8):
-
-  $ hg clone -q -u 3 a a3
-  $ cd a3
-
-  $ hg rebase --dest 'branch(.)'
-  rebasing f68855660cff "B"
-  rebasing 9b96ea441fce "C"
-  rebasing 9da08f1f4bcc "D"
-
-  $ tglog
-  @  c691b1d40ebc 'D'
-  │
-  o  f5101d28cadd 'C'
-  │
-  o  4ff9cf5957f0 'B'
-  │
-  o  442d0c3a332a 'I'
-  │
-  o  23a00112b28c 'H'
-  │
-  │ o  319f51d6224e 'G'
-  ╭─┤
-  o │  971baba67099 'F'
-  │ │
-  │ o  0e89a44ca1b2 'E'
-  ├─╯
-  o  7b3f3d5e5faf 'A'
+  o  426bada5c675 'A'
   
   $ cd ..
 
@@ -221,55 +181,56 @@ Specify only source (from 2 onto 8):
   $ cd a4
 
   $ hg rebase --source 'desc("C")'
-  rebasing 9b96ea441fce "C"
-  rebasing 9da08f1f4bcc "D"
+  rebasing 26805aba1e60 "C"
+  rebasing f585351a92f8 "D"
 
   $ tglog
-  o  eccbb0403c5f 'D'
+  o  53b9858adc18 'D'
   │
-  o  e8496abab162 'C'
+  o  b2b0670adeee 'C'
   │
-  @  442d0c3a332a 'I'
-  │
-  o  23a00112b28c 'H'
-  │
-  o  971baba67099 'F'
-  │
-  │ o  f68855660cff 'B'
+  │ o  112478962961 'B'
+  │ │
+  @ │  3e65a434aea7 'I'
+  │ │
+  o │  4ea5b230dea3 'H'
+  │ │
+  o │  8908a377a434 'F'
   ├─╯
-  o  7b3f3d5e5faf 'A'
+  o  426bada5c675 'A'
   
   $ cd ..
 
 
 Specify only dest (from 3 onto 6):
 
-  $ hg clone -q -u 3 a a5
+  $ cp -R a a5
   $ cd a5
+  $ hg goto -q $D
 
   $ hg rebase --dest 'desc(G)'
-  rebasing f68855660cff "B"
-  rebasing 9b96ea441fce "C"
-  rebasing 9da08f1f4bcc "D"
+  rebasing 112478962961 "B"
+  rebasing 26805aba1e60 "C"
+  rebasing f585351a92f8 "D"
 
   $ tglog
-  @  600bb15de336 'D'
+  @  fd9396964646 'D'
   │
-  o  38c964e15e52 'C'
+  o  9fa31dc0e74e 'C'
   │
-  o  1c9fe805ca4e 'B'
+  o  566695ae5898 'B'
   │
-  │ o  442d0c3a332a 'I'
-  │ │
-  │ o  23a00112b28c 'H'
-  │ │
-  o │  319f51d6224e 'G'
+  o    c6001eacfde5 'G'
   ├─╮
-  │ o  971baba67099 'F'
+  │ o  7fb047a69f22 'E'
   │ │
-  o │  0e89a44ca1b2 'E'
+  │ │ o  3e65a434aea7 'I' master
+  │ │ │
+  │ │ o  4ea5b230dea3 'H'
+  ├───╯
+  o │  8908a377a434 'F'
   ├─╯
-  o  7b3f3d5e5faf 'A'
+  o  426bada5c675 'A'
   
   $ cd ..
 
@@ -280,55 +241,51 @@ Specify only base (from 1 onto 8):
   $ cd a6
 
   $ hg rebase --base 'desc("D")'
-  rebasing f68855660cff "B"
-  rebasing 9b96ea441fce "C"
-  rebasing 9da08f1f4bcc "D"
+  rebasing 112478962961 "B"
+  rebasing 26805aba1e60 "C"
+  rebasing f585351a92f8 "D"
 
   $ tglog
-  o  c691b1d40ebc 'D'
+  o  9ddd1ab93e66 'D'
   │
-  o  f5101d28cadd 'C'
+  o  5c73b5224523 'C'
   │
-  o  4ff9cf5957f0 'B'
+  o  0f744df8b10a 'B'
   │
-  @  442d0c3a332a 'I'
+  @  3e65a434aea7 'I'
   │
-  o  23a00112b28c 'H'
+  o  4ea5b230dea3 'H'
   │
-  o  971baba67099 'F'
+  o  8908a377a434 'F'
   │
-  o  7b3f3d5e5faf 'A'
+  o  426bada5c675 'A'
   
   $ cd ..
 
 
 Specify source and dest (from 2 onto 7):
 
-  $ cp -R a a7
+  $ cp -R a2heads a7
   $ cd a7
 
   $ hg rebase --source 'desc(C)' --dest 'desc(H)'
-  rebasing 9b96ea441fce "C"
-  rebasing 9da08f1f4bcc "D"
+  rebasing 26805aba1e60 "C"
+  rebasing f585351a92f8 "D"
 
   $ tglog
-  o  1106330f5f77 'D'
+  o  21a2359f8c06 'D'
   │
-  o  69c2c425e598 'C'
+  o  df521e8f6ec4 'C'
   │
-  │ @  442d0c3a332a 'I'
-  ├─╯
-  o  23a00112b28c 'H'
-  │
-  │ o  319f51d6224e 'G'
-  ╭─┤
-  o │  971baba67099 'F'
+  │ o  112478962961 'B'
   │ │
-  │ o  0e89a44ca1b2 'E'
+  │ │ @  3e65a434aea7 'I'
+  ├───╯
+  o │  4ea5b230dea3 'H'
+  │ │
+  o │  8908a377a434 'F'
   ├─╯
-  │ o  f68855660cff 'B'
-  ├─╯
-  o  7b3f3d5e5faf 'A'
+  o  426bada5c675 'A'
   
   $ cd ..
 
@@ -339,28 +296,28 @@ Specify base and dest (from 1 onto 7):
   $ cd a8
 
   $ hg rebase --base 'desc(D)' --dest 'desc(H)'
-  rebasing f68855660cff "B"
-  rebasing 9b96ea441fce "C"
-  rebasing 9da08f1f4bcc "D"
+  rebasing 112478962961 "B"
+  rebasing 26805aba1e60 "C"
+  rebasing f585351a92f8 "D"
 
   $ tglog
-  o  98e5f65f4dfa 'D'
+  o  49ddef00e564 'D'
   │
-  o  d8f5725d7e97 'C'
+  o  8a25ca8f8a1c 'C'
   │
-  o  c3c3bee19f3c 'B'
+  o  59672d756804 'B'
   │
-  │ @  442d0c3a332a 'I'
-  ├─╯
-  o  23a00112b28c 'H'
-  │
-  │ o  319f51d6224e 'G'
-  ╭─┤
-  o │  971baba67099 'F'
-  │ │
-  │ o  0e89a44ca1b2 'E'
-  ├─╯
-  o  7b3f3d5e5faf 'A'
+  │ o    c6001eacfde5 'G'
+  │ ├─╮
+  │ │ o  7fb047a69f22 'E'
+  │ │ │
+  │ │ │ o  3e65a434aea7 'I' master
+  ├─────╯
+  o │ │  4ea5b230dea3 'H'
+  ├─╯ │
+  o   │  8908a377a434 'F'
+  ├───╯
+  o  426bada5c675 'A'
   
   $ cd ..
 
@@ -371,23 +328,23 @@ Specify only revs (from 2 onto 8)
   $ cd a9
 
   $ hg rebase --rev 'desc("C")::'
-  rebasing 9b96ea441fce "C"
-  rebasing 9da08f1f4bcc "D"
+  rebasing 26805aba1e60 "C"
+  rebasing f585351a92f8 "D"
 
   $ tglog
-  o  eccbb0403c5f 'D'
+  o  53b9858adc18 'D'
   │
-  o  e8496abab162 'C'
+  o  b2b0670adeee 'C'
   │
-  @  442d0c3a332a 'I'
-  │
-  o  23a00112b28c 'H'
-  │
-  o  971baba67099 'F'
-  │
-  │ o  f68855660cff 'B'
+  │ o  112478962961 'B'
+  │ │
+  @ │  3e65a434aea7 'I'
+  │ │
+  o │  4ea5b230dea3 'H'
+  │ │
+  o │  8908a377a434 'F'
   ├─╯
-  o  7b3f3d5e5faf 'A'
+  o  426bada5c675 'A'
   
   $ cd ..
 
@@ -395,9 +352,9 @@ Rebasing both a single revision and a merge in one command
 
   $ cp -R a aX
   $ cd aX
-  $ hg rebase -r 9da08f1f4bcc -r 6 --dest 'desc(I)'
-  rebasing 9da08f1f4bcc "D"
-  rebasing 319f51d6224e "G"
+  $ hg rebase -r $D -r $G --dest 'desc(I)'
+  rebasing c6001eacfde5 "G"
+  rebasing f585351a92f8 "D"
   $ cd ..
 
 Test --tool parameter:

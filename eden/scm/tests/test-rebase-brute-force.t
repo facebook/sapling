@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=False
   $ configure mutation
   $ setconfig extensions.bruterebase="$TESTDIR/bruterebase.py"
   $ init() {

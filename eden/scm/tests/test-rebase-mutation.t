@@ -1,9 +1,8 @@
 #chg-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig format.use-segmented-changelog=true
   $ setconfig devel.segmented-changelog-rev-compat=true
 
+  $ eagerepo
   $ configure mutation-norecord dummyssh
   $ enable rebase amend remotenames
   $ setconfig 'hint.ack=amend-restack'
@@ -18,8 +17,6 @@ Setup rebase canonical repo
 
   $ hg init base
   $ cd base
-  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
-  $ setconfig treemanifest.server=True
 
   $ echo A > A
   $ hg commit -Aqm "A"
@@ -65,13 +62,7 @@ Setup rebase canonical repo
 simple rebase
 ---------------------------------
 
-  $ hg clone ssh://user@dummy/base simple
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cp -R base simple
   $ cd simple
   $ hg up 'desc(D)'
   3 files updated, 0 files merged, 2 files removed, 0 files unresolved
@@ -143,13 +134,7 @@ simple rebase
 empty changeset
 ---------------------------------
 
-  $ hg clone ssh://user@dummy/base empty
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cp -R base empty
   $ cd empty
   $ hg up 'desc(G)'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -271,8 +256,6 @@ More complex case where part of the rebase set were already rebased
   o  4a2df7238c3b A
   
   $ hg log -r 4596109a6a4328c398bde3a4a3b6737cfade3003
-  pulling '4596109a6a4328c398bde3a4a3b6737cfade3003' from 'ssh://user@dummy/base'
-  pull failed: unknown revision '4596109a6a4328c398bde3a4a3b6737cfade3003'
   abort: unknown revision '4596109a6a4328c398bde3a4a3b6737cfade3003'!
   [255]
   $ hg up -qr 'desc(G)'
@@ -319,7 +302,7 @@ even though it is hidden (until we're moved there).
 collapse rebase
 ---------------------------------
 
-  $ hg clone ssh://user@dummy/base collapse -q
+  $ cp -R base collapse
   $ cd collapse
   $ hg up 'desc(H)' -q
   $ hg rebase  -s 'desc(B)' -d 'desc(G)' --collapse
@@ -375,13 +358,7 @@ Rebase set has hidden descendants
 We rebase a changeset which has hidden descendants. Hidden changesets must not
 be rebased.
 
-  $ hg clone ssh://user@dummy/base hidden
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cp -R base hidden
   $ cd hidden
   $ hg up -q 'desc(H)'
   $ hg log -G
@@ -558,13 +535,7 @@ test on rebase dropping a merge
 
 (setup)
 
-  $ hg clone ssh://user@dummy/base dropmerge
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cp -R base dropmerge
   $ cd dropmerge
   $ hg up 'desc(D)'
   3 files updated, 0 files merged, 2 files removed, 0 files unresolved
@@ -773,9 +744,7 @@ Even when the chain include missing node
   $ echo D > D
   $ hg add D
   $ hg commit -m D
-  $ hg --hidden debugstrip -r 'desc(B1)'
 
-XXX: rev 3 should remain hidden. (debugstrip is rarely used so this might be okay)
   $ enable amend
   $ hg hide 212cb178bcbb8916f22a2bf937232f368b64ace7 -q --hidden
 

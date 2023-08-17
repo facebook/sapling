@@ -141,9 +141,7 @@ Ensure symlink and executable files were rebased properly:
 
 Make a change that only changes the flags of a file and ensure it rebases
 cleanly.
-  $ hg clone repo2 repo3
-  updating to branch default
-  6 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg clone -q repo2 repo3
   $ cd repo3
   $ tglog
   @  753feb6fd12a 'c'

@@ -1,6 +1,5 @@
-#chg-compatible
+#debugruntest-compatible
 
-  $ setconfig workingcopy.ruststatus=False
   $ configure mutation-norecord
 Tests the --noconflict rebase flag
 
@@ -56,7 +55,7 @@ Confirm the flag fails without IMM:
   [255]
 
 Confirm that it rebases a three-way merge, but no conflict:
-  $ newrepo
+  $ newclientrepo
   $ seq 1 5 > a
   $ hg commit -Aq -m "base"
   $ seq 1 10 > a
@@ -76,7 +75,5 @@ Confirm that it rebases a three-way merge, but no conflict:
   rebasing in-memory!
   rebasing 12cba56c6d27 "extend to 10"
   merging a
-  $ hg cat -r tip a | wc -l | xargs
+  $ hg cat -r tip a | wc -l
   11
-
-^ (xargs is used for trimming)

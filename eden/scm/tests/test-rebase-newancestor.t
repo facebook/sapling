@@ -1,8 +1,7 @@
 #debugruntest-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
-  $ disable treemanifest
+  $ eagerepo
   $ enable rebase
   $ readconfig <<EOF
   > [revsetalias]
@@ -97,7 +96,7 @@ The branches are emulated using commit messages.
   >        |/
   >        default1
   > EOS
-  $ hg clone -qU . ../ancestor-merge-2
+  $ cp -R . ../ancestor-merge-2
 
 Full rebase all the way back from branching point:
 

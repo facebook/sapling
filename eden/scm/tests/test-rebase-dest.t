@@ -57,9 +57,7 @@ Requiring dest should not break continue or other rebase options
   $ cd ..
 
 Check rebase.requiredest interaction with pull --rebase
-  $ hg clone repo clone
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg clone -q repo clone
   $ cd repo
   $ echo e > e
   $ hg commit -qAm ee

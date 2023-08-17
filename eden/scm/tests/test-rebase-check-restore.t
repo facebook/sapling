@@ -7,17 +7,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-  $ setconfig workingcopy.ruststatus=False
-
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig 'extensions.treemanifest=!'
-
-  $ cat >> $HGRCPATH << 'EOF'
-  > [extensions]
-  > rebase=
-  > [phases]
-  > publish=False
-  > EOF
+  $ eagerepo
+  $ enable rebase
+  $ setconfig phases.publish=False
 
   $ hg init a
   $ cd a
@@ -51,7 +44,7 @@
 
 # Rebasing B onto E - check keep: and phases
 
-  $ hg clone -q -u . a a1
+  $ cp -R a a1
   $ cd a1
 
   $ tglogp
@@ -105,7 +98,7 @@
 
 # Rebase F onto E:
 
-  $ hg clone -q -u . a a2
+  $ cp -R a a2
   $ cd a2
 
   $ tglogp

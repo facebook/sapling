@@ -1,12 +1,11 @@
 #chg-compatible
 
-  $ setconfig workingcopy.ruststatus=False
+  $ eagerepo
   $ configure mutation-norecord
   $ enable rebase
   $ setconfig phases.publish=false
 
-  $ hg init a
-  $ cd a
+  $ newclientrepo
 
   $ touch .hg/rebasestate
   $ hg sum

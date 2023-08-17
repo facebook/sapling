@@ -1,17 +1,12 @@
 #chg-compatible
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig format.use-segmented-changelog=true
   $ setconfig devel.segmented-changelog-rev-compat=true
 
-  $ configure dummyssh
+  $ eagerepo
   $ enable rebase amend
 
   $ hg init a
   $ cd a
-  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
-  $ setconfig treemanifest.server=True
 
   $ echo A > A
   $ hg commit -Aqm "A"
@@ -43,7 +38,7 @@ D onto H - simple rebase:
 (this also tests that editor is invoked if '--edit' is specified, and that we
 can abort or warn for colliding untracked files)
 
-  $ hg clone -q -u . ssh://user@dummy/a a1
+  $ cp -R a a1
   $ cd a1
 
   $ tglog
@@ -104,7 +99,7 @@ D onto F - intermediate point:
 (this also tests that editor is not invoked if '--edit' is not specified, and
 that we can ignore for colliding untracked files)
 
-  $ hg clone -q -u . ssh://user@dummy/a a2
+  $ cp -R a a2
   $ cd a2
   $ echo collide > D
 
@@ -135,7 +130,7 @@ E onto H - skip of G:
 (this also tests that we can overwrite untracked files and don't create backups
 if they have the same contents)
 
-  $ hg clone -q -u . ssh://user@dummy/a a3
+  $ cp -R a a3
   $ cd a3
   $ hg cat -r 'desc(E)' E | tee E
   E
@@ -168,7 +163,7 @@ if they have the same contents)
 
 F onto E - rebase of a branching point (skip G):
 
-  $ hg clone -q -u . ssh://user@dummy/a a4
+  $ cp -R a a4
   $ cd a4
 
   $ hg rebase -s 'desc(F)' -d 'desc(E)'
@@ -198,7 +193,7 @@ F onto E - rebase of a branching point (skip G):
 
 G onto H - merged revision having a parent in ancestors of target:
 
-  $ hg clone -q -u . ssh://user@dummy/a a5
+  $ cp -R a a5
   $ cd a5
 
   $ hg rebase -s 'desc(G)' -d 'desc(H)'
@@ -226,7 +221,7 @@ G onto H - merged revision having a parent in ancestors of target:
 
 F onto B - G maintains E as parent:
 
-  $ hg clone -q -u . ssh://user@dummy/a a6
+  $ cp -R a a6
   $ cd a6
 
   $ hg rebase -s 'desc(F)' -d 'desc(B)'
@@ -258,8 +253,9 @@ These will fail (using --source):
 
 G onto F - rebase onto an ancestor:
 
-  $ hg clone -q -u . ssh://user@dummy/a a7
+  $ cp -R a a7
   $ cd a7
+  $ setconfig paths.default=test:a
 
   $ hg rebase -s 'desc(G)' -d 'desc(F)'
   nothing to rebase
@@ -321,7 +317,7 @@ C onto A - rebase onto an ancestor:
 
 Check rebasing public changeset
 
-  $ hg pull --config phases.publish=True -q -r 6 . # update phase of 6
+  $ hg push --config phases.publish=True -q -r 6 # update phase of G
   $ hg rebase -d 'desc(A)' -b 'desc(C)'
   nothing to rebase
   $ hg debugmakepublic 'desc(C)'
@@ -374,8 +370,6 @@ All destination are B
 
   $ hg init ah
   $ cd ah
-  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
-  $ setconfig treemanifest.server=True
 
   $ echo A > A
   $ hg commit -Aqm "A"
@@ -426,7 +420,7 @@ Simple case with keep:
 
 Source on have two descendant heads but ask for one
 
-  $ hg clone -q -u . ssh://user@dummy/ah ah1
+  $ cp -R ah ah1
   $ cd ah1
   $ hg rebase -r 'max(desc(C))::desc(I)' -d 'desc(B)' -k
   rebasing c5cefa58fd55 "C"
@@ -468,7 +462,7 @@ Source on have two descendant heads but ask for one
 
 Base on have one descendant heads we ask for but common ancestor have two
 
-  $ hg clone -q -u . ssh://user@dummy/ah ah2
+  $ cp -R ah ah2
   $ cd ah2
   $ hg rebase -r 'desc(D)::desc(I)' -d 'desc(B)' --keep
   rebasing 36784c4b0d11 "D"
@@ -507,7 +501,7 @@ Base on have one descendant heads we ask for but common ancestor have two
 
 rebase subset
 
-  $ hg clone -q -u . ssh://user@dummy/ah ah3
+  $ cp -R ah ah3
   $ cd ah3
   $ hg rebase -r 'desc(D)::desc(H)' -d 'desc(B)' --keep
   rebasing 36784c4b0d11 "D"
@@ -543,7 +537,7 @@ rebase subset
 
 rebase subset with multiple head
 
-  $ hg clone -q -u . ssh://user@dummy/ah ah4
+  $ cp -R ah ah4
   $ cd ah4
   $ hg rebase -r 'desc(D)::(desc(H)+desc(F))' -d 'desc(B)' --keep
   rebasing 36784c4b0d11 "D"
@@ -587,7 +581,7 @@ More advanced tests
 
 rebase on ancestor with revset
 
-  $ hg clone -q -u . ssh://user@dummy/ah ah5
+  $ cp -R ah ah5
   $ cd ah5
   $ hg rebase -r 'desc(G)::' -d 'desc(C)'
   rebasing 15356cd3838c "G"
@@ -619,7 +613,7 @@ rebase with multiple root.
 We rebase E and G on B
 We would expect heads are I, F if it was supported
 
-  $ hg clone -q -u . ssh://user@dummy/ah ah6
+  $ cp -R ah ah6
   $ cd ah6
   $ hg rebase -r '(desc(C)+desc(G))::' -d 'desc(B)'
   rebasing c5cefa58fd55 "C"
@@ -655,7 +649,7 @@ each root have a different common ancestor with the destination and this is a de
 
 (setup)
 
-  $ hg clone -q -u . a a8
+  $ cp -R a a8
   $ cd a8
   $ echo I > I
   $ hg add I
