@@ -388,7 +388,11 @@ class physicalfilesystem(object):
         directories that were deleted (or, if a dry-run, should be deleted) and
         any errors that were encountered.
         """
-        errors = []
+
+        files, dirs, errors = findthingstopurge(
+            self.dirstate, match, removefiles, removedirs, removeignored
+        )
+
         join = self.dirstate._repo.wjoin
 
         def remove(remove_func, name):
@@ -396,10 +400,6 @@ class physicalfilesystem(object):
                 remove_func(join(name))
             except OSError:
                 errors.append(_("%s cannot be removed") % name)
-
-        files, dirs = findthingstopurge(
-            self.dirstate, match, removefiles, removedirs, removeignored
-        )
 
         files = list(files)
         if not dryrun:
@@ -488,9 +488,6 @@ def findthingstopurge(dirstate, match, findfiles, finddirs, includeignored):
     remove, and dirs is an iterable of directories to remove.
     """
     wvfs = dirstate._repo.wvfs
-    if finddirs:
-        directories = set(f for f in match.files() if wvfs.isdir(f))
-        match.traversedir = directories.add
 
     status = dirstate.status(match, includeignored, False, True)
 
@@ -500,19 +497,41 @@ def findthingstopurge(dirstate, match, findfiles, finddirs, includeignored):
         files = []
 
     if finddirs:
-        # Use a generator expression to lazily test for directory contents,
-        # otherwise nested directories that are being removed would be counted
-        # when in reality they'd be removed already by the time the parent
-        # directory is to be removed.
-        dirs = (
-            f
-            for f in sorted(directories, reverse=True)
-            if (match(f) and not os.listdir(wvfs.join(f)))
-        )
+        dirs, errors = _emptydirs(dirstate._ui, wvfs, dirstate, match)
     else:
-        dirs = []
+        dirs, errors = [], []
 
-    return files, dirs
+    return files, dirs, errors
+
+
+def _emptydirs(ui, wvfs, dirstate, match):
+    directories = set(f for f in match.files() if wvfs.isdir(f))
+
+    walker = workingcopy.walker(
+        wvfs.base,
+        ui.identity.dotdir(),
+        match,
+        True,
+    )
+    for fn in walker:
+        fn = dirstate.normalize(fn)
+        st = util.lstat(wvfs.join(fn))
+        if stat.S_ISDIR(st.st_mode):
+            directories.add(fn)
+
+    # Use a generator expression to lazily test for directory contents,
+    # otherwise nested directories that are being removed would be counted
+    # when in reality they'd be removed already by the time the parent
+    # directory is to be removed.
+    dirs = (
+        f
+        for f in sorted(directories, reverse=True)
+        if (match(f) and not os.listdir(wvfs.join(f)))
+    )
+
+    errors = ["%s: %s" % (_(msg), path) for path, msg in sorted(walker.errors())]
+
+    return dirs, errors
 
 
 def badtype(mode: int) -> str:

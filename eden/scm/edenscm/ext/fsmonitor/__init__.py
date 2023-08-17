@@ -349,6 +349,7 @@ def wrappurge(orig, dirstate, match, findfiles, finddirs, includeignored):
     ui = dirstate._ui
     files = []
     dirs = []
+    errors = []
     usefastdirs = True
     if finddirs:
         try:
@@ -358,7 +359,7 @@ def wrappurge(orig, dirstate, match, findfiles, finddirs, includeignored):
             usefastdirs = False
 
     if findfiles or not usefastdirs:
-        files, dirs = orig(
+        files, dirs, errors = orig(
             dirstate, match, findfiles, finddirs and not usefastdirs, False
         )
 
@@ -372,7 +373,7 @@ def wrappurge(orig, dirstate, match, findfiles, finddirs, includeignored):
             )
         )
 
-    return files, dirs
+    return files, dirs, errors
 
 
 def _watchmanpid(clock):

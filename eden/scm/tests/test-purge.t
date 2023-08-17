@@ -3,7 +3,6 @@
 init
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=false
   $ hg init t
   $ cd t
   $ setconfig purge.dirs-by-default=True

@@ -58,8 +58,8 @@ py_class!(class walker |py| {
         let matcher = extract_matcher(py, pymatcher)?;
         let walker = Walker::new(
             root.to_path_buf(),
-            dot_dir,
-            Vec::new(),
+            dot_dir.clone(),
+            vec![dot_dir.into()],
             matcher,
             include_directories,
         ).map_pyerr(py)?;
@@ -72,7 +72,8 @@ py_class!(class walker |py| {
 
     def __next__(&self) -> PyResult<Option<PyPathBuf>> {
         loop {
-            match self.inner(py).borrow_mut().next() {
+            let inner = &mut *self.inner(py).borrow_mut();
+            match py.allow_threads(|| inner.next()) {
                 Some(Ok(path)) => return Ok(Some(PyPathBuf::from(path.as_ref()))),
                 Some(Err(e)) => self._errors(py).borrow_mut().push(e),
                 None => return Ok(None),
