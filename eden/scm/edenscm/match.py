@@ -1404,90 +1404,6 @@ class intersectionmatcher(basematcher):
         return "<intersectionmatcher m1=%r, m2=%r>" % (self._m1, self._m2)
 
 
-class subdirmatcher(basematcher):
-    """Adapt a matcher to work on a subdirectory only.
-
-    The paths are remapped to remove/insert the path as needed:
-
-    >>> import os
-    >>> from . import pycompat
-    >>> m1 = match(os.getcwd(), '', ['a.txt', 'sub/b.txt'])
-    >>> m2 = subdirmatcher('sub', m1)
-    >>> bool(m2('a.txt'))
-    False
-    >>> bool(m2('b.txt'))
-    True
-    >>> bool(m2.matchfn('a.txt'))
-    False
-    >>> bool(m2.matchfn('b.txt'))
-    True
-    >>> m2.files()
-    ['b.txt']
-    >>> m2.exact('b.txt')
-    True
-    >>> util.pconvert(m2.rel('b.txt'))
-    'sub/b.txt'
-    >>> def bad(f, msg):
-    ...     print("%s: %s" % (f, msg))
-    >>> m1.bad = bad
-    >>> m2.bad('x.txt', 'No such file')
-    sub/x.txt: No such file
-    >>> m2.abs('c.txt')
-    'sub/c.txt'
-    """
-
-    def __init__(self, path, matcher):
-        super(subdirmatcher, self).__init__(matcher._root, matcher._cwd)
-        self._path = path
-        self._matcher = matcher
-        self._always = matcher.always()
-
-        self._files = [
-            f[len(path) + 1 :] for f in matcher._files if f.startswith(path + "/")
-        ]
-
-        # If the parent repo had a path to this subrepo and the matcher is
-        # a prefix matcher, this submatcher always matches.
-        if matcher.prefix():
-            self._always = any(f == path for f in matcher._files)
-
-    def bad(self, f, msg):
-        self._matcher.bad(self._path + "/" + f, msg)
-
-    def abs(self, f):
-        return self._matcher.abs(self._path + "/" + f)
-
-    def rel(self, f):
-        return self._matcher.rel(self._path + "/" + f)
-
-    def uipath(self, f):
-        return self._matcher.uipath(self._path + "/" + f)
-
-    def matchfn(self, f):
-        # Some information is lost in the superclass's constructor, so we
-        # can not accurately create the matching function for the subdirectory
-        # from the inputs. Instead, we override matchfn() and visitdir() to
-        # call the original matcher with the subdirectory path prepended.
-        return self._matcher.matchfn(self._path + "/" + f)
-
-    def visitdir(self, dir):
-        dir = normalizerootdir(dir, "visitdir")
-        if dir == "":
-            dir = self._path
-        else:
-            dir = self._path + "/" + dir
-        return self._matcher.visitdir(dir)
-
-    def always(self):
-        return self._always
-
-    def prefix(self):
-        return self._matcher.prefix() and not self._always
-
-    def __repr__(self):
-        return "<subdirmatcher path=%r, matcher=%r>" % (self._path, self._matcher)
-
-
 class unionmatcher(basematcher):
     """A matcher that is the union of several matchers.
 
@@ -1576,29 +1492,6 @@ class xormatcher(basematcher):
 
     def __repr__(self):
         return "<xormatcher matchers=%r>" % self._matchers
-
-
-class recursivematcher(basematcher):
-    """Make matchers recursive. If "a/b/c" matches, match "a/b/c/**".
-
-    It is intended to be used by hgignore only. Other matchers would want to
-    fix "visitdir" and "matchfn" to take parent directories into consideration.
-    """
-
-    def __init__(self, matcher):
-        self._matcher = matcher
-
-    def matchfn(self, f):
-        match = self._matcher
-        return match(f) or any(map(match, util.dirs((f,))))
-
-    def visitdir(self, dir):
-        if self(dir):
-            return "all"
-        return self._matcher.visitdir(dir)
-
-    def __repr__(self):
-        return "<recursivematcher %r>" % self._matcher
 
 
 def patkind(pattern, default=None):
