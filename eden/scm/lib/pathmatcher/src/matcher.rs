@@ -57,18 +57,18 @@ pub fn build_matcher(
 
 fn build_matcher_from_patterns(patterns: &[Pattern], case_sensitive: bool) -> Result<DynMatcher> {
     assert!(!patterns.is_empty(), "patterns should not be empty");
-    let grouped_patterns = group_by_pattern_kind(patterns);
+
     let mut matchers: Vec<DynMatcher> = Vec::new();
+
+    let grouped_patterns = group_by_pattern_kind(patterns);
     for (kind, pats) in &grouped_patterns {
-        let m: DynMatcher = match kind {
-            PatternKind::Glob => Arc::new(TreeMatcher::from_rules(pats.iter(), case_sensitive)?),
-            PatternKind::RE => {
-                let regex_pat = format!("(?:{})", pats.join("|"));
-                Arc::new(RegexMatcher::new(&regex_pat, case_sensitive)?)
-            }
-            _ => {
-                return Err(Error::UnsupportedPatternKind(kind.name().to_string()).into());
-            }
+        let m: DynMatcher = if kind.is_glob() || kind.is_path() {
+            Arc::new(TreeMatcher::from_rules(pats.iter(), case_sensitive)?)
+        } else if kind.is_regex() {
+            let regex_pat = format!("(?:{})", pats.join("|"));
+            Arc::new(RegexMatcher::new(&regex_pat, case_sensitive)?)
+        } else {
+            return Err(Error::UnsupportedPatternKind(kind.name().to_string()).into());
         };
         matchers.push(m);
     }
