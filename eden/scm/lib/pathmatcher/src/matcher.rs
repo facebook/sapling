@@ -55,7 +55,10 @@ pub fn build_matcher(
     Ok(m)
 }
 
-fn build_matcher_from_patterns(patterns: &[Pattern], case_sensitive: bool) -> Result<DynMatcher> {
+pub(crate) fn build_matcher_from_patterns(
+    patterns: &[Pattern],
+    case_sensitive: bool,
+) -> Result<DynMatcher> {
     assert!(!patterns.is_empty(), "patterns should not be empty");
 
     let mut matchers: Vec<DynMatcher> = Vec::new();

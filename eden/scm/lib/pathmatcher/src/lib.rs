@@ -8,6 +8,7 @@
 mod error;
 mod exact_matcher;
 mod gitignore_matcher;
+mod hinted_matcher;
 mod matcher;
 mod pattern;
 mod regex_matcher;
