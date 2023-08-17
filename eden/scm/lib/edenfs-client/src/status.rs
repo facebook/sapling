@@ -27,19 +27,23 @@ async fn get_socket_transport(sock_path: &Path) -> Result<SocketTransport<UnixSt
     Ok(SocketTransport::new(sock))
 }
 
-pub fn get_status(repo_root: &Path, commit: HgId) -> Result<GetScmStatusResult> {
+pub fn get_status(repo_root: &Path, commit: HgId, ignored: bool) -> Result<GetScmStatusResult> {
     let rt = tokio::runtime::Runtime::new()?;
 
-    rt.block_on(get_status_internal(repo_root, commit))
+    rt.block_on(get_status_internal(repo_root, commit, ignored))
 }
 
-async fn get_status_internal(repo_root: &Path, commit: HgId) -> Result<GetScmStatusResult> {
+async fn get_status_internal(
+    repo_root: &Path,
+    commit: HgId,
+    ignored: bool,
+) -> Result<GetScmStatusResult> {
     let eden_config = EdenConfig::from_root(repo_root)?;
 
     let transport = get_socket_transport(&eden_config.socket).await?;
     let client = <dyn EdenService>::new(BinaryProtocol, transport);
 
-    get_status_helper(&client, &eden_config.root, commit, false).await
+    get_status_helper(&client, &eden_config.root, commit, ignored).await
 }
 
 #[derive(Deserialize)]

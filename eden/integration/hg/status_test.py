@@ -66,6 +66,23 @@ class StatusTest(EdenHgTestCase):
         self.assert_status({"hello.txt": "R", "world.txt": "A"})
         self.assertFalse(os.path.exists(self.get_path("hello.txt")))
 
+    def test_ignored(self) -> None:
+        self.repo.write_file(".gitignore", "ignore_me\n")
+        self.repo.commit("gitignore")
+
+        self.touch("ignore_me")
+        self.assert_status({"ignore_me": "I"})
+
+        # Set some flags so we use Rust status.
+        self.hg(
+            "config",
+            "--local",
+            "devel.rust-status-ignored=true",
+            "workingcopy.use-rust=true",
+            "workingcopy.ruststatus=true",
+        )
+        self.assert_status({"ignore_me": "I"})
+
     def thoroughly_get_scm_status(
         self, client, mountPoint, commit, listIgnored, expected_status
     ) -> None:

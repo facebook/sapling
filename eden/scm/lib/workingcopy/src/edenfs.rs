@@ -41,24 +41,24 @@ impl PendingChanges for EdenFileSystem {
         _matcher: DynMatcher,
         _ignore_matcher: DynMatcher,
         _ignore_dirs: Vec<PathBuf>,
-        _include_ignored: bool,
+        include_ignored: bool,
         _last_write: SystemTime,
         _config: &dyn Config,
         _io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
-        let result = edenfs_client::status::get_status(&self.root, self.p1)?;
-        Ok(Box::new(result.status.entries.into_iter().filter_map(
+        let result = edenfs_client::status::get_status(&self.root, self.p1, include_ignored)?;
+        Ok(Box::new(result.status.entries.into_iter().map(
             |(path, status)| {
                 {
                     // TODO: Handle non-UTF8 encoded paths from Eden
                     let repo_path = match RepoPathBuf::from_utf8(path) {
                         Ok(repo_path) => repo_path,
-                        Err(err) => return Some(Err(anyhow!(err))),
+                        Err(err) => return Err(anyhow!(err)),
                     };
                     match status {
-                        ScmFileStatus::REMOVED => Some(Ok(PendingChange::Deleted(repo_path))),
-                        ScmFileStatus::IGNORED => None,
-                        _ => Some(Ok(PendingChange::Changed(repo_path))),
+                        ScmFileStatus::REMOVED => Ok(PendingChange::Deleted(repo_path)),
+                        ScmFileStatus::IGNORED => Ok(PendingChange::Ignored(repo_path)),
+                        _ => Ok(PendingChange::Changed(repo_path)),
                     }
                 }
             },
