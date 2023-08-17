@@ -35,7 +35,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" --derive-hg full-repo
+  $ gitimport --record-head-symref "$GIT_REPO" --derive-hg full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
   * Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(*))) (glob)
@@ -49,6 +49,10 @@
   $ ls $TESTTMP/blobstore/blobs | grep "git_object"
   blob-repo0000.git_object.8ce3eae44760b500bf3f2c3922a95dcd3c908e9e
   blob-repo0000.git_object.cb2ef838eb24e4667fee3a8b89c930234ae6e4bb
+
+# Validate if we imported the HEAD symref
+  $ mononoke_newadmin git-symref -R repo get --symref-name HEAD
+  The symbolic ref HEAD points to branch master
 
 # Cross reference with the blobs present in the git store
   $ cd "$GIT_REPO"

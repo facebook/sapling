@@ -412,7 +412,8 @@ pub async fn read_symref(
         .env_clear()
         .kill_on_drop(false)
         .stdout(Stdio::piped())
-        .arg(format!("symbolic-ref {}", symref_name))
+        .arg("symbolic-ref")
+        .arg(symref_name)
         .spawn()
         .with_context(|| format!("failed to run git with {:?}", prefs.git_command_path))?;
     let mut stdout = BufReader::new(command.stdout.take().context("stdout not set up")?);

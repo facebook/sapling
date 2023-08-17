@@ -53,7 +53,7 @@ use slog::info;
 
 use crate::mem_writes_changesets::MemWritesChangesets;
 
-pub const HEAD_SYMREF: &str = "head";
+pub const HEAD_SYMREF: &str = "HEAD";
 
 // Refactor this a bit. Use a thread pool for git operations. Pass that wherever we use store repo.
 // Transform the walk into a stream of commit + file changes.
