@@ -114,7 +114,10 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         || !ctx.opts.walk_opts.include.is_empty()
         || !ctx.opts.walk_opts.exclude.is_empty()
         || !args_check
-        || ctx.opts.ignored
+        || (ctx.opts.ignored
+            && !repo
+                .config()
+                .get_or_default("devel", "rust-status-ignored")?)
         || ctx.opts.clean
     {
         tracing::debug!(target: "status_info", status_detail="unsupported_args");
@@ -183,6 +186,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
     let status = wc.status(
         matcher.clone(),
         SystemTime::UNIX_EPOCH,
+        ignored,
         repo.config(),
         ctx.io(),
     )?;

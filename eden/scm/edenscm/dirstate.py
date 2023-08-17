@@ -954,11 +954,11 @@ class dirstate(object):
     def _ruststatus(
         self, match: matchmod.basematcher, ignored: bool, clean: bool, unknown: bool
     ) -> "scmutil.status":
-        if ignored:
+        if ignored and not self._ui.configbool("devel", "rust-status-ignored"):
             raise self.FallbackToPythonStatus
 
         status = self._repo._rsrepo.workingcopy().status(
-            match, self._lastnormaltime, self._ui._rcfg
+            match, self._lastnormaltime, bool(ignored), self._ui._rcfg
         )
 
         if not unknown:

@@ -101,6 +101,7 @@ py_class!(pub class workingcopy |py| {
         &self,
         pymatcher: Option<PyObject>,
         lastwrite: u32,
+        include_ignored: bool,
         config: &config,
     ) -> PyResult<PyObject> {
         let wc = self.inner(py).write();
@@ -112,7 +113,7 @@ py_class!(pub class workingcopy |py| {
         let config = config.get_cfg(py);
         pystatus::to_python_status(py,
             &py.allow_threads(|| {
-                wc.status(matcher, last_write, &config, &io)
+                wc.status(matcher, last_write, include_ignored, &config, &io)
             }).map_pyerr(py)?
         )
     }

@@ -75,6 +75,7 @@ impl PendingChangesTrait for PhysicalFileSystem {
         matcher: DynMatcher,
         _ignore_matcher: DynMatcher,
         ignore_dirs: Vec<PathBuf>,
+        _include_ignored: bool,
         last_write: SystemTime,
         config: &dyn Config,
         _io: &IO,

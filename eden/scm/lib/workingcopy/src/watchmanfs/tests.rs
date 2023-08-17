@@ -185,6 +185,9 @@ fn check(mut tc: TestCase) -> Result<()> {
                     assert_eq!(path, got_path);
                     assert_eq!(want_change, Change::Deleted);
                 }
+                PendingChange::Ignored(got_path) => {
+                    panic!("got ignored file {:?}", got_path);
+                }
             }
         }
     } else {

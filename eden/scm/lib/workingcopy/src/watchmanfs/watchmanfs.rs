@@ -214,6 +214,7 @@ impl PendingChanges for WatchmanFileSystem {
         matcher: DynMatcher,
         mut ignore_matcher: DynMatcher,
         ignore_dirs: Vec<PathBuf>,
+        _include_ignored: bool,
         last_write: SystemTime,
         config: &dyn Config,
         io: &IO,

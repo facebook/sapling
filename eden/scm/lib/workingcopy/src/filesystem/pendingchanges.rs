@@ -19,6 +19,11 @@ use types::RepoPathBuf;
 pub enum PendingChange {
     Changed(RepoPathBuf),
     Deleted(RepoPathBuf),
+    // Ingored doesn't make sense as a pending change, but in general we don't
+    // store info about ignored files, and it is more efficient for the
+    // filesystem abstraction to tell us about ignored files as it computes
+    // status.
+    Ignored(RepoPathBuf),
 }
 
 impl PendingChange {
@@ -26,6 +31,7 @@ impl PendingChange {
         match self {
             Self::Changed(path) => path,
             Self::Deleted(path) => path,
+            Self::Ignored(path) => path,
         }
     }
 }
@@ -39,6 +45,8 @@ pub trait PendingChanges {
         ignore_matcher: DynMatcher,
         // Directories to always ignore such as ".sl".
         ignore_dirs: Vec<PathBuf>,
+        // include ignored files
+        include_ignored: bool,
         last_write: SystemTime,
         config: &dyn Config,
         io: &IO,

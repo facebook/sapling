@@ -52,6 +52,7 @@ pub fn compute_status(
     let mut removed = vec![];
     let mut deleted = vec![];
     let mut unknown = vec![];
+    let mut ignored = vec![];
     let mut invalid_path = vec![];
     let mut invalid_type = vec![];
 
@@ -66,6 +67,10 @@ pub fn compute_status(
         let (path, is_deleted) = match change {
             Ok(PendingChange::Changed(path)) => (path, false),
             Ok(PendingChange::Deleted(path)) => (path, true),
+            Ok(PendingChange::Ignored(path)) => {
+                ignored.push(path);
+                continue;
+            }
             Err(e) => {
                 let e = match e.downcast::<types::path::ParseError>() {
                     Ok(parse_err) => {
@@ -175,7 +180,8 @@ pub fn compute_status(
         .chain(added.iter())
         .chain(removed.iter())
         .chain(deleted.iter())
-        .chain(unknown.iter());
+        .chain(unknown.iter())
+        .chain(ignored.iter());
 
     // Augment matcher to skip "seen" files since they have already been handled above.
     let matcher = Arc::new(DifferenceMatcher::new(
@@ -266,6 +272,7 @@ pub fn compute_status(
         .removed(removed)
         .deleted(deleted)
         .unknown(unknown)
+        .ignored(ignored)
         .invalid_path(invalid_path)
         .invalid_type(invalid_type))
 }

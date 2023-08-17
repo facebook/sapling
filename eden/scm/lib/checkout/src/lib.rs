@@ -1148,6 +1148,7 @@ pub fn checkout(
     let status = wc.status(
         sparse_matcher.clone(),
         SystemTime::UNIX_EPOCH,
+        false,
         repo.config(),
         io,
     )?;

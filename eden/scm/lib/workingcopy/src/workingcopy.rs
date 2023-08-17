@@ -305,8 +305,9 @@ impl WorkingCopy {
 
     pub fn status(
         &self,
-        matcher: DynMatcher,
+        mut matcher: DynMatcher,
         last_write: SystemTime,
+        include_ignored: bool,
         config: &dyn Config,
         io: &IO,
     ) -> Result<Status> {
@@ -325,20 +326,22 @@ impl WorkingCopy {
             )));
         }
 
-        let matcher = Arc::new(IntersectMatcher::new(vec![
+        matcher = Arc::new(IntersectMatcher::new(vec![
             matcher,
             self.sparse_matcher(&manifests)?,
         ]));
 
-        // The GitignoreMatcher minus files in the repo. In other
-        // words, it does not match an ignored file that has been
-        // previously committed.
+        // The GitignoreMatcher minus files in the repo. In other words, it does
+        // not match an ignored file that has been previously committed.
         let ignore_matcher = Arc::new(DifferenceMatcher::new(
             self.ignore_matcher.clone(),
             UnionMatcher::new(manifest_matchers),
         ));
 
-        let matcher = Arc::new(DifferenceMatcher::new(matcher, ignore_matcher.clone()));
+        // If we have been asked to report ignored files, don't skip them in the matcher.
+        if !include_ignored {
+            matcher = Arc::new(DifferenceMatcher::new(matcher, ignore_matcher.clone()));
+        }
 
         let mut ignore_dirs = vec![PathBuf::from(self.ident.dot_dir())];
         if self.format.is_git() {
@@ -362,6 +365,7 @@ impl WorkingCopy {
                 matcher.clone(),
                 ignore_matcher,
                 ignore_dirs,
+                include_ignored,
                 last_write,
                 config,
                 io,

@@ -41,6 +41,7 @@ impl PendingChanges for EdenFileSystem {
         _matcher: DynMatcher,
         _ignore_matcher: DynMatcher,
         _ignore_dirs: Vec<PathBuf>,
+        _include_ignored: bool,
         _last_write: SystemTime,
         _config: &dyn Config,
         _io: &IO,
