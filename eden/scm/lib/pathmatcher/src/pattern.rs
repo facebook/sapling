@@ -9,11 +9,13 @@ use std::path::Path;
 use std::str::FromStr;
 
 use anyhow::Result;
+use types::RepoPathBuf;
 
 use crate::error::Error;
 use crate::expand_curly_brackets;
 use crate::normalize_glob;
 use crate::plain_to_glob;
+use crate::utils::contains_glob_operator;
 use crate::utils::make_glob_recursive;
 
 #[derive(Debug, PartialEq, Copy, Clone, Hash, Eq)]
@@ -118,6 +120,12 @@ pub struct Pattern {
     pub(crate) kind: PatternKind,
     pub(crate) pattern: String,
     pub(crate) source: Option<String>,
+
+    // Any "exact" file name implied by this pattern. For example, "sl status
+    // foo" has pattern "relpath:foo" which implies exact file "foo" (even
+    // though the pattern matches "foo/**"). The exact file is used for various
+    // reasons in Python (see "match.files()" calls).
+    pub(crate) exact_file: Option<RepoPathBuf>,
 }
 
 impl Pattern {
@@ -126,11 +134,17 @@ impl Pattern {
             kind,
             pattern,
             source: None,
+            exact_file: None,
         }
     }
 
     pub(crate) fn with_source(mut self, source: String) -> Self {
         self.source = Some(source);
+        self
+    }
+
+    pub(crate) fn with_exact_file(mut self, exact: Option<RepoPathBuf>) -> Self {
+        self.exact_file = exact;
         self
     }
 
@@ -144,11 +158,13 @@ impl Pattern {
             kind,
             pattern: pat.to_string(),
             source: None,
+            exact_file: None,
         }
     }
 }
 
 /// Build `Pattern`s from strings. It calls `Pattern::from_str` to do actual work.
+/// `patterns` must already be normalized.
 pub fn build_patterns(patterns: &[String], default_kind: PatternKind) -> Vec<Pattern> {
     patterns
         .iter()
@@ -225,6 +241,10 @@ where
                 }
             }
 
+            // This is the best moment to look for "exact" files. We have
+            // expanded glob curlies, but haven't glob-escaped paths.
+            let exact_file = exact_file(kind, &pat)?;
+
             // Escape glob characters so we can convert non-glob patterns into globs.
             if kind.is_path() {
                 pat = plain_to_glob(&pat);
@@ -275,7 +295,7 @@ where
             }
 
             if kind.is_glob() || kind.is_path() || kind.is_regex() {
-                result.push(Pattern::new(kind, pat));
+                result.push(Pattern::new(kind, pat).with_exact_file(exact_file));
             } else if matches!(kind, PatternKind::ListFile | PatternKind::ListFile0) {
                 let contents = util::file::read_to_string(&pat)?;
 
@@ -294,6 +314,23 @@ where
     }
 
     Ok(result)
+}
+
+// Extract "exact" file path from pattern. This is only appropriate to call at a
+// particular moment during pattern normalization (see callsite).
+fn exact_file(kind: PatternKind, pat: &str) -> Result<Option<RepoPathBuf>> {
+    if (kind.is_path() || (kind.is_glob() && !contains_glob_operator(&pat)))
+        // rootfilesin only specifies a directory, not an file
+        && kind != PatternKind::RootFilesIn
+        // exclude free patterns (relglob)
+        && !kind.is_free()
+        // you can't have a file with no name
+        && !pat.is_empty()
+    {
+        Ok(Some(RepoPathBuf::from_string(pat.to_string())?))
+    } else {
+        Ok(None)
+    }
 }
 
 /// A wrapper of `util::path::normalize` function by adding path separator conversion,
@@ -324,27 +361,28 @@ mod tests {
     use std::fs;
 
     use tempfile::TempDir;
+    use PatternKind::*;
 
     use super::*;
 
     #[test]
     fn test_split_pattern() {
-        let v = split_pattern("re:a.*py", PatternKind::Glob);
-        assert_eq!(v, (PatternKind::RE, "a.*py"));
+        let v = split_pattern("re:a.*py", Glob);
+        assert_eq!(v, (RE, "a.*py"));
 
-        let v = split_pattern("badkind:a.*py", PatternKind::Glob);
-        assert_eq!(v, (PatternKind::Glob, "badkind:a.*py"));
+        let v = split_pattern("badkind:a.*py", Glob);
+        assert_eq!(v, (Glob, "badkind:a.*py"));
 
-        let v = split_pattern("a.*py", PatternKind::RE);
-        assert_eq!(v, (PatternKind::RE, "a.*py"));
+        let v = split_pattern("a.*py", RE);
+        assert_eq!(v, (RE, "a.*py"));
     }
 
     #[test]
     fn test_pattern_kind_enum() {
-        assert_eq!(PatternKind::from_str("re").unwrap(), PatternKind::RE);
+        assert_eq!(PatternKind::from_str("re").unwrap(), RE);
         assert!(PatternKind::from_str("invalid").is_err());
 
-        assert_eq!(PatternKind::RE.name(), "re");
+        assert_eq!(RE.name(), "re");
     }
 
     #[test]
@@ -356,23 +394,24 @@ mod tests {
     }
 
     #[track_caller]
+    fn normalize(pat: &str, root: &str, cwd: &str, recursive: bool) -> Result<Vec<Pattern>> {
+        // Caller must specify kind.
+        assert!(pat.contains(':'));
+
+        normalize_patterns(vec![pat], Glob, root.as_ref(), cwd.as_ref(), recursive)
+    }
+
+    #[track_caller]
     fn assert_normalize(pat: &str, expected: &[&str], root: &str, cwd: &str, recursive: bool) {
         let kind = pat.split_once(':').unwrap().0;
-
-        let got: Vec<String> = normalize_patterns(
-            vec![pat],
-            PatternKind::Glob,
-            root.as_ref(),
-            cwd.as_ref(),
-            recursive,
-        )
-        .unwrap()
-        .into_iter()
-        .map(|p| {
-            assert_eq!(p.kind.name(), kind);
-            p.pattern
-        })
-        .collect();
+        let got: Vec<String> = normalize(pat, root, cwd, recursive)
+            .unwrap()
+            .into_iter()
+            .map(|p| {
+                assert_eq!(p.kind.name(), kind);
+                p.pattern
+            })
+            .collect();
 
         assert_eq!(got, expected);
     }
@@ -454,14 +493,8 @@ mod tests {
     #[test]
     fn test_normalize_patterns_unsupported_kind() {
         assert!(
-            normalize_patterns(
-                vec!["set:added()"],
-                PatternKind::Glob,
-                "".as_ref(),
-                "".as_ref(),
-                false,
-            )
-            .is_err()
+            normalize_patterns(vec!["set:added()"], Glob, "".as_ref(), "".as_ref(), false,)
+                .is_err()
         );
     }
 
@@ -470,10 +503,10 @@ mod tests {
         let patterns = ["re:a.py".to_string(), "a.txt".to_string()];
 
         assert_eq!(
-            build_patterns(&patterns, PatternKind::Glob),
+            build_patterns(&patterns, Glob),
             [
-                Pattern::new(PatternKind::RE, "a.py".to_string()),
-                Pattern::new(PatternKind::Glob, "a.txt".to_string())
+                Pattern::new(RE, "a.py".to_string()),
+                Pattern::new(Glob, "a.txt".to_string())
             ]
         )
     }
@@ -502,23 +535,44 @@ mod tests {
             if sep == "\0" { "0" } else { "" },
             path_str
         )];
-        let result = normalize_patterns(
-            outer_patterns,
-            PatternKind::Glob,
-            "".as_ref(),
-            "".as_ref(),
-            false,
-        )
-        .unwrap();
+        let result =
+            normalize_patterns(outer_patterns, Glob, "".as_ref(), "".as_ref(), false).unwrap();
 
         assert_eq!(
             result,
             [
-                Pattern::new(PatternKind::Glob, "/a/*".to_string())
-                    .with_source(path_str.to_string()),
-                Pattern::new(PatternKind::RE, r"a.*\.py".to_string())
-                    .with_source(path_str.to_string())
+                Pattern::new(Glob, "/a/*".to_string()).with_source(path_str.to_string()),
+                Pattern::new(RE, r"a.*\.py".to_string()).with_source(path_str.to_string())
             ]
         )
+    }
+
+    #[test]
+    fn test_exact_file() {
+        #[track_caller]
+        fn check(pat: &str, expected: &[&str]) {
+            let got: Vec<String> = normalize(pat, "/root", "/root/cwd", false)
+                .unwrap()
+                .into_iter()
+                .filter_map(|p| p.exact_file.map(|p| p.to_string()))
+                .collect();
+
+            assert_eq!(got, expected);
+        }
+
+        check("path:", &[]);
+        check("path:.", &[]);
+        check("path:foo", &["foo"]);
+        check("path:foo*/bar?", &["foo*/bar?"]);
+
+        check("relpath:foo", &["cwd/foo"]);
+        check("relpath:", &["cwd"]);
+
+        check("glob:foo", &["cwd/foo"]);
+        check("glob:foo*", &[]);
+
+        check("relglob:foo", &[]);
+
+        check("rootfilesin:foo", &[]);
     }
 }

@@ -188,6 +188,20 @@ pub(crate) fn make_glob_recursive(glob: &str) -> String {
     }
 }
 
+pub(crate) fn contains_glob_operator(glob: &str) -> bool {
+    let mut escaped = false;
+    for ch in glob.chars() {
+        if ch == '\\' {
+            escaped = !escaped;
+        } else if !escaped && matches!(ch, '*' | '{' | '}' | '[' | ']' | '?') {
+            return true;
+        } else {
+            escaped = false;
+        }
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -209,5 +223,13 @@ mod tests {
         assert_eq!(plain_to_glob(""), "");
         assert_eq!(plain_to_glob("!a!"), r"\!a!");
         assert_eq!(plain_to_glob("foo.jpe?g"), r"foo.jpe\?g");
+    }
+
+    #[test]
+    fn test_contains_glob_operator() {
+        assert!(!contains_glob_operator(""));
+        assert!(contains_glob_operator("*"));
+        assert!(!contains_glob_operator(r"\*"));
+        assert!(contains_glob_operator(r"\\?"));
     }
 }
