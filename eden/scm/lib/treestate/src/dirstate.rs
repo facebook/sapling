@@ -8,11 +8,15 @@
 //! Directory State.
 
 use std::path::Path;
+use std::path::PathBuf;
+use std::time::Duration;
 use std::time::SystemTime;
 
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use repolock::LockError;
+use repolock::RepoLockHandle;
 use repolock::RepoLocker;
 use types::hgid::NULL_ID;
 use types::HgId;
@@ -44,6 +48,7 @@ pub fn flush(
     treestate: &mut TreeState,
     locker: &RepoLocker,
     write_time: Option<i64>,
+    lock_timeout_secs: Option<u32>,
 ) -> Result<()> {
     if treestate.dirty() {
         tracing::debug!("flushing dirty treestate");
@@ -51,7 +56,7 @@ pub fn flush(
         let dot_dir = root.join(id.dot_dir());
         let dirstate_path = dot_dir.join("dirstate");
 
-        let _lock = locker.lock_working_copy(dot_dir.clone())?;
+        let _lock = wait_for_wc_lock(dot_dir, locker, lock_timeout_secs)?;
 
         let dirstate_input = util::file::read(&dirstate_path)?;
         let mut dirstate = Dirstate::deserialize(&mut dirstate_input.as_slice())?;
@@ -116,6 +121,35 @@ pub fn flush(
     } else {
         tracing::debug!("skipping treestate flush - it is not dirty");
         Ok(())
+    }
+}
+
+pub fn wait_for_wc_lock(
+    wc_dot_hg: PathBuf,
+    locker: &RepoLocker,
+    timeout_secs: Option<u32>,
+) -> anyhow::Result<RepoLockHandle> {
+    let mut timeout = match timeout_secs {
+        None => return Ok(locker.lock_working_copy(wc_dot_hg)?),
+        Some(timeout) => timeout,
+    };
+
+    loop {
+        match locker.try_lock_working_copy(wc_dot_hg.clone()) {
+            Ok(lock) => return Ok(lock),
+            Err(err) => match err {
+                LockError::Contended(_) => {
+                    if timeout == 0 {
+                        return Err(ErrorKind::LockTimeout.into());
+                    }
+
+                    timeout -= 1;
+
+                    std::thread::sleep(Duration::from_secs(1));
+                }
+                _ => return Err(err.into()),
+            },
+        }
     }
 }
 

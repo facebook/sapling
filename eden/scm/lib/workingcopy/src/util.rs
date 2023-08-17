@@ -94,12 +94,27 @@ pub(crate) fn maybe_flush_treestate(
     locker: &RepoLocker,
     time_override: Option<i64>,
 ) -> Result<()> {
-    match dirstate::flush(root, ts, locker, time_override) {
+    let pending_change_count = ts.pending_change_count();
+    let timeout_secs = match pending_change_count {
+        // If we have a lot of pending changes, wait indefinitely for wc lock.
+        // If we don't flush, performance will degrade as "status" redoes work.
+        c if c >= 1000 => None,
+        // If there is a decent number of pending changes, wait a little bit.
+        c if c >= 100 => Some(1),
+        _ => Some(0),
+    };
+
+    tracing::debug!(pending_change_count, ?timeout_secs);
+
+    match dirstate::flush(root, ts, locker, time_override, timeout_secs) {
         Ok(()) => Ok(()),
-        // If the dirstate was changed before we flushed, that's ok. Let the other write win
-        // since writes during status are just optimizations.
         Err(e) => match e.downcast_ref::<ErrorKind>() {
+            // If the dirstate was changed before we flushed, that's ok. Let the other write win
+            // since writes during status are just optimizations.
             Some(e) if *e == ErrorKind::TreestateOutOfDate => Ok(()),
+            // Similarly, it's okay if we couldn't acquire wc lock.
+            Some(e) if *e == ErrorKind::LockTimeout => Ok(()),
+            // Check error
             _ => Err(e),
         },
     }

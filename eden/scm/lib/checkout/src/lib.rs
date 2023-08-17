@@ -1177,6 +1177,7 @@ pub fn checkout(
         &mut wc.treestate().lock(),
         repo.locker(),
         None,
+        None,
     )?;
 
     Ok(plan.stats())

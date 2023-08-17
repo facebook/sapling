@@ -29,4 +29,6 @@ pub enum ErrorKind {
     CallbackError(String),
     #[error("dirstate/treestate was out of date and therefore did not flush")]
     TreestateOutOfDate,
+    #[error("timed out waiting for working copy lock")]
+    LockTimeout,
 }
