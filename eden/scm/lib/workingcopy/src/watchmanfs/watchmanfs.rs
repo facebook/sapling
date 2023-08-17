@@ -22,7 +22,6 @@ use parking_lot::Mutex;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
-use pathmatcher::NeverMatcher;
 use progress_model::ProgressBar;
 use repolock::RepoLocker;
 use serde::Deserialize;
@@ -212,9 +211,9 @@ impl PendingChanges for WatchmanFileSystem {
     fn pending_changes(
         &self,
         matcher: DynMatcher,
-        mut ignore_matcher: DynMatcher,
+        ignore_matcher: DynMatcher,
         ignore_dirs: Vec<PathBuf>,
-        _include_ignored: bool,
+        include_ignored: bool,
         last_write: SystemTime,
         config: &dyn Config,
         io: &IO,
@@ -242,6 +241,11 @@ impl PendingChanges for WatchmanFileSystem {
             };
             tracing::info!(track_ignored = md_value, "migrating track-ignored");
             ts.update_metadata(&[("track-ignored".to_string(), Some(md_value))])?;
+        }
+
+        if include_ignored && !track_ignored {
+            // TODO: give user a hint about fsmonitor.track-ignore-files
+            prev_clock = None;
         }
 
         if config.get_or_default("devel", "watchman-reset-clock")? {
@@ -350,12 +354,6 @@ impl PendingChanges for WatchmanFileSystem {
             )
             .collect();
 
-        if track_ignored {
-            // If we want to track ignored files, say that nothing is ignored.
-            // Note that the "full" matcher will still skip ignored files.
-            ignore_matcher = Arc::new(NeverMatcher::new());
-        }
-
         let detector = FileChangeDetector::new(
             self.vfs.clone(),
             last_write.try_into()?,
@@ -366,6 +364,8 @@ impl PendingChanges for WatchmanFileSystem {
         let mut pending_changes = detect_changes(
             matcher,
             ignore_matcher,
+            track_ignored,
+            include_ignored,
             detector,
             ts,
             wm_needs_check,
@@ -440,6 +440,8 @@ fn warn_about_fresh_instance(io: &IO, old_pid: Option<u32>, new_pid: Option<u32>
 pub(crate) fn detect_changes(
     matcher: DynMatcher,
     ignore_matcher: DynMatcher,
+    track_ignored: bool,
+    include_ignored: bool,
     mut file_change_detector: impl FileChangeDetectorTrait + 'static,
     ts: &mut TreeState,
     wm_need_check: Vec<metadata::File>,
@@ -486,6 +488,14 @@ pub(crate) fn detect_changes(
             continue;
         }
 
+        // This check is important when we are tracking ignored files.
+        // We won't do a fresh watchman query, so we must get the list
+        // of ignored files from the treestate.
+        if include_ignored && ignore_matcher.matches_file(ts_needs_check)? {
+            pending_changes.push(Ok(PendingChange::Ignored(ts_needs_check.clone())));
+            continue;
+        }
+
         // We don't need the ignore check since ts_need_check was filtered by
         // the full matcher, which incorporates the ignore matcher.
         file_change_detector.submit(metadata::File {
@@ -502,16 +512,29 @@ pub(crate) fn detect_changes(
     for mut wm_needs_check in wm_need_check {
         let state = ts.normalized_get(&wm_needs_check.path)?;
 
+        // is_tracked is used to short circuit invocations of the ignore
+        // matcher, which can be expensive.
         let is_tracked = match &state {
             Some(state) => state
                 .state
                 .intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT),
             None => false,
         };
-        // Skip ignored files to reduce work. We short circuit with an
-        // "untracked" check to minimize use of the GitignoreMatcher.
-        if !is_tracked && ignore_matcher.matches_file(&wm_needs_check.path)? {
-            continue;
+
+        if !is_tracked {
+            if let Some(Some(fs_meta)) = &wm_needs_check.fs_meta {
+                if fs_meta.is_dir() {
+                    continue;
+                }
+            }
+
+            let ignored = ignore_matcher.matches_file(&wm_needs_check.path)?;
+            if include_ignored && ignored {
+                pending_changes.push(Ok(PendingChange::Ignored(wm_needs_check.path.clone())));
+            }
+            if !track_ignored && ignored {
+                continue;
+            }
         }
 
         wm_needs_check.ts_state = state;

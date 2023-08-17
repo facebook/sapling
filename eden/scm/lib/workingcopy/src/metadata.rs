@@ -64,6 +64,10 @@ impl Metadata {
         }
     }
 
+    pub fn is_dir(&self) -> bool {
+        self.flags.intersects(MetadataFlags::IS_DIR)
+    }
+
     pub fn len(&self) -> Option<u64> {
         if self.flags.intersects(MetadataFlags::HAS_SIZE) {
             Some(self.size)
