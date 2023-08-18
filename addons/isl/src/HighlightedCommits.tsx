@@ -38,11 +38,11 @@ export function HighlightCommitsWhileHovering({
   return (
     <div
       {...rest}
-      onMouseEnter={() => {
+      onMouseOver={() => {
         setHighlighted(new Set(toHighlight.map(commit => commit.hash)));
         setIsSourceOfHighlight(true);
       }}
-      onMouseLeave={() => {
+      onMouseOut={() => {
         setHighlighted(new Set());
         setIsSourceOfHighlight(false);
       }}>
