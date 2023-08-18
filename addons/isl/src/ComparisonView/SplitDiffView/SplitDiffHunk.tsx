@@ -5,12 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {TokenizedDiffHunk} from './syntaxHighlighting';
 import type {Context, LineRangeParams, OneIndexedLineNumber} from './types';
 import type {Hunk, ParsedDiff} from 'diff';
 import type {ReactNode} from 'react';
 
 import SplitDiffRow from './SplitDiffRow';
 import {useTableColumnSelection} from './copyFromSelectedColumn';
+import {useTokenizedHunks} from './syntaxHighlighting';
 import {diffChars} from 'diff';
 import React, {useCallback, useState} from 'react';
 import {useRecoilValueLoadable} from 'recoil';
@@ -40,6 +42,8 @@ export const SplitDiffTable = React.memo(
       },
       [expandedSeparators, setExpandedSeparators],
     );
+
+    const tokenization = useTokenizedHunks(patch.newFileName ?? '', patch.hunks);
 
     const {className: tableSelectionClassName, ...tableSelectionProps} = useTableColumnSelection();
 
@@ -82,7 +86,7 @@ export const SplitDiffTable = React.memo(
           }
         }
 
-        addRowsForHunk(hunk, path, rows, ctx.openFileToLine);
+        addRowsForHunk(hunk, path, rows, tokenization?.[index], ctx.openFileToLine);
 
         if (index !== lastHunkIndex) {
           const nextHunk = hunks[index + 1];
@@ -149,6 +153,7 @@ function addRowsForHunk(
   hunk: Hunk,
   path: string,
   rows: React.ReactElement[],
+  _tokenization: TokenizedDiffHunk | undefined,
   openFileToLine?: (line: OneIndexedLineNumber) => unknown,
 ): void {
   const {oldStart, newStart, lines} = hunk;
