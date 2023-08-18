@@ -13,6 +13,8 @@ from __future__ import absolute_import
 import operator
 import os
 
+from typing import Optional
+
 from edenscm import encoding, error, json, pycompat, util
 from edenscm.i18n import _
 from edenscm.node import bin, hex
@@ -182,9 +184,14 @@ class Client(object):
         params = {"diffid": diffid}
         ret = self._client.query(timeout, query, params)
 
-        latest = ret["data"]["phabricator_diff_query"][0]["results"]["nodes"][0][
-            "latest_associated_phabricator_version_regardless_of_viewer"
-        ]
+        latest: Optional[dict] = ret["data"]["phabricator_diff_query"][0]["results"][
+            "nodes"
+        ][0]["latest_associated_phabricator_version_regardless_of_viewer"]
+
+        if latest is None:
+            raise ClientError(
+                None, f"D{diffid} does not have any commits associated with it"
+            )
 
         # Massage commits into {repo_name => commit_hash}
         commits = ret["data"]["phabricator_diff_query"][0]["results"]["nodes"][0][
