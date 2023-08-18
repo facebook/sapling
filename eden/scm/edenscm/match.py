@@ -137,6 +137,7 @@ def match(
             include or [],
             exclude or [],
             default,
+            ctx,
             casesensitive=not icasefs,
             badfn=badfn,
         )
@@ -946,12 +947,38 @@ class hintedmatcher(basematcher):
         include: List[str],
         exclude: List[str],
         default: str,
+        ctx,
         casesensitive: bool,
         badfn=None,
     ):
         super(hintedmatcher, self).__init__(root, cwd, badfn)
+
+        def expandsets(pats, default):
+            fset, nonsets = set(), []
+            for pat in pats:
+                k, p = _patsplit(pat, default)
+                if k == "set":
+                    if not ctx:
+                        raise error.ProgrammingError(
+                            "fileset expression with no " "context"
+                        )
+                    fset.update(ctx.getfileset(p))
+                else:
+                    nonsets.append(pat)
+
+            if len(nonsets) == len(pats):
+                return nonsets, None
+            else:
+                return nonsets, list(fset)
+
         self._matcher = pathmatcher.hintedmatcher(
-            patterns, include, exclude, default, casesensitive, root, cwd
+            *expandsets(patterns, default),
+            *expandsets(include, "glob"),
+            *expandsets(exclude, "glob"),
+            default,
+            casesensitive,
+            root,
+            cwd,
         )
         self._files = self._matcher.exact_files()
 

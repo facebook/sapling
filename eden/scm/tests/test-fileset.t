@@ -1,5 +1,13 @@
 #debugruntest-compatible
 
+#testcases pythonmatcher rustmatcher
+
+#if pythonmatcher
+  $ setconfig experimental.rustmatcher=false
+#else
+  $ setconfig experimental.rustmatcher=true
+#endif
+
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ eagerepo
   $ fileset() {

@@ -10,6 +10,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Result;
+use types::RepoPathBuf;
 
 use crate::pattern::normalize_patterns;
 use crate::pattern::Pattern;
@@ -34,23 +35,50 @@ pub fn cli_matcher(
     root: &Path,
     cwd: &Path,
 ) -> Result<HintedMatcher> {
+    cli_matcher_with_filesets(
+        patterns,
+        None,
+        include,
+        None,
+        exclude,
+        None,
+        default_pattern_type,
+        case_sensitive,
+        root,
+        cwd,
+    )
+}
+
+/// Create top level matcher from non-normalized CLI input.
+pub fn cli_matcher_with_filesets(
+    patterns: &[String],
+    patterns_filesets: Option<&[RepoPathBuf]>,
+    include: &[String],
+    include_filesets: Option<&[RepoPathBuf]>,
+    exclude: &[String],
+    exclude_filesets: Option<&[RepoPathBuf]>,
+    default_pattern_type: PatternKind,
+    case_sensitive: bool,
+    root: &Path,
+    cwd: &Path,
+) -> Result<HintedMatcher> {
     let pattern_matcher = HintedMatcher::from_patterns(
         &normalize_patterns(patterns, default_pattern_type, root, cwd, false)?,
-        None,
+        patterns_filesets,
         true,
         case_sensitive,
     )?;
 
     let include_matcher = HintedMatcher::from_patterns(
         &normalize_patterns(include, PatternKind::Glob, root, cwd, true)?,
-        None,
+        include_filesets,
         true,
         case_sensitive,
     )?;
 
     let exclude_matcher = HintedMatcher::from_patterns(
         &normalize_patterns(exclude, PatternKind::Glob, root, cwd, true)?,
-        None,
+        exclude_filesets,
         false,
         case_sensitive,
     )?;

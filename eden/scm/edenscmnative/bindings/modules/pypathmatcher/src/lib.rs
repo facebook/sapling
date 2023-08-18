@@ -34,6 +34,7 @@ use pathmatcher::TreeMatcher;
 use pathmatcher::UnionMatcher;
 use tracing::debug;
 use types::RepoPath;
+use types::RepoPathBuf;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "pathmatcher"].join(".");
@@ -185,17 +186,29 @@ py_class!(pub class hintedmatcher |py| {
 
     def __new__(_cls,
         patterns: Vec<String>,
+        pattern_fset: Option<Vec<PyPathBuf>>,
         include: Vec<String>,
+        include_fset: Option<Vec<PyPathBuf>>,
         exclude: Vec<String>,
+        exclude_fset: Option<Vec<PyPathBuf>>,
         default_pattern_type: String,
         case_sensitive: bool,
         root: &PyPath,
         cwd: &PyPath,
     ) -> PyResult<Self> {
-        let matcher = pathmatcher::cli_matcher(
+        fn into_repo_paths(paths: Option<Vec<PyPathBuf>>) -> Result<Option<Vec<RepoPathBuf>>> {
+            paths
+                .map(|paths| paths.into_iter().map(|p| p.to_repo_path_buf()).collect::<Result<Vec<_>>>())
+                .transpose()
+        }
+
+        let matcher = pathmatcher::cli_matcher_with_filesets(
             &patterns,
+            into_repo_paths(pattern_fset).map_pyerr(py)?.as_deref(),
             &include,
+            into_repo_paths(include_fset).map_pyerr(py)?.as_deref(),
             &exclude,
+            into_repo_paths(exclude_fset).map_pyerr(py)?.as_deref(),
             PatternKind::from_str(&default_pattern_type).map_pyerr(py)?,
             case_sensitive,
             root.as_path(),
