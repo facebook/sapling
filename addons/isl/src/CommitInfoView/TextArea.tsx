@@ -17,7 +17,7 @@ import {
 import {Internal} from '../Internal';
 import {insertAtCursor} from '../textareaUtils';
 import {assert} from '../utils';
-import {GenerateAICommitMesageButton} from './GenerateWithAI';
+import {GenerateAICommitMessageButton} from './GenerateWithAI';
 import {getInnerTextareaForVSCodeTextArea} from './utils';
 import {VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
 import {forwardRef, useRef, useEffect} from 'react';
@@ -185,7 +185,7 @@ export function EditorToolbar({
   }
   if (supportsGeneratingAIMessage != null) {
     parts.push(
-      <GenerateAICommitMesageButton
+      <GenerateAICommitMessageButton
         textAreaRef={textAreaRef}
         appendToTextArea={appendToTextArea}
         key="gen-ai-message"
