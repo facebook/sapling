@@ -2,6 +2,7 @@
 .vscode/
 /isl/build/
 /isl/coverage/
+/isl/public/generated
 /isl-server/dist/
 /isl-server/coverage/
 /isl-server/src/facebook/phabricator/generated/

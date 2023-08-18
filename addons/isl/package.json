@@ -29,6 +29,7 @@
   "scripts": {
     "start": "node ./start.js",
     "build": "node ./build.js",
+    "textmate": "node ./textmate.js",
     "test": "react-scripts test",
     "integration": "jest --config=./integrationTests/integration.jest.config.ts",
     "eject": "react-scripts eject",
