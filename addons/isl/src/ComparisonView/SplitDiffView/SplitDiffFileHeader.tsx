@@ -77,6 +77,7 @@ export function FileHeader<Id>({
         <VSCodeButton
           appearance="icon"
           className="split-diff-view-file-header-open-button"
+          data-testid={`split-diff-view-file-header-${open ? 'collapse' : 'expand'}-button`}
           onClick={() => onChangeOpen(!open)}>
           <Icon icon={open ? 'chevron-down' : 'chevron-right'} />
         </VSCodeButton>
