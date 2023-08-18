@@ -25,7 +25,7 @@ import {tokenizeLines} from 'shared/textmate-lib/tokenize';
 import {unwrap} from 'shared/utils';
 import {loadWASM} from 'vscode-oniguruma';
 
-const URL_TO_ONIG_WASM = '/generated/textmate/onig.wasm';
+const URL_TO_ONIG_WASM = 'generated/textmate/onig.wasm';
 
 export type TokenizedHunk = Array<Array<HighlightedToken>>;
 export type TokenizedDiffHunk = [before: TokenizedHunk, after: TokenizedHunk];
@@ -189,7 +189,7 @@ function getGrammerStore(theme: ThemeColor) {
 }
 
 async function fetchGrammar(moduleName: string, type: 'json' | 'plist'): Promise<TextMateGrammar> {
-  const uri = `/generated/textmate/${moduleName}.${type}`;
+  const uri = `generated/textmate/${moduleName}.${type}`;
   const response = await fetch(uri);
   const grammar = await response.text();
   return {type, grammar};

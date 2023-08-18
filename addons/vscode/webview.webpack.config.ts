@@ -8,6 +8,7 @@
 import type webpack from 'webpack';
 
 import CircularDependencyPlugin from 'circular-dependency-plugin';
+import CopyPlugin from 'copy-webpack-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import path from 'path';
 
@@ -27,6 +28,9 @@ module.exports = {
     new CircularDependencyPlugin({
       failOnError: false,
       exclude: /.*node_modules.*/,
+    }),
+    new CopyPlugin({
+      patterns: [{from: path.resolve(__dirname, '../isl/public/generated'), to: 'generated'}],
     }),
   ],
   module: {
