@@ -30,6 +30,8 @@ export type Context<T> = {
   copy?: (s: string) => void;
   openFile?: () => unknown;
   openFileToLine?: (line: OneIndexedLineNumber) => unknown;
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean) => void;
 };
 
 export type OneIndexedLineNumber = Exclude<number, 0>;

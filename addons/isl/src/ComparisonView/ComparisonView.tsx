@@ -20,7 +20,7 @@ import {latestHeadCommit} from '../serverAPIState';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
 import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
-import {useCallback, useEffect} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {atomFamily, selectorFamily, useRecoilState, useSetRecoilState} from 'recoil';
 import {comparisonIsAgainstHead, labelForComparison, ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
@@ -117,6 +117,8 @@ export default function ComparisonView({comparison}: {comparison: Comparison}) {
   // any time the comparison changes, fetch the diff
   useEffect(reloadComparison, [comparison, reloadComparison]);
 
+  const [collapsedFiles, setCollapsedFile] = useCollapsedFilesState(compared);
+
   return (
     <div data-testid="comparison-view" className="comparison-view">
       <ComparisonViewHeader comparison={comparison} />
@@ -131,7 +133,15 @@ export default function ComparisonView({comparison}: {comparison: Comparison}) {
           </EmptyState>
         ) : (
           compared.data.value.map((parsed, i) => (
-            <ComparisonViewFile diff={parsed} comparison={comparison} key={i} />
+            <ComparisonViewFile
+              diff={parsed}
+              comparison={comparison}
+              key={i}
+              collapsed={collapsedFiles.get(parsed.newFileName ?? '') ?? false}
+              setCollapsed={(collapsed: boolean) =>
+                setCollapsedFile(parsed.newFileName ?? '', collapsed)
+              }
+            />
           ))
         )}
       </div>
@@ -195,7 +205,77 @@ function ComparisonViewHeader({comparison}: {comparison: Comparison}) {
   );
 }
 
-function ComparisonViewFile({diff, comparison}: {diff: ParsedDiff; comparison: Comparison}) {
+/**
+ * Derive from the parsed diff state which files should be expanded or collapsed by default.
+ * This state is the source of truth of which files are expanded/collapsed.
+ * This is a hook instead of a recoil selector since it depends on the comparison
+ * which is a prop.
+ */
+function useCollapsedFilesState(data: {
+  isLoading: boolean;
+  data: Result<Array<ParsedDiff>> | null;
+}): [Map<string, boolean>, (path: string, collapsed: boolean) => void] {
+  const [collapsedFiles, setCollapsedFiles] = useState(new Map());
+
+  useEffect(() => {
+    if (data.isLoading || data.data?.value == null) {
+      return;
+    }
+
+    const newCollapsedFiles = new Map(collapsedFiles);
+
+    // Allocate a number of changed lines we're willing to show expanded by default,
+    // add files until we just cross that threshold.
+    // This means a single very large file will start expanded already.
+    const TOTAL_DEFAULT_EXPANDED_SIZE = 4000;
+    let accumulatedSize = 0;
+    let indexToStartCollapsing = Infinity;
+    for (const [i, diff] of data.data.value.entries()) {
+      const sizeThisFile = diff.hunks.reduce((last, hunk) => last + hunk.lines.length, 0);
+      accumulatedSize += sizeThisFile;
+      if (accumulatedSize > TOTAL_DEFAULT_EXPANDED_SIZE) {
+        indexToStartCollapsing = i;
+        break;
+      }
+    }
+
+    let anyChanged = false;
+    for (const [i, diff] of data.data.value.entries()) {
+      if (!newCollapsedFiles.has(diff.newFileName)) {
+        newCollapsedFiles.set(diff.newFileName, i > 0 && i >= indexToStartCollapsing);
+        anyChanged = true;
+      }
+      // Leave existing files alone in case the user changed their expanded state.
+    }
+    if (anyChanged) {
+      setCollapsedFiles(newCollapsedFiles);
+      // We don't bother removing files that no longer appear in the list of files.
+      // That's not a big deal, this state is local to this instance of the comparison view anyway.
+    }
+  }, [data, collapsedFiles]);
+
+  const setCollapsed = (path: string, collapsed: boolean) => {
+    setCollapsedFiles(prev => {
+      const map = new Map(prev);
+      map.set(path, collapsed);
+      return map;
+    });
+  };
+
+  return [collapsedFiles, setCollapsed];
+}
+
+function ComparisonViewFile({
+  diff,
+  comparison,
+  collapsed,
+  setCollapsed,
+}: {
+  diff: ParsedDiff;
+  comparison: Comparison;
+  collapsed: boolean;
+  setCollapsed: (isCollapsed: boolean) => void;
+}) {
   const path = diff.newFileName ?? diff.oldFileName ?? '';
   const context = {
     id: {path, comparison},
@@ -207,6 +287,8 @@ function ComparisonViewFile({diff, comparison}: {diff: ParsedDiff; comparison: C
     openFileToLine: comparisonIsAgainstHead(comparison)
       ? (line: number) => platform.openFile(path, {line})
       : undefined,
+    collapsed,
+    setCollapsed,
   };
   return (
     <div className="comparison-view-file" key={path}>
