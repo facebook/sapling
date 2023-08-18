@@ -7,7 +7,7 @@
   $ setconfig workingcopy.ruststatus=true
 #endif
 #if rustcommand
-  $ setconfig status.use-rust=True workingcopy.use-rust=True
+  $ setconfig status.use-rust=True workingcopy.use-rust=True experimental.rustmatcher=true
 #else
   $ setconfig status.use-rust=False workingcopy.use-rust=False
 #endif

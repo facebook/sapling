@@ -16,6 +16,7 @@ use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use configloader::configmodel::ConfigExt;
 use pathmatcher::AlwaysMatcher;
+use pathmatcher::DynMatcher;
 use print::PrintConfig;
 use print::PrintConfigStatusTypes;
 use repo::repo::Repo;
@@ -104,16 +105,10 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
 
     let rev_check = ctx.opts.rev.is_empty() || (ctx.opts.rev.len() == 1 && ctx.opts.rev[0] == ".");
 
-    let args_check =
-        ctx.opts.args.is_empty() || (ctx.opts.args.len() == 1 && ctx.opts.args[0] == "re:.");
-
     if ctx.opts.all
         || !ctx.opts.change.is_empty()
         || !ctx.opts.terse.is_empty()
         || !rev_check
-        || !ctx.opts.walk_opts.include.is_empty()
-        || !ctx.opts.walk_opts.exclude.is_empty()
-        || !args_check
         || (ctx.opts.ignored
             && !repo
                 .config()
@@ -133,6 +128,42 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         tracing::debug!(target: "status_info", status_detail="morestatus_needed");
         fallback!("morestatus functionality needed");
     }
+
+    let cwd = std::env::current_dir()?;
+
+    let always_matches = (ctx.opts.args.is_empty()
+        || (ctx.opts.args.len() == 1 && ctx.opts.args[0] == "re:."))
+        && ctx.opts.walk_opts.include.is_empty()
+        && ctx.opts.walk_opts.exclude.is_empty();
+
+    let matcher: DynMatcher = if repo
+        .config()
+        .get_or_default("experimental", "rustmatcher")?
+    {
+        match pathmatcher::cli_matcher(
+            &ctx.opts.args,
+            &ctx.opts.walk_opts.include,
+            &ctx.opts.walk_opts.exclude,
+            pathmatcher::PatternKind::RelPath,
+            wc.vfs().case_sensitive(),
+            wc.vfs().root(),
+            &cwd,
+        ) {
+            Ok(matcher) => Arc::new(matcher),
+            Err(err) => match err.downcast_ref::<pathmatcher::Error>() {
+                Some(pathmatcher::Error::UnsupportedPatternKind(_)) => {
+                    tracing::debug!(target: "status_info", status_detail="unsupported_pattern");
+                    fallback!("unsupported pattern");
+                }
+                _ => return Err(err),
+            },
+        }
+    } else if always_matches {
+        Arc::new(AlwaysMatcher::new())
+    } else {
+        tracing::debug!(target: "status_info", status_detail="needs_matcher");
+        fallback!("needs matcher");
+    };
 
     let StatusOpts {
         modified,
@@ -182,7 +213,6 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
 
     tracing::debug!(target: "status_info", status_mode="rust");
 
-    let matcher = Arc::new(AlwaysMatcher::new());
     let status = wc.status(
         matcher.clone(),
         SystemTime::UNIX_EPOCH,
@@ -196,7 +226,6 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
     // make a difference.
     let copymap = wc.copymap(matcher)?.into_iter().collect();
 
-    let cwd = std::env::current_dir()?;
     let relativizer = RepoPathRelativizer::new(cwd, repo.path());
     let formatter = get_formatter(
         repo.config(),
