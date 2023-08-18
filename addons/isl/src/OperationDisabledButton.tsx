@@ -35,6 +35,7 @@ export function OperationDisabledButton({
   runOperation,
   disabled,
   children,
+  icon,
   ...rest
 }: {
   appearance?: 'primary' | 'secondary' | 'icon';
@@ -46,6 +47,7 @@ export function OperationDisabledButton({
     | Promise<Operation | Array<Operation> | undefined>;
   children: React.ReactNode;
   disabled?: boolean;
+  icon?: React.ReactNode;
 }) {
   const actuallyRunOperation = useRunOperation();
   const pendingOperation = useMostRecentPendingOperation();
@@ -76,7 +78,7 @@ export function OperationDisabledButton({
         }
         setTriggeredOperationId(ops.map(op => op.id));
       }}>
-      {isRunningThisOperation && <Icon icon="loading" slot="start" />}
+      {isRunningThisOperation ? <Icon icon="loading" slot="start" /> : icon ?? null}
       {children}
     </VSCodeButton>
   );

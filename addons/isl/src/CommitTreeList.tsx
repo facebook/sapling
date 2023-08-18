@@ -16,6 +16,7 @@ import {Commit} from './Commit';
 import {Center, FlexRow, LargeSpinner} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
+import {OperationDisabledButton} from './OperationDisabledButton';
 import {StackEditIcon} from './StackEditIcon';
 import {StackEditSubTree, UndoDescription} from './StackEditSubTree';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
@@ -304,14 +305,15 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
     ) {
       actions.push(
         <HighlightCommitsWhileHovering key="resubmit-stack" toHighlight={resubmittableStack}>
-          <VSCodeButton
+          <OperationDisabledButton
+            contextKey="submit-stack"
             appearance="icon"
-            onClick={() => {
-              runOperation(reviewProvider.submitOperation(resubmittableStack));
+            icon={<Icon icon="cloud-upload" slot="start" />}
+            runOperation={() => {
+              return reviewProvider.submitOperation(resubmittableStack);
             }}>
-            <Icon icon="cloud-upload" slot="start" />
             <T>Resubmit stack</T>
-          </VSCodeButton>
+          </OperationDisabledButton>
         </HighlightCommitsWhileHovering>,
       );
       //     any non-submitted diffs -> "submit all commits this stack" in hidden group
@@ -344,14 +346,15 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
       // NO existing diffs -> show submit stack ()
       actions.push(
         <HighlightCommitsWhileHovering key="submit-stack" toHighlight={submittableStack}>
-          <VSCodeButton
+          <OperationDisabledButton
+            contextKey="submit-stack"
             appearance="icon"
-            onClick={() => {
-              runOperation(reviewProvider.submitOperation(submittableStack));
+            icon={<Icon icon="cloud-upload" slot="start" />}
+            runOperation={() => {
+              return reviewProvider.submitOperation(submittableStack);
             }}>
-            <Icon icon="cloud-upload" slot="start" />
             <T>Submit stack</T>
-          </VSCodeButton>
+          </OperationDisabledButton>
         </HighlightCommitsWhileHovering>,
       );
     }
