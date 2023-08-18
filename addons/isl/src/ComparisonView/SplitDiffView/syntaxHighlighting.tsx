@@ -21,14 +21,14 @@ import {CancellationToken} from 'shared/CancellationToken';
 import FilepathClassifier from 'shared/textmate-lib/FilepathClassifier';
 import createTextMateRegistry from 'shared/textmate-lib/createTextMateRegistry';
 import {updateTextMateGrammarCSS} from 'shared/textmate-lib/textmateStyles';
-import {tokenizeFileContents} from 'shared/textmate-lib/tokenize';
+import {tokenizeLines} from 'shared/textmate-lib/tokenize';
 import {unwrap} from 'shared/utils';
 import {loadWASM} from 'vscode-oniguruma';
 
 const URL_TO_ONIG_WASM = '/generated/textmate/onig.wasm';
 
-export type TokenizedParsedDiffHunk = Array<Array<HighlightedToken>>;
-export type TokenizedDiffHunk = [before: TokenizedParsedDiffHunk, after: TokenizedParsedDiffHunk];
+export type TokenizedHunk = Array<Array<HighlightedToken>>;
+export type TokenizedDiffHunk = [before: TokenizedHunk, after: TokenizedHunk];
 export type TokenizedDiffHunks = Array<TokenizedDiffHunk>;
 
 /**
@@ -58,6 +58,32 @@ export function useTokenizedHunks(
   return tokenized;
 }
 
+/**
+ * Given a chunk of a file as an array of lines, asynchronously provide syntax highlighting by tokenizing.
+ */
+export function useTokenizedContents(
+  path: string,
+  content: Array<string> | undefined,
+): TokenizedHunk | undefined {
+  const theme = useRecoilValue(themeState);
+
+  const [tokenized, setTokenized] = useState<TokenizedHunk | undefined>(undefined);
+
+  useEffect(() => {
+    if (content == null) {
+      return;
+    }
+    const token = new CancellationToken();
+    // TODO: run this in a web worker so we don't block the UI?
+    // May only be a problem for very large files.
+    tokenizeContent(theme, path, content, token).then(result => {
+      setTokenized(result);
+    });
+    return () => token.cancel();
+  }, [theme, path, content]);
+  return tokenized;
+}
+
 async function tokenizeHunks(
   theme: ThemeColor,
   path: string,
@@ -80,12 +106,33 @@ async function tokenizeHunks(
   }
   const tokenizedPatches: TokenizedDiffHunks = hunks
     .map(hunk => recoverFileContentsFromPatchLines(hunk.lines))
-    .map(([before, after]) => [
-      tokenizeFileContents(before, grammar),
-      tokenizeFileContents(after, grammar),
-    ]);
+    .map(([before, after]) => [tokenizeLines(before, grammar), tokenizeLines(after, grammar)]);
 
   return tokenizedPatches;
+}
+
+async function tokenizeContent(
+  theme: ThemeColor,
+  path: string,
+  content: Array<string>,
+  cancellationToken: CancellationToken,
+): Promise<TokenizedHunk | undefined> {
+  await ensureOnigurumaIsLoaded();
+  const scopeName = getFilepathClassifier().findScopeNameForPath(path);
+  if (!scopeName) {
+    return undefined;
+  }
+  const store = getGrammerStore(theme);
+  const grammar = await getGrammar(store, scopeName);
+  if (grammar == null) {
+    return undefined;
+  }
+  if (cancellationToken.isCancelled) {
+    // check for cancellation before doing expensive highlighting
+    return undefined;
+  }
+
+  return tokenizeLines(content, grammar);
 }
 
 const grammarCache: Map<string, Promise<IGrammar | null>> = new Map();
@@ -102,7 +149,9 @@ function getGrammar(store: Registry, scopeName: string): Promise<IGrammar | null
  * Patch lines start with ' ', '+', or '-'. From this we can reconstruct before & after file contents as strings,
  * which we can actually use in the syntax highlighting.
  */
-function recoverFileContentsFromPatchLines(lines: Array<string>): [before: string, after: string] {
+function recoverFileContentsFromPatchLines(
+  lines: Array<string>,
+): [before: Array<string>, after: Array<string>] {
   const linesBefore = [];
   const linesAfter = [];
   for (const line of lines) {
@@ -116,7 +165,7 @@ function recoverFileContentsFromPatchLines(lines: Array<string>): [before: strin
     }
   }
 
-  return [linesBefore.join('\n'), linesAfter.join('\n')];
+  return [linesBefore, linesAfter];
 }
 
 let cachedGrammarStore: {value: Registry; theme: ThemeColor} | null = null;

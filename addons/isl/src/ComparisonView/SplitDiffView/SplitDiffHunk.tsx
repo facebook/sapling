@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TokenizedDiffHunk, TokenizedParsedDiffHunk} from './syntaxHighlighting';
+import type {TokenizedDiffHunk, TokenizedHunk} from './syntaxHighlighting';
 import type {Context, LineRangeParams, OneIndexedLineNumber} from './types';
 import type {Hunk, ParsedDiff} from 'diff';
 import type {ReactNode} from 'react';
 
 import SplitDiffRow from './SplitDiffRow';
 import {useTableColumnSelection} from './copyFromSelectedColumn';
-import {useTokenizedHunks} from './syntaxHighlighting';
+import {useTokenizedContents, useTokenizedHunks} from './syntaxHighlighting';
 import {diffChars} from 'diff';
 import React, {useCallback, useState} from 'react';
 import {useRecoilValueLoadable} from 'recoil';
@@ -285,8 +285,8 @@ function addUnmodifiedRows(
   initialBeforeLineNumber: number,
   initialAfterLineNumber: number,
   rows: React.ReactElement[],
-  tokenizationBefore?: TokenizedParsedDiffHunk | undefined,
-  tokenizationAfter?: TokenizedParsedDiffHunk | undefined,
+  tokenizationBefore?: TokenizedHunk | undefined,
+  tokenizationAfter?: TokenizedHunk | undefined,
   openFileToLine?: (line: OneIndexedLineNumber) => unknown,
 ): void {
   let beforeLineNumber = initialBeforeLineNumber;
@@ -297,13 +297,13 @@ function addUnmodifiedRows(
         key={`${beforeLineNumber}/${afterLineNumber}`}
         beforeLineNumber={beforeLineNumber}
         before={
-          tokenizationBefore == null
+          tokenizationBefore?.[i] == null
             ? lineContent
             : applyTokenizationToLine(lineContent, tokenizationBefore[i])
         }
         afterLineNumber={afterLineNumber}
         after={
-          tokenizationAfter == null
+          tokenizationAfter?.[i] == null
             ? lineContent
             : applyTokenizationToLine(lineContent, tokenizationAfter[i])
         }
@@ -401,6 +401,8 @@ function ExpandingSeparator<Id>({
   t,
 }: ExpandingSeparatorProps<Id>): React.ReactElement {
   const loadable = useRecoilValueLoadable(ctx.atoms.lineRange(range));
+
+  const tokenization = useTokenizedContents(path, loadable.valueMaybe());
   switch (loadable.state) {
     case 'hasValue': {
       const rows: React.ReactElement[] = [];
@@ -412,8 +414,8 @@ function ExpandingSeparator<Id>({
         beforeLineStart,
         afterLineStart,
         rows,
-        undefined, // TODO: syntax highlight loaded chunk
-        undefined, // TODO: syntax highlight loaded chunk
+        tokenization,
+        tokenization,
         ctx.openFileToLine,
       );
       return <>{rows}</>;
