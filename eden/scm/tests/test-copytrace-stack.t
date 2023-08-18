@@ -16,14 +16,10 @@ Prepare a repo
   > A   # A/x = 1\n
   > EOS
 
-Rebase should succeed (tofix:zhaolong)
+Rebase should succeed
 
   $ hg rebase -s $B -d $C
   rebasing 4b097f0fb1bf "B"
   merging y and x to y
   rebasing 0918b4413bb6 "D"
-  other [source] changed x which local [dest] is missing
-  hint: if this is due to a renamed file, you can manually input the renamed path
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
-  unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [1]
+  merging y and x to y

@@ -2251,6 +2251,9 @@ class localrepository(object):
         # different form).
         self._headcache.clear()
         self._phasecache.invalidate()
+        self.invalidatedagcopytrace()
+
+    def invalidatedagcopytrace(self):
         self.__dict__.pop("_dagcopytrace", None)
 
     def invalidatemetalog(self):
@@ -2926,6 +2929,9 @@ class localrepository(object):
                 repo=self.ui.config("remotefilelog", "reponame"),
                 **loginfo,
             )
+
+            # new commit invalidates the dag used in dagcopytrace
+            self.invalidatedagcopytrace()
             return n
         finally:
             if tr:
