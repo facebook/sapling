@@ -128,6 +128,19 @@ def match(
     'set:<fileset>' - a fileset expression
     '<something>' - a pattern of the specified default type
     """
+
+    if _userustmatcher:
+        return hintedmatcher(
+            root,
+            cwd,
+            patterns or [],
+            include or [],
+            exclude or [],
+            default,
+            casesensitive=not icasefs,
+            badfn=badfn,
+        )
+
     normalize = _donormalize
     if icasefs:
         dirstate = ctx.repo().dirstate
@@ -920,6 +933,52 @@ class regexmatcher(basematcher):
 
     def __repr__(self):
         return f"<regexmatcher pattern={self._pattern!r}>"
+
+
+class hintedmatcher(basematcher):
+    """Rust matcher fully implementing Python API."""
+
+    def __init__(
+        self,
+        root,
+        cwd,
+        patterns: List[str],
+        include: List[str],
+        exclude: List[str],
+        default: str,
+        casesensitive: bool,
+        badfn=None,
+    ):
+        super(hintedmatcher, self).__init__(root, cwd, badfn)
+        self._matcher = pathmatcher.hintedmatcher(
+            patterns, include, exclude, default, casesensitive, root, cwd
+        )
+        self._files = self._matcher.exact_files()
+
+    def matchfn(self, f):
+        return self._matcher.matches_file(f)
+
+    def visitdir(self, dir):
+        matched = self._matcher.matches_directory(dir)
+        if matched is None:
+            return True
+        elif matched is True:
+            return "all"
+        else:
+            assert matched is False, f"expected False, but got {matched}"
+            return False
+
+    def always(self):
+        return self._matcher.always_matches()
+
+    # Similar to nevermatcher, let the knowledge that we never match
+    # allow prefix() and isexact() fast paths.
+
+    def prefix(self):
+        return self._matcher.all_recursive_paths() or self._matcher.never_matches()
+
+    def isexact(self):
+        return self._matcher.never_matches()
 
 
 class dynmatcher(basematcher):
@@ -1777,6 +1836,7 @@ _usetreematcher = True
 _useregexmatcher = True
 _usedynmatcher = True
 _emptyglobalwaysmatches = False
+_userustmatcher = False
 
 
 def init(ui) -> None:
@@ -1788,3 +1848,5 @@ def init(ui) -> None:
     _usedynmatcher = ui.configbool("experimental", "dynmatcher")
     global _emptyglobalwaysmatches
     _emptyglobalwaysmatches = ui.configbool("experimental", "empty-glob-always-matches")
+    global _userustmatcher
+    _userustmatcher = ui.configbool("experimental", "rustmatcher")

@@ -236,7 +236,7 @@ def canonpath(root, cwd, myname):
         # into a subdirectory of "root". Try resolving the first
         # symlink and invoking ourself recursively to see if we end up
         # under "root". We don't want to resolve all symlinks at once
-        # since later symlinks in "name" could by inside the repo, and
+        # since later symlinks in "name" could be inside the repo, and
         # we don't want to resolve those.
         maybesymlink = head
         while tail:
