@@ -9,7 +9,7 @@ import type {ThemeColor} from '../../theme';
 import type {ParsedDiff} from 'shared/patch/parse';
 import type {HighlightedToken} from 'shared/textmate-lib/tokenize';
 import type {TextMateGrammar} from 'shared/textmate-lib/types';
-import type {Registry} from 'vscode-textmate';
+import type {Registry, IGrammar} from 'vscode-textmate';
 
 import {grammars, languages} from '../../generated/textmate/TextMateGrammarManifest';
 import {themeState} from '../../theme';
@@ -17,10 +17,12 @@ import VSCodeDarkPlusTheme from './VSCodeDarkPlusTheme';
 import VSCodeLightPlusTheme from './VSCodeLightPlusTheme';
 import {useEffect, useState} from 'react';
 import {useRecoilValue} from 'recoil';
+import {CancellationToken} from 'shared/CancellationToken';
 import FilepathClassifier from 'shared/textmate-lib/FilepathClassifier';
 import createTextMateRegistry from 'shared/textmate-lib/createTextMateRegistry';
 import {updateTextMateGrammarCSS} from 'shared/textmate-lib/textmateStyles';
 import {tokenizeFileContents} from 'shared/textmate-lib/tokenize';
+import {unwrap} from 'shared/utils';
 import {loadWASM} from 'vscode-oniguruma';
 
 const URL_TO_ONIG_WASM = '/generated/textmate/onig.wasm';
@@ -45,8 +47,13 @@ export function useTokenizedHunks(
   const [tokenized, setTokenized] = useState<TokenizedDiffHunks | undefined>(undefined);
 
   useEffect(() => {
-    // TODO: run this in a web worker so we don't block the UI.
-    tokenizeHunks(theme, path, hunks).then(setTokenized);
+    const token = new CancellationToken();
+    // TODO: run this in a web worker so we don't block the UI?
+    // May only be a problem for very large files.
+    tokenizeHunks(theme, path, hunks, token).then(result => {
+      setTokenized(result);
+    });
+    return () => token.cancel();
   }, [theme, path, hunks]);
   return tokenized;
 }
@@ -55,14 +62,20 @@ async function tokenizeHunks(
   theme: ThemeColor,
   path: string,
   hunks: Array<{lines: Array<string>}>,
+  cancellationToken: CancellationToken,
 ): Promise<TokenizedDiffHunks | undefined> {
+  await ensureOnigurumaIsLoaded();
   const scopeName = getFilepathClassifier().findScopeNameForPath(path);
   if (!scopeName) {
     return undefined;
   }
-  const store = await getGrammerStore(theme);
-  const grammar = await store.loadGrammar(scopeName);
+  const store = getGrammerStore(theme);
+  const grammar = await getGrammar(store, scopeName);
   if (grammar == null) {
+    return undefined;
+  }
+  if (cancellationToken.isCancelled) {
+    // check for cancellation before doing expensive highlighting
     return undefined;
   }
   const tokenizedPatches: TokenizedDiffHunks = hunks
@@ -71,7 +84,18 @@ async function tokenizeHunks(
       tokenizeFileContents(before, grammar),
       tokenizeFileContents(after, grammar),
     ]);
+
   return tokenizedPatches;
+}
+
+const grammarCache: Map<string, Promise<IGrammar | null>> = new Map();
+function getGrammar(store: Registry, scopeName: string): Promise<IGrammar | null> {
+  if (grammarCache.has(scopeName)) {
+    return unwrap(grammarCache.get(scopeName));
+  }
+  const grammarPromise = store.loadGrammar(scopeName);
+  grammarCache.set(scopeName, grammarPromise);
+  return grammarPromise;
 }
 
 /**
@@ -96,13 +120,16 @@ function recoverFileContentsFromPatchLines(lines: Array<string>): [before: strin
 }
 
 let cachedGrammarStore: {value: Registry; theme: ThemeColor} | null = null;
-async function getGrammerStore(theme: ThemeColor) {
+function getGrammerStore(theme: ThemeColor) {
   const found = cachedGrammarStore;
   if (found != null && found.theme === theme) {
     return found.value;
   }
 
-  await ensureOnigurumaIsLoaded();
+  // Grammars were cached according to the store, but the theme may have changed. Just bust the cache
+  // to force grammars to reload.
+  grammarCache.clear();
+
   const themeValues = theme === 'light' ? VSCodeLightPlusTheme : VSCodeDarkPlusTheme;
 
   const registry = createTextMateRegistry(themeValues, grammars, fetchGrammar);
