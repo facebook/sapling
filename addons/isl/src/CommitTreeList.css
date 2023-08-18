@@ -167,6 +167,15 @@
   user-select: none;
 }
 
+.commit-wide-drag-target {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 500px; /* Arbitrary minimum size we want to be able to drag through, so we can't "miss" small commits */
+  height: 100%;
+  z-index: -100;
+}
+
 .commit-details > .tooltip-creator {
   display: flex;
   align-items: center;

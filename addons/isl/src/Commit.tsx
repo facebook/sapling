@@ -507,6 +507,7 @@ function DraggableCommit({
       onContextMenu={onContextMenu}
       tabIndex={0}
       data-testid={'draggable-commit'}>
+      <div className="commit-wide-drag-target" onDragEnter={handleDragEnter} />
       {dragDisabledMessage != null ? (
         <Tooltip trigger="manual" shouldShow title={dragDisabledMessage}>
           {children}
