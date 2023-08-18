@@ -34,21 +34,29 @@ export function SplitDiffView<Id>({
 
   const preamble = [];
   if (patch.type === DiffType.Added) {
-    preamble.push(<FileStatusBanner key="added">{t('This file was added')}</FileStatusBanner>);
+    preamble.push(
+      <FileStatusBanner key="added" color="added">
+        {t('This file was added')}
+      </FileStatusBanner>,
+    );
   }
   if (patch.type === DiffType.Removed) {
-    preamble.push(<FileStatusBanner key="deleted">{t('This file was removed')}</FileStatusBanner>);
+    preamble.push(
+      <FileStatusBanner key="deleted" color="removed">
+        {t('This file was removed')}
+      </FileStatusBanner>,
+    );
   }
   if (patch.type === DiffType.Renamed) {
     preamble.push(
-      <FileStatusBanner key="renamed">
+      <FileStatusBanner key="renamed" color="modified">
         {t('This file was renamed from')} {patch.oldFileName ?? ''}
       </FileStatusBanner>,
     );
   }
   if (patch.type === DiffType.Copied) {
     preamble.push(
-      <FileStatusBanner key="copied">
+      <FileStatusBanner key="copied" color="added">
         {t('This file was copied from')} {patch.oldFileName ?? ''}
       </FileStatusBanner>,
     );
@@ -70,9 +78,15 @@ export function SplitDiffView<Id>({
   );
 }
 
-function FileStatusBanner({children}: {children: React.ReactNode}): React.ReactElement {
+function FileStatusBanner({
+  children,
+  color,
+}: {
+  children: React.ReactNode;
+  color: 'added' | 'removed' | 'modified';
+}): React.ReactElement {
   return (
-    <tr className="split-diff-view-file-status-banner">
+    <tr className={`split-diff-view-file-status-banner split-diff-view-banner-${color}`}>
       <td colSpan={4} className="separator">
         <div className="split-diff-view-">{children}</div>
       </td>

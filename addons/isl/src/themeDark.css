@@ -34,6 +34,8 @@
   --diffEditor-insertedLineHighlightBackground: #5fff8433;
   --diffEditor-removedLineBackground: #fa7e7c33;
   --diffEditor-removedLineHighlightBackground: #fa7e7c55;
+  --diffEditor-modifiedLineBackground: #deb94033;
+  --diffEditor-modifiedLineHighlightBackground: #deb94066;
   --editor-selectionBackground: #264f78;
 
   /* Signal colors */

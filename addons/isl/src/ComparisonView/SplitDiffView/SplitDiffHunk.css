@@ -48,6 +48,19 @@
   height: 12px;
 }
 
+.split-diff-view-banner-added {
+  background-color: var(--diffEditor-insertedLineHighlightBackground);
+  color: var(--diffEditor-foreground);
+}
+.split-diff-view-banner-removed {
+  background-color: var(--diffEditor-removedLineHighlightBackground);
+  color: var(--diffEditor-foreground);
+}
+.split-diff-view-banner-modified {
+  background-color: var(--diffEditor-modifiedLineHighlightBackground);
+  color: var(--diffEditor-foreground);
+}
+
 .split-diff-view-file-status-banner .separator > div {
   padding: 1px;
 }

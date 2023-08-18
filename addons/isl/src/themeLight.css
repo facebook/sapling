@@ -34,6 +34,8 @@
   --diffEditor-insertedLineHighlightBackground: #5fff8466;
   --diffEditor-removedLineBackground: #fa7e7c33;
   --diffEditor-removedLineHighlightBackground: #fa7e7c66;
+  --diffEditor-modifiedLineBackground: #f9ec5633;
+  --diffEditor-modifiedLineHighlightBackground: #f9ec5666;
   --editor-selectionBackground: #add6ff;
 
   --signal-good-bg: #2da44e;
