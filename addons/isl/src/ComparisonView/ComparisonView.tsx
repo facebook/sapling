@@ -12,7 +12,7 @@ import type {ParsedDiff} from 'shared/patch/parse';
 
 import serverAPI from '../ClientToServerAPI';
 import {EmptyState} from '../EmptyState';
-import {ErrorNotice} from '../ErrorNotice';
+import {ErrorBoundary, ErrorNotice} from '../ErrorNotice';
 import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import platform from '../platform';
@@ -210,7 +210,9 @@ function ComparisonViewFile({diff, comparison}: {diff: ParsedDiff; comparison: C
   };
   return (
     <div className="comparison-view-file" key={path}>
-      <SplitDiffView ctx={context} patch={diff} path={path} />
+      <ErrorBoundary>
+        <SplitDiffView ctx={context} patch={diff} path={path} />
+      </ErrorBoundary>
     </div>
   );
 }
