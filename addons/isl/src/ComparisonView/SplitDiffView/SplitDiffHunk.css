@@ -87,17 +87,17 @@
   gap: var(--pad);
 }
 
-.SplitDiffView-hunk-table {
+.split-diff-view-hunk-table {
   border-spacing: 0;
   table-layout: fixed;
   width: 100%;
 }
 
-.SplitDiffView-hunk-table tbody {
+.split-diff-view-hunk-table tbody {
   vertical-align: top;
 }
 
-.SplitDiffView-hunk-table td {
+.split-diff-view-hunk-table td {
   font-size: 12px;
   line-height: 16px;
   padding: 2px 0 2px 6px;
@@ -105,23 +105,23 @@
   word-break: break-all;
 }
 
-.SplitDiffView-hunk-table td.lineNumber {
+.split-diff-view-hunk-table td.lineNumber {
   padding-left: 10px;
   padding-right: 10px;
   text-align: right;
   white-space: nowrap;
 }
 
-.SplitDiffView-hunk-table td.lineNumber-RIGHT {
+.split-diff-view-hunk-table td.lineNumber-RIGHT {
   border-left: 1px solid var(--tooltip-border);
 }
 
-.SplitDiffView-hunk-table tr.separator-row {
+.split-diff-view-hunk-table tr.separator-row {
   background-color: var(--tooltip-background);
   height: 12px;
 }
 
-.SplitDiffView-hunk-table td.separator {
+.split-diff-view-hunk-table td.separator {
   line-height: 20px;
   padding: 0;
   text-align: center;

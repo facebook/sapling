@@ -136,7 +136,7 @@ export const SplitDiffTable = React.memo(
 
     return (
       <table
-        className={'SplitDiffView-hunk-table ' + (tableSelectionClassName ?? '')}
+        className={'split-diff-view-hunk-table ' + (tableSelectionClassName ?? '')}
         {...tableSelectionProps}>
         <colgroup>
           <col width={50} />
