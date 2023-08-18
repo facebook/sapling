@@ -36,18 +36,21 @@ pub fn cli_matcher(
 ) -> Result<HintedMatcher> {
     let pattern_matcher = HintedMatcher::from_patterns(
         &normalize_patterns(patterns, default_pattern_type, root, cwd, false)?,
+        None,
         true,
         case_sensitive,
     )?;
 
     let include_matcher = HintedMatcher::from_patterns(
         &normalize_patterns(include, PatternKind::Glob, root, cwd, true)?,
+        None,
         true,
         case_sensitive,
     )?;
 
     let exclude_matcher = HintedMatcher::from_patterns(
         &normalize_patterns(exclude, PatternKind::Glob, root, cwd, true)?,
+        None,
         false,
         case_sensitive,
     )?;

@@ -21,6 +21,7 @@ use crate::ExactMatcher;
 use crate::IntersectMatcher;
 use crate::Matcher;
 use crate::NeverMatcher;
+use crate::UnionMatcher;
 
 /// HintedMatcher tracks some basic metadata about the patterns in
 /// order to fulfill Python's matcher interface. The hints are best
@@ -68,39 +69,63 @@ impl HintedMatcher {
     /// Initialize HintedMatcher, deriving hints from given patterns.
     pub(crate) fn from_patterns(
         pats: &[Pattern],
+        // Pre-expanded filesets from Python. `None` means no filesets were
+        // specified. `Some(&[])` means there were filesets, but they evaluated
+        // to an empty set of files.
+        fileset: Option<&[RepoPathBuf]>,
         empty_means_always_match: bool,
         case_sensitive: bool,
     ) -> Result<Self> {
-        if pats.is_empty() {
-            Ok(Self {
-                case_sensitive,
-                matcher: if empty_means_always_match {
+        let mut always_matches = false;
+        let mut never_matches = false;
+        let mut all_recursive_paths = false;
+        let mut matcher: Option<DynMatcher> = None;
+        if !pats.is_empty() {
+            matcher = Some(build_matcher_from_patterns(pats, case_sensitive)?);
+
+            // This is so we can mark "sl log ." as an always() matcher, enabling
+            // various Python fast paths. ("." AKA "relpath:." is normalized to "" when run
+            // from repo root.)
+            always_matches = pats
+                .iter()
+                .any(|p| p.pattern.is_empty() && p.kind.is_path() && p.kind.is_recursive());
+
+            all_recursive_paths = pats
+                .iter()
+                .all(|p| p.kind.is_path() && p.kind.is_recursive());
+        }
+
+        if let Some(fileset) = fileset {
+            let fileset_matcher = Arc::new(ExactMatcher::new(fileset.iter(), case_sensitive));
+            matcher = match matcher {
+                Some(matcher) => Some(Arc::new(UnionMatcher::new(vec![matcher, fileset_matcher]))),
+                None => Some(fileset_matcher),
+            };
+
+            all_recursive_paths = false;
+        }
+
+        let matcher: DynMatcher = match matcher {
+            Some(matcher) => matcher,
+            None => {
+                if empty_means_always_match {
+                    always_matches = true;
                     Arc::new(AlwaysMatcher::new())
                 } else {
+                    never_matches = true;
                     Arc::new(NeverMatcher::new())
-                },
-                exact_files: Vec::new(),
-                always_matches: empty_means_always_match,
-                never_matches: !empty_means_always_match,
-                all_recursive_paths: false,
-            })
-        } else {
-            Ok(Self {
-                case_sensitive,
-                matcher: build_matcher_from_patterns(pats, case_sensitive)?,
-                exact_files: pats.iter().filter_map(|p| p.exact_file.clone()).collect(),
-                // This is so we can mark "sl log ." as an always() matcher, enabling
-                // various Python fast paths. ("." AKA "relpath:." is normalized to "" when run
-                // from repo root.)
-                always_matches: pats
-                    .iter()
-                    .any(|p| p.pattern.is_empty() && p.kind.is_path() && p.kind.is_recursive()),
-                never_matches: false,
-                all_recursive_paths: pats
-                    .iter()
-                    .all(|p| p.kind.is_path() && p.kind.is_recursive()),
-            })
-        }
+                }
+            }
+        };
+
+        Ok(Self {
+            case_sensitive,
+            matcher,
+            always_matches,
+            never_matches,
+            all_recursive_paths,
+            exact_files: pats.iter().filter_map(|p| p.exact_file.clone()).collect(),
+        })
     }
 
     pub fn include(&self, other: &Self) -> Self {
@@ -157,12 +182,12 @@ mod test {
 
     #[test]
     fn test_empty_hinted_matcher() -> Result<()> {
-        let always = HintedMatcher::from_patterns(&[], true, true)?;
+        let always = HintedMatcher::from_patterns(&[], None, true, true)?;
         assert!(always.always_matches());
         assert!(!always.never_matches());
         assert!(always.matches_file("foo/bar".try_into()?)?);
 
-        let never = HintedMatcher::from_patterns(&[], false, true)?;
+        let never = HintedMatcher::from_patterns(&[], None, false, true)?;
         assert!(never.never_matches());
         assert!(!never.always_matches());
         assert!(!never.matches_file("foo/bar".try_into()?)?);
@@ -200,8 +225,8 @@ mod test {
             .with_exact_file(Some("foo.c".to_string().try_into()?));
         let full_glob = Pattern::new(PatternKind::Glob, "**".into());
 
-        let pats = HintedMatcher::from_patterns(&[foo_dot_c], true, true)?;
-        let exclude = HintedMatcher::from_patterns(&[full_glob], true, true)?;
+        let pats = HintedMatcher::from_patterns(&[foo_dot_c], None, true, true)?;
+        let exclude = HintedMatcher::from_patterns(&[full_glob], None, true, true)?;
 
         let m = pats.exclude(&exclude);
         assert!(!m.always_matches());
@@ -209,6 +234,34 @@ mod test {
 
         // Make sure we still match foo.c even though the exclude matches everything.
         assert!(m.matches_file("foo.c".try_into()?)?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_filesets() -> Result<()> {
+        let foo_dot_c = Pattern::new(PatternKind::Path, "foo.c".into());
+
+        let m = HintedMatcher::from_patterns(
+            &[foo_dot_c],
+            Some(&["foo/bar".to_string().try_into()?]),
+            true,
+            true,
+        )?;
+
+        assert!(!m.all_recursive_paths());
+        assert!(m.matches_file("foo.c".try_into()?)?);
+        assert!(m.matches_file("foo/bar".try_into()?)?);
+
+        let m = HintedMatcher::from_patterns(
+            &[],
+            Some(&["foo/bar".to_string().try_into()?]),
+            true,
+            true,
+        )?;
+        assert!(!m.never_matches());
+        assert!(!m.always_matches());
+        assert!(m.matches_file("foo/bar".try_into()?)?);
 
         Ok(())
     }
