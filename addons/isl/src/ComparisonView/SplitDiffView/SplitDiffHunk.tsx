@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TokenizedDiffHunk} from './syntaxHighlighting';
+import type {TokenizedDiffHunk, TokenizedParsedDiffHunk} from './syntaxHighlighting';
 import type {Context, LineRangeParams, OneIndexedLineNumber} from './types';
 import type {Hunk, ParsedDiff} from 'diff';
 import type {ReactNode} from 'react';
@@ -18,6 +18,10 @@ import React, {useCallback, useState} from 'react';
 import {useRecoilValueLoadable} from 'recoil';
 import {Icon} from 'shared/Icon';
 import organizeLinesIntoGroups from 'shared/SplitDiffView/organizeLinesIntoGroups';
+import {
+  applyTokenizationToLine,
+  createTokenizedIntralineDiff,
+} from 'shared/createTokenizedIntralineDiff';
 
 const MAX_INPUT_LENGTH_FOR_INTRALINE_DIFF = 300;
 
@@ -153,13 +157,16 @@ function addRowsForHunk(
   hunk: Hunk,
   path: string,
   rows: React.ReactElement[],
-  _tokenization: TokenizedDiffHunk | undefined,
+  tokenization: TokenizedDiffHunk | undefined,
   openFileToLine?: (line: OneIndexedLineNumber) => unknown,
 ): void {
   const {oldStart, newStart, lines} = hunk;
   const groups = organizeLinesIntoGroups(lines);
   let beforeLineNumber = oldStart;
   let afterLineNumber = newStart;
+
+  let beforeTokenizedIndex = 0;
+  let afterTokenizedIndex = 0;
 
   groups.forEach(group => {
     const {common, removed, added} = group;
@@ -170,17 +177,33 @@ function addRowsForHunk(
       beforeLineNumber,
       afterLineNumber,
       rows,
+      tokenization?.[0].slice(beforeTokenizedIndex),
+      tokenization?.[1].slice(afterTokenizedIndex),
       openFileToLine,
     );
     beforeLineNumber += common.length;
     afterLineNumber += common.length;
+    beforeTokenizedIndex += common.length;
+    afterTokenizedIndex += common.length;
 
     const maxIndex = Math.max(removed.length, added.length);
     for (let index = 0; index < maxIndex; ++index) {
       const removedLine = removed[index];
       const addedLine = added[index];
       if (removedLine != null && addedLine != null) {
-        const beforeAndAfter = createIntralineDiff(removedLine, addedLine);
+        let beforeAndAfter;
+
+        if (tokenization != null) {
+          beforeAndAfter = createTokenizedIntralineDiff(
+            removedLine,
+            tokenization[0][beforeTokenizedIndex],
+            addedLine,
+            tokenization[1][afterTokenizedIndex],
+          );
+        } else {
+          beforeAndAfter = createIntralineDiff(removedLine, addedLine);
+        }
+
         const [before, after] = beforeAndAfter;
         rows.push(
           <SplitDiffRow
@@ -196,12 +219,18 @@ function addRowsForHunk(
         );
         ++beforeLineNumber;
         ++afterLineNumber;
+        ++beforeTokenizedIndex;
+        ++afterTokenizedIndex;
       } else if (removedLine != null) {
         rows.push(
           <SplitDiffRow
             key={`${beforeLineNumber}/`}
             beforeLineNumber={beforeLineNumber}
-            before={removedLine}
+            before={
+              tokenization?.[0] == null
+                ? removedLine
+                : applyTokenizationToLine(removedLine, tokenization[0][beforeTokenizedIndex])
+            }
             afterLineNumber={null}
             after={null}
             rowType="remove"
@@ -210,6 +239,7 @@ function addRowsForHunk(
           />,
         );
         ++beforeLineNumber;
+        ++beforeTokenizedIndex;
       } else {
         rows.push(
           <SplitDiffRow
@@ -217,13 +247,18 @@ function addRowsForHunk(
             beforeLineNumber={null}
             before={null}
             afterLineNumber={afterLineNumber}
-            after={addedLine}
+            after={
+              tokenization?.[1] == null
+                ? addedLine
+                : applyTokenizationToLine(addedLine, tokenization[1][afterTokenizedIndex])
+            }
             rowType="add"
             path={path}
             openFileToLine={openFileToLine}
           />,
         );
         ++afterLineNumber;
+        ++afterTokenizedIndex;
       }
     }
   });
@@ -250,18 +285,28 @@ function addUnmodifiedRows(
   initialBeforeLineNumber: number,
   initialAfterLineNumber: number,
   rows: React.ReactElement[],
+  tokenizationBefore?: TokenizedParsedDiffHunk | undefined,
+  tokenizationAfter?: TokenizedParsedDiffHunk | undefined,
   openFileToLine?: (line: OneIndexedLineNumber) => unknown,
 ): void {
   let beforeLineNumber = initialBeforeLineNumber;
   let afterLineNumber = initialAfterLineNumber;
-  lines.forEach(lineContent => {
+  lines.forEach((lineContent, i) => {
     rows.push(
       <SplitDiffRow
         key={`${beforeLineNumber}/${afterLineNumber}`}
         beforeLineNumber={beforeLineNumber}
-        before={lineContent}
+        before={
+          tokenizationBefore == null
+            ? lineContent
+            : applyTokenizationToLine(lineContent, tokenizationBefore[i])
+        }
         afterLineNumber={afterLineNumber}
-        after={lineContent}
+        after={
+          tokenizationAfter == null
+            ? lineContent
+            : applyTokenizationToLine(lineContent, tokenizationAfter[i])
+        }
         rowType={rowType}
         path={path}
         openFileToLine={openFileToLine}
@@ -367,6 +412,8 @@ function ExpandingSeparator<Id>({
         beforeLineStart,
         afterLineStart,
         rows,
+        undefined, // TODO: syntax highlight loaded chunk
+        undefined, // TODO: syntax highlight loaded chunk
         ctx.openFileToLine,
       );
       return <>{rows}</>;

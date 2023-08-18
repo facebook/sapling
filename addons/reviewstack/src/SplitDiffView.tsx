@@ -20,11 +20,6 @@ import type {HighlightedToken} from 'shared/textmate-lib/tokenize';
 
 import {FileHeader} from './SplitDiffFileHeader';
 import SplitDiffRow from './SplitDiffRow';
-import {
-  applyTokenizationToLine,
-  createTokenizedIntralineDiff,
-  MAX_INPUT_LENGTH_FOR_INTRALINE_DIFF,
-} from './createTokenizedIntralineDiff';
 import {diffAndTokenize, lineRange} from './diffServiceClient';
 import {DiffSide} from './generated/graphql';
 import {grammars, languages} from './generated/textmate/TextMateGrammarManifest';
@@ -45,6 +40,11 @@ import {diffChars} from 'diff';
 import React, {useCallback, useEffect, useState} from 'react';
 import {useRecoilValue, useRecoilValueLoadable, waitForAll} from 'recoil';
 import organizeLinesIntoGroups from 'shared/SplitDiffView/organizeLinesIntoGroups';
+import {
+  applyTokenizationToLine,
+  createTokenizedIntralineDiff,
+  MAX_INPUT_LENGTH_FOR_INTRALINE_DIFF,
+} from 'shared/createTokenizedIntralineDiff';
 import FilepathClassifier from 'shared/textmate-lib/FilepathClassifier';
 import {unwrap} from 'shared/utils';
 

@@ -19,6 +19,7 @@ import {useEffect, useState} from 'react';
 import {useRecoilValue} from 'recoil';
 import FilepathClassifier from 'shared/textmate-lib/FilepathClassifier';
 import createTextMateRegistry from 'shared/textmate-lib/createTextMateRegistry';
+import {updateTextMateGrammarCSS} from 'shared/textmate-lib/textmateStyles';
 import {tokenizeFileContents} from 'shared/textmate-lib/tokenize';
 import {loadWASM} from 'vscode-oniguruma';
 
@@ -26,7 +27,7 @@ const URL_TO_ONIG_WASM = '/generated/textmate/onig.wasm';
 
 export type TokenizedParsedDiffHunk = Array<Array<HighlightedToken>>;
 export type TokenizedDiffHunk = [before: TokenizedParsedDiffHunk, after: TokenizedParsedDiffHunk];
-export type TokenizedDiffHunks = Array<TokenizedDiffHunk> | null;
+export type TokenizedDiffHunks = Array<TokenizedDiffHunk>;
 
 /**
  * Given a set of hunks from a diff view,
@@ -35,10 +36,13 @@ export type TokenizedDiffHunks = Array<TokenizedDiffHunk> | null;
  * Note that we reconstruct the file contents from the diff,
  * so syntax highlighting can be inaccurate since it's missing full context.
  */
-export function useTokenizedHunks(path: string, hunks: ParsedDiff['hunks']): TokenizedDiffHunks {
+export function useTokenizedHunks(
+  path: string,
+  hunks: ParsedDiff['hunks'],
+): TokenizedDiffHunks | undefined {
   const theme = useRecoilValue(themeState);
 
-  const [tokenized, setTokenized] = useState<TokenizedDiffHunks>(null);
+  const [tokenized, setTokenized] = useState<TokenizedDiffHunks | undefined>(undefined);
 
   useEffect(() => {
     // TODO: run this in a web worker so we don't block the UI.
@@ -51,15 +55,15 @@ async function tokenizeHunks(
   theme: ThemeColor,
   path: string,
   hunks: Array<{lines: Array<string>}>,
-): Promise<TokenizedDiffHunks> {
+): Promise<TokenizedDiffHunks | undefined> {
   const scopeName = getFilepathClassifier().findScopeNameForPath(path);
   if (!scopeName) {
-    return null;
+    return undefined;
   }
   const store = await getGrammerStore(theme);
   const grammar = await store.loadGrammar(scopeName);
   if (grammar == null) {
-    return null;
+    return undefined;
   }
   const tokenizedPatches: TokenizedDiffHunks = hunks
     .map(hunk => recoverFileContentsFromPatchLines(hunk.lines))
@@ -102,6 +106,8 @@ async function getGrammerStore(theme: ThemeColor) {
   const themeValues = theme === 'light' ? VSCodeLightPlusTheme : VSCodeDarkPlusTheme;
 
   const registry = createTextMateRegistry(themeValues, grammars, fetchGrammar);
+
+  updateTextMateGrammarCSS(registry.getColorMap());
   cachedGrammarStore = {value: registry, theme};
   return registry;
 }
