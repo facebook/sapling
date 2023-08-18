@@ -154,7 +154,7 @@ export const Commit = memo(
       }
       if (!isPublic && !actionsPrevented) {
         items.push({
-          label: <T>Hide Commit and Descendents</T>,
+          label: <T>Hide Commit and Descendants</T>,
           onClick: () => setOperationBeingPreviewed(new HideOperation(commit.hash)),
         });
       }

@@ -50,14 +50,14 @@ describe('hide operation', () => {
   }
 
   it('previews hiding a stack of commits', () => {
-    rightClickAndChooseFromContextMenu(screen.getByText('Commit B'), 'Hide Commit and Descendents');
+    rightClickAndChooseFromContextMenu(screen.getByText('Commit B'), 'Hide Commit and Descendants');
 
     expect(document.querySelectorAll('.commit-preview-hidden-root')).toHaveLength(1);
     expect(document.querySelectorAll('.commit-preview-hidden-descendant')).toHaveLength(3);
   });
 
   it('runs hide operation', () => {
-    rightClickAndChooseFromContextMenu(screen.getByText('Commit B'), 'Hide Commit and Descendents');
+    rightClickAndChooseFromContextMenu(screen.getByText('Commit B'), 'Hide Commit and Descendants');
 
     const runHideButton = screen.getByText('Hide');
     expect(runHideButton).toBeInTheDocument();
@@ -75,7 +75,7 @@ describe('hide operation', () => {
   });
 
   it('shows optimistic preview of hide', () => {
-    rightClickAndChooseFromContextMenu(screen.getByText('Commit B'), 'Hide Commit and Descendents');
+    rightClickAndChooseFromContextMenu(screen.getByText('Commit B'), 'Hide Commit and Descendants');
 
     const runHideButton = screen.getByText('Hide');
     fireEvent.click(runHideButton);
@@ -89,7 +89,7 @@ describe('hide operation', () => {
   });
 
   it('does not show uninteresting public base during optimistic hide', () => {
-    rightClickAndChooseFromContextMenu(screen.getByText('Commit A'), 'Hide Commit and Descendents');
+    rightClickAndChooseFromContextMenu(screen.getByText('Commit A'), 'Hide Commit and Descendants');
 
     const runHideButton = screen.getByText('Hide');
     fireEvent.click(runHideButton);
@@ -99,7 +99,7 @@ describe('hide operation', () => {
   });
 
   it('does show interesting public base during optimistic hide', () => {
-    rightClickAndChooseFromContextMenu(screen.getByText('Commit X'), 'Hide Commit and Descendents');
+    rightClickAndChooseFromContextMenu(screen.getByText('Commit X'), 'Hide Commit and Descendants');
 
     const runHideButton = screen.getByText('Hide');
     fireEvent.click(runHideButton);
