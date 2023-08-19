@@ -493,7 +493,9 @@ def _hint_for_missing_file(repo, fcd, fco, fd):
     dagcopytrace = repo._dagcopytrace
     try:
         trace_result = dagcopytrace.trace_rename_ex(get_node(fco), get_node(fcd), fd)
-    except Exception:
+    except Exception as e:
+        if util.istest():
+            raise e
         repo.ui.metrics.gauge("copytrace_error", 1)
         return default_hint
 
