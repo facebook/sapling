@@ -483,6 +483,10 @@ def _hint_for_missing_file(repo, fcd, fco, fd):
         ctx = fctx.changectx()
         return ctx.node() if ctx.node() else ctx.p1().node()
 
+    def get_hex(fctx):
+        ctx = fctx.changectx()
+        return ctx.hex() if ctx.node() else ctx.p1().hex()
+
     default_hint = _(
         "if this is due to a renamed file, you can manually input the renamed path"
     )
@@ -491,13 +495,24 @@ def _hint_for_missing_file(repo, fcd, fco, fd):
         return default_hint
 
     dagcopytrace = repo._dagcopytrace
+    copytrace_error = False
     try:
         trace_result = dagcopytrace.trace_rename_ex(get_node(fco), get_node(fcd), fd)
     except Exception as e:
+        copytrace_error = True
         if util.istest():
             raise e
-        repo.ui.metrics.gauge("copytrace_error", 1)
-        return default_hint
+        else:
+            return default_hint
+    finally:
+        repo.ui.log(
+            "merge_conflicts",
+            dest_hex=get_hex(fcd),
+            src_hex=get_hex(fco),
+            repo=repo.ui.config("remotefilelog", "reponame", "unknown"),
+            copytrace_missing_file=fd,
+            copytrace_error=int(copytrace_error),
+        )
 
     type_ = trace_result["t"].lower()
     if type_ in ("added", "deleted"):
