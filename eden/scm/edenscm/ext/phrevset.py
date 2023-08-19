@@ -299,14 +299,8 @@ def diffidtonode(repo, diffid):
 
         hexnodes = []
         try:
-            props = resp["phabricator_version_properties"]["edges"]
-            for prop in props:
-                property_name = prop["node"]["property_name"]
-                get_commits = lambda: json.loads(prop["node"]["property_value"])
-                if property_name == "local:commits":
-                    hexnodes += [c["commit"] for c in get_commits().values()]
-                elif property_name == "facebook:bundle_info:hg":
-                    hexnodes += list(get_commits().values())
+            commit_hash = resp.get("commit_hash_best_effort")
+            hexnodes = [] if commit_hash is None else [commit_hash]
         except (AttributeError, IndexError, KeyError):
             pass
 

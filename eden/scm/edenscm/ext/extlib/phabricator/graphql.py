@@ -159,14 +159,7 @@ class Client(object):
                           scm_name
                       }
                       source_control_system
-                      phabricator_version_properties {
-                        edges {
-                          node {
-                            property_name
-                            property_value
-                          }
-                        }
-                      }
+                      commit_hash_best_effort
                     }
                     phabricator_diff_commit {
                       nodes {
