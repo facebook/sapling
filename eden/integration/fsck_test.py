@@ -6,19 +6,12 @@
 
 import pathlib
 import subprocess
-import unittest
 from pathlib import Path
 from typing import Tuple
 
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .lib import edenclient, overlay as overlay_mod, repobase, testcase
-
-
-FSCK_RETCODE_OK = 0
-FSCK_RETCODE_SKIPPED = 1
-FSCK_RETCODE_WARNINGS = 2
-FSCK_RETCODE_ERRORS = 3
 
 
 @testcase.eden_nfs_repo_test
@@ -64,23 +57,20 @@ class FsckTest(testcase.EdenRepoTest):
 
         # Running fsck with the mount still mounted should fail
         returncode, fsck_out = self.run_fsck(self.mount)
-        self.assertIn(f"Not checking {self.mount}", fsck_out)
-        self.assertEqual(FSCK_RETCODE_SKIPPED, returncode)
+        self.assertIn(f"failed to acquire overlay lock on {self.eden_dir}", fsck_out)
 
         # Running fsck with --force should override that
         returncode, fsck_out = self.run_fsck(self.mount, "--force")
-        self.assertIn("warning: could not obtain lock", fsck_out)
-        self.assertIn("scanning anyway due to --force", fsck_out)
-        self.assertIn(f"Checking {self.mount}", fsck_out)
-        self.assertEqual(FSCK_RETCODE_OK, returncode)
+        self.assertIn("Overlay was shut down uncleanly", fsck_out)
+        self.assertIn(f"Starting fsck scan on overlay {self.eden_dir}", fsck_out)
+        self.assertIn("completed checking for errors", fsck_out)
 
         # fsck should perform the check normally without --force
         # if the mount is not mounted
         self.eden.run_cmd("unmount", self.mount)
         returncode, fsck_out = self.run_fsck(self.mount)
         self.assertIn(f"Checking {self.mount}", fsck_out)
-        self.assertIn("No issues found", fsck_out)
-        self.assertEqual(FSCK_RETCODE_OK, returncode)
+        self.assertIn("no problems found", fsck_out)
 
         # Truncate the overlay file for doc/foo.txt to 0 length
         with foo_overlay_path.open("wb"):
@@ -89,35 +79,31 @@ class FsckTest(testcase.EdenRepoTest):
         # Running fsck with --check-only should report the error but not try to fix it.
         returncode, fsck_out = self.run_fsck("--check-only")
         self.assertIn(f"Checking {self.mount}", fsck_out)
-        self.assertRegex(
-            fsck_out,
-            r"invalid overlay file for materialized file .* \(doc/foo.txt\).*: "
-            r"zero-sized overlay file",
+        self.assertIn(
+            "file was too short to contain overlay header: read 0 bytes", fsck_out
         )
-        self.assertRegex(fsck_out, r"\b1 errors")
-        self.assertRegex(fsck_out, "Not fixing errors: --check-only was specified")
-        self.assertEqual(FSCK_RETCODE_ERRORS, returncode)
+        self.assertRegex(fsck_out, r"found 1 problem")
+
+        # Running fsck with --check-only a second time should still report the error
+        returncode, fsck_out = self.run_fsck("--check-only")
+        self.assertIn(f"Checking {self.mount}", fsck_out)
+        self.assertIn(
+            "file was too short to contain overlay header: read 0 bytes", fsck_out
+        )
+        self.assertRegex(fsck_out, r"found 1 problem")
 
         # Running fsck with no arguments should attempt to fix the errors
         returncode, fsck_out = self.run_fsck()
-        self.assertRegex(
-            fsck_out,
-            r"invalid overlay file for materialized file .* \(doc/foo.txt\).*: "
-            r"zero-sized overlay file",
+
+        self.assertIn(
+            "file was too short to contain overlay header: read 0 bytes", fsck_out
         )
-        self.assertRegex(fsck_out, r"\b1 errors")
-        self.assertRegex(fsck_out, "Beginning repairs")
-        self.assertRegex(
-            fsck_out, "replacing corrupt file inode 'doc/foo.txt' with an empty file"
-        )
-        self.assertRegex(fsck_out, "Fixed 1 of 1 issues")
-        self.assertEqual(FSCK_RETCODE_ERRORS, returncode)
+        self.assertIn("successfully repaired all 1 problems", fsck_out)
 
         # There should be no more errors if we run fsck again
         returncode, fsck_out = self.run_fsck()
         self.assertIn(f"Checking {self.mount}", fsck_out)
-        self.assertIn("No issues found", fsck_out)
-        self.assertEqual(FSCK_RETCODE_OK, returncode)
+        self.assertIn("no problems found", fsck_out)
 
     def test_fsck_multiple_mounts(self) -> None:
         mount2 = Path(self.mounts_dir) / "second_mount"
@@ -135,19 +121,41 @@ class FsckTest(testcase.EdenRepoTest):
 
         # Running fsck should check all but mount3
         returncode, fsck_out = self.run_fsck()
-        self.assertIn(f"Checking {self.mount}", fsck_out)
-        self.assertIn(f"Checking {mount2}", fsck_out)
-        self.assertIn(f"Not checking {mount3}", fsck_out)
-        self.assertIn(f"Checking {mount4}", fsck_out)
-        self.assertEqual(FSCK_RETCODE_SKIPPED, returncode)
+        self.assertIn(
+            f"fsck:{self.eden_dir}/clients/main/local: completed checking for errors, no problems found",
+            fsck_out,
+        )
+        self.assertIn(
+            f"fsck:{self.eden_dir}/clients/second_mount/local: completed checking for errors, no problems found",
+            fsck_out,
+        )
+        self.assertIn(
+            f"failed to acquire overlay lock on {self.eden_dir}/clients/third_mount/local/info",
+            fsck_out,
+        )
+        self.assertIn(
+            f"fsck:{self.eden_dir}/clients/fourth_mount/local: completed checking for errors, no problems found",
+            fsck_out,
+        )
 
         # Running fsck with --force should check everything
         returncode, fsck_out = self.run_fsck("--force")
-        self.assertIn(f"Checking {self.mount}", fsck_out)
-        self.assertIn(f"Checking {mount2}", fsck_out)
-        self.assertIn(f"Checking {mount3}", fsck_out)
-        self.assertIn(f"Checking {mount4}", fsck_out)
-        self.assertEqual(FSCK_RETCODE_OK, returncode)
+        self.assertIn(
+            f"fsck:{self.eden_dir}/clients/main/local: completed checking for errors, no problems found",
+            fsck_out,
+        )
+        self.assertIn(
+            f"fsck:{self.eden_dir}/clients/second_mount/local: completed checking for errors, no problems found",
+            fsck_out,
+        )
+        self.assertIn(
+            f"fsck:{self.eden_dir}/clients/third_mount/local: completed checking for errors, no problems found",
+            fsck_out,
+        )
+        self.assertIn(
+            f"fsck:{self.eden_dir}/clients/fourth_mount/local: completed checking for errors, no problems found",
+            fsck_out,
+        )
 
 
 @testcase.eden_test

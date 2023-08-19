@@ -61,7 +61,12 @@ from . import (
     util,
     version as version_mod,
 )
-from .cmd_util import get_eden_instance, prompt_confirmation, require_checkout
+from .cmd_util import (
+    get_eden_instance,
+    get_fsck_command,
+    prompt_confirmation,
+    require_checkout,
+)
 from .config import EdenCheckout, EdenInstance, ListMountInfo
 from .constants import (
     SHUTDOWN_EXIT_CODE_ERROR,
@@ -89,10 +94,6 @@ except ImportError:
 
     def stop_internal_processes(_: str) -> None:
         pass
-
-
-if sys.platform != "win32":
-    from . import fsck as fsck_mod
 
 
 subcmd = subcmd_mod.Decorator()
@@ -1270,70 +1271,16 @@ class FsckCmd(Subcmd):
         checkout_path: Path,
         state_dir: Path,
     ) -> int:
-        if instance.get_config_bool("fsck.use-cpp-implementation", False):
-            print(f"Checking {checkout_path}...")
-            overlay_path = state_dir / "local"
-            return subprocess.call(
-                [
-                    fsck_mod.get_fsck_command(),
-                    overlay_path,
-                    f"--dry-run={'true' if args.check_only else 'false'}",
-                    f"--force={'true' if args.force else 'false'}",
-                ]
-            )
-        else:
-            return self.check_one_impl(args, checkout_path, state_dir)
-
-    def check_one_impl(
-        self, args: argparse.Namespace, checkout_path: Path, state_dir: Path
-    ) -> int:
-        with fsck_mod.FilesystemChecker(state_dir) as checker:
-            if not checker._overlay_locked:
-                if args.force:
-                    print(
-                        f"warning: could not obtain lock on {checkout_path}, but "
-                        f"scanning anyway due to --force "
-                    )
-                else:
-                    print(f"Not checking {checkout_path}: mount is currently in use")
-                    return self.EXIT_SKIPPED
-
-            print(f"Checking {checkout_path}...")
-            checker.scan_for_errors()
-            if not checker.errors:
-                print("  No issues found")
-                return self.EXIT_OK
-
-            num_warnings = 0
-            num_errors = 0
-            for error in checker.errors:
-                self._report_error(args, error)
-                if error.level == fsck_mod.ErrorLevel.WARNING:
-                    num_warnings += 1
-                else:
-                    num_errors += 1
-
-            if num_warnings > 0:
-                print(f"  {num_warnings} warnings")
-            print(f"  {num_errors} errors")
-
-            if args.check_only:
-                print("Not fixing errors: --check-only was specified")
-            elif not checker._overlay_locked:
-                print("Not fixing errors: checkout is currently in use")
-            else:
-                checker.fix_errors()
-
-            if num_errors == 0:
-                return self.EXIT_WARNINGS
-            return self.EXIT_ERRORS
-
-    def _report_error(self, args: argparse.Namespace, error: "fsck_mod.Error") -> None:
-        print(f"{fsck_mod.ErrorLevel.get_label(error.level)}: {error}")
-        if args.verbose:
-            details = error.detailed_description()
-            if details:
-                print("  " + "\n  ".join(details.splitlines()))
+        print(f"Checking {checkout_path}...")
+        overlay_path = state_dir / "local"
+        return subprocess.call(
+            [
+                get_fsck_command(),
+                overlay_path,
+                f"--dry-run={'true' if args.check_only else 'false'}",
+                f"--force={'true' if args.force else 'false'}",
+            ]
+        )
 
 
 @subcmd("gc", "Minimize disk and memory usage by freeing caches")

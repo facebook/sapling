@@ -6,50 +6,68 @@
 
 import abc
 import binascii
-import os
-import stat as stat_mod
+import re
 import struct
+import subprocess
 import typing
 import unittest
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Optional
 
-from eden.fs.cli import fsck as fsck_mod
+from eden.fs.cli import cmd_util
+
 from eden.integration.lib import edenclient, testcase
 from eden.integration.snapshot import snapshot as snapshot_mod, verify as verify_mod
 from eden.integration.snapshot.types.basic import BasicSnapshot
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 
-class ExpectedError(metaclass=abc.ABCMeta):
+class FsckError(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def is_match(self, error: fsck_mod.Error) -> bool:
+    def is_match(self, other) -> bool:
         pass
 
+    @staticmethod
+    def _regex_match(regex: str, line: str) -> bool:
+        return re.search(regex, line) is not None
 
-class MissingMaterializedInode(ExpectedError):
-    def __init__(self, inode_number: int, path: str) -> None:
+
+class MissingMaterializedInode(FsckError):
+    regex = (
+        r"error: missing overlay file for materialized (directory|file) inode [0-9]+"
+    )
+
+    def __init__(self, inode_number: int) -> None:
         super().__init__()
         self.inode_number = inode_number
-        self.path = path
+
+    def is_match(self, other) -> bool:
+        if self.__class__ != other.__class__:
+            return False
+
+        return (self.inode_number) == (other.inode_number)
 
     def __str__(self) -> str:
-        return f"MissingMaterializedInode({self.inode_number}, {self.path!r})"
+        return f"MissingMaterializedInode({self.inode_number})"
 
-    def is_match(self, error: fsck_mod.Error) -> bool:
-        if not isinstance(error, fsck_mod.MissingMaterializedInode):
-            return False
+    @staticmethod
+    def create(line: str) -> "MissingMaterializedInode":
+        match = re.search(MissingMaterializedInode.regex, line)
+        assert match
+        snippet = match.group(0)
+        inode_number = re.findall(r"\d+", snippet)[0]
 
-        if error.child.inode_number != self.inode_number:
-            return False
+        return MissingMaterializedInode(inode_number)
 
-        if error.compute_path() != self.path:
-            return False
-
-        return True
+    @staticmethod
+    def is_instance(line: str) -> bool:
+        return FsckError._regex_match(MissingMaterializedInode.regex, line)
 
 
-class InvalidMaterializedInode(ExpectedError):
+class InvalidMaterializedInode(FsckError):
+
+    regex = r"error: error reading data for inode [0-9]+"
+
     def __init__(
         self, inode_number: int, path: str, parent_inode: int, bad_data: bytes
     ) -> None:
@@ -59,38 +77,67 @@ class InvalidMaterializedInode(ExpectedError):
         self.parent_inode_number = parent_inode
         self.bad_data = bad_data
 
+    def is_match(self, other) -> bool:
+        if self.__class__ != other.__class__:
+            return False
+
+        return (self.inode_number) == (other.inode_number)
+
     def __str__(self) -> str:
-        return f"InvalidMaterializedInode({self.inode_number}, {self.path!r})"
+        return f"InvalidMaterializedInode({self.inode_number})"
 
-    def is_match(self, error: fsck_mod.Error) -> bool:
-        if not isinstance(error, fsck_mod.InvalidMaterializedInode):
-            return False
+    @staticmethod
+    def create(line: str) -> "InvalidMaterializedInode":
+        snippet = re.findall(InvalidMaterializedInode.regex, line)[0]
+        inode_number = re.findall(r"\d+", snippet)[0]
+        path = ""
+        parent_inode_number = 0
+        bad_data = b""
 
-        if error.inode.inode_number != self.inode_number:
-            return False
+        return InvalidMaterializedInode(
+            inode_number, path, parent_inode_number, bad_data
+        )
 
-        err_path = error.inode.compute_path()
-        if err_path != self.path:
-            return False
-
-        return True
+    @staticmethod
+    def is_instance(line: str) -> bool:
+        return FsckError._regex_match(InvalidMaterializedInode.regex, line)
 
 
-class OrphanFile:
+class OrphanFile(FsckError):
+
+    regex = r"error: found orphan file inode [0-9]+"
+
     def __init__(
         self, inode_number: int, file_info: verify_mod.ExpectedFileBase
     ) -> None:
         self.inode_number = inode_number
         self.file_info = file_info
 
+    def is_match(self, other) -> bool:
+        if self.__class__ != other.__class__:
+            return False
+
+        return (self.inode_number) == (other.inode_number)
+
     def __str__(self) -> str:
-        return f"OrphanFile({self.inode_number}, {self.file_info.path!r})"
+        return f"OrphanFile({self.inode_number})"
 
-    def __repr__(self) -> str:
-        return f"OrphanDir({self.inode_number}, {self.file_info!r})"
+    @staticmethod
+    def create(line: str) -> "OrphanFile":
+        snippet = re.findall(OrphanFile.regex, line)[0]
+        inode_number = re.findall(r"\d+", snippet)[0]
+
+        return OrphanFile(inode_number, verify_mod.ExpectedFile("", b""))
+
+    @staticmethod
+    def is_instance(line: str) -> bool:
+        return FsckError._regex_match(OrphanFile.regex, line)
 
 
-class OrphanDir:
+class OrphanDir(FsckError):
+
+    regex = r"error: found orphan directory inode [0-9]+"
+
     def __init__(
         self, inode_number: int, path: str, contents: List[verify_mod.ExpectedFileBase]
     ) -> None:
@@ -98,65 +145,68 @@ class OrphanDir:
         self.path: Path = Path(path)
         self.contents = contents
 
+    def is_match(self, other) -> bool:
+        if self.__class__ != other.__class__:
+            return False
+
+        return (self.inode_number) == (other.inode_number)
+
     def __str__(self) -> str:
-        return f"OrphanDir({self.inode_number}, {self.path!r})"
+        return f"OrphanDir({self.inode_number})"
 
-    def __repr__(self) -> str:
-        return f"OrphanDir({self.inode_number}, {self.path!r}, {self.contents})"
+    @staticmethod
+    def create(line: str) -> "OrphanDir":
+        snippet = re.findall(OrphanDir.regex, line)[0]
+        inode_number = re.findall(r"\d+", snippet)[0]
+
+        return OrphanDir(inode_number, "", [])
+
+    @staticmethod
+    def is_instance(line: str) -> bool:
+        return FsckError._regex_match(OrphanDir.regex, line)
 
 
-class OrphanInodes(ExpectedError):
-    def __init__(self, files: List[OrphanFile], dirs: List[OrphanDir]) -> None:
+class MissingNextInodeNumber(FsckError):
+
+    regex = r"Overlay was shut down uncleanly"
+
+    def __init__(self) -> None:
         super().__init__()
-        self.files = files
-        self.dirs = dirs
+
+    def is_match(self, other) -> bool:
+        return self.__class__ == other.__class__
 
     def __str__(self) -> str:
-        return f"OrphanInodes({self.files}, {self.dirs})"
+        return "MissingNextInodeNumber()"
 
-    def is_match(self, error: fsck_mod.Error) -> bool:
-        if not isinstance(error, fsck_mod.OrphanInodes):
-            return False
+    @staticmethod
+    def create(line: str) -> "MissingNextInodeNumber":
+        return MissingNextInodeNumber()
 
-        expected_orphan_files = {orphan.inode_number for orphan in self.files}
-        actual_orphan_files = {
-            inode_info.inode_number for inode_info in error.orphan_files
-        }
-        if expected_orphan_files != actual_orphan_files:
-            return False
-
-        expected_orphan_dirs = {orphan.inode_number for orphan in self.dirs}
-        actual_orphan_dirs = {
-            inode_info.inode_number for inode_info in error.orphan_directories
-        }
-        if expected_orphan_dirs != actual_orphan_dirs:
-            return False
-
-        return True
+    @staticmethod
+    def is_instance(line: str) -> bool:
+        return FsckError._regex_match(MissingNextInodeNumber.regex, line)
 
 
-class MissingNextInodeNumber(ExpectedError):
-    def __init__(self, next_inode_number: int) -> None:
-        super().__init__()
-        self.next_inode_number = next_inode_number
+class BadNextInodeNumber(FsckError):
 
-    def __str__(self) -> str:
-        return f"MissingNextInodeNumber({self.next_inode_number})"
+    regex = r"error: bad stored next inode number: read [0-9]+ but should be at least [0-9]+"
 
-    def is_match(self, error: fsck_mod.Error) -> bool:
-        if not isinstance(error, fsck_mod.MissingNextInodeNumber):
-            return False
-
-        return error.next_inode_number == self.next_inode_number
-
-
-class BadNextInodeNumber(ExpectedError):
     def __init__(
         self, read_next_inode_number: int, correct_next_inode_number: int
     ) -> None:
         super().__init__()
         self.read_next_inode_number = read_next_inode_number
         self.correct_next_inode_number = correct_next_inode_number
+
+    def is_match(self, other) -> bool:
+        if self.__class__ != other.__class__:
+            return False
+
+        return (self.read_next_inode_number, self.correct_next_inode_number) == (
+            other.read_next_inode_number,
+            other.correct_next_inode_number,
+        )
 
     def __str__(self) -> str:
         return (
@@ -166,29 +216,64 @@ class BadNextInodeNumber(ExpectedError):
             ")"
         )
 
-    def is_match(self, error: fsck_mod.Error) -> bool:
-        if not isinstance(error, fsck_mod.BadNextInodeNumber):
-            return False
+    @staticmethod
+    def create(line: str) -> "BadNextInodeNumber":
+        snippet = re.findall(BadNextInodeNumber.regex, line)[0]
+        next_inode_numbers = re.findall(r"\d+", snippet)
 
-        return (
-            error.read_next_inode_number == self.read_next_inode_number
-            and error.next_inode_number == self.correct_next_inode_number
-        )
+        return BadNextInodeNumber(next_inode_numbers[0], next_inode_numbers[1])
+
+    @staticmethod
+    def is_instance(line: str) -> bool:
+        return FsckError._regex_match(BadNextInodeNumber.regex, line)
 
 
-class CorruptNextInodeNumber(ExpectedError):
-    def __init__(self, next_inode_number: int) -> None:
+class CorruptNextInodeNumber(FsckError):
+
+    regex = r"Failed to read entire inode number\. Only read [0-9]+ bytes\. Full overlay scan required\."
+
+    def __init__(self) -> None:
         super().__init__()
-        self.next_inode_number = next_inode_number
+
+    def is_match(self, other) -> bool:
+        return self.__class__ == other.__class__
 
     def __str__(self) -> str:
-        return f"CorruptNextInodeNumber({self.next_inode_number})"
+        return "CorruptNextInodeNumber()"
 
-    def is_match(self, error: fsck_mod.Error) -> bool:
-        if not isinstance(error, fsck_mod.CorruptNextInodeNumber):
-            return False
+    @staticmethod
+    def create(line: str) -> "CorruptNextInodeNumber":
+        return CorruptNextInodeNumber()
 
-        return error.next_inode_number == self.next_inode_number
+    @staticmethod
+    def is_instance(line: str) -> bool:
+        return FsckError._regex_match(CorruptNextInodeNumber.regex, line)
+
+
+def createFsckError(line: str) -> Optional[FsckError]:
+
+    if MissingMaterializedInode.is_instance(line):
+        return MissingMaterializedInode.create(line)
+
+    if InvalidMaterializedInode.is_instance(line):
+        return InvalidMaterializedInode.create(line)
+
+    if OrphanFile.is_instance(line):
+        return OrphanFile.create(line)
+
+    if OrphanDir.is_instance(line):
+        return OrphanDir.create(line)
+
+    if MissingNextInodeNumber.is_instance(line):
+        return MissingNextInodeNumber.create(line)
+
+    if BadNextInodeNumber.is_instance(line):
+        return BadNextInodeNumber.create(line)
+
+    if CorruptNextInodeNumber.is_instance(line):
+        return CorruptNextInodeNumber.create(line)
+
+    return None
 
 
 @unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
@@ -225,11 +310,26 @@ class SnapshotTestBase(
         if data is not None:
             inode_path.write_bytes(data)
 
-    def _run_fsck(self, expected_errors: Sequence[ExpectedError]) -> Optional[Path]:
-        with fsck_mod.FilesystemChecker(self._checkout_state_dir()) as fsck:
-            fsck.scan_for_errors()
-            self._check_expected_errors(fsck, expected_errors)
-            return fsck.fix_errors()
+    def _run_fsck(self, expected_errors: List[FsckError]) -> None:
+        output = subprocess.check_output(
+            [
+                cmd_util.get_fsck_command(),
+                str(self._overlay_path()),
+            ],
+            stderr=subprocess.STDOUT,
+        )
+
+        actual_errors: List[FsckError] = []
+
+        for line in output.splitlines():
+            print(line.decode())
+            err = createFsckError(line.decode())
+            if err:
+                actual_errors.append(err)
+
+        print(len(actual_errors))
+
+        self._check_expected_errors(actual_errors, expected_errors)
 
     def _verify_contents(self, expected_files: verify_mod.ExpectedFileSet) -> None:
         verifier = verify_mod.SnapshotVerifier()
@@ -242,102 +342,25 @@ class SnapshotTestBase(
                 f"found errors when checking checkout contents: {verifier.errors}"
             )
 
-    def _verify_orphans_extracted(
-        self,
-        log_dir: Path,
-        expected_errors: List[ExpectedError],
-        new_fsck: bool = False,
-    ) -> None:
-        # Build the state that we expect to find in the lost+found directory
-        expected = verify_mod.ExpectedFileSet()
-
-        for error in expected_errors:
-            if isinstance(error, OrphanInodes):
-                self._build_expected_orphans(expected, error, new_fsck)
-            elif isinstance(error, InvalidMaterializedInode):
-                # The Python fsck code extracts broken data files into a separate
-                # "broken_inodes" subdirectory, but the newer C++ logic puts everything
-                # into the single "lost+found" directory.
-                if new_fsck:
-                    extracted_path = os.path.join(
-                        str(error.parent_inode_number), os.path.basename(error.path)
-                    )
-                    expected.add_file(extracted_path, error.bad_data, perms=0o644)
-
-        verifier = verify_mod.SnapshotVerifier()
-        verifier.verify_directory(log_dir / "lost+found", expected)
-        if verifier.errors:
-            self.fail(
-                f"found errors when checking extracted orphan inodes: "
-                f"{verifier.errors}"
-            )
-
-    def _build_expected_orphans(
-        self,
-        expected: verify_mod.ExpectedFileSet,
-        orphan_errors: OrphanInodes,
-        new_fsck: bool,
-    ) -> None:
-        # All of the orphan files should be extracted as regular files using their inode
-        # number as the path.  We cannot tell if the inodes were originally regular
-        # files, symlinks, or sockets, so everything just gets extracted as a regular
-        # file.
-        for orphan_file in orphan_errors.files:
-            expected.add_file(
-                str(orphan_file.inode_number),
-                orphan_file.file_info.contents,
-                perms=0o600,
-            )
-
-        # All of the orphan directories will be extracted as directories.
-        # For their contents we know file types but not permissions.
-        for orphan_dir in orphan_errors.dirs:
-            dir_inode = Path(str(orphan_dir.inode_number))
-            for expected_file in orphan_dir.contents:
-                orphan_path = dir_inode / expected_file.path.relative_to(
-                    orphan_dir.path
-                )
-                if expected_file.file_type == stat_mod.S_IFSOCK:
-                    if new_fsck:
-                        expected.add_file(
-                            orphan_path, expected_file.contents, perms=0o600
-                        )
-                    else:
-                        # The Python fsck code does not extract anything but regular
-                        # files and symlinks, so sockets do not get extracted.
-                        continue
-                elif expected_file.file_type == stat_mod.S_IFLNK:
-                    expected.add_symlink(
-                        orphan_path, expected_file.contents, perms=0o777
-                    )
-                elif expected_file.file_type == stat_mod.S_IFREG:
-                    expected.add_file(orphan_path, expected_file.contents, perms=0o600)
-                else:
-                    raise Exception("unknown file type for expected orphan inode")
-
     def _check_expected_errors(
-        self, fsck: fsck_mod.FilesystemChecker, expected_errors: Sequence[ExpectedError]
+        self, actual_errors: List[FsckError], expected_errors: List[FsckError]
     ) -> None:
-        remaining_expected = list(expected_errors)
-        unexpected_errors: List[fsck_mod.Error] = []
-        for found_error in fsck.errors:
-            for expected_idx, expected in enumerate(remaining_expected):
-                if expected.is_match(found_error):
-                    del remaining_expected[expected_idx]
-                    break
-            else:
-                unexpected_errors.append(found_error)
 
-        errors = []
-        if unexpected_errors:
-            err_list = "  \n".join(str(err) for err in unexpected_errors)
-            errors.append(f"unexpected fsck errors reported:\n  {err_list}")
-        if remaining_expected:
-            err_list = "  \n".join(str(err) for err in remaining_expected)
-            errors.append(f"did not find all expected fsck errors:\n  {err_list}")
+        actual_errors_str = sorted([str(x) for x in actual_errors])
+        expected_errors_str = sorted([str(x) for x in expected_errors])
 
-        if errors:
-            self.fail("\n".join(errors))
+        if actual_errors_str == expected_errors_str:
+            return
+
+        error = ""
+        if len(actual_errors_str) > len(expected_errors_str):
+            err_list = "  \n".join(set(actual_errors_str) - set(expected_errors_str))
+            error = f"unexpected fsck errors reported:\n  {err_list}"
+        else:
+            err_list = "  \n".join(set(expected_errors_str) - set(actual_errors_str))
+            error = f"did not find all expected fsck errors:\n  {err_list}"
+
+        self.fail(error)
 
 
 @testcase.eden_test
@@ -345,12 +368,15 @@ class Basic20210712Test(SnapshotTestBase):
     def get_snapshot_path(self) -> Path:
         return snapshot_mod.get_snapshots_root() / "basic-20210712.tar.xz"
 
-    def _verify_fsck_and_get_log_dir(
+    def get_fsck_log_dirs(self) -> List[Path]:
+        return list((self._overlay_path().parent / "fsck").iterdir())
+
+    def _verify_fsck(
         self,
         expected_files: verify_mod.ExpectedFileSet,
-        expected_errors: List[ExpectedError],
+        expected_errors: List[FsckError],
         auto_fsck: bool,
-    ) -> Path:
+    ) -> None:
         if auto_fsck:
             # Remove the next-inode-number file so that edenfs will
             # automatically peform an fsck run when mounting this checkout.
@@ -360,20 +386,15 @@ class Basic20210712Test(SnapshotTestBase):
             # Now call _verify_contents() without ever running fsck.
             # edenfs should automatically perform the fsck steps.
             self._verify_contents(expected_files)
-            log_dirs = list((self._overlay_path().parent / "fsck").iterdir())
+            log_dirs = self.get_fsck_log_dirs()
             if len(log_dirs) != 1:
                 raise Exception(
                     f"unable to find fsck log directory: candidates are {log_dirs!r}"
                 )
-            return log_dirs[0]
-
-        # manual fsck
-        log_dir = self._run_fsck(expected_errors)
-        assert log_dir is not None
-        self._run_fsck([])
-        self._verify_contents(expected_files)
-
-        return log_dir
+        else:
+            # manual fsck
+            self._run_fsck(expected_errors)
+            self._verify_contents(expected_files)
 
     def test_untracked_file_removed(self) -> None:
         self._test_file_corrupted(None)
@@ -389,9 +410,9 @@ class Basic20210712Test(SnapshotTestBase):
         path = "untracked/new/normal2.txt"
         self._replace_overlay_inode(inode_number, data)
 
-        expected_errors: List[ExpectedError] = []
+        expected_errors: List[FsckError] = []
         if data is None:
-            expected_errors.append(MissingMaterializedInode(inode_number, path))
+            expected_errors.append(MissingMaterializedInode(inode_number))
         else:
             expected_errors.append(
                 InvalidMaterializedInode(
@@ -401,7 +422,7 @@ class Basic20210712Test(SnapshotTestBase):
         repaired_files = self.snapshot.get_expected_files()
         repaired_files.set_file(path, b"", perms=0o644)
 
-        self._verify_fsck_and_get_log_dir(
+        self._verify_fsck(
             expected_files=repaired_files,
             expected_errors=expected_errors,
             auto_fsck=False,
@@ -450,9 +471,9 @@ class Basic20210712Test(SnapshotTestBase):
         inode_number = 49  # untracked/
         self._replace_overlay_inode(inode_number, data)
 
-        expected_errors: List[ExpectedError] = []
+        expected_errors: List[FsckError] = []
         if data is None:
-            expected_errors.append(MissingMaterializedInode(inode_number, "untracked"))
+            expected_errors.append(MissingMaterializedInode(inode_number))
         else:
             expected_errors.append(
                 InvalidMaterializedInode(
@@ -478,20 +499,19 @@ class Basic20210712Test(SnapshotTestBase):
                 ],
             )
         ]
-        expected_errors.append(OrphanInodes(orphan_files, orphan_dirs))
+        expected_errors.extend(orphan_files + orphan_dirs)
 
-        log_dir = self._verify_fsck_and_get_log_dir(
+        self._verify_fsck(
             expected_files=repaired_files,
             expected_errors=expected_errors,
             auto_fsck=auto_fsck,
         )
-        self._verify_orphans_extracted(log_dir, expected_errors, new_fsck=auto_fsck)
 
     def _test_truncate_main_dir(self, auto_fsck: bool) -> None:
         # inode 4 is main/
         bad_main_data = b""
         self._replace_overlay_inode(4, bad_main_data)
-        expected_errors: List[ExpectedError] = [
+        expected_errors: List[FsckError] = [
             InvalidMaterializedInode(4, "main", parent_inode=1, bad_data=bad_main_data)
         ]
 
@@ -528,7 +548,7 @@ class Basic20210712Test(SnapshotTestBase):
                 [repaired_files.pop("main/untracked_dir/foo.txt")],
             ),
         ]
-        expected_errors.append(OrphanInodes(orphan_files, orphan_dirs))
+        expected_errors.extend(orphan_files + orphan_dirs)
 
         # The following files are inside the corrupt directory, but they were never
         # materialized and so their contents will not be extracted into lost+found.
@@ -541,12 +561,11 @@ class Basic20210712Test(SnapshotTestBase):
         del repaired_files["main/loaded_dir/loaded_subdir/dir2/file2.txt"]
         del repaired_files["main/materialized_subdir/unmodified.txt"]
 
-        log_dir = self._verify_fsck_and_get_log_dir(
+        self._verify_fsck(
             expected_files=repaired_files,
             expected_errors=expected_errors,
             auto_fsck=auto_fsck,
         )
-        self._verify_orphans_extracted(log_dir, expected_errors, new_fsck=auto_fsck)
 
     def test_main_dir_truncated(self) -> None:
         self._test_truncate_main_dir(auto_fsck=False)
@@ -561,9 +580,7 @@ class Basic20210712Test(SnapshotTestBase):
         return struct.pack("<Q", inode_number)
 
     def test_missing_next_inode_number(self) -> None:
-        self._test_bad_next_inode_number(
-            None, MissingNextInodeNumber(self._next_inode_number)
-        )
+        self._test_bad_next_inode_number(None, [MissingNextInodeNumber()])
 
         # Start eden and verify the checkout looks correct.
         # This is relatively slow, compared to running fsck itself, so we only do
@@ -575,13 +592,13 @@ class Basic20210712Test(SnapshotTestBase):
         # Test replacing the next inode number file with a value too small by 0
         self._test_bad_next_inode_number(
             self._compute_next_inode_data(self._next_inode_number - 1),
-            BadNextInodeNumber(self._next_inode_number - 1, self._next_inode_number),
+            [BadNextInodeNumber(self._next_inode_number - 1, self._next_inode_number)],
         )
 
         # Test replacing the next inode number file with a much smaller value
         self._test_bad_next_inode_number(
             self._compute_next_inode_data(10),
-            BadNextInodeNumber(10, self._next_inode_number),
+            [BadNextInodeNumber(10, self._next_inode_number)],
         )
 
         # Replacing the next inode number file with a larger value should not
@@ -592,15 +609,11 @@ class Basic20210712Test(SnapshotTestBase):
 
     def test_corrupt_next_inode_number(self) -> None:
         self._test_bad_next_inode_number(
-            b"abc", CorruptNextInodeNumber(self._next_inode_number)
-        )
-        self._test_bad_next_inode_number(
-            b"asdfasdfasdfasdfasdfasdfasdf",
-            CorruptNextInodeNumber(self._next_inode_number),
+            b"abc", [CorruptNextInodeNumber(), MissingNextInodeNumber()]
         )
 
     def _test_bad_next_inode_number(
-        self, next_inode_data: Optional[bytes], expected_error: ExpectedError
+        self, next_inode_data: Optional[bytes], expected_errors: List[FsckError]
     ) -> None:
         next_inode_path = self._overlay_path() / "next-inode-number"
 
@@ -609,8 +622,7 @@ class Basic20210712Test(SnapshotTestBase):
         else:
             next_inode_path.write_bytes(next_inode_data)
 
-        log_dir = self._run_fsck([expected_error])
-        assert log_dir is not None
+        self._run_fsck(expected_errors)
 
         # Verify the contents of the next-inode-number file now
         new_data = next_inode_path.read_bytes()

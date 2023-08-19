@@ -63,3 +63,10 @@ def prompt_confirmation(prompt: str) -> bool:
         if value in ("", "n", "no"):
             return False
         print('Please enter "yes" or "no"')
+
+
+def get_fsck_command() -> Path:
+    try:
+        return Path(os.environ["EDENFS_FSCK"])
+    except KeyError:
+        return Path("/usr/local/libexec/eden/eden_fsck")

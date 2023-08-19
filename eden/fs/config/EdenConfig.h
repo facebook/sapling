@@ -1227,14 +1227,6 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> multiThreadedFsck{"fsck:multi-threaded", true, this};
 
-  /**
-   * Should `eden fsck` use the Python or C++ implementation
-   */
-  ConfigSetting<bool> useCppImplementation{
-      "fsck:use-cpp-implementation",
-      false,
-      this};
-
   // [glob]
 
   /**
