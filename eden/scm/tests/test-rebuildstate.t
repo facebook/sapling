@@ -1,7 +1,5 @@
 #debugruntest-compatible
 
-  $ setconfig workingcopy.ruststatus=false
-
   $ eagerepo
   $ newext adddrop <<EOF
   > from edenscm import registrar

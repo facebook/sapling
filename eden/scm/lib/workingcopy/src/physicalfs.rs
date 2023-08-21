@@ -32,9 +32,10 @@ use crate::filechangedetector::ResolvedFileChangeResult;
 use crate::filesystem::PendingChange;
 use crate::filesystem::PendingChanges as PendingChangesTrait;
 use crate::metadata;
-use crate::metadata::HgModifiedTime;
+use crate::metadata::Metadata;
 use crate::util::dirstate_write_time_override;
 use crate::util::maybe_flush_treestate;
+use crate::util::update_filestate_from_fs_meta;
 use crate::walker::WalkEntry;
 use crate::walker::Walker;
 use crate::workingcopy::WorkingCopy;
@@ -109,7 +110,7 @@ impl PendingChangesTrait for PhysicalFileSystem {
             tree_iter: None,
             lookup_iter: None,
             file_change_detector: Some(file_change_detector),
-            update_mtime: Vec::new(),
+            update_ts: Vec::new(),
             locker: self.locker.clone(),
             dirstate_write_time: dirstate_write_time_override(config),
             vfs: self.vfs.clone(),
@@ -129,7 +130,7 @@ pub struct PendingChanges<M: Matcher + Clone + Send + Sync + 'static> {
     tree_iter: Option<Box<dyn Iterator<Item = Result<PendingChange>> + Send>>,
     lookup_iter: Option<Box<dyn Iterator<Item = Result<ResolvedFileChangeResult>> + Send>>,
     file_change_detector: Option<FileChangeDetector>,
-    update_mtime: Vec<(RepoPathBuf, HgModifiedTime)>,
+    update_ts: Vec<(RepoPathBuf, Metadata)>,
     locker: Arc<RepoLocker>,
     dirstate_write_time: Option<i64>,
     vfs: VFS,
@@ -308,8 +309,8 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                     return Some(Ok(change_type));
                 }
                 Ok(ResolvedFileChangeResult::No((path, fs_meta))) => {
-                    if let Some(mtime) = fs_meta.and_then(|m| m.mtime()) {
-                        self.update_mtime.push((path, mtime));
+                    if let Some(fs_meta) = fs_meta {
+                        self.update_ts.push((path, fs_meta));
                     }
                     continue;
                 }
@@ -353,13 +354,12 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
         let mut ts = self.treestate.lock();
         let was_dirty = ts.dirty();
 
-        for (path, mtime) in self.update_mtime.drain(..) {
+        // If file came back clean, update dirstate entry with current mtime and/or size.
+        for (path, fs_meta) in self.update_ts.drain(..) {
             if let Some(state) = ts.get(&path)? {
-                if let Ok(mtime) = mtime.try_into() {
-                    let mut state = state.clone();
-                    state.mtime = mtime;
-                    ts.insert(&path, &state)?;
-                }
+                let mut state = state.clone();
+                update_filestate_from_fs_meta(&mut state, &fs_meta);
+                ts.insert(&path, &state)?;
             }
         }
 

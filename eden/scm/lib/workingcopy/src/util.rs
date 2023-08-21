@@ -22,6 +22,8 @@ use types::path::ParseError;
 use types::RepoPath;
 use types::RepoPathBuf;
 
+use crate::metadata::Metadata;
+
 /// Walk the TreeState, calling the callback for files that have all flags in [`state_all`]
 /// and none of the flags in [`state_none`]. Returns errors parsing invalid paths, if any.
 pub fn walk_treestate(
@@ -117,5 +119,21 @@ pub(crate) fn maybe_flush_treestate(
             // Check error
             _ => Err(e),
         },
+    }
+}
+
+pub(crate) fn update_filestate_from_fs_meta(state: &mut FileStateV2, fs_meta: &Metadata) {
+    if let Some(mtime) = fs_meta.mtime() {
+        if let Ok(mtime) = mtime.try_into() {
+            state.mtime = mtime;
+        }
+    }
+
+    if let Some(size) = fs_meta.len() {
+        if let Ok(size) = size.try_into() {
+            state.size = size;
+        }
+
+        state.mode = fs_meta.mode();
     }
 }

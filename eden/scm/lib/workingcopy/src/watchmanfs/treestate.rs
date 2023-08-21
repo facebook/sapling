@@ -18,6 +18,7 @@ use types::RepoPathBuf;
 use watchman_client::prelude::*;
 
 use crate::metadata::Metadata;
+use crate::util::update_filestate_from_fs_meta;
 use crate::util::walk_treestate;
 
 pub(crate) fn mark_needs_check(ts: &mut TreeState, path: &RepoPathBuf) -> Result<bool> {
@@ -71,10 +72,8 @@ pub(crate) fn clear_needs_check(
             ..filestate
         };
 
-        if let Some(mtime) = fs_meta.and_then(|m| m.mtime()) {
-            if let Ok(mtime) = mtime.try_into() {
-                filestate.mtime = mtime;
-            }
+        if let Some(fs_meta) = &fs_meta {
+            update_filestate_from_fs_meta(&mut filestate, fs_meta);
         }
 
         if filestate.state.is_empty() {
