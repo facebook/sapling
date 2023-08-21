@@ -456,9 +456,13 @@ impl TreeState {
     // "mtime = -1" statement.
     pub fn invalidate_mtime(&mut self, now: i32) -> Result<()> {
         self.visit(
-            &mut |_, state| {
+            &mut |path, state| {
                 if state.mtime >= now {
                     state.mtime = -1;
+                    tracing::trace!(
+                        "invalidate_mtime setting NEED_CHECK for {}",
+                        util::utf8::escape_non_utf8(&path.concat())
+                    );
                     state.state |= StateFlags::NEED_CHECK;
                     Ok(VisitorResult::Changed)
                 } else {

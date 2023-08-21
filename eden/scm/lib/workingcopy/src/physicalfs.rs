@@ -357,7 +357,15 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
         // If file came back clean, update dirstate entry with current mtime and/or size.
         for (path, fs_meta) in self.update_ts.drain(..) {
             if let Some(state) = ts.get(&path)? {
+                tracing::trace!(%path, "updating treestate metadata");
+
                 let mut state = state.clone();
+
+                // We don't set NEED_CHECK since we check all files every time.
+                // However, unset it anyway in case someone else set it
+                // (otherwise files get stuck NEED_CHECK).
+                state.state -= StateFlags::NEED_CHECK;
+
                 update_filestate_from_fs_meta(&mut state, &fs_meta);
                 ts.insert(&path, &state)?;
             }

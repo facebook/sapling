@@ -562,7 +562,10 @@ pub(crate) fn detect_changes(
                 }
             }
             Ok(ResolvedFileChangeResult::No((path, fs_meta))) => {
-                if ts_need_check.contains(&path) {
+                // File is clean. Update treestate entry if it was marked
+                // NEED_CHECK, or if we have fs_meta which implies treestate
+                // metadata (e.g. mtime, size, etc.) is out of date.
+                if ts_need_check.contains(&path) || fs_meta.is_some() {
                     needs_clear.push((path, fs_meta));
                 }
             }
