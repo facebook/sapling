@@ -473,7 +473,8 @@ void TestMount::remount() {
       serverState_,
       std::move(journal),
       stats_.copy(),
-      kDefaultInodeCatalogType);
+      kDefaultInodeCatalogType,
+      kDefaultInodeCatalogOptions);
   initializeEdenMount();
 }
 
@@ -521,7 +522,9 @@ void TestMount::remountGracefully() {
       blobCache_,
       serverState_,
       std::move(journal),
-      stats_.copy());
+      stats_.copy(),
+      kDefaultInodeCatalogType,
+      kDefaultInodeCatalogOptions);
   edenMount_
       ->initialize(
           [](auto) {},
