@@ -282,6 +282,7 @@ members = [
   "git/git_types",
   "git/git_types/if",
   "git/git_types/if/types",
+  "git/gitexport",
   "git/gitimport",
   "git/import_direct",
   "git/import_tools",
