@@ -948,15 +948,9 @@ class dirstate(object):
                 files.append(fullpath)
         return files
 
-    class FallbackToPythonStatus(Exception):
-        pass
-
     def _ruststatus(
         self, match: matchmod.basematcher, ignored: bool, clean: bool, unknown: bool
     ) -> "scmutil.status":
-        if ignored and not self._ui.configbool("devel", "rust-status-ignored"):
-            raise self.FallbackToPythonStatus
-
         status = self._repo._rsrepo.workingcopy().status(
             match, self._lastnormaltime, bool(ignored), self._ui._rcfg
         )
@@ -985,10 +979,7 @@ class dirstate(object):
         dirstate and return a scmutil.status.
         """
         if self._ui.configbool("workingcopy", "ruststatus"):
-            try:
-                return self._ruststatus(match, ignored, clean, unknown)
-            except self.FallbackToPythonStatus:
-                pass
+            return self._ruststatus(match, ignored, clean, unknown)
 
         wctx = self._repo[None]
         # Prime the wctx._parents cache so the parent doesn't change out from

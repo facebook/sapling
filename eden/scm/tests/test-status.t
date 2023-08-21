@@ -16,8 +16,6 @@
   $ setconfig scmstore.status=true
 #endif
 
-  $ setconfig devel.rust-status-ignored=true
-
   $ configure modernclient
   $ newclientrepo repo1
   $ mkdir a b a/1 b/1 b/2

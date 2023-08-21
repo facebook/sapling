@@ -73,16 +73,6 @@ class StatusTest(EdenHgTestCase):
         self.touch("ignore_me")
         self.assert_status({"ignore_me": "I"})
 
-        # Set some flags so we use Rust status.
-        self.hg(
-            "config",
-            "--local",
-            "devel.rust-status-ignored=true",
-            "workingcopy.use-rust=true",
-            "workingcopy.ruststatus=true",
-        )
-        self.assert_status({"ignore_me": "I"})
-
     def thoroughly_get_scm_status(
         self, client, mountPoint, commit, listIgnored, expected_status
     ) -> None:

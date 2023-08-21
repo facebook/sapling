@@ -109,10 +109,6 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         || !ctx.opts.change.is_empty()
         || !ctx.opts.terse.is_empty()
         || !rev_check
-        || (ctx.opts.ignored
-            && !repo
-                .config()
-                .get_or_default("devel", "rust-status-ignored")?)
         || ctx.opts.clean
     {
         tracing::debug!(target: "status_info", status_detail="unsupported_args");

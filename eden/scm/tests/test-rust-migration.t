@@ -15,5 +15,5 @@ Test failed fallback
   $ hg addremove
   adding something
   $ hg commit -m "Added something"
-  $ hg --config commands.force-rust=status st -i
+  $ hg --config commands.force-rust=status st 'set:added()'
   [197]
