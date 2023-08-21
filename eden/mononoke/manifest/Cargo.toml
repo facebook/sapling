@@ -20,8 +20,8 @@ futures = { version = "0.3.28", features = ["async-await", "compat"] }
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 nonzero_ext = "0.2"
-serde = { version = "1.0.176", features = ["derive", "rc"] }
-serde_derive = "1.0.176"
+serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde_derive = "1.0.185"
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]

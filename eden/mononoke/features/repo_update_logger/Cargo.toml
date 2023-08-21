@@ -28,8 +28,8 @@ phases = { version = "0.1.0", path = "../../phases" }
 regex = "1.9.2"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
-serde = { version = "1.0.176", features = ["derive", "rc"] }
-serde_derive = "1.0.176"
+serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde_derive = "1.0.185"
 
 [dev-dependencies]
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }

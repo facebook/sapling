@@ -27,7 +27,7 @@ http-client = { version = "0.1.0", path = "../../http-client", optional = true }
 identity = { version = "0.1.0", path = "../../identity" }
 minibytes = { version = "0.1.0", path = "../../minibytes" }
 regex = { version = "1.9.2", optional = true }
-serde = { version = "1.0.176", features = ["derive", "rc"], optional = true }
+serde = { version = "1.0.185", features = ["derive", "rc"], optional = true }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"], optional = true }
 serde_urlencoded = { version = "0.7", optional = true }
 sha2 = { version = "0.10.6", optional = true }

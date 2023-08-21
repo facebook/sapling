@@ -9,7 +9,7 @@ license = "MIT"
 [dependencies]
 bitflags = "1.3"
 itertools = "0.10.3"
-serde = { version = "1.0.176", features = ["derive", "rc"], optional = true }
+serde = { version = "1.0.185", features = ["derive", "rc"], optional = true }
 
 [dev-dependencies]
 dag = { version = "0.1.0", path = "../dag", default-features = false }

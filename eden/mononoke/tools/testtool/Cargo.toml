@@ -33,8 +33,8 @@ mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
-serde = { version = "1.0.176", features = ["derive", "rc"] }
-serde_derive = "1.0.176"
+serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde_derive = "1.0.185"
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }

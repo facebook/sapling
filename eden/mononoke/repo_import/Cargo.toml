@@ -56,7 +56,7 @@ repo_cross_repo = { version = "0.1.0", path = "../repo_attributes/repo_cross_rep
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
-serde = { version = "1.0.176", features = ["derive", "rc"] }
+serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }

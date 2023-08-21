@@ -14,8 +14,8 @@ anyhow = "1.0.71"
 byteorder = "1.3"
 quickcheck = "1.0"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-serde = { version = "1.0.176", features = ["derive", "rc"] }
-serde_derive = "1.0.176"
+serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde_derive = "1.0.185"
 
 [features]
 default = ["for-tests"]

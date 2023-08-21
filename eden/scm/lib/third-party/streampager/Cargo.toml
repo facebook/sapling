@@ -20,7 +20,7 @@ lru = "0.10.0"
 memmap2 = "0.5.10"
 regex = "1.9.2"
 scopeguard = "1.0.0"
-serde = { version = "1.0.176", features = ["derive", "rc"] }
+serde = { version = "1.0.185", features = ["derive", "rc"] }
 smallvec = { version = "1.6.1", default-features = false }
 tempfile = "3.5"
 terminfo = "0.7"

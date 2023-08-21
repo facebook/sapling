@@ -31,7 +31,7 @@ regex = "1.9.2"
 reqwest = { version = "0.11.18", features = ["blocking", "cookies", "json", "multipart", "native-tls", "rustls-tls", "rustls-tls-native-roots", "stream"] }
 reqwest-eventsource = "0.4.0"
 rust-ini = { version = "0.17", features = ["inline-comment"] }
-serde = { version = "1.0.176", features = ["derive", "rc"] }
+serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 thiserror = "1.0.43"
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }

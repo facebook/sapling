@@ -16,10 +16,10 @@ indexedlog = { version = "0.1.0", path = "../indexedlog" }
 lazy_static = "1.4"
 libc = "0.2.139"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
-serde = { version = "1.0.176", features = ["derive", "rc"] }
+serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_alt = { version = "0.1.0", path = "serde_alt" }
 serde_cbor = "0.11"
-serde_derive = "1.0.176"
+serde_derive = "1.0.185"
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 
 [dev-dependencies]

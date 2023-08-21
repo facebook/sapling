@@ -20,7 +20,7 @@ nonzero_ext = "0.2"
 regex = "1.9.2"
 repo_name = { version = "0.1.0", path = "../../../scm/lib/repo_name" }
 repos = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/repos" }
-serde = { version = "1.0.176", features = ["derive", "rc"] }
+serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_ignored = "0.1.8"
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 thiserror = "1.0.43"

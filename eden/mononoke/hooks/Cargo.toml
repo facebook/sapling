@@ -41,8 +41,8 @@ permission_checker = { version = "0.1.0", path = "../permission_checker" }
 regex = "1.9.2"
 scuba = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
-serde = { version = "1.0.176", features = ["derive", "rc"] }
-serde_derive = "1.0.176"
+serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde_derive = "1.0.185"
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

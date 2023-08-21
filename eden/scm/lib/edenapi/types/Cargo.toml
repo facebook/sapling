@@ -17,9 +17,9 @@ paste = "1.0.13"
 quickcheck = "1.0"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 revisionstore_types = { version = "0.1.0", path = "../../revisionstore/types" }
-serde = { version = "1.0.176", features = ["derive", "rc"] }
+serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_bytes = "0.11"
-serde_derive = "1.0.176"
+serde_derive = "1.0.185"
 thiserror = "1.0.43"
 type_macros = { version = "0.1.0", path = "proc_macros" }
 types = { version = "0.1.0", path = "../../types" }
