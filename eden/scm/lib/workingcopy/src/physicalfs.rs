@@ -159,7 +159,10 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
         loop {
             match self.walker.next() {
                 Some(Ok(WalkEntry::File(mut path, metadata))) => {
+                    tracing::trace!(%path, "found file");
+
                     if self.include_ignored && self.ignore_matcher.matches_file(&path)? {
+                        tracing::trace!(%path, "ignored");
                         return Ok(Some(PendingChange::Ignored(path)));
                     }
 
@@ -169,13 +172,22 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                     // duplicate paths with different case can be detected in
                     // the seen set, but only if the dirstate entry hasn't been
                     // deleted.
-                    let (normalized, ts_state) = ts.normalize_path_and_get(path.as_ref())?;
-                    if normalized != path.as_byte_slice()
-                        && ts_state
+                    let (normalized, mut ts_state) = ts.normalize_path_and_get(path.as_ref())?;
+                    if normalized != path.as_byte_slice() {
+                        let normalized = RepoPathBuf::from_utf8(normalized.into_owned())?;
+
+                        if ts_state
                             .as_ref()
                             .map_or(false, |s| s.state.intersects(StateFlags::EXIST_NEXT))
-                    {
-                        path = RepoPathBuf::from_utf8(normalized.into_owned())?;
+                        {
+                            tracing::trace!(%path, %normalized, "normalizing path based in dirstate");
+                            path = normalized;
+                        } else {
+                            tracing::trace!(%path, %normalized, "not normalizing because !EXIST_NEXT");
+                            // We aren staying separate from normalized, so we mustn't use
+                            // it's tree state entry.
+                            ts_state = ts.get(&path)?.cloned();
+                        }
                     }
                     self.seen.insert(path.clone());
                     let changed = self
@@ -223,32 +235,39 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
         tracked
             .into_iter()
             .filter_map(|mut path| {
+                tracing::trace!(%path, "tree path");
+
                 let normalized = match ts.normalize_path(path.as_ref()) {
                     Ok(path) => path,
                     Err(e) => return Some(Err(e)),
                 };
                 if normalized != path.as_byte_slice() {
-                    path = match RepoPathBuf::from_utf8(normalized.into_owned()) {
+                    let normalized = match RepoPathBuf::from_utf8(normalized.into_owned()) {
                         Ok(path) => path,
                         Err(e) => return Some(Err(e.into())),
                     };
+                    tracing::trace!(%path, %normalized, "normalized tree path");
+                    path = normalized;
                 }
 
                 // Skip this path if we've seen it or it doesn't match the matcher.
                 if self.seen.contains(&path) {
-                    return None;
+                    tracing::trace!(%path, "tree path seen");
+                    None
                 } else {
                     match self.matcher.matches_file(&path) {
-                        Err(e) => {
-                            return Some(Err(e));
+                        Err(e) => Some(Err(e)),
+                        Ok(false) => {
+                            tracing::trace!(%path, "tree path doesn't match");
+                            None
                         }
-                        Ok(false) => return None,
-                        Ok(true) => {}
+                        // This path is EXIST_P1 but not on disk - emit deleted event.
+                        Ok(true) => {
+                            tracing::trace!(%path, "tree path deleted");
+                            Some(Ok(PendingChange::Deleted(path.to_owned())))
+                        }
                     }
                 }
-
-                // This path is EXIST_P1 but not on disk - emit deleted event.
-                Some(Ok(PendingChange::Deleted(path.to_owned())))
             })
             .collect()
     }

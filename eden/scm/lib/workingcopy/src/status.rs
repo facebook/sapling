@@ -108,7 +108,12 @@ pub fn compute_status(
         };
 
         let mut treestate = treestate.lock();
-        match treestate.normalized_get(&path)? {
+
+        // Don't use normalized_get since we need to support statuses like:
+        //   $ sl status
+        //   R foo
+        //   ? FOO
+        match treestate.get(&path)? {
             Some(state) => {
                 let exist_parent = state
                     .state
