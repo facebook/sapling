@@ -230,6 +230,7 @@ impl SqlDeletionLog {
             .await?;
         let (in_target_state, not_in_target_state): (Vec<_>, Vec<_>) = rows
             .into_iter()
+            .filter(|(cs_id, blob, _)| cs_to_blobs.contains(&(*cs_id, blob.clone())))
             .partition(|(_, _, stage)| *stage == to_stage);
         if blobs_count == in_target_state.len() {
             return Ok(0);
