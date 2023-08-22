@@ -202,8 +202,10 @@ This avoids same-second race condition that leaves files as NEED_CHECK.
 Make sure files are _not_ NEED_CHECK and have metadata. This is the tricky
 case for "status" to detect the new symlink.
   $ hg debugtree list
-  a/b/c/demo: 01207* 23 + EXIST_P1 EXIST_NEXT  (glob)
-  foo/a: 0100644 0 + EXIST_P1 EXIST_NEXT 
+  a/b/c/demo: 01207* 23 + EXIST_P1 EXIST_NEXT  (glob) (no-windows !)
+  a/b/c/demo: 0120666 0 + EXIST_P1 EXIST_NEXT  (windows !)
+  foo/a: 0100644 0 + EXIST_P1 EXIST_NEXT  (no-windows !)
+  foo/a: 0100666 0 + EXIST_P1 EXIST_NEXT  (windows !)
 #endif
 
   $ mv foo bar
