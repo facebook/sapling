@@ -130,6 +130,7 @@ pub fn symlink_file(src: &Path, dst: &Path) -> io::Result<()> {
 pub fn symlink_dir(src: &Path, dst: &Path) -> io::Result<()> {
     #[cfg(windows)]
     return std::os::windows::fs::symlink_dir(src, dst);
+    #[cfg(not(windows))]
     symlink_file(src, dst)
 }
 
@@ -227,7 +228,8 @@ pub fn normalize(path: &Path) -> PathBuf {
 /// Given cwd, return `path` relative to `root`, or None if `path` is not under `root`.
 /// This is analagous to pathutil.canonpath() in Python.
 pub fn root_relative_path(root: &Path, cwd: &Path, path: &Path) -> IOResult<Option<PathBuf>> {
-    // Make `path` absolute. I'm not sure why `root` is included - maybe in case `cwd` is empty?
+    // Make `path` absolute. I'm not sure why `root` is included.
+    // Maybe in case `cwd` is empty? Or to allow root-relative `cwd`?
     let path = normalize(&root.join(cwd).join(path));
 
     // Handle easy case when `path` lexically starts w/ `root`.

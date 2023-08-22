@@ -15,7 +15,7 @@ use crate::error::Error;
 use crate::expand_curly_brackets;
 use crate::normalize_glob;
 use crate::plain_to_glob;
-use crate::utils::contains_glob_operator;
+use crate::utils::first_glob_operator_index;
 use crate::utils::make_glob_recursive;
 
 #[derive(Debug, PartialEq, Copy, Clone, Hash, Eq)]
@@ -319,19 +319,28 @@ where
 
 // Extract "exact" file path from pattern. This is only appropriate to call at a
 // particular moment during pattern normalization (see callsite).
-fn exact_file(kind: PatternKind, pat: &str) -> Result<Option<RepoPathBuf>> {
-    if (kind.is_path() || (kind.is_glob() && !contains_glob_operator(&pat)))
-        // rootfilesin only specifies a directory, not an file
+fn exact_file(kind: PatternKind, mut pat: &str) -> Result<Option<RepoPathBuf>> {
+    if (kind.is_path() || kind.is_glob())
+        // rootfilesin only specifies a directory, not a file
         && kind != PatternKind::RootFilesIn
         // exclude free patterns (relglob)
         && !kind.is_free()
-        // you can't have a file with no name
-        && !pat.is_empty()
     {
-        Ok(Some(RepoPathBuf::from_string(pat.to_string())?))
-    } else {
-        Ok(None)
+        if kind.is_glob() {
+            // Trim to longest path prefix without glob operator.
+            if let Some(op_idx) = first_glob_operator_index(pat) {
+                let slash_idx = pat[..op_idx].rfind('/').unwrap_or(0);
+                pat = &pat[..slash_idx];
+            }
+        }
+
+        // you can't have a file with no name
+        if !pat.is_empty() {
+            return Ok(Some(RepoPathBuf::from_string(pat.to_string())?));
+        }
     }
+
+    Ok(None)
 }
 
 /// A wrapper of `util::path::normalize` function by adding path separator conversion,
@@ -494,7 +503,7 @@ mod tests {
     #[test]
     fn test_normalize_patterns_unsupported_kind() {
         assert!(
-            normalize_patterns(vec!["set:added()"], Glob, "".as_ref(), "".as_ref(), false,)
+            normalize_patterns(vec!["set:added()"], Glob, "/".as_ref(), "/".as_ref(), false,)
                 .is_err()
         );
     }
@@ -537,12 +546,14 @@ mod tests {
             path_str
         )];
         let result =
-            normalize_patterns(outer_patterns, Glob, "".as_ref(), "".as_ref(), false).unwrap();
+            normalize_patterns(outer_patterns, Glob, "/".as_ref(), "/".as_ref(), false).unwrap();
 
         assert_eq!(
             result,
             [
-                Pattern::new(Glob, "/a/*".to_string()).with_source(path_str.to_string()),
+                Pattern::new(Glob, "a/*".to_string())
+                    .with_source(path_str.to_string())
+                    .with_exact_file(Some("a".to_string().try_into().unwrap())),
                 Pattern::new(RE, r"a.*\.py".to_string()).with_source(path_str.to_string())
             ]
         )
@@ -570,7 +581,12 @@ mod tests {
         check("relpath:", &["cwd"]);
 
         check("glob:foo", &["cwd/foo"]);
-        check("glob:foo*", &[]);
+        check("glob:foo*", &["cwd"]);
+        check("glob:foo/*/baz", &["cwd/foo"]);
+        check("glob:/root/foo*/*/baz", &[]);
+        check("glob:/root/*foo", &[]);
+        check("glob:/root/foo/bar*/baz", &["foo"]);
+        check("glob:/root/foo/bar/baz?", &["foo/bar"]);
 
         check("relglob:foo", &[]);
 

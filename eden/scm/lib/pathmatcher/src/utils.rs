@@ -188,18 +188,20 @@ pub(crate) fn make_glob_recursive(glob: &str) -> String {
     }
 }
 
-pub(crate) fn contains_glob_operator(glob: &str) -> bool {
+// Return byte index of first glob operator, if any.
+pub(crate) fn first_glob_operator_index(glob: &str) -> Option<usize> {
     let mut escaped = false;
-    for ch in glob.chars() {
+    for (offset, ch) in glob.char_indices() {
         if ch == '\\' {
             escaped = !escaped;
         } else if !escaped && matches!(ch, '*' | '{' | '}' | '[' | ']' | '?') {
-            return true;
+            return Some(offset);
         } else {
             escaped = false;
         }
     }
-    false
+
+    None
 }
 
 #[cfg(test)]
@@ -227,9 +229,9 @@ mod tests {
 
     #[test]
     fn test_contains_glob_operator() {
-        assert!(!contains_glob_operator(""));
-        assert!(contains_glob_operator("*"));
-        assert!(!contains_glob_operator(r"\*"));
-        assert!(contains_glob_operator(r"\\?"));
+        assert_eq!(first_glob_operator_index(""), None);
+        assert_eq!(first_glob_operator_index("*"), Some(0));
+        assert_eq!(first_glob_operator_index(r"\*"), None);
+        assert_eq!(first_glob_operator_index(r"\\?"), Some(2));
     }
 }
