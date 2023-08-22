@@ -326,6 +326,10 @@ impl Repo {
     ///
     /// Returns `None` if EdenAPI should not be used.
     pub fn optional_eden_api(&mut self) -> Result<Option<Arc<dyn EdenApi>>, EdenApiError> {
+        if self.store_requirements.contains("git") {
+            tracing::trace!(target: "repo::eden_api", "disabled because of git");
+            return Ok(None);
+        }
         if matches!(
             self.config.get_opt::<bool>("edenapi", "enable"),
             Ok(Some(false))
