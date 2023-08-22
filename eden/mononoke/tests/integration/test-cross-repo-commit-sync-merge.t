@@ -60,9 +60,9 @@ blobimport hg servers repos into Mononoke repos
   $ REPOID=1 blobimport fbs-hg-srv/.hg fbs-mon
 
 get some bonsai hashes to avoid magic strings later
-  $ FBSOURCE_C1_BONSAI=$(get_bonsai_bookmark 1 fbsource_c1)
-  $ FBSOURCE_MASTER_BONSAI=$(get_bonsai_bookmark 1 fbsource_master)
-  $ MEGAREPO_MERGE_BONSAI=$(get_bonsai_bookmark 0 master_bookmark)
+  $ FBSOURCE_C1_BONSAI=$(mononoke_newadmin bookmarks --repo-id 1 get fbsource_c1)
+  $ FBSOURCE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 1 get fbsource_master)
+  $ MEGAREPO_MERGE_BONSAI=$(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
 
 setup hg client repos
   $ hgclone_treemanifest ssh://user@dummy/fbs-hg-srv fbs-hg-cnt --noupdate

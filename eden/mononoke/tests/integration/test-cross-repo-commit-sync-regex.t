@@ -10,9 +10,9 @@
   $ init_two_small_one_large_repo
 
 -- get some bonsai hashes to avoid magic strings later
-  $ FBSOURCE_MASTER_BONSAI=$(get_bonsai_bookmark 1 master_bookmark)
-  $ OVRSOURCE_MASTER_BONSAI=$(get_bonsai_bookmark 2 master_bookmark)
-  $ MEGAREPO_MERGE_BONSAI=$(get_bonsai_bookmark 0 master_bookmark)
+  $ FBSOURCE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 1 get master_bookmark)
+  $ OVRSOURCE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 2 get master_bookmark)
+  $ MEGAREPO_MERGE_BONSAI=$(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
 
 -- insert sync mapping entry
   $ add_synced_commit_mapping_entry 1 $FBSOURCE_MASTER_BONSAI 0 $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME

@@ -97,9 +97,9 @@ Start mononoke server
 
 Setup commit sync mapping
 -- get some bonsai hashes to avoid magic strings later
-  $ FBSOURCE_MASTER_BONSAI=$(get_bonsai_bookmark $FBS_REPOID master_bookmark)
-  $ OVRSOURCE_MASTER_BONSAI=$(get_bonsai_bookmark $OVR_REPOID master_bookmark)
-  $ MEGAREPO_MERGE_BONSAI=$(get_bonsai_bookmark $MEG_REPOID master_bookmark)
+  $ FBSOURCE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id $FBS_REPOID get master_bookmark)
+  $ OVRSOURCE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id $OVR_REPOID get master_bookmark)
+  $ MEGAREPO_MERGE_BONSAI=$(mononoke_newadmin bookmarks --repo-id $MEG_REPOID get master_bookmark)
 
 -- insert sync mapping entry
   $ add_synced_commit_mapping_entry $FBS_REPOID $FBSOURCE_MASTER_BONSAI $MEG_REPOID $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
@@ -227,7 +227,7 @@ Prepare for the invisible merge
   > --commit-date-rfc3339 "$COMMIT_DATE"
   bffa0e47c22b600605917892c9c9a2604d1640dbac8ae8c88530e0f32bb2c965
   cad6246b8ea9efdb756e6adb2f1a2da2f8d9d43bdabfeceaa4a4213abd334b61
-  $ get_bonsai_bookmark $FBS_REPOID ovrsource/moved_master
+  $ mononoke_newadmin bookmarks --repo-id $FBS_REPOID get ovrsource/moved_master
   0b114e8a3d0d62a31ff8f99b8894603cf37cdb6edc070d744a7a457bd360fc0a
 -- a list of commits we want to merge also includes the pre-delete commit
   $ TOMERGES=(bffa0e47c22b600605917892c9c9a2604d1640dbac8ae8c88530e0f32bb2c965 cad6246b8ea9efdb756e6adb2f1a2da2f8d9d43bdabfeceaa4a4213abd334b61 0b114e8a3d0d62a31ff8f99b8894603cf37cdb6edc070d744a7a457bd360fc0a)
@@ -308,8 +308,8 @@ Set mutable counter for the backsyncer (we've synced everything up until now)
   $ sqlite3 $TESTTMP/monsql/sqlite_dbs "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($OVR_REPOID, 'backsync_from_$FBS_REPOID', $LATEST_LOG_ENTRY_ID)"
 
 Set working copy equivalence between ovrsource master and fbsource master
-  $ FBSOURCE_MASTER_BONSAI=$(get_bonsai_bookmark $FBS_REPOID master_bookmark)
-  $ OVRSOURCE_MASTER_BONSAI=$(get_bonsai_bookmark $OVR_REPOID master_bookmark)
+  $ FBSOURCE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id $FBS_REPOID get master_bookmark)
+  $ OVRSOURCE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id $OVR_REPOID get master_bookmark)
   $ sqlite3 $TESTTMP/monsql/sqlite_dbs \
   > "INSERT INTO synced_working_copy_equivalence \
   >    (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id, sync_map_version_name) \

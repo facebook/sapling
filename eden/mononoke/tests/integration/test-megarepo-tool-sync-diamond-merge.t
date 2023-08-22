@@ -70,8 +70,8 @@ merge things in both repos
 start mononoke server
   $ start_and_wait_for_mononoke_server
 Record current master and the first commit in the preserved stack
-  $ WITH_MERGE_PRE_MERGE_PRESERVED=$(get_bonsai_bookmark 1 with_merge_pre_big_merge)
-  $ WITH_MERGE_C1=$(get_bonsai_bookmark 1 with_merge_master)
+  $ WITH_MERGE_PRE_MERGE_PRESERVED=$(mononoke_newadmin bookmarks --repo-id 1 get with_merge_pre_big_merge)
+  $ WITH_MERGE_C1=$(mononoke_newadmin bookmarks --repo-id 1 get with_merge_master)
 
 Create marker commits, so that we don't have to add $WITH_MERGE_C1 and $MEGAREPO_MERGE to the mapping
 (as it's not correct: $WITH_MERGE_C1 is supposed to be preserved)
@@ -80,18 +80,18 @@ Create marker commits, so that we don't have to add $WITH_MERGE_C1 and $MEGAREPO
   $ REPONAME=with_merge_mon hgmn up -q with_merge_master
   $ hgmn ci -m "marker commit" --config ui.allowemptycommit=True
   $ REPONAME=with_merge_mon hgmn push -r . --to with_merge_master -q
-  $ WITH_MERGE_MARKER=$(get_bonsai_bookmark 1 with_merge_master)
+  $ WITH_MERGE_MARKER=$(mononoke_newadmin bookmarks --repo-id 1 get with_merge_master)
 
   $ cd "$TESTTMP/meg_hg"
   $ REPONAME=meg_mon hgmn pull -q
   $ REPONAME=meg_mon hgmn up -q master_bookmark
   $ hgmn ci -m "marker commit" --config ui.allowemptycommit=True
   $ REPONAME=meg_mon hgmn push -r . --to master_bookmark -q
-  $ MEGAREPO_MARKER=$(get_bonsai_bookmark 0 master_bookmark)
+  $ MEGAREPO_MARKER=$(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
 
 insert sync mapping entry
-  $ ANOTHER_C1=$(get_bonsai_bookmark 2 another_master)
-  $ MEGAREPO_MERGE=$(get_bonsai_bookmark 0 master_bookmark)
+  $ ANOTHER_C1=$(mononoke_newadmin bookmarks --repo-id 2 get another_master)
+  $ MEGAREPO_MERGE=$(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
   $ add_synced_commit_mapping_entry 2 $ANOTHER_C1 0 $MEGAREPO_MERGE TEST_VERSION_NAME
   $ add_synced_commit_mapping_entry 1 $WITH_MERGE_MARKER 0 $MEGAREPO_MARKER TEST_VERSION_NAME
 

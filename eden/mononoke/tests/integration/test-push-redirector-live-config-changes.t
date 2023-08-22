@@ -161,8 +161,8 @@ setup hg client repos
   $ init_client large-hg-srv large-hg-client
 
 Setup helpers
-  $ LARGE_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDLARGE master_bookmark)
-  $ SMALL1_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDSMALL1 master_bookmark)
+  $ LARGE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id $REPOIDLARGE get master_bookmark)
+  $ SMALL1_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id $REPOIDSMALL1 get master_bookmark)
 
 start mononoke server
   $ start_and_wait_for_mononoke_server
