@@ -12,7 +12,7 @@ from typing import Callable, List, Optional, Tuple
 
 
 class ExpectLine:
-    r"""an "expected" line with hints (glob) (re) (esc) (feature !) (?)
+    r"""an "expected" line with hints (glob) (re) (esc) (feature !)* (?)
     (?) - The line is optional.
     (feature !) - The line only exist if feature is present
     (esc) - The line contains escape sequences (ex. \r)
@@ -45,8 +45,10 @@ class ExpectLine:
         if body.endswith(" (?)"):
             body = body[:-4]
             optional = True
-        if body.endswith(" !)") and " (" in body:
+        while body.endswith(" !)") and " (" in body:
             body, rest = body.rsplit(" (", 1)
+            if excluded:
+                continue
             if hasfeature is None:
                 optional = True
             else:
