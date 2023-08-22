@@ -21,8 +21,15 @@ class OSFS(ShellFS):
         path = self._absjoin(path)
         if "b" not in mode:
             mode += "b"
-        # pyre-fixme[7]: Expected `BinaryIO` but got `IO[typing.Any]`.
-        return open(path, mode)
+        try:
+            # pyre-fixme[7]: Expected `BinaryIO` but got `IO[typing.Any]`.
+            return open(path, mode)
+        except NotADirectoryError:
+            raise
+        except FileNotFoundError:
+            if os.name == "nt" and not os.path.isdir(os.path.dirname(path)):
+                raise NotADirectoryError
+            raise
 
     def glob(self, pat: str) -> List[str]:
         prefix = self._absjoin("")
