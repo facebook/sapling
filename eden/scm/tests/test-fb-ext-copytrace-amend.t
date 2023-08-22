@@ -1,4 +1,5 @@
-#debugruntest-compatible
+(debugruntest fails under buck for some reason)
+#chg-compatible
 
   $ configure mutation-norecord
   $ enable amend copytrace rebase shelve
