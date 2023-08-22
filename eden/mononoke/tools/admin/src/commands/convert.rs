@@ -12,8 +12,12 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use clap::Parser;
+use git_types::MappedGitCommitId;
+use mercurial_derivation::MappedHgChangesetId;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
+use repo_derived_data::RepoDerivedData;
+use repo_derived_data::RepoDerivedDataRef;
 
 use crate::commit_id::parse_commit_id;
 use crate::commit_id::print_commit_id;
@@ -29,7 +33,7 @@ pub struct CommandArgs {
     #[clap(long, short = 'f', value_enum, value_name = "SCHEME")]
     from: Option<IdentityScheme>,
 
-    /// Identity scheme to
+    /// Identity scheme to convert to
     #[clap(
         long,
         short = 't',
@@ -42,6 +46,10 @@ pub struct CommandArgs {
 
     /// Source commit id
     id: String,
+
+    /// Derive the target commit type if necessary
+    #[clap(long)]
+    derive: bool,
 }
 
 #[facet::container]
@@ -57,6 +65,9 @@ pub struct Repo {
 
     #[facet]
     bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
+
+    #[facet]
+    repo_derived_data: RepoDerivedData,
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -71,6 +82,26 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         Some(scheme) => scheme.parse_commit_id(&ctx, &repo, &args.id).await?,
         None => parse_commit_id(&ctx, &repo, &args.id).await?,
     };
+
+    if args.derive {
+        for to in args.to.iter() {
+            match to {
+                IdentityScheme::Hg => {
+                    repo.repo_derived_data()
+                        .derive::<MappedHgChangesetId>(&ctx, cs_id)
+                        .await
+                        .context("Failed to derive Mercurial changeset")?;
+                }
+                IdentityScheme::Git => {
+                    repo.repo_derived_data()
+                        .derive::<MappedGitCommitId>(&ctx, cs_id)
+                        .await
+                        .context("Failed to derive Git commit")?;
+                }
+                _ => {}
+            }
+        }
+    }
 
     print_commit_id(&ctx, &repo, &args.to, cs_id).await?;
 
