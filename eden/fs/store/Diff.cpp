@@ -39,6 +39,15 @@ namespace facebook::eden {
  */
 namespace {
 
+struct TreeAndId {
+  TreePtr tree;
+  ObjectId id;
+
+  static TreeAndId null() {
+    return TreeAndId{nullptr, ObjectId{}};
+  }
+};
+
 struct ChildFutures {
   void add(RelativePath&& path, ImmediateFuture<Unit>&& future) {
     paths.emplace_back(std::move(path));
@@ -283,8 +292,8 @@ FOLLY_NODISCARD ImmediateFuture<Unit> waitOnResults(
 FOLLY_NODISCARD ImmediateFuture<Unit> computeTreeDiff(
     DiffContext* context,
     RelativePathPiece currentPath,
-    std::shared_ptr<const Tree> scmTree,
-    std::shared_ptr<const Tree> wdTree,
+    TreePtr scmTree,
+    TreePtr wdTree,
     std::unique_ptr<GitIgnoreStack> ignore,
     bool isIgnored) {
   // A list of Futures to wait on for our children's results.
@@ -385,8 +394,8 @@ ImmediateFuture<std::string> loadGitIgnore(
 FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
-    std::shared_ptr<const Tree> scmTree,
-    std::shared_ptr<const Tree> wdTree,
+    TreePtr scmTree,
+    TreePtr wdTree,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
   if (context->isCancelled()) {
@@ -444,8 +453,8 @@ FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
 FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
-    ImmediateFuture<std::shared_ptr<const Tree>> scmFuture,
-    ImmediateFuture<std::shared_ptr<const Tree>> wdFuture,
+    ImmediateFuture<TreeAndId> scmFuture,
+    ImmediateFuture<TreeAndId> wdFuture,
     const GitIgnoreStack* ignore,
     bool isIgnored) {
   auto treesFuture = collectAllSafe(std::move(scmFuture), std::move(wdFuture));
@@ -460,9 +469,7 @@ FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
            copiedCurrentPath = std::move(copiedCurrentPath),
            currentPath,
            ignore,
-           isIgnored](std::tuple<
-                      std::shared_ptr<const Tree>,
-                      std::shared_ptr<const Tree>> tup)
+           isIgnored](std::tuple<TreeAndId, TreeAndId> tup)
               -> ImmediateFuture<folly::Unit> {
             auto [scmTree, wdTree] = std::move(tup);
 
@@ -470,9 +477,9 @@ FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
             // This happens in the case in which the CLI (during eden doctor)
             // calls getScmStatusBetweenRevisions() with the same hash in
             // order to check if a commit hash is valid.
-            if (scmTree && wdTree &&
+            if (scmTree.tree && wdTree.tree &&
                 context->store->areObjectsKnownIdentical(
-                    scmTree->getHash(), wdTree->getHash())) {
+                    scmTree.id, wdTree.id)) {
               return folly::unit;
             }
 
@@ -482,11 +489,18 @@ FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
             return diffTrees(
                 context,
                 pathPiece,
-                std::move(scmTree),
-                std::move(wdTree),
+                std::move(scmTree.tree),
+                std::move(wdTree.tree),
                 ignore,
                 isIgnored);
           });
+}
+
+ImmediateFuture<TreeAndId> getTreeAndId(DiffContext* context, ObjectId id) {
+  return context->store->getTree(id, context->getFetchContext())
+      .thenValue([id](TreePtr tree) mutable {
+        return TreeAndId{std::move(tree), std::move(id)};
+      });
 }
 
 } // namespace
@@ -498,8 +512,12 @@ diffRoots(DiffContext* context, const RootId& root1, const RootId& root2) {
   return diffTrees(
       context,
       RelativePathPiece{},
-      std::move(future1),
-      std::move(future2),
+      std::move(future1).thenValue([](TreePtr tree) {
+        return TreeAndId{tree, tree->getHash()};
+      }),
+      std::move(future2).thenValue([](TreePtr tree) {
+        return TreeAndId{tree, tree->getHash()};
+      }),
       nullptr,
       false);
 }
@@ -514,8 +532,8 @@ ImmediateFuture<Unit> diffTrees(
   return diffTrees(
       context,
       currentPath,
-      context->store->getTree(scmHash, context->getFetchContext()),
-      context->store->getTree(wdHash, context->getFetchContext()),
+      getTreeAndId(context, scmHash),
+      getTreeAndId(context, wdHash),
       ignore,
       isIgnored);
 }
@@ -529,8 +547,8 @@ ImmediateFuture<Unit> diffAddedTree(
   return diffTrees(
       context,
       currentPath,
-      std::shared_ptr<const Tree>{nullptr},
-      context->store->getTree(wdHash, context->getFetchContext()),
+      TreeAndId::null(),
+      getTreeAndId(context, wdHash),
       ignore,
       isIgnored);
 }
@@ -542,8 +560,8 @@ ImmediateFuture<Unit> diffRemovedTree(
   return diffTrees(
       context,
       currentPath,
-      context->store->getTree(scmHash, context->getFetchContext()),
-      std::shared_ptr<const Tree>{nullptr},
+      getTreeAndId(context, scmHash),
+      TreeAndId::null(),
       nullptr,
       false);
 }
