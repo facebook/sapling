@@ -27,6 +27,10 @@ impl FbClientInfo {
     pub fn sandcastle_alias(&self) -> Option<&str> {
         None
     }
+
+    pub fn sandcastle_type(&self) -> Option<&str> {
+        None
+    }
 }
 
 pub fn get_fb_client_info() -> FbClientInfo {

@@ -60,6 +60,7 @@ pub enum LfsScubaKey {
     /// Fields of ClientInfo
     SandcastleNonce,
     SandcastleAlias,
+    SandcastleType,
     ClientTwJob,
     ClientTwTask,
 }
@@ -87,6 +88,7 @@ impl AsRef<str> for LfsScubaKey {
             ClientThrottleAttemptsLeft => "client_throttle_attempts_left",
             SandcastleNonce => "sandcastle_nonce",
             SandcastleAlias => "sandcastle_alias",
+            SandcastleType => "sandcastle_type",
             ClientTwJob => "client_tw_job",
             ClientTwTask => "client_tw_task",
         }
@@ -165,6 +167,11 @@ impl ScubaHandler for LfsScubaHandler {
             scuba.add_opt(
                 LfsScubaKey::SandcastleAlias,
                 client_info.fb.sandcastle_alias(),
+            );
+
+            scuba.add_opt(
+                LfsScubaKey::SandcastleType,
+                client_info.fb.sandcastle_type(),
             );
 
             scuba.add_opt(LfsScubaKey::ClientTwJob, client_info.fb.tw_job());
