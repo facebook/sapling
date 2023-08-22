@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import errno
 import hashlib
+import posixpath
 import shutil
 import struct
 
@@ -693,7 +694,7 @@ class _unknowndirschecker(object):
             # Does the directory contain any files that are not in the dirstate?
             for p, dirs, files in repo.wvfs.walk(f):
                 for fn in files:
-                    relf = repo.dirstate.normalize(repo.wvfs.reljoin(p, fn))
+                    relf = repo.dirstate.normalize(posixpath.join(p, fn))
                     if relf not in repo.dirstate:
                         return f
         return None

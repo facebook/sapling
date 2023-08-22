@@ -1,7 +1,5 @@
 #debugruntest-compatible
 
-#require symlink
-
 Path conflict checking is currently disabled by default because of issue5716.
 Turn it on for this test.
 
@@ -26,6 +24,7 @@ Turn it on for this test.
   $ hg bookmark -i file2
   $ hg up 'desc(base)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+#if symlink
   $ mkdir a
   $ ln -s c a/b
   $ hg add a/b
@@ -33,6 +32,7 @@ Turn it on for this test.
   $ hg bookmark -i link
   $ hg up 'desc(base)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+#endif
   $ mkdir -p a/b/c
   $ echo 2 > a/b/c/d
   $ hg add a/b/c/d
@@ -44,6 +44,7 @@ Merge - local file conflicts with remote directory
   $ hg up file
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (activating bookmark file)
+#if symlink
   $ hg bookmark -i
   $ hg merge --verbose dir
   resolving manifests
@@ -135,3 +136,4 @@ Merge - local directory conflicts with remote file or link
   $ hg resolve --mark a/b
   (no more unresolved files)
   $ hg commit -m "merge link (rename link)"
+#endif
