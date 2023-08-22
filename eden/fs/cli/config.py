@@ -509,6 +509,9 @@ class EdenInstance(AbstractEdenInstance):
             ]
         )
 
+        if sys.platform == "win32":
+            ret["symlinks_enabled"] = checkout_config.enable_windows_symlinks
+
         if snapshot is not None:
             ret["checked_out_revision"] = snapshot.last_checkout_hash
             ret["working_copy_parent"] = snapshot.working_copy_parent
