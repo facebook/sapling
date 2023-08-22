@@ -374,7 +374,7 @@ small reminder of the repository state
   M b2
   A 1k
   A 2k
-  A b2link (no-windows !)
+  A b2link (symlink !)
   A bin
   A c1
   A con.xml (no-windows !)
@@ -385,7 +385,7 @@ small reminder of the repository state
   M b2
   A 1k
   A 2k
-  A b2link (no-windows !)
+  A b2link (symlink !)
   A bin
   A c1
   A con.xml (no-windows !)
@@ -508,14 +508,14 @@ test with multi revs revset
   $ hg status --added --rev 'desc(addfiles)':'desc(manychanges)' --rev 'desc(merge)':'desc(subrepo)'
   A 1k
   A 2k
-  A b2link (no-windows !)
+  A b2link (symlink !)
   A bin
   A c1
   A con.xml (no-windows !)
   $ fileset "status('0:1', '3:4', added())"
   1k
   2k
-  b2link (no-windows !)
+  b2link (symlink !)
   bin
   c1
   con.xml (no-windows !)
