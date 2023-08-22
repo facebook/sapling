@@ -226,12 +226,19 @@ impl VFS {
     /// Add a symlink `link_name` pointing to `link_dest`. On platforms that do not support symlinks,
     /// `link_name` will be a file containing the path to `link_dest`.
     fn symlink(&self, link_name: &Path, link_dest: &Path) -> Result<()> {
-        #[cfg(windows)]
-        let result = Self::plain_symlink_file(link_name, link_dest);
-
-        #[cfg(not(windows))]
-        let result = if self.inner.supports_symlinks {
-            std::os::unix::fs::symlink(link_dest, link_name).map_err(Into::into)
+        let result = if self.inner.supports_symlinks && (cfg!(unix) || cfg!(windows)) {
+            #[cfg(windows)]
+            {
+                std::os::windows::fs::symlink_file(
+                    util::path::replace_slash_with_backslash(link_dest).as_path(),
+                    link_name,
+                )
+                .map_err(Into::into)
+            }
+            #[cfg(unix)]
+            {
+                std::os::unix::fs::symlink(link_dest, link_name).map_err(Into::into)
+            }
         } else {
             Self::plain_symlink_file(link_name, link_dest)
         };

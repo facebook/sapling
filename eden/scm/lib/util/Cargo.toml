@@ -24,4 +24,5 @@ memmap2 = "0.5.10"
 tempdir = "0.3"
 
 [target.'cfg(target_os = "windows")'.dependencies]
+widestring = "1.0.2"
 winapi = { version = "0.3", features = ["fileapi", "handleapi", "winbase", "winnt"] }

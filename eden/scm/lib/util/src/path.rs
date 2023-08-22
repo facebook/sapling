@@ -561,6 +561,33 @@ pub fn relativize(base: &Path, path: &Path) -> PathBuf {
     rel_path
 }
 
+/// Replace forward slashes (/) with backward slashes (\) on a wide coded-path
+#[cfg(windows)]
+pub fn replace_slash_with_backslash(path: &Path) -> PathBuf {
+    use std::os::windows::ffi::OsStrExt;
+    use std::os::windows::ffi::OsStringExt;
+
+    use widestring::U16Str;
+
+    // Convert OsString to Vec<u16> (UTF-16 representation on Windows)
+    let mut utf16_string: Vec<u16> = path.as_os_str().encode_wide().collect();
+
+    let to_replace = U16Str::from_slice(&mut utf16_string)
+        .char_indices()
+        .filter_map(|(i, c)| {
+            c.ok()
+                .map(|c| if c == '/' { Some(i) } else { None })
+                .flatten()
+        })
+        .collect::<Vec<_>>();
+
+    for i in to_replace {
+        utf16_string[i] = '\\' as u16;
+    }
+
+    PathBuf::from(std::ffi::OsString::from_wide(&utf16_string))
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs::create_dir_all;
@@ -573,6 +600,9 @@ mod tests {
 
     #[cfg(windows)]
     mod windows {
+        use std::os::windows::ffi::OsStrExt;
+        use std::os::windows::ffi::OsStringExt;
+
         use super::*;
 
         #[test]
@@ -596,6 +626,47 @@ mod tests {
         fn test_normalize_path() {
             assert_eq!(normalize(r"a/b\c\..\.".as_ref()), Path::new(r"a\b"));
             assert_eq!(normalize("z:/a//b/./".as_ref()), Path::new(r"z:\a\b"));
+        }
+
+        #[test]
+        fn test_replace_slash_with_backslash() {
+            // Test replacing a normal string
+            let utf16_bytes: &[u16] = &[0xd83c, 0xdf31, 0x002f, 0x0073, 0x0061, 0x0070];
+            let path = PathBuf::from(std::ffi::OsString::from_wide(utf16_bytes));
+            let expected = "🌱\\sap".encode_utf16().collect::<Vec<_>>();
+            assert_eq!(
+                replace_slash_with_backslash(&path)
+                    .as_os_str()
+                    .encode_wide()
+                    .collect::<Vec<_>>(),
+                expected,
+            );
+
+            // Test replacing string with the / character encoded on it
+            // This string is the same as "expected" above, but with one character corrupted
+            let utf16_bytes: &[u16] = &[0xd83c, 0x002f, 0x002f, 0x0073, 0x0061, 0x0070];
+            // 0x005c is the UTF-16 character for backslash
+            let expected: Vec<u16> = Vec::from([0xd83c, 0x005c, 0x005c, 0x0073, 0x0061, 0x0070]);
+            let path = PathBuf::from(std::ffi::OsString::from_wide(utf16_bytes));
+            assert_eq!(
+                replace_slash_with_backslash(&path)
+                    .as_os_str()
+                    .encode_wide()
+                    .collect::<Vec<_>>(),
+                expected,
+            );
+
+            // Another case of / being on unexpected places
+            let utf16_bytes: &[u16] = &[0x002f, 0xdf31, 0x002f, 0x0073, 0x0061, 0x0070];
+            let expected: Vec<u16> = Vec::from([0x005c, 0xdf31, 0x005c, 0x0073, 0x0061, 0x0070]);
+            let path = PathBuf::from(std::ffi::OsString::from_wide(utf16_bytes));
+            assert_eq!(
+                replace_slash_with_backslash(&path)
+                    .as_os_str()
+                    .encode_wide()
+                    .collect::<Vec<_>>(),
+                expected,
+            );
         }
     }
 

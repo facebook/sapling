@@ -1,7 +1,9 @@
 #debugruntest-compatible
+
   $ eagerepo
   $ setconfig experimental.allowfilepeer=True
   $ setconfig experimental.windows-symlinks=True
+  $ setconfig workingcopy.ruststatus=False
 
 #if no-windows
 #require symlink
@@ -155,9 +157,8 @@ try cloning symlink in a subdir
 
 == symlink and git diffs ==
 
-git symlink diff
+test diff --git with symlinks
 
-#if no-windows
   $ cd clonedest
   $ hg diff --git -r null:tip
   diff --git a/a/b/c/demo b/a/b/c/demo
@@ -169,7 +170,7 @@ git symlink diff
   \ No newline at end of file
   $ hg export --git tip > ../sl.diff
 
-import git symlink diff
+import git-style symlink diff
 
   $ hg rm a/b/c/demo
   $ hg commit -m'remove link'
@@ -316,7 +317,6 @@ Issue995: hg copy -A incorrectly handles symbolic links
   $ hg mv -A dirlink newdir/dirlink
 
   $ cd ..
-#endif
 
 Don't treat symlinks as untrackable if symlinks aren't supported.
   $ newclientrepo
