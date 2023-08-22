@@ -100,7 +100,7 @@
 -- Step 2. then we need to sync new small repo commits to a large repo
   $ megarepo_tool_multirepo --source-repo-id 1 --target-repo-id 0 sync-commit-and-ancestors --commit-hash "$SMALL_NODE" 2>&1 | grep remapped
   * remapped to RewrittenAs(ChangesetId(Blake2(146b951933c6d1554a377d733af183659f61794da5c6537c5de68e52acd5e949)), CommitSyncConfigVersion("test_version")) (glob)
-  $ HG_CS_ID="$(REPOID=0 mononoke_admin convert --from bonsai --to hg 146b951933c6d1554a377d733af183659f61794da5c6537c5de68e52acd5e949 2> /dev/null)"
+  $ HG_CS_ID="$(mononoke_newadmin convert --repo-id 0 --from bonsai --to hg --derive 146b951933c6d1554a377d733af183659f61794da5c6537c5de68e52acd5e949)"
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -r "$HG_CS_ID"
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/large-mon

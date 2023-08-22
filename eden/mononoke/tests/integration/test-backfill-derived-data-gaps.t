@@ -97,4 +97,8 @@ They should be derived for types that don't support gaps
   Derived: da6d6ff8b30c472a08a1252ccb81dd4a0f9f3212af2e631a6a9a6b78ad78f6f4
 
 Skeleton manifest blob keys should have their prefix
-  $ mononoke_admin --log-level ERROR blobstore-fetch derived_root_skeletonmanifest.xyz.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd --raw-blob $TESTTMP/skmf-root
+  $ mononoke_newadmin --log-level ERROR blobstore -R repo fetch derived_root_skeletonmanifest.xyz.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd --output $TESTTMP/skmf-root
+  Key: derived_root_skeletonmanifest.xyz.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
+  Ctime: * (glob)
+  Size: 32
+  

@@ -75,10 +75,8 @@
   blob-repo0000.git_object.d53a2ef2bbadbe26f8c28598b408e03c0b01027c
 
 # Set master (gitimport does not do this yet)
-  $ mononoke_admin bookmarks set master 375ef2c64bcda29f59e557d6da26baca67af93b6da5702fcaa2bb626aa1a45e7
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(375ef2c64bcda29f59e557d6da26baca67af93b6da5702fcaa2bb626aa1a45e7)) (glob)
-  * Current position of * bookmark: "master" * is None (glob)
+  $ mononoke_newadmin bookmarks -R repo set master 375ef2c64bcda29f59e557d6da26baca67af93b6da5702fcaa2bb626aa1a45e7
+  Creating publishing bookmark master at 375ef2c64bcda29f59e557d6da26baca67af93b6da5702fcaa2bb626aa1a45e7
 
 # Start Mononoke
   $ start_and_wait_for_mononoke_server

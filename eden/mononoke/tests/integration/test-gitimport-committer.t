@@ -64,14 +64,10 @@
   * Ref: "refs/heads/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
 
 # Set master (gitimport does not do this yet)
-  $ mononoke_admin bookmarks set another_committer 1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7)) (glob)
-  * Current position of * bookmark: "another_committer" * is None (glob)
-  $ mononoke_admin bookmarks set master 032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
-  * Current position of * bookmark: "master" * is None (glob)
+  $ mononoke_newadmin bookmarks -R repo set another_committer 1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7
+  Creating publishing bookmark another_committer at 1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7
+  $ mononoke_newadmin bookmarks -R repo set master 032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044
+  Creating publishing bookmark master at 032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044
 
 # Start Mononoke
   $ start_and_wait_for_mononoke_server

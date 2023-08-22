@@ -76,10 +76,8 @@ upload C as it wasn't imported
 
   $ mononoke_testtool create-bonsai -R repo bonsai_file
   Created bonsai changeset 2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f for Hg changeset 1ef6b45b6561464f92b16aba791974a9bb858ce2
-  $ mononoke_admin bookmarks set master_bookmark 2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f)) (glob)
-  * Current position of * "master_bookmark" * is Some(ChangesetId(Blake2(d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da))) (glob)
+  $ mononoke_newadmin bookmarks -R repo set master_bookmark 2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f
+  Updating publishing bookmark master_bookmark from d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da to 2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f
 
 Sync to backup repo
   $ mononoke_backup_sync backup sync-loop 0 2>&1 | grep 'should map' | head -n 1

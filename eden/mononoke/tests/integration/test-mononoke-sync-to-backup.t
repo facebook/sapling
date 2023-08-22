@@ -117,7 +117,8 @@ Do a manual move
   $ TIP="$(hg log -T '{node}' -r master_bookmark)"
   $ TIP_PARENT="$(hg log -T '{node}' -r master_bookmark~1)"
 
-  $ REPOID=0 mononoke_admin bookmarks set master_bookmark "$TIP_PARENT" &> /dev/null
+  $ mononoke_newadmin bookmarks --repo-id=0 set master_bookmark "$TIP_PARENT"
+  Updating publishing bookmark master_bookmark from aa56217d7c6265a0624bfdc78047bd26d6189e9f2667f9a41e6a51ca80c30a3c to 8e7d2998fd68c6efaae7db7e93fdbaa73d34123ceedebc082acdb5ab955c5f2a
 
   $ cd "$TESTTMP"
   $ mononoke_backup_sync backup sync-loop 2 --bookmark-move-any-direction 2>&1 | grep 'successful sync'
@@ -138,7 +139,8 @@ Do a manual move
   f5fb745185a2d197d092e7dfffe147f36de1af76
 
 Move forward to a commit that's already present in the destination
-  $ REPOID=0 mononoke_admin bookmarks set master_bookmark "$TIP" &> /dev/null
+  $ mononoke_newadmin bookmarks --repo-id=0 set master_bookmark "$TIP"
+  Updating publishing bookmark master_bookmark from 8e7d2998fd68c6efaae7db7e93fdbaa73d34123ceedebc082acdb5ab955c5f2a to aa56217d7c6265a0624bfdc78047bd26d6189e9f2667f9a41e6a51ca80c30a3c
 
   $ cd "$TESTTMP"
   $ mononoke_backup_sync backup sync-loop 2 --bookmark-move-any-direction 2>&1 | grep -e 'successful sync' -e 'already in the darkstorm backup repo'

@@ -36,10 +36,8 @@
   * Ref: "refs/heads/master": Some(ChangesetId(Blake2(d37ab14503b5323dd32b54f6b1da45c3e8add4dce31d6d28da89b9f3f27550b3))) (glob)
 
 # Set master (gitimport does not do this yet)
-  $ mononoke_admin bookmarks set master d37ab14503b5323dd32b54f6b1da45c3e8add4dce31d6d28da89b9f3f27550b3
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
-  * Current position of * bookmark: "master" * is None (glob)
+  $ mononoke_newadmin bookmarks -R repo set master d37ab14503b5323dd32b54f6b1da45c3e8add4dce31d6d28da89b9f3f27550b3
+  Creating publishing bookmark master at d37ab14503b5323dd32b54f6b1da45c3e8add4dce31d6d28da89b9f3f27550b3
 
 # Start Mononoke
   $ start_and_wait_for_mononoke_server

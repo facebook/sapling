@@ -113,7 +113,8 @@ Do a manual move
   $ NODE="$(hg log -T '{node}' -r master_bookmark~1)"
   $ echo "$NODE"
   f5fb745185a2d197d092e7dfffe147f36de1af76
-  $ mononoke_admin bookmarks set master_bookmark "$NODE" &> /dev/null
+  $ mononoke_newadmin bookmarks -R repo set master_bookmark "$NODE"
+  Updating publishing bookmark master_bookmark from aa56217d7c6265a0624bfdc78047bd26d6189e9f2667f9a41e6a51ca80c30a3c to 8e7d2998fd68c6efaae7db7e93fdbaa73d34123ceedebc082acdb5ab955c5f2a
   $ cd "$TESTTMP"
   $ mononoke_hg_sync_loop_regenerate repo-hg 6 2>&1 | grep 'successful sync'
   * successful sync of entries [8]* (glob)

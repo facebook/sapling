@@ -100,12 +100,15 @@
 Check that admin-created bookmark sets and deletes in the large repo can be correctly synced
 -- Let's cover creation, updating and deletion of the bookmark
   $ cd "$TESTTMP/large-hg-client"
-  $ REPOID="$REPOIDLARGE" mononoke_admin bookmarks set bookprefix/foobar $(hg log -T "{node}" -r master_bookmark) &>/dev/null
+  $ mononoke_newadmin bookmarks --repo-id="$REPOIDLARGE" set bookprefix/foobar $(hg log -T "{node}" -r master_bookmark)
+  Creating publishing bookmark bookprefix/foobar at * (glob)
   $ backsync_large_to_small 2>&1 | grep creating
   * creating bookmark * "foobar" * (glob)
-  $ REPOID="$REPOIDLARGE" mononoke_admin bookmarks set bookprefix/foobar $(hg log -T "{node}" -r master_bookmark~1) &>/dev/null
+  $ mononoke_newadmin bookmarks --repo-id="$REPOIDLARGE" set bookprefix/foobar $(hg log -T "{node}" -r master_bookmark~1)
+  Updating publishing bookmark bookprefix/foobar from * to * (glob)
   $ backsync_large_to_small 2>&1 2>&1 | grep updating
   * updating bookmark * "foobar" * (glob)
-  $ REPOID="$REPOIDLARGE" mononoke_admin bookmarks delete bookprefix/foobar &>/dev/null
+  $ mononoke_newadmin bookmarks --repo-id="$REPOIDLARGE" delete bookprefix/foobar
+  Deleting publishing bookmark bookprefix/foobar at * (glob)
   $ backsync_large_to_small 2>&1 | grep deleting
   * deleting bookmark * "foobar" * (glob)

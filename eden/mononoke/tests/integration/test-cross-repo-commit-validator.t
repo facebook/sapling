@@ -212,9 +212,9 @@ attention to more than just the last commit (successful validation of many commi
   $ hg ci -qAm "Commit 3 of 3"
   $ REPONAME=meg-mon hgmn push -q --to master_bookmark
   $ MEGAREPO_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
-  $ MEGAREPO_C1_BONSAI=$(REPOID=0 mononoke_admin convert --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~2) 2>/dev/null)
-  $ MEGAREPO_C2_BONSAI=$(REPOID=0 mononoke_admin convert --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1) 2>/dev/null)
-  $ MEGAREPO_C3_BONSAI=$(REPOID=0 mononoke_admin convert --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark) 2>/dev/null)
+  $ MEGAREPO_C1_BONSAI=$(mononoke_newadmin convert --repo-id 0 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~2))
+  $ MEGAREPO_C2_BONSAI=$(mononoke_newadmin convert --repo-id 0 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1))
+  $ MEGAREPO_C3_BONSAI=$(mononoke_newadmin convert --repo-id 0 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark))
 
 -- Create three commits in the small repo
   $ cd "$TESTTMP/fbs-hg-cnt"
@@ -227,9 +227,9 @@ attention to more than just the last commit (successful validation of many commi
   $ hg ci -qAm "Commit 3 of 3"
   $ REPONAME=fbs-mon hgmn push -q --to master_bookmark
   $ FBSOURCE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 1 get master_bookmark)
-  $ FBSOURCE_C1_BONSAI=$(REPOID=1 mononoke_admin convert --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~2) 2>/dev/null)
-  $ FBSOURCE_C2_BONSAI=$(REPOID=1 mononoke_admin convert --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1) 2>/dev/null)
-  $ FBSOURCE_C3_BONSAI=$(REPOID=1 mononoke_admin convert --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark) 2>/dev/null)
+  $ FBSOURCE_C1_BONSAI=$(mononoke_newadmin convert --repo-id 1 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~2))
+  $ FBSOURCE_C2_BONSAI=$(mononoke_newadmin convert --repo-id 1 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1))
+  $ FBSOURCE_C3_BONSAI=$(mononoke_newadmin convert --repo-id 1 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark))
 
 -- fake a commit sync mapping between the new commits
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" << ENDOFINSERT
@@ -261,9 +261,9 @@ attention to more than just the last commit (failed validation of inner commit)
   $ hg ci -qAm "Commit 3 of 3"
   $ REPONAME=meg-mon hgmn push -q --to master_bookmark
   $ MEGAREPO_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
-  $ MEGAREPO_C1_BONSAI=$(REPOID=0 mononoke_admin convert --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~2) 2>/dev/null)
-  $ MEGAREPO_C2_BONSAI=$(REPOID=0 mononoke_admin convert --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1) 2>/dev/null)
-  $ MEGAREPO_C3_BONSAI=$(REPOID=0 mononoke_admin convert --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark) 2>/dev/null)
+  $ MEGAREPO_C1_BONSAI=$(mononoke_newadmin convert --repo-id 0 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~2))
+  $ MEGAREPO_C2_BONSAI=$(mononoke_newadmin convert --repo-id 0 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1))
+  $ MEGAREPO_C3_BONSAI=$(mononoke_newadmin convert --repo-id 0 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark))
 
 -- Create three commits in the small repo
   $ cd "$TESTTMP/fbs-hg-cnt"
@@ -276,9 +276,9 @@ attention to more than just the last commit (failed validation of inner commit)
   $ hg ci -qAm "Commit 3 of 3"
   $ REPONAME=fbs-mon hgmn push -q --to master_bookmark
   $ FBSOURCE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 1 get master_bookmark)
-  $ FBSOURCE_C1_BONSAI=$(REPOID=1 mononoke_admin convert --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~2) 2>/dev/null)
-  $ FBSOURCE_C2_BONSAI=$(REPOID=1 mononoke_admin convert --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1) 2>/dev/null)
-  $ FBSOURCE_C3_BONSAI=$(REPOID=1 mononoke_admin convert --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark) 2>/dev/null)
+  $ FBSOURCE_C1_BONSAI=$(mononoke_newadmin convert --repo-id 1 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~2))
+  $ FBSOURCE_C2_BONSAI=$(mononoke_newadmin convert --repo-id 1 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1))
+  $ FBSOURCE_C3_BONSAI=$(mononoke_newadmin convert --repo-id 1 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark))
 
 -- fake a commit sync mapping between the new commits
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" << ENDOFINSERT
@@ -305,8 +305,8 @@ Check that we validate the topological order
   $ hg ci -qAm "Commit 2 of 2" --config ui.allowemptycommit=True
   $ REPONAME=meg-mon hgmn push -q --to master_bookmark
   $ MEGAREPO_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
-  $ MEGAREPO_C1_BONSAI=$(REPOID=0 mononoke_admin convert --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1) 2>/dev/null)
-  $ MEGAREPO_C2_BONSAI=$(REPOID=0 mononoke_admin convert --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark) 2>/dev/null)
+  $ MEGAREPO_C1_BONSAI=$(mononoke_newadmin convert --repo-id 0 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1))
+  $ MEGAREPO_C2_BONSAI=$(mononoke_newadmin convert --repo-id 0 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark))
 
 -- Create three commits in the small repo
   $ cd "$TESTTMP/fbs-hg-cnt"
@@ -315,8 +315,8 @@ Check that we validate the topological order
   $ hg ci -qAm "Commit 2 of 2" --config ui.allowemptycommit=True
   $ REPONAME=fbs-mon hgmn push -q --to master_bookmark
   $ FBSOURCE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 1 get master_bookmark)
-  $ FBSOURCE_C1_BONSAI=$(REPOID=1 mononoke_admin convert --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1) 2>/dev/null)
-  $ FBSOURCE_C2_BONSAI=$(REPOID=1 mononoke_admin convert --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark) 2>/dev/null)
+  $ FBSOURCE_C1_BONSAI=$(mononoke_newadmin convert --repo-id 1 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1))
+  $ FBSOURCE_C2_BONSAI=$(mononoke_newadmin convert --repo-id 1 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark))
 
 -- fake a commit sync mapping between the new commits
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" << ENDOFINSERT

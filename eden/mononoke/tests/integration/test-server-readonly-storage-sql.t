@@ -37,14 +37,12 @@ blobimport, succeeding
   $ blobimport repo-hg/.hg repo
 
 check the read sql path still works with readonly storage
-  $ mononoke_admin --with-readonly-storage=true bookmarks log master_bookmark 2>&1 | grep master_bookmark
-  * (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
+  $ mononoke_newadmin --with-readonly-storage=true bookmarks -R repo log master_bookmark
+  * (master_bookmark) c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd blobimport * (glob)
 
 check that sql writes are blocked by readonly storage
-  $ mononoke_admin --with-readonly-storage=true bookmarks set another_bookmark 26805aba1e600a82e93661149f2313866a221a7b 2>&1
-  * using repo "repo" repoid * (glob)
-  * changeset resolved as: * (glob)
-  * Current position of * "another_bookmark" * is None (glob)
+  $ mononoke_newadmin --with-readonly-storage=true bookmarks -R repo set another_bookmark 26805aba1e600a82e93661149f2313866a221a7b
+  Creating publishing bookmark another_bookmark at c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
   * While executing InsertBookmarksImpl query (glob)
   
   Caused by:
