@@ -398,6 +398,11 @@ pub struct MononokeTunables {
 
     // Assigning global revs with small gaps
     global_rev_increment_with_gaps: TunableBool,
+
+    // During cross-repo sync, mark a generated changeset as created by lossy conversion if it is
+    // See [this post](https://fburl.com/workplace/l5job9po) for context
+    // The repo it is tuned by refers to the source repo in the sync
+    cross_repo_mark_changesets_as_created_by_lossy_conversion: TunableBoolByRepo,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

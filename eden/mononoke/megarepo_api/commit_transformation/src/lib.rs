@@ -47,8 +47,11 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
+use slog::info;
+use slog::Logger;
 use sorted_vector_map::SortedVectorMap;
 use thiserror::Error;
+use tunables::tunables;
 
 pub type MultiMover = Arc<dyn Fn(&MPath) -> Result<Vec<MPath>, Error> + Send + Sync + 'static>;
 pub type DirectoryMultiMover =
@@ -205,13 +208,13 @@ fn minimize_file_change_set<I: IntoIterator<Item = (MPath, FileChange)>>(
 /// to naive `MPath` rewriting in `cs.file_changes`. For
 /// more information about implicit deletes, please see
 /// `manifest/src/implici_deletes.rs`
-async fn get_implicit_delete_file_changes<'a, I: IntoIterator<Item = ChangesetId>>(
+async fn get_renamed_implicit_deletes<'a, I: IntoIterator<Item = ChangesetId>>(
     ctx: &'a CoreContext,
     cs: BonsaiChangesetMut,
     parent_changeset_ids: I,
     mover: MultiMover,
     source_repo: &'a impl Repo,
-) -> Result<Vec<(MPath, FileChange)>, Error> {
+) -> Result<Vec<Vec<MPath>>, Error> {
     let parent_manifest_ids = get_manifest_ids(ctx, source_repo, parent_changeset_ids).await?;
     let file_adds: Vec<_> = cs
         .file_changes
@@ -223,16 +226,7 @@ async fn get_implicit_delete_file_changes<'a, I: IntoIterator<Item = ChangesetId
         get_implicit_deletes(ctx, store, file_adds, parent_manifest_ids)
             .try_collect()
             .await?;
-    let maybe_renamed_implicit_deletes: Result<Vec<Vec<MPath>>, _> =
-        implicit_deletes.iter().map(|mpath| mover(mpath)).collect();
-    let maybe_renamed_implicit_deletes: Vec<Vec<MPath>> = maybe_renamed_implicit_deletes?;
-    let implicit_delete_file_changes: Vec<_> = maybe_renamed_implicit_deletes
-        .into_iter()
-        .flatten()
-        .map(|implicit_delete_mpath| (implicit_delete_mpath, FileChange::Deletion))
-        .collect();
-
-    Ok(implicit_delete_file_changes)
+    implicit_deletes.iter().map(|mpath| mover(mpath)).collect()
 }
 
 /// Determines what to do in commits rewriting to empty commit in small repo.
@@ -288,8 +282,8 @@ pub async fn rewrite_commit<'a>(
     force_first_parent: Option<ChangesetId>,
     rewrite_opts: RewriteOpts,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
-    let delete_file_changes = if !cs.file_changes.is_empty() {
-        get_implicit_delete_file_changes(
+    let renamed_implicit_deletes = if !cs.file_changes.is_empty() {
+        get_renamed_implicit_deletes(
             ctx,
             cs.clone(),
             remapped_parents.keys().cloned(),
@@ -302,12 +296,14 @@ pub async fn rewrite_commit<'a>(
     };
 
     internal_rewrite_commit_with_implicit_deletes(
+        ctx.logger(),
         cs,
         remapped_parents,
         mover,
         force_first_parent,
-        delete_file_changes,
+        renamed_implicit_deletes,
         rewrite_opts,
+        source_repo,
     )
 }
 
@@ -385,7 +381,7 @@ pub async fn rewrite_stack_no_merges<'a>(
             |cs| async move {
                 let deleted_file_changes = if cs.file_changes().next().is_some() {
                     let parents = cs.parents();
-                    get_implicit_delete_file_changes(
+                    get_renamed_implicit_deletes(
                         ctx,
                         cs.clone().into_mut(),
                         parents,
@@ -405,7 +401,7 @@ pub async fn rewrite_stack_no_merges<'a>(
         .await?;
 
     let mut res = vec![];
-    for (from_cs, implicit_deletes_file_changes) in css {
+    for (from_cs, renamed_implicit_deletes) in css {
         let from_cs_id = from_cs.get_changeset_id();
         let from_cs = from_cs.into_mut();
 
@@ -415,12 +411,14 @@ pub async fn rewrite_stack_no_merges<'a>(
         }
 
         let maybe_cs = internal_rewrite_commit_with_implicit_deletes(
+            ctx.logger(),
             from_cs,
             &remapped_parents,
             mover.clone(),
             force_first_parent,
-            implicit_deletes_file_changes,
+            renamed_implicit_deletes,
             Default::default(),
+            source_repo,
         )?;
 
         let maybe_cs = maybe_cs
@@ -439,20 +437,22 @@ pub async fn rewrite_stack_no_merges<'a>(
 }
 
 pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
+    logger: &Logger,
     mut cs: BonsaiChangesetMut,
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     mover: MultiMover,
     force_first_parent: Option<ChangesetId>,
-    implicit_delete_file_changes: Vec<(MPath, FileChange)>,
+    renamed_implicit_deletes: Vec<Vec<MPath>>,
     rewrite_opts: RewriteOpts,
+    source_repo: &impl RepoIdentityRef,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     let empty_commit = cs.file_changes.is_empty();
     if !empty_commit
         || rewrite_opts.empty_commit_from_large_repo == EmptyCommitFromLargeRepo::Discard
     {
-        let path_rewritten_changes: Result<Vec<Vec<_>>, _> = cs
+        let path_rewritten_changes = cs
             .file_changes
-            .into_iter()
+            .iter()
             .map(|(path, change)| {
                 // Just rewrite copy_from information, when we have it
                 fn rewrite_copy_from(
@@ -482,7 +482,7 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
 
                 // Extract any copy_from information, and use rewrite_copy_from on it
                 fn rewrite_file_change(
-                    change: TrackedFileChange,
+                    change: &TrackedFileChange,
                     remapped_parents: &HashMap<ChangesetId, ChangesetId>,
                     mover: MultiMover,
                 ) -> Result<FileChange, Error> {
@@ -498,12 +498,12 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
 
                 // Rewrite both path and changes
                 fn do_rewrite(
-                    path: MPath,
-                    change: FileChange,
+                    path: &MPath,
+                    change: &FileChange,
                     remapped_parents: &HashMap<ChangesetId, ChangesetId>,
                     mover: MultiMover,
                 ) -> Result<Vec<(MPath, FileChange)>, Error> {
-                    let new_paths = mover(&path)?;
+                    let new_paths = mover(path)?;
                     let change = match change {
                         FileChange::Change(tc) => {
                             rewrite_file_change(tc, remapped_parents, mover.clone())?
@@ -520,15 +520,47 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
                 }
                 do_rewrite(path, change, remapped_parents, mover.clone())
             })
-            .collect();
+            .collect::<Result<Vec<Vec<_>>, _>>()?;
 
-        let mut path_rewritten_changes: SortedVectorMap<_, _> = path_rewritten_changes?
+        // If any file change in the source bonsai changeset has no equivalent file change in the destination
+        // changeset, the conversion was lossy
+        if path_rewritten_changes
+            .iter()
+            .any(|rewritten| rewritten.is_empty())
+        {
+            mark_as_created_by_lossy_conversion(
+                logger,
+                &mut cs,
+                LossyConversionReason::FileChanges,
+                source_repo,
+            );
+        // If any implicit delete in the source bonsai changeset has no equivalent file change in the destination
+        // changeset, the conversion was lossy
+        } else if renamed_implicit_deletes
+            .iter()
+            .any(|rewritten| rewritten.is_empty())
+        {
+            mark_as_created_by_lossy_conversion(
+                logger,
+                &mut cs,
+                LossyConversionReason::ImplicitFileChanges,
+                source_repo,
+            );
+        }
+
+        let mut path_rewritten_changes: SortedVectorMap<_, _> = path_rewritten_changes
             .into_iter()
             .flat_map(|changes| changes.into_iter())
             .collect();
 
+        let implicit_delete_file_changes: Vec<(MPath, FileChange)> = renamed_implicit_deletes
+            .into_iter()
+            .flatten()
+            .map(|implicit_delete_mpath| (implicit_delete_mpath, FileChange::Deletion))
+            .collect();
         path_rewritten_changes.extend(implicit_delete_file_changes.into_iter());
         let path_rewritten_changes = minimize_file_change_set(path_rewritten_changes.into_iter());
+
         let is_merge = cs.parents.len() >= 2;
 
         // If all parent has < 2 commits then it's not a merge, and it was completely rewritten
@@ -568,6 +600,38 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
     }
 
     Ok(Some(cs))
+}
+
+enum LossyConversionReason {
+    FileChanges,
+    ImplicitFileChanges,
+}
+
+fn mark_as_created_by_lossy_conversion(
+    logger: &Logger,
+    cs: &mut BonsaiChangesetMut,
+    reason: LossyConversionReason,
+    source_repo: &impl RepoIdentityRef,
+) {
+    if tunables().by_repo_cross_repo_mark_changesets_as_created_by_lossy_conversion(
+        source_repo.repo_identity().name(),
+    ) == Some(true)
+    {
+        let reason = match reason {
+            LossyConversionReason::FileChanges => {
+                "the file changes from the source changeset don't all have an equivalent file change in the target changeset"
+            }
+            LossyConversionReason::ImplicitFileChanges => {
+                "implicit file changes from the source changeset don't all have an equivalent implicit file change in the target changeset"
+            }
+        };
+        info!(
+            logger,
+            "Marking changeset as created by lossy conversion because {}", reason
+        );
+        cs.hg_extra
+            .insert("created_by_lossy_conversion".to_string(), Vec::new());
+    }
 }
 
 pub async fn upload_commits<'a>(
@@ -641,6 +705,7 @@ mod test {
     use test_repo_factory::TestRepoFactory;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::CreateCommitContext;
+    use tunables::MononokeTunables;
 
     use super::*;
 
@@ -776,6 +841,255 @@ mod test {
             vec![("a", None), ("a/b", Some(()))],
             btreemap! { "a" => None, "a/b" => Some(()) },
         );
+    }
+
+    #[fbinit::test]
+    async fn test_rewrite_commit_marks_lossy_conversions(fb: FacebookInit) -> Result<(), Error> {
+        let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build().await?;
+        let tunables = MononokeTunables::default();
+        tunables.update_by_repo_bools(&hashmap! {
+            repo.repo_identity().name().to_string() => hashmap! {
+                "cross_repo_mark_changesets_as_created_by_lossy_conversion".to_string() => true,
+            },
+        });
+        tunables::override_tunables(Some(Arc::new(tunables)));
+        assert_eq!(
+            tunables::tunables().by_repo_cross_repo_mark_changesets_as_created_by_lossy_conversion(
+                repo.repo_identity().name(),
+            ),
+            Some(true)
+        );
+        let ctx = CoreContext::test_mock(fb);
+        let mapping_rules = SourceMappingRules {
+            default_prefix: "".to_string(), // Rewrite to root
+            overrides: btreemap! {
+                "www".to_string() => vec!["".to_string()], // map changes to www to root
+                "xplat".to_string() => vec![], // swallow changes outside of www
+            },
+            ..Default::default()
+        };
+        let multi_mover = create_source_to_target_multi_mover(mapping_rules)?;
+        // Add files to www and xplat (lossy)
+        let first = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("www/foo.php", "foo content")
+            .add_file("www/bar/baz.php", "baz content")
+            .add_file("www/bar/crux.php", "crux content")
+            .add_file("xplat/a/a.js", "a content")
+            .add_file("xplat/a/b.js", "b content")
+            .add_file("xplat/b/c.js", "c content")
+            .commit()
+            .await?;
+        // Only add one file in xplat (No changeset will be generated)
+        let second = CreateCommitContext::new(&ctx, &repo, vec![first])
+            .add_file("xplat/c/d.js", "d content")
+            .commit()
+            .await?;
+        // Only add one file in www (non-lossy)
+        let third = CreateCommitContext::new(&ctx, &repo, vec![second])
+            .add_file("www/baz/foobar.php", "foobar content")
+            .commit()
+            .await?;
+        // Only change files in www (non-lossy)
+        let fourth = CreateCommitContext::new(&ctx, &repo, vec![third])
+            .add_file("www/baz/foobar.php", "more foobar content")
+            .add_file("www/foo.php", "more foo content")
+            .commit()
+            .await?;
+        // Only delete files in www (non-lossy)
+        let fifth = CreateCommitContext::new(&ctx, &repo, vec![fourth])
+            .delete_file("www/baz/crux.php")
+            .commit()
+            .await?;
+        // Delete files in www and xplat (lossy)
+        let sixth = CreateCommitContext::new(&ctx, &repo, vec![fifth])
+            .delete_file("xplat/a/a.js")
+            .delete_file("www/bar/baz.php")
+            .commit()
+            .await?;
+
+        let first_rewritten_bcs_id = test_rewrite_commit_cs_id(
+            &ctx,
+            &repo,
+            first,
+            HashMap::new(),
+            multi_mover.clone(),
+            None,
+        )
+        .await?;
+        assert_changeset_is_marked_lossy(&ctx, &repo, first_rewritten_bcs_id).await?;
+
+        assert!(
+            test_rewrite_commit_cs_id(
+                &ctx,
+                &repo,
+                second,
+                hashmap! {
+                    first => first_rewritten_bcs_id,
+                },
+                multi_mover.clone(),
+                None,
+            )
+            .await
+            .is_err()
+        );
+
+        let third_rewritten_bcs_id = test_rewrite_commit_cs_id(
+            &ctx,
+            &repo,
+            third,
+            hashmap! {
+                second => first_rewritten_bcs_id, // there is no second equivalent
+            },
+            multi_mover.clone(),
+            None,
+        )
+        .await?;
+        assert_changeset_is_not_marked_lossy(&ctx, &repo, third_rewritten_bcs_id).await?;
+
+        let fourth_rewritten_bcs_id = test_rewrite_commit_cs_id(
+            &ctx,
+            &repo,
+            fourth,
+            hashmap! {
+                third => third_rewritten_bcs_id,
+            },
+            multi_mover.clone(),
+            None,
+        )
+        .await?;
+        assert_changeset_is_not_marked_lossy(&ctx, &repo, fourth_rewritten_bcs_id).await?;
+
+        let fifth_rewritten_bcs_id = test_rewrite_commit_cs_id(
+            &ctx,
+            &repo,
+            fifth,
+            hashmap! {
+                fourth => fourth_rewritten_bcs_id,
+            },
+            multi_mover.clone(),
+            None,
+        )
+        .await?;
+        assert_changeset_is_not_marked_lossy(&ctx, &repo, fifth_rewritten_bcs_id).await?;
+
+        let sixth_rewritten_bcs_id = test_rewrite_commit_cs_id(
+            &ctx,
+            &repo,
+            sixth,
+            hashmap! {
+                fifth => fifth_rewritten_bcs_id,
+            },
+            multi_mover.clone(),
+            None,
+        )
+        .await?;
+        assert_changeset_is_marked_lossy(&ctx, &repo, sixth_rewritten_bcs_id).await?;
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_rewrite_commit_marks_lossy_conversions_with_implicit_deletes(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build().await?;
+        let tunables = MononokeTunables::default();
+        tunables.update_by_repo_bools(&hashmap! {
+            repo.repo_identity().name().to_string() => hashmap! {
+                "cross_repo_mark_changesets_as_created_by_lossy_conversion".to_string() => true,
+            },
+        });
+        tunables::override_tunables(Some(Arc::new(tunables)));
+        assert_eq!(
+            tunables::tunables().by_repo_cross_repo_mark_changesets_as_created_by_lossy_conversion(
+                repo.repo_identity().name(),
+            ),
+            Some(true)
+        );
+        let ctx = CoreContext::test_mock(fb);
+        // This commit is not lossy because all paths will be mapped somewhere.
+        let first = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("a/b/c/d", "d")
+            .add_file("a/b/c/e", "e")
+            .add_file("a/b/c/f/g", "g")
+            .add_file("a/b/c/f/h", "h")
+            .add_file("a/b/c/i", "i")
+            .commit()
+            .await?;
+        let second = CreateCommitContext::new(&ctx, &repo, vec![first])
+            .add_file("a/b/c", "new c") // This creates a file at `a/b/c`, implicitely deleting the directory
+            // at `a/b/c` and all the files it contains (`d`, `e`, `f/g` and `f/h`)
+            .add_file("a/b/i", "new i")
+            .commit()
+            .await?;
+
+        // With the full mapping rules, all directories from the repo have a mapping
+        let full_mapping_rules = SourceMappingRules {
+            default_prefix: "".to_string(),
+            overrides: btreemap! {
+                "a/b".to_string() => vec!["ab".to_string()],
+                "a/b/c".to_string() => vec!["abc".to_string()],
+                "a/b/c/f".to_string() => vec!["abcf".to_string()],
+            },
+            ..Default::default()
+        };
+        let full_multi_mover = create_source_to_target_multi_mover(full_mapping_rules)?;
+        // With the partial mapping rules, files under `a/b/c/f` don't have a mapping
+        let partial_mapping_rules = SourceMappingRules {
+            default_prefix: "".to_string(),
+            overrides: btreemap! {
+                "a/b".to_string() => vec!["ab".to_string()],
+                "a/b/c".to_string() => vec!["abc".to_string()],
+                "a/b/c/f".to_string() => vec![],
+            },
+            ..Default::default()
+        };
+        let partial_multi_mover = create_source_to_target_multi_mover(partial_mapping_rules)?;
+
+        // We rewrite the first commit with the full_multi_mover.
+        // This is not lossy.
+        let first_rewritten_bcs_id = test_rewrite_commit_cs_id(
+            &ctx,
+            &repo,
+            first,
+            HashMap::new(),
+            full_multi_mover.clone(),
+            None,
+        )
+        .await?;
+        assert_changeset_is_not_marked_lossy(&ctx, &repo, first_rewritten_bcs_id).await?;
+        // When we rewrite the second commit with the full_multi_mover.
+        // This is not lossy:
+        // All file changes have a mapping and all implicitely deleted files have a mapping.
+        let full_second_rewritten_bcs_id = test_rewrite_commit_cs_id(
+            &ctx,
+            &repo,
+            second,
+            hashmap! {
+                first => first_rewritten_bcs_id
+            },
+            full_multi_mover.clone(),
+            None,
+        )
+        .await?;
+        assert_changeset_is_not_marked_lossy(&ctx, &repo, full_second_rewritten_bcs_id).await?;
+        // When we rewrite the second commit with the partial_multi_mover.
+        // This **is** lossy:
+        // All file changes have a mapping but some implicitely deleted files don't have a mapping
+        // (namely, `a/b/c/f/g` and `a/b/c/f/h`).
+        let partial_second_rewritten_bcs_id = test_rewrite_commit_cs_id(
+            &ctx,
+            &repo,
+            second,
+            hashmap! {
+                first => first_rewritten_bcs_id
+            },
+            partial_multi_mover.clone(),
+            None,
+        )
+        .await?;
+        assert_changeset_is_marked_lossy(&ctx, &repo, partial_second_rewritten_bcs_id).await?;
+        Ok(())
     }
 
     #[fbinit::test]
@@ -938,6 +1252,36 @@ mod test {
         save_bonsai_changesets(vec![rewritten.clone()], ctx.clone(), repo).await?;
 
         Ok(rewritten.get_changeset_id())
+    }
+
+    async fn assert_changeset_is_marked_lossy<'a>(
+        ctx: &'a CoreContext,
+        repo: &'a impl Repo,
+        bcs_id: ChangesetId,
+    ) -> Result<(), Error> {
+        let bcs = bcs_id.load(ctx, &repo.repo_blobstore()).await?;
+        assert!(
+            bcs.hg_extra()
+                .any(|(key, _)| key == "created_by_lossy_conversion"),
+            "Failed with {:?}",
+            bcs
+        );
+        Ok(())
+    }
+
+    async fn assert_changeset_is_not_marked_lossy<'a>(
+        ctx: &'a CoreContext,
+        repo: &'a impl Repo,
+        bcs_id: ChangesetId,
+    ) -> Result<(), Error> {
+        let bcs = bcs_id.load(ctx, &repo.repo_blobstore()).await?;
+        assert!(
+            !bcs.hg_extra()
+                .any(|(key, _)| key == "created_by_lossy_conversion"),
+            "Failed with {:?}",
+            bcs
+        );
+        Ok(())
     }
 
     #[test]
