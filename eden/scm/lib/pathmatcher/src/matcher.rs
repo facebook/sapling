@@ -62,17 +62,18 @@ pub fn cli_matcher_with_filesets(
     root: &Path,
     cwd: &Path,
 ) -> Result<HintedMatcher> {
-    let normalize = |pats: &[_], default, force_recursive| -> Result<Option<Vec<Pattern>>> {
+    let mut all_warnings = Vec::new();
+
+    let mut normalize = |pats: &[_], default, force_recursive| -> Result<Option<Vec<Pattern>>> {
         if pats.is_empty() {
             Ok(None)
         } else {
-            Ok(Some(normalize_patterns(
-                pats,
-                default,
-                root,
-                cwd,
-                force_recursive,
-            )?))
+            let (normalized, warnings) =
+                normalize_patterns(pats, default, root, cwd, force_recursive)?;
+
+            all_warnings.extend(warnings);
+
+            Ok(Some(normalized))
         }
     };
 
@@ -97,9 +98,18 @@ pub fn cli_matcher_with_filesets(
         case_sensitive,
     )?;
 
+    for fs in [&patterns_filesets, &include_filesets, &exclude_filesets] {
+        if fs.map_or(false, |fs| fs.is_empty()) {
+            // TODO: pipe the original fileset string to this warning
+            all_warnings.push(format!("fileset evaluated to zero files"));
+            break;
+        }
+    }
+
     Ok(pattern_matcher
         .include(&include_matcher)
-        .exclude(&exclude_matcher))
+        .exclude(&exclude_matcher)
+        .with_warnings(all_warnings))
 }
 
 /// Build matcher from normalized patterns.
@@ -320,6 +330,44 @@ mod tests {
         )?;
 
         assert!(!m.matches_file(RepoPath::from_str("foo")?)?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_warnings() -> Result<()> {
+        let dir = tempfile::TempDir::new()?;
+
+        let listfile = dir.path().join("listfile");
+        std::fs::write(&listfile, "")?;
+
+        let m = cli_matcher_with_filesets(
+            &vec![
+                format!("listfile:{}", listfile.to_str().unwrap()),
+                "foo*".to_string(),
+            ],
+            Some(&[]),
+            &[],
+            None,
+            &[],
+            None,
+            PatternKind::RelPath,
+            true,
+            "/root".as_ref(),
+            "/root/cwd".as_ref(),
+        )?;
+
+        assert_eq!(
+            m.warnings(),
+            &[
+                format!(
+                    "empty listfile {} matches nothing",
+                    listfile.to_str().unwrap()
+                ),
+                "possible glob in non-glob pattern 'foo*', did you mean 'glob:foo*'?".to_string(),
+                "fileset evaluated to zero files".to_string(),
+            ]
+        );
 
         Ok(())
     }

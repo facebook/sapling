@@ -37,6 +37,8 @@ pub struct HintedMatcher {
     always_matches: bool,
     never_matches: bool,
     all_recursive_paths: bool,
+
+    warnings: Vec<String>,
 }
 
 impl Matcher for HintedMatcher {
@@ -108,6 +110,7 @@ impl HintedMatcher {
                 never_matches: never,
                 all_recursive_paths: true,
                 exact_files: Vec::new(),
+                warnings: Vec::new(),
             });
         }
 
@@ -139,6 +142,7 @@ impl HintedMatcher {
                     .iter()
                     .all(|p| p.kind.is_path() && p.kind.is_recursive()),
             exact_files: pats.iter().filter_map(|p| p.exact_file.clone()).collect(),
+            warnings: Vec::new(),
         })
     }
 
@@ -157,6 +161,7 @@ impl HintedMatcher {
             never_matches: self.never_matches || other.never_matches,
             all_recursive_paths: self.all_recursive_paths && other.always_matches,
             case_sensitive: self.case_sensitive,
+            warnings: Vec::new(),
         }
     }
 
@@ -185,7 +190,17 @@ impl HintedMatcher {
                 || (other.always_matches && self.exact_files.is_empty()),
             all_recursive_paths: self.all_recursive_paths && other.never_matches,
             case_sensitive: self.case_sensitive,
+            warnings: Vec::new(),
         }
+    }
+
+    pub fn warnings(&self) -> &[String] {
+        &self.warnings
+    }
+
+    pub(crate) fn with_warnings(mut self, warnings: Vec<String>) -> Self {
+        self.warnings = warnings;
+        self
     }
 }
 
@@ -295,13 +310,16 @@ mod test {
     #[test]
     fn test_always_matches() -> Result<()> {
         let matcher = HintedMatcher::from_patterns(
-            Some(&normalize_patterns(
-                &[".", "doesnt-matter"],
-                PatternKind::RelPath,
-                "/root".as_ref(),
-                "/root".as_ref(),
-                false,
-            )?),
+            Some(
+                &normalize_patterns(
+                    &[".", "doesnt-matter"],
+                    PatternKind::RelPath,
+                    "/root".as_ref(),
+                    "/root".as_ref(),
+                    false,
+                )?
+                .0,
+            ),
             None,
             true,
             true,

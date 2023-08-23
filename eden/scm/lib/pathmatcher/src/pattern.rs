@@ -185,6 +185,9 @@ pub fn split_pattern<'a>(pattern: &'a str, default_kind: PatternKind) -> (Patter
     }
 }
 
+// Normalize input patterns, also returning warnings for the user.
+// All pattern kinds expand to globs except for regexes, which stay regexes.
+// A pattern can expand to empty (e.g. empty "listfile").
 #[tracing::instrument(level = "debug", ret)]
 pub(crate) fn normalize_patterns<I>(
     patterns: I,
@@ -192,12 +195,13 @@ pub(crate) fn normalize_patterns<I>(
     root: &Path,
     cwd: &Path,
     force_recursive_glob: bool,
-) -> Result<Vec<Pattern>>
+) -> Result<(Vec<Pattern>, Vec<String>)>
 where
     I: IntoIterator + std::fmt::Debug,
     I::Item: AsRef<str> + std::fmt::Debug,
 {
     let mut result = Vec::new();
+    let mut warnings = Vec::new();
 
     for pattern in patterns {
         let (kind, pat) = split_pattern(pattern.as_ref(), default_kind);
@@ -248,7 +252,14 @@ where
 
             // Escape glob characters so we can convert non-glob patterns into globs.
             if kind.is_path() {
-                pat = plain_to_glob(&pat);
+                let escaped = plain_to_glob(&pat);
+                if pat != escaped {
+                    let pattern = pattern.as_ref();
+                    warnings.push(format!(
+                        "possible glob in non-glob pattern '{pattern}', did you mean 'glob:{pattern}'?"
+                    ));
+                    pat = escaped;
+                }
             }
 
             // Make our loose globbing compatible with the tree matcher's strict globbing.
@@ -300,11 +311,18 @@ where
             } else if matches!(kind, PatternKind::ListFile | PatternKind::ListFile0) {
                 let contents = util::file::read_to_string(&pat)?;
 
-                let patterns = if kind == PatternKind::ListFile {
+                let (patterns, listfile_warnings) = if kind == PatternKind::ListFile {
                     normalize_patterns(contents.lines(), default_kind, root, cwd, false)?
                 } else {
                     normalize_patterns(contents.split('\0'), default_kind, root, cwd, false)?
                 };
+
+                warnings.extend(listfile_warnings);
+
+                if patterns.is_empty() {
+                    warnings.push(format!("empty {} {pat} matches nothing", kind.name()));
+                }
+
                 for p in patterns {
                     result.push(p.with_source(pat.clone()));
                 }
@@ -314,7 +332,7 @@ where
         }
     }
 
-    Ok(result)
+    Ok((result, warnings))
 }
 
 // Extract "exact" file path from pattern. This is only appropriate to call at a
@@ -404,7 +422,12 @@ mod tests {
     }
 
     #[track_caller]
-    fn normalize(pat: &str, root: &str, cwd: &str, recursive: bool) -> Result<Vec<Pattern>> {
+    fn normalize(
+        pat: &str,
+        root: &str,
+        cwd: &str,
+        recursive: bool,
+    ) -> Result<(Vec<Pattern>, Vec<String>)> {
         // Caller must specify kind.
         assert!(pat.contains(':'));
 
@@ -416,6 +439,7 @@ mod tests {
         let kind = pat.split_once(':').unwrap().0;
         let got: Vec<String> = normalize(pat, root, cwd, recursive)
             .unwrap()
+            .0
             .into_iter()
             .map(|p| {
                 assert_eq!(p.kind.name(), kind);
@@ -474,6 +498,7 @@ mod tests {
             false,
         )
         .unwrap()
+        .0
         .into_iter()
         .map(|p| (p.kind, p.pattern))
         .collect();
@@ -503,7 +528,7 @@ mod tests {
     #[test]
     fn test_normalize_patterns_unsupported_kind() {
         assert!(
-            normalize_patterns(vec!["set:added()"], Glob, "/".as_ref(), "/".as_ref(), false,)
+            normalize_patterns(vec!["set:added()"], Glob, "/".as_ref(), "/".as_ref(), false)
                 .is_err()
         );
     }
@@ -545,8 +570,9 @@ mod tests {
             if sep == "\0" { "0" } else { "" },
             path_str
         )];
-        let result =
-            normalize_patterns(outer_patterns, Glob, "/".as_ref(), "/".as_ref(), false).unwrap();
+        let result = normalize_patterns(outer_patterns, Glob, "/".as_ref(), "/".as_ref(), false)
+            .unwrap()
+            .0;
 
         assert_eq!(
             result,
@@ -565,6 +591,7 @@ mod tests {
         fn check(pat: &str, expected: &[&str]) {
             let got: Vec<String> = normalize(pat, "/root", "/root/cwd", false)
                 .unwrap()
+                .0
                 .into_iter()
                 .filter_map(|p| p.exact_file.map(|p| p.to_string()))
                 .collect();
