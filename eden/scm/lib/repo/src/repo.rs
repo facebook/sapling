@@ -301,11 +301,22 @@ impl Repo {
         self.store_path.join("metalog")
     }
 
-    /// Constructs the EdenAPI client.
+    /// Constructs the EdenAPI client. Errors out if the EdenAPI should not be
+    /// constructed.
     ///
-    /// This requires configs like `paths.default`. Avoid calling this function for
-    /// local-only operations.
+    /// Use `optional_eden_api` if `EdenAPI` is optional.
     pub fn eden_api(&mut self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
+        match self.optional_eden_api()? {
+            Some(v) => Ok(v),
+            None => Err(EdenApiError::Other(anyhow!(
+                "EdenAPI is requested but not available for this repo"
+            ))),
+        }
+    }
+
+    /// Private API used by `optional_eden_api` that bypasses checks about whether
+    /// EdenAPI should be used or not.
+    fn force_construct_eden_api(&mut self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
         match &self.eden_api {
             Some(eden_api) => Ok(eden_api.clone()),
             None => {
@@ -350,7 +361,7 @@ impl Repo {
                     || (!path.contains("://") && EagerRepo::url_to_dir(&path).is_some())
                 {
                     tracing::trace!(target: "repo::eden_api", "using EagerRepo at {}", &path);
-                    return Ok(Some(self.eden_api()?));
+                    return Ok(Some(self.force_construct_eden_api()?));
                 }
                 // Legacy tests are incompatible with EdenAPI.
                 // They use None or file or ssh scheme with dummyssh.
@@ -381,7 +392,7 @@ impl Repo {
                 tracing::trace!(target: "repo::eden_api", "proceeding with path {}, reponame {:?}", path, self.config.get("remotefilelog", "reponame"));
             }
         }
-        Ok(Some(self.eden_api()?))
+        Ok(Some(self.force_construct_eden_api()?))
     }
 
     pub fn dag_commits(&mut self) -> Result<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>> {
