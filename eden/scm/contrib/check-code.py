@@ -591,7 +591,6 @@ def checkfile(
             try:
                 pre = post = fp.read()
             except UnicodeDecodeError as e:
-                print("%s while reading %s" % (e, f))
                 return result
     except IOError as e:
         print("Skipping %s, %s" % (f, str(e).split(":", 1)[0]))
