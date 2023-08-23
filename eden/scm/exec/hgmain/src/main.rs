@@ -40,6 +40,10 @@ fn main() {
         std::env::set_var("NoDefaultCurrentDirectoryInExePath", "1")
     }
 
+    // This code path is used by `open Sapling.app` on macOS.
+    #[cfg(target_os = "macos")]
+    webview_app::maybe_become_webview_app();
+
     let mut full_args = match dispatch::args() {
         Ok(args) => args,
         Err(_) => {

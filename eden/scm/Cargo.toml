@@ -129,6 +129,7 @@ members = [
   "lib/version",
   "lib/vfs",
   "lib/vlqencoding",
+  "lib/webview-app",
   "lib/workingcopy",
   "lib/xdiff",
   "lib/xdiff-sys",

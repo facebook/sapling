@@ -17,6 +17,9 @@ identity = { version = "0.1.0", path = "../../lib/identity", optional = true }
 libc = "0.2.139"
 pyblackbox = { path = "../../edenscmnative/bindings/modules/pyblackbox" }
 
+[target.'cfg(target_os = "macos")'.dependencies]
+webview-app = { version = "0.1.0", path = "../../lib/webview-app" }
+
 [target.'cfg(target_os = "windows")'.dependencies]
 anyhow = "1.0.71"
 winapi = { version = "0.3", features = ["everything"] }
