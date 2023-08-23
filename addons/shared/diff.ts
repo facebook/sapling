@@ -49,6 +49,25 @@ export function diffLines(
   aLines: string[],
   bLines: string[],
 ): [LineIdx, LineIdx, LineIdx, LineIdx][] {
+  return diffBlocks(aLines, bLines)
+    .filter(([sign, _range]) => sign === '!')
+    .map(([_sign, range]) => range);
+}
+
+/**
+ * Calculate the line differences. For performance, this function returns
+ * line ranges not line contents.
+ *
+ * Similar to Mercurial's `mdiff.allblocks`.
+ *
+ * @param aLines lines on the "a" side.
+ * @param bLines lines on the "b" side.
+ * @returns A list of `[sign, [a1, a2, b1, b2]]` tuples for the line ranges.
+ * If `sign` is `'='`, the a1 to a2 range on the a side, and b1 to b2 range
+ * on the b side are the same on both sides. Otherwise, `sign` is `'!'`
+ * meaning the ranges are different.
+ */
+export function diffBlocks(aLines: string[], bLines: string[]): Array<Block> {
   // Avoid O(string length) comparison.
   const [aList, bList] = stringsToInts([aLines, bLines]);
 
@@ -57,18 +76,24 @@ export function diffLines(
   let bLen = bList.length;
   const minLen = Math.min(aLen, bLen);
   let commonPrefixLen = 0;
+  let commonSuffixLen = 0;
   while (commonPrefixLen < minLen && aList[commonPrefixLen] === bList[commonPrefixLen]) {
     commonPrefixLen += 1;
   }
   while (aLen > commonPrefixLen && bLen > commonPrefixLen && aList[aLen - 1] === bList[bLen - 1]) {
     aLen -= 1;
     bLen -= 1;
+    commonSuffixLen += 1;
   }
   aLen -= commonPrefixLen;
   bLen -= commonPrefixLen;
 
+  const blocks: Array<Block> = [];
+  if (commonPrefixLen > 0) {
+    blocks.push(['=', [0, commonPrefixLen, 0, commonPrefixLen]]);
+  }
+
   // Run the diff algorithm.
-  const blocks: [LineIdx, LineIdx, LineIdx, LineIdx][] = [];
   let a1 = 0;
   let b1 = 0;
 
@@ -79,10 +104,19 @@ export function diffLines(
   function foundSequence(n: LineIdx, a2: LineIdx, b2: LineIdx) {
     if (a1 !== a2 || b1 !== b2) {
       blocks.push([
-        a1 + commonPrefixLen,
-        a2 + commonPrefixLen,
-        b1 + commonPrefixLen,
-        b2 + commonPrefixLen,
+        '!',
+        [a1 + commonPrefixLen, a2 + commonPrefixLen, b1 + commonPrefixLen, b2 + commonPrefixLen],
+      ]);
+    }
+    if (n > 0) {
+      blocks.push([
+        '=',
+        [
+          a2 + commonPrefixLen,
+          a2 + n + commonPrefixLen,
+          b2 + commonPrefixLen,
+          b2 + n + commonPrefixLen,
+        ],
       ]);
     }
     a1 = a2 + n;
@@ -90,10 +124,16 @@ export function diffLines(
   }
 
   diffSequences(aLen, bLen, isCommon, foundSequence);
-  foundSequence(0, aLen, bLen);
+  foundSequence(commonSuffixLen, aLen, bLen);
 
   return blocks;
 }
+
+/** Indicates whether a block is same or different on both sides. */
+export type Sign = '=' | '!';
+
+/** Return type of `diffBlocks`. */
+export type Block = [Sign, [LineIdx, LineIdx, LineIdx, LineIdx]];
 
 /**
  * Split lines by `\n`. Preserve the end of lines.
