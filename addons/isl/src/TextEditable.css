@@ -58,7 +58,8 @@
 
 .text-editable-selection-highlight {
   position: absolute;
-  opacity: 0.4;
+  opacity: 0.9;
+  mix-blend-mode: var(--selection-mix-mode);
 }
 
 .text-editable-selection-highlight-line {

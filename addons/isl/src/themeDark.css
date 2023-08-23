@@ -21,6 +21,8 @@
   --hover-darken: rgba(255, 255, 255, 0.1);
   --highlight-foreground: #f0f0f0;
 
+  --selection-mix-mode: lighten;
+
   /* github PR colors */
   --github-badge-fg: white;
   --github-open-bg: #238636;
