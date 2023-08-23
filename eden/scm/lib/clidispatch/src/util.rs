@@ -9,7 +9,7 @@
 macro_rules! abort_if {
     ( $cond:expr, $($arg:tt)+ ) => {
         if $cond {
-            abort!($($arg)*);
+            $crate::abort!($($arg)*);
         }
     };
 }
@@ -17,27 +17,25 @@ macro_rules! abort_if {
 #[macro_export]
 macro_rules! abort {
     ( $msg:expr ) => {
-        return Err(clidispatch::errors::Abort($msg.into()).into());
+        return Err($crate::errors::Abort($msg.into()).into());
     };
     ( $($arg:tt)+ ) => {
-        return Err(clidispatch::errors::Abort(format!($($arg)*).into()).into());
+        return Err($crate::errors::Abort(format!($($arg)*).into()).into());
     };
 }
 
 #[macro_export]
 macro_rules! fallback {
     ( $msg:expr ) => {
-        return Err(clidispatch::errors::FallbackToPython($msg.into()).into());
+        return Err($crate::errors::FallbackToPython($msg.into()).into());
     };
     ( $($arg:tt)+ ) => {
-        return Err(clidispatch::errors::FallbackToPython(format!($($arg)*).into()).into());
+        return Err($crate::errors::FallbackToPython(format!($($arg)*).into()).into());
     };
 }
 
 #[cfg(test)]
 mod test {
-    use crate as clidispatch;
-
     fn abort_if_simple(should_abort: bool) -> anyhow::Result<()> {
         abort_if!(should_abort, "error!");
         Ok(())

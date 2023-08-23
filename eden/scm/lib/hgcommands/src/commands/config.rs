@@ -9,7 +9,6 @@ use std::borrow::Cow;
 use std::collections::BTreeSet;
 
 use anyhow::bail;
-use clidispatch::abort;
 use clidispatch::abort_if;
 use clidispatch::errors;
 use clidispatch::OptionalRepo;
