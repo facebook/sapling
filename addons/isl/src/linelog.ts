@@ -826,5 +826,5 @@ const revRangeToSet = cached(
   {cacheSize: 1000},
 );
 
-export {LineLog};
-export type {FlattenLine, Rev, LineIdx, LineInfo};
+export {LineLog, FlattenLine};
+export type {Rev, LineIdx, LineInfo};
