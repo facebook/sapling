@@ -1,4 +1,5 @@
-#debugruntest-compatible
+(debugruntest hits IO deadlock w/ tracing output)
+#chg-compatible
 
   $ eagerepo
   $ newext adddrop <<EOF
