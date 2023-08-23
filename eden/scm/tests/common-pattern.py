@@ -51,6 +51,9 @@ substitutions = [
 # Various platform error strings, keyed on a common replacement string
 _errors = {
     rb"$ENOENT$": (
+        # Rust's versions
+        rb"No such file or directory \(os error 2\)",
+        rb"The system cannot find the file specified\. \(os error 2\)",
         # strerror()
         rb"No such file or directory",
         # FormatMessage(ERROR_FILE_NOT_FOUND)

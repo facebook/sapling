@@ -149,6 +149,10 @@ impl Status {
     pub fn iter(&self) -> impl Iterator<Item = (&RepoPath, FileStatus)> {
         self.all.iter().map(|(f, s)| (f.as_repo_path(), *s))
     }
+
+    pub fn contains(&self, path: &RepoPath) -> bool {
+        self.all.contains_key(path)
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

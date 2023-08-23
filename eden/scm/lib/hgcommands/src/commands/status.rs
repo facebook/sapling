@@ -22,6 +22,7 @@ use print::PrintConfigStatusTypes;
 use repo::repo::Repo;
 use status::needs_morestatus_extension;
 use types::path::RepoPathRelativizer;
+use types::RepoPathBuf;
 use workingcopy::workingcopy::WorkingCopy;
 
 use super::get_formatter;
@@ -132,6 +133,8 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         && ctx.opts.walk_opts.include.is_empty()
         && ctx.opts.walk_opts.exclude.is_empty();
 
+    let mut matcher_files: Vec<RepoPathBuf> = Vec::new();
+
     let matcher: DynMatcher = if repo
         .config()
         .get_or_default("experimental", "rustmatcher")?
@@ -145,7 +148,10 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
             wc.vfs().root(),
             &cwd,
         ) {
-            Ok(matcher) => Arc::new(matcher),
+            Ok(matcher) => {
+                matcher_files = matcher.exact_files().to_vec();
+                Arc::new(matcher)
+            }
             Err(err) => match err.downcast_ref::<pathmatcher::Error>() {
                 Some(pathmatcher::Error::UnsupportedPatternKind(_)) => {
                     tracing::debug!(target: "status_info", status_detail="unsupported_pattern");
@@ -241,6 +247,14 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
 
     for invalid in status.invalid_type() {
         lgr.warn(format!("{invalid}: invalid file type"));
+    }
+
+    for file in &matcher_files {
+        if !status.contains(file) {
+            if let Err(err) = wc.vfs().metadata(file) {
+                lgr.warn(format!("{}: {err}", relativizer.relativize(file)));
+            }
+        }
     }
 
     ctx.maybe_start_pager(repo.config())?;
