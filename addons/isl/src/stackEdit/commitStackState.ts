@@ -1261,11 +1261,11 @@ type CommitIdxProps = {
   path: RepoPath;
 };
 
-const FileIdx = Record<FileIdxProps>({fileIdx: 0, fileRev: 0});
-type FileIdx = RecordOf<FileIdxProps>;
+export const FileIdx = Record<FileIdxProps>({fileIdx: 0, fileRev: 0});
+export type FileIdx = RecordOf<FileIdxProps>;
 
-const CommitIdx = Record<CommitIdxProps>({rev: -1, path: ''});
-type CommitIdx = RecordOf<CommitIdxProps>;
+export const CommitIdx = Record<CommitIdxProps>({rev: -1, path: ''});
+export type CommitIdx = RecordOf<CommitIdxProps>;
 
 const ABSENT_FLAG = 'a';
 

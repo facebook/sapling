@@ -33,7 +33,7 @@ SOFTWARE.
 import diffSequences from 'diff-sequences';
 
 /** Index of a line. Starts from 0. */
-type LineIdx = number;
+export type LineIdx = number;
 
 /**
  * Calculate the line differences. For performance, this function only
