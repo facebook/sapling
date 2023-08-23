@@ -7,9 +7,8 @@
 # Copyright (c) Mercurial Contributors.
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig workingcopy.ruststatus=false
 
-  $ setconfig 'extensions.treemanifest=!' hint.ack-match-full-traversal=true
+  $ setconfig hint.ack-match-full-traversal=true
   $ hg init repo
   $ cd repo
   $ echo 0 > a
@@ -73,8 +72,8 @@
   $ hg locate -r 0
   a
   b
-  dir.h/foo
   t.h
+  dir.h/foo
   t/b
   t/e.h
   t/x

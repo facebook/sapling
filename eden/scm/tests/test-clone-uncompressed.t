@@ -2,7 +2,6 @@
 #inprocess-hg-incompatible
 
   $ configure dummyssh
-  $ setconfig workingcopy.ruststatus=false
 #require serve
 
 Initialize repository
@@ -16,7 +15,7 @@ the status call is to check for issue5130
   ...     with open(str(i), 'w') as fh:
   ...         x = fh.write("%s" % (str(i),))
   $ hg -q commit -A -m 'add a lot of files'
-  $ hg st --config status.use-rust=false
+  $ hg st
   $ cd ..
 
 Basic clone

@@ -8,7 +8,6 @@
 # GNU General Public License version 2 or any later version.
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig status.use-rust=false
   $ setconfig workingcopy.ruststatus=False
 
   $ setconfig 'extensions.treemanifest=!'

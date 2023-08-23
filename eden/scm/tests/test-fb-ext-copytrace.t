@@ -2,7 +2,6 @@
 #inprocess-hg-incompatible
   $ eagerepo
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig workingcopy.ruststatus=false
 
   $ configure mutation-norecord
   $ enable copytrace rebase shelve remotenames

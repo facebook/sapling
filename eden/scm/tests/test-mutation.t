@@ -7,7 +7,6 @@
   $ setconfig experimental.evolution=obsolete
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
-  $ setconfig workingcopy.ruststatus=false
 
   $ cat >> $HGRCPATH <<EOF
   > [templatealias]

@@ -1,8 +1,6 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
-  $ setconfig workingcopy.ruststatus=False
-  $ disable treemanifest
   $ enable smartlog
   $ readconfig <<EOF
   > [experimental]

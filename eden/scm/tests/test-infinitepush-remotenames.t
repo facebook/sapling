@@ -1,9 +1,7 @@
 #chg-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
   $ configure dummyssh
-  $ disable treemanifest
   $ enable infinitepush
   $ setconfig remotenames.hoist=default 'remotenames.autopullhoistpattern=re:.*'
   $ setconfig infinitepush.branchpattern="re:scratch/.+"

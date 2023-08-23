@@ -9,7 +9,6 @@
 
   $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig workingcopy.ruststatus=false
   $ hg init book-D
   $ cd book-D
   $ cat >> .hg/hgrc << 'EOF'

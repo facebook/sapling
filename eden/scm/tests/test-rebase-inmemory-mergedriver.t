@@ -8,7 +8,6 @@ Test mergedriver invalidation with IMM.
   $ setconfig rebase.singletransaction=True
   $ setconfig rebase.experimental.inmemory=True
   $ setconfig rebase.experimental.inmemorywarning="rebasing in-memory!"
-  $ setconfig workingcopy.ruststatus=false
 
   $ mkdir driver
   $ cat > driver/__init__.py <<EOF

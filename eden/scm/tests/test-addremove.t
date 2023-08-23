@@ -6,7 +6,6 @@
 # GNU General Public License version 2 or any later version.
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=False
   $ hg init rep
   $ cd rep
   $ mkdir dir

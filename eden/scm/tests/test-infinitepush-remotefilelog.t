@@ -1,8 +1,6 @@
 #debugruntest-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
-  $ disable treemanifest
   $ . "$TESTDIR/library.sh"
 
   $ mkcommit() {
@@ -78,8 +76,8 @@ First client: make commits with file modification and file deletion
   searching for changes
   remote: pushing 3 commits:
   remote:     2d9cfa751213  scratchcommit
-  remote:     1c2153299e05  scratch commit with many files
-  remote:     2db33e8c1f93  scratch commit with deletion
+  remote:     70ec84a579b5  scratch commit with many files
+  remote:     bae5ff92534a  scratch commit with deletion
   $ cd ..
 
 Second client: pull new scratch commits and update to all of them
@@ -90,9 +88,9 @@ Second client: pull new scratch commits and update to all of them
   adding changesets
   adding manifests
   adding file changes
-  $ hg up 1c2153299e05
+  $ hg up 70ec84a579b5
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg up 2db33e8c1f93
+  $ hg up bae5ff92534a
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ cd ..
 
@@ -107,23 +105,23 @@ First client: make a file whose name is a glob
   searching for changes
   remote: pushing 5 commits:
   remote:     2d9cfa751213  scratchcommit
-  remote:     1c2153299e05  scratch commit with many files
-  remote:     2db33e8c1f93  scratch commit with deletion
-  remote:     2eea49d22494  Add foo[bar]
-  remote:     fc38aa914a17  Edit foo[bar]
+  remote:     70ec84a579b5  scratch commit with many files
+  remote:     bae5ff92534a  scratch commit with deletion
+  remote:     3109e6519e25  Add foo[bar]
+  remote:     f490a85d5051  Edit foo[bar]
   $ cd ..
 
 Second client: pull regex file an make sure it is readable
 (only pull the first commit, to force a rebundle)
   $ cd shallow2
-  $ hg pull -r 2eea49d22494
+  $ hg pull -r 3109e6519e25
   pulling from ssh://user@dummy/master
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  $ hg log -r 2eea49d22494 --stat
-  commit:      2eea49d22494
+  $ hg log -r 3109e6519e25 --stat
+  commit:      3109e6519e25
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Add foo[bar]

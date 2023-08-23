@@ -1,9 +1,7 @@
 #chg-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
   $ configure dummyssh
-  $ disable treemanifest
   $ enable infinitepush remotenames
   $ setconfig infinitepush.branchpattern="re:scratch/.+"
   $ mkcommit() {

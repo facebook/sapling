@@ -1,5 +1,4 @@
 #debugruntest-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ configure modern
   $ enable smartlog
   $ newserver master

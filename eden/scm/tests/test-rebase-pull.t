@@ -10,7 +10,6 @@
 
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig workingcopy.ruststatus=false
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > rebase=

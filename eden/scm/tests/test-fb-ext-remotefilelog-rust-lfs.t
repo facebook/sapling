@@ -1,7 +1,6 @@
 #debugruntest-compatible
   $ eagerepo
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig workingcopy.ruststatus=false
 
   $ . "$TESTDIR/library.sh"
   $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False

@@ -2,7 +2,6 @@
 
 Test the lfs.localstore config option
 
-  $ setconfig workingcopy.ruststatus=False
   $ enable lfs
   $ setconfig lfs.url=file://$TESTTMP/remote lfs.threshold=1
 

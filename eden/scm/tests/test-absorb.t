@@ -8,7 +8,6 @@
 
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=false
   $ setconfig 'experimental.evolution='
   $ enable absorb
 

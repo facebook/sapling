@@ -1,7 +1,5 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
-  $ setconfig workingcopy.ruststatus=False
-  $ disable treemanifest
   $ setconfig experimental.allowfilepeer=True
 
 Stabilize test

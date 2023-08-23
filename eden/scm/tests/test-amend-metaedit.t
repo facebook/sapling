@@ -2,7 +2,6 @@
 
   $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig workingcopy.ruststatus=false
   $ configure mutation-norecord
   $ enable amend rebase
   $ export HGIDENTITY=sl

@@ -2,9 +2,9 @@
 
 #testcases pythonstatus ruststatus
 #if pythonstatus
-  $ setconfig status.use-rust=false workingcopy.use-rust=false
+  $ setconfig status.use-rust=false workingcopy.ruststatus=false
 #else
-  $ setconfig status.use-rust=true workingcopy.use-rust=true
+  $ setconfig status.use-rust=true workingcopy.ruststatus=true
 #endif
 
   $ configure modernclient

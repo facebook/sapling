@@ -4,7 +4,6 @@
   $ eagerepo
   $ setconfig format.use-segmented-changelog=true
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig workingcopy.ruststatus=false
 UTILS:
   $ reset() {
   >   cd ..

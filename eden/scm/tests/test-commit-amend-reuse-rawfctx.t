@@ -1,7 +1,6 @@
 #debugruntest-compatible
 
   $ configure mutation-norecord
-  $ setconfig workingcopy.ruststatus=false
 
 File node could be reused during commit --amend
 

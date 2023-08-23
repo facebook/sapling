@@ -1,6 +1,5 @@
 #debugruntest-compatible
 
-  $ setconfig workingcopy.ruststatus=False
 https://bz.mercurial-scm.org/522
 
 In the merge below, the file "foo" has the same contents in both

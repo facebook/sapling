@@ -2,7 +2,6 @@
 #inprocess-hg-incompatible
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig format.dirstate=2
 
 ------ Test dirstate._dirs refcounting
@@ -54,7 +53,6 @@ Test modulo storage/comparison of absurd dates:
 
 #if no-aix
   $ touch -t 195001011200 a
-Rust status doesn't crash
   $ hg st
   $ hg debugstate
   n 644          2 2018-01-19 15:14:08 a

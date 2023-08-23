@@ -23,7 +23,6 @@
 #  0 <- known good - -
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig workingcopy.ruststatus=False
 test bisect-sparse
   $ enable sparse
   $ hg init myrepo

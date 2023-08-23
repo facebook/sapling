@@ -1,6 +1,5 @@
 #debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig workingcopy.ruststatus=false
 
   $ readconfig <<EOF
   > [alias]

@@ -11,8 +11,6 @@
 # Log on empty repository: checking consistency
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig status.use-rust=false
-  $ setconfig workingcopy.ruststatus=False
 
   $ hg init empty
   $ cd empty

@@ -1,7 +1,6 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig workingcopy.ruststatus=false
 
 Issue586: removing remote files after merge appears to corrupt the
 dirstate

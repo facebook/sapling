@@ -6,7 +6,6 @@
 # GNU General Public License version 2 or any later version.
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig workingcopy.ruststatus=false
   $ hg init test
   $ cd test
   $ echo a > changed

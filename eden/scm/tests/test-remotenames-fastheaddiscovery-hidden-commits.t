@@ -1,6 +1,5 @@
 #debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig workingcopy.ruststatus=false
 
   $ enable remotenames
   $ enable amend

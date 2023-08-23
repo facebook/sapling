@@ -3,7 +3,6 @@
   $ setconfig format.use-segmented-changelog=true
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig 'ui.allowemptycommit=1'
-  $ setconfig workingcopy.ruststatus=false
 
   $ hg init a
   $ cd a

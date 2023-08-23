@@ -1,5 +1,3 @@
-  $ setconfig workingcopy.ruststatus=False
-  $ disable treemanifest
   $ setconfig experimental.allowfilepeer=True
 
   $ . "$TESTDIR/library.sh"

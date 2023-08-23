@@ -2,7 +2,6 @@
 
   $ configure modern
   $ enable shelve
-  $ setconfig workingcopy.ruststatus=false
 
 Use wrong formatted '._*' files to mimic the binary files created by MacOS:
 

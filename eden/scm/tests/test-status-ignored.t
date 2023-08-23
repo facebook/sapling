@@ -2,8 +2,6 @@
 #debugruntest-compatible
 #require fsmonitor
 
-  $ setconfig status.use-rust=true workingcopy.use-rust=true
-
   $ configure modernclient
   $ newclientrepo
   $ echo foo > .gitignore

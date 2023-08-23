@@ -1,9 +1,6 @@
 #chg-compatible
 
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig workingcopy.ruststatus=False
-  $ disable treemanifest
 
 test merge-tools configuration - mostly exercising filemerge.py
 
@@ -1343,7 +1340,6 @@ specified file as expected
 
   $ hg debugpickmergetool -X f
   $ hg debugpickmergetool unknown
-  unknown: no such file in rev ef83787e2614
 
 (--absent emulates merging change and delete)
 

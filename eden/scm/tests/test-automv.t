@@ -7,7 +7,6 @@
 # Tests for the automv extension; detect moved files at commit time.
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=false
 
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]

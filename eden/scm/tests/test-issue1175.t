@@ -1,7 +1,5 @@
 #debugruntest-compatible
 
-  $ setconfig workingcopy.ruststatus=False
-  $ disable treemanifest
 https://bz.mercurial-scm.org/1175
 
   $ newrepo repo

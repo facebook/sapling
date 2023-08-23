@@ -1,8 +1,9 @@
 #debugruntest-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
-  $ disable treemanifest
+Fails due to ":" in Windows path in combination w/ treemanifest.
+#require no-windows
+
 Setup
 
   $ configure dummyssh

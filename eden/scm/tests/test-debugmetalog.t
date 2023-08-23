@@ -6,7 +6,6 @@
 # GNU General Public License version 2.
 
   $ setconfig "visibility.enabled=true" "experimental.narrow-heads=1" "remotenames.selectivepull=1" "mutation.date=0 0" "metalog.track-config=0"
-  $ setconfig workingcopy.ruststatus=false
 
   $ newrepo
   $ enable remotenames amend

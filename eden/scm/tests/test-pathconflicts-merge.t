@@ -6,7 +6,6 @@ Turn it on for this test.
   $ setconfig experimental.merge.checkpathconflicts=True
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=false
 
   $ hg init repo
   $ cd repo

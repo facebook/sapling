@@ -1,7 +1,6 @@
 #debugruntest-compatible
 
   $ configure modern
-  $ setconfig workingcopy.ruststatus=false
   $ hg init repo
   $ cd repo
 

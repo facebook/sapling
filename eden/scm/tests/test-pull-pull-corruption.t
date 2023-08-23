@@ -1,9 +1,7 @@
 #chg-compatible
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
-  $ disable treemanifest
 Corrupt an hg repo with two pulls.
 create one repo with a long history
 

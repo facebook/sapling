@@ -8,7 +8,6 @@
 # Journal extension test: tests the share extension support
 
   $ configure modern
-  $ setconfig workingcopy.ruststatus=false
 
   $ cat >> testmocks.py << 'EOF'
   > # mock out util.getuser() and util.makedate() to supply testable values

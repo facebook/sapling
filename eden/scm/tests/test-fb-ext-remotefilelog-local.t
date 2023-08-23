@@ -1,9 +1,6 @@
 #chg-compatible
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
-  $ setconfig workingcopy.ruststatus=False
+  $ setconfig status.use-rust=false workingcopy.ruststatus=false
   $ setconfig experimental.allowfilepeer=True
-
-  $ disable treemanifest
 
   $ . "$TESTDIR/library.sh"
 

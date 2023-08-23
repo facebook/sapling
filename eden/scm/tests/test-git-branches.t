@@ -4,7 +4,6 @@
   $ eagerepo
   $ . $TESTDIR/git.sh
   $ enable smartlog amend
-  $ setconfig workingcopy.ruststatus=False
 
 Prepare upstream server repo w/ two commits on "main":
 

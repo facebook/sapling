@@ -3,7 +3,6 @@
   $ eagerepo
   $ setconfig format.use-segmented-changelog=true
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig workingcopy.ruststatus=false
 Set up test environment.
   $ configure mutation-norecord
   $ enable amend rebase

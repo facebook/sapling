@@ -2,7 +2,6 @@
 
   $ configure modern
   $ enable rebase
-  $ setconfig workingcopy.ruststatus=false
 
 Simple case:
   $ newrepo simple

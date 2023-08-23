@@ -1,8 +1,5 @@
 #debugruntest-compatible
 
-  $ setconfig workingcopy.ruststatus=False status.use-rust=false
-  $ disable treemanifest
-
 # enable bundle2 in advance
   $ setconfig format.usegeneraldelta=yes
 

@@ -2,7 +2,6 @@
 #require xargs env python3.8
 
   $ enable tweakdefaults rebase
-  $ setconfig workingcopy.ruststatus=false
 
 Set up the repository with some simple files.
 This is coupled with the files dictionary in

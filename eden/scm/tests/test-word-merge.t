@@ -3,7 +3,6 @@
   $ configure modern
   $ enable rebase
   $ setconfig merge.word-merge=1
-  $ setconfig workingcopy.ruststatus=false
 
 Successful word merge:
 

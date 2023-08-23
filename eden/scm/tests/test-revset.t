@@ -9,7 +9,6 @@
   $ setconfig format.use-segmented-changelog=true
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig workingcopy.ruststatus=false
   $ enable commitextras
   $ setconfig 'ui.allowemptycommit=1'
 

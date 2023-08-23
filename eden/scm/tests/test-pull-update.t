@@ -7,7 +7,6 @@
 #inprocess-hg-incompatible
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig workingcopy.ruststatus=False
 
   $ setconfig experimental.allowfilepeer=True
   $ hg init t

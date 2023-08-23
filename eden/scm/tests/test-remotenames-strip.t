@@ -5,7 +5,6 @@
 # GNU General Public License version 2.
 
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig workingcopy.ruststatus=false
   $ enable remotenames
 
 # Test that hg debugstrip -B stops at remotenames

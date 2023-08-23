@@ -2,8 +2,6 @@
 
 #if no-windows
 
-  $ setconfig workingcopy.ruststatus=False
-  $ disable treemanifest
   $ configure dummyssh
 #require serve
 #require bucktest

@@ -1,8 +1,6 @@
 #debugruntest-compatible
 
-  $ setconfig workingcopy.ruststatus=False
   $ configure mutation-norecord
-  $ disable treemanifest
 
 Avoid "\r" in messages:
 
@@ -107,7 +105,6 @@ Remove file that was added in amended commit:
   $ HGEDITOR='sh "`pwd`/editor.sh"' hg ci --amend --logfile ../logfile
 
   $ hg cat C
-  C: no such file in rev 9579b4a5c1df
   [1]
 
 No changes, just a different message:

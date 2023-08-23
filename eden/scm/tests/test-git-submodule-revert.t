@@ -5,7 +5,6 @@ Test the 'revert' command with submodules:
 
   $ configure modern
   $ setconfig diff.git=1
-  $ setconfig status.use-rust=false
   $ . $TESTDIR/git.sh
   $ enable rebase
 

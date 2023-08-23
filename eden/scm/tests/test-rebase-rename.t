@@ -1,7 +1,6 @@
 #debugruntest-compatible
 
   $ enable rebase
-  $ setconfig workingcopy.ruststatus=false
   $ readconfig <<EOF
   > [alias]
   > tlog  = log --template "{node|short} '{desc}' {branches}\n"

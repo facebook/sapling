@@ -7,7 +7,6 @@
 
   $ eagerepo
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig status.use-rust=false
   $ hg init t
   $ cd t
   $ echo a > a

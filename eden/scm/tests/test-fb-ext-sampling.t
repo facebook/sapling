@@ -1,8 +1,6 @@
 #chg-compatible
 #require no-fsmonitor
 
-  $ setconfig workingcopy.ruststatus=False
-
 Setup. SCM_SAMPLING_FILEPATH needs to be cleared as some environments may
 have it set.
 
@@ -77,17 +75,17 @@ Do a couple of commits.  We expect to log two messages per call to repo.commit.
   ...         assert len(parsedrecord["data"]) == 4
   ...     elif parsedrecord['category'] == 'measuredtimes':
   ...         print('atexit_measured: ', ", ".join(sorted(parsedrecord['data'])))
-  atexit_measured:  atexit_measured, fswalk_time, metrics_type, stdio_blocked
+  atexit_measured:  atexit_measured, metrics_type, stdio_blocked
   atexit_measured:  command_duration
   match filter commit_table
   message string commit_table
-  atexit_measured:  atexit_measured, fswalk_time, metrics_type, stdio_blocked
+  atexit_measured:  atexit_measured, metrics_type, stdio_blocked
   atexit_measured:  command_duration
-  atexit_measured:  atexit_measured, fswalk_time, metrics_type, stdio_blocked
+  atexit_measured:  atexit_measured, metrics_type, stdio_blocked
   atexit_measured:  command_duration
   match filter commit_table
   message string commit_table
-  atexit_measured:  atexit_measured, fswalk_time, metrics_type, stdio_blocked
+  atexit_measured:  atexit_measured, metrics_type, stdio_blocked
   atexit_measured:  command_duration
 
 Test topdir logging:

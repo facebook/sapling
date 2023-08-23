@@ -4,7 +4,6 @@
   $ configure mutation-norecord
   $ enable amend copytrace rebase shelve
   $ setconfig experimental.copytrace=off
-  $ setconfig workingcopy.ruststatus=false
 
   $ initclient() {
   >   setconfig copytrace.remote=false copytrace.enablefilldb=true

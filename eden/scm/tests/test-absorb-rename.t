@@ -2,7 +2,6 @@
 
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=false
   $ configure mutation-norecord
   $ enable absorb
   $ setconfig diff.git=1

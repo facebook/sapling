@@ -5,7 +5,6 @@
   $ eagerepo
   $ setconfig ghstack.github_username=test clone.use-rust=false
 Threading messes up the asyncio run loop since only main thread gets run loop by default.
-  $ setconfig workingcopy.ruststatus=false
   $ enable github ghstack amend rebase smartlog
   $ . $TESTDIR/git.sh
   $ export SL_TEST_GH_URL=https://github.com/facebook/test_github_repo.git

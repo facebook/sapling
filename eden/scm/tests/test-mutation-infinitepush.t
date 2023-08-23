@@ -1,9 +1,7 @@
 #chg-compatible
 #require bash
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
-  $ disable treemanifest
   $ enable amend rebase histedit fbhistedit remotenames
   $ setconfig experimental.evolution=obsolete
   $ setconfig experimental.narrow-heads=true

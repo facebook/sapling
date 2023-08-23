@@ -1,8 +1,6 @@
 #debugruntest-compatible
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=False
-  $ disable treemanifest
 
 Set up a repo
 

@@ -1,7 +1,6 @@
 #debugruntest-compatible
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig workingcopy.ruststatus=false
 This runs with TZ="GMT"
 
   $ hg init repo

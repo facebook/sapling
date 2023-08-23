@@ -3,7 +3,6 @@
 #inprocess-hg-incompatible
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=false
 
 test merging things outside of the sparse checkout
 

@@ -1,7 +1,6 @@
 #debugruntest-compatible
   $ enable amend copytrace rebase
   $ setconfig experimental.copytrace=off
-  $ setconfig workingcopy.ruststatus=false
   $ newrepo
 
   $ touch base

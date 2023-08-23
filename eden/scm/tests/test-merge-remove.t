@@ -1,7 +1,6 @@
 #debugruntest-compatible
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=false
 
   $ newclientrepo
 

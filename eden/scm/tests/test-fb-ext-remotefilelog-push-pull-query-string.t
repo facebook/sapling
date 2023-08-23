@@ -1,8 +1,6 @@
 #chg-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
-  $ disable treemanifest
   $ . "$TESTDIR/library.sh"
 
   $ cat >> $HGRCPATH << EOF

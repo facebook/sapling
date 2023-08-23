@@ -1,9 +1,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
-  $ disable treemanifest
   $ configure dummyssh
 Common configuration for both the server and client.
 
