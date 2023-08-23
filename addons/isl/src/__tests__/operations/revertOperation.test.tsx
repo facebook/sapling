@@ -7,7 +7,7 @@
 
 import App from '../../App';
 import platform from '../../platform';
-import {CommitInfoTestUtils, CommitTreeListTestUtils} from '../../testQueries';
+import {CommitInfoTestUtils, CommitTreeListTestUtils, ignoreRTL} from '../../testQueries';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -89,11 +89,11 @@ describe('RevertOperation', () => {
 
     it('renders optimistic state while running', async () => {
       expect(
-        CommitTreeListTestUtils.withinCommitTree().getByText('myFile1.txt'),
+        CommitTreeListTestUtils.withinCommitTree().getByText(ignoreRTL('myFile1.txt')),
       ).toBeInTheDocument();
       await clickRevert(screen.getByTestId('commit-tree-root'), 'myFile1.txt');
       expect(
-        CommitTreeListTestUtils.withinCommitTree().queryByText('myFile1.txt'),
+        CommitTreeListTestUtils.withinCommitTree().queryByText(ignoreRTL('myFile1.txt')),
       ).not.toBeInTheDocument();
     });
   });
@@ -131,13 +131,15 @@ describe('RevertOperation', () => {
     it('renders optimistic state while running', async () => {
       CommitInfoTestUtils.clickToSelectCommit('c');
       expect(
-        CommitTreeListTestUtils.withinCommitTree().queryByText('file.txt'),
+        CommitTreeListTestUtils.withinCommitTree().queryByText(ignoreRTL('file.txt')),
       ).not.toBeInTheDocument();
 
       await clickRevert(screen.getByTestId('commit-info-view'), 'file.txt');
 
       // file is not hidden from the tree, instead it's inserted
-      expect(CommitTreeListTestUtils.withinCommitTree().getByText('file.txt')).toBeInTheDocument();
+      expect(
+        CommitTreeListTestUtils.withinCommitTree().getByText(ignoreRTL('file.txt')),
+      ).toBeInTheDocument();
     });
   });
 });

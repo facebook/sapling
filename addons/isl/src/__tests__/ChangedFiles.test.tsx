@@ -7,6 +7,7 @@
 
 import App from '../App';
 import {__TEST__} from '../Tooltip';
+import {ignoreRTL} from '../testQueries';
 import {
   expectMessageSentToServer,
   simulateCommits,
@@ -99,17 +100,30 @@ describe('Changed Files', () => {
         value: '"fullPaths"',
       });
     });
-    expect(screen.getByText('src/file2.js')).toBeInTheDocument();
+    expect(screen.getByText(ignoreRTL('src/file2.js'))).toBeInTheDocument();
+  });
+
+  it('Uses LTR markers to render paths correctly', () => {
+    act(() => {
+      simulateUncommittedChangedFiles({
+        value: [
+          {path: '.gitignore', status: 'M'},
+          {path: 'src/.gitignore', status: 'A'},
+        ],
+      });
+    });
+    expect(screen.getByText('\u200E.gitignore')).toBeInTheDocument();
+    expect(screen.getByText('\u200Esrc/.gitignore')).toBeInTheDocument();
   });
 
   describe('default changed files', () => {
     it('disambiguates file paths', () => {
-      expect(screen.getByText('file1.js')).toBeInTheDocument();
-      expect(screen.getByText('file2.js')).toBeInTheDocument();
-      expect(screen.getByText('a/foo.js')).toBeInTheDocument();
-      expect(screen.getByText('b/foo.js')).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('file1.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('file2.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('a/foo.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('b/foo.js'))).toBeInTheDocument();
 
-      expect(screen.queryByText('src/file2.js')).not.toBeInTheDocument();
+      expect(screen.queryByText(ignoreRTL('src/file2.js'))).not.toBeInTheDocument();
     });
   });
 
@@ -120,11 +134,13 @@ describe('Changed Files', () => {
         fireEvent.click(screen.getByText('Full file paths'));
       });
 
-      expect(screen.getByText('file1.js')).toBeInTheDocument();
-      expect(screen.getByText('src/file2.js')).toBeInTheDocument();
-      expect(screen.getByText('src/a/foo.js')).toBeInTheDocument();
-      expect(screen.getByText('src/b/foo.js')).toBeInTheDocument();
-      expect(screen.getByText('src/subfolder/another/yet/another/file5.js')).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('file1.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('src/file2.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('src/a/foo.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('src/b/foo.js'))).toBeInTheDocument();
+      expect(
+        screen.getByText(ignoreRTL('src/subfolder/another/yet/another/file5.js')),
+      ).toBeInTheDocument();
     });
   });
 
@@ -135,12 +151,12 @@ describe('Changed Files', () => {
         fireEvent.click(screen.getByText('One-letter directories'));
       });
 
-      expect(screen.getByText('file1.js')).toBeInTheDocument();
-      expect(screen.getByText('s/file2.js')).toBeInTheDocument();
-      expect(screen.getByText('s/a/foo.js')).toBeInTheDocument();
-      expect(screen.getByText('s/b/foo.js')).toBeInTheDocument();
-      expect(screen.getByText('s/s/file4.js')).toBeInTheDocument();
-      expect(screen.getByText('s/s/a/y/a/file5.js')).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('file1.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('s/file2.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('s/a/foo.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('s/b/foo.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('s/s/file4.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('s/s/a/y/a/file5.js'))).toBeInTheDocument();
     });
   });
 
@@ -153,32 +169,32 @@ describe('Changed Files', () => {
     });
 
     it('shows non-disambiguated file basenames', () => {
-      expect(screen.getByText('file1.js')).toBeInTheDocument();
-      expect(screen.getByText('file2.js')).toBeInTheDocument();
-      expect(screen.getByText('file3.js')).toBeInTheDocument();
-      expect(screen.getAllByText('foo.js')).toHaveLength(2);
-      expect(screen.getByText('file4.js')).toBeInTheDocument();
-      expect(screen.getByText('file5.js')).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('file1.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('file2.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('file3.js'))).toBeInTheDocument();
+      expect(screen.getAllByText(ignoreRTL('foo.js'))).toHaveLength(2);
+      expect(screen.getByText(ignoreRTL('file4.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('file5.js'))).toBeInTheDocument();
     });
 
     it('shows folder names', () => {
-      expect(screen.getByText('src')).toBeInTheDocument();
-      expect(screen.getByText('a')).toBeInTheDocument();
-      expect(screen.getByText('b')).toBeInTheDocument();
-      expect(screen.getByText('subfolder')).toBeInTheDocument();
-      expect(screen.getByText('another/yet/another')).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('src'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('a'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('b'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('subfolder'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('another/yet/another'))).toBeInTheDocument();
     });
 
     it('clicking folder name hides contents', () => {
       act(() => {
         fireEvent.click(screen.getByText('subfolder'));
       });
-      expect(screen.queryByText('file4.js')).not.toBeInTheDocument();
-      expect(screen.queryByText('file5.js')).not.toBeInTheDocument();
+      expect(screen.queryByText(ignoreRTL('file4.js'))).not.toBeInTheDocument();
+      expect(screen.queryByText(ignoreRTL('file5.js'))).not.toBeInTheDocument();
 
-      expect(screen.getByText('file1.js')).toBeInTheDocument();
-      expect(screen.getByText('file2.js')).toBeInTheDocument();
-      expect(screen.getByText('file3.js')).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('file1.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('file2.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('file3.js'))).toBeInTheDocument();
     });
 
     it('clicking folders with the same name do not collapse each other', () => {
@@ -195,8 +211,8 @@ describe('Changed Files', () => {
       act(() => {
         fireEvent.click(screen.getAllByText('foo')[0]);
       });
-      expect(screen.queryByText('file1.js')).not.toBeInTheDocument();
-      expect(screen.queryByText('file3.js')).toBeInTheDocument();
+      expect(screen.queryByText(ignoreRTL('file1.js'))).not.toBeInTheDocument();
+      expect(screen.queryByText(ignoreRTL('file3.js'))).toBeInTheDocument();
     });
   });
 });

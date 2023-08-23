@@ -101,24 +101,19 @@
   align-items: center;
   gap: var(--halfpad);
   cursor: pointer;
+  overflow: hidden;
 }
 
-.changed-file-path {
-  max-width: calc(100% - 2 * var(--pad));
-  position: relative;
-  overflow: hidden;
-}
 .changed-file-path-text {
-  float: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* ellipsis dots on the start of the file path rather than the end */
+  direction: rtl;
+  text-align: left;
 }
 .changed-file-path .tooltip-creator {
-  width: 100%;
-  text-align: right;
   overflow: hidden;
-  white-space: nowrap;
-  margin-left: auto;
-  margin-right: auto;
-  display: block;
 }
 
 .changed-file-path:hover {

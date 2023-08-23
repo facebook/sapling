@@ -6,6 +6,7 @@
  */
 
 import App from '../App';
+import {ignoreRTL} from '../testQueries';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -97,11 +98,13 @@ describe('CommitTreeList', () => {
       });
 
       it('renders uncommitted changes', () => {
-        expect(screen.getByText('file.js', {exact: false})).toBeInTheDocument();
-        expect(screen.getByText('file_add.js', {exact: false})).toBeInTheDocument();
-        expect(screen.getByText('file_removed.js', {exact: false})).toBeInTheDocument();
-        expect(screen.getByText('file_untracked.js', {exact: false})).toBeInTheDocument();
-        expect(screen.getByText('file_missing.js', {exact: false})).toBeInTheDocument();
+        expect(screen.getByText(ignoreRTL('file.js'), {exact: false})).toBeInTheDocument();
+        expect(screen.getByText(ignoreRTL('file_add.js'), {exact: false})).toBeInTheDocument();
+        expect(screen.getByText(ignoreRTL('file_removed.js'), {exact: false})).toBeInTheDocument();
+        expect(
+          screen.getByText(ignoreRTL('file_untracked.js'), {exact: false}),
+        ).toBeInTheDocument();
+        expect(screen.getByText(ignoreRTL('file_missing.js'), {exact: false})).toBeInTheDocument();
       });
 
       it('shows quick commit button', () => {

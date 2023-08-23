@@ -219,3 +219,12 @@ function isInternalMessageFields(): boolean {
   const schema = snapshot.getLoadable(commitMessageFieldsSchema).valueOrThrow();
   return schema !== OSSDefaultFieldSchema;
 }
+
+/**
+ * When querying changed files, there may be unicode left-to-right marks in the path,
+ * which make the test hard to read. This util searches for a string, inserting optional
+ * RTL marks at path boundaries.
+ */
+export function ignoreRTL(s: string): RegExp {
+  return new RegExp(`^\u200E?${s}$`);
+}

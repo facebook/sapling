@@ -8,7 +8,7 @@
 import type {UseUncommittedSelection} from './partialSelection';
 import type {PathTree} from './pathTree';
 import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} from './types';
-import type {MutableRefObject} from 'react';
+import type {MutableRefObject, ReactNode} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
 import {
@@ -294,23 +294,44 @@ function File({
         }}>
         <Icon icon={icon} />
         <Tooltip title={file.tooltip} delayMs={2_000} placement="right">
-          <span className="changed-file-path-text">
-            {displayType === 'fish'
-              ? file.path
-                  .split('/')
-                  .map((a, i, arr) => (i === arr.length - 1 ? a : a[0]))
-                  .join('/')
-              : displayType === 'fullPaths'
-              ? file.path
-              : displayType === 'tree'
-              ? file.path.slice(file.path.lastIndexOf('/') + 1)
-              : file.label}
+          <span
+            className="changed-file-path-text"
+            onCopy={e => {
+              const selection = document.getSelection();
+              if (selection) {
+                // we inserted LTR markers, remove them again on copy
+                e.clipboardData.setData('text/plain', selection.toString().replace(/\u200E/g, ''));
+                e.preventDefault();
+              }
+            }}>
+            {escapeForRTL(
+              displayType === 'fish'
+                ? file.path
+                    .split('/')
+                    .map((a, i, arr) => (i === arr.length - 1 ? a : a[0]))
+                    .join('/')
+                : displayType === 'fullPaths'
+                ? file.path
+                : displayType === 'tree'
+                ? file.path.slice(file.path.lastIndexOf('/') + 1)
+                : file.label,
+            )}
           </span>
         </Tooltip>
       </span>
       <FileActions file={file} comparison={comparison} />
     </div>
   );
+}
+
+/**
+ * We render file paths with CSS text-direction: rtl,
+ * which allows the ellipsis overflow to appear on the left.
+ * However, rtl can have weird effects, such as moving leading '.' to the end.
+ * To fix this, it's enough to add a left-to-right marker at the start of the path
+ */
+function escapeForRTL(s: string): ReactNode {
+  return '\u200E' + s;
 }
 
 function FileSelectionCheckbox({

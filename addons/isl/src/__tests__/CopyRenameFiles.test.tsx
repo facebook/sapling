@@ -8,6 +8,7 @@
 import type {CommandArg} from '../types';
 
 import App from '../App';
+import {ignoreRTL} from '../testQueries';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -54,9 +55,9 @@ describe('CommitTreeList', () => {
         ],
       });
     });
-    expect(screen.getByText('file.js → file_copy.js')).toBeInTheDocument();
-    expect(screen.getByText('copiedFrom.txt → file.txt')).toBeInTheDocument();
-    expect(screen.getByText('original/file.txt → copied/file.txt')).toBeInTheDocument();
+    expect(screen.getByText(ignoreRTL('file.js → file_copy.js'))).toBeInTheDocument();
+    expect(screen.getByText(ignoreRTL('copiedFrom.txt → file.txt'))).toBeInTheDocument();
+    expect(screen.getByText(ignoreRTL('original/file.txt → copied/file.txt'))).toBeInTheDocument();
   });
 
   it("removed files aren't hidden except for renames", () => {
@@ -69,7 +70,7 @@ describe('CommitTreeList', () => {
         ],
       });
     });
-    expect(screen.getByText('file_rem.js')).toBeInTheDocument();
+    expect(screen.getByText(ignoreRTL('file_rem.js'))).toBeInTheDocument();
   });
 
   it('shows renamed files', () => {
@@ -85,16 +86,16 @@ describe('CommitTreeList', () => {
         ],
       });
     });
-    expect(screen.getByText('file.js → file_rename.js')).toBeInTheDocument();
-    expect(screen.getByText('movedFrom.txt → file.txt')).toBeInTheDocument();
-    expect(screen.getByText('original/file.txt → moved/file.txt')).toBeInTheDocument();
+    expect(screen.getByText(ignoreRTL('file.js → file_rename.js'))).toBeInTheDocument();
+    expect(screen.getByText(ignoreRTL('movedFrom.txt → file.txt'))).toBeInTheDocument();
+    expect(screen.getByText(ignoreRTL('original/file.txt → moved/file.txt'))).toBeInTheDocument();
     // removed files are visually hidden:
-    expect(screen.queryByText('file.js')).not.toBeInTheDocument();
-    expect(screen.queryByText('movedFrom.txt')).not.toBeInTheDocument();
-    expect(screen.queryByText('original/movedFrom.txt')).not.toBeInTheDocument();
-    expect(screen.queryByText('path/original/movedFrom.txt')).not.toBeInTheDocument();
-    expect(screen.queryByText('moved/file.txt')).not.toBeInTheDocument();
-    expect(screen.queryByText('path/moved/file.txt')).not.toBeInTheDocument();
+    expect(screen.queryByText(ignoreRTL('file.js'))).not.toBeInTheDocument();
+    expect(screen.queryByText(ignoreRTL('movedFrom.txt'))).not.toBeInTheDocument();
+    expect(screen.queryByText(ignoreRTL('original/movedFrom.txt'))).not.toBeInTheDocument();
+    expect(screen.queryByText(ignoreRTL('path/original/movedFrom.txt'))).not.toBeInTheDocument();
+    expect(screen.queryByText(ignoreRTL('moved/file.txt'))).not.toBeInTheDocument();
+    expect(screen.queryByText(ignoreRTL('path/moved/file.txt'))).not.toBeInTheDocument();
   });
 
   it('selecting renamed files selects removed file as well', () => {
