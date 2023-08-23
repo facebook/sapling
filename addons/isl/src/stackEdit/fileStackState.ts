@@ -40,8 +40,18 @@ export class FileStackState extends SelfUpdate<State> {
     return this.inner.source;
   }
 
+  get revLength(): number {
+    return this.inner.source.revLength;
+  }
+
   fromLineLog(log: LineLog): FileStackState {
     return new FileStackState(Source({type: 'linelog', value: log, revLength: log.maxRev + 1}));
+  }
+
+  fromFlattenLines(lines: List<FlattenLine>, revLength: number | undefined): FileStackState {
+    const newRevLength = revLength ?? lines.map(l => l.revs.max()).max() ?? 0;
+    const source = Source({type: 'flatten', value: lines, revLength: newRevLength});
+    return new FileStackState(source);
   }
 
   // Read operations.
@@ -150,39 +160,35 @@ export class FileStackState extends SelfUpdate<State> {
     includeRevs?: Rev[],
     excludeRevs?: Rev[],
   ): FileStackState {
-    const lines = this.convertToFlattenLines().toArray();
-    const editLine = (line: FlattenLine): FlattenLine => {
-      const newRevs = line.revs.withMutations(mutRevs => {
-        let revs = mutRevs;
-        if (includeRevs) {
-          revs = revs.union(includeRevs);
-        }
-        if (excludeRevs) {
-          revs = revs.subtract(excludeRevs);
-        }
-        return revs;
-      });
-      return line.set('revs', newRevs);
-    };
-
-    // Note `lineStart` and `lineEnd` are for lines in `rev`.
-    // The indexes cannot be used by `lines`. We need to filter `lines` by `rev`.
     let revLineIdx = 0;
-    for (let i = 0; i < lines.length; ++i) {
-      const line = lines[i];
+    const editLine = (line: FlattenLine): FlattenLine => {
+      let newLine = line;
       if (line.revs.has(aRev)) {
         if (revLineIdx >= a1 && revLineIdx < a2) {
-          lines[i] = editLine(line);
+          const newRevs = line.revs.withMutations(mutRevs => {
+            let revs = mutRevs;
+            if (includeRevs) {
+              revs = revs.union(includeRevs);
+            }
+            if (excludeRevs) {
+              revs = revs.subtract(excludeRevs);
+            }
+            return revs;
+          });
+          newLine = line.set('revs', newRevs);
         }
-        revLineIdx += 1;
-        if (revLineIdx >= a2) {
-          break;
-        }
+        revLineIdx++;
       }
-    }
+      return newLine;
+    };
 
-    const source = Source({type: 'flatten', value: List(lines), revLength: this.source.revLength});
-    return new FileStackState(source);
+    return this.mapAllLines(editLine);
+  }
+
+  /** Edit lines for all revisions using a callback. */
+  mapAllLines(editLineFunc: (line: FlattenLine, i: number) => FlattenLine): FileStackState {
+    const lines = this.convertToFlattenLines().map(editLineFunc);
+    return this.fromFlattenLines(lines, this.revLength);
   }
 
   // Internal format conversions.
