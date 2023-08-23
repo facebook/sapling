@@ -10,7 +10,7 @@ import type {Deferred} from 'shared/utils';
 import {useCommand} from './ISLShortcuts';
 import {Modal} from './Modal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useEffect, useRef} from 'react';
+import React, {useEffect, useRef} from 'react';
 import {atom, useRecoilState, useSetRecoilState} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {defer} from 'shared/utils';
@@ -18,25 +18,30 @@ import {defer} from 'shared/utils';
 import './useModal.css';
 
 type ButtonConfig = {label: string | React.ReactNode; primary?: boolean};
-type ModalConfig<T> =
-  | {
-      // hack: using 'confirm' mode requires T to be string.
-      // The type inference goes wrong if we try to add this constraint directly to the `buttons` field.
-      // By adding the constaint here, we get type checking that T is string in order to use this API.
-      type: T extends string ? 'confirm' : T extends ButtonConfig ? 'confirm' : never;
-      message: React.ReactNode;
-      buttons: ReadonlyArray<T>;
-      /** Optional codicon to show next to the title */
-      icon?: string;
-      title: React.ReactNode;
-    }
-  | {
-      type: 'custom';
-      component: (props: {returnResultAndDismiss: (data: T) => void}) => React.ReactNode;
-      /** Optional codicon to show next to the title */
-      icon?: string;
-      title: React.ReactNode;
-    };
+type ModalConfigBase = {
+  /** Optional codicon to show next to the title */
+  icon?: string;
+  title: React.ReactNode;
+  width?: string | number;
+  height?: string | number;
+  maxWidth?: string | number;
+  maxHeight?: string | number;
+};
+type ModalConfig<T> = ModalConfigBase &
+  (
+    | {
+        // hack: using 'confirm' mode requires T to be string.
+        // The type inference goes wrong if we try to add this constraint directly to the `buttons` field.
+        // By adding the constaint here, we get type checking that T is string in order to use this API.
+        type: T extends string ? 'confirm' : T extends ButtonConfig ? 'confirm' : never;
+        message: React.ReactNode;
+        buttons: ReadonlyArray<T>;
+      }
+    | {
+        type: 'custom';
+        component: (props: {returnResultAndDismiss: (data: T) => void}) => React.ReactNode;
+      }
+  );
 type ModalState<T> = {
   config: ModalConfig<T>;
   visible: boolean;
@@ -112,7 +117,10 @@ export function ModalContainer() {
 
   return (
     <Modal
-      height="fit-content"
+      height={modal.config.height ?? 'fit-content'}
+      width={modal.config.width ?? 'fit-content'}
+      maxHeight={modal.config.maxHeight ?? '95%'}
+      maxWidth={modal.config.maxWidth ?? '95%'}
       className="use-modal"
       aria-labelledby="use-modal-title"
       aria-describedby="use-modal-message"
