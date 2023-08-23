@@ -276,8 +276,6 @@ struct EdenApiMiss {
 
   std::string repo_name;
   MissType miss_type;
-  std::string path;
-  std::string hash;
 
   void populate(DynamicEvent& event) const {
     event.addString("repo_source", repo_name);
@@ -286,8 +284,6 @@ struct EdenApiMiss {
     } else {
       event.addString("edenapi_miss_type", "tree");
     }
-    event.addString("path", path);
-    event.addString("hash", hash);
   }
 };
 
