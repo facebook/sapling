@@ -12,8 +12,6 @@
   $ hg rm a
   $ hg cat a
   0
-  $ hg cat --decode a # more tests in test-encode
-  0
   $ echo 1 > b
   $ hg ci -m m
   $ echo 2 > b

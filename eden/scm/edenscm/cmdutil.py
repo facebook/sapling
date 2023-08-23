@@ -3626,8 +3626,6 @@ def cat(ui, repo, ctx, matcher, basefm, fntemplate, prefix, **opts):
                 pass
         with formatter.maybereopen(basefm, filename, opts) as fm:
             data = ctx[path].data()
-            if opts.get("decode"):
-                data = repo.wwritedata(path, data)
             fm.startitem()
             fm.writebytes("data", b"%s", data)
             fm.data(abspath=path, path=matcher.rel(path))

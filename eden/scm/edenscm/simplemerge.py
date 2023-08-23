@@ -574,7 +574,7 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
         # Maintain that behavior today for BC, though perhaps in the future
         # it'd be worth considering whether merging encoded data (what the
         # repository usually sees) might be more useful.
-        return _verifytext(ctx.decodeddata(), ctx.path(), ui, opts)
+        return _verifytext(ctx.data(), ctx.path(), ui, opts)
 
     mode = opts.get("mode", "merge")
     name_a, name_b, name_base = None, None, None

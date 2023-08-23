@@ -539,7 +539,7 @@ def annotate(ui, repo, *pats, **opts):
 @command(
     "archive|ar|arc|arch|archi|archiv",
     [
-        ("", "no-decode", None, _("do not pass files through decoders")),
+        ("", "no-decode", None, _("do not pass files through decoders (DEPRECATED)")),
         ("p", "prefix", "", _("directory prefix for files in archive"), _("PREFIX")),
         ("r", "rev", "", _("revision to distribute"), _("REV")),
         ("t", "type", "", _("type of distribution to create"), _("TYPE")),
@@ -615,7 +615,7 @@ def archive(ui, repo, dest, **opts):
                 "requires an explicit set of files to be archived"
             )
         )
-    archival.archive(repo, dest, node, kind, not opts.get("no_decode"), match, prefix)
+    archival.archive(repo, dest, node, kind, match, prefix)
 
 
 @command(
@@ -1547,7 +1547,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
     [
         ("o", "output", "", _("print output to file with formatted name"), _("FORMAT")),
         ("r", "rev", "", _("print the given revision"), _("REV")),
-        ("", "decode", None, _("apply any matching decode filter")),
+        ("", "decode", None, _("apply any matching decode filter (DEPRECATED)")),
     ]
     + walkopts
     + formatteropts,

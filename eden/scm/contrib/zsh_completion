@@ -482,7 +482,6 @@ _hg_cmd_annotate() {
 
 _hg_cmd_archive() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_subrepos_opts \
-  '--no-decode[do not pass files through decoders]' \
   '(--prefix -p)'{-p+,--prefix=}'[directory prefix for files in archive]:' \
   '(--rev -r)'{-r+,--rev=}'[revision to distribute]:revision:_hg_labels' \
   '(--type -t)'{-t+,--type=}'[type of distribution to create]:archive type:(files tar tbz2 tgz uzip zip)' \
@@ -548,7 +547,6 @@ _hg_cmd_cat() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
   '(--output -o)'{-o+,--output=}'[print output to file with formatted name]:filespec:' \
   '(--rev -r)'{-r+,--rev=}'[revision]:revision:_hg_labels' \
-  '--decode[apply any matching decode filter]' \
   '*:file:_hg_files'
 }
 

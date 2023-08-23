@@ -572,8 +572,6 @@ class localrepository(object):
         self._dirstatevalidatewarned = False
 
         self._branchcaches = {}
-        self.filterpats = {}
-        self._datafilters = {}
         self._transref = self._lockref = self._wlockref = None
 
         # headcache might belong to the changelog object for easier
@@ -1660,52 +1658,11 @@ class localrepository(object):
     def pathto(self, f, cwd=None):
         return self.dirstate.pathto(f, cwd)
 
-    def _loadfilter(self, filter):
-        if filter not in self.filterpats:
-            l = []
-            for pat, cmd in self.ui.configitems(filter):
-                if cmd == "!":
-                    continue
-                mf = matchmod.match(self.root, "", [pat])
-                fn = None
-                params = cmd
-                for name, filterfn in pycompat.iteritems(self._datafilters):
-                    if cmd.startswith(name):
-                        fn = filterfn
-                        params = cmd[len(name) :].lstrip()
-                        break
-                if not fn:
-                    fn = lambda s, c, **kwargs: util.filter(s, c)
-                l.append((mf, fn, params))
-            self.filterpats[filter] = l
-        return self.filterpats[filter]
-
-    def _filter(self, filterpats, filename, data):
-        for mf, fn, cmd in filterpats:
-            if mf(filename):
-                self.ui.debug("filtering %s through %s\n" % (filename, cmd))
-                data = fn(data, cmd, ui=self.ui, repo=self, filename=filename)
-                break
-
-        return data
-
-    @util.propertycache
-    def _encodefilterpats(self):
-        return self._loadfilter("encode")
-
-    @util.propertycache
-    def _decodefilterpats(self):
-        return self._loadfilter("decode")
-
-    def adddatafilter(self, name, filter):
-        self._datafilters[name] = filter
-
     def wread(self, filename):
         if self.wvfs.islink(filename):
-            data = pycompat.encodeutf8(self.wvfs.readlink(filename))
+            return pycompat.encodeutf8(self.wvfs.readlink(filename))
         else:
-            data = self.wvfs.read(filename)
-        return self._filter(self._encodefilterpats, filename, data)
+            return self.wvfs.read(filename)
 
     def wwrite(
         self, filename: str, data: bytes, flags: str, backgroundclose: bool = False
@@ -1714,7 +1671,6 @@ class localrepository(object):
 
         This returns length of written (maybe decoded) data.
         """
-        data = self._filter(self._decodefilterpats, filename, data)
         if "l" in flags:
             self.wvfs.symlink(data, filename)
         else:
@@ -1722,9 +1678,6 @@ class localrepository(object):
             if "x" in flags:
                 self.wvfs.setflags(filename, False, True)
         return len(data)
-
-    def wwritedata(self, filename, data):
-        return self._filter(self._decodefilterpats, filename, data)
 
     def currenttransaction(self):
         """return the current transaction or None if non exists"""

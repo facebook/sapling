@@ -259,16 +259,13 @@ archivers = {
 }
 
 
-def archive(repo, dest, node, kind, decode=True, matchfn=None, prefix="", mtime=None):
+def archive(repo, dest, node, kind, matchfn=None, prefix="", mtime=None):
     """create archive of repo as it was at node.
 
     dest can be name of directory, name of archive file, or file
     object to write archive to.
 
     kind is type of archive to create.
-
-    decode tells whether to put files through decode filters from
-    hgrc.
 
     matchfn is function to filter names of files to write to archive.
 
@@ -285,8 +282,6 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None, prefix="", mtime=
 
     def write(name, mode, islink, getdata):
         data = getdata()
-        if decode:
-            data = repo.wwritedata(name, data)
         archiver.addfile(prefix + name, mode, islink, data)
 
     if kind not in archivers:

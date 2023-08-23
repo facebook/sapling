@@ -1607,10 +1607,6 @@ Clear win32text configuration before size/timestamp sensitive test
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > win32text = !
-  > [decode]
-  > ** = !
-  > [encode]
-  > ** = !
   > [patch]
   > eol = strict
   > EOF

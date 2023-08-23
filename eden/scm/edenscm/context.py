@@ -922,12 +922,9 @@ class basefilectx(object):
 
         if (
             fctx._filenode is None
-            and (
-                self._repo._encodefilterpats
-                # if file data starts with '\1\n', empty metadata block is
-                # prepended, which adds 4 bytes to filelog.size().
-                or self.size() - 4 == fctx.size()
-            )
+            # if file data starts with '\1\n', empty metadata block is
+            # prepended, which adds 4 bytes to filelog.size().
+            and self.size() - 4 == fctx.size()
             or self.size() == fctx.size()
         ):
             if self._filenode is None:
@@ -1199,13 +1196,6 @@ class basefilectx(object):
                 break
             c = visit.pop(max(visit))
             yield c
-
-    def decodeddata(self):
-        """Returns `data()` after running repository decoding filters.
-
-        This is often equivalent to how the data would be expressed on disk.
-        """
-        return self._repo.wwritedata(self.path(), self.data())
 
 
 def _filelogbaseparents(
@@ -3271,10 +3261,6 @@ class arbitraryfilectx(object):
 
     def content_sha256(self):
         return hashlib.sha256(self.data()).digest()
-
-    def decodeddata(self):
-        with open(self._path, "rb") as f:
-            return f.read()
 
     def remove(self):
         util.unlink(self._path)
