@@ -800,7 +800,7 @@ def validdest(repo, old, new):
         # (new != nullrev has been excluded by the previous check)
         return True
     elif mutation.enabled(repo):
-        return new.node() in mutation.foreground(repo, [old.node()])
+        return mutation.foreground_contains(repo, [old.node()], new.node())
     else:
         # still an independent clause as it is lazier (and therefore faster)
         return old.descendant(new)

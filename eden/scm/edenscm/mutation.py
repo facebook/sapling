@@ -629,6 +629,31 @@ def foreground(repo, nodes):
     return foreground
 
 
+def foreground_contains(repo, old_nodes, new_node):
+    """Test if `ancestors(predecessors(new_node))` overlap with `old_nodes`.
+
+    This is not quite as the same as the original 'foreground', but is much
+    faster since we avoid passing a large set to `predecessors` or
+    `successors`.
+    """
+    # First, check without calculating `predecessors`.
+    ancestor_nodes = repo.dageval(lambda: ancestors([new_node]))
+    if any(n in ancestor_nodes for n in old_nodes):
+        return True
+    # Then, calculate predecessors.
+    obsdag = getdag(repo, new_node, successors=False)
+    predecessor_nodes = obsdag.ancestors([new_node])
+    ancestor_nodes = repo.dageval(lambda: ancestors([new_node]))
+    if any(n in ancestor_nodes for n in old_nodes):
+        return True
+    # For performance we don't check transitive closures like
+    # ancestors(predecessors) or predecessors(ancestors(predecessors)).
+    # If you have to check them, try to limit the commits passed to
+    # predecessors(), like, maybe, passing old_nodes::predecessors(new_node)
+    # to ancestors().
+    return False
+
+
 def toposortrevs(repo, revs, predmap):
     """topologically sort revs according to the given predecessor map"""
     dag = {}
