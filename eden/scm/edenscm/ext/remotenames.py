@@ -675,10 +675,12 @@ def expushdiscoverybookmarks(pushop):
             hint = _("pull and merge or rebase or use --non-forward-move")
             raise error.Abort(msg, hint=hint)
         if mutation.enabled(repo):
-            foreground = mutation.foreground(repo, [repo.lookup(old)])
+            in_foreground = mutation.foreground_contains(
+                repo, [repo.lookup(old)], repo[rev].node()
+            )
         else:
-            foreground = set()
-        if repo[rev].node() not in foreground:
+            in_foreground = False
+        if not in_foreground:
             msg = _("pushed rev is not in the foreground of remote bookmark")
             hint = _("use --non-forward-move flag to complete arbitrary moves")
             raise error.Abort(msg, hint=hint)

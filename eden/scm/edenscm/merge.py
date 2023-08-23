@@ -2402,13 +2402,15 @@ def update(
                 dirty = wc.dirty(missing=True)
                 if dirty:
                     # Branching is a bit strange to ensure we do the minimal
-                    # amount of call to mutation.foreground.
+                    # amount of call to mutation.foreground_contains.
                     if mutation.enabled(repo):
-                        foreground = mutation.foreground(repo, [p1.node()])
+                        in_foreground = mutation.foreground_contains(
+                            repo, [p1.node()], repo[node].node()
+                        )
                     else:
-                        foreground = set()
+                        in_foreground = False
                     # note: the <node> variable contains a random identifier
-                    if repo[node].node() in foreground:
+                    if in_foreground:
                         pass  # allow updating to successors
                     else:
                         msg = _("uncommitted changes")

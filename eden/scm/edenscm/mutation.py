@@ -611,24 +611,6 @@ def successorssets(repo, startnode, closest: bool = False, cache=None):
     return succsets
 
 
-def foreground(repo, nodes):
-    """Returns all nodes in the "foreground" of the given nodes.
-
-    The foreground of a commit is the transitive closure of all descendants
-    and successors of the commit.
-    """
-    unfi = repo
-    nm = unfi.changelog.nodemap
-    foreground = set(nodes)
-    newnodes = set(nodes)
-    while newnodes:
-        newnodes.update(n for n in allsuccessors(repo, newnodes) if n in nm)
-        newnodes.update(unfi.nodes("%ln::", newnodes))
-        newnodes.difference_update(foreground)
-        foreground.update(newnodes)
-    return foreground
-
-
 def foreground_contains(repo, old_nodes, new_node):
     """Test if `ancestors(predecessors(new_node))` overlap with `old_nodes`.
 
