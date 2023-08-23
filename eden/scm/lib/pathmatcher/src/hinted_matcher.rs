@@ -66,7 +66,7 @@ impl HintedMatcher {
         &self.exact_files
     }
 
-    /// Initialize HintedMatcher, deriving hints from given patterns.
+    /// Initialize HintedMatcher from normalized patterns, deriving hints.
     pub(crate) fn from_patterns(
         pats: &[Pattern],
         // Pre-expanded filesets from Python. `None` means no filesets were
@@ -83,12 +83,12 @@ impl HintedMatcher {
         if !pats.is_empty() {
             matcher = Some(build_matcher_from_patterns(pats, case_sensitive)?);
 
-            // This is so we can mark "sl log ." as an always() matcher, enabling
-            // various Python fast paths. ("." AKA "relpath:." is normalized to "" when run
-            // from repo root.)
+            // This is so we can mark "sl log ." as an always() matcher, enabling various
+            // Python fast paths. ("." AKA "relpath:." which is normalized to "**" when
+            // run from repo root).
             always_matches = pats
                 .iter()
-                .any(|p| p.pattern.is_empty() && p.kind.is_path() && p.kind.is_recursive());
+                .any(|p| p.pattern == "**" && (p.kind.is_path() || p.kind.is_glob()));
 
             all_recursive_paths = pats
                 .iter()
@@ -118,13 +118,20 @@ impl HintedMatcher {
             }
         };
 
+        // The Python match.files() must be empty if match.always().
+        let exact_files = if always_matches {
+            Vec::new()
+        } else {
+            pats.iter().filter_map(|p| p.exact_file.clone()).collect()
+        };
+
         Ok(Self {
             case_sensitive,
             matcher,
             always_matches,
             never_matches,
             all_recursive_paths,
-            exact_files: pats.iter().filter_map(|p| p.exact_file.clone()).collect(),
+            exact_files,
         })
     }
 
@@ -178,6 +185,7 @@ impl HintedMatcher {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::pattern::normalize_patterns;
     use crate::PatternKind;
 
     #[test]
@@ -215,6 +223,29 @@ mod test {
 
         assert!(never.include(&always).never_matches());
         assert!(!never.include(&always).always_matches());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_always_matches() -> Result<()> {
+        let matcher = HintedMatcher::from_patterns(
+            &normalize_patterns(
+                &[".", "doesnt-matter"],
+                PatternKind::RelPath,
+                "/root".as_ref(),
+                "/root".as_ref(),
+                false,
+            )?,
+            None,
+            true,
+            true,
+        )?;
+
+        assert!(matcher.always_matches());
+        assert!(!matcher.never_matches());
+        assert!(matcher.all_recursive_paths());
+        assert!(matcher.exact_files().is_empty());
 
         Ok(())
     }
