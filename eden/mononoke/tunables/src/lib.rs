@@ -89,8 +89,6 @@ pub struct MononokeTunables {
     bookmark_subscription_max_age_ms: TunableI64,
     bookmark_subscription_protect_master: TunableBool,
     max_scuba_msg_length: TunableI64,
-    wishlist_read_qps: TunableI64,
-    wishlist_write_qps: TunableI64,
     edenapi_large_tree_metadata_limit: TunableI64,
     edenapi_req_dumper_sample_ratio: TunableI64,
     command_monitor_interval: TunableI64,
@@ -592,18 +590,22 @@ mod test {
 
     #[test]
     fn test_override_tunables() {
-        assert!(tunables().wishlist_write_qps().is_none());
+        assert!(tunables().warm_bookmark_cache_poll_interval_ms().is_none());
 
         let res = with_tunables(
             MononokeTunables {
-                wishlist_write_qps: ArcSwapOption::from(Some(Arc::new(2))),
+                warm_bookmark_cache_poll_interval_ms: ArcSwapOption::from(Some(Arc::new(2))),
                 ..MononokeTunables::default()
             },
-            || tunables().wishlist_write_qps().unwrap_or_default(),
+            || {
+                tunables()
+                    .warm_bookmark_cache_poll_interval_ms()
+                    .unwrap_or_default()
+            },
         );
 
         assert_eq!(res, 2);
-        assert!(tunables().wishlist_write_qps().is_none());
+        assert!(tunables().warm_bookmark_cache_poll_interval_ms().is_none());
     }
 
     #[test]
@@ -1086,10 +1088,15 @@ mod test {
     async fn test_with_tunables_async(_fb: fbinit::FacebookInit) {
         let res = with_tunables_async(
             MononokeTunables {
-                wishlist_write_qps: ArcSwapOption::from(Some(Arc::new(2))),
+                warm_bookmark_cache_poll_interval_ms: ArcSwapOption::from(Some(Arc::new(2))),
                 ..MononokeTunables::default()
             },
-            async { tunables().wishlist_write_qps().unwrap_or_default() }.boxed(),
+            async {
+                tunables()
+                    .warm_bookmark_cache_poll_interval_ms()
+                    .unwrap_or_default()
+            }
+            .boxed(),
         )
         .await;
 
