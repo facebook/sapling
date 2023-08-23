@@ -157,24 +157,25 @@ PathMap<TreeEntry> FilteredBackingStore::filterImpl(
   return pathMap;
 }
 
-ImmediateFuture<TreePtr> FilteredBackingStore::getRootTree(
+ImmediateFuture<BackingStore::GetRootTreeResult>
+FilteredBackingStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& context) {
   auto [filterId, parsedRootId] = parseFilterIdFromRootId(rootId);
   return backingStore_->getRootTree(parsedRootId, context)
       .thenValue([filterId = filterId,
-                  self = shared_from_this()](TreePtr rootTree) {
-        if (!rootTree) {
-          return rootTree;
-        }
-
+                  self = shared_from_this()](GetRootTreeResult rootTreeResult) {
         // apply the filter to the tree
-        auto pathMap = self->filterImpl(rootTree, RelativePath{""}, filterId);
+        auto pathMap =
+            self->filterImpl(rootTreeResult.tree, RelativePath{""}, filterId);
 
         auto rootFOID =
-            FilteredObjectId{RelativePath{""}, filterId, rootTree->getHash()};
-        return std::make_shared<const Tree>(
-            std::move(pathMap), ObjectId{rootFOID.getValue()});
+            FilteredObjectId{RelativePath{""}, filterId, rootTreeResult.treeId};
+        return GetRootTreeResult{
+            std::make_shared<const Tree>(
+                std::move(pathMap), ObjectId{rootFOID.getValue()}),
+            ObjectId{rootFOID.getValue()},
+        };
       });
 }
 

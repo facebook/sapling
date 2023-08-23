@@ -146,10 +146,10 @@ class DiffTest : public ::testing::Test {
           .semi()
           .via(&folly::QueuedImmediateExecutor::instance())
           .thenValue([this](std::tuple<
-                            std::shared_ptr<const Tree>,
-                            std::shared_ptr<const Tree>>&& tup) {
+                            ObjectStore::GetRootTreeResult,
+                            ObjectStore::GetRootTreeResult>&& tup) {
             const auto& [tree1, tree2] = tup;
-            return diffCommitsFuture(tree1->getHash(), tree2->getHash());
+            return diffCommitsFuture(tree1.treeId, tree2.treeId);
           });
     });
   }

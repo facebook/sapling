@@ -512,11 +512,11 @@ diffRoots(DiffContext* context, const RootId& root1, const RootId& root2) {
   return diffTrees(
       context,
       RelativePathPiece{},
-      std::move(future1).thenValue([](TreePtr tree) {
-        return TreeAndId{tree, tree->getHash()};
+      std::move(future1).thenValue([](ObjectStore::GetRootTreeResult tree) {
+        return TreeAndId{tree.tree, tree.treeId};
       }),
-      std::move(future2).thenValue([](TreePtr tree) {
-        return TreeAndId{tree, tree->getHash()};
+      std::move(future2).thenValue([](ObjectStore::GetRootTreeResult tree) {
+        return TreeAndId{tree.tree, tree.treeId};
       }),
       nullptr,
       false);

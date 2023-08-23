@@ -85,11 +85,10 @@ TEST_F(HgQueuedBackingStoreTest, getTree) {
           .get(kTestTimeout);
 
   auto [tree2, origin2] =
-      queuedStore
-          ->getTree(tree1->getHash(), ObjectFetchContext::getNullContext())
+      queuedStore->getTree(tree1.treeId, ObjectFetchContext::getNullContext())
           .get(kTestTimeout);
 
-  EXPECT_TRUE(*tree1 == *tree2);
+  EXPECT_TRUE(*tree1.tree == *tree2);
 }
 
 TEST_F(HgQueuedBackingStoreTest, getBlob) {
@@ -98,7 +97,7 @@ TEST_F(HgQueuedBackingStoreTest, getBlob) {
       queuedStore->getRootTree(commit1, ObjectFetchContext::getNullContext())
           .get(kTestTimeout);
 
-  for (auto& [name, entry] : *tree) {
+  for (auto& [name, entry] : *tree.tree) {
     if (entry.isTree()) {
       continue;
     }

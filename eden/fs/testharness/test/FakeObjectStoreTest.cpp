@@ -54,8 +54,8 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   Tree tree2(std::move(entries2), tree2Hash);
   store.setTreeForCommit(commHash, std::move(tree2));
   auto foundTreeForCommit = store.getRootTree(commHash).get();
-  ASSERT_NE(nullptr, foundTreeForCommit.get());
-  EXPECT_EQ(tree2Hash, foundTreeForCommit->getHash());
+  ASSERT_NE(nullptr, foundTreeForCommit.tree.get());
+  EXPECT_EQ(tree2Hash, foundTreeForCommit.treeId);
 }
 
 TEST(FakeObjectStore, getMissingObjectThrows) {

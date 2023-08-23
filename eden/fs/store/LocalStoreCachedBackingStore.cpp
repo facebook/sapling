@@ -36,17 +36,16 @@ ObjectComparison LocalStoreCachedBackingStore::compareObjectsById(
   return backingStore_->compareObjectsById(one, two);
 }
 
-ImmediateFuture<TreePtr> LocalStoreCachedBackingStore::getRootTree(
+ImmediateFuture<BackingStore::GetRootTreeResult>
+LocalStoreCachedBackingStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& context) {
   return backingStore_->getRootTree(rootId, context)
-      .thenValue([localStore = localStore_](TreePtr tree) {
+      .thenValue([localStore = localStore_](GetRootTreeResult result) {
         // TODO: perhaps this callback should use toUnsafeFuture() to ensure the
         // tree is cached whether or not the caller consumes the future.
-        if (tree) {
-          localStore->putTree(*tree);
-        }
-        return tree;
+        localStore->putTree(*result.tree);
+        return result;
       });
 }
 

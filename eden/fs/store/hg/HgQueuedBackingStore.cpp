@@ -637,7 +637,8 @@ HgQueuedBackingStore::getBlobMetadataImpl(
       });
 }
 
-ImmediateFuture<TreePtr> HgQueuedBackingStore::getRootTree(
+ImmediateFuture<BackingStore::GetRootTreeResult>
+HgQueuedBackingStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& /*context*/) {
   return backingStore_->getRootTree(rootId);

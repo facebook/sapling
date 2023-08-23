@@ -38,10 +38,11 @@ std::string EmptyBackingStore::renderObjectId(const ObjectId& /*objectId*/) {
   throw std::domain_error("empty backing store");
 }
 
-ImmediateFuture<TreePtr> EmptyBackingStore::getRootTree(
+ImmediateFuture<BackingStore::GetRootTreeResult> EmptyBackingStore::getRootTree(
     const RootId& /* rootId */,
     const ObjectFetchContextPtr& /* context */) {
-  return makeSemiFuture<TreePtr>(std::domain_error("empty backing store"));
+  return makeSemiFuture<GetRootTreeResult>(
+      std::domain_error("empty backing store"));
 }
 
 SemiFuture<BackingStore::GetTreeResult> EmptyBackingStore::getTree(

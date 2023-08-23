@@ -13,6 +13,7 @@
 
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/RootId.h"
+#include "eden/fs/model/TreeFwd.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 
@@ -28,7 +29,6 @@ class Blob;
 class BlobMetadata;
 class ObjectId;
 class Hash20;
-class Tree;
 class ObjectFetchContext;
 template <typename T>
 class ImmediateFuture;
@@ -44,7 +44,23 @@ class IObjectStore {
    * resulting future is complete.
    */
 
-  virtual ImmediateFuture<std::shared_ptr<const Tree>> getRootTree(
+  struct GetRootTreeResult {
+    GetRootTreeResult(TreePtr tree, ObjectId treeId)
+        : tree{std::move(tree)}, treeId{std::move(treeId)} {}
+
+    GetRootTreeResult(const GetRootTreeResult&) = default;
+    GetRootTreeResult(GetRootTreeResult&&) = default;
+
+    GetRootTreeResult& operator=(const GetRootTreeResult&) = default;
+    GetRootTreeResult& operator=(GetRootTreeResult&&) = default;
+
+    /// The root tree object.
+    TreePtr tree;
+    /// The root tree's ID which can later be passed to getTree.
+    ObjectId treeId;
+  };
+
+  virtual ImmediateFuture<GetRootTreeResult> getRootTree(
       const RootId& rootId,
       const ObjectFetchContextPtr& context) const = 0;
   virtual ImmediateFuture<std::shared_ptr<const Tree>> getTree(

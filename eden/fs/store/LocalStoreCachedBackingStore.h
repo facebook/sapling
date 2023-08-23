@@ -55,7 +55,7 @@ class LocalStoreCachedBackingStore
   ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
       override;
 
-  ImmediateFuture<TreePtr> getRootTree(
+  ImmediateFuture<GetRootTreeResult> getRootTree(
       const RootId& rootId,
       const ObjectFetchContextPtr& context) override;
 

@@ -372,7 +372,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
           [this,
            progressCallback = std::move(progressCallback),
            parent,
-           parentCommit](std::shared_ptr<const Tree> parentTree) mutable {
+           parentCommit](ObjectStore::GetRootTreeResult parentTree) mutable {
             ParentCommitState::CheckoutState checkoutState =
                 ParentCommitState::NoOngoingCheckout{};
             if (parentCommit.isCheckoutInProgress()) {
@@ -385,7 +385,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
 
             *parentState_.wlock() = ParentCommitState{
                 parent,
-                parentTree,
+                parentTree.tree,
                 parentCommit.getWorkingCopyParent(),
                 std::move(checkoutState)};
 
@@ -411,7 +411,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
                           objectStore_,
                           context.copy());
                     })
-                .deferValue([parentTree = std::move(parentTree)](
+                .deferValue([parentTree = std::move(parentTree.tree)](
                                 auto&&) mutable { return parentTree; });
           })
       .thenValue([this, takeover](std::shared_ptr<const Tree> parentTree) {
@@ -1412,16 +1412,26 @@ folly::Future<CheckoutResult> EdenMount::checkout(
             .semi()
             .via(&folly::QueuedImmediateExecutor::instance());
       })
-      .thenValue(
-          [this](std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
-                     treeResults) {
-            XLOG(DBG7) << "Checkout: waitForPendingWrites";
-            return waitForPendingWrites()
-                .thenValue([treeResults = std::move(treeResults)](auto&&) {
-                  return treeResults;
-                })
-                .semi();
-          })
+      .thenValue([this](std::tuple<
+                        ObjectStore::GetRootTreeResult,
+                        ObjectStore::GetRootTreeResult> treeResults) {
+        XLOG(DBG7) << "Checkout: waitForPendingWrites";
+        return waitForPendingWrites()
+            .thenValue([treeResults = std::move(treeResults)](auto&&) {
+              return treeResults;
+            })
+            .semi();
+      })
+      .thenValue([this](std::tuple<
+                        ObjectStore::GetRootTreeResult,
+                        ObjectStore::GetRootTreeResult> treeResults) {
+        XLOG(DBG7) << "Checkout: waitForPendingWrites";
+        return waitForPendingWrites()
+            .thenValue([treeResults = std::move(treeResults)](auto&&) {
+              return treeResults;
+            })
+            .semi();
+      })
       .thenValue(
           [this,
            rootInode,
@@ -1432,8 +1442,9 @@ folly::Future<CheckoutResult> EdenMount::checkout(
            resumingCheckout =
                std::holds_alternative<ParentCommitState::InterruptedCheckout>(
                    oldState)](
-              std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
-                  treeResults) {
+              std::tuple<
+                  IObjectStore::GetRootTreeResult,
+                  IObjectStore::GetRootTreeResult> treeResults) {
             XLOG(DBG7) << "Checkout: performDiff";
             checkoutTimes->didLookupTrees = stopWatch.elapsed();
             // Call JournalDiffCallback::performDiff() to compute the changes
@@ -1447,9 +1458,9 @@ folly::Future<CheckoutResult> EdenMount::checkout(
             }
 
             auto& fromTree = std::get<0>(treeResults);
-            auto trees = std::vector{fromTree};
+            auto trees = std::vector{fromTree.tree};
             if (resumingCheckout) {
-              trees.push_back(std::get<1>(treeResults));
+              trees.push_back(std::get<1>(treeResults).tree);
             }
             return journalDiffCallback
                 ->performDiff(this, rootInode, std::move(trees))
@@ -1462,8 +1473,9 @@ folly::Future<CheckoutResult> EdenMount::checkout(
                 .via(&folly::QueuedImmediateExecutor::instance());
           })
       .thenValue([this, rootInode, ctx, checkoutTimes, stopWatch, snapshotHash](
-                     std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
-                         treeResults) {
+                     std::tuple<
+                         ObjectStore::GetRootTreeResult,
+                         ObjectStore::GetRootTreeResult> treeResults) {
         checkoutTimes->didDiff = stopWatch.elapsed();
 
         // Perform the requested checkout operation after the journal diff
@@ -1474,7 +1486,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
             std::move(renameLock),
             parentState_.wlock(),
             snapshotHash,
-            std::get<1>(treeResults));
+            std::get<1>(treeResults).tree);
 
         checkoutTimes->didAcquireRenameLock = stopWatch.elapsed();
 
@@ -1508,7 +1520,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
             .thenValue([ctx, treeResults = std::move(treeResults), rootInode](
                            auto&&) mutable {
               auto& [fromTree, toTree] = treeResults;
-              return rootInode->checkout(ctx.get(), fromTree, toTree);
+              return rootInode->checkout(ctx.get(), fromTree.tree, toTree.tree);
             });
       })
       .thenValue([ctx, checkoutTimes, stopWatch, snapshotHash](auto&&) {
@@ -1737,16 +1749,16 @@ ImmediateFuture<Unit> EdenMount::diff(
     DiffContext* ctxPtr,
     const RootId& commitHash) const {
   return objectStore_->getRootTree(commitHash, ctxPtr->getFetchContext())
-      .thenValue([this](std::shared_ptr<const Tree> rootTree) {
+      .thenValue([this](ObjectStore::GetRootTreeResult rootTree) {
         return waitForPendingWrites().thenValue(
             [rootTree = std::move(rootTree)](auto&&) { return rootTree; });
       })
       .thenValue([ctxPtr, rootInode = std::move(rootInode)](
-                     std::shared_ptr<const Tree>&& rootTree) {
+                     ObjectStore::GetRootTreeResult rootTree) {
         return rootInode->diff(
             ctxPtr,
             RelativePathPiece{},
-            std::vector{std::move(rootTree)},
+            std::vector{std::move(rootTree.tree)},
             ctxPtr->getToplevelIgnore(),
             false);
       });

@@ -70,10 +70,17 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
       const ObjectId& one,
       const ObjectId& two) = 0;
 
+  struct GetRootTreeResult {
+    /// The root tree object.
+    TreePtr tree;
+    /// The root tree's ID which can later be passed to getTree.
+    ObjectId treeId;
+  };
+
   /**
    * Return the root Tree corresponding to the passed in RootId.
    */
-  virtual ImmediateFuture<TreePtr> getRootTree(
+  virtual ImmediateFuture<GetRootTreeResult> getRootTree(
       const RootId& rootId,
       const ObjectFetchContextPtr& context) = 0;
 

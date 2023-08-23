@@ -205,13 +205,15 @@ HgBackingStore::HgBackingStore(
 
 HgBackingStore::~HgBackingStore() = default;
 
-ImmediateFuture<TreePtr> HgBackingStore::getRootTree(const RootId& rootId) {
+ImmediateFuture<BackingStore::GetRootTreeResult> HgBackingStore::getRootTree(
+    const RootId& rootId) {
   ObjectId commitId = hashFromRootId(rootId);
 
   return localStore_
       ->getImmediateFuture(KeySpace::HgCommitToTreeFamily, commitId)
       .thenValue(
-          [this, commitId](StoreResult result) -> folly::SemiFuture<TreePtr> {
+          [this, commitId](StoreResult result)
+              -> folly::SemiFuture<BackingStore::GetRootTreeResult> {
             if (!result.isValid()) {
               return importTreeManifest(commitId).thenValue(
                   [this, commitId](TreePtr rootTree) {
@@ -222,7 +224,8 @@ ImmediateFuture<TreePtr> HgBackingStore::getRootTree(const RootId& rootId) {
                         KeySpace::HgCommitToTreeFamily,
                         commitId,
                         rootTree->getHash().getBytes());
-                    return rootTree;
+                    return BackingStore::GetRootTreeResult{
+                        rootTree, rootTree->getHash()};
                   });
             }
 
@@ -231,7 +234,10 @@ ImmediateFuture<TreePtr> HgBackingStore::getRootTree(const RootId& rootId) {
                 ObjectId{result.bytes()},
                 "getRootTree",
                 *stats_);
-            return importTreeManifestImpl(rootTreeHash.revHash());
+            return importTreeManifestImpl(rootTreeHash.revHash())
+                .thenValue([](TreePtr tree) {
+                  return BackingStore::GetRootTreeResult{tree, tree->getHash()};
+                });
           });
 }
 

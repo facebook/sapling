@@ -306,8 +306,7 @@ TEST_F(FilteredBackingStoreTest, getRootTree) {
   commit1->trigger();
   EXPECT_FALSE(future1.isReady());
   dir1->trigger();
-  EXPECT_EQ(
-      ObjectId{dir1FOID.getValue()}, std::move(future1).get(0ms)->getHash());
+  EXPECT_EQ(ObjectId{dir1FOID.getValue()}, std::move(future1).get(0ms).treeId);
 
   // future2 should still be pending
   EXPECT_FALSE(future2.isReady());
@@ -325,7 +324,7 @@ TEST_F(FilteredBackingStoreTest, getRootTree) {
   commit1->trigger();
   EXPECT_FALSE(future3.isReady());
   dir1->trigger();
-  EXPECT_EQ(ObjectId{dir1FOID.getValue()}, std::move(future3).get()->getHash());
+  EXPECT_EQ(ObjectId{dir1FOID.getValue()}, std::move(future3).get().treeId);
 
   // Try triggering errors
   auto future4 = filteredStore_->getRootTree(
@@ -407,11 +406,12 @@ TEST_F(FilteredBackingStoreTest, testCompareBlobObjectsById) {
   auto fooDirRes = std::move(future1).get(0ms);
 
   // Get the object IDs of all the blobs from commit 1.
-  auto [foobar1Name1, foobar1TreeEntry1] = *fooDirRes->find("foobar1"_pc);
+  auto [foobar1Name1, foobar1TreeEntry1] = *fooDirRes.tree->find("foobar1"_pc);
   auto foobar1OID1 = foobar1TreeEntry1.getHash();
-  auto [foobar2Name1, foobar2TreeEntry1] = *fooDirRes->find("foobar2"_pc);
+  auto [foobar2Name1, foobar2TreeEntry1] = *fooDirRes.tree->find("foobar2"_pc);
   auto foobar2OID1 = foobar2TreeEntry1.getHash();
-  auto [football1Name1, football1TreeEntry1] = *fooDirRes->find("football1"_pc);
+  auto [football1Name1, football1TreeEntry1] =
+      *fooDirRes.tree->find("football1"_pc);
   auto football1OID1 = football1TreeEntry1.getHash();
 
   // We expect all the foo blobs in commit 1 to NOT be filtered. Therefore, foos
@@ -439,15 +439,17 @@ TEST_F(FilteredBackingStoreTest, testCompareBlobObjectsById) {
   auto fooDirExtRes = std::move(future2).get(0ms);
 
   // Get the object IDs of all the blobs from commit 1.
-  auto [foobar1Name2, foobar1TreeEntry2] = *fooDirExtRes->find("foobar1"_pc);
+  auto [foobar1Name2, foobar1TreeEntry2] =
+      *fooDirExtRes.tree->find("foobar1"_pc);
   auto foobar1OID2 = foobar1TreeEntry2.getHash();
-  auto [foobar2Name2, foobar2TreeEntry2] = *fooDirExtRes->find("foobar2"_pc);
+  auto [foobar2Name2, foobar2TreeEntry2] =
+      *fooDirExtRes.tree->find("foobar2"_pc);
   auto foobar2OID2 = foobar2TreeEntry2.getHash();
   auto [football1Name2, football1TreeEntry2] =
-      *fooDirExtRes->find("football1"_pc);
+      *fooDirExtRes.tree->find("football1"_pc);
   auto football1OID2 = football1TreeEntry2.getHash();
   auto [football2Name2, football2TreeEntry2] =
-      *fooDirExtRes->find("football2"_pc);
+      *fooDirExtRes.tree->find("football2"_pc);
   auto football2OID2 = football2TreeEntry2.getHash();
 
   // Only football3 is unavailable for comparison in commit2. Let's make sure
@@ -545,7 +547,7 @@ TEST_F(FilteredBackingStoreTest, testCompareTreeObjectsById) {
   auto rootDirRes1 = std::move(rootFuture1).get(0ms);
 
   // Get the object IDs of all the trees from commit 1.
-  auto [childName, childEntry] = *rootDirRes1->find("child"_pc);
+  auto [childName, childEntry] = *rootDirRes1.tree->find("child"_pc);
   auto childOID = childEntry.getHash();
   auto childFuture1 =
       filteredStore_->getTree(childOID, ObjectFetchContext::getNullContext());
@@ -560,7 +562,7 @@ TEST_F(FilteredBackingStoreTest, testCompareTreeObjectsById) {
   auto rootDirCommit2Res = std::move(rootFuture2).get(0ms);
 
   // Get the object IDs of all the blobs from commit 1.
-  auto [childName2, childEntry2] = *rootDirCommit2Res->find("child"_pc);
+  auto [childName2, childEntry2] = *rootDirCommit2Res.tree->find("child"_pc);
   auto childOID2 = childEntry2.getHash();
   auto childFuture2 =
       filteredStore_->getTree(childOID2, ObjectFetchContext::getNullContext());
@@ -580,12 +582,12 @@ TEST_F(FilteredBackingStoreTest, testCompareTreeObjectsById) {
   // Unknown.
   EXPECT_EQ(
       filteredStore_->compareObjectsById(
-          rootDirRes1->getHash(), rootDirCommit2Res->getHash()),
+          rootDirRes1.tree->getHash(), rootDirCommit2Res.tree->getHash()),
       ObjectComparison::Unknown);
   // The root tree should be identical to itself
   EXPECT_EQ(
       filteredStore_->compareObjectsById(
-          rootDirRes1->getHash(), rootDirRes1->getHash()),
+          rootDirRes1.tree->getHash(), rootDirRes1.tree->getHash()),
       ObjectComparison::Identical);
   // The grandchild tree got filtered, but it isn't aware that its children were
   // filtered. We return Unknown in this case.

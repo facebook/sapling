@@ -233,7 +233,7 @@ TEST_F(FakeBackingStoreTest, getRootTree) {
   commit1->trigger();
   EXPECT_FALSE(future1.isReady());
   dir1->trigger();
-  EXPECT_EQ(dir1Hash, std::move(future1).get(0ms)->getHash());
+  EXPECT_EQ(dir1Hash, std::move(future1).get(0ms).treeId);
 
   // future2 should still be pending
   EXPECT_FALSE(future2.isReady());
@@ -249,7 +249,7 @@ TEST_F(FakeBackingStoreTest, getRootTree) {
   commit1->trigger();
   EXPECT_FALSE(future3.isReady());
   dir1->trigger();
-  EXPECT_EQ(dir1Hash, std::move(future3).get(0ms)->getHash());
+  EXPECT_EQ(dir1Hash, std::move(future3).get(0ms).treeId);
 
   // Try triggering errors
   auto future4 =

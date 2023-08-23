@@ -100,11 +100,11 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
               .thenValue([edenMount,
                           globRoot,
                           fetchContext = fetchContext.copy(),
-                          searchRoot](std::shared_ptr<const Tree>&& rootTree) {
+                          searchRoot](ObjectStore::GetRootTreeResult rootTree) {
                 return resolveTree(
                     *edenMount->getObjectStore(),
                     fetchContext,
-                    std::move(rootTree),
+                    std::move(rootTree.tree),
                     searchRoot);
               })
               .thenValue(

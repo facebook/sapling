@@ -117,17 +117,17 @@ TEST_F(
   auto tree1 =
       objectStore->getRootTree(commit1, ObjectFetchContext::getNullContext())
           .get(0ms);
-  EXPECT_TRUE(tree1);
+  EXPECT_TRUE(tree1.tree);
   ASSERT_THAT(
-      getTreeNames(tree1),
+      getTreeNames(tree1.tree),
       ::testing::ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
 
   localStore->clearKeySpace(KeySpace::TreeFamily);
   auto tree2 =
       objectStore->getRootTree(commit1, ObjectFetchContext::getNullContext())
           .get(0ms);
-  EXPECT_TRUE(tree2);
+  EXPECT_TRUE(tree2.tree);
   ASSERT_THAT(
-      getTreeNames(tree1),
+      getTreeNames(tree1.tree),
       ::testing::ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
 }

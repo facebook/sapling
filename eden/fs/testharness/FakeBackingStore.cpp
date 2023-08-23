@@ -59,7 +59,7 @@ FakeBackingStore::getTreeEntryForObjectId(
       std::make_shared<TreeEntry>(commitID, treeEntryType));
 }
 
-ImmediateFuture<TreePtr> FakeBackingStore::getRootTree(
+ImmediateFuture<BackingStore::GetRootTreeResult> FakeBackingStore::getRootTree(
     const RootId& commitID,
     const ObjectFetchContextPtr& /*context*/) {
   StoredHash* storedTreeHash;
@@ -86,6 +86,9 @@ ImmediateFuture<TreePtr> FakeBackingStore::getRootTree(
         }
 
         return treeIter->second->getFuture();
+      })
+      .thenValue([storedTreeHash](TreePtr tree) {
+        return GetRootTreeResult{tree, storedTreeHash->get()};
       })
       .semi();
 }

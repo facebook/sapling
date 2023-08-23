@@ -44,17 +44,18 @@ void FakeObjectStore::setTreeForCommit(const RootId& commitID, Tree&& tree) {
   }
 }
 
-ImmediateFuture<shared_ptr<const Tree>> FakeObjectStore::getRootTree(
+ImmediateFuture<IObjectStore::GetRootTreeResult> FakeObjectStore::getRootTree(
     const RootId& commitID,
     const ObjectFetchContextPtr&) const {
   ++commitAccessCounts_[commitID];
   auto iter = commits_.find(commitID);
   if (iter == commits_.end()) {
-    return makeSemiFuture<shared_ptr<const Tree>>(
+    return makeSemiFuture<GetRootTreeResult>(
         std::domain_error(folly::to<std::string>(
             "tree data for commit ", commitID, " not found")));
   }
-  return make_shared<const Tree>(iter->second);
+  auto tree = make_shared<const Tree>(iter->second);
+  return GetRootTreeResult{tree, tree->getHash()};
 }
 
 ImmediateFuture<std::shared_ptr<const Tree>> FakeObjectStore::getTree(

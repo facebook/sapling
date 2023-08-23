@@ -17,6 +17,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/model/TreeFwd.h"
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -31,7 +32,6 @@ class EdenConfig;
 class EdenStats;
 class ProcessNameCache;
 class StructuredLogger;
-class Tree;
 class TreeCache;
 enum class ObjectComparison : uint8_t;
 
@@ -147,7 +147,7 @@ class ObjectStore : public IObjectStore,
    * ready.  It may result in a std::domain_error if the specified commit ID
    * does not exist, or possibly other exceptions on error.
    */
-  ImmediateFuture<std::shared_ptr<const Tree>> getRootTree(
+  ImmediateFuture<GetRootTreeResult> getRootTree(
       const RootId& rootId,
       const ObjectFetchContextPtr& context) const override;
 
@@ -170,7 +170,7 @@ class ObjectStore : public IObjectStore,
    * is ready.  It may result in a std::domain_error if the specified tree ID
    * does not exist, or possibly other exceptions on error.
    */
-  ImmediateFuture<std::shared_ptr<const Tree>> getTree(
+  ImmediateFuture<TreePtr> getTree(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const override;
 
