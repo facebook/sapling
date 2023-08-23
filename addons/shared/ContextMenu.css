@@ -78,33 +78,42 @@
   animation: flash 0.1s steps(1);
 }
 
-.context-menu-arrow-top,
-.context-menu-arrow-bottom {
-  --arrow-height: var(--pad);
-  --arrow-half-width: var(--halfpad);
-  content: ' ';
-  border: var(--arrow-half-width) solid transparent;
-  width: 0px;
-  height: 0px;
+.context-menu-arrow {
+  --arrow-height: calc(var(--pad) - 4px);
+  --arrow-half-width: calc(var(--arrow-height) / 2);
   position: absolute;
-  margin-left: auto;
-  margin-right: auto;
+}
+
+.context-menu-arrow::after {
+  content: ' ';
+  position: absolute;
+  width: var(--arrow-height);
+  height: var(--arrow-height);
+  background-color: var(--tooltip-background);
+  border-right: 1px solid var(--tooltip-border);
+  border-bottom: 1px solid var(--tooltip-border);
+}
+
+.context-menu-arrow-top::after {
+  transform: rotate(225deg);
+}
+.context-menu-arrow-bottom::after {
+  transform: rotate(45deg);
 }
 
 .context-menu-arrow-top {
-  border-bottom: var(--arrow-half-width) solid var(--tooltip-border);
-  top: calc(-1 * var(--arrow-height));
+  left: calc(50% - var(--arrow-half-width));
+  top: calc(-1px - var(--arrow-half-width));
 }
-
 .context-menu-arrow-bottom {
-  border-top: var(--arrow-half-width) solid var(--tooltip-border);
-  bottom: calc(-1 * var(--arrow-height));
+  left: calc(50% - var(--arrow-half-width));
+  bottom: calc(var(--arrow-half-width));
 }
 
 .context-menu-arrow-left {
-  left: 0;
+  left: var(--pad);
 }
 
 .context-menu-arrow-right {
-  right: 0;
+  right: var(--pad);
 }
