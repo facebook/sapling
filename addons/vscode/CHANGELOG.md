@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.22
+
+- Syntax highlighting in comparison view
+- Add option to "amend changes to here" when right clicking a commit
+- Add ellipsis to file path overflow
+- Collapse some files by default in the comparison view for performance
+- Timeout some commands to prevent hanging issue
+- Fix commit highlighting on hover not going away
+- Improve drag target size for commits in drag and drop rebase
+- Improve rendering comparison view file banners, such as "this file was renamed"
+
 ## 0.1.21
 
 - Selection and copying from comparison view stays within the before/after sides
