@@ -163,7 +163,7 @@ Test that local must have rev of remote to push --to without --non-forward-move
   $ hg push --to @ -r headc
   pushing rev cc61aa6be3dc to destination test:repo1 bookmark @
   searching for changes
-  abort: remote bookmark revision is not in local repo
+  abort: remote bookmark @ revision 1846eede8b6886d8cc8a88c96a687b7fe8f3b9d1 is not in local repo
   (pull and merge or rebase or use --non-forward-move)
   [255]
 

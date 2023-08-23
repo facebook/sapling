@@ -1,25 +1,20 @@
 #chg-compatible
-  $ setconfig status.use-rust=false workingcopy.ruststatus=false
   $ setconfig experimental.allowfilepeer=True
 
   $ . "$TESTDIR/library.sh"
 
+  $ eagerepo
   $ hginit master
   $ cd master
-  $ cat >> .hg/hgrc <<EOF
-  > [remotefilelog]
-  > server=True
-  > EOF
   $ echo x > x
   $ echo y > y
   $ echo z > z
   $ hg commit -qAm xy
+  $ hg book master
 
   $ cd ..
 
-  $ hgcloneshallow ssh://user@dummy/master shallow -q
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob) (?)
-  $ cd shallow
+  $ newclientrepo shallow test:master
 
 # status
 
@@ -70,13 +65,9 @@
 # local commit where the dirstate is clean -- ensure that we do just one fetch
 # (update to a commit on the server first)
 
-  $ hg --config debug.dirstate.delaywrite=1 up 'desc(xy)'
+  $ hg up 'desc(xy)'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ clearcache
-  $ hg debugdirstate
-  n 644          2 * x (glob)
-  n 644          2 * y (glob)
-  n 644          2 * z (glob)
   $ echo xxxx > x
   $ echo yyyy > y
   $ hg commit -m x
@@ -96,13 +87,10 @@
 
   $ cd ../shallow
   $ hg pull
-  pulling from ssh://user@dummy/master
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  pulling from test:master
+  imported commit graph for 1 commit (1 segment)
 
-  $ hg rebase -d tip
+  $ hg rebase -d master
   rebasing 9abfe7bca547 "a"
   3 files fetched over 2 fetches - (3 misses, 0.00% hit ratio) over *s (glob) (?)
 
@@ -149,9 +137,7 @@
   2 changesets found
   $ cd ..
 
-  $ hgcloneshallow ssh://user@dummy/master shallow2 -q
-  [12] files fetched over 1 fetches \- \([12] misses, 0.00% hit ratio\) over .*s (re) (?)
-  $ cd shallow2
+  $ newclientrepo shallow2 test:master
   $ hg unbundle ../local.bundle
   adding changesets
   adding manifests
@@ -181,8 +167,7 @@
 # commit without producing new node
 
   $ cd $TESTTMP
-  $ hgcloneshallow ssh://user@dummy/master shallow3 -q
-  $ cd shallow3
+  $ newclientrepo shallow3 test:master
   $ echo 1 > A
   $ hg commit -m foo -A A
   $ hg log -r . -T '{node}\n'

@@ -671,7 +671,10 @@ def expushdiscoverybookmarks(pushop):
         # the first check isn't technically about non-fg moves, but the non-fg
         # check relies on the old bm location being in the local repo
         if old not in repo:
-            msg = _("remote bookmark revision is not in local repo")
+            msg = _("remote bookmark %s revision %s is not in local repo") % (
+                bookmark,
+                old,
+            )
             hint = _("pull and merge or rebase or use --non-forward-move")
             raise error.Abort(msg, hint=hint)
         if mutation.enabled(repo):
