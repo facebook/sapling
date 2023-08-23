@@ -23,12 +23,12 @@ use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
-use pathmatcher::AlwaysMatcher;
 use pathmatcher::DifferenceMatcher;
 use pathmatcher::DynMatcher;
 use pathmatcher::GitignoreMatcher;
 use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher;
+use pathmatcher::NegateMatcher;
 use pathmatcher::UnionMatcher;
 use repolock::RepoLocker;
 use status::FileStatus;
@@ -276,31 +276,36 @@ impl WorkingCopy {
         Ok(added_files)
     }
 
-    fn sparse_matcher(&self, manifests: &[Arc<RwLock<TreeManifest>>]) -> Result<DynMatcher> {
+    fn sparse_matcher(
+        &self,
+        manifests: &[Arc<RwLock<TreeManifest>>],
+    ) -> Result<Option<DynMatcher>> {
+        assert!(!manifests.is_empty());
+
         let fs = &self.filesystem.lock();
 
-        let mut sparse_matchers: Vec<DynMatcher> = Vec::new();
         if fs.file_system_type == FileSystemType::Eden {
-            sparse_matchers.push(Arc::new(AlwaysMatcher::new()));
-        } else {
-            for manifest in manifests.iter() {
-                match crate::sparse::repo_matcher(
-                    &self.vfs,
-                    &fs.vfs.root().join(self.ident.dot_dir()),
-                    manifest.read().clone(),
-                    fs.file_store.clone(),
-                )? {
-                    Some((matcher, _hash)) => {
-                        sparse_matchers.push(matcher);
-                    }
-                    None => {
-                        sparse_matchers.push(Arc::new(AlwaysMatcher::new()));
-                    }
-                };
+            return Ok(None);
+        }
+
+        let mut sparse_matchers: Vec<DynMatcher> = Vec::new();
+        for manifest in manifests.iter() {
+            if let Some((matcher, _hash)) = crate::sparse::repo_matcher(
+                &self.vfs,
+                &fs.vfs.root().join(self.ident.dot_dir()),
+                manifest.read().clone(),
+                fs.file_store.clone(),
+            )? {
+                sparse_matchers.push(matcher);
             }
         }
 
-        Ok(Arc::new(UnionMatcher::new(sparse_matchers)))
+        if sparse_matchers.is_empty() {
+            // Indicates we have no .hg/sparse (i.e. sparse is disabled).
+            Ok(None)
+        } else {
+            Ok(Some(Arc::new(UnionMatcher::new(sparse_matchers))))
+        }
     }
 
     pub fn status(
@@ -326,14 +331,15 @@ impl WorkingCopy {
             )));
         }
 
-        matcher = Arc::new(IntersectMatcher::new(vec![
-            matcher,
-            self.sparse_matcher(&manifests)?,
-        ]));
+        let sparse_matcher = self.sparse_matcher(&manifests)?;
+
+        if let Some(sparse) = sparse_matcher.clone() {
+            matcher = Arc::new(IntersectMatcher::new(vec![matcher, sparse]));
+        }
 
         // The GitignoreMatcher minus files in the repo. In other words, it does
         // not match an ignored file that has been previously committed.
-        let ignore_matcher = Arc::new(DifferenceMatcher::new(
+        let mut ignore_matcher: DynMatcher = Arc::new(DifferenceMatcher::new(
             self.ignore_matcher.clone(),
             UnionMatcher::new(manifest_matchers),
         ));
@@ -341,6 +347,14 @@ impl WorkingCopy {
         // If we have been asked to report ignored files, don't skip them in the matcher.
         if !include_ignored {
             matcher = Arc::new(DifferenceMatcher::new(matcher, ignore_matcher.clone()));
+        }
+
+        // Treat files outside sparse profile as ignored.
+        if let Some(sparse) = sparse_matcher.clone() {
+            ignore_matcher = Arc::new(UnionMatcher::new(vec![
+                ignore_matcher,
+                Arc::new(NegateMatcher::new(sparse)),
+            ]));
         }
 
         let mut ignore_dirs = vec![PathBuf::from(self.ident.dot_dir())];

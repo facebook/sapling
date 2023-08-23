@@ -271,6 +271,30 @@ impl Matcher for IntersectMatcher {
     }
 }
 
+pub struct NegateMatcher {
+    matcher: Arc<dyn 'static + Matcher + Send + Sync>,
+}
+
+impl NegateMatcher {
+    pub fn new(matcher: Arc<dyn 'static + Matcher + Send + Sync>) -> Self {
+        Self { matcher }
+    }
+}
+
+impl Matcher for NegateMatcher {
+    fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
+        self.matcher.matches_directory(path).map(|m| match m {
+            DirectoryMatch::Everything => DirectoryMatch::Nothing,
+            DirectoryMatch::Nothing => DirectoryMatch::Everything,
+            DirectoryMatch::ShouldTraverse => DirectoryMatch::ShouldTraverse,
+        })
+    }
+
+    fn matches_file(&self, path: &RepoPath) -> Result<bool> {
+        self.matcher.matches_file(path).map(|b| !b)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
