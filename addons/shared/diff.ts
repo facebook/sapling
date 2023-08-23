@@ -129,11 +129,64 @@ export function diffBlocks(aLines: string[], bLines: string[]): Array<Block> {
   return blocks;
 }
 
+/**
+ * Post process `blocks` from `diffBlocks` to collapse unchanged lines.
+ * `contextLineCount` lines before or after a `!` (changed) block are
+ * not collapsed.
+ *
+ * If `isALineExpanded(aLine, bLine)` returns `true`, then the _block_
+ * is expanded.
+ *
+ * Split `=` blocks into `=` and `~` blocks. The `~` blocks are expected
+ * to be collapsed.
+ */
+export function collapseContextBlocks(
+  blocks: Array<Block>,
+  isLineExpanded: (aLine: LineIdx, bLine: LineIdx) => boolean,
+  contextLineCount = 3,
+): Array<ContextBlock> {
+  const collapsedBlocks: Array<ContextBlock> = [];
+  blocks.forEach((block, i) => {
+    const [sign, [a1, a2, b1, b2]] = block;
+    if (sign === '!') {
+      collapsedBlocks.push(block);
+    } else if (sign === '=') {
+      // a1 ... a1 + topContext ... a2 - bottomContext ... a2
+      //                        ^^^ collapse this range (c1 to c2)
+      // The topContext and bottomContext can be 0 lines if they are not adjacent
+      // to a diff block.
+      const topContext = i == 0 || blocks[i - 1][0] !== '!' ? 0 : contextLineCount;
+      const bottomContext =
+        i + 1 == blocks.length || blocks[i + 1][0] !== '!' ? 0 : contextLineCount;
+      const c1 = Math.min(a1 + topContext, a2);
+      const c2 = Math.max(c1, a2 - bottomContext);
+      const aToB = b1 - a1;
+      if (c1 >= c2 || isLineExpanded(c1, c1 + aToB) || isLineExpanded(c2 - 1, c2 - 1 + aToB)) {
+        // Nothing to collapse.
+        collapsedBlocks.push(block);
+      } else {
+        // Split. Collapse c1 .. c2 range.
+        if (c1 > a1) {
+          collapsedBlocks.push(['=', [a1, c1, b1, c1 + aToB]]);
+        }
+        collapsedBlocks.push(['~', [c1, c2, c1 + aToB, c2 + aToB]]);
+        if (c2 < a2) {
+          collapsedBlocks.push(['=', [c2, a2, c2 + aToB, b2]]);
+        }
+      }
+    }
+  });
+  return collapsedBlocks;
+}
+
 /** Indicates whether a block is same or different on both sides. */
 export type Sign = '=' | '!';
 
 /** Return type of `diffBlocks`. */
 export type Block = [Sign, [LineIdx, LineIdx, LineIdx, LineIdx]];
+
+/** Return type of `collapseContextLines`. */
+export type ContextBlock = [Sign | '~', [LineIdx, LineIdx, LineIdx, LineIdx]];
 
 /**
  * Split lines by `\n`. Preserve the end of lines.

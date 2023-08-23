@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {diffBlocks, splitLines} from '../diff';
+import {diffBlocks, splitLines, collapseContextBlocks} from '../diff';
 
 describe('diffBlocks', () => {
   it('returns a "=" block for unchanged content', () => {
@@ -59,5 +59,131 @@ describe('diffBlocks', () => {
       const actual = diffBlocks(a, b);
       expect(actual).toEqual(expected);
     });
+  });
+});
+
+describe('collapseContextBlocks', () => {
+  it('collapses everything in a "=" block', () => {
+    expect(collapseContextBlocks([['=', [0, 5, 0, 5]]], () => false)).toMatchObject([
+      ['~', [0, 5, 0, 5]],
+    ]);
+  });
+
+  it('collapses the top part of a "=" block', () => {
+    expect(
+      collapseContextBlocks(
+        [
+          ['=', [0, 5, 0, 5]],
+          ['!', [5, 6, 5, 7]],
+        ],
+        () => false,
+      ),
+    ).toMatchObject([
+      ['~', [0, 2, 0, 2]],
+      ['=', [2, 5, 2, 5]],
+      ['!', [5, 6, 5, 7]],
+    ]);
+  });
+
+  it('collapses the bottom part of a "=" block', () => {
+    expect(
+      collapseContextBlocks(
+        [
+          ['!', [0, 2, 0, 3]],
+          ['=', [2, 8, 3, 9]],
+        ],
+        () => false,
+      ),
+    ).toMatchObject([
+      ['!', [0, 2, 0, 3]],
+      ['=', [2, 5, 3, 6]],
+      ['~', [5, 8, 6, 9]],
+    ]);
+  });
+
+  it('splits a "=" block in 3 blocks on demand', () => {
+    expect(
+      collapseContextBlocks(
+        [
+          ['!', [0, 1, 0, 2]],
+          ['=', [1, 10, 2, 11]],
+          ['!', [10, 11, 11, 12]],
+        ],
+        () => false,
+      ),
+    ).toMatchObject([
+      ['!', [0, 1, 0, 2]],
+      ['=', [1, 4, 2, 5]],
+      ['~', [4, 7, 5, 8]],
+      ['=', [7, 10, 8, 11]],
+      ['!', [10, 11, 11, 12]],
+    ]);
+  });
+
+  it('respects isExpanded function', () => {
+    expect(
+      collapseContextBlocks(
+        [
+          ['!', [0, 1, 0, 2]],
+          ['=', [1, 10, 2, 11]],
+          ['!', [10, 11, 11, 12]],
+        ],
+        (aLine, _bLine) => aLine === 4,
+      ),
+    ).toMatchObject([
+      ['!', [0, 1, 0, 2]],
+      ['=', [1, 10, 2, 11]],
+      ['!', [10, 11, 11, 12]],
+    ]);
+  });
+
+  it('skips "~" if "=" block is too small', () => {
+    expect(
+      collapseContextBlocks(
+        [
+          ['!', [0, 1, 0, 2]],
+          ['=', [1, 7, 2, 8]],
+          ['!', [7, 8, 8, 9]],
+        ],
+        () => false,
+      ),
+    ).toMatchObject([
+      ['!', [0, 1, 0, 2]],
+      ['=', [1, 7, 2, 8]],
+      ['!', [7, 8, 8, 9]],
+    ]);
+  });
+
+  it('preserves context around empty ! block', () => {
+    expect(
+      collapseContextBlocks(
+        [
+          ['=', [0, 5, 0, 5]],
+          ['!', [5, 5, 5, 5]],
+          ['=', [5, 6, 5, 6]],
+        ],
+        () => false,
+      ),
+    ).toEqual([
+      ['~', [0, 2, 0, 2]],
+      ['=', [2, 5, 2, 5]],
+      ['!', [5, 5, 5, 5]],
+      ['=', [5, 6, 5, 6]],
+    ]);
+  });
+
+  it('handles adjacent "=" blocks', () => {
+    expect(
+      collapseContextBlocks(
+        [
+          ['=', [0, 2, 0, 2]],
+          ['=', [2, 8, 2, 8]],
+        ],
+        () => false,
+      ),
+    ).toMatchObject([
+      ['~', [0, 2, 0, 2]],
+      ['~', [2, 8, 2, 8]],
+    ]);
   });
 });
