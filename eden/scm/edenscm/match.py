@@ -19,7 +19,7 @@ from typing import List, Optional, Pattern, Sized, Tuple
 
 from bindings import pathmatcher
 
-from . import error, pathutil, pycompat, util
+from . import error, identity, pathutil, pycompat, util
 from .i18n import _
 from .pycompat import decodeutf8
 
@@ -130,7 +130,7 @@ def match(
     """
 
     if _userustmatcher:
-        return hintedmatcher(
+        hm = hintedmatcher(
             root,
             cwd,
             patterns or [],
@@ -141,6 +141,10 @@ def match(
             casesensitive=not icasefs,
             badfn=badfn,
         )
+        if warn:
+            for warning in hm.warnings():
+                warn("warning: " + identity.replace(warning) + "\n")
+        return hm
 
     normalize = _donormalize
     if icasefs:
@@ -1005,6 +1009,9 @@ class hintedmatcher(basematcher):
         # Similar to nevermatcher, let the knowledge that we never match
         # allow isexact() fast paths.
         return self._matcher.never_matches()
+
+    def warnings(self):
+        return self._matcher.warnings()
 
 
 class dynmatcher(basematcher):

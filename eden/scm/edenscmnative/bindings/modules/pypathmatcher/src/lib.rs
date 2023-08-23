@@ -247,6 +247,10 @@ py_class!(pub class hintedmatcher |py| {
     def all_recursive_paths(&self) -> PyResult<bool> {
         Ok(self.matcher(py).all_recursive_paths())
     }
+
+    def warnings(&self) -> PyResult<Vec<String>> {
+        Ok(self.matcher(py).warnings().to_vec())
+    }
 });
 
 impl ExtractInnerRef for dynmatcher {
