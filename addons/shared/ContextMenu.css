@@ -16,6 +16,11 @@
   z-index: 2000;
   min-width: 180px;
   animation: fadein 50ms linear;
+  box-sizing: border-box;
+}
+
+.context-menu {
+  overflow-y: auto;
 }
 
 .context-menu-fadeout {

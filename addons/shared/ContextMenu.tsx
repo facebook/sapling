@@ -62,8 +62,8 @@ export function ContextMenus() {
             setState(null);
           }
           return;
-        } else if (e.type === 'click') {
-          // if the click is inside the context menu, don't dismiss
+        } else if (e.type === 'click' || e.type === 'scroll') {
+          // if click or scroll inside the context menu, don't dismiss
           if (findParentWithClassName(e.target as HTMLElement, 'context-menu-container')) {
             return;
           }
@@ -91,7 +91,7 @@ export function ContextMenus() {
   const leftOrRight = state.x > window.innerWidth / 2 ? 'right' : 'left';
   const yOffset = 10;
   const xOffset = -5;
-  let position;
+  let position: React.CSSProperties;
   if (topOrBottom === 'top') {
     if (leftOrRight === 'left') {
       position = {top: state.y + yOffset, left: state.x + xOffset};
@@ -108,6 +108,10 @@ export function ContextMenus() {
       };
     }
   }
+  position.maxHeight =
+    window.innerHeight -
+    ((position.top as number | null) ?? 0) -
+    ((position.bottom as number | null) ?? 0);
 
   return (
     <div
