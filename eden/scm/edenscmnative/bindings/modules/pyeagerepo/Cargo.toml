@@ -9,7 +9,6 @@ async-runtime = { path = "../../../../lib/async-runtime" }
 cpython = { version = "0.7", default-features = false }
 cpython_ext = { path = "../../../../lib/cpython-ext" }
 dag = { path = "../../../../lib/dag" }
-pyconfigloader = { path = "../pyconfigloader" }
 eagerepo = { path = "../../../../lib/eagerepo" }
 edenapi_types = { path = "../../../../lib/edenapi/types" }
 pydag = { path = "../pydag" }

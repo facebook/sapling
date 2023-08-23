@@ -514,8 +514,8 @@ pub fn edenapi_from_config(config: &dyn Config) -> edenapi::Result<Option<Arc<dy
                 &value
             );
             if let Some(path) = EagerRepo::url_to_dir(&value) {
-                let repo = EagerRepo::open(&path, None)
-                    .map_err(|e| edenapi::EdenApiError::Other(e.into()))?;
+                let repo =
+                    EagerRepo::open(&path).map_err(|e| edenapi::EdenApiError::Other(e.into()))?;
                 return Ok(Some(Arc::new(repo)));
             }
         }

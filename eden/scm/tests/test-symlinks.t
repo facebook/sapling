@@ -1,13 +1,9 @@
 #debugruntest-compatible
+#require symlink
 
   $ eagerepo
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig experimental.windows-symlinks=True
   $ setconfig workingcopy.ruststatus=False
-
-#if no-windows
-#require symlink
-#endif
 
 == tests added in 0.7 ==
 

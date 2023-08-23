@@ -19,7 +19,6 @@ use dag::ops::DagAlgorithm;
 use eagerepo::EagerRepo as RustEagerRepo;
 use eagerepo::EagerRepoStore as RustEagerRepoStore;
 use edenapi_types::HgId;
-use pyconfigloader::config as PyConfig;
 use pydag::dagalgo::dagalgo as PyDag;
 use pyedenapi::PyClient;
 
@@ -40,10 +39,9 @@ py_class!(class EagerRepo |py| {
 
     /// Construct `EagerRepo` from a directory.
     @staticmethod
-    def open(dir: &PyPath, config: Option<&PyConfig> = None) -> PyResult<Self> {
-        let config = config.map(|config| config.get_cfg(py));
+    def open(dir: &PyPath) -> PyResult<Self> {
         let path = dir.as_path().to_path_buf();
-        let inner = RustEagerRepo::open(&path, config.as_ref()).map_pyerr(py)?;
+        let inner = RustEagerRepo::open(&path).map_pyerr(py)?;
         Self::create_instance(py, path, RefCell::new(inner))
     }
 
@@ -54,7 +52,7 @@ py_class!(class EagerRepo |py| {
             Some(dir) => dir,
             None => return Err(PyErr::new::<exc::ValueError, _>(py, "invalid url")),
         };
-        let inner = RustEagerRepo::open(&dir, None).map_pyerr(py)?;
+        let inner = RustEagerRepo::open(&dir).map_pyerr(py)?;
         Self::create_instance(py, dir, RefCell::new(inner))
     }
 
@@ -106,7 +104,7 @@ py_class!(class EagerRepo |py| {
     /// Obtain an edenapi client.
     /// It re-opens the on-disk state so pending changes won't be exposed.
     def edenapiclient(&self) -> PyResult<PyClient> {
-        let inner = RustEagerRepo::open(self.path(py), None).map_pyerr(py)?;
+        let inner = RustEagerRepo::open(self.path(py)).map_pyerr(py)?;
         PyClient::from_edenapi(py, Arc::new(inner))
     }
 

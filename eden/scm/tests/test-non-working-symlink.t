@@ -1,6 +1,8 @@
 #debugruntest-compatible
 #require windows
 
+  $ setconfig experimental.windows-symlinks=False
+
 Make sure Windows symlink support respects absence of windowssymlinks requirement
   $ newrepo
   $ echo bar > foo

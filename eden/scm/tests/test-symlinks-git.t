@@ -1,14 +1,7 @@
 #debugruntest-compatible
-#require git
-
-#if no-windows
-#require symlink
-#endif
+#require git symlink
 
   $ configure modernclient
-  $ setconfig experimental.windows-symlinks=True
-  $ setconfig workingcopy.ruststatus=False
-  $ setconfig status.use-rust=False
   $ . $TESTDIR/git.sh
 
 Test cloning git repos

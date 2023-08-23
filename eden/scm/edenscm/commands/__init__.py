@@ -3890,7 +3890,7 @@ def init(ui, dest=".", **opts):
             _("please use '@prog@ init --git %s' for a better experience") % dest
         )
     elif ui.configbool("format", "use-eager-repo"):
-        bindings.eagerepo.EagerRepo.open(destpath, ui._rcfg)
+        bindings.eagerepo.EagerRepo.open(destpath)
     else:
         if util.url(destpath).scheme == "bundle":
             hg.repository(ui, destpath, create=True)

@@ -59,6 +59,7 @@ contentstorefallback=True
 
 [experimental]
 use-rust-changelog=True
+windows-symlinks=True
 """
     if use_watchman:
         content += """

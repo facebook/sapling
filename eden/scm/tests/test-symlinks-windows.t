@@ -1,11 +1,7 @@
 #debugruntest-compatible
-
-#if no-windows
 #require symlink
-#endif
 
   $ configure modernclient
-  $ setconfig experimental.windows-symlinks=True
   $ setconfig workingcopy.ruststatus=False
   $ setconfig status.use-rust=False
   $ eagerepo

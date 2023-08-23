@@ -569,7 +569,7 @@ fn eager_clone(
     // Copy over store files.
     recursive_copy(&source_dot_dir.join("store"), &dest_dot_dir.join("store"))?;
     // Init working copy.
-    eagerepo::EagerRepo::open(dest, Some(config))?;
+    eagerepo::EagerRepo::open(dest)?;
 
     let config_path = dest_dot_dir.join(dest_ident.config_repo_file());
     atomic_write(&config_path, |f| {

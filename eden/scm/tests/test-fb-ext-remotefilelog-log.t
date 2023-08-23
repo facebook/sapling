@@ -35,6 +35,7 @@ Shallow clone from full
   revlogv1
   store
   treestate
+  windowssymlinks
 
   $ hg goto
   fetching tree '' 05bd2758dd7a25912490d0633b8975bf52bfab06
