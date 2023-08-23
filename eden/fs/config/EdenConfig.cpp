@@ -209,9 +209,28 @@ void EdenConfig::registerConfiguration(ConfigSettingBase* configSetting) {
 const std::optional<AbsolutePath> EdenConfig::getClientCertificate() const {
   // return the first cert path that exists
   for (auto& cert : clientCertificateLocations.getValue()) {
-    if (boost::filesystem::exists(cert.asString())) {
-      return cert;
+    auto certPath =
+        FieldConverter<AbsolutePath>{}.fromString(cert, *substitutions_);
+
+    if (certPath.hasError()) {
+      XLOG(
+          DBG2,
+          "Unable to resolve possible cert location, skipping : ",
+          certPath.error());
+      continue;
     }
+
+    if (boost::filesystem::exists(certPath.value().value())) {
+      return certPath.value();
+    }
+
+    XLOG(
+        DBG2,
+        "Cert does not exist on disk, skipping : ",
+        cert,
+        " (resolved as: ",
+        certPath.value().value(),
+        ")");
   }
   auto singleCertificateConfig = clientCertificate.getValue();
   if (singleCertificateConfig != kUnspecifiedDefault) {

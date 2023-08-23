@@ -179,14 +179,16 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
       systemIgnoreFile, ConfigSourceType::CommandLine);
   edenConfig->edenDir.setValue(edenDir, ConfigSourceType::CommandLine);
   edenConfig->clientCertificateLocations.setValue(
-      {clientCertificate}, ConfigSourceType::CommandLine);
+      {clientCertificate.asString()}, ConfigSourceType::CommandLine);
   edenConfig->useMononoke.setValue(useMononoke, ConfigSourceType::CommandLine);
 
   // Configuration
   EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), ignoreFile);
   EXPECT_EQ(edenConfig->systemIgnoreFile.getValue(), systemIgnoreFile);
   EXPECT_EQ(edenConfig->edenDir.getValue(), edenDir);
-  EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate);
+  EXPECT_EQ(
+      edenConfig->getClientCertificate(),
+      normalizeBestEffort(clientCertificate.asString()));
   EXPECT_EQ(edenConfig->useMononoke.getValue(), useMononoke);
 }
 
@@ -224,13 +226,15 @@ TEST_F(EdenConfigTest, cloneTest) {
         systemIgnoreFile, ConfigSourceType::SystemConfig);
     edenConfig->edenDir.setValue(edenDir, ConfigSourceType::UserConfig);
     edenConfig->clientCertificateLocations.setValue(
-        {clientCertificate}, ConfigSourceType::UserConfig);
+        {clientCertificate.asString()}, ConfigSourceType::UserConfig);
     edenConfig->useMononoke.setValue(useMononoke, ConfigSourceType::UserConfig);
 
     EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), ignoreFile);
     EXPECT_EQ(edenConfig->systemIgnoreFile.getValue(), systemIgnoreFile);
     EXPECT_EQ(edenConfig->edenDir.getValue(), edenDir);
-    EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate);
+    EXPECT_EQ(
+        edenConfig->getClientCertificate(),
+        normalizeBestEffort(clientCertificate.asString()));
     EXPECT_EQ(edenConfig->useMononoke.getValue(), useMononoke);
 
     configCopy = std::make_shared<EdenConfig>(*edenConfig);
@@ -239,7 +243,9 @@ TEST_F(EdenConfigTest, cloneTest) {
   EXPECT_EQ(configCopy->userIgnoreFile.getValue(), ignoreFile);
   EXPECT_EQ(configCopy->systemIgnoreFile.getValue(), systemIgnoreFile);
   EXPECT_EQ(configCopy->edenDir.getValue(), edenDir);
-  EXPECT_EQ(configCopy->getClientCertificate(), clientCertificate);
+  EXPECT_EQ(
+      configCopy->getClientCertificate(),
+      normalizeBestEffort(clientCertificate.asString()));
   EXPECT_EQ(configCopy->useMononoke.getValue(), useMononoke);
 
   configCopy->clearAll(ConfigSourceType::UserConfig);
@@ -504,20 +510,38 @@ TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
               defaultUserConfigPath_, ConfigSourceType::UserConfig)});
 
   edenConfig->clientCertificateLocations.setValue(
-      {clientCertificate1, clientCertificate2}, ConfigSourceType::UserConfig);
-  EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate1);
+      {clientCertificate1.asString(), clientCertificate2.asString()},
+      ConfigSourceType::UserConfig);
+  EXPECT_EQ(
+      edenConfig->getClientCertificate(),
+      normalizeBestEffort(clientCertificate1.asString()));
 
   edenConfig->clientCertificateLocations.setValue(
-      {clientCertificate2, clientCertificate1}, ConfigSourceType::UserConfig);
-  EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate2);
+      {clientCertificate2.asString(), clientCertificate1.asString()},
+      ConfigSourceType::UserConfig);
+  EXPECT_EQ(
+      edenConfig->getClientCertificate(),
+      normalizeBestEffort(clientCertificate2.asString()));
 
   edenConfig->clientCertificateLocations.setValue(
-      {clientCertificate1, clientCertificate3}, ConfigSourceType::UserConfig);
-  EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate1);
+      {clientCertificate1.asString(), clientCertificate3.asString()},
+      ConfigSourceType::UserConfig);
+  EXPECT_EQ(
+      edenConfig->getClientCertificate(),
+      normalizeBestEffort(clientCertificate1.asString()));
 
   edenConfig->clientCertificateLocations.setValue(
-      {clientCertificate3, clientCertificate1}, ConfigSourceType::UserConfig);
-  EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate1);
+      {clientCertificate3.asString(), clientCertificate1.asString()},
+      ConfigSourceType::UserConfig);
+  EXPECT_EQ(
+      edenConfig->getClientCertificate(),
+      normalizeBestEffort(clientCertificate1.asString()));
+  edenConfig->clientCertificateLocations.setValue(
+      {"${A_NON_EXISTANT_ENV_VAR}", clientCertificate1.asString()},
+      ConfigSourceType::UserConfig);
+  EXPECT_EQ(
+      edenConfig->getClientCertificate(),
+      normalizeBestEffort(clientCertificate1.asString()));
 }
 
 TEST_F(EdenConfigTest, fallbackToOldSingleCertConfig) {
@@ -546,18 +570,27 @@ TEST_F(EdenConfigTest, fallbackToOldSingleCertConfig) {
   // Without clientCertificateLocations set clientCertificate should be used.
   edenConfig->clientCertificate.setValue(
       clientCertificate4, ConfigSourceType::UserConfig);
-  EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate4);
+  edenConfig->clientCertificateLocations.setValue(
+      {}, ConfigSourceType::UserConfig);
+  EXPECT_EQ(
+      edenConfig->getClientCertificate(),
+      normalizeBestEffort(clientCertificate4.asString()));
 
   // Now that clientCertificateLocations is set this should be used.
   edenConfig->clientCertificateLocations.setValue(
-      {clientCertificate1, clientCertificate2}, ConfigSourceType::UserConfig);
-  EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate1);
+      {clientCertificate1.asString(), clientCertificate2.asString()},
+      ConfigSourceType::UserConfig);
+  EXPECT_EQ(
+      edenConfig->getClientCertificate(),
+      normalizeBestEffort(clientCertificate1.asString()));
 
   // Now that clientCertificateLocations does not contain a valid cert we should
   // fall back to the old single cert.
   edenConfig->clientCertificateLocations.setValue(
-      {clientCertificate3}, ConfigSourceType::UserConfig);
-  EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate4);
+      {clientCertificate3.asString()}, ConfigSourceType::UserConfig);
+  EXPECT_EQ(
+      edenConfig->getClientCertificate(),
+      normalizeBestEffort(clientCertificate4.asString()));
 }
 
 TEST_F(EdenConfigTest, getValueByFullKey) {

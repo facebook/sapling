@@ -279,9 +279,10 @@ class EdenConfig : private ConfigSettingManager {
       "ssl:client-certificate",
       kUnspecifiedDefault,
       this};
-  ConfigSetting<std::vector<AbsolutePath>> clientCertificateLocations{
+
+  ConfigSetting<std::vector<std::string>> clientCertificateLocations{
       "ssl:client-certificate-locations",
-      std::vector<AbsolutePath>{},
+      std::vector<std::string>{},
       this};
 
   ConfigSetting<bool> useMononoke{"mononoke:use-mononoke", false, this};
