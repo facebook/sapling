@@ -9,8 +9,9 @@ import type {RangeInfo} from './TextEditable';
 import type {ChunkSelectState, LineRegion, SelectLine} from './stackEdit/chunkSelectState';
 
 import {TextEditable} from './TextEditable';
+import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {T, t} from './i18n';
-import {VSCodeCheckbox, VSCodeRadio} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeRadio} from '@vscode/webview-ui-toolkit/react';
 import {Set as ImSet} from 'immutable';
 import {useRef, useState} from 'react';
 import {notEmpty} from 'shared/utils';
@@ -135,18 +136,16 @@ function PartialFileSelectionWithCheckbox(props: Props & {unified?: boolean}) {
         const selectedCount = region.lines.reduce((acc, line) => acc + (line.selected ? 1 : 0), 0);
         const indeterminate = selectedCount > 0 && selectedCount < selectableCount;
         const checked = selectedCount === selectableCount;
-        // Note: VSCodeCheckbox's onClick or onChange are not really React events
-        // and are hard to get right (ex. onChange can be triggered by re-rendering
-        // with a different `checked` state without events on the checkbox itself).
-        // So we use onClick on the parent element.
-        // FIXME: This does not work for keyboard checkbox events.
         lineCheckbox.push(
-          <div className="checkbox-anchor">
-            <div
-              key={`${key}c`}
-              className="checkbox-container"
-              onClick={_e => toogleLineOrRegion(region.lines[0], region)}>
-              <VSCodeCheckbox checked={checked} indeterminate={indeterminate} />
+          <div className="checkbox-anchor" key={`${key}c`}>
+            <div className="checkbox-container">
+              <VSCodeCheckbox
+                checked={checked}
+                indeterminate={indeterminate}
+                onChange={() => {
+                  toogleLineOrRegion(region.lines[0], region);
+                }}
+              />
             </div>
           </div>,
         );
