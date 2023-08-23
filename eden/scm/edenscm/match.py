@@ -738,24 +738,40 @@ class basematcher(object):
         return True
 
     def always(self):
-        """Matcher will match everything and .files() will be empty --
-        optimization might be possible."""
+        """Matcher will match everything and .files() will be empty.
+        Optimization might be possible."""
         return False
 
     def isexact(self):
-        """Matcher will match exactly the list of files in .files() --
-        optimization might be possible."""
+        """Matcher matches exactly the list of files in .files(), and nothing else.
+        Optimization might be possible."""
         return False
 
     def prefix(self):
-        """Matcher will match the paths in .files() recursively --
-        optimization might be possible."""
+        """Matcher matches the paths in .files() recursively, and nothing else.
+        Optimization might be possible."""
         return False
 
     def anypats(self):
-        """None of .always(), .isexact(), and .prefix() is true --
-        optimizations will be difficult."""
-        return not self.always() and not self.isexact() and not self.prefix()
+        """Matcher contains a non-trivial pattern (i.e. non-path and non-always).
+        If this returns False, code assumes files() is all that matters.
+        Optimizations will be difficult."""
+        if self.always():
+            # This is confusing since, conceptually, we are saying
+            # there aren't patterns when we have a pattern like "**".
+            # But since always() implies files() is empty, it is safe
+            # for code to assume files() is all that's important.
+            return False
+
+        if self.isexact():
+            # Only exacty files - no patterns.
+            return False
+
+        if self.prefix():
+            # Only recursive paths - no patterns.
+            return False
+
+        return True
 
 
 class alwaysmatcher(basematcher):
