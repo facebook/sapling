@@ -621,6 +621,31 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
       .toArray();
   }
 
+  /**
+   * Get the commit from a file stack revision.
+   * Returns undefined when rev is out of range, or the commit is "public" (ex. fileRev is 0).
+   */
+  getCommitFromFileStackRev(fileIdx: number, fileRev: Rev): CommitState | undefined {
+    const commitRev = this.fileToCommit.get(FileIdx({fileIdx, fileRev}))?.rev;
+    if (commitRev == null || commitRev < 0) {
+      return undefined;
+    }
+    return unwrap(this.stack.get(commitRev));
+  }
+
+  /**
+   * Test if a file rev is "absent". An absent file is different from an empty file.
+   */
+  isAbsentFromFileStackRev(fileIdx: number, fileRev: Rev): boolean {
+    const commitIdx = this.fileToCommit.get(FileIdx({fileIdx, fileRev}));
+    if (commitIdx == null) {
+      return true;
+    }
+    const {rev, path} = commitIdx;
+    const file = rev < 0 ? this.bottomFiles.get(path) : this.getFile(rev, path);
+    return file == null || isAbsent(file);
+  }
+
   /** Extract utf-8 data from a file. */
   getUtf8Data(file: FileState): string {
     if (typeof file.data === 'string') {
