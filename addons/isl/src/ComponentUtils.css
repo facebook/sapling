@@ -19,3 +19,8 @@
   align-items: center;
   gap: var(--pad);
 }
+
+/* Workaround missing `scrollbar-width: none` support in Chrome */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
