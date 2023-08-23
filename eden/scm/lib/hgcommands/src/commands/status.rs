@@ -127,6 +127,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
     }
 
     let cwd = std::env::current_dir()?;
+    let mut lgr = ctx.logger();
 
     let always_matches = (ctx.opts.args.is_empty()
         || (ctx.opts.args.len() == 1 && ctx.opts.args[0] == "re:."))
@@ -150,6 +151,11 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         ) {
             Ok(matcher) => {
                 matcher_files = matcher.exact_files().to_vec();
+
+                for warning in matcher.warnings() {
+                    lgr.warn(format!("warning: {}", warning));
+                }
+
                 Arc::new(matcher)
             }
             Err(err) => match err.downcast_ref::<pathmatcher::Error>() {
