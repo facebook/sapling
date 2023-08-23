@@ -221,10 +221,6 @@ pub struct MononokeTunables {
     // Disable the parallel derivation for DM and default to serial
     deleted_manifest_disable_new_parallel_derivation: TunableBool,
 
-    // multiplexed blobstore is_present/get new semantics rollout
-    multiplex_blobstore_get_do_queue_lookup: TunableBool,
-    multiplex_blobstore_is_present_do_queue_lookup: TunableBool,
-
     // Not in use.
     // TODO(mitrandir): clean it up
     fastlog_use_mutable_renames: TunableBoolByRepo,
