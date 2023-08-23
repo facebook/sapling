@@ -7,6 +7,7 @@
 
 import type {CommitInfo, SuccessorInfo} from './types';
 import type {Snapshot} from 'recoil';
+import type {ContextMenuItem} from 'shared/ContextMenu';
 
 import {BranchIndicator} from './BranchIndicator';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
@@ -21,6 +22,7 @@ import {DiffInfo} from './codeReview/DiffBadge';
 import {islDrawerState} from './drawerState';
 import {isDescendant} from './getCommitTree';
 import {t, T} from './i18n';
+import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
@@ -139,8 +141,8 @@ export const Commit = memo(
       });
     });
 
-    const contextMenu = useContextMenu(() => {
-      const items = [
+    const makeContextMenuOptions = useRecoilCallback(({snapshot}) => () => {
+      const items: Array<ContextMenuItem> = [
         {
           label: <T replace={{$hash: short(commit?.hash)}}>Copy Commit Hash "$hash"</T>,
           onClick: () => platform.clipboardCopy(commit.hash),
@@ -153,6 +155,13 @@ export const Commit = memo(
         });
       }
       if (!isPublic && !actionsPrevented) {
+        items.push({type: 'divider'});
+        if (isAmendToAllowedForCommit(commit, snapshot)) {
+          items.push({
+            label: <T>Amend changes to here</T>,
+            onClick: () => runOperation(getAmendToOperation(commit, snapshot)),
+          });
+        }
         items.push({
           label: <T>Hide Commit and Descendants</T>,
           onClick: () => setOperationBeingPreviewed(new HideOperation(commit.hash)),
@@ -160,6 +169,8 @@ export const Commit = memo(
       }
       return items;
     });
+
+    const contextMenu = useContextMenu(makeContextMenuOptions);
 
     const commitActions = [];
 

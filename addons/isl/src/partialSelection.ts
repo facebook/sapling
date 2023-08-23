@@ -17,7 +17,7 @@ import {clearOnCwdChange} from './recoilUtils';
 import {ChunkSelectState} from './stackEdit/chunkSelectState';
 import {assert} from './utils';
 import Immutable from 'immutable';
-import {useRecoilState, useRecoilValue, atom} from 'recoil';
+import {selector, useRecoilState, useRecoilValue, atom} from 'recoil';
 import {RateLimiter} from 'shared/RateLimiter';
 import {SelfUpdate} from 'shared/immutableExt';
 
@@ -387,6 +387,8 @@ export class UseUncommittedSelection {
     this.setSelection(newSelection);
   }
 
+  // ---------- Read-only methods below ----------
+
   /**
    * Return true if a file is selected (default), false if deselected,
    * or a string with the edited content.
@@ -424,6 +426,21 @@ export class UseUncommittedSelection {
   }
 }
 
+type OmitNotMatching<T, K> = {
+  [P in keyof T]: K extends P ? T[P] : never;
+};
+type ReadonlyPartialSelection = OmitNotMatching<
+  PartialSelection,
+  | 'getSelection'
+  | 'isFullyOrPartiallySelected'
+  | 'isPartiallySelected'
+  | 'isFullySelected'
+  | 'isDeselected'
+  | 'isEverythingSelected'
+  | 'isNothingSelected'
+  | 'hasChunkSelection'
+>;
+
 /** Get the uncommitted selection state. */
 export function useUncommittedSelection() {
   const [selection, setSelection] = useRecoilState(uncommittedSelection);
@@ -434,6 +451,17 @@ export function useUncommittedSelection() {
 
   return new UseUncommittedSelection(selection, setSelection, wdirHash, getPaths);
 }
+
+/** Get a readonly view of the selection state, accessible from a snapshot / outside of react hooks */
+export const uncommittedSelectionReadonly = selector<ReadonlyPartialSelection>({
+  key: 'uncommittedSelectionReadonly',
+  cachePolicy_UNSTABLE: {eviction: 'most-recent'},
+  get: ({get}) => {
+    const selection = get(uncommittedSelection);
+    // Return the selection exactly, but modify the type to discourage using non-readonly methods.
+    return selection as ReadonlyPartialSelection;
+  },
+});
 
 function mergeObjectToMap<V>(obj: {[path: string]: V} | undefined, map: Map<string, V>) {
   if (obj === undefined) {

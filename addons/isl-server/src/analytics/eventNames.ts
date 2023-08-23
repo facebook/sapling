@@ -21,6 +21,7 @@ export type TrackEventName =
   | 'AddRemoveOperation'
   | 'AmendMessageOperation'
   | 'AmendOperation'
+  | 'AmendToOperation'
   | 'ArcPullOperation'
   | 'CommitOperation'
   | 'ContinueMergeOperation'
