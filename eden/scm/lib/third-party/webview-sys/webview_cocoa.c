@@ -4,6 +4,10 @@
 #include <CoreGraphics/CoreGraphics.h>
 #include <limits.h>
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wincompatible-pointer-types"
+#pragma clang diagnostic ignored "-Wint-conversion"
+
 struct webview_priv {
   id pool;
   id window;
@@ -725,3 +729,5 @@ WEBVIEW_API void webview_exit(webview_t w) {
 }
 
 WEBVIEW_API void webview_print_log(const char *s) { printf("%s\n", s); }
+
+#pragma clang diagnostic pop
