@@ -202,6 +202,10 @@ impl HintedMatcher {
         self.warnings = warnings;
         self
     }
+
+    pub fn matcher(&self) -> &DynMatcher {
+        &self.matcher
+    }
 }
 
 #[cfg(test)]

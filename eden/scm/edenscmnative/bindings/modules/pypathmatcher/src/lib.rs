@@ -24,6 +24,7 @@ use pathmatcher::build_patterns;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::DifferenceMatcher;
 use pathmatcher::DirectoryMatch;
+use pathmatcher::DynMatcher;
 use pathmatcher::GitignoreMatcher;
 use pathmatcher::HintedMatcher;
 use pathmatcher::Matcher;
@@ -143,7 +144,7 @@ impl ExtractInnerRef for treematcher {
 }
 
 py_class!(pub class dynmatcher |py| {
-    data matcher: Arc<dyn 'static + Matcher + Send + Sync>;
+    data matcher: DynMatcher;
 
     def __new__(_cls,
         patterns: Vec<String>,
@@ -253,8 +254,16 @@ py_class!(pub class hintedmatcher |py| {
     }
 });
 
+impl ExtractInnerRef for hintedmatcher {
+    type Inner = DynMatcher;
+
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.matcher(py).matcher()
+    }
+}
+
 impl ExtractInnerRef for dynmatcher {
-    type Inner = Arc<dyn 'static + Matcher + Send + Sync>;
+    type Inner = DynMatcher;
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
         self.matcher(py)
@@ -372,23 +381,23 @@ pub fn extract_matcher(py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matche
         return Ok(matcher.extract_inner(py));
     }
 
+    if let Ok(matcher) = hintedmatcher::downcast_from(py, matcher.clone_ref(py)) {
+        debug!("hintedmatcher downcast");
+        return Ok(matcher.extract_inner(py));
+    }
+
     let py_type = matcher.get_type(py);
     let type_name = py_type.name(py);
 
     debug!(%type_name);
 
-    if type_name.as_ref() == "treematcher" {
+    if matches!(
+        type_name.as_ref(),
+        "treematcher" | "gitignorematcher" | "regexmatcher" | "dynmatcher" | "hintedmatcher"
+    ) {
         return extract_matcher(py, matcher.getattr(py, "_matcher")?);
     }
-    if type_name.as_ref() == "gitignorematcher" {
-        return extract_matcher(py, matcher.getattr(py, "_matcher")?);
-    }
-    if type_name.as_ref() == "regexmatcher" {
-        return extract_matcher(py, matcher.getattr(py, "_matcher")?);
-    }
-    if type_name.as_ref() == "dynmatcher" {
-        return extract_matcher(py, matcher.getattr(py, "_matcher")?);
-    }
+
     if type_name.as_ref() == "unionmatcher" {
         let py_matchers = matcher.getattr(py, "_matchers")?;
         let py_matchers = PyList::extract(py, &py_matchers)?;
