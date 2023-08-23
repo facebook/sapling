@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {diffBlocks, splitLines, collapseContextBlocks} from '../diff';
+import type {Block} from '../diff';
+
+import {diffBlocks, splitLines, collapseContextBlocks, mergeBlocks} from '../diff';
 
 describe('diffBlocks', () => {
   it('returns a "=" block for unchanged content', () => {
@@ -184,6 +186,86 @@ describe('collapseContextBlocks', () => {
     ).toMatchObject([
       ['~', [0, 2, 0, 2]],
       ['~', [2, 8, 2, 8]],
+    ]);
+  });
+});
+
+describe('mergeBlocks', () => {
+  it('should handle empty blocks', () => {
+    const result = mergeBlocks([], []);
+    expect(result).toEqual([]);
+  });
+
+  it('should merge blocks', () => {
+    const abBlocks: Array<Block> = [
+      ['!', [0, 0, 0, 1]],
+      ['!', [0, 0, 1, 4]],
+      ['!', [0, 0, 4, 7]],
+    ];
+    const cbBlocks: Array<Block> = [
+      ['!', [0, 0, 0, 2]],
+      ['!', [0, 0, 2, 3]],
+      ['!', [0, 0, 3, 6]],
+      ['!', [0, 0, 6, 7]],
+    ];
+    const result = mergeBlocks(abBlocks, cbBlocks);
+    expect(result).toEqual([['!', [0, 7, 0, 7]]]);
+  });
+
+  it('should handle blocks with different signs', () => {
+    let abBlocks: Array<Block> = [
+      ['!', [0, 1, 0, 1]],
+      ['!', [1, 2, 1, 2]],
+      ['=', [2, 5, 3, 6]],
+    ];
+    let cbBlocks: Array<Block> = [
+      ['!', [0, 2, 0, 3]],
+      ['=', [2, 3, 3, 4]],
+      ['=', [3, 5, 4, 6]],
+    ];
+    let result = mergeBlocks(abBlocks, cbBlocks);
+    expect(result).toEqual([
+      ['!', [0, 3, 0, 3]],
+      ['=', [3, 6, 3, 6]],
+    ]);
+
+    abBlocks = [
+      ['!', [0, 0, 0, 3]],
+      ['=', [0, 4, 3, 7]],
+    ];
+    cbBlocks = [
+      ['=', [0, 1, 0, 1]],
+      ['=', [1, 4, 1, 4]],
+      ['!', [4, 4, 4, 6]],
+      ['=', [4, 5, 6, 7]],
+    ];
+    result = mergeBlocks(abBlocks, cbBlocks);
+    expect(result).toEqual([
+      ['!', [0, 3, 0, 3]],
+      ['=', [3, 4, 3, 4]],
+      ['!', [4, 6, 4, 6]],
+      ['=', [6, 7, 6, 7]],
+    ]);
+  });
+
+  it('should perserve empty ranges', () => {
+    const abBlocks: Array<Block> = [
+      ['=', [0, 1, 0, 1]],
+      ['!', [1, 2, 1, 1]],
+      ['=', [2, 6, 1, 5]],
+    ];
+    const cbBlocks: Array<Block> = [
+      ['=', [0, 4, 0, 4]],
+      ['!', [4, 5, 4, 4]],
+      ['=', [5, 6, 4, 5]],
+    ];
+    const result = mergeBlocks(abBlocks, cbBlocks);
+    expect(result).toEqual([
+      ['=', [0, 1, 0, 1]],
+      ['!', [1, 1, 1, 1]],
+      ['=', [1, 4, 1, 4]],
+      ['!', [4, 4, 4, 4]],
+      ['=', [4, 5, 4, 5]],
     ]);
   });
 });

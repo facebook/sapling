@@ -179,6 +179,65 @@ export function collapseContextBlocks(
   return collapsedBlocks;
 }
 
+/**
+ * Merge diffBlocks(a, b) and diffBlocks(c, b).
+ * Any difference (between a and b, or c and b) generates a `!` block.
+ * The (a1, a2) line numbers in the output blocks are changed to (b1, b2).
+ * Preserve empty (a1 == a2, b1 == b2) '!' blocks for context line calculation.
+ */
+export function mergeBlocks(abBlocks: Array<Block>, cbBlocks: Array<Block>): Array<Block> {
+  let i = 0; // Index of abBlocks.
+  let j = 0; // Index of cbBlocks.
+  let start = 0; // "Current" line index of b.
+  const result: Array<Block> = [];
+
+  const push = (sign: Sign, end: number) => {
+    const last = result.at(-1);
+    if (last?.[0] === sign) {
+      last[1][1] = end;
+      last[1][3] = end;
+    } else {
+      result.push([sign, [start, end, start, end]]);
+    }
+    start = end;
+  };
+
+  while (i < abBlocks.length && j < cbBlocks.length) {
+    const [sign1, [, , b11, b12]] = abBlocks[i];
+    if (b11 === b12 && b12 === start && sign1 === '!') {
+      push(sign1, start);
+    }
+    if (b12 <= start) {
+      ++i;
+      continue;
+    }
+    const [sign2, [, , b21, b22]] = cbBlocks[j];
+    if (b21 === b22 && b21 === start && sign2 === '!') {
+      push(sign2, start);
+    }
+    if (b22 <= start) {
+      ++j;
+      continue;
+    }
+
+    // Minimal "end" so there cannot be 2 different signs in the start-end range
+    // on either side. Note 2 sides might have different signs.
+    const end = Math.min(...[b11, b12, b21, b22].filter(i => i > start));
+
+    // Figure out the sign of the start-end range.
+    let sign: Sign = '=';
+    if (
+      (start >= b11 && end <= b12 && sign1 === '!') ||
+      (start >= b21 && end <= b22 && sign2 === '!')
+    ) {
+      sign = '!';
+    }
+    push(sign, end);
+  }
+
+  return result;
+}
+
 /** Indicates whether a block is same or different on both sides. */
 export type Sign = '=' | '!';
 
