@@ -998,13 +998,12 @@ class hintedmatcher(basematcher):
     def always(self):
         return self._matcher.always_matches()
 
-    # Similar to nevermatcher, let the knowledge that we never match
-    # allow prefix() and isexact() fast paths.
-
     def prefix(self):
-        return self._matcher.all_recursive_paths() or self._matcher.never_matches()
+        return self._matcher.all_recursive_paths()
 
     def isexact(self):
+        # Similar to nevermatcher, let the knowledge that we never match
+        # allow isexact() fast paths.
         return self._matcher.never_matches()
 
 

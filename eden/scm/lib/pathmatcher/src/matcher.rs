@@ -62,22 +62,36 @@ pub fn cli_matcher_with_filesets(
     root: &Path,
     cwd: &Path,
 ) -> Result<HintedMatcher> {
+    let normalize = |pats: &[_], default, force_recursive| -> Result<Option<Vec<Pattern>>> {
+        if pats.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(normalize_patterns(
+                pats,
+                default,
+                root,
+                cwd,
+                force_recursive,
+            )?))
+        }
+    };
+
     let pattern_matcher = HintedMatcher::from_patterns(
-        &normalize_patterns(patterns, default_pattern_type, root, cwd, false)?,
+        normalize(patterns, default_pattern_type, false)?.as_deref(),
         patterns_filesets,
         true,
         case_sensitive,
     )?;
 
     let include_matcher = HintedMatcher::from_patterns(
-        &normalize_patterns(include, PatternKind::Glob, root, cwd, true)?,
+        normalize(include, PatternKind::Glob, true)?.as_deref(),
         include_filesets,
         true,
         case_sensitive,
     )?;
 
     let exclude_matcher = HintedMatcher::from_patterns(
-        &normalize_patterns(exclude, PatternKind::Glob, root, cwd, true)?,
+        normalize(exclude, PatternKind::Glob, true)?.as_deref(),
         exclude_filesets,
         false,
         case_sensitive,
@@ -284,6 +298,28 @@ mod tests {
         )?;
 
         assert!(m.matches_file(RepoPath::from_str("foo")?)?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_empty_listfile() -> Result<()> {
+        let dir = tempfile::TempDir::new()?;
+
+        let listfile = dir.path().join("listfile");
+        std::fs::write(&listfile, "")?;
+
+        let m = cli_matcher(
+            &vec![format!("listfile:{}", listfile.to_str().unwrap())],
+            &[],
+            &[],
+            PatternKind::Glob,
+            true,
+            "/root".as_ref(),
+            "/root/cwd".as_ref(),
+        )?;
+
+        assert!(!m.matches_file(RepoPath::from_str("foo")?)?);
 
         Ok(())
     }
