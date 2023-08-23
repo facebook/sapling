@@ -21,11 +21,13 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use repo::repo::Repo;
 
+use crate::abort_if;
 use crate::command::CommandDefinition;
 use crate::command::CommandFunc;
 use crate::command::CommandTable;
 use crate::errors;
 use crate::errors::UnknownCommand;
+use crate::fallback;
 use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
 use crate::OptionalRepo;
@@ -90,14 +92,49 @@ fn add_global_flag_derived_configs(repo: &mut OptionalRepo, global_opts: HgGloba
     }
 }
 
-fn last_chance_to_abort(opts: &HgGlobalOpts) -> Result<()> {
-    if opts.profile {
-        return Err(errors::Abort("--profile does not support Rust commands (yet)".into()).into());
+fn last_chance_to_abort(early: &HgGlobalOpts, full: &HgGlobalOpts) -> Result<()> {
+    abort_if!(
+        full.profile,
+        "--profile does not support Rust commands (yet)"
+    );
+
+    if full.help {
+        fallback!("--help option requested");
     }
 
-    if opts.help {
-        return Err(errors::FallbackToPython("--help option requested".to_owned()).into());
-    }
+    // These are security sensitive options, so perform extra checks.
+    //
+    // "early" was parsed disallowing arbitrary prefix matching (e.g.
+    // "--configfi" won't expand to "--configfile"), so simply comparing the
+    // early and full args can detect abbreviations.
+    //
+    // These comparisons also check for the sensitive options being included in
+    // command aliases since aliases have not been expanded for the "early"
+    // parse.
+    abort_if!(
+        early.config != full.config,
+        "option --config may not be abbreviated or used in aliases",
+    );
+
+    abort_if!(
+        early.configfile != full.configfile,
+        "option --configfile may not be abbreviated or used in aliases",
+    );
+
+    abort_if!(
+        early.cwd != full.cwd,
+        "option --cwd may not be abbreviated or used in aliases",
+    );
+
+    abort_if!(
+        early.repository != full.repository,
+        "option -R must appear alone, and --repository may not be abbreviated or used in aliases",
+    );
+
+    abort_if!(
+        early.debugger != full.debugger,
+        "option --debugger may not be abbreviated or used in aliases",
+    );
 
     Ok(())
 }
@@ -382,7 +419,7 @@ impl Dispatcher {
         let parsed = parse(def, &new_args)?;
 
         let global_opts: HgGlobalOpts = parsed.clone().try_into()?;
-        last_chance_to_abort(&global_opts)?;
+        last_chance_to_abort(&self.global_opts, &global_opts)?;
 
         initialize_blackbox(&self.optional_repo)?;
 

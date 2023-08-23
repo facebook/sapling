@@ -1,7 +1,6 @@
 #debugruntest-compatible
 
   $ eagerepo
-  $ setconfig status.use-rust=false
 
   $ HGFOO=BAR; export HGFOO
   $ readconfig <<'EOF'
@@ -155,7 +154,7 @@ invalid options
 
   $ hg init
   $ hg no--cwd
-  abort: option --cwd may not be abbreviated!
+  abort: option --cwd may not be abbreviated or used in aliases
   [255]
   $ hg help no--cwd
   alias for: status --cwd elsewhere
@@ -224,7 +223,7 @@ invalid options
   
   (some details hidden, use --verbose to show complete help)
   $ hg no-R
-  abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+  abort: option -R must appear alone, and --repository may not be abbreviated or used in aliases
   [255]
   $ hg help no-R
   alias for: status -R elsewhere
@@ -293,7 +292,7 @@ invalid options
   
   (some details hidden, use --verbose to show complete help)
   $ hg no--repo
-  abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+  abort: option -R must appear alone, and --repository may not be abbreviated or used in aliases
   [255]
   $ hg help no--repo
   alias for: status --repo elsewhere
@@ -362,7 +361,7 @@ invalid options
   
   (some details hidden, use --verbose to show complete help)
   $ hg no--repository
-  abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+  abort: option -R must appear alone, and --repository may not be abbreviated or used in aliases
   [255]
   $ hg help no--repository
   alias for: status --repository elsewhere
@@ -431,7 +430,7 @@ invalid options
   
   (some details hidden, use --verbose to show complete help)
   $ hg no--config
-  abort: option --config may not be abbreviated!
+  abort: option --config may not be abbreviated or used in aliases
   [255]
   $ hg no --config alias.no='--repo elsewhere --cwd elsewhere status'
   unknown command '--repo'
