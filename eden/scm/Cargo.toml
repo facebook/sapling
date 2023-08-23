@@ -110,6 +110,7 @@ members = [
   "lib/streams",
   "lib/third-party/conch-parser",
   "lib/third-party/streampager",
+  "lib/third-party/webview-sys",
   "lib/thrift-types",
   "lib/tracing-analyzer",
   "lib/tracing-collector",
