@@ -49,22 +49,27 @@ const auto entry2 = TreeEntry{hash2, TreeEntryType::REGULAR_FILE};
 const auto entry3 = TreeEntry{hash3, TreeEntryType::REGULAR_FILE};
 const auto entry4 = TreeEntry{hash4, TreeEntryType::REGULAR_FILE};
 
+const auto tree0_id = hash5;
 const auto tree0 = std::make_shared<const Tree>(
     Tree::container{{{entry0Name, entry0}}, kPathMapDefaultCaseSensitive},
-    hash5);
+    tree0_id);
 
+const auto tree1_id = hash6;
 const auto tree1 = std::make_shared<const Tree>(
     Tree::container{{{entry1Name, entry1}}, kPathMapDefaultCaseSensitive},
-    hash6);
+    tree1_id);
 
+const auto tree2_id = hash7;
 const auto tree2 = std::make_shared<const Tree>(
     Tree::container{{{entry2Name, entry2}}, kPathMapDefaultCaseSensitive},
-    hash7);
+    tree2_id);
 
+const auto tree3_id = hash8;
 const auto tree3 = std::make_shared<const Tree>(
     Tree::container{{{entry3Name, entry3}}, kPathMapDefaultCaseSensitive},
-    hash8);
+    tree3_id);
 
+const auto tree4_id = hash9;
 const auto tree4 = std::make_shared<const Tree>(
     Tree::container{
         {{entry0Name, entry0},
@@ -73,7 +78,7 @@ const auto tree4 = std::make_shared<const Tree>(
          {entry3Name, entry3},
          {entry4Name, entry4}},
         kPathMapDefaultCaseSensitive},
-    hash9);
+    tree4_id);
 
 const auto entrySize = sizeof(entry0);
 const auto smallTreeSize = tree0 -> getSizeBytes();
@@ -129,9 +134,9 @@ TEST_F(TreeCacheTest, testAssumptions) {
 }
 
 TEST_F(TreeCacheTest, testMultipleInsert) {
-  cache->insert(tree0);
-  cache->insert(tree1);
-  cache->insert(tree2);
+  cache->insert(tree0_id, tree0);
+  cache->insert(tree1_id, tree1);
+  cache->insert(tree2_id, tree2);
 
   EXPECT_TRUE(cache->contains(tree0->getHash()));
   EXPECT_EQ(tree0, cache->get(tree0->getHash()));
@@ -142,10 +147,10 @@ TEST_F(TreeCacheTest, testMultipleInsert) {
 }
 
 TEST_F(TreeCacheTest, testSizeOverflowInsert) {
-  cache->insert(tree0);
-  cache->insert(tree1);
-  cache->insert(tree2);
-  cache->insert(tree3);
+  cache->insert(tree0_id, tree0);
+  cache->insert(tree1_id, tree1);
+  cache->insert(tree2_id, tree2);
+  cache->insert(tree3_id, tree3);
 
   EXPECT_FALSE(cache->contains(tree0->getHash()));
   EXPECT_EQ(std::shared_ptr<const Tree>{nullptr}, cache->get(tree0->getHash()));
@@ -158,17 +163,17 @@ TEST_F(TreeCacheTest, testSizeOverflowInsert) {
 }
 
 TEST_F(TreeCacheTest, testLargeInsert) {
-  cache->insert(tree4);
+  cache->insert(tree4_id, tree4);
 
   EXPECT_TRUE(cache->contains(tree4->getHash()));
   EXPECT_EQ(tree4, cache->get(tree4->getHash()));
 }
 
 TEST_F(TreeCacheTest, testSizeOverflowLargeInsert) {
-  cache->insert(tree0);
-  cache->insert(tree1);
-  cache->insert(tree2);
-  cache->insert(tree4);
+  cache->insert(tree0_id, tree0);
+  cache->insert(tree1_id, tree1);
+  cache->insert(tree2_id, tree2);
+  cache->insert(tree4_id, tree4);
 
   EXPECT_FALSE(cache->contains(tree0->getHash()));
   EXPECT_EQ(std::shared_ptr<const Tree>{nullptr}, cache->get(tree0->getHash()));

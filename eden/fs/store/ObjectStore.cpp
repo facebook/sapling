@@ -174,7 +174,7 @@ ImmediateFuture<ObjectStore::GetRootTreeResult> ObjectStore::getRootTree(
       .thenValue(
           [treeCache = treeCache_, rootId, caseSensitive = caseSensitive_](
               BackingStore::GetRootTreeResult result) {
-            treeCache->insert(result.tree);
+            treeCache->insert(result.treeId, result.tree);
 
             return GetRootTreeResult{
                 changeCaseSensitivity(std::move(result.tree), caseSensitive),
@@ -239,7 +239,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
           throwf<std::domain_error>("tree {} not found", id);
         }
 
-        self->treeCache_->insert(result.tree);
+        self->treeCache_->insert(result.tree->getHash(), result.tree);
         fetchContext->didFetch(ObjectFetchContext::Tree, id, result.origin);
         self->updateProcessFetch(*fetchContext);
         return changeCaseSensitivity(

@@ -14,12 +14,12 @@ std::shared_ptr<const Tree> TreeCache::get(const ObjectId& hash) {
   if (config_->getEdenConfig()->enableInMemoryTreeCaching.getValue()) {
     return getSimple(hash);
   }
-  return std::shared_ptr<const Tree>{nullptr};
+  return nullptr;
 }
 
-void TreeCache::insert(std::shared_ptr<const Tree> tree) {
+void TreeCache::insert(ObjectId id, std::shared_ptr<const Tree> tree) {
   if (config_->getEdenConfig()->enableInMemoryTreeCaching.getValue()) {
-    return insertSimple(tree->getHash(), tree);
+    return insertSimple(std::move(id), std::move(tree));
   }
 }
 

@@ -54,7 +54,7 @@ class TreeCache : public ObjectCache<Tree, ObjectCacheFlavor::Simple> {
    * exceeds the maximum cache size and the minimum entry count, old entries are
    * evicted.
    */
-  void insert(std::shared_ptr<const Tree> tree);
+  void insert(ObjectId id, std::shared_ptr<const Tree> tree);
 
  private:
   /**
