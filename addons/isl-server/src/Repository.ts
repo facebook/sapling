@@ -549,7 +549,7 @@ export class Repository {
       this.uncommittedChangesEmitter.emit('change', this.uncommittedChanges);
     } catch (err) {
       this.logger.error('Error fetching files: ', err);
-      if (isProcessError(err)) {
+      if (isExecaError(err)) {
         if (err.stderr.includes('checkout is currently in progress')) {
           this.logger.info('Ignoring `hg status` error caused by in-progress checkout');
           return;
@@ -619,11 +619,19 @@ export class Repository {
       };
       this.smartlogCommitsChangesEmitter.emit('change', this.smartlogCommits);
     } catch (err) {
-      this.logger.error('Error fetching commits: ', err);
+      let error = err;
+      const internalError = Internal.checkInternalError?.(err);
+      if (internalError) {
+        error = internalError;
+      }
+      if (isExecaError(error) && error.stderr.includes('Please check your internet connection')) {
+        error = Error('Network request failed. Please check your internet connection.');
+      }
+      this.logger.error('Error fetching commits: ', error);
       this.smartlogCommitsChangesEmitter.emit('change', {
         fetchStartTimestamp,
         fetchCompletedTimestamp: Date.now(),
-        commits: {error: err instanceof Error ? err : new Error(err as string)},
+        commits: {error: error instanceof Error ? error : new Error(error as string)},
       });
     }
   });
@@ -1084,10 +1092,6 @@ export function repoRelativePathForAbsolutePath(
   pathMod = path,
 ): RepoRelativePath {
   return pathMod.relative(repo.info.repoRoot, absolutePath);
-}
-
-function isProcessError(s: unknown): s is {stderr: string} {
-  return s != null && typeof s === 'object' && 'stderr' in s;
 }
 
 function computeNewConflicts(

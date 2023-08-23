@@ -6,7 +6,7 @@
  */
 
 import type execa from 'execa';
-import type {ExecaChildProcess} from 'execa';
+import type {ExecaChildProcess, ExecaError} from 'execa';
 import type {CommitInfo, SmartlogCommits} from 'isl/src/types';
 
 import os from 'os';
@@ -163,4 +163,8 @@ export function parseExecJson<T>(
       const msg = `Cannot run ${truncate(err.escapedCommand)}. (error: ${err})`;
       reply(undefined, msg);
     });
+}
+
+export function isExecaError(s: unknown): s is ExecaError {
+  return s != null && typeof s === 'object' && 'stderr' in s;
 }
