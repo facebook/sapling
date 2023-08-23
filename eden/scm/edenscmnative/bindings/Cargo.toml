@@ -74,6 +74,7 @@ pythreading = { path = "modules/pythreading" }
 pytracing = { path = "modules/pytracing" }
 pytreestate = { path = "modules/pytreestate" }
 pyvlq = { path = "modules/pyvlq" }
+pywebview = { path = "modules/pywebview" }
 pyworker = { path = "modules/pyworker" }
 pyworkingcopy = { path = "modules/pyworkingcopy" }
 pyxdiff = { path = "modules/pyxdiff" }

@@ -89,6 +89,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
             tracing,
             treestate,
             vlq,
+            webview,
             worker,
             workingcopy,
             xdiff,
