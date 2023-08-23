@@ -456,15 +456,13 @@ function PartialFileSelectionWithFreeEdit(props: Props) {
           </div>
           <pre className="column-m-number">{lineMNumber}</pre>
           <div className="partial-file-selection-scroll-x">
-            <pre className="column-m">
-              <TextEditable
-                value={textValue}
-                rangeInfos={rangeInfos}
-                onTextChange={handleTextChange}
-                onSelectChange={handleSelChange}>
-                <pre className="column-m">{lineMContent}</pre>
-              </TextEditable>
-            </pre>
+            <TextEditable
+              value={textValue}
+              rangeInfos={rangeInfos}
+              onTextChange={handleTextChange}
+              onSelectChange={handleSelChange}>
+              <pre className="column-m">{lineMContent}</pre>
+            </TextEditable>
           </div>
           <pre className="column-b-number readonly">{lineBNumber}</pre>
           <div className="partial-file-selection-scroll-x readonly">
