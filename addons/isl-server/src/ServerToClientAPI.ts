@@ -622,7 +622,12 @@ export default class ServerToClientAPI {
       case 'exportStack': {
         const {revs, assumeTracked} = data;
         const assumeTrackedArgs = (assumeTracked ?? []).map(path => `--assume-tracked=${path}`);
-        const exec = repo.runCommand(['debugexportstack', '-r', revs, ...assumeTrackedArgs]);
+        const exec = repo.runCommand(
+          ['debugexportstack', '-r', revs, ...assumeTrackedArgs],
+          undefined,
+          undefined,
+          /* don't timeout */ 0,
+        );
         const reply = (stack?: ExportStack, error?: string) => {
           this.postMessage({
             type: 'exportedStack',
@@ -637,7 +642,12 @@ export default class ServerToClientAPI {
       }
       case 'importStack': {
         const stdinStream = Readable.from(JSON.stringify(data.stack));
-        const exec = repo.runCommand(['debugimportstack'], undefined, {stdin: stdinStream});
+        const exec = repo.runCommand(
+          ['debugimportstack'],
+          undefined,
+          {stdin: stdinStream},
+          /* don't timeout */ 0,
+        );
         const reply = (imported?: ImportedStack, error?: string) => {
           this.postMessage({type: 'importedStack', imported: imported ?? [], error});
         };

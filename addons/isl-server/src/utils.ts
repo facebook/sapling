@@ -130,7 +130,7 @@ export function findPublicAncestor(
  * Return a JSON object. On error, the JSON object has property "error".
  */
 export function parseExecJson<T>(
-  exec: execa.ExecaChildProcess,
+  exec: Promise<execa.ExecaReturnValue<string>>,
   reply: (parsed?: T, error?: string) => void,
 ) {
   exec
