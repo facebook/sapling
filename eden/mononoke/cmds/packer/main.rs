@@ -24,7 +24,6 @@ use futures::stream;
 use futures::stream::TryStreamExt;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
-use mononoke_app::args::AsRepoArg;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
@@ -164,12 +163,14 @@ fn main(fb: FacebookInit) -> Result<()> {
         let (_repo_name, repo_config) = app.repo_config(&repo_arg)?;
         let blobconfig = repo_config.storage_config.blobstore;
         let inner_blobconfig = get_blobconfig(blobconfig, inner_blobstore_id)?;
-        let _repo_prefix = repo_config.repoid.prefix();
+        let repo_prefix = repo_config.repoid.prefix();
         let mut scuba = env.scuba_sample_builder.clone();
         scuba.add_opt("blobstore_id", Some(inner_blobstore_id));
-        // construct blobstore instance
-        runtime.block_on(async move {
-            let _blobstore = make_packblob(
+        // Read keys from the file
+        let keys_list = lines_from_file(entry);
+        runtime.block_on(async {
+            // construct blobstore instance
+            let blobstore = make_packblob(
                 fb,
                 inner_blobconfig,
                 *readonly_storage,
@@ -177,58 +178,33 @@ fn main(fb: FacebookInit) -> Result<()> {
                 logger,
                 config_store,
             )
-            .await;
-        });
-        // Read keys from the file
-        let _key_list = lines_from_file(entry);
-        // TODO next diff will pack these keys
-    }
-
-    // the following parameter are repo specific
-    let repo_arg = args.repo_args.as_repo_arg();
-    let inner_id = args.inner_blobstore_id;
-    let (_repo_name, repo_config) = app.repo_config(repo_arg)?;
-    let blobconfig = repo_config.storage_config.blobstore;
-    let repo_prefix = repo_config.repoid.prefix();
-
-    let input_lines: Vec<String> = io::stdin()
-        .lock()
-        .lines()
-        .collect::<Result<_, io::Error>>()?;
-
-    let mut scuba = env.scuba_sample_builder.clone();
-    scuba.add_opt("blobstore_id", inner_id);
-
-    runtime.block_on(async move {
-        let blobstore = make_packblob(
-            fb,
-            get_blobconfig(blobconfig, inner_id)?,
-            *readonly_storage,
-            blobstore_options,
-            logger,
-            config_store,
-        )
-        .await?;
-        stream::iter(input_lines.split(String::is_empty).map(Result::Ok))
-            .try_for_each_concurrent(max_parallelism, |pack_keys| {
-                borrowed!(ctx, repo_prefix, blobstore, scuba);
-                async move {
-                    let pack_keys: Vec<&str> = pack_keys.iter().map(|i| i.as_ref()).collect();
-                    pack_utils::repack_keys(
-                        ctx,
-                        blobstore,
-                        PACK_PREFIX,
-                        zstd_level,
-                        repo_prefix,
-                        &pack_keys,
-                        dry_run,
-                        scuba,
-                    )
-                    .await
-                }
-            })
             .await
-    })
+            .unwrap();
+            // start packing
+            stream::iter(keys_list.split(String::is_empty).map(Result::Ok))
+                .try_for_each_concurrent(max_parallelism, |pack_keys| {
+                    borrowed!(ctx, repo_prefix, blobstore, scuba);
+                    async move {
+                        let pack_keys: Vec<&str> = pack_keys.iter().map(|i| i.as_ref()).collect();
+                        pack_utils::repack_keys(
+                            ctx,
+                            blobstore,
+                            PACK_PREFIX,
+                            zstd_level,
+                            repo_prefix,
+                            &pack_keys,
+                            dry_run,
+                            scuba,
+                        )
+                        .await
+                    }
+                })
+                .await
+                .with_context(|| "while packing keys")
+                .unwrap();
+        });
+    }
+    Ok(())
 }
 
 #[test]
