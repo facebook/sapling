@@ -137,9 +137,42 @@ fn main(fb: FacebookInit) -> Result<()> {
     let readonly_storage = &env.readonly_storage;
     let blobstore_options = &env.blobstore_options;
 
-    let _keys_file_entries = fs::read_dir(keys_dir)?
+    let keys_file_entries = fs::read_dir(keys_dir)?
         .map(|res| res.map(|e| e.path()))
         .collect::<Result<Vec<_>, io::Error>>()?;
+
+    // The following code is use to construct a blobstore instance for each file.
+    // We're not going to use them for now, but the integration test will test the code.
+    // Next diff will use the blobstore.
+    let _total_file_count = keys_file_entries.len();
+    for (_cur, entry) in keys_file_entries.iter().enumerate() {
+        let filename = entry
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("name of key file must be valid UTF-8"))?;
+        // Parse repo name, and inner blobstore id from file name
+        let repo_name = extract_repo_name_from_filename(filename);
+        let inner_blobstore_id = extract_inner_store_id_from_filename(filename);
+        // construct blobstore specific parameters
+        let repo_arg = mononoke_app::args::RepoArg::Name(String::from(repo_name));
+        let (_repo_name, repo_config) = app.repo_config(&repo_arg)?;
+        let blobconfig = repo_config.storage_config.blobstore;
+        let inner_blobconfig = get_blobconfig(blobconfig, inner_blobstore_id)?;
+        let _repo_prefix = repo_config.repoid.prefix();
+        let mut scuba = env.scuba_sample_builder.clone();
+        scuba.add_opt("blobstore_id", Some(inner_blobstore_id));
+        // construct blobstore instance
+        runtime.block_on(async move {
+            let _blobstore = make_packblob(
+                fb,
+                inner_blobconfig,
+                *readonly_storage,
+                blobstore_options,
+                logger,
+                config_store,
+            )
+            .await;
+        });
+    }
 
     // the following parameter are repo specific
     let repo_arg = args.repo_args.as_repo_arg();
