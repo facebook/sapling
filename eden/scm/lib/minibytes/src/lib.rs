@@ -30,3 +30,4 @@ pub use text::TextOwner;
 
 pub use crate::bytes::Bytes;
 pub use crate::bytes::BytesOwner;
+pub use crate::bytes::WeakBytes;

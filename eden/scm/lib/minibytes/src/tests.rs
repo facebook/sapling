@@ -108,3 +108,22 @@ fn test_bytes_debug_format() {
     let expected = r#"b"printable\t\r\n\'\"\\\x00\x01\x02printable""#;
     assert_eq!(escaped, expected);
 }
+
+#[test]
+fn test_downgrade_upgrade() {
+    let v = b"abcd".to_vec();
+    let b = Bytes::from(v);
+
+    // `downgrade` -> `upgrade` returns the same buffer.
+    // Slicing is ignored. Full range is used.
+    let b1: crate::WeakBytes = b.slice(1..=2).downgrade().unwrap();
+    let b2 = Bytes::upgrade(&b1).unwrap();
+    assert_eq!(b, b2);
+    assert_eq!(b.as_ptr(), b2.as_ptr());
+
+    // `upgrade` returns `None` if all strong refs are dropped.
+    drop(b2);
+    drop(b);
+    let b3 = Bytes::upgrade(&b1);
+    assert!(b3.is_none());
+}
