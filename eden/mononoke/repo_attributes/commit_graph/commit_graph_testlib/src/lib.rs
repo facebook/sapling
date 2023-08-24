@@ -153,6 +153,66 @@ pub async fn test_storage_store_and_fetch(
             .await?
     );
 
+    assert!(
+        graph
+            .is_ancestor_of_any(
+                &ctx,
+                name_cs_id("C"),
+                vec![name_cs_id("D"), name_cs_id("F")]
+            )
+            .await?
+    );
+    assert!(
+        graph
+            .is_ancestor_of_any(&ctx, name_cs_id("C"), vec![name_cs_id("D")])
+            .await?
+    );
+    assert!(
+        graph
+            .is_ancestor_of_any(
+                &ctx,
+                name_cs_id("C"),
+                vec![name_cs_id("G"), name_cs_id("I")]
+            )
+            .await?
+    );
+    assert!(
+        !graph
+            .is_ancestor_of_any(
+                &ctx,
+                name_cs_id("C"),
+                vec![name_cs_id("B"), name_cs_id("F")]
+            )
+            .await?
+    );
+    assert!(
+        graph
+            .is_ancestor_of_any(
+                &ctx,
+                name_cs_id("A"),
+                vec![
+                    name_cs_id("B"),
+                    name_cs_id("C"),
+                    name_cs_id("D"),
+                    name_cs_id("E"),
+                    name_cs_id("F"),
+                    name_cs_id("G"),
+                    name_cs_id("H"),
+                    name_cs_id("I")
+                ]
+            )
+            .await?
+    );
+    assert!(
+        !graph
+            .is_ancestor_of_any(
+                &ctx,
+                name_cs_id("I"),
+                vec![name_cs_id("G"), name_cs_id("H")]
+            )
+            .await?
+    );
+
     // Check some underlying storage details.
     assert_eq!(
         storage

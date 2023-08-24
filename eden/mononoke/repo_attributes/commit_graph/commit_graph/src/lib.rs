@@ -197,6 +197,24 @@ impl CommitGraph {
         Ok(frontier.highest_generation_contains(ancestor, target_gen))
     }
 
+    /// Returns true if the ancestor changeset is an ancestor of any of
+    /// the descendant changesets.
+    ///
+    /// Ancestry is inclusive: a commit is its own ancestor.
+    pub async fn is_ancestor_of_any(
+        &self,
+        ctx: &CoreContext,
+        ancestor: ChangesetId,
+        descendants: Vec<ChangesetId>,
+    ) -> Result<bool> {
+        let (mut frontier, target_gen) = futures::try_join!(
+            self.frontier(ctx, descendants),
+            self.changeset_generation_required(ctx, ancestor)
+        )?;
+        self.lower_frontier(ctx, &mut frontier, target_gen).await?;
+        Ok(frontier.highest_generation_contains(ancestor, target_gen))
+    }
+
     /// Returns a stream of all ancestors of any changeset in heads,
     /// excluding any ancestor of any changeset in common, in reverse
     /// topological order.
