@@ -1145,9 +1145,7 @@ def manifestmerge(
                 if n2 == a and fl2 == fla:
                     actions[f] = ("k", (), "remote unchanged")
                 elif n1 == a and fl1 == fla:  # local unchanged - use remote
-                    if n1 == n2:  # optimization: keep local content
-                        actions[f] = ("e", (fl2,), "update permissions")
-                    elif fl1 == fl2:
+                    if fl1 == fl2:
                         actions[f] = ("g", (fl2, False), "remote is newer")
                     else:
                         actions[f] = ("rg", (fl2, False), "flag differ")

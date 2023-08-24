@@ -2,7 +2,6 @@
 
 #require execbit
 
-  $ setconfig workingcopy.ruststatus=False
   $ configure modernclient
 
 Create extension that can disable exec checks:
@@ -57,13 +56,23 @@ Simulate a Windows merge:
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: a03b0deabf2b, local: d6fa54f68ae1+, remote: 2d8bcf2dda39
-   a: update permissions -> e
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
+  $ hg debugtreestate list
+  a: * EXIST_P1 EXIST_P2 EXIST_NEXT NEED_CHECK  (glob)
+  b: * EXIST_P1 EXIST_NEXT  (glob)
+
 Simulate a Windows commit:
 
-  $ hg --config extensions.n=$TESTTMP/noexec.py commit -m 'win: merge'
+"a" should be modified since p2 adds executable bit
+  $ hg status
+  M a
+
+noexec.py is not needed for commit since Rust status doesn't check a's on-disk flags
+in this case at all. The rust "pending changes" only checks with respect to p1.
+Rust picks up the change by inference since the file is EXIST_P1 and EXIST_P2.
+  $ hg commit -m 'merge'
 
   $ hg manifest -v
   755 * a
