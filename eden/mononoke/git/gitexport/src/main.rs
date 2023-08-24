@@ -11,12 +11,16 @@ use anyhow::Error;
 use bookmarks_types::BookmarkKey;
 use fbinit::FacebookInit;
 use gitexport_tools::build_partial_commit_graph_for_export;
-pub use mononoke_api::BookmarkFreshness;
+use gitexport_tools::rewrite_partial_changesets;
+use mononoke_api::BookmarkFreshness;
+use mononoke_api::Repo;
 use mononoke_api::RepoContext;
+use mononoke_app::args::RepoArg;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use mononoke_types::MPath;
 use repo_authorization::AuthorizationContext;
 
 use crate::types::GitExportArgs;
@@ -32,6 +36,10 @@ pub mod types {
         #[clap(flatten)]
         pub hg_repo_args: RepoArgs,
 
+        // TODO(T160787114): programatically create a temp repo
+        #[clap(long)]
+        pub temp_repo_name: String,
+
         /// Path to the git repo being created
         #[clap(long)]
         pub output: Option<String>, // TODO(T160787114): Make this required
@@ -39,6 +47,7 @@ pub mod types {
         /// List of directories in `hg_repo` to be exported to a git repo
         #[clap(long)]
         // TODO(T161204758): change this to a Vec<String> when we can support multiple export paths
+        /// Path in the source hg repo that should be exported to a git repo.
         pub export_path: String,
         // TODO(T160600443): support last revision argument
         // TODO(T160600443): support until_timestamp argument
@@ -67,7 +76,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     // instead of a bookmark.
     let bookmark_key = BookmarkKey::from_str("master")?;
 
-    let chgset_ctx = repo_ctx
+    let cs_ctx = repo_ctx
         .resolve_bookmark(&bookmark_key, BookmarkFreshness::MostRecent)
         .await?
         .unwrap();
@@ -75,11 +84,35 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     // TODO(T161204758): get multiple paths from arguments once we sort and
     // dedupe changesets properly and can build a commit graph from multiple
     // changeset lists
-    let export_paths = vec![args.export_path.as_str()];
+    let export_paths = vec![MPath::new(args.export_path)?];
 
-    let _commit_graph = build_partial_commit_graph_for_export(export_paths, chgset_ctx).await;
+    let (changesets, cs_parents) =
+        build_partial_commit_graph_for_export(export_paths.clone(), cs_ctx).await?;
 
-    // TODO(T160787114): export commit graph to temporary mononore repo
+    println!("changesets: {:?}", changesets);
+    println!("changeset parents: {:?}", cs_parents);
+
+    let temp_repo_args = RepoArg::Name(args.temp_repo_name);
+    let temp_repo: Repo = app.open_repo(&temp_repo_args).await?;
+
+    let auth_ctx = AuthorizationContext::new_bypass_access_control();
+    let target_repo_ctx: RepoContext = RepoContext::new(
+        repo_ctx.ctx().clone(),
+        auth_ctx.into(),
+        temp_repo.into(),
+        None,
+        None,
+    )
+    .await?;
+
+    rewrite_partial_changesets(
+        repo_ctx,
+        changesets,
+        &cs_parents,
+        target_repo_ctx,
+        export_paths,
+    )
+    .await?;
 
     // TODO(T160787114): export temporary repo to git repo
 
