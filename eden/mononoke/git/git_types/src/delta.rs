@@ -13,7 +13,11 @@ use std::ops::Range;
 
 use anyhow::Result;
 use bytes::Bytes;
+use gix_diff::blob::diff;
+use gix_diff::blob::intern::InternedInput;
+use gix_diff::blob::intern::TokenSource;
 use gix_diff::blob::sink::Sink;
+use gix_diff::blob::Algorithm;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 
@@ -36,7 +40,7 @@ const COPY_SPECIAL_SIZE: u32 = 1 << 16;
 
 /// Individual instruction for constructing a part of a
 /// new object based on a base object
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Clone, Hash, Eq, PartialEq)]
 pub enum DeltaInstruction {
     /// Use raw data bytes from the new object
     Data(Bytes),
@@ -142,9 +146,24 @@ impl DeltaInstruction {
     }
 }
 
+impl std::fmt::Debug for DeltaInstruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Data(bytes) => f.write_fmt(format_args!(
+                "Data instruction: {}",
+                String::from_utf8_lossy(bytes.as_ref())
+            )),
+            Self::Copy { base_offset, size } => f.write_fmt(format_args!(
+                "Copy instruction: base_offset: {:?}, size: {:?}",
+                base_offset, size
+            )),
+        }
+    }
+}
+
 /// List of instructions which when applied in order form a
 /// complete new object based on delta of a base object
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Clone, Hash, Eq, PartialEq)]
 pub struct DeltaInstructions {
     base_object: Bytes,
     new_object: Bytes,
@@ -154,13 +173,24 @@ pub struct DeltaInstructions {
 
 #[allow(dead_code)]
 impl DeltaInstructions {
-    pub fn new(base_object: Bytes, new_object: Bytes) -> Self {
-        Self {
-            base_object,
-            new_object,
+    // Generate set of DeltaInstructions for the given base and new object by diffing them
+    // using the provided diff algorithm
+    pub fn generate(
+        base_object: Bytes,
+        new_object: Bytes,
+        diff_algorithm: Algorithm,
+    ) -> Result<Self> {
+        let delta_instructions = Self {
+            base_object: base_object.clone(),
+            new_object: new_object.clone(),
             instructions: Vec::new(),
             processed_till: 0,
-        }
+        };
+        let tokened_base_object = ObjectData::new(base_object);
+        let tokened_new_object = ObjectData::new(new_object);
+        let interned_input = InternedInput::new(tokened_base_object, tokened_new_object);
+        let fallible_delta_instructions = FallibleDeltaInstructions::Valid(delta_instructions);
+        diff(diff_algorithm, &interned_input, fallible_delta_instructions)
     }
 
     pub async fn write(&self, out: &mut (impl AsyncWrite + Unpin)) -> Result<()> {
@@ -169,8 +199,27 @@ impl DeltaInstructions {
         // Write the size of the new object
         write_size(self.new_object.len(), out).await?;
         // Write the delta instructions in order
+        self.write_instructions(out).await
+    }
+
+    pub async fn write_instructions(&self, out: &mut (impl AsyncWrite + Unpin)) -> Result<()> {
         for instruction in self.instructions.iter() {
             instruction.write(out).await?;
+        }
+        Ok(())
+    }
+}
+
+impl std::fmt::Debug for DeltaInstructions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "DeltaInstructions:\n base_object: {},\n new_object: {},\n processed_till: {}\n",
+            String::from_utf8_lossy(self.base_object.as_ref()),
+            String::from_utf8_lossy(self.new_object.as_ref()),
+            self.processed_till,
+        ))?;
+        for instruction in self.instructions.iter() {
+            f.write_fmt(format_args!("{:?}\n", instruction))?;
         }
         Ok(())
     }
@@ -216,7 +265,7 @@ impl FallibleDeltaInstructions {
 
     /// Add Data instruction to the list of instructions if it is valid
     /// using the range of bytes from the new object
-    pub fn add_data(&mut self, range: Range<u32>, new_processed: u32) {
+    pub fn add_data(&mut self, range: Range<u32>) {
         match self {
             Self::Valid(delta_instructions) => {
                 let bytes = delta_instructions
@@ -225,11 +274,21 @@ impl FallibleDeltaInstructions {
                 match DeltaInstruction::from_data(bytes) {
                     Ok(data_instruction) => {
                         delta_instructions.instructions.push(data_instruction);
-                        delta_instructions.processed_till = new_processed;
                     }
                     // If the data is invalid, then we should stop processing
                     Err(e) => *self = Self::Invalid(e),
                 };
+            }
+            // If the instructions are already invalid, do nothing
+            Self::Invalid(_) => {}
+        }
+    }
+
+    /// Update the processed_till field of the instructions if it is valid
+    pub fn update_processed_till(&mut self, new_processed_till: u32) {
+        match self {
+            Self::Valid(delta_instructions) => {
+                delta_instructions.processed_till = new_processed_till;
             }
             // If the instructions are already invalid, do nothing
             Self::Invalid(_) => {}
@@ -288,8 +347,25 @@ impl Sink for FallibleDeltaInstructions {
                     }
                 }
                 // Now that the Copy instructions are added, append the data instruction for this range
-                // of changed content
-                self.add_data(after, before.end);
+                // of changed content. Note that if the amount of raw bytes to be added exceeds the limit
+                // of MAX_DATA_BYTES, we would need to split the range into mini-ranges of size
+                // MAX_DATA_BYTES or less. Each such mini-range will be a Data instruction that will
+                // be added to the list of instructions
+                let range_start = after.start;
+                let mut written_till = range_start;
+                for subrange_start in after.clone().step_by(MAX_DATA_BYTES) {
+                    written_till = std::cmp::min(
+                        after.end,
+                        subrange_start.saturating_add(MAX_DATA_BYTES as u32),
+                    );
+                    self.add_data(subrange_start..written_till);
+                }
+                // Add data instruction for the remaining subrange
+                if written_till < after.end {
+                    self.add_data(written_till..after.end);
+                }
+                // Record that we have processed the entire range
+                self.update_processed_till(before.end);
             }
             // If we have already encountered an error, don't process any further deltas
             Self::Invalid(_) => {}
@@ -336,6 +412,34 @@ impl Sink for FallibleDeltaInstructions {
             }
         }
         self.into_result()
+    }
+}
+
+/// Wrapper type over the bytes representing the data of the Git Object, used
+/// for bypassing the orphan rule for implementing the TokenSource trait
+struct ObjectData {
+    data: Bytes,
+}
+
+impl ObjectData {
+    pub fn new(data: Bytes) -> Self {
+        Self { data }
+    }
+}
+
+impl TokenSource for ObjectData {
+    // Since we want byte level diff, the atomic unit of difference would
+    // be individual bytes of the Git Object data
+    type Token = u8;
+
+    type Tokenizer = bytes::buf::IntoIter<Bytes>;
+
+    fn tokenize(&self) -> Self::Tokenizer {
+        self.data.clone().into_iter()
+    }
+
+    fn estimate_tokens(&self) -> u32 {
+        self.data.len() as u32
     }
 }
 
