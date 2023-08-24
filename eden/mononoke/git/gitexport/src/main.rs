@@ -22,6 +22,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_types::MPath;
 use repo_authorization::AuthorizationContext;
+use slog::debug;
 
 use crate::types::GitExportArgs;
 
@@ -65,6 +66,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let args: GitExportArgs = app.args()?;
+    let logger = app.logger();
     let ctx = app.new_basic_context();
 
     let repo = app.open_repo(&args.hg_repo_args).await?;
@@ -87,10 +89,10 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let export_paths = vec![MPath::new(args.export_path)?];
 
     let (changesets, cs_parents) =
-        build_partial_commit_graph_for_export(export_paths.clone(), cs_ctx).await?;
+        build_partial_commit_graph_for_export(logger, export_paths.clone(), cs_ctx).await?;
 
-    println!("changesets: {:?}", changesets);
-    println!("changeset parents: {:?}", cs_parents);
+    debug!(logger, "changesets: {:#?}", changesets);
+    debug!(logger, "changeset parents: {:?}", cs_parents);
 
     let temp_repo_args = RepoArg::Name(args.temp_repo_name);
     let temp_repo: Repo = app.open_repo(&temp_repo_args).await?;

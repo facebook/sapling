@@ -21,12 +21,16 @@ use futures::stream::TryStreamExt;
 use futures::stream::{self};
 use mononoke_api::BookmarkKey;
 use mononoke_api::ChangesetContext;
+use mononoke_api::CoreContext;
 use mononoke_api::MononokeError;
 use mononoke_api::RepoContext;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use repo_blobstore::RepoBlobstoreArc;
+use slog::debug;
+use slog::error;
+use slog::info;
 
 pub use crate::partial_commit_graph::build_partial_commit_graph_for_export;
 use crate::partial_commit_graph::ChangesetParents;
@@ -42,18 +46,27 @@ pub async fn rewrite_partial_changesets(
     target_repo_ctx: RepoContext,
     export_paths: Vec<MPath>,
 ) -> Result<(), MononokeError> {
-    println!("export_paths: {:#?}", &export_paths);
-    println!("changeset_parents: {:#?}", &changeset_parents);
+    let ctx: &CoreContext = source_repo_ctx.ctx();
+
+    let logger = ctx.logger();
+
+    debug!(logger, "export_paths: {:#?}", &export_paths);
+    debug!(logger, "changeset_parents: {:#?}", &changeset_parents);
+
+    let logger_clone = logger.clone();
 
     let multi_mover: MultiMover = Arc::new(move |source_path: &MPath| {
         let should_export = export_paths.iter().any(|p| p.is_prefix_of(source_path));
 
         if !should_export {
-            println!("Path {:#?} will NOT be exported.", &source_path);
+            debug!(
+                logger_clone,
+                "Path {:#?} will NOT be exported.", &source_path
+            );
             return Ok(vec![]);
         }
 
-        println!("Path {:#?} will be exported.", &source_path);
+        debug!(logger_clone, "Path {:#?} will be exported.", &source_path);
         Ok(vec![source_path.clone()])
     });
 
@@ -82,7 +95,10 @@ pub async fn rewrite_partial_changesets(
         )
         .await?;
 
-    println!("new_bonsai_changesets: {:#?}", &new_bonsai_changesets);
+    debug!(
+        logger,
+        "new_bonsai_changesets: {:#?}", &new_bonsai_changesets
+    );
 
     let head_cs_id = new_bonsai_changesets
         .last()
@@ -98,11 +114,15 @@ pub async fn rewrite_partial_changesets(
     .await?;
 
     // Set master bookmark to point to the latest changeset
-    target_repo_ctx
+    if let Err(err) = target_repo_ctx
         .create_bookmark(&BookmarkKey::from_str("master")?, head_cs_id, None)
-        .await?;
+        .await
+    {
+        // TODO(T161902005): stop failing silently on bookmark creation
+        error!(logger, "Failed to create master bookmark: {:?}", err);
+    }
 
-    println!("Finished copying all changesets!");
+    info!(logger, "Finished copying all changesets!");
     Ok(())
 }
 
@@ -115,7 +135,9 @@ async fn create_bonsai_for_new_repo(
     mut remapped_parents: HashMap<ChangesetId, ChangesetId>,
     changeset_ctx: ChangesetContext,
 ) -> Result<(BonsaiChangeset, HashMap<ChangesetId, ChangesetId>), MononokeError> {
-    println!(
+    let logger = changeset_ctx.repo().ctx().logger();
+    debug!(
+        logger,
         "Rewriting changeset: {:#?} | {:#?}",
         &changeset_ctx.id(),
         &changeset_ctx.message().await?

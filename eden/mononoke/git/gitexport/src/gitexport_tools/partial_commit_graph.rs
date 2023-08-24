@@ -16,6 +16,8 @@ use mononoke_api::ChangesetContext;
 use mononoke_api::MononokeError;
 use mononoke_api::MononokePath;
 use mononoke_types::ChangesetId;
+use slog::debug;
+use slog::Logger;
 
 pub type ChangesetParents = HashMap<ChangesetId, Vec<ChangesetId>>;
 pub type PartialGraphInfo = (Vec<ChangesetContext>, ChangesetParents);
@@ -26,6 +28,7 @@ pub type PartialGraphInfo = (Vec<ChangesetContext>, ChangesetParents);
 /// The commit graph is returned as a topologically sorted list of changesets
 /// and a hashmap of changset id to their parents' ids.
 pub async fn build_partial_commit_graph_for_export<P>(
+    logger: &Logger,
     paths: Vec<P>,
     cs_ctx: ChangesetContext,
 ) -> Result<PartialGraphInfo, MononokeError>
@@ -60,11 +63,11 @@ where
 
     let sorted_changesets = merge_and_sort_changeset_lists(history_changesets)?;
 
-    println!("sorted_changesets: {0:#?}", &sorted_changesets);
+    debug!(logger, "sorted_changesets: {0:#?}", &sorted_changesets);
 
     // TODO(gustavoavena): remove these prints for debugging after adding tests
     let cs_msgs: Vec<_> = try_join_all(sorted_changesets.iter().map(|csc| csc.message())).await?;
-    println!("changeset messages: {0:#?}", cs_msgs);
+    debug!(logger, "changeset messages: {0:#?}", cs_msgs);
 
     let parents_map = build_parents_map(&sorted_changesets).await?;
 
