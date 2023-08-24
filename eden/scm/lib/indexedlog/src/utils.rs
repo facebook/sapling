@@ -48,9 +48,10 @@ pub fn mmap_bytes(file: &File, len: Option<u64>) -> io::Result<Bytes> {
     if len == 0 {
         Ok(Bytes::new())
     } else {
-        Ok(Bytes::from(unsafe {
-            MmapOptions::new().len(len as usize).map(file)
-        }?))
+        let bytes = Bytes::from(unsafe { MmapOptions::new().len(len as usize).map(file) }?);
+        #[cfg(unix)]
+        crate::page_out::track_mmap_buffer(&bytes);
+        Ok(bytes)
     }
 }
 

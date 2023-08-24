@@ -1415,7 +1415,11 @@ impl Log {
     /// integrity-check failed.
     fn read_entry(&self, offset: u64) -> crate::Result<Option<EntryResult>> {
         let result = if offset < self.meta.primary_len {
-            Self::read_entry_from_buf(&self.dir, &self.disk_buf, offset)?
+            let entry = Self::read_entry_from_buf(&self.dir, &self.disk_buf, offset)?;
+            if let Some(ref entry) = entry {
+                crate::page_out::adjust_available(-(entry.data.len() as i64));
+            }
+            entry
         } else {
             let offset = offset - self.meta.primary_len;
             if offset >= self.mem_buf.len() as u64 {
