@@ -22,6 +22,11 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
     m.add_class::<Log>(py)?;
     m.add_class::<OpenOptions>(py)?;
+    m.add(
+        py,
+        "set_page_out_threshold",
+        py_fn!(py, set_page_out_threshold(size: i64)),
+    )?;
     Ok(m)
 }
 
@@ -196,4 +201,9 @@ fn range_iter_to_vec(
         )
         .collect::<Result<Vec<_>, _>>()?;
     Ok(result)
+}
+
+fn set_page_out_threshold(_py: Python, size: i64) -> PyResult<PyNone> {
+    indexedlog::config::set_page_out_threshold(size);
+    Ok(PyNone)
 }

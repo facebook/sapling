@@ -17,6 +17,7 @@ use cliparser::parser::ParseOptions;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
 use configloader::config::ConfigSet;
+use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use repo::repo::Repo;
@@ -203,6 +204,12 @@ fn initialize_indexedlog(config: &ConfigSet) -> Result<()> {
         config.get_opt::<u32>("storage", "indexedlog-max-index-checksum-chain-len")?
     {
         indexedlog::config::INDEX_CHECKSUM_MAX_CHAIN_LEN.store(max_chain_len, SeqCst);
+    }
+
+    if let Some(threshold) =
+        config.get_opt::<ByteCount>("storage", "indexedlog-page-out-threshold")?
+    {
+        indexedlog::config::set_page_out_threshold(threshold.value() as _);
     }
 
     let fsync: bool = config.get_or_default("storage", "indexedlog-fsync")?;
