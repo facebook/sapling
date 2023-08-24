@@ -16,6 +16,7 @@ mod thrift {
 
 mod blob;
 mod commit;
+mod delta;
 mod derive_commit;
 mod derive_tree;
 mod errors;
