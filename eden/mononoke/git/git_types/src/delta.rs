@@ -6,11 +6,14 @@
  */
 
 //! Uses https://git-scm.com/docs/pack-format#_deltified_representation as source
+//! NOTE: We can represent Git objects as Deltas only if the size of the objects is less than 4GB
 
+use std::cmp::Ordering;
 use std::ops::Range;
 
 use anyhow::Result;
 use bytes::Bytes;
+use gix_diff::blob::sink::Sink;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 
@@ -143,26 +146,28 @@ impl DeltaInstruction {
 /// complete new object based on delta of a base object
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct DeltaInstructions {
-    base_object_size: u64,
-    new_object_size: u64,
+    base_object: Bytes,
+    new_object: Bytes,
+    processed_till: u32, // To keep track of the byte position till which the delta has been processed
     instructions: Vec<DeltaInstruction>,
 }
 
 #[allow(dead_code)]
 impl DeltaInstructions {
-    pub fn new(base_object_size: u64, new_object_size: u64) -> Self {
+    pub fn new(base_object: Bytes, new_object: Bytes) -> Self {
         Self {
-            base_object_size,
-            new_object_size,
+            base_object,
+            new_object,
             instructions: Vec::new(),
+            processed_till: 0,
         }
     }
 
     pub async fn write(&self, out: &mut (impl AsyncWrite + Unpin)) -> Result<()> {
         // Write the size of the base object
-        write_size(self.base_object_size, out).await?;
+        write_size(self.base_object.len(), out).await?;
         // Write the size of the new object
-        write_size(self.new_object_size, out).await?;
+        write_size(self.new_object.len(), out).await?;
         // Write the delta instructions in order
         for instruction in self.instructions.iter() {
             instruction.write(out).await?;
@@ -171,11 +176,174 @@ impl DeltaInstructions {
     }
 }
 
+/// Enum representing Delta Instructions that can be either be valid or invalid.
+/// If valid, they contain the actual instructions. If invalid, they contain the
+/// underlying error
+#[allow(dead_code)]
+pub enum FallibleDeltaInstructions {
+    Valid(DeltaInstructions),
+    Invalid(anyhow::Error),
+}
+
+impl FallibleDeltaInstructions {
+    /// Convert to Result and return an error if the instruction is invalid
+    fn into_result(self) -> Result<DeltaInstructions> {
+        match self {
+            FallibleDeltaInstructions::Valid(v) => Ok(v),
+            FallibleDeltaInstructions::Invalid(e) => Err(e),
+        }
+    }
+
+    /// Add Copy instruction to the list of instructions if it is valid
+    fn add_copy(&mut self, range: Range<u32>) {
+        match self {
+            Self::Valid(delta_instructions) => {
+                match DeltaInstruction::from_copy(range.clone()) {
+                    Ok(copy_instruction) => {
+                        delta_instructions.instructions.push(copy_instruction);
+                        delta_instructions.processed_till = range.end;
+                    }
+                    // If the data is invalid, then we should stop processing
+                    Err(e) => {
+                        *self = Self::Invalid(e);
+                    }
+                }
+            }
+            // If the instructions are already invalid, do nothing
+            Self::Invalid(_) => {}
+        }
+    }
+
+    /// Add Data instruction to the list of instructions if it is valid
+    /// using the range of bytes from the new object
+    pub fn add_data(&mut self, range: Range<u32>, new_processed: u32) {
+        match self {
+            Self::Valid(delta_instructions) => {
+                let bytes = delta_instructions
+                    .new_object
+                    .slice((range.start as usize)..(range.end as usize));
+                match DeltaInstruction::from_data(bytes) {
+                    Ok(data_instruction) => {
+                        delta_instructions.instructions.push(data_instruction);
+                        delta_instructions.processed_till = new_processed;
+                    }
+                    // If the data is invalid, then we should stop processing
+                    Err(e) => *self = Self::Invalid(e),
+                };
+            }
+            // If the instructions are already invalid, do nothing
+            Self::Invalid(_) => {}
+        }
+    }
+}
+
+// Implement Sink for FallibleDeltaInstructions instead of DeltaInstructions since we can encounter
+// errors during the processing of deltas and the trait signature involves infallible types
+impl Sink for FallibleDeltaInstructions {
+    type Out = Result<DeltaInstructions>;
+
+    fn process_change(&mut self, before: Range<u32>, after: Range<u32>) {
+        match self {
+            Self::Valid(delta_instructions) => {
+                let processed_till = delta_instructions.processed_till.clone();
+                // Every change detected by the algorithm would be represented as a Data instruction since
+                // the changed part of the content cannot be copied from the base object. The data instruction
+                // can be preceded by a Copy instruction if the range prior to `before` was not covered already.
+                match before.start.cmp(&processed_till) {
+                    // The start of this delta range has already been processed before. Since the ranges are
+                    // monotonically increasing, this should not happen and is likely the result of a bug.
+                    Ordering::Less => {
+                        *self = Self::Invalid(anyhow::anyhow!(
+                            "Encountered invalid processed range {:?} while diffing content",
+                            before
+                        ));
+                        return;
+                    }
+                    // The delta range starts exactly where we ended our previous processing. In this case,
+                    // we do nothing since no copy instructions need to be prepended before the data instruction.
+                    Ordering::Equal => {}
+                    // There exists a gap between our previously processed endpoint and the start of this delta range.
+                    // This indicates the section of content lying between this range needs to be copied from the base
+                    // object
+                    Ordering::Greater => {
+                        // Since the range from processed_till..range_start can be too large to be covered
+                        // by a single copy instruction, we need to split the range into mini-ranges of size
+                        // MAX_COPY_BYTES or less. Each such mini-range will be a Copy instruction that will
+                        // be added to the list of instructions
+                        let range_start = before.start;
+                        let mut copied_till = processed_till;
+                        for subrange_start in
+                            (processed_till..range_start).step_by(MAX_COPY_BYTES as usize)
+                        {
+                            copied_till = std::cmp::min(
+                                range_start,
+                                subrange_start.saturating_add(MAX_COPY_BYTES),
+                            );
+                            self.add_copy(subrange_start..copied_till);
+                        }
+                        // Add copy instruction for the remaining subrange
+                        if copied_till < range_start {
+                            self.add_copy(copied_till..range_start);
+                        }
+                    }
+                }
+                // Now that the Copy instructions are added, append the data instruction for this range
+                // of changed content
+                self.add_data(after, before.end);
+            }
+            // If we have already encountered an error, don't process any further deltas
+            Self::Invalid(_) => {}
+        }
+    }
+
+    fn finish(mut self) -> Self::Out {
+        if let Self::Valid(delta_instructions) = &mut self {
+            let base_obj_len = delta_instructions.base_object.len() as u32;
+            let processed_till = delta_instructions.processed_till;
+            match base_obj_len.cmp(&processed_till) {
+                Ordering::Less => {
+                    // We have processed more than the size of the base object. This should
+                    // not happen and is likely the result of a bug
+                    anyhow::bail!(
+                        "Processed till position {} which is greater than base object size {}",
+                        processed_till,
+                        base_obj_len
+                    )
+                }
+                Ordering::Equal => {
+                    // We have processed till the end of the base object as expected. Return the
+                    // final set of delta instructions
+                }
+                Ordering::Greater => {
+                    // We have not yet processed the entire base object. This can happen if the last
+                    // section of the base object is the same for the new object, hence need to Copy
+                    // the remaining contents
+                    let mut copied_till = processed_till;
+                    for subrange_start in
+                        (processed_till..base_obj_len).step_by(MAX_COPY_BYTES as usize)
+                    {
+                        copied_till = std::cmp::min(
+                            base_obj_len,
+                            subrange_start.saturating_add(MAX_COPY_BYTES),
+                        );
+                        self.add_copy(subrange_start..copied_till);
+                    }
+                    // Add copy instruction for the remaining subrange
+                    if copied_till < base_obj_len {
+                        self.add_copy(copied_till..base_obj_len);
+                    }
+                }
+            }
+        }
+        self.into_result()
+    }
+}
+
 /// Write the size "size" using the size encoding scheme used by Git
 /// The encoding scheme is one of variable length where the bytes are written
 /// in little-endian order. Only the lower 7 bits of each byte are used to represent
 /// the size data and the 8th bit is used to represent continuation.
-async fn write_size(size_to_write: u64, out: &mut (impl AsyncWrite + Unpin)) -> Result<()> {
+async fn write_size(size_to_write: usize, out: &mut (impl AsyncWrite + Unpin)) -> Result<()> {
     let mut size = size_to_write;
     // Get the first byte of size in little endian order ignoring the
     // 8th bit
