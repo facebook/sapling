@@ -258,6 +258,8 @@ fn compare_repo_bytes_to_disk(
                 return Ok(ResolvedFileChangeResult::Yes(PendingChange::Deleted(path)));
             }
 
+            tracing::trace!(?path, ?e);
+
             Err(e)
         }
     }

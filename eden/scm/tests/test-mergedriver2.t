@@ -6,7 +6,6 @@ mergedriver the exact file list to change at "preprocess" time.
   $ enable mergedriver
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=false
   $ hg init repo
   $ cd repo
   $ drawdag << 'EOS'
