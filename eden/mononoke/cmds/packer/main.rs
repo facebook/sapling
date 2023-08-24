@@ -6,8 +6,11 @@
  */
 
 use std::fs;
+use std::fs::File;
 use std::io;
-use std::io::BufRead;
+use std::io::prelude::*;
+use std::io::BufReader;
+use std::path::Path;
 
 use anyhow::bail;
 use anyhow::Context;
@@ -116,6 +119,14 @@ fn extract_inner_store_id_from_filename(filename: &str) -> Option<u64> {
     inner_blobstore_id_str.parse::<u64>().ok()
 }
 
+fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
+    let file = File::open(filename).expect("File does not exist");
+    let buf = BufReader::new(file);
+    buf.lines()
+        .map(|l| l.expect("Could not parse line"))
+        .collect()
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let app: MononokeApp = MononokeAppBuilder::new(fb)
@@ -141,10 +152,6 @@ fn main(fb: FacebookInit) -> Result<()> {
         .map(|res| res.map(|e| e.path()))
         .collect::<Result<Vec<_>, io::Error>>()?;
 
-    // The following code is use to construct a blobstore instance for each file.
-    // We're not going to use them for now, but the integration test will test the code.
-    // Next diff will use the blobstore.
-    let _total_file_count = keys_file_entries.len();
     for (_cur, entry) in keys_file_entries.iter().enumerate() {
         let filename = entry
             .to_str()
@@ -172,6 +179,9 @@ fn main(fb: FacebookInit) -> Result<()> {
             )
             .await;
         });
+        // Read keys from the file
+        let _key_list = lines_from_file(entry);
+        // TODO next diff will pack these keys
     }
 
     // the following parameter are repo specific
