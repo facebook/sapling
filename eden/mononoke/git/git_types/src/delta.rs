@@ -474,8 +474,71 @@ async fn write_size(size_to_write: usize, out: &mut (impl AsyncWrite + Unpin)) -
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::io::Write;
 
+    use anyhow::Context;
+    use gix_hash::ObjectId;
+    use gix_object::ObjectRef;
+    use gix_object::Tag;
+    use gix_object::WriteTo;
+    use rand::Rng;
+
+    use super::*;
+    /// Apply delta instructions `data` to generate complete `target` object from `base` object
+    /// Originally from gix-pack pub function which is currently not exposed (https://fburl.com/8ttcw83w)
+    /// NOTE: For testing purposes only. Do not use in production.
+    pub fn apply(base: &[u8], target: &mut Vec<u8>, data: &[u8]) {
+        let mut i = 0;
+        while let Some(cmd) = data.get(i) {
+            i += 1;
+            match cmd {
+                cmd if cmd & 0b1000_0000 != 0 => {
+                    let (mut ofs, mut size): (u32, u32) = (0, 0);
+                    if cmd & 0b0000_0001 != 0 {
+                        ofs = data[i] as u32;
+                        i += 1;
+                    }
+                    if cmd & 0b0000_0010 != 0 {
+                        ofs |= (data[i] as u32) << 8;
+                        i += 1;
+                    }
+                    if cmd & 0b0000_0100 != 0 {
+                        ofs |= (data[i] as u32) << 16;
+                        i += 1;
+                    }
+                    if cmd & 0b0000_1000 != 0 {
+                        ofs |= (data[i] as u32) << 24;
+                        i += 1;
+                    }
+                    if cmd & 0b0001_0000 != 0 {
+                        size = data[i] as u32;
+                        i += 1;
+                    }
+                    if cmd & 0b0010_0000 != 0 {
+                        size |= (data[i] as u32) << 8;
+                        i += 1;
+                    }
+                    if cmd & 0b0100_0000 != 0 {
+                        size |= (data[i] as u32) << 16;
+                        i += 1;
+                    }
+                    if size == 0 {
+                        size = 0x10000; // 65536
+                    }
+                    let ofs = ofs as usize;
+                    std::io::Write::write_all(target, &base[ofs..ofs + size as usize])
+                        .expect("delta copy from base: byte slices must match");
+                }
+                0 => panic!("encountered unsupported command code: 0"),
+                size => {
+                    std::io::Write::write_all(target, &data[i..i + *size as usize])
+                        .expect("delta copy data: slice sizes to match up");
+                    i += *size as usize;
+                }
+            }
+        }
+        assert_eq!(i, data.len());
+    }
     #[test]
     fn test_data_instruction_creation() -> Result<()> {
         // Creating a data instruction with more than 127 bytes of data should fail
@@ -503,6 +566,196 @@ mod test {
         let valid_range = 0..MAX_COPY_BYTES;
         let copy_instruction = DeltaInstruction::from_copy(valid_range);
         assert!(copy_instruction.is_ok());
+        Ok(())
+    }
+    #[test]
+    fn test_basic_delta_creation() -> Result<()> {
+        let base_object = Bytes::from_static(b"So close no matter how far");
+        let new_object = Bytes::from_static(b"So close no matter if very far");
+        let delta_instructions =
+            DeltaInstructions::generate(base_object, new_object, Algorithm::Myers);
+        // Validate that the delta instructions get created successfully
+        assert!(
+            delta_instructions.is_ok(),
+            "Failure in creating delta instructions",
+        );
+        Ok(())
+    }
+    #[fbinit::test]
+    async fn test_basic_delta_encoding() -> anyhow::Result<()> {
+        let base_object = Bytes::from_static(b"So close no matter how far");
+        let new_object = Bytes::from_static(b"So close no matter if very far");
+        let delta_instructions =
+            DeltaInstructions::generate(base_object, new_object, Algorithm::Myers)?;
+        let mut encoded_instructions = Vec::new();
+        let result = delta_instructions.write(&mut encoded_instructions).await;
+        assert!(result.is_ok(), "Failure in encoding delta instructions");
+        Ok(())
+    }
+    #[fbinit::test]
+    async fn test_basic_delta_application() -> anyhow::Result<()> {
+        let base_object = Bytes::from_static(b"So close no matter how far");
+        let new_object = Bytes::from_static(b"So close no matter if very far");
+        let delta_instructions =
+            DeltaInstructions::generate(base_object.clone(), new_object.clone(), Algorithm::Myers)?;
+        let mut encoded_instructions = Vec::new();
+        delta_instructions
+            .write_instructions(&mut encoded_instructions)
+            .await?;
+        let mut recreated_new_object = Vec::new();
+        apply(
+            base_object.as_ref(),
+            &mut recreated_new_object,
+            encoded_instructions.as_ref(),
+        );
+        // Validate that the recreated_new_object matches the original new_object
+        assert_eq!(new_object, Bytes::from(recreated_new_object));
+        Ok(())
+    }
+    #[fbinit::test]
+    async fn test_random_bytes_blob_delta_application() -> anyhow::Result<()> {
+        // Create an arbitrary set of bytes and use that as the base object
+        let base_object: Vec<u8> = rand::thread_rng()
+            .sample_iter::<u8, _>(rand::distributions::Standard)
+            .take(10000)
+            .collect();
+        let base_object = Bytes::from(base_object);
+        // Create an arbitrary set of bytes and use that as the new object
+        let new_object: Vec<u8> = rand::thread_rng()
+            .sample_iter::<u8, _>(rand::distributions::Standard)
+            .take(10000)
+            .collect();
+        let new_object = Bytes::from(new_object);
+        let delta_instructions =
+            DeltaInstructions::generate(base_object.clone(), new_object.clone(), Algorithm::Myers)?;
+        let mut encoded_instructions = Vec::new();
+        delta_instructions
+            .write_instructions(&mut encoded_instructions)
+            .await?;
+        let mut recreated_new_object = Vec::new();
+        apply(
+            base_object.as_ref(),
+            &mut recreated_new_object,
+            encoded_instructions.as_ref(),
+        );
+        // Validate that the recreated_new_object matches the original new_object
+        assert_eq!(new_object, Bytes::from(recreated_new_object));
+        Ok(())
+    }
+    #[fbinit::test]
+    async fn test_smaller_base_random_bytes_blob_delta_application() -> anyhow::Result<()> {
+        // Create an arbitrary set of bytes and use that as the base object
+        let base_object: Vec<u8> = rand::thread_rng()
+            .sample_iter::<u8, _>(rand::distributions::Standard)
+            .take(100)
+            .collect();
+        let base_object = Bytes::from(base_object);
+        // Create an arbitrary set of bytes and use that as the new object
+        let new_object: Vec<u8> = rand::thread_rng()
+            .sample_iter::<u8, _>(rand::distributions::Standard)
+            .take(10000)
+            .collect();
+        let new_object = Bytes::from(new_object);
+        let delta_instructions =
+            DeltaInstructions::generate(base_object.clone(), new_object.clone(), Algorithm::Myers)?;
+        let mut encoded_instructions = Vec::new();
+        delta_instructions
+            .write_instructions(&mut encoded_instructions)
+            .await?;
+        let mut recreated_new_object = Vec::new();
+        apply(
+            base_object.as_ref(),
+            &mut recreated_new_object,
+            encoded_instructions.as_ref(),
+        );
+        // Validate that the recreated_new_object matches the original new_object
+        assert_eq!(new_object, Bytes::from(recreated_new_object));
+        Ok(())
+    }
+    #[fbinit::test]
+    async fn test_larger_base_random_bytes_blob_delta_application() -> anyhow::Result<()> {
+        // Create an arbitrary set of bytes and use that as the base object
+        let base_object: Vec<u8> = rand::thread_rng()
+            .sample_iter::<u8, _>(rand::distributions::Standard)
+            .take(10000)
+            .collect();
+        let base_object = Bytes::from(base_object);
+        // Create an arbitrary set of bytes and use that as the new object
+        let new_object: Vec<u8> = rand::thread_rng()
+            .sample_iter::<u8, _>(rand::distributions::Standard)
+            .take(100)
+            .collect();
+        let new_object = Bytes::from(new_object);
+        let delta_instructions =
+            DeltaInstructions::generate(base_object.clone(), new_object.clone(), Algorithm::Myers)?;
+        let mut encoded_instructions = Vec::new();
+        delta_instructions
+            .write_instructions(&mut encoded_instructions)
+            .await?;
+        let mut recreated_new_object = Vec::new();
+        apply(
+            base_object.as_ref(),
+            &mut recreated_new_object,
+            encoded_instructions.as_ref(),
+        );
+        // Validate that the recreated_new_object matches the original new_object
+        assert_eq!(new_object, Bytes::from(recreated_new_object));
+        Ok(())
+    }
+    #[fbinit::test]
+    async fn test_git_object_delta_application() -> anyhow::Result<()> {
+        // Create a Git tag object pointing to a tree and use it as base object
+        let tag = Tag {
+            target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
+            target_kind: gix_object::Kind::Tree,
+            name: "TreeTag".into(),
+            tagger: None,
+            message: "Tag pointing to a tree".into(),
+            pgp_signature: None,
+        };
+        let mut base_object = tag.loose_header().into_vec();
+        tag.write_to(base_object.by_ref())?;
+        let base_object = Bytes::from(base_object);
+        // Create a Git tag object pointing to a blob and use it as the new object
+        let tag = Tag {
+            target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
+            target_kind: gix_object::Kind::Blob,
+            name: "BlobTag".into(),
+            tagger: None,
+            message: "Tag pointing to a blob".into(),
+            pgp_signature: None,
+        };
+        let mut new_object = tag.loose_header().into_vec();
+        tag.write_to(new_object.by_ref())?;
+        let new_object = Bytes::from(new_object);
+        let delta_instructions =
+            DeltaInstructions::generate(base_object.clone(), new_object.clone(), Algorithm::Myers)?;
+        let mut encoded_instructions = Vec::new();
+        delta_instructions
+            .write_instructions(&mut encoded_instructions)
+            .await?;
+        let mut recreated_new_object = Vec::new();
+        apply(
+            base_object.as_ref(),
+            &mut recreated_new_object,
+            encoded_instructions.as_ref(),
+        );
+        // Validate that we are able to recreate the Git tag object from
+        // the delta-generated bytes
+        let object = ObjectRef::from_loose(recreated_new_object.as_ref())
+            .with_context(|| {
+                format!(
+                    "Error in deserialing bytes into Git Object: {}",
+                    String::from_utf8_lossy(recreated_new_object.as_ref())
+                )
+            })?
+            .to_owned();
+        let output_tag = object
+            .try_into_tag()
+            .expect("Expected successful conversion into Git Tag");
+        // Validate that the Git tag object obtained from the delta-generated bytes is the same
+        // as the Tag object used as new_object above
+        assert_eq!(tag, output_tag, "Git tag objects do not match");
         Ok(())
     }
 }
