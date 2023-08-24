@@ -37,6 +37,7 @@ use mysql_common::value::convert::ConvIr;
 use mysql_common::value::convert::FromValue;
 use mysql_common::value::convert::ParseIr;
 use regex::Regex;
+use rusoto_core::Region;
 use scuba::ScubaValue;
 use serde_derive::Deserialize;
 use sql::mysql;
@@ -906,6 +907,19 @@ pub enum BlobConfig {
         /// Name of the secret key within the keychain group
         secret_name: Option<String>,
     },
+    /// Store in an AWS S3 bucket
+    AwsS3 {
+        /// AWS Account ID
+        aws_account_id: String,
+        /// AWS Role
+        aws_role: String,
+        /// Bucket to connect to
+        bucket: String,
+        /// AWS Region
+        region: Region,
+        /// Limit the number of concurrent operations to S3 blobstore.
+        num_concurrent_operations: Option<usize>,
+    },
 }
 
 impl BlobConfig {
@@ -916,7 +930,9 @@ impl BlobConfig {
 
         match self {
             Disabled | Files { .. } | Sqlite { .. } => true,
-            Manifold { .. } | Mysql { .. } | ManifoldWithTtl { .. } | S3 { .. } => false,
+            Manifold { .. } | Mysql { .. } | ManifoldWithTtl { .. } | S3 { .. } | AwsS3 { .. } => {
+                false
+            }
             MultiplexedWal { blobstores, .. } => blobstores
                 .iter()
                 .map(|(_, _, config)| config)
