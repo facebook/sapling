@@ -37,8 +37,12 @@ Check logged pack info. Commit time is forced to zero in tests, hence mtime is 0
   "repo",1,"repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a","FileContent",1456254697391410303,-6891338160001598946,0,107640,10*,,1* (glob)
   "repo",1,"repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09","FileContent",-7441908177121090870,-6743401566611195657,0,107636,1*,,1* (glob)
 
+# Create packing key files
+  $ mkdir -p $TESTTMP/pack_key_files/
+  $ (cd blobstore/blobs; ls) | sed -e 's/^blob-//' -e 's/.pack$//' >> $TESTTMP/pack_key_files/reporepo.store.part0.keys.txt
+
 Now pack the blobs
-  $ (cd blobstore/blobs; ls) | sed -e 's/^blob-//' -e 's/.pack$//' | packer --zstd-level=3
+  $ (cd blobstore/blobs; ls) | sed -e 's/^blob-//' -e 's/.pack$//' | packer --zstd-level=3 --keys-dir $TESTTMP/pack_key_files/
 
 Run a scrub again now the storage is packed
   $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -p Changeset --checkpoint-name=bonsai_packed --checkpoint-path=test_sqlite -a all --pack-log-scuba-file pack-info-packed.json 2>&1 | strip_glog

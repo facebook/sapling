@@ -21,7 +21,6 @@
 
 # Commit files
   $ cp "${TEST_FIXTURES}/raw_text.txt" f1
-  $ 
   $ hg commit -Aqm "f1"
   $ cp f1 f2
   $ echo "More text" >> f2
@@ -41,14 +40,23 @@
   107639 1 '$TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd.pack'
   107649 1 '$TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09.pack'
   107653 1 '$TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a.pack'
+
+# Create packing key files
+  $ mkdir -p $TESTTMP/pack_key_files1/
+  $ echo 'repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd' >> $TESTTMP/pack_key_files1/reporepo.store0.part0.keys.txt
+  $ mkdir -p $TESTTMP/pack_key_files2/
+  $ echo 'repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09' >> $TESTTMP/pack_key_files2/reporepo.store0.part0.keys.txt
+  $ mkdir -p $TESTTMP/pack_key_files3/
+  $ echo 'repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a' >> $TESTTMP/pack_key_files3/reporepo.store0.part0.keys.txt
+
 # Pack content individually, to show recompression effect
-  $ packer --zstd-level 10 --inner-blobstore-id 0 --scuba-dataset file://pack-individually.json << EOF
+  $ packer --zstd-level 10 --inner-blobstore-id 0 --scuba-dataset file://pack-individually.json --keys-dir $TESTTMP/pack_key_files1/ << EOF
   > repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd
   > EOF
-  $ packer --zstd-level 10 --inner-blobstore-id 0 --scuba-dataset file://pack-individually.json << EOF
+  $ packer --zstd-level 10 --inner-blobstore-id 0 --scuba-dataset file://pack-individually.json --keys-dir $TESTTMP/pack_key_files2/  << EOF
   > repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09
   > EOF
-  $ packer --zstd-level 10 --inner-blobstore-id 0 --scuba-dataset file://pack-individually.json << EOF
+  $ packer --zstd-level 10 --inner-blobstore-id 0 --scuba-dataset file://pack-individually.json --keys-dir $TESTTMP/pack_key_files3/  << EOF
   > repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a
   > EOF
 
@@ -70,8 +78,14 @@
   $TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a.pack
   $TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09.pack
 
+# Create a single file that contains multiple packing keys
+  $ mkdir -p $TESTTMP/pack_key_files4/
+  $ echo 'repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd' >> $TESTTMP/pack_key_files4/reporepo.store0.part0.keys.txt
+  $ echo 'repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09' >> $TESTTMP/pack_key_files4/reporepo.store0.part0.keys.txt
+  $ echo 'repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a' >> $TESTTMP/pack_key_files4/reporepo.store0.part0.keys.txt
+
 # Pack content into a pack
-  $ packer --zstd-level 19 --inner-blobstore-id 0 --scuba-dataset file://packed.json << EOF
+  $ packer --zstd-level 19 --inner-blobstore-id 0 --scuba-dataset file://packed.json --keys-dir $TESTTMP/pack_key_files4/ << EOF
   > repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd
   > repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09
   > repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a
@@ -111,7 +125,18 @@
   48 1 '$TESTTMP/blobstore/0/blobs/blob-repo0000.alias.sha256.9b798d4eb3901972c1311a3c6a21480e3f29c8c64cd6bbb81a977ecab56452e3.pack'
 
 # Attempt to pack aliases together
-  $ packer --zstd-level 19 --inner-blobstore-id 0 << EOF
+  $ mkdir -p $TESTTMP/pack_key_files_aliases/
+  $ echo 'repo0000.alias.gitsha1.3df6501a508835a9bc5098b7659c34f97c31c955' >> $TESTTMP/pack_key_files_aliases/reporepo.store0.part0.keys.txt
+  $ echo 'repo0000.alias.gitsha1.95a55295a562971d9b7a228a27865342998e0fc6' >> $TESTTMP/pack_key_files_aliases/reporepo.store0.part0.keys.txt
+  $ echo 'repo0000.alias.gitsha1.db001d5a57109687474038c8d819062057ce4e23' >> $TESTTMP/pack_key_files_aliases/reporepo.store0.part0.keys.txt
+  $ echo 'repo0000.alias.sha1.c714247df863f86d8d0729632ed78ddfcfec10dd' >> $TESTTMP/pack_key_files_aliases/reporepo.store0.part0.keys.txt
+  $ echo 'repo0000.alias.sha1.e36bdee9c84cf34c336c1d5a30b1b7e54907635c' >> $TESTTMP/pack_key_files_aliases/reporepo.store0.part0.keys.txt
+  $ echo 'repo0000.alias.sha1.f81707fc5f680da4a58d7b51dff36e5fa8ac294f' >> $TESTTMP/pack_key_files_aliases/reporepo.store0.part0.keys.txt
+  $ echo 'repo0000.alias.sha256.19dac65a9cb4bda4155d0ae8e7ad372af92351620450cea75a858253839386e0' >> $TESTTMP/pack_key_files_aliases/reporepo.store0.part0.keys.txt
+  $ echo 'repo0000.alias.sha256.85b856bc2313fcddec8464984ab2d384f61625890ee19e4f909dd80ac36e8fd7' >> $TESTTMP/pack_key_files_aliases/reporepo.store0.part0.keys.txt
+  $ echo 'repo0000.alias.sha256.9b798d4eb3901972c1311a3c6a21480e3f29c8c64cd6bbb81a977ecab56452e3' >> $TESTTMP/pack_key_files_aliases/reporepo.store0.part0.keys.txt
+
+  $ packer --zstd-level 19 --inner-blobstore-id 0 --keys-dir $TESTTMP/pack_key_files_aliases/ << EOF
   > repo0000.alias.gitsha1.3df6501a508835a9bc5098b7659c34f97c31c955
   > repo0000.alias.gitsha1.95a55295a562971d9b7a228a27865342998e0fc6
   > repo0000.alias.gitsha1.db001d5a57109687474038c8d819062057ce4e23
@@ -138,9 +163,17 @@
   48 1 '$TESTTMP/blobstore/0/blobs/blob-repo0000.alias.sha256.85b856bc2313fcddec8464984ab2d384f61625890ee19e4f909dd80ac36e8fd7.pack'
   48 1 '$TESTTMP/blobstore/0/blobs/blob-repo0000.alias.sha256.9b798d4eb3901972c1311a3c6a21480e3f29c8c64cd6bbb81a977ecab56452e3.pack'
 
+
 # Split the content up into a single compressed file, and a pack, and show that the hardlink counts change.
 # Note that this uses one instance of the packer to generate multiple packs
-  $ packer --zstd-level 19 --inner-blobstore-id 0 << EOF
+# Prepare the key file
+  $ mkdir -p $TESTTMP/pack_key_files5/
+  $ echo 'repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd' >> $TESTTMP/pack_key_files5/reporepo.store0.part0.keys.txt
+  $ echo 'repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09' >> $TESTTMP/pack_key_files5/reporepo.store0.part0.keys.txt
+  $ echo '' >> $TESTTMP/pack_key_files5/reporepo.store0.part0.keys.txt
+  $ echo 'repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a' >> $TESTTMP/pack_key_files5/reporepo.store0.part0.keys.txt
+
+  $ packer --zstd-level 19 --inner-blobstore-id 0 --keys-dir $TESTTMP/pack_key_files5/ << EOF
   > repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd
   > repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09
   > 

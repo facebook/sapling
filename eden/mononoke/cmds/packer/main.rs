@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::fs;
 use std::io;
 use std::io::BufRead;
 
@@ -57,6 +58,10 @@ struct MononokePackerArgs {
         help = "Maximum number of parallel packs to work on. Default 1"
     )]
     scheduled_max: usize,
+
+    /// The directory that contains all the key files
+    #[arg(short, long)]
+    keys_dir: String,
 }
 
 const PACK_PREFIX: &str = "multiblob-";
@@ -97,10 +102,10 @@ fn main(fb: FacebookInit) -> Result<()> {
         .build::<MononokePackerArgs>()?;
 
     let args: MononokePackerArgs = app.args()?;
-    let inner_id = args.inner_blobstore_id;
     let zstd_level = args.zstd_level;
     let dry_run = args.dry_run;
     let max_parallelism = args.scheduled_max;
+    let keys_dir = args.keys_dir;
 
     let env = app.environment();
     let logger = app.logger();
@@ -111,7 +116,13 @@ fn main(fb: FacebookInit) -> Result<()> {
     let readonly_storage = &env.readonly_storage;
     let blobstore_options = &env.blobstore_options;
 
+    let _keys_file_entries = fs::read_dir(keys_dir)?
+        .map(|res| res.map(|e| e.path()))
+        .collect::<Result<Vec<_>, io::Error>>()?;
+
+    // the following parameter are repo specific
     let repo_arg = args.repo_args.as_repo_arg();
+    let inner_id = args.inner_blobstore_id;
     let (_repo_name, repo_config) = app.repo_config(repo_arg)?;
     let blobconfig = repo_config.storage_config.blobstore;
     let repo_prefix = repo_config.repoid.prefix();
