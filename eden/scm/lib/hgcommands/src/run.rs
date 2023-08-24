@@ -24,6 +24,7 @@ use std::time::Duration;
 use std::time::Instant;
 use std::time::SystemTime;
 
+use anyhow::Context;
 use anyhow::Result;
 use blackbox::serde_json;
 use clidispatch::dispatch;
@@ -298,7 +299,8 @@ fn dispatch_command(
                 ));
             }
         }
-        if io.wait_pager().is_err() {
+        if let Err(err) = io.wait_pager().context("error flushing command output") {
+            errors::print_error(&err, io, &dispatcher.args()[1..]);
             return 255;
         }
     }

@@ -2,7 +2,6 @@
 #require fsmonitor
 
   $ configure modernclient
-  $ setconfig status.use-rust=true workingcopy.use-rust=true
 
   $ newclientrepo
   $ echo foo > foo

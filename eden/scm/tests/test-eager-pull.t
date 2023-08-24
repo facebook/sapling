@@ -169,7 +169,7 @@ If fast path is broken, use fallback pull path:
   $ FAILPOINTS=eagerepo::api::pulllazy=return LOG=pull::fastpath=debug hg pull
   pulling from test:e2
   DEBUG pull::fastpath: master: 26805aba1e600a82e93661149f2313866a221a7b => 9bc730a19041f9ec7cb33c626e811aa233efb18c
-  failed to get fast pull data (Not supported by the server), using fallback path
+  failed to get fast pull data (not supported by the server), using fallback path
   searching for changes
 
   $ hg log -Gr 'all()' -T '{desc} {remotenames}'

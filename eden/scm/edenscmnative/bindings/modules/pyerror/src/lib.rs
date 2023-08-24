@@ -172,7 +172,7 @@ fn register_error_handlers() {
         } else if e.is::<repo::errors::InvalidWorkingCopy>() {
             Some(PyErr::new::<WorkingCopyError, _>(
                 py,
-                cpython_ext::Str::from(e.to_string()),
+                cpython_ext::Str::from(format!("{:#}", e)),
             ))
         } else if e.is::<cpython_ext::Error>() {
             Some(PyErr::new::<NonUTF8Path, _>(

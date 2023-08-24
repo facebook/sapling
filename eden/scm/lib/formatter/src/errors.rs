@@ -14,7 +14,7 @@ pub struct FormatterNotFound(pub String);
 #[derive(Debug, Error)]
 pub enum FormattingError {
     /// IO error likely caused by failure to write
-    #[error("Write Error")]
+    #[error("error writing command output: {0}")]
     WriterError(#[from] std::io::Error),
 
     /// Error caused when serializing using the JSON formatter

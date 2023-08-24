@@ -19,9 +19,8 @@ Writes to stdio succeed and fail appropriately
   $ hg status 2>/dev/full
   A a
 
-FIXME(status):
-  $ hg status --config status.use-rust=false >/dev/full
-  abort: No space left on device
+  $ hg status >/dev/full
+  abort: error flushing command output: No space left on device (os error 28)
   [255]
 #endif
 
@@ -38,8 +37,7 @@ Commands can succeed without a stdin
   $ hg status >/dev/full 2>&1
   [255]
 
-FIXME(status):
-  $ hg status ENOENT --config workingcopy.ruststatus=false 2>/dev/full
+  $ hg status ENOENT 2>/dev/full
   [1]
 #endif
 

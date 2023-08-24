@@ -23,7 +23,7 @@ pub struct InvalidSharedPath(pub String);
 pub struct RemotenamesMetalogKeyError;
 
 #[derive(Debug, Error)]
-#[error("cannot initialize working copy: {0:?}")]
+#[error("cannot initialize working copy")]
 pub struct InvalidWorkingCopy(#[from] anyhow::Error);
 
 #[derive(Debug, Error)]

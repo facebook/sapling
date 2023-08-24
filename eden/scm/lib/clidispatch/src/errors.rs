@@ -84,7 +84,7 @@ pub fn print_error(err: &anyhow::Error, io: &crate::io::IO, _args: &[String]) {
         // Ideally we'd identify expected errors and unexpected errors and print the full {:?}
         // output for unexpected errors. Today we can't make that distinction though, so for now we
         // print it in the user-friendly way.
-        let _ = io.write_err(format!("abort: {}\n", err));
+        let _ = io.write_err(format!("abort: {:#}\n", err));
     }
 }
 

@@ -17,15 +17,15 @@ use types::errors::NetworkError;
 
 #[derive(Debug, Error)]
 pub enum EdenApiError {
-    #[error("Failed to serialize request: {0}")]
+    #[error("failed to serialize request: {0}")]
     RequestSerializationFailed(#[source] serde_cbor::Error),
-    #[error("Failed to parse response: {0}")]
+    #[error("failed to parse response: {0}")]
     ParseResponse(String),
     #[error(transparent)]
     BadConfig(#[from] ConfigError),
     #[error(transparent)]
     Http(#[from] HttpClientError),
-    #[error("Server responded {status} for {url}: {message}. Headers: {headers:#?}")]
+    #[error("server responded {status} for {url}: {message}. Headers: {headers:#?}")]
     HttpError {
         status: StatusCode,
         message: String,
@@ -42,7 +42,7 @@ pub enum EdenApiError {
     NoResponse,
     #[error(transparent)]
     Other(#[from] anyhow::Error),
-    #[error("Not supported by the server")]
+    #[error("not supported by the server")]
     NotSupported,
     #[error(transparent)]
     MissingCerts(#[from] auth::MissingCerts),
@@ -50,9 +50,9 @@ pub enum EdenApiError {
 
 #[derive(Debug, Error)]
 pub enum ConfigError {
-    #[error("Missing required config item: {0}")]
+    #[error("missing required config item: {0}")]
     Missing(String),
-    #[error("Invalid config item: '{0}' ({1})")]
+    #[error("invalid config item: '{0}' ({1})")]
     Invalid(String, #[source] anyhow::Error),
 }
 
