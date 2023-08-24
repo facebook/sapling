@@ -145,7 +145,6 @@ class TestInsensitiveStatus(BaseTest):
 class TestInsensitiveRustStatus(TestInsensitiveStatus):
     def setUp(self) -> None:
         super().setUp()
-        self.config.add("workingcopy", "use-rust", "True")
         self.config.add("status", "use-rust", "True")
 
 

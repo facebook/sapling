@@ -453,14 +453,6 @@ impl Dispatcher {
                 }
                 CommandFunc::WorkingCopy(f) => {
                     let repo = self.repo_mut()?;
-                    if !repo.config().get_or_default("workingcopy", "use-rust")? {
-                        tracing::warn!(
-                            "command requires working copy but Rust working copy is disabled"
-                        );
-                        // TODO(T131699257): Migrate all tests to use Rust
-                        // workingcopy and removed fallback to Python.
-                        return Err(errors::FallbackToPython("requested command that uses working copy but workingcopy.use-rust not set to True".to_owned()).into());
-                    }
                     let path = repo.path().to_owned();
                     let mut wc = repo.working_copy(&path)?;
                     f(parsed, io, repo, &mut wc)

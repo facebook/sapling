@@ -1,17 +1,25 @@
-#chg-compatible
+#debugruntest-compatible
+
+#require diff
 
 #testcases pythonstatus ruststatus rustcommand scmstore
+
 #if pythonstatus
-  $ setconfig workingcopy.ruststatus=false
-#else
-  $ setconfig workingcopy.ruststatus=true
+  $ setconfig workingcopy.ruststatus=false status.use-rust=false
 #endif
+
 #if rustcommand
-  $ setconfig status.use-rust=True workingcopy.use-rust=True experimental.rustmatcher=true
+  $ setconfig status.use-rust=True experimental.rustmatcher=true
 #else
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
+  $ setconfig status.use-rust=False
 #endif
+
+#if ruststatus
+  $ setconfig status.use-rust=false workingcopy.ruststatus=true
+#endif
+
 #if scmstore
+  $ setconfig status.use-rust=false workingcopy.ruststatus=false
   $ setconfig scmstore.auxindexedlog=true
   $ setconfig scmstore.status=true
 #endif

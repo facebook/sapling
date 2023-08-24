@@ -569,7 +569,6 @@ coreconfigitem("worker", "enabled", default=True)
 coreconfigitem("worker", "numcpus", default=None)
 
 coreconfigitem("workingcopy", "ruststatus", default=False)
-coreconfigitem("workingcopy", "use-rust", default=True)
 
 # Rebase related configuration moved to core because other extension are doing
 # strange things. For example, shelve import the extensions to reuse some bit

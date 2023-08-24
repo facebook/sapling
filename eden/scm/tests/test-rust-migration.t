@@ -1,7 +1,6 @@
 #debugruntest-compatible
 
   $ eagerepo
-  $ setconfig workingcopy.use-rust=True
   $ setconfig edenapi.url=https://test_fail/foo
   $ hg init testrepo
   $ cd testrepo
