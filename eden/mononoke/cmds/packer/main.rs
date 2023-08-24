@@ -26,6 +26,7 @@ use mononoke_app::args::RepoArgs;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use regex::Regex;
 
 mod pack_utils;
 
@@ -93,6 +94,26 @@ fn get_blobconfig(
     };
 
     Ok(blob_config)
+}
+
+fn extract_repo_name_from_filename(filename: &str) -> &str {
+    let re = Regex::new(r"repo(.*)\.store(\d*).part([0-9]+).keys.txt").unwrap();
+    let caps = re
+        .captures(filename)
+        .with_context(|| format!("Failed to capture lambda for filename {}", filename))
+        .unwrap();
+    let repo_name = caps.get(1).map_or("", |m| m.as_str());
+    repo_name
+}
+
+fn extract_inner_store_id_from_filename(filename: &str) -> Option<u64> {
+    let re = Regex::new(r"repo(.*)\.store(\d*).part([0-9]+).keys.txt").unwrap();
+    let caps = re
+        .captures(filename)
+        .with_context(|| format!("Failed to capture lambda for filename {}", filename))
+        .unwrap();
+    let inner_blobstore_id_str = caps.get(2).map_or("", |m| m.as_str());
+    inner_blobstore_id_str.parse::<u64>().ok()
 }
 
 #[fbinit::main]
@@ -165,4 +186,26 @@ fn main(fb: FacebookInit) -> Result<()> {
             })
             .await
     })
+}
+
+#[test]
+fn test_parsing_repo_from_filename() -> Result<()> {
+    let mut filename = "repoadmin.store3.part1.keys.txt";
+    let mut repo_name = extract_repo_name_from_filename(filename);
+    assert_eq!(repo_name, "admin");
+    filename = "reporepo-hg-nolfs.store3.part1.keys.txt";
+    repo_name = extract_repo_name_from_filename(filename);
+    assert_eq!(repo_name, "repo-hg-nolfs");
+    Ok(())
+}
+
+#[test]
+fn test_parsing_inner_blobstore_id_from_filename() -> Result<()> {
+    let mut filename = "repoadmin.store3.part1.keys.txt";
+    let mut blobstore_id = extract_inner_store_id_from_filename(filename);
+    assert_eq!(blobstore_id, Some(3));
+    filename = "repoadmin.store.part1.keys.txt";
+    blobstore_id = extract_inner_store_id_from_filename(filename);
+    assert_eq!(blobstore_id, None);
+    Ok(())
 }
