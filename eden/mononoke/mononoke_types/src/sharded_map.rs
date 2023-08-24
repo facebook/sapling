@@ -8,6 +8,7 @@
 #![allow(dead_code)]
 #![allow(clippy::mutable_key_type)] // false positive: Bytes is not inner mutable
 
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 
@@ -242,19 +243,53 @@ impl<Value: MapValue> ShardedMapNode<Value> {
 
     /// Given a map and replacements, return the map with the replacements.
     fn update_map(
-        mut map: BTreeMap<SmallBinary, Value>,
-        replacements: impl IntoIterator<Item = (Bytes, Option<Value>)>,
+        map: SortedVectorMap<SmallBinary, Value>,
+        replacements: BTreeMap<Bytes, Option<Value>>,
         deleter: impl Fn(Value),
-    ) -> Result<SortedVectorMap<SmallBinary, Value>> {
-        for (key, value) in replacements {
-            let key = SmallVec::from_iter(key);
-            match value {
-                Some(value) => map.insert(key, value),
-                None => map.remove(&key),
+    ) -> SortedVectorMap<SmallBinary, Value> {
+        // Worst case scenario, every update deletes from the map.
+        let mut result =
+            SortedVectorMap::with_capacity(map.len().saturating_sub(replacements.len()));
+        let mut map_iter = map.into_iter().peekable();
+        let mut replacements_iter = replacements.into_iter().peekable();
+        // Iterate the two maps in lockstep
+        while let (Some((map_key, _)), Some((replacements_key, _))) =
+            (map_iter.peek(), replacements_iter.peek())
+        {
+            match map_key.as_slice().cmp(replacements_key.as_ref()) {
+                Ordering::Less => {
+                    // Next existing map entry is first, copy it.
+                    if let Some((key, value)) = map_iter.next() {
+                        result.insert(key, value);
+                    }
+                }
+                Ordering::Greater => {
+                    // New replacement is first, insert it.
+                    if let Some((key, Some(new_value))) = replacements_iter.next() {
+                        result.insert(SmallBinary::from_slice(key.as_ref()), new_value);
+                    }
+                }
+                Ordering::Equal => {
+                    // Replacement value matches map value.  Replace or
+                    // delete.
+                    if let Some((key, old_value)) = map_iter.next() {
+                        if let Some((_, Some(new_value))) = replacements_iter.next() {
+                            result.insert(key, new_value);
+                        }
+                        deleter(old_value);
+                    }
+                }
             }
-            .map(&deleter);
         }
-        Ok(map.into())
+        // If the map iterator is not exhausted, copy the remainder.
+        result.extend(map_iter);
+        // If the replacements iterator is not exhausted, copy all
+        // the insertions.
+        result.extend(
+            replacements_iter
+                .filter_map(|(k, v)| v.map(|v| (SmallBinary::from_slice(k.as_ref()), v))),
+        );
+        result
     }
 
     /// Prepend all keys in this node with the given prefix.
@@ -302,7 +337,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
         let shard_size = Self::shard_size()?;
         match self {
             Self::Terminal { values } => {
-                let values = Self::update_map(values.into_iter().collect(), replacements, deleter)?;
+                let values = Self::update_map(values, replacements, deleter);
                 if values.len() <= shard_size {
                     // Case 1: values is small enough, return a terminal node
                     Ok(Self::Terminal { values })
