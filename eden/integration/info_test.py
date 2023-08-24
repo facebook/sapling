@@ -44,6 +44,7 @@ class InfoTest(testcase.EdenRepoTest):
                 "backing_repo": backing_repo,
                 "checked_out_revision": self.repo.get_head_hash(),
                 "working_copy_parent": self.repo.get_head_hash(),
+                "inode_catalog_type": self.inode_catalog_type,
             },
             client_info,
         )

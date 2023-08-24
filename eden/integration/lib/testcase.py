@@ -401,6 +401,7 @@ class EdenRepoTest(EdenTestCase):
     repo: repobase.Repository
     repo_name: str
     repo_type: str
+    inode_catalog_type: str
 
     enable_logview: bool = False
 
@@ -424,6 +425,7 @@ class EdenRepoTest(EdenTestCase):
         super().setup_eden_test()
 
         self.repo_name = "main"
+        self.inode_catalog_type = "sqlite" if sys.platform == "win32" else "legacy"
         self.repo = self.create_repo(self.repo_name)
         self.populate_repo()
         self.report_time("repository setup done")

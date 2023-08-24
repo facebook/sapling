@@ -509,6 +509,9 @@ class EdenInstance(AbstractEdenInstance):
             ]
         )
 
+        if checkout_config.inode_catalog_type is not None:
+            ret["inode_catalog_type"] = checkout_config.inode_catalog_type
+
         if sys.platform == "win32":
             ret["symlinks_enabled"] = checkout_config.enable_windows_symlinks
 
