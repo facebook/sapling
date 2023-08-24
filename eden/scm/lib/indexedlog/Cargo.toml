@@ -38,3 +38,6 @@ dev-logger = { version = "0.1.0", path = "../dev-logger" }
 minibench = { version = "0.1.0", path = "../minibench" }
 quickcheck = "1.0"
 rand_chacha = "0.3"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3", features = ["everything"] }
