@@ -2283,7 +2283,6 @@ function packer() {
   "$MONONOKE_PACKER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
-    --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     "$@"
 }

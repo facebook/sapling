@@ -24,7 +24,6 @@ use futures::stream;
 use futures::stream::TryStreamExt;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
-use mononoke_app::args::RepoArgs;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
@@ -37,15 +36,6 @@ mod pack_utils;
     about = "Given a set of blob names on stdin, replace them with a packed version that takes less space"
 )]
 struct MononokePackerArgs {
-    #[clap(flatten)]
-    repo_args: RepoArgs,
-
-    #[clap(
-        long,
-        help = "If main blobstore in the storage config is a multiplexed one, use inner blobstore with this id"
-    )]
-    inner_blobstore_id: Option<u64>,
-
     #[clap(long, help = "zstd compression level to use")]
     zstd_level: i32,
 
