@@ -3,7 +3,6 @@
 
   $ eagerepo
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig workingcopy.ruststatus=False
 
 == tests added in 0.7 ==
 

@@ -2,8 +2,6 @@
 #require symlink
 
   $ configure modernclient
-  $ setconfig workingcopy.ruststatus=False
-  $ setconfig status.use-rust=False
   $ eagerepo
   $ enable sparse
 

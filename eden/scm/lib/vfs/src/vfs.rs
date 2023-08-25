@@ -335,7 +335,14 @@ impl VFS {
         let metadata = self.metadata(path)?;
         let content = if metadata.is_symlink() {
             match std::fs::read_link(&filepath)?.to_str() {
-                Some(p) => p.as_bytes().iter().map(|u| *u).collect(),
+                Some(p) => {
+                    let p = if cfg!(windows) {
+                        p.replace('\\', "/")
+                    } else {
+                        p.to_owned()
+                    };
+                    p.as_bytes().to_vec()
+                }
                 None => bail!("invalid path during vfs::read '{:?}'", filepath),
             }
         } else {

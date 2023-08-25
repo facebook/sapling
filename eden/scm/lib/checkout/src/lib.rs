@@ -771,7 +771,7 @@ pub fn file_state(vfs: &VFS, path: &RepoPath) -> Result<FileStateV2> {
     #[cfg(unix)]
     let mode = std::os::unix::fs::PermissionsExt::mode(&meta.permissions());
     #[cfg(windows)]
-    let mode = 0o644; // todo figure this out
+    let mode = if meta.is_symlink() { 0o120644 } else { 0o644 };
     let mtime = meta
         .modified()?
         .duration_since(SystemTime::UNIX_EPOCH)?
