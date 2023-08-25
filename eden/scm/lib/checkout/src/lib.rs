@@ -744,6 +744,221 @@ impl AsRef<RepoPath> for UpdateMetaAction {
     }
 }
 
+impl fmt::Display for CheckoutPlan {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for r in &self.remove {
+            writeln!(f, "rm {}", r)?;
+        }
+        for u in &self.update_content {
+            let ft = match u.file_type {
+                FileType::Executable => "(x)",
+                FileType::Symlink => "(s)",
+                FileType::Regular => "",
+                FileType::GitSubmodule => continue,
+            };
+            writeln!(f, "up {}=>{}{}", u.path, u.content_hgid, ft)?;
+        }
+        for u in &self.update_meta {
+            let ch = if u.set_x_flag { "+x" } else { "-x" };
+            writeln!(f, "{} {}", ch, u.path)?;
+        }
+        Ok(())
+    }
+}
+
+pub fn file_state(vfs: &VFS, path: &RepoPath) -> Result<FileStateV2> {
+    let meta = vfs.metadata(path)?;
+    #[cfg(unix)]
+    let mode = std::os::unix::fs::PermissionsExt::mode(&meta.permissions());
+    #[cfg(windows)]
+    let mode = 0o644; // todo figure this out
+    let mtime = meta
+        .modified()?
+        .duration_since(SystemTime::UNIX_EPOCH)?
+        .as_secs();
+    let mtime = truncate_u64("mtime", path, mtime);
+    let size = meta.len();
+    let size = truncate_u64("size", path, size);
+    let state = StateFlags::EXIST_P1 | StateFlags::EXIST_NEXT;
+    Ok(FileStateV2 {
+        mode,
+        size,
+        mtime,
+        state,
+        copied: None,
+    })
+}
+
+fn truncate_u64(f: &str, path: &RepoPath, v: u64) -> i32 {
+    const RANGE_MASK: u64 = 0x7FFFFFFF;
+    let truncated = v & RANGE_MASK;
+    if truncated != v {
+        warn!("{} for {} is truncated {}=>{}", f, path, v, truncated);
+    }
+    truncated as i32
+}
+
+pub fn checkout(
+    io: &IO,
+    repo: &mut Repo,
+    wc: &mut WorkingCopy,
+    target_commit: HgId,
+) -> Result<(usize, usize)> {
+    wc.ensure_locked()?;
+
+    let current_commit = wc.parents()?.into_iter().next().unwrap_or(NULL_ID);
+
+    let tree_resolver = repo.tree_resolver()?;
+    let current_mf = tree_resolver.get(&current_commit)?;
+    let target_mf = tree_resolver.get(&target_commit)?;
+
+    let (sparse_matcher, sparse_change) =
+        create_sparse_matchers(repo, wc.vfs(), &current_mf.read(), &target_mf.read())?;
+
+    // 1. Create the plan
+    let plan = create_plan(
+        wc.vfs(),
+        repo.config(),
+        &current_mf.read(),
+        &target_mf.read(),
+        &sparse_matcher,
+        sparse_change,
+    )?;
+
+    // 2. Check if status is dirty
+    let status = wc.status(
+        sparse_matcher.clone(),
+        SystemTime::UNIX_EPOCH,
+        false,
+        repo.config(),
+        io,
+    )?;
+
+    let conflicts = plan.check_conflicts(&status);
+    if !conflicts.is_empty() {
+        bail!(
+            "{:?} conflicting file changes:\n {}",
+            conflicts.len(),
+            conflicts
+                .iter()
+                .take(5)
+                .map(|p| p.as_str())
+                .collect::<Vec<_>>()
+                .join("\n "),
+        );
+    }
+
+    // 3. Execute the plan
+    block_on(plan.apply_store(&repo.file_store()?))?;
+
+    // 4. Update the treestate parents, dirstate
+    wc.set_parents(&mut [target_commit].iter())?;
+    record_updates(&plan, wc.vfs(), &mut wc.treestate().lock())?;
+    dirstate::flush(
+        wc.vfs().root(),
+        &mut wc.treestate().lock(),
+        repo.locker(),
+        None,
+        None,
+    )?;
+
+    Ok(plan.stats())
+}
+
+fn create_sparse_matchers(
+    repo: &mut Repo,
+    vfs: &VFS,
+    current_mf: &TreeManifest,
+    target_mf: &TreeManifest,
+) -> Result<(ArcMatcher, Option<(ArcMatcher, ArcMatcher)>)> {
+    let dot_path = repo.dot_hg_path().to_owned();
+    if util::file::exists(dot_path.join("sparse"))?.is_none() {
+        return Ok((Arc::new(AlwaysMatcher::new()), None));
+    }
+
+    let overrides = sparse::config_overrides(repo.config());
+
+    let (current_sparse, current_hash) = sparse::repo_matcher_with_overrides(
+        vfs,
+        &dot_path,
+        current_mf.clone(),
+        repo.file_store()?,
+        &overrides,
+    )?
+    .unwrap_or_else(|| {
+        let matcher: Arc<dyn Matcher + Sync + Send> = Arc::new(AlwaysMatcher::new());
+        (matcher, 0)
+    });
+
+    let (target_sparse, target_hash) = sparse::repo_matcher_with_overrides(
+        vfs,
+        &dot_path,
+        target_mf.clone(),
+        repo.file_store()?,
+        &overrides,
+    )?
+    .unwrap_or_else(|| {
+        let matcher: Arc<dyn Matcher + Sync + Send> = Arc::new(AlwaysMatcher::new());
+        (matcher, 0)
+    });
+
+    let sparse_matcher: ArcMatcher = Arc::new(UnionMatcher::new(vec![
+        current_sparse.clone(),
+        target_sparse.clone(),
+    ]));
+    let sparse_change = if current_hash != target_hash {
+        Some((current_sparse, target_sparse))
+    } else {
+        None
+    };
+
+    Ok((sparse_matcher, sparse_change))
+}
+
+fn create_plan(
+    vfs: &VFS,
+    config: &dyn Config,
+    current_mf: &TreeManifest,
+    target_mf: &TreeManifest,
+    matcher: &dyn Matcher,
+    sparse_change: Option<(ArcMatcher, ArcMatcher)>,
+) -> Result<CheckoutPlan> {
+    let diff = Diff::new(current_mf, target_mf, &matcher)?;
+    let mut actions = ActionMap::from_diff(diff)?;
+
+    if let Some((old_sparse, new_sparse)) = sparse_change {
+        actions =
+            actions.with_sparse_profile_change(old_sparse, new_sparse, current_mf, target_mf)?;
+    }
+    let checkout = Checkout::from_config(vfs.clone(), &config)?;
+    let plan = checkout.plan_action_map(actions);
+    // if let Some(progress_path) = progress_path {
+    //     plan.add_progress(progress_path.as_path()).map_pyerr(py)?;
+    // }
+
+    Ok(plan)
+}
+
+fn record_updates(plan: &CheckoutPlan, vfs: &VFS, treestate: &mut TreeState) -> Result<()> {
+    let bar = ProgressBar::register_new("recording", plan.all_files().count() as u64, "files");
+
+    for removed in plan.removed_files() {
+        treestate.remove(removed)?;
+        bar.increase_position(1);
+    }
+
+    for updated in plan
+        .updated_content_files()
+        .chain(plan.updated_meta_files())
+    {
+        let fstate = file_state(vfs, updated)?;
+        treestate.insert(updated, &fstate)?;
+        bar.increase_position(1);
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 // todo - consider moving some of this code to vfs / separate test create
 // todo parallel execution for the test
@@ -1061,219 +1276,4 @@ mod test {
     fn hgid_file(hgid: &HgId) -> Vec<u8> {
         hgid.to_string().into_bytes()
     }
-}
-
-impl fmt::Display for CheckoutPlan {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for r in &self.remove {
-            writeln!(f, "rm {}", r)?;
-        }
-        for u in &self.update_content {
-            let ft = match u.file_type {
-                FileType::Executable => "(x)",
-                FileType::Symlink => "(s)",
-                FileType::Regular => "",
-                FileType::GitSubmodule => continue,
-            };
-            writeln!(f, "up {}=>{}{}", u.path, u.content_hgid, ft)?;
-        }
-        for u in &self.update_meta {
-            let ch = if u.set_x_flag { "+x" } else { "-x" };
-            writeln!(f, "{} {}", ch, u.path)?;
-        }
-        Ok(())
-    }
-}
-
-pub fn file_state(vfs: &VFS, path: &RepoPath) -> Result<FileStateV2> {
-    let meta = vfs.metadata(path)?;
-    #[cfg(unix)]
-    let mode = std::os::unix::fs::PermissionsExt::mode(&meta.permissions());
-    #[cfg(windows)]
-    let mode = 0o644; // todo figure this out
-    let mtime = meta
-        .modified()?
-        .duration_since(SystemTime::UNIX_EPOCH)?
-        .as_secs();
-    let mtime = truncate_u64("mtime", path, mtime);
-    let size = meta.len();
-    let size = truncate_u64("size", path, size);
-    let state = StateFlags::EXIST_P1 | StateFlags::EXIST_NEXT;
-    Ok(FileStateV2 {
-        mode,
-        size,
-        mtime,
-        state,
-        copied: None,
-    })
-}
-
-fn truncate_u64(f: &str, path: &RepoPath, v: u64) -> i32 {
-    const RANGE_MASK: u64 = 0x7FFFFFFF;
-    let truncated = v & RANGE_MASK;
-    if truncated != v {
-        warn!("{} for {} is truncated {}=>{}", f, path, v, truncated);
-    }
-    truncated as i32
-}
-
-pub fn checkout(
-    io: &IO,
-    repo: &mut Repo,
-    wc: &mut WorkingCopy,
-    target_commit: HgId,
-) -> Result<(usize, usize)> {
-    wc.ensure_locked()?;
-
-    let current_commit = wc.parents()?.into_iter().next().unwrap_or(NULL_ID);
-
-    let tree_resolver = repo.tree_resolver()?;
-    let current_mf = tree_resolver.get(&current_commit)?;
-    let target_mf = tree_resolver.get(&target_commit)?;
-
-    let (sparse_matcher, sparse_change) =
-        create_sparse_matchers(repo, wc.vfs(), &current_mf.read(), &target_mf.read())?;
-
-    // 1. Create the plan
-    let plan = create_plan(
-        wc.vfs(),
-        repo.config(),
-        &*current_mf.read(),
-        &*target_mf.read(),
-        &sparse_matcher,
-        sparse_change,
-    )?;
-
-    // 2. Check if status is dirty
-    let status = wc.status(
-        sparse_matcher.clone(),
-        SystemTime::UNIX_EPOCH,
-        false,
-        repo.config(),
-        io,
-    )?;
-
-    let conflicts = plan.check_conflicts(&status);
-    if !conflicts.is_empty() {
-        bail!(
-            "{:?} conflicting file changes:\n {}",
-            conflicts.len(),
-            conflicts
-                .iter()
-                .take(5)
-                .map(|p| p.as_str())
-                .collect::<Vec<_>>()
-                .join("\n "),
-        );
-    }
-
-    // 3. Execute the plan
-    block_on(plan.apply_store(&repo.file_store()?))?;
-
-    // 4. Update the treestate parents, dirstate
-    wc.set_parents(&mut [target_commit].iter())?;
-    record_updates(&plan, &wc.vfs(), &mut wc.treestate().lock())?;
-    dirstate::flush(
-        wc.vfs().root(),
-        &mut wc.treestate().lock(),
-        repo.locker(),
-        None,
-        None,
-    )?;
-
-    Ok(plan.stats())
-}
-
-fn create_sparse_matchers(
-    repo: &mut Repo,
-    vfs: &VFS,
-    current_mf: &TreeManifest,
-    target_mf: &TreeManifest,
-) -> Result<(ArcMatcher, Option<(ArcMatcher, ArcMatcher)>)> {
-    let dot_path = repo.dot_hg_path().to_owned();
-    if util::file::exists(dot_path.join("sparse"))?.is_none() {
-        return Ok((Arc::new(AlwaysMatcher::new()), None));
-    }
-
-    let overrides = sparse::config_overrides(repo.config());
-
-    let (current_sparse, current_hash) = sparse::repo_matcher_with_overrides(
-        vfs,
-        &dot_path,
-        current_mf.clone(),
-        repo.file_store()?,
-        &overrides,
-    )?
-    .unwrap_or_else(|| {
-        let matcher: Arc<dyn Matcher + Sync + Send> = Arc::new(AlwaysMatcher::new());
-        (matcher, 0)
-    });
-
-    let (target_sparse, target_hash) = sparse::repo_matcher_with_overrides(
-        vfs,
-        &dot_path,
-        target_mf.clone(),
-        repo.file_store()?,
-        &overrides,
-    )?
-    .unwrap_or_else(|| {
-        let matcher: Arc<dyn Matcher + Sync + Send> = Arc::new(AlwaysMatcher::new());
-        (matcher, 0)
-    });
-
-    let sparse_matcher: ArcMatcher = Arc::new(UnionMatcher::new(vec![
-        current_sparse.clone(),
-        target_sparse.clone(),
-    ]));
-    let sparse_change = if current_hash != target_hash {
-        Some((current_sparse, target_sparse))
-    } else {
-        None
-    };
-
-    Ok((sparse_matcher, sparse_change))
-}
-
-fn create_plan(
-    vfs: &VFS,
-    config: &dyn Config,
-    current_mf: &TreeManifest,
-    target_mf: &TreeManifest,
-    matcher: &dyn Matcher,
-    sparse_change: Option<(ArcMatcher, ArcMatcher)>,
-) -> Result<CheckoutPlan> {
-    let diff = Diff::new(current_mf, target_mf, &matcher)?;
-    let mut actions = ActionMap::from_diff(diff)?;
-
-    if let Some((old_sparse, new_sparse)) = sparse_change {
-        actions =
-            actions.with_sparse_profile_change(old_sparse, new_sparse, current_mf, target_mf)?;
-    }
-    let checkout = Checkout::from_config(vfs.clone(), &config)?;
-    let plan = checkout.plan_action_map(actions);
-    // if let Some(progress_path) = progress_path {
-    //     plan.add_progress(progress_path.as_path()).map_pyerr(py)?;
-    // }
-
-    Ok(plan)
-}
-
-fn record_updates(plan: &CheckoutPlan, vfs: &VFS, treestate: &mut TreeState) -> Result<()> {
-    let bar = ProgressBar::register_new("recording", plan.all_files().count() as u64, "files");
-
-    for removed in plan.removed_files() {
-        treestate.remove(removed)?;
-        bar.increase_position(1);
-    }
-
-    for updated in plan
-        .updated_content_files()
-        .chain(plan.updated_meta_files())
-    {
-        let fstate = file_state(vfs, updated)?;
-        treestate.insert(updated, &fstate)?;
-        bar.increase_position(1);
-    }
-
-    Ok(())
 }
