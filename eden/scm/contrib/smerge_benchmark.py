@@ -6,7 +6,7 @@
 import time
 from dataclasses import dataclass
 
-from edenscm import commands, error, mdiff, registrar
+from edenscm import commands, error, mdiff, registrar, scmutil
 from edenscm.i18n import _
 from edenscm.simplemerge import Merge3Text, wordmergemode
 
@@ -63,7 +63,9 @@ def sresolve(ui, repo, *args, **opts):
     if len(args) != 4:
         raise error.CommandError("smerge", _("invalid arguments"))
 
-    filepath, dest, src, base = args
+    filepath = args[0]
+    dest, src, base = [scmutil.revsingle(repo, x) for x in args[1:]]
+
     desttext = repo[dest][filepath].data()
     srctext = repo[src][filepath].data()
     basetext = repo[base][filepath].data()
