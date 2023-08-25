@@ -209,6 +209,52 @@ def unidiff(atext, btext, filepath="") -> bytes:
     return b"\n".join(result)
 
 
+def basediff(m3, name_a, name_b):
+    lines = []
+    conflicts = False
+    for group in m3.merge_groups():
+        if group[0] == "conflict":
+            base_lines, a_lines, b_lines = group[1:]
+            basetext = b"".join(base_lines)
+            bblocks = list(
+                mdiff.allblocks(
+                    basetext,
+                    b"".join(b_lines),
+                    lines1=base_lines,
+                    lines2=b_lines,
+                )
+            )
+            ablocks = list(
+                mdiff.allblocks(
+                    basetext,
+                    b"".join(a_lines),
+                    lines1=base_lines,
+                    lines2=b_lines,
+                )
+            )
+
+            def difflines(blocks, lines1, lines2):
+                for block, kind in blocks:
+                    if kind == "=":
+                        for line in lines1[block[0] : block[1]]:
+                            yield b" " + line
+                    else:
+                        for line in lines1[block[0] : block[1]]:
+                            yield b"-" + line
+                        for line in lines2[block[2] : block[3]]:
+                            yield b"+" + line
+
+            lines.append(b"<<<<<<< %s\n" % name_a)
+            lines.extend(difflines(ablocks, base_lines, a_lines))
+            lines.append(b"=======\n")
+            lines.extend(difflines(bblocks, base_lines, b_lines))
+            lines.append(b">>>>>>> %s\n" % name_b)
+            conflicts = True
+        else:
+            lines.extend(group[1])
+    return lines, conflicts
+
+
 if __name__ == "__main__":
     import doctest
 
