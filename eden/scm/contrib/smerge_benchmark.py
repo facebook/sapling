@@ -66,6 +66,11 @@ class SmartMerge3Text(Merge3Text):
             if is_overlap(ablock[0], ablock[1], bblock[0], bblock[1]):
                 c.merged_lines = []
                 return False
+            elif is_non_unique_separator_for_insertion(
+                base_lines, a_lines, b_lines, ablock, bblock
+            ):
+                c.merged_lines = []
+                return False
 
             i, block, lines = (
                 (A, ablock, a_lines) if ablock[0] < bblock[0] else (B, bblock, b_lines)
@@ -96,6 +101,39 @@ class SmartMerge3Text(Merge3Text):
         c.merged_lines += self.base[k : c.end[BASE]]
 
         return True
+
+
+def is_non_unique_separator_for_insertion(
+    base_lines, a_lines, b_lines, ablock, bblock
+) -> bool:
+    def is_sub_list(list1, list2):
+        "check if list1 is a sublist of list2"
+        # PERF: might be able to use rolling hash to optimize the time complexity
+        len1, len2 = len(list1), len(list2)
+        if len1 > len2:
+            return False
+        for i in range(len2 - len1 + 1):
+            if list1 == list2[i : i + len1]:
+                return True
+        return False
+
+    # no insertion on both sides
+    if not (ablock[0] == bblock[0] or ablock[1] == bblock[1]):
+        return False
+
+    if ablock[1] <= bblock[0]:
+        base_start, base_end = ablock[1], bblock[0]
+    else:
+        base_start, base_end = bblock[1], ablock[0]
+
+    if base_start <= base_end:
+        # empty is a subset of any list
+        return True
+
+    base_list = base_lines[base_start:base_end]
+    a_list = a_lines[ablock[3] : ablock[4]]
+    b_list = b_lines[bblock[3] : bblock[4]]
+    return is_sub_list(base_list, a_list) or is_sub_list(base_list, b_list)
 
 
 @dataclass

@@ -37,3 +37,38 @@ test merge adjacent changes
   c'
   d'
   e
+
+test merge adjacent changes -- insertion case
+
+  $ cat > base <<EOF
+  > a
+  > b
+  > e
+  > EOF
+  $ cat > src <<EOF
+  > a
+  > b'
+  > e
+  > EOF
+  $ cat > dest <<EOF
+  > a
+  > a2
+  > b
+  > c
+  > d
+  > e
+  > EOF
+
+  $ hg debugsmerge dest src base
+  a
+  <<<<<<< dest
+  a2
+  b
+  c
+  d
+  ||||||| base
+  b
+  =======
+  b'
+  >>>>>>> src
+  e
