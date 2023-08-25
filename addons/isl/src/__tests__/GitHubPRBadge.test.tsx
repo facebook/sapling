@@ -95,18 +95,20 @@ describe('GitHubPRBadge', () => {
                     url: 'https://github.com/myusername/testrepo/pull/10',
                     anyUnresolvedComments: false,
                     commentCount: 0,
+                    commitMessage: 'PR A',
                   },
                 ],
                 [
                   '11',
                   {
                     number: '11',
-                    state: PullRequestState.Open,
+                    state: PullRequestState.Closed,
                     title: 'PR B',
                     type: 'github',
                     url: 'https://github.com/myusername/testrepo/pull/11',
                     anyUnresolvedComments: false,
                     commentCount: 0,
+                    commitMessage: 'PR B',
                   },
                 ],
               ]),
@@ -124,12 +126,12 @@ describe('GitHubPRBadge', () => {
         expect(
           within(
             within(screen.getByTestId('commit-a')).getByTestId('github-diff-info'),
-          ).queryByText('#10'),
+          ).queryByText('Open'),
         ).toBeInTheDocument();
         expect(
           within(
             within(screen.getByTestId('commit-b')).getByTestId('github-diff-info'),
-          ).queryByText('#11'),
+          ).queryByText('Closed'),
         ).toBeInTheDocument();
       });
 
@@ -137,7 +139,27 @@ describe('GitHubPRBadge', () => {
         expect(
           within(screen.getByTestId('commit-1')).queryByTestId('github-diff-info'),
         ).not.toBeInTheDocument();
-        expect(within(screen.getByTestId('commit-1')).queryByText('#2')).not.toBeInTheDocument();
+      });
+
+      it('shows PR numbers if config enabled', () => {
+        expect(screen.queryAllByTestId('github-diff-info')).toHaveLength(2);
+        act(() => {
+          simulateMessageFromServer({
+            type: 'gotConfig',
+            name: 'isl.show-diff-number',
+            value: 'true',
+          });
+        });
+        expect(
+          within(
+            within(screen.getByTestId('commit-a')).getByTestId('github-diff-info'),
+          ).queryByText('#10'),
+        ).toBeInTheDocument();
+        expect(
+          within(
+            within(screen.getByTestId('commit-b')).getByTestId('github-diff-info'),
+          ).queryByText('#11'),
+        ).toBeInTheDocument();
       });
 
       describe('url opener', () => {
@@ -254,6 +276,7 @@ describe('GitHubPRBadge', () => {
               url: 'https://github.com/myusername/testrepo/pull/10',
               anyUnresolvedComments: false,
               commentCount: 0,
+              commitMessage: 'PR a',
             },
           ],
         ]),
@@ -272,7 +295,7 @@ describe('GitHubPRBadge', () => {
       expect(screen.queryAllByTestId('github-error')).toHaveLength(0);
       expect(
         within(within(screen.getByTestId('commit-a')).getByTestId('github-diff-info')).queryByText(
-          '#10',
+          'Open',
         ),
       ).toBeInTheDocument();
 
@@ -296,9 +319,7 @@ describe('GitHubPRBadge', () => {
       expect(screen.queryByText('something failed')).not.toBeInTheDocument();
       expect(screen.queryAllByTestId('github-error')).toHaveLength(0);
       expect(
-        within(within(screen.getByTestId('commit-a')).getByTestId('github-diff-info')).queryByText(
-          '#10',
-        ),
+        within(screen.getByTestId('commit-a')).getByTestId('github-diff-info'),
       ).toBeInTheDocument();
     });
   });

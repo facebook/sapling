@@ -13,15 +13,22 @@ import {CircleEllipsisIcon} from '../CircleEllipsisIcon';
 import {ExternalLink} from '../ExternalLink';
 import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
+import {persistAtomToConfigEffect} from '../persistAtomToConfigEffect';
 import platform from '../platform';
 import {diffSummary, codeReviewProvider} from './CodeReviewInfo';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
 import {useState, Component, Suspense} from 'react';
-import {useRecoilValue} from 'recoil';
+import {atom, useRecoilValue} from 'recoil';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 
 import './DiffBadge.css';
+
+export const showDiffNumberConfig = atom<boolean>({
+  key: 'showDiffNumberConfig',
+  default: false,
+  effects: [persistAtomToConfigEffect('isl.show-diff-number')],
+});
 
 /**
  * Component that shows inline summary information about a Diff,
@@ -106,7 +113,8 @@ function DiffInfoInner({diffId, provider}: {diffId: DiffId; provider: UICodeRevi
 
 function DiffNumber({children}: {children: string}) {
   const [showing, setShowing] = useState(false);
-  if (!children) {
+  const showDiffNumber = useRecoilValue(showDiffNumberConfig);
+  if (!children || !showDiffNumber) {
     return null;
   }
 

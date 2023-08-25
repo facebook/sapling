@@ -393,6 +393,7 @@ export type ConfigName =
   | 'isl.hasShownGettingStarted'
   // sapling config prefers foo-bar naming.
   | 'isl.pull-button-choice'
+  | 'isl.show-diff-number'
   | 'isl.experimental-features';
 
 export type ClientToServerMessage =
