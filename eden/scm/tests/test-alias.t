@@ -147,7 +147,6 @@ no closing quotation
 
   $ hg --config alias.dash='cat --' -R alias dash -r0
   abort: -r0 not under root '$TESTTMP/alias'
-  (consider using '--cwd alias')
   [255]
 
 invalid options

@@ -18,7 +18,6 @@ Don't error out if a naughty file happens to be present:
   skipping invalid path 'he\rllo'
 Do error out if the naughty file is explicitly referenced:
   $ hg add "$A"
-  skipping invalid path 'he\rllo'
   abort: Failed to validate "he\rllo". Invalid byte: 13.
   [255]
   $ hg ci -A -m m

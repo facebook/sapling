@@ -1,8 +1,6 @@
 #require no-windows
 #debugruntest-compatible
 
-  $ setconfig experimental.rustmatcher=true
-
   $ eagerepo
 Explore the semi-mysterious matchmod.match API
 

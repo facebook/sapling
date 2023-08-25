@@ -2,7 +2,6 @@
 #inprocess-hg-incompatible
   $ setconfig experimental.nativecheckout=true
   $ setconfig commands.update.check=noconflict
-  $ setconfig experimental.rustmatcher=true
   $ newserver server
 
   $ newremoterepo myrepo

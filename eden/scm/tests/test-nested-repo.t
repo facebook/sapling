@@ -24,9 +24,6 @@
 
 # Should fail:
 
-  $ hg st b/x
-  abort: path 'b/x' is inside nested repo 'b'
-  [255]
   $ hg add b/x
   abort: path 'b/x' is inside nested repo 'b'
   [255]

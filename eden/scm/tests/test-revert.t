@@ -102,7 +102,7 @@
   $ hg revert -v b
   forgetting b
   $ hg status b
-  b: * (glob)
+  b: $ENOENT$
 
   $ ls
   a

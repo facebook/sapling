@@ -255,10 +255,26 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         lgr.warn(format!("{invalid}: invalid file type"));
     }
 
+    // Give the user warnings if explicitly specified files are "bad".
     for file in &matcher_files {
-        if !status.contains(file) {
-            if let Err(err) = wc.vfs().metadata(file) {
-                lgr.warn(format!("{}: {err}", relativizer.relativize(file)));
+        match wc.vfs().metadata(file) {
+            Ok(fs_meta) => {
+                // Warn about invalid file type (but only if we didn't already warn).
+                if !fs_meta.is_dir()
+                    && !fs_meta.is_file()
+                    && !fs_meta.is_symlink()
+                    && !status.invalid_type().contains(file)
+                {
+                    lgr.warn(format!(
+                        "{}: invalid file type",
+                        relativizer.relativize(file)
+                    ));
+                }
+            }
+            Err(err) => {
+                if !status.contains(file) {
+                    lgr.warn(format!("{}: {err}", relativizer.relativize(file)));
+                }
             }
         }
     }

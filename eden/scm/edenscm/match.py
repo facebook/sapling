@@ -971,7 +971,9 @@ class hintedmatcher(basematcher):
         casesensitive: bool,
         badfn=None,
     ):
-        super(hintedmatcher, self).__init__(root, cwd, badfn)
+        super(hintedmatcher, self).__init__(
+            root, cwd, badfn, relativeuipath=bool(patterns or include or exclude)
+        )
 
         def expandsets(pats, default):
             fset, nonsets = set(), []

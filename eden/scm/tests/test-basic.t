@@ -38,7 +38,7 @@ Commands can succeed without a stdin
   [255]
 
   $ hg status ENOENT 2>/dev/full
-  [1]
+  [255]
 #endif
 
 #if devfull chg

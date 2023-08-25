@@ -242,12 +242,6 @@ Test that status is default relative
   $ hg status ../subdir1
   A ../subdir1/subf1
 
-Test that --root-relative and patterns abort
-  $ hg status --root-relative ""
-  abort: --root-relative not supported with patterns
-  (run from the repo root instead)
-  [255]
-
 Don't break automation
   $ HGPLAIN=1 hg status
   A dir1/-v

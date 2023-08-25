@@ -57,12 +57,12 @@ hg status with template
 hg status . in repo root:
 
   $ hg status .
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35ma/1/in_a_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35ma/in_a\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35mb/1/in_b_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35mb/2/in_b_2\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35mb/in_b\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_root\x1b[0m (esc)
+  [0m[1m[4m[35m? a/1/in_a_1[0m
+  [0m[1m[4m[35m? a/in_a[0m
+  [0m[1m[4m[35m? b/1/in_b_1[0m
+  [0m[1m[4m[35m? b/2/in_b_2[0m
+  [0m[1m[4m[35m? b/in_b[0m
+  [0m[1m[4m[35m? in_root[0m
 
   $ hg status --cwd a
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? 1/in_a_1\x1b[0m (esc)
@@ -72,15 +72,15 @@ hg status . in repo root:
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../b/in_b\x1b[0m (esc)
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../in_root\x1b[0m (esc)
   $ hg status --cwd a .
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m1/in_a_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_a\x1b[0m (esc)
+  [0m[1m[4m[35m? 1/in_a_1[0m
+  [0m[1m[4m[35m? in_a[0m
   $ hg status --cwd a ..
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m1/in_a_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_a\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../b/1/in_b_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../b/2/in_b_2\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../b/in_b\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_root\x1b[0m (esc)
+  [0m[1m[4m[35m? 1/in_a_1[0m
+  [0m[1m[4m[35m? in_a[0m
+  [0m[1m[4m[35m? ../b/1/in_b_1[0m
+  [0m[1m[4m[35m? ../b/2/in_b_2[0m
+  [0m[1m[4m[35m? ../b/in_b[0m
+  [0m[1m[4m[35m? ../in_root[0m
 
   $ hg status --cwd b
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../a/1/in_a_1\x1b[0m (esc)
@@ -90,16 +90,16 @@ hg status . in repo root:
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? in_b\x1b[0m (esc)
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../in_root\x1b[0m (esc)
   $ hg status --cwd b .
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m1/in_b_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m2/in_b_2\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b\x1b[0m (esc)
+  [0m[1m[4m[35m? 1/in_b_1[0m
+  [0m[1m[4m[35m? 2/in_b_2[0m
+  [0m[1m[4m[35m? in_b[0m
   $ hg status --cwd b ..
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../a/1/in_a_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../a/in_a\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m1/in_b_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m2/in_b_2\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_root\x1b[0m (esc)
+  [0m[1m[4m[35m? ../a/1/in_a_1[0m
+  [0m[1m[4m[35m? ../a/in_a[0m
+  [0m[1m[4m[35m? 1/in_b_1[0m
+  [0m[1m[4m[35m? 2/in_b_2[0m
+  [0m[1m[4m[35m? in_b[0m
+  [0m[1m[4m[35m? ../in_root[0m
 
   $ hg status --cwd a/1
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? in_a_1\x1b[0m (esc)
@@ -109,10 +109,10 @@ hg status . in repo root:
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../../b/in_b\x1b[0m (esc)
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../../in_root\x1b[0m (esc)
   $ hg status --cwd a/1 .
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_a_1\x1b[0m (esc)
+  [0m[1m[4m[35m? in_a_1[0m
   $ hg status --cwd a/1 ..
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_a_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_a\x1b[0m (esc)
+  [0m[1m[4m[35m? in_a_1[0m
+  [0m[1m[4m[35m? ../in_a[0m
 
   $ hg status --cwd b/1
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../../a/1/in_a_1\x1b[0m (esc)
@@ -122,11 +122,11 @@ hg status . in repo root:
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../in_b\x1b[0m (esc)
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../../in_root\x1b[0m (esc)
   $ hg status --cwd b/1 .
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b_1\x1b[0m (esc)
+  [0m[1m[4m[35m? in_b_1[0m
   $ hg status --cwd b/1 ..
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../2/in_b_2\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_b\x1b[0m (esc)
+  [0m[1m[4m[35m? in_b_1[0m
+  [0m[1m[4m[35m? ../2/in_b_2[0m
+  [0m[1m[4m[35m? ../in_b[0m
 
   $ hg status --cwd b/2
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../../a/1/in_a_1\x1b[0m (esc)
@@ -136,11 +136,11 @@ hg status . in repo root:
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../in_b\x1b[0m (esc)
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../../in_root\x1b[0m (esc)
   $ hg status --cwd b/2 .
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b_2\x1b[0m (esc)
+  [0m[1m[4m[35m? in_b_2[0m
   $ hg status --cwd b/2 ..
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../1/in_b_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b_2\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_b\x1b[0m (esc)
+  [0m[1m[4m[35m? ../1/in_b_1[0m
+  [0m[1m[4m[35m? in_b_2[0m
+  [0m[1m[4m[35m? ../in_b[0m
 
 Make sure --color=never works
   $ hg status --color=never
@@ -199,11 +199,11 @@ hg status:
 hg status modified added removed deleted unknown never-existed ignored:
 
   $ hg status modified added removed deleted unknown never-existed ignored
-  never-existed: * (glob)
-  \x1b[0m\x1b[1m\x1b[32mA \x1b[0m\x1b[0m\x1b[1m\x1b[32madded\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[31mR \x1b[0m\x1b[0m\x1b[1m\x1b[31mremoved\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[36m! \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[36mdeleted\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35munknown\x1b[0m (esc)
+  never-existed: $ENOENT$
+  [0m[1m[32mA added[0m
+  [0m[1m[31mR removed[0m
+  [0m[1m[4m[36m! deleted[0m
+  [0m[1m[4m[35m? unknown[0m
 
   $ hg copy modified copied
 
@@ -242,7 +242,7 @@ hg status ignoreddir/file:
 hg status -i ignoreddir/file:
 
   $ hg status -i ignoreddir/file
-  \x1b[0m\x1b[1m\x1b[30mI \x1b[0m\x1b[0m\x1b[1m\x1b[30mignoreddir/file\x1b[0m (esc)
+  [0m[1m[30mI ignoreddir/file[0m
   $ cd ..
 
 check 'status -q' and some combinations

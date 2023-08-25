@@ -11,6 +11,7 @@ test file addition with bad case
   $ newclientrepo
   $ echo a > a
   $ hg add A
+  adding a
   $ hg st
   A a
   $ hg ci -m adda
@@ -74,12 +75,14 @@ test changing case of path components
   A D/c (fsmonitor !)
   $ hg ci -m addc "glob:**/c"
   $ hg mv d/b d/e
+  moving D/b to D/e
   $ hg st
   A D/e
   R D/b
   $ hg revert -aq
   $ rm d/e
   $ hg mv d/b D/B
+  moving D/b to D/B
   $ hg st
   A D/B
   R D/b
