@@ -190,6 +190,12 @@ class Merge3Text:
                             for line in text.splitlines(True):
                                 yield line
                             continue
+
+                    if (merged_lines := self.resolve_conflict_region(t)) is not None:
+                        for line in merged_lines:
+                            yield line
+                        continue
+
                     self.conflictscount += 1
                     if start_marker is not None:
                         yield start_marker + newline
@@ -207,6 +213,13 @@ class Merge3Text:
                         yield end_marker + newline
             else:
                 raise ValueError(what)
+
+    def resolve_conflict_region(self, conflict_region):
+        """Try automerge algorithms to resolve the conflict region.
+
+        Return resolved lines, or None if auto resolution failed.
+        """
+        return None
 
     def merge_groups(self):
         """Yield sequence of line groups.  Each one is a tuple:

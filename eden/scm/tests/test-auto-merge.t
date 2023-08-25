@@ -7,7 +7,7 @@ prepare a repo
 
   $ newrepo
 
-test merge adjacent changes (tofix)
+test merge adjacent changes
 
   $ cat > base <<EOF
   > a
@@ -33,16 +33,7 @@ test merge adjacent changes (tofix)
 
   $ hg debugsmerge dest src base
   a
-  <<<<<<< dest
-   b
-  -c
-  -d
-  +c'
-  +d'
-  =======
-  -b
-  +b'
-   c
-   d
-  >>>>>>> source
+  b'
+  c'
+  d'
   e

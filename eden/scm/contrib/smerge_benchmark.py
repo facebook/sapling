@@ -10,9 +10,21 @@ from edenscm import commands, error, mdiff, registrar, scmutil
 from edenscm.i18n import _
 from edenscm.simplemerge import Merge3Text, wordmergemode
 
-
 cmdtable = {}
 command = registrar.command(cmdtable)
+
+A, B, BASE = range(3)
+
+
+class Conflict:
+    def __init__(self, conflict_region):
+        _, z1, z2, a1, a2, b1, b2 = conflict_region
+        self.start = [a1, b1, z1]
+        self.end = [a2, b2, z2]
+        self.merged_lines = []
+
+    def __str__(self):
+        return f"{list(zip(self.start, self.end))}"
 
 
 class SmartMerge3Text(Merge3Text):
@@ -20,9 +32,70 @@ class SmartMerge3Text(Merge3Text):
     SmergeMerge3Text uses vairable automerge algorithms to resolve conflicts.
     """
 
-    def __init__(self, basetext, atext, btext, wordmerge=wordmergemode.ondemand):
-        # a dummy implementation by enabling wordmerge in `Merge3Text`
+    def __init__(self, basetext, atext, btext, wordmerge=wordmergemode.disabled):
         Merge3Text.__init__(self, basetext, atext, btext, wordmerge=wordmerge)
+
+    def resolve_conflict_region(self, conflict_region):
+        """Try automerge algorithms to resolve the conflict region.
+
+        Return resolved lines, or None if auto resolution failed.
+        """
+        c = Conflict(conflict_region)
+
+        if self.merge_adjacent_changes(c):
+            return c.merged_lines
+
+        return None
+
+    def merge_adjacent_changes(self, c: Conflict) -> bool:
+        # require something to be changed
+        if c.start[BASE] == c.end[BASE]:
+            return False
+
+        base_lines = self.base[c.start[BASE] : c.end[BASE]]
+        a_lines = self.a[c.start[A] : c.end[A]]
+        b_lines = self.b[c.start[B] : c.end[B]]
+
+        ablocks = unmatching_blocks(base_lines, a_lines)
+        bblocks = unmatching_blocks(base_lines, b_lines)
+
+        k = c.start[BASE]
+        indexes = [0, 0]
+        while indexes[A] < len(ablocks) and indexes[B] < len(bblocks):
+            ablock, bblock = ablocks[indexes[A]], bblocks[indexes[B]]
+            if is_overlap(ablock[0], ablock[1], bblock[0], bblock[1]):
+                c.merged_lines = []
+                return False
+
+            i, block, lines = (
+                (A, ablock, a_lines) if ablock[0] < bblock[0] else (B, bblock, b_lines)
+            )
+            # add base lines before the block
+            while k < block[0]:
+                c.merged_lines.append(self.base[k])
+                k += 1
+            # skip base lines being deleted
+            k += block[1] - block[0]
+            # add new lines from the block
+            c.merged_lines += lines[block[2] : block[3]]
+
+            indexes[i] += 1
+
+        if indexes[A] < len(ablocks):
+            block, lines = ablocks[indexes[A]], a_lines
+        else:
+            block, lines = bblocks[indexes[B]], b_lines
+
+        while k < block[0]:
+            c.merged_lines.append(self.base[k])
+            k += 1
+        k += block[1] - block[0]
+        c.merged_lines += lines[block[2] : block[3]]
+
+        # add base lines at the end of block
+        c.merged_lines += self.base[k : c.end[BASE]]
+
+        return True
 
 
 @dataclass
@@ -48,7 +121,7 @@ def debugsmerge(ui, repo, *args, **opts):
 
     desttext, srctext, basetext = [readfile(p) for p in args]
     m3 = SmartMerge3Text(basetext, desttext, srctext)
-    lines, _ = basediff(m3, b"dest", b"source")
+    lines = merge_lines(m3)
     mergedtext = b"".join(lines)
     ui.fout.write(mergedtext)
 
@@ -94,20 +167,22 @@ def sresolve(ui, repo, *args, **opts):
     else:
         m3 = Merge3Text(basetext, desttext, srctext)
 
+    mergedtext = b"".join(merge_lines(m3))
+
+    if output := opts.get("output"):
+        with open(output, "wb") as f:
+            f.write(mergedtext)
+    else:
+        ui.fout.write(mergedtext)
+
+
+def merge_lines(m3, name_a=b"dest", name_b=b"source"):
     extrakwargs = {}
     extrakwargs["base_marker"] = b"|||||||"
     extrakwargs["name_base"] = b"base"
     extrakwargs["minimize"] = False
 
-    mergedtext = b"".join(
-        m3.merge_lines(name_a=b"dest", name_b=b"src", **extrakwargs)
-    ).decode("utf8")
-
-    if output := opts.get("output"):
-        with open(output, "wb") as f:
-            f.write(mergedtext.encode("utf8"))
-    else:
-        ui.write(mergedtext)
+    return m3.merge_lines(name_a=b"dest", name_b=b"src", **extrakwargs)
 
 
 @command("smerge_bench", commands.dryrunopts)
@@ -277,6 +352,17 @@ def basediff(m3, name_a, name_b):
 def readfile(path):
     with open(path, "rb") as f:
         return f.read()
+
+
+def unmatching_blocks(lines1, lines2):
+    text1 = b"".join(lines1)
+    text2 = b"".join(lines2)
+    blocks = mdiff.allblocks(text1, text2, lines1=lines1, lines2=lines2)
+    return [b[0] for b in blocks if b[1] == "!"]
+
+
+def is_overlap(s1, e1, s2, e2):
+    return not (s1 >= e2 or s2 >= e1)
 
 
 if __name__ == "__main__":
