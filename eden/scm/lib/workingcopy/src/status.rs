@@ -132,11 +132,8 @@ pub fn compute_status(
                     // renamed over another existing file.
                     (false, false, false, true) => modified.push(path),
                     (false, false, false, false) => unknown.push(path),
-                    _ => {
-                        // The remaining case is (T, F, _, _).
-                        // If the file is deleted, but didn't exist in a parent commit,
-                        // it didn't change.
-                    }
+                    (true, false, true, _) => deleted.push(path),
+                    (true, false, false, _) => {}
                 }
             }
             None => {
@@ -272,12 +269,17 @@ pub fn compute_status(
     )?;
 
     Ok(StatusBuilder::new()
+        // Ignored added files can show up as both ignored and added.
+        // Work around by inserting ignored first so added files
+        // "win". The better fix is to augment the ignore matcher to
+        // not include added files, which almost works except for
+        // EdenFS, which doesn't report added ignored files as added.
+        .ignored(ignored)
         .modified(modified)
         .added(added)
         .removed(removed)
         .deleted(deleted)
         .unknown(unknown)
-        .ignored(ignored)
         .invalid_path(invalid_path)
         .invalid_type(invalid_type))
 }

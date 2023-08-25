@@ -402,7 +402,17 @@ impl WorkingCopy {
                     Ok(result) if result => match self.vfs.metadata(&path) {
                         Ok(ref attr) if attr.is_dir() => None,
                         Ok(_) => Some(Ok(PendingChange::Changed(path))),
-                        Err(_) => None,
+                        Err(err) => {
+                            if let Some(io_err) = err.downcast_ref::<std::io::Error>() {
+                                // If file is not on disk, report as deleted so it shows up as "!".
+                                if io_err.kind() == std::io::ErrorKind::NotFound {
+                                    return Some(Ok(PendingChange::Deleted(path)));
+                                }
+                            }
+
+                            // Propagate error otherwise this added file might disappear from "status".
+                            Some(Err(err))
+                        }
                     },
                     Ok(_) => None,
                     Err(e) => Some(Err(e)),

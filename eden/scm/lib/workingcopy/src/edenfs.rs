@@ -55,6 +55,9 @@ impl PendingChanges for EdenFileSystem {
                         Ok(repo_path) => repo_path,
                         Err(err) => return Err(anyhow!(err)),
                     };
+
+                    tracing::trace!(%repo_path, ?status, "eden status");
+
                     match status {
                         ScmFileStatus::REMOVED => Ok(PendingChange::Deleted(repo_path)),
                         ScmFileStatus::IGNORED => Ok(PendingChange::Ignored(repo_path)),
