@@ -308,6 +308,9 @@ def filterhgerr(err):
             and not e.startswith(b"warning: Not importing")
             and not e.startswith(b"obsolete feature not enabled")
             and not e.startswith(b"devel-warn:")
+            # Ignore hints from building hg with an old hg
+            and not e.startswith(b"hint[old-version]")
+            and not e.startswith(b"hint[hint-ack]")
         )
     ]
     return b"\n".join(b"  " + e for e in err)
