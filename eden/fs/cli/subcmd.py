@@ -130,7 +130,7 @@ def subcmd(
     return wrapper
 
 
-class Decorator(object):
+class Decorator:
     """
     decorator() creates a new object that can act as a decorator function to
     help define Subcmd instances.

@@ -62,7 +62,7 @@ class NotAnEdenMountError(Exception):
         return f"{self.path} does not appear to be inside an EdenFS checkout"
 
 
-class HealthStatus(object):
+class HealthStatus:
     def __init__(
         self,
         status: fb303_status,
