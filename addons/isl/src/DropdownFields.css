@@ -31,3 +31,7 @@
   flex-direction: column;
   gap: var(--halfpad);
 }
+
+.dropdown-field strong {
+  font-size: 90%;
+}

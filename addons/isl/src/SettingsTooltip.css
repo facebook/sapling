@@ -7,4 +7,5 @@
 
 .setting-description {
   padding-bottom: var(--halfpad);
+  font-size: 13px;
 }
