@@ -114,15 +114,15 @@ https://en.wikipedia.org/wiki/Interleaved_deltas for its introduction.
 
        Take insertions as example, deletions are similar:
 
-       ^AI x         ^AI x
-       a             a
-       ^AI x + 1  -> ^AI x + 1
-       b             b
-       ^AE x         ^AE x + 1
-       c             ^AE x
-       ^AE x + 1     ^AI x + 1
-                     c
-                     ^AE x + 1
+       ^AI x          ^AI x
+       a              a
+       ^AI x + 1  ->  ^AI x + 1
+       b              b
+       ^AE x          ^AE x + 1
+       c              ^AE x
+       ^AE x + 1      ^AI x + 1
+                      c
+                      ^AE x + 1
 
     2. Nested insertions, where the inner one has a smaller revision number.
        Or nested deletions, where the inner one has a larger revision number.
@@ -130,15 +130,15 @@ https://en.wikipedia.org/wiki/Interleaved_deltas for its introduction.
 
        Take insertions as example, deletions are similar:
 
-       ^AI x + 1     ^AI x + 1
-       a             a
-       ^AI x      -> ^AE x + 1
-       b             ^AI x
-       ^AE x         b
-       c             ^AE x
-       ^AE x + 1     ^AI x + 1
-                     c
-                     ^AE x + 1
+       ^AI x + 1      ^AI x + 1
+       a              a
+       ^AI x      ->  ^AE x + 1
+       b              ^AI x
+       ^AE x          b
+       c              ^AE x
+       ^AE x + 1      ^AI x + 1
+                      c
+                      ^AE x + 1
 
     3. Insertion inside deletion with a smaller revision number.
 
