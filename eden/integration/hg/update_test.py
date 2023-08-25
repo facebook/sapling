@@ -251,6 +251,74 @@ class UpdateTest(EdenHgTestCase):
             msg="Should be expected commit hash because nothing has changed.",
         )
 
+    def test_merge_update_untracked_file_with_same_contents_in_destination(
+        self,
+    ) -> None:
+        base_commit = self.repo.get_head_hash()
+
+        file_contents = "new file\n"
+        self.write_file("bar/some_new_file.txt", file_contents)
+        self.hg("add", "bar/some_new_file.txt")
+        new_commit = self.repo.commit("add some_new_file.txt")
+        self.assert_status_empty()
+
+        self.repo.update(base_commit)
+        self.assert_status_empty()
+        self.write_file("bar/some_new_file.txt", file_contents)
+
+        # the update succeeds because some_new_file has the same contents
+        self.repo.update(new_commit)
+        self.assert_status_empty()
+        self.assertEqual(
+            new_commit,
+            self.repo.get_head_hash(),
+            msg="Should be expected commit hash because nothing has changed.",
+        )
+
+        self.repo.update(base_commit)
+        new_file_contents = "some OTHER contents\n"
+        self.write_file("bar/some_new_file.txt", new_file_contents)
+        self.assert_status({"bar/some_new_file.txt": "?"})
+
+        # now the update aborts because some_new_file has the different contents
+        with self.assertRaises(hgrepo.HgError) as context:
+            self.repo.update(new_commit)
+        self.assertIn(b"abort: conflicting changes", context.exception.stderr)
+        self.assertEqual(
+            base_commit,
+            self.repo.get_head_hash(),
+            msg="We should still be on the base commit because "
+            "the merge was aborted.",
+        )
+        self.assert_dirstate({})
+        self.assert_status({"bar/some_new_file.txt": "?"})
+        self.assertEqual(new_file_contents, self.read_file("bar/some_new_file.txt"))
+
+    def test_merge_update_ignored_file_tracked_in_destination(
+        self,
+    ) -> None:
+        self.write_file(".gitignore", "ignoredfiles/\n")
+
+        file_contents = "hello\n"
+        self.write_file("ignoredfiles/bad.txt", file_contents)
+        self.hg("add", "ignoredfiles/bad.txt")
+        added_commit = self.repo.commit("add ignored bad file")
+        self.assert_status_empty()
+
+        self.rm("ignoredfiles/bad.txt")
+        self.hg("forget", "ignoredfiles/bad.txt")
+        self.repo.commit("remove ignored bad file")
+        self.assert_status_empty()
+
+        self.write_file("ignoredfiles/bad.txt", "something else\n")
+        self.assert_status({"ignoredfiles/bad.txt": "I"})
+
+        # Go back before the file was removed, it should succeed
+        self.repo.update(added_commit)
+        # The file is tracked, and its content was replaced with the version in this commit.
+        self.assert_status_empty()
+        self.assertEqual(file_contents, self.read_file("ignoredfiles/bad.txt"))
+
     def test_merge_update_added_file_with_conflict_in_destination(self) -> None:
         self._test_merge_update_file_with_conflict_in_destination(True)
 

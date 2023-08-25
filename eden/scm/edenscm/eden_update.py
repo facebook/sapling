@@ -85,7 +85,9 @@ def update(
                         manifest=destctx.manifestnode(),
                     )
                 if conflicts:
-                    actions = _determine_actions_for_conflicts(repo, p1ctx, conflicts)
+                    actions = _determine_actions_for_conflicts(
+                        repo, p1ctx, conflicts, wctx, destctx
+                    )
                     _check_actions_and_raise_if_there_are_conflicts(actions)
 
         # Invoke the preupdate hook
@@ -174,7 +176,7 @@ def _handle_update_conflicts(repo, wctx, src, dest, labels, conflicts, force):
     # the local changes in the working directory (against A) to the new
     # location B.  Using A as the common ancestor in this operation is the
     # desired behavior.
-    actions = _determine_actions_for_conflicts(repo, src, conflicts)
+    actions = _determine_actions_for_conflicts(repo, src, conflicts, wctx, dest)
     return _applyupdates(repo, actions, wctx, dest, labels, conflicts)
 
 
@@ -194,27 +196,29 @@ def _is_abort_on_eden_conflict_error_enabled(repo) -> bool:
     return repo.ui.configbool("experimental", "abort-on-eden-conflict-error")
 
 
-def _determine_actions_for_conflicts(repo, src, conflicts):
+def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
     """Calculate the actions for _applyupdates()."""
     # Build a list of actions to pass to mergemod.applyupdates()
     actions = dict(
         (m, [])
         for m in [
-            "a",
-            "am",
-            "cd",
-            "dc",
-            "dg",
-            "dm",
-            "e",
-            "f",
-            "g",  # create or modify
-            "k",
-            "m",
+            "a",  # re-add
+            "am",  # re-add and mark as modified
+            "c",  # remote created
+            "cm",  # remote created, get or merge
+            "cd",  # merge action
+            "dc",  # merge action
+            "dg",  # directory rename, get
+            "dm",  # directory rename, move local
+            "e",  # exec
+            "f",  # forget
+            "g",  # "get": create or modify
+            "k",  # keep
+            "m",  # merge
             "p",  # path conflicts
             "pr",  # files to rename
-            "r",
-            "rg",
+            "r",  # remove
+            "rg",  # like "g"
         ]
     )
 
@@ -240,15 +244,29 @@ def _determine_actions_for_conflicts(repo, src, conflicts):
             action = (path, None, path, False, src.node())
             prompt = "prompt changed/deleted"
         elif conflict.type == ConflictType.UNTRACKED_ADDED:
-            # In core Mercurial, this is the case where the file does not exist
-            # in the manifest of the common ancestor for the merge.
-            # TODO(mbolin): Check for the "both renamed from " case in
-            # manifestmerge(), which is the other possibility when the file
-            # does not exist in the manifest of the common ancestor for the
-            # merge.
-            action_type = "m"
-            action = (path, path, None, False, src.node())
-            prompt = "both created"
+            if repo.dirstate[path] == "?" and (
+                repo.dirstate._ignore(path)
+                or not mergemod._checkunknownfile(repo, wctx, destctx, path)
+            ):
+                # Tracked files should always be merged, but an untracked file
+                # that's also been added in the destination may still be OK:
+                #  - if the files don't differ, we don't need to raise a conflict
+                #    and take either version since they're the same.
+                #  - if the file is ignored in the wctx, but tracked in the dest,
+                #    we can just take the remote version.
+                action_type = "g"
+                action = (destctx.manifest().flags(path), False)
+                prompt = "remote created"
+            else:
+                # In core Mercurial, this is the case where the file does not exist
+                # in the manifest of the common ancestor for the merge.
+                # TODO(mbolin): Check for the "both renamed from " case in
+                # manifestmerge(), which is the other possibility when the file
+                # does not exist in the manifest of the common ancestor for the
+                # merge.
+                action_type = "m"
+                action = (path, path, None, False, src.node())
+                prompt = "both created"
         elif conflict.type == ConflictType.REMOVED_MODIFIED:
             action_type = "dc"
             action = (None, path, path, False, src.node())
