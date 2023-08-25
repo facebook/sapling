@@ -1659,6 +1659,13 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                       .count();
               event.success = !t.hasException();
               event.clean = edenMount->getOverlay()->hadCleanStartup();
+
+              auto inodeCatalogType =
+                  edenMount->getCheckoutConfig()->getInodeCatalogType();
+              if (inodeCatalogType.has_value()) {
+                event.inode_catalog_type =
+                    static_cast<int64_t>(inodeCatalogType.value());
+              }
               serverState_->getStructuredLogger()->logEvent(event);
               return makeFuture(std::move(t));
             });
