@@ -403,7 +403,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         self.assertEqual([], self.repo.journal())
 
 
-class JournalEntry(object):
+class JournalEntry:
     """
     JournalEntry describes an expected journal entry.
     It is intended to pass to EdenHgTestCase.assert_journal()

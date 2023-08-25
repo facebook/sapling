@@ -32,7 +32,7 @@ EDENFS_START_TIMEOUT = 120
 EDENFS_STOP_TIMEOUT = 240
 
 
-class EdenFS(object):
+class EdenFS:
     """Manages an instance of the EdenFS fuse server."""
 
     _eden_dir: Path

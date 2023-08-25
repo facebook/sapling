@@ -21,7 +21,7 @@ _table = {}  # {name: (repo, name) -> Optional[pullattempt]}
 builtinautopullpredicate = registrar.autopullpredicate(_table)
 
 
-class pullattempt(object):
+class pullattempt:
     """Describe an auto-pull attempt"""
 
     def __init__(

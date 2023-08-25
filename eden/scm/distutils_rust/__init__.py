@@ -49,7 +49,7 @@ def chdir(path):
         os.chdir(cwd)
 
 
-class RustExtension(object):
+class RustExtension:
     """Data for a Rust extension.
 
     'name' is the name of the target, and must match the 'name' in the Cargo
@@ -98,7 +98,7 @@ class RustExtension(object):
         return name
 
 
-class RustBinary(object):
+class RustBinary:
     """Data for a Rust binary.
 
     'name' is the name of the target, and must match the 'name' in the Cargo

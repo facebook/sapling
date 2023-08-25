@@ -25,7 +25,7 @@ def shortlist(listlike, count=None, limit=4):
     return {"short_list": shortlist, "len": count}
 
 
-class logblocked(object):
+class logblocked:
     def __new__(cls, op, seconds=None, name=None, ignorefast=False):
         """Log a "Blocked" event.
 

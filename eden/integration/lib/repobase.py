@@ -10,7 +10,7 @@ import os
 from typing import AnyStr, List, Optional
 
 
-class Repository(object):
+class Repository:
     def __init__(self, path: str) -> None:
         self.path = path
 

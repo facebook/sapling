@@ -20,7 +20,7 @@ specified for each instance method.
 """
 
 
-class EdenServerInspector(object):
+class EdenServerInspector:
     def __init__(self, eden: edenclient.EdenFS, mount_point: str) -> None:
         self._eden = eden
         self._mount_point = mount_point

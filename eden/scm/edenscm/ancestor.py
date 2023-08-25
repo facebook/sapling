@@ -155,7 +155,7 @@ def ancestors(pfunc, *orignodes):
     return deepest(gca)
 
 
-class incrementalmissingancestors(object):
+class incrementalmissingancestors:
     """persistent state used to calculate missing ancestors incrementally
 
     Although similar in spirit to lazyancestors below, this is a separate class
@@ -277,7 +277,7 @@ class incrementalmissingancestors(object):
         return missing
 
 
-class lazyancestors(object):
+class lazyancestors:
     def __init__(self, pfunc, revs, stoprev=0, inclusive=False):
         """Create a new object generating ancestors for the given revs. Does
         not generate revs lower than stoprev.

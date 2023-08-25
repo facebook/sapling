@@ -526,7 +526,7 @@ def _preparepats():
             filters[i] = re.compile(flt[0]), flt[1]
 
 
-class norepeatlogger(object):
+class norepeatlogger:
     def __init__(self):
         self._lastseen = None
 

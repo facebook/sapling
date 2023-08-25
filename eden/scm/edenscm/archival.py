@@ -109,7 +109,7 @@ def buildmetadata(ctx):
     return pycompat.encodeutf8(out.getvalue())
 
 
-class tarit(object):
+class tarit:
     """write archive to tar file or stream.  can write uncompressed,
     or compress with gzip or bzip2."""
 
@@ -156,7 +156,7 @@ class tarit(object):
             self.fileobj.close()
 
 
-class tellable(object):
+class tellable:
     """provide tell method for zipfile.ZipFile when writing to http
     response file object."""
 
@@ -175,7 +175,7 @@ class tellable(object):
         return self.offset
 
 
-class zipit(object):
+class zipit:
     """write archive to zip file or stream.  can write uncompressed,
     or compressed with deflate."""
 
@@ -225,7 +225,7 @@ class zipit(object):
         self.z.close()
 
 
-class fileit(object):
+class fileit:
     """write archive as files in directory."""
 
     def __init__(self, name, mtime):

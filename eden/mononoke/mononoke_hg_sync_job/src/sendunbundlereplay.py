@@ -50,7 +50,7 @@ def getremote(ui, path):
 
 # Use a separate ReplayData class so that we can add/remove and don't depend
 # on mercurial client release schedule
-class ReplayData(object):
+class ReplayData:
     def __init__(self, commitdates, rebasedhead, ontobook, hgbonsaimapping):
         self.commitdates = commitdates
         self.rebasedhead = rebasedhead

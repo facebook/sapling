@@ -13,7 +13,7 @@ from . import error, util
 from .i18n import _
 
 
-class localblobstore(object):
+class localblobstore:
     """A local blobstore.
 
     This blobstore is used both as a cache and as a staging area for large blobs
@@ -62,7 +62,7 @@ class localblobstore(object):
         return sorted(oids)
 
 
-class memlocal(object):
+class memlocal:
     """In-memory local blobstore for ad-hoc uploading/downloading without
     writing to the filesystem.
 
@@ -98,7 +98,7 @@ class memlocal(object):
         return list(sorted(self._files.keys()))
 
 
-class unionstore(object):
+class unionstore:
     """A store which offers uniform access to in-memory store and local on-disk store."""
 
     def __init__(self, diskstore, memstore):

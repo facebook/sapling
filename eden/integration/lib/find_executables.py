@@ -43,7 +43,7 @@ class cached_property(Generic[T], object):
         self.name = name
 
 
-class FindExeClass(object):
+class FindExeClass:
     _BUCK_OUT: Optional[str] = None
     _EDEN_SRC_ROOT: Optional[str] = None
     _TEST_ROOT: str = os.getcwd()
