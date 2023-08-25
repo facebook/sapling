@@ -52,7 +52,7 @@ if pycompat.isdarwin:
     # pyre-fixme[6]: For 2nd param expected `None` but got `int`.
     attrkinds[lib.VSOCK] = statmod.S_IFSOCK
 
-    class stat_res(object):
+    class stat_res:
         def __init__(self, st_mode, st_mtime, st_size):
             self.st_mode = st_mode
             self.st_mtime = st_mtime

@@ -91,7 +91,7 @@ def benchmarkrevsets(ui, repo, *args, **opts):
     return 0
 
 
-class dynamiccontent(object):
+class dynamiccontent:
     """Render dynamic content to ANSI terminal"""
 
     def __init__(self):

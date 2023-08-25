@@ -339,7 +339,7 @@ Commands:
     return "".join(["# %s\n" % l if l else "#\n" for l in lines])
 
 
-class histeditstate(object):
+class histeditstate:
     def __init__(
         self,
         repo,
@@ -479,7 +479,7 @@ class histeditstate(object):
         return self.repo.localvfs.exists("histedit-state")
 
 
-class histeditaction(object):
+class histeditaction:
     def __init__(self, state, node):
         self.state = state
         self.repo = state.repo

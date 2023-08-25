@@ -31,7 +31,7 @@ from .i18n import _
 from .node import hex, nullid
 
 
-class _hybrid(object):
+class _hybrid:
     """Wrapper for list or dict to support legacy template
 
     This class allows us to handle both:
@@ -92,7 +92,7 @@ class _hybrid(object):
         return getattr(self._values, name)
 
 
-class _mappable(object):
+class _mappable:
     """Wrapper for non-list/dict object to support map operation
 
     This class allows us to handle both:

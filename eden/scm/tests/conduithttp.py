@@ -161,7 +161,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.wfile.write(pycompat.encodeutf8(known_translations))
 
 
-class simplehttpservice(object):
+class simplehttpservice:
     def __init__(self, host, port, port_file):
         self.address = (host, port)
         self.port_file = port_file

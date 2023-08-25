@@ -89,7 +89,7 @@ class HTTPRangeHandler(urlreq.basehandler):
         raise RangeError("Requested Range Not Satisfiable")
 
 
-class RangeableFileObject(object):
+class RangeableFileObject:
     """File object wrapper to enable raw range handling.
     This was implemented primarily for handling range
     specifications for file:// urls. This object effectively makes

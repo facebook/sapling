@@ -21,7 +21,7 @@ _tuple_property_pat = "    {attr_name} = property(itemgetter({index}))"
 _empty_metadata_singleton = metadata_proxy({})
 
 
-class _Nothing(object):
+class _Nothing:
     """
     Sentinel class to indicate the lack of a value when ``None`` is ambiguous.
 
@@ -822,7 +822,7 @@ def __init__(self, {args}):
     )
 
 
-class Attribute(object):
+class Attribute:
     """
     *Read-only* representation of an attribute.
 
@@ -926,7 +926,7 @@ Attribute = _add_hash(
 )
 
 
-class _CountingAttr(object):
+class _CountingAttr:
     """
     Intermediate representation of attributes that uses a counter to preserve
     the order in which the attributes have been defined.
@@ -1022,7 +1022,7 @@ _CountingAttr = _add_cmp(_add_repr(_CountingAttr))
 
 
 @attributes(slots=True, init=False)
-class Factory(object):
+class Factory:
     """
     Stores a factory callable.
 
@@ -1084,7 +1084,7 @@ def make_class(name, attrs, bases=(object,), **attributes_arguments):
 
 
 @attributes(slots=True, hash=True)
-class _AndValidator(object):
+class _AndValidator:
     """
     Compose many validators to a single one.
     """

@@ -19,7 +19,7 @@ from . import error, util
 # abstract batching support
 
 
-class future(object):
+class future:
     """placeholder for a value to be set later"""
 
     def set(self, value):
@@ -28,7 +28,7 @@ class future(object):
         self.value = value
 
 
-class batcher(object):
+class batcher:
     """base class for batches of commands submittable in a single request
 
     All methods invoked on instances of this class are simply queued and

@@ -48,7 +48,7 @@ def offset_type(offset, type: int) -> int:
     return int(int(offset) << 16 | type)
 
 
-class BaseIndexObject(object):
+class BaseIndexObject:
     def __len__(self):
         return self._lgt + len(self._extra) + 1
 

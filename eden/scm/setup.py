@@ -278,7 +278,7 @@ def runcmd(cmd, env):
     return p.returncode, out, err
 
 
-class hgcommand(object):
+class hgcommand:
     def __init__(self, cmd, env):
         self.cmd = cmd
         self.env = env
@@ -553,7 +553,7 @@ if needbuildinfo:
     buildinfocpath = writebuildinfoc()
 
 
-class asset(object):
+class asset:
     def __init__(self, name=None, url=None, destdir=None, version=0):
         """Declare an asset to download
 
@@ -1682,7 +1682,7 @@ except ImportError:
     # the cygwinccompiler package is not available on some Python
     # distributions like the ones from the optware project for Synology
     # DiskStation boxes
-    class HackedMingw32CCompiler(object):
+    class HackedMingw32CCompiler:
         pass
 
 

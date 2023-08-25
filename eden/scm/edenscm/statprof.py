@@ -157,7 +157,7 @@ def clock():
 ## Collection data structures
 
 
-class ProfileState(object):
+class ProfileState:
     def __init__(self, frequency=None):
         self.reset(frequency)
 
@@ -191,7 +191,7 @@ class ProfileState(object):
 state = ProfileState()
 
 
-class CodeSite(object):
+class CodeSite:
     cache = {}
 
     __slots__ = ("path", "lineno", "function", "source")
@@ -248,7 +248,7 @@ class CodeSite(object):
         return os.path.basename(self.path)
 
 
-class Sample(object):
+class Sample:
     __slots__ = ("stack", "time")
 
     def __init__(self, stack, time):
@@ -409,7 +409,7 @@ def profile():
 ## Reporting API
 
 
-class SiteStats(object):
+class SiteStats:
     def __init__(self, site):
         self.site = site
         self.selfcount = 0
@@ -667,7 +667,7 @@ def display_about_method(data, fp, function=None, **kwargs):
 
 
 def display_hotpath(data, fp, limit=0.05, **kwargs):
-    class HotNode(object):
+    class HotNode:
         def __init__(self, site):
             self.site = site
             self.count = 0

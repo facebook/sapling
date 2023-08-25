@@ -15,7 +15,7 @@ from edenscm import error
 from edenscm.i18n import _
 
 
-class bundlestore(object):
+class bundlestore:
     def __init__(self, repo):
         self.store = filebundlestore(repo)
         from . import fileindex
@@ -23,7 +23,7 @@ class bundlestore(object):
         self.index = fileindex.fileindex(repo)
 
 
-class filebundlestore(object):
+class filebundlestore:
     """bundle store in filesystem
 
     meant for storing bundles somewhere on disk and on network filesystems

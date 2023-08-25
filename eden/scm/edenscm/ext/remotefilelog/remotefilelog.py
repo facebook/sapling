@@ -26,7 +26,7 @@ from .repack import fulllocaldatarepack
 _maxentrysize = 0x7FFFFFFF
 
 
-class remotefilelognodemap(object):
+class remotefilelognodemap:
     def __init__(self, filename, store):
         self._filename = filename
         self._store = store
@@ -41,7 +41,7 @@ class remotefilelognodemap(object):
         return node
 
 
-class remotefilelog(object):
+class remotefilelog:
     def __init__(self, opener, path, repo):
         self.opener = opener
         self.filename = path

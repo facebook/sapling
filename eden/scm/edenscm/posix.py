@@ -565,7 +565,7 @@ def hidewindow():
     """
 
 
-class cachestat(object):
+class cachestat:
     def __init__(self, path):
         from . import util
 

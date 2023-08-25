@@ -16,13 +16,13 @@ import bindings
 enabled = False
 
 
-class ModuleLoader(object):
+class ModuleLoader:
     # load_module: (fullname) -> module
     # See find_module below for why it's implemented in this way.
     load_module = sys.modules.__getitem__
 
 
-class TraceImporter(object):
+class TraceImporter:
     """Trace time spent on importing modules.
 
     In additional, wrap functions so they get traced.

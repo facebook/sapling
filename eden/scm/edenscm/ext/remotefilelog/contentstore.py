@@ -11,7 +11,7 @@ from edenscm.node import hex, nullid
 from . import constants, shallowutil
 
 
-class ChainIndicies(object):
+class ChainIndicies:
     """A static class for easy reference to the delta chain indicies."""
 
     # The filename of this revision delta
@@ -29,7 +29,7 @@ class ChainIndicies(object):
     DATA = 4
 
 
-class unioncontentstore(object):
+class unioncontentstore:
     def __init__(self, *args, **kwargs):
         self.stores = list(args)
 
@@ -165,7 +165,7 @@ class unioncontentstore(object):
                 store.flush()
 
 
-class manifestrevlogstore(object):
+class manifestrevlogstore:
     def __init__(self, repo):
         # It's important that we store the repo, and not just the changelog,
         # since the changelog may be mutated in memory. So we need to refetch

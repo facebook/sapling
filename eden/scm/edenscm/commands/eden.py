@@ -123,7 +123,7 @@ FLAG_ERROR = 0x01
 FLAG_MORE_CHUNKS = 0x02
 
 
-class Request(object):
+class Request:
     def __init__(self, txn_id: int, command: int, flags: int, body: bytes) -> None:
         self.txn_id = txn_id
         self.command = command
@@ -183,7 +183,7 @@ class HgUI(ui.ui):
         return False
 
 
-class HgServer(object):
+class HgServer:
     def __init__(
         self,
         repo: localrepo.localrepository,

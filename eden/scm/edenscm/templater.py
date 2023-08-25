@@ -1534,7 +1534,7 @@ def unquotestring(s):
     return s[1:-1]
 
 
-class engine(object):
+class engine:
     """template expansion engine.
 
     template expansion works like this. a map file contains key=value
@@ -1669,7 +1669,7 @@ class TemplateNotFound(error.Abort):
     pass
 
 
-class templater(object):
+class templater:
     def __init__(
         self,
         filters=None,

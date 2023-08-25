@@ -500,7 +500,7 @@ def _push(orig, ui, repo, *args, **opts):
     return result
 
 
-class replacementtracker(object):
+class replacementtracker:
     """track replacements of commits during pushrebase"""
 
     def __init__(self):

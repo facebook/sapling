@@ -74,7 +74,7 @@ def makedatapackstore(ui, path, shared, deletecorruptpacks: bool = False):
         return datapackstore(ui, path, shared, deletecorruptpacks=deletecorruptpacks)
 
 
-class memdatapack(object):
+class memdatapack:
     def __init__(self):
         self.data = {}
         self.meta = {}

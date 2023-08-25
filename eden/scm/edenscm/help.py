@@ -327,7 +327,7 @@ helphomecommands = [
 helphometopics = {"revisions", "filesets", "glossary", "patterns", "templating"}
 
 
-class _helpdispatch(object):
+class _helpdispatch:
     def __init__(
         self, ui, commands, unknowncmd=False, full=False, subtopic=None, **opts
     ):

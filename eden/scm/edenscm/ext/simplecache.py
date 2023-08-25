@@ -159,7 +159,7 @@ def mcset(key, value: bytes, ui) -> bool:
     return b"".join(data) == b"STORED"
 
 
-class jsonserializer(object):
+class jsonserializer:
     """
     Serialize and deserialize simple Python datastructures.
 
@@ -269,7 +269,7 @@ def buildstatusui(ui):
     return buildstatus
 
 
-class stringserializer(object):
+class stringserializer:
     """Simple serializer that just checks if the input is a string and returns
     it.
     """

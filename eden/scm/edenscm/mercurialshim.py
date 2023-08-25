@@ -7,7 +7,7 @@ import importlib
 import sys
 
 
-class MercurialImporter(object):
+class MercurialImporter:
     """Intercept legacy imports of edenscm.mercurial(.foo)? or mercurial(.foo)? and resolve with import of edenscm$1.
 
     This provides compatibility to legacy hooks and extensions that still use old imports.

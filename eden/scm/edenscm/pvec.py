@@ -189,7 +189,7 @@ def ctxpvec(ctx) -> "pvec":
     return pvec(base64.b85encode(bs))
 
 
-class pvec(object):
+class pvec:
     def __init__(self, hashorctx):
         if isinstance(hashorctx, str):
             self._bs = hashorctx

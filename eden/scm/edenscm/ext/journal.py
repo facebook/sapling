@@ -258,7 +258,7 @@ class journalentry(
         )
 
 
-class journalstorage(object):
+class journalstorage:
     """Storage for journal entries
 
     Entries are divided over two files; one with entries that pertain to the

@@ -45,7 +45,7 @@ command = registrar.command(cmdtable)
 testedwith = b"ships-with-hg-core"
 
 
-class ShortRepository(object):
+class ShortRepository:
     def __init__(self, url, scheme):
         self.scheme = scheme
         self.url = url

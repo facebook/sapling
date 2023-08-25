@@ -103,7 +103,7 @@ def screen_size():
     return unpack("hh", ioctl(1, termios.TIOCGWINSZ, "    "))
 
 
-class histeditrule(object):
+class histeditrule:
     def __init__(self, ctx, pos, action="pick"):
         self.ctx = ctx
         self.action = action

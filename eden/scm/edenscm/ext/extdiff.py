@@ -360,7 +360,7 @@ def extdiff(ui, repo, *pats, **opts):
     return dodiff(ui, repo, cmdline, pats, opts)
 
 
-class savedcmd(object):
+class savedcmd:
     """use external program to diff repository (or selected files)
 
     Show differences between revisions for the specified files, using

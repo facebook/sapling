@@ -26,7 +26,7 @@ from .node import hex
 _rangemask = 0x7FFFFFFF
 
 
-class physicalfilesystem(object):
+class physicalfilesystem:
     def __init__(self, root, dirstate):
         self.root = root
         self.ui = dirstate._ui

@@ -35,7 +35,7 @@ def optional(func, s):
         return func(s)
 
 
-class uiconfig(object):
+class uiconfig:
     """Config portion of the ui object"""
 
     def __init__(self, src=None, rcfg=None):

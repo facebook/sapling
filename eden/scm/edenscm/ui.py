@@ -109,7 +109,7 @@ default = %s
 }
 
 
-class httppasswordmgrdbproxy(object):
+class httppasswordmgrdbproxy:
     """Delays loading urllib2 until it's needed."""
 
     def __init__(self):
@@ -152,7 +152,7 @@ class deprecationlevel(IntEnum):
     Block = 4
 
 
-class ui(object):
+class ui:
     def __init__(self, src=None, rcfg=None):
         """Create a fresh new ui object if no src given
 
@@ -2028,7 +2028,7 @@ def pushrevpathoption(ui, path, value):
     return value
 
 
-class path(object):
+class path:
     """Represents an individual path and its configuration."""
 
     _all_dotdirs = [ident.dotdir() for ident in bindings.identity.all()]

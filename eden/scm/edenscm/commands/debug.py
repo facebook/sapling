@@ -2325,7 +2325,7 @@ def debugpreviewbindag(ui, repo, path):
         for rev in reversed(revs):
             yield (rev, "C", dummyctx(rev), [("P", p) for p in parentrevs(rev)])
 
-    class dummyctx(object):
+    class dummyctx:
         """A dummy changeset object"""
 
         def __init__(self, id):

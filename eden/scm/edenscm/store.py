@@ -413,7 +413,7 @@ def setvfsmode(vfs) -> None:
     vfs.createmode = _calcmode(vfs)
 
 
-class basicstore(object):
+class basicstore:
     """base class for local repository stores"""
 
     def __init__(self, path, vfstype):
@@ -489,7 +489,7 @@ class basicstore(object):
         return self.vfs.exists(path)
 
 
-class fncache(object):
+class fncache:
     # the filename used to be partially encoded
     # hence the encodedir/decodedir dance
     def __init__(self, vfs):
@@ -552,7 +552,7 @@ class fncache(object):
         return iter(self.entries)
 
 
-class metavfs(object):
+class metavfs:
     """Wrapper vfs that writes data to metalog"""
 
     metapaths = {}
@@ -612,7 +612,7 @@ class metavfs(object):
             raise error.ProgrammingError("mode %s is unsupported for %s" % (mode, path))
 
 
-class readablestream(object):
+class readablestream:
     """Similar to stringio, but also works in a with context"""
 
     def __init__(self, data):
@@ -631,7 +631,7 @@ class readablestream(object):
         pass
 
 
-class writablestream(object):
+class writablestream:
     """Writable stringio that writes to specified place on close"""
 
     def __init__(self, writefunc):

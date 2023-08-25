@@ -181,7 +181,7 @@ def readdeltas(
             yield (node, deltabase, delta, metadata)
 
 
-class wirepackstore(object):
+class wirepackstore:
     def __init__(self, wirepack, version=1):
         self._data = {}
         self._history = {}

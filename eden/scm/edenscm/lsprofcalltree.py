@@ -27,7 +27,7 @@ def label(code: str) -> str:
         return "%s %s:%d" % (code.co_name, code.co_filename, code.co_firstlineno)
 
 
-class KCacheGrind(object):
+class KCacheGrind:
     def __init__(self, profiler):
         self.data = profiler.getstats()
         self.out_file = None

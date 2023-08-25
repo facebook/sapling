@@ -30,7 +30,7 @@ class lockwrapper(lock.lock):
         return "%s/%s" % (pid, self._pidoffset)
 
 
-class teststate(object):
+class teststate:
     def __init__(self, testcase, dir, pidoffset=0):
         self._testcase = testcase
         self._acquirecalled = False

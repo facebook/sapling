@@ -122,7 +122,7 @@ def _wait():
     time.sleep(0.01)
 
 
-class Bunch(object):
+class Bunch:
     """
     A bunch of threads.
     """

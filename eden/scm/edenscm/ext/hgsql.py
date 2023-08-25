@@ -494,7 +494,7 @@ def _localphasemove(orig, pushop, *args, **kwargs):
         return orig(pushop, *args, **kwargs)
 
 
-class sqlcontext(object):
+class sqlcontext:
     def __init__(
         self, repo, dbwritable=False, enforcepullfromdb=False, syncfromreplica=False
     ):
@@ -1736,7 +1736,7 @@ def wraprepo(repo) -> None:
             return value.tobytes()
 
 
-class bufferedopener(object):
+class bufferedopener:
     """Opener implementation that buffers all writes in memory until
     flush or close is called.
     """

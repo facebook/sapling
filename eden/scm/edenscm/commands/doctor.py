@@ -592,7 +592,7 @@ def runglobalindexedlogdoctor(ui):
             )
 
 
-class ChangelogRepo(object):
+class ChangelogRepo:
     """Minimal repo object to construct the changelog object"""
 
     def __init__(self, ui, svfs):

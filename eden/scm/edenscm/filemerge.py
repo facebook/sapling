@@ -76,7 +76,7 @@ _otherchangedlocaldeletedmsg = _(
 )
 
 
-class absentfilectx(object):
+class absentfilectx:
     """Represents a file that's ostensibly in a context but is actually not
     present in it.
 
@@ -157,7 +157,7 @@ def _findexternaltoolwithreporoot(ui, repo, tool):
     return util.findexe(util.expandpath(exe))
 
 
-class merge_context(object):
+class merge_context:
     def __init__(self, local, other, ancestor):
         self.local = local
         self.other = other

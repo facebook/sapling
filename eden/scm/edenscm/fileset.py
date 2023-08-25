@@ -542,7 +542,7 @@ methods = {
 }
 
 
-class matchctx(object):
+class matchctx:
     def __init__(self, ctx, subset, status=None):
         self.ctx = ctx
         assert isinstance(subset, (fullsubset, listsubset))

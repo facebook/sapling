@@ -276,7 +276,7 @@ versionformat_unpack = versionformat.unpack
 _maxentrysize = 0x7FFFFFFF
 
 
-class revlogio(object):
+class revlogio:
     def __init__(self):
         self.size = indexformatng.size
 
@@ -292,7 +292,7 @@ class revlogio(object):
         return p
 
 
-class revlog(object):
+class revlog:
     """
     the underlying revision storage object
 

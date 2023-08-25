@@ -65,7 +65,7 @@ def findcommonincoming(repo, remote, heads=None, force: bool = False, ancestorso
     return (list(common), anyinc, heads or list(srvheads))
 
 
-class outgoing(object):
+class outgoing:
     """Represents the set of nodes present in a local repo but not in a
     (possibly) remote one.
 

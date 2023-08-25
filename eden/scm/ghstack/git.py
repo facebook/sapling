@@ -14,7 +14,7 @@ RE_RAW_TREE = re.compile(r"^tree (?P<tree>.+)$", re.MULTILINE)
 RE_RAW_COMMIT_MSG_LINE = re.compile(r"^    (?P<line>.*)$", re.MULTILINE)
 
 
-class CommitHeader(object):
+class CommitHeader:
     """
     Represents the information extracted from `git rev-list --header`
     """

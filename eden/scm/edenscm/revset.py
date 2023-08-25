@@ -714,7 +714,7 @@ def bsearch(repo, subset, x):
     # NOTE: Remove BisectArray and use `key=` provided by Python 3.10
     # once Python 3.10 is used.
 
-    class BisectArray(object):
+    class BisectArray:
         def __init__(self, array, keyfunc):
             self.array = array
             self.keyfunc = keyfunc

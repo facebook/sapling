@@ -37,7 +37,7 @@ class GraphQLConfigError(Exception):
     pass
 
 
-class Client(object):
+class Client:
     def __init__(self, repodir=None, repo=None, ui=None):
         if repo is not None:
             if repodir is None:

@@ -203,7 +203,7 @@ def _trackphasechange(data, rev, old, new) -> None:
     data[rev] = (old, new)
 
 
-class phasecache(object):
+class phasecache:
     def __init__(self, repo, phasedefaults, _load=True):
         self._headbased = repo and repo.ui.configbool("experimental", "narrow-heads")
         if self._headbased:
@@ -729,7 +729,7 @@ def analyzeremotephases(repo, subset, roots):
     return publicheads, draftroots
 
 
-class remotephasessummary(object):
+class remotephasessummary:
     """summarize phase information on the remote side
 
     :publishing: True is the remote is publishing

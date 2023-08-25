@@ -109,7 +109,7 @@ def getchar(fd: int) -> Union[None, bytes, str]:
 # End of code from link
 
 
-class viewframe(object):
+class viewframe:
     # framework for view
     def __init__(self, ui, repo, index):
         self.ui = ui

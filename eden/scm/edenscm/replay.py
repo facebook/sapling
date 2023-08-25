@@ -10,7 +10,7 @@ from __future__ import absolute_import
 from . import json
 
 
-class ReplayData(object):
+class ReplayData:
     """A structure to store and serialize/deserialize replay-related data
 
     Replay is a process of re-application of an `unbundle`, captured on

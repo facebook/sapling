@@ -54,7 +54,7 @@ def escape(s, quote=None):
     return s
 
 
-class passwordmgr(object):
+class passwordmgr:
     def __init__(self, ui, passwddb):
         self.ui = ui
         self.passwddb = passwddb

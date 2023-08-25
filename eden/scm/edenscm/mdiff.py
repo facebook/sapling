@@ -67,7 +67,7 @@ def splitwords(text):
     return wordsplitter.findall(text)
 
 
-class diffopts(object):
+class diffopts:
     """context is the number of context lines
     text treats all files as text
     showfunc enables diff -p output

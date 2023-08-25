@@ -36,7 +36,7 @@ def checkobject(o):
 
 
 # Facilitates testing localpeer.
-class dummyrepo(object):
+class dummyrepo:
     def __init__(self):
         self.ui = uimod.ui()
 

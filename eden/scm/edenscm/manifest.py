@@ -77,7 +77,7 @@ def _cmp(a, b):
 _lazymanifest = parsers.lazymanifest
 
 
-class manifestdict(object):
+class manifestdict:
     def __init__(self, data=b""):
         self._lm = _lazymanifest(data)
 
@@ -539,7 +539,7 @@ class manifestrevlog(revlog.revlog):
         return n
 
 
-class manifestlog(object):
+class manifestlog:
     """A collection class representing the collection of manifest snapshots
     referenced by commits in the repository.
 
@@ -639,7 +639,7 @@ class manifestlog(object):
         additions."""
 
 
-class memmanifestctx(object):
+class memmanifestctx:
     def __init__(self, manifestlog):
         self._manifestlog = manifestlog
         self._manifestdict = manifestdict()
@@ -697,7 +697,7 @@ class memmanifestctx(object):
         return self._manifestlog._maplinkrev(self._linkrev)
 
 
-class manifestctx(object):
+class manifestctx:
     """A class representing a single revision of a manifest, including its
     contents, its parent revs, and its linkrev.
     """

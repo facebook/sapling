@@ -440,7 +440,7 @@ def setuptreestores(repo, mfl):
         mfl.makeruststore()
 
 
-class basetreemanifestlog(object):
+class basetreemanifestlog:
     def __init__(self, repo):
         self.recentlinknode = None
         cachesize = 4
@@ -658,7 +658,7 @@ def _getparenttree(manifestlog, node=None):
     return tree
 
 
-class treemanifestctx(object):
+class treemanifestctx:
     def __init__(self, manifestlog, dir, node):
         self._manifestlog = manifestlog
         self._dir = dir
@@ -726,7 +726,7 @@ class treemanifestctx(object):
         return self.read().find(key)
 
 
-class memtreemanifestctx(object):
+class memtreemanifestctx:
     def __init__(self, manifestlog, dir=""):
         self._manifestlog = manifestlog
         self._dir = dir
@@ -783,7 +783,7 @@ def getbundlemanifestlog(orig, self):
 
     wrapmfl = mfl
 
-    class pendingmempack(object):
+    class pendingmempack:
         def __init__(self):
             self._mutabledpack = None
             self._mutablehpack = None
@@ -1596,7 +1596,7 @@ def _generatepackstream(
     yield wirepack.closepart()
 
 
-class remotetreestore(object):
+class remotetreestore:
     def __init__(self, repo):
         self._repo = repo
         self.ui = repo.ui
@@ -1763,7 +1763,7 @@ NODEINFOFORMAT = "!20s20s20sI"
 NODEINFOLEN = struct.calcsize(NODEINFOFORMAT)
 
 
-class nodeinfoserializer(object):
+class nodeinfoserializer:
     """Serializer for node info"""
 
     @staticmethod
@@ -1788,7 +1788,7 @@ class nodeinfoserializer(object):
         )
 
 
-class cachestoreserializer(object):
+class cachestoreserializer:
     """Simple serializer that attaches key and sha1 to the content"""
 
     def __init__(self, key):

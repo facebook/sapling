@@ -61,7 +61,7 @@ class HTTPRemoteClosedError(httplib.HTTPException):
     """The server closed the remote socket in the middle of a response."""
 
 
-class AbstractReader(object):
+class AbstractReader:
     """Abstract base class for response readers.
 
     Subclasses must implement _load, and should implement _close if

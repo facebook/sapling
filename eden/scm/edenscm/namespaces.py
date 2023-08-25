@@ -99,7 +99,7 @@ def hoistednames(repo):
         return None
 
 
-class namespaces(object):
+class namespaces:
     """provides an interface to register and operate on multiple namespaces. See
     the namespace class below for details on the namespace object.
 
@@ -172,7 +172,7 @@ class namespaces(object):
         raise KeyError(_("no such name: %s") % name)
 
 
-class namespace(object):
+class namespace:
     """provides an interface to a namespace
 
     Namespaces are basically generic many-to-many mapping between some

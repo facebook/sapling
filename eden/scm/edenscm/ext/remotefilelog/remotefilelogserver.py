@@ -159,7 +159,7 @@ def onetimesetup(ui):
     wrapfunction(context.basefilectx, "_adjustlinkrev", _adjustlinkrev)
 
 
-class trivialserializer(object):
+class trivialserializer:
     """Trivial simple serializer for remotefilelog cache"""
 
     @staticmethod

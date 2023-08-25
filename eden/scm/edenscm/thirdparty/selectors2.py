@@ -103,7 +103,7 @@ def _fileobj_to_fd(fileobj):
     return fd
 
 
-class BaseSelector(object):
+class BaseSelector:
     """ Abstract Selector class
 
     A selector supports registering file objects to be monitored
@@ -298,7 +298,7 @@ if hasattr(select, "select"):
     # Jython has a different implementation of .fileno() for socket objects.
     if pycompat.isjython:
 
-        class _JythonSelectorMapping(object):
+        class _JythonSelectorMapping:
             """ This is an implementation of _SelectorMapping that is built
             for use specifically with Jython, which does not provide a hashable
             value from socket.socket.fileno(). """

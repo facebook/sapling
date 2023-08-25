@@ -148,7 +148,7 @@ class filelog(revlog.revlog):
         return newlen >= addlen and delta[hlen : hlen + addlen] == add
 
 
-class fileslog(object):
+class fileslog:
     """Top level object representing all the file storage.
 
     Eventually filelog content access should go through this, but for now it's

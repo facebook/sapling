@@ -660,7 +660,7 @@ def _buildvisitdir(kindpats):
     return tree.visitdir
 
 
-class basematcher(object):
+class basematcher:
     def __init__(self, root, cwd, badfn=None, relativeuipath=True):
         self._root = root
         self._cwd = cwd

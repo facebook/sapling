@@ -36,7 +36,7 @@ SEGMENTS_DIR_NEXT = "segments/v1next"  # Used on Windows, for migration.
 HGCOMMITS_DIR = "hgcommits/v1"
 
 
-class changelog(object):
+class changelog:
     """Changelog backed by Rust objects.
 
     Many methods exist for compatibility. New code should consider using `dag`,
@@ -624,7 +624,7 @@ class changelog(object):
         return True
 
 
-class nodemap(object):
+class nodemap:
     def __init__(self, changelog):
         self.changelog = changelog
 

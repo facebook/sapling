@@ -16,7 +16,7 @@ import sys
 from . import pycompat
 
 
-class _pycompatstub(object):
+class _pycompatstub:
     def __init__(self):
         self._aliases = {}
 

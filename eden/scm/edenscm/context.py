@@ -68,7 +68,7 @@ slowstatuswarning = _(
 )
 
 
-class basectx(object):
+class basectx:
     """A basectx object represents the common logic for its children:
     changectx: read-only context that is already present in the repo,
     workingctx: a context that represents the working directory and can
@@ -718,7 +718,7 @@ class changectx(basectx):
         return self.walk(match)
 
 
-class basefilectx(object):
+class basefilectx:
     """A filecontext object represents the common logic for its children:
     filectx: read-only access to a filerevision that is already present
              in the repo,
@@ -1329,7 +1329,7 @@ class pathhistoryparents:
         raise error.ProgrammingError("%s is not yet follow()-ed" % hex(node))
 
 
-class annotateline(object):
+class annotateline:
     def __init__(self, fctx=None, ctx=None, lineno=None, path=None):
         if (not fctx) == (not ctx):
             raise error.ProgrammingError("must specify exactly one of ctx or fctx")
@@ -3227,7 +3227,7 @@ class metadataonlyctx(committablectx):
         return scmutil.status(modified, added, removed, [], [], [], [])
 
 
-class arbitraryfilectx(object):
+class arbitraryfilectx:
     """Allows you to use filectx-like functions on a file in an arbitrary
     location on disk, possibly not in the working directory.
     """

@@ -52,7 +52,7 @@ def merge_dicts(x: Dict[K, V], y: Dict[K, V]) -> Dict[K, V]:
     return z
 
 
-class Shell(object):
+class Shell:
     """
     An object representing a shell (e.g., the bash prompt in your
     terminal), maintaining a concept of current working directory, and

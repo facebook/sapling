@@ -19,7 +19,7 @@ class PhabricatorClientError(Exception):
         Exception.__init__(self, reason, error)
 
 
-class PhabricatorGraphQLClientRequests(object):
+class PhabricatorGraphQLClientRequests:
     def __init__(self, unix_socket_proxy=None):
         self._connection = None
         self._unix_socket_proxy = unix_socket_proxy

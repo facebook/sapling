@@ -63,7 +63,7 @@ def buildancestorsets(graph):
     return ancs
 
 
-class naiveincrementalmissingancestors(object):
+class naiveincrementalmissingancestors:
     def __init__(self, ancs, bases):
         self.ancs = ancs
         self.bases = set(bases)

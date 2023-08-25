@@ -3271,7 +3271,7 @@ def histgrep(ui, repo, pattern, *pats, **opts):
             lend = begin - 1
             yield linenum, mstart - lstart, mend - lstart, body[lstart:lend]
 
-    class linestate(object):
+    class linestate:
         def __init__(self, line, linenum, colstart, colend):
             self.line = line
             self.linenum = linenum

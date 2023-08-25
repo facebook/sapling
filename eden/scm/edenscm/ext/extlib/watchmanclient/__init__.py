@@ -62,7 +62,7 @@ class WatchmanNoRoot(Unavailable):
         super(WatchmanNoRoot, self).__init__(msg)
 
 
-class client(object):
+class client:
     def __init__(self, repo, timeout=1.0):
         err = None
         if not self._user:
@@ -344,7 +344,7 @@ def calcdistance(repo, oldnode, newnode):
     return distance
 
 
-class state_update(object):
+class state_update:
     """This context manager is responsible for dispatching the state-enter
     and state-leave signals to the watchman service. The enter and leave
     methods can be invoked manually (for scenarios where context manager

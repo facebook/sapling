@@ -73,7 +73,7 @@ colortable = {
 defaultdict = collections.defaultdict
 
 
-class nullui(object):
+class nullui:
     """blank ui object doing nothing"""
 
     debugflag = False
@@ -87,7 +87,7 @@ class nullui(object):
         return nullfunc
 
 
-class emptyfilecontext(object):
+class emptyfilecontext:
     """minimal filecontext representing an empty file"""
 
     def data(self):
@@ -233,7 +233,7 @@ def overlaycontext(
     return mctx
 
 
-class filefixupstate(object):
+class filefixupstate:
     """state needed to apply fixups to a single file
 
     internally, it keeps file contents of several revisions and a linelog.
@@ -584,7 +584,7 @@ class filefixupstate(object):
             writeline(bidxs[i - b1], b"+", trim(blines[i]), "inserted", "diff.inserted")
 
 
-class fixupstate(object):
+class fixupstate:
     """state needed to run absorb
 
     internally, it keeps paths and filefixupstates.

@@ -81,7 +81,7 @@ def stripdesc(desc):
 
 
 @attr.s
-class _changelogrevision(object):
+class _changelogrevision:
     # Extensions might modify _defaultextra, so let the constructor below pass
     # it in
     extra = attr.ib()
@@ -92,7 +92,7 @@ class _changelogrevision(object):
     description = attr.ib(default="")
 
 
-class changelogrevision(object):
+class changelogrevision:
     """Holds results of a parsed changelog revision.
 
     Changelog revisions consist of multiple pieces of data, including

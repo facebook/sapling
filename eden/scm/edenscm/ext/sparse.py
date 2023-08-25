@@ -608,7 +608,7 @@ def _setupdirstate(ui) -> None:
 
     # The atrocity below is needed to wrap dirstate._ignore. It is a cached
     # property, which means normal function wrapping doesn't work.
-    class ignorewrapper(object):
+    class ignorewrapper:
         def __init__(self, orig):
             self.orig = orig
             self.origignore = None
@@ -801,7 +801,7 @@ def _setupdiff(ui) -> None:
 
 
 @attr.s(frozen=True, slots=True, cmp=False)
-class RawSparseConfig(object):
+class RawSparseConfig:
     """Represents a raw, unexpanded sparse config file"""
 
     path = attr.ib()
@@ -824,7 +824,7 @@ class RawSparseConfig(object):
 
 
 @attr.s(frozen=True, slots=True, cmp=False)
-class SparseConfig(object):
+class SparseConfig:
     """Represents the full sparse config as seen by the user, including config
     rules and profile rules."""
 
@@ -866,7 +866,7 @@ class SparseConfig(object):
 
 
 @attr.s(frozen=True, slots=True, cmp=False)
-class SparseProfile(object):
+class SparseProfile:
     """Represents a single sparse profile, with subprofiles expanded."""
 
     path = attr.ib()

@@ -121,7 +121,7 @@ def estimatespeed(bar):
 
 
 # NB: the engine's only purpose is to maintain the progressfile extension's hook point.
-class engine(object):
+class engine:
     def __init__(self):
         self._cond = rustthreading.Condition()
         self._active = False
@@ -308,7 +308,7 @@ def _progvalue(value):
         return value, ""
 
 
-class basebar(object):
+class basebar:
     """bar base class that traces events and updates rust model"""
 
     def __init__(self):
@@ -498,7 +498,7 @@ def spinner(ui, topic):
     return bar(ui, topic, start=None)
 
 
-class iterwrapper(object):
+class iterwrapper:
     def __init__(self, itr: Iterator, bar):
         self.itr = itr
         self.bar = bar

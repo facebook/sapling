@@ -122,7 +122,7 @@ from .i18n import _
 from .node import hex, short
 
 
-class _nullconverter(object):
+class _nullconverter:
     """convert non-primitive data types to be processed by formatter"""
 
     # set to True if context object should be stored as item
@@ -144,7 +144,7 @@ class _nullconverter(object):
         return list(data)
 
 
-class baseformatter(object):
+class baseformatter:
     def __init__(self, ui, topic, opts, converter):
         self._ui = ui
         self._topic = topic
@@ -263,7 +263,7 @@ def _iteritems(data):
     return data
 
 
-class _plainconverter(object):
+class _plainconverter:
     """convert non-primitive data types to text"""
 
     storecontext = False
@@ -384,7 +384,7 @@ class jsonformatter(baseformatter):
         self._out.write("\n]\n")
 
 
-class _templateconverter(object):
+class _templateconverter:
     """convert non-primitive data types to be processed by templater"""
 
     storecontext = True

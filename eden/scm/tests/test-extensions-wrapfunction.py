@@ -22,7 +22,7 @@ def getid(wrapper):
 wrappers = [genwrapper(i) for i in range(5)]
 
 
-class dummyclass(object):
+class dummyclass:
     def getstack(self):
         return ["orig"]
 
@@ -68,7 +68,7 @@ with wrap1:
 print("context manager", dummy.getstack())
 
 # Wrap callable object which has no __name__
-class callableobj(object):
+class callableobj:
     def __call__(self):
         return ["orig"]
 

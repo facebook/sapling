@@ -83,7 +83,7 @@ def parsenodenames(meta) -> Set[Tuple[bytes, str]]:
     return nodenames
 
 
-class displayer(object):
+class displayer:
     """show changeset information with debugmetalog context."""
 
     def __init__(self, nodenamesdict):

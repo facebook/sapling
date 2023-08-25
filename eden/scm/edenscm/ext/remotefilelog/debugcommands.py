@@ -75,7 +75,7 @@ def buildtemprevlog(repo, file):
         os.remove(temppath)
     r = filelog.filelog(repo.svfs, "temprevlog")
 
-    class faket(object):
+    class faket:
         def add(self, a, b, c):
             pass
 

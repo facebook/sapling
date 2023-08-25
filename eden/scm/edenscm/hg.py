@@ -1084,7 +1084,7 @@ foi = [
 ]
 
 
-class cachedlocalrepo(object):
+class cachedlocalrepo:
     """Holds a localrepository that can be cached and reused."""
 
     def __init__(self, repo):

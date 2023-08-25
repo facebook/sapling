@@ -11,7 +11,7 @@ from edenscm.ext import absorb
 from hghave import require
 
 
-class simplefctx(object):
+class simplefctx:
     def __init__(self, content):
         self.content = content.encode("utf-8")
 

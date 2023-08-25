@@ -66,7 +66,7 @@ def bundlerepohandlebundle2part(orig, self, bundle, part):
         orig(self, bundle, part)
 
 
-class scratchbranchmatcher(object):
+class scratchbranchmatcher:
     def __init__(self, ui):
         scratchbranchpat = ui.config("infinitepush", "branchpattern")
         if scratchbranchpat:

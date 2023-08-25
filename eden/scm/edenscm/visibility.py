@@ -43,7 +43,7 @@ encodeheads = bindings.refencode.encodevisibleheads
 decodeheads = bindings.refencode.decodevisibleheads
 
 
-class visibleheads(object):
+class visibleheads:
     """tracks visible non-public heads in the repostory
 
     Track visibility of non-public commits through a set of heads.  This only

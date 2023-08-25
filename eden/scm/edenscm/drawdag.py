@@ -238,7 +238,7 @@ def _parseasciigraph(text: str):
     return bindings.drawdag.parse(text)
 
 
-class simplefilectx(object):
+class simplefilectx:
     def __init__(self, repo, path, data, renamed=None):
         assert isinstance(data, bytes)
         filenode = None

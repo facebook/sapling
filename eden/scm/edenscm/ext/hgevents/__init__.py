@@ -167,7 +167,7 @@ def _xmerge(origfunc, repo, mynode, orig, fcd, fco, fca, toolconf, files, labels
         return origfunc(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels)
 
 
-class state_filemerge(object):
+class state_filemerge:
     """Context manager for single filemerge event"""
 
     def __init__(self, repo, path):

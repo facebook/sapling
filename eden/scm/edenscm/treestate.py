@@ -62,7 +62,7 @@ def _unpackmetadata(data):
     return dict(entry.split("=", 1) for entry in data.split("\0") if "=" in entry)
 
 
-class treestatemap(object):
+class treestatemap:
     """a drop-in replacement for dirstate._map, with more abilities like also
     track fsmonitor state.
 

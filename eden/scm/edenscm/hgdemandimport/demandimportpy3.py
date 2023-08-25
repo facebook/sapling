@@ -54,7 +54,7 @@ class _lazyloaderex(importlib.util.LazyLoader):
             super().exec_module(module)
 
 
-class LazyFinder(object):
+class LazyFinder:
     """A wrapper around a ``MetaPathFinder`` that makes loaders lazy.
 
     ``sys.meta_path`` finders have their ``find_spec()`` called to locate a

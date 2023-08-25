@@ -589,7 +589,7 @@ class vfs(abstractvfs):
 opener = vfs
 
 
-class proxyvfs(object):
+class proxyvfs:
     def __init__(self, vfs: "abstractvfs") -> None:
         self.vfs = vfs
 
@@ -639,7 +639,7 @@ class readonlyvfs(abstractvfs, proxyvfs):
         return self.vfs.join(path, *insidef)
 
 
-class closewrapbase(object):
+class closewrapbase:
     """Base class of wrapper, which hooks closing
 
     Do not instantiate outside of the vfs layer.
@@ -684,7 +684,7 @@ class delayclosedfile(closewrapbase):
         self._closer.close(self._origfh)
 
 
-class backgroundfilecloser(object):
+class backgroundfilecloser:
     """Coordinates background closing of file handles on multiple threads."""
 
     def __init__(self, ui, expectedcount=-1):

@@ -17,7 +17,7 @@ from . import service
 
 
 def showhistory(ui, repo, reponame, workspacename, templatealias, **opts) -> None:
-    class cloudsl(object):
+    class cloudsl:
         def __init__(self, ui, repo, reponame, workspacename, **opts):
             self.ui = ui
             self.repo = repo

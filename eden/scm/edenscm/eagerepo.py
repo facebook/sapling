@@ -23,7 +23,7 @@ def openstore(repo):
     return bindings.eagerepo.EagerRepoStore.open(path)
 
 
-class eagerfilelog(object):
+class eagerfilelog:
     """filelog-like interface for EagerRepoStore"""
 
     def __init__(self, repo, name):

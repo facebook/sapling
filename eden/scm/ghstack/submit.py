@@ -226,7 +226,7 @@ def push_spec(commit: GitCommitHash, branch: str) -> str:
     return "{}:refs/heads/{}".format(commit, branch)
 
 
-class Submitter(object):
+class Submitter:
     """
     A class responsible for managing all of the environment and mutable
     state associated with submitting PRs to GitHub.

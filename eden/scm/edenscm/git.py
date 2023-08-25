@@ -970,7 +970,7 @@ def gitbinary(ui):
     return ui.config("ui", "git") or "git"
 
 
-class gitfilelog(object):
+class gitfilelog:
     """filelog-like interface for git"""
 
     def __init__(self, repo):

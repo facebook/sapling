@@ -23,7 +23,7 @@ def _lowerclean(s):
     return encoding.hfsignoreclean(s.lower())
 
 
-class pathauditor(object):
+class pathauditor:
     """ensure that a filesystem path contains no banned components.
     the following properties of a path are checked:
 

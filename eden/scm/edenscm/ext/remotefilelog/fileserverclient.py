@@ -94,7 +94,7 @@ def peersetup(ui, peer):
     peer.__class__ = remotefilepeer
 
 
-class getpackclient(object):
+class getpackclient:
     def __init__(self, repo):
         self.repo = repo
         self.ui = repo.ui
@@ -204,7 +204,7 @@ class getpackclient(object):
             raise
 
 
-class fileserverclient(object):
+class fileserverclient:
     """A client for requesting files from the remote file server."""
 
     def __init__(self, repo):

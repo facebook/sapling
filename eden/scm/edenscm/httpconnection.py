@@ -27,7 +27,7 @@ urlerr = util.urlerr
 urlreq = util.urlreq
 
 # moved here from url.py to avoid a cycle
-class httpsendfile(object):
+class httpsendfile:
     """This is a wrapper around the objects returned by python's "open".
 
     Its purpose is to send file-like objects via HTTP.

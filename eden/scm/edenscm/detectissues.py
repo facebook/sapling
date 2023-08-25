@@ -14,7 +14,7 @@ from .i18n import _
 from .pycompat import ossep
 
 
-class issue(object):
+class issue:
     def __init__(self, category, message, data):
         self.category = category
         self.message = message

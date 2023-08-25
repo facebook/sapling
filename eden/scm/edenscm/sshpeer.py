@@ -50,7 +50,7 @@ def _writessherror(ui: "Any", s: bytes) -> None:
             ui.write_err(prefix, decodeutf8(l, errors="replace"), "\n")
 
 
-class countingpipe(object):
+class countingpipe:
     """Wraps a pipe that count the number of bytes read/written to it"""
 
     def __init__(self, ui, pipe):
@@ -96,7 +96,7 @@ class countingpipe(object):
         return self._pipe.flush()
 
 
-class threadedstderr(object):
+class threadedstderr:
     def __init__(self, ui, stderr):
         self._ui = ui
         self._stderr = stderr

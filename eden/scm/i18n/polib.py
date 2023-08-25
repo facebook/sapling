@@ -744,7 +744,7 @@ class MOFile(_BaseFile):
 # class _BaseEntry {{{
 
 
-class _BaseEntry(object):
+class _BaseEntry:
     """
     Base class for :class:`~polib.POEntry` and :class:`~polib.MOEntry` classes.
     This class should **not** be instanciated directly.
@@ -1093,7 +1093,7 @@ class MOEntry(_BaseEntry):
 # class _POFileParser {{{
 
 
-class _POFileParser(object):
+class _POFileParser:
     """
     A finite state machine to parse efficiently and correctly po
     file format.
@@ -1513,7 +1513,7 @@ class _POFileParser(object):
 # class _MOFileParser {{{
 
 
-class _MOFileParser(object):
+class _MOFileParser:
     """
     A class to parse binary mo files.
     """

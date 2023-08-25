@@ -65,7 +65,7 @@ class CantShowWordConflicts(Exception):
     pass
 
 
-class wordmergemode(object):
+class wordmergemode:
     enforced = "enforced"  # Enforced word merge. Cannot draw conflict regions.
     ondemand = "ondemand"  # Try line merge first. Only use word merge if it can solve conflicts.
     disabled = "disabled"  # Do not ever attempt to do word merge.
@@ -110,7 +110,7 @@ def splitwordswithoutemptylines(text):
     return result
 
 
-class Merge3Text(object):
+class Merge3Text:
     """3-way merge of texts.
 
     Given strings BASE, OTHER, THIS, tries to produce a combined text

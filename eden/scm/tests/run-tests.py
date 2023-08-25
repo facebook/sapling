@@ -948,7 +948,7 @@ def killdaemons(pidfile):
 
 if os.name == "nt":
 
-    class ProcessGroup(object):
+    class ProcessGroup:
         """Process group backed by Windows JobObject.
 
         It provides a clean way to kill processes recursively.
@@ -976,7 +976,7 @@ if os.name == "nt":
 
 else:
 
-    class ProcessGroup(object):
+    class ProcessGroup:
         """Fallback implementation on *nix. Kill process groups.
 
         This is less reliable than Windows' JobObject, because child processes
@@ -2290,7 +2290,7 @@ firsterror = False
 _iolock = RLock()
 
 
-class Progress(object):
+class Progress:
     def __init__(self):
         self.lines = []
         self.out = sys.stderr
@@ -2384,7 +2384,7 @@ if showprogress and os.name == "nt":
                     showprogress = False
 
 
-class IOLockWithProgress(object):
+class IOLockWithProgress:
     def __enter__(self):
         _iolock.acquire()
         progress.clear()
@@ -3197,7 +3197,7 @@ class TextTestRunner(unittest.TextTestRunner):
         )
 
 
-class TestpilotTestResult(object):
+class TestpilotTestResult:
     def __init__(self, testpilotjson):
         self.testsSkipped = 0
         self.errors = 0
@@ -3215,7 +3215,7 @@ class TestpilotTestResult(object):
                         self.errors += 1
 
 
-class TestpilotTestRunner(object):
+class TestpilotTestRunner:
     def __init__(self, runner):
         self._runner = runner
 
@@ -3262,7 +3262,7 @@ class TestpilotTestRunner(object):
         return TestpilotTestResult(testpilotjson)
 
 
-class TestRunner(object):
+class TestRunner:
     """Holds context for executing tests.
 
     Tests rely on a lot of state. This object holds it for them.

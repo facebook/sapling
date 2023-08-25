@@ -298,7 +298,7 @@ def upperfallback(s):
     return s.upper()
 
 
-class normcasespecs(object):
+class normcasespecs:
     """what a platform's normcase does to ASCII strings
 
     This is specified per platform, and should be consistent with what normcase

@@ -511,7 +511,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
     return commit(ui, repo, recordinwlock, pats, opts)
 
 
-class dirnode(object):
+class dirnode:
     """
     Represent a directory in user working copy with information required for
     the purpose of tersing its status.
@@ -1097,7 +1097,7 @@ def rendertemplate(ui, tmpl, props=None):
     return t.render(mapping)
 
 
-class _unclosablefile(object):
+class _unclosablefile:
     def __init__(self, fp):
         self._fp = fp
 
@@ -1904,7 +1904,7 @@ def _changesetlabels(ctx):
     return " ".join(labels)
 
 
-class changeset_printer(object):
+class changeset_printer:
     """show changeset information when templating not requested."""
 
     def __init__(self, ui, repo, matchfn, diffopts, buffered):
@@ -2522,7 +2522,7 @@ def walkfilerevs(repo, match, follow, revs, fncache):
     return wanted
 
 
-class _followfilter(object):
+class _followfilter:
     def __init__(self, repo, onlyfirst=False):
         self.repo = repo
         self.startrev = nullrev
@@ -2624,7 +2624,7 @@ def walkchangerevs(repo, match, opts, prepare):
 
         # The slow path checks files modified in every changeset.
         # This is really slow on large repos, so compute the set lazily.
-        class lazywantedset(object):
+        class lazywantedset:
             def __init__(self):
                 self.set = set()
                 self.revs = set(revs)

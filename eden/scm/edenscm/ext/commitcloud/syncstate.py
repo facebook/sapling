@@ -18,7 +18,7 @@ from . import error as ccerror
 NOTSET = object()
 
 
-class SyncState(object):
+class SyncState:
     """
     Stores the local record of what state was stored in the cloud at the
     last sync.

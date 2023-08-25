@@ -12,7 +12,7 @@ from .util import altsortdict
 
 
 # Stores a mapping of (node, category) -> data, with a FIFO-limited number of entries
-class smallcommitmetadata(object):
+class smallcommitmetadata:
     def __init__(self, vfs, entrylimit):
         self.vfs = vfs
         self.limit = entrylimit

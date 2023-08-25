@@ -169,7 +169,7 @@ def safestriproots(ui, repo, nodes):
     return [c.node() for c in repo.set("roots(%ld)", tostrip)]
 
 
-class stripcallback(object):
+class stripcallback:
     """used as a transaction postclose callback"""
 
     def __init__(self, ui, repo, backup, topic):

@@ -52,7 +52,7 @@ _pack = struct.pack
 _unpack = struct.unpack
 
 
-class mergestate(object):
+class mergestate:
     """track 3-way merge state of individual files
 
     The merge state is stored on disk when needed. For more about the format,
@@ -645,7 +645,7 @@ def _checkunknownfile(repo, wctx, mctx, f, f2=None):
     )
 
 
-class _unknowndirschecker(object):
+class _unknowndirschecker:
     """
     Look for any unknown files or directories that may have a path conflict
     with a file.  If any path prefix of the file exists as a file or link,

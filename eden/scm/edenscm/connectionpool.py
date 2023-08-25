@@ -13,7 +13,7 @@ import time
 from . import json, pycompat, sshpeer, util
 
 
-class connectionpool(object):
+class connectionpool:
     def __init__(self, repo):
         self._real_connection_pool = realconnectionpool(repo)
 
@@ -27,7 +27,7 @@ class connectionpool(object):
 # Internal implementation would connect lazily.
 
 
-class lazyconnection(object):
+class lazyconnection:
     def __init__(self, connection_pool, path, opts, reason):
         self.peer = lazypeer(connection_pool, path, opts, reason)
 
@@ -43,7 +43,7 @@ class lazyconnection(object):
             self.peer._real_connection.close()
 
 
-class lazypeer(object):
+class lazypeer:
     def __init__(self, connection_pool, path, opts, reason):
         self._real_connection_pool = connection_pool
         self._path = path
@@ -67,7 +67,7 @@ class lazypeer(object):
         return getattr(self._real_peer, name)
 
 
-class realconnectionpool(object):
+class realconnectionpool:
     def __init__(self, repo):
         self._repo = repo
         self._poolpid = os.getpid()
@@ -180,7 +180,7 @@ class realconnectionpool(object):
             del pathpool[:]
 
 
-class standaloneconnection(object):
+class standaloneconnection:
     def __init__(self, peer):
         self.peer = peer
 
@@ -195,7 +195,7 @@ class standaloneconnection(object):
             self.peer._cleanup()
 
 
-class realconnection(object):
+class realconnection:
     def __init__(self, ui, pool, peer, path):
         self._ui = ui
         self._pool = pool

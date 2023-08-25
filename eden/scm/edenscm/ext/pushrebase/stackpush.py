@@ -44,7 +44,7 @@ from edenscm.node import hex, nullrev
 from .errors import ConflictsError, StackPushUnsupportedError
 
 
-class pushcommit(object):
+class pushcommit:
     def __init__(
         self, user, date, desc, extra, filechanges, examinepaths, orignode=None
     ):
@@ -94,7 +94,7 @@ class pushcommit(object):
         )
 
 
-class pushrequest(object):
+class pushrequest:
     def __init__(self, stackparentnode, pushcommits, fileconditions):
         """constructor for pushrequest
 

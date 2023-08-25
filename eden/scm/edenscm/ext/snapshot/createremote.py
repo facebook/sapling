@@ -79,7 +79,7 @@ def parentsfromwctx(ui, wctx):
 
 
 @dataclass(frozen=True)
-class workingcopy(object):
+class workingcopy:
     untracked: list
     removed: list
     modified: list

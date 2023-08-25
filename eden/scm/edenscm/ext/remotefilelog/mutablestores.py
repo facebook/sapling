@@ -9,7 +9,7 @@ from edenscm.node import hex
 from . import shallowutil
 
 
-class mutablebasestore(object):
+class mutablebasestore:
     def __init__(self):
         self._store = None
 
@@ -48,7 +48,7 @@ class mutablehistorystore(mutablebasestore):
         self._store = self.makestore(repo, path)
 
 
-class pendingmutablepack(object):
+class pendingmutablepack:
     def __init__(self, repo, pathcb):
         self._mutabledpack = None
         self._mutablehpack = None
@@ -99,7 +99,7 @@ class pendingmutablepack(object):
         self._mutablehpack = None
 
 
-class mutabledatahistorystore(object):
+class mutabledatahistorystore:
     """A proxy class that gets added to the union store and knows how to answer
     requests by inspecting the current mutable data and history packs. We can't
     insert the mutable packs themselves into the union store because they can be

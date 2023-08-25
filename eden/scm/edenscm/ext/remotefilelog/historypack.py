@@ -73,7 +73,7 @@ def makehistorypackstore(ui, path, shared, deletecorruptpacks: bool = False):
         return historypackstore(ui, path, shared, deletecorruptpacks=deletecorruptpacks)
 
 
-class memhistorypack(object):
+class memhistorypack:
     def __init__(self):
         self.history = {}
 

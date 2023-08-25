@@ -48,7 +48,7 @@ def log(*args):
     logfile.flush()
 
 
-class channeledoutput(object):
+class channeledoutput:
     """
     Write data to out in the following format:
 
@@ -79,7 +79,7 @@ class channeledoutput(object):
         return getattr(self.out, attr)
 
 
-class channeledinput(object):
+class channeledinput:
     """
     Read data from in_.
 
@@ -164,7 +164,7 @@ class channeledinput(object):
         return getattr(self.in_, attr)
 
 
-class server(object):
+class server:
     """
     Listens for commands on fin, runs them and writes the output on a channel
     based stream to fout.
@@ -358,7 +358,7 @@ def _restoreio(ui: "Any", fin: "BinaryIO", fout: "BinaryIO") -> None:
             f.close()
 
 
-class pipeservice(object):
+class pipeservice:
     def __init__(self, ui, repo, opts):
         self.ui = ui
         self.repo = repo
@@ -437,7 +437,7 @@ def _serverequest(ui, repo, conn, createcmdserver):
                 raise
 
 
-class unixservicehandler(object):
+class unixservicehandler:
     """Set of pluggable operations for unix-mode services
 
     Almost all methods except for createcmdserver() are called in the main
@@ -471,7 +471,7 @@ class unixservicehandler(object):
         return server(self.ui, repo, fin, fout)
 
 
-class unixforkingservice(object):
+class unixforkingservice:
     """
     Listens on unix domain socket and forks server per connection
     """

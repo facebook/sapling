@@ -32,7 +32,7 @@ except NameError:
     xrange = range
 
 
-class histpacktestsbase(object):
+class histpacktestsbase:
     def __init__(self, historypackreader, historypackwriter):
         self.historypackreader = historypackreader
         self.historypackwriter = historypackwriter

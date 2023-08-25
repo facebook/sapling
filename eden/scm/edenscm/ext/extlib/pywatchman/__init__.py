@@ -290,7 +290,7 @@ def is_named_pipe_path(path):
     return path.startswith("\\\\.\\pipe\\watchman")
 
 
-class SockPath(object):
+class SockPath:
     """Describes how to connect to watchman"""
 
     unix_domain = None
@@ -326,7 +326,7 @@ class SockPath(object):
         return self.unix_domain
 
 
-class Transport(object):
+class Transport:
     """communication transport to the watchman server"""
 
     buf = None
@@ -371,7 +371,7 @@ class Transport(object):
             self.buf.append(b)
 
 
-class Codec(object):
+class Codec:
     """communication encoding for the watchman server"""
 
     transport = None
@@ -909,7 +909,7 @@ class JsonCodec(Codec):
         self.transport.write(cmd + b"\n")
 
 
-class client(object):
+class client:
     """Handles the communication with the watchman service"""
 
     sockpath = None

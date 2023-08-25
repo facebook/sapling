@@ -131,7 +131,7 @@ def fastreadp1(repopath) -> Optional[bytes]:
         return None
 
 
-class dirstate(object):
+class dirstate:
     def __init__(
         self,
         opener: "vfs.abstractvfs",
@@ -1436,7 +1436,7 @@ class dirstate(object):
         ui.log("dirstate_info", **data)
 
 
-class dirstatemap(object):
+class dirstatemap:
     """Map encapsulating the dirstate's contents.
 
     The dirstate contains the following state:

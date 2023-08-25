@@ -461,7 +461,7 @@ def applybundlev1(repo: "Any", fp: "Any") -> None:
     consumev1(repo, fp, filecount, bytecount)
 
 
-class streamcloneapplier(object):
+class streamcloneapplier:
     """Class to manage applying streaming clone bundles.
 
     We need to wrap ``applybundlev1()`` in a dedicated type to enable bundle

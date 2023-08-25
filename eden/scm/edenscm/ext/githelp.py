@@ -109,7 +109,7 @@ def parseoptions(ui, cmdoptions, args):
     return args, opts
 
 
-class Command(object):
+class Command:
     def __init__(self, name):
         self.name = name
         self.args = []
@@ -144,7 +144,7 @@ class Command(object):
         return AndCommand(self, other)
 
 
-class AndCommand(object):
+class AndCommand:
     def __init__(self, left, right):
         self.left = left
         self.right = right

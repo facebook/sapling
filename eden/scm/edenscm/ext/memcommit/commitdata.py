@@ -13,7 +13,7 @@ from __future__ import absolute_import
 from typing import Any, Dict, List, Optional, Union
 
 
-class params(object):
+class params:
     def __init__(
         self, changelist: "changelist", metadata: "metadata", destination: "destination"
     ) -> None:
@@ -37,7 +37,7 @@ class params(object):
         )
 
 
-class metadata(object):
+class metadata:
     def __init__(
         self,
         author: "Optional[str]",
@@ -67,7 +67,7 @@ class metadata(object):
         return cls(author, description, parents, extra)
 
 
-class destination(object):
+class destination:
     def __init__(
         self, bookmark: "Optional[str]" = None, pushrebase: "Optional[bool]" = False
     ) -> None:
@@ -87,7 +87,7 @@ class destination(object):
         return cls(bookmark, pushrebase)
 
 
-class changelistbuilder(object):
+class changelistbuilder:
     def __init__(self, parent: str) -> None:
         self.parent = parent
         self.files: "Dict[str, fileinfo]" = {}
@@ -99,7 +99,7 @@ class changelistbuilder(object):
         return changelist(self.parent, self.files)
 
 
-class changelist(object):
+class changelist:
     def __init__(self, parent: "Optional[str]", files: "Dict[str, fileinfo]") -> None:
         self.parent = parent
         self.files = files
@@ -119,7 +119,7 @@ class changelist(object):
         return cls(parent, files)
 
 
-class fileinfo(object):
+class fileinfo:
     def __init__(
         self,
         deleted: "Optional[bool]" = False,

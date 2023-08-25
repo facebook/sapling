@@ -11,7 +11,7 @@ __all__ = ["and_", "in_", "instance_of", "optional", "provides"]
 
 
 @attributes(repr=False, slots=True, hash=True)
-class _InstanceOfValidator(object):
+class _InstanceOfValidator:
     type = attr()
 
     def __call__(self, inst, attr, value):
@@ -51,7 +51,7 @@ def instance_of(type) -> _InstanceOfValidator:
 
 
 @attributes(repr=False, slots=True, hash=True)
-class _ProvidesValidator(object):
+class _ProvidesValidator:
     interface = attr()
 
     def __call__(self, inst, attr, value):
@@ -93,7 +93,7 @@ def provides(interface) -> _ProvidesValidator:
 
 
 @attributes(repr=False, slots=True, hash=True)
-class _OptionalValidator(object):
+class _OptionalValidator:
     validator = attr()
 
     def __call__(self, inst, attr, value):
@@ -129,7 +129,7 @@ def optional(validator) -> _OptionalValidator:
 
 
 @attributes(repr=False, slots=True, hash=True)
-class _InValidator(object):
+class _InValidator:
     options = attr()
 
     def __call__(self, inst, attr, value):

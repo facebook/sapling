@@ -318,7 +318,7 @@ class locallegacypeer(repository.legacypeer, localpeer):
     # End of baselegacywirecommands interface.
 
 
-class localrepository(object):
+class localrepository:
     """local repository object
 
     ``unsafe.wvfsauditorcache`` config option allows the user to enable

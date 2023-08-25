@@ -55,7 +55,7 @@ except AttributeError:
     _canloaddefaultcerts = False
 
     # We implement SSLContext using the interface from the standard library.
-    class SSLContext(object):
+    class SSLContext:
         def __init__(self, protocol):
             # From the public interface of SSLContext
             self.protocol = protocol

@@ -32,7 +32,7 @@ def loadconfigtable(ui, extname, configtable):
         knownitems.update(items)
 
 
-class configitem(object):
+class configitem:
     """represent a known config item
 
     :section: the official config section where to find this item,

@@ -34,7 +34,7 @@ def debugdryup(ui, repo, fromspec, tospec, **opts):
     repo.ui.write(_("fetched %s files with %s\n") % (count, util.bytecount(size)))
 
 
-class PrintTimer(object):
+class PrintTimer:
     def __init__(self, ui, name):
         self.ui = ui
         self.name = name

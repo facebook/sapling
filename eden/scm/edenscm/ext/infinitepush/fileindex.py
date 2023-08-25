@@ -32,7 +32,7 @@ else:
         return path
 
 
-class fileindex(object):
+class fileindex:
     """File-based backend for infinitepush index.
 
     This is a context manager.  All write operations should use:

@@ -56,7 +56,7 @@ cliparser = bindings.cliparser
 unrecoverablewrite = registrar.command.unrecoverablewrite
 
 
-class request(object):
+class request:
     def __init__(
         self,
         args,
@@ -758,7 +758,7 @@ def _callcatch(ui, req, func):
     return -1
 
 
-class cmdtemplatestate(object):
+class cmdtemplatestate:
     """Template-related state for a command.
 
     Used together with cmdtemplate=True.

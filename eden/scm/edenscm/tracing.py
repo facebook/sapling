@@ -117,7 +117,7 @@ error = partial(event, level=LEVEL_ERROR)
 # ---- span ----
 
 
-class _stubspan(object):
+class _stubspan:
     """Stub for a real span for when Python tracing is disabled."""
 
     def __enter__(self):

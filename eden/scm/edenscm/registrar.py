@@ -25,7 +25,7 @@ from . import configitems, error, identity, pycompat, util
 configitem = configitems.getitemregister
 
 
-class _funcregistrarbase(object):
+class _funcregistrarbase:
     """Base of decorator to register a function for specific purpose
 
     This decorator stores decorated functions into own dict 'table'.

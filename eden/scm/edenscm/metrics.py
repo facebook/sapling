@@ -10,7 +10,7 @@ from __future__ import absolute_import
 from bindings import hgmetrics
 
 
-class metrics(object):
+class metrics:
     """Abstract base class for metrics"""
 
     def __init__(self, ui):

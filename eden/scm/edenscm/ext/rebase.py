@@ -245,7 +245,7 @@ class RevCompatSet(MutableSet):
         self.__dict__.pop("_revs", None)
 
 
-class rebaseruntime(object):
+class rebaseruntime:
     """This class is a container for rebase runtime state"""
 
     def __init__(self, repo, ui, templ, inmemory=False, opts=None):

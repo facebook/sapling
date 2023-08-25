@@ -446,7 +446,7 @@ def checkportabilityalert(ui):
     return abort, warn
 
 
-class casecollisionauditor(object):
+class casecollisionauditor:
     def __init__(self, ui, abort, dirstate):
         self._ui = ui
         self._abort = abort
@@ -773,7 +773,7 @@ def origpath(ui, repo, filepath):
     return origvfs.join(filepathfromroot)
 
 
-class _containsnode(object):
+class _containsnode:
     """proxy __contains__(node) to container.__contains__ which accepts revs"""
 
     def __init__(self, repo, revcontainer):
@@ -1094,7 +1094,7 @@ def writerequires(opener, requirements):
     opener.writeutf8("requires", content)
 
 
-class filecachesubentry(object):
+class filecachesubentry:
     def __init__(self, path, stat):
         self.path = path
         self.cachestat = None
@@ -1122,7 +1122,7 @@ class filecachesubentry(object):
         return util.cachestat(path)
 
 
-class filecacheentry(object):
+class filecacheentry:
     def __init__(self, paths, stat=True):
         self._entries = []
         for path in paths:
@@ -1140,7 +1140,7 @@ class filecacheentry(object):
             entry.refresh()
 
 
-class filecache(object):
+class filecache:
     """A property like decorator that tracks files under .hg/ for updates.
 
     Records stat info when called in _filecache.
@@ -1237,7 +1237,7 @@ def gddeltaconfig(ui):
     return ui.configbool("format", "generaldelta")
 
 
-class simplekeyvaluefile(object):
+class simplekeyvaluefile:
     """A simple file with key=value lines
 
     Keys must be alphanumerics and start with a letter, values must not

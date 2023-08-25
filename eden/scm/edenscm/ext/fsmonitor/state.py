@@ -20,7 +20,7 @@ _version = 4
 _versionformat = ">I"
 
 
-class state(object):
+class state:
     def __init__(self, repo):
         self._vfs = repo.localvfs
         self._ui = repo.ui

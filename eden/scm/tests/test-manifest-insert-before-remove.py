@@ -47,7 +47,7 @@ class ManifestInsertBeforeRemoveTest(unittest.TestCase):
             pass  # expected to raise
 
 
-class TestStore(object):
+class TestStore:
     def __init__(self):
         self.underlying = {}
 

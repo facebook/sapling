@@ -62,7 +62,7 @@ def makemutationstore(repo):
     return mutationstore.mutationstore(repo.svfs.join("mutation"))
 
 
-class bundlemutationstore(object):
+class bundlemutationstore:
     def __init__(self, bundlerepo):
         self._entries = {}
         self._splitheads = {}
@@ -255,7 +255,7 @@ def allsuccessors(repo, nodes, startdepth=None, stopdepth=None):
         nextlevel = set()
 
 
-class obsoletecache(object):
+class obsoletecache:
     def __init__(self):
         # Set of commits that are known to be obsolete for each filter level.
         self.obsolete = defaultdict(set)

@@ -52,7 +52,7 @@ def _formatsetrepr(r):
         return repr(r)
 
 
-class abstractsmartset(object):
+class abstractsmartset:
     def __nonzero__(self):
         """True if the smartset is not empty"""
         raise NotImplementedError()

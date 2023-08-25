@@ -25,7 +25,7 @@ from edenscm import (
 from edenscm.i18n import _
 
 
-class filewithprogress(object):
+class filewithprogress:
     """a file-like object that supports __len__ and read.
 
     Useful to provide progress information for how many bytes are read.
@@ -76,7 +76,7 @@ class local(blobstore.localblobstore):
         super(local, self).__init__(vfs, cachevfs)
 
 
-class _gitlfsremote(object):
+class _gitlfsremote:
     def __init__(self, ui, url):
         self.ui = ui
         self._metrics = {
@@ -350,7 +350,7 @@ class _gitlfsremote(object):
                 getattr(h, "close_all", lambda: None)()
 
 
-class _dummyremote(object):
+class _dummyremote:
     """Dummy store storing blobs to temp directory."""
 
     def __init__(self, ui, url):
@@ -375,7 +375,7 @@ class _dummyremote(object):
                 )
 
 
-class _nullremote(object):
+class _nullremote:
     """Null store storing blobs to /dev/null."""
 
     def __init__(self, ui, url):
@@ -388,7 +388,7 @@ class _nullremote(object):
         pass
 
 
-class _promptremote(object):
+class _promptremote:
     """Prompt user to set lfs.url when accessed."""
 
     def __init__(self, ui, url):

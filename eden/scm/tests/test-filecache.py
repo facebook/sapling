@@ -17,11 +17,11 @@ except NameError:
     xrange = range
 
 
-class fakerepo(object):
+class fakerepo:
     def __init__(self):
         self._filecache = {}
 
-    class fakevfs(object):
+    class fakevfs:
         def join(self, p):
             return p
 

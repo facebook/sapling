@@ -76,7 +76,7 @@ except NameError:
     range = range
 
 
-class shelvedfile(object):
+class shelvedfile:
     """Helper for the file storing a single shelve
 
     Handles common functions on shelve files (.hg/.patch) using
@@ -169,7 +169,7 @@ class shelvedfile(object):
         return scmutil.simplekeyvaluefile(self.vfs, self.fname).read()
 
 
-class shelvedstate(object):
+class shelvedstate:
     """Handle persistence during unshelving operations.
 
     Handles saving and restoring a shelved state. Ensures that different

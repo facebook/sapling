@@ -773,7 +773,7 @@ def setuptreestores(repo, mfl):
     ondemandstore.setshared(mfl.datastore, mfl.historystore)
 
 
-class basetreemanifestlog(object):
+class basetreemanifestlog:
     def __init__(self, repo):
         if not useruststore(self._repo.ui):
             self._mutablelocalpacks = mutablestores.pendingmutablepack(
@@ -1125,7 +1125,7 @@ def _getparenttree(manifestlog, node=None):
     return tree
 
 
-class treemanifestctx(object):
+class treemanifestctx:
     def __init__(self, manifestlog, dir, node):
         self._manifestlog = manifestlog
         self._dir = dir
@@ -1193,7 +1193,7 @@ class treemanifestctx(object):
         return self.read().find(key)
 
 
-class memtreemanifestctx(object):
+class memtreemanifestctx:
     def __init__(self, manifestlog, dir=""):
         self._manifestlog = manifestlog
         self._dir = dir
@@ -1308,7 +1308,7 @@ def getbundlemanifestlog(orig, self):
     if isinstance(mfl, hybridmanifestlog):
         wrapmfl = mfl.treemanifestlog
 
-    class pendingmempack(object):
+    class pendingmempack:
         def __init__(self):
             self._mutabledpack = None
             self._mutablehpack = None
@@ -1737,7 +1737,7 @@ def _convertdeltatotree(
     mfl.add(mfl.ui, newtree, p1, p2, linknode, overridenode=node, overridep1node=p1)
 
 
-class InterceptedMutableDataPack(object):
+class InterceptedMutableDataPack:
     """This classes intercepts data pack writes and replaces the node for the
     root with the provided node. This is useful for forcing a tree manifest to
     be referencable via its flat hash.
@@ -1757,7 +1757,7 @@ class InterceptedMutableDataPack(object):
         return self._pack.add(name, node, deltabasenode, delta)
 
 
-class InterceptedMutableHistoryPack(object):
+class InterceptedMutableHistoryPack:
     """This classes intercepts history pack writes and replaces the node for the
     root with the provided node. This is useful for forcing a tree manifest to
     be referencable via its flat hash.
@@ -2829,7 +2829,7 @@ NODEINFOFORMAT = "!20s20s20sI"
 NODEINFOLEN = struct.calcsize(NODEINFOFORMAT)
 
 
-class nodeinfoserializer(object):
+class nodeinfoserializer:
     """Serializer for node info"""
 
     @staticmethod
@@ -2854,7 +2854,7 @@ class nodeinfoserializer(object):
         )
 
 
-class cachestoreserializer(object):
+class cachestoreserializer:
     """Simple serializer that attaches key and sha1 to the content"""
 
     def __init__(self, key):

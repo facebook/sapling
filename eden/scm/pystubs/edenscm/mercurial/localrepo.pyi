@@ -94,7 +94,7 @@ class localpeer(edenscm.repository.peer):
     def unbundle(self, bundle, heads, url) -> Any: ...
     def url(self) -> Any: ...
 
-class localrepository(object):
+class localrepository:
     __doc__: str
     _activebookmark: Any
     _basestoresupported: Set[str]

@@ -168,7 +168,7 @@ def statprofile(ui, fp, section):
         statprof.display(fp, data=data, format=displayformat, **kwargs)
 
 
-class profile(object):
+class profile:
     """Start profiling.
 
     Profiling is active when the context manager is active. When the context

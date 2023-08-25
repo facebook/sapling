@@ -53,7 +53,7 @@ def _tobytes(exc) -> Union[bytes, str]:
     return b"(%s)" % b", ".join(b"'%s'" % pycompat.bytestr(a) for a in exc.args)
 
 
-class Hint(object):
+class Hint:
     """Mix-in to provide a hint of an error
 
     This should come first in the inheritance list to consume a hint and
@@ -65,7 +65,7 @@ class Hint(object):
         super(Hint, self).__init__(*args, **kwargs)
 
 
-class Context(object):
+class Context:
     """Mix-in to provide extra context about an error"""
 
     def context(self):
@@ -93,7 +93,7 @@ class Context(object):
             ui.warn(message, "\n")
 
 
-class Component(object):
+class Component:
     """Mix-in to provide component identity of an error
 
     This should come before Exception in the inheritance list to consume the

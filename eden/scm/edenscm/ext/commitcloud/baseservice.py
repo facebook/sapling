@@ -42,7 +42,7 @@ WorkspaceInfo = collections.namedtuple("WorkspaceInfo", "name archived version")
 PUBLICPHASE = "public"
 
 
-class FakeCtx(object):
+class FakeCtx:
     """fake ctx for fake smartlog from fake nodes"""
 
     def __init__(self, repo, nodeinfo, rev):
@@ -126,7 +126,7 @@ def topological(graph):
     return order
 
 
-class SingletonDecorator(object):
+class SingletonDecorator:
     def __init__(self, klass):
         self.klass = klass
         self.instance = None

@@ -10,7 +10,7 @@ from edenscm import util
 from . import shallowutil
 
 
-class unionmetadatastore(object):
+class unionmetadatastore:
     def __init__(self, *args):
         self.stores = list(args)
 

@@ -12,7 +12,7 @@ from edenscm import json
 from . import arcconfig
 
 
-class PhabricatorGraphQLClient(object):
+class PhabricatorGraphQLClient:
     def __init__(self, urllib, x2p_app_id, ph_oauth, ph_cats, host):
         self.urllib = urllib
         self.phabricator_oauth = ph_oauth

@@ -582,7 +582,7 @@ def instance(ui, path, create, initial_config):
     return bundlerepository(ui, repopath, bundlename)
 
 
-class bundletransactionmanager(object):
+class bundletransactionmanager:
     def transaction(self):
         return None
 

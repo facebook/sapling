@@ -138,7 +138,7 @@ class _CompatMessage(email.message.Message):
         return self.get(key, failobj=default)
 
 
-class HTTPResponse(object):
+class HTTPResponse:
     """Response from an HTTP server.
 
     The response will continue to load as available. If you need the
@@ -408,7 +408,7 @@ except AttributeError:
         return False
 
 
-class HTTPConnection(object):
+class HTTPConnection:
     """Connection to a single http server.
 
     Supports 100-continue and keepalives natively. Uses select() for

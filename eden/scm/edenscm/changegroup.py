@@ -122,7 +122,7 @@ def checkrevs(repo: "Any", revs: "Sequence[bytes]") -> None:
     pass
 
 
-class cg1unpacker(object):
+class cg1unpacker:
     """Unpacker for cg1 changegroup streams.
 
     A changegroup unpacker handles the framing of the revision data in
@@ -520,7 +520,7 @@ class cg3unpacker(cg2unpacker):
         return mfnodes
 
 
-class headerlessfixup(object):
+class headerlessfixup:
     def __init__(self, fh: "Any", h: bytes) -> None:
         self._h = h
         self._fh = fh
@@ -534,7 +534,7 @@ class headerlessfixup(object):
         return readexactly(self._fh, n)
 
 
-class cg1packer(object):
+class cg1packer:
     deltaheader = _CHANGEGROUPV1_DELTA_HEADER
     version = "01"
 

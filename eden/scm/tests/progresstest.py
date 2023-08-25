@@ -9,7 +9,7 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 
-class faketime(object):
+class faketime:
     def __init__(self):
         self.now = 0
 

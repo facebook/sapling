@@ -15,7 +15,7 @@ from . import dependencies, util as ccutil
 FORMAT_VERSION = "v2"
 
 
-class BackupState(object):
+class BackupState:
     """Stores what commits have been successfully backed up to the Commit Cloud.
 
     BackupState is not the source of truth, it is a local cache of what has been backed up on the server.

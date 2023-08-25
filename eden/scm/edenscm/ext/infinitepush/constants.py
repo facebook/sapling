@@ -9,6 +9,6 @@ scratchmutationparttype = "b2x:infinitepushmutation"
 pushrebaseparttype = "b2x:rebase"
 
 
-class pathname(object):
+class pathname:
     default = "default"
     defaultpush = "default-push"

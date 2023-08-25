@@ -566,7 +566,7 @@ def processparts(orig, repo, op, unbundler):
         bundle2._processpart(op, scratchbookpart)
 
 
-class copiedpart(object):
+class copiedpart:
     """a copy of unbundlepart content that can be consumed later"""
 
     def __init__(self, part):
