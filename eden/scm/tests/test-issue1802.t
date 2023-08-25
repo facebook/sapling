@@ -61,7 +61,7 @@ Simulate a Windows merge:
 
   $ hg debugtreestate list
   a: * EXIST_P1 EXIST_P2 EXIST_NEXT NEED_CHECK  (glob)
-  b: * EXIST_P1 EXIST_NEXT  (glob)
+  b: * EXIST_P1 EXIST_NEXT * (glob)
 
 Simulate a Windows commit:
 

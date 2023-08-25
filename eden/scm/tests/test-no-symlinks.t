@@ -1,19 +1,18 @@
-#debugruntest-compatible
-  $ disable treemanifest
-  $ setconfig workingcopy.ruststatus=False
+TODO(debugruntest): this test fails on Mac
+#chg-compatible
   $ export SL_DEBUG_DISABLE_SYMLINKS=1
 
-# The following script was used to create the bundle:
+# The following (test) script was used to create the bundle:
 #
-# hg init symlinks
-# cd symlinks
+# configure modernclient
+# newclientrepo symlinks
 # echo a > a
 # mkdir d
 # echo b > d/b
 # ln -s a a.lnk
 # ln -s d/b d/b.lnk
 # hg ci -Am t
-# hg bundle --base null ../test-no-symlinks.hg
+# hg bundle --base null $TESTDIR/bundles/test-no-symlinks.hg
 
 Extract a symlink on a platform not supporting them
 
