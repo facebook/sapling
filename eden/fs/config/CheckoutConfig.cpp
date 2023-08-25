@@ -24,6 +24,8 @@ using folly::ByteRange;
 using folly::IOBuf;
 using folly::StringPiece;
 
+using namespace std::literals::chrono_literals;
+
 namespace facebook::eden {
 namespace {
 // TOML config file for the individual client.
@@ -192,6 +194,33 @@ ParentCommit CheckoutConfig::getParentCommit() const {
 }
 
 namespace {
+
+constexpr int kNumWriteFileAtomicRetry = 3;
+
+/**
+ * Retry writing the passed in file on failure.
+ *
+ * On Windows, we've seen rare cases where the SNAPSHOT file cannot be written
+ * due to a permission denied. This is more than likely caused by an anti-virus
+ * software opening the file in an exclusive way and should be transient, thus
+ * retrying a couple of times should more than likely succeed.
+ */
+folly::Try<void> writeFileAtomicWithRetry(
+    AbsolutePathPiece path,
+    folly::ByteRange content) {
+  for (int i = 0; i < kNumWriteFileAtomicRetry - 1; i++) {
+    auto ret = writeFileAtomic(path, content);
+    if (ret.hasValue()) {
+      return ret;
+    }
+    // TODO(T162069531): This code runs in a Future context, we should ideally
+    // futurize all of this to prevent blocking an executor.
+    /* sleep override */
+    std::this_thread::sleep_for(1ms);
+  }
+  return writeFileAtomic(path, content);
+}
+
 void writeWorkingCopyParentAndCheckedOutRevisision(
     AbsolutePathPiece path,
     const RootId& workingCopy,
@@ -222,7 +251,7 @@ void writeWorkingCopyParentAndCheckedOutRevisision(
   cursor.writeBE<uint32_t>(checkedOutString.size());
   cursor.push(folly::StringPiece{checkedOutString});
 
-  writeFileAtomic(path, ByteRange{buf->data(), buf->length()}).value();
+  writeFileAtomicWithRetry(path, ByteRange{buf->data(), buf->length()}).value();
 }
 } // namespace
 
@@ -271,7 +300,8 @@ void CheckoutConfig::setCheckoutInProgress(const RootId& from, const RootId& to)
   cursor.writeBE<uint32_t>(toString.size());
   cursor.push(folly::StringPiece{toString});
 
-  writeFileAtomic(getSnapshotPath(), ByteRange{buf->data(), buf->length()})
+  writeFileAtomicWithRetry(
+      getSnapshotPath(), ByteRange{buf->data(), buf->length()})
       .value();
 }
 
