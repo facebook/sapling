@@ -1,15 +1,12 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig workingcopy.ruststatus=False
-  $ disable treemanifest
   $ setconfig experimental.allowfilepeer=True
   $ configure mutation dummyssh
 
 Set up server repository
 
-  $ hg init server
-  $ cd server
+  $ newserver server
   $ cat >> .hg/hgrc << EOF
   > [extensions]
   > pushrebase=
@@ -261,8 +258,7 @@ Test that we still don't allow non-ff bm changes
   [255]
 
 Test force pushes
-  $ hg init forcepushserver
-  $ cd forcepushserver
+  $ newserver forcepushserver
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
@@ -319,8 +315,7 @@ Test force pushes
   $ cd ..
 
 Test 'hg push' with a tracking bookmark
-  $ hg init trackingserver
-  $ cd trackingserver
+  $ newserver trackingserver
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
@@ -364,8 +359,7 @@ Test 'hg push' with a tracking bookmark
   $ cd ..
 
 Test push --to to a repo without pushrebase on (i.e. the default remotenames behavior)
-  $ hg init oldserver
-  $ cd oldserver
+  $ newserver oldserver
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > remotenames =
@@ -404,8 +398,7 @@ Test push --to with remotenames but without pushrebase to a remote repository
 that requires pushrebase.
 
   $ cd ..
-  $ hg init pushrebaseserver
-  $ cd pushrebaseserver
+  $ newserver pushrebaseserver
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > remotenames =

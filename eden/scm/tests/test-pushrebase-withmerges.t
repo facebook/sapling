@@ -1,8 +1,5 @@
 #debugruntest-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
-
-  $ disable treemanifest
 
 Setup
 
@@ -22,15 +19,14 @@ Setup
 
 Set up server repository
 
-  $ hg init server
-  $ cd server
+  $ newserver server
   $ commit base
   $ hg book @
 
 Set up client repository
 
   $ cd ..
-  $ hg clone ssh://user@dummy/server client -q
+  $ hg clone ssh://user@dummy/server client -q --config remotenames.selectivepulldefault=@
   $ cd client
 
 Build commit graph to push in

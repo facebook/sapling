@@ -1,5 +1,4 @@
 #chg-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
   $ configure mutation-norecord
@@ -7,17 +6,10 @@
 
 Setup the server
 
-  $ hginit master
-  $ cd master
+  $ newserver master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
-  > treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
-  > [treemanifest]
-  > server=True
-  > [remotefilelog]
-  > server=True
-  > shallowtrees=True
   > EOF
 
 Make local commits on the server for a file in a deep directory with a long
@@ -89,34 +81,7 @@ time.
   o  base
   
 Create a client
-  $ hgcloneshallow ssh://user@dummy/master client -q
-  13 files fetched over *s (glob) (?)
-  1 trees fetched over 0.00s
-  1 trees fetched over 0.00s
-  1 trees fetched over 0.00s
-  1 trees fetched over 0.00s
-  1 trees fetched over 0.00s
-  1 trees fetched over 0.00s
-  1 trees fetched over 0.00s
-  1 trees fetched over 0.00s
-  1 trees fetched over 0.00s
-  1 trees fetched over 0.00s
-  1 trees fetched over 0.00s
-  $ cd client
-  $ cat >> .hg/hgrc <<EOF
-  > [experimental]
-  > evolution = createmarkers, allowunstable
-  > [extensions]
-  > amend=
-  > [treemanifest]
-  > sendtrees=True
-  > [remotefilelog]
-  > reponame=treeonlyrepo
-  > EOF
-
-Rename the file in a commit
-  $ hg mv a/b/c/d/e/f/g/h/i/j/file a/b/c/d/e/f/g/h/i/j/file2
-  * files fetched over *s (glob) (?)
+  $ clone master client
   fetching tree '' efa8fa4352b919302f90e85924e691a632d6bea0
   1 trees fetched over 0.00s
   fetching tree 'a' da4a8c7aed08ac15737161f1141f62c8bf5863ff
@@ -139,6 +104,17 @@ Rename the file in a commit
   1 trees fetched over 0.00s
   fetching tree 'a/b/c/d/e/f/g/h/i/j' 22ac44092b0a117fbfeabff7839cd97964ebc4ea
   1 trees fetched over 0.00s
+  $ cd client
+  $ cat >> .hg/hgrc <<EOF
+  > [experimental]
+  > evolution = createmarkers, allowunstable
+  > [extensions]
+  > amend=
+  > EOF
+
+Rename the file in a commit
+  $ hg mv a/b/c/d/e/f/g/h/i/j/file a/b/c/d/e/f/g/h/i/j/file2
+  * files fetched over *s (glob) (?)
   $ hg commit -m "rename"
   * files fetched over *s (glob) (?)
 

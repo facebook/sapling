@@ -1,9 +1,6 @@
 #debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True
 
-Fails due to ":" in Windows path in combination w/ treemanifest.
-#require no-windows
-
 Setup
 
   $ configure dummyssh

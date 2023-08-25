@@ -573,7 +573,6 @@ Test that hooks are fired with the correct variables
   > pretxnchangegroup = python "$RUNTESTDIR/printenv.py" pretxnchangegroup
   > txnclose = python "$RUNTESTDIR/printenv.py" txnclose
   > pretxnclose = python "$RUNTESTDIR/printenv.py" pretxnclose
-  > prepushrebase = python "$RUNTESTDIR/printenv.py" prepushrebase
   > prepushkey = python "$RUNTESTDIR/printenv.py" prepushkey
   > [extensions]
   > pushrebase=
@@ -601,7 +600,6 @@ Test that hooks are fired with the correct variables
   pushing rev a5e72ac0df88 to destination ssh://user@dummy/hookserver bookmark master
   searching for changes
   updating bookmark master
-  remote: prepushrebase hook: HG_BUNDLE2=1 HG_HOOKNAME=prepushrebase HG_HOOKTYPE=prepushrebase HG_HOOK_BUNDLEPATH=* HG_HOOK_PACKPATHS=* HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE_ONTO=e95be919ac60f0c114075e32a0a4301afabadb60 HG_ONTO=master HG_SOURCE=push (glob)
   remote: pushing 3 changesets:
   remote:     4fcee35c508c  first
   remote:     11be4ca7f3f4  second

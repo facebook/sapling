@@ -1,9 +1,7 @@
 #debugruntest-compatible
-  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
   $ configure dummyssh
-  $ disable treemanifest
   $ enable pushrebase amend remotenames
   $ setconfig experimental.evolution=obsolete
   $ setconfig experimental.narrow-heads=true
@@ -13,8 +11,7 @@
 
 Set up server repository
 
-  $ hg init server
-  $ cd server
+  $ newserver server
   $ setconfig experimental.narrow-heads=false
   $ echo 1 > a
   $ echo 2 > b
