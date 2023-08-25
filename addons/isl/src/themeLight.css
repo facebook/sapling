@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-.light-theme,
-.vscode-light {
+html .light-theme,
+html .vscode-light {
   /* custom values **/
   --scm-modified-foreground: #895503;
   --scm-added-foreground: #007100;
@@ -44,4 +44,6 @@
   --signal-medium-bg: #d5b14e;
   --signal-bad-bg: #cf222e;
   --signal-fg: white;
+
+  --checkbox-border: var(--vscode-contrastBorder, rgba(0, 0, 0, 0.2));
 }

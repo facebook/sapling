@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-.dark-theme,
-.vscode-dark {
+html .dark-theme,
+html .vscode-dark {
   --scm-modified-foreground: #e2c08d;
   --scm-added-foreground: #73c991;
   --scm-removed-foreground: #f3674f;
@@ -45,6 +45,8 @@
   --signal-medium-bg: #e0d12d;
   --signal-bad-bg: #cf222e;
   --signal-fg: white;
+
+  --checkbox-border: var(--vscode-contrastBorder, rgba(255, 255, 255, 0.2));
 
   /* VS Code Webview UI Toolkit includes dark theme colors already */
 }
