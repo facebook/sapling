@@ -35,6 +35,25 @@ class BenchStats:
 
 
 @command(
+    "debugsmerge",
+    [],
+    _("[OPTION]... <DEST_FILE> <SRC_FILE> <BASE_FILE>"),
+)
+def debugsmerge(ui, repo, *args, **opts):
+    """
+    debug the performance of SmartMerge3Text
+    """
+    if len(args) != 3:
+        raise error.CommandError("debugsmerge", _("invalid arguments"))
+
+    desttext, srctext, basetext = [readfile(p) for p in args]
+    m3 = SmartMerge3Text(basetext, desttext, srctext)
+    lines, _ = basediff(m3, b"dest", b"source")
+    mergedtext = b"".join(lines)
+    ui.fout.write(mergedtext)
+
+
+@command(
     "sresolve",
     [
         (
@@ -253,6 +272,11 @@ def basediff(m3, name_a, name_b):
         else:
             lines.extend(group[1])
     return lines, conflicts
+
+
+def readfile(path):
+    with open(path, "rb") as f:
+        return f.read()
 
 
 if __name__ == "__main__":
