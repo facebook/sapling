@@ -3417,8 +3417,38 @@ def add(ui, repo, match, prefix, explicitonly, **opts):
         if file in pctx or (ignored(file) and repo.wvfs.isfileorlink(file))
     )
 
+    if util.fscasesensitive(repo.root):
+
+        def normpath(f):
+            return f
+
+    else:
+
+        def normpath(f):
+            return f.lower()
+
+    # Mapping of normalized exact path to actual exact path.
+    # On case sensitive filesystems this serves no purpose.
+    norm_to_exact = {normpath(f): f for f in files if match.exact(f)}
+
     for f in sorted(files):
-        exact = match.exact(f)
+        fn = normpath(f)
+        if fn in norm_to_exact and f != norm_to_exact[fn]:
+            # Skip if we are a case collision with an exactly matched file. The
+            # Rust matcher is case insensitive on case insensitive file
+            # systems, but there is one situation where you can still have
+            # files that differ only in case:
+            #
+            #   $ sl status
+            #   ? FOO
+            #   R foo
+            #
+            # If you run "sl add FOO" we only want to add FOO even though the
+            # "FOO" pattern matches both foo and FOO (assuming you are on a
+            # case insensitive filesystem).
+            continue
+
+        exact = fn in norm_to_exact
         if exact or not explicitonly and f not in wctx and repo.wvfs.lexists(f):
             if cca:
                 cca(f)
