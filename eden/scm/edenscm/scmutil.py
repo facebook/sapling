@@ -1223,6 +1223,71 @@ class filecache:
             raise AttributeError(self.name)
 
 
+class keyedcache:
+    """
+    Property cache based on key. Changing the key invalidates the cache.
+
+    Example:
+
+        >>> class Object1:
+        ...     count = 0
+        ...     def __init__(self):
+        ...         self.key = 1
+        ...     @keyedcache(lambda o: o.key)
+        ...     def next(self):
+        ...         Object1.count += 1
+        ...         return Object1.count
+        >>> o = Object1()
+        >>> o.next
+        1
+        >>> o.next # cached
+        1
+        >>> o.key = 2 # invalidate cache
+        >>> o.next # new value
+        2
+
+    """
+
+    NOT_SET = object()
+
+    def __init__(self, key):
+        """key: function to obtain 'key' from 'self'."""
+        self.key_function = key
+        self.nothing = object()
+        self.current_key = self.NOT_SET
+
+    def __call__(self, func):
+        # apply the decorator
+        assert callable(func)
+        self.func = func
+        self.name = func.__name__
+        return self
+
+    def __get__(self, obj, objtype=None):
+        # class property access
+        if obj is None:
+            return self
+        # property get
+        new_key = self.key_function(obj)
+        changed = self.current_key is self.NOT_SET or new_key != self.current_key
+        if changed:
+            # invalidate property cache on key change
+            obj.__dict__.pop(self.name, None)
+            self.current_key = new_key
+        if self.name not in obj.__dict__:
+            # populate cache
+            obj.__dict__[self.name] = self.func(obj)
+        return obj.__dict__[self.name]
+
+    # does not support __set__
+
+    def __delete__(self, obj):
+        try:
+            del obj.__dict__[self.name]
+        except KeyError:
+            raise AttributeError(self.name)
+
+
 def gdinitconfig(ui):
     """helper function to know if a repo should be created as general delta"""
     # experimental config: format.generaldelta
