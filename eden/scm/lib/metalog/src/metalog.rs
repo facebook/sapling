@@ -244,6 +244,12 @@ impl MetaLog {
         }
     }
 
+    /// Get the content hash of a key.
+    pub fn get_hash(&self, name: &str) -> Option<Id20> {
+        tracing::trace!("get_hash {}", name);
+        self.root.map.get(name).map(|SerId20(id)| *id)
+    }
+
     /// Insert a blob entry with the given name.
     ///
     /// Changes are not flushed to disk. Use `flush` to write them.
@@ -711,6 +717,28 @@ mod tests {
         std::env::remove_var("HGFORCEMETALOGROOT");
         let metalog = MetaLog::open_from_env(dir.as_ref()).unwrap();
         assert_eq!(metalog.message(), "third_commit");
+    }
+
+    #[test]
+    fn test_get_hash() {
+        let dir = TempDir::new().unwrap();
+        let mut metalog = MetaLog::open(&dir, None).unwrap();
+
+        // Same content should have a same hash.
+        metalog.set("a", b"bar").unwrap();
+        metalog.set("b", b"bar").unwrap();
+
+        let id_a = metalog.get_hash("a").unwrap();
+        let id_b = metalog.get_hash("b").unwrap();
+        assert_eq!(&id_a, &id_b);
+
+        // Changed content has a different hash.
+        metalog.set("a", b"baz").unwrap();
+        let id_a2 = metalog.get_hash("a").unwrap();
+        assert_ne!(&id_a, &id_a2);
+
+        // Non-existed keys do not have a hash.
+        assert!(metalog.get_hash("c").is_none());
     }
 
     /// Populate metalog for conflict testing.
