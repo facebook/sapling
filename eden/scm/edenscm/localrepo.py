@@ -1322,7 +1322,7 @@ class localrepository:
     def nullableedenapi(self):
         return self._getedenapi(nullable=True)
 
-    @util.propertycache
+    @dagcache()
     def _dagcopytrace(self):
         return bindings.copytrace.dagcopytrace(
             self.changelog.inner,
@@ -2908,8 +2908,6 @@ class localrepository:
                 **loginfo,
             )
 
-            # new commit invalidates the dag used in dagcopytrace
-            self.invalidatedagcopytrace()
             return n
         finally:
             if tr:
