@@ -136,6 +136,30 @@ class storecache(_basefilecache):
         return obj.sjoin(fname)
 
 
+class metalogcache(scmutil.keyedcache):
+    """property cache based on given metalog keys"""
+
+    def __init__(self, *metalog_keys):
+        if metalog_keys:
+            key = lambda repo: tuple(repo.metalog().get_hash(k) for k in metalog_keys)
+        else:
+            key = lambda repo: repo.metalog().root()
+        super().__init__(key)
+
+
+class dagcache(scmutil.keyedcache):
+    """property cache based on dag version
+
+    Side effect: creates changelog.
+
+    Note: dag only tracks commits, not bookmarks, or remote names, or
+    visibility.
+    """
+
+    def __init__(self):
+        super().__init__(lambda repo: repo.changelog.dag.version())
+
+
 def isfilecached(repo, name):
     """check if a repo has already cached "name" filecache-ed property
 
