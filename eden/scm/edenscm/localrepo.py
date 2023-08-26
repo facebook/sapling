@@ -1277,11 +1277,12 @@ class localrepository:
                 raise
             return set()
 
-    @repofilecache(sharedpaths=["store/bookmarks"], localpaths=["bookmarks.current"])
+    # not checking bookmarks.current - is it necessary?
+    @metalogcache("bookmarks")
     def _bookmarks(self):
         return bookmarks.bmstore(self)
 
-    @repofilecache(sharedpaths=["store/remotenames"])
+    @metalogcache("remotenames")
     def _remotenames(self):
         return bookmarks.remotenames(self)
 
