@@ -87,6 +87,13 @@ py_class!(pub class metalog |py| {
         Ok(data.map(|data| PyBytes::new(py, &data)))
     }
 
+    /// Get (binary) content hash of the key, or None if the key does not exist.
+    def get_hash(&self, key: &str) -> PyResult<Option<PyBytes>> {
+        let log = self.log(py).read();
+        let data = log.get_hash(key);
+        Ok(data.map(|data| PyBytes::new(py, data.as_ref())))
+    }
+
     /// Set an item. Return the Id of value.
     def set(&self, key: &str, value: Bytes) -> PyResult<Bytes> {
         let mut log = self.log(py).write();
