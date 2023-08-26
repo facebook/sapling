@@ -28,4 +28,18 @@ py_class!(pub class VerLink |py| {
         });
         Ok(ord)
     }
+
+    def __richcmp__(&self, rhs: VerLink, op: CompareOp) -> PyResult<bool> {
+        use std::cmp::Ordering::*;
+        use CompareOp::*;
+
+        let ord = self.inner(py).partial_cmp(rhs.inner(py));
+        let result = match ord {
+            None => matches!(op, Ne),
+            Some(Less) => matches!(op, Lt | Le | Ne),
+            Some(Greater) => matches!(op, Gt | Ge | Ne),
+            Some(Equal) => matches!(op, Le | Ge | Eq),
+        };
+        Ok(result)
+    }
 });
