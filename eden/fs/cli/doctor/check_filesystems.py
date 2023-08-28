@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Callable, List, Set, Tuple
 
 from eden.fs.cli import hg_util
-from eden.fs.cli.config import EdenCheckout, EdenInstance
+from eden.fs.cli.config import EdenCheckout, EdenInstance, InProgressCheckoutError
 from eden.fs.cli.doctor.problem import (
     FixableProblem,
     Problem,
@@ -841,16 +841,26 @@ def get_hg_diff(checkout: EdenCheckout) -> Set[Path]:
 def check_hg_status_match_hg_diff(
     tracker: ProblemTracker, instance: EdenInstance, checkout: EdenCheckout
 ) -> None:
-    modified_files = get_modified_files(instance, checkout)
+    try:
+        modified_files = get_modified_files(instance, checkout)
+    except InProgressCheckoutError:
+        return
+
     if len(modified_files) == 0:
         return
 
-    diff = get_hg_diff(checkout)
+    try:
+        diff = get_hg_diff(checkout)
+    except subprocess.CalledProcessError:
+        return
 
-    # Bail out if status changed while running `hg diff` as it is
-    # guaranteed that the working copy was modified, thus this doctor
-    # checker would raise a Problem
-    if modified_files != get_modified_files(instance, checkout):
+    try:
+        # Bail out if status changed while running `hg diff` as it is
+        # guaranteed that the working copy was modified, thus this doctor
+        # checker would raise a Problem
+        if modified_files != get_modified_files(instance, checkout):
+            return
+    except InProgressCheckoutError:
         return
 
     mismatched_files = []
