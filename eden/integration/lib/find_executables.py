@@ -233,7 +233,7 @@ class FindExeClass:
 
     def _find_hg_real(self) -> str:
         hg_real_bin = self._find_exe_optional(
-            "hg.real", env="HG_REAL_BIN", buck_path="fbcode/eden/scm/hg"
+            "hg.real", env="HG_REAL_BIN", buck_path="eden/scm/__hg__/hg.sh"
         )
         if hg_real_bin:
             return hg_real_bin
