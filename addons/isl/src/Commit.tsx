@@ -148,6 +148,12 @@ export const Commit = memo(
           onClick: () => platform.clipboardCopy(commit.hash),
         },
       ];
+      if (!isPublic && commit.diffId != null) {
+        items.push({
+          label: <T replace={{$number: commit.diffId}}>Copy Diff Number "$number"</T>,
+          onClick: () => platform.clipboardCopy(commit.diffId ?? ''),
+        });
+      }
       if (!isPublic) {
         items.push({
           label: <T>View Changes in Commit</T>,
@@ -238,6 +244,7 @@ export const Commit = memo(
           (isHighlighted ? ' highlighted' : '') +
           (isPublic || hasChildren ? '' : ' topmost')
         }
+        onContextMenu={contextMenu}
         data-testid={`commit-${commit.hash}`}>
         {!isNonActionable &&
         (commit.isHead || previewType === CommitPreview.GOTO_PREVIOUS_LOCATION) ? (
@@ -257,7 +264,6 @@ export const Commit = memo(
             commit={commit}
             draggable={!isPublic && isDraggablePreview(previewType)}
             onClick={onClickToSelect}
-            onContextMenu={contextMenu}
             onDoubleClick={onDoubleClickToShowDrawer}>
             <div className="commit-avatar" />
             {isPublic ? null : (

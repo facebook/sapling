@@ -12,14 +12,13 @@ import type {ReactNode} from 'react';
 import {CircleEllipsisIcon} from '../CircleEllipsisIcon';
 import {ExternalLink} from '../ExternalLink';
 import {Tooltip} from '../Tooltip';
-import {T, t} from '../i18n';
+import {t} from '../i18n';
 import {persistAtomToConfigEffect} from '../persistAtomToConfigEffect';
 import platform from '../platform';
 import {diffSummary, codeReviewProvider} from './CodeReviewInfo';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
 import {useState, Component, Suspense} from 'react';
 import {atom, useRecoilValue} from 'recoil';
-import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 
 import './DiffBadge.css';
@@ -61,19 +60,8 @@ export function DiffBadge({
 }) {
   const openerUrl = useRecoilValue(openerUrlForDiffUrl(url));
 
-  const contextMenu = useContextMenu(() => {
-    return [
-      {
-        label: <T replace={{$number: diff?.number}}>Copy Diff Number "$number"</T>,
-        onClick: () => platform.clipboardCopy(diff?.number ?? ''),
-      },
-    ];
-  });
   return (
-    <ExternalLink
-      href={openerUrl}
-      className={`diff-badge ${provider.name}-diff-badge`}
-      onContextMenu={contextMenu}>
+    <ExternalLink href={openerUrl} className={`diff-badge ${provider.name}-diff-badge`}>
       <provider.DiffBadgeContent diff={diff} children={children} />
     </ExternalLink>
   );
