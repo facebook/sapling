@@ -109,14 +109,30 @@ export const editedCommitMessages = atomFamily<EditedMessageUnlessOptimistic, Ha
       },
   }),
 });
-successionTracker.onSuccessions(successions => {
-  for (const [oldHash, newHash] of successions) {
-    const existing = globalRecoil().getLoadable(editedCommitMessages(oldHash));
-    if (existing.state === 'hasValue') {
-      globalRecoil().set(editedCommitMessages(newHash), existing.valueOrThrow());
+function updateEditedCommitMessagesFromSuccessions() {
+  return successionTracker.onSuccessions(successions => {
+    for (const [oldHash, newHash] of successions) {
+      const existing = globalRecoil().getLoadable(editedCommitMessages(oldHash));
+      if (
+        existing.state === 'hasValue' &&
+        // Never copy an "optimistic" message during succession, we have no way to clear it out.
+        // "optimistic" may also correspond to a message which was not edited,
+        // for which the hash no longer exists in the tree.
+        // We should just use the atom's default, which lets it populate correctly.
+        existing.valueOrThrow().type !== 'optimistic'
+      ) {
+        globalRecoil().set(editedCommitMessages(newHash), existing.valueOrThrow());
+      }
     }
-  }
-});
+  });
+}
+let editedCommitMessageSuccessionDisposable = updateEditedCommitMessagesFromSuccessions();
+export const __TEST__ = {
+  renewEditedCommitMessageSuccessionSubscription() {
+    editedCommitMessageSuccessionDisposable();
+    editedCommitMessageSuccessionDisposable = updateEditedCommitMessagesFromSuccessions();
+  },
+};
 
 export const hasUnsavedEditedCommitMessage = selectorFamily<boolean, Hash | 'head'>({
   key: 'hasUnsavedEditedCommitMessage',

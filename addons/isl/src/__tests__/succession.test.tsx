@@ -6,6 +6,7 @@
  */
 
 import App from '../App';
+import {__TEST__} from '../CommitInfoView/CommitInfoState';
 import {successionTracker} from '../SuccessionTracker';
 import {CommitInfoTestUtils} from '../testQueries';
 import {resetTestMessages, expectMessageSentToServer, simulateCommits, COMMIT} from '../testUtils';
@@ -36,6 +37,7 @@ describe('succession', () => {
   });
   afterEach(() => {
     successionTracker.clear();
+    __TEST__.renewEditedCommitMessageSuccessionSubscription();
   });
 
   describe('edited commit message', () => {
@@ -71,6 +73,37 @@ describe('succession', () => {
       expect(
         CommitInfoTestUtils.withinCommitInfo().getByText('my description'),
       ).toBeInTheDocument();
+    });
+
+    it('bug: does not propagate optimistic state message', () => {
+      // load a set of commits with hash A as head. (without any edited message for A)
+      // load a new set of commits, with hash A succeeded by hash A2.
+      // ensure commit info view is editable.
+
+      act(() => {
+        simulateCommits({
+          value: [
+            COMMIT('1', 'Commit 1', '0', {phase: 'public'}),
+            COMMIT('x', 'Commit X', '1', {isHead: true}),
+          ],
+        });
+      });
+      act(() => {
+        simulateCommits({
+          value: [
+            COMMIT('1', 'Commit 1', '0', {phase: 'public'}),
+            COMMIT('x2', 'Commit X2', '1', {isHead: true, closestPredecessors: ['x']}),
+          ],
+        });
+      });
+
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit X2')).toBeInTheDocument();
+
+      // Resulting commit being viewed should be editable: clicking the edit buttons work.
+      CommitInfoTestUtils.clickToEditTitle();
+      CommitInfoTestUtils.clickToEditDescription();
+      CommitInfoTestUtils.expectIsEditingTitle();
+      CommitInfoTestUtils.expectIsEditingDescription();
     });
   });
 
