@@ -784,36 +784,20 @@ def _imergediff(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None)
     )
 
 
-def _imergeauto(
-    repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None, localorother=None
-):
-    """
-    Generic driver for _imergelocal and _imergeother
-    """
-    assert localorother is not None
-    tool, toolpath, binary, symlink = toolconf
-    r = simplemerge.simplemerge(
-        repo.ui, fcd, fca, fco, label=labels, localorother=localorother
-    )
-    return True, r
-
-
 @internaltool("merge-local", mergeonly, precheck=_mergecheck)
-def _imergelocal(*args, **kwargs):
+def _imergelocal(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Like :merge, but resolve all conflicts non-interactively in favor
     of the local `p1()` changes."""
-    success, status = _imergeauto(localorother="local", *args, **kwargs)
-    return success, status, False
+    return _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, "local")
 
 
 @internaltool("merge-other", mergeonly, precheck=_mergecheck)
-def _imergeother(*args, **kwargs):
+def _imergeother(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Like :merge, but resolve all conflicts non-interactively in favor
     of the other `p2()` changes."""
-    success, status = _imergeauto(localorother="other", *args, **kwargs)
-    return success, status, False
+    return _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, "other")
 
 
 @internaltool("dump", fullmerge)

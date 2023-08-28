@@ -580,11 +580,15 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
 
     m3 = Merge3Text(basetext, localtext, othertext, wordmerge=wordmergemode.fromui(ui))
 
-    extrakwargs = {"localorother": opts.get("localorother", None), "minimize": True}
+    extrakwargs = {"localorother": None, "minimize": True}
     if mode == "union":
         extrakwargs["start_marker"] = None
         extrakwargs["mid_marker"] = None
         extrakwargs["end_marker"] = None
+    elif mode == "local":
+        extrakwargs["localorother"] = "local"
+    elif mode == "other":
+        extrakwargs["localorother"] = "other"
     elif name_base is not None:
         extrakwargs["base_marker"] = b"|||||||"
         extrakwargs["name_base"] = name_base
