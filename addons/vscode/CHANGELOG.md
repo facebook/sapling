@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.23
+
+- Fix commits info view sometimes becoming read only and buttons not working
+- Add border to checkboxes/radios in all themes for improved viewability
+- Improved error messages for some types of errors
+- Made font sizes and button sizes more consistent
+
 ## 0.1.22
 
 - Syntax highlighting in comparison view
