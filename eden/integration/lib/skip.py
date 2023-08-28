@@ -114,9 +114,7 @@ if sys.platform == "win32":
             "test_grep_directory_from_root",
             "test_grep_directory_from_subdirectory",
         ],
-        "hg.rebase_test.RebaseTest": [
-            "test_rebase_commit_with_independent_folder"
-        ],
+        "hg.rebase_test.RebaseTest": ["test_rebase_commit_with_independent_folder"],
         "hg.rm_test.RmTest": [
             "test_rm_directory_with_modification",
             "test_rm_modified_file_permissions",
@@ -136,6 +134,8 @@ if sys.platform == "win32":
         "hg.update_test.UpdateTest": [
             # TODO: A \r\n is used
             "test_mount_state_during_unmount_with_in_progress_checkout",
+            # Windows doesn't support executable files; mode changes are no-op
+            "test_mode_change_with_no_content_change",
         ],
         "hg.update_test.UpdateTestTreeOnlyInMemory": [
             # kill and restart Eden
@@ -294,15 +294,20 @@ if sys.platform != "win32":
         }
     )
 
+
 def _have_ntapi_extension_module() -> bool:
     if sys.platform != "win32":
         return False
 
     try:
-        from eden.integration.lib.ntapi import get_directory_entry_size  # @manual # @nolint
+        from eden.integration.lib.ntapi import (  # @manual  # @nolint
+            get_directory_entry_size,
+        )
+
         return True
     except ImportError:
         return False
+
 
 # ProjFS enumeration tests depend on a Python extension module, which may not be
 # available with all build systems.

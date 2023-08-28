@@ -64,6 +64,21 @@ class UpdateTest(EdenHgTestCase):
         repo.write_file("foo/bar.txt", "updated in commit 3\n")
         self.commit3 = repo.commit("Update foo/.gitignore")
 
+    def test_mode_change_with_no_content_change(self) -> None:
+        """Test changing the mode of a file but NOT the contents."""
+        self.assert_status_empty()
+
+        self.chmod("hello.txt", 0o755)
+        self.assert_status({"hello.txt": "M"})
+        commit4 = self.repo.commit("Update hello.txt mode")
+
+        self.repo.update(self.commit1)
+        self.repo.update(commit4)
+        self.touch("hello.txt")
+        self.repo.update(self.commit1)
+        self.repo.update(commit4)
+        self.assert_status_empty()
+
     def test_update_clean_reverts_modified_files(self) -> None:
         """Test using `hg update --clean .` to revert file modifications."""
         self.assert_status_empty()

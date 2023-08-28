@@ -3466,8 +3466,15 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
       newScmEntry &&
       getObjectStore().areObjectsKnownIdentical(
           entry.getHash(), newScmEntry->second.getHash())) {
-    // The inode already matches the checkout destination. So do nothing.
-    return nullptr;
+    if (filteredEntryType(
+            oldScmEntry->second.getType(), windowsSymlinksEnabled) ==
+        filteredEntryType(
+            newScmEntry->second.getType(), windowsSymlinksEnabled)) {
+      // The inode already matches the checkout destination. So do nothing.
+      return nullptr;
+    }
+    // The types don't match, so we should fall through and update the
+    // entry. An example is when a file goes from REGULAR -> EXECUTABLE.
   } else {
     switch (getObjectStore().compareObjectsById(
         entry.getHash(), oldScmEntry->second.getHash())) {

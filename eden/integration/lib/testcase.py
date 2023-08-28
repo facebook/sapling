@@ -314,6 +314,11 @@ class EdenTestCase(EdenTestCaseBase):
             f.write(contents.encode())
         os.chmod(fullpath, mode)
 
+    def chmod(self, path: str, mode: int = 0o644) -> None:
+        """Create or overwrite a file with the given contents."""
+        fullpath = self.get_path(path)
+        os.chmod(fullpath, mode)
+
     def rename(self, from_path: str, to_path: str) -> None:
         """Rename a file/directory at the specified paths relative to the
         clone.
