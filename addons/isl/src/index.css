@@ -56,4 +56,8 @@ code {
 
 vscode-button::part(content) {
   white-space: nowrap;
+  align-items: center;
+}
+vscode-button::part(control) {
+  margin: 0;
 }
