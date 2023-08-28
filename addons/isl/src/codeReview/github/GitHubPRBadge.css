@@ -23,6 +23,9 @@
 .github-diff-status-DRAFT {
   background-color: var(--github-neutral-bg);
 }
+.github-diff-status-MERGE_QUEUED {
+  background-color: #966600;
+}
 
 .github-diff-info {
   display: flex;

@@ -23,7 +23,7 @@ export type GitHubDiffSummary = {
   type: 'github';
   title: string;
   commitMessage: string;
-  state: PullRequestState | 'DRAFT';
+  state: PullRequestState | 'DRAFT' | 'MERGE_QUEUED';
   number: DiffId;
   url: string;
   commentCount: number;
@@ -85,6 +85,8 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
               state:
                 summary.isDraft && summary.state === PullRequestState.Open
                   ? 'DRAFT'
+                  : summary.mergeQueueEntry != null
+                  ? 'MERGE_QUEUED'
                   : summary.state,
               number: id,
               url: summary.url,
