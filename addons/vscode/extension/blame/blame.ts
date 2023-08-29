@@ -19,6 +19,7 @@ import type {
   TextEditorSelectionChangeEvent,
 } from 'vscode';
 
+import {Internal} from '../Internal';
 import {getDiffBlameHoverMarkup} from './blameHover';
 import {getRealignedBlameInfo} from './blameUtils';
 import {getUsername} from 'isl-server/src/analytics/environment';
@@ -90,7 +91,11 @@ export class InlineBlameProvider implements Disposable {
 
   initBasedOnConfig() {
     const config = 'sapling.showInlineBlame';
-    if (workspace.getConfiguration().get<boolean>(config)) {
+    const enableBlameByDefault =
+      Internal?.shouldEnableBlameByDefault == null
+        ? /* OSS */ true
+        : Internal?.shouldEnableBlameByDefault();
+    if (workspace.getConfiguration().get<boolean>(config, enableBlameByDefault)) {
       this.init();
     }
     this.disposables.push(
@@ -173,6 +178,8 @@ export class InlineBlameProvider implements Disposable {
         }
       }),
     );
+
+    this.logger.info('Initialized inline blame');
   }
 
   deinit(): void {

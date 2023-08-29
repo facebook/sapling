@@ -45,7 +45,6 @@
         },
         "sapling.showInlineBlame": {
           "type": "boolean",
-          "default": false,
           "description": "%settings.showInlineBlame.description%"
         },
         "sapling.isl.showInSidebar": {
