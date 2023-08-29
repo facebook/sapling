@@ -239,7 +239,12 @@ function generateToken(): Promise<string> {
   }
 }
 
-const validPlatforms: Array<PlatformName> = ['androidStudio', 'androidStudioRemote', 'standalone'];
+const validPlatforms: Array<PlatformName> = [
+  'androidStudio',
+  'androidStudioRemote',
+  'standalone',
+  'webview',
+];
 function isValidCustomPlatform(name: unknown): name is PlatformName {
   return validPlatforms.includes(name as PlatformName);
 }

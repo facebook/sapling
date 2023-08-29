@@ -24,7 +24,8 @@ export type PlatformName =
   | 'androidStudio'
   | 'androidStudioRemote'
   | 'vscode'
-  | 'standalone';
+  | 'standalone'
+  | 'webview';
 
 export type AbsolutePath = string;
 /**

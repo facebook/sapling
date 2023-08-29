@@ -188,6 +188,9 @@ export function startServer({
         case 'standalone':
           platformImpl = (await import('../platform/standaloneServerPlatform')).platform;
           break;
+        case 'webview':
+          platformImpl = (await import('../platform/webviewServerPlatform')).platform;
+          break;
         default:
         case undefined:
           break;
