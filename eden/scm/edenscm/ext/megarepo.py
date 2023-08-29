@@ -14,7 +14,17 @@ local repo which corresponds to commit "deadbeef" in a mirror repo.
 import re
 from typing import Optional
 
-from edenscm import autopull, error, namespaces, registrar, util
+from edenscm import (
+    autopull,
+    commands,
+    error,
+    extensions,
+    localrepo,
+    mutation,
+    namespaces,
+    registrar,
+    util,
+)
 from edenscm.autopull import deferredpullattempt, pullattempt
 from edenscm.i18n import _
 from edenscm.namespaces import namespace
@@ -140,3 +150,58 @@ def _xrepotranslate(repo, commithash):
 
 def reposetup(_ui, repo) -> None:
     repo._xrepo_lookup_cache = util.lrucachedict(100)
+
+
+# If commit is marked as a lossy commit, abort if abort, else warn.
+def _check_for_lossy_commit_usage(repo, commit, abort):
+    if not commit or not commit in repo:
+        return
+
+    ctx = repo[commit]
+    if "created_by_lossy_conversion" in ctx.extra():
+        if abort:
+            raise error.Abort(
+                _("operating on lossily synced commit %s disallowed by default")
+                % ctx.hex(),
+                hint=_(
+                    "perform operation in source-of-truth repo, or specify '--config megarepo.lossy-commit-action=ignore' to bypass"
+                ),
+            )
+        else:
+            repo.ui.warn(
+                _("warning: operating on lossily synced commit %s\n") % ctx.hex()
+            )
+
+
+def extsetup(ui) -> None:
+    action = ui.config("megarepo", "lossy-commit-action")
+    should_abort = action == "abort"
+
+    def _wrap_commit_ctx(orig, repo, ctx, **opts):
+        to_check = set()
+
+        # Check mutation info. Some commands like "metaedit" only set this.
+        if mutinfo := ctx.mutinfo():
+            to_check.update(mutation.nodesfrominfo(mutinfo.get("mutpred")) or [])
+
+        # Check ad-hoc "source" extras. Some commands like "graft" only set this.
+        if not to_check:
+            to_check.update(v for (k, v) in ctx.extra().items() if k.endswith("source"))
+
+        for c in to_check:
+            _check_for_lossy_commit_usage(repo, c, should_abort)
+
+        return orig(repo, ctx, **opts)
+
+    # Wrap backout separately since it doesn't set any commit extras.
+    def _wrap_backout(orig, ui, repo, node=None, rev=None, **opts):
+        _check_for_lossy_commit_usage(repo, node or rev, should_abort)
+        return orig(ui, repo, node, rev, **opts)
+
+    if action in {"warn", "abort"}:
+        extensions.wrapfunction(
+            localrepo.localrepository, "commitctx", _wrap_commit_ctx
+        )
+        extensions.wrapcommand(commands.table, "backout", _wrap_backout)
+    elif action and not action == "ignore":
+        ui.warn(_("invalid megarepo.lossy-commit-action '%s'\n") % action)

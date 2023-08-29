@@ -105,11 +105,12 @@ class bundlemutationstore:
         pass
 
 
-def createentry(node, mutinfo):
-    def nodesfrominfo(info):
-        if info is not None:
-            return [nodefromident(x) for x in info.split(",")]
+def nodesfrominfo(info):
+    if info is not None:
+        return [nodefromident(x) for x in info.split(",")]
 
+
+def createentry(node, mutinfo):
     if mutinfo is not None:
         try:
             time, tz = mutinfo["mutdate"].split()
