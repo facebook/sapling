@@ -546,6 +546,17 @@ def _mergediff(m3, name_a, name_b, name_base):
     return lines, conflicts
 
 
+def _resolve(m3, sides):
+    lines = []
+    for group in m3.merge_groups():
+        if group[0] == "conflict":
+            for side in sides:
+                lines.extend(group[side + 1])
+        else:
+            lines.extend(group[1])
+    return lines
+
+
 def simplemerge(ui, localctx, basectx, otherctx, **opts):
     """Performs the simplemerge algorithm.
 
@@ -580,25 +591,24 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
 
     m3 = Merge3Text(basetext, localtext, othertext, wordmerge=wordmergemode.fromui(ui))
 
-    extrakwargs = {"localorother": None, "minimize": True}
+    conflicts = False
     if mode == "union":
-        extrakwargs["start_marker"] = None
-        extrakwargs["mid_marker"] = None
-        extrakwargs["end_marker"] = None
+        lines = _resolve(m3, (1, 2))
     elif mode == "local":
-        extrakwargs["localorother"] = "local"
+        lines = _resolve(m3, (1,))
     elif mode == "other":
-        extrakwargs["localorother"] = "other"
-    elif name_base is not None:
-        extrakwargs["base_marker"] = b"|||||||"
-        extrakwargs["name_base"] = name_base
-        extrakwargs["minimize"] = False
-
-    if mode == "mergediff":
+        lines = _resolve(m3, (2,))
+    elif mode == "mergediff":
         lines, conflicts = _mergediff(m3, name_a, name_b, name_base)
     else:
+        extrakwargs = {"minimize": True}
+        if name_base is not None:
+            extrakwargs["base_marker"] = b"|||||||"
+            extrakwargs["name_base"] = name_base
+            extrakwargs["minimize"] = False
         lines = list(m3.merge_lines(name_a=name_a, name_b=name_b, **extrakwargs))
         conflicts = bool(m3.conflictscount)
+
     mergedtext = b"".join(lines)
     if opts.get("print"):
         ui.fout.write(mergedtext)
@@ -608,5 +618,5 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
         flags = getattr(localctx, "workingflags", localctx.flags)()
         localctx.write(mergedtext, flags)
 
-    if conflicts and not mode == "union":
+    if conflicts:
         return getattr(m3, "conflictscount", 1)
