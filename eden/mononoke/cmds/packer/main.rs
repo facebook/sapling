@@ -11,6 +11,7 @@ use std::io;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
+use std::time::Instant;
 
 use anyhow::bail;
 use anyhow::Context;
@@ -51,6 +52,12 @@ struct MononokePackerArgs {
         help = "Maximum number of parallel packs to work on. Default 1"
     )]
     scheduled_max: usize,
+
+    #[clap(
+        long,
+        help = "If true, print the progress and some metrics, for example, the time used for finding the best packing strategy"
+    )]
+    print_progress: bool,
 
     /// The directory that contains all the key files
     #[arg(short, long)]
@@ -127,6 +134,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let dry_run = args.dry_run;
     let max_parallelism = args.scheduled_max;
     let keys_dir = args.keys_dir;
+    let print_progress = args.print_progress;
 
     let env = app.environment();
     let logger = app.logger();
@@ -141,7 +149,9 @@ fn main(fb: FacebookInit) -> Result<()> {
         .map(|res| res.map(|e| e.path()))
         .collect::<Result<Vec<_>, io::Error>>()?;
 
-    for (_cur, entry) in keys_file_entries.iter().enumerate() {
+    let total_file_count = keys_file_entries.len();
+    for (cur, entry) in keys_file_entries.iter().enumerate() {
+        let now = Instant::now();
         let filename = entry
             .to_str()
             .ok_or_else(|| anyhow::anyhow!("name of key file must be valid UTF-8"))?;
@@ -158,6 +168,9 @@ fn main(fb: FacebookInit) -> Result<()> {
         scuba.add_opt("blobstore_id", Some(inner_blobstore_id));
         // Read keys from the file
         let keys_list = lines_from_file(entry);
+        if print_progress {
+            println!("File {}, which has {} lines", filename, keys_list.len());
+        }
         runtime.block_on(async {
             // construct blobstore instance
             let blobstore = make_packblob(
@@ -193,6 +206,14 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .with_context(|| "while packing keys")
                 .unwrap();
         });
+        let elapsed = now.elapsed();
+        if print_progress {
+            println!(
+                "Progress: {:.3}%\tprocessing took {:.2?}",
+                (cur + 1) as f32 * 100.0 / total_file_count as f32,
+                elapsed
+            );
+        }
     }
     Ok(())
 }
