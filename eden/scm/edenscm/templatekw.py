@@ -728,13 +728,12 @@ def showpeerurls(repo, **args) -> _hybrid:
 
 @templatekeyword("predecessors")
 def showpredecessors(repo, ctx, **args) -> _hybrid:
-    """Returns the list if the closest visible predecessors. (EXPERIMENTAL)"""
+    """ISL-use only. Returns the list of the closest locally known predecessors. (EXPERIMENTAL)"""
     if mutation.enabled(repo):
-        predecessors = sorted(mutation.predecessorsset(repo, ctx.node(), closest=True))
+        predecessors = mutation.local_closest_predecessors(repo, ctx.node())
     else:
         predecessors = []
     predecessors = list(map(hex, predecessors))
-
     return _hybrid(
         None,
         predecessors,

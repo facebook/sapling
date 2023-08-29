@@ -8,7 +8,7 @@
 from __future__ import absolute_import
 
 from collections import defaultdict
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from bindings import mutationstore
 
@@ -467,6 +467,15 @@ def predecessorsset(repo, startnode, closest: bool = False):
         # to process them multiple times.
         nextpreds = util.removeduplicates(nextpreds)
     return preds
+
+
+def local_closest_predecessors(repo, node) -> List[bytes]:
+    entry = repo._mutationstore.get(node)
+    preds = entry and entry.preds() or []
+    # Filter preds by "locally known"
+    if preds:
+        preds = repo.changelog.filternodes(preds, local=True)
+    return list(preds)
 
 
 def _succproduct(succsetlist):
