@@ -10,6 +10,8 @@
 
 from __future__ import absolute_import
 
+import contextlib
+
 from . import error, pycompat, registrar, templatekw, util
 from .i18n import _
 
@@ -121,6 +123,9 @@ class namespaces:
             if ns is not None:
                 self._addnamespace(name, ns)
 
+        # tweaked by revset layer that handles user input
+        self.include_user = False
+
     def __getitem__(self, namespace):
         """returns the namespace object"""
         return self._names[namespace]
@@ -149,17 +154,26 @@ class namespaces:
 
             templatekw.keywords[name] = generatekw
 
-    def singlenode(self, repo, name):
+    def singlenode(self, repo, name, namespaces=None):
         """
         Return the 'best' node for the given name. Best means the first node
         in the first nonempty list returned by a name-to-nodes mapping function
         in the defined precedence order.
 
         Raises a KeyError if there is no such node.
+
+        'namespaces', if set, can be used to limit resolution in the specified
+        namespaces, otherwise, namespaces with 'user_only=False' will be used,
+        if 'self.included' is 'False'.
         """
         for ns, v in pycompat.iteritems(self._names):
             # Fast path: do not consider branches unless it's "default".
             if ns == "branches" and name != "default":
+                continue
+            if namespaces is not None:
+                if ns not in namespaces:
+                    continue
+            elif v.user_only and not self.include_user:
                 continue
             n = v.namemap(repo, name)
             if n:
@@ -170,6 +184,16 @@ class namespaces:
                     return cl.node(maxrev)
                 return n[0]
         raise KeyError(_("no such name: %s") % name)
+
+    @contextlib.contextmanager
+    def included_user(self):
+        """Include namespaces with 'user_only=True' for resolution"""
+        orig_value = self.include_user
+        self.include_user = True
+        try:
+            yield
+        finally:
+            self.include_user = orig_value
 
 
 class namespace:
@@ -198,6 +222,8 @@ class namespace:
       'deprecated': set of names to be masked for ordinary use
       'builtin': bool indicating if this namespace is supported by core
                  Mercurial.
+      'user_only': if True, only used by user provided symbols and strings
+                   passed via argv.
     """
 
     def __init__(
@@ -211,6 +237,7 @@ class namespace:
         nodemap=None,
         deprecated=None,
         builtin=False,
+        user_only=False,
     ):
         """create a namespace
 
@@ -235,6 +262,7 @@ class namespace:
         self.listnames = listnames
         self.namemap = namemap
         self.nodemap = nodemap
+        self.user_only = user_only
 
         # if logname is not specified, use the template name as backup
         if self.logname is None:
