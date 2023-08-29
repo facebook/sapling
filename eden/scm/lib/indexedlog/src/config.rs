@@ -65,3 +65,43 @@ pub fn set_page_out_threshold(threshold: i64) {
     let delta = threshold - old_threshold;
     crate::page_out::adjust_available(delta);
 }
+
+/// Configure various settings based on a `Config`.
+#[cfg(feature = "configurable")]
+pub fn configure(config: &dyn configmodel::Config) -> configmodel::Result<()> {
+    use configmodel::convert::ByteCount;
+    use configmodel::ConfigExt;
+
+    if cfg!(unix) {
+        let chmod_file = config.get_or("permissions", "chmod-file", || -1)?;
+        if chmod_file >= 0 {
+            CHMOD_FILE.store(chmod_file, atomic::Ordering::Release);
+        }
+
+        let chmod_dir = config.get_or("permissions", "chmod-dir", || -1)?;
+        if chmod_dir >= 0 {
+            CHMOD_DIR.store(chmod_dir, atomic::Ordering::Release);
+        }
+
+        let use_symlink_atomic_write: bool =
+            config.get_or_default("format", "use-symlink-atomic-write")?;
+        SYMLINK_ATOMIC_WRITE.store(use_symlink_atomic_write, atomic::Ordering::Release);
+    }
+
+    if let Some(max_chain_len) =
+        config.get_opt::<u32>("storage", "indexedlog-max-index-checksum-chain-len")?
+    {
+        INDEX_CHECKSUM_MAX_CHAIN_LEN.store(max_chain_len, atomic::Ordering::Release);
+    }
+
+    if let Some(threshold) =
+        config.get_opt::<ByteCount>("storage", "indexedlog-page-out-threshold")?
+    {
+        set_page_out_threshold(threshold.value() as _);
+    }
+
+    let fsync: bool = config.get_or_default("storage", "indexedlog-fsync")?;
+    set_global_fsync(fsync);
+
+    Ok(())
+}

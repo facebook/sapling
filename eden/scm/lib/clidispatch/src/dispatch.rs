@@ -7,7 +7,6 @@
 
 use std::env;
 use std::path::Path;
-use std::sync::atomic::Ordering::SeqCst;
 
 use anyhow::Error;
 use cliparser::alias::expand_aliases;
@@ -17,7 +16,6 @@ use cliparser::parser::ParseOptions;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
 use configloader::config::ConfigSet;
-use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use repo::repo::Repo;
@@ -184,37 +182,7 @@ fn initialize_blackbox(optional_repo: &OptionalRepo) -> Result<()> {
 }
 
 fn initialize_indexedlog(config: &ConfigSet) -> Result<()> {
-    if cfg!(unix) {
-        let chmod_file = config.get_or("permissions", "chmod-file", || -1)?;
-        if chmod_file >= 0 {
-            indexedlog::config::CHMOD_FILE.store(chmod_file, SeqCst);
-        }
-
-        let chmod_dir = config.get_or("permissions", "chmod-dir", || -1)?;
-        if chmod_dir >= 0 {
-            indexedlog::config::CHMOD_DIR.store(chmod_dir, SeqCst);
-        }
-
-        let use_symlink_atomic_write: bool =
-            config.get_or_default("format", "use-symlink-atomic-write")?;
-        indexedlog::config::SYMLINK_ATOMIC_WRITE.store(use_symlink_atomic_write, SeqCst);
-    }
-
-    if let Some(max_chain_len) =
-        config.get_opt::<u32>("storage", "indexedlog-max-index-checksum-chain-len")?
-    {
-        indexedlog::config::INDEX_CHECKSUM_MAX_CHAIN_LEN.store(max_chain_len, SeqCst);
-    }
-
-    if let Some(threshold) =
-        config.get_opt::<ByteCount>("storage", "indexedlog-page-out-threshold")?
-    {
-        indexedlog::config::set_page_out_threshold(threshold.value() as _);
-    }
-
-    let fsync: bool = config.get_or_default("storage", "indexedlog-fsync")?;
-    indexedlog::config::set_global_fsync(fsync);
-
+    indexedlog::config::configure(config)?;
     Ok(())
 }
 

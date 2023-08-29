@@ -14,7 +14,7 @@ configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 hgplain = { version = "0.1.0", path = "../util/hgplain" }
 identity = { version = "0.1.0", path = "../identity" }
-indexedlog = { version = "0.1.0", path = "../indexedlog" }
+indexedlog = { version = "0.1.0", path = "../indexedlog", features = ["configurable"] }
 io = { version = "0.1.0", path = "../io" }
 network-doctor = { version = "0.1.0", path = "../doctor/network" }
 repo = { version = "0.1.0", path = "../repo" }
