@@ -185,17 +185,17 @@ as --rev arguments (issue3950)
   $ hg goto -q 'desc(other)'
   $ echo bimble > bimble
   $ hg add bimble
-  $ hg commit -q -m 'bisect'
+  $ hg commit -q -m 'b1'
   $ echo e >> bimble
-  $ hg ci -m bisect2
+  $ hg ci -m b2
   $ echo e >> bimble
-  $ hg ci -m bisect3
+  $ hg ci -m b3
   $ hg book bisect
   $ hg goto -q Y
   $ hg rebase -r '"bisect"^^::"bisect"^' -r bisect -d Z
-  rebasing 345c90f326a4 "bisect"
-  rebasing f677a2907404 "bisect2"
-  rebasing 325c16001345 "bisect3" (bisect)
+  rebasing 49529c8ce0a4 "b1"
+  rebasing 2d12d2701d8f "b2"
+  rebasing d19a263ead4a "b3" (bisect)
 
 Bookmark and working parent get moved even if --keep is set (issue5682)
 

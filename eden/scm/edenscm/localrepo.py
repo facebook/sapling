@@ -1635,6 +1635,33 @@ class localrepository:
             return True
         return True
 
+    def draft_titles(self):
+        """return a stream of (draft_node, title), used by namespace"""
+        rgen = self._draft_titles_gen
+        return rgen.iter()
+
+    @metalogcache("visibleheads", "remotenames")
+    def _draft_titles_gen(self):
+        """cached generator that yields (draft_node, title).
+
+        Lazily load and cached content:
+        - Only titles of the iterated commits are read.
+        - Already read commit titles are cached (by metalogcache and
+          RGenerator) so they won't be read again by the next iteration
+          via `draft_titles`.
+        """
+        limit = self.ui.configint("experimental", "draft-title-limit") or 1000
+        draftrevs = self.revs("limit(reverse(draft()),%z)", limit).prefetch("text")
+
+        def gen():
+            for c in draftrevs.iterctx():
+                yield c.node(), c.description().split("\n", 1)[0].lower()
+
+        # Wrap in the RGenerator so it can be iterated through multiple times
+        # and be cached.
+        rgen = bindings.threading.RGenerator(gen())
+        return rgen
+
     def shared(self):
         """the type of shared repository (None if not shared)"""
         if self.sharedpath != self.path:

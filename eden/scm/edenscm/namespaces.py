@@ -12,7 +12,7 @@ from __future__ import absolute_import
 
 import contextlib
 
-from . import error, pycompat, registrar, templatekw, util
+from . import error, hintutil, pycompat, registrar, templatekw, util
 from .i18n import _
 
 
@@ -99,6 +99,54 @@ def hoistednames(repo):
         )
     else:
         return None
+
+
+# Example namespaces used by extensions:
+# - gitrev      priority=70
+# - globalrevs  priority=75
+# - phrevset    priority=70
+# - conduit     priority=70
+# - megarepo    priority=100
+
+
+@builtinnamespace("titles", priority=90)
+def titles(repo):
+    """Match the titles of draft commits."""
+    # Disable on PLAIN - potentially dangerous for automation.
+    if repo.ui.plain("titles-namespace") or not repo.ui.configbool(
+        "experimental", "titles-namespace"
+    ):
+        return None
+
+    def namemap(repo, name):
+        name = name.lower()
+        # PERF: This runs a linear string match scan of up to 1k commits.
+        # If called repetitively, it might need caching or indexing.
+        for node, title in repo.draft_titles():
+            start = title.find(name)
+            if start < 0:
+                # no match
+                continue
+            # check word boundary
+            if start > 0 and title[start - 1].isalnum():
+                continue
+            end = start + len(name)
+            if end < len(title) and title[end].isalnum():
+                continue
+            # matched - show a hint
+            hintutil.trigger("match-title", name)
+            return [node]
+
+    return namespace(
+        templatename="titles",
+        logname="titles",
+        colorname="titles",
+        listnames=lambda repo: [],
+        namemap=namemap,
+        nodemap=lambda repo, node: [],
+        builtin=True,
+        user_only=True,
+    )
 
 
 class namespaces:

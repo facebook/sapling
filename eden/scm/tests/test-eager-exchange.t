@@ -143,13 +143,15 @@ Pull (lazy):
       DEBUG eagerepo::api: commit_graph 99dac869f01e09fe3d501fa645ea524af80d498f 23d30dc6b70380b2d939023947578ae0e0198999
       DEBUG eagerepo::api: commit_mutations 99dac869f01e09fe3d501fa645ea524af80d498f
 
+      $ hg debugmakepublic -r $B
+
       $ hg log -Gr 'all()' -T '{desc} {remotenames}'
       DEBUG eagerepo::api: revlog_data 99dac869f01e09fe3d501fa645ea524af80d498f, 23d30dc6b70380b2d939023947578ae0e0198999, 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 748104bd5058bf2c386d074d8dcf2704855380f6
       TRACE eagerepo::api:  found: 99dac869f01e09fe3d501fa645ea524af80d498f, 94 bytes
       TRACE eagerepo::api:  found: 23d30dc6b70380b2d939023947578ae0e0198999, 94 bytes
       TRACE eagerepo::api:  found: 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 98 bytes
       TRACE eagerepo::api:  found: 748104bd5058bf2c386d074d8dcf2704855380f6, 98 bytes
-      o  B
+      o  B* (glob)
       │
       │ o  D remote/master
       │ │

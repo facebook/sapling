@@ -1255,7 +1255,6 @@ class keyedcache:
     def __init__(self, key):
         """key: function to obtain 'key' from 'self'."""
         self.key_function = key
-        self.nothing = object()
         self.current_key = self.NOT_SET
 
     def __call__(self, func):

@@ -43,6 +43,11 @@ hinttable = {
         'the patterns "%s" may be slow since they traverse the entire repo (see "@prog@ help patterns")',
     )
     % (pats),
+    "match-title": lambda name: _(
+        "commit matched by title from '%s'\n"
+        " (if you want to disable title matching, run '@prog@ config --edit experimental.titles-namespace=false')"
+    )
+    % name,
 }
 messages = []
 triggered = set()
