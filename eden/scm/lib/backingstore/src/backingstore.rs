@@ -49,6 +49,9 @@ impl BackingStore {
             config.set("edenapi", "max-retry-per-request", Some("0"), &source);
         }
 
+        // Apply indexed log configs, which can affect edenfs behavior.
+        indexedlog::config::configure(&config)?;
+
         let ident = identity::must_sniff_dir(root)?;
         let hg = root.join(ident.dot_dir());
         let store_path = hg.join("store");

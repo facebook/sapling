@@ -16,6 +16,7 @@ eagerepo = { version = "0.1.0", path = "../eagerepo" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 env_logger = "0.10"
 identity = { version = "0.1.0", path = "../identity" }
+indexedlog = { version = "0.1.0", path = "../indexedlog", features = ["configurable"] }
 libc = "0.2.139"
 log = { version = "0.4.17", features = ["kv_unstable", "kv_unstable_std"] }
 manifest = { version = "0.1.0", path = "../manifest" }
