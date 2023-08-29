@@ -980,8 +980,12 @@ class dirstate:
         """Determine the status of the working copy relative to the
         dirstate and return a scmutil.status.
         """
+
         if self._ui.configbool("workingcopy", "ruststatus"):
+            self._ui.log("status_info", internal_status_mode="rust")
             return self._ruststatus(match, ignored, clean, unknown)
+
+        self._ui.log("status_info", internal_status_mode="python")
 
         wctx = self._repo[None]
         # Prime the wctx._parents cache so the parent doesn't change out from
