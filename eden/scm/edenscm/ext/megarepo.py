@@ -57,7 +57,10 @@ def _megareponamespace(_repo) -> namespace:
         return []
 
     return namespaces.namespace(
-        listnames=lambda _repo: [], namemap=cachedname, nodemap=lambda _repo, _node: []
+        listnames=lambda _repo: [],
+        namemap=cachedname,
+        nodemap=lambda _repo, _node: [],
+        user_only=True,
     )
 
 
