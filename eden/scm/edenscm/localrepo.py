@@ -1820,12 +1820,21 @@ class localrepository:
             # Flush changelog. At this time remotenames should be up-to-date.
             # We need to write out changelog before remotenames so remotenames
             # do not have dangling pointers.
-            main = bookmarks.mainbookmark(repo)
             mainnodes = []
-            if main in repo:
-                node = repo[main].node()
-                if node != nullid:
-                    mainnodes.append(node)
+            main = bookmarks.mainbookmark(repo)
+            if main:
+                # Explicitly resolve 'main' in the 'hoistednames' and
+                # 'bookmarks' namespace only. The "bookmarks" namespace is
+                # needed by some tests and paths, unfortunately.
+                try:
+                    main_node = repo.names.singlenode(
+                        repo, main, {"hoistednames", "bookmarks"}
+                    )
+                    if main_node != nullid:
+                        mainnodes.append(main_node)
+                except KeyError:
+                    # no such namespace, or not resolved in namespace
+                    pass
             cl.inner.flush(mainnodes)
 
             # flush(mainnodes) might reassign ids that makes the cached `public()`
