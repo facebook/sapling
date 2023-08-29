@@ -138,7 +138,6 @@ class Merge3Text:
         mid_marker=b"=======",
         end_marker=b">>>>>>>",
         base_marker=None,
-        localorother=None,
         minimize=False,
     ):
         """Return merge in cvs-like form."""
@@ -170,47 +169,40 @@ class Merge3Text:
                 for i in range(t[1], t[2]):
                     yield self.b[i]
             elif what == "conflict":
-                if localorother == "local":
-                    for i in range(t[3], t[4]):
-                        yield self.a[i]
-                elif localorother == "other":
-                    for i in range(t[5], t[6]):
-                        yield self.b[i]
-                else:
-                    if self.wordmerge is wordmergemode.enforced:
-                        self.conflictscount += 1
-                        raise CantShowWordConflicts()
-                    elif self.wordmerge is wordmergemode.ondemand:
-                        # Try resolve the conflicted region using word merge
-                        subbasetext = b"".join(self.base[t[1] : t[2]])
-                        subatext = b"".join(self.a[t[3] : t[4]])
-                        subbtext = b"".join(self.b[t[5] : t[6]])
-                        text = trywordmerge(subbasetext, subatext, subbtext)
-                        if text:
-                            for line in text.splitlines(True):
-                                yield line
-                            continue
-
-                    if (merged_lines := self.resolve_conflict_region(t)) is not None:
-                        for line in merged_lines:
+                if self.wordmerge is wordmergemode.enforced:
+                    self.conflictscount += 1
+                    raise CantShowWordConflicts()
+                elif self.wordmerge is wordmergemode.ondemand:
+                    # Try resolve the conflicted region using word merge
+                    subbasetext = b"".join(self.base[t[1] : t[2]])
+                    subatext = b"".join(self.a[t[3] : t[4]])
+                    subbtext = b"".join(self.b[t[5] : t[6]])
+                    text = trywordmerge(subbasetext, subatext, subbtext)
+                    if text:
+                        for line in text.splitlines(True):
                             yield line
                         continue
 
-                    self.conflictscount += 1
-                    if start_marker is not None:
-                        yield start_marker + newline
-                    for i in range(t[3], t[4]):
-                        yield self.a[i]
-                    if base_marker is not None:
-                        yield base_marker + newline
-                        for i in range(t[1], t[2]):
-                            yield self.base[i]
-                    if mid_marker is not None:
-                        yield mid_marker + newline
-                    for i in range(t[5], t[6]):
-                        yield self.b[i]
-                    if end_marker is not None:
-                        yield end_marker + newline
+                if (merged_lines := self.resolve_conflict_region(t)) is not None:
+                    for line in merged_lines:
+                        yield line
+                    continue
+
+                self.conflictscount += 1
+                if start_marker is not None:
+                    yield start_marker + newline
+                for i in range(t[3], t[4]):
+                    yield self.a[i]
+                if base_marker is not None:
+                    yield base_marker + newline
+                    for i in range(t[1], t[2]):
+                        yield self.base[i]
+                if mid_marker is not None:
+                    yield mid_marker + newline
+                for i in range(t[5], t[6]):
+                    yield self.b[i]
+                if end_marker is not None:
+                    yield end_marker + newline
             else:
                 raise ValueError(what)
 
