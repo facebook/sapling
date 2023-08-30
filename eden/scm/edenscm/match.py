@@ -130,21 +130,29 @@ def match(
     """
 
     if _userustmatcher:
-        hm = hintedmatcher(
-            root,
-            cwd,
-            patterns or [],
-            include or [],
-            exclude or [],
-            default,
-            ctx,
-            casesensitive=not icasefs,
-            badfn=badfn,
-        )
-        if warn:
-            for warning in hm.warnings():
-                warn("warning: " + identity.replace(warning) + "\n")
-        return hm
+        try:
+            hm = hintedmatcher(
+                root,
+                cwd,
+                patterns or [],
+                include or [],
+                exclude or [],
+                default,
+                ctx,
+                casesensitive=not icasefs,
+                badfn=badfn,
+            )
+        except (error.UncategorizedNativeError, ValueError) as ex:
+            if util.istest():
+                raise
+            if ctx:
+                ctx.repo().ui.log("pathmatcher_info", hinted_matcher_error=str(ex))
+            pass
+        else:
+            if warn:
+                for warning in hm.warnings():
+                    warn("warning: " + identity.replace(warning) + "\n")
+            return hm
 
     normalize = _donormalize
     if icasefs:
