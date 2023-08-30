@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.71"
 async-trait = "0.1.71"
-auto_impl = "0.4"
+auto_impl = "1.1.0"
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 types = { version = "0.1.0", path = "../types" }
