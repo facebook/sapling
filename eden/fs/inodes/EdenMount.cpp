@@ -1422,16 +1422,6 @@ folly::Future<CheckoutResult> EdenMount::checkout(
             })
             .semi();
       })
-      .thenValue([this](std::tuple<
-                        ObjectStore::GetRootTreeResult,
-                        ObjectStore::GetRootTreeResult> treeResults) {
-        XLOG(DBG7) << "Checkout: waitForPendingWrites";
-        return waitForPendingWrites()
-            .thenValue([treeResults = std::move(treeResults)](auto&&) {
-              return treeResults;
-            })
-            .semi();
-      })
       .thenValue(
           [this,
            rootInode,
