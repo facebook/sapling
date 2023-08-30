@@ -17,14 +17,65 @@ A, B, BASE = range(3)
 
 
 class Conflict:
-    def __init__(self, conflict_region):
-        _, z1, z2, a1, a2, b1, b2 = conflict_region
-        self.start = [a1, b1, z1]
-        self.end = [a2, b2, z2]
+    def __init__(self, base_lines, a_lines, b_lines):
+        self.base_lines = base_lines
+        self.a_lines = a_lines
+        self.b_lines = b_lines
         self.merged_lines = []
 
-    def __str__(self):
-        return f"{list(zip(self.start, self.end))}"
+
+def merge_adjacent_changes(c: Conflict) -> bool:
+    base_lines, a_lines, b_lines = c.base_lines, c.a_lines, c.b_lines
+
+    # require something to be changed
+    if not base_lines:
+        return False
+
+    ablocks = unmatching_blocks(base_lines, a_lines)
+    bblocks = unmatching_blocks(base_lines, b_lines)
+
+    k = 0
+    indexes = [0, 0]
+    merged_lines = []
+    while indexes[A] < len(ablocks) and indexes[B] < len(bblocks):
+        ablock, bblock = ablocks[indexes[A]], bblocks[indexes[B]]
+        if is_overlap(ablock[0], ablock[1], bblock[0], bblock[1]):
+            return False
+        elif is_non_unique_separator_for_insertion(
+            base_lines, a_lines, b_lines, ablock, bblock
+        ):
+            return False
+
+        i, block, lines = (
+            (A, ablock, a_lines) if ablock[0] < bblock[0] else (B, bblock, b_lines)
+        )
+        # add base lines before the block
+        while k < block[0]:
+            merged_lines.append(base_lines[k])
+            k += 1
+        # skip base lines being deleted
+        k += block[1] - block[0]
+        # add new lines from the block
+        merged_lines.extend(lines[block[2] : block[3]])
+
+        indexes[i] += 1
+
+    if indexes[A] < len(ablocks):
+        block, lines = ablocks[indexes[A]], a_lines
+    else:
+        block, lines = bblocks[indexes[B]], b_lines
+
+    while k < block[0]:
+        merged_lines.append(base_lines[k])
+        k += 1
+    k += block[1] - block[0]
+    merged_lines.extend(lines[block[2] : block[3]])
+
+    # add base lines at the end of block
+    merged_lines.extend(base_lines[k:])
+    c.merged_lines = merged_lines
+
+    return True
 
 
 class SmartMerge3Text(Merge3Text):
@@ -40,67 +91,16 @@ class SmartMerge3Text(Merge3Text):
 
         Return resolved lines, or None if auto resolution failed.
         """
-        c = Conflict(conflict_region)
+        _, z1, z2, a1, a2, b1, b2 = conflict_region
+        base_lines = self.base[z1:z2]
+        a_lines = self.a[a1:a2]
+        b_lines = self.b[b1:b2]
+        c = Conflict(base_lines, a_lines, b_lines)
 
-        if self.merge_adjacent_changes(c):
+        if merge_adjacent_changes(c):
             return c.merged_lines
 
         return None
-
-    def merge_adjacent_changes(self, c: Conflict) -> bool:
-        # require something to be changed
-        if c.start[BASE] == c.end[BASE]:
-            return False
-
-        base_lines = self.base[c.start[BASE] : c.end[BASE]]
-        a_lines = self.a[c.start[A] : c.end[A]]
-        b_lines = self.b[c.start[B] : c.end[B]]
-
-        ablocks = unmatching_blocks(base_lines, a_lines)
-        bblocks = unmatching_blocks(base_lines, b_lines)
-
-        k = c.start[BASE]
-        indexes = [0, 0]
-        while indexes[A] < len(ablocks) and indexes[B] < len(bblocks):
-            ablock, bblock = ablocks[indexes[A]], bblocks[indexes[B]]
-            if is_overlap(ablock[0], ablock[1], bblock[0], bblock[1]):
-                c.merged_lines = []
-                return False
-            elif is_non_unique_separator_for_insertion(
-                base_lines, a_lines, b_lines, ablock, bblock
-            ):
-                c.merged_lines = []
-                return False
-
-            i, block, lines = (
-                (A, ablock, a_lines) if ablock[0] < bblock[0] else (B, bblock, b_lines)
-            )
-            # add base lines before the block
-            while k < block[0]:
-                c.merged_lines.append(self.base[k])
-                k += 1
-            # skip base lines being deleted
-            k += block[1] - block[0]
-            # add new lines from the block
-            c.merged_lines += lines[block[2] : block[3]]
-
-            indexes[i] += 1
-
-        if indexes[A] < len(ablocks):
-            block, lines = ablocks[indexes[A]], a_lines
-        else:
-            block, lines = bblocks[indexes[B]], b_lines
-
-        while k < block[0]:
-            c.merged_lines.append(self.base[k])
-            k += 1
-        k += block[1] - block[0]
-        c.merged_lines += lines[block[2] : block[3]]
-
-        # add base lines at the end of block
-        c.merged_lines += self.base[k : c.end[BASE]]
-
-        return True
 
 
 def is_non_unique_separator_for_insertion(
