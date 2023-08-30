@@ -596,7 +596,7 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
         lines, conflicts = _mergediff(m3, name_a, name_b, name_base)
     else:
         extrakwargs = {"minimize": True}
-        if name_base is not None:
+        if mode == "merge3":
             extrakwargs["base_marker"] = b"|||||||"
             extrakwargs["name_base"] = name_base
             extrakwargs["minimize"] = False
