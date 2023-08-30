@@ -307,7 +307,8 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
       actions.push(
         <HighlightCommitsWhileHovering key="resubmit-stack" toHighlight={resubmittableStack}>
           <OperationDisabledButton
-            contextKey="submit-stack"
+            // Use the diffId in the key so that only this "resubmit stack" button shows the spinner.
+            contextKey={`resubmit-stack-on-${tree.info.diffId}`}
             appearance="icon"
             icon={<Icon icon="cloud-upload" slot="start" />}
             runOperation={() => {
@@ -317,7 +318,7 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
           </OperationDisabledButton>
         </HighlightCommitsWhileHovering>,
       );
-      //     any non-submitted diffs -> "submit all commits this stack" in hidden group
+      // any non-submitted diffs -> "submit all commits this stack" in hidden group
       if (
         submittableStack != null &&
         submittableStack.length > 0 &&
@@ -339,16 +340,25 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
           },
         });
       }
-      //     NO non-submitted diffs -> nothing in hidden group
+      // NO non-submitted diffs -> nothing in hidden group
     } else if (
       submittableStack != null &&
       submittableStack.length >= MIN_STACK_SIZE_TO_SUGGEST_SUBMIT
     ) {
+      // We need to associate this operation with the stack we're submitting,
+      // but during submitting, we'll amend the original commit, so hash is not accurate.
+      // Parent is close, but if you had multiple stacks rebased to the same public commit,
+      // all those stacks would render the same key and show the same spinner.
+      // So parent hash + title heuristic lets us almost always show the spinner for only this stack.
+      const contextKey = `submit-stack-on-${tree.info.parents[0]}-${tree.info.title.replace(
+        / /g,
+        '_',
+      )}`;
       // NO existing diffs -> show submit stack ()
       actions.push(
         <HighlightCommitsWhileHovering key="submit-stack" toHighlight={submittableStack}>
           <OperationDisabledButton
-            contextKey="submit-stack"
+            contextKey={contextKey}
             appearance="icon"
             icon={<Icon icon="cloud-upload" slot="start" />}
             runOperation={() => {
@@ -381,7 +391,7 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
       </VSCodeButton>
     );
   return (
-    <div className="commit-tree-stack-actions">
+    <div className="commit-tree-stack-actions" data-testid="commit-tree-stack-actions">
       {actions}
       {moreActionsButton}
     </div>
