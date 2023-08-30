@@ -198,6 +198,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                             &pack_keys,
                             dry_run,
                             scuba,
+                            print_progress,
                         )
                         .await
                     }
