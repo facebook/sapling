@@ -363,6 +363,12 @@ Test patterns:
   f  fenugreek      fenugreek
   f  mammals/skunk  mammals/skunk
 
+Fancy regexes are deprecated but technically supported.
+It is okay to delete this test if you are dropping support.
+  $ hg debugwalk 're:(?<!fruit)(b)eans/\1lack(?=pinto|$)'
+  warning: fancy regexes are deprecated and may stop working (?)
+  f  beans/black  beans/black
+
   $ hg debugwalk path:beans/black
   f  beans/black  beans/black  exact
   $ hg debugwalk path:beans//black

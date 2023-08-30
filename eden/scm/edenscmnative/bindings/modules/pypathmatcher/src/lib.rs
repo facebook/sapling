@@ -158,7 +158,7 @@ py_class!(pub class dynmatcher |py| {
             &build_patterns(&include, default_kind),
             &build_patterns(&exclude, default_kind),
             case_sensitive
-        ).map_pyerr(py)?;
+        ).map_pyerr(py)?.0;
         Self::create_instance(py, matcher)
     }
 

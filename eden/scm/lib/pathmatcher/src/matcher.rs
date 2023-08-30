@@ -14,6 +14,7 @@ use types::RepoPathBuf;
 
 use crate::pattern::normalize_patterns;
 use crate::pattern::Pattern;
+use crate::regex_matcher::SlowRegexMatcher;
 use crate::AlwaysMatcher;
 use crate::DifferenceMatcher;
 use crate::DynMatcher;
@@ -126,33 +127,36 @@ pub fn build_matcher(
     include: &[Pattern],
     exclude: &[Pattern],
     case_sensitive: bool,
-) -> Result<DynMatcher> {
-    let mut m: DynMatcher = if patterns.is_empty() {
-        Arc::new(AlwaysMatcher::new())
+) -> Result<(DynMatcher, Vec<String>)> {
+    let (mut m, mut warnings) = if patterns.is_empty() {
+        (Arc::new(AlwaysMatcher::new()) as DynMatcher, Vec::new())
     } else {
         build_matcher_from_patterns(patterns, case_sensitive)?
     };
 
     if !include.is_empty() {
-        let im = build_matcher_from_patterns(include, case_sensitive)?;
+        let (im, w) = build_matcher_from_patterns(include, case_sensitive)?;
         m = Arc::new(IntersectMatcher::new(vec![m, im]));
+        warnings.extend(w);
     }
 
     if !exclude.is_empty() {
-        let em = build_matcher_from_patterns(exclude, case_sensitive)?;
+        let (em, w) = build_matcher_from_patterns(exclude, case_sensitive)?;
         m = Arc::new(DifferenceMatcher::new(m, em));
+        warnings.extend(w);
     }
 
-    Ok(m)
+    Ok((m, warnings))
 }
 
 pub(crate) fn build_matcher_from_patterns(
     patterns: &[Pattern],
     case_sensitive: bool,
-) -> Result<DynMatcher> {
+) -> Result<(DynMatcher, Vec<String>)> {
     assert!(!patterns.is_empty(), "patterns should not be empty");
 
     let mut matchers: Vec<DynMatcher> = Vec::new();
+    let mut warnings: Vec<String> = Vec::new();
 
     let grouped_patterns = group_by_pattern_kind(patterns);
     for (kind, pats) in &grouped_patterns {
@@ -160,7 +164,16 @@ pub(crate) fn build_matcher_from_patterns(
             Arc::new(TreeMatcher::from_rules(pats.iter(), case_sensitive)?)
         } else if kind.is_regex() {
             let regex_pat = format!("(?:{})", pats.join("|"));
-            Arc::new(RegexMatcher::new(&regex_pat, case_sensitive)?)
+            match RegexMatcher::new(&regex_pat, case_sensitive) {
+                Ok(m) => Arc::new(m),
+                // regex_automata doesn't export error introspection, so just try fancy on any error.
+                Err(_) => {
+                    let m = Arc::new(SlowRegexMatcher::new(&regex_pat, case_sensitive)?);
+                    tracing::trace!(target: "pathmatcher_info", fancy_regex=true);
+                    warnings.push("fancy regexes are deprecated and may stop working".to_string());
+                    m
+                }
+            }
         } else {
             return Err(Error::UnsupportedPatternKind(kind.name().to_string()).into());
         };
@@ -168,9 +181,9 @@ pub(crate) fn build_matcher_from_patterns(
     }
 
     if matchers.len() == 1 {
-        Ok(matchers.remove(0))
+        Ok((matchers.remove(0), warnings))
     } else {
-        Ok(Arc::new(UnionMatcher::new(matchers)))
+        Ok((Arc::new(UnionMatcher::new(matchers)), warnings))
     }
 }
 
@@ -201,7 +214,7 @@ mod tests {
     #[test]
     fn test_build_matcher_with_all_empty() {
         // AlwaysMatcher
-        let m = build_matcher(&[], &[], &[], true).unwrap();
+        let m = build_matcher(&[], &[], &[], true).unwrap().0;
 
         assert!(m.matches_file(path!("")).unwrap());
         assert!(m.matches_file(path!("a")).unwrap());
@@ -215,7 +228,7 @@ mod tests {
         let include = &[Pattern::new(PatternKind::Glob, "a/t1*/**".to_string())];
         let exclude = &[Pattern::new(PatternKind::Glob, "a/t11/**".to_string())];
 
-        let m = build_matcher(patterns, include, exclude, true).unwrap();
+        let m = build_matcher(patterns, include, exclude, true).unwrap().0;
 
         assert_eq!(
             m.matches_directory(path!("a")).unwrap(),
@@ -249,7 +262,7 @@ mod tests {
         let include = &[Pattern::new(PatternKind::Glob, "a/t1*/**".to_string())];
         let exclude = &[Pattern::new(PatternKind::Glob, "a/t11/**".to_string())];
 
-        let m = build_matcher(&[], include, exclude, true).unwrap();
+        let m = build_matcher(&[], include, exclude, true).unwrap().0;
 
         assert_eq!(
             m.matches_directory(path!("a/t1a")).unwrap(),
@@ -266,7 +279,7 @@ mod tests {
         let patterns = &[Pattern::new(PatternKind::RE, r"a/t\d+.*\.py".to_string())];
         let exclude = &[Pattern::new(PatternKind::Glob, "a/t11/**".to_string())];
 
-        let m = build_matcher(patterns, &[], exclude, true).unwrap();
+        let m = build_matcher(patterns, &[], exclude, true).unwrap().0;
 
         assert_eq!(
             m.matches_directory(path!("a/t1")).unwrap(),
@@ -283,7 +296,7 @@ mod tests {
         let patterns = &[Pattern::new(PatternKind::RE, r"a/t\d+.*\.py".to_string())];
         let include = &[Pattern::new(PatternKind::Glob, "a/t1*/**".to_string())];
 
-        let m = build_matcher(patterns, include, &[], true).unwrap();
+        let m = build_matcher(patterns, include, &[], true).unwrap().0;
 
         assert_eq!(
             m.matches_directory(path!("a/t1")).unwrap(),
@@ -367,6 +380,29 @@ mod tests {
                 "possible glob in non-glob pattern 'foo*', did you mean 'glob:foo*'?".to_string(),
                 "fileset evaluated to zero files".to_string(),
             ]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_pcre_compat() -> Result<()> {
+        let m = cli_matcher(
+            &["re:(?<!foo)bar".to_string()],
+            &[],
+            &[],
+            PatternKind::RelPath,
+            true,
+            "/root".as_ref(),
+            "/root/cwd".as_ref(),
+        )?;
+
+        assert!(m.matches_file(path!("bar"))?);
+        assert!(!m.matches_file(path!("foobar"))?);
+
+        assert_eq!(
+            m.warnings(),
+            &["fancy regexes are deprecated and may stop working".to_string()]
         );
 
         Ok(())
