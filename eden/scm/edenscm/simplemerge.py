@@ -23,6 +23,8 @@
 
 from __future__ import absolute_import
 
+from typing import List, Tuple
+
 from . import error, mdiff, pycompat, util
 from .i18n import _
 from .pycompat import range
@@ -84,7 +86,7 @@ def trywordmerge(basetext, atext, btext):
     """
     try:
         m3 = Merge3Text(basetext, atext, btext, wordmerge=wordmergemode.enforced)
-        return b"".join(m3.merge_lines())
+        return b"".join(m3.merge_lines()[0])
     except CantShowWordConflicts:
         return None
 
@@ -139,9 +141,9 @@ class Merge3Text:
         end_marker=b">>>>>>>",
         base_marker=None,
         minimize=False,
-    ):
+    ) -> Tuple[List[bytes], int]:
         """Return merge in cvs-like form."""
-        self.conflictscount = 0
+        conflictscount = 0
         newline = b"\n"
         if len(self.a) > 0:
             if self.a[0].endswith(b"\r\n"):
@@ -158,11 +160,12 @@ class Merge3Text:
         merge_groups = self.merge_groups()
         if minimize:
             merge_groups = self.minimize(merge_groups)
+        lines = []
         for what, group_lines in merge_groups:
             if what == "conflict":
                 base_lines, a_lines, b_lines = group_lines
                 if self.wordmerge is wordmergemode.enforced:
-                    self.conflictscount += 1
+                    conflictscount += 1
                     raise CantShowWordConflicts()
                 elif self.wordmerge is wordmergemode.ondemand:
                     # Try resolve the conflicted region using word merge
@@ -171,32 +174,28 @@ class Merge3Text:
                     subbtext = b"".join(b_lines)
                     text = trywordmerge(subbasetext, subatext, subbtext)
                     if text:
-                        for line in text.splitlines(True):
-                            yield line
+                        lines.extend(text.splitlines(True))
                         continue
                 elif (merged_lines := self.resolve_conflict(*group_lines)) is not None:
-                    for line in merged_lines:
-                        yield line
+                    lines.extend(merged_lines)
                     continue
 
-                self.conflictscount += 1
+                conflictscount += 1
                 if start_marker is not None:
-                    yield start_marker + newline
-                for line in a_lines:
-                    yield line
+                    lines.append(start_marker + newline)
+                lines.extend(a_lines)
                 if base_marker is not None:
-                    yield base_marker + newline
-                    for line in base_lines:
-                        yield line
+                    lines.append(base_marker + newline)
+                    lines.extend(base_lines)
                 if mid_marker is not None:
-                    yield mid_marker + newline
-                for line in b_lines:
-                    yield line
+                    lines.append(mid_marker + newline)
+                lines.extend(b_lines)
                 if end_marker is not None:
-                    yield end_marker + newline
+                    lines.append(end_marker + newline)
             else:
-                for line in group_lines:
-                    yield line
+                lines.extend(group_lines)
+
+        return lines, conflictscount
 
     def resolve_conflict(self, base_lines, a_lines, b_lines):
         """Try automerge algorithms to resolve the conflict region.
@@ -473,7 +472,7 @@ def _picklabels(defaults, overrides):
 
 def _mergediff(m3, name_a, name_b, name_base):
     lines = []
-    conflicts = False
+    conflictscount = 0
     for what, group_lines in m3.merge_groups():
         if what == "conflict":
             base_lines, a_lines, b_lines = group_lines
@@ -523,10 +522,10 @@ def _mergediff(m3, name_a, name_b, name_base):
                 lines.append(b"======= %s\n" % name_b)
                 lines.extend(b_lines)
             lines.append(b">>>>>>>\n")
-            conflicts = True
+            conflictscount += 1
         else:
             lines.extend(group_lines)
-    return lines, conflicts
+    return lines, conflictscount
 
 
 def _resolve(m3, sides):
@@ -574,7 +573,7 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
 
     m3 = Merge3Text(basetext, localtext, othertext, wordmerge=wordmergemode.fromui(ui))
 
-    conflicts = False
+    conflictscount = 0
     if mode == "union":
         lines = _resolve(m3, (1, 2))
     elif mode == "local":
@@ -582,15 +581,16 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
     elif mode == "other":
         lines = _resolve(m3, (2,))
     elif mode == "mergediff":
-        lines, conflicts = _mergediff(m3, name_a, name_b, name_base)
+        lines, conflictscount = _mergediff(m3, name_a, name_b, name_base)
     else:
         extrakwargs = {"minimize": True}
         if mode == "merge3":
             extrakwargs["base_marker"] = b"|||||||"
             extrakwargs["name_base"] = name_base
             extrakwargs["minimize"] = False
-        lines = list(m3.merge_lines(name_a=name_a, name_b=name_b, **extrakwargs))
-        conflicts = bool(m3.conflictscount)
+        lines, conflictscount = m3.merge_lines(
+            name_a=name_a, name_b=name_b, **extrakwargs
+        )
 
     mergedtext = b"".join(lines)
     if opts.get("print"):
@@ -601,5 +601,5 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
         flags = getattr(localctx, "workingflags", localctx.flags)()
         localctx.write(mergedtext, flags)
 
-    if conflicts:
-        return getattr(m3, "conflictscount", 1)
+    if conflictscount:
+        return conflictscount

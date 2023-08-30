@@ -216,7 +216,7 @@ def merge_lines(m3, name_a=b"dest", name_b=b"source"):
     extrakwargs["name_base"] = b"base"
     extrakwargs["minimize"] = False
 
-    return m3.merge_lines(name_a=b"dest", name_b=b"src", **extrakwargs)
+    return m3.merge_lines(name_a=b"dest", name_b=b"src", **extrakwargs)[0]
 
 
 @command("smerge_bench", commands.dryrunopts)
@@ -292,10 +292,10 @@ def merge_file(
     bench_stats.changed_files += 1
 
     m3 = m3merger(basetext, dsttext, srctext)
-    # merge_lines() has side effect setting conflictscount
-    mergedtext = b"".join(m3.merge_lines())
+    mergedlines, conflictscount = m3.merge_lines()
+    mergedtext = b"".join(mergedlines)
 
-    if m3.conflictscount:
+    if conflictscount:
         bench_stats.unresolved_files += 1
     else:
         expectedtext = mergectx[filepath].data()
@@ -305,7 +305,7 @@ def merge_file(
 
             if m3merger != Merge3Text:
                 m3_baseline = Merge3Text(basetext, dsttext, srctext)
-                mergedtext_baseline = b"".join(m3_baseline.merge_lines())
+                mergedtext_baseline = b"".join(m3_baseline.merge_lines()[0])
 
             if mergedtext != mergedtext_baseline:
                 repo.ui.write(

@@ -167,7 +167,7 @@ class TestMerge3(TestCase):
 
         self.assertEqual(list(m3.merge_regions()), [("a", 0, 2)])
 
-        self.assertEqual(list(m3.merge_lines()), [b"aaa", b"bbb"])
+        self.assertEqual(m3.merge_lines(), ([b"aaa", b"bbb"], 0))
 
     def test_no_conflicts(self):
         """No conflicts because only one side changed"""
@@ -188,14 +188,14 @@ class TestMerge3(TestCase):
             [b"aaa\n", b"bbb\n"], [b"aaa\n", b"bbb\n", b"222\n"], [b"aaa\n", b"bbb\n"]
         )
 
-        self.assertEqual(b"".join(m3.merge_lines()), b"aaa\nbbb\n222\n")
+        self.assertEqual(b"".join(m3.merge_lines()[0]), b"aaa\nbbb\n222\n")
 
     def test_append_b(self):
         m3 = Merge3(
             [b"aaa\n", b"bbb\n"], [b"aaa\n", b"bbb\n"], [b"aaa\n", b"bbb\n", b"222\n"]
         )
 
-        self.assertEqual(b"".join(m3.merge_lines()), b"aaa\nbbb\n222\n")
+        self.assertEqual(b"".join(m3.merge_lines()[0]), b"aaa\nbbb\n222\n")
 
     def test_append_agreement(self):
         m3 = Merge3(
@@ -204,7 +204,7 @@ class TestMerge3(TestCase):
             [b"aaa\n", b"bbb\n", b"222\n"],
         )
 
-        self.assertEqual(b"".join(m3.merge_lines()), b"aaa\nbbb\n222\n")
+        self.assertEqual(b"".join(m3.merge_lines()[0]), b"aaa\nbbb\n222\n")
 
     def test_append_clash(self):
         m3 = Merge3(
@@ -213,7 +213,7 @@ class TestMerge3(TestCase):
             [b"aaa\n", b"bbb\n", b"333\n"],
         )
 
-        ml = m3.merge_lines(
+        ml, conflictscount = m3.merge_lines(
             name_a=b"a",
             name_b=b"b",
             start_marker=b"<<",
@@ -224,6 +224,7 @@ class TestMerge3(TestCase):
             b"".join(ml),
             b"aaa\n" b"bbb\n" b"<< a\n" b"222\n" b"--\n" b"333\n" b">> b\n",
         )
+        self.assertEqual(conflictscount, 1)
 
     def test_insert_agreement(self):
         m3 = Merge3(
@@ -232,7 +233,7 @@ class TestMerge3(TestCase):
             [b"aaa\n", b"222\n", b"bbb\n"],
         )
 
-        ml = m3.merge_lines(
+        ml, conflictscount = m3.merge_lines(
             name_a=b"a",
             name_b=b"b",
             start_marker=b"<<",
@@ -240,6 +241,7 @@ class TestMerge3(TestCase):
             end_marker=b">>",
         )
         self.assertEqual(b"".join(ml), b"aaa\n222\nbbb\n")
+        self.assertEqual(conflictscount, 0)
 
     def test_insert_clash(self):
         """Both try to insert lines in the same place."""
@@ -268,7 +270,7 @@ class TestMerge3(TestCase):
             ],
         )
 
-        ml = m3.merge_lines(
+        ml, conflictscount = m3.merge_lines(
             name_a=b"a",
             name_b=b"b",
             start_marker=b"<<",
@@ -286,6 +288,7 @@ class TestMerge3(TestCase):
 bbb
 """,
         )
+        self.assertEqual(conflictscount, 1)
 
     def test_replace_clash(self):
         """Both try to insert lines in the same place."""
@@ -314,10 +317,11 @@ bbb
     def test_merge_poem(self):
         """Test case from diff3 manual"""
         m3 = Merge3(TZU, LAO, TAO)
-        ml = list(m3.merge_lines(b"LAO", b"TAO"))
+        ml, conflictscount = m3.merge_lines(b"LAO", b"TAO")
         self.log("merge result:")
         self.log(decodeutf8(b"".join(ml)))
         self.assertEqual(ml, MERGED_RESULT)
+        self.assertEqual(conflictscount, 1)
 
     def test_binary(self):
         with self.assertRaises(error.Abort):
@@ -332,12 +336,13 @@ bbb
             other_text.splitlines(True),
             this_text.splitlines(True),
         )
-        m_lines = m3.merge_lines(b"OTHER", b"THIS")
+        m_lines, conflictscount = m3.merge_lines(b"OTHER", b"THIS")
         self.assertEqual(
             b"<<<<<<< OTHER\r\nc\r\n=======\r\nb\r\n"
             b">>>>>>> THIS\r\n".splitlines(True),
-            list(m_lines),
+            m_lines,
         )
+        self.assertEqual(conflictscount, 1)
 
     def test_mac_text(self):
         base_text = b"a\r"
@@ -348,11 +353,12 @@ bbb
             other_text.splitlines(True),
             this_text.splitlines(True),
         )
-        m_lines = m3.merge_lines(b"OTHER", b"THIS")
+        m_lines, conflictscount = m3.merge_lines(b"OTHER", b"THIS")
         self.assertEqual(
             b"<<<<<<< OTHER\rc\r=======\rb\r" b">>>>>>> THIS\r".splitlines(True),
             list(m_lines),
         )
+        self.assertEqual(conflictscount, 1)
 
     def test_adjacent_import_line_changes_with_wordmerge(self):
         base_text = b"""
@@ -377,9 +383,9 @@ import {cached, LRU} from 'shared/LRU';
             this_text.splitlines(True),
             wordmerge=wordmergemode.ondemand,
         )
-        m_lines = m3.merge_lines(b"OTHER", b"THIS")
-        self.assertEqual(expected.splitlines(True), list(m_lines))
-        self.assertEqual(0, m3.conflictscount)
+        m_lines, conflictscount = m3.merge_lines(b"OTHER", b"THIS")
+        self.assertEqual(expected.splitlines(True), m_lines)
+        self.assertEqual(0, conflictscount)
 
 
 if __name__ == "__main__":
