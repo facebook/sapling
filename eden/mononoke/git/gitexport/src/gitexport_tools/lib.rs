@@ -43,7 +43,7 @@ pub async fn rewrite_partial_changesets(
     changesets: Vec<ChangesetContext>,
     changeset_parents: &ChangesetParents,
     // Repo that will hold the partial changesets that will be exported to git
-    target_repo_ctx: RepoContext,
+    target_repo_ctx: &RepoContext,
     export_paths: Vec<MPath>,
 ) -> Result<(), MononokeError> {
     let ctx: &CoreContext = source_repo_ctx.ctx();
@@ -187,4 +187,199 @@ async fn create_bonsai_for_new_repo(
     remapped_parents.insert(changeset_ctx.id(), rewritten_bcs.get_changeset_id());
 
     Ok((rewritten_bcs, remapped_parents))
+}
+
+#[cfg(test)]
+mod test {
+
+    use std::collections::VecDeque;
+
+    use anyhow::anyhow;
+    use fbinit::FacebookInit;
+    use futures::future::try_join_all;
+    use mononoke_api::BookmarkFreshness;
+    use test_repo_factory::TestRepoFactory;
+    use test_utils::build_single_export_directory_source_repo;
+    use test_utils::get_relevant_changesets_from_ids;
+    use test_utils::EXPORT_DIR;
+    use test_utils::EXPORT_FILE;
+    use test_utils::SECOND_EXPORT_FILE;
+
+    use super::*;
+
+    #[fbinit::test]
+    async fn test_rewrite_partial_changesets_with_single_export_dir(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+
+        let export_dir = MPath::new(EXPORT_DIR).unwrap();
+
+        let (source_repo_ctx, changeset_ids) =
+            build_single_export_directory_source_repo(fb, &ctx).await?;
+
+        let first = changeset_ids["first"];
+        let third = changeset_ids["third"];
+        let fifth = changeset_ids["fifth"];
+        let sixth = changeset_ids["sixth"];
+        let seventh = changeset_ids["seventh"];
+        let ninth = changeset_ids["ninth"];
+
+        let target_repo = TestRepoFactory::new(fb)?.build().await?;
+        let target_repo_ctx = RepoContext::new_test(ctx.clone(), target_repo).await?;
+
+        // Test that changesets are rewritten when relevant changesets are given
+        // topologically sorted
+        let relevant_changeset_ids: Vec<ChangesetId> =
+            vec![first, third, fifth, sixth, seventh, ninth];
+
+        let relevant_changesets: Vec<ChangesetContext> =
+            get_relevant_changesets_from_ids(&source_repo_ctx, relevant_changeset_ids).await?;
+
+        let relevant_changeset_parents = HashMap::from([
+            (first, vec![]),
+            (third, vec![first]),
+            (fifth, vec![third]),
+            (sixth, vec![fifth]),
+            (seventh, vec![sixth]),
+            (ninth, vec![seventh]),
+        ]);
+
+        rewrite_partial_changesets(
+            source_repo_ctx.clone(),
+            relevant_changesets.clone(),
+            &relevant_changeset_parents,
+            &target_repo_ctx,
+            vec![export_dir.clone()],
+        )
+        .await?;
+
+        let master_cs = target_repo_ctx
+            .resolve_bookmark(
+                &BookmarkKey::from_str("master")?,
+                BookmarkFreshness::MostRecent,
+            )
+            .await?
+            .ok_or(anyhow!("Couldn't find master bookmark in target repo."))?;
+
+        let mut parents_to_check: VecDeque<ChangesetId> = VecDeque::from([master_cs.id()]);
+        let mut target_css = vec![];
+
+        while let Some(changeset_id) = parents_to_check.pop_front() {
+            let changeset = target_repo_ctx
+                .changeset(changeset_id)
+                .await?
+                .ok_or(anyhow!("Changeset not found in target repo"))?;
+
+            changeset
+                .parents()
+                .await?
+                .into_iter()
+                .for_each(|parent| parents_to_check.push_back(parent));
+
+            target_css.push(changeset);
+        }
+
+        // Order the changesets topologically
+        target_css.reverse();
+
+        assert_eq!(
+            try_join_all(target_css.iter().map(ChangesetContext::message)).await?,
+            try_join_all(relevant_changesets.iter().map(ChangesetContext::message)).await?
+        );
+
+        async fn get_msg_and_files_changed(
+            cs: &ChangesetContext,
+            file_filter: Box<dyn Fn(&MPath) -> bool>,
+        ) -> Result<(String, Vec<MPath>), MononokeError> {
+            let msg = cs.message().await?;
+            let fcs = cs.file_changes().await?;
+
+            let files_changed: Vec<MPath> =
+                fcs.into_keys().filter(file_filter).collect::<Vec<MPath>>();
+
+            Ok((msg, files_changed))
+        }
+
+        let result = try_join_all(
+            target_css
+                .iter()
+                .map(|cs| get_msg_and_files_changed(cs, Box::new(|_p| true))),
+        )
+        .await?;
+
+        fn build_expected_tuple(msg: &str, fpaths: Vec<&str>) -> (String, Vec<MPath>) {
+            (
+                String::from(msg),
+                fpaths
+                    .iter()
+                    .map(|p| MPath::new(p).unwrap())
+                    .collect::<Vec<_>>(),
+            )
+        }
+
+        assert_eq!(result.len(), 6);
+        assert_eq!(result[0], build_expected_tuple("first", vec![EXPORT_FILE]));
+        assert_eq!(result[1], build_expected_tuple("third", vec![EXPORT_FILE]));
+        assert_eq!(result[2], build_expected_tuple("fifth", vec![EXPORT_FILE]));
+        assert_eq!(
+            result[3],
+            build_expected_tuple("sixth", vec![SECOND_EXPORT_FILE])
+        );
+        assert_eq!(
+            result[4],
+            build_expected_tuple("seventh", vec![EXPORT_FILE, SECOND_EXPORT_FILE])
+        );
+        assert_eq!(result[5], build_expected_tuple("ninth", vec![EXPORT_FILE]));
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_rewriting_fails_with_irrelevant_changeset(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+
+        let export_dir = MPath::new(EXPORT_DIR).unwrap();
+
+        let (source_repo_ctx, changeset_ids) =
+            build_single_export_directory_source_repo(fb, &ctx).await?;
+
+        let first = changeset_ids["first"];
+        let third = changeset_ids["third"];
+        let fourth = changeset_ids["fourth"];
+        let fifth = changeset_ids["fifth"];
+
+        // Passing an irrelevant changeset in the list should result in an error
+        let broken_changeset_list_ids: Vec<ChangesetId> = vec![first, third, fourth, fifth];
+
+        let broken_changeset_list: Vec<ChangesetContext> =
+            get_relevant_changesets_from_ids(&source_repo_ctx, broken_changeset_list_ids).await?;
+
+        let broken_changeset_parents = HashMap::from([
+            (first, vec![]),
+            (third, vec![first]),
+            (fourth, vec![third]),
+            (fifth, vec![fourth]),
+        ]);
+
+        let target_repo = TestRepoFactory::new(fb)?.build().await?;
+        let target_repo_ctx = RepoContext::new_test(ctx.clone(), target_repo).await?;
+
+        let error = rewrite_partial_changesets(
+            source_repo_ctx.clone(),
+            broken_changeset_list.clone(),
+            &broken_changeset_parents,
+            &target_repo_ctx,
+            vec![export_dir.clone()],
+        )
+        .await
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "internal error: Commit wasn't rewritten because it had no signficant changes"
+        );
+
+        Ok(())
+    }
 }

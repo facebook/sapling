@@ -284,6 +284,7 @@ members = [
   "git/git_types/if",
   "git/git_types/if/types",
   "git/gitexport",
+  "git/gitexport/test_utils",
   "git/gitimport",
   "git/import_direct",
   "git/import_tools",

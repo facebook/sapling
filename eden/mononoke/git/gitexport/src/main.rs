@@ -111,7 +111,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         repo_ctx,
         changesets,
         &cs_parents,
-        target_repo_ctx,
+        &target_repo_ctx,
         export_paths,
     )
     .await?;
