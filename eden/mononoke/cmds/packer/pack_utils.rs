@@ -67,8 +67,8 @@ impl PackContainer {
 async fn find_best_pack(
     mut blobs: BlobsWithKeys,
     zstd_level: i32,
-    print_progress: bool,
-) -> Result<Option<Pack>> {
+    container: PackContainer,
+) -> Result<PackContainer> {
     let build_packs = FuturesUnordered::new();
     for _ in 0..blobs.len() {
         build_packs.push({
@@ -78,7 +78,7 @@ async fn find_best_pack(
         blobs.rotate_left(1);
     }
     let container = build_packs
-        .try_fold(PackContainer::default(), |mut acc, new| async move {
+        .try_fold(container, |mut acc, new| async move {
             let new_size = new.get_compressed_size().unwrap();
             acc.sizes.push(new_size);
             if acc.best_size_so_far > new_size {
@@ -91,10 +91,7 @@ async fn find_best_pack(
             }
         })
         .await?;
-    if print_progress {
-        println!("Pack possible sizes {:?}", container.sizes);
-    }
-    Ok(container.pack)
+    Ok(container)
 }
 
 async fn fetch_blobs<T: BlobstoreUnlinkOps>(
@@ -131,14 +128,16 @@ pub async fn repack_keys<T: BlobstoreUnlinkOps>(
     keys: &[&str],
     dry_run: bool,
     scuba: &MononokeScubaSampleBuilder,
-    print_progress: bool,
+    tuning_info_scuba: &MononokeScubaSampleBuilder,
 ) -> Result<()> {
+    let mut tuning_scuba = tuning_info_scuba.clone();
+
     let mut last_event_time = Instant::now();
     let blobs = fetch_blobs(ctx, blobstore, repo_prefix, keys).await?;
     let mut elapsed = last_event_time.elapsed();
-    if print_progress {
-        println!("Downloading {} blobs took {:.2?}", blobs.len(), elapsed);
-    }
+    let mut elapsed_in_s = elapsed.as_secs_f64();
+    tuning_scuba.add_opt("pack_length", Some(blobs.len()));
+    tuning_scuba.add_opt("blobs_download_time", Some(elapsed_in_s));
 
     // Compress blobs individually
     let compression_futs: FuturesUnordered<_> = blobs
@@ -154,21 +153,27 @@ pub async fn repack_keys<T: BlobstoreUnlinkOps>(
     last_event_time = Instant::now();
     let single_compressed: Vec<_> = compression_futs.try_collect().await?;
     elapsed = last_event_time.elapsed();
-    if print_progress {
-        println!("Compressing blobs individually took {:.2?}", elapsed);
-    }
+    elapsed_in_s = elapsed.as_secs_f64();
+    tuning_scuba.add_opt("compressing_blobs_invidivually_time", Some(elapsed_in_s));
 
     // Find the best packing strategy
     last_event_time = Instant::now();
     let pack = if keys.len() > 1 {
-        find_best_pack(blobs, zstd_level, print_progress).await?
+        let container = find_best_pack(blobs, zstd_level, PackContainer::default()).await?;
+        let sizes_str = container
+            .sizes
+            .into_iter()
+            .map(|i| i.to_string())
+            .collect::<Vec<String>>()
+            .join(",");
+        tuning_scuba.add_opt("possible_pack_sizes", Some(sizes_str));
+        container.pack
     } else {
         None
     };
     elapsed = last_event_time.elapsed();
-    if print_progress {
-        println!("Finding the best packing strategy took {:.2?}", elapsed);
-    }
+    elapsed_in_s = elapsed.as_secs_f64();
+    tuning_scuba.add_opt("finding_best_packing_strategy_time", Some(elapsed_in_s));
 
     let mut uncompressed_sizes = HashMap::new();
     let single_compressed_size =
@@ -181,16 +186,10 @@ pub async fn repack_keys<T: BlobstoreUnlinkOps>(
 
     match pack {
         Some(pack) if pack.get_compressed_size()? < single_compressed_size => {
-            if print_progress {
-                let pack_size = pack.get_compressed_size().unwrap() as f64;
-                let single_size = single_compressed_size as f64;
-                println!(
-                    "Pack size={}, single compressed size={}. Extra compression={:.2?}%",
-                    pack_size,
-                    single_size,
-                    pack_size * 100.0 / single_size,
-                );
-            }
+            let pack_size = pack.get_compressed_size().unwrap() as f64;
+            let single_size = single_compressed_size as f64;
+            tuning_scuba.add_opt("packed_size", Some(pack_size));
+            tuning_scuba.add_opt("single_compressed_size", Some(single_size));
             if !dry_run {
                 // gather info for logs
                 let logs: Vec<MononokeScubaSampleBuilder> = pack
@@ -223,9 +222,6 @@ pub async fn repack_keys<T: BlobstoreUnlinkOps>(
             }
         }
         Some(_) | None => {
-            if print_progress {
-                println!("Pack size / single compressed size = {:.2?}%", 100.0);
-            }
             if !dry_run {
                 let put_futs: FuturesUnordered<_> = single_compressed
                     .into_iter()
@@ -246,5 +242,6 @@ pub async fn repack_keys<T: BlobstoreUnlinkOps>(
             }
         }
     }
+    tuning_scuba.log();
     Ok(())
 }

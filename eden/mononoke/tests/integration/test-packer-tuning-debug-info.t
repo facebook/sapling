@@ -48,14 +48,13 @@
   $ echo 'repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a' >> $TESTTMP/pack_key_files4/reporepo.store0.part0.keys.txt
 
 # Pack content into a pack
-  $ packer --zstd-level 19 --scuba-dataset file://packed.json --keys-dir $TESTTMP/pack_key_files4/ --print-progress
+  $ packer --zstd-level 19 --scuba-dataset file://packed.json --keys-dir $TESTTMP/pack_key_files4/ --print-progress --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
   File $TESTTMP/pack_key_files4/reporepo.store0.part0.keys.txt, which has 3 lines
-  Downloading * blobs took * (glob)
-  Compressing blobs individually took * (glob)
-  Pack possible sizes * (glob)
-  Finding the best packing strategy took * (glob)
-  Pack size=*, single compressed size=*. Extra compression=* (glob)
   Progress: 100.000%	processing took * (glob)
+
+# Check the tuning log has the following columns
+  $ jq -r '.normal * .double | [.blobs_download_time, .compressing_blobs_invidivually_time, .finding_best_packing_strategy_time, .packed_size, .single_compressed_size, .repo_name, .possible_pack_sizes] | @csv' < "${TESTTMP}/tuning_scuba.json" | sort
+  *,*,*,*,*,*,* (glob)
 
 # Check logging for packed keys (last 3 digits of the compressed size are matched by glob because they can change on zstd crate updates)
   $ jq -r '.int * .normal | [ .blobstore_id, .blobstore_key, .pack_key, .uncompressed_size, .compressed_size ] | @csv' < packed.json | sort | uniq

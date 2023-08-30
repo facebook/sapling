@@ -31,8 +31,8 @@ Set up the key file for packing
   $ (cd blobstore/0/blobs; ls) | sed -e 's/^blob-//' -e 's/.pack$//' >> $TESTTMP/pack_key_files_1/reporepo.store1.part1.keys.txt
 
 Pack the blobs in the two packed stores differently
-  $ packer --zstd-level=3 --keys-dir $TESTTMP/pack_key_files_0/
-  $ packer --zstd-level=19 --keys-dir $TESTTMP/pack_key_files_1/
+  $ packer --zstd-level=3 --keys-dir $TESTTMP/pack_key_files_0/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
+  $ packer --zstd-level=19 --keys-dir $TESTTMP/pack_key_files_1/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
 
 Run a scrub, need a scrub action to put ScrubBlobstore in the stack, which is necessary to make sure all the inner stores of the multiplex are read
   $ mononoke_walker -l loaded --blobstore-scrub-action=ReportOnly scrub -q -I deep -i bonsai -i FileContent -b master_bookmark -a all --pack-log-scuba-file pack-info-packed.json 2>&1 | strip_glog

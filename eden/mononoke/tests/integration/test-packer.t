@@ -50,9 +50,9 @@
   $ echo 'repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a' >> $TESTTMP/pack_key_files3/reporepo.store0.part0.keys.txt
 
 # Pack content individually, to show recompression effect
-  $ packer --zstd-level 10 --scuba-dataset file://pack-individually.json --keys-dir $TESTTMP/pack_key_files1/
-  $ packer --zstd-level 10 --scuba-dataset file://pack-individually.json --keys-dir $TESTTMP/pack_key_files2/
-  $ packer --zstd-level 10 --scuba-dataset file://pack-individually.json --keys-dir $TESTTMP/pack_key_files3/
+  $ packer --zstd-level 10 --scuba-dataset file://pack-individually.json --keys-dir $TESTTMP/pack_key_files1/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
+  $ packer --zstd-level 10 --scuba-dataset file://pack-individually.json --keys-dir $TESTTMP/pack_key_files2/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
+  $ packer --zstd-level 10 --scuba-dataset file://pack-individually.json --keys-dir $TESTTMP/pack_key_files3/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
 
 # Check logging for individually packed keys (last 3 digits of the compressed size are matched by glob because they can change on zstd crate updates)
   $ jq -r '.int * .normal | [ .blobstore_id, .blobstore_key, .uncompressed_size, .compressed_size ] | @csv' < pack-individually.json | sort | uniq
@@ -79,7 +79,7 @@
   $ echo 'repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a' >> $TESTTMP/pack_key_files4/reporepo.store0.part0.keys.txt
 
 # Pack content into a pack
-  $ packer --zstd-level 19 --scuba-dataset file://packed.json --keys-dir $TESTTMP/pack_key_files4/
+  $ packer --zstd-level 19 --scuba-dataset file://packed.json --keys-dir $TESTTMP/pack_key_files4/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
 
 # Check logging for packed keys (last 3 digits of the compressed size are matched by glob because they can change on zstd crate updates)
   $ jq -r '.int * .normal | [ .blobstore_id, .blobstore_key, .pack_key, .uncompressed_size, .compressed_size ] | @csv' < packed.json | sort | uniq
@@ -126,7 +126,7 @@
   $ echo 'repo0000.alias.sha256.85b856bc2313fcddec8464984ab2d384f61625890ee19e4f909dd80ac36e8fd7' >> $TESTTMP/pack_key_files_aliases/reporepo.store0.part0.keys.txt
   $ echo 'repo0000.alias.sha256.9b798d4eb3901972c1311a3c6a21480e3f29c8c64cd6bbb81a977ecab56452e3' >> $TESTTMP/pack_key_files_aliases/reporepo.store0.part0.keys.txt
 
-  $ packer --zstd-level 19 --keys-dir $TESTTMP/pack_key_files_aliases/
+  $ packer --zstd-level 19 --keys-dir $TESTTMP/pack_key_files_aliases/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
 
 # Show that they're not packed (hardlink count of 1)
   $ stat -c '%s %h %N' $TESTTMP/blobstore/0/blobs/blob-repo0000.alias.* | sort -n
@@ -153,7 +153,7 @@
   $ echo '' >> $TESTTMP/pack_key_files5/reporepo.store0.part0.keys.txt
   $ echo 'repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a' >> $TESTTMP/pack_key_files5/reporepo.store0.part0.keys.txt
 
-  $ packer --zstd-level 19 --keys-dir $TESTTMP/pack_key_files5/
+  $ packer --zstd-level 19 --keys-dir $TESTTMP/pack_key_files5/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
   $ stat -c '%s %h %N' $TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.* | sort -n
   * 1 '$TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a.pack' (glob)
   * 2 '$TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd.pack' (glob)

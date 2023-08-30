@@ -42,7 +42,7 @@ Check logged pack info. Commit time is forced to zero in tests, hence mtime is 0
   $ (cd blobstore/blobs; ls) | sed -e 's/^blob-//' -e 's/.pack$//' >> $TESTTMP/pack_key_files/reporepo.store.part0.keys.txt
 
 Now pack the blobs
-  $ packer --zstd-level=3 --keys-dir $TESTTMP/pack_key_files/
+  $ packer --zstd-level=3 --keys-dir $TESTTMP/pack_key_files/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
 
 Run a scrub again now the storage is packed
   $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -p Changeset --checkpoint-name=bonsai_packed --checkpoint-path=test_sqlite -a all --pack-log-scuba-file pack-info-packed.json 2>&1 | strip_glog
