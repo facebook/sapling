@@ -86,15 +86,11 @@ class SmartMerge3Text(Merge3Text):
     def __init__(self, basetext, atext, btext, wordmerge=wordmergemode.disabled):
         Merge3Text.__init__(self, basetext, atext, btext, wordmerge=wordmerge)
 
-    def resolve_conflict_region(self, conflict_region):
+    def resolve_conflict(self, base_lines, a_lines, b_lines):
         """Try automerge algorithms to resolve the conflict region.
 
         Return resolved lines, or None if auto resolution failed.
         """
-        _, z1, z2, a1, a2, b1, b2 = conflict_region
-        base_lines = self.base[z1:z2]
-        a_lines = self.a[a1:a2]
-        b_lines = self.b[b1:b2]
         c = Conflict(base_lines, a_lines, b_lines)
 
         if merge_adjacent_changes(c):

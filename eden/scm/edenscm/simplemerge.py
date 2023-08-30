@@ -154,36 +154,27 @@ class Merge3Text:
             end_marker = end_marker + b" " + name_b
         if name_base and base_marker:
             base_marker = base_marker + b" " + name_base
-        merge_regions = self.merge_regions()
+
+        merge_groups = self.merge_groups()
         if minimize:
-            merge_regions = self.minimize(merge_regions)
-        for t in merge_regions:
-            what = t[0]
-            if what == "unchanged":
-                for i in range(t[1], t[2]):
-                    yield self.base[i]
-            elif what == "a" or what == "same":
-                for i in range(t[1], t[2]):
-                    yield self.a[i]
-            elif what == "b":
-                for i in range(t[1], t[2]):
-                    yield self.b[i]
-            elif what == "conflict":
+            merge_groups = self.minimize(merge_groups)
+        for what, group_lines in merge_groups:
+            if what == "conflict":
+                base_lines, a_lines, b_lines = group_lines
                 if self.wordmerge is wordmergemode.enforced:
                     self.conflictscount += 1
                     raise CantShowWordConflicts()
                 elif self.wordmerge is wordmergemode.ondemand:
                     # Try resolve the conflicted region using word merge
-                    subbasetext = b"".join(self.base[t[1] : t[2]])
-                    subatext = b"".join(self.a[t[3] : t[4]])
-                    subbtext = b"".join(self.b[t[5] : t[6]])
+                    subbasetext = b"".join(base_lines)
+                    subatext = b"".join(a_lines)
+                    subbtext = b"".join(b_lines)
                     text = trywordmerge(subbasetext, subatext, subbtext)
                     if text:
                         for line in text.splitlines(True):
                             yield line
                         continue
-
-                if (merged_lines := self.resolve_conflict_region(t)) is not None:
+                elif (merged_lines := self.resolve_conflict(*group_lines)) is not None:
                     for line in merged_lines:
                         yield line
                     continue
@@ -191,22 +182,23 @@ class Merge3Text:
                 self.conflictscount += 1
                 if start_marker is not None:
                     yield start_marker + newline
-                for i in range(t[3], t[4]):
-                    yield self.a[i]
+                for line in a_lines:
+                    yield line
                 if base_marker is not None:
                     yield base_marker + newline
-                    for i in range(t[1], t[2]):
-                        yield self.base[i]
+                    for line in base_lines:
+                        yield line
                 if mid_marker is not None:
                     yield mid_marker + newline
-                for i in range(t[5], t[6]):
-                    yield self.b[i]
+                for line in b_lines:
+                    yield line
                 if end_marker is not None:
                     yield end_marker + newline
             else:
-                raise ValueError(what)
+                for line in group_lines:
+                    yield line
 
-    def resolve_conflict_region(self, conflict_region):
+    def resolve_conflict(self, base_lines, a_lines, b_lines):
         """Try automerge algorithms to resolve the conflict region.
 
         Return resolved lines, or None if auto resolution failed.
@@ -336,50 +328,47 @@ class Merge3Text:
                 ia = aend
                 ib = bend
 
-    def minimize(self, merge_regions):
+    def minimize(self, merge_groups):
         """Trim conflict regions of lines where A and B sides match.
 
         Lines where both A and B have made the same changes at the beginning
         or the end of each merge region are eliminated from the conflict
         region and are instead considered the same.
         """
-        for region in merge_regions:
-            if region[0] != "conflict":
-                yield region
+        for what, group_lines in merge_groups:
+            if what != "conflict":
+                yield what, group_lines
                 continue
-            issue, z1, z2, a1, a2, b1, b2 = region
-            alen = a2 - a1
-            blen = b2 - b1
+            base_lines, a_lines, b_lines = group_lines
+            alen = len(a_lines)
+            blen = len(b_lines)
 
             # find matches at the front
             ii = 0
-            while ii < alen and ii < blen and self.a[a1 + ii] == self.b[b1 + ii]:
+            while ii < alen and ii < blen and a_lines[ii] == b_lines[ii]:
                 ii += 1
             startmatches = ii
 
             # find matches at the end
             ii = 0
-            while (
-                ii < alen and ii < blen and self.a[a2 - ii - 1] == self.b[b2 - ii - 1]
-            ):
+            while ii < alen and ii < blen and a_lines[-ii - 1] == b_lines[-ii - 1]:
                 ii += 1
             endmatches = ii
 
             if startmatches > 0:
-                yield "same", a1, a1 + startmatches
+                yield "same", a_lines[:startmatches]
 
             yield (
                 "conflict",
-                z1,
-                z2,
-                a1 + startmatches,
-                a2 - endmatches,
-                b1 + startmatches,
-                b2 - endmatches,
+                (
+                    base_lines,
+                    a_lines[startmatches : alen - endmatches],
+                    b_lines[startmatches : blen - endmatches],
+                ),
             )
 
             if endmatches > 0:
-                yield "same", a2 - endmatches, a2
+                yield "same", a_lines[alen - endmatches :]
 
     def find_sync_regions(self):
         """Return a list of sync regions, where both descendants match the base.
