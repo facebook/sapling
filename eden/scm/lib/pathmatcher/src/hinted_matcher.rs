@@ -133,11 +133,7 @@ impl HintedMatcher {
 
         Ok(Self {
             case_sensitive,
-            matcher: if matchers.len() == 1 {
-                matchers.remove(0)
-            } else {
-                Arc::new(UnionMatcher::new(matchers))
-            },
+            matcher: Arc::new(UnionMatcher::new_or_single(matchers)),
             always_matches: false,
             never_matches: false,
             all_recursive_paths: fs.is_empty()

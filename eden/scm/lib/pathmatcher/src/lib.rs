@@ -179,12 +179,20 @@ impl<A: Matcher, B: Matcher> Matcher for DifferenceMatcher<A, B> {
 }
 
 pub struct UnionMatcher {
-    matchers: Vec<Arc<dyn 'static + Matcher + Send + Sync>>,
+    matchers: Vec<DynMatcher>,
 }
 
 impl UnionMatcher {
-    pub fn new(matchers: Vec<Arc<dyn 'static + Matcher + Send + Sync>>) -> Self {
+    pub fn new(matchers: Vec<DynMatcher>) -> Self {
         UnionMatcher { matchers }
+    }
+
+    pub fn new_or_single(mut matchers: Vec<DynMatcher>) -> DynMatcher {
+        if matchers.len() == 1 {
+            matchers.remove(0)
+        } else {
+            Arc::new(Self::new(matchers))
+        }
     }
 
     pub fn matches_directory<M: Matcher, I: Iterator<Item = M>>(
@@ -228,11 +236,11 @@ impl Matcher for UnionMatcher {
 }
 
 pub struct IntersectMatcher {
-    matchers: Vec<Arc<dyn 'static + Matcher + Send + Sync>>,
+    matchers: Vec<DynMatcher>,
 }
 
 impl IntersectMatcher {
-    pub fn new(matchers: Vec<Arc<dyn 'static + Matcher + Send + Sync>>) -> Self {
+    pub fn new(matchers: Vec<DynMatcher>) -> Self {
         Self { matchers }
     }
 }
@@ -272,11 +280,11 @@ impl Matcher for IntersectMatcher {
 }
 
 pub struct NegateMatcher {
-    matcher: Arc<dyn 'static + Matcher + Send + Sync>,
+    matcher: DynMatcher,
 }
 
 impl NegateMatcher {
-    pub fn new(matcher: Arc<dyn 'static + Matcher + Send + Sync>) -> Self {
+    pub fn new(matcher: DynMatcher) -> Self {
         Self { matcher }
     }
 }

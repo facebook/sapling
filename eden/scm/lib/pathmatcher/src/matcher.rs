@@ -180,11 +180,7 @@ pub(crate) fn build_matcher_from_patterns(
         matchers.push(m);
     }
 
-    if matchers.len() == 1 {
-        Ok((matchers.remove(0), warnings))
-    } else {
-        Ok((Arc::new(UnionMatcher::new(matchers)), warnings))
-    }
+    Ok((UnionMatcher::new_or_single(matchers), warnings))
 }
 
 fn group_by_pattern_kind(patterns: &[Pattern]) -> HashMap<PatternKind, Vec<String>> {
