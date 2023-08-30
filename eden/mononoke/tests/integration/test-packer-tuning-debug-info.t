@@ -53,8 +53,8 @@
   Progress: 100.000%	processing took * (glob)
 
 # Check the tuning log has the following columns
-  $ jq -r '.normal * .double | [.blobs_download_time, .compressing_blobs_invidivually_time, .finding_best_packing_strategy_time, .packed_size, .single_compressed_size, .repo_name, .possible_pack_sizes] | @csv' < "${TESTTMP}/tuning_scuba.json" | sort
-  *,*,*,*,*,*,* (glob)
+  $ jq -r '.normal * .double | [.blobs_download_time, .compressing_blobs_invidivually_time, .finding_best_packing_strategy_time, .packed_size, .single_compressed_size, .repo_name, .possible_pack_sizes, .uncompressed_size] | @csv' < "${TESTTMP}/tuning_scuba.json" | sort
+  *,*,*,*,*,*,*,* (glob)
 
 # Check logging for packed keys (last 3 digits of the compressed size are matched by glob because they can change on zstd crate updates)
   $ jq -r '.int * .normal | [ .blobstore_id, .blobstore_key, .pack_key, .uncompressed_size, .compressed_size ] | @csv' < packed.json | sort | uniq

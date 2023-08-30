@@ -184,6 +184,14 @@ pub async fn repack_keys<T: BlobstoreUnlinkOps>(
                 Ok::<_, Error>(size + item.get_compressed_size()?)
             })?;
 
+    let total_uncompressed_size: usize = uncompressed_sizes
+        .values()
+        .cloned()
+        .collect::<Vec<usize>>()
+        .iter()
+        .sum();
+    tuning_scuba.add_opt("uncompressed_size", Some(total_uncompressed_size));
+
     match pack {
         Some(pack) if pack.get_compressed_size()? < single_compressed_size => {
             let pack_size = pack.get_compressed_size().unwrap() as f64;
