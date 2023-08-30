@@ -1612,11 +1612,12 @@ Supported arguments:
 
 ``premerge``
   Attempt to run internal non-interactive 3-way merge tool before
-  launching external tool.  Options are ``true``, ``false``, ``keep`` or
-  ``keep-merge3``. The ``keep`` option will leave markers in the file if the
-  premerge fails. The ``keep-merge3`` will do the same but include information
-  about the base of the merge in the marker (see internal :merge3 in
-  :prog:`help merge-tools`).
+  launching external tool.  Options are ``true``, ``false``, ``keep``,
+  ``keep-merge3`` or ``keep-mergediff``. The ``keep`` option will leave markers
+  in the file if the premerge fails. The ``keep-merge3`` will do the same but
+  include information about the base of the merge in the marker (see internal :merge3 in
+  :prog:`help merge-tools`). The ``keep-mergediff`` option is similar but uses a
+  a different marker style (see internal :mergediff in :hg:`help merge-tools`).
   (default: True)
 
 ``binary``
