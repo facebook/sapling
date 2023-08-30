@@ -99,6 +99,7 @@ export function CommitTreeList() {
  */
 function shouldShowPublicCommit(tree: CommitTree) {
   return (
+    tree.info.isHead ||
     tree.children.length > 0 ||
     tree.info.bookmarks.length > 0 ||
     tree.info.remoteBookmarks.length > 0 ||
