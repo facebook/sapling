@@ -69,14 +69,14 @@ async fn find_best_pack(
     zstd_level: i32,
     container: PackContainer,
 ) -> Result<PackContainer> {
+    blobs.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+
     let build_packs = FuturesUnordered::new();
-    for _ in 0..blobs.len() {
-        build_packs.push({
-            let blobs = blobs.clone();
-            async { tokio::task::spawn_blocking(move || try_pack(zstd_level, blobs)).await? }
-        });
-        blobs.rotate_left(1);
-    }
+    build_packs.push({
+        let blobs = blobs.clone();
+        async { tokio::task::spawn_blocking(move || try_pack(zstd_level, blobs)).await? }
+    });
+
     let container = build_packs
         .try_fold(container, |mut acc, new| async move {
             let new_size = new.get_compressed_size().unwrap();
