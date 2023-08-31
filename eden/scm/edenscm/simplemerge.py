@@ -353,47 +353,33 @@ class Merge3Text:
         return sl
 
 
-def _minimize(merge_groups):
+def _minimize(a_lines, b_lines):
     """Trim conflict regions of lines where A and B sides match.
 
     Lines where both A and B have made the same changes at the beginning
     or the end of each merge region are eliminated from the conflict
     region and are instead considered the same.
     """
-    for what, group_lines in merge_groups:
-        if what != "conflict":
-            yield what, group_lines
-            continue
-        base_lines, a_lines, b_lines = group_lines
-        alen = len(a_lines)
-        blen = len(b_lines)
+    alen = len(a_lines)
+    blen = len(b_lines)
 
-        # find matches at the front
-        ii = 0
-        while ii < alen and ii < blen and a_lines[ii] == b_lines[ii]:
-            ii += 1
-        startmatches = ii
+    # find matches at the front
+    ii = 0
+    while ii < alen and ii < blen and a_lines[ii] == b_lines[ii]:
+        ii += 1
+    startmatches = ii
 
-        # find matches at the end
-        ii = 0
-        while ii < alen and ii < blen and a_lines[-ii - 1] == b_lines[-ii - 1]:
-            ii += 1
-        endmatches = ii
+    # find matches at the end
+    ii = 0
+    while ii < alen and ii < blen and a_lines[-ii - 1] == b_lines[-ii - 1]:
+        ii += 1
+    endmatches = ii
 
-        if startmatches > 0:
-            yield "same", a_lines[:startmatches]
-
-        yield (
-            "conflict",
-            (
-                base_lines,
-                a_lines[startmatches : alen - endmatches],
-                b_lines[startmatches : blen - endmatches],
-            ),
-        )
-
-        if endmatches > 0:
-            yield "same", a_lines[alen - endmatches :]
+    lines_before = a_lines[:startmatches]
+    new_a_lines = a_lines[startmatches : alen - endmatches]
+    new_b_lines = b_lines[startmatches : blen - endmatches]
+    lines_after = a_lines[alen - endmatches :]
+    return lines_before, new_a_lines, new_b_lines, lines_after
 
 
 def render_minimized(
@@ -413,17 +399,20 @@ def render_minimized(
         end_marker = end_marker + b" " + name_b
 
     merge_groups = m3.merge_groups(automerge=True)
-    merge_groups = _minimize(merge_groups)
     lines = []
     for what, group_lines in merge_groups:
         if what == "conflict":
             conflictscount += 1
             base_lines, a_lines, b_lines = group_lines
+            minimized = _minimize(a_lines, b_lines)
+            lines_before, a_lines, b_lines, lines_after = minimized
+            lines.extend(lines_before)
             lines.append(start_marker + newline)
             lines.extend(a_lines)
             lines.append(mid_marker + newline)
             lines.extend(b_lines)
             lines.append(end_marker + newline)
+            lines.extend(lines_after)
         else:
             lines.extend(group_lines)
 
