@@ -17,6 +17,7 @@ import type {
   ImportAction,
 } from 'shared/types/stack';
 
+import {t} from '../i18n';
 import {assert} from '../utils';
 import {FileStackState} from './fileStackState';
 import deepEqual from 'fast-deep-equal';
@@ -619,6 +620,32 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
           .join(' ');
       })
       .toArray();
+  }
+
+  /** File name for `fileStacks[index]`. If the file is renamed, return  */
+  getFileStackDescription(fileIdx: number): string {
+    const fileStack = unwrap(this.fileStacks.get(fileIdx));
+    const revLength = fileStack.revLength - 1;
+    const nameAtFirstRev = this.getFileStackPath(fileIdx, 0);
+    const nameAtLastRev = this.getFileStackPath(fileIdx, revLength - 1);
+    const words = [];
+    if (nameAtFirstRev) {
+      words.push(nameAtFirstRev);
+    }
+    if (nameAtLastRev && nameAtLastRev !== nameAtFirstRev) {
+      // U+2192. Rightwards Arrow (Unicode 1.1).
+      words.push('→');
+      words.push(nameAtLastRev);
+    }
+    if (revLength > 1) {
+      words.push(t('(edited by $n commits)', {replace: {$n: revLength.toString()}}));
+    }
+    return words.join(' ');
+  }
+
+  /** Get the path name for a specific revision in the given file stack. */
+  getFileStackPath(fileIdx: number, fileRev: number): string | undefined {
+    return this.fileToCommit.get(FileIdx({fileIdx, fileRev}))?.path;
   }
 
   /**

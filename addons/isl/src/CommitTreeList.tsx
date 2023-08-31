@@ -15,6 +15,7 @@ import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
 import {Center, FlexRow, LargeSpinner} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
+import {FileStackEditButton} from './FileStackEditButton';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {OperationDisabledButton} from './OperationDisabledButton';
 import {StackEditIcon} from './StackEditIcon';
@@ -31,6 +32,7 @@ import {useArrowKeysToChangeSelection} from './selection';
 import {
   commitFetchError,
   commitsShownRange,
+  hasExperimentalFeatures,
   isFetchingAdditionalCommits,
   latestHeadCommit,
   latestUncommittedChangesData,
@@ -425,6 +427,7 @@ function StackEditConfirmButtons(): React.ReactElement {
   const originalHead = useRecoilValue(latestHeadCommit);
   const runOperation = useRunOperation();
   const stackEdit = useStackEditState();
+  const hasExperimental = useRecoilValue(hasExperimentalFeatures);
 
   const canUndo = stackEdit.canUndo();
   const canRedo = stackEdit.canRedo();
@@ -456,7 +459,7 @@ function StackEditConfirmButtons(): React.ReactElement {
     setStackHashes(new Set<Hash>());
   };
 
-  // Show [Cancel] [Save changes] [Undo] [Redo].
+  // Show [Edit file stack] [Cancel] [Save changes] [Undo] [Redo].
   return (
     <>
       <Tooltip
@@ -511,6 +514,12 @@ function StackEditConfirmButtons(): React.ReactElement {
           <Icon icon="redo" />
         </VSCodeButton>
       </Tooltip>
+      {hasExperimental && (
+        <>
+          <Icon icon="circle-small-filled" />
+          <FileStackEditButton />
+        </>
+      )}
     </>
   );
 }
