@@ -467,10 +467,10 @@ def _verifytext(text, path, ui, opts):
     return text
 
 
-def _picklabels(defaults, overrides):
+def _picklabels(overrides):
     if len(overrides) > 3:
         raise error.Abort(_("can only specify three labels."))
-    result = list((pycompat.encodeutf8(d) if d is not None else None) for d in defaults)
+    result = [None, None, None]
     for i, override in enumerate(overrides):
         result[i] = pycompat.encodeutf8(override)
     return result
@@ -567,9 +567,7 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
     mode = opts.get("mode", "merge")
     name_a, name_b, name_base = None, None, None
     if mode != "union":
-        name_a, name_b, name_base = _picklabels(
-            [localctx.path(), otherctx.path(), None], opts.get("label", [])
-        )
+        name_a, name_b, name_base = _picklabels(opts.get("label", []))
 
     try:
         localtext = readctx(localctx)
