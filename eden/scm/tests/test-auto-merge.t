@@ -62,13 +62,12 @@ test merge adjacent changes -- insertion case
   $ hg debugsmerge dest src base
   a
   <<<<<<< dest
-  a2
-  b
-  c
-  d
-  ||||||| base
-  b
+  +a2
+   b
+  +c
+  +d
   =======
-  b'
+  -b
+  +b'
   >>>>>>> source
   e

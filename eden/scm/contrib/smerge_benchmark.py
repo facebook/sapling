@@ -9,7 +9,7 @@ from typing import List, Optional
 
 from edenscm import commands, error, mdiff, registrar, scmutil
 from edenscm.i18n import _
-from edenscm.simplemerge import Merge3Text, render_markers, render_merge3, wordmergemode
+from edenscm.simplemerge import Merge3Text, render_markers, wordmergemode
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -133,7 +133,7 @@ def debugsmerge(ui, repo, *args, **opts):
 
     desttext, srctext, basetext = [readfile(p) for p in args]
     m3 = SmartMerge3Text(basetext, desttext, srctext)
-    lines = merge3_merge_lines(m3)
+    lines = render_mergediff2(m3, b"dest", b"source")[0]
     mergedtext = b"".join(lines)
     ui.fout.write(mergedtext)
 
@@ -179,17 +179,13 @@ def sresolve(ui, repo, *args, **opts):
     else:
         m3 = Merge3Text(basetext, desttext, srctext)
 
-    mergedtext = b"".join(merge3_merge_lines(m3))
+    mergedtext = b"".join(render_mergediff2(m3, b"dest", b"source")[0])
 
     if output := opts.get("output"):
         with open(output, "wb") as f:
             f.write(mergedtext)
     else:
         ui.fout.write(mergedtext)
-
-
-def merge3_merge_lines(m3, name_a=b"dest", name_b=b"source", name_base=b"base"):
-    return render_merge3(m3, name_a, name_b, name_base)[0]
 
 
 @command("smerge_bench", commands.dryrunopts)
@@ -310,12 +306,12 @@ def unidiff(atext, btext, filepath="") -> bytes:
     return b"\n".join(result)
 
 
-def basediff(m3, name_a, name_b):
+def render_mergediff2(m3, name_a, name_b):
     lines = []
     conflicts = False
-    for group in m3.merge_groups(automerge=True):
-        if group[0] == "conflict":
-            base_lines, a_lines, b_lines = group[1:]
+    for what, group_lines in m3.merge_groups(automerge=True):
+        if what == "conflict":
+            base_lines, a_lines, b_lines = group_lines
             basetext = b"".join(base_lines)
             bblocks = list(
                 mdiff.allblocks(
@@ -352,7 +348,7 @@ def basediff(m3, name_a, name_b):
             lines.append(b">>>>>>> %s\n" % name_b)
             conflicts = True
         else:
-            lines.extend(group[1])
+            lines.extend(group_lines)
     return lines, conflicts
 
 
