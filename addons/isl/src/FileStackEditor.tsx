@@ -5,10 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {RangeInfo} from './TextEditable';
 import type {FileStackState, Rev} from './stackEdit/fileStackState';
 import type {LineIdx} from 'shared/diff';
 
 import {Row, ScrollX, ScrollY} from './ComponentUtils';
+import {TextEditable} from './TextEditable';
 import {Tooltip} from './Tooltip';
 import {t} from './i18n';
 import {Set as ImSet, Range} from 'immutable';
@@ -47,6 +49,9 @@ type EditorRowProps = {
 
   /** Diff mode. */
   mode: Mode;
+
+  /** Whehter to enable text editing. This will disable conflicting features. */
+  textEdit: boolean;
 };
 
 type EditorProps = EditorRowProps & {
@@ -58,13 +63,15 @@ export function FileStackEditor(props: EditorProps) {
   const mainContentRef = useRef<HTMLPreElement | null>(null);
   const [expandedLines, setExpandedLines] = useState<ImSet<LineIdx>>(ImSet);
   const [selectedLineIds, setSelectedLineIds] = useState<ImSet<string>>(ImSet);
-  const {stack, rev, setStack} = props;
+  const {stack, rev, setStack, textEdit} = props;
+  const rangeInfos: RangeInfo[] = [];
 
   // Selection change is a document event, not a <pre> event.
   useEffect(() => {
     const handleSelect = () => {
       const selection = window.getSelection();
       if (
+        textEdit ||
         selection == null ||
         mainContentRef.current == null ||
         !mainContentRef.current.contains(selection.anchorNode)
@@ -86,7 +93,7 @@ export function FileStackEditor(props: EditorProps) {
     return () => {
       document.removeEventListener('selectionchange', handleSelect);
     };
-  }, []);
+  }, [textEdit]);
 
   // Diff with the left side.
   const bText = stack.getRev(rev);
@@ -113,7 +120,15 @@ export function FileStackEditor(props: EditorProps) {
     setExpandedLines(newSet);
   };
 
-  const lineButtons = (sign: '=' | '!' | '~', aIdx?: LineIdx, bIdx?: LineIdx): JSX.Element => {
+  const lineButtons = (
+    sign: '=' | '!' | '~',
+    aIdx?: LineIdx,
+    bIdx?: LineIdx,
+  ): JSX.Element | null => {
+    if (textEdit) {
+      return null;
+    }
+
     const leftButtons = [];
     const rightButtons = [];
 
@@ -226,6 +241,22 @@ export function FileStackEditor(props: EditorProps) {
     );
   };
 
+  let start = 0;
+  const nextRangeId = (len: number): number => {
+    const id = rangeInfos.length;
+    const end = start + len;
+    rangeInfos.push({start, end});
+    start = end;
+    return id;
+  }
+  const bLineSpan = (bLine: string): JSX.Element => {
+    if (!textEdit) {
+      return <span>{bLine}</span>;
+    }
+    const id = nextRangeId(bLine.length);
+    return <span data-range-id={id}>{bLine}</span>;
+  };
+
   collapsedBlocks.forEach(([sign, [a1, a2, b1, b2]]) => {
     if (sign === '~') {
       // Context line.
@@ -244,6 +275,14 @@ export function FileStackEditor(props: EditorProps) {
           {' '}
         </div>,
       );
+      if (textEdit) {
+        // Still need to update rangeInfos.
+        let len = 0;
+        for (let bi = b1; bi < b2; ++bi) {
+          len += bLines[bi].length;
+        }
+        nextRangeId(len);
+      }
     } else if (sign === '=') {
       // Unchanged.
       for (let ai = a1; ai < a2; ++ai) {
@@ -261,7 +300,7 @@ export function FileStackEditor(props: EditorProps) {
         mainContent.push(
           <div key={bi} className="unchanged line">
             {lineButtons(sign, ai, bi)}
-            {bLines[bi]}
+            {bLineSpan(bLines[bi])}
           </div>,
         );
       }
@@ -309,20 +348,31 @@ export function FileStackEditor(props: EditorProps) {
         mainContent.push(
           <div key={bi} className={className} data-sel-id={selId}>
             {lineButtons(sign, undefined, bi)}
-            {bLines[bi]}
+            {bLineSpan(bLines[bi])}
           </div>,
         );
       }
     }
   });
 
+  const handleTextChange = (value: string) => {
+    const newStack = stack.editText(rev, value);
+    setStack(newStack);
+  };
+
   return (
     <ScrollY hideBar={true} maxSize="70vh">
       <Row className="file-stack-editor">
         <pre className="column-left-gutter">{leftGutter}</pre>
-        <pre className="main-content" ref={mainContentRef}>
-          {mainContent}
-        </pre>
+        {textEdit ? (
+          <TextEditable value={bText} rangeInfos={rangeInfos} onTextChange={handleTextChange}>
+            <pre className="main-content">{mainContent}</pre>
+          </TextEditable>
+        ) : (
+          <pre className="main-content" ref={mainContentRef}>
+            {mainContent}
+          </pre>
+        )}
         <pre className="column-right-gutter">{rightGutter}</pre>
       </Row>
     </ScrollY>

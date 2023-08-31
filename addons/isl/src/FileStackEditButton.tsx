@@ -9,11 +9,13 @@ import type {Rev} from './stackEdit/fileStackState';
 
 import {FileStackEditorRow} from './FileStackEditor';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
+import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {T, t} from './i18n';
 import {FileStackState} from './stackEdit/fileStackState';
 import {useStackEditState} from './stackEditState';
 import {useModal} from './useModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {useState} from 'react';
 import {atom, useRecoilState, useSetRecoilState} from 'recoil';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
@@ -82,13 +84,26 @@ function FileStackEditModalContent(props: {
   skip: (rev: Rev) => boolean;
 }) {
   const [stack, setStack] = useRecoilState(fileStackAtom);
+  const [textEdit, setTextEdit] = useState(false);
+
   return (
-    <FileStackEditorRow
-      stack={stack}
-      setStack={setStack}
-      getTitle={props.getTitle}
-      skip={props.skip}
-      mode="unified-diff"
-    />
+    <div>
+      <FileStackEditorRow
+        stack={stack}
+        setStack={setStack}
+        getTitle={props.getTitle}
+        skip={props.skip}
+        mode="unified-diff"
+        textEdit={textEdit}
+      />
+      <VSCodeCheckbox
+        accessKey="t"
+        checked={textEdit}
+        onChange={() => {
+          setTextEdit(c => !c);
+        }}>
+        <T>Edit text</T>
+      </VSCodeCheckbox>
+    </div>
   );
 }
