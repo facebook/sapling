@@ -8,6 +8,7 @@
 use std::str::FromStr;
 
 use anyhow::Error;
+use anyhow::Result;
 use bookmarks_types::BookmarkKey;
 use fbinit::FacebookInit;
 use gitexport_tools::build_partial_commit_graph_for_export;
@@ -27,6 +28,8 @@ use slog::debug;
 use crate::types::GitExportArgs;
 
 pub mod types {
+    use std::path::PathBuf;
+
     use clap::Parser;
     use mononoke_app::args::RepoArgs;
 
@@ -43,13 +46,12 @@ pub mod types {
 
         /// Path to the git repo being created
         #[clap(long)]
-        pub output: Option<String>, // TODO(T160787114): Make this required
+        pub output: Option<PathBuf>, // TODO(T160787114): Make this required
 
         /// List of directories in `hg_repo` to be exported to a git repo
-        #[clap(long)]
-        // TODO(T161204758): change this to a Vec<String> when we can support multiple export paths
-        /// Path in the source hg repo that should be exported to a git repo.
-        pub export_path: String,
+        #[clap(long, short('p'))]
+        /// Paths in the source hg repo that should be exported to a git repo.
+        pub export_paths: Vec<PathBuf>,
         // TODO(T160600443): support last revision argument
         // TODO(T160600443): support until_timestamp argument
     }
@@ -83,10 +85,11 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         .await?
         .unwrap();
 
-    // TODO(T161204758): get multiple paths from arguments once we sort and
-    // dedupe changesets properly and can build a commit graph from multiple
-    // changeset lists
-    let export_paths = vec![MPath::new(args.export_path)?];
+    let export_paths = args
+        .export_paths
+        .into_iter()
+        .map(|p| TryFrom::try_from(p.as_os_str()))
+        .collect::<Result<Vec<MPath>>>()?;
 
     let (changesets, cs_parents) =
         build_partial_commit_graph_for_export(logger, export_paths.clone(), cs_ctx).await?;

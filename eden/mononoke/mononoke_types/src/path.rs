@@ -7,12 +7,14 @@
 
 use std::cmp;
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::fmt;
 use std::fmt::Display;
 use std::io;
 use std::io::Write;
 use std::iter::once;
 use std::iter::Once;
+use std::os::unix::ffi::OsStrExt;
 use std::slice::Iter;
 
 use abomonation_derive::Abomonation;
@@ -36,7 +38,6 @@ use crate::errors::MononokeTypeError;
 use crate::hash::Blake2;
 use crate::hash::Context;
 use crate::thrift;
-
 // Filesystems on Linux commonly limit path *elements* to 255 bytes. Enforce this on MPaths as well
 // as a repository that cannot be checked out isn't very useful.
 const MPATH_ELEMENT_MAX_LENGTH: usize = 255;
@@ -905,6 +906,14 @@ impl<'a> TryFrom<&'a str> for MPath {
     type Error = Error;
 
     fn try_from(value: &str) -> Result<Self> {
+        MPath::new(value.as_bytes())
+    }
+}
+
+impl<'a> TryFrom<&'a OsStr> for MPath {
+    type Error = Error;
+
+    fn try_from(value: &OsStr) -> Result<Self> {
         MPath::new(value.as_bytes())
     }
 }

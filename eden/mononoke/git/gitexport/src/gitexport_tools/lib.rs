@@ -199,28 +199,31 @@ mod test {
     use futures::future::try_join_all;
     use mononoke_api::BookmarkFreshness;
     use test_repo_factory::TestRepoFactory;
-    use test_utils::build_single_export_directory_source_repo;
+    use test_utils::build_test_repo;
     use test_utils::get_relevant_changesets_from_ids;
+    use test_utils::GitExportTestRepoOptions;
     use test_utils::EXPORT_DIR;
     use test_utils::EXPORT_FILE;
+    use test_utils::FILE_IN_SECOND_EXPORT_DIR;
+    use test_utils::SECOND_EXPORT_DIR;
     use test_utils::SECOND_EXPORT_FILE;
 
     use super::*;
 
     #[fbinit::test]
-    async fn test_rewrite_partial_changesets_with_single_export_dir(
-        fb: FacebookInit,
-    ) -> Result<(), Error> {
+    async fn test_rewrite_partial_changesets(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
         let export_dir = MPath::new(EXPORT_DIR).unwrap();
+        let second_export_dir = MPath::new(SECOND_EXPORT_DIR).unwrap();
 
         let (source_repo_ctx, changeset_ids) =
-            build_single_export_directory_source_repo(fb, &ctx).await?;
+            build_test_repo(fb, &ctx, GitExportTestRepoOptions::default()).await?;
 
         let first = changeset_ids["first"];
         let third = changeset_ids["third"];
         let fifth = changeset_ids["fifth"];
+        let sixth = changeset_ids["sixth"];
         let seventh = changeset_ids["seventh"];
         let ninth = changeset_ids["ninth"];
         let tenth = changeset_ids["tenth"];
@@ -231,7 +234,7 @@ mod test {
         // Test that changesets are rewritten when relevant changesets are given
         // topologically sorted
         let relevant_changeset_ids: Vec<ChangesetId> =
-            vec![first, third, fifth, seventh, ninth, tenth];
+            vec![first, third, fifth, sixth, seventh, ninth, tenth];
 
         let relevant_changesets: Vec<ChangesetContext> =
             get_relevant_changesets_from_ids(&source_repo_ctx, relevant_changeset_ids).await?;
@@ -240,7 +243,8 @@ mod test {
             (first, vec![]),
             (third, vec![first]),
             (fifth, vec![third]),
-            (seventh, vec![fifth]),
+            (sixth, vec![fifth]),
+            (seventh, vec![sixth]),
             (ninth, vec![seventh]),
             (tenth, vec![ninth]),
         ]);
@@ -250,7 +254,7 @@ mod test {
             relevant_changesets.clone(),
             &relevant_changeset_parents,
             &target_repo_ctx,
-            vec![export_dir.clone()],
+            vec![export_dir.clone(), second_export_dir.clone()],
         )
         .await?;
 
@@ -318,19 +322,23 @@ mod test {
             )
         }
 
-        assert_eq!(result.len(), 6);
+        assert_eq!(result.len(), 7);
         assert_eq!(result[0], build_expected_tuple("first", vec![EXPORT_FILE]));
         assert_eq!(result[1], build_expected_tuple("third", vec![EXPORT_FILE]));
         assert_eq!(result[2], build_expected_tuple("fifth", vec![EXPORT_FILE]));
         assert_eq!(
             result[3],
-            build_expected_tuple("seventh", vec![EXPORT_FILE])
+            build_expected_tuple("sixth", vec![FILE_IN_SECOND_EXPORT_DIR])
         );
         assert_eq!(
             result[4],
+            build_expected_tuple("seventh", vec![EXPORT_FILE, FILE_IN_SECOND_EXPORT_DIR])
+        );
+        assert_eq!(
+            result[5],
             build_expected_tuple("ninth", vec![SECOND_EXPORT_FILE])
         );
-        assert_eq!(result[5], build_expected_tuple("tenth", vec![EXPORT_FILE]));
+        assert_eq!(result[6], build_expected_tuple("tenth", vec![EXPORT_FILE]));
 
         Ok(())
     }
@@ -342,7 +350,7 @@ mod test {
         let export_dir = MPath::new(EXPORT_DIR).unwrap();
 
         let (source_repo_ctx, changeset_ids) =
-            build_single_export_directory_source_repo(fb, &ctx).await?;
+            build_test_repo(fb, &ctx, GitExportTestRepoOptions::default()).await?;
 
         let first = changeset_ids["first"];
         let third = changeset_ids["third"];

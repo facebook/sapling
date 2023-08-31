@@ -48,9 +48,15 @@ pub async fn get_relevant_changesets_from_ids(
     .await
 }
 
-pub async fn build_single_export_directory_source_repo(
+#[derive(Default)]
+pub struct GitExportTestRepoOptions {
+    pub add_branch_commit: bool,
+}
+
+pub async fn build_test_repo(
     fb: FacebookInit,
     ctx: &CoreContext,
+    opts: GitExportTestRepoOptions,
 ) -> Result<(RepoContext, HashMap<String, ChangesetId>), Error> {
     let source_repo = TestRepoFactory::new(fb)?.build().await?;
     let source_repo_ctx = RepoContext::new_test(ctx.clone(), source_repo).await?;
@@ -103,8 +109,24 @@ pub async fn build_single_export_directory_source_repo(
         .commit()
         .await?;
 
+    let mut maybe_branch_commit = None;
+    let mut merge_commit_parents = vec![sixth];
+
+    if opts.add_branch_commit {
+        // Create a commit that will branch from the fifth and merge into the seventh
+
+        let branch_commit = CreateCommitContext::new(ctx, source_repo, vec![fifth])
+            .add_file(SECOND_EXPORT_FILE, "change export_file in a branch")
+            .set_message("branch commit")
+            .commit()
+            .await?;
+
+        maybe_branch_commit = Some(branch_commit);
+        merge_commit_parents.push(branch_commit);
+    }
+
     // Change both relevant files -> full export
-    let seventh = CreateCommitContext::new(ctx, source_repo, vec![sixth])
+    let seventh = CreateCommitContext::new(ctx, source_repo, merge_commit_parents)
         .add_file(EXPORT_FILE, "change export file again")
         .add_file(
             FILE_IN_SECOND_EXPORT_DIR,
@@ -137,7 +159,7 @@ pub async fn build_single_export_directory_source_repo(
     let bookmark_update_ctx = bookmark(ctx, source_repo, "master");
     let _master_bookmark_key = bookmark_update_ctx.set_to(tenth.clone()).await?;
 
-    let cs_map = hashmap! {
+    let mut cs_map = hashmap! {
         String::from("first") => first,
         String::from("second") => second,
         String::from("third") => third,
@@ -149,6 +171,10 @@ pub async fn build_single_export_directory_source_repo(
         String::from("ninth") => ninth,
         String::from("tenth") => tenth,
     };
+
+    if let Some(branch_commit) = maybe_branch_commit {
+        cs_map.insert(String::from("branch"), branch_commit);
+    }
 
     Ok((source_repo_ctx, cs_map))
 }

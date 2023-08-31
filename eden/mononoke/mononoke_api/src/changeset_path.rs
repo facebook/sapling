@@ -65,7 +65,7 @@ pub struct HistoryEntry {
     pub changeset_id: ChangesetId,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct ChangesetPathHistoryOptions {
     pub until_timestamp: Option<i64>,
     pub descendants_of: Option<ChangesetId>,

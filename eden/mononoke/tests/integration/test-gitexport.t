@@ -177,12 +177,11 @@ Check all the commits
    1 files changed, 1 insertions(+), 0 deletions(-)
   
 
-
 # -------------------- Use the gitexport tool --------------------
 
 Set location of binary, resources and options (e.g. output path, directories)
 # Path that should be exported to the git repo
-  $ EXPORT_PATHS="$EXPORT_DIR $SECOND_EXPORT_DIR"
+  $ EXPORT_PATHS=($EXPORT_DIR $SECOND_EXPORT_DIR)
 
   $ GIT_REPO_OUTPUT="$TESTTMP/git_repo"
 
@@ -200,12 +199,12 @@ Set location of binary, resources and options (e.g. output path, directories)
 Run the tool
 
 # TODO(T160600991): uncomment once the CLI binary is created
-  $ gitexport --log-level ERROR --repo-name "repo" --temp-repo-name "temp_repo" --export-path "$EXPORT_DIR"
+  $ gitexport --log-level ERROR --repo-name "repo" --temp-repo-name "temp_repo" $(printf -- '-p %s ' "${EXPORT_PATHS[@]}")
 
   $ REPONAME="temp_repo" hgmn_clone mononoke://$(mononoke_address)/temp_repo temp_repo
   $ cd temp_repo
   $ hg log --stat
-  commit:      64086cee8b10
+  commit:      e3baff356afa
   bookmark:    default/master
   hoistedname: master
   user:        author
@@ -215,7 +214,7 @@ Run the tool
    export_dir/subdir_to_export/second_subdir_export.txt |  1 -
    1 files changed, 0 insertions(+), 1 deletions(-)
   
-  commit:      f1dcb8b150c8
+  commit:      e1b0231eb975
   user:        author
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Modify only file in export subdirectory
@@ -223,7 +222,7 @@ Run the tool
    export_dir/subdir_to_export/second_subdir_export.txt |  2 +-
    1 files changed, 1 insertions(+), 1 deletions(-)
   
-  commit:      bb4abf6cefa7
+  commit:      8459577d202d
   user:        author
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Modify only exported file
@@ -231,7 +230,7 @@ Run the tool
    export_dir/B.txt |  2 +-
    1 files changed, 1 insertions(+), 1 deletions(-)
   
-  commit:      c5e2cea7851f
+  commit:      00d1b2200b22
   user:        author
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Modify internal and exported files
@@ -239,6 +238,14 @@ Run the tool
    export_dir/A.txt                                          |  1 +
    export_dir/subdir_to_export/exception_from_export_dir.txt |  1 +
    2 files changed, 2 insertions(+), 0 deletions(-)
+  
+  commit:      87b1876a37c4
+  user:        author
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     Create another export directory
+  
+   second_export_dir/another_file.txt |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
   
   commit:      e5b584c96fcf
   user:        author
@@ -265,7 +272,6 @@ Run the tool
    export_dir/B.txt |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-
 
 # -------------------- Run checks on the git repo --------------------
 
