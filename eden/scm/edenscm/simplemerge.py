@@ -138,7 +138,7 @@ class Merge3Text:
         """
         return None
 
-    def merge_groups(self):
+    def merge_groups(self, automerge=False):
         """Yield sequence of line groups.  Each one is a tuple:
 
         'unchanged', lines
@@ -155,6 +155,9 @@ class Merge3Text:
 
         'conflict', (base_lines, a_lines, b_lines)
              Lines from base were changed to either a or b and conflict.
+
+        'automerge', lines
+             Lines produced by automerge algorithms to resolve conflict.
         """
         for t in self.merge_regions():
             what = t[0]
@@ -165,14 +168,31 @@ class Merge3Text:
             elif what == "b":
                 yield what, self.b[t[1] : t[2]]
             elif what == "conflict":
-                yield (
-                    what,
-                    (
-                        self.base[t[1] : t[2]],
-                        self.a[t[3] : t[4]],
-                        self.b[t[5] : t[6]],
-                    ),
-                )
+                base_lines = self.base[t[1] : t[2]]
+                a_lines = self.a[t[3] : t[4]]
+                b_lines = self.b[t[5] : t[6]]
+
+                merged_lines = None
+                if automerge:
+                    if self.wordmerge is wordmergemode.enforced:
+                        raise CantShowWordConflicts()
+                    elif self.wordmerge is wordmergemode.ondemand:
+                        # Try resolve the conflicted region using word merge
+                        subbasetext = b"".join(base_lines)
+                        subatext = b"".join(a_lines)
+                        subbtext = b"".join(b_lines)
+                        text = trywordmerge(subbasetext, subatext, subbtext)
+                        if text:
+                            merged_lines = text.splitlines(True)
+                    else:
+                        merged_lines = self.resolve_conflict(
+                            base_lines, a_lines, b_lines
+                        )
+
+                if merged_lines is not None:
+                    yield "automerge", merged_lines
+                else:
+                    yield what, (base_lines, a_lines, b_lines)
             else:
                 raise ValueError(what)
 
@@ -404,29 +424,13 @@ def render_markers(
     if name_base and base_marker:
         base_marker = base_marker + b" " + name_base
 
-    merge_groups = m3.merge_groups()
+    merge_groups = m3.merge_groups(automerge=True)
     if minimize:
         merge_groups = m3.minimize(merge_groups)
     lines = []
     for what, group_lines in merge_groups:
         if what == "conflict":
             base_lines, a_lines, b_lines = group_lines
-            if m3.wordmerge is wordmergemode.enforced:
-                conflictscount += 1
-                raise CantShowWordConflicts()
-            elif m3.wordmerge is wordmergemode.ondemand:
-                # Try resolve the conflicted region using word merge
-                subbasetext = b"".join(base_lines)
-                subatext = b"".join(a_lines)
-                subbtext = b"".join(b_lines)
-                text = trywordmerge(subbasetext, subatext, subbtext)
-                if text:
-                    lines.extend(text.splitlines(True))
-                    continue
-            elif (merged_lines := m3.resolve_conflict(*group_lines)) is not None:
-                lines.extend(merged_lines)
-                continue
-
             conflictscount += 1
             if start_marker is not None:
                 lines.append(start_marker + newline)
@@ -480,7 +484,7 @@ def render_mergediff(m3, name_a, name_b, name_base):
     newline = _detect_newline(m3)
     lines = []
     conflictscount = 0
-    for what, group_lines in m3.merge_groups():
+    for what, group_lines in m3.merge_groups(automerge=True):
         if what == "conflict":
             base_lines, a_lines, b_lines = group_lines
             basetext = b"".join(base_lines)

@@ -340,7 +340,7 @@ def unidiff(atext, btext, filepath="") -> bytes:
 def basediff(m3, name_a, name_b):
     lines = []
     conflicts = False
-    for group in m3.merge_groups():
+    for group in m3.merge_groups(automerge=True):
         if group[0] == "conflict":
             base_lines, a_lines, b_lines = group[1:]
             basetext = b"".join(base_lines)
