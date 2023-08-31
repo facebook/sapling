@@ -17,12 +17,12 @@ export function LargeSpinner() {
   );
 }
 
-export function Center({children}: {children: React.ReactNode}) {
-  return <div className="center-container">{children}</div>;
+export function Center(props: FlexProps) {
+  return FlexBox({...props, className: addClassName('center-container', props)});
 }
 
-export function FlexRow({children}: {children: React.ReactNode}) {
-  return <div className="flex-row">{children}</div>;
+export function FlexRow(props: FlexProps) {
+  return FlexBox({...props, className: addClassName('flex-row', props)});
 }
 
 /** Flexbox container with horizontal children. */
@@ -110,4 +110,8 @@ function Scroll(props: ScrollProps) {
       <div {...mergedProps}>{props.children}</div>
     </div>
   );
+}
+
+function addClassName(name: string, props: FlexProps) {
+  return props.className == null ? name : `${props.className} ${name}`;
 }
