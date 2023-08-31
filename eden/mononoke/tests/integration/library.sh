@@ -2026,6 +2026,16 @@ remotenames =
 EOF
 }
 
+function gitexport() {
+  log="$TESTTMP/gitexport.out"
+
+  "$MONONOKE_GITEXPORT" \
+    "${CACHE_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    "$@"
+}
+
 function gitimport() {
   log="$TESTTMP/gitimport.out"
 

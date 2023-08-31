@@ -11,6 +11,7 @@ Setting up a simple scenario for the gitexport tool
 Setup configuration
   $ REPOTYPE="blob_files"
   $ setup_common_config "$REPOTYPE"
+  $ ENABLE_API_WRITES=1 REPOID=1 setup_mononoke_repo_config "temp_repo"
   $ cd $TESTTMP
 
 
@@ -180,13 +181,8 @@ Check all the commits
 # -------------------- Use the gitexport tool --------------------
 
 Set location of binary, resources and options (e.g. output path, directories)
-# TODO(T160600991): Pass the CLI pass once the initial binary is setup in buck
-  $ GITEXPORT_CLI=""
-
 # Path that should be exported to the git repo
   $ EXPORT_PATHS="$EXPORT_DIR $SECOND_EXPORT_DIR"
-
-  $ HG_REPO="$TESTTMP/repo"
 
   $ GIT_REPO_OUTPUT="$TESTTMP/git_repo"
 
@@ -204,8 +200,71 @@ Set location of binary, resources and options (e.g. output path, directories)
 Run the tool
 
 # TODO(T160600991): uncomment once the CLI binary is created
-# $ $GITEXPORT_CLI --hg-repo "$REPO" --output "$GIT_REPO_OUTPUT" --export-paths "$EXPORT_PATHS"
+  $ gitexport --log-level ERROR --repo-name "repo" --temp-repo-name "temp_repo" --export-path "$EXPORT_DIR"
 
+  $ REPONAME="temp_repo" hgmn_clone mononoke://$(mononoke_address)/temp_repo temp_repo
+  $ cd temp_repo
+  $ hg log --stat
+  commit:      64086cee8b10
+  bookmark:    default/master
+  hoistedname: master
+  user:        author
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     Delete internal and exported files
+  
+   export_dir/subdir_to_export/second_subdir_export.txt |  1 -
+   1 files changed, 0 insertions(+), 1 deletions(-)
+  
+  commit:      f1dcb8b150c8
+  user:        author
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     Modify only file in export subdirectory
+  
+   export_dir/subdir_to_export/second_subdir_export.txt |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  commit:      bb4abf6cefa7
+  user:        author
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     Modify only exported file
+  
+   export_dir/B.txt |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  commit:      c5e2cea7851f
+  user:        author
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     Modify internal and exported files
+  
+   export_dir/A.txt                                          |  1 +
+   export_dir/subdir_to_export/exception_from_export_dir.txt |  1 +
+   2 files changed, 2 insertions(+), 0 deletions(-)
+  
+  commit:      e5b584c96fcf
+  user:        author
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     Add files to all directories
+  
+   export_dir/C.txt                                     |  1 +
+   export_dir/subdir_to_export/second_subdir_export.txt |  1 +
+   2 files changed, 2 insertions(+), 0 deletions(-)
+  
+  commit:      09811adfffe7
+  user:        author
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     Add subdirectory to export dir
+  
+   export_dir/subdir_to_export/export_file_in_subdir.txt |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  commit:      d5d07c2e7885
+  user:        author
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     Add files to export dir
+  
+   export_dir/B.txt |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
 
 
 # -------------------- Run checks on the git repo --------------------
