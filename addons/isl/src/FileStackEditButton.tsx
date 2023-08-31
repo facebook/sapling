@@ -5,28 +5,26 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Mode} from './FileStackEditor';
 import type {Rev} from './stackEdit/fileStackState';
 
-import {Row} from './ComponentUtils';
-import {FileStackEditorRow} from './FileStackEditor';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
-import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {T, t} from './i18n';
 import {FileStackState} from './stackEdit/fileStackState';
-import {bumpStackEditMetric, useStackEditState} from './stackEditState';
+import {useStackEditState} from './stackEditState';
 import {useModal} from './useModal';
-import {VSCodeButton, VSCodeRadio, VSCodeRadioGroup} from '@vscode/webview-ui-toolkit/react';
-import {useState} from 'react';
-import {atom, useRecoilState, useSetRecoilState} from 'recoil';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {lazy, Suspense} from 'react';
+import {atom, useSetRecoilState} from 'recoil';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {unwrap} from 'shared/utils';
 
-const fileStackAtom = atom<FileStackState>({
+export const fileStackAtom = atom<FileStackState>({
   key: 'fileStackAtom',
   default: new FileStackState([]),
 });
+
+const FileStackEditModal = lazy(() => import('./FileStackEditModal'));
 
 export function FileStackEditButton(): React.ReactElement {
   const stackEdit = useStackEditState();
@@ -50,13 +48,15 @@ export function FileStackEditButton(): React.ReactElement {
           );
         const skip = (rev: Rev) => stackEdit.commitStack.isAbsentFromFileStackRev(fileIdx, rev);
         return (
-          <FileStackEditModalContent
-            getTitle={getTitle}
-            skip={skip}
-            close={close}
-            fileIdx={fileIdx}
-            fileDesc={label}
-          />
+          <Suspense>
+            <FileStackEditModal
+              getTitle={getTitle}
+              skip={skip}
+              close={close}
+              fileIdx={fileIdx}
+              fileDesc={label}
+            />
+          </Suspense>
         );
       },
       title,
@@ -86,83 +86,5 @@ export function FileStackEditButton(): React.ReactElement {
         <T>Edit file stack</T>
       </VSCodeButton>
     </Tooltip>
-  );
-}
-
-const editModeAtom = atom<Mode>({
-  key: 'editModeAtom',
-  default: 'unified-diff',
-});
-
-function FileStackEditModalContent(props: {
-  getTitle: (rev: Rev) => string;
-  skip: (rev: Rev) => boolean;
-  close: (data: unknown) => void;
-  fileIdx: number;
-  fileDesc: string;
-}) {
-  const [stack, setStack] = useRecoilState(fileStackAtom);
-  const [mode, setMode] = useRecoilState(editModeAtom);
-  const [textEdit, setTextEdit] = useState(false);
-  const stackEdit = useStackEditState();
-
-  // VSCode toolkit does not provide a way to proper type `e`.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleModeChange = (e: any) => {
-    setMode(e.target.value);
-  };
-
-  const handleConfirm = () => {
-    const newCommitStack = stackEdit.commitStack.setFileStack(props.fileIdx, stack);
-    stackEdit.push(newCommitStack, {name: 'fileStack', fileDesc: props.fileDesc});
-    bumpStackEditMetric('fileStackEdit');
-    props.close(true);
-  };
-
-  return (
-    <div>
-      <FileStackEditorRow
-        stack={stack}
-        setStack={setStack}
-        getTitle={props.getTitle}
-        skip={props.skip}
-        mode={mode}
-        textEdit={textEdit || mode === 'side-by-side-diff'}
-      />
-      <Row style={{marginTop: 'var(--pad)'}}>
-        <VSCodeRadioGroup value={mode} onChange={handleModeChange}>
-          <VSCodeRadio accessKey="u" value="unified-diff">
-            <T>Unified diff</T>
-          </VSCodeRadio>
-          <VSCodeRadio accessKey="s" value="side-by-side-diff">
-            <T>Side-by-side diff</T>
-          </VSCodeRadio>
-          <VSCodeRadio value="unified-stack">
-            <T>Unified stack</T>
-          </VSCodeRadio>
-        </VSCodeRadioGroup>
-        <VSCodeCheckbox
-          accessKey="t"
-          checked={textEdit || mode === 'side-by-side-diff'}
-          disabled={mode === 'side-by-side-diff'}
-          onChange={() => {
-            setTextEdit(c => !c);
-          }}>
-          <T>Edit text</T>
-        </VSCodeCheckbox>
-        <VSCodeButton
-          appearance="secondary"
-          style={{marginLeft: 'auto'}}
-          onClick={() => props.close(false)}>
-          <T>Cancel</T>
-        </VSCodeButton>
-        <VSCodeButton
-          appearance="primary"
-          style={{marginLeft: 'var(--pad)'}}
-          onClick={handleConfirm}>
-          <T>Confirm</T>
-        </VSCodeButton>
-      </Row>
-    </div>
   );
 }
