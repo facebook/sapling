@@ -1,0 +1,95 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.file-stack-editor {
+  margin: var(--pad);
+  border: 1px solid var(--tooltip-border);
+  min-width: 200px;
+  height: fit-content;
+}
+
+.file-stack-editor pre {
+  padding: 0;
+  margin: 0;
+  /* Set line-height explicitly to avoid dynamic line heights based on (different) fonts decided by text content. */
+  line-height: 1.2;
+}
+
+.file-stack-editor .context-button {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 20'%3E%3Cpath d='M0 10 Q10 15 20 10 Q30 5 40 10' stroke='grey' fill='transparent' /%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  user-select: none;
+  cursor: pointer;
+}
+
+.file-stack-editor .lineno {
+  padding-left: var(--halfpad);
+  padding-right: var(--halfpad);
+  text-align: right;
+  user-select: none;
+  background-color: rgba(128, 128, 128, 0.2);
+}
+
+.file-stack-editor .main-content {
+  min-width: 200px;
+  position: relative;
+}
+
+.file-stack-editor .line {
+  padding-left: var(--halfpad);
+}
+
+.file-stack-editor .line-buttons {
+  display: inline-block;
+  opacity: 0;
+  user-select: none;
+  text-shadow: -1px -1px 0 var(--background), 1px -1px 0 var(--background),
+    -1px 1px 0 var(--background), 1px 1px 0 var(--background);
+}
+
+.file-stack-editor .line:hover .line-buttons,
+.file-stack-editor .line.selected .line-buttons {
+  opacity: 1;
+}
+
+.file-stack-editor .line-buttons.left {
+  min-width: 1.5em;
+}
+
+.file-stack-editor .line-buttons.right {
+  position: absolute;
+  right: 0;
+}
+
+.file-stack-editor .button {
+  cursor: pointer;
+}
+
+.file-stack-editor .line-buttons.right .button {
+  padding-left: var(--halfpad);
+}
+
+.file-stack-editor .line-buttons.right .button:active {
+  color: grey;
+}
+
+.file-stack-editor .line-buttons.right .button:first {
+  padding-left: 0;
+}
+
+.file-stack-editor .add {
+  background: var(--diffEditor-insertedLineBackground);
+}
+
+.file-stack-editor .del {
+  background: var(--diffEditor-removedLineBackground);
+}
+
+.file-stack-editor-row .filerev-title {
+  padding-left: var(--pad);
+  text-overflow: ellipsis;
+}
