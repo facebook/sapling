@@ -14,7 +14,7 @@ import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {T, t} from './i18n';
 import {FileStackState} from './stackEdit/fileStackState';
-import {useStackEditState} from './stackEditState';
+import {bumpStackEditMetric, useStackEditState} from './stackEditState';
 import {useModal} from './useModal';
 import {VSCodeButton, VSCodeRadio, VSCodeRadioGroup} from '@vscode/webview-ui-toolkit/react';
 import {useState} from 'react';
@@ -39,7 +39,7 @@ export function FileStackEditButton(): React.ReactElement {
     setFileStack(stack);
     showModal({
       type: 'custom',
-      component: ({returnResultAndDismiss: _}) => {
+      component: ({returnResultAndDismiss: close}) => {
         const getTitle = (rev: Rev) =>
           stackEdit.commitStack.getCommitFromFileStackRev(fileIdx, rev)?.text ??
           t(
@@ -49,7 +49,15 @@ export function FileStackEditButton(): React.ReactElement {
               'Provided to show diff against changes in the stack.',
           );
         const skip = (rev: Rev) => stackEdit.commitStack.isAbsentFromFileStackRev(fileIdx, rev);
-        return <FileStackEditModalContent getTitle={getTitle} skip={skip} />;
+        return (
+          <FileStackEditModalContent
+            getTitle={getTitle}
+            skip={skip}
+            close={close}
+            fileIdx={fileIdx}
+            fileDesc={label}
+          />
+        );
       },
       title,
     });
@@ -89,15 +97,26 @@ const editModeAtom = atom<Mode>({
 function FileStackEditModalContent(props: {
   getTitle: (rev: Rev) => string;
   skip: (rev: Rev) => boolean;
+  close: (data: unknown) => void;
+  fileIdx: number;
+  fileDesc: string;
 }) {
   const [stack, setStack] = useRecoilState(fileStackAtom);
   const [mode, setMode] = useRecoilState(editModeAtom);
   const [textEdit, setTextEdit] = useState(false);
+  const stackEdit = useStackEditState();
 
   // VSCode toolkit does not provide a way to proper type `e`.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleModeChange = (e: any) => {
     setMode(e.target.value);
+  };
+
+  const handleConfirm = () => {
+    const newCommitStack = stackEdit.commitStack.setFileStack(props.fileIdx, stack);
+    stackEdit.push(newCommitStack, {name: 'fileStack', fileDesc: props.fileDesc});
+    bumpStackEditMetric('fileStackEdit');
+    props.close(true);
   };
 
   return (
@@ -110,7 +129,7 @@ function FileStackEditModalContent(props: {
         mode={mode}
         textEdit={textEdit || mode === 'side-by-side-diff'}
       />
-      <Row>
+      <Row style={{marginTop: 'var(--pad)'}}>
         <VSCodeRadioGroup value={mode} onChange={handleModeChange}>
           <VSCodeRadio accessKey="u" value="unified-diff">
             <T>Unified diff</T>
@@ -131,6 +150,18 @@ function FileStackEditModalContent(props: {
           }}>
           <T>Edit text</T>
         </VSCodeCheckbox>
+        <VSCodeButton
+          appearance="secondary"
+          style={{marginLeft: 'auto'}}
+          onClick={() => props.close(false)}>
+          <T>Cancel</T>
+        </VSCodeButton>
+        <VSCodeButton
+          appearance="primary"
+          style={{marginLeft: 'var(--pad)'}}
+          onClick={handleConfirm}>
+          <T>Confirm</T>
+        </VSCodeButton>
       </Row>
     </div>
   );

@@ -324,6 +324,8 @@ export function UndoDescription({op}: {op?: StackEditOpDescription}): React.Reac
     return <T replace={replace}>dropping $commit</T>;
   } else if (op.name === 'import') {
     return <T>import</T>;
+  } else if (op.name === 'fileStack') {
+    return <T replace={{$file: op.fileDesc}}>editing file stack: $file</T>;
   }
   return <T>unknown</T>;
 }

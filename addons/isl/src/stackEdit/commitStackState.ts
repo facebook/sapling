@@ -1040,6 +1040,15 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
 
     return state.buildFileStacks();
   }
+
+  /** Replace a file stack. */
+  setFileStack(fileIdx: number, stack: FileStackState): CommitStackState {
+    const oldStack = this.fileStacks.get(fileIdx);
+    assert(oldStack != null, 'fileIdx out of range');
+    assert(oldStack.revLength === stack.revLength, 'fileStack length mismatch');
+    const newInner = this.inner.setIn(['fileStacks', fileIdx], stack);
+    return new CommitStackState(undefined, newInner);
+  }
 }
 
 function getBottomFilesFromExportStack(stack: Readonly<ExportStack>): Map<RepoPath, FileState> {

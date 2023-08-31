@@ -41,7 +41,8 @@ export type StackEditOpDescription =
       name: 'fold';
       commit: CommitState;
     }
-  | {name: 'import'};
+  | {name: 'import'}
+  | {name: 'fileStack'; fileDesc: string};
 
 const StackStateWithOperation = Record<StackStateWithOperationProps>({
   op: {name: 'import'},
@@ -315,6 +316,7 @@ type StackEditMetrics = {
   drop?: number;
   moveUpDown?: number;
   moveDnD?: number;
+  fileStackEdit?: number;
 };
 
 // Not atoms. They do not trigger re-render.
