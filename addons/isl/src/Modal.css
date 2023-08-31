@@ -6,7 +6,7 @@
  */
 
 .modal {
-  position: absolute;
+  position: fixed;
   width: 100vw;
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.2);
@@ -14,6 +14,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  left: 0;
+  top: 0;
 }
 
 .dark-theme .modal,
