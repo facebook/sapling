@@ -6,7 +6,6 @@
  */
 
 .file-stack-editor {
-  margin: var(--pad);
   border: 1px solid var(--tooltip-border);
   min-width: 200px;
   height: fit-content;
@@ -31,7 +30,19 @@
   padding-right: var(--halfpad);
   text-align: right;
   user-select: none;
-  background-color: rgba(128, 128, 128, 0.2);
+  background-color: rgba(128, 128, 128, 0.1);
+}
+
+.file-stack-editor .lineno.add {
+  background: var(--diffEditor-insertedLineHighlightBackground);
+}
+
+.file-stack-editor .lineno.del {
+  background: var(--diffEditor-removedLineHighlightBackground);
+}
+
+.file-stack-editor .lineno.change {
+  background: var(--editor-changedHighlightBackground);
 }
 
 .file-stack-editor .main-content {
@@ -89,7 +100,31 @@
   background: var(--diffEditor-removedLineBackground);
 }
 
+.file-stack-editor .line.change {
+  background: var(--editor-changedBackground);
+}
+
 .file-stack-editor-row .filerev-title {
   padding-left: var(--pad);
   text-overflow: ellipsis;
+}
+
+.file-stack-editor-ribbon-no-clip {
+  position: relative;
+  margin: var(--pad);
+}
+
+.file-stack-editor-ribbon-no-clip .ribbon {
+  position: absolute;
+  stroke: none;
+  fill: var(--editor-changedHighlightBackground);
+  z-index: 1;
+}
+
+.file-stack-editor-ribbon-no-clip .ribbon.add {
+  fill: var(--diffEditor-insertedLineHighlightBackground);
+}
+
+.file-stack-editor-ribbon-no-clip .ribbon.del {
+  fill: var(--diffEditor-removedLineHighlightBackground);
 }

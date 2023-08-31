@@ -39,6 +39,8 @@ html .vscode-light {
   --diffEditor-modifiedLineBackground: #f9ec5633;
   --diffEditor-modifiedLineHighlightBackground: #f9ec5666;
   --editor-selectionBackground: #add6ff;
+  --editor-changedBackground: hsla(211, 100%, 87%, 0.3);
+  --editor-changedHighlightBackground: hsla(211, 100%, 87%, 0.5);
 
   --signal-good-bg: #2da44e;
   --signal-medium-bg: #d5b14e;

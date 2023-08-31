@@ -5,8 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Mode} from './FileStackEditor';
 import type {Rev} from './stackEdit/fileStackState';
 
+import {Row} from './ComponentUtils';
 import {FileStackEditorRow} from './FileStackEditor';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {VSCodeCheckbox} from './VSCodeCheckbox';
@@ -14,7 +16,7 @@ import {T, t} from './i18n';
 import {FileStackState} from './stackEdit/fileStackState';
 import {useStackEditState} from './stackEditState';
 import {useModal} from './useModal';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton, VSCodeRadio, VSCodeRadioGroup} from '@vscode/webview-ui-toolkit/react';
 import {useState} from 'react';
 import {atom, useRecoilState, useSetRecoilState} from 'recoil';
 import {useContextMenu} from 'shared/ContextMenu';
@@ -79,12 +81,24 @@ export function FileStackEditButton(): React.ReactElement {
   );
 }
 
+const editModeAtom = atom<Mode>({
+  key: 'editModeAtom',
+  default: 'unified-diff',
+});
+
 function FileStackEditModalContent(props: {
   getTitle: (rev: Rev) => string;
   skip: (rev: Rev) => boolean;
 }) {
   const [stack, setStack] = useRecoilState(fileStackAtom);
+  const [mode, setMode] = useRecoilState(editModeAtom);
   const [textEdit, setTextEdit] = useState(false);
+
+  // VSCode toolkit does not provide a way to proper type `e`.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleModeChange = (e: any) => {
+    setMode(e.target.value);
+  };
 
   return (
     <div>
@@ -93,17 +107,28 @@ function FileStackEditModalContent(props: {
         setStack={setStack}
         getTitle={props.getTitle}
         skip={props.skip}
-        mode="unified-diff"
-        textEdit={textEdit}
+        mode={mode}
+        textEdit={textEdit || mode === 'side-by-side-diff'}
       />
-      <VSCodeCheckbox
-        accessKey="t"
-        checked={textEdit}
-        onChange={() => {
-          setTextEdit(c => !c);
-        }}>
-        <T>Edit text</T>
-      </VSCodeCheckbox>
+      <Row>
+        <VSCodeRadioGroup value={mode} onChange={handleModeChange}>
+          <VSCodeRadio accessKey="u" value="unified-diff">
+            <T>Unified diff</T>
+          </VSCodeRadio>
+          <VSCodeRadio accessKey="s" value="side-by-side-diff">
+            <T>Side-by-side diff</T>
+          </VSCodeRadio>
+        </VSCodeRadioGroup>
+        <VSCodeCheckbox
+          accessKey="t"
+          checked={textEdit || mode === 'side-by-side-diff'}
+          disabled={mode === 'side-by-side-diff'}
+          onChange={() => {
+            setTextEdit(c => !c);
+          }}>
+          <T>Edit text</T>
+        </VSCodeCheckbox>
+      </Row>
     </div>
   );
 }

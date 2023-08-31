@@ -39,6 +39,8 @@ html .vscode-dark {
   --diffEditor-modifiedLineBackground: #deb94033;
   --diffEditor-modifiedLineHighlightBackground: #deb94066;
   --editor-selectionBackground: #264f78;
+  --editor-changedBackground: hsla(212, 90%, 70%, 0.15);
+  --editor-changedHighlightBackground: hsla(212, 90%, 70%, 0.3);
 
   /* Signal colors */
   --signal-good-bg: #2da44e;

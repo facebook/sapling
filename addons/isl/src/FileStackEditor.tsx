@@ -7,20 +7,21 @@
 
 import type {RangeInfo} from './TextEditable';
 import type {FileStackState, Rev} from './stackEdit/fileStackState';
-import type {LineIdx} from 'shared/diff';
+import type {Block, LineIdx} from 'shared/diff';
 
 import {Row, ScrollX, ScrollY} from './ComponentUtils';
 import {TextEditable} from './TextEditable';
 import {Tooltip} from './Tooltip';
 import {t} from './i18n';
+import deepEqual from 'fast-deep-equal';
 import {Set as ImSet, Range} from 'immutable';
-import {useState, useRef, useEffect} from 'react';
-import {collapseContextBlocks, diffBlocks, splitLines} from 'shared/diff';
+import {useState, useRef, useEffect, useLayoutEffect} from 'react';
+import {mergeBlocks, collapseContextBlocks, diffBlocks, splitLines} from 'shared/diff';
 import {unwrap} from 'shared/utils';
 
 import './FileStackEditor.css';
 
-type Mode = 'unified-diff';
+export type Mode = 'unified-diff' | 'side-by-side-diff';
 
 type EditorRowProps = {
   /**
@@ -63,7 +64,10 @@ export function FileStackEditor(props: EditorProps) {
   const mainContentRef = useRef<HTMLPreElement | null>(null);
   const [expandedLines, setExpandedLines] = useState<ImSet<LineIdx>>(ImSet);
   const [selectedLineIds, setSelectedLineIds] = useState<ImSet<string>>(ImSet);
-  const {stack, rev, setStack, textEdit} = props;
+  const [widthStyle, setWidthStyle] = useState<string>('unset');
+  const {stack, rev, setStack, mode} = props;
+  const readOnly = rev === 0;
+  const textEdit = !readOnly && props.textEdit;
   const rangeInfos: RangeInfo[] = [];
 
   // Selection change is a document event, not a <pre> event.
@@ -99,11 +103,38 @@ export function FileStackEditor(props: EditorProps) {
   const bText = stack.getRev(rev);
   const bLines = splitLines(bText);
   const aLines = splitLines(stack.getRev(Math.max(0, rev - 1)));
-  const blocks = diffBlocks(aLines, bLines);
+  const abBlocks = diffBlocks(aLines, bLines);
 
   const leftMost = rev <= 1;
   const rightMost = rev + 1 >= stack.revLength;
 
+  // For side-by-side diff, we also need to diff with the right side.
+  let cbBlocks: Array<Block> = [];
+  let blocks = abBlocks;
+  if (!rightMost && mode === 'side-by-side-diff') {
+    const cText = stack.getRev(rev + 1);
+    const cLines = splitLines(cText);
+    cbBlocks = diffBlocks(cLines, bLines);
+    blocks = mergeBlocks(abBlocks, cbBlocks);
+  }
+
+  // Utility to get the "different" block containing the given b-side line number.
+  // Used by side-by-side diff to highlight left and right gutters.
+  const buildGetDifferentBlockFunction = (blocks: Array<Block>) => {
+    let blockIdx = 0;
+    return (bIdx: LineIdx): Block | null => {
+      while (blockIdx < blocks.length && bIdx >= blocks[blockIdx][1][3]) {
+        blockIdx++;
+      }
+      return blockIdx < blocks.length && blocks[blockIdx][0] === '!' ? blocks[blockIdx] : null;
+    };
+  };
+  const getLeftDifferentBlock = buildGetDifferentBlockFunction(abBlocks);
+  const getRightDifferentBlock = buildGetDifferentBlockFunction(cbBlocks);
+  const blockToClass = (block: Block | null, add = true): ' add' | ' del' | ' change' | '' =>
+    block == null ? '' : block[1][0] === block[1][1] ? (add ? ' add' : ' del') : ' change';
+
+  // Collapse unchanged context blocks, preserving the context lines.
   const collapsedBlocks = collapseContextBlocks(blocks, (_aLine, bLine) =>
     expandedLines.has(bLine),
   );
@@ -114,6 +145,7 @@ export function FileStackEditor(props: EditorProps) {
   const leftGutter: JSX.Element[] = [];
   const mainContent: JSX.Element[] = [];
   const rightGutter: JSX.Element[] = [];
+  const ribbons: JSX.Element[] = [];
 
   const handleContextExpand = (b1: LineIdx, b2: LineIdx) => {
     const newSet = expandedLines.union(Range(b1, b2));
@@ -125,7 +157,7 @@ export function FileStackEditor(props: EditorProps) {
     aIdx?: LineIdx,
     bIdx?: LineIdx,
   ): JSX.Element | null => {
-    if (textEdit) {
+    if (textEdit || readOnly || mode === 'side-by-side-diff') {
       return null;
     }
 
@@ -248,7 +280,7 @@ export function FileStackEditor(props: EditorProps) {
     rangeInfos.push({start, end});
     start = end;
     return id;
-  }
+  };
   const bLineSpan = (bLine: string): JSX.Element => {
     if (!textEdit) {
       return <span>{bLine}</span>;
@@ -287,13 +319,14 @@ export function FileStackEditor(props: EditorProps) {
       // Unchanged.
       for (let ai = a1; ai < a2; ++ai) {
         const bi = ai + b1 - a1;
+        const leftIdx = mode === 'unified-diff' ? ai : bi;
         leftGutter.push(
-          <div className="lineno" key={ai}>
-            {ai + 1}
+          <div className="lineno" key={ai} data-span-id={`${rev}-${leftIdx}l`}>
+            {leftIdx + 1}
           </div>,
         );
         rightGutter.push(
-          <div className="lineno" key={bi}>
+          <div className="lineno" key={bi} data-span-id={`${rev}-${bi}r`}>
             {bi + 1}
           </div>,
         );
@@ -306,47 +339,70 @@ export function FileStackEditor(props: EditorProps) {
       }
     } else if (sign === '!') {
       // Changed.
-      for (let ai = a1; ai < a2; ++ai) {
-        leftGutter.push(
-          <div className="lineno" key={ai}>
-            {ai + 1}
-          </div>,
-        );
-        rightGutter.push(
-          <div className="lineno" key={`a${ai}`}>
-            {' '}
-          </div>,
-        );
-        const selId = `a${ai}`;
-        let className = 'del line';
-        if (selectedLineIds.has(selId)) {
-          className += ' selected';
+      if (mode === 'unified-diff') {
+        // Deleted lines only show up in unified diff.
+        for (let ai = a1; ai < a2; ++ai) {
+          leftGutter.push(
+            <div className="lineno" key={ai}>
+              {ai + 1}
+            </div>,
+          );
+          rightGutter.push(
+            <div className="lineno" key={`a${ai}`}>
+              {' '}
+            </div>,
+          );
+          const selId = `a${ai}`;
+          let className = 'del line';
+          if (selectedLineIds.has(selId)) {
+            className += ' selected';
+          }
+          mainContent.push(
+            <div key={-ai} className={className} data-sel-id={selId}>
+              {lineButtons(sign, ai, undefined)}
+              {aLines[ai]}
+            </div>,
+          );
         }
-        mainContent.push(
-          <div key={-ai} className={className} data-sel-id={selId}>
-            {lineButtons(sign, ai, undefined)}
-            {aLines[ai]}
-          </div>,
-        );
       }
       for (let bi = b1; bi < b2; ++bi) {
+        // Inserted lines show up in unified and side-by-side diffs.
+        let leftClassName = 'lineno';
+        if (mode === 'side-by-side-diff') {
+          leftClassName += blockToClass(getLeftDifferentBlock(bi), true);
+        }
         leftGutter.push(
-          <div className="lineno" key={`b${bi}`}>
-            {' '}
+          <div className={leftClassName} key={`b${bi}`} data-span-id={`${rev}-${bi}l`}>
+            {mode === 'unified-diff' ? ' ' : bi + 1}
           </div>,
         );
+        let rightClassName = 'lineno';
+        if (mode === 'side-by-side-diff') {
+          rightClassName += blockToClass(getRightDifferentBlock(bi), false);
+        }
         rightGutter.push(
-          <div className="lineno" key={bi}>
+          <div className={rightClassName} key={bi} data-span-id={`${rev}-${bi}r`}>
             {bi + 1}
           </div>,
         );
         const selId = `b${bi}`;
-        let className = 'add line';
+        let lineClassName = 'line';
+        if (mode === 'unified-diff') {
+          lineClassName += ' add';
+        } else if (mode === 'side-by-side-diff') {
+          const lineNoClassNames = leftClassName + rightClassName;
+          for (const name of [' change', ' add', ' del']) {
+            if (lineNoClassNames.includes(name)) {
+              lineClassName += name;
+              break;
+            }
+          }
+        }
         if (selectedLineIds.has(selId)) {
-          className += ' selected';
+          lineClassName += ' selected';
         }
         mainContent.push(
-          <div key={bi} className={className} data-sel-id={selId}>
+          <div key={bi} className={lineClassName} data-sel-id={selId}>
             {lineButtons(sign, undefined, bi)}
             {bLineSpan(bLines[bi])}
           </div>,
@@ -355,27 +411,79 @@ export function FileStackEditor(props: EditorProps) {
     }
   });
 
+  if (mode === 'side-by-side-diff' && rev > 0) {
+    abBlocks.forEach(([sign, [a1, a2, b1, b2]]) => {
+      if (sign === '!') {
+        ribbons.push(
+          <Ribbon
+            a1={`${rev - 1}-${a1}r`}
+            a2={`${rev - 1}-${a2 - 1}r`}
+            b1={`${rev}-${b1}l`}
+            b2={`${rev}-${b2 - 1}l`}
+            outerContainerClass="file-stack-editor-outer-scroll-y"
+            innerContainerClass="file-stack-editor"
+            key={b1}
+            className={b1 === b2 ? 'del' : a1 === a2 ? 'add' : 'change'}
+          />,
+        );
+      }
+    });
+  }
+
   const handleTextChange = (value: string) => {
     const newStack = stack.editText(rev, value);
     setStack(newStack);
   };
 
+  const handleXScroll: React.UIEventHandler<HTMLDivElement> = e => {
+    // Dynamically decide between 'width: fit-content' and 'width: unset'.
+    // Affects the position of the [->] "move right" button and the width
+    // of the line background for LONG LINES.
+    //
+    //     |ScrollX width|
+    // ------------------------------------------------------------------------
+    //     |Editor width |              <- width: unset && scrollLeft == 0
+    //     |Text width - could be long|    text could be longer
+    //     |         [->]|                 "move right" button is visible
+    // ------------------------------------------------------------------------
+    // |Editor width |                  <- width: unset && scrollLeft > 0
+    // |+/- highlight|                     +/- background covers partial text
+    // |         [->]|                     "move right" at wrong position
+    // ------------------------------------------------------------------------
+    // |Editor width              | <- width: fit-content && scrollLeft > 0
+    // |Text width - could be long|    long text width = editor width
+    // |+/- highlight             |    +/- background covers all text
+    // |                      [->]|    "move right" at the right side of text
+    //
+    const newWidthStyle = e.currentTarget?.scrollLeft > 0 ? 'fit-content' : 'unset';
+    setWidthStyle(newWidthStyle);
+  };
+
+  const mainStyle: React.CSSProperties = {width: widthStyle};
+
   return (
-    <ScrollY hideBar={true} maxSize="70vh">
-      <Row className="file-stack-editor">
-        <pre className="column-left-gutter">{leftGutter}</pre>
-        {textEdit ? (
-          <TextEditable value={bText} rangeInfos={rangeInfos} onTextChange={handleTextChange}>
-            <pre className="main-content">{mainContent}</pre>
-          </TextEditable>
-        ) : (
-          <pre className="main-content" ref={mainContentRef}>
-            {mainContent}
-          </pre>
-        )}
-        <pre className="column-right-gutter">{rightGutter}</pre>
-      </Row>
-    </ScrollY>
+    <div className="file-stack-editor-ribbon-no-clip">
+      {ribbons}
+      <ScrollY className="file-stack-editor-outer-scroll-y" hideBar={true} maxSize="70vh">
+        <Row className="file-stack-editor">
+          <pre className="column-left-gutter">{leftGutter}</pre>
+          <ScrollX hideBar={true} maxSize={500} onScroll={handleXScroll}>
+            {textEdit ? (
+              <TextEditable value={bText} rangeInfos={rangeInfos} onTextChange={handleTextChange}>
+                <pre className="main-content" style={mainStyle}>
+                  {mainContent}
+                </pre>
+              </TextEditable>
+            ) : (
+              <pre className="main-content" style={mainStyle} ref={mainContentRef}>
+                {mainContent}
+              </pre>
+            )}
+          </ScrollX>
+          <pre className="column-right-gutter">{rightGutter}</pre>
+        </Row>
+      </ScrollY>
+    </div>
   );
 }
 
@@ -402,5 +510,211 @@ export function FileStackEditorRow(props: EditorRowProps) {
         })}
       </Row>
     </ScrollX>
+  );
+}
+
+/**
+ * The "connector" between two editors.
+ *
+ * Takes 4 data-span-id attributes:
+ *
+ * +------------+        +------------+
+ * | containerA |        | containerB |
+ * |       +----+~~~~~~~~+----+       |
+ * |       | a1 |        | b1 |       |
+ * |       +----+        +----+       |
+ * |       | .. | Ribbon | .. |       |
+ * |       +----+        +----+       |
+ * |       | a2 |        | b2 |       |
+ * |       +----+~~~~~~~~+----+       |
+ * |            |        |            |
+ * +------------+        +------------+
+ *
+ * The ribbon is positioned relative to (outer) containerB,
+ * the editor on the right side.
+ *
+ * The ribbon position will be recalculated if either containerA
+ * or containerB gets resized or scrolled. Note there are inner
+ * and outer containers. The scroll check is on the outer container
+ * with the `overflow-y: auto`. The resize check is on the inner
+ * container, since the outer container remains the same size
+ * once overflowed.
+ *
+ * The ribbons are drawn outside the scroll container, and need
+ * another container to have the `overflow: visible` behavior,
+ * like:
+ *
+ *   <div style={{overflow: 'visible', position: 'relative'}}>
+ *     <Ribbon />
+ *     <ScrollY className="outerContainer">
+ *        <Something className="innerContainer" />
+ *     </ScrollY>
+ *   </div>
+ *
+ * If one of a1 and a2 is missing, the a-side range is then
+ * considered zero-height. This is useful for pure deletion
+ * or insertion. Same for b1 and b2.
+ */
+function Ribbon(props: {
+  a1: string;
+  a2: string;
+  b1: string;
+  b2: string;
+  outerContainerClass: string;
+  innerContainerClass: string;
+  className: string;
+}) {
+  type RibbonPos = {
+    top: number;
+    width: number;
+    height: number;
+    path: string;
+  };
+  const [pos, setPos] = useState<RibbonPos | null>(null);
+  type E = HTMLElement;
+
+  type Containers = {
+    resize: E[];
+    scroll: E[];
+  };
+
+  useLayoutEffect(() => {
+    // Get the container elements and recaluclate positions.
+    // Returns an empty array if the containers are not found.
+    const repositionAndGetContainers = (): Containers | undefined => {
+      // Find a1, a2, b1, b2. a2 and b2 are nullable.
+      const select = (spanId: string): E | null =>
+        spanId === ''
+          ? null
+          : document.querySelector(`.${props.outerContainerClass} [data-span-id="${spanId}"]`);
+      const [a1, a2, b1, b2] = [props.a1, props.a2, props.b1, props.b2].map(select);
+      const aEither = a1 ?? a2;
+      const bEither = b1 ?? b2;
+      if (aEither == null || bEither == null) {
+        return;
+      }
+
+      // Find containers.
+      const findContainer = (span: E, className: string): E | null => {
+        for (let e: E | null = span; e != null; e = e.parentElement) {
+          if (e.classList.contains(className)) {
+            return e;
+          }
+        }
+        return null;
+      };
+      const [outerA, outerB] = [aEither, bEither].map(e =>
+        findContainer(e, props.outerContainerClass),
+      );
+      const [innerA, innerB] = [aEither, bEither].map(e =>
+        findContainer(e, props.innerContainerClass),
+      );
+      if (outerA == null || outerB == null || innerA == null || innerB == null) {
+        return;
+      }
+
+      // Recalculate positions. a2Rect and b2Rect are nullable.
+      let newPos: RibbonPos | null = null;
+      const [outerARect, outerBRect] = [outerA, outerB].map(e => e.getBoundingClientRect());
+      const [a1Rect, a2Rect, b1Rect, b2Rect] = [a1, a2, b1, b2].map(
+        e => e && e.getBoundingClientRect(),
+      );
+      const aTop = a1Rect?.top ?? a2Rect?.bottom;
+      const bTop = b1Rect?.top ?? b2Rect?.bottom;
+      const aBottom = a2Rect?.bottom ?? aTop;
+      const bBottom = b2Rect?.bottom ?? bTop;
+      const aRight = a1Rect?.right ?? a2Rect?.right;
+      const bLeft = b1Rect?.left ?? b2Rect?.left;
+
+      if (
+        aTop != null &&
+        bTop != null &&
+        aBottom != null &&
+        bBottom != null &&
+        aRight != null &&
+        bLeft != null
+      ) {
+        const top = Math.min(aTop, bTop) - outerBRect.top;
+        const width = bLeft - aRight;
+        const ay1 = Math.max(aTop - bTop, 0);
+        const by1 = Math.max(bTop - aTop, 0);
+        const height = Math.max(aBottom, bBottom) - Math.min(aTop, bTop);
+        const ay2 = ay1 + aBottom - aTop;
+        const by2 = by1 + bBottom - bTop;
+        const mid = width / 2;
+
+        // Discard overflow position.
+        if (
+          top >= 0 &&
+          top + Math.max(ay2, by2) <= Math.max(outerARect.height, outerBRect.height)
+        ) {
+          const path = [
+            `M 0 ${ay1}`,
+            `C ${mid} ${ay1}, ${mid} ${by1}, ${width} ${by1}`,
+            `L ${width} ${by2}`,
+            `C ${mid} ${by2}, ${mid} ${ay2}, 0 ${ay2}`,
+            `L 0 ${ay1}`,
+          ].join(' ');
+          newPos = {
+            top,
+            width,
+            height,
+            path,
+          };
+        }
+      }
+
+      setPos(pos => (deepEqual(pos, newPos) ? pos : newPos));
+
+      return {
+        scroll: [outerA, outerB],
+        resize: [innerA, innerB],
+      };
+    };
+
+    // Calcualte position now.
+    const containers = repositionAndGetContainers();
+
+    if (containers == null) {
+      return;
+    }
+
+    // Observe resize and scrolling changes of the container.
+    const observer = new ResizeObserver(() => repositionAndGetContainers());
+    const handleScroll = () => {
+      repositionAndGetContainers();
+    };
+    containers.resize.forEach(c => observer.observe(c));
+    containers.scroll.forEach(c => c.addEventListener('scroll', handleScroll));
+
+    return () => {
+      observer.disconnect();
+      containers.scroll.forEach(c => c.removeEventListener('scroll', handleScroll));
+    };
+  }, [
+    props.a1,
+    props.a2,
+    props.b1,
+    props.b2,
+    props.outerContainerClass,
+    props.innerContainerClass,
+    props.className,
+  ]);
+
+  if (pos == null) {
+    return null;
+  }
+
+  const style: React.CSSProperties = {
+    top: pos.top,
+    left: 1 - pos.width,
+    width: pos.width,
+    height: pos.height,
+  };
+
+  return (
+    <svg className={`ribbon ${props.className}`} style={style}>
+      <path d={pos.path} />
+    </svg>
   );
 }
