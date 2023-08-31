@@ -89,7 +89,7 @@ def trywordmerge(base_lines, a_lines, b_lines):
     btext = b"".join(b_lines)
     try:
         m3 = Merge3Text(basetext, atext, btext, wordmerge=wordmergemode.enforced)
-        text = b"".join(render_markers(m3)[0])
+        text = b"".join(render_minimized(m3)[0])
         return text.splitlines(True)
     except CantShowWordConflicts:
         return None
@@ -395,39 +395,34 @@ class Merge3Text:
         return sl
 
 
-def render_markers(
+def render_minimized(
     m3,
     name_a=None,
     name_b=None,
     start_marker=b"<<<<<<<",
     mid_marker=b"=======",
     end_marker=b">>>>>>>",
-    minimize=False,
 ) -> Tuple[List[bytes], int]:
     """Return merge in cvs-like form."""
     conflictscount = 0
     newline = _detect_newline(m3)
-    if name_a and start_marker:
+    if name_a:
         start_marker = start_marker + b" " + name_a
-    if name_b and end_marker:
+    if name_b:
         end_marker = end_marker + b" " + name_b
 
     merge_groups = m3.merge_groups(automerge=True)
-    if minimize:
-        merge_groups = m3.minimize(merge_groups)
+    merge_groups = m3.minimize(merge_groups)
     lines = []
     for what, group_lines in merge_groups:
         if what == "conflict":
             conflictscount += 1
             base_lines, a_lines, b_lines = group_lines
-            if start_marker is not None:
-                lines.append(start_marker + newline)
+            lines.append(start_marker + newline)
             lines.extend(a_lines)
-            if mid_marker is not None:
-                lines.append(mid_marker + newline)
+            lines.append(mid_marker + newline)
             lines.extend(b_lines)
-            if end_marker is not None:
-                lines.append(end_marker + newline)
+            lines.append(end_marker + newline)
         else:
             lines.extend(group_lines)
 
@@ -603,10 +598,7 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
     elif mode == "merge3":
         lines, conflictscount = render_merge3(m3, name_a, name_b, name_base)
     else:
-        extrakwargs = {"minimize": True}
-        lines, conflictscount = render_markers(
-            m3, name_a=name_a, name_b=name_b, **extrakwargs
-        )
+        lines, conflictscount = render_minimized(m3, name_a, name_b)
 
     mergedtext = b"".join(lines)
     if opts.get("print"):
