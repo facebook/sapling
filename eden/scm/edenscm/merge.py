@@ -1689,7 +1689,11 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 repo.fileslog.contentstore, repo.wvfs.base, numworkers
             )
             fctx = mctx.filectx
+            slinkfix = pycompat.iswindows and repo.wvfs._cansymlink
+            slinks = []
             for f, (flags, backup), msg in actions["g"] + actions["rg"]:
+                if slinkfix and "l" in flags:
+                    slinks.append(f)
                 fnode = fctx(f).filenode()
                 # The write method will either return immediately or block if
                 # the internal worker queue is full.
@@ -1702,6 +1706,8 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             for f, flag in retry:
                 repo.ui.debug("retrying %s\n" % f)
                 writesize += updateone(repo, fctx, wctx, f, flag)
+            if slinkfix:
+                nativecheckout.fixsymlinks(slinks, repo.wvfs.base)
         else:
             for i, size, item in batchget(
                 repo, mctx, wctx, actions["g"] + actions["rg"]

@@ -46,7 +46,25 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<checkoutplan>(py)?;
     m.add_class::<mergeresult>(py)?;
     m.add_class::<manifestbuilder>(py)?;
+    m.add(
+        py,
+        "fixsymlinks",
+        py_fn!(py, fix_symlinks(paths: Vec<PyPathBuf>, root: PyPathBuf)),
+    )?;
     Ok(m)
+}
+
+#[cfg(windows)]
+fn fix_symlinks(py: Python, paths: Vec<PyPathBuf>, root: PyPathBuf) -> PyResult<PyNone> {
+    let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
+    let paths = paths.iter().map(|p| p.to_string()).collect::<Vec<_>>();
+    checkout::update_symlinks(&paths, &vfs).map_pyerr(py)?;
+    Ok(PyNone)
+}
+
+#[cfg(not(windows))]
+fn fix_symlinks(_py: Python, _paths: Vec<PyPathBuf>, _root: PyPathBuf) -> PyResult<PyNone> {
+    Ok(PyNone)
 }
 
 py_class!(class checkoutplan |py| {

@@ -12,6 +12,8 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Write;
 use std::path::Path;
+#[cfg(windows)]
+use std::path::PathBuf;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -284,6 +286,24 @@ impl CheckoutPlan {
         let update_meta = Self::process_work_stream(update_meta);
 
         try_join!(update_content, update_meta)?;
+
+        #[cfg(windows)]
+        {
+            if vfs.supports_symlinks() {
+                let symlinks = self
+                    .filtered_update_content
+                    .iter()
+                    .filter_map(|a| {
+                        if a.file_type == FileType::Symlink {
+                            Some(a.path.as_str().to_owned())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                update_symlinks(&symlinks, vfs)?;
+            }
+        }
 
         Ok(stats)
     }
@@ -956,6 +976,50 @@ fn record_updates(plan: &CheckoutPlan, vfs: &VFS, treestate: &mut TreeState) -> 
         bar.increase_position(1);
     }
 
+    Ok(())
+}
+
+#[cfg(windows)]
+fn is_final_symlink_target_dir(mut path: PathBuf) -> Result<bool> {
+    // On Linux the usual limit for symlinks depth is 40, and symlinks stop
+    // being followed after that point:
+    // https://elixir.bootlin.com/linux/v6.5-rc7/source/include/linux/namei.h#L13
+    // Let's keep a similar limit for Windows
+    let mut rem_links = 40;
+    let mut metadata = std::fs::symlink_metadata(path.clone())?;
+    while metadata.is_symlink() && rem_links > 0 {
+        rem_links -= 1;
+        let target = std::fs::read_link(path.clone())?;
+        path = path
+            .parent()
+            .context("unable to determine parent directory for path when resolving symlink")?
+            .to_owned();
+        path.push(target);
+        if !path.exists() {
+            // If final target doesn't exist report it as a regular file
+            return Ok(false);
+        }
+        metadata = std::fs::symlink_metadata(path.clone())?;
+    }
+    Ok(metadata.is_dir())
+}
+
+#[cfg(windows)]
+/// Converts a list of file symlinks into potentially directory symlinks by
+/// checking the final target of that symlink, and converting it into a
+/// directory one if the final target is a directory.
+pub fn update_symlinks(paths: &[String], vfs: &VFS) -> Result<()> {
+    for p in paths.iter() {
+        let path = RepoPath::from_str(p.as_str())?;
+        if is_final_symlink_target_dir(vfs.join(path))? {
+            let (contents, _) = vfs.read_with_metadata(&path)?;
+            let target = PathBuf::from(String::from_utf8(contents.into_vec())?);
+            let target = util::path::replace_slash_with_backslash(&target);
+            let path = vfs.join(path);
+            util::path::remove_file(&path).context("Unable to remove symlink")?;
+            util::path::symlink_dir(&target, &path)?;
+        }
+    }
     Ok(())
 }
 

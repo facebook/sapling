@@ -274,6 +274,12 @@ pub fn remove_file<P: AsRef<Path>>(path: P) -> io::Result<()> {
     #[cfg(windows)]
     match &result {
         Err(e) if e.kind() == io::ErrorKind::PermissionDenied => {
+            // The file might be a directory symlink
+            if let Ok(r) = remove_directory_symlink(&path) {
+                if r {
+                    return Ok(());
+                }
+            }
             // This file might be mmapp-ed. Try a different way.
             if windows_remove_mmap_file(&path).is_ok() {
                 return Ok(());
@@ -282,6 +288,17 @@ pub fn remove_file<P: AsRef<Path>>(path: P) -> io::Result<()> {
         _ => {}
     }
     result.map_err(Into::into)
+}
+
+#[cfg(windows)]
+/// Tries to remove a symlink in case it was a directory symlink
+fn remove_directory_symlink(path: &Path) -> io::Result<bool> {
+    let metadata = path.symlink_metadata()?;
+    if metadata.is_symlink() {
+        std::fs::remove_dir(path)?;
+        return Ok(true);
+    }
+    Ok(false)
 }
 
 /// Deletes a file even if it is being mmap-ed on Windows.
