@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 from edenscm import commands, error, mdiff, registrar, scmutil
 from edenscm.i18n import _
-from edenscm.simplemerge import Merge3Text, merge_lines, wordmergemode
+from edenscm.simplemerge import Merge3Text, render_markers, wordmergemode
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -216,7 +216,7 @@ def merge3_merge_lines(m3, name_a=b"dest", name_b=b"source"):
     extrakwargs["name_base"] = b"base"
     extrakwargs["minimize"] = False
 
-    return merge_lines(m3, name_a=b"dest", name_b=b"src", **extrakwargs)[0]
+    return render_markers(m3, name_a=b"dest", name_b=b"src", **extrakwargs)[0]
 
 
 @command("smerge_bench", commands.dryrunopts)
@@ -292,7 +292,7 @@ def merge_file(
     bench_stats.changed_files += 1
 
     m3 = m3merger(basetext, dsttext, srctext)
-    mergedlines, conflictscount = merge_lines(m3)
+    mergedlines, conflictscount = render_markers(m3)
     mergedtext = b"".join(mergedlines)
 
     if conflictscount:
@@ -305,7 +305,7 @@ def merge_file(
 
             if m3merger != Merge3Text:
                 m3_baseline = Merge3Text(basetext, dsttext, srctext)
-                mergedtext_baseline = b"".join(merge_lines(m3_baseline)[0])
+                mergedtext_baseline = b"".join(render_markers(m3_baseline)[0])
 
             if mergedtext != mergedtext_baseline:
                 repo.ui.write(

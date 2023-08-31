@@ -86,7 +86,7 @@ def trywordmerge(basetext, atext, btext):
     """
     try:
         m3 = Merge3Text(basetext, atext, btext, wordmerge=wordmergemode.enforced)
-        return b"".join(merge_lines(m3)[0])
+        return b"".join(render_markers(m3)[0])
     except CantShowWordConflicts:
         return None
 
@@ -383,7 +383,7 @@ class Merge3Text:
         return sl
 
 
-def merge_lines(
+def render_markers(
     m3,
     name_a=None,
     name_b=None,
@@ -471,7 +471,7 @@ def _picklabels(defaults, overrides):
     return result
 
 
-def _mergediff(m3, name_a, name_b, name_base):
+def render_mergediff(m3, name_a, name_b, name_base):
     lines = []
     conflictscount = 0
     for what, group_lines in m3.merge_groups():
@@ -582,14 +582,14 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
     elif mode == "other":
         lines = _resolve(m3, (2,))
     elif mode == "mergediff":
-        lines, conflictscount = _mergediff(m3, name_a, name_b, name_base)
+        lines, conflictscount = render_mergediff(m3, name_a, name_b, name_base)
     else:
         extrakwargs = {"minimize": True}
         if mode == "merge3":
             extrakwargs["base_marker"] = b"|||||||"
             extrakwargs["name_base"] = name_base
             extrakwargs["minimize"] = False
-        lines, conflictscount = merge_lines(
+        lines, conflictscount = render_markers(
             m3, name_a=name_a, name_b=name_b, **extrakwargs
         )
 
