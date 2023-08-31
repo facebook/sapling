@@ -399,11 +399,9 @@ def render_markers(
     m3,
     name_a=None,
     name_b=None,
-    name_base=None,
     start_marker=b"<<<<<<<",
     mid_marker=b"=======",
     end_marker=b">>>>>>>",
-    base_marker=None,
     minimize=False,
 ) -> Tuple[List[bytes], int]:
     """Return merge in cvs-like form."""
@@ -413,8 +411,6 @@ def render_markers(
         start_marker = start_marker + b" " + name_a
     if name_b and end_marker:
         end_marker = end_marker + b" " + name_b
-    if name_base and base_marker:
-        base_marker = base_marker + b" " + name_base
 
     merge_groups = m3.merge_groups(automerge=True)
     if minimize:
@@ -427,14 +423,35 @@ def render_markers(
             if start_marker is not None:
                 lines.append(start_marker + newline)
             lines.extend(a_lines)
-            if base_marker is not None:
-                lines.append(base_marker + newline)
-                lines.extend(base_lines)
             if mid_marker is not None:
                 lines.append(mid_marker + newline)
             lines.extend(b_lines)
             if end_marker is not None:
                 lines.append(end_marker + newline)
+        else:
+            lines.extend(group_lines)
+
+    return lines, conflictscount
+
+
+def render_merge3(m3, name_a, name_b, name_base) -> Tuple[List[bytes], int]:
+    """Return merge in cvs-like form."""
+    conflictscount = 0
+    newline = _detect_newline(m3)
+    merge_groups = m3.merge_groups(automerge=True)
+    lines = []
+
+    for what, group_lines in merge_groups:
+        if what == "conflict":
+            conflictscount += 1
+            base_lines, a_lines, b_lines = group_lines
+            lines.append(b"<<<<<<< " + name_a + newline)
+            lines.extend(a_lines)
+            lines.append(b"||||||| " + name_base + newline)
+            lines.extend(base_lines)
+            lines.append(b"=======" + newline)
+            lines.extend(b_lines)
+            lines.append(b">>>>>>> " + name_b + newline)
         else:
             lines.extend(group_lines)
 
@@ -583,12 +600,10 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
         lines = _resolve(m3, (2,))
     elif mode == "mergediff":
         lines, conflictscount = render_mergediff(m3, name_a, name_b, name_base)
+    elif mode == "merge3":
+        lines, conflictscount = render_merge3(m3, name_a, name_b, name_base)
     else:
         extrakwargs = {"minimize": True}
-        if mode == "merge3":
-            extrakwargs["base_marker"] = b"|||||||"
-            extrakwargs["name_base"] = name_base
-            extrakwargs["minimize"] = False
         lines, conflictscount = render_markers(
             m3, name_a=name_a, name_b=name_b, **extrakwargs
         )

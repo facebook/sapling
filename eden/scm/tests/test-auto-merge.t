@@ -70,5 +70,5 @@ test merge adjacent changes -- insertion case
   b
   =======
   b'
-  >>>>>>> src
+  >>>>>>> source
   e

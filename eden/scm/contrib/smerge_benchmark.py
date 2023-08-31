@@ -9,7 +9,7 @@ from typing import List, Optional
 
 from edenscm import commands, error, mdiff, registrar, scmutil
 from edenscm.i18n import _
-from edenscm.simplemerge import Merge3Text, render_markers, wordmergemode
+from edenscm.simplemerge import Merge3Text, render_markers, render_merge3, wordmergemode
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -188,13 +188,8 @@ def sresolve(ui, repo, *args, **opts):
         ui.fout.write(mergedtext)
 
 
-def merge3_merge_lines(m3, name_a=b"dest", name_b=b"source"):
-    extrakwargs = {}
-    extrakwargs["base_marker"] = b"|||||||"
-    extrakwargs["name_base"] = b"base"
-    extrakwargs["minimize"] = False
-
-    return render_markers(m3, name_a=b"dest", name_b=b"src", **extrakwargs)[0]
+def merge3_merge_lines(m3, name_a=b"dest", name_b=b"source", name_base=b"base"):
+    return render_merge3(m3, name_a, name_b, name_base)[0]
 
 
 @command("smerge_bench", commands.dryrunopts)
