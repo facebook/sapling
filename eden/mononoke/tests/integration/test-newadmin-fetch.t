@@ -28,7 +28,7 @@ setup configuration
   $ mononoke_newadmin fetch -R repo -i c1c5eb4a15a4c71edae31c84f8b23ec5008ad16be07fba5b872fe010184b16ba --json | jq -S .
   {
     "author": "author",
-    "author_date": "1970-01-01T00:00:00+00:00",
+    "author_date": "1970-01-01T00:00:00Z",
     "changeset_id": "c1c5eb4a15a4c71edae31c84f8b23ec5008ad16be07fba5b872fe010184b16ba",
     "committer": null,
     "committer_date": null,

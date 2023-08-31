@@ -93,7 +93,7 @@ Check that bonsais are the same
       "d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da"
     ],
     "author": "test",
-    "author_date": "1970-01-01T00:00:00+00:00",
+    "author_date": "1970-01-01T00:00:00Z",
     "committer": null,
     "committer_date": null,
     "message": "C",
@@ -129,7 +129,7 @@ Check that bonsais are the same
       "d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da"
     ],
     "author": "test",
-    "author_date": "1970-01-01T00:00:00+00:00",
+    "author_date": "1970-01-01T00:00:00Z",
     "committer": null,
     "committer_date": null,
     "message": "C",
