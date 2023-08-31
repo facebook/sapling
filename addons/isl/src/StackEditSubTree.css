@@ -9,6 +9,10 @@
   display: flex;
 }
 
+.stack-edit-subtree {
+  position: relative;
+}
+
 .stack-edit-subtree .commit-details {
   align-items: flex-start;
   cursor: default;
