@@ -86,7 +86,7 @@ def trywordmerge(basetext, atext, btext):
     """
     try:
         m3 = Merge3Text(basetext, atext, btext, wordmerge=wordmergemode.enforced)
-        return b"".join(m3.merge_lines()[0])
+        return b"".join(merge_lines(m3)[0])
     except CantShowWordConflicts:
         return None
 
@@ -130,72 +130,6 @@ class Merge3Text:
         self.a = split(atext)
         self.b = split(btext)
         self.wordmerge = wordmerge
-
-    def merge_lines(
-        self,
-        name_a=None,
-        name_b=None,
-        name_base=None,
-        start_marker=b"<<<<<<<",
-        mid_marker=b"=======",
-        end_marker=b">>>>>>>",
-        base_marker=None,
-        minimize=False,
-    ) -> Tuple[List[bytes], int]:
-        """Return merge in cvs-like form."""
-        conflictscount = 0
-        newline = b"\n"
-        if len(self.a) > 0:
-            if self.a[0].endswith(b"\r\n"):
-                newline = b"\r\n"
-            elif self.a[0].endswith(b"\r"):
-                newline = b"\r"
-        if name_a and start_marker:
-            start_marker = start_marker + b" " + name_a
-        if name_b and end_marker:
-            end_marker = end_marker + b" " + name_b
-        if name_base and base_marker:
-            base_marker = base_marker + b" " + name_base
-
-        merge_groups = self.merge_groups()
-        if minimize:
-            merge_groups = self.minimize(merge_groups)
-        lines = []
-        for what, group_lines in merge_groups:
-            if what == "conflict":
-                base_lines, a_lines, b_lines = group_lines
-                if self.wordmerge is wordmergemode.enforced:
-                    conflictscount += 1
-                    raise CantShowWordConflicts()
-                elif self.wordmerge is wordmergemode.ondemand:
-                    # Try resolve the conflicted region using word merge
-                    subbasetext = b"".join(base_lines)
-                    subatext = b"".join(a_lines)
-                    subbtext = b"".join(b_lines)
-                    text = trywordmerge(subbasetext, subatext, subbtext)
-                    if text:
-                        lines.extend(text.splitlines(True))
-                        continue
-                elif (merged_lines := self.resolve_conflict(*group_lines)) is not None:
-                    lines.extend(merged_lines)
-                    continue
-
-                conflictscount += 1
-                if start_marker is not None:
-                    lines.append(start_marker + newline)
-                lines.extend(a_lines)
-                if base_marker is not None:
-                    lines.append(base_marker + newline)
-                    lines.extend(base_lines)
-                if mid_marker is not None:
-                    lines.append(mid_marker + newline)
-                lines.extend(b_lines)
-                if end_marker is not None:
-                    lines.append(end_marker + newline)
-            else:
-                lines.extend(group_lines)
-
-        return lines, conflictscount
 
     def resolve_conflict(self, base_lines, a_lines, b_lines):
         """Try automerge algorithms to resolve the conflict region.
@@ -449,6 +383,73 @@ class Merge3Text:
         return sl
 
 
+def merge_lines(
+    m3,
+    name_a=None,
+    name_b=None,
+    name_base=None,
+    start_marker=b"<<<<<<<",
+    mid_marker=b"=======",
+    end_marker=b">>>>>>>",
+    base_marker=None,
+    minimize=False,
+) -> Tuple[List[bytes], int]:
+    """Return merge in cvs-like form."""
+    conflictscount = 0
+    newline = b"\n"
+    if len(m3.a) > 0:
+        if m3.a[0].endswith(b"\r\n"):
+            newline = b"\r\n"
+        elif m3.a[0].endswith(b"\r"):
+            newline = b"\r"
+    if name_a and start_marker:
+        start_marker = start_marker + b" " + name_a
+    if name_b and end_marker:
+        end_marker = end_marker + b" " + name_b
+    if name_base and base_marker:
+        base_marker = base_marker + b" " + name_base
+
+    merge_groups = m3.merge_groups()
+    if minimize:
+        merge_groups = m3.minimize(merge_groups)
+    lines = []
+    for what, group_lines in merge_groups:
+        if what == "conflict":
+            base_lines, a_lines, b_lines = group_lines
+            if m3.wordmerge is wordmergemode.enforced:
+                conflictscount += 1
+                raise CantShowWordConflicts()
+            elif m3.wordmerge is wordmergemode.ondemand:
+                # Try resolve the conflicted region using word merge
+                subbasetext = b"".join(base_lines)
+                subatext = b"".join(a_lines)
+                subbtext = b"".join(b_lines)
+                text = trywordmerge(subbasetext, subatext, subbtext)
+                if text:
+                    lines.extend(text.splitlines(True))
+                    continue
+            elif (merged_lines := m3.resolve_conflict(*group_lines)) is not None:
+                lines.extend(merged_lines)
+                continue
+
+            conflictscount += 1
+            if start_marker is not None:
+                lines.append(start_marker + newline)
+            lines.extend(a_lines)
+            if base_marker is not None:
+                lines.append(base_marker + newline)
+                lines.extend(base_lines)
+            if mid_marker is not None:
+                lines.append(mid_marker + newline)
+            lines.extend(b_lines)
+            if end_marker is not None:
+                lines.append(end_marker + newline)
+        else:
+            lines.extend(group_lines)
+
+    return lines, conflictscount
+
+
 def _verifytext(text, path, ui, opts):
     """verifies that text is non-binary (unless opts[text] is passed,
     then we just warn)"""
@@ -588,8 +589,8 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
             extrakwargs["base_marker"] = b"|||||||"
             extrakwargs["name_base"] = name_base
             extrakwargs["minimize"] = False
-        lines, conflictscount = m3.merge_lines(
-            name_a=name_a, name_b=name_b, **extrakwargs
+        lines, conflictscount = merge_lines(
+            m3, name_a=name_a, name_b=name_b, **extrakwargs
         )
 
     mergedtext = b"".join(lines)

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 from edenscm import commands, error, mdiff, registrar, scmutil
 from edenscm.i18n import _
-from edenscm.simplemerge import Merge3Text, wordmergemode
+from edenscm.simplemerge import Merge3Text, merge_lines, wordmergemode
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -155,7 +155,7 @@ def debugsmerge(ui, repo, *args, **opts):
 
     desttext, srctext, basetext = [readfile(p) for p in args]
     m3 = SmartMerge3Text(basetext, desttext, srctext)
-    lines = merge_lines(m3)
+    lines = merge3_merge_lines(m3)
     mergedtext = b"".join(lines)
     ui.fout.write(mergedtext)
 
@@ -201,7 +201,7 @@ def sresolve(ui, repo, *args, **opts):
     else:
         m3 = Merge3Text(basetext, desttext, srctext)
 
-    mergedtext = b"".join(merge_lines(m3))
+    mergedtext = b"".join(merge3_merge_lines(m3))
 
     if output := opts.get("output"):
         with open(output, "wb") as f:
@@ -210,13 +210,13 @@ def sresolve(ui, repo, *args, **opts):
         ui.fout.write(mergedtext)
 
 
-def merge_lines(m3, name_a=b"dest", name_b=b"source"):
+def merge3_merge_lines(m3, name_a=b"dest", name_b=b"source"):
     extrakwargs = {}
     extrakwargs["base_marker"] = b"|||||||"
     extrakwargs["name_base"] = b"base"
     extrakwargs["minimize"] = False
 
-    return m3.merge_lines(name_a=b"dest", name_b=b"src", **extrakwargs)[0]
+    return merge_lines(m3, name_a=b"dest", name_b=b"src", **extrakwargs)[0]
 
 
 @command("smerge_bench", commands.dryrunopts)
@@ -292,7 +292,7 @@ def merge_file(
     bench_stats.changed_files += 1
 
     m3 = m3merger(basetext, dsttext, srctext)
-    mergedlines, conflictscount = m3.merge_lines()
+    mergedlines, conflictscount = merge_lines(m3)
     mergedtext = b"".join(mergedlines)
 
     if conflictscount:
@@ -305,7 +305,7 @@ def merge_file(
 
             if m3merger != Merge3Text:
                 m3_baseline = Merge3Text(basetext, dsttext, srctext)
-                mergedtext_baseline = b"".join(m3_baseline.merge_lines()[0])
+                mergedtext_baseline = b"".join(merge_lines(m3_baseline)[0])
 
             if mergedtext != mergedtext_baseline:
                 repo.ui.write(

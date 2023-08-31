@@ -317,7 +317,7 @@ def debugbuilddag(
                             pa = p1.ancestor(p2)
                             base, local, other = [x[fn].data() for x in (pa, p1, p2)]
                             m3 = simplemerge.Merge3Text(base, local, other)
-                            merged_lines = m3.merge_lines()[0]
+                            merged_lines = simplemerge.merge_lines(m3)[0]
                             ml = [pycompat.decodeutf8(l.strip()) for l in merged_lines]
                             ml.append("")
                         elif at > 0:
