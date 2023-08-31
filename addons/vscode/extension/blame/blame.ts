@@ -21,7 +21,7 @@ import type {
 
 import {Internal} from '../Internal';
 import {getDiffBlameHoverMarkup} from './blameHover';
-import {getRealignedBlameInfo} from './blameUtils';
+import {getRealignedBlameInfo, shortenAuthorName} from './blameUtils';
 import {getUsername} from 'isl-server/src/analytics/environment';
 import {relativeDate} from 'isl/src/relativeDate';
 import {LRU} from 'shared/LRU';
@@ -393,8 +393,14 @@ export class InlineBlameProvider implements Disposable {
   }
 
   private authorHint(author: string): string {
-    // Don't show author inline unless it's you. Hover to see the author.
-    return areYouTheAuthor(author) ? '(you) ' : '';
+    if (areYouTheAuthor(author)) {
+      return '(you) ';
+    }
+    if (Internal?.showAuthorNameInInlineBlame?.() === false) {
+      // Internally, don't show author inline unless it's you. Hover to see the author.
+      return '';
+    }
+    return shortenAuthorName(author) + ', ';
   }
 
   private initRepoCaches(repoUri: string): void {
