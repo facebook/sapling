@@ -180,6 +180,37 @@ describe('CommitInfoView', () => {
         expect(amendButton?.disabled).not.toBe(true);
       });
 
+      it('does not show banner if all files are shown', () => {
+        expect(
+          withinCommitInfo().queryByText(/Showing first .* files out of .* total/),
+        ).not.toBeInTheDocument();
+      });
+
+      it('shows banner if not all files are shown', () => {
+        act(() => {
+          simulateCommits({
+            value: [
+              COMMIT('1', 'some public base', '0', {phase: 'public'}),
+              COMMIT('a', 'Head Commit', '1', {
+                isHead: true,
+                filesSample: new Array(25)
+                  .fill(null)
+                  .map((_, i) => ({path: `src/file${i}.txt`, status: 'M'})),
+                totalFileCount: 100,
+              }),
+            ],
+          });
+          simulateUncommittedChangedFiles({
+            value: [],
+          });
+        });
+
+        expect(withinCommitInfo().queryByText(ignoreRTL('file1.txt'))).toBeInTheDocument();
+        expect(
+          withinCommitInfo().queryByText('Showing first 25 files out of 100 total'),
+        ).toBeInTheDocument();
+      });
+
       it('runs amend with selected files', async () => {
         expect(withinCommitInfo().queryByText(ignoreRTL('file1.js'))).toBeInTheDocument();
         expect(withinCommitInfo().queryByText(ignoreRTL('file2.js'))).toBeInTheDocument();

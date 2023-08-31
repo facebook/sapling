@@ -96,6 +96,11 @@
   line-height: 30px;
 }
 
+.changed-files .banner {
+  padding: var(--pad);
+  margin: var(--pad) 0;
+}
+
 .changed-file-path {
   display: flex;
   align-items: center;

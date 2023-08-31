@@ -331,7 +331,8 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                 </VSCodeButton>
               </div>
               <ChangedFiles
-                files={commit.filesSample}
+                filesSubset={commit.filesSample}
+                totalFiles={commit.totalFileCount}
                 comparison={
                   commit.isHead
                     ? {type: ComparisonType.HeadChanges}

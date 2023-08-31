@@ -11,6 +11,7 @@ import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} fro
 import type {MutableRefObject, ReactNode} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
+import {Banner} from './Banner';
 import {
   ChangedFileDisplayTypePicker,
   type ChangedFilesDisplayType,
@@ -153,15 +154,23 @@ const sortKeyForStatus: Record<VisualChangedFileType, number> = {
 };
 
 export function ChangedFiles(props: {
-  files: Array<ChangedFile>;
+  filesSubset: Array<ChangedFile>;
+  totalFiles: number;
   comparison: Comparison;
   selection?: UseUncommittedSelection;
 }) {
   const displayType = useRecoilValue(changedFilesDisplayType);
-  const {files, ...rest} = props;
-  const processedFiles = useDeepMemo(() => processCopiesAndRenames(files), [files]);
+  const {filesSubset, totalFiles, ...rest} = props;
+  const processedFiles = useDeepMemo(() => processCopiesAndRenames(filesSubset), [filesSubset]);
   return (
     <div className="changed-files">
+      {totalFiles > filesSubset.length ? (
+        <Banner key={'alert'} icon={<Icon icon="info" />}>
+          <T replace={{$numShown: filesSubset.length, $total: totalFiles}}>
+            Showing first $numShown files out of $total total
+          </T>
+        </Banner>
+      ) : null}
       {displayType === 'tree' ? (
         <FileTree {...rest} files={processedFiles} displayType={displayType} />
       ) : (
@@ -566,14 +575,16 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
       </div>
       {conflicts != null ? (
         <ChangedFiles
-          files={conflicts.files ?? []}
+          filesSubset={conflicts.files ?? []}
+          totalFiles={conflicts.files?.length ?? 0}
           comparison={{
             type: ComparisonType.UncommittedChanges,
           }}
         />
       ) : (
         <ChangedFiles
-          files={uncommittedChanges}
+          filesSubset={uncommittedChanges}
+          totalFiles={uncommittedChanges.length}
           selection={selection}
           comparison={{
             type: ComparisonType.UncommittedChanges,
