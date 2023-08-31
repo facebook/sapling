@@ -125,7 +125,7 @@ impl HgTime {
 
     pub fn to_utc(self) -> DateTime<Utc> {
         let naive = NaiveDateTime::from_timestamp_opt(self.unixtime, 0).unwrap();
-        DateTime::from_utc(naive, Utc)
+        naive.and_utc()
     }
 
     /// Converts to `NaiveDateTime` with local timezone specified by `offset`.
