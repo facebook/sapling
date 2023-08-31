@@ -396,12 +396,7 @@ def render_markers(
 ) -> Tuple[List[bytes], int]:
     """Return merge in cvs-like form."""
     conflictscount = 0
-    newline = b"\n"
-    if len(m3.a) > 0:
-        if m3.a[0].endswith(b"\r\n"):
-            newline = b"\r\n"
-        elif m3.a[0].endswith(b"\r"):
-            newline = b"\r"
+    newline = _detect_newline(m3)
     if name_a and start_marker:
         start_marker = start_marker + b" " + name_a
     if name_b and end_marker:
@@ -450,6 +445,16 @@ def render_markers(
     return lines, conflictscount
 
 
+def _detect_newline(m3):
+    newline = b"\n"
+    if len(m3.a) > 0:
+        if m3.a[0].endswith(b"\r\n"):
+            newline = b"\r\n"
+        elif m3.a[0].endswith(b"\r"):
+            newline = b"\r"
+    return newline
+
+
 def _verifytext(text, path, ui, opts):
     """verifies that text is non-binary (unless opts[text] is passed,
     then we just warn)"""
@@ -472,6 +477,7 @@ def _picklabels(defaults, overrides):
 
 
 def render_mergediff(m3, name_a, name_b, name_base):
+    newline = _detect_newline(m3)
     lines = []
     conflictscount = 0
     for what, group_lines in m3.merge_groups():
@@ -509,20 +515,20 @@ def render_mergediff(m3, name_a, name_b, name_base):
                         for line in lines2[block[2] : block[3]]:
                             yield b"+" + line
 
-            lines.append(b"<<<<<<<\n")
+            lines.append(b"<<<<<<<" + newline)
             if matchinglines(ablocks) < matchinglines(bblocks):
-                lines.append(b"======= %s\n" % name_a)
+                lines.append(b"======= " + name_a + newline)
                 lines.extend(a_lines)
-                lines.append(b"------- %s\n" % name_base)
-                lines.append(b"+++++++ %s\n" % name_b)
+                lines.append(b"------- " + name_base + newline)
+                lines.append(b"+++++++ " + name_b + newline)
                 lines.extend(difflines(bblocks, base_lines, b_lines))
             else:
-                lines.append(b"------- %s\n" % name_base)
-                lines.append(b"+++++++ %s\n" % name_a)
+                lines.append(b"------- " + name_base + newline)
+                lines.append(b"+++++++ " + name_a + newline)
                 lines.extend(difflines(ablocks, base_lines, a_lines))
-                lines.append(b"======= %s\n" % name_b)
+                lines.append(b"======= " + name_b + newline)
                 lines.extend(b_lines)
-            lines.append(b">>>>>>>\n")
+            lines.append(b">>>>>>>" + newline)
             conflictscount += 1
         else:
             lines.extend(group_lines)
