@@ -128,7 +128,6 @@ pub struct MononokeTunables {
     disable_running_hooks_in_pushredirected_repo: TunableBool,
     scs_request_read_qps: TunableI64,
     scs_request_write_qps: TunableI64,
-    enable_logging_commit_rewrite_data: TunableBool,
     // All blobstore read request with size bigger than
     // this threshold will be logged to scuba
     blobstore_read_size_logging_threshold: TunableI64,
@@ -153,9 +152,6 @@ pub struct MononokeTunables {
 
     // Disable EdenAPI in http_service.
     disable_http_service_edenapi: TunableBool,
-
-    // Disable putting hydrating manifests in .hg
-    disable_hydrating_manifests_in_dot_hg: TunableBool,
 
     // Rendez vous configuration.
     rendezvous_dispatch_delay_ms: TunableI64,
@@ -221,16 +217,10 @@ pub struct MononokeTunables {
     // Disable the parallel derivation for DM and default to serial
     deleted_manifest_disable_new_parallel_derivation: TunableBool,
 
-    // Not in use.
-    // TODO(mitrandir): clean it up
-    fastlog_use_mutable_renames: TunableBoolByRepo,
     // Disable mutable renames for fastlog in case they cause problems.
     fastlog_disable_mutable_renames: TunableBoolByRepo,
     megarepo_api_dont_set_file_mutable_renames: TunableBool,
     megarepo_api_dont_set_directory_mutable_renames: TunableBool,
-
-    force_unode_v2: TunableBool,
-    fastlog_use_gen_num_traversal: TunableBool,
 
     // Changing the value of this tunable forces all mononoke instances
     // to reload segmented changelog. One can also specify jitter (or use default)

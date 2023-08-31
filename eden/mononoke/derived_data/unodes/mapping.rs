@@ -97,7 +97,6 @@ impl BonsaiDerivable for RootUnodeManifestId {
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
     ) -> Result<Self> {
-        let unode_version = derivation_ctx.config().unode_version;
         let csid = bonsai.get_changeset_id();
         derive_unode_manifest(
             ctx,
@@ -108,7 +107,6 @@ impl BonsaiDerivable for RootUnodeManifestId {
                 .map(|root_mf_id| root_mf_id.manifest_unode_id().clone())
                 .collect(),
             get_file_changes(&bonsai),
-            unode_version,
         )
         .map_ok(RootUnodeManifestId)
         .await
@@ -129,7 +127,6 @@ impl BonsaiDerivable for RootUnodeManifestId {
         let batch_len = bonsais.len();
         let stacks = split_bonsais_in_linear_stacks(&bonsais, FileConflicts::ChangeDelete.into())?;
 
-        let unode_version = derivation_ctx.config().unode_version;
         for stack in stacks {
             let derived_parents = try_join_all(
                 stack
@@ -173,7 +170,6 @@ impl BonsaiDerivable for RootUnodeManifestId {
                     derived_parents
                         .get(0)
                         .map(|mf_id| *mf_id.manifest_unode_id()),
-                    unode_version,
                 )
                 .await
                 .with_context(|| format!("failed deriving stack of {:?} to {:?}", first, last,))?;

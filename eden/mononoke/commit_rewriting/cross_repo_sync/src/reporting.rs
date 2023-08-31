@@ -12,7 +12,6 @@ use anyhow::Error;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
-use tunables::tunables;
 
 const SCUBA_TABLE: &str = "mononoke_x_repo_mapping";
 
@@ -70,13 +69,6 @@ pub fn log_rewrite(
     duration: Duration,
     sync_result: &Result<Option<ChangesetId>, Error>,
 ) {
-    if !tunables()
-        .enable_logging_commit_rewrite_data()
-        .unwrap_or_default()
-    {
-        return;
-    }
-
     sample
         .add(DURATION_MS, duration.as_millis() as u64)
         .add(SOURCE_CS_ID, format!("{}", source_cs_id))

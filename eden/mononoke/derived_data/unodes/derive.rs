@@ -29,7 +29,6 @@ use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestChanges;
 use manifest::TreeInfo;
-use metaconfig_types::UnodeVersion;
 use mononoke_types::unode::FileUnode;
 use mononoke_types::unode::ManifestUnode;
 use mononoke_types::unode::UnodeEntry;
@@ -52,7 +51,6 @@ pub(crate) async fn derive_unode_manifest_stack(
     derivation_ctx: &DerivationContext,
     file_changes: Vec<(ChangesetId, BTreeMap<MPath, Option<(ContentId, FileType)>>)>,
     parent: Option<ManifestUnodeId>,
-    unode_version: UnodeVersion,
 ) -> Result<HashMap<ChangesetId, ManifestUnodeId>, Error> {
     let blobstore = derivation_ctx.blobstore();
 
@@ -72,27 +70,13 @@ pub(crate) async fn derive_unode_manifest_stack(
         {
             cloned!(ctx, blobstore);
             move |tree_info, cs_id| {
-                create_unode_manifest(
-                    ctx.clone(),
-                    cs_id,
-                    blobstore.clone(),
-                    None,
-                    tree_info,
-                    unode_version,
-                )
+                create_unode_manifest(ctx.clone(), cs_id, blobstore.clone(), None, tree_info)
             }
         },
         {
             cloned!(ctx, blobstore);
             move |leaf_info, cs_id| {
-                create_unode_file(
-                    ctx.clone(),
-                    cs_id,
-                    blobstore.clone(),
-                    None,
-                    leaf_info,
-                    unode_version,
-                )
+                create_unode_file(ctx.clone(), cs_id, blobstore.clone(), None, leaf_info)
             }
         },
     )
@@ -111,7 +95,6 @@ pub(crate) async fn derive_unode_manifest(
     cs_id: ChangesetId,
     parents: Vec<ManifestUnodeId>,
     changes: Vec<(MPath, Option<(ContentId, FileType)>)>,
-    unode_version: UnodeVersion,
 ) -> Result<ManifestUnodeId, Error> {
     let parents: Vec<_> = parents.into_iter().collect();
     let blobstore = derivation_ctx.blobstore();
@@ -130,7 +113,6 @@ pub(crate) async fn derive_unode_manifest(
                     blobstore.clone(),
                     Some(sender),
                     tree_info,
-                    unode_version,
                 )
             }
         },
@@ -143,7 +125,6 @@ pub(crate) async fn derive_unode_manifest(
                     blobstore.clone(),
                     Some(sender),
                     leaf_info,
-                    unode_version,
                 )
             }
         },
@@ -159,15 +140,9 @@ pub(crate) async fn derive_unode_manifest(
                 parents,
                 subentries: Default::default(),
             };
-            let ((), tree_id) = create_unode_manifest(
-                ctx.clone(),
-                cs_id,
-                blobstore.clone(),
-                None,
-                tree_info,
-                unode_version,
-            )
-            .await?;
+            let ((), tree_id) =
+                create_unode_manifest(ctx.clone(), cs_id, blobstore.clone(), None, tree_info)
+                    .await?;
             Ok(tree_id)
         }
     }
@@ -195,7 +170,6 @@ async fn create_unode_manifest(
     blobstore: Arc<dyn Blobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     tree_info: TreeInfo<ManifestUnodeId, FileUnodeId, ()>,
-    unode_version: UnodeVersion,
 ) -> Result<((), ManifestUnodeId), Error> {
     let mut subentries = SortedVectorMap::new();
     for (basename, (_context, entry)) in tree_info.subentries {
@@ -208,7 +182,7 @@ async fn create_unode_manifest(
             }
         }
     }
-    if can_reuse(unode_version) && tree_info.parents.len() > 1 {
+    if tree_info.parents.len() > 1 {
         if let Some(mf_unode_id) =
             reuse_manifest_parent(&ctx, &blobstore, &tree_info.parents, &subentries).await?
         {
@@ -238,7 +212,6 @@ async fn create_unode_file(
     blobstore: Arc<dyn Blobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     leaf_info: LeafInfo<FileUnodeId, (ContentId, FileType)>,
-    unode_version: UnodeVersion,
 ) -> Result<((), FileUnodeId), Error> {
     borrowed!(ctx, blobstore);
 
@@ -251,9 +224,8 @@ async fn create_unode_file(
         file_type: FileType,
         path_hash: MPathHash,
         linknode: ChangesetId,
-        unode_version: UnodeVersion,
     ) -> Result<FileUnodeId, Error> {
-        if can_reuse(unode_version) && parents.len() > 1 {
+        if parents.len() > 1 {
             if let Some(parent) =
                 reuse_file_parent(ctx, blobstore, &parents, &content_id, file_type).await?
             {
@@ -304,7 +276,6 @@ async fn create_unode_file(
             file_type,
             path.get_path_hash(),
             linknode,
-            unode_version,
         )
         .await?
     } else {
@@ -355,7 +326,6 @@ async fn create_unode_file(
                     *file_type,
                     path.get_path_hash(),
                     linknode,
-                    unode_version,
                 )
                 .await?
             }
@@ -400,10 +370,6 @@ async fn create_unode_file(
 //
 // In that case it would be ideal to preserve that "file.txt" was modified in both commits.
 // But we consider this case is rare enough to not worry about it.
-
-fn can_reuse(unode_version: UnodeVersion) -> bool {
-    unode_version == UnodeVersion::V2 || tunables::tunables().force_unode_v2().unwrap_or_default()
-}
 
 async fn reuse_manifest_parent(
     ctx: &CoreContext,
@@ -523,7 +489,6 @@ mod tests {
                 bcs_id,
                 vec![],
                 get_file_changes(&bcs),
-                UnodeVersion::V2,
             )
             .await?;
 
@@ -556,7 +521,6 @@ mod tests {
                 bcs_id,
                 vec![parent_unode_id.clone()],
                 get_file_changes(&bcs),
-                UnodeVersion::V2,
             )
             .await?;
 
@@ -609,7 +573,6 @@ mod tests {
                 bcs_id,
                 vec![],
                 get_file_changes(&bcs),
-                UnodeVersion::V2,
             )
             .await?;
             let unode_mf = unode_id.load(&ctx, &repo.repo_blobstore).await?;
@@ -790,7 +753,6 @@ mod tests {
             bcs_id,
             vec![p1_root_unode_id, p2_root_unode_id],
             get_file_changes(&bcs),
-            UnodeVersion::V2,
         )
         .await?;
 
@@ -801,7 +763,6 @@ mod tests {
             bcs_id,
             vec![p1_root_unode_id, p2_root_unode_id],
             get_file_changes(&bcs),
-            UnodeVersion::V2,
         )
         .await?;
         assert_eq!(root_unode, same_root_unode);
@@ -813,7 +774,6 @@ mod tests {
             bcs_id,
             vec![p2_root_unode_id, p1_root_unode_id],
             get_file_changes(&bcs),
-            UnodeVersion::V2,
         )
         .await?;
 
@@ -839,7 +799,6 @@ mod tests {
             bcs_id,
             vec![],
             get_file_changes(&bcs),
-            UnodeVersion::V2,
         )
         .await
     }
@@ -864,7 +823,6 @@ mod tests {
             first_bcs_id,
             vec![],
             get_file_changes(&bcs),
-            UnodeVersion::V2,
         )
         .await?;
 
@@ -885,7 +843,6 @@ mod tests {
                 merge_p1_id,
                 vec![first_unode_id.clone()],
                 get_file_changes(&merge_p1),
-                UnodeVersion::V2,
             )
             .await?;
             (merge_p1, merge_p1_unode_id)
@@ -909,7 +866,6 @@ mod tests {
                 merge_p2_id,
                 vec![first_unode_id.clone()],
                 get_file_changes(&merge_p2),
-                UnodeVersion::V2,
             )
             .await?;
             (merge_p2, merge_p2_unode_id)
@@ -931,7 +887,6 @@ mod tests {
             merge_id,
             vec![merge_p1_unode_id, merge_p2_unode_id],
             get_file_changes(&merge),
-            UnodeVersion::V2,
         )
         .await
     }
