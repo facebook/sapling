@@ -117,10 +117,10 @@ export function ModalContainer() {
 
   return (
     <Modal
-      height={modal.config.height ?? 'fit-content'}
-      width={modal.config.width ?? 'fit-content'}
-      maxHeight={modal.config.maxHeight ?? '95%'}
-      maxWidth={modal.config.maxWidth ?? '95%'}
+      height={modal.config.height}
+      width={modal.config.width}
+      maxHeight={modal.config.maxHeight}
+      maxWidth={modal.config.maxWidth}
       className="use-modal"
       aria-labelledby="use-modal-title"
       aria-describedby="use-modal-message"

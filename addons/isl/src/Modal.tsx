@@ -31,6 +31,12 @@ export function Modal({
   /** Callback to dismiss the modal. If provided, an 'x' button is added to the top-right corner of the modal. */
   dismiss?: () => void;
 }) {
+  const style: React.CSSProperties = {
+    width: width ?? 'fit-content',
+    height: height ?? 'fit-content',
+    maxHeight: maxHeight ?? '95%',
+    maxWidth: maxWidth ?? '95%',
+  };
   return (
     <div
       className="modal"
@@ -38,9 +44,7 @@ export function Modal({
       aria-modal={true}
       aria-labelledby={ariaLabelledBy}
       aria-describedby={ariaDescribedBy}>
-      <div
-        className={`modal-contents ${className ?? ''}`}
-        style={{width, height, maxWidth, maxHeight}}>
+      <div className={`modal-contents ${className ?? ''}`} style={style}>
         {dismiss != null ? (
           <div className="dismiss-modal">
             <VSCodeButton appearance="icon" onClick={dismiss}>
