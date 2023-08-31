@@ -96,9 +96,42 @@
   line-height: 30px;
 }
 
+.changed-files-list .changed-file:nth-child(n + 15):last-child {
+  margin-bottom: 10px;
+}
+
 .changed-files .banner {
   padding: var(--pad);
   margin: var(--pad) 0;
+  max-width: 500px;
+}
+
+.changed-files-list-container {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-y: hidden;
+}
+
+.changed-files-list {
+  --changed-files-list-height: 500px;
+  overflow-y: scroll;
+  max-height: var(--changed-files-list-height);
+}
+
+.changed-files-list:after {
+  --overflow-gradient-height: 20px;
+  display: block;
+  content: ' ';
+  width: 100%;
+  height: var(--overflow-gradient-height);
+  background: linear-gradient(transparent, var(--background));
+  z-index: 10;
+  position: absolute;
+  bottom: 0px;
+  left: 0;
+  top: calc(var(--changed-files-list-height) - var(--overflow-gradient-height));
+  pointer-events: none;
 }
 
 .changed-file-path {

@@ -215,4 +215,25 @@ describe('Changed Files', () => {
       expect(screen.queryByText(ignoreRTL('file3.js'))).toBeInTheDocument();
     });
   });
+
+  describe('truncated list of changed files', () => {
+    it('only first 25 files are shown', () => {
+      act(() => {
+        simulateUncommittedChangedFiles({
+          value: new Array(100).fill(null).map((_, i) => ({path: `file${i}.txt`, status: 'M'})),
+        });
+      });
+      const files = screen.getAllByText(/file\d+\.txt/);
+      expect(files).toHaveLength(25);
+    });
+
+    it('banner is shown if some files are hidden', () => {
+      act(() => {
+        simulateUncommittedChangedFiles({
+          value: new Array(100).fill(null).map((_, i) => ({path: `file${i}.txt`, status: 'M'})),
+        });
+      });
+      expect(screen.getByText('Showing first 25 files out of 100 total')).toBeInTheDocument();
+    });
+  });
 });

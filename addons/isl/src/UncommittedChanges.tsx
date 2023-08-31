@@ -189,11 +189,13 @@ function LinearFileList(props: {
   const {files, ...rest} = props;
 
   return (
-    <>
-      {files.map(file => (
-        <File key={file.path} {...rest} file={file} />
-      ))}
-    </>
+    <div className="changed-files-list-container">
+      <div className="changed-files-list">
+        {files.map(file => (
+          <File key={file.path} {...rest} file={file} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -583,7 +585,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
         />
       ) : (
         <ChangedFiles
-          filesSubset={uncommittedChanges}
+          filesSubset={uncommittedChanges.slice(0, 25)}
           totalFiles={uncommittedChanges.length}
           selection={selection}
           comparison={{
