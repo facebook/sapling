@@ -18,6 +18,7 @@ use mononoke_api::MononokeError;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use test_repo_factory::TestRepoFactory;
+use tests_utils::bookmark;
 use tests_utils::CreateCommitContext;
 
 // Directory and file constants.
@@ -29,6 +30,9 @@ pub const SECOND_EXPORT_FILE: &str = "A/foo.txt";
 
 pub const IRRELEVANT_FILE: &str = "b/bar.txt";
 pub const SECOND_IRRELEVANT_FILE: &str = "b/foo.txt";
+
+pub const SECOND_EXPORT_DIR: &str = "C";
+pub const FILE_IN_SECOND_EXPORT_DIR: &str = "C/foo.txt";
 
 pub async fn get_relevant_changesets_from_ids(
     repo_ctx: &RepoContext,
@@ -83,14 +87,17 @@ pub async fn build_single_export_directory_source_repo(
 
     // Modify only relevant files -> full export
     let fifth = CreateCommitContext::new(ctx, source_repo, vec![fourth])
-        .add_file(EXPORT_FILE, "change only EXPORT_FILE")
+        .add_file(EXPORT_FILE, "change only EXPORT_FILE in fifth")
         .set_message("fifth")
         .commit()
         .await?;
 
     // Add relevant and irrelevant files -> partial export
     let sixth = CreateCommitContext::new(ctx, source_repo, vec![fifth])
-        .add_file(SECOND_EXPORT_FILE, "SECOND_EXPORT_FILE")
+        .add_file(
+            FILE_IN_SECOND_EXPORT_DIR,
+            "Create file in second export dir",
+        )
         .add_file(SECOND_IRRELEVANT_FILE, "SECOND_IRRELEVANT_FILE")
         .set_message("sixth")
         .commit()
@@ -99,7 +106,10 @@ pub async fn build_single_export_directory_source_repo(
     // Change both relevant files -> full export
     let seventh = CreateCommitContext::new(ctx, source_repo, vec![sixth])
         .add_file(EXPORT_FILE, "change export file again")
-        .add_file(SECOND_EXPORT_FILE, "change second export file again")
+        .add_file(
+            FILE_IN_SECOND_EXPORT_DIR,
+            "change file in second export dir again",
+        )
         .set_message("seventh")
         .commit()
         .await?;
@@ -113,10 +123,19 @@ pub async fn build_single_export_directory_source_repo(
 
     // Delete relevant file -> full export
     let ninth = CreateCommitContext::new(ctx, source_repo, vec![eighth])
-        .delete_file(EXPORT_FILE)
+        .delete_file(SECOND_EXPORT_FILE)
         .set_message("ninth")
         .commit()
         .await?;
+
+    let tenth = CreateCommitContext::new(ctx, source_repo, vec![ninth])
+        .add_file(EXPORT_FILE, "add export file back")
+        .set_message("tenth")
+        .commit()
+        .await?;
+
+    let bookmark_update_ctx = bookmark(ctx, source_repo, "master");
+    let _master_bookmark_key = bookmark_update_ctx.set_to(tenth.clone()).await?;
 
     let cs_map = hashmap! {
         String::from("first") => first,
@@ -128,6 +147,7 @@ pub async fn build_single_export_directory_source_repo(
         String::from("seventh") => seventh,
         String::from("eighth") => eighth,
         String::from("ninth") => ninth,
+        String::from("tenth") => tenth,
     };
 
     Ok((source_repo_ctx, cs_map))
