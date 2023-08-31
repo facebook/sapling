@@ -5,6 +5,7 @@
 
 import time
 from dataclasses import dataclass
+from typing import List, Optional
 
 from edenscm import commands, error, mdiff, registrar, scmutil
 from edenscm.i18n import _
@@ -16,20 +17,10 @@ command = registrar.command(cmdtable)
 A, B, BASE = range(3)
 
 
-class Conflict:
-    def __init__(self, base_lines, a_lines, b_lines):
-        self.base_lines = base_lines
-        self.a_lines = a_lines
-        self.b_lines = b_lines
-        self.merged_lines = []
-
-
-def merge_adjacent_changes(c: Conflict) -> bool:
-    base_lines, a_lines, b_lines = c.base_lines, c.a_lines, c.b_lines
-
+def merge_adjacent_changes(base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
     # require something to be changed
     if not base_lines:
-        return False
+        return None
 
     ablocks = unmatching_blocks(base_lines, a_lines)
     bblocks = unmatching_blocks(base_lines, b_lines)
@@ -40,11 +31,11 @@ def merge_adjacent_changes(c: Conflict) -> bool:
     while indexes[A] < len(ablocks) and indexes[B] < len(bblocks):
         ablock, bblock = ablocks[indexes[A]], bblocks[indexes[B]]
         if is_overlap(ablock[0], ablock[1], bblock[0], bblock[1]):
-            return False
+            return None
         elif is_non_unique_separator_for_insertion(
             base_lines, a_lines, b_lines, ablock, bblock
         ):
-            return False
+            return None
 
         i, block, lines = (
             (A, ablock, a_lines) if ablock[0] < bblock[0] else (B, bblock, b_lines)
@@ -73,9 +64,7 @@ def merge_adjacent_changes(c: Conflict) -> bool:
 
     # add base lines at the end of block
     merged_lines.extend(base_lines[k:])
-    c.merged_lines = merged_lines
-
-    return True
+    return merged_lines
 
 
 class SmartMerge3Text(Merge3Text):
@@ -85,18 +74,7 @@ class SmartMerge3Text(Merge3Text):
 
     def __init__(self, basetext, atext, btext, wordmerge=wordmergemode.disabled):
         Merge3Text.__init__(self, basetext, atext, btext, wordmerge=wordmerge)
-
-    def resolve_conflict(self, base_lines, a_lines, b_lines):
-        """Try automerge algorithms to resolve the conflict region.
-
-        Return resolved lines, or None if auto resolution failed.
-        """
-        c = Conflict(base_lines, a_lines, b_lines)
-
-        if merge_adjacent_changes(c):
-            return c.merged_lines
-
-        return None
+        self.automerge_fns.append(merge_adjacent_changes)
 
 
 def is_non_unique_separator_for_insertion(

@@ -80,13 +80,17 @@ class wordmergemode:
             return cls.disabled
 
 
-def trywordmerge(basetext, atext, btext):
+def trywordmerge(base_lines, a_lines, b_lines):
     """Try resolve conflicts using wordmerge.
-    Return resolved text, or None if merge failed.
+    Return resolved lines, or None if merge failed.
     """
+    basetext = b"".join(base_lines)
+    atext = b"".join(a_lines)
+    btext = b"".join(b_lines)
     try:
         m3 = Merge3Text(basetext, atext, btext, wordmerge=wordmergemode.enforced)
-        return b"".join(render_markers(m3)[0])
+        text = b"".join(render_markers(m3)[0])
+        return text.splitlines(True)
     except CantShowWordConflicts:
         return None
 
@@ -130,16 +134,14 @@ class Merge3Text:
         self.a = split(atext)
         self.b = split(btext)
         self.wordmerge = wordmerge
-
-    def resolve_conflict(self, base_lines, a_lines, b_lines):
-        """Try automerge algorithms to resolve the conflict region.
-
-        Return resolved lines, or None if auto resolution failed.
-        """
-        return None
+        self.automerge_fns = (
+            [trywordmerge] if wordmerge == wordmergemode.ondemand else []
+        )
 
     def merge_groups(self, automerge=False):
-        """Yield sequence of line groups.  Each one is a tuple:
+        """Yield sequence of line groups.
+
+        Each one is a tuple:
 
         'unchanged', lines
              Lines unchanged from base
@@ -168,31 +170,21 @@ class Merge3Text:
             elif what == "b":
                 yield what, self.b[t[1] : t[2]]
             elif what == "conflict":
+                if self.wordmerge is wordmergemode.enforced:
+                    raise CantShowWordConflicts()
+
                 base_lines = self.base[t[1] : t[2]]
                 a_lines = self.a[t[3] : t[4]]
                 b_lines = self.b[t[5] : t[6]]
-
                 merged_lines = None
                 if automerge:
-                    if self.wordmerge is wordmergemode.enforced:
-                        raise CantShowWordConflicts()
-                    elif self.wordmerge is wordmergemode.ondemand:
-                        # Try resolve the conflicted region using word merge
-                        subbasetext = b"".join(base_lines)
-                        subatext = b"".join(a_lines)
-                        subbtext = b"".join(b_lines)
-                        text = trywordmerge(subbasetext, subatext, subbtext)
-                        if text:
-                            merged_lines = text.splitlines(True)
-                    else:
-                        merged_lines = self.resolve_conflict(
-                            base_lines, a_lines, b_lines
-                        )
-
-                if merged_lines is not None:
-                    yield "automerge", merged_lines
-                else:
-                    yield what, (base_lines, a_lines, b_lines)
+                    for fn in self.automerge_fns:
+                        merged_lines = fn(base_lines, a_lines, b_lines)
+                        if merged_lines is not None:
+                            yield "automerge", merged_lines
+                            break
+                if merged_lines is None:
+                    yield (what, (base_lines, a_lines, b_lines))
             else:
                 raise ValueError(what)
 
@@ -430,8 +422,8 @@ def render_markers(
     lines = []
     for what, group_lines in merge_groups:
         if what == "conflict":
-            base_lines, a_lines, b_lines = group_lines
             conflictscount += 1
+            base_lines, a_lines, b_lines = group_lines
             if start_marker is not None:
                 lines.append(start_marker + newline)
             lines.extend(a_lines)
