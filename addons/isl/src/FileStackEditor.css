@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-.file-stack-editor {
+.file-stack-editor,
+.file-unified-stack-editor {
   border: 1px solid var(--tooltip-border);
   min-width: 200px;
   height: fit-content;
@@ -18,7 +19,8 @@
   line-height: 1.2;
 }
 
-.file-stack-editor .context-button {
+.file-stack-editor .context-button,
+.file-unified-stack-editor .context-button {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 20'%3E%3Cpath d='M0 10 Q10 15 20 10 Q30 5 40 10' stroke='grey' fill='transparent' /%3E%3C/svg%3E");
   background-repeat: repeat-x;
   user-select: none;
@@ -127,4 +129,85 @@
 
 .file-stack-editor-ribbon-no-clip .ribbon.del {
   fill: var(--diffEditor-removedLineHighlightBackground);
+}
+
+.file-unified-stack-editor {
+  background-color: var(--background);
+  width: 100%;
+  border-spacing: 0;
+}
+
+.file-unified-stack-editor thead {
+  position: sticky;
+  top: 0;
+  background-color: var(--background);
+  z-index: 1;
+  user-select: none;
+}
+
+.file-unified-stack-editor th {
+  font-weight: unset;
+}
+
+.file-unified-stack-editor tbody {
+  font-family: var(--monospace-fontFamily);
+  font-size: 13px;
+}
+
+.file-unified-stack-editor td {
+  padding: 0;
+}
+
+.file-unified-stack-editor td:last-child,
+.file-unified-stack-editor th:last-child {
+  width: 100%;
+}
+
+.file-unified-stack-editor .color1 {
+  background-color: rgba(128, 128, 160, 0.08);
+}
+.file-unified-stack-editor .color2 {
+  background-color: rgba(128, 128, 160, 0.15);
+}
+.file-unified-stack-editor .color3 {
+  background-color: rgba(128, 128, 160, 0.08);
+}
+.file-unified-stack-editor .color0 {
+  background-color: rgba(128, 128, 160, 0.15);
+}
+
+.file-unified-stack-editor .checkbox {
+  user-select: none;
+  padding-left: var(--halfpad);
+  padding-right: var(--halfpad);
+}
+
+.file-unified-stack-editor .checkbox.mutable {
+  cursor: pointer;
+}
+
+.file-unified-stack-editor .checkbox.mutable.add {
+  background-color: var(--diffEditor-insertedLineHighlightBackground);
+}
+
+.file-unified-stack-editor .checkbox.mutable.del {
+  background-color: var(--diffEditor-removedLineHighlightBackground);
+}
+
+.file-unified-stack-editor td.line.del {
+  background: var(--diffEditor-removedLineBackground);
+}
+
+.file-unified-stack-editor td.line.change {
+  background: var(--editor-changedBackground);
+}
+
+.file-unified-stack-editor span.line {
+  padding-left: var(--pad);
+  white-space: pre;
+}
+
+.file-unified-stack-editor .context-button > span {
+  display: block;
+  height: 1em;
 }

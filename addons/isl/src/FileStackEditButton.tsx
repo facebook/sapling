@@ -118,6 +118,9 @@ function FileStackEditModalContent(props: {
           <VSCodeRadio accessKey="s" value="side-by-side-diff">
             <T>Side-by-side diff</T>
           </VSCodeRadio>
+          <VSCodeRadio value="unified-stack">
+            <T>Unified stack</T>
+          </VSCodeRadio>
         </VSCodeRadioGroup>
         <VSCodeCheckbox
           accessKey="t"

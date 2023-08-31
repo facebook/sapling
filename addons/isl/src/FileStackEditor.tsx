@@ -12,16 +12,18 @@ import type {Block, LineIdx} from 'shared/diff';
 import {Row, ScrollX, ScrollY} from './ComponentUtils';
 import {TextEditable} from './TextEditable';
 import {Tooltip} from './Tooltip';
+import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {t} from './i18n';
+import {FlattenLine} from './linelog';
 import deepEqual from 'fast-deep-equal';
-import {Set as ImSet, Range} from 'immutable';
-import {useState, useRef, useEffect, useLayoutEffect} from 'react';
+import {Set as ImSet, Range, List} from 'immutable';
+import React, {useState, useRef, useEffect, useLayoutEffect} from 'react';
 import {mergeBlocks, collapseContextBlocks, diffBlocks, splitLines} from 'shared/diff';
 import {unwrap} from 'shared/utils';
 
 import './FileStackEditor.css';
 
-export type Mode = 'unified-diff' | 'side-by-side-diff';
+export type Mode = 'unified-diff' | 'side-by-side-diff' | 'unified-stack';
 
 type EditorRowProps = {
   /**
@@ -98,6 +100,10 @@ export function FileStackEditor(props: EditorProps) {
       document.removeEventListener('selectionchange', handleSelect);
     };
   }, [textEdit]);
+
+  if (mode === 'unified-stack') {
+    return null;
+  }
 
   // Diff with the left side.
   const bText = stack.getRev(rev);
@@ -487,7 +493,268 @@ export function FileStackEditor(props: EditorProps) {
   );
 }
 
+/** The unified stack view is different from other views. */
+function FileStackEditorUnifiedStack(props: EditorRowProps) {
+  type ClickPosition = {
+    rev: Rev;
+    lineIdx: LineIdx;
+    checked?: boolean;
+  };
+  const [clickStart, setClickStart] = useState<ClickPosition | null>(null);
+  const [clickEnd, setClickEnd] = useState<ClickPosition | null>(null);
+  const [expandedLines, setExpandedLines] = useState<ImSet<LineIdx>>(ImSet);
+
+  const {stack, setStack, getTitle, skip, textEdit} = props;
+  const rangeInfos: Array<RangeInfo> = [];
+
+  const lines = stack.convertToFlattenLines();
+  const revs = stack.revs().filter(rev => !skip(rev));
+  const lastRev = revs.at(-1) ?? -1;
+
+  // RangeInfo handling required by TextEditable.
+  let start = 0;
+  const nextRangeId = (len: number): number => {
+    const id = rangeInfos.length;
+    const end = start + len;
+    rangeInfos.push({start, end});
+    start = end;
+    return id;
+  };
+
+  // Append `baseName` with `color${rev % 4}`.
+  const getColorClassName = (baseName: string, rev: number): string => {
+    const colorIdx = rev % 4;
+    return `${baseName} color${colorIdx}`;
+  };
+
+  // Header. Commit titles.
+  const headerRows = revs.map(rev => {
+    const padTds = revs.map(rev2 => (
+      <th key={rev2} className={getColorClassName('pad', Math.min(rev2, rev))}></th>
+    ));
+    const title = getTitle(rev);
+    const shortTitle = title.split('\n')[0];
+    return (
+      <tr key={rev}>
+        {padTds}
+        <th className={getColorClassName('commit-title', rev)}>
+          <Tooltip placement="left" title={title}>
+            {shortTitle}
+          </Tooltip>
+        </th>
+      </tr>
+    );
+  });
+
+  // Checkbox range selection.
+  const getSelRanges = (start: ClickPosition | null, end: ClickPosition | null) => {
+    // Minimal number sort. Note Array.sort is a string sort.
+    const sort2 = (a: number, b: number) => (a < b ? [a, b] : [b, a]);
+
+    // Selected range to highlight.
+    let lineRange = Range(0, 0);
+    let revRange = Range(0, 0);
+    if (start != null && end != null) {
+      const [rev1, rev2] = sort2(start.rev, end.rev);
+      // Skip rev 0 (public, immutable).
+      revRange = Range(Math.max(rev1, 1), rev2 + 1);
+      const [lineIdx1, lineIdx2] = sort2(start.lineIdx, end.lineIdx);
+      lineRange = Range(lineIdx1, lineIdx2 + 1);
+    }
+    return [lineRange, revRange];
+  };
+  const [selLineRange, selRevRange] = getSelRanges(clickStart, clickEnd ?? clickStart);
+
+  const handlePointerDown = (
+    lineIdx: LineIdx,
+    rev: Rev,
+    checked: boolean,
+    e: React.PointerEvent,
+  ) => {
+    if (e.isPrimary) {
+      setClickStart({lineIdx, rev, checked});
+    }
+  };
+  const handlePointerMove = (lineIdx: LineIdx, rev: Rev, e: React.PointerEvent) => {
+    if (e.isPrimary && clickStart != null) {
+      const newClickEnd = {lineIdx, rev, checked: false};
+      setClickEnd(v => (deepEqual(v, newClickEnd) ? v : newClickEnd));
+    }
+  };
+  const handlePointerUp = (lineIdx: LineIdx, rev: Rev, e: React.PointerEvent) => {
+    setClickEnd(null);
+    if (e.isPrimary && clickStart != null) {
+      const [lineRange, revRange] = getSelRanges(clickStart, {lineIdx, rev});
+      setClickStart(null);
+      const newStack = stack.mapAllLines((line, i) => {
+        if (lineRange.contains(i)) {
+          const newRevs = clickStart.checked
+            ? line.revs.union(revRange)
+            : line.revs.subtract(revRange);
+          return line.set('revs', newRevs);
+        } else {
+          return line;
+        }
+      });
+      setStack(newStack);
+    }
+  };
+
+  // Context line analysis. We "abuse" the `collapseContextBlocks` by faking the `blocks`.
+  const blocks: Array<Block> = [];
+  const pushSign = (sign: '!' | '=', end: LineIdx) => {
+    const lastBlock = blocks.at(-1);
+    if (lastBlock == null) {
+      blocks.push([sign, [0, end, 0, end]]);
+    } else if (lastBlock[0] === sign) {
+      lastBlock[1][1] = lastBlock[1][3] = end;
+    } else {
+      blocks.push([sign, [lastBlock[1][1], end, lastBlock[1][3], end]]);
+    }
+  };
+  lines.forEach((line, i) => {
+    const sign = line.revs.size >= revs.length ? '=' : '!';
+    pushSign(sign, i + 1);
+  });
+  const collapsedBlocks = collapseContextBlocks(blocks, (_a, b) => expandedLines.contains(b));
+
+  const handleContextExpand = (b1: LineIdx, b2: LineIdx) => {
+    const newSet = expandedLines.union(Range(b1, b2));
+    setExpandedLines(newSet);
+  };
+
+  // Body. Checkboxes + Line content, or "~~~~" context button.
+  const bodyRows: JSX.Element[] = [];
+  collapsedBlocks.forEach(([sign, [, , b1, b2]]) => {
+    if (sign === '~') {
+      const checkboxes = revs.map(rev => (
+        <td key={rev} className={getColorClassName('', rev)}></td>
+      ));
+
+      bodyRows.push(
+        <tr key={b1}>
+          {checkboxes}
+          <td className="context-button" onClick={() => handleContextExpand(b1, b2)}>
+            <span> </span>
+          </td>
+        </tr>,
+      );
+
+      if (textEdit) {
+        const len = Range(b1, b2).reduce((acc, i) => acc + unwrap(lines.get(i)).data.length, 0);
+        nextRangeId(len);
+      }
+
+      return;
+    }
+    for (let i = b1; i < b2; ++i) {
+      const line = unwrap(lines.get(i));
+      const checkboxes = revs.map(rev => {
+        const checked = line.revs.contains(rev);
+        let className = 'checkbox' + (rev > 0 ? ' mutable' : ' immutable');
+        if (selLineRange.contains(i) && selRevRange.contains(rev)) {
+          className += clickStart?.checked ? ' add' : ' del';
+        }
+        return (
+          <td
+            key={rev}
+            className={getColorClassName(className, rev)}
+            onPointerDown={e => handlePointerDown(i, rev, !checked, e)}
+            onPointerMove={e => handlePointerMove(i, rev, e)}
+            onPointerUp={e => handlePointerUp(i, rev, e)}
+            onDragStart={e => e.preventDefault()}>
+            <VSCodeCheckbox
+              tabIndex={-1}
+              disabled={rev === 0}
+              checked={checked}
+              style={{pointerEvents: 'none'}}
+            />
+          </td>
+        );
+      });
+      let tdClass = 'line';
+      if (!line.revs.has(lastRev)) {
+        tdClass += ' del';
+      } else if (line.revs.size < revs.length) {
+        tdClass += ' change';
+      }
+      const rangeId = textEdit ? nextRangeId(line.data.length) : undefined;
+      bodyRows.push(
+        <tr key={i}>
+          {checkboxes}
+          <td className={tdClass}>
+            <span className="line" data-range-id={rangeId}>
+              {line.data}
+            </span>
+          </td>
+        </tr>,
+      );
+    }
+  });
+
+  let editor = (
+    <table className="file-unified-stack-editor">
+      <thead>{headerRows}</thead>
+      <tbody>{bodyRows}</tbody>
+    </table>
+  );
+
+  if (textEdit) {
+    const textLines = lines.map(l => l.data).toArray();
+    const text = textLines.join('');
+    const handleTextChange = (newText: string) => {
+      const immutableRev = 0;
+      const immutableRevs: ImSet<Rev> = ImSet([immutableRev]);
+      const newTextLines = splitLines(newText);
+      const blocks = diffBlocks(textLines, newTextLines);
+      const newFlattenLines: List<FlattenLine> = List<FlattenLine>().withMutations(mut => {
+        let flattenLines = mut;
+        blocks.forEach(([sign, [a1, a2, b1, b2]]) => {
+          if (sign === '=') {
+            flattenLines = flattenLines.concat(lines.slice(a1, a2));
+          } else if (sign === '!') {
+            // Plain text does not have "revs" info.
+            // We just reuse the last line on the a-side. This should work fine for
+            // single-line insertion or edits.
+            const fallbackRevs: ImSet<Rev> =
+              lines.get(Math.max(a1, a2 - 1))?.revs?.delete(immutableRev) ?? ImSet();
+            // Public (immutableRev, rev 0) lines cannot be deleted. Enforce that.
+            const aLines = Range(a1, a2)
+              .map(ai => lines.get(ai))
+              .filter(l => l != null && l.revs.contains(immutableRev))
+              .map(l => (l as FlattenLine).set('revs', immutableRevs));
+            // Newly added lines cannot insert to (immutableRev, rev 0) either.
+            const bLines = Range(b1, b2).map(bi => {
+              const data = newTextLines[bi] ?? '';
+              const ai = bi - b1 + a1;
+              const revs =
+                (ai < a2 ? lines.get(ai)?.revs?.delete(immutableRev) : null) ?? fallbackRevs;
+              return FlattenLine({data, revs});
+            });
+            flattenLines = flattenLines.concat(aLines).concat(bLines);
+          }
+        });
+        return flattenLines;
+      });
+      const newStack = stack.fromFlattenLines(newFlattenLines, stack.revLength);
+      setStack(newStack);
+    };
+
+    editor = (
+      <TextEditable rangeInfos={rangeInfos} value={text} onTextChange={handleTextChange}>
+        {editor}
+      </TextEditable>
+    );
+  }
+
+  return <ScrollY maxSize="70vh">{editor}</ScrollY>;
+}
+
 export function FileStackEditorRow(props: EditorRowProps) {
+  if (props.mode === 'unified-stack') {
+    return FileStackEditorUnifiedStack(props);
+  }
+
   // skip rev 0, the "public" revision for unified diff.
   const revs = props.stack
     .revs()
