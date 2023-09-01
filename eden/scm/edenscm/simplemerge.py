@@ -599,5 +599,4 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
         flags = getattr(localctx, "workingflags", localctx.flags)()
         localctx.write(mergedtext, flags)
 
-    if conflictscount:
-        return conflictscount
+    return conflictscount

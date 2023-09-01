@@ -133,7 +133,7 @@ Merge using internal:union tool:
 
   $ hg merge 2e6ee5e3ca9741adb8dea438cf4481288efd73c3
   merging f
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
   $ cat f

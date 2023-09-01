@@ -28,7 +28,7 @@ test merging things outside of the sparse checkout
   $ hg merge feature2 --tool :merge-other
   temporarily included 1 file(s) in the sparse checkout for merging
   merging bar
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
 Verify bar was merged temporarily
@@ -64,5 +64,5 @@ copy
   $ hg merge feature2 --tool :merge-other
   temporarily included 1 file(s) in the sparse checkout for merging
   merging bar
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
