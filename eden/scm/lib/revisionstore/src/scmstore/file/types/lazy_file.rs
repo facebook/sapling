@@ -17,7 +17,6 @@ use types::Key;
 use crate::indexedlogdatastore::Entry;
 use crate::lfs::rebuild_metadata;
 use crate::lfs::LfsPointersEntry;
-use crate::memcache::McData;
 use crate::scmstore::file::FileAuxData;
 use crate::ContentHash;
 use crate::Metadata;
@@ -37,9 +36,6 @@ pub(crate) enum LazyFile {
 
     /// An EdenApi FileEntry.
     EdenApi(FileEntry),
-
-    /// A memcache entry, convertable to Entry. In this case the Key's path should match the requested Key's path.
-    Memcache(McData),
 }
 
 impl LazyFile {
@@ -51,7 +47,6 @@ impl LazyFile {
             IndexedLog(ref entry) => Some(entry.key().hgid),
             Lfs(_, ref ptr) => Some(ptr.hgid()),
             EdenApi(ref entry) => Some(entry.key().hgid),
-            Memcache(ref entry) => Some(entry.key.hgid),
         }
     }
 
@@ -96,7 +91,6 @@ impl LazyFile {
             ContentStore(ref blob, _) => strip_metadata(blob)?.0,
             // TODO(meyer): Convert EdenApi to use minibytes
             EdenApi(ref entry) => strip_metadata(&entry.data()?.into())?.0,
-            Memcache(ref entry) => strip_metadata(&entry.data)?.0,
         })
     }
 
@@ -108,7 +102,6 @@ impl LazyFile {
             Lfs(ref blob, ref ptr) => (blob.clone(), ptr.copy_from().clone()),
             ContentStore(ref blob, _) => strip_metadata(blob)?,
             EdenApi(ref entry) => strip_metadata(&entry.data()?.into())?,
-            Memcache(ref entry) => strip_metadata(&entry.data)?,
         })
     }
 
@@ -120,7 +113,6 @@ impl LazyFile {
             Lfs(ref blob, ref ptr) => rebuild_metadata(blob.clone(), ptr),
             ContentStore(ref blob, _) => blob.clone(),
             EdenApi(ref entry) => entry.data()?.into(),
-            Memcache(ref entry) => entry.data.clone(),
         })
     }
 
@@ -134,7 +126,6 @@ impl LazyFile {
             },
             ContentStore(_, ref meta) => meta.clone(),
             EdenApi(ref entry) => entry.metadata()?.clone(),
-            Memcache(ref entry) => entry.metadata.clone(),
         })
     }
 
@@ -148,28 +139,11 @@ impl LazyFile {
                 entry.data()?.into(),
                 entry.metadata()?.clone(),
             )),
-            // TODO(meyer): We shouldn't ever need to replace the key with Memcache, can probably just clone this.
-            Memcache(ref entry) => Some({
-                let entry: Entry = entry.clone().into();
-                entry.with_key(key)
-            }),
             // LFS Files should be written to LfsCache instead
             Lfs(_, _) => None,
             // ContentStore handles caching internally
             ContentStore(_, _) => None,
         })
-    }
-}
-
-impl TryFrom<McData> for LfsPointersEntry {
-    type Error = Error;
-
-    fn try_from(e: McData) -> Result<Self, Self::Error> {
-        if e.metadata.is_lfs() {
-            Ok(LfsPointersEntry::from_bytes(e.data, e.key.hgid)?)
-        } else {
-            bail!("failed to convert McData entry to LFS pointer, is_lfs is false")
-        }
     }
 }
 

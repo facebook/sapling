@@ -37,7 +37,6 @@ use revisionstore::scmstore::TreeStoreBuilder;
 use revisionstore::trait_impls::ArcFileStore;
 use revisionstore::EdenApiFileStore;
 use revisionstore::EdenApiTreeStore;
-use revisionstore::MemcacheStore;
 use revsets::errors::RevsetLookupError;
 use revsets::utils as revset_utils;
 use storemodel::ReadFileContents;
@@ -504,15 +503,6 @@ impl Repo {
         tracing::trace!(target: "repo::file_store", "configuring aux data");
         if self.config.get_or_default("scmstore", "auxindexedlog")? {
             file_builder = file_builder.store_aux_data();
-        }
-
-        tracing::trace!(target: "repo::file_store", "configuring memcache");
-        if self
-            .config
-            .get_nonempty("remotefilelog", "cachekey")
-            .is_some()
-        {
-            file_builder = file_builder.memcache(Arc::new(MemcacheStore::new(&self.config)?));
         }
 
         tracing::trace!(target: "repo::file_store", "building file store");

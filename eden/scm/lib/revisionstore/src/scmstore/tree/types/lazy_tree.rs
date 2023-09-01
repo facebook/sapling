@@ -17,7 +17,6 @@ use types::HgId;
 use types::Key;
 
 use crate::indexedlogdatastore::Entry;
-use crate::memcache::McData;
 use crate::scmstore::file::FileAuxData;
 use crate::Metadata;
 
@@ -33,9 +32,6 @@ pub(crate) enum LazyTree {
 
     /// An EdenApi TreeEntry.
     EdenApi(TreeEntry),
-
-    /// A memcache entry, convertable to Entry. In this case the Key's path should match the requested Key's path.
-    Memcache(McData),
 }
 
 impl LazyTree {
@@ -46,7 +42,6 @@ impl LazyTree {
             ContentStore(_, _) => None,
             IndexedLog(ref entry) => Some(entry.key().hgid),
             EdenApi(ref entry) => Some(entry.key().hgid),
-            Memcache(ref entry) => Some(entry.key.hgid),
         }
     }
 
@@ -57,7 +52,6 @@ impl LazyTree {
             IndexedLog(ref mut entry) => entry.content()?,
             ContentStore(ref blob, _) => blob.clone(),
             EdenApi(ref entry) => entry.data()?.into(),
-            Memcache(ref entry) => entry.data.clone(),
         })
     }
 
@@ -67,11 +61,6 @@ impl LazyTree {
         Ok(match self {
             IndexedLog(ref entry) => Some(entry.clone().with_key(key)),
             EdenApi(ref entry) => Some(Entry::new(key, entry.data()?.into(), Metadata::default())),
-            // TODO(meyer): We shouldn't ever need to replace the key with Memcache, can probably just clone this.
-            Memcache(ref entry) => Some({
-                let entry: Entry = entry.clone().into();
-                entry.with_key(key)
-            }),
             // ContentStore handles caching internally
             ContentStore(_, _) => None,
         })

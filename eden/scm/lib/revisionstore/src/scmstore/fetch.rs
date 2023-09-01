@@ -21,7 +21,7 @@ use crate::scmstore::value::StoreValue;
 
 #[derive(Debug)]
 pub enum FetchMode {
-    /// The fetch may hit memcache or other servers.
+    /// The fetch may hit remote servers.
     AllowRemote,
     /// The fetch is limited to RAM and disk.
     LocalOnly,

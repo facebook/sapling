@@ -47,7 +47,6 @@ use crate::lfs::lfs_from_hg_file_blob;
 use crate::lfs::LfsPointersEntry;
 use crate::lfs::LfsRemote;
 use crate::lfs::LfsStore;
-use crate::memcache::MEMCACHE_DELAY;
 use crate::remotestore::HgIdRemoteStore;
 use crate::scmstore::activitylogger::ActivityLogger;
 use crate::scmstore::fetch::FetchMode;
@@ -60,7 +59,6 @@ use crate::EdenApiFileStore;
 use crate::ExtStoredPolicy;
 use crate::LegacyStore;
 use crate::LocalStore;
-use crate::MemcacheStore;
 use crate::Metadata;
 use crate::MultiplexDeltaStore;
 use crate::RepackLocation;
@@ -73,7 +71,6 @@ pub struct FileStore {
     // TODO(meyer): Move these to a separate config struct with default impl, etc.
     pub(crate) extstored_policy: ExtStoredPolicy,
     pub(crate) lfs_threshold_bytes: Option<u64>,
-    pub(crate) cache_to_memcache: bool,
     pub(crate) edenapi_retries: i32,
     /// Allow explicitly writing serialized LFS pointers outside of tests
     pub(crate) allow_write_lfs_ptrs: bool,
@@ -92,9 +89,6 @@ pub struct FileStore {
     // Local LFS cache aka shared store
     pub(crate) lfs_cache: Option<Arc<LfsStore>>,
 
-    // Memcache
-    pub(crate) memcache: Option<Arc<MemcacheStore>>,
-
     // Remote stores
     pub(crate) lfs_remote: Option<Arc<LfsRemote>>,
     pub(crate) edenapi: Option<Arc<EdenApiFileStore>>,
@@ -109,9 +103,6 @@ pub struct FileStore {
     // Metrics, statistics, debugging
     pub(crate) activity_logger: Option<Arc<Mutex<ActivityLogger>>>,
     pub(crate) metrics: Arc<RwLock<FileStoreMetrics>>,
-
-    // Records the store creation time, so we can only use memcache for long running commands.
-    pub(crate) creation_time: Instant,
 
     pub(crate) lfs_progress: Arc<AggregatingProgressBar>,
 
@@ -151,13 +142,10 @@ impl FileStore {
         let indexedlog_local = self.indexedlog_local.clone();
         let lfs_cache = self.lfs_cache.clone();
         let lfs_local = self.lfs_local.clone();
-        let memcache = self.memcache.clone();
         let edenapi = self.edenapi.clone();
         let lfs_remote = self.lfs_remote.clone();
         let contentstore = self.contentstore.clone();
-        let creation_time = self.creation_time;
         let prefer_computing_aux_data = self.prefer_computing_aux_data;
-        let cache_to_memcache = self.cache_to_memcache;
         let metrics = self.metrics.clone();
         let activity_logger = self.activity_logger.clone();
 
@@ -204,17 +192,6 @@ impl FileStore {
                 state.fetch_lfs(lfs_local, StoreType::Local);
             }
 
-            if let FetchMode::AllowRemote = fetch_mode {
-                if use_memcache(creation_time) {
-                    if let Some(ref memcache) = memcache {
-                        state.fetch_memcache(
-                            memcache,
-                            indexedlog_cache.as_ref().map(|s| s.as_ref()),
-                        );
-                    }
-                }
-            }
-
             if prefer_computing_aux_data {
                 state.derive_computable(
                     aux_cache.as_ref().map(|s| s.as_ref()),
@@ -229,11 +206,6 @@ impl FileStore {
                         indexedlog_cache.clone(),
                         lfs_cache.clone(),
                         aux_cache.clone(),
-                        if cache_to_memcache && use_memcache(creation_time) {
-                            memcache.clone()
-                        } else {
-                            None
-                        },
                     );
                 }
             }
@@ -419,9 +391,6 @@ impl FileStore {
             indexedlog_cache: None,
             lfs_cache: None,
 
-            memcache: None,
-            cache_to_memcache: true,
-
             edenapi: None,
             lfs_remote: None,
 
@@ -433,7 +402,6 @@ impl FileStore {
             aux_local: None,
             aux_cache: None,
 
-            creation_time: Instant::now(),
             lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
             flush_on_drop: true,
         }
@@ -452,12 +420,6 @@ impl FileStore {
         clone.contentstore = Some(cs);
         clone
     }
-}
-
-fn use_memcache(creation_time: Instant) -> bool {
-    // Only use memcache if the process has been around a while. It takes 2s to setup, which
-    // hurts responiveness for short commands.
-    creation_time.elapsed() > MEMCACHE_DELAY
 }
 
 impl LegacyStore for FileStore {
@@ -482,9 +444,6 @@ impl LegacyStore for FileStore {
             indexedlog_cache: None,
             lfs_cache: None,
 
-            memcache: None,
-            cache_to_memcache: false,
-
             edenapi: None,
             lfs_remote: None,
 
@@ -496,7 +455,6 @@ impl LegacyStore for FileStore {
             aux_local: None,
             aux_cache: None,
 
-            creation_time: Instant::now(),
             lfs_progress: self.lfs_progress.clone(),
 
             // Conservatively flushing on drop here, didn't see perf problems and might be needed by Python
@@ -624,15 +582,10 @@ impl RemoteDataStore for FileStore {
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.metrics.write().api.hg_upload.call(keys.len());
-        // TODO(meyer): Eliminate usage of legacy API, or at least minimize it (do we really need memcache + multiplex, etc)
+        // TODO(meyer): Eliminate usage of legacy API, or at least minimize it (do we really need multiplex, etc)
         if let Some(ref lfs_remote) = self.lfs_remote {
             let mut multiplex = MultiplexDeltaStore::new();
             multiplex.add_store(self.get_shared_mutable());
-            if use_memcache(self.creation_time) {
-                if let Some(ref memcache) = self.memcache {
-                    multiplex.add_store(memcache.clone());
-                }
-            }
             lfs_remote
                 .clone()
                 .datastore(Arc::new(multiplex))

@@ -43,8 +43,6 @@ use crate::lfs::LfsRemote;
 use crate::lfs::LfsStore;
 use crate::localstore::ExtStoredPolicy;
 use crate::localstore::LocalStore;
-use crate::memcache::MemcacheStore;
-use crate::multiplexstore::MultiplexDeltaStore;
 use crate::packstore::CorruptionPolicy;
 use crate::packstore::MutableDataPackStore;
 use crate::remotestore::HgIdRemoteStore;
@@ -280,7 +278,6 @@ pub struct ContentStoreBuilder<'a> {
     config: &'a dyn Config,
     remotestore: Option<Arc<dyn HgIdRemoteStore>>,
     suffix: Option<PathBuf>,
-    memcachestore: Option<Arc<MemcacheStore>>,
     correlator: Option<String>,
     shared_indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
     shared_indexedlog_shared: Option<Arc<IndexedLogHgIdDataStore>>,
@@ -295,7 +292,6 @@ impl<'a> ContentStoreBuilder<'a> {
             no_local_store: false,
             config,
             remotestore: None,
-            memcachestore: None,
             suffix: None,
             correlator: None,
             shared_indexedlog_shared: None,
@@ -322,11 +318,6 @@ impl<'a> ContentStoreBuilder<'a> {
 
     pub fn remotestore(mut self, remotestore: Arc<dyn HgIdRemoteStore>) -> Self {
         self.remotestore = Some(remotestore);
-        self
-    }
-
-    pub fn memcachestore(mut self, memcachestore: Arc<MemcacheStore>) -> Self {
-        self.memcachestore = Some(memcachestore);
         self
     }
 
@@ -554,44 +545,10 @@ impl<'a> ContentStoreBuilder<'a> {
         let remote_store: Option<Arc<ReportingRemoteDataStore>> = if let Some(remotestore) =
             self.remotestore
         {
-            let (cache, shared_store) = if let Some(memcachestore) = self.memcachestore {
-                // Combine the memcache store with the other stores. The intent is that all
-                // remote requests will first go to the memcache store, and only reach the
-                // slower remote store after that.
-                //
-                // If data isn't found in the memcache store, once fetched from the remote
-                // store it will be written to the local cache, and will populate the memcache
-                // store, so other clients and future requests won't need to go to a network
-                // store.
-                let mut multiplexstore: MultiplexDeltaStore<Arc<dyn HgIdMutableDeltaStore>> =
-                    MultiplexDeltaStore::new();
-                multiplexstore.add_store(
-                    memcachestore
-                        .clone()
-                        .datastore(shared_mutabledatastore.clone()),
-                );
-                multiplexstore.add_store(shared_mutabledatastore.clone());
-
-                (
-                    Some(
-                        memcachestore
-                            .clone()
-                            .remote_datastore(shared_mutabledatastore.clone()),
-                    ),
-                    Arc::new(multiplexstore) as Arc<dyn HgIdMutableDeltaStore>,
-                )
-            } else {
-                (None, shared_mutabledatastore.clone())
-            };
-
+            let shared_store = shared_mutabledatastore.clone();
             let mut remotestores = UnionHgIdDataStore::new();
 
-            // First, the fast memcache store
-            if let Some(cache) = cache {
-                remotestores.add(cache.clone());
-            };
-
-            // Second, the slower remotestore. For LFS blobs, the LFS pointers will be fetched
+            // Add remotestore. For LFS blobs, the LFS pointers will be fetched
             // at this step and be written to the LFS store.
             let filenode_remotestore = remotestore.datastore(shared_store.clone());
             remotestores.add(filenode_remotestore.clone());
@@ -1417,256 +1374,6 @@ mod tests {
             let k1 = StoreKey::from(k1.clone());
             let k2 = StoreKey::from(k2.clone());
             assert_eq!(store.prefetch(&[k1, k2])?, vec![]);
-
-            Ok(())
-        }
-    }
-
-    #[cfg(all(fbcode_build, target_os = "linux"))]
-    mod fbcode_tests {
-        use std::str::FromStr;
-
-        use memcache::MockMemcache;
-        use once_cell::sync::Lazy;
-        use types::Sha256;
-
-        use super::*;
-
-        static MOCK: Lazy<MockMemcache> = Lazy::new(|| MockMemcache::new());
-
-        #[fbinit::test]
-        fn test_memcache_get() -> Result<()> {
-            let _mock = Lazy::force(&MOCK);
-
-            let cachedir = TempDir::new()?;
-            let localdir = TempDir::new()?;
-            let config = make_config(&cachedir);
-
-            let k = key("a", "1234");
-            let data = Bytes::from(&[1, 2, 3, 4][..]);
-
-            let mut map = HashMap::new();
-            map.insert(k.clone(), (data.clone(), None));
-            let mut remotestore = FakeHgIdRemoteStore::new();
-            remotestore.data(map);
-
-            let memcache = Arc::new(MemcacheStore::new(&config)?);
-            let store = ContentStoreBuilder::new(&config)
-                .local_path(&localdir)
-                .remotestore(Arc::new(remotestore))
-                .memcachestore(memcache.clone())
-                .build()?;
-            let data_get = store.get(StoreKey::hgid(k.clone()))?;
-            assert_eq!(data_get, StoreResult::Found(data.as_ref().to_vec()));
-
-            loop {
-                let memcache_data = memcache
-                    .get_data_iter(&[k.clone()])
-                    .unwrap()
-                    .collect::<Result<Vec<_>>>()?;
-                if !memcache_data.is_empty() {
-                    assert_eq!(memcache_data[0].data, data);
-                    break;
-                }
-            }
-            Ok(())
-        }
-
-        #[fbinit::test]
-        fn test_memcache_get_large() -> Result<()> {
-            let _mock = Lazy::force(&MOCK);
-
-            let cachedir = TempDir::new()?;
-            let localdir = TempDir::new()?;
-            let config = make_config(&cachedir);
-
-            let k = key("a", "abcd");
-
-            let data: Bytes = (0..10 * 1024 * 1024)
-                .map(|_| rand::random::<u8>())
-                .collect::<Vec<u8>>()
-                .into();
-            assert_eq!(data.len(), 10 * 1024 * 1024);
-
-            let mut map = HashMap::new();
-            map.insert(k.clone(), (data.clone(), None));
-            let mut remotestore = FakeHgIdRemoteStore::new();
-            remotestore.data(map);
-
-            let memcache = Arc::new(MemcacheStore::new(&config)?);
-            let store = ContentStoreBuilder::new(&config)
-                .local_path(&localdir)
-                .remotestore(Arc::new(remotestore))
-                .memcachestore(memcache.clone())
-                .build()?;
-            let data_get = store.get(StoreKey::hgid(k.clone()))?;
-            assert_eq!(data_get, StoreResult::Found(data.as_ref().to_vec()));
-
-            let memcache_data = memcache
-                .get_data_iter(&[k])
-                .unwrap()
-                .collect::<Result<Vec<_>>>()?;
-            assert_eq!(memcache_data, vec![]);
-            Ok(())
-        }
-
-        #[fbinit::test]
-        fn test_memcache_no_wait() -> Result<()> {
-            let _mock = Lazy::force(&MOCK);
-
-            let cachedir = TempDir::new()?;
-            let localdir = TempDir::new()?;
-            let mut config = make_config(&cachedir);
-            setconfig(&mut config, "remotefilelog", "waitformemcache", "false");
-
-            let k = key("a", "1");
-            let data = Bytes::from(&[1, 2, 3, 4][..]);
-
-            let mut map = HashMap::new();
-            map.insert(k.clone(), (data.clone(), None));
-            let mut remotestore = FakeHgIdRemoteStore::new();
-            remotestore.data(map);
-
-            let memcache = Arc::new(MemcacheStore::new(&config)?);
-            let store = ContentStoreBuilder::new(&config)
-                .local_path(&localdir)
-                .remotestore(Arc::new(remotestore))
-                .memcachestore(memcache)
-                .build()?;
-            let data_get = store.get(StoreKey::hgid(k))?;
-            assert_eq!(data_get, StoreResult::Found(data.as_ref().to_vec()));
-
-            // Ideally, we should check that we didn't wait for memcache, but that's timing
-            // related and thus a bit hard to test.
-            Ok(())
-        }
-
-        #[fbinit::test]
-        fn test_memcache_no_duplicate_fetch() -> Result<()> {
-            let _mock = Lazy::force(&MOCK);
-
-            let cachedir = TempDir::new()?;
-            let localdir = TempDir::new()?;
-            let config = make_config(&cachedir);
-
-            let k = key("a", "1234");
-            let data = Bytes::from(&[1, 2, 3, 4][..]);
-
-            let mut map = HashMap::new();
-            map.insert(k.clone(), (data.clone(), None));
-            let mut remotestore = FakeHgIdRemoteStore::new();
-            remotestore.data(map);
-
-            let memcache = Arc::new(MemcacheStore::new(&config)?);
-            let store = ContentStoreBuilder::new(&config)
-                .local_path(&localdir)
-                .remotestore(Arc::new(remotestore))
-                .memcachestore(memcache.clone())
-                .build()?;
-
-            // This populates memcache
-            let data_get = store.get(StoreKey::hgid(k.clone()))?;
-            assert_eq!(data_get, StoreResult::Found(data.as_ref().to_vec()));
-
-            // Wait to make sure it's there.
-            loop {
-                let memcache_data = memcache
-                    .get_data_iter(&[k.clone()])
-                    .unwrap()
-                    .collect::<Result<Vec<_>>>()?;
-                if !memcache_data.is_empty() {
-                    assert_eq!(memcache_data[0].data, data);
-                    break;
-                }
-            }
-
-            let cachedir = TempDir::new()?;
-            let localdir = TempDir::new()?;
-            let config = make_config(&cachedir);
-
-            let mut remotestore = FakeHgIdRemoteStore::new();
-            remotestore.data(HashMap::new());
-            let store = ContentStoreBuilder::new(&config)
-                .local_path(&localdir)
-                .remotestore(Arc::new(remotestore))
-                .memcachestore(memcache.clone())
-                .build()?;
-
-            // The data is only in the memcache store, this should succeed.
-            assert_eq!(store.prefetch(&vec![StoreKey::hgid(k.clone())])?, vec![]);
-
-            Ok(())
-        }
-
-        #[fbinit::test]
-        fn test_memcache_lfs() -> Result<()> {
-            let _mock = Lazy::force(&MOCK);
-            let blob = example_blob();
-            let _lfs_mocks = prepare_lfs_mocks(&blob);
-
-            let cachedir = TempDir::new()?;
-            let localdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir, "test_memcache_lfs");
-
-            let k = key("a", "1f5");
-            let sha256 = Sha256::from_str(
-                "fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9",
-            )?;
-            let size = 6;
-
-            let pointer = format!(
-                "version https://git-lfs.github.com/spec/v1\noid sha256:{}\nsize {}\nx-is-binary 0\n",
-                sha256.to_hex(),
-                size
-            );
-
-            let pointer_data = Bytes::from(pointer);
-
-            let mut map = HashMap::new();
-            map.insert(k.clone(), (pointer_data.clone(), Some(0x2000)));
-            let mut remotestore = FakeHgIdRemoteStore::new();
-            remotestore.data(map);
-            let remotestore = Arc::new(remotestore);
-
-            let memcache = Arc::new(MemcacheStore::new(&config)?);
-            let store = ContentStoreBuilder::new(&config)
-                .local_path(&localdir)
-                .remotestore(remotestore.clone())
-                .memcachestore(memcache.clone())
-                .build()?;
-
-            let data = store.get(StoreKey::hgid(k.clone()))?;
-            assert_eq!(
-                data,
-                StoreResult::Found(Bytes::from(&b"master"[..]).as_ref().to_vec())
-            );
-
-            loop {
-                let memcache_data = memcache
-                    .get_data_iter(&[k.clone()])
-                    .unwrap()
-                    .collect::<Result<Vec<_>>>()?;
-                if !memcache_data.is_empty() {
-                    assert_eq!(memcache_data[0].data, pointer_data);
-                    break;
-                }
-            }
-
-            let cachedir = TempDir::new()?;
-            let localdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir, "test_memcache_lfs2");
-
-            let store = ContentStoreBuilder::new(&config)
-                .local_path(&localdir)
-                .remotestore(remotestore)
-                .memcachestore(memcache)
-                .build()?;
-
-            let data = store.get(StoreKey::hgid(k))?;
-            assert_eq!(
-                data,
-                StoreResult::Found(Bytes::from(&b"master"[..]).as_ref().to_vec())
-            );
 
             Ok(())
         }

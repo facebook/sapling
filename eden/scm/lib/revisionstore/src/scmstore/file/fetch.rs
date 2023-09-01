@@ -38,7 +38,6 @@ use crate::lfs::LfsPointersEntry;
 use crate::lfs::LfsRemoteInner;
 use crate::lfs::LfsStore;
 use crate::lfs::LfsStoreEntry;
-use crate::memcache::McData;
 use crate::scmstore::attrs::StoreAttrs;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
@@ -55,7 +54,6 @@ use crate::ContentHash;
 use crate::ContentStore;
 use crate::EdenApiFileStore;
 use crate::ExtStoredPolicy;
-use crate::MemcacheStore;
 use crate::Metadata;
 use crate::StoreKey;
 
@@ -204,14 +202,12 @@ impl FetchState {
         key: Key,
         file: LazyFile,
         indexedlog_cache: &IndexedLogHgIdDataStore,
-        memcache: Option<Arc<MemcacheStore>>,
     ) -> Result<LazyFile> {
         let cache_entry = file.indexedlog_cache_entry(key.clone())?.ok_or_else(|| {
-            anyhow!("expected LazyFile::EdenApi or LazyFile::Memcache, other LazyFile variants should not be written to cache")
+            anyhow!(
+                "expected LazyFile::EdenApi, other LazyFile variants should not be written to cache"
+            )
         })?;
-        if let Some(memcache) = memcache.as_ref() {
-            memcache.add_mcdata(cache_entry.clone().try_into()?);
-        }
         indexedlog_cache.put_entry(cache_entry)?;
         let mmap_entry = indexedlog_cache
             .get_entry(key)?
@@ -460,75 +456,11 @@ impl FetchState {
         }
     }
 
-    fn found_memcache(
-        &mut self,
-        entry: McData,
-        indexedlog_cache: Option<&IndexedLogHgIdDataStore>,
-    ) {
-        let key = entry.key.clone();
-        if entry.metadata.is_lfs() {
-            match entry.try_into() {
-                Ok(ptr) => self.found_pointer(key, ptr, StoreType::Shared, true),
-                Err(err) => self.errors.keyed_error(key, err),
-            }
-        } else if let Some(indexedlog_cache) = indexedlog_cache {
-            match Self::evict_to_cache(
-                key.clone(),
-                LazyFile::Memcache(entry),
-                indexedlog_cache,
-                None,
-            ) {
-                Ok(cached) => {
-                    self.found_attributes(key, cached.into(), None);
-                }
-                Err(err) => self.errors.keyed_error(key, err),
-            }
-        } else {
-            self.found_attributes(key, LazyFile::Memcache(entry).into(), None);
-        }
-    }
-
-    fn fetch_memcache_inner(
-        &mut self,
-        store: &MemcacheStore,
-        indexedlog_cache: Option<&IndexedLogHgIdDataStore>,
-    ) -> Result<()> {
-        let pending = self.pending_nonlfs(FileAttributes::CONTENT);
-        if pending.is_empty() {
-            return Ok(());
-        }
-
-        debug!("Fetching Memcache - Count = {count}", count = pending.len());
-
-        self.fetch_logger
-            .as_ref()
-            .map(|fl| fl.report_keys(pending.iter()));
-
-        for res in store.get_data_iter(&pending)?.into_iter() {
-            match res {
-                Ok(mcdata) => self.found_memcache(mcdata, indexedlog_cache),
-                Err(err) => self.errors.other_error(err),
-            }
-        }
-        Ok(())
-    }
-
-    pub(crate) fn fetch_memcache(
-        &mut self,
-        store: &MemcacheStore,
-        indexedlog_cache: Option<&IndexedLogHgIdDataStore>,
-    ) {
-        if let Err(err) = self.fetch_memcache_inner(store, indexedlog_cache) {
-            self.errors.other_error(err);
-        }
-    }
-
     fn found_edenapi(
         entry: FileResponse,
         indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
         lfs_cache: Option<Arc<LfsStore>>,
         aux_cache: Option<Arc<AuxStore>>,
-        memcache: Option<Arc<MemcacheStore>>,
     ) -> Result<(StoreFile, Option<LfsPointersEntry>)> {
         let entry = entry.result?;
 
@@ -556,7 +488,6 @@ impl FetchState {
                     key,
                     LazyFile::EdenApi(entry),
                     indexedlog_cache,
-                    memcache,
                 )?);
             } else {
                 file.content = Some(LazyFile::EdenApi(entry));
@@ -572,7 +503,6 @@ impl FetchState {
         indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
         lfs_cache: Option<Arc<LfsStore>>,
         aux_cache: Option<Arc<AuxStore>>,
-        memcache: Option<Arc<MemcacheStore>>,
     ) {
         let fetchable = FileAttributes::CONTENT | FileAttributes::AUX;
 
@@ -624,18 +554,11 @@ impl FetchState {
                 let lfs_cache = lfs_cache.clone();
                 let indexedlog_cache = indexedlog_cache.clone();
                 let aux_cache = aux_cache.clone();
-                let memcache = memcache.clone();
                 spawn_blocking(move || {
                     res_entry.map(move |entry| {
                         (
                             entry.key.clone(),
-                            Self::found_edenapi(
-                                entry,
-                                indexedlog_cache,
-                                lfs_cache,
-                                aux_cache,
-                                memcache,
-                            ),
+                            Self::found_edenapi(entry, indexedlog_cache, lfs_cache, aux_cache),
                         )
                     })
                 })

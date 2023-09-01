@@ -8,7 +8,6 @@
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Instant;
 
 use anyhow::Result;
 use configmodel::convert::ByteCount;
@@ -38,7 +37,6 @@ use crate::ContentStore;
 use crate::EdenApiFileStore;
 use crate::EdenApiTreeStore;
 use crate::ExtStoredPolicy;
-use crate::MemcacheStore;
 
 pub struct FileStoreBuilder<'a> {
     config: &'a dyn Config,
@@ -54,8 +52,6 @@ pub struct FileStoreBuilder<'a> {
     lfs_cache: Option<Arc<LfsStore>>,
 
     edenapi: Option<Arc<EdenApiFileStore>>,
-    memcache: Option<Arc<MemcacheStore>>,
-
     contentstore: Option<Arc<ContentStore>>,
 }
 
@@ -73,7 +69,6 @@ impl<'a> FileStoreBuilder<'a> {
             lfs_local: None,
             lfs_cache: None,
             edenapi: None,
-            memcache: None,
             contentstore: None,
         }
     }
@@ -105,11 +100,6 @@ impl<'a> FileStoreBuilder<'a> {
 
     pub fn edenapi(mut self, edenapi: Arc<EdenApiFileStore>) -> Self {
         self.edenapi = Some(edenapi);
-        self
-    }
-
-    pub fn memcache(mut self, memcache: Arc<MemcacheStore>) -> Self {
-        self.memcache = Some(memcache);
         self
     }
 
@@ -354,8 +344,6 @@ impl<'a> FileStoreBuilder<'a> {
             None
         };
 
-        let memcache = self.memcache.take();
-
         tracing::trace!(target: "revisionstore::filestore", "processing edenapi");
         let edenapi = if self.use_edenapi()? {
             if let Some(edenapi) = self.edenapi.take() {
@@ -418,9 +406,6 @@ impl<'a> FileStoreBuilder<'a> {
             indexedlog_cache,
             lfs_cache,
 
-            memcache,
-            cache_to_memcache: true,
-
             edenapi,
             lfs_remote,
 
@@ -432,7 +417,6 @@ impl<'a> FileStoreBuilder<'a> {
             aux_local,
             aux_cache,
 
-            creation_time: Instant::now(),
             lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
             flush_on_drop: true,
         })
@@ -466,7 +450,6 @@ pub struct TreeStoreBuilder<'a> {
     indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
     indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
     edenapi: Option<Arc<EdenApiTreeStore>>,
-    memcache: Option<Arc<MemcacheStore>>,
     contentstore: Option<Arc<ContentStore>>,
     filestore: Option<Arc<FileStore>>,
 }
@@ -481,7 +464,6 @@ impl<'a> TreeStoreBuilder<'a> {
             indexedlog_local: None,
             indexedlog_cache: None,
             edenapi: None,
-            memcache: None,
             contentstore: None,
             filestore: None,
         }
@@ -504,11 +486,6 @@ impl<'a> TreeStoreBuilder<'a> {
 
     pub fn edenapi(mut self, edenapi: Arc<EdenApiTreeStore>) -> Self {
         self.edenapi = Some(edenapi);
-        self
-    }
-
-    pub fn memcache(mut self, memcache: Arc<MemcacheStore>) -> Self {
-        self.memcache = Some(memcache);
         self
     }
 
@@ -623,8 +600,6 @@ impl<'a> TreeStoreBuilder<'a> {
             self.build_indexedlog_cache()?
         };
 
-        let memcache = self.memcache.take();
-
         tracing::trace!(target: "revisionstore::treestore", "processing edenapi");
         let edenapi = if self.use_edenapi()? {
             if let Some(edenapi) = self.edenapi.take() {
@@ -649,19 +624,11 @@ impl<'a> TreeStoreBuilder<'a> {
         tracing::trace!(target: "revisionstore::treestore", "constructing TreeStore");
         Ok(TreeStore {
             indexedlog_local,
-
             indexedlog_cache,
             cache_to_local_cache: true,
-
-            memcache,
-            cache_to_memcache: true,
-
             edenapi,
-
             contentstore,
             filestore: self.filestore,
-
-            creation_time: Instant::now(),
             flush_on_drop: true,
         })
     }

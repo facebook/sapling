@@ -8,7 +8,6 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Instant;
 
 use ::types::Key;
 use ::types::Node;
@@ -27,7 +26,6 @@ use crate::datastore::HgIdDataStore;
 use crate::datastore::RemoteDataStore;
 use crate::indexedlogdatastore::Entry;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
-use crate::memcache::MEMCACHE_DELAY;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
 use crate::scmstore::fetch::FetchMode;
@@ -46,7 +44,6 @@ use crate::EdenApiTreeStore;
 use crate::HgIdMutableDeltaStore;
 use crate::LegacyStore;
 use crate::LocalStore;
-use crate::MemcacheStore;
 use crate::Metadata;
 use crate::RepackLocation;
 use crate::StoreKey;
@@ -65,13 +62,6 @@ pub struct TreeStore {
     /// will the written to indexedlog_cache.
     pub cache_to_local_cache: bool,
 
-    /// If provided, memcache will be checked before other remote stores
-    pub memcache: Option<Arc<MemcacheStore>>,
-
-    /// If cache_to_memcache is true, data found by falling back to another remote store
-    // will be written to memcache.
-    pub cache_to_memcache: bool,
-
     /// An EdenApi Client, EdenApiTreeStore provides the tree-specific subset of EdenApi functionality
     /// used by TreeStore.
     pub edenapi: Option<Arc<EdenApiTreeStore>>,
@@ -83,8 +73,6 @@ pub struct TreeStore {
 
     /// A FileStore, which can be used for fetching and caching file aux data for a tree.
     pub filestore: Option<Arc<FileStore>>,
-
-    pub creation_time: Instant,
 
     pub flush_on_drop: bool,
 }
@@ -112,12 +100,9 @@ impl TreeStore {
 
         let indexedlog_cache = self.indexedlog_cache.clone();
         let indexedlog_local = self.indexedlog_local.clone();
-        let memcache = self.memcache.clone();
         let edenapi = self.edenapi.clone();
 
         let contentstore = self.contentstore.clone();
-        let creation_time = self.creation_time;
-        let cache_to_memcache = self.cache_to_memcache;
         let cache_to_local_cache = self.cache_to_local_cache;
         let (aux_local, aux_cache) = if let Some(ref filestore) = self.filestore {
             (filestore.aux_local.clone(), filestore.aux_cache.clone())
@@ -147,34 +132,6 @@ impl TreeStore {
                     if let Some(entry) = indexedlog_local.get_entry(key)? {
                         tracing::trace!("{:?} found in local", &entry.key());
                         common.found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
-                    }
-                }
-            }
-
-            if let FetchMode::AllowRemote = fetch_mode {
-                if use_memcache(creation_time) {
-                    if let Some(ref memcache) = memcache {
-                        let pending: Vec<_> = common
-                            .pending(TreeAttributes::CONTENT, false)
-                            .map(|(key, _attrs)| key.clone())
-                            .collect();
-
-                        if !pending.is_empty() {
-                            for entry in memcache.get_data_iter(&pending)? {
-                                let entry = entry?;
-                                let key = entry.key.clone();
-                                let entry = LazyTree::Memcache(entry);
-                                if indexedlog_cache.is_some() && cache_to_local_cache {
-                                    if let Some(entry) =
-                                        entry.indexedlog_cache_entry(key.clone())?
-                                    {
-                                        indexedlog_cache.as_ref().unwrap().put_entry(entry)?;
-                                    }
-                                }
-                                tracing::trace!("{:?} found in memcache", &key);
-                                common.found(key, entry.into());
-                            }
-                        }
                     }
                 }
             }
@@ -232,14 +189,6 @@ impl TreeStore {
                                     indexedlog_cache.as_ref().unwrap().put_entry(entry)?;
                                 }
                             }
-                            if memcache.is_some()
-                                && cache_to_memcache
-                                && use_memcache(creation_time)
-                            {
-                                if let Some(entry) = entry.indexedlog_cache_entry(key.clone())? {
-                                    memcache.as_ref().unwrap().add_mcdata(entry.try_into()?);
-                                }
-                            }
                             common.found(key, entry.into());
                         }
                         util::record_edenapi_stats(&span, &response.stats);
@@ -281,7 +230,7 @@ impl TreeStore {
                             };
 
                             if let (Some(blob), Some(meta)) = (blob, meta) {
-                                // We don't write to local indexedlog or memcache for contentstore fallbacks because
+                                // We don't write to local indexedlog for contentstore fallbacks because
                                 // contentstore handles that internally.
                                 tracing::trace!("{:?} found in contentstore", &key);
                                 common.found(key, LazyTree::ContentStore(blob.into(), meta).into());
@@ -323,19 +272,11 @@ impl TreeStore {
     pub fn empty() -> Self {
         TreeStore {
             indexedlog_local: None,
-
             indexedlog_cache: None,
             cache_to_local_cache: true,
-
-            memcache: None,
-            cache_to_memcache: true,
-
             edenapi: None,
-
             contentstore: None,
-
             filestore: None,
-            creation_time: Instant::now(),
             flush_on_drop: true,
         }
     }
@@ -373,12 +314,6 @@ impl TreeStore {
     }
 }
 
-fn use_memcache(creation_time: Instant) -> bool {
-    // Only use memcache if the process has been around a while. It takes 2s to setup, which
-    // hurts responiveness for short commands.
-    creation_time.elapsed() > MEMCACHE_DELAY
-}
-
 impl LegacyStore for TreeStore {
     /// Returns only the local cache / shared stores, in place of the local-only stores, such that writes will go directly to the local cache.
     /// For compatibility with ContentStore::get_shared_mutable
@@ -392,15 +327,9 @@ impl LegacyStore for TreeStore {
             indexedlog_local: self.indexedlog_cache.clone(),
             indexedlog_cache: None,
             cache_to_local_cache: false,
-
-            memcache: None,
-            cache_to_memcache: false,
-
             edenapi: None,
             contentstore: None,
-
             filestore: None,
-            creation_time: Instant::now(),
             flush_on_drop: true,
         })
     }

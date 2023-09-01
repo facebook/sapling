@@ -3,8 +3,6 @@ remotefilelog
 
 The remotefilelog extension allows Mercurial to clone shallow copies of a repository such that all file contents are left on the server and only downloaded on demand by the client. This greatly speeds up clone and pull performance for repositories that have long histories or that are growing quickly.
 
-In addition, the extension allows using a caching layer (such as memcache) to serve the file contents, thus providing better scalability and reducing server load.
-
 Installing
 ==========
 

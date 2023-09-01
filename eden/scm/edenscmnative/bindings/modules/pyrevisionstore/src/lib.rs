@@ -64,7 +64,6 @@ use revisionstore::IndexedLogHgIdDataStoreConfig;
 use revisionstore::IndexedLogHgIdHistoryStore;
 use revisionstore::LegacyStore;
 use revisionstore::LocalStore;
-use revisionstore::MemcacheStore;
 use revisionstore::Metadata;
 use revisionstore::MetadataStore;
 use revisionstore::MetadataStoreBuilder;
@@ -120,7 +119,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<pyremotestore>(py)?;
     m.add_class::<contentstore>(py)?;
     m.add_class::<metadatastore>(py)?;
-    m.add_class::<memcachestore>(py)?;
     m.add_class::<filescmstore>(py)?;
     m.add_class::<treescmstore>(py)?;
     m.add_class::<pyfilescmstore>(py)?;
@@ -960,7 +958,6 @@ py_class!(pub class contentstore |py| {
         path: Option<PyPathBuf>,
         config: config,
         remote: pyremotestore,
-        memcache: Option<memcachestore>,
         edenapi: Option<edenapifilestore> = None,
         suffix: Option<String> = None,
         correlator: Option<String> = None
@@ -980,12 +977,6 @@ py_class!(pub class contentstore |py| {
             builder.local_path(path.as_path())
         } else {
             builder.no_local_store()
-        };
-
-        builder = if let Some(memcache) = memcache {
-            builder.memcachestore(memcache.extract_inner(py))
-        } else {
-            builder
         };
 
         builder = if let Some(suffix) = suffix {
@@ -1084,7 +1075,6 @@ py_class!(class metadatastore |py| {
         path: Option<PyPathBuf>,
         config: config,
         remote: pyremotestore,
-        memcache: Option<memcachestore>,
         edenapi: Option<edenapifilestore> = None,
         suffix: Option<String> = None
     ) -> PyResult<metadatastore> {
@@ -1103,12 +1093,6 @@ py_class!(class metadatastore |py| {
             builder.local_path(path.as_path())
         } else {
             builder.no_local_store()
-        };
-
-        builder = if let Some(memcache) = memcache {
-            builder.memcachestore(memcache.extract_inner(py))
-        } else {
-            builder
         };
 
         builder = if let Some(suffix) = suffix {
@@ -1163,24 +1147,6 @@ impl ExtractInnerRef for metadatastore {
     }
 }
 
-py_class!(pub class memcachestore |py| {
-    data memcache: Arc<MemcacheStore>;
-
-    def __new__(_cls, config: config) -> PyResult<memcachestore> {
-        let config = config.get_cfg(py);
-        let memcache = Arc::new(MemcacheStore::new(&config).map_pyerr(py)?);
-        memcachestore::create_instance(py, memcache)
-    }
-});
-
-impl ExtractInnerRef for memcachestore {
-    type Inner = Arc<MemcacheStore>;
-
-    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
-        self.memcache(py)
-    }
-}
-
 // TODO(meyer): Make this a `BoxedRwStore` (and introduce such a concept). Will need to implement write
 // for FallbackStore.
 /// Construct a file ReadStore using the provided config, optionally falling back
@@ -1189,7 +1155,6 @@ fn make_filescmstore<'a>(
     path: Option<&'a Path>,
     config: &'a dyn Config,
     remote: Arc<PyHgIdRemoteStore>,
-    memcache: Option<Arc<MemcacheStore>>,
     edenapi_filestore: Option<Arc<EdenApiFileStore>>,
     suffix: Option<String>,
     correlator: Option<String>,
@@ -1210,11 +1175,6 @@ fn make_filescmstore<'a>(
         builder.local_path(path)
     } else {
         builder.no_local_store()
-    };
-
-    if let Some(memcache) = memcache {
-        filestore_builder = filestore_builder.memcache(memcache.clone());
-        builder = builder.memcachestore(memcache)
     };
 
     if let Some(ref suffix) = suffix {
@@ -1271,7 +1231,6 @@ py_class!(pub class filescmstore |py| {
         path: Option<PyPathBuf>,
         config: config,
         remote: pyremotestore,
-        memcache: Option<memcachestore>,
         edenapi: Option<edenapifilestore> = None,
         suffix: Option<String> = None,
         correlator: Option<String> = None
@@ -1280,10 +1239,9 @@ py_class!(pub class filescmstore |py| {
         let path = path.as_ref().map(|v| v.as_path());
         let config = config.get_cfg(py);
         let remote = remote.extract_inner(py);
-        let memcache = memcache.map(|v| v.extract_inner(py));
         let edenapi = edenapi.map(|v| v.extract_inner(py));
 
-        let (filestore, contentstore) = make_filescmstore(path, &config, remote, memcache, edenapi, suffix, correlator).map_pyerr(py)?;
+        let (filestore, contentstore) = make_filescmstore(path, &config, remote, edenapi, suffix, correlator).map_pyerr(py)?;
 
         filescmstore::create_instance(py, filestore, contentstore)
     }
@@ -1446,7 +1404,6 @@ fn make_treescmstore<'a>(
     path: Option<&'a Path>,
     config: &'a dyn Config,
     remote: Arc<PyHgIdRemoteStore>,
-    memcache: Option<Arc<MemcacheStore>>,
     edenapi_treestore: Option<Arc<EdenApiTreeStore>>,
     filestore: Option<Arc<FileStore>>,
     suffix: Option<String>,
@@ -1460,11 +1417,6 @@ fn make_treescmstore<'a>(
         builder.local_path(path)
     } else {
         builder.no_local_store()
-    };
-
-    if let Some(memcache) = memcache {
-        builder = builder.memcachestore(memcache.clone());
-        treestore_builder = treestore_builder.memcache(memcache);
     };
 
     if let Some(ref suffix) = suffix {
@@ -1532,7 +1484,6 @@ py_class!(pub class treescmstore |py| {
         path: Option<PyPathBuf>,
         config: config,
         remote: pyremotestore,
-        memcache: Option<memcachestore>,
         edenapi: Option<edenapitreestore> = None,
         filestore: Option<filescmstore> = None,
         suffix: Option<String> = None,
@@ -1542,11 +1493,10 @@ py_class!(pub class treescmstore |py| {
         let path = path.as_ref().map(|v| v.as_path());
         let config = config.get_cfg(py);
         let remote = remote.extract_inner(py);
-        let memcache = memcache.map(|v| v.extract_inner(py));
         let edenapi = edenapi.map(|v| v.extract_inner(py));
         let filestore = filestore.map(|v| v.extract_inner(py));
 
-        let (treestore, contentstore) = make_treescmstore(path, &config, remote, memcache, edenapi, filestore, suffix, correlator).map_pyerr(py)?;
+        let (treestore, contentstore) = make_treescmstore(path, &config, remote, edenapi, filestore, suffix, correlator).map_pyerr(py)?;
 
         treescmstore::create_instance(py, treestore, contentstore)
     }

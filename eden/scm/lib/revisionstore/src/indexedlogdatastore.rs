@@ -285,26 +285,6 @@ impl IndexedLogHgIdDataStore {
     }
 }
 
-impl From<crate::memcache::McData> for Entry {
-    fn from(v: crate::memcache::McData) -> Self {
-        Entry::new(v.key, v.data, v.metadata)
-    }
-}
-
-impl TryFrom<Entry> for crate::memcache::McData {
-    type Error = anyhow::Error;
-
-    fn try_from(mut v: Entry) -> Result<Self, Self::Error> {
-        let data = v.content()?;
-
-        Ok(crate::memcache::McData {
-            key: v.key,
-            data,
-            metadata: v.metadata,
-        })
-    }
-}
-
 // TODO(meyer): Remove these infallible conversions, replace with fallible or inherent in LazyFile.
 impl From<TreeEntry> for Entry {
     fn from(v: TreeEntry) -> Self {

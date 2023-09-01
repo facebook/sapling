@@ -997,7 +997,6 @@ class basetreemanifestlog:
                 self._repo.svfs.vfs.base,
                 self.ui._rcfg,
                 remotestore,
-                None,
                 edenapistore,
                 None,
                 "manifests",
@@ -1008,7 +1007,6 @@ class basetreemanifestlog:
                 self._repo.svfs.vfs.base,
                 self.ui._rcfg,
                 remotestore,
-                None,
                 None,
                 "manifests",
             )

@@ -598,7 +598,6 @@ class basetreemanifestlog:
                 self.ui._rcfg,
                 remotestore,
                 None,
-                None,
                 "manifests",
             )
         finally:

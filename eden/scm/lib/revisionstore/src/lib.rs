@@ -124,15 +124,12 @@
 
 mod contentstore;
 mod dataindex;
-#[cfg(all(fbcode_build, target_os = "linux"))]
-mod facebook;
 mod fanouttable;
 mod fetch_logger;
 mod historyindex;
 mod indexedloghistorystore;
 mod indexedlogutil;
 mod lfs;
-mod memcache;
 mod metadatastore;
 mod missing;
 mod redacted;
@@ -194,7 +191,6 @@ pub use crate::indexedloghistorystore::IndexedLogHgIdHistoryStore;
 pub use crate::indexedlogutil::StoreType;
 pub use crate::localstore::ExtStoredPolicy;
 pub use crate::localstore::LocalStore;
-pub use crate::memcache::MemcacheStore;
 pub use crate::metadatastore::MetadataStore;
 pub use crate::metadatastore::MetadataStoreBuilder;
 pub use crate::multiplexstore::MultiplexDeltaStore;
