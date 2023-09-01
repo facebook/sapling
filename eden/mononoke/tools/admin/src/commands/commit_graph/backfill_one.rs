@@ -9,13 +9,13 @@ use anyhow::Result;
 use changeset_fetcher::ChangesetFetcherArc;
 use clap::Args;
 use commit_graph::CommitGraphRef;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use futures_stats::TimedFutureExt;
 use smallvec::ToSmallVec;
 use vec1::vec1;
 
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 pub struct BackfillOneArgs {

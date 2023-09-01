@@ -12,11 +12,11 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarksRef;
 use clap::Args;
+use commit_id::print_commit_id;
+use commit_id::IdentityScheme;
 use context::CoreContext;
 
 use super::Repo;
-use crate::commit_id::print_commit_id;
-use crate::commit_id::IdentityScheme;
 
 #[derive(Args)]
 pub struct BookmarksGetArgs {

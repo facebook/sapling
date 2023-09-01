@@ -15,6 +15,7 @@ use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
+use commit_id::IdentityScheme;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::StreamExt;
@@ -22,8 +23,6 @@ use futures::stream::TryStreamExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::Timestamp;
-
-use crate::commit_id::IdentityScheme;
 
 pub trait Repo =
     BonsaiHgMappingRef + BonsaiGitMappingRef + BonsaiGlobalrevMappingRef + BonsaiSvnrevMappingRef;

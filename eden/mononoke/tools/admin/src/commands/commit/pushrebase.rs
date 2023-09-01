@@ -12,6 +12,7 @@ use anyhow::Result;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use clap::Args;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
@@ -21,7 +22,6 @@ use metaconfig_types::RepoConfigRef;
 use repo_blobstore::RepoBlobstoreRef;
 
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 pub struct CommitPushrebaseArgs {

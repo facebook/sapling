@@ -14,6 +14,7 @@ use blobstore::Loadable;
 use changeset_fetcher::ArcChangesetFetcher;
 use changeset_fetcher::ChangesetFetcherArc;
 use clap::Args;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use dag::render::Ancestor;
 use dag::render::GraphRowRenderer;
@@ -25,7 +26,6 @@ use mononoke_types::Generation;
 use repo_blobstore::RepoBlobstoreRef;
 
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 pub struct ChangelogGraphArgs {

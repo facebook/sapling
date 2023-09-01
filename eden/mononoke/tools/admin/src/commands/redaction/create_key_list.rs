@@ -22,6 +22,7 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use clap::ArgGroup;
 use clap::Args;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use fsnodes::RootFsnodeId;
 use futures::stream::TryStreamExt;
@@ -39,7 +40,6 @@ use repo_derived_data::RepoDerivedDataRef;
 
 use super::list::paths_for_content_keys;
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 #[clap(group(ArgGroup::new("files-input=file").args(&["files", "input_file"]).required(true)))]

@@ -15,10 +15,10 @@ use bookmarks::BookmarksRef;
 use bookmarks_movement::check_bookmark_sync_config;
 use bookmarks_movement::BookmarkKind;
 use clap::Args;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 pub struct BookmarksSetArgs {

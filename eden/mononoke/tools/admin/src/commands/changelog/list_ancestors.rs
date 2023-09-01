@@ -8,6 +8,7 @@
 use anyhow::Result;
 use changeset_fetcher::ChangesetFetcherArc;
 use clap::Args;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use futures::compat::Stream01CompatExt;
 use futures::StreamExt;
@@ -15,7 +16,6 @@ use futures::TryStreamExt;
 use revset::AncestorsNodeStream;
 
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 pub struct ChangelogListAncestorsArgs {

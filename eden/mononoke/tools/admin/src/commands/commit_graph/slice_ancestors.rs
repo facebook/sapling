@@ -9,6 +9,7 @@ use anyhow::Result;
 use clap::Args;
 use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures::stream;
@@ -16,7 +17,6 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 pub struct SliceAncestorsArgs {

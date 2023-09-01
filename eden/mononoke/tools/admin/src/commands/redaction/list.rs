@@ -12,6 +12,7 @@ use anyhow::Context;
 use anyhow::Result;
 use blobstore::Loadable;
 use clap::Args;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use fsnodes::RootFsnodeId;
 use futures::stream::TryStreamExt;
@@ -28,7 +29,6 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 pub struct RedactionListArgs {

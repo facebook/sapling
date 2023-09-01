@@ -29,6 +29,7 @@ use clap::Subcommand;
 use clap::ValueEnum;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use futures::future;
 use futures::stream;
@@ -41,8 +42,6 @@ use mononoke_types::ChangesetId;
 use phases::Phases;
 use phases::PhasesArc;
 use repo_identity::RepoIdentity;
-
-use crate::commit_id::parse_commit_id;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum Format {

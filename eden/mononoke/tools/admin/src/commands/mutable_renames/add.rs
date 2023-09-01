@@ -12,6 +12,7 @@ use anyhow::Context;
 use anyhow::Result;
 use changesets::ChangesetsRef;
 use clap::Args;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use futures::TryStreamExt;
 use manifest::Entry;
@@ -30,7 +31,6 @@ use unodes::RootUnodeManifestId;
 
 use super::Repo;
 use crate::commands::mutable_renames::copy_immutable;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 pub struct AddArgs {

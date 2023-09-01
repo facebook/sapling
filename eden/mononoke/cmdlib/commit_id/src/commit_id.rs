@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(trait_alias)]
+
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;

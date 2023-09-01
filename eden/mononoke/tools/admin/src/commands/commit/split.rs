@@ -13,6 +13,7 @@ use blobstore::Loadable;
 use changesets_creation::save_changesets;
 use clap::ArgGroup;
 use clap::Args;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -21,7 +22,6 @@ use mononoke_types::MPath;
 use repo_blobstore::RepoBlobstoreRef;
 
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 #[clap(group(ArgGroup::new("file-size-and-num").args(&["commit_file_size", "commit_file_num"]).multiple(true)))]

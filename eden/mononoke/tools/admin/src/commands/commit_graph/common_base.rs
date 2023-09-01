@@ -9,11 +9,11 @@ use anyhow::bail;
 use anyhow::Result;
 use clap::Args;
 use commit_graph::CommitGraphRef;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use futures::future::try_join_all;
 
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 pub struct CommonBaseArgs {

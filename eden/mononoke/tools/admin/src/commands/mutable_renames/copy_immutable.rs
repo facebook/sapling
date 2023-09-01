@@ -15,6 +15,7 @@ use anyhow::Result;
 use blobstore::Loadable;
 use changesets::ChangesetsRef;
 use clap::Args;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
@@ -29,7 +30,6 @@ use repo_derived_data::RepoDerivedDataRef;
 use unodes::RootUnodeManifestId;
 
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 pub struct CopyImmutableArgs {
