@@ -1875,6 +1875,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                     src_hex=_gethex(mctx),
                     repo=reponame,
                     manual_merge_files_count=len(files),
+                    manual_merge_files=",".join(files),
                 )
         finally:
             ms.commit()
