@@ -172,17 +172,13 @@ pub fn build_patterns(patterns: &[String], default_kind: PatternKind) -> Vec<Pat
         .collect()
 }
 
-pub fn split_pattern<'a>(pattern: &'a str, default_kind: PatternKind) -> (PatternKind, &'a str) {
-    match pattern.split_once(':') {
-        Some((k, p)) => {
-            if let Ok(kind) = PatternKind::from_str(k) {
-                (kind, p)
-            } else {
-                (default_kind, pattern)
-            }
-        }
-        None => (default_kind, pattern),
-    }
+pub fn split_pattern<'a>(pat: &'a str, default_kind: PatternKind) -> (PatternKind, &'a str) {
+    explicit_pattern_kind(pat).unwrap_or((default_kind, pat))
+}
+
+pub fn explicit_pattern_kind<'a>(pat: &'a str) -> Option<(PatternKind, &'a str)> {
+    pat.split_once(':')
+        .and_then(|(kind, pat)| Some((PatternKind::from_str(kind).ok()?, pat)))
 }
 
 // Normalize input patterns, also returning warnings for the user.

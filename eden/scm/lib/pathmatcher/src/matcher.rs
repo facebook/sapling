@@ -9,9 +9,11 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use types::RepoPathBuf;
 
+use crate::pattern::explicit_pattern_kind;
 use crate::pattern::normalize_patterns;
 use crate::pattern::Pattern;
 use crate::regex_matcher::SlowRegexMatcher;
@@ -36,6 +38,10 @@ pub fn cli_matcher(
     root: &Path,
     cwd: &Path,
 ) -> Result<HintedMatcher> {
+    // This expands relpath patterns as globs on Windows to emulate shell expansion.
+    let patterns = expand_globs(patterns, default_pattern_type)?;
+    let patterns = &patterns;
+
     cli_matcher_with_filesets(
         patterns,
         None,
@@ -50,7 +56,10 @@ pub fn cli_matcher(
     )
 }
 
-/// Create top level matcher from non-normalized CLI input.
+/// Create top level matcher from non-normalized CLI input given
+/// expanded filesets. The only intended external caller of this is
+/// Python, where some processing has already happende (e.g. glob
+/// expansion).
 pub fn cli_matcher_with_filesets(
     patterns: &[String],
     patterns_filesets: Option<&[RepoPathBuf]>,
@@ -111,6 +120,47 @@ pub fn cli_matcher_with_filesets(
         .include(&include_matcher)
         .exclude(&exclude_matcher)
         .with_warnings(all_warnings))
+}
+
+// "Manually" expand globs in relpath patterns on Windows.
+// This emulates non-Windows shell expansion.
+fn expand_globs(pats: &[String], default_pattern_type: PatternKind) -> Result<Vec<String>> {
+    if !cfg!(windows) || default_pattern_type != PatternKind::RelPath {
+        return Ok(pats.to_vec());
+    }
+
+    let mut expanded: Vec<String> = Vec::with_capacity(pats.len());
+    for pat in pats {
+        if explicit_pattern_kind(pat).is_some() {
+            // Don't expand paths with explicit "kind". This includes "relpath:*foo".
+            expanded.push(pat.clone());
+        } else {
+            match glob::glob(pat) {
+                Ok(paths) => {
+                    let mut globbed = paths
+                        .map(|p| {
+                            let p = p?;
+                            p.to_str()
+                                .map(|s| s.to_string())
+                                .ok_or_else(|| anyhow!("invalid file path: {}", p.display()))
+                        })
+                        // Propagate permission errors.
+                        .collect::<Result<Vec<_>>>()?;
+                    if globbed.is_empty() {
+                        // Glob didn't match any files - keep original pattern. AFAIK this serves two purposes:
+                        //   1. Avoids "pats" becoming empty and accidentally matching everything.
+                        //   2. Keeps "pat" in list of exact files so user will see warning "{pat}: no such file".
+                        expanded.push(pat.clone());
+                    } else {
+                        expanded.append(&mut globbed);
+                    }
+                }
+                // Invalid glob pattern - assume it wasn't a glob.
+                Err(_) => expanded.push(pat.clone()),
+            }
+        }
+    }
+    Ok(expanded)
 }
 
 /// Build matcher from normalized patterns.
@@ -405,7 +455,7 @@ mod tests {
     }
 
     #[test]
-    fn test_pcre_compat() -> Result<()> {
+    fn test_fancy_regex_compat() -> Result<()> {
         let m = cli_matcher(
             &["re:(?<!foo)bar".to_string()],
             &[],
@@ -423,6 +473,54 @@ mod tests {
             m.warnings(),
             &["fancy regexes are deprecated and may stop working".to_string()]
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_expand_globs() -> Result<()> {
+        let dir = tempfile::TempDir::new()?;
+
+        let foo1 = dir.path().join("foo1");
+        std::fs::write(&foo1, "")?;
+
+        let foo2 = dir.path().join("foo2");
+        std::fs::write(&foo2, "")?;
+
+        let foo_glob = dir
+            .path()
+            .join("f*")
+            .into_os_string()
+            .into_string()
+            .unwrap();
+
+        let pats = &[
+            format!("relpath:{}", foo_glob),
+            "no".to_string(),
+            foo_glob.clone(),
+        ];
+
+        let got = expand_globs(pats, PatternKind::RelPath)?;
+
+        if cfg!(windows) {
+            assert_eq!(
+                got,
+                vec![
+                    // Not expanded - has explicit kind.
+                    format!("relpath:{}", foo_glob),
+                    // Not expanded - doesn't match any files.
+                    "no".to_string(),
+                    // Expanded into file names.
+                    foo1.into_os_string().into_string().unwrap(),
+                    foo2.into_os_string().into_string().unwrap(),
+                ]
+            );
+        } else {
+            assert_eq!(got, pats.to_vec());
+        }
+
+        let got = expand_globs(pats, PatternKind::Glob)?;
+        assert_eq!(got, pats.to_vec());
 
         Ok(())
     }
