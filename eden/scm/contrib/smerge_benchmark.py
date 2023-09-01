@@ -115,8 +115,6 @@ class BenchStats:
     changed_files: int = 0
     unresolved_files: int = 0
     unmatched_files: int = 0
-    octopus_merges: int = 0
-    criss_cross_merges: int = 0
 
 
 @command(
@@ -190,44 +188,13 @@ def sresolve(ui, repo, *args, **opts):
 
 @command("smerge_bench", commands.dryrunopts)
 def smerge_bench(ui, repo, **opts):
-    merge_commits = repo.dageval(lambda dag: dag.merges(dag.all()))
-    ui.write(f"len(merge_commits)={len(merge_commits)}\n")
-
+    merge_ctxs = get_merge_ctxs_from_repo(ui, repo)
     for m3merger in [SmartMerge3Text, Merge3Text]:
         ui.write(f"\n============== {m3merger.__name__} ==============\n")
         start = time.time()
         bench_stats = BenchStats()
-        for i, merge_commit in enumerate(merge_commits, start=1):
-            parents = repo.dageval(lambda: parentnames(merge_commit))
 
-            if len(parents) != 2:
-                # skip octopus merge
-                #    a
-                #  / | \
-                # b  c  d
-                #  \ | /
-                #    e
-                bench_stats.octopus_merges += 1
-                continue
-
-            p1, p2 = parents
-            gcas = repo.dageval(lambda: gcaall([p1, p2]))
-            if len(gcas) != 1:
-                # skip criss cross merge
-                #    a
-                #   / \
-                #  b1  c1
-                #  |\ /|
-                #  | X |
-                #  |/ \|
-                #  b2  c2
-                bench_stats.criss_cross_merges += 1
-                continue
-
-            basectx = repo[gcas[0]]
-            p1ctx, p2ctx = repo[p1], repo[p2]
-            mergectx = repo[merge_commit]
-
+        for i, (p1ctx, p2ctx, basectx, mergectx) in enumerate(merge_ctxs, start=1):
             for filepath in mergectx.files():
                 if all(filepath in ctx for ctx in [basectx, p1ctx, p2ctx]):
                     merge_file(
@@ -246,6 +213,50 @@ def smerge_bench(ui, repo, **opts):
 
         ui.write(f"\nSummary: {bench_stats}\n")
         ui.write(f"Execution time: {time.time() - start:.2f} seconds\n")
+
+
+def get_merge_ctxs_from_repo(ui, repo):
+    ui.write("generating merge data ...\n")
+    merge_commits = repo.dageval(lambda dag: dag.merges(dag.all()))
+    octopus_merges, criss_cross_merges = 0, 0
+
+    ctxs = []
+    for i, merge_commit in enumerate(merge_commits, start=1):
+        parents = repo.dageval(lambda: parentnames(merge_commit))
+        if len(parents) != 2:
+            # skip octopus merge
+            #    a
+            #  / | \
+            # b  c  d
+            #  \ | /
+            #    e
+            octopus_merges += 1
+            continue
+
+        p1, p2 = parents
+        gcas = repo.dageval(lambda: gcaall([p1, p2]))
+        if len(gcas) != 1:
+            # skip criss cross merge
+            #    a
+            #   / \
+            #  b1  c1
+            #  |\ /|
+            #  | X |
+            #  |/ \|
+            #  b2  c2
+            criss_cross_merges += 1
+            continue
+
+        basectx = repo[gcas[0]]
+        p1ctx, p2ctx = repo[p1], repo[p2]
+        mergectx = repo[merge_commit]
+        ctxs.append((p1ctx, p2ctx, basectx, mergectx))
+
+    ui.write(
+        f"len(merge_ctxs)={len(ctxs)}, octopus_merges={octopus_merges}, "
+        f"criss_cross_merges={criss_cross_merges}\n"
+    )
+    return ctxs
 
 
 def merge_file(
