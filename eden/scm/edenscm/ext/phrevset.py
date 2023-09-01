@@ -240,7 +240,9 @@ def diffidtonode(repo, diffid):
         if diffreponame in repo.ui.configlist("phrevset", "aliases"):
             diffreponame = localreponame
 
-    if not util.istest() and (diffreponame != localreponame):
+    if not util.istest() and (
+        _normalize_slash(diffreponame) != _normalize_slash(localreponame)
+    ):
         raise error.Abort(
             "D%s is for repo '%s', not this repo ('%s')"
             % (diffid, diffreponame, localreponame)
@@ -394,3 +396,7 @@ def _get_callsigns(repo) -> List[str]:
         except Exception:
             pass
     return callsigns
+
+
+def _normalize_slash(name):
+    return (name or "").rsplit("/", 1)[-1]
