@@ -64,7 +64,7 @@ Examine some of the data
           hg_extra: {},
           git_extra_headers: None,
           file_changes: {
-              MPath("C"): Change(
+              NonRootMPath("C"): Change(
                   TrackedFileChange {
                       inner: BasicFileChange {
                           content_id: ContentId(
@@ -76,8 +76,8 @@ Examine some of the data
                       copy_from: None,
                   },
               ),
-              MPath("Z"): Deletion,
-              MPath("file"): Change(
+              NonRootMPath("Z"): Deletion,
+              NonRootMPath("file"): Change(
                   TrackedFileChange {
                       inner: BasicFileChange {
                           content_id: ContentId(

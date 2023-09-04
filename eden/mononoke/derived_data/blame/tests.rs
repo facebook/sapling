@@ -23,7 +23,7 @@ use metaconfig_types::BlameVersion;
 use mononoke_types::blame_v2::BlameRejected;
 use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use test_repo_factory::TestRepoFactory;
@@ -208,7 +208,8 @@ async fn test_blame_version(fb: FacebookInit, version: BlameVersion) -> Result<(
     .await;
 
     let mut c1_changes = store_files(ctx, btreemap! {"f0" => Some(F0[1])}, repo).await;
-    let (f2_path, f2_change) = store_rename(ctx, (MPath::new("_f2")?, c0), "f2", F2[1], repo).await;
+    let (f2_path, f2_change) =
+        store_rename(ctx, (NonRootMPath::new("_f2")?, c0), "f2", F2[1], repo).await;
     c1_changes.insert(f2_path, f2_change);
     let c1 = create_commit(ctx.clone(), repo, vec![c0], c1_changes).await;
 
@@ -262,13 +263,13 @@ async fn test_blame_version(fb: FacebookInit, version: BlameVersion) -> Result<(
         c4 => "c4",
     };
 
-    let (blame, _) = fetch_blame_v2(ctx, repo, c4, MPath::new("f0")?).await?;
+    let (blame, _) = fetch_blame_v2(ctx, repo, c4, NonRootMPath::new("f0")?).await?;
     assert_eq!(annotate(F0[4], blame, &names)?, F0_AT_C4);
 
-    let (blame, _) = fetch_blame_v2(ctx, repo, c4, MPath::new("f1")?).await?;
+    let (blame, _) = fetch_blame_v2(ctx, repo, c4, NonRootMPath::new("f1")?).await?;
     assert_eq!(annotate(F1[1], blame, &names)?, F1_AT_C4);
 
-    let (blame, _) = fetch_blame_v2(ctx, repo, c4, MPath::new("f2")?).await?;
+    let (blame, _) = fetch_blame_v2(ctx, repo, c4, NonRootMPath::new("f2")?).await?;
     assert_eq!(annotate(F2[3], blame, &names)?, F2_AT_C4);
 
     Ok(())
@@ -295,7 +296,7 @@ async fn test_blame_size_rejected_version(
 
     // Default file size is 10MiB, so blame should be computed
     // without problems.
-    let (blame, _) = fetch_blame_v2(ctx, repo, c1, MPath::new(file1)?).await?;
+    let (blame, _) = fetch_blame_v2(ctx, repo, c1, NonRootMPath::new(file1)?).await?;
     let _ = blame.ranges()?;
 
     let repo: TestRepo = TestRepoFactory::new(fb)?
@@ -321,7 +322,7 @@ async fn test_blame_size_rejected_version(
         .await?;
 
     // This repo has a decreased limit, so derivation should fail now
-    let (blame, _) = fetch_blame_v2(ctx, &repo, c2, MPath::new(file2)?).await?;
+    let (blame, _) = fetch_blame_v2(ctx, &repo, c2, NonRootMPath::new(file2)?).await?;
 
     match blame.ranges() {
         Err(BlameRejected::TooBig) => {}
@@ -360,7 +361,7 @@ async fn test_blame_copy_source(fb: FacebookInit) -> Result<(), Error> {
         .commit()
         .await?;
 
-    let (blame, _) = fetch_blame_v2(ctx, repo, c2, MPath::new("file1")?).await?;
+    let (blame, _) = fetch_blame_v2(ctx, repo, c2, NonRootMPath::new("file1")?).await?;
     let lines = blame
         .lines()?
         .map(|line| (line.changeset_id, line.path.to_string(), line.origin_offset))

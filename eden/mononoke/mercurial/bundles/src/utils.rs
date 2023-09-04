@@ -21,7 +21,7 @@ use byteorder::ByteOrder;
 use bytes_old::Bytes;
 use bytes_old::BytesMut;
 use mercurial_types::HgNodeHash;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 
 use crate::errors::ErrorKind;
 
@@ -50,7 +50,7 @@ pub trait BytesExt {
     fn drain_u64(&mut self) -> u64;
     fn drain_i32(&mut self) -> i32;
     fn drain_str(&mut self, len: usize) -> Result<String>;
-    fn drain_path(&mut self, len: usize) -> Result<MPath>;
+    fn drain_path(&mut self, len: usize) -> Result<NonRootMPath>;
     fn drain_node(&mut self) -> HgNodeHash;
     fn peek_u16(&self) -> u16;
     fn peek_u32(&self) -> u32;
@@ -94,8 +94,8 @@ where
     }
 
     #[inline]
-    fn drain_path(&mut self, len: usize) -> Result<MPath> {
-        MPath::new(self.split_to(len))
+    fn drain_path(&mut self, len: usize) -> Result<NonRootMPath> {
+        NonRootMPath::new(self.split_to(len))
             .context("invalid path")
             .map_err(Error::from)
     }

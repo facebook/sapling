@@ -32,7 +32,7 @@ use mercurial_types::HgBlobNode;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mononoke_types::DateTime;
 use repo_blobstore::RepoBlobstoreArc;
@@ -229,8 +229,8 @@ pub fn string_to_nodehash(hash: &str) -> HgNodeHash {
     HgNodeHash::from_ascii_str(hash.as_ascii_str().unwrap()).unwrap()
 }
 
-pub fn to_mpath(path: RepoPath) -> Result<MPath, Error> {
-    let bad_mpath = Error::msg("RepoPath did not convert to MPath");
+pub fn to_mpath(path: RepoPath) -> Result<NonRootMPath, Error> {
+    let bad_mpath = Error::msg("RepoPath did not convert to NonRootMPath");
     path.into_mpath().ok_or(bad_mpath)
 }
 

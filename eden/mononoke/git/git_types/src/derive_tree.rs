@@ -28,7 +28,7 @@ use futures::stream::TryStreamExt;
 use manifest::derive_manifest;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
 use crate::errors::MononokeGitError;
 use crate::upload_git_object;
@@ -113,7 +113,7 @@ async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
     ctx: &CoreContext,
     blobstore: B,
     parents: Vec<TreeHandle>,
-    changes: Vec<(MPath, Option<BlobHandle>)>,
+    changes: Vec<(NonRootMPath, Option<BlobHandle>)>,
 ) -> Result<TreeHandle, Error> {
     let handle = derive_manifest(
         ctx.clone(),
@@ -181,7 +181,7 @@ pub async fn get_file_changes<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: &CoreContext,
     bcs: BonsaiChangeset,
-) -> Result<Vec<(MPath, Option<BlobHandle>)>, Error> {
+) -> Result<Vec<(NonRootMPath, Option<BlobHandle>)>, Error> {
     bcs.into_mut()
         .file_changes
         .into_iter()

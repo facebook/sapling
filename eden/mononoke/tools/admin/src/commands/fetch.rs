@@ -29,7 +29,7 @@ use mercurial_types::HgChangesetId;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 
@@ -154,7 +154,7 @@ async fn display_hg_entry(
     let entry = if path.is_empty() {
         Entry::Tree(hg_cs.manifestid())
     } else {
-        let mpath = MPath::new(path).with_context(|| format!("Invalid path: {}", path))?;
+        let mpath = NonRootMPath::new(path).with_context(|| format!("Invalid path: {}", path))?;
         hg_cs
             .manifestid()
             .find_entry(ctx.clone(), blobstore.clone(), Some(mpath))

@@ -41,9 +41,9 @@ use mononoke_types::unode::UnodeEntry;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::NonRootMPath;
 use multimap::MultiMap;
 use slog::debug;
 use tokio::sync::Mutex;
@@ -605,7 +605,7 @@ pub(crate) async fn get_changes_list(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
-) -> Result<Vec<(MPath, PathChange)>, Error> {
+) -> Result<Vec<(NonRootMPath, PathChange)>, Error> {
     // Get file/directory changes between the current changeset and its parents
     //
     // get unode manifests first
@@ -653,7 +653,7 @@ async fn diff_against_parents(
     derivation_ctx: &DerivationContext,
     unode: ManifestUnodeId,
     parents: Vec<ManifestUnodeId>,
-) -> Result<Vec<(MPath, PathChange)>, Error> {
+) -> Result<Vec<(NonRootMPath, PathChange)>, Error> {
     let blobstore = derivation_ctx.blobstore();
     let parent_diffs_fut = parents.into_iter().map({
         cloned!(ctx, blobstore, unode);

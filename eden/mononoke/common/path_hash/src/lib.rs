@@ -12,7 +12,7 @@ use std::hash::Hash;
 use abomonation_derive::Abomonation;
 use mononoke_types::hash;
 use mononoke_types::path_bytes_from_mpath;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use sql::mysql;
 use sql::mysql_async::prelude::ConvIr;
@@ -169,7 +169,7 @@ impl PathHash {
         }
     }
 
-    pub fn from_path_and_is_tree(path: Option<&MPath>, is_tree: bool) -> Self {
+    pub fn from_path_and_is_tree(path: Option<&NonRootMPath>, is_tree: bool) -> Self {
         let path_bytes = path_bytes_from_mpath(path);
         let hash = PathHashBytes::new(&path_bytes);
 

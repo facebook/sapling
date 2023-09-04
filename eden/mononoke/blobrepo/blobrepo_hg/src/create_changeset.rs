@@ -41,7 +41,7 @@ use mercurial_types::RepoPath;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -129,7 +129,7 @@ pub fn create_bonsai_changeset_hook(
 pub struct CreateChangeset {
     /// This should always be provided, keeping it an Option for tests
     pub expected_nodeid: Option<HgNodeHash>,
-    pub expected_files: Option<Vec<MPath>>,
+    pub expected_files: Option<Vec<NonRootMPath>>,
     pub p1: Option<ChangesetHandle>,
     pub p2: Option<ChangesetHandle>,
     // root_manifest can be None f.e. when commit removes all the content of the repo

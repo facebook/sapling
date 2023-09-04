@@ -38,7 +38,7 @@ use futures_stats::FutureStats;
 use futures_stats::TimedFutureExt;
 use futures_stats::TimedTryFutureExt;
 use mononoke_types::ContentId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use slog::trace;
 use slog::Logger;
@@ -74,7 +74,7 @@ pub struct ContentBlobMeta {
     pub id: ContentId,
     pub size: u64,
     // The copy info will later be stored as part of the commit.
-    pub copy_from: Option<(MPath, HgFileNodeId)>,
+    pub copy_from: Option<(NonRootMPath, HgFileNodeId)>,
 }
 
 /// Node hash handling for upload entries
@@ -375,7 +375,7 @@ impl UploadHgFileContents {
         ctx: CoreContext,
         blobstore: &Arc<dyn Blobstore>,
         content_id: ContentId,
-        copy_from: Option<(MPath, HgFileNodeId)>,
+        copy_from: Option<(NonRootMPath, HgFileNodeId)>,
     ) -> impl Future<Output = Result<Bytes, Error>> {
         cloned!(blobstore);
 
@@ -448,7 +448,7 @@ impl UploadHgFileEntry {
         self,
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
-        path: Option<&MPath>, // This is used for logging
+        path: Option<&NonRootMPath>, // This is used for logging
     ) -> Result<HgFileNodeId, Error> {
         STATS::upload_hg_file_entry.add_value(1);
         let UploadHgFileEntry {
@@ -522,7 +522,7 @@ impl UploadHgFileEntry {
         self,
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
-        path: MPath,
+        path: NonRootMPath,
     ) -> Result<(HgFileNodeId, RepoPath), Error> {
         let filenode_id = self.upload(ctx, blobstore.clone(), Some(&path)).await?;
         Ok((filenode_id, RepoPath::FilePath(path)))
@@ -532,7 +532,7 @@ impl UploadHgFileEntry {
         self,
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
-        path: MPath,
+        path: NonRootMPath,
     ) -> Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error> {
         let filenode_id = self.upload(ctx, blobstore.clone(), Some(&path)).await?;
         Ok((Entry::Leaf(filenode_id), RepoPath::FilePath(path)))
@@ -540,7 +540,7 @@ impl UploadHgFileEntry {
 
     fn log_stats(
         logger: Logger,
-        path: Option<&MPath>,
+        path: Option<&NonRootMPath>,
         nodeid: HgFileNodeId,
         phase: &str,
         stats: FutureStats,

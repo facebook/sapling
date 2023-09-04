@@ -21,8 +21,8 @@ use manifest::PathOrPrefix;
 use mononoke_types::mpath_element_iter;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
-use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::NonRootMPath;
 use mutable_renames::MutableRenameEntry;
 use mutable_renames::MutableRenamesRef;
 use repo_blobstore::RepoBlobstoreArc;
@@ -71,9 +71,9 @@ pub struct AddArgs {
 
 pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()> {
     let src_cs_id = parse_commit_id(ctx, repo, &add_args.src_commit_id).await?;
-    let src_path = MPath::new_opt(&add_args.src_path)?;
+    let src_path = NonRootMPath::new_opt(&add_args.src_path)?;
     let dst_cs_id = parse_commit_id(ctx, repo, &add_args.dst_commit_id).await?;
-    let dst_path = MPath::new_opt(&add_args.dst_path)?;
+    let dst_path = NonRootMPath::new_opt(&add_args.dst_path)?;
 
     if (src_path.is_none() || dst_path.is_none()) && !add_args.no_preserve_root {
         bail!(concat!(
@@ -108,7 +108,7 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
         .with_context(|| {
             format!(
                 "Cannot load source manifest entry, does `{}` exist?",
-                MPath::display_opt(src_path.as_ref())
+                NonRootMPath::display_opt(src_path.as_ref())
             )
         })?;
 
@@ -121,7 +121,7 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
                 .with_context(|| {
                     format!(
                         "Cannot load destination manifest entry, does `{}` exist?",
-                        MPath::display_opt(dst_path.as_ref())
+                        NonRootMPath::display_opt(dst_path.as_ref())
                     )
                 })?;
             Ok(vec![create_mutable_rename(
@@ -157,7 +157,7 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
                 }
                 (_, None) => bail!(
                     "Cannot load destination manifest entry, does `{}` exist?",
-                    MPath::display_opt(dst_path.as_ref())
+                    NonRootMPath::display_opt(dst_path.as_ref())
                 ),
             };
 
@@ -165,9 +165,9 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
                 .into_iter()
                 .filter_map(|(src_entry_path, src_entry)| {
                     let dst_entry_path =
-                        MPath::join_opt(dst_path.as_ref(), mpath_element_iter(&src_entry_path));
+                        NonRootMPath::join_opt(dst_path.as_ref(), mpath_element_iter(&src_entry_path));
                     let src_entry_path =
-                        MPath::join_opt(src_path.as_ref(), mpath_element_iter(&src_entry_path));
+                        NonRootMPath::join_opt(src_path.as_ref(), mpath_element_iter(&src_entry_path));
                     let dst_entry = dst_entries.remove(&dst_entry_path);
 
                     if let Some(dst_entry) = dst_entry {
@@ -175,8 +175,8 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
                     } else {
                         eprintln!(
                             "Source path `{}` has no matching destination `{}` - no entry created.",
-                            MPath::display_opt(src_entry_path.as_ref()),
-                            MPath::display_opt(dst_entry_path.as_ref())
+                            NonRootMPath::display_opt(src_entry_path.as_ref()),
+                            NonRootMPath::display_opt(dst_entry_path.as_ref())
                         );
                         None
                     }
@@ -195,18 +195,18 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
 
 fn create_mutable_rename(
     src_cs_id: ChangesetId,
-    src_path: Option<MPath>,
+    src_path: Option<NonRootMPath>,
     src_entry: Entry<ManifestUnodeId, FileUnodeId>,
     dst_cs_id: ChangesetId,
-    dst_path: Option<MPath>,
+    dst_path: Option<NonRootMPath>,
     dst_entry: Entry<ManifestUnodeId, FileUnodeId>,
 ) -> Result<Result<MutableRenameEntry>> {
     if dst_entry.is_tree() != src_entry.is_tree() {
         bail!(
             "Source `{}` is a {}, destination `{}` is a {} - no entry created.",
-            MPath::display_opt(src_path.as_ref()),
+            NonRootMPath::display_opt(src_path.as_ref()),
             entry_to_type(&src_entry),
-            MPath::display_opt(dst_path.as_ref()),
+            NonRootMPath::display_opt(dst_path.as_ref()),
             entry_to_type(&dst_entry)
         );
     }
@@ -214,9 +214,9 @@ fn create_mutable_rename(
     println!(
         "Creating entry for source {} `{}` to destination {} `{}`",
         entry_to_type(&src_entry),
-        MPath::display_opt(src_path.as_ref()),
+        NonRootMPath::display_opt(src_path.as_ref()),
         entry_to_type(&dst_entry),
-        MPath::display_opt(dst_path.as_ref())
+        NonRootMPath::display_opt(dst_path.as_ref())
     );
 
     Ok(MutableRenameEntry::new(

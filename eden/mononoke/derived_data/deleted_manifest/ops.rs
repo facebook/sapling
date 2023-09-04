@@ -31,8 +31,8 @@ use maplit::hashset;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
-use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use unodes::RootUnodeManifestId;
@@ -70,7 +70,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
         ctx: &'a CoreContext,
         repo: impl Repo + 'a,
         cs_id: ChangesetId,
-        path: &'a Option<MPath>,
+        path: &'a Option<NonRootMPath>,
     ) -> Result<Option<PathState>, Error> {
         // if unode exists return entry
         let unode_entry = derive_unode_entry(ctx, repo, cs_id.clone(), path).await?;
@@ -117,7 +117,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
     async fn resolve_path_state_unfold(
         ctx: CoreContext,
         repo: impl Repo,
-        path: Option<MPath>,
+        path: Option<NonRootMPath>,
         mut queue: VecDeque<ChangesetId>,
         mut visited: HashSet<ChangesetId>,
     ) -> Result<
@@ -144,7 +144,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
                 let linknode = mf.linknode().ok_or_else(|| {
                 let message = format!(
                     "there is no unode for the path '{}' and changeset {:?}, but it exists as a live entry in deleted manifest",
-                    MPath::display_opt(path.as_ref()),
+                    NonRootMPath::display_opt(path.as_ref()),
                     cs_id,
                 );
                 Error::msg(message)
@@ -175,7 +175,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
                         // the linknode must have a parent, otherwise the path couldn't be deleted
                         let message = format!(
                             "the path '{}' was deleted in {:?}, but the changeset doesn't have parents",
-                            MPath::display_opt(path.as_ref()),
+                            NonRootMPath::display_opt(path.as_ref()),
                             linknode,
                         );
                         Err(Error::msg(message))
@@ -188,7 +188,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
                             // the unode entry must exist
                             let message = format!(
                                 "the path '{}' was deleted in {:?}, but the parent changeset doesn't have a unode",
-                                MPath::display_opt(path.as_ref()),
+                                NonRootMPath::display_opt(path.as_ref()),
                                 linknode,
                             );
                             Err(Error::msg(message))
@@ -228,7 +228,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
         paths_or_prefixes: impl IntoIterator<Item = impl Into<PathOrPrefix>>,
-    ) -> BoxStream<'a, Result<(Option<MPath>, Self::Id), Error>> {
+    ) -> BoxStream<'a, Result<(Option<NonRootMPath>, Self::Id), Error>> {
         let root_id = self.id().clone();
         enum Pattern {
             Path,
@@ -250,7 +250,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
         (async_stream::stream! {
             let ctx = ctx.borrow();
             let blobstore = &blobstore;
-            let s: BoxStream<'_, Result<(Option<MPath>, Self::Id), Error>> = bounded_traversal_stream(
+            let s: BoxStream<'_, Result<(Option<NonRootMPath>, Self::Id), Error>> = bounded_traversal_stream(
                 256,
                 // starting point
                 Some((None, Selector::Selector(path_tree), root_id)),
@@ -267,7 +267,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
                             Selector::Recursive => {
                                 // collect subentries to recurse into
                                 let recurse = mf.into_subentries(ctx, blobstore).map_ok(|(name, mf_id)| {
-                                    let next_path = MPath::join_opt_element(path.as_ref(), &name);
+                                    let next_path = NonRootMPath::join_opt_element(path.as_ref(), &name);
                                     (Some(next_path), Selector::Recursive, mf_id)
                                 }).try_collect::<Vec<_>>().await?;
 
@@ -280,7 +280,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
                                     Some(Pattern::Prefix) => {
                                         // collect subentries to recurse into
                                         let recurse = mf.into_subentries(ctx, blobstore).map_ok(|(name, mf_id)| {
-                                            let next_path = MPath::join_opt_element(path.as_ref(), &name);
+                                            let next_path = NonRootMPath::join_opt_element(path.as_ref(), &name);
                                             (Some(next_path), Selector::Recursive, mf_id)
                                         }).try_collect::<Vec<_>>().await?;
 
@@ -296,7 +296,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
                                         for (name, tree) in subentries {
                                             if let Some(mf_id) = mf.lookup(ctx, blobstore, &name).await? {
                                                 let next_path =
-                                                    MPath::join_opt_element(path.as_ref(), &name);
+                                                    NonRootMPath::join_opt_element(path.as_ref(), &name);
                                                 recurse.push((
                                                     Some(next_path),
                                                     Selector::Selector(tree),
@@ -335,7 +335,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
         &self,
         ctx: &CoreContext,
         blobstore: &impl Blobstore,
-        path: Option<MPath>,
+        path: Option<NonRootMPath>,
     ) -> Result<Option<Self::Id>, Error> {
         let s = self.find_entries(ctx, blobstore, vec![PathOrPrefix::Path(path)]);
         pin_mut!(s);
@@ -351,7 +351,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
         &self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
-    ) -> BoxStream<'a, Result<(Option<MPath>, Self::Id), Error>> {
+    ) -> BoxStream<'a, Result<(Option<NonRootMPath>, Self::Id), Error>> {
         let root_id = self.id().clone();
         (async_stream::stream! {
             let ctx = ctx.borrow();
@@ -367,7 +367,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
                     let recurse_subentries = manifest
                         .into_subentries(ctx, blobstore)
                         .map_ok(|(name, mf_id)| {
-                            let full_path = MPath::join_opt_element(path.as_ref(), &name);
+                            let full_path = NonRootMPath::join_opt_element(path.as_ref(), &name);
                             (Some(full_path), mf_id)
                         })
                         .try_collect::<Vec<_>>().await?;
@@ -392,7 +392,7 @@ async fn derive_unode_entry(
     ctx: &CoreContext,
     repo: impl RepoDerivedDataRef + RepoBlobstoreArc,
     cs_id: ChangesetId,
-    path: &Option<MPath>,
+    path: &Option<NonRootMPath>,
 ) -> Result<Option<UnodeEntry>, Error> {
     let root_unode_mf_id = repo
         .repo_derived_data()

@@ -9,7 +9,7 @@ use anyhow::Result;
 use clap::Args;
 use commit_id::parse_commit_id;
 use context::CoreContext;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mutable_renames::MutableRenamesRef;
 
 use super::Repo;
@@ -34,7 +34,7 @@ pub struct GetArgs {
 pub async fn get(ctx: &CoreContext, repo: &Repo, get_args: GetArgs) -> Result<()> {
     let target_commit = parse_commit_id(ctx, repo, &get_args.commit_id).await?;
 
-    let mpath = MPath::new_opt(&get_args.path)?;
+    let mpath = NonRootMPath::new_opt(&get_args.path)?;
 
     let maybe_entry = if get_args.bypass_cache {
         repo.mutable_renames()

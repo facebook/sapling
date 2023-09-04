@@ -23,7 +23,7 @@ use manifest::Entry;
 use manifest::ManifestOps;
 use manifest::PathOrPrefix;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::info;
 use slog::Logger;
@@ -62,7 +62,10 @@ pub async fn subcommand_fsnodes<'a>(
     match sub_matches.subcommand() {
         (COMMAND_TREE, Some(matches)) => {
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
-            let path = matches.value_of(ARG_PATH).map(MPath::new).transpose()?;
+            let path = matches
+                .value_of(ARG_PATH)
+                .map(NonRootMPath::new)
+                .transpose()?;
 
             let csid = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
             subcommand_tree(&ctx, &repo, csid, path).await?;
@@ -76,7 +79,7 @@ async fn subcommand_tree(
     ctx: &CoreContext,
     repo: &BlobRepo,
     csid: ChangesetId,
-    path: Option<MPath>,
+    path: Option<NonRootMPath>,
 ) -> Result<(), Error> {
     let root = RootFsnodeId::derive(ctx, repo, csid).await?;
 
@@ -95,7 +98,7 @@ async fn subcommand_tree(
             Entry::Leaf(file) => {
                 println!(
                     "{}\t{}\t{}\t{}",
-                    MPath::display_opt(path.as_ref()),
+                    NonRootMPath::display_opt(path.as_ref()),
                     file.content_id(),
                     file.file_type(),
                     file.size(),

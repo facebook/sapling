@@ -19,8 +19,8 @@ use context::CoreContext;
 use futures::Future;
 use futures::FutureExt;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 
 use crate::Entry;
 use crate::LeafInfo;
@@ -30,7 +30,7 @@ use crate::TreeInfo;
 
 pub struct ManifestChanges<Leaf> {
     pub cs_id: ChangesetId,
-    pub changes: Vec<(MPath, Option<Leaf>)>,
+    pub changes: Vec<(NonRootMPath, Option<Leaf>)>,
 }
 
 // Function that can derive manifests for a "simple" stack of commits. But what does "simple" mean?
@@ -163,7 +163,7 @@ where
         }
 
         struct UnfoldState<TreeId, LeafId, Leaf> {
-            path: Option<MPath>,
+            path: Option<NonRootMPath>,
             name: Option<MPathElement>,
             parent: Option<Entry<TreeId, LeafId>>,
             path_tree: PathTree<Vec<(ChangesetId, Leaf)>>,
@@ -171,18 +171,18 @@ where
 
         enum FoldState<TreeId, LeafId, Leaf> {
             Reuse(
-                Option<MPath>,
+                Option<NonRootMPath>,
                 Option<MPathElement>,
                 Option<Entry<TreeId, LeafId>>,
             ),
             CreateLeaves(
-                Option<MPath>,
+                Option<NonRootMPath>,
                 MPathElement,
                 Option<Entry<TreeId, LeafId>>,
                 Vec<Leaf>,
             ),
             CreateTrees(
-                Option<MPath>,
+                Option<NonRootMPath>,
                 Option<MPathElement>,
                 Option<Entry<TreeId, LeafId>>,
                 // We might have a single file deletion, this field represents it
@@ -259,7 +259,7 @@ where
                                 for (name, entry) in mf.list() {
                                     let subentry =
                                         deps.entry(name.clone()).or_insert_with(|| UnfoldState {
-                                            path: Some(MPath::join_opt_element(path.as_ref(), &name)),
+                                            path: Some(NonRootMPath::join_opt_element(path.as_ref(), &name)),
                                             name: Some(name),
                                             parent: Default::default(),
                                             path_tree: Default::default(),
@@ -271,7 +271,7 @@ where
                             for (name, path_tree) in subentries {
                                 let subentry =
                                     deps.entry(name.clone()).or_insert_with(|| UnfoldState {
-                                        path: Some(MPath::join_opt_element(path.as_ref(), &name)),
+                                        path: Some(NonRootMPath::join_opt_element(path.as_ref(), &name)),
                                         name: Some(name),
                                         parent: Default::default(),
                                         path_tree: Default::default(),
@@ -393,7 +393,7 @@ where
 
     async fn create_leaves(
         ctx: &CoreContext,
-        path: MPath,
+        path: NonRootMPath,
         parent: Option<Entry<TreeId, IntermediateLeafId>>,
         changes: Vec<(ChangesetId, Option<Leaf>)>,
         create_leaf: Arc<L>,
@@ -470,7 +470,7 @@ where
     }
 
     async fn create_trees(
-        path: Option<MPath>,
+        path: Option<NonRootMPath>,
         parent: Option<Entry<TreeId, IntermediateLeafId>>,
         stack_sub_entries: BTreeMap<MPathElement, EntryStack<TreeId, IntermediateLeafId, Ctx>>,
         create_tree: Arc<T>,

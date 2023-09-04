@@ -30,7 +30,7 @@ use memcache::KeyGen;
 use mononoke_types::hash::Blake2;
 use mononoke_types::path_bytes_from_mpath;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mutable_rename_thrift as thrift;
 use path_hash::PathHash;
 use path_hash::PathHashBytes;
@@ -241,7 +241,7 @@ impl TryFrom<CacheableMutableRenameEntry> for MutableRenameEntry {
             src_unode,
             is_tree,
         } = entry;
-        let src_path = src_path.as_ref().map(MPath::new).transpose()?;
+        let src_path = src_path.as_ref().map(NonRootMPath::new).transpose()?;
 
         Ok(Self {
             dst_cs_id,
@@ -265,7 +265,7 @@ impl From<MutableRenameEntry> for CacheableMutableRenameEntry {
             src_unode,
             is_tree,
         } = entry;
-        let src_path = src_path.as_ref().map(MPath::to_vec);
+        let src_path = src_path.as_ref().map(NonRootMPath::to_vec);
 
         Self {
             dst_cs_id,
@@ -287,7 +287,7 @@ fn path_hash_to_thrift(hash: &PathHash) -> thrift::PathHash {
 }
 
 fn path_hash_from_thrift(hash: thrift::PathHash) -> Result<PathHash, Error> {
-    let path = MPath::new_opt(hash.path)?;
+    let path = NonRootMPath::new_opt(hash.path)?;
     Ok(PathHash::from_path_and_is_tree(path.as_ref(), hash.is_tree))
 }
 
@@ -397,12 +397,12 @@ impl<'a> EntityStore<CachedMutableRenameEntry> for CachedGetMutableRename<'a> {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct RenameKey {
     dst_cs_id: ChangesetId,
-    dst_path: Option<MPath>,
+    dst_path: Option<NonRootMPath>,
     dst_path_hash: PathHashBytes,
 }
 
 impl RenameKey {
-    pub fn new(dst_cs_id: ChangesetId, dst_path: Option<MPath>) -> Self {
+    pub fn new(dst_cs_id: ChangesetId, dst_path: Option<NonRootMPath>) -> Self {
         let dst_path_bytes = path_bytes_from_mpath(dst_path.as_ref());
         let dst_path_hash = PathHashBytes::new(&dst_path_bytes);
 
@@ -520,12 +520,12 @@ impl<'a> EntityStore<ChangesetIdSet> for CachedGetCsIdsWithRename<'a> {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct GetCsIdsKey {
-    dst_path: Option<MPath>,
+    dst_path: Option<NonRootMPath>,
     dst_path_hash: PathHashBytes,
 }
 
 impl GetCsIdsKey {
-    pub fn new(dst_path: Option<MPath>) -> Self {
+    pub fn new(dst_path: Option<NonRootMPath>) -> Self {
         let dst_path_bytes = path_bytes_from_mpath(dst_path.as_ref());
         let dst_path_hash = PathHashBytes::new(&dst_path_bytes);
 

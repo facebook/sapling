@@ -25,8 +25,8 @@ use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::hash;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -65,7 +65,7 @@ async fn check_node(
             CheckEntry::Directory => match fsnode_entry {
                 FsnodeEntry::File(_) => {
                     let entry_path =
-                        RepoPath::dir(MPath::join_opt_element(path.mpath(), &filename))?;
+                        RepoPath::dir(NonRootMPath::join_opt_element(path.mpath(), &filename))?;
                     bail!("{} is a file in Mononoke", entry_path);
                 }
                 FsnodeEntry::Directory(_) => {}
@@ -73,7 +73,7 @@ async fn check_node(
             CheckEntry::File(filetype, sha256) => match fsnode_entry {
                 FsnodeEntry::File(fsnode_file) => {
                     let entry_path =
-                        RepoPath::file(MPath::join_opt_element(path.mpath(), &filename))?;
+                        RepoPath::file(NonRootMPath::join_opt_element(path.mpath(), &filename))?;
                     if *fsnode_file.file_type() != filetype {
                         bail!(
                             "{} is type {} in git and {} in Mononoke",
@@ -93,7 +93,7 @@ async fn check_node(
                 }
                 FsnodeEntry::Directory(_) => {
                     let entry_path =
-                        RepoPath::file(MPath::join_opt_element(path.mpath(), &filename))?;
+                        RepoPath::file(NonRootMPath::join_opt_element(path.mpath(), &filename))?;
                     bail!("{} is a directory in Mononoke", entry_path);
                 }
             },
@@ -102,7 +102,7 @@ async fn check_node(
 
     // By this point, all the Mononoke entries have been checked
     if let Some((filename, _)) = contents.drain().next() {
-        let entry_path = RepoPath::file(MPath::join_opt_element(path.mpath(), &filename))?;
+        let entry_path = RepoPath::file(NonRootMPath::join_opt_element(path.mpath(), &filename))?;
         bail!("{} in git but not Bonsai", entry_path);
     }
 
@@ -150,10 +150,10 @@ async fn check_receiver(
                                 Some(dir.id().load(ctx, hg_repo.repo_blobstore()).await?)
                             }
                         };
-                        path_to_fsnode
-                            .lock()
-                            .expect("lock poisoned")
-                            .insert(Some(MPath::join_opt_element(path.mpath(), element)), fsnode)
+                        path_to_fsnode.lock().expect("lock poisoned").insert(
+                            Some(NonRootMPath::join_opt_element(path.mpath(), element)),
+                            fsnode,
+                        )
                     };
                     if old_entry.is_some() {
                         Err(anyhow!("Two different routes to the same path?!?"))

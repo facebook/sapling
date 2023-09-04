@@ -21,7 +21,7 @@ use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_authorization::AuthorizationContext;
 use slog::debug;
 
@@ -89,7 +89,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         .export_paths
         .into_iter()
         .map(|p| TryFrom::try_from(p.as_os_str()))
-        .collect::<Result<Vec<MPath>>>()?;
+        .collect::<Result<Vec<NonRootMPath>>>()?;
 
     let (changesets, cs_parents) =
         build_partial_commit_graph_for_export(logger, export_paths.clone(), cs_ctx).await?;

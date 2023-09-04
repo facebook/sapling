@@ -30,8 +30,8 @@ use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::SkeletonManifestBlob;
 use crate::errors::MononokeTypeError;
-use crate::path::MPath;
 use crate::path::MPathElement;
+use crate::path::NonRootMPath;
 use crate::thrift;
 use crate::typed_hash::SkeletonManifestId;
 use crate::typed_hash::SkeletonManifestIdContext;
@@ -110,9 +110,9 @@ impl SkeletonManifest {
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
-    ) -> Result<Option<(MPath, MPath)>> {
+    ) -> Result<Option<(NonRootMPath, NonRootMPath)>> {
         let mut sk_mf = Cow::Borrowed(self);
-        let mut path: Option<MPath> = None;
+        let mut path: Option<NonRootMPath> = None;
         'outer: loop {
             if sk_mf.summary.child_case_conflicts {
                 let mut lower_map = HashMap::new();
@@ -120,8 +120,8 @@ impl SkeletonManifest {
                     if let Some(lower_name) = name.to_lowercase_utf8() {
                         if let Some(other_name) = lower_map.insert(lower_name, name.clone()) {
                             return Ok(Some((
-                                MPath::join_opt_element(path.as_ref(), &other_name),
-                                MPath::join_opt_element(path.as_ref(), name),
+                                NonRootMPath::join_opt_element(path.as_ref(), &other_name),
+                                NonRootMPath::join_opt_element(path.as_ref(), name),
                             )));
                         }
                     }
@@ -133,7 +133,7 @@ impl SkeletonManifest {
                         if subdir.summary.child_case_conflicts
                             || subdir.summary.descendant_case_conflicts
                         {
-                            path = Some(MPath::join_opt_element(path.as_ref(), name));
+                            path = Some(NonRootMPath::join_opt_element(path.as_ref(), name));
                             sk_mf = Cow::Owned(subdir.id.load(ctx, blobstore).await?);
                             continue 'outer;
                         }
@@ -151,7 +151,7 @@ impl SkeletonManifest {
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
         parents: Vec<SkeletonManifest>,
-    ) -> Result<Option<(MPath, MPath)>> {
+    ) -> Result<Option<(NonRootMPath, NonRootMPath)>> {
         bounded_traversal(
             256,
             (None, self, parents),
@@ -160,8 +160,8 @@ impl SkeletonManifest {
                     if sk_mf.summary.child_case_conflicts {
                         if let Some((name1, name2)) = sk_mf.first_new_child_case_conflict(&parents)
                         {
-                            let path1 = MPath::join_opt_element(path.as_ref(), name1);
-                            let path2 = MPath::join_opt_element(path.as_ref(), name2);
+                            let path1 = NonRootMPath::join_opt_element(path.as_ref(), name1);
+                            let path2 = NonRootMPath::join_opt_element(path.as_ref(), name2);
                             // Since we only want the first conflict, don't
                             // recurse to child directories.
                             return Ok((Some((path1, path2)), Vec::new()));
@@ -176,7 +176,7 @@ impl SkeletonManifest {
                     let recurse_ids = sk_mf
                         .recurse_new_descendant_case_conflicts(&parents)
                         .map(|(name, recurse_id, recurse_parent_ids)| async move {
-                            let recurse_path = MPath::join_opt_element(path.as_ref(), name);
+                            let recurse_path = NonRootMPath::join_opt_element(path.as_ref(), name);
                             let (recurse_sk_mf, recurse_parents) = try_join(
                                 recurse_id.load(ctx, blobstore),
                                 try_join_all(

@@ -29,7 +29,7 @@ use mercurial_derivation::DeriveHgChangeset;
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use pushrebase::do_pushrebase_bonsai;
 use regex::Regex;
 use repo_blobstore::RepoBlobstoreRef;
@@ -176,7 +176,7 @@ async fn find_files_that_need_to_be_deleted(
     head_bookmark: &BookmarkKey,
     commit_to_merge: ChangesetId,
     path_regex: Regex,
-) -> Result<Vec<MPath>, Error> {
+) -> Result<Vec<NonRootMPath>, Error> {
     let maybe_head_bookmark_val = repo.bookmarks().get(ctx.clone(), head_bookmark).await?;
 
     let head_bookmark_val =
@@ -248,10 +248,10 @@ mod test {
         assert_eq!(
             paths,
             vec![
-                MPath::new("changed/a")?,
-                MPath::new("changed/b")?,
-                MPath::new("toremove/file1")?,
-                MPath::new("toremove/file2")?,
+                NonRootMPath::new("changed/a")?,
+                NonRootMPath::new("changed/b")?,
+                NonRootMPath::new("toremove/file1")?,
+                NonRootMPath::new("toremove/file2")?,
             ]
         );
 
@@ -295,7 +295,7 @@ mod test {
         .await?;
 
         paths.sort();
-        assert_eq!(paths, vec![MPath::new("file")?,]);
+        assert_eq!(paths, vec![NonRootMPath::new("file")?,]);
 
         Ok(())
     }

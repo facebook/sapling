@@ -26,7 +26,7 @@ use mercurial_types::blobs::HgBlobEnvelope;
 use mercurial_types::HgFileEnvelope;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
@@ -122,7 +122,7 @@ async fn find_file_changes(
     parent_manifests: Vec<HgManifestId>,
     blobstore: &RepoBlobstore,
     bonsai_parents: Vec<ChangesetId>,
-) -> Result<SortedVectorMap<MPath, FileChange>, Error> {
+) -> Result<SortedVectorMap<NonRootMPath, FileChange>, Error> {
     let diff: Result<_, Error> = find_bonsai_diff(
         ctx,
         blobstore.clone(),
@@ -186,10 +186,10 @@ async fn get_copy_info(
     ctx: CoreContext,
     blobstore: RepoBlobstore,
     bonsai_parents: Vec<ChangesetId>,
-    copy_from_path: MPath,
+    copy_from_path: NonRootMPath,
     envelope: HgFileEnvelope,
     parent_manifests: Vec<HgManifestId>,
-) -> Result<Option<(MPath, ChangesetId)>, Error> {
+) -> Result<Option<(NonRootMPath, ChangesetId)>, Error> {
     let node_id = envelope.node_id();
 
     let maybecopy = envelope

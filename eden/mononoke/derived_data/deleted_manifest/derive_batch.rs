@@ -25,8 +25,8 @@ use manifest::PathTree;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 
 use crate::derive::DeletedManifestChangeType;
 use crate::derive::DeletedManifestDeriver;
@@ -63,7 +63,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
         ctx: &CoreContext,
         blobstore: &Arc<dyn Blobstore>,
         parent: Option<Manifest::Id>,
-        all_changes: Vec<(ChangesetId, Vec<(MPath, PathChange)>)>,
+        all_changes: Vec<(ChangesetId, Vec<(NonRootMPath, PathChange)>)>,
     ) -> Result<Vec<Manifest::Id>> {
         let (path_tree, commit_stack) = {
             let mut path_tree: PathTree<Vec<(ChangesetId, PathChange)>> = PathTree::default();

@@ -24,7 +24,7 @@ use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::blobs::HgBlobEnvelope;
 use mercurial_types::HgChangesetId;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
@@ -49,8 +49,8 @@ const BUFFER_SIZE: usize = 100;
 const REPORTING_INTERVAL_FILES: usize = 10000;
 
 struct FileMove {
-    old_path: MPath,
-    maybe_new_path: Option<MPath>,
+    old_path: NonRootMPath,
+    maybe_new_path: Option<NonRootMPath>,
     file_type: FileType,
     file_size: u64,
     content_id: ContentId,
@@ -246,40 +246,44 @@ mod test {
 
     use super::*;
 
-    fn identity_mover(p: &MPath) -> Result<Option<MPath>> {
+    fn identity_mover(p: &NonRootMPath) -> Result<Option<NonRootMPath>> {
         Ok(Some(p.clone()))
     }
 
-    fn skip_one(p: &MPath) -> Result<Option<MPath>> {
-        if &MPath::new("dir1/file_1_in_dir1").unwrap() == p {
+    fn skip_one(p: &NonRootMPath) -> Result<Option<NonRootMPath>> {
+        if &NonRootMPath::new("dir1/file_1_in_dir1").unwrap() == p {
             return Ok(None);
         }
 
         Ok(Some(p.clone()))
     }
 
-    fn shift_one(p: &MPath) -> Result<Option<MPath>> {
-        if &MPath::new("dir1/file_1_in_dir1").unwrap() == p {
-            return Ok(Some(MPath::new("newdir/dir1/file_1_in_dir1").unwrap()));
+    fn shift_one(p: &NonRootMPath) -> Result<Option<NonRootMPath>> {
+        if &NonRootMPath::new("dir1/file_1_in_dir1").unwrap() == p {
+            return Ok(Some(
+                NonRootMPath::new("newdir/dir1/file_1_in_dir1").unwrap(),
+            ));
         }
 
         Ok(Some(p.clone()))
     }
 
-    fn shift_one_skip_another(p: &MPath) -> Result<Option<MPath>> {
-        if &MPath::new("dir1/file_1_in_dir1").unwrap() == p {
-            return Ok(Some(MPath::new("newdir/dir1/file_1_in_dir1").unwrap()));
+    fn shift_one_skip_another(p: &NonRootMPath) -> Result<Option<NonRootMPath>> {
+        if &NonRootMPath::new("dir1/file_1_in_dir1").unwrap() == p {
+            return Ok(Some(
+                NonRootMPath::new("newdir/dir1/file_1_in_dir1").unwrap(),
+            ));
         }
 
-        if &MPath::new("dir2/file_1_in_dir2").unwrap() == p {
+        if &NonRootMPath::new("dir2/file_1_in_dir2").unwrap() == p {
             return Ok(None);
         }
 
         Ok(Some(p.clone()))
     }
 
-    fn shift_all(p: &MPath) -> Result<Option<MPath>> {
-        Ok(Some(MPath::new("moved_dir")?.join(p)))
+    fn shift_all(p: &NonRootMPath) -> Result<Option<NonRootMPath>> {
+        Ok(Some(NonRootMPath::new("moved_dir")?.join(p)))
     }
 
     async fn prepare(
@@ -365,7 +369,7 @@ mod test {
         assert_eq!(
             file_changes,
             sorted_vector_map! {
-                MPath::new("dir1/file_1_in_dir1").unwrap() => FileChange::Deletion
+                NonRootMPath::new("dir1/file_1_in_dir1").unwrap() => FileChange::Deletion
             }
         );
     }
@@ -384,8 +388,8 @@ mod test {
             ..
         } = newcs.into_mut();
         assert_eq!(parents, vec![bcs_id]);
-        let old_path = MPath::new("dir1/file_1_in_dir1").unwrap();
-        let new_path = MPath::new("newdir/dir1/file_1_in_dir1").unwrap();
+        let old_path = NonRootMPath::new("dir1/file_1_in_dir1").unwrap();
+        let new_path = NonRootMPath::new("newdir/dir1/file_1_in_dir1").unwrap();
         assert_eq!(file_changes[&old_path], FileChange::Deletion);
         let file_change = match &file_changes[&new_path] {
             FileChange::Change(tc) => tc,
@@ -398,7 +402,7 @@ mod test {
         ctx: CoreContext,
         repo: BlobRepo,
         hg_cs_id: HgChangesetId,
-    ) -> BTreeMap<MPath, (FileType, ContentId)> {
+    ) -> BTreeMap<NonRootMPath, (FileType, ContentId)> {
         let hg_cs = hg_cs_id.load(&ctx, repo.repo_blobstore()).await.unwrap();
         hg_cs
             .manifestid()
@@ -430,9 +434,10 @@ mod test {
         .unwrap();
         let mut old_wc = get_working_copy_contents(ctx.clone(), repo.clone(), old_hg_cs_id).await;
         let mut new_wc = get_working_copy_contents(ctx.clone(), repo.clone(), new_hg_cs_id).await;
-        let _removed_file = old_wc.remove(&MPath::new("dir2/file_1_in_dir2").unwrap());
-        let old_moved_file = old_wc.remove(&MPath::new("dir1/file_1_in_dir1").unwrap());
-        let new_moved_file = new_wc.remove(&MPath::new("newdir/dir1/file_1_in_dir1").unwrap());
+        let _removed_file = old_wc.remove(&NonRootMPath::new("dir2/file_1_in_dir2").unwrap());
+        let old_moved_file = old_wc.remove(&NonRootMPath::new("dir1/file_1_in_dir1").unwrap());
+        let new_moved_file =
+            new_wc.remove(&NonRootMPath::new("newdir/dir1/file_1_in_dir1").unwrap());
         // Same file should live in both locations
         assert_eq!(old_moved_file, new_moved_file);
         // After removing renamed and removed files, both working copies should be identical
@@ -487,7 +492,7 @@ mod test {
             .await?;
 
         assert_eq!(leaf_entries.len(), 11);
-        let prefix = MPath::new("moved_dir")?;
+        let prefix = NonRootMPath::new("moved_dir")?;
         for (leaf, _) in &leaf_entries {
             assert!(prefix.is_prefix_of(leaf));
         }

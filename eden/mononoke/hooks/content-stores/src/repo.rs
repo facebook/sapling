@@ -29,8 +29,8 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
-use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
@@ -80,8 +80,8 @@ impl FileContentManager for RepoFileContentManager {
         &'a self,
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
-        paths: Vec<MPath>,
-    ) -> Result<HashMap<MPath, PathContent>, ErrorKind> {
+        paths: Vec<NonRootMPath>,
+    ) -> Result<HashMap<NonRootMPath, PathContent>, ErrorKind> {
         let changeset_id = self
             .bookmarks
             .get(ctx.clone(), &bookmark)
@@ -118,7 +118,7 @@ impl FileContentManager for RepoFileContentManager {
         ctx: &'a CoreContext,
         new_cs_id: ChangesetId,
         old_cs_id: ChangesetId,
-    ) -> Result<Vec<(MPath, FileChange)>, ErrorKind> {
+    ) -> Result<Vec<(NonRootMPath, FileChange)>, ErrorKind> {
         let new_mf_fut = derive_hg_manifest(
             ctx,
             &self.repo_derived_data,
@@ -180,8 +180,8 @@ impl FileContentManager for RepoFileContentManager {
         &'a self,
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
-        paths: Vec<MPath>,
-    ) -> Result<HashMap<MPath, ChangesetInfo>, ErrorKind> {
+        paths: Vec<NonRootMPath>,
+    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, ErrorKind> {
         let changeset_id = self
             .bookmarks
             .get(ctx.clone(), &bookmark)

@@ -22,7 +22,7 @@ use std::sync::Mutex;
 use bytes_old::Bytes;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
 pub mod batch;
 mod commands;
@@ -177,7 +177,7 @@ impl Debug for GetbundleArgs {
 pub struct GettreepackArgs {
     /// The directory of the tree to send (including its subdirectories).
     /// If set to `None`, that means "root of the repo".
-    pub rootdir: Option<MPath>,
+    pub rootdir: Option<NonRootMPath>,
     /// The manifest nodes of the specified root directory to send.
     pub mfnodes: Vec<HgManifestId>,
     /// The manifest nodes of the rootdir that are already on the client.

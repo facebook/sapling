@@ -39,7 +39,7 @@ use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
@@ -1176,7 +1176,7 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
         .load(&ctx, smallrepo.blob_repo().repo_blobstore())
         .await?;
     let file_changes: Vec<_> = bcs.file_changes().map(|(path, _)| path).cloned().collect();
-    assert_eq!(file_changes, vec![MPath::new("remapped")?]);
+    assert_eq!(file_changes, vec![NonRootMPath::new("remapped")?]);
 
     // Now in another direction
     let new_small_draft =
@@ -1194,7 +1194,7 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
         .load(&ctx, largerepo.blob_repo().repo_blobstore())
         .await?;
     let file_changes: Vec<_> = bcs.file_changes().map(|(path, _)| path).cloned().collect();
-    assert_eq!(file_changes, vec![MPath::new("prefix/remapped2")?]);
+    assert_eq!(file_changes, vec![NonRootMPath::new("prefix/remapped2")?]);
 
     Ok(())
 }
@@ -1240,7 +1240,7 @@ async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
         .load(&ctx, smallrepo.blob_repo().repo_blobstore())
         .await?;
     let file_changes: Vec<_> = bcs.file_changes().map(|(path, _)| path).cloned().collect();
-    assert_eq!(file_changes, vec![MPath::new("remapped")?]);
+    assert_eq!(file_changes, vec![NonRootMPath::new("remapped")?]);
 
     // Now in another direction - it should fail
     let new_small_public =
@@ -1300,7 +1300,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
         .cloned()
         .collect();
 
-    assert_eq!(file_changes, vec![MPath::new("remapped_before")?]);
+    assert_eq!(file_changes, vec![NonRootMPath::new("remapped_before")?]);
 
     // Config change: new config remaps prefix2 instead of prefix
     let large_repo_id = largerepo.blob_repo().repo_identity().id();
@@ -1317,8 +1317,9 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
     cfg.small_repos
         .get_mut(&small_repo_id)
         .unwrap()
-        .default_action =
-        DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new("prefix2").unwrap());
+        .default_action = DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
+        NonRootMPath::new("prefix2").unwrap(),
+    );
     let new_version = CommitSyncConfigVersion("TEST_VERSION_NAME_2".to_string());
     cfg.version_name = new_version.clone();
     cfg_src.add_config(cfg.clone());
@@ -1375,7 +1376,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
         .cloned()
         .collect();
 
-    assert_eq!(file_changes, vec![MPath::new("remapped_after")?]);
+    assert_eq!(file_changes, vec![NonRootMPath::new("remapped_after")?]);
     Ok(())
 }
 

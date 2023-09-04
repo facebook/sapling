@@ -27,7 +27,7 @@ use crate::HgChangesetId;
 use crate::HgManifestId;
 use crate::HgNodeHash;
 use crate::HgParents;
-use crate::MPath;
+use crate::NonRootMPath;
 use crate::NULL_HASH;
 
 // The `user` and `comments` fields are expected to be utf8 encoded, but
@@ -42,7 +42,7 @@ pub struct RevlogChangeset {
     pub user: Vec<u8>,
     pub time: DateTime,
     pub extra: Extra,
-    pub files: Vec<MPath>,
+    pub files: Vec<NonRootMPath>,
     pub message: Vec<u8>,
 }
 
@@ -187,7 +187,7 @@ impl RevlogChangeset {
         user: Vec<u8>,
         time: DateTime,
         extra: BTreeMap<Vec<u8>, Vec<u8>>,
-        files: Vec<MPath>,
+        files: Vec<NonRootMPath>,
         message: Vec<u8>,
     ) -> Self {
         let (p1, p2) = parents.get_nodes();
@@ -335,7 +335,7 @@ impl RevlogChangeset {
                         dofiles = false;
                         continue;
                     }
-                    files.push(MPath::new(line).context("invalid path in changelog")?)
+                    files.push(NonRootMPath::new(line).context("invalid path in changelog")?)
                 } else {
                     message.push(line);
                 }
@@ -390,7 +390,7 @@ impl RevlogChangeset {
         self.message.as_ref()
     }
 
-    pub fn files(&self) -> &[MPath] {
+    pub fn files(&self) -> &[NonRootMPath] {
         self.files.as_ref()
     }
 

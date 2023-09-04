@@ -36,7 +36,7 @@ use manifest::PathOrPrefix;
 use mercurial_derivation::DeriveHgChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DeletedManifestV2Id;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use revset::AncestorsNodeStream;
 use slog::debug;
@@ -109,7 +109,7 @@ pub async fn subcommand_deleted_manifest<'a>(
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
             let path = match matches.value_of(ARG_PATH).unwrap() {
                 "" => None,
-                p => MPath::new(p).map(Some)?,
+                p => NonRootMPath::new(p).map(Some)?,
             };
             let cs_id = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
             subcommand_manifest(ctx, repo, cs_id, path).await?;
@@ -147,7 +147,7 @@ async fn subcommand_manifest(
     ctx: CoreContext,
     repo: BlobRepo,
     cs_id: ChangesetId,
-    prefix: Option<MPath>,
+    prefix: Option<NonRootMPath>,
 ) -> Result<(), Error> {
     let root_manifest = RootDeletedManifestV2Id::derive(&ctx, &repo, cs_id).await?;
     debug!(ctx.logger(), "ROOT Deleted Manifest V2 {:?}", root_manifest,);
@@ -161,7 +161,7 @@ async fn subcommand_manifest(
         .await?;
     entries.sort_by_key(|(path, _)| path.clone());
     for (path, mf_id) in entries {
-        println!("{}/ {:?}", MPath::display_opt(path.as_ref()), mf_id);
+        println!("{}/ {:?}", NonRootMPath::display_opt(path.as_ref()), mf_id);
     }
     Ok(())
 }
@@ -185,7 +185,7 @@ async fn get_file_changes(
     ctx: CoreContext,
     repo: BlobRepo,
     cs_id: ChangesetId,
-) -> Result<(Vec<MPath>, Vec<MPath>), Error> {
+) -> Result<(Vec<NonRootMPath>, Vec<NonRootMPath>), Error> {
     let paths_added_fut = async {
         let bonsai = cs_id.load(&ctx, repo.repo_blobstore()).await?;
         let paths = bonsai

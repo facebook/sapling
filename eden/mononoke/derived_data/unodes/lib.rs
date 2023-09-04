@@ -20,7 +20,7 @@ use manifest::ManifestOps;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use thiserror::Error;
 
 mod derive;
@@ -44,7 +44,7 @@ pub struct UnodeRenameSource {
 
     /// Path of the file in the parent changeset (i.e., the path it was
     /// renamed from).
-    pub from_path: MPath,
+    pub from_path: NonRootMPath,
 
     /// Unode ID of the file in the parent changeset.
     pub unode_id: FileUnodeId,
@@ -59,10 +59,11 @@ pub async fn find_unode_rename_sources(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsai: &BonsaiChangeset,
-) -> Result<HashMap<MPath, UnodeRenameSource>, Error> {
+) -> Result<HashMap<NonRootMPath, UnodeRenameSource>, Error> {
     // Collect together a map of (source_path -> [dest_paths]) for each parent
     // changeset.
-    let mut references: HashMap<ChangesetId, HashMap<&MPath, Vec<&MPath>>> = HashMap::new();
+    let mut references: HashMap<ChangesetId, HashMap<&NonRootMPath, Vec<&NonRootMPath>>> =
+        HashMap::new();
     for (to_path, file_change) in bonsai.file_changes() {
         if let Some((from_path, csid)) = file_change.copy_from() {
             references
@@ -133,8 +134,8 @@ pub async fn find_unode_renames_incorrect_for_blame_v1(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsai: &BonsaiChangeset,
-) -> Result<HashMap<MPath, FileUnodeId>, Error> {
-    let mut references: HashMap<ChangesetId, HashMap<MPath, MPath>> = HashMap::new();
+) -> Result<HashMap<NonRootMPath, FileUnodeId>, Error> {
+    let mut references: HashMap<ChangesetId, HashMap<NonRootMPath, NonRootMPath>> = HashMap::new();
     for (to_path, file_change) in bonsai.file_changes() {
         if let Some((from_path, csid)) = file_change.copy_from() {
             references
@@ -184,7 +185,7 @@ mod tests {
     use fbinit::FacebookInit;
     use filenodes::Filenodes;
     use filestore::FilestoreConfig;
-    use mononoke_types::MPath;
+    use mononoke_types::NonRootMPath;
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
     use repo_identity::RepoIdentity;
@@ -247,10 +248,10 @@ mod tests {
 
         let check = |path: &str, parent_index: usize, from_path: &str| {
             let source = renames
-                .get(&MPath::new(path).unwrap())
+                .get(&NonRootMPath::new(path).unwrap())
                 .expect("path should exist");
             assert_eq!(source.parent_index, parent_index);
-            assert_eq!(source.from_path, MPath::new(from_path).unwrap());
+            assert_eq!(source.from_path, NonRootMPath::new(from_path).unwrap());
         };
 
         check("file1a", 0, "file1");

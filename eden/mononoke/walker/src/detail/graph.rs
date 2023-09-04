@@ -70,10 +70,10 @@ use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::FastlogBatchId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::FsnodeId;
-use mononoke_types::MPath;
 use mononoke_types::MPathHash;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::MononokeId;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use mononoke_types::SkeletonManifestId;
 use newfilenodes::PathHash;
@@ -688,12 +688,12 @@ impl fmt::Display for WrappedPathHash {
 // Memoize the hash of the path as it is used frequently
 #[derive(Debug)]
 pub struct MPathWithHashMemo {
-    mpath: MPath,
+    mpath: NonRootMPath,
     memoized_hash: OnceCell<WrappedPathHash>,
 }
 
 impl MPathWithHashMemo {
-    fn new(mpath: MPath) -> Self {
+    fn new(mpath: NonRootMPath) -> Self {
         Self {
             mpath,
             memoized_hash: OnceCell::new(),
@@ -705,7 +705,7 @@ impl MPathWithHashMemo {
             .get_or_init(|| WrappedPathHash::NonRoot(self.mpath.get_path_hash()))
     }
 
-    pub fn mpath(&self) -> &MPath {
+    pub fn mpath(&self) -> &NonRootMPath {
         &self.mpath
     }
 }
@@ -731,7 +731,7 @@ pub enum WrappedPath {
 }
 
 impl WrappedPath {
-    pub fn as_ref(&self) -> Option<&MPath> {
+    pub fn as_ref(&self) -> Option<&NonRootMPath> {
         match self {
             WrappedPath::Root => None,
             WrappedPath::NonRoot(path) => Some(path.mpath()),
@@ -784,8 +784,8 @@ impl fmt::Display for WrappedPath {
 
 static PATH_HASHER_FACTORY: OnceCell<RandomState> = OnceCell::new();
 
-impl From<Option<MPath>> for WrappedPath {
-    fn from(mpath: Option<MPath>) -> Self {
+impl From<Option<NonRootMPath>> for WrappedPath {
+    fn from(mpath: Option<NonRootMPath>) -> Self {
         let hasher_fac = PATH_HASHER_FACTORY.get_or_init(RandomState::default);
         match mpath {
             Some(mpath) => WrappedPath::NonRoot(ArcIntern::new(EagerHashMemoizer::new(

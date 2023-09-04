@@ -67,8 +67,8 @@ pub mod utils;
 pub use mononoke_types::sha1_hash;
 pub use mononoke_types::FileType;
 pub use mononoke_types::Globalrev;
-pub use mononoke_types::MPath;
 pub use mononoke_types::MPathElement;
+pub use mononoke_types::NonRootMPath;
 pub use mononoke_types::RepoPath;
 
 pub use crate::blob::HgBlob;

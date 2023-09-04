@@ -33,8 +33,8 @@ use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 use skeleton_manifest::mapping::get_file_changes;
 
 use crate::mapping::RootBasenameSuffixSkeletonManifest;
@@ -42,14 +42,18 @@ use crate::path::BssmPath;
 
 /// Calculate a list of changes of the changeset, but putting the basename first and
 /// reversing it.
-fn get_fixed_up_changes(bcs: &BonsaiChangeset) -> Vec<(MPath, Option<(ContentId, FileType)>)> {
+fn get_fixed_up_changes(
+    bcs: &BonsaiChangeset,
+) -> Vec<(NonRootMPath, Option<(ContentId, FileType)>)> {
     get_file_changes(bcs)
         .into_iter()
         .map(|(path, content)| (BssmPath::transform(path).into_raw(), content))
         .collect()
 }
 
-fn split_by_root_dir<X>(changes: Vec<(MPath, X)>) -> HashMap<MPathElement, Vec<(MPath, X)>> {
+fn split_by_root_dir<X>(
+    changes: Vec<(NonRootMPath, X)>,
+) -> HashMap<MPathElement, Vec<(NonRootMPath, X)>> {
     let mut map = HashMap::new();
     for (p, x) in changes {
         let (root_dir, rest) = p.split_first();
@@ -73,7 +77,7 @@ async fn inner_derive(
     ctx: &CoreContext,
     blobstore: &Arc<dyn Blobstore>,
     parents: Vec<BssmDirectory>,
-    changes: Vec<(MPath, Option<(ContentId, FileType)>)>,
+    changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
 ) -> Result<Option<BssmDirectory>> {
     // Types to help understand how to use derive_manifest helper
     type Leaf = (ContentId, FileType);

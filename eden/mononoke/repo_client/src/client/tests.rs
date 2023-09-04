@@ -108,7 +108,7 @@ async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), 
         .map(|(_, path)| path)
         .collect::<Vec<_>>();
     res.sort();
-    let mut expected = vec![None, Some(MPath::new("dir2")?)];
+    let mut expected = vec![None, Some(NonRootMPath::new("dir2")?)];
     expected.sort();
     assert_eq!(res, expected);
 
@@ -133,10 +133,10 @@ async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), 
     res.sort();
     let mut expected = vec![
         None,
-        Some(MPath::new("dir1")?),
-        Some(MPath::new("dir1/subdir1")?),
-        Some(MPath::new("dir1/subdir1/subsubdir1")?),
-        Some(MPath::new("dir1/subdir1/subsubdir2")?),
+        Some(NonRootMPath::new("dir1")?),
+        Some(NonRootMPath::new("dir1/subdir1")?),
+        Some(NonRootMPath::new("dir1/subdir1/subsubdir1")?),
+        Some(NonRootMPath::new("dir1/subdir1/subsubdir2")?),
     ];
     expected.sort();
     assert_eq!(res, expected);
@@ -232,7 +232,7 @@ async fn get_changed_manifests_stream_test_base_path_impl(fb: FacebookInit) -> R
             .into_iter()
             .filter(|(_, curpath)| match &path {
                 Some(path) => {
-                    let elems = MPath::iter_opt(curpath.as_ref());
+                    let elems = NonRootMPath::iter_opt(curpath.as_ref());
                     path.is_prefix_of(elems)
                 }
                 None => true,
@@ -378,7 +378,7 @@ async fn run_and_check_if_lfs(ctx: &CoreContext, lfs_params: LfsParams) -> Resul
 
     let hg_cs = hg_cs_id.load(ctx, &repo.repo_blobstore().clone()).await?;
 
-    let path = MPath::new("largefile")?;
+    let path = NonRootMPath::new("largefile")?;
     let maybe_entry = hg_cs
         .manifestid()
         .find_entry(
@@ -429,9 +429,9 @@ async fn fetch_mfs(
     repo: &BlobRepo,
     root_mf_id: HgManifestId,
     base_root_mf_id: HgManifestId,
-    base_path: Option<MPath>,
+    base_path: Option<NonRootMPath>,
     depth: usize,
-) -> Result<Vec<(HgManifestId, Option<MPath>)>, Error> {
+) -> Result<Vec<(HgManifestId, Option<NonRootMPath>)>, Error> {
     let fetched_mfs = get_changed_manifests_stream(
         ctx.clone(),
         repo,

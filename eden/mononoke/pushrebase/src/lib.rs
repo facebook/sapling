@@ -88,7 +88,7 @@ use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types::check_case_conflicts;
 use mononoke_types::BonsaiChangeset;
@@ -153,7 +153,7 @@ pub enum PushrebaseError {
     #[error(
         "PotentialCaseConflict: the change this commit introduces at {0} may conflict with other commits. Rebase and retry."
     )]
-    PotentialCaseConflict(MPath),
+    PotentialCaseConflict(NonRootMPath),
     #[error("Pushrebase over merge")]
     RebaseOverMerge,
     #[error("Root is too far behind")]
@@ -177,12 +177,12 @@ pub enum PushrebaseError {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PushrebaseConflict {
-    pub left: MPath,
-    pub right: MPath,
+    pub left: NonRootMPath,
+    pub right: NonRootMPath,
 }
 
 impl PushrebaseConflict {
-    fn new(left: MPath, right: MPath) -> Self {
+    fn new(left: NonRootMPath, right: NonRootMPath) -> Self {
         PushrebaseConflict { left, right }
     }
 }
@@ -319,7 +319,7 @@ async fn rebase_in_loop(
     onto_bookmark: &BookmarkKey,
     head: ChangesetId,
     root: ChangesetId,
-    client_cf: Vec<MPath>,
+    client_cf: Vec<NonRootMPath>,
     client_bcs: &[BonsaiChangeset],
     prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
 ) -> Result<PushrebaseOutcome, PushrebaseError> {
@@ -661,7 +661,7 @@ async fn find_changed_files_between_manifests(
     repo: &impl Repo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
-) -> Result<Vec<MPath>, PushrebaseError> {
+) -> Result<Vec<NonRootMPath>, PushrebaseError> {
     let paths = find_bonsai_diff(ctx, repo, ancestor, descendant)
         .await?
         .map_ok(|diff| match diff {
@@ -731,7 +731,7 @@ async fn find_changed_files(
     repo: &impl Repo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
-) -> Result<Vec<MPath>, PushrebaseError> {
+) -> Result<Vec<NonRootMPath>, PushrebaseError> {
     let id_to_bcs = repo
         .commit_graph()
         .range_stream(ctx, ancestor, descendant)
@@ -797,7 +797,7 @@ async fn find_changed_files(
     Ok(file_changes_union)
 }
 
-fn extract_conflict_files_from_bonsai_changeset(bcs: BonsaiChangeset) -> Vec<MPath> {
+fn extract_conflict_files_from_bonsai_changeset(bcs: BonsaiChangeset) -> Vec<NonRootMPath> {
     bcs.file_changes()
         .flat_map(|(path, file_change)| {
             let mut v = vec![];
@@ -807,12 +807,15 @@ fn extract_conflict_files_from_bonsai_changeset(bcs: BonsaiChangeset) -> Vec<MPa
             v.push(path.clone());
             v.into_iter()
         })
-        .collect::<Vec<MPath>>()
+        .collect::<Vec<NonRootMPath>>()
 }
 
 /// `left` and `right` are considerered to be conflit free, if none of the element from `left`
 /// is prefix of element from `right`, and vice versa.
-fn intersect_changed_files(left: Vec<MPath>, right: Vec<MPath>) -> Result<(), PushrebaseError> {
+fn intersect_changed_files(
+    left: Vec<NonRootMPath>,
+    right: Vec<NonRootMPath>,
+) -> Result<(), PushrebaseError> {
     let mut left = {
         let mut left = left;
         left.sort_unstable();
@@ -1072,7 +1075,7 @@ async fn generate_additional_bonsai_file_changes(
     onto: &ChangesetId,
     repo: &impl Repo,
     rebased_set: &HashSet<ChangesetId>,
-) -> Result<Vec<(MPath, FileChange)>> {
+) -> Result<Vec<(NonRootMPath, FileChange)>> {
     let parents: Vec<_> = bcs.parents().collect();
 
     if parents.len() <= 1 {
@@ -1386,8 +1389,8 @@ mod tests {
         Ok(())
     }
 
-    fn make_paths(paths: &[&str]) -> Vec<MPath> {
-        let paths: Result<_, _> = paths.iter().map(MPath::new).collect();
+    fn make_paths(paths: &[&str]) -> Vec<NonRootMPath> {
+        let paths: Result<_, _> = paths.iter().map(NonRootMPath::new).collect();
         paths.unwrap()
     }
 
@@ -1856,8 +1859,8 @@ mod tests {
                     assert_eq!(
                         conflicts,
                         vec![PushrebaseConflict {
-                            left: MPath::new("9")?,
-                            right: MPath::new("9/file")?,
+                            left: NonRootMPath::new("9")?,
+                            right: NonRootMPath::new("9/file")?,
                         },],
                     );
                 }
@@ -2137,7 +2140,7 @@ mod tests {
             let result = do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss).await;
             match result {
                 Err(PushrebaseError::PotentialCaseConflict(conflict)) => {
-                    assert_eq!(conflict, MPath::new("Dir1/file_1_in_dir1")?)
+                    assert_eq!(conflict, NonRootMPath::new("Dir1/file_1_in_dir1")?)
                 }
                 _ => panic!("push-rebase should have failed with case conflict"),
             };
@@ -2200,7 +2203,7 @@ mod tests {
             let result = do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcs1).await;
             match result {
                 Err(PushrebaseError::PotentialCaseConflict(conflict)) => {
-                    assert_eq!(conflict, MPath::new("dir1/File_1_in_dir1")?)
+                    assert_eq!(conflict, NonRootMPath::new("dir1/File_1_in_dir1")?)
                 }
                 _ => panic!("push-rebase should have failed with case conflict"),
             };
@@ -2212,7 +2215,7 @@ mod tests {
                 &PushrebaseFlags {
                     casefolding_check: true,
                     casefolding_check_excluded_paths: PrefixTrie::from_iter(
-                        vec![Some(MPath::new("dir1")?)].into_iter(),
+                        vec![Some(NonRootMPath::new("dir1")?)].into_iter(),
                     ),
                     ..Default::default()
                 },
@@ -2236,7 +2239,7 @@ mod tests {
                 &PushrebaseFlags {
                     casefolding_check: true,
                     casefolding_check_excluded_paths: PrefixTrie::from_iter(
-                        vec![Some(MPath::new("dir1")?)].into_iter(),
+                        vec![Some(NonRootMPath::new("dir1")?)].into_iter(),
                     ),
                     ..Default::default()
                 },
@@ -2246,7 +2249,7 @@ mod tests {
             .await;
             match result {
                 Err(PushrebaseError::PotentialCaseConflict(conflict)) => {
-                    assert_eq!(conflict, MPath::new("dir2/File_1_in_dir2")?)
+                    assert_eq!(conflict, NonRootMPath::new("dir2/File_1_in_dir2")?)
                 }
                 _ => panic!("push-rebase should have failed with case conflict"),
             };
@@ -2264,16 +2267,16 @@ mod tests {
                 *conflicts,
                 [
                     PushrebaseConflict {
-                        left: MPath::new("a/b/d")?,
-                        right: MPath::new("a/b/d/f")?,
+                        left: NonRootMPath::new("a/b/d")?,
+                        right: NonRootMPath::new("a/b/d/f")?,
                     },
                     PushrebaseConflict {
-                        left: MPath::new("c")?,
-                        right: MPath::new("c")?,
+                        left: NonRootMPath::new("c")?,
+                        right: NonRootMPath::new("c")?,
                     },
                     PushrebaseConflict {
-                        left: MPath::new("e/c")?,
-                        right: MPath::new("e")?,
+                        left: NonRootMPath::new("e/c")?,
+                        right: NonRootMPath::new("e")?,
                     },
                 ]
             ),
@@ -2289,7 +2292,7 @@ mod tests {
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo: PushrebaseTestRepo = Linear::get_custom_test_repo(fb).await;
-            let path_1 = MPath::new("1")?;
+            let path_1 = NonRootMPath::new("1")?;
 
             let root_hg = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let root_cs = root_hg.load(&ctx, repo.repo_blobstore()).await?;
@@ -3226,7 +3229,7 @@ mod tests {
                 _bcs_old: ChangesetId,
                 bcs_new: &mut BonsaiChangesetMut,
             ) -> Result<(), Error> {
-                bcs_new.file_changes.remove(&MPath::new("base")?);
+                bcs_new.file_changes.remove(&NonRootMPath::new("base")?);
                 Ok(())
             }
 

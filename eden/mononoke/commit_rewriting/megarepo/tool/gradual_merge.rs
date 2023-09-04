@@ -338,7 +338,7 @@ mod test {
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use mononoke_types::DateTime;
-    use mononoke_types::MPath;
+    use mononoke_types::NonRootMPath;
     use tests_utils::bookmark;
     use tests_utils::drawdag::create_from_dag;
     use tests_utils::list_working_copy_utf8;
@@ -623,12 +623,12 @@ mod test {
         .await?;
         assert_eq!(
             hashmap! {
-                MPath::new("A")? => "A".to_string(),
-                MPath::new("B")? => "B".to_string(),
-                MPath::new("C")? => "C".to_string(),
-                MPath::new("D")? => "D".to_string(),
-                MPath::new("E")? => "E".to_string(),
-                MPath::new("F")? => "F".to_string(),
+                NonRootMPath::new("A")? => "A".to_string(),
+                NonRootMPath::new("B")? => "B".to_string(),
+                NonRootMPath::new("C")? => "C".to_string(),
+                NonRootMPath::new("D")? => "D".to_string(),
+                NonRootMPath::new("E")? => "E".to_string(),
+                NonRootMPath::new("F")? => "F".to_string(),
             },
             working_copy
         );
@@ -641,11 +641,11 @@ mod test {
         .await?;
         assert_eq!(
             hashmap! {
-                MPath::new("A")? => "A".to_string(),
-                MPath::new("B")? => "B".to_string(),
-                MPath::new("C")? => "C".to_string(),
-                MPath::new("D")? => "D".to_string(),
-                MPath::new("E")? => "E".to_string(),
+                NonRootMPath::new("A")? => "A".to_string(),
+                NonRootMPath::new("B")? => "B".to_string(),
+                NonRootMPath::new("C")? => "C".to_string(),
+                NonRootMPath::new("D")? => "D".to_string(),
+                NonRootMPath::new("E")? => "E".to_string(),
             },
             working_copy
         );
@@ -658,10 +658,10 @@ mod test {
         .await?;
         assert_eq!(
             hashmap! {
-                MPath::new("A")? => "A".to_string(),
-                MPath::new("B")? => "B".to_string(),
-                MPath::new("C")? => "C".to_string(),
-                MPath::new("D")? => "D".to_string(),
+                NonRootMPath::new("A")? => "A".to_string(),
+                NonRootMPath::new("B")? => "B".to_string(),
+                NonRootMPath::new("C")? => "C".to_string(),
+                NonRootMPath::new("D")? => "D".to_string(),
             },
             working_copy
         );

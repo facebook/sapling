@@ -76,7 +76,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use movers::Mover;
 use mutable_counters::MutableCounters;
@@ -263,9 +263,11 @@ pub async fn rewrite_commit<'a>(
 /// Mover moves a path to at most a single path, while MultiMover can move a
 /// path to multiple.
 pub fn mover_to_multi_mover(mover: Mover) -> MultiMover {
-    Arc::new(move |path: &MPath| -> Result<Vec<MPath>, Error> {
-        Ok(mover(path)?.into_iter().collect())
-    })
+    Arc::new(
+        move |path: &NonRootMPath| -> Result<Vec<NonRootMPath>, Error> {
+            Ok(mover(path)?.into_iter().collect())
+        },
+    )
 }
 
 async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(

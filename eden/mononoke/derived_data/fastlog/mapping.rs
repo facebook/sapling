@@ -229,8 +229,8 @@ mod tests {
     use mononoke_types::fastlog_batch::max_entries_in_fastlog_batch;
     use mononoke_types::fastlog_batch::MAX_BATCHES;
     use mononoke_types::fastlog_batch::MAX_LATEST_LEN;
-    use mononoke_types::MPath;
     use mononoke_types::ManifestUnodeId;
+    use mononoke_types::NonRootMPath;
     use pretty_assertions::assert_eq;
     use rand::SeedableRng;
     use rand_xorshift::XorShiftRng;
@@ -298,8 +298,8 @@ mod tests {
         assert_eq!(list, vec![(bcs_id, vec![])]);
 
         let blobstore = Arc::new(repo.repo_blobstore.clone());
-        let path_1 = MPath::new("1").unwrap();
-        let path_files = MPath::new("files").unwrap();
+        let path_1 = NonRootMPath::new("1").unwrap();
+        let path_files = NonRootMPath::new("files").unwrap();
         let entries: Vec<_> = root_unode_mf_id
             .find_entries(ctx.clone(), blobstore.clone(), vec![path_1, path_files])
             .try_collect()

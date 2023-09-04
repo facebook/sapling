@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use context::CoreContext;
 use maplit::hashset;
 use mononoke_types::BasicFileChange;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
 use crate::CrossRepoPushSource;
 use crate::FileContentManager;
@@ -40,7 +40,7 @@ impl FileHook for ConflictMarkers {
         ctx: &'ctx CoreContext,
         content_manager: &'fetcher dyn FileContentManager,
         change: Option<&'change BasicFileChange>,
-        path: &'path MPath,
+        path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {

@@ -84,10 +84,10 @@ Push rebase fails with conflict in the bottom of the stack
   remote: * pushrebase failed * (glob)
   remote: 
   remote:   Root cause:
-  remote:     pushrebase failed Conflicts([PushrebaseConflict { left: MPath("1"), right: MPath("1") }])
+  remote:     pushrebase failed Conflicts([PushrebaseConflict { left: NonRootMPath("1"), right: NonRootMPath("1") }])
   remote: 
   remote:   Debug context:
-  remote:     "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])"
+  remote:     "pushrebase failed Conflicts([PushrebaseConflict { left: NonRootMPath(\"1\"), right: NonRootMPath(\"1\") }])"
   abort: * (glob)
   [255]
   $ hg hide -r ".^ + ." -q
@@ -105,10 +105,10 @@ Push rebase fails with conflict in the top of the stack
   remote: * pushrebase failed * (glob)
   remote: 
   remote:   Root cause:
-  remote:     pushrebase failed Conflicts([PushrebaseConflict { left: MPath("1"), right: MPath("1") }])
+  remote:     pushrebase failed Conflicts([PushrebaseConflict { left: NonRootMPath("1"), right: NonRootMPath("1") }])
   remote: 
   remote:   Debug context:
-  remote:     "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])"
+  remote:     "pushrebase failed Conflicts([PushrebaseConflict { left: NonRootMPath(\"1\"), right: NonRootMPath(\"1\") }])"
   abort: * (glob)
   [255]
   $ hg hide -r ".^ + ." -q

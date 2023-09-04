@@ -30,7 +30,7 @@ use manifest::ManifestOps;
 use manifest::PathOrPrefix;
 use mercurial_derivation::DeriveHgChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use revset::AncestorsNodeStream;
 use slog::info;
@@ -46,10 +46,10 @@ const ARG_CSID: &str = "csid";
 const ARG_PATH: &str = "path";
 const ARG_LIMIT: &str = "limit";
 
-fn path_resolve(path: &str) -> Result<Option<MPath>, Error> {
+fn path_resolve(path: &str) -> Result<Option<NonRootMPath>, Error> {
     match path {
         "/" => Ok(None),
-        _ => Ok(Some(MPath::new(path)?)),
+        _ => Ok(Some(NonRootMPath::new(path)?)),
     }
 }
 
@@ -125,7 +125,7 @@ async fn subcommand_tree(
     ctx: &CoreContext,
     repo: BlobRepo,
     csid: ChangesetId,
-    path: Option<MPath>,
+    path: Option<NonRootMPath>,
 ) -> Result<(), Error> {
     let root = RootUnodeManifestId::derive(ctx, &repo, csid).await?;
     info!(ctx.logger(), "ROOT: {:?}", root);
@@ -139,10 +139,14 @@ async fn subcommand_tree(
         .try_for_each(|(path, entry)| async move {
             match entry {
                 Entry::Tree(tree_id) => {
-                    println!("{}/ {:?}", MPath::display_opt(path.as_ref()), tree_id);
+                    println!(
+                        "{}/ {:?}",
+                        NonRootMPath::display_opt(path.as_ref()),
+                        tree_id
+                    );
                 }
                 Entry::Leaf(leaf_id) => {
-                    println!("{} {:?}", MPath::display_opt(path.as_ref()), leaf_id);
+                    println!("{} {:?}", NonRootMPath::display_opt(path.as_ref()), leaf_id);
                 }
             }
             Ok(())

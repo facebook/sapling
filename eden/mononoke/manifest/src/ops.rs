@@ -22,7 +22,7 @@ use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
 use crate::select::select_path_tree;
 use crate::AsyncManifest as Manifest;
@@ -33,9 +33,9 @@ use crate::StoreLoadable;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Diff<Entry> {
-    Added(Option<MPath>, Entry),
-    Removed(Option<MPath>, Entry),
-    Changed(Option<MPath>, Entry, Entry),
+    Added(Option<NonRootMPath>, Entry),
+    Removed(Option<NonRootMPath>, Entry),
+    Changed(Option<NonRootMPath>, Entry, Entry),
 }
 
 pub trait ManifestOps<Store>
@@ -54,7 +54,7 @@ where
         'static,
         Result<
             (
-                Option<MPath>,
+                Option<NonRootMPath>,
                 Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>,
             ),
             Error,
@@ -89,7 +89,7 @@ where
                             output.push((path.clone(), Entry::Tree(manifest_id)));
                             let mut stream = manifest.list(ctx, store).await?;
                             while let Some((name, entry)) = stream.try_next().await? {
-                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                let path = Some(NonRootMPath::join_opt_element(path.as_ref(), &name));
                                 match entry {
                                     Entry::Leaf(_) => {
                                         output.push((path.clone(), entry));
@@ -105,7 +105,7 @@ where
                             }
                             for (name, selector) in subentries {
                                 if let Some(entry) = manifest.lookup(ctx, store, &name).await? {
-                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                    let path = Some(NonRootMPath::join_opt_element(path.as_ref(), &name));
                                     match entry {
                                         Entry::Leaf(_) => {
                                             if selector.value.is_selected() {
@@ -139,7 +139,7 @@ where
         &self,
         ctx: CoreContext,
         store: Store,
-        path: Option<MPath>,
+        path: Option<NonRootMPath>,
     ) -> BoxFuture<
         'static,
         Result<
@@ -161,7 +161,7 @@ where
         'static,
         Result<
             (
-                Option<MPath>,
+                Option<NonRootMPath>,
                 Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>,
             ),
             Error,
@@ -178,7 +178,7 @@ where
         'static,
         Result<
             (
-                MPath,
+                NonRootMPath,
                 <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId,
             ),
             Error,
@@ -200,12 +200,12 @@ where
         &self,
         ctx: CoreContext,
         store: Store,
-        prefixes: impl IntoIterator<Item = MPath>,
+        prefixes: impl IntoIterator<Item = NonRootMPath>,
     ) -> BoxStream<
         'static,
         Result<
             (
-                MPath,
+                NonRootMPath,
                 <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId,
             ),
             Error,
@@ -237,7 +237,7 @@ where
         'static,
         Result<
             (
-                Option<MPath>,
+                Option<NonRootMPath>,
                 <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::TreeId,
             ),
             Error,
@@ -323,7 +323,8 @@ where
 
                             let mut stream = left_mf.list(ctx, &store).await?;
                             while let Some((name, left)) = stream.try_next().await? {
-                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                let path =
+                                    Some(NonRootMPath::join_opt_element(path.as_ref(), &name));
                                 if let Some(right) =
                                     right_mf.lookup(ctx, &other_store, &name).await?
                                 {
@@ -357,7 +358,8 @@ where
                             let mut stream = right_mf.list(ctx, &other_store).await?;
                             while let Some((name, right)) = stream.try_next().await? {
                                 if left_mf.lookup(ctx, &store, &name).await?.is_none() {
-                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                    let path =
+                                        Some(NonRootMPath::join_opt_element(path.as_ref(), &name));
                                     match right {
                                         Entry::Tree(tree) => recurse.push(Diff::Added(path, tree)),
                                         _ => output.push(Diff::Added(path, right)),
@@ -372,7 +374,8 @@ where
                             let manifest = tree.load(ctx, &other_store).await?;
                             let mut stream = manifest.list(ctx, &other_store).await?;
                             while let Some((name, entry)) = stream.try_next().await? {
-                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                let path =
+                                    Some(NonRootMPath::join_opt_element(path.as_ref(), &name));
                                 match entry {
                                     Entry::Tree(tree) => recurse.push(Diff::Added(path, tree)),
                                     _ => output.push(Diff::Added(path, entry)),
@@ -385,7 +388,8 @@ where
                             let manifest = tree.load(ctx, &store).await?;
                             let mut stream = manifest.list(ctx, &store).await?;
                             while let Some((name, entry)) = stream.try_next().await? {
-                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                let path =
+                                    Some(NonRootMPath::join_opt_element(path.as_ref(), &name));
                                 match entry {
                                     Entry::Tree(tree) => recurse.push(Diff::Removed(path, tree)),
                                     _ => output.push(Diff::Removed(path, entry)),
@@ -474,7 +478,7 @@ pub fn find_intersection_of_diffs<TreeId, LeafId, Store>(
     store: Store,
     mf_id: TreeId,
     diff_against: Vec<TreeId>,
-) -> impl Stream<Item = Result<(Option<MPath>, Entry<TreeId, LeafId>), Error>> + 'static
+) -> impl Stream<Item = Result<(Option<NonRootMPath>, Entry<TreeId, LeafId>), Error>> + 'static
 where
     Store: Sync + Send + Clone + 'static,
     TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
@@ -496,7 +500,7 @@ pub fn find_intersection_of_diffs_and_parents<TreeId, LeafId, Store>(
 ) -> impl Stream<
     Item = Result<
         (
-            Option<MPath>,
+            Option<NonRootMPath>,
             Entry<TreeId, LeafId>,
             Vec<Entry<TreeId, LeafId>>,
         ),

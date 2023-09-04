@@ -56,7 +56,7 @@ use manifest::ManifestOps;
 use maplit::hashset;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::MetadataDatabaseConfig;
@@ -580,7 +580,7 @@ async fn merge_imported_commit(
 
     let imported_leaf_entries = get_leaf_entries(ctx, repo, imported_cs_id).await?;
 
-    let intersection: Vec<MPath> = imported_leaf_entries
+    let intersection: Vec<NonRootMPath> = imported_leaf_entries
         .intersection(&master_leaf_entries)
         .cloned()
         .collect();
@@ -672,7 +672,7 @@ async fn get_leaf_entries(
     ctx: &CoreContext,
     repo: &Repo,
     cs_id: ChangesetId,
-) -> Result<HashSet<MPath>, Error> {
+) -> Result<HashSet<NonRootMPath>, Error> {
     let hg_cs_id = repo.as_blob_repo().derive_hg_changeset(ctx, cs_id).await?;
     let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
     hg_cs
@@ -1006,7 +1006,7 @@ async fn repo_import(
 ) -> Result<(), Error> {
     let arg_git_repo_path = recovery_fields.git_repo_path.clone();
     let path = Path::new(&arg_git_repo_path);
-    let dest_path_prefix = MPath::new(&recovery_fields.dest_path)?;
+    let dest_path_prefix = NonRootMPath::new(&recovery_fields.dest_path)?;
     let importing_bookmark = get_importing_bookmark(&recovery_fields.bookmark_suffix)?;
     if !is_valid_bookmark_suffix(&recovery_fields.bookmark_suffix) {
         return Err(format_err!(
@@ -1112,7 +1112,7 @@ async fn repo_import(
         }
     }
 
-    let combined_mover: Mover = Arc::new(move |source_path: &MPath| {
+    let combined_mover: Mover = Arc::new(move |source_path: &NonRootMPath| {
         let mut mutable_path = source_path.clone();
         for mover in movers.clone() {
             let maybe_path = mover(&mutable_path)?;

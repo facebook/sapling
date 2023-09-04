@@ -20,7 +20,7 @@ use commit_graph::CommitGraphRef;
 use itertools::Itertools;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use phases::PhasesRef;
 use pushrebase::PushrebaseError;
 use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
@@ -138,8 +138,8 @@ pub enum BookmarkMovementError {
     #[error("Case conflict found in {changeset_id}: {path1} conflicts with {path2}")]
     CaseConflict {
         changeset_id: ChangesetId,
-        path1: MPath,
-        path2: MPath,
+        path1: NonRootMPath,
+        path2: NonRootMPath,
     },
 
     #[error(

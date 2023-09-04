@@ -23,8 +23,8 @@ use futures::future::FutureExt;
 use futures::future::TryFutureExt;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 
 use crate::AsyncManifest as Manifest;
 use crate::Entry;
@@ -37,14 +37,14 @@ use crate::StoreLoadable;
 /// manifest. It is `Some` for subentries for which `create_{tree|leaf}` was called to
 /// generate them, and `None` if subentry was reused from one of its parents.
 pub struct TreeInfo<TreeId, LeafId, Ctx> {
-    pub path: Option<MPath>,
+    pub path: Option<NonRootMPath>,
     pub parents: Vec<TreeId>,
     pub subentries: BTreeMap<MPathElement, (Option<Ctx>, Entry<TreeId, LeafId>)>,
 }
 
 /// Information passed to `create_leaf` function when leaf node is constructed
 pub struct LeafInfo<LeafId, Leaf> {
-    pub path: MPath,
+    pub path: NonRootMPath,
     pub parents: Vec<LeafId>,
     /// Leaf value, if it is not provided it means we have leaves only conflict
     /// which can potentially be resolved by `create_leaf`, in case of mercurial
@@ -74,7 +74,7 @@ pub fn derive_manifest<TreeId, LeafId, IntermediateLeafId, Leaf, T, TFut, L, LFu
     ctx: CoreContext,
     store: Store,
     parents: impl IntoIterator<Item = TreeId>,
-    changes: impl IntoIterator<Item = (MPath, Option<Leaf>)>,
+    changes: impl IntoIterator<Item = (NonRootMPath, Option<Leaf>)>,
     create_tree: T,
     create_leaf: L,
 ) -> impl Future<Output = Result<Option<TreeId>, Error>>
@@ -155,7 +155,7 @@ pub fn derive_manifest_inner<
     ctx: CoreContext,
     store: Store,
     parents: impl IntoIterator<Item = TreeId>,
-    changes: impl IntoIterator<Item = (MPath, Option<Leaf>)>,
+    changes: impl IntoIterator<Item = (NonRootMPath, Option<Leaf>)>,
     create_tree: T,
     create_leaf: L,
 ) -> impl Future<Output = Result<Option<TreeId>, Error>>
@@ -294,7 +294,7 @@ pub fn derive_manifest_with_io_sender<
     ctx: CoreContext,
     store: Store,
     parents: impl IntoIterator<Item = TreeId>,
-    changes: impl IntoIterator<Item = (MPath, Option<Leaf>)>,
+    changes: impl IntoIterator<Item = (NonRootMPath, Option<Leaf>)>,
     create_tree_with_sender: T,
     create_leaf_with_sender: L,
 ) -> impl Future<Output = Result<Option<TreeId>, Error>>
@@ -365,12 +365,12 @@ enum MergeResult<TreeId, LeafId, Leaf> {
     CreateLeaf {
         leaf: Option<Leaf>,
         name: Option<MPathElement>,
-        path: MPath,
+        path: NonRootMPath,
         parents: Vec<LeafId>,
     },
     CreateTree {
         name: Option<MPathElement>,
-        path: Option<MPath>,
+        path: Option<NonRootMPath>,
         parents: Vec<TreeId>,
     },
 }
@@ -379,7 +379,7 @@ enum MergeResult<TreeId, LeafId, Leaf> {
 /// between changes and parents.
 struct MergeNode<TreeId, LeafId, Leaf> {
     name: Option<MPathElement>, // name of this node in parent manifest
-    path: Option<MPath>,        // path to this node from root of the manifest
+    path: Option<NonRootMPath>, // path to this node from root of the manifest
     changes: PathTree<Option<Change<Leaf>>>, // changes associated with current subtree
     parents: Vec<Entry<TreeId, LeafId>>, // unmerged parents of current node
 }
@@ -545,7 +545,7 @@ where
         let mut stream = manifest.list(ctx, store).await?;
         while let Some((name, entry)) = stream.try_next().await? {
             let subentry = deps.entry(name.clone()).or_insert_with(|| MergeNode {
-                path: Some(MPath::join_opt_element(path.as_ref(), &name)),
+                path: Some(NonRootMPath::join_opt_element(path.as_ref(), &name)),
                 name: Some(name),
                 changes: Default::default(),
                 parents: Default::default(),
@@ -556,7 +556,7 @@ where
     // add subentries from changes
     for (name, change) in subentries {
         let subentry = deps.entry(name.clone()).or_insert_with(|| MergeNode {
-            path: Some(MPath::join_opt_element(path.as_ref(), &name)),
+            path: Some(NonRootMPath::join_opt_element(path.as_ref(), &name)),
             name: Some(name),
             changes: Default::default(),
             parents: Default::default(),

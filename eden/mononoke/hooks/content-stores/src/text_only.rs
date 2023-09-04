@@ -15,7 +15,7 @@ use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
 use crate::ErrorKind;
 use crate::FileChange;
@@ -76,8 +76,8 @@ impl<T: FileContentManager + 'static> FileContentManager for TextOnlyFileContent
         &'a self,
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
-        paths: Vec<MPath>,
-    ) -> Result<HashMap<MPath, PathContent>, ErrorKind> {
+        paths: Vec<NonRootMPath>,
+    ) -> Result<HashMap<NonRootMPath, PathContent>, ErrorKind> {
         self.inner.find_content(ctx, bookmark, paths).await
     }
 
@@ -86,7 +86,7 @@ impl<T: FileContentManager + 'static> FileContentManager for TextOnlyFileContent
         ctx: &'a CoreContext,
         new_cs_id: ChangesetId,
         old_cs_id: ChangesetId,
-    ) -> Result<Vec<(MPath, FileChange)>, ErrorKind> {
+    ) -> Result<Vec<(NonRootMPath, FileChange)>, ErrorKind> {
         self.inner.file_changes(ctx, new_cs_id, old_cs_id).await
     }
 
@@ -94,8 +94,8 @@ impl<T: FileContentManager + 'static> FileContentManager for TextOnlyFileContent
         &'a self,
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
-        paths: Vec<MPath>,
-    ) -> Result<HashMap<MPath, ChangesetInfo>, ErrorKind> {
+        paths: Vec<NonRootMPath>,
+    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, ErrorKind> {
         self.inner.latest_changes(ctx, bookmark, paths).await
     }
 }

@@ -19,7 +19,7 @@ use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
 use crate::Entry;
 use crate::Manifest;
@@ -47,9 +47,9 @@ use crate::ManifestOps;
 fn get_implicit_dir_deletes<ManifestId, FileId, Store>(
     ctx: CoreContext,
     store: Store,
-    path_added_in_a_child: MPath,
+    path_added_in_a_child: NonRootMPath,
     parent: ManifestId,
-) -> impl Stream<Item = Result<MPath, Error>>
+) -> impl Stream<Item = Result<NonRootMPath, Error>>
 where
     FileId: Hash + Eq + Send + Sync + Unpin + 'static,
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + ManifestOps<Store> + 'static,
@@ -91,7 +91,7 @@ fn get_implicit_deletes_single_parent<ManifestId, FileId, Store, I>(
     store: Store,
     paths_added_in_a_child: I,
     parent: ManifestId,
-) -> impl Stream<Item = Result<MPath, Error>>
+) -> impl Stream<Item = Result<NonRootMPath, Error>>
 where
     FileId: Hash + Eq + Send + Sync + Unpin + 'static,
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + ManifestOps<Store> + 'static,
@@ -99,7 +99,7 @@ where
     <ManifestId as StoreLoadable<Store>>::Value:
         Manifest<TreeId = ManifestId, LeafId = (FileType, FileId)> + Send + Sync,
     <<ManifestId as StoreLoadable<Store>>::Value as Manifest>::LeafId: Send + Copy + Eq,
-    I: IntoIterator<Item = MPath>,
+    I: IntoIterator<Item = NonRootMPath>,
 {
     let individual_path_streams = paths_added_in_a_child.into_iter().map({
         cloned!(ctx, store, parent);
@@ -122,7 +122,7 @@ pub fn get_implicit_deletes<ManifestId, FileId, Store, I, M>(
     store: Store,
     paths_added_in_a_child: I,
     parents: M,
-) -> impl Stream<Item = Result<MPath, Error>>
+) -> impl Stream<Item = Result<NonRootMPath, Error>>
 where
     FileId: Hash + Eq + Send + Sync + Unpin + 'static,
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + ManifestOps<Store> + 'static,
@@ -130,7 +130,7 @@ where
     <ManifestId as StoreLoadable<Store>>::Value:
         Manifest<TreeId = ManifestId, LeafId = (FileType, FileId)> + Send + Sync,
     <<ManifestId as StoreLoadable<Store>>::Value as Manifest>::LeafId: Send + Copy + Eq,
-    I: IntoIterator<Item = MPath> + Clone,
+    I: IntoIterator<Item = NonRootMPath> + Clone,
     M: IntoIterator<Item = ManifestId>,
 {
     let individual_parent_streams = parents.into_iter().map({

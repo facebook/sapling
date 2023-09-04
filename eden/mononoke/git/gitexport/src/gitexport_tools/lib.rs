@@ -26,7 +26,7 @@ use mononoke_api::MononokeError;
 use mononoke_api::RepoContext;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 use slog::debug;
 use slog::error;
@@ -44,7 +44,7 @@ pub async fn rewrite_partial_changesets(
     changeset_parents: &ChangesetParents,
     // Repo that will hold the partial changesets that will be exported to git
     target_repo_ctx: &RepoContext,
-    export_paths: Vec<MPath>,
+    export_paths: Vec<NonRootMPath>,
 ) -> Result<(), MononokeError> {
     let ctx: &CoreContext = source_repo_ctx.ctx();
 
@@ -55,7 +55,7 @@ pub async fn rewrite_partial_changesets(
 
     let logger_clone = logger.clone();
 
-    let multi_mover: MultiMover = Arc::new(move |source_path: &MPath| {
+    let multi_mover: MultiMover = Arc::new(move |source_path: &NonRootMPath| {
         let should_export = export_paths.iter().any(|p| p.is_prefix_of(source_path));
 
         if !should_export {
@@ -214,8 +214,8 @@ mod test {
     async fn test_rewrite_partial_changesets(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let export_dir = MPath::new(EXPORT_DIR).unwrap();
-        let second_export_dir = MPath::new(SECOND_EXPORT_DIR).unwrap();
+        let export_dir = NonRootMPath::new(EXPORT_DIR).unwrap();
+        let second_export_dir = NonRootMPath::new(SECOND_EXPORT_DIR).unwrap();
 
         let (source_repo_ctx, changeset_ids) =
             build_test_repo(fb, &ctx, GitExportTestRepoOptions::default()).await?;
@@ -294,13 +294,15 @@ mod test {
 
         async fn get_msg_and_files_changed(
             cs: &ChangesetContext,
-            file_filter: Box<dyn Fn(&MPath) -> bool>,
-        ) -> Result<(String, Vec<MPath>), MononokeError> {
+            file_filter: Box<dyn Fn(&NonRootMPath) -> bool>,
+        ) -> Result<(String, Vec<NonRootMPath>), MononokeError> {
             let msg = cs.message().await?;
             let fcs = cs.file_changes().await?;
 
-            let files_changed: Vec<MPath> =
-                fcs.into_keys().filter(file_filter).collect::<Vec<MPath>>();
+            let files_changed: Vec<NonRootMPath> = fcs
+                .into_keys()
+                .filter(file_filter)
+                .collect::<Vec<NonRootMPath>>();
 
             Ok((msg, files_changed))
         }
@@ -312,12 +314,12 @@ mod test {
         )
         .await?;
 
-        fn build_expected_tuple(msg: &str, fpaths: Vec<&str>) -> (String, Vec<MPath>) {
+        fn build_expected_tuple(msg: &str, fpaths: Vec<&str>) -> (String, Vec<NonRootMPath>) {
             (
                 String::from(msg),
                 fpaths
                     .iter()
-                    .map(|p| MPath::new(p).unwrap())
+                    .map(|p| NonRootMPath::new(p).unwrap())
                     .collect::<Vec<_>>(),
             )
         }
@@ -347,7 +349,7 @@ mod test {
     async fn test_rewriting_fails_with_irrelevant_changeset(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let export_dir = MPath::new(EXPORT_DIR).unwrap();
+        let export_dir = NonRootMPath::new(EXPORT_DIR).unwrap();
 
         let (source_repo_ctx, changeset_ids) =
             build_test_repo(fb, &ctx, GitExportTestRepoOptions::default()).await?;

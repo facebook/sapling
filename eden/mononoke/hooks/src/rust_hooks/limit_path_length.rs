@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use context::CoreContext;
 use mercurial_types::simple_fsencode;
 use mononoke_types::BasicFileChange;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
 use crate::CrossRepoPushSource;
 use crate::FileContentManager;
@@ -50,7 +50,7 @@ impl FileHook for LimitPathLengthHook {
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
         change: Option<&'change BasicFileChange>,
-        path: &'path MPath,
+        path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
@@ -86,7 +86,7 @@ impl FileHook for LimitPathLengthHook {
     }
 }
 
-fn check_path(path: &MPath) -> Result<Option<HookExecution>, Error> {
+fn check_path(path: &NonRootMPath) -> Result<Option<HookExecution>, Error> {
     let mut elements = path
         .as_ref()
         .iter()
@@ -126,13 +126,13 @@ mod test {
 
     #[test]
     fn test_path_bad() {
-        let path = MPath::new("flib/intern/__generated__/GraphQLMeerkatStep/flib/intern/entschema/generated/entity/profile_plus/EntPlatformToolViewerContextCallsiteMigrationRuleAction.php/GQLG_Intern__PlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionResponsePayload__EntPlatformToolViewerContextCallsiteMigrationRuleAction__genPerformGraphQLPlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionMutationType.php").unwrap();
+        let path = NonRootMPath::new("flib/intern/__generated__/GraphQLMeerkatStep/flib/intern/entschema/generated/entity/profile_plus/EntPlatformToolViewerContextCallsiteMigrationRuleAction.php/GQLG_Intern__PlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionResponsePayload__EntPlatformToolViewerContextCallsiteMigrationRuleAction__genPerformGraphQLPlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionMutationType.php").unwrap();
         assert!(check_path(&path).unwrap().is_some());
     }
 
     #[test]
     fn test_path_ok() {
-        let path = MPath::new("flib/intern/__generated__/GraphQLFetchersMeerkatStep/ic/GQLG_File__EntIcxPositionSearchHitWorkdayPositionViewStateJunction__GraphQLFacebookInternalTypeSetFetcherWrapper.php").unwrap();
+        let path = NonRootMPath::new("flib/intern/__generated__/GraphQLFetchersMeerkatStep/ic/GQLG_File__EntIcxPositionSearchHitWorkdayPositionViewStateJunction__GraphQLFacebookInternalTypeSetFetcherWrapper.php").unwrap();
         assert!(check_path(&path).unwrap().is_none());
     }
 }

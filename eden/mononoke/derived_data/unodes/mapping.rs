@@ -33,8 +33,8 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::NonRootMPath;
 use slog::debug;
 use stats::prelude::*;
 
@@ -230,7 +230,7 @@ impl_bonsai_derived_via_manager!(RootUnodeManifestId);
 
 pub(crate) fn get_file_changes(
     bcs: &BonsaiChangeset,
-) -> Vec<(MPath, Option<(ContentId, FileType)>)> {
+) -> Vec<(NonRootMPath, Option<(ContentId, FileType)>)> {
     bcs.file_changes()
         .map(|(mpath, file_change)| {
             let content_file_type = file_change

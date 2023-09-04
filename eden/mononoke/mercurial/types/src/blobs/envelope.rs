@@ -13,11 +13,11 @@ use crate::HgFileEnvelope;
 use crate::HgFileNodeId;
 use crate::HgManifestEnvelope;
 use crate::HgParents;
-use crate::MPath;
+use crate::NonRootMPath;
 
 pub trait HgBlobEnvelope: Send + Sync + 'static {
     fn get_parents(&self) -> HgParents;
-    fn get_copy_info(&self) -> Result<Option<(MPath, HgFileNodeId)>>;
+    fn get_copy_info(&self) -> Result<Option<(NonRootMPath, HgFileNodeId)>>;
     fn get_size(&self) -> Option<u64>;
 }
 
@@ -30,7 +30,7 @@ impl HgBlobEnvelope for HgFileEnvelope {
         )
     }
 
-    fn get_copy_info(&self) -> Result<Option<(MPath, HgFileNodeId)>> {
+    fn get_copy_info(&self) -> Result<Option<(NonRootMPath, HgFileNodeId)>> {
         File::extract_copied_from(self.metadata())
     }
 
@@ -45,7 +45,7 @@ impl HgBlobEnvelope for HgManifestEnvelope {
         HgParents::new(p1, p2)
     }
 
-    fn get_copy_info(&self) -> Result<Option<(MPath, HgFileNodeId)>> {
+    fn get_copy_info(&self) -> Result<Option<(NonRootMPath, HgFileNodeId)>> {
         Ok(None)
     }
 
@@ -59,7 +59,7 @@ impl HgBlobEnvelope for HgBlobManifest {
         self.hg_parents()
     }
 
-    fn get_copy_info(&self) -> Result<Option<(MPath, HgFileNodeId)>> {
+    fn get_copy_info(&self) -> Result<Option<(NonRootMPath, HgFileNodeId)>> {
         Ok(None)
     }
 

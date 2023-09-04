@@ -22,8 +22,8 @@ use mononoke_types::hash::Blake2;
 use mononoke_types::path_bytes_from_mpath;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
-use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use path_hash::PathHash;
 use path_hash::PathHashBytes;
@@ -65,7 +65,7 @@ pub struct MutableRenameEntry {
     dst_cs_id: ChangesetId,
     dst_path_hash: PathHash,
     src_cs_id: ChangesetId,
-    src_path: Option<MPath>,
+    src_path: Option<NonRootMPath>,
     src_path_hash: PathHash,
     src_unode: Blake2,
     is_tree: i8,
@@ -78,9 +78,9 @@ impl MutableRenameEntry {
     /// If either path is `None`, this represents the root of the repo
     pub fn new(
         dst_cs_id: ChangesetId,
-        dst_path: Option<MPath>,
+        dst_path: Option<NonRootMPath>,
         src_cs_id: ChangesetId,
-        src_path: Option<MPath>,
+        src_path: Option<NonRootMPath>,
         src_unode: Entry<ManifestUnodeId, FileUnodeId>,
     ) -> Result<Self, Error> {
         let (src_unode, is_tree) = match src_unode {
@@ -109,7 +109,7 @@ impl MutableRenameEntry {
 
     /// Get the source path for this entry, or None if the source
     /// is the repo root
-    pub fn src_path(&self) -> Option<&MPath> {
+    pub fn src_path(&self) -> Option<&NonRootMPath> {
         self.src_path.as_ref()
     }
 
@@ -269,7 +269,7 @@ impl MutableRenames {
         &self,
         ctx: &CoreContext,
         dst_cs_id: ChangesetId,
-        dst_path: Option<MPath>,
+        dst_path: Option<NonRootMPath>,
     ) -> Result<Option<MutableRenameEntry>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
@@ -289,7 +289,7 @@ impl MutableRenames {
         .await?;
         match rows.pop() {
             Some((src_cs_id, src_path_bytes, src_unode, is_tree)) => {
-                let src_path = MPath::new_opt(src_path_bytes)?;
+                let src_path = NonRootMPath::new_opt(src_path_bytes)?;
                 let src_unode = if is_tree == 1 {
                     Entry::Tree(ManifestUnodeId::new(src_unode))
                 } else {
@@ -308,7 +308,7 @@ impl MutableRenames {
         &self,
         ctx: &CoreContext,
         dst_cs_id: ChangesetId,
-        dst_path: Option<MPath>,
+        dst_path: Option<NonRootMPath>,
     ) -> Result<Option<MutableRenameEntry>, Error> {
         match &self.cache_handlers {
             None => self.get_rename_uncached(ctx, dst_cs_id, dst_path).await,
@@ -332,7 +332,7 @@ impl MutableRenames {
     pub async fn get_cs_ids_with_rename_uncached(
         &self,
         ctx: &CoreContext,
-        dst_path: Option<MPath>,
+        dst_path: Option<NonRootMPath>,
     ) -> Result<HashSet<ChangesetId>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
@@ -347,7 +347,7 @@ impl MutableRenames {
     pub async fn get_cs_ids_with_rename(
         &self,
         ctx: &CoreContext,
-        dst_path: Option<MPath>,
+        dst_path: Option<NonRootMPath>,
     ) -> Result<HashSet<ChangesetId>, Error> {
         match &self.cache_handlers {
             None => self.get_cs_ids_with_rename_uncached(ctx, dst_path).await,

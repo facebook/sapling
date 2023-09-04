@@ -50,8 +50,8 @@ use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::FileType;
 use mononoke_types::FsnodeId;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::FsnodeDerivationError;
@@ -59,7 +59,10 @@ use crate::FsnodeDerivationError;
 pub(crate) async fn derive_fsnodes_stack(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
-    file_changes: Vec<(ChangesetId, BTreeMap<MPath, Option<(ContentId, FileType)>>)>,
+    file_changes: Vec<(
+        ChangesetId,
+        BTreeMap<NonRootMPath, Option<(ContentId, FileType)>>,
+    )>,
     parent: Option<FsnodeId>,
 ) -> Result<HashMap<ChangesetId, FsnodeId>, Error> {
     let blobstore = derivation_ctx.blobstore();
@@ -123,7 +126,7 @@ pub(crate) async fn derive_fsnode(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     parents: Vec<FsnodeId>,
-    changes: Vec<(MPath, Option<(ContentId, FileType)>)>,
+    changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
 ) -> Result<FsnodeId> {
     let blobstore = derivation_ctx.blobstore();
     let content_ids = changes
@@ -521,8 +524,8 @@ mod test {
                 all_fsnodes.keys().collect::<Vec<_>>(),
                 vec![
                     &None,
-                    &Some(MPath::new("1").unwrap()),
-                    &Some(MPath::new("files").unwrap())
+                    &Some(NonRootMPath::new("1").unwrap()),
+                    &Some(NonRootMPath::new("files").unwrap())
                 ]
             );
 
@@ -577,9 +580,9 @@ mod test {
                 all_fsnodes.keys().collect::<Vec<_>>(),
                 vec![
                     &None,
-                    &Some(MPath::new("1").unwrap()),
-                    &Some(MPath::new("2").unwrap()),
-                    &Some(MPath::new("files").unwrap())
+                    &Some(NonRootMPath::new("1").unwrap()),
+                    &Some(NonRootMPath::new("2").unwrap()),
+                    &Some(NonRootMPath::new("files").unwrap())
                 ]
             );
 
@@ -666,20 +669,20 @@ mod test {
                 all_fsnodes.keys().collect::<Vec<_>>(),
                 vec![
                     &None,
-                    &Some(MPath::new("1").unwrap()),
-                    &Some(MPath::new("2").unwrap()),
-                    &Some(MPath::new("dir1").unwrap()),
-                    &Some(MPath::new("dir1/file_1_in_dir1").unwrap()),
-                    &Some(MPath::new("dir1/file_2_in_dir1").unwrap()),
-                    &Some(MPath::new("dir1/subdir1").unwrap()),
-                    &Some(MPath::new("dir1/subdir1/file_1").unwrap()),
-                    &Some(MPath::new("dir1/subdir1/subsubdir1").unwrap()),
-                    &Some(MPath::new("dir1/subdir1/subsubdir1/file_1").unwrap()),
-                    &Some(MPath::new("dir1/subdir1/subsubdir2").unwrap()),
-                    &Some(MPath::new("dir1/subdir1/subsubdir2/file_1").unwrap()),
-                    &Some(MPath::new("dir1/subdir1/subsubdir2/file_2").unwrap()),
-                    &Some(MPath::new("dir2").unwrap()),
-                    &Some(MPath::new("dir2/file_1_in_dir2").unwrap()),
+                    &Some(NonRootMPath::new("1").unwrap()),
+                    &Some(NonRootMPath::new("2").unwrap()),
+                    &Some(NonRootMPath::new("dir1").unwrap()),
+                    &Some(NonRootMPath::new("dir1/file_1_in_dir1").unwrap()),
+                    &Some(NonRootMPath::new("dir1/file_2_in_dir1").unwrap()),
+                    &Some(NonRootMPath::new("dir1/subdir1").unwrap()),
+                    &Some(NonRootMPath::new("dir1/subdir1/file_1").unwrap()),
+                    &Some(NonRootMPath::new("dir1/subdir1/subsubdir1").unwrap()),
+                    &Some(NonRootMPath::new("dir1/subdir1/subsubdir1/file_1").unwrap()),
+                    &Some(NonRootMPath::new("dir1/subdir1/subsubdir2").unwrap()),
+                    &Some(NonRootMPath::new("dir1/subdir1/subsubdir2/file_1").unwrap()),
+                    &Some(NonRootMPath::new("dir1/subdir1/subsubdir2/file_2").unwrap()),
+                    &Some(NonRootMPath::new("dir2").unwrap()),
+                    &Some(NonRootMPath::new("dir2/file_1_in_dir2").unwrap()),
                 ]
             );
 
@@ -723,10 +726,11 @@ mod test {
             );
 
             // Check one of the deeper fsnodes.
-            let deep_fsnode_id = match all_fsnodes.get(&Some(MPath::new("dir1/subdir1").unwrap())) {
-                Some(Entry::Tree(fsnode_id)) => fsnode_id,
-                _ => panic!("dir1/subdir1 fsnode should be a tree"),
-            };
+            let deep_fsnode_id =
+                match all_fsnodes.get(&Some(NonRootMPath::new("dir1/subdir1").unwrap())) {
+                    Some(Entry::Tree(fsnode_id)) => fsnode_id,
+                    _ => panic!("dir1/subdir1 fsnode should be a tree"),
+                };
             let deep_fsnode = runtime
                 .block_on(deep_fsnode_id.load(&ctx, repo.repo_blobstore()))
                 .unwrap();
@@ -851,11 +855,11 @@ mod test {
                 all_fsnodes.keys().collect::<Vec<_>>(),
                 vec![
                     &None,
-                    &Some(MPath::new("1").unwrap()),
-                    &Some(MPath::new("2").unwrap()),
-                    &Some(MPath::new("dir1").unwrap()),
-                    &Some(MPath::new("dir2").unwrap()),
-                    &Some(MPath::new("dir2/file_1_in_dir2").unwrap()),
+                    &Some(NonRootMPath::new("1").unwrap()),
+                    &Some(NonRootMPath::new("2").unwrap()),
+                    &Some(NonRootMPath::new("dir1").unwrap()),
+                    &Some(NonRootMPath::new("dir2").unwrap()),
+                    &Some(NonRootMPath::new("dir2/file_1_in_dir2").unwrap()),
                 ]
             );
 

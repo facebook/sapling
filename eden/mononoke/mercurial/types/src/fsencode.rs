@@ -357,14 +357,14 @@ fn hashencode(dirs: Vec<&[u8]>, file: &[u8], dotencode: bool) -> PathBuf {
 
 #[cfg(test)]
 mod test {
-    use mononoke_types::MPath;
     use mononoke_types::MPathElement;
+    use mononoke_types::NonRootMPath;
 
     use super::*;
 
     fn check_fsencode(path: &[u8], expected: &str) {
         let mut elements = vec![];
-        let path = &MPath::new(path).unwrap();
+        let path = &NonRootMPath::new(path).unwrap();
         elements.extend(path.into_iter().cloned());
 
         let elements = elements.iter().map(|e| e.as_ref()).collect::<Vec<_>>();
@@ -373,7 +373,7 @@ mod test {
 
     fn check_simple_fsencode(path: &[u8], expected: &str) {
         let mut elements = vec![];
-        let path = &MPath::new(path).unwrap();
+        let path = &NonRootMPath::new(path).unwrap();
         elements.extend(path.into_iter().cloned());
 
         let elements = elements.iter().map(|e| e.as_ref()).collect::<Vec<_>>();
@@ -441,11 +441,12 @@ mod test {
     }
 
     fn join_and_check(prefix: Option<&str>, suffix: Option<&str>, expected: &str) {
-        let prefix = prefix.map(|prefix| MPath::new(prefix).unwrap());
-        let suffix = suffix.map(|suffix| MPath::new(suffix).unwrap());
+        let prefix = prefix.map(|prefix| NonRootMPath::new(prefix).unwrap());
+        let suffix = suffix.map(|suffix| NonRootMPath::new(suffix).unwrap());
         let mut elements = vec![];
-        let joined = MPath::join_opt(prefix.as_ref(), MPath::iter_opt(suffix.as_ref()));
-        elements.extend(MPath::into_iter_opt(joined));
+        let joined =
+            NonRootMPath::join_opt(prefix.as_ref(), NonRootMPath::iter_opt(suffix.as_ref()));
+        elements.extend(NonRootMPath::into_iter_opt(joined));
         let elements = elements.iter().map(|e| e.as_ref()).collect::<Vec<_>>();
         assert_eq!(fncache_fsencode(&elements, false), PathBuf::from(expected));
     }
@@ -456,10 +457,17 @@ mod test {
         join_and_check(Some("prefix"), None, "prefix");
         join_and_check(None, Some("suffix"), "suffix");
 
-        assert_eq!(MPath::new(b"asdf").unwrap().join(None).to_vec().len(), 4);
+        assert_eq!(
+            NonRootMPath::new(b"asdf")
+                .unwrap()
+                .join(None)
+                .to_vec()
+                .len(),
+            4
+        );
 
         assert_eq!(
-            MPath::new(b"asdf")
+            NonRootMPath::new(b"asdf")
                 .unwrap()
                 .join(&MPathElement::new(b"bdc".to_vec()).expect("valid MPathElement"))
                 .to_vec()

@@ -18,7 +18,7 @@ use megarepo_config::Target;
 use megarepo_mapping::SourceName;
 use megarepo_mapping::REMAPPING_STATE_FILE;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use tests_utils::bookmark;
 use tests_utils::list_working_copy_utf8_with_types;
@@ -84,14 +84,17 @@ async fn test_change_target_config(fb: FacebookInit) -> Result<(), Error> {
     let mut wc = list_working_copy_utf8_with_types(&ctx, &test.blobrepo, target_cs_id).await?;
 
     // Remove file with commit remapping state because it's never present in source
-    assert!(wc.remove(&MPath::new(REMAPPING_STATE_FILE)?).is_some());
+    assert!(
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
+            .is_some()
+    );
 
     assert_eq!(
         wc,
         hashmap! {
-            MPath::new("linkfiles/first_in_other_location")? => ("../source_1/first".to_string(), FileType::Symlink),
-            MPath::new("source_1/first")? => ("first".to_string(), FileType::Regular),
-            MPath::new("source_3/third")? => ("third".to_string(), FileType::Regular),
+            NonRootMPath::new("linkfiles/first_in_other_location")? => ("../source_1/first".to_string(), FileType::Symlink),
+            NonRootMPath::new("source_1/first")? => ("first".to_string(), FileType::Regular),
+            NonRootMPath::new("source_3/third")? => ("third".to_string(), FileType::Regular),
         }
     );
 
@@ -104,10 +107,10 @@ async fn test_change_target_config(fb: FacebookInit) -> Result<(), Error> {
             .map(|(a, _b)| a.clone())
             .collect::<Vec<_>>(),
         vec![
-            MPath::new(".megarepo/remapping_state")?,
-            MPath::new("linkfiles/first")?,
-            MPath::new("linkfiles/second")?,
-            MPath::new("source_2/second")?
+            NonRootMPath::new(".megarepo/remapping_state")?,
+            NonRootMPath::new("linkfiles/first")?,
+            NonRootMPath::new("linkfiles/second")?,
+            NonRootMPath::new("source_2/second")?
         ],
     );
 
@@ -690,14 +693,17 @@ async fn test_change_target_config_linkfile_to_file_mapped_to_multiple_paths(
     let mut wc = list_working_copy_utf8_with_types(&ctx, &test.blobrepo, target_cs_id).await?;
 
     // Remove file with commit remapping state because it's never present in source
-    assert!(wc.remove(&MPath::new(REMAPPING_STATE_FILE)?).is_some());
+    assert!(
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
+            .is_some()
+    );
 
     assert_eq!(
         wc,
         hashmap! {
-            MPath::new("source_1/first")? => ("first".to_string(), FileType::Regular),
-            MPath::new("linkfiles/first")? => ("../source_1/first".to_string(), FileType::Symlink),
-            MPath::new("copy_of_first")? => ("first".to_string(), FileType::Regular),
+            NonRootMPath::new("source_1/first")? => ("first".to_string(), FileType::Regular),
+            NonRootMPath::new("linkfiles/first")? => ("../source_1/first".to_string(), FileType::Symlink),
+            NonRootMPath::new("copy_of_first")? => ("first".to_string(), FileType::Regular),
         }
     );
 

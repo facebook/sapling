@@ -19,8 +19,8 @@ use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 use nonzero_ext::nonzero;
 
 use crate::ops::Diff;
@@ -42,17 +42,17 @@ pub enum After {
 
     /// Include everything in this directory after the named element and the
     /// subpath within that element.
-    After(MPathElement, Option<MPath>),
+    After(MPathElement, Option<NonRootMPath>),
 }
 
-impl From<Option<Option<MPath>>> for After {
-    fn from(path: Option<Option<MPath>>) -> Self {
+impl From<Option<Option<NonRootMPath>>> for After {
+    fn from(path: Option<Option<NonRootMPath>>) -> Self {
         path.map_or(After::All, |p| After::new(p.as_ref()))
     }
 }
 
 impl After {
-    fn new(mpath_opt: Option<&MPath>) -> Self {
+    fn new(mpath_opt: Option<&NonRootMPath>) -> Self {
         match mpath_opt {
             None => After::AllContents,
             Some(mpath) => {
@@ -127,7 +127,7 @@ where
         'static,
         Result<
             (
-                Option<MPath>,
+                Option<NonRootMPath>,
                 Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>,
             ),
             Error,
@@ -183,7 +183,7 @@ where
                                 if after.skip(&name) {
                                     continue;
                                 }
-                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                let path = Some(NonRootMPath::join_opt_element(path.as_ref(), &name));
                                 match entry {
                                     Entry::Leaf(leaf) => {
                                         if after.include_file(&name) {
@@ -219,7 +219,7 @@ where
                                     continue;
                                 }
                                 if let Some(entry) = manifest.lookup_weighted(ctx, store, &name).await? {
-                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                    let path = Some(NonRootMPath::join_opt_element(path.as_ref(), &name));
                                     match entry {
                                         Entry::Leaf(leaf) => {
                                             if after.include_file(&name)
@@ -271,7 +271,7 @@ where
         ctx: CoreContext,
         store: Store,
         other: Self,
-        after: Option<Option<MPath>>,
+        after: Option<Option<NonRootMPath>>,
     ) -> BoxStream<
         'static,
         Result<
@@ -292,7 +292,7 @@ where
         store: Store,
         other: Self,
         other_store: Store,
-        after: Option<Option<MPath>>,
+        after: Option<Option<NonRootMPath>>,
         output_filter: FilterMap,
         recurse_pruner: RecursePruner,
     ) -> BoxStream<'static, Result<Out, Error>>
@@ -388,7 +388,7 @@ where
                                     if after.skip(&name) || left == right {
                                         continue;
                                     }
-                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                    let path = Some(NonRootMPath::join_opt_element(path.as_ref(), &name));
                                     match (left, right) {
                                         (Some(Entry::Leaf(left)), Some(Entry::Leaf(right))) => {
                                             if after.include_file(&name) {
@@ -507,7 +507,7 @@ where
                                     if after.skip(&name) {
                                         continue;
                                     }
-                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                    let path = Some(NonRootMPath::join_opt_element(path.as_ref(), &name));
                                     match entry {
                                         Entry::Tree((weight, tree)) => {
                                             push_recurse(
@@ -541,7 +541,7 @@ where
                                     if after.skip(&name) {
                                         continue;
                                     }
-                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                    let path = Some(NonRootMPath::join_opt_element(path.as_ref(), &name));
                                     match entry {
                                         Entry::Tree((weight, tree)) => {
                                             push_recurse(

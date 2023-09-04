@@ -21,7 +21,7 @@ use maplit::hashset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::SparseProfilesConfig;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use pathmatcher::Matcher;
 use repo_sparse_profiles::RepoSparseProfiles;
 use tests_utils::store_files;
@@ -151,12 +151,12 @@ async fn test_sparse_monitoring_config(fb: FacebookInit) -> Result<()> {
 
     assert_eq!(
         hashset![
-            MPath::new("sparse/base")?,
-            MPath::new("sparse/include")?,
-            MPath::new("sparse/other")?,
-            MPath::new("sparse/top_level_files")?,
-            MPath::new("sparse/empty")?,
-            MPath::new("sparse/validation/lib/buck.py")?,
+            NonRootMPath::new("sparse/base")?,
+            NonRootMPath::new("sparse/include")?,
+            NonRootMPath::new("sparse/other")?,
+            NonRootMPath::new("sparse/top_level_files")?,
+            NonRootMPath::new("sparse/empty")?,
+            NonRootMPath::new("sparse/validation/lib/buck.py")?,
         ],
         paths
     );
@@ -175,11 +175,11 @@ async fn test_sparse_monitoring_config(fb: FacebookInit) -> Result<()> {
 
     assert_eq!(
         hashset![
-            MPath::new("sparse/base")?,
-            MPath::new("sparse/include")?,
-            MPath::new("sparse/other")?,
-            MPath::new("sparse/top_level_files")?,
-            MPath::new("sparse/empty")?,
+            NonRootMPath::new("sparse/base")?,
+            NonRootMPath::new("sparse/include")?,
+            NonRootMPath::new("sparse/other")?,
+            NonRootMPath::new("sparse/top_level_files")?,
+            NonRootMPath::new("sparse/empty")?,
         ],
         paths
     );
@@ -192,7 +192,7 @@ async fn test_sparse_monitoring_config(fb: FacebookInit) -> Result<()> {
     )?;
     let paths = monitor.get_monitoring_profiles(&changeset_a).await?;
 
-    assert_eq!(vec![MPath::new("sparse/include")?], paths);
+    assert_eq!(vec![NonRootMPath::new("sparse/include")?], paths);
 
     // If Exact profiles provided, should ignore monitoring and excludes
     let monitor = mock_sparse_monitoring(
@@ -213,8 +213,8 @@ async fn test_sparse_monitoring_config(fb: FacebookInit) -> Result<()> {
 
     assert_eq!(
         hashset![
-            MPath::new("sparse/other")?,
-            MPath::new("dir1/file_1_in_dir1")?
+            NonRootMPath::new("sparse/other")?,
+            NonRootMPath::new("dir1/file_1_in_dir1")?
         ],
         paths
     );
@@ -275,7 +275,11 @@ async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
     let changeset_a = ChangesetContext::new(repo.clone(), a);
     let monitor = mock_default_sparse_monitoring()?;
     let size = monitor
-        .get_profile_size(&ctx, &changeset_a, vec![MPath::new("sparse/include")?])
+        .get_profile_size(
+            &ctx,
+            &changeset_a,
+            vec![NonRootMPath::new("sparse/include")?],
+        )
         .await?;
 
     assert_eq!(size, hashmap! {"sparse/include".to_string() => 45});
@@ -290,7 +294,11 @@ async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
 
     let changeset_b = ChangesetContext::new(repo.clone(), b);
     let size = monitor
-        .get_profile_size(&ctx, &changeset_b, vec![MPath::new("sparse/include")?])
+        .get_profile_size(
+            &ctx,
+            &changeset_b,
+            vec![NonRootMPath::new("sparse/include")?],
+        )
         .await?;
     assert_eq!(size, hashmap! {"sparse/include".to_string() => 37});
 
@@ -304,7 +312,11 @@ async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
 
     let changeset_c = ChangesetContext::new(repo, c);
     let size = monitor
-        .get_profile_size(&ctx, &changeset_c, vec![MPath::new("sparse/include")?])
+        .get_profile_size(
+            &ctx,
+            &changeset_c,
+            vec![NonRootMPath::new("sparse/include")?],
+        )
         .await?;
     assert_eq!(size, hashmap! {"sparse/include".to_string() => 37});
 
@@ -336,7 +348,8 @@ async fn multiple_sparse_profile_sizes(fb: FacebookInit) -> Result<()> {
         "sparse/top_level_files".to_string() => 4,
         "sparse/empty".to_string() => 427,
     };
-    let profiles_names: Result<Vec<MPath>> = profiles_map.keys().map(MPath::new).collect();
+    let profiles_names: Result<Vec<NonRootMPath>> =
+        profiles_map.keys().map(NonRootMPath::new).collect();
     let monitor = mock_default_sparse_monitoring()?;
     let sizes = monitor
         .get_profile_size(&ctx, &changeset_a, profiles_names?)

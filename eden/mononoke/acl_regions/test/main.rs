@@ -22,7 +22,7 @@ use metaconfig_types::AclRegion;
 use metaconfig_types::AclRegionConfig;
 use metaconfig_types::AclRegionRule;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
@@ -57,13 +57,13 @@ struct Repo {
     changeset_fetcher: dyn ChangesetFetcher,
 }
 
-fn path(p: &str) -> Option<MPath> {
-    MPath::new_opt(p).unwrap()
+fn path(p: &str) -> Option<NonRootMPath> {
+    NonRootMPath::new_opt(p).unwrap()
 }
 
 struct TestData {
     cs_id: ChangesetId,
-    path: Option<MPath>,
+    path: Option<NonRootMPath>,
     expected_names: HashSet<String>,
 }
 

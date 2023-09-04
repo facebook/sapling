@@ -15,7 +15,7 @@ use futures_stats::StreamStats;
 use hgproto::GettreepackArgs;
 use iterhelpers::chunk_by_accumulation;
 use mercurial_types::HgManifestId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 use scuba_ext::ScubaVerbosityLevel;
@@ -136,7 +136,7 @@ pub fn debug_format_manifest(node: &HgManifestId) -> String {
     format!("{}", node)
 }
 
-pub fn debug_format_path(path: &Option<MPath>) -> String {
+pub fn debug_format_path(path: &Option<NonRootMPath>) -> String {
     match path {
         Some(p) => format!("{}", p),
         None => String::new(),

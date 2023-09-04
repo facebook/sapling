@@ -87,7 +87,7 @@ mod test {
     use cross_repo_sync_test_utils::xrepo_mapping_version_with_small_repo;
     use fbinit::FacebookInit;
     use maplit::hashmap;
-    use mononoke_types::MPath;
+    use mononoke_types::NonRootMPath;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
@@ -146,9 +146,9 @@ mod test {
 
         assert_eq!(
             hashmap! {
-                MPath::new("prefix/file")? => "content".to_string(),
-                MPath::new("prefix/file2")? => "content".to_string(),
-                MPath::new("prefix/some_other_file")? => "some_content".to_string(),
+                NonRootMPath::new("prefix/file")? => "content".to_string(),
+                NonRootMPath::new("prefix/file2")? => "content".to_string(),
+                NonRootMPath::new("prefix/some_other_file")? => "some_content".to_string(),
             },
             wc
         );
@@ -220,10 +220,10 @@ mod test {
 
         assert_eq!(
             hashmap! {
-                MPath::new("file")? => "content".to_string(),
-                MPath::new("file2")? => "content".to_string(),
-                MPath::new("file3")? => "content3".to_string(),
-                MPath::new("some_other_file")? => "some_content".to_string(),
+                NonRootMPath::new("file")? => "content".to_string(),
+                NonRootMPath::new("file2")? => "content".to_string(),
+                NonRootMPath::new("file3")? => "content3".to_string(),
+                NonRootMPath::new("some_other_file")? => "some_content".to_string(),
             },
             wc
         );

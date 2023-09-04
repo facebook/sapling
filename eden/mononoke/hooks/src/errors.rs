@@ -9,7 +9,7 @@ use std::collections::HashSet;
 
 pub use mercurial_types::HgChangesetId;
 use metaconfig_types::BookmarkOrRegex;
-pub use mononoke_types::MPath;
+pub use mononoke_types::NonRootMPath;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -25,10 +25,10 @@ pub enum ErrorKind {
     #[error("invalid file structure: {0}")]
     InvalidFileStructure(String),
     #[error("invalid path: {0}")]
-    InvalidPath(MPath),
+    InvalidPath(NonRootMPath),
 
     #[error("Missing file for cs '{0}' path '{1}'")]
-    MissingFile(HgChangesetId, MPath),
+    MissingFile(HgChangesetId, NonRootMPath),
 
     #[error("Hook(s) referenced in bookmark {0:#?} do not exist: {1:?}")]
     NoSuchBookmarkHook(BookmarkOrRegex, HashSet<String>),

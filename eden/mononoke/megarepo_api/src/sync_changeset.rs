@@ -602,7 +602,7 @@ mod test {
     use maplit::hashmap;
     use megarepo_mapping::REMAPPING_STATE_FILE;
     use mononoke_types::FileChange;
-    use mononoke_types::MPath;
+    use mononoke_types::NonRootMPath;
     use tests_utils::bookmark;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::resolve_cs_id;
@@ -683,13 +683,13 @@ mod test {
         let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, cs_id).await?;
 
         // Remove file with commit remapping state because it's never present in source
-        wc.remove(&MPath::new(REMAPPING_STATE_FILE)?);
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?);
 
         assert_eq!(
             wc,
             hashmap! {
-                MPath::new("source_1/file")? => "content".to_string(),
-                MPath::new("source_1/anotherfile")? => "anothercontent".to_string(),
+                NonRootMPath::new("source_1/file")? => "content".to_string(),
+                NonRootMPath::new("source_1/anotherfile")? => "anothercontent".to_string(),
             }
         );
 
@@ -805,17 +805,17 @@ mod test {
         let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, merge_target).await?;
 
         // Remove file with commit remapping state because it's never present in source
-        wc.remove(&MPath::new(REMAPPING_STATE_FILE)?);
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?);
 
         assert_eq!(
             wc,
             hashmap! {
-                MPath::new("source_1/file")? => "mergeresolution".to_string(),
-                MPath::new("source_1/file_from_parent_1")? => "parent_1".to_string(),
-                MPath::new("source_1/file_from_parent_2")? => "parent_2".to_string(),
-                MPath::new("source_1/file_from_parent_3")? => "parent_3".to_string(),
-                MPath::new("source_1/copy_of_file")? => "totallydifferentcontent".to_string(),
-                MPath::new("copyfile")? => "mergeresolution".to_string(),
+                NonRootMPath::new("source_1/file")? => "mergeresolution".to_string(),
+                NonRootMPath::new("source_1/file_from_parent_1")? => "parent_1".to_string(),
+                NonRootMPath::new("source_1/file_from_parent_2")? => "parent_2".to_string(),
+                NonRootMPath::new("source_1/file_from_parent_3")? => "parent_3".to_string(),
+                NonRootMPath::new("source_1/copy_of_file")? => "totallydifferentcontent".to_string(),
+                NonRootMPath::new("copyfile")? => "mergeresolution".to_string(),
             }
         );
 
@@ -825,7 +825,7 @@ mod test {
 
         let copied_file_change_from_bonsai = match merge_target_cs
             .file_changes()
-            .find(|(p, _)| p == &&MPath::new("source_1/copy_of_file").unwrap())
+            .find(|(p, _)| p == &&NonRootMPath::new("source_1/copy_of_file").unwrap())
             .unwrap()
             .1
         {
@@ -834,7 +834,7 @@ mod test {
         };
         assert_eq!(
             copied_file_change_from_bonsai.copy_from().unwrap().0,
-            MPath::new("source_1/file")?
+            NonRootMPath::new("source_1/file")?
         );
 
         // All parents are preserved.
@@ -975,15 +975,15 @@ mod test {
         let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, target_cs_id).await?;
 
         // Remove file with commit remapping state because it's never present in source
-        wc.remove(&MPath::new(REMAPPING_STATE_FILE)?);
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?);
 
         assert_eq!(
             wc,
             hashmap! {
-                MPath::new("source_1/file1")? => "content1".to_string(),
-                MPath::new("source_1/anotherfile1")? => "content_from_diamond_merge".to_string(),
-                MPath::new("source_2/file2")? => "content2".to_string(),
-                MPath::new("source_2/anotherfile2")? => "anothercontent".to_string(),
+                NonRootMPath::new("source_1/file1")? => "content1".to_string(),
+                NonRootMPath::new("source_1/anotherfile1")? => "content_from_diamond_merge".to_string(),
+                NonRootMPath::new("source_2/file2")? => "content2".to_string(),
+                NonRootMPath::new("source_2/anotherfile2")? => "anothercontent".to_string(),
             }
         );
 
@@ -1156,17 +1156,17 @@ mod test {
         let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, merge_target).await?;
 
         // Remove file with commit remapping state because it's never present in source
-        wc.remove(&MPath::new(REMAPPING_STATE_FILE)?);
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?);
 
         assert_eq!(parents.len(), 1);
 
         assert_eq!(
             wc,
             hashmap! {
-                MPath::new("source_1/file")? => "mergeresolution".to_string(),
-                MPath::new("source_1/file_in_sidebranch_1")? => "sidebranch1".to_string(),
-                MPath::new("source_1/file_in_sidebranch_2")? => "sidebranch2".to_string(),
-                MPath::new("source_1/file_in_mainline")? => "mainline1".to_string(),
+                NonRootMPath::new("source_1/file")? => "mergeresolution".to_string(),
+                NonRootMPath::new("source_1/file_in_sidebranch_1")? => "sidebranch1".to_string(),
+                NonRootMPath::new("source_1/file_in_sidebranch_2")? => "sidebranch2".to_string(),
+                NonRootMPath::new("source_1/file_in_mainline")? => "mainline1".to_string(),
             }
         );
         Ok(())

@@ -49,7 +49,7 @@ use generation_derivation::DerivedGeneration;
 use lock_ext::LockExt;
 use maplit::hashmap;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
@@ -368,7 +368,7 @@ async fn test_parallel_derivation(fb: FacebookInit) -> Result<(), Error> {
     let mut parents = vec![];
     for i in 0..8 {
         let p = CreateCommitContext::new_root(&ctx, &repo)
-            .add_file(MPath::new(format!("file_{}", i))?, format!("{}", i))
+            .add_file(NonRootMPath::new(format!("file_{}", i))?, format!("{}", i))
             .add_extra("test-derive-delay", "2")
             .commit()
             .await?;
@@ -439,7 +439,7 @@ async fn test_cancelling_slow_derivation(fb: FacebookInit) -> Result<(), Error> 
     };
 
     let commit = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file(MPath::new("file")?, "content")
+        .add_file(NonRootMPath::new("file")?, "content")
         .add_extra("test-derive-delay", "20")
         .commit()
         .await?;

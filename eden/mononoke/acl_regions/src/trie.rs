@@ -9,8 +9,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use metaconfig_types::AclRegionRule;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct RegionIndex(pub usize);
@@ -67,7 +67,7 @@ impl PrefixTrieWithRules {
     /// deduplicated by (rule name, matched region index)
     pub fn associated_rules(
         &self,
-        path: Option<&MPath>,
+        path: Option<&NonRootMPath>,
     ) -> HashMap<(String, RegionIndex), Arc<AclRegionRule>> {
         self.associated_rules_inner(path.into_iter().flatten())
             .into_iter()
@@ -102,12 +102,12 @@ mod test {
 
     use super::*;
 
-    fn path(raw: &str) -> Option<MPath> {
-        MPath::new_opt(raw).unwrap()
+    fn path(raw: &str) -> Option<NonRootMPath> {
+        NonRootMPath::new_opt(raw).unwrap()
     }
 
     struct TestData {
-        path: Option<MPath>,
+        path: Option<NonRootMPath>,
         expected_regions: HashSet<(String, RegionIndex)>,
     }
 

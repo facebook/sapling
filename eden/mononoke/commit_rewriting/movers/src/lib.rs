@@ -12,8 +12,8 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use mercurial_types::MPath;
 use mercurial_types::MPathElement;
+use mercurial_types::NonRootMPath;
 use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
@@ -26,11 +26,11 @@ pub enum ErrorKind {
     #[error("Cannot remove prefix, equal to the whole path")]
     RemovePrefixWholePathFailure,
     #[error("Cannot apply prefix action {0:?} to {1:?}")]
-    PrefixActionFailure(PrefixAction, MPath),
+    PrefixActionFailure(PrefixAction, NonRootMPath),
     #[error("Small repo {0} not found")]
     SmallRepoNotFound(RepositoryId),
     #[error("Provided map is not prefix-free (e.g. {0:?} and {1:?})")]
-    NonPrefixFreeMap(MPath, MPath),
+    NonPrefixFreeMap(NonRootMPath, NonRootMPath),
 }
 
 /// A function to modify paths during repo sync
@@ -40,7 +40,7 @@ pub enum ErrorKind {
 /// - `Ok(None)` - the path shoould not be synced
 /// - `Err(e)` - the sync should fail, as this function
 ///   could not figure out how to rewrite path
-pub type Mover = Arc<dyn Fn(&MPath) -> Result<Option<MPath>> + Send + Sync + 'static>;
+pub type Mover = Arc<dyn Fn(&NonRootMPath) -> Result<Option<NonRootMPath>> + Send + Sync + 'static>;
 
 /// A struct to contain forward and reverse `Mover`
 pub struct Movers {
@@ -52,7 +52,7 @@ pub struct Movers {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrefixAction {
     // The new path should have this prefix replaced with a new value
-    Change(MPath),
+    Change(NonRootMPath),
     // The new path should have this prefix dropped
     RemovePrefix,
     // The path that matches this prefix should not be synced
@@ -63,7 +63,7 @@ pub enum PrefixAction {
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum PathAction {
     // Change the path when syncing
-    Change(MPath),
+    Change(NonRootMPath),
     // Do not sync this path
     DoNotSync,
 }
@@ -72,7 +72,7 @@ enum PathAction {
 #[derive(Debug, Clone)]
 pub enum DefaultAction {
     /// Prepend path with this prefix
-    PrependPrefix(MPath),
+    PrependPrefix(NonRootMPath),
     /// Keep the path as is
     Preserve,
     /// Do not sync this path
@@ -92,8 +92,8 @@ impl DefaultAction {
 }
 
 fn get_suffix_after<'a, 'b>(
-    source_path: &'a MPath,
-    candidate_prefix: &'b MPath,
+    source_path: &'a NonRootMPath,
+    candidate_prefix: &'b NonRootMPath,
 ) -> Option<Vec<&'a MPathElement>> {
     if !candidate_prefix.is_prefix_of(source_path) {
         None
@@ -117,7 +117,7 @@ fn get_path_action<'a, I: IntoIterator<Item = &'a MPathElement>>(
         PrefixAction::DoNotSync => Ok(PathAction::DoNotSync),
         PrefixAction::RemovePrefix => {
             let elements: Vec<_> = source_path_minus_prefix.into_iter().cloned().collect();
-            MPath::try_from(elements)
+            NonRootMPath::try_from(elements)
                 .map(PathAction::Change)
                 .map_err(|_| {
                     // This case means that we are trying to sync a file
@@ -144,21 +144,21 @@ fn get_path_action<'a, I: IntoIterator<Item = &'a MPathElement>>(
 
 /// Create a `Mover`, given a path prefix map and a default action
 pub fn mover_factory(
-    prefix_map: HashMap<MPath, PrefixAction>,
+    prefix_map: HashMap<NonRootMPath, PrefixAction>,
     default_action: DefaultAction,
 ) -> Result<Mover> {
     // We want `prefix_map` to be ordered longest-to-shortest
     // to allow non-prefix-free maps in the future. For these kinds
     // of maps, we need to ensure we always try to match the longest
     // prefix first, as it's more specific.
-    let prefix_map: Vec<(MPath, PrefixAction)> = {
-        let mut v: Vec<(MPath, PrefixAction)> = prefix_map.into_iter().collect();
+    let prefix_map: Vec<(NonRootMPath, PrefixAction)> = {
+        let mut v: Vec<(NonRootMPath, PrefixAction)> = prefix_map.into_iter().collect();
         v.sort_unstable_by_key(|(ref mpath, _)| mpath.len());
         v.reverse();
         v
     };
 
-    Ok(Arc::new(move |source_path: &MPath| {
+    Ok(Arc::new(move |source_path: &NonRootMPath| {
         let path_and_prefix_action = prefix_map
             .iter()
             .filter_map(|(candidate_prefix, candidate_action)| {
@@ -238,7 +238,7 @@ pub fn get_large_to_small_mover(
 
     let target_repo_right_sides: HashSet<_> = target_repo_config.map.values().collect();
 
-    let other_repo_right_sides: Vec<&MPath> = other_repo_configs
+    let other_repo_right_sides: Vec<&NonRootMPath> = other_repo_configs
         .iter()
         .flat_map(|small_repo_config| {
             small_repo_config
@@ -248,7 +248,7 @@ pub fn get_large_to_small_mover(
         })
         .collect();
 
-    let other_repo_prepended_prefixes: Vec<&MPath> = other_repo_configs
+    let other_repo_prepended_prefixes: Vec<&NonRootMPath> = other_repo_configs
         .iter()
         .filter_map(
             |small_repo_config| match &small_repo_config.default_action {
@@ -259,7 +259,7 @@ pub fn get_large_to_small_mover(
         .collect();
 
     // We reverse the direction of all path-to-path mappings
-    let mut prefix_map: HashMap<MPath, PrefixAction> = target_repo_config
+    let mut prefix_map: HashMap<NonRootMPath, PrefixAction> = target_repo_config
         .map
         .iter()
         .map(|(k, v)| (v.clone(), PrefixAction::Change(k.clone())))
@@ -313,19 +313,21 @@ pub fn get_large_to_small_mover(
     let default_large_to_small_mover = mover_factory(prefix_map, default_action)?;
 
     let small_to_large_mover = get_small_to_large_mover(commit_sync_config, small_repo_id)?;
-    Ok(Arc::new(move |path: &MPath| -> Result<Option<MPath>> {
-        let moved_large_to_small = default_large_to_small_mover(path)?;
-        match moved_large_to_small {
-            Some(moved_large_to_small) => {
-                if small_to_large_mover(&moved_large_to_small)?.as_ref() == Some(path) {
-                    Ok(Some(moved_large_to_small))
-                } else {
-                    Ok(None)
+    Ok(Arc::new(
+        move |path: &NonRootMPath| -> Result<Option<NonRootMPath>> {
+            let moved_large_to_small = default_large_to_small_mover(path)?;
+            match moved_large_to_small {
+                Some(moved_large_to_small) => {
+                    if small_to_large_mover(&moved_large_to_small)?.as_ref() == Some(path) {
+                        Ok(Some(moved_large_to_small))
+                    } else {
+                        Ok(None)
+                    }
                 }
+                None => Ok(None),
             }
-            None => Ok(None),
-        }
-    }))
+        },
+    ))
 }
 
 /// Get a forward and a reverse `Mover`, stored in the `Movers` struct
@@ -353,8 +355,8 @@ mod test {
 
     use super::*;
 
-    fn mp(s: &'static str) -> MPath {
-        MPath::new(s).unwrap()
+    fn mp(s: &'static str) -> NonRootMPath {
+        NonRootMPath::new(s).unwrap()
     }
 
     fn mpe(s: &'static [u8]) -> MPathElement {
@@ -444,7 +446,7 @@ mod test {
 
         let mover = mover_factory(
             hm,
-            DefaultAction::PrependPrefix(MPath::new("dude").unwrap()),
+            DefaultAction::PrependPrefix(NonRootMPath::new("dude").unwrap()),
         )
         .unwrap();
         assert_eq!(mover(&mp("wow")).unwrap(), Some(mp("dude/wow")));

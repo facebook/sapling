@@ -44,7 +44,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::TrackedFileChange;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
@@ -88,9 +88,9 @@ pub(crate) async fn store_file_change<'a>(
     blobstore: Arc<dyn Blobstore>,
     p1: Option<HgFileNodeId>,
     p2: Option<HgFileNodeId>,
-    path: &'a MPath,
+    path: &'a NonRootMPath,
     change: &'a TrackedFileChange,
-    copy_from: Option<(MPath, HgFileNodeId)>,
+    copy_from: Option<(NonRootMPath, HgFileNodeId)>,
 ) -> Result<(FileType, HgFileNodeId), Error> {
     // If we produced a hg change that has copy info, then the Bonsai should have copy info
     // too. However, we could have Bonsai copy info without having copy info in the hg change
@@ -178,12 +178,12 @@ async fn resolve_paths(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
     manifest_id: Option<HgManifestId>,
-    paths: Vec<MPath>,
-) -> Result<HashMap<MPath, HgFileNodeId>, Error> {
+    paths: Vec<NonRootMPath>,
+) -> Result<HashMap<NonRootMPath, HgFileNodeId>, Error> {
     match manifest_id {
         None => Ok(HashMap::new()),
         Some(manifest_id) => {
-            let mapping: HashMap<MPath, HgFileNodeId> = manifest_id
+            let mapping: HashMap<NonRootMPath, HgFileNodeId> = manifest_id
                 .find_entries(ctx, blobstore, paths)
                 .map_ok(|(path, entry)| Some((path?, entry.into_leaf()?.1)))
                 .try_filter_map(future::ok)

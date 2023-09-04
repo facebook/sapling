@@ -34,7 +34,7 @@ use linked_hash_map::LinkedHashMap;
 use manifest::BonsaiDiffFileChange;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use slog::debug;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
@@ -74,7 +74,7 @@ async fn find_file_changes<S, U>(
     reader: &GitRepoReader,
     uploader: U,
     changes: S,
-) -> Result<SortedVectorMap<MPath, U::Change>, Error>
+) -> Result<SortedVectorMap<NonRootMPath, U::Change>, Error>
 where
     S: Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>, Error>>,
     U: GitUploader,

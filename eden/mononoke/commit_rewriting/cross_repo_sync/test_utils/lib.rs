@@ -52,7 +52,7 @@ use metaconfig_types::SmallRepoCommitSyncConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
 use phases::Phases;
@@ -376,7 +376,7 @@ pub async fn init_small_large_repo(
 pub fn base_commit_sync_config(large_repo: &TestRepo, small_repo: &TestRepo) -> CommitSyncConfig {
     let small_repo_sync_config = SmallRepoCommitSyncConfig {
         default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
-            MPath::new("prefix").unwrap(),
+            NonRootMPath::new("prefix").unwrap(),
         ),
         map: hashmap! {},
     };
@@ -390,9 +390,9 @@ pub fn base_commit_sync_config(large_repo: &TestRepo, small_repo: &TestRepo) -> 
     }
 }
 
-fn prefix_mover(v: &MPath) -> Result<Option<MPath>, Error> {
-    let prefix = MPath::new("prefix").unwrap();
-    Ok(Some(MPath::join(&prefix, v)))
+fn prefix_mover(v: &NonRootMPath) -> Result<Option<NonRootMPath>, Error> {
+    let prefix = NonRootMPath::new("prefix").unwrap();
+    Ok(Some(NonRootMPath::join(&prefix, v)))
 }
 
 pub fn get_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {
@@ -443,7 +443,7 @@ fn get_small_repo_sync_config_noop() -> SmallRepoCommitSyncConfig {
 fn get_small_repo_sync_config_1() -> SmallRepoCommitSyncConfig {
     SmallRepoCommitSyncConfig {
         default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
-            MPath::new("prefix").unwrap(),
+            NonRootMPath::new("prefix").unwrap(),
         ),
         map: hashmap! {},
     }
@@ -452,10 +452,10 @@ fn get_small_repo_sync_config_1() -> SmallRepoCommitSyncConfig {
 fn get_small_repo_sync_config_2() -> SmallRepoCommitSyncConfig {
     SmallRepoCommitSyncConfig {
         default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
-            MPath::new("prefix").unwrap(),
+            NonRootMPath::new("prefix").unwrap(),
         ),
         map: hashmap! {
-            MPath::new("special").unwrap() => MPath::new("special").unwrap(),
+            NonRootMPath::new("special").unwrap() => NonRootMPath::new("special").unwrap(),
         },
     }
 }

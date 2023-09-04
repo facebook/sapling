@@ -57,7 +57,7 @@ use mercurial_derivation::MappedHgChangesetId;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
 use repo_identity::RepoIdentityRef;
@@ -484,7 +484,7 @@ async fn verify_manifests(
             return Err(anyhow!("unknown derived data manifest type").into());
         }
     }
-    let mut combined: HashMap<MPath, FileContentValue> = HashMap::new();
+    let mut combined: HashMap<NonRootMPath, FileContentValue> = HashMap::new();
     let contents = try_join_all(futs).await?;
     info!(ctx.logger(), "Combining {} manifests", contents.len());
     for (mf_type, map) in contents {
@@ -646,7 +646,7 @@ async fn list_hg_manifest(
     ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id: ChangesetId,
-) -> Result<(ManifestType, HashMap<MPath, ManifestData>), Error> {
+) -> Result<(ManifestType, HashMap<NonRootMPath, ManifestData>), Error> {
     let hg_cs_id = repo.derive_hg_changeset(ctx, cs_id).await?;
 
     let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
@@ -672,7 +672,7 @@ async fn list_skeleton_manifest(
     repo: &BlobRepo,
     cs_id: ChangesetId,
     fetch_derived: bool,
-) -> Result<(ManifestType, HashMap<MPath, ManifestData>), Error> {
+) -> Result<(ManifestType, HashMap<NonRootMPath, ManifestData>), Error> {
     let root_skeleton_id =
         derive_or_fetch::<RootSkeletonManifestId>(ctx, repo, cs_id, fetch_derived).await?;
 
@@ -695,7 +695,7 @@ async fn list_fsnodes(
     repo: &BlobRepo,
     cs_id: ChangesetId,
     fetch_derived: bool,
-) -> Result<(ManifestType, HashMap<MPath, ManifestData>), Error> {
+) -> Result<(ManifestType, HashMap<NonRootMPath, ManifestData>), Error> {
     let root_fsnode_id = derive_or_fetch::<RootFsnodeId>(ctx, repo, cs_id, fetch_derived).await?;
 
     let fsnode_id = root_fsnode_id.fsnode_id();
@@ -717,7 +717,7 @@ async fn list_unodes(
     repo: &BlobRepo,
     cs_id: ChangesetId,
     fetch_derived: bool,
-) -> Result<(ManifestType, HashMap<MPath, ManifestData>), Error> {
+) -> Result<(ManifestType, HashMap<NonRootMPath, ManifestData>), Error> {
     let root_unode_id =
         derive_or_fetch::<RootUnodeManifestId>(ctx, repo, cs_id, fetch_derived).await?;
 

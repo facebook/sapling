@@ -24,7 +24,7 @@ use futures::TryStreamExt;
 use maplit::hashmap;
 use maplit::hashset;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use tokio::task;
 
 use crate::Entry;
@@ -35,7 +35,7 @@ pub(crate) type BonsaiEntry<ManifestId, FileId> = Entry<ManifestId, (FileType, F
 #[derive(Clone, Eq, Debug, Hash, PartialEq, PartialOrd, Ord)]
 pub enum BonsaiDiffFileChange<FileId> {
     /// This file was changed (was added or modified) in this changeset.
-    Changed(MPath, FileType, FileId),
+    Changed(NonRootMPath, FileType, FileId),
 
     /// The file was marked changed, but one of the parent file ID was reused. This can happen in
     /// these situations:
@@ -45,14 +45,14 @@ pub enum BonsaiDiffFileChange<FileId> {
     ///
     /// This is separate from `Changed` because in these instances, if copy information is part of
     /// the node it wouldn't be recorded.
-    ChangedReusedId(MPath, FileType, FileId),
+    ChangedReusedId(NonRootMPath, FileType, FileId),
 
     /// This file was deleted in this changeset.
-    Deleted(MPath),
+    Deleted(NonRootMPath),
 }
 
 impl<FileId> BonsaiDiffFileChange<FileId> {
-    pub fn path(&self) -> &MPath {
+    pub fn path(&self) -> &NonRootMPath {
         match self {
             Self::Changed(path, ..) | Self::ChangedReusedId(path, ..) | Self::Deleted(path) => path,
         }
@@ -130,7 +130,7 @@ where
 /// It maps a path to consider to the contents of the Manifest for which to produce Bonsai changes
 /// at this path and the contents of the parents at this path.
 type WorkEntry<ManifestId, FileId> = HashMap<
-    MPath,
+    NonRootMPath,
     (
         Option<BonsaiEntry<ManifestId, FileId>>,
         CompositeEntry<ManifestId, FileId>,
@@ -141,7 +141,7 @@ type WorkEntry<ManifestId, FileId> = HashMap<
 async fn recurse_trees<ManifestId, FileId, Store>(
     ctx: &CoreContext,
     store: &Store,
-    path: Option<&MPath>,
+    path: Option<&NonRootMPath>,
     node: Option<ManifestId>,
     parents: HashSet<ManifestId>,
 ) -> Result<WorkEntry<ManifestId, FileId>, Error>
@@ -192,7 +192,7 @@ where
     let ret = ret
         .into_iter()
         .map(|(p, e)| {
-            let p = MPath::join_opt_element(path, &p);
+            let p = NonRootMPath::join_opt_element(path, &p);
             (p, e)
         })
         .collect();
@@ -201,7 +201,7 @@ where
 }
 
 fn resolve_file_over_files<FileId>(
-    path: MPath,
+    path: NonRootMPath,
     node: (FileType, FileId),
     parents: HashSet<(FileType, FileId)>,
 ) -> Option<BonsaiDiffFileChange<FileId>>
@@ -216,7 +216,7 @@ where
 }
 
 fn resolve_file_over_mixed<FileId>(
-    path: MPath,
+    path: NonRootMPath,
     node: (FileType, FileId),
     parents: HashSet<(FileType, FileId)>,
 ) -> BonsaiDiffFileChange<FileId>
@@ -233,7 +233,7 @@ where
 async fn bonsai_diff_unfold<ManifestId, FileId, Store>(
     ctx: &CoreContext,
     store: &Store,
-    path: MPath,
+    path: NonRootMPath,
     node: Option<BonsaiEntry<ManifestId, FileId>>,
     parents: CompositeEntry<ManifestId, FileId>,
 ) -> Result<
@@ -388,7 +388,7 @@ mod test {
     }
 
     fn changed(
-        path: MPath,
+        path: NonRootMPath,
         ty: FileType,
         name: &'static str,
     ) -> Option<BonsaiDiffFileChange<TestFileId>> {
@@ -396,7 +396,7 @@ mod test {
     }
 
     fn reused(
-        path: MPath,
+        path: NonRootMPath,
         ty: FileType,
         name: &'static str,
     ) -> Option<BonsaiDiffFileChange<TestFileId>> {
@@ -407,7 +407,7 @@ mod test {
         ))
     }
 
-    fn deleted(path: MPath) -> Option<BonsaiDiffFileChange<TestFileId>> {
+    fn deleted(path: NonRootMPath) -> Option<BonsaiDiffFileChange<TestFileId>> {
         Some(BonsaiDiffFileChange::Deleted(path))
     }
 

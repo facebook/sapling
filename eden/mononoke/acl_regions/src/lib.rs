@@ -21,7 +21,7 @@ use futures::stream::TryStreamExt;
 use metaconfig_types::AclRegion;
 use metaconfig_types::AclRegionConfig;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use trie::PrefixTrieWithRules;
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
@@ -53,7 +53,7 @@ pub trait AclRegions: Send + Sync {
         &self,
         ctx: &CoreContext,
         cs_id: ChangesetId,
-        path: Option<&MPath>,
+        path: Option<&NonRootMPath>,
     ) -> Result<AssociatedRulesResult>;
 }
 
@@ -117,7 +117,7 @@ impl AclRegions for AclRegionsImpl {
         &self,
         ctx: &CoreContext,
         cs_id: ChangesetId,
-        path: Option<&MPath>,
+        path: Option<&NonRootMPath>,
     ) -> Result<AssociatedRulesResult> {
         let matched_rules: HashMap<_, _> =
             stream::iter(self.path_rules_index.associated_rules(path))
@@ -160,7 +160,7 @@ impl AclRegions for DisabledAclRegions {
         &self,
         _ctx: &CoreContext,
         _cs_id: ChangesetId,
-        _path: Option<&MPath>,
+        _path: Option<&NonRootMPath>,
     ) -> Result<AssociatedRulesResult> {
         Ok(AssociatedRulesResult::AclRegionsDisabled)
     }

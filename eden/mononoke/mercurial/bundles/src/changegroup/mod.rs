@@ -7,7 +7,7 @@
 
 use mercurial_types::Delta;
 use mercurial_types::HgNodeHash;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RevFlags;
 
 pub mod packer;
@@ -19,7 +19,7 @@ pub enum Section {
     Changeset,
     Manifest,
     Treemanifest,
-    Filelog(MPath),
+    Filelog(NonRootMPath),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

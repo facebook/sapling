@@ -18,7 +18,7 @@ use megarepo_config::Target;
 use megarepo_mapping::CommitRemappingState;
 use megarepo_mapping::SourceName;
 use megarepo_mapping::REMAPPING_STATE_FILE;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use tests_utils::bookmark;
 use tests_utils::list_working_copy_utf8;
 use tests_utils::resolve_cs_id;
@@ -106,13 +106,16 @@ async fn test_remerge_source_simple(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(state.sync_config_version(), &version);
 
     // Remove file with commit remapping state because it's never present in source
-    assert!(wc.remove(&MPath::new(REMAPPING_STATE_FILE)?).is_some());
+    assert!(
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
+            .is_some()
+    );
 
     assert_eq!(
         wc,
         hashmap! {
-            MPath::new("source_1/first")? => "first".to_string(),
-            MPath::new("source_2/second")? => "second".to_string(),
+            NonRootMPath::new("source_1/first")? => "first".to_string(),
+            NonRootMPath::new("source_2/second")? => "second".to_string(),
         }
     );
 
@@ -165,13 +168,16 @@ async fn test_remerge_source_simple(fb: FacebookInit) -> Result<(), Error> {
 
     let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, target_cs_id).await?;
     // Remove file with commit remapping state because it's never present in source
-    assert!(wc.remove(&MPath::new(REMAPPING_STATE_FILE)?).is_some());
+    assert!(
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
+            .is_some()
+    );
 
     assert_eq!(
         wc,
         hashmap! {
-            MPath::new("source_1/first")? => "first".to_string(),
-            MPath::new("source_2/second")? => "root".to_string(),
+            NonRootMPath::new("source_1/first")? => "first".to_string(),
+            NonRootMPath::new("source_2/second")? => "root".to_string(),
         }
     );
 

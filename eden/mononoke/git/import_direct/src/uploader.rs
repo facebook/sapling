@@ -41,7 +41,7 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::debug;
 use slog::info;
@@ -116,7 +116,7 @@ where
         &self,
         ctx: &CoreContext,
         lfs: &GitImportLfs,
-        path: &MPath,
+        path: &NonRootMPath,
         ty: FileType,
         oid: ObjectId,
         git_bytes: Bytes,
@@ -182,7 +182,7 @@ where
         _ctx: &CoreContext,
         bonsai_parents: Vec<ChangesetId>,
         metadata: CommitMetadata,
-        changes: SortedVectorMap<MPath, Self::Change>,
+        changes: SortedVectorMap<NonRootMPath, Self::Change>,
         _dry_run: bool,
     ) -> Result<(Self::IntermediateChangeset, ChangesetId), Error> {
         let bcs = generate_bonsai_changeset(metadata, bonsai_parents, changes)?;
@@ -286,7 +286,7 @@ fn git_store_request(
 fn generate_bonsai_changeset(
     metadata: CommitMetadata,
     parents: Vec<ChangesetId>,
-    file_changes: SortedVectorMap<MPath, FileChange>,
+    file_changes: SortedVectorMap<NonRootMPath, FileChange>,
 ) -> Result<BonsaiChangeset, Error> {
     let CommitMetadata {
         oid,

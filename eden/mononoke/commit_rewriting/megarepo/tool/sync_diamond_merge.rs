@@ -61,7 +61,7 @@ use mononoke_api_types::InnerRepo;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::info;
 use slog::warn;
@@ -318,7 +318,7 @@ async fn generate_additional_file_changes(
     large_to_small: &CommitSyncer<SqlSyncedCommitMapping, InnerRepo>,
     onto_value: ChangesetId,
     version: &CommitSyncConfigVersion,
-) -> Result<SortedVectorMap<MPath, FileChange>, Error> {
+) -> Result<SortedVectorMap<NonRootMPath, FileChange>, Error> {
     let bonsai_diff = find_bonsai_diff(ctx.clone(), large_repo.as_blob_repo(), root, onto_value)
         .collect()
         .compat()

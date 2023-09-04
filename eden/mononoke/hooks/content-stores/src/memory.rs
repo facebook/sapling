@@ -15,7 +15,7 @@ use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
 use crate::ErrorKind;
 use crate::FileChange;
@@ -86,8 +86,8 @@ impl FileContentManager for InMemoryFileContentManager {
         &'a self,
         _ctx: &'a CoreContext,
         _bookmark: BookmarkKey,
-        _paths: Vec<MPath>,
-    ) -> Result<HashMap<MPath, PathContent>, ErrorKind> {
+        _paths: Vec<NonRootMPath>,
+    ) -> Result<HashMap<NonRootMPath, PathContent>, ErrorKind> {
         Err(
             format_err!("`find_content` is not implemented for `InMemoryFileContentManager`")
                 .into(),
@@ -99,7 +99,7 @@ impl FileContentManager for InMemoryFileContentManager {
         _ctx: &'a CoreContext,
         _new_cs_id: ChangesetId,
         _old_cs_id: ChangesetId,
-    ) -> Result<Vec<(MPath, FileChange)>, ErrorKind> {
+    ) -> Result<Vec<(NonRootMPath, FileChange)>, ErrorKind> {
         Err(
             format_err!("`file_changes` is not implemented for `InMemoryFileContentManager`")
                 .into(),
@@ -110,8 +110,8 @@ impl FileContentManager for InMemoryFileContentManager {
         &'a self,
         _ctx: &'a CoreContext,
         _bookmark: BookmarkKey,
-        _paths: Vec<MPath>,
-    ) -> Result<HashMap<MPath, ChangesetInfo>, ErrorKind> {
+        _paths: Vec<NonRootMPath>,
+    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, ErrorKind> {
         Err(
             format_err!("`latest_changes` is not implemented for `InMemoryFileContentManager`")
                 .into(),

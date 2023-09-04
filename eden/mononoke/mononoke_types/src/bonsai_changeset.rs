@@ -27,7 +27,7 @@ use crate::file_change::BasicFileChange;
 use crate::file_change::FileChange;
 use crate::hash::GitSha1;
 use crate::path;
-use crate::path::MPath;
+use crate::path::NonRootMPath;
 use crate::thrift;
 use crate::typed_hash::ChangesetId;
 use crate::typed_hash::ChangesetIdContext;
@@ -46,7 +46,7 @@ pub struct BonsaiChangesetMut {
     pub message: String,
     pub hg_extra: SortedVectorMap<String, Vec<u8>>,
     pub git_extra_headers: Option<SortedVectorMap<SmallVec<[u8; 24]>, Bytes>>,
-    pub file_changes: SortedVectorMap<MPath, FileChange>,
+    pub file_changes: SortedVectorMap<NonRootMPath, FileChange>,
     pub is_snapshot: bool,
     pub git_tree_hash: Option<GitSha1>,
     pub git_annotated_tag: Option<BonsaiAnnotatedTag>,
@@ -96,7 +96,7 @@ impl BonsaiChangesetMut {
                 .file_changes
                 .into_iter()
                 .map(|(f, fc_opt)| {
-                    let mpath = MPath::from_thrift(f)?;
+                    let mpath = NonRootMPath::from_thrift(f)?;
                     let fc_opt = FileChange::from_thrift(fc_opt, &mpath)?;
                     Ok((mpath, fc_opt))
                 })
@@ -282,21 +282,21 @@ impl BonsaiChangeset {
     /// Get the files changed in this changeset. The items returned are guaranteed
     /// to be in depth-first traversal order: once all the changes to a particular
     /// tree have been applied, it will never be referred to again.
-    pub fn file_changes(&self) -> impl ExactSizeIterator<Item = (&MPath, &FileChange)> {
+    pub fn file_changes(&self) -> impl ExactSizeIterator<Item = (&NonRootMPath, &FileChange)> {
         self.inner.file_changes.iter()
     }
 
     /// File changes, but untracked and tracked changes are merged together for easy handling
     pub fn simplified_file_changes(
         &self,
-    ) -> impl Iterator<Item = (&MPath, Option<&BasicFileChange>)> {
+    ) -> impl Iterator<Item = (&NonRootMPath, Option<&BasicFileChange>)> {
         self.inner
             .file_changes
             .iter()
             .map(|(path, fc)| (path, fc.simplify()))
     }
 
-    pub fn file_changes_map(&self) -> &SortedVectorMap<MPath, FileChange> {
+    pub fn file_changes_map(&self) -> &SortedVectorMap<NonRootMPath, FileChange> {
         &self.inner.file_changes
     }
 
@@ -401,7 +401,7 @@ impl Arbitrary for BonsaiChangeset {
                     FileChange::Deletion
                 };
                 // XXX be smarter about generating paths here?
-                (MPath::arbitrary(g), fc_opt)
+                (NonRootMPath::arbitrary(g), fc_opt)
             })
             .collect();
 
@@ -604,23 +604,23 @@ mod test {
             git_extra_headers: None,
             git_tree_hash: None,
             file_changes: sorted_vector_map![
-                MPath::new("a/b").unwrap() => FileChange::tracked(
+                NonRootMPath::new("a/b").unwrap() => FileChange::tracked(
                     ContentId::from_byte_array([1; 32]),
                     FileType::Regular,
                     42,
                     None,
                 ),
-                MPath::new("c/d").unwrap() => FileChange::tracked(
+                NonRootMPath::new("c/d").unwrap() => FileChange::tracked(
                     ContentId::from_byte_array([2; 32]),
                     FileType::Executable,
                     84,
                     Some((
-                        MPath::new("e/f").unwrap(),
+                        NonRootMPath::new("e/f").unwrap(),
                         ChangesetId::from_byte_array([3; 32]),
                     )),
                 ),
-                MPath::new("g/h").unwrap() => FileChange::Deletion,
-                MPath::new("i/j").unwrap() => FileChange::Deletion,
+                NonRootMPath::new("g/h").unwrap() => FileChange::Deletion,
+                NonRootMPath::new("i/j").unwrap() => FileChange::Deletion,
             ],
             is_snapshot: false,
             git_annotated_tag: None,
@@ -642,17 +642,17 @@ mod test {
     fn bonsai_snapshots() {
         fn create(untracked: bool, missing: bool, is_snapshot: bool) -> Result<BonsaiChangeset> {
             let mut file_changes = sorted_vector_map! [
-                MPath::new("a").unwrap() => FileChange::tracked(
+                NonRootMPath::new("a").unwrap() => FileChange::tracked(
                     ContentId::from_byte_array([1; 32]),
                     FileType::Regular,
                     42,
                     None,
                 ),
-                MPath::new("b").unwrap() => FileChange::Deletion,
+                NonRootMPath::new("b").unwrap() => FileChange::Deletion,
             ];
             if untracked {
                 file_changes.insert(
-                    MPath::new("c").unwrap(),
+                    NonRootMPath::new("c").unwrap(),
                     FileChange::untracked(
                         ContentId::from_byte_array([2; 32]),
                         FileType::Regular,
@@ -661,7 +661,10 @@ mod test {
                 );
             }
             if missing {
-                file_changes.insert(MPath::new("d").unwrap(), FileChange::UntrackedDeletion);
+                file_changes.insert(
+                    NonRootMPath::new("d").unwrap(),
+                    FileChange::UntrackedDeletion,
+                );
             }
             BonsaiChangesetMut {
                 parents: vec![],
@@ -721,13 +724,13 @@ mod test {
             hg_extra: SortedVectorMap::new(),
             git_extra_headers: None,
             file_changes: sorted_vector_map! [
-                MPath::new("a").unwrap() => FileChange::tracked(
+                NonRootMPath::new("a").unwrap() => FileChange::tracked(
                     ContentId::from_byte_array([1; 32]),
                     FileType::Regular,
                     42,
                     None,
                 ),
-                MPath::new("b").unwrap() => FileChange::Deletion,
+                NonRootMPath::new("b").unwrap() => FileChange::Deletion,
             ],
             is_snapshot: false,
             git_tree_hash: GitSha1::from_bytes([
@@ -779,13 +782,13 @@ mod test {
                 SmallVec::from_vec(b"JustAHeader".to_vec()) => Bytes::from_static(b"Some Content")
             ]),
             file_changes: sorted_vector_map! [
-                MPath::new("a").unwrap() => FileChange::tracked(
+                NonRootMPath::new("a").unwrap() => FileChange::tracked(
                     ContentId::from_byte_array([1; 32]),
                     FileType::Regular,
                     42,
                     None,
                 ),
-                MPath::new("b").unwrap() => FileChange::Deletion,
+                NonRootMPath::new("b").unwrap() => FileChange::Deletion,
             ],
             is_snapshot: false,
             git_tree_hash: None,
@@ -831,13 +834,13 @@ mod test {
                 SmallVec::from_vec(b"JustAHeader".to_vec()) => Bytes::from_static(b"Some Content")
             ]),
             file_changes: sorted_vector_map! [
-                MPath::new("a").unwrap() => FileChange::tracked(
+                NonRootMPath::new("a").unwrap() => FileChange::tracked(
                     ContentId::from_byte_array([1; 32]),
                     FileType::Regular,
                     42,
                     None,
                 ),
-                MPath::new("b").unwrap() => FileChange::Deletion,
+                NonRootMPath::new("b").unwrap() => FileChange::Deletion,
             ],
             is_snapshot: false,
             git_tree_hash: None,

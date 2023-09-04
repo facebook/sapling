@@ -14,7 +14,7 @@ use context::CoreContext;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 use repo_permission_checker::RepoPermissionCheckerRef;
 
@@ -175,7 +175,7 @@ impl AuthorizationContext {
         ctx: &CoreContext,
         repo: &(impl RepoPermissionCheckerRef + AclRegionsRef),
         csid: ChangesetId,
-        path: Option<&MPath>,
+        path: Option<&NonRootMPath>,
     ) -> Result<AuthorizationCheckOutcome> {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
@@ -206,7 +206,7 @@ impl AuthorizationContext {
         ctx: &CoreContext,
         repo: &(impl RepoPermissionCheckerRef + AclRegionsRef),
         csid: ChangesetId,
-        path: Option<&MPath>,
+        path: Option<&NonRootMPath>,
     ) -> Result<(), AuthorizationError> {
         self.check_path_read(ctx, repo, csid, path)
             .await?

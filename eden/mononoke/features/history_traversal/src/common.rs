@@ -11,7 +11,7 @@ use futures::stream;
 use futures::stream::TryStreamExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
 use crate::Repo;
 
@@ -33,7 +33,7 @@ pub(crate) async fn find_possible_mutable_ancestors(
     ctx: &CoreContext,
     repo: &impl Repo,
     csid: ChangesetId,
-    path: Option<&MPath>,
+    path: Option<&NonRootMPath>,
 ) -> Result<Vec<(Generation, ChangesetId)>, Error> {
     let mutable_renames = repo.mutable_renames();
     let mutable_csids = mutable_renames

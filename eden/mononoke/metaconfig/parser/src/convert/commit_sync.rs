@@ -20,7 +20,7 @@ use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::SmallRepoCommitSyncConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use repos::RawCommitSyncConfig;
 use repos::RawCommitSyncSmallRepoConfig;
@@ -170,7 +170,7 @@ impl Convert for RawCommitSyncSmallRepoConfig {
             "preserve" => DefaultSmallToLargeCommitSyncPathAction::Preserve,
             "prepend_prefix" => match default_prefix {
                 Some(prefix_to_prepend) => {
-                    let prefix_to_prepend = MPath::new(prefix_to_prepend)?;
+                    let prefix_to_prepend = NonRootMPath::new(prefix_to_prepend)?;
                     DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(prefix_to_prepend)
                 }
                 None => {
@@ -184,7 +184,7 @@ impl Convert for RawCommitSyncSmallRepoConfig {
 
         let map = mapping
             .into_iter()
-            .map(|(k, v)| Ok((MPath::new(k)?, MPath::new(v)?)))
+            .map(|(k, v)| Ok((NonRootMPath::new(k)?, NonRootMPath::new(v)?)))
             .collect::<Result<HashMap<_, _>>>()?;
 
         Ok(SmallRepoCommitSyncConfig {

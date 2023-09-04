@@ -23,7 +23,7 @@ use futures::stream;
 use maplit::btreemap;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_types::HgChangesetId;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mononoke_api_types::InnerRepo;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
@@ -42,11 +42,11 @@ pub async fn store_files(
     ctx: &CoreContext,
     files: BTreeMap<&str, Option<&str>>,
     repo: &impl Repo,
-) -> SortedVectorMap<MPath, FileChange> {
+) -> SortedVectorMap<NonRootMPath, FileChange> {
     let mut res = BTreeMap::new();
 
     for (path, content) in files {
-        let path = MPath::new(path).unwrap();
+        let path = NonRootMPath::new(path).unwrap();
         match content {
             Some(content) => {
                 let content = Bytes::copy_from_slice(content.as_bytes());
@@ -1654,7 +1654,7 @@ pub fn create_bonsai_changeset_with_author(
 
 pub fn create_bonsai_changeset_with_files(
     parents: Vec<ChangesetId>,
-    file_changes: impl Into<SortedVectorMap<MPath, FileChange>>,
+    file_changes: impl Into<SortedVectorMap<NonRootMPath, FileChange>>,
 ) -> BonsaiChangeset {
     BonsaiChangesetMut {
         parents,

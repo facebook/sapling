@@ -12,7 +12,7 @@ use context::CoreContext;
 use lazy_static::lazy_static;
 use mononoke_types::BasicFileChange;
 use mononoke_types::BonsaiChangeset;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use regex::Regex;
 
 use crate::ChangesetHook;
@@ -56,7 +56,7 @@ impl FileHook for CheckNocommitHook {
         ctx: &'ctx CoreContext,
         content_manager: &'fetcher dyn FileContentManager,
         change: Option<&'change BasicFileChange>,
-        path: &'path MPath,
+        path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {

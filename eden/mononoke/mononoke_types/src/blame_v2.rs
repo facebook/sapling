@@ -28,7 +28,7 @@ use thiserror::Error;
 use vec_map::VecMap;
 use xdiff::diff_hunks;
 
-use crate::path::MPath;
+use crate::path::NonRootMPath;
 use crate::thrift;
 use crate::typed_hash::BlobstoreKey;
 use crate::typed_hash::ChangesetId;
@@ -149,7 +149,7 @@ pub enum BlameV2 {
 impl BlameV2 {
     pub fn new<C: AsRef<[u8]>>(
         csid: ChangesetId,
-        path: MPath,
+        path: NonRootMPath,
         content: C,
         parents: Vec<BlameParent<C>>,
     ) -> Result<Self> {
@@ -289,7 +289,7 @@ impl BlameV2 {
 /// Blame for a parent file version when constructing a new blame.
 pub struct BlameParent<C: AsRef<[u8]>> {
     parent_index: usize,
-    path: MPath,
+    path: NonRootMPath,
     content: Option<C>,
     blame: BlameV2,
 }
@@ -297,7 +297,7 @@ pub struct BlameParent<C: AsRef<[u8]>> {
 impl<C: AsRef<[u8]>> BlameParent<C> {
     pub fn new(
         parent_index: usize,
-        path: MPath,
+        path: NonRootMPath,
         content: impl Into<Option<C>>,
         blame: BlameV2,
     ) -> BlameParent<C> {
@@ -326,7 +326,7 @@ impl<C: AsRef<[u8]>> BlameParent<C> {
 /// Blame data for a parent file version when constructing a new blame.
 pub struct BlameParentData<C: AsRef<[u8]>> {
     parent_index: u32,
-    path: MPath,
+    path: NonRootMPath,
     content: C,
     blame: BlameData,
 }
@@ -348,12 +348,12 @@ pub struct BlameData {
 
     /// A list of all paths this file has ever been located at.  Used
     /// as an index for paths in `ranges`.
-    paths: Vec<MPath>,
+    paths: Vec<NonRootMPath>,
 }
 
 impl BlameData {
     /// Create a new BlameData for a brand new file.
-    fn new_root<C: AsRef<[u8]>>(csid: ChangesetId, path: MPath, content: C) -> Self {
+    fn new_root<C: AsRef<[u8]>>(csid: ChangesetId, path: NonRootMPath, content: C) -> Self {
         let mut ranges = Vec::new();
         let mut csids = VecMap::new();
         // Calculate length by diffing with empty content, so the number of lines
@@ -390,7 +390,7 @@ impl BlameData {
     /// Create a new BlameData for a file with a single parent.
     fn new_with_parent<C: AsRef<[u8]>>(
         csid: ChangesetId,
-        path: MPath,
+        path: NonRootMPath,
         content: &C,
         blame_parent: BlameParentData<C>,
     ) -> Result<Self> {
@@ -542,7 +542,7 @@ impl BlameData {
             .iter()
             .map(|(index, csid)| (*csid, index as u32))
             .collect();
-        let mut path_indexes: HashMap<MPath, u32> = self
+        let mut path_indexes: HashMap<NonRootMPath, u32> = self
             .paths
             .iter()
             .enumerate()
@@ -653,7 +653,7 @@ impl BlameData {
         let paths = blame
             .paths
             .into_iter()
-            .map(MPath::from_thrift)
+            .map(NonRootMPath::from_thrift)
             .collect::<Result<Vec<_>, _>>()?;
         let mut csids = VecMap::with_capacity(blame.max_csid_index.0 as usize + 1);
         for (index, csid) in blame.csids {
@@ -740,7 +740,11 @@ impl BlameData {
             .map(|(index, csid)| (index as i32, csid.into_thrift()))
             .collect();
         let max_csid_index = thrift::BlameChangeset(self.max_csid_index as i32);
-        let paths = self.paths.into_iter().map(MPath::into_thrift).collect();
+        let paths = self
+            .paths
+            .into_iter()
+            .map(NonRootMPath::into_thrift)
+            .collect();
 
         thrift::BlameDataV2 {
             ranges,
@@ -758,7 +762,7 @@ impl BlameData {
         &self.csids
     }
 
-    pub fn paths(&self) -> &[MPath] {
+    pub fn paths(&self) -> &[NonRootMPath] {
         &self.paths
     }
 
@@ -884,7 +888,7 @@ impl BlameData {
 
             let line_follows_range = |line: &BlameLine<'_>, range: &BlameRangeIndexes| -> bool {
                 let range_path_index: usize = range.path_index as usize;
-                let maybe_range_path: Option<&MPath> = new_paths.get(range_path_index);
+                let maybe_range_path: Option<&NonRootMPath> = new_paths.get(range_path_index);
                 Some(line.changeset_id) == new_csids.get(range.csid_index as usize)
                     && Some(line.path) == maybe_range_path
                     && line.offset == range.offset + range.length
@@ -1126,7 +1130,7 @@ pub struct BlameRange<'a> {
     pub offset: u32,
     pub length: u32,
     pub csid: ChangesetId,
-    pub path: &'a MPath,
+    pub path: &'a NonRootMPath,
     pub origin_offset: u32,
 }
 
@@ -1185,7 +1189,7 @@ pub struct BlameLineParent<'a> {
     pub parent_index: u32,
     pub offset: u32,
     pub length: u32,
-    pub renamed_from_path: Option<&'a MPath>,
+    pub renamed_from_path: Option<&'a NonRootMPath>,
 }
 
 /// Blame line produced by iteration.
@@ -1194,7 +1198,7 @@ pub struct BlameLine<'a> {
     pub changeset_index: u32,
     pub changeset_id: &'a ChangesetId,
     pub path_index: u32,
-    pub path: &'a MPath,
+    pub path: &'a NonRootMPath,
     pub origin_offset: u32,
     pub parent: Option<BlameLineParent<'a>>,
 }
@@ -1220,7 +1224,7 @@ impl<'a> BlameLine<'a> {
         }
     }
 
-    fn parent(&self, path_indexes: &HashMap<MPath, u32>) -> Option<BlameParentIndexes> {
+    fn parent(&self, path_indexes: &HashMap<NonRootMPath, u32>) -> Option<BlameParentIndexes> {
         self.parent.as_ref().map(|parent| BlameParentIndexes {
             parent_index: parent.parent_index,
             offset: parent.offset,
@@ -1345,8 +1349,8 @@ mod test {
 
     #[test]
     fn test_thrift() -> Result<()> {
-        let p0 = MPath::new("path/zero")?;
-        let p1 = MPath::new("path/one")?;
+        let p0 = NonRootMPath::new("path/zero")?;
+        let p1 = NonRootMPath::new("path/one")?;
 
         let mut csids = VecMap::new();
         csids.insert(0, ONES_CSID);
@@ -1453,7 +1457,7 @@ mod test {
             ],
             csids,
             max_csid_index: 4,
-            paths: vec![MPath::new("file")?],
+            paths: vec![NonRootMPath::new("file")?],
         });
 
         assert_eq!(
@@ -1472,8 +1476,8 @@ mod test {
 
     #[test]
     fn test_linear() -> Result<()> {
-        let path1 = MPath::new("path")?;
-        let path2 = MPath::new("new/path")?;
+        let path1 = NonRootMPath::new("path")?;
+        let path2 = NonRootMPath::new("new/path")?;
 
         let c1 = "one\ntwo\nthree\nfour\n";
         let c2 = "one\nfive\nsix\nfour\n";
@@ -1739,7 +1743,7 @@ mod test {
         //  2
         //  |
         //  1
-        let path = MPath::new("path")?;
+        let path = NonRootMPath::new("path")?;
 
         let c1 = "one\ntwo\nthree\n";
         let c2 = "one\nfour\nfive\nthree\nsix\n";
@@ -1841,7 +1845,7 @@ mod test {
         //  2 |
         //  |/
         //  1
-        let path = MPath::new("path")?;
+        let path = NonRootMPath::new("path")?;
 
         let c1 = "one\ntwo\nthree\n";
         let c2 = "one\nfour\nfive\nthree\nsix\n";
@@ -1990,7 +1994,7 @@ mod test {
         // merged-in commit.  The range shouldn't be merged because of the
         // origin offset difference.
         //
-        let path = MPath::new("path")?;
+        let path = NonRootMPath::new("path")?;
 
         let c1 = "one\ntwo\nthree\n";
         let c2 = "one\ntwo\nthree\nfour\n";
@@ -2094,7 +2098,7 @@ mod test {
         //  2
         //  |
         //  1(R)
-        let path = MPath::new("path")?;
+        let path = NonRootMPath::new("path")?;
 
         let c1 = "binary\0";
         let c2 = "one\ntwo\n";
@@ -2181,7 +2185,7 @@ mod test {
         //    4
         //   /|\
         //  1 2 3
-        let path = MPath::new("path")?;
+        let path = NonRootMPath::new("path")?;
 
         let c1 = "one\ntwo\nthree\n";
         let c2 = "three\nfour\nfive\n";
@@ -2268,7 +2272,7 @@ mod test {
 
     #[test]
     fn test_empty_file() -> Result<()> {
-        let path = MPath::new("path")?;
+        let path = NonRootMPath::new("path")?;
 
         let c1 = "";
         let c2 = "data\n";
@@ -2378,9 +2382,9 @@ mod test {
         //  Commit 4 is a merge where the file is not present in the first
         //  parent.  Commits 2 and 4 also rename the file to path2, and
         //  commit 5 renames it to path3.
-        let path1 = MPath::new("path1")?;
-        let path2 = MPath::new("path2")?;
-        let path3 = MPath::new("path3")?;
+        let path1 = NonRootMPath::new("path1")?;
+        let path2 = NonRootMPath::new("path2")?;
+        let path3 = NonRootMPath::new("path3")?;
 
         let c1 = "one\nthree\nfive\n";
         let c2 = "one\ntwo\nthree\nfive\n";
@@ -2532,7 +2536,7 @@ mod test {
         // |\
         // 2 1
         // Original blame is at 2, mutated to 1.
-        let path = MPath::new("path")?;
+        let path = NonRootMPath::new("path")?;
         let c1 = "Mutant\nText\nHere\n";
         let c2 = "Plain\nText\n";
         let c3 = "Rich\nText\n";
@@ -2582,7 +2586,7 @@ mod test {
         // |\
         // 2 1
         // Original blame is at 2, mutated to 1.
-        let path = MPath::new("path")?;
+        let path = NonRootMPath::new("path")?;
         let c1 = "Mutant\nText\nHere\n";
         let c2 = "Plain\nText\n";
         let c3 = "Completely\nNew\n";
@@ -2638,8 +2642,8 @@ mod test {
         // 2 1
         // Original blame is at 2, mutated to 1.
         // Mutable blame changed the name going 3 to 1
-        let path1 = MPath::new("path1")?;
-        let path2 = MPath::new("path2")?;
+        let path1 = NonRootMPath::new("path1")?;
+        let path2 = NonRootMPath::new("path2")?;
         let c1 = "Mutant\nText\nHere\n";
         let c2 = "Plain\nText\n";
         let c3 = "Rich\nText\n";
@@ -2692,7 +2696,7 @@ mod test {
         // |\
         // 2 1
         // Original blame is at 2, mutated to 1.
-        let path = MPath::new("path")?;
+        let path = NonRootMPath::new("path")?;
         let c1 = "Mutant\nText\nHere\n";
         let c2 = "Plain\nText\n";
         let c3 = "Rich\nText\n";
@@ -2771,7 +2775,7 @@ mod test {
         // 1 2 3
         // Original blame is at 4, mutated to 5.
         // Tricksyness is because 4 is a merge of 1 and 2, while 5 is a merge of 2 and 3
-        let path = MPath::new("path")?;
+        let path = NonRootMPath::new("path")?;
         let c1 = "Plain\n";
         let c2 = "Text\n";
         let c3 = "Rich\n";

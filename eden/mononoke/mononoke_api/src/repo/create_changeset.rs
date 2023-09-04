@@ -37,8 +37,8 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime as MononokeDateTime;
 use mononoke_types::FileChange;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 use repo_authorization::RepoWriteOperation;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
@@ -140,7 +140,7 @@ impl CreateCopyInfo {
     fn into_file_change(
         self,
         parent_ids: &[ChangesetId],
-    ) -> Result<(MPath, ChangesetId), MononokeError> {
+    ) -> Result<(NonRootMPath, ChangesetId), MononokeError> {
         let mpath = self.path.into_mpath().ok_or_else(|| {
             MononokeError::InvalidRequest(String::from("Copy-from path cannot be the root"))
         })?;
@@ -712,7 +712,7 @@ impl RepoContext {
             .collect();
 
         // Convert change paths into the form needed for the bonsai changeset.
-        let changes_stack: Vec<Vec<(MPath, CreateChange)>> = changes_stack
+        let changes_stack: Vec<Vec<(NonRootMPath, CreateChange)>> = changes_stack
             .into_iter()
             .zip(path_changes_stack.iter())
             .map(|(changes, path_changes)| {
@@ -884,7 +884,7 @@ impl RepoContext {
                             },
                         ))
                         .buffered(1000)
-                        .try_collect::<SortedVectorMap<MPath, CreateChange>>()
+                        .try_collect::<SortedVectorMap<NonRootMPath, CreateChange>>()
                         .timed()
                         .await;
                         let mut scuba = self.ctx().scuba().clone();
@@ -920,7 +920,7 @@ impl RepoContext {
             let file_changes = file_changes
                 .into_iter()
                 .map(|(path, change)| Ok((path, change.into_file_change(&parents)?)))
-                .collect::<Result<SortedVectorMap<MPath, FileChange>, MononokeError>>()?;
+                .collect::<Result<SortedVectorMap<NonRootMPath, FileChange>, MononokeError>>()?;
 
             // Create the new Bonsai Changeset. The `freeze` method validates
             // that the bonsai changeset is internally consistent.

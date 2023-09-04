@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use context::CoreContext;
 use metaconfig_types::HookConfig;
 use mononoke_types::BasicFileChange;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
 use super::LuaPattern;
 use crate::CrossRepoPushSource;
@@ -100,7 +100,7 @@ impl FileHook for DenyFiles {
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
         change: Option<&'change BasicFileChange>,
-        path: &'path MPath,
+        path: &'path NonRootMPath,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
@@ -132,7 +132,7 @@ fn rejection<'a, 'b>(path: &'a String, pattern: &'b LuaPattern) -> HookExecution
 fn deny_unacceptable_patterns<'a, 'b, 'c>(
     all_patterns: &'a [LuaPattern],
     native_patterns: &'a [LuaPattern],
-    path: &'b MPath,
+    path: &'b NonRootMPath,
     cross_repo_push_source: CrossRepoPushSource,
     change: Option<&'c BasicFileChange>,
 ) -> Result<HookExecution> {
@@ -175,8 +175,8 @@ mod test {
         BasicFileChange::new(TWOS_CTID, FileType::Regular, 10)
     }
 
-    fn mpath(s: &str) -> MPath {
-        MPath::new(s).unwrap()
+    fn mpath(s: &str) -> NonRootMPath {
+        NonRootMPath::new(s).unwrap()
     }
 
     #[test]

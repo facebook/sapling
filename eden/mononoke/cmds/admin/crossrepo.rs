@@ -63,7 +63,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use mutable_counters::MutableCountersRef;
 use pushrebase::do_pushrebase_bonsai;
@@ -406,7 +406,7 @@ async fn run_pushredirection_subcommand<'a>(
 
             let dump_mapping_file = sub_m
                 .value_of(DUMP_MAPPING_LARGE_REPO_PATH_ARG)
-                .map(MPath::new)
+                .map(NonRootMPath::new)
                 .transpose()?;
 
             let large_cs_id = create_commit_for_mapping_change(
@@ -507,7 +507,7 @@ async fn change_mapping_via_extras<'a>(
 
     let dump_mapping_file = sub_m
         .value_of(DUMP_MAPPING_LARGE_REPO_PATH_ARG)
-        .map(MPath::new)
+        .map(NonRootMPath::new)
         .transpose()?;
     let large_cs_id = create_commit_for_mapping_change(
         ctx,
@@ -733,7 +733,7 @@ async fn get_source_target_cs_ids_and_version(
 
 struct MappingCommitOptions {
     add_mapping_change_extra: bool,
-    dump_mapping_file: Option<MPath>,
+    dump_mapping_file: Option<NonRootMPath>,
 }
 
 async fn create_commit_for_mapping_change(
@@ -814,7 +814,7 @@ async fn create_file_changes(
     options: MappingCommitOptions,
     commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, CrossRepo>,
     live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
-) -> Result<BTreeMap<MPath, FileChange>, Error> {
+) -> Result<BTreeMap<NonRootMPath, FileChange>, Error> {
     let mut file_changes = btreemap! {};
     if let Some(path) = options.dump_mapping_file {
         // This "dump-mapping-file" is going to be created in the large repo,

@@ -149,7 +149,7 @@ mod test {
     use mononoke_api::BookmarkFreshness;
     use mononoke_api::BookmarkKey;
     use mononoke_api::CoreContext;
-    use mononoke_types::MPath;
+    use mononoke_types::NonRootMPath;
     use slog_glog_fmt::logger_that_can_work_in_tests;
     use test_utils::build_test_repo;
     use test_utils::GitExportTestRepoOptions;
@@ -165,7 +165,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let logger = logger_that_can_work_in_tests().unwrap();
 
-        let export_dir = MPath::new(EXPORT_DIR).unwrap();
+        let export_dir = NonRootMPath::new(EXPORT_DIR).unwrap();
 
         let (source_repo_ctx, changeset_ids) =
             build_test_repo(fb, &ctx, GitExportTestRepoOptions::default()).await?;
@@ -217,8 +217,8 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let logger = logger_that_can_work_in_tests().unwrap();
 
-        let export_dir = MPath::new(EXPORT_DIR).unwrap();
-        let second_export_dir = MPath::new(SECOND_EXPORT_DIR).unwrap();
+        let export_dir = NonRootMPath::new(EXPORT_DIR).unwrap();
+        let second_export_dir = NonRootMPath::new(SECOND_EXPORT_DIR).unwrap();
         let test_repo_opts = GitExportTestRepoOptions {
             add_branch_commit: true,
         };
@@ -260,8 +260,8 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let logger = logger_that_can_work_in_tests().unwrap();
 
-        let export_dir = MPath::new(EXPORT_DIR).unwrap();
-        let second_export_dir = MPath::new(SECOND_EXPORT_DIR).unwrap();
+        let export_dir = NonRootMPath::new(EXPORT_DIR).unwrap();
+        let second_export_dir = NonRootMPath::new(SECOND_EXPORT_DIR).unwrap();
 
         let test_repo_opts = GitExportTestRepoOptions {
             add_branch_commit: false,

@@ -5,13 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
 /// Put reversed basename in beginning
-pub(crate) struct BssmPath(MPath);
+pub(crate) struct BssmPath(NonRootMPath);
 
 impl BssmPath {
-    pub(crate) fn transform(path: MPath) -> Self {
+    pub(crate) fn transform(path: NonRootMPath) -> Self {
         let mut rev_basename = path.split_dirname().1.clone();
         rev_basename.reverse();
         // Let's add the basename in the end of the path as well
@@ -20,20 +20,20 @@ impl BssmPath {
         // So a repo with files `file` and `dir/file` will become a repo with files
         // `elif/file` and `elif/dir/file`, which otherwise could cause a file-dir conflict.
         // It also conserves ordering of files, for the same basename.
-        Self(MPath::from(rev_basename).join(&path))
+        Self(NonRootMPath::from(rev_basename).join(&path))
     }
 
     #[cfg(test)]
-    pub(crate) fn from_bsm_formatted_path(path: MPath) -> Self {
+    pub(crate) fn from_bsm_formatted_path(path: NonRootMPath) -> Self {
         Self(path)
     }
 
-    pub(crate) fn into_raw(self) -> MPath {
+    pub(crate) fn into_raw(self) -> NonRootMPath {
         self.0
     }
 
     #[cfg(test)]
-    pub(crate) fn untransform(self) -> anyhow::Result<MPath> {
+    pub(crate) fn untransform(self) -> anyhow::Result<NonRootMPath> {
         use anyhow::Context;
 
         let (rev_basename, rest) = self.0.split_first();
@@ -57,7 +57,7 @@ mod test {
     use super::*;
 
     quickcheck! {
-        fn roundtrip(path: MPath) -> bool {
+        fn roundtrip(path: NonRootMPath) -> bool {
             let bsm = BssmPath::transform(path.clone());
             bsm.untransform().unwrap() == path
         }
@@ -65,16 +65,16 @@ mod test {
 
     fn assert_transform(orig: &str, transform: &str) {
         assert_eq!(
-            BssmPath::transform(MPath::new(orig).unwrap()).into_raw(),
-            MPath::new(transform).unwrap()
+            BssmPath::transform(NonRootMPath::new(orig).unwrap()).into_raw(),
+            NonRootMPath::new(transform).unwrap()
         );
     }
 
     fn assert_untransform(transform: &str, orig: Option<&str>) {
         let untransform =
-            BssmPath::from_bsm_formatted_path(MPath::new(transform).unwrap()).untransform();
+            BssmPath::from_bsm_formatted_path(NonRootMPath::new(transform).unwrap()).untransform();
         if let Some(orig) = orig {
-            assert_eq!(untransform.unwrap(), MPath::new(orig).unwrap(),);
+            assert_eq!(untransform.unwrap(), NonRootMPath::new(orig).unwrap(),);
         } else {
             assert!(untransform.is_err());
         }

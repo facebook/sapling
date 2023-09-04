@@ -10,7 +10,7 @@ use std::fmt;
 use anyhow::Error;
 use bookmarks::BookmarkKey;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use permission_checker::MononokeIdentitySet;
 use thiserror::Error;
 
@@ -22,9 +22,9 @@ pub enum DeniedAction {
     FullRepoRead,
     FullRepoDraft,
     RepoMetadataRead,
-    PathRead(ChangesetId, Option<MPath>),
+    PathRead(ChangesetId, Option<NonRootMPath>),
     RepoWrite(RepoWriteOperation),
-    PathWrite(MPath),
+    PathWrite(NonRootMPath),
     BookmarkModification(BookmarkKey),
     OverrideGitMapping,
     GitImportOperation,

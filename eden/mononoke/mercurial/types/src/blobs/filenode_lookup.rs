@@ -29,7 +29,7 @@ use context::CoreContext;
 use futures::Future;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::ContentId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use stats::prelude::*;
 use tokio::time::timeout;
 use tunables::tunables;
@@ -47,7 +47,7 @@ pub struct FileNodeIdPointer(String);
 impl FileNodeIdPointer {
     pub fn new(
         content_id: &ContentId,
-        copy_from: &Option<(MPath, HgFileNodeId)>,
+        copy_from: &Option<(NonRootMPath, HgFileNodeId)>,
         p1: &Option<HgFileNodeId>,
         p2: &Option<HgFileNodeId>,
     ) -> Self {

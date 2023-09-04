@@ -30,7 +30,7 @@ use manifest::BonsaiDiffFileChange;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use serde_derive::Serialize;
 use slog::Logger;
@@ -219,7 +219,7 @@ fn slice_to_str(slice: &[u8]) -> String {
     String::from_utf8_lossy(slice).into_owned()
 }
 
-fn mpath_to_str<P: Borrow<MPath>>(mpath: P) -> String {
+fn mpath_to_str<P: Borrow<NonRootMPath>>(mpath: P) -> String {
     let bytes = mpath.borrow().to_vec();
     String::from_utf8_lossy(bytes.as_ref()).into_owned()
 }

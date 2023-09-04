@@ -50,7 +50,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types_mocks::contentid::ONES_CTID;
 use mononoke_types_mocks::contentid::THREES_CTID;
 use mononoke_types_mocks::contentid::TWOS_CTID;
@@ -188,11 +188,11 @@ impl ChangesetHook for FileChangesChangesetHook {
 
 #[derive(Clone, Debug)]
 struct FileContentMatchingChangesetHook {
-    expected_content: HashMap<MPath, Option<String>>,
+    expected_content: HashMap<NonRootMPath, Option<String>>,
 }
 
 #[derive(Clone)]
-struct LatestChangesChangesetHook(HashMap<MPath, Option<ChangesetId>>);
+struct LatestChangesChangesetHook(HashMap<NonRootMPath, Option<ChangesetId>>);
 
 #[async_trait]
 impl ChangesetHook for LatestChangesChangesetHook {
@@ -285,14 +285,14 @@ impl ChangesetHook for FileContentMatchingChangesetHook {
 }
 
 fn file_text_matching_changeset_hook(
-    expected_content: HashMap<MPath, Option<String>>,
+    expected_content: HashMap<NonRootMPath, Option<String>>,
 ) -> Box<dyn ChangesetHook> {
     Box::new(FileContentMatchingChangesetHook { expected_content })
 }
 
 #[derive(Clone, Debug)]
 struct LengthMatchingChangesetHook {
-    expected_lengths: HashMap<MPath, u64>,
+    expected_lengths: HashMap<NonRootMPath, u64>,
 }
 
 #[async_trait]
@@ -340,7 +340,9 @@ impl ChangesetHook for LengthMatchingChangesetHook {
     }
 }
 
-fn length_matching_changeset_hook(expected_lengths: HashMap<MPath, u64>) -> Box<dyn ChangesetHook> {
+fn length_matching_changeset_hook(
+    expected_lengths: HashMap<NonRootMPath, u64>,
+) -> Box<dyn ChangesetHook> {
     Box::new(LengthMatchingChangesetHook { expected_lengths })
 }
 
@@ -362,7 +364,7 @@ impl FileHook for FnFileHook {
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
         _change: Option<&'change BasicFileChange>,
-        _path: &'path MPath,
+        _path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
@@ -382,7 +384,7 @@ fn always_rejecting_file_hook() -> Box<dyn FileHook> {
 
 #[derive(Clone, Debug)]
 struct PathMatchingFileHook {
-    paths: HashSet<MPath>,
+    paths: HashSet<NonRootMPath>,
 }
 
 #[async_trait]
@@ -392,7 +394,7 @@ impl FileHook for PathMatchingFileHook {
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
         _change: Option<&'change BasicFileChange>,
-        path: &'path MPath,
+        path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
@@ -404,7 +406,7 @@ impl FileHook for PathMatchingFileHook {
     }
 }
 
-fn path_matching_file_hook(paths: HashSet<MPath>) -> Box<dyn FileHook> {
+fn path_matching_file_hook(paths: HashSet<NonRootMPath>) -> Box<dyn FileHook> {
     Box::new(PathMatchingFileHook { paths })
 }
 
@@ -420,7 +422,7 @@ impl FileHook for FileContentMatchingFileHook {
         ctx: &'ctx CoreContext,
         content_manager: &'fetcher dyn FileContentManager,
         change: Option<&'change BasicFileChange>,
-        _path: &'path MPath,
+        _path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
@@ -464,7 +466,7 @@ impl FileHook for IsSymLinkMatchingFileHook {
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
         change: Option<&'change BasicFileChange>,
-        _path: &'path MPath,
+        _path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
@@ -496,7 +498,7 @@ impl FileHook for LengthMatchingFileHook {
         ctx: &'ctx CoreContext,
         content_manager: &'fetcher dyn FileContentManager,
         change: Option<&'change BasicFileChange>,
-        _path: &'path MPath,
+        _path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
@@ -1444,8 +1446,8 @@ async fn hook_manager_many_files_dirs_repo(fb: FacebookInit) -> HookManager {
     hook_manager_repo(fb, &fixtures::ManyFilesDirs::get_test_repo(fb).await).await
 }
 
-fn to_mpath(string: &str) -> MPath {
-    MPath::new(string).unwrap()
+fn to_mpath(string: &str) -> NonRootMPath {
+    NonRootMPath::new(string).unwrap()
 }
 
 async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {

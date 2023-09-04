@@ -543,7 +543,7 @@ mod test {
     use metaconfig_types::UnodeVersion;
     use metaconfig_types::UpdateLoggingConfig;
     use metaconfig_types::WalkerConfig;
-    use mononoke_types::MPath;
+    use mononoke_types::NonRootMPath;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use nonzero_ext::nonzero;
     use pretty_assertions::assert_eq;
@@ -636,15 +636,15 @@ mod test {
                     RepositoryId::new(2) => SmallRepoCommitSyncConfig {
                         default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                         map: hashmap! {
-                            MPath::new("p1").unwrap() => MPath::new(".r2-legacy/p1").unwrap(),
-                            MPath::new("p5").unwrap() => MPath::new(".r2-legacy/p5").unwrap(),
+                            NonRootMPath::new("p1").unwrap() => NonRootMPath::new(".r2-legacy/p1").unwrap(),
+                            NonRootMPath::new("p5").unwrap() => NonRootMPath::new(".r2-legacy/p5").unwrap(),
                         },
                     },
                     RepositoryId::new(3) => SmallRepoCommitSyncConfig {
-                        default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new("subdir").unwrap()),
+                        default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(NonRootMPath::new("subdir").unwrap()),
                         map: hashmap! {
-                            MPath::new("p1").unwrap() => MPath::new("p1").unwrap(),
-                            MPath::new("p4").unwrap() => MPath::new("p5/p4").unwrap(),
+                            NonRootMPath::new("p1").unwrap() => NonRootMPath::new("p1").unwrap(),
+                            NonRootMPath::new("p4").unwrap() => NonRootMPath::new("p5/p4").unwrap(),
                         },
                     }
                 },
@@ -1244,7 +1244,10 @@ mod test {
                         regions: vec![AclRegion {
                             roots: vec![ONES_CSID],
                             heads: vec![],
-                            path_prefixes: vec![Some(MPath::new("test/prefix").unwrap()), None],
+                            path_prefixes: vec![
+                                Some(NonRootMPath::new("test/prefix").unwrap()),
+                                None,
+                            ],
                         }],
                         hipster_acl: "acl_test".to_string(),
                     }],

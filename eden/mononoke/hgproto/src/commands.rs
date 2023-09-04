@@ -47,7 +47,7 @@ use mercurial_bundles::bundle2::StreamEvent;
 use mercurial_bundles::Bundle2Item;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use qps::Qps;
 use slog::Logger;
 use tokio_io::codec::Decoder;
@@ -442,8 +442,8 @@ where
 enum GetPackv1ParsingState {
     Start,
     ParsingFilename(u16),
-    ParsedFilename(MPath),
-    ParsingFileNodes(MPath, u32, Vec<HgFileNodeId>),
+    ParsedFilename(NonRootMPath),
+    ParsingFileNodes(NonRootMPath, u32, Vec<HgFileNodeId>),
 }
 
 // Request format:
@@ -468,7 +468,7 @@ impl Getpackv1ArgDecoder {
 
 impl Decoder for Getpackv1ArgDecoder {
     // If None has been decoded, then that means that client has sent all the data
-    type Item = Option<(MPath, Vec<HgFileNodeId>)>;
+    type Item = Option<(NonRootMPath, Vec<HgFileNodeId>)>;
     type Error = Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>> {
@@ -499,7 +499,7 @@ impl Decoder for Getpackv1ArgDecoder {
                     }
 
                     let filename_bytes = src.split_to(filelen);
-                    ParsedFilename(MPath::new(&filename_bytes)?)
+                    ParsedFilename(NonRootMPath::new(&filename_bytes)?)
                 }
                 ParsedFilename(file) => {
                     let prefix_len = 4;
@@ -702,14 +702,14 @@ pub trait HgCommands {
     // @wireprotocommand()
     fn getpackv1(
         &self,
-        _params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
+        _params: BoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
     ) -> BoxStream<Bytes, Error> {
         once(Err(ErrorKind::Unimplemented("getpackv1".into()).into())).boxify()
     }
 
     fn getpackv2(
         &self,
-        _params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
+        _params: BoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
     ) -> BoxStream<Bytes, Error> {
         once(Err(ErrorKind::Unimplemented("getpackv2".into()).into())).boxify()
     }
@@ -796,7 +796,7 @@ mod test {
         );
 
         let mut buf = vec![];
-        let path = MPath::new("file".as_bytes()).unwrap();
+        let path = NonRootMPath::new("file".as_bytes()).unwrap();
         buf.put_u16_be(4);
         buf.put_slice(&path.to_vec());
         buf.put_u32_be(1);
@@ -817,6 +817,6 @@ mod test {
             Getpackv1ArgDecoder::new,
         );
         let res = paramstream.collect().wait().unwrap();
-        assert_eq!(res, vec![(MPath::new("path").unwrap(), vec![])]);
+        assert_eq!(res, vec![(NonRootMPath::new("path").unwrap(), vec![])]);
     }
 }

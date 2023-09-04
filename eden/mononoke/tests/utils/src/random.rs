@@ -24,8 +24,8 @@ use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileContents;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 use rand::seq::SliceRandom;
 use rand::Rng;
 use rand_distr::Binomial;
@@ -181,7 +181,7 @@ impl GenManifest {
         rng: &mut impl Rng,
         settings: &GenSettings,
         mut prefix: Vec<MPathElement>,
-    ) -> (MPath, Option<String>) {
+    ) -> (NonRootMPath, Option<String>) {
         if rng.gen_bool(settings.p_dir_descend) {
             let dirname = if rng.gen_bool(settings.p_dir_create) {
                 gen_filename(rng)
@@ -213,7 +213,10 @@ impl GenManifest {
                 self.files.insert(filename, data.clone());
                 Some(data)
             };
-            (MPath::try_from(prefix).expect("prefix is empty"), data)
+            (
+                NonRootMPath::try_from(prefix).expect("prefix is empty"),
+                data,
+            )
         }
     }
 }

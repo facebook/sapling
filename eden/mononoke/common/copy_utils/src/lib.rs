@@ -26,7 +26,7 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use regex::Regex;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
@@ -53,12 +53,12 @@ pub async fn copy(
     target_repo: &BlobRepo,
     source_cs_id: ChangesetId,
     target_cs_id: ChangesetId,
-    from_to_dirs: Vec<(MPath, MPath)>,
+    from_to_dirs: Vec<(NonRootMPath, NonRootMPath)>,
     author: String,
     msg: String,
     limits: Limits,
     options: Options,
-    skip_overwrite_warning: Option<&dyn Fn(&CoreContext, &MPath)>,
+    skip_overwrite_warning: Option<&dyn Fn(&CoreContext, &NonRootMPath)>,
 ) -> Result<Vec<ChangesetId>, Error> {
     // These are the file changes that have to be removed first
     let mut remove_file_changes = BTreeMap::new();
@@ -168,7 +168,7 @@ pub async fn copy(
 async fn create_changesets(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    file_changes: Vec<BTreeMap<MPath, Option<(MPath, FsnodeFile)>>>,
+    file_changes: Vec<BTreeMap<NonRootMPath, Option<(NonRootMPath, FsnodeFile)>>>,
     mut parent: ChangesetId,
     author: String,
     msg: String,
@@ -223,7 +223,7 @@ pub async fn remove_excessive_files(
     target_repo: &BlobRepo,
     source_cs_id: ChangesetId,
     target_cs_id: ChangesetId,
-    from_to_dirs: Vec<(MPath, MPath)>,
+    from_to_dirs: Vec<(NonRootMPath, NonRootMPath)>,
     author: String,
     msg: String,
     maybe_total_file_num_limit: Option<NonZeroU64>,
@@ -277,8 +277,8 @@ async fn list_directory(
     ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id: ChangesetId,
-    path: &MPath,
-) -> Result<Option<BTreeMap<MPath, FsnodeFile>>, Error> {
+    path: &NonRootMPath,
+) -> Result<Option<BTreeMap<NonRootMPath, FsnodeFile>>, Error> {
     let root = RootFsnodeId::derive(ctx, repo, cs_id).await?;
 
     let entries = root
@@ -316,7 +316,7 @@ async fn list_directory(
 
 fn create_bonsai_changeset(
     parents: Vec<ChangesetId>,
-    file_changes: SortedVectorMap<MPath, FileChange>,
+    file_changes: SortedVectorMap<NonRootMPath, FileChange>,
     author: String,
     message: String,
 ) -> Result<BonsaiChangeset, Error> {
@@ -360,12 +360,12 @@ mod test {
             .commit()
             .await?;
 
-        let maybe_dir = list_directory(&ctx, &repo, cs_id, &MPath::new("dir")?).await?;
+        let maybe_dir = list_directory(&ctx, &repo, cs_id, &NonRootMPath::new("dir")?).await?;
         let dir = maybe_dir.unwrap();
 
         assert_eq!(
             dir.keys().collect::<Vec<_>>(),
-            vec![&MPath::new("a")?, &MPath::new("b")?]
+            vec![&NonRootMPath::new("a")?, &NonRootMPath::new("b")?]
         );
 
         Ok(())
@@ -389,7 +389,7 @@ mod test {
             &repo,
             cs_id,
             cs_id,
-            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
+            vec![(NonRootMPath::new("dir_from")?, NonRootMPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             Limits::default(),
@@ -404,12 +404,12 @@ mod test {
         assert_eq!(
             list_working_copy_utf8(&ctx, &repo, new_cs_id,).await?,
             hashmap! {
-                MPath::new("dir_from/a")? => "a".to_string(),
-                MPath::new("dir_from/b")? => "b".to_string(),
-                MPath::new("dir_from/c")? => "c".to_string(),
-                MPath::new("dir_to/a")? => "dontoverwrite".to_string(),
-                MPath::new("dir_to/b")? => "b".to_string(),
-                MPath::new("dir_to/c")? => "c".to_string(),
+                NonRootMPath::new("dir_from/a")? => "a".to_string(),
+                NonRootMPath::new("dir_from/b")? => "b".to_string(),
+                NonRootMPath::new("dir_from/c")? => "c".to_string(),
+                NonRootMPath::new("dir_to/a")? => "dontoverwrite".to_string(),
+                NonRootMPath::new("dir_to/b")? => "b".to_string(),
+                NonRootMPath::new("dir_to/c")? => "c".to_string(),
             }
         );
         Ok(())
@@ -437,8 +437,14 @@ mod test {
             cs_id,
             cs_id,
             vec![
-                (MPath::new("dir_from_1")?, MPath::new("dir_to_1")?),
-                (MPath::new("dir_from_2")?, MPath::new("dir_to_2")?),
+                (
+                    NonRootMPath::new("dir_from_1")?,
+                    NonRootMPath::new("dir_to_1")?,
+                ),
+                (
+                    NonRootMPath::new("dir_from_2")?,
+                    NonRootMPath::new("dir_to_2")?,
+                ),
             ],
             "author".to_string(),
             "msg".to_string(),
@@ -454,19 +460,19 @@ mod test {
         assert_eq!(
             list_working_copy_utf8(&ctx, &repo, new_cs_id,).await?,
             hashmap! {
-                MPath::new("dir_from_1/a")? => "a".to_string(),
-                MPath::new("dir_from_1/b")? => "b".to_string(),
-                MPath::new("dir_from_1/c")? => "c".to_string(),
-                MPath::new("dir_to_1/a")? => "dontoverwrite".to_string(),
-                MPath::new("dir_to_1/b")? => "b".to_string(),
-                MPath::new("dir_to_1/c")? => "c".to_string(),
+                NonRootMPath::new("dir_from_1/a")? => "a".to_string(),
+                NonRootMPath::new("dir_from_1/b")? => "b".to_string(),
+                NonRootMPath::new("dir_from_1/c")? => "c".to_string(),
+                NonRootMPath::new("dir_to_1/a")? => "dontoverwrite".to_string(),
+                NonRootMPath::new("dir_to_1/b")? => "b".to_string(),
+                NonRootMPath::new("dir_to_1/c")? => "c".to_string(),
 
-                MPath::new("dir_from_2/aa")? => "aa".to_string(),
-                MPath::new("dir_from_2/bb")? => "bb".to_string(),
-                MPath::new("dir_from_2/cc")? => "cc".to_string(),
-                MPath::new("dir_to_2/aa")? => "aa".to_string(),
-                MPath::new("dir_to_2/bb")? => "bb".to_string(),
-                MPath::new("dir_to_2/cc")? => "cc".to_string(),
+                NonRootMPath::new("dir_from_2/aa")? => "aa".to_string(),
+                NonRootMPath::new("dir_from_2/bb")? => "bb".to_string(),
+                NonRootMPath::new("dir_from_2/cc")? => "cc".to_string(),
+                NonRootMPath::new("dir_to_2/aa")? => "aa".to_string(),
+                NonRootMPath::new("dir_to_2/bb")? => "bb".to_string(),
+                NonRootMPath::new("dir_to_2/cc")? => "cc".to_string(),
             }
         );
         Ok(())
@@ -495,7 +501,7 @@ mod test {
             &repo,
             cs_id,
             cs_id,
-            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
+            vec![(NonRootMPath::new("dir_from")?, NonRootMPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             limit.clone(),
@@ -510,11 +516,11 @@ mod test {
         assert_eq!(
             list_working_copy_utf8(&ctx, &repo, first_cs_id,).await?,
             hashmap! {
-                MPath::new("dir_from/a")? => "a".to_string(),
-                MPath::new("dir_from/b")? => "b".to_string(),
-                MPath::new("dir_from/c")? => "c".to_string(),
-                MPath::new("dir_to/a")? => "dontoverwrite".to_string(),
-                MPath::new("dir_to/b")? => "b".to_string(),
+                NonRootMPath::new("dir_from/a")? => "a".to_string(),
+                NonRootMPath::new("dir_from/b")? => "b".to_string(),
+                NonRootMPath::new("dir_from/c")? => "c".to_string(),
+                NonRootMPath::new("dir_to/a")? => "dontoverwrite".to_string(),
+                NonRootMPath::new("dir_to/b")? => "b".to_string(),
             }
         );
 
@@ -524,7 +530,7 @@ mod test {
             &repo,
             first_cs_id,
             first_cs_id,
-            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
+            vec![(NonRootMPath::new("dir_from")?, NonRootMPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             limit,
@@ -539,12 +545,12 @@ mod test {
         assert_eq!(
             list_working_copy_utf8(&ctx, &repo, second_cs_id,).await?,
             hashmap! {
-                MPath::new("dir_from/a")? => "a".to_string(),
-                MPath::new("dir_from/b")? => "b".to_string(),
-                MPath::new("dir_from/c")? => "c".to_string(),
-                MPath::new("dir_to/a")? => "dontoverwrite".to_string(),
-                MPath::new("dir_to/b")? => "b".to_string(),
-                MPath::new("dir_to/c")? => "c".to_string(),
+                NonRootMPath::new("dir_from/a")? => "a".to_string(),
+                NonRootMPath::new("dir_from/b")? => "b".to_string(),
+                NonRootMPath::new("dir_from/c")? => "c".to_string(),
+                NonRootMPath::new("dir_to/a")? => "dontoverwrite".to_string(),
+                NonRootMPath::new("dir_to/b")? => "b".to_string(),
+                NonRootMPath::new("dir_to/c")? => "c".to_string(),
             }
         );
         Ok(())
@@ -570,7 +576,7 @@ mod test {
             &repo,
             cs_id,
             cs_id,
-            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
+            vec![(NonRootMPath::new("dir_from")?, NonRootMPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             Limits::default(),
@@ -588,13 +594,13 @@ mod test {
         assert_eq!(
             list_working_copy_utf8(&ctx, &repo, cs_id,).await?,
             hashmap! {
-                MPath::new("dir_from/BUCK")? => "buck".to_string(),
-                MPath::new("dir_from/b")? => "b".to_string(),
-                MPath::new("dir_from/TARGETS")? => "targets".to_string(),
-                MPath::new("dir_from/subdir/TARGETS")? => "targets".to_string(),
-                MPath::new("dir_from/c.bzl")? => "bzl".to_string(),
-                MPath::new("dir_to/a")? => "dontoverwrite".to_string(),
-                MPath::new("dir_to/b")? => "b".to_string(),
+                NonRootMPath::new("dir_from/BUCK")? => "buck".to_string(),
+                NonRootMPath::new("dir_from/b")? => "b".to_string(),
+                NonRootMPath::new("dir_from/TARGETS")? => "targets".to_string(),
+                NonRootMPath::new("dir_from/subdir/TARGETS")? => "targets".to_string(),
+                NonRootMPath::new("dir_from/c.bzl")? => "bzl".to_string(),
+                NonRootMPath::new("dir_to/a")? => "dontoverwrite".to_string(),
+                NonRootMPath::new("dir_to/b")? => "b".to_string(),
             }
         );
 
@@ -618,7 +624,7 @@ mod test {
             &repo,
             cs_id,
             cs_id,
-            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
+            vec![(NonRootMPath::new("dir_from")?, NonRootMPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             Limits {
@@ -637,10 +643,10 @@ mod test {
         assert_eq!(
             list_working_copy_utf8(&ctx, &repo, first_cs_id,).await?,
             hashmap! {
-                MPath::new("dir_from/a")? => "aaaaaaaaaa".to_string(),
-                MPath::new("dir_from/b")? => "b".to_string(),
-                MPath::new("dir_from/c")? => "c".to_string(),
-                MPath::new("dir_to/a")? => "aaaaaaaaaa".to_string(),
+                NonRootMPath::new("dir_from/a")? => "aaaaaaaaaa".to_string(),
+                NonRootMPath::new("dir_from/b")? => "b".to_string(),
+                NonRootMPath::new("dir_from/c")? => "c".to_string(),
+                NonRootMPath::new("dir_to/a")? => "aaaaaaaaaa".to_string(),
             }
         );
 
@@ -650,7 +656,7 @@ mod test {
             &repo,
             first_cs_id,
             first_cs_id,
-            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
+            vec![(NonRootMPath::new("dir_from")?, NonRootMPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             Limits {
@@ -669,12 +675,12 @@ mod test {
         assert_eq!(
             list_working_copy_utf8(&ctx, &repo, second_cs_id,).await?,
             hashmap! {
-                MPath::new("dir_to/a")? => "aaaaaaaaaa".to_string(),
-                MPath::new("dir_to/b")? => "b".to_string(),
-                MPath::new("dir_to/c")? => "c".to_string(),
-                MPath::new("dir_from/a")? => "aaaaaaaaaa".to_string(),
-                MPath::new("dir_from/b")? => "b".to_string(),
-                MPath::new("dir_from/c")? => "c".to_string(),
+                NonRootMPath::new("dir_to/a")? => "aaaaaaaaaa".to_string(),
+                NonRootMPath::new("dir_to/b")? => "b".to_string(),
+                NonRootMPath::new("dir_to/c")? => "c".to_string(),
+                NonRootMPath::new("dir_from/a")? => "aaaaaaaaaa".to_string(),
+                NonRootMPath::new("dir_from/b")? => "b".to_string(),
+                NonRootMPath::new("dir_from/c")? => "c".to_string(),
             }
         );
 
@@ -700,7 +706,7 @@ mod test {
             &repo,
             cs_id,
             cs_id,
-            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
+            vec![(NonRootMPath::new("dir_from")?, NonRootMPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             Limits {
@@ -718,12 +724,12 @@ mod test {
         assert_eq!(
             list_working_copy_utf8(&ctx, &repo, cs_id,).await?,
             hashmap! {
-                MPath::new("dir_to/a")? => "aaaaaaaaaa".to_string(),
-                MPath::new("dir_to/b")? => "b".to_string(),
-                MPath::new("dir_to/c")? => "c".to_string(),
-                MPath::new("dir_from/a")? => "aaaaaaaaaa".to_string(),
-                MPath::new("dir_from/b")? => "b".to_string(),
-                MPath::new("dir_from/c")? => "c".to_string(),
+                NonRootMPath::new("dir_to/a")? => "aaaaaaaaaa".to_string(),
+                NonRootMPath::new("dir_to/b")? => "b".to_string(),
+                NonRootMPath::new("dir_to/c")? => "c".to_string(),
+                NonRootMPath::new("dir_from/a")? => "aaaaaaaaaa".to_string(),
+                NonRootMPath::new("dir_from/b")? => "b".to_string(),
+                NonRootMPath::new("dir_from/c")? => "c".to_string(),
             }
         );
 
@@ -749,7 +755,7 @@ mod test {
             &repo,
             cs_id,
             cs_id,
-            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
+            vec![(NonRootMPath::new("dir_from")?, NonRootMPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             Limits::default(),
@@ -770,7 +776,7 @@ mod test {
             &repo,
             cs_id,
             cs_id,
-            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
+            vec![(NonRootMPath::new("dir_from")?, NonRootMPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             Limits::default(),
@@ -785,19 +791,19 @@ mod test {
         assert_eq!(
             list_working_copy_utf8(&ctx, &repo, *cs_ids.get(0).unwrap()).await?,
             hashmap! {
-                MPath::new("dir_from/a")? => "aa".to_string(),
-                MPath::new("dir_from/b")? => "b".to_string(),
-                MPath::new("dir_to/b")? => "b".to_string(),
+                NonRootMPath::new("dir_from/a")? => "aa".to_string(),
+                NonRootMPath::new("dir_from/b")? => "b".to_string(),
+                NonRootMPath::new("dir_to/b")? => "b".to_string(),
             }
         );
 
         assert_eq!(
             list_working_copy_utf8(&ctx, &repo, *cs_ids.last().unwrap()).await?,
             hashmap! {
-                MPath::new("dir_from/a")? => "aa".to_string(),
-                MPath::new("dir_from/b")? => "b".to_string(),
-                MPath::new("dir_to/a")? => "aa".to_string(),
-                MPath::new("dir_to/b")? => "b".to_string(),
+                NonRootMPath::new("dir_from/a")? => "aa".to_string(),
+                NonRootMPath::new("dir_from/b")? => "b".to_string(),
+                NonRootMPath::new("dir_to/a")? => "aa".to_string(),
+                NonRootMPath::new("dir_to/b")? => "b".to_string(),
             }
         );
 
@@ -808,7 +814,7 @@ mod test {
             .await?;
         let file_changes = copy_bcs.file_changes_map();
         let a_change = match file_changes
-            .get(&MPath::new("dir_to/a")?)
+            .get(&NonRootMPath::new("dir_to/a")?)
             .expect("change to dir_to/a expected to be present in the map")
         {
             FileChange::Change(tc) => tc,
@@ -838,7 +844,7 @@ mod test {
             &repo,
             cs_id,
             cs_id,
-            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
+            vec![(NonRootMPath::new("dir_from")?, NonRootMPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             None,
@@ -848,8 +854,8 @@ mod test {
         assert_eq!(
             list_working_copy_utf8(&ctx, &repo, cs_id,).await?,
             hashmap! {
-                MPath::new("dir_from/a")? => "a".to_string(),
-                MPath::new("dir_to/a")? => "a".to_string(),
+                NonRootMPath::new("dir_from/a")? => "a".to_string(),
+                NonRootMPath::new("dir_to/a")? => "a".to_string(),
             }
         );
 
@@ -878,8 +884,14 @@ mod test {
             cs_id,
             cs_id,
             vec![
-                (MPath::new("dir_from_1")?, MPath::new("dir_to_1")?),
-                (MPath::new("dir_from_2")?, MPath::new("dir_to_2")?),
+                (
+                    NonRootMPath::new("dir_from_1")?,
+                    NonRootMPath::new("dir_to_1")?,
+                ),
+                (
+                    NonRootMPath::new("dir_from_2")?,
+                    NonRootMPath::new("dir_to_2")?,
+                ),
             ],
             "author".to_string(),
             "msg".to_string(),
@@ -890,10 +902,10 @@ mod test {
         assert_eq!(
             list_working_copy_utf8(&ctx, &repo, cs_id,).await?,
             hashmap! {
-                MPath::new("dir_from_1/a")? => "a".to_string(),
-                MPath::new("dir_to_1/a")? => "a".to_string(),
-                MPath::new("dir_from_2/a")? => "a".to_string(),
-                MPath::new("dir_to_2/a")? => "a".to_string(),
+                NonRootMPath::new("dir_from_1/a")? => "a".to_string(),
+                NonRootMPath::new("dir_to_1/a")? => "a".to_string(),
+                NonRootMPath::new("dir_from_2/a")? => "a".to_string(),
+                NonRootMPath::new("dir_to_2/a")? => "a".to_string(),
             }
         );
 
@@ -925,7 +937,7 @@ mod test {
             &target_repo,
             source_cs_id,
             target_cs_id,
-            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
+            vec![(NonRootMPath::new("dir_from")?, NonRootMPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             None,
@@ -935,7 +947,7 @@ mod test {
         assert_eq!(
             list_working_copy_utf8(&ctx, &target_repo, cs_id).await?,
             hashmap! {
-                MPath::new("dir_to/a")? => "a".to_string(),
+                NonRootMPath::new("dir_to/a")? => "a".to_string(),
             }
         );
 
@@ -968,7 +980,7 @@ mod test {
             &target_repo,
             source_cs_id,
             target_cs_id,
-            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
+            vec![(NonRootMPath::new("dir_from")?, NonRootMPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             Limits::default(),
@@ -983,16 +995,16 @@ mod test {
         assert_eq!(
             list_working_copy_utf8(&ctx, &target_repo, *cs_ids.get(0).unwrap()).await?,
             hashmap! {
-                MPath::new("target_random_file")? => "tr".to_string(),
+                NonRootMPath::new("target_random_file")? => "tr".to_string(),
             }
         );
 
         assert_eq!(
             list_working_copy_utf8(&ctx, &target_repo, *cs_ids.get(1).unwrap()).await?,
             hashmap! {
-                MPath::new("dir_to/a")? => "aa".to_string(),
-                MPath::new("dir_to/b")? => "b".to_string(),
-                MPath::new("target_random_file")? => "tr".to_string(),
+                NonRootMPath::new("dir_to/a")? => "aa".to_string(),
+                NonRootMPath::new("dir_to/b")? => "b".to_string(),
+                NonRootMPath::new("target_random_file")? => "tr".to_string(),
             }
         );
 
@@ -1011,7 +1023,7 @@ mod test {
             .await?;
         let file_changes = copy_bcs.file_changes_map();
         let a_change = match file_changes
-            .get(&MPath::new("dir_to/a")?)
+            .get(&NonRootMPath::new("dir_to/a")?)
             .expect("change to dir_to/a expected to be present in the map")
         {
             FileChange::Change(tc) => tc,

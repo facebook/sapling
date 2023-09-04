@@ -26,7 +26,7 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use serde_derive::Deserialize;
@@ -122,7 +122,7 @@ impl DeserializableBonsaiChangeset {
             .file_changes
             .into_iter()
             .map::<Result<_, Error>, _>(|(path, changes)| {
-                Ok((MPath::new(path.as_bytes())?, changes))
+                Ok((NonRootMPath::new(path.as_bytes())?, changes))
             })
             .collect::<Result<SortedVectorMap<_, _>, _>>()?;
         Ok(BonsaiChangesetMut {

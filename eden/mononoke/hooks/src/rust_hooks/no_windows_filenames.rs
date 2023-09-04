@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use context::CoreContext;
 use metaconfig_types::HookConfig;
 use mononoke_types::BasicFileChange;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use regex::bytes::Regex;
 
 use crate::CrossRepoPushSource;
@@ -78,7 +78,7 @@ impl NoWindowsFilenames {
 const BAD_WINDOWS_PATH_ELEMENT_REGEX: &str =
     r#"(^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$"#;
 
-fn check_path_for_bad_elements(path: &MPath) -> Result<HookExecution, Error> {
+fn check_path_for_bad_elements(path: &NonRootMPath) -> Result<HookExecution, Error> {
     let bad_windows_path_element = Regex::new(BAD_WINDOWS_PATH_ELEMENT_REGEX)?;
     for element in path {
         if bad_windows_path_element.is_match(element.as_ref()) {
@@ -98,7 +98,7 @@ impl FileHook for NoWindowsFilenames {
         _ctx: &'ctx CoreContext,
         _context_fetcher: &'fetcher dyn FileContentManager,
         change: Option<&'change BasicFileChange>,
-        path: &'path MPath,
+        path: &'path NonRootMPath,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
@@ -132,7 +132,7 @@ mod test {
     use super::*;
 
     fn check_path(path: &str) -> bool {
-        match check_path_for_bad_elements(&MPath::new(path).unwrap()).unwrap() {
+        match check_path_for_bad_elements(&NonRootMPath::new(path).unwrap()).unwrap() {
             HookExecution::Accepted => true,
             HookExecution::Rejected(_) => false,
         }

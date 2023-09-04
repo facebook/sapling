@@ -49,7 +49,7 @@ use metaconfig_types::HookManagerParams;
 use mononoke_types::BasicFileChange;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use permission_checker::AclProvider;
 use permission_checker::ArcMembershipChecker;
 use permission_checker::NeverMember;
@@ -349,7 +349,11 @@ enum Hook {
 
 enum HookInstance<'a> {
     Changeset(&'a dyn ChangesetHook),
-    File(&'a dyn FileHook, &'a MPath, Option<&'a BasicFileChange>),
+    File(
+        &'a dyn FileHook,
+        &'a NonRootMPath,
+        Option<&'a BasicFileChange>,
+    ),
 }
 
 impl<'a> HookInstance<'a> {
@@ -528,7 +532,7 @@ pub trait FileHook: Send + Sync {
         ctx: &'ctx CoreContext,
         content_manager: &'fetcher dyn FileContentManager,
         change: Option<&'change BasicFileChange>,
-        path: &'path MPath,
+        path: &'path NonRootMPath,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error>;
@@ -574,7 +578,7 @@ impl HookOutcome {
         }
     }
 
-    pub fn get_file_path(&self) -> Option<&MPath> {
+    pub fn get_file_path(&self) -> Option<&NonRootMPath> {
         match self {
             HookOutcome::ChangesetHook(..) => None,
             HookOutcome::FileHook(id, _) => Some(&id.path),
@@ -691,7 +695,7 @@ impl HookRejectionInfo {
 pub struct FileHookExecutionID {
     pub cs_id: ChangesetId,
     pub hook_name: String,
-    pub path: MPath,
+    pub path: NonRootMPath,
 }
 
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]

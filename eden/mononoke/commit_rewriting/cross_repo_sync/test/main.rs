@@ -61,7 +61,7 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use pushrebase::PushrebaseError;
 use repo_blobstore::RepoBlobstoreRef;
@@ -79,8 +79,8 @@ use tests_utils::CreateCommitContext;
 use tunables::with_tunables_async;
 use tunables::MononokeTunables;
 
-fn mpath(p: &str) -> MPath {
-    MPath::new(p).unwrap()
+fn mpath(p: &str) -> NonRootMPath {
+    NonRootMPath::new(p).unwrap()
 }
 
 async fn move_bookmark(
@@ -247,7 +247,9 @@ fn create_commit_sync_config(
     prefix: &str,
 ) -> Result<CommitSyncConfig, Error> {
     let small_repo_config = SmallRepoCommitSyncConfig {
-        default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new(prefix)?),
+        default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(NonRootMPath::new(
+            prefix,
+        )?),
         map: hashmap! {},
     };
 
@@ -668,8 +670,8 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let small_repo_config = SmallRepoCommitSyncConfig {
         default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
         map: hashmap! {
-            MPath::new("dir1/subdir1/subsubdir1")? => MPath::new("prefix1")?,
-            MPath::new("dir1")? => MPath::new("prefix2")?,
+            NonRootMPath::new("dir1/subdir1/subsubdir1")? => NonRootMPath::new("prefix1")?,
+            NonRootMPath::new("dir1")? => NonRootMPath::new("prefix2")?,
         },
     };
 
@@ -759,7 +761,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let megarepo_implicit_delete_bcs = megarepo_implicit_delete_bcs_id
         .load(&ctx, megarepo.repo_blobstore())
         .await?;
-    let file_changes: BTreeMap<MPath, _> = megarepo_implicit_delete_bcs
+    let file_changes: BTreeMap<NonRootMPath, _> = megarepo_implicit_delete_bcs
         .file_changes()
         .map(|(a, b)| (a.clone(), b.clone()))
         .collect();
@@ -1595,11 +1597,11 @@ async fn prepare_commit_syncer_with_mapping_change(
     let small_repo_id = small_repo.repo_identity().id();
     let large_repo_id = megarepo.repo_identity().id();
     let small_repo_config = SmallRepoCommitSyncConfig {
-        default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new(
+        default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(NonRootMPath::new(
             "prefix",
         )?),
         map: hashmap! {
-            MPath::new("tools")? => MPath::new("tools")?,
+            NonRootMPath::new("tools")? => NonRootMPath::new("tools")?,
         },
     };
 
@@ -1959,7 +1961,7 @@ async fn assert_working_copy(
     actual_paths.sort();
 
     let expected_paths: Result<Vec<_>, Error> =
-        expected_files.into_iter().map(MPath::new).collect();
+        expected_files.into_iter().map(NonRootMPath::new).collect();
     let mut expected_paths = expected_paths?;
     expected_paths.sort();
 

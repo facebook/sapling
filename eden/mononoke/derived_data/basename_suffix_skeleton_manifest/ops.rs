@@ -24,15 +24,15 @@ use manifest::AsyncManifest;
 use manifest::ManifestOps;
 use manifest::ManifestOrderedOps;
 use manifest::PathOrPrefix;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 use vec1::vec1;
 use vec1::Vec1;
 
 use crate::path::BssmPath;
 use crate::RootBasenameSuffixSkeletonManifest;
 
-type MononokePath = Option<MPath>;
+type MononokePath = Option<NonRootMPath>;
 
 fn normal_to_custom(path: MononokePath) -> MononokePath {
     path.map(|p| BssmPath::transform(p).into_raw())

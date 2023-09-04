@@ -34,7 +34,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestEnvelope;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 
 use crate::mapping::FilenodesOnlyPublic;
@@ -237,7 +237,7 @@ pub(crate) fn classify_filenode(
 }
 
 fn create_manifest_filenode(
-    path: Option<MPath>,
+    path: Option<NonRootMPath>,
     envelope: HgManifestEnvelope,
     linknode: HgChangesetId,
 ) -> PreparedFilenode {
@@ -263,7 +263,7 @@ fn create_manifest_filenode(
 }
 
 fn create_file_filenode(
-    path: Option<MPath>,
+    path: Option<NonRootMPath>,
     envelope: HgFileEnvelope,
     linknode: HgChangesetId,
 ) -> Result<PreparedFilenode> {

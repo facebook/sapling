@@ -21,7 +21,7 @@ use bytes::Bytes;
 use futures_old::stream;
 use mercurial_types::Delta;
 use mercurial_types::HgNodeHash;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RevFlags;
 use quickcheck::empty_shrinker;
 use quickcheck::Arbitrary;
@@ -142,7 +142,7 @@ impl Arbitrary for CgPartSequence {
 
         for _ in 0..nfilelogs {
             // Changegroups can't support empty paths, so skip over those.
-            let path = MPath::arbitrary(g);
+            let path = NonRootMPath::arbitrary(g);
             let section_end = Part::SectionEnd(Section::Filelog(path.clone()));
             filelogs.push((gen_parts(Section::Filelog(path), g), section_end));
         }

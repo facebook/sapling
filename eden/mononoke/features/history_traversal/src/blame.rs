@@ -23,7 +23,7 @@ use mononoke_types::blame_v2::BlameParent;
 use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use unodes::RootUnodeManifestId;
 
 use crate::common::find_possible_mutable_ancestors;
@@ -34,7 +34,7 @@ async fn fetch_mutable_blame(
     ctx: &CoreContext,
     repo: &impl Repo,
     my_csid: ChangesetId,
-    path: &MPath,
+    path: &NonRootMPath,
     seen: &mut HashSet<ChangesetId>,
 ) -> Result<(BlameV2, FileUnodeId), BlameError> {
     let mutable_renames = repo.mutable_renames();
@@ -165,7 +165,7 @@ async fn fetch_immutable_blame(
     ctx: &CoreContext,
     repo: &impl Repo,
     csid: ChangesetId,
-    path: &MPath,
+    path: &NonRootMPath,
 ) -> Result<(BlameV2, FileUnodeId), BlameError> {
     fetch_blame_v2(ctx, repo.as_blob_repo(), csid, path.clone()).await
 }
@@ -174,7 +174,7 @@ pub async fn blame(
     ctx: &CoreContext,
     repo: &impl Repo,
     csid: ChangesetId,
-    path: Option<&MPath>,
+    path: Option<&NonRootMPath>,
     follow_mutable_file_history: bool,
 ) -> Result<(BlameV2, FileUnodeId), BlameError> {
     let path = path.ok_or_else(|| anyhow!("Blame is not available for directory: `/`"))?;
@@ -192,7 +192,7 @@ pub async fn blame_with_content(
     ctx: &CoreContext,
     repo: &impl Repo,
     csid: ChangesetId,
-    path: Option<&MPath>,
+    path: Option<&NonRootMPath>,
     follow_mutable_file_history: bool,
 ) -> Result<(BlameV2, Bytes), BlameError> {
     let (blame, file_unode_id) = blame(ctx, repo, csid, path, follow_mutable_file_history).await?;

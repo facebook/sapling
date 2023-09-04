@@ -21,9 +21,9 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
-pub type FileToContent = BTreeMap<MPath, Option<(ContentId, FileType)>>;
+pub type FileToContent = BTreeMap<NonRootMPath, Option<(ContentId, FileType)>>;
 pub const DEFAULT_STACK_FILE_CHANGES_LIMIT: u64 = 10000;
 
 #[derive(Copy, Clone, Debug)]
@@ -225,7 +225,7 @@ fn has_copy_info(cs: &BonsaiChangeset) -> bool {
 /// 2) File with the same name was deleted in `left` and added in `right` or vice-versa
 fn has_file_conflict(
     left: &FileToContent,
-    right: BTreeMap<&MPath, &FileChange>,
+    right: BTreeMap<&NonRootMPath, &FileChange>,
     file_conflicts: FileConflicts,
 ) -> bool {
     let mut left = left.iter().peekable();
@@ -403,7 +403,7 @@ mod test {
                 .per_commit_file_changes
                 .keys()
                 .collect::<Vec<_>>(),
-            vec![&MPath::new(file1)?]
+            vec![&NonRootMPath::new(file1)?]
         );
 
         assert_eq!(
@@ -411,7 +411,7 @@ mod test {
                 .per_commit_file_changes
                 .keys()
                 .collect::<Vec<_>>(),
-            vec![&MPath::new(file2)?]
+            vec![&NonRootMPath::new(file2)?]
         );
 
         Ok(())
@@ -469,7 +469,7 @@ mod test {
                 .per_commit_file_changes
                 .keys()
                 .collect::<Vec<_>>(),
-            vec![&MPath::new(file1)?]
+            vec![&NonRootMPath::new(file1)?]
         );
 
         assert_eq!(
@@ -477,7 +477,7 @@ mod test {
                 .per_commit_file_changes
                 .keys()
                 .collect::<Vec<_>>(),
-            vec![&MPath::new(file2)?]
+            vec![&NonRootMPath::new(file2)?]
         );
 
         Ok(())
@@ -870,7 +870,9 @@ mod test {
                     .map(|paths| {
                         paths
                             .into_iter()
-                            .map(|(p, maybe_content)| (MPath::new(p).unwrap(), maybe_content))
+                            .map(|(p, maybe_content)| {
+                                (NonRootMPath::new(p).unwrap(), maybe_content)
+                            })
                             .collect::<BTreeMap<_, _>>()
                     })
                     .collect::<Vec<_>>();

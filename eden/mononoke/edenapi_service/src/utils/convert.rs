@@ -40,7 +40,7 @@ use mononoke_api::path::MononokePath;
 use mononoke_api::CreateChange;
 use mononoke_api::CreateChangeFile;
 use mononoke_types::DateTime;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use types::RepoPath;
 use types::RepoPathBuf;
 
@@ -52,16 +52,16 @@ pub fn to_mononoke_path(path: impl AsRef<RepoPath>) -> Result<MononokePath> {
     Ok(MononokePath::new(to_mpath(path)?))
 }
 
-/// Convert a Mercurial `RepoPath` or `RepoPathBuf` into an `Option<MPath>`.
+/// Convert a Mercurial `RepoPath` or `RepoPathBuf` into an `Option<NonRootMPath>`.
 /// The input will be copied due to differences in data representation.
-pub fn to_mpath(path: impl AsRef<RepoPath>) -> Result<Option<MPath>> {
+pub fn to_mpath(path: impl AsRef<RepoPath>) -> Result<Option<NonRootMPath>> {
     let path_bytes = path.as_ref().as_byte_slice();
-    MPath::new_opt(path_bytes).with_context(|| ErrorKind::InvalidPath(path_bytes.to_vec()))
+    NonRootMPath::new_opt(path_bytes).with_context(|| ErrorKind::InvalidPath(path_bytes.to_vec()))
 }
 
-/// Convert an `MPath` into a Mercurial `RepoPathBuf`.
+/// Convert an `NonRootMPath` into a Mercurial `RepoPathBuf`.
 /// The input will be copied due to differences in data representation.
-pub fn to_hg_path(path: &MPath) -> Result<RepoPathBuf> {
+pub fn to_hg_path(path: &NonRootMPath) -> Result<RepoPathBuf> {
     RepoPathBuf::from_utf8(path.to_vec()).with_context(|| ErrorKind::InvalidPath(path.to_vec()))
 }
 

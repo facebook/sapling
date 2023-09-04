@@ -108,7 +108,7 @@ filenode won't be send at all
   remote:                                 source: SharedError {
   remote:                                     error: InconsistentEntryHashForPath(
   remote:                                         FilePath(
-  remote:                                             MPath("file"),
+  remote:                                             NonRootMPath("file"),
   remote:                                         ),
   remote:                                         HgNodeHash(
   remote:                                             Sha1(979d39e9dea4d1f3f1fea701fd4d3bae43eef76b),

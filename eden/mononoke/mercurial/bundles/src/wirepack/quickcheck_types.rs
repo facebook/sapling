@@ -9,7 +9,7 @@
 
 use mercurial_types::Delta;
 use mercurial_types::HgNodeHash;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::NULL_HASH;
 use quickcheck::empty_shrinker;
@@ -69,10 +69,10 @@ impl FileEntries {
                 if u64::arbitrary(g) % 10 == 0 {
                     RepoPath::root()
                 } else {
-                    RepoPath::DirectoryPath(MPath::arbitrary(g))
+                    RepoPath::DirectoryPath(NonRootMPath::arbitrary(g))
                 }
             }
-            Kind::File => RepoPath::FilePath(MPath::arbitrary(g)),
+            Kind::File => RepoPath::FilePath(NonRootMPath::arbitrary(g)),
         };
         let history = (0..history_len)
             .map(|_| HistoryEntry::arbitrary_kind(g, kind))
@@ -114,7 +114,7 @@ impl HistoryEntry {
             Kind::File => {
                 // 20% chance of generating copy-from info
                 if *g.choose(&[0, 1, 2, 3, 4]).unwrap() == 0 {
-                    Some(RepoPath::FilePath(MPath::arbitrary(g)))
+                    Some(RepoPath::FilePath(NonRootMPath::arbitrary(g)))
                 } else {
                     None
                 }
@@ -137,7 +137,7 @@ impl Arbitrary for HistoryEntry {
         unimplemented!("use WirePackPartSequence::arbitrary instead")
     }
 
-    // Not going to get anything out of shrinking this since MPath is not shrinkable.
+    // Not going to get anything out of shrinking this since NonRootMPath is not shrinkable.
 }
 
 impl Arbitrary for DataEntry {

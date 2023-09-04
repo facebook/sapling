@@ -19,7 +19,7 @@ use megarepo_mapping::CommitRemappingState;
 use megarepo_mapping::SourceName;
 use megarepo_mapping::REMAPPING_STATE_FILE;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use tests_utils::bookmark;
 use tests_utils::list_working_copy_utf8;
@@ -104,13 +104,16 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(state.sync_config_version(), &version);
 
     // Remove file with commit remapping state because it's never present in source
-    assert!(wc.remove(&MPath::new(REMAPPING_STATE_FILE)?).is_some());
+    assert!(
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
+            .is_some()
+    );
 
     assert_eq!(
         wc,
         hashmap! {
-            MPath::new("source_1/first")? => "first".to_string(),
-            MPath::new("source_2/second")? => "second".to_string(),
+            NonRootMPath::new("source_1/first")? => "first".to_string(),
+            NonRootMPath::new("source_2/second")? => "second".to_string(),
         }
     );
 
@@ -138,13 +141,16 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
     let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
     let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, target_cs_id).await?;
     // Remove file with commit remapping state because it's never present in source
-    assert!(wc.remove(&MPath::new(REMAPPING_STATE_FILE)?).is_some());
+    assert!(
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
+            .is_some()
+    );
 
     assert_eq!(
         wc,
         hashmap! {
-            MPath::new("source_1/first")? => "first_updated".to_string(),
-            MPath::new("source_2/second")? => "second".to_string(),
+            NonRootMPath::new("source_1/first")? => "first_updated".to_string(),
+            NonRootMPath::new("source_2/second")? => "second".to_string(),
         }
     );
 
@@ -213,15 +219,18 @@ async fn test_add_sync_target_with_linkfiles(fb: FacebookInit) -> Result<(), Err
     let mut wc = list_working_copy_utf8_with_types(&ctx, &test.blobrepo, target_cs_id).await?;
 
     // Remove file with commit remapping state because it's never present in source
-    assert!(wc.remove(&MPath::new(REMAPPING_STATE_FILE)?).is_some());
+    assert!(
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
+            .is_some()
+    );
 
     assert_eq!(
         wc,
         hashmap! {
-            MPath::new("source_1/first")? => ("first".to_string(), FileType::Regular),
-            MPath::new("source_2/second")? => ("second".to_string(), FileType::Regular),
-            MPath::new("linkfiles/first")? => ("../source_1/first".to_string(), FileType::Symlink),
-            MPath::new("linkfiles/second")? => ("../source_2/second".to_string(), FileType::Symlink),
+            NonRootMPath::new("source_1/first")? => ("first".to_string(), FileType::Regular),
+            NonRootMPath::new("source_2/second")? => ("second".to_string(), FileType::Regular),
+            NonRootMPath::new("linkfiles/first")? => ("../source_1/first".to_string(), FileType::Symlink),
+            NonRootMPath::new("linkfiles/second")? => ("../source_2/second".to_string(), FileType::Symlink),
         }
     );
 
@@ -364,13 +373,16 @@ async fn test_add_sync_target_same_file_different_prefix(fb: FacebookInit) -> Re
     assert_eq!(state.sync_config_version(), &version);
 
     // Remove file with commit remapping state because it's never present in source
-    assert!(wc.remove(&MPath::new(REMAPPING_STATE_FILE)?).is_some());
+    assert!(
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
+            .is_some()
+    );
 
     assert_eq!(
         wc,
         hashmap! {
-            MPath::new("source_1/file")? => "file".to_string(),
-            MPath::new("source_2/file")? => "file".to_string(),
+            NonRootMPath::new("source_1/file")? => "file".to_string(),
+            NonRootMPath::new("source_2/file")? => "file".to_string(),
         }
     );
 
@@ -565,14 +577,17 @@ async fn test_add_sync_target_merge_three_sources(fb: FacebookInit) -> Result<()
     let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
     let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, target_cs_id).await?;
     // Remove file with commit remapping state because it's never present in source
-    assert!(wc.remove(&MPath::new(REMAPPING_STATE_FILE)?).is_some());
+    assert!(
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
+            .is_some()
+    );
 
     assert_eq!(
         wc,
         hashmap! {
-            MPath::new("source_1/first")? => "first".to_string(),
-            MPath::new("source_2/second")? => "second".to_string(),
-            MPath::new("source_3/third")? => "third".to_string(),
+            NonRootMPath::new("source_1/first")? => "first".to_string(),
+            NonRootMPath::new("source_2/second")? => "second".to_string(),
+            NonRootMPath::new("source_3/third")? => "third".to_string(),
         }
     );
 

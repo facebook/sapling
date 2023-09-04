@@ -68,7 +68,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use phases::PhasesRef;
 use repo_blobstore::RepoBlobstore;
@@ -509,7 +509,7 @@ impl HgRepoContext {
             .map_err(MononokeError::from)
             .and_then({
                 let repo = self.clone();
-                move |(mfid, path): (HgManifestId, Option<MPath>)| {
+                move |(mfid, path): (HgManifestId, Option<NonRootMPath>)| {
                     let repo = repo.clone();
                     async move {
                         let tree = HgTreeContext::new(repo, mfid).await?;

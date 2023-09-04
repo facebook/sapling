@@ -27,7 +27,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
 use mononoke_types::FsnodeId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
 use crate::batch::derive_fsnode_in_batch;
 use crate::derive::derive_fsnode;
@@ -158,7 +158,7 @@ impl_bonsai_derived_via_manager!(RootFsnodeId);
 
 pub(crate) fn get_file_changes(
     bcs: &BonsaiChangeset,
-) -> Vec<(MPath, Option<(ContentId, FileType)>)> {
+) -> Vec<(NonRootMPath, Option<(ContentId, FileType)>)> {
     bcs.file_changes()
         .map(|(mpath, file_change)| {
             (

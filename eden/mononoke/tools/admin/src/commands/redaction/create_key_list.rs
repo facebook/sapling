@@ -34,7 +34,7 @@ use mononoke_app::MononokeApp;
 use mononoke_types::typed_hash::RedactionKeyListId;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 
@@ -163,7 +163,7 @@ async fn content_keys_for_paths(
     ctx: &CoreContext,
     repo: &Repo,
     cs_id: ChangesetId,
-    paths: Vec<MPath>,
+    paths: Vec<NonRootMPath>,
 ) -> Result<HashSet<String>> {
     let root_fsnode_id = repo
         .repo_derived_data()
@@ -205,13 +205,13 @@ pub async fn create_key_list_from_commit_files(
     let mut files = create_args
         .files
         .iter()
-        .map(MPath::new)
+        .map(NonRootMPath::new)
         .collect::<Result<Vec<_>>>()?;
     if let Some(input_file) = create_args.input_file {
         let input_file =
             BufReader::new(File::open(input_file).context("Failed to open input file")?);
         for line in input_file.lines() {
-            files.push(MPath::new(line?)?);
+            files.push(NonRootMPath::new(line?)?);
         }
     }
     if files.is_empty() {

@@ -40,7 +40,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use mononoke_types::TrackedFileChange;
 use sorted_vector_map::SortedVectorMap;
@@ -136,7 +136,7 @@ pub async fn derive_hg_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
     parents: impl IntoIterator<Item = HgManifestId>,
-    changes: impl IntoIterator<Item = (MPath, Option<(FileType, HgFileNodeId)>)> + 'static,
+    changes: impl IntoIterator<Item = (NonRootMPath, Option<(FileType, HgFileNodeId)>)> + 'static,
 ) -> Result<HgManifestId, Error> {
     let parents: Vec<_> = parents
         .into_iter()
@@ -322,7 +322,7 @@ async fn create_hg_file(
 async fn resolve_conflict(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
-    path: MPath,
+    path: NonRootMPath,
     parents: &[Traced<ParentIndex, (FileType, HgFileNodeId)>],
 ) -> Result<(FileType, HgFileNodeId), Error> {
     let make_err = || {

@@ -7,19 +7,19 @@
 
 use std::fmt;
 
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 
 use crate::errors::MononokeError;
 
-// Define a wrapper around `Option<MPath>` to make it more convenient to
+// Define a wrapper around `Option<NonRootMPath>` to make it more convenient to
 // use in the API.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct MononokePath(Option<MPath>);
+pub struct MononokePath(Option<NonRootMPath>);
 
 /// Whether this path is a path prefix of the given path.
 /// `foo` is a prefix of `foo/bar`, but not of `foo1`.
-pub fn is_prefix_of(lhs: Option<&MPath>, rhs: Option<&MPath>) -> bool {
+pub fn is_prefix_of(lhs: Option<&NonRootMPath>, rhs: Option<&NonRootMPath>) -> bool {
     match (lhs, rhs) {
         (None, _) => true,
         (_, None) => false,
@@ -27,20 +27,20 @@ pub fn is_prefix_of(lhs: Option<&MPath>, rhs: Option<&MPath>) -> bool {
     }
 }
 
-pub fn is_related_to(lhs: Option<&MPath>, rhs: Option<&MPath>) -> bool {
+pub fn is_related_to(lhs: Option<&NonRootMPath>, rhs: Option<&NonRootMPath>) -> bool {
     is_prefix_of(lhs, rhs) || is_prefix_of(rhs, lhs)
 }
 
 impl MononokePath {
-    pub fn new(path: Option<MPath>) -> Self {
+    pub fn new(path: Option<NonRootMPath>) -> Self {
         Self(path)
     }
 
-    pub fn as_mpath(&self) -> Option<&MPath> {
+    pub fn as_mpath(&self) -> Option<&NonRootMPath> {
         self.0.as_ref()
     }
 
-    pub fn into_mpath(self) -> Option<MPath> {
+    pub fn into_mpath(self) -> Option<NonRootMPath> {
         self.0
     }
 
@@ -54,7 +54,10 @@ impl MononokePath {
     }
 
     pub fn append(&self, element: &MPathElement) -> Self {
-        Self(Some(MPath::join_opt_element(self.0.as_ref(), element)))
+        Self(Some(NonRootMPath::join_opt_element(
+            self.0.as_ref(),
+            element,
+        )))
     }
 }
 
@@ -68,7 +71,7 @@ impl TryFrom<&str> for MononokePath {
         if path.is_empty() {
             Ok(MononokePath(None))
         } else {
-            let mpath = MPath::try_from(path)
+            let mpath = NonRootMPath::try_from(path)
                 .map_err(|error| MononokeError::InvalidRequest(error.to_string()))?;
             Ok(MononokePath(Some(mpath)))
         }
@@ -83,20 +86,20 @@ impl TryFrom<&String> for MononokePath {
     }
 }
 
-impl From<MononokePath> for Option<MPath> {
-    fn from(path: MononokePath) -> Option<MPath> {
+impl From<MononokePath> for Option<NonRootMPath> {
+    fn from(path: MononokePath) -> Option<NonRootMPath> {
         path.0
     }
 }
 
-impl From<MPath> for MononokePath {
-    fn from(mpath: MPath) -> MononokePath {
+impl From<NonRootMPath> for MononokePath {
+    fn from(mpath: NonRootMPath) -> MononokePath {
         MononokePath(Some(mpath))
     }
 }
 
-impl From<Option<MPath>> for MononokePath {
-    fn from(mpath: Option<MPath>) -> MononokePath {
+impl From<Option<NonRootMPath>> for MononokePath {
+    fn from(mpath: Option<NonRootMPath>) -> MononokePath {
         MononokePath(mpath)
     }
 }

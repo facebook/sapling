@@ -39,8 +39,8 @@ use mononoke_types::hash;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 use slog::debug;
 use slog::Logger;
 use smallvec::SmallVec;
@@ -604,7 +604,7 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
         &self,
         ctx: &CoreContext,
         lfs: &GitImportLfs,
-        path: &MPath,
+        path: &NonRootMPath,
         ty: FileType,
         oid: ObjectId,
         git_bytes: Bytes,
@@ -630,7 +630,7 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
         ctx: &CoreContext,
         bonsai_parents: Vec<ChangesetId>,
         metadata: CommitMetadata,
-        changes: SortedVectorMap<MPath, Self::Change>,
+        changes: SortedVectorMap<NonRootMPath, Self::Change>,
         dry_run: bool,
     ) -> Result<(Self::IntermediateChangeset, ChangesetId), Error>;
 

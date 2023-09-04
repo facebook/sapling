@@ -14,7 +14,7 @@ use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
 use crate::ErrorKind;
 
@@ -36,22 +36,22 @@ pub trait FileContentManager: Send + Sync {
         &'a self,
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
-        paths: Vec<MPath>,
-    ) -> Result<HashMap<MPath, PathContent>, ErrorKind>;
+        paths: Vec<NonRootMPath>,
+    ) -> Result<HashMap<NonRootMPath, PathContent>, ErrorKind>;
 
     async fn file_changes<'a>(
         &'a self,
         ctx: &'a CoreContext,
         new_cs_id: ChangesetId,
         old_cs_id: ChangesetId,
-    ) -> Result<Vec<(MPath, FileChange)>, ErrorKind>;
+    ) -> Result<Vec<(NonRootMPath, FileChange)>, ErrorKind>;
 
     async fn latest_changes<'a>(
         &'a self,
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
-        paths: Vec<MPath>,
-    ) -> Result<HashMap<MPath, ChangesetInfo>, ErrorKind>;
+        paths: Vec<NonRootMPath>,
+    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, ErrorKind>;
 }
 
 #[derive(Clone, Debug)]

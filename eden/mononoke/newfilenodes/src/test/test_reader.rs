@@ -23,7 +23,7 @@ use mercurial_types_mocks::nodehash::THREES_CSID;
 use mercurial_types_mocks::nodehash::THREES_FNID;
 use mercurial_types_mocks::nodehash::TWOS_CSID;
 use mercurial_types_mocks::nodehash::TWOS_FNID;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::repo::REPO_ONE;
@@ -89,7 +89,7 @@ async fn test_basic(fb: FacebookInit) -> Result<(), Error> {
     let reader = Arc::new(reader);
 
     let payload = PreparedFilenode {
-        path: RepoPath::FilePath(MPath::new(b"test")?),
+        path: RepoPath::FilePath(NonRootMPath::new(b"test")?),
         info: FilenodeInfo {
             filenode: ONES_FNID,
             p1: Some(TWOS_FNID),
@@ -113,7 +113,7 @@ async fn read_copy_info(fb: FacebookInit) -> Result<(), Error> {
     let reader = Arc::new(reader);
 
     let from = PreparedFilenode {
-        path: RepoPath::FilePath(MPath::new(b"from")?),
+        path: RepoPath::FilePath(NonRootMPath::new(b"from")?),
         info: FilenodeInfo {
             filenode: ONES_FNID,
             p1: None,
@@ -129,7 +129,7 @@ async fn read_copy_info(fb: FacebookInit) -> Result<(), Error> {
         .do_not_handle_disabled_filenodes()?;
 
     let payload = PreparedFilenode {
-        path: RepoPath::FilePath(MPath::new(b"test")?),
+        path: RepoPath::FilePath(NonRootMPath::new(b"test")?),
         info: FilenodeInfo {
             filenode: TWOS_FNID,
             p1: None,

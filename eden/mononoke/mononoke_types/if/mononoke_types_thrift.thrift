@@ -69,13 +69,13 @@ typedef binary MPathElement (
   rust.newtype,
   rust.type = "smallvec::SmallVec<[u8; 24]>",
 )
-typedef list<MPathElement> MPath (rust.newtype)
+typedef list<MPathElement> NonRootMPath (rust.newtype)
 
 union RepoPath {
   # Thrift language doesn't support void here, so put a dummy bool
   1: bool RootPath;
-  2: MPath DirectoryPath;
-  3: MPath FilePath;
+  2: NonRootMPath DirectoryPath;
+  3: NonRootMPath FilePath;
 }
 
 // Parent ordering
@@ -101,7 +101,7 @@ union RepoPath {
 //   wants to read metadata can stop early.
 // * The "required" fields are only for data that is absolutely core to the
 //   model. Note that Thrift does allow changing "required" to unqualified.
-// * MPath, Id and DateTime fields do not have a reasonable default value, so
+// * NonRootMPath, Id and DateTime fields do not have a reasonable default value, so
 //   they must always be either "required" or "optional".
 // * The set of keys in file_changes is path-conflict-free (pcf): no changed
 //   path is a directory prefix of another path. So file_changes can never have
@@ -124,7 +124,7 @@ struct BonsaiChangeset {
   7: map<string, binary> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) hg_extra;
-  8: map<MPath, FileChangeOpt> (
+  8: map<NonRootMPath, FileChangeOpt> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) file_changes;
   // Changeset is a snapshot iff this field is present
@@ -292,7 +292,7 @@ struct FileChange {
 
 // This is only used optionally so it is OK to use `required` here.
 struct CopyInfo {
-  1: required MPath file;
+  1: required NonRootMPath file;
   // cs_id must match one of the parents specified in BonsaiChangeset
   2: required ChangesetId cs_id;
 } (rust.exhaustive)
@@ -594,7 +594,7 @@ struct BlameRange {
 
 struct Blame {
   1: list<BlameRange> ranges;
-  2: list<MPath> paths;
+  2: list<NonRootMPath> paths;
 } (rust.exhaustive)
 
 union BlameMaybeRejected {
@@ -718,7 +718,7 @@ struct BlameDataV2 {
   // reduce repetition of data in ranges.  Since files are not often moved, and
   // for simplicity, this includes all paths the file has ever been located at,
   // even if they are no longer referenced by any of the ranges.
-  4: list<MPath> paths;
+  4: list<NonRootMPath> paths;
 } (rust.exhaustive)
 
 union BlameV2 {

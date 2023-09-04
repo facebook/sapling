@@ -30,7 +30,7 @@ use derive_more::From;
 use derive_more::Into;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::PrefixTrie;
 use mononoke_types::RepositoryId;
 use mysql_common::value::convert::ConvIr;
@@ -1167,7 +1167,7 @@ pub enum DefaultSmallToLargeCommitSyncPathAction {
     /// Preserve as is
     Preserve,
     /// Prepend a given prefix to the path
-    PrependPrefix(MPath),
+    PrependPrefix(NonRootMPath),
 }
 
 /// Commit sync configuration for a small repo
@@ -1179,7 +1179,7 @@ pub struct SmallRepoCommitSyncConfig {
     /// Default action to take on a path
     pub default_action: DefaultSmallToLargeCommitSyncPathAction,
     /// A map of prefix replacements when syncing
-    pub map: HashMap<MPath, MPath>,
+    pub map: HashMap<NonRootMPath, NonRootMPath>,
 }
 
 /// Commit sync direction
@@ -1341,7 +1341,7 @@ impl SourceControlServiceParams {
         &self,
         service_identity: impl AsRef<str>,
         bonsai: &'cs BonsaiChangeset,
-    ) -> Result<(), &'cs MPath> {
+    ) -> Result<(), &'cs NonRootMPath> {
         if let Some(restrictions) = self
             .service_write_restrictions
             .get(service_identity.as_ref())
@@ -1565,7 +1565,7 @@ pub struct AclRegion {
 
     /// List of path prefixes that apply to this region.  Prefixes are in terms of
     /// path elements, so the prefix a/b applies to a/b/c but not a/bb.
-    pub path_prefixes: Vec<Option<MPath>>,
+    pub path_prefixes: Vec<Option<NonRootMPath>>,
 }
 
 /// ACL region rule consisting of multiple regions and path prefixes

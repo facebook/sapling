@@ -107,7 +107,7 @@ The tool will print the commit hash of each commit.
           hg_extra: {},
           git_extra_headers: None,
           file_changes: {
-              MPath("path/to/file"): Deletion,
+              NonRootMPath("path/to/file"): Deletion,
           },
           is_snapshot: false,
           git_tree_hash: None,

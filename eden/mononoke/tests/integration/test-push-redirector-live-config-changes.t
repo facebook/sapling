@@ -280,9 +280,9 @@ Again, normal pushrebase with one commit
   $ REPONAME=large-mon hgmn log -T "{files % '{file}\n'}" -r master_bookmark
   specialsmallrepofolder_after_change/f
 
-  $ EXPECTED_RC=1 quiet_grep "MPath" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V1
-  Some(MPath("specialsmallrepofolder1/f")) is present in large-mon, but not in small-mon-1 (under Some(MPath("special/f")))
-  Some(MPath("specialsmallrepofolder1/f")) is present in large-mon, but not in small-mon-1 (under Some(MPath("special/f")))
+  $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V1
+  Some(NonRootMPath("specialsmallrepofolder1/f")) is present in large-mon, but not in small-mon-1 (under Some(NonRootMPath("special/f")))
+  Some(NonRootMPath("specialsmallrepofolder1/f")) is present in large-mon, but not in small-mon-1 (under Some(NonRootMPath("special/f")))
   [1]
   $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V2
   * all is well! (glob)

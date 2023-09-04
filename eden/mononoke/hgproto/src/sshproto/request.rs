@@ -18,7 +18,7 @@ use bytes_old::BytesMut;
 use hex::FromHex;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use nom::alt;
 use nom::apply;
 use nom::call;
@@ -474,9 +474,9 @@ fn utf8_string_complete(inp: &[u8]) -> IResult<&[u8], String> {
     }
 }
 
-/// Parse an Option<MPath>; assumes that input is complete.
-fn path_complete(inp: &[u8]) -> IResult<&[u8], Option<MPath>> {
-    match MPath::new_opt(inp) {
+/// Parse an Option<NonRootMPath>; assumes that input is complete.
+fn path_complete(inp: &[u8]) -> IResult<&[u8], Option<NonRootMPath>> {
+    match NonRootMPath::new_opt(inp) {
         Ok(path) => IResult::Done(b"", path),
         Err(_) => IResult::Error(Err::Code(ErrorKind::Custom(BAD_PATH_ERR_CODE))),
     }
@@ -1510,7 +1510,7 @@ mod test_parse {
         test_parse(
             inp,
             Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
-                rootdir: MPath::new_opt("ololo").unwrap(),
+                rootdir: NonRootMPath::new_opt("ololo").unwrap(),
                 mfnodes: vec![hash_ones_manifest(), hash_twos_manifest()],
                 basemfnodes: btreeset![hash_twos_manifest(), hash_ones_manifest()],
                 directories: vec![Bytes::from("".as_bytes())],
@@ -1534,7 +1534,7 @@ mod test_parse {
         test_parse(
             inp,
             Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
-                rootdir: MPath::new_opt("ololo").unwrap(),
+                rootdir: NonRootMPath::new_opt("ololo").unwrap(),
                 mfnodes: vec![hash_ones_manifest(), hash_twos_manifest()],
                 basemfnodes: btreeset![hash_twos_manifest(), hash_ones_manifest()],
                 directories: vec![Bytes::from(",".as_bytes()), Bytes::from(";".as_bytes())],

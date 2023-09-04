@@ -62,7 +62,7 @@ use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::SmallRepoCommitSyncConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use movers::Mover;
 use mutable_counters::MutableCountersArc;
@@ -109,18 +109,18 @@ async fn backsync_linear_simple(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
-                MPath::new("1")? => "1\n".to_string(),
-                MPath::new("2")? => "2\n".to_string(),
-                MPath::new("3")? => "3\n".to_string(),
-                MPath::new("4")? => "4\n".to_string(),
-                MPath::new("5")? => "5\n".to_string(),
-                MPath::new("6")? => "6\n".to_string(),
-                MPath::new("7")? => "7\n".to_string(),
-                MPath::new("8")? => "8\n".to_string(),
-                MPath::new("9")? => "9\n".to_string(),
-                MPath::new("10")? => "modified10\n".to_string(),
-                MPath::new("randomfile")? => "some other content".to_string(),
-                MPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
+                NonRootMPath::new("1")? => "1\n".to_string(),
+                NonRootMPath::new("2")? => "2\n".to_string(),
+                NonRootMPath::new("3")? => "3\n".to_string(),
+                NonRootMPath::new("4")? => "4\n".to_string(),
+                NonRootMPath::new("5")? => "5\n".to_string(),
+                NonRootMPath::new("6")? => "6\n".to_string(),
+                NonRootMPath::new("7")? => "7\n".to_string(),
+                NonRootMPath::new("8")? => "8\n".to_string(),
+                NonRootMPath::new("9")? => "9\n".to_string(),
+                NonRootMPath::new("10")? => "modified10\n".to_string(),
+                NonRootMPath::new("randomfile")? => "some other content".to_string(),
+                NonRootMPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
         }
     );
 
@@ -130,24 +130,24 @@ async fn backsync_linear_simple(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
-                MPath::new("1")? => "1\n".to_string(),
-                MPath::new("2")? => "2\n".to_string(),
-                MPath::new("3")? => "merged 3".to_string(),
-                MPath::new("4")? => "4\n".to_string(),
-                MPath::new("5")? => "5\n".to_string(),
-                MPath::new("6")? => "6\n".to_string(),
-                MPath::new("7")? => "7\n".to_string(),
-                MPath::new("8")? => "8\n".to_string(),
-                MPath::new("9")? => "9\n".to_string(),
-                MPath::new("10")? => "modified10\n".to_string(),
-                MPath::new("files")? => "branchmerge files content".to_string(),
-                MPath::new("branchmerge")? => "new branch merge content".to_string(),
-                MPath::new("repomergefile")? => "some content".to_string(),
-                MPath::new("randomfile")? => "some other content".to_string(),
-                MPath::new("repomerge/first")? => "new repo content".to_string(),
-                MPath::new("repomerge/movedest")? => "moved content".to_string(),
-                MPath::new("repomerge/second")? => "new repo second content".to_string(),
-                MPath::new("repomerge/toremove")? => "new repo content".to_string(),
+                NonRootMPath::new("1")? => "1\n".to_string(),
+                NonRootMPath::new("2")? => "2\n".to_string(),
+                NonRootMPath::new("3")? => "merged 3".to_string(),
+                NonRootMPath::new("4")? => "4\n".to_string(),
+                NonRootMPath::new("5")? => "5\n".to_string(),
+                NonRootMPath::new("6")? => "6\n".to_string(),
+                NonRootMPath::new("7")? => "7\n".to_string(),
+                NonRootMPath::new("8")? => "8\n".to_string(),
+                NonRootMPath::new("9")? => "9\n".to_string(),
+                NonRootMPath::new("10")? => "modified10\n".to_string(),
+                NonRootMPath::new("files")? => "branchmerge files content".to_string(),
+                NonRootMPath::new("branchmerge")? => "new branch merge content".to_string(),
+                NonRootMPath::new("repomergefile")? => "some content".to_string(),
+                NonRootMPath::new("randomfile")? => "some other content".to_string(),
+                NonRootMPath::new("repomerge/first")? => "new repo content".to_string(),
+                NonRootMPath::new("repomerge/movedest")? => "moved content".to_string(),
+                NonRootMPath::new("repomerge/second")? => "new repo second content".to_string(),
+                NonRootMPath::new("repomerge/toremove")? => "new repo content".to_string(),
 
         }
     );
@@ -236,7 +236,7 @@ async fn backsync_linear_with_mover_that_removes_some_files(fb: FacebookInit) ->
     let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
     assert_eq!(
         map,
-        hashmap! {MPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string()}
+        hashmap! {NonRootMPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string()}
     );
 
     let target_cs_id =
@@ -244,7 +244,7 @@ async fn backsync_linear_with_mover_that_removes_some_files(fb: FacebookInit) ->
     let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
     assert_eq!(
         map,
-        hashmap! {MPath::new("files")? => "branchmerge files content".to_string()}
+        hashmap! {NonRootMPath::new("files")? => "branchmerge files content".to_string()}
     );
     Ok(())
 }
@@ -269,17 +269,17 @@ async fn backsync_linear_with_mover_that_removes_single_file(
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
-                MPath::new("1")? => "1\n".to_string(),
-                MPath::new("2")? => "2\n".to_string(),
-                MPath::new("3")? => "3\n".to_string(),
-                MPath::new("4")? => "4\n".to_string(),
-                MPath::new("5")? => "5\n".to_string(),
-                MPath::new("6")? => "6\n".to_string(),
-                MPath::new("7")? => "7\n".to_string(),
-                MPath::new("8")? => "8\n".to_string(),
-                MPath::new("9")? => "9\n".to_string(),
-                MPath::new("randomfile")? => "some other content".to_string(),
-                MPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
+                NonRootMPath::new("1")? => "1\n".to_string(),
+                NonRootMPath::new("2")? => "2\n".to_string(),
+                NonRootMPath::new("3")? => "3\n".to_string(),
+                NonRootMPath::new("4")? => "4\n".to_string(),
+                NonRootMPath::new("5")? => "5\n".to_string(),
+                NonRootMPath::new("6")? => "6\n".to_string(),
+                NonRootMPath::new("7")? => "7\n".to_string(),
+                NonRootMPath::new("8")? => "8\n".to_string(),
+                NonRootMPath::new("9")? => "9\n".to_string(),
+                NonRootMPath::new("randomfile")? => "some other content".to_string(),
+                NonRootMPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
         }
     );
 
@@ -289,23 +289,23 @@ async fn backsync_linear_with_mover_that_removes_single_file(
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
-                MPath::new("1")? => "1\n".to_string(),
-                MPath::new("2")? => "2\n".to_string(),
-                MPath::new("3")? => "merged 3".to_string(),
-                MPath::new("4")? => "4\n".to_string(),
-                MPath::new("5")? => "5\n".to_string(),
-                MPath::new("6")? => "6\n".to_string(),
-                MPath::new("7")? => "7\n".to_string(),
-                MPath::new("8")? => "8\n".to_string(),
-                MPath::new("9")? => "9\n".to_string(),
-                MPath::new("files")? => "branchmerge files content".to_string(),
-                MPath::new("branchmerge")? => "new branch merge content".to_string(),
-                MPath::new("repomergefile")? => "some content".to_string(),
-                MPath::new("randomfile")? => "some other content".to_string(),
-                MPath::new("repomerge/first")? => "new repo content".to_string(),
-                MPath::new("repomerge/movedest")? => "moved content".to_string(),
-                MPath::new("repomerge/second")? => "new repo second content".to_string(),
-                MPath::new("repomerge/toremove")? => "new repo content".to_string(),
+                NonRootMPath::new("1")? => "1\n".to_string(),
+                NonRootMPath::new("2")? => "2\n".to_string(),
+                NonRootMPath::new("3")? => "merged 3".to_string(),
+                NonRootMPath::new("4")? => "4\n".to_string(),
+                NonRootMPath::new("5")? => "5\n".to_string(),
+                NonRootMPath::new("6")? => "6\n".to_string(),
+                NonRootMPath::new("7")? => "7\n".to_string(),
+                NonRootMPath::new("8")? => "8\n".to_string(),
+                NonRootMPath::new("9")? => "9\n".to_string(),
+                NonRootMPath::new("files")? => "branchmerge files content".to_string(),
+                NonRootMPath::new("branchmerge")? => "new branch merge content".to_string(),
+                NonRootMPath::new("repomergefile")? => "some content".to_string(),
+                NonRootMPath::new("randomfile")? => "some other content".to_string(),
+                NonRootMPath::new("repomerge/first")? => "new repo content".to_string(),
+                NonRootMPath::new("repomerge/movedest")? => "moved content".to_string(),
+                NonRootMPath::new("repomerge/second")? => "new repo second content".to_string(),
+                NonRootMPath::new("repomerge/toremove")? => "new repo content".to_string(),
 
         }
     );
@@ -328,18 +328,18 @@ async fn backsync_linear_bookmark_renamer_only_master(fb: FacebookInit) -> Resul
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
-                MPath::new("1")? => "1\n".to_string(),
-                MPath::new("2")? => "2\n".to_string(),
-                MPath::new("3")? => "3\n".to_string(),
-                MPath::new("4")? => "4\n".to_string(),
-                MPath::new("5")? => "5\n".to_string(),
-                MPath::new("6")? => "6\n".to_string(),
-                MPath::new("7")? => "7\n".to_string(),
-                MPath::new("8")? => "8\n".to_string(),
-                MPath::new("9")? => "9\n".to_string(),
-                MPath::new("10")? => "modified10\n".to_string(),
-                MPath::new("randomfile")? => "some other content".to_string(),
-                MPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
+                NonRootMPath::new("1")? => "1\n".to_string(),
+                NonRootMPath::new("2")? => "2\n".to_string(),
+                NonRootMPath::new("3")? => "3\n".to_string(),
+                NonRootMPath::new("4")? => "4\n".to_string(),
+                NonRootMPath::new("5")? => "5\n".to_string(),
+                NonRootMPath::new("6")? => "6\n".to_string(),
+                NonRootMPath::new("7")? => "7\n".to_string(),
+                NonRootMPath::new("8")? => "8\n".to_string(),
+                NonRootMPath::new("9")? => "9\n".to_string(),
+                NonRootMPath::new("10")? => "modified10\n".to_string(),
+                NonRootMPath::new("randomfile")? => "some other content".to_string(),
+                NonRootMPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
         }
     );
 
@@ -443,18 +443,18 @@ async fn backsync_merge_new_repo_all_files_removed(fb: FacebookInit) -> Result<(
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
-                MPath::new("1")? => "1\n".to_string(),
-                MPath::new("2")? => "2\n".to_string(),
-                MPath::new("3")? => "3\n".to_string(),
-                MPath::new("4")? => "4\n".to_string(),
-                MPath::new("5")? => "5\n".to_string(),
-                MPath::new("6")? => "6\n".to_string(),
-                MPath::new("7")? => "7\n".to_string(),
-                MPath::new("8")? => "8\n".to_string(),
-                MPath::new("9")? => "9\n".to_string(),
-                MPath::new("10")? => "modified10\n".to_string(),
-                MPath::new("randomfile")? => "some other content".to_string(),
-                MPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
+                NonRootMPath::new("1")? => "1\n".to_string(),
+                NonRootMPath::new("2")? => "2\n".to_string(),
+                NonRootMPath::new("3")? => "3\n".to_string(),
+                NonRootMPath::new("4")? => "4\n".to_string(),
+                NonRootMPath::new("5")? => "5\n".to_string(),
+                NonRootMPath::new("6")? => "6\n".to_string(),
+                NonRootMPath::new("7")? => "7\n".to_string(),
+                NonRootMPath::new("8")? => "8\n".to_string(),
+                NonRootMPath::new("9")? => "9\n".to_string(),
+                NonRootMPath::new("10")? => "modified10\n".to_string(),
+                NonRootMPath::new("randomfile")? => "some other content".to_string(),
+                NonRootMPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
         }
     );
 
@@ -464,19 +464,19 @@ async fn backsync_merge_new_repo_all_files_removed(fb: FacebookInit) -> Result<(
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
-                MPath::new("1")? => "1\n".to_string(),
-                MPath::new("2")? => "2\n".to_string(),
-                MPath::new("3")? => "merged 3".to_string(),
-                MPath::new("4")? => "4\n".to_string(),
-                MPath::new("5")? => "5\n".to_string(),
-                MPath::new("6")? => "6\n".to_string(),
-                MPath::new("7")? => "7\n".to_string(),
-                MPath::new("8")? => "8\n".to_string(),
-                MPath::new("9")? => "9\n".to_string(),
-                MPath::new("10")? => "modified10\n".to_string(),
-                MPath::new("files")? => "branchmerge files content".to_string(),
-                MPath::new("branchmerge")? => "new branch merge content".to_string(),
-                MPath::new("randomfile")? => "some other content".to_string(),
+                NonRootMPath::new("1")? => "1\n".to_string(),
+                NonRootMPath::new("2")? => "2\n".to_string(),
+                NonRootMPath::new("3")? => "merged 3".to_string(),
+                NonRootMPath::new("4")? => "4\n".to_string(),
+                NonRootMPath::new("5")? => "5\n".to_string(),
+                NonRootMPath::new("6")? => "6\n".to_string(),
+                NonRootMPath::new("7")? => "7\n".to_string(),
+                NonRootMPath::new("8")? => "8\n".to_string(),
+                NonRootMPath::new("9")? => "9\n".to_string(),
+                NonRootMPath::new("10")? => "modified10\n".to_string(),
+                NonRootMPath::new("files")? => "branchmerge files content".to_string(),
+                NonRootMPath::new("branchmerge")? => "new branch merge content".to_string(),
+                NonRootMPath::new("randomfile")? => "some other content".to_string(),
         }
     );
 
@@ -502,18 +502,18 @@ async fn backsync_merge_new_repo_branch_removed(fb: FacebookInit) -> Result<(), 
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
-                MPath::new("1")? => "1\n".to_string(),
-                MPath::new("2")? => "2\n".to_string(),
-                MPath::new("3")? => "3\n".to_string(),
-                MPath::new("4")? => "4\n".to_string(),
-                MPath::new("5")? => "5\n".to_string(),
-                MPath::new("6")? => "6\n".to_string(),
-                MPath::new("7")? => "7\n".to_string(),
-                MPath::new("8")? => "8\n".to_string(),
-                MPath::new("9")? => "9\n".to_string(),
-                MPath::new("10")? => "modified10\n".to_string(),
-                MPath::new("randomfile")? => "some other content".to_string(),
-                MPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
+                NonRootMPath::new("1")? => "1\n".to_string(),
+                NonRootMPath::new("2")? => "2\n".to_string(),
+                NonRootMPath::new("3")? => "3\n".to_string(),
+                NonRootMPath::new("4")? => "4\n".to_string(),
+                NonRootMPath::new("5")? => "5\n".to_string(),
+                NonRootMPath::new("6")? => "6\n".to_string(),
+                NonRootMPath::new("7")? => "7\n".to_string(),
+                NonRootMPath::new("8")? => "8\n".to_string(),
+                NonRootMPath::new("9")? => "9\n".to_string(),
+                NonRootMPath::new("10")? => "modified10\n".to_string(),
+                NonRootMPath::new("randomfile")? => "some other content".to_string(),
+                NonRootMPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
         }
     );
 
@@ -523,20 +523,20 @@ async fn backsync_merge_new_repo_branch_removed(fb: FacebookInit) -> Result<(), 
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
-                MPath::new("1")? => "1\n".to_string(),
-                MPath::new("2")? => "2\n".to_string(),
-                MPath::new("3")? => "merged 3".to_string(),
-                MPath::new("4")? => "4\n".to_string(),
-                MPath::new("5")? => "5\n".to_string(),
-                MPath::new("6")? => "6\n".to_string(),
-                MPath::new("7")? => "7\n".to_string(),
-                MPath::new("8")? => "8\n".to_string(),
-                MPath::new("9")? => "9\n".to_string(),
-                MPath::new("10")? => "modified10\n".to_string(),
-                MPath::new("files")? => "branchmerge files content".to_string(),
-                MPath::new("branchmerge")? => "new branch merge content".to_string(),
-                MPath::new("repomergefile")? => "some content".to_string(),
-                MPath::new("randomfile")? => "some other content".to_string(),
+                NonRootMPath::new("1")? => "1\n".to_string(),
+                NonRootMPath::new("2")? => "2\n".to_string(),
+                NonRootMPath::new("3")? => "merged 3".to_string(),
+                NonRootMPath::new("4")? => "4\n".to_string(),
+                NonRootMPath::new("5")? => "5\n".to_string(),
+                NonRootMPath::new("6")? => "6\n".to_string(),
+                NonRootMPath::new("7")? => "7\n".to_string(),
+                NonRootMPath::new("8")? => "8\n".to_string(),
+                NonRootMPath::new("9")? => "9\n".to_string(),
+                NonRootMPath::new("10")? => "modified10\n".to_string(),
+                NonRootMPath::new("files")? => "branchmerge files content".to_string(),
+                NonRootMPath::new("branchmerge")? => "new branch merge content".to_string(),
+                NonRootMPath::new("repomergefile")? => "some content".to_string(),
+                NonRootMPath::new("randomfile")? => "some other content".to_string(),
         }
     );
 
@@ -561,18 +561,18 @@ async fn backsync_branch_merge_remove_branch_merge_file(fb: FacebookInit) -> Res
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
-                MPath::new("1")? => "1\n".to_string(),
-                MPath::new("2")? => "2\n".to_string(),
-                MPath::new("3")? => "3\n".to_string(),
-                MPath::new("4")? => "4\n".to_string(),
-                MPath::new("5")? => "5\n".to_string(),
-                MPath::new("6")? => "6\n".to_string(),
-                MPath::new("7")? => "7\n".to_string(),
-                MPath::new("8")? => "8\n".to_string(),
-                MPath::new("9")? => "9\n".to_string(),
-                MPath::new("10")? => "modified10\n".to_string(),
-                MPath::new("randomfile")? => "some other content".to_string(),
-                MPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
+                NonRootMPath::new("1")? => "1\n".to_string(),
+                NonRootMPath::new("2")? => "2\n".to_string(),
+                NonRootMPath::new("3")? => "3\n".to_string(),
+                NonRootMPath::new("4")? => "4\n".to_string(),
+                NonRootMPath::new("5")? => "5\n".to_string(),
+                NonRootMPath::new("6")? => "6\n".to_string(),
+                NonRootMPath::new("7")? => "7\n".to_string(),
+                NonRootMPath::new("8")? => "8\n".to_string(),
+                NonRootMPath::new("9")? => "9\n".to_string(),
+                NonRootMPath::new("10")? => "modified10\n".to_string(),
+                NonRootMPath::new("randomfile")? => "some other content".to_string(),
+                NonRootMPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
         }
     );
 
@@ -582,23 +582,23 @@ async fn backsync_branch_merge_remove_branch_merge_file(fb: FacebookInit) -> Res
     assert_eq!(
         map.into_iter().collect::<BTreeMap<_, _>>(),
         btreemap! {
-                MPath::new("1")? => "1\n".to_string(),
-                MPath::new("2")? => "2\n".to_string(),
-                MPath::new("3")? => "merged 3".to_string(),
-                MPath::new("4")? => "4\n".to_string(),
-                MPath::new("5")? => "5\n".to_string(),
-                MPath::new("6")? => "6\n".to_string(),
-                MPath::new("7")? => "7\n".to_string(),
-                MPath::new("8")? => "8\n".to_string(),
-                MPath::new("9")? => "9\n".to_string(),
-                MPath::new("10")? => "modified10\n".to_string(),
-                MPath::new("files")? => "branchmerge files content".to_string(),
-                MPath::new("repomergefile")? => "some content".to_string(),
-                MPath::new("randomfile")? => "some other content".to_string(),
-                MPath::new("repomerge/first")? => "new repo content".to_string(),
-                MPath::new("repomerge/movedest")? => "moved content".to_string(),
-                MPath::new("repomerge/second")? => "new repo second content".to_string(),
-                MPath::new("repomerge/toremove")? => "new repo content".to_string(),
+                NonRootMPath::new("1")? => "1\n".to_string(),
+                NonRootMPath::new("2")? => "2\n".to_string(),
+                NonRootMPath::new("3")? => "merged 3".to_string(),
+                NonRootMPath::new("4")? => "4\n".to_string(),
+                NonRootMPath::new("5")? => "5\n".to_string(),
+                NonRootMPath::new("6")? => "6\n".to_string(),
+                NonRootMPath::new("7")? => "7\n".to_string(),
+                NonRootMPath::new("8")? => "8\n".to_string(),
+                NonRootMPath::new("9")? => "9\n".to_string(),
+                NonRootMPath::new("10")? => "modified10\n".to_string(),
+                NonRootMPath::new("files")? => "branchmerge files content".to_string(),
+                NonRootMPath::new("repomergefile")? => "some content".to_string(),
+                NonRootMPath::new("randomfile")? => "some other content".to_string(),
+                NonRootMPath::new("repomerge/first")? => "new repo content".to_string(),
+                NonRootMPath::new("repomerge/movedest")? => "moved content".to_string(),
+                NonRootMPath::new("repomerge/second")? => "new repo second content".to_string(),
+                NonRootMPath::new("repomerge/toremove")? => "new repo content".to_string(),
 
         }
     );
@@ -720,7 +720,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
         small_repos: hashmap! {
             target_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
                 default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
-                    MPath::new("current_prefix").unwrap(),
+                    NonRootMPath::new("current_prefix").unwrap(),
                 ),
                 map: hashmap! { },
 
@@ -737,7 +737,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
         small_repos: hashmap! {
             target_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
                 default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
-                    MPath::new("new_prefix").unwrap(),
+                    NonRootMPath::new("new_prefix").unwrap(),
                 ),
                 map: hashmap! { },
 
@@ -846,7 +846,10 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     });
 
     let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
-    assert_eq!(map, hashmap! {MPath::new("file")? => "content".to_string()});
+    assert_eq!(
+        map,
+        hashmap! {NonRootMPath::new("file")? => "content".to_string()}
+    );
 
     Ok(())
 }
@@ -1129,7 +1132,7 @@ async fn compare_contents(
     let filtered_source_content = source_content
         .into_iter()
         .filter_map(|(key, value)| {
-            mover(&MPath::new(key).unwrap())
+            mover(&NonRootMPath::new(key).unwrap())
                 .unwrap()
                 .map(|key| (key, value))
         })
@@ -1247,8 +1250,8 @@ impl MoverType {
                 let mut map = hashmap! {};
                 for file in files {
                     map.insert(
-                        MPath::new(file).unwrap(),
-                        MPath::new(format!("nonexistentpath{}", file)).unwrap(),
+                        NonRootMPath::new(file).unwrap(),
+                        NonRootMPath::new(format!("nonexistentpath{}", file)).unwrap(),
                     );
                 }
                 SmallRepoCommitSyncConfig {
@@ -1258,10 +1261,10 @@ impl MoverType {
             }
             Only(path) => SmallRepoCommitSyncConfig {
                 default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
-                    MPath::new("nonexistentpath").unwrap(),
+                    NonRootMPath::new("nonexistentpath").unwrap(),
                 ),
                 map: hashmap! {
-                    MPath::new(path).unwrap() => MPath::new(path).unwrap(),
+                    NonRootMPath::new(path).unwrap() => NonRootMPath::new(path).unwrap(),
                 },
             },
         }
@@ -1453,7 +1456,7 @@ async fn init_repos(
         let (path_rename, rename_file_change) = store_rename(
             &ctx,
             (
-                MPath::new(to_remove_new_repo_file.clone())?,
+                NonRootMPath::new(to_remove_new_repo_file.clone())?,
                 first_new_repo_commit,
             ),
             &move_dest_new_repo_file,
@@ -1608,7 +1611,7 @@ async fn init_merged_repos(
             small_repos: hashmap! {
                 small_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
-                        MPath::new(format!("smallrepo{}", small_repo.repo_identity().id().id())).unwrap(),
+                        NonRootMPath::new(format!("smallrepo{}", small_repo.repo_identity().id().id())).unwrap(),
                     ),
                     map: hashmap! { },
 
@@ -1696,7 +1699,7 @@ async fn init_merged_repos(
         );
         let (renamed_path, rename) = store_rename(
             &ctx,
-            (MPath::new(&filename).unwrap(), small_repo_cs_id),
+            (NonRootMPath::new(&filename).unwrap(), small_repo_cs_id),
             renamed_filename.as_str(),
             "some content",
             &large_repo,

@@ -35,7 +35,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgNodeKey;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::NULL_HASH;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -185,7 +185,7 @@ impl NewBlobs {
             }
 
             let nodehash = details.entryid().clone().into_nodehash();
-            let next_path = MPath::join_opt(path_taken.mpath(), name);
+            let next_path = NonRootMPath::join_opt(path_taken.mpath(), name);
             let next_path = match next_path {
                 Some(path) => path,
                 None => bail!("internal error: joined root path with root manifest"),
@@ -251,7 +251,7 @@ fn get_manifest_parent_content(
 
 fn is_entry_present_in_parent(
     p: Option<&ManifestContent>,
-    name: &MPath,
+    name: &NonRootMPath,
     details: &Details,
 ) -> bool {
     match p.and_then(|p| p.files.get(name)) {

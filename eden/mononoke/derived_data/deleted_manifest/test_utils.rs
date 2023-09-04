@@ -39,7 +39,7 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
@@ -777,7 +777,7 @@ async fn gen_deleted_manifest_nodes<Root: RootDeletedManifestIdCommon>(
     ctx: &CoreContext,
     repo: &TestRepo,
     bonsai: ChangesetId,
-) -> Result<Vec<(Option<MPath>, Status)>, Error> {
+) -> Result<Vec<(Option<NonRootMPath>, Status)>, Error> {
     let manifest = repo
         .repo_derived_data()
         .manager()
@@ -796,7 +796,7 @@ async fn create_cs_and_derive_manifest<Root: RootDeletedManifestIdCommon>(
     repo: TestRepo,
     file_changes: BTreeMap<&str, Option<&str>>,
     parent_ids: Vec<(ChangesetId, Root::Id)>,
-) -> Result<(ChangesetId, Root::Id, Vec<(Option<MPath>, Status)>), Error> {
+) -> Result<(ChangesetId, Root::Id, Vec<(Option<NonRootMPath>, Status)>), Error> {
     let parent_bcs_ids = parent_ids
         .iter()
         .map(|(bs, _)| bs.clone())
@@ -815,7 +815,7 @@ async fn derive_manifest<Root: RootDeletedManifestIdCommon>(
     repo: &TestRepo,
     bcs: BonsaiChangeset,
     parent_mf_ids: Vec<Root::Id>,
-) -> Result<(ChangesetId, Root::Id, Vec<(Option<MPath>, Status)>), Error> {
+) -> Result<(ChangesetId, Root::Id, Vec<(Option<NonRootMPath>, Status)>), Error> {
     let blobstore = repo.repo_blobstore_arc() as Arc<dyn Blobstore>;
     let bcs_id = bcs.get_changeset_id();
 
@@ -856,7 +856,7 @@ async fn derive_manifest<Root: RootDeletedManifestIdCommon>(
 async fn create_bonsai_changeset(
     fb: FacebookInit,
     repo: TestRepo,
-    file_changes: SortedVectorMap<MPath, FileChange>,
+    file_changes: SortedVectorMap<NonRootMPath, FileChange>,
     parents: Vec<ChangesetId>,
 ) -> BonsaiChangeset {
     let bcs = BonsaiChangesetMut {
@@ -898,7 +898,7 @@ fn iterate_all_entries<Root: RootDeletedManifestIdCommon>(
     ctx: CoreContext,
     repo: TestRepo,
     manifest_id: Root::Id,
-) -> impl Stream<Item = Result<(Option<MPath>, Status, Root::Id), Error>> {
+) -> impl Stream<Item = Result<(Option<NonRootMPath>, Status, Root::Id), Error>> {
     async_stream::stream! {
         let blobstore = repo.repo_blobstore();
         let s = bounded_traversal_stream(256, Some((None, manifest_id)), move |(path, manifest_id)| {
@@ -913,7 +913,7 @@ fn iterate_all_entries<Root: RootDeletedManifestIdCommon>(
                 let recurse_subentries = manifest
                     .into_subentries(&ctx, &blobstore)
                     .map_ok(|(name, mf_id)| {
-                        let full_path = MPath::join_opt_element(path.as_ref(), &name);
+                        let full_path = NonRootMPath::join_opt_element(path.as_ref(), &name);
                         (Some(full_path), mf_id)
                     })
                     .try_collect::<Vec<_>>().await?;
@@ -931,6 +931,6 @@ fn iterate_all_entries<Root: RootDeletedManifestIdCommon>(
     }
 }
 
-fn path(path_str: &str) -> MPath {
-    MPath::new(path_str).unwrap()
+fn path(path_str: &str) -> NonRootMPath {
+    NonRootMPath::new(path_str).unwrap()
 }

@@ -56,8 +56,8 @@ use mercurial_types::Globalrev;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::FileChange;
 pub use mononoke_types::Generation;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 use mononoke_types::SkeletonManifestId;
 use mononoke_types::Svnrev;
 use repo_blobstore::RepoBlobstoreArc;
@@ -656,7 +656,9 @@ impl ChangesetContext {
     }
 
     /// File changes associated with the commit.
-    pub async fn file_changes(&self) -> Result<SortedVectorMap<MPath, FileChange>, MononokeError> {
+    pub async fn file_changes(
+        &self,
+    ) -> Result<SortedVectorMap<NonRootMPath, FileChange>, MononokeError> {
         let bonsai = self.bonsai_changeset().await?;
         let bonsai = bonsai.into_mut();
         Ok(bonsai.file_changes)
@@ -1101,7 +1103,10 @@ impl ChangesetContext {
         ordering: ChangesetFileOrdering,
     ) -> Result<
         impl Stream<
-            Item = Result<(Option<MPath>, ManifestEntry<SkeletonManifestId, ()>), anyhow::Error>,
+            Item = Result<
+                (Option<NonRootMPath>, ManifestEntry<SkeletonManifestId, ()>),
+                anyhow::Error,
+            >,
         >,
         MononokeError,
     > {

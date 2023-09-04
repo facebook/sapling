@@ -34,7 +34,7 @@ use mercurial_types::HgBlobNode;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgNodeHash;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::RevFlags;
 use mercurial_types::NULL_HASH;
@@ -116,7 +116,7 @@ where
 
 pub fn changegroup_part<CS>(
     changelogentries: CS,
-    filenodeentries: Option<BoxStream<(MPath, Vec<FilenodeEntry>), Error>>,
+    filenodeentries: Option<BoxStream<(NonRootMPath, Vec<FilenodeEntry>), Error>>,
     version: CgVersion,
 ) -> Result<PartEncodeBuilder>
 where
@@ -202,7 +202,7 @@ fn convert_file_stream<FS>(
     cg_version: CgVersion,
 ) -> impl Stream<Item = Part, Error = Error>
 where
-    FS: Stream<Item = (MPath, Vec<FilenodeEntry>), Error = Error> + Send + 'static,
+    FS: Stream<Item = (NonRootMPath, Vec<FilenodeEntry>), Error = Error> + Send + 'static,
 {
     filenodeentries
         .map(move |(path, nodes)| {
@@ -265,7 +265,7 @@ pub struct TreepackPartInput {
     pub p1: Option<HgNodeHash>,
     pub p2: Option<HgNodeHash>,
     pub content: Bytes,
-    pub fullpath: Option<MPath>,
+    pub fullpath: Option<NonRootMPath>,
     pub linknode: HgNodeHash,
 }
 

@@ -72,8 +72,8 @@ use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::FastlogBatchId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::FsnodeId;
-use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::NonRootMPath;
 use mononoke_types::SkeletonManifestId;
 use phases::Phase;
 use phases::Phases;
@@ -1123,7 +1123,8 @@ async fn hg_manifest_step<V: VisitOne>(
             .await?
             .yield_every(MANIFEST_YIELD_EVERY_ENTRY_COUNT, |_| 1);
         while let Some((name, entry)) = subentries.try_next().await? {
-            let full_path = WrappedPath::from(Some(MPath::join_opt_element(path.as_ref(), &name)));
+            let full_path =
+                WrappedPath::from(Some(NonRootMPath::join_opt_element(path.as_ref(), &name)));
             match entry {
                 Entry::Leaf((_, hg_child_filenode_id)) => {
                     checker.add_edge_with_path(
@@ -1274,7 +1275,10 @@ async fn fsnode_step<V: VisitOne>(
                         || Node::Fsnode(*fsnode_id),
                         || {
                             path.map(|p| {
-                                WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child)))
+                                WrappedPath::from(NonRootMPath::join_element_opt(
+                                    p.as_ref(),
+                                    Some(child),
+                                ))
                             })
                         },
                     );
@@ -1286,7 +1290,10 @@ async fn fsnode_step<V: VisitOne>(
                         || Node::FileContent(*file.content_id()),
                         || {
                             path.map(|p| {
-                                WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child)))
+                                WrappedPath::from(NonRootMPath::join_element_opt(
+                                    p.as_ref(),
+                                    Some(child),
+                                ))
                             })
                         },
                     );
@@ -1510,7 +1517,10 @@ async fn unode_manifest_step<V: VisitOne>(
                     || Node::UnodeManifest(UnodeKey { inner: *id, flags }),
                     || {
                         path.map(|p| {
-                            WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child)))
+                            WrappedPath::from(NonRootMPath::join_element_opt(
+                                p.as_ref(),
+                                Some(child),
+                            ))
                         })
                     },
                 );
@@ -1522,7 +1532,10 @@ async fn unode_manifest_step<V: VisitOne>(
                     || Node::UnodeFile(UnodeKey { inner: *id, flags }),
                     || {
                         path.map(|p| {
-                            WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child)))
+                            WrappedPath::from(NonRootMPath::join_element_opt(
+                                p.as_ref(),
+                                Some(child),
+                            ))
                         })
                     },
                 );
@@ -1580,7 +1593,10 @@ async fn deleted_manifest_v2_step<V: VisitOne>(
             || Node::DeletedManifestV2(deleted_manifest_v2_id),
             || {
                 path.map(|p| {
-                    WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(&child_path)))
+                    WrappedPath::from(NonRootMPath::join_element_opt(
+                        p.as_ref(),
+                        Some(&child_path),
+                    ))
                 })
             },
         );
@@ -1650,7 +1666,7 @@ async fn skeleton_manifest_step<V: VisitOne>(
                         || Node::SkeletonManifest(*subdir.id()),
                         || {
                             path.map(|p| {
-                                WrappedPath::from(MPath::join_element_opt(
+                                WrappedPath::from(NonRootMPath::join_element_opt(
                                     p.as_ref(),
                                     Some(child_path),
                                 ))
@@ -1730,7 +1746,7 @@ async fn basename_suffix_skeleton_manifest_step<V: VisitOne>(
                     || Node::BasenameSuffixSkeletonManifest(subdir.id),
                     || {
                         path.map(|p| {
-                            WrappedPath::from(MPath::join_element_opt(
+                            WrappedPath::from(NonRootMPath::join_element_opt(
                                 p.as_ref(),
                                 Some(&child_path),
                             ))

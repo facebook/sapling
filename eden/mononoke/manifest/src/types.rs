@@ -32,9 +32,9 @@ use mononoke_types::unode::ManifestUnode;
 use mononoke_types::unode::UnodeEntry;
 use mononoke_types::FileUnodeId;
 use mononoke_types::FsnodeId;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::NonRootMPath;
 use mononoke_types::SkeletonManifestId;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -521,7 +521,7 @@ impl<V> PathTree<V>
 where
     V: Default,
 {
-    pub fn insert(&mut self, path: Option<MPath>, value: V) {
+    pub fn insert(&mut self, path: Option<NonRootMPath>, value: V) {
         let node = path.into_iter().flatten().fold(self, |node, element| {
             node.subentries
                 .entry(element)
@@ -530,7 +530,7 @@ where
         node.value = value;
     }
 
-    pub fn insert_and_merge<T>(&mut self, path: Option<MPath>, value: T)
+    pub fn insert_and_merge<T>(&mut self, path: Option<NonRootMPath>, value: T)
     where
         V: Extend<T>,
     {
@@ -542,7 +542,7 @@ where
         node.value.extend(std::iter::once(value));
     }
 
-    pub fn get(&self, path: Option<&MPath>) -> Option<&V> {
+    pub fn get(&self, path: Option<&NonRootMPath>) -> Option<&V> {
         let mut tree = self;
         for elem in path.into_iter().flatten() {
             match tree.subentries.get(elem) {
@@ -553,7 +553,7 @@ where
         Some(&tree.value)
     }
 
-    pub fn insert_and_prune(&mut self, path: Option<MPath>, value: V) {
+    pub fn insert_and_prune(&mut self, path: Option<NonRootMPath>, value: V) {
         let node = path.into_iter().flatten().fold(self, |node, element| {
             node.subentries
                 .entry(element)
@@ -576,13 +576,13 @@ where
     }
 }
 
-impl<V> FromIterator<(MPath, V)> for PathTree<V>
+impl<V> FromIterator<(NonRootMPath, V)> for PathTree<V>
 where
     V: Default,
 {
     fn from_iter<I>(iter: I) -> Self
     where
-        I: IntoIterator<Item = (MPath, V)>,
+        I: IntoIterator<Item = (NonRootMPath, V)>,
     {
         let mut tree: Self = Default::default();
         for (path, value) in iter {
@@ -592,13 +592,13 @@ where
     }
 }
 
-impl<V> FromIterator<(Option<MPath>, V)> for PathTree<V>
+impl<V> FromIterator<(Option<NonRootMPath>, V)> for PathTree<V>
 where
     V: Default,
 {
     fn from_iter<I>(iter: I) -> Self
     where
-        I: IntoIterator<Item = (Option<MPath>, V)>,
+        I: IntoIterator<Item = (Option<NonRootMPath>, V)>,
     {
         let mut tree: Self = Default::default();
         for (path, value) in iter {
@@ -609,17 +609,17 @@ where
 }
 
 pub struct PathTreeIter<V> {
-    frames: Vec<(Option<MPath>, PathTree<V>)>,
+    frames: Vec<(Option<NonRootMPath>, PathTree<V>)>,
 }
 
 impl<V> Iterator for PathTreeIter<V> {
-    type Item = (Option<MPath>, V);
+    type Item = (Option<NonRootMPath>, V);
 
     fn next(&mut self) -> Option<Self::Item> {
         let (path, PathTree { value, subentries }) = self.frames.pop()?;
         for (name, subentry) in subentries {
             self.frames.push((
-                Some(MPath::join_opt_element(path.as_ref(), &name)),
+                Some(NonRootMPath::join_opt_element(path.as_ref(), &name)),
                 subentry,
             ));
         }
@@ -628,7 +628,7 @@ impl<V> Iterator for PathTreeIter<V> {
 }
 
 impl<V> IntoIterator for PathTree<V> {
-    type Item = (Option<MPath>, V);
+    type Item = (Option<NonRootMPath>, V);
     type IntoIter = PathTreeIter<V>;
 
     fn into_iter(self) -> Self::IntoIter {

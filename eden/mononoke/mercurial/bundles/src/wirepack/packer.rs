@@ -18,7 +18,7 @@ use byteorder::BigEndian;
 use bytes_old::BufMut;
 use futures_old::Poll;
 use futures_old::Stream;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 
 use super::converter::WirePackConverter;
@@ -172,7 +172,7 @@ impl ChunkBuilder {
     }
 }
 
-fn verify_path<'a>(mpath: &'a MPath) -> Result<&'a MPath> {
+fn verify_path<'a>(mpath: &'a NonRootMPath) -> Result<&'a NonRootMPath> {
     let len = mpath.len();
     if len > (u16::max_value() as usize) {
         bail!(ErrorKind::WirePackEncode(format!(

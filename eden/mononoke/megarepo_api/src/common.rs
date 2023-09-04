@@ -61,7 +61,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use mutable_renames::MutableRenameEntry;
 use mutable_renames::MutableRenames;
@@ -285,7 +285,7 @@ pub trait MegarepoOp {
         ctx: &CoreContext,
         repo: &RepoContext,
         old_target_cs: &ChangesetContext,
-        removed_files: HashSet<MPath>,
+        removed_files: HashSet<NonRootMPath>,
         new_version: Option<String>,
     ) -> Result<ChangesetId, MegarepoError> {
         let file_changes = removed_files
@@ -386,7 +386,7 @@ pub trait MegarepoOp {
         cs_id: ChangesetId,
         mover: &MultiMover,
         directory_mover: &DirectoryMultiMover,
-        linkfiles: BTreeMap<MPath, FileChange>,
+        linkfiles: BTreeMap<NonRootMPath, FileChange>,
         source_name: &SourceName,
     ) -> Result<SourceAndMovedChangesets, MegarepoError> {
         let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id)
@@ -732,16 +732,16 @@ pub trait MegarepoOp {
         &self,
         source_config: &Source,
         mover: &DirectoryMultiMover,
-    ) -> Result<BTreeMap<MPath, Bytes>, MegarepoError> {
+    ) -> Result<BTreeMap<NonRootMPath, Bytes>, MegarepoError> {
         let mut links = BTreeMap::new();
         for (dst, src) in &source_config.mapping.linkfiles {
             // src is a file inside a given source, so mover needs to be applied to it
             let src = if src == "." {
                 None
             } else {
-                MPath::new_opt(src).map_err(MegarepoError::request)?
+                NonRootMPath::new_opt(src).map_err(MegarepoError::request)?
             };
-            let dst = MPath::new(dst).map_err(MegarepoError::request)?;
+            let dst = NonRootMPath::new(dst).map_err(MegarepoError::request)?;
             let moved_srcs = mover(&src).map_err(MegarepoError::request)?;
 
             let mut iter = moved_srcs.into_iter();
@@ -783,9 +783,9 @@ pub trait MegarepoOp {
     async fn upload_linkfiles(
         &self,
         ctx: &CoreContext,
-        links: BTreeMap<MPath, Bytes>,
+        links: BTreeMap<NonRootMPath, Bytes>,
         repo: &impl Repo,
-    ) -> Result<BTreeMap<MPath, FileChange>, Error> {
+    ) -> Result<BTreeMap<NonRootMPath, FileChange>, Error> {
         let linkfiles = stream::iter(links.into_iter())
             .map(Ok)
             .map_ok(|(path, content)| async {
@@ -1138,7 +1138,7 @@ pub async fn find_bookmark_and_value(
     Ok((bookmark, cs_id))
 }
 
-fn create_relative_symlink(path: &MPath, base: &MPath) -> Result<Bytes, Error> {
+fn create_relative_symlink(path: &NonRootMPath, base: &NonRootMPath) -> Result<Bytes, Error> {
     let common_components = path.common_components(base);
     let path_no_prefix = path.into_iter().skip(common_components).collect::<Vec<_>>();
     let base_no_prefix = base.into_iter().skip(common_components).collect::<Vec<_>>();
@@ -1169,9 +1169,9 @@ fn create_relative_symlink(path: &MPath, base: &MPath) -> Result<Bytes, Error> {
 
 // Verifies that no two sources create the same path in the target
 fn add_and_check_all_paths<'a>(
-    all_files_in_target: &'a mut HashMap<MPath, SourceName>,
+    all_files_in_target: &'a mut HashMap<NonRootMPath, SourceName>,
     source_name: &'a SourceName,
-    iter: impl Iterator<Item = &'a MPath>,
+    iter: impl Iterator<Item = &'a NonRootMPath>,
 ) -> Result<(), MegarepoError> {
     for path in iter {
         add_and_check(all_files_in_target, source_name, path)?;
@@ -1181,9 +1181,9 @@ fn add_and_check_all_paths<'a>(
 }
 
 fn add_and_check<'a>(
-    all_files_in_target: &'a mut HashMap<MPath, SourceName>,
+    all_files_in_target: &'a mut HashMap<NonRootMPath, SourceName>,
     source_name: &'a SourceName,
-    path: &MPath,
+    path: &NonRootMPath,
 ) -> Result<(), MegarepoError> {
     let existing_source = all_files_in_target.insert(path.clone(), source_name.clone());
     if let Some(existing_source) = existing_source {
@@ -1250,7 +1250,7 @@ pub fn find_source_config<'a, 'b>(
 pub(crate) fn new_megarepo_automation_commit(
     parents: Vec<ChangesetId>,
     message: String,
-    file_changes: SortedVectorMap<MPath, FileChange>,
+    file_changes: SortedVectorMap<NonRootMPath, FileChange>,
 ) -> BonsaiChangesetMut {
     BonsaiChangesetMut {
         parents,
@@ -1274,23 +1274,23 @@ mod test {
 
     #[test]
     fn test_create_relative_symlink() -> Result<(), Error> {
-        let path = MPath::new(&b"dir/1.txt"[..])?;
-        let base = MPath::new(&b"dir/2.txt"[..])?;
+        let path = NonRootMPath::new(&b"dir/1.txt"[..])?;
+        let base = NonRootMPath::new(&b"dir/2.txt"[..])?;
         let bytes = create_relative_symlink(&path, &base)?;
         assert_eq!(bytes, Bytes::from(&b"1.txt"[..]));
 
-        let path = MPath::new(&b"dir/1.txt"[..])?;
-        let base = MPath::new(&b"base/2.txt"[..])?;
+        let path = NonRootMPath::new(&b"dir/1.txt"[..])?;
+        let base = NonRootMPath::new(&b"base/2.txt"[..])?;
         let bytes = create_relative_symlink(&path, &base)?;
         assert_eq!(bytes, Bytes::from(&b"../dir/1.txt"[..]));
 
-        let path = MPath::new(&b"dir/subdir/1.txt"[..])?;
-        let base = MPath::new(&b"dir/2.txt"[..])?;
+        let path = NonRootMPath::new(&b"dir/subdir/1.txt"[..])?;
+        let base = NonRootMPath::new(&b"dir/2.txt"[..])?;
         let bytes = create_relative_symlink(&path, &base)?;
         assert_eq!(bytes, Bytes::from(&b"subdir/1.txt"[..]));
 
-        let path = MPath::new(&b"dir1/subdir1/1.txt"[..])?;
-        let base = MPath::new(&b"dir2/subdir2/2.txt"[..])?;
+        let path = NonRootMPath::new(&b"dir1/subdir1/1.txt"[..])?;
+        let base = NonRootMPath::new(&b"dir2/subdir2/2.txt"[..])?;
         let bytes = create_relative_symlink(&path, &base)?;
         assert_eq!(bytes, Bytes::from(&b"../../dir1/subdir1/1.txt"[..]));
 

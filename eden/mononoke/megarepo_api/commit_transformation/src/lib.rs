@@ -40,7 +40,7 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::TrackedFileChange;
 use pushrebase::find_bonsai_diff;
 use repo_blobstore::RepoBlobstoreArc;
@@ -53,9 +53,14 @@ use sorted_vector_map::SortedVectorMap;
 use thiserror::Error;
 use tunables::tunables;
 
-pub type MultiMover = Arc<dyn Fn(&MPath) -> Result<Vec<MPath>, Error> + Send + Sync + 'static>;
-pub type DirectoryMultiMover =
-    Arc<dyn Fn(&Option<MPath>) -> Result<Vec<Option<MPath>>, Error> + Send + Sync + 'static>;
+pub type MultiMover =
+    Arc<dyn Fn(&NonRootMPath) -> Result<Vec<NonRootMPath>, Error> + Send + Sync + 'static>;
+pub type DirectoryMultiMover = Arc<
+    dyn Fn(&Option<NonRootMPath>) -> Result<Vec<Option<NonRootMPath>>, Error>
+        + Send
+        + Sync
+        + 'static,
+>;
 
 pub trait Repo = RepoIdentityRef
     + RepoBlobstoreArc
@@ -93,33 +98,35 @@ pub fn create_source_to_target_multi_mover(
     let mut overrides = mapping_rules.overrides.into_iter().collect::<Vec<_>>();
     overrides.sort_unstable_by_key(|(ref prefix, _)| prefix.len());
     overrides.reverse();
-    let prefix = MPath::new_opt(mapping_rules.default_prefix)?;
+    let prefix = NonRootMPath::new_opt(mapping_rules.default_prefix)?;
 
-    Ok(Arc::new(move |path: &MPath| -> Result<Vec<MPath>, Error> {
-        for (override_prefix_src, dsts) in &overrides {
-            let override_prefix_src = MPath::new(override_prefix_src.clone())?;
-            if override_prefix_src.is_prefix_of(path) {
-                let suffix: Vec<_> = path
-                    .into_iter()
-                    .skip(override_prefix_src.num_components())
-                    .collect();
+    Ok(Arc::new(
+        move |path: &NonRootMPath| -> Result<Vec<NonRootMPath>, Error> {
+            for (override_prefix_src, dsts) in &overrides {
+                let override_prefix_src = NonRootMPath::new(override_prefix_src.clone())?;
+                if override_prefix_src.is_prefix_of(path) {
+                    let suffix: Vec<_> = path
+                        .into_iter()
+                        .skip(override_prefix_src.num_components())
+                        .collect();
 
-                return dsts
-                    .iter()
-                    .map(|dst| {
-                        let override_prefix = MPath::new_opt(dst)?;
-                        MPath::join_opt(override_prefix.as_ref(), suffix.clone())
-                            .ok_or_else(|| anyhow!("unexpected empty path"))
-                    })
-                    .collect::<Result<_, _>>();
+                    return dsts
+                        .iter()
+                        .map(|dst| {
+                            let override_prefix = NonRootMPath::new_opt(dst)?;
+                            NonRootMPath::join_opt(override_prefix.as_ref(), suffix.clone())
+                                .ok_or_else(|| anyhow!("unexpected empty path"))
+                        })
+                        .collect::<Result<_, _>>();
+                }
             }
-        }
 
-        Ok(vec![
-            MPath::join_opt(prefix.as_ref(), path)
-                .ok_or_else(|| anyhow!("unexpected empty path"))?,
-        ])
-    }))
+            Ok(vec![
+                NonRootMPath::join_opt(prefix.as_ref(), path)
+                    .ok_or_else(|| anyhow!("unexpected empty path"))?,
+            ])
+        },
+    ))
 }
 
 pub fn create_directory_source_to_target_multi_mover(
@@ -129,12 +136,12 @@ pub fn create_directory_source_to_target_multi_mover(
     let mut overrides = mapping_rules.overrides.into_iter().collect::<Vec<_>>();
     overrides.sort_unstable_by_key(|(ref prefix, _)| prefix.len());
     overrides.reverse();
-    let prefix = MPath::new_opt(mapping_rules.default_prefix)?;
+    let prefix = NonRootMPath::new_opt(mapping_rules.default_prefix)?;
 
     Ok(Arc::new(
-        move |path: &Option<MPath>| -> Result<Vec<Option<MPath>>, Error> {
+        move |path: &Option<NonRootMPath>| -> Result<Vec<Option<NonRootMPath>>, Error> {
             for (override_prefix_src, dsts) in &overrides {
-                let override_prefix_src = MPath::new(override_prefix_src.clone())?;
+                let override_prefix_src = NonRootMPath::new(override_prefix_src.clone())?;
                 if override_prefix_src.is_prefix_of(mpath_element_iter(path)) {
                     let suffix: Vec<_> = mpath_element_iter(path)
                         .skip(override_prefix_src.num_components())
@@ -143,14 +150,17 @@ pub fn create_directory_source_to_target_multi_mover(
                     return dsts
                         .iter()
                         .map(|dst| {
-                            let override_prefix = MPath::new_opt(dst)?;
-                            Ok(MPath::join_opt(override_prefix.as_ref(), suffix.clone()))
+                            let override_prefix = NonRootMPath::new_opt(dst)?;
+                            Ok(NonRootMPath::join_opt(
+                                override_prefix.as_ref(),
+                                suffix.clone(),
+                            ))
                         })
                         .collect::<Result<_, _>>();
                 }
             }
 
-            Ok(vec![MPath::join_opt(
+            Ok(vec![NonRootMPath::join_opt(
                 prefix.as_ref(),
                 mpath_element_iter(path),
             )])
@@ -181,15 +191,15 @@ async fn get_manifest_ids<'a, I: IntoIterator<Item = ChangesetId>>(
 /// Take an iterator of file changes, which may contain implicit deletes
 /// and produce a `SortedVectorMap` suitable to be used in the `BonsaiChangeset`,
 /// without any implicit deletes.
-fn minimize_file_change_set<I: IntoIterator<Item = (MPath, FileChange)>>(
+fn minimize_file_change_set<I: IntoIterator<Item = (NonRootMPath, FileChange)>>(
     file_changes: I,
-) -> SortedVectorMap<MPath, FileChange> {
+) -> SortedVectorMap<NonRootMPath, FileChange> {
     let (adds, removes): (Vec<_>, Vec<_>) = file_changes
         .into_iter()
         .partition(|(_, fc)| fc.is_changed());
-    let adds: HashMap<MPath, FileChange> = adds.into_iter().collect();
+    let adds: HashMap<NonRootMPath, FileChange> = adds.into_iter().collect();
 
-    let prefix_path_was_added = |removed_path: MPath| {
+    let prefix_path_was_added = |removed_path: NonRootMPath| {
         removed_path
             .into_parent_dir_iter()
             .any(|parent_dir| adds.contains_key(&parent_dir))
@@ -205,7 +215,7 @@ fn minimize_file_change_set<I: IntoIterator<Item = (MPath, FileChange)>>(
 
 /// Given a changeset and it's parents, get the list of file
 /// changes, which arise from "implicit deletes" as opposed
-/// to naive `MPath` rewriting in `cs.file_changes`. For
+/// to naive `NonRootMPath` rewriting in `cs.file_changes`. For
 /// more information about implicit deletes, please see
 /// `manifest/src/implici_deletes.rs`
 async fn get_renamed_implicit_deletes<'a, I: IntoIterator<Item = ChangesetId>>(
@@ -214,7 +224,7 @@ async fn get_renamed_implicit_deletes<'a, I: IntoIterator<Item = ChangesetId>>(
     parent_changeset_ids: I,
     mover: MultiMover,
     source_repo: &'a impl Repo,
-) -> Result<Vec<Vec<MPath>>, Error> {
+) -> Result<Vec<Vec<NonRootMPath>>, Error> {
     let parent_manifest_ids = get_manifest_ids(ctx, source_repo, parent_changeset_ids).await?;
     let file_adds: Vec<_> = cs
         .file_changes
@@ -222,7 +232,7 @@ async fn get_renamed_implicit_deletes<'a, I: IntoIterator<Item = ChangesetId>>(
         .filter_map(|(mpath, file_change)| file_change.is_changed().then(|| mpath.clone()))
         .collect();
     let store = source_repo.repo_blobstore().clone();
-    let implicit_deletes: Vec<MPath> =
+    let implicit_deletes: Vec<NonRootMPath> =
         get_implicit_deletes(ctx, store, file_adds, parent_manifest_ids)
             .try_collect()
             .await?;
@@ -442,7 +452,7 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     mover: MultiMover,
     force_first_parent: Option<ChangesetId>,
-    renamed_implicit_deletes: Vec<Vec<MPath>>,
+    renamed_implicit_deletes: Vec<Vec<NonRootMPath>>,
     rewrite_opts: RewriteOpts,
     source_repo: &impl RepoIdentityRef,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
@@ -456,10 +466,10 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
             .map(|(path, change)| {
                 // Just rewrite copy_from information, when we have it
                 fn rewrite_copy_from(
-                    copy_from: &(MPath, ChangesetId),
+                    copy_from: &(NonRootMPath, ChangesetId),
                     remapped_parents: &HashMap<ChangesetId, ChangesetId>,
                     mover: MultiMover,
-                ) -> Result<Option<(MPath, ChangesetId)>, Error> {
+                ) -> Result<Option<(NonRootMPath, ChangesetId)>, Error> {
                     let (path, copy_from_commit) = copy_from;
                     let new_paths = mover(path)?;
                     let copy_from_commit =
@@ -498,11 +508,11 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
 
                 // Rewrite both path and changes
                 fn do_rewrite(
-                    path: &MPath,
+                    path: &NonRootMPath,
                     change: &FileChange,
                     remapped_parents: &HashMap<ChangesetId, ChangesetId>,
                     mover: MultiMover,
-                ) -> Result<Vec<(MPath, FileChange)>, Error> {
+                ) -> Result<Vec<(NonRootMPath, FileChange)>, Error> {
                     let new_paths = mover(path)?;
                     let change = match change {
                         FileChange::Change(tc) => {
@@ -553,11 +563,12 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
             .flat_map(|changes| changes.into_iter())
             .collect();
 
-        let implicit_delete_file_changes: Vec<(MPath, FileChange)> = renamed_implicit_deletes
-            .into_iter()
-            .flatten()
-            .map(|implicit_delete_mpath| (implicit_delete_mpath, FileChange::Deletion))
-            .collect();
+        let implicit_delete_file_changes: Vec<(NonRootMPath, FileChange)> =
+            renamed_implicit_deletes
+                .into_iter()
+                .flatten()
+                .map(|implicit_delete_mpath| (implicit_delete_mpath, FileChange::Deletion))
+                .collect();
         path_rewritten_changes.extend(implicit_delete_file_changes.into_iter());
         let path_rewritten_changes = minimize_file_change_set(path_rewritten_changes.into_iter());
 
@@ -717,8 +728,8 @@ mod test {
         };
         let multi_mover = create_source_to_target_multi_mover(mapping_rules)?;
         assert_eq!(
-            multi_mover(&MPath::new("path")?)?,
-            vec![MPath::new("path")?]
+            multi_mover(&NonRootMPath::new("path")?)?,
+            vec![NonRootMPath::new("path")?]
         );
         Ok(())
     }
@@ -731,8 +742,8 @@ mod test {
         };
         let multi_mover = create_source_to_target_multi_mover(mapping_rules)?;
         assert_eq!(
-            multi_mover(&MPath::new("path")?)?,
-            vec![MPath::new("prefix/path")?]
+            multi_mover(&NonRootMPath::new("path")?)?,
+            vec![NonRootMPath::new("prefix/path")?]
         );
         Ok(())
     }
@@ -751,15 +762,15 @@ mod test {
         };
         let multi_mover = create_source_to_target_multi_mover(mapping_rules)?;
         assert_eq!(
-            multi_mover(&MPath::new("path")?)?,
-            vec![MPath::new("prefix/path")?]
+            multi_mover(&NonRootMPath::new("path")?)?,
+            vec![NonRootMPath::new("prefix/path")?]
         );
 
         assert_eq!(
-            multi_mover(&MPath::new("override/path")?)?,
+            multi_mover(&NonRootMPath::new("override/path")?)?,
             vec![
-                MPath::new("overriden_1/path")?,
-                MPath::new("overriden_2/path")?,
+                NonRootMPath::new("overriden_1/path")?,
+                NonRootMPath::new("overriden_2/path")?,
             ]
         );
         Ok(())
@@ -781,20 +792,20 @@ mod test {
         };
         let multi_mover = create_source_to_target_multi_mover(mapping_rules)?;
         assert_eq!(
-            multi_mover(&MPath::new("prefix/path")?)?,
-            vec![MPath::new("prefix_1/path")?]
+            multi_mover(&NonRootMPath::new("prefix/path")?)?,
+            vec![NonRootMPath::new("prefix_1/path")?]
         );
 
         assert_eq!(
-            multi_mover(&MPath::new("prefix/sub/path")?)?,
-            vec![MPath::new("prefix/sub_1/path")?]
+            multi_mover(&NonRootMPath::new("prefix/sub/path")?)?,
+            vec![NonRootMPath::new("prefix/sub_1/path")?]
         );
 
         Ok(())
     }
 
-    fn path(p: &str) -> MPath {
-        MPath::new(p).unwrap()
+    fn path(p: &str) -> NonRootMPath {
+        NonRootMPath::new(p).unwrap()
     }
 
     fn verify_minimized(changes: Vec<(&str, Option<()>)>, expected: BTreeMap<&str, Option<()>>) {
@@ -814,7 +825,7 @@ mod test {
             .map(|(p, c)| (path(p), to_file_change(c)))
             .collect();
         let minimized = minimize_file_change_set(changes);
-        let expected: SortedVectorMap<MPath, FileChange> = expected
+        let expected: SortedVectorMap<NonRootMPath, FileChange> = expected
             .into_iter()
             .map(|(p, c)| (path(p), to_file_change(c)))
             .collect();
@@ -1136,8 +1147,8 @@ mod test {
         assert_eq!(
             first_rewritten_wc,
             hashmap! {
-                MPath::new("path_1")? => "path".to_string(),
-                MPath::new("path_2")? => "path".to_string(),
+                NonRootMPath::new("path_1")? => "path".to_string(),
+                NonRootMPath::new("path_2")? => "path".to_string(),
             }
         );
 
@@ -1158,7 +1169,7 @@ mod test {
             .await?;
         let maybe_copy_from = match second_bcs
             .file_changes_map()
-            .get(&MPath::new("prefix/pathsecondcommit")?)
+            .get(&NonRootMPath::new("prefix/pathsecondcommit")?)
             .ok_or_else(|| anyhow!("path not found"))?
         {
             FileChange::Change(tc) => tc.copy_from().cloned(),
@@ -1167,7 +1178,7 @@ mod test {
 
         assert_eq!(
             maybe_copy_from,
-            Some((MPath::new("path_1")?, first_rewritten_bcs_id))
+            Some((NonRootMPath::new("path_1")?, first_rewritten_bcs_id))
         );
 
         let second_rewritten_wc =
@@ -1175,9 +1186,9 @@ mod test {
         assert_eq!(
             second_rewritten_wc,
             hashmap! {
-                MPath::new("path_1")? => "path".to_string(),
-                MPath::new("path_2")? => "path".to_string(),
-                MPath::new("prefix/pathsecondcommit")? => "pathsecondcommit".to_string(),
+                NonRootMPath::new("path_1")? => "path".to_string(),
+                NonRootMPath::new("path_2")? => "path".to_string(),
+                NonRootMPath::new("prefix/pathsecondcommit")? => "pathsecondcommit".to_string(),
             }
         );
 
@@ -1292,11 +1303,14 @@ mod test {
         };
         let multi_mover = create_directory_source_to_target_multi_mover(mapping_rules)?;
         assert_eq!(
-            multi_mover(&Some(MPath::new("path")?))?,
-            vec![Some(MPath::new("prefix/path")?)]
+            multi_mover(&Some(NonRootMPath::new("path")?))?,
+            vec![Some(NonRootMPath::new("prefix/path")?)]
         );
 
-        assert_eq!(multi_mover(&None)?, vec![Some(MPath::new("prefix")?)]);
+        assert_eq!(
+            multi_mover(&None)?,
+            vec![Some(NonRootMPath::new("prefix")?)]
+        );
         Ok(())
     }
 }
