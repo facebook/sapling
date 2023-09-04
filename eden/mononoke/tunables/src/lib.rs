@@ -150,9 +150,6 @@ pub struct MononokeTunables {
 
     allow_change_xrepo_mapping_extra: TunableBool,
 
-    // Disable EdenAPI in http_service.
-    disable_http_service_edenapi: TunableBool,
-
     // Rendez vous configuration.
     rendezvous_dispatch_delay_ms: TunableI64,
     rendezvous_dispatch_max_threshold: TunableI64,

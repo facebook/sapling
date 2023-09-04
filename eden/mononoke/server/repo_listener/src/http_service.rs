@@ -44,7 +44,6 @@ use slog::Logger;
 use thiserror::Error;
 use tokio::io::AsyncReadExt;
 use tunables::force_update_tunables;
-use tunables::tunables;
 
 use crate::connection_acceptor;
 use crate::connection_acceptor::AcceptedConnection;
@@ -357,17 +356,6 @@ where
         pq: http::uri::PathAndQuery,
         body: Body,
     ) -> Result<Response<Body>, HttpError> {
-        if tunables()
-            .disable_http_service_edenapi()
-            .unwrap_or_default()
-        {
-            let res = Response::builder()
-                .status(http::StatusCode::SERVICE_UNAVAILABLE)
-                .body("EdenAPI service is killswitched".into())
-                .map_err(HttpError::internal)?;
-            return Ok(res);
-        }
-
         let mut uri_parts = req.uri.into_parts();
 
         uri_parts.path_and_query = Some(pq);
