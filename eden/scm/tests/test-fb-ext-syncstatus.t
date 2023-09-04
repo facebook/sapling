@@ -60,29 +60,6 @@
   >       ]
   >     }
   >   },
-  >   "differential_diffs": {"count": 3},
-  >   "created_time": 123,
-  >   "updated_time": 222
-  > }]}}]}}]
-  > EOF
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
-  Error talking to phabricator. No diff information can be provided.
-  Error info: Unexpected graphql response format
-  Error
-
-# Missing count field is treated as an error
-
-  $ cat > $TESTTMP/mockduit << 'EOF'
-  > [{"data": {"query": [{"results": {"nodes": [{
-  >   "number": 1,
-  >   "diff_status_name": "Approved",
-  >   "latest_active_diff": {
-  >     "local_commit_info": {
-  >       "nodes": [
-  >         {"property_value": "{\"lolwut\": {\"time\": 0, \"commit\": \"lolwut\"}}"}
-  >       ]
-  >     }
-  >   },
   >   "created_time": 123,
   >   "updated_time": 222
   > }]}}]}}]
@@ -105,7 +82,6 @@
   >       ]
   >     }
   >   },
-  >   "differential_diffs": {"count": 3},
   >   "is_landing": false,
   >   "land_job_status": "NO_LAND_RUNNING",
   >   "needs_final_review_status": "NOT_NEEDED",
@@ -128,7 +104,6 @@
   >       ]
   >     }
   >   },
-  >   "differential_diffs": {"count": 3},
   >   "is_landing": false,
   >   "land_job_status": "NO_LAND_RUNNING",
   >   "needs_final_review_status": "NOT_NEEDED",
@@ -152,7 +127,6 @@
   >       ]
   >     }
   >   },
-  >   "differential_diffs": {"count": 3},
   >   "is_landing": false,
   >   "land_job_status": "NO_LAND_RUNNING",
   >   "needs_final_review_status": "NOT_NEEDED",
@@ -176,7 +150,6 @@
   >       ]
   >     }
   >   },
-  >   "differential_diffs": {"count": 3},
   >   "is_landing": false,
   >   "land_job_status": "NO_LAND_RUNNING",
   >   "needs_final_review_status": "NOT_NEEDED",

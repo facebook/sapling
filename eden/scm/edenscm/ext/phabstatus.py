@@ -206,22 +206,6 @@ def showphabcommit(repo, ctx, templ, **args):
     return remote
 
 
-"""
-in order to determine whether the local changeset is in sync with the
-remote one we compare the hash of the current changeset with the one we
-get from the remote (phabricator) repo. There are three different cases
-and we deal with them separately.
-1) If this is the first revision in a diff: We look at the count field and
-understand that this is the first changeset, so we compare the hash we get
-from remote repo with the predessesor's hash from the local changeset. The
-reason for that is the D number is ammended on the changeset after it is
-sent to phabricator.
-2) If this is the last revision, i.e. it is alread committed: Then we
-don't say anything. All good.
-3) If this is a middle revision: Then we compare the hashes as regular.
-"""
-
-
 @templatekeyword("syncstatus")
 def showsyncstatus(repo, ctx, templ, **args) -> Optional[str]:
     """String. Return whether the local revision is in sync
@@ -240,7 +224,6 @@ def showsyncstatus(repo, ctx, templ, **args) -> Optional[str]:
         result = results[0]
         remote = result["hash"]
         status = result["status"]
-        count = int(result["count"])
     except (IndexError, KeyError, ValueError, TypeError):
         # We got no result back, or it did not contain all required fields
         return "Error"
@@ -248,17 +231,6 @@ def showsyncstatus(repo, ctx, templ, **args) -> Optional[str]:
     local = ctx.hex()
     if local == remote:
         return "sync"
-    elif count == 1:
-        precursors = list(mutation.allpredecessors(repo, [ctx.node()]))
-        hashes = [
-            repo[h].hex() for h in repo.changelog.filternodes(precursors, local=True)
-        ]
-        # hashes[0] is the current
-        # hashes[1] is the previous
-        if len(hashes) > 1 and hashes[1] == remote:
-            return "sync"
-        else:
-            return "unsync"
     elif status == "Committed":
         return "committed"
     else:

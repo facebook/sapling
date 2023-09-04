@@ -381,9 +381,6 @@ class Client:
                 is_landing
                 land_job_status
                 needs_final_review_status
-                differential_diffs: phabricator_versions {
-                  count
-                }
                 %s
               }
             }
@@ -452,8 +449,6 @@ class Client:
 
                 if active_diff is None:
                     continue
-
-                info["count"] = node["differential_diffs"]["count"]
 
                 localcommitnode = active_diff["local_commit_info"]["nodes"]
                 if localcommitnode is not None and len(localcommitnode) == 1:
