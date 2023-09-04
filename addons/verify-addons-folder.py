@@ -123,7 +123,7 @@ async def verify_reviewstack(*, use_vendored_grammars=False):
 async def lint_and_test(cwd: Path):
     await asyncio.gather(
         run(["yarn", "run", "eslint"], cwd=cwd),
-        run(["yarn", "test", "--watchAll=false"], cwd=cwd),
+        run(["yarn", "test", "--no-watchman", "--watchAll=false", "--detectOpenHandles"], cwd=cwd),
     )
 
 

@@ -14,6 +14,14 @@ jobs:
     container:
       image: ${{ format('ghcr.io/{0}/build_ubuntu_20_04:latest', github.repository) }}
     steps:
+      - name: Install gh cli
+        run: >
+          apt install -y gpg && 
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg |
+          gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg &&
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" |
+          tee /etc/apt/sources.list.d/github-cli.list > /dev/null &&
+          apt update && apt install -y gh
       - name: Checkout Code
         uses: actions/checkout@v3
       - name: Grant Access
@@ -23,4 +31,6 @@ jobs:
         run: yarn install --prefer-offline
       - name: Run addons/verify-addons-folder.py
         working-directory: ./addons
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: ./verify-addons-folder.py
