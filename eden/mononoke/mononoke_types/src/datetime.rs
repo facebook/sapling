@@ -233,7 +233,7 @@ impl From<Timestamp> for DateTime {
     fn from(ts: Timestamp) -> Self {
         let ts_secs = ts.timestamp_seconds();
         let ts_nsecs = (ts.0 % SEC_IN_NS) as u32;
-        DateTime::new(ChronoDateTime::<FixedOffset>::from_utc(
+        DateTime::new(ChronoDateTime::<FixedOffset>::from_naive_utc_and_offset(
             NaiveDateTime::from_timestamp_opt(ts_secs, ts_nsecs).unwrap(),
             FixedOffset::west_opt(0).unwrap(),
         ))
