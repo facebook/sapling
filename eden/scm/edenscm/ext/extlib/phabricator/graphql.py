@@ -358,23 +358,11 @@ class Client:
               nodes {
                 number
                 diff_status_name
-                latest_active_diff: latest_active_phabricator_version {
-                  local_commit_info: phabricator_version_properties (
-                    property_names: ["local:commits"]
-                  ) {
-                    nodes {
-                      property_value
-                    }
-                  }
+                latest_active_phabricator_version {
+                  commit_hash_best_effort
                 }
                 latest_publishable_draft_phabricator_version {
-                  local_commit_info: phabricator_version_properties (
-                    property_names: ["local:commits"]
-                  ) {
-                    nodes {
-                      property_value
-                    }
-                  }
+                  commit_hash_best_effort
                 }
                 created_time
                 updated_time
@@ -434,35 +422,14 @@ class Client:
                         .replace("_", " ")
                     )
 
-                active_diff = None
-                if (
-                    "latest_active_diff" in node
-                    and node["latest_active_diff"] is not None
-                ):
-                    active_diff = node["latest_active_diff"]
-
-                if (
-                    "latest_publishable_draft_phabricator_version" in node
-                    and node["latest_publishable_draft_phabricator_version"] is not None
-                ):
-                    active_diff = node["latest_publishable_draft_phabricator_version"]
-
-                if active_diff is None:
-                    continue
-
-                localcommitnode = active_diff["local_commit_info"]["nodes"]
-                if localcommitnode is not None and len(localcommitnode) == 1:
-                    localcommits = json.loads(localcommitnode[0]["property_value"])
-
-                    if not isinstance(localcommits, dict):
-                        continue
-
-                    localcommits = sorted(
-                        localcommits.values(),
-                        key=operator.itemgetter("time"),
-                        reverse=True,
-                    )
-                    info["hash"] = localcommits[0].get("commit", None)
+                active_version = node.get(
+                    "latest_publishable_draft_phabricator_version"
+                )
+                if active_version is None:
+                    active_version = node.get("latest_active_phabricator_version", {})
+                commit_hash = active_version.get("commit_hash_best_effort")
+                if commit_hash is not None:
+                    info["hash"] = commit_hash
 
         except (AttributeError, KeyError, TypeError):
             raise ClientError(None, "Unexpected graphql response format")

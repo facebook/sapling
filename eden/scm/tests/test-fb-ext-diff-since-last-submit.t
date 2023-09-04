@@ -105,12 +105,8 @@
   > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "diff_status_name": "Needs Review",
-  >   "latest_active_diff": {
-  >     "local_commit_info": {
-  >       "nodes": [
-  >         {"property_value": "{\"lolwut\": {\"time\": 0, \"commit\": \"2e6531b7dada2a3e5638e136de05f51e94a427f4\"}}"}
-  >       ]
-  >     }
+  >   "latest_active_phabricator_version": {
+  >      "commit_hash_best_effort": "2e6531b7dada2a3e5638e136de05f51e94a427f4"
   >   },
   >   "is_landing": false,
   >   "land_job_status": "NO_LAND_RUNNING",
@@ -133,12 +129,8 @@
   > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "diff_status_name": "Needs Review",
-  >   "latest_active_diff": {
-  >     "local_commit_info": {
-  >       "nodes": [
-  >         {"property_value": "{\"lolwut\": {\"time\": 0, \"commit\": \"88dd5a13bf28b99853a24bddfc93d4c44e07c6bd\"}}"}
-  >       ]
-  >     }
+  >   "latest_active_phabricator_version": {
+  >      "commit_hash_best_effort": "88dd5a13bf28b99853a24bddfc93d4c44e07c6bd"
   >   },
   >   "is_landing": false,
   >   "land_job_status": "NO_LAND_RUNNING",

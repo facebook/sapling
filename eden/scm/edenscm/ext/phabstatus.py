@@ -222,9 +222,9 @@ def showsyncstatus(repo, ctx, templ, **args) -> Optional[str]:
     results = getdiffstatus(repo, diffnum)
     try:
         result = results[0]
-        remote = result["hash"]
+        remote = result.get("hash")
         status = result["status"]
-    except (IndexError, KeyError, ValueError, TypeError):
+    except (IndexError, KeyError, ValueError, TypeError, AttributeError):
         # We got no result back, or it did not contain all required fields
         return "Error"
 

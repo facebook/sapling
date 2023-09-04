@@ -53,12 +53,8 @@
   $ cat > $TESTTMP/mockduit << 'EOF'
   > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
-  >   "latest_active_diff": {
-  >     "local_commit_info": {
-  >       "nodes": [
-  >         {"property_value": "{\"lolwut\": {\"time\": 0, \"commit\": \"lolwut\"}}"}
-  >       ]
-  >     }
+  >   "latest_active_phabricator_version": {
+  >     "commit_hash_best_effort": "abcd"
   >   },
   >   "created_time": 123,
   >   "updated_time": 222
@@ -75,13 +71,6 @@
   > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "diff_status_name": "Approved",
-  >   "latest_active_diff": {
-  >     "local_commit_info": {
-  >       "nodes": [
-  >         {"property_value": "{\"lolwut\": {\"time\": 0}}"}
-  >       ]
-  >     }
-  >   },
   >   "is_landing": false,
   >   "land_job_status": "NO_LAND_RUNNING",
   >   "needs_final_review_status": "NOT_NEEDED",
@@ -97,12 +86,8 @@
   > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "diff_status_name": "Approved",
-  >   "latest_active_diff": {
-  >     "local_commit_info": {
-  >       "nodes": [
-  >         {"property_value": "{\"lolwut\": {\"commit\": \"ffffff\", \"time\": 0}}"}
-  >       ]
-  >     }
+  >   "latest_active_phabricator_version": {
+  >     "commit_hash_best_effort": "abcd"
   >   },
   >   "is_landing": false,
   >   "land_job_status": "NO_LAND_RUNNING",
@@ -112,7 +97,47 @@
   > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabcommit}\n' -r .
-  ffffff
+  abcd
+
+# Matching hash is sync
+
+  $ cat > $TESTTMP/mockduit << 'EOF'
+  > [{"data": {"query": [{"results": {"nodes": [{
+  >   "number": 1,
+  >   "diff_status_name": "Approved",
+  >   "latest_active_phabricator_version": {
+  >     "commit_hash_best_effort": "c4f28933f13b414e18aa5896ec9e86b0a7c85c6c"
+  >   },
+  >   "is_landing": false,
+  >   "land_job_status": "NO_LAND_RUNNING",
+  >   "needs_final_review_status": "NOT_NEEDED",
+  >   "created_time": 123,
+  >   "updated_time": 222
+  > }]}}]}}]
+  > EOF
+
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
+  sync
+
+# Non-matching hash is unsync
+
+  $ cat > $TESTTMP/mockduit << 'EOF'
+  > [{"data": {"query": [{"results": {"nodes": [{
+  >   "number": 1,
+  >   "diff_status_name": "Approved",
+  >   "latest_active_phabricator_version": {
+  >     "commit_hash_best_effort": "abcd"
+  >   },
+  >   "is_landing": false,
+  >   "land_job_status": "NO_LAND_RUNNING",
+  >   "needs_final_review_status": "NOT_NEEDED",
+  >   "created_time": 123,
+  >   "updated_time": 222
+  > }]}}]}}]
+  > EOF
+
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
+  unsync
 
 # Missing hash field is treated as unsync
 
@@ -120,13 +145,6 @@
   > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "diff_status_name": "Approved",
-  >   "latest_active_diff": {
-  >     "local_commit_info": {
-  >       "nodes": [
-  >         {"property_value": "{\"lolwut\": {\"time\": 0}}"}
-  >       ]
-  >     }
-  >   },
   >   "is_landing": false,
   >   "land_job_status": "NO_LAND_RUNNING",
   >   "needs_final_review_status": "NOT_NEEDED",
@@ -137,18 +155,14 @@
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
   unsync
 
-# And finally, the success case
+# Non-matching hash when committed shows as committed
 
   $ cat > $TESTTMP/mockduit << 'EOF'
   > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "diff_status_name": "Committed",
-  >   "latest_active_diff": {
-  >     "local_commit_info": {
-  >       "nodes": [
-  >         {"property_value": "{\"lolwut\": {\"time\": 0, \"commit\": \"lolwut\"}}"}
-  >       ]
-  >     }
+  >   "latest_active_phabricator_version": {
+  >     "commit_hash_best_effort": "abcd"
   >   },
   >   "is_landing": false,
   >   "land_job_status": "NO_LAND_RUNNING",
