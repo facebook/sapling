@@ -82,16 +82,10 @@ class DeferredDiffEntry {
       DiffContext* context,
       RelativePath path,
       ObjectId scmHash,
-      ObjectId wdHash,
-      const GitIgnoreStack* ignore,
-      bool isIgnored);
+      ObjectId wdHash);
 
-  static std::unique_ptr<DeferredDiffEntry> createAddedScmEntry(
-      DiffContext* context,
-      RelativePath path,
-      ObjectId wdHash,
-      const GitIgnoreStack* ignore,
-      bool isIgnored);
+  static std::unique_ptr<DeferredDiffEntry>
+  createAddedScmEntry(DiffContext* context, RelativePath path, ObjectId wdHash);
 
   static std::unique_ptr<DeferredDiffEntry> createRemovedScmEntry(
       DiffContext* context,

@@ -2719,11 +2719,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
             // Collect this future to complete with other
             // deferred entries.
             deferredEntries.emplace_back(DeferredDiffEntry::createAddedScmEntry(
-                context,
-                entryPath,
-                inodeEntry->getHash(),
-                ignore.get(),
-                entryIgnored));
+                context, entryPath, inodeEntry->getHash()));
           }
         }
       }
@@ -2833,9 +2829,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
                   context,
                   entryPath,
                   scmEntry.getHash(),
-                  inodeEntry->getHash(),
-                  ignore.get(),
-                  entryIgnored));
+                  inodeEntry->getHash()));
         } else if (scmEntry.isTree()) {
           // This used to be a directory in the source control state,
           // but is now a file or symlink.  Report the new file, then add a

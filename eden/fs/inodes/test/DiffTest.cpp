@@ -1773,7 +1773,7 @@ TEST_F(
   EXPECT_THAT(
       *result->entries_ref(),
       UnorderedElementsAre(
-          std::make_pair("root/src/test/t.txt", ScmFileStatus::IGNORED),
+          std::make_pair("root/src/test/t.txt", ScmFileStatus::ADDED),
           std::make_pair("root/src/r.txt", ScmFileStatus::MODIFIED),
           std::make_pair("root/src/s.txt", ScmFileStatus::MODIFIED),
           std::make_pair("root/src/t.txt", ScmFileStatus::MODIFIED),
@@ -1857,7 +1857,7 @@ TEST_F(
   EXPECT_THAT(
       *result->entries_ref(),
       UnorderedElementsAre(
-          std::make_pair("root/doc/src/test/t.txt", ScmFileStatus::IGNORED),
+          std::make_pair("root/doc/src/test/t.txt", ScmFileStatus::ADDED),
           std::make_pair("root/doc/src/r.txt", ScmFileStatus::MODIFIED),
           std::make_pair("root/doc/src/s.txt", ScmFileStatus::MODIFIED),
           std::make_pair("root/doc/src/t.txt", ScmFileStatus::MODIFIED),
@@ -1933,7 +1933,7 @@ TEST_F(
   EXPECT_THAT(
       *result->entries_ref(),
       UnorderedElementsAre(
-          std::make_pair("root/src/foo/r.txt", ScmFileStatus::IGNORED),
+          std::make_pair("root/src/foo/r.txt", ScmFileStatus::ADDED),
           std::make_pair("root/src/r.txt", ScmFileStatus::ADDED),
           std::make_pair("root/src/s.txt", ScmFileStatus::ADDED),
           std::make_pair("root/src/t.txt", ScmFileStatus::ADDED),

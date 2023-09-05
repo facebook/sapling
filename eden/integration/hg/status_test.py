@@ -247,6 +247,36 @@ enforce-parents = false
         uds.close()
         self.assert_status({"socket": "?"})
 
+    def test_no_ignore_tracked(self) -> None:
+        self.repo.write_file(".gitignore", "subdir/foo/file.txt")
+        self.repo.write_file("subdir/foo/file.txt", "ignored but tracked file")
+        commit_with_ignored = self.repo.commit("Commit with ignored file")
+
+        self.repo.remove_file("subdir/foo/file.txt")
+        commit_with_ignored_removed = self.repo.commit("Commit with removed file")
+        self.repo.update(commit_with_ignored)
+
+        with self.get_thrift_client_legacy() as client:
+            status_from_get_scm_status = client.getScmStatus(
+                mountPoint=self.mount_path_bytes,
+                commit=commit_with_ignored_removed.encode(),
+                listIgnored=False,
+            )
+
+        hg_status = self.repo.status(rev=commit_with_ignored_removed)
+
+        # Check that both Mercurial and EdenFS agree when computing status.
+        self.assertIn("subdir/foo/file.txt", hg_status)
+        self.assertEqual(len(hg_status), 1)
+        self.assertEqual(hg_status["subdir/foo/file.txt"], "A")
+
+        self.assertIn(b"subdir/foo/file.txt", status_from_get_scm_status.entries)
+        self.assertEqual(len(status_from_get_scm_status.entries), 1)
+        self.assertEqual(
+            status_from_get_scm_status.entries[b"subdir/foo/file.txt"],
+            ScmFileStatus.ADDED,
+        )
+
 
 @hg_test
 # pyre-ignore[13]: T62487924

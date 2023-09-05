@@ -16,7 +16,6 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
-#include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ObjectStore.h"
@@ -58,8 +57,6 @@ struct ChildFutures {
   vector<ImmediateFuture<Unit>> futures;
 };
 
-static constexpr PathComponentPiece kIgnoreFilename{".gitignore"};
-
 /**
  * Process a TreeEntry that is present only on one side of the diff.
  * We don't know yet if this TreeEntry refers to a Tree or a Blob.
@@ -72,14 +69,14 @@ void processRemovedSide(
     ChildFutures& childFutures,
     RelativePathPiece currentPath,
     const Tree::value_type& scmEntry) {
+  auto entryPath = currentPath + scmEntry.first;
   context->callback->removedPath(
-      currentPath + scmEntry.first,
+      entryPath,
       filteredEntryDtype(
           scmEntry.second.getDtype(), context->getWindowsSymlinksEnabled()));
   if (!scmEntry.second.isTree()) {
     return;
   }
-  auto entryPath = currentPath + scmEntry.first;
   auto childFuture =
       diffRemovedTree(context, entryPath, scmEntry.second.getHash());
   childFutures.add(std::move(entryPath), std::move(childFuture));
@@ -96,43 +93,18 @@ void processAddedSide(
     DiffContext* context,
     ChildFutures& childFutures,
     RelativePathPiece currentPath,
-    const Tree::value_type& wdEntry,
-    const GitIgnoreStack* ignore,
-    bool isIgnored) {
-  bool entryIgnored = isIgnored;
+    const Tree::value_type& wdEntry) {
   auto entryPath = currentPath + wdEntry.first;
   bool windowsSymlinksEnabled = context->getWindowsSymlinksEnabled();
-  if (!isIgnored && ignore) {
-    auto fileType =
-        wdEntry.second.isTree() ? GitIgnore::TYPE_DIR : GitIgnore::TYPE_FILE;
-    auto ignoreStatus = ignore->match(entryPath, fileType);
-    if (ignoreStatus == GitIgnore::HIDDEN) {
-      // Completely skip over hidden entries.
-      // This is used for reserved directories like .hg and .eden
-      return;
-    }
-    entryIgnored = (ignoreStatus == GitIgnore::EXCLUDE);
-  }
 
-  if (!entryIgnored) {
-    context->callback->addedPath(
-        entryPath,
-        filteredEntryDtype(wdEntry.second.getDtype(), windowsSymlinksEnabled));
-  } else if (context->listIgnored) {
-    context->callback->ignoredPath(
-        entryPath,
-        filteredEntryDtype(wdEntry.second.getDtype(), windowsSymlinksEnabled));
-  } else {
-    // Don't bother reporting this ignored file since
-    // listIgnored is false.
-  }
+  context->callback->addedPath(
+      entryPath,
+      filteredEntryDtype(wdEntry.second.getDtype(), windowsSymlinksEnabled));
 
   if (wdEntry.second.isTree()) {
-    if (!entryIgnored || context->listIgnored) {
-      auto childFuture = diffAddedTree(
-          context, entryPath, wdEntry.second.getHash(), ignore, entryIgnored);
-      childFutures.add(std::move(entryPath), std::move(childFuture));
-    }
+    auto childFuture =
+        diffAddedTree(context, entryPath, wdEntry.second.getHash());
+    childFutures.add(std::move(entryPath), std::move(childFuture));
   }
 }
 
@@ -144,33 +116,11 @@ void processBothPresent(
     ChildFutures& childFutures,
     RelativePathPiece currentPath,
     const Tree::value_type& scmEntry,
-    const Tree::value_type& wdEntry,
-    const GitIgnoreStack* ignore,
-    bool isIgnored) {
-  bool entryIgnored = isIgnored;
+    const Tree::value_type& wdEntry) {
   auto entryPath = currentPath + scmEntry.first;
   bool isTreeSCM = scmEntry.second.isTree();
   bool isTreeWD = wdEntry.second.isTree();
   bool windowsSymlinksEnabled = context->getWindowsSymlinksEnabled();
-
-  // If wdEntry and scmEntry are both files (or symlinks) then we don't need
-  // to bother computing the ignore status: the file is explicitly tracked in
-  // source control, so we should report it's status even if it would normally
-  // be ignored.
-  if (!isIgnored && (isTreeWD || isTreeSCM) && ignore) {
-    auto fileType = isTreeWD ? GitIgnore::TYPE_DIR : GitIgnore::TYPE_FILE;
-    auto ignoreStatus = ignore->match(entryPath, fileType);
-    if (ignoreStatus == GitIgnore::HIDDEN) {
-      // This is rather unexpected.  We don't expect to find entries in
-      // source control using reserved hidden names.
-      // Treat this as ignored for now.
-      entryIgnored = true;
-    } else if (ignoreStatus == GitIgnore::EXCLUDE) {
-      entryIgnored = true;
-    } else {
-      entryIgnored = false;
-    }
-  }
 
   if (isTreeSCM) {
     if (isTreeWD) {
@@ -185,26 +135,15 @@ void processBothPresent(
           context,
           entryPath,
           scmEntry.second.getHash(),
-          wdEntry.second.getHash(),
-          ignore,
-          entryIgnored);
+          wdEntry.second.getHash());
       childFutures.add(std::move(entryPath), std::move(childFuture));
     } else {
       // tree-to-file
       // Add a ADDED entry for this path and a removal of the directory
-      if (entryIgnored) {
-        if (context->listIgnored) {
-          context->callback->ignoredPath(
-              entryPath,
-              filteredEntryDtype(
-                  wdEntry.second.getDtype(), windowsSymlinksEnabled));
-        }
-      } else {
-        context->callback->addedPath(
-            entryPath,
-            filteredEntryDtype(
-                wdEntry.second.getDtype(), windowsSymlinksEnabled));
-      }
+      context->callback->addedPath(
+          entryPath,
+          filteredEntryDtype(
+              wdEntry.second.getDtype(), windowsSymlinksEnabled));
 
       // Report everything in scmTree as REMOVED
       context->callback->removedPath(entryPath, scmEntry.second.getDtype());
@@ -223,8 +162,8 @@ void processBothPresent(
 
       // Report everything in wdEntry as ADDED
       context->callback->addedPath(entryPath, wdEntry.second.getDtype());
-      auto childFuture = diffAddedTree(
-          context, entryPath, wdEntry.second.getHash(), ignore, entryIgnored);
+      auto childFuture =
+          diffAddedTree(context, entryPath, wdEntry.second.getHash());
       childFutures.add(std::move(entryPath), std::move(childFuture));
     } else {
       // file-to-file diff
@@ -293,9 +232,7 @@ FOLLY_NODISCARD ImmediateFuture<Unit> computeTreeDiff(
     DiffContext* context,
     RelativePathPiece currentPath,
     TreePtr scmTree,
-    TreePtr wdTree,
-    std::unique_ptr<GitIgnoreStack> ignore,
-    bool isIgnored) {
+    TreePtr wdTree) {
   // A list of Futures to wait on for our children's results.
   ChildFutures childFutures;
 
@@ -313,8 +250,7 @@ FOLLY_NODISCARD ImmediateFuture<Unit> computeTreeDiff(
         break;
       }
       // This entry is present in wdTree but not scmTree
-      processAddedSide(
-          context, childFutures, currentPath, *wdIter, ignore.get(), isIgnored);
+      processAddedSide(context, childFutures, currentPath, *wdIter);
       ++wdIter;
     } else if (wdIter == wdEnd) {
       // This entry is present in scmTree but not wdTree
@@ -327,136 +263,40 @@ FOLLY_NODISCARD ImmediateFuture<Unit> computeTreeDiff(
         processRemovedSide(context, childFutures, currentPath, *scmIter);
         ++scmIter;
       } else if (compare == CompareResult::AFTER) {
-        processAddedSide(
-            context,
-            childFutures,
-            currentPath,
-            *wdIter,
-            ignore.get(),
-            isIgnored);
+        processAddedSide(context, childFutures, currentPath, *wdIter);
         ++wdIter;
       } else {
         processBothPresent(
-            context,
-            childFutures,
-            currentPath,
-            *scmIter,
-            *wdIter,
-            ignore.get(),
-            isIgnored);
+            context, childFutures, currentPath, *scmIter, *wdIter);
         ++scmIter;
         ++wdIter;
       }
     }
   }
 
-  // Add an ensure() block that makes sure the ignore stack exists until all of
-  // our children results have finished processing
-  return waitOnResults(context, std::move(childFutures))
-      .ensure([ignore = std::move(ignore)] {});
-}
-
-/**
- * Load the content of the .gitignore file and return it.
- */
-ImmediateFuture<std::string> loadGitIgnore(
-    DiffContext* context,
-    const TreeEntry& treeEntry,
-    RelativePath gitIgnorePath) {
-  auto type = treeEntry.getType();
-  if (type != TreeEntryType::REGULAR_FILE &&
-      type != TreeEntryType::EXECUTABLE_FILE) {
-    XLOG(WARN) << "error loading gitignore at " << gitIgnorePath
-               << ": not a regular file";
-    return std::string{};
-  } else {
-    const auto& hash = treeEntry.getHash();
-    return context->store->getBlob(hash, context->getFetchContext())
-        .thenTry([entryPath = std::move(gitIgnorePath)](
-                     folly::Try<std::shared_ptr<const Blob>> blobTry) {
-          if (blobTry.hasException()) {
-            // TODO: add an API to DiffCallback to report user
-            // errors like this (errors that do not indicate a
-            // problem with EdenFS itself) that can be returned to
-            // the caller in a thrift response
-            XLOG(WARN) << "error loading gitignore at " << entryPath << ": "
-                       << folly::exceptionStr(blobTry.exception());
-
-            return std::string{};
-          }
-          const auto& contentsBuf = blobTry.value()->getContents();
-          folly::io::Cursor cursor(&contentsBuf);
-          return cursor.readFixedString(contentsBuf.computeChainDataLength());
-        });
-  }
+  return waitOnResults(context, std::move(childFutures));
 }
 
 FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
     TreePtr scmTree,
-    TreePtr wdTree,
-    const GitIgnoreStack* parentIgnore,
-    bool isIgnored) {
+    TreePtr wdTree) {
   if (context->isCancelled()) {
     XLOG(DBG7) << "diff() on directory " << currentPath
                << " cancelled due to client request no longer being active";
     return folly::unit;
   }
-  // If this directory is already ignored, we don't need to bother loading its
-  // .gitignore file.  Everything inside this directory must also be ignored,
-  // unless it is explicitly tracked in source control.
-  //
-  // Explicit include rules cannot be used to unignore files inside an ignored
-  // directory.
-  if (isIgnored) {
-    // We can pass in a null GitIgnoreStack pointer here.
-    // Since the entire directory is ignored, we don't need to check ignore
-    // status for any entries that aren't already tracked in source control.
-    return computeTreeDiff(
-        context,
-        currentPath,
-        std::move(scmTree),
-        std::move(wdTree),
-        nullptr,
-        isIgnored);
-  }
 
-  ImmediateFuture<std::string> gitIgnore{std::in_place};
-  if (wdTree) {
-    // If this directory has a .gitignore file, load it first.
-    const auto it = wdTree->find(kIgnoreFilename);
-    if (it != wdTree->cend() && !it->second.isTree()) {
-      gitIgnore = loadGitIgnore(context, it->second, currentPath + it->first);
-    }
-  }
-
-  return std::move(gitIgnore).thenValue(
-      [context,
-       currentPath = currentPath.copy(),
-       scmTree = std::move(scmTree),
-       wdTree = std::move(wdTree),
-       parentIgnore,
-       isIgnored](std::string gitIgnore) mutable {
-        auto gitIgnoreStack =
-            std::make_unique<GitIgnoreStack>(parentIgnore, gitIgnore);
-        return computeTreeDiff(
-            context,
-            currentPath,
-            std::move(scmTree),
-            std::move(wdTree),
-            std::move(gitIgnoreStack),
-            isIgnored);
-      });
+  return computeTreeDiff(
+      context, currentPath, std::move(scmTree), std::move(wdTree));
 }
 
 FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
     ImmediateFuture<TreeAndId> scmFuture,
-    ImmediateFuture<TreeAndId> wdFuture,
-    const GitIgnoreStack* ignore,
-    bool isIgnored) {
+    ImmediateFuture<TreeAndId> wdFuture) {
   auto treesFuture = collectAllSafe(std::move(scmFuture), std::move(wdFuture));
 
   // Optimization for the case when the trees are immediately ready. We can
@@ -467,9 +307,7 @@ FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
       .thenValue(
           [context,
            copiedCurrentPath = std::move(copiedCurrentPath),
-           currentPath,
-           ignore,
-           isIgnored](std::tuple<TreeAndId, TreeAndId> tup)
+           currentPath](std::tuple<TreeAndId, TreeAndId> tup)
               -> ImmediateFuture<folly::Unit> {
             auto [scmTree, wdTree] = std::move(tup);
 
@@ -490,9 +328,7 @@ FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
                 context,
                 pathPiece,
                 std::move(scmTree.tree),
-                std::move(wdTree.tree),
-                ignore,
-                isIgnored);
+                std::move(wdTree.tree));
           });
 }
 
@@ -517,40 +353,27 @@ diffRoots(DiffContext* context, const RootId& root1, const RootId& root2) {
       }),
       std::move(future2).thenValue([](ObjectStore::GetRootTreeResult tree) {
         return TreeAndId{tree.tree, tree.treeId};
-      }),
-      nullptr,
-      false);
+      }));
 }
 
 ImmediateFuture<Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
     ObjectId scmHash,
-    ObjectId wdHash,
-    const GitIgnoreStack* ignore,
-    bool isIgnored) {
+    ObjectId wdHash) {
   return diffTrees(
       context,
       currentPath,
       getTreeAndId(context, scmHash),
-      getTreeAndId(context, wdHash),
-      ignore,
-      isIgnored);
+      getTreeAndId(context, wdHash));
 }
 
 ImmediateFuture<Unit> diffAddedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
-    ObjectId wdHash,
-    const GitIgnoreStack* ignore,
-    bool isIgnored) {
+    ObjectId wdHash) {
   return diffTrees(
-      context,
-      currentPath,
-      TreeAndId::null(),
-      getTreeAndId(context, wdHash),
-      ignore,
-      isIgnored);
+      context, currentPath, TreeAndId::null(), getTreeAndId(context, wdHash));
 }
 
 ImmediateFuture<Unit> diffRemovedTree(
@@ -558,12 +381,7 @@ ImmediateFuture<Unit> diffRemovedTree(
     RelativePathPiece currentPath,
     ObjectId scmHash) {
   return diffTrees(
-      context,
-      currentPath,
-      getTreeAndId(context, scmHash),
-      TreeAndId::null(),
-      nullptr,
-      false);
+      context, currentPath, getTreeAndId(context, scmHash), TreeAndId::null());
 }
 
 } // namespace facebook::eden
