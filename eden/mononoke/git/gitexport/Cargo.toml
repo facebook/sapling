@@ -28,6 +28,7 @@ itertools = "0.10.3"
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+print_graph = { version = "0.1.0", path = "../../cmdlib/displaying/graph" }
 repo_authorization = { version = "0.1.0", path = "../../repo_authorization" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
