@@ -4,6 +4,7 @@ base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "
 curve25519-dalek = { git = "https://github.com/hariria/curve25519-dalek", rev = "1f39e7b369dc70f432370c9703229a45bfa9664e" }
 dachshund = { git = "https://github.com/facebookresearch/dachshund", rev = "ec4cc35bc5afb0db5f791ee9e3168e7586986c88" }
 graphql-parser = { git = "https://github.com/graphql-rust//graphql-parser", rev = "8d76425d83c40670570cc325f57c730262f07456" }
+libbpf-sys = { git = "https://github.com/danielocfb/libbpf-sys", rev = "d9e279ab7ca2e483366fe86af2a5b6ef30320bca" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d174c6796d736b2b61dab0297670390f8" }
 mysql_async = { git = "https://github.com/mzr/mysql_async", rev = "76b6fa05d7bb3408402033e6f94042a756ab55ab" }
 perf-event = { version = "0.4", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
