@@ -120,6 +120,8 @@ def titles(repo):
 
     def namemap(repo, name):
         name = name.lower()
+        if not name or (_is_symbol(name[0]) and _is_symbol(name[-1])):
+            return []
         # PERF: This runs a linear string match scan of up to 1k commits.
         # If called repetitively, it might need caching or indexing.
         for node, title in repo.draft_titles():
@@ -350,3 +352,8 @@ def loadpredicate(ui, extname, registrarobj):
         if name in namespacetable:
             raise error.ProgrammingError("namespace '%s' is already registered", name)
         namespacetable[name] = ns
+
+
+def _is_symbol(name):
+    # symbols in revsetlang
+    return name in "()[]#~^-:.!&%|+=,"

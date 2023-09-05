@@ -6,11 +6,17 @@ Prepare a repo
   $ setconfig ui.allowemptycommit=1
   $ hg ci -m 'A: foo bar'
   $ hg ci -m 'B: bar-baz'
+  $ hg go -q 'desc("A: foo")'
   $ hg ci -m "$(printf 'C: multi line\nfoo bar baz 2nd line')"
 
   $ function log() {
   >   hg log -T '{desc|firstline}\n' -r "$1"
   > }
+
+Not by symbol
+
+  $ log 'desc("bar-baz")::'
+  B: bar-baz
 
 Select by word
 
