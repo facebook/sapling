@@ -13,6 +13,7 @@ import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {OperationDisabledButton} from './OperationDisabledButton';
 import {StackEditConfirmButtons} from './StackEditConfirmButtons';
 import {StackEditIcon} from './StackEditIcon';
+import {showSuggestedRebaseForStack, SuggestedRebaseButton} from './SuggestedRebase';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {codeReviewProvider, allDiffSummaries} from './codeReview/CodeReviewInfo';
 import {type CommitTreeWithPreviews, walkTreePostorder, isTreeLinear} from './getCommitTree';
@@ -35,6 +36,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
   const diffMap = useRecoilValue(allDiffSummaries);
   const stackHashes = useRecoilValue(editingStackHashes);
   const loadingState = useRecoilValue(loadingStackState);
+  const suggestedRebase = useRecoilValue(showSuggestedRebaseForStack(tree.info.hash));
   const runOperation = useRunOperation();
 
   // buttons at the bottom of the stack
@@ -141,6 +143,9 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
     actions.push(
       <CleanupButton key="cleanup" commit={tree.info} hasChildren={tree.children.length > 0} />,
     );
+    // cleanup button implies no need to rebase this stack
+  } else if (suggestedRebase) {
+    actions.push(<SuggestedRebaseButton key="suggested-rebase" stackBaseHash={tree.info.hash} />);
   }
 
   if (actions.length === 0) {
