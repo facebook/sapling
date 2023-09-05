@@ -273,12 +273,7 @@ def metaedit(ui, repo, templ, *revs, **opts) -> Optional[int]:
                 else:
                     allctxopt += newunstableopt
                 # we need topological order for all
-                if mutation.enabled(repo):
-                    allctxopt = mutation.toposort(
-                        repo, allctxopt, nodefn=lambda copt: copt["ctx"].node()
-                    )
-                else:
-                    allctxopt = sorted(allctxopt, key=lambda copt: copt["ctx"].rev())
+                allctxopt = sorted(allctxopt, key=lambda copt: copt["ctx"].rev())
 
                 def _rewritesingle(c, _commitopts):
                     # Predefined message overrides other message editing choices.

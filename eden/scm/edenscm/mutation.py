@@ -636,58 +636,6 @@ def foreground_contains(repo, old_nodes, new_node):
     return False
 
 
-def toposortrevs(repo, revs, predmap):
-    """topologically sort revs according to the given predecessor map"""
-    dag = {}
-    valid = set(revs)
-    heads = set(revs)
-    clparentrevs = repo.changelog.parentrevs
-    for rev in revs:
-        prev = [p for p in clparentrevs(rev) if p in valid]
-        prev.extend(predmap[rev])
-        heads.difference_update(prev)
-        dag[rev] = prev
-    if not heads:
-        raise error.Abort("commit predecessors and ancestors contain a cycle")
-    seen = set()
-    sortedrevs = []
-    revstack = list(reversed(sorted(heads)))
-    while revstack:
-        rev = revstack[-1]
-        if rev not in seen:
-            seen.add(rev)
-            for next in reversed(dag[rev]):
-                if next not in seen:
-                    revstack.append(next)
-        else:
-            sortedrevs.append(rev)
-            revstack.pop()
-    return sortedrevs
-
-
-def toposort(repo, items, nodefn=None):
-    """topologically sort nodes according to the given predecessor map
-
-    items can either be nodes, or something convertible to nodes by a provided
-    node function.
-    """
-    if nodefn is None:
-        nodefn = lambda item: item
-    clrev = repo.changelog.rev
-    revmap = {clrev(nodefn(x)): i for i, x in enumerate(items)}
-    predmap = {}
-    for item in items:
-        node = nodefn(item)
-        rev = clrev(node)
-        predmap[rev] = [
-            r
-            for r in map(clrev, predecessorsset(repo, node, closest=True))
-            if r != rev and r in revmap
-        ]
-    sortedrevs = toposortrevs(repo, revmap.keys(), predmap)
-    return [items[revmap[r]] for r in sortedrevs]
-
-
 def unbundle(repo, bundledata) -> None:
     if enabled(repo):
         entries = mutationstore.unbundle(bundledata)
