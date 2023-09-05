@@ -199,6 +199,7 @@ members = [
   "cmdlib/commit_id",
   "cmdlib/cross_repo",
   "cmdlib/displaying",
+  "cmdlib/displaying/graph",
   "cmdlib/environment",
   "cmdlib/extensions",
   "cmdlib/log",

@@ -74,6 +74,7 @@ packfile = { version = "0.1.0", path = "../../git/packfile" }
 phases = { version = "0.1.0", path = "../../phases" }
 preloaded_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/preloaded_commit_graph_storage" }
 prettytable-rs = "0.10"
+print_graph = { version = "0.1.0", path = "../../cmdlib/displaying/graph" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
