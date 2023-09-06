@@ -53,7 +53,13 @@ export default function FileStackEditPanel() {
   const fileSelector = (
     <VSCodeDropdown
       value={fileIdx == null ? 'none' : fileIdx.toString()}
-      style={{margin: '0 var(--pad)'}}
+      style={{
+        margin: '0 var(--pad)',
+        marginBottom: 'var(--pad)',
+        width: 'calc(100% - var(--pad) * 2)',
+        minWidth: '450px',
+        zIndex: 3,
+      }}
       onChange={e => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const idx = (e.target as any).value;

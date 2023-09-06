@@ -31,9 +31,21 @@ export function MaybeEditStackModal() {
 function LoadedEditStackModal() {
   type Tab = 'commits' | 'files';
   const [activeTab, setActiveTab] = useState<Tab>('commits');
+  const getPanelViewStyle = (tab: string): React.CSSProperties => {
+    return {
+      overflow: 'unset',
+      display: 'block',
+      padding: tab === activeTab ? 'var(--pad) 0 0 0' : '0',
+    };
+  };
+
   return (
     <Modal>
       <VSCodePanels
+        style={{
+          // Allow dropdown to show content.
+          overflow: 'unset',
+        }}
         onChange={e => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const tab: Tab | undefined = (e.target as any)?.activetab?.id?.replace('tab-', '');
@@ -45,11 +57,11 @@ function LoadedEditStackModal() {
         <VSCodePanelTab id="tab-files">
           <T>Files</T>
         </VSCodePanelTab>
-        <VSCodePanelView id="view-commits">
+        <VSCodePanelView style={getPanelViewStyle('commits')} id="view-commits">
           {/* Skip rendering (which might trigger slow dependency calculation) if the tab is inactive */}
           <ScrollY maxSize="70vh">{activeTab === 'commits' && <StackEditSubTree />}</ScrollY>
         </VSCodePanelView>
-        <VSCodePanelView id="view-files">
+        <VSCodePanelView style={getPanelViewStyle('files')} id="view-files">
           {activeTab === 'files' && <FileStackEditPanel />}
         </VSCodePanelView>
       </VSCodePanels>
