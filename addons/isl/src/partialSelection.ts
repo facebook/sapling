@@ -31,10 +31,12 @@ type PartialSelectionProps = {
   fileMap: Immutable.Map<RepoRelativePath, SingleFileSelection>;
   /** For files not in fileMap, whether they are selected or not. */
   selectByDefault: boolean;
+  expanded: Immutable.Set<RepoRelativePath>;
 };
 const PartialSelectionRecord = Immutable.Record<PartialSelectionProps>({
   fileMap: Immutable.Map(),
   selectByDefault: true,
+  expanded: Immutable.Set(),
 });
 type PartialSelectionRecord = Immutable.RecordOf<PartialSelectionProps>;
 
@@ -63,12 +65,27 @@ export class PartialSelection extends SelfUpdate<PartialSelectionRecord> {
 
   /** Explicitly deselect a file. */
   deselect(path: RepoRelativePath): PartialSelection {
-    return new PartialSelection(this.inner.setIn(['fileMap', path], false));
+    return new PartialSelection(this.inner.setIn(['fileMap', path], false)).toggleExpand(
+      path,
+      false,
+    );
   }
 
   /** Reset to the "default" state. Useful for commit/amend. */
   clear(): PartialSelection {
     return new PartialSelection(this.inner.set('fileMap', Immutable.Map()));
+  }
+
+  /** Toggle expansion of a file. */
+  toggleExpand(path: RepoRelativePath, select?: boolean): PartialSelection {
+    const expanded = this.inner.expanded;
+    const newExpanded = select ?? !expanded.has(path) ? expanded.add(path) : expanded.remove(path);
+    return new PartialSelection(this.inner.set('expanded', newExpanded));
+  }
+
+  /** Test if a file was expanded. */
+  isExpanded(path: RepoRelativePath): boolean {
+    return this.inner.expanded.has(path);
   }
 
   /** Start chunk selection for the given file. */
@@ -271,6 +288,16 @@ export class UseUncommittedSelection {
     let newSelection = this.selection;
     this.getPaths().forEach(path => (newSelection = newSelection.deselect(path)));
     this.setSelection(newSelection);
+  }
+
+  /** Toggle a file expansion. */
+  toggleExpand(path: RepoRelativePath, select?: boolean) {
+    this.setSelection(this.selection.toggleExpand(path, select));
+  }
+
+  /** Test if a path is marked as expanded. */
+  isExpanded(path: RepoRelativePath): boolean {
+    return this.selection.isExpanded(path);
   }
 
   /** Restore to the default selection (select all). */
