@@ -29,7 +29,7 @@ const editModeAtom = atom<Mode>({
   default: 'unified-diff',
 });
 
-export default function FileStackEditModal() {
+export default function FileStackEditPanel() {
   const [fileIdx, setFileIdx] = useState<null | number>(null);
   const [mode, setMode] = useRecoilState(editModeAtom);
   const [textEdit, setTextEdit] = useState(false);

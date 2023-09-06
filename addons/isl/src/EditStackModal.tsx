@@ -6,6 +6,7 @@
  */
 
 import {FlexRow, ScrollY} from './ComponentUtils';
+import FileStackEditPanel from './FileStackEditPanel';
 import {Modal} from './Modal';
 import {StackEditConfirmButtons} from './StackEditConfirmButtons';
 import {StackEditSubTree} from './StackEditSubTree';
@@ -48,7 +49,9 @@ function LoadedEditStackModal() {
           {/* Skip rendering (which might trigger slow dependency calculation) if the tab is inactive */}
           <ScrollY maxSize="70vh">{activeTab === 'commits' && <StackEditSubTree />}</ScrollY>
         </VSCodePanelView>
-        <VSCodePanelView id="view-files"></VSCodePanelView>
+        <VSCodePanelView id="view-files">
+          {activeTab === 'files' && <FileStackEditPanel />}
+        </VSCodePanelView>
       </VSCodePanels>
       <FlexRow style={{padding: 'var(--pad) 0', justifyContent: 'flex-end'}}>
         <StackEditConfirmButtons />

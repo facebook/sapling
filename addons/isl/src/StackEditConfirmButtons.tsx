@@ -7,12 +7,11 @@
 
 import type {Hash} from './types';
 
-import {FileStackEditButton} from './FileStackEditButton';
 import {UndoDescription} from './StackEditSubTree';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {T, t} from './i18n';
 import {ImportStackOperation} from './operations/ImportStackOperation';
-import {hasExperimentalFeatures, latestHeadCommit, useRunOperation} from './serverAPIState';
+import {latestHeadCommit, useRunOperation} from './serverAPIState';
 import {
   bumpStackEditMetric,
   editingStackHashes,
@@ -28,7 +27,6 @@ export function StackEditConfirmButtons(): React.ReactElement {
   const originalHead = useRecoilValue(latestHeadCommit);
   const runOperation = useRunOperation();
   const stackEdit = useStackEditState();
-  const hasExperimental = useRecoilValue(hasExperimentalFeatures);
 
   const canUndo = stackEdit.canUndo();
   const canRedo = stackEdit.canRedo();
@@ -115,12 +113,6 @@ export function StackEditConfirmButtons(): React.ReactElement {
           <Icon icon="redo" />
         </VSCodeButton>
       </Tooltip>
-      {hasExperimental && (
-        <>
-          <Icon icon="circle-small-filled" />
-          <FileStackEditButton />
-        </>
-      )}
     </>
   );
 }
