@@ -22,6 +22,7 @@ import {unwrap} from 'shared/utils';
 type StackStateWithOperationProps = {
   op: StackEditOpDescription;
   state: CommitStackState;
+  splitRange: SplitRangeRecord;
 };
 
 /** Description of a stack edit operation. Used for display purpose. */
@@ -42,11 +43,21 @@ export type StackEditOpDescription =
       commit: CommitState;
     }
   | {name: 'import'}
-  | {name: 'fileStack'; fileDesc: string};
+  | {name: 'fileStack'; fileDesc: string}
+  | {name: 'split'; path: string}
+  | {name: 'metaedit'; commit: CommitState};
+
+type SplitRangeProps = {
+  startKey: string;
+  endKey: string;
+};
+export const SplitRangeRecord = Record<SplitRangeProps>({startKey: '', endKey: ''});
+export type SplitRangeRecord = RecordOf<SplitRangeProps>;
 
 const StackStateWithOperation = Record<StackStateWithOperationProps>({
   op: {name: 'import'},
   state: new CommitStackState([]),
+  splitRange: SplitRangeRecord(),
 });
 type StackStateWithOperation = RecordOf<StackStateWithOperationProps>;
 
@@ -63,14 +74,27 @@ const HistoryRecord = Record<HistoryProps>({
 type HistoryRecord = RecordOf<HistoryProps>;
 
 class History extends HistoryRecord {
-  current(): CommitStackState {
-    return unwrap(this.history.get(this.currentIndex)).state;
+  get current(): StackStateWithOperation {
+    return unwrap(this.history.get(this.currentIndex));
   }
 
-  push(state: CommitStackState, op: StackEditOpDescription): History {
+  push(
+    state: CommitStackState,
+    op: StackEditOpDescription,
+    splitRange?: SplitRangeRecord,
+  ): History {
+    const newSplitRange = splitRange ?? this.current.splitRange;
     const newHistory = this.history
       .slice(0, this.currentIndex + 1)
-      .push(StackStateWithOperation({op, state}));
+      .push(StackStateWithOperation({op, state, splitRange: newSplitRange}));
+    return new History({
+      history: newHistory,
+      currentIndex: newHistory.size - 1,
+    });
+  }
+
+  setSplitRange(range: SplitRangeRecord): History {
+    const newHistory = this.history.set(this.currentIndex, this.current.set('splitRange', range));
     return new History({
       history: newHistory,
       currentIndex: newHistory.size - 1,
@@ -243,15 +267,31 @@ class UseStackEditState {
   }
 
   get commitStack(): CommitStackState {
-    return this.history.current();
+    return this.history.current.state;
   }
 
-  push(commitStack: CommitStackState, op: StackEditOpDescription) {
+  get splitRange(): SplitRangeRecord {
+    return this.history.current.splitRange;
+  }
+
+  setSplitRange(range: SplitRangeRecord | string) {
+    const splitRange =
+      typeof range === 'string'
+        ? SplitRangeRecord({
+            startKey: range,
+            endKey: range,
+          })
+        : range;
+    const newHistory = this.history.setSplitRange(splitRange);
+    this.setHistory(newHistory);
+  }
+
+  push(commitStack: CommitStackState, op: StackEditOpDescription, splitRange?: SplitRangeRecord) {
     if (commitStack.originalStack !== this.commitStack.originalStack) {
       // Wrong stack. Discard.
       return;
     }
-    const newHistory = this.history.push(commitStack, op);
+    const newHistory = this.history.push(commitStack, op, splitRange);
     this.setHistory(newHistory);
   }
 
