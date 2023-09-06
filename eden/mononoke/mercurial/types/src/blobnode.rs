@@ -210,19 +210,19 @@ mod test {
         let blob = HgBlob::from(Bytes::from(&[0; 10][..]));
         let p = &HgBlobNode::new(blob.clone(), None, None);
         {
-            let pid: Option<HgNodeHash> = Some(p.nodeid());
-            let n = HgBlobNode::new(blob.clone(), pid, None);
-            assert_eq!(n.parents, HgParents::One(pid.unwrap()));
+            let pid: HgNodeHash = p.nodeid();
+            let n = HgBlobNode::new(blob.clone(), Some(pid), None);
+            assert_eq!(n.parents, HgParents::One(pid));
         }
         {
-            let pid: Option<HgNodeHash> = Some(p.nodeid());
-            let n = HgBlobNode::new(blob.clone(), None, pid);
-            assert_eq!(n.parents, HgParents::One(pid.unwrap()));
+            let pid: HgNodeHash = p.nodeid();
+            let n = HgBlobNode::new(blob.clone(), None, Some(pid));
+            assert_eq!(n.parents, HgParents::One(pid));
         }
         {
-            let pid: Option<HgNodeHash> = Some(p.nodeid());
-            let n = HgBlobNode::new(blob, pid, pid);
-            assert_eq!(n.parents, HgParents::Two(pid.unwrap(), pid.unwrap()));
+            let pid: HgNodeHash = p.nodeid();
+            let n = HgBlobNode::new(blob, Some(pid), Some(pid));
+            assert_eq!(n.parents, HgParents::Two(pid, pid));
         }
     }
 
@@ -236,17 +236,25 @@ mod test {
             mem::swap(&mut p1, &mut p2);
         }
 
-        let pid1: Option<HgNodeHash> = Some(p1.nodeid());
-        let pid2: Option<HgNodeHash> = Some(p2.nodeid());
+        let pid1: HgNodeHash = p1.nodeid();
+        let pid2: HgNodeHash = p2.nodeid();
 
         let node1 = {
-            let n = HgBlobNode::new(HgBlob::from(Bytes::from(&b"bar"[..])), pid1, pid2);
-            assert_eq!(n.parents, HgParents::Two(pid1.unwrap(), pid2.unwrap()));
+            let n = HgBlobNode::new(
+                HgBlob::from(Bytes::from(&b"bar"[..])),
+                Some(pid1),
+                Some(pid2),
+            );
+            assert_eq!(n.parents, HgParents::Two(pid1, pid2));
             n.nodeid()
         };
         let node2 = {
-            let n = HgBlobNode::new(HgBlob::from(Bytes::from(&b"bar"[..])), pid2, pid1);
-            assert_eq!(n.parents, HgParents::Two(pid2.unwrap(), pid1.unwrap()));
+            let n = HgBlobNode::new(
+                HgBlob::from(Bytes::from(&b"bar"[..])),
+                Some(pid2),
+                Some(pid1),
+            );
+            assert_eq!(n.parents, HgParents::Two(pid2, pid1));
             n.nodeid()
         };
         assert_eq!(node1, node2);
