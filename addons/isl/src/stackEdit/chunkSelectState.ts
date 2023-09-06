@@ -57,11 +57,21 @@ export class ChunkSelectState extends SelfUpdate<ChunkSelectRecord> {
    * If `selected` is `true`, then all changes are selected, selection result is `b`.
    * If `selected` is `false`, none of the changes are selected, selection result is `a`.
    * If `selected` is a string, then the selections are "inferred" from the string.
+   *
+   * If `normalize` is `true`, drop changes in `selected` that is not in `a` or `b`.
    */
-  static fromText(a: string, b: string, selected: boolean | string): ChunkSelectState {
+  static fromText(
+    a: string,
+    b: string,
+    selected: boolean | string,
+    normalize = false,
+  ): ChunkSelectState {
     const mid = selected === true ? b : selected === false ? a : selected;
     const fileStack = new FileStackState([a, mid, b]);
-    const lines = fileStack.convertToFlattenLines().map(l => toLineBits(l));
+    let lines = fileStack.convertToFlattenLines().map(l => toLineBits(l));
+    if (normalize) {
+      lines = lines.filter(l => l.bits !== 0b101 && l.bits !== 0b010 && l.bits !== 0b000);
+    }
     return new ChunkSelectState(ChunkSelectRecord({a, b, lines}));
   }
 

@@ -185,6 +185,13 @@ export const latestCommitsData = atom<{
   ],
 });
 
+export const latestUncommittedChangesTimestamp = selector<number>({
+  key: 'latestUncommittedChangesTimestamp',
+  get: ({get}) => {
+    return get(latestUncommittedChangesData).fetchCompletedTimestamp;
+  },
+});
+
 /**
  * Lookup a commit by hash, *WITHOUT PREVIEWS*.
  * Generally, you'd want to look up WITH previews, which you can use treeWithPreviews for.
