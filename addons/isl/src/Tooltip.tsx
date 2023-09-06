@@ -14,7 +14,7 @@ import {findParentWithClassName, unwrap} from 'shared/utils';
 
 import './Tooltip.css';
 
-type Placement = 'top' | 'bottom' | 'left' | 'right';
+export type Placement = 'top' | 'bottom' | 'left' | 'right';
 
 /**
  * Default delay used for hover tooltips to convey documentation information.

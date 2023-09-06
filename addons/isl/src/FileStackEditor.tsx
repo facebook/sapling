@@ -9,9 +9,9 @@ import type {RangeInfo} from './TextEditable';
 import type {FileStackState, Rev} from './stackEdit/fileStackState';
 import type {Block, LineIdx} from 'shared/diff';
 
+import {CommitTitle} from './CommitTitle';
 import {Row, ScrollX, ScrollY} from './ComponentUtils';
 import {TextEditable} from './TextEditable';
-import {Tooltip} from './Tooltip';
 import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {t} from './i18n';
 import {FlattenLine} from './linelog';
@@ -533,14 +533,11 @@ function FileStackEditorUnifiedStack(props: EditorRowProps) {
       <th key={rev2} className={getColorClassName('pad', Math.min(rev2, rev))}></th>
     ));
     const title = getTitle(rev);
-    const shortTitle = title.split('\n')[0];
     return (
       <tr key={rev}>
         {padTds}
         <th className={getColorClassName('commit-title', rev)}>
-          <Tooltip placement="left" title={title}>
-            {shortTitle}
-          </Tooltip>
+          <CommitTitle commitMessage={title} tooltipPlacement="left" />
         </th>
       </tr>
     );
@@ -765,12 +762,9 @@ export function FileStackEditorRow(props: EditorRowProps) {
       <Row className="file-stack-editor-row">
         {revs.map(rev => {
           const title = props.getTitle(rev);
-          const shortTitle = title.split('\n')[0];
           return (
             <div key={rev}>
-              <Tooltip title={title}>
-                <div className="filerev-title">{shortTitle}</div>
-              </Tooltip>
+              <CommitTitle className="filerev-title" commitMessage={title} />
               <FileStackEditor rev={rev} {...props} />
             </div>
           );
