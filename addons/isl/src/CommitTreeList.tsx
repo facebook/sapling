@@ -12,9 +12,9 @@ import {BranchIndicator} from './BranchIndicator';
 import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
 import {Center, LargeSpinner} from './ComponentUtils';
+import {MaybeEditStackModal} from './EditStackModal';
 import {ErrorNotice} from './ErrorNotice';
 import {StackActions} from './StackActions';
-import {StackEditSubTree} from './StackEditSubTree';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {pageVisibility} from './codeReview/CodeReviewInfo';
 import {T, t} from './i18n';
@@ -28,7 +28,6 @@ import {
   latestUncommittedChangesData,
   useRunOperation,
 } from './serverAPIState';
-import {editingStackHashes, loadingStackState} from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {useRecoilState, useRecoilValue} from 'recoil';
@@ -70,6 +69,7 @@ export function CommitTreeList() {
             <FetchingAdditionalCommitsButton />
             <FetchingAdditionalCommitsIndicator />
           </MainLineEllipsis>
+          <MaybeEditStackModal />
         </div>
       )}
     </>
@@ -119,22 +119,8 @@ function SubTree({tree, depth}: {tree: CommitTreeWithPreviews; depth: number}): 
   const {info, children, previewType} = tree;
   const isPublic = info.phase === 'public';
 
-  const stackHashes = useRecoilValue(editingStackHashes);
-  const loadingState = useRecoilValue(loadingStackState);
-  const isStackEditing =
-    depth > 0 && stackHashes.has(info.hash) && loadingState.state === 'hasValue';
-
   const stackActions =
     !isPublic && depth === 1 ? <StackActions key="stack-actions" tree={tree} /> : null;
-
-  if (isStackEditing) {
-    return (
-      <>
-        <StackEditSubTree />
-        {stackActions}
-      </>
-    );
-  }
 
   const renderedChildren = (children ?? [])
     .map(tree => <SubTree key={`tree-${tree.info.hash}`} tree={tree} depth={depth + 1} />)

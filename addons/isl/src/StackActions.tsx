@@ -11,7 +11,6 @@ import type {DiffSummary, CommitInfo, Hash} from './types';
 import {FlexRow} from './ComponentUtils';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {OperationDisabledButton} from './OperationDisabledButton';
-import {StackEditConfirmButtons} from './StackEditConfirmButtons';
 import {StackEditIcon} from './StackEditIcon';
 import {showSuggestedRebaseForStack, SuggestedRebaseButton} from './SuggestedRebase';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
@@ -218,10 +217,6 @@ function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactEle
 
   const stackCommits = [...walkTreePostorder([tree])].map(t => t.info);
   const isEditing = stackHashes.size > 0 && stackCommits.some(c => stackHashes.has(c.hash));
-  const isLoaded = isEditing && loadingState.state === 'hasValue';
-  if (isLoaded) {
-    return <StackEditConfirmButtons />;
-  }
 
   const isPreview = tree.previewType != null;
   const isLoading = isEditing && loadingState.state === 'loading';

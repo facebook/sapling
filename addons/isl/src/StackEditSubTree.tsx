@@ -240,7 +240,6 @@ export function StackEditCommit({
   return (
     <div className="commit" data-reorder-id={onDrag ? commit.key : ''} data-rev={rev}>
       <div className="commit-rows">
-        <div className="commit-avatar" />
         <div className={`commit-details${isReorderPreview ? ' commit-reorder-preview' : ''}`}>
           <DragHandle onDrag={onDrag}>
             <Icon icon="grabber" />
