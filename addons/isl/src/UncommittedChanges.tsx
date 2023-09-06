@@ -45,6 +45,7 @@ import {ForgetOperation} from './operations/ForgetOperation';
 import {PurgeOperation} from './operations/PurgeOperation';
 import {ResolveOperation, ResolveTool} from './operations/ResolveOperation';
 import {RevertOperation} from './operations/RevertOperation';
+import {getShelveOperation} from './operations/ShelveOperation';
 import {useUncommittedSelection} from './partialSelection';
 import {buildPathTree} from './pathTree';
 import platform from './platform';
@@ -444,6 +445,7 @@ export function UncommittedChanges({place}: {place: Place}) {
   }
   const allFilesSelected = selection.isEverythingSelected();
   const noFilesSelected = selection.isNothingSelected();
+  const hasChunkSelection = selection.hasChunkSelection();
 
   const allConflictsResolved =
     conflicts?.files?.every(conflict => conflict.status === 'Resolved') ?? false;
@@ -483,6 +485,13 @@ export function UncommittedChanges({place}: {place: Place}) {
     const allFiles = uncommittedChanges.map(file => file.path);
     const operation = getCommitOperation(title, hash, selection.selection, allFiles);
     selection.discardPartialSelections();
+    runOperation(operation);
+  };
+
+  const onShelve = () => {
+    const title = (commitTitleRef.current as HTMLInputElement | null)?.value || undefined;
+    const allFiles = uncommittedChanges.map(file => file.path);
+    const operation = getShelveOperation(title, selection.selection, allFiles);
     runOperation(operation);
   };
 
@@ -638,6 +647,19 @@ export function UncommittedChanges({place}: {place: Place}) {
               <Icon slot="start" icon="edit" />
               <T>Commit as...</T>
             </VSCodeButton>
+            <Tooltip
+              title={t(
+                'Save selected uncommitted changes for later unshelving. Removes these changes from the working copy.',
+              )}>
+              <VSCodeButton
+                disabled={noFilesSelected || hasChunkSelection}
+                appearance="icon"
+                className="show-on-hover"
+                onClick={onShelve}>
+                <Icon slot="start" icon="archive" />
+                <T>Shelve</T>
+              </VSCodeButton>
+            </Tooltip>
           </div>
           {headCommit?.phase === 'public' ? null : (
             <div className="button-row">

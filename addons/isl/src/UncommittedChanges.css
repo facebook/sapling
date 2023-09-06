@@ -201,6 +201,9 @@
 .changed-file:hover .file-show-on-hover {
   opacity: 1;
 }
+.uncommitted-changes:hover vscode-button:disabled.show-on-hover {
+  opacity: 0.4;
+}
 
 .changed-file-list .button-rows,
 .uncommitted-changes .button-rows {
