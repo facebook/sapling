@@ -6,31 +6,31 @@
  */
 
 import type {Mode} from './FileStackEditor';
-import type {Rev} from './stackEdit/fileStackState';
+import type {FileStackState, Rev} from './stackEdit/fileStackState';
 
 import {Row} from './ComponentUtils';
-import {fileStackAtom} from './FileStackEditButton';
 import {FileStackEditorRow} from './FileStackEditor';
 import {VSCodeCheckbox} from './VSCodeCheckbox';
-import {T} from './i18n';
+import {t, T} from './i18n';
 import {bumpStackEditMetric, useStackEditState} from './stackEditState';
-import {VSCodeButton, VSCodeRadio, VSCodeRadioGroup} from '@vscode/webview-ui-toolkit/react';
+import {
+  VSCodeDivider,
+  VSCodeDropdown,
+  VSCodeOption,
+  VSCodeRadio,
+  VSCodeRadioGroup,
+} from '@vscode/webview-ui-toolkit/react';
 import {useState} from 'react';
 import {atom, useRecoilState} from 'recoil';
+import {unwrap} from 'shared/utils';
 
 const editModeAtom = atom<Mode>({
   key: 'editModeAtom',
   default: 'unified-diff',
 });
 
-export default function FileStackEditModal(props: {
-  getTitle: (rev: Rev) => string;
-  skip: (rev: Rev) => boolean;
-  close: (data: unknown) => void;
-  fileIdx: number;
-  fileDesc: string;
-}) {
-  const [stack, setStack] = useRecoilState(fileStackAtom);
+export default function FileStackEditModal() {
+  const [fileIdx, setFileIdx] = useState<null | number>(null);
   const [mode, setMode] = useRecoilState(editModeAtom);
   const [textEdit, setTextEdit] = useState(false);
   const stackEdit = useStackEditState();
@@ -41,20 +41,66 @@ export default function FileStackEditModal(props: {
     setMode(e.target.value);
   };
 
-  const handleConfirm = () => {
-    const newCommitStack = stackEdit.commitStack.setFileStack(props.fileIdx, stack);
-    stackEdit.push(newCommitStack, {name: 'fileStack', fileDesc: props.fileDesc});
+  // File list dropdown.
+  const commitStack = stackEdit.commitStack;
+  const pathFileIdxList: Array<[string, number]> = commitStack.fileStacks
+    .map((_f, i): [string, number] => {
+      const label = commitStack.getFileStackDescription(i);
+      return [label, i];
+    })
+    .toArray()
+    .sort();
+  const fileSelector = (
+    <VSCodeDropdown
+      value={fileIdx == null ? 'none' : fileIdx.toString()}
+      style={{margin: '0 var(--pad)'}}
+      onChange={e => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const idx = (e.target as any).value;
+        setFileIdx(idx === 'none' ? null : parseInt(idx));
+      }}>
+      <VSCodeOption value="none">
+        <T>Select a file to edit</T>
+      </VSCodeOption>
+      <VSCodeDivider />
+      {pathFileIdxList.map(([path, idx]) => (
+        <VSCodeOption key={idx} value={idx.toString()}>
+          {path}
+        </VSCodeOption>
+      ))}
+    </VSCodeDropdown>
+  );
+
+  if (fileIdx == null) {
+    return <div>{fileSelector}</div>;
+  }
+
+  // Properties for file stack editing.
+  const stack = unwrap(stackEdit.commitStack.fileStacks.get(fileIdx));
+  const getTitle = (rev: Rev) =>
+    stackEdit.commitStack.getCommitFromFileStackRev(fileIdx, rev)?.text ??
+    t(
+      '(Base version)\n\n' +
+        'Not part of the stack being edited. ' +
+        'Cannot be edited here.\n\n' +
+        'Provided to show diff against changes in the stack.',
+    );
+  const skip = (rev: Rev) => stackEdit.commitStack.isAbsentFromFileStackRev(fileIdx, rev);
+  const setStack = (newStack: FileStackState) => {
+    const fileDesc = stackEdit.commitStack.getFileStackDescription(fileIdx);
+    const newCommitStack = stackEdit.commitStack.setFileStack(fileIdx, newStack);
+    stackEdit.push(newCommitStack, {name: 'fileStack', fileDesc});
     bumpStackEditMetric('fileStackEdit');
-    props.close(true);
   };
 
   return (
     <div>
+      {fileSelector}
       <FileStackEditorRow
         stack={stack}
         setStack={setStack}
-        getTitle={props.getTitle}
-        skip={props.skip}
+        getTitle={getTitle}
+        skip={skip}
         mode={mode}
         textEdit={textEdit || mode === 'side-by-side-diff'}
       />
@@ -79,18 +125,6 @@ export default function FileStackEditModal(props: {
           }}>
           <T>Edit text</T>
         </VSCodeCheckbox>
-        <VSCodeButton
-          appearance="secondary"
-          style={{marginLeft: 'auto'}}
-          onClick={() => props.close(false)}>
-          <T>Cancel</T>
-        </VSCodeButton>
-        <VSCodeButton
-          appearance="primary"
-          style={{marginLeft: 'var(--pad)'}}
-          onClick={handleConfirm}>
-          <T>Confirm</T>
-        </VSCodeButton>
       </Row>
     </div>
   );
