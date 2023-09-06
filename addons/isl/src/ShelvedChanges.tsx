@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Result, ShelvedChange} from './types';
+import type {ShelvedChange} from './types';
 
 import serverAPI from './ClientToServerAPI';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
@@ -21,29 +21,26 @@ import {T, t} from './i18n';
 import {UnshelveOperation} from './operations/UnshelveOperation';
 import {RelativeDate} from './relativeDate';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {atom, useRecoilValue} from 'recoil';
+import {useEffect} from 'react';
+import {selector, useRecoilValueLoadable, useRecoilRefresher_UNSTABLE} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 
 import './ShelvedChanges.css';
 
-const shelvedChangesState = atom<Result<Array<ShelvedChange>>>({
+const shelvedChangesState = selector<Array<ShelvedChange>>({
   key: 'shelvedChangesState',
-  default: {value: []},
-  effects: [
-    ({setSelf}) => {
-      const disposable = serverAPI.onMessageOfType('fetchedShelvedChanges', event => {
-        setSelf(event.shelvedChanges);
-      });
-      return () => disposable.dispose();
-    },
-    () =>
-      serverAPI.onSetup(() =>
-        serverAPI.postMessage({
-          type: 'fetchShelvedChanges',
-        }),
-      ),
-  ],
+  get: async () => {
+    serverAPI.postMessage({
+      type: 'fetchShelvedChanges',
+    });
+
+    const result = await serverAPI.nextMessageMatching('fetchedShelvedChanges', () => true);
+    if (result.shelvedChanges.error != null) {
+      throw new Error(result.shelvedChanges.error.toString());
+    }
+    return result.shelvedChanges.value;
+  },
 });
 
 export function ShelvedChangesMenu() {
@@ -60,23 +57,33 @@ export function ShelvedChangesMenu() {
   );
 }
 
-export function ShelvedChangesList({dismiss}: {dismiss: () => void}) {
-  const shelvedChanges = useRecoilValue(shelvedChangesState);
+function ShelvedChangesList({dismiss}: {dismiss: () => void}) {
+  const shelvedChanges = useRecoilValueLoadable(shelvedChangesState);
+  const refresh = useRecoilRefresher_UNSTABLE(shelvedChangesState);
+  useEffect(() => {
+    // make sure we fetch whenever loading the shelved changes list
+    refresh();
+  }, [refresh]);
   return (
     <DropdownFields
       title={<T>Shelved Changes</T>}
       icon="archive"
       className="shelved-changes-dropdown"
       data-testid="shelved-changes-dropdown">
-      {shelvedChanges.error ? (
-        <ErrorNotice title="Could not fetch shelved changes" error={shelvedChanges.error} />
-      ) : shelvedChanges.value.length === 0 ? (
+      {shelvedChanges.state === 'loading' ? (
+        <Icon icon="loading" />
+      ) : shelvedChanges.state === 'hasError' ? (
+        <ErrorNotice
+          title="Could not fetch shelved changes"
+          error={shelvedChanges.errorOrThrow()}
+        />
+      ) : shelvedChanges.valueOrThrow().length === 0 ? (
         <EmptyState small>
           <T>No shelved changes</T>
         </EmptyState>
       ) : (
         <div className="shelved-changes-list">
-          {shelvedChanges.value.map(change => {
+          {shelvedChanges.valueOrThrow().map(change => {
             const comparison = {
               type: ComparisonType.Committed,
               hash: change.hash,
