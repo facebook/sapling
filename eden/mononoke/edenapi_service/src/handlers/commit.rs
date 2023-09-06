@@ -285,7 +285,7 @@ impl EdenApiHandler for HashLookupHandler {
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
         use CommitHashLookupRequest::*;
-        Ok(stream::iter(request.batch.into_iter())
+        Ok(stream::iter(request.batch)
             .then(move |request| {
                 let hg_repo_ctx = repo.clone();
                 async move {

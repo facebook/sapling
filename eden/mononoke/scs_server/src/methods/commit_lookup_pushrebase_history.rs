@@ -209,7 +209,7 @@ impl RepoChangesetsPushrebaseHistory {
     fn into_thrift(self) -> thrift::CommitLookupPushrebaseHistoryResponse {
         let origin = self.last().into_thrift();
         let history: Vec<_> = once(self.head)
-            .chain(self.changesets.into_iter())
+            .chain(self.changesets)
             .map(|rc| rc.into_thrift())
             .collect();
         thrift::CommitLookupPushrebaseHistoryResponse {

@@ -209,7 +209,7 @@ fn minimize_file_change_set<I: IntoIterator<Item = (NonRootMPath, FileChange)>>(
         .into_iter()
         .filter(|(ref mpath, _)| !prefix_path_was_added(mpath.clone()));
     let mut result: SortedVectorMap<_, _> = filtered_removes.collect();
-    result.extend(adds.into_iter());
+    result.extend(adds);
     result
 }
 
@@ -569,8 +569,8 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
                 .flatten()
                 .map(|implicit_delete_mpath| (implicit_delete_mpath, FileChange::Deletion))
                 .collect();
-        path_rewritten_changes.extend(implicit_delete_file_changes.into_iter());
-        let path_rewritten_changes = minimize_file_change_set(path_rewritten_changes.into_iter());
+        path_rewritten_changes.extend(implicit_delete_file_changes);
+        let path_rewritten_changes = minimize_file_change_set(path_rewritten_changes);
 
         let is_merge = cs.parents.len() >= 2;
 

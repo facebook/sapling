@@ -115,7 +115,7 @@ impl EdenApiHandler for Files2Handler {
                     aux_data: false,
                 },
             })
-            .chain(request.reqs.into_iter());
+            .chain(request.reqs);
         ctx.perf_counters()
             .add_to_counter(PerfCounterType::EdenapiFiles, len as i64);
         let fetches =

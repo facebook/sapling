@@ -112,8 +112,7 @@ impl LimitCommitsizeBuilder {
             ));
         }
 
-        let regexes_with_limits: Vec<(Regex, u64)> =
-            regexes.into_iter().zip(limits.into_iter()).collect();
+        let regexes_with_limits: Vec<(Regex, u64)> = regexes.into_iter().zip(limits).collect();
 
         Ok(LimitCommitsize {
             commit_size_limit: self

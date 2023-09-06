@@ -136,7 +136,7 @@ pub fn new_entry_intersection_stream(
 
         p2.collect()
             .map(move |p2| {
-                let p2: HashSet<_> = HashSet::from_iter(p2.into_iter());
+                let p2: HashSet<_> = HashSet::from_iter(p2);
 
                 p1.filter_map(move |ne| if p2.contains(&ne) { Some(ne) } else { None })
             })
@@ -268,7 +268,7 @@ fn diff_manifests(
 
     to_vec_future
         .join(from_vec_future)
-        .map(|(to, from)| iter_ok(diff_sorted_vecs(path, to, from).into_iter()))
+        .map(|(to, from)| iter_ok(diff_sorted_vecs(path, to, from)))
         .flatten_stream()
         .boxify()
 }

@@ -100,11 +100,11 @@ async fn test_preloaded_commit_graph_storage(fb: FacebookInit) -> Result<()> {
     let underlying_storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
     let _ = from_dag(
         &ctx,
-        r##"
+        r"
             A-B-C-D-G-H-I
              \     /
               E---F
-        "##,
+        ",
         underlying_storage.clone(),
     )
     .await?;

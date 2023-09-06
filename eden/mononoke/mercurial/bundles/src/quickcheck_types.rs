@@ -97,7 +97,7 @@ impl CgPartSequence {
     #[cfg(test)]
     pub fn to_stream(&self) -> stream::IterOk<IntoIter<Result<changegroup::Part>>, Error> {
         let part_results: Vec<_> = self.as_iter().cloned().map(Ok).collect();
-        stream::iter_ok(part_results.into_iter())
+        stream::iter_ok(part_results)
     }
 
     #[cfg(test)]

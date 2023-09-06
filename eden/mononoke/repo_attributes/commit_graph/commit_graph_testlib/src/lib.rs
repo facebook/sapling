@@ -66,11 +66,11 @@ pub async fn test_storage_store_and_fetch(
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
-        r##"
+        r"
              A-B-C-D-G-H-I
               \     /
                E---F
-         "##,
+         ",
         storage.clone(),
     )
     .await?;
@@ -245,13 +245,13 @@ pub async fn test_storage_store_and_fetch(
 pub async fn test_skip_tree(ctx: CoreContext, storage: Arc<dyn CommitGraphStorage>) -> Result<()> {
     let graph = from_dag(
         &ctx,
-        r##"
+        r"
          A-B-C-D-G-H---J-K
             \   /   \ /
              E-F     I
 
          L-M-N-O-P-Q-R-S-T-U
-         "##,
+         ",
         storage.clone(),
     )
     .await?;
@@ -299,13 +299,13 @@ pub async fn test_p1_linear_tree(
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
-        r##"
+        r"
          A-B-C-D-G-H---J-K
             \   /   \ /
              E-F     I
 
          L-M-N-O-P-Q-R-S-T-U
-         "##,
+         ",
         storage.clone(),
     )
     .await?;
@@ -344,13 +344,13 @@ pub async fn test_ancestors_difference(
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
-        r##"
+        r"
          A-B-C-D-G-H---J-K
             \   /   \ /
              E-F     I
 
          L-M-N-O-P-Q-R-S-T-U
-         "##,
+         ",
         storage.clone(),
     )
     .await?;
@@ -536,11 +536,11 @@ pub async fn test_add_recursive(
     let reference_graph = Arc::new(
         from_dag(
             &ctx,
-            r##"
+            r"
              A-B-C-D-G-H-I
               \     /
                E---F---J
-         "##,
+         ",
             reference_storage,
         )
         .await?,
@@ -615,11 +615,11 @@ pub async fn test_add_recursive_many_changesets(
     let reference_graph = Arc::new(
         from_dag(
             &ctx,
-            r##"
+            r"
              A-B-C-D-G-H-I
               \     /
                E---F---J
-         "##,
+         ",
             reference_storage,
         )
         .await?,
@@ -689,13 +689,13 @@ pub async fn test_ancestors_frontier_with(
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
-        r##"
+        r"
          A-B-C-D-G-H---J-K
             \   /   \ /
              E-F     I
 
          L-M-N-O-P-Q-R-S-T-U
-         "##,
+         ",
         storage.clone(),
     )
     .await?;
@@ -791,13 +791,13 @@ pub async fn test_range_stream(
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
-        r##"
+        r"
          A-B-C-D-G-H---J-K
             \   /   \ /
              E-F     I
 
          L-M-N-O-P-Q-R-S-T-U
-         "##,
+         ",
         storage.clone(),
     )
     .await?;
@@ -823,7 +823,7 @@ pub async fn test_common_base(
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
-        r##"
+        r"
         A-B-C-D-E-L------N
            \       \    /
             F-G-H   M  /
@@ -831,7 +831,7 @@ pub async fn test_common_base(
               I-J-K--/
 
         O-P-Q-R-S-T-U-V-W
-        "##,
+        ",
         storage.clone(),
     )
     .await?;
@@ -856,13 +856,13 @@ pub async fn test_slice_ancestors(
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
-        r##"
+        r"
          A-B-C-D-G-H---J-K
             \   /   \ /
              E-F     I
 
          L-M-N-O-P-Q-R-S-T-U
-         "##,
+         ",
         storage.clone(),
     )
     .await?;
@@ -925,13 +925,13 @@ pub async fn test_slice_ancestors(
 pub async fn test_children(ctx: CoreContext, storage: Arc<dyn CommitGraphStorage>) -> Result<()> {
     let graph = from_dag(
         &ctx,
-        r##"
+        r"
         A-B-C-D-E-L------N
            \       \    /
             F-G-H   M  /
              \     /  /
               I-J-K--/
-        "##,
+        ",
         storage,
     )
     .await?;
@@ -960,7 +960,7 @@ pub async fn test_ancestors_difference_segments_1(
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
-        r##"
+        r"
         A-B-C-D-E---L------N----O
            \         \    /
             F-G-H     M  /
@@ -968,7 +968,7 @@ pub async fn test_ancestors_difference_segments_1(
               I-J---K--/
                  \
                   \---------P
-        "##,
+        ",
         storage,
     )
     .await?;
@@ -993,7 +993,7 @@ pub async fn test_ancestors_difference_segments_2(
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
-        r##"
+        r"
         A--B------C----E---J---K
          \  \      \
           \  \--D   \-----F----L
@@ -1001,7 +1001,7 @@ pub async fn test_ancestors_difference_segments_2(
             \  \--G---H     \--M
              \     \
               \-P   \--I--N----O
-        "##,
+        ",
         storage,
     )
     .await?;

@@ -430,7 +430,7 @@ mod test {
         let changesets = create_from_dag_with_changes(
             ctx,
             &repo,
-            r##"
+            r"
                     J-K
                      /
                 A-B-C-D-E-F-G
@@ -438,7 +438,7 @@ mod test {
                       H
                        \
                       L-M
-            "##,
+            ",
             changes! {
                 "B" => |c| add_files(c, B_FILES),
                 "C" => |c| add_files(c, C_FILES),

@@ -320,7 +320,7 @@ mod test {
         // manually specif multiple shards
         sql.shard_count = 3;
         let repo_id = RepositoryId::new(1);
-        let blobs = vec![
+        let blobs = [
             "blob1", "blob2", "blob3", "blob4", "blob5", "blob6", "blob7",
         ];
         let shards: Vec<_> = blobs.iter().map(|blob| sql.shard(repo_id, blob)).collect();

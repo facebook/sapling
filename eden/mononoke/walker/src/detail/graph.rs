@@ -1227,7 +1227,7 @@ mod tests {
         // list, otherwise it won't get scrubbed and thus you would be unaware of different representation
         // in different stores
         let grandfathered: HashSet<&'static str> =
-            HashSet::from_iter(vec!["git_trees", "git_commits"].into_iter());
+            HashSet::from_iter(vec!["git_trees", "git_commits"]);
         let mut missing = HashSet::new();
         for t in a {
             if s.contains(t.as_str()) {

@@ -107,13 +107,13 @@ async fn test_acl_regions(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mut factory = TestRepoFactory::new(fb)?;
     let repo: Repo = factory.build().await?;
-    let dag = r#"
+    let dag = r"
           I
          /
     A-B-C-D-G-H
        \   /
         E-F
-    "#;
+    ";
     let mapping = create_from_dag(&ctx, &repo, dag).await?;
     let a = mapping["A"];
     let b = mapping["B"];

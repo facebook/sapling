@@ -423,13 +423,13 @@ mod test {
         let mapping = create_from_dag(
             &ctx,
             repo.as_blob_repo(),
-            r##"
+            r"
               B
              /  \
             A    D
              \  /
                C
-            "##,
+            ",
         )
         .await?;
 

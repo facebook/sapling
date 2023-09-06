@@ -782,7 +782,7 @@ impl RepoClient {
                             .add("getpack_paths", params.len())
                             .log_with_msg("Getpack Params", None);
 
-                        let res = stream::iter(params.into_iter())
+                        let res = stream::iter(params)
                             .map({
                                 cloned!(ctx, getpack_params, repo, lfs_params);
                                 move |(path, filenodes)| {
@@ -928,7 +928,7 @@ impl RepoClient {
                                     metadata,
                                 }));
                             }
-                            stream_old::iter_ok(res.into_iter())
+                            stream_old::iter_ok(res)
                         }
                     })
                     .flatten()
@@ -1232,7 +1232,7 @@ impl HgCommands for RepoClient {
             // TODO(jsgf): do pairs in parallel?
             // TODO: directly return stream of streams
             cloned!(self.repo);
-            stream_old::iter_ok(pairs.into_iter())
+            stream_old::iter_ok(pairs)
                 .and_then({
                     cloned!(ctx);
                     move |(top, bottom)| {
@@ -2052,7 +2052,7 @@ impl HgCommands for RepoClient {
                         let header = format!("{}\0{}\n", name, size);
 
                         stream::once(future::ready(Ok(header.into_bytes().into())))
-                            .chain(stream::iter(data.into_iter()).buffered(100))
+                            .chain(stream::iter(data).buffered(100))
                     }
 
                     let res = response
@@ -2144,7 +2144,7 @@ impl HgCommands for RepoClient {
                 .add("getcommitdata_nodes", nodes.len())
                 .log_with_msg("GetCommitData Params", None);
 
-            let s = stream::iter(nodes.into_iter())
+            let s = stream::iter(nodes)
                 .map({
                     cloned!(ctx, blobrepo);
                     move |hg_cs_id| {
@@ -2234,7 +2234,7 @@ pub fn gettreepack_entries(
 
         let entries = mfnodes
             .into_iter()
-            .zip(directories.into_iter())
+            .zip(directories)
             .map(|(node, path)| {
                 let path = if !path.is_empty() {
                     Some(NonRootMPath::new(path.as_ref())?)

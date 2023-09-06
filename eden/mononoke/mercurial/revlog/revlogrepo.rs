@@ -241,7 +241,7 @@ impl RevlogRepo {
     pub fn get_heads(&self) -> BoxStream<HgNodeHash, Error> {
         match self.changelog.get_heads() {
             Err(e) => stream::once(Err(e)).boxify(),
-            Ok(set) => stream::iter_ok(set.into_iter()).boxify(),
+            Ok(set) => stream::iter_ok(set).boxify(),
         }
     }
 

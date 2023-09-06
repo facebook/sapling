@@ -382,8 +382,7 @@ impl CommitGraphStorage for PreloadedCommitGraphStorage {
             fetched_edges.extend(
                 self.persistent_storage
                     .fetch_many_edges(ctx, unfetched_ids.as_slice(), prefetch)
-                    .await?
-                    .into_iter(),
+                    .await?,
             )
         }
 

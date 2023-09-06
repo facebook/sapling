@@ -174,7 +174,7 @@ pub fn mover_factory(
             .next();
         match path_and_prefix_action {
             None => Ok(match default_action.clone() {
-                DefaultAction::PrependPrefix(prefix) => Some(prefix.join(source_path.into_iter())),
+                DefaultAction::PrependPrefix(prefix) => Some(prefix.join(source_path)),
                 DefaultAction::Preserve => Some(source_path.clone()),
                 DefaultAction::DoNotSync => None,
             }),
@@ -273,7 +273,7 @@ pub fn get_large_to_small_mover(
     // sync to *both* small repos.
     other_repo_right_sides
         .into_iter()
-        .chain(other_repo_prepended_prefixes.into_iter())
+        .chain(other_repo_prepended_prefixes)
         .for_each(|v| {
             prefix_map.insert(v.clone(), PrefixAction::DoNotSync);
         });

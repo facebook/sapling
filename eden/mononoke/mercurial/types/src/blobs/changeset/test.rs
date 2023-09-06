@@ -53,11 +53,11 @@ fn test_parse() {
                     .collect()
             ),
             files: vec![NonRootMPath::new(b"mercurial/util.py").unwrap()],
-            message: r#"util: warn when adding paths ending with \
+            message: r"util: warn when adding paths ending with \
 
 Paths ending with \ will fail the verification introduced in 684a977c2ae0 when
 checking out on Windows ... and if it didn't fail it would probably not do what
-the user expected."#
+the user expected."
                 .into(),
         }
     );

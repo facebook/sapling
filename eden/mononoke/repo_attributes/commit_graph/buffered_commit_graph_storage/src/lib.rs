@@ -120,8 +120,7 @@ impl CommitGraphStorage for BufferedCommitGraphStorage {
             fetched_edges.extend(
                 self.persistent_storage
                     .fetch_many_edges(ctx, unfetched_ids.as_slice(), prefetch)
-                    .await?
-                    .into_iter(),
+                    .await?,
             )
         }
 
@@ -149,8 +148,7 @@ impl CommitGraphStorage for BufferedCommitGraphStorage {
             fetched_edges.extend(
                 self.persistent_storage
                     .fetch_many_edges_required(ctx, unfetched_ids.as_slice(), prefetch)
-                    .await?
-                    .into_iter(),
+                    .await?,
             )
         }
 
@@ -179,7 +177,7 @@ impl CommitGraphStorage for BufferedCommitGraphStorage {
                     in_memory_matches
                         .to_vec()
                         .into_iter()
-                        .chain(persistent_matches.to_vec().into_iter())
+                        .chain(persistent_matches.to_vec())
                         .collect(),
                     limit,
                 ))
@@ -197,12 +195,7 @@ impl CommitGraphStorage for BufferedCommitGraphStorage {
             .fetch_children(ctx, cs_id)
             .await?
             .into_iter()
-            .chain(
-                self.persistent_storage
-                    .fetch_children(ctx, cs_id)
-                    .await?
-                    .into_iter(),
-            )
+            .chain(self.persistent_storage.fetch_children(ctx, cs_id).await?)
             .collect::<HashSet<_>>()
             .into_iter()
             .collect())

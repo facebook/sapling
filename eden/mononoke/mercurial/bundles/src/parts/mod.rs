@@ -358,7 +358,7 @@ where
                 metadata: None,
             });
 
-            iter_ok(vec![history_meta, history, data_meta, data].into_iter())
+            iter_ok(vec![history_meta, history, data_meta, data])
         })
         .flatten()
         .chain(once(Ok(wirepack::Part::End)));

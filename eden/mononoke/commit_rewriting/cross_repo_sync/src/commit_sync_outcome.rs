@@ -753,11 +753,11 @@ mod tests {
         let dag = create_from_dag(
             &ctx,
             &blob_repo,
-            r##"
+            r"
                 A-B-C-D-E
                    \
                     F-G
-            "##,
+            ",
         )
         .await?;
 
@@ -834,11 +834,11 @@ mod tests {
         let dag = create_from_dag(
             &ctx,
             &blob_repo,
-            r##"
+            r"
                 A-B----C--D-E
                    \    \
                     F-G  J
-            "##,
+            ",
         )
         .await?;
 
@@ -965,11 +965,11 @@ mod tests {
         let dag = create_from_dag(
             &ctx,
             &blob_repo,
-            r##"
+            r"
                 A-B-C-D-E
                    \
                     F-G
-            "##,
+            ",
         )
         .await?;
 
@@ -1024,11 +1024,11 @@ mod tests {
         let dag = create_from_dag(
             &ctx,
             &blob_repo,
-            r##"
+            r"
                 A-B-C-D-E
                    \
                     F-G
-            "##,
+            ",
         )
         .await?;
 

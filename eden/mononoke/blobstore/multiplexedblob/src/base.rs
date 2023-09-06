@@ -201,8 +201,8 @@ pub fn scrub_parse_results(
         Some((all_values, _)) => {
             let answered = all_values.into_values().collect();
             let mut all_missing = HashSet::new();
-            all_missing.extend(missing_main.into_iter());
-            all_missing.extend(missing_write_only.into_iter());
+            all_missing.extend(missing_main);
+            all_missing.extend(missing_write_only);
             Err(ErrorKind::ValueMismatch(
                 Arc::new(answered),
                 Arc::new(all_missing),

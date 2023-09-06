@@ -780,7 +780,7 @@ fn prepare_filenode_entries_stream<'a>(
     filenodes: Vec<(NonRootMPath, HgFileNodeId, HgChangesetId)>,
     lfs_session: &'a SessionLfsParams,
 ) -> impl Stream<Item = Result<(NonRootMPath, Vec<PreparedFilenodeEntry>), Error>> + 'a {
-    stream::iter(filenodes.into_iter())
+    stream::iter(filenodes)
         .map({
             move |(path, filenode, linknode)| async move {
                 let envelope = filenode.load(ctx, blobstore).await?;
@@ -868,7 +868,7 @@ pub fn create_manifest_entries_stream(
     blobstore: RepoBlobstore,
     manifests: Vec<(Option<NonRootMPath>, HgManifestId, HgChangesetId)>,
 ) -> OldBoxStream<OldBoxFuture<parts::TreepackPartInput, Error>, Error> {
-    old_stream::iter_ok(manifests.into_iter())
+    old_stream::iter_ok(manifests)
         .filter(|(fullpath, mf_id, _linknode)| {
             !(fullpath.is_none() && mf_id.clone().into_nodehash() == NULL_HASH)
         })

@@ -65,7 +65,7 @@ impl LimitFilesizeBuilder {
             let limits: Vec<Option<u64>> = limits.into_iter().map(|n| n.try_into().ok()).collect();
 
             return Ok(LimitFilesize {
-                path_regexes_with_limits: regexes.into_iter().zip(limits.into_iter()).collect(),
+                path_regexes_with_limits: regexes.into_iter().zip(limits).collect(),
             });
         }
         Err(anyhow!(

@@ -576,7 +576,7 @@ impl NonRootMPath {
     /// `foo` is a prefix of `foo/bar`, but not of `foo1`.
     #[inline]
     pub fn is_prefix_of<'a, E: IntoIterator<Item = &'a MPathElement>>(&self, other: E) -> bool {
-        self.common_components(other.into_iter()) == self.num_components()
+        self.common_components(other) == self.num_components()
     }
 
     /// The final component of this path.

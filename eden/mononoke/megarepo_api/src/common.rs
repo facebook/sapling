@@ -419,7 +419,7 @@ pub trait MegarepoOp {
                 (target, fc)
             }));
         }
-        file_changes.extend(linkfiles.into_iter());
+        file_changes.extend(linkfiles);
 
         let moved_bcs = new_megarepo_automation_commit(
             vec![cs_id],
@@ -483,7 +483,7 @@ pub trait MegarepoOp {
             .keys()
             .map(|dst| dst.try_into())
             .try_collect()?;
-        all_paths.extend(linkfiles.into_iter());
+        all_paths.extend(linkfiles);
         Ok(all_paths)
     }
 
