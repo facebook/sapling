@@ -9,7 +9,7 @@ import type {Rev} from '../fileStackState';
 import type {ExportCommit, ExportStack} from 'shared/types/stack';
 
 import {ABSENT_FILE, CommitStackState} from '../commitStackState';
-import {List} from 'immutable';
+import {List, Set as ImSet} from 'immutable';
 
 const exportCommitDefault: ExportCommit = {
   requested: true,
@@ -753,6 +753,51 @@ describe('CommitStackState', () => {
       expect(subStack.stack.map(c => c.files.size).toJS()).toEqual([3, 3]);
       // All file stacks (x.txt, y.txt, z.txt) should have 3 revs (bottomFile, B, C).
       expect(subStack.fileStacks.map(f => f.revLength).toJS()).toEqual([3, 3, 3]);
+    });
+  });
+
+  describe('insertEmpty', () => {
+    const stack = new CommitStackState(exportStack1);
+    const getRevs = (stack: CommitStackState) =>
+      stack.stack.map(c => [c.rev, c.parents.toArray()]).toArray();
+
+    it('updates revs of commits', () => {
+      expect(getRevs(stack)).toEqual([
+        [0, []],
+        [1, [0]],
+        [2, [1]],
+        [3, [2]],
+      ]);
+      expect(getRevs(stack.insertEmpty(2, 'foo'))).toEqual([
+        [0, []],
+        [1, [0]],
+        [2, [1]],
+        [3, [2]],
+        [4, [3]],
+      ]);
+    });
+
+    it('inserts at stack top', () => {
+      expect(getRevs(stack.insertEmpty(4, 'foo'))).toEqual([
+        [0, []],
+        [1, [0]],
+        [2, [1]],
+        [3, [2]],
+        [4, [3]],
+      ]);
+    });
+
+    it('uses the provided commit message', () => {
+      const msg = 'provided message\nfoobar';
+      [0, 2, 4].forEach(i => {
+        expect(stack.insertEmpty(i, msg).stack.get(i)?.text).toBe(msg);
+      });
+    });
+
+    it('provides unique keys for inserted commits', () => {
+      const newStack = stack.insertEmpty(1, '').insertEmpty(1, '').insertEmpty(1, '');
+      const keys = newStack.stack.map(c => c.key);
+      expect(keys.size).toBe(ImSet(keys).size);
     });
   });
 });

@@ -21,7 +21,7 @@ import {t} from '../i18n';
 import {assert} from '../utils';
 import {FileStackState} from './fileStackState';
 import deepEqual from 'fast-deep-equal';
-import {List, Map as ImMap, Set as ImSet, Record, is} from 'immutable';
+import {Seq, List, Map as ImMap, Set as ImSet, Record, is} from 'immutable';
 import {cached} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
 import {generatorContains, unwrap, zip} from 'shared/utils';
@@ -526,6 +526,18 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     return this.fileStacks.size === 0 ? this.buildFileStacks() : this;
   }
 
+  /** Invalidate file stacks so they need to be rebuilt from commit contents. */
+  invalidateFileStacks(): CommitStackState {
+    if (this.fileStacks.isEmpty()) {
+      return this;
+    }
+    return this.useFileContent().merge({
+      fileStacks: List(),
+      commitToFile: ImMap(),
+      fileToCommit: ImMap(),
+    });
+  }
+
   /**
    * Switch file contents to use FileStack as source of truth.
    * Useful when using FileStack to edit files.
@@ -911,6 +923,68 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     });
 
     return new CommitStackState(undefined, state).rewriteStackDroppingRev(rev);
+  }
+
+  /**
+   * Insert an empty commit at `rev`.
+   * Cannot insert to an empty stack.
+   */
+  insertEmpty(rev: Rev, title: string): CommitStackState {
+    assert(rev <= this.stack.size && rev >= 0, 'rev out of range');
+    const state = this.invalidateFileStacks();
+    let newStack;
+    const newKey = this.nextKey('insert');
+    if (rev === this.stack.size) {
+      const top = this.stack.last();
+      assert(top != null, 'stack cannot be empty');
+      newStack = this.stack.push(
+        CommitState({
+          rev,
+          parents: List(rev === 0 ? [] : [rev - 1]),
+          text: title,
+          key: newKey,
+          author: top.author,
+          date: top.date,
+        }),
+      );
+    } else {
+      const revMapFunc = (r: Rev) => (r >= rev ? r + 1 : r);
+      const origParents = unwrap(state.stack.get(rev)).parents;
+      newStack = state.stack
+        .map(c => rewriteCommitRevs(c, revMapFunc))
+        .flatMap(c => {
+          if (c.rev == rev + 1) {
+            return Seq([
+              CommitState({
+                rev,
+                parents: origParents,
+                text: title,
+                key: newKey,
+                author: c.author,
+                date: c.date,
+              }),
+              c.set('parents', List([rev])),
+            ]);
+          } else {
+            return Seq([c]);
+          }
+        });
+    }
+    return this.set('stack', newStack).buildFileStacks();
+  }
+
+  /**
+   * Find a unique "key" not yet used by the commit stack.
+   */
+  nextKey(prefix: string): string {
+    const usedKeys = ImSet(this.stack.map(c => c.key));
+    for (let i = 0; ; i++) {
+      const key = `${prefix}-${i}`;
+      if (usedKeys.has(key)) {
+        continue;
+      }
+      return key;
+    }
   }
 
   /**
