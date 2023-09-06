@@ -148,6 +148,7 @@ def loaddoc(topic, subdir=None):
 helptable = sorted(
     [
         (["bundlespec"], _("Bundle File Formats"), loaddoc("bundlespec")),
+        (["cache"], _("File/Manifest Cache"), loaddoc("cache")),
         (["color"], _("Colorizing Outputs"), loaddoc("color")),
         (["config", "hgrc"], _("Configuration Files"), loaddoc("config")),
         (["dates"], _("Date Formats"), loaddoc("dates")),

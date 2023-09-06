@@ -4443,3 +4443,75 @@ default-push:
   The push command will look for a path named 'default-push', and
   prefer it over 'default' if both are defined.
 """
+
+cache = r"""@Product@ caches file contents ("data"), manifest tree entries
+("manifest"), file metadata ("aux"), and LFS data ("lfs")
+for shallow (i.e. lazy) repos.
+
+Configuration
+=============
+
+The cache location is configured via ``remotefilelog.cachepath``. The cache is
+namespaced by repository name allowing for a shared, system-wide cache.
+
+Each data type ("data", "manifest", "aux", "lfs") is stored in a set of rotating
+indexedlog files so as to not grow without bound. The max size and count of
+log files can be configured per-type::
+
+  [indexedlog]
+  data.max-bytes-per-log = 10GB
+  data.max-log-count = 4
+  manifest.max-bytes-per-log = 100MB
+  manifest.max-log-count = 4
+  aux.max-bytes-per-log = 100MB
+  aux.max-log-count = 4
+
+  [lfs]
+  blobsstoresize = 10GB
+  pointersstoresize = 100MB
+
+  # Below are legacy settings superseded by max-log-count. If max-log-count is
+  # not configured, max-log-count is calculated as the below limit divided by
+  # the corresponding max-bytes-per-log.
+  [remotefilelog]
+  cachelimit = 4GB
+  manifestlimit = 1GB
+  auxlimit = 1GB
+
+As max-log-count increases, so does the potential amount of work during cache
+reads.
+
+As max-bytes-per-log increases, so does the potential for large spurts of remote
+access as a cache file is deleted.
+
+The aux cache can be disabled via the below setting::
+
+  [scmstore]
+  auxindexedlog = false
+
+Semantics
+=========
+
+The caches are used by the scmstore file store layer. The scmstore has three
+places to look for content::
+
+  1. The cache.
+  2. The local repo. File/manifest content is added to the local repo storage
+     during commit operations, for example.
+  3. The remote repo.
+
+When fetching a manifest entry or file content/metadata, the logic is::
+
+  if in local cache, return cache value
+  else if in local repo, return local repo value
+  else fetch remote value, write back to cache, return value
+
+
+Rotation
+========
+
+When a log file crosses the size threshold, it is rotated into the next
+position. Log files beyond max-log-count are deleted. Note that there are no LRU
+sematics.
+
+"""
