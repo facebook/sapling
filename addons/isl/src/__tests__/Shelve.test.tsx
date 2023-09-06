@@ -61,7 +61,7 @@ describe('Shelve', () => {
       expectMessageSentToServer({
         type: 'runOperation',
         operation: expect.objectContaining({
-          args: ['shelve'],
+          args: ['shelve', '--unknown'],
         }),
       });
     });
@@ -87,7 +87,7 @@ describe('Shelve', () => {
       expectMessageSentToServer({
         type: 'runOperation',
         operation: expect.objectContaining({
-          args: ['shelve', '--name', 'My Shelf'],
+          args: ['shelve', '--unknown', '--name', 'My Shelf'],
         }),
       });
     });
@@ -110,6 +110,7 @@ describe('Shelve', () => {
         operation: expect.objectContaining({
           args: [
             'shelve',
+            '--unknown',
             {type: 'repo-relative-file', path: 'src/file1.js'},
             {type: 'repo-relative-file', path: 'src/file3.js'},
           ],

@@ -26,7 +26,7 @@ export class ShelveOperation extends Operation {
   static opName = 'Shelve';
 
   getArgs() {
-    const args: Array<CommandArg> = ['shelve'];
+    const args: Array<CommandArg> = ['shelve', '--unknown'];
     if (this.name) {
       args.push('--name', this.name);
     }
