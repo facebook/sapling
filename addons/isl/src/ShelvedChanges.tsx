@@ -8,15 +8,19 @@
 import type {Result, ShelvedChange} from './types';
 
 import serverAPI from './ClientToServerAPI';
+import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
+import {FlexSpacer} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
 import {EmptyState} from './EmptyState';
 import {ErrorNotice} from './ErrorNotice';
 import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
+import {ChangedFiles} from './UncommittedChanges';
 import {T, t} from './i18n';
 import {RelativeDate} from './relativeDate';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useRecoilValue} from 'recoil';
+import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 
 import './ShelvedChanges.css';
@@ -43,7 +47,7 @@ const shelvedChangesState = atom<Result<Array<ShelvedChange>>>({
 export function ShelvedChangesMenu() {
   return (
     <Tooltip
-      component={() => <ShelvedChangesList />}
+      component={dismiss => <ShelvedChangesList dismiss={dismiss} />}
       trigger="click"
       placement="bottom"
       title={t('Shelved Changes')}>
@@ -54,7 +58,7 @@ export function ShelvedChangesMenu() {
   );
 }
 
-export function ShelvedChangesList() {
+export function ShelvedChangesList({dismiss}: {dismiss: () => void}) {
   const shelvedChanges = useRecoilValue(shelvedChangesState);
   return (
     <DropdownFields
@@ -70,15 +74,44 @@ export function ShelvedChangesList() {
         </EmptyState>
       ) : (
         <div className="shelved-changes-list">
-          {shelvedChanges.value.map(change => (
-            <span key={change.hash} className="shelved-changes-item">
-              <span>{change.name}</span>
-
-              <Subtle>
-                <RelativeDate date={change.date} useShortVariant />
-              </Subtle>
-            </span>
-          ))}
+          {shelvedChanges.value.map(change => {
+            const comparison = {
+              type: ComparisonType.Committed,
+              hash: change.hash,
+            };
+            return (
+              <div key={change.hash} className="shelved-changes-item">
+                <div className="shelved-changes-item-row">
+                  <span className="shelve-name">{change.name}</span>
+                  <Subtle>
+                    <RelativeDate date={change.date} useShortVariant />
+                  </Subtle>
+                  <FlexSpacer />
+                  <VSCodeButton
+                    appearance="secondary"
+                    className="unshelve-button"
+                    onClick={() => {
+                      /* TODO: run unshelve */
+                    }}>
+                    <Icon icon="layers-active" slot="start" />
+                    <T>Unshelve</T>
+                  </VSCodeButton>
+                </div>
+                <OpenComparisonViewButton
+                  comparison={comparison}
+                  buttonText={<T>View Changes</T>}
+                  onClick={dismiss}
+                />
+                <div className="shelved-changes-item-row">
+                  <ChangedFiles
+                    filesSubset={change.filesSample}
+                    totalFiles={change.totalFileCount}
+                    comparison={comparison}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </DropdownFields>

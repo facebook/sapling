@@ -45,6 +45,11 @@ export function ScrollY(props: ScrollProps) {
   return Scroll({...props, direction: 'y'});
 }
 
+/** Visually empty flex item with `flex-grow: 1` to insert as much space as possible between siblings. */
+export function FlexSpacer() {
+  return <div className={'spacer'} />;
+}
+
 type ContainerProps = React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
 
 type FlexProps = ContainerProps & {

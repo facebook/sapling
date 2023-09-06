@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactNode} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
 import {t} from '../i18n';
@@ -15,17 +16,26 @@ import {useSetRecoilState} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 
-export function OpenComparisonViewButton({comparison}: {comparison: Comparison}) {
+export function OpenComparisonViewButton({
+  comparison,
+  buttonText,
+  onClick,
+}: {
+  comparison: Comparison;
+  buttonText?: ReactNode;
+  onClick?: () => unknown;
+}) {
   const setComparisonMode = useSetRecoilState(currentComparisonMode);
   return (
     <VSCodeButton
       data-testid={`open-comparison-view-button-${comparison.type}`}
       appearance="icon"
       onClick={() => {
+        onClick?.();
         setComparisonMode({comparison, visible: true});
       }}>
       <Icon icon="files" slot="start" />
-      {buttonLabelForComparison(comparison)}
+      {buttonText ?? buttonLabelForComparison(comparison)}
     </VSCodeButton>
   );
 }

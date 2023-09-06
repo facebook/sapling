@@ -24,3 +24,7 @@
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+.spacer {
+  flex-grow: 1;
+}

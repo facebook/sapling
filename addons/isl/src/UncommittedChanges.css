@@ -115,6 +115,7 @@
 
 .changed-files-list {
   --changed-files-list-height: 500px;
+  --changed-files-overflow-color: var(--background);
   overflow-y: scroll;
   max-height: var(--changed-files-list-height);
 }
@@ -125,7 +126,7 @@
   content: ' ';
   width: 100%;
   height: var(--overflow-gradient-height);
-  background: linear-gradient(transparent, var(--background));
+  background: linear-gradient(transparent, var(--changed-files-overflow-color));
   z-index: 10;
   position: absolute;
   bottom: 0px;
