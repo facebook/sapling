@@ -42,7 +42,7 @@ export default function FileStackEditPanel() {
   };
 
   // File list dropdown.
-  const commitStack = stackEdit.commitStack;
+  const commitStack = stackEdit.commitStack.maybeBuildFileStacks();
   const pathFileIdxList: Array<[string, number]> = commitStack.fileStacks
     .map((_f, i): [string, number] => {
       const label = commitStack.getFileStackDescription(i);
@@ -82,19 +82,19 @@ export default function FileStackEditPanel() {
   }
 
   // Properties for file stack editing.
-  const stack = unwrap(stackEdit.commitStack.fileStacks.get(fileIdx));
+  const stack = unwrap(commitStack.fileStacks.get(fileIdx));
   const getTitle = (rev: Rev) =>
-    stackEdit.commitStack.getCommitFromFileStackRev(fileIdx, rev)?.text ??
+    commitStack.getCommitFromFileStackRev(fileIdx, rev)?.text ??
     t(
       '(Base version)\n\n' +
         'Not part of the stack being edited. ' +
         'Cannot be edited here.\n\n' +
         'Provided to show diff against changes in the stack.',
     );
-  const skip = (rev: Rev) => stackEdit.commitStack.isAbsentFromFileStackRev(fileIdx, rev);
+  const skip = (rev: Rev) => commitStack.isAbsentFromFileStackRev(fileIdx, rev);
   const setStack = (newStack: FileStackState) => {
-    const fileDesc = stackEdit.commitStack.getFileStackDescription(fileIdx);
-    const newCommitStack = stackEdit.commitStack.setFileStack(fileIdx, newStack);
+    const fileDesc = commitStack.getFileStackDescription(fileIdx);
+    const newCommitStack = commitStack.setFileStack(fileIdx, newStack);
     stackEdit.push(newCommitStack, {name: 'fileStack', fileDesc});
     bumpStackEditMetric('fileStackEdit');
   };
