@@ -55,6 +55,7 @@ export type TrackEventName =
   | 'RevertOperation'
   | 'SetConfigOperation'
   | 'ShelveOperation'
+  | 'UnshelveOperation'
   | 'ShowBugButtonNux'
   | 'StackEditMetrics'
   | 'SyncDiffMessageMutation'

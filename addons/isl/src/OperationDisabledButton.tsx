@@ -48,6 +48,7 @@ export function OperationDisabledButton({
   children: React.ReactNode;
   disabled?: boolean;
   icon?: React.ReactNode;
+  className?: string;
 }) {
   const actuallyRunOperation = useRunOperation();
   const pendingOperation = useMostRecentPendingOperation();

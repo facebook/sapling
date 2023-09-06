@@ -13,10 +13,12 @@ import {FlexSpacer} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
 import {EmptyState} from './EmptyState';
 import {ErrorNotice} from './ErrorNotice';
+import {OperationDisabledButton} from './OperationDisabledButton';
 import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
 import {ChangedFiles} from './UncommittedChanges';
 import {T, t} from './i18n';
+import {UnshelveOperation} from './operations/UnshelveOperation';
 import {RelativeDate} from './relativeDate';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useRecoilValue} from 'recoil';
@@ -87,15 +89,17 @@ export function ShelvedChangesList({dismiss}: {dismiss: () => void}) {
                     <RelativeDate date={change.date} useShortVariant />
                   </Subtle>
                   <FlexSpacer />
-                  <VSCodeButton
+                  <OperationDisabledButton
                     appearance="secondary"
+                    contextKey={`unshelve-${change.hash}`}
                     className="unshelve-button"
-                    onClick={() => {
-                      /* TODO: run unshelve */
-                    }}>
-                    <Icon icon="layers-active" slot="start" />
+                    runOperation={() => {
+                      dismiss();
+                      return new UnshelveOperation(change);
+                    }}
+                    icon={<Icon icon="layers-active" slot="start" />}>
                     <T>Unshelve</T>
-                  </VSCodeButton>
+                  </OperationDisabledButton>
                 </div>
                 <OpenComparisonViewButton
                   comparison={comparison}
