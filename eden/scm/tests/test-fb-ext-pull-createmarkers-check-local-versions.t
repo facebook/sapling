@@ -115,6 +115,27 @@ Setup phabricator response
   > ]
   > EOF
 
+Show commit graph
+  $ hg log -G -T '{node|short} {desc}\n\n\n'
+  o  524f3ad51d24 add d
+  │
+  │  Differential Revision: https://phabricator.fb.com/D456
+  │
+  │
+  │ @  d131c2d7408a add c
+  │ │
+  │ │  Differential Revision: https://phabricator.fb.com/D123
+  │ │
+  │ │
+  │ o  a421db7622bf add b
+  ├─╯
+  │    Differential Revision: https://phabricator.fb.com/D123
+  │
+  │
+  o  23bffadc9066 add initial
+  
+     Differential Revision: https://phabricator.fb.com/D123
+
 Test that commit hashes matching GraphQL are marked as landed
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg debugmarklanded --verbose --dry-run
   marking D123 (a421db7622bf, d131c2d7408a) as landed as 23bffadc9066
@@ -141,4 +162,13 @@ Test that original behavior of marking local commits as landed even if hashes do
   marking D456 (524f3ad51d24) as abandoned
   marked 2 commits as landed
   marked 1 commit as abandoned
+  (this is a dry-run, nothing was actually done)
+
+Test that if there are non-obsoleted descendants for the abandoned commit, then it's no longer marked as abandoned.
+  $ hg goto 524f3ad51d24
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ mkcommit e 666
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg debugmarklanded --verbose --dry-run
+  marking D123 (3b86866eb2ba, a421db7622bf) as landed as 23bffadc9066
+  marked 2 commits as landed
   (this is a dry-run, nothing was actually done)

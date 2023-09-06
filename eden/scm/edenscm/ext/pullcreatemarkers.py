@@ -50,6 +50,7 @@ def _cleanuplanded(repo, dryrun=False):
     tohide = set()
     markedcount_landed = 0
     markedcount_abandoned = 0
+    visible_heads = visibility.heads(repo)
 
     checklocalversions = ui.configbool("pullcreatemarkers", "check-local-versions")
     for diffid, draftnodes in sorted(difftodraft.items()):
@@ -68,6 +69,8 @@ def _cleanuplanded(repo, dryrun=False):
                 mutationentries,
             )
         elif status == "Abandoned":
+            # filter out unhidable nodes
+            draftnodes = {node for node in draftnodes if node in visible_heads}
             markedcount_abandoned += _process_abandonded(
                 repo,
                 diffid,
@@ -153,7 +156,7 @@ def _process_abandonded(
     if checklocalversions:
         draftnodes = draftnodes & difftolocal.get(diffid, set())
     draftnodestr = ", ".join(short(d) for d in sorted(draftnodes))
-    if ui.verbose:
+    if ui.verbose and draftnodestr:
         ui.write(_("marking D%s (%s) as abandoned\n") % (diffid, draftnodestr))
     tohide |= set(draftnodes)
     return len(draftnodes)
