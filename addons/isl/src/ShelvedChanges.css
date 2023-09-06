@@ -9,6 +9,12 @@
   min-width: 400px;
 }
 
+.shelved-changes-title {
+  display: flex;
+  gap: var(--pad);
+  align-items: center;
+}
+
 .shelved-changes-list {
   display: flex;
   flex-direction: column;

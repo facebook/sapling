@@ -66,7 +66,17 @@ function ShelvedChangesList({dismiss}: {dismiss: () => void}) {
   }, [refresh]);
   return (
     <DropdownFields
-      title={<T>Shelved Changes</T>}
+      title={
+        <span className="shelved-changes-title">
+          <T>Shelved Changes</T>{' '}
+          <Tooltip
+            title={t(
+              'You can Shelve a set of uncommitted changes to save them for later, via the Shelve button in the list of uncommitted changes.\n\nHere you can view and Unshelve previously shelved changes.',
+            )}>
+            <Icon icon="info" />
+          </Tooltip>
+        </span>
+      }
       icon="archive"
       className="shelved-changes-dropdown"
       data-testid="shelved-changes-dropdown">
