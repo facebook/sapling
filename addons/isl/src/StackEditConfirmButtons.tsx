@@ -62,28 +62,6 @@ export function StackEditConfirmButtons(): React.ReactElement {
   return (
     <>
       <Tooltip
-        title={t('Discard stack editing changes')}
-        delayMs={DOCUMENTATION_DELAY}
-        placement="bottom">
-        <VSCodeButton
-          className="cancel-edit-stack-button"
-          appearance="secondary"
-          onClick={handleCancel}>
-          <T>Cancel</T>
-        </VSCodeButton>
-      </Tooltip>
-      <Tooltip
-        title={t('Save stack editing changes')}
-        delayMs={DOCUMENTATION_DELAY}
-        placement="bottom">
-        <VSCodeButton
-          className="confirm-edit-stack-button"
-          appearance="primary"
-          onClick={handleSaveChanges}>
-          <T>Save changes</T>
-        </VSCodeButton>
-      </Tooltip>
-      <Tooltip
         component={() =>
           canUndo ? (
             <T replace={{$op: <UndoDescription op={stackEdit.undoOperationDescription()} />}}>
@@ -111,6 +89,28 @@ export function StackEditConfirmButtons(): React.ReactElement {
         placement="bottom">
         <VSCodeButton appearance="icon" disabled={!canRedo} onClick={handleRedo}>
           <Icon icon="redo" />
+        </VSCodeButton>
+      </Tooltip>
+      <Tooltip
+        title={t('Discard stack editing changes')}
+        delayMs={DOCUMENTATION_DELAY}
+        placement="bottom">
+        <VSCodeButton
+          className="cancel-edit-stack-button"
+          appearance="secondary"
+          onClick={handleCancel}>
+          <T>Cancel</T>
+        </VSCodeButton>
+      </Tooltip>
+      <Tooltip
+        title={t('Save stack editing changes')}
+        delayMs={DOCUMENTATION_DELAY}
+        placement="bottom">
+        <VSCodeButton
+          className="confirm-edit-stack-button"
+          appearance="primary"
+          onClick={handleSaveChanges}>
+          <T>Save changes</T>
         </VSCodeButton>
       </Tooltip>
     </>
