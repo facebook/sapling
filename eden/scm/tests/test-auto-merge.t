@@ -71,3 +71,26 @@ test merge adjacent changes -- insertion case
   +b'
   >>>>>>> source
   e
+
+test common changes
+
+  $ cat > base <<EOF
+  > a
+  > d
+  > EOF
+  $ cat > src <<EOF
+  > a
+  > b
+  > d
+  > EOF
+  $ cat > dest <<EOF
+  > a
+  > b
+  > c
+  > d
+  > EOF
+  $ hg debugsmerge dest src base
+  a
+  b
+  c
+  d

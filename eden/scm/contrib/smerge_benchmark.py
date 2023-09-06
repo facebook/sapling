@@ -20,6 +20,21 @@ A, B, BASE = range(3)
 WHITE_SPACE_PATTERN = re.compile(b"\\s+")
 
 
+class SmartMerge3Text(Merge3Text):
+    """
+    SmergeMerge3Text uses vairable automerge algorithms to resolve conflicts.
+    """
+
+    def __init__(self, basetext, atext, btext, wordmerge=wordmergemode.disabled):
+        Merge3Text.__init__(self, basetext, atext, btext, wordmerge=wordmerge)
+        self.automerge_fns.extend(
+            [
+                merge_adjacent_changes,
+                merge_common_changes,
+            ]
+        )
+
+
 def merge_adjacent_changes(base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
     # require something to be changed
     if not base_lines:
@@ -70,30 +85,18 @@ def merge_adjacent_changes(base_lines, a_lines, b_lines) -> Optional[List[bytes]
     return merged_lines
 
 
-class SmartMerge3Text(Merge3Text):
-    """
-    SmergeMerge3Text uses vairable automerge algorithms to resolve conflicts.
-    """
-
-    def __init__(self, basetext, atext, btext, wordmerge=wordmergemode.disabled):
-        Merge3Text.__init__(self, basetext, atext, btext, wordmerge=wordmerge)
-        self.automerge_fns.append(merge_adjacent_changes)
+def merge_common_changes(base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
+    if base_lines:
+        return None
+    if len(a_lines) > len(b_lines):
+        return merge_common_changes(base_lines, b_lines, a_lines)
+    if is_sub_list(a_lines, b_lines):
+        return b_lines
 
 
 def is_non_unique_separator_for_insertion(
     base_lines, a_lines, b_lines, ablock, bblock
 ) -> bool:
-    def is_sub_list(list1, list2):
-        "check if list1 is a sublist of list2"
-        # PERF: might be able to use rolling hash to optimize the time complexity
-        len1, len2 = len(list1), len(list2)
-        if len1 > len2:
-            return False
-        for i in range(len2 - len1 + 1):
-            if list1 == list2[i : i + len1]:
-                return True
-        return False
-
     # no insertion on both sides
     if not (ablock[0] == bblock[0] or ablock[1] == bblock[1]):
         return False
@@ -111,6 +114,18 @@ def is_non_unique_separator_for_insertion(
     a_list = a_lines[ablock[3] : ablock[4]]
     b_list = b_lines[bblock[3] : bblock[4]]
     return is_sub_list(base_list, a_list) or is_sub_list(base_list, b_list)
+
+
+def is_sub_list(list1, list2):
+    "check if list1 is a sublist of list2"
+    # PERF: might be able to use rolling hash to optimize the time complexity
+    len1, len2 = len(list1), len(list2)
+    if len1 > len2:
+        return False
+    for i in range(len2 - len1 + 1):
+        if list1 == list2[i : i + len1]:
+            return True
+    return False
 
 
 @dataclass
