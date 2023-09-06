@@ -75,6 +75,47 @@ def extshelp(ui) -> str:
     return doc
 
 
+def cachehelp(ui) -> str:
+    static = loaddoc("cache")(ui)
+
+    def sizeinfo(key, legacykey, defaultsize):
+        logcount = ui.configint("indexedlog", f"{key}.max-log-count", 4)
+        maxlogsize = ui.configbytes("indexedlog", f"{key}.max-bytes-per-log")
+        if not maxlogsize:
+            if legacykey and (legacy := ui.configbytes("remotefilelog", legacykey)):
+                maxlogsize = max(legacy / max(logcount, 1), 1)
+            else:
+                maxlogsize = util.sizetoint(defaultsize)
+        return f"{key}: %s across %d logs" % (
+            util.inttosize(maxlogsize * logcount),
+            logcount,
+        )
+
+    dynamic = "cache path: %s\n\n" % ui.config("remotefilelog", "cachepath")
+    dynamic += "".join(
+        f"{info}\n\n"
+        for info in (
+            sizeinfo("data", "cachelimit", "2.5GB"),
+            sizeinfo("manifest", "manifestlimit", "2.5GB"),
+            sizeinfo("aux", "auxlimit", "62MB"),
+        )
+    )
+
+    if ui.configbool("remotefilelog", "lfs"):
+        dynamic += (
+            "LFS blobs: "
+            + util.inttosize(ui.configbytes("lfs", "blobsstoresize", "20GB"))
+            + " across 4 logs\n\n"
+        )
+        dynamic += (
+            "LFS pointers: "
+            + util.inttosize(ui.configbytes("lfs", "pointersstoresize", "40MB"))
+            + " across 4 logs\n\n"
+        )
+
+    return static + "\nLocal Configuration\n===================\n\n" + dynamic
+
+
 def optrst(header: str, options, verbose) -> str:
     data = []
     multioccur = False
@@ -148,7 +189,7 @@ def loaddoc(topic, subdir=None):
 helptable = sorted(
     [
         (["bundlespec"], _("Bundle File Formats"), loaddoc("bundlespec")),
-        (["cache"], _("File/Manifest Cache"), loaddoc("cache")),
+        (["cache"], _("File/Manifest Cache"), cachehelp),
         (["color"], _("Colorizing Outputs"), loaddoc("color")),
         (["config", "hgrc"], _("Configuration Files"), loaddoc("config")),
         (["dates"], _("Date Formats"), loaddoc("dates")),

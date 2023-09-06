@@ -165,6 +165,9 @@ impl AuxStore {
     }
 
     fn open_options(config: &dyn Config) -> Result<StoreOpenOptions> {
+        // If you update defaults/logic here, please update the "cache" help topic
+        // calculations in help.py.
+
         let mut open_options = StoreOpenOptions::new()
             .max_log_count(4)
             .max_bytes_per_log(250 * 1000 * 1000 / 4)

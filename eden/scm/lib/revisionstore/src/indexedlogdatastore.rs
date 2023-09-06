@@ -229,6 +229,9 @@ impl IndexedLogHgIdDataStore {
     }
 
     fn open_options(config: &IndexedLogHgIdDataStoreConfig) -> StoreOpenOptions {
+        // If you update defaults/logic here, please update the "cache" help topic
+        // calculations in help.py.
+
         // Default configuration: 4 x 2.5GB.
         let mut open_options = StoreOpenOptions::new()
             .max_log_count(4)
