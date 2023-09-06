@@ -9,6 +9,7 @@ import type {Rev} from '../fileStackState';
 import type {ExportCommit, ExportStack} from 'shared/types/stack';
 
 import {ABSENT_FILE, CommitStackState} from '../commitStackState';
+import {List} from 'immutable';
 
 const exportCommitDefault: ExportCommit = {
   requested: true,
@@ -729,6 +730,29 @@ describe('CommitStackState', () => {
         ['commit', {date: [40, 0], text: 'C'}],
         ['commit', {date: [40, 0], text: 'B'}],
       ]);
+    });
+  });
+
+  describe('denseSubStack', () => {
+    it('provides bottomFiles', () => {
+      const stack = new CommitStackState(exportStack1);
+      let subStack = stack.denseSubStack(List([3])); // C
+      // The bottom files contains z (deleted) and its content is before deletion.
+      expect([...subStack.bottomFiles.keys()].sort()).toEqual(['z.txt']);
+      expect(subStack.bottomFiles.get('z.txt')?.data).toBe('22');
+
+      subStack = stack.denseSubStack(List([2, 3])); // B, C
+      // The bottom files contains x (deleted), y (modified) and z (deleted).
+      expect([...subStack.bottomFiles.keys()].sort()).toEqual(['x.txt', 'y.txt', 'z.txt']);
+    });
+
+    it('marks all files at every commit as changed', () => {
+      const stack = new CommitStackState(exportStack1);
+      const subStack = stack.denseSubStack(List([2, 3])); // B, C
+      // All commits (B, C) should have 3 files (x.txt, y.txt, z.txt) marked as "changed".
+      expect(subStack.stack.map(c => c.files.size).toJS()).toEqual([3, 3]);
+      // All file stacks (x.txt, y.txt, z.txt) should have 3 revs (bottomFile, B, C).
+      expect(subStack.fileStacks.map(f => f.revLength).toJS()).toEqual([3, 3, 3]);
     });
   });
 });
