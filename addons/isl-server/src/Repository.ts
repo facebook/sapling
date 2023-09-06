@@ -767,6 +767,8 @@ export class Repository {
     ).stdout;
 
     const shelves = parseShelvedCommitsOutput(this.logger, output.trim());
+    // sort by date ascending
+    shelves.sort((a, b) => b.date.getTime() - a.date.getTime());
     return shelves;
   }
 
