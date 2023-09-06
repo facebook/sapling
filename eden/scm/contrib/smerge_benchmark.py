@@ -3,12 +3,13 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import csv
 import re
 import time
 from dataclasses import dataclass
 from typing import List, Optional
 
-from edenscm import commands, error, mdiff, registrar, scmutil
+from edenscm import error, mdiff, registrar, scmutil
 from edenscm.i18n import _
 from edenscm.simplemerge import Merge3Text, render_minimized, wordmergemode
 
@@ -204,9 +205,16 @@ def sresolve(ui, repo, *args, **opts):
         ui.fout.write(mergedtext)
 
 
-@command("smerge_bench", commands.dryrunopts)
-def smerge_bench(ui, repo, **opts):
-    merge_ctxs = get_merge_ctxs_from_repo(ui, repo)
+@command(
+    "smerge_bench",
+    [("f", "file", "", _("a file that contains merge commits (csv file)."))],
+)
+def smerge_bench(ui, repo, *args, **opts):
+    path = opts.get("file")
+    if path:
+        merge_ctxs = get_merge_ctxs_from_file(ui, repo, path)
+    else:
+        merge_ctxs = get_merge_ctxs_from_repo(ui, repo)
     for m3merger in [SmartMerge3Text, Merge3Text]:
         ui.write(f"\n============== {m3merger.__name__} ==============\n")
         start = time.time()
@@ -214,7 +222,7 @@ def smerge_bench(ui, repo, **opts):
 
         for i, (p1ctx, p2ctx, basectx, mergectx) in enumerate(merge_ctxs, start=1):
             for filepath in mergectx.files():
-                if all(filepath in ctx for ctx in [basectx, p1ctx, p2ctx]):
+                if all(filepath in ctx for ctx in [basectx, p1ctx, p2ctx, mergectx]):
                     merge_file(
                         repo,
                         p1ctx,
@@ -234,7 +242,7 @@ def smerge_bench(ui, repo, **opts):
 
 
 def get_merge_ctxs_from_repo(ui, repo):
-    ui.write("generating merge data ...\n")
+    ui.write("generating merge data from repo ...\n")
     merge_commits = repo.dageval(lambda dag: dag.merges(dag.all()))
     octopus_merges, criss_cross_merges = 0, 0
 
@@ -274,6 +282,62 @@ def get_merge_ctxs_from_repo(ui, repo):
         f"len(merge_ctxs)={len(ctxs)}, octopus_merges={octopus_merges}, "
         f"criss_cross_merges={criss_cross_merges}\n"
     )
+    return ctxs
+
+
+def get_merge_ctxs_from_file(ui, repo, filepath):
+    def get_merge_commits_from_file(filepath):
+        merge_commits = []
+        with open(filepath) as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                merge_commits.append(
+                    (row["dest_hex"], row["src_hex"], row["newnode_hex"])
+                )
+        return merge_commits
+
+    def prefetch_commits(repo, commit_hashes):
+        size = 1000
+        chunks = [
+            commit_hashes[i : i + size] for i in range(0, len(commit_hashes), size)
+        ]
+        n = len(chunks)
+        for i, chunk in enumerate(chunks, start=1):
+            ui.write(f"{int(time.time())}: {i}/{n}\n")
+            try:
+                repo.pull(headnames=chunk)
+            except error.RepoLookupError as e:
+                print(e)
+
+    ui.write(f"generating merge data from file {filepath} ...\n")
+    merge_commits = get_merge_commits_from_file(filepath)
+
+    commits = list(dict.fromkeys([c for group in merge_commits for c in group]))
+    ui.write(f"prefetching {len(commits)} commits ...\n")
+    prefetch_commits(repo, commits)
+    ui.write(f"prefetching done\n")
+
+    ctxs = []
+    nonlinear_merge = 0
+    lookuperr = 0
+    n = len(merge_commits)
+    for i, (p1, p2, merge_commit) in enumerate(merge_commits, start=1):
+        try:
+            p2ctx = repo[p2]
+            parents = repo.dageval(lambda: parentnames(p2ctx.node()))
+            if len(parents) != 1:
+                nonlinear_merge += 1
+                continue
+            basectx = repo[parents[0]]
+            p1ctx = repo[p1]
+            mergectx = repo[merge_commit]
+            ctxs.append((p1ctx, p2ctx, basectx, mergectx))
+        except error.RepoLookupError:
+            lookuperr += 1
+        if i % 100 == 0:
+            ui.write(f"{int(time.time())}: {i}/{n} lookuperr={lookuperr}\n")
+
+    ui.write(f"len(merge_ctxs)={len(ctxs)}, nonlinear_merge={nonlinear_merge}\n")
     return ctxs
 
 
