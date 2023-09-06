@@ -535,10 +535,7 @@ function ActionsBar({
       ? getCommitOperation(message, headHash, selection.selection, allFiles)
       : getAmendOperation(message, headHash, selection.selection, allFiles);
 
-    // TODO(quark): We need better invalidation for chunk selected files.
-    if (selection.hasChunkSelection()) {
-      selection.clear();
-    }
+    selection.discardPartialSelections();
 
     clearEditedCommitMessage(/* skip confirmation */ true);
     // reset to amend mode now that the commit has been made

@@ -88,6 +88,14 @@ export class PartialSelection extends SelfUpdate<PartialSelectionRecord> {
     return this.inner.expanded.has(path);
   }
 
+  /** Drop "chunk selection" states. */
+  discardPartialSelections() {
+    const newFileMap = this.inner.fileMap.filter(
+      fileSelection => !(fileSelection instanceof ChunkSelectState),
+    );
+    return new PartialSelection(this.inner.merge({fileMap: newFileMap, expanded: Immutable.Set()}));
+  }
+
   /** Start chunk selection for the given file. */
   startChunkSelect(
     path: RepoRelativePath,
@@ -298,6 +306,11 @@ export class UseUncommittedSelection {
   /** Test if a path is marked as expanded. */
   isExpanded(path: RepoRelativePath): boolean {
     return this.selection.isExpanded(path);
+  }
+
+  /** Drop "chunk selection" states. Useful to clear states after an wdir-changing operation. */
+  discardPartialSelections() {
+    return this.setSelection(this.selection.discardPartialSelections());
   }
 
   /** Restore to the default selection (select all). */

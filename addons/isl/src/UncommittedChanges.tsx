@@ -482,10 +482,7 @@ export function UncommittedChanges({place}: {place: Place}) {
     const hash = headCommit?.hash ?? '.';
     const allFiles = uncommittedChanges.map(file => file.path);
     const operation = getCommitOperation(title, hash, selection.selection, allFiles);
-    // TODO(quark): We need better invalidation for chunk selected files.
-    if (selection.hasChunkSelection()) {
-      selection.clear();
-    }
+    selection.discardPartialSelections();
     runOperation(operation);
   };
 
@@ -555,7 +552,6 @@ export function UncommittedChanges({place}: {place: Place}) {
                 appearance="icon"
                 disabled={noFilesSelected}
                 onClick={() => {
-                  // TODO(quark): [Discard] does not work for partial selection yet.
                   const selectedFiles = uncommittedChanges
                     .filter(file => selection.isFullyOrPartiallySelected(file.path))
                     .map(file => file.path);
@@ -575,6 +571,7 @@ export function UncommittedChanges({place}: {place: Place}) {
                       // TODO(quark): Make PartialDiscardOperation replace the above and below cases.
                       const allFiles = uncommittedChanges.map(file => file.path);
                       const operation = new PartialDiscardOperation(selection.selection, allFiles);
+                      selection.discardPartialSelections();
                       runOperation(operation);
                     } else {
                       // only a subset of files selected -> we need to revert selected files individually
@@ -657,10 +654,7 @@ export function UncommittedChanges({place}: {place: Place}) {
                     selection.selection,
                     allFiles,
                   );
-                  // TODO(quark): We need better invalidation for chunk selected files.
-                  if (selection.hasChunkSelection()) {
-                    selection.clear();
-                  }
+                  selection.discardPartialSelections();
                   runOperation(operation);
                 }}>
                 <Icon slot="start" icon="debug-step-into" />
