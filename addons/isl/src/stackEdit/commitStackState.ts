@@ -720,6 +720,21 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     );
   }
 
+  /** Find a commit by key. */
+  findCommitByKey(key: string): CommitState | undefined {
+    return this.stack.find(c => c.key === key);
+  }
+
+  /** Get a specified commit. */
+  get(rev: Rev): CommitState | undefined {
+    return this.stack.get(rev);
+  }
+
+  /** Get the stack size. */
+  get size(): number {
+    return this.stack.size;
+  }
+
   // Histedit-related opeations.
 
   /**
