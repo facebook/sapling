@@ -473,7 +473,7 @@ export function FileStackEditor(props: EditorProps) {
       <ScrollY className="file-stack-editor-outer-scroll-y" hideBar={true} maxSize="70vh">
         <Row className="file-stack-editor">
           <pre className="column-left-gutter">{leftGutter}</pre>
-          <ScrollX hideBar={true} maxSize={500} onScroll={handleXScroll}>
+          <ScrollX hideBar={true} size={500} maxSize={500} onScroll={handleXScroll}>
             {textEdit ? (
               <TextEditable value={bText} rangeInfos={rangeInfos} onTextChange={handleTextChange}>
                 <pre className="main-content" style={mainStyle}>

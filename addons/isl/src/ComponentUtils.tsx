@@ -70,6 +70,8 @@ type ScrollProps = ContainerProps & {
   direction?: 'x' | 'y';
   /** maxHeight or maxWidth depending on scroll direction. */
   maxSize?: string | number;
+  /** height or width depending on scroll direction. */
+  size?: string | number;
   /** Whether to hide the scroll bar. */
   hideBar?: boolean;
   /** On-scroll event handler. */
@@ -85,9 +87,15 @@ function Scroll(props: ScrollProps) {
   if (direction === 'x') {
     style.overflowX = 'auto';
     style.maxWidth = props.maxSize ?? '100%';
+    if (props.size != null) {
+      style.width = props.size;
+    }
   } else {
     style.overflowY = 'auto';
     style.maxHeight = props.maxSize ?? '100%';
+    if (props.size != null) {
+      style.height = props.size;
+    }
   }
   if (hideBar) {
     style.scrollbarWidth = 'none';

@@ -8,7 +8,7 @@
 .file-stack-editor,
 .file-unified-stack-editor {
   border: 1px solid var(--tooltip-border);
-  min-width: 200px;
+  width: fit-content;
   height: fit-content;
 }
 
@@ -33,6 +33,7 @@
   text-align: right;
   user-select: none;
   background-color: rgba(128, 128, 128, 0.1);
+  min-width: 1.5rem;
 }
 
 .file-stack-editor .lineno.add {
