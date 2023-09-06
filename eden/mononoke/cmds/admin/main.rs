@@ -6,7 +6,6 @@
  */
 
 #![type_length_limit = "8000000"]
-#![feature(btree_drain_filter)]
 
 use std::process::ExitCode;
 

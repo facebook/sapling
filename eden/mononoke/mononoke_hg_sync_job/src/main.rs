@@ -13,7 +13,6 @@
 
 #![feature(auto_traits)]
 #![feature(async_closure)]
-#![feature(drain_filter)]
 
 use std::collections::BTreeSet;
 use std::collections::HashMap;
