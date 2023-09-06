@@ -11,8 +11,6 @@ from .cmdtable import command
 @command("debugstatus", [("n", "nonnormal", 0, _("print nonnormalfiltered samples"))])
 def debugstatus(ui, repo, **opts):
     """common performance issues for status"""
-    if "treestate" not in repo.requirements:
-        raise error.Abort("debugstatus only supports treestate currently")
     if "eden" in repo.requirements:
         raise error.Abort("debugstatus is not supported in edenfs virtual checkouts")
 

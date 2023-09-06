@@ -193,7 +193,7 @@ def fixdirstate(repo, oldctx, newctx, status) -> None:
             # For treestate, ds.remove is a no-op if f is not tracked.
             # In that case, we need to manually "correct" the state by
             # using low-level treestate API.
-            if ds._istreestate and f not in ds:
+            if f not in ds:
                 state = 0
                 if any(f in ctx for ctx in p1):
                     state |= treestate.treestate.EXIST_P1

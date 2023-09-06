@@ -2339,10 +2339,6 @@ def update(
                 )
             elif not hasattr(repo.fileslog, "contentstore"):
                 fallbackcheckout = "Repo does not have remotefilelog"
-            elif type(repo.dirstate._map) != treestate.treestatemap:
-                fallbackcheckout = "Repo repo.dirstate._map: %s" % type(
-                    repo.dirstate._map
-                )
             else:
                 fallbackcheckout = None
 

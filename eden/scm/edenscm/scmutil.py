@@ -465,7 +465,7 @@ class casecollisionauditor:
         fl = encoding.lower(f)
         ds = self._dirstate
         shouldwarn = False
-        if ds._istreestate and f not in ds:
+        if f not in ds:
             dmap = ds._map
 
             for candidate in dmap.getfiltered(fl, encoding.lower):

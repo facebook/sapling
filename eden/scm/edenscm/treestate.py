@@ -8,7 +8,6 @@
 from __future__ import absolute_import
 
 import errno
-import os
 
 from bindings import treestate
 
@@ -63,8 +62,40 @@ def _unpackmetadata(data):
 
 
 class treestatemap:
-    """a drop-in replacement for dirstate._map, with more abilities like also
-    track fsmonitor state.
+    """Map encapsulating the dirstate's contents.
+
+    The dirstate contains the following state:
+
+    - `identity` is the identity of the dirstate file, which can be used to
+      detect when changes have occurred to the dirstate file.
+
+    - `parents` is a pair containing the parents of the working copy. The
+      parents are updated by calling `setparents`.
+
+    - the state map maps filenames to tuples of (state, mode, size, mtime),
+      where state is a single character representing 'normal', 'added',
+      'removed', or 'merged'. It is read by treating the dirstate as a
+      dict.  File state is updated by calling the `addfile`, `removefile` and
+      `untrackfile` methods.
+
+    - `copymap` maps destination filenames to their source filename.
+
+    The dirstate also provides the following views onto the state:
+
+    - `nonnormalset` is a set of the filenames that have state other
+      than 'normal', or are normal but have an mtime of -1 ('normallookup').
+
+    - `otherparentset` is a set of the filenames that are marked as coming
+      from the second parent when the dirstate is currently being merged.
+
+    - `filefoldmap` is a dict mapping normalized filenames to the denormalized
+      form that they appear as in the dirstate.
+
+    - `dirfoldmap` is a dict mapping normalized directory names to the
+      denormalized form that they appear as in the dirstate.
+
+    Treestatemap is drop-in replacement for previous dirstatemap, with
+    more abilities like also track fsmonitor state.
 
     The treestate files are stored at ".hg/treestate/<uuid>". It uses a
     Rust-backed append-only map which tracks detailed information in one tree,
@@ -166,6 +197,7 @@ class treestatemap:
         pass
 
     def addfile(self, f, oldstate, state, mode, size, mtime):
+        """Add a tracked file to the dirstate."""
         if state == "n":
             if size == -2:
                 state = treestate.EXIST_P2 | treestate.EXIST_NEXT
@@ -181,6 +213,9 @@ class treestatemap:
         self._tree.insert(f, state, mode, size, mtime, None)
 
     def removefile(self, f, oldstate, size):
+        """
+        Mark a file as removed in the treestate.
+        """
         existing = self._get(f)
         if existing:
             # preserve "copied" information
@@ -257,6 +292,9 @@ class treestatemap:
 
     @property
     def filefoldmap(self):
+        """Returns a dictionary mapping normalized case paths to their
+        non-normalized versions.
+        """
         filterfunc = util.normcase
 
         def lookup(path):
@@ -273,12 +311,20 @@ class treestatemap:
         return _overlaydict(lookup)
 
     def hastrackeddir(self, d):
+        """
+        Returns True if the dirstate contains a tracked (not removed) file
+        in this directory.
+        """
         if not d.endswith("/"):
             d += "/"
         state = self._tree.getdir(d)  # [union, intersection]
         return bool(state and (state[0] & treestate.EXIST_NEXT))
 
     def hasdir(self, d):
+        """
+        Returns True if the dirstate contains a file (tracked or removed)
+        in this directory.
+        """
         if not d.endswith("/"):
             d += "/"
         return self._tree.hasdir(d)
@@ -598,82 +644,18 @@ class treestatemap:
         return self._tree.get(path, default)
 
 
-def currentversion(repo):
-    """get the current dirstate version"""
-    if "treestate" in repo.requirements:
-        return 2
-    else:
-        return 0
-
-
 def cleanup(ui, repo):
     """Clean up old tree files."""
-    if repo.dirstate._istreestate:
-        repo.dirstate._map._gc()
-
-
-def migrate(ui, repo, version):
-    """migrate dirstate to specified version"""
-    wanted = version
-    current = currentversion(repo)
-    if current == wanted:
-        return
-
-    if "eden" in repo.requirements:
-        raise error.Abort(
-            _("eden checkouts cannot be migrated to a different dirstate format")
-        )
-
-    with repo.wlock():
-        vfs = repo.dirstate._opener
-        newmap = None
-        # Reset repo requirements
-        for req in {"treestate"}:
-            if req in repo.requirements:
-                repo.requirements.remove(req)
-        if wanted in {1, 2} and current in {0}:
-            # to treestate
-            vfs.makedirs("treestate")
-            newmap = treestatemap(
-                ui,
-                vfs,
-                repo.root,
-                repo._rsrepo.workingcopy().treestate(),
-                importdirstate=repo.dirstate,
-            )
-            repo.requirements.add("treestate")
-        elif wanted == 0 and current in {1, 2}:
-            # treestate does not support writeflat.
-            raise error.Abort(_("cannot migrate back to flat dirstate"))
-        else:
-            # unreachable
-            raise error.Abort(
-                _("cannot migrate dirstate from version %s to version %s")
-                % (current, wanted)
-            )
-
-        if newmap is not None:
-            with vfs("dirstate", "w", atomictemp=True) as f:
-                from . import dirstate  # avoid cycle
-
-                newmap.write(f, dirstate._getfsnow(vfs))
-        repo._writerequirements()
-        repo.dirstate.invalidate()  # trigger fsmonitor state invalidation
-        repo.invalidatedirstate()
+    repo.dirstate._map._gc()
 
 
 def repack(ui, repo):
     if "eden" in repo.requirements:
         return
-    version = currentversion(repo)
-    if version > 0:
-        with repo.wlock(), repo.lock(), repo.transaction("dirstate") as tr:
-            repo.dirstate._map._threshold = 1
-            repo.dirstate._dirty = True
-            repo.dirstate.write(tr)
-    else:
-        ui.note(_("not repacking because repo does not have treestate"))
-        return
+    with repo.wlock(), repo.lock(), repo.transaction("dirstate") as tr:
+        repo.dirstate._map._threshold = 1
+        repo.dirstate._dirty = True
+        repo.dirstate.write(tr)
 
 
 def reprflags(flags):
@@ -683,23 +665,3 @@ def reprflags(flags):
         for name in ("EXIST_P1", "EXIST_P2", "EXIST_NEXT", "COPIED", "NEED_CHECK")
         if flags & getattr(treestate, name)
     )
-
-
-def automigrate(repo):
-    if "eden" in repo.requirements:
-        return
-    version = repo.ui.configint("format", "dirstate")
-    current = currentversion(repo)
-    if current == version:
-        return
-    elif current > version:
-        repo.ui.debug("downgrading dirstate format...\n")
-    elif current < version:
-        repo.ui.debug(
-            _(
-                "please wait while we migrate dirstate format to version %s\n"
-                "this will make your @prog@ commands faster...\n"
-            )
-            % version
-        )
-    migrate(repo.ui, repo, version)

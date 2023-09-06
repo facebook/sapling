@@ -121,8 +121,7 @@ class physicalfilesystem:
                 lookups.append(fn)
                 return None
             else:
-                if self.dirstate._istreestate:
-                    self.dirstate.clearneedcheck(fn)
+                self.dirstate.clearneedcheck(fn)
                 return False
         else:
             raise error.ProgrammingError(

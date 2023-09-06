@@ -1005,7 +1005,7 @@ def debugstate(ui, repo, **opts) -> Optional[int]:
         else:
             mode = "%3o" % (ent[1] & 0o777 & ~util.umask)
         msg = "%c %s %10d %s%s" % (ent[0], mode, ent[2], timestr, path)
-        if ui.verbose and ds._istreestate:
+        if ui.verbose:
             flags = dmap._tree.get(path, None)[0]
             msg += " %s" % treestate.reprflags(flags)
         ui.write("%s\n" % (msg,))
@@ -2370,36 +2370,18 @@ def debugpathcomplete(ui, repo, *specs, **opts) -> None:
     Completion extends only to the next path segment unless
     --full is specified, in which case entire paths are used."""
 
-    if "treestate" in repo.requirements:
-
-        def complete(spec, acceptable, matches, fullpaths):
-            t = treestate.treestate
-            for k, setbits, unsetbits in [
-                ("nm", t.EXIST_P1 | t.EXIST_NEXT, 0),
-                ("nm", t.EXIST_P2 | t.EXIST_NEXT, 0),
-                ("a", t.EXIST_NEXT, t.EXIST_P1 | t.EXIST_P2),
-                ("r", 0, t.EXIST_NEXT),
-            ]:
-                if k in acceptable:
-                    repo.dirstate._map._tree.pathcomplete(
-                        spec, setbits, unsetbits, matches.add, fullpaths
-                    )
-
-    else:
-
-        def complete(spec, acceptable, matches, fullpaths):
-            addmatch = matches.add
-            speclen = len(spec)
-            for f, st in pycompat.iteritems(repo.dirstate):
-                if f.startswith(spec) and st[0] in acceptable:
-                    if fullpaths:
-                        addmatch(f)
-                        continue
-                    s = f.find("/", speclen)
-                    if s >= 0:
-                        addmatch(f[:s])
-                    else:
-                        addmatch(f)
+    def complete(spec, acceptable, matches, fullpaths):
+        t = treestate.treestate
+        for k, setbits, unsetbits in [
+            ("nm", t.EXIST_P1 | t.EXIST_NEXT, 0),
+            ("nm", t.EXIST_P2 | t.EXIST_NEXT, 0),
+            ("a", t.EXIST_NEXT, t.EXIST_P1 | t.EXIST_P2),
+            ("r", 0, t.EXIST_NEXT),
+        ]:
+            if k in acceptable:
+                repo.dirstate._map._tree.pathcomplete(
+                    spec, setbits, unsetbits, matches.add, fullpaths
+                )
 
     acceptable = ""
     if opts[r"normal"]:
@@ -3472,21 +3454,11 @@ def debugexistingcasecollisions(ui, repo, *basepaths, **opts) -> None:
 @command(
     "debugtreestate|debugtree",
     [],
-    "hg debugtreestate [on|off|status|repack|cleanup|v0|v1|v2|list]",
+    "hg debugtreestate [status|repack|cleanup|list]",
 )
 def debugtreestate(ui, repo, cmd: str = "status", **opts) -> None:
-    """manage treestate
-
-    v0/off: migrate to flat dirstate
-    v1 or v2: migrate to treestate
-    on: migrate to the latest version (v2)
-    """
-    if cmd in {"v2", "v1", "on"}:
-        treestate.migrate(ui, repo, 2)
-    elif cmd in ["v0", "off"]:
-        treestate.migrate(ui, repo, 0)
-        treestate.cleanup(ui, repo)
-    elif cmd == "repack":
+    """manage treestate"""
+    if cmd == "repack":
         treestate.repack(ui, repo)
         treestate.cleanup(ui, repo)
     elif cmd == "cleanup":
@@ -3495,16 +3467,12 @@ def debugtreestate(ui, repo, cmd: str = "status", **opts) -> None:
         dmap = repo.dirstate._map
         if "eden" in repo.requirements:
             ui.status(_("eden checkout dirstate is managed by edenfs\n"))
-        elif "treestate" in repo.requirements:
+        else:
             ui.status(
                 _("dirstate v2 (using treestate/%s, offset %s, %s files tracked)\n")
                 % (dmap._tree.filename(), dmap._rootid, len(dmap))
             )
-        else:
-            ui.status(_("dirstate v0 (flat dirstate, %s files tracked)\n") % len(dmap))
     elif cmd == "list":
-        if "treestate" not in repo.requirements:
-            raise error.Abort(_("list only supports treestate"))
         dmap = repo.dirstate._map
         tree = dmap._tree
         tget = tree.get

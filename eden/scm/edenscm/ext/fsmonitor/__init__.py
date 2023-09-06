@@ -190,14 +190,11 @@ from __future__ import absolute_import
 
 import codecs
 import contextlib
-import hashlib
 import os
 import stat
 import sys
 import weakref
 from typing import Callable, Iterable, Optional, Tuple
-
-from bindings import workingcopy
 
 from edenscm import (
     blackbox,
@@ -263,19 +260,6 @@ def _handleunavailable(ui, state, ex):
             ui.warn(str(ex) + "\n")
         if ex.invalidate:
             state.invalidate(reason="exception")
-
-
-def _hashignore(ignore):
-    """Calculate hash for ignore patterns and filenames
-
-    If this information changes between Mercurial invocations, we can't
-    rely on Watchman information anymore and have to re-scan the working
-    copy.
-
-    """
-    sha1 = hashlib.sha1()
-    sha1.update(repr(ignore))
-    return sha1.hexdigest()
 
 
 _watchmanencoding = pywatchman.encoding.get_local_encoding()
@@ -415,7 +399,7 @@ def _walk(self, match, event, span):
 
 def _innerwalk(self, match, event, span):
     state = self._fsmonitorstate
-    clock, ignorehash, notefiles = state.get()
+    clock, notefiles = state.get()
     if not clock:
         if state.walk_on_invalidate:
             raise fsmonitorfallback("no clock")
@@ -425,15 +409,6 @@ def _innerwalk(self, match, event, span):
         notefiles = []
 
     ignore = self.dirstate._ignore
-
-    # experimental config: experimental.fsmonitor.skipignore
-    if not self._ui.configbool("experimental", "fsmonitor.skipignore"):
-        if ignorehash and _hashignore(ignore) != ignorehash and clock != "c:0:0":
-            # ignore list changed -- can't rely on Watchman state any more
-            if state.walk_on_invalidate:
-                raise fsmonitorfallback("ignore rules changed")
-            notefiles = []
-            clock = "c:0:0"
 
     if self._ui.configbool("devel", "watchman-reset-clock"):
         clock = "c:0:0"
@@ -445,19 +420,16 @@ def _innerwalk(self, match, event, span):
         # for better performance, directly access the inner dirstate map if the
         # standard dirstate implementation is in use.
         dmap = dmap._map
-    if "treestate" in self._repo.requirements:
-        # treestate has a fast path to filter out ignored directories.
-        ignorevisitdir = self.dirstate._ignore.visitdir
 
-        def dirfilter(path):
-            if path == "":
-                return False
-            result = ignorevisitdir(path.rstrip("/"))
-            return result == "all"
+    ignorevisitdir = self.dirstate._ignore.visitdir
 
-        nonnormalset = self.dirstate._map.nonnormalsetfiltered(dirfilter)
-    else:
-        nonnormalset = self.dirstate._map.nonnormalset
+    def dirfilter(path):
+        if path == "":
+            return False
+        result = ignorevisitdir(path.rstrip("/"))
+        return result == "all"
+
+    nonnormalset = self.dirstate._map.nonnormalsetfiltered(dirfilter)
 
     event["old_clock"] = clock
     event["old_files"] = blackbox.shortlist(sorted(nonnormalset))
@@ -841,11 +813,10 @@ def overridestatus(
         stateunknown = listunknown
 
     if updatestate:
-        if "treestate" in self.requirements:
-            # No need to invalidate fsmonitor state.
-            # state.set needs to run before dirstate write, since it changes
-            # dirstate (treestate).
-            self.addpostdsstatus(poststatustreestate, afterdirstatewrite=False)
+        # No need to invalidate fsmonitor state.
+        # state.set needs to run before dirstate write, since it changes
+        # dirstate (treestate).
+        self.addpostdsstatus(poststatustreestate, afterdirstatewrite=False)
 
     r = orig(node1, node2, match, listignored, listclean, stateunknown)
     modified, added, removed, deleted, unknown, ignored, clean = r
@@ -1056,8 +1027,6 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
         try:
             repo = self.dirstate._repo
 
-            istreestate = "treestate" in self.dirstate._repo.requirements
-
             # Only update fsmonitor state if the results aren't filtered
             isfullstatus = not match or match.always()
 
@@ -1100,15 +1069,10 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
                     # 2. Write dirstate
                     # 3. Write fsmonitor state
                     if isfullstatus:
-                        if not istreestate:
-                            # Treestate is always in sync and doesn't need this
-                            # valdiation.
-                            self._fsmonitorstate.invalidate(reason="dirstate_change")
-                        else:
-                            # Treestate records the fsmonitor state inside the
-                            # dirstate, so we need to write it before we call
-                            # newdirstate.write()
-                            self._updatefsmonitorstate(changed, startclock)
+                        # Treestate records the fsmonitor state inside the
+                        # dirstate, so we need to write it before we call
+                        # newdirstate.write()
+                        self._updatefsmonitorstate(changed, startclock)
 
                     self._marklookupsclean()
 
@@ -1120,14 +1084,6 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
                     # This is a no-op if dirstate is not dirty.
                     tr = repo.currenttransaction()
                     newdirstate.write(tr)
-
-                    # In non-treestate mode write the fsmonitorstate after the
-                    # dirstate to avoid the race condition mentioned in the
-                    # comment above. In treestate mode this race condition
-                    # doesn't exist, and the state is written earlier, so we can
-                    # skip it here.
-                    if isfullstatus and not istreestate:
-                        self._updatefsmonitorstate(changed, startclock)
                 else:
                     if freshinstance:
                         repo.ui.write_err(
@@ -1152,23 +1108,15 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
                 repo.ui.write_err(dirstatemod.slowstatuswarning)
 
     def _updatefsmonitorstate(self, changed, startclock):
-        istreestate = "treestate" in self.dirstate._repo.requirements
-
         clock = self._fsmonitorstate.getlastclock()
-        hashignore = None
         notefiles = changed
-
-        if not istreestate:
-            if not clock:
-                clock = startclock
-            hashignore = _hashignore(self.dirstate._ignore)
 
         # For treestate, the clock and the file state are always consistent - they
         # should not affect "status" correctness, even if they are not the latest
         # state. Changing the clock to None would make the next "status" command
         # slower. Therefore avoid doing that.
-        if clock is not None or not istreestate:
-            self._fsmonitorstate.set(clock, hashignore, notefiles)
+        if clock is not None:
+            self._fsmonitorstate.set(clock, notefiles)
 
     @util.timefunction("fsmonitorwalk", 0, "_ui")
     def _fsmonitorwalk(self, match):
@@ -1291,9 +1239,6 @@ def debugrefreshwatchmanclock(ui, repo):
     # Sanity checks
     if not ui.plain():
         raise error.Abort(_("only automation can run this"))
-
-    if "treestate" not in repo.requirements:
-        raise error.Abort(_("treestate is required"))
 
     with repo.wlock(), repo.lock(), repo.transaction("debugrefreshwatchmanclock") as tr:
         # Don't trigger a commitcloud background backup for this.

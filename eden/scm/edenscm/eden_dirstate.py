@@ -43,9 +43,10 @@ class eden_dirstate(dirstate.dirstate):
 
         super(eden_dirstate, self).__init__(opener, ui, root, validate, repo)
 
+    def _initfs(self) -> None:
         def create_eden_dirstate(ui, opener, root):
             return eden_dirstate_map.eden_dirstate_map(
-                ui, opener, root, self.eden_client, repo
+                ui, opener, root, self.eden_client, self._repo
             )
 
         self._mapcls = create_eden_dirstate
@@ -56,6 +57,7 @@ class eden_dirstate(dirstate.dirstate):
         # response here, but really, we should outright prohibit this.
         # Most likely, we will have to replace the implementation of `hg reset`.
         return
+        # This yield is load bearing - it makes us an iterator.
         yield
 
     def iteritems(self):  # override

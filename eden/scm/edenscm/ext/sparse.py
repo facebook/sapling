@@ -198,26 +198,6 @@ def extsetup(ui) -> None:
     _setupadd(ui)
     _setupdirstate(ui)
     _setupdiff(ui)
-    # if fsmonitor is enabled, tell it to use our hash function
-    try:
-        fsmonitor = extensions.find("fsmonitor")
-
-        def _hashignore(orig, ignore):
-            return _hashmatcher(ignore)
-
-        extensions.wrapfunction(fsmonitor, "_hashignore", _hashignore)
-    except KeyError:
-        pass
-    # do the same for hgwatchman, old name
-    try:
-        hgwatchman = extensions.find("hgwatchman")
-
-        def _hashignore(orig, ignore):
-            return _hashmatcher(ignore)
-
-        extensions.wrapfunction(hgwatchman, "_hashignore", _hashignore)
-    except KeyError:
-        pass
 
 
 def reposetup(ui, repo) -> None:
