@@ -8,6 +8,7 @@
 import type {RangeInfo} from './TextEditable';
 import type {ChunkSelectState, LineRegion, SelectLine} from './stackEdit/chunkSelectState';
 
+import {ScrollX, Row} from './ComponentUtils';
 import {TextEditable} from './TextEditable';
 import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {T, t} from './i18n';
@@ -236,34 +237,32 @@ function PartialFileSelectionWithCheckbox(props: Props & {unified?: boolean}) {
     }
   });
 
+  const scrollX = (children: JSX.Element) => {
+    return (
+      <ScrollX size={600} maxSize={600} hideBar={true}>
+        {children}
+      </ScrollX>
+    );
+  };
+
   return (
-    <div className="partial-file-selection-width-min-content partial-file-selection-border">
-      <div className="partial-file-selection-scroll-y">
-        <div className="partial-file-selection checkboxes">
-          <pre className="column-checkbox">{lineCheckbox}</pre>
-          {unified ? (
-            <>
-              <pre className="column-a-number">{lineANumber}</pre>
-              <pre className="column-b-number">{lineBNumber}</pre>
-              <div className="partial-file-selection-scroll-x">
-                <pre className="column-unified">{lineAContent}</pre>
-              </div>
-            </>
-          ) : (
-            <>
-              <pre className="column-a-number">{lineANumber}</pre>
-              <div className="partial-file-selection-scroll-x">
-                <pre className="column-a">{lineAContent}</pre>
-              </div>
-              <pre className="column-b-number">{lineBNumber}</pre>
-              <div className="partial-file-selection-scroll-x">
-                <pre className="column-b">{lineBContent}</pre>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+    <Row className="partial-file-selection checkboxes partial-file-selection-border">
+      <pre className="column-checkbox">{lineCheckbox}</pre>
+      {unified ? (
+        <>
+          <pre className="column-a-number">{lineANumber}</pre>
+          <pre className="column-b-number">{lineBNumber}</pre>
+          {scrollX(<pre className="column-unified">{lineAContent}</pre>)}
+        </>
+      ) : (
+        <>
+          <pre className="column-a-number">{lineANumber}</pre>
+          {scrollX(<pre className="column-a">{lineAContent}</pre>)}
+          <pre className="column-b-number">{lineBNumber}</pre>
+          {scrollX(<pre className="column-b">{lineBContent}</pre>)}
+        </>
+      )}
+    </Row>
   );
 }
 
@@ -447,7 +446,7 @@ function PartialFileSelectionWithFreeEdit(props: Props) {
   };
 
   return (
-    <div className="partial-file-selection-width-min-content partial-file-selection-border">
+    <div className="partial-file-selection-width-min-content">
       <div className="partial-file-selection-scroll-y">
         <div className="partial-file-selection free-form">
           <pre className="column-a-number readonly">{lineANumber}</pre>

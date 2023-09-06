@@ -21,7 +21,9 @@
 }
 
 .partial-file-selection-border {
-  border: 1px solid var(--tooltip-border);
+  border-left: 1px solid var(--tooltip-border);
+  border-right: 1px solid var(--tooltip-border);
+  width: fit-content;
 }
 
 .partial-file-selection-width-min-content {
@@ -53,6 +55,15 @@
 
 .partial-file-selection .line-context {
   height: var(--pad);
+}
+
+.partial-file-selection .column-unified {
+  min-width: 100%;
+}
+
+.partial-file-selection .column-a-number,
+.partial-file-selection .column-b-number {
+  min-width: 3em;
 }
 
 .partial-file-selection.checkboxes .line.line-context,
@@ -140,4 +151,5 @@
   position: absolute;
   padding-left: var(--pad);
   white-space: normal; /* needed for <VSCodeCheckbox /> */
+  top: calc(9px - 1em);
 }

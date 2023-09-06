@@ -29,7 +29,7 @@ import {
 } from './CommitInfoView/CommitMessageFields';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {ErrorNotice} from './ErrorNotice';
-import {PartialFileSelection} from './PartialFileSelection';
+import {PartialFileSelectionWithMode} from './PartialFileSelection';
 import {SuspenseBoundary} from './SuspenseBoundary';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {islDrawerState} from './drawerState';
@@ -55,7 +55,6 @@ import {
 } from './previews';
 import {selectedCommits} from './selection';
 import {
-  hasExperimentalFeatures,
   latestHeadCommit,
   operationList,
   uncommittedChangesFetchError,
@@ -158,6 +157,7 @@ export function ChangedFiles(props: {
   totalFiles: number;
   comparison: Comparison;
   selection?: UseUncommittedSelection;
+  place?: Place;
 }) {
   const displayType = useRecoilValue(changedFilesDisplayType);
   const {filesSubset, totalFiles, ...rest} = props;
@@ -185,6 +185,7 @@ function LinearFileList(props: {
   displayType: ChangedFilesDisplayType;
   comparison: Comparison;
   selection?: UseUncommittedSelection;
+  place?: Place;
 }) {
   const {files, ...rest} = props;
 
@@ -204,6 +205,7 @@ function FileTree(props: {
   displayType: ChangedFilesDisplayType;
   comparison: Comparison;
   selection?: UseUncommittedSelection;
+  place?: Place;
 }) {
   const {files, ...rest} = props;
 
@@ -258,11 +260,13 @@ function File({
   displayType,
   comparison,
   selection,
+  place,
 }: {
   file: UIChangedFile;
   displayType: ChangedFilesDisplayType;
   comparison: Comparison;
   selection?: UseUncommittedSelection;
+  place?: Place;
 }) {
   // Renamed files are files which have a copy field, where that path was also removed.
   // Visually show renamed files as if they were modified, even though sl treats them as added.
@@ -286,52 +290,60 @@ function File({
   });
 
   return (
-    <div
-      className={`changed-file file-${statusName}`}
-      data-testid={`changed-file-${file.path}`}
-      onContextMenu={contextMenu}
-      key={file.path}
-      tabIndex={0}
-      onKeyPress={e => {
-        if (e.key === 'Enter') {
-          platform.openFile(file.path);
-        }
-      }}>
-      <FileSelectionCheckbox file={file} selection={selection} />
-      <span
-        className="changed-file-path"
-        onClick={() => {
-          platform.openFile(file.path);
+    <>
+      <div
+        className={`changed-file file-${statusName}`}
+        data-testid={`changed-file-${file.path}`}
+        onContextMenu={contextMenu}
+        key={file.path}
+        tabIndex={0}
+        onKeyPress={e => {
+          if (e.key === 'Enter') {
+            platform.openFile(file.path);
+          }
         }}>
-        <Icon icon={icon} />
-        <Tooltip title={file.tooltip} delayMs={2_000} placement="right">
-          <span
-            className="changed-file-path-text"
-            onCopy={e => {
-              const selection = document.getSelection();
-              if (selection) {
-                // we inserted LTR markers, remove them again on copy
-                e.clipboardData.setData('text/plain', selection.toString().replace(/\u200E/g, ''));
-                e.preventDefault();
-              }
-            }}>
-            {escapeForRTL(
-              displayType === 'fish'
-                ? file.path
-                    .split('/')
-                    .map((a, i, arr) => (i === arr.length - 1 ? a : a[0]))
-                    .join('/')
-                : displayType === 'fullPaths'
-                ? file.path
-                : displayType === 'tree'
-                ? file.path.slice(file.path.lastIndexOf('/') + 1)
-                : file.label,
-            )}
-          </span>
-        </Tooltip>
-      </span>
-      <FileActions file={file} comparison={comparison} />
-    </div>
+        <FileSelectionCheckbox file={file} selection={selection} />
+        <span
+          className="changed-file-path"
+          onClick={() => {
+            platform.openFile(file.path);
+          }}>
+          <Icon icon={icon} />
+          <Tooltip title={file.tooltip} delayMs={2_000} placement="right">
+            <span
+              className="changed-file-path-text"
+              onCopy={e => {
+                const selection = document.getSelection();
+                if (selection) {
+                  // we inserted LTR markers, remove them again on copy
+                  e.clipboardData.setData(
+                    'text/plain',
+                    selection.toString().replace(/\u200E/g, ''),
+                  );
+                  e.preventDefault();
+                }
+              }}>
+              {escapeForRTL(
+                displayType === 'fish'
+                  ? file.path
+                      .split('/')
+                      .map((a, i, arr) => (i === arr.length - 1 ? a : a[0]))
+                      .join('/')
+                  : displayType === 'fullPaths'
+                  ? file.path
+                  : displayType === 'tree'
+                  ? file.path.slice(file.path.lastIndexOf('/') + 1)
+                  : file.label,
+              )}
+            </span>
+          </Tooltip>
+        </span>
+        <FileActions file={file} comparison={comparison} place={place} />
+      </div>
+      {place === 'main' && selection?.isExpanded(file.path) && (
+        <MaybePartialSelection file={file} />
+      )}
+    </>
   );
 }
 
@@ -380,7 +392,9 @@ function FileSelectionCheckbox({
   );
 }
 
-export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | 'commit sidebar'}) {
+type Place = 'main' | 'amend sidebar' | 'commit sidebar';
+
+export function UncommittedChanges({place}: {place: Place}) {
   const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
   const error = useRecoilValue(uncommittedChangesFetchError);
   // TODO: use treeWithPreviews instead, and update CommitOperation
@@ -579,6 +593,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
         <ChangedFiles
           filesSubset={conflicts.files ?? []}
           totalFiles={conflicts.files?.length ?? 0}
+          place={place}
           comparison={{
             type: ComparisonType.UncommittedChanges,
           }}
@@ -587,6 +602,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
         <ChangedFiles
           filesSubset={uncommittedChanges.slice(0, 25)}
           totalFiles={uncommittedChanges.length}
+          place={place}
           selection={selection}
           comparison={{
             type: ComparisonType.UncommittedChanges,
@@ -720,9 +736,16 @@ function MergeConflictButtons({
 
 const revertableStatues = new Set(['M', 'R', '!']);
 const conflictStatuses = new Set<ChangedFileType>(['U', 'Resolved']);
-function FileActions({comparison, file}: {comparison: Comparison; file: UIChangedFile}) {
+function FileActions({
+  comparison,
+  file,
+  place,
+}: {
+  comparison: Comparison;
+  file: UIChangedFile;
+  place?: Place;
+}) {
   const runOperation = useRunOperation();
-  const hasExperimental = useRecoilValue(hasExperimentalFeatures);
   const conflicts = useRecoilValue(optimisticMergeConflicts);
 
   const actions: Array<React.ReactNode> = [];
@@ -892,7 +915,7 @@ function FileActions({comparison, file}: {comparison: Comparison; file: UIChange
       );
     }
 
-    if (hasExperimental && conflicts == null) {
+    if (place === 'main' && conflicts == null) {
       actions.push(<PartialSelectionAction file={file} key="partial-selection" />);
     }
   }
@@ -904,24 +927,34 @@ function FileActions({comparison, file}: {comparison: Comparison; file: UIChange
 }
 
 function PartialSelectionAction({file}: {file: UIChangedFile}) {
-  const getPanel = () => {
-    return (
-      <SuspenseBoundary>
-        <PartialSelectionPanel file={file} />
-      </SuspenseBoundary>
-    );
+  const selection = useUncommittedSelection();
+
+  const handleClick = () => {
+    selection.toggleExpand(file.path);
   };
 
   return (
-    <Tooltip
-      title={t('Select partial changes')}
-      component={getPanel}
-      trigger="click"
-      placement="bottom">
-      <VSCodeButton className="file-show-on-hover" appearance="icon">
+    <Tooltip title={t('Toggle chuck selection')}>
+      <VSCodeButton className="file-show-on-hover" appearance="icon" onClick={handleClick}>
         <Icon icon="diff" />
       </VSCodeButton>
     </Tooltip>
+  );
+}
+
+// Left margin to "indendent" by roughly a checkbox width.
+const leftMarginStyle: React.CSSProperties = {marginLeft: 'calc(2.5 * var(--pad))'};
+
+function MaybePartialSelection({file}: {file: UIChangedFile}) {
+  const fallback = (
+    <div style={leftMarginStyle}>
+      <Icon icon="loading" />
+    </div>
+  );
+  return (
+    <SuspenseBoundary fallback={fallback}>
+      <PartialSelectionPanel file={file} />
+    </SuspenseBoundary>
   );
 }
 
@@ -931,10 +964,13 @@ function PartialSelectionPanel({file}: {file: UIChangedFile}) {
   const chunkSelect = usePromise(selection.getChunkSelect(path));
 
   return (
-    <PartialFileSelection
-      chunkSelection={chunkSelect}
-      setChunkSelection={state => selection.editChunkSelect(path, state)}
-    />
+    <div style={leftMarginStyle}>
+      <PartialFileSelectionWithMode
+        chunkSelection={chunkSelect}
+        setChunkSelection={state => selection.editChunkSelect(path, state)}
+        mode="unified"
+      />
+    </div>
   );
 }
 
