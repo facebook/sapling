@@ -576,6 +576,21 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'fetchShelvedChanges': {
+        repo
+          .getShelvedChanges()
+          .then(shelvedChanges => {
+            this.postMessage({
+              type: 'fetchedShelvedChanges',
+              shelvedChanges: {value: shelvedChanges},
+            });
+          })
+          .catch(err => {
+            logger?.error('Could not fetch shelved changes', err);
+            this.postMessage({type: 'fetchedShelvedChanges', shelvedChanges: {error: err}});
+          });
+        break;
+      }
       case 'typeahead': {
         // Current repo's code review provider should be able to handle all
         // TypeaheadKinds for the fields in its defined schema.

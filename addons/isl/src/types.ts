@@ -265,6 +265,15 @@ export type BeganFetchingSmartlogCommitsEvent = {
   type: 'beganFetchingSmartlogCommitsEvent';
 };
 
+export type ShelvedChange = {
+  hash: Hash;
+  name: string;
+  date: Date;
+  filesSample: Array<ChangedFile>;
+  totalFileCount: number;
+  description: string;
+};
+
 type ConflictInfo = {
   command: string;
   toContinue: string;
@@ -411,6 +420,7 @@ export type ClientToServerMessage =
   | {type: 'abortRunningOperation'; operationId: string}
   | {type: 'deleteFile'; filePath: RepoRelativePath}
   | {type: 'fetchCommitMessageTemplate'}
+  | {type: 'fetchShelvedChanges'}
   | {type: 'typeahead'; kind: TypeaheadKind; query: string; id: string}
   | {type: 'requestRepoInfo'}
   | {type: 'requestApplicationInfo'}
@@ -469,6 +479,7 @@ export type ServerToClientMessage =
   | {type: 'heartbeat'; id: string}
   | {type: 'gotConfig'; name: ConfigName; value: string | undefined}
   | {type: 'fetchedCommitMessageTemplate'; template: string}
+  | {type: 'fetchedShelvedChanges'; shelvedChanges: Result<Array<ShelvedChange>>}
   | {type: 'typeaheadResult'; id: string; result: Array<TypeaheadResult>}
   | {type: 'applicationInfo'; info: ApplicationInfo}
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}

@@ -33,6 +33,7 @@ import type {
   RepoRelativePath,
   FetchedUncommittedChanges,
   FetchedCommits,
+  ShelvedChange,
 } from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
@@ -130,8 +131,22 @@ function fromEntries<V>(entries: Array<[string, V]>): {
 const FIELD_INDEX = fromEntries(Object.keys(FIELDS).map((key, i) => [key, i])) as {
   [key in Required<keyof typeof FIELDS>]: number;
 };
-
 const FETCH_TEMPLATE = [...Object.values(FIELDS), COMMIT_END_MARK].join('\n');
+
+const SHELVE_FIELDS = {
+  hash: '{node}',
+  name: '{shelvename}',
+  author: '{author}',
+  date: '{date|isodatesec}',
+  filesAdded: '{file_adds|json}',
+  filesModified: '{file_mods|json}',
+  filesRemoved: '{file_dels|json}',
+  description: '{desc}',
+};
+const SHELVE_FIELD_INDEX = fromEntries(Object.keys(SHELVE_FIELDS).map((key, i) => [key, i])) as {
+  [key in Required<keyof typeof SHELVE_FIELDS>]: number;
+};
+const SHELVE_FETCH_TEMPLATE = [...Object.values(SHELVE_FIELDS), COMMIT_END_MARK].join('\n');
 
 /**
  * This class is responsible for providing information about the working copy
@@ -746,6 +761,15 @@ export class Repository {
     return result;
   }
 
+  public async getShelvedChanges(): Promise<Array<ShelvedChange>> {
+    const output = (
+      await this.runCommand(['log', '--rev', 'shelved()', '--template', SHELVE_FETCH_TEMPLATE])
+    ).stdout;
+
+    const shelves = parseShelvedCommitsOutput(this.logger, output.trim());
+    return shelves;
+  }
+
   public getAllDiffIds(): Array<DiffId> {
     return (
       this.getSmartlogCommits()
@@ -1017,6 +1041,45 @@ export function parseCommitInfoOutput(logger: Logger, output: string): SmartlogC
   }
   return commitInfos;
 }
+
+export function parseShelvedCommitsOutput(logger: Logger, output: string): Array<ShelvedChange> {
+  const shelves = output.split(COMMIT_END_MARK);
+  const commitInfos: Array<ShelvedChange> = [];
+  for (const chunk of shelves) {
+    try {
+      const lines = chunk.trim().split('\n');
+      if (lines.length < Object.keys(SHELVE_FIELDS).length) {
+        continue;
+      }
+      const files: Array<ChangedFile> = [
+        ...(JSON.parse(lines[SHELVE_FIELD_INDEX.filesModified]) as Array<string>).map(path => ({
+          path,
+          status: 'M' as const,
+        })),
+        ...(JSON.parse(lines[SHELVE_FIELD_INDEX.filesAdded]) as Array<string>).map(path => ({
+          path,
+          status: 'A' as const,
+        })),
+        ...(JSON.parse(lines[SHELVE_FIELD_INDEX.filesRemoved]) as Array<string>).map(path => ({
+          path,
+          status: 'R' as const,
+        })),
+      ];
+      commitInfos.push({
+        hash: lines[SHELVE_FIELD_INDEX.hash],
+        name: lines[SHELVE_FIELD_INDEX.name],
+        date: new Date(lines[SHELVE_FIELD_INDEX.date]),
+        filesSample: files.slice(0, MAX_FETCHED_FILES_PER_COMMIT),
+        totalFileCount: files.length,
+        description: lines.slice(SHELVE_FIELD_INDEX.description).join('\n'),
+      });
+    } catch (err) {
+      logger.error('failed to parse shelved change');
+    }
+  }
+  return commitInfos;
+}
+
 export function parseSuccessorData(successorData: string): SuccessorInfo | undefined {
   const [successorString] = successorData.split(',', 1); // we're only interested in the first available mutation
   if (!successorString) {
