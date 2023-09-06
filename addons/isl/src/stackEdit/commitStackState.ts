@@ -1199,6 +1199,184 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     const newStack = new CommitStackState(undefined, record);
     return newStack.maybeBuildFileStacks().useFileStack();
   }
+
+  /**
+   * Replace the `startRev` (inclusive) to `endRev` (exclusive) sub stack
+   * with commits from the `subStack`.
+   *
+   * Unmodified changes will be dropped. Top commits with empty changes are
+   * dropped. This turns a "dense" back to a non-"dense" one.
+   *
+   * Note: `denseSubStack` does not preserve renaming info. This function
+   * currently does not try to reconstruct the rename info.
+   *
+   * Intended for interactive split use-case.
+   */
+  applySubStack(startRev: Rev, endRev: Rev, subStack: CommitStackState): CommitStackState {
+    assert(
+      startRev >= 0 && endRev <= this.stack.size && startRev < endRev,
+      'startRev or endRev out of range',
+    );
+
+    const contentSubStack = subStack.useFileContent();
+    const state = this.invalidateFileStacks();
+
+    // Used to detect "unchanged" files in subStack.
+    const afterFileMap = new Map(
+      [...state.bottomFiles.entries()].map(([path, file]) => [path, file]),
+    );
+
+    // Used to check the original "final" content of files.
+    const beforeFileMap = new Map(afterFileMap);
+
+    const updateFileMap = (commit: CommitState, map: Map<string, FileState>) =>
+      commit.files.forEach((file, path) => map.set(path, file));
+
+    // Pick an unused key.
+    const usedKeys = new Set(
+      state.stack
+        .filter(c => c.rev < startRev || c.rev >= endRev)
+        .map(c => c.key)
+        .toArray(),
+    );
+    const pickKey = (c: CommitState): CommitState => {
+      if (usedKeys.has(c.key)) {
+        for (let i = 0; ; ++i) {
+          const key = `${c.key}-${i}`;
+          if (!usedKeys.has(key)) {
+            usedKeys.add(c.key);
+            return c.set('key', key);
+          }
+        }
+      } else {
+        usedKeys.add(c.key);
+        return c;
+      }
+    };
+
+    // Process commits in a "dense" stack.
+    // - Update afterFileMap.
+    // - Drop unchanged files.
+    // - Drop the "absent" flag from files if they are not empty.
+    // - Pick a unique key.
+    // - Add "parent" for the first commit.
+    // - Adjust "revs".
+    const processDenseCommit = (c: CommitState): CommitState => {
+      const newFiles = c.files.flatMap<RepoPath, FileState>((currentFile, path) => {
+        let file = currentFile;
+        const oldFile = afterFileMap.get(path);
+        // Drop "absent" flag (and reuse the old flag).
+        if (
+          file.flags?.includes(ABSENT_FLAG) &&
+          typeof file.data === 'string' &&
+          file.data.length > 0
+        ) {
+          let oldFlag = oldFile?.flags;
+          if (oldFlag === ABSENT_FLAG) {
+            oldFlag = undefined;
+          }
+          if (oldFlag == null) {
+            file = file.remove('flags');
+          } else {
+            file = file.set('flags', oldFlag);
+          }
+        } else {
+          // Add "absent" flag for empty files (herustics).
+          // The file must be non-empty in the old stack.
+          if (
+            oldFile?.flags?.includes(ABSENT_FLAG) &&
+            file.data === '' &&
+            !file.flags?.includes(ABSENT_FLAG)
+          ) {
+            // Check the old stack. Does it have a non-absent empty file in the range?
+            let hasEmpty = false;
+            for (let i = startRev; i < endRev; ++i) {
+              const oldFile = state.getFile(i, path);
+              if (isAbsent(oldFile)) {
+                continue;
+              } else {
+                hasEmpty = oldFile.data === '';
+                break;
+              }
+            }
+            // If not, let's re-add the "absent" flag.
+            if (!hasEmpty) {
+              file = file.set('flags', ABSENT_FLAG);
+            }
+          }
+        }
+        // Drop unchanged files.
+        const keep = oldFile == null || !isContentSame(oldFile, file);
+        // Update afterFileMap.
+        if (keep) {
+          afterFileMap.set(path, file);
+        }
+        return Seq(keep ? [[path, file]] : []);
+      });
+      const isFirst = c.rev === 0;
+      let commit = rewriteCommitRevs(pickKey(c), r => r + startRev).set('files', newFiles);
+      if (isFirst && startRev > 0) {
+        commit = commit.set('parents', List([startRev - 1]));
+      }
+      return commit;
+    };
+
+    //             |<--- to delete --->|
+    // Before: ... |startRev ... endRev| ...
+    // New:    ... |filter(substack)   | ...
+    //             filter: remove empty commits
+    let newSubStackSize = 0;
+    const newStack = state.stack.flatMap(c => {
+      updateFileMap(c, beforeFileMap);
+      if (c.rev < startRev) {
+        updateFileMap(c, afterFileMap);
+        return Seq([c]);
+      } else if (c.rev === startRev) {
+        // dropUnchangedFiles updates afterFileMap.
+        let commits = contentSubStack.stack.map(c => processDenseCommit(c));
+        // Drop empty commits at the end. Adjust offset.
+        while (commits.last()?.files?.isEmpty()) {
+          commits = commits.pop();
+        }
+        newSubStackSize = commits.size;
+        return commits;
+      } else if (c.rev > startRev && c.rev < endRev) {
+        return Seq([]);
+      } else {
+        let commit = c;
+        assert(c.rev >= endRev, 'bug: c.rev < endRev should be handled above');
+        if (c.rev === endRev) {
+          // This commit should have the same exact content as before, not just the
+          // modified files, but also the unmodified ones.
+          // We check all files ever changed by the stack between "before" and "after",
+          // and bring their content back to "before" in this commit.
+          beforeFileMap.forEach((beforeFile, path) => {
+            if (commit.files.has(path)) {
+              return;
+            }
+            const afterFile = afterFileMap.get(path);
+            if (afterFile == null || !isContentSame(beforeFile, afterFile)) {
+              commit = commit.setIn(['files', path], beforeFile);
+            }
+          });
+          // Delete file added by the subStack that do not exist before.
+          afterFileMap.forEach((_, path) => {
+            if (!beforeFileMap.has(path)) {
+              commit = commit.setIn(['files', path], ABSENT_FILE);
+            }
+          });
+        }
+        const offset = newSubStackSize - (endRev - startRev);
+        return Seq([
+          rewriteCommitRevs(commit, r => (r >= startRev && r < endRev ? endRev - 1 : r) + offset),
+        ]);
+      }
+    });
+
+    // This function might be frequnetly called during interacitve split.
+    // Do not build file stacks (potentially slow) now.
+    return state.set('stack', newStack);
+  }
 }
 
 function getBottomFilesFromExportStack(stack: Readonly<ExportStack>): Map<RepoPath, FileState> {
@@ -1355,6 +1533,11 @@ function isAbsent(file: FileState | undefined): boolean {
 /** Test if a file has utf-8 content. */
 function isUtf8(file: FileState): boolean {
   return typeof file.data === 'string' || file.data instanceof FileIdx;
+}
+
+/** Test if 2 files have the same content, ignoring "copyFrom". */
+function isContentSame(file1: FileState, file2: FileState): boolean {
+  return is(file1.data, file2.data) && (file1.flags ?? '') === (file2.flags ?? '');
 }
 
 /**

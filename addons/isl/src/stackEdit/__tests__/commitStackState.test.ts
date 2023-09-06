@@ -8,8 +8,10 @@
 import type {Rev} from '../fileStackState';
 import type {ExportCommit, ExportStack} from 'shared/types/stack';
 
-import {ABSENT_FILE, CommitStackState} from '../commitStackState';
-import {List, Set as ImSet} from 'immutable';
+import {ABSENT_FILE, CommitIdx, CommitStackState, CommitState} from '../commitStackState';
+import {FileStackState} from '../fileStackState';
+import {List, Set as ImSet, Map as ImMap} from 'immutable';
+import {unwrap} from 'shared/utils';
 
 const exportCommitDefault: ExportCommit = {
   requested: true,
@@ -798,6 +800,137 @@ describe('CommitStackState', () => {
       const newStack = stack.insertEmpty(1, '').insertEmpty(1, '').insertEmpty(1, '');
       const keys = newStack.stack.map(c => c.key);
       expect(keys.size).toBe(ImSet(keys).size);
+    });
+  });
+
+  describe('applySubStack', () => {
+    const stack = new CommitStackState(exportStack1);
+    const subStack = stack.denseSubStack(List([2, 3]));
+    const emptyStack = subStack.set('stack', List());
+
+    const getChangedFiles = (state: CommitStackState, rev: Rev): Array<string> => {
+      return [...unwrap(state.stack.get(rev)).files.keys()].sort();
+    };
+
+    it('optimizes file changes by removing unmodified changes', () => {
+      const newStack = stack.applySubStack(2, 4, subStack);
+      expect(newStack.stack.size).toBe(stack.stack.size);
+      // The original `stack` does not have unmodified changes.
+      // To verify that `newStack` does not have unmodified changes, check it
+      // against the original `stack`.
+      stack.revs().forEach(i => {
+        expect(getChangedFiles(newStack, i)).toEqual(getChangedFiles(stack, i));
+      });
+    });
+
+    it('drops empty commits at the end of subStack', () => {
+      // Change the 2nd commit in subStack to empty.
+      const newSubStack = subStack.set(
+        'stack',
+        subStack.stack.setIn([1, 'files'], unwrap(subStack.stack.get(0)).files),
+      );
+      // `applySubStack` should drop the 2nd commit in `newSubStack`.
+      const newStack = stack.applySubStack(2, 4, newSubStack);
+      newStack.assertRevOrder();
+      expect(newStack.stack.size).toBe(stack.stack.size - 1);
+    });
+
+    it('rewrites revs for the remaining of the stack', () => {
+      const newStack = stack.applySubStack(1, 2, emptyStack);
+      newStack.assertRevOrder();
+      [1, 2].forEach(i => {
+        expect(newStack.stack.get(i)?.toJS()).toMatchObject({rev: i, parents: [i - 1]});
+      });
+    });
+
+    it('rewrites revs for the inserted stack', () => {
+      const newStack = stack.applySubStack(2, 3, subStack);
+      newStack.assertRevOrder();
+      [2, 3, 4].forEach(i => {
+        expect(newStack.stack.get(i)?.toJS()).toMatchObject({rev: i, parents: [i - 1]});
+      });
+    });
+
+    it('preserves file contents of the old stack', () => {
+      // Add a file 'x.txt' deleted by the original stack.
+      const newSubStack = subStack.set(
+        'stack',
+        List([
+          CommitState({
+            key: 'foo',
+            files: ImMap([['x.txt', stack.getFile(1, 'x.txt')]]),
+          }),
+        ]),
+      );
+      const newStack = stack.applySubStack(1, 3, newSubStack);
+
+      // 'y.txt' was added by the old stack, not the new stack. So it is re-added
+      // to preserve its old content.
+      // 'x.txt' was added by the new stack, deleted by the old stack. So it is
+      // re-deleted.
+      expect(getChangedFiles(newStack, 2)).toEqual(['x.txt', 'y.txt', 'z.txt']);
+      expect(newStack.getFile(2, 'y.txt').data).toBe('33');
+      expect(newStack.getFile(2, 'x.txt')).toBe(ABSENT_FILE);
+    });
+
+    it('update keys to avoid conflict', () => {
+      const oldKey = unwrap(stack.stack.get(1)).key;
+      const newSubStack = subStack.set('stack', subStack.stack.setIn([0, 'key'], oldKey));
+      const newStack = stack.applySubStack(2, 3, newSubStack);
+
+      // Keys are still unique.
+      const keys = newStack.stack.map(c => c.key);
+      const keysSet = ImSet(keys);
+      expect(keys.size).toBe(keysSet.size);
+    });
+
+    it('drops ABSENT flag if content is not empty', () => {
+      // x.txt was deleted by subStack rev 0 (B). We are moving it to be deleted by rev 1 (C).
+      expect(subStack.getFile(0, 'x.txt').flags).toBe(ABSENT_FILE.flags);
+      // To break the deletion into done by 2 commits, we edit the file stack of 'x.txt'.
+      const fileIdx = unwrap(subStack.commitToFile.get(CommitIdx({rev: 0, path: 'x.txt'}))).fileIdx;
+      const fileStack = unwrap(subStack.fileStacks.get(fileIdx));
+      // The file stack has 3 revs: (base, before deletion), (deleted at rev 0), (deleted at rev 1).
+      expect(fileStack.convertToPlainText().toArray()).toEqual(['33', '', '']);
+      const newFileStack = new FileStackState(['33', '3', '']);
+      const newSubStack = subStack.setFileStack(fileIdx, newFileStack);
+      expect(newSubStack.getUtf8Data(newSubStack.getFile(0, 'x.txt'))).toBe('3');
+      // Apply the file stack back to the main stack.
+      const newStack = stack.applySubStack(2, 4, newSubStack);
+      expect(newStack.stack.size).toBe(4);
+      // Check that x.txt in rev 2 (B) is '3', not absent.
+      const file = newStack.getFile(2, 'x.txt');
+      expect(file.data).toBe('3');
+      expect(file.flags ?? '').not.toContain(ABSENT_FILE.flags);
+
+      // Compare the old and new file stacks.
+      // - x.txt deletion is now by commit 'C', not 'B'.
+      // - y.txt rename is lost (current limitation)
+      expect(stack.describeFileStacks(true)).toEqual([
+        '0:./x.txt 1:A/x.txt(33) 2:B/y.txt(33)',
+        '0:./z.txt(11) 1:A/z.txt(22) 2:C/z.txt',
+      ]);
+      expect(newStack.describeFileStacks(true)).toEqual([
+        '0:./x.txt 1:A/x.txt(33) 2:B/x.txt(3) 3:C/x.txt',
+        '0:./z.txt(11) 1:A/z.txt(22) 2:C/z.txt',
+        '0:./y.txt 1:B/y.txt(33)',
+      ]);
+    });
+
+    it('adds ABSENT flag if content becomes empty', () => {
+      // y.txt was added by subStack rev 0 (B). We are moving it to be added by rev 1 (C).
+      const fileIdx = unwrap(subStack.commitToFile.get(CommitIdx({rev: 0, path: 'y.txt'}))).fileIdx;
+      const fileStack = unwrap(subStack.fileStacks.get(fileIdx));
+      // The file stack has 3 revs: (base, before add), (add by rev 0), (unchanged by rev 1).
+      expect(fileStack.convertToPlainText().toArray()).toEqual(['', '33', '33']);
+      const newFileStack = new FileStackState(['', '', '33']);
+      const newSubStack = subStack.setFileStack(fileIdx, newFileStack);
+      // Apply the file stack back to the main stack.
+      const newStack = stack.applySubStack(2, 4, newSubStack);
+      // Check that y.txt in rev 2 (B) is absent, not just empty.
+      const file = newStack.getFile(2, 'y.txt');
+      expect(file.data).toBe('');
+      expect(file.flags).toBe(ABSENT_FILE.flags);
     });
   });
 });
