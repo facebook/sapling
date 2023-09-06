@@ -39,7 +39,7 @@ type EditorRowProps = {
   setStack: (stack: FileStackState) => void;
 
   /** Function to get the "title" of a rev. */
-  getTitle: (rev: Rev) => string;
+  getTitle?: (rev: Rev) => string;
 
   /**
    * Skip editing (or showing) given revs.
@@ -48,7 +48,7 @@ type EditorRowProps = {
    * (introduced by a previous public commit). rev 0 is not shown if it is
    * absent, aka. rev 1 added the file.
    */
-  skip: (rev: Rev) => boolean;
+  skip?: (rev: Rev) => boolean;
 
   /** Diff mode. */
   mode: Mode;
@@ -504,7 +504,9 @@ function FileStackEditorUnifiedStack(props: EditorRowProps) {
   const [clickEnd, setClickEnd] = useState<ClickPosition | null>(null);
   const [expandedLines, setExpandedLines] = useState<ImSet<LineIdx>>(ImSet);
 
-  const {stack, setStack, getTitle, skip, textEdit} = props;
+  const {stack, setStack, textEdit} = props;
+  const {skip, getTitle} = getSkipGetTitleOrDefault(props);
+
   const rangeInfos: Array<RangeInfo> = [];
 
   const lines = stack.convertToFlattenLines();
@@ -753,15 +755,16 @@ export function FileStackEditorRow(props: EditorRowProps) {
   }
 
   // skip rev 0, the "public" revision for unified diff.
+  const {skip, getTitle} = getSkipGetTitleOrDefault(props);
   const revs = props.stack
     .revs()
     .slice(props.mode === 'unified-diff' ? 1 : 0)
-    .filter(r => !props.skip(r));
+    .filter(r => !skip(r));
   return (
     <ScrollX>
       <Row className="file-stack-editor-row">
         {revs.map(rev => {
-          const title = props.getTitle(rev);
+          const title = getTitle(rev);
           return (
             <div key={rev}>
               <CommitTitle className="filerev-title" commitMessage={title} />
@@ -772,6 +775,15 @@ export function FileStackEditorRow(props: EditorRowProps) {
       </Row>
     </ScrollX>
   );
+}
+
+function getSkipGetTitleOrDefault(props: EditorRowProps): {
+  skip: (rev: Rev) => boolean;
+  getTitle: (rev: Rev) => string;
+} {
+  const skip = props.skip ?? ((rev: Rev) => rev === 0);
+  const getTitle = props.getTitle ?? (() => '');
+  return {skip, getTitle};
 }
 
 /**
