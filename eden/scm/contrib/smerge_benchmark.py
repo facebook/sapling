@@ -3,6 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import re
 import time
 from dataclasses import dataclass
 from typing import List, Optional
@@ -14,7 +15,9 @@ from edenscm.simplemerge import Merge3Text, render_minimized, wordmergemode
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+
 A, B, BASE = range(3)
+WHITE_SPACE_PATTERN = re.compile(b"\\s+")
 
 
 def merge_adjacent_changes(base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
@@ -279,7 +282,7 @@ def merge_file(
         bench_stats.unresolved_files += 1
     else:
         expectedtext = mergectx[filepath].data()
-        if mergedtext != expectedtext:
+        if remove_white_space(mergedtext) != remove_white_space(expectedtext):
             bench_stats.unmatched_files += 1
             mergedtext_baseline = b""
 
@@ -377,6 +380,10 @@ def unmatching_blocks(lines1, lines2):
 
 def is_overlap(s1, e1, s2, e2):
     return not (s1 >= e2 or s2 >= e1)
+
+
+def remove_white_space(text):
+    return re.sub(WHITE_SPACE_PATTERN, b"", text)
 
 
 if __name__ == "__main__":
