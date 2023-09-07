@@ -28,6 +28,7 @@ use ascii::AsciiString;
 use bookmarks_types::BookmarkKey;
 use derive_more::From;
 use derive_more::Into;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
@@ -1565,7 +1566,7 @@ pub struct AclRegion {
 
     /// List of path prefixes that apply to this region.  Prefixes are in terms of
     /// path elements, so the prefix a/b applies to a/b/c but not a/bb.
-    pub path_prefixes: Vec<Option<NonRootMPath>>,
+    pub path_prefixes: Vec<MPath>,
 }
 
 /// ACL region rule consisting of multiple regions and path prefixes

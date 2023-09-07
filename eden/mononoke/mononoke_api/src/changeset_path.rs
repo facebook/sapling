@@ -160,7 +160,7 @@ impl ChangesetPathContentContext {
                 changeset.ctx(),
                 changeset.repo().inner_repo(),
                 changeset.id(),
-                path.as_mpath(),
+                path.as_mpath().into(),
             )
             .await?;
         Ok(Self {
@@ -183,7 +183,7 @@ impl ChangesetPathContentContext {
                 changeset.ctx(),
                 changeset.repo().inner_repo(),
                 changeset.id(),
-                path.as_mpath(),
+                path.as_mpath().into(),
             )
             .await?;
         Ok(Self {
@@ -334,7 +334,7 @@ impl ChangesetPathHistoryContext {
                 changeset.ctx(),
                 changeset.repo().inner_repo(),
                 changeset.id(),
-                path.as_mpath(),
+                path.as_mpath().into(),
             )
             .await?;
         Ok(Self {
@@ -358,7 +358,7 @@ impl ChangesetPathHistoryContext {
                 changeset.ctx(),
                 changeset.repo().inner_repo(),
                 changeset.id(),
-                path.as_mpath(),
+                path.as_mpath().into(),
             )
             .await?;
         Ok(Self {
@@ -381,7 +381,7 @@ impl ChangesetPathHistoryContext {
                 changeset.ctx(),
                 changeset.repo().inner_repo(),
                 changeset.id(),
-                path.as_mpath(),
+                path.as_mpath().into(),
             )
             .await?;
         let ctx = changeset.ctx().clone();
@@ -736,7 +736,7 @@ impl ChangesetPathContext {
                 changeset.ctx(),
                 changeset.repo().inner_repo(),
                 changeset.id(),
-                path.as_mpath(),
+                path.as_mpath().into(),
             )
             .await?;
         Ok(Self {
@@ -759,7 +759,7 @@ impl ChangesetPathContext {
                 changeset.ctx(),
                 changeset.repo().inner_repo(),
                 changeset.id(),
-                path.as_mpath(),
+                path.as_mpath().into(),
             )
             .await?;
         Ok(Self {

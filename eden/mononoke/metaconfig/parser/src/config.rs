@@ -543,6 +543,7 @@ mod test {
     use metaconfig_types::UnodeVersion;
     use metaconfig_types::UpdateLoggingConfig;
     use metaconfig_types::WalkerConfig;
+    use mononoke_types::path::MPath;
     use mononoke_types::NonRootMPath;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use nonzero_ext::nonzero;
@@ -1244,10 +1245,7 @@ mod test {
                         regions: vec![AclRegion {
                             roots: vec![ONES_CSID],
                             heads: vec![],
-                            path_prefixes: vec![
-                                Some(NonRootMPath::new("test/prefix").unwrap()),
-                                None,
-                            ],
+                            path_prefixes: vec![MPath::new("test/prefix").unwrap(), MPath::EMPTY],
                         }],
                         hipster_acl: "acl_test".to_string(),
                     }],

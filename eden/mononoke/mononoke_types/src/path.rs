@@ -410,7 +410,7 @@ impl From<MPathElement> for NonRootMPath {
 /// The path can be root path (i.e. just /) or non-root (i.e. /home/here).
 ///
 /// This is called `MPath` so that it can be differentiated from `std::path::Path`.
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 #[derive(Abomonation, Serialize, Deserialize)]
 pub struct MPath {
     elements: Vec<MPathElement>,
@@ -625,6 +625,16 @@ impl From<Option<NonRootMPath>> for MPath {
         match value {
             Some(v) => v.0,
             None => Self::EMPTY,
+        }
+    }
+}
+
+impl<'a> From<Option<&'a NonRootMPath>> for &'a MPath {
+    fn from(value: Option<&'a NonRootMPath>) -> Self {
+        static EMPTY: MPath = MPath::EMPTY;
+        match value {
+            Some(v) => &v.0,
+            None => &EMPTY,
         }
     }
 }
@@ -1227,6 +1237,12 @@ impl Display for NonRootMPath {
     }
 }
 
+impl Display for MPath {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{}", String::from_utf8_lossy(&self.to_vec()))
+    }
+}
+
 // Implement our own Debug so that strings are displayed properly
 impl fmt::Debug for MPathElement {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -1241,6 +1257,12 @@ impl fmt::Debug for MPathElement {
 impl fmt::Debug for NonRootMPath {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "NonRootMPath(\"{}\")", self)
+    }
+}
+
+impl fmt::Debug for MPath {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "MPath(\"{}\")", self)
     }
 }
 

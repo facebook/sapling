@@ -9,8 +9,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use metaconfig_types::AclRegionRule;
+use mononoke_types::path::MPath;
 use mononoke_types::MPathElement;
-use mononoke_types::NonRootMPath;
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct RegionIndex(pub usize);
@@ -36,11 +36,7 @@ impl PrefixTrieWithRules {
     pub fn add_rule(&mut self, rule: Arc<AclRegionRule>) {
         for (region_index, region) in rule.regions.iter().enumerate() {
             for path in &region.path_prefixes {
-                self.add_rule_on_path(
-                    path.iter().flatten(),
-                    RegionIndex(region_index),
-                    rule.clone(),
-                );
+                self.add_rule_on_path(path.into_iter(), RegionIndex(region_index), rule.clone());
             }
         }
     }
@@ -67,7 +63,7 @@ impl PrefixTrieWithRules {
     /// deduplicated by (rule name, matched region index)
     pub fn associated_rules(
         &self,
-        path: Option<&NonRootMPath>,
+        path: &MPath,
     ) -> HashMap<(String, RegionIndex), Arc<AclRegionRule>> {
         self.associated_rules_inner(path.into_iter().flatten())
             .into_iter()
@@ -98,16 +94,17 @@ mod test {
     use std::collections::HashSet;
 
     use metaconfig_types::AclRegion;
+    use mononoke_types::path::MPath;
     use pretty_assertions::assert_eq;
 
     use super::*;
 
-    fn path(raw: &str) -> Option<NonRootMPath> {
-        NonRootMPath::new_opt(raw).unwrap()
+    fn path(raw: &str) -> MPath {
+        MPath::new(raw).unwrap()
     }
 
     struct TestData {
-        path: Option<NonRootMPath>,
+        path: MPath,
         expected_regions: HashSet<(String, RegionIndex)>,
     }
 
@@ -125,7 +122,7 @@ mod test {
         }
 
         fn verify(&self, trie: &PrefixTrieWithRules) {
-            let rules = trie.associated_rules(self.path.as_ref());
+            let rules = trie.associated_rules(&self.path);
             assert_eq!(
                 rules.into_keys().collect::<HashSet<_>>(),
                 self.expected_regions
