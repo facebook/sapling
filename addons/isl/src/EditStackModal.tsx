@@ -8,6 +8,7 @@
 import {FlexRow, ScrollY} from './ComponentUtils';
 import FileStackEditPanel from './FileStackEditPanel';
 import {Modal} from './Modal';
+import {SplitStackEditPanel} from './SplitStackEditPanel';
 import {StackEditConfirmButtons} from './StackEditConfirmButtons';
 import {StackEditSubTree} from './StackEditSubTree';
 import {T} from './i18n';
@@ -29,7 +30,7 @@ export function MaybeEditStackModal() {
 
 /// A <Modal /> for stack editing UI.
 function LoadedEditStackModal() {
-  type Tab = 'commits' | 'files';
+  type Tab = 'commits' | 'files' | 'split';
   const [activeTab, setActiveTab] = useState<Tab>('commits');
   const getPanelViewStyle = (tab: string): React.CSSProperties => {
     return {
@@ -42,6 +43,7 @@ function LoadedEditStackModal() {
   return (
     <Modal>
       <VSCodePanels
+        activeid={`tab-${activeTab}`}
         style={{
           // Allow dropdown to show content.
           overflow: 'unset',
@@ -57,12 +59,25 @@ function LoadedEditStackModal() {
         <VSCodePanelTab id="tab-files">
           <T>Files</T>
         </VSCodePanelTab>
+        <VSCodePanelTab id="tab-split">
+          <T>Split</T>
+          <sup>
+            <sup>(Beta)</sup>
+          </sup>
+        </VSCodePanelTab>
         <VSCodePanelView style={getPanelViewStyle('commits')} id="view-commits">
           {/* Skip rendering (which might trigger slow dependency calculation) if the tab is inactive */}
-          <ScrollY maxSize="70vh">{activeTab === 'commits' && <StackEditSubTree />}</ScrollY>
+          <ScrollY maxSize="70vh">
+            {activeTab === 'commits' && (
+              <StackEditSubTree activateSplitTab={() => setActiveTab('split')} />
+            )}
+          </ScrollY>
         </VSCodePanelView>
         <VSCodePanelView style={getPanelViewStyle('files')} id="view-files">
           {activeTab === 'files' && <FileStackEditPanel />}
+        </VSCodePanelView>
+        <VSCodePanelView style={getPanelViewStyle('split')} id="view-split">
+          {activeTab === 'split' && <SplitStackEditPanel />}
         </VSCodePanelView>
       </VSCodePanels>
       <FlexRow style={{padding: 'var(--pad) 0', justifyContent: 'flex-end'}}>

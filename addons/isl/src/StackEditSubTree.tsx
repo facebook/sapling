@@ -12,6 +12,7 @@ import type {StackEditOpDescription, UseStackEditState} from './stackEditState';
 
 import {AnimatedReorderGroup} from './AnimatedReorderGroup';
 import {DragHandle} from './DragHandle';
+import {SplitCommitIcon} from './SplitCommitIcon';
 import {Tooltip} from './Tooltip';
 import {t, T} from './i18n';
 import {reorderedRevs} from './stackEdit/commitStackState';
@@ -25,8 +26,12 @@ import {unwrap} from 'shared/utils';
 
 import './StackEditSubTree.css';
 
+type ActivateSplitProps = {
+  activateSplitTab?: () => void;
+};
+
 // <StackEditSubTree /> assumes stack is loaded.
-export function StackEditSubTree(): React.ReactElement {
+export function StackEditSubTree(props: ActivateSplitProps): React.ReactElement {
   const stackEdit = useStackEditState();
   const [reorderState, setReorderState] = useState<ReorderState>(() => new ReorderState());
 
@@ -114,6 +119,7 @@ export function StackEditSubTree(): React.ReactElement {
                 stackEdit={stackEdit}
                 isReorderPreview={reorderState.draggingRevs.includes(rev)}
                 onDrag={getDragHandler(rev)}
+                activateSplitTab={props.activateSplitTab}
               />
             );
           })}
@@ -145,12 +151,13 @@ export function StackEditCommit({
   stackEdit,
   onDrag,
   isReorderPreview,
+  activateSplitTab,
 }: {
   rev: Rev;
   stackEdit: UseStackEditState;
   onDrag?: DragHandler;
   isReorderPreview?: boolean;
-}): React.ReactElement {
+} & ActivateSplitProps): React.ReactElement {
   const state = stackEdit.commitStack;
   const canFold = state.canFoldDown(rev);
   const canDrop = state.canDrop(rev);
@@ -178,6 +185,11 @@ export function StackEditCommit({
   const handleDrop = () => {
     stackEdit.push(state.drop(rev), {name: 'drop', commit});
     bumpStackEditMetric('drop');
+  };
+  const handleSplit = () => {
+    stackEdit.setSplitRange(commit.key);
+    // Focus the split panel.
+    activateSplitTab?.();
   };
 
   const title =
@@ -212,6 +224,11 @@ export function StackEditCommit({
         }>
         <VSCodeButton disabled={!canMoveDown} onClick={handleMoveDown} appearance="icon">
           <Icon icon="chevron-down" />
+        </VSCodeButton>
+      </Tooltip>
+      <Tooltip title={t('Interactively split the commit')}>
+        <VSCodeButton onClick={handleSplit} appearance="icon">
+          <SplitCommitIcon />
         </VSCodeButton>
       </Tooltip>
       <Tooltip
