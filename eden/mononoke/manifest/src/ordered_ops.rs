@@ -19,8 +19,8 @@ use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use mononoke_types::path::MPath;
 use mononoke_types::MPathElement;
-use mononoke_types::NonRootMPath;
 use nonzero_ext::nonzero;
 
 use crate::ops::Diff;
@@ -42,23 +42,20 @@ pub enum After {
 
     /// Include everything in this directory after the named element and the
     /// subpath within that element.
-    After(MPathElement, Option<NonRootMPath>),
+    After(MPathElement, MPath),
 }
 
-impl From<Option<Option<NonRootMPath>>> for After {
-    fn from(path: Option<Option<NonRootMPath>>) -> Self {
-        path.map_or(After::All, |p| After::new(p.as_ref()))
+impl From<Option<MPath>> for After {
+    fn from(path: Option<MPath>) -> Self {
+        path.map_or(After::All, |p| After::new(&p))
     }
 }
 
 impl After {
-    fn new(mpath_opt: Option<&NonRootMPath>) -> Self {
-        match mpath_opt {
+    fn new(mpath: &MPath) -> Self {
+        match mpath.split_first() {
             None => After::AllContents,
-            Some(mpath) => {
-                let (elem, rest) = mpath.split_first();
-                After::After(elem.clone(), rest)
-            }
+            Some((elem, rest)) => After::After(elem.clone(), rest),
         }
     }
 
@@ -99,7 +96,7 @@ impl After {
             After::All | After::AllContents => After::All,
             After::After(elem, rest) => {
                 if name == elem {
-                    After::new(rest.as_ref())
+                    After::new(rest)
                 } else {
                     debug_assert!(name > elem);
                     After::All
@@ -127,7 +124,7 @@ where
         'static,
         Result<
             (
-                Option<NonRootMPath>,
+                MPath,
                 Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>,
             ),
             Error,
@@ -152,7 +149,7 @@ where
 
         let init = Some((
             queue_max.get(),
-            (self.clone(), selector, None, false, after),
+            (self.clone(), selector, MPath::EMPTY, false, after),
         ));
         (async_stream::stream! {
             borrowed!(ctx, store);
@@ -183,7 +180,7 @@ where
                                 if after.skip(&name) {
                                     continue;
                                 }
-                                let path = Some(NonRootMPath::join_opt_element(path.as_ref(), &name));
+                                let path = path.join(&name);
                                 match entry {
                                     Entry::Leaf(leaf) => {
                                         if after.include_file(&name) {
@@ -219,7 +216,7 @@ where
                                     continue;
                                 }
                                 if let Some(entry) = manifest.lookup_weighted(ctx, store, &name).await? {
-                                    let path = Some(NonRootMPath::join_opt_element(path.as_ref(), &name));
+                                    let path = path.join(&name);
                                     match entry {
                                         Entry::Leaf(leaf) => {
                                             if after.include_file(&name)
@@ -271,7 +268,7 @@ where
         ctx: CoreContext,
         store: Store,
         other: Self,
-        after: Option<Option<NonRootMPath>>,
+        after: Option<MPath>,
     ) -> BoxStream<
         'static,
         Result<
@@ -292,7 +289,7 @@ where
         store: Store,
         other: Self,
         other_store: Store,
-        after: Option<Option<NonRootMPath>>,
+        after: Option<MPath>,
         output_filter: FilterMap,
         recurse_pruner: RecursePruner,
     ) -> BoxStream<'static, Result<Out, Error>>
@@ -329,13 +326,13 @@ where
             Some(mpath_opt) => {
                 // If `after` is `Some(None)`, then we include everything
                 // after the root (i.e. not the root itself).
-                After::new(mpath_opt.as_ref())
+                After::new(&mpath_opt)
             }
         };
 
         let init = Some((
             queue_max.get(),
-            (Diff::Changed(None, self.clone(), other), after),
+            (Diff::Changed(MPath::EMPTY, self.clone(), other), after),
         ));
 
         (async_stream::stream! {
@@ -388,7 +385,7 @@ where
                                     if after.skip(&name) || left == right {
                                         continue;
                                     }
-                                    let path = Some(NonRootMPath::join_opt_element(path.as_ref(), &name));
+                                    let path = path.join(&name);
                                     match (left, right) {
                                         (Some(Entry::Leaf(left)), Some(Entry::Leaf(right))) => {
                                             if after.include_file(&name) {
@@ -507,7 +504,7 @@ where
                                     if after.skip(&name) {
                                         continue;
                                     }
-                                    let path = Some(NonRootMPath::join_opt_element(path.as_ref(), &name));
+                                    let path = path.join(&name);
                                     match entry {
                                         Entry::Tree((weight, tree)) => {
                                             push_recurse(
@@ -541,7 +538,7 @@ where
                                     if after.skip(&name) {
                                         continue;
                                     }
-                                    let path = Some(NonRootMPath::join_opt_element(path.as_ref(), &name));
+                                    let path = path.join(&name);
                                     match entry {
                                         Entry::Tree((weight, tree)) => {
                                             push_recurse(

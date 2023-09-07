@@ -34,7 +34,7 @@ use manifest::get_implicit_deletes;
 use megarepo_configs::types::SourceMappingRules;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgManifestId;
-use mononoke_types::mpath_element_iter;
+use mononoke_types::non_root_mpath_element_iter;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -142,8 +142,8 @@ pub fn create_directory_source_to_target_multi_mover(
         move |path: &Option<NonRootMPath>| -> Result<Vec<Option<NonRootMPath>>, Error> {
             for (override_prefix_src, dsts) in &overrides {
                 let override_prefix_src = NonRootMPath::new(override_prefix_src.clone())?;
-                if override_prefix_src.is_prefix_of(mpath_element_iter(path)) {
-                    let suffix: Vec<_> = mpath_element_iter(path)
+                if override_prefix_src.is_prefix_of(non_root_mpath_element_iter(path)) {
+                    let suffix: Vec<_> = non_root_mpath_element_iter(path)
                         .skip(override_prefix_src.num_components())
                         .collect();
 
@@ -162,7 +162,7 @@ pub fn create_directory_source_to_target_multi_mover(
 
             Ok(vec![NonRootMPath::join_opt(
                 prefix.as_ref(),
-                mpath_element_iter(path),
+                non_root_mpath_element_iter(path),
             )])
         },
     ))

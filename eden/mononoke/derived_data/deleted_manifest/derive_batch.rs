@@ -70,7 +70,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             let mut commit_stack: Vec<ChangesetId> = vec![];
             for (csid, cs_changes) in all_changes {
                 for (path, change) in cs_changes {
-                    path_tree.insert_and_merge(Some(path), (csid, change));
+                    path_tree.insert_and_merge(path.into(), (csid, change));
                 }
                 commit_stack.push(csid);
             }

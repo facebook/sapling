@@ -86,7 +86,7 @@ pub async fn copy_immutable_impl(
                     .find_entry(
                         ctx.clone(),
                         repo.repo_blobstore_arc(),
-                        Some(src_path.clone()),
+                        src_path.clone().into(),
                     )
                     .await?
                     .with_context(|| {

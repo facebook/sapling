@@ -185,7 +185,9 @@ async fn resolve_paths(
         Some(manifest_id) => {
             let mapping: HashMap<NonRootMPath, HgFileNodeId> = manifest_id
                 .find_entries(ctx, blobstore, paths)
-                .map_ok(|(path, entry)| Some((path?, entry.into_leaf()?.1)))
+                .map_ok(|(path, entry)| {
+                    Some((Option::<NonRootMPath>::from(path)?, entry.into_leaf()?.1))
+                })
                 .try_filter_map(future::ok)
                 .try_collect()
                 .await?;

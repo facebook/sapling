@@ -1276,7 +1276,7 @@ impl TestHelper {
             .find_entry(
                 self.ctx.clone(),
                 self.repo.repo_blobstore().clone(),
-                Some(path),
+                path.into(),
             )
             .await?
             .ok_or(err)?;

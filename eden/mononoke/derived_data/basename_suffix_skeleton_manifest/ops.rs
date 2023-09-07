@@ -24,6 +24,7 @@ use manifest::AsyncManifest;
 use manifest::ManifestOps;
 use manifest::ManifestOrderedOps;
 use manifest::PathOrPrefix;
+use mononoke_types::path::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use vec1::vec1;
@@ -34,8 +35,13 @@ use crate::RootBasenameSuffixSkeletonManifest;
 
 type MononokePath = Option<NonRootMPath>;
 
-fn normal_to_custom(path: MononokePath) -> MononokePath {
-    path.map(|p| BssmPath::transform(p).into_raw())
+fn normal_to_custom<T>(path: T) -> MPath
+where
+    T: Into<MononokePath>,
+{
+    path.into()
+        .map(|p| BssmPath::transform(p).into_raw())
+        .into()
 }
 
 enum BasenameOrSuffix {
@@ -61,15 +67,15 @@ impl RootBasenameSuffixSkeletonManifest {
         &self,
         ctx: &'a CoreContext,
         blobstore: impl Blobstore + Clone + Sync + Send + 'static,
-        prefixes: Vec<MononokePath>,
+        prefixes: Vec<MPath>,
         basenames_and_suffixes: EitherOrBoth<Vec1<String>, Vec1<String>>,
-        ordered: Option<Option<MononokePath>>,
-    ) -> Result<impl Stream<Item = Result<MononokePath>> + 'a> {
+        ordered: Option<Option<MPath>>,
+    ) -> Result<impl Stream<Item = Result<MPath>> + 'a> {
         let (basenames, suffixes) = basenames_and_suffixes
             .map_any(Vec1::into_vec, Vec1::into_vec)
             .or_default();
         let prefixes: Vec1<PathOrPrefix> = Vec1::try_from_vec(prefixes)
-            .unwrap_or_else(|_| vec1![None])
+            .unwrap_or_else(|_| vec1![MPath::EMPTY])
             .mapped(PathOrPrefix::Prefix);
         let mut all: Vec<BasenameOrSuffix> = basenames
             .into_iter()

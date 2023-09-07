@@ -314,7 +314,14 @@ async fn create_bundle_impl(
         )?);
 
         bundle2_parts.push(parts::treepack_part(
-            create_manifest_entries_stream(ctx.clone(), repo.repo_blobstore().clone(), manifests),
+            create_manifest_entries_stream(
+                ctx.clone(),
+                repo.repo_blobstore().clone(),
+                manifests
+                    .into_iter()
+                    .map(|(path, m_id, cs_id)| (path.into(), m_id, cs_id))
+                    .collect(),
+            ),
             parts::StoreInHgCache::Yes,
         )?);
     }

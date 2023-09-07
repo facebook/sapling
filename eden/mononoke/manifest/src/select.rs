@@ -5,25 +5,26 @@
  * GNU General Public License version 2.
  */
 
+use mononoke_types::path::MPath;
 use mononoke_types::NonRootMPath;
 
 use crate::PathTree;
 
 #[derive(Debug, Clone)]
 pub enum PathOrPrefix {
-    Path(Option<NonRootMPath>),
-    Prefix(Option<NonRootMPath>),
+    Path(MPath),
+    Prefix(MPath),
+}
+
+impl From<MPath> for PathOrPrefix {
+    fn from(path: MPath) -> Self {
+        PathOrPrefix::Path(path)
+    }
 }
 
 impl From<NonRootMPath> for PathOrPrefix {
     fn from(path: NonRootMPath) -> Self {
-        PathOrPrefix::Path(Some(path))
-    }
-}
-
-impl From<Option<NonRootMPath>> for PathOrPrefix {
-    fn from(path: Option<NonRootMPath>) -> Self {
-        PathOrPrefix::Path(path)
+        PathOrPrefix::Prefix(path.into())
     }
 }
 

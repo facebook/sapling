@@ -32,6 +32,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileEnvelope;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestEnvelope;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
@@ -237,11 +238,11 @@ pub(crate) fn classify_filenode(
 }
 
 fn create_manifest_filenode(
-    path: Option<NonRootMPath>,
+    path: MPath,
     envelope: HgManifestEnvelope,
     linknode: HgChangesetId,
 ) -> PreparedFilenode {
-    let path = match path {
+    let path = match Option::<NonRootMPath>::from(path) {
         Some(path) => RepoPath::DirectoryPath(path),
         None => RepoPath::RootPath,
     };
@@ -263,11 +264,11 @@ fn create_manifest_filenode(
 }
 
 fn create_file_filenode(
-    path: Option<NonRootMPath>,
+    path: MPath,
     envelope: HgFileEnvelope,
     linknode: HgChangesetId,
 ) -> Result<PreparedFilenode> {
-    let path = match path {
+    let path = match path.into() {
         Some(path) => RepoPath::FilePath(path),
         None => {
             return Err(format_err!("unexpected empty file path"));
@@ -766,7 +767,7 @@ mod tests {
             .list_all_entries(ctx.clone(), repo.repo_blobstore.clone())
             .map_ok(|(path, entry)| {
                 async move {
-                    let (path, node) = match (path, entry) {
+                    let (path, node) = match (Option::<NonRootMPath>::from(path), entry) {
                         (Some(path), Entry::Leaf((_, id))) => (RepoPath::FilePath(path), id),
                         (Some(path), Entry::Tree(id)) => (
                             RepoPath::DirectoryPath(path),

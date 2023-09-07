@@ -197,11 +197,16 @@ async fn find_files_that_need_to_be_deleted(
         )
         .try_filter_map(|diff| async move {
             use Diff::*;
-            let maybe_path = match diff {
-                Added(_maybe_path, _entry) => None,
-                Removed(maybe_path, entry) => entry.into_leaf().and(maybe_path),
-                Changed(maybe_path, _old_entry, new_entry) => new_entry.into_leaf().and(maybe_path),
-            };
+            let maybe_path =
+                match diff {
+                    Added(_maybe_path, _entry) => None,
+                    Removed(maybe_path, entry) => entry
+                        .into_leaf()
+                        .and(Option::<NonRootMPath>::from(maybe_path)),
+                    Changed(maybe_path, _old_entry, new_entry) => new_entry
+                        .into_leaf()
+                        .and(Option::<NonRootMPath>::from(maybe_path)),
+                };
 
             Ok(maybe_path)
         })

@@ -1141,7 +1141,7 @@ async fn generate_additional_bonsai_file_changes(
             let mfid = id_to_manifestid(ctx, repo, *p).await?;
             let stale = mfid
                 .find_entries(ctx.clone(), repo.repo_blobstore().clone(), paths)
-                .try_filter_map(|(path, _)| async move { Ok(path) })
+                .try_filter_map(|(path, _)| async move { Ok(Option::<NonRootMPath>::from(path)) })
                 .try_collect::<HashSet<_>>()
                 .await?;
             Result::<_, Error>::Ok(stale)
@@ -2302,7 +2302,7 @@ mod tests {
                 .find_entry(
                     ctx.clone(),
                     repo.repo_blobstore().clone(),
-                    Some(path_1.clone()),
+                    path_1.clone().into(),
                 )
                 .await?
                 .and_then(|entry| Some(entry.into_leaf()?.1))
@@ -2368,7 +2368,7 @@ mod tests {
                 .find_entry(
                     ctx.clone(),
                     repo.repo_blobstore().clone(),
-                    Some(path_1.clone()),
+                    path_1.clone().into(),
                 )
                 .await?
                 .and_then(|entry| Some(entry.into_leaf()?.1))
@@ -3393,7 +3393,10 @@ mod tests {
                     let content = filestore::fetch_concat(store, ctx, content_id).await?;
 
                     let s = String::from_utf8_lossy(content.as_ref()).into_owned();
-                    actual.insert(format!("{}", path.unwrap()), s);
+                    actual.insert(
+                        format!("{}", Option::<NonRootMPath>::from(path).unwrap()),
+                        s,
+                    );
                 }
                 Entry::Tree(_) => {}
             }

@@ -276,12 +276,14 @@ pub async fn subcommand_filenodes<'a>(
                     async move {
                         let (repo_path, filenode_id) = match entry {
                             Entry::Leaf((_, filenode_id)) => (
-                                RepoPath::FilePath(path.expect("unexpected empty file path")),
+                                RepoPath::FilePath(
+                                    path.try_into().expect("unexpected empty file path"),
+                                ),
                                 filenode_id,
                             ),
                             Entry::Tree(mf_id) => {
                                 let filenode_id = HgFileNodeId::new(mf_id.into_nodehash());
-                                match path {
+                                match Option::<NonRootMPath>::from(path) {
                                     Some(path) => (RepoPath::DirectoryPath(path), filenode_id),
                                     None => (RepoPath::RootPath, filenode_id),
                                 }

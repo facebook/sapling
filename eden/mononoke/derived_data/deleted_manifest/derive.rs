@@ -634,7 +634,7 @@ pub(crate) async fn get_changes_list(
         unode_mf_id
             .list_all_entries(ctx.clone(), derivation_ctx.blobstore().clone())
             .try_filter_map(move |(path, _)| async {
-                match path {
+                match Option::<NonRootMPath>::from(path) {
                     Some(path) => Ok(Some((path, PathChange::Add))),
                     None => Ok(None),
                 }
@@ -668,8 +668,12 @@ async fn diff_against_parents(
         .into_iter()
         .flatten()
         .filter_map(|diff| match diff {
-            Diff::Added(Some(path), _) => Some((path, PathChange::Add)),
-            Diff::Removed(Some(path), _) => Some((path, PathChange::Remove)),
+            Diff::Added(path, _) => {
+                Option::<NonRootMPath>::from(path).map(|path| (path, PathChange::Add))
+            }
+            Diff::Removed(path, _) => {
+                Option::<NonRootMPath>::from(path).map(|path| (path, PathChange::Remove))
+            }
             _ => None,
         });
 

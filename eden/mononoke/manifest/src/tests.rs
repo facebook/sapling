@@ -31,6 +31,7 @@ use futures::future::FutureExt;
 use futures::stream::TryStreamExt;
 use maplit::btreemap;
 use memblob::Memblob;
+use mononoke_types::path::MPath;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
@@ -315,7 +316,7 @@ impl Loadable for Files {
     ) -> Result<Self::Value, LoadableError> {
         bounded_traversal_stream(
             256,
-            Some((None, Entry::Tree(self.0))),
+            Some((MPath::EMPTY, Entry::Tree(self.0))),
             move |(path, entry)| {
                 async move {
                     let content = Loadable::load(&entry, ctx, blobstore).await?;
@@ -324,12 +325,7 @@ impl Loadable for Files {
                         Entry::Tree(tree) => {
                             let recurse = tree
                                 .list()
-                                .map(|(name, entry)| {
-                                    (
-                                        Some(NonRootMPath::join_opt_element(path.as_ref(), &name)),
-                                        entry,
-                                    )
-                                })
+                                .map(|(name, entry)| (path.join(&name), entry))
                                 .collect();
                             (None, recurse)
                         }
@@ -339,7 +335,8 @@ impl Loadable for Files {
             },
         )
         .try_filter_map(|item| {
-            let item = item.and_then(|(path, leaf)| Some((path?, leaf.0)));
+            let item =
+                item.and_then(|(path, leaf)| Some((Option::<NonRootMPath>::from(path)?, leaf.0)));
             future::ok(item)
         })
         .try_fold(BTreeMap::new(), |mut acc, (path, leaf)| {
@@ -360,19 +357,19 @@ fn files_reference(files: BTreeMap<&str, &str>) -> Result<BTreeMap<NonRootMPath,
 #[test]
 fn test_path_tree() -> Result<()> {
     let tree = PathTree::from_iter(vec![
-        (NonRootMPath::new("/one/two/three")?, true),
-        (NonRootMPath::new("/one/two/four")?, true),
-        (NonRootMPath::new("/one/two")?, true),
-        (NonRootMPath::new("/five")?, true),
+        (MPath::new("/one/two/three")?, true),
+        (MPath::new("/one/two/four")?, true),
+        (MPath::new("/one/two")?, true),
+        (MPath::new("/five")?, true),
     ]);
 
     let reference = vec![
-        (None, false),
-        (Some(NonRootMPath::new("one")?), false),
-        (Some(NonRootMPath::new("one/two")?), true),
-        (Some(NonRootMPath::new("one/two/three")?), true),
-        (Some(NonRootMPath::new("one/two/four")?), true),
-        (Some(NonRootMPath::new("five")?), true),
+        (MPath::EMPTY, false),
+        (MPath::new("one")?, false),
+        (MPath::new("one/two")?, true),
+        (MPath::new("one/two/three")?, true),
+        (MPath::new("one/two/four")?, true),
+        (MPath::new("five")?, true),
     ];
 
     assert_eq!(Vec::from_iter(tree), reference);
@@ -383,18 +380,18 @@ fn test_path_tree() -> Result<()> {
 fn test_path_insert_and_merge() -> Result<()> {
     let mut tree = PathTree::<Vec<_>>::default();
     let items = vec![
-        (NonRootMPath::new("/one/two/three")?, true),
-        (NonRootMPath::new("/one/two/three")?, false),
+        (MPath::new("/one/two/three")?, true),
+        (MPath::new("/one/two/three")?, false),
     ];
     for (path, value) in items {
-        tree.insert_and_merge(Some(path), value);
+        tree.insert_and_merge(path, value);
     }
 
     let reference = vec![
-        (None, vec![]),
-        (Some(NonRootMPath::new("one")?), vec![]),
-        (Some(NonRootMPath::new("one/two")?), vec![]),
-        (Some(NonRootMPath::new("one/two/three")?), vec![true, false]),
+        (MPath::EMPTY, vec![]),
+        (MPath::new("one")?, vec![]),
+        (MPath::new("one/two")?, vec![]),
+        (MPath::new("one/two/three")?, vec![true, false]),
     ];
 
     assert_eq!(Vec::from_iter(tree), reference);
@@ -1041,12 +1038,12 @@ async fn test_derive_stack_of_manifests(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-fn make_paths(paths_str: &[&str]) -> Result<BTreeSet<Option<NonRootMPath>>> {
+fn make_paths(paths_str: &[&str]) -> Result<BTreeSet<MPath>> {
     paths_str
         .iter()
         .map(|path_str| match path_str {
-            &"/" => Ok(None),
-            _ => NonRootMPath::new(path_str).map(Some),
+            &"/" => Ok(MPath::EMPTY),
+            _ => MPath::new(path_str),
         })
         .collect()
 }
@@ -1055,17 +1052,17 @@ fn describe_diff_item(diff: Diff<Entry<TestManifestIdU64, TestLeafId>>) -> Strin
     match diff {
         Diff::Added(path, entry) => format!(
             "A {}{}",
-            NonRootMPath::display_opt(path.as_ref()),
+            MPath::display_opt(&path),
             if entry.is_tree() { "/" } else { "" }
         ),
         Diff::Removed(path, entry) => format!(
             "R {}{}",
-            NonRootMPath::display_opt(path.as_ref()),
+            MPath::display_opt(&path),
             if entry.is_tree() { "/" } else { "" }
         ),
         Diff::Changed(path, entry, _) => format!(
             "C {}{}",
-            NonRootMPath::display_opt(path.as_ref()),
+            MPath::display_opt(&path),
             if entry.is_tree() { "/" } else { "" }
         ),
     }
@@ -1129,9 +1126,9 @@ async fn test_find_entries(fb: FacebookInit) -> Result<()> {
     // use prefix + single select
     {
         let paths = vec![
-            PathOrPrefix::Path(Some(NonRootMPath::new("two/three/5")?)),
-            PathOrPrefix::Path(Some(NonRootMPath::new("five/seven/11")?)),
-            PathOrPrefix::Prefix(Some(NonRootMPath::new("five/seven/eight")?)),
+            PathOrPrefix::Path(MPath::new("two/three/5")?),
+            PathOrPrefix::Path(MPath::new("five/seven/11")?),
+            PathOrPrefix::Prefix(MPath::new("five/seven/eight")?),
         ];
 
         let results: Vec<_> = mf0
@@ -1165,7 +1162,9 @@ async fn test_find_entries(fb: FacebookInit) -> Result<()> {
 
     // find entry
     {
-        let mf_root = mf0.find_entry(ctx.clone(), blobstore.clone(), None).await?;
+        let mf_root = mf0
+            .find_entry(ctx.clone(), blobstore.clone(), MPath::EMPTY)
+            .await?;
         assert_eq!(mf_root, Some(Entry::Tree(mf0)));
 
         let paths = make_paths(&[
@@ -1324,12 +1323,8 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
                     }
                 };
 
-                let badpath = NonRootMPath::new("dir/added_dir/3").unwrap();
-                if &Some(badpath) != path {
-                    Some(diff)
-                } else {
-                    None
-                }
+                let badpath = MPath::new("dir/added_dir/3").unwrap();
+                if &badpath != path { Some(diff) } else { None }
             },
             |diff| {
                 let path = match diff {
@@ -1338,8 +1333,8 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
                     }
                 };
 
-                let badpath = NonRootMPath::new("dir/removed_dir").unwrap();
-                &Some(badpath) != path
+                let badpath = MPath::new("dir/removed_dir").unwrap();
+                &badpath != path
             },
         )
         .try_collect()
@@ -1382,7 +1377,7 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
             blobstore.clone(),
             mf1,
             blobstore.clone(),
-            Some(Some(NonRootMPath::new("dir")?)),
+            Some(MPath::new("dir")?),
             |diff| {
                 let path = match &diff {
                     Diff::Added(path, ..) | Diff::Removed(path, ..) | Diff::Changed(path, ..) => {
@@ -1390,12 +1385,8 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
                     }
                 };
 
-                let badpath = NonRootMPath::new("dir/added_dir/3").unwrap();
-                if &Some(badpath) != path {
-                    Some(diff)
-                } else {
-                    None
-                }
+                let badpath = MPath::new("dir/added_dir/3").unwrap();
+                if &badpath != path { Some(diff) } else { None }
             },
             |diff| {
                 let path = match diff {
@@ -1404,8 +1395,8 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
                     }
                 };
 
-                let badpath = NonRootMPath::new("dir/removed_dir").unwrap();
-                &Some(badpath) != path
+                let badpath = MPath::new("dir/removed_dir").unwrap();
+                &badpath != path
             },
         )
         .map_ok(describe_diff_item)

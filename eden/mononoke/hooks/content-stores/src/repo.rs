@@ -99,7 +99,7 @@ impl FileContentManager for RepoFileContentManager {
         master_mf
             .find_entries(ctx.clone(), self.repo_blobstore.clone(), paths)
             .map_ok(|(mb_path, entry)| async move {
-                if let Some(path) = mb_path {
+                if let Some(path) = Option::<NonRootMPath>::from(mb_path) {
                     let content = resolve_content_id(ctx, &self.repo_blobstore, entry).await?;
                     Ok(Some((path, content)))
                 } else {
@@ -138,35 +138,48 @@ impl FileContentManager for RepoFileContentManager {
             .map_err(ErrorKind::from)
             .map_ok(move |diff| async move {
                 match diff {
-                    Diff::Added(Some(path), entry) => {
-                        match resolve_content_id(ctx, &self.repo_blobstore, entry).await? {
-                            PathContent::File(content) => {
-                                Ok(Some((path, FileChange::Added(content))))
+                    Diff::Added(path, entry) => match Option::<NonRootMPath>::from(path) {
+                        Some(path) => {
+                            match resolve_content_id(ctx, &self.repo_blobstore, entry).await? {
+                                PathContent::File(content) => {
+                                    Ok(Some((path, FileChange::Added(content))))
+                                }
+                                PathContent::Directory => Ok(None),
                             }
-                            PathContent::Directory => Ok(None),
                         }
-                    }
-                    Diff::Changed(Some(path), old_entry, entry) => {
-                        let old_content = resolve_content_id(ctx, &self.repo_blobstore, old_entry);
-                        let content = resolve_content_id(ctx, &self.repo_blobstore, entry);
+                        None => Ok(None),
+                    },
+                    Diff::Changed(path, old_entry, entry) if !path.is_root() => {
+                        match Option::<NonRootMPath>::from(path) {
+                            Some(path) => {
+                                let old_content =
+                                    resolve_content_id(ctx, &self.repo_blobstore, old_entry);
+                                let content = resolve_content_id(ctx, &self.repo_blobstore, entry);
 
-                        match future::try_join(old_content, content).await? {
-                            (PathContent::File(old_content_id), PathContent::File(content_id)) => {
-                                Ok(Some((
-                                    path,
-                                    FileChange::Changed(old_content_id, content_id),
-                                )))
+                                match future::try_join(old_content, content).await? {
+                                    (
+                                        PathContent::File(old_content_id),
+                                        PathContent::File(content_id),
+                                    ) => Ok(Some((
+                                        path,
+                                        FileChange::Changed(old_content_id, content_id),
+                                    ))),
+                                    _ => Ok(None),
+                                }
                             }
-                            _ => Ok(None),
+                            None => Ok(None),
                         }
                     }
-                    Diff::Removed(Some(path), entry) => {
-                        if let Entry::Leaf(_) = entry {
-                            Ok(Some((path, FileChange::Removed)))
-                        } else {
-                            Ok(None)
+                    Diff::Removed(path, entry) => match Option::<NonRootMPath>::from(path) {
+                        Some(path) => {
+                            if let Entry::Leaf(_) = entry {
+                                Ok(Some((path, FileChange::Removed)))
+                            } else {
+                                Ok(None)
+                            }
                         }
-                    }
+                        None => Ok(None),
+                    },
                     _ => Ok(None),
                 }
             })
@@ -192,8 +205,8 @@ impl FileContentManager for RepoFileContentManager {
         let master_mf = derive_unode_manifest(ctx, &self.repo_derived_data, changeset_id).await?;
         master_mf
             .find_entries(ctx.clone(), self.repo_blobstore.clone(), paths)
-            .map_ok(|(mb_path, entry)| async move {
-                if let Some(path) = mb_path {
+            .map_ok(|(path, entry)| async move {
+                if let Some(path) = Option::<NonRootMPath>::from(path) {
                     let unode = entry
                         .load(ctx, &self.repo_blobstore)
                         .await

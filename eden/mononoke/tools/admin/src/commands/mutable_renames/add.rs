@@ -150,10 +150,9 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
                 )
                 .try_collect()
                 .await?;
-            let dst_non_root_path = dst_path.clone().into();
             let first = match (
-                src_entries.remove(&None),
-                dst_entries.remove(&dst_non_root_path),
+                src_entries.remove(&MPath::EMPTY),
+                dst_entries.remove(&dst_path),
             ) {
                 (Some(src_entry), Some(dst_entry)) => Some(create_mutable_rename(
                     src_cs_id,
@@ -179,8 +178,7 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
                         dst_path.join(mpath_element_iter(&src_entry_path));
                     let src_entry_path =
                         src_path.join(mpath_element_iter(&src_entry_path));
-                    let dst_non_root_entry_path = dst_entry_path.clone().into();
-                    let dst_entry = dst_entries.remove(&dst_non_root_entry_path);
+                    let dst_entry = dst_entries.remove(&dst_entry_path);
 
                     if let Some(dst_entry) = dst_entry {
                         create_mutable_rename(src_cs_id, src_entry_path, src_entry, dst_cs_id, dst_entry_path, dst_entry).map_err(|e| {eprintln!("{}",e); e}).ok()

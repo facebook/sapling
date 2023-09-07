@@ -102,7 +102,7 @@ async fn assert_linknodes(
         .find_entry(
             ctx.clone(),
             repo.repo_blobstore().clone(),
-            Some(path.clone()),
+            path.clone().into(),
         )
         .await?
         .ok_or_else(|| anyhow!("entry not found"))?

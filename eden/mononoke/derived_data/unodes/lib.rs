@@ -98,7 +98,9 @@ pub async fn find_unode_rename_sources(
 
             let mut sources = Vec::new();
             for (from_path, entry) in unodes {
-                if let (Some(from_path), Some(unode_id)) = (from_path, entry.into_leaf()) {
+                if let (Some(from_path), Some(unode_id)) =
+                    (Option::<NonRootMPath>::from(from_path), entry.into_leaf())
+                {
                     if let Some(to_paths) = paths.remove(&from_path) {
                         for to_path in to_paths {
                             sources.push((
@@ -155,7 +157,9 @@ pub async fn find_unode_renames_incorrect_for_blame_v1(
             .manifest_unode_id()
             .clone()
             .find_entries(ctx.clone(), blobstore.clone(), from_paths)
-            .map_ok(|(from_path, entry)| Some((from_path?, entry.into_leaf()?)))
+            .map_ok(|(from_path, entry)| {
+                Some((Option::<NonRootMPath>::from(from_path)?, entry.into_leaf()?))
+            })
             .try_filter_map(future::ok)
             .try_collect::<Vec<_>>()
             .map_ok(move |unodes| {

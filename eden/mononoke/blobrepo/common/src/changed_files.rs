@@ -88,7 +88,7 @@ async fn compute_changed_files_pair(
 
             match entry {
                 Entry::Tree(_) => Ok(None),
-                Entry::Leaf(_) => Ok(path),
+                Entry::Leaf(_) => Ok(Option::<NonRootMPath>::from(path)),
             }
         })
         .try_collect()
@@ -103,7 +103,7 @@ async fn compute_removed_files(
 ) -> Result<Vec<NonRootMPath>, Error> {
     compute_files_with_status(ctx, blobstore, child, parent, move |diff| match diff {
         Diff::Removed(path, entry) => match entry {
-            Entry::Leaf(_) => path,
+            Entry::Leaf(_) => path.into(),
             Entry::Tree(_) => None,
         },
         _ => None,

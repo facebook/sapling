@@ -508,6 +508,7 @@ pub trait MegarepoOp {
 
         let mut res = vec![];
         for (src_path, entry) in entries {
+            let src_path: Option<NonRootMPath> = src_path.into();
             match (src_path, entry) {
                 (Some(src_path), Entry::Leaf(leaf)) => {
                     if tunables()

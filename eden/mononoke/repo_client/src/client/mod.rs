@@ -2328,17 +2328,16 @@ fn get_changed_manifests_stream(
                 }
             },
             move |tree_diff| match tree_diff {
-                Diff::Added(path, ..) | Diff::Changed(path, ..) => match path {
-                    Some(path) => path.num_components() <= max_depth,
-                    None => true,
-                },
+                Diff::Added(path, ..) | Diff::Changed(path, ..) => {
+                    path.num_components() <= max_depth
+                }
                 Diff::Removed(..) => false,
             },
         )
         .compat()
         .map(move |(path_no_root_path, hg_mf_id)| {
             let mut path = rootpath.clone();
-            path.extend(NonRootMPath::into_iter_opt(path_no_root_path));
+            path.extend(NonRootMPath::into_iter_opt(path_no_root_path.into()));
             (hg_mf_id, path)
         })
         .boxify()

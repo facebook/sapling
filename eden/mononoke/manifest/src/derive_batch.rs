@@ -157,7 +157,7 @@ where
         let mut stack_of_commits = vec![];
         for mf_changes in changes {
             for (path, leaf) in mf_changes.changes {
-                path_tree.insert_and_merge(Some(path), (mf_changes.cs_id, leaf));
+                path_tree.insert_and_merge(path.into(), (mf_changes.cs_id, leaf));
             }
             stack_of_commits.push(mf_changes.cs_id);
         }

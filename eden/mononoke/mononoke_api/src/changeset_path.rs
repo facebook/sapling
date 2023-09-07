@@ -42,6 +42,7 @@ use manifest::ManifestOps;
 use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::fsnode::FsnodeFile;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentMetadataV2;
 /// Metadata about a file.
@@ -216,10 +217,10 @@ impl ChangesetPathContentContext {
                     let ctx = changeset.ctx().clone();
                     let blobstore = changeset.repo().blob_repo().repo_blobstore().clone();
                     let root_fsnode_id = changeset.root_fsnode_id().await?;
-                    if let Some(mpath) = path.into() {
+                    if let Some(mpath) = path.into_mpath() {
                         root_fsnode_id
                             .fsnode_id()
-                            .find_entry(ctx, blobstore, Some(mpath))
+                            .find_entry(ctx, blobstore, MPath::from(mpath))
                             .await
                             .map_err(MononokeError::from)
                     } else {
@@ -423,10 +424,10 @@ impl ChangesetPathHistoryContext {
                     let ctx = changeset.ctx().clone();
                     let blobstore = changeset.repo().blob_repo().repo_blobstore().clone();
                     let root_unode_manifest_id = changeset.root_unode_manifest_id().await?;
-                    if let Some(mpath) = path.into() {
+                    if let Some(mpath) = path.into_mpath() {
                         root_unode_manifest_id
                             .manifest_unode_id()
-                            .find_entry(ctx, blobstore, Some(mpath))
+                            .find_entry(ctx, blobstore, MPath::from(mpath))
                             .await
                             .map_err(MononokeError::from)
                     } else {
@@ -445,8 +446,8 @@ impl ChangesetPathHistoryContext {
         root: impl RootDeletedManifestIdCommon + 'static,
         path: MononokePath,
     ) -> Result<Option<ChangesetId>, MononokeError> {
-        let maybe_id = if let Some(mpath) = path.into() {
-            root.find_entry(ctx, blobstore, Some(mpath))
+        let maybe_id = if let Some(mpath) = path.into_mpath() {
+            root.find_entry(ctx, blobstore, MPath::from(mpath))
                 .await
                 .map_err(MononokeError::from)?
         } else {
@@ -794,10 +795,10 @@ impl ChangesetPathContext {
                     let ctx = changeset.ctx().clone();
                     let blobstore = changeset.repo().blob_repo().repo_blobstore().clone();
                     let root_skeleton_manifest_id = changeset.root_skeleton_manifest_id().await?;
-                    if let Some(mpath) = path.into() {
+                    if let Some(mpath) = path.into_mpath() {
                         root_skeleton_manifest_id
                             .skeleton_manifest_id()
-                            .find_entry(ctx, blobstore, Some(mpath))
+                            .find_entry(ctx, blobstore, MPath::from(mpath))
                             .await
                             .map_err(MononokeError::from)
                     } else {

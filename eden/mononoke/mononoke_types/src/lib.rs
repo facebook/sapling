@@ -73,6 +73,7 @@ pub use generation::FIRST_GENERATION;
 pub use globalrev::Globalrev;
 pub use path::check_case_conflicts;
 pub use path::mpath_element_iter;
+pub use path::non_root_mpath_element_iter;
 pub use path::path_bytes_from_mpath;
 pub use path::MPathElement;
 pub use path::MPathHash;

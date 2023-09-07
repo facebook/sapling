@@ -32,6 +32,7 @@ use itertools::Itertools;
 use manifest::PathTree;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::fsnode::FsnodeEntry;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -81,7 +82,7 @@ impl CreateCopyInfo {
                 )));
             }
             // Check if the copy-from path was added or removed in the stack.
-            match stack_changes.get(self.path.as_mpath()) {
+            match stack_changes.get(self.path.as_mpath().into()) {
                 None | Some(CreateChangeType::None) => {}
                 Some(CreateChangeType::Change) => {
                     return Ok(());
@@ -94,7 +95,7 @@ impl CreateCopyInfo {
             }
             // Check if the copy-from path was deleted by a prefix change.
             for prefix in self.path.prefixes() {
-                if stack_changes.get(prefix.as_mpath()) == Some(&CreateChangeType::Change) {
+                if stack_changes.get(prefix.as_mpath().into()) == Some(&CreateChangeType::Change) {
                     return Err(MononokeError::InvalidRequest(String::from(
                         "Copy-from path references a file in a directory deleted earler in the stack",
                     )));
@@ -341,21 +342,24 @@ async fn verify_deleted_files_existed_in_a_parent(
     if let Some(stack_changes) = stack_changes {
         // Ignore files that were created or modified earlier in the stack.
         deleted_files.retain(|deleted_file| {
-            stack_changes.get(deleted_file.as_mpath()) != Some(&CreateChangeType::Change)
+            stack_changes.get(deleted_file.as_mpath().into()) != Some(&CreateChangeType::Change)
         });
 
         for deleted_file in deleted_files.iter() {
             // It's an error if this file was already deleted, or if any of
             // its path prefixes were created (this implicitly deletes the
             // directory).
-            if stack_changes.get(deleted_file.as_mpath()) == Some(&CreateChangeType::Deletion) {
+            if stack_changes.get(deleted_file.as_mpath().into())
+                == Some(&CreateChangeType::Deletion)
+            {
                 return Err(MononokeError::InvalidRequest(format!(
                     "Deleted file '{}' was deleted earlier in the stack",
                     deleted_file
                 )));
             }
             for prefix in deleted_file.prefixes() {
-                if let Some(CreateChangeType::Change) = stack_changes.get(prefix.as_mpath()) {
+                if let Some(CreateChangeType::Change) = stack_changes.get(prefix.as_mpath().into())
+                {
                     return Err(MononokeError::InvalidRequest(format!(
                         "Deleted file '{}' was deleted earlier in the stack through replacement of '{}'",
                         deleted_file, prefix
@@ -407,7 +411,7 @@ async fn verify_deleted_files_existed_in_a_parent(
 /// detecting when a directory is replaced by a file.
 fn is_prefix_changed(path: &MononokePath, paths: &PathTree<CreateChangeType>) -> bool {
     path.prefixes()
-        .any(|prefix| paths.get(prefix.as_mpath()) == Some(&CreateChangeType::Change))
+        .any(|prefix| paths.get(prefix.as_mpath().into()) == Some(&CreateChangeType::Change))
 }
 
 /// Verify that any files in `prefix_paths` that exist in any of
@@ -422,12 +426,13 @@ async fn verify_prefix_files_deleted(
     if let Some(stack_changes) = stack_changes {
         // Remove any prefix paths that have already been deleted earlier in the stack.
         prefix_paths.retain(|prefix_path| {
-            stack_changes.get(prefix_path.as_mpath()) != Some(&CreateChangeType::Deletion)
+            stack_changes.get(prefix_path.as_mpath().into()) != Some(&CreateChangeType::Deletion)
         });
         // Check that any prefix path added earlier in the stack is being deleted.
         for prefix_path in prefix_paths.iter() {
-            if stack_changes.get(prefix_path.as_mpath()) == Some(&CreateChangeType::Change)
-                && path_changes.get(prefix_path.as_mpath()) != Some(&CreateChangeType::Deletion)
+            if stack_changes.get(prefix_path.as_mpath().into()) == Some(&CreateChangeType::Change)
+                && path_changes.get(prefix_path.as_mpath().into())
+                    != Some(&CreateChangeType::Deletion)
             {
                 return Err(MononokeError::InvalidRequest(format!(
                     concat!(
@@ -448,7 +453,7 @@ async fn verify_prefix_files_deleted(
                 .await?
                 .try_for_each(|prefix_path| async move {
                     if prefix_path.is_file().await?
-                        && path_changes.get(prefix_path.path().as_mpath())
+                        && path_changes.get(prefix_path.path().as_mpath().into())
                             != Some(&CreateChangeType::Deletion)
                     {
                         Err(MononokeError::InvalidRequest(format!(
@@ -518,7 +523,7 @@ async fn check_addless_union_conflicts(
                     .filter_map(|(path_element, contents)| {
                         let path = current_path.append(&path_element);
                         let fix_exists = fix_paths
-                            .get(path.as_mpath())
+                            .get(path.as_mpath().into())
                             .map_or(false, CreateChangeType::is_modification);
                         let conflict_exists =
                             contents.len() > 1 || trees.contains_key(&path_element);
@@ -536,7 +541,7 @@ async fn check_addless_union_conflicts(
                     .filter_map(|(path_element, fsnodes)| {
                         let path = current_path.append(&path_element);
                         let fix_exists = fix_paths
-                            .get(path.as_mpath())
+                            .get(path.as_mpath().into())
                             .map_or(false, CreateChangeType::is_modification);
 
                         if !fix_exists && fsnodes.len() > 1 {
@@ -690,11 +695,9 @@ impl RepoContext {
         let path_changes_stack: Vec<_> = changes_stack
             .iter()
             .map(|changes| {
-                PathTree::from_iter(
-                    changes
-                        .iter()
-                        .map(|(path, change)| (path.as_mpath().cloned(), change.change_type())),
-                )
+                PathTree::from_iter(changes.iter().map(|(path, change)| {
+                    (MPath::from(path.as_mpath().cloned()), change.change_type())
+                }))
             })
             .collect();
         let path_changes_stack = path_changes_stack.as_slice();

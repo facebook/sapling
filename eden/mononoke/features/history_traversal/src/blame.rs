@@ -81,7 +81,7 @@ async fn fetch_mutable_blame(
             .derive::<RootUnodeManifestId>(ctx, my_csid)
             .await?
             .manifest_unode_id()
-            .find_entry(ctx.clone(), blobstore, Some(path.clone()))
+            .find_entry(ctx.clone(), blobstore, path.clone().into())
             .await?
             .context("Unode missing")?
             .into_leaf()

@@ -511,7 +511,11 @@ async fn verify_dir<'a>(
     let source_blobstore = source_repo.repo_blobstore_arc();
     let target_blobstore = target_repo.repo_blobstore_arc();
     let maybe_source_manifest_entry = source_root_fsnode_id
-        .find_entry(ctx.clone(), source_blobstore.clone(), source_path.clone())
+        .find_entry(
+            ctx.clone(),
+            source_blobstore.clone(),
+            source_path.clone().into(),
+        )
         .await?;
 
     let inits = match maybe_source_manifest_entry {
@@ -564,7 +568,11 @@ async fn verify_dir<'a>(
                     };
 
                     let target_fsnode = target_root_fsnode_id
-                        .find_entry(ctx.clone(), target_blobstore.clone(), target_path.clone())
+                        .find_entry(
+                            ctx.clone(),
+                            target_blobstore.clone(),
+                            target_path.clone().into(),
+                        )
                         .await?;
 
                     if let (

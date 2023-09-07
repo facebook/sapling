@@ -69,7 +69,7 @@ pub(crate) async fn derive_blame_v2(
         root_manifest.manifest_unode_id().clone(),
         parent_manifests,
     )
-    .map_ok(|(path, entry)| Some((path?, entry.into_leaf()?)))
+    .map_ok(|(path, entry)| Some((Option::<NonRootMPath>::from(path)?, entry.into_leaf()?)))
     .try_filter_map(future::ok)
     .map(move |path_and_file_unode| {
         cloned!(ctx, blobstore, renames);

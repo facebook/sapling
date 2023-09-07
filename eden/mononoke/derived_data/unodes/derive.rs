@@ -456,6 +456,7 @@ mod tests {
     use mercurial_types::blobs::HgBlobManifest;
     use mercurial_types::HgFileNodeId;
     use mercurial_types::HgManifestId;
+    use mononoke_types::path::MPath;
     use mononoke_types::BlobstoreValue;
     use mononoke_types::BonsaiChangeset;
     use mononoke_types::BonsaiChangesetMut;
@@ -684,10 +685,7 @@ mod tests {
                     .find_entries(
                         ctx.clone(),
                         repo.repo_blobstore.clone(),
-                        vec![
-                            Some(NonRootMPath::new(merged_files)?),
-                            Some(NonRootMPath::new("dir")?),
-                        ],
+                        vec![MPath::new(merged_files)?, MPath::new("dir")?],
                         // Some(NonRootMPath::new(&merged_files)?),
                     )
                     .try_collect()
@@ -702,10 +700,7 @@ mod tests {
                     .find_entries(
                         ctx.clone(),
                         repo.repo_blobstore.clone(),
-                        vec![
-                            Some(NonRootMPath::new(merged_files)?),
-                            Some(NonRootMPath::new("dir")?),
-                        ],
+                        vec![MPath::new(merged_files)?, MPath::new("dir")?],
                     )
                     .try_collect()
                     .await?;

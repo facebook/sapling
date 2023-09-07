@@ -1166,7 +1166,10 @@ async fn list_content(
                 let content =
                     filestore::fetch_concat(blobstore, ctx, envelope.content_id()).await?;
                 let s = String::from_utf8_lossy(content.as_ref()).into_owned();
-                actual.insert(format!("{}", path.unwrap()), s);
+                actual.insert(
+                    format!("{}", Option::<NonRootMPath>::from(path).unwrap()),
+                    s,
+                );
             }
             Entry::Tree(_) => {}
         }

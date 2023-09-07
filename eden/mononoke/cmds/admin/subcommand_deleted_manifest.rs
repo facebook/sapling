@@ -34,6 +34,7 @@ use futures::TryStreamExt;
 use manifest::get_implicit_deletes;
 use manifest::PathOrPrefix;
 use mercurial_derivation::DeriveHgChangeset;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::NonRootMPath;
@@ -107,10 +108,7 @@ pub async fn subcommand_deleted_manifest<'a>(
     match sub_matches.subcommand() {
         (COMMAND_MANIFEST, Some(matches)) => {
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
-            let path = match matches.value_of(ARG_PATH).unwrap() {
-                "" => None,
-                p => NonRootMPath::new(p).map(Some)?,
-            };
+            let path = MPath::new(matches.value_of(ARG_PATH).unwrap())?;
             let cs_id = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
             subcommand_manifest(ctx, repo, cs_id, path).await?;
             Ok(())
@@ -147,7 +145,7 @@ async fn subcommand_manifest(
     ctx: CoreContext,
     repo: BlobRepo,
     cs_id: ChangesetId,
-    prefix: Option<NonRootMPath>,
+    prefix: MPath,
 ) -> Result<(), Error> {
     let root_manifest = RootDeletedManifestV2Id::derive(&ctx, &repo, cs_id).await?;
     debug!(ctx.logger(), "ROOT Deleted Manifest V2 {:?}", root_manifest,);
@@ -233,7 +231,7 @@ async fn verify_single_commit(
         let root_manifest = RootDeletedManifestV2Id::derive(&ctx, &repo, cs_id).await?;
         let entries: BTreeSet<_> = root_manifest
             .list_all_entries(&ctx, repo.repo_blobstore())
-            .try_filter_map(|(path_opt, ..)| async move { Ok(path_opt) })
+            .try_filter_map(|(path, ..)| async move { Ok(Option::<NonRootMPath>::from(path)) })
             .try_collect()
             .await?;
         Ok(entries)

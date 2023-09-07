@@ -82,7 +82,7 @@ pub async fn fetch_blame_v2(
     let file_unode_id = root_unode
         .manifest_unode_id()
         .clone()
-        .find_entry(ctx.clone(), blobstore.clone(), Some(path.clone()))
+        .find_entry(ctx.clone(), blobstore.clone(), path.clone().into())
         .await?
         .ok_or_else(|| BlameError::NoSuchPath(path.clone()))?
         .into_leaf()

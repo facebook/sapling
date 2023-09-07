@@ -26,6 +26,7 @@ pub use megarepo_configs::types::SourceRevision;
 pub use megarepo_configs::types::SyncConfigVersion;
 pub use megarepo_configs::types::SyncTargetConfig;
 pub use megarepo_configs::types::Target;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
@@ -156,10 +157,10 @@ impl CommitRemappingState {
     ) -> Result<Option<Self>, Error> {
         let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id).await?;
 
-        let path = NonRootMPath::new(REMAPPING_STATE_FILE)?;
+        let path = MPath::new(REMAPPING_STATE_FILE)?;
         let maybe_entry = root_fsnode_id
             .fsnode_id()
-            .find_entry(ctx.clone(), repo.repo_blobstore().clone(), Some(path))
+            .find_entry(ctx.clone(), repo.repo_blobstore().clone(), path)
             .await?;
 
         let entry = match maybe_entry {

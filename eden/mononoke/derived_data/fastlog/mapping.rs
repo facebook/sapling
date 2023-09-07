@@ -429,10 +429,7 @@ mod tests {
             child_root_unode,
             vec![parent_root_unode],
         )
-        .map_ok(|(path, _)| match path {
-            Some(path) => String::from_utf8(path.to_vec()).unwrap(),
-            None => String::new(),
-        })
+        .map_ok(|(path, _)| String::from_utf8(path.to_vec()).unwrap())
         .try_collect()
         .await?;
         entries.sort();
@@ -496,10 +493,7 @@ mod tests {
                 merge_unode,
                 parent_unodes,
             )
-            .map_ok(|(path, _)| match path {
-                Some(path) => String::from_utf8(path.to_vec()).unwrap(),
-                None => String::new(),
-            })
+            .map_ok(|(path, _)| String::from_utf8(path.to_vec()).unwrap())
             .try_collect()
             .await?;
             entries.sort();

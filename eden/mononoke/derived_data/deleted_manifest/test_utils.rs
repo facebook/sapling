@@ -647,9 +647,9 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(
                     &ctx,
                     repo.repo_blobstore(),
                     vec![
-                        PathOrPrefix::Path(Some(path("file.txt"))),
-                        PathOrPrefix::Path(Some(path("dir/f-2"))),
-                        PathOrPrefix::Path(Some(path("dir/sub/f-1"))),
+                        PathOrPrefix::Path(path("file.txt").into()),
+                        PathOrPrefix::Path(path("dir/f-2").into()),
+                        PathOrPrefix::Path(path("dir/sub/f-1").into()),
                     ],
                 )
                 .map_ok(|(path, _)| path)
@@ -658,7 +658,7 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(
                 .unwrap();
 
             entries.sort();
-            let expected_entries = vec![Some(path("dir/f-2")), Some(path("dir/sub/f-1"))];
+            let expected_entries = vec![path("dir/f-2").into(), path("dir/sub/f-1").into()];
             assert_eq!(entries, expected_entries);
         }
 
@@ -668,7 +668,7 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(
                 .find_entries(
                     &ctx,
                     repo.repo_blobstore(),
-                    vec![PathOrPrefix::Prefix(Some(path("dir-2")))],
+                    vec![PathOrPrefix::Prefix(path("dir-2").into())],
                 )
                 .map_ok(|(path, _)| path)
                 .try_collect::<Vec<_>>()
@@ -691,8 +691,8 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(
                     &ctx,
                     repo.repo_blobstore(),
                     vec![
-                        PathOrPrefix::Prefix(Some(path("dir/sub"))),
-                        PathOrPrefix::Path(Some(path("dir/sub/f-1"))),
+                        PathOrPrefix::Prefix(path("dir/sub").into()),
+                        PathOrPrefix::Path(path("dir/sub/f-1").into()),
                     ],
                 )
                 .map_ok(|(path, _)| path)
@@ -763,9 +763,9 @@ pub(crate) async fn test_list_all_entries<Root: RootDeletedManifestIdCommon>(
                 .collect::<Vec<_>>();
             entries.sort();
             let expected_entries = vec![
-                Some(path("dir/sub")),
-                Some(path("dir/sub/f-1")),
-                Some(path("dir/sub/f-3")),
+                path("dir/sub").into(),
+                path("dir/sub/f-1").into(),
+                path("dir/sub/f-3").into(),
             ];
             assert_eq!(entries, expected_entries);
         }

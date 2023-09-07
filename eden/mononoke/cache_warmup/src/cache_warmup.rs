@@ -114,7 +114,7 @@ async fn blobstore_and_filenodes_warmup(
                 Entry::Tree(hash) => {
                     let hash = HgFileNodeId::new(hash.into_nodehash());
 
-                    let path = match path {
+                    let path = match path.into() {
                         Some(path) => RepoPath::DirectoryPath(path),
                         None => RepoPath::RootPath,
                     };

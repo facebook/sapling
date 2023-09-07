@@ -141,19 +141,43 @@ impl FilenodeDiff {
         use Diff::*;
         use Entry::*;
         match diff {
-            // We don't care about repo root diffs!
-            Added(None, _) | Removed(None, _) | Changed(None, _, _) => None,
             // We don't care about tree diffs!
             Added(_, Tree(_)) | Removed(_, Tree(_)) | Changed(_, _, Tree(_)) => None,
-            Added(Some(mpath), Leaf((file_type, hg_filenode_id))) => Some(Self::new(
-                mpath,
-                FilenodeDiffPayload::Added(file_type, hg_filenode_id),
-            )),
-            Removed(Some(mpath), Leaf(_)) => Some(Self::new(mpath, FilenodeDiffPayload::Removed)),
-            Changed(Some(mpath), _, Leaf((file_type, hg_filenode_id))) => Some(Self::new(
-                mpath,
-                FilenodeDiffPayload::ChangedTo(file_type, hg_filenode_id),
-            )),
+            Added(mpath, Leaf((file_type, hg_filenode_id))) => {
+                // We don't care about repo root diffs!
+                if mpath.is_root() {
+                    None
+                } else {
+                    // Safe to unwrap since the path is not root
+                    Some(Self::new(
+                        mpath.try_into().unwrap(),
+                        FilenodeDiffPayload::Added(file_type, hg_filenode_id),
+                    ))
+                }
+            }
+            Removed(mpath, Leaf(_)) => {
+                // We don't care about repo root diffs!
+                if mpath.is_root() {
+                    None
+                } else {
+                    // Safe to unwrap since the path is not root
+                    Some(Self::new(
+                        mpath.try_into().unwrap(),
+                        FilenodeDiffPayload::Removed,
+                    ))
+                }
+            }
+            Changed(mpath, _, Leaf((file_type, hg_filenode_id))) => {
+                // We don't care about repo root diffs!
+                if mpath.is_root() {
+                    None
+                } else {
+                    Some(Self::new(
+                        mpath.try_into().unwrap(), // Safe to unwrap since the path is not root
+                        FilenodeDiffPayload::ChangedTo(file_type, hg_filenode_id),
+                    ))
+                }
+            }
         }
     }
 
@@ -292,7 +316,7 @@ impl ValidationHelper {
                     .find_entry(
                         ctx.clone(),
                         repo.repo_blobstore().clone(),
-                        Some(mpath.clone()),
+                        mpath.clone().into(),
                     )
                     .await?;
 
@@ -1490,7 +1514,9 @@ async fn list_all_filenode_ids(
         .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
         .try_filter_map(move |(path, entry)| {
             let res = match entry {
-                Entry::Leaf(leaf_payload) => path.map(|path| (path, leaf_payload)),
+                Entry::Leaf(leaf_payload) => {
+                    Option::<NonRootMPath>::from(path).map(|path| (path, leaf_payload))
+                }
                 Entry::Tree(_) => None,
             };
             future::ready(Ok(res))

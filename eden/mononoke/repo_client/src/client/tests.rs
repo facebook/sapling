@@ -384,7 +384,7 @@ async fn run_and_check_if_lfs(ctx: &CoreContext, lfs_params: LfsParams) -> Resul
         .find_entry(
             ctx.clone(),
             repo.repo_blobstore().clone(),
-            Some(path.clone()),
+            path.clone().into(),
         )
         .await?
         .unwrap();

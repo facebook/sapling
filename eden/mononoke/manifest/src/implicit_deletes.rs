@@ -62,7 +62,7 @@ where
         .find_entry(
             ctx.clone(),
             store.clone(),
-            Some(path_added_in_a_child.clone()),
+            path_added_in_a_child.clone().into(),
         )
         .map_ok({
             cloned!(ctx, store, path_added_in_a_child);

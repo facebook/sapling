@@ -49,6 +49,7 @@ use manifest::PathOrPrefix;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_api_types::InnerRepo;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::NonRootMPath;
@@ -1246,7 +1247,7 @@ async fn run_delete_no_longer_bound_files_from_large_repo<'a>(
         .find_entries(
             ctx.clone(),
             large_repo.repo_blobstore().clone(),
-            vec![PathOrPrefix::Prefix(Some(NonRootMPath::new(prefix)?))],
+            vec![PathOrPrefix::Prefix(MPath::new(prefix)?)],
         )
         .try_collect::<Vec<_>>()
         .await?;
@@ -1257,7 +1258,7 @@ async fn run_delete_no_longer_bound_files_from_large_repo<'a>(
     let mut to_delete = vec![];
     for (path, entry) in entries {
         if let Entry::Leaf(_) = entry {
-            let path = path.unwrap();
+            let path = path.try_into().unwrap();
             if mover(&path)?.is_none() {
                 to_delete.push(path);
             }

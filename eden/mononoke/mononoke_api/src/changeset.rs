@@ -53,6 +53,7 @@ use manifest::ManifestOps;
 use manifest::ManifestOrderedOps;
 use manifest::PathOrPrefix;
 use mercurial_types::Globalrev;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::FileChange;
 pub use mononoke_types::Generation;
@@ -410,7 +411,7 @@ impl ChangesetContext {
             .find_entries(
                 self.ctx().clone(),
                 self.repo().blob_repo().repo_blobstore().clone(),
-                paths.map(|path| path.into_mpath()),
+                paths.map(|path| path.into_mpath()).map(MPath::from),
             )
             .map_err(MononokeError::from)
             .and_then({
@@ -418,7 +419,7 @@ impl ChangesetContext {
                 move |(mpath, entry)| {
                     ChangesetPathHistoryContext::new_with_unode_entry(
                         changeset.clone(),
-                        MononokePath::new(mpath),
+                        MononokePath::new(mpath.into()),
                         entry,
                     )
                 }
@@ -441,7 +442,7 @@ impl ChangesetContext {
             .find_entries(
                 self.ctx().clone(),
                 self.repo().blob_repo().repo_blobstore().clone(),
-                paths.map(|path| path.into_mpath()),
+                paths.map(|path| path.into_mpath()).map(MPath::from),
             )
             .map_err(MononokeError::from)
             .and_then({
@@ -451,7 +452,7 @@ impl ChangesetContext {
                     async move {
                         ChangesetPathContentContext::new_with_fsnode_entry(
                             changeset.clone(),
-                            MononokePath::new(mpath),
+                            MononokePath::new(mpath.into()),
                             entry,
                         )
                         .await
@@ -476,7 +477,7 @@ impl ChangesetContext {
             .find_entries(
                 self.ctx().clone(),
                 self.repo().blob_repo().repo_blobstore().clone(),
-                paths.map(|path| path.into_mpath()),
+                paths.map(|path| path.into_mpath()).map(MPath::from),
             )
             .map_err(MononokeError::from)
             .and_then({
@@ -484,7 +485,7 @@ impl ChangesetContext {
                 move |(mpath, entry)| {
                     ChangesetPathContext::new_with_skeleton_manifest_entry(
                         changeset.clone(),
-                        MononokePath::new(mpath),
+                        MononokePath::new(mpath.into()),
                         entry,
                     )
                 }
@@ -499,7 +500,7 @@ impl ChangesetContext {
         root.find_entries(
             self.ctx(),
             self.repo().blob_repo().repo_blobstore(),
-            paths.map(|path| path.into_mpath()),
+            paths.map(|path| path.into_mpath()).map(MPath::from),
         )
         .map_err(MononokeError::from)
         .and_then({
@@ -806,9 +807,15 @@ impl ChangesetContext {
                 .find_entries(
                     self.ctx().clone(),
                     self.repo().blob_repo().repo_blobstore().clone(),
-                    copy_path_map.keys().cloned().map(MononokePath::into_mpath),
+                    copy_path_map
+                        .keys()
+                        .cloned()
+                        .map(MononokePath::into_mpath)
+                        .map(MPath::from),
                 )
-                .map_ok(|(maybe_from_path, entry)| (MononokePath::new(maybe_from_path), entry))
+                .map_ok(|(maybe_from_path, entry)| {
+                    (MononokePath::new(maybe_from_path.into()), entry)
+                })
                 .try_collect::<HashMap<_, _>>();
 
             // At the same time, find out whether the destinations of copies
@@ -818,9 +825,12 @@ impl ChangesetContext {
                 .find_entries(
                     self.ctx().clone(),
                     other.repo().blob_repo().repo_blobstore().clone(),
-                    to_paths.into_iter().map(MononokePath::into_mpath),
+                    to_paths
+                        .into_iter()
+                        .map(MononokePath::into_mpath)
+                        .map(MPath::from),
                 )
-                .map_ok(|(maybe_to_path, _entry)| MononokePath::new(maybe_to_path))
+                .map_ok(|(maybe_to_path, _entry)| MononokePath::new(maybe_to_path.into()))
                 .try_collect::<HashSet<_>>();
 
             let (from_path_to_mf_entry, to_path_exists_in_parent) =
@@ -862,9 +872,13 @@ impl ChangesetContext {
             .find_entries(
                 self.ctx().clone(),
                 self.repo().blob_repo().repo_blobstore().clone(),
-                copy_path_map.keys().cloned().map(MononokePath::into_mpath),
+                copy_path_map
+                    .keys()
+                    .cloned()
+                    .map(MononokePath::into_mpath)
+                    .map(MPath::from),
             )
-            .map_ok(|(maybe_from_path, _)| MononokePath::new(maybe_from_path))
+            .map_ok(|(maybe_from_path, _)| MononokePath::new(maybe_from_path.into()))
             .try_collect::<HashSet<_>>()
             .await?;
 
@@ -880,7 +894,7 @@ impl ChangesetContext {
                 ManifestDiff::Added(path, ..)
                 | ManifestDiff::Changed(path, ..)
                 | ManifestDiff::Removed(path, ..) => {
-                    let path = MononokePath::new(path.clone());
+                    let path = MononokePath::new(path.clone().into());
                     within_restrictions(&path, &path_restrictions)
                 }
             }
@@ -910,7 +924,7 @@ impl ChangesetContext {
                         self.repo().blob_repo().repo_blobstore().clone(),
                         self_manifest_root.fsnode_id().clone(),
                         self.repo().blob_repo().repo_blobstore().clone(),
-                        after.map(MononokePath::into_mpath),
+                        after.map(|path| MPath::from(path.into_mpath())),
                         Some,
                         recurse_pruner,
                     )
@@ -923,7 +937,7 @@ impl ChangesetContext {
                 async {
                     let entry = match diff_entry {
                         ManifestDiff::Added(path, entry @ ManifestEntry::Leaf(_)) => {
-                            let path = MononokePath::new(path);
+                            let path = MononokePath::new(path.into());
                             if !diff_files || !within_restrictions(&path, &path_restrictions) {
                                 None
                             } else if let Some((from_path, from_entry)) =
@@ -985,7 +999,7 @@ impl ChangesetContext {
                             }
                         }
                         ManifestDiff::Removed(path, entry @ ManifestEntry::Leaf(_)) => {
-                            let path = MononokePath::new(path);
+                            let path = MononokePath::new(path.into());
                             #[allow(clippy::if_same_then_else)]
                             if copy_path_map.get(&path).is_some() {
                                 // The file is was moved (not removed), it will be covered by a "Moved" entry.
@@ -1009,7 +1023,7 @@ impl ChangesetContext {
                             from_entry @ ManifestEntry::Leaf(_),
                             to_entry @ ManifestEntry::Leaf(_),
                         ) => {
-                            let path = MononokePath::new(path);
+                            let path = MononokePath::new(path.into());
                             if !diff_files || !within_restrictions(&path, &path_restrictions) {
                                 None
                             } else {
@@ -1030,7 +1044,7 @@ impl ChangesetContext {
                             }
                         }
                         ManifestDiff::Added(path, entry @ ManifestEntry::Tree(_)) => {
-                            let path = MononokePath::new(path);
+                            let path = MononokePath::new(path.into());
                             if !diff_trees || !within_restrictions(&path, &path_restrictions) {
                                 None
                             } else {
@@ -1045,7 +1059,7 @@ impl ChangesetContext {
                             }
                         }
                         ManifestDiff::Removed(path, entry @ ManifestEntry::Tree(_)) => {
-                            let path = MononokePath::new(path);
+                            let path = MononokePath::new(path.into());
                             if !diff_trees || !within_restrictions(&path, &path_restrictions) {
                                 None
                             } else {
@@ -1064,7 +1078,7 @@ impl ChangesetContext {
                             from_entry @ ManifestEntry::Tree(_),
                             to_entry @ ManifestEntry::Tree(_),
                         ) => {
-                            let path = MononokePath::new(path);
+                            let path = MononokePath::new(path.into());
                             if !diff_trees || !within_restrictions(&path, &path_restrictions) {
                                 None
                             } else {
@@ -1102,21 +1116,16 @@ impl ChangesetContext {
         prefixes: Option<Vec1<MononokePath>>,
         ordering: ChangesetFileOrdering,
     ) -> Result<
-        impl Stream<
-            Item = Result<
-                (Option<NonRootMPath>, ManifestEntry<SkeletonManifestId, ()>),
-                anyhow::Error,
-            >,
-        >,
+        impl Stream<Item = Result<(MPath, ManifestEntry<SkeletonManifestId, ()>), anyhow::Error>>,
         MononokeError,
     > {
         let root = self.root_skeleton_manifest_id().await?;
         let prefixes = match prefixes {
             Some(prefixes) => prefixes
                 .into_iter()
-                .map(|prefix| PathOrPrefix::Prefix(prefix.into()))
+                .map(|prefix| PathOrPrefix::Prefix(prefix.into_mpath().into()))
                 .collect(),
-            None => vec![PathOrPrefix::Prefix(None)],
+            None => vec![PathOrPrefix::Prefix(MPath::EMPTY)],
         };
         let entries = match ordering {
             ChangesetFileOrdering::Unordered => root
@@ -1133,7 +1142,7 @@ impl ChangesetContext {
                     self.ctx().clone(),
                     self.repo().blob_repo().repo_blobstore().clone(),
                     prefixes,
-                    after.map(MononokePath::into_mpath),
+                    after.map(|path| MPath::from(path.into_mpath())),
                 )
                 .right_stream(),
         };
@@ -1220,19 +1229,20 @@ impl ChangesetContext {
                     .unwrap_or_else(Vec::new)
                     .into_iter()
                     .map(MononokePath::into_mpath)
+                    .map(MPath::from)
                     .collect(),
                 basenames_and_suffixes,
                 match ordering {
                     ChangesetFileOrdering::Unordered => None,
                     ChangesetFileOrdering::Ordered { after } => {
-                        Some(after.map(MononokePath::into_mpath))
+                        Some(after.map(|m| MPath::from(m.into_mpath())))
                     }
                 },
             )
             .await
             .map_err(MononokeError::from)?
             .map(|r| match r {
-                Ok(p) => Ok(MononokePath::new(p)),
+                Ok(p) => Ok(MononokePath::new(p.into())),
                 Err(err) => Err(MononokeError::from(err)),
             }))
     }
@@ -1247,6 +1257,7 @@ impl ChangesetContext {
         // First, find the entries, and filter by file prefix.
         let entries = self.find_entries(prefixes, ordering).await?;
         let mpaths = entries.try_filter_map(|(path, entry)| async move {
+            let path: Option<NonRootMPath> = path.into();
             match (path, entry) {
                 (Some(mpath), ManifestEntry::Leaf(_)) => Ok(Some(mpath)),
                 _ => Ok(None),
@@ -1402,6 +1413,7 @@ impl ChangesetContext {
         self.find_entries(to_vec1(path_restrictions), ordering)
             .await?
             .try_filter_map(|(path, entry)| async move {
+                let path: Option<NonRootMPath> = path.into();
                 match (path, entry) {
                     (Some(mpath), ManifestEntry::Leaf(_)) if diff_files => Ok(Some(mpath)),
                     (Some(mpath), ManifestEntry::Tree(_)) if diff_trees => Ok(Some(mpath)),

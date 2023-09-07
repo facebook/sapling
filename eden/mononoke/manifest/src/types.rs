@@ -26,6 +26,7 @@ use mononoke_types::basename_suffix_skeleton_manifest::BssmEntry;
 use mononoke_types::fsnode::Fsnode;
 use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::fsnode::FsnodeFile;
+use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
 use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
 use mononoke_types::unode::ManifestUnode;
@@ -521,8 +522,8 @@ impl<V> PathTree<V>
 where
     V: Default,
 {
-    pub fn insert(&mut self, path: Option<NonRootMPath>, value: V) {
-        let node = path.into_iter().flatten().fold(self, |node, element| {
+    pub fn insert(&mut self, path: MPath, value: V) {
+        let node = path.into_iter().fold(self, |node, element| {
             node.subentries
                 .entry(element)
                 .or_insert_with(Default::default)
@@ -530,11 +531,11 @@ where
         node.value = value;
     }
 
-    pub fn insert_and_merge<T>(&mut self, path: Option<NonRootMPath>, value: T)
+    pub fn insert_and_merge<T>(&mut self, path: MPath, value: T)
     where
         V: Extend<T>,
     {
-        let node = path.into_iter().flatten().fold(self, |node, element| {
+        let node = path.into_iter().fold(self, |node, element| {
             node.subentries
                 .entry(element)
                 .or_insert_with(Default::default)
@@ -542,9 +543,9 @@ where
         node.value.extend(std::iter::once(value));
     }
 
-    pub fn get(&self, path: Option<&NonRootMPath>) -> Option<&V> {
+    pub fn get(&self, path: &MPath) -> Option<&V> {
         let mut tree = self;
-        for elem in path.into_iter().flatten() {
+        for elem in path.into_iter() {
             match tree.subentries.get(elem) {
                 Some(subtree) => tree = subtree,
                 None => return None,
@@ -553,8 +554,8 @@ where
         Some(&tree.value)
     }
 
-    pub fn insert_and_prune(&mut self, path: Option<NonRootMPath>, value: V) {
-        let node = path.into_iter().flatten().fold(self, |node, element| {
+    pub fn insert_and_prune(&mut self, path: MPath, value: V) {
+        let node = path.into_iter().fold(self, |node, element| {
             node.subentries
                 .entry(element)
                 .or_insert_with(Default::default)
@@ -576,6 +577,22 @@ where
     }
 }
 
+impl<V> FromIterator<(MPath, V)> for PathTree<V>
+where
+    V: Default,
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = (MPath, V)>,
+    {
+        let mut tree: Self = Default::default();
+        for (path, value) in iter {
+            tree.insert(path, value);
+        }
+        tree
+    }
+}
+
 impl<V> FromIterator<(NonRootMPath, V)> for PathTree<V>
 where
     V: Default,
@@ -586,54 +603,35 @@ where
     {
         let mut tree: Self = Default::default();
         for (path, value) in iter {
-            tree.insert(Some(path), value);
-        }
-        tree
-    }
-}
-
-impl<V> FromIterator<(Option<NonRootMPath>, V)> for PathTree<V>
-where
-    V: Default,
-{
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = (Option<NonRootMPath>, V)>,
-    {
-        let mut tree: Self = Default::default();
-        for (path, value) in iter {
-            tree.insert(path, value);
+            tree.insert(MPath::from(path), value);
         }
         tree
     }
 }
 
 pub struct PathTreeIter<V> {
-    frames: Vec<(Option<NonRootMPath>, PathTree<V>)>,
+    frames: Vec<(MPath, PathTree<V>)>,
 }
 
 impl<V> Iterator for PathTreeIter<V> {
-    type Item = (Option<NonRootMPath>, V);
+    type Item = (MPath, V);
 
     fn next(&mut self) -> Option<Self::Item> {
         let (path, PathTree { value, subentries }) = self.frames.pop()?;
         for (name, subentry) in subentries {
-            self.frames.push((
-                Some(NonRootMPath::join_opt_element(path.as_ref(), &name)),
-                subentry,
-            ));
+            self.frames.push((path.join(&name), subentry));
         }
         Some((path, value))
     }
 }
 
 impl<V> IntoIterator for PathTree<V> {
-    type Item = (Option<NonRootMPath>, V);
+    type Item = (MPath, V);
     type IntoIter = PathTreeIter<V>;
 
     fn into_iter(self) -> Self::IntoIter {
         PathTreeIter {
-            frames: vec![(None, self)],
+            frames: vec![(MPath::EMPTY, self)],
         }
     }
 }

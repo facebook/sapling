@@ -62,11 +62,16 @@ pub async fn get_changed_content_working_copy_paths(
         )
         .try_filter_map(|diff| async move {
             use Diff::*;
-            let maybe_path = match diff {
-                Added(maybe_path, entry) => entry.into_leaf().and(maybe_path),
-                Removed(_maybe_path, _entry) => None,
-                Changed(maybe_path, _old_entry, new_entry) => new_entry.into_leaf().and(maybe_path),
-            };
+            let maybe_path =
+                match diff {
+                    Added(maybe_path, entry) => entry
+                        .into_leaf()
+                        .and(Option::<NonRootMPath>::from(maybe_path)),
+                    Removed(_maybe_path, _entry) => None,
+                    Changed(maybe_path, _old_entry, new_entry) => new_entry
+                        .into_leaf()
+                        .and(Option::<NonRootMPath>::from(maybe_path)),
+                };
 
             Ok(maybe_path)
         })
@@ -97,11 +102,14 @@ pub async fn get_colliding_paths_between_commits(
         )
         .try_filter_map(|diff| async move {
             use Diff::*;
-            let maybe_path = match diff {
-                Added(_maybe_path, _entry) => None,
-                Removed(_maybe_path, _entry) => None,
-                Changed(maybe_path, _old_entry, new_entry) => new_entry.into_leaf().and(maybe_path),
-            };
+            let maybe_path =
+                match diff {
+                    Added(_maybe_path, _entry) => None,
+                    Removed(_maybe_path, _entry) => None,
+                    Changed(maybe_path, _old_entry, new_entry) => new_entry
+                        .into_leaf()
+                        .and(Option::<NonRootMPath>::from(maybe_path)),
+                };
 
             Ok(maybe_path)
         })
@@ -132,11 +140,16 @@ pub async fn get_changed_working_copy_paths(
         )
         .try_filter_map(|diff| async move {
             use Diff::*;
-            let maybe_path = match diff {
-                Added(maybe_path, entry) => entry.into_leaf().and(maybe_path),
-                Removed(_maybe_path, _entry) => None,
-                Changed(maybe_path, _old_entry, new_entry) => new_entry.into_leaf().and(maybe_path),
-            };
+            let maybe_path =
+                match diff {
+                    Added(maybe_path, entry) => entry
+                        .into_leaf()
+                        .and(Option::<NonRootMPath>::from(maybe_path)),
+                    Removed(_maybe_path, _entry) => None,
+                    Changed(maybe_path, _old_entry, new_entry) => new_entry
+                        .into_leaf()
+                        .and(Option::<NonRootMPath>::from(maybe_path)),
+                };
 
             Ok(maybe_path)
         })

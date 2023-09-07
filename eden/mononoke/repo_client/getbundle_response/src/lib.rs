@@ -68,6 +68,7 @@ use mercurial_types::RevFlags;
 use mercurial_types::NULL_CSID;
 use mercurial_types::NULL_HASH;
 use mononoke_types::hash::Sha256;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::Generation;
@@ -906,7 +907,7 @@ async fn diff_with_parents(
     hg_cs_id: HgChangesetId,
 ) -> Result<
     (
-        Vec<(Option<NonRootMPath>, HgManifestId, HgChangesetId)>,
+        Vec<(MPath, HgManifestId, HgChangesetId)>,
         Vec<(NonRootMPath, HgFileNodeId, HgChangesetId)>,
     ),
     Error,
@@ -926,7 +927,7 @@ async fn diff_with_parents(
     )?;
 
     let blobstore = Arc::new(repo.repo_blobstore().clone());
-    let new_entries: Vec<(Option<NonRootMPath>, Entry<_, _>, _)> =
+    let new_entries: Vec<(MPath, Entry<_, _>, _)> =
         find_intersection_of_diffs_and_parents(ctx.clone(), blobstore, mf_id, parent_mf_ids)
             .try_collect()
             .await?;
@@ -951,7 +952,7 @@ async fn diff_with_parents(
                 if found_same_in_parents {
                     continue;
                 }
-                let path = path.expect("empty file paths?");
+                let path = Option::<NonRootMPath>::from(path).expect("empty file paths?");
                 files.push((path, file, hg_cs_id.clone()));
             }
         }
@@ -1023,7 +1024,7 @@ pub async fn get_manifests_and_filenodes(
     lfs_params: &SessionLfsParams,
 ) -> Result<
     (
-        Vec<(Option<NonRootMPath>, HgManifestId, HgChangesetId)>,
+        Vec<(MPath, HgManifestId, HgChangesetId)>,
         HashMap<NonRootMPath, Vec<PreparedFilenodeEntry>>,
     ),
     Error,

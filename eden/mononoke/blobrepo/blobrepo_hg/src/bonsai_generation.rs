@@ -208,7 +208,7 @@ async fn get_copy_info(
                     cloned!(ctx, blobstore);
                     async move {
                         let entry = parent_mf
-                            .find_entry(ctx, blobstore, Some(repopath.clone()))
+                            .find_entry(ctx, blobstore, repopath.clone().into())
                             .await
                             .ok()?;
                         if entry?.into_leaf()?.1 == copyfromnode {

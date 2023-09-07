@@ -231,7 +231,7 @@ async fn find_leaf(
     let entry_opt = mf_root
         .manifest_unode_id()
         .clone()
-        .find_entry(ctx, repo.repo_blobstore().clone(), Some(path.clone()))
+        .find_entry(ctx, repo.repo_blobstore().clone(), path.clone().into())
         .await?;
     let entry = entry_opt.ok_or_else(|| format_err!("No such path: {}", path))?;
     match entry.into_leaf() {
@@ -254,7 +254,7 @@ async fn try_find_leaf(
     let entry_opt = mf_root
         .manifest_unode_id()
         .clone()
-        .find_entry(ctx, repo.repo_blobstore().clone(), Some(path.clone()))
+        .find_entry(ctx, repo.repo_blobstore().clone(), path.clone().into())
         .await?;
     Ok(entry_opt.and_then(|entry| entry.into_leaf()))
 }

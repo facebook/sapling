@@ -1041,13 +1041,17 @@ impl AsRef<[MPathElement]> for NonRootMPath {
     }
 }
 
-pub fn mpath_element_iter<'a>(
+pub fn non_root_mpath_element_iter<'a>(
     mpath: &'a Option<NonRootMPath>,
 ) -> Box<dyn Iterator<Item = &MPathElement> + 'a> {
     match mpath {
         Some(path) => Box::new(path.into_iter()),
         None => Box::new(std::iter::empty()),
     }
+}
+
+pub fn mpath_element_iter<'a>(mpath: &'a MPath) -> Box<dyn Iterator<Item = &MPathElement> + 'a> {
+    Box::new(mpath.into_iter())
 }
 
 impl IntoIterator for NonRootMPath {
