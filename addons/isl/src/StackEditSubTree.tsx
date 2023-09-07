@@ -11,6 +11,8 @@ import type {Rev} from './stackEdit/fileStackState';
 import type {StackEditOpDescription, UseStackEditState} from './stackEditState';
 
 import {AnimatedReorderGroup} from './AnimatedReorderGroup';
+import {CommitTitle as StandaloneCommitTitle} from './CommitTitle';
+import {FlexRow} from './ComponentUtils';
 import {DragHandle} from './DragHandle';
 import {SplitCommitIcon} from './SplitCommitIcon';
 import {Tooltip} from './Tooltip';
@@ -198,7 +200,7 @@ export function StackEditCommit({
         <T>Untitled</T>
       </span>
     ) : (
-      <span className="commit-title">{titleText}</span>
+      <StandaloneCommitTitle commitMessage={commit.text} />
     );
   const buttons = (
     <div className="stack-edit-button-group">
@@ -226,11 +228,6 @@ export function StackEditCommit({
           <Icon icon="chevron-down" />
         </VSCodeButton>
       </Tooltip>
-      <Tooltip title={t('Interactively split the commit')}>
-        <VSCodeButton onClick={handleSplit} appearance="icon">
-          <SplitCommitIcon />
-        </VSCodeButton>
-      </Tooltip>
       <Tooltip
         title={
           canFold
@@ -254,18 +251,29 @@ export function StackEditCommit({
     </div>
   );
 
-  return (
-    <div className="commit" data-reorder-id={onDrag ? commit.key : ''} data-rev={rev}>
-      <div className="commit-rows">
-        <div className={`commit-details${isReorderPreview ? ' commit-reorder-preview' : ''}`}>
-          <DragHandle onDrag={onDrag}>
-            <Icon icon="grabber" />
-          </DragHandle>
-          {buttons}
-          {title}
-        </div>
-      </div>
+  const rightSideButtons = (
+    <div className="stack-edit-right-side-buttons">
+      <Tooltip title={t('Start interactive split for this commit')}>
+        <VSCodeButton onClick={handleSplit} appearance="icon">
+          <SplitCommitIcon slot="start" />
+          <T>Split</T>
+        </VSCodeButton>
+      </Tooltip>
     </div>
+  );
+
+  return (
+    <FlexRow
+      data-reorder-id={onDrag ? commit.key : ''}
+      data-rev={rev}
+      className={`commit${isReorderPreview ? ' commit-reorder-preview' : ''}`}>
+      <DragHandle onDrag={onDrag}>
+        <Icon icon="grabber" />
+      </DragHandle>
+      {buttons}
+      {title}
+      {rightSideButtons}
+    </FlexRow>
   );
 }
 

@@ -9,18 +9,22 @@
   display: flex;
 }
 
-.stack-edit-subtree {
-  position: relative;
+.stack-edit-right-side-buttons {
+  opacity: 0;
 }
 
-.stack-edit-subtree .commit-details {
-  align-items: flex-start;
-  cursor: default;
+.stack-edit-subtree {
+  position: relative;
 }
 
 .stack-edit-subtree .commit {
   background: var(--background);
   margin-bottom: var(--pad);
+  cursor: default;
+}
+
+.stack-edit-subtree .commit:hover .stack-edit-right-side-buttons {
+  opacity: 1;
 }
 
 .stack-edit-subtree .drag-handle {
@@ -37,10 +41,6 @@
   top: 0px;
   opacity: 0;
   z-index: 1000;
-}
-
-.stack-edit-dragging .commit-avatar {
-  display: none;
 }
 
 .stack-edit-dragging-commit-list {
