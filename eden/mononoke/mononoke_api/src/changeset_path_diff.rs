@@ -281,15 +281,13 @@ impl TextFile {
         })
     }
 
-    /// This method replaces text.lines().count() and use the metadata to get
-    /// that information. The behavior should be identical in most cases except
-    /// when the text ends in a newline. The lines().count() method does not consider
-    /// the last newline in that case but it would still be counted in metadata.newline_count.
     fn lines(&self) -> usize {
         if self.metadata.ends_in_newline {
-            (self.metadata.newline_count - 1) as usize
-        } else {
+            // For files that end in newline, the number of lines is equal to the number of newlines.
             self.metadata.newline_count as usize
+        } else {
+            // For files that don't end in a newline, the number of lines is equal to the number of newlines plus one for the last line.
+            (self.metadata.newline_count + 1) as usize
         }
     }
 
