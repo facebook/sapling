@@ -17,8 +17,13 @@ export function LargeSpinner() {
   );
 }
 
-export function Center(props: FlexProps) {
-  return FlexBox({...props, className: addClassName('center-container', props)});
+export function Center(props: ContainerProps) {
+  const className = addClassName('center-container', props);
+  return (
+    <div {...props} className={className}>
+      {props.children}
+    </div>
+  );
 }
 
 export function FlexRow(props: FlexProps) {
