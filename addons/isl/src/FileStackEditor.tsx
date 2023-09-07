@@ -145,12 +145,14 @@ export function FileStackEditor(props: EditorProps) {
     expandedLines.has(bLine),
   );
 
-  // We render 3 columns as 3 <pre>s so they align vertically:
-  // [left gutter] [main content] [right gutter].
+  // We render 3 (or 5) columns as 3 <pre>s so they align vertically:
+  // [left gutter] [left buttons] [main content] [right buttons] [right gutter].
   // The arrays below are the children of the <pre>s. One element per line per column.
   const leftGutter: JSX.Element[] = [];
+  const leftButtons: JSX.Element[] = [];
   const mainContent: JSX.Element[] = [];
   const rightGutter: JSX.Element[] = [];
+  const rightButtons: JSX.Element[] = [];
   const ribbons: JSX.Element[] = [];
 
   const handleContextExpand = (b1: LineIdx, b2: LineIdx) => {
@@ -158,17 +160,14 @@ export function FileStackEditor(props: EditorProps) {
     setExpandedLines(newSet);
   };
 
-  const lineButtons = (
-    sign: '=' | '!' | '~',
-    aIdx?: LineIdx,
-    bIdx?: LineIdx,
-  ): JSX.Element | null => {
-    if (textEdit || readOnly || mode === 'side-by-side-diff') {
-      return null;
+  const showLineButtons = !textEdit && !readOnly && mode === 'unified-diff';
+  const pushLineButtons = (sign: '=' | '!' | '~', aIdx?: LineIdx, bIdx?: LineIdx) => {
+    if (!showLineButtons) {
+      return;
     }
 
-    const leftButtons = [];
-    const rightButtons = [];
+    let leftButton: JSX.Element | string = ' ';
+    let rightButton: JSX.Element | string = ' ';
 
     // Move one or more lines. If the current line is part of the selection,
     // Move all lines in the selection.
@@ -247,35 +246,45 @@ export function FileStackEditor(props: EditorProps) {
       setStack(newStack);
     };
 
+    const selected =
+      aIdx != null
+        ? selectedLineIds.has(`a${aIdx}`)
+        : bIdx != null
+        ? selectedLineIds.has(`b${bIdx}`)
+        : false;
+
     if (!leftMost && sign === '!') {
-      leftButtons.push(
-        <span
-          className="button"
-          role="button"
-          key="<"
-          title={t('Move left')}
-          onClick={() => moveLines(-1)}>
+      const title = selected
+        ? t('Move selected line changes left')
+        : t('Move this line change left');
+      leftButton = (
+        <span className="button" role="button" title={title} onClick={() => moveLines(-1)}>
           🡄
-        </span>,
+        </span>
       );
     }
     if (!rightMost && sign === '!') {
-      rightButtons.push(
-        <span
-          className="button"
-          role="button"
-          key=">"
-          title={t('Move right')}
-          onClick={() => moveLines(+1)}>
+      const title = selected
+        ? t('Move selected line changes right')
+        : t('Move this line change right');
+      rightButton = (
+        <span className="button" role="button" title={title} onClick={() => moveLines(+1)}>
           🡆
-        </span>,
+        </span>
       );
     }
-    return (
-      <>
-        <span className="line-buttons right">{rightButtons} </span>
-        <span className="line-buttons left">{leftButtons} </span>
-      </>
+
+    const className = selected ? 'selected' : '';
+
+    leftButtons.push(
+      <div key={leftButtons.length} className={`${className} left`}>
+        {leftButton}
+      </div>,
+    );
+    rightButtons.push(
+      <div key={rightButtons.length} className={`${className} right`}>
+        {rightButton}
+      </div>,
     );
   };
 
@@ -313,6 +322,7 @@ export function FileStackEditor(props: EditorProps) {
           {' '}
         </div>,
       );
+      pushLineButtons(sign, a1, b1);
       if (textEdit) {
         // Still need to update rangeInfos.
         let len = 0;
@@ -338,10 +348,10 @@ export function FileStackEditor(props: EditorProps) {
         );
         mainContent.push(
           <div key={bi} className="unchanged line">
-            {lineButtons(sign, ai, bi)}
             {bLineSpan(bLines[bi])}
           </div>,
         );
+        pushLineButtons(sign, ai, bi);
       }
     } else if (sign === '!') {
       // Changed.
@@ -363,9 +373,10 @@ export function FileStackEditor(props: EditorProps) {
           if (selectedLineIds.has(selId)) {
             className += ' selected';
           }
+
+          pushLineButtons(sign, ai, undefined);
           mainContent.push(
             <div key={-ai} className={className} data-sel-id={selId}>
-              {lineButtons(sign, ai, undefined)}
               {aLines[ai]}
             </div>,
           );
@@ -407,9 +418,9 @@ export function FileStackEditor(props: EditorProps) {
         if (selectedLineIds.has(selId)) {
           lineClassName += ' selected';
         }
+        pushLineButtons(sign, undefined, bi);
         mainContent.push(
           <div key={bi} className={lineClassName} data-sel-id={selId}>
-            {lineButtons(sign, undefined, bi)}
             {bLineSpan(bLines[bi])}
           </div>,
         );
@@ -466,27 +477,30 @@ export function FileStackEditor(props: EditorProps) {
   };
 
   const mainStyle: React.CSSProperties = {width: widthStyle};
+  const mainContentPre = (
+    <pre className="main-content" style={mainStyle} ref={mainContentRef}>
+      {mainContent}
+    </pre>
+  );
 
   return (
     <div className="file-stack-editor-ribbon-no-clip">
       {ribbons}
       <ScrollY className="file-stack-editor-outer-scroll-y" hideBar={true} maxSize="70vh">
         <Row className="file-stack-editor">
+          {showLineButtons && <pre className="column-left-buttons">{leftButtons}</pre>}
           <pre className="column-left-gutter">{leftGutter}</pre>
           <ScrollX hideBar={true} size={500} maxSize={500} onScroll={handleXScroll}>
             {textEdit ? (
               <TextEditable value={bText} rangeInfos={rangeInfos} onTextChange={handleTextChange}>
-                <pre className="main-content" style={mainStyle}>
-                  {mainContent}
-                </pre>
+                {mainContentPre}
               </TextEditable>
             ) : (
-              <pre className="main-content" style={mainStyle} ref={mainContentRef}>
-                {mainContent}
-              </pre>
+              mainContentPre
             )}
           </ScrollX>
           <pre className="column-right-gutter">{rightGutter}</pre>
+          {showLineButtons && <pre className="column-right-buttons">{rightButtons}</pre>}
         </Row>
       </ScrollY>
     </div>
