@@ -133,39 +133,5 @@ using ProcessList = std::vector<pid_t>;
  */
 ProcessList readProcessIdsForPath(const AbsolutePath& path);
 
-/**
- * Stores a simple process name - just the name of the process. This is in
- * contrast to ProcessName which stores the process command line minus the
- * process path.
- */
-using ProcessSimpleName = std::string;
-
-/**
- * Fetches the process name for the specified process ID. If the pid is invalid
- * or an error occurs while fetching, returns std::nullopt.
- */
-std::optional<ProcessSimpleName> readProcessSimpleName(pid_t pid);
-
-/**
- * Get the parent process ID of the specified process ID, if one exists.
- */
-std::optional<pid_t> getParentProcessId(pid_t pid);
-
-/**
- * Stores a process hierarchy - front = bottom and back = top of the hierarchy,
- * respectively. Each entry in the hierarchy is a tuple of the process ID,
- * simple process name and full process name.
- */
-using ProcessHierarchy =
-    std::vector<std::tuple<pid_t, std::string, ProcessName>>;
-
-/**
- * Get the process hierarchy, as a stack of tuples of pid, simple name and
- * ProcessName, of the specified process ID.
- */
-ProcessHierarchy getProcessHierarchy(
-    std::shared_ptr<ProcessInfoCache> processInfoCache,
-    pid_t pid);
-
 } // namespace proc_util
 } // namespace facebook::eden

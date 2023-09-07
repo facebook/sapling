@@ -2377,7 +2377,7 @@ void EdenServer::detectNfsCrawl() {
               struct ProcessHierarchyRecord {
                 pid_t pid;
                 pid_t ppid;
-                proc_util::ProcessSimpleName simpleName;
+                ProcessSimpleName simpleName;
                 ProcessName processName;
               };
 
@@ -2404,16 +2404,14 @@ void EdenServer::detectNfsCrawl() {
                        processRecords.find(pid) == processRecords.end()) {
                   auto processName =
                       serverState->getProcessInfoCache()->lookup(pid).get();
-                  auto ppid = proc_util::getParentProcessId(pid).value_or(0);
+                  auto ppid = getParentProcessId(pid).value_or(0);
                   nonLeafPids.insert(ppid);
                   processRecords.insert(
                       {pid,
                        ProcessHierarchyRecord{
                            .pid = pid,
                            .ppid = ppid,
-                           .simpleName =
-                               proc_util::readProcessSimpleName(pid).value_or(
-                                   "<unknown>"),
+                           .simpleName = readProcessSimpleName(pid),
                            .processName = processName}});
 
                   pid = ppid;
