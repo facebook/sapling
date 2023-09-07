@@ -407,6 +407,9 @@ except ImportError:
 
 
 def is_class_disabled(class_name: str) -> bool:
+    # S362020
+    if "SANDCASTLE" in os.environ and sys.platform == "darwin":
+        return True
     class_skipped = TEST_DISABLED.get(class_name)
     if class_skipped is None:
         return False
@@ -418,6 +421,9 @@ def is_class_disabled(class_name: str) -> bool:
 
 
 def is_method_disabled(class_name: str, method_name: str) -> bool:
+    # S362020
+    if "SANDCASTLE" in os.environ and sys.platform == "darwin":
+        return True
     method_skipped = TEST_DISABLED.get(class_name)
     if method_skipped is None:
         return False
