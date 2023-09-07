@@ -209,12 +209,12 @@ impl ChangesetContext {
 
         let copy_info = stream::iter(paths.map(move |path| async move {
             let maybe_rename_entry = mutable_renames
-                .get_rename(ctx, cs_id, path.as_mpath().cloned())
+                .get_rename(ctx, cs_id, path.as_mpath().cloned().into())
                 .await?;
             let rename = match maybe_rename_entry {
                 Some(entry) => {
                     let cs_id = entry.src_cs_id();
-                    let path = MononokePath::new(entry.src_path().cloned());
+                    let path = MononokePath::new(entry.src_path().clone().into());
                     PathMutableHistory::PathAndChangeset(cs_id, path)
                 }
                 None => PathMutableHistory::NoChange,

@@ -40,11 +40,11 @@ use futures_util::TryStreamExt;
 use itertools::Itertools;
 use manifest::Entry;
 use manifest::ManifestOps;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::Generation;
 use mononoke_types::ManifestUnodeId;
-use mononoke_types::NonRootMPath;
 use mutable_renames::MutableRenames;
 use stats::prelude::*;
 use thiserror::Error;
@@ -84,7 +84,7 @@ pub enum FollowMutableFileHistory {
     ImmutableCommitParents,
 }
 
-pub type CsAndPath = (ChangesetId, Arc<Option<NonRootMPath>>);
+pub type CsAndPath = (ChangesetId, Arc<MPath>);
 
 pub enum NextChangeset {
     // Changeset is new and hasn't been returned
@@ -241,9 +241,10 @@ async fn resolve_path_state(
     ctx: &CoreContext,
     repo: &impl Repo,
     cs_id: ChangesetId,
-    path: &Option<NonRootMPath>,
+    path: &MPath,
 ) -> Result<Option<PathState>, Error> {
-    RootDeletedManifestV2Id::resolve_path_state(ctx, repo.as_blob_repo(), cs_id, path).await
+    let path = path.clone().into();
+    RootDeletedManifestV2Id::resolve_path_state(ctx, repo.as_blob_repo(), cs_id, &path).await
 }
 
 /// Returns a full history of the given path starting from the given unode in generation number order.
@@ -288,7 +289,7 @@ async fn resolve_path_state(
 pub async fn list_file_history<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
-    path: Option<NonRootMPath>,
+    path: MPath,
     changeset_id: ChangesetId,
     mut visitor: impl Visitor,
     history_across_deletions: HistoryAcrossDeletions,
@@ -479,7 +480,7 @@ async fn process_deletion_nodes(
     repo: &impl Repo,
     history_graph: &mut CommitGraph,
     deletion_nodes: Vec<(ChangesetId, UnodeEntry)>,
-    path: Arc<Option<NonRootMPath>>,
+    path: Arc<MPath>,
 ) -> Result<Vec<CsAndPath>, FastlogError> {
     let mut deleted_linknodes = vec![];
     let mut last_unodes = vec![];
@@ -516,7 +517,7 @@ async fn fetch_linknodes_and_update_graph(
     repo: &impl Repo,
     unode_entries: Vec<UnodeEntry>,
     history_graph: &mut CommitGraph,
-    path: Arc<Option<NonRootMPath>>,
+    path: Arc<MPath>,
 ) -> Result<Vec<CsAndPath>, FastlogError> {
     let linknodes = unode_entries.into_iter().map({
         let path = &path;
@@ -555,17 +556,17 @@ async fn derive_unode_entry(
     ctx: &CoreContext,
     repo: &impl Repo,
     cs_id: ChangesetId,
-    path: &Option<NonRootMPath>,
+    path: &MPath,
 ) -> Result<Option<UnodeEntry>, Error> {
     let root_unode_mf_id = RootUnodeManifestId::derive(ctx, repo.as_blob_repo(), cs_id).await?;
     root_unode_mf_id
         .manifest_unode_id()
-        .find_entry(ctx.clone(), repo.repo_blobstore_arc(), path.clone())
+        .find_entry(ctx.clone(), repo.repo_blobstore_arc(), path.clone().into())
         .await
 }
 
 type CommitGraph = HashMap<CsAndPath, Option<Vec<CsAndPath>>>;
-type PossibleMutableAncestorsCache = HashMap<Option<NonRootMPath>, Vec<(Generation, ChangesetId)>>;
+type PossibleMutableAncestorsCache = HashMap<MPath, Vec<(Generation, ChangesetId)>>;
 
 struct TraversalState<V: Visitor> {
     history_graph: CommitGraph,
@@ -686,7 +687,7 @@ where
 async fn find_mutable_renames(
     ctx: &CoreContext,
     repo: &impl Repo,
-    (cs_id, path): (ChangesetId, Arc<Option<NonRootMPath>>),
+    (cs_id, path): (ChangesetId, Arc<MPath>),
     history_graph: &mut CommitGraph,
     mutable_renames: &MutableRenames,
 ) -> Result<Vec<CsAndPath>, FastlogError> {
@@ -694,7 +695,7 @@ async fn find_mutable_renames(
         .get_rename(ctx, cs_id, (path.as_ref()).clone())
         .await?
     {
-        let src_path = Arc::new(rename.src_path().cloned());
+        let src_path = Arc::new(rename.src_path().clone());
         // TODO(stash): this unode can be used to avoid unode manifest traversal
         // later while doing prefetching
         let src_unode = rename.src_unode().load(ctx, repo.repo_blobstore()).await?;
@@ -714,7 +715,7 @@ async fn find_mutable_renames(
 pub(crate) async fn find_possible_mutable_ancestors<'a>(
     ctx: &CoreContext,
     repo: &impl Repo,
-    path: &Option<NonRootMPath>,
+    path: &MPath,
     possible_mutable_ancestors_cache: &'a mut PossibleMutableAncestorsCache,
 ) -> Result<&'a Vec<(Generation, ChangesetId)>, Error> {
     if !possible_mutable_ancestors_cache.contains_key(path) {
@@ -731,7 +732,7 @@ pub(crate) async fn find_possible_mutable_ancestors<'a>(
 pub(crate) async fn _find_possible_mutable_ancestors(
     ctx: &CoreContext,
     repo: &impl Repo,
-    path: &Option<NonRootMPath>,
+    path: &MPath,
 ) -> Result<Vec<(Generation, ChangesetId)>, Error> {
     let mutable_renames = repo.mutable_renames();
     let mutable_csids = mutable_renames
@@ -903,7 +904,7 @@ async fn replace_ancestors_with_mutable_ancestors(
                 Entry::Leaf(leaf_unode) => *leaf_unode.linknode(),
             };
             Ok((
-                vec![(linknode, Arc::new(rename.src_path().cloned()))],
+                vec![(linknode, Arc::new(rename.src_path().clone()))],
                 vec![],
             ))
         } else {
@@ -988,7 +989,7 @@ async fn replace_ancestor_with_mutable_ancestor<'a>(
                         // this node during the unode graph traversal.
                         Some((
                             (*possible_ancestor_cs_id, path.clone()),
-                            Some(vec![(linknode, Arc::new(rename.src_path().cloned()))]),
+                            Some(vec![(linknode, Arc::new(rename.src_path().clone()))]),
                         )),
                     ));
                 }
@@ -1004,7 +1005,7 @@ async fn replace_ancestor_with_mutable_ancestor<'a>(
 async fn try_continue_traversal_when_no_parents(
     ctx: &CoreContext,
     repo: &impl Repo,
-    (cs_id, path): (ChangesetId, Arc<Option<NonRootMPath>>),
+    (cs_id, path): (ChangesetId, Arc<MPath>),
     history_across_deletions: HistoryAcrossDeletions,
     history_graph: &mut CommitGraph,
     follow_mutable_renames: FollowMutableFileHistory,
@@ -1047,7 +1048,7 @@ async fn find_where_file_was_deleted(
     ctx: &CoreContext,
     repo: &impl Repo,
     commit_no_more_history: ChangesetId,
-    path: &Option<NonRootMPath>,
+    path: &MPath,
 ) -> Result<Vec<(ChangesetId, UnodeEntry)>, Error> {
     let parents = repo
         .changeset_fetcher()
@@ -1087,7 +1088,7 @@ async fn prefetch_and_process_history(
     ctx: &CoreContext,
     repo: &impl Repo,
     visitor: &mut impl Visitor,
-    (changeset_id, path): (ChangesetId, Arc<Option<NonRootMPath>>),
+    (changeset_id, path): (ChangesetId, Arc<MPath>),
     history_graph: &mut CommitGraph,
     follow_mutable_renames: FollowMutableFileHistory,
     possible_mutable_ancestors_cache: &mut PossibleMutableAncestorsCache,
@@ -1129,7 +1130,7 @@ async fn prefetch_and_process_history(
 fn process_unode_batch(
     unode_batch: Vec<(ChangesetId, Vec<FastlogParent>)>,
     graph: &CommitGraph,
-    path: Arc<Option<NonRootMPath>>,
+    path: Arc<MPath>,
 ) -> Vec<(CsAndPath, Option<Vec<CsAndPath>>)> {
     let mut graph_insertions = Vec::new();
     for (cs_id, parents) in unode_batch {
@@ -1173,7 +1174,7 @@ async fn prefetch_fastlog_by_changeset(
     ctx: &CoreContext,
     repo: &impl Repo,
     changeset_id: ChangesetId,
-    path: &Option<NonRootMPath>,
+    path: &MPath,
 ) -> Result<Vec<(ChangesetId, Vec<FastlogParent>)>, Error> {
     let unode_entry_opt = derive_unode_entry(ctx, repo, changeset_id.clone(), path).await?;
     let entry = unode_entry_opt
@@ -1287,7 +1288,7 @@ mod test {
         check_history(
             ctx,
             &repo,
-            path(filename),
+            path(filename)?,
             top,
             (),
             HistoryAcrossDeletions::Track,
@@ -1362,7 +1363,7 @@ mod test {
         check_history(
             ctx,
             &repo,
-            path(filename),
+            path(filename)?,
             top,
             (),
             HistoryAcrossDeletions::Track,
@@ -1428,7 +1429,7 @@ mod test {
         check_history(
             ctx,
             &repo,
-            path(filename),
+            path(filename)?,
             prev_id,
             (),
             HistoryAcrossDeletions::Track,
@@ -1469,7 +1470,7 @@ mod test {
         let ctx = &ctx;
 
         let filename = "1";
-        let filepath = path(filename);
+        let filepath = path(filename)?;
 
         let graph = HashMap::new();
 
@@ -1614,9 +1615,9 @@ mod test {
 
         expected.reverse();
         // check deleted file
-        history(bcs_id.clone(), path(filename), expected.clone()).await?;
+        history(bcs_id.clone(), path(filename)?, expected.clone()).await?;
         // check deleted directory
-        history(bcs_id.clone(), path("dir"), expected.clone()).await?;
+        history(bcs_id.clone(), path("dir")?, expected.clone()).await?;
 
         // recreate dir and check
         let bcs_id = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
@@ -1626,7 +1627,7 @@ mod test {
 
         let mut res = vec![bcs_id];
         res.extend(expected);
-        history(bcs_id.clone(), path("dir"), res).await?;
+        history(bcs_id.clone(), path("dir")?, res).await?;
 
         Ok(())
     }
@@ -1754,13 +1755,13 @@ mod test {
             e.clone(),
             a.clone(),
         ];
-        history(l.clone(), path("file"), expected).await?;
+        history(l.clone(), path("file")?, expected).await?;
 
         let expected = vec![i.clone(), g.clone(), c.clone(), d.clone()];
-        history(l.clone(), path("dir/file"), expected).await?;
+        history(l.clone(), path("dir/file")?, expected).await?;
 
         let expected = vec![k.clone(), i.clone(), b.clone(), c.clone()];
-        history(l.clone(), path("dir_1/file_1"), expected).await?;
+        history(l.clone(), path("dir_1/file_1")?, expected).await?;
 
         let expected = vec![
             k.clone(),
@@ -1770,7 +1771,7 @@ mod test {
             d.clone(),
             b.clone(),
         ];
-        history(l.clone(), path("dir_1"), expected).await?;
+        history(l.clone(), path("dir_1")?, expected).await?;
 
         Ok(())
     }
@@ -1805,7 +1806,7 @@ mod test {
         check_history(
             ctx,
             &repo,
-            NonRootMPath::new_opt(filename)?,
+            MPath::new(filename)?,
             bcs_id,
             (),
             HistoryAcrossDeletions::Track,
@@ -1818,7 +1819,7 @@ mod test {
         check_history(
             ctx,
             &repo,
-            NonRootMPath::new_opt(filename)?,
+            MPath::new(filename)?,
             bcs_id,
             (),
             HistoryAcrossDeletions::DontTrack,
@@ -1885,7 +1886,7 @@ mod test {
         check_history(
             ctx,
             &repo,
-            NonRootMPath::new_opt(filename)?,
+            MPath::new(filename)?,
             bcs_id,
             (),
             HistoryAcrossDeletions::Track,
@@ -1900,7 +1901,7 @@ mod test {
         check_history(
             ctx,
             &repo,
-            NonRootMPath::new_opt(filename)?,
+            MPath::new(filename)?,
             merge,
             (),
             HistoryAcrossDeletions::Track,
@@ -1953,7 +1954,7 @@ mod test {
         check_history(
             ctx,
             &repo,
-            NonRootMPath::new_opt(first_dst_filename)?,
+            MPath::new(first_dst_filename)?,
             third_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
@@ -1966,7 +1967,7 @@ mod test {
         check_history(
             ctx,
             &repo,
-            NonRootMPath::new_opt(second_dst_filename)?,
+            MPath::new(second_dst_filename)?,
             third_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
@@ -1977,23 +1978,15 @@ mod test {
         .await?;
 
         // Set mutable renames
-        let first_src_unode = derive_unode_entry(
-            ctx,
-            &repo,
-            second_bcs_id,
-            &NonRootMPath::new_opt(first_src_filename)?,
-        )
-        .await?
-        .ok_or_else(|| format_err!("not found source unode id"))?;
+        let first_src_unode =
+            derive_unode_entry(ctx, &repo, second_bcs_id, &MPath::new(first_src_filename)?)
+                .await?
+                .ok_or_else(|| format_err!("not found source unode id"))?;
 
-        let second_src_unode = derive_unode_entry(
-            ctx,
-            &repo,
-            second_bcs_id,
-            &NonRootMPath::new_opt(second_src_filename)?,
-        )
-        .await?
-        .ok_or_else(|| format_err!("not found source unode id"))?;
+        let second_src_unode =
+            derive_unode_entry(ctx, &repo, second_bcs_id, &MPath::new(second_src_filename)?)
+                .await?
+                .ok_or_else(|| format_err!("not found source unode id"))?;
 
         mutable_renames
             .add_or_overwrite_renames(
@@ -2002,16 +1995,16 @@ mod test {
                 vec![
                     MutableRenameEntry::new(
                         third_bcs_id,
-                        NonRootMPath::new_opt(first_dst_filename)?,
+                        MPath::new(first_dst_filename)?,
                         second_bcs_id,
-                        NonRootMPath::new_opt(first_src_filename)?,
+                        MPath::new(first_src_filename)?,
                         first_src_unode,
                     )?,
                     MutableRenameEntry::new(
                         third_bcs_id,
-                        NonRootMPath::new_opt(second_dst_filename)?,
+                        MPath::new(second_dst_filename)?,
                         second_bcs_id,
-                        NonRootMPath::new_opt(second_src_filename)?,
+                        MPath::new(second_src_filename)?,
                         second_src_unode,
                     )?,
                 ],
@@ -2029,7 +2022,7 @@ mod test {
         let actual = check_history(
             ctx,
             &repo,
-            NonRootMPath::new_opt(first_dst_filename)?,
+            MPath::new(first_dst_filename)?,
             third_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
@@ -2042,7 +2035,7 @@ mod test {
         let actual = check_history(
             ctx,
             &repo,
-            NonRootMPath::new_opt(second_dst_filename)?,
+            MPath::new(second_dst_filename)?,
             third_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
@@ -2056,7 +2049,7 @@ mod test {
         check_history(
             ctx,
             &repo,
-            NonRootMPath::new_opt(first_dst_filename)?,
+            MPath::new(first_dst_filename)?,
             third_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
@@ -2069,7 +2062,7 @@ mod test {
         check_history(
             ctx,
             &repo,
-            NonRootMPath::new_opt(second_dst_filename)?,
+            MPath::new(second_dst_filename)?,
             third_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
@@ -2150,23 +2143,15 @@ mod test {
         //  * file from 2nd changeset -> moved_file from 5th changeset
 
         // Set mutable renames
-        let first_src_unode = derive_unode_entry(
-            ctx,
-            &repo,
-            first_bcs_id,
-            &NonRootMPath::new_opt(first_src_filename)?,
-        )
-        .await?
-        .ok_or_else(|| format_err!("not found source unode id"))?;
+        let first_src_unode =
+            derive_unode_entry(ctx, &repo, first_bcs_id, &MPath::new(first_src_filename)?)
+                .await?
+                .ok_or_else(|| format_err!("not found source unode id"))?;
 
-        let second_src_unode = derive_unode_entry(
-            ctx,
-            &repo,
-            second_bcs_id,
-            &NonRootMPath::new_opt(second_src_filename)?,
-        )
-        .await?
-        .ok_or_else(|| format_err!("not found source unode id"))?;
+        let second_src_unode =
+            derive_unode_entry(ctx, &repo, second_bcs_id, &MPath::new(second_src_filename)?)
+                .await?
+                .ok_or_else(|| format_err!("not found source unode id"))?;
 
         mutable_renames
             .add_or_overwrite_renames(
@@ -2175,16 +2160,16 @@ mod test {
                 vec![
                     MutableRenameEntry::new(
                         third_bcs_id,
-                        NonRootMPath::new_opt(first_dst_filename)?,
+                        MPath::new(first_dst_filename)?,
                         first_bcs_id,
-                        NonRootMPath::new_opt(first_src_filename)?,
+                        MPath::new(first_src_filename)?,
                         first_src_unode,
                     )?,
                     MutableRenameEntry::new(
                         fifth_bcs_id,
-                        NonRootMPath::new_opt(second_dst_filename)?,
+                        MPath::new(second_dst_filename)?,
                         second_bcs_id,
-                        NonRootMPath::new_opt(second_src_filename)?,
+                        MPath::new(second_src_filename)?,
                         second_src_unode,
                     )?,
                 ],
@@ -2194,7 +2179,7 @@ mod test {
         check_history(
             ctx,
             &repo,
-            NonRootMPath::new_opt(first_dst_filename)?,
+            MPath::new(first_dst_filename)?,
             sixth_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
@@ -2207,7 +2192,7 @@ mod test {
         check_history(
             ctx,
             &repo,
-            NonRootMPath::new_opt(second_dst_filename)?,
+            MPath::new(second_dst_filename)?,
             sixth_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
@@ -2272,7 +2257,7 @@ mod test {
         let history_stream = list_file_history(
             ctx,
             &repo,
-            NonRootMPath::new_opt(filename)?,
+            MPath::new(filename)?,
             merge,
             (),
             HistoryAcrossDeletions::Track,
@@ -2340,7 +2325,7 @@ mod test {
         let history_stream = list_file_history(
             ctx,
             &repo,
-            NonRootMPath::new_opt(filename)?,
+            MPath::new(filename)?,
             bcs_id,
             (),
             HistoryAcrossDeletions::Track,
@@ -2479,14 +2464,14 @@ mod test {
         response
     }
 
-    fn path(path_str: &str) -> Option<NonRootMPath> {
-        NonRootMPath::new(path_str).ok()
+    fn path(path_str: &str) -> anyhow::Result<MPath> {
+        MPath::new(path_str)
     }
 
     async fn check_history(
         ctx: &CoreContext,
         repo: &TestRepoWithMutableRenames,
-        path: Option<NonRootMPath>,
+        path: MPath,
         changeset_id: ChangesetId,
         visitor: impl Visitor + Clone,
         history_across_deletions: HistoryAcrossDeletions,

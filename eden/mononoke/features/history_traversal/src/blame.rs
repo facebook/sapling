@@ -45,7 +45,7 @@ async fn fetch_mutable_blame(
 
     // First case. Fix up blame directly if I have a mutable rename attached
     let my_mutable_rename = mutable_renames
-        .get_rename(ctx, my_csid, Some(path.clone()))
+        .get_rename(ctx, my_csid, path.clone().into())
         .await?;
     if let Some(rename) = my_mutable_rename {
         // We have a mutable rename, which replaces our p1 and our path.
@@ -61,12 +61,19 @@ async fn fetch_mutable_blame(
         // and there is a mutable rename saying that a's parent should be e, not b.
         // After this, because we did the blame a->e, and we fetched a mutant blame
         // for e, we're guaranteed to be done, even if there are mutations in e's history.
-        let src_path = rename
-            .src_path()
+        let rename_src_path = rename.src_path().clone().into_optional_non_root_path();
+        let src_path = rename_src_path
+            .as_ref()
             .ok_or_else(|| anyhow!("Mutable rename points file to root directory"))?
             .clone();
-        let (src_blame, src_content) =
-            blame_with_content(ctx, repo, rename.src_cs_id(), rename.src_path(), true).await?;
+        let (src_blame, src_content) = blame_with_content(
+            ctx,
+            repo,
+            rename.src_cs_id(),
+            rename_src_path.as_ref(),
+            true,
+        )
+        .await?;
 
         let blobstore = repo.repo_blobstore_arc();
         let unode = repo
@@ -114,7 +121,7 @@ async fn fetch_mutable_blame(
     // renames attached to d or e; however, if c does not, but d and e do, then we want to consider
     // the mutable renames for both d and e.
     let mut possible_mutable_ancestors =
-        find_possible_mutable_ancestors(ctx, repo, my_csid, Some(path)).await?;
+        find_possible_mutable_ancestors(ctx, repo, my_csid, path.into()).await?;
 
     // Fetch the immutable blame, which we're going to mutate
     let (mut blame, unode) = fetch_immutable_blame(ctx, repo, my_csid, path).await?;

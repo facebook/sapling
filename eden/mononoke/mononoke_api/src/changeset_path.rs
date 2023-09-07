@@ -687,7 +687,7 @@ impl ChangesetPathHistoryContext {
         let history = list_file_history(
             self.changeset.ctx(),
             self.repo().inner_repo(),
-            mpath.cloned(),
+            mpath.cloned().into(),
             self.changeset.id(),
             FilterVisitor {
                 cs_info_enabled,

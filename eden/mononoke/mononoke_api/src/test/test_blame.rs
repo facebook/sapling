@@ -189,9 +189,9 @@ async fn add_mutable_rename(
 
     let rename_entry = MutableRenameEntry::new(
         dst.changeset().id(),
-        dst.path().as_mpath().cloned(),
+        dst.path().as_mpath().cloned().into(),
         src.changeset().id(),
-        src.path().as_mpath().cloned(),
+        src.path().as_mpath().cloned().into(),
         src_unode,
     )?;
 

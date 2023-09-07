@@ -527,9 +527,9 @@ pub trait MegarepoOp {
                     for dst_path in dst_paths {
                         let mutable_rename_entry = MutableRenameEntry::new(
                             dst_cs_id,
-                            Some(dst_path),
+                            dst_path.into(),
                             cs_id,
-                            Some(src_path.clone()),
+                            src_path.clone().into(),
                             Entry::Leaf(leaf),
                         )?;
                         res.push(mutable_rename_entry);
@@ -547,9 +547,9 @@ pub trait MegarepoOp {
                     for dst_path in dst_paths {
                         let mutable_rename_entry = MutableRenameEntry::new(
                             dst_cs_id,
-                            dst_path,
+                            dst_path.into(),
                             cs_id,
-                            src_path.clone(),
+                            src_path.clone().into(),
                             Entry::Tree(tree),
                         )?;
                         res.push(mutable_rename_entry);

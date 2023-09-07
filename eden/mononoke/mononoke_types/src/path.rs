@@ -618,6 +618,10 @@ impl MPath {
             Some(NonRootMPath(self))
         }
     }
+
+    pub fn display_opt<'a>(path_opt: &'a Self) -> DisplayOpt<'a> {
+        DisplayOpt(path_opt)
+    }
 }
 
 impl From<Option<NonRootMPath>> for MPath {
@@ -629,12 +633,48 @@ impl From<Option<NonRootMPath>> for MPath {
     }
 }
 
+impl From<MPath> for Option<NonRootMPath> {
+    fn from(value: MPath) -> Self {
+        if value.is_root() {
+            None
+        } else {
+            Some(NonRootMPath(value))
+        }
+    }
+}
+
 impl<'a> From<Option<&'a NonRootMPath>> for &'a MPath {
     fn from(value: Option<&'a NonRootMPath>) -> Self {
         static EMPTY: MPath = MPath::EMPTY;
         match value {
             Some(v) => &v.0,
             None => &EMPTY,
+        }
+    }
+}
+
+impl From<NonRootMPath> for MPath {
+    fn from(value: NonRootMPath) -> Self {
+        value.0
+    }
+}
+
+impl<'a> From<&'a NonRootMPath> for &'a MPath {
+    fn from(value: &'a NonRootMPath) -> Self {
+        &value.0
+    }
+}
+
+impl TryFrom<MPath> for NonRootMPath {
+    type Error = anyhow::Error;
+    fn try_from(path: MPath) -> Result<Self> {
+        if path.is_root() {
+            bail!(MononokeTypeError::InvalidPath(
+                path.to_string(),
+                "path cannot be empty".into()
+            ));
+        } else {
+            Ok(NonRootMPath(path))
         }
     }
 }
@@ -957,7 +997,7 @@ impl NonRootMPath {
     }
 
     pub fn display_opt<'a>(path_opt: Option<&'a NonRootMPath>) -> DisplayOpt<'a> {
-        DisplayOpt(path_opt)
+        DisplayOpt(path_opt.into())
     }
 
     pub fn get_path_hash(&self) -> MPathHash {
@@ -991,11 +1031,8 @@ impl NonRootMPath {
     }
 }
 
-pub fn path_bytes_from_mpath(path: Option<&NonRootMPath>) -> Vec<u8> {
-    match path {
-        Some(path) => path.to_vec(),
-        None => vec![],
-    }
+pub fn path_bytes_from_mpath(path: &MPath) -> Vec<u8> {
+    path.to_vec()
 }
 
 impl AsRef<[MPathElement]> for NonRootMPath {
@@ -1154,13 +1191,14 @@ impl MPathHashContext {
     }
 }
 
-pub struct DisplayOpt<'a>(Option<&'a NonRootMPath>);
+pub struct DisplayOpt<'a>(&'a MPath);
 
 impl<'a> Display for DisplayOpt<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.0 {
-            Some(path) => write!(f, "{}", path),
-            None => write!(f, "(none)"),
+        if self.0.is_root() {
+            write!(f, "(none)")
+        } else {
+            write!(f, "{}", self.0)
         }
     }
 }

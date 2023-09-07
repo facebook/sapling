@@ -18,7 +18,7 @@ struct MutableRenameEntry {
   1: required mononoke_types_thrift.ChangesetId dst_cs_id;
   2: required PathHash dst_path_hash;
   3: required mononoke_types_thrift.ChangesetId src_cs_id;
-  4: optional binary src_path;
+  4: binary src_path;
   5: required PathHash src_path_hash;
   6: required mononoke_types_thrift.Blake2 src_unode;
   7: required byte is_tree;
