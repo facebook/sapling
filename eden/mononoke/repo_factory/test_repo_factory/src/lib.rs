@@ -178,6 +178,7 @@ pub fn default_test_repo_config() -> RepoConfig {
             RootUnodeManifestId::NAME.to_string(),
             TreeHandle::NAME.to_string(),
             MappedGitCommitId::NAME.to_string(),
+            // TODO(rajshar): Add RootGitDeltaManifestId once the derivation code is complete
             MappedHgChangesetId::NAME.to_string(),
             RootSkeletonManifestId::NAME.to_string(),
             RootBasenameSuffixSkeletonManifest::NAME.to_string(),

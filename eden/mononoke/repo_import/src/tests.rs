@@ -33,6 +33,7 @@ mod tests {
     use fbinit::FacebookInit;
     use futures::stream::TryStreamExt;
     use git_types::MappedGitCommitId;
+    use git_types::RootGitDeltaManifestId;
     use git_types::TreeHandle;
     use live_commit_sync_config::CfgrLiveCommitSyncConfig;
     use live_commit_sync_config::LiveCommitSyncConfig;
@@ -107,9 +108,10 @@ mod tests {
                     .derived_data_config
                     .get_active_config()
                     .expect("No enabled derived data types config");
-
+                // Repo import has no need of these derived data types
                 config.types.remove(TreeHandle::NAME);
                 config.types.remove(MappedGitCommitId::NAME);
+                config.types.remove(RootGitDeltaManifestId::NAME);
             })
             .with_id(RepositoryId::new(id))
             .build()

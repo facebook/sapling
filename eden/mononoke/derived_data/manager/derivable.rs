@@ -45,6 +45,7 @@ pub enum DerivableType {
     HgChangesets,
     GitTree,
     GitCommit,
+    GitDeltaManifest,
     SkeletonManifests,
     Unodes,
 }
@@ -62,6 +63,7 @@ impl DerivableType {
             DerivableType::HgChangesets => "hgchangesets",
             DerivableType::GitTree => "git_trees",
             DerivableType::GitCommit => "git_commits",
+            DerivableType::GitDeltaManifest => "git_delta_manifests",
             DerivableType::SkeletonManifests => "skeleton_manifests",
             DerivableType::Unodes => "unodes",
         }

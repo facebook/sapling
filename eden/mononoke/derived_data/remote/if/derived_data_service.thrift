@@ -69,6 +69,7 @@ union DerivedData {
   11: DerivedDataDeletedManifestV2 deleted_manifest_v2;
   12: DerivedDataBasenameSuffixSkeletonManifest basename_suffix_skeleton_manifest;
   13: DerivedDataCommitHandle commit_handle;
+  14: DerivedDataGitDeltaManifest git_delta_manifest;
 }
 
 union DerivedDataFsnode {
@@ -132,6 +133,10 @@ union DerivedDataTreeHandle {
 
 union DerivedDataCommitHandle {
   1: git_types_thrift.MappedGitCommitId mapped_commit_id;
+}
+
+union DerivedDataGitDeltaManifest {
+  1: git_types_thrift.GitDeltaManifestId root_git_delta_manifest_id;
 }
 
 struct DerivedDataTypeNotEnabled {

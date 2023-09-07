@@ -57,6 +57,7 @@ use futures::TryFutureExt;
 use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use git_types::MappedGitCommitId;
+use git_types::RootGitDeltaManifestId;
 use git_types::TreeHandle;
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -89,6 +90,7 @@ pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     MappedGitCommitId::NAME,
     RootDeletedManifestV2Id::NAME,
     RootBasenameSuffixSkeletonManifest::NAME,
+    RootGitDeltaManifestId::NAME,
 ];
 
 pub const DEFAULT_BACKFILLING_CONFIG_NAME: &str = "backfilling";
@@ -106,6 +108,9 @@ lazy_static! {
         let filenodes = FilenodesOnlyPublic::NAME;
         let skeleton_mf = RootSkeletonManifestId::NAME;
         let bssm = RootBasenameSuffixSkeletonManifest::NAME;
+        let gdm = RootGitDeltaManifestId::NAME;
+        let git_commit = MappedGitCommitId::NAME;
+        let git_tree = TreeHandle::NAME;
 
         let mut dag = HashMap::new();
 
@@ -119,6 +124,9 @@ lazy_static! {
         dag.insert(deleted_mf_v2, vec![unodes]);
         dag.insert(skeleton_mf, vec![]);
         dag.insert(bssm, vec![]);
+        dag.insert(git_tree, vec![]);
+        dag.insert(git_commit, vec![git_tree]);
+        dag.insert(gdm, vec![git_tree, git_commit]);
 
         dag
     };
@@ -525,6 +533,11 @@ fn derived_data_utils_impl(
             repo,
             config,
             enabled_config_name,
+        ))),
+        RootGitDeltaManifestId::NAME => Ok(Arc::new(DerivedUtilsFromManager::<
+            RootGitDeltaManifestId,
+        >::new(
+            repo, config, enabled_config_name
         ))),
         RootBasenameSuffixSkeletonManifest::NAME => {
             Ok(Arc::new(DerivedUtilsFromManager::<
@@ -1055,6 +1068,11 @@ pub async fn check_derived(
         }
         DerivableType::GitCommit => {
             ddm.fetch_derived::<MappedGitCommitId>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        DerivableType::GitDeltaManifest => {
+            ddm.fetch_derived::<RootGitDeltaManifestId>(ctx, head_cs_id, None)
                 .map_ok(|res| res.is_some())
                 .await
         }
