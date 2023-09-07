@@ -407,7 +407,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   /**
    * Returns the pid that caused the Thrift request running on the calling
-   * Thrift worker thread and registers it with the ProcessNameCache.
+   * Thrift worker thread and registers it with the ProcessInfoCache.
    *
    * This must be run from a Thrift worker thread, because the calling pid is
    * stored in a thread local variable.

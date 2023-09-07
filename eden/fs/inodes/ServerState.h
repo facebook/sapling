@@ -33,7 +33,7 @@ class IHiveLogger;
 class NfsServer;
 class Notifier;
 class PrivHelper;
-class ProcessNameCache;
+class ProcessInfoCache;
 class ReloadableConfig;
 class StructuredLogger;
 class TopLevelIgnores;
@@ -60,7 +60,7 @@ class ServerState {
       std::shared_ptr<PrivHelper> privHelper,
       std::shared_ptr<UnboundedQueueExecutor> threadPool,
       std::shared_ptr<Clock> clock,
-      std::shared_ptr<ProcessNameCache> processNameCache,
+      std::shared_ptr<ProcessInfoCache> processInfoCache,
       std::shared_ptr<StructuredLogger> structuredLogger,
       std::shared_ptr<IHiveLogger> hiveLogger,
       std::shared_ptr<ReloadableConfig> reloadableConfig,
@@ -150,8 +150,8 @@ class ServerState {
     return nfs_;
   }
 
-  const std::shared_ptr<ProcessNameCache>& getProcessNameCache() const {
-    return processNameCache_;
+  const std::shared_ptr<ProcessInfoCache>& getProcessInfoCache() const {
+    return processInfoCache_;
   }
 
   const std::shared_ptr<StructuredLogger>& getStructuredLogger() const {
@@ -192,7 +192,7 @@ class ServerState {
   std::shared_ptr<PrivHelper> privHelper_;
   std::shared_ptr<UnboundedQueueExecutor> threadPool_;
   std::shared_ptr<Clock> clock_;
-  std::shared_ptr<ProcessNameCache> processNameCache_;
+  std::shared_ptr<ProcessInfoCache> processInfoCache_;
   std::shared_ptr<StructuredLogger> structuredLogger_;
   std::shared_ptr<IHiveLogger> hiveLogger_;
   std::unique_ptr<FaultInjector> const faultInjector_;

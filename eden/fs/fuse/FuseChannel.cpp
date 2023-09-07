@@ -786,7 +786,7 @@ FuseChannel::FuseChannel(
     size_t numThreads,
     std::unique_ptr<FuseDispatcher> dispatcher,
     const folly::Logger* straceLogger,
-    std::shared_ptr<ProcessNameCache> processNameCache,
+    std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<FsEventLogger> fsEventLogger,
     folly::Duration requestTimeout,
     std::shared_ptr<Notifier> notifier,
@@ -808,7 +808,7 @@ FuseChannel::FuseChannel(
       maximumBackgroundRequests_{maximumBackgroundRequests},
       useWriteBackCache_{useWriteBackCache},
       fuseDevice_(std::move(fuseDevice)),
-      processAccessLog_(std::move(processNameCache)),
+      processAccessLog_(std::move(processInfoCache)),
       traceDetailedArguments_(std::make_shared<std::atomic<size_t>>(0)),
       traceBus_(TraceBus<FuseTraceEvent>::create(
           "FuseTrace" + mountPath.asString(),

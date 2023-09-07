@@ -17,7 +17,7 @@
 #include <folly/portability/GTest.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include "eden/common/utils/ProcessNameCache.h"
+#include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/EdenDispatcherFactory.h"
@@ -171,7 +171,7 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
       privHelper_,
       make_shared<UnboundedQueueExecutor>(serverExecutor_),
       clock_,
-      make_shared<ProcessNameCache>(),
+      make_shared<ProcessInfoCache>(),
       make_shared<NullStructuredLogger>(),
       make_shared<NullHiveLogger>(),
       reloadableConfig,
@@ -311,7 +311,7 @@ void TestMount::createMount(
       backingStore_,
       treeCache_,
       stats_.copy(),
-      std::make_shared<ProcessNameCache>(),
+      std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
       edenConfig_,
       config_->getEnableWindowsSymlinks(),
@@ -445,7 +445,7 @@ void TestMount::remount() {
       backingStore_,
       treeCache_,
       stats_.copy(),
-      std::make_shared<ProcessNameCache>(),
+      std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
       edenConfig_,
       config->getEnableWindowsSymlinks(),
@@ -487,7 +487,7 @@ void TestMount::remountGracefully() {
       backingStore_,
       treeCache_,
       stats_.copy(),
-      std::make_shared<ProcessNameCache>(),
+      std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
       edenConfig_,
       config->getEnableWindowsSymlinks(),

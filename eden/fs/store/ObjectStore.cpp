@@ -13,7 +13,7 @@
 
 #include <stdexcept>
 
-#include "eden/common/utils/ProcessNameCache.h"
+#include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BackingStore.h"
@@ -43,7 +43,7 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
     shared_ptr<BackingStore> backingStore,
     shared_ptr<TreeCache> treeCache,
     EdenStatsPtr stats,
-    std::shared_ptr<ProcessNameCache> processNameCache,
+    std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::shared_ptr<const EdenConfig> edenConfig,
     bool windowsSymlinksEnabled,
@@ -52,7 +52,7 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
       std::move(backingStore),
       std::move(treeCache),
       std::move(stats),
-      processNameCache,
+      processInfoCache,
       structuredLogger,
       edenConfig,
       windowsSymlinksEnabled,
@@ -63,7 +63,7 @@ ObjectStore::ObjectStore(
     shared_ptr<BackingStore> backingStore,
     shared_ptr<TreeCache> treeCache,
     EdenStatsPtr stats,
-    std::shared_ptr<ProcessNameCache> processNameCache,
+    std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::shared_ptr<const EdenConfig> edenConfig,
     bool windowsSymlinksEnabled,
@@ -73,7 +73,7 @@ ObjectStore::ObjectStore(
       backingStore_{std::move(backingStore)},
       stats_{std::move(stats)},
       pidFetchCounts_{std::make_unique<PidFetchCounts>()},
-      processNameCache_(processNameCache),
+      processInfoCache_(processInfoCache),
       structuredLogger_(structuredLogger),
       edenConfig_(edenConfig),
       caseSensitive_{caseSensitive},
@@ -98,7 +98,7 @@ void ObjectStore::updateProcessFetch(
 
 void ObjectStore::sendFetchHeavyEvent(ProcessId pid, uint64_t fetch_count)
     const {
-  auto processName = processNameCache_->getProcessName(pid.get());
+  auto processName = processInfoCache_->getProcessName(pid.get());
   if (processName) {
     std::replace(processName->begin(), processName->end(), '\0', ' ');
     XLOG(WARN) << "Heavy fetches (" << fetch_count << ") from process "

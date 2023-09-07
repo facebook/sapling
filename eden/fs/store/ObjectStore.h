@@ -30,7 +30,7 @@ class BackingStore;
 class Blob;
 class EdenConfig;
 class EdenStats;
-class ProcessNameCache;
+class ProcessInfoCache;
 class StructuredLogger;
 class TreeCache;
 enum class ObjectComparison : uint8_t;
@@ -82,7 +82,7 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<BackingStore> backingStore,
       std::shared_ptr<TreeCache> treeCache,
       EdenStatsPtr stats,
-      std::shared_ptr<ProcessNameCache> processNameCache,
+      std::shared_ptr<ProcessInfoCache> processInfoCache,
       std::shared_ptr<StructuredLogger> structuredLogger,
       std::shared_ptr<const EdenConfig> edenConfig,
       bool windowsSymlinksEnabled,
@@ -97,7 +97,7 @@ class ObjectStore : public IObjectStore,
   void updateProcessFetch(const ObjectFetchContext& fetchContext) const;
 
   /**
-   * send a FetchHeavy log event to Scuba. If either processNameCache_
+   * send a FetchHeavy log event to Scuba. If either processInfoCache_
    * or structuredLogger_ is nullptr, this function does nothing.
    */
   void sendFetchHeavyEvent(ProcessId pid, uint64_t fetch_count) const;
@@ -295,7 +295,7 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<BackingStore> backingStore,
       std::shared_ptr<TreeCache> treeCache,
       EdenStatsPtr stats,
-      std::shared_ptr<ProcessNameCache> processNameCache,
+      std::shared_ptr<ProcessInfoCache> processInfoCache,
       std::shared_ptr<StructuredLogger> structuredLogger,
       std::shared_ptr<const EdenConfig> edenConfig,
       bool windowsSymlinksEnabled,
@@ -355,7 +355,7 @@ class ObjectStore : public IObjectStore,
    * sending fetch heavy events, set to nullptr if not
    * initialized by create()
    */
-  std::shared_ptr<ProcessNameCache> processNameCache_;
+  std::shared_ptr<ProcessInfoCache> processInfoCache_;
   std::shared_ptr<StructuredLogger> structuredLogger_;
   std::shared_ptr<const EdenConfig> edenConfig_;
 

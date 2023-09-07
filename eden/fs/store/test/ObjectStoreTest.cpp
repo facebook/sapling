@@ -8,7 +8,7 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
-#include "eden/common/utils/ProcessNameCache.h"
+#include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/store/LocalStoreCachedBackingStore.h"
@@ -56,7 +56,7 @@ struct ObjectStoreTest : ::testing::Test {
         backingStore,
         treeCache,
         stats.copy(),
-        std::make_shared<ProcessNameCache>(),
+        std::make_shared<ProcessInfoCache>(),
         std::make_shared<NullStructuredLogger>(),
         EdenConfig::createTestEdenConfig(),
         true,
@@ -77,7 +77,7 @@ struct ObjectStoreTest : ::testing::Test {
         backingStoreWithKeyedBlake3,
         treeCache,
         stats.copy(),
-        std::make_shared<ProcessNameCache>(),
+        std::make_shared<ProcessInfoCache>(),
         std::make_shared<NullStructuredLogger>(),
         std::move(configWithBlake3Key),
         true,
@@ -211,7 +211,7 @@ TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
       backingStore,
       treeCache,
       stats.copy(),
-      std::make_shared<ProcessNameCache>(),
+      std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
       EdenConfig::createTestEdenConfig(),
       true,

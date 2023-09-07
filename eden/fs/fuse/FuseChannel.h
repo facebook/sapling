@@ -242,7 +242,7 @@ class FuseChannel final : public FsChannel {
       size_t numThreads,
       std::unique_ptr<FuseDispatcher> dispatcher,
       const folly::Logger* straceLogger,
-      std::shared_ptr<ProcessNameCache> processNameCache,
+      std::shared_ptr<ProcessInfoCache> processInfoCache,
       std::shared_ptr<FsEventLogger> fsEventLogger,
       folly::Duration requestTimeout,
       std::shared_ptr<Notifier> notifier,

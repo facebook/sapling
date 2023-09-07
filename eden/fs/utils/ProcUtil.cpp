@@ -345,7 +345,7 @@ std::optional<pid_t> getParentProcessId(FOLLY_MAYBE_UNUSED pid_t pid) {
 }
 
 ProcessHierarchy getProcessHierarchy(
-    std::shared_ptr<ProcessNameCache> processNameCache,
+    std::shared_ptr<ProcessInfoCache> processInfoCache,
     pid_t pid) {
   ProcessHierarchy hierarchy;
   do {
@@ -353,7 +353,7 @@ ProcessHierarchy getProcessHierarchy(
     hierarchy.emplace_back(
         pid,
         simpleName.value_or("<unknown>"),
-        processNameCache->lookup(pid).get());
+        processInfoCache->lookup(pid).get());
     pid = proc_util::getParentProcessId(pid).value_or(0);
     // Exit when reaching the root process (not included).
   } while (pid > 1);

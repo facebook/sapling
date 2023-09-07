@@ -27,7 +27,7 @@
 #include <thrift/lib/cpp/util/EnumUtils.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
-#include "eden/common/utils/ProcessNameCache.h"
+#include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
@@ -979,10 +979,10 @@ TraceEventTimes thriftTraceEventTimes(const TraceEventBase& event) {
   return times;
 }
 
-RequestInfo thriftRequestInfo(pid_t pid, ProcessNameCache& processNameCache) {
+RequestInfo thriftRequestInfo(pid_t pid, ProcessInfoCache& processInfoCache) {
   RequestInfo info;
   info.pid_ref() = pid;
-  info.processName_ref().from_optional(processNameCache.getProcessName(pid));
+  info.processName_ref().from_optional(processInfoCache.getProcessName(pid));
   return info;
 }
 
@@ -1033,7 +1033,7 @@ namespace {
 FuseCall populateFuseCall(
     uint64_t unique,
     const FuseTraceEvent::RequestHeader& request,
-    ProcessNameCache& processNameCache) {
+    ProcessInfoCache& processInfoCache) {
   FuseCall fc;
   fc.opcode_ref() = request.opcode;
   fc.unique_ref() = unique;
@@ -1044,7 +1044,7 @@ FuseCall populateFuseCall(
 
   fc.opcodeName_ref() = fuseOpcodeName(request.opcode);
   fc.processName_ref().from_optional(
-      processNameCache.getProcessName(request.pid));
+      processInfoCache.getProcessName(request.pid));
   return fc;
 }
 
@@ -1310,7 +1310,7 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
           te.fuseRequest_ref() = populateFuseCall(
               event.getUnique(),
               event.getRequest(),
-              *serverState->getProcessNameCache());
+              *serverState->getProcessInfoCache());
 
           switch (event.getType()) {
             case FuseTraceEvent::START:
@@ -1326,7 +1326,7 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
           }
 
           te.requestInfo_ref() = thriftRequestInfo(
-              event.getRequest().pid, *serverState->getProcessNameCache());
+              event.getRequest().pid, *serverState->getProcessInfoCache());
 
           publisher.next(te);
         });
@@ -1417,7 +1417,7 @@ std::shared_ptr<HgQueuedBackingStore> castToHgQueuedBackingStore(
  */
 void convertHgImportTraceEventToHgEvent(
     const HgImportTraceEvent& event,
-    ProcessNameCache& processNameCache,
+    ProcessInfoCache& processInfoCache,
     HgEvent& te) {
   te.times_ref() = thriftTraceEventTimes(event);
   switch (event.eventType) {
@@ -1478,7 +1478,7 @@ void convertHgImportTraceEventToHgEvent(
 
   if (auto pid = event.pid) {
     te.requestInfo_ref() =
-        thriftRequestInfo(pid.value().get(), processNameCache);
+        thriftRequestInfo(pid.value().get(), processInfoCache);
   }
 }
 
@@ -1506,12 +1506,12 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
       fmt::format(
           "hgtrace-{}", mountHandle.getEdenMount().getPath().basename()),
       [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
-       processNameCache =
-           mountHandle.getEdenMount().getServerState()->getProcessNameCache()](
+       processInfoCache =
+           mountHandle.getEdenMount().getServerState()->getProcessInfoCache()](
           const HgImportTraceEvent& event) {
         HgEvent thriftEvent;
         convertHgImportTraceEventToHgEvent(
-            event, *processNameCache, thriftEvent);
+            event, *processInfoCache, thriftEvent);
         publisher.next(thriftEvent);
       });
 
@@ -2632,7 +2632,7 @@ void maybeLogExpensiveGlob(
       // TODO: we should look up client scope here instead of command line
       // since it will give move context into the overarching process or
       // system producing the expensive query
-      client_cmdline = serverState->getProcessNameCache()
+      client_cmdline = serverState->getProcessInfoCache()
                            ->lookup(clientPid.value().get())
                            .get();
       std::replace(client_cmdline.begin(), client_cmdline.end(), '\0', ' ');
@@ -3502,7 +3502,7 @@ void EdenServiceHandler::debugOutstandingFuseCalls(
       outstandingCalls.push_back(populateFuseCall(
           call.unique,
           call.request,
-          *server_->getServerState()->getProcessNameCache()));
+          *server_->getServerState()->getProcessInfoCache()));
     }
   }
 #else
@@ -3700,7 +3700,7 @@ void EdenServiceHandler::getAccessCounts(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
 
   result.cmdsByPid_ref() =
-      server_->getServerState()->getProcessNameCache()->getAllProcessNames();
+      server_->getServerState()->getProcessInfoCache()->getAllProcessNames();
 
   auto seconds = std::chrono::seconds{duration};
 
@@ -4125,7 +4125,7 @@ void EdenServiceHandler::getRetroactiveHgEvents(
   for (auto const& event : bufferEvents) {
     HgEvent thriftEvent{};
     convertHgImportTraceEventToHgEvent(
-        event, *server_->getServerState()->getProcessNameCache(), thriftEvent);
+        event, *server_->getServerState()->getProcessInfoCache(), thriftEvent);
     thriftEvents.push_back(std::move(thriftEvent));
   }
 
@@ -4368,7 +4368,7 @@ OptionalProcessId EdenServiceHandler::getAndRegisterClientPid() {
     if (auto peerCreds = connectionContext->getConnectionContext()
                              ->getPeerEffectiveCreds()) {
       pid_t clientPid = peerCreds->pid;
-      server_->getServerState()->getProcessNameCache()->add(clientPid);
+      server_->getServerState()->getProcessInfoCache()->add(clientPid);
       return ProcessId(clientPid);
     }
   }

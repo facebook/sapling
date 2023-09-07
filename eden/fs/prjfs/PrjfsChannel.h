@@ -490,7 +490,7 @@ class PrjfsChannel : public FsChannel {
       std::unique_ptr<PrjfsDispatcher> dispatcher,
       std::shared_ptr<ReloadableConfig> config,
       const folly::Logger* straceLogger,
-      std::shared_ptr<ProcessNameCache> processNameCache,
+      std::shared_ptr<ProcessInfoCache> processInfoCache,
       Guid guid,
       bool enableWindowsSymlinks,
       std::shared_ptr<Notifier> notifier);

@@ -1920,7 +1920,7 @@ std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(
       FLAGS_fuseNumThreads,
       EdenDispatcherFactory::makeFuseDispatcher(mount),
       &mount->getStraceLogger(),
-      mount->getServerState()->getProcessNameCache(),
+      mount->getServerState()->getProcessInfoCache(),
       mount->getServerState()->getFsEventLogger(),
       std::chrono::duration_cast<folly::Duration>(
           edenConfig->fuseRequestTimeout.getValue()),
@@ -1953,7 +1953,7 @@ folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
                    mount->getRootInode()->getNodeId(),
                    EdenDispatcherFactory::makeNfsDispatcher(mount),
                    &mount->getStraceLogger(),
-                   mount->getServerState()->getProcessNameCache(),
+                   mount->getServerState()->getProcessInfoCache(),
                    mount->getServerState()->getFsEventLogger(),
                    mount->getServerState()->getStructuredLogger(),
                    std::chrono::duration_cast<folly::Duration>(
@@ -2069,7 +2069,7 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                          EdenDispatcherFactory::makePrjfsDispatcher(this),
                          serverState_->getReloadableConfig(),
                          &getStraceLogger(),
-                         serverState_->getProcessNameCache(),
+                         serverState_->getProcessInfoCache(),
                          getCheckoutConfig()->getRepoGuid(),
                          getCheckoutConfig()->getEnableWindowsSymlinks(),
                          this->getServerState()->getNotifier()));

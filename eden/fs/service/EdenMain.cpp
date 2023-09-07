@@ -163,7 +163,7 @@ void EdenMain::registerStandardBackingStores() {
             params.serverState->getStructuredLogger(),
             std::make_unique<BackingStoreLogger>(
                 params.serverState->getStructuredLogger(),
-                params.serverState->getProcessNameCache())),
+                params.serverState->getProcessInfoCache())),
         params.localStore,
         params.sharedStats.copy(),
         localStoreCaching);

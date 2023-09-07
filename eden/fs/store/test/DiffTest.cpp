@@ -12,7 +12,7 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
-#include "eden/common/utils/ProcessNameCache.h"
+#include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
@@ -81,7 +81,7 @@ class DiffTest : public ::testing::Test {
         backingStore_,
         treeCache,
         makeRefPtr<EdenStats>(),
-        std::make_shared<ProcessNameCache>(),
+        std::make_shared<ProcessInfoCache>(),
         std::make_shared<NullStructuredLogger>(),
         rawEdenConfig,
         true,

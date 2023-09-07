@@ -16,7 +16,7 @@
 
 namespace facebook::eden {
 
-class ProcessNameCache;
+class ProcessInfoCache;
 struct ThreadLocalBucket;
 
 /**
@@ -40,7 +40,7 @@ class ProcessAccessLog {
     Last,
   };
 
-  explicit ProcessAccessLog(std::shared_ptr<ProcessNameCache> processNameCache);
+  explicit ProcessAccessLog(std::shared_ptr<ProcessInfoCache> processInfoCache);
   ~ProcessAccessLog();
 
   /**
@@ -49,7 +49,7 @@ class ProcessAccessLog {
    * calls on that thread will accumulate within this access log.
    *
    * Process IDs passed to recordAccess are also inserted into the
-   * ProcessNameCache.
+   * ProcessInfoCache.
    */
   void recordAccess(pid_t pid, AccessType type);
   void recordDuration(pid_t pid, std::chrono::nanoseconds duration);
@@ -96,7 +96,7 @@ class ProcessAccessLog {
     Buckets buckets;
   };
 
-  const std::shared_ptr<ProcessNameCache> processNameCache_;
+  const std::shared_ptr<ProcessInfoCache> processInfoCache_;
   folly::Synchronized<State> state_;
 
   uint64_t getSecondsSinceEpoch();

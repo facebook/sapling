@@ -12,8 +12,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include "eden/common/utils/ProcessName.h"
-#include "eden/common/utils/ProcessNameCache.h"
+#include "eden/common/utils/ProcessInfo.h"
+#include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
@@ -164,7 +164,7 @@ using ProcessHierarchy =
  * ProcessName, of the specified process ID.
  */
 ProcessHierarchy getProcessHierarchy(
-    std::shared_ptr<ProcessNameCache> processNameCache,
+    std::shared_ptr<ProcessInfoCache> processInfoCache,
     pid_t pid);
 
 } // namespace proc_util

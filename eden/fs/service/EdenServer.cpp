@@ -39,7 +39,7 @@
 #include <thrift/lib/cpp2/server/ThriftProcessor.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
-#include "eden/common/utils/ProcessNameCache.h"
+#include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/TomlConfig.h"
@@ -387,7 +387,7 @@ EdenServer::EdenServer(
           std::move(privHelper),
           std::make_shared<EdenCPUThreadPool>(),
           std::make_shared<UnixClock>(),
-          std::make_shared<ProcessNameCache>(),
+          std::make_shared<ProcessInfoCache>(),
           structuredLogger_,
           std::move(hiveLogger),
           config_,
@@ -1557,7 +1557,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       backingStore,
       treeCache_,
       getStats().copy(),
-      serverState_->getProcessNameCache(),
+      serverState_->getProcessInfoCache(),
       serverState_->getStructuredLogger(),
       serverState_->getReloadableConfig()->getEdenConfig(),
       initialConfig->getEnableWindowsSymlinks(),
@@ -2403,7 +2403,7 @@ void EdenServer::detectNfsCrawl() {
                 while (pid > 1 &&
                        processRecords.find(pid) == processRecords.end()) {
                   auto processName =
-                      serverState->getProcessNameCache()->lookup(pid).get();
+                      serverState->getProcessInfoCache()->lookup(pid).get();
                   auto ppid = proc_util::getParentProcessId(pid).value_or(0);
                   nonLeafPids.insert(ppid);
                   processRecords.insert(

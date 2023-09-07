@@ -16,7 +16,7 @@
 #include <folly/portability/GFlags.h>
 #include <signal.h>
 #include <sysexits.h>
-#include "eden/common/utils/ProcessNameCache.h"
+#include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/privhelper/PrivHelper.h"
@@ -136,7 +136,7 @@ int main(int argc, char** argv) {
       FLAGS_numFuseThreads,
       std::move(dispatcher),
       &straceLogger,
-      std::make_shared<ProcessNameCache>(),
+      std::make_shared<ProcessInfoCache>(),
       /*fsEventLogger=*/nullptr,
       std::chrono::seconds(60),
       /*notifications=*/nullptr,

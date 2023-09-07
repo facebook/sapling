@@ -1784,7 +1784,7 @@ class FakePrjfsChannel final : public PrjfsChannel {
             EdenDispatcherFactory::makePrjfsDispatcher(mount.get()),
             mount->getServerState()->getReloadableConfig(),
             &mount->getStraceLogger(),
-            mount->getServerState()->getProcessNameCache(),
+            mount->getServerState()->getProcessInfoCache(),
             mount->getCheckoutConfig()->getRepoGuid(),
             mount->getCheckoutConfig()->getEnableWindowsSymlinks(),
             nullptr),
