@@ -9,6 +9,7 @@ import type {Mode} from './FileStackEditor';
 import type {FileStackState, Rev} from './stackEdit/fileStackState';
 
 import {Row} from './ComponentUtils';
+import {EmptyState} from './EmptyState';
 import {FileStackEditorRow} from './FileStackEditor';
 import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {t, T} from './i18n';
@@ -23,6 +24,8 @@ import {
 import {useState} from 'react';
 import {atom, useRecoilState} from 'recoil';
 import {unwrap} from 'shared/utils';
+
+import './VSCodeDropdown.css';
 
 const editModeAtom = atom<Mode>({
   key: 'editModeAtom',
@@ -51,34 +54,46 @@ export default function FileStackEditPanel() {
     .toArray()
     .sort();
   const fileSelector = (
-    <VSCodeDropdown
-      value={fileIdx == null ? 'none' : fileIdx.toString()}
+    <div
+      className="dropdown-container"
       style={{
-        margin: '0 var(--pad)',
         marginBottom: 'var(--pad)',
-        width: 'calc(100% - var(--pad) * 2)',
-        minWidth: '450px',
+        width: '100%',
+        minWidth: '500px',
         zIndex: 3,
-      }}
-      onChange={e => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const idx = (e.target as any).value;
-        setFileIdx(idx === 'none' ? null : parseInt(idx));
       }}>
-      <VSCodeOption value="none">
-        <T>Select a file to edit</T>
-      </VSCodeOption>
-      <VSCodeDivider />
-      {pathFileIdxList.map(([path, idx]) => (
-        <VSCodeOption key={idx} value={idx.toString()}>
-          {path}
+      <label htmlFor="stack-file-dropdown">File to edit</label>
+      <VSCodeDropdown
+        id="stack-file-dropdown"
+        value={fileIdx == null ? 'none' : fileIdx.toString()}
+        style={{width: '100%', zIndex: 3}}
+        onChange={e => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const idx = (e.target as any).value;
+          setFileIdx(idx === 'none' ? null : parseInt(idx));
+        }}>
+        <VSCodeOption value="none">
+          <T>Select a file to edit</T>
         </VSCodeOption>
-      ))}
-    </VSCodeDropdown>
+        <VSCodeDivider />
+        {pathFileIdxList.map(([path, idx]) => (
+          <VSCodeOption key={idx} value={idx.toString()}>
+            {path}
+          </VSCodeOption>
+        ))}
+      </VSCodeDropdown>
+    </div>
   );
 
   if (fileIdx == null) {
-    return <div>{fileSelector}</div>;
+    return (
+      <div>
+        {fileSelector}
+        <EmptyState>
+          <T>Select a file to see all changes in a row.</T>
+        </EmptyState>
+      </div>
+    );
   }
 
   // Properties for file stack editing.
@@ -99,18 +114,24 @@ export default function FileStackEditPanel() {
     bumpStackEditMetric('fileStackEdit');
   };
 
+  const editorRow = (
+    <FileStackEditorRow
+      stack={stack}
+      setStack={setStack}
+      getTitle={getTitle}
+      skip={skip}
+      mode={mode}
+      textEdit={textEdit || mode === 'side-by-side-diff'}
+    />
+  );
+
   return (
     <div>
       {fileSelector}
-      <FileStackEditorRow
-        stack={stack}
-        setStack={setStack}
-        getTitle={getTitle}
-        skip={skip}
-        mode={mode}
-        textEdit={textEdit || mode === 'side-by-side-diff'}
-      />
-      <Row style={{marginTop: 'var(--pad)'}}>
+      <div style={{marginLeft: 'calc(0px - var(--pad))', marginRight: 'calc(0px - var(--pad))'}}>
+        {editorRow}
+      </div>
+      <Row>
         <VSCodeRadioGroup value={mode} onChange={handleModeChange}>
           <VSCodeRadio accessKey="u" value="unified-diff">
             <T>Unified diff</T>
