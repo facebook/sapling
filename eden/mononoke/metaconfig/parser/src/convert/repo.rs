@@ -52,6 +52,7 @@ use metaconfig_types::UpdateLoggingConfig;
 use metaconfig_types::WalkerConfig;
 use metaconfig_types::WalkerJobParams;
 use metaconfig_types::WalkerJobType;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::PrefixTrie;
@@ -299,7 +300,7 @@ impl Convert for RawPushrebaseParams {
                     .casefolding_check_excluded_paths
                     .map(|raw| {
                         raw.into_iter()
-                            .map(|path| NonRootMPath::new_opt(path.as_bytes()))
+                            .map(|path| NonRootMPath::new_opt(path.as_bytes()).map(MPath::from))
                             .collect::<Result<PrefixTrie>>()
                     })
                     .transpose()?
@@ -397,7 +398,10 @@ impl Convert for RawServiceWriteRestrictions {
         let permitted_path_prefixes = permitted_path_prefixes
             .map(|raw| {
                 raw.into_iter()
-                    .map(|path| NonRootMPath::new_opt(path.as_bytes()))
+                    .map(|path| {
+                        NonRootMPath::new_opt(path.as_bytes())
+                            .map(mononoke_types::path::MPath::from)
+                    })
                     .collect::<Result<PrefixTrie>>()
             })
             .transpose()?

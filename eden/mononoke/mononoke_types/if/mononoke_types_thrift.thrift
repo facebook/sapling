@@ -69,7 +69,11 @@ typedef binary MPathElement (
   rust.newtype,
   rust.type = "smallvec::SmallVec<[u8; 24]>",
 )
-typedef list<MPathElement> NonRootMPath (rust.newtype)
+/// Type representing all forms of path in Mononoke (i.e. root, directory, file)
+typedef list<MPathElement> MPath (rust.newtype)
+
+/// Type representing non-root paths used in Mononoke
+typedef MPath NonRootMPath (rust.newtype)
 
 union RepoPath {
   # Thrift language doesn't support void here, so put a dummy bool
