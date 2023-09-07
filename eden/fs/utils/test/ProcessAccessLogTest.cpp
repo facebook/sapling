@@ -49,5 +49,5 @@ TEST(ProcessAccessLog, accessAddsProcessToProcessInfoCache) {
   auto processInfoCache = std::make_shared<ProcessInfoCache>();
   auto log = ProcessAccessLog{processInfoCache};
   log.recordAccess(pid, ProcessAccessLog::AccessType::FsChannelOther);
-  EXPECT_THAT(processInfoCache->getAllProcessNames(), Contains(Key(Eq(pid))));
+  EXPECT_THAT(processInfoCache->getAllProcessInfos(), Contains(Key(Eq(pid))));
 }

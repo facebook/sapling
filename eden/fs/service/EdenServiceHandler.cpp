@@ -2634,7 +2634,8 @@ void maybeLogExpensiveGlob(
       // system producing the expensive query
       client_cmdline = serverState->getProcessInfoCache()
                            ->lookup(clientPid.value().get())
-                           .get();
+                           .get()
+                           .name;
       std::replace(client_cmdline.begin(), client_cmdline.end(), '\0', ' ');
     }
 

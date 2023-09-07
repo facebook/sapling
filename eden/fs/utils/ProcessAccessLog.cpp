@@ -133,7 +133,7 @@ void ProcessAccessLog::Bucket::merge(const Bucket& other) {
 ProcessAccessLog::ProcessAccessLog(
     std::shared_ptr<ProcessInfoCache> processInfoCache)
     : processInfoCache_{std::move(processInfoCache)} {
-  XCHECK(processInfoCache_) << "Process name cache is mandatory";
+  XCHECK(processInfoCache_) << "Process info cache is mandatory";
 }
 
 ProcessAccessLog::~ProcessAccessLog() {
