@@ -5,8 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#![feature(hash_extract_if)]
-
+#![feature(hash_drain_filter)]
 use std::sync::Arc;
 
 use anyhow::Result;
