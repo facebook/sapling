@@ -622,6 +622,16 @@ impl MPath {
     pub fn display_opt<'a>(path_opt: &'a Self) -> DisplayOpt<'a> {
         DisplayOpt(path_opt)
     }
+
+    pub fn to_null_separated_bytes(&self) -> Vec<u8> {
+        // The root path will be represented as a null byte
+        if self.is_root() {
+            vec![b'\0']
+        } else {
+            let ret: Vec<_> = self.elements.iter().map(|e| e.0.as_ref()).collect();
+            ret.join(&b'\0')
+        }
+    }
 }
 
 impl From<Option<NonRootMPath>> for MPath {

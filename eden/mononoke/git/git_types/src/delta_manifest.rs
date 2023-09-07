@@ -5,20 +5,162 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::str::FromStr;
+
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use async_trait::async_trait;
+use blobstore::Blobstore;
+use blobstore::Loadable;
+use blobstore::LoadableError;
 use bytes::Bytes;
+use context::CoreContext;
 use fbthrift::compact_protocol;
 use gix_hash::oid;
 use gix_hash::ObjectId;
+use mononoke_types::hash::Blake2;
+use mononoke_types::impl_typed_hash;
+use mononoke_types::impl_typed_hash_loadable;
+use mononoke_types::impl_typed_hash_no_context;
 use mononoke_types::path::MPath;
+use mononoke_types::sharded_map::MapValue;
+use mononoke_types::sharded_map::ShardedMapNode;
 use mononoke_types::thrift as mononoke_types_thrift;
+use mononoke_types::Blob;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::BlobstoreValue;
 use mononoke_types::ChangesetId;
+use mononoke_types::MononokeId;
 use mononoke_types::ThriftConvert;
 use quickcheck::Arbitrary;
 
 use crate::thrift;
+
+/// An identifier for a sharded map node used in git delta manifest
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct ShardedMapNodeGitDeltaManifestId(Blake2);
+
+impl_typed_hash! {
+    hash_type => ShardedMapNodeGitDeltaManifestId,
+    thrift_hash_type => mononoke_types_thrift::ShardedMapNodeId,
+    value_type => ShardedMapNode<GitDeltaManifestEntry>,
+    context_type => ShardedMapNodeGitDeltaManifestContext,
+    context_key => "git_delta_manifest.mapnode",
+}
+
+/// An identifier for mapping from ChangesetId to GitDeltaManifest
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct GitDeltaManifestId(Blake2);
+
+impl_typed_hash_no_context! {
+    hash_type => GitDeltaManifestId,
+    thrift_type => thrift::GitDeltaManifestId,
+    blobstore_key => "git_delta_manifest",
+}
+
+impl_typed_hash_loadable! {
+    hash_type => GitDeltaManifestId,
+    value_type => GitDeltaManifest,
+}
+
+impl From<ChangesetId> for GitDeltaManifestId {
+    fn from(changeset_id: ChangesetId) -> Self {
+        Self(changeset_id.blake2().to_owned())
+    }
+}
+
+impl MononokeId for GitDeltaManifestId {
+    #[inline]
+    fn sampling_fingerprint(&self) -> u64 {
+        self.0.sampling_fingerprint()
+    }
+}
+
+/// Manifest that contains an entry for each Git object that was added or modified as part of
+/// a commit.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct GitDeltaManifest {
+    pub commit: ChangesetId,
+    pub entries: ShardedMapNode<GitDeltaManifestEntry>,
+}
+
+impl GitDeltaManifest {
+    pub fn new(commit: ChangesetId) -> Self {
+        Self {
+            commit,
+            entries: ShardedMapNode::default(),
+        }
+    }
+
+    pub async fn add_entries(
+        &mut self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+        new_entries: BTreeMap<MPath, GitDeltaManifestEntry>,
+    ) -> Result<()> {
+        let entries = std::mem::take(&mut self.entries);
+        let new_entries = new_entries
+            .into_iter()
+            .map(|(path, entry)| (path.to_null_separated_bytes().into(), Some(entry)))
+            .collect::<BTreeMap<Bytes, _>>();
+        self.entries = entries.update(ctx, blobstore, new_entries, |_| ()).await?;
+        Ok(())
+    }
+}
+
+impl MapValue for GitDeltaManifestEntry {
+    type Id = ShardedMapNodeGitDeltaManifestId;
+    type Context = ShardedMapNodeGitDeltaManifestContext;
+}
+
+impl TryFrom<thrift::GitDeltaManifest> for GitDeltaManifest {
+    type Error = Error;
+
+    fn try_from(value: thrift::GitDeltaManifest) -> Result<Self, Self::Error> {
+        let commit = ChangesetId::from_thrift(value.commit)?;
+        let entries = ShardedMapNode::from_thrift(value.entries)?;
+        Ok(GitDeltaManifest { commit, entries })
+    }
+}
+
+impl From<GitDeltaManifest> for thrift::GitDeltaManifest {
+    fn from(value: GitDeltaManifest) -> Self {
+        let commit = ChangesetId::into_thrift(value.commit);
+        let entries = value.entries.into_thrift();
+        thrift::GitDeltaManifest { commit, entries }
+    }
+}
+
+impl ThriftConvert for GitDeltaManifest {
+    const NAME: &'static str = "GitDeltaManifest";
+    type Thrift = thrift::GitDeltaManifest;
+
+    fn from_thrift(t: Self::Thrift) -> Result<Self> {
+        t.try_into()
+    }
+
+    fn into_thrift(self) -> Self::Thrift {
+        self.into()
+    }
+}
+
+pub type GitDeltaManifestBlob = Blob<GitDeltaManifestId>;
+
+impl BlobstoreValue for GitDeltaManifest {
+    type Key = GitDeltaManifestId;
+
+    fn into_blob(self) -> GitDeltaManifestBlob {
+        let id: Self::Key = self.commit.clone().into();
+        let data = self.into_bytes();
+        Blob::new(id, data)
+    }
+
+    fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
+        Self::from_bytes(blob.data())
+    }
+}
 
 /// Represents a single entry in the GitDeltaManifest corresponding to a Git object.
 /// Contains reference to the full version of the object along with all potential delta entries.
@@ -295,5 +437,19 @@ mod test {
             println!("entry_from_thrift: {:?}", from_thrift_entry);
             entry == from_thrift_entry
         }
+    }
+
+    #[test]
+    fn test_git_delta_manifest_id() {
+        let id = GitDeltaManifestId::from_byte_array([1; 32]);
+        assert_eq!(
+            id.blobstore_key(),
+            format!("git_delta_manifest.blake2.{}", id)
+        );
+
+        let id = GitDeltaManifestId::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
     }
 }

@@ -59,3 +59,16 @@ struct GitDeltaManifestEntry {
   1: ObjectEntry full;
   2: list<ObjectDelta> deltas;
 } (rust.exhaustive)
+
+/// Identifier for accessing GitDeltaManifest
+typedef mononoke_types_thrift.IdType GitDeltaManifestId (rust.newtype)
+
+/// Manifest that contains an entry for each Git object that was added or modified as part of
+/// a commit
+struct GitDeltaManifest {
+  /// The commit for which this GitDeltaManifest exists
+  1: mononoke_types_thrift.ChangesetId commit;
+  /// The entries corresponding created / modified Git objects
+  /// expressed as a map from null-separated MPath bytes -> GitDeltaManifestEntry
+  2: mononoke_types_thrift.ShardedMapNode entries;
+} (rust.exhaustive)
