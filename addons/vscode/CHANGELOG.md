@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.24
+
+- Suggested rebase button to make rebases across many commits easier
+- Button to "shelve" commits, and a menu to list and unshelve them again
+- Make the list of uncommitted changes scrollable and truncate if very long
+- Show a banner if the list of files in a commit has been truncated
+- Fixed submit stack spinner spinning if you submit any visible stack
+- Fix "you are here" and uncommitted changes sometimes not being visible
+- Inline Blame now shows the author name and appears by default
+- Now in beta: _Interactive Split_ UI as part of the _Edit Stack_ menu.
+  This lets you make multiple commits out of a single large commit.
+  We expect this feature to change in the next few releases.
+- Now in beta: _Partial "Chunk" Selection_ of uncommitted changes.
+  Click the Chunk selection button next to files to open a selection view of the file's hunks.
+  Only selected hunks will be included in the next commit or amend.
+
 ## 0.1.23
 
 - Fix commits info view sometimes becoming read only and buttons not working
