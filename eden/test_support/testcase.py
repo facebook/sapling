@@ -58,9 +58,7 @@ class EdenTestCaseBase(IsolatedAsyncioTestCase):
         if sys.platform == "darwin":
             self.setenv("TMPDIR", "/tmp")
 
-        self.temp_mgr = self.exit_stack.enter_context(
-            TempFileManager(self._get_tmp_prefix())
-        )
+        self.temp_mgr = self.exit_stack.enter_context(TempFileManager())
 
     def disableBuckHgForTests(self, testnames: List[str]) -> None:
         """Forces tests in the `testnames` list to use the hg bundled with the system rather than the one built with Buck"""
@@ -80,19 +78,6 @@ class EdenTestCaseBase(IsolatedAsyncioTestCase):
     def _callTestMethod(self, testMethod):
         with no_warnings(self):
             return super()._callTestMethod(testMethod)
-
-    def _get_tmp_prefix(self) -> str:
-        """Get a prefix to use for the test's temporary directory name."""
-        # Attempt to include a potion of the test name in the temporary directory
-        # prefix, but limit it to 20 characters.  If the path is too long EdenFS will
-        # fail to start since its Unix socket path won't fit in sockaddr_un, which has a
-        # 108 byte maximum path length.
-        method_name = self._testMethodName
-        for strip_prefix in ("test_", "test"):
-            if method_name.startswith(strip_prefix):
-                method_name = method_name[len(strip_prefix) :]
-                break
-        return f"eden_test.{method_name[:10]}."
 
     def setenv(self, name: str, value: Optional[str]) -> None:
         self.exit_stack.enter_context(env_module.setenv_scope(name, value))

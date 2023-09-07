@@ -43,7 +43,7 @@ class HgRepository(repobase.Repository):
         environment variable when `hg` is run.
         """
         super().__init__(path)
-        self.temp_mgr = temp_mgr or TempFileManager("hgrepo")
+        self.temp_mgr = temp_mgr or TempFileManager()
         self.hg_environment = os.environ.copy()
         # Drop any environment variables starting with 'HG'
         # to ensure the user's environment does not affect the tests.
