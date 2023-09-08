@@ -218,9 +218,6 @@ can not update or merge when there are unresolved conflicts
   $ hg merge 'max(desc(append))'
   abort: outstanding merge conflicts
   [255]
-  $ hg merge --force 'max(desc(append))'
-  abort: outstanding merge conflicts
-  [255]
 
 set up conflict-free merge
 

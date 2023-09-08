@@ -701,7 +701,7 @@ class _unknowndirschecker:
 
 
 @perftrace.tracefunc("Check Unknown Files")
-def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
+def _checkunknownfiles(repo, wctx, mctx, force, actions):
     """
     Considers any actions that care about the presence of conflicting unknown
     files. For some actions, the result is to abort; for others, it is to
@@ -757,12 +757,12 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
                     config = unknownconfig
 
                 # The behavior when force is True is described by this table:
-                #  config  different  mergeforce  |    action    backup
-                #    *         n          *       |      get        n
-                #    *         y          y       |     merge       -
-                #   abort      y          n       |     merge       -   (1)
-                #   warn       y          n       |  warn + get     y
-                #  ignore      y          n       |      get        y
+                #  config  different    |    action    backup
+                #    *         n        |      get        n
+                #    *         y        |     merge       -
+                #   abort      y        |     merge       -   (1)
+                #   warn       y        |  warn + get     y
+                #  ignore      y        |      get        y
                 #
                 # (1) this is probably the wrong behavior here -- we should
                 #     probably abort, but some actions like rebases currently
@@ -770,14 +770,12 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
                 #     merge.update.
                 if not different:
                     actions[f] = ("g", (fl2, False), "remote created")
-                elif mergeforce or config == "abort":
+                elif config == "abort":
                     actions[f] = (
                         "m",
                         (f, f, None, False, anc),
                         "remote differs from untracked local",
                     )
-                elif config == "abort":
-                    abortconflicts.add(f)
                 else:
                     if config == "warn":
                         warnconflicts.add(f)
@@ -1312,7 +1310,6 @@ def calculateupdates(
     acceptremote,
     followcopies,
     matcher=None,
-    mergeforce=False,
 ):
     """Calculate the actions needed to merge mctx into wctx using ancestors"""
 
@@ -1328,7 +1325,7 @@ def calculateupdates(
             acceptremote,
             followcopies,
         )
-        _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce)
+        _checkunknownfiles(repo, wctx, mctx, force, actions)
 
     else:  # only when merge.preferancestor=* - the default
         repo.ui.note(
@@ -1353,7 +1350,7 @@ def calculateupdates(
                 followcopies,
                 forcefulldiff=True,
             )
-            _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce)
+            _checkunknownfiles(repo, wctx, mctx, force, actions)
 
             # Track the shortest set of warning on the theory that bid
             # merge will correctly incorporate more information
@@ -2141,7 +2138,6 @@ def update(
     mergeancestor=False,
     labels=None,
     matcher=None,
-    mergeforce=False,
     updatecheck=None,
     wc=None,
 ):
@@ -2158,8 +2154,6 @@ def update(
       between different named branches. This flag is used by rebase extension
       as a temporary fix and should be avoided in general.
     labels = labels to use for base, local and other
-    mergeforce = whether the merge was run with 'merge --force' (deprecated): if
-      this is True, then 'force' should be True as well.
 
     The table below shows all the behaviors of the update command given the
     -c/--check and -C/--clean or no options, whether the working directory is
@@ -2245,7 +2239,6 @@ def update(
                 mergeancestor,
                 labels,
                 matcher,
-                mergeforce,
                 updatecheck,
                 wc,
             )
@@ -2453,7 +2446,6 @@ def update(
                     mergeancestor,
                     followcopies,
                     matcher=matcher,
-                    mergeforce=mergeforce,
                 )
             else:
                 repo.ui.debug("Using results from native rebase\n")

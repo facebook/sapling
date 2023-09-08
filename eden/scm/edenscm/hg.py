@@ -1007,14 +1007,10 @@ def updatetotally(
     return hasunresolved
 
 
-def merge(
-    repo, node, force=None, remind: bool = True, mergeforce: bool = False, labels=None
-):
+def merge(repo, node, force=None, remind: bool = True, labels=None):
     """Branch merge with node, resolving changes. Return true if any
     unresolved conflicts."""
-    stats = mergemod.update(
-        repo, node, True, force, mergeforce=mergeforce, labels=labels
-    )
+    stats = mergemod.update(repo, node, True, force, labels=labels)
     _showstats(repo, stats)
     if stats[3]:
         repo.ui.status(
