@@ -1021,7 +1021,6 @@ def manifestmerge(
     pa,
     branchmerge,
     force,
-    matcher,
     acceptremote,
     followcopies,
     forcefulldiff=False,
@@ -1030,12 +1029,8 @@ def manifestmerge(
     Merge wctx and p2 with ancestor pa and generate merge action list
 
     branchmerge and force are as passed in to update
-    matcher = matcher to filter file lists
     acceptremote = accept the incoming changes without prompting
     """
-    if matcher is not None and matcher.always():
-        matcher = None
-
     copy, movewithdir, diverge, renamedelete, dirmove = {}, {}, {}, {}, {}
 
     # manifests fetched in order are going to be faster, so prime the caches
@@ -1047,15 +1042,16 @@ def manifestmerge(
 
     boolbm = pycompat.bytestr(bool(branchmerge))
     boolf = pycompat.bytestr(bool(force))
-    boolm = pycompat.bytestr(bool(matcher))
     sparsematch = getattr(repo, "sparsematch", None)
     repo.ui.note(_("resolving manifests\n"))
-    repo.ui.debug(" branchmerge: %s, force: %s, partial: %s\n" % (boolbm, boolf, boolm))
+    repo.ui.debug(" branchmerge: %s, force: %s\n" % (boolbm, boolf))
     repo.ui.debug(" ancestor: %s, local: %s, remote: %s\n" % (pa, wctx, p2))
 
     m1, m2, ma = wctx.manifest(), p2.manifest(), pa.manifest()
     copied = set(copy.values())
     copied.update(movewithdir.values())
+
+    matcher = None
 
     # Don't use m2-vs-ma optimization if:
     # - ma is the same as m1 or m2, which we're just going to diff again later
@@ -1073,8 +1069,7 @@ def manifestmerge(
                 relevantfiles.add(copykey)
         for movedirkey in movewithdir:
             relevantfiles.add(movedirkey)
-        filesmatcher = scmutil.matchfiles(repo, relevantfiles)
-        matcher = matchmod.intersectmatchers(matcher, filesmatcher)
+        matcher = scmutil.matchfiles(repo, relevantfiles)
 
     # For sparse repos, attempt to use the sparsematcher to narrow down
     # calculation.  Consider a typical rebase:
@@ -1309,7 +1304,6 @@ def calculateupdates(
     force,
     acceptremote,
     followcopies,
-    matcher=None,
 ):
     """Calculate the actions needed to merge mctx into wctx using ancestors"""
 
@@ -1321,7 +1315,6 @@ def calculateupdates(
             ancestors[0],
             branchmerge,
             force,
-            matcher,
             acceptremote,
             followcopies,
         )
@@ -1345,7 +1338,6 @@ def calculateupdates(
                 ancestor,
                 branchmerge,
                 force,
-                matcher,
                 acceptremote,
                 followcopies,
                 forcefulldiff=True,
@@ -2137,7 +2129,6 @@ def update(
     ancestor=None,
     mergeancestor=False,
     labels=None,
-    matcher=None,
     updatecheck=None,
     wc=None,
 ):
@@ -2147,7 +2138,6 @@ def update(
     node = the node to update to
     branchmerge = whether to merge between branches
     force = whether to force branch merging or file overwriting
-    matcher = a matcher to filter file lists (dirstate not updated)
     mergeancestor = whether it is merging with an ancestor. If true,
       we should accept the incoming changes for any prompts that occur.
       If false, merging with an ancestor (fast-forward) is only allowed
@@ -2200,9 +2190,7 @@ def update(
     _logupdatedistance(repo.ui, repo, node, branchmerge)
 
     if edenfs.requirement in repo.requirements:
-        if matcher is not None and not matcher.always():
-            why_not_eden = "We don't support doing a partial update through eden yet."
-        elif branchmerge:
+        if branchmerge:
             # TODO: We potentially should support handling this scenario ourself in
             # the future.  For now we simply haven't investigated what the correct
             # semantics are in this case.
@@ -2238,7 +2226,6 @@ def update(
                 ancestor,
                 mergeancestor,
                 labels,
-                matcher,
                 updatecheck,
                 wc,
             )
@@ -2253,11 +2240,13 @@ def update(
                 rawconfig = sparse.readsparseconfig(
                     repo, raw, filename="eden_checkout_prefetch"
                 )
-                matcher = sparse.computesparsematcher(repo, ["."], rawconfig=rawconfig)
+                prefetchmatcher = sparse.computesparsematcher(
+                    repo, ["."], rawconfig=rawconfig
+                )
                 repo.ui.status_err(
                     _("prefetching %s sparse profiles\n") % len(prefetchprofiles)
                 )
-                repo.prefetch(["."], base=oldnode, matcher=matcher)
+                repo.prefetch(["."], base=oldnode, matcher=prefetchmatcher)
             return result
 
     if not branchmerge and not force:
@@ -2267,13 +2256,6 @@ def update(
         if updatecheck is None:
             updatecheck = "linear"
         assert updatecheck in ("none", "linear", "noconflict")
-    # If we're doing a partial update, we need to skip updating
-    # the dirstate, so make a note of any partial-ness to the
-    # update here.
-    if matcher is None or matcher.always():
-        partial = False
-    else:
-        partial = True
 
     with repo.wlock():
         prerecrawls = querywatchmanrecrawls(repo)
@@ -2344,14 +2326,12 @@ def update(
                     p2,
                     xp1,
                     xp2,
-                    matcher,
                     force,
-                    partial,
                     wc,
                     prerecrawls,
                 )
                 if git.isgitformat(repo) and not wc.isinmemory():
-                    git.submodulecheckout(p2, matcher, force=force)
+                    git.submodulecheckout(p2, force=force)
                 return ret
 
         if pas[0] is None:
@@ -2439,7 +2419,6 @@ def update(
                 force,
                 mergeancestor,
                 followcopies,
-                matcher=matcher,
             )
 
         if updatecheck == "noconflict":
@@ -2498,7 +2477,7 @@ def update(
         ### apply phase
         if not branchmerge:  # just jump to the new rev
             fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ""
-        if not partial and not wc.isinmemory():
+        if not wc.isinmemory():
             repo.hook("preupdate", throw=True, parent1=xp1, parent2=xp2)
             # note that we're in the middle of an update
             repo.localvfs.writeutf8("updatestate", p2.hex())
@@ -2543,7 +2522,7 @@ def update(
             repo, actions, wc, p2, overwrite, labels=labels, ancestors=pas
         )
 
-        if not partial and not wc.isinmemory():
+        if not wc.isinmemory():
             with repo.dirstate.parentchange():
                 repo.setparents(fp1, fp2)
                 recordupdates(repo, actions, branchmerge)
@@ -2563,16 +2542,15 @@ def update(
                 if not branchmerge:
                     repo.dirstate.setbranch(p2.branch())
 
-    if not partial:
-        if git.isgitformat(repo) and not wc.isinmemory():
-            if branchmerge:
-                ctx = p1
-                mctx = p2
-            else:
-                ctx = p2
-                mctx = None
-            git.submodulecheckout(ctx, matcher, force=force, mctx=mctx)
-        repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
+    if git.isgitformat(repo) and not wc.isinmemory():
+        if branchmerge:
+            ctx = p1
+            mctx = p2
+        else:
+            ctx = p2
+            mctx = None
+        git.submodulecheckout(ctx, force=force, mctx=mctx)
+    repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
 
     # Log the number of files updated.
     repo.ui.log("update_size", update_filecount=sum(stats))
@@ -2582,7 +2560,7 @@ def update(
     return stats
 
 
-def getsparsematchers(repo, fp1, fp2, matcher=None):
+def getsparsematchers(repo, fp1, fp2):
     sparsematch = getattr(repo, "sparsematch", None)
     if sparsematch is not None:
         from edenscm.ext import sparse
@@ -2599,10 +2577,9 @@ def getsparsematchers(repo, fp1, fp2, matcher=None):
         newpatterns = sparse.getsparsepatterns(repo, fp2)
         newmatcher = sparsematch(fp2)
 
-        sparsematcher = sparsematch(*list(revs))
         # Ignore files that are not in either source or target sparse match
         # This is not enough if sparse profile changes, but works for checkout within same sparse profile
-        matcher = matchmod.intersectmatchers(matcher, sparsematcher)
+        matcher = sparsematch(*list(revs))
 
         # If sparse configs are identical, don't set old/new matchers.
         # This signals to nativecheckout that there isn't a sparse
@@ -2615,15 +2592,12 @@ def getsparsematchers(repo, fp1, fp2, matcher=None):
         # sparse.py does not do it, so we are not making things worse
         return matcher, oldnewmatchers
     else:
-        return matcher, None
+        return None, None
 
 
 @util.timefunction("makenativecheckoutplan", 0, "ui")
-def makenativecheckoutplan(repo, p1, p2, matcher=None, updateprogresspath=None):
-    (matcher, sparsematchers) = getsparsematchers(repo, p1.node(), p2.node(), matcher)
-
-    if matcher is not None and matcher.always():
-        matcher = None
+def makenativecheckoutplan(repo, p1, p2, updateprogresspath=None):
+    matcher, sparsematchers = getsparsematchers(repo, p1.node(), p2.node())
 
     return nativecheckout.checkoutplan(
         repo.ui._rcfg,
@@ -2637,7 +2611,7 @@ def makenativecheckoutplan(repo, p1, p2, matcher=None, updateprogresspath=None):
 
 
 @util.timefunction("donativecheckout", 0, "ui")
-def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerecrawls):
+def donativecheckout(repo, p1, p2, xp1, xp2, force, wc, prerecrawls):
     repo.ui.debug("Using native checkout\n")
     repo.ui.log(
         "nativecheckout",
@@ -2648,7 +2622,7 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
     if repo.ui.configbool("checkout", "resumable"):
         updateprogresspath = repo.localvfs.join("updateprogress")
 
-    plan = makenativecheckoutplan(repo, p1, p2, matcher, updateprogresspath)
+    plan = makenativecheckoutplan(repo, p1, p2, updateprogresspath)
 
     if repo.ui.debugflag:
         repo.ui.debug("Native checkout plan:\n%s\n" % plan)
@@ -2688,7 +2662,7 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
             raise error.Abort(msg.strip(), hint=hint)
 
     # preserving checks as is, even though wc.isinmemory always false here
-    if not partial and not wc.isinmemory():
+    if not wc.isinmemory():
         repo.hook("preupdate", throw=True, parent1=xp1, parent2=xp2)
         # note that we're in the middle of an update
         repo.localvfs.writeutf8("updatestate", p2.hex())
@@ -2719,7 +2693,7 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
             % repo.root
         )
 
-    if not partial and not wc.isinmemory():
+    if not wc.isinmemory():
         with repo.dirstate.parentchange():
             repo.setparents(fp1, fp2)
             plan.record_updates(repo.dirstate._map._tree)
@@ -2737,8 +2711,7 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
             if hasattr(repo, "_persistprofileconfigs"):
                 repo._persistprofileconfigs()
 
-    if not partial:
-        repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
+    repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
     postrecrawls = querywatchmanrecrawls(repo)
     repo.ui.log("watchman-recrawls", watchman_recrawls=postrecrawls - prerecrawls)
     return stats

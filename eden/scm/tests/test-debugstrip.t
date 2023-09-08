@@ -596,7 +596,7 @@ unrelated to strip.)
 
   $ hg debugstrip 'desc(commitD)' --debug
   resolving manifests
-   branchmerge: False, force: True, partial: False
+   branchmerge: False, force: True
    ancestor: d8db9d137221+, local: d8db9d137221+, remote: eca11cf91c71
    c: other deleted -> r
   removing c

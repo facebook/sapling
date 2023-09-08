@@ -35,7 +35,7 @@ https://bz.mercurial-scm.org/672
      src: '1' -> dst: '1a' 
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 81f4b099af3d, local: c64f439569a9+, remote: c12dcd37c90a
    1: other deleted -> r
   removing 1
@@ -63,7 +63,7 @@ https://bz.mercurial-scm.org/672
      src: '1' -> dst: '1a' *
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: c64f439569a9, local: e327dca35ac8+, remote: 746e9549ea96
    preserving 1a for resolve of 1a
    1a: local copied/moved from 1 -> m (premerge)
@@ -86,7 +86,7 @@ https://bz.mercurial-scm.org/672
      src: '1' -> dst: '1a' *
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: c64f439569a9, local: 746e9549ea96+, remote: e327dca35ac8
    preserving 1 for resolve of 1a
   removing 1

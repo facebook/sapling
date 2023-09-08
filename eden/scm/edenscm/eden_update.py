@@ -38,7 +38,6 @@ def update(
     ancestor=None,
     mergeancestor=False,
     labels=None,
-    matcher=None,
     updatecheck=None,
     wc=None,
 ):

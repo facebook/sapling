@@ -80,7 +80,7 @@ $4 = expected result
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: e300d1c794ec+, remote: 4ce40f5aca24
    preserving a for resolve of b
    preserving rev for resolve of rev
@@ -126,7 +126,7 @@ $4 = expected result
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: f4db7e329e71
    preserving b for resolve of b
    preserving rev for resolve of rev
@@ -172,7 +172,7 @@ $4 = expected result
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: e300d1c794ec+, remote: bdb19105162a
    preserving a for resolve of b
    preserving rev for resolve of rev
@@ -218,7 +218,7 @@ $4 = expected result
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 02963e448370+, remote: f4db7e329e71
    preserving b for resolve of b
    preserving rev for resolve of rev
@@ -263,7 +263,7 @@ $4 = expected result
      src: 'a' -> dst: 'b' 
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 94b33a1b7f2d+, remote: 4ce40f5aca24
    preserving rev for resolve of rev
    rev: versions differ -> m (premerge)
@@ -299,7 +299,7 @@ $4 = expected result
      src: 'a' -> dst: 'b' 
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: 97c705ade336
    preserving rev for resolve of rev
    rev: versions differ -> m (premerge)
@@ -335,7 +335,7 @@ $4 = expected result
      src: 'a' -> dst: 'b' 
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 94b33a1b7f2d+, remote: bdb19105162a
    preserving rev for resolve of rev
    rev: versions differ -> m (premerge)
@@ -370,7 +370,7 @@ $4 = expected result
      src: 'a' -> dst: 'b' 
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 02963e448370+, remote: 97c705ade336
    preserving rev for resolve of rev
    rev: versions differ -> m (premerge)
@@ -402,7 +402,7 @@ $4 = expected result
     unmatched files new in both:
      b
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 62e7bf090eba+, remote: 49b6d8032493
    preserving b for resolve of b
    preserving rev for resolve of rev
@@ -459,7 +459,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
      src: 'a' -> dst: 'c' !
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 02963e448370+, remote: fe905ef2c33e
   note: possible conflict - a was renamed multiple times to:
    b
@@ -495,7 +495,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
     unmatched files new in both:
      b
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: af30c7647fc7
    preserving b for resolve of b
    preserving rev for resolve of rev
@@ -544,7 +544,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
     unmatched files new in both:
      b
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 59318016310c+, remote: bdb19105162a
    preserving b for resolve of b
    preserving rev for resolve of rev
@@ -592,7 +592,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
     unmatched files new in both:
      b
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: 8dbce441892a
    preserving b for resolve of b
    preserving rev for resolve of rev
@@ -641,7 +641,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
     unmatched files new in both:
      b
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 59318016310c+, remote: bdb19105162a
    preserving b for resolve of b
    preserving rev for resolve of rev
@@ -689,7 +689,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
     unmatched files new in both:
      b
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: 8dbce441892a
    preserving b for resolve of b
    preserving rev for resolve of rev
@@ -738,7 +738,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
     unmatched files new in both:
      b
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 0b76e65c8289+, remote: 4ce40f5aca24
    preserving b for resolve of b
    preserving rev for resolve of rev
@@ -787,7 +787,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
     unmatched files new in both:
      b
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 02963e448370+, remote: 8dbce441892a
    preserving b for resolve of b
    preserving rev for resolve of rev
@@ -844,7 +844,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
     unmatched files new in both:
      b
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 0b76e65c8289+, remote: bdb19105162a
    preserving a for resolve of a
    preserving b for resolve of b
@@ -905,7 +905,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: e300d1c794ec+, remote: 49b6d8032493
    preserving a for resolve of b
    preserving rev for resolve of rev
@@ -958,7 +958,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 62e7bf090eba+, remote: f4db7e329e71
    preserving b for resolve of b
    preserving rev for resolve of rev
@@ -1015,7 +1015,7 @@ m "nm a b" "um x a" "      " "22 get a, keep b"
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 924404dff337, local: 02963e448370+, remote: 2b958612230f
    preserving b for resolve of b
    preserving rev for resolve of rev

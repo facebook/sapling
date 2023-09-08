@@ -36,7 +36,7 @@ Test for the full copytracing algorithm
      src: 'a' -> dst: 'c' *
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: b8bf91eeebbc, local: add3f11052fa+, remote: 17c05bb7fcb6
    preserving a for resolve of b
    preserving a for resolve of c

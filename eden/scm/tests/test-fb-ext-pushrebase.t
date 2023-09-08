@@ -119,7 +119,7 @@ Stack of non-conflicting commits should be accepted
   remote: 1
   sending gettreepack command
   resolving manifests
-   branchmerge: False, force: False, partial: False
+   branchmerge: False, force: False
    ancestor: 0e3997dc0733, local: 0e3997dc0733+, remote: 4cfedb0dc25f
   reusing connection from pool
   sending getpackv1 command

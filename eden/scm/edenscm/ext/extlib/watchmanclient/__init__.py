@@ -360,7 +360,6 @@ class state_update:
         oldnode=None,
         newnode=None,
         distance=None,
-        partial=False,
         metadata=None,
     ):
         self.repo = repo
@@ -368,7 +367,6 @@ class state_update:
         self.oldnode = oldnode
         self.newnode = newnode
         self.distance = distance
-        self.partial = partial
         self._lock = None
         self.need_leave = False
         self.metadata = metadata or {}
@@ -430,7 +428,7 @@ class state_update:
                 # success/failure (only really meaningful for state-leave)
                 "status": status,
                 # whether the working copy parent is changing
-                "partial": self.partial,
+                "partial": False,
             }
             metadata.update(self.metadata)
             client.command(

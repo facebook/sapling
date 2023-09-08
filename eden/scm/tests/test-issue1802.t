@@ -54,7 +54,7 @@ Simulate a Windows merge:
     unmatched files in local:
      b
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: a03b0deabf2b, local: d6fa54f68ae1+, remote: 2d8bcf2dda39
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

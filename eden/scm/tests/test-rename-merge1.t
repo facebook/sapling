@@ -35,7 +35,7 @@
      src: 'a2' -> dst: 'c2' !
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: af1939970a1c, local: 044f8520aeeb+, remote: 85c198ef2f6c
   note: possible conflict - a2 was renamed multiple times to:
    c2
@@ -166,7 +166,7 @@ Check for issue3074
      src: 'file' -> dst: 'newfile' %
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 19d7f95df299, local: 0084274f6b67+, remote: 5d32493049f0
   note: possible conflict - file was deleted and renamed to:
    newfile

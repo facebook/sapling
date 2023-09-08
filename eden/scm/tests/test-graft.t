@@ -184,7 +184,7 @@
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   branchmerge: True, force: True, partial: False
+   branchmerge: True, force: True
    ancestor: 68795b066622, local: ef0ef43d49e7+, remote: 5d205f8b35b6
    preserving b for resolve of b
    b: local copied/moved from a -> m (premerge)
@@ -202,7 +202,7 @@
     unmatched files in other (from topological common ancestor):
      c
   resolving manifests
-   branchmerge: True, force: True, partial: False
+   branchmerge: True, force: True
    ancestor: 4c60f11aa304, local: 6b9e5368ca4e+, remote: 5345cd5c0f38
   committing files:
   e
@@ -214,7 +214,7 @@
     unmatched files in other (from topological common ancestor):
      c
   resolving manifests
-   branchmerge: True, force: True, partial: False
+   branchmerge: True, force: True
    ancestor: 4c60f11aa304, local: 9436191a062e+, remote: 9c233e8e184d
    preserving e for resolve of e
    e: versions differ -> m (premerge)
