@@ -7,16 +7,20 @@
 
 mod partial_commit_graph;
 use std::collections::HashMap;
+use std::env;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Error;
 use blobstore::Loadable;
+use blobstore::PutBehaviour;
 use borrowed::borrowed;
 use cloned::cloned;
 use commit_transformation::rewrite_commit;
 use commit_transformation::upload_commits;
 use commit_transformation::MultiMover;
+use fbinit::FacebookInit;
+use fileblob::Fileblob;
 use futures::stream::TryStreamExt;
 use futures::stream::{self};
 use mononoke_api::BookmarkKey;
@@ -27,10 +31,14 @@ use mononoke_api::RepoContext;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
+use rand::distributions::Alphanumeric;
+use rand::distributions::DistString;
 use repo_blobstore::RepoBlobstoreArc;
 use slog::debug;
 use slog::error;
 use slog::info;
+use sql::rusqlite::Connection as SqliteConnection;
+use test_repo_factory::TestRepoFactory;
 
 pub use crate::partial_commit_graph::build_partial_commit_graph_for_export;
 use crate::partial_commit_graph::ChangesetParents;
@@ -39,19 +47,21 @@ use crate::partial_commit_graph::ChangesetParents;
 /// copies in a target mononoke repository containing only changes that
 /// were made on the given paths.
 pub async fn rewrite_partial_changesets(
+    fb: FacebookInit,
     source_repo_ctx: RepoContext,
     changesets: Vec<ChangesetContext>,
     changeset_parents: &ChangesetParents,
-    // Repo that will hold the partial changesets that will be exported to git
-    target_repo_ctx: &RepoContext,
     export_paths: Vec<NonRootMPath>,
-) -> Result<(), MononokeError> {
+) -> Result<RepoContext, MononokeError> {
     let ctx: &CoreContext = source_repo_ctx.ctx();
 
     let logger = ctx.logger();
 
     debug!(logger, "export_paths: {:#?}", &export_paths);
     debug!(logger, "changeset_parents: {:#?}", &changeset_parents);
+
+    // Repo that will hold the partial changesets that will be exported to git
+    let temp_repo_ctx = create_temp_repo(fb, ctx).await?;
 
     let logger_clone = logger.clone();
 
@@ -109,12 +119,12 @@ pub async fn rewrite_partial_changesets(
         source_repo_ctx.ctx(),
         new_bonsai_changesets,
         source_repo_ctx.repo(),
-        target_repo_ctx.repo(),
+        temp_repo_ctx.repo(),
     )
     .await?;
 
     // Set master bookmark to point to the latest changeset
-    if let Err(err) = target_repo_ctx
+    if let Err(err) = temp_repo_ctx
         .create_bookmark(&BookmarkKey::from_str("master")?, head_cs_id, None)
         .await
     {
@@ -123,7 +133,7 @@ pub async fn rewrite_partial_changesets(
     }
 
     info!(logger, "Finished copying all changesets!");
-    Ok(())
+    Ok(temp_repo_ctx)
 }
 
 /// Given a changeset and a set of paths being exported, build the
@@ -189,6 +199,45 @@ async fn create_bonsai_for_new_repo(
     Ok((rewritten_bcs, remapped_parents))
 }
 
+/// Create a temporary repository to store the changesets that affect the export
+/// directories.
+/// The temporary repo uses file-backed storage and does not perform any writes
+/// to the Mononoke instance provided to the tool (e.g. production Mononoke).
+async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoContext, Error> {
+    let logger = ctx.logger();
+    let system_tmp = env::temp_dir();
+    let temp_dir_suffix = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
+
+    let mk_temp_path = |prefix| system_tmp.join(format!("{}_{}", prefix, temp_dir_suffix));
+
+    let metadata_db_path = mk_temp_path("metadata_temp");
+    let hg_mutation_db_path = mk_temp_path("hg_mut_temp");
+    let blobstore_path = mk_temp_path("blobstore");
+
+    debug!(logger, "metadata_db_path: {0:#?}", metadata_db_path);
+    debug!(logger, "hg_mutation_db_path: {0:#?}", hg_mutation_db_path);
+    debug!(logger, "blobstore_path: {0:#?}", blobstore_path);
+
+    let temp_repo_name = format!("temp_repo_{}", temp_dir_suffix);
+    debug!(logger, "Temporary repo name: {}", temp_repo_name);
+
+    let metadata_conn = SqliteConnection::open(metadata_db_path)?;
+    let hg_mutation_conn = SqliteConnection::open(hg_mutation_db_path)?;
+
+    let put_behaviour = PutBehaviour::IfAbsent;
+    let file_blobstore = Arc::new(Fileblob::create(blobstore_path, put_behaviour)?);
+
+    let temp_repo = TestRepoFactory::with_sqlite_connection(fb, metadata_conn, hg_mutation_conn)?
+        .with_blobstore(file_blobstore)
+        .with_core_context_that_does_not_override_logger(ctx.clone())
+        .with_name(temp_repo_name)
+        .build()
+        .await?;
+    let temp_repo_ctx = RepoContext::new_test(ctx.clone(), temp_repo).await?;
+
+    Ok(temp_repo_ctx)
+}
+
 #[cfg(test)]
 mod test {
 
@@ -198,7 +247,6 @@ mod test {
     use fbinit::FacebookInit;
     use futures::future::try_join_all;
     use mononoke_api::BookmarkFreshness;
-    use test_repo_factory::TestRepoFactory;
     use test_utils::build_test_repo;
     use test_utils::get_relevant_changesets_from_ids;
     use test_utils::GitExportTestRepoOptions;
@@ -228,9 +276,6 @@ mod test {
         let ninth = changeset_ids["ninth"];
         let tenth = changeset_ids["tenth"];
 
-        let target_repo = TestRepoFactory::new(fb)?.build().await?;
-        let target_repo_ctx = RepoContext::new_test(ctx.clone(), target_repo).await?;
-
         // Test that changesets are rewritten when relevant changesets are given
         // topologically sorted
         let relevant_changeset_ids: Vec<ChangesetId> =
@@ -249,28 +294,29 @@ mod test {
             (tenth, vec![ninth]),
         ]);
 
-        rewrite_partial_changesets(
+        let temp_repo_ctx = rewrite_partial_changesets(
+            fb,
             source_repo_ctx.clone(),
             relevant_changesets.clone(),
             &relevant_changeset_parents,
-            &target_repo_ctx,
             vec![export_dir.clone(), second_export_dir.clone()],
         )
         .await?;
 
-        let master_cs = target_repo_ctx
+        let temp_repo_master_csc = temp_repo_ctx
             .resolve_bookmark(
                 &BookmarkKey::from_str("master")?,
                 BookmarkFreshness::MostRecent,
             )
             .await?
-            .ok_or(anyhow!("Couldn't find master bookmark in target repo."))?;
+            .ok_or(anyhow!("Couldn't find master bookmark in temporary repo."))?;
 
-        let mut parents_to_check: VecDeque<ChangesetId> = VecDeque::from([master_cs.id()]);
+        let mut parents_to_check: VecDeque<ChangesetId> =
+            VecDeque::from([temp_repo_master_csc.id()]);
         let mut target_css = vec![];
 
         while let Some(changeset_id) = parents_to_check.pop_front() {
-            let changeset = target_repo_ctx
+            let changeset = temp_repo_ctx
                 .changeset(changeset_id)
                 .await?
                 .ok_or(anyhow!("Changeset not found in target repo"))?;
@@ -372,14 +418,11 @@ mod test {
             (fifth, vec![fourth]),
         ]);
 
-        let target_repo = TestRepoFactory::new(fb)?.build().await?;
-        let target_repo_ctx = RepoContext::new_test(ctx.clone(), target_repo).await?;
-
         let error = rewrite_partial_changesets(
+            fb,
             source_repo_ctx.clone(),
             broken_changeset_list.clone(),
             &broken_changeset_parents,
-            &target_repo_ctx,
             vec![export_dir.clone()],
         )
         .await

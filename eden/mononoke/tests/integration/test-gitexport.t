@@ -97,7 +97,7 @@ Set location of binary, resources and options (e.g. output path, directories)
 Run the tool
 
 # TODO(T160600991): uncomment once the CLI binary is created
-  $ gitexport --log-level ERROR --repo-name "repo" --temp-repo-name "temp_repo" $(printf -- '-p %s ' "${EXPORT_PATHS[@]}") --source-graph-output "$SOURCE_GRAPH_OUTPUT" --partial-graph-output "$PARTIAL_GRAPH_OUTPUT" --distance-limit 30
+  $ gitexport --log-level ERROR --repo-name "repo" $(printf -- '-p %s ' "${EXPORT_PATHS[@]}") --source-graph-output "$SOURCE_GRAPH_OUTPUT" --partial-graph-output "$PARTIAL_GRAPH_OUTPUT" --distance-limit 30
 
   $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_GRAPH_OUTPUT" "$PARTIAL_GRAPH_OUTPUT"
   - o  message: Add file to repo root, id: ca1b7e33632b3b9a89abe7f820b590f1185cf7e187386e9bddf4c1cbe62dc324

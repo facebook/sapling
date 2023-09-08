@@ -18,9 +18,7 @@ use gitexport_tools::build_partial_commit_graph_for_export;
 use gitexport_tools::rewrite_partial_changesets;
 use mononoke_api::BookmarkFreshness;
 use mononoke_api::ChangesetId;
-use mononoke_api::Repo;
 use mononoke_api::RepoContext;
-use mononoke_app::args::RepoArg;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
@@ -65,10 +63,6 @@ pub mod types {
         /// Name of the hg repo being exported
         #[clap(flatten)]
         pub hg_repo_args: RepoArgs,
-
-        // TODO(T160787114): programatically create a temp repo
-        #[clap(long)]
-        pub temp_repo_name: String,
 
         /// Path to the git repo being created
         #[clap(long)]
@@ -138,29 +132,10 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     debug!(logger, "changesets: {:#?}", changesets);
     debug!(logger, "changeset parents: {:?}", cs_parents);
 
-    let temp_repo_args = RepoArg::Name(args.temp_repo_name);
-    let temp_repo: Repo = app.open_repo(&temp_repo_args).await?;
+    let temp_repo_ctx =
+        rewrite_partial_changesets(app.fb, repo_ctx, changesets, &cs_parents, export_paths).await?;
 
-    let auth_ctx = AuthorizationContext::new_bypass_access_control();
-    let target_repo_ctx: RepoContext = RepoContext::new(
-        repo_ctx.ctx().clone(),
-        auth_ctx.into(),
-        temp_repo.into(),
-        None,
-        None,
-    )
-    .await?;
-
-    rewrite_partial_changesets(
-        repo_ctx,
-        changesets,
-        &cs_parents,
-        &target_repo_ctx,
-        export_paths,
-    )
-    .await?;
-
-    let master_cs = target_repo_ctx
+    let temp_master_csc = temp_repo_ctx
         .resolve_bookmark(
             &BookmarkKey::from_str("master")?,
             BookmarkFreshness::MostRecent,
@@ -170,8 +145,8 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
 
     if let Some(partial_graph_output) = args.print_graph_args.partial_graph_output.clone() {
         print_commit_graph(
-            &target_repo_ctx,
-            master_cs.id(),
+            &temp_repo_ctx,
+            temp_master_csc.id(),
             partial_graph_output,
             args.print_graph_args.distance_limit,
         )
