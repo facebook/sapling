@@ -152,6 +152,7 @@ use wireproto_handler::TargetRepoDbs;
 pub struct TestRepoFactory {
     /// Sometimes needed to construct a facet
     pub fb: FacebookInit,
+    ctx: CoreContext,
     name: String,
     config: RepoConfig,
     blobstore: Arc<dyn Blobstore>,
@@ -290,6 +291,7 @@ impl TestRepoFactory {
 
         Ok(TestRepoFactory {
             fb,
+            ctx: CoreContext::test_mock(fb),
             name: "repo".to_string(),
             config: default_test_repo_config(),
             blobstore: Arc::new(Memblob::default()),
@@ -361,6 +363,22 @@ impl TestRepoFactory {
         filenodes_override: impl Fn(ArcFilenodes) -> ArcFilenodes + Send + Sync + 'static,
     ) -> &mut Self {
         self.filenodes_override = Some(Box::new(filenodes_override));
+        self
+    }
+
+    /// Override core context. BEWARE that using this can impact default
+    /// behaviour needed for testing (e.g. logging).
+    /// This was exposed so that TestRepoFactory can be used to create temporary
+    /// repositories with configurations similar to the ones needed for testing,
+    /// (e.g. local file-based storage) while avoiding code duplication.
+    /// For more details, see D48946892.
+    ///
+    /// If you're building repos for testing, you likely do NOT want to use it.
+    pub fn with_core_context_that_does_not_override_logger(
+        &mut self,
+        ctx: CoreContext,
+    ) -> &mut Self {
+        self.ctx = ctx;
         self
     }
 
@@ -565,7 +583,7 @@ impl TestRepoFactory {
         bookmarks: &ArcBookmarks,
     ) -> Result<ArcSegmentedChangelog> {
         new_test_segmented_changelog(
-            CoreContext::test_mock(self.fb),
+            self.ctx.clone(),
             repo_identity.id(),
             &repo_config.segmented_changelog_config,
             changeset_fetcher.clone(),
@@ -674,9 +692,8 @@ impl TestRepoFactory {
         bookmark_update_log: &ArcBookmarkUpdateLog,
         mutable_counters: &ArcMutableCounters,
     ) -> Result<ArcRepoHandlerBase> {
-        let ctx = CoreContext::test_mock(self.fb);
-        let scuba = ctx.scuba().clone();
-        let logger = ctx.logger().clone();
+        let scuba = self.ctx.scuba().clone();
+        let logger = self.ctx.logger().clone();
         let repo_client_knobs = repo_config.repo_client_knobs.clone();
 
         let common_commit_sync_config = repo_cross_repo
@@ -733,8 +750,7 @@ impl TestRepoFactory {
             || Arc::new(InProcessLease::new()) as Arc<dyn LeaseOps>,
             |lease| lease(),
         );
-        let ctx = CoreContext::test_mock(self.fb);
-        let logger = ctx.logger().clone();
+        let logger = self.ctx.logger().clone();
         anyhow::Ok(Arc::new(DerivedDataManagerSet::new(
             repo_identity.id(),
             repo_identity.name().to_string(),
@@ -835,9 +851,8 @@ impl TestRepoFactory {
         repo_derived_data: &ArcRepoDerivedData,
         phases: &ArcPhases,
     ) -> Result<ArcBookmarksCache> {
-        let ctx = CoreContext::test_mock(self.fb);
         let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(
-            ctx,
+            self.ctx.clone(),
             bookmarks.clone(),
             bookmark_update_log.clone(),
             repo_identity.clone(),
