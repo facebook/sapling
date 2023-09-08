@@ -243,7 +243,7 @@ async fn resolve_path_state(
     cs_id: ChangesetId,
     path: &MPath,
 ) -> Result<Option<PathState>, Error> {
-    let path = path.clone().into();
+    let path = path.clone();
     RootDeletedManifestV2Id::resolve_path_state(ctx, repo.as_blob_repo(), cs_id, &path).await
 }
 
@@ -561,7 +561,7 @@ async fn derive_unode_entry(
     let root_unode_mf_id = RootUnodeManifestId::derive(ctx, repo.as_blob_repo(), cs_id).await?;
     root_unode_mf_id
         .manifest_unode_id()
-        .find_entry(ctx.clone(), repo.repo_blobstore_arc(), path.clone().into())
+        .find_entry(ctx.clone(), repo.repo_blobstore_arc(), path.clone())
         .await
 }
 

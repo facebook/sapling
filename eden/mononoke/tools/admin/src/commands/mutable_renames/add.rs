@@ -103,11 +103,7 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
 
     let src_entry = src_root_unode_id
         .manifest_unode_id()
-        .find_entry(
-            ctx.clone(),
-            repo.repo_blobstore_arc(),
-            src_path.clone().into(),
-        )
+        .find_entry(ctx.clone(), repo.repo_blobstore_arc(), src_path.clone())
         .await?
         .with_context(|| {
             format!(
@@ -120,11 +116,7 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
         (true, _) | (_, Entry::Leaf(_)) => {
             let dst_entry = dst_root_unode_id
                 .manifest_unode_id()
-                .find_entry(
-                    ctx.clone(),
-                    repo.repo_blobstore_arc(),
-                    dst_path.clone().into(),
-                )
+                .find_entry(ctx.clone(), repo.repo_blobstore_arc(), dst_path.clone())
                 .await?
                 .with_context(|| {
                     format!(
@@ -146,7 +138,7 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
                 .find_entries(
                     ctx.clone(),
                     repo.repo_blobstore_arc(),
-                    [PathOrPrefix::Prefix(dst_path.clone().into())],
+                    [PathOrPrefix::Prefix(dst_path.clone())],
                 )
                 .try_collect()
                 .await?;
