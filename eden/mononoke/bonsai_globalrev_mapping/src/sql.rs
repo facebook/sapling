@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::collections::HashSet;
 
 use ::sql::Connection;
@@ -25,6 +26,8 @@ use sql_ext::SqlConnections;
 use thiserror::Error;
 
 use super::BonsaiGlobalrevMapping;
+use super::BonsaiGlobalrevMappingCacheEntry;
+use super::BonsaiGlobalrevMappingEntries;
 use super::BonsaiGlobalrevMappingEntry;
 use super::BonsaisOrGlobalrevs;
 
@@ -56,13 +59,21 @@ mononoke_queries! {
          WHERE repo_id = {repo_id} AND bcs_id in {bcs_id}"
     }
 
-    read SelectMappingByGlobalrev(
+    read SelectMappingByGlobalrevCacheFriendly(
         repo_id: RepositoryId,
+        max_globalrev: Globalrev,
         >list globalrev: Globalrev
     ) -> (ChangesetId, Globalrev) {
         "SELECT bcs_id, globalrev
          FROM bonsai_globalrev_mapping
-         WHERE repo_id = {repo_id} AND globalrev in {globalrev}"
+         WHERE repo_id = {repo_id} AND globalrev in {globalrev}
+         UNION ALL
+         SELECT * FROM (
+            SELECT bcs_id, globalrev
+            FROM bonsai_globalrev_mapping
+            WHERE repo_id = {repo_id} AND globalrev > {max_globalrev} LIMIT 1
+        ) AS extra_for_negative_caching
+        "
     }
 
     read SelectMaxEntry(repo_id: RepositoryId) -> (Globalrev,) {
@@ -83,6 +94,144 @@ mononoke_queries! {
         ORDER BY globalrev DESC
         LIMIT 1
         "
+    }
+}
+
+impl BonsaiGlobalrevMappingEntries {
+    pub fn empty() -> Self {
+        Self {
+            cached_data: Vec::new(),
+        }
+    }
+    /// Construct a `BonsaiGlobalrevMappingEntries` instance from the outcome of a db query.
+    /// This is where we perform the core logic of our negative caching trick:
+    ///
+    /// ## Context
+    /// For a given repo, any globalrev may not have an associated bcs_id.
+    /// It can happen for two reasons:
+    /// * The change is recent (or future) and the table wasn't yet populated
+    /// * The change doesn't have an associated globalrev and never will (globalrev gap)
+    ///   This situation was always possible but has become frequent in the case of one of our
+    ///   small-repos since the large-repo became the source-of-truth if the cross-repo config.
+    ///   That is because the large-repo commits take up assigned globalrev slots that the small-repo commits
+    ///   can't claim.
+    /// In the former case, we should not cache a negative result.
+    /// In the latter case, we should as it won't ever change.
+    ///
+    /// ## The trick
+    /// When we query the globalrevs, we query the values we are interested in AND one extra value
+    /// that is outside of the range we are interested in, see `SelectMappingByGlobalrevCacheFriendly` above.
+    /// If a globalrev exists that is more recent (greater) than the max globalrev in our query,
+    /// we know for sure that we are in the latter case above and the gap is forever, so it
+    /// is safe to cache.
+    /// See [this workplace thread for more context](https://fburl.com/workplace/4ulske1w)
+    fn from_db_query(
+        repo_id: RepositoryId,
+        objects: &BonsaisOrGlobalrevs,
+        fetched_data: Vec<(ChangesetId, Globalrev)>,
+    ) -> Self {
+        match objects {
+            // The query given bonsais is exactly what you would think:
+            // It returns each fetched datum without any further processing
+            BonsaisOrGlobalrevs::Bonsai(_bonsais) => {
+                let cached_data = fetched_data
+                    .into_iter()
+                    .map(|(bcs_id, globalrev)| BonsaiGlobalrevMappingCacheEntry {
+                        repo_id,
+                        bcs_id: Some(bcs_id),
+                        globalrev,
+                    })
+                    .collect();
+                Self { cached_data }
+            }
+            // The query given globalrevs includes a sentinel value after the range we are looking
+            // for. This allows us to distinguish between a mapping that doesn't exist yet and
+            // could exist later, and a mapping which will never exist, so that the absence of
+            // mapping is safe to cache.
+            BonsaisOrGlobalrevs::Globalrev(globalrevs) => {
+                let mapping = fetched_data
+                    .into_iter()
+                    .map(|(bcs_id, globalrev)| (globalrev, bcs_id))
+                    .collect::<BTreeMap<_, _>>();
+                // If this is empty, it means we fetched no data so the max doesn't really matter
+                let cached_data =
+                    if let Some(max_globalrev_mapping) = mapping.last_key_value().map(|(k, _)| k) {
+                        globalrevs
+                            .iter()
+                            .filter_map(|globalrev| {
+                                if globalrev > max_globalrev_mapping {
+                                    // We got no data for this globalrev or any subsequent globalrev from
+                                    // the query, so we shouldn't cache it as the query includes an extra
+                                    // sentinel value, which means that there should always be a value
+                                    // here if we are not querying outside the range that this db replica
+                                    // is aware of.
+                                    None
+                                } else {
+                                    Some(BonsaiGlobalrevMappingCacheEntry {
+                                        repo_id,
+                                        bcs_id: mapping.get(globalrev).copied(),
+                                        globalrev: *globalrev,
+                                    })
+                                }
+                            })
+                            .collect()
+                    } else {
+                        Vec::new()
+                    };
+                Self { cached_data }
+            }
+        }
+    }
+    /// This is used in case the first query (from a replica db) hasn't returned all the
+    /// information it could have.
+    /// We will query the master db for what's left to fetch.
+    fn left_to_fetch(&self, objects: BonsaisOrGlobalrevs) -> BonsaisOrGlobalrevs {
+        match objects {
+            BonsaisOrGlobalrevs::Bonsai(cs_ids) => {
+                let bcs_fetched: HashSet<_> =
+                    self.cached_data.iter().filter_map(|m| m.bcs_id).collect();
+
+                BonsaisOrGlobalrevs::Bonsai(
+                    cs_ids
+                        .iter()
+                        .filter_map(|cs| {
+                            if !bcs_fetched.contains(cs) {
+                                Some(*cs)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
+                )
+            }
+            BonsaisOrGlobalrevs::Globalrev(globalrevs) => {
+                let globalrevs_fetched: HashSet<_> =
+                    self.cached_data.iter().map(|m| &m.globalrev).collect();
+
+                BonsaisOrGlobalrevs::Globalrev(
+                    globalrevs
+                        .iter()
+                        .filter_map(|globalrev| {
+                            if !globalrevs_fetched.contains(globalrev) {
+                                Some(*globalrev)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
+                )
+            }
+        }
+    }
+    /// This is used to append the outcome of the query from the master db in cases where the
+    /// replica db didn't contain all the expected results: `Self::left_to_fetch` returned a
+    /// non-empty set.
+    pub(crate) fn append(&mut self, mut other: Self) -> Self {
+        let cached_data = &mut self.cached_data;
+        cached_data.append(&mut other.cached_data);
+        Self {
+            cached_data: cached_data.to_vec(),
+        }
     }
 }
 
@@ -147,14 +296,14 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
         &self,
         ctx: &CoreContext,
         objects: BonsaisOrGlobalrevs,
-    ) -> Result<Vec<BonsaiGlobalrevMappingEntry>, Error> {
+    ) -> Result<BonsaiGlobalrevMappingEntries, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
         let mut mappings =
             select_mapping(&self.connections.read_connection, self.repo_id, &objects).await?;
 
-        let left_to_fetch = filter_fetched_objects(objects, &mappings[..]);
+        let left_to_fetch = mappings.left_to_fetch(objects);
 
         if left_to_fetch.is_empty() {
             return Ok(mappings);
@@ -163,13 +312,13 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
 
-        let mut master_mappings = select_mapping(
+        let master_mappings = select_mapping(
             &self.connections.read_master_connection,
             self.repo_id,
             &left_to_fetch,
         )
         .await?;
-        mappings.append(&mut master_mappings);
+        mappings.append(master_mappings);
         Ok(mappings)
     }
 
@@ -214,53 +363,13 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
     }
 }
 
-fn filter_fetched_objects(
-    objects: BonsaisOrGlobalrevs,
-    mappings: &[BonsaiGlobalrevMappingEntry],
-) -> BonsaisOrGlobalrevs {
-    match objects {
-        BonsaisOrGlobalrevs::Bonsai(cs_ids) => {
-            let bcs_fetched: HashSet<_> = mappings.iter().map(|m| &m.bcs_id).collect();
-
-            BonsaisOrGlobalrevs::Bonsai(
-                cs_ids
-                    .iter()
-                    .filter_map(|cs| {
-                        if !bcs_fetched.contains(cs) {
-                            Some(*cs)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect(),
-            )
-        }
-        BonsaisOrGlobalrevs::Globalrev(globalrevs) => {
-            let globalrevs_fetched: HashSet<_> = mappings.iter().map(|m| &m.globalrev).collect();
-
-            BonsaisOrGlobalrevs::Globalrev(
-                globalrevs
-                    .iter()
-                    .filter_map(|globalrev| {
-                        if !globalrevs_fetched.contains(globalrev) {
-                            Some(*globalrev)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect(),
-            )
-        }
-    }
-}
-
 async fn select_mapping(
     connection: &Connection,
     repo_id: RepositoryId,
     objects: &BonsaisOrGlobalrevs,
-) -> Result<Vec<BonsaiGlobalrevMappingEntry>, Error> {
+) -> Result<BonsaiGlobalrevMappingEntries, Error> {
     if objects.is_empty() {
-        return Ok(vec![]);
+        return Ok(BonsaiGlobalrevMappingEntries::empty());
     }
 
     let rows = match objects {
@@ -268,14 +377,23 @@ async fn select_mapping(
             SelectMappingByBonsai::query(connection, &repo_id, &bcs_ids[..]).await?
         }
         BonsaisOrGlobalrevs::Globalrev(globalrevs) => {
-            SelectMappingByGlobalrev::query(connection, &repo_id, &globalrevs[..]).await?
+            let max_globalrev = globalrevs
+                .iter()
+                .max()
+                .expect("We already returned earlier if objects.is_empty()");
+            SelectMappingByGlobalrevCacheFriendly::query(
+                connection,
+                &repo_id,
+                max_globalrev,
+                &globalrevs[..],
+            )
+            .await?
         }
     };
 
-    Ok(rows
-        .into_iter()
-        .map(move |(bcs_id, globalrev)| BonsaiGlobalrevMappingEntry { bcs_id, globalrev })
-        .collect())
+    Ok(BonsaiGlobalrevMappingEntries::from_db_query(
+        repo_id, objects, rows,
+    ))
 }
 
 /// This method is for importing Globalrevs in bulk from a set of BonsaiChangesets where you know

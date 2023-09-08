@@ -36,42 +36,15 @@ use mononoke_types::Globalrev;
 use mononoke_types::RepositoryId;
 
 use super::BonsaiGlobalrevMapping;
+use super::BonsaiGlobalrevMappingEntries;
 use super::BonsaiGlobalrevMappingEntry;
 use super::BonsaisOrGlobalrevs;
 
 #[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct BonsaiGlobalrevMappingCacheEntry {
     pub repo_id: RepositoryId,
-    pub bcs_id: ChangesetId,
+    pub bcs_id: Option<ChangesetId>,
     pub globalrev: Globalrev,
-}
-
-impl BonsaiGlobalrevMappingCacheEntry {
-    fn into_entry(self, repo_id: RepositoryId) -> Result<BonsaiGlobalrevMappingEntry> {
-        if self.repo_id == repo_id {
-            Ok(BonsaiGlobalrevMappingEntry {
-                bcs_id: self.bcs_id,
-                globalrev: self.globalrev,
-            })
-        } else {
-            Err(anyhow!(
-                "Cache returned invalid entry: repo {} returned for query to repo {}",
-                self.repo_id,
-                repo_id
-            ))
-        }
-    }
-
-    fn from_entry(
-        entry: BonsaiGlobalrevMappingEntry,
-        repo_id: RepositoryId,
-    ) -> BonsaiGlobalrevMappingCacheEntry {
-        BonsaiGlobalrevMappingCacheEntry {
-            repo_id,
-            bcs_id: entry.bcs_id,
-            globalrev: entry.globalrev,
-        }
-    }
 }
 
 pub struct CachingBonsaiGlobalrevMapping {
@@ -131,27 +104,39 @@ impl BonsaiGlobalrevMapping for CachingBonsaiGlobalrevMapping {
         &self,
         ctx: &CoreContext,
         objects: BonsaisOrGlobalrevs,
-    ) -> Result<Vec<BonsaiGlobalrevMappingEntry>, Error> {
+    ) -> Result<BonsaiGlobalrevMappingEntries, Error> {
         let cache_request = (ctx, self);
         let repo_id = self.repo_id();
 
+        let validate_cache_entry = |val: BonsaiGlobalrevMappingCacheEntry| {
+            if val.repo_id == repo_id {
+                Ok(val)
+            } else {
+                Err(anyhow!(
+                    "Cache returned invalid entry: repo {} returned for query to repo {}",
+                    val.repo_id,
+                    repo_id
+                ))
+            }
+        };
+
         let res = match objects {
-            BonsaisOrGlobalrevs::Bonsai(cs_ids) => {
-                get_or_fill(&cache_request, cs_ids.into_iter().collect())
+            BonsaisOrGlobalrevs::Bonsai(cs_ids) => BonsaiGlobalrevMappingEntries {
+                cached_data: get_or_fill(&cache_request, cs_ids.into_iter().collect())
                     .await
                     .with_context(|| "Error fetching globalrevs via cache")?
                     .into_values()
-                    .map(|val| val.into_entry(repo_id))
-                    .collect::<Result<_>>()?
-            }
-            BonsaisOrGlobalrevs::Globalrev(globalrevs) => {
-                get_or_fill(&cache_request, globalrevs.into_iter().collect())
+                    .map(validate_cache_entry)
+                    .collect::<Result<_>>()?,
+            },
+            BonsaisOrGlobalrevs::Globalrev(globalrevs) => BonsaiGlobalrevMappingEntries {
+                cached_data: get_or_fill(&cache_request, globalrevs.into_iter().collect())
                     .await
                     .with_context(|| "Error fetching bonsais via cache")?
                     .into_values()
-                    .map(|val| val.into_entry(repo_id))
-                    .collect::<Result<_>>()?
-            }
+                    .map(validate_cache_entry)
+                    .collect::<Result<_>>()?,
+            },
         };
 
         Ok(res)
@@ -185,7 +170,7 @@ impl MemcacheEntity for BonsaiGlobalrevMappingCacheEntry {
     fn serialize(&self) -> Bytes {
         let entry = thrift::BonsaiGlobalrevMappingEntry {
             repo_id: self.repo_id.id(),
-            bcs_id: self.bcs_id.into_thrift(),
+            bcs_id: self.bcs_id.map(|bcs_id| bcs_id.into_thrift()),
             globalrev: self
                 .globalrev
                 .id()
@@ -203,7 +188,11 @@ impl MemcacheEntity for BonsaiGlobalrevMappingCacheEntry {
         } = compact_protocol::deserialize(bytes).map_err(|_| McErrorKind::Deserialization)?;
 
         let repo_id = RepositoryId::new(repo_id);
-        let bcs_id = ChangesetId::from_thrift(bcs_id).map_err(|_| McErrorKind::Deserialization)?;
+        let bcs_id = bcs_id
+            .map(|bcs_id| {
+                ChangesetId::from_thrift(bcs_id).map_err(|_| McErrorKind::Deserialization)
+            })
+            .transpose()?;
         let globalrev = Globalrev::new(
             globalrev
                 .try_into()
@@ -255,8 +244,6 @@ impl KeyedEntityStore<ChangesetId, BonsaiGlobalrevMappingCacheEntry> for CacheRe
         keys: HashSet<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, BonsaiGlobalrevMappingCacheEntry>, Error> {
         let (ctx, mapping) = self;
-        let repo_id = mapping.repo_id();
-
         let res = mapping
             .inner
             .as_ref()
@@ -265,13 +252,9 @@ impl KeyedEntityStore<ChangesetId, BonsaiGlobalrevMappingCacheEntry> for CacheRe
             .with_context(|| "Error fetching globalrevs from bonsais from SQL")?;
 
         Result::<_, Error>::Ok(
-            res.into_iter()
-                .map(|e| {
-                    (
-                        e.bcs_id,
-                        BonsaiGlobalrevMappingCacheEntry::from_entry(e, repo_id),
-                    )
-                })
+            res.cached_data
+                .into_iter()
+                .filter_map(|e| e.bcs_id.map(|bcs_id| (bcs_id, e)))
                 .collect(),
         )
     }
@@ -289,8 +272,6 @@ impl KeyedEntityStore<Globalrev, BonsaiGlobalrevMappingCacheEntry> for CacheRequ
         keys: HashSet<Globalrev>,
     ) -> Result<HashMap<Globalrev, BonsaiGlobalrevMappingCacheEntry>, Error> {
         let (ctx, mapping) = self;
-        let repo_id = mapping.repo_id();
-
         let res = mapping
             .inner
             .as_ref()
@@ -302,13 +283,9 @@ impl KeyedEntityStore<Globalrev, BonsaiGlobalrevMappingCacheEntry> for CacheRequ
             .with_context(|| "Error fetching bonsais from globalrevs from SQL")?;
 
         Result::<_, Error>::Ok(
-            res.into_iter()
-                .map(|e| {
-                    (
-                        e.globalrev,
-                        BonsaiGlobalrevMappingCacheEntry::from_entry(e, repo_id),
-                    )
-                })
+            res.cached_data
+                .into_iter()
+                .map(|e| (e.globalrev, e))
                 .collect(),
         )
     }
