@@ -519,9 +519,6 @@ filechangesdetailed={ifeq(verbosity,"verbose",diff()|hgprefix,stat("status")|hgp
 [copytrace]
 maxmovescandidatestocheck=0
 
-[perftweaks]
-disablecasecheck=True
-
 [profiling:background]
 enabled=1
 format=text

@@ -385,20 +385,6 @@ def _setupupdates(_ui) -> None:
 
     extensions.wrapfunction(mergemod, "update", _update)
 
-    def _checkcollision(orig, repo, wmf, actions):
-        # If disablecasecheck is on, this should be a no-op. Run orig just to
-        # be safe.
-        if repo.ui.configbool("perftweaks", "disablecasecheck"):
-            return orig(repo, wmf, actions)
-
-        if hasattr(repo, "sparsematch"):
-            # Only check for collisions on files and directories in the
-            # sparse profile
-            wmf = wmf.matches(repo.sparsematch())
-        return orig(repo, wmf, actions)
-
-    extensions.wrapfunction(mergemod, "_checkcollision", _checkcollision)
-
 
 def _setupcommit(ui) -> None:
     def _refreshoncommit(orig, self, node):

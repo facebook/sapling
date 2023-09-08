@@ -1,22 +1,5 @@
 #debugruntest-compatible
 
-#if osx
-#else
-  $ eagerepo
-Test disabling the case conflict check (only fails on case sensitive systems)
-  $ hg init casecheck
-  $ cd casecheck
-  $ setconfig perftweaks.disablecasecheck=true
-  $ touch a
-  $ hg add a
-  $ hg commit -m a
-  $ touch A
-  $ hg add A
-  warning: possible case-folding collision for A
-  $ hg commit -m A
-  $ cd ..
-#endif
-
 Test avoiding calculating head changes during commit
 
   $ hg init branchatcommit

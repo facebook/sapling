@@ -846,53 +846,6 @@ def _forgetremoved(wctx, mctx, branchmerge):
     return actions
 
 
-def _checkcollision(repo, wmf, actions):
-    # build provisional merged manifest up
-    pmmf = set(wmf)
-
-    if actions:
-        # k, dr, e and rd are no-op
-        for m in "a", "am", "f", "g", "cd", "dc", "rg":
-            for f, args, msg in actions[m]:
-                pmmf.add(f)
-        for f, args, msg in actions["r"]:
-            pmmf.discard(f)
-        for f, args, msg in actions["dm"]:
-            f2, flags = args
-            pmmf.discard(f2)
-            pmmf.add(f)
-        for f, args, msg in actions["dg"]:
-            pmmf.add(f)
-        for f, args, msg in actions["m"]:
-            f1, f2, fa, move, anc = args
-            if move:
-                pmmf.discard(f1)
-            pmmf.add(f)
-
-    # check case-folding collision in provisional merged manifest
-    foldmap = {}
-    for f in pmmf:
-        fold = util.normcase(f)
-        if fold in foldmap:
-            raise error.Abort(
-                _("case-folding collision between %s and %s") % (f, foldmap[fold])
-            )
-        foldmap[fold] = f
-
-    # check case-folding of directories
-    foldprefix = unfoldprefix = lastfull = ""
-    for fold, f in sorted(foldmap.items()):
-        if fold.startswith(foldprefix) and not f.startswith(unfoldprefix):
-            # the folded prefix matches but actual casing is different
-            raise error.Abort(
-                _("case-folding collision between " "%s and directory of %s")
-                % (lastfull, f)
-            )
-        foldprefix = fold + "/"
-        unfoldprefix = f + "/"
-        lastfull = f
-
-
 def driverpreprocess(repo, ms, wctx, labels=None):
     """run the preprocess step of the merge driver, if any
 
@@ -2445,17 +2398,6 @@ def update(
             if m not in actions:
                 actions[m] = []
             actions[m].append((f, args, msg))
-
-        # The case collision check can be disabled because it can be very slow in
-        # large repos.
-        if not repo.ui.configbool(
-            "perftweaks", "disablecasecheck"
-        ) and not util.fscasesensitive(repo.path):
-            # check collision between files only in p2 for clean update
-            if not branchmerge and (force or not wc.dirty(missing=True, branch=False)):
-                _checkcollision(repo, p2.manifest(), None)
-            else:
-                _checkcollision(repo, wc.manifest(), actions)
 
         # divergent renames
         for f, fl in sorted(pycompat.iteritems(diverge)):

@@ -43,7 +43,7 @@ Python utilities:
 
 # Use some production settings. They avoid expensive paths.
 
-  $ setconfig experimental.copytrace=off perftweaks.disablecasecheck=true
+  $ setconfig experimental.copytrace=off
   $ enable sparse treemanifest rebase copytrace
 
 FIXME(status): removing this causes IO deadlock due to in-processness
