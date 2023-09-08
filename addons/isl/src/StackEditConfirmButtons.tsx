@@ -14,16 +14,16 @@ import {ImportStackOperation} from './operations/ImportStackOperation';
 import {latestHeadCommit, useRunOperation} from './serverAPIState';
 import {
   bumpStackEditMetric,
-  editingStackHashes,
+  editingStackIntentionHashes,
   sendStackEditMetrics,
   useStackEditState,
 } from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useRecoilValue, useSetRecoilState} from 'recoil';
+import {useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 export function StackEditConfirmButtons(): React.ReactElement {
-  const setStackHashes = useSetRecoilState(editingStackHashes);
+  const [[stackIntention], setStackIntentionHashes] = useRecoilState(editingStackIntentionHashes);
   const originalHead = useRecoilValue(latestHeadCommit);
   const runOperation = useRunOperation();
   const stackEdit = useStackEditState();
@@ -50,12 +50,12 @@ export function StackEditConfirmButtons(): React.ReactElement {
     runOperation(op);
     sendStackEditMetrics(true);
     // Exit stack editing.
-    setStackHashes(new Set());
+    setStackIntentionHashes(['general', new Set()]);
   };
 
   const handleCancel = () => {
     sendStackEditMetrics(false);
-    setStackHashes(new Set<Hash>());
+    setStackIntentionHashes(['general', new Set<Hash>()]);
   };
 
   // Show [Edit file stack] [Cancel] [Save changes] [Undo] [Redo].
@@ -110,7 +110,7 @@ export function StackEditConfirmButtons(): React.ReactElement {
           className="confirm-edit-stack-button"
           appearance="primary"
           onClick={handleSaveChanges}>
-          <T>Save changes</T>
+          {stackIntention === 'split' ? <T>Split</T> : <T>Save changes</T>}
         </VSCodeButton>
       </Tooltip>
     </>

@@ -25,6 +25,8 @@ type StackStateWithOperationProps = {
   splitRange: SplitRangeRecord;
 };
 
+type Intention = 'general' | 'split';
+
 /** Description of a stack edit operation. Used for display purpose. */
 export type StackEditOpDescription =
   | {
@@ -137,6 +139,9 @@ type StackEditState = {
    */
   hashes: Set<Hash>;
 
+  /** Intention of the stack editing. */
+  intention: Intention;
+
   /**
    * The (mutable) main history of stack states.
    */
@@ -161,6 +166,7 @@ const stackEditState = atom<StackEditState>({
   key: 'stackEditState',
   default: {
     hashes: new Set<Hash>(),
+    intention: 'general',
     history: {state: 'loading', exportedStack: undefined},
   },
   effects: [
@@ -168,16 +174,19 @@ const stackEditState = atom<StackEditState>({
     ({setSelf}) => {
       const disposable = clientToServerAPI.onMessageOfType('exportedStack', event => {
         setSelf(prev => {
-          const hashes = prev instanceof DefaultValue ? new Set<Hash>() : prev.hashes;
+          const {hashes, intention} =
+            prev instanceof DefaultValue
+              ? {hashes: new Set<Hash>(), intention: 'general' as Intention}
+              : prev;
           const revs = getRevs(hashes);
           if (revs !== event.revs) {
             // Wrong stack. Ignore it.
             return prev;
           }
           if (event.error != null) {
-            return {hashes, history: {state: 'hasError', error: event.error}};
+            return {hashes, intention, history: {state: 'hasError', error: event.error}};
           } else {
-            return {hashes, history: {state: 'loading', exportedStack: event.stack}};
+            return {hashes, intention, history: {state: 'loading', exportedStack: event.stack}};
           }
         });
       });
@@ -186,7 +195,7 @@ const stackEditState = atom<StackEditState>({
     // Kick off stack analysis on receiving an exported stack.
     ({setSelf, onSet}) => {
       onSet(newValue => {
-        const {hashes, history} = newValue;
+        const {hashes, intention, history} = newValue;
         if (hashes.size > 0 && history.state === 'loading' && history.exportedStack !== undefined) {
           try {
             const stack = new CommitStackState(history.exportedStack).buildFileStacks();
@@ -200,10 +209,10 @@ const stackEditState = atom<StackEditState>({
               fileStackRevs: stack.fileStacks.reduce((acc, f) => acc + f.source.revLength, 0),
             };
             currentMetricsStartTime = Date.now();
-            setSelf({hashes, history: {state: 'hasValue', value: historyValue}});
+            setSelf({hashes, intention, history: {state: 'hasValue', value: historyValue}});
           } catch (err) {
             const msg = `Cannot construct stack ${err}`;
-            setSelf({hashes, history: {state: 'hasError', error: msg}});
+            setSelf({hashes, intention, history: {state: 'hasError', error: msg}});
           }
         }
       });
@@ -212,19 +221,27 @@ const stackEditState = atom<StackEditState>({
 });
 
 /**
- * Commit hashes being stack edited.
+ * Commit hashes being stack edited for general purpose.
  * Setting to a non-empty value triggers server-side loading.
  */
-export const editingStackHashes = selector({
-  key: 'editingStackHashes',
-  get: ({get}) => get(stackEditState).hashes,
+export const editingStackIntentionHashes = selector<[Intention, Set<Hash>]>({
+  key: 'editingStackIntentionHashes',
+  get: ({get}) => {
+    const state = get(stackEditState);
+    return [state.intention, state.hashes];
+  },
   set: ({set}, newValue) => {
-    const hashes = newValue instanceof DefaultValue ? new Set<Hash>() : newValue;
+    const [intention, hashes] =
+      newValue instanceof DefaultValue ? ['general' as Intention, new Set<Hash>()] : newValue;
     if (hashes.size > 0) {
       const revs = getRevs(hashes);
       clientToServerAPI.postMessage({type: 'exportStack', revs});
     }
-    set(stackEditState, {hashes, history: {state: 'loading', exportedStack: undefined}});
+    set(stackEditState, {
+      hashes,
+      intention,
+      history: {state: 'loading', exportedStack: undefined},
+    });
   },
 });
 
@@ -274,6 +291,10 @@ class UseStackEditState {
     return this.history.current.splitRange;
   }
 
+  get intention(): Intention {
+    return this.state.intention;
+  }
+
   setSplitRange(range: SplitRangeRecord | string) {
     const splitRange =
       typeof range === 'string'
@@ -320,7 +341,12 @@ class UseStackEditState {
   }
 
   private setHistory(newHistory: History) {
-    this.setState({hashes: this.state.hashes, history: {state: 'hasValue', value: newHistory}});
+    const {hashes, intention} = this.state;
+    this.setState({
+      hashes,
+      intention,
+      history: {state: 'hasValue', value: newHistory},
+    });
   }
 }
 

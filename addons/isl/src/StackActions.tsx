@@ -19,7 +19,7 @@ import {type CommitTreeWithPreviews, walkTreePostorder, isTreeLinear} from './ge
 import {T, t} from './i18n';
 import {HideOperation} from './operations/HideOperation';
 import {useRunOperation, latestUncommittedChangesData} from './serverAPIState';
-import {editingStackHashes, loadingStackState} from './stackEditState';
+import {editingStackIntentionHashes, loadingStackState} from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue, useRecoilState} from 'recoil';
 import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';
@@ -33,7 +33,7 @@ import {generatorContains, unwrap} from 'shared/utils';
 export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElement | null {
   const reviewProvider = useRecoilValue(codeReviewProvider);
   const diffMap = useRecoilValue(allDiffSummaries);
-  const stackHashes = useRecoilValue(editingStackHashes);
+  const stackHashes = useRecoilValue(editingStackIntentionHashes)[1];
   const loadingState = useRecoilValue(loadingStackState);
   const suggestedRebase = useRecoilValue(showSuggestedRebaseForStack(tree.info.hash));
   const runOperation = useRunOperation();
@@ -212,7 +212,7 @@ function CleanupButton({commit, hasChildren}: {commit: CommitInfo; hasChildren: 
 
 function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactElement | null {
   const uncommitted = useRecoilValue(latestUncommittedChangesData);
-  const [stackHashes, setStackHashes] = useRecoilState(editingStackHashes);
+  const [[, stackHashes], setStackIntentionHashes] = useRecoilState(editingStackIntentionHashes);
   const loadingState = useRecoilValue(loadingStackState);
 
   const stackCommits = [...walkTreePostorder([tree])].map(t => t.info);
@@ -259,7 +259,7 @@ function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactEle
           disabled={disabled}
           appearance="icon"
           onClick={() => {
-            setStackHashes(new Set<Hash>(stackCommits.map(c => c.hash)));
+            setStackIntentionHashes(['general', new Set<Hash>(stackCommits.map(c => c.hash))]);
           }}>
           {icon}
           <T>Edit stack</T>

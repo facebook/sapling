@@ -12,7 +12,7 @@ import {SplitStackEditPanel} from './SplitStackEditPanel';
 import {StackEditConfirmButtons} from './StackEditConfirmButtons';
 import {StackEditSubTree} from './StackEditSubTree';
 import {T} from './i18n';
-import {loadingStackState, editingStackHashes} from './stackEditState';
+import {loadingStackState, editingStackIntentionHashes} from './stackEditState';
 import {VSCodePanels, VSCodePanelTab, VSCodePanelView} from '@vscode/webview-ui-toolkit/react';
 import {useState} from 'react';
 import {useRecoilValue} from 'recoil';
@@ -20,7 +20,7 @@ import {useRecoilValue} from 'recoil';
 /// Show a <Modal /> when editing a stack.
 export function MaybeEditStackModal() {
   const loadingState = useRecoilValue(loadingStackState);
-  const stackHashes = useRecoilValue(editingStackHashes);
+  const stackHashes = useRecoilValue(editingStackIntentionHashes)[1];
 
   const isEditing = stackHashes.size > 0;
   const isLoaded = isEditing && loadingState.state === 'hasValue';
