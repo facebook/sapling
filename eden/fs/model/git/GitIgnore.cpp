@@ -15,7 +15,7 @@ using std::string;
 
 namespace facebook::eden {
 
-GitIgnore::GitIgnore() {}
+GitIgnore::GitIgnore() = default;
 
 GitIgnore::GitIgnore(GitIgnore const&) = default;
 GitIgnore& GitIgnore::operator=(GitIgnore const&) = default;
@@ -25,7 +25,7 @@ GitIgnore::GitIgnore(GitIgnore&&) noexcept(
 GitIgnore& GitIgnore::operator=(GitIgnore&&) noexcept(
     std::is_nothrow_move_assignable<std::vector<GitIgnorePattern>>::value) =
     default;
-GitIgnore::~GitIgnore() {}
+GitIgnore::~GitIgnore() = default;
 
 void GitIgnore::loadFile(StringPiece contents) {
   std::vector<GitIgnorePattern> newRules;

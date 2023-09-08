@@ -37,7 +37,7 @@ CheckoutContext::CheckoutContext(
       windowsSymlinksEnabled_{
           mount_->getCheckoutConfig()->getEnableWindowsSymlinks()} {}
 
-CheckoutContext::~CheckoutContext() {}
+CheckoutContext::~CheckoutContext() = default;
 
 void CheckoutContext::start(
     RenameLock&& renameLock,

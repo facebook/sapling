@@ -55,7 +55,7 @@ CheckoutAction::CheckoutAction(
   }
 }
 
-CheckoutAction::~CheckoutAction() {}
+CheckoutAction::~CheckoutAction() = default;
 
 PathComponentPiece CheckoutAction::getEntryName() const {
   XDCHECK(oldScmEntry_.has_value() || newScmEntry_.has_value());

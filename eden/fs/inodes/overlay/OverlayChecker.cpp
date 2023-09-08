@@ -12,7 +12,7 @@
 #include <boost/filesystem.hpp>
 #include <fcntl.h>
 #include <folly/portability/Unistd.h>
-#include <time.h>
+#include <ctime>
 
 #include <folly/Conv.h>
 #include <folly/ExceptionWrapper.h>
@@ -754,7 +754,7 @@ OverlayChecker::OverlayChecker(
           nextInodeNumber,
           lookupCallback)} {}
 
-OverlayChecker::~OverlayChecker() {}
+OverlayChecker::~OverlayChecker() = default;
 
 void OverlayChecker::scanForErrors(const ProgressCallback& progressCallback) {
   XLOG(INFO) << "Starting fsck scan on overlay " << impl_->fcs->getLocalDir();
@@ -1016,7 +1016,7 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
               auto entryInodeNumber =
                   folly::tryTo<uint64_t>(inodePath.basename().value());
               if (entryInodeNumber.hasValue()) {
-                inodes.push_back(std::make_tuple(*entryInodeNumber, shardID));
+                inodes.emplace_back(*entryInodeNumber, shardID);
               } else {
                 errors.wlock()->push_back(
                     make_error<UnexpectedOverlayFile>(inodePath));

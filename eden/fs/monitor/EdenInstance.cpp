@@ -43,7 +43,7 @@ namespace facebook::eden {
 
 EdenInstance::EdenInstance(EdenMonitor* monitor) : monitor_{monitor} {}
 
-EdenInstance::~EdenInstance() {}
+EdenInstance::~EdenInstance() = default;
 
 ExistingEdenInstance::ExistingEdenInstance(EdenMonitor* monitor, pid_t pid)
     : EdenInstance(monitor),
@@ -184,15 +184,15 @@ Future<Unit> SpawnedEdenInstance::start() {
       startupLog.value(),
   };
   if (!FLAGS_edenfsctl.empty()) {
-    argv.push_back("--edenfsctlPath");
+    argv.emplace_back("--edenfsctlPath");
     argv.push_back(FLAGS_edenfsctl);
   }
   if (!FLAGS_etcEdenDir.empty()) {
-    argv.push_back("--etcEdenDir");
+    argv.emplace_back("--etcEdenDir");
     argv.push_back(FLAGS_etcEdenDir);
   }
   if (!FLAGS_etcEdenDir.empty()) {
-    argv.push_back("--configPath");
+    argv.emplace_back("--configPath");
     argv.push_back(FLAGS_configPath);
   }
   SpawnedProcess::Options options;

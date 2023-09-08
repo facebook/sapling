@@ -8,7 +8,7 @@
 #include <folly/init/Init.h>
 #include <folly/portability/GFlags.h>
 #include <folly/stop_watch.h>
-#include <stdlib.h>
+#include <cstdlib>
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/InodeCatalogType.h"

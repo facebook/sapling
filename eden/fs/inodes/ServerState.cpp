@@ -92,7 +92,7 @@ ServerState::ServerState(
   }
 }
 
-ServerState::~ServerState() {}
+ServerState::~ServerState() = default;
 
 std::shared_ptr<const EdenConfig> ServerState::getEdenConfig(
     ConfigReloadBehavior reload) {

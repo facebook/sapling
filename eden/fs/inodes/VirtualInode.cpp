@@ -481,16 +481,16 @@ getChildrenHelper(
   for (auto& child : *tree) {
     const auto* treeEntry = &child.second;
     if (treeEntry->isTree()) {
-      result.push_back(std::make_pair(
+      result.emplace_back(
           child.first,
           objectStore->getTree(treeEntry->getHash(), fetchContext)
               .thenValue([mode = modeFromTreeEntryType(treeEntry->getType())](
                              TreePtr tree) {
                 return VirtualInode{std::move(tree), mode};
-              })));
+              }));
     } else {
       // This is a file, return the TreeEntry for it
-      result.push_back(std::make_pair(child.first, VirtualInode{*treeEntry}));
+      result.emplace_back(child.first, VirtualInode{*treeEntry});
     }
   }
 
@@ -576,8 +576,8 @@ VirtualInode::getChildrenAttributes(
             XDCHECK_EQ(attributes.size(), names.size())
                 << "Missing/too many attributes for the names.";
             for (uint32_t i = 0; i < attributes.size(); ++i) {
-              zippedResult.push_back(std::make_pair(
-                  std::move(names.at(i)), std::move(attributes.at(i))));
+              zippedResult.emplace_back(
+                  std::move(names.at(i)), std::move(attributes.at(i)));
             }
             return zippedResult;
           });

@@ -643,7 +643,7 @@ folly::SemiFuture<Unit> EdenMount::performBindMounts() {
       });
 }
 
-EdenMount::~EdenMount() {}
+EdenMount::~EdenMount() = default;
 
 bool EdenMount::tryToTransitionState(State expected, State newState) {
   return state_.compare_exchange_strong(

@@ -14,8 +14,8 @@
 #include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
-#include <signal.h>
 #include <sysexits.h>
+#include <csignal>
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseDispatcher.h"

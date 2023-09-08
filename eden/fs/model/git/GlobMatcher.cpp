@@ -105,8 +105,8 @@ class CharIntervalSet {
         if (depth == 1) {
           // Start a new interval before this character. Its end will be set
           // later.
-          intervals.push_back(
-              {bound.value, std::numeric_limits<uint8_t>::max()});
+          intervals.emplace_back(
+              bound.value, std::numeric_limits<uint8_t>::max());
         }
       } else {
         --depth;
@@ -187,9 +187,9 @@ bool operator&(GlobOptions a, GlobOptions b) {
 GlobMatcher::GlobMatcher(vector<uint8_t> pattern, CaseSensitivity caseSensitive)
     : pattern_(std::move(pattern)), caseSensitive_(caseSensitive) {}
 
-GlobMatcher::GlobMatcher() {}
+GlobMatcher::GlobMatcher() = default;
 
-GlobMatcher::~GlobMatcher() {}
+GlobMatcher::~GlobMatcher() = default;
 
 /*
  * A glob pattern consists of a few types of data:

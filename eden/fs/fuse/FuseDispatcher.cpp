@@ -54,7 +54,7 @@ fuse_attr_out FuseDispatcher::Attr::asFuseAttr() const {
   return result;
 }
 
-FuseDispatcher::~FuseDispatcher() {}
+FuseDispatcher::~FuseDispatcher() = default;
 
 FuseDispatcher::FuseDispatcher(EdenStatsPtr stats) : stats_(std::move(stats)) {}
 

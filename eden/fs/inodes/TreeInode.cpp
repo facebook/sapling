@@ -186,7 +186,7 @@ TreeInode::TreeInode(
     std::optional<ObjectId> treeHash)
     : Base(mount), contents_(folly::in_place, std::move(dir), treeHash) {}
 
-TreeInode::~TreeInode() {}
+TreeInode::~TreeInode() = default;
 
 ImmediateFuture<struct stat> TreeInode::stat(
     const ObjectFetchContextPtr& context) {
@@ -408,20 +408,19 @@ TreeInode::getChildren(const ObjectFetchContextPtr& context, bool loadInodes) {
       auto virtualInode =
           rlockGetOrFindChild(*contents, entry.first, context, loadInodes);
       if (virtualInode) {
-        result.push_back(
-            std::make_pair(entry.first, std::move(virtualInode.value())));
+        result.emplace_back(entry.first, std::move(virtualInode.value()));
       } else {
         auto childResult = loadChild(contents, entry.first, context);
         // inodeLoadCleanUps.push_back must be no-except to guarantee
         // the cleanup will run if result.push_back below throws.
         XCHECK_LT(inodeLoadCleanUps.size(), inodeLoadCleanUps.capacity());
-        inodeLoadCleanUps.push_back(
-            std::make_pair(entry.first, std::move(childResult.second)));
+        inodeLoadCleanUps.emplace_back(
+            entry.first, std::move(childResult.second));
 
-        result.push_back(std::make_pair(
+        result.emplace_back(
             entry.first,
             ImmediateFuture<InodePtr>{std::move(childResult.first)}.thenValue(
-                [](auto&& inode) { return VirtualInode{inode}; })));
+                [](auto&& inode) { return VirtualInode{inode}; }));
       }
     }
   }
@@ -1789,7 +1788,7 @@ int TreeInode::checkPreRemove(const FileInode& /* child */) {
  */
 class TreeInode::TreeRenameLocks {
  public:
-  TreeRenameLocks() {}
+  TreeRenameLocks() = default;
 
   void acquireLocks(
       RenameLock&& renameLock,

@@ -14,8 +14,8 @@
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
-#include <signal.h>
 #include <chrono>
+#include <csignal>
 #include <type_traits>
 #include "eden/common/utils/Synchronized.h"
 #include "eden/fs/fuse/FuseDirList.h"
