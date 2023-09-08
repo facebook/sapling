@@ -14,7 +14,7 @@ class TestDiffHashes(BaseTest):
     @hgtest
     def test_diff_hashes(self, repo: Repo, wc: WorkingCopy) -> None:
 
-        self.config.add("workingcopy", "ruststatus", "false")
+        self.config.add("workingcopy", "rust-status", "false")
         self.assertIn(
             "inexistent1: No such file or directory\ninexistent2: No such file or directory\n",
             repo.hg.diff("inexistent1", "inexistent2").stderr,

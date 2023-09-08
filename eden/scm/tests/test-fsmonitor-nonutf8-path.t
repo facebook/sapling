@@ -3,7 +3,7 @@
 #testcases pythonstatus ruststatus
 
 #if pythonstatus
-  $ setconfig workingcopy.ruststatus=false status.use-rust=false
+  $ setconfig workingcopy.rust-status=false status.use-rust=false
 #endif
 
 #if ruststatus

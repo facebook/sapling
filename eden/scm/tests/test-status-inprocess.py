@@ -8,7 +8,7 @@ from edenscm import commands, localrepo, ui as uimod
 
 u = uimod.ui.load()
 
-u.setconfig("workingcopy", "ruststatus", "false")
+u.setconfig("workingcopy", "rust-status", "false")
 
 u.write("% creating repo\n")
 repo = localrepo.localrepository(u, "repo", create=True)

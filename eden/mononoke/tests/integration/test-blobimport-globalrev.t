@@ -5,7 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ setconfig workingcopy.ruststatus=False
+  $ setconfig workingcopy.rust-status=False
 
   $ hg init repo-hg --config format.usefncache=False
 

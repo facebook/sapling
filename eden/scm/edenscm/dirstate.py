@@ -912,7 +912,7 @@ class dirstate:
         dirstate and return a scmutil.status.
         """
 
-        if self._ui.configbool("workingcopy", "ruststatus"):
+        if self._ui.configbool("workingcopy", "rust-status"):
             self._ui.log("status_info", internal_status_mode="rust")
             return self._ruststatus(match, ignored, clean, unknown)
 

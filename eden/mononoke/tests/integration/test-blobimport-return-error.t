@@ -23,7 +23,7 @@ Init treemanifest and remotefilelog
   > server=True
   > shallowtrees=True
   > [workingcopy]
-  > ruststatus=False
+  > rust-status=False
   > EOF
 
   $ touch a

@@ -29,7 +29,7 @@ use-rust=True
 
 [workingcopy]
 use-rust=True
-ruststatus=True
+rust-status=True
 
 [status]
 use-rust=True

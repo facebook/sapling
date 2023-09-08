@@ -576,7 +576,7 @@ edenapi.prefix=localhost
 edenapi.cacerts=$TEST_CERTDIR/root-ca.crt
 [workingcopy]
 use-rust=False
-ruststatus=False
+rust-status=False
 [status]
 use-rust=False
 EOF
@@ -1617,7 +1617,7 @@ cachepath=$TESTTMP/cachepath
 server=True
 shallowtrees=True
 [workingcopy]
-ruststatus=False
+rust-status=False
 use-rust=False
 [status]
 use-rust=False

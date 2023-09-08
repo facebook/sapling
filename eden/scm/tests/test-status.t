@@ -5,7 +5,7 @@
 #testcases pythonstatus ruststatus rustcommand scmstore
 
 #if pythonstatus
-  $ setconfig workingcopy.ruststatus=false status.use-rust=false
+  $ setconfig workingcopy.rust-status=false status.use-rust=false
 #endif
 
 #if rustcommand
@@ -15,11 +15,11 @@
 #endif
 
 #if ruststatus
-  $ setconfig status.use-rust=false workingcopy.ruststatus=true
+  $ setconfig status.use-rust=false workingcopy.rust-status=true
 #endif
 
 #if scmstore
-  $ setconfig status.use-rust=false workingcopy.ruststatus=false
+  $ setconfig status.use-rust=false workingcopy.rust-status=false
   $ setconfig scmstore.auxindexedlog=true
   $ setconfig scmstore.status=true
 #endif

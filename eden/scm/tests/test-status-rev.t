@@ -2,7 +2,7 @@
 
 #testcases pythonstatus ruststatus
 #if pythonstatus
-  $ setconfig workingcopy.ruststatus=false
+  $ setconfig workingcopy.rust-status=false
 #endif
 
 Tests of 'hg status --rev <rev>' to make sure status between <rev> and '.' get
