@@ -46,7 +46,7 @@ streamingeden crate",
 
         conf.types_crate("thrift-streaming__types");
 
-        let options = "";
+        let options = "deprecated_default_enum_min_i32";
         if !options.is_empty() {
             conf.options(options);
         }

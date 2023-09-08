@@ -46,7 +46,7 @@ mononoke_types_thrift mononoke_types_thrift",
 
         conf.types_crate("git-types-thrift__types");
 
-        let options = "";
+        let options = "deprecated_default_enum_min_i32";
         if !options.is_empty() {
             conf.options(options);
         }
