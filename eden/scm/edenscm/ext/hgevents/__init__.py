@@ -107,11 +107,7 @@ def wrapupdate(
     orig,
     repo,
     node,
-    branchmerge,
-    force,
-    ancestor=None,
-    mergeancestor=False,
-    labels=None,
+    branchmerge=False,
     matcher=None,
     wc=None,
     **kwargs,
@@ -122,12 +118,8 @@ def wrapupdate(
         return orig(
             repo,
             node,
-            branchmerge,
-            force,
-            ancestor,
-            mergeancestor,
-            labels,
-            matcher,
+            branchmerge=branchmerge,
+            matcher=matcher,
             wc=wc,
             **kwargs,
         )
@@ -151,12 +143,9 @@ def wrapupdate(
         return orig(
             repo,
             node,
-            branchmerge,
-            force,
-            ancestor,
-            mergeancestor,
-            labels,
-            matcher,
+            branchmerge=branchmerge,
+            matcher=matcher,
+            wc=wc,
             **kwargs,
         )
 

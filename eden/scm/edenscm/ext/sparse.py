@@ -368,9 +368,9 @@ def _setupupdates(_ui) -> None:
 
     extensions.wrapfunction(mergemod, "calculateupdates", _calculateupdates)
 
-    def _update(orig, repo, node, branchmerge, *args, **kwargs):
+    def _update(orig, repo, node, branchmerge=False, **kwargs):
         try:
-            results = orig(repo, node, branchmerge, *args, **kwargs)
+            results = orig(repo, node, branchmerge=branchmerge, **kwargs)
         except Exception:
             if _hassparse(repo):
                 repo._clearpendingprofileconfig()

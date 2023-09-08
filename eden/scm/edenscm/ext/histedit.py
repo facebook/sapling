@@ -913,8 +913,7 @@ class base(histeditaction):
             with self.repo.wlock(), self.repo.lock(), self.repo.transaction(
                 "histedit-base"
             ):
-                mergemod.update(self.repo, self.node, False, True)
-            #                                     branchmerge, force)
+                mergemod.update(self.repo, self.node, force=True)
         return self.continueclean()
 
     def continuedirty(self):

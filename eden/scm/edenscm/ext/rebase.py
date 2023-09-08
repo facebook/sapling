@@ -1706,7 +1706,7 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest, wctx):
     else:
         if repo["."].rev() != p1:
             repo.ui.debug(" update to %s\n" % (repo[p1]))
-            mergemod.update(repo, p1, False, True)
+            mergemod.update(repo, p1, force=True)
         else:
             repo.ui.debug(" already in destination\n")
         # This is, alas, necessary to invalidate workingctx's manifest cache,
@@ -1727,10 +1727,10 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest, wctx):
     stats = mergemod.update(
         repo,
         rev,
-        True,
-        True,
-        base,
-        collapse,
+        branchmerge=True,
+        force=True,
+        ancestor=base,
+        mergeancestor=collapse,
         labels=labels,
         wc=wctx,
     )
@@ -2156,7 +2156,7 @@ def abort(repo, originalwd, destmap, state, activebookmark=None) -> int:
 
             # Update away from the rebase if necessary
             if shouldupdate or needupdate(repo, state):
-                mergemod.update(repo, originalwd, False, True)
+                mergemod.update(repo, originalwd, force=True)
 
             # Strip from the first rebased revision
             if rebased:

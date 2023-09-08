@@ -894,8 +894,7 @@ def updaterepo(repo, node, overwrite, updatecheck=None):
     return mergemod.update(
         repo,
         node,
-        False,
-        overwrite,
+        force=overwrite,
         labels=["working copy", "destination"],
         updatecheck=updatecheck,
     )
@@ -1007,10 +1006,10 @@ def updatetotally(
     return hasunresolved
 
 
-def merge(repo, node, force=None, remind: bool = True, labels=None):
+def merge(repo, node, force=False, remind: bool = True, labels=None):
     """Branch merge with node, resolving changes. Return true if any
     unresolved conflicts."""
-    stats = mergemod.update(repo, node, True, force, labels=labels)
+    stats = mergemod.update(repo, node, branchmerge=True, force=force, labels=labels)
     _showstats(repo, stats)
     if stats[3]:
         repo.ui.status(

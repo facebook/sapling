@@ -784,7 +784,9 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
         dsguard = dirstateguard.dirstateguard(repo, "backout")
         try:
             ui.setconfig("ui", "forcemerge", opts.get("tool", ""), "backout")
-            stats = mergemod.update(repo, parent, True, True, node, False)
+            stats = mergemod.update(
+                repo, parent, branchmerge=True, force=True, ancestor=node
+            )
             repo.setparents(op1, op2)
 
             # Ensure reverse-renames are preserved during the backout. In theory

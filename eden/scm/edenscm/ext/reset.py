@@ -98,10 +98,8 @@ def _moveto(repo, bookmark, ctx, clean=False):
         merge.update(
             repo,
             ctx.node(),
-            False,  # not a branchmerge
-            True,  # force overwriting files
-            None,
-        )  # not a partial update
+            force=True,
+        )
     else:
         # Mark any files that are different between the two as normal-lookup
         # so they show up correctly in hg status afterwards.

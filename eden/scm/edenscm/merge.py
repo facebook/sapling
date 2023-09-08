@@ -2132,8 +2132,8 @@ def _prefetchlazychildren(repo, node):
 def update(
     repo,
     node,
-    branchmerge,
-    force,
+    branchmerge=False,
+    force=False,
     ancestor=None,
     mergeancestor=False,
     labels=None,
@@ -2796,9 +2796,9 @@ def graft(repo, ctx, pctx, labels, keepparent=False):
     stats = update(
         repo,
         ctx.node(),
-        True,
-        True,
-        pctx.node(),
+        branchmerge=True,
+        force=True,
+        ancestor=pctx.node(),
         mergeancestor=mergeancestor,
         labels=labels,
     )
