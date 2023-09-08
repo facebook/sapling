@@ -11,7 +11,6 @@ import type {Comparison} from 'shared/Comparison';
 
 import {ErrorNotice} from '../ErrorNotice';
 import {Internal} from '../Internal';
-import {ThoughtBubbleIcon} from '../ThoughtBubbleIcon';
 import {Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
 import {useFeatureFlagSync} from '../featureFlags';
@@ -101,7 +100,7 @@ export function GenerateAICommitMesageButton({
         onDismiss={onDismiss}
         title={t('Generate a commit message suggestion with AI')}>
         <VSCodeButton appearance="icon" data-testid="generate-commit-message-button">
-          <ThoughtBubbleIcon />
+          <Icon icon="sparkle" />
         </VSCodeButton>
       </Tooltip>
     </span>
