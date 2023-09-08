@@ -34,8 +34,8 @@ export function Modal({
   const style: React.CSSProperties = {
     width: width ?? 'fit-content',
     height: height ?? 'fit-content',
-    maxHeight: maxHeight ?? '95%',
-    maxWidth: maxWidth ?? '95%',
+    maxHeight: maxHeight ?? '100vh',
+    maxWidth: maxWidth ?? '100vw',
   };
   return (
     <div

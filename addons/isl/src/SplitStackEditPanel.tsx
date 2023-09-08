@@ -92,7 +92,12 @@ export function SplitStackEditPanel() {
           borderBottom: '1px dashed var(--tooltip-border)',
         }}
       />
-      <div style={negativeMargin}>
+      <div
+        style={{
+          ...negativeMargin,
+          minWidth: 'calc(100vw - 81px)',
+          minHeight: 'calc(100vh - 270px)',
+        }}>
         <ScrollX maxSize="calc(100vw - 50px)">
           <Row style={{padding: '0 var(--pad)'}}>{columns}</Row>
         </ScrollX>
