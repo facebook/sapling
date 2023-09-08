@@ -27,7 +27,10 @@ export function useThrottledEffect<A extends Array<unknown>>(
   deps?: Array<unknown>,
 ): void {
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const throttled = useCallback(debounce(cb, throttleTimeMs, undefined, true), [throttleTimeMs]);
+  const throttled = useCallback(debounce(cb, throttleTimeMs, undefined, true), [
+    throttleTimeMs,
+    ...(deps ?? []),
+  ]);
   return useEffect((...args: A) => {
     return throttled(...args);
     // eslint-disable-next-line react-hooks/exhaustive-deps
