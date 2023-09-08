@@ -2430,31 +2430,17 @@ def update(
 
         ### calculate phase
         with progress.spinner(repo.ui, "calculating"):
-            if ancestor is not None:
-                actionbyfile = calculateupdatesnative(repo, p1, p2, repo[ancestor])
-            else:
-                actionbyfile = None
-
-            if actionbyfile is None:
-                actionbyfile, diverge, renamedelete = calculateupdates(
-                    repo,
-                    wc,
-                    p2,
-                    pas,
-                    branchmerge,
-                    force,
-                    mergeancestor,
-                    followcopies,
-                    matcher=matcher,
-                )
-            else:
-                repo.ui.debug("Using results from native rebase\n")
-                repo.ui.log(
-                    "nativecheckout",
-                    using_nativerebase=True,
-                )
-                renamedelete = {}
-                diverge = {}
+            actionbyfile, diverge, renamedelete = calculateupdates(
+                repo,
+                wc,
+                p2,
+                pas,
+                branchmerge,
+                force,
+                mergeancestor,
+                followcopies,
+                matcher=matcher,
+            )
 
         if updatecheck == "noconflict":
             paths = []
@@ -2756,18 +2742,6 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
     postrecrawls = querywatchmanrecrawls(repo)
     repo.ui.log("watchman-recrawls", watchman_recrawls=postrecrawls - prerecrawls)
     return stats
-
-
-@util.timefunction("calculateupdatesnative", 0, "ui")
-def calculateupdatesnative(repo, p1, p2, pa):
-    if not repo.ui.configbool("experimental", "nativerebase"):
-        return None
-    mergeresult = nativecheckout.mergeresult(
-        p2.manifest(), p1.manifest(), pa.manifest()
-    )
-    # Returns None if mergeresult can not be converted fully into Python actions
-    actions = mergeresult.pymerge_actions()
-    return actions
 
 
 def graft(repo, ctx, pctx, labels, keepparent=False):
