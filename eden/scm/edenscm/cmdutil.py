@@ -459,9 +459,15 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
 
             # 3b. apply filtered patch to clean repo  (clean)
             if backups:
-                # Equivalent to hg.revert
                 m = scmutil.matchfiles(repo, backups.keys())
-                mergemod.update(repo, repo.dirstate.p1(), force=True, matcher=m)
+                revert(
+                    ui,
+                    repo,
+                    repo["."],
+                    repo.dirstate.parents(),
+                    match=m,
+                    no_backup=True,
+                )
 
             # 3c. (apply)
             if dopatch:
@@ -4073,7 +4079,12 @@ def postcommitstatus(repo, pats, opts):
     return repo.status(match=scmutil.match(repo[None], pats, opts))
 
 
-def revert(ui, repo, ctx, parents, *pats, **opts):
+def revert(ui, repo, ctx, parents, *pats, match=None, **opts):
+    if match and (pats or opts.get("include") or opts.get("exclude")):
+        raise error.ProgrammingError(
+            "revert: match and patterns are mutually exclusive"
+        )
+
     parent, p2 = parents
     node = ctx.node()
 
@@ -4098,7 +4109,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
         interactive = opts.get("interactive", False)
         wctx = repo[None]
-        m = scmutil.match(wctx, pats, opts)
+        m = match or scmutil.match(wctx, pats, opts)
 
         # we'll need this later
         badfiles = set()
