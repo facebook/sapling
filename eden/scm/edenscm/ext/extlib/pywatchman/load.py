@@ -8,8 +8,9 @@ from __future__ import absolute_import, division, print_function
 
 import ctypes
 
-# pyre-fixme[21]: Could not find name `bser` in `edenscmnative`.
-from edenscmnative import bser
+import bindings
+
+bser = bindings.cext.bser
 
 
 EMPTY_HEADER = b"\x00\x01\x05\x00\x00\x00\x00"

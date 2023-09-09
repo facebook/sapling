@@ -14,11 +14,11 @@ import subprocess
 import sys
 import time
 
-# pyre-fixme[21]: Could not find name `bser` in `edenscmnative`.
-from edenscmnative import bser
+import bindings
 
 from . import capabilities, compat, encoding, load  # noqa: F401
 
+bser = bindings.cext.bser
 
 if os.name == "nt":
     import ctypes

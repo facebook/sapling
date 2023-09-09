@@ -1528,13 +1528,7 @@ havefanotify = (
 )
 
 
-extmodules = [
-    Extension(
-        "edenscmnative.bser",
-        sources=["edenscm/ext/extlib/pywatchman/bser.c"],
-        include_dirs=include_dirs,
-    ),
-]
+extmodules = []
 
 
 def cythonize(*args, **kwargs):
