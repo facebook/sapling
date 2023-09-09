@@ -38,6 +38,16 @@ impl PythonSysConfig {
             include_dir: lines[2].to_string(),
         }
     }
+
+    fn add_python_flags(&self, c: &mut cc::Build) {
+        for flag in self.cflags.split_whitespace().filter(|s| pick_flag(s)) {
+            c.flag(flag);
+        }
+        for flag in self.ldflags.split_whitespace().filter(|s| pick_flag(s)) {
+            c.flag(flag);
+        }
+        c.include(&self.include_dir);
+    }
 }
 
 // Ignore flags that are annoying for our code.
@@ -66,7 +76,6 @@ fn main() {
         cext_dir.join("../ext/extlib/pywatchman/bser.c"),
     ])
     .include(root_dir)
-    .include(&config.include_dir)
     .define("HAVE_LINUX_STATFS", "1")
     .define("_GNU_SOURCE", "1")
     .warnings(false)
@@ -74,11 +83,15 @@ fn main() {
     if !cfg!(windows) {
         c.flag("-std=c99").flag("-Wno-deprecated-declarations");
     }
-    for flag in config.cflags.split_whitespace().filter(|s| pick_flag(s)) {
-        c.flag(flag);
-    }
-    for flag in config.ldflags.split_whitespace().filter(|s| pick_flag(s)) {
-        c.flag(flag);
-    }
+    config.add_python_flags(&mut c);
     c.compile("cextmodules");
+
+    let mut c = cc::Build::new();
+    c.cpp(true)
+        .file(cext_dir.join("../ext/extlib/traceprofimpl.cpp"));
+    if !cfg!(windows) {
+        c.flag("-std=c++11").flag("-Wno-unused-function");
+    }
+    config.add_python_flags(&mut c);
+    c.compile("traceprofimpl");
 }

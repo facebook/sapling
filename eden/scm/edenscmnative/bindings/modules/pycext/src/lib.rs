@@ -14,6 +14,10 @@ extern "C" {
     fn PyInit_osutil() -> *mut ffi::PyObject;
     fn PyInit_parsers() -> *mut ffi::PyObject;
     fn PyInit_bser() -> *mut ffi::PyObject;
+
+    fn traceprof_enable();
+    fn traceprof_disable();
+    fn traceprof_report_stderr();
 }
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -34,5 +38,29 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "parsers", parsers)?;
     m.add(py, "bser", bser)?;
 
+    m.add_class::<TraceProf>(py)?;
+
     Ok(m)
 }
+
+py_class!(pub class TraceProf |py| {
+    def __new__(_cls) -> PyResult<Self> {
+        Self::create_instance(py)
+    }
+
+    def __enter__(&self) -> PyResult<Self> {
+        unsafe { traceprof_enable() };
+        Ok(self.clone_ref(py))
+    }
+
+    def __exit__(&self, _ty: Option<PyType>, _value: PyObject, _traceback: PyObject) -> PyResult<bool> {
+        unsafe { traceprof_disable() };
+        Ok(false) // Do not suppress exception
+    }
+
+    /// Report tracing result to stderr.
+    def report(&self) -> PyResult<Option<u8>> {
+        unsafe { traceprof_report_stderr() };
+        Ok(None)
+    }
+});

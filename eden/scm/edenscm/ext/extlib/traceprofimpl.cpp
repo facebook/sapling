@@ -6,8 +6,8 @@
  */
 
 /* traceprofimpl.cpp - main implementation of traceprofile */
-#include "Python.h"
-#include "frameobject.h"
+#include "Python.h" // @manual=fbsource//third-party/python:python
+#include "frameobject.h" // @manual
 
 #if PY_MAJOR_VERSION >= 3
 #define IS_PY3K
@@ -192,13 +192,13 @@ static int tracefunc(PyObject* o, PyFrameObject* frame, int op, PyObject* a) {
   return 0;
 }
 
-static void enable() {
+extern "C" void traceprof_enable() {
   r1 = rdtsc();
   t1 = now_microseconds() / 1000;
   PyEval_SetProfile((Py_tracefunc)tracefunc, NULL);
 }
 
-static void disable() {
+extern "C" void traceprof_disable() {
   PyEval_SetProfile(NULL, NULL);
   r2 = rdtsc();
   t2 = now_microseconds() / 1000;
@@ -453,11 +453,16 @@ static void clear() {
   frames.clear();
 }
 
-static void report(FILE* fp = stderr) {
+static void traceprof_report(FILE* fp = stderr) {
   if (dedup)
     buildframededup();
   buildsummaries();
   buildframetree();
   fprintframetree(fp, dedupfid(0));
   fprintf(fp, "Total time: %.0f ms\n", (double)(r2 - r1) * rdtscratio);
+  clear();
+}
+
+extern "C" void traceprof_report_stderr() {
+  traceprof_report(stderr);
 }

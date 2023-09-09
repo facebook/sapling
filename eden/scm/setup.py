@@ -1552,12 +1552,6 @@ cythonopts = {"unraisable_tracebacks": False, "c_string_type": "bytes"}
 extmodules += cythonize(
     [
         Extension(
-            "edenscmnative.traceprof",
-            sources=["edenscmnative/traceprof.pyx"],
-            include_dirs=include_dirs,
-            extra_compile_args=filter(None, [STDCPP11, PRODUCEDEBUGSYMBOLS]),
-        ),
-        Extension(
             "edenscmnative.linelog",
             sources=["edenscmnative/linelog.pyx"],
             include_dirs=include_dirs,
