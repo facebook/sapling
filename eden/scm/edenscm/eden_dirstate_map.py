@@ -12,7 +12,6 @@ from typing import BinaryIO, Dict
 import bindings
 
 import eden.dirstate as eden_dirstate_serializer
-from edenscmnative import parsers
 
 from . import (
     EdenThriftClient,
@@ -24,6 +23,8 @@ from . import (
     util,
     vfs,
 )
+
+parsers = bindings.cext.parsers
 
 
 MERGE_STATE_NOT_APPLICABLE: int = eden_dirstate_serializer.MERGE_STATE_NOT_APPLICABLE

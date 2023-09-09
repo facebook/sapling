@@ -20,7 +20,7 @@ from typing import Optional, Sized
 
 import bindings
 
-from edenscmnative import parsers
+parsers = bindings.cext.parsers
 
 from . import error, pycompat, util, vfs as vfsmod
 from .i18n import _

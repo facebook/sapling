@@ -16,7 +16,7 @@
 
 #define _ATFILE_SOURCE
 #define PY_SSIZE_T_CLEAN
-#include <Python.h>
+#include <Python.h> // @manual=fbsource//third-party/python:python
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>

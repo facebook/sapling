@@ -15,13 +15,15 @@ from __future__ import absolute_import
 import heapq
 import struct
 
-from edenscmnative import parsers
+import bindings
 
 from . import error, mdiff, pycompat, revlog, util
 from .i18n import _
 from .node import bin
 from .pycompat import encodeutf8, unicode
 
+
+parsers = bindings.cext.parsers
 
 propertycache = util.propertycache
 

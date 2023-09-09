@@ -28,8 +28,6 @@ from typing import IO, Optional, Tuple, Union
 
 import bindings
 
-from edenscmnative import parsers
-
 from . import ancestor, error, mdiff, pycompat, templatefilters, util
 from .i18n import _
 
@@ -37,6 +35,7 @@ from .i18n import _
 from .node import bbin, bhex, hex, nullid, nullrev, wdirhex, wdirid, wdirrev
 from .pycompat import range
 
+parsers = bindings.cext.parsers
 
 # Aliased for performance.
 _zlibdecompress = zlib.decompress

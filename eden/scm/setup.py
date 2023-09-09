@@ -1515,13 +1515,6 @@ if library_dirs is None:
 
 extra_libs = get_env_path_list("EXTRA_LIBS", [])
 
-osutil_cflags = []
-
-# platform specific macros
-for plat, func in [("bsd", "setproctitle")]:
-    if re.search(plat, sys.platform) and hasfunction(new_compiler(), func):
-        osutil_cflags.append("-DHAVE_%s" % func.upper())
-
 havefanotify = (
     not ossbuild
     and "linux" in sys.platform
@@ -1536,36 +1529,6 @@ havefanotify = (
 
 
 extmodules = [
-    Extension(
-        "edenscmnative.bdiff",
-        ["edenscm/bdiff.c", "edenscm/cext/bdiff.c"],
-        include_dirs=include_dirs,
-        depends=common_depends + ["edenscm/bdiff.h"],
-    ),
-    Extension(
-        "edenscmnative.mpatch",
-        ["edenscm/mpatch.c", "edenscm/cext/mpatch.c"],
-        include_dirs=include_dirs,
-        depends=common_depends + ["edenscm/mpatch.h"],
-    ),
-    Extension(
-        "edenscmnative.parsers",
-        [
-            "edenscm/cext/charencode.c",
-            "edenscm/cext/manifest.c",
-            "edenscm/cext/parsers.c",
-            "edenscm/cext/revlog.c",
-        ],
-        include_dirs=include_dirs,
-        depends=common_depends + ["edenscm/cext/charencode.h"],
-    ),
-    Extension(
-        "edenscmnative.osutil",
-        ["edenscm/cext/osutil.c"],
-        include_dirs=include_dirs,
-        extra_compile_args=osutil_cflags,
-        depends=common_depends,
-    ),
     Extension(
         "edenscmnative.bser",
         sources=["edenscm/ext/extlib/pywatchman/bser.c"],

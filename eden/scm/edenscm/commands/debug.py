@@ -1743,13 +1743,6 @@ def debuginstall(ui, **opts) -> int:
     )
 
     err = None
-    try:
-        from edenscmnative import bdiff, mpatch, osutil
-
-        dir(bdiff), dir(mpatch), dir(osutil)  # quiet pyflakes
-    except Exception as inst:
-        err = util.forcebytestr(inst)
-        problems += 1
     fm.condwrite(err, "extensionserror", " %s\n", err)
 
     compengines = util.compengines._engines.values()

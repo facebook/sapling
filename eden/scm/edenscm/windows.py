@@ -25,11 +25,10 @@ from typing import IO, Optional
 
 import bindings
 
-from edenscmnative import osutil
-
 from . import encoding, error, pycompat, win32, winutil
 from .i18n import _
 
+osutil = bindings.cext.osutil
 
 try:
     # pyre-fixme[21]: Could not find `_winreg`.

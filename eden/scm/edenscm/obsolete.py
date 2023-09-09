@@ -63,12 +63,13 @@ from __future__ import absolute_import
 
 import struct
 
-from edenscmnative import parsers
+import bindings
 
 from . import error, util
 from .i18n import _
 from .pycompat import encodeutf8
 
+parsers = bindings.cext.parsers
 
 _pack = struct.pack
 _unpack = struct.unpack
@@ -170,7 +171,6 @@ def _fm1encodeonemarker(marker):
 # mapping to read/write various marker formats
 # <version> -> (decoder, encoder)
 formats = {
-    # pyre-fixme[16]: Module `parsers` has no attribute `fm1readmarkers`.
     _fm1version: (parsers.fm1readmarkers, _fm1encodeonemarker),
 }
 

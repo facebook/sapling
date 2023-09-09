@@ -17,17 +17,20 @@ import os
 import sys
 import unicodedata
 
-from edenscmnative import parsers as charencode
+import bindings
 
 from . import error, pycompat
 from .pure import charencode as charencodepure
 from .pycompat import range
 
 
+charencode = bindings.cext.parsers
+
 isasciistr = charencode.isasciistr
 asciilower = charencode.asciilower
 asciiupper = charencode.asciiupper
 _jsonescapeu8fast = charencode.jsonescapeu8fast
+
 
 if sys.version_info[0] >= 3:
     unichr = chr

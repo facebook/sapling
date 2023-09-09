@@ -8,6 +8,7 @@ members = [
   "edenscmnative/bindings/modules/pyblackbox",
   "edenscmnative/bindings/modules/pybytes",
   "edenscmnative/bindings/modules/pycats",
+  "edenscmnative/bindings/modules/pycext",
   "edenscmnative/bindings/modules/pycheckout",
   "edenscmnative/bindings/modules/pyclientinfo",
   "edenscmnative/bindings/modules/pycliparser",

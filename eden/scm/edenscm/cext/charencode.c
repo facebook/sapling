@@ -15,7 +15,7 @@
 */
 
 #define PY_SSIZE_T_CLEAN
-#include <Python.h>
+#include <Python.h> // @manual=fbsource//third-party/python:python
 #include <assert.h>
 
 #include "eden/scm/edenscm/cext/charencode.h"

@@ -67,8 +67,6 @@ from typing import (
 import bindings
 from edenscm import tracing
 
-from edenscmnative import osutil
-
 from . import (
     blackbox,
     encoding,
@@ -82,6 +80,7 @@ from . import (
 )
 from .pycompat import decodeutf8, encodeutf8, range
 
+osutil = bindings.cext.osutil
 
 getsignal = signalmod.getsignal
 signal = signalmod.signal
@@ -188,7 +187,6 @@ setsignalhandler = platform.setsignalhandler
 shellquote = platform.shellquote
 split = platform.split
 sshargs = platform.sshargs
-# pyre-fixme[16]: Module `osutil` has no attribute `statfiles`.
 statfiles = getattr(osutil, "statfiles", platform.statfiles)
 statisexec = platform.statisexec
 syncfile = platform.syncfile

@@ -1,0 +1,83 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+use std::path::Path;
+use std::process::Command;
+
+struct PythonSysConfig {
+    cflags: String,
+    ldflags: String,
+    include_dir: String,
+}
+
+impl PythonSysConfig {
+    fn load() -> Self {
+        let python = std::env::var("PYTHON_SYS_EXECUTABLE")
+            .expect("Building bindings.cext requires PYTHON_SYS_EXECUTABLE");
+        let script = concat!(
+            "import sysconfig\n",
+            "print(sysconfig.get_config_var('CFLAGS').strip())\n",
+            "print(sysconfig.get_config_var('LDFLAGS').strip())\n",
+            "print(sysconfig.get_paths()['include'].strip())\n",
+        );
+
+        let out = Command::new(&python)
+            .arg("-c")
+            .arg(script)
+            .output()
+            .expect("Failed to get CFLAGS from Python");
+        let out_str = String::from_utf8_lossy(&out.stdout);
+        let lines: Vec<&str> = out_str.lines().collect();
+        Self {
+            cflags: lines[0].to_string(),
+            ldflags: lines[1].to_string(),
+            include_dir: lines[2].to_string(),
+        }
+    }
+}
+
+// Ignore flags that are annoying for our code.
+fn pick_flag(flag: &str) -> bool {
+    return !flag.starts_with("-W");
+}
+
+fn main() {
+    println!("cargo:rerun-if-changed=build.rs");
+
+    let root_dir = Path::new("../../../../../../");
+    let cext_dir = Path::new("../../../../edenscm/cext/");
+    let config = PythonSysConfig::load();
+
+    let mut c = cc::Build::new();
+    c.files([
+        cext_dir.join("../bdiff.c"),
+        cext_dir.join("../mpatch.c"),
+        cext_dir.join("bdiff.c"),
+        cext_dir.join("mpatch.c"),
+        cext_dir.join("osutil.c"),
+        cext_dir.join("charencode.c"),
+        cext_dir.join("manifest.c"),
+        cext_dir.join("revlog.c"),
+        cext_dir.join("parsers.c"),
+    ])
+    .include(root_dir)
+    .include(&config.include_dir)
+    .define("HAVE_LINUX_STATFS", "1")
+    .define("_GNU_SOURCE", "1")
+    .warnings(false)
+    .warnings_into_errors(false);
+    if !cfg!(windows) {
+        c.flag("-std=c99").flag("-Wno-deprecated-declarations");
+    }
+    for flag in config.cflags.split_whitespace().filter(|s| pick_flag(s)) {
+        c.flag(flag);
+    }
+    for flag in config.ldflags.split_whitespace().filter(|s| pick_flag(s)) {
+        c.flag(flag);
+    }
+    c.compile("cextmodules");
+}

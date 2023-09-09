@@ -21,12 +21,12 @@ from typing import Iterator, List, Optional, Pattern, Sized, Tuple, TYPE_CHECKIN
 
 import bindings
 
-from edenscmnative import bdiff, mpatch
-
 from . import error, util
 from .i18n import _
 from .pycompat import encodeutf8, range
 
+bdiff = bindings.cext.bdiff
+mpatch = bindings.cext.mpatch
 
 if TYPE_CHECKING:
     import edenscm
@@ -128,22 +128,15 @@ defaultopts = diffopts()
 
 def wsclean(opts, text: str, blank: bool = True) -> bytes:
     if opts.ignorews:
-        # pyre-fixme[9]: text has type `str`; used as `bytes`.
-        # pyre-fixme[6]: For 2nd param expected `bool` but got `int`.
         text = bdiff.fixws(text, 1)
     elif opts.ignorewsamount:
-        # pyre-fixme[9]: text has type `str`; used as `bytes`.
-        # pyre-fixme[6]: For 2nd param expected `bool` but got `int`.
         text = bdiff.fixws(text, 0)
     if blank and opts.ignoreblanklines:
         # pyre-fixme[9]: text has type `str`; used as `bytes`.
-        # pyre-fixme[6]: For 3rd param expected `AnyStr` but got `str`.
         text = re.sub(b"\n+", b"\n", text).strip(b"\n")
     if opts.ignorewseol:
         # pyre-fixme[9]: text has type `str`; used as `bytes`.
-        # pyre-fixme[6]: For 3rd param expected `AnyStr` but got `str`.
         text = re.sub(b"[ \t\r\f]+\n", b"\n", text)
-    # pyre-fixme[7]: Expected `bytes` but got `str`.
     return text
 
 
@@ -618,7 +611,6 @@ def patch(a: Sized, bin):
     if len(a) == 0:
         # skip over trivial delta header
         return util.buffer(bin, 12)
-    # pyre-fixme[6]: For 1st param expected `bytes` but got `Sized`.
     return mpatch.patches(a, [bin])
 
 

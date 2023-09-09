@@ -17,7 +17,7 @@
 */
 
 #define PY_SSIZE_T_CLEAN
-#include <Python.h>
+#include <Python.h> // @manual=fbsource//third-party/python:python
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>

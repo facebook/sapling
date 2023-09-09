@@ -33,11 +33,11 @@ from typing import (
     Union,
 )
 
+import bindings
+
 # Using an absolute import here allows us to import localrepo even though it
 # circularly imports us.
 import edenscm.localrepo
-
-from edenscmnative import parsers
 
 from . import (
     context,
@@ -60,9 +60,12 @@ from .i18n import _
 from .node import hex, nullid
 from .pycompat import encodeutf8
 
+# pyre-fixme[5]: Global expression must be annotated.
+parsers = bindings.cext.parsers
 
 _rangemask = 0x7FFFFFFF
 
+# pyre-fixme[5]: Global expression must be annotated.
 dirstatetuple = parsers.dirstatetuple
 
 slowstatuswarning: str = _(
@@ -365,6 +368,7 @@ class dirstate:
     def __iter__(self) -> "Iterable[str]":
         return iter(sorted(self._map))
 
+    # pyre-fixme[11]: Annotation `dirstatetuple` is not defined as a type.
     def items(self) -> "Iterable[Tuple[str, dirstatetuple]]":
         return pycompat.iteritems(self._map)
 

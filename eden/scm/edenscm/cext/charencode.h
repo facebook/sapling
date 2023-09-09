@@ -17,7 +17,7 @@
 #ifndef _HG_CHARENCODE_H_
 #define _HG_CHARENCODE_H_
 
-#include <Python.h>
+#include <Python.h> // @manual=fbsource//third-party/python:python
 #include "eden/scm/edenscm/compat.h"
 
 /* This should be kept in sync with normcasespecs in encoding.py. */

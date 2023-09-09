@@ -34,7 +34,7 @@ class TraceImporter:
         # unicodedata.east_asian_width can be called very frequently.
         "unicodedata",
         # parsers.isasciistr can be called very frequently.
-        "edenscmnative.parsers",
+        "bindings.cext.parsers",
         # encoding.tolocal can be called very frequently.
         "edenscm.encoding",
     }

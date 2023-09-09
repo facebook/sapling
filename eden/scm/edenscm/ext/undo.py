@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+import bindings
+
 from bindings import cliparser
 from edenscm import (
     cmdutil,
@@ -38,7 +40,8 @@ from edenscm.i18n import _
 from edenscm.node import bin, hex, nullid, short
 from edenscm.pycompat import decodeutf8, encodeutf8
 
-from edenscmnative import mpatch
+
+mpatch = bindings.cext.mpatch
 
 
 if not pycompat.iswindows:
