@@ -1,9 +1,0 @@
-[package]
-name = "pylock"
-version = "0.1.0"
-edition = "2018"
-
-[dependencies]
-cpython_ext = { path = "../../../../lib/cpython-ext" }
-cpython = { version = "0.7", default-features = false }
-repolock = { path = "../../../../lib/repolock" }
