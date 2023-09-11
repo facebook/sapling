@@ -2,6 +2,8 @@
 
 ## 0.1.24
 
+### Sep 07 2023
+
 - Suggested rebase button to make rebases across many commits easier
 - Button to "shelve" commits, and a menu to list and unshelve them again
 - Make the list of uncommitted changes scrollable and truncate if very long
@@ -18,12 +20,16 @@
 
 ## 0.1.23
 
+### Aug 28 2023
+
 - Fix commits info view sometimes becoming read only and buttons not working
 - Add border to checkboxes/radios in all themes for improved viewability
 - Improved error messages for some types of errors
 - Made font sizes and button sizes more consistent
 
 ## 0.1.22
+
+### Aug 23 2023
 
 - Syntax highlighting in comparison view
 - Add option to "amend changes to here" when right clicking a commit
@@ -35,6 +41,8 @@
 - Improve rendering comparison view file banners, such as "this file was renamed"
 
 ## 0.1.21
+
+### Aug 15 2023
 
 - Selection and copying from comparison view stays within the before/after sides
 - Support collapsing files in the comparison view
@@ -48,6 +56,8 @@
 
 ## 0.1.20
 
+### Aug 07 2023
+
 - Add badge for review decision for GitHub PRs
 - Add button to open all changed files in a commit
 - Add debugging tools
@@ -55,11 +65,15 @@
 
 ## 0.1.19
 
+### Jul 25 2023
+
 - Add context menu to files to copy paths and open diff views
 - Fix visual overflow in commit messages
 - Allow amending with only message changes
 
 ## 0.1.18
+
+### Jul 20 2023
 
 - Allow pressing Enter to quick commit
 - Add button to open a file in the comparison view
@@ -68,6 +82,8 @@
 - Fix PR links in blame hover
 
 ## 0.1.17
+
+### Jul 18 2023
 
 - Add dropdown to pull a specific commit from remote
 - Experimental partial commit UI hidden behind `isl.experimental-features` config
@@ -78,6 +94,8 @@
   - [Fix github CI status check](https://github.com/facebook/sapling/pull/651)
 
 ## 0.1.16
+
+### May 31 2023
 
 - Add "Edit stack" to reorder, drop, or fold stacked commits
 - CI signal badge is now responsive and more obvious
@@ -94,6 +112,8 @@
 
 ## 0.1.15
 
+### May 09 2023
+
 - Add repo selector if multiple workspace folders are mounted
 - Add "View Changes" context menu action on commits to quickly diff their changes
 - Show diff badges inline on large displays to better use horizontal space
@@ -101,11 +121,15 @@
 
 ## 0.1.14
 
+### May 03 2023
+
 - Fix tooltips not disappearing (such as on pull button)
 - Use normal font-smoothing for more readable text
 - Hide uncommit button on closed PRs
 
 ## 0.1.13
+
+### Apr 26 2023
 
 - Customize how changed file paths are displayed: minimal, full file path, tree view, or fish-shell-style
 - Copy quick commit form title into full commit form when clicking "Commit as..."
@@ -113,6 +137,8 @@
 - Allow repos cloned without http prefix
 
 ## 0.1.12
+
+### Apr 06 2023
 
 - Reduce visual padding in the tree to improve information density
 - Show copied/renamed files
@@ -125,6 +151,8 @@
 - Fix vscode webview getting stuck with "Webview is disposed" error when reopened
 
 ## 0.1.11
+
+### Mar 24 2023
 
 - Allow submitting PRs as drafts and showing whether a PRs is a draft
 - Option to put ISL in the vscode sidebar instead of in the editor area
@@ -139,6 +167,8 @@
 
 ## 0.1.10
 
+### Feb 23 2023
+
 - Added revert button to VS Code SCM Sidebar files
 - Added button to open diff view for VS Code SCM Sidebar files
 - Use --addremove flag when committing/amending so untracked files are included
@@ -146,6 +176,8 @@
 - Better styling of Load More button and commit graph
 
 ## 0.1.9
+
+### Feb 09 2023
 
 - Fix sending messages to disposed webviews which caused ISL to stop working
 - Add context menu support
@@ -163,15 +195,21 @@
 
 ## 0.1.8
 
+### Feb 09 2023
+
 - ISL no longer crashes when a language other than English is selected in VS Code: <https://github.com/facebook/sapling/issues/362>.
 - Added an ISL menu button to the source control panel: <https://github.com/facebook/sapling/commit/538c6fba11ddfdae9de93bf77cffa688b13458c0>.
 - Updated the Sapling icon: <https://github.com/facebook/sapling/commit/2f7873e32208d4cd153b7c1c1e27afe19e815cf0>.
 
 ## 0.1.7
 
+### Dec 12 2022
+
 - Fixed an issue where we were stripping the trailing newline in the output to `sl cat`, which caused the VS Code extension to constantly report that the user had modified a file by adding a newline to the end: <https://github.com/facebook/sapling/commit/f65f499ba95a742444b61cb181adb39d2a3af4c2>.
 
 ## 0.1.6
+
+### Dec 09 2022
 
 - Fixed an issue with path normalization that was preventing extension commands from working on Windows because files were not recognized as part of a Sapling repository: <https://github.com/facebook/sapling/commit/206c7fbf6bc94e7e5940630b812fba7dcd55140e>.
 - Cleaned up the instructions on how to use the extension in the README: <https://github.com/facebook/sapling/commit/4ee418ca7aab519b1b4f96edd0991311e8c6b03f>
@@ -179,14 +217,20 @@
 
 ## 0.1.5
 
+### Nov 30 2022
+
 - Did not realize a release and pre-release cannot share a version number. Re-publishing the 0.1.4 pre-release with 4c29208c91256f4306aec9f0e9ec626e96ea3cba included as an official release.
 
 ## 0.1.4
+
+### Nov 29 2022
 
 - Fixed #282: Add config option to set what `sl` command to use
 - More reliably detect command not found on Windows
 
 ## 0.1.3
+
+### Nov 21 2022
 
 - Support GitHub enterprise and non-GitHub repos in ISL
 - Add revert button next to uncommitted changes in ISL
@@ -197,10 +241,16 @@
 
 ## 0.1.2
 
+### Nov 16 2022
+
 - Fix the comparison view not scrolling
 - Show an error in ISL if Sapling is not yet installed
 
 ## 0.1.1 - Initial release
+
+### Nov 14 2022
+
+###
 
 Features:
 
