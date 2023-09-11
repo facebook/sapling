@@ -270,7 +270,7 @@ class Code implements ValueObject {
       }
       if (bLines.length > 0) {
         const b2Pc = start + bLines.length + 1;
-        code.push(JL({rev: bRev, pc: b2Pc}) as Inst);
+        code = code.push(JL({rev: bRev, pc: b2Pc}) as Inst);
         bLines.forEach(line => {
           code = code.push(LINE({rev: bRev, data: line}) as Inst);
         });
