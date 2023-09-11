@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::BTreeMap;
 use std::hash::Hash;
 use std::hash::Hasher;
 
@@ -37,6 +36,7 @@ use mononoke_types::MPathElement;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::SkeletonManifestId;
+use mononoke_types::TrieMap;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
@@ -515,7 +515,36 @@ where
 #[derive(Clone, Debug)]
 pub struct PathTree<V> {
     pub value: V,
-    pub subentries: BTreeMap<MPathElement, Self>,
+    pub subentries: TrieMap<Self>,
+}
+
+impl<V> PathTree<V> {
+    pub fn deconstruct(self) -> (V, Vec<(MPathElement, Self)>) {
+        (
+            self.value,
+            self.subentries
+                .into_iter()
+                .map(|(path, subtree)| {
+                    (
+                        MPathElement::from_smallvec(path)
+                            .expect("Only MPaths are inserted into PathTree"),
+                        subtree,
+                    )
+                })
+                .collect(),
+        )
+    }
+
+    pub fn get(&self, path: &MPath) -> Option<&V> {
+        let mut tree = self;
+        for elem in path {
+            match tree.subentries.get(elem.as_ref()) {
+                Some(subtree) => tree = subtree,
+                None => return None,
+            }
+        }
+        Some(&tree.value)
+    }
 }
 
 impl<V> PathTree<V>
@@ -524,9 +553,7 @@ where
 {
     pub fn insert(&mut self, path: MPath, value: V) {
         let node = path.into_iter().fold(self, |node, element| {
-            node.subentries
-                .entry(element)
-                .or_insert_with(Default::default)
+            node.subentries.get_or_insert_default(element)
         });
         node.value = value;
     }
@@ -536,29 +563,14 @@ where
         V: Extend<T>,
     {
         let node = path.into_iter().fold(self, |node, element| {
-            node.subentries
-                .entry(element)
-                .or_insert_with(Default::default)
+            node.subentries.get_or_insert_default(element)
         });
         node.value.extend(std::iter::once(value));
     }
 
-    pub fn get(&self, path: &MPath) -> Option<&V> {
-        let mut tree = self;
-        for elem in path.into_iter() {
-            match tree.subentries.get(elem) {
-                Some(subtree) => tree = subtree,
-                None => return None,
-            }
-        }
-        Some(&tree.value)
-    }
-
     pub fn insert_and_prune(&mut self, path: MPath, value: V) {
         let node = path.into_iter().fold(self, |node, element| {
-            node.subentries
-                .entry(element)
-                .or_insert_with(Default::default)
+            node.subentries.get_or_insert_default(element)
         });
         node.value = value;
         node.subentries.clear();
@@ -617,7 +629,9 @@ impl<V> Iterator for PathTreeIter<V> {
     type Item = (MPath, V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let (path, PathTree { value, subentries }) = self.frames.pop()?;
+        let (path, path_tree) = self.frames.pop()?;
+        let (value, subentries) = path_tree.deconstruct();
+
         for (name, subentry) in subentries {
             self.frames.push((path.join(&name), subentry));
         }
