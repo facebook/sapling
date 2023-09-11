@@ -11,9 +11,8 @@ from typing import BinaryIO, Dict
 
 import bindings
 
-import eden.dirstate as eden_dirstate_serializer
-
 from . import (
+    eden_dirstate_serializer,
     EdenThriftClient,
     localrepo,
     node,

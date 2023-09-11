@@ -8,8 +8,6 @@ import stat
 
 import bindings
 
-from eden.dirstate import MERGE_STATE_BOTH_PARENTS, MERGE_STATE_OTHER_PARENT
-
 from . import (
     dirstate,
     eden_dirstate_fs,
@@ -21,6 +19,8 @@ from . import (
     ui as ui_mod,
     util,
 )
+
+from .eden_dirstate_serializer import MERGE_STATE_BOTH_PARENTS, MERGE_STATE_OTHER_PARENT
 from .node import nullid
 
 

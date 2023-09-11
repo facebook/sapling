@@ -938,14 +938,14 @@ def debugdate(ui, date, **opts) -> None:
 def debugstate(ui, repo, **opts) -> Optional[int]:
     """show the contents of the current dirstate"""
     if edenfs.requirement in repo.requirements:
-        import eden.dirstate
+        from .. import eden_dirstate_serializer
 
         def get_merge_string(value):
-            if value == eden.dirstate.MERGE_STATE_NOT_APPLICABLE:
+            if value == eden_dirstate_serializer.MERGE_STATE_NOT_APPLICABLE:
                 return ""
-            elif value == eden.dirstate.MERGE_STATE_OTHER_PARENT:
+            elif value == eden_dirstate_serializer.MERGE_STATE_OTHER_PARENT:
                 return "MERGE_OTHER"
-            elif value == eden.dirstate.MERGE_STATE_BOTH_PARENTS:
+            elif value == eden_dirstate_serializer.MERGE_STATE_BOTH_PARENTS:
                 return "MERGE_BOTH"
             # We don't expect any other merge state values; we probably had a bug
             # if the dirstate file contains other values.
