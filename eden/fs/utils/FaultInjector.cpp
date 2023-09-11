@@ -68,33 +68,19 @@ ImmediateFuture<Unit> FaultInjector::checkAsyncImpl(
       behavior);
 }
 
+folly::Try<Unit> FaultInjector::checkTryImpl(
+    std::string_view keyClass,
+    std::string_view keyValue) {
+  return checkAsyncImpl(keyClass, keyValue).getTry();
+}
+
 void FaultInjector::checkImpl(
     std::string_view keyClass,
     std::string_view keyValue) {
-  auto behavior = findFault(keyClass, keyValue);
-  std::visit(
-      folly::overload(
-          [](const Unit&) {},
-          [&](const FaultInjector::Block&) {
-            XLOG(DBG1) << "block fault hit: " << keyClass << ", " << keyValue;
-            addBlockedFault(keyClass, keyValue).get();
-          },
-          [&](const FaultInjector::Delay& delay) {
-            XLOG(DBG1) << "delay fault hit: " << keyClass << ", " << keyValue;
-            /* sleep override */ std::this_thread::sleep_for(delay.duration);
-            if (delay.error.has_value()) {
-              delay.error.value().throw_exception();
-            }
-          },
-          [&](const folly::exception_wrapper& error) {
-            XLOG(DBG1) << "error fault hit: " << keyClass << ", " << keyValue;
-            error.throw_exception();
-          },
-          [&](const FaultInjector::Kill&) {
-            XLOG(DBG1) << "kill fault hit: " << keyClass << ", " << keyValue;
-            abort();
-          }),
-      behavior);
+  auto result = checkTryImpl(keyClass, keyValue);
+  if (result.hasException()) {
+    result.exception().throw_exception();
+  }
 }
 
 void FaultInjector::injectError(

@@ -116,6 +116,29 @@ class FaultInjector {
   }
 
   /**
+   * Check for an injected fault with the specified key.
+   *
+   * This is a synchronous implementation of check() that returns a Try rather
+   * than throw an exception.
+   *
+   * If fault injection is disabled or there is no matching fault, this method
+   * will return a Try<Unit>.  However, if there is a matching fault that would
+   * block execution this method blocks as with check().
+   *
+   * The keyValues parameters are handled the same as in check(), above.
+   */
+  template <typename... Args>
+  FOLLY_NODISCARD folly::Try<folly::Unit> checkTry(
+      std::string_view keyClass,
+      Args&&... keyValues) {
+    if (UNLIKELY(enabled_)) {
+      return checkTryImpl(
+          keyClass, constructKey(std::forward<Args>(keyValues)...));
+    }
+    return folly::Try{folly::unit};
+  }
+
+  /**
    * Inject a fault that triggers an exception to be thrown.
    *
    * Faults are evaluated in the order in which they are inserted.  If multiple
@@ -268,6 +291,11 @@ class FaultInjector {
   FOLLY_NODISCARD ImmediateFuture<folly::Unit> checkAsyncImpl(
       std::string_view keyClass,
       std::string_view keyValue);
+
+  folly::Try<folly::Unit> checkTryImpl(
+      std::string_view keyClass,
+      std::string_view keyValue);
+
   void checkImpl(std::string_view keyClass, std::string_view keyValue);
 
   void injectFault(
