@@ -950,7 +950,7 @@ function PartialSelectionAction({file}: {file: UIChangedFile}) {
   };
 
   return (
-    <Tooltip title={t('Toggle chuck selection')}>
+    <Tooltip title={t('Toggle chunk selection')}>
       <VSCodeButton className="file-show-on-hover" appearance="icon" onClick={handleClick}>
         <Icon icon="diff" />
       </VSCodeButton>
