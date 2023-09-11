@@ -8,6 +8,7 @@
 use std::path::Path;
 
 use anyhow::Result;
+use async_runtime::block_on;
 use eden::GetScmStatusParams;
 use eden::GetScmStatusResult;
 use thrift_types::edenfs as eden;
@@ -16,9 +17,7 @@ use types::HgId;
 use crate::client::EdenFsClient;
 
 pub fn get_status(repo_root: &Path, commit: HgId, ignored: bool) -> Result<GetScmStatusResult> {
-    let rt = tokio::runtime::Runtime::new()?;
-
-    rt.block_on(get_status_internal(repo_root, commit, ignored))
+    block_on(get_status_internal(repo_root, commit, ignored))
 }
 
 async fn get_status_internal(
