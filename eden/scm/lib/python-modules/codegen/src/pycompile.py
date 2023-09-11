@@ -110,6 +110,31 @@ def main():
     for module_name, path in find_modules(root_modules):
         with open(path, "rb") as f:
             source = f.read()
+        if module_name == "linecache":
+            # patch linecache so it can read static modules from bindings.
+            # stdlib doctest does something similar.
+            source += rb"""
+_orig_updatecache = updatecache
+
+def updatecache(filename, module_globals=None):
+    prefix = "<static:"
+    if filename.startswith(prefix) and filename.endswith(">"):
+        name = filename[len(prefix):-1]
+        try:
+            import bindings
+        except ImportError:
+            pass
+        else:
+            source = bindings.modules.get_source(name)
+            if source is not None:
+                buf = source.asref().tobytes()
+                lines = buf.decode().splitlines(True)
+                # size, mtime, lines, fullname
+                cache[filename] = (len(buf), None, lines, filename)
+                return lines
+    return _orig_updatecache(filename, module_globals)
+"""
+
         try:
             code = compile(source, f"<static:{module_name}>", "exec")
         except SyntaxError:
