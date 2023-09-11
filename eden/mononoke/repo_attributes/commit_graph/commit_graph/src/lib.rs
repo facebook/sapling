@@ -90,7 +90,7 @@ impl CommitGraph {
 
     /// Returns true if the changeset exists.
     pub async fn exists(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<bool> {
-        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
+        let edges = self.storage.maybe_fetch_edges(ctx, cs_id).await?;
         Ok(edges.is_some())
     }
 
@@ -100,7 +100,7 @@ impl CommitGraph {
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetParents>> {
-        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
+        let edges = self.storage.maybe_fetch_edges(ctx, cs_id).await?;
         Ok(edges.map(|edges| {
             edges
                 .parents
@@ -116,7 +116,7 @@ impl CommitGraph {
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<ChangesetParents> {
-        let edges = self.storage.fetch_edges_required(ctx, cs_id).await?;
+        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
         Ok(edges
             .parents
             .into_iter()
@@ -130,7 +130,7 @@ impl CommitGraph {
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<Generation>> {
-        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
+        let edges = self.storage.maybe_fetch_edges(ctx, cs_id).await?;
         Ok(edges.map(|edges| edges.node.generation))
     }
 
@@ -140,7 +140,7 @@ impl CommitGraph {
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Generation> {
-        let edges = self.storage.fetch_edges_required(ctx, cs_id).await?;
+        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
         Ok(edges.node.generation)
     }
 
@@ -296,7 +296,7 @@ impl CommitGraph {
                 .last_key_value()
                 .and_then(|(_, cs_ids)| cs_ids.iter().next())
             {
-                Some(cs_id) => self.storage.fetch_edges_required(ctx, *cs_id).await?,
+                Some(cs_id) => self.storage.fetch_edges(ctx, *cs_id).await?,
                 None => return Ok(vec![]),
             };
 

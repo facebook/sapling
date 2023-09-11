@@ -106,25 +106,21 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
         Ok(added)
     }
 
-    async fn fetch_edges(
-        &self,
-        _ctx: &CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<Option<ChangesetEdges>> {
-        Ok(self.changesets.read().get(&cs_id).cloned())
-    }
-
-    async fn fetch_edges_required(
-        &self,
-        ctx: &CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<ChangesetEdges> {
-        self.fetch_edges(ctx, cs_id).await?.ok_or_else(|| {
+    async fn fetch_edges(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<ChangesetEdges> {
+        self.maybe_fetch_edges(ctx, cs_id).await?.ok_or_else(|| {
             anyhow!(
                 "Missing changeset from in-memory commit graph storage: {}",
                 cs_id
             )
         })
+    }
+
+    async fn maybe_fetch_edges(
+        &self,
+        _ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Option<ChangesetEdges>> {
+        Ok(self.changesets.read().get(&cs_id).cloned())
     }
 
     async fn fetch_many_edges(

@@ -329,29 +329,21 @@ impl CommitGraphStorage for PreloadedCommitGraphStorage {
         self.persistent_storage.add_many(ctx, many_edges).await
     }
 
-    async fn fetch_edges(
+    async fn fetch_edges(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<ChangesetEdges> {
+        match self.preloaded_edges.load().get(&cs_id)? {
+            Some(edges) => Ok(edges),
+            None => self.persistent_storage.fetch_edges(ctx, cs_id).await,
+        }
+    }
+
+    async fn maybe_fetch_edges(
         &self,
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEdges>> {
         match self.preloaded_edges.load().get(&cs_id)? {
             Some(edges) => Ok(Some(edges)),
-            None => self.persistent_storage.fetch_edges(ctx, cs_id).await,
-        }
-    }
-
-    async fn fetch_edges_required(
-        &self,
-        ctx: &CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<ChangesetEdges> {
-        match self.preloaded_edges.load().get(&cs_id)? {
-            Some(edges) => Ok(edges),
-            None => {
-                self.persistent_storage
-                    .fetch_edges_required(ctx, cs_id)
-                    .await
-            }
+            None => self.persistent_storage.maybe_fetch_edges(ctx, cs_id).await,
         }
     }
 

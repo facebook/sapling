@@ -92,7 +92,7 @@ pub async fn assert_skip_tree_parent(
 ) -> Result<()> {
     assert_eq!(
         storage
-            .fetch_edges(ctx, name_cs_id(u))
+            .maybe_fetch_edges(ctx, name_cs_id(u))
             .await?
             .unwrap()
             .skip_tree_parent
@@ -110,7 +110,7 @@ pub async fn assert_skip_tree_skew_ancestor(
 ) -> Result<()> {
     assert_eq!(
         storage
-            .fetch_edges(ctx, name_cs_id(u))
+            .maybe_fetch_edges(ctx, name_cs_id(u))
             .await?
             .unwrap()
             .skip_tree_skew_ancestor
@@ -292,7 +292,7 @@ pub async fn assert_p1_linear_skew_ancestor(
 ) -> Result<()> {
     assert_eq!(
         storage
-            .fetch_edges(ctx, name_cs_id(u))
+            .maybe_fetch_edges(ctx, name_cs_id(u))
             .await?
             .unwrap()
             .p1_linear_skew_ancestor

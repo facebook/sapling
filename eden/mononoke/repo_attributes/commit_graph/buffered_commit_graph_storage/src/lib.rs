@@ -73,29 +73,21 @@ impl CommitGraphStorage for BufferedCommitGraphStorage {
         self.in_memory_storage.add_many(ctx, many_edges).await
     }
 
-    async fn fetch_edges(
-        &self,
-        ctx: &CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<Option<ChangesetEdges>> {
-        match self.in_memory_storage.fetch_edges(ctx, cs_id).await? {
-            Some(edges) => Ok(Some(edges)),
+    async fn fetch_edges(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<ChangesetEdges> {
+        match self.in_memory_storage.maybe_fetch_edges(ctx, cs_id).await? {
+            Some(edges) => Ok(edges),
             None => self.persistent_storage.fetch_edges(ctx, cs_id).await,
         }
     }
 
-    async fn fetch_edges_required(
+    async fn maybe_fetch_edges(
         &self,
         ctx: &CoreContext,
         cs_id: ChangesetId,
-    ) -> Result<ChangesetEdges> {
-        match self.in_memory_storage.fetch_edges(ctx, cs_id).await? {
-            Some(edges) => Ok(edges),
-            None => {
-                self.persistent_storage
-                    .fetch_edges_required(ctx, cs_id)
-                    .await
-            }
+    ) -> Result<Option<ChangesetEdges>> {
+        match self.in_memory_storage.maybe_fetch_edges(ctx, cs_id).await? {
+            Some(edges) => Ok(Some(edges)),
+            None => self.persistent_storage.maybe_fetch_edges(ctx, cs_id).await,
         }
     }
 

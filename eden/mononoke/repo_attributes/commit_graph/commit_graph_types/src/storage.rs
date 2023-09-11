@@ -141,20 +141,17 @@ pub trait CommitGraphStorage: Send + Sync {
     /// Add many changesets at once. Used for low level stuff like backfilling.
     async fn add_many(&self, ctx: &CoreContext, many_edges: Vec1<ChangesetEdges>) -> Result<usize>;
 
-    /// Returns the changeset graph edges for this changeset.
-    async fn fetch_edges(
+    /// Returns the changeset graph edges for this changeset, or an error if
+    /// this changeset is missing from the commit graph.
+    async fn fetch_edges(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<ChangesetEdges>;
+
+    /// Returns the changeset graph edges for this changeset, or None if
+    /// it doesn't exist in the commit graph.
+    async fn maybe_fetch_edges(
         &self,
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEdges>>;
-
-    /// Returns the changeset graph edges for this changeset, or an error of
-    /// this changeset is missing in the commit graph.
-    async fn fetch_edges_required(
-        &self,
-        ctx: &CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<ChangesetEdges>;
 
     /// Returns the changeset graph edges for multiple changesets.
     ///

@@ -65,12 +65,12 @@ async fn test_equivalent_storages(
 ) -> Result<()> {
     for cs_id in cs_ids.iter() {
         assert_eq!(
-            first_storage.fetch_edges(ctx, *cs_id).await?,
-            second_storage.fetch_edges(ctx, *cs_id).await?,
+            first_storage.maybe_fetch_edges(ctx, *cs_id).await?,
+            second_storage.maybe_fetch_edges(ctx, *cs_id).await?,
         );
         assert_eq!(
-            first_storage.fetch_edges_required(ctx, *cs_id).await?,
-            second_storage.fetch_edges_required(ctx, *cs_id).await?,
+            first_storage.fetch_edges(ctx, *cs_id).await?,
+            second_storage.fetch_edges(ctx, *cs_id).await?,
         );
     }
 
@@ -111,19 +111,19 @@ async fn test_preloaded_commit_graph_storage(fb: FacebookInit) -> Result<()> {
 
     let edges_vec = vec![
         underlying_storage
-            .fetch_edges_required(&ctx, name_cs_id("A"))
+            .fetch_edges(&ctx, name_cs_id("A"))
             .await?,
         underlying_storage
-            .fetch_edges_required(&ctx, name_cs_id("B"))
+            .fetch_edges(&ctx, name_cs_id("B"))
             .await?,
         underlying_storage
-            .fetch_edges_required(&ctx, name_cs_id("C"))
+            .fetch_edges(&ctx, name_cs_id("C"))
             .await?,
         underlying_storage
-            .fetch_edges_required(&ctx, name_cs_id("D"))
+            .fetch_edges(&ctx, name_cs_id("D"))
             .await?,
         underlying_storage
-            .fetch_edges_required(&ctx, name_cs_id("E"))
+            .fetch_edges(&ctx, name_cs_id("E"))
             .await?,
     ];
 
@@ -173,7 +173,7 @@ async fn test_preloaded_commit_graph_storage(fb: FacebookInit) -> Result<()> {
 
     assert_eq!(
         preloaded_storage_with_empty_underlying_storage
-            .fetch_edges(&ctx, name_cs_id("F"))
+            .maybe_fetch_edges(&ctx, name_cs_id("F"))
             .await?,
         None
     );

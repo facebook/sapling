@@ -216,7 +216,7 @@ pub async fn test_storage_store_and_fetch(
     // Check some underlying storage details.
     assert_eq!(
         storage
-            .fetch_edges(&ctx, name_cs_id("A"))
+            .maybe_fetch_edges(&ctx, name_cs_id("A"))
             .await?
             .unwrap()
             .merge_ancestor,
@@ -224,7 +224,7 @@ pub async fn test_storage_store_and_fetch(
     );
     assert_eq!(
         storage
-            .fetch_edges(&ctx, name_cs_id("C"))
+            .maybe_fetch_edges(&ctx, name_cs_id("C"))
             .await?
             .unwrap()
             .merge_ancestor,
@@ -232,7 +232,7 @@ pub async fn test_storage_store_and_fetch(
     );
     assert_eq!(
         storage
-            .fetch_edges(&ctx, name_cs_id("I"))
+            .maybe_fetch_edges(&ctx, name_cs_id("I"))
             .await?
             .unwrap()
             .merge_ancestor,
@@ -258,7 +258,7 @@ pub async fn test_skip_tree(ctx: CoreContext, storage: Arc<dyn CommitGraphStorag
 
     assert_eq!(
         storage
-            .fetch_edges(&ctx, name_cs_id("K"))
+            .maybe_fetch_edges(&ctx, name_cs_id("K"))
             .await?
             .unwrap()
             .node

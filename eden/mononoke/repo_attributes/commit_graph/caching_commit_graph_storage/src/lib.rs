@@ -303,26 +303,22 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
         self.storage.add_many(ctx, many_edges).await
     }
 
-    async fn fetch_edges(
-        &self,
-        ctx: &CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<Option<ChangesetEdges>> {
-        let mut found = get_or_fill(&self.request(ctx, Prefetch::None), hashset![cs_id]).await?;
-        Ok(found.remove(&cs_id).map(CachedChangesetEdges::take))
-    }
-
-    async fn fetch_edges_required(
-        &self,
-        ctx: &CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<ChangesetEdges> {
+    async fn fetch_edges(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<ChangesetEdges> {
         let mut found =
             get_or_fill(&self.request_required(ctx, Prefetch::None), hashset![cs_id]).await?;
         Ok(found
             .remove(&cs_id)
             .ok_or_else(|| anyhow!("Missing changeset from commit graph storage: {}", cs_id))?
             .take())
+    }
+
+    async fn maybe_fetch_edges(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Option<ChangesetEdges>> {
+        let mut found = get_or_fill(&self.request(ctx, Prefetch::None), hashset![cs_id]).await?;
+        Ok(found.remove(&cs_id).map(CachedChangesetEdges::take))
     }
 
     async fn fetch_many_edges(

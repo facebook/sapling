@@ -49,7 +49,7 @@ impl SkewAncestorsSet {
         cs_id: ChangesetId,
         base_generation: Generation,
     ) -> Result<()> {
-        let mut edges = storage.fetch_edges_required(ctx, cs_id).await?;
+        let mut edges = storage.fetch_edges(ctx, cs_id).await?;
 
         if self
             .changesets
@@ -74,7 +74,7 @@ impl SkewAncestorsSet {
                         if skip_tree_skew_ancestor.generation >= base_generation =>
                     {
                         edges = storage
-                            .fetch_edges_required(ctx, skip_tree_skew_ancestor.cs_id)
+                            .fetch_edges(ctx, skip_tree_skew_ancestor.cs_id)
                             .await?;
                     }
                     _ => break,
@@ -209,7 +209,7 @@ impl CommitGraph {
         heads: Vec<ChangesetId>,
         common: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetSegment>> {
-        let base_edges = self.storage.fetch_edges_required(ctx, base).await?;
+        let base_edges = self.storage.fetch_edges(ctx, base).await?;
 
         let mut heads_skew_ancestors_set: SkewAncestorsSet = Default::default();
         let mut common_skew_ancestors_set: SkewAncestorsSet = Default::default();
@@ -653,7 +653,7 @@ impl CommitGraph {
                     (Some(location), _) => {
                         let location_head_depth = self
                             .storage
-                            .fetch_edges_required(ctx, location.head)
+                            .fetch_edges(ctx, location.head)
                             .await?
                             .node
                             .skip_tree_depth;
