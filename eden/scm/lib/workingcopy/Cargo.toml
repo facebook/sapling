@@ -12,7 +12,7 @@ bitflags = "1.3"
 configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 crossbeam = "0.8"
-edenfs_client = { version = "0.1.0", path = "../edenfs-client", optional = true }
+edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 hgtime = { version = "0.1.0", path = "../hgtime" }
 identity = { version = "0.1.0", path = "../identity" }
@@ -44,4 +44,4 @@ tempdir = "0.3"
 tempfile = "3.5"
 
 [features]
-eden = ["edenfs_client", "thrift-types"]
+eden = ["edenfs-client", "thrift-types"]
