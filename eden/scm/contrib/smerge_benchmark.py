@@ -71,18 +71,23 @@ def merge_adjacent_changes(base_lines, a_lines, b_lines) -> Optional[List[bytes]
         indexes[i] += 1
 
     if indexes[A] < len(ablocks):
-        block, lines = ablocks[indexes[A]], a_lines
+        blocks, index, lines = ablocks, indexes[A], a_lines
     else:
-        block, lines = bblocks[indexes[B]], b_lines
+        blocks, index, lines = bblocks, indexes[B], b_lines
 
-    while k < block[0]:
-        merged_lines.append(base_lines[k])
-        k += 1
-    k += block[1] - block[0]
-    merged_lines.extend(lines[block[2] : block[3]])
+    while index < len(blocks):
+        block = blocks[index]
+        index += 1
+
+        while k < block[0]:
+            merged_lines.append(base_lines[k])
+            k += 1
+        k += block[1] - block[0]
+        merged_lines.extend(lines[block[2] : block[3]])
 
     # add base lines at the end of block
     merged_lines.extend(base_lines[k:])
+
     return merged_lines
 
 
@@ -199,6 +204,7 @@ def sresolve(ui, repo, *args, **opts):
     mergedtext = b"".join(render_mergediff2(m3, b"dest", b"source")[0])
 
     if output := opts.get("output"):
+        ui.write(f"writing to file: {output}\n")
         with open(output, "wb") as f:
             f.write(mergedtext)
     else:
