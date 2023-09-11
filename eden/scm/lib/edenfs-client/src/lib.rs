@@ -9,5 +9,11 @@
 
 mod client;
 pub mod status;
+mod types;
 
-pub use client::EdenFsClient;
+pub use crate::client::EdenFsClient;
+pub use crate::types::CheckoutConflict;
+pub use crate::types::CheckoutMode;
+pub use crate::types::ConflictType;
+pub use crate::types::EdenError;
+pub use crate::types::FileStatus;
