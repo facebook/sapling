@@ -134,7 +134,7 @@ getdepsbuild:
 
 cleanbutpackages:
 	-$(PYTHON3) setup.py clean --all # ignore errors from this command
-	find contrib doc i18n edenscm edenscmnative tests \
+	find contrib doc i18n edenscm tests \
 		\( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
 	rm -f MANIFEST MANIFEST.in edenscm/ext/__index__.py tests/*.err
 	rm -f edenscm/__modulepolicy__.py

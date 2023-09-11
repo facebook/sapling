@@ -48,9 +48,8 @@ if PY_VERSION is None:
 
 ossbuild = bool(os.environ.get("SAPLING_OSS_BUILD"))
 
-# If this is set, then certain build dependencies like Cython are
-# expected to be present and will not be downloaded. Third-party
-# dependencies like IPython will not be bundled.
+# If this is set, then skip downloading third-party dependencies
+# like IPython.
 offline = bool(os.environ.get("SAPLING_OFFLINE"))
 
 
@@ -969,20 +968,6 @@ class buildembedded(Command):
     def finalize_options(self):
         pass
 
-    def _process_hg_exts(self, dirforexts):
-        """Prepare Mercurail native Python extensions
-
-        This just copies edenscmnative/ to the destination."""
-        parentdir = scriptdir
-        if not self.local_bins:
-            # copy .pyd's from ./build/lib.win-amd64/, not from ./
-            parentdir = pjoin(scriptdir, "build", distutils_dir_name("lib"))
-        copy_to(pjoin(parentdir, "edenscmnative"), pjoin(dirforexts, "edenscmnative"))
-        # copy the conch_parser extension, not living in the edenscmnative directory
-        for pattern in ["*.pyd", "*.so"]:
-            for path in glob.glob(pjoin(parentdir, pattern)):
-                copy_to(path, dirforexts)
-
     def _process_isl(self, dirforisl):
         """Copy edenscm-isl, if present, to the destination.
 
@@ -1065,7 +1050,6 @@ class buildembedded(Command):
         embdir = pjoin(scriptdir, "build", "embedded")
         ensureempty(embdir)
         ensureexists(embdir)
-        self._process_hg_exts(embdir)
         self._process_isl(embdir)
 
         # On Windows, Python shared library has to live at the same level
@@ -1530,36 +1514,6 @@ havefanotify = (
 
 extmodules = []
 
-
-def cythonize(*args, **kwargs):
-    """Proxy to Cython.Build.cythonize. Download Cython on demand."""
-    if not offline:
-        cythonsrc = asset(
-            url="https://files.pythonhosted.org/packages/4c/76/1e41fbb365ad20b6efab2e61b0f4751518444c953b390f9b2d36cf97eea0/Cython-0.29.32.tar.gz"
-        )
-        path = cythonsrc.ensureready()
-        sys.path.insert(0, path)
-
-    from Cython.Build import cythonize
-
-    return cythonize(*args, **kwargs)
-
-
-# Cython modules
-# see http://cython.readthedocs.io/en/latest/src/reference/compilation.html
-cythonopts = {"unraisable_tracebacks": False, "c_string_type": "bytes"}
-
-extmodules += cythonize(
-    [
-        Extension(
-            "edenscmnative.linelog",
-            sources=["edenscmnative/linelog.pyx"],
-            include_dirs=include_dirs,
-            extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS]),
-        ),
-    ],
-    compiler_directives=cythonopts,
-)
 
 libraries = [
     (

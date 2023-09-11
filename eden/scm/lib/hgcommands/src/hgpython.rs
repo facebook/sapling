@@ -83,7 +83,6 @@ impl HgPython {
         // alongside the binary. Let's setup the PATH so we discover those python modules.
         // An example layout:
         //   $PREFIX/usr/local/bin/hg
-        //   $PREFIX/usr/local/lib/python3.8/site-packages/edenscmnative
         //   $PREFIX/usr/local/lib/python3.8/site-packages/edenscmdeps3.zip
         //   $PREFIX/usr/local/lib/python3.8/site-packages/edenscm
         let py_version: (i32, i32, i32, String, i32) =

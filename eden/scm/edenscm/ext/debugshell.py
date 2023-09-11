@@ -21,8 +21,6 @@ from typing import Any, Dict, List, Optional
 import bindings
 import edenscm
 
-# pyre-fixme[21]: Could not find module `edenscmnative`.
-import edenscmnative
 from edenscm import ext, hgdemandimport, pycompat, registrar, traceimport, util
 from edenscm.ext import commitcloud as cc
 from edenscm.i18n import _
@@ -43,7 +41,6 @@ def _assignobjects(objects, repo) -> None:
             # Modules
             "bindings": bindings,
             "edenscm": edenscm,
-            "edenscmnative": edenscmnative,
             # Utilities
             "util": edenscm.util,
             "hex": edenscm.node.hex,

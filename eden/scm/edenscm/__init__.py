@@ -7,7 +7,7 @@ from __future__ import absolute_import
 
 
 def _fixsys():
-    """Fix sys.path so core edenscm modules (edenscmnative, and 3rd party
+    """Fix sys.path so core edenscm modules (and 3rd party
     libraries) are in sys.path
 
     Fix sys.stdin if it's None.
@@ -35,12 +35,6 @@ def _fixsys():
         depspath = os.path.join(candidate, name)
         if os.path.exists(depspath) and depspath not in sys.path:
             sys.path.insert(0, depspath)
-
-    # Make sure "edenscmnative" can be imported. Error early.
-    # pyre-fixme[21]: Could not find module `edenscmnative`.
-    import edenscmnative
-
-    edenscmnative.__name__
 
     # stdin can be None if the parent process unset the stdin file descriptor.
     # Replace it early, since it may be read in layer modules, like pycompat.
