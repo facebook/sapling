@@ -7,6 +7,7 @@
 
 use std::cell::RefCell;
 use std::env;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::RwLock;
 use std::sync::Weak;
@@ -76,6 +77,35 @@ impl HgPython {
         prepare_builtin_modules(py, &bindings_module).unwrap();
         let sys_modules = PyDict::extract(py, &sys.get(py, "modules").unwrap()).unwrap();
         sys_modules.set_item(py, name, bindings_module).unwrap();
+        Self::update_meta_path(py, &sys);
+    }
+
+    fn update_meta_path(py: Python, sys: &PyModule) {
+        // When running inside the repo, auto-enable "dev" mode with desired paths.
+        // This can be overridden by SAPLING_PYTHON_HOME.
+        let mut home: Option<String> = None;
+        if let Ok(v) = std::env::var("SAPLING_PYTHON_HOME") {
+            if !v.is_empty() && Path::new(&v).is_dir() {
+                home = Some(v)
+            }
+        } else {
+            home = infer_python_home();
+        }
+        if let Some(dir) = home.as_ref() {
+            // Append the Python home to sys.path.
+            tracing::debug!(
+                "Python modules will be imported from filesystem {} (SAPLING_PYTHON_HOME)",
+                dir
+            );
+            let sys_path = PyList::extract(py, &sys.get(py, "path").unwrap()).unwrap();
+            sys_path.append(py, PyString::new(py, dir).into_object());
+        } else {
+            tracing::debug!("Python modules will be imported by BindingsModuleFinder");
+        }
+
+        let meta_path_finder = pymodules::BindingsModuleFinder::new(py, home).unwrap();
+        let meta_path = PyList::extract(py, &sys.get(py, "meta_path").unwrap()).unwrap();
+        meta_path.insert(py, 0, meta_path_finder.into_object());
     }
 
     fn update_path(py: Python, sys: &PyModule) {
@@ -424,4 +454,39 @@ pub fn prepare_builtin_modules(py: Python<'_>, module: &PyModule) -> PyResult<()
     )?;
     bindings::populate_module(py, &module)?;
     Ok(())
+}
+
+fn infer_python_home() -> Option<String> {
+    let exe_path = match std::env::current_exe() {
+        Ok(path) => path,
+        _ => return None,
+    };
+
+    if cfg!(unix) && (exe_path.starts_with("/usr/") || exe_path.starts_with("/opt/")) {
+        // Unlikely an in-repo path. Skip repo discovery.
+        return None;
+    }
+
+    // Try to locate the repo root and check the known "home" path.
+    let prefix = if cfg!(feature = "fb") {
+        // fbsource
+        "fbcode/eden/scm"
+    } else {
+        // github: facebook/sapling
+        "eden/scm"
+    };
+    let mut path: &Path = exe_path.as_path();
+    while let Some(parent) = path.parent() {
+        path = parent;
+        if path.join(".hg").is_dir() || path.join(".sl").is_dir() {
+            let maybe_home = path.join(prefix);
+            if maybe_home.is_dir() {
+                tracing::debug!("Discovered SAPLING_PYTHON_HOME at {}", maybe_home.display());
+                return Some(maybe_home.display().to_string());
+            }
+            break;
+        }
+    }
+
+    None
 }

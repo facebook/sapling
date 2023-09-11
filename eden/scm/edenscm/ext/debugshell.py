@@ -121,7 +121,7 @@ def _startipython(ui, repo, env) -> None:
 
     bannermsg = "loaded repo:  %s\n" "using source: %s" % (
         repo and repo.root or "(none)",
-        edenscm.__path__[0],
+        edenscm.__path__ and edenscm.__path__[0],
     ) + (
         "\n\nAvailable variables:\n"
         " e:  edenscm\n"
