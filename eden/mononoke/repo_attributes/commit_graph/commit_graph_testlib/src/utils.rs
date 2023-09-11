@@ -218,7 +218,7 @@ pub async fn assert_topological_order(
     let mut previous_cs_ids: HashSet<ChangesetId> = Default::default();
 
     for cs_id in cs_ids {
-        let parents = graph.changeset_parents_required(ctx, *cs_id).await?;
+        let parents = graph.changeset_parents(ctx, *cs_id).await?;
         // Check that each parent of cs_id either isn't contained in cs_ids
         // or is found before cs_id.
         assert!(

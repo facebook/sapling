@@ -57,7 +57,7 @@ pub async fn slice_ancestors(
                         anyhow::Ok((
                             cs_id,
                             repo.commit_graph_arc()
-                                .changeset_generation_required(ctx, cs_id)
+                                .changeset_generation(ctx, cs_id)
                                 .await?,
                         ))
                     })

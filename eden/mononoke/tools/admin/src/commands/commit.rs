@@ -155,10 +155,7 @@ async fn resolve_stack(
         .range_stream(ctx, bottom, top)
         .await?
         .map(|csid| async move {
-            let parents = repo
-                .commit_graph()
-                .changeset_parents_required(ctx, csid)
-                .await?;
+            let parents = repo.commit_graph().changeset_parents(ctx, csid).await?;
             if parents.len() > 1 {
                 bail!("rebasing stacks with merges is not supported");
             }

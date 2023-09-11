@@ -85,7 +85,6 @@ pub async fn test_storage_store_and_fetch(
         graph
             .changeset_generation(&ctx, name_cs_id("G"))
             .await?
-            .unwrap()
             .value(),
         5
     );
@@ -93,7 +92,6 @@ pub async fn test_storage_store_and_fetch(
         graph
             .changeset_parents(&ctx, name_cs_id("A"))
             .await?
-            .unwrap()
             .as_slice(),
         &[]
     );
@@ -101,7 +99,6 @@ pub async fn test_storage_store_and_fetch(
         graph
             .changeset_parents(&ctx, name_cs_id("E"))
             .await?
-            .unwrap()
             .as_slice(),
         &[name_cs_id("A")]
     );
@@ -109,7 +106,6 @@ pub async fn test_storage_store_and_fetch(
         graph
             .changeset_parents(&ctx, name_cs_id("G"))
             .await?
-            .unwrap()
             .as_slice(),
         &[name_cs_id("D"), name_cs_id("F")]
     );
@@ -626,7 +622,6 @@ pub async fn test_add_recursive(
         graph
             .changeset_parents(&ctx, name_cs_id("E"))
             .await?
-            .unwrap()
             .as_slice(),
         &[name_cs_id("A")]
     );
@@ -634,7 +629,6 @@ pub async fn test_add_recursive(
         graph
             .changeset_parents(&ctx, name_cs_id("G"))
             .await?
-            .unwrap()
             .as_slice(),
         &[name_cs_id("D"), name_cs_id("F")]
     );
@@ -642,7 +636,6 @@ pub async fn test_add_recursive(
         graph
             .changeset_parents(&ctx, name_cs_id("I"))
             .await?
-            .unwrap()
             .as_slice(),
         &[name_cs_id("H")]
     );
@@ -650,7 +643,6 @@ pub async fn test_add_recursive(
         graph
             .changeset_parents(&ctx, name_cs_id("J"))
             .await?
-            .unwrap()
             .as_slice(),
         &[name_cs_id("F")]
     );
@@ -698,7 +690,6 @@ pub async fn test_add_recursive_many_changesets(
         graph
             .changeset_parents(&ctx, name_cs_id("I"))
             .await?
-            .unwrap()
             .as_slice(),
         &[name_cs_id("H")]
     );
@@ -706,7 +697,6 @@ pub async fn test_add_recursive_many_changesets(
         graph
             .changeset_parents(&ctx, name_cs_id("K"))
             .await?
-            .unwrap()
             .as_slice(),
         &[name_cs_id("I")]
     );
@@ -714,7 +704,6 @@ pub async fn test_add_recursive_many_changesets(
         graph
             .changeset_parents(&ctx, name_cs_id("L"))
             .await?
-            .unwrap()
             .as_slice(),
         &[name_cs_id("K")]
     );

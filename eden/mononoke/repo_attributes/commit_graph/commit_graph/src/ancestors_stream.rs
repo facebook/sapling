@@ -147,7 +147,7 @@ impl AncestorsStreamBuilder {
             Some(descendants_of) => Some((
                 descendants_of,
                 self.commit_graph
-                    .changeset_generation_required(&self.ctx, descendants_of)
+                    .changeset_generation(&self.ctx, descendants_of)
                     .await?,
             )),
             None => None,

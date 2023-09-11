@@ -27,7 +27,7 @@ impl CommitGraph {
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<ChangesetFrontier> {
-        let generation = self.changeset_generation_required(ctx, cs_id).await?;
+        let generation = self.changeset_generation(ctx, cs_id).await?;
         Ok(ChangesetFrontier::new_single(cs_id, generation))
     }
 

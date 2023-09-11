@@ -562,7 +562,7 @@ impl CommitGraph {
             }
 
             let mut parents = self
-                .changeset_parents_required(ctx, current_cs_id)
+                .changeset_parents(ctx, current_cs_id)
                 .await?
                 .into_iter();
 
@@ -622,7 +622,7 @@ impl CommitGraph {
         let mut union_segments_cs_ids: HashMap<_, _> = Default::default();
 
         for (segment_num, segment) in difference_segments.iter().rev().enumerate() {
-            let parents = self.changeset_parents_required(ctx, segment.base).await?;
+            let parents = self.changeset_parents(ctx, segment.base).await?;
             let segment_parents: SmallVec<[ChangesetId; 1]> =
                 segment.parents.iter().map(|parent| parent.cs_id).collect();
 
