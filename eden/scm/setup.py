@@ -714,71 +714,6 @@ class fbsourcepylibrary(asset):
             tryunlink(pjoin(topdir, name))
 
 
-class edenpythrift(asset):
-    """In this context, we are only interested in the `py/` subdir,
-    so we extract only that dir"""
-
-    def _extract(self):
-        destdir = self.destdir
-        srcpath = pjoin(builddir, self.name)
-        destpath = pjoin(builddir, destdir)
-        assert os.path.isfile(srcpath), "%s is not downloaded properly" % srcpath
-        ensureempty(destpath)
-
-        with zipfile.ZipFile(srcpath, "r") as f:
-            for name in f.namelist():
-                if name.startswith("py/"):
-                    targetname = name[3:]  # strip off `py/` prefix
-                    ensureexists(os.path.dirname(pjoin(destpath, targetname)))
-                    with open(pjoin(destpath, targetname), "wb") as target:
-                        target.write(f.read(name))
-
-
-class thriftasset(asset):
-    def __init__(self, name, sourcemap, destdir=None):
-        assert isgetdepsbuild, "can only build this only via the getdeps.py script"
-
-        if destdir is None:
-            destdir = name + "-py"
-        assert name != destdir, "name (%s) and destdir cannot be the same" % name
-
-        super(thriftasset, self).__init__(name=name, destdir=destdir)
-        self.sourcemap = sourcemap
-
-    def _download(self):
-        for source, dest in self.sourcemap.items():
-            copy_to(pjoin(scriptdir, source), pjoin(builddir, self.name, dest))
-
-    def _extract(self):
-        thriftdir = pjoin(builddir, self.name)
-        destdir = pjoin(builddir, self.destdir)
-        for thriftdest in self.sourcemap.values():
-            thriftfile = pjoin(thriftdir, thriftdest)
-            subprocess.check_call(
-                [
-                    os.environ["THRIFT"],
-                    "-I",
-                    thriftdir,
-                    "-gen",
-                    "py:new_style",
-                    "-out",
-                    destdir,
-                    thriftfile,
-                ]
-            )
-
-    def __hash__(self):
-        thriftdir = pjoin(builddir, self.name)
-        hasher = hashlib.sha1()
-
-        for thriftdest in sorted(self.sourcemap.values()):
-            thriftfile = pjoin(thriftdir, thriftdest)
-            if os.path.exists(thriftfile):
-                with open(thriftfile, "rb") as f:
-                    hasher.update(f.read())
-        return int(hasher.hexdigest(), 16)
-
-
 class fetchbuilddeps(Command):
     description = "download build depencencies"
     user_options = []
@@ -808,44 +743,6 @@ class fetchbuilddeps(Command):
                 "https://files.pythonhosted.org/packages/fc/56/9f67dcd4a4b9960373173a31be1b8c47fe351a1c9385677a7bdd82810e57/ipdb-0.13.9.tar.gz",
             ]
         ]
-
-    # These pyassets are eden and thrift related. We don't use those in open
-    # source for now.
-    if not ossbuild:
-        pyassets += [
-            fbsourcepylibrary(
-                "thrift",
-                "../../thrift/lib/py"
-                if havefb
-                else f"{dep_build_dir}/fbthrift/thrift/lib/py/thrift_py.lib_install/thrift_py/thrift",
-                excludes=[
-                    "thrift/util/asyncio.py",
-                    "thrift/util/inspect.py",
-                    "thrift/server/TAsyncioServer.py",
-                    "thrift/server/test/TAsyncioServerTest.py",
-                    "thrift/util/tests/__init__.py",
-                ],
-            ),
-            fbsourcepylibrary("eden", "../../eden/fs/py/eden"),
-        ]
-        pyassets += (
-            [
-                edenpythrift(
-                    name="eden-rust-deps-2f6da57cdd616a6f0e5d1b9fcd7f0349f4edcf47.zip"
-                )
-            ]
-            if havefb
-            else [
-                thriftasset(
-                    name="eden-thrift",
-                    sourcemap={
-                        "../../eden/fs/service/eden.thrift": "eden/fs/service/eden.thrift",
-                        "../../eden/fs/config/eden_config.thrift": "eden/fs/config/eden_config.thrift",
-                        f"{dep_install_dir}/fb303/include/thrift-files/fb303/thrift/fb303_core.thrift": "fb303/thrift/fb303_core.thrift",
-                    },
-                )
-            ]
-        )
 
     assets = pyassets
 
