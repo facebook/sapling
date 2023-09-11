@@ -55,6 +55,7 @@ members = [
   "edenscmnative/bindings/modules/pysptui",
   "edenscmnative/bindings/modules/pystatus",
   "edenscmnative/bindings/modules/pythreading",
+  "edenscmnative/bindings/modules/pytoml",
   "edenscmnative/bindings/modules/pytracing",
   "edenscmnative/bindings/modules/pytreestate",
   "edenscmnative/bindings/modules/pyversion",
