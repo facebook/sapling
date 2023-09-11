@@ -136,6 +136,7 @@ def is_sub_list(list1, list2):
 
 @dataclass
 class BenchStats:
+    merger_name: str = ""
     changed_files: int = 0
     unresolved_files: int = 0
     unmatched_files: int = 0
@@ -224,7 +225,7 @@ def smerge_bench(ui, repo, *args, **opts):
     for m3merger in [SmartMerge3Text, Merge3Text]:
         ui.write(f"\n============== {m3merger.__name__} ==============\n")
         start = time.time()
-        bench_stats = BenchStats()
+        bench_stats = BenchStats(m3merger.__name__)
 
         for i, (p1ctx, p2ctx, basectx, mergectx) in enumerate(merge_ctxs, start=1):
             for filepath in mergectx.files():
@@ -354,7 +355,7 @@ def merge_file(
     dsttext = dstctx[filepath].data()
     basetext = basectx[filepath].data()
 
-    if srctext == dsttext:
+    if srctext == dsttext or srctext == basetext or dsttext == basetext:
         return
 
     bench_stats.changed_files += 1
