@@ -57,6 +57,7 @@ members = [
   "edenscmnative/bindings/modules/pythreading",
   "edenscmnative/bindings/modules/pytracing",
   "edenscmnative/bindings/modules/pytreestate",
+  "edenscmnative/bindings/modules/pyversion",
   "edenscmnative/bindings/modules/pyvlq",
   "edenscmnative/bindings/modules/pywebview",
   "edenscmnative/bindings/modules/pyworker",
