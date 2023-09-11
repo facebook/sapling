@@ -105,7 +105,7 @@ pub async fn test_lower_level_api(fb: FacebookInit) -> Result<()> {
     );
 
     let all_edges = storage
-        .fetch_many_edges_required(
+        .fetch_many_edges(
             &ctx,
             &["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
                 .into_iter()

@@ -99,7 +99,7 @@ impl CommitGraphStorage for BufferedCommitGraphStorage {
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         let mut fetched_edges = self
             .in_memory_storage
-            .fetch_many_edges(ctx, cs_ids, prefetch)
+            .maybe_fetch_many_edges(ctx, cs_ids, prefetch)
             .await?;
 
         let unfetched_ids = cs_ids
@@ -119,7 +119,7 @@ impl CommitGraphStorage for BufferedCommitGraphStorage {
         Ok(fetched_edges)
     }
 
-    async fn fetch_many_edges_required(
+    async fn maybe_fetch_many_edges(
         &self,
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
@@ -127,7 +127,7 @@ impl CommitGraphStorage for BufferedCommitGraphStorage {
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         let mut fetched_edges = self
             .in_memory_storage
-            .fetch_many_edges(ctx, cs_ids, prefetch)
+            .maybe_fetch_many_edges(ctx, cs_ids, prefetch)
             .await?;
 
         let unfetched_ids = cs_ids
@@ -139,7 +139,7 @@ impl CommitGraphStorage for BufferedCommitGraphStorage {
         if !unfetched_ids.is_empty() {
             fetched_edges.extend(
                 self.persistent_storage
-                    .fetch_many_edges_required(ctx, unfetched_ids.as_slice(), prefetch)
+                    .maybe_fetch_many_edges(ctx, unfetched_ids.as_slice(), prefetch)
                     .await?,
             )
         }

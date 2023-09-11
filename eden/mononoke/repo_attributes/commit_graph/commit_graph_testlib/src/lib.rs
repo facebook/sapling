@@ -13,8 +13,10 @@ use anyhow::Result;
 use cloned::cloned;
 use commit_graph::CommitGraph;
 use commit_graph_types::storage::CommitGraphStorage;
+use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
 use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
+use maplit::hashset;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::RepositoryId;
@@ -237,6 +239,56 @@ pub async fn test_storage_store_and_fetch(
             .unwrap()
             .merge_ancestor,
         Some(name_cs_node("G", 5, 1, 4))
+    );
+
+    // fetch_many_edges and maybe_fetch_many_edges return the same result if none of the changesets
+    // are missing.
+    assert_eq!(
+        storage
+            .fetch_many_edges(
+                &ctx,
+                &[name_cs_id("A"), name_cs_id("C"), name_cs_id("I")],
+                Prefetch::None
+            )
+            .await?,
+        storage
+            .maybe_fetch_many_edges(
+                &ctx,
+                &[name_cs_id("A"), name_cs_id("C"), name_cs_id("I")],
+                Prefetch::None
+            )
+            .await?,
+    );
+
+    // fetch_many_edges returns an error if any of the changesets are missing.
+    assert!(
+        storage
+            .fetch_many_edges(
+                &ctx,
+                &[name_cs_id("Z"), name_cs_id("A"), name_cs_id("B")],
+                Prefetch::None
+            )
+            .await
+            .is_err()
+    );
+
+    // maybe_fetch_many_edges ignores missing changesets ("Z" in this case).
+    assert_eq!(
+        storage
+            .maybe_fetch_many_edges(
+                &ctx,
+                &[
+                    name_cs_id("Z"),
+                    name_cs_id("A"),
+                    name_cs_id("C"),
+                    name_cs_id("I")
+                ],
+                Prefetch::None
+            )
+            .await?
+            .into_keys()
+            .collect::<HashSet<_>>(),
+        hashset! {name_cs_id("A"), name_cs_id("C"), name_cs_id("I")},
     );
 
     Ok(())

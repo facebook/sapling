@@ -187,12 +187,12 @@ impl KeyedEntityStore<ChangesetId, CachedChangesetEdges> for CacheRequest<'_> {
         let entries = if self.required {
             self.caching_storage
                 .storage
-                .fetch_many_edges_required(self.ctx, &cs_ids, self.prefetch)
+                .fetch_many_edges(self.ctx, &cs_ids, self.prefetch)
                 .await?
         } else {
             self.caching_storage
                 .storage
-                .fetch_many_edges(self.ctx, &cs_ids, self.prefetch)
+                .maybe_fetch_many_edges(self.ctx, &cs_ids, self.prefetch)
                 .await?
         };
         if self.prefetch.is_include() {
@@ -329,7 +329,7 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         let cs_ids: HashSet<ChangesetId> = cs_ids.iter().copied().collect();
         let found = get_or_fill_chunked(
-            &self.request(ctx, prefetch),
+            &self.request_required(ctx, prefetch),
             cs_ids.clone(),
             CHUNK_SIZE,
             PARALLEL_CHUNKS,
@@ -341,7 +341,7 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
             .collect())
     }
 
-    async fn fetch_many_edges_required(
+    async fn maybe_fetch_many_edges(
         &self,
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
@@ -349,7 +349,7 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         let cs_ids: HashSet<ChangesetId> = cs_ids.iter().copied().collect();
         let found = get_or_fill_chunked(
-            &self.request_required(ctx, prefetch),
+            &self.request(ctx, prefetch),
             cs_ids.clone(),
             CHUNK_SIZE,
             PARALLEL_CHUNKS,

@@ -76,18 +76,18 @@ async fn test_equivalent_storages(
 
     assert_eq!(
         first_storage
-            .fetch_many_edges(ctx, &cs_ids, Prefetch::None)
+            .maybe_fetch_many_edges(ctx, &cs_ids, Prefetch::None)
             .await?,
         second_storage
-            .fetch_many_edges(ctx, &cs_ids, Prefetch::None)
+            .maybe_fetch_many_edges(ctx, &cs_ids, Prefetch::None)
             .await?
     );
     assert_eq!(
         first_storage
-            .fetch_many_edges_required(ctx, &cs_ids, Prefetch::None)
+            .fetch_many_edges(ctx, &cs_ids, Prefetch::None)
             .await?,
         second_storage
-            .fetch_many_edges_required(ctx, &cs_ids, Prefetch::None)
+            .fetch_many_edges(ctx, &cs_ids, Prefetch::None)
             .await?
     );
 

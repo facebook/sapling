@@ -66,7 +66,7 @@ impl CommitGraph {
             if !parents_to_fetch.is_empty() {
                 edges_map.extend(
                     self.storage
-                        .fetch_many_edges(ctx, &parents_to_fetch, Prefetch::None)
+                        .maybe_fetch_many_edges(ctx, &parents_to_fetch, Prefetch::None)
                         .await
                         .with_context(|| "during commit_graph::add_recursive (fetch_many_edges)")?
                         .into_iter(),

@@ -67,7 +67,7 @@ impl CommitGraph {
     ) -> Result<bool> {
         let parent_edges = self
             .storage
-            .fetch_many_edges_required(ctx, &parents, Prefetch::None)
+            .fetch_many_edges(ctx, &parents, Prefetch::None)
             .await?;
 
         self.storage

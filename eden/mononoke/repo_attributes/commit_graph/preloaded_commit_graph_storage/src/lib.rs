@@ -353,6 +353,23 @@ impl CommitGraphStorage for PreloadedCommitGraphStorage {
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+        let edges = self.maybe_fetch_many_edges(ctx, cs_ids, prefetch).await?;
+        if let Some(missing_changeset) = cs_ids.iter().find(|cs_id| !edges.contains_key(cs_id)) {
+            Err(anyhow!(
+                "Missing changeset from preloaded commit graph storage: {}",
+                missing_changeset,
+            ))
+        } else {
+            Ok(edges)
+        }
+    }
+
+    async fn maybe_fetch_many_edges(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: &[ChangesetId],
+        prefetch: Prefetch,
+    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         let preloaded_edges = self.preloaded_edges.load();
         let mut fetched_edges: HashMap<_, _> = cs_ids
             .iter()
@@ -373,29 +390,12 @@ impl CommitGraphStorage for PreloadedCommitGraphStorage {
         if !unfetched_ids.is_empty() {
             fetched_edges.extend(
                 self.persistent_storage
-                    .fetch_many_edges(ctx, unfetched_ids.as_slice(), prefetch)
+                    .maybe_fetch_many_edges(ctx, unfetched_ids.as_slice(), prefetch)
                     .await?,
             )
         }
 
         Ok(fetched_edges)
-    }
-
-    async fn fetch_many_edges_required(
-        &self,
-        ctx: &CoreContext,
-        cs_ids: &[ChangesetId],
-        prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
-        let edges = self.fetch_many_edges(ctx, cs_ids, prefetch).await?;
-        if let Some(missing_changeset) = cs_ids.iter().find(|cs_id| !edges.contains_key(cs_id)) {
-            Err(anyhow!(
-                "Missing changeset from preloaded commit graph storage: {}",
-                missing_changeset,
-            ))
-        } else {
-            Ok(edges)
-        }
     }
 
     async fn find_by_prefix(

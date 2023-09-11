@@ -125,27 +125,11 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
 
     async fn fetch_many_edges(
         &self,
-        _ctx: &CoreContext,
-        cs_ids: &[ChangesetId],
-        _prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
-        let mut result = HashMap::with_capacity(cs_ids.len());
-        let changesets = self.changesets.read();
-        for cs_id in cs_ids {
-            if let Some(edges) = changesets.get(cs_id) {
-                result.insert(*cs_id, edges.clone());
-            }
-        }
-        Ok(result)
-    }
-
-    async fn fetch_many_edges_required(
-        &self,
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
-        let edges = self.fetch_many_edges(ctx, cs_ids, prefetch).await?;
+        let edges = self.maybe_fetch_many_edges(ctx, cs_ids, prefetch).await?;
         let missing_changesets: Vec<_> = cs_ids
             .iter()
             .filter(|cs_id| !edges.contains_key(cs_id))
@@ -162,6 +146,22 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
         } else {
             Ok(edges)
         }
+    }
+
+    async fn maybe_fetch_many_edges(
+        &self,
+        _ctx: &CoreContext,
+        cs_ids: &[ChangesetId],
+        _prefetch: Prefetch,
+    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+        let mut result = HashMap::with_capacity(cs_ids.len());
+        let changesets = self.changesets.read();
+        for cs_id in cs_ids {
+            if let Some(edges) = changesets.get(cs_id) {
+                result.insert(*cs_id, edges.clone());
+            }
+        }
+        Ok(result)
     }
 
     async fn find_by_prefix(

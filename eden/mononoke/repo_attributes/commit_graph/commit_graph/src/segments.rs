@@ -136,7 +136,7 @@ impl CommitGraph {
 
         let all_edges = self
             .storage
-            .fetch_many_edges_required(ctx, &cs_ids, Prefetch::None)
+            .fetch_many_edges(ctx, &cs_ids, Prefetch::None)
             .await?;
 
         for (cs_id, edges) in all_edges {
@@ -171,7 +171,7 @@ impl CommitGraph {
                 let segment_bases: Vec<_> = segments.into_keys().collect();
                 let all_edges = self
                     .storage
-                    .fetch_many_edges_required(ctx, &segment_bases, Prefetch::None)
+                    .fetch_many_edges(ctx, &segment_bases, Prefetch::None)
                     .await?;
 
                 let parents: Vec<_> = all_edges
@@ -182,7 +182,7 @@ impl CommitGraph {
 
                 let parent_edges = self
                     .storage
-                    .fetch_many_edges_required(ctx, &parents, Prefetch::None)
+                    .fetch_many_edges(ctx, &parents, Prefetch::None)
                     .await?;
 
                 for (cs_id, edges) in parent_edges {
@@ -289,7 +289,7 @@ impl CommitGraph {
                     let cs_ids: Vec<_> = last_changesets.keys().copied().collect();
                     let all_edges = self
                         .storage
-                        .fetch_many_edges_required(ctx, &cs_ids, Prefetch::None)
+                        .fetch_many_edges(ctx, &cs_ids, Prefetch::None)
                         .await?;
 
                     // Try to lower the highest generation changesets in the frontier to their
@@ -508,7 +508,7 @@ impl CommitGraph {
 
             let all_edges = self
                 .storage
-                .fetch_many_edges_required(ctx, &bases_not_reachable_from_common, Prefetch::None)
+                .fetch_many_edges(ctx, &bases_not_reachable_from_common, Prefetch::None)
                 .await?;
 
             let parents: Vec<_> = all_edges
@@ -519,7 +519,7 @@ impl CommitGraph {
 
             let parent_edges = self
                 .storage
-                .fetch_many_edges_required(ctx, &parents, Prefetch::None)
+                .fetch_many_edges(ctx, &parents, Prefetch::None)
                 .await?;
 
             for (cs_id, edges) in parent_edges {

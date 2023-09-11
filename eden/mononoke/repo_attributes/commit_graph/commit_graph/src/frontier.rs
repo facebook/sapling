@@ -40,7 +40,7 @@ impl CommitGraph {
     ) -> Result<ChangesetFrontier> {
         let all_edges = self
             .storage
-            .fetch_many_edges_required(ctx, &cs_ids, Prefetch::None)
+            .fetch_many_edges(ctx, &cs_ids, Prefetch::None)
             .await?;
 
         cs_ids
@@ -82,7 +82,7 @@ impl CommitGraph {
                 let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
                 let frontier_edges = self
                     .storage
-                    .fetch_many_edges_required(ctx, &cs_ids, prefetch)
+                    .fetch_many_edges(ctx, &cs_ids, prefetch)
                     .await?;
 
                 let mut property_frontier: Vec<_> = Default::default();
@@ -160,7 +160,7 @@ impl CommitGraph {
             let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
             let frontier_edges = self
                 .storage
-                .fetch_many_edges_required(ctx, &cs_ids, Prefetch::for_p1_linear_traversal())
+                .fetch_many_edges(ctx, &cs_ids, Prefetch::for_p1_linear_traversal())
                 .await?;
 
             for cs_id in cs_ids {
