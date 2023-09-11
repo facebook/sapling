@@ -1372,18 +1372,6 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        self.fetch_many_edges_impl(ctx, cs_ids, prefetch, &self.read_connection)
-            .await
-    }
-
-    async fn fetch_many_edges_required(
-        &self,
-        ctx: &CoreContext,
-        cs_ids: &[ChangesetId],
-        prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlReadsReplica);
         let mut edges = self
             .fetch_many_edges_impl(ctx, cs_ids, prefetch, &self.read_connection)
             .await?;
@@ -1392,7 +1380,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             .filter(|id| !edges.contains_key(id))
             .copied()
             .collect();
-        let unfetched_ids = if !unfetched_ids.is_empty() {
+        if !unfetched_ids.is_empty() {
             // Let's go to master with the remaining edges
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
@@ -1400,14 +1388,22 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                 .fetch_many_edges_impl(ctx, &unfetched_ids, prefetch, &self.read_master_connection)
                 .await?;
             edges.extend(extra_edges);
-            cs_ids
-                .iter()
-                .filter(|id| !edges.contains_key(id))
-                .copied()
-                .collect()
-        } else {
-            unfetched_ids
-        };
+        }
+        Ok(edges)
+    }
+
+    async fn fetch_many_edges_required(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: &[ChangesetId],
+        prefetch: Prefetch,
+    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+        let mut edges = self.fetch_many_edges(ctx, cs_ids, prefetch).await?;
+        let unfetched_ids: Vec<ChangesetId> = cs_ids
+            .iter()
+            .filter(|id| !edges.contains_key(id))
+            .copied()
+            .collect();
         if !unfetched_ids.is_empty() {
             anyhow::bail!(
                 "Missing changesets from sql commit graph storage: {}",
