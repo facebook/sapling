@@ -3,6 +3,7 @@ abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2a
 
 [workspace]
 members = [
+  "edenscmnative/bindings",
   "edenscmnative/bindings/modules/pyatexit",
   "edenscmnative/bindings/modules/pyauth",
   "edenscmnative/bindings/modules/pyblackbox",
@@ -68,6 +69,7 @@ members = [
   "edenscmnative/bindings/modules/pyzstd",
   "edenscmnative/bindings/modules/pyzstore",
   "edenscmnative/conch_parser",
+  "edenscmnative/pybindings",
   "exec/eden_apfs_mount_helper",
   "exec/fsprobe",
   "exec/hgmain",

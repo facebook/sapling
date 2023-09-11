@@ -5,4 +5,4 @@
 # GNU General Public License version 2.
 
 # use 'python3.8 -m pip install cogapp' to install cog
-python3.8 -m cogapp -r TARGETS Cargo.toml src/modules.rs
+python3.8 -m cogapp -r TARGETS src/modules.rs

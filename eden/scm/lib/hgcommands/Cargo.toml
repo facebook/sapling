@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = { version = "1.0.71", features = ["backtrace"] }
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 atexit = { version = "0.1.0", path = "../util/atexit" }
-bindings = { path = "../../edenscmnative/bindings", default-features = false }
+bindings = { version = "0.1.0", path = "../../edenscmnative/bindings", default-features = false }
 blackbox = { version = "0.1.0", path = "../blackbox" }
 checkout = { version = "0.1.0", path = "../checkout" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
