@@ -7,4 +7,7 @@
 
 //! # Communicating to EdenFS via Thrift
 
+mod client;
 pub mod status;
+
+pub use client::EdenFsClient;
