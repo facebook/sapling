@@ -57,3 +57,25 @@ py_class!(pub(crate) class EdenFsClient |py| {
         Ok(Serde(result))
     }
 });
+
+py_exception!(error, EdenError);
+
+pub(crate) fn populate_module(py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<EdenFsClient>(py)?;
+    m.add(py, "EdenError", py.get_type::<EdenError>())?;
+    cpython_ext::error::register("020-eden-error", eden_error_handler);
+    Ok(())
+}
+
+fn eden_error_handler(py: Python, mut e: &cpython_ext::error::Error) -> Option<PyErr> {
+    // Remove anyhow contex.
+    while let Some(inner) = e.downcast_ref::<cpython_ext::error::Error>() {
+        e = inner;
+    }
+
+    if let Some(e) = e.downcast_ref::<edenfs_client::EdenError>() {
+        return Some(PyErr::new::<EdenError, _>(py, &e.message));
+    }
+
+    None
+}

@@ -11,7 +11,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "edenclient"].join(".");
     let m = PyModule::new(py, &name)?;
     #[cfg(feature = "eden")]
-    m.add_class::<feature_eden::EdenFsClient>(py)?;
+    feature_eden::populate_module(py, &m)?;
     Ok(m)
 }
 
