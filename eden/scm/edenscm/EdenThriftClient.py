@@ -122,14 +122,6 @@ class EdenThriftClient:
             except EdenError as e:
                 raise error.Abort(_("error performing EdenFS checkout: %s") % e.message)
 
-    def glob(self, globs):
-        with self._get_client() as client:
-            return client.glob(self._eden_root, globs)
-
-    def getFileInformation(self, files):
-        with self._get_client() as client:
-            return client.getFileInformation(self._eden_root, files)
-
     def _flushPendingTransactions(self):
         # If a transaction is currently in progress, make sure it has flushed
         # pending commit data to disk so that eden will be able to access it.
