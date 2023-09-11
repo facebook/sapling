@@ -22,6 +22,7 @@ members = [
   "edenscmnative/bindings/modules/pydrawdag",
   "edenscmnative/bindings/modules/pyeagerepo",
   "edenscmnative/bindings/modules/pyedenapi",
+  "edenscmnative/bindings/modules/pyedenclient",
   "edenscmnative/bindings/modules/pyerror",
   "edenscmnative/bindings/modules/pyexchange",
   "edenscmnative/bindings/modules/pyfail",
