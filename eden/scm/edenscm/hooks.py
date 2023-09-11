@@ -9,7 +9,7 @@ import os
 import stat
 from typing import Optional
 
-import toml
+import bindings
 
 from . import util
 from .i18n import _
@@ -70,7 +70,8 @@ def _is_edenfs_redirect_okay(repo) -> Optional[bool]:
     # .eden/client symlink exists on Windows.
     if os.name == "nt" and not repo.wvfs.lexists(".eden/client"):
         try:
-            client_path = toml.load(repo.wjoin(".eden/config"))["Config"]["client"]
+            text = repo.wread(".eden/config").decode()
+            client_path = bindings.toml.loads(text)["Config"]["client"]
             paths.append(os.path.join(client_path, "config.toml"))
         except Exception as e:
             repo.ui.note_err(_("cannot parse .eden/config: %s\n") % (e,))
@@ -81,7 +82,9 @@ def _is_edenfs_redirect_okay(repo) -> Optional[bool]:
             # Cannot use wvfs.tryread as it audits paths and will refuse to
             # read from .eden/.
             full_path = os.path.join(repo.root, path)
-            parsed = toml.load(full_path)
+            with open(full_path, "r") as f:
+                text = f.read()
+            parsed = bindings.toml.loads(text)
         except FileNotFoundError:
             continue
         except Exception as e:
