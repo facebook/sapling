@@ -16,13 +16,14 @@ struct PythonSysConfig {
 
 impl PythonSysConfig {
     fn load() -> Self {
+        println!("cargo:rerun-if-env-changed=NAME");
         let python = std::env::var("PYTHON_SYS_EXECUTABLE")
             .expect("Building bindings.cext requires PYTHON_SYS_EXECUTABLE");
         let script = concat!(
-            "import sysconfig\n",
-            "print(sysconfig.get_config_var('CFLAGS').strip())\n",
-            "print(sysconfig.get_config_var('LDFLAGS').strip())\n",
-            "print(sysconfig.get_paths()['include'].strip())\n",
+            "import sysconfig;",
+            "print((sysconfig.get_config_var('CFLAGS') or '').strip());",
+            "print((sysconfig.get_config_var('LDFLAGS') or '').strip());",
+            "print(sysconfig.get_paths()['include'].strip());",
         );
 
         let out = Command::new(&python)
@@ -32,6 +33,9 @@ impl PythonSysConfig {
             .expect("Failed to get CFLAGS from Python");
         let out_str = String::from_utf8_lossy(&out.stdout);
         let lines: Vec<&str> = out_str.lines().collect();
+        if lines.len() < 3 {
+            println!("cargo:warning=Python sysconfig output is imcomplete: {:?} Python: {:?}", out_str, python);
+        }
         Self {
             cflags: lines[0].to_string(),
             ldflags: lines[1].to_string(),
