@@ -669,11 +669,17 @@ def _runcatch(req):
             if startdebugger:
                 # Enforce the use of ipdb, since it's always available and
                 # we can afford the import overhead here.
+                debugmod = pdb
                 with demandimport.deactivated():
-                    import ipdb
+                    try:
+                        import ipdb
+
+                        debugmod = ipdb
+                    except ImportError:
+                        pass
 
                 ui.write_err(util.smartformatexc())
-                ipdb.post_mortem(sys.exc_info()[2])
+                debugmod.post_mortem(sys.exc_info()[2])
                 os._exit(255)
             raise
 

@@ -119,9 +119,6 @@ def _startipython(ui, repo, env) -> None:
     if getattr(time, "clock", None) is None:
         time.clock = time.time
 
-    from IPython.terminal.embed import InteractiveShellEmbed
-    from IPython.terminal.ipapp import load_default_config
-
     bannermsg = "loaded repo:  %s\n" "using source: %s" % (
         repo and repo.root or "(none)",
         edenscm.__path__[0],
@@ -143,13 +140,39 @@ def _startipython(ui, repo, env) -> None:
             " ml: repo.svfs.metalog\n"
             " ms: repo._mutationstore\n"
         )
-    bannermsg += """
+
+    util.mainio.disable_progress()
+
+    have_ipython = False
+    try:
+        from IPython.terminal.embed import InteractiveShellEmbed
+        from IPython.terminal.ipapp import load_default_config
+
+        bannermsg += """
 Available IPython magics (auto magic is on, `%` is optional):
  time:   measure time
  timeit: benchmark
  trace:  run and print ASCII trace (better with --trace command flag)
  hg:     run commands inline
 """
+        have_ipython = True
+    except ImportError:
+        pass
+
+    if not have_ipython:
+        # Fallback to stdlib REPL
+        import code
+
+        readfunc = None
+        try:
+            import readline
+
+            readline.parse_and_bind("tab: complete")
+        except ImportError:
+            pass
+
+        code.interact(local=env, banner=bannermsg, readfunc=readfunc)
+        return
 
     config = load_default_config()
     config.InteractiveShellEmbed = config.TerminalInteractiveShell
@@ -160,8 +183,6 @@ Available IPython magics (auto magic is on, `%` is optional):
     if util.istest():
         # Disable history during tests.
         config.HistoryAccessor.enabled = False
-
-    util.mainio.disable_progress()
 
     globals().update(env)
     shell = InteractiveShellEmbed.instance(
