@@ -544,207 +544,6 @@ if needbuildinfo:
     buildinfocpath = writebuildinfoc()
 
 
-class asset:
-    def __init__(self, name=None, url=None, destdir=None, version=0):
-        """Declare an asset to download
-
-        When building inside fbsource, look up the name from the LFS list, and
-        use internal LFS to download it. Outside fbsource, use the specified
-        URL to download it.
-
-        name: File name matching the internal lfs-pointers file
-        url:  External url. If not provided, external build will fail.
-        destdir: Destination directory name, excluding build/
-        version: Number to invalidate existing downloaded cache. Useful when
-                 content has changed while neither name nor url was changed.
-
-        Files will be downloaded to build/<name> and extract to
-        build/<destdir>.
-        """
-        if name is None and url:
-            # Try to infer the name from url
-            name = os.path.basename(url)
-        assert name is not None
-        if destdir is None:
-            # Try to infer it from name
-            destdir = os.path.splitext(name)[0]
-            if destdir.endswith(".tar"):
-                destdir = destdir[:-4]
-        assert name != destdir, "name (%s) and destdir cannot be the same" % name
-        self.name = name
-        self.url = url
-        self.destdir = destdir
-        self.version = version
-
-    def ensureready(self):
-        """Download and extract the asset to self.destdir. Return full path of
-        the directory containing extracted files.
-        """
-        if not self._isready():
-            self._download()
-            self._extract()
-            self._markready()
-        assert self._isready(), "%r should be ready now" % self
-        return pjoin(builddir, self.destdir)
-
-    def _download(self):
-        if offline:
-            raise RuntimeError(
-                "offline requested via SAPLING_OFFLINE, "
-                "but downloading required for %s" % self.url
-            )
-        destpath = pjoin(builddir, self.name)
-        if havefb:
-            # via internal LFS utlity
-            lfspypath = os.environ.get(
-                "LFSPY_PATH", pjoin(scriptdir, "../../tools/lfs/lfs.py")
-            )
-            args = [sys.executable, lfspypath, "-q", "download", destpath]
-        else:
-            # via external URL
-            assert self.url, "Cannot download %s - no URL provided" % self.name
-            args = ["curl", "-L", self.url, "-o", destpath]
-            cert_dir = os.environ.get("SSL_CERT_DIR", None)
-            if cert_dir:
-                args += ["--capath", cert_dir]
-            ca_file = os.environ.get("SSL_CERT_FILE", None)
-            if ca_file:
-                args += ["--cacert", ca_file]
-            print(f"downloading with: {' '.join(args)}")
-        subprocess.check_call(args)
-
-    def _extract(self):
-        destdir = self.destdir
-        srcpath = pjoin(builddir, self.name)
-        destpath = pjoin(builddir, destdir)
-        assert os.path.isfile(srcpath), "%s is not downloaded properly" % srcpath
-        ensureempty(destpath)
-
-        if srcpath.endswith(".tar.gz"):
-            with tarfile.open(srcpath, "r") as f:
-                # Be smarter: are all paths in the tar already starts with
-                # destdir? If so, strip it.
-                prefix = destdir + "/"
-                if all((name + "/").startswith(prefix) for name in f.getnames()):
-                    destpath = os.path.dirname(destpath)
-                f.extractall(destpath)
-        elif srcpath.endswith(".zip") or srcpath.endswith(".whl"):
-            with zipfile.ZipFile(srcpath, "r") as f:
-                # Same as above. Strip the destdir name if all entries have it.
-                prefix = destdir + "/"
-                if all((name + "/").startswith(prefix) for name in f.namelist()):
-                    destpath = os.path.dirname(destpath)
-                f.extractall(destpath)
-        else:
-            raise RuntimeError("don't know how to extract %s" % self.name)
-
-    def hash(self):
-        sha = hashlib.sha256()
-        sha.update((self.name or "").encode("utf8"))
-        sha.update((self.url or "").encode("utf8"))
-        sha.update(b"%i" % self.version)
-        return sha.hexdigest()
-
-    def _isready(self):
-        try:
-            with open(self._readypath) as f:
-                return f.read() == self.hash()
-        except Exception:
-            return False
-
-    def _markready(self):
-        with open(self._readypath, "w") as f:
-            f.write("%s" % self.hash())
-
-    @property
-    def _readypath(self):
-        return pjoin(builddir, self.destdir, ".ready")
-
-
-class fbsourcepylibrary(asset):
-    """An asset available from inside fbsource only.
-    This is used to pull in python libraries from fbsource
-    and process them to fit our installation requirements.
-    "name" specifies the python package name for the library.
-    "path" is its location relative to the current location
-    in fbsource.
-    "excludes" is a list of paths relative to "path" that should
-    be excluded from the installation image."""
-
-    def __init__(self, name, path, excludes=None):
-        assert (
-            havefb or isgetdepsbuild or ossbuild
-        ), "can only build this internally at FB or via the getdeps.py script"
-        topname = "fbsource-" + name.replace("/", ".")
-        super(fbsourcepylibrary, self).__init__(name=name, destdir=topname)
-        self.path = path
-        self.excludes = excludes or []
-        self.pkgname = name
-
-    def _download(self):
-        # Nothing to download; already present in fbsource
-        pass
-
-    def _extract(self):
-        # Extraction is really just copying files.  We generate
-        # a directory with a name matching the pkgname as an intermediate
-        # step so that it resolves correctly at import time
-        topdir = pjoin(builddir, self.destdir)
-        ensureexists(topdir)
-        destpath = pjoin(topdir, self.pkgname)
-        if os.path.exists(destpath):
-            shutil.rmtree(destpath)
-        shutil.copytree(self.path, destpath)
-        for root, dirs, files in os.walk(topdir):
-            if "__init__.py" not in files:
-                with open(pjoin(root, "__init__.py"), "w") as f:
-                    f.write("\n")
-        for name in self.excludes:
-            tryunlink(pjoin(topdir, name))
-
-
-class fetchbuilddeps(Command):
-    description = "download build depencencies"
-    user_options = []
-
-    if offline:
-        pyassets = []
-    else:
-        pyassets = [
-            asset(url=url)
-            for url in [
-                "https://files.pythonhosted.org/packages/22/a6/858897256d0deac81a172289110f31629fc4cee19b6f01283303e18c8db3/ptyprocess-0.7.0-py2.py3-none-any.whl",
-                "https://files.pythonhosted.org/packages/39/7b/88dbb785881c28a102619d46423cb853b46dbccc70d3ac362d99773a78ce/pexpect-4.8.0-py2.py3-none-any.whl",
-                "https://files.pythonhosted.org/packages/23/6a/210816c943c9aeeb29e4e18a298f14bf0e118fe222a23e13bfcc2d41b0a4/ipython-7.16.1-py3-none-any.whl",
-                "https://files.pythonhosted.org/packages/3d/57/4d9c9e3ae9a255cd4e1106bb57e24056d3d0709fc01b2e3e345898e49d5b/simplegeneric-0.8.1.zip",
-                "https://files.pythonhosted.org/packages/44/98/5b86278fbbf250d239ae0ecb724f8572af1c91f4a11edf4d36a206189440/colorama-0.4.4-py2.py3-none-any.whl",
-                "https://files.pythonhosted.org/packages/4c/1c/ff6546b6c12603d8dd1070aa3c3d273ad4c07f5771689a7b69a550e8c951/backcall-0.2.0-py2.py3-none-any.whl",
-                "https://files.pythonhosted.org/packages/4e/78/56aa1b5f4d8ac548755ae767d84f0be54fdd9d404197a3d9e4659d272348/setuptools-57.0.0-py3-none-any.whl",
-                "https://files.pythonhosted.org/packages/59/7c/e39aca596badaf1b78e8f547c807b04dae603a433d3e7a7e04d67f2ef3e5/wcwidth-0.2.5-py2.py3-none-any.whl",
-                "https://files.pythonhosted.org/packages/87/61/2dfea88583d5454e3a64f9308a686071d58d59a55db638268a6413e1eb6d/prompt_toolkit-2.0.10-py3-none-any.whl",
-                "https://files.pythonhosted.org/packages/6a/36/b1b9bfdf28690ae01d9ca0aa5b0d07cb4448ac65fb91dc7e2d094e3d992f/decorator-5.0.9-py3-none-any.whl",
-                "https://files.pythonhosted.org/packages/9a/41/220f49aaea88bc6fa6cba8d05ecf24676326156c23b991e80b3f2fc24c77/pickleshare-0.7.5-py2.py3-none-any.whl",
-                "https://files.pythonhosted.org/packages/a6/c9/be11fce9810793676017f79ffab3c6cb18575844a6c7b8d4ed92f95de604/Pygments-2.9.0-py3-none-any.whl",
-                "https://files.pythonhosted.org/packages/ca/ab/872a23e29cec3cf2594af7e857f18b687ad21039c1f9b922fac5b9b142d5/traitlets-4.3.3-py2.py3-none-any.whl",
-                "https://files.pythonhosted.org/packages/d9/5a/e7c31adbe875f2abbb91bd84cf2dc52d792b5a01506781dbcf25c91daf11/six-1.16.0-py2.py3-none-any.whl",
-                "https://files.pythonhosted.org/packages/fa/bc/9bd3b5c2b4774d5f33b2d544f1460be9df7df2fe42f352135381c347c69a/ipython_genutils-0.2.0-py2.py3-none-any.whl",
-                "https://files.pythonhosted.org/packages/fc/56/9f67dcd4a4b9960373173a31be1b8c47fe351a1c9385677a7bdd82810e57/ipdb-0.13.9.tar.gz",
-            ]
-        ]
-
-    assets = pyassets
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        for item in self.assets:
-            item.ensureready()
-
-
 class hgbuild(build):
     # Insert hgbuildmo first so that files in mercurial/locale/ are found
     # when build_py is run next. Also, normally build_scripts is automatically
@@ -805,7 +604,6 @@ buildextnegops = dict(getattr(build_ext, "negative_options", {}))
 
 class hgbuildext(build_ext):
     def build_extensions(self):
-        fetchbuilddeps(self.distribution).run()
         return build_ext.build_extensions(self)
 
     def build_extension(self, ext):
@@ -944,7 +742,6 @@ class buildembedded(Command):
 
         # Build everything into pythonXX.zip, which is in the default sys.path.
         zippath = pjoin(embdir, f"python{PY_VERSION}.zip")
-        buildpyzip(self.distribution).run(appendzippath=zippath)
         self._zip_pyc_files(zippath, "edenscm")
         self._zip_pyc_files(zippath, "ghstack")
         self._copy_hg_exe(embdir)
@@ -976,85 +773,6 @@ class hgbuildpy(build_py):
         self.mkpath(basepath)
 
         build_py.run(self)
-
-        # This builds the 3rd-party pure Python dependencies into
-        # a zip. It is not needed for offline (prefer system-dep) build.
-        if not offline:
-            buildpyzip(self.distribution).run()
-
-
-class buildpyzip(Command):
-    description = "generate zip for bundled dependent Python modules (ex. IPython)"
-    user_options = [
-        (
-            "inplace",
-            "i",
-            "ignore build-lib and put compiled extensions into the source "
-            + "directory alongside your pure Python modules",
-        )
-    ]
-    boolean_options = ["inplace"]
-
-    # Currently this only handles IPython. It avoids conflicts with the system
-    # IPython (which might be older and have GUI dependencies that we don't
-    # need). In the future this might evolve into packing the main library
-    # as weel (i.e. some buildembedded logic will move here).
-
-    def initialize_options(self):
-        self.inplace = None
-
-    def finalize_options(self):
-        pass
-
-    def run(self, appendzippath=None):
-        """If appendzippath is not None, files will be appended to the given
-        path. Otherwise, zippath will be a default path and recreated.
-        """
-        fetchbuilddeps(self.distribution).run()
-
-        # Directories of IPython dependencies
-        depdirs = [pjoin(builddir, a.destdir) for a in fetchbuilddeps.pyassets]
-        if not depdirs:
-            return
-
-        if appendzippath is None:
-            zippath = pjoin(builddir, "edenscmdeps3.zip")
-        else:
-            zippath = appendzippath
-
-        print(f"Packaging assets into {zippath}")
-
-        # Perform a mtime check so we can skip building if possible
-        if os.path.exists(zippath):
-            depmtime = max(os.stat(d).st_mtime for d in depdirs)
-            zipmtime = os.stat(zippath).st_mtime
-            if zipmtime > depmtime:
-                return
-
-        # Compile all (pure Python) IPython dependencies and zip them.
-        if not appendzippath:
-            tryunlink(zippath)
-        with zipfile.PyZipFile(zippath, "a") as f:
-            for asset in fetchbuilddeps.pyassets:
-                # writepy only scans directories if it is a Python package
-                # (ex. with __init__.py). Therefore scan the top-level
-                # directories to get everything included.
-                extracteddir = pjoin(builddir, asset.destdir)
-
-                def process_top_level(top):
-                    for name in os.listdir(top):
-                        if name == "setup.py" or name == "__pycache__":
-                            continue
-                        path = pjoin(top, name)
-                        if name == "src" and os.path.isdir(path):
-                            # eg: the "future" tarball has a top level src dir
-                            # that contains the python packages, recurse and
-                            # process those.
-                            process_top_level(path)
-                        elif path.endswith(".py") or os.path.isdir(path):
-                            f.writepy(path)
-
-                process_top_level(extracteddir)
 
 
 class buildextindex(Command):
@@ -1206,16 +924,8 @@ class hginstalllib(install_lib):
         file_util.copy_file = copyfileandsetmode
         try:
             install_lib.run(self)
-            self._installpyzip()
         finally:
             file_util.copy_file = realcopyfile
-
-    def _installpyzip(self):
-        for src, dst in [("edenscmdeps3.zip", "edenscmdeps3.zip")]:
-            srcpath = pjoin(builddir, src)
-            dstpath = pjoin(self.install_dir, dst)
-            if os.path.exists(srcpath):
-                file_util.copy_file(srcpath, dstpath)
 
 
 class hginstallscripts(install_scripts):
@@ -1294,12 +1004,10 @@ class hginstallscripts(install_scripts):
 
 
 cmdclass = {
-    "fetch_build_deps": fetchbuilddeps,
     "build": hgbuild,
     "build_mo": hgbuildmo,
     "build_ext": hgbuildext,
     "build_py": hgbuildpy,
-    "build_pyzip": buildpyzip,
     "build_scripts": hgbuildscripts,
     "build_extindex": buildextindex,
     "install": hginstall,

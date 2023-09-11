@@ -77,7 +77,6 @@ oss:
 	  build_clib $(COMPILERFLAG) \
 	  build_ext $(COMPILERFLAG) -i \
 	  build_rust_ext -i -l $(RUST_FLAG) \
-	  build_pyzip -i \
 	  build_mo
 ifeq ($(OS),Windows_NT)
 	cp build/scripts-3*/$(SL_NAME).exe $(SL_NAME).exe
@@ -99,7 +98,6 @@ local:
 	  build_clib $(COMPILERFLAG) \
 	  build_ext $(COMPILERFLAG) -i \
 	  build_rust_ext -i -l $(RUST_FLAG) \
-	  build_pyzip -i \
 	  build_mo
 ifeq ($(OS),Windows_NT)
 	cp build/scripts-3*/$(HGNAME).exe $(HGNAME).exe
