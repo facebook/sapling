@@ -208,7 +208,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                     borrowed!(ctx, repo_prefix, blobstore, scuba, tuning_info_scuba);
                     async move {
                         let pack_keys: Vec<&str> = pack_keys.iter().map(|i| i.as_ref()).collect();
-                        pack_utils::repack_keys(
+                        pack_utils::repack_keys_with_retry(
                             ctx,
                             blobstore,
                             PACK_PREFIX,
@@ -218,6 +218,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                             dry_run,
                             scuba,
                             tuning_info_scuba,
+                            &logger.clone(),
                         )
                         .await
                     }

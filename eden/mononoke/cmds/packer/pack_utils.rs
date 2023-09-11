@@ -23,7 +23,9 @@ use packblob::EmptyPack;
 use packblob::Pack;
 use packblob::PackBlob;
 use packblob::SingleCompressed;
+use retry::retry_always;
 use scuba_ext::MononokeScubaSampleBuilder;
+use slog::Logger;
 use tokio::task::spawn_blocking;
 
 type BlobsWithKeys = Vec<(String, BlobstoreBytes)>;
@@ -32,6 +34,8 @@ const BLOBSTORE_KEY: &str = "blobstore_key";
 const COMPRESSED_SIZE: &str = "compressed_size";
 const PACK_KEY: &str = "pack_key";
 const UNCOMPRESSED_SIZE: &str = "uncompressed_size";
+const BASE_RETRY_DELAY_MS: u64 = 1000;
+const RETRIES: usize = 3;
 
 // Tries to pack with the first blob from `blobs` as the dictionary for the other blobs
 fn try_pack(zstd_level: i32, blobs: Vec<(String, BlobstoreBytes)>) -> Result<Pack> {
@@ -116,6 +120,41 @@ async fn fetch_blobs<T: BlobstoreUnlinkOps>(
         .collect();
 
     blob_fetches.try_collect().await
+}
+
+/// Given a list of keys to repack, convert them to a single pack with retries
+pub async fn repack_keys_with_retry<T: BlobstoreUnlinkOps>(
+    ctx: &CoreContext,
+    blobstore: &PackBlob<T>,
+    pack_prefix: &str,
+    zstd_level: i32,
+    repo_prefix: &str,
+    keys: &[&str],
+    dry_run: bool,
+    scuba: &MononokeScubaSampleBuilder,
+    tuning_info_scuba: &MononokeScubaSampleBuilder,
+    logger: &Logger,
+) -> Result<()> {
+    let _ = retry_always(
+        logger,
+        |_| {
+            repack_keys(
+                ctx,
+                blobstore,
+                pack_prefix,
+                zstd_level,
+                repo_prefix,
+                keys,
+                dry_run,
+                scuba,
+                tuning_info_scuba,
+            )
+        },
+        BASE_RETRY_DELAY_MS,
+        RETRIES,
+    )
+    .await?;
+    Ok(())
 }
 
 /// Given a list of keys to repack, convert them to a single pack
