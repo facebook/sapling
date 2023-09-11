@@ -9,3 +9,8 @@ pub static VERSION: &'static str = match option_env!("SAPLING_VERSION") {
     Some(s) => s,
     None => "dev",
 };
+
+pub static VERSION_HASH: &'static str = match option_env!("SAPLING_VERSION_HASH") {
+    Some(s) => s,
+    None => "",
+};

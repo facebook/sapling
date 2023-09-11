@@ -7,4 +7,5 @@
 
 fn main() {
     println!("cargo:rerun-if-env-changed=SAPLING_VERSION");
+    println!("cargo:rerun-if-env-changed=SAPLING_VERSION_HASH");
 }
