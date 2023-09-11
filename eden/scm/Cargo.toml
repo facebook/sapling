@@ -154,6 +154,8 @@ members = [
   "lib/procinfo",
   "lib/progress/model",
   "lib/progress/render",
+  "lib/python-modules",
+  "lib/python-modules/codegen",
   "lib/radixbuf",
   "lib/refencode",
   "lib/renderdag",
