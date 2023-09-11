@@ -105,8 +105,6 @@ class eden_dirstate_map(treestate.treestatemap):
         self._thrift_client.setHgParents(
             parents[0],
             parents[1],
-            need_flush=False,
-            p1manifest=self._repo[parents[0]].manifestnode(),
         )
 
     def _read(self, tree):  # override

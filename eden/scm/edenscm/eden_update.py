@@ -9,20 +9,9 @@ This overrides the dirstate to check with the eden daemon for modifications,
 instead of doing a normal scan of the filesystem.
 """
 
-from . import (
-    EdenThriftClient as thrift,
-    error,
-    localrepo,
-    merge as mergemod,
-    progress,
-    pycompat,
-    util,
-)
+from . import error, localrepo, merge as mergemod, progress, pycompat, util
 from .i18n import _
 
-
-CheckoutMode = thrift.CheckoutMode
-ConflictType = thrift.ConflictType
 
 _repoclass = localrepo.localrepository
 
@@ -79,7 +68,7 @@ def update(
                 with progress.spinner(repo.ui, _("conflict check")):
                     conflicts = repo.dirstate.eden_client.checkout(
                         destctx.node(),
-                        CheckoutMode.DRY_RUN,
+                        "DRY_RUN",
                         manifest=destctx.manifestnode(),
                     )
                 if conflicts:
@@ -110,7 +99,7 @@ def update(
             with progress.spinner(repo.ui, _("updating")):
                 conflicts = repo.dirstate.eden_client.checkout(
                     destctx.node(),
-                    CheckoutMode.FORCE,
+                    "FORCE",
                     manifest=destctx.manifestnode(),
                 )
                 if conflicts:
@@ -127,7 +116,7 @@ def update(
             with progress.spinner(repo.ui, _("updating")):
                 conflicts = repo.dirstate.eden_client.checkout(
                     destctx.node(),
-                    CheckoutMode.NORMAL,
+                    "NORMAL",
                     manifest=destctx.manifestnode(),
                 )
             # TODO(mbolin): Add a warning if we did a DRY_RUN and the conflicts
@@ -184,10 +173,10 @@ def _abort_on_eden_conflict_error(repo, conflicts):
         return
 
     for conflict in conflicts:
-        if conflict.type == ConflictType.ERROR:
+        if conflict["conflict_type"] == "ERROR":
             repo.ui.metrics.gauge("abort_on_eden_conflict_error", 1)
-            path = pycompat.decodeutf8(conflict.path)
-            raise error.Abort(_("error updating %s: %s") % (path, conflict.message))
+            path = conflict["path"]
+            raise error.Abort(_("error updating %s: %s") % (path, conflict["message"]))
 
 
 def _is_abort_on_eden_conflict_error_enabled(repo) -> bool:
@@ -223,25 +212,27 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
     for conflict in conflicts:
         # The action tuple is:
         # - path_in_1, path_in_2, path_in_ancestor, move, ancestor_node
-        path = pycompat.decodeutf8(conflict.path)
-
-        if conflict.type == ConflictType.ERROR:
+        path = conflict["path"]
+        conflict_type = conflict["conflict_type"]
+        if conflict_type == "ERROR":
             if _is_abort_on_eden_conflict_error_enabled(repo):
                 repo.ui.metrics.gauge("abort_on_eden_conflict_error", 1)
-                raise error.Abort(_("error updating %s: %s") % (path, conflict.message))
+                raise error.Abort(
+                    _("error updating %s: %s") % (path, conflict["message"])
+                )
             else:
                 # We don't record this as a conflict for now.
                 # We will report the error, but the file will show modified in
                 # the working directory status after the update returns.
                 repo.ui.write_err(
-                    _("error updating %s: %s\n") % (path, conflict.message)
+                    _("error updating %s: %s\n") % (path, conflict["message"])
                 )
                 continue
-        elif conflict.type == ConflictType.MODIFIED_REMOVED:
+        elif conflict_type == "MODIFIED_REMOVED":
             action_type = "cd"
             action = (path, None, path, False, src.node())
             prompt = "prompt changed/deleted"
-        elif conflict.type == ConflictType.UNTRACKED_ADDED:
+        elif conflict_type == "UNTRACKED_ADDED":
             if repo.dirstate[path] == "?" and (
                 repo.dirstate._ignore(path)
                 or not mergemod._checkunknownfile(repo, wctx, destctx, path)
@@ -265,20 +256,20 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
                 action_type = "m"
                 action = (path, path, None, False, src.node())
                 prompt = "both created"
-        elif conflict.type == ConflictType.REMOVED_MODIFIED:
+        elif conflict_type == "REMOVED_MODIFIED":
             action_type = "dc"
             action = (None, path, path, False, src.node())
             prompt = "prompt deleted/changed"
-        elif conflict.type == ConflictType.MISSING_REMOVED:
+        elif conflict_type == "MISSING_REMOVED":
             # Nothing to do here really.  The file was already removed
             # locally in the working directory before, and it was removed
             # in the new commit.
             continue
-        elif conflict.type == ConflictType.MODIFIED_MODIFIED:
+        elif conflict_type == "MODIFIED_MODIFIED":
             action_type = "m"
             action = (path, path, path, False, src.node())
             prompt = "versions differ"
-        elif conflict.type == ConflictType.DIRECTORY_NOT_EMPTY:
+        elif conflict_type == "DIRECTORY_NOT_EMPTY":
             # This is a file in a directory that Eden would have normally
             # removed as part of the checkout, but it could not because this
             # untracked file was here. Just leave it be.
@@ -286,7 +277,7 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
         else:
             raise RuntimeError(
                 "unknown conflict type received from eden: "
-                "%r, %r, %r" % (conflict.type, path, conflict.message)
+                "%r, %r, %r" % (conflict_type, path, conflict["message"])
             )
 
         actions[action_type].append((path, action, prompt))
@@ -324,7 +315,7 @@ def _check_actions_and_raise_if_there_are_conflicts(actions):
 
 
 def _applyupdates(repo, actions, wctx, dest, labels, conflicts):
-    numerrors = sum(1 for c in conflicts if c.type == ConflictType.ERROR)
+    numerrors = sum(1 for c in conflicts if c["conflict_type"] == "ERROR")
 
     # Call applyupdates
     # Note that applyupdates may mutate actions.
