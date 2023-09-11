@@ -26,7 +26,11 @@ amend modified chunks into the corresponding non-public changesets.
 
 from __future__ import absolute_import
 
+import bisect
+
 import collections
+
+import bindings
 
 from edenscm import (
     cmdutil,
@@ -48,9 +52,6 @@ from edenscm import (
 )
 from edenscm.i18n import _, _n
 from edenscm.pycompat import decodeutf8, encodeutf8, range
-
-# pyre-fixme[21]: Could not find name `linelog` in `edenscmnative`.
-from edenscmnative import linelog
 
 
 testedwith = "ships-with-fb-ext"
@@ -273,6 +274,9 @@ class filefixupstate:
         if self.ui.debugflag:
             assert self._checkoutlinelog() == self.contents
 
+        # used for _iscontinuous check
+        self.gap_lines = _calculate_gap_lines(self.linelog)
+
         # following fields will be filled later
         self.chunkstats = [0, 0]  # [adopted, total : int]
         self.targetlines = []  # [str]
@@ -298,13 +302,12 @@ class filefixupstate:
         blines = mdiff.splitnewlines(b)
         self.targetlines = blines
 
-        self.linelog.annotate(self.linelog.maxrev)
-        annotated = self.linelog.annotateresult  # [(linelog rev, linenum)]
-        assert len(annotated) == len(alines)
-        # add a dummy end line to make insertion at the end easier
-        if annotated:
-            dummyendline = (annotated[-1][0], annotated[-1][1] + 1)
-            annotated.append(dummyendline)
+        # [(rev, linenum, pc, deleted)]
+        annotated = self.linelog.checkout_lines(self.linelog.max_rev())
+        # change the last dummy line to belong to the last actual line
+        if len(annotated) > 1:
+            annotated[-1] = (annotated[-2][0], annotated[-2][1], *annotated[-1][2:])
+        assert len(annotated) == len(alines) + 1
 
         # analyse diff blocks
         for chunk in self._alldiffchunks(a, b, alines, blines):
@@ -320,8 +323,7 @@ class filefixupstate:
 
         call this only once, before getfinalcontent(), after diffwith().
         """
-        # the following is unnecessary, as it's done by "diffwith":
-        #   self.linelog.annotate(self.linelog.maxrev)
+        max_rev = self.linelog.max_rev()
         for rev, a1, a2, b1, b2 in reversed(self.fixups):
             blines = self.targetlines[b1:b2]
             if self.ui.debugflag:
@@ -330,7 +332,7 @@ class filefixupstate:
                     _("%s: chunk %d:%d -> %d lines\n")
                     % (node.short(self.fctxs[idx].node()), a1, a2, len(blines))
                 )
-            self.linelog.replacelines(rev, a1, a2, b1, b2)
+            self.linelog = self.linelog.edit_chunk(max_rev, a1, a2, rev, b1, b2)
         if self.opts.get("edit_lines", False):
             self.finalcontents = self._checkoutlinelogwithedits()
         else:
@@ -368,9 +370,9 @@ class filefixupstate:
             # to the public (first) changeset (i.e. annotated[i][0] == 1)
             nearbylinenums = set([a2, max(0, a1 - 1)])
             involved = [annotated[i] for i in nearbylinenums if annotated[i][0] != 1]
-        involvedrevs = list(set(r for r, l in involved))
+        involvedrevs = list(set(r[0] for r in involved))
         newfixups = []
-        if len(involvedrevs) == 1 and self._iscontinuous(a1, a2 - 1, True):
+        if len(involvedrevs) == 1 and self._iscontinuous(a1, a2 - 1):
             # chunk belongs to a single revision
             rev = involvedrevs[0]
             if rev > 1:
@@ -379,7 +381,7 @@ class filefixupstate:
         elif a2 - a1 == b2 - b1 or b1 == b2:
             # 1:1 line mapping, or chunk was deleted
             for i in range(a1, a2):
-                rev, linenum = annotated[i]
+                rev, linenum = annotated[i][:2]
                 if rev > 1:
                     if b1 == b2:  # deletion, simply remove that single line
                         nb1 = nb2 = 0
@@ -403,14 +405,14 @@ class filefixupstate:
         """calculate the initial linelog based on self.content{,line}s.
         this is similar to running a partial "annotate".
         """
-        llog = linelog.linelog()
+        llog = bindings.linelog.IntLineLog()
         a, alines = b"", []
         for i in range(len(self.contents)):
             b, blines = self.contents[i], self.contentlines[i]
             llrev = i * 2 + 1
             chunks = self._alldiffchunks(a, b, alines, blines)
             for a1, a2, b1, b2 in reversed(list(chunks)):
-                llog.replacelines(llrev, a1, a2, b1, b2)
+                llog = llog.edit_chunk(llrev, a1, a2, llrev, b1, b2)
             a, alines = b, blines
         return llog
 
@@ -419,14 +421,16 @@ class filefixupstate:
         contents = []
         for i in range(len(self.contents)):
             rev = (i + 1) * 2
-            self.linelog.annotate(rev)
-            content = b"".join(map(self._getline, self.linelog.annotateresult))
+            annotated = self.linelog.checkout_lines(rev)[:-1]
+            content = b"".join(map(self._getline, annotated))
             contents.append(content)
         return contents
 
     def _checkoutlinelogwithedits(self):
         """() -> [str]. prompt all lines for edit"""
-        alllines = self.linelog.getalllines()
+        max_rev = self.linelog.max_rev()
+        # discard the "end" line
+        alllines = self.linelog.checkout_lines(max_rev, 0)[:-1]
         # header
         editortext = _(
             '{0}: editing {1}\n{0}: "y" means the line to the right '
@@ -451,11 +455,13 @@ class filefixupstate:
         # but probably fine
         lineset = defaultdict(lambda: set())  # {(llrev, linenum): {llrev}}
         for i, f in visiblefctxs:
-            self.linelog.annotate((i + 1) * 2)
-            for l in self.linelog.annotateresult:
+            annotated = self.linelog.checkout_lines((i + 1) * 2)
+            for info in annotated:
+                l = tuple(info[:2])
                 lineset[l].add(i)
         # append lines
-        for l in alllines:
+        for info in alllines:
+            l = tuple(info[:2])
             editortext += "    %s : %s" % (
                 "".join([("y" if i in lineset[l] else " ") for i, _f in visiblefctxs]),
                 decodeutf8(self._getline(l)),
@@ -485,28 +491,25 @@ class filefixupstate:
 
     def _getline(self, lineinfo):
         """((rev, linenum)) -> str. convert rev+line number to line content"""
-        rev, linenum = lineinfo
+        rev, linenum = lineinfo[:2]
         if rev & 1:  # odd: original line taken from fctxs
             return self.contentlines[rev // 2][linenum]
         else:  # even: fixup line from targetfctx
             return self.targetlines[linenum]
 
-    def _iscontinuous(self, a1, a2, closedinterval=False):
+    def _iscontinuous(self, a1, a2):
         """(a1, a2 : int) -> bool
 
         check if these lines are continuous. i.e. no other insertions or
         deletions (from other revisions) among these lines.
-
-        closedinterval decides whether a2 should be included or not. i.e. is
-        it [a1, a2), or [a1, a2] ?
         """
         if a1 >= a2:
             return True
-        llog = self.linelog
-        offset1 = llog.getoffset(a1)
-        offset2 = llog.getoffset(a2) + int(closedinterval)
-        linesinbetween = llog.getalllines(offset1, offset2)
-        return len(linesinbetween) == a2 - a1 + int(closedinterval)
+        gap_index = bisect.bisect_left(self.gap_lines, a1)
+        if gap_index >= len(self.gap_lines):
+            return True
+        gap = self.gap_lines[gap_index]
+        return gap >= a2
 
     def _optimizefixups(self, fixups):
         """[(rev, a1, a2, b1, b2)] -> [(rev, a1, a2, b1, b2)].
@@ -1102,6 +1105,22 @@ def _amendcmd(flag, orig, ui, repo, *pats, **opts):
 
     if adoptedsum == 0:
         return 1
+
+
+def _calculate_gap_lines(linelog, rev=None):
+    if rev is None:
+        rev = linelog.max_rev()
+    all_lines = linelog.checkout_lines(rev, 0)
+    gap_lines = []
+    lineno = -1
+    last_gap_line = -1
+    for _rev, _lineno, _pc, deleted in all_lines:
+        if deleted and lineno != last_gap_line and lineno >= 0:
+            last_gap_line = lineno
+            gap_lines.append(lineno + 0.5)
+        else:
+            lineno += 1
+    return gap_lines
 
 
 def extsetup(ui):

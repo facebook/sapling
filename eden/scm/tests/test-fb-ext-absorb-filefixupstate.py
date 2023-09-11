@@ -126,6 +126,7 @@ testfilefixup(case1, "1a23", case1)
 testfilefixup(case1, "12b3", case1)
 
 # input case 2: delete in the middle
+"112233" "1133"
 case2 = buildcontents([("11", [1, 2]), ("22", [1]), ("33", [1, 2])])
 
 # deletion (optimize code should make it 2 chunks)
