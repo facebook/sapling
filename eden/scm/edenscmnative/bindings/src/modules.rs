@@ -72,6 +72,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
             lz4,
             manifest,
             metalog,
+            modules,
             mutationstore,
             nodeipc,
             nodemap,

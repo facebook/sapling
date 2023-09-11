@@ -38,6 +38,7 @@ members = [
   "edenscmnative/bindings/modules/pylz4",
   "edenscmnative/bindings/modules/pymanifest",
   "edenscmnative/bindings/modules/pymetalog",
+  "edenscmnative/bindings/modules/pymodules",
   "edenscmnative/bindings/modules/pymutationstore",
   "edenscmnative/bindings/modules/pynodeipc",
   "edenscmnative/bindings/modules/pynodemap",
