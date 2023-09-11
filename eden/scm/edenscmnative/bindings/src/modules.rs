@@ -66,6 +66,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
             identity,
             indexedlog,
             io,
+            linelog,
             lock,
             lz4,
             manifest,
