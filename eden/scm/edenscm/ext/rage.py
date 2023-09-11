@@ -345,7 +345,7 @@ def _makerage(ui, repo, **opts) -> str:
         ("active bookmark", lambda: bookmarks._readactive(repo, repo._bookmarks)),
         (
             "hg version",
-            lambda: __import__("edenscm.__version__").__version__.version,
+            lambda: bindings.version.VERSION,
         ),
     ]
 

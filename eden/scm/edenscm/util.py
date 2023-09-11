@@ -480,12 +480,7 @@ def popen4(cmd, env=None, newlines=False, bufsize=-1):
 
 def version():
     """Return version information if available."""
-    try:
-        from . import __version__
-
-        return __version__.version
-    except ImportError:
-        return "unknown"
+    return bindings.version.VERSION
 
 
 def versionagedays() -> int:

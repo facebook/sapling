@@ -258,7 +258,6 @@ def _preimportmodules():
         "vfs",
         "wireproto",
         "worker",
-        "__version__",
     ]
     extmods = [
         "absorb",

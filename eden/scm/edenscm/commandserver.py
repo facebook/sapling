@@ -304,10 +304,8 @@ class server:
         hellomsg += "pid: %d" % util.getpid()
         hellomsg += "\n"
         hellomsg += "groups: " + " ".join(str(gid) for gid in sorted(os.getgroups()))
-        versionmod = sys.modules.get("edenscm.__version__")
-        if versionmod:
-            hellomsg += "\n"
-            hellomsg += "versionhash: %s" % versionmod.versionhash
+        hellomsg += "\n"
+        hellomsg += "versionhash: %s" % bindings.version.VERSION_HASH
         if hasattr(os, "getpgid"):
             hellomsg += "\n"
             hellomsg += "pgid: %d" % os.getpgid(0)
