@@ -225,6 +225,11 @@ impl MPathElement {
     }
 
     #[inline]
+    pub fn to_smallvec(self) -> SmallVec<[u8; 24]> {
+        self.0
+    }
+
+    #[inline]
     pub fn new_from_slice(element: &[u8]) -> Result<MPathElement> {
         Self::verify(element)?;
         Ok(MPathElement(SmallVec::from(element)))

@@ -28,6 +28,7 @@ use futures::stream::FuturesUnordered;
 use futures::stream::TryStreamExt;
 use manifest::derive_manifest_with_io_sender;
 use manifest::derive_manifests_for_simple_stack_of_commits;
+use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::ManifestChanges;
 use manifest::TreeInfo;
@@ -43,6 +44,7 @@ use mononoke_types::FileType;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types::SkeletonManifestId;
+use mononoke_types::TrieMap;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::SkeletonManifestDerivationError;
@@ -230,11 +232,22 @@ async fn create_skeleton_manifest(
     ctx: &CoreContext,
     blobstore: &Arc<dyn Blobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
-    tree_info: TreeInfo<SkeletonManifestId, (), Option<SkeletonManifestSummary>>,
+    tree_info: TreeInfo<
+        SkeletonManifestId,
+        (),
+        Option<SkeletonManifestSummary>,
+        TrieMap<Entry<SkeletonManifestId, ()>>,
+    >,
 ) -> Result<(Option<SkeletonManifestSummary>, SkeletonManifestId)> {
-    let entries =
-        collect_skeleton_subentries(ctx, blobstore, &tree_info.parents, tree_info.subentries)
-            .await?;
+    let entries = collect_skeleton_subentries(
+        ctx,
+        blobstore,
+        &tree_info.parents,
+        flatten_subentries(ctx, &(), tree_info.subentries)
+            .await?
+            .collect(),
+    )
+    .await?;
 
     // Build a summary of the entries and store it as the new skeleton
     // manifest.

@@ -10,10 +10,11 @@ use std::collections::HashSet;
 use std::fmt;
 use std::future::Future;
 use std::hash::Hash;
+use std::iter::Iterator;
 use std::sync::Arc;
 
 use anyhow::format_err;
-use anyhow::Error;
+use anyhow::Result;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
@@ -21,25 +22,82 @@ use futures::channel::mpsc;
 use futures::future;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
+use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use itertools::Either;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
+use smallvec::SmallVec;
 
 use crate::AsyncManifest as Manifest;
 use crate::Entry;
 use crate::PathTree;
 use crate::StoreLoadable;
+use crate::TrieMapOps;
 
 /// Information passed to `create_tree` function when tree node is constructed
 ///
 /// `Ctx` is any additional data which is useful for particular implementation of
 /// manifest. It is `Some` for subentries for which `create_{tree|leaf}` was called to
 /// generate them, and `None` if subentry was reused from one of its parents.
-pub struct TreeInfo<TreeId, LeafId, Ctx> {
+pub struct TreeInfo<TreeId, LeafId, Ctx, TrieMapType> {
     pub path: Option<NonRootMPath>,
     pub parents: Vec<TreeId>,
-    pub subentries: BTreeMap<MPathElement, (Option<Ctx>, Entry<TreeId, LeafId>)>,
+    pub subentries:
+        BTreeMap<SmallVec<[u8; 24]>, Either<(Option<Ctx>, Entry<TreeId, LeafId>), TrieMapType>>,
+}
+
+pub async fn flatten_subentries<Store, TreeId, IntermediateLeafId, LeafId, Ctx, TrieMapType>(
+    ctx: &CoreContext,
+    blobstore: &Store,
+    subentries: BTreeMap<
+        SmallVec<[u8; 24]>,
+        Either<(Option<Ctx>, Entry<TreeId, IntermediateLeafId>), TrieMapType>,
+    >,
+) -> Result<
+    impl Iterator<
+        Item = (
+            MPathElement,
+            (Option<Ctx>, Entry<TreeId, IntermediateLeafId>),
+        ),
+    >,
+>
+where
+    TrieMapType: TrieMapOps<Store, Entry<TreeId, LeafId>>,
+    IntermediateLeafId: From<LeafId>,
+{
+    let subentries_futures = subentries
+        .into_iter()
+        .map(|(prefix, entry_or_map)| async move {
+            match entry_or_map {
+                Either::Left((ctx, entry)) => {
+                    Ok(vec![(MPathElement::from_smallvec(prefix)?, (ctx, entry))])
+                }
+                Either::Right(map) => map
+                    .into_stream(ctx, blobstore)
+                    .await?
+                    .map_ok(|(mut path, entry)| {
+                        path.insert_from_slice(0, prefix.as_ref());
+                        Ok((
+                            MPathElement::from_smallvec(path)?,
+                            (None, convert_to_intermediate_entry(entry)),
+                        ))
+                    })
+                    .try_collect::<Vec<_>>()
+                    .await?
+                    .into_iter()
+                    .collect::<Result<_>>(),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    Ok(stream::iter(subentries_futures)
+        .buffer_unordered(100)
+        .try_collect::<Vec<_>>()
+        .await?
+        .into_iter()
+        .flatten())
 }
 
 /// Information passed to `create_leaf` function when leaf node is constructed
@@ -77,7 +135,7 @@ pub fn derive_manifest<TreeId, LeafId, IntermediateLeafId, Leaf, T, TFut, L, LFu
     changes: impl IntoIterator<Item = (NonRootMPath, Option<Leaf>)>,
     create_tree: T,
     create_leaf: L,
-) -> impl Future<Output = Result<Option<TreeId>, Error>>
+) -> impl Future<Output = Result<Option<TreeId>>>
 where
     Store: Sync + Send + Clone + 'static,
     LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
@@ -86,10 +144,22 @@ where
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
     TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId>,
     <TreeId as StoreLoadable<Store>>::Value: Send + Sync,
-    T: Fn(TreeInfo<TreeId, IntermediateLeafId, Ctx>) -> TFut + Send + Sync + 'static,
-    TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'static,
+    T: Fn(
+            TreeInfo<
+                TreeId,
+                IntermediateLeafId,
+                Ctx,
+                <TreeId::Value as Manifest<Store>>::TrieMapType,
+            >,
+        ) -> TFut
+        + Send
+        + Sync
+        + 'static,
+    TFut: Future<Output = Result<(Ctx, TreeId)>> + Send + 'static,
     L: Fn(LeafInfo<IntermediateLeafId, Leaf>) -> LFut + Send + Sync + 'static,
-    LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'static,
+    LFut: Future<Output = Result<(Ctx, IntermediateLeafId)>> + Send + 'static,
+    <TreeId::Value as Manifest<Store>>::TrieMapType:
+        TrieMapOps<Store, Entry<TreeId, LeafId>> + Send + Sync + 'static,
     Ctx: Send + 'static,
 {
     derive_manifest_inner(ctx, store, parents, changes, create_tree, create_leaf)
@@ -158,7 +228,7 @@ pub fn derive_manifest_inner<
     changes: impl IntoIterator<Item = (NonRootMPath, Option<Leaf>)>,
     create_tree: T,
     create_leaf: L,
-) -> impl Future<Output = Result<Option<TreeId>, Error>>
+) -> impl Future<Output = Result<Option<TreeId>>>
 where
     Store: Sync + Send + Clone + 'static,
     LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
@@ -167,10 +237,22 @@ where
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
     TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId>,
     <TreeId as StoreLoadable<Store>>::Value: Send + Sync,
-    T: Fn(TreeInfo<TreeId, IntermediateLeafId, Ctx>) -> TFut + Send + Sync + 'static,
-    TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'static,
+    T: Fn(
+            TreeInfo<
+                TreeId,
+                IntermediateLeafId,
+                Ctx,
+                <TreeId::Value as Manifest<Store>>::TrieMapType,
+            >,
+        ) -> TFut
+        + Send
+        + Sync
+        + 'static,
+    TFut: Future<Output = Result<(Ctx, TreeId)>> + Send + 'static,
     L: Fn(LeafInfo<IntermediateLeafId, Leaf>) -> LFut + Send + Sync + 'static,
-    LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'static,
+    LFut: Future<Output = Result<(Ctx, IntermediateLeafId)>> + Send + 'static,
+    <TreeId::Value as Manifest<Store>>::TrieMapType:
+        TrieMapOps<Store, Entry<TreeId, LeafId>> + Send + 'static,
     Ctx: Send + 'static,
 {
     bounded_traversal::bounded_traversal(
@@ -193,7 +275,7 @@ where
         {
             let create_tree = Arc::new(create_tree);
             let create_leaf = Arc::new(create_leaf);
-            move |merge_result: MergeResult<_, IntermediateLeafId, _>, subentries| {
+            move |merge_result: MergeResult<_, IntermediateLeafId, _, _>, subentries| {
                 let create_tree = create_tree.clone();
                 let create_leaf = create_leaf.clone();
                 async move {
@@ -207,6 +289,7 @@ where
                                 name,
                                 path,
                                 parents,
+                                reused_maps,
                             } => {
                                 let subentries: BTreeMap<_, _> = subentries
                                     .flatten()
@@ -214,10 +297,17 @@ where
                                         |(name, context, entry): (
                                             Option<MPathElement>,
                                             Option<Ctx>,
-                                            _,
+                                            Entry<TreeId, IntermediateLeafId>,
                                         )| {
-                                            name.map(move |name| (name, (context, entry)))
+                                            name.map(move |name| {
+                                                (name.to_smallvec(), Either::Left((context, entry)))
+                                            })
                                         },
+                                    )
+                                    .chain(
+                                        reused_maps
+                                            .into_iter()
+                                            .map(|(prefix, map)| (prefix, Either::Right(map))),
                                     )
                                     .collect();
                                 if subentries.is_empty() {
@@ -269,7 +359,7 @@ where
     }
 }
 
-type BoxFuture<T, E> = future::BoxFuture<'static, Result<T, E>>;
+type BoxFuture<T> = future::BoxFuture<'static, Result<T>>;
 
 /// A convenience wrapper around `derive_manifest` that allows for the tree and leaf creation
 /// closures to send IO work onto a channel that is then fed into a buffered stream. NOTE: don't
@@ -297,7 +387,7 @@ pub fn derive_manifest_with_io_sender<
     changes: impl IntoIterator<Item = (NonRootMPath, Option<Leaf>)>,
     create_tree_with_sender: T,
     create_leaf_with_sender: L,
-) -> impl Future<Output = Result<Option<TreeId>, Error>>
+) -> impl Future<Output = Result<Option<TreeId>>>
 where
     LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
     Leaf: Send + 'static,
@@ -307,18 +397,25 @@ where
     TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId>,
     <TreeId as StoreLoadable<Store>>::Value: Send + Sync,
     T: Fn(
-            TreeInfo<TreeId, IntermediateLeafId, Ctx>,
-            mpsc::UnboundedSender<BoxFuture<(), Error>>,
+            TreeInfo<
+                TreeId,
+                IntermediateLeafId,
+                Ctx,
+                <TreeId::Value as Manifest<Store>>::TrieMapType,
+            >,
+            mpsc::UnboundedSender<BoxFuture<()>>,
         ) -> TFut
         + Send
         + Sync
         + 'static,
-    TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'static,
-    L: Fn(LeafInfo<IntermediateLeafId, Leaf>, mpsc::UnboundedSender<BoxFuture<(), Error>>) -> LFut
+    TFut: Future<Output = Result<(Ctx, TreeId)>> + Send + 'static,
+    L: Fn(LeafInfo<IntermediateLeafId, Leaf>, mpsc::UnboundedSender<BoxFuture<()>>) -> LFut
         + Send
         + Sync
         + 'static,
-    LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'static,
+    LFut: Future<Output = Result<(Ctx, IntermediateLeafId)>> + Send + 'static,
+    <TreeId::Value as Manifest<Store>>::TrieMapType:
+        TrieMapOps<Store, Entry<TreeId, LeafId>> + PartialEq + Send + 'static,
     Ctx: Send + 'static,
 {
     let (sender, receiver) = mpsc::unbounded();
@@ -356,7 +453,7 @@ impl<Leaf> From<Option<Leaf>> for Change<Leaf> {
     }
 }
 
-enum MergeResult<TreeId, LeafId, Leaf> {
+enum MergeResult<TreeId, LeafId, Leaf, TrieMapType> {
     Delete,
     Reuse {
         name: Option<MPathElement>,
@@ -372,6 +469,7 @@ enum MergeResult<TreeId, LeafId, Leaf> {
         name: Option<MPathElement>,
         path: Option<NonRootMPath>,
         parents: Vec<TreeId>,
+        reused_maps: Vec<(SmallVec<[u8; 24]>, TrieMapType)>,
     },
 }
 
@@ -388,13 +486,10 @@ async fn merge<TreeId, LeafId, IntermediateLeafId, Leaf, Store>(
     ctx: CoreContext,
     store: Store,
     node: MergeNode<TreeId, IntermediateLeafId, Leaf>,
-) -> Result<
-    (
-        MergeResult<TreeId, IntermediateLeafId, Leaf>,
-        Vec<MergeNode<TreeId, IntermediateLeafId, Leaf>>,
-    ),
-    Error,
->
+) -> Result<(
+    MergeResult<TreeId, IntermediateLeafId, Leaf, <TreeId::Value as Manifest<Store>>::TrieMapType>,
+    Vec<MergeNode<TreeId, IntermediateLeafId, Leaf>>,
+)>
 where
     Store: Sync + Send + Clone + 'static,
     IntermediateLeafId: Send + From<LeafId> + 'static + fmt::Debug + Clone + Eq + Hash,
@@ -568,6 +663,7 @@ where
             name,
             path,
             parents: parent_subtrees,
+            reused_maps: vec![],
         },
         deps.into_values().collect(),
     ))

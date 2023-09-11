@@ -22,6 +22,7 @@ use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use manifest::derive_manifest_with_io_sender;
+use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::TreeInfo;
@@ -35,6 +36,7 @@ use mononoke_types::ContentId;
 use mononoke_types::FileType;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
+use mononoke_types::TrieMap;
 use skeleton_manifest::mapping::get_file_changes;
 
 use crate::mapping::RootBasenameSuffixSkeletonManifest;
@@ -93,19 +95,24 @@ async fn inner_derive(
         // create_tree
         {
             cloned!(ctx, blobstore);
-            move |info: TreeInfo<TreeId, IntermediateLeafId, Ctx>, fut_sender| {
+            move |info: TreeInfo<
+                TreeId,
+                IntermediateLeafId,
+                Ctx,
+                TrieMap<Entry<TreeId, LeafId>>,
+            >,
+                  fut_sender| {
                 cloned!(ctx, blobstore);
                 async move {
-                    let entries =
-                        info.subentries
-                            .into_iter()
-                            .map(|(path_el, (_maybe_ctx, entry_in))| {
-                                let entry = match entry_in {
-                                    Entry::Leaf(()) => BssmEntry::File,
-                                    Entry::Tree(entry) => BssmEntry::Directory(entry),
-                                };
-                                (path_el, Some(entry))
-                            });
+                    let entries = flatten_subentries(&ctx, &(), info.subentries).await?.map(
+                        |(path_el, (_maybe_ctx, entry_in))| {
+                            let entry = match entry_in {
+                                Entry::Leaf(()) => BssmEntry::File,
+                                Entry::Tree(entry) => BssmEntry::Directory(entry),
+                            };
+                            (path_el, Some(entry))
+                        },
+                    );
 
                     let (mf, rollup_count) = BasenameSuffixSkeletonManifest::empty()
                         .update(&ctx, &blobstore, entries.collect())
