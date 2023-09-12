@@ -21,9 +21,11 @@ export function FileHeader({
   diffType,
   open,
   onChangeOpen,
+  fileActions,
 }: {
   path: string;
   diffType?: DiffType;
+  fileActions?: JSX.Element;
 } & EnsureAssignedTogether<{
   open: boolean;
   onChangeOpen: (open: boolean) => void;
@@ -47,10 +49,9 @@ export function FileHeader({
             {acc}
             {
               <Tooltip
-                // TODO: better translate API that supports templates.
                 component={() => (
                   <span className="file-header-copyable-path-hover">
-                    {t('Copy $path').replace('$path', pathSoFar)}
+                    {t('Copy $path', {replace: {$path: pathSoFar}})}
                   </span>
                 )}
                 delayMs={100}
@@ -82,7 +83,10 @@ export function FileHeader({
       )}
       {diffType !== undefined && <Icon icon={diffTypeToIcon[diffType]} />}
       <div className="split-diff-view-file-path-parts">{filePathParts}</div>
-      {
+      {fileActions != null ? (
+        fileActions
+      ) : (
+        // open file button shows only if other actions not specified
         <Tooltip title={t('Open file')} placement={'bottom'}>
           <VSCodeButton
             appearance="icon"
@@ -93,7 +97,7 @@ export function FileHeader({
             <Icon icon="go-to-file" />
           </VSCodeButton>
         </Tooltip>
-      }
+      )}
     </div>
   );
 }

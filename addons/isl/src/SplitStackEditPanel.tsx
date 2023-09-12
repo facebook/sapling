@@ -198,7 +198,11 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
 
   return (
     <div className="split-commit-file">
-      <FileHeader path={path} diffType={DiffType.Modified} />
+      <FileHeader
+        path={path}
+        diffType={DiffType.Modified}
+        fileActions={<>{/* TODO: move entire file left/right */}</>}
+      />
       <SplitFile key={fileIdx} rev={fileRev} stack={fileStack} setStack={setStack} />
     </div>
   );
