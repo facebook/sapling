@@ -487,8 +487,8 @@ export function SplitFile(props: SplitFileProps) {
   };
 
   const pushLineButtons = (sign: '=' | '!' | '~', aIdx?: LineIdx, bIdx?: LineIdx) => {
-    let leftButton: JSX.Element | string = ' ';
-    let rightButton: JSX.Element | string = ' ';
+    let leftButton: JSX.Element | null = null;
+    let rightButton: JSX.Element | null = null;
 
     // Move one or more lines. If the current line is part of the selection,
     // Move all lines in the selection.
