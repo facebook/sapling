@@ -72,14 +72,24 @@
 }
 
 .split-file .lineno.add {
-  background: var(--diffEditor-insertedLineHighlightBackground);
+  background: var(--diffEditor-insertedLineBackground);
 }
 
 .split-file .lineno.del {
-  background: var(--diffEditor-removedLineHighlightBackground);
+  background: var(--diffEditor-removedLineBackground);
 }
 
 .split-file .lineno.change {
+  background: var(--editor-changedBackground);
+}
+
+.split-file tr:hover .add {
+  background: var(--diffEditor-insertedLineHighlightBackground);
+}
+.split-file tr:hover .del {
+  background: var(--diffEditor-removedLineHighlightBackground);
+}
+.split-file tr:hover .line.change {
   background: var(--editor-changedHighlightBackground);
 }
 
@@ -100,6 +110,10 @@
   user-select: none;
   cursor: pointer;
   opacity: 0.3;
+}
+
+.split-commit-file tr:hover .button {
+  opacity: 0.7;
 }
 
 .split-file .button:active {
