@@ -19,6 +19,7 @@ html .vscode-light {
   --error-bg-color: #e3594120;
 
   --hover-darken: rgba(0, 0, 0, 0.1);
+  --subtle-hover-darken: rgba(0, 0, 0, 0.03);
   --highlight-foreground: #2a2a2a;
 
   --selection-mix-mode: darken;

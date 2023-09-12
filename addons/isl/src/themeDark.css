@@ -19,6 +19,7 @@ html .vscode-dark {
   --tooltip-border: var(--vscode-editorWidget-border, #454545);
 
   --hover-darken: rgba(255, 255, 255, 0.1);
+  --subtle-hover-darken: rgba(255, 255, 255, 0.03);
   --highlight-foreground: #f0f0f0;
 
   --selection-mix-mode: lighten;

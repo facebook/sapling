@@ -107,6 +107,12 @@
   text-align: right;
   user-select: none;
 }
+.split-right-lineno,
+.split-left-lineno,
+.split-right-button,
+.split-left-button {
+  background-color: var(--subtle-hover-darken);
+}
 
 .split-file tr.add {
   background: var(--diffEditor-insertedLineBackground);
