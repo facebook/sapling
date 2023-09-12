@@ -157,11 +157,12 @@ function SplitColumn(props: SplitColumnProps) {
   // The min width ensures it does not look too narrow for an empty commit.
   return (
     <div className="split-commit-column" style={{minWidth: 300, flexShrink: 0}}>
-      <div>
-        {rev + 1} / {subStack.size - 1}
+      <div className="split-commit-header">
+        <span className="split-commit-header-stack-number">
+          {rev + 1} / {subStack.size - 1}
+        </span>
+        <MaybeEditableCommitTitle commitMessage={commitMessage} commitKey={commit?.key} />
       </div>
-      <MaybeEditableCommitTitle commitMessage={commitMessage} commitKey={commit?.key} />
-      <div style={{marginTop: 'var(--pad)'}} />
       {body}
     </div>
   );
@@ -473,6 +474,7 @@ export function SplitFile(props: SplitFileProps) {
     expandedLines.has(bLine),
   );
 
+  const lineKind: Array<'add' | 'del' | 'context'> = [];
   const leftGutter: JSX.Element[] = [];
   const leftButtons: JSX.Element[] = [];
   const mainContent: JSX.Element[] = [];
@@ -629,6 +631,7 @@ export function SplitFile(props: SplitFileProps) {
           {' '}
         </div>,
       );
+      lineKind.push('context');
       pushLineButtons(sign, a1, b1);
     } else if (sign === '=') {
       // Unchanged.
@@ -650,6 +653,8 @@ export function SplitFile(props: SplitFileProps) {
             {bLineSpan(bLines[bi])}
           </div>,
         );
+
+        lineKind.push('context');
         pushLineButtons(sign, ai, bi);
       }
     } else if (sign === '!') {
@@ -666,7 +671,7 @@ export function SplitFile(props: SplitFileProps) {
           </div>,
         );
         const selId = `a${ai}`;
-        let className = 'del line';
+        let className = 'line';
         if (selectedLineIds.has(selId)) {
           className += ' selected';
         }
@@ -677,6 +682,7 @@ export function SplitFile(props: SplitFileProps) {
             {aLines[ai]}
           </div>,
         );
+        lineKind.push('del');
       }
       for (let bi = b1; bi < b2; ++bi) {
         // Inserted lines show up in unified and side-by-side diffs.
@@ -694,7 +700,6 @@ export function SplitFile(props: SplitFileProps) {
         );
         const selId = `b${bi}`;
         let lineClassName = 'line';
-        lineClassName += ' add';
         if (selectedLineIds.has(selId)) {
           lineClassName += ' selected';
         }
@@ -704,12 +709,13 @@ export function SplitFile(props: SplitFileProps) {
             {bLineSpan(bLines[bi])}
           </div>,
         );
+        lineKind.push('add');
       }
     }
   });
 
   const rows = mainContent.map((line, i) => (
-    <tr key={i}>
+    <tr key={i} className={lineKind[i]}>
       <td className="split-left-button">{leftButtons[i]}</td>
       <td className="split-left-lineno">{leftGutter[i]}</td>
       <td className="split-line-content">{line}</td>

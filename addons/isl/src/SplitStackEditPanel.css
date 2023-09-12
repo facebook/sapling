@@ -8,6 +8,26 @@
 .split-commit-column {
   margin: var(--pad);
   max-width: 700px;
+  background-color: var(--tooltip-background);
+  padding: var(--pad);
+  border-radius: var(--halfpad);
+}
+
+.split-commit-header {
+  font-size: 110%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--pad);
+  margin: var(--pad) 0px;
+  margin-bottom: calc(2 * var(--pad));
+}
+.split-commit-header-stack-number {
+  flex-shrink: 0;
+  font-size: 140%;
+  font-weight: 300;
+  opacity: 0.8;
+  margin: 0 var(--pad);
 }
 
 .split-commit-file,
@@ -16,9 +36,11 @@
 }
 
 .split-commit-file {
+  background-color: var(--background);
   margin-bottom: var(--pad);
 }
 .split-commit-file .split-diff-view-file-header {
+  background-color: var(--background);
   border: 1px solid var(--panel-view-border);
   margin-left: 0;
   margin-right: 0;
@@ -50,13 +72,6 @@
   vertical-align: top;
 }
 
-.split-file .split-left-lineno,
-.split-file .split-left-button,
-.split-file .split-right-lineno,
-.split-file .split-right-button {
-  background-color: rgba(128, 128, 128, 0.1);
-}
-
 .split-file .context-button {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 20'%3E%3Cpath d='M0 10 Q10 15 20 10 Q30 5 40 10' stroke='grey' fill='transparent' /%3E%3C/svg%3E");
   background-repeat: repeat-x;
@@ -71,25 +86,19 @@
   user-select: none;
 }
 
-.split-file .lineno.add {
+.split-file tr.add {
   background: var(--diffEditor-insertedLineBackground);
 }
-
-.split-file .lineno.del {
+.split-file tr.del {
   background: var(--diffEditor-removedLineBackground);
 }
-
-.split-file .lineno.change {
-  background: var(--editor-changedBackground);
-}
-
-.split-file tr:hover .add {
+.split-file tr:hover.add {
   background: var(--diffEditor-insertedLineHighlightBackground);
 }
-.split-file tr:hover .del {
+.split-file tr:hover.del {
   background: var(--diffEditor-removedLineHighlightBackground);
 }
-.split-file tr:hover .line.change {
+.split-file tr:hover.line.change {
   background: var(--editor-changedHighlightBackground);
 }
 
