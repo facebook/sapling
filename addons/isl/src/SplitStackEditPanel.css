@@ -77,6 +77,27 @@
   background-repeat: repeat-x;
   user-select: none;
   cursor: pointer;
+  opacity: 0.8;
+  position: relative;
+  transition: opacity 0.1s;
+}
+.split-file .context-button:before {
+  opacity: 0;
+  transition: opacity 0.1s;
+  display: block;
+  position: absolute;
+  left: calc(50% - 70px);
+  right: calc(50% - 70px);
+  text-align: center;
+  padding: 0 var(--pad);
+  content: 'Click to expand';
+}
+.split-file .context-button:hover {
+  opacity: 1;
+}
+.split-file .context-button:hover:before {
+  opacity: 1;
+  background-color: var(--background);
 }
 
 .split-file .lineno {
