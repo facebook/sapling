@@ -9,13 +9,13 @@ import type {CommitStackState} from './stackEdit/commitStackState';
 import type {FileStackState, Rev} from './stackEdit/fileStackState';
 import type {RepoPath} from 'shared/types/common';
 
-import {CommitTitle} from './CommitTitle';
 import {FileHeader} from './ComparisonView/SplitDiffView/SplitDiffFileHeader';
 import {Column, FlexRow, Row, ScrollX, ScrollY} from './ComponentUtils';
 import {EmptyState} from './EmptyState';
 import {Subtle} from './Subtle';
 import {t, T} from './i18n';
 import {SplitRangeRecord, useStackEditState} from './stackEditState';
+import {firstLine} from './utils';
 import {
   VSCodeDivider,
   VSCodeDropdown,
@@ -151,7 +151,7 @@ function SplitColumn(props: SplitColumnProps) {
         <span className="split-commit-header-stack-number">
           {rev + 1} / {subStack.size}
         </span>
-        <MaybeEditableCommitTitle commitMessage={commitMessage} commitKey={commit?.key} />
+        <EditableCommitTitle commitMessage={commitMessage} commitKey={commit?.key} />
       </div>
       {body}
     </div>
@@ -280,38 +280,35 @@ type MaybeEditableCommitTitleProps = {
   commitKey?: string;
 };
 
-function MaybeEditableCommitTitle(props: MaybeEditableCommitTitleProps) {
+function EditableCommitTitle(props: MaybeEditableCommitTitleProps) {
   const stackEdit = useStackEditState();
 
   const {commitMessage, commitKey} = props;
 
-  const isMultiLine = commitMessage.trimEnd().includes('\n');
-  if (isMultiLine) {
-    return <CommitTitle commitMessage={commitMessage} />;
-  } else {
-    // Make single-line message (ex. "Split of ....") editable.
-    // Don't support multi-line message editing yet due to the complexities
-    // of syncing to a code review system.
-    const handleEdit = (value?: string) => {
-      if (value != null && commitKey != null) {
-        const {commitStack} = stackEdit;
-        const commit = commitStack.findCommitByKey(commitKey);
-        if (commit != null) {
-          const newStack = commitStack.stack.setIn([commit.rev, 'text'], value);
-          const newCommitStack = commitStack.set('stack', newStack);
-          stackEdit.push(newCommitStack, {name: 'metaedit', commit});
-        }
+  const existingTitle = firstLine(commitMessage);
+  const existingDescription = commitMessage.slice(existingTitle.length + 1);
+
+  // Only allow changing the commit title, not the rest of the commit message.
+  const handleEdit = (newTitle?: string) => {
+    if (newTitle != null && commitKey != null) {
+      const {commitStack} = stackEdit;
+      const commit = commitStack.findCommitByKey(commitKey);
+      if (commit != null) {
+        const newFullText = newTitle + '\n' + existingDescription;
+        const newStack = commitStack.stack.setIn([commit.rev, 'text'], newFullText);
+        const newCommitStack = commitStack.set('stack', newStack);
+        stackEdit.push(newCommitStack, {name: 'metaedit', commit});
       }
-    };
-    return (
-      <VSCodeTextField
-        value={commitMessage}
-        title={t('Edit commit title')}
-        style={{width: 'calc(100% - var(--pad))'}}
-        onInput={e => handleEdit((e.target as unknown as {value: string})?.value)}
-      />
-    );
-  }
+    }
+  };
+  return (
+    <VSCodeTextField
+      value={existingTitle}
+      title={t('Edit commit title')}
+      style={{width: 'calc(100% - var(--pad))'}}
+      onInput={e => handleEdit((e.target as unknown as {value: string})?.value)}
+    />
+  );
 }
 
 function findStartEndRevs(
