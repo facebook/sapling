@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Mode} from './FileStackEditor';
 import type {CommitStackState} from './stackEdit/commitStackState';
 import type {FileStackState, Rev} from './stackEdit/fileStackState';
 import type {RepoPath} from 'shared/types/common';
@@ -14,20 +13,16 @@ import {CommitTitle} from './CommitTitle';
 import {FileHeader} from './ComparisonView/SplitDiffView/SplitDiffFileHeader';
 import {FlexRow, Row, ScrollX, ScrollY} from './ComponentUtils';
 import {EmptyState} from './EmptyState';
-import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {t, T} from './i18n';
 import {SplitRangeRecord, useStackEditState} from './stackEditState';
 import {
   VSCodeDivider,
   VSCodeDropdown,
   VSCodeOption,
-  VSCodeRadio,
-  VSCodeRadioGroup,
   VSCodeTextField,
 } from '@vscode/webview-ui-toolkit/react';
 import {Set as ImSet, Range, Seq} from 'immutable';
 import {useRef, useState, useEffect} from 'react';
-import {atom, useRecoilState} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {type LineIdx, splitLines, diffBlocks, collapseContextBlocks} from 'shared/diff';
 import {DiffType} from 'shared/patch/parse';
@@ -35,15 +30,6 @@ import {unwrap} from 'shared/utils';
 
 import './VSCodeDropdown.css';
 import './SplitStackEditPanel.css';
-
-const splitEditModeAtom = atom<Mode>({
-  key: 'splitEditModeAtom',
-  default: 'unified-diff',
-});
-const splitTextEditAtom = atom<boolean>({
-  key: 'splitTextEditAtom',
-  default: false,
-});
 
 export function SplitStackEditPanel() {
   const stackEdit = useStackEditState();
@@ -106,7 +92,6 @@ export function SplitStackEditPanel() {
           <Row style={{padding: '0 var(--pad)'}}>{columns}</Row>
         </ScrollX>
       </div>
-      <EditModeSelector />
     </>
   );
 }
@@ -282,41 +267,6 @@ function StackRangeSelector() {
       <Icon icon="ellipsis" />
       <Dropdown isStart={false} />
     </FlexRow>
-  );
-}
-
-function EditModeSelector() {
-  const [mode, setMode] = useRecoilState(splitEditModeAtom);
-  const [textEdit, setTextEdit] = useRecoilState(splitTextEditAtom);
-
-  const handleModeChange = ((e: Event) => {
-    setMode((e.target as HTMLInputElement).value as Mode);
-  }) as ((e: Event) => unknown) & React.FormEventHandler<HTMLElement>;
-
-  const showModeSwitch = false;
-
-  return (
-    <Row style={{marginTop: 'var(--pad)'}}>
-      {showModeSwitch && (
-        <VSCodeRadioGroup value={mode} onChange={handleModeChange}>
-          <VSCodeRadio accessKey="u" value="unified-diff">
-            <T>Unified diff</T>
-          </VSCodeRadio>
-          <VSCodeRadio accessKey="s" value="side-by-side-diff">
-            <T>Side-by-side diff</T>
-          </VSCodeRadio>
-        </VSCodeRadioGroup>
-      )}
-      <VSCodeCheckbox
-        accessKey="t"
-        checked={textEdit || mode === 'side-by-side-diff'}
-        disabled={mode === 'side-by-side-diff'}
-        onChange={() => {
-          setTextEdit(c => !c);
-        }}>
-        <T>Edit text (advanced)</T>
-      </VSCodeCheckbox>
-    </Row>
   );
 }
 
