@@ -97,7 +97,6 @@
 
 .file-stack-editor-ribbon-no-clip {
   position: relative;
-  margin: var(--pad);
 }
 
 .file-stack-editor-ribbon-no-clip .ribbon {

@@ -14,7 +14,6 @@ import {CommitTitle} from './CommitTitle';
 import {FileHeader} from './ComparisonView/SplitDiffView/SplitDiffFileHeader';
 import {FlexRow, Row, ScrollX, ScrollY} from './ComponentUtils';
 import {EmptyState} from './EmptyState';
-import {FileStackEditor} from './FileStackEditor';
 import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {t, T} from './i18n';
 import {SplitRangeRecord, useStackEditState} from './stackEditState';
@@ -26,9 +25,11 @@ import {
   VSCodeRadioGroup,
   VSCodeTextField,
 } from '@vscode/webview-ui-toolkit/react';
-import {Range, Seq} from 'immutable';
-import {atom, useRecoilState, useRecoilValue} from 'recoil';
+import {Set as ImSet, Range, Seq} from 'immutable';
+import {useRef, useState, useEffect} from 'react';
+import {atom, useRecoilState} from 'recoil';
 import {Icon} from 'shared/Icon';
+import {type LineIdx, splitLines, diffBlocks, collapseContextBlocks} from 'shared/diff';
 import {DiffType} from 'shared/patch/parse';
 import {unwrap} from 'shared/utils';
 
@@ -176,8 +177,6 @@ type SplitEditorWithTitleProps = {
 
 function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
   const stackEdit = useStackEditState();
-  const mode = useRecoilValue(splitEditModeAtom);
-  const textEdit = useRecoilValue(splitTextEditAtom) || mode === 'side-by-side-diff';
 
   const {commitStack} = stackEdit;
   const {subStack, path, fileStack, fileIdx, fileRev} = props;
@@ -200,14 +199,7 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
   return (
     <div className="split-commit-file">
       <FileHeader path={path} diffType={DiffType.Modified} />
-      <FileStackEditor
-        key={fileIdx}
-        rev={fileRev}
-        stack={fileStack}
-        mode={mode}
-        textEdit={textEdit}
-        setStack={setStack}
-      />
+      <SplitFile key={fileIdx} rev={fileRev} stack={fileStack} setStack={setStack} />
     </div>
   );
 }
@@ -400,4 +392,372 @@ function getEmptyCommitTitle(commitMessage: string): string {
     }
   }
   return title;
+}
+
+type SplitFileProps = {
+  /**
+   * File stack to edit.
+   *
+   * Note: the editor for rev 1 might want to diff against rev 0 and rev 2,
+   * and might have buttons to move lines to other revs. So it needs to
+   * know the entire stack.
+   */
+  stack: FileStackState;
+
+  /** Function to update the stack. */
+  setStack: (stack: FileStackState) => void;
+
+  /** Function to get the "title" of a rev. */
+  getTitle?: (rev: Rev) => string;
+
+  /**
+   * Skip editing (or showing) given revs.
+   * This is usually to skip rev 0 (public, empty) if it is absent.
+   * In the side-by-side mode, rev 0 is shown it it is an existing empty file
+   * (introduced by a previous public commit). rev 0 is not shown if it is
+   * absent, aka. rev 1 added the file.
+   */
+  skip?: (rev: Rev) => boolean;
+
+  /** The rev in the stack to edit. */
+  rev: Rev;
+};
+
+export function SplitFile(props: SplitFileProps) {
+  const mainContentRef = useRef<HTMLPreElement | null>(null);
+  const [expandedLines, setExpandedLines] = useState<ImSet<LineIdx>>(ImSet);
+  const [selectedLineIds, setSelectedLineIds] = useState<ImSet<string>>(ImSet);
+  const [widthStyle, setWidthStyle] = useState<string>('unset');
+  const {stack, rev, setStack} = props;
+
+  // Selection change is a document event, not a <pre> event.
+  useEffect(() => {
+    const handleSelect = () => {
+      const selection = window.getSelection();
+      if (
+        selection == null ||
+        mainContentRef.current == null ||
+        !mainContentRef.current.contains(selection.anchorNode)
+      ) {
+        setSelectedLineIds(ids => (ids.isEmpty() ? ids : ImSet()));
+        return;
+      }
+      const divs = mainContentRef.current.querySelectorAll<HTMLDivElement>('div[data-sel-id]');
+      const selIds: Array<string> = [];
+      for (const div of divs) {
+        const child = div.lastChild;
+        if (child && selection.containsNode(child, true)) {
+          selIds.push(unwrap(div.dataset.selId));
+        }
+      }
+      setSelectedLineIds(ImSet(selIds));
+    };
+    document.addEventListener('selectionchange', handleSelect);
+    return () => {
+      document.removeEventListener('selectionchange', handleSelect);
+    };
+  }, []);
+
+  // Diff with the left side.
+  const bText = stack.getRev(rev);
+  const bLines = splitLines(bText);
+  const aLines = splitLines(stack.getRev(Math.max(0, rev - 1)));
+  const abBlocks = diffBlocks(aLines, bLines);
+
+  const leftMost = rev <= 1;
+  const rightMost = rev + 1 >= stack.revLength;
+
+  const blocks = abBlocks;
+
+  // Collapse unchanged context blocks, preserving the context lines.
+  const collapsedBlocks = collapseContextBlocks(blocks, (_aLine, bLine) =>
+    expandedLines.has(bLine),
+  );
+
+  // We render 3 (or 5) columns as 3 <pre>s so they align vertically:
+  // [left gutter] [left buttons] [main content] [right buttons] [right gutter].
+  // The arrays below are the children of the <pre>s. One element per line per column.
+  const leftGutter: JSX.Element[] = [];
+  const leftButtons: JSX.Element[] = [];
+  const mainContent: JSX.Element[] = [];
+  const rightGutter: JSX.Element[] = [];
+  const rightButtons: JSX.Element[] = [];
+  const ribbons: JSX.Element[] = [];
+
+  const handleContextExpand = (b1: LineIdx, b2: LineIdx) => {
+    const newSet = expandedLines.union(Range(b1, b2));
+    setExpandedLines(newSet);
+  };
+
+  const pushLineButtons = (sign: '=' | '!' | '~', aIdx?: LineIdx, bIdx?: LineIdx) => {
+    let leftButton: JSX.Element | string = ' ';
+    let rightButton: JSX.Element | string = ' ';
+
+    // Move one or more lines. If the current line is part of the selection,
+    // Move all lines in the selection.
+    const moveLines = (revOffset: number) => {
+      // Figure out which lines to move on both sides.
+      let aIdxToMove: ImSet<LineIdx> = ImSet();
+      let bIdxToMove: ImSet<LineIdx> = ImSet();
+      if (
+        (aIdx != null && selectedLineIds.has(`a${aIdx}`)) ||
+        (bIdx != null && selectedLineIds.has(`b${bIdx}`))
+      ) {
+        // Move selected multiple lines.
+        aIdxToMove = aIdxToMove.withMutations(mut => {
+          let set = mut;
+          selectedLineIds.forEach(id => {
+            if (id.startsWith('a')) {
+              set = set.add(parseInt(id.slice(1)));
+            }
+          });
+          return set;
+        });
+        bIdxToMove = bIdxToMove.withMutations(mut => {
+          let set = mut;
+          selectedLineIds.forEach(id => {
+            if (id.startsWith('b')) {
+              set = set.add(parseInt(id.slice(1)));
+            }
+          });
+          return set;
+        });
+      } else {
+        // Move a single line.
+        if (aIdx != null) {
+          aIdxToMove = aIdxToMove.add(aIdx);
+        }
+        if (bIdx != null) {
+          bIdxToMove = bIdxToMove.add(bIdx);
+        }
+      }
+
+      // Actually move the lines.
+      const aRev = rev - 1;
+      const bRev = rev;
+      let currentAIdx = 0;
+      let currentBIdx = 0;
+      const newStack = stack.mapAllLines(line => {
+        let newRevs = line.revs;
+        if (line.revs.has(aRev)) {
+          // This is a deletion.
+          if (aIdxToMove.has(currentAIdx)) {
+            if (revOffset > 0) {
+              // Move deletion right - add it in bRev.
+              newRevs = newRevs.add(bRev);
+            } else {
+              // Move deletion left - drop it from aRev.
+              newRevs = newRevs.remove(aRev);
+            }
+          }
+          currentAIdx += 1;
+        }
+        if (line.revs.has(bRev)) {
+          // This is an insertion.
+          if (bIdxToMove.has(currentBIdx)) {
+            if (revOffset > 0) {
+              // Move insertion right - drop it in bRev.
+              newRevs = newRevs.remove(bRev);
+            } else {
+              // Move insertion left - add it to aRev.
+              newRevs = newRevs.add(aRev);
+            }
+          }
+          currentBIdx += 1;
+        }
+        return newRevs === line.revs ? line : line.set('revs', newRevs);
+      });
+      setStack(newStack);
+    };
+
+    const selected =
+      aIdx != null
+        ? selectedLineIds.has(`a${aIdx}`)
+        : bIdx != null
+        ? selectedLineIds.has(`b${bIdx}`)
+        : false;
+
+    if (!leftMost && sign === '!') {
+      const title = selected
+        ? t('Move selected line changes left')
+        : t('Move this line change left');
+      leftButton = (
+        <span className="button" role="button" title={title} onClick={() => moveLines(-1)}>
+          ⬅
+        </span>
+      );
+    }
+    if (!rightMost && sign === '!') {
+      const title = selected
+        ? t('Move selected line changes right')
+        : t('Move this line change right');
+      rightButton = (
+        <span className="button" role="button" title={title} onClick={() => moveLines(+1)}>
+          ⮕
+        </span>
+      );
+    }
+
+    const className = selected ? 'selected' : '';
+
+    leftButtons.push(
+      <div key={leftButtons.length} className={`${className} left`}>
+        {leftButton}
+      </div>,
+    );
+    rightButtons.push(
+      <div key={rightButtons.length} className={`${className} right`}>
+        {rightButton}
+      </div>,
+    );
+  };
+
+  const bLineSpan = (bLine: string): JSX.Element => {
+    return <span>{bLine}</span>;
+  };
+
+  collapsedBlocks.forEach(([sign, [a1, a2, b1, b2]]) => {
+    if (sign === '~') {
+      // Context line.
+      leftGutter.push(
+        <div key={a1} className="lineno">
+          {' '}
+        </div>,
+      );
+      rightGutter.push(
+        <div key={b1} className="lineno">
+          {' '}
+        </div>,
+      );
+      mainContent.push(
+        <div key={b1} className="context-button" onClick={() => handleContextExpand(b1, b2)}>
+          {' '}
+        </div>,
+      );
+      pushLineButtons(sign, a1, b1);
+    } else if (sign === '=') {
+      // Unchanged.
+      for (let ai = a1; ai < a2; ++ai) {
+        const bi = ai + b1 - a1;
+        const leftIdx = ai;
+        leftGutter.push(
+          <div className="lineno" key={ai} data-span-id={`${rev}-${leftIdx}l`}>
+            {leftIdx + 1}
+          </div>,
+        );
+        rightGutter.push(
+          <div className="lineno" key={bi} data-span-id={`${rev}-${bi}r`}>
+            {bi + 1}
+          </div>,
+        );
+        mainContent.push(
+          <div key={bi} className="unchanged line">
+            {bLineSpan(bLines[bi])}
+          </div>,
+        );
+        pushLineButtons(sign, ai, bi);
+      }
+    } else if (sign === '!') {
+      // Changed.
+      for (let ai = a1; ai < a2; ++ai) {
+        leftGutter.push(
+          <div className="lineno" key={ai}>
+            {ai + 1}
+          </div>,
+        );
+        rightGutter.push(
+          <div className="lineno" key={`a${ai}`}>
+            {' '}
+          </div>,
+        );
+        const selId = `a${ai}`;
+        let className = 'del line';
+        if (selectedLineIds.has(selId)) {
+          className += ' selected';
+        }
+
+        pushLineButtons(sign, ai, undefined);
+        mainContent.push(
+          <div key={-ai} className={className} data-sel-id={selId}>
+            {aLines[ai]}
+          </div>,
+        );
+      }
+      for (let bi = b1; bi < b2; ++bi) {
+        // Inserted lines show up in unified and side-by-side diffs.
+        const leftClassName = 'lineno';
+        leftGutter.push(
+          <div className={leftClassName} key={`b${bi}`} data-span-id={`${rev}-${bi}l`}>
+            {' '}
+          </div>,
+        );
+        const rightClassName = 'lineno';
+        rightGutter.push(
+          <div className={rightClassName} key={bi} data-span-id={`${rev}-${bi}r`}>
+            {bi + 1}
+          </div>,
+        );
+        const selId = `b${bi}`;
+        let lineClassName = 'line';
+        lineClassName += ' add';
+        if (selectedLineIds.has(selId)) {
+          lineClassName += ' selected';
+        }
+        pushLineButtons(sign, undefined, bi);
+        mainContent.push(
+          <div key={bi} className={lineClassName} data-sel-id={selId}>
+            {bLineSpan(bLines[bi])}
+          </div>,
+        );
+      }
+    }
+  });
+
+  const handleXScroll: React.UIEventHandler<HTMLDivElement> = e => {
+    // Dynamically decide between 'width: fit-content' and 'width: unset'.
+    // Affects the position of the [->] "move right" button and the width
+    // of the line background for LONG LINES.
+    //
+    //     |ScrollX width|
+    // ------------------------------------------------------------------------
+    //     |Editor width |              <- width: unset && scrollLeft == 0
+    //     |Text width - could be long|    text could be longer
+    //     |         [->]|                 "move right" button is visible
+    // ------------------------------------------------------------------------
+    // |Editor width |                  <- width: unset && scrollLeft > 0
+    // |+/- highlight|                     +/- background covers partial text
+    // |         [->]|                     "move right" at wrong position
+    // ------------------------------------------------------------------------
+    // |Editor width              | <- width: fit-content && scrollLeft > 0
+    // |Text width - could be long|    long text width = editor width
+    // |+/- highlight             |    +/- background covers all text
+    // |                      [->]|    "move right" at the right side of text
+    //
+    const newWidthStyle = e.currentTarget?.scrollLeft > 0 ? 'fit-content' : 'unset';
+    setWidthStyle(newWidthStyle);
+  };
+
+  const mainStyle: React.CSSProperties = {width: widthStyle};
+  const mainContentPre = (
+    <pre className="main-content" style={mainStyle} ref={mainContentRef}>
+      {mainContent}
+    </pre>
+  );
+
+  return (
+    <div className="file-stack-editor-ribbon-no-clip">
+      {ribbons}
+      <div>
+        <Row className="file-stack-editor">
+          {<pre className="column-left-buttons">{leftButtons}</pre>}
+          <pre className="column-left-gutter">{leftGutter}</pre>
+          <ScrollX hideBar={true} size={500} maxSize={500} onScroll={handleXScroll}>
+            {mainContentPre}
+          </ScrollX>
+          <pre className="column-right-gutter">{rightGutter}</pre>
+          {<pre className="column-right-buttons">{rightButtons}</pre>}
+        </Row>
+      </div>
+    </div>
+  );
 }

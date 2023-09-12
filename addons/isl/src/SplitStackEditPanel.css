@@ -12,3 +12,7 @@
 .split-commit-file pre {
   font-family: var(--monospace-fontFamily);
 }
+
+.split-commit-file {
+  margin-bottom: var(--pad);
+}
