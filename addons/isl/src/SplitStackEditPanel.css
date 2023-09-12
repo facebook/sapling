@@ -10,6 +10,7 @@
   max-width: 700px;
   background-color: var(--tooltip-background);
   padding: var(--pad);
+  padding-bottom: 0px;
   border-radius: var(--halfpad);
 }
 
