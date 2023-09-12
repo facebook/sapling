@@ -259,7 +259,7 @@ export function FileStackEditor(props: EditorProps) {
         : t('Move this line change left');
       leftButton = (
         <span className="button" role="button" title={title} onClick={() => moveLines(-1)}>
-          🡄
+          ⬅
         </span>
       );
     }
@@ -269,7 +269,7 @@ export function FileStackEditor(props: EditorProps) {
         : t('Move this line change right');
       rightButton = (
         <span className="button" role="button" title={title} onClick={() => moveLines(+1)}>
-          🡆
+          ⮕
         </span>
       );
     }
