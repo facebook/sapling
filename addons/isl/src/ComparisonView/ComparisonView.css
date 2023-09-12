@@ -39,23 +39,6 @@
   align-items: center;
 }
 
-/*
- * Override split diff view file header to be sticky.
- * This also requires adding borders to the file header (previously only on the container)
- */
-.comparison-view .split-diff-view-file-header {
-  position: sticky;
-  top: 0;
-  margin-left: -1px;
-  margin-right: -1px;
-  border: 1px solid var(--panel-view-border);
-  /* Remove all border radius so the sticky header doesn't show any of the diff behind it */
-  border-radius: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--halfpad);
-}
-
 .comparison-view .split-diff-view {
   border-top-width: 0;
   border-radius: 0;

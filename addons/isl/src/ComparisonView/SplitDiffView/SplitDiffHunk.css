@@ -19,10 +19,16 @@
   background-color: var(--tooltip-background);
   padding: var(--halfpad) var(--pad);
   line-height: 2em;
-  border-top-right-radius: 2px;
-  border-top-left-radius: 2px;
-  border-bottom: 1px solid var(--tooltip-border);
+
+  position: sticky;
+  top: 0;
+  margin-left: -1px;
+  margin-right: -1px;
+  border: 1px solid var(--panel-view-border);
+  gap: var(--halfpad);
+  z-index: 1;
 }
+
 .split-diff-view-file-header-toggle-open {
   padding-right: 2px;
   cursor: pointer;

@@ -155,7 +155,7 @@ function SplitColumn(props: SplitColumnProps) {
 
   // The min width ensures it does not look too narrow for an empty commit.
   return (
-    <div style={{minWidth: 300, flexShrink: 0}}>
+    <div className="split-commit-column" style={{minWidth: 300, flexShrink: 0}}>
       <div>
         {rev + 1} / {subStack.size - 1}
       </div>
@@ -198,7 +198,7 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
   };
 
   return (
-    <div className="split-commit-column">
+    <div className="split-commit-file">
       <FileHeader path={path} diffType={DiffType.Modified} />
       <FileStackEditor
         key={fileIdx}

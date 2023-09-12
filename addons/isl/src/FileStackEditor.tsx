@@ -486,10 +486,7 @@ export function FileStackEditor(props: EditorProps) {
   return (
     <div className="file-stack-editor-ribbon-no-clip">
       {ribbons}
-      <ScrollY
-        className="file-stack-editor-outer-scroll-y"
-        hideBar={true}
-        maxSize="calc(100vh - 350px)">
+      <div>
         <Row className="file-stack-editor">
           {showLineButtons && <pre className="column-left-buttons">{leftButtons}</pre>}
           <pre className="column-left-gutter">{leftGutter}</pre>
@@ -505,7 +502,7 @@ export function FileStackEditor(props: EditorProps) {
           <pre className="column-right-gutter">{rightGutter}</pre>
           {showLineButtons && <pre className="column-right-buttons">{rightButtons}</pre>}
         </Row>
-      </ScrollY>
+      </div>
     </div>
   );
 }
