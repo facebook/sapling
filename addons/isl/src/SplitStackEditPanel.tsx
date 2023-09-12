@@ -11,8 +11,9 @@ import type {RepoPath} from 'shared/types/common';
 
 import {CommitTitle} from './CommitTitle';
 import {FileHeader} from './ComparisonView/SplitDiffView/SplitDiffFileHeader';
-import {FlexRow, Row, ScrollX, ScrollY} from './ComponentUtils';
+import {Column, FlexRow, Row, ScrollX, ScrollY} from './ComponentUtils';
 import {EmptyState} from './EmptyState';
+import {Subtle} from './Subtle';
 import {t, T} from './i18n';
 import {SplitRangeRecord, useStackEditState} from './stackEditState';
 import {
@@ -62,7 +63,6 @@ export function SplitStackEditPanel() {
   // One commit per column.
   const columns: JSX.Element[] = subStack
     .revs()
-    .slice(0, -1 /* Drop the last "empty" commit */)
     .map(rev => <SplitColumn key={rev} rev={rev} subStack={subStack} />);
 
   // Remove the padding/margin set by the panel.
@@ -130,8 +130,13 @@ function SplitColumn(props: SplitColumnProps) {
   });
 
   const body = editors.isEmpty() ? (
-    <EmptyState>
-      <T>This commit is empty.</T>
+    <EmptyState small>
+      <Column>
+        <T>This commit is empty</T>
+        <Subtle>
+          <T>Use the left/right arrows to move files and lines of code and create new commits.</T>
+        </Subtle>
+      </Column>
     </EmptyState>
   ) : (
     <ScrollY maxSize="calc(100vh - 350px)" hideBar={true}>
@@ -144,7 +149,7 @@ function SplitColumn(props: SplitColumnProps) {
     <div className="split-commit-column" style={{minWidth: 300, flexShrink: 0}}>
       <div className="split-commit-header">
         <span className="split-commit-header-stack-number">
-          {rev + 1} / {subStack.size - 1}
+          {rev + 1} / {subStack.size}
         </span>
         <MaybeEditableCommitTitle commitMessage={commitMessage} commitKey={commit?.key} />
       </div>
