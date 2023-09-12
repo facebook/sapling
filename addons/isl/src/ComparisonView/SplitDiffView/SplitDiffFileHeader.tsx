@@ -14,6 +14,8 @@ import platform from '../../platform';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {Icon} from 'shared/Icon';
 
+import './SplitDiffHunk.css';
+
 export function FileHeader({
   path,
   diffType,

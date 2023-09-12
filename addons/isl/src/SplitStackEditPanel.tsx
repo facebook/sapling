@@ -11,6 +11,7 @@ import type {FileStackState, Rev} from './stackEdit/fileStackState';
 import type {RepoPath} from 'shared/types/common';
 
 import {CommitTitle} from './CommitTitle';
+import {FileHeader} from './ComparisonView/SplitDiffView/SplitDiffFileHeader';
 import {FlexRow, Row, ScrollX, ScrollY} from './ComponentUtils';
 import {EmptyState} from './EmptyState';
 import {FileStackEditor} from './FileStackEditor';
@@ -28,9 +29,11 @@ import {
 import {Range, Seq} from 'immutable';
 import {atom, useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
+import {DiffType} from 'shared/patch/parse';
 import {unwrap} from 'shared/utils';
 
 import './VSCodeDropdown.css';
+import './SplitStackEditPanel.css';
 
 const splitEditModeAtom = atom<Mode>({
   key: 'splitEditModeAtom',
@@ -195,8 +198,8 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
   };
 
   return (
-    <details className="split-commit-column" open={true}>
-      <summary style={{cursor: 'pointer'}}>{path}</summary>
+    <div className="split-commit-column">
+      <FileHeader path={path} diffType={DiffType.Modified} />
       <FileStackEditor
         key={fileIdx}
         rev={fileRev}
@@ -205,7 +208,7 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
         textEdit={textEdit}
         setStack={setStack}
       />
-    </details>
+    </div>
   );
 }
 
