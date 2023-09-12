@@ -12,11 +12,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 @hg_test
 # pyre-ignore[13]: T62487924
 class SplitTest(EdenHgTestCase):
-    def setUp(self):
-        # TODO: Remove this once there are no weird batch hacks around Buck the buck-built hg
-        self.disableBuckHgForTests(["test_abort_split_with_pending_add"])
-        super().setUp()
-
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("letters", "a\nb\nc\n")
         repo.write_file("numbers", "1\n2\n3\n")

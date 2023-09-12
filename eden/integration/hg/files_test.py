@@ -16,11 +16,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 @hg_test
 # pyre-ignore[13]: T62487924
 class FilesTest(EdenHgTestCase):
-    def setUp(self) -> None:
-        # TODO: Remove this once there are no weird batch hacks around Buck the buck-built hg
-        self.disableBuckHgForTests(["test_bad_matches"])
-        super().setUp()
-
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("README.md", "docs\n")
         repo.write_file("LICENSE", "legal legal\n")
