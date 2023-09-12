@@ -5,22 +5,21 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Context} from './types';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import type {DiffType} from 'shared/patch/parse';
 
 import {Tooltip} from '../../Tooltip';
+import {t} from '../../i18n';
+import platform from '../../platform';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {Icon} from 'shared/Icon';
 
-export function FileHeader<Id>({
-  ctx,
+export function FileHeader({
   path,
   diffType,
   open,
   onChangeOpen,
 }: {
-  ctx?: Context<Id>;
   path: string;
   diffType?: DiffType;
 } & EnsureAssignedTogether<{
@@ -34,9 +33,6 @@ export function FileHeader<Id>({
 
   const pathSeparator = '/';
   const pathParts = path.split(pathSeparator);
-
-  const t = ctx?.translate ?? (s => s);
-  const copy = ctx?.copy;
 
   const filePathParts = (
     <>
@@ -57,7 +53,7 @@ export function FileHeader<Id>({
                 )}
                 delayMs={100}
                 placement="bottom">
-                <span onClick={copy && (() => copy(pathSoFar))}>
+                <span onClick={() => platform.clipboardCopy(pathSoFar)}>
                   {part}
                   {idx < pathParts.length - 1 ? pathSeparator : ''}
                 </span>
@@ -84,18 +80,18 @@ export function FileHeader<Id>({
       )}
       {diffType !== undefined && <Icon icon={diffTypeToIcon[diffType]} />}
       <div className="split-diff-view-file-path-parts">{filePathParts}</div>
-      {ctx?.openFile && (
+      {
         <Tooltip title={t('Open file')} placement={'bottom'}>
           <VSCodeButton
             appearance="icon"
             className="split-diff-view-file-header-open-button"
             onClick={() => {
-              ctx.openFile?.();
+              platform.openFile(path);
             }}>
             <Icon icon="go-to-file" />
           </VSCodeButton>
         </Tooltip>
-      )}
+      }
     </div>
   );
 }

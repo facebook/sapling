@@ -65,7 +65,6 @@ export function SplitDiffView<Id>({
   return (
     <div className="split-diff-view">
       <FileHeader
-        ctx={ctx}
         path={fileName}
         diffType={patch.type}
         open={!collapsed}
