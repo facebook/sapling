@@ -17,6 +17,8 @@ import {VSCodePanels, VSCodePanelTab, VSCodePanelView} from '@vscode/webview-ui-
 import {useState} from 'react';
 import {useRecoilValue} from 'recoil';
 
+import './EditStackModal.css';
+
 /// Show a <Modal /> when editing a stack.
 export function MaybeEditStackModal() {
   const loadingState = useRecoilValue(loadingStackState);
@@ -43,6 +45,7 @@ function LoadedEditStackModal() {
   return (
     <Modal>
       <VSCodePanels
+        className="edit-stack-modal-panels"
         activeid={`tab-${activeTab}`}
         style={{
           // Allow dropdown to show content.
@@ -61,8 +64,13 @@ function LoadedEditStackModal() {
         </VSCodePanelTab>
         <VSCodePanelTab id="tab-split">
           <T>Split</T>
-          <sup>
-            <sup>(Beta)</sup>
+          <sup
+            style={{
+              color: 'var(--scm-removed-foreground)',
+              marginLeft: 'var(--halfpad)',
+              fontSize: '80%',
+            }}>
+            (Beta)
           </sup>
         </VSCodePanelTab>
         <VSCodePanelView style={getPanelViewStyle('commits')} id="view-commits">
