@@ -165,6 +165,8 @@ class CliCmd:
                 fin = io.BytesIO(stdin or b"")
                 import bindings
 
+                _register_module_loader()
+
                 returncode = bindings.commands.run(args, fin, fout, ferr)
                 return subprocess.CompletedProcess(
                     args,
@@ -174,6 +176,25 @@ class CliCmd:
                 )
             finally:
                 os.chdir(old_cwd)
+
+
+_registered = False
+
+
+def _register_module_loader():
+    global _registered
+
+    if _registered:
+        return
+
+    import sys
+
+    import bindings
+
+    finder = bindings.modules.BindingsModuleFinder(None)
+    sys.meta_path.insert(0, finder)
+
+    _registered = True
 
 
 class hg(CliCmd):
