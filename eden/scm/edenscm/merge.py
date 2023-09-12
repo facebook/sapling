@@ -1813,6 +1813,8 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             if files:
                 repo.ui.log(
                     "merge_conflicts",
+                    command=repo.ui.cmdname,
+                    full_command=command,
                     dest_hex=_gethex(wctx),
                     src_hex=_gethex(mctx),
                     repo=reponame,
