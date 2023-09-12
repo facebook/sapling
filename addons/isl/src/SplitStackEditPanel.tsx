@@ -288,10 +288,6 @@ function EditModeSelector() {
     setMode((e.target as HTMLInputElement).value as Mode);
   }) as ((e: Event) => unknown) & React.FormEventHandler<HTMLElement>;
 
-  // Blockers of 'side-by-side-diff':
-  // - Ribbons are clipped by <ScrollY> (difficult).
-  // - `data-span-id` needs a prefix for different paths/files (fixable).
-  // - Need to show immutable fileRev 0 to compare against (fixable).
   const showModeSwitch = false;
 
   return (
@@ -427,7 +423,6 @@ export function SplitFile(props: SplitFileProps) {
   const mainContentRef = useRef<HTMLPreElement | null>(null);
   const [expandedLines, setExpandedLines] = useState<ImSet<LineIdx>>(ImSet);
   const [selectedLineIds, setSelectedLineIds] = useState<ImSet<string>>(ImSet);
-  const [widthStyle, setWidthStyle] = useState<string>('unset');
   const {stack, rev, setStack} = props;
 
   // Selection change is a document event, not a <pre> event.
@@ -474,15 +469,11 @@ export function SplitFile(props: SplitFileProps) {
     expandedLines.has(bLine),
   );
 
-  // We render 3 (or 5) columns as 3 <pre>s so they align vertically:
-  // [left gutter] [left buttons] [main content] [right buttons] [right gutter].
-  // The arrays below are the children of the <pre>s. One element per line per column.
   const leftGutter: JSX.Element[] = [];
   const leftButtons: JSX.Element[] = [];
   const mainContent: JSX.Element[] = [];
   const rightGutter: JSX.Element[] = [];
   const rightButtons: JSX.Element[] = [];
-  const ribbons: JSX.Element[] = [];
 
   const handleContextExpand = (b1: LineIdx, b2: LineIdx) => {
     const newSet = expandedLines.union(Range(b1, b2));
@@ -713,51 +704,28 @@ export function SplitFile(props: SplitFileProps) {
     }
   });
 
-  const handleXScroll: React.UIEventHandler<HTMLDivElement> = e => {
-    // Dynamically decide between 'width: fit-content' and 'width: unset'.
-    // Affects the position of the [->] "move right" button and the width
-    // of the line background for LONG LINES.
-    //
-    //     |ScrollX width|
-    // ------------------------------------------------------------------------
-    //     |Editor width |              <- width: unset && scrollLeft == 0
-    //     |Text width - could be long|    text could be longer
-    //     |         [->]|                 "move right" button is visible
-    // ------------------------------------------------------------------------
-    // |Editor width |                  <- width: unset && scrollLeft > 0
-    // |+/- highlight|                     +/- background covers partial text
-    // |         [->]|                     "move right" at wrong position
-    // ------------------------------------------------------------------------
-    // |Editor width              | <- width: fit-content && scrollLeft > 0
-    // |Text width - could be long|    long text width = editor width
-    // |+/- highlight             |    +/- background covers all text
-    // |                      [->]|    "move right" at the right side of text
-    //
-    const newWidthStyle = e.currentTarget?.scrollLeft > 0 ? 'fit-content' : 'unset';
-    setWidthStyle(newWidthStyle);
-  };
-
-  const mainStyle: React.CSSProperties = {width: widthStyle};
-  const mainContentPre = (
-    <pre className="main-content" style={mainStyle} ref={mainContentRef}>
-      {mainContent}
-    </pre>
-  );
+  const rows = mainContent.map((line, i) => (
+    <tr key={i}>
+      <td className="split-left-button">{leftButtons[i]}</td>
+      <td className="split-left-lineno">{leftGutter[i]}</td>
+      <td>{line}</td>
+      <td className="split-right-lineno">{rightGutter[i]}</td>
+      <td className="split-right-button">{rightButtons[i]}</td>
+    </tr>
+  ));
 
   return (
-    <div className="file-stack-editor-ribbon-no-clip">
-      {ribbons}
-      <div>
-        <Row className="file-stack-editor">
-          {<pre className="column-left-buttons">{leftButtons}</pre>}
-          <pre className="column-left-gutter">{leftGutter}</pre>
-          <ScrollX hideBar={true} size={500} maxSize={500} onScroll={handleXScroll}>
-            {mainContentPre}
-          </ScrollX>
-          <pre className="column-right-gutter">{rightGutter}</pre>
-          {<pre className="column-right-buttons">{rightButtons}</pre>}
-        </Row>
-      </div>
+    <div className="split-file">
+      <table>
+        <colgroup>
+          <col width={50} /> {/* left arrows */}
+          <col width={50} /> {/* before line numbers */}
+          <col width={'100%'} /> {/* diff content */}
+          <col width={50} /> {/* after line numbers */}
+          <col width={50} /> {/* rightarrow  */}
+        </colgroup>
+        <tbody>{rows}</tbody>
+      </table>
     </div>
   );
 }

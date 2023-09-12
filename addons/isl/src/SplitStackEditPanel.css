@@ -16,3 +16,89 @@
 .split-commit-file {
   margin-bottom: var(--pad);
 }
+
+.split-commit-file table {
+  white-space: pre-wrap;
+  border-spacing: 0px;
+}
+.split-commit-file tr {
+  /* Set line-height explicitly to avoid dynamic line heights based on (different) fonts decided by text content. */
+  line-height: 1.2;
+}
+.split-commit-file td {
+  padding: 0;
+}
+
+.split-file .split-left-lineno,
+.split-file .split-left-button,
+.split-file .split-right-lineno,
+.split-file .split-right-button {
+  background-color: rgba(128, 128, 128, 0.1);
+}
+
+.split-file .context-button {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 20'%3E%3Cpath d='M0 10 Q10 15 20 10 Q30 5 40 10' stroke='grey' fill='transparent' /%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  user-select: none;
+  cursor: pointer;
+}
+
+.split-file .lineno {
+  padding-left: var(--halfpad);
+  padding-right: var(--halfpad);
+  text-align: right;
+  user-select: none;
+}
+
+.split-file .lineno.add {
+  background: var(--diffEditor-insertedLineHighlightBackground);
+}
+
+.split-file .lineno.del {
+  background: var(--diffEditor-removedLineHighlightBackground);
+}
+
+.split-file .lineno.change {
+  background: var(--editor-changedHighlightBackground);
+}
+
+.split-file .main-content {
+  min-width: 200px;
+  position: relative;
+}
+
+.split-file .line {
+  padding-left: var(--halfpad);
+}
+
+.split-file .selected .button {
+  opacity: 0.8;
+}
+
+.split-file .button {
+  user-select: none;
+  cursor: pointer;
+  opacity: 0.3;
+}
+
+.split-file .button:active {
+  color: grey;
+  opacity: 1;
+}
+
+.split-file .add {
+  background: var(--diffEditor-insertedLineBackground);
+}
+
+.split-file .del {
+  background: var(--diffEditor-removedLineBackground);
+}
+
+.split-file .line.change {
+  background: var(--editor-changedBackground);
+}
+
+.split-file-row .filerev-title {
+  padding-left: var(--pad);
+  text-overflow: ellipsis;
+}
