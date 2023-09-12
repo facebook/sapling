@@ -6,6 +6,8 @@
  */
 
 .split-commit-column {
+  margin: var(--pad);
+  max-width: 700px;
 }
 
 .split-commit-file,
@@ -16,6 +18,15 @@
 .split-commit-file {
   margin-bottom: var(--pad);
 }
+.split-commit-file .split-diff-view-file-header {
+  border: 1px solid var(--panel-view-border);
+  margin-left: 0;
+  margin-right: 0;
+}
+.split-file {
+  border: 1px solid var(--panel-view-border);
+  border-top-width: 0px;
+}
 
 .split-commit-file table {
   white-space: pre-wrap;
@@ -25,8 +36,18 @@
   /* Set line-height explicitly to avoid dynamic line heights based on (different) fonts decided by text content. */
   line-height: 1.2;
 }
+
 .split-commit-file td {
   padding: 0;
+}
+
+.split-commit-file .split-line-content {
+  word-break: break-all;
+}
+
+.split-file .split-left-lineno,
+.split-file .split-right-lineno {
+  vertical-align: top;
 }
 
 .split-file .split-left-lineno,

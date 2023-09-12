@@ -708,7 +708,7 @@ export function SplitFile(props: SplitFileProps) {
     <tr key={i}>
       <td className="split-left-button">{leftButtons[i]}</td>
       <td className="split-left-lineno">{leftGutter[i]}</td>
-      <td>{line}</td>
+      <td className="split-line-content">{line}</td>
       <td className="split-right-lineno">{rightGutter[i]}</td>
       <td className="split-right-button">{rightButtons[i]}</td>
     </tr>
