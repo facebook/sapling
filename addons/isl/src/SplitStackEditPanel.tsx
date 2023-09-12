@@ -57,7 +57,7 @@ export function SplitStackEditPanel() {
   // Prepare a "dense" subStack with an extra empty commit to move right.
   const emptyTitle = getEmptyCommitTitle(commitStack.get(endRev)?.text ?? '');
   const subStack = commitStack
-    .insertEmpty(endRev + 1, emptyTitle)
+    .insertEmpty(endRev + 1, emptyTitle, endRev)
     .denseSubStack(Range(startRev, endRev + 2).toList());
 
   // One commit per column.

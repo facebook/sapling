@@ -801,6 +801,17 @@ describe('CommitStackState', () => {
       const keys = newStack.stack.map(c => c.key);
       expect(keys.size).toBe(ImSet(keys).size);
     });
+
+    // The "originalNodes" are useful for split to set predecessors correctly.
+    it('preserves the originalNodes with splitFromRev', () => {
+      [1, 4].forEach(i => {
+        const newStack = stack.insertEmpty(i, '', 2);
+        expect(newStack.get(i)?.originalNodes).toBe(stack.get(2)?.originalNodes);
+        expect(newStack.get(i)?.originalNodes?.isEmpty()).toBeFalsy();
+        const anotherStack = stack.insertEmpty(i, '');
+        expect(anotherStack.get(i)?.originalNodes?.isEmpty()).toBeTruthy();
+      });
+    });
   });
 
   describe('applySubStack', () => {

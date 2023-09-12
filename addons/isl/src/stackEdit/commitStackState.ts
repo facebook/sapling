@@ -944,11 +944,12 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * Insert an empty commit at `rev`.
    * Cannot insert to an empty stack.
    */
-  insertEmpty(rev: Rev, title: string): CommitStackState {
+  insertEmpty(rev: Rev, title: string, splitFromRev?: Rev): CommitStackState {
     assert(rev <= this.stack.size && rev >= 0, 'rev out of range');
     const state = this.invalidateFileStacks();
     let newStack;
     const newKey = this.nextKey('insert');
+    const originalNodes = splitFromRev == null ? undefined : state.get(splitFromRev)?.originalNodes;
     if (rev === this.stack.size) {
       const top = this.stack.last();
       assert(top != null, 'stack cannot be empty');
@@ -960,6 +961,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
           key: newKey,
           author: top.author,
           date: top.date,
+          originalNodes,
         }),
       );
     } else {
@@ -977,6 +979,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
                 key: newKey,
                 author: c.author,
                 date: c.date,
+                originalNodes,
               }),
               c.set('parents', List([rev])),
             ]);
