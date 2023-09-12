@@ -69,6 +69,7 @@ async function main() {
     alias: {
       extension: 'ext',
     },
+    boolean: ['pretty'],
   });
   const [manifestPath, grammarsDir] = argv._;
   if (manifestPath == null) {
@@ -202,6 +203,7 @@ async function main() {
     manifestPath,
     grammarsDir,
     scopeNameToEmbeddedLanguages,
+    argv.pretty,
   );
 }
 
@@ -241,6 +243,7 @@ async function writeGrammarFiles(
   manifestPath: string,
   grammarsDir: string,
   scopeNameToEmbeddedLanguages: Map<ScopeName, Record<ScopeName, string>>,
+  pretty: boolean,
 ): Promise<void> {
   const __dirname = pathMod.resolve();
   const prettierOptions = await prettier.resolveConfig(__dirname);
@@ -277,7 +280,10 @@ async function writeGrammarFiles(
 
       const jsModule = `${scopeName.replace(/\./g, '_')}_TextMateGrammar`;
       const jsonFile = pathMod.join(grammarsDir, `${jsModule}.${type}`);
-      let contents = type === 'json' ? JSON.stringify(definition) : definition;
+      let contents =
+        type === 'json'
+          ? JSON.stringify(definition, undefined, pretty ? 2 : undefined)
+          : definition;
       if (contents[contents.length - 1] !== '\n') {
         contents = `${contents}\n`;
       }
