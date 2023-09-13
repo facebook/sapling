@@ -13,7 +13,7 @@
 from __future__ import absolute_import
 
 import subprocess
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple, Union
 
 from . import encoding, error, gituser, revlog, util
 from .i18n import _
@@ -263,8 +263,8 @@ def hgcommittext(manifest, files, desc, user, date, extra):
     return text
 
 
-def gitdatestr(datestr: str) -> str:
-    """convert datestr to git date str used in commits
+def gitdatestr(dateobj: Union[str, Tuple[int, int]]) -> str:
+    """convert dateobj to git date str used in commits
 
     >>> util.parsedate('2000-01-01T00:00:00 +0700')
     (946659600, -25200)
@@ -273,7 +273,7 @@ def gitdatestr(datestr: str) -> str:
     >>> gitdatestr('2000-01-01T00:00:00 +0000')
     '946684800 +0000'
     """
-    utc, offset = util.parsedate(datestr)
+    utc, offset = util.parsedate(dateobj)
     if offset > 0:
         offsetsign = "-"
     else:
@@ -290,7 +290,7 @@ def gitcommittext(
     parents: List[bytes],
     desc: str,
     user: str,
-    date: str,
+    date: Optional[str],
     extra: Optional[Dict[str, str]],
     gpgkeyid: Optional[str] = None,
 ) -> bytes:
@@ -366,11 +366,23 @@ def gitcommittext(
     except ValueError as ex:
         raise error.Abort(ex)
 
-    committerdate = (extra.get("committer_date") if extra else None) or date
+    get_date = lambda name: util.parsedate((extra.get(name) if extra else None) or date)
+
+    authordate = get_date("author_date")
+    committerdate = get_date("committer_date")
+
+    # date, if not modified, should match either committerdate (usually) or
+    # authordate (tests). If modified, the intention is to change authordate,
+    # since the committerdate should not never be set manually.
+    # This means that `--date` might not be able to update the displayed
+    # `{date}` in a Git repo. But it does do something...
+    if date != authordate and date != committerdate:
+        authordate = date
+
     parent_entries = "".join(f"parent {hex(p)}\n" for p in parents)
     pre_sig_text = f"""\
 tree {hex(tree)}
-{parent_entries}author {gituser.normalize(user)} {gitdatestr(date)}
+{parent_entries}author {gituser.normalize(user)} {gitdatestr(authordate)}
 committer {gituser.normalize(committer)} {gitdatestr(committerdate)}"""
 
     normalized_desc = stripdesc(desc)

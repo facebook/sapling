@@ -429,19 +429,29 @@ fn to_hg_text(commit: &git2::Commit) -> Bytes {
     write(to_hex(commit.tree_id()).as_bytes());
     write(b"\n");
 
-    // user
     let author = commit.author();
+    let committer = commit.committer();
+
+    // author
     write(utf8(author.name_bytes()).as_bytes());
     write(b" <");
     write(utf8(author.email_bytes()).as_bytes());
     write(b">\n");
 
     // date
-    write(to_hg_date_text(&author.when()).as_bytes());
+    // We want the "modified" date to match user expectation. For hg we bump dates on commit
+    // rewrites (rebase, metaedit, amend, ...). So the hg "date" is the "modified" date.
+    // Usually, the committer date is the "modified" date. For tests, to preserve "stable"
+    // hashes the "date.now" is patched to return UNIX epoch. So we pick the maximum date
+    // from author and committer dates for test compatibility.
+    let max_date = committer.when().max(author.when());
+    write(to_hg_date_text(&max_date).as_bytes());
 
-    // extras (committer)
-    let committer = commit.committer();
-    write(b" committer:");
+    // extras
+    // The extras format is: "\0".join(f"{key}:{value}"). See "encodeextra" in changelog.py.
+    write(b" author_date:");
+    write(to_hg_date_text(&author.when()).as_bytes());
+    write(b"\0committer:");
     write(utf8(committer.name_bytes()).as_bytes());
     write(b" <");
     write(utf8(committer.email_bytes()).as_bytes());
