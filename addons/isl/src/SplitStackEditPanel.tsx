@@ -7,6 +7,7 @@
 
 import type {CommitStackState} from './stackEdit/commitStackState';
 import type {FileStackState, Rev} from './stackEdit/fileStackState';
+import type {UseStackEditState} from './stackEditState';
 import type {RepoPath} from 'shared/types/common';
 
 import {FileHeader} from './ComparisonView/SplitDiffView/SplitDiffFileHeader';
@@ -43,7 +44,7 @@ export function SplitStackEditPanel() {
   const {commitStack} = stackEdit;
 
   // Find the commits being split.
-  const [startRev, endRev] = findStartEndRevs(commitStack, stackEdit.splitRange);
+  const [startRev, endRev] = findStartEndRevs(stackEdit);
 
   // Nothing to split? Show a dropdown.
   if (startRev == null || endRev == null || startRev > endRev) {
@@ -239,7 +240,7 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
 
   const setStack = (newFileStack: FileStackState) => {
     const newSubStack = subStack.setFileStack(fileIdx, newFileStack);
-    const [startRev, endRev] = findStartEndRevs(commitStack, stackEdit.splitRange);
+    const [startRev, endRev] = findStartEndRevs(stackEdit);
     if (startRev != null && endRev != null) {
       const newCommitStack = commitStack.applySubStack(startRev, endRev + 1, newSubStack);
       // Find the new split range.
@@ -322,7 +323,7 @@ function StackRangeSelector() {
 
   const {commitStack} = stackEdit;
   let {splitRange} = stackEdit;
-  const [startRev, endRev] = findStartEndRevs(commitStack, splitRange);
+  const [startRev, endRev] = findStartEndRevs(stackEdit);
   const endKey = (endRev != null && commitStack.get(endRev)?.key) || '';
   splitRange = splitRange.set('endKey', endKey);
   const mutableRevs = commitStack.mutableRevs().reverse();
@@ -430,10 +431,11 @@ function EditableCommitTitle(props: MaybeEditableCommitTitleProps) {
   );
 }
 
-function findStartEndRevs(
-  commitStack: CommitStackState,
-  splitRange: SplitRangeRecord,
-): [Rev | undefined, Rev | undefined] {
+function findStartEndRevs(stackEdit: UseStackEditState): [Rev | undefined, Rev | undefined] {
+  const {splitRange, intention, commitStack} = stackEdit;
+  if (intention === 'split') {
+    return [1, commitStack.size - 1];
+  }
   const startRev = commitStack.findCommitByKey(splitRange.startKey)?.rev;
   let endRev = commitStack.findCommitByKey(splitRange.endKey)?.rev;
   if (startRev == null || startRev > (endRev ?? -1)) {

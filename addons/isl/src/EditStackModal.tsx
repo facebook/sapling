@@ -21,15 +21,33 @@ import './EditStackModal.css';
 /// Show a <Modal /> when editing a stack.
 export function MaybeEditStackModal() {
   const loadingState = useRecoilValue(loadingStackState);
-  const stackHashes = useRecoilValue(editingStackIntentionHashes)[1];
+  const [stackIntention, stackHashes] = useRecoilValue(editingStackIntentionHashes);
 
   const isEditing = stackHashes.size > 0;
   const isLoaded = isEditing && loadingState.state === 'hasValue';
 
-  return isLoaded ? <LoadedEditStackModal /> : null;
+  return isLoaded ? (
+    stackIntention === 'split' ? (
+      <LoadedSplitModal />
+    ) : (
+      <LoadedEditStackModal />
+    )
+  ) : null;
 }
 
-/// A <Modal /> for stack editing UI.
+/** A Modal for dedicated split UI. Subset of `LoadedEditStackModal`. */
+function LoadedSplitModal() {
+  return (
+    <Modal>
+      <SplitStackEditPanel />
+      <FlexRow style={{padding: 'var(--pad) 0', justifyContent: 'flex-end'}}>
+        <StackEditConfirmButtons />
+      </FlexRow>
+    </Modal>
+  );
+}
+
+/** A Modal for general stack editing UI. */
 function LoadedEditStackModal() {
   type Tab = 'commits' | 'files' | 'split';
   const [activeTab, setActiveTab] = useState<Tab>('commits');

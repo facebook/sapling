@@ -11,7 +11,8 @@ import {UndoDescription} from './StackEditSubTree';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {T, t} from './i18n';
 import {ImportStackOperation} from './operations/ImportStackOperation';
-import {latestHeadCommit, useRunOperation} from './serverAPIState';
+import {RebaseOperation} from './operations/RebaseOperation';
+import {latestCommitTreeMap, latestHeadCommit, useRunOperation} from './serverAPIState';
 import {
   bumpStackEditMetric,
   editingStackIntentionHashes,
@@ -25,6 +26,7 @@ import {Icon} from 'shared/Icon';
 export function StackEditConfirmButtons(): React.ReactElement {
   const [[stackIntention], setStackIntentionHashes] = useRecoilState(editingStackIntentionHashes);
   const originalHead = useRecoilValue(latestHeadCommit);
+  const latestTreeMap = useRecoilValue(latestCommitTreeMap);
   const runOperation = useRunOperation();
   const stackEdit = useStackEditState();
 
@@ -42,13 +44,30 @@ export function StackEditConfirmButtons(): React.ReactElement {
   };
 
   const handleSaveChanges = () => {
+    const originalHash = originalHead?.hash;
     const importStack = stackEdit.commitStack.calculateImportStack({
-      goto: originalHead?.hash,
+      goto: originalHash,
       rewriteDate: Date.now() / 1000,
     });
     const op = new ImportStackOperation(importStack);
     runOperation(op);
     sendStackEditMetrics(true);
+    // For standalone split, follow-up with a rebase.
+    // Note: the rebase might fail with conflicted pending changes.
+    // rebase is technically incorrect if the user edits the changes.
+    // We should move the rebase logic to debugimportstack and make
+    // it handle pending changes just fine.
+    const stackTop = stackEdit.commitStack.originalStack.at(-1)?.node;
+    if (stackIntention === 'split' && stackTop != null) {
+      const children = latestTreeMap.get(stackTop)?.children?.map(c => c.info.hash);
+      if (children != null && children.length > 0) {
+        const rebaseOp = new RebaseOperation(
+          children.join('|'),
+          stackTop /* stack top of the new successor */,
+        );
+        runOperation(rebaseOp);
+      }
+    }
     // Exit stack editing.
     setStackIntentionHashes(['general', new Set()]);
   };
@@ -92,7 +111,7 @@ export function StackEditConfirmButtons(): React.ReactElement {
         </VSCodeButton>
       </Tooltip>
       <Tooltip
-        title={t('Discard stack editing changes')}
+        title={stackIntention === 'split' ? t('Cancel split') : t('Discard stack editing changes')}
         delayMs={DOCUMENTATION_DELAY}
         placement="bottom">
         <VSCodeButton
@@ -103,7 +122,9 @@ export function StackEditConfirmButtons(): React.ReactElement {
         </VSCodeButton>
       </Tooltip>
       <Tooltip
-        title={t('Save stack editing changes')}
+        title={
+          stackIntention === 'split' ? t('Apply split changes') : t('Save stack editing changes')
+        }
         delayMs={DOCUMENTATION_DELAY}
         placement="bottom">
         <VSCodeButton
