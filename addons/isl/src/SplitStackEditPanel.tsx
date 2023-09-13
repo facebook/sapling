@@ -49,10 +49,12 @@ export function SplitStackEditPanel() {
     return (
       <div>
         <StackRangeSelector />
-        <EmptyState>
+        <EmptyState small>
           <T>Select a commit to split its changes.</T>
           <br />
-          <T>Select a range of commits to move contents among them.</T>
+          <Subtle>
+            <T>Or, select a range of commits to move contents among them.</T>
+          </Subtle>
         </EmptyState>
       </div>
     );

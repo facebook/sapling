@@ -89,7 +89,7 @@ export default function FileStackEditPanel() {
     return (
       <div>
         {fileSelector}
-        <EmptyState>
+        <EmptyState small>
           <T>Select a file to see all changes in a row.</T>
         </EmptyState>
       </div>
