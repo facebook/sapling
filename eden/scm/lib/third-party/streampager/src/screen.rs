@@ -277,7 +277,7 @@ impl Screen {
             width: self.width,
             height: self.height,
             file_lines: self.file.lines(),
-            error_file_lines: self.error_file.as_ref().map(|f| f.lines()).unwrap_or(0),
+            error_file_lines: self.error_file.as_ref().map_or(0, |f| f.lines()),
             ..Default::default()
         };
         if let Some(search) = self.search.as_ref() {
@@ -333,7 +333,7 @@ impl Screen {
 
         // Compute where the overlay will go
         let ruler_height = self.show_ruler as usize;
-        render.progress_height = self.progress.as_ref().map(|f| f.lines()).unwrap_or(0);
+        render.progress_height = self.progress.as_ref().map_or(0, |f| f.lines());
         render.error_file_height = error_file_line_portions.len();
         render.overlay_height = render.progress_height
             + render.error_file_height
@@ -348,7 +348,7 @@ impl Screen {
                 row_contents[row + progress_line] = RowContent::ProgressLine(progress_line);
             }
             row -= render.error_file_height;
-            render.error_file_last_line_portion = error_file_line_portions.get(0).cloned();
+            render.error_file_last_line_portion = error_file_line_portions.first().cloned();
             for (error_file_row, error_file_line_portion) in
                 error_file_line_portions.into_iter().rev().enumerate()
             {
@@ -848,7 +848,7 @@ impl Screen {
         let match_index = self
             .search
             .as_ref()
-            .and_then(|ref search| search.current_match())
+            .and_then(|search| search.current_match())
             .and_then(|(match_line_index, match_index)| {
                 if match_line_index == line_index {
                     Some(match_index)
@@ -1303,8 +1303,7 @@ impl Screen {
             || self
                 .search
                 .as_ref()
-                .map(|search| !search.finished())
-                .unwrap_or(false)
+                .map_or(false, |search| !search.finished())
     }
 
     /// Dispatch an animation timeout, updating for the next animation frame.
@@ -1315,8 +1314,7 @@ impl Screen {
         if self
             .search
             .as_ref()
-            .map(|search| !search.finished())
-            .unwrap_or(false)
+            .map_or(false, |search| !search.finished())
         {
             self.refresh_overlay();
         }
@@ -1347,7 +1345,7 @@ impl Screen {
         let current_match = self
             .search
             .as_ref()
-            .and_then(|ref search| search.current_match());
+            .and_then(|search| search.current_match());
         if let Some((line_index, _match_index)) = current_match {
             self.scroll_to(line_index);
             self.refresh_matched_lines();

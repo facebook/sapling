@@ -115,7 +115,7 @@ pub(crate) fn direct<T: Terminal>(
     };
 
     let read_progress_lines = || -> Vec<Vec<u8>> {
-        let line_count = progress.map(|p| p.lines()).unwrap_or(0);
+        let line_count = progress.map_or(0, |p| p.lines());
         (0..line_count)
             .filter_map(|i| progress.and_then(|p| p.with_line(i, |l| l.to_vec())))
             .collect::<Vec<_>>()

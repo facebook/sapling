@@ -44,8 +44,8 @@ pub(crate) fn truncate_string<'a>(
                 column += w;
             }
         }
-        let start_index = maybe_start_index.unwrap_or_else(|| text.len());
-        let end_index = maybe_end_index.unwrap_or_else(|| text.len());
+        let start_index = maybe_start_index.unwrap_or(text.len());
+        let end_index = maybe_end_index.unwrap_or(text.len());
         format!(
             "{0:1$.1$}{3}{0:2$.2$}",
             "",
