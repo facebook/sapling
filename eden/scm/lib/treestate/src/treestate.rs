@@ -91,7 +91,7 @@ impl TreeState {
         tracing::trace!(target: "treestate::create", "creating directory {directory:?}");
         create_dir(directory)?;
         let name = format!("{:x}", uuid::Uuid::new_v4());
-        let path = directory.join(&name);
+        let path = directory.join(name);
         tracing::trace!(target: "treestate::create", "creating filestore {path:?}");
         let mut store = FileStore::create(&path)?;
         let _lock = store.lock()?;
@@ -186,7 +186,7 @@ impl TreeState {
     /// Save as a new file.
     pub fn write_new<P: AsRef<Path>>(&mut self, directory: P) -> Result<BlockId> {
         let name = format!("{:x}", uuid::Uuid::new_v4());
-        let path = directory.as_ref().join(&name);
+        let path = directory.as_ref().join(name);
         let mut new_store = FileStore::create(path)?;
         let _lock = new_store.lock()?;
         let tree_block_id = self.tree.write_full(&mut new_store, &self.store)?;
@@ -374,7 +374,7 @@ impl TreeState {
             values.push((format!("p{}", i + 1), Some(p.to_string())));
         }
         // Set p1 or p2 to None to remove it from the metadata if necessary.
-        if values.len() == 0 {
+        if values.is_empty() {
             values.push(("p1".to_string(), None));
         }
         if values.len() == 1 {
@@ -512,12 +512,8 @@ mod tests {
         let dir = tempdir().expect("tempdir");
         let mut state = TreeState::new(dir.path(), true).expect("open").0;
         let block_id = state.flush().expect("flush");
-        let state = TreeState::open(
-            dir.path().join(state.file_name().unwrap()),
-            block_id.into(),
-            true,
-        )
-        .expect("open");
+        let state = TreeState::open(dir.path().join(state.file_name().unwrap()), block_id, true)
+            .expect("open");
         assert!(state.metadata_bytes().is_empty());
         assert_eq!(state.len(), 0);
     }
@@ -527,12 +523,8 @@ mod tests {
         let dir = tempdir().expect("tempdir");
         let mut state = TreeState::new(dir.path(), true).expect("open").0;
         let block_id = state.write_new(dir.path()).expect("write_as");
-        let state = TreeState::open(
-            dir.path().join(state.file_name().unwrap()),
-            block_id.into(),
-            true,
-        )
-        .expect("open");
+        let state = TreeState::open(dir.path().join(state.file_name().unwrap()), block_id, true)
+            .expect("open");
         assert!(state.metadata_bytes().is_empty());
         assert_eq!(state.len(), 0);
     }
@@ -546,11 +538,9 @@ mod tests {
         let block_id1 = state.flush().expect("flush");
         let block_id2 = state.write_new(dir.path()).expect("write_as");
         let new_name = state.file_name().unwrap();
-        let state =
-            TreeState::open(dir.path().join(orig_name), block_id1.into(), true).expect("open");
+        let state = TreeState::open(dir.path().join(orig_name), block_id1, true).expect("open");
         assert_eq!(state.metadata_bytes()[..], b"foobar"[..]);
-        let state =
-            TreeState::open(dir.path().join(new_name), block_id2.into(), true).expect("open");
+        let state = TreeState::open(dir.path().join(new_name), block_id2, true).expect("open");
         assert_eq!(state.metadata_bytes()[..], b"foobar"[..]);
     }
 
@@ -663,12 +653,9 @@ mod tests {
         let dir = tempdir().expect("tempdir");
         let mut state = new_treestate(dir.path());
         let block_id = state.flush().expect("flush");
-        let mut state = TreeState::open(
-            dir.path().join(state.file_name().unwrap()),
-            block_id.into(),
-            true,
-        )
-        .expect("open");
+        let mut state =
+            TreeState::open(dir.path().join(state.file_name().unwrap()), block_id, true)
+                .expect("open");
         let mut rng = ChaChaRng::from_seed([0; 32]);
         for path in &SAMPLE_PATHS {
             let file: FileStateV2 = rng.gen();
@@ -682,12 +669,9 @@ mod tests {
         let dir = tempdir().expect("tempdir");
         let mut state = new_treestate(dir.path());
         let block_id = state.write_new(dir.path()).expect("write_as");
-        let mut state = TreeState::open(
-            dir.path().join(state.file_name().unwrap()),
-            block_id.into(),
-            true,
-        )
-        .expect("open");
+        let mut state =
+            TreeState::open(dir.path().join(state.file_name().unwrap()), block_id, true)
+                .expect("open");
         let mut rng = ChaChaRng::from_seed([0; 32]);
         for path in &SAMPLE_PATHS {
             let file: FileStateV2 = rng.gen();
@@ -828,8 +812,7 @@ mod tests {
 
         let block_id = state.flush().expect("flush");
 
-        let state =
-            TreeState::open(dir.path().join(orig_name), block_id.into(), true).expect("open");
+        let state = TreeState::open(dir.path().join(orig_name), block_id, true).expect("open");
         assert_eq!(
             state.parents().collect::<Result<Vec<_>>>().unwrap(),
             [p1, p3].to_vec()

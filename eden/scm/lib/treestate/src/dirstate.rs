@@ -186,7 +186,7 @@ mod test {
         }
 
         {
-            (&mut ds.tree_state).as_mut().unwrap().repack_threshold = Some(123);
+            ds.tree_state.as_mut().unwrap().repack_threshold = Some(123);
 
             let mut buf: Vec<u8> = Vec::new();
             ds.serialize(&mut buf).unwrap();

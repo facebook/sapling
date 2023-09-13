@@ -145,7 +145,7 @@ enum PathRecurse<'name, 'node, T: 'node> {
 /// Splits a key into the first path element and the remaining path elements (if any).  Doesn't
 /// split the key if it just contains an exact file or directory name.
 fn split_key<'a>(key: KeyRef<'a>) -> (KeyRef<'a>, Option<KeyRef<'a>>) {
-    if key.len() == 0 {
+    if key.is_empty() {
         return (key, None);
     }
     // Skip the last character.  Even if it's a '/' we don't want to split on it.
@@ -223,10 +223,10 @@ impl CompatExt<FileStateV2> for Node<FileStateV2> {
                     .expect("entries should exist")
                     .iter()
                     .fold(AggregatedState::default(), |acc, (_, x)| match x {
-                        &NodeEntry::Directory(ref x) => {
+                        NodeEntry::Directory(x) => {
                             acc.merge(x.aggregated_state.get().expect("should be ready now"))
                         }
-                        &NodeEntry::File(ref x) => acc.merge(x.state.into()),
+                        NodeEntry::File(x) => acc.merge(x.state.into()),
                     });
                 self.aggregated_state.set(Some(state));
                 state
@@ -645,7 +645,7 @@ where
                 file.clone_from(info);
                 (None, false)
             }
-            PathRecurse::MissingFile(ref name) => {
+            PathRecurse::MissingFile(name) => {
                 // The file should be in this directory.  Add it.
                 if name.is_empty() || name[name.len() - 1] == b'/' {
                     panic!("Adding file with tailing slash");
@@ -776,7 +776,7 @@ where
                 .map
                 .get(elem)
                 .cloned()
-                .unwrap_or_else(|| Vec::new())
+                .unwrap_or_else(Vec::new)
                 .iter()
                 .map(|e| vec![trim_separator(e).to_vec().into_boxed_slice()])
                 .collect())
@@ -940,7 +940,7 @@ where
     }
 
     pub fn get<'a>(&'a mut self, store: &dyn StoreView, name: KeyRef) -> Result<Option<&'a T>> {
-        Ok(self.root.get(store, name)?)
+        self.root.get(store, name)
     }
 
     pub fn visit_advanced<F, VD, VF>(
@@ -1006,7 +1006,7 @@ where
     }
 
     pub fn has_dir(&mut self, store: &dyn StoreView, name: KeyRef) -> Result<bool> {
-        Ok(self.root.has_dir(store, name)?)
+        self.root.has_dir(store, name)
     }
 
     pub fn get_dir(
@@ -1014,7 +1014,7 @@ where
         store: &dyn StoreView,
         name: KeyRef,
     ) -> Result<Option<AggregatedState>> {
-        Ok(self.root.get_dir(store, name)?)
+        self.root.get_dir(store, name)
     }
 
     pub fn add(&mut self, store: &dyn StoreView, name: KeyRef, file: &T) -> Result<()> {
@@ -1160,7 +1160,7 @@ mod tests {
                 &FileState::new(b'n', expected.1, expected.2, expected.3)
             ))
         );
-        while let Some(expected) = expect_iter.next() {
+        for expected in expect_iter {
             let actual = t.get_next(&ms, &filename).expect("can get next");
             filename = expected.0.to_vec();
             assert_eq!(
@@ -1178,35 +1178,25 @@ mod tests {
     fn has_dir() {
         let ms = MapStore::new();
         let mut t = Tree::new();
-        assert_eq!(
-            t.has_dir(&ms, b"anything/").expect("can check has_dir"),
-            false
-        );
+        assert!(!t.has_dir(&ms, b"anything/").expect("can check has_dir"));
         populate(&mut t, &ms);
-        assert_eq!(
-            t.has_dir(&ms, b"something else/")
-                .expect("can check has_dir"),
-            false
+        assert!(
+            !t.has_dir(&ms, b"something else/")
+                .expect("can check has_dir")
         );
-        assert_eq!(t.has_dir(&ms, b"dirB/").expect("can check has_dir"), true);
-        assert_eq!(
-            t.has_dir(&ms, b"dirB/subdira/").expect("can check has_dir"),
-            true
-        );
-        assert_eq!(
+        assert!(t.has_dir(&ms, b"dirB/").expect("can check has_dir"));
+        assert!(t.has_dir(&ms, b"dirB/subdira/").expect("can check has_dir"));
+        assert!(
             t.has_dir(&ms, b"dirB/subdira/subsubdirz/")
-                .expect("can check has_dir"),
-            true
+                .expect("can check has_dir")
         );
-        assert_eq!(
-            t.has_dir(&ms, b"dirB/subdira/subsubdirz/file7")
-                .expect("can check has_dir"),
-            false
+        assert!(
+            !t.has_dir(&ms, b"dirB/subdira/subsubdirz/file7")
+                .expect("can check has_dir")
         );
-        assert_eq!(
-            t.has_dir(&ms, b"dirB/subdira/subsubdirz/file7/")
-                .expect("can check has_dir"),
-            false
+        assert!(
+            !t.has_dir(&ms, b"dirB/subdira/subsubdirz/file7/")
+                .expect("can check has_dir")
         );
     }
 

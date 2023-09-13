@@ -83,7 +83,7 @@ impl FileStore {
                 .write(true)
                 .create(true)
                 .truncate(true)
-                .open(&path)?,
+                .open(path)?,
         );
         let mut file = FileReaderWriter::new(writer, path)?;
         file.write(&MAGIC)?;
@@ -126,10 +126,10 @@ impl FileStore {
         let file = OpenOptions::new()
             .read(true)
             .write(true)
-            .open(&path)
+            .open(path)
             .or_else(|_e| {
                 read_only = true;
-                OpenOptions::new().read(true).open(&path)
+                OpenOptions::new().read(true).open(path)
             })?;
         let mut file = FileReaderWriter::new(BufWriter::new(file), path)?;
 
@@ -317,7 +317,7 @@ mod tests {
             .expect("write block 3");
         s.flush().expect("flush");
         drop((s, lock));
-        let s = FileStore::open(p.clone()).expect("open store");
+        let s = FileStore::open(p).expect("open store");
         assert_eq!(s.read(id3).expect("read 3"), "third data block".as_bytes());
         assert_eq!(s.read(id2).expect("read 2"), "data block two".as_bytes());
         assert_eq!(s.read(id1).expect("read 1"), "data block 1".as_bytes());
