@@ -319,7 +319,7 @@ impl Offset {
         } else {
             index.verify_checksum(self.0, TYPE_BYTES as u64)?;
             match buf.get(self.0 as usize) {
-                Some(x) => Ok(*x as u8),
+                Some(x) => Ok(*x),
                 _ => Err(index.range_error(self.0 as usize, 1)),
             }
         }
@@ -488,7 +488,7 @@ impl RadixOffset {
         if self.is_dirty() {
             Ok(self)
         } else {
-            let entry = MemRadix::read_from(&index, u64::from(self))?;
+            let entry = MemRadix::read_from(index, u64::from(self))?;
             let len = index.dirty_radixes.len();
             index.dirty_radixes.push(entry);
             Ok(RadixOffset::from_dirty_index(len))
@@ -556,7 +556,7 @@ impl RadixOffset {
         debug_assert_eq!(RADIX_BITMAP_BYTES, size_of::<u16>());
         let buf = &index.buf;
         buf.get(bitmap_offset..bitmap_offset + RADIX_BITMAP_BYTES)
-            .map(|buf| LittleEndian::read_u16(buf))
+            .map(LittleEndian::read_u16)
             .ok_or_else(|| {
                 crate::Error::corruption(
                     &index.path,
@@ -573,9 +573,7 @@ impl RadixOffset {
             4 => buf
                 .get(offset..offset + 4)
                 .map(|buf| LittleEndian::read_u32(buf) as u64),
-            8 => buf
-                .get(offset..offset + 8)
-                .map(|buf| LittleEndian::read_u64(buf)),
+            8 => buf.get(offset..offset + 8).map(LittleEndian::read_u64),
             _ => unreachable!(),
         };
         result.ok_or_else(|| {
@@ -619,10 +617,7 @@ impl LeafOffset {
                         key_offset.key_content_and_entry_size_unchecked(index)?;
                     let key_entry_size = key_entry_size.unwrap();
                     let raw_link_offset = raw_key_offset + key_entry_size as u64;
-                    index.verify_checksum(
-                        u64::from(self),
-                        raw_link_offset as u64 - u64::from(self),
-                    )?;
+                    index.verify_checksum(u64::from(self), raw_link_offset - u64::from(self))?;
                     (key_content, raw_link_offset)
                 }
                 TYPE_LEAF => {
@@ -653,7 +648,7 @@ impl LeafOffset {
                 _ => unreachable!("bug: LeafOffset constructed with non-leaf types"),
             };
             let link_offset =
-                LinkOffset::from_offset(Offset::from_disk(index, raw_link_offset as u64)?, index)?;
+                LinkOffset::from_offset(Offset::from_disk(index, raw_link_offset)?, index)?;
             Ok((key_content, link_offset))
         }
     }
@@ -1496,7 +1491,7 @@ impl MemChecksum {
         while offset > 0 {
             let mut cur: usize = offset;
 
-            check_type(&index, cur, TYPE_CHECKSUM)?;
+            check_type(index, cur, TYPE_CHECKSUM)?;
             cur += TYPE_BYTES;
 
             let (previous_offset, vlq_len): (u64, _) = index
@@ -1569,7 +1564,7 @@ impl MemChecksum {
             let xx32_read = (&index.buf()[cur..])
                 .read_u32::<LittleEndian>()
                 .context(index.path(), "cannot read xxhash32 for checksum")?;
-            let xx32_self = xxhash32(&index.buf()[offset as usize..cur as usize]);
+            let xx32_self = xxhash32(&index.buf()[offset..cur]);
             if xx32_read != xx32_self {
                 return Err(crate::Error::corruption(
                     index.path(),
@@ -1856,7 +1851,7 @@ impl<'a> IndexBuf for SimpleIndexBuf<'a> {
         Ok(())
     }
     fn path(&self) -> &Path {
-        &self.1
+        self.1
     }
 }
 
@@ -2305,11 +2300,11 @@ fn read_root_checksum_at_end(
     // |<--------- root_checksum_size ------>|
     // |<-- root_size ->|
 
-    let buf = SimpleIndexBuf(&bytes, path);
+    let buf = SimpleIndexBuf(bytes, path);
     // Be careful! SimpleIndexBuf does not do data verification.
     // Handle integer range overflows here.
     let (root_checksum_size, vlq_size) =
-        read_vlq_reverse(&bytes, end).context(path, "cannot read len(root+checksum)")?;
+        read_vlq_reverse(bytes, end).context(path, "cannot read len(root+checksum)")?;
 
     // Verify the header byte.
     check_type(&buf, 0, TYPE_HEAD)?;
@@ -3376,7 +3371,7 @@ impl Debug for Offset {
             write!(f, "None")
         } else if self.is_dirty() {
             let path = Path::new("<dummy>");
-            let dummy = SimpleIndexBuf(b"", &path);
+            let dummy = SimpleIndexBuf(b"", path);
             match self.to_typed(dummy).unwrap() {
                 TypedOffset::Radix(x) => x.fmt(f),
                 TypedOffset::Leaf(x) => x.fmt(f),
@@ -4068,7 +4063,7 @@ Link[0]: Link { value: 7, next: Disk[4] }
         let buf = Arc::new(vec![0x12u8, 0x34, 0x56, 0x78, 0x9a, 0xbc]);
         let dir = tempdir().unwrap();
         let mut index = open_opts()
-            .key_buf(Some(buf.clone()))
+            .key_buf(Some(buf))
             .open(dir.path().join("a"))
             .expect("open");
         index
@@ -4104,7 +4099,7 @@ ExtKey[0]: ExtKey { start: 1, len: 3 }
         let buf = Arc::new(vec![0x12u8, 0x34, 0x56, 0x78, 0x9a, 0xbc]);
         let dir = tempdir().unwrap();
         let mut index = open_opts()
-            .key_buf(Some(buf.clone()))
+            .key_buf(Some(buf))
             .open(dir.path().join("a"))
             .expect("open");
 
@@ -4310,7 +4305,7 @@ Disk[201]: Checksum { start: 126, end: 201, chunk_size_logarithm: 4, checksums.l
             .clone();
 
         let bytes = {
-            let mut index = opts.clone().open(dir.path().join("a")).expect("open");
+            let mut index = opts.open(dir.path().join("a")).expect("open");
 
             for (i, key) in keys.iter().enumerate() {
                 index.insert(key, i as u64).expect("insert");
@@ -4336,7 +4331,7 @@ Disk[201]: Checksum { start: 126, end: 201, chunk_size_logarithm: 4, checksums.l
             let link = index.get(&key);
             match link {
                 Err(_) => true,
-                Ok(link) => link.values(&index).any(|v| v.is_err()),
+                Ok(link) => link.values(index).any(|v| v.is_err()),
             }
         }
 
@@ -4589,7 +4584,7 @@ Disk[410]: Root { radix: Disk[402] }
             let key = key.as_ref();
             // Verify link_offset is correct
             let ids: Vec<u64> = link_offset
-                .values(&index)
+                .values(index)
                 .collect::<crate::Result<Vec<u64>>>()
                 .unwrap();
             assert!(ids.len() == 1);
@@ -4788,7 +4783,7 @@ Disk[410]: Root { radix: Disk[402] }
                     index.insert(key, *value).expect("insert");
                     index_mem.insert(key, *value).expect("insert");
                 }
-                if values.len() == 0 {
+                if values.is_empty() {
                     // Flush sometimes.
                     index.flush().expect("flush");
                 }

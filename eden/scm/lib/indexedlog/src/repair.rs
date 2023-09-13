@@ -165,7 +165,7 @@ where
             let lock = match ScopedDirLock::new_with_options(path, &CHECK_READER_LOCK_OPTS) {
                 Ok(lock) => lock,
                 Err(lock_err) => {
-                    msg += &"Auto-repair is skipped due to active readers.\n";
+                    msg += "Auto-repair is skipped due to active readers.\n";
                     let _ = msg.into_string();
                     return Err(e.source(lock_err))
                         .context(|| format!("in open_with_repair({:?})", path))
@@ -179,7 +179,7 @@ where
             // to `open` because the `open` will fail anyway.
             drop(lock);
 
-            msg += &"Starting auto repair.\n";
+            msg += "Starting auto repair.\n";
             let _ = msg.into_string();
 
             // Repair and retry.
@@ -187,12 +187,12 @@ where
                 .open_options_repair(path)
                 .context(|| format!("in open_with_repair({:?}), attempt to repair", path))?;
             tracing::info!("Auto-repair {:?} Result:\n{}", path, &repair_message);
-            return opts.open_path(path).context(|| {
+            opts.open_path(path).context(|| {
                 format!(
                     "in open_with_repair({:?}), after repair ({})",
                     path, repair_message
                 )
-            });
+            })
         }
         Err(e) => Err(e),
     }

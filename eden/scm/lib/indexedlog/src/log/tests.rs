@@ -53,7 +53,7 @@ fn test_open_options_create() {
 
     let log_path = dir.path().join("log2");
     let opts = OpenOptions::new().create(false);
-    assert!(opts.open(&log_path).is_err());
+    assert!(opts.open(log_path).is_err());
 }
 
 #[test]
@@ -154,7 +154,7 @@ fn test_checksum_type() {
 fn test_iter_and_iter_dirty() {
     let dir = tempdir().unwrap();
     let log_path = dir.path().join("log");
-    let mut log = Log::open(&log_path, Vec::new()).unwrap();
+    let mut log = Log::open(log_path, Vec::new()).unwrap();
 
     log.append(b"2").unwrap();
     log.append(b"4").unwrap();
@@ -264,7 +264,7 @@ fn test_slice_to_bytes() {
     assert_ne!(bytes1.as_ptr(), bytes2.as_ptr());
 
     // Try IndexOutput::Reference produced by Index #0.
-    let key = log.lookup_range(0, ..).unwrap().nth(0).unwrap().unwrap().0;
+    let key = log.lookup_range(0, ..).unwrap().next().unwrap().unwrap().0;
     assert_eq!(&key[..], b"01");
 
     // The key is from the main Log buffer.
@@ -276,7 +276,7 @@ fn test_slice_to_bytes() {
     assert_ne!(bytes1.as_ptr(), bytes2.as_ptr());
 
     // Try IndexOutput::Owned produced by Index #1.
-    let key = log.lookup_range(1, ..).unwrap().nth(0).unwrap().unwrap().0;
+    let key = log.lookup_range(1, ..).unwrap().next().unwrap().unwrap().0;
     assert_eq!(&key[..], b"012");
 
     // The key is from the Index buffer.
@@ -539,13 +539,13 @@ fn test_index_func() {
     for entry in log.iter() {
         let entry = entry.unwrap();
         found_keys1.extend(
-            log.index_func(0, &entry)
+            log.index_func(0, entry)
                 .unwrap()
                 .into_iter()
                 .map(|c| c.into_owned()),
         );
         found_keys2.extend(
-            log.index_func(1, &entry)
+            log.index_func(1, entry)
                 .unwrap()
                 .into_iter()
                 .map(|c| c.into_owned()),
@@ -558,7 +558,7 @@ fn test_index_func() {
 
 #[test]
 fn test_index_lag_threshold() {
-    for lag_entries in vec![0, 1] {
+    for lag_entries in &[0, 1] {
         //, 2, 5, 8] {
         let lag_bytes = lag_entries * 110; // 100: entry; 8: xxhash; 1: vlq len; 1: flag
         let dir = tempdir().unwrap();
@@ -581,7 +581,7 @@ fn test_index_lag_threshold() {
             log.append(&vec![i as u8; 100]).unwrap();
             log.sync().unwrap();
             let index_size_after = get_index_size();
-            let index_should_change = unindexed_entries >= lag_entries;
+            let index_should_change = unindexed_entries >= *lag_entries;
             if index_should_change {
                 unindexed_entries = 0;
             } else {
@@ -636,8 +636,7 @@ fn test_update_index_upon_open() {
     );
 
     // Open with a different OpenOptions. This should update the indexes.
-    let def =
-        IndexDef::new("a", |_| vec![IndexOutput::Reference(0..1)]).lag_threshold(1 * entry_size);
+    let def = IndexDef::new("a", |_| vec![IndexOutput::Reference(0..1)]).lag_threshold(entry_size);
     let open_opts = OpenOptions::new().create(true).index_defs(vec![def]);
     let _log = open_opts.open(dir.path()).unwrap();
     assert_eq!(
@@ -688,7 +687,7 @@ fn test_flush_filter() {
         .create(true)
         .flush_filter(Some(|ctx: &FlushFilterContext, bytes: &[u8]| {
             // "new" changes by log2 are visible.
-            assert_eq!(ctx.log.iter().nth(0).unwrap().unwrap(), b"log2");
+            assert_eq!(ctx.log.iter().next().unwrap().unwrap(), b"log2");
             Ok(match bytes.len() {
                 1 => FlushFilterOutput::Drop,
                 2 => FlushFilterOutput::Replace(b"cc".to_vec()),
@@ -725,7 +724,7 @@ fn log_with_index(path: &Path, lag: u64) -> Log {
 /// Insert entries to a log
 fn insert_entries(log: &mut Log, start: u64, n: u64) {
     for i in start..(start + n) {
-        let buf: [u8; 8] = unsafe { std::mem::transmute(i as u64) };
+        let buf: [u8; 8] = unsafe { std::mem::transmute(i) };
         log.append(&buf[..]).unwrap();
     }
 }
@@ -754,8 +753,8 @@ fn test_sync_fast_paths() {
 
     const N: u64 = 1003;
 
-    for choice1 in vec![1, 2, 3] {
-        for choice2 in vec![4, 5, 6] {
+    for choice1 in &[1, 2, 3] {
+        for choice2 in &[4, 5, 6] {
             let dir = tempdir().unwrap();
             // Write a single entry to make the log non-empty.
             // So it's slightly more interesting.
@@ -766,13 +765,13 @@ fn test_sync_fast_paths() {
             let mut log2 = log_with_index(dir.path(), (choice2 - 4) << 29);
             let mut count = 0usize;
 
-            if choice1 < 3 {
+            if *choice1 < 3 {
                 count += N as usize;
                 insert_entries(&mut log1, 0, N);
             }
             log1.sync().unwrap();
 
-            if choice2 < 6 {
+            if *choice2 < 6 {
                 count += (N as usize) * 2;
                 insert_entries(&mut log2, N, N * 2);
             }
@@ -819,7 +818,7 @@ fn test_sync_missing_meta() {
     log.sync().unwrap();
 
     let mut log2 = open_opts.open(dir.path()).unwrap();
-    fs::remove_file(&dir.path().join(META_FILE)).unwrap();
+    fs::remove_file(dir.path().join(META_FILE)).unwrap();
     log2.sync().unwrap(); // pretend to be a no-op
 
     log2.append(vec![b'b'; 100]).unwrap();
@@ -834,7 +833,7 @@ fn test_rebuild_indexes() {
         })
         .lag_threshold(1),
     ]);
-    let mut log = open_opts.clone().open(dir.path()).unwrap();
+    let mut log = open_opts.open(dir.path()).unwrap();
 
     log.append(b"abc").unwrap();
     log.flush().unwrap();
@@ -1143,7 +1142,7 @@ Index "c" passed integrity check"#
     );
 
     // Corrupt the end of index
-    corrupt(&index_file, -1);
+    corrupt(index_file, -1);
     verify_corrupted();
     assert_eq!(
         repair(),
@@ -1153,7 +1152,7 @@ Rebuilt index "c""#
     verify_len(5);
 
     // Corrupt the beginning of index
-    corrupt(&index_file, 1);
+    corrupt(index_file, 1);
     verify_corrupted();
     assert_eq!(
         repair(),
@@ -1163,7 +1162,7 @@ Rebuilt index "c""#
     verify_len(5);
 
     // Replace index with garbage
-    truncate(&index_file);
+    truncate(index_file);
     verify_corrupted();
     assert_eq!(
         repair(),
@@ -1190,7 +1189,7 @@ Rebuilt index "c""#
     verify_len(3);
 
     // Delete index
-    delete(&index_file);
+    delete(index_file);
     verify_corrupted();
     assert_eq!(
         repair(),
@@ -1229,7 +1228,7 @@ Rebuilt index "c""#
         log.sync().unwrap();
     };
     append_many_entries();
-    corrupt(&index_file, -1000_000);
+    corrupt(index_file, -1_000_000);
     verify_corrupted();
     assert_eq!(
         repair(),
@@ -1240,7 +1239,7 @@ Rebuilt index "c""#
     verify_len(200000);
 
     // Corrupt meta
-    crate::utils::atomic_write(&path.join(META_FILE), b"xxx", false).unwrap();
+    crate::utils::atomic_write(path.join(META_FILE), b"xxx", false).unwrap();
     corrupt(PRIMARY_FILE, 1000);
     verify_corrupted();
     assert_eq!(
@@ -1252,7 +1251,7 @@ Rebuilt index "c""#
     );
     verify_len(141);
 
-    crate::utils::atomic_write(&path.join(META_FILE), b"yyy", false).unwrap();
+    crate::utils::atomic_write(path.join(META_FILE), b"yyy", false).unwrap();
     verify_corrupted();
     assert_eq!(
         repair(),
@@ -1282,12 +1281,12 @@ Rebuilt index "c""#
         log.append(&[b'z'; 50_000][..]).unwrap();
         log.sync().unwrap();
         assert_eq!(len(PRIMARY_FILE), PRIMARY_START_OFFSET + 150036);
-        assert_eq!(len(&index_file), 100);
+        assert_eq!(len(index_file), 100);
     };
     let delete_content = || {
         open_opts.delete_content(path).unwrap();
         assert_eq!(len(PRIMARY_FILE), PRIMARY_START_OFFSET);
-        assert_eq!(len(&index_file), 25);
+        assert_eq!(len(index_file), 25);
         // Check SIGBUS
         try_trigger_sigbus();
         // Check log is empty
@@ -1295,7 +1294,7 @@ Rebuilt index "c""#
     };
 
     // 'dir' does not exist - delete_content creates the log
-    fs::remove_dir_all(&path).unwrap();
+    fs::remove_dir_all(path).unwrap();
     delete_content();
 
     // Normal log
@@ -1312,17 +1311,17 @@ Rebuilt index "c""#
 
     // Corrupt index
     append();
-    corrupt(&index_file, -10);
+    corrupt(index_file, -10);
     delete_content();
 
     // Corrupt log and index
     append();
     corrupt(PRIMARY_FILE, -25_000);
-    corrupt(&index_file, -10);
+    corrupt(index_file, -10);
     delete_content();
 
     // Deleted various files
-    delete(&index_file);
+    delete(index_file);
     delete_content();
 
     delete(PRIMARY_FILE);
@@ -1436,9 +1435,9 @@ fn test_non_append_only() {
 
 #[test]
 fn test_clear_dirty() {
-    for lag in vec![0, 1000] {
+    for lag in &[0, 1000] {
         let dir = tempdir().unwrap();
-        let mut log = log_with_index(dir.path(), lag);
+        let mut log = log_with_index(dir.path(), *lag);
         log.append([b'a'; 10]).unwrap();
         log.sync().unwrap();
         log.append([b'b'; 10]).unwrap();
@@ -1455,9 +1454,9 @@ fn test_clear_dirty() {
 
 #[test]
 fn test_clone() {
-    for lag in vec![0, 1000] {
+    for lag in &[0, 1000] {
         let dir = tempdir().unwrap();
-        let mut log = log_with_index(dir.path(), lag);
+        let mut log = log_with_index(dir.path(), *lag);
         log.append([b'a'; 10]).unwrap();
         log.sync().unwrap();
         log.append([b'b'; 10]).unwrap();
@@ -1510,7 +1509,7 @@ fn test_multithread_sync() {
             std::thread::spawn(move || {
                 barrier.wait();
                 let non_lag_open_opts = open_opts.clone().with_zero_index_lag();
-                let mut log = open_opts.clone().open(&path).unwrap();
+                let mut log = open_opts.open(&path).unwrap();
                 for j in 1..=WRITE_COUNT_PER_THREAD {
                     let buf = [i, j];
                     // Pick 1/4 threads to do "no_lag" opens.
@@ -1524,7 +1523,7 @@ fn test_multithread_sync() {
                             log = open_opts.clone().open(&path).unwrap();
                         }
                     }
-                    log.append(&buf).unwrap();
+                    log.append(buf).unwrap();
                     if j % (i + 1) == 0 || j == WRITE_COUNT_PER_THREAD {
                         log.sync().unwrap();
                         // Verify that the indexes match the entries.

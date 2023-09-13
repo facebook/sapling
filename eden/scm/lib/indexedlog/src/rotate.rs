@@ -165,7 +165,7 @@ impl OpenOptions {
             let span = debug_span!("RotateLog::open", dir = &dir.to_string_lossy().as_ref());
             let _guard = span.enter();
 
-            let latest_and_log = read_latest_and_logs(dir, &self);
+            let latest_and_log = read_latest_and_logs(dir, self);
 
             let (latest, logs) = match latest_and_log {
                 Ok((latest, logs)) => (latest, logs),
@@ -175,11 +175,11 @@ impl OpenOptions {
                             .context("not creating new logs since OpenOption::create is not set");
                     } else {
                         utils::mkdir_p(dir)?;
-                        let lock = ScopedDirLock::new(&dir)?;
+                        let lock = ScopedDirLock::new(dir)?;
 
                         match read_latest_raw(dir) {
                             Ok(latest) => {
-                                match read_logs(dir, &self, latest) {
+                                match read_logs(dir, self, latest) {
                                     Ok(logs) => {
                                         // Both latest and logs are read properly.
                                         (latest, logs)
@@ -188,9 +188,9 @@ impl OpenOptions {
                                         // latest is fine, but logs cannot be read.
                                         // Try auto recover by creating an empty log.
                                         let latest = latest.wrapping_add(1);
-                                        match create_empty_log(Some(dir), &self, latest, &lock) {
+                                        match create_empty_log(Some(dir), self, latest, &lock) {
                                             Ok(new_log) => {
-                                                if let Ok(logs) = read_logs(dir, &self, latest) {
+                                                if let Ok(logs) = read_logs(dir, self, latest) {
                                                     (latest, logs)
                                                 } else {
                                                     (latest, vec![create_log_cell(new_log)])
@@ -210,8 +210,7 @@ impl OpenOptions {
                                     // Most likely, it is a new empty directory.
                                     // Create an empty log and update latest.
                                     let latest = 0;
-                                    let new_log =
-                                        create_empty_log(Some(dir), &self, latest, &lock)?;
+                                    let new_log = create_empty_log(Some(dir), self, latest, &lock)?;
                                     (latest, vec![create_log_cell(new_log)])
                                 } else {
                                     // latest cannot be read for other reasons.
@@ -443,7 +442,7 @@ impl RotateLog {
         let result: crate::Result<_> = (|| {
             let span = debug_span!("RotateLog::sync", latest = self.latest as u32);
             if let Some(dir) = &self.dir {
-                span.record("dir", &dir.to_string_lossy().as_ref());
+                span.record("dir", dir.to_string_lossy().as_ref());
             }
             let _guard = span.enter();
 
@@ -559,7 +558,7 @@ impl RotateLog {
     fn rotate_internal(&mut self, lock: &ScopedDirLock) -> crate::Result<()> {
         let span = debug_span!("RotateLog::rotate", latest = self.latest as u32);
         if let Some(dir) = &self.dir {
-            span.record("dir", &dir.to_string_lossy().as_ref());
+            span.record("dir", dir.to_string_lossy().as_ref());
         }
         let _guard = span.enter();
 
@@ -569,7 +568,7 @@ impl RotateLog {
             Some(self.dir.as_ref().unwrap()),
             &self.open_options,
             next,
-            &lock,
+            lock,
         )?;
         if self.logs.len() >= self.open_options.max_log_count as usize {
             self.logs.pop();
@@ -669,7 +668,7 @@ impl RotateLog {
                         if index > 0 {
                             open_options = open_options.with_zero_index_lag();
                         }
-                        let log = load_log(&dir, id, open_options);
+                        let log = load_log(dir, id, open_options);
                         trace!(
                             name = "RotateLog::load_log",
                             index = index,
@@ -718,8 +717,8 @@ fn create_log_cell(log: Log) -> OnceCell<Log> {
 /// Load a single log at the given location.
 fn load_log(dir: &Path, id: u8, open_options: log::OpenOptions) -> crate::Result<Log> {
     let name = format!("{}", id);
-    let log_path = dir.join(&name);
-    open_options.create(false).open(&log_path)
+    let log_path = dir.join(name);
+    open_options.create(false).open(log_path)
 }
 
 /// Get access to internals of [`RotateLog`].
@@ -841,7 +840,7 @@ fn create_empty_log(
             let opts = open_options.log_open_options.clone().create(true);
             opts.delete_content(&log_path)?;
             let log = opts.open(&log_path)?;
-            utils::atomic_write(&latest_path, latest_str.as_bytes(), false)?;
+            utils::atomic_write(latest_path, latest_str.as_bytes(), false)?;
             log
         }
         None => open_options.log_open_options.clone().open(())?,
@@ -1011,17 +1010,17 @@ mod tests {
                 vec![IndexOutput::Reference(0..2)]
             })]);
 
-        let rotate = opts.clone().open(&dir).unwrap();
-        let rotate_mem = opts.clone().create_in_memory().unwrap();
+        let rotate = opts.open(&dir).unwrap();
+        let rotate_mem = opts.create_in_memory().unwrap();
 
         for rotate in &mut [rotate, rotate_mem] {
             rotate.append(b"aaa").unwrap();
             rotate.append(b"abbb").unwrap();
             rotate.append(b"abc").unwrap();
 
-            assert_eq!(lookup(&rotate, b"aa"), vec![b"aaa"]);
-            assert_eq!(lookup(&rotate, b"ab"), vec![&b"abc"[..], b"abbb"]);
-            assert_eq!(lookup(&rotate, b"ac"), Vec::<&[u8]>::new());
+            assert_eq!(lookup(rotate, b"aa"), vec![b"aaa"]);
+            assert_eq!(lookup(rotate, b"ab"), vec![&b"abc"[..], b"abbb"]);
+            assert_eq!(lookup(rotate, b"ac"), Vec::<&[u8]>::new());
         }
     }
 
@@ -1488,7 +1487,7 @@ mod tests {
 
         let size = |name: &str| dir.path().join(name).metadata().unwrap().len();
 
-        let mut rotate = opts.clone().open(&dir).unwrap();
+        let mut rotate = opts.open(&dir).unwrap();
         rotate.append(vec![b'x'; 200]).unwrap();
         rotate.sync().unwrap();
         rotate.append(vec![b'y'; 200]).unwrap();
@@ -1521,7 +1520,7 @@ mod tests {
         rotate.append(vec![b'x'; 200]).unwrap();
         rotate.sync().unwrap();
 
-        let mut rotate2 = opts.clone().open(&dir).unwrap();
+        let mut rotate2 = opts.open(&dir).unwrap();
         fs::remove_file(dir.path().join(LATEST_FILE)).unwrap();
         rotate2.sync().unwrap(); // not a failure
         rotate2.append(vec![b'y'; 200]).unwrap();
@@ -1533,7 +1532,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let opts = OpenOptions::new().auto_sync_threshold(100).create(true);
 
-        let mut rotate = opts.clone().create(true).open(&dir).unwrap();
+        let mut rotate = opts.create(true).open(&dir).unwrap();
         rotate.append(vec![b'x'; 50]).unwrap();
         assert_eq!(rotate.logs()[0].iter_dirty().count(), 1);
         rotate.append(vec![b'x'; 50]).unwrap(); // trigger sync
@@ -1546,7 +1545,7 @@ mod tests {
             let index_names = ["a"];
             (0..index_names.len())
                 .map(|i| {
-                    IndexDef::new(&index_names[i], |_| vec![IndexOutput::Reference(0..1)])
+                    IndexDef::new(index_names[i], |_| vec![IndexOutput::Reference(0..1)])
                         .lag_threshold(lag_threshold)
                 })
                 .collect()
@@ -1610,7 +1609,7 @@ mod tests {
         let opts = opts.index("a", |_data| vec![IndexOutput::Reference(0..1)]);
 
         // Triggers rebuilding indexes.
-        let rotate = opts.clone().create(true).open(&dir).unwrap();
+        let rotate = opts.create(true).open(&dir).unwrap();
 
         // Because older log is lazy. It hasn't been loaded yet. So it does not have the index.
         assert!(!dir.path().join("1/index2-a").exists());
@@ -1623,7 +1622,7 @@ mod tests {
         assert!(!dir.path().join("1/index2-a").exists());
 
         // Iterate through all logs.
-        assert_eq!(iter.nth(0).unwrap().unwrap(), &[0; 50][..]);
+        assert_eq!(iter.next().unwrap().unwrap(), &[0; 50][..]);
 
         // Now the index is built for older logs.
         assert!(dir.path().join("1/index2-a").exists());
@@ -1647,7 +1646,7 @@ mod tests {
 
         // Corrupt "latest".
         let latest_path = dir.path().join(LATEST_FILE);
-        utils::atomic_write(&latest_path, "NaN", false).unwrap();
+        utils::atomic_write(latest_path, "NaN", false).unwrap();
         assert!(opts.open(&dir).is_err());
         assert_eq!(
             opts.repair(&dir)
@@ -1762,7 +1761,7 @@ Reset latest to 2"#
                     let mut log = open_opts.open(path).unwrap();
                     for j in 1..=WRITE_COUNT_PER_THREAD {
                         let buf = [i, j];
-                        log.append(&buf).unwrap();
+                        log.append(buf).unwrap();
                         if j % (i + 1) == 0 || j == WRITE_COUNT_PER_THREAD {
                             log.sync().unwrap();
                             // Verify that the indexes match the entries.

@@ -104,7 +104,7 @@ pub fn open_dir(lock_path: impl AsRef<Path>) -> io::Result<File> {
     let path = lock_path.as_ref();
     #[cfg(unix)]
     {
-        File::open(&path)
+        File::open(path)
     }
     #[cfg(not(unix))]
     {
@@ -261,10 +261,10 @@ fn atomic_read_symlink(path: &Path) -> io::Result<Vec<u8>> {
 pub(crate) fn mkdir_p(dir: impl AsRef<Path>) -> crate::Result<()> {
     let dir = dir.as_ref();
     let try_mkdir_once = || -> io::Result<()> {
-        fs::create_dir(dir).and_then(|_| {
+        fs::create_dir(dir).map(|_| {
             // fix_perm_path issues are not fatal
             let _ = fix_perm_path(dir, true);
-            Ok(())
+            ()
         })
     };
     (|| -> crate::Result<()> {
@@ -277,14 +277,14 @@ pub(crate) fn mkdir_p(dir: impl AsRef<Path>) -> crate::Result<()> {
                         mkdir_p(parent)
                             .context(|| format!("while trying to mkdir_p({:?})", dir))?;
                         return try_mkdir_once()
-                            .context(&dir, "cannot mkdir after mkdir its parent");
+                            .context(dir, "cannot mkdir after mkdir its parent");
                     }
                 }
                 io::ErrorKind::PermissionDenied => {
                     // Try to fix permission aggressively.
                     if let Some(parent) = dir.parent() {
-                        if fix_perm_path(&parent, true).is_ok() {
-                            return try_mkdir_once().context(&dir, "cannot mkdir").context(|| {
+                        if fix_perm_path(parent, true).is_ok() {
+                            return try_mkdir_once().context(dir, "cannot mkdir").context(|| {
                                 format!(
                                     "while trying to mkdir {:?} after fix_perm {:?}",
                                     &dir, &parent

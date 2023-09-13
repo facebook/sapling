@@ -127,7 +127,7 @@ impl OpenOptions {
 
             // The multimeta log contains the "MultiMeta" metadata about how to load other
             // logs.
-            let meta_log_path = multi_meta_log_path(&path);
+            let meta_log_path = multi_meta_log_path(path);
             let meta_path = multi_meta_path(path);
             let mut multimeta_log = multi_meta_log_open_options().open(&meta_log_path)?;
             let multimeta_log_is_empty = multimeta_log.iter().next().is_none();
@@ -237,7 +237,7 @@ impl MultiLog {
 
             // Legacy MultiLog uses multimeta file to track MultiMeta.
             let meta_path = multi_meta_path(&self.path);
-            self.multimeta.write_file(&meta_path)?;
+            self.multimeta.write_file(meta_path)?;
 
             Ok(())
         })();
@@ -806,7 +806,7 @@ mod tests {
         mlog.multimeta
             .write_log(&mut mlog.multimeta_log, &lock)
             .unwrap();
-        mlog.multimeta.write_file(&multi_meta_path(path)).unwrap();
+        mlog.multimeta.write_file(multi_meta_path(path)).unwrap();
         drop(lock);
 
         // The index is rebuilt (appended) at open time because of incompatible meta.
@@ -850,7 +850,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path();
         let opts = simple_open_opts();
-        let mut mlog = opts.open(&path).unwrap();
+        let mut mlog = opts.open(path).unwrap();
         let mut logs = mlog.detach_logs();
 
         // Create 10 "multimeta"s. Each MultiMeta contains N entires for each log.
@@ -870,7 +870,7 @@ mod tests {
 
         // Check that both logs only have a multiple of N entries.
         let verify = || {
-            let mlog = opts.open(&path).unwrap();
+            let mlog = opts.open(path).unwrap();
             assert_eq!(mlog.logs[0].iter().count() % N, 0);
             assert_eq!(mlog.logs[1].iter().count() % N, 0);
         };
@@ -931,7 +931,7 @@ Write valid MultiMeta"#
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path();
         let opts = index_open_opts();
-        let mut mlog = opts.open(&path).unwrap();
+        let mut mlog = opts.open(path).unwrap();
         let mut logs = mlog.detach_logs();
 
         let repair = || repair_output(&opts, path);
@@ -962,7 +962,7 @@ Write valid MultiMeta"#
         // to the index file that is no longer valid.
         pwrite(&index_path, -4, b"ffff");
         pwrite(&meta_log_path, (meta_log_sizes[1] - 5) as _, b"xxxxx");
-        std::fs::remove_file(&meta_path).unwrap();
+        std::fs::remove_file(meta_path).unwrap();
 
         let index_len_before = file_size(&index_path);
         assert_eq!(
@@ -990,13 +990,13 @@ Write valid MultiMeta"#
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path();
 
-        let mut mlog_new = simple_open_opts().open(&path).unwrap();
+        let mut mlog_new = simple_open_opts().open(path).unwrap();
         let mut logs_new = mlog_new.detach_logs();
 
         let mut mlog_old = {
             let mut opts = simple_open_opts();
             opts.leacy_multimeta_source = true;
-            opts.open(&path).unwrap()
+            opts.open(path).unwrap()
         };
         let mut logs_old = mlog_old.detach_logs();
 
@@ -1008,14 +1008,14 @@ Write valid MultiMeta"#
                 (&mut mlog_old, &mut logs_old, 1u8),
             ] {
                 let lock = mlog.lock().unwrap();
-                logs[0].append(&[i as u8, j]).unwrap();
+                logs[0].append([i as u8, j]).unwrap();
                 logs[0].sync().unwrap();
                 mlog.write_meta(&lock).unwrap();
             }
         }
 
         // Reading the log. It should contain N * 2 entries.
-        let mlog = simple_open_opts().open(&path).unwrap();
+        let mlog = simple_open_opts().open(path).unwrap();
         assert_eq!(
             mlog.logs[0].iter().map(|e| e.unwrap()).collect::<Vec<_>>(),
             [[0, 0], [0, 1], [1, 0], [1, 1]],

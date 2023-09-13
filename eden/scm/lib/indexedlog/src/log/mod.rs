@@ -452,7 +452,7 @@ impl Log {
         let result: crate::Result<_> = (|| {
             let span = debug_span!("Log::sync", dirty_bytes = self.mem_buf.len());
             if let Some(dir) = &self.dir.as_opt_path() {
-                span.record("dir", &dir.to_string_lossy().as_ref());
+                span.record("dir", dir.to_string_lossy().as_ref());
             }
             let _guard = span.enter();
 
@@ -759,7 +759,7 @@ impl Log {
                     ));
                 }
 
-                let _lock = ScopedDirLock::new(&dir)?;
+                let _lock = ScopedDirLock::new(dir)?;
 
                 let meta = Self::load_or_create_meta(&self.dir, false)?;
                 // Only check primary_len, not meta.indexes. This is because
@@ -818,7 +818,7 @@ impl Log {
         let dir = self.dir.clone();
         let result: crate::Result<_> = (|this: Log| {
             if let Some(dir) = this.dir.clone().as_opt_path() {
-                let lock = ScopedDirLock::new(&dir)?;
+                let lock = ScopedDirLock::new(dir)?;
                 this.rebuild_indexes_with_lock(force, &lock)
             } else {
                 Ok(String::new())
@@ -880,13 +880,13 @@ impl Log {
                         }
                     }
 
-                    let tmp = tempfile::NamedTempFile::new_in(dir).context(&dir, || {
+                    let tmp = tempfile::NamedTempFile::new_in(dir).context(dir, || {
                         format!("cannot create tempfile for rebuilding index {:?}", name)
                     })?;
                     let index_len = {
                         let mut index = index::OpenOptions::new()
                             .key_buf(Some(Arc::new(self.disk_buf.clone())))
-                            .open(&tmp.path())?;
+                            .open(tmp.path())?;
                         Self::update_index_for_on_disk_entry_unchecked(
                             &self.dir,
                             &mut index,
@@ -1077,7 +1077,7 @@ impl Log {
         for output in (index_def.func)(entry).into_iter() {
             result.push(
                 output
-                    .into_cow(&entry)
+                    .into_cow(entry)
                     .context(|| format!("index_id = {}", index_id))?,
             );
         }
@@ -1221,7 +1221,7 @@ impl Log {
         let mut count = 0;
         // PERF: might be worthwhile to cache xxhash verification result.
         while let Some(entry_result) =
-            Self::read_entry_from_buf(&path, disk_buf, offset).context(|| {
+            Self::read_entry_from_buf(path, disk_buf, offset).context(|| {
                 format!(
                     "while updating index {:?} for on-disk entry at {}",
                     def.name, offset
@@ -1322,7 +1322,7 @@ impl Log {
             None => Bytes::new(),
         };
 
-        let mem_buf: &Vec<u8> = &mem_buf;
+        let mem_buf: &Vec<u8> = mem_buf;
         let mem_buf: *const Vec<u8> = mem_buf as *const Vec<u8>;
         let key_buf = Arc::new(ExternalKeyBuffer {
             disk_buf: primary_buf.clone(),
@@ -1338,7 +1338,7 @@ impl Log {
                     let index_len = meta.indexes.get(&def.metaname()).cloned().unwrap_or(0);
                     indexes.push(Self::load_index(
                         dir,
-                        &def,
+                        def,
                         index_len,
                         key_buf.clone(),
                         fsync,
@@ -1354,7 +1354,7 @@ impl Log {
                 for (index, def) in indexes.iter().zip(index_defs) {
                     let index_len = meta.indexes.get(&def.metaname()).cloned().unwrap_or(0);
                     let index = if index_len > Self::get_index_log_len(index, true).unwrap_or(0) {
-                        Self::load_index(dir, &def, index_len, key_buf.clone(), fsync)?
+                        Self::load_index(dir, def, index_len, key_buf.clone(), fsync)?
                     } else {
                         let mut index = index.try_clone()?;
                         index.key_buf = key_buf.clone();
@@ -1479,7 +1479,7 @@ impl Log {
         let (checksum, offset) = match checksum_flags {
             ENTRY_FLAG_HAS_XXHASH64 => {
                 let checksum = LittleEndian::read_u64(
-                    &buf.get(offset as usize..offset as usize + 8)
+                    buf.get(offset as usize..offset as usize + 8)
                         .ok_or_else(|| {
                             data_error(format!("xxhash cannot be read at {}", offset))
                         })?,
@@ -1488,7 +1488,7 @@ impl Log {
             }
             ENTRY_FLAG_HAS_XXHASH32 => {
                 let checksum = LittleEndian::read_u32(
-                    &buf.get(offset as usize..offset as usize + 4)
+                    buf.get(offset as usize..offset as usize + 4)
                         .ok_or_else(|| {
                             data_error(format!("xxhash32 cannot be read at {}", offset))
                         })?,
@@ -1512,8 +1512,8 @@ impl Log {
 
         let verified = match checksum_flags {
             0 => true,
-            ENTRY_FLAG_HAS_XXHASH64 => xxhash(&data) == checksum,
-            ENTRY_FLAG_HAS_XXHASH32 => xxhash32(&data) as u64 == checksum,
+            ENTRY_FLAG_HAS_XXHASH64 => xxhash(data) == checksum,
+            ENTRY_FLAG_HAS_XXHASH32 => xxhash32(data) as u64 == checksum,
             // Tested above. Therefore unreachable.
             _ => unreachable!(),
         };
@@ -1624,7 +1624,7 @@ impl Log {
 
     fn corruption(&self, message: String) -> crate::Error {
         let path: &Path = match self.dir.as_opt_path() {
-            Some(ref path) => &path,
+            Some(ref path) => path,
             None => Path::new("<memory>"),
         };
         crate::Error::corruption(path, message)
