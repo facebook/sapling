@@ -138,7 +138,10 @@ void HgDatapackStore::getTreeBatch(
         if (config_->getEdenConfig()->hgTreeFetchFallback.getValue() &&
             content.hasException()) {
           if (logger_) {
-            logger_->logEvent(EdenApiMiss{repoName_, EdenApiMiss::Tree});
+            logger_->logEvent(EdenApiMiss{
+                repoName_,
+                EdenApiMiss::Tree,
+                content.exception().what().toStdString()});
           }
 
           // If we're falling back, the caller will fulfill this Promise with a
@@ -245,7 +248,10 @@ void HgDatapackStore::getBlobBatch(
         if (config_->getEdenConfig()->hgBlobFetchFallback.getValue() &&
             content.hasException()) {
           if (logger_) {
-            logger_->logEvent(EdenApiMiss{repoName_, EdenApiMiss::Blob});
+            logger_->logEvent(EdenApiMiss{
+                repoName_,
+                EdenApiMiss::Blob,
+                content.exception().what().toStdString()});
           }
 
           // If we're falling back, the caller will fulfill this Promise with a
