@@ -27,12 +27,6 @@ if not pycompat.iswindows:
     import grp
 
 
-# An enum representing the result of file data validation
-ValidationResult = util.Enum(
-    "ValidationResult", "Valid Invalid Redacted", module=__name__
-)
-
-
 def interposeclass(container, classname):
     """Interpose a class into the hierarchies of all loaded subclasses. This
     function is intended for use as a decorator.
