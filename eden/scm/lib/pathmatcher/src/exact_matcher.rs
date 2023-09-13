@@ -82,7 +82,7 @@ impl Node {
     fn find(&self, path: &RepoPath) -> Option<&Node> {
         let mut node = self;
         let mut components = path.components();
-        while let Some(component) = components.next() {
+        for component in components {
             let component: Cow<str> = if node.case_sensitive {
                 Cow::Borrowed(component.as_str())
             } else {

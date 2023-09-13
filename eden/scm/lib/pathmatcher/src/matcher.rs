@@ -111,7 +111,7 @@ pub fn cli_matcher_with_filesets(
     for fs in [&patterns_filesets, &include_filesets, &exclude_filesets] {
         if fs.map_or(false, |fs| fs.is_empty()) {
             // TODO: pipe the original fileset string to this warning
-            all_warnings.push(format!("fileset evaluated to zero files"));
+            all_warnings.push("fileset evaluated to zero files".to_string());
             break;
         }
     }
@@ -380,9 +380,9 @@ mod tests {
     #[test]
     fn test_cli_matcher_exact_precedence() -> Result<()> {
         let m = cli_matcher(
-            &vec!["path:foo".to_string()],
+            &["path:foo".to_string()],
             &[],
-            &vec!["path:".to_string()],
+            &["path:".to_string()],
             PatternKind::Glob,
             true,
             "/root".as_ref(),

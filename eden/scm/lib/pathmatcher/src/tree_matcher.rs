@@ -91,14 +91,14 @@ impl TreeMatcher {
 
         for (idx, rule) in rules.enumerate() {
             let rule = rule.as_ref();
-            let (negative, rule) = if rule.starts_with("!") {
+            let (negative, rule) = if rule.starts_with('!') {
                 (true, &rule[1..])
             } else {
                 (false, rule)
             };
 
             // Strip a leading "/". More friendly to gitignore users.
-            let rule = if rule.starts_with("/") {
+            let rule = if rule.starts_with('/') {
                 &rule[1..]
             } else {
                 rule
@@ -112,7 +112,7 @@ impl TreeMatcher {
             // build_globs().
             //
             // See https://github.com/BurntSushi/ripgrep/issues/1183.
-            let rule = escape_curly_brackets(&rule);
+            let rule = escape_curly_brackets(rule);
 
             // Add flags to the rule_id
             let mut flag = if negative {
@@ -210,12 +210,10 @@ impl TreeMatcher {
                     } else {
                         return Some(false);
                     }
+                } else if subpath_may_mismatch {
+                    return None;
                 } else {
-                    if subpath_may_mismatch {
-                        return None;
-                    } else {
-                        return Some(true);
-                    }
+                    return Some(true);
                 }
             }
         }
@@ -291,7 +289,7 @@ fn build_globs(pat: &str, case_sensitive: bool) -> Result<Vec<Glob>, globset::Er
     // Fast path (maybe).
     if pat.ends_with("/**") {
         let prefix = &pat[..pat.len() - 3];
-        if !prefix.contains("?") && !prefix.contains("*") {
+        if !prefix.contains('?') && !prefix.contains('*') {
             // Rewrite "foo/**" (literal_separator=true) to
             // "foo" (literal_separator=false) and
             // "foo/*" (literal_separator=false) so
@@ -343,9 +341,7 @@ fn next_path_separator(pat: &[u8], start: usize) -> Option<usize> {
 
     for (i, ch) in pat.iter().skip(start).enumerate() {
         if escaped {
-            match ch {
-                _ => escaped = false,
-            }
+            escaped = false
         } else if in_box_brackets {
             match ch {
                 b']' => in_box_brackets = false,
@@ -392,8 +388,8 @@ mod tests {
         assert_eq!(m.match_recursive(""), Some(false));
         assert_eq!(m.match_recursive("a"), Some(false));
         assert_eq!(m.match_recursive("a/b"), Some(false));
-        assert_eq!(m.matches(""), false);
-        assert_eq!(m.matches("a/b"), false);
+        assert!(!m.matches(""));
+        assert!(!m.matches("a/b"));
     }
 
     #[test]
@@ -402,8 +398,8 @@ mod tests {
         assert_eq!(m.match_recursive(""), Some(true));
         assert_eq!(m.match_recursive("a"), Some(true));
         assert_eq!(m.match_recursive("a/b"), Some(true));
-        assert_eq!(m.matches(""), true);
-        assert_eq!(m.matches("a/b"), true);
+        assert!(m.matches(""));
+        assert!(m.matches("a/b"));
     }
 
     #[test]
@@ -419,13 +415,13 @@ mod tests {
         assert_eq!(m.match_recursive("e/f/g"), Some(true));
         assert_eq!(m.match_recursive("c"), Some(false));
         assert_eq!(m.match_recursive("c/a"), Some(false));
-        assert_eq!(m.matches(""), false);
-        assert_eq!(m.matches("a/b"), true);
-        assert_eq!(m.matches("b/x"), false);
-        assert_eq!(m.matches("b/c/d/e"), true);
-        assert_eq!(m.matches("e"), false);
-        assert_eq!(m.matches("e/f1"), false);
-        assert_eq!(m.matches("e/f/g"), true);
+        assert!(!m.matches(""));
+        assert!(m.matches("a/b"));
+        assert!(!m.matches("b/x"));
+        assert!(m.matches("b/c/d/e"));
+        assert!(!m.matches("e"));
+        assert!(!m.matches("e/f1"));
+        assert!(m.matches("e/f/g"));
     }
 
     #[test]
@@ -436,8 +432,8 @@ mod tests {
         assert_eq!(m.match_recursive("a/x"), Some(false));
         assert_eq!(m.match_recursive("a/xde"), Some(true));
         assert_eq!(m.match_recursive("a/xde/x"), Some(true));
-        assert_eq!(m.matches("a/12df"), true);
-        assert_eq!(m.matches("a/12df/12df"), true);
+        assert!(m.matches("a/12df"));
+        assert!(m.matches("a/12df/12df"));
     }
 
     #[test]
@@ -448,12 +444,12 @@ mod tests {
         assert_eq!(m.match_recursive("a/v/.c"), Some(true));
         assert_eq!(m.match_recursive("a/v/.c/z"), Some(true));
         assert_eq!(m.match_recursive("a/z"), None);
-        assert_eq!(m.matches("v/.c"), false);
-        assert_eq!(m.matches("a/v/.c"), true);
-        assert_eq!(m.matches("a/w/.c"), true);
-        assert_eq!(m.matches("a/v/c/v/c/v/c/v/c/v.c"), true);
-        assert_eq!(m.matches("a/c/c/c/c/w/w.c"), true);
-        assert_eq!(m.matches("a/w/v/w.c"), false);
+        assert!(!m.matches("v/.c"));
+        assert!(m.matches("a/v/.c"));
+        assert!(m.matches("a/w/.c"));
+        assert!(m.matches("a/v/c/v/c/v/c/v/c/v.c"));
+        assert!(m.matches("a/c/c/c/c/w/w.c"));
+        assert!(!m.matches("a/w/v/w.c"));
 
         // "{" has no special meaning
         let m = TreeMatcher::from_rules(["a/{b,c/d}/**"].iter(), true).unwrap();
@@ -471,10 +467,10 @@ mod tests {
         assert_eq!(m.match_recursive("b/xc/yc"), Some(true));
         assert_eq!(m.match_recursive("b/xc"), Some(true));
         assert_eq!(m.match_recursive("b/d"), Some(false));
-        assert_eq!(m.matches("b/c/d/e/f"), true);
-        assert_eq!(m.matches("b/fc"), true);
-        assert_eq!(m.matches("b/ce"), false);
-        assert_eq!(m.matches("b/c/e"), true);
+        assert!(m.matches("b/c/d/e/f"));
+        assert!(m.matches("b/fc"));
+        assert!(!m.matches("b/ce"));
+        assert!(m.matches("b/c/e"));
     }
 
     #[test]
@@ -484,11 +480,11 @@ mod tests {
         assert_eq!(m.match_recursive("b/d"), None);
         assert_eq!(m.match_recursive("b/c"), Some(true));
         assert_eq!(m.match_recursive("b/x/c/y"), Some(true));
-        assert_eq!(m.matches("b/c/d/e/f"), true);
-        assert_eq!(m.matches("b/c/d"), true);
-        assert_eq!(m.matches("b/c"), true);
-        assert_eq!(m.matches("b"), false);
-        assert_eq!(m.matches("b/x/y/c/x/y"), true);
+        assert!(m.matches("b/c/d/e/f"));
+        assert!(m.matches("b/c/d"));
+        assert!(m.matches("b/c"));
+        assert!(!m.matches("b"));
+        assert!(m.matches("b/x/y/c/x/y"));
     }
 
     #[test]
@@ -497,8 +493,8 @@ mod tests {
         assert_eq!(m.match_recursive(""), None); // better answer is Some(false)
         assert_eq!(m.match_recursive("a"), Some(false));
         assert_eq!(m.match_recursive("a/b"), Some(false));
-        assert_eq!(m.matches(""), false);
-        assert_eq!(m.matches("a/b"), false);
+        assert!(!m.matches(""));
+        assert!(!m.matches("a/b"));
     }
 
     #[test]
@@ -509,12 +505,12 @@ mod tests {
         assert_eq!(m.match_recursive("a/b"), None);
         assert_eq!(m.match_recursive("a/b/d"), Some(false));
         assert_eq!(m.match_recursive("a/b/c"), Some(true));
-        assert_eq!(m.matches("a"), true);
-        assert_eq!(m.matches("a/b"), false);
-        assert_eq!(m.matches("a/b/c/d"), true);
-        assert_eq!(m.matches("a/b/d"), false);
-        assert_eq!(m.matches("a/c"), true);
-        assert_eq!(m.matches("z"), false);
+        assert!(m.matches("a"));
+        assert!(!m.matches("a/b"));
+        assert!(m.matches("a/b/c/d"));
+        assert!(!m.matches("a/b/d"));
+        assert!(m.matches("a/c"));
+        assert!(!m.matches("z"));
     }
 
     #[test]
@@ -522,8 +518,8 @@ mod tests {
         let m = TreeMatcher::from_rules(["a/**", "!a/**", "!b/**", "b/**"].iter(), true).unwrap();
         assert_eq!(m.match_recursive("a/b"), Some(false));
         assert_eq!(m.match_recursive("b/c"), Some(true));
-        assert_eq!(m.matches("a"), false);
-        assert_eq!(m.matches("b"), true);
+        assert!(!m.matches("a"));
+        assert!(m.matches("b"));
     }
 
     #[test]
@@ -532,13 +528,13 @@ mod tests {
             .unwrap();
         assert_eq!(m.match_recursive("b"), Some(false));
         assert_eq!(m.match_recursive("a1/a"), Some(true));
-        assert_eq!(m.matches("a"), true);
-        assert_eq!(m.matches("a1"), false);
-        assert_eq!(m.matches("a1/a"), true);
-        assert_eq!(m.matches("a1/b"), false);
-        assert_eq!(m.matches("a1/a1c"), false);
-        assert_eq!(m.matches("a2"), true);
-        assert_eq!(m.matches("b"), false);
+        assert!(m.matches("a"));
+        assert!(!m.matches("a1"));
+        assert!(m.matches("a1/a"));
+        assert!(!m.matches("a1/b"));
+        assert!(!m.matches("a1/a1c"));
+        assert!(m.matches("a2"));
+        assert!(!m.matches("b"));
     }
 
     #[test]
@@ -627,10 +623,10 @@ mod tests {
             assert_eq!(m.matches("BAR/baz"), !sensitive);
             assert_eq!(m.matches("bar/BAZ"), !sensitive);
             assert_eq!(m.matches("QUX/some/thing"), !sensitive);
-            assert_eq!(m.matches("qux/SOME/thing"), true);
-            assert_eq!(m.matches("qux/some/THING"), true);
+            assert!(m.matches("qux/SOME/thing"));
+            assert!(m.matches("qux/some/THING"));
             assert_eq!(m.matches("z/1/Z"), !sensitive);
-            assert_eq!(m.matches("Z/1"), false);
+            assert!(!m.matches("Z/1"));
         }
     }
 }
