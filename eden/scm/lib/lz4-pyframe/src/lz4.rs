@@ -136,8 +136,7 @@ pub fn decompress_into(data: &[u8], dest: &mut [u8]) -> Result<()> {
     if stream.0.is_null() {
         return Err(LZ4Error::Generic {
             message: "Unable to construct lz4 stream decoder".to_string(),
-        }
-        .into());
+        });
     }
     if !dest.is_empty() {
         let data = &data[HEADER_LEN..];
@@ -181,8 +180,7 @@ pub fn compress(data: &[u8]) -> Result<Vec<u8>> {
     if stream.0.is_null() {
         return Err(LZ4Error::Generic {
             message: "unable to construct LZ4 stream encoder".to_string(),
-        }
-        .into());
+        });
     }
 
     let source = data.as_ptr();
@@ -214,8 +212,7 @@ pub fn compresshc(data: &[u8]) -> Result<Vec<u8>> {
     if stream.0.is_null() {
         return Err(LZ4Error::Generic {
             message: "unable to construct LZ4 stream encoder".to_string(),
-        }
-        .into());
+        });
     }
 
     let source = data.as_ptr();
@@ -244,8 +241,7 @@ fn check_error(result: i32) -> Result<i32> {
     if result < 0 {
         return Err(LZ4Error::Generic {
             message: format!("lz4 failed with error '{:?}'", result),
-        }
-        .into());
+        });
     }
 
     Ok(result)
@@ -272,7 +268,7 @@ mod tests {
     #[test]
     fn test_roundtrip() {
         let data = &b"\x00\x01\x02hello world long string easy easy easy easy compress\xF0\xFA"[..];
-        let (compressed, roundtrips) = check_roundtrip(&data);
+        let (compressed, roundtrips) = check_roundtrip(data);
         assert!(compressed.len() < data.len());
         assert!(roundtrips);
     }
@@ -280,7 +276,7 @@ mod tests {
     #[test]
     fn test_empty() {
         let data = &b"";
-        let (compressed, roundtrips) = check_roundtrip(&data);
+        let (compressed, roundtrips) = check_roundtrip(data);
         assert_eq!(compressed, &[0u8, 0, 0, 0][..]);
         assert!(roundtrips);
     }
@@ -300,7 +296,7 @@ mod tests {
 
     quickcheck! {
         fn test_quickcheck_roundtrip(data: Vec<u8>) -> bool {
-            check_roundtrip(&data).1
+            check_roundtrip(data).1
         }
     }
 }

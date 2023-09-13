@@ -65,7 +65,7 @@ impl PathAuditor {
         let full_path = self.root.join(path.as_str());
 
         // XXX: Maybe filter by specific errors?
-        if let Ok(metadata) = symlink_metadata(&full_path) {
+        if let Ok(metadata) = symlink_metadata(full_path) {
             if metadata.file_type().is_symlink() {
                 return Err(AuditError::ThroughSymlink(path.to_owned()));
             }
@@ -235,7 +235,7 @@ mod tests {
 
         // Populate the auditor cache.
         let repo_path = RepoPath::from_str("a/b")?;
-        auditor.audit(&repo_path)?;
+        auditor.audit(repo_path)?;
 
         remove_dir_all(&path)?;
 

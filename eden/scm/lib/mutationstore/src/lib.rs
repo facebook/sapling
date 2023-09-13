@@ -295,7 +295,7 @@ impl MutationStore {
 
     pub fn get_successors_sets(&self, node: Node) -> Result<Vec<Vec<Node>>> {
         let mut successors_sets = Vec::new();
-        for entry in self.log.lookup(INDEX_PRED, &node)? {
+        for entry in self.log.lookup(INDEX_PRED, node)? {
             let mutation_entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
             let mut successors = Vec::new();
             successors.extend(&mutation_entry.split);
@@ -308,11 +308,11 @@ impl MutationStore {
     pub fn get_predecessors(&self, node: Node) -> Result<Vec<Node>> {
         let mut lookup = self
             .log
-            .lookup(INDEX_SUCC, &node)?
-            .chain(self.log.lookup(INDEX_SPLIT, &node)?);
+            .lookup(INDEX_SUCC, node)?
+            .chain(self.log.lookup(INDEX_SPLIT, node)?);
         let predecessors = if let Some(entry) = lookup.next() {
             let mutation_entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
-            mutation_entry.preds.clone()
+            mutation_entry.preds
         } else {
             vec![]
         };
@@ -320,7 +320,7 @@ impl MutationStore {
     }
 
     pub fn get_split_head(&self, node: Node) -> Result<Option<MutationEntry>> {
-        let mutation_entry = match self.log.lookup(INDEX_SPLIT, &node)?.next() {
+        let mutation_entry = match self.log.lookup(INDEX_SPLIT, node)?.next() {
             Some(entry) => Some(MutationEntry::deserialize(&mut Cursor::new(entry?))?),
             None => None,
         };
@@ -328,7 +328,7 @@ impl MutationStore {
     }
 
     pub fn get(&self, succ: Node) -> Result<Option<MutationEntry>> {
-        let mutation_entry = match self.log.lookup(INDEX_SUCC, &succ)?.next() {
+        let mutation_entry = match self.log.lookup(INDEX_SUCC, succ)?.next() {
             Some(entry) => Some(MutationEntry::deserialize(&mut Cursor::new(entry?))?),
             None => None,
         };
@@ -366,14 +366,14 @@ impl MutationStore {
                 continue;
             }
             if flags.contains(DagFlags::SUCCESSORS) {
-                for entry in self.log.lookup(INDEX_PRED, &node)? {
+                for entry in self.log.lookup(INDEX_PRED, node)? {
                     let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
                     add_parent(&node, &entry.succ);
                     to_visit.push(entry.succ);
                 }
             }
             if flags.contains(DagFlags::PREDECESSORS) {
-                for entry in self.log.lookup(INDEX_SUCC, &node)? {
+                for entry in self.log.lookup(INDEX_SUCC, node)? {
                     let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
                     for pred in entry.preds {
                         add_parent(&pred, &node);

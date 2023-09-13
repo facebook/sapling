@@ -282,12 +282,8 @@ mod tests {
             rp("c"),
             Action::Update(UpdateAction::new(None, FileMetadata::regular(hgid(3)))),
         );
-        let actions = actions.with_sparse_profile_change(
-            ab_profile.clone(),
-            ac_profile.clone(),
-            &old_manifest,
-            &manifest,
-        )?;
+        let actions =
+            actions.with_sparse_profile_change(ab_profile, ac_profile, &old_manifest, &manifest)?;
 
         assert_eq!(expected_actions, actions);
 

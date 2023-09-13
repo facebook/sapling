@@ -246,7 +246,7 @@ impl AppendCommits for GitSegmentedCommits {
     }
 
     async fn add_graph_nodes(&mut self, graph_nodes: &[GraphNode]) -> Result<()> {
-        utils::add_graph_nodes_to_dag(&mut *self.dag, graph_nodes).await
+        utils::add_graph_nodes_to_dag(&mut self.dag, graph_nodes).await
     }
 
     async fn flush(&mut self, master_heads: &[Vertex]) -> Result<()> {

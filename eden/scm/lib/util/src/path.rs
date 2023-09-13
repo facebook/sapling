@@ -87,7 +87,7 @@ pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> IOResult<()> {
     }?;
 
     // Overwrite the original symlink. This works on both Windows and Linux.
-    fs::rename(&symlink_tmp_path, path).path_context("error renaming temp atomic symlink", path)?;
+    fs::rename(symlink_tmp_path, path).path_context("error renaming temp atomic symlink", path)?;
 
     // Scan. Remove unreferenced files.
     let _ = (|| -> IOResult<()> {
@@ -371,7 +371,7 @@ fn create_dir_with_mode_impl(path: &Path, mode: u32) -> io::Result<()> {
             format!("`{:?}` does not have a parent directory", path),
         )
     })?;
-    let temp = tempfile::TempDir::new_in(&parent)?;
+    let temp = tempfile::TempDir::new_in(parent)?;
     fs::set_permissions(&temp, fs::Permissions::from_mode(mode))?;
 
     let temp = temp.into_path();
@@ -810,7 +810,7 @@ mod tests {
         // c: symlink -> c.xxxx: "2"
         atomic_write_symlink(&j("c"), b"2")?;
         // Keep an mmap of the current "c".
-        let file = fs::OpenOptions::new().read(true).open(&j("c"))?;
+        let file = fs::OpenOptions::new().read(true).open(j("c"))?;
         let mmap = unsafe { memmap2::Mmap::map(&file) }?;
         // This file should be automatically deleted.
         fs::write(j("c.aaaa.atomic"), b"0")?;
@@ -819,12 +819,12 @@ mod tests {
         // mmap has the old content.
         assert_eq!(mmap.as_ref(), b"2");
         // Reading c gets new data.
-        assert_eq!(fs::read(&j("c"))?, b"3");
+        assert_eq!(fs::read(j("c"))?, b"3");
         // a: should exist
         assert!(j("a").exists());
         // 4 files: a, c, c.xxxx, c.lock
         let count = || {
-            fs::read_dir(&path)
+            fs::read_dir(path)
                 .unwrap()
                 .filter(|e| e.as_ref().unwrap().path().exists())
                 .count()
@@ -902,7 +902,7 @@ mod tests {
     #[test]
     fn test_create_dir_without_empty_path() {
         let empty = Path::new("");
-        let err = create_dir(&empty).unwrap_err();
+        let err = create_dir(empty).unwrap_err();
         assert_eq!(err.kind(), ErrorKind::NotFound);
     }
 
@@ -923,7 +923,7 @@ mod tests {
         let path = "$foo/${bar}/$baz";
         let expected = PathBuf::from("/home/user/a/b/$baz");
 
-        assert_eq!(expand_path_impl(&path, getenv, homedir), expected);
+        assert_eq!(expand_path_impl(path, getenv, homedir), expected);
     }
 
     #[test]

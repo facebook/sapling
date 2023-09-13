@@ -280,7 +280,7 @@ mod tests {
             assert!(check_round_trip!(i as u8));
             assert!(check_round_trip!(i as u16));
             assert!(check_round_trip!(i as u32));
-            assert!(check_round_trip!(i as u64));
+            assert!(check_round_trip!(i));
             assert!(check_round_trip!(i as usize));
         }
     }

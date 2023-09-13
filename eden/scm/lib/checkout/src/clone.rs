@@ -212,7 +212,7 @@ fn update_dirstate(plan: &CheckoutPlan, ts: &mut TreeState, vfs: &VFS) -> anyhow
         .updated_content_files()
         .chain(plan.updated_meta_files())
     {
-        let fstate = file_state(&vfs, updated)?;
+        let fstate = file_state(vfs, updated)?;
         ts.insert(updated, &fstate)?;
         bar.increase_position(1);
     }

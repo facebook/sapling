@@ -27,7 +27,6 @@ async fn get_status_internal(
 ) -> Result<GetScmStatusResult> {
     let client = EdenFsClient::from_wdir(repo_root)?;
     let thrift_client = client.get_thrift_client().await?;
-
     thrift_client
         .getScmStatusV2(&GetScmStatusParams {
             mountPoint: client.root().as_bytes().to_vec(),

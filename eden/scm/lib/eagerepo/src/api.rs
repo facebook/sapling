@@ -564,10 +564,7 @@ fn extract_rename(data: &[u8]) -> Option<Key> {
                 }
             }
             if let (Some(path), Some(rev)) = (path, rev) {
-                return Some(Key {
-                    path: path.into(),
-                    hgid: rev,
-                });
+                return Some(Key { path, hgid: rev });
             }
         }
     }
@@ -637,7 +634,7 @@ fn debug_list<T>(keys: &[T], func: impl Fn(&T) -> String) -> String {
     let msg = keys
         .iter()
         .take(limit)
-        .map(|k| func(k))
+        .map(func)
         .collect::<Vec<_>>()
         .join(", ");
     if keys.len() > limit {

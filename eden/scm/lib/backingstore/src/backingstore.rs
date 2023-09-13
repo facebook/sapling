@@ -102,7 +102,7 @@ impl BackingStore {
         resolve: F,
         attrs: FileAttributes,
     ) where
-        F: Fn(usize, Result<Option<StoreFile>>) -> (),
+        F: Fn(usize, Result<Option<StoreFile>>),
     {
         // Resolve key errors
         let requests = keys.into_iter().enumerate();
@@ -169,7 +169,7 @@ impl BackingStore {
     #[instrument(level = "debug", skip(self, resolve))]
     pub fn get_blob_batch<F>(&self, keys: Vec<Key>, fetch_mode: FetchMode, resolve: F)
     where
-        F: Fn(usize, Result<Option<Vec<u8>>>) -> (),
+        F: Fn(usize, Result<Option<Vec<u8>>>),
     {
         self.get_file_attrs_batch(
             keys,
@@ -301,7 +301,7 @@ impl BackingStore {
 
     pub fn get_file_aux_batch<F>(&self, keys: Vec<Key>, fetch_mode: FetchMode, resolve: F)
     where
-        F: Fn(usize, Result<Option<FileAuxData>>) -> (),
+        F: Fn(usize, Result<Option<FileAuxData>>),
     {
         self.get_file_attrs_batch(
             keys,

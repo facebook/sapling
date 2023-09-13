@@ -42,10 +42,10 @@ fn test_callsite_span() {
     assert_eq!(callsite.identifier(), callsite.metadata().callsite());
     let log = capture(|| {
         let span = callsite.create_span(&[None, None, None]);
-        span.record("y", &"yyy2");
+        span.record("y", "yyy2");
         span.in_scope(|| {});
         let span = callsite.create_span(&[Some(Box::new("foo")), None, Some(Box::new(123))]);
-        span.record("x", &123);
+        span.record("x", 123);
         span.in_scope(|| {});
     });
     assert_eq!(
@@ -162,7 +162,7 @@ fn d<T: fmt::Debug>(t: T) -> String {
 
 fn normalize(s: &str) -> String {
     // Change "Identifier(...)" to "_". It has dynamic pointer.
-    IDENTIFIER_RE.replace_all(&s, "_").replace('"', "")
+    IDENTIFIER_RE.replace_all(s, "_").replace('"', "")
 }
 
 static THREAD_LOCK: Lazy<Mutex<()>> = Lazy::new(Default::default);

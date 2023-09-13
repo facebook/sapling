@@ -43,7 +43,7 @@ pub fn read_subscriptions(
     );
 
     let paths = fs::read_dir(joined_pool_path);
-    if let &Err(ref e) = &paths {
+    if let Err(e) = &paths {
         if e.kind() == io::ErrorKind::NotFound {
             info!("No active subscribers");
             return Ok(HashMap::new());
@@ -145,7 +145,7 @@ pub fn read_subscriptions(
             key.workspace
         );
     }
-    return Ok(subscriptions);
+    Ok(subscriptions)
 }
 
 pub static TOKEN_FILENAME: &str = ".commitcloudrc";
@@ -173,7 +173,7 @@ pub struct Token {
 
 pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<Token> {
     // Try to read OAuth token from a file.
-    let token = if let &Some(ref user_token_path) = user_token_path {
+    let token = if let Some(user_token_path) = user_token_path {
         let mut user_token_path = user_token_path.clone();
         user_token_path.push(TOKEN_FILENAME);
         info!(

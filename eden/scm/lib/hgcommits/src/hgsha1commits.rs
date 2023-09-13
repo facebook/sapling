@@ -91,7 +91,7 @@ impl AppendCommits for HgCommits {
                 result.write_all(p2.as_ref())?;
                 result.write_all(p1.as_ref())?;
             }
-            result.write_all(&raw_text)?;
+            result.write_all(raw_text)?;
             Ok(result)
         }
 

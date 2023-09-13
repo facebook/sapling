@@ -678,7 +678,7 @@ mod tests {
     fn test_working_copy() -> Result<()> {
         let tmp = tempfile::tempdir()?;
 
-        let cfg = Box::new(BTreeMap::<&str, &str>::new());
+        let cfg = Box::<BTreeMap<&str, &str>>::default();
 
         let locker = RepoLocker::new(&cfg, tmp.path().to_path_buf())?;
 
@@ -703,7 +703,7 @@ mod tests {
         let store_tmp = tempfile::tempdir()?;
         let wc_tmp = tempfile::tempdir()?;
 
-        let cfg = Box::new(BTreeMap::<&str, &str>::new());
+        let cfg = Box::<BTreeMap<&str, &str>>::default();
 
         let locker = RepoLocker::new(&cfg, store_tmp.path().to_path_buf())?;
 

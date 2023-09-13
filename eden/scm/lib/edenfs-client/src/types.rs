@@ -86,9 +86,9 @@ impl From<edenfs::ScmFileStatus> for FileStatus {
     }
 }
 
-impl Into<edenfs::CheckoutMode> for CheckoutMode {
-    fn into(self) -> edenfs::CheckoutMode {
-        match self {
+impl From<CheckoutMode> for edenfs::CheckoutMode {
+    fn from(val: CheckoutMode) -> Self {
+        match val {
             CheckoutMode::Normal => edenfs::CheckoutMode::NORMAL,
             CheckoutMode::Force => edenfs::CheckoutMode::FORCE,
             CheckoutMode::DryRun => edenfs::CheckoutMode::DRY_RUN,
@@ -117,7 +117,6 @@ impl TryFrom<edenfs::CheckoutConflict> for CheckoutConflict {
     fn try_from(conflict: edenfs::CheckoutConflict) -> Result<Self, Self::Error> {
         let path = RepoPathBuf::from_utf8(conflict.path).map_err(|e| {
             tracing::warn!("conflict: ignore non-utf8 path {}", e);
-            ()
         })?;
         let conflict_type = conflict.r#type.into();
         let message = conflict.message;

@@ -59,7 +59,7 @@ where
             EnvFilter::try_new(dirs)
         }
     };
-    let layer = new_filter(&*dirs)?;
+    let layer = new_filter(&dirs)?;
     let (layer, handle) = reload::Layer::new(layer);
     let update_env_filter = move |dirs: &str| -> Result<()> {
         let layer = new_filter(dirs)?;

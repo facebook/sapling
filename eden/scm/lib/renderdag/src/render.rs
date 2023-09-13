@@ -68,8 +68,8 @@ impl<N> Ancestor<N> {
 
     fn id(&self) -> Option<&N> {
         match self {
-            Ancestor::Ancestor(n) => Some(&n),
-            Ancestor::Parent(n) => Some(&n),
+            Ancestor::Ancestor(n) => Some(n),
+            Ancestor::Parent(n) => Some(n),
             Ancestor::Anonymous => None,
         }
     }
@@ -334,7 +334,7 @@ where
             // If the node is not already allocated, and there is no
             // space for the node, then adding the new node would create
             // a new column.
-            if self.columns.find(&node).is_none() {
+            if self.columns.find(node).is_none() {
                 if empty_columns == 0 {
                     width += 1;
                 } else {
@@ -351,7 +351,7 @@ where
                 .filter(|parent| {
                     parent
                         .id()
-                        .map_or(true, |parent| self.columns.find(&parent).is_none())
+                        .map_or(true, |parent| self.columns.find(parent).is_none())
                 })
                 .count()
                 .saturating_sub(empty_columns);

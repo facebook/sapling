@@ -180,7 +180,7 @@ impl EdenConfig {
         if cfg!(windows) {
             let toml_path = dot_eden.join("config");
 
-            match util::file::read_to_string(&toml_path) {
+            match util::file::read_to_string(toml_path) {
                 Ok(toml_contents) => {
                     #[derive(Deserialize)]
                     struct Outer {

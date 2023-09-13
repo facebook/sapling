@@ -141,7 +141,7 @@ impl MetaLog {
             None
         };
         let root = if let Some(metalog_root) = metalog_root {
-            if let Ok(decoded_root) = hex::decode(&metalog_root) {
+            if let Ok(decoded_root) = hex::decode(metalog_root) {
                 Some(Id20::from_slice(&decoded_root)?)
             } else {
                 None
@@ -174,7 +174,7 @@ impl MetaLog {
     /// After compaction writes through outstanding metalog handles will fail.
     /// Reads through outstanding metalog handles are unaffected.
     pub fn compact(path: impl AsRef<Path>) -> Result<()> {
-        let _lock = ScopedDirLock::new(&path.as_ref());
+        let _lock = ScopedDirLock::new(path.as_ref());
         let metalog = Self::open(path, None)?;
         let curr_epoch = metalog.compaction_epoch.unwrap_or(0);
         // allow for a small (and arbitrary) number of failures to compact the metalog
@@ -188,8 +188,8 @@ impl MetaLog {
             // (this function took the needed lock).
             let mut compact_metalog = Self::open(metalog.path.join(next_epoch.to_string()), None)?;
             for key in metalog.keys() {
-                if let Some(value) = metalog.get(&key)? {
-                    compact_metalog.set(&key, &value)?;
+                if let Some(value) = metalog.get(key)? {
+                    compact_metalog.set(key, &value)?;
                 }
             }
             let opts = CommitOptions {
@@ -333,7 +333,7 @@ impl MetaLog {
         let bytes = mincode::serialize(&self.root)?;
         let orig_root_id = self.orig_root_id;
         let mut blobs = self.blobs.write();
-        let id = blobs.insert(&bytes, &vec![self.orig_root_id])?;
+        let id = blobs.insert(&bytes, &[self.orig_root_id])?;
         blobs.flush()?;
         if !options.detached {
             let mut log = self.log.write();
@@ -475,7 +475,7 @@ impl Repair<()> for MetaLog {
 
         // Write out good Root IDs.
         if good_root_ids.len() == root_ids.len() {
-            message += &format!("All Roots are verified.\n");
+            message += &"All Roots are verified.\n".to_string();
         } else {
             message += &format!(
                 "Removing {} bad Root IDs.\n",
@@ -1060,7 +1060,7 @@ mod tests {
                     .filter(|l| !l.contains("Reset log size to"))
                     .collect::<Vec<_>>()
                     .join("\n")
-                    .replace(&path, "<path>")
+                    .replace(path, "<path>")
                     // Normalize path difference on Windows.
                     .replace("\\\\", "/")
                     .trim_end()
@@ -1168,7 +1168,7 @@ Rebuilt Root log with 4 Root IDs."#
                 zlog.flush().unwrap();
             }
         }
-        reorder_blobs_log(&dir.path());
+        reorder_blobs_log(dir.path());
 
         // Now the last blob is the 4KB "noise" blob. Break it without breaking
         // other blobs.

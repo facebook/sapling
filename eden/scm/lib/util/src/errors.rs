@@ -29,10 +29,7 @@ impl IOError {
     }
 
     pub fn to_io_err(&self) -> std::io::Error {
-        std::io::Error::new(
-            self.source.kind(),
-            format!("{}: {}", self.msg, self.source.to_string()),
-        )
+        std::io::Error::new(self.source.kind(), format!("{}: {}", self.msg, self.source))
     }
 
     pub fn kind(&self) -> std::io::ErrorKind {

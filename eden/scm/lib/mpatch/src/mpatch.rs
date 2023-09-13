@@ -30,12 +30,12 @@ unsafe extern "C" fn get_next_link(deltas: *mut c_void, index: ssize_t) -> *mut 
         return ptr::null_mut();
     }
 
-    return res;
+    res
 }
 
 pub fn get_full_text(base_text: &[u8], deltas: &Vec<&[u8]>) -> Result<Vec<u8>, &'static str> {
     // If there are no deltas, just return the full text portion
-    if deltas.len() == 0 {
+    if deltas.is_empty() {
         return Ok(base_text.to_vec());
     }
 
@@ -71,7 +71,7 @@ pub fn get_full_text(base_text: &[u8], deltas: &Vec<&[u8]>) -> Result<Vec<u8>, &
         }
 
         mpatch_lfree(patch);
-        return Ok(result);
+        Ok(result)
     }
 }
 

@@ -41,7 +41,7 @@ pub fn run_via_commandserver(args: Vec<String>, config: &dyn Config) -> anyhow::
                 let pool_size = config.get_or::<usize>("commandserver", "pool-size", || 2)?;
                 let _ = spawn::spawn_pool(pool_size);
             }
-            return Err(e.into());
+            return Err(e);
         }
         Ok(ipc) => {
             // Going to consume one server, so spawn another one.

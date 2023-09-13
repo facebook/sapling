@@ -42,7 +42,7 @@ pub fn render_string(registry: &Registry, config: &RenderingConfig) -> String {
     render_progress_bars(&mut lines, &bar_list, config);
 
     for line in lines.iter_mut() {
-        *line = config.truncate_line(&line).to_string();
+        *line = config.truncate_line(line).to_string();
     }
 
     lines.join("\r\n")
@@ -62,7 +62,7 @@ fn render_time_series(
         // Net [▁▂▄█▇▅▃▆] 3 MB/s
         phrases.push(format!("{:>1$}", model.topic(), config.max_topic_len()));
 
-        let ascii = ascii_time_series(&model);
+        let ascii = ascii_time_series(model);
         phrases.push(format!("[{}]", ascii));
 
         let speed = match model.mode() {

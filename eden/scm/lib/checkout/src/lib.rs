@@ -721,7 +721,7 @@ impl CheckoutProgress {
                 }
                 true
             })
-            .map(|a| a.clone())
+            .cloned()
             .collect()
     }
 }
@@ -1097,7 +1097,7 @@ mod test {
         let tempdir = tempfile::tempdir()?;
         let working_path = tempdir.path().to_path_buf().join("workingdir");
         create_dir(working_path.as_path()).unwrap();
-        let vfs = VFS::new(working_path.clone())?;
+        let vfs = VFS::new(working_path)?;
         let path = tempdir.path().to_path_buf().join("updateprogress");
         let mut progress = CheckoutProgress::new(&path, vfs.clone())?;
         let file_path = RepoPathBuf::from_string("file".to_string())?;
@@ -1105,7 +1105,7 @@ mod test {
         let id = hgid(1);
         progress.record_writes(vec![(id, file_path.clone())]);
 
-        let progress = CheckoutProgress::load(&path, vfs.clone())?;
+        let progress = CheckoutProgress::load(&path, vfs)?;
         assert_eq!(progress.state.len(), 1);
         assert_eq!(progress.state.get(&file_path).unwrap().0, id);
         Ok(())
@@ -1154,9 +1154,9 @@ mod test {
         if let Err(e) = assert_checkout_impl(from, to, &tempdir).await {
             eprintln!("===");
             eprintln!("Failed transitioning from tree");
-            print_tree(&from);
+            print_tree(from);
             eprintln!("To tree");
-            print_tree(&to);
+            print_tree(to);
             eprintln!("===");
             eprintln!(
                 "Working directory: {} (not deleted)",

@@ -742,7 +742,7 @@ impl Repo {
             tracing::trace!(target: "repo::file_store", "creating EagerRepo file and tree store");
             return Ok(Some((store.clone(), store)));
         }
-        return Ok(None);
+        Ok(None)
     }
 
     pub fn correlator(&self) -> &'static str {
@@ -753,7 +753,7 @@ impl Repo {
 fn read_sharedpath(dot_path: &Path) -> Result<Option<(PathBuf, identity::Identity)>> {
     let sharedpath = fs::read_to_string(dot_path.join("sharedpath"))
         .ok()
-        .map(|s| PathBuf::from(s))
+        .map(PathBuf::from)
         .and_then(|p| Some(PathBuf::from(p.parent()?)));
 
     if let Some(mut possible_path) = sharedpath {

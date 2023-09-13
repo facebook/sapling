@@ -162,7 +162,7 @@ impl<'a> AuthSection<'a> {
 
         let scheme = url.scheme().to_string();
         let username = url.username();
-        let url_suffix = strip_scheme_and_user(&url);
+        let url_suffix = strip_scheme_and_user(url);
 
         'groups: for group in &self.groups {
             if !group.schemes.contains(&scheme) {
@@ -184,7 +184,7 @@ impl<'a> AuthSection<'a> {
 
             // If there is an existing candidate, check whether the current
             // auth entry is a more specific match.
-            if let Some(ref best) = best {
+            if let Some(best) = best {
                 // Take the entry with the longer prefix.
                 if group.prefix.len() < best.prefix.len() {
                     continue;

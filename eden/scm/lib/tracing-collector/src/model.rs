@@ -247,9 +247,7 @@ impl TracingData {
                     .as_micros() as u64,
             )
         } else {
-            RelativeTime(
-                self.eventus.last().map(|e| e.timestamp.0).unwrap_or(0) + self.test_clock_step,
-            )
+            RelativeTime(self.eventus.last().map_or(0, |e| e.timestamp.0) + self.test_clock_step)
         }
     }
 
@@ -387,7 +385,7 @@ impl TracingData {
 
         let result = EspanId(self.espans.len() as u64 + self.espan_id_offset.0);
         self.espans.push(espan);
-        result.into()
+        result
     }
 
     /// Rewrite `moudle_path` and `line` information so they stay stable
@@ -625,7 +623,7 @@ impl TracingData {
 
         let result = EspanId(self.espans.len() as u64 + self.espan_id_offset.0);
         self.espans.push(espan);
-        result.into()
+        result
     }
 
     /// Edit key-value data to an existing `Espan`.
@@ -857,7 +855,7 @@ impl TracingData {
                 })
                 .map(|(k, v)| (self.strings.get(*k), self.strings.get(*v).into()))
                 .collect();
-            let pid = match eventus.process_id as u64 {
+            let pid = match eventus.process_id {
                 0 => self.default_process_id,
                 v => v,
             };
@@ -890,13 +888,12 @@ impl TracingData {
             displayTimeUnit: &'static str,
             otherData: HashMap<String, String>,
         }
-        let trace = Trace {
+
+        Trace {
             traceEvents: RefCell::new(trace_event_iter),
             displayTimeUnit: "ms",
             otherData: other_data,
-        };
-
-        trace
+        }
     }
 }
 
@@ -1030,7 +1027,7 @@ impl fmt::Display for Rows {
             .map(|i| {
                 self.rows
                     .iter()
-                    .map(|r| r.columns.get(i).map(|s| s.len()).unwrap_or(0))
+                    .map(|r| r.columns.get(i).map_or(0, |s| s.len()))
                     .max()
                     .unwrap_or(0)
                     .max(self.column_min_widths.get(i).cloned().unwrap_or(0))
@@ -1076,11 +1073,11 @@ impl TracingData {
         let mut out = String::new();
         for ((pid, tid), eventus) in eventus_by_pid_tid.iter() {
             if self.test_clock_step > 0 {
-                out += &"Process _ Thread _:\n"
+                out += "Process _ Thread _:\n"
             } else {
                 out += &format!("Process {} Thread {}:\n", pid, tid)
             };
-            out += &self.ascii_single_thread(&eventus, opts);
+            out += &self.ascii_single_thread(eventus, opts);
             out += "\n";
         }
         out
@@ -1313,8 +1310,7 @@ impl TracingData {
             // Treat spans with the same metadata as same spans.
             // So different EspanIds can still be merged.
             let mut meta_to_id = IndexMap::<Vec<(StringId, StringId)>, RawTreeSpanId>::new();
-            let child_ids: Vec<RawTreeSpanId> =
-                ctx.tree_spans[id].children.iter().cloned().collect();
+            let child_ids: Vec<RawTreeSpanId> = ctx.tree_spans[id].children.to_vec();
             for child_id in child_ids {
                 // Do not try to merge this child span if itself, or any of the
                 // grand children is interesting. But some of the grand children
@@ -1670,7 +1666,7 @@ impl<'a, S: Eq + Hash> TreeWalker<'a, S> {
                             self.stack.push((child_span_id, 0));
                             let span = &self.spans.spans[child_span_id];
                             if let Some(filter) = self.filter.clone() {
-                                if filter(self, span) == false {
+                                if !filter(self, span) {
                                     continue 'visit_next;
                                 }
                             }
@@ -1834,7 +1830,7 @@ Start Dur.ms | Name                         Source
         let tree_spans: Vec<_> = data
             .tree_spans::<&str>()
             .into_iter()
-            .nth(0)
+            .next()
             .unwrap()
             .1
             .spans;
@@ -2082,7 +2078,7 @@ Start Dur.ms | Name               Source
         };
 
         let tree = data.tree_spans::<&str>();
-        let tree: &TreeSpans<&str> = tree.iter().nth(0).unwrap().1;
+        let tree: &TreeSpans<&str> = tree.iter().next().unwrap().1;
 
         // Walk through every span in DFS order.
         assert_eq!(render(tree.walk()), "bar@2 bar@4 foo@8 bar@10 foo@12");

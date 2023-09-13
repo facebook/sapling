@@ -62,7 +62,7 @@ impl DefaultOpenOptions<ilog::OpenOptions> for Zstore {
                 // Drop duplicated entries.
                 let id = &data[0..Id20::len()];
                 if let Ok(mut iter) = context.log.lookup(Self::ID20_INDEX, id) {
-                    if iter.nth(0).is_some() {
+                    if iter.next().is_some() {
                         return Ok(ilog::FlushFilterOutput::Drop);
                     }
                 }

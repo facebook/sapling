@@ -112,7 +112,7 @@ impl Registry {
     /// waits for the next wait() call, ensuring that the registry
     /// processing loop finished its iteration.
     pub fn step(&self) {
-        let &(ref lock, ref var) = &*self.render_cond;
+        let (lock, var) = &*self.render_cond;
         let mut ready = lock.lock();
         *ready = true;
         var.notify_one();
@@ -122,7 +122,7 @@ impl Registry {
 
     /// See step().
     pub fn wait(&self) {
-        let &(ref lock, ref var) = &*self.render_cond;
+        let (lock, var) = &*self.render_cond;
         let mut ready = lock.lock();
         if *ready {
             // We've come around to the next iteration's wait() call -

@@ -189,8 +189,10 @@ pub struct FileMetadata {
 ///
 /// The type needs to round-trip tree serialization.
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[derive(Default)]
 pub enum FileType {
     /// Regular files.
+    #[default]
     Regular,
     /// Executable files. Like Regular files but with the executable flag set.
     Executable,
@@ -198,12 +200,6 @@ pub enum FileType {
     Symlink,
     /// Git submodule. It's up to the higher layer to decide what to do with them.
     GitSubmodule,
-}
-
-impl Default for FileType {
-    fn default() -> Self {
-        FileType::Regular
-    }
 }
 
 impl FileMetadata {

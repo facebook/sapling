@@ -129,7 +129,7 @@ pub(crate) fn file_changed_given_metadata(
         // File was not found but exists in P1: mark as deleted.
         (None, Some(state)) if state.state.intersects(EXIST_P1) => {
             tracing::trace!(?path, "not on disk, in P1");
-            return Ok(FileChangeResult::deleted(path.to_owned()));
+            return Ok(FileChangeResult::deleted(path));
         }
 
         // File doesn't exist, isn't in P1 but exists in treestate.
@@ -195,7 +195,7 @@ pub(crate) fn file_changed_given_metadata(
                 symlink_different,
                 "changed (metadata mismatch)"
             );
-            return Ok(FileChangeResult::changed(path.to_owned()));
+            return Ok(FileChangeResult::changed(path));
         }
     } else {
         tracing::trace!(?path, "maybe (no size)");

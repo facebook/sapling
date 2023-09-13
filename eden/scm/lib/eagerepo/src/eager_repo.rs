@@ -479,7 +479,7 @@ fn hg_sha1_text(parents: &[Vertex], raw_text: &[u8]) -> Vec<u8> {
         result.extend_from_slice(p2.as_ref());
         result.extend_from_slice(p1.as_ref());
     }
-    result.extend_from_slice(&raw_text);
+    result.extend_from_slice(raw_text);
     result
 }
 

@@ -247,8 +247,8 @@ impl<T> ImplInto<T> {
 fn is_heap_type(_py: Python, typeobj: &PyType) -> bool {
     let type_ptr: *mut ffi::PyTypeObject = typeobj.as_type_ptr();
     // safety: _py holds GIL. The pointer is valid.
-    let result = (unsafe { *type_ptr }.tp_flags & ffi::Py_TPFLAGS_HEAPTYPE) != 0;
-    result
+
+    (unsafe { *type_ptr }.tp_flags & ffi::Py_TPFLAGS_HEAPTYPE) != 0
 }
 
 #[cfg(test)]

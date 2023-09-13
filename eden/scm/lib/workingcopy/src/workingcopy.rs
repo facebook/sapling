@@ -118,7 +118,7 @@ impl WorkingCopy {
         )?);
 
         let root = vfs.root();
-        let ident = match identity::sniff_dir(&root)? {
+        let ident = match identity::sniff_dir(root)? {
             Some(ident) => ident,
             None => {
                 return Err(errors::RepoNotFound(root.to_string_lossy().to_string()).into());
@@ -174,10 +174,7 @@ impl WorkingCopy {
     ) -> Result<Vec<Arc<RwLock<TreeManifest>>>> {
         let mut parents = treestate.parents().peekable();
         if parents.peek_mut().is_some() {
-            parents
-                .into_iter()
-                .map(|p| tree_resolver.get(&p?))
-                .collect()
+            parents.map(|p| tree_resolver.get(&p?)).collect()
         } else {
             let null_commit = HgId::null_id().clone();
             Ok(vec![
@@ -215,12 +212,12 @@ impl WorkingCopy {
                 vfs.clone(),
                 tree_resolver,
                 store.clone(),
-                treestate.clone(),
+                treestate,
                 locker,
             )?),
             FileSystemType::Watchman => Box::new(WatchmanFileSystem::new(
                 vfs.clone(),
-                treestate.clone(),
+                treestate,
                 tree_resolver,
                 store.clone(),
                 locker,

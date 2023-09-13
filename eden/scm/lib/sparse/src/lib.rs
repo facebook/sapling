@@ -239,7 +239,7 @@ impl Profile {
                 None => continue,
                 Some('#' | ';') => {
                     let comment = chars.as_str().trim();
-                    if let Some((l, r)) = comment.split_once(&['=', ':']) {
+                    if let Some((l, r)) = comment.split_once(['=', ':']) {
                         match (l.trim(), r.trim()) {
                             // Allow a magic comment to specify additional
                             // source information for particular rules. This way
@@ -268,7 +268,7 @@ impl Profile {
                 section_type = section_start;
                 current_metadata_val = None;
             } else if section_type == SectionType::Metadata {
-                if line.starts_with(&[' ', '\t']) {
+                if line.starts_with([' ', '\t']) {
                     // Continuation of multiline value.
                     if let Some(ref mut val) = current_metadata_val {
                         val.push('\n');
@@ -278,7 +278,7 @@ impl Profile {
                     }
                 } else {
                     current_metadata_val = None;
-                    if let Some((key, val)) = trimmed.split_once(&['=', ':']) {
+                    if let Some((key, val)) = trimmed.split_once(['=', ':']) {
                         let prof_val = match key.trim() {
                             "description" => &mut prof.description,
                             "title" => &mut prof.title,
@@ -371,7 +371,7 @@ impl Profile {
                                 }
                             };
 
-                            let mut child = Profile::from_bytes(&data, child_path.clone())?;
+                            let mut child = Profile::from_bytes(data, child_path.clone())?;
                             rules_inner(&mut child, fetch, rules, Some(&source), seen).await?;
 
                             if let Some((_, in_progress)) = seen.get_mut(child_path) {

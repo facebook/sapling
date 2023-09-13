@@ -88,13 +88,12 @@ pub struct WorkspaceSubscriberService {
 impl WorkspaceSubscriberService {
     pub fn new(config: &CommitCloudConfig) -> Result<WorkspaceSubscriberService> {
         Ok(WorkspaceSubscriberService {
-            notification_url: config
-                .notification_url
-                .clone()
-                .ok_or_else(|| ErrorKind::CommitCloudConfigError("undefined 'notification_url'"))?,
+            notification_url: config.notification_url.clone().ok_or(
+                ErrorKind::CommitCloudConfigError("undefined 'notification_url'"),
+            )?,
             user_token_path: config.user_token_path.clone(),
-            connected_subscribers_path: config.connected_subscribers_path.clone().ok_or_else(
-                || ErrorKind::CommitCloudConfigError("undefined 'connected_subscribers_path'"),
+            connected_subscribers_path: config.connected_subscribers_path.clone().ok_or(
+                ErrorKind::CommitCloudConfigError("undefined 'connected_subscribers_path'"),
             )?,
             cloudsync_retries: config.cloudsync_retries,
             channel: mpsc::channel(),

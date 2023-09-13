@@ -161,7 +161,7 @@ impl RadixOffset {
         // NOTE: The error is not accurate if the prefix is empty and the radix tree is
         // also empty, or has exactly one entry. But without supporting that, the code
         // becomes much shorter. Since that is a rare case, we do not support it for now.
-        Err(ErrorKind::AmbiguousPrefix.into())
+        Err(ErrorKind::AmbiguousPrefix)
     }
 
     /// Rewrite specified entry to point to another radix node.
@@ -231,7 +231,7 @@ where
 /// `key` is a base256 sequence.
 /// `key_reader` and `key_reader_arg` decide how and where to read a key given a `KeyId`.
 /// Unlike `radix_lookup_unchecked`. This function reads and checks the key.
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 pub fn radix_lookup<R, K, KR, KA>(
     radix_buf: &R, offset: u32, key: &K, key_reader: KR, key_reader_arg: &KA)
     -> Result<Option<KeyId>>
@@ -263,7 +263,7 @@ where
 /// Return `Ok(key_id)` if there is a unique match. The `key_id` is guarnateed
 /// that once resolved and converted to base16 sequence, has a prefix matching
 /// the given `prefix`.
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 pub fn radix_prefix_lookup<R, P, KR, KA>(
     radix_buf: &R, offset: u32, prefix: P, key_reader: KR, key_reader_arg: &KA)
     -> Result<Option<KeyId>>
@@ -298,7 +298,7 @@ where
 /// The key being inserted can neither be a prefix of an existing key, or has a prefix that equals
 /// to an existing key. If the key already exists, `key_id` must match the existing `key_id`.
 /// Otherwise it will cause `ErrorKind::PrefixConflict` error.
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 pub fn radix_insert<R, KR, KA>(
     radix_buf: &mut R, offset: u32, key_id: KeyId, key_reader: KR, key_reader_arg: &KA)
     -> Result<()>
@@ -330,7 +330,7 @@ where
 /// The key being inserted can neither be a prefix of an existing key, or has a prefix that equals
 /// to an existing key. If the key already exists, `key_id` must match the existing `key_id`.
 /// Otherwise it will cause `ErrorKind::PrefixConflict` error.
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 pub fn radix_insert_with_key<R, K, KR, KA>(
     radix_buf: &mut R, offset: u32, key_id: KeyId, key: &K, key_reader: KR, key_reader_arg: &KA)
     -> Result<()>
@@ -385,9 +385,9 @@ where
             // new_key is a prefix of old_key, or vice-versa.
             // or they are the same but with different key_ids.
             if old_key.len() > new_key.as_ref().len() {
-                Err(ErrorKind::PrefixConflict(new_key_id, old_key_id).into())
+                Err(ErrorKind::PrefixConflict(new_key_id, old_key_id))
             } else {
-                Err(ErrorKind::PrefixConflict(old_key_id, new_key_id).into())
+                Err(ErrorKind::PrefixConflict(old_key_id, new_key_id))
             }
         }
         None => radix.write_key_id(radix_buf, b, new_key_id),

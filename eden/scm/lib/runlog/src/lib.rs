@@ -81,7 +81,7 @@ impl Logger {
         };
         logger.write(&logger.entry.lock(), false)?;
 
-        return Ok(Arc::new(logger));
+        Ok(Arc::new(logger))
     }
 
     pub fn close(&self, exit_code: i32) -> Result<()> {

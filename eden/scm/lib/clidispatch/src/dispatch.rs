@@ -224,7 +224,7 @@ impl Dispatcher {
         let cwd = util::path::absolute(cwd)?;
 
         // Load repo and configuration.
-        match OptionalRepo::from_global_opts(&global_opts, &cwd) {
+        match OptionalRepo::from_global_opts(&global_opts, cwd) {
             Ok(optional_repo) => Ok(Self {
                 args,
                 early_result,
@@ -308,12 +308,12 @@ impl Dispatcher {
             env::set_current_dir(&self.global_opts.cwd)?;
         }
 
-        initialize_indexedlog(&config)?;
+        initialize_indexedlog(config)?;
 
         // Prepare alias handling.
         let alias_lookup = |name: &str| {
             // [alias] can have "<name>:doc" entries that are not commands. Skip them.
-            if name.contains(":") {
+            if name.contains(':') {
                 return None;
             }
 
@@ -375,11 +375,11 @@ impl Dispatcher {
         // - expanded => ["status", "-Tjson", "--verbose", "--verbose", "--traceback"]
         // - new_args => ["status", "-Tjson", "--verbose", "--verbose", "--traceback"]
 
-        let command_name = first_arg.to_string();
+        let command_name = first_arg;
         let (expanded, _first_arg_index) = expand_aliases(alias_lookup, &args[first_arg_index..])?;
         let (command_name, command_arg_len) =
             find_command_name(|name| command_table.get(name).is_some(), &expanded)
-                .ok_or_else(|| errors::UnknownCommand(command_name))?;
+                .ok_or(errors::UnknownCommand(command_name))?;
         tracing::info!(
             name = "log:command-row",
             command = AsRef::<str>::as_ref(&command_name)

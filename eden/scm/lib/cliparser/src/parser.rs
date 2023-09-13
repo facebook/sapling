@@ -112,7 +112,7 @@ impl ToPyObject for Value {
             Value::Int(i) => i.to_py_object(py).into_object(),
             Value::List(vec) => {
                 let collection: Vec<Str> = vec
-                    .into_iter()
+                    .iter()
                     .map(|s: &String| Str::from(Bytes::from(s.to_string())))
                     .collect();
                 collection.to_py_object(py).into_object()
@@ -511,7 +511,7 @@ impl Parser {
                         positional_args.push(arg);
                     }
                 }
-            } else if arg.starts_with("-") {
+            } else if arg.starts_with('-') {
                 if let Err(msg) = self.parse_single_hyphen_flag(&mut iter, &mut opts) {
                     if self.parsing_options.error_on_unknown_opts {
                         return Err(msg);
@@ -550,14 +550,13 @@ impl Parser {
             (arg, true)
         };
 
-        let mut parts = arg.splitn(2, "=");
+        let mut parts = arg.splitn(2, '=');
         let clean_arg = parts.next().unwrap();
         let clean_arg = self
             .parsing_options
             .flag_aliases
             .get(clean_arg)
-            .map(|name| name.as_ref())
-            .unwrap_or(clean_arg);
+            .map_or(clean_arg, |name| name.as_ref());
 
         if let Some(&known_flag_id) = self.long_map.get(clean_arg) {
             let name = self.parsing_options.flags[known_flag_id].long_name.as_ref();
@@ -601,17 +600,17 @@ impl Parser {
         let prefixed_flag_ids: Vec<usize> = range.map(|(_, flag)| *flag).collect();
 
         if prefixed_flag_ids.len() > 1 {
-            return Err(ParseError::OptionAmbiguous {
+            Err(ParseError::OptionAmbiguous {
                 option_name: "--".to_owned() + clean_arg,
                 possibilities: prefixed_flag_ids
                     .into_iter()
                     .map(|i| self.parsing_options.flags[i].long_name.to_string())
                     .collect(),
-            });
-        } else if prefixed_flag_ids.len() == 0 {
-            return Err(ParseError::OptionNotRecognized {
+            })
+        } else if prefixed_flag_ids.is_empty() {
+            Err(ParseError::OptionNotRecognized {
                 option_name: "--".to_owned() + clean_arg,
-            });
+            })
         } else {
             let matched_flag = &self.parsing_options.flags[prefixed_flag_ids[0]];
             let name = matched_flag.long_name.as_ref();
@@ -625,7 +624,7 @@ impl Parser {
                 }
                 None => unreachable!(),
             }
-            return Ok(());
+            Ok(())
         }
     }
 
@@ -634,7 +633,7 @@ impl Parser {
         iter: &mut impl Iterator<Item = (usize, &'a str)>,
         opts: &mut HashMap<String, Value>,
     ) -> Result<(), ParseError> {
-        let clean_arg = iter.next().unwrap().1.trim_start_matches("-");
+        let clean_arg = iter.next().unwrap().1.trim_start_matches('-');
 
         let mut char_iter = clean_arg.chars().peekable();
 

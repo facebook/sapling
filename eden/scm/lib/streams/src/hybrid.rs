@@ -217,7 +217,7 @@ where
             .iter()
             .filter_map(|i| match i {
                 ResolveState::NotResolved(i) => {
-                    if self.response.contains_key(&i) {
+                    if self.response.contains_key(i) {
                         // The item was fetched previously.
                         // This can happen when retry requests were sent.
                         None

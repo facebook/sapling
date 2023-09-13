@@ -353,10 +353,10 @@ impl VFS {
 
     /// Removes file, but unlike Self::remove, does not delete empty directories.
     fn remove_keep_path(&self, filepath: &PathBuf) -> Result<()> {
-        if let Ok(metadata) = symlink_metadata(&filepath) {
+        if let Ok(metadata) = symlink_metadata(filepath) {
             let file_type = metadata.file_type();
             if file_type.is_file() || file_type.is_symlink() {
-                let result = remove_file(&filepath)
+                let result = remove_file(filepath)
                     .with_context(|| format!("Can't remove file {:?}", filepath));
                 if let Err(e) = result {
                     if let Some(io_error) = e.downcast_ref::<io::Error>() {

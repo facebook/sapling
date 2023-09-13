@@ -135,11 +135,9 @@ impl TestHistory {
             .map(|s| RepoPath::from_str(s).unwrap().to_owned())
             .collect();
 
-        let path_history =
-            PathHistory::new(set, paths, Arc::new(self.clone()), Arc::new(self.clone()))
-                .await
-                .unwrap();
-        path_history
+        PathHistory::new(set, paths, Arc::new(self.clone()), Arc::new(self.clone()))
+            .await
+            .unwrap()
     }
 
     /// Obtain the access log.
@@ -150,7 +148,7 @@ impl TestHistory {
     fn commit_to_tree(&self, commit_id: HgId) -> HgId {
         let commit_int = hgid_to_int(commit_id);
         let inner = self.inner.lock().unwrap();
-        match inner.commit_to_tree.range(..=commit_int).rev().next() {
+        match inner.commit_to_tree.range(..=commit_int).next_back() {
             Some((_, tree_id)) => *tree_id,
             None => inner.empty_tree_id,
         }

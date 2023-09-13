@@ -87,14 +87,14 @@ mod pytypes {
                     } else {
                         Ok(None)
                     }
-                })(&pyiter);
+                })(pyiter);
                 item.into_anyhow_result().transpose()
             });
             // async_runtime::iter_to_stream supports blocking `next` calls.
             // futures::stream::iter doesn't. If futures::stream::iter is used,
             // then test_nested_stream_to_and_from_python() will hang.
             let stream = async_runtime::iter_to_stream(iter);
-            return Ok(stream.into());
+            Ok(stream.into())
         }
     }
 

@@ -69,7 +69,7 @@ impl WalkError {
             WalkError::IOError(_, error) => error.to_string(),
             WalkError::RepoPathError(_, error) => error.to_string(),
             WalkError::InvalidFileType(_) => "invalid file type".to_string(),
-            WalkError::InvalidMTime(_, error) => format!("invalid mtime - {}", error.to_string()),
+            WalkError::InvalidMTime(_, error) => format!("invalid mtime - {}", error),
             WalkError::ChannelDisconnected(error) => error.to_string(),
             WalkError::ChannelRecvError(error) => error.to_string(),
         }

@@ -207,8 +207,7 @@ impl Identity {
         let paths = self.user_config_paths();
         paths
             .iter()
-            .filter(|p| p.exists())
-            .next()
+            .find(|p| p.exists())
             .cloned()
             .or_else(|| paths.into_iter().next())
     }
@@ -435,8 +434,7 @@ fn compute_default() -> Identity {
         let env_override = all()
             .iter()
             .find_map(|id| id.env_var("IDENTITY"))
-            .map(|v| v.ok())
-            .flatten();
+            .and_then(|v| v.ok());
 
         for ident in all() {
             if Some(ident.user.cli_name) == env_override.as_deref() {
@@ -617,7 +615,7 @@ mod test {
         {
             let root = dir.path().join("bad_perms");
             let dot_dir = root.join(default().dot_dir());
-            fs::create_dir_all(&dot_dir)?;
+            fs::create_dir_all(dot_dir)?;
 
             // Sanity.
             assert!(sniff_dir(&root).is_ok());
@@ -641,7 +639,7 @@ mod test {
         assert!(sniff_root(&root)?.is_none());
 
         let dot_dir = root.join(TEST.dot_dir());
-        fs::create_dir_all(&dot_dir)?;
+        fs::create_dir_all(dot_dir)?;
 
         let (sniffed_root, sniffed_ident) = sniff_root(&root)?.unwrap();
         assert_eq!(sniffed_root, root);
@@ -649,7 +647,7 @@ mod test {
         assert_eq!(sniffed_ident.user, default().user);
 
         let abc = root.join("a/b/c");
-        fs::create_dir_all(&abc)?;
+        fs::create_dir_all(abc)?;
 
         let (sniffed_root, sniffed_ident) = sniff_root(&root)?.unwrap();
         assert_eq!(sniffed_root, root);

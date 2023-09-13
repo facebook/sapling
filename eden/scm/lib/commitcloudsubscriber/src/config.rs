@@ -35,7 +35,7 @@ mod defaults {
             Some(ref val) if !val.is_empty() => Some(val),
             _ => None,
         }
-        .map(|value| PathBuf::from(value))
+        .map(PathBuf::from)
     }
 
     pub fn connected_subscribers_path() -> Option<PathBuf> {
