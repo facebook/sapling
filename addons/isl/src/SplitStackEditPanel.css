@@ -23,6 +23,7 @@
   margin: var(--pad) 0px;
   margin-bottom: calc(2 * var(--pad));
 }
+
 .split-commit-header-stack-number {
   flex-shrink: 0;
   font-size: 140%;
@@ -46,6 +47,19 @@
   margin-left: 0;
   margin-right: 0;
 }
+.split-commit-file-arrows vscode-button {
+  font-family: var(--monospace-fontFamily);
+  opacity: 0.5;
+  font-size: 120%;
+  min-width: 25px;
+}
+.split-commit-file-arrows vscode-button:hover {
+  opacity: 0.8;
+}
+.split-commit-file-arrows vscode-button:hover::part(content) {
+  transform: scale(1.3);
+}
+
 .split-file {
   border: 1px solid var(--panel-view-border);
   border-top-width: 0px;

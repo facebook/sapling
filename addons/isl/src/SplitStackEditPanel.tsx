@@ -18,6 +18,7 @@ import {t, T} from './i18n';
 import {SplitRangeRecord, useStackEditState} from './stackEditState';
 import {firstLine} from './utils';
 import {
+  VSCodeButton,
   VSCodeDivider,
   VSCodeDropdown,
   VSCodeOption,
@@ -188,12 +189,60 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
     }
   };
 
+  const moveEntireFile = (dir: 'left' | 'right') => {
+    const aRev = fileRev - 1;
+    const bRev = fileRev;
+
+    const newFileStack = fileStack.mapAllLines(line => {
+      let newRevs = line.revs;
+      const inA = line.revs.has(aRev);
+      const inB = line.revs.has(bRev);
+      const isContext = inA && inB;
+      if (!isContext) {
+        if (inA) {
+          // This is a deletion.
+          if (dir === 'right') {
+            // Move deletion right - add it in bRev.
+            newRevs = newRevs.add(bRev);
+          } else {
+            // Move deletion left - drop it from aRev.
+            newRevs = newRevs.remove(aRev);
+          }
+        }
+        if (inB) {
+          // This is an insertion.
+          if (dir === 'right') {
+            // Move insertion right - drop it in bRev.
+            newRevs = newRevs.remove(bRev);
+          } else {
+            // Move insertion left - add it to aRev.
+            newRevs = newRevs.add(aRev);
+          }
+        }
+      }
+      return newRevs === line.revs ? line : line.set('revs', newRevs);
+    });
+
+    setStack(newFileStack);
+  };
+
   return (
     <div className="split-commit-file">
       <FileHeader
         path={path}
         diffType={DiffType.Modified}
-        fileActions={<>{/* TODO: move entire file left/right */}</>}
+        fileActions={
+          <div className="split-commit-file-arrows">
+            {fileRev > 1 /* rev == 0 corresponds to fileRev == 1  */ ? (
+              <VSCodeButton appearance="icon" onClick={() => moveEntireFile('left')}>
+                ⬅
+              </VSCodeButton>
+            ) : null}
+            <VSCodeButton appearance="icon" onClick={() => moveEntireFile('right')}>
+              ⮕
+            </VSCodeButton>
+          </div>
+        }
       />
       <SplitFile key={fileIdx} rev={fileRev} stack={fileStack} setStack={setStack} />
     </div>
