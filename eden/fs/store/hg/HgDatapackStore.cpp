@@ -21,6 +21,8 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/telemetry/LogEvent.h"
+#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Bug.h"
 
 namespace facebook::eden {
@@ -135,6 +137,10 @@ void HgDatapackStore::getTreeBatch(
           folly::Try<std::shared_ptr<sapling::Tree>> content) mutable {
         if (config_->getEdenConfig()->hgTreeFetchFallback.getValue() &&
             content.hasException()) {
+          if (logger_) {
+            logger_->logEvent(EdenApiMiss{repoName_, EdenApiMiss::Tree});
+          }
+
           // If we're falling back, the caller will fulfill this Promise with a
           // tree from HgImporter.
           // TODO: Remove this.
@@ -238,6 +244,10 @@ void HgDatapackStore::getBlobBatch(
       [&](size_t index, folly::Try<std::unique_ptr<folly::IOBuf>> content) {
         if (config_->getEdenConfig()->hgBlobFetchFallback.getValue() &&
             content.hasException()) {
+          if (logger_) {
+            logger_->logEvent(EdenApiMiss{repoName_, EdenApiMiss::Blob});
+          }
+
           // If we're falling back, the caller will fulfill this Promise with a
           // blob from HgImporter.
           // TODO: Remove this.
