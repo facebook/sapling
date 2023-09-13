@@ -172,10 +172,10 @@ HgBackingStore::HgBackingStore(
           make_unique<folly::UnboundedBlockingQueue<
               folly::CPUThreadPoolExecutor::CPUTask>>(),
           std::make_shared<HgImporterThreadFactory>(repository, stats.copy()))),
-      config_(config),
+      config_(std::move(config)),
       serverThreadPool_(serverThreadPool),
-      datapackStore_(repository, computeOptions(), config),
-      logger_(logger) {
+      logger_(std::move(logger)),
+      datapackStore_(repository, computeOptions(), config_, logger_) {
   HgImporter importer(repository, stats.copy());
   const auto& options = importer.getOptions();
   repoName_ = options.repoName;
@@ -197,8 +197,8 @@ HgBackingStore::HgBackingStore(
       importThreadPool_{std::make_unique<HgImporterTestExecutor>(importer)},
       config_(std::move(config)),
       serverThreadPool_{importThreadPool_.get()},
-      datapackStore_(repository, testOptions(), config_),
-      logger_(nullptr) {
+      logger_(nullptr),
+      datapackStore_(repository, testOptions(), config_, logger_) {
   const auto& options = importer->getOptions();
   repoName_ = options.repoName;
 }

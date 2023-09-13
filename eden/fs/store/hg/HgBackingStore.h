@@ -171,10 +171,10 @@ class HgBackingStore {
   // load).
   folly::Executor* serverThreadPool_;
 
+  std::shared_ptr<StructuredLogger> logger_;
+
   std::string repoName_;
   HgDatapackStore datapackStore_;
-
-  std::shared_ptr<StructuredLogger> logger_;
 
   // Track metrics for imports currently fetching data from hg
   mutable RequestMetricsScope::LockedRequestWatchList liveImportBlobWatches_;
