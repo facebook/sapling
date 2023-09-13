@@ -123,7 +123,7 @@ impl FileContent {
             return Err(FileError::Lfs(key.clone(), data.clone()));
         }
 
-        let computed = HgId::from_content(&data, parents);
+        let computed = HgId::from_content(data, parents);
         if computed != key.hgid {
             let err = InvalidHgId {
                 expected: key.hgid,

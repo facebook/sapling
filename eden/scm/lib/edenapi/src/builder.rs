@@ -180,7 +180,7 @@ impl HttpClientBuilder {
         let mut headers = get_config::<String>(config, "edenapi", "headers")?
             .map(parse_headers)
             .transpose()
-            .map_err(|e| ConfigError::Invalid("edenapi.headers".into(), e.into()))?
+            .map_err(|e| ConfigError::Invalid("edenapi.headers".into(), e))?
             .unwrap_or_default();
         headers.insert(
             "User-Agent".to_string(),
@@ -381,8 +381,8 @@ fn get_required_config<T: FromConfigValue>(
     section: &str,
     name: &str,
 ) -> Result<T, ConfigError> {
-    Ok(get_config::<T>(config, section, name)?
-        .ok_or_else(|| ConfigError::Missing(format!("{}.{}", section, name)))?)
+    get_config::<T>(config, section, name)?
+        .ok_or_else(|| ConfigError::Missing(format!("{}.{}", section, name)))
 }
 
 /// Configuration for a `Client`. Essentially has the same fields as a
@@ -481,6 +481,6 @@ impl TryFrom<HttpClientBuilder> for Config {
 
 /// Parse headers from a JSON object.
 fn parse_headers(headers: impl AsRef<str>) -> Result<HashMap<String, String>, Error> {
-    Ok(serde_json::from_str(headers.as_ref())
-        .context(format!("Not a valid JSON object: {:?}", headers.as_ref()))?)
+    serde_json::from_str(headers.as_ref())
+        .context(format!("Not a valid JSON object: {:?}", headers.as_ref()))
 }

@@ -202,7 +202,6 @@ pub enum CommitHashLookupRequest {
 pub fn make_hash_lookup_request(prefix: String) -> Result<CommitHashLookupRequest, anyhow::Error> {
     let suffix_len = HgId::hex_len() - prefix.len();
     let low_hex = prefix
-        .clone()
         .chars()
         .chain(iter::repeat('0').take(suffix_len))
         .collect::<String>();

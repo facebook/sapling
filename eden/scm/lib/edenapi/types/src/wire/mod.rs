@@ -428,7 +428,7 @@ impl ToApi for WireRepoPathBuf {
     type Error = RepoPathParseError;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(RepoPathBuf::from_string(self.0)?)
+        RepoPathBuf::from_string(self.0)
     }
 }
 
@@ -465,8 +465,10 @@ impl ToApi for WireKey {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum WireParents {
     #[serde(rename = "1")]
+    #[default]
     None,
 
     #[serde(rename = "2")]
@@ -508,12 +510,6 @@ impl ToApi for WireParents {
             One(id) => Parents::One(id.to_api()?),
             Two(id1, id2) => Parents::Two(id1.to_api()?, id2.to_api()?),
         })
-    }
-}
-
-impl Default for WireParents {
-    fn default() -> Self {
-        WireParents::None
     }
 }
 

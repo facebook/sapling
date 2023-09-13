@@ -237,7 +237,7 @@ mod tests {
         let retryable_move = retryable.clone();
         let response = block_on(retryable_move.perform_with_retries(client))?;
 
-        let results: Vec<_> = stream_to_iter(response.entries).into_iter().collect();
+        let results: Vec<_> = stream_to_iter(response.entries).collect();
 
         assert_eq!(retryable.lock().attempts, fails + 1);
         assert_eq!(retryable.lock().keys.len(), 0);
