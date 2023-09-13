@@ -139,6 +139,24 @@ py_class!(pub class BindingsModuleFinder |py| {
         };
         Ok(obj)
     }
+
+    // `get_code` is not part of modern importlib loader spec. It is "optional" by PEP 302.
+    // However, runpy.py from stdlib requires it.
+
+    def get_code(&self, module_name: &str) -> PyResult<Option<PyObject>> {
+        match python_modules::find_module(module_name) {
+            None => Ok(None),
+            Some(info) => unsafe {
+                let bytecode = info.byte_code();
+                let code = ffi::PyMarshal_ReadObjectFromString(bytecode.as_ptr() as _, bytecode.len() as _);
+                if code.is_null() {
+                    return Err(PyErr::fetch(py));
+                }
+                Ok(Some(PyObject::from_owned_ptr(py, code)))
+            }
+        }
+    }
+
 });
 
 impl BindingsModuleFinder {
