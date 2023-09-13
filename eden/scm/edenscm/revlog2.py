@@ -10,14 +10,12 @@ import hashlib
 import pickle
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Union
-
-import bindings
+from typing import Dict, Union
 
 from . import error, mdiff, revlog, util
 from .i18n import _
 
-from .node import bbin, hex, nullid, nullrev, wdirid
+from .node import bbin, nullid, nullrev, wdirid
 from .revlog import revlog as orig_revlog, textwithheader
 
 
@@ -568,17 +566,9 @@ class Index:
         )
 
 
-_patched = False
-
-
+@util.call_once()
 def patch_types():
     """replace revlog with revlog2 for revlog's subclasses"""
-
-    global _patched
-
-    if _patched:
-        return
-
     # Ensure those types are seen.
     from .bundlerepo import bundlerevlog
     from .filelog import filelog
@@ -587,5 +577,3 @@ def patch_types():
     for klass in orig_revlog.__subclasses__():
         bases = tuple((t is orig_revlog and revlog2 or t for t in klass.__bases__))
         klass.__bases__ = bases
-
-    _patched = True

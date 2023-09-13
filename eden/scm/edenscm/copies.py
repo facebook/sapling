@@ -19,17 +19,12 @@ from . import error, git, match as matchmod, node, pathutil, pycompat, scmutil, 
 from .i18n import _
 
 
-_gitcopytrace = None
-
-
+@util.call_once(cache_val=True)
 def _newgitcopytrace(repo):
-    global _gitcopytrace
-    if _gitcopytrace is None:
-        import bindings
+    import bindings
 
-        gitdir = git.readgitdir(repo)
-        _gitcopytrace = bindings.copytrace.gitcopytrace(gitdir)
-    return _gitcopytrace
+    gitdir = git.readgitdir(repo)
+    return bindings.copytrace.gitcopytrace(gitdir)
 
 
 def _findlimit(repo, a, b):

@@ -580,6 +580,54 @@ def caller():
     return caller
 
 
+def call_once(cache_val=False):
+    """
+    returns a decorator that ensures the given `func` is only executed once,
+    even if it is called multiple times. It also provides an option to cache
+    the result of the initial function call for subsequent invocations.
+
+    >>> @call_once(cache_val=True)
+    ... def expensive_op():
+    ...   print("performing an expensive operation")
+    ...   return 42
+    ...
+    >>> expensive_op()
+    performing an expensive operation
+    42
+    >>> expensive_op()
+    42
+    >>> @call_once()
+    ... def expensive_op():
+    ...   print("performing an expensive operation")
+    ...   return 42
+    ...
+    >>> expensive_op()
+    performing an expensive operation
+    42
+    >>> expensive_op()
+    """
+
+    def _decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            if not wrapper.called:
+                val = func(*args, **kwargs)
+                wrapper.called = True
+                if cache_val:
+                    wrapper.val = val
+                return val
+            else:
+                # `wrapper.val` is the cached val if `cache_val`
+                # is True, otherwise it is the default val `None`
+                return wrapper.val
+
+        wrapper.called = False
+        wrapper.val = None
+        return wrapper
+
+    return _decorator
+
+
 def cachefunc(func):
     """cache the result of function calls"""
     # XXX doesn't handle keywords args
