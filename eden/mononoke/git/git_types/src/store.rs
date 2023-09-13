@@ -5,19 +5,28 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Context;
 use async_trait::async_trait;
 use blobstore::impl_loadable_storable;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
+use bytes::Bytes;
 use context::CoreContext;
 use filestore::hash_bytes;
+use filestore::ExpectedSize;
 use filestore::Sha1IncrementalHasher;
+use futures::future;
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BlobstoreKey;
 
 use crate::delta::DeltaInstructionChunk;
 use crate::delta::DeltaInstructionChunkId;
+use crate::delta::DeltaInstructionChunkIdPrefix;
+use crate::delta::DeltaInstructions;
 use crate::errors::GitError;
 use crate::thrift::Tree as ThriftTree;
 use crate::thrift::TreeHandle as ThriftTreeHandle;
@@ -100,6 +109,89 @@ where
             )
         })?;
     Ok(object.into())
+}
+
+/// Store delta instructions in blobstore by chunking the incoming byte stream and returning the total
+/// number of chunk_size chunks stored to represent the delta instructions. This method can partially fail
+/// and store a subset of the chunks. However, it is perfectly safe to retry until all the chunks are stored
+/// successfully
+#[allow(dead_code)]
+pub async fn store_delta_instructions<B>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    instructions: DeltaInstructions,
+    chunk_prefix: DeltaInstructionChunkIdPrefix,
+    chunk_size: Option<u64>,
+) -> anyhow::Result<u64>
+where
+    B: Blobstore + Clone,
+{
+    let mut raw_instruction_bytes = Vec::new();
+    instructions
+        .write(&mut raw_instruction_bytes)
+        .await
+        .context("Error in converting DeltaInstructions to raw bytes")?;
+    let size = ExpectedSize::new(raw_instruction_bytes.len() as u64);
+    let raw_instructions_stream = stream::once(future::ok(Bytes::from(raw_instruction_bytes)));
+    let chunk_stream = filestore::make_chunks(raw_instructions_stream, size, chunk_size);
+    match chunk_stream {
+        filestore::Chunks::Inline(fallible_bytes) => {
+            let instruction_bytes = fallible_bytes
+                .await
+                .context("Error in getting inlined bytes from chunk stream")?;
+            store_delta_instruction_chunk(ctx, blobstore, chunk_prefix.as_id(0), instruction_bytes)
+                .await
+                .context("Failure in storing inlined instruction chunk to blobstore")?;
+            Ok(1)
+        }
+        filestore::Chunks::Chunked(_, bytes_stream) => bytes_stream
+            .enumerate()
+            .map(|(idx, fallible_bytes)| {
+                let chunk_prefix = &chunk_prefix;
+                async move {
+                    let instruction_bytes = fallible_bytes.with_context(|| {
+                        format!(
+                            "Error in getting bytes from chunk {} in chunked stream",
+                            idx
+                        )
+                    })?;
+                    store_delta_instruction_chunk(
+                        ctx,
+                        blobstore,
+                        chunk_prefix.as_id(idx),
+                        instruction_bytes,
+                    )
+                    .await
+                    .with_context(|| {
+                        format!("Failure in storing instruction chunk {} to blobstore", idx)
+                    })?;
+                    anyhow::Ok(())
+                }
+            })
+            .buffer_unordered(100)
+            .try_collect::<Vec<_>>()
+            .await
+            .map(|result| result.len() as u64),
+    }
+}
+
+async fn store_delta_instruction_chunk<B>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    id: DeltaInstructionChunkId,
+    instruction_bytes: Bytes,
+) -> anyhow::Result<()>
+where
+    B: Blobstore + Clone,
+{
+    let blobstore_key = id.blobstore_key();
+    blobstore
+        .put(
+            ctx,
+            blobstore_key,
+            DeltaInstructionChunk::new_bytes(instruction_bytes).into_blobstore_bytes(),
+        )
+        .await
 }
 
 #[async_trait]

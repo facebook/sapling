@@ -14,6 +14,7 @@ use std::str::FromStr;
 
 use anyhow::Context;
 use anyhow::Result;
+use blobstore::BlobstoreBytes;
 use bytes::Bytes;
 use fbthrift::compact_protocol;
 use gix_diff::blob::diff;
@@ -78,6 +79,41 @@ impl DeltaInstructionChunkId {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct DeltaInstructionChunkIdPrefix {
+    actual_cs_id: ChangesetId,
+    actual_mpath: MPath,
+    base_cs_id: ChangesetId,
+    base_mpath: MPath,
+}
+
+#[allow(dead_code)]
+impl DeltaInstructionChunkIdPrefix {
+    pub fn new(
+        actual_cs_id: ChangesetId,
+        actual_mpath: MPath,
+        base_cs_id: ChangesetId,
+        base_mpath: MPath,
+    ) -> Self {
+        Self {
+            actual_cs_id,
+            actual_mpath,
+            base_cs_id,
+            base_mpath,
+        }
+    }
+
+    pub fn as_id(&self, index: usize) -> DeltaInstructionChunkId {
+        DeltaInstructionChunkId::new(
+            &self.actual_cs_id,
+            &self.actual_mpath,
+            &self.base_cs_id,
+            &self.base_mpath,
+            index,
+        )
+    }
+}
+
 impl FromStr for DeltaInstructionChunkId {
     type Err = anyhow::Error;
     #[inline]
@@ -123,6 +159,10 @@ impl DeltaInstructionChunk {
             MononokeTypeError::BlobDeserializeError("DeltaInstructionChunk".into())
         })?;
         Self::from_thrift(thrift_tc)
+    }
+
+    pub fn into_blobstore_bytes(self) -> BlobstoreBytes {
+        BlobstoreBytes::from_bytes(compact_protocol::serialize(&self.into_thrift()))
     }
 
     pub fn size(&self) -> u64 {
