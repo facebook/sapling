@@ -99,7 +99,7 @@ py_class!(pub class config |py| {
         let sources = cfg.get_sources(section, name);
         let mut result = Vec::with_capacity(sources.len());
         for source in sources.as_ref().iter() {
-            let value = source.value().as_ref().map(|v| PyUnicode::new(py, &v));
+            let value = source.value().as_ref().map(|v| PyUnicode::new(py, v));
             let file = source.location().map(|(path, range)| {
                 // Calculate the line number - count "\n" till range.start
                 let file = source.file_content().unwrap();
@@ -113,7 +113,7 @@ py_class!(pub class config |py| {
                 };
                 (pypath, range.start, range.end, line)
             });
-            let source = PyUnicode::new(py, &source.source());
+            let source = PyUnicode::new(py, source.source());
             result.push((value, file, source));
         }
         Ok(result)
@@ -130,12 +130,12 @@ py_class!(pub class config |py| {
 
     def sections(&self) -> PyResult<Vec<PyUnicode>> {
         let cfg = self.cfg(py).borrow();
-        Ok(cfg.sections().iter().map(|s| PyUnicode::new(py, &s)).collect())
+        Ok(cfg.sections().iter().map(|s| PyUnicode::new(py, s)).collect())
     }
 
     def names(&self, section: &str) -> PyResult<Vec<PyUnicode>> {
         let cfg = self.cfg(py).borrow();
-        Ok(cfg.keys(section).iter().map(|s| PyUnicode::new(py, &s)).collect())
+        Ok(cfg.keys(section).iter().map(|s| PyUnicode::new(py, s)).collect())
     }
 
     def tostring(&self) -> PyResult<Str> {
@@ -184,7 +184,7 @@ impl config {
 fn parselist(py: Python, value: String) -> PyResult<Vec<PyUnicode>> {
     Ok(parse_list(value)
         .iter()
-        .map(|v| PyUnicode::new(py, &v))
+        .map(|v| PyUnicode::new(py, v))
         .collect())
 }
 

@@ -19,9 +19,9 @@ use dag::IdSetIter;
 /// - No need to take the Python GIL to create a new instance of `Set`.
 pub struct Spans(pub IdSet);
 
-impl Into<IdSet> for Spans {
-    fn into(self) -> IdSet {
-        self.0
+impl From<Spans> for IdSet {
+    fn from(val: Spans) -> Self {
+        val.0
     }
 }
 
@@ -156,7 +156,7 @@ impl<'a> FromPyObject<'a> for Spans {
         // Collecting ids to a Vec first to preserve error handling.
         let ids: PyResult<Vec<Id>> = obj
             .iter(py)?
-            .map(|o| Ok(o?.extract::<Option<i64>>(py)?))
+            .map(|o| o?.extract::<Option<i64>>(py))
             .filter_map(|o| match o {
                 // Skip "None" (wdir?) automatically.
                 Ok(None) => None,

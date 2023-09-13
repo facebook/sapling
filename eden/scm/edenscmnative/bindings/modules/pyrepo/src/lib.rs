@@ -57,7 +57,7 @@ py_class!(pub class repo |py| {
     def __new__(_cls, path: PyPathBuf, config: &config) -> PyResult<Self> {
         let config = config.get_cfg(py);
         let abs_path = util::path::absolute(path.as_path()).map_pyerr(py)?;
-        let repo = Repo::load_with_config(&abs_path, config).map_pyerr(py)?;
+        let repo = Repo::load_with_config(abs_path, config).map_pyerr(py)?;
         Self::create_instance(py, RwLock::new(repo), RefCell::new(None))
     }
 

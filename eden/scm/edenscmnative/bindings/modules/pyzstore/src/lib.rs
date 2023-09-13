@@ -27,7 +27,7 @@ py_class!(class zstore |py| {
     data store: RefCell<Zstore>;
 
     def __new__(_cls, path: String) -> PyResult<Self> {
-        let log = Zstore::open(&path).map_pyerr(py)?;
+        let log = Zstore::open(path).map_pyerr(py)?;
         Self::create_instance(py, RefCell::new(log))
     }
 

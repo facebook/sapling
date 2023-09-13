@@ -123,7 +123,7 @@ py_class!(pub class idmap |py| {
         } else {
             prefix.extract::<String>(py)?.as_bytes().to_vec()
         };
-        if !prefix.iter().all(|&b| (b >= b'0' && b <= b'9') || (b >= b'a' && b <= b'f')) {
+        if !prefix.iter().all(|&b| (b'0'..=b'9').contains(&b) || (b'a'..=b'f').contains(&b)) {
             // Invalid hex prefix. Pretend nothing matches.
             return Ok(Vec::new())
         }

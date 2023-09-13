@@ -183,7 +183,7 @@ py_class!(pub class treestate |py| {
     def hasdir(&self, path: &PyPath) -> PyResult<bool> {
         let mut state = self.state(py).lock();
         let path = path.as_utf8_bytes();
-        Ok(convert_result(py, state.has_dir(path))?)
+        convert_result(py, state.has_dir(path))
     }
 
     def walk(

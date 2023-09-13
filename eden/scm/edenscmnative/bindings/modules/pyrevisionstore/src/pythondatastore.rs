@@ -76,7 +76,7 @@ impl HgIdDataStore for PythonHgIdDataStore {
             }
         };
 
-        let py_bytes = PyBytes::extract(py, &py_data).map_err(|e| PyErr::from(e))?;
+        let py_bytes = PyBytes::extract(py, &py_data).map_err(PyErr::from)?;
 
         Ok(StoreResult::Found(py_bytes.data(py).to_vec()))
     }
@@ -104,7 +104,7 @@ impl HgIdDataStore for PythonHgIdDataStore {
                 }
             }
         };
-        let py_dict = PyDict::extract(py, &py_meta).map_err(|e| PyErr::from(e))?;
+        let py_dict = PyDict::extract(py, &py_meta).map_err(PyErr::from)?;
         to_metadata(py, &py_dict)
             .map_err(|e| PyErr::from(e).into())
             .map(StoreResult::Found)
@@ -141,9 +141,9 @@ impl RemoteDataStore for PythonHgIdDataStore {
 
         self.py_store
             .call_method(py, "prefetch", (py_keys,), None)
-            .map_err(|e| PyErr::from(e))?;
+            .map_err(PyErr::from)?;
 
-        self.get_missing(&keys)
+        self.get_missing(keys)
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
@@ -160,7 +160,7 @@ impl LocalStore for PythonHgIdDataStore {
         for key in keys.iter() {
             match key {
                 StoreKey::HgId(key) => {
-                    let py_key = from_key_to_tuple(py, &key);
+                    let py_key = from_key_to_tuple(py, key);
                     py_missing.insert(py, py_missing.len(py), py_key.into_object());
                 }
                 StoreKey::Content(_, _) => continue,
@@ -170,13 +170,13 @@ impl LocalStore for PythonHgIdDataStore {
         let py_missing = self
             .py_store
             .call_method(py, "getmissing", (py_missing,), None)
-            .map_err(|e| PyErr::from(e))?;
-        let py_list = PyList::extract(py, &py_missing).map_err(|e| PyErr::from(e))?;
+            .map_err(PyErr::from)?;
+        let py_list = PyList::extract(py, &py_missing).map_err(PyErr::from)?;
         let missing = py_list
             .iter(py)
             .map(|k| {
                 Ok(StoreKey::from(
-                    from_tuple_to_key(py, &k).map_err(|e| PyErr::from(e))?,
+                    from_tuple_to_key(py, &k).map_err(PyErr::from)?,
                 ))
             })
             .collect::<Result<Vec<StoreKey>>>()?;

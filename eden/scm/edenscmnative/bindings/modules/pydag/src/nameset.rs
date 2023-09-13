@@ -41,11 +41,11 @@ py_class!(pub class nameset |py| {
 
     def __contains__(&self, name: PyBytes) -> PyResult<bool> {
         let name = Vertex::copy_from(name.data(py));
-        Ok(block_on(self.inner(py).contains(&name)).map_pyerr(py)?)
+        block_on(self.inner(py).contains(&name)).map_pyerr(py)
     }
 
     def __len__(&self) -> PyResult<usize> {
-        Ok(block_on(self.inner(py).count()).map_pyerr(py)?)
+        block_on(self.inner(py).count()).map_pyerr(py)
     }
 
     def __repr__(&self) -> PyResult<String> {

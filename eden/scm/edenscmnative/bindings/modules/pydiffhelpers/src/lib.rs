@@ -80,7 +80,7 @@ fn addlines(
             // on empty lines. Supply a leading space.
             let s = if s == b"\n" { b" \n" } else { s };
             hunk.append(py, to_object(py, s));
-            match s.get(0) {
+            match s.first() {
                 Some(b'+') => b.append(py, to_object(py, &s[1..])),
                 Some(b'-') => a.append(py, to_object(py, s)),
                 _ => {
@@ -110,20 +110,20 @@ fn fix_newline(py: Python, hunk: &PyList, a: &PyList, b: &PyList) -> PyResult<us
         } else {
             last_line
         };
-        match last_line.get(0) {
+        match last_line.first() {
             Some(b' ') => {
                 b.set_item(py, b.len(py) - 1, to_object(py, &last_line[1..]));
-                a.set_item(py, a.len(py) - 1, to_object(py, &last_line[..]));
+                a.set_item(py, a.len(py) - 1, to_object(py, last_line));
             }
             Some(b'+') => {
                 b.set_item(py, b.len(py) - 1, to_object(py, &last_line[1..]));
             }
             Some(b'-') => {
-                a.set_item(py, a.len(py) - 1, to_object(py, &last_line[..]));
+                a.set_item(py, a.len(py) - 1, to_object(py, last_line));
             }
             _ => {}
         }
-        hunk.set_item(py, hunk_len - 1, to_object(py, &last_line));
+        hunk.set_item(py, hunk_len - 1, to_object(py, last_line));
     }
     Ok(0)
 }

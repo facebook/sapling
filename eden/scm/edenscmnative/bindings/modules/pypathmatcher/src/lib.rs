@@ -298,11 +298,11 @@ impl<'a> PythonMatcher<'a> {
 
 impl<'a> Matcher for PythonMatcher<'a> {
     fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
-        matches_directory_impl(self.py, &self.py_matcher, &path).into_anyhow_result()
+        matches_directory_impl(self.py, &self.py_matcher, path).into_anyhow_result()
     }
 
     fn matches_file(&self, path: &RepoPath) -> Result<bool> {
-        matches_file_impl(self.py, &self.py_matcher, &path).into_anyhow_result()
+        matches_file_impl(self.py, &self.py_matcher, path).into_anyhow_result()
     }
 }
 
@@ -319,12 +319,12 @@ impl ThreadPythonMatcher {
 impl Matcher for ThreadPythonMatcher {
     fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
         let gil = Python::acquire_gil();
-        matches_directory_impl(gil.python(), &self.py_matcher, &path).into_anyhow_result()
+        matches_directory_impl(gil.python(), &self.py_matcher, path).into_anyhow_result()
     }
 
     fn matches_file(&self, path: &RepoPath) -> Result<bool> {
         let gil = Python::acquire_gil();
-        matches_file_impl(gil.python(), &self.py_matcher, &path).into_anyhow_result()
+        matches_file_impl(gil.python(), &self.py_matcher, path).into_anyhow_result()
     }
 }
 
@@ -343,12 +343,10 @@ fn matches_directory_impl(
         .unwrap_or(false);
     let matches = if is_all {
         DirectoryMatch::Everything
+    } else if py_value.is_true(py).unwrap() {
+        DirectoryMatch::ShouldTraverse
     } else {
-        if py_value.is_true(py).unwrap() {
-            DirectoryMatch::ShouldTraverse
-        } else {
-            DirectoryMatch::Nothing
-        }
+        DirectoryMatch::Nothing
     };
     Ok(matches)
 }

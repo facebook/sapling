@@ -248,14 +248,13 @@ py_class!(class writerworker |py| {
         let path = name.to_repo_path_buf().map_pyerr(py)?;
         let node = HgId::from_slice(node.data(py)).map_pyerr(py)?;
 
-        let flags = if flags == "l" {
-            UpdateFlag::Symlink
-        } else if flags == "x" {
-            UpdateFlag::Executable
-        } else if flags == "" {
-            UpdateFlag::Regular
-        } else {
-            return Err(format_err!("Unknown flags: {}", flags)).map_pyerr(py);
+        let flags = match flags {
+            "l" => UpdateFlag::Symlink,
+            "x" => UpdateFlag::Executable,
+            "" => UpdateFlag::Regular,
+            _ => {
+                return Err(format_err!("Unknown flags: {}", flags)).map_pyerr(py);
+            }
         };
 
         self.inner(py).borrow_mut().as_mut().unwrap().push_work(py, (Key::new(path, node), flags)).map_pyerr(py)?;
@@ -342,7 +341,7 @@ py_class!(class removerworker |py| {
         let inner = self.inner(py).borrow_mut().take().unwrap();
 
         let failures = py.allow_threads(move || -> Result<Vec<_>> {
-            Ok(inner.wait()?.flatten().map(|path| PyPathBuf::from(path)).collect::<Vec<PyPathBuf>>())
+            Ok(inner.wait()?.flatten().map(PyPathBuf::from).collect::<Vec<PyPathBuf>>())
         }).map_pyerr(py)?;
 
         Ok(failures)
@@ -671,7 +670,7 @@ mod tests {
         let root = workingdir.as_ref().to_path_buf();
         let path = root.join("TEST");
 
-        let f = File::create(&path)?;
+        let f = File::create(path)?;
 
         let state = RemoverState::new(root)?;
         state.working_copy.remove(RepoPath::from_str("TEST")?)?;
@@ -810,7 +809,7 @@ mod tests {
             let root = workingdir.as_ref().to_path_buf();
             let state = RemoverState::new(root)?;
             for path in paths.iter() {
-                state.working_copy.remove(&path)?;
+                state.working_copy.remove(path)?;
             }
 
             Ok(TestResult::from_bool(read_dir(&workingdir)?.count() == 0))

@@ -167,7 +167,7 @@ fn to_index_func(
             .map(|obj| {
                 if let Ok(obj) = obj.extract::<PyBytes>(py) {
                     let out: &[u8] = obj.data(py);
-                    return IndexOutput::Owned(out.to_vec().into_boxed_slice());
+                    IndexOutput::Owned(out.to_vec().into_boxed_slice())
                 } else if let Ok((start, end)) = obj.extract::<(u64, u64)>(py) {
                     return IndexOutput::Reference(start..end);
                 } else {

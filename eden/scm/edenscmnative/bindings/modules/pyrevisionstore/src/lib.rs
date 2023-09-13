@@ -751,9 +751,9 @@ impl PyHgIdRemoteStore {
         let py = gil.python();
 
         let keys = keys
-            .into_iter()
+            .iter()
             .filter_map(|key| match key {
-                StoreKey::HgId(key) => Some(from_key(py, &key)),
+                StoreKey::HgId(key) => Some(from_key(py, key)),
                 StoreKey::Content(_, _) => None,
             })
             .collect::<Vec<_>>();
@@ -772,7 +772,7 @@ impl PyHgIdRemoteStore {
                     ),
                     None,
                 )
-                .map_err(|e| PyErr::from(e))?;
+                .map_err(PyErr::from)?;
         }
         Ok(())
     }
@@ -804,7 +804,7 @@ impl HgIdRemoteStore for PyHgIdRemoteStore {
         self.inner.write().historystore =
             Some(mutablehistorystore::create_instance(py, store).unwrap());
 
-        Arc::new(PyRemoteHistoryStore(self.clone()))
+        Arc::new(PyRemoteHistoryStore(self))
     }
 }
 

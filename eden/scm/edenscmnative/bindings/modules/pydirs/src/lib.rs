@@ -26,7 +26,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
 fn add_path(map: &mut HashMap<PyPathBuf, u64>, path: &PyPath) {
     let path = path.as_str();
-    for (i, _) in path.rmatch_indices("/").chain(Some((0, ""))) {
+    for (i, _) in path.rmatch_indices('/').chain(Some((0, ""))) {
         let prefix = PyPath::from_str(&path[..i]);
         if let Some(e) = map.get_mut(prefix) {
             *e += 1;
@@ -38,7 +38,7 @@ fn add_path(map: &mut HashMap<PyPathBuf, u64>, path: &PyPath) {
 
 fn del_path(py: Python, map: &mut HashMap<PyPathBuf, u64>, path: &PyPath) -> PyResult<()> {
     let path = path.as_str();
-    for (i, _) in path.rmatch_indices("/").chain(Some((0, ""))) {
+    for (i, _) in path.rmatch_indices('/').chain(Some((0, ""))) {
         let prefix = PyPath::from_str(&path[..i]);
         if let Some(e) = map.get_mut(prefix) {
             if *e > 1 {
@@ -69,18 +69,18 @@ py_class!(pub class dirs |py| {
                 })?;
             }
         }
-        Ok(dirs::create_instance(py, inner)?)
+        dirs::create_instance(py, inner)
     }
 
     def addpath(&self, path: &PyPath) -> PyResult<PyNone> {
         let mut inner = self.inner(py).borrow_mut();
-        add_path(&mut *inner, path);
+        add_path(&mut inner, path);
         Ok(PyNone)
     }
 
     def delpath(&self, path: &PyPath) -> PyResult<PyNone> {
         let mut inner = self.inner(py).borrow_mut();
-        del_path(py, &mut *inner, path)?;
+        del_path(py, &mut inner, path)?;
         Ok(PyNone)
     }
 

@@ -142,31 +142,29 @@ py_class!(class Condition |py| {
             let owner = owner.incref();
             self.owner(py).set(owner);
             Ok(true)
-        } else {
-            if blocking {
-                let mutex_release = self.mutex_release(py);
-                let cond_release = self.cond_release(py);
-                // Blocking. Wait for other threads to "release", or "wait"
-                while self.owner(py).get().is_some() {
-                    let guard = ForceSend(mutex_release.lock().unwrap());
-                    py.allow_threads(|| {
-                        let guard = guard; // capture ForceSend into closure
-                        let _guard = cond_release.wait(guard.0).unwrap();
-                        // Drop _guard to release the lock before acquiring
-                        // Python GIL Otherwise this might deadlock with other
-                        // threads acquiring mutex_release.
-                    });
-                    // At this point we don't know whether the lock is free or
-                    // not. The above section does not prevent a Python thread
-                    // from acquiring the lock again. But we regained GIL so
-                    // check it in a loop.
-                }
-                let old_owner = self.owner(py).replace(Owner::current_thread());
-                assert!(old_owner.is_none());
-                Ok(true)
-            } else {
-                Ok(false)
+        } else if blocking {
+            let mutex_release = self.mutex_release(py);
+            let cond_release = self.cond_release(py);
+            // Blocking. Wait for other threads to "release", or "wait"
+            while self.owner(py).get().is_some() {
+                let guard = ForceSend(mutex_release.lock().unwrap());
+                py.allow_threads(|| {
+                    let guard = guard; // capture ForceSend into closure
+                    let _guard = cond_release.wait(guard.0).unwrap();
+                    // Drop _guard to release the lock before acquiring
+                    // Python GIL Otherwise this might deadlock with other
+                    // threads acquiring mutex_release.
+                });
+                // At this point we don't know whether the lock is free or
+                // not. The above section does not prevent a Python thread
+                // from acquiring the lock again. But we regained GIL so
+                // check it in a loop.
             }
+            let old_owner = self.owner(py).replace(Owner::current_thread());
+            assert!(old_owner.is_none());
+            Ok(true)
+        } else {
+            Ok(false)
         }
     }
 
@@ -288,7 +286,7 @@ py_class!(class Condition |py| {
         let msg = if owner.is_some() {
             format!("<Condition (owned by {:?}, refcount {})>", owner.thread_id, owner.count)
         } else {
-            format!("<Condition (not owned)>")
+            String::from("<Condition (not owned)>")
         };
         Ok(msg)
     }
@@ -398,11 +396,11 @@ py_class!(class RGenerator |py| {
 
     def __clear__(&self) {
         let mut list = self.iterlist(py).borrow_mut();
-        let obj = mem::replace(&mut *list, None);
+        let obj = (*list).take();
         obj.release_ref(py);
         drop(list);
         let mut next = self.iternext(py).borrow_mut();
-        let obj = mem::replace(&mut *next, None);
+        let obj = (*next).take();
         obj.release_ref(py);
     }
 });
@@ -456,7 +454,7 @@ py_class!(class RGeneratorIter |py| {
             // Release Python GIL to give other threads chances to release mutex.
             let _locked = py.allow_threads(|| mutex.lock().unwrap());
             if let Some(next) = &*rgen.iternext(py).borrow() {
-                self.next_internal(py, &next)
+                self.next_internal(py, next)
             } else {
                 Err(unavailable(py))
             }
@@ -473,7 +471,7 @@ py_class!(class RGeneratorIter |py| {
 
     def __clear__(&self) {
         let mut rgen = self.rgen(py).borrow_mut();
-        let obj = mem::replace(&mut *rgen, None);
+        let obj = (*rgen).take();
         obj.release_ref(py);
     }
 });

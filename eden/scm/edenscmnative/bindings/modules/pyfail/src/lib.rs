@@ -19,7 +19,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
 fn failpoint(py: Python, name: &str) -> PyResult<PyNone> {
     if let Some(e) = fail::eval(name, |_| fail_error(name)) {
-        Err(cpython_ext::error::translate_io_error(py, &e).into())
+        Err(cpython_ext::error::translate_io_error(py, &e))
     } else {
         Ok(PyNone)
     }

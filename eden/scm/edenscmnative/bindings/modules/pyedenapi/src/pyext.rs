@@ -467,7 +467,7 @@ pub trait EdenApiPyExt: EdenApi {
                             map
                         });
                     self.lookup_batch(
-                        indexable_ids.iter().map(|(id, _)| id.id.clone()).collect(),
+                        indexable_ids.keys().map(|id| id.id.clone()).collect(),
                         None,
                         None,
                     )

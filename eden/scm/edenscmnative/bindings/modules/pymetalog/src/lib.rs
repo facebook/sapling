@@ -54,7 +54,7 @@ py_class!(pub class metalog |py| {
     /// List all roots.
     def roots(&self) -> PyResult<Vec<Bytes>> {
         let path = self.fspath(py);
-        let root_ids = MetaLog::list_roots(&path).map_pyerr(py)?;
+        let root_ids = MetaLog::list_roots(path).map_pyerr(py)?;
         Ok(root_ids.into_iter().map(|id| Bytes::from(id.as_ref().to_vec())).collect())
     }
 
@@ -76,7 +76,7 @@ py_class!(pub class metalog |py| {
 
     @staticmethod
     def listroots(path: String) -> PyResult<Vec<Bytes>> {
-        let root_ids = MetaLog::list_roots(&path).map_pyerr(py)?;
+        let root_ids = MetaLog::list_roots(path).map_pyerr(py)?;
         Ok(root_ids.into_iter().map(|id| Bytes::from(id.as_ref().to_vec())).collect())
     }
 

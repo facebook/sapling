@@ -37,7 +37,7 @@ py_class!(class revlogindex |py| {
     def __new__(_cls, changelogipath: String, nodemappath: String) -> PyResult<Self> {
         let changelogipath = Path::new(&changelogipath);
         let nodemappath = Path::new(&nodemappath);
-        let index = RevlogIndex::new(&changelogipath, &nodemappath).map_pyerr(py)?;
+        let index = RevlogIndex::new(changelogipath, nodemappath).map_pyerr(py)?;
         Self::create_instance(py, RefCell::new(index))
     }
 
@@ -50,7 +50,7 @@ py_class!(class revlogindex |py| {
     /// Calculate `heads(ancestors(revs))`.
     def headsancestors(&self, revs: Vec<u32>) -> PyResult<Vec<u32>> {
         let revlog = self.index(py).borrow();
-        Ok(revlog.headsancestors(revs).map_pyerr(py)?)
+        revlog.headsancestors(revs).map_pyerr(py)
     }
 
     /// Given public and draft head revision numbers, calculate the "phase sets".

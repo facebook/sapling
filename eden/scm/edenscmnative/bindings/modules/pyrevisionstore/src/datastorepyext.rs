@@ -108,7 +108,7 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
         let base_node = PyBytes::new(py, Node::null_id().as_ref());
 
         let bytes = PyBytes::new(py, &delta.data);
-        let meta = self.get_meta_py(py.clone(), &name, &node)?;
+        let meta = self.get_meta_py(py.clone(), name, node)?;
         Ok((
             bytes.into_object(),
             base_name.to_py_object(py).into_object(),
@@ -140,7 +140,7 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
 
         let pychain = deltachain
             .iter()
-            .map(|d| from_delta_to_tuple(py, &d))
+            .map(|d| from_delta_to_tuple(py, d))
             .collect::<Vec<PyObject>>();
         Ok(PyList::new(py, &pychain[..]))
     }

@@ -96,7 +96,7 @@ pub fn as_legacystore(py: Python, store: PyObject) -> PyResult<Arc<dyn LegacySto
 
 pub fn from_base(py: Python, delta: &Delta) -> (PyPathBuf, PyBytes) {
     match delta.base.as_ref() {
-        Some(base) => from_key(py, &base),
+        Some(base) => from_key(py, base),
         None => from_key(
             py,
             &Key::new(delta.key.path.clone(), Node::null_id().clone()),
@@ -106,7 +106,7 @@ pub fn from_base(py: Python, delta: &Delta) -> (PyPathBuf, PyBytes) {
 
 pub fn from_delta_to_tuple(py: Python, delta: &Delta) -> PyObject {
     let (name, node) = from_key(py, &delta.key);
-    let (base_name, base_node) = from_base(py, &delta);
+    let (base_name, base_node) = from_base(py, delta);
     let bytes = PyBytes::new(py, &delta.data);
     // A python delta is a tuple: (name, node, base name, base node, delta bytes)
     (
@@ -132,10 +132,10 @@ pub fn from_key_to_tuple<'a>(py: Python, key: &'a Key) -> PyTuple {
 }
 
 pub fn from_tuple_to_key(py: Python, py_tuple: &PyObject) -> PyResult<Key> {
-    let py_tuple = <&PyTuple>::extract(py, &py_tuple)?.as_slice(py);
+    let py_tuple = <&PyTuple>::extract(py, py_tuple)?.as_slice(py);
     let name = <PyPathBuf>::extract(py, &py_tuple[0])?;
     let node = <&PyBytes>::extract(py, &py_tuple[1])?;
-    to_key(py, &name, &node)
+    to_key(py, &name, node)
 }
 
 pub fn to_metadata(py: Python, meta: &PyDict) -> PyResult<Metadata> {

@@ -86,7 +86,7 @@ impl<'s> FromPyObject<'s> for FlagDef {
     fn extract(py: Python, obj: &'s PyObject) -> PyResult<Self> {
         let tuple: PyTuple = obj.extract(py)?;
         if tuple.len(py) < 3 {
-            let msg = format!("flag defintion requires at least 3 items");
+            let msg = "flag defintion requires at least 3 items".to_string();
             return Err(PyErr::new::<exc::ValueError, _>(py, msg));
         }
         let short: String = tuple.get_item(py, 0).extract(py)?;
@@ -106,17 +106,10 @@ impl<'s> FromPyObject<'s> for FlagDef {
     }
 }
 
-impl Into<Flag> for FlagDef {
-    fn into(self) -> Flag {
+impl From<FlagDef> for Flag {
+    fn from(val: FlagDef) -> Self {
         let description = "";
-        (
-            self.short,
-            self.long,
-            description,
-            self.default,
-            self.flag_type,
-        )
-            .into()
+        (val.short, val.long, description, val.default, val.flag_type).into()
     }
 }
 
@@ -150,7 +143,7 @@ fn expand_args(py: Python, config: config, args: Vec<String>) -> PyResult<(Vec<S
     let cfg = &config.get_cfg(py);
 
     let lookup = move |name: &str| {
-        if name.contains(":") {
+        if name.contains(':') {
             return None;
         }
         match (cfg.get("alias", name), cfg.get("defaults", name)) {
@@ -231,44 +224,32 @@ fn map_to_python_err(py: Python, err: ParseError) -> PyErr {
     let msg = format!("{}", err);
     match err {
         ParseError::OptionNotRecognized { option_name } => {
-            return PyErr::new::<exceptions::OptionNotRecognized, _>(py, (msg, option_name));
+            PyErr::new::<exceptions::OptionNotRecognized, _>(py, (msg, option_name))
         }
         ParseError::OptionRequiresArgument { option_name } => {
-            return PyErr::new::<exceptions::OptionRequiresArgument, _>(py, (msg, option_name));
+            PyErr::new::<exceptions::OptionRequiresArgument, _>(py, (msg, option_name))
         }
         ParseError::OptionArgumentInvalid {
             option_name,
             given,
             expected,
-        } => {
-            return PyErr::new::<exceptions::OptionArgumentInvalid, _>(
-                py,
-                (msg, option_name, given, expected),
-            );
-        }
+        } => PyErr::new::<exceptions::OptionArgumentInvalid, _>(
+            py,
+            (msg, option_name, given, expected),
+        ),
         ParseError::OptionAmbiguous {
             option_name,
             possibilities,
-        } => {
-            return PyErr::new::<exceptions::OptionAmbiguous, _>(
-                py,
-                (msg, option_name, possibilities),
-            );
-        }
+        } => PyErr::new::<exceptions::OptionAmbiguous, _>(py, (msg, option_name, possibilities)),
         ParseError::AmbiguousCommand {
             command_name,
             possibilities,
-        } => {
-            return PyErr::new::<exceptions::AmbiguousCommand, _>(
-                py,
-                (msg, command_name, possibilities),
-            );
-        }
+        } => PyErr::new::<exceptions::AmbiguousCommand, _>(py, (msg, command_name, possibilities)),
         ParseError::CircularReference { command_name } => {
-            return PyErr::new::<exceptions::CircularReference, _>(py, (msg, command_name));
+            PyErr::new::<exceptions::CircularReference, _>(py, (msg, command_name))
         }
         ParseError::MalformedAlias { name, value } => {
-            return PyErr::new::<exceptions::MalformedAlias, _>(py, (msg, name, value));
+            PyErr::new::<exceptions::MalformedAlias, _>(py, (msg, name, value))
         }
     }
 }

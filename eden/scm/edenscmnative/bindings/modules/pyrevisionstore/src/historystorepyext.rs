@@ -111,7 +111,7 @@ fn from_node_info(py: Python, key: &Key, info: &NodeInfo) -> PyTuple {
     (
         PyBytes::new(py, info.parents[0].hgid.as_ref()),
         PyBytes::new(py, info.parents[1].hgid.as_ref()),
-        PyBytes::new(py, info.linknode.as_ref().as_ref()),
+        PyBytes::new(py, info.linknode.as_ref()),
         if key.path != info.parents[0].path {
             if info.parents[0].path.is_empty() {
                 Python::None(py)
@@ -182,7 +182,7 @@ impl<T: ToKeys + HgIdHistoryStore + ?Sized> IterableHgIdHistoryStorePyExt for T 
                 node.into_object(),
                 PyBytes::new(py, node_info.parents[0].hgid.as_ref()),
                 PyBytes::new(py, node_info.parents[1].hgid.as_ref()),
-                PyBytes::new(py, node_info.linknode.as_ref().as_ref()),
+                PyBytes::new(py, node_info.linknode.as_ref()),
                 copyfrom.to_py_object(py).into_object(),
             )
                 .into_py_object(py);

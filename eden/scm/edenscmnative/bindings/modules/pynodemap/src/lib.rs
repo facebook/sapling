@@ -117,7 +117,7 @@ py_class!(class nodeset |py| {
 
     def __contains__(&self, node: &PyBytes) -> PyResult<bool> {
         let node = Node::from_slice(node.data(py)).map_pyerr(py)?;
-        Ok(self.set(py).borrow().contains(&node).map_pyerr(py)?)
+        self.set(py).borrow().contains(&node).map_pyerr(py)
     }
 
     def items(&self) -> PyResult<Vec<Bytes>> {

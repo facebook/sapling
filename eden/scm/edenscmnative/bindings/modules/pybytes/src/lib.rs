@@ -29,7 +29,7 @@ py_class!(pub class Bytes |py| {
                 slice.len() as _,
                 ffi::PyBUF_READ,
             );
-            return Ok(PyObject::from_owned_ptr(py, raw_obj))
+            Ok(PyObject::from_owned_ptr(py, raw_obj))
         }
     }
 });
