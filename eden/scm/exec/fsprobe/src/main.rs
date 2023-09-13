@@ -102,7 +102,7 @@ impl ProbePlan {
 
     pub fn run(self, stats: &Arc<Stats>) {
         for action in self.0 {
-            action.run(&*stats);
+            action.run(stats);
         }
     }
 
@@ -114,7 +114,7 @@ impl ProbePlan {
             let (sender, recv) = mpsc::sync_channel::<ProbeAction>(8);
             let thread = thread::spawn(move || {
                 for action in recv {
-                    action.run(&*stats)
+                    action.run(&stats)
                 }
             });
             threads.push(thread);
@@ -144,7 +144,7 @@ impl ProbeAction {
         if let Some(space) = space {
             let cmd = &s[..space];
             let path = &s[space + 1..];
-            if path.len() == 0 {
+            if path.is_empty() {
                 bail!("{} requires path", cmd);
             }
             match cmd {

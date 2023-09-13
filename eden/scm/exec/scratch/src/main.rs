@@ -38,22 +38,17 @@ use serde::Deserialize;
 
 /// Configuration for scratch space style. This decides whether the directory
 /// structure is kept exactly as provided subdir or not.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum ScratchStyle {
     /// With flat scratch style, the sub-directories are created one-level under
     /// the repository namespace with serialized names.
+    #[default]
     Flat,
 
     /// With mirror scratch style, the sub-directories mirror the directory
     /// hierarchy of the subdir.
     Mirror,
-}
-
-impl Default for ScratchStyle {
-    fn default() -> Self {
-        ScratchStyle::Flat
-    }
 }
 
 /// The configuration is intentionally very minimal, and explicitly
@@ -100,10 +95,7 @@ struct Config {
 fn home_dir() -> String {
     let home = dirs::home_dir().expect("resolved HOME dir");
     home.to_str()
-        .expect(&format!(
-            "HOME dir {:?} was not representable as UTF-8",
-            home
-        ))
+        .unwrap_or_else(|| panic!("HOME dir {:?} was not representable as UTF-8", home))
         .into()
 }
 
@@ -136,7 +128,7 @@ impl Config {
         file.read_to_string(&mut s)?;
 
         toml::from_str(&s)
-            .map(|c| Some(c))
+            .map(Some)
             .map_err(|e| format_err!("error while loading TOML from {}: {:?}", path.display(), e))
     }
 
@@ -190,8 +182,8 @@ impl Config {
             return over.clone();
         }
         match &self.template {
-            &Some(ref s) => s.clone(),
-            &None => {
+            Some(s) => s.clone(),
+            None => {
                 // This is a little bit of a hack; ideally we'd
                 // configure this in chef, but don't have bandwidth
                 // to prepare a recipe for this in time; will follow
@@ -522,7 +514,7 @@ fn path_command(
     let repo_root = locate_repo_root(&path)?.unwrap_or(&path);
 
     // Get the base scratch path for this repo
-    let mut result = scratch_root(&config, repo_root, encoder)?;
+    let mut result = scratch_root(config, repo_root, encoder)?;
     readme_in_scratch_path(&result)?;
     let repo_owner = get_file_owner(repo_root)?;
 
@@ -548,13 +540,13 @@ fn path_command(
         ancestors.reverse();
         for ancestor in ancestors.iter() {
             match fs::create_dir(ancestor) {
-                Ok(()) => set_file_owner(&ancestor, &repo_owner)?,
+                Ok(()) => set_file_owner(ancestor, &repo_owner)?,
                 Err(_) if ancestor.is_dir() => {}
                 Err(e) => bail!(e),
             }
         }
         if watchable {
-            create_watchmanconfig(&config, &result, &repo_owner)?;
+            create_watchmanconfig(config, &result, &repo_owner)?;
         }
     }
 

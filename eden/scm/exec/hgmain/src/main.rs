@@ -126,7 +126,7 @@ fn main() {
     // Run atexit handlers.
     atexit::drop_queued();
 
-    std::process::exit(code as i32);
+    std::process::exit(code);
 }
 
 #[cfg(unix)]

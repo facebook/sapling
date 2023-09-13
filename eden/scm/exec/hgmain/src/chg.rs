@@ -39,7 +39,7 @@ fn chg_main_wrapper(args: Vec<CString>, envs: Vec<CString>) -> i32 {
             envp.as_mut_ptr(),
             name.as_c_str().as_ptr(),
         )
-    } as i32;
+    };
     rc
 }
 
