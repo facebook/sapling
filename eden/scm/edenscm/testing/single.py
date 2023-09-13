@@ -30,6 +30,10 @@ Exit code (matches run-tests.py DebugRunTestTest):
 
 
 def main():
+    # argparse does not like "None" argv[0], which can happen with the
+    # builtin module importer.
+    if sys.argv[0] is None:
+        sys.argv = [""] + list(sys.argv[1:])
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument(
         "-o",
