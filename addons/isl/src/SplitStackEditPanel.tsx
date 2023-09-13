@@ -48,7 +48,6 @@ export function SplitStackEditPanel() {
   if (startRev == null || endRev == null || startRev > endRev) {
     return (
       <div>
-        <StackRangeSelector />
         <EmptyState small>
           <T>Select a commit to split its changes.</T>
           <br />
@@ -87,34 +86,12 @@ export function SplitStackEditPanel() {
       <SplitColumn key={rev} rev={rev} subStack={subStack} insertBlankCommit={insertBlankCommit} />
     ));
 
-  // Remove the padding/margin set by the panel.
-  // Useful for long ScrollX content.
-  const negativeMargin: React.CSSProperties = {
-    marginLeft: 'calc(0px - var(--pad))',
-    marginRight: 'calc(0px - var(--pad))',
-  };
-
   return (
-    <>
-      <StackRangeSelector />
-      <div
-        style={{
-          ...negativeMargin,
-          marginBottom: 'var(--pad)',
-          borderBottom: '1px dashed var(--tooltip-border)',
-        }}
-      />
-      <div
-        style={{
-          ...negativeMargin,
-          minWidth: 'calc(100vw - 81px)',
-          minHeight: 'calc(100vh - 270px)',
-        }}>
-        <ScrollX maxSize="calc(100vw - 50px)">
-          <Row style={{padding: '0 var(--pad)'}}>{columns}</Row>
-        </ScrollX>
-      </div>
-    </>
+    <div className="interactive-split">
+      <ScrollX maxSize="calc(100vw - 50px)">
+        <Row style={{padding: '0 var(--pad)'}}>{columns}</Row>
+      </ScrollX>
+    </div>
   );
 }
 
@@ -187,7 +164,7 @@ function SplitColumn(props: SplitColumnProps) {
       </Column>
     </EmptyState>
   ) : (
-    <ScrollY maxSize="calc(100vh - 350px)" hideBar={true}>
+    <ScrollY maxSize="calc(100vh - 280px)" hideBar={true}>
       {editors}
     </ScrollY>
   );
@@ -324,7 +301,9 @@ function StackRangeSelector() {
     const id = isStart ? 'split-dropdown-start' : 'split-dropdown-end';
     return (
       <div className="dropdown-container" style={dropdownStyle}>
-        <label htmlFor={id}>{isStart ? t('Split start') : t('Split end')}</label>
+        <label htmlFor={id} className="split-range-label">
+          {isStart ? t('Split start') : t('Split end')}
+        </label>
         <VSCodeDropdown
           id={id}
           value={value}
@@ -368,7 +347,7 @@ function StackRangeSelector() {
   // "value" if the new child is not yet rendered).
   // See also https://github.com/microsoft/vscode-webview-ui-toolkit/issues/433.
   return (
-    <FlexRow>
+    <FlexRow className="split-range-selector">
       <Dropdown isStart={true} />
       <Icon icon="ellipsis" />
       <Dropdown isStart={false} />
@@ -570,4 +549,8 @@ export function SplitFile(props: SplitFileProps) {
       </table>
     </div>
   );
+}
+
+export function SplitStackToolbar() {
+  return <StackRangeSelector />;
 }

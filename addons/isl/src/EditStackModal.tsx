@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {FlexRow, ScrollY} from './ComponentUtils';
+import {FlexRow, FlexSpacer, ScrollY} from './ComponentUtils';
 import FileStackEditPanel from './FileStackEditPanel';
 import {Modal} from './Modal';
-import {SplitStackEditPanel} from './SplitStackEditPanel';
+import {SplitStackEditPanel, SplitStackToolbar} from './SplitStackEditPanel';
 import {StackEditConfirmButtons} from './StackEditConfirmButtons';
 import {StackEditSubTree} from './StackEditSubTree';
 import {T} from './i18n';
@@ -89,6 +89,8 @@ function LoadedEditStackModal() {
         </VSCodePanelView>
       </VSCodePanels>
       <FlexRow style={{padding: 'var(--pad) 0', justifyContent: 'flex-end'}}>
+        {activeTab === 'split' && <SplitStackToolbar />}
+        <FlexSpacer />
         <StackEditConfirmButtons />
       </FlexRow>
     </Modal>

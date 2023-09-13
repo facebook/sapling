@@ -5,8 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+.interactive-split {
+  height: 100%;
+  position: relative;
+  min-width: calc(100vw - 81px);
+  min-height: calc(100vh - 220px);
+
+  margin-inline: calc(0px - var(--pad));
+}
+
 .split-commit-column {
-  margin: var(--pad);
+  margin-inline: var(--pad);
   background-color: var(--tooltip-background);
   padding: var(--pad);
   padding-bottom: 0px;
@@ -32,6 +41,14 @@
   font-weight: 300;
   opacity: 0.8;
   margin: 0 var(--pad);
+}
+
+.split-range-selector {
+  overflow-x: auto;
+}
+
+label.split-range-label {
+  font-size: 80%;
 }
 
 .split-insert-blank-commit-container {
