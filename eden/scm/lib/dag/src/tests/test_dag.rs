@@ -221,7 +221,7 @@ impl TestDag {
     /// Use this DAG as the "server", return the "client" Dag that has lazy Vertexes.
     pub async fn client(&self) -> TestDag {
         let mut client = TestDag::new();
-        client.set_remote(&self);
+        client.set_remote(self);
         client
     }
 

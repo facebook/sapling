@@ -1250,7 +1250,7 @@ mod tests {
     fn test_iter() {
         let set = SpanSet::empty();
         assert!(set.iter_desc().next().is_none());
-        assert!(set.iter_desc().rev().next().is_none());
+        assert!(set.iter_desc().next_back().is_none());
         assert_eq!(set.iter_desc().size_hint(), (0, Some(0)));
 
         let set = SpanSet::from(0..=1);

@@ -44,7 +44,7 @@ pub fn main() {
     let mut covered_ids = IdSet::empty();
     let reserved_ids = IdSet::empty();
     let outcome = nbr(id_map.assign_head(
-        head_name.clone(),
+        head_name,
         &parents_by_name,
         Group::MASTER,
         &mut covered_ids,

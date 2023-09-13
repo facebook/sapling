@@ -88,7 +88,6 @@ impl Fold for CoveredIdSetFold {
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
     }
 
-    #[allow(clippy::for_loops_over_fallibles)]
     fn accumulate(&mut self, data: &[u8]) -> indexedlog::Result<()> {
         let mut inner = self.inner.lock().unwrap();
         if data.starts_with(IndexedLogStore::MAGIC_REMOVE_SEGMENT) {
@@ -185,7 +184,7 @@ impl IdDagStore for IndexedLogStore {
             .nth(0)
         {
             None => 0,
-            Some(key) => key?.0.get(0).cloned().unwrap_or(0),
+            Some(key) => key?.0.first().cloned().unwrap_or(0),
         };
         self.cached_max_level.store(max_level, Release);
         Ok(max_level)
@@ -193,7 +192,7 @@ impl IdDagStore for IndexedLogStore {
 
     fn find_segment_by_head_and_level(&self, head: Id, level: u8) -> Result<Option<Segment>> {
         let key = Self::serialize_head_level_lookup_key(head, level);
-        match self.log.lookup(Self::INDEX_LEVEL_HEAD, &key)?.nth(0) {
+        match self.log.lookup(Self::INDEX_LEVEL_HEAD, key)?.nth(0) {
             None => Ok(None),
             Some(bytes) => Ok(Some(self.segment_from_slice(bytes?))),
         }
@@ -670,7 +669,7 @@ impl IndexedLogStore {
                 }
                 result
             })
-            .fold_def("cover", || Box::new(CoveredIdSetFold::default()))
+            .fold_def("cover", || Box::<CoveredIdSetFold>::default())
     }
 
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
@@ -936,7 +935,7 @@ mod tests {
         iddag.insert_segment(seg2)?;
         let bytes = iddag.log.iter_dirty().nth(1).unwrap()?;
         assert_eq!(
-            describe_indexedlog_entry(&bytes),
+            describe_indexedlog_entry(bytes),
             r#"# f0: MAGIC_REWRITE_LAST_FLAT
 # 00 00 00 00 00 00 00 00 05: Previous index Level = 0, Head = 5
 # 01: Flags = HAS_ROOT

@@ -626,7 +626,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             for level in (1..=max_level).rev() {
                 let seg = self.find_segment_by_head_and_level(id, level)?;
                 if let Some(seg) = seg {
-                    let span = seg.span()?.into();
+                    let span = seg.span()?;
                     trace(&|| format!(" push lv{} {:?}", level, &span));
                     result.push_span(span);
                     let parents = seg.parents()?;
@@ -1980,17 +1980,16 @@ mod tests {
 
         let flags = SegmentFlags::empty();
 
-        dag.insert(flags, 0, Id::MIN, Id(50), &vec![]).unwrap();
+        dag.insert(flags, 0, Id::MIN, Id(50), &[]).unwrap();
         assert_eq!(dag.all().unwrap().max(), Some(Id(50)));
 
-        dag.insert(flags, 0, Id(51), Id(100), &vec![Id(50)])
-            .unwrap();
+        dag.insert(flags, 0, Id(51), Id(100), &[Id(50)]).unwrap();
         assert_eq!(dag.all().unwrap().max(), Some(Id(100)));
 
-        dag.insert(flags, 0, Id(101), Id(150), &vec![]).unwrap();
+        dag.insert(flags, 0, Id(101), Id(150), &[]).unwrap();
         assert_eq!(dag.all().unwrap().max(), Some(Id(150)));
 
-        dag.insert(flags, 1, Id::MIN, Id(150), &vec![]).unwrap();
+        dag.insert(flags, 1, Id::MIN, Id(150), &[]).unwrap();
         assert_eq!(dag.all().unwrap().max(), Some(Id(150)));
 
         // Helper functions to make the below lines shorter.

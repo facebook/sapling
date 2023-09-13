@@ -544,7 +544,7 @@ where
             Some(vertex_fn) => vertex_fn,
             None => |s: &str| VertexName::copy_from(s.as_bytes()),
         };
-        let parents = drawdag::parse(&text);
+        let parents = drawdag::parse(text);
         let heads: Vec<_> = match heads {
             Some(heads) => heads.iter().map(|s| vertex_fn(s.as_ref())).collect(),
             None => {

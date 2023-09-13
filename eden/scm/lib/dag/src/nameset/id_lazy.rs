@@ -294,7 +294,7 @@ impl AsyncNameSetQuery for IdLazySet {
             let mut loaded = Vec::new();
             loop {
                 // Fast paths.
-                if let Some(&last_id) = inner.visited.iter().rev().next() {
+                if let Some(&last_id) = inner.visited.iter().next_back() {
                     let hints = self.hints();
                     if hints.contains(Flags::ID_DESC) {
                         if last_id < id {

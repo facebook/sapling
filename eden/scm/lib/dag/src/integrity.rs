@@ -96,7 +96,7 @@ where
 
                 // Maintain heads and roots. This can only be calculated from flat segments.
                 if level == 0 {
-                    let previous_head = heads.iter().rev().next().cloned();
+                    let previous_head = heads.iter().next_back().cloned();
                     if let Some(head) = previous_head {
                         if span.low <= head {
                             add_problem(format!(

@@ -265,7 +265,7 @@ fn test_specific_dag_import(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> 
     let dag1 = from_ascii_with_heads(dag, ascii, Some(&["J", "K"][..]));
 
     let dir = tempdir().unwrap();
-    let mut dag2 = NameDag::open(&dir.path())?;
+    let mut dag2 = NameDag::open(dir.path())?;
     r(dag2.import_and_flush(&dag1, nameset("J")))?;
     #[cfg(feature = "render")]
     assert_eq!(
@@ -295,7 +295,7 @@ fn test_specific_dag_import(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> 
     );
 
     // Check that dag2 is actually flushed to disk.
-    let dag3 = NameDag::open(&dir.path())?;
+    let dag3 = NameDag::open(dir.path())?;
     #[cfg(feature = "render")]
     assert_eq!(
         render(&dag3),
@@ -477,7 +477,7 @@ Lv1: R0-0[] R1-8[0]"#
     );
 
     // Applying responses to IdMap. Should not cause errors.
-    r((&mut built.name_dag.map, &built.name_dag.dag).process(response1.clone())).unwrap();
+    r((&mut built.name_dag.map, &built.name_dag.dag).process(response1)).unwrap();
     r((&mut built.name_dag.map, &built.name_dag.dag).process(response2.clone())).unwrap();
 
     // Try applying response2 to a sparse IdMap.
@@ -751,7 +751,7 @@ Lv0: RH0-6[] 7-10[5] H11-12[6, 10] N0-N3[1] N4-N5[N3, 9]"#
 #[test]
 fn test_namedag_reassign_master() -> crate::Result<()> {
     let dir = tempdir().unwrap();
-    let mut dag = NameDag::open(&dir.path())?;
+    let mut dag = NameDag::open(dir.path())?;
     dag = from_ascii(dag, "A-B-C");
 
     // The in-memory DAG can answer parent_names questions.
@@ -819,7 +819,7 @@ fn test_segment_ancestors_example1() {
     let result = build_segments(ascii_dag, "11", 3);
     let dag = result.name_dag.dag;
 
-    for (id, count) in vec![
+    for (id, count) in &[
         (11, 12),
         (10, 11),
         (9, 9),
@@ -833,7 +833,7 @@ fn test_segment_ancestors_example1() {
         (1, 2),
         (0, 1),
     ] {
-        assert_eq!(dag.ancestors(id.into()).unwrap().count(), count);
+        assert_eq!(dag.ancestors((*id).into()).unwrap().count(), *count);
     }
 
     for (a, b, ancestor) in vec![
@@ -1384,7 +1384,7 @@ impl IdMap {
                             .replace(&format!("{}-", name), &id_str)
                             .replace(&format!("{} ", name), &id_str);
                     }
-                    result = result.replace(&format!("{}", name), &id_str);
+                    result = result.replace(&name.to_string(), &id_str);
                 }
             }
         }
@@ -1393,7 +1393,7 @@ impl IdMap {
 }
 
 fn get_parents_func_from_ascii(text: &str) -> impl Fn(VertexName) -> Result<Vec<VertexName>> {
-    let parents = ::drawdag::parse(&text);
+    let parents = ::drawdag::parse(text);
     move |name: VertexName| -> Result<Vec<VertexName>> {
         Ok(parents[&String::from_utf8(name.as_ref().to_vec()).unwrap()]
             .iter()

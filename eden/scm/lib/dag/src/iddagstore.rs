@@ -226,9 +226,9 @@ pub trait IdDagStore: Send + Sync + 'static {
 
     /// Find segments that fully covers the given range. Return segments in ascending order.
     fn segments_in_span_ascending(&self, span: Span, level: Level) -> Result<Vec<Segment>> {
-        let mut iter = self.iter_segments_ascending(span.low, level)?;
+        let iter = self.iter_segments_ascending(span.low, level)?;
         let mut result = Vec::new();
-        while let Some(item) = iter.next() {
+        for item in iter {
             let seg = item?;
             let seg_span = seg.span()?;
             if seg_span.low >= span.low && seg_span.high <= span.high {
@@ -516,7 +516,7 @@ pub(crate) mod tests {
     }
 
     fn segments_to_owned(segments: &[&Segment]) -> Vec<Segment> {
-        segments.into_iter().cloned().cloned().collect()
+        segments.iter().cloned().cloned().collect()
     }
 
     fn test_find_segment_by_head_and_level(store: &dyn IdDagStore) {
@@ -1052,7 +1052,7 @@ P->C: 50->N100, 50->N300"#
         #[cfg(feature = "indexedlog-backend")]
         {
             let dir = tempfile::tempdir().unwrap();
-            let mut store = IndexedLogStore::open(&dir.path()).unwrap();
+            let mut store = IndexedLogStore::open(dir.path()).unwrap();
             tracing::debug!("testing IndexedLogStore");
             f(&mut store);
         }
