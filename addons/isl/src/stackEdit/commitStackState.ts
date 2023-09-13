@@ -1153,7 +1153,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * - Does not have "originalStack".
    * - "Dense". Therefore file revs (in fileStacks) map to all
    *   commits.
-   * - Does not have rename infomration, which adds complexities
+   * - Does not have rename information, which adds complexities
    *   to "dense" handling. This might be solvable but the current
    *   implementation ignores renames for simplicity.
    *

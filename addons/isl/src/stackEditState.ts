@@ -45,6 +45,7 @@ export type StackEditOpDescription =
       commit: CommitState;
     }
   | {name: 'import'}
+  | {name: 'insertBlankCommit'}
   | {name: 'fileStack'; fileDesc: string}
   | {name: 'split'; path: string}
   | {name: 'metaedit'; commit: CommitState};

@@ -34,6 +34,37 @@
   margin: 0 var(--pad);
 }
 
+.split-insert-blank-commit-container {
+  height: auto;
+  margin-top: var(--pad);
+}
+.split-insert-blank-commit-container > .tooltip-creator {
+  height: calc(100% - 3 * var(--pad));
+}
+.split-insert-blank-commit {
+  cursor: pointer;
+  margin: calc(-1 * var(--pad) + var(--halfpad));
+  padding: var(--halfpad);
+  padding-top: calc(2 * var(--pad));
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  height: 100%;
+  transition: background-color 0.1s;
+  border-radius: 4px;
+}
+.split-insert-blank-commit:hover {
+  background-color: var(--tooltip-background);
+}
+.split-insert-blank-commit .codicon {
+  transition: transform 0.1s;
+  margin-left: 1px;
+  margin-right: -1px;
+}
+.split-insert-blank-commit:hover .codicon {
+  transform: scale(1.5);
+}
+
 .split-commit-file,
 .split-commit-file pre {
   font-family: var(--monospace-fontFamily);

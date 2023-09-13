@@ -14,6 +14,7 @@ import {Column, FlexRow, Row, ScrollX, ScrollY} from './ComponentUtils';
 import {EmptyState} from './EmptyState';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {Subtle} from './Subtle';
+import {Tooltip} from './Tooltip';
 import {t, T} from './i18n';
 import {SplitRangeRecord, useStackEditState} from './stackEditState';
 import {firstLine} from './utils';
@@ -24,7 +25,7 @@ import {
   VSCodeOption,
   VSCodeTextField,
 } from '@vscode/webview-ui-toolkit/react';
-import {Set as ImSet, Range, Seq} from 'immutable';
+import {Set as ImSet, Range} from 'immutable';
 import {useRef, useState, useEffect} from 'react';
 import {Icon} from 'shared/Icon';
 import {type LineIdx, splitLines, diffBlocks} from 'shared/diff';
@@ -62,10 +63,26 @@ export function SplitStackEditPanel() {
     .insertEmpty(endRev + 1, emptyTitle, endRev)
     .denseSubStack(Range(startRev, endRev + 2).toList());
 
+  const insertBlankCommit = (rev: Rev) => {
+    const newStack = stackEdit.commitStack.insertEmpty(startRev + rev, t('New Commit'));
+
+    let {splitRange} = stackEdit;
+    if (rev === 0) {
+      const newStart = newStack.get(startRev);
+      if (newStart != null) {
+        splitRange = splitRange.set('startKey', newStart.key);
+      }
+    }
+
+    stackEdit.push(newStack, {name: 'insertBlankCommit'}, splitRange);
+  };
+
   // One commit per column.
   const columns: JSX.Element[] = subStack
     .revs()
-    .map(rev => <SplitColumn key={rev} rev={rev} subStack={subStack} />);
+    .map(rev => (
+      <SplitColumn key={rev} rev={rev} subStack={subStack} insertBlankCommit={insertBlankCommit} />
+    ));
 
   // Remove the padding/margin set by the panel.
   // Useful for long ScrollX content.
@@ -101,10 +118,35 @@ export function SplitStackEditPanel() {
 type SplitColumnProps = {
   subStack: CommitStackState;
   rev: Rev;
+  insertBlankCommit: (rev: Rev) => unknown;
 };
 
+function InsertBlankCommitButton({
+  beforeRev,
+  onClick,
+}: {
+  beforeRev: Rev | undefined;
+  onClick: () => unknown;
+}) {
+  return (
+    <div className="split-insert-blank-commit-container" role="button" onClick={onClick}>
+      <Tooltip
+        placement="top"
+        title={
+          beforeRev == 0
+            ? t('Insert a new blank commit before the next commit')
+            : t('Insert a new blank commit between these commits')
+        }>
+        <div className="split-insert-blank-commit">
+          <Icon icon="add" />
+        </div>
+      </Tooltip>
+    </div>
+  );
+}
+
 function SplitColumn(props: SplitColumnProps) {
-  const {subStack, rev} = props;
+  const {subStack, rev, insertBlankCommit} = props;
 
   const commit = subStack.get(rev);
   const commitMessage = commit?.text ?? '';
@@ -128,7 +170,8 @@ function SplitColumn(props: SplitColumnProps) {
         fileRev={fileRev}
       />
     );
-    return Seq(isModified ? [editor] : []);
+    const result = isModified ? [editor] : [];
+    return result;
   });
 
   const body = editors.isEmpty() ? (
@@ -148,15 +191,20 @@ function SplitColumn(props: SplitColumnProps) {
 
   // The min width ensures it does not look too narrow for an empty commit.
   return (
-    <div className="split-commit-column">
-      <div className="split-commit-header">
-        <span className="split-commit-header-stack-number">
-          {rev + 1} / {subStack.size}
-        </span>
-        <EditableCommitTitle commitMessage={commitMessage} commitKey={commit?.key} />
+    <>
+      {editors.isEmpty() ? null : (
+        <InsertBlankCommitButton beforeRev={rev} onClick={() => insertBlankCommit(rev)} />
+      )}
+      <div className="split-commit-column">
+        <div className="split-commit-header">
+          <span className="split-commit-header-stack-number">
+            {rev + 1} / {subStack.size}
+          </span>
+          <EditableCommitTitle commitMessage={commitMessage} commitKey={commit?.key} />
+        </div>
+        {body}
       </div>
-      {body}
-    </div>
+    </>
   );
 }
 
