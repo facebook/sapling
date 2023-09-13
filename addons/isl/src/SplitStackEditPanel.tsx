@@ -10,6 +10,7 @@ import type {FileStackState, Rev} from './stackEdit/fileStackState';
 import type {RepoPath} from 'shared/types/common';
 
 import {FileHeader} from './ComparisonView/SplitDiffView/SplitDiffFileHeader';
+import {useTokenizedContentsOnceVisible} from './ComparisonView/SplitDiffView/syntaxHighlighting';
 import {Column, FlexRow, Row, ScrollX, ScrollY} from './ComponentUtils';
 import {EmptyState} from './EmptyState';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
@@ -26,7 +27,7 @@ import {
   VSCodeTextField,
 } from '@vscode/webview-ui-toolkit/react';
 import {Set as ImSet, Range} from 'immutable';
-import {useRef, useState, useEffect} from 'react';
+import {useRef, useState, useEffect, useMemo} from 'react';
 import {Icon} from 'shared/Icon';
 import {type LineIdx, splitLines, diffBlocks} from 'shared/diff';
 import {DiffType} from 'shared/patch/parse';
@@ -292,7 +293,7 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
           </div>
         }
       />
-      <SplitFile key={fileIdx} rev={fileRev} stack={fileStack} setStack={setStack} />
+      <SplitFile key={fileIdx} rev={fileRev} stack={fileStack} setStack={setStack} path={path} />
     </div>
   );
 }
@@ -472,6 +473,9 @@ type SplitFileProps = {
 
   /** The rev in the stack to edit. */
   rev: Rev;
+
+  /** The filepath */
+  path: string;
 };
 
 export function SplitFile(props: SplitFileProps) {
@@ -511,9 +515,13 @@ export function SplitFile(props: SplitFileProps) {
 
   // Diff with the left side.
   const bText = stack.getRev(rev);
-  const bLines = splitLines(bText);
-  const aLines = splitLines(stack.getRev(Math.max(0, rev - 1)));
+  const aText = stack.getRev(Math.max(0, rev - 1));
+  // memo to avoid syntax highlighting repeatedly even when the text hasn't changed
+  const bLines = useMemo(() => splitLines(bText), [bText]);
+  const aLines = useMemo(() => splitLines(aText), [aText]);
   const abBlocks = diffBlocks(aLines, bLines);
+
+  const highlights = useTokenizedContentsOnceVisible(props.path, aLines, bLines, mainContentRef);
 
   const {leftGutter, leftButtons, mainContent, rightGutter, rightButtons, lineKind} =
     computeLinesForFileStackEditor(
@@ -523,6 +531,8 @@ export function SplitFile(props: SplitFileProps) {
       'unified-diff',
       aLines,
       bLines,
+      highlights?.[0],
+      highlights?.[1],
       abBlocks,
       [],
       abBlocks,

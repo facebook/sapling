@@ -5,11 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {TokenizedHunk} from './ComparisonView/SplitDiffView/syntaxHighlighting';
 import type {RangeInfo} from './TextEditable';
 import type {FileStackState, Rev} from './stackEdit/fileStackState';
 
 import {t} from './i18n';
 import {Set as ImSet, Range} from 'immutable';
+import {applyTokenizationToLine} from 'shared/createTokenizedIntralineDiff';
 import {type Block, collapseContextBlocks, type LineIdx} from 'shared/diff';
 
 export type ComputedFileStackLines = {
@@ -34,6 +36,8 @@ export function computeLinesForFileStackEditor(
   mode: Mode,
   aLines: Array<string>,
   bLines: Array<string>,
+  highlightedALines: TokenizedHunk | undefined,
+  highlightedBLines: TokenizedHunk | undefined,
   abBlocks: Array<Block>,
   cbBlocks: Array<Block>,
   blocks: Array<Block>,
@@ -264,7 +268,9 @@ export function computeLinesForFileStackEditor(
         );
         mainContent.push(
           <div key={bi} className="unchanged line">
-            {bLineSpan(bLines[bi])}
+            {highlightedBLines == null
+              ? bLineSpan(bLines[bi])
+              : applyTokenizationToLine(bLines[bi], highlightedBLines[bi])}
           </div>,
         );
         lineKind.push('context');
@@ -290,7 +296,9 @@ export function computeLinesForFileStackEditor(
           pushLineButtons(sign, ai, undefined);
           mainContent.push(
             <div key={-ai} className={className} data-sel-id={selId}>
-              {aLines[ai]}
+              {highlightedALines == null
+                ? aLines[ai]
+                : applyTokenizationToLine(aLines[ai], highlightedALines[ai])}
             </div>,
           );
           lineKind.push('del');
@@ -335,7 +343,9 @@ export function computeLinesForFileStackEditor(
         pushLineButtons(sign, undefined, bi);
         mainContent.push(
           <div key={bi} className={lineClassName} data-sel-id={selId}>
-            {bLineSpan(bLines[bi])}
+            {highlightedBLines == null
+              ? bLineSpan(bLines[bi])
+              : applyTokenizationToLine(bLines[bi], highlightedBLines[bi])}
           </div>,
         );
         lineKind.push('add');

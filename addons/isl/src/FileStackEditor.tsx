@@ -130,6 +130,8 @@ export function FileStackEditor(props: EditorProps) {
       mode,
       aLines,
       bLines,
+      undefined,
+      undefined,
       abBlocks,
       cbBlocks,
       blocks,
