@@ -164,6 +164,9 @@ export function computeLinesForFileStackEditor(
         return newRevs === line.revs ? line : line.set('revs', newRevs);
       });
       setStack(newStack);
+
+      // deselect
+      window.getSelection()?.removeAllRanges();
     };
 
     const selected =

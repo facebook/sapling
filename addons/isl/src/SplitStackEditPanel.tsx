@@ -475,7 +475,7 @@ type SplitFileProps = {
 };
 
 export function SplitFile(props: SplitFileProps) {
-  const mainContentRef = useRef<HTMLPreElement | null>(null);
+  const mainContentRef = useRef<HTMLTableElement | null>(null);
   const [expandedLines, setExpandedLines] = useState<ImSet<LineIdx>>(ImSet);
   const [selectedLineIds, setSelectedLineIds] = useState<ImSet<string>>(ImSet);
   const {stack, rev, setStack} = props;
@@ -500,6 +500,7 @@ export function SplitFile(props: SplitFileProps) {
           selIds.push(unwrap(div.dataset.selId));
         }
       }
+
       setSelectedLineIds(ImSet(selIds));
     };
     document.addEventListener('selectionchange', handleSelect);
@@ -545,7 +546,7 @@ export function SplitFile(props: SplitFileProps) {
 
   return (
     <div className="split-file">
-      <table>
+      <table ref={mainContentRef}>
         <colgroup>
           <col width={50} /> {/* left arrows */}
           <col width={50} /> {/* before line numbers */}
