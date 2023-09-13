@@ -210,7 +210,7 @@ impl<P: FnMut(Progress)> ProgressReporter<P> {
         let inner = &self.inner;
         let progress = inner.aggregate();
         if progress != self.last_progress.to_progress() {
-            (&mut *self.callback.borrow_mut())(inner.aggregate());
+            (*self.callback.borrow_mut())(inner.aggregate());
             self.last_progress.set(progress);
         }
     }

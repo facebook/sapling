@@ -242,10 +242,7 @@ impl HttpClient {
             client.stream_with_progress(stream_requests, progress_cb)
         });
 
-        let stats = task
-            .err_into::<HttpClientError>()
-            .map(|res| Ok(res??))
-            .boxed();
+        let stats = task.err_into::<HttpClientError>().map(|res| res?).boxed();
 
         Ok((responses, stats))
     }
@@ -445,17 +442,17 @@ mod tests {
 
         let mock1 = mock("GET", "/test1")
             .with_status(201)
-            .with_body(&body1)
+            .with_body(body1)
             .create();
 
         let mock2 = mock("GET", "/test2")
             .with_status(201)
-            .with_body(&body2)
+            .with_body(body2)
             .create();
 
         let mock3 = mock("GET", "/test3")
             .with_status(201)
-            .with_body(&body3)
+            .with_body(body3)
             .create();
 
         let server_url = Url::parse(&mockito::server_url())?;
@@ -500,17 +497,17 @@ mod tests {
 
         let mock1 = mock("GET", "/test1")
             .with_status(201)
-            .with_body(&body1)
+            .with_body(body1)
             .create();
 
         let mock2 = mock("GET", "/test2")
             .with_status(201)
-            .with_body(&body2)
+            .with_body(body2)
             .create();
 
         let mock3 = mock("GET", "/test3")
             .with_status(201)
-            .with_body(&body3)
+            .with_body(body3)
             .create();
 
         let server_url = Url::parse(&mockito::server_url())?;
@@ -558,17 +555,17 @@ mod tests {
 
         let mock1 = mock("GET", "/test1")
             .with_status(201)
-            .with_body(&body1)
+            .with_body(body1)
             .create();
 
         let mock2 = mock("GET", "/test2")
             .with_status(201)
-            .with_body(&body2)
+            .with_body(body2)
             .create();
 
         let mock3 = mock("GET", "/test3")
             .with_status(201)
-            .with_body(&body3)
+            .with_body(body3)
             .create();
 
         let server_url = Url::parse(&mockito::server_url())?;

@@ -77,7 +77,7 @@ where
     }
 
     pub(crate) fn num_transfers(&self) -> usize {
-        (&*self.handles.borrow()).len()
+        (*self.handles.borrow()).len()
     }
 
     /// Add an Easy2 handle to the Multi stack.

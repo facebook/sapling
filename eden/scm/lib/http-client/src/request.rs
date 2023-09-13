@@ -212,12 +212,12 @@ impl RequestContext {
 
     /// Obtain the HTTP url of the request.
     pub fn url(&self) -> &Url {
-        &self.info.url()
+        self.info.url()
     }
 
     /// Obtain the HTTP method of the request.
     pub fn method(&self) -> &Method {
-        &self.info.method()
+        self.info.method()
     }
 
     /// Obtain the request Id.
