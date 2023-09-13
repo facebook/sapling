@@ -204,7 +204,7 @@ def _sync(
         state = backupstate.BackupState(repo, usehttp=usehttp)
 
     with repo.ui.timesection("commitcloud_sync_push"):
-        if ui.configbool("commitcloud", "usehttpupload"):
+        if usehttp:
             uploaded, failed = upload.upload(repo, None, localbackupstate=state)
             # Upload returns a list of all newly uploaded heads and failed nodes (not just heads).
             # Backup returns a revset for failed. Create a revset for compatibility.
