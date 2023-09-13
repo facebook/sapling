@@ -174,7 +174,7 @@ impl<'a> Diff<'a> {
 
         let entries = item.process(
             &mut self.sender,
-            &self.store,
+            self.store,
             self.matcher,
             &mut self.pending,
             output_dirs,
@@ -222,8 +222,12 @@ fn prefetch_thread<'a>(receiver: Receiver<DiffItem>, sender: Sender<DiffItem>, s
                     };
                 }
                 DiffItem::Changed(left, right) => {
-                    left.key().map(|key| keys.push(key));
-                    right.key().map(|key| keys.push(key));
+                    if let Some(key) = left.key() {
+                        keys.push(key)
+                    }
+                    if let Some(key) = right.key() {
+                        keys.push(key)
+                    }
                 }
             }
         }
@@ -257,7 +261,7 @@ impl<'a> Iterator for Diff<'a> {
         let result = self.output.pop_front();
         if !span.is_disabled() {
             if let Some(ref result) = result {
-                span.record("path", &result.path.as_repo_path().as_str());
+                span.record("path", result.path.as_repo_path().as_str());
             }
         }
         result.map(Ok)

@@ -302,7 +302,7 @@ impl<'a> DfsCursor<'a> {
                             self.state = State::Next;
                         }
                         Durable(durable_entry) => {
-                            match durable_entry.materialize_links(&*self.store, &self.path) {
+                            match durable_entry.materialize_links(self.store, &self.path) {
                                 Err(err) => {
                                     self.state = State::Done;
                                     return Step::Err(err);
@@ -421,7 +421,7 @@ mod tests {
         tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
             .unwrap();
         let hgid = tree.flush().unwrap();
-        let tree = TreeManifest::durable(store.clone(), hgid);
+        let tree = TreeManifest::durable(store, hgid);
 
         assert_eq!(
             tree.files(AlwaysMatcher::new())

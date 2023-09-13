@@ -139,7 +139,7 @@ impl Manifest for TreeManifest {
         };
 
         let directory = directory
-            .into_iter()
+            .iter()
             .map(|(key, value)| (key.to_owned(), value.to_fs_node()))
             .collect();
 
@@ -170,7 +170,7 @@ impl Manifest for TreeManifest {
                 Some(link) => cursor = link,
             }
         }
-        if must_insert == false {
+        if !must_insert {
             match cursor.as_ref() {
                 Leaf(existing_metadata) => {
                     if *existing_metadata == file_metadata {
@@ -191,7 +191,7 @@ impl Manifest for TreeManifest {
             cursor = cursor
                 .mut_ephemeral_links(&self.store, parent)?
                 .entry(component.to_owned())
-                .or_insert_with(|| Link::ephemeral());
+                .or_insert_with(Link::ephemeral);
         }
         match cursor
             .mut_ephemeral_links(&self.store, path_parent)?
@@ -230,7 +230,7 @@ impl Manifest for TreeManifest {
                 Some((parent, component)) => {
                     // TODO: only convert to ephemeral if a removal took place
                     // We are navigating the tree down following parent directories
-                    let ephemeral_links = cursor.mut_ephemeral_links(&store, parent)?;
+                    let ephemeral_links = cursor.mut_ephemeral_links(store, parent)?;
                     // When there is no `component` subtree we behave like the file was removed.
                     if let Some(link) = ephemeral_links.get_mut(component) {
                         if do_remove(store, link, iter)? {
@@ -302,7 +302,7 @@ impl Manifest for TreeManifest {
                         let elements: Vec<_> = iter.collect::<Result<Vec<_>>>()?;
                         let entry = store::Entry::from_elements(elements, format);
                         let hgid = compute_sha1(entry.as_ref(), format);
-                        store.insert_entry(&pathbuf, hgid, entry)?;
+                        store.insert_entry(pathbuf, hgid, entry)?;
 
                         let cell = OnceCell::new();
                         // TODO: remove clone
@@ -666,7 +666,7 @@ pub fn compat_subtree_diff(
                     }
                     let mut others = others_map
                         .remove(&element.component)
-                        .unwrap_or_else(|| vec![]);
+                        .unwrap_or_else(std::vec::Vec::new);
                     if others.contains(&element.hgid) {
                         continue;
                     }
@@ -1018,7 +1018,7 @@ mod tests {
 
         let hgid = tree.flush().unwrap();
 
-        let tree = TreeManifest::durable(store.clone(), hgid);
+        let tree = TreeManifest::durable(store, hgid);
         assert_eq!(
             tree.get_file(repo_path("a1/b1/c1/d1")).unwrap(),
             Some(make_meta("10"))
@@ -1061,7 +1061,7 @@ mod tests {
         use minibytes::Bytes;
         for (path, hgid, raw, _, _) in tree_changed.iter() {
             store
-                .insert(&path, *hgid, Bytes::copy_from_slice(&raw[..]))
+                .insert(path, *hgid, Bytes::copy_from_slice(&raw[..]))
                 .unwrap();
         }
 
@@ -1096,7 +1096,7 @@ mod tests {
             .unwrap();
         let _p1_changed = p1.finalize(vec![]).unwrap();
 
-        let mut p2 = TreeManifest::ephemeral(store.clone());
+        let mut p2 = TreeManifest::ephemeral(store);
         p2.insert(repo_path_buf("a1/b2"), make_meta("40")).unwrap();
         p2.insert(repo_path_buf("a3/b1"), make_meta("50")).unwrap();
         let _p2_changed = p2.finalize(vec![]).unwrap();
@@ -1151,7 +1151,7 @@ mod tests {
         assert_eq!(tree2_changed[1].3, tree1_changed[0].1);
         assert_eq!(tree2_changed[1].4, NULL_ID);
 
-        let mut tree3 = TreeManifest::ephemeral(store.clone());
+        let mut tree3 = TreeManifest::ephemeral(store);
         tree3.insert(repo_path_buf("a1"), make_meta("30")).unwrap();
         let tree3_changed: Vec<_> = tree3.finalize(vec![&tree2]).unwrap().collect();
         assert_eq!(tree3_changed[0].0, RepoPathBuf::new());
@@ -1162,7 +1162,7 @@ mod tests {
     #[test]
     fn test_finalize_on_durable() {
         let store = Arc::new(TestStore::new());
-        let mut tree1 = TreeManifest::ephemeral(store.clone());
+        let mut tree1 = TreeManifest::ephemeral(store);
         tree1
             .insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
@@ -1211,7 +1211,7 @@ mod tests {
             .insert(RepoPath::empty(), hgid("2"), entry_2.to_bytes())
             .unwrap();
 
-        let mut tree = TreeManifest::durable(store.clone(), hgid("2"));
+        let mut tree = TreeManifest::durable(store, hgid("2"));
 
         let _changes: Vec<_> = tree.finalize(vec![&parent]).unwrap().collect();
         // expecting the code to not panic
@@ -1273,7 +1273,7 @@ mod tests {
         use std::fmt::Write;
 
         let store = Arc::new(TestStore::new());
-        let mut tree = TreeManifest::ephemeral(store.clone());
+        let mut tree = TreeManifest::ephemeral(store);
         tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
         let _hgid = tree.flush().unwrap();
@@ -1382,7 +1382,7 @@ mod tests {
                 RepoPathBuf::new(),
                 hgid("1"),
                 vec![hgid("2")],
-                root_1_entry.clone().to_bytes()
+                root_1_entry.to_bytes()
             ),]
         );
         assert_eq!(
@@ -1398,7 +1398,7 @@ mod tests {
                 repo_path_buf("foo"),
                 hgid("11"),
                 vec![hgid("12")],
-                foo_11_entry.clone().to_bytes()
+                foo_11_entry.to_bytes()
             ),]
         );
         assert_eq!(
@@ -1413,14 +1413,7 @@ mod tests {
             vec![]
         );
         assert_eq!(
-            compat_subtree_diff(
-                store.clone(),
-                repo_path("foo"),
-                hgid("11"),
-                vec![hgid("11")],
-                3
-            )
-            .unwrap(),
+            compat_subtree_diff(store, repo_path("foo"), hgid("11"), vec![hgid("11")], 3).unwrap(),
             vec![]
         );
         // it is illegal to call compat_subtree_diff with "baz" but we can't validate for it
@@ -1436,11 +1429,7 @@ mod tests {
             store::Flag::File(FileType::Regular),
         )]);
         store
-            .insert(
-                RepoPath::empty(),
-                hgid("1"),
-                root_1_entry.clone().to_bytes(),
-            )
+            .insert(RepoPath::empty(), hgid("1"), root_1_entry.to_bytes())
             .unwrap();
 
         // add ("", 2), ("foo", 12), ("foo/bar", 121)
@@ -1470,26 +1459,19 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            compat_subtree_diff(
-                store.clone(),
-                RepoPath::empty(),
-                hgid("2"),
-                vec![hgid("1")],
-                3
-            )
-            .unwrap(),
+            compat_subtree_diff(store, RepoPath::empty(), hgid("2"), vec![hgid("1")], 3).unwrap(),
             vec![
                 (
                     repo_path_buf("foo"),
                     hgid("12"),
                     vec![],
-                    foo_12_entry.clone().to_bytes()
+                    foo_12_entry.to_bytes()
                 ),
                 (
                     RepoPathBuf::new(),
                     hgid("2"),
                     vec![hgid("1")],
-                    root_2_entry.clone().to_bytes()
+                    root_2_entry.to_bytes()
                 ),
             ]
         );

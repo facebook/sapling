@@ -82,7 +82,7 @@ impl TreeStore for TestStore {
         let result = underlying
             .get(path)
             .and_then(|hgid_hash| hgid_hash.get(&hgid))
-            .map(|entry| entry.clone());
+            .cloned();
         result.ok_or_else(|| format_err!("Could not find manifest entry for ({}, {})", path, hgid))
     }
 
