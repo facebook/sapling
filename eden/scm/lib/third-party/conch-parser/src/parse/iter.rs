@@ -4,7 +4,6 @@ use crate::parse::SourcePos;
 use crate::token::Token;
 use crate::token::Token::*;
 use std::iter as std_iter;
-use std::mem;
 
 /// Indicates an error such that EOF was encountered while some unmatched
 /// tokens were still pending. The error stores the unmatched token

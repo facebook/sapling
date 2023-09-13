@@ -81,7 +81,7 @@ impl Node {
     /// or [`None`] if there is no node.
     fn find(&self, path: &RepoPath) -> Option<&Node> {
         let mut node = self;
-        let mut components = path.components();
+        let components = path.components();
         for component in components {
             let component: Cow<str> = if node.case_sensitive {
                 Cow::Borrowed(component.as_str())

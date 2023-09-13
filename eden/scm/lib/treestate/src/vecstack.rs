@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::mem;
-
 /// Manage a `Vec` of references. so elements with different lifetimes can be
 /// pushed manually, and poped automatically. Elements pushed later must have
 /// a more narrow lifetime than elements pushed earlier.

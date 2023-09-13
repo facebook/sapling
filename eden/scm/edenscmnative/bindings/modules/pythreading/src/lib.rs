@@ -9,7 +9,6 @@
 
 use std::cell::Cell;
 use std::cell::RefCell;
-use std::mem;
 use std::sync::Condvar;
 use std::sync::Mutex;
 use std::thread;
