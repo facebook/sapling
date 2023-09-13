@@ -45,7 +45,7 @@
 }
 
 .split-range-selector {
-  overflow-x: auto;
+  overflow: visible;
 }
 
 label.split-range-label {
