@@ -96,7 +96,7 @@ export function ContextMenus() {
     if (leftOrRight === 'left') {
       position = {top: state.y + yOffset, left: state.x + xOffset};
     } else {
-      position = {top: state.y + yOffset, right: window.innerWidth - (state.x + xOffset)};
+      position = {top: state.y + yOffset, right: window.innerWidth - (state.x - xOffset)};
     }
   } else {
     if (leftOrRight === 'left') {

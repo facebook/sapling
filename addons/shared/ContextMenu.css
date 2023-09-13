@@ -116,4 +116,5 @@
 
 .context-menu-arrow-right {
   right: var(--pad);
+  left: unset;
 }
