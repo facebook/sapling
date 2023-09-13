@@ -927,7 +927,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<uint32_t> nfsCrawlReadThreshold{
       "experimental:nfs-crawl-read-threshold",
-      500,
+      1000,
       this};
 
   /**
@@ -936,7 +936,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<uint32_t> nfsCrawlReadDirThreshold{
       "experimental:nfs-crawl-readdir-threshold",
-      100,
+      250,
       this};
 
   /**
