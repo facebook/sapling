@@ -706,7 +706,7 @@ fn get_update_target(
         .clone();
 
     match repo.resolve_commit_opt(None, &main_bookmark)? {
-        Some(id) => return Ok(Some((id, main_bookmark))),
+        Some(id) => Ok(Some((id, main_bookmark))),
         None => {
             logger.info(format!(
                 "Server has no '{}' bookmark - trying tip.",
@@ -717,7 +717,7 @@ fn get_update_target(
                 return Ok(Some((tip, "tip".to_string())));
             }
 
-            logger.info(format!("Skipping checkout - no commits available."));
+            logger.info("Skipping checkout - no commits available.".to_string());
 
             Ok(None)
         }

@@ -31,7 +31,7 @@ pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: &mut Repo) -> Result<u8> {
         let username = repo
             .config()
             .get("ui", "username")
-            .and_then(|u| Some(u.to_string()))
+            .map(|u| u.to_string())
             .unwrap_or_else(|| "".to_string());
 
         let mode = FbConfigMode::default();

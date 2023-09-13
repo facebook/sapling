@@ -73,7 +73,7 @@ impl HgPython {
 
         // If this fails, it's a fatal error.
         let name = "bindings";
-        let bindings_module = PyModule::new(py, &name).unwrap();
+        let bindings_module = PyModule::new(py, name).unwrap();
         prepare_builtin_modules(py, &bindings_module).unwrap();
         let sys_modules = PyDict::extract(py, &sys.get(py, "modules").unwrap()).unwrap();
         sys_modules.set_item(py, name, bindings_module).unwrap();
@@ -222,7 +222,7 @@ impl HgPython {
                 } else {
                     let message =
                         format_py_error(py, &err).unwrap_or("unknown python exception".to_string());
-                    let _ = io.write_err(&message);
+                    let _ = io.write_err(message);
                     1
                 }
             }
@@ -324,14 +324,14 @@ impl HgPython {
 impl Drop for HgPython {
     fn drop(&mut self) {
         if self.py_initialized_by_us {
-            info_span!("Finalize Python").in_scope(|| py_finalize())
+            info_span!("Finalize Python").in_scope(py_finalize)
         }
     }
 }
 
 fn read_to_py_object(py: Python, reader: &dyn clidispatch::io::Read) -> PyObject {
     let any = reader.as_any();
-    if let Some(_) = any.downcast_ref::<std::io::Stdin>() {
+    if any.downcast_ref::<std::io::Stdin>().is_some() {
         // The Python code accepts None, and will use its default input stream.
         py.None()
     } else if let Some(obj) = any.downcast_ref::<WrappedIO>() {
@@ -346,9 +346,9 @@ fn read_to_py_object(py: Python, reader: &dyn clidispatch::io::Read) -> PyObject
 
 fn write_to_py_object(py: Python, writer: &dyn clidispatch::io::Write) -> PyObject {
     let any = writer.as_any();
-    if let Some(_) = any.downcast_ref::<std::io::Stdout>() {
+    if any.downcast_ref::<std::io::Stdout>().is_some() {
         py.None()
-    } else if let Some(_) = any.downcast_ref::<std::io::Stderr>() {
+    } else if any.downcast_ref::<std::io::Stderr>().is_some() {
         py.None()
     } else if let Some(obj) = any.downcast_ref::<WrappedIO>() {
         obj.0.clone_ref(py)
@@ -451,7 +451,7 @@ pub fn prepare_builtin_modules(py: Python<'_>, module: &PyModule) -> PyResult<()
         "commands",
         init_bindings_commands(py, module.name(py)?)?,
     )?;
-    bindings::populate_module(py, &module)?;
+    bindings::populate_module(py, module)?;
     Ok(())
 }
 

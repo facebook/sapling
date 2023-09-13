@@ -45,7 +45,7 @@ pub fn run(ctx: ReqCtx<DebugScmStoreReplayOpts>, repo: &mut Repo) -> Result<u8> 
                 let result = store.fetch(log.keys.into_iter(), log.attrs, FetchMode::AllowRemote);
                 match result.missing() {
                     Ok(failed) => {
-                        if failed.len() > 0 {
+                        if !failed.is_empty() {
                             write!(stderr, "Failed to fetch keys {:?}\n", failed)?;
                         }
                     }

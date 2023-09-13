@@ -612,7 +612,7 @@ pub(crate) fn write_trace(io: &IO, path: &str, data: &TracingData) -> Result<()>
     let mut out: Box<dyn Write> = if path == "-" || path.is_empty() {
         Box::new(io.error())
     } else {
-        Box::new(BufWriter::new(File::create(&path)?))
+        Box::new(BufWriter::new(File::create(path)?))
     };
 
     match format {
@@ -652,11 +652,7 @@ fn log_start(args: Vec<String>, now: SystemTime) -> tracing::Span {
     } else {
         #[cfg(unix)]
         unsafe {
-            (
-                libc::getuid() as u32,
-                libc::getpid() as u32,
-                libc::nice(0) as i32,
-            )
+            (libc::getuid(), libc::getpid() as u32, libc::nice(0))
         }
 
         #[cfg(not(unix))]
@@ -741,8 +737,8 @@ fn log_end(
         procinfo::max_rss_bytes()
     };
 
-    span.record("exit_code", &exit_code);
-    span.record("max_rss", &max_rss);
+    span.record("exit_code", exit_code);
+    span.record("max_rss", max_rss);
 
     blackbox::log(&blackbox::event::Event::Finish {
         exit_code,
@@ -940,7 +936,7 @@ fn commandserver_serve(args: &[String], io: &IO) -> i32 {
 
     let run_func = |server: &Server, args: Vec<String>| -> i32 {
         tracing::debug!("commandserver is about to run command: {:?}", &args);
-        if let Err(e) = python.setup_ui_system(&server) {
+        if let Err(e) = python.setup_ui_system(server) {
             tracing::warn!("cannot setup ui.system:\n{:?}", &e);
         }
         run_command(args, io)

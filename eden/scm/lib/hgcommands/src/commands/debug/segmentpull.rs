@@ -74,7 +74,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo) -> Result<u8> {
         .context("error importing segmented changelog")??;
 
     let master = VertexName::copy_from(&to.into_byte_array());
-    let heads = VertexListWithOptions::from(vec![master.clone()]).with_highest_group(Group::MASTER);
+    let heads = VertexListWithOptions::from(vec![master]).with_highest_group(Group::MASTER);
     block_on(namedag.flush(&heads)).context("error writing segmented changelog to disk")??;
 
     Ok(0)

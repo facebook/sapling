@@ -65,7 +65,7 @@ pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>, config: &mut ConfigSet) -> Result<u
             ctx.core.io.write(generated.to_string())?;
         } else {
             for arg in ctx.opts.args {
-                let split: Vec<_> = arg.splitn(2, ".").collect();
+                let split: Vec<_> = arg.splitn(2, '.').collect();
                 if let [section, name] = split[..] {
                     let value: String = generated.get_opt(section, name)?.unwrap_or_default();
                     ctx.core.io.write(format!("{}\n", value))?;
