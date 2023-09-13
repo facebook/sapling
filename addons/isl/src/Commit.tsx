@@ -40,6 +40,7 @@ import {
   useRunOperation,
   useRunPreviewedOperation,
 } from './serverAPIState';
+import {editingStackIntentionHashes} from './stackEditState';
 import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
 import React, {memo, useEffect, useState} from 'react';
@@ -105,6 +106,8 @@ export const Commit = memo(
 
     const handlePreviewedOperation = useRunPreviewedOperation();
     const runOperation = useRunOperation();
+    const setEditStackIntentionHashes = useSetRecoilState(editingStackIntentionHashes);
+
     const isHighlighted = useRecoilValue(highlightedCommits).has(commit.hash);
 
     const inlineProgress = useRecoilValue(inlineProgressByHash(commit.hash));
@@ -141,6 +144,10 @@ export const Commit = memo(
       });
     });
 
+    const handleSplit = () => {
+      setEditStackIntentionHashes(['split', new Set([commit.hash])]);
+    };
+
     const makeContextMenuOptions = useRecoilCallback(({snapshot}) => () => {
       const items: Array<ContextMenuItem> = [
         {
@@ -168,6 +175,10 @@ export const Commit = memo(
             onClick: () => runOperation(getAmendToOperation(commit, snapshot)),
           });
         }
+        items.push({
+          label: <T>Split...</T>,
+          onClick: handleSplit,
+        });
         items.push({
           label: <T>Hide Commit and Descendants</T>,
           onClick: () => setOperationBeingPreviewed(new HideOperation(commit.hash)),
