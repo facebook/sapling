@@ -26,19 +26,46 @@ from typing import (
     Union,
 )
 
+# pyre-fixme[21]: Could not find module `edenscm.connectionpool`.
 import edenscm.connectionpool
+
+# pyre-fixme[21]: Could not find module `edenscm.context`.
 import edenscm.context
+
+# pyre-fixme[21]: Could not find module `edenscm.filelog`.
 import edenscm.filelog
+
+# pyre-fixme[21]: Could not find module `edenscm.lock`.
 import edenscm.lock
+
+# pyre-fixme[21]: Could not find module `edenscm.namespaces`.
 import edenscm.namespaces
+
+# pyre-fixme[21]: Could not find module `edenscm.pathutil`.
 import edenscm.pathutil
+
+# pyre-fixme[21]: Could not find module `edenscm.peer`.
 import edenscm.peer
+
+# pyre-fixme[21]: Could not find module `edenscm.phases`.
 import edenscm.phases
+
+# pyre-fixme[21]: Could not find module `edenscm.repository`.
 import edenscm.repository
+
+# pyre-fixme[21]: Could not find module `edenscm.scmutil`.
 import edenscm.scmutil
+
+# pyre-fixme[21]: Could not find module `edenscm.store`.
 import edenscm.store
+
+# pyre-fixme[21]: Could not find module `edenscm.urllibcompat`.
 import edenscm.urllibcompat
+
+# pyre-fixme[21]: Could not find module `edenscm.util`.
 import edenscm.util
+
+# pyre-fixme[21]: Could not find module `edenscm.vfs`.
 import edenscm.vfs
 
 _T = TypeVar("_T")
@@ -47,15 +74,18 @@ _T1 = TypeVar("_T1")
 _Tlocalpeer = TypeVar("_Tlocalpeer", bound="edenscm.repository._basepeer")
 _Tlocalrepository = TypeVar("_Tlocalrepository", bound=localrepository)
 
+# pyre-fixme[11]: Annotation `filecache` is not defined as a type.
 class _basefilecache(edenscm.scmutil.filecache):
     __doc__: str
     def __delete__(self, obj) -> None: ...
     def __get__(self, obj, type=...) -> Any: ...
     def __set__(self, obj, value) -> None: ...
 
+# pyre-fixme[11]: Annotation `propertycache` is not defined as a type.
 class filteredpropertycache(edenscm.util.propertycache):
     __doc__: str
 
+# pyre-fixme[11]: Annotation `legacypeer` is not defined as a type.
 class locallegacypeer(edenscm.repository.legacypeer, localpeer):
     __doc__: str
     _caps: Any
@@ -67,6 +97,7 @@ class locallegacypeer(edenscm.repository.legacypeer, localpeer):
     def changegroup(self, nodes, kind) -> Any: ...
     def changegroupsubset(self, bases, heads, kind) -> Any: ...
 
+# pyre-fixme[11]: Annotation `peer` is not defined as a type.
 class localpeer(edenscm.repository.peer):
     __doc__: str
     _caps: Any
@@ -83,11 +114,13 @@ class localpeer(edenscm.repository.peer):
         self, source, heads=..., common=..., bundlecaps=..., **kwargs
     ) -> Any: ...
     def heads(self, *args, **kwargs) -> list: ...
+    # pyre-fixme[11]: Annotation `localiterbatcher` is not defined as a type.
     def iterbatch(self) -> edenscm.peer.localiterbatcher: ...
     def known(self, nodes) -> Any: ...
     def listkeys(self, namespace) -> Any: ...
     def local(self) -> Any: ...
     def lookup(self, key) -> Any: ...
+    # pyre-fixme[11]: Annotation `_Tlocalpeer` is not defined as a type.
     def peer(self: _Tlocalpeer) -> _Tlocalpeer: ...
     def pushkey(self, namespace, key, old, new) -> Any: ...
     def stream_out(self, shallow=...) -> NoReturn: ...
@@ -111,16 +144,22 @@ class localrepository:
     _lockfreeprefix: Set[str]
     _lockref: Optional[_weakref.ReferenceType[Any]]
     _mutationstore: Any
+    # pyre-fixme[11]: Annotation `phasecache` is not defined as a type.
     _phasecache: edenscm.phases.phasecache
     _phasedefaults: List[Any]
     _postdsstatus: List[Tuple[Any, Any]]
     _transref: Optional[_weakref.ReferenceType[Any]]
     _wlockfreeprefix: Set[str]
     _wlockref: Optional[_weakref.ReferenceType[Any]]
+    # pyre-fixme[11]: Annotation `pathauditor` is not defined as a type.
     auditor: edenscm.pathutil.pathauditor
+    # pyre-fixme[11]: Annotation `ui` is not defined as a type.
     baseui: edenscm.ui.ui
+    # pyre-fixme[11]: Annotation `vfs` is not defined as a type.
     cachevfs: edenscm.vfs.vfs
+    # pyre-fixme[11]: Annotation `connectionpool` is not defined as a type.
     connectionpool: edenscm.connectionpool.connectionpool
+    # pyre-fixme[11]: Annotation `dirstate` is not defined as a type.
     dirstate: edenscm.dirstate.dirstate
     disableeventreporting: Callable[..., contextlib._GeneratorContextManager]
     featuresetupfuncs: Set[Any]
@@ -130,6 +169,7 @@ class localrepository:
     filterpats: Dict[Any, List[Tuple[Any, Any, Any]]]
     localvfs: edenscm.vfs.vfs
     manifestlog: Any
+    # pyre-fixme[11]: Annotation `namespaces` is not defined as a type.
     names: edenscm.namespaces.namespaces
     nofsauditor: edenscm.pathutil.pathauditor
     obsstore: Any
@@ -145,6 +185,7 @@ class localrepository:
     sharedvfs: Optional[edenscm.vfs.vfs]
     sjoin: Callable[[Any], Any]
     spath: str
+    # pyre-fixme[11]: Annotation `basicstore` is not defined as a type.
     store: edenscm.store.basicstore
     storefeaturesetupfuncs: Set[Any]
     storerequirements: Set[str]
@@ -220,6 +261,7 @@ class localrepository:
     def cancopy(self) -> bool: ...
     def changectx(
         self,
+        # pyre-fixme[11]: Annotation `basectx` is not defined as a type.
         changeid: Union[int, str, bytes, edenscm.context.basectx],
     ) -> edenscm.context.basectx: ...
     def checkcommitpatterns(self, wctx, match, status, fail) -> None: ...
@@ -234,7 +276,9 @@ class localrepository:
     def debugwireargs(self, one, two, three=..., four=..., five=...) -> str: ...
     def destroyed(self) -> None: ...
     def destroying(self) -> None: ...
+    # pyre-fixme[11]: Annotation `filelog` is not defined as a type.
     def file(self, f) -> edenscm.filelog.filelog: ...
+    # pyre-fixme[11]: Annotation `filectx` is not defined as a type.
     def filectx(self, path, changeid=..., fileid=...) -> edenscm.context.filectx: ...
     def getcwd(self) -> str: ...
     def headrevs(

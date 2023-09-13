@@ -21,10 +21,16 @@ import contextlib
 import json
 import sys
 
+# pyre-fixme[21]: Could not find module `edenscm`.
 from edenscm import bookmarks, error, registrar, scmutil
+
+# pyre-fixme[21]: Could not find module `edenscm.i18n`.
 from edenscm.i18n import _
+
+# pyre-fixme[21]: Could not find module `edenscm.node`.
 from edenscm.node import hex, nullid
 
+# pyre-fixme[21]: Could not find module `edenscm.ext.pushrebase.stackpush`.
 from ..pushrebase.stackpush import pushrequest
 from . import commitdata, serialization
 
