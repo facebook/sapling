@@ -7,11 +7,13 @@
 
 .split-commit-column {
   margin: var(--pad);
-  max-width: 700px;
   background-color: var(--tooltip-background);
   padding: var(--pad);
   padding-bottom: 0px;
   border-radius: var(--halfpad);
+  min-width: 700px;
+  max-width: 700px;
+  flex-shrink: 0;
 }
 
 .split-commit-header {

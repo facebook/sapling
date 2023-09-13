@@ -148,7 +148,7 @@ function SplitColumn(props: SplitColumnProps) {
 
   // The min width ensures it does not look too narrow for an empty commit.
   return (
-    <div className="split-commit-column" style={{minWidth: 300, flexShrink: 0}}>
+    <div className="split-commit-column">
       <div className="split-commit-header">
         <span className="split-commit-header-stack-number">
           {rev + 1} / {subStack.size}
