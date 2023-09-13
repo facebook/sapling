@@ -6,7 +6,6 @@
  */
 
 import {FlexRow, FlexSpacer, ScrollY} from './ComponentUtils';
-import FileStackEditPanel from './FileStackEditPanel';
 import {Modal} from './Modal';
 import {SplitStackEditPanel, SplitStackToolbar} from './SplitStackEditPanel';
 import {StackEditConfirmButtons} from './StackEditConfirmButtons';
@@ -59,9 +58,10 @@ function LoadedEditStackModal() {
         <VSCodePanelTab id="tab-commits">
           <T>Commits</T>
         </VSCodePanelTab>
-        <VSCodePanelTab id="tab-files">
+        {/* TODO: reenable the "files" tab */}
+        {/* <VSCodePanelTab id="tab-files">
           <T>Files</T>
-        </VSCodePanelTab>
+        </VSCodePanelTab> */}
         <VSCodePanelTab id="tab-split">
           <T>Split</T>
           <sup
@@ -81,9 +81,10 @@ function LoadedEditStackModal() {
             )}
           </ScrollY>
         </VSCodePanelView>
-        <VSCodePanelView style={getPanelViewStyle('files')} id="view-files">
+        {/* TODO: reenable the "files" tab */}
+        {/* <VSCodePanelView style={getPanelViewStyle('files')} id="view-files">
           {activeTab === 'files' && <FileStackEditPanel />}
-        </VSCodePanelView>
+        </VSCodePanelView> */}
         <VSCodePanelView style={getPanelViewStyle('split')} id="view-split">
           {activeTab === 'split' && <SplitStackEditPanel />}
         </VSCodePanelView>
