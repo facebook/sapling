@@ -12,7 +12,7 @@
 
 from __future__ import absolute_import
 
-from typing import Dict, Optional, Sized, Union
+from typing import Dict, Optional, Sized, Tuple, Union
 
 from . import (
     encoding,
@@ -343,6 +343,13 @@ def showauthor(repo, ctx, templ, **args):
     return ctx.user()
 
 
+@templatekeyword("committer")
+def showcommitter(repo, ctx, templ, **args):
+    """String. The committer. Fallback to "author"."""
+    committer = ctx.extra().get("committer")
+    return committer or ctx.user()
+
+
 @templatekeyword("bisect")
 def showbisect(repo, ctx, templ, **args) -> Optional[str]:
     """String. The changeset bisection status."""
@@ -413,9 +420,32 @@ def showactivebookmark(**args):
     return ""
 
 
+def _date_from_extra(ctx, extra_name: str) -> Tuple[int, int]:
+    d = ctx.extra().get(extra_name)
+    if d:
+        try:
+            sec_str, tz_str = d.split(" ", 1)
+            return int(sec_str), int(tz_str)
+        except ValueError:
+            pass
+    return ctx.date()
+
+
+@templatekeyword("authordate")
+def showauthordate(repo, ctx, templ, **args):
+    """Date information. The "author" date. Fallback to "date"."""
+    return _date_from_extra(ctx, "author_date")
+
+
+@templatekeyword("committerdate")
+def showcommitterdate(repo, ctx, templ, **args):
+    """Date information. The "committer" date. Fallback to "date"."""
+    return _date_from_extra(ctx, "committer_date")
+
+
 @templatekeyword("date")
 def showdate(repo, ctx, templ, **args):
-    """Date information. The date when the changeset was committed."""
+    """Date information. The date when the changeset was modified."""
     return ctx.date()
 
 

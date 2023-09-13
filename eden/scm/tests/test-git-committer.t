@@ -10,7 +10,7 @@ rewriting commits.
 
   $ dump_commits() {
   >   local revs="${1}"
-  >   sl log -r "${revs:-all()}"  -T '{desc}:\n date: {date|hgdate}\n author: {author}\n author date: {get(extras,"author_date")}\n committer: {get(extras,"committer")}\n committer date: {get(extras,"committer_date")}\n'
+  >   sl log -r "${revs:-all()}"  -T '{desc}:\n date: {date|hgdate}\n author: {author}\n author date: {authordate|hgdate}\n committer: {committer}\n committer date: {committerdate|hgdate}\n'
   > }
 
 Simple case: a single commit.
@@ -31,6 +31,14 @@ Explicitly set author and committer:
    author date: 3600 -120
    committer: user3 <>
    committer date: 7200 60
+
+Test templates:
+
+  $ sl log -T '{author}\n{authordate|isodatesec}\n{committer}\n{committerdate|isodatesec}\n'
+  user2 <>
+  1970-01-01 01:02:00 +0002
+  user3 <>
+  1970-01-01 01:59:00 -0001
 
 Metaedit without `-d` does not update author date
 "date" is the max of author and committer dates:
