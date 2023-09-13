@@ -892,3 +892,15 @@ def has_bucktest():
 @check("bash", "running via real bash")
 def has_bash():
     return False
+
+
+@check("ipython", "can import IPython")
+def has_ipython():
+    try:
+        import IPython
+
+        # force demandimport to load the module
+        IPython.embed
+    except Exception:
+        return False
+    return True
