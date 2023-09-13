@@ -192,8 +192,12 @@ label.split-range-label {
 .split-file tr:hover.del {
   background: var(--diffEditor-removedLineHighlightBackground);
 }
-.split-file tr:hover.line.change {
-  background: var(--editor-changedHighlightBackground);
+
+.split-file tr.selected.add {
+  background: var(--diffEditor-insertedLineHighlightBackground);
+}
+.split-file tr.selected.del {
+  background: var(--diffEditor-removedLineHighlightBackground);
 }
 
 .split-file .main-content {
@@ -217,6 +221,10 @@ label.split-range-label {
   transition: transform 0.1s;
 }
 
+.split-commit-file tr.selected .button {
+  opacity: 0.6;
+  transform: scale(1.25);
+}
 .split-commit-file tr:hover .button {
   opacity: 0.7;
   transform: scale(1.3);

@@ -20,7 +20,7 @@ export type ComputedFileStackLines = {
   mainContent: JSX.Element[];
   rightGutter: JSX.Element[];
   rightButtons: JSX.Element[];
-  lineKind: Array<'add' | 'del' | 'context'>;
+  lineKind: Array<string>;
 };
 
 export type Mode = 'unified-diff' | 'side-by-side-diff' | 'unified-stack';
@@ -53,7 +53,7 @@ export function computeLinesForFileStackEditor(
   const mainContent: JSX.Element[] = [];
   const rightGutter: JSX.Element[] = [];
   const rightButtons: JSX.Element[] = [];
-  const lineKind: Array<'add' | 'del' | 'context'> = [];
+  const lineKind: Array<string> = [];
 
   const leftMost = rev <= 1;
   const rightMost = rev + 1 >= stack.revLength;
@@ -301,7 +301,7 @@ export function computeLinesForFileStackEditor(
                 : applyTokenizationToLine(aLines[ai], highlightedALines[ai])}
             </div>,
           );
-          lineKind.push('del');
+          lineKind.push(className);
         }
       }
       for (let bi = b1; bi < b2; ++bi) {
@@ -348,7 +348,7 @@ export function computeLinesForFileStackEditor(
               : applyTokenizationToLine(bLines[bi], highlightedBLines[bi])}
           </div>,
         );
-        lineKind.push('add');
+        lineKind.push(lineClassName);
       }
     }
   });
