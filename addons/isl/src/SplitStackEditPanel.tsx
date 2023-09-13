@@ -28,6 +28,7 @@ import {
 } from '@vscode/webview-ui-toolkit/react';
 import {Set as ImSet, Range} from 'immutable';
 import {useRef, useState, useEffect, useMemo} from 'react';
+import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {type LineIdx, splitLines, diffBlocks} from 'shared/diff';
 import {DiffType} from 'shared/patch/parse';
@@ -177,7 +178,28 @@ function SplitColumn(props: SplitColumnProps) {
     </ScrollY>
   );
 
-  // The min width ensures it does not look too narrow for an empty commit.
+  const showExtraCommitActionsContextMenu = useContextMenu(() => {
+    const options = [];
+    const allFiles = new Set(sortedFileStacks.map(([path]) => path));
+    if (collapsedFiles.size < allFiles.size && allFiles.size > 0) {
+      options.push({
+        label: t('Collapse all files'),
+        onClick() {
+          setCollapsedFiles(allFiles);
+        },
+      });
+    }
+    if (collapsedFiles.size > 0) {
+      options.push({
+        label: t('Expand all files'),
+        onClick() {
+          setCollapsedFiles(new Set());
+        },
+      });
+    }
+    return options;
+  });
+
   return (
     <>
       {editors.isEmpty() ? null : (
@@ -189,6 +211,9 @@ function SplitColumn(props: SplitColumnProps) {
             {rev + 1} / {subStack.size}
           </span>
           <EditableCommitTitle commitMessage={commitMessage} commitKey={commit?.key} />
+          <VSCodeButton appearance="icon" onClick={e => showExtraCommitActionsContextMenu(e)}>
+            <Icon icon="ellipsis" />
+          </VSCodeButton>
         </div>
         {body}
       </div>
