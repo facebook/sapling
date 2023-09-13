@@ -8,11 +8,13 @@
 import type {CommitStackState} from './stackEdit/commitStackState';
 import type {FileStackState, Rev} from './stackEdit/fileStackState';
 import type {UseStackEditState} from './stackEditState';
+import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import type {RepoPath} from 'shared/types/common';
 
+import {BranchIndicator} from './BranchIndicator';
 import {FileHeader} from './ComparisonView/SplitDiffView/SplitDiffFileHeader';
 import {useTokenizedContentsOnceVisible} from './ComparisonView/SplitDiffView/syntaxHighlighting';
-import {Column, FlexRow, Row, ScrollX, ScrollY} from './ComponentUtils';
+import {Column, Row, ScrollX, ScrollY} from './ComponentUtils';
 import {EmptyState} from './EmptyState';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {Subtle} from './Subtle';
@@ -20,13 +22,7 @@ import {Tooltip} from './Tooltip';
 import {t, T} from './i18n';
 import {SplitRangeRecord, useStackEditState} from './stackEditState';
 import {firstLine} from './utils';
-import {
-  VSCodeButton,
-  VSCodeDivider,
-  VSCodeDropdown,
-  VSCodeOption,
-  VSCodeTextField,
-} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {Set as ImSet, Range} from 'immutable';
 import {useRef, useState, useEffect, useMemo} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
@@ -317,7 +313,59 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
   );
 }
 
-/** Select a commit range to split. */
+/** Open dialog to select a commit range to split. */
+function StackRangeSelectorButton() {
+  const stackEdit = useStackEditState();
+
+  const [startRev, endRev] = findStartEndRevs(stackEdit);
+  const {commitStack} = stackEdit;
+  const startCommit = startRev == null ? null : commitStack.get(startRev);
+
+  const label =
+    startRev == null ? null : endRev == null || startRev === endRev ? (
+      <T replace={{$commit: firstLine(startCommit?.text ?? '')}}>Splitting $commit</T>
+    ) : (
+      <T replace={{$numCommits: endRev - startRev + 1}}>Splitting $numCommits commits</T>
+    );
+  return (
+    <div className="split-range-selector-button">
+      <Tooltip trigger="click" component={() => <StackRangeSelector />}>
+        <VSCodeButton appearance="secondary">
+          <Icon icon="layers" slot="start" />
+          <T>Change split range</T>
+        </VSCodeButton>
+      </Tooltip>
+      {label}
+    </div>
+  );
+}
+
+type DragSelection = {
+  start: number;
+  startKey: string;
+  isDragging: boolean;
+} & EnsureAssignedTogether<{
+  end: number;
+  endKey: string;
+}>;
+
+/** Split range should be ordered with start at the bottom of the stack, and end at the top. */
+function orderRevsInDrag(drag: DragSelection): DragSelection {
+  if (drag.end == null) {
+    return drag;
+  }
+  if (drag.start > drag.end) {
+    return {
+      ...drag,
+      start: drag.end,
+      startKey: drag.endKey,
+      end: drag.start,
+      endKey: drag.startKey,
+    };
+  }
+  return drag;
+}
+
 function StackRangeSelector() {
   const stackEdit = useStackEditState();
 
@@ -328,70 +376,78 @@ function StackRangeSelector() {
   splitRange = splitRange.set('endKey', endKey);
   const mutableRevs = commitStack.mutableRevs().reverse();
 
-  const dropdownStyle: React.CSSProperties = {
-    width: 'calc(50% - var(--pad))',
-    minWidth: 'calc(min(260px, 50vw - 100px))',
-    marginBottom: 'var(--pad)',
-    zIndex: 3,
-  };
+  const startCommitKey = startRev == null ? '' : commitStack.get(startRev)?.key ?? '';
+  const [dragSelection, setDragSelection] = useState<DragSelection>({
+    start: startRev ?? 0,
+    startKey: startCommitKey,
+    isDragging: false,
+  });
 
-  const Dropdown = (props: {isStart: boolean}) => {
-    const {isStart} = props;
-    const value = isStart ? splitRange.startKey : splitRange.endKey ?? '';
-    const id = isStart ? 'split-dropdown-start' : 'split-dropdown-end';
+  const orderedDrag = orderRevsInDrag(dragSelection);
+  const selectStart = orderedDrag.start;
+  const selectEnd = orderedDrag.end ?? selectStart;
+
+  const commits = mutableRevs.map(rev => {
+    const commit = unwrap(commitStack.get(rev));
     return (
-      <div className="dropdown-container" style={dropdownStyle}>
-        <label htmlFor={id} className="split-range-label">
-          {isStart ? t('Split start') : t('Split end')}
-        </label>
-        <VSCodeDropdown
-          id={id}
-          value={value}
-          disabled={!isStart && startRev == null}
-          style={{width: '100%', zIndex: 3}}
-          onChange={e => {
-            const key = (e.target as unknown as {value: string}).value;
-            let newRange = splitRange.set(isStart ? 'startKey' : 'endKey', key);
-            if (isStart && endKey === '') {
-              newRange = newRange.set('endKey', key);
-            }
-            stackEdit.setSplitRange(newRange);
-          }}>
-          <VSCodeOption value="" selected={value === ''}>
-            {isStart ? <T>Select split start</T> : <T>Select split end</T>}
-          </VSCodeOption>
-          <VSCodeDivider />
-          {mutableRevs.map(rev => {
-            const commit = unwrap(commitStack.get(rev));
-            const disabled = isStart ? false : startRev != null && rev < startRev;
-            return (
-              <VSCodeOption
-                key={commit.key}
-                value={commit.key}
-                disabled={disabled}
-                selected={value === commit.key}>
-                {commit.text.split('\n', 1)[0]}
-              </VSCodeOption>
-            );
-          })}
-        </VSCodeDropdown>
+      <div
+        onPointerDown={() => {
+          setDragSelection({start: rev, startKey: commit.key, isDragging: true});
+        }}
+        onPointerEnter={() => {
+          if (dragSelection?.isDragging === true) {
+            setDragSelection(old => ({...unwrap(old), end: rev, endKey: commit.key}));
+          }
+        }}
+        key={rev}
+        className={
+          'split-range-commit' +
+          (commit.rev === selectStart ? ' selection-start' : '') +
+          (commit.rev === selectEnd ? ' selection-end' : '') +
+          (selectStart != null &&
+          selectEnd != null &&
+          commit.rev > selectStart &&
+          commit.rev < selectEnd
+            ? ' selection-middle'
+            : '')
+        }>
+        <div className="commit-selection-avatar" />
+        <div className="commit-avatar" />
+        <div className="commit-title">{firstLine(commit.text)}</div>
       </div>
     );
-  };
+  });
 
-  // Intentionally "mistakenly" use "<Dropdown>" instead of "Dropdown()" to force rerendering
-  // "<VSCodeDropdown>". This works around an issue that <VSCodeDropdown> has poor support
-  // as a "controlled component". For example, if we update the "value" to a new child being
-  // rendered, or reorder the "children", VSCodeDropdown might render the "wrong" selected
-  // item (ex. based on the index of children, not value of children; or ignore the new
-  // "value" if the new child is not yet rendered).
-  // See also https://github.com/microsoft/vscode-webview-ui-toolkit/issues/433.
   return (
-    <FlexRow className="split-range-selector">
-      <Dropdown isStart={true} />
-      <Icon icon="ellipsis" />
-      <Dropdown isStart={false} />
-    </FlexRow>
+    <div className="split-range-selector">
+      <div className="split-range-selector-info">
+        <Icon icon="info" />
+        <div>
+          <b>
+            <T>Click to select a commit to split.</T>
+          </b>
+          <br />
+          <T>Click and drag to select a range of commits.</T>
+        </div>
+      </div>
+      <div
+        className="commit-tree-root commit-group with-vertical-line"
+        onPointerUp={() => {
+          // update drag preview
+          setDragSelection(old => ({...old, isDragging: false}));
+
+          const {startKey, endKey} = orderRevsInDrag(dragSelection);
+
+          // actually change range
+          let newRange = splitRange;
+          newRange = newRange.set('startKey', startKey);
+          newRange = newRange.set('endKey', endKey ?? startKey);
+          stackEdit.setSplitRange(newRange);
+        }}>
+        <div className="commit-group inner-commit-group">{commits}</div>
+        <BranchIndicator />
+      </div>
+    </div>
   );
 }
 
@@ -593,5 +649,5 @@ export function SplitFile(props: SplitFileProps) {
 }
 
 export function SplitStackToolbar() {
-  return <StackRangeSelector />;
+  return <StackRangeSelectorButton />;
 }

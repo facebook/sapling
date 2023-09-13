@@ -44,8 +44,102 @@
   margin: 0 var(--pad);
 }
 
+.split-range-selector-button {
+  font-size: 90%;
+  display: flex;
+  gap: var(--pad);
+  align-items: center;
+}
+
+.split-range-selector-info {
+  display: flex;
+  align-items: center;
+  gap: var(--pad);
+  background-color: var(--subtle-hover-darken);
+  border-radius: 8px;
+  padding: var(--pad);
+}
+
 .split-range-selector {
   overflow: visible;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad);
+}
+.split-range-selector .inner-commit-group {
+  margin-left: var(--halfpad);
+}
+.split-range-commit {
+  display: flex;
+  flex-direction: row;
+  gap: var(--halfpad);
+  align-items: center;
+  padding-left: calc(3 * var(--pad));
+  margin-left: -20px;
+  user-select: none;
+  cursor: pointer;
+  padding-block: calc(var(--halfpad) / 2);
+}
+
+.split-range-commit .commit-title {
+  opacity: 0.7;
+}
+.split-range-commit:hover .commit-title {
+  opacity: 0.9;
+}
+
+.split-range-commit.selection-start .commit-title,
+.split-range-commit.selection-end .commit-title,
+.split-range-commit.selection-middle .commit-title {
+  opacity: 1;
+}
+
+.split-range-commit .commit-selection-avatar {
+  position: absolute;
+  z-index: 0;
+  left: -21px;
+  border-radius: 24px;
+  height: 12px;
+  width: 14px;
+  box-sizing: border-box;
+}
+
+.split-range-commit.selection-start .commit-selection-avatar,
+.split-range-commit.selection-middle .commit-selection-avatar,
+.split-range-commit.selection-end .commit-selection-avatar {
+  background-color: var(--focus-border);
+  border-color: var(--focus-border);
+  width: 24px;
+  height: 24px;
+  left: -26px;
+}
+.split-range-commit.selection-start .commit-selection-avatar {
+  border-top-right-radius: 0;
+  border-top-left-radius: 0;
+  height: 28px;
+  transform: translateY(-2px);
+}
+
+.split-range-commit.selection-end .commit-selection-avatar {
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+  height: 28px;
+  transform: translateY(2px);
+}
+.split-range-commit.selection-middle .commit-selection-avatar {
+  border-radius: 0;
+  border-top-width: 17px;
+  height: 28px;
+}
+.split-range-commit.selection-end.selection-start .commit-selection-avatar {
+  border-radius: 24px;
+  height: 24px;
+  transform: none;
+}
+.split-range-commit.selection-end .commit-avatar,
+.split-range-commit.selection-middle .commit-avatar,
+.split-range-commit.selection-start .commit-avatar {
+  border: none;
 }
 
 label.split-range-label {
