@@ -51,7 +51,7 @@ struct ObjectEntry {
 struct ObjectDelta {
   1: mononoke_types_thrift.ChangesetId origin;
   2: ObjectEntry base;
-  3: mononoke_types_thrift.binary_bytes encoded_instructions;
+  3: i64 instructions_chunk_count;
 } (rust.exhaustive)
 
 /// An entry in the GitDeltaManifest for a given commit
@@ -59,6 +59,12 @@ struct GitDeltaManifestEntry {
   1: ObjectEntry full;
   2: list<ObjectDelta> deltas;
 } (rust.exhaustive)
+
+/// The byte content of an individual chunk of DeltaInstructions
+typedef mononoke_types_thrift.binary_bytes DeltaInstructionChunk (rust.newtype)
+
+/// Identifier for accessing a specific delta instruction chunk
+typedef mononoke_types_thrift.IdType DeltaInstructionChunkId (rust.newtype)
 
 /// Identifier for accessing GitDeltaManifest
 typedef mononoke_types_thrift.IdType GitDeltaManifestId (rust.newtype)

@@ -238,8 +238,9 @@ pub struct ObjectDelta {
     origin: ChangesetId,
     /// The base Git object used for creating the delta
     base: ObjectEntry,
-    /// Raw Zlib encoded instructions for recreating this object from the base
-    encoded_instructions: Bytes,
+    /// The raw Zlib encoded instructions are stored in the blobstore in chunks. This property
+    /// reflects the number of chunks stored for these raw instructions in the blobstore
+    instructions_chunk_count: u64,
 }
 
 impl TryFrom<thrift::ObjectDelta> for ObjectDelta {
@@ -247,12 +248,12 @@ impl TryFrom<thrift::ObjectDelta> for ObjectDelta {
 
     fn try_from(value: thrift::ObjectDelta) -> Result<Self, Self::Error> {
         let base = value.base.try_into()?;
-        let encoded_instructions = value.encoded_instructions;
+        let instructions_chunk_count = value.instructions_chunk_count.try_into()?;
         let origin = ChangesetId::from_thrift(value.origin)?;
         Ok(Self {
             base,
             origin,
-            encoded_instructions,
+            instructions_chunk_count,
         })
     }
 }
@@ -260,12 +261,12 @@ impl TryFrom<thrift::ObjectDelta> for ObjectDelta {
 impl From<ObjectDelta> for thrift::ObjectDelta {
     fn from(value: ObjectDelta) -> Self {
         let base = value.base.into();
-        let encoded_instructions = value.encoded_instructions;
+        let instructions_chunk_count = value.instructions_chunk_count as i64;
         let origin = ChangesetId::into_thrift(value.origin);
         Self {
             base,
             origin,
-            encoded_instructions,
+            instructions_chunk_count,
         }
     }
 }
@@ -287,11 +288,11 @@ impl Arbitrary for ObjectDelta {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let base = ObjectEntry::arbitrary(g);
         let origin = ChangesetId::arbitrary(g);
-        let encoded_instructions = Bytes::from(Vec::arbitrary(g));
+        let instructions_chunk_count = u64::arbitrary(g) / 2;
         Self {
             base,
             origin,
-            encoded_instructions,
+            instructions_chunk_count,
         }
     }
 }

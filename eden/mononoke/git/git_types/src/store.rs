@@ -5,13 +5,19 @@
  * GNU General Public License version 2.
  */
 
+use async_trait::async_trait;
 use blobstore::impl_loadable_storable;
 use blobstore::Blobstore;
+use blobstore::Loadable;
+use blobstore::LoadableError;
 use context::CoreContext;
 use filestore::hash_bytes;
 use filestore::Sha1IncrementalHasher;
 use mononoke_types::BlobstoreBytes;
+use mononoke_types::BlobstoreKey;
 
+use crate::delta::DeltaInstructionChunk;
+use crate::delta::DeltaInstructionChunkId;
 use crate::errors::GitError;
 use crate::thrift::Tree as ThriftTree;
 use crate::thrift::TreeHandle as ThriftTreeHandle;
@@ -94,4 +100,23 @@ where
             )
         })?;
     Ok(object.into())
+}
+
+#[async_trait]
+impl Loadable for DeltaInstructionChunkId {
+    type Value = DeltaInstructionChunk;
+
+    async fn load<'a, B: Blobstore>(
+        &'a self,
+        ctx: &'a CoreContext,
+        blobstore: &'a B,
+    ) -> Result<Self::Value, LoadableError> {
+        let id = *self;
+        let blobstore_key = id.blobstore_key();
+        let get = blobstore.get(ctx, &blobstore_key);
+
+        let bytes = get.await?.ok_or(LoadableError::Missing(blobstore_key))?;
+        DeltaInstructionChunk::from_encoded_bytes(bytes.into_raw_bytes())
+            .map_err(LoadableError::Error)
+    }
 }

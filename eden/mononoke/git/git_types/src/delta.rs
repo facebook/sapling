@@ -10,16 +10,26 @@
 
 use std::cmp::Ordering;
 use std::ops::Range;
+use std::str::FromStr;
 
+use anyhow::Context;
 use anyhow::Result;
 use bytes::Bytes;
+use fbthrift::compact_protocol;
 use gix_diff::blob::diff;
 use gix_diff::blob::intern::InternedInput;
 use gix_diff::blob::intern::TokenSource;
 use gix_diff::blob::sink::Sink;
 use gix_diff::blob::Algorithm;
+use mononoke_types::path::MPath;
+use mononoke_types::private::Blake2;
+use mononoke_types::private::MononokeTypeError;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::ChangesetId;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
+
+use crate::thrift;
 
 /// The maximum size of raw bytes that can be contained within a single
 /// Data instruction
@@ -37,6 +47,93 @@ const DATA_BITMASK: u8 = (1 << 7) - 1;
 /// Specific range size within a copy instruction which is encoded uniquely by Git, ignoring
 /// the standard format
 const COPY_SPECIAL_SIZE: u32 = 1 << 16;
+
+const DELTA_INSTRUCTION_HASHING_KEY: &str = "git_delta_instruction_chunk";
+
+/// Identifier for accessing a specific delta instruction chunk from the blobstore
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct DeltaInstructionChunkId(Blake2);
+
+#[allow(dead_code)]
+impl DeltaInstructionChunkId {
+    pub fn new(
+        actual_cs_id: &ChangesetId,
+        actual_mpath: &MPath,
+        base_cs_id: &ChangesetId,
+        base_mpath: &MPath,
+        index: usize,
+    ) -> Self {
+        let mut blake2 =
+            mononoke_types::hash::Context::new(DELTA_INSTRUCTION_HASHING_KEY.as_bytes());
+        blake2.update(actual_cs_id);
+        blake2.update(actual_mpath.to_null_separated_bytes());
+        blake2.update(base_cs_id);
+        blake2.update(base_mpath.to_null_separated_bytes());
+        blake2.update(index.to_be_bytes());
+        Self(blake2.finish())
+    }
+
+    pub fn from_hash(hash: Blake2) -> Self {
+        Self(hash)
+    }
+}
+
+impl FromStr for DeltaInstructionChunkId {
+    type Err = anyhow::Error;
+    #[inline]
+    fn from_str(s: &str) -> anyhow::Result<Self> {
+        Blake2::from_str(s).map(Self::from_hash)
+    }
+}
+
+impl BlobstoreKey for DeltaInstructionChunkId {
+    fn blobstore_key(&self) -> String {
+        format!("{}.blake2.{}", DELTA_INSTRUCTION_HASHING_KEY, self.0)
+    }
+
+    fn parse_blobstore_key(key: &str) -> Result<Self> {
+        let prefix = format!("{}.blake2", DELTA_INSTRUCTION_HASHING_KEY);
+        match key.strip_prefix(&prefix) {
+            None => anyhow::bail!("{} is not a blobstore key for DeltaInstructionChunkId", key),
+            Some(suffix) => Self::from_str(suffix),
+        }
+    }
+}
+
+/// Type representing a chunk of delta instructions stored as an individual unit in the blobstore
+#[derive(Clone, Eq, PartialEq)]
+pub struct DeltaInstructionChunk(Bytes);
+
+#[allow(dead_code)]
+impl DeltaInstructionChunk {
+    pub fn new_bytes<B: Into<Bytes>>(b: B) -> Self {
+        DeltaInstructionChunk(b.into())
+    }
+
+    pub(crate) fn from_thrift(chunk: thrift::DeltaInstructionChunk) -> Result<Self> {
+        Ok(DeltaInstructionChunk(chunk.0))
+    }
+
+    pub(crate) fn into_thrift(self) -> thrift::DeltaInstructionChunk {
+        thrift::DeltaInstructionChunk(self.0)
+    }
+
+    pub fn from_encoded_bytes(encoded_bytes: Bytes) -> Result<Self> {
+        let thrift_tc = compact_protocol::deserialize(encoded_bytes).with_context(|| {
+            MononokeTypeError::BlobDeserializeError("DeltaInstructionChunk".into())
+        })?;
+        Self::from_thrift(thrift_tc)
+    }
+
+    pub fn size(&self) -> u64 {
+        // NOTE: This panics if the buffer length doesn't fit a u64: that's fine.
+        self.0.len().try_into().unwrap()
+    }
+
+    pub fn into_bytes(self) -> Bytes {
+        self.0
+    }
+}
 
 /// Individual instruction for constructing a part of a
 /// new object based on a base object
