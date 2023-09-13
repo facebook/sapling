@@ -128,6 +128,8 @@ function InsertBlankCommitButton({
 function SplitColumn(props: SplitColumnProps) {
   const {subStack, rev, insertBlankCommit} = props;
 
+  const [collapsedFiles, setCollapsedFiles] = useState(new Set());
+
   const commit = subStack.get(rev);
   const commitMessage = commit?.text ?? '';
   const sortedFileStacks = subStack.fileStacks
@@ -148,6 +150,12 @@ function SplitColumn(props: SplitColumnProps) {
         fileStack={fileStack}
         fileIdx={fileIdx}
         fileRev={fileRev}
+        collapsed={collapsedFiles.has(path)}
+        toggleCollapsed={() => {
+          const updated = new Set(collapsedFiles);
+          updated.has(path) ? updated.delete(path) : updated.add(path);
+          setCollapsedFiles(updated);
+        }}
       />
     );
     const result = isModified ? [editor] : [];
@@ -194,13 +202,15 @@ type SplitEditorWithTitleProps = {
   fileStack: FileStackState;
   fileIdx: number;
   fileRev: Rev;
+  collapsed: boolean;
+  toggleCollapsed: () => unknown;
 };
 
 function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
   const stackEdit = useStackEditState();
 
   const {commitStack} = stackEdit;
-  const {subStack, path, fileStack, fileIdx, fileRev} = props;
+  const {subStack, path, fileStack, fileIdx, fileRev, collapsed, toggleCollapsed} = props;
 
   const setStack = (newFileStack: FileStackState) => {
     const newSubStack = subStack.setFileStack(fileIdx, newFileStack);
@@ -259,6 +269,8 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
       <FileHeader
         path={path}
         diffType={DiffType.Modified}
+        open={!collapsed}
+        onChangeOpen={toggleCollapsed}
         fileActions={
           <div className="split-commit-file-arrows">
             {fileRev > 1 /* rev == 0 corresponds to fileRev == 1  */ ? (
@@ -272,7 +284,9 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
           </div>
         }
       />
-      <SplitFile key={fileIdx} rev={fileRev} stack={fileStack} setStack={setStack} path={path} />
+      {!collapsed && (
+        <SplitFile key={fileIdx} rev={fileRev} stack={fileStack} setStack={setStack} path={path} />
+      )}
     </div>
   );
 }
