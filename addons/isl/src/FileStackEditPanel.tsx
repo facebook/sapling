@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Mode} from './FileStackEditor';
+import type {Mode} from './FileStackEditorLines';
 import type {FileStackState, Rev} from './stackEdit/fileStackState';
 
 import {Row} from './ComponentUtils';
