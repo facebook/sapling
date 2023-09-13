@@ -58,8 +58,39 @@ class TestId:
                         break
                 modname = f"{mod.__name__}.{relpath.replace('/', '.')}"
                 return cls.frompath(f"doctest:{modname}")
+            # try harder, using sys.path
+            # This is needed when the modules being used are <static:*>.
+            for root in sys.path:
+                relpath = os.path.relpath(path, root)
+                if not relpath.startswith(".."):
+                    if relpath.endswith("__init__.py"):
+                        # strip "/__init__.py"
+                        name = os.path.dirname(relpath)
+                    else:
+                        # strip ".py"
+                        name = relpath[:-3]
+                    modname = name.replace("\\", ".").replace("/", ".")
+                    if modname in sys.modules:
+                        # double check that the source code matches
+                        mod = sys.modules[modname]
+
+                        if mod.__file__.startswith("<static:"):
+                            import inspect
+
+                            source1 = inspect.getsource(mod)
+                            with open(path, "rb") as f:
+                                source2 = f.read().decode()
+
+                            if source1 != source2:
+                                sys.stderr.write(
+                                    f"warning: doctest is using an older <static> version of module {modname} that no longer matches on-disk {path}\n"
+                                )
+                                sys.stderr.flush()
+
+                        return cls.frompath(f"doctest:{modname}")
             raise RuntimeError(
-                f"cannot find Python module name for {path=} to run doctest"
+                f"cannot find Python module name for {path=} to run doctest\n"
+                "hint: try 'doctest:module.name' instead of file path\n"
             )
         else:
             name = os.path.basename(path)
