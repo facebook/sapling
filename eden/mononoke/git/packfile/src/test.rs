@@ -19,6 +19,7 @@ use gix_hash::ObjectId;
 use gix_object::Object;
 use gix_object::ObjectRef;
 use gix_object::Tag;
+use tempfile::NamedTempFile;
 
 use crate::bundle::BundleWriter;
 use crate::pack::PackfileWriter;
@@ -140,11 +141,10 @@ async fn validate_packfile_generation_format() -> anyhow::Result<()> {
     // Retrieve the raw_writer (in this case Vec) back from the PackfileWriter
     let written_content = packfile_writer.into_write();
     // Write the packfile to disk
-    let mut created_file = std::fs::File::create("packfile2")?;
+    let mut created_file = NamedTempFile::new()?;
     created_file.write_all(written_content.as_ref())?;
     // Open the written packfile
-    let opened_packfile =
-        gix_pack::data::File::at(std::path::Path::new("packfile2"), gix_hash::Kind::Sha1);
+    let opened_packfile = gix_pack::data::File::at(created_file.path(), gix_hash::Kind::Sha1);
     // Validate that the packfile gets opened without error
     assert!(opened_packfile.is_ok());
     let opened_packfile = opened_packfile.expect("Expected successful opening of packfile");
@@ -158,8 +158,6 @@ async fn validate_packfile_generation_format() -> anyhow::Result<()> {
         .expect("Expected successful checksum computation");
     // Verify the checksum matches the hash generated when computing the packfile
     assert_eq!(checksum, checksum_from_file);
-    // Delete the created temporary packfile
-    std::fs::remove_file("packfile2").expect("Expected successful deleltion of packfile");
     Ok(())
 }
 
@@ -211,11 +209,10 @@ async fn validate_staggered_packfile_generation() -> anyhow::Result<()> {
     // Retrieve the raw_writer (in this case Vec) back from the PackfileWriter
     let written_content = packfile_writer.into_write();
     // Write the packfile to disk
-    let mut created_file = std::fs::File::create("packfile")?;
+    let mut created_file = NamedTempFile::new()?;
     created_file.write_all(written_content.as_ref())?;
     // Open the written packfile
-    let opened_packfile =
-        gix_pack::data::File::at(std::path::Path::new("packfile"), gix_hash::Kind::Sha1);
+    let opened_packfile = gix_pack::data::File::at(created_file.path(), gix_hash::Kind::Sha1);
     // Validate that the packfile gets opened without error
     assert!(opened_packfile.is_ok());
     let opened_packfile = opened_packfile.expect("Expected successful opening of packfile");
@@ -229,8 +226,6 @@ async fn validate_staggered_packfile_generation() -> anyhow::Result<()> {
         .expect("Expected successful checksum computation");
     // Verify the checksum matches the hash generated when computing the packfile
     assert_eq!(checksum, checksum_from_file);
-    // Delete the created temporary packfile
-    std::fs::remove_file("packfile").expect("Expected successful deleltion of packfile");
     Ok(())
 }
 
@@ -252,11 +247,10 @@ async fn validate_roundtrip_packfile_generation() -> anyhow::Result<()> {
     // Retrieve the raw_writer (in this case Vec) back from the PackfileWriter
     let written_content = packfile_writer.into_write();
     // Write the packfile to disk
-    let mut created_file = std::fs::File::create("packfile3")?;
+    let mut created_file = NamedTempFile::new()?;
     created_file.write_all(written_content.as_ref())?;
     // Open the written packfile
-    let opened_packfile =
-        gix_pack::data::File::at(std::path::Path::new("packfile3"), gix_hash::Kind::Sha1);
+    let opened_packfile = gix_pack::data::File::at(created_file.path(), gix_hash::Kind::Sha1);
     // Validate that the packfile gets opened without error
     assert!(opened_packfile.is_ok());
     let opened_packfile = opened_packfile.expect("Expected successful opening of packfile");
@@ -270,8 +264,6 @@ async fn validate_roundtrip_packfile_generation() -> anyhow::Result<()> {
         // Since we used only base objects, the packfile entries should all have is_base() set to true
         assert!(entry.header.is_base());
     }
-    // Delete the created temporary packfile
-    std::fs::remove_file("packfile3").expect("Expected successful deleltion of packfile");
     Ok(())
 }
 
