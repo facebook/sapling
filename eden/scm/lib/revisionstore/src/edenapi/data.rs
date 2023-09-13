@@ -262,7 +262,7 @@ mod tests {
         assert_eq!(fetched.file_content()?.to_vec(), d.data.as_ref().to_vec());
 
         // Check that data was written to the local store.
-        let mut fetched = cache.get_entry(k.clone())?.expect("key not found");
+        let mut fetched = cache.get_entry(k)?.expect("key not found");
         assert_eq!(fetched.content()?.to_vec(), d.data.as_ref().to_vec());
 
         Ok(())
@@ -307,7 +307,7 @@ mod tests {
         );
 
         // Check that data was written to the local store.
-        let mut fetched = cache.get_entry(k.clone())?.expect("key not found");
+        let mut fetched = cache.get_entry(k)?.expect("key not found");
         assert_eq!(fetched.content()?.to_vec(), d.data.as_ref().to_vec());
 
         Ok(())
@@ -338,7 +338,7 @@ mod tests {
         // Set up mocked EdenAPI file and tree stores.
         let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
         let d = delta("1234", None, k.clone());
-        let files = hashmap! { k.clone() => d.data.clone() };
+        let files = hashmap! { k.clone() => d.data };
 
         let client = FakeEdenApi::new().files(files).into_arc();
         let remote_files = EdenApiRemoteStore::<File>::new(client);
@@ -350,7 +350,7 @@ mod tests {
         // Empty aux cache
         let tmp = TempDir::new()?;
         let aux_cache = Arc::new(AuxStore::new(&tmp, &empty_config(), StoreType::Shared)?);
-        store.aux_cache = Some(aux_cache.clone());
+        store.aux_cache = Some(aux_cache);
 
         // Empty content cache
         let tmp = TempDir::new()?;
@@ -406,7 +406,7 @@ mod tests {
         assert_eq!(fetched.aux_data().expect("no aux data found"), expected);
 
         // Content shouldn't have been cached
-        assert_eq!(cache.get_entry(k.clone())?, None);
+        assert_eq!(cache.get_entry(k)?, None);
 
         Ok(())
     }

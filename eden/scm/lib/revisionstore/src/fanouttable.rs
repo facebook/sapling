@@ -54,7 +54,7 @@ impl FanoutTable {
         while cur.position() < table.len() as u64 {
             let candidate = cur.read_u32::<BigEndian>()? as usize;
             if candidate != start {
-                end = Option::Some(candidate as usize);
+                end = Option::Some(candidate);
                 break;
             }
         }
@@ -109,7 +109,7 @@ impl FanoutTable {
         // Fill in the fanout table with the offset of the first entry for each prefix.
         let mut offset: u32 = 0;
         for (i, hgid) in hgid_iter.enumerate() {
-            let fanout_key = get_fanout_index(fanout_raw_size, &hgid)?;
+            let fanout_key = get_fanout_index(fanout_raw_size, hgid)?;
             if fanout_table[fanout_key as usize].is_none() {
                 fanout_table[fanout_key as usize] = Some(offset);
             }
@@ -179,7 +179,7 @@ mod tests {
             &mut buf,
             SMALL_FANOUT_FACTOR,
             &mut nodes.iter(),
-            size_of::<u32>() as usize,
+            size_of::<u32>(),
             Some(&mut locations),
         )
         .expect("fanout write");
@@ -226,7 +226,7 @@ mod tests {
             &mut buf,
             LARGE_FANOUT_FACTOR,
             &mut nodes.iter(),
-            size_of::<u32>() as usize,
+            size_of::<u32>(),
             Some(&mut locations),
         )
         .expect("fanout write");
@@ -264,7 +264,7 @@ mod tests {
             &mut buf,
             SMALL_FANOUT_FACTOR,
             &mut nodes.iter(),
-            size_of::<u32>() as usize,
+            size_of::<u32>(),
             Some(&mut locations),
         )
         .expect("fanout write");
@@ -297,7 +297,7 @@ mod tests {
             &mut buf,
             SMALL_FANOUT_FACTOR,
             &mut nodes.iter(),
-            size_of::<u32>() as usize,
+            size_of::<u32>(),
             Some(&mut locations),
         )
         .expect("fanout write");
@@ -346,7 +346,7 @@ mod tests {
             ).expect("fanout write");
 
             // Simulate a data file that includes just the nodes
-            let data_buf: Vec<u8> = nodes.iter().flat_map(|x| x.as_ref().iter()).map(|x| x.clone()).collect();
+            let data_buf: Vec<u8> = nodes.iter().flat_map(|x| x.as_ref().iter()).copied().collect();
 
             // Validate the locations are correct
             for (i, hgid) in nodes.iter().enumerate() {

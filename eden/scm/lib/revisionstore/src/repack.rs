@@ -75,7 +75,7 @@ fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Resu
 
                 // If we managed to get a delta, the metadata must be present.
                 match data_pack.get_meta(StoreKey::hgid(delta.key.clone()))? {
-                    StoreResult::Found(meta) => mut_pack.add(&delta, &meta)?,
+                    StoreResult::Found(meta) => mut_pack.add(delta, &meta)?,
                     _ => {}
                 }
             }
@@ -269,7 +269,7 @@ fn filter_incrementalpacks(
             let size = p
                 .with_extension(extension)
                 .metadata()
-                .and_then(|m| Ok(m.len()))
+                .map(|m| m.len())
                 .unwrap_or(u64::max_value());
             (p, size)
         })
@@ -362,7 +362,7 @@ fn repack_datapack_to_contentstore(
 
     let new_packs = store
         .commit_pending(location)?
-        .unwrap_or_else(|| vec![])
+        .unwrap_or_else(std::vec::Vec::new)
         .into_iter()
         .collect::<HashSet<PathBuf>>();
 
@@ -422,7 +422,7 @@ fn repack_histpack_to_metadatastore(
 
     let new_packs = store
         .commit_pending(location)?
-        .unwrap_or_else(|| vec![])
+        .unwrap_or_else(std::vec::Vec::new)
         .into_iter()
         .collect::<HashSet<PathBuf>>();
 
@@ -664,7 +664,7 @@ mod tests {
 
         let newpath = repack_datapacks(paths.into_iter(), tempdir.path());
         assert!(newpath.is_ok());
-        let newpack = DataPack::new(&newpath.unwrap().unwrap(), ExtStoredPolicy::Use).unwrap();
+        let newpack = DataPack::new(newpath.unwrap().unwrap(), ExtStoredPolicy::Use).unwrap();
         assert_eq!(
             newpack
                 .to_keys()
@@ -684,7 +684,7 @@ mod tests {
         let tempdir = TempDir::new().unwrap();
 
         let paths = vec![PathBuf::from("foo.datapack"), PathBuf::from("bar.datapack")];
-        let res = repack_datapacks(paths.clone().into_iter(), tempdir.path());
+        let res = repack_datapacks(paths.into_iter(), tempdir.path());
 
         assert!(res.unwrap().is_none());
     }
@@ -738,9 +738,9 @@ mod tests {
             .unwrap();
 
         if let Some(RepackFailure::Partial(errors)) = res.downcast_ref() {
-            assert_eq!(errors.iter().count(), 1);
+            assert_eq!(errors.len(), 1);
             to_corrupt.set_extension("");
-            assert!(errors.iter().find(|(p, _)| p == &to_corrupt).is_some());
+            assert!(errors.iter().any(|(p, _)| p == &to_corrupt));
         } else {
             assert!(false);
         }
@@ -761,7 +761,7 @@ mod tests {
         assert!(newpath.is_ok());
         let newpack = HistoryPack::new(&newpath.unwrap().unwrap()).unwrap();
 
-        for (ref key, _) in nodes.iter() {
+        for (key, _) in nodes.iter() {
             let response = newpack.get_node_info(key).unwrap().unwrap();
             assert_eq!(&response, nodes.get(key).unwrap());
         }
@@ -788,7 +788,7 @@ mod tests {
         let newpack = HistoryPack::new(&newpath.unwrap().unwrap()).unwrap();
 
         for (key, _) in nodes.iter() {
-            let response = newpack.get_node_info(&key).unwrap().unwrap();
+            let response = newpack.get_node_info(key).unwrap().unwrap();
             assert_eq!(&response, nodes.get(key).unwrap());
         }
     }

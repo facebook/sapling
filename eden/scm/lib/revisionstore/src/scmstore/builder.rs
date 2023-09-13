@@ -181,7 +181,7 @@ impl<'a> FileStoreBuilder<'a> {
                 max_bytes: None,
             };
             Some(Arc::new(IndexedLogHgIdDataStore::new(
-                get_indexedlogdatastore_path(&local_path)?,
+                get_indexedlogdatastore_path(local_path)?,
                 self.get_extstored_policy()?,
                 &config,
                 StoreType::Local,
@@ -212,7 +212,7 @@ impl<'a> FileStoreBuilder<'a> {
             max_bytes,
         };
         Ok(Some(Arc::new(IndexedLogHgIdDataStore::new(
-            get_indexedlogdatastore_path(&cache_path)?,
+            get_indexedlogdatastore_path(cache_path)?,
             self.get_extstored_policy()?,
             &config,
             StoreType::Shared,
@@ -222,7 +222,7 @@ impl<'a> FileStoreBuilder<'a> {
     pub fn build_aux_local(&self) -> Result<Option<Arc<AuxStore>>> {
         Ok(if let Some(local_path) = self.local_path.clone() {
             let local_path = get_local_path(local_path, &self.suffix)?;
-            let local_path = get_indexedlogdatastore_aux_path(&local_path)?;
+            let local_path = get_indexedlogdatastore_aux_path(local_path)?;
             Some(Arc::new(AuxStore::new(
                 local_path,
                 self.config,
@@ -239,7 +239,7 @@ impl<'a> FileStoreBuilder<'a> {
             None => return Ok(None),
         };
 
-        let cache_path = get_indexedlogdatastore_aux_path(&cache_path)?;
+        let cache_path = get_indexedlogdatastore_aux_path(cache_path)?;
         Ok(Some(Arc::new(AuxStore::new(
             cache_path,
             self.config,
@@ -254,7 +254,7 @@ impl<'a> FileStoreBuilder<'a> {
 
         Ok(if let Some(local_path) = self.local_path.clone() {
             let local_path = get_local_path(local_path, &self.suffix)?;
-            Some(Arc::new(LfsStore::local(&local_path, self.config)?))
+            Some(Arc::new(LfsStore::local(local_path, self.config)?))
         } else {
             None
         })
@@ -270,7 +270,7 @@ impl<'a> FileStoreBuilder<'a> {
             None => return Ok(None),
         };
 
-        Ok(Some(Arc::new(LfsStore::shared(&cache_path, self.config)?)))
+        Ok(Some(Arc::new(LfsStore::shared(cache_path, self.config)?)))
     }
 
     pub fn build(mut self) -> Result<FileStore> {
@@ -537,7 +537,7 @@ impl<'a> TreeStoreBuilder<'a> {
                 max_bytes: None,
             };
             Some(Arc::new(IndexedLogHgIdDataStore::new(
-                get_indexedlogdatastore_path(&local_path)?,
+                get_indexedlogdatastore_path(local_path)?,
                 ExtStoredPolicy::Use,
                 &config,
                 StoreType::Local,
@@ -569,7 +569,7 @@ impl<'a> TreeStoreBuilder<'a> {
         };
 
         Ok(Some(Arc::new(IndexedLogHgIdDataStore::new(
-            get_indexedlogdatastore_path(&cache_path)?,
+            get_indexedlogdatastore_path(cache_path)?,
             ExtStoredPolicy::Use,
             &config,
             StoreType::Shared,

@@ -176,7 +176,7 @@ impl<'a> FileSectionHeader<'a> {
     pub(crate) fn read(buf: &[u8]) -> Result<FileSectionHeader> {
         let mut cur = Cursor::new(buf);
         let file_name_len = cur.read_u16::<BigEndian>()? as usize;
-        let file_name_slice = read_slice(&mut cur, &buf, file_name_len)?;
+        let file_name_slice = read_slice(&mut cur, buf, file_name_len)?;
         let file_name = RepoPath::from_utf8(file_name_slice)?;
 
         let count = cur.read_u32::<BigEndian>()?;
@@ -214,7 +214,7 @@ impl<'a> HistoryEntry<'a> {
         // Copyfrom
         let copy_from_len = cur.read_u16::<BigEndian>()? as usize;
         let copy_from = if copy_from_len > 0 {
-            let slice = read_slice(&mut cur, &buf, copy_from_len)?;
+            let slice = read_slice(&mut cur, buf, copy_from_len)?;
             Some(RepoPath::from_utf8(slice)?)
         } else {
             None
@@ -315,11 +315,11 @@ impl HistoryPack {
     }
 
     fn read_file_section_header(&self, offset: u64) -> Result<FileSectionHeader> {
-        FileSectionHeader::read(&self.mmap.as_ref().get_err(offset as usize..)?)
+        FileSectionHeader::read(self.mmap.as_ref().get_err(offset as usize..)?)
     }
 
     fn read_history_entry(&self, offset: u64) -> Result<HistoryEntry> {
-        HistoryEntry::read(&self.mmap.as_ref().get_err(offset as usize..)?)
+        HistoryEntry::read(self.mmap.as_ref().get_err(offset as usize..)?)
     }
 
     fn read_node_info(&self, key: &Key, offset: u64) -> Result<NodeInfo> {
@@ -391,8 +391,8 @@ impl Repackable for HistoryPack {
         let index_path = take(&mut self.index_path);
         drop(self);
 
-        let result1 = remove_file(&pack_path);
-        let result2 = remove_file(&index_path);
+        let result1 = remove_file(pack_path);
+        let result2 = remove_file(index_path);
         // Only check for errors after both have run. That way if pack_path doesn't exist,
         // index_path is still deleted.
         result1?;
@@ -494,7 +494,7 @@ pub mod tests {
 
         let path = &mutpack.flush().unwrap().unwrap()[0];
 
-        HistoryPack::new(&path).unwrap()
+        HistoryPack::new(path).unwrap()
     }
 
     pub fn get_nodes(mut rng: &mut ChaChaRng) -> HashMap<Key, NodeInfo> {
@@ -519,7 +519,7 @@ pub mod tests {
             ],
             linknode: HgId::random(&mut rng),
         };
-        nodes.insert(key1.clone(), info.clone());
+        nodes.insert(key1.clone(), info);
 
         // Insert key 2
         let key2 = Key::new(file2.to_owned(), node3.clone());
@@ -530,15 +530,15 @@ pub mod tests {
             ],
             linknode: HgId::random(&mut rng),
         };
-        nodes.insert(key2.clone(), info.clone());
+        nodes.insert(key2.clone(), info);
 
         // Insert key 3
         let key3 = Key::new(file1.to_owned(), node4.clone());
         let info = NodeInfo {
-            parents: [key2.clone(), key1.clone()],
+            parents: [key2, key1],
             linknode: HgId::random(&mut rng),
         };
-        nodes.insert(key3.clone(), info.clone());
+        nodes.insert(key3, info);
 
         nodes
     }
@@ -552,9 +552,9 @@ pub mod tests {
 
         let pack = make_historypack(&tempdir, &nodes);
 
-        for (ref key, ref info) in nodes.iter() {
+        for (key, info) in nodes.iter() {
             let response: NodeInfo = pack.get_node_info(key).unwrap().unwrap();
-            assert_eq!(response, **info);
+            assert_eq!(response, *info);
         }
     }
 
@@ -567,7 +567,7 @@ pub mod tests {
 
         let pack = make_historypack(&tempdir, &nodes);
 
-        let mut test_keys: Vec<StoreKey> = nodes.keys().map(|k| StoreKey::from(k)).collect();
+        let mut test_keys: Vec<StoreKey> = nodes.keys().map(StoreKey::from).collect();
         let missing_key = key("missing", "f0f0f0");
         test_keys.push(StoreKey::from(&missing_key));
 
@@ -584,7 +584,7 @@ pub mod tests {
 
         let pack = make_historypack(&tempdir, &nodes);
 
-        let mut keys: Vec<Key> = nodes.keys().map(|k| k.clone()).collect();
+        let mut keys: Vec<Key> = nodes.keys().cloned().collect();
         keys.sort_unstable();
         let mut iter_keys = pack
             .to_keys()
@@ -638,7 +638,7 @@ pub mod tests {
         fn test_file_section_header_serialization(path: RepoPathBuf, count: u32) -> bool {
             let header = FileSectionHeader {
                 file_name: path.as_ref(),
-                count: count,
+                count,
             };
             let mut buf = vec![];
             header.write(&mut buf).unwrap();

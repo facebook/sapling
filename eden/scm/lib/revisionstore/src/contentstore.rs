@@ -393,7 +393,7 @@ impl<'a> ContentStoreBuilder<'a> {
         };
 
         let shared_pack_store = Arc::new(MutableDataPackStore::new(
-            &cache_packs_path,
+            cache_packs_path,
             CorruptionPolicy::REMOVE,
             max_pending_bytes,
             max_bytes,
@@ -460,12 +460,11 @@ impl<'a> ContentStoreBuilder<'a> {
 
         let shared_mutabledatastore: Arc<dyn HgIdMutableDeltaStore> = {
             if let Some(lfs_threshold) = lfs_threshold {
-                let lfs_store = Arc::new(LfsMultiplexer::new(
+                Arc::new(LfsMultiplexer::new(
                     shared_lfs_store.clone(),
                     primary,
                     lfs_threshold.value() as usize,
-                ));
-                lfs_store
+                )) as _
             } else {
                 primary
             }
@@ -474,7 +473,7 @@ impl<'a> ContentStoreBuilder<'a> {
         let (local_mutabledatastore, local_lfs_store): (Option<Arc<dyn HgIdMutableDeltaStore>>, _) =
             if let Some(unsuffixed_local_path) = self.local_path {
                 let local_pack_store = Arc::new(MutableDataPackStore::new(
-                    get_packs_path(&unsuffixed_local_path, &self.suffix)?,
+                    get_packs_path(unsuffixed_local_path, &self.suffix)?,
                     CorruptionPolicy::IGNORE,
                     max_pending_bytes,
                     None,
@@ -515,7 +514,7 @@ impl<'a> ContentStoreBuilder<'a> {
                 let local_lfs_store = if let Some(shared_lfs_local) = self.shared_lfs_local {
                     shared_lfs_local
                 } else {
-                    Arc::new(LfsStore::local(&local_path.unwrap(), self.config)?)
+                    Arc::new(LfsStore::local(local_path.unwrap(), self.config)?)
                 };
                 blob_stores.add(local_lfs_store.clone());
                 datastore.add(local_lfs_store.clone());
@@ -598,8 +597,7 @@ pub fn check_cache_buster(config: &dyn Config, store_path: &Path) {
     for key in config.keys("hgcache-purge").into_iter() {
         if let Some(cutoff) = config
             .get("hgcache-purge", &key)
-            .map(|c| HgTime::parse(&c))
-            .flatten()
+            .and_then(|c| HgTime::parse(&c))
         {
             if check_run_once(store_path, &key, cutoff) {
                 let _ = delete_hgcache(store_path);
@@ -901,7 +899,7 @@ mod tests {
         let data = Bytes::from(&[1, 2, 3, 4][..]);
 
         let mut map = HashMap::new();
-        map.insert(k.clone(), (data.clone(), None));
+        map.insert(k.clone(), (data, None));
 
         let mut remotestore = FakeHgIdRemoteStore::new();
         remotestore.data(map);
@@ -1145,7 +1143,7 @@ mod tests {
         let data = Bytes::from(&[1, 2, 3, 4, 5][..]);
 
         let mut map = HashMap::new();
-        map.insert(k.clone(), (data.clone(), None));
+        map.insert(k, (data.clone(), None));
         let mut remotestore = FakeHgIdRemoteStore::new();
         remotestore.data(map);
         let remotestore = Arc::new(remotestore);
@@ -1208,7 +1206,7 @@ mod tests {
 
         // Populate the store again
         let store = create_store(&mut config);
-        let _ = store.get(store_key.clone())?;
+        let _ = store.get(store_key)?;
 
         // Construct a store again and verify it doesn't purge the cache
         let store = create_store(&mut config);
@@ -1278,7 +1276,7 @@ mod tests {
                 &mut config,
                 "lfs",
                 "url",
-                &Url::from_file_path(&lfsdir).unwrap().to_string(),
+                Url::from_file_path(&lfsdir).unwrap().as_ref(),
             );
 
             let k = key("a", "1");
@@ -1297,7 +1295,7 @@ mod tests {
             let data = Bytes::from("AAAA");
 
             let mut map = HashMap::new();
-            map.insert(k.clone(), (data.clone(), None));
+            map.insert(k.clone(), (data, None));
             let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.data(map);
 
@@ -1330,7 +1328,7 @@ mod tests {
             );
             store.prefetch(&[StoreKey::from(k.clone())])?;
             // Even though the blob was missing, we got it!
-            assert_eq!(store.get_missing(&[StoreKey::from(k.clone())])?, vec![]);
+            assert_eq!(store.get_missing(&[StoreKey::from(k)])?, vec![]);
 
             Ok(())
         }
@@ -1371,8 +1369,8 @@ mod tests {
                 .remotestore(Arc::new(remotestore))
                 .build()?;
 
-            let k1 = StoreKey::from(k1.clone());
-            let k2 = StoreKey::from(k2.clone());
+            let k1 = StoreKey::from(k1);
+            let k2 = StoreKey::from(k2);
             assert_eq!(store.prefetch(&[k1, k2])?, vec![]);
 
             Ok(())

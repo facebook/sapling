@@ -97,8 +97,8 @@ impl MetadataStore {
         location: RepackLocation,
     ) -> Result<()> {
         match location {
-            RepackLocation::Local => self.add(&key, &info),
-            RepackLocation::Shared => self.shared_mutablehistorystore.add(&key, &info),
+            RepackLocation::Local => self.add(key, &info),
+            RepackLocation::Shared => self.shared_mutablehistorystore.add(key, &info),
         }
     }
 
@@ -127,7 +127,7 @@ impl HgIdHistoryStore for MetadataStore {
 impl RemoteHistoryStore for MetadataStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         if let Some(remote_store) = self.remote_store.as_ref() {
-            let missing = self.get_missing(&keys)?;
+            let missing = self.get_missing(keys)?;
             if missing == vec![] {
                 Ok(())
             } else {
@@ -234,7 +234,7 @@ impl<'a> MetadataStoreBuilder<'a> {
 
         let cache_packs_path = get_cache_packs_path(self.config, &self.suffix)?;
         let shared_pack_store = Arc::new(MutableHistoryPackStore::new(
-            &cache_packs_path,
+            cache_packs_path,
             CorruptionPolicy::REMOVE,
             max_pending,
             max_bytes,
@@ -243,7 +243,7 @@ impl<'a> MetadataStoreBuilder<'a> {
             UnionHgIdHistoryStore::new();
 
         let shared_indexedloghistorystore = Arc::new(IndexedLogHgIdHistoryStore::new(
-            get_indexedloghistorystore_path(&cache_path)?,
+            get_indexedloghistorystore_path(cache_path)?,
             &self.config,
             StoreType::Shared,
         )?);
@@ -272,13 +272,13 @@ impl<'a> MetadataStoreBuilder<'a> {
         let local_mutablehistorystore: Option<Arc<dyn HgIdMutableHistoryStore>> =
             if let Some(unsuffixed_local_path) = self.local_path {
                 let local_pack_store = Arc::new(MutableHistoryPackStore::new(
-                    get_packs_path(&unsuffixed_local_path, &self.suffix)?,
+                    get_packs_path(unsuffixed_local_path, &self.suffix)?,
                     CorruptionPolicy::IGNORE,
                     max_pending,
                     None,
                 )?);
                 let local_indexedloghistorystore = Arc::new(IndexedLogHgIdHistoryStore::new(
-                    get_indexedloghistorystore_path(&local_path.unwrap())?,
+                    get_indexedloghistorystore_path(local_path.unwrap())?,
                     &self.config,
                     StoreType::Local,
                 )?);

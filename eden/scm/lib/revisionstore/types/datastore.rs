@@ -53,7 +53,7 @@ impl Metadata {
     }
 
     fn write_meta<T: Write>(flag: u8, value: u64, writer: &mut T) -> Result<()> {
-        writer.write_u8(flag as u8)?;
+        writer.write_u8(flag)?;
         writer.write_u16::<BigEndian>(u64_to_bin_len(value))?;
         u64_to_bin(value, writer)?;
         Ok(())

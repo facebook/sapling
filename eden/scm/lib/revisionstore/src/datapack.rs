@@ -245,7 +245,7 @@ impl<'a> DataEntry<'a> {
     pub fn delta(&self) -> Result<Bytes> {
         let mut cell = self.data.borrow_mut();
         if cell.is_none() {
-            *cell = Some(decompress(&self.compressed_data)?.into());
+            *cell = Some(decompress(self.compressed_data)?.into());
         }
 
         Ok(cell.as_ref().unwrap().clone())
@@ -455,8 +455,8 @@ impl Repackable for DataPack {
         let index_path = take(&mut self.index_path);
         drop(self);
 
-        let result1 = remove_file(&pack_path);
-        let result2 = remove_file(&index_path);
+        let result1 = remove_file(pack_path);
+        let result2 = remove_file(index_path);
         // Only check for errors after both have run. That way if pack_path doesn't exist,
         // index_path is still deleted.
         result1?;
@@ -528,7 +528,7 @@ pub mod tests {
 
         let path = mutdatapack.flush().unwrap().unwrap()[0].clone();
 
-        DataPack::new(&path, ExtStoredPolicy::Use).unwrap()
+        DataPack::new(path, ExtStoredPolicy::Use).unwrap()
     }
 
     #[test]
@@ -544,13 +544,13 @@ pub mod tests {
             Default::default(),
         )];
         let pack = make_datapack(&tempdir, &revisions);
-        for &(ref delta, ref _metadata) in revisions.iter() {
+        for (delta, _metadata) in revisions.iter() {
             let missing = pack.get_missing(&[StoreKey::from(&delta.key)]).unwrap();
             assert_eq!(missing.len(), 0);
         }
 
         let not = key("b", "3");
-        let missing = pack.get_missing(&vec![StoreKey::from(&not)]).unwrap();
+        let missing = pack.get_missing(&[StoreKey::from(&not)]).unwrap();
         assert_eq!(missing, vec![StoreKey::from(not)]);
     }
 
@@ -611,7 +611,7 @@ pub mod tests {
         ];
 
         let pack = make_datapack(&tempdir, &revisions);
-        for &(ref delta, ref _metadata) in revisions.iter() {
+        for (delta, _metadata) in revisions.iter() {
             let chain = pack.get_delta_chain(&delta.key).unwrap().unwrap();
             assert_eq!(chain[0], *delta);
         }

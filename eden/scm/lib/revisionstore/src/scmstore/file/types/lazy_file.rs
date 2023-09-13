@@ -56,8 +56,8 @@ impl LazyFile {
         let aux_data = match self {
             LazyFile::Lfs(content, ref ptr) => FileAuxData {
                 total_size: content.len() as u64,
-                content_id: ContentHash::content_id(&content),
-                content_sha1: ContentHash::sha1(&content),
+                content_id: ContentHash::content_id(content),
+                content_sha1: ContentHash::sha1(content),
                 content_sha256: ptr.sha256(),
                 content_seeded_blake3: Some(ContentHash::seeded_blake3(content)),
             },

@@ -301,7 +301,7 @@ impl LfsPointersStore {
     }
 
     fn add(&mut self, entry: LfsPointersEntry) -> Result<()> {
-        Ok(self.0.append(serialize(&entry)?)?)
+        self.0.append(serialize(&entry)?)
     }
 }
 
@@ -493,7 +493,7 @@ impl LfsBlobsStore {
     /// format.
     pub fn shared(path: &Path, config: &dyn Config) -> Result<Self> {
         let indexedlog = Box::new(LfsBlobsStore::IndexedLog(LfsIndexedLogBlobsStore::shared(
-            &path, config,
+            path, config,
         )?));
         let loose = Box::new(LfsBlobsStore::Loose(get_lfs_objects_path(path)?, false));
 
@@ -527,7 +527,7 @@ impl LfsBlobsStore {
     pub fn get(&self, hash: &Sha256, size: u64) -> Result<Option<Bytes>> {
         let blob = match self {
             LfsBlobsStore::Loose(path, _) => {
-                let path = LfsBlobsStore::path(&path, hash);
+                let path = LfsBlobsStore::path(path, hash);
                 let mut file = match File::open(path) {
                     Ok(file) => file,
                     Err(e) => {
@@ -566,7 +566,7 @@ impl LfsBlobsStore {
     /// Test whether the blob store contains the hash.
     pub fn contains(&self, hash: &Sha256) -> Result<bool> {
         match self {
-            LfsBlobsStore::Loose(path, _) => Ok(LfsBlobsStore::path(&path, hash).is_file()),
+            LfsBlobsStore::Loose(path, _) => Ok(LfsBlobsStore::path(path, hash).is_file()),
             LfsBlobsStore::IndexedLog(log) => log.contains(hash),
             LfsBlobsStore::Union(first, second) => {
                 Ok(first.contains(hash)? || second.contains(hash)?)
@@ -578,7 +578,7 @@ impl LfsBlobsStore {
     pub fn add(&self, hash: &Sha256, blob: Bytes) -> Result<()> {
         match self {
             LfsBlobsStore::Loose(path, is_local) => {
-                let path = LfsBlobsStore::path(&path, hash);
+                let path = LfsBlobsStore::path(path, hash);
                 let parent_path = path.parent().unwrap();
 
                 if *is_local {
@@ -606,7 +606,7 @@ impl LfsBlobsStore {
     pub fn remove(&self, hash: &Sha256) -> Result<()> {
         match self {
             LfsBlobsStore::Loose(path, _) => {
-                let path = LfsBlobsStore::path(&path, hash);
+                let path = LfsBlobsStore::path(path, hash);
                 remove_file(path).with_context(|| format!("Cannot remove LFS blob {}", hash))?;
             }
 
@@ -757,7 +757,7 @@ impl LocalStore for LfsStore {
                     }
                 }
                 StoreKey::Content(content_hash, _) => match content_hash {
-                    ContentHash::Sha256(hash) => match self.blobs.contains(&hash) {
+                    ContentHash::Sha256(hash) => match self.blobs.contains(hash) {
                         Ok(true) => None,
                         Ok(false) | Err(_) => Some(k.clone()),
                     },
@@ -784,15 +784,13 @@ pub(crate) fn rebuild_metadata(data: Bytes, entry: &LfsPointersEntry) -> Bytes {
         ret.extend_from_slice(&b"\x01\n"[..]);
         ret.extend_from_slice(data.as_ref());
         ret.into()
+    } else if data.as_ref().starts_with(b"\x01\n") {
+        let mut ret = Vec::with_capacity(data.len() + 4);
+        ret.extend_from_slice(&b"\x01\n\x01\n"[..]);
+        ret.extend_from_slice(data.as_ref());
+        ret.into()
     } else {
-        if data.as_ref().starts_with(b"\x01\n") {
-            let mut ret = Vec::with_capacity(data.len() + 4);
-            ret.extend_from_slice(&b"\x01\n\x01\n"[..]);
-            ret.extend_from_slice(data.as_ref());
-            ret.into()
-        } else {
-            data
-        }
+        data
     }
 }
 
@@ -933,7 +931,7 @@ impl LfsPointersEntry {
     /// can be found at https://github.com/git-lfs/git-lfs/blob/master/docs/spec.md
     pub(crate) fn from_bytes(data: impl AsRef<[u8]>, hgid: HgId) -> Result<Self> {
         let data = str::from_utf8(data.as_ref())?;
-        Ok(LfsPointersEntry::from_str(data, hgid)?)
+        LfsPointersEntry::from_str(data, hgid)
     }
 
     /// Parse the text representation of an LFS pointer.
@@ -1238,7 +1236,7 @@ impl LfsRemoteInner {
                         RetryStrategy::from_http_status(*status)
                     }
                     TransferError::HttpClientError(http_error) => {
-                        RetryStrategy::from_http_error(&http_error)
+                        RetryStrategy::from_http_error(http_error)
                     }
                     TransferError::EndOfStream => RetryStrategy::NoRetry,
                     TransferError::Timeout(..) => RetryStrategy::NoRetry,
@@ -1482,7 +1480,7 @@ impl LfsRemoteInner {
                 }
             };
 
-            for (op, action) in actions.into_iter().map(|h| h.into_iter()).flatten() {
+            for (op, action) in actions.into_iter().flat_map(|h| h.into_iter()) {
                 let oid = Sha256::from(oid.0);
 
                 let fut = match op {
@@ -1698,7 +1696,7 @@ impl HgIdRemoteStore for LfsRemote {
     ) -> Arc<dyn RemoteDataStore> {
         Arc::new(LfsRemoteStore {
             store,
-            remote: self.clone(),
+            remote: self,
         })
     }
 
@@ -1817,7 +1815,7 @@ impl RemoteDataStore for LfsRemoteStore {
             },
             |_, _| {},
         )?;
-        span.record("size", &size.load(Ordering::Relaxed));
+        span.record("size", size.load(Ordering::Relaxed));
 
         let obj_set = mem::take(&mut *obj_set.lock());
         not_found.extend(obj_set.into_iter().map(|(sha256, (k, _))| match k {
@@ -1881,7 +1879,7 @@ impl RemoteDataStore for LfsRemoteStore {
                 |_, _| {},
             )?;
 
-            span.record("size", &size.load(Ordering::Relaxed));
+            span.record("size", size.load(Ordering::Relaxed));
         }
 
         if self.remote.move_after_upload {
@@ -2121,13 +2119,13 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
             base: None,
-            key: k1.clone(),
+            key: k1,
         };
 
         store.add(&delta, &Default::default())?;
         store.flush()?;
 
-        let indexedlog_blobs = LfsIndexedLogBlobsStore::shared(&dir.path(), &config)?;
+        let indexedlog_blobs = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
         let hash = ContentHash::sha256(&delta.data).unwrap_sha256();
 
         assert!(indexedlog_blobs.contains(&hash)?);
@@ -2511,10 +2509,7 @@ mod tests {
         let k = StoreKey::hgid(k1);
         let stored = multiplexer.get(k.clone())?;
         assert_eq!(stored, StoreResult::Found(delta.data.as_ref().to_vec()));
-        assert_eq!(
-            indexedlog.get_missing(&[k.clone()])?,
-            vec![StoreKey::from(k)]
-        );
+        assert_eq!(indexedlog.get_missing(&[k.clone()])?, vec![k]);
 
         Ok(())
     }
@@ -2586,7 +2581,7 @@ mod tests {
 
         assert_eq!(entry.hgid, k1.hgid);
         assert_eq!(entry.size, size);
-        assert_eq!(entry.is_binary, false);
+        assert!(!entry.is_binary);
         assert_eq!(entry.copy_from, None);
         assert_eq!(
             entry.content_hashes[&ContentHashType::Sha256],
@@ -2658,7 +2653,7 @@ mod tests {
         multiplexer.flush()?;
 
         let lfs = LfsStore::shared(&lfsdir, &config)?;
-        let entry = lfs.pointers.read().get(&k.clone())?;
+        let entry = lfs.pointers.read().get(&k)?;
 
         assert!(entry.is_some());
 
@@ -2666,7 +2661,7 @@ mod tests {
 
         assert_eq!(entry.hgid, k1.hgid);
         assert_eq!(entry.size, size);
-        assert_eq!(entry.is_binary, true);
+        assert!(entry.is_binary);
         assert_eq!(entry.copy_from, Some(copy_from));
         assert_eq!(
             entry.content_hashes[&ContentHashType::Sha256],
@@ -2696,9 +2691,7 @@ mod tests {
         )?);
 
         let blob = Bytes::from(&b"\x01\nTHIS IS A BLOB WITH A HEADER"[..]);
-        let sha256 = match ContentHash::sha256(&blob) {
-            ContentHash::Sha256(sha256) => sha256,
-        };
+        let ContentHash::Sha256(sha256) = ContentHash::sha256(&blob);
         let size = blob.len();
         lfs.blobs.add(&sha256, blob)?;
 
@@ -3065,7 +3058,7 @@ mod tests {
             // Populate the pointer store. Usually, this would be done via a previous remotestore call.
             lfs.pointers.write().add(pointer)?;
 
-            let remotedatastore = remote.datastore(lfs.clone());
+            let remotedatastore = remote.datastore(lfs);
 
             let expected_delta = Delta {
                 data: blob.content.clone(),
@@ -3253,7 +3246,7 @@ mod tests {
 
         let k1 = key("a", "2");
         let delta = Delta {
-            data: Bytes::from(&"THIS IS A LARGE BLOB"[..]),
+            data: Bytes::from("THIS IS A LARGE BLOB"),
             base: None,
             key: k1.clone(),
         };
@@ -3278,10 +3271,7 @@ mod tests {
 
         // The blob was moved from the local store to the shared store.
         assert_eq!(local_lfs.get(k.clone())?, StoreResult::NotFound(contentk));
-        assert_eq!(
-            shared_lfs.get(k.clone())?,
-            StoreResult::Found(delta.data.to_vec())
-        );
+        assert_eq!(shared_lfs.get(k)?, StoreResult::Found(delta.data.to_vec()));
 
         Ok(())
     }

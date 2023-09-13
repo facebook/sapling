@@ -132,7 +132,7 @@ impl Entry {
     /// Read an entry from the IndexedLog and deserialize it.
     pub fn from_log(key: &Key, log: &RwLock<Store>) -> Result<Option<Self>> {
         let locked_log = log.read();
-        let mut log_entry = locked_log.lookup(0, key.hgid.as_ref().to_vec())?;
+        let mut log_entry = locked_log.lookup(0, key.hgid.as_ref())?;
         let buf = match log_entry.next() {
             None => return Ok(None),
             Some(buf) => buf?,
@@ -154,18 +154,16 @@ impl Entry {
 
         let compressed = if let Some(compressed) = self.compressed_content {
             compressed
+        } else if let Some(raw) = self.content {
+            compress(&raw)?.into()
         } else {
-            if let Some(raw) = self.content {
-                compress(&raw)?.into()
-            } else {
-                bail!("No content");
-            }
+            bail!("No content");
         };
 
         buf.write_u64::<BigEndian>(compressed.len() as u64)?;
         buf.write_all(&compressed)?;
 
-        Ok(log.write().append(buf)?)
+        log.write().append(buf)
     }
 
     fn content_inner(&self) -> Result<Bytes> {
@@ -174,7 +172,7 @@ impl Entry {
         }
 
         if let Some(compressed) = self.compressed_content.as_ref() {
-            let raw = Bytes::from(decompress(&compressed)?);
+            let raw = Bytes::from(decompress(compressed)?);
             Ok(raw)
         } else {
             bail!("No content");
@@ -602,7 +600,7 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
             base: None,
-            key: k.clone(),
+            key: k,
         };
         let metadata = Default::default();
 
@@ -631,14 +629,14 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
             base: None,
-            key: k.clone(),
+            key: k,
         };
         let metadata = Default::default();
         log.add(&delta, &metadata)?;
         log.flush()?;
 
         // There should be only one key in the store.
-        assert_eq!(log.to_keys().into_iter().count(), 1);
+        assert_eq!(log.to_keys().len(), 1);
         Ok(())
     }
 
@@ -740,12 +738,12 @@ mod tests {
 
         // Set up local-only FileStore
         let mut store = FileStore::empty();
-        store.indexedlog_local = Some(local.clone());
+        store.indexedlog_local = Some(local);
 
         // Attempt fetch.
         let mut fetched = store
             .fetch(
-                std::iter::once(k.clone()),
+                std::iter::once(k),
                 FileAttributes::CONTENT,
                 FetchMode::AllowRemote,
             )
@@ -778,7 +776,7 @@ mod tests {
 
         // Set up local-only FileStore
         let mut store = FileStore::empty();
-        store.indexedlog_local = Some(local.clone());
+        store.indexedlog_local = Some(local);
 
         // Write a file
         store.write_batch(std::iter::once((k.clone(), d.data.clone(), meta)))?;
@@ -786,7 +784,7 @@ mod tests {
         // Attempt fetch.
         let mut fetched = store
             .fetch(
-                std::iter::once(k.clone()),
+                std::iter::once(k),
                 FileAttributes::CONTENT,
                 FetchMode::AllowRemote,
             )

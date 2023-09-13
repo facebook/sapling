@@ -252,9 +252,7 @@ impl DataIndex {
                     .map_or(DeltaBaseOffset::FullText, |delta_base| {
                         nodelocations
                             .get(&delta_base)
-                            .map_or(DeltaBaseOffset::Missing, |x| {
-                                DeltaBaseOffset::Offset(*x as u32)
-                            })
+                            .map_or(DeltaBaseOffset::Missing, |x| DeltaBaseOffset::Offset(*x))
                     });
 
             let entry = IndexEntry::new(hgid.clone(), delta_base_offset, value.offset, value.size);
@@ -314,7 +312,7 @@ mod tests {
 
     fn make_index(values: &HashMap<HgId, DeltaLocation>) -> DataIndex {
         let mut file = NamedTempFile::new().expect("file");
-        DataIndex::write(&mut file, &values).expect("write dataindex");
+        DataIndex::write(&mut file, values).expect("write dataindex");
         let path = file.into_temp_path();
 
         DataIndex::new(&path).expect("dataindex")
@@ -391,8 +389,8 @@ mod tests {
                     hgid.clone(),
                     DeltaLocation {
                         delta_base: Default::default(),
-                        offset: offset,
-                        size: size,
+                        offset,
+                        size,
                     },
                 );
 

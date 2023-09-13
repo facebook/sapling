@@ -27,7 +27,7 @@ pub struct FileAuxData {
 impl From<AuxDataEntry> for FileAuxData {
     fn from(v: AuxDataEntry) -> Self {
         FileAuxData {
-            total_size: v.total_size() as u64,
+            total_size: v.total_size(),
             content_id: v.content_id(),
             content_sha1: v.content_sha1(),
             content_sha256: Sha256::from_byte_array(v.content_sha256().into()),

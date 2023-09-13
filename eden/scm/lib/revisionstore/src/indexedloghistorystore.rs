@@ -172,7 +172,7 @@ impl Entry {
             buf.write_all(copy_from_slice)?;
         }
 
-        Ok(log.write().append(buf)?)
+        log.write().append(buf)
     }
 
     pub fn node_info(&self) -> NodeInfo {
@@ -355,7 +355,7 @@ mod tests {
 
         let nodes = get_nodes(&mut rng);
         for (key, info) in nodes.iter() {
-            log.add(&key, &info)?;
+            log.add(key, info)?;
         }
         log.flush()?;
         drop(log);
@@ -368,11 +368,11 @@ mod tests {
 
         let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
         for (key, info) in nodes.iter() {
-            log.add(&key, &info)?;
+            log.add(key, info)?;
         }
         log.flush()?;
 
-        assert_eq!(log.to_keys().len(), nodes.iter().count());
+        assert_eq!(log.to_keys().len(), nodes.len());
         Ok(())
     }
 

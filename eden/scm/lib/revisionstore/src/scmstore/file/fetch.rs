@@ -520,9 +520,9 @@ impl FetchState {
         let mut errors = 0;
         let mut error: Option<String> = None;
 
-        self.fetch_logger
-            .as_ref()
-            .map(|fl| fl.report_keys(pending.iter()));
+        if let Some(fl) = self.fetch_logger.as_ref() {
+            fl.report_keys(pending.iter())
+        }
 
         // TODO(meyer): Iterators or otherwise clean this up
         let pending_attrs: Vec<_> = pending
@@ -696,9 +696,9 @@ impl FetchState {
 
         debug!("Fetching LFS - Count = {count}", count = pending.len());
 
-        self.fetch_logger
-            .as_ref()
-            .map(|fl| fl.report_keys(self.lfs_pointers.keys()));
+        if let Some(fl) = self.fetch_logger.as_ref() {
+            fl.report_keys(self.lfs_pointers.keys())
+        }
 
         let prog = self.lfs_progress.create_or_extend(pending.len() as u64);
 
@@ -800,7 +800,7 @@ impl FetchState {
         let mut errors = 0;
         let mut error: Option<String> = None;
 
-        store.prefetch(&pending)?;
+        store.prefetch(pending)?;
 
         for store_key in pending.drain(..) {
             let key = store_key.clone().maybe_into_key().expect(
@@ -905,14 +905,14 @@ impl FetchState {
 
                             match self.key_origin.get(&key).unwrap_or(&StoreType::Shared) {
                                 StoreType::Shared => {
-                                    if let Some(ref aux_cache) = aux_cache {
+                                    if let Some(aux_cache) = aux_cache {
                                         if let Some(aux_data) = new.aux_data {
                                             let _ = aux_cache.put(key.hgid, &aux_data.into());
                                         }
                                     }
                                 }
                                 StoreType::Local => {
-                                    if let Some(ref aux_local) = aux_local {
+                                    if let Some(aux_local) = aux_local {
                                         if let Some(aux_data) = new.aux_data {
                                             let _ = aux_local.put(key.hgid, &aux_data.into());
                                         }

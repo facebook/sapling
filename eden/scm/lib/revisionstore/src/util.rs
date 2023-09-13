@@ -154,27 +154,27 @@ pub fn check_run_once(store_path: impl AsRef<Path>, key: &str, cutoff: HgTime) -
         return write!(fp, "{}", line).is_ok();
     }
 
-    return false;
+    false
 }
 
 pub fn record_edenapi_stats(span: &Span, stats: &Stats) {
     // Bytes
-    span.record("downloaded", &stats.downloaded);
+    span.record("downloaded", stats.downloaded);
     // Bytes
-    span.record("uploaded", &stats.uploaded);
-    span.record("requests", &stats.requests);
+    span.record("uploaded", stats.uploaded);
+    span.record("requests", stats.requests);
     // Milliseconds
     span.record(
         "time",
-        &u64::try_from(stats.time.as_millis()).unwrap_or(u64::MAX),
+        u64::try_from(stats.time.as_millis()).unwrap_or(u64::MAX),
     );
     // Milliseconds
     span.record(
         "latency",
-        &u64::try_from(stats.latency.as_millis()).unwrap_or(u64::MAX),
+        u64::try_from(stats.latency.as_millis()).unwrap_or(u64::MAX),
     );
     // Compute the speed in MB/s
     let time = stats.time.as_millis() as f64 / 1000.0;
     let size = stats.downloaded as f64 / 1024.0 / 1024.0;
-    span.record("download_speed", &format!("{:.2}", size / time).as_str());
+    span.record("download_speed", format!("{:.2}", size / time).as_str());
 }

@@ -142,7 +142,7 @@ mod tests {
 
     impl LocalStore for EmptyHgIdDataStore {
         fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-            Ok(keys.iter().cloned().collect())
+            Ok(keys.to_vec())
         }
     }
 
