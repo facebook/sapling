@@ -112,6 +112,7 @@
 .split-right-button,
 .split-left-button {
   background-color: var(--subtle-hover-darken);
+  user-select: none;
 }
 
 .split-file tr.add {
@@ -159,18 +160,6 @@
 .split-file .button:active {
   color: grey;
   opacity: 1;
-}
-
-.split-file .add {
-  background: var(--diffEditor-insertedLineBackground);
-}
-
-.split-file .del {
-  background: var(--diffEditor-removedLineBackground);
-}
-
-.split-file .line.change {
-  background: var(--editor-changedBackground);
 }
 
 .split-file-row .filerev-title {

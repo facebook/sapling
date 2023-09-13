@@ -12,6 +12,7 @@ import type {RepoPath} from 'shared/types/common';
 import {FileHeader} from './ComparisonView/SplitDiffView/SplitDiffFileHeader';
 import {Column, FlexRow, Row, ScrollX, ScrollY} from './ComponentUtils';
 import {EmptyState} from './EmptyState';
+import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {Subtle} from './Subtle';
 import {t, T} from './i18n';
 import {SplitRangeRecord, useStackEditState} from './stackEditState';
@@ -25,7 +26,7 @@ import {
 import {Set as ImSet, Range, Seq} from 'immutable';
 import {useRef, useState, useEffect} from 'react';
 import {Icon} from 'shared/Icon';
-import {type LineIdx, splitLines, diffBlocks, collapseContextBlocks} from 'shared/diff';
+import {type LineIdx, splitLines, diffBlocks} from 'shared/diff';
 import {DiffType} from 'shared/patch/parse';
 import {unwrap} from 'shared/utils';
 
@@ -416,255 +417,24 @@ export function SplitFile(props: SplitFileProps) {
   const aLines = splitLines(stack.getRev(Math.max(0, rev - 1)));
   const abBlocks = diffBlocks(aLines, bLines);
 
-  const leftMost = rev <= 1;
-  const rightMost = rev + 1 >= stack.revLength;
-
-  const blocks = abBlocks;
-
-  // Collapse unchanged context blocks, preserving the context lines.
-  const collapsedBlocks = collapseContextBlocks(blocks, (_aLine, bLine) =>
-    expandedLines.has(bLine),
-  );
-
-  const lineKind: Array<'add' | 'del' | 'context'> = [];
-  const leftGutter: JSX.Element[] = [];
-  const leftButtons: JSX.Element[] = [];
-  const mainContent: JSX.Element[] = [];
-  const rightGutter: JSX.Element[] = [];
-  const rightButtons: JSX.Element[] = [];
-
-  const handleContextExpand = (b1: LineIdx, b2: LineIdx) => {
-    const newSet = expandedLines.union(Range(b1, b2));
-    setExpandedLines(newSet);
-  };
-
-  const pushLineButtons = (sign: '=' | '!' | '~', aIdx?: LineIdx, bIdx?: LineIdx) => {
-    let leftButton: JSX.Element | null = null;
-    let rightButton: JSX.Element | null = null;
-
-    // Move one or more lines. If the current line is part of the selection,
-    // Move all lines in the selection.
-    const moveLines = (revOffset: number) => {
-      // Figure out which lines to move on both sides.
-      let aIdxToMove: ImSet<LineIdx> = ImSet();
-      let bIdxToMove: ImSet<LineIdx> = ImSet();
-      if (
-        (aIdx != null && selectedLineIds.has(`a${aIdx}`)) ||
-        (bIdx != null && selectedLineIds.has(`b${bIdx}`))
-      ) {
-        // Move selected multiple lines.
-        aIdxToMove = aIdxToMove.withMutations(mut => {
-          let set = mut;
-          selectedLineIds.forEach(id => {
-            if (id.startsWith('a')) {
-              set = set.add(parseInt(id.slice(1)));
-            }
-          });
-          return set;
-        });
-        bIdxToMove = bIdxToMove.withMutations(mut => {
-          let set = mut;
-          selectedLineIds.forEach(id => {
-            if (id.startsWith('b')) {
-              set = set.add(parseInt(id.slice(1)));
-            }
-          });
-          return set;
-        });
-      } else {
-        // Move a single line.
-        if (aIdx != null) {
-          aIdxToMove = aIdxToMove.add(aIdx);
-        }
-        if (bIdx != null) {
-          bIdxToMove = bIdxToMove.add(bIdx);
-        }
-      }
-
-      // Actually move the lines.
-      const aRev = rev - 1;
-      const bRev = rev;
-      let currentAIdx = 0;
-      let currentBIdx = 0;
-      const newStack = stack.mapAllLines(line => {
-        let newRevs = line.revs;
-        if (line.revs.has(aRev)) {
-          // This is a deletion.
-          if (aIdxToMove.has(currentAIdx)) {
-            if (revOffset > 0) {
-              // Move deletion right - add it in bRev.
-              newRevs = newRevs.add(bRev);
-            } else {
-              // Move deletion left - drop it from aRev.
-              newRevs = newRevs.remove(aRev);
-            }
-          }
-          currentAIdx += 1;
-        }
-        if (line.revs.has(bRev)) {
-          // This is an insertion.
-          if (bIdxToMove.has(currentBIdx)) {
-            if (revOffset > 0) {
-              // Move insertion right - drop it in bRev.
-              newRevs = newRevs.remove(bRev);
-            } else {
-              // Move insertion left - add it to aRev.
-              newRevs = newRevs.add(aRev);
-            }
-          }
-          currentBIdx += 1;
-        }
-        return newRevs === line.revs ? line : line.set('revs', newRevs);
-      });
-      setStack(newStack);
-    };
-
-    const selected =
-      aIdx != null
-        ? selectedLineIds.has(`a${aIdx}`)
-        : bIdx != null
-        ? selectedLineIds.has(`b${bIdx}`)
-        : false;
-
-    if (!leftMost && sign === '!') {
-      const title = selected
-        ? t('Move selected line changes left')
-        : t('Move this line change left');
-      leftButton = (
-        <span className="button" role="button" title={title} onClick={() => moveLines(-1)}>
-          ⬅
-        </span>
-      );
-    }
-    if (!rightMost && sign === '!') {
-      const title = selected
-        ? t('Move selected line changes right')
-        : t('Move this line change right');
-      rightButton = (
-        <span className="button" role="button" title={title} onClick={() => moveLines(+1)}>
-          ⮕
-        </span>
-      );
-    }
-
-    const className = selected ? 'selected' : '';
-
-    leftButtons.push(
-      <div key={leftButtons.length} className={`${className} left`}>
-        {leftButton}
-      </div>,
+  const {leftGutter, leftButtons, mainContent, rightGutter, rightButtons, lineKind} =
+    computeLinesForFileStackEditor(
+      stack,
+      setStack,
+      rev,
+      'unified-diff',
+      aLines,
+      bLines,
+      abBlocks,
+      [],
+      abBlocks,
+      expandedLines,
+      setExpandedLines,
+      selectedLineIds,
+      [],
+      false,
+      false,
     );
-    rightButtons.push(
-      <div key={rightButtons.length} className={`${className} right`}>
-        {rightButton}
-      </div>,
-    );
-  };
-
-  const bLineSpan = (bLine: string): JSX.Element => {
-    return <span>{bLine}</span>;
-  };
-
-  collapsedBlocks.forEach(([sign, [a1, a2, b1, b2]]) => {
-    if (sign === '~') {
-      // Context line.
-      leftGutter.push(
-        <div key={a1} className="lineno">
-          {' '}
-        </div>,
-      );
-      rightGutter.push(
-        <div key={b1} className="lineno">
-          {' '}
-        </div>,
-      );
-      mainContent.push(
-        <div key={b1} className="context-button" onClick={() => handleContextExpand(b1, b2)}>
-          {' '}
-        </div>,
-      );
-      lineKind.push('context');
-      pushLineButtons(sign, a1, b1);
-    } else if (sign === '=') {
-      // Unchanged.
-      for (let ai = a1; ai < a2; ++ai) {
-        const bi = ai + b1 - a1;
-        const leftIdx = ai;
-        leftGutter.push(
-          <div className="lineno" key={ai} data-span-id={`${rev}-${leftIdx}l`}>
-            {leftIdx + 1}
-          </div>,
-        );
-        rightGutter.push(
-          <div className="lineno" key={bi} data-span-id={`${rev}-${bi}r`}>
-            {bi + 1}
-          </div>,
-        );
-        mainContent.push(
-          <div key={bi} className="unchanged line">
-            {bLineSpan(bLines[bi])}
-          </div>,
-        );
-
-        lineKind.push('context');
-        pushLineButtons(sign, ai, bi);
-      }
-    } else if (sign === '!') {
-      // Changed.
-      for (let ai = a1; ai < a2; ++ai) {
-        leftGutter.push(
-          <div className="lineno" key={ai}>
-            {ai + 1}
-          </div>,
-        );
-        rightGutter.push(
-          <div className="lineno" key={`a${ai}`}>
-            {' '}
-          </div>,
-        );
-        const selId = `a${ai}`;
-        let className = 'line';
-        if (selectedLineIds.has(selId)) {
-          className += ' selected';
-        }
-
-        pushLineButtons(sign, ai, undefined);
-        mainContent.push(
-          <div key={-ai} className={className} data-sel-id={selId}>
-            {aLines[ai]}
-          </div>,
-        );
-        lineKind.push('del');
-      }
-      for (let bi = b1; bi < b2; ++bi) {
-        // Inserted lines show up in unified and side-by-side diffs.
-        const leftClassName = 'lineno';
-        leftGutter.push(
-          <div className={leftClassName} key={`b${bi}`} data-span-id={`${rev}-${bi}l`}>
-            {' '}
-          </div>,
-        );
-        const rightClassName = 'lineno';
-        rightGutter.push(
-          <div className={rightClassName} key={bi} data-span-id={`${rev}-${bi}r`}>
-            {bi + 1}
-          </div>,
-        );
-        const selId = `b${bi}`;
-        let lineClassName = 'line';
-        if (selectedLineIds.has(selId)) {
-          lineClassName += ' selected';
-        }
-        pushLineButtons(sign, undefined, bi);
-        mainContent.push(
-          <div key={bi} className={lineClassName} data-sel-id={selId}>
-            {bLineSpan(bLines[bi])}
-          </div>,
-        );
-        lineKind.push('add');
-      }
-    }
-  });
 
   const rows = mainContent.map((line, i) => (
     <tr key={i} className={lineKind[i]}>

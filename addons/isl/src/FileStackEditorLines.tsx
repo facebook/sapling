@@ -18,6 +18,7 @@ export type ComputedFileStackLines = {
   mainContent: JSX.Element[];
   rightGutter: JSX.Element[];
   rightButtons: JSX.Element[];
+  lineKind: Array<'add' | 'del' | 'context'>;
 };
 
 export type Mode = 'unified-diff' | 'side-by-side-diff' | 'unified-stack';
@@ -48,6 +49,7 @@ export function computeLinesForFileStackEditor(
   const mainContent: JSX.Element[] = [];
   const rightGutter: JSX.Element[] = [];
   const rightButtons: JSX.Element[] = [];
+  const lineKind: Array<'add' | 'del' | 'context'> = [];
 
   const leftMost = rev <= 1;
   const rightMost = rev + 1 >= stack.revLength;
@@ -225,21 +227,14 @@ export function computeLinesForFileStackEditor(
   collapsedBlocks.forEach(([sign, [a1, a2, b1, b2]]) => {
     if (sign === '~') {
       // Context line.
-      leftGutter.push(
-        <div key={a1} className="lineno">
-          {' '}
-        </div>,
-      );
-      rightGutter.push(
-        <div key={b1} className="lineno">
-          {' '}
-        </div>,
-      );
+      leftGutter.push(<div key={a1} className="lineno" />);
+      rightGutter.push(<div key={b1} className="lineno" />);
       mainContent.push(
         <div key={b1} className="context-button" onClick={() => handleContextExpand(b1, b2)}>
           {' '}
         </div>,
       );
+      lineKind.push('context');
       pushLineButtons(sign, a1, b1);
       if (textEdit) {
         // Still need to update rangeInfos.
@@ -269,6 +264,7 @@ export function computeLinesForFileStackEditor(
             {bLineSpan(bLines[bi])}
           </div>,
         );
+        lineKind.push('context');
         pushLineButtons(sign, ai, bi);
       }
     } else if (sign === '!') {
@@ -281,11 +277,7 @@ export function computeLinesForFileStackEditor(
               {ai + 1}
             </div>,
           );
-          rightGutter.push(
-            <div className="lineno" key={`a${ai}`}>
-              {' '}
-            </div>,
-          );
+          rightGutter.push(<div className="lineno" key={`a${ai}`} />);
           const selId = `a${ai}`;
           let className = 'del line';
           if (selectedLineIds.has(selId)) {
@@ -298,6 +290,7 @@ export function computeLinesForFileStackEditor(
               {aLines[ai]}
             </div>,
           );
+          lineKind.push('del');
         }
       }
       for (let bi = b1; bi < b2; ++bi) {
@@ -308,7 +301,7 @@ export function computeLinesForFileStackEditor(
         }
         leftGutter.push(
           <div className={leftClassName} key={`b${bi}`} data-span-id={`${rev}-${bi}l`}>
-            {mode === 'unified-diff' ? ' ' : bi + 1}
+            {mode === 'unified-diff' ? null : bi + 1}
           </div>,
         );
         let rightClassName = 'lineno';
@@ -342,6 +335,7 @@ export function computeLinesForFileStackEditor(
             {bLineSpan(bLines[bi])}
           </div>,
         );
+        lineKind.push('add');
       }
     }
   });
@@ -352,5 +346,6 @@ export function computeLinesForFileStackEditor(
     mainContent,
     rightGutter,
     rightButtons,
+    lineKind,
   };
 }
