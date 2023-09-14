@@ -5,24 +5,24 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitStackState} from './stackEdit/commitStackState';
-import type {FileStackState, Rev} from './stackEdit/fileStackState';
+import type {CommitStackState} from '../commitStackState';
+import type {FileStackState, Rev} from '../fileStackState';
 import type {UseStackEditState} from './stackEditState';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import type {RepoPath} from 'shared/types/common';
 
-import {BranchIndicator} from './BranchIndicator';
-import {FileHeader} from './ComparisonView/SplitDiffView/SplitDiffFileHeader';
-import {useTokenizedContentsOnceVisible} from './ComparisonView/SplitDiffView/syntaxHighlighting';
-import {Column, Row, ScrollX, ScrollY} from './ComponentUtils';
-import {EmptyState} from './EmptyState';
+import {BranchIndicator} from '../../BranchIndicator';
+import {FileHeader} from '../../ComparisonView/SplitDiffView/SplitDiffFileHeader';
+import {useTokenizedContentsOnceVisible} from '../../ComparisonView/SplitDiffView/syntaxHighlighting';
+import {Column, Row, ScrollX, ScrollY} from '../../ComponentUtils';
+import {EmptyState} from '../../EmptyState';
+import {Subtle} from '../../Subtle';
+import {Tooltip} from '../../Tooltip';
+import {tracker} from '../../analytics';
+import {t, T} from '../../i18n';
+import {firstLine} from '../../utils';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
-import {Subtle} from './Subtle';
-import {Tooltip} from './Tooltip';
-import {tracker} from './analytics';
-import {t, T} from './i18n';
 import {SplitRangeRecord, useStackEditState} from './stackEditState';
-import {firstLine} from './utils';
 import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {Set as ImSet, Range} from 'immutable';
 import {useRef, useState, useEffect, useMemo} from 'react';
@@ -33,7 +33,6 @@ import {useThrottledEffect} from 'shared/hooks';
 import {DiffType} from 'shared/patch/parse';
 import {unwrap} from 'shared/utils';
 
-import './VSCodeDropdown.css';
 import './SplitStackEditPanel.css';
 
 export function SplitStackEditPanel() {

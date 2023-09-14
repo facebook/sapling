@@ -5,17 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {FileStackState, Rev} from '../fileStackState';
 import type {Mode} from './FileStackEditorLines';
 import type {RangeInfo} from './TextEditable';
-import type {FileStackState, Rev} from './stackEdit/fileStackState';
 import type {Block, LineIdx} from 'shared/diff';
 
-import {CommitTitle} from './CommitTitle';
-import {Row, ScrollX, ScrollY} from './ComponentUtils';
+import {CommitTitle} from '../../CommitTitle';
+import {Row, ScrollX, ScrollY} from '../../ComponentUtils';
+import {VSCodeCheckbox} from '../../VSCodeCheckbox';
+import {FlattenLine} from '../../linelog';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {TextEditable} from './TextEditable';
-import {VSCodeCheckbox} from './VSCodeCheckbox';
-import {FlattenLine} from './linelog';
 import deepEqual from 'fast-deep-equal';
 import {Set as ImSet, Range, List} from 'immutable';
 import React, {useState, useRef, useEffect, useLayoutEffect} from 'react';

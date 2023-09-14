@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Hash} from './types';
+import type {Hash} from '../../types';
 
+import {Tooltip, DOCUMENTATION_DELAY} from '../../Tooltip';
+import {T, t} from '../../i18n';
+import {ImportStackOperation} from '../../operations/ImportStackOperation';
+import {RebaseOperation} from '../../operations/RebaseOperation';
+import {latestCommitTreeMap, latestHeadCommit, useRunOperation} from '../../serverAPIState';
 import {UndoDescription} from './StackEditSubTree';
-import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
-import {T, t} from './i18n';
-import {ImportStackOperation} from './operations/ImportStackOperation';
-import {RebaseOperation} from './operations/RebaseOperation';
-import {latestCommitTreeMap, latestHeadCommit, useRunOperation} from './serverAPIState';
 import {
   bumpStackEditMetric,
   editingStackIntentionHashes,

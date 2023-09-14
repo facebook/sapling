@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {RangeInfo} from './TextEditable';
 import type {ChunkSelectState, LineRegion, SelectLine} from './stackEdit/chunkSelectState';
+import type {RangeInfo} from './stackEdit/ui/TextEditable';
 
 import {ScrollX, Row} from './ComponentUtils';
-import {TextEditable} from './TextEditable';
 import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {T, t} from './i18n';
+import {TextEditable} from './stackEdit/ui/TextEditable';
 import {VSCodeRadio, VSCodeRadioGroup} from '@vscode/webview-ui-toolkit/react';
 import {Set as ImSet} from 'immutable';
 import {useRef, useState} from 'react';

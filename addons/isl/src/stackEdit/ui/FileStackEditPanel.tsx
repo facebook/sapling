@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {FileStackState, Rev} from '../fileStackState';
 import type {Mode} from './FileStackEditorLines';
-import type {FileStackState, Rev} from './stackEdit/fileStackState';
 
-import {Row} from './ComponentUtils';
-import {EmptyState} from './EmptyState';
+import {Row} from '../../ComponentUtils';
+import {EmptyState} from '../../EmptyState';
+import {VSCodeCheckbox} from '../../VSCodeCheckbox';
+import {t, T} from '../../i18n';
 import {FileStackEditorRow} from './FileStackEditor';
-import {VSCodeCheckbox} from './VSCodeCheckbox';
-import {t, T} from './i18n';
 import {bumpStackEditMetric, useStackEditState} from './stackEditState';
 import {
   VSCodeDivider,

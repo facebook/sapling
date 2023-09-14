@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TokenizedHunk} from './ComparisonView/SplitDiffView/syntaxHighlighting';
+import type {TokenizedHunk} from '../../ComparisonView/SplitDiffView/syntaxHighlighting';
+import type {FileStackState, Rev} from '../fileStackState';
 import type {RangeInfo} from './TextEditable';
-import type {FileStackState, Rev} from './stackEdit/fileStackState';
 
-import {t} from './i18n';
+import {t} from '../../i18n';
 import {Set as ImSet, Range} from 'immutable';
 import {applyTokenizationToLine} from 'shared/createTokenizedIntralineDiff';
 import {type Block, collapseContextBlocks, type LineIdx} from 'shared/diff';

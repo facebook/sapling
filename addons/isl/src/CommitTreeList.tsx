@@ -12,7 +12,6 @@ import {BranchIndicator} from './BranchIndicator';
 import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
 import {Center, LargeSpinner} from './ComponentUtils';
-import {MaybeEditStackModal} from './EditStackModal';
 import {ErrorNotice} from './ErrorNotice';
 import {StackActions} from './StackActions';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
@@ -28,6 +27,7 @@ import {
   latestUncommittedChangesData,
   useRunOperation,
 } from './serverAPIState';
+import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {useRecoilState, useRecoilValue} from 'recoil';

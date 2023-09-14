@@ -5,16 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitState} from './stackEdit/commitStackState';
-import type {Hash} from './types';
+import type {Hash} from '../../types';
+import type {CommitState} from '../commitStackState';
 import type {RecordOf} from 'immutable';
 import type {SetterOrUpdater} from 'recoil';
 import type {ExportStack} from 'shared/types/stack';
 
-import clientToServerAPI from './ClientToServerAPI';
-import {getTracker} from './analytics/globalTracker';
-import {CommitStackState} from './stackEdit/commitStackState';
-import {assert} from './utils';
+import clientToServerAPI from '../../ClientToServerAPI';
+import {getTracker} from '../../analytics/globalTracker';
+import {CommitStackState} from '../../stackEdit/commitStackState';
+import {assert} from '../../utils';
 import {List, Record} from 'immutable';
 import {atom, DefaultValue, selector, useRecoilState} from 'recoil';
 import {unwrap} from 'shared/utils';

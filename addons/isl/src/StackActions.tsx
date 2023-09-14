@@ -11,7 +11,6 @@ import type {DiffSummary, CommitInfo, Hash} from './types';
 import {FlexRow} from './ComponentUtils';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {OperationDisabledButton} from './OperationDisabledButton';
-import {StackEditIcon} from './StackEditIcon';
 import {showSuggestedRebaseForStack, SuggestedRebaseButton} from './SuggestedRebase';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {codeReviewProvider, allDiffSummaries} from './codeReview/CodeReviewInfo';
@@ -19,7 +18,8 @@ import {type CommitTreeWithPreviews, walkTreePostorder, isTreeLinear} from './ge
 import {T, t} from './i18n';
 import {HideOperation} from './operations/HideOperation';
 import {useRunOperation, latestUncommittedChangesData} from './serverAPIState';
-import {editingStackIntentionHashes, loadingStackState} from './stackEditState';
+import {StackEditIcon} from './stackEdit/ui/StackEditIcon';
+import {editingStackIntentionHashes, loadingStackState} from './stackEdit/ui/stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue, useRecoilState} from 'recoil';
 import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';

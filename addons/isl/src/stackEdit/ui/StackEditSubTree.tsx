@@ -5,20 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DragHandler} from './DragHandle';
-import type {CommitState} from './stackEdit/commitStackState';
-import type {Rev} from './stackEdit/fileStackState';
+import type {DragHandler} from '../../DragHandle';
+import type {CommitState} from '../commitStackState';
+import type {Rev} from '../fileStackState';
 import type {StackEditOpDescription, UseStackEditState} from './stackEditState';
 
-import {AnimatedReorderGroup} from './AnimatedReorderGroup';
-import {CommitTitle as StandaloneCommitTitle} from './CommitTitle';
-import {FlexRow} from './ComponentUtils';
-import {DragHandle} from './DragHandle';
+import {AnimatedReorderGroup} from '../../AnimatedReorderGroup';
+import {CommitTitle as StandaloneCommitTitle} from '../../CommitTitle';
+import {FlexRow} from '../../ComponentUtils';
+import {DragHandle} from '../../DragHandle';
+import {Tooltip} from '../../Tooltip';
+import {t, T} from '../../i18n';
+import {reorderedRevs} from '../commitStackState';
+import {ReorderState} from '../reorderState';
 import {SplitCommitIcon} from './SplitCommitIcon';
-import {Tooltip} from './Tooltip';
-import {t, T} from './i18n';
-import {reorderedRevs} from './stackEdit/commitStackState';
-import {ReorderState} from './stackEdit/reorderState';
 import {bumpStackEditMetric, useStackEditState} from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {is} from 'immutable';

@@ -41,7 +41,7 @@ import {
   useRunOperation,
   useRunPreviewedOperation,
 } from './serverAPIState';
-import {editingStackIntentionHashes} from './stackEditState';
+import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
 import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
 import React, {memo, useEffect, useState} from 'react';

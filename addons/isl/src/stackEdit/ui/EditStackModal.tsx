@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {FlexRow, FlexSpacer, ScrollY} from './ComponentUtils';
-import {Modal} from './Modal';
+import {FlexRow, FlexSpacer, ScrollY} from '../../ComponentUtils';
+import {Modal} from '../../Modal';
+import {tracker} from '../../analytics';
+import {T} from '../../i18n';
 import {SplitStackEditPanel, SplitStackToolbar} from './SplitStackEditPanel';
 import {StackEditConfirmButtons} from './StackEditConfirmButtons';
 import {StackEditSubTree} from './StackEditSubTree';
-import {tracker} from './analytics';
-import {T} from './i18n';
 import {loadingStackState, editingStackIntentionHashes} from './stackEditState';
 import {VSCodePanels, VSCodePanelTab, VSCodePanelView} from '@vscode/webview-ui-toolkit/react';
 import {useState} from 'react';
