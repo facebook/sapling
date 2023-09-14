@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.26
+
+### Sep 14 2023
+
+- Disallow opening split from context menu when you have uncommitted changes, since they may be lost
+- Fix left arrow overflowing on hover
+
 ## 0.1.25
 
 ### Sep 13 2023
