@@ -26,6 +26,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use derivative::Derivative;
 use futures::stream;
+use futures::stream::BoxStream;
 use futures::FutureExt;
 use futures::Stream;
 use futures::StreamExt;
@@ -44,6 +45,7 @@ use crate::thrift;
 use crate::typed_hash::IdContext;
 use crate::typed_hash::MononokeId;
 use crate::ThriftConvert;
+use crate::TrieMap;
 
 pub trait MapValue: ThriftConvert + Debug + Clone + Send + Sync + 'static {
     type Id: MononokeId<Thrift = thrift::ShardedMapNodeId, Value = ShardedMapNode<Self>>;
@@ -177,6 +179,108 @@ fn common_prefix<'a>(a: &'a [u8], b: &'a [u8]) -> &'a [u8] {
     let lcp = a.iter().zip(b.iter()).take_while(|(a, b)| a == b).count();
     // Panic safety: lcp is at most a.len()
     &a[..lcp]
+}
+
+#[derive(PartialEq, Clone)]
+pub enum ShardedTrieMap<Value: MapValue> {
+    Edge(ShardedMapEdge<Value>),
+    Trie(TrieMap<Value>),
+}
+
+impl<Value: MapValue> ShardedTrieMap<Value> {
+    pub fn new(node: ShardedMapNode<Value>) -> Self {
+        ShardedTrieMap::Edge(ShardedMapEdge {
+            size: node.size(),
+            child: ShardedMapChild::Inlined(node),
+        })
+    }
+
+    pub async fn expand(
+        self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+    ) -> Result<(Option<Value>, Vec<(u8, Self)>)> {
+        match self {
+            Self::Edge(edge) => match edge.load_child(ctx, blobstore).await? {
+                ShardedMapNode::Intermediate {
+                    prefix,
+                    value,
+                    edges,
+                    ..
+                } => match prefix.split_first() {
+                    Some((first_byte, rest)) => {
+                        let node = ShardedMapNode::from_entries(
+                            ctx,
+                            blobstore,
+                            edges
+                                .into_iter()
+                                .map(|(next_byte, edge)| {
+                                    (
+                                        Bytes::copy_from_slice(&[rest, &[next_byte]].concat()),
+                                        Either::Right(edge),
+                                    )
+                                })
+                                .collect(),
+                        )
+                        .await?;
+                        Ok((
+                            None,
+                            vec![(
+                                *first_byte,
+                                ShardedTrieMap::Edge(ShardedMapEdge {
+                                    size: node.size(),
+                                    child: ShardedMapChild::Inlined(node),
+                                }),
+                            )],
+                        ))
+                    }
+                    None => Ok((
+                        value,
+                        edges
+                            .into_iter()
+                            .map(|(next_byte, edge)| (next_byte, ShardedTrieMap::Edge(edge)))
+                            .collect(),
+                    )),
+                },
+                ShardedMapNode::Terminal { values } => {
+                    let trie = values.into_iter().collect::<TrieMap<_>>();
+                    let (value, children) = trie.expand();
+                    Ok((
+                        value,
+                        children
+                            .into_iter()
+                            .map(|(next_byte, child)| (next_byte, ShardedTrieMap::Trie(child)))
+                            .collect(),
+                    ))
+                }
+            },
+            Self::Trie(trie) => {
+                let (value, children) = trie.expand();
+                Ok((
+                    value,
+                    children
+                        .into_iter()
+                        .map(|(next_byte, child)| (next_byte, ShardedTrieMap::Trie(child)))
+                        .collect(),
+                ))
+            }
+        }
+    }
+
+    pub async fn into_stream<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+    ) -> Result<BoxStream<'a, Result<(SmallVec<[u8; 24]>, Value)>>> {
+        match self {
+            Self::Edge(edge) => Ok(edge
+                .load_child(ctx, blobstore)
+                .await?
+                .into_entries(ctx, blobstore)
+                .boxed()),
+            Self::Trie(trie) => Ok(stream::iter(trie).map(Ok).boxed()),
+        }
+    }
 }
 
 impl<Value: MapValue> ShardedMapNode<Value> {
@@ -1064,6 +1168,7 @@ mod test {
     }
 
     type TestShardedMap = ShardedMapNode<MyType>;
+    type TestShardedTrieMap = ShardedTrieMap<MyType>;
 
     fn terminal(values: Vec<(&str, i32)>) -> TestShardedMap {
         ShardedMapNode::Terminal {
@@ -1158,6 +1263,10 @@ mod test {
             );
             map.validate().await?;
             Ok(map)
+        }
+
+        fn into_trie_map(self) -> TestShardedTrieMap {
+            ShardedTrieMap::new(self.0)
         }
 
         async fn into_edge(self) -> Result<ShardedMapEdge<MyType>> {
@@ -1919,6 +2028,99 @@ mod test {
             )
             .await
             .is_err()
+        );
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_sharded_trie_map(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = Memblob::default();
+
+        let map = ShardedMapNode::from_entries(
+            &ctx,
+            &blobstore,
+            EXAMPLE_ENTRIES
+                .iter()
+                .map(|(key, entry)| {
+                    (
+                        Bytes::copy_from_slice(key.as_bytes()),
+                        Either::Left(MyType(*entry)),
+                    )
+                })
+                .chain(std::iter::once((
+                    Bytes::from_static("z".as_bytes()),
+                    Either::Left(MyType(100)),
+                )))
+                .collect(),
+        )
+        .await?;
+
+        let sharded_trie_map = ShardedTrieMap::new(map);
+
+        let (root_value, children) = sharded_trie_map.expand(&ctx, &blobstore).await?;
+
+        assert_eq!(root_value, None);
+        assert_eq!(children.len(), 3);
+        assert_eq!(children[0].0, b'a');
+        assert_eq!(children[1].0, b'o');
+        assert_eq!(children[2].0, b'z');
+
+        let (a_value, a_children) = children[0].1.clone().expand(&ctx, &blobstore).await?;
+        assert_eq!(a_value, None);
+        assert_eq!(a_children.len(), 1);
+        assert_eq!(a_children[0].0, b'b');
+
+        let (o_value, o_children) = children[1].1.clone().expand(&ctx, &blobstore).await?;
+        assert_eq!(o_value, None);
+        assert_eq!(o_children.len(), 1);
+        assert_eq!(o_children[0].0, b'm');
+
+        let (z_value, z_children) = children[2].1.clone().expand(&ctx, &blobstore).await?;
+        assert_eq!(z_value, Some(MyType(100)));
+        assert_eq!(z_children.len(), 0);
+
+        let (om_value, om_children) = o_children[0].1.clone().expand(&ctx, &blobstore).await?;
+        assert_eq!(om_value, None);
+        assert_eq!(om_children.len(), 2);
+        assert_eq!(om_children[0].0, b'i');
+        assert_eq!(om_children[1].0, b'u');
+
+        assert_eq!(
+            children[0]
+                .1
+                .clone()
+                .into_stream(&ctx, &blobstore)
+                .await?
+                .try_collect::<Vec<_>>()
+                .await?,
+            EXAMPLE_ENTRIES[0..8]
+                .iter()
+                .map(|(key, entry)| {
+                    let mut key = SmallBinary::from_slice(key.as_bytes());
+                    key.remove(0);
+                    (key, MyType(*entry))
+                })
+                .collect::<Vec<_>>(),
+        );
+
+        assert_eq!(
+            children[1]
+                .1
+                .clone()
+                .into_stream(&ctx, &blobstore)
+                .await?
+                .try_collect::<Vec<_>>()
+                .await?,
+            EXAMPLE_ENTRIES[8..12]
+                .iter()
+                .map(|(key, entry)| {
+                    let mut key = SmallBinary::from_slice(key.as_bytes());
+                    key.remove(0);
+                    (key, MyType(*entry))
+                })
+                .collect::<Vec<_>>(),
         );
 
         Ok(())
