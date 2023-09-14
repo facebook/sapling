@@ -118,3 +118,8 @@
   right: var(--pad);
   left: unset;
 }
+
+.context-menu-disabled-option {
+  cursor: not-allowed;
+  opacity: 0.8;
+}

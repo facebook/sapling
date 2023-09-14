@@ -14,6 +14,7 @@ import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
 import {highlightedCommits} from './HighlightedCommits';
 import {InlineBadge} from './InlineBadge';
+import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
 import {UncommitButton} from './UncommitButton';
 import {UncommittedChanges} from './UncommittedChanges';
@@ -28,7 +29,7 @@ import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
 import platform from './platform';
-import {CommitPreview} from './previews';
+import {CommitPreview, uncommittedChangesWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {isNarrowCommitTree} from './responsive';
 import {useCommitSelection} from './selection';
@@ -151,6 +152,8 @@ export const Commit = memo(
     };
 
     const makeContextMenuOptions = useRecoilCallback(({snapshot}) => () => {
+      const hasUncommittedChanges =
+        (snapshot.getLoadable(uncommittedChangesWithPreviews).valueMaybe()?.length ?? 0) > 0;
       const items: Array<ContextMenuItem> = [
         {
           label: <T replace={{$hash: short(commit?.hash)}}>Copy Commit Hash "$hash"</T>,
@@ -178,8 +181,17 @@ export const Commit = memo(
           });
         }
         items.push({
-          label: <T>Split...</T>,
-          onClick: handleSplit,
+          label: hasUncommittedChanges ? (
+            <span className="context-menu-disabled-option">
+              <T>Split... </T>
+              <Subtle>
+                <T>(disabled due to uncommitted changes)</T>
+              </Subtle>
+            </span>
+          ) : (
+            <T>Split...</T>
+          ),
+          onClick: hasUncommittedChanges ? () => null : handleSplit,
         });
         items.push({
           label: <T>Hide Commit and Descendants</T>,
