@@ -28,6 +28,8 @@ use futures::stream::TryStreamExt;
 use itertools::Either;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
+use mononoke_types::TrieMap;
+use smallvec::smallvec;
 use smallvec::SmallVec;
 
 use crate::AsyncManifest as Manifest;
@@ -415,7 +417,7 @@ where
         + 'static,
     LFut: Future<Output = Result<(Ctx, IntermediateLeafId)>> + Send + 'static,
     <TreeId::Value as Manifest<Store>>::TrieMapType:
-        TrieMapOps<Store, Entry<TreeId, LeafId>> + PartialEq + Send + 'static,
+        TrieMapOps<Store, Entry<TreeId, LeafId>> + Send + 'static,
     Ctx: Send + 'static,
 {
     let (sender, receiver) = mpsc::unbounded();
@@ -493,18 +495,21 @@ async fn merge<TreeId, LeafId, IntermediateLeafId, Leaf, Store>(
 where
     Store: Sync + Send + Clone + 'static,
     IntermediateLeafId: Send + From<LeafId> + 'static + fmt::Debug + Clone + Eq + Hash,
-    LeafId: Clone + Eq + Hash + fmt::Debug,
-    TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Sync,
+    LeafId: Send + Clone + Eq + Hash + fmt::Debug,
+    Leaf: Send,
+    TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync,
     TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId>,
+    <TreeId::Value as Manifest<Store>>::TrieMapType: TrieMapOps<Store, Entry<TreeId, LeafId>>,
 {
     let MergeNode {
         name,
         path,
-        changes,
+        changes: PathTree {
+            value: change,
+            subentries,
+        },
         mut parents,
     } = node;
-
-    let (change, subentries) = changes.deconstruct();
 
     // Deduplicate entries in parents list, **preserving order** of entries.
     // Essentially performing a trivial merge between identical entries.
@@ -625,46 +630,195 @@ where
 
     // Fetch parent trees and merge them.
     borrowed!(ctx, store);
-    let manifests = future::try_join_all(parent_subtrees.iter().map(move |tree_id| {
-        cloned!(ctx);
-        async move { tree_id.load(&ctx, store).await }
-    }))
-    .await?;
+    let parent_manifests_trie_maps =
+        future::try_join_all(parent_subtrees.iter().map(move |tree_id| {
+            cloned!(ctx);
+            async move {
+                tree_id
+                    .load(&ctx, store)
+                    .await?
+                    .into_trie_map(&ctx, store)
+                    .await
+            }
+        }))
+        .await?;
 
-    let mut deps: BTreeMap<MPathElement, _> = Default::default();
-    // add subentries from all parents
-    for manifest in manifests {
-        // TODO(T123518092): Do this concurrently where possible. Also, skip
-        // it altogether if possible, instead using lookup.
-        let mut stream = manifest.list(ctx, store).await?;
-        while let Some((name, entry)) = stream.try_next().await? {
-            let subentry = deps.entry(name.clone()).or_insert_with(|| MergeNode {
-                path: Some(NonRootMPath::join_opt_element(path.as_ref(), &name)),
-                name: Some(name),
-                changes: Default::default(),
-                parents: Default::default(),
-            });
-            subentry.parents.push(convert_to_intermediate_entry(entry));
-        }
-    }
-    // add subentries from changes
-    for (name, change) in subentries {
-        let subentry = deps.entry(name.clone()).or_insert_with(|| MergeNode {
-            path: Some(NonRootMPath::join_opt_element(path.as_ref(), &name)),
-            name: Some(name),
-            changes: Default::default(),
-            parents: Default::default(),
-        });
-        subentry.changes = change;
-    }
+    let MergeSubentriesResult {
+        reused_maps,
+        merge_nodes,
+    } = merge_subentries(
+        ctx,
+        store,
+        path.as_ref(),
+        subentries,
+        parent_manifests_trie_maps,
+    )
+    .await?;
 
     Ok((
         MergeResult::CreateTree {
             name,
             path,
             parents: parent_subtrees,
-            reused_maps: vec![],
+            reused_maps,
         },
-        deps.into_values().collect(),
+        merge_nodes,
     ))
+}
+
+struct MergeSubentriesNode<'a, Leaf, TrieMapType> {
+    path: Option<&'a NonRootMPath>,
+    prefix: SmallVec<[u8; 24]>,
+    changes: TrieMap<PathTree<Option<Change<Leaf>>>>,
+    parents: Vec<TrieMapType>,
+}
+
+struct MergeSubentriesResult<TreeId, IntermediateLeafId, Leaf, TrieMapType> {
+    reused_maps: Vec<(SmallVec<[u8; 24]>, TrieMapType)>,
+    merge_nodes: Vec<MergeNode<TreeId, IntermediateLeafId, Leaf>>,
+}
+
+async fn merge_subentries<TreeId, LeafId, IntermediateLeafId, Leaf, TrieMapType, Store>(
+    ctx: &CoreContext,
+    store: &Store,
+    path: Option<&NonRootMPath>,
+    changes: TrieMap<PathTree<Option<Change<Leaf>>>>,
+    parents: Vec<TrieMapType>,
+) -> Result<MergeSubentriesResult<TreeId, IntermediateLeafId, Leaf, TrieMapType>>
+where
+    TrieMapType: TrieMapOps<Store, Entry<TreeId, LeafId>> + Send,
+    Store: Sync + Send,
+    IntermediateLeafId: Send + From<LeafId>,
+    TreeId: Send,
+    LeafId: Send,
+    Leaf: Send,
+{
+    bounded_traversal::bounded_traversal(
+        256,
+        MergeSubentriesNode {
+            path,
+            prefix: smallvec![],
+            changes,
+            parents,
+        },
+        move |MergeSubentriesNode::<_, _> {
+                  path,
+                  prefix,
+                  changes,
+                  parents,
+              }| {
+            async move {
+                // If there are no changes and only one parent then we can reuse the parent's map.
+                // TODO(youssefsalama): In case of multiple identical parent maps, reuse one of their maps. This
+                // will only become possible once sharded map nodes are extended with aggregate information.
+                if changes.is_empty() && parents.len() <= 1 {
+                    return Ok((
+                        MergeSubentriesResult {
+                            reused_maps: parents
+                                .into_iter()
+                                .next()
+                                .map(|parent| (prefix, parent))
+                                .into_iter()
+                                .collect(),
+                            merge_nodes: vec![],
+                        },
+                        vec![],
+                    ));
+                }
+
+                // Expand changes and parent maps by the first byte, group changes and parent subentries that
+                // correspond to the current prefix into current_merge_node, then recurse on changes and parent
+                // maps that start with each byte, accumulating the resulting merge nodes and reused maps.
+
+                let mut child_merge_subentries_nodes: BTreeMap<u8, MergeSubentriesNode<_, _>> =
+                    Default::default();
+                let mut current_merge_node = None;
+
+                let (current_change, child_changes) = changes.expand();
+
+                if let Some(current_change) = current_change {
+                    let name = MPathElement::new_from_slice(&prefix)?;
+                    current_merge_node = Some(MergeNode {
+                        path: Some(NonRootMPath::join_opt_element(path, &name)),
+                        name: Some(name),
+                        changes: current_change,
+                        parents: Default::default(),
+                    })
+                }
+
+                for (next_byte, changes) in child_changes {
+                    child_merge_subentries_nodes
+                        .entry(next_byte)
+                        .or_insert_with(|| MergeSubentriesNode {
+                            path,
+                            prefix: prefix
+                                .iter()
+                                .copied()
+                                .chain(std::iter::once(next_byte))
+                                .collect(),
+                            changes: Default::default(),
+                            parents: Default::default(),
+                        })
+                        .changes = changes;
+                }
+
+                for parent in parents {
+                    let (current_entry, child_trie_maps) = parent.expand(ctx, store).await?;
+
+                    if let Some(current_entry) = current_entry {
+                        let name = MPathElement::new_from_slice(&prefix)?;
+                        current_merge_node
+                            .get_or_insert_with(|| MergeNode {
+                                path: Some(NonRootMPath::join_opt_element(path, &name)),
+                                name: Some(name),
+                                changes: Default::default(),
+                                parents: Default::default(),
+                            })
+                            .parents
+                            .push(convert_to_intermediate_entry(current_entry));
+                    }
+
+                    for (next_byte, trie_map) in child_trie_maps {
+                        child_merge_subentries_nodes
+                            .entry(next_byte)
+                            .or_insert_with(|| MergeSubentriesNode {
+                                path,
+                                prefix: prefix
+                                    .iter()
+                                    .copied()
+                                    .chain(std::iter::once(next_byte))
+                                    .collect(),
+                                changes: Default::default(),
+                                parents: Default::default(),
+                            })
+                            .parents
+                            .push(trie_map);
+                    }
+                }
+
+                Ok((
+                    MergeSubentriesResult {
+                        reused_maps: vec![],
+                        merge_nodes: current_merge_node.into_iter().collect::<Vec<_>>(),
+                    },
+                    child_merge_subentries_nodes.into_values().collect(),
+                ))
+            }
+            .boxed()
+        },
+        |mut result,
+         child_results: std::iter::Flatten<
+            std::vec::IntoIter<Option<MergeSubentriesResult<_, _, _, _>>>,
+        >| {
+            async {
+                for child_result in child_results {
+                    result.reused_maps.extend(child_result.reused_maps);
+                    result.merge_nodes.extend(child_result.merge_nodes);
+                }
+                Ok(result)
+            }
+            .boxed()
+        },
+    )
+    .await
 }
