@@ -235,13 +235,6 @@ def uisetup(ui) -> None:
     # Reorder incoming revs to be in linkrev order
     wrapfunction(revlog.revlog, "addgroup", addgroup)
 
-    def memcommitwrapper(loaded):
-        if loaded:
-            memcommitmod = extensions.find("memcommit")
-            wrapfunction(memcommitmod, "_memcommit", _memcommit)
-
-    extensions.afterloaded("memcommit", memcommitwrapper)
-
 
 def _importmysqlconnector() -> None:
     # mysql.connector does not import nicely with the demandimporter, so
@@ -468,14 +461,6 @@ def backfilltree(orig, ui, repo, *args, **kwargs):
             repo.sqlreplaytransaction = False
     else:
         return orig(ui, repo, *args, **kwargs)
-
-
-def _memcommit(orig, *args, **kwargs):
-    repo = args[0]
-    if issqlrepo(repo):
-        return executewithsql(repo, orig, True, *args, **kwargs)
-    else:
-        return orig(*args, **kwargs)
 
 
 def changegroupapply(orig, *args, **kwargs):

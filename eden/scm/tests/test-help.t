@@ -333,7 +333,6 @@ Test extension help:
                      this extension logs different pieces of information that
                      will be used
        megarepo      provides support for cross repo commit resolution
-       memcommit     make commits without a working copy
        morestatus    make status give a bit more context
        myparent
        ownercheck    prevent operations on repos not owned by the current user

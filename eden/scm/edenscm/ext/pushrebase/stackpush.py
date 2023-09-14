@@ -139,42 +139,6 @@ class pushrequest:
             cls._calculatefileconditions(parentctx, examinepaths),
         )
 
-    @classmethod
-    def frommemcommit(cls, repo, commitparams):
-        changelist = commitparams.changelist
-        metadata = commitparams.metadata
-
-        files = changelist.files
-        filechanges = {}
-        examinepaths = set(files.keys())
-
-        for path, info in pycompat.iteritems(files):
-            if info.deleted:
-                filechanges[path] = None
-            else:
-                copysource = info.copysource
-                if copysource:
-                    examinepaths.add(copysource)
-                filechanges[path] = (info.flags, info.content, copysource)
-
-        commit = pushcommit(
-            metadata.author,
-            None,
-            metadata.description,
-            metadata.extra,
-            filechanges,
-            examinepaths,
-        )
-
-        def resolveparentctx(repo, originalparent):
-            if not originalparent:
-                raise error.Abort(_("parent commit must be specified"))
-
-            return repo[originalparent]
-
-        p1 = resolveparentctx(repo, changelist.parent)
-        return cls(p1.node(), [commit], cls._calculatefileconditions(p1, examinepaths))
-
     @staticmethod
     def _calculatefileconditions(parentctx, examinepaths):
         """calculate 'fileconditions' - filenodes in the signal parent commit"""
