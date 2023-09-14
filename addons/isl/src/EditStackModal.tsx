@@ -10,6 +10,7 @@ import {Modal} from './Modal';
 import {SplitStackEditPanel, SplitStackToolbar} from './SplitStackEditPanel';
 import {StackEditConfirmButtons} from './StackEditConfirmButtons';
 import {StackEditSubTree} from './StackEditSubTree';
+import {tracker} from './analytics';
 import {T} from './i18n';
 import {loadingStackState, editingStackIntentionHashes} from './stackEditState';
 import {VSCodePanels, VSCodePanelTab, VSCodePanelView} from '@vscode/webview-ui-toolkit/react';
@@ -72,6 +73,7 @@ function LoadedEditStackModal() {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const tab: Tab | undefined = (e.target as any)?.activetab?.id?.replace('tab-', '');
           tab && setActiveTab(tab);
+          tab && tracker.track('StackEditChangeTab', {extras: {tab}});
         }}>
         <VSCodePanelTab id="tab-commits">
           <T>Commits</T>
@@ -95,7 +97,12 @@ function LoadedEditStackModal() {
           {/* Skip rendering (which might trigger slow dependency calculation) if the tab is inactive */}
           <ScrollY maxSize="calc(100vh - 200px)">
             {activeTab === 'commits' && (
-              <StackEditSubTree activateSplitTab={() => setActiveTab('split')} />
+              <StackEditSubTree
+                activateSplitTab={() => {
+                  setActiveTab('split');
+                  tracker.track('StackEditInlineSplitButton');
+                }}
+              />
             )}
           </ScrollY>
         </VSCodePanelView>

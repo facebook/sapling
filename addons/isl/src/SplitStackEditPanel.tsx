@@ -19,6 +19,7 @@ import {EmptyState} from './EmptyState';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
+import {tracker} from './analytics';
 import {t, T} from './i18n';
 import {SplitRangeRecord, useStackEditState} from './stackEditState';
 import {firstLine} from './utils';
@@ -28,6 +29,7 @@ import {useRef, useState, useEffect, useMemo} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {type LineIdx, splitLines, diffBlocks} from 'shared/diff';
+import {useThrottledEffect} from 'shared/hooks';
 import {DiffType} from 'shared/patch/parse';
 import {unwrap} from 'shared/utils';
 
@@ -372,6 +374,14 @@ function orderRevsInDrag(drag: DragSelection): DragSelection {
 
 function StackRangeSelector() {
   const stackEdit = useStackEditState();
+
+  useThrottledEffect(
+    () => {
+      tracker.track('SplitOpenRangeSelector');
+    },
+    100,
+    [],
+  );
 
   const {commitStack} = stackEdit;
   let {splitRange} = stackEdit;

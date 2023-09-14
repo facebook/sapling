@@ -17,6 +17,7 @@ import {InlineBadge} from './InlineBadge';
 import {Tooltip} from './Tooltip';
 import {UncommitButton} from './UncommitButton';
 import {UncommittedChanges} from './UncommittedChanges';
+import {tracker} from './analytics';
 import {latestCommitMessage} from './codeReview/CodeReviewInfo';
 import {DiffInfo} from './codeReview/DiffBadge';
 import {islDrawerState} from './drawerState';
@@ -146,6 +147,7 @@ export const Commit = memo(
 
     const handleSplit = () => {
       setEditStackIntentionHashes(['split', new Set([commit.hash])]);
+      tracker.track('SplitOpenFromCommitContextMenu');
     };
 
     const makeContextMenuOptions = useRecoilCallback(({snapshot}) => () => {
