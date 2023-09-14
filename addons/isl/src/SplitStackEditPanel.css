@@ -12,6 +12,7 @@
   min-height: calc(100vh - 220px);
 
   margin-inline: calc(0px - var(--pad));
+  font-size: var(--editor-font-size);
 }
 
 .split-commit-column {

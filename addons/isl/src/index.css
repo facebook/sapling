@@ -30,6 +30,8 @@
   --monospace-fontFamily: source-code-pro, SFMono-Regular, Consolas, 'Liberation Mono', Menlo,
     Courier, monospace;
 
+  --editor-font-size: var(--vscode-font-size, 13px);
+
   height: 100vh;
   max-height: 100vh;
   display: flex;
