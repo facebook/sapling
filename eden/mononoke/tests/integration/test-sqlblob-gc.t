@@ -37,6 +37,8 @@ Run sqlblob_gc generation size report again, just to check mark has not broken i
 Run sqlblob_gc mark
   $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 mark 2>&1 | strip_glog
   Starting initial generation set
+  Completed initial generation handling on shard * (glob)
+  Completed initial generation handling on shard * (glob)
   Completed initial generation set
   Starting marking generation 1
   Starting mark on data keys from shard 0
