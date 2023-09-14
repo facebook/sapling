@@ -34,8 +34,8 @@ const BLOBSTORE_KEY: &str = "blobstore_key";
 const COMPRESSED_SIZE: &str = "compressed_size";
 const PACK_KEY: &str = "pack_key";
 const UNCOMPRESSED_SIZE: &str = "uncompressed_size";
-const BASE_RETRY_DELAY_MS: u64 = 1000;
-const RETRIES: usize = 3;
+const BASE_RETRY_DELAY_MS: u64 = 2000;
+const RETRIES: usize = 10;
 
 // Tries to pack with the first blob from `blobs` as the dictionary for the other blobs
 fn try_pack(zstd_level: i32, blobs: Vec<(String, BlobstoreBytes)>) -> Result<Pack> {
