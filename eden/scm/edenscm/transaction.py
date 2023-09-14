@@ -19,7 +19,6 @@
 from __future__ import absolute_import
 
 import errno
-import functools
 
 import bindings
 
@@ -447,18 +446,14 @@ class transaction(util.transactional):
     def running(self):
         return self.count > 0
 
-    def addpending(self, category, callback, onetime=False):
+    def addpending(self, category, callback):
         """add a callback to be called when the transaction is pending
 
         The transaction will be given as callback's first argument.
 
         Category is a unique identifier to allow overwriting an old callback
         with a newer callback.
-
-        If onetime is set to True, the callback will only be called once.
         """
-        if onetime:
-            callback = functools.partial(onetimewrapper, [False], callback)
         self._pendingcallback[category] = callback
 
     @active
@@ -792,14 +787,3 @@ def rollback(opener, vfsmap, file, report, checkambigfiles=None) -> None:
         backupentries,
         checkambigfiles=checkambigfiles,
     )
-
-
-def onetimewrapper(called, orig, *args, **kwargs):
-    """Wrapper to call orig function only once.
-
-    This function is meant to be bound with called=[False], orig=func using
-    functools.partial.
-    """
-    if not called[0]:
-        called[0] = True
-        return orig(*args, **kwargs)

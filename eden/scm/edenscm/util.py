@@ -580,7 +580,7 @@ def caller():
     return caller
 
 
-def call_once(cache_val=False):
+def call_once(cache_val=True):
     """
     returns a decorator that ensures the given `func` is only executed once,
     even if it is called multiple times. It also provides an option to cache
@@ -596,7 +596,7 @@ def call_once(cache_val=False):
     42
     >>> expensive_op()
     42
-    >>> @call_once()
+    >>> @call_once(cache_val=False)
     ... def expensive_op():
     ...   print("performing an expensive operation")
     ...   return 42
