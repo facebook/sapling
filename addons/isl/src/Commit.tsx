@@ -239,7 +239,7 @@ export const Commit = memo(
               );
               event.stopPropagation(); // don't select commit
             }}>
-            <T>Goto</T> <Icon icon="arrow-right" />
+            <T>Goto</T> <Icon icon="newline" />
           </VSCodeButton>
         </span>,
       );
