@@ -23,6 +23,8 @@ import minimist from 'minimist';
 import pathMod from 'path';
 import prettier from 'prettier';
 
+const GENERATED_SIGIL = '\x40generated';
+
 type GrammarResponse = {
   scopeName: string;
   language?: string | null;
@@ -280,10 +282,19 @@ async function writeGrammarFiles(
 
       const jsModule = `${scopeName.replace(/\./g, '_')}_TextMateGrammar`;
       const jsonFile = pathMod.join(grammarsDir, `${jsModule}.${type}`);
-      let contents =
-        type === 'json'
-          ? JSON.stringify(definition, undefined, pretty ? 2 : undefined)
-          : definition;
+      let contents: string;
+      switch (type) {
+        case 'json':
+          contents = JSON.stringify(
+            {generated: GENERATED_SIGIL, ...definition},
+            undefined,
+            pretty ? 2 : undefined,
+          );
+          break;
+        case 'plist':
+          contents = `<!-- ${GENERATED_SIGIL} -->\n${definition}`;
+          break;
+      }
       if (contents[contents.length - 1] !== '\n') {
         contents = `${contents}\n`;
       }
