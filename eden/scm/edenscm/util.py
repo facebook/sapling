@@ -1492,6 +1492,10 @@ def copyfiles(src, dst, hardlink=None, num=0, progress=None):
     return hardlink, num
 
 
+def noop(*_args, **_kwargs):
+    pass
+
+
 def _reloadenv():
     """Reset some functions that are sensitive to environment variables"""
 
@@ -1512,6 +1516,10 @@ def _reloadenv():
 
         def istest():
             return True
+
+        # Silence exceptions in __del__
+        if sys.unraisablehook is not noop:
+            sys.unraisablehook = noop
 
     else:
 
