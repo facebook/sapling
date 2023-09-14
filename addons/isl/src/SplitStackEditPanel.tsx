@@ -207,7 +207,11 @@ function SplitColumn(props: SplitColumnProps) {
           <span className="split-commit-header-stack-number">
             {rev + 1} / {subStack.size}
           </span>
-          <EditableCommitTitle commitMessage={commitMessage} commitKey={commit?.key} />
+          <EditableCommitTitle
+            commitMessage={commitMessage}
+            commitKey={commit?.key}
+            readOnly={editors.isEmpty()}
+          />
           <VSCodeButton appearance="icon" onClick={e => showExtraCommitActionsContextMenu(e)}>
             <Icon icon="ellipsis" />
           </VSCodeButton>
@@ -454,6 +458,7 @@ function StackRangeSelector() {
 type MaybeEditableCommitTitleProps = {
   commitMessage: string;
   commitKey?: string;
+  readOnly: boolean;
 };
 
 function EditableCommitTitle(props: MaybeEditableCommitTitleProps) {
@@ -479,6 +484,7 @@ function EditableCommitTitle(props: MaybeEditableCommitTitleProps) {
   };
   return (
     <VSCodeTextField
+      readOnly={props.readOnly}
       value={existingTitle}
       title={t('Edit commit title')}
       style={{width: 'calc(100% - var(--pad))'}}
