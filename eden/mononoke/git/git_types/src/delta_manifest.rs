@@ -15,6 +15,7 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
+use blobstore::Storable;
 use bytes::Bytes;
 use context::CoreContext;
 use fbthrift::compact_protocol;
@@ -103,7 +104,11 @@ impl GitDeltaManifest {
         let entries = std::mem::take(&mut self.entries);
         let new_entries = new_entries
             .into_iter()
-            .map(|(path, entry)| (path.to_null_separated_bytes().into(), Some(entry)))
+            .map(|(path, entry)| {
+                // Convert the MPath into Vec<u8> by merging MPathElements with null byte as the separator. We use the null-separated
+                // path as the key in the ShardedMap to allow for proper ordering of paths.
+                (path.to_null_separated_bytes().into(), Some(entry))
+            })
             .collect::<BTreeMap<Bytes, _>>();
         self.entries = entries.update(ctx, blobstore, new_entries, |_| ()).await?;
         Ok(())
@@ -159,6 +164,22 @@ impl BlobstoreValue for GitDeltaManifest {
 
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
         Self::from_bytes(blob.data())
+    }
+}
+
+#[async_trait::async_trait]
+impl Storable for GitDeltaManifest {
+    type Key = GitDeltaManifestId;
+
+    async fn store<'a, B: Blobstore>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a B,
+    ) -> Result<Self::Key> {
+        let blob = self.into_blob();
+        let id = blob.id().clone();
+        blobstore.put(ctx, id.blobstore_key(), blob.into()).await?;
+        Ok(id)
     }
 }
 
@@ -243,6 +264,16 @@ pub struct ObjectDelta {
     instructions_chunk_count: u64,
 }
 
+impl ObjectDelta {
+    pub fn new(origin: ChangesetId, base: ObjectEntry, instructions_chunk_count: u64) -> Self {
+        Self {
+            origin,
+            base,
+            instructions_chunk_count,
+        }
+    }
+}
+
 impl TryFrom<thrift::ObjectDelta> for ObjectDelta {
     type Error = Error;
 
@@ -302,13 +333,13 @@ impl Arbitrary for ObjectDelta {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ObjectEntry {
     /// The Git object ID which is the SHA1 hash of the object content
-    oid: ObjectId,
+    pub oid: ObjectId,
     /// The size of the object in bytes
-    size: u64,
+    pub size: u64,
     /// The type of the Git object, only Blob and Tree are supported in GitDeltaManifest
-    kind: ObjectKind,
+    pub kind: ObjectKind,
     /// The path of the directory or file corresponding to this Git Tree or Blob
-    path: MPath,
+    pub path: MPath,
 }
 
 impl TryFrom<thrift::ObjectEntry> for ObjectEntry {

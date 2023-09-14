@@ -86,12 +86,12 @@ where
         .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))
 }
 
-/// Free function for fetching stored git objects
-pub async fn fetch_git_object<B>(
+/// Free function for fetching the raw bytes of stored git objects
+pub(crate) async fn fetch_git_object_bytes<B>(
     ctx: &CoreContext,
     blobstore: &B,
     git_hash: &gix_hash::oid,
-) -> anyhow::Result<gix_object::Object, GitError>
+) -> anyhow::Result<Bytes, GitError>
 where
     B: Blobstore + Clone,
 {
@@ -101,13 +101,25 @@ where
         .await
         .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))?
         .ok_or_else(|| GitError::NonExistentObject(git_hash.to_hex().to_string()))?;
-    let object =
-        gix_object::ObjectRef::from_loose(object_bytes.as_raw_bytes().as_ref()).map_err(|e| {
-            GitError::InvalidContent(
-                git_hash.to_hex().to_string(),
-                anyhow::anyhow!(e.to_string()).into(),
-            )
-        })?;
+    Ok(object_bytes.into_raw_bytes())
+}
+
+/// Free function for fetching stored git objects
+pub async fn fetch_git_object<B>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    git_hash: &gix_hash::oid,
+) -> anyhow::Result<gix_object::Object, GitError>
+where
+    B: Blobstore + Clone,
+{
+    let raw_bytes = fetch_git_object_bytes(ctx, blobstore, git_hash).await?;
+    let object = gix_object::ObjectRef::from_loose(raw_bytes.as_ref()).map_err(|e| {
+        GitError::InvalidContent(
+            git_hash.to_hex().to_string(),
+            anyhow::anyhow!(e.to_string()).into(),
+        )
+    })?;
     Ok(object.into())
 }
 
@@ -168,7 +180,7 @@ where
                     anyhow::Ok(())
                 }
             })
-            .buffer_unordered(100)
+            .buffer_unordered(24) // Same as the concurrency used for filestore
             .try_collect::<Vec<_>>()
             .await
             .map(|result| result.len() as u64),

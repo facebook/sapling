@@ -6,6 +6,7 @@
  */
 
 #![feature(error_generic_member_access)]
+#![feature(iterator_try_reduce)]
 #![feature(provide_any)]
 
 pub mod mode;
@@ -27,6 +28,7 @@ mod object;
 mod store;
 mod tree;
 
+pub use delta_manifest::ObjectKind as DeltaObjectKind;
 pub use object::ObjectKind;
 
 pub use crate::blob::BlobHandle;

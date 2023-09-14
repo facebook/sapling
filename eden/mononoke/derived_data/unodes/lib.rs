@@ -24,7 +24,7 @@ use mononoke_types::NonRootMPath;
 use thiserror::Error;
 
 mod derive;
-mod mapping;
+pub mod mapping;
 
 pub use mapping::format_key;
 pub use mapping::RootUnodeManifestId;

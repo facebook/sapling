@@ -108,7 +108,7 @@ lazy_static! {
         let filenodes = FilenodesOnlyPublic::NAME;
         let skeleton_mf = RootSkeletonManifestId::NAME;
         let bssm = RootBasenameSuffixSkeletonManifest::NAME;
-        let gdm = RootGitDeltaManifestId::NAME;
+        let git_delta_manifest = RootGitDeltaManifestId::NAME;
         let git_commit = MappedGitCommitId::NAME;
         let git_tree = TreeHandle::NAME;
 
@@ -126,7 +126,7 @@ lazy_static! {
         dag.insert(bssm, vec![]);
         dag.insert(git_tree, vec![]);
         dag.insert(git_commit, vec![git_tree]);
-        dag.insert(gdm, vec![git_tree, git_commit]);
+        dag.insert(git_delta_manifest, vec![git_tree, git_commit, unodes]);
 
         dag
     };
