@@ -276,6 +276,11 @@ elif sys.platform.startswith("darwin"):
     # flakey (actual timing doesn't match expected timing)
     TEST_DISABLED["config_test.ConfigTest"] = True
 
+    if "SANDCASTLE" in os.environ:
+        # S362020: Redirect tests leave behind garbage on macOS Sandcastle hosts
+        TEST_DISABLED["redirect_test.RedirectTest"] = True
+
+
 # Windows specific tests
 if sys.platform != "win32":
     TEST_DISABLED.update(
