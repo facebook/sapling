@@ -557,8 +557,9 @@ impl MPath {
         slashes + elem_len
     }
 
-    // Private because it does not validate elements - you must ensure that it's non-empty
-    fn from_elements<'a, I>(elements: I) -> Self
+    /// Create an MPath out of an iterator of elements. If the iterator is empty, we create en
+    /// empty (root) MPath
+    pub fn from_elements<'a, I>(elements: I) -> Self
     where
         I: Iterator<Item = &'a MPathElement>,
     {
@@ -629,6 +630,10 @@ impl MPath {
         DisplayOpt(path_opt)
     }
 
+    /// Convert this path to a null separated bytes sequence. If the path is non-empty, the null-byte
+    /// is used as a separator to combine the elements of the path (i.e. a path with 3 elements will have 2 null bytes).
+    /// However, if the path is empty (root) then simply a null-byte is returned. This helps in providing a storable representation
+    /// of empty paths which is not offered by an empty Vec
     pub fn to_null_separated_bytes(&self) -> Vec<u8> {
         // The root path will be represented as a null byte
         if self.is_root() {
@@ -637,6 +642,20 @@ impl MPath {
             let ret: Vec<_> = self.elements.iter().map(|e| e.0.as_ref()).collect();
             ret.join(&b'\0')
         }
+    }
+
+    /// Create an MPath out of sequence of MPathElement bytes separated by the null byte. If the
+    /// byte sequence just contains the null byte, then the empty (root) path is returned
+    pub fn from_null_separated_bytes(path: Vec<u8>) -> Result<Self> {
+        if path == vec![b'\0'] {
+            return Ok(Self::EMPTY);
+        }
+        let segments = path
+            .split(|elem| elem == &b'\0')
+            .map(MPathElement::new_from_slice)
+            .collect::<Result<Vec<_>>>()
+            .with_context(|| format!("Error in creating Vec<MPathElement> from {:?}", path))?;
+        Ok(MPath::from_elements(segments.iter()))
     }
 }
 

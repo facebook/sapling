@@ -19,6 +19,9 @@ use blobstore::Storable;
 use bytes::Bytes;
 use context::CoreContext;
 use fbthrift::compact_protocol;
+use futures::stream::BoxStream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use gix_hash::oid;
 use gix_hash::ObjectId;
 use mononoke_types::hash::Blake2;
@@ -113,6 +116,66 @@ impl GitDeltaManifest {
         self.entries = entries.update(ctx, blobstore, new_entries, |_| ()).await?;
         Ok(())
     }
+
+    pub fn into_subentries<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+    ) -> BoxStream<'a, Result<(MPath, GitDeltaManifestEntry)>> {
+        self.entries
+            .into_entries(ctx, blobstore)
+            .and_then(|(k, v)| async move {
+                let path = MPath::from_null_separated_bytes(k.to_vec())?;
+                anyhow::Ok((path, v))
+            })
+            .boxed()
+    }
+
+    pub fn into_filtered_subentries<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        filter: fn(&MPath, &GitDeltaManifestEntry) -> bool,
+    ) -> BoxStream<'a, Result<(MPath, GitDeltaManifestEntry)>> {
+        self.entries
+            .into_entries(ctx, blobstore)
+            .try_filter_map(move |(k, v)| async move {
+                let path = MPath::from_null_separated_bytes(k.to_vec())?;
+                if filter(&path, &v) {
+                    anyhow::Ok(Some((path, v)))
+                } else {
+                    anyhow::Ok(None)
+                }
+            })
+            .boxed()
+    }
+
+    pub fn into_prefix_subentries<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        prefix: &'a [u8],
+    ) -> BoxStream<'a, Result<(MPath, GitDeltaManifestEntry)>> {
+        self.entries
+            .into_prefix_entries(ctx, blobstore, prefix)
+            .map(|res| {
+                res.and_then(|(k, v)| {
+                    let path = MPath::from_null_separated_bytes(k.to_vec())?;
+                    anyhow::Ok((path, v))
+                })
+            })
+            .boxed()
+    }
+
+    pub async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+        name: &MPath,
+    ) -> Result<Option<GitDeltaManifestEntry>> {
+        let path = name.to_null_separated_bytes();
+        self.entries.lookup(ctx, blobstore, path.as_ref()).await
+    }
 }
 
 impl MapValue for GitDeltaManifestEntry {
@@ -206,6 +269,13 @@ impl GitDeltaManifestEntry {
         thrift_tc
             .try_into()
             .context("Failure in converting Thrift data to GitDeltaManifestEntry")
+    }
+
+    pub fn is_tree(&self) -> bool {
+        match self.full.kind {
+            ObjectKind::Blob => false,
+            ObjectKind::Tree => true,
+        }
     }
 }
 
