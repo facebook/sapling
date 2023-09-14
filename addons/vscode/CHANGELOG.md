@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.25
+
+### Sep 13 2023
+
+- Many UI and UX changes to the _Interactive Split_ feature. While still labeled _Beta_, it's much more useable now.
+- Added Syntax highlighting for the Split view.
+- Split can now be accessed on any single commit by right click
+- When using Split from the _Edit Stack_ menu, you can more easily select a range of commits to split
+- Temporarily removed the _Files_ tab from edit stack, until it can be polished similar to the _Split_ tab.
+- New icon in the "go to" button
+
 ## 0.1.24
 
 ### Sep 07 2023
