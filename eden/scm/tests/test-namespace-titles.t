@@ -8,15 +8,25 @@ Prepare a repo
   $ hg ci -m 'B: bar-baz'
   $ hg go -q 'desc("A: foo")'
   $ hg ci -m "$(printf 'C: multi line\nfoo bar baz 2nd line')"
+  $ hg ci -m 'D: not public'
 
   $ function log() {
-  >   hg log -T '{desc|firstline}\n' -r "$1"
+  >   hg log -T '{desc|firstline}\n' -r "$@"
   > }
 
 Not by symbol
 
   $ log 'desc("bar-baz")::'
   B: bar-baz
+
+Do not conflict with aliases or trigger hint messages
+
+  $ log public '--config=revsetalias.public=public()'
+
+  $ log 'public()'
+
+  $ log 'public()' '--config=revsetalias.public()=.'
+  D: not public
 
 Select by word
 
@@ -79,7 +89,6 @@ Embed in a revset expression
 
 Can be disabled
 
-  $ setconfig experimental.titles-namespace=false
-  $ log foo
+  $ log foo --config experimental.titles-namespace=false
   abort: unknown revision 'foo'!
   [255]

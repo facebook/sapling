@@ -122,6 +122,9 @@ def titles(repo):
         name = name.lower()
         if not name or (_is_symbol(name[0]) and _is_symbol(name[-1])):
             return []
+        # Do not conflict with revsetalias
+        if repo.ui.config("revsetalias", name):
+            return []
         # PERF: This runs a linear string match scan of up to 1k commits.
         # If called repetitively, it might need caching or indexing.
         for node, title in repo.draft_titles():
