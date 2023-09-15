@@ -17,8 +17,8 @@ use anyhow::bail;
 use anyhow::Error;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
+use bulkops::ChangesetBulkFetcher;
 use bulkops::Direction;
-use bulkops::PublicChangesetBulkFetch;
 use bulkops::MAX_FETCH_STEP;
 use changesets::ChangesetsArc;
 use cloned::cloned;
@@ -263,7 +263,7 @@ where
             .chunking
             .as_ref()
             .map(|chunking| {
-                let heads_fetcher = PublicChangesetBulkFetch::new(
+                let heads_fetcher = ChangesetBulkFetcher::new(
                     repo_params.repo.changesets_arc(),
                     repo_params.repo.phases_arc(),
                 )

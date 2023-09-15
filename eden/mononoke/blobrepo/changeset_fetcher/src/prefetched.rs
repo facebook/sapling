@@ -33,7 +33,7 @@ pub struct PrefetchedChangesetsFetcher {
 
 impl PrefetchedChangesetsFetcher {
     /// Construct with a fetcher to get from the backing store, and a prefetched set
-    /// This can come directly from bulkops::PublicChangesetBulkFetch::fetch
+    /// This can come directly from bulkops::ChangesetBulkFetcher::fetch
     /// or from a deserialised file via `futures::stream::iter`
     pub async fn new(
         repo_id: RepositoryId,

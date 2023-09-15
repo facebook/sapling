@@ -12,8 +12,8 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use buffered_commit_graph_storage::BufferedCommitGraphStorage;
+use bulkops::ChangesetBulkFetcher;
 use bulkops::Direction;
-use bulkops::PublicChangesetBulkFetch;
 use caching_commit_graph_storage::CachingCommitGraphStorage;
 use caching_ext::CacheHandlerFactory;
 use clap::Args;
@@ -111,7 +111,7 @@ async fn backfill_impl(
     args: BackfillArgs,
 ) -> Result<()> {
     let fetcher =
-        PublicChangesetBulkFetch::new(repo.changesets.clone(), Arc::new(FakeAllCommitsPublic))
+        ChangesetBulkFetcher::new(repo.changesets.clone(), Arc::new(FakeAllCommitsPublic))
             .with_read_from_master(true);
 
     let start_id = match args.start_id {
@@ -123,7 +123,7 @@ async fn backfill_impl(
     };
 
     fetcher
-        .fetch_bounded_with_id(ctx, Direction::OldestFirst, Some((start_id, u64::MAX)))
+        .fetch_public_bounded_with_id(ctx, Direction::OldestFirst, Some((start_id, u64::MAX)))
         .try_chunks(args.chunk_size)
         .map(|r| r.context("Error chunking"))
         .try_for_each(|entries| async move {

@@ -16,7 +16,7 @@ use blobrepo::BlobRepo;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksArc;
-use bulkops::PublicChangesetBulkFetch;
+use bulkops::ChangesetBulkFetcher;
 use caching_ext::CacheHandlerFactory;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
@@ -130,7 +130,7 @@ async fn new_tailer(
         .await?,
     );
 
-    let bulk_fetcher = Arc::new(PublicChangesetBulkFetch::new(
+    let bulk_fetcher = Arc::new(ChangesetBulkFetcher::new(
         blobrepo.changesets_arc(),
         blobrepo.phases_arc(),
     ));

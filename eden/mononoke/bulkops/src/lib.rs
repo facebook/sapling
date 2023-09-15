@@ -59,14 +59,14 @@ impl Direction {
     }
 }
 
-pub struct PublicChangesetBulkFetch {
+pub struct ChangesetBulkFetcher {
     changesets: Arc<dyn Changesets>,
     phases: Arc<dyn Phases>,
     read_from_master: bool,
     step: u64,
 }
 
-impl PublicChangesetBulkFetch {
+impl ChangesetBulkFetcher {
     pub fn new(changesets: Arc<dyn Changesets>, phases: Arc<dyn Phases>) -> Self {
         Self {
             changesets,
@@ -93,15 +93,15 @@ impl PublicChangesetBulkFetch {
     }
 
     /// Fetch the ChangesetEntry, which involves actually loading the Changesets
-    pub fn fetch<'a>(
+    pub fn fetch_public<'a>(
         &'a self,
         ctx: &'a CoreContext,
         d: Direction,
     ) -> impl Stream<Item = Result<ChangesetEntry, Error>> + 'a {
-        self.fetch_bounded(ctx, d, None)
+        self.fetch_public_bounded(ctx, d, None)
     }
 
-    pub fn fetch_bounded<'a>(
+    pub fn fetch_public_bounded<'a>(
         &'a self,
         ctx: &'a CoreContext,
         d: Direction,
@@ -109,7 +109,7 @@ impl PublicChangesetBulkFetch {
     ) -> impl Stream<Item = Result<ChangesetEntry, Error>> + 'a {
         async move {
             let s = self
-                .fetch_ids(ctx, d, repo_bounds)
+                .fetch_public_ids(ctx, d, repo_bounds)
                 .chunks(CHUNK_SIZE)
                 .then(move |results| {
                     future::ready(async move {
@@ -136,7 +136,7 @@ impl PublicChangesetBulkFetch {
     }
 
     /// Same as fetch_bounded but also returns the auto-increment id for each changeset
-    pub fn fetch_bounded_with_id<'a>(
+    pub fn fetch_public_bounded_with_id<'a>(
         &'a self,
         ctx: &'a CoreContext,
         d: Direction,
@@ -144,7 +144,7 @@ impl PublicChangesetBulkFetch {
     ) -> impl Stream<Item = Result<(ChangesetEntry, u64), Error>> + 'a {
         async move {
             let s = self
-                .fetch_ids(ctx, d, repo_bounds)
+                .fetch_public_ids(ctx, d, repo_bounds)
                 .chunks(CHUNK_SIZE)
                 .then(move |results| {
                     future::ready(async move {
@@ -190,7 +190,7 @@ impl PublicChangesetBulkFetch {
     /// Fetch ChangesetIds and the corresponding SQL auto-increment ids.
     /// Each id comes with the chunk bounds it was loaded from, using rusts upper exclusive bounds convention.
     /// One can optionally specify repo bounds, or None to have it resolved for you (specifying it is useful when checkpointing)
-    pub fn fetch_ids<'a>(
+    pub fn fetch_public_ids<'a>(
         &'a self,
         ctx: &'a CoreContext,
         d: Direction,
@@ -363,11 +363,8 @@ mod tests {
         Ok(blobrepo)
     }
 
-    fn build_fetcher(
-        step_size: u64,
-        blobrepo: &BlobRepo,
-    ) -> Result<PublicChangesetBulkFetch, Error> {
-        PublicChangesetBulkFetch::new(blobrepo.changesets_arc(), blobrepo.phases_arc())
+    fn build_fetcher(step_size: u64, blobrepo: &BlobRepo) -> Result<ChangesetBulkFetcher, Error> {
+        ChangesetBulkFetcher::new(blobrepo.changesets_arc(), blobrepo.phases_arc())
             .with_step(step_size)
     }
 
@@ -394,10 +391,11 @@ mod tests {
             // Repo bounds are 1..8. Check a range of step sizes in lieu of varying the repo bounds
             for step_size in 1..9 {
                 let fetcher = build_fetcher(step_size, &blobrepo)?;
-                let entries: Vec<ChangesetEntry> = fetcher.fetch(&ctx, *d).try_collect().await?;
+                let entries: Vec<ChangesetEntry> =
+                    fetcher.fetch_public(&ctx, *d).try_collect().await?;
                 let public_ids: Vec<ChangesetId> = entries.into_iter().map(|e| e.cs_id).collect();
                 let public_ids2: Vec<ChangesetId> = fetcher
-                    .fetch_ids(&ctx, *d, None)
+                    .fetch_public_ids(&ctx, *d, None)
                     .map_ok(|((cs_id, _), (lower, upper))| {
                         assert_ne!(lower, upper, "step {} dir {:?}", step_size, d);
                         cs_id
@@ -450,7 +448,7 @@ mod tests {
             assert_eq!((1, 8), repo_bounds);
 
             let completed: Vec<(u64, u64)> = fetcher
-                .fetch_ids(&ctx, *dir, Some(repo_bounds))
+                .fetch_public_ids(&ctx, *dir, Some(repo_bounds))
                 .map_ok(|(_cs_id, completed)| completed)
                 .try_collect()
                 .await?;
@@ -470,8 +468,8 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         let blobrepo = get_test_repo(&ctx, fb).await?;
 
-        let fetcher =
-            PublicChangesetBulkFetch::new(blobrepo.changesets_arc(), blobrepo.phases_arc());
+        let fetcher = ChangesetBulkFetcher::new(blobrepo.changesets_arc(), blobrepo.phases_arc());
+
         // If we give empty known heads, we expect all IDs in the repo
         assert_eq!(
             (1, 8),

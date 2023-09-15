@@ -19,8 +19,8 @@ use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksArc;
+use bulkops::ChangesetBulkFetcher;
 use bulkops::Direction;
-use bulkops::PublicChangesetBulkFetch;
 use caching_ext::CacheHandlerFactory;
 use changeset_fetcher::ChangesetFetcher;
 use changeset_fetcher::PrefetchedChangesetsFetcher;
@@ -94,7 +94,7 @@ pub enum OperationMode {
 pub struct SegmentedChangelogTailer {
     repo_id: RepositoryId,
     changeset_fetcher: Arc<PrefetchedChangesetsFetcher>,
-    bulk_fetch: Arc<PublicChangesetBulkFetch>,
+    bulk_fetch: Arc<ChangesetBulkFetcher>,
     bookmarks: Arc<dyn Bookmarks>,
     seed_heads: Vec<SeedHead>,
     sc_version_store: SegmentedChangelogVersionStore,
@@ -110,7 +110,7 @@ impl SegmentedChangelogTailer {
         connections: SegmentedChangelogSqlConnections,
         replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
         changeset_fetcher: Arc<PrefetchedChangesetsFetcher>,
-        bulk_fetch: Arc<PublicChangesetBulkFetch>,
+        bulk_fetch: Arc<ChangesetBulkFetcher>,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         blobstore: Arc<dyn Blobstore>,
         bookmarks: Arc<dyn Bookmarks>,
@@ -192,7 +192,7 @@ impl SegmentedChangelogTailer {
             .await?,
         );
 
-        let bulk_fetcher = Arc::new(PublicChangesetBulkFetch::new(
+        let bulk_fetcher = Arc::new(ChangesetBulkFetcher::new(
             blobrepo.changesets_arc(),
             blobrepo.phases_arc(),
         ));
@@ -372,7 +372,7 @@ impl SegmentedChangelogTailer {
                 // chunk of the repo
                 let missing = self
                     .bulk_fetch
-                    .fetch_bounded(ctx, Direction::NewestFirst, Some(repo_bounds))
+                    .fetch_public_bounded(ctx, Direction::NewestFirst, Some(repo_bounds))
                     .map(|res| {
                         counter += 1;
                         let sampling_rate = tunables()
