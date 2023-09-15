@@ -227,11 +227,30 @@ class ConfigSetting final : private ConfigSettingBase {
   static constexpr size_t kConfigSourceLastIndex =
       static_cast<size_t>(apache::thrift::TEnumTraits<ConfigSourceType>::max());
 
+  /**
+   * Mapping of ConfigSourceType to the corresponding precedence. A higer value
+   * means higher precedence.
+   */
+  static size_t getIdx(ConfigSourceType cs) {
+    switch (cs) {
+      case ConfigSourceType::Default:
+        return 0;
+      case ConfigSourceType::SystemConfig:
+        return 1;
+      case ConfigSourceType::UserConfig:
+        return 2;
+      case ConfigSourceType::CommandLine:
+        return 3;
+    }
+    throwf<std::invalid_argument>(
+        "invalid config source value: {}", static_cast<size_t>(cs));
+  }
+
   std::optional<T>& getSlot(ConfigSourceType source) {
-    return configValueArray_[static_cast<size_t>(source)];
+    return configValueArray_[getIdx(source)];
   }
   const std::optional<T>& getSlot(ConfigSourceType source) const {
-    return configValueArray_[static_cast<size_t>(source)];
+    return configValueArray_[getIdx(source)];
   }
 
   /**
@@ -239,13 +258,13 @@ class ConfigSetting final : private ConfigSettingBase {
    */
   size_t getHighestPriorityIdx() const {
     for (auto idx = kConfigSourceLastIndex;
-         idx > static_cast<size_t>(ConfigSourceType::Default);
+         idx > getIdx(ConfigSourceType::Default);
          --idx) {
       if (configValueArray_[idx].has_value()) {
         return idx;
       }
     }
-    return static_cast<size_t>(ConfigSourceType::Default);
+    return getIdx(ConfigSourceType::Default);
   }
 
   /**
