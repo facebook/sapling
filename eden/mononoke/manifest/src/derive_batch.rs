@@ -212,7 +212,10 @@ where
                 | {
                     cloned!(ctx, store);
                     async move {
-                        let (changes, subentries) = path_tree.deconstruct();
+                        let PathTree {
+                            value: changes,
+                            subentries,
+                        } = path_tree;
 
                         if !changes.is_empty() && subentries.is_empty() {
                             // We have a stack of changes for a given leaf

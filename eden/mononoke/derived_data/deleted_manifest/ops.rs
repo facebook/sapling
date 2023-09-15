@@ -275,7 +275,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
                                 Ok((return_entry, recurse))
                             }
                             Selector::Selector(path_tree) => {
-                                let (value, subentries) = path_tree.deconstruct();
+                                let PathTree { value, subentries } = path_tree;
 
                                 match value {
                                     Some(Pattern::Prefix) => {

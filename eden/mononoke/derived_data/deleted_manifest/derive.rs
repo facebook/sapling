@@ -394,7 +394,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 }
             }
         }
-        let (_, subentries) = changes.deconstruct();
+        let subentries = changes.subentries;
 
         // Base traversal for all entries included in `changes` arg
         let mut recurse_entries = subentries

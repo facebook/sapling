@@ -80,7 +80,6 @@ pub use path::MPathHash;
 pub use path::NonRootMPath;
 pub use path::PrefixTrie;
 pub use path::RepoPath;
-pub use path::TrieMap;
 pub use rawbundle2::RawBundle2;
 pub use redaction_key_list::RedactionKeyList;
 pub use repo::RepositoryId;
