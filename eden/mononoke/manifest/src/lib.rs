@@ -13,7 +13,6 @@ pub use crate::bonsai::bonsai_diff;
 pub use crate::bonsai::BonsaiDiffFileChange;
 pub use crate::derive::derive_manifest;
 pub use crate::derive::derive_manifest_with_io_sender;
-pub use crate::derive::flatten_subentries;
 pub use crate::derive::LeafInfo;
 pub use crate::derive::TreeInfo;
 pub use crate::implicit_deletes::get_implicit_deletes;
@@ -31,7 +30,6 @@ pub use crate::types::Manifest;
 pub use crate::types::OrderedManifest;
 pub use crate::types::PathTree;
 pub use crate::types::Traced;
-pub use crate::types::TrieMapOps;
 
 mod bonsai;
 mod derive;

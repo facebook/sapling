@@ -16,18 +16,15 @@ use anyhow::Error;
 use blobstore::StoreLoadable;
 use cloned::cloned;
 use context::CoreContext;
-use futures::stream::TryStreamExt;
 use futures::Future;
 use futures::FutureExt;
-use itertools::Either;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
-use smallvec::SmallVec;
 
-use crate::AsyncManifest as Manifest;
 use crate::Entry;
 use crate::LeafInfo;
+use crate::Manifest;
 use crate::PathTree;
 use crate::TreeInfo;
 
@@ -72,24 +69,12 @@ where
     IntermediateLeafId: Clone + Send + From<LeafId> + 'static + Sync,
     Leaf: Send + 'static,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
-    TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId> + Sync,
+    TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId> + Sync,
     <TreeId as StoreLoadable<Store>>::Value: Send,
-    T: Fn(
-            TreeInfo<
-                TreeId,
-                IntermediateLeafId,
-                Ctx,
-                <TreeId::Value as Manifest<Store>>::TrieMapType,
-            >,
-            ChangesetId,
-        ) -> TFut
-        + Send
-        + Sync
-        + 'static,
+    T: Fn(TreeInfo<TreeId, IntermediateLeafId, Ctx>, ChangesetId) -> TFut + Send + Sync + 'static,
     TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'caller,
     L: Fn(LeafInfo<IntermediateLeafId, Leaf>, ChangesetId) -> LFut + Send + Sync + 'static,
     LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'caller,
-    <TreeId::Value as Manifest<Store>>::TrieMapType: Clone,
     Ctx: Clone + Send + Sync + 'static,
 {
     Deriver {
@@ -143,24 +128,12 @@ where
     IntermediateLeafId: Clone + Send + From<LeafId> + 'static + Sync,
     Leaf: Send + 'static,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
-    TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId> + Sync,
+    TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId> + Sync,
     <TreeId as StoreLoadable<Store>>::Value: Send,
-    T: Fn(
-            TreeInfo<
-                TreeId,
-                IntermediateLeafId,
-                Ctx,
-                <TreeId::Value as Manifest<Store>>::TrieMapType,
-            >,
-            ChangesetId,
-        ) -> TFut
-        + Send
-        + Sync
-        + 'static,
+    T: Fn(TreeInfo<TreeId, IntermediateLeafId, Ctx>, ChangesetId) -> TFut + Send + Sync + 'static,
     TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'caller,
     L: Fn(LeafInfo<IntermediateLeafId, Leaf>, ChangesetId) -> LFut + Send + Sync + 'static,
     LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'caller,
-    <TreeId::Value as Manifest<Store>>::TrieMapType: Clone,
     Ctx: Clone + Send + Sync + 'static,
 {
     async fn derive(self) -> Result<BTreeMap<ChangesetId, TreeId>, Error> {
@@ -280,8 +253,7 @@ where
                             let mut deps: BTreeMap<MPathElement, _> = Default::default();
                             if let Some(Entry::Tree(tree_id)) = &parent {
                                 let mf = tree_id.load(&ctx, &store).await?;
-                                let mut stream = mf.list(&ctx, &store).await?;
-                                while let Some((name, entry)) = stream.try_next().await? {
+                                for (name, entry) in mf.list() {
                                     let subentry =
                                         deps.entry(name.clone()).or_insert_with(|| UnfoldState {
                                             path: Some(NonRootMPath::join_opt_element(path.as_ref(), &name)),
@@ -463,16 +435,11 @@ where
                         // derive_manifest()
                         let parent_mf = tree_id.load(ctx, &store).await?;
                         let subentries = parent_mf
-                            .list(ctx, &store)
-                            .await?
-                            .map_ok(|(path, entry)| {
-                                (
-                                    path.to_smallvec(),
-                                    Either::Left((None, convert_to_intermediate_entry(entry))),
-                                )
+                            .list()
+                            .map(|(path, entry)| {
+                                (path, (None, convert_to_intermediate_entry(entry)))
                             })
-                            .try_collect()
-                            .await?;
+                            .collect();
                         let (upload_ctx, tree_id) = create_tree(
                             TreeInfo {
                                 path: Some(path.clone()),
@@ -509,7 +476,8 @@ where
     ) -> Result<EntryStack<TreeId, IntermediateLeafId, Ctx>, Error> {
         // These are all sub entries for the commit we are currently processing.
         // We start with parent entries, and then apply delta changes on top.
-        let mut cur_sub_entries: BTreeMap<SmallVec<[u8; 24]>, _> = BTreeMap::new();
+        let mut cur_sub_entries: BTreeMap<MPathElement, (Option<Ctx>, Entry<_, _>)> =
+            BTreeMap::new();
 
         // `stack_sub_entries` is a mapping from (name -> list of changes).
         // We want to pivot it into (Changeset id -> Map(name, entry)),
@@ -519,17 +487,14 @@ where
         for (path_elem, entry_stack) in stack_sub_entries {
             let EntryStack { values, parent } = entry_stack;
             if let Some(parent) = parent {
-                cur_sub_entries.insert(
-                    path_elem.clone().to_smallvec(),
-                    Either::Left((None, parent)),
-                );
+                cur_sub_entries.insert(path_elem.clone(), (None, parent));
             }
 
             for (cs_id, ctx, maybe_entry) in values {
                 delta_sub_entries
                     .entry(cs_id)
                     .or_default()
-                    .insert(path_elem.clone().to_smallvec(), (ctx, maybe_entry));
+                    .insert(path_elem.clone(), (ctx, maybe_entry));
             }
         }
 
@@ -615,10 +580,10 @@ where
             for (path_elem, (ctx, maybe_entry)) in delta {
                 match maybe_entry {
                     Some(entry) => {
-                        cur_sub_entries.insert(path_elem, Either::Left((ctx, entry)));
+                        cur_sub_entries.insert(path_elem, (ctx, entry));
                     }
                     None => {
-                        cur_sub_entries.remove(path_elem.as_ref());
+                        cur_sub_entries.remove(&path_elem);
                     }
                 }
             }

@@ -25,7 +25,6 @@ use futures::future::TryFutureExt;
 use futures::future::{self as new_future};
 use manifest::derive_manifest_with_io_sender;
 use manifest::derive_manifests_for_simple_stack_of_commits;
-use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestChanges;
@@ -43,7 +42,6 @@ use mononoke_types::MPathElement;
 use mononoke_types::MPathHash;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
-use mononoke_types::TrieMap;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::ErrorKind;
@@ -174,16 +172,10 @@ async fn create_unode_manifest(
     linknode: ChangesetId,
     blobstore: Arc<dyn Blobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
-    tree_info: TreeInfo<
-        ManifestUnodeId,
-        FileUnodeId,
-        (),
-        TrieMap<Entry<ManifestUnodeId, FileUnodeId>>,
-    >,
+    tree_info: TreeInfo<ManifestUnodeId, FileUnodeId, ()>,
 ) -> Result<((), ManifestUnodeId), Error> {
     let mut subentries = SortedVectorMap::new();
-    for (basename, (_context, entry)) in flatten_subentries(&ctx, &(), tree_info.subentries).await?
-    {
+    for (basename, (_context, entry)) in tree_info.subentries {
         match entry {
             Entry::Tree(mf_unode) => {
                 subentries.insert(basename, UnodeEntry::Directory(mf_unode));

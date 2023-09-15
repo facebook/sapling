@@ -49,7 +49,6 @@ pub(crate) use crate::derive_batch::derive_manifests_for_simple_stack_of_commits
 pub(crate) use crate::derive_batch::ManifestChanges;
 pub(crate) use crate::derive_manifest;
 pub(crate) use crate::find_intersection_of_diffs;
-pub(crate) use crate::flatten_subentries;
 pub(crate) use crate::Diff;
 pub(crate) use crate::Entry;
 pub(crate) use crate::Manifest;
@@ -211,16 +210,13 @@ async fn derive_test_manifest(
         {
             cloned!(ctx, blobstore);
             move |TreeInfo { subentries, .. }| {
+                let subentries = subentries
+                    .into_iter()
+                    .map(|(path, (_, id))| (path, id))
+                    .collect();
                 cloned!(ctx, blobstore);
                 async move {
-                    let id = TestManifestU64(
-                        flatten_subentries(&ctx, &(), subentries)
-                            .await?
-                            .map(|(path, (_ctx, entry))| (path, entry))
-                            .collect(),
-                    )
-                    .store(&ctx, &blobstore)
-                    .await?;
+                    let id = TestManifestU64(subentries).store(&ctx, &blobstore).await?;
                     Ok(((), id))
                 }
             }
@@ -271,16 +267,13 @@ async fn derive_test_stack_of_manifests(
         {
             cloned!(ctx, blobstore);
             move |TreeInfo { subentries, .. }, _| {
+                let subentries = subentries
+                    .into_iter()
+                    .map(|(path, (_, id))| (path, id))
+                    .collect();
                 cloned!(ctx, blobstore);
                 async move {
-                    let id = TestManifestU64(
-                        flatten_subentries(&ctx, &(), subentries)
-                            .await?
-                            .map(|(path, (_ctx, entry))| (path, entry))
-                            .collect(),
-                    )
-                    .store(&ctx, &blobstore)
-                    .await?;
+                    let id = TestManifestU64(subentries).store(&ctx, &blobstore).await?;
                     Ok(((), id))
                 }
             }
