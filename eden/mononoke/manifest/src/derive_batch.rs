@@ -12,23 +12,24 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Context;
-use anyhow::Result;
+use anyhow::Error;
 use blobstore::StoreLoadable;
 use cloned::cloned;
 use context::CoreContext;
 use futures::stream::TryStreamExt;
 use futures::Future;
 use futures::FutureExt;
+use itertools::Either;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
+use smallvec::SmallVec;
 
 use crate::AsyncManifest as Manifest;
 use crate::Entry;
 use crate::LeafInfo;
 use crate::PathTree;
 use crate::TreeInfo;
-use crate::TreeInfoSubentries;
 
 pub struct ManifestChanges<Leaf> {
     pub cs_id: ChangesetId,
@@ -64,7 +65,7 @@ pub async fn derive_manifests_for_simple_stack_of_commits<
     changes: Vec<ManifestChanges<Leaf>>,
     create_tree: T,
     create_leaf: L,
-) -> Result<BTreeMap<ChangesetId, TreeId>>
+) -> Result<BTreeMap<ChangesetId, TreeId>, Error>
 where
     Store: Sync + Send + Clone + 'static,
     LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static + Sync,
@@ -85,9 +86,9 @@ where
         + Send
         + Sync
         + 'static,
-    TFut: Future<Output = Result<(Ctx, TreeId)>> + Send + 'caller,
+    TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'caller,
     L: Fn(LeafInfo<IntermediateLeafId, Leaf>, ChangesetId) -> LFut + Send + Sync + 'static,
-    LFut: Future<Output = Result<(Ctx, IntermediateLeafId)>> + Send + 'caller,
+    LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'caller,
     <TreeId::Value as Manifest<Store>>::TrieMapType: Clone,
     Ctx: Clone + Send + Sync + 'static,
 {
@@ -156,13 +157,13 @@ where
         + Send
         + Sync
         + 'static,
-    TFut: Future<Output = Result<(Ctx, TreeId)>> + Send + 'caller,
+    TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'caller,
     L: Fn(LeafInfo<IntermediateLeafId, Leaf>, ChangesetId) -> LFut + Send + Sync + 'static,
-    LFut: Future<Output = Result<(Ctx, IntermediateLeafId)>> + Send + 'caller,
+    LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'caller,
     <TreeId::Value as Manifest<Store>>::TrieMapType: Clone,
     Ctx: Clone + Send + Sync + 'static,
 {
-    async fn derive(self) -> Result<BTreeMap<ChangesetId, TreeId>> {
+    async fn derive(self) -> Result<BTreeMap<ChangesetId, TreeId>, Error> {
         let Deriver {
             ctx,
             store,
@@ -423,7 +424,7 @@ where
         create_leaf: Arc<L>,
         create_tree: Arc<T>,
         store: Store,
-    ) -> Result<EntryStack<TreeId, IntermediateLeafId, Ctx>> {
+    ) -> Result<EntryStack<TreeId, IntermediateLeafId, Ctx>, Error> {
         let mut entry_stack = EntryStack {
             parent: parent.clone(),
             values: vec![],
@@ -465,7 +466,10 @@ where
                             .list(ctx, &store)
                             .await?
                             .map_ok(|(path, entry)| {
-                                (path, (None, convert_to_intermediate_entry(entry)))
+                                (
+                                    path.to_smallvec(),
+                                    Either::Left((None, convert_to_intermediate_entry(entry))),
+                                )
                             })
                             .try_collect()
                             .await?;
@@ -473,7 +477,7 @@ where
                             TreeInfo {
                                 path: Some(path.clone()),
                                 parents: vec![tree_id],
-                                subentries: TreeInfoSubentries::AllSubentries(subentries),
+                                subentries,
                             },
                             cs_id,
                         )
@@ -502,10 +506,10 @@ where
         create_tree: Arc<T>,
         stack_of_commits: Arc<Vec<ChangesetId>>,
         maybe_file_deletion: Option<ChangesetId>,
-    ) -> Result<EntryStack<TreeId, IntermediateLeafId, Ctx>> {
+    ) -> Result<EntryStack<TreeId, IntermediateLeafId, Ctx>, Error> {
         // These are all sub entries for the commit we are currently processing.
         // We start with parent entries, and then apply delta changes on top.
-        let mut cur_sub_entries: BTreeMap<MPathElement, _> = BTreeMap::new();
+        let mut cur_sub_entries: BTreeMap<SmallVec<[u8; 24]>, _> = BTreeMap::new();
 
         // `stack_sub_entries` is a mapping from (name -> list of changes).
         // We want to pivot it into (Changeset id -> Map(name, entry)),
@@ -515,14 +519,17 @@ where
         for (path_elem, entry_stack) in stack_sub_entries {
             let EntryStack { values, parent } = entry_stack;
             if let Some(parent) = parent {
-                cur_sub_entries.insert(path_elem.clone(), (None, parent));
+                cur_sub_entries.insert(
+                    path_elem.clone().to_smallvec(),
+                    Either::Left((None, parent)),
+                );
             }
 
             for (cs_id, ctx, maybe_entry) in values {
                 delta_sub_entries
                     .entry(cs_id)
                     .or_default()
-                    .insert(path_elem.clone(), (ctx, maybe_entry));
+                    .insert(path_elem.clone().to_smallvec(), (ctx, maybe_entry));
             }
         }
 
@@ -595,7 +602,6 @@ where
                             *cs_id,
                         )
                         .await?;
-
                         parent = Some(tree_id.clone());
                         entry_stack
                             .values
@@ -609,10 +615,10 @@ where
             for (path_elem, (ctx, maybe_entry)) in delta {
                 match maybe_entry {
                     Some(entry) => {
-                        cur_sub_entries.insert(path_elem, (ctx, entry));
+                        cur_sub_entries.insert(path_elem, Either::Left((ctx, entry)));
                     }
                     None => {
-                        cur_sub_entries.remove(&path_elem);
+                        cur_sub_entries.remove(path_elem.as_ref());
                     }
                 }
             }
@@ -623,7 +629,7 @@ where
                     TreeInfo {
                         path: path.clone(),
                         parents: parent.clone().into_iter().collect(),
-                        subentries: TreeInfoSubentries::AllSubentries(cur_sub_entries.clone()),
+                        subentries: cur_sub_entries.clone(),
                     },
                     *cs_id,
                 )
@@ -645,7 +651,6 @@ where
                     *cs_id,
                 )
                 .await?;
-
                 parent = Some(tree_id.clone());
                 entry_stack
                     .values

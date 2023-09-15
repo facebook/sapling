@@ -16,7 +16,6 @@ pub use crate::derive::derive_manifest_with_io_sender;
 pub use crate::derive::flatten_subentries;
 pub use crate::derive::LeafInfo;
 pub use crate::derive::TreeInfo;
-pub use crate::derive::TreeInfoSubentries;
 pub use crate::implicit_deletes::get_implicit_deletes;
 pub use crate::ops::find_intersection_of_diffs;
 pub use crate::ops::find_intersection_of_diffs_and_parents;
