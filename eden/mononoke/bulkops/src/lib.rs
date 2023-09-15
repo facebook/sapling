@@ -11,6 +11,7 @@
 use std::cmp::max;
 use std::cmp::min;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::bail;
@@ -109,7 +110,7 @@ impl PublicChangesetBulkFetch {
         async move {
             let s = self
                 .fetch_ids(ctx, d, repo_bounds)
-                .chunks(BLOBSTORE_CHUNK_SIZE)
+                .chunks(CHUNK_SIZE)
                 .then(move |results| {
                     future::ready(async move {
                         let ids: Vec<ChangesetId> = results
@@ -144,7 +145,7 @@ impl PublicChangesetBulkFetch {
         async move {
             let s = self
                 .fetch_ids(ctx, d, repo_bounds)
-                .chunks(BLOBSTORE_CHUNK_SIZE)
+                .chunks(CHUNK_SIZE)
                 .then(move |results| {
                     future::ready(async move {
                         let ids: Vec<(ChangesetId, u64)> = results
@@ -174,7 +175,19 @@ impl PublicChangesetBulkFetch {
         .try_flatten_stream()
     }
 
-    /// Fetch just the ids without attempting to load the Changesets.
+    /// Fetch ChangesetIds and the corresponding SQL auto-increment ids, including both public and draft commits.
+    /// Each id comes with the chunk bounds it was loaded from, using rusts upper exclusive bounds convention.
+    /// One can optionally specify repo bounds, or None to have it resolved for you (specifying it is useful when checkpointing)
+    pub fn fetch_ids_for_both_public_and_draft_commits<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        d: Direction,
+        repo_bounds: Option<(u64, u64)>,
+    ) -> impl Stream<Item = Result<((ChangesetId, u64), (u64, u64)), Error>> + 'a {
+        self.fetch_ids_impl(ctx, d, repo_bounds, false)
+    }
+
+    /// Fetch ChangesetIds and the corresponding SQL auto-increment ids.
     /// Each id comes with the chunk bounds it was loaded from, using rusts upper exclusive bounds convention.
     /// One can optionally specify repo bounds, or None to have it resolved for you (specifying it is useful when checkpointing)
     pub fn fetch_ids<'a>(
@@ -182,6 +195,16 @@ impl PublicChangesetBulkFetch {
         ctx: &'a CoreContext,
         d: Direction,
         repo_bounds: Option<(u64, u64)>,
+    ) -> impl Stream<Item = Result<((ChangesetId, u64), (u64, u64)), Error>> + 'a {
+        self.fetch_ids_impl(ctx, d, repo_bounds, true)
+    }
+
+    fn fetch_ids_impl<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        d: Direction,
+        repo_bounds: Option<(u64, u64)>,
+        public_commits_only: bool,
     ) -> impl Stream<Item = Result<((ChangesetId, u64), (u64, u64)), Error>> + 'a {
         let phases = self.phases.as_ref();
         let repo_bounds = if let Some(repo_bounds) = repo_bounds {
@@ -255,8 +278,12 @@ impl PublicChangesetBulkFetch {
             .and_then(move |(mut ids, completed_bounds)| async move {
                 if !ids.is_empty() {
                     let cs_ids = ids.iter().map(|(cs_id, _)| *cs_id).collect();
-                    let public = phases.get_cached_public(ctx, cs_ids).await?;
-                    ids.retain(|(id, _)| public.contains(id));
+                    let selected_cs_ids = if public_commits_only {
+                        phases.get_cached_public(ctx, cs_ids).await?
+                    } else {
+                        cs_ids.iter().cloned().collect::<HashSet<ChangesetId>>()
+                    };
+                    ids.retain(|(id, _)| selected_cs_ids.contains(id));
                 }
                 Ok::<_, Error>(stream::iter(
                     ids.into_iter().map(move |id| Ok((id, completed_bounds))),
@@ -295,8 +322,7 @@ impl PublicChangesetBulkFetch {
     }
 }
 
-// Blobstore gets don't need batching as much as the SQL queries
-const BLOBSTORE_CHUNK_SIZE: usize = 1000;
+const CHUNK_SIZE: usize = 1000;
 
 pub const MAX_FETCH_STEP: u64 = 65536;
 pub const MIN_FETCH_STEP: u64 = 1;

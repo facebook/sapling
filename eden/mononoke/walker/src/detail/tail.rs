@@ -350,7 +350,11 @@ where
 
             let load_ids = |(lower, upper)| {
                 heads_fetcher
-                    .fetch_ids(&ctx, chunking.direction, Some((lower, upper)))
+                    .fetch_ids_for_both_public_and_draft_commits(
+                        &ctx,
+                        chunking.direction,
+                        Some((lower, upper)),
+                    )
                     .chunks(chunking.chunk_size)
                     .map(move |v| v.into_iter().collect::<Result<HashSet<_>, Error>>())
             };
