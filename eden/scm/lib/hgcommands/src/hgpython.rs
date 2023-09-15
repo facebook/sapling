@@ -377,7 +377,7 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
             let io = IO::new(fin, fout, Some(ferr));
             io.set_main();
             let result = Ok(crate::run_command(args, &io));
-            if let Ok(old_io) = old_io {
+            if let (Ok(old_io), true) = (old_io, io.is_main()) {
                 old_io.set_main();
             }
             result

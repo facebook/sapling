@@ -15,6 +15,7 @@ import json
 import os
 import socket
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -458,10 +459,23 @@ def _makerage(ui, repo, **opts) -> str:
     footnotes = []
     timeout = opts.get("timeout") or 20
 
-    def _failsafe(gen, timeout=timeout):
-        class TimedOut(RuntimeError):
-            pass
+    class TimedOut(RuntimeError):
+        pass
 
+    origexcepthook = sys.excepthook
+
+    def ignoretimeouthook(ex_cls, ex_inst, traceback):
+        if ex_cls == TimedOut:
+            return
+        origexcepthook(ex_cls, ex_inst, traceback)
+
+    # Sometimes the TimedOut exception leaks out and spoils the entire
+    # rage. We could set threading.excepthook instead, but I'm not
+    # sure if the exception propagates from the work thread to the
+    # main thread, or if it somehow jumps straight to the main thread.
+    sys.excepthook = ignoretimeouthook
+
+    def _failsafe(gen, timeout=timeout):
         def target(result, gen):
             try:
                 result.append(gen())
@@ -490,6 +504,9 @@ def _makerage(ui, repo, **opts) -> str:
                 ctypes.pythonapi.PyThreadState_SetAsyncExc(
                     ctypes.c_long(thread.ident), ctypes.py_object(TimedOut)
                 )
+                # Give thread a chance to exit. Otherwise, we risk various race
+                # conditions such as global IO mutation.
+                thread.join(min(5, timeout))
             return (
                 "(Did not complete in %s seconds, rerun with a larger --timeout to collect this)"
                 % timeout

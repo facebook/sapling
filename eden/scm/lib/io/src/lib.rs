@@ -474,6 +474,14 @@ impl IO {
         }
     }
 
+    /// Report whether self is the current main IO.
+    ///
+    /// This can be used to minimize race condition windows when running
+    /// commands in threads.
+    pub fn is_main(&self) -> bool {
+        Self::main().is_ok_and(|main| Arc::ptr_eq(&main.inner, &self.inner))
+    }
+
     /// Set the current IO as the main IO.
     ///
     /// Note: If the current IO gets dropped then the main IO will be dropped
