@@ -105,13 +105,12 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
             </HighlightCommitsWhileHovering>
           ),
           onClick: async () => {
-            const allCommits = [...resubmittableStack, ...submittableStack];
-            const confirmation = await confirmShouldSubmit('submit-all', allCommits);
+            const confirmation = await confirmShouldSubmit('submit-all', submittableStack);
             if (!confirmation) {
               return [];
             }
             runOperation(
-              reviewProvider.submitOperation(allCommits, {draft: confirmation.submitAsDraft}),
+              reviewProvider.submitOperation(submittableStack, {draft: confirmation.submitAsDraft}),
             );
           },
         });

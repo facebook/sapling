@@ -43,6 +43,8 @@ type SubmitType = 'submit' | 'submit-all' | 'resubmit';
 export function useShowConfirmSubmitStack() {
   const showModal = useModal();
 
+  useRecoilValue(confirmShouldSubmitEnabledAtom); // ensure this config is loaded ahead of clicking this
+
   return useRecoilCallback(({snapshot}) => async (mode: SubmitType, stack: Array<CommitInfo>) => {
     const provider = snapshot.getLoadable(codeReviewProvider).valueMaybe();
     const shouldShowConfirmation = snapshot
@@ -50,7 +52,7 @@ export function useShowConfirmSubmitStack() {
       .valueMaybe();
     if (
       !shouldShowConfirmation ||
-      !provider?.supportSubmittingAsDraft // if you can't submit as draft, no need to show the interstitial
+      provider?.supportSubmittingAsDraft == null // if you can't submit as draft, no need to show the interstitial
     ) {
       const draft = snapshot.getLoadable(submitAsDraft).valueMaybe();
       return {submitAsDraft: draft ?? false};
@@ -86,7 +88,7 @@ function ConfirmModalContent({
   );
   const shouldSubmitAsDraft = useRecoilValue(submitAsDraft);
   return (
-    <div className="confirm-submit-stack">
+    <div className="confirm-submit-stack" data-testid="confirm-submit-stack">
       <div className="confirm-submit-stack-content">
         <div className="commit-list">
           {stack.map(commit => (
@@ -121,7 +123,6 @@ function ConfirmModalContent({
         </VSCodeButton>
         <VSCodeButton
           appearance="primary"
-          autofocus
           onClick={() => returnResultAndDismiss({submitAsDraft: shouldSubmitAsDraft})}>
           <T>Submit</T>
         </VSCodeButton>
