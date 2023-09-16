@@ -403,6 +403,7 @@ export type ConfigName =
   | 'isl.hasShownGettingStarted'
   // sapling config prefers foo-bar naming.
   | 'isl.pull-button-choice'
+  | 'isl.show-stack-submit-confirmation'
   | 'isl.show-diff-number'
   | 'isl.experimental-features';
 

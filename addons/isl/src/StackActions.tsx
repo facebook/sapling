@@ -9,7 +9,7 @@ import type {UICodeReviewProvider} from './codeReview/UICodeReviewProvider';
 import type {DiffSummary, CommitInfo, Hash} from './types';
 
 import {FlexRow} from './ComponentUtils';
-import {confirmShouldSubmit} from './ConfirmSubmitStack';
+import {confirmShouldSubmit, confirmShouldSubmitEnabledAtom} from './ConfirmSubmitStack';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {OperationDisabledButton} from './OperationDisabledButton';
 import {showSuggestedRebaseForStack, SuggestedRebaseButton} from './SuggestedRebase';
@@ -37,6 +37,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
   const diffMap = useRecoilValue(allDiffSummaries);
   const stackHashes = useRecoilValue(editingStackIntentionHashes)[1];
   const loadingState = useRecoilValue(loadingStackState);
+  const showSubmitConfirmation = useRecoilValue(confirmShouldSubmitEnabledAtom);
   const suggestedRebase = useRecoilValue(showSuggestedRebaseForStack(tree.info.hash));
   const runOperation = useRunOperation();
 
@@ -80,6 +81,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
             runOperation={async () => {
               const confirmed = await confirmShouldSubmit(
                 'resubmit',
+                showSubmitConfirmation,
                 showModal,
                 reviewProvider,
                 resubmittableStack,
@@ -112,6 +114,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
             const allCommits = [...resubmittableStack, ...submittableStack];
             const confirmed = await confirmShouldSubmit(
               'submit-all',
+              showSubmitConfirmation,
               showModal,
               reviewProvider,
               allCommits,
@@ -148,6 +151,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
               const allCommits = submittableStack;
               const confirmed = await confirmShouldSubmit(
                 'submit',
+                showSubmitConfirmation,
                 showModal,
                 reviewProvider,
                 allCommits,
