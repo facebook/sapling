@@ -9,6 +9,7 @@ import type {UICodeReviewProvider} from './codeReview/UICodeReviewProvider';
 import type {DiffSummary, CommitInfo, Hash} from './types';
 
 import {FlexRow} from './ComponentUtils';
+import {confirmShouldSubmit} from './ConfirmSubmitStack';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {OperationDisabledButton} from './OperationDisabledButton';
 import {showSuggestedRebaseForStack, SuggestedRebaseButton} from './SuggestedRebase';
@@ -20,6 +21,7 @@ import {HideOperation} from './operations/HideOperation';
 import {useRunOperation, latestUncommittedChangesData} from './serverAPIState';
 import {StackEditIcon} from './stackEdit/ui/StackEditIcon';
 import {editingStackIntentionHashes, loadingStackState} from './stackEdit/ui/stackEditState';
+import {useModal} from './useModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue, useRecoilState} from 'recoil';
 import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';
@@ -55,6 +57,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
       : isStackEligibleForCleanup(tree, diffMap.value, reviewProvider);
 
   const contextMenu = useContextMenu(() => moreActions);
+  const showModal = useModal();
   if (reviewProvider !== null && !isStackEditingActivated) {
     const reviewActions =
       diffMap.value == null ? {} : reviewProvider?.getSupportedStackActions(tree, diffMap.value);
@@ -74,8 +77,17 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
             contextKey={`resubmit-stack-on-${tree.info.diffId}`}
             appearance="icon"
             icon={<Icon icon="cloud-upload" slot="start" />}
-            runOperation={() => {
-              return reviewProvider.submitOperation(resubmittableStack);
+            runOperation={async () => {
+              const confirmed = await confirmShouldSubmit(
+                'resubmit',
+                showModal,
+                reviewProvider,
+                resubmittableStack,
+              );
+              if (!confirmed) {
+                return [];
+              }
+              return reviewProvider.submitOperation(resubmittableStack, {});
             }}>
             <T>Resubmit stack</T>
           </OperationDisabledButton>
@@ -96,10 +108,18 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
               </FlexRow>
             </HighlightCommitsWhileHovering>
           ),
-          onClick: () => {
-            runOperation(
-              reviewProvider.submitOperation([...resubmittableStack, ...submittableStack]),
+          onClick: async () => {
+            const allCommits = [...resubmittableStack, ...submittableStack];
+            const confirmed = await confirmShouldSubmit(
+              'submit-all',
+              showModal,
+              reviewProvider,
+              allCommits,
             );
+            if (!confirmed) {
+              return [];
+            }
+            runOperation(reviewProvider.submitOperation(allCommits));
           },
         });
       }
@@ -124,7 +144,17 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
             contextKey={contextKey}
             appearance="icon"
             icon={<Icon icon="cloud-upload" slot="start" />}
-            runOperation={() => {
+            runOperation={async () => {
+              const allCommits = submittableStack;
+              const confirmed = await confirmShouldSubmit(
+                'submit',
+                showModal,
+                reviewProvider,
+                allCommits,
+              );
+              if (!confirmed) {
+                return [];
+              }
               return reviewProvider.submitOperation(submittableStack);
             }}>
             <T>Submit stack</T>
