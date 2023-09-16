@@ -83,6 +83,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
               }
               return reviewProvider.submitOperation(resubmittableStack, {
                 draft: confirmation.submitAsDraft,
+                updateMessage: confirmation.updateMessage,
               });
             }}>
             <T>Resubmit stack</T>
@@ -110,7 +111,10 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
               return [];
             }
             runOperation(
-              reviewProvider.submitOperation(submittableStack, {draft: confirmation.submitAsDraft}),
+              reviewProvider.submitOperation(submittableStack, {
+                draft: confirmation.submitAsDraft,
+                updateMessage: confirmation.updateMessage,
+              }),
             );
           },
         });
@@ -144,6 +148,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
               }
               return reviewProvider.submitOperation(submittableStack, {
                 draft: confirmation.submitAsDraft,
+                updateMessage: confirmation.updateMessage,
               });
             }}>
             <T>Submit stack</T>

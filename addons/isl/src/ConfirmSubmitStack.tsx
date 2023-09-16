@@ -17,7 +17,8 @@ import {t, T} from './i18n';
 import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {CommitPreview} from './previews';
 import {useModal} from './useModal';
-import {VSCodeDivider, VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeDivider, VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
+import {useState} from 'react';
 import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 
 import './ConfirmSubmitStack.css';
@@ -28,7 +29,9 @@ export const confirmShouldSubmitEnabledAtom = atom<boolean>({
   effects: [persistAtomToConfigEffect('isl.show-stack-submit-confirmation', true as boolean)],
 });
 
-export type SubmitConfirmationReponse = {submitAsDraft: boolean} | undefined;
+export type SubmitConfirmationReponse =
+  | {submitAsDraft: boolean; updateMessage?: string}
+  | undefined;
 
 type SubmitType = 'submit' | 'submit-all' | 'resubmit';
 
@@ -87,6 +90,8 @@ function ConfirmModalContent({
     confirmShouldSubmitEnabledAtom,
   );
   const shouldSubmitAsDraft = useRecoilValue(submitAsDraft);
+  const [updateMessage, setUpdateMessage] = useState('');
+  const commitsWithDiffs = stack.filter(commit => commit.diffId != null);
   return (
     <div className="confirm-submit-stack" data-testid="confirm-submit-stack">
       <div className="confirm-submit-stack-content">
@@ -100,6 +105,14 @@ function ConfirmModalContent({
             />
           ))}
         </div>
+        {commitsWithDiffs.length === 0 ? null : (
+          <VSCodeTextField
+            value={updateMessage}
+            data-testid="submit-update-message-input"
+            onChange={e => setUpdateMessage((e.target as HTMLInputElement).value)}>
+            Update Message
+          </VSCodeTextField>
+        )}
         <SubmitAsDraftCheckbox commitsToBeSubmit={stack} />
       </div>
       <VSCodeDivider />
@@ -123,7 +136,12 @@ function ConfirmModalContent({
         </VSCodeButton>
         <VSCodeButton
           appearance="primary"
-          onClick={() => returnResultAndDismiss({submitAsDraft: shouldSubmitAsDraft})}>
+          onClick={() =>
+            returnResultAndDismiss({
+              submitAsDraft: shouldSubmitAsDraft,
+              updateMessage: updateMessage || undefined,
+            })
+          }>
           <T>Submit</T>
         </VSCodeButton>
       </div>
