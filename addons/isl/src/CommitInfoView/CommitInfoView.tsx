@@ -107,6 +107,12 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
   const provider = useRecoilValue(codeReviewProvider);
   const diffSummaries = useRecoilValue(allDiffSummaries);
   const shouldSubmitAsDraft = useRecoilValue(submitAsDraft);
+  const commitsWithDiffs = selectedCommits.filter(commit => commit.diffId != null);
+  const [updateMessage, setUpdateMessage] = useRecoilState(
+    // Combine hashes to key the typed update message.
+    // This is kind of volatile, since if you change your selection at all, the message will be cleared.
+    diffUpdateMessagesState(selectedCommits.map(commit => commit.hash).join(',')),
+  );
   const submittable =
     (diffSummaries.value != null
       ? provider?.getSubmittableDiffs(selectedCommits, diffSummaries.value)
@@ -129,6 +135,9 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
         ))}
       </div>
       <div className="commit-info-actions-bar">
+        {commitsWithDiffs.length === 0 ? null : (
+          <SubmitUpdateMessageInput commits={selectedCommits} />
+        )}
         <div className="commit-info-actions-bar-left">
           <SubmitAsDraftCheckbox commitsToBeSubmit={selectedCommits} />
         </div>
@@ -139,8 +148,11 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
                 contextKey={'submit-selected'}
                 appearance="secondary"
                 runOperation={() => {
+                  // clear update message on submit
+                  setUpdateMessage('');
                   return unwrap(provider).submitOperation(selectedCommits, {
                     draft: shouldSubmitAsDraft,
+                    updateMessage: updateMessage || undefined,
                   });
                 }}>
                 <T>Submit Selected Commits</T>

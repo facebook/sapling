@@ -24,6 +24,7 @@ export function SubmitUpdateMessageInput({commits}: {commits: Array<CommitInfo>}
   }
   return (
     <VSCodeTextField
+      style={{width: '100%'}}
       value={message}
       onChange={e => setMessage((e.target as HTMLInputElement).value)}>
       <T>Update Message</T>
