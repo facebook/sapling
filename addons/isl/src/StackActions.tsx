@@ -79,17 +79,19 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
             appearance="icon"
             icon={<Icon icon="cloud-upload" slot="start" />}
             runOperation={async () => {
-              const confirmed = await confirmShouldSubmit(
+              const confirmation = await confirmShouldSubmit(
                 'resubmit',
                 showSubmitConfirmation,
                 showModal,
                 reviewProvider,
                 resubmittableStack,
               );
-              if (!confirmed) {
+              if (!confirmation) {
                 return [];
               }
-              return reviewProvider.submitOperation(resubmittableStack, {});
+              return reviewProvider.submitOperation(resubmittableStack, {
+                draft: confirmation.submitAsDraft,
+              });
             }}>
             <T>Resubmit stack</T>
           </OperationDisabledButton>
@@ -112,17 +114,19 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
           ),
           onClick: async () => {
             const allCommits = [...resubmittableStack, ...submittableStack];
-            const confirmed = await confirmShouldSubmit(
+            const confirmation = await confirmShouldSubmit(
               'submit-all',
               showSubmitConfirmation,
               showModal,
               reviewProvider,
               allCommits,
             );
-            if (!confirmed) {
+            if (!confirmation) {
               return [];
             }
-            runOperation(reviewProvider.submitOperation(allCommits));
+            runOperation(
+              reviewProvider.submitOperation(allCommits, {draft: confirmation.submitAsDraft}),
+            );
           },
         });
       }
@@ -149,17 +153,19 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
             icon={<Icon icon="cloud-upload" slot="start" />}
             runOperation={async () => {
               const allCommits = submittableStack;
-              const confirmed = await confirmShouldSubmit(
+              const confirmation = await confirmShouldSubmit(
                 'submit',
                 showSubmitConfirmation,
                 showModal,
                 reviewProvider,
                 allCommits,
               );
-              if (!confirmed) {
+              if (!confirmation) {
                 return [];
               }
-              return reviewProvider.submitOperation(submittableStack);
+              return reviewProvider.submitOperation(submittableStack, {
+                draft: confirmation.submitAsDraft,
+              });
             }}>
             <T>Submit stack</T>
           </OperationDisabledButton>

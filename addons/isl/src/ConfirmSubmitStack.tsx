@@ -13,12 +13,12 @@ import {Commit} from './Commit';
 import {FlexSpacer} from './ComponentUtils';
 import {Tooltip} from './Tooltip';
 import {VSCodeCheckbox} from './VSCodeCheckbox';
-import {SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
+import {submitAsDraft, SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
 import {t, T} from './i18n';
 import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {CommitPreview} from './previews';
 import {VSCodeDivider, VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {atom, useRecoilState} from 'recoil';
+import {atom, useRecoilState, useRecoilValue} from 'recoil';
 
 import './ConfirmSubmitStack.css';
 
@@ -27,6 +27,8 @@ export const confirmShouldSubmitEnabledAtom = atom<boolean>({
   default: true,
   effects: [persistAtomToConfigEffect('isl.show-stack-submit-confirmation', true as boolean)],
 });
+
+export type SubmitConfirmationReponse = {submitAsDraft: boolean} | undefined;
 
 /**
  * Show a modal to confirm if you want to bulk submit a given stack of commits.
@@ -42,12 +44,12 @@ export async function confirmShouldSubmit(
   showModal: ReturnType<typeof useModal>,
   provider: UICodeReviewProvider,
   stack: Array<CommitInfo>,
-): Promise<boolean> {
+): Promise<SubmitConfirmationReponse> {
   if (
     !showSubmitConfirmation ||
     !provider.supportSubmittingAsDraft // if you can't submit as draft, no need to show the interstitial
   ) {
-    return true;
+    return undefined;
   }
 
   const replace = {$numCommits: String(stack.length)};
@@ -57,14 +59,14 @@ export async function confirmShouldSubmit(
       : mode === 'resubmit'
       ? t('Resubmit $numCommits commits that already have diffs for review?', {replace})
       : t('Submit all $numCommits commits in this stack for review?', {replace});
-  const response = await showModal<boolean>({
+  const response = await showModal<SubmitConfirmationReponse>({
     type: 'custom',
     title,
     component: ({returnResultAndDismiss}) => (
       <ConfirmModalContent stack={stack} returnResultAndDismiss={returnResultAndDismiss} />
     ),
   });
-  return response === true;
+  return response;
 }
 
 function ConfirmModalContent({
@@ -72,11 +74,12 @@ function ConfirmModalContent({
   returnResultAndDismiss,
 }: {
   stack: Array<CommitInfo>;
-  returnResultAndDismiss: (value: boolean) => unknown;
+  returnResultAndDismiss: (value: SubmitConfirmationReponse) => unknown;
 }) {
   const [showSubmitConfirmation, setShowSubmitConfirmation] = useRecoilState(
     confirmShouldSubmitEnabledAtom,
   );
+  const shouldSubmitAsDraft = useRecoilValue(submitAsDraft);
   return (
     <div className="confirm-submit-stack">
       <div className="confirm-submit-stack-content">
@@ -108,10 +111,13 @@ function ConfirmModalContent({
           </VSCodeCheckbox>
         </Tooltip>
         <FlexSpacer />
-        <VSCodeButton appearance="secondary" onClick={() => returnResultAndDismiss(false)}>
+        <VSCodeButton appearance="secondary" onClick={() => returnResultAndDismiss(undefined)}>
           <T>Cancel</T>
         </VSCodeButton>
-        <VSCodeButton appearance="primary" autofocus onClick={() => returnResultAndDismiss(true)}>
+        <VSCodeButton
+          appearance="primary"
+          autofocus
+          onClick={() => returnResultAndDismiss({submitAsDraft: shouldSubmitAsDraft})}>
           <T>Submit</T>
         </VSCodeButton>
       </div>
