@@ -9,3 +9,11 @@
   padding-bottom: var(--halfpad);
   font-size: 13px;
 }
+
+.multiple-settings {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  max-width: 500px;
+  gap: var(--pad);
+}
