@@ -173,9 +173,11 @@ elif sys.platform.startswith("darwin"):
         "test_status_thrift_apis",
     ]
 
-    # update fails because new file created while checkout operation in progress
     TEST_DISABLED["hg.update_test.UpdateTestTreeOnly"] = [
+        # update fails because new file created while checkout operation in progress
         "test_change_casing_with_untracked",
+        # TODO(T163970408)
+        "test_mount_state_during_unmount_with_in_progress_checkout",
     ]
 
     # Assertion error and invalid argument
