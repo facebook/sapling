@@ -92,6 +92,8 @@ function ConfirmModalContent({
   const shouldSubmitAsDraft = useRecoilValue(submitAsDraft);
   const [updateMessage, setUpdateMessage] = useState('');
   const commitsWithDiffs = stack.filter(commit => commit.diffId != null);
+
+  const provider = useRecoilValue(codeReviewProvider);
   return (
     <div className="confirm-submit-stack" data-testid="confirm-submit-stack">
       <div className="confirm-submit-stack-content">
@@ -105,7 +107,7 @@ function ConfirmModalContent({
             />
           ))}
         </div>
-        {commitsWithDiffs.length === 0 ? null : (
+        {provider?.supportsUpdateMessage !== true || commitsWithDiffs.length === 0 ? null : (
           <VSCodeTextField
             value={updateMessage}
             data-testid="submit-update-message-input"

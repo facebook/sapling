@@ -92,6 +92,7 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   }
 
   supportSubmittingAsDraft = 'newDiffsOnly' as const;
+  supportsUpdateMessage = false;
 
   enableMessageSyncing = false;
 

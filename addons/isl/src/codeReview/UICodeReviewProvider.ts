@@ -46,6 +46,8 @@ export interface UICodeReviewProvider {
    * submitting for the first time or also when resubmitting.
    */
   supportSubmittingAsDraft: 'always' | 'newDiffsOnly';
+  /** Whether this review provider allows attaching a short update message when resubmitting a diff. */
+  supportsUpdateMessage: boolean;
 
   getSupportedStackActions(
     tree: CommitTreeWithPreviews,
