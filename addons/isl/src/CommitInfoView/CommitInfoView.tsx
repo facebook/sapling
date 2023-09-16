@@ -18,6 +18,7 @@ import {Center} from '../ComponentUtils';
 import {HighlightCommitsWhileHovering} from '../HighlightedCommits';
 import {numPendingImageUploads} from '../ImageUpload';
 import {OperationDisabledButton} from '../OperationDisabledButton';
+import {SubmitUpdateMessageInput} from '../SubmitUpdateMessageInput';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
 import {ChangedFiles, UncommittedChanges} from '../UncommittedChanges';
@@ -45,6 +46,7 @@ import {useModal} from '../useModal';
 import {assert, firstLine, firstOfIterable} from '../utils';
 import {CommitInfoField} from './CommitInfoField';
 import {
+  diffUpdateMessagesState,
   commitInfoViewCurrentCommits,
   assertNonOptimistic,
   commitFieldsBeingEdited,
@@ -489,6 +491,8 @@ function ActionsBar({
   const schema = useRecoilValue(commitMessageFieldsSchema);
   const headCommit = useRecoilValue(latestHeadCommit);
 
+  const [updateMessage, setUpdateMessage] = useRecoilState(diffUpdateMessagesState(commit.hash));
+
   const messageSyncEnabled = useRecoilValue(messageSyncingEnabledState);
 
   // after committing/amending, if you've previously selected the head commit,
@@ -565,6 +569,9 @@ function ActionsBar({
 
   return (
     <div className="commit-info-actions-bar" data-testid="commit-info-actions-bar">
+      {isCommitMode || commit.diffId == null ? null : (
+        <SubmitUpdateMessageInput commits={[commit]} />
+      )}
       <div className="commit-info-actions-bar-left">
         <SubmitAsDraftCheckbox commitsToBeSubmit={isCommitMode ? [] : [commit]} />
       </div>
@@ -770,8 +777,14 @@ function ActionsBar({
                   {
                     draft: shouldSubmitAsDraft,
                     updateFields: shouldUpdateMessage,
+                    updateMessage: updateMessage || undefined,
                   },
                 );
+                // clear out the update message now that we've used it to submit
+                if (updateMessage) {
+                  setUpdateMessage('');
+                }
+
                 return [amendOrCommitOp, submitOp].filter(notEmpty);
               }}>
               {commit.isHead && anythingToCommit ? (

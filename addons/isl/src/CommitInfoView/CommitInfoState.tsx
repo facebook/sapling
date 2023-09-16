@@ -68,6 +68,15 @@ export const commitMessageTemplate = atom<EditedMessage | undefined>({
   ],
 });
 
+/** Typed update messages when submitting a commit or set of commits.
+ * Unlike editedCommitMessages, you can't provide an update message when committing the first time,
+ * so we don't need to track this state for 'head'.
+ */
+export const diffUpdateMessagesState = atomFamily<string, Hash>({
+  key: 'diffUpdateMessagesState',
+  default: '',
+});
+
 /**
  * Map of hash -> latest edited commit message, representing any changes made to the commit's message fields.
  * This also stores the state of new commit messages being written, keyed by "head" instead of a commit hash.
@@ -122,6 +131,12 @@ function updateEditedCommitMessagesFromSuccessions() {
         existing.valueOrThrow().type !== 'optimistic'
       ) {
         globalRecoil().set(editedCommitMessages(newHash), existing.valueOrThrow());
+      }
+
+      const existingUpdateMessage = globalRecoil().getLoadable(diffUpdateMessagesState(oldHash));
+      if (existingUpdateMessage.state === 'hasValue') {
+        // TODO: this doesn't work if you have multiple commits selected...
+        globalRecoil().set(diffUpdateMessagesState(oldHash), existingUpdateMessage.valueOrThrow());
       }
     }
   });
