@@ -9,7 +9,7 @@ import type {UICodeReviewProvider} from './codeReview/UICodeReviewProvider';
 import type {DiffSummary, CommitInfo, Hash} from './types';
 
 import {FlexRow} from './ComponentUtils';
-import {confirmShouldSubmit, confirmShouldSubmitEnabledAtom} from './ConfirmSubmitStack';
+import {useShowConfirmSubmitStack} from './ConfirmSubmitStack';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {OperationDisabledButton} from './OperationDisabledButton';
 import {showSuggestedRebaseForStack, SuggestedRebaseButton} from './SuggestedRebase';
@@ -21,7 +21,6 @@ import {HideOperation} from './operations/HideOperation';
 import {useRunOperation, latestUncommittedChangesData} from './serverAPIState';
 import {StackEditIcon} from './stackEdit/ui/StackEditIcon';
 import {editingStackIntentionHashes, loadingStackState} from './stackEdit/ui/stackEditState';
-import {useModal} from './useModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue, useRecoilState} from 'recoil';
 import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';
@@ -37,7 +36,6 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
   const diffMap = useRecoilValue(allDiffSummaries);
   const stackHashes = useRecoilValue(editingStackIntentionHashes)[1];
   const loadingState = useRecoilValue(loadingStackState);
-  const showSubmitConfirmation = useRecoilValue(confirmShouldSubmitEnabledAtom);
   const suggestedRebase = useRecoilValue(showSuggestedRebaseForStack(tree.info.hash));
   const runOperation = useRunOperation();
 
@@ -57,8 +55,8 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
       ? false
       : isStackEligibleForCleanup(tree, diffMap.value, reviewProvider);
 
+  const confirmShouldSubmit = useShowConfirmSubmitStack();
   const contextMenu = useContextMenu(() => moreActions);
-  const showModal = useModal();
   if (reviewProvider !== null && !isStackEditingActivated) {
     const reviewActions =
       diffMap.value == null ? {} : reviewProvider?.getSupportedStackActions(tree, diffMap.value);
@@ -79,13 +77,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
             appearance="icon"
             icon={<Icon icon="cloud-upload" slot="start" />}
             runOperation={async () => {
-              const confirmation = await confirmShouldSubmit(
-                'resubmit',
-                showSubmitConfirmation,
-                showModal,
-                reviewProvider,
-                resubmittableStack,
-              );
+              const confirmation = await confirmShouldSubmit('resubmit', resubmittableStack);
               if (!confirmation) {
                 return [];
               }
@@ -114,13 +106,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
           ),
           onClick: async () => {
             const allCommits = [...resubmittableStack, ...submittableStack];
-            const confirmation = await confirmShouldSubmit(
-              'submit-all',
-              showSubmitConfirmation,
-              showModal,
-              reviewProvider,
-              allCommits,
-            );
+            const confirmation = await confirmShouldSubmit('submit-all', allCommits);
             if (!confirmation) {
               return [];
             }
@@ -153,13 +139,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
             icon={<Icon icon="cloud-upload" slot="start" />}
             runOperation={async () => {
               const allCommits = submittableStack;
-              const confirmation = await confirmShouldSubmit(
-                'submit',
-                showSubmitConfirmation,
-                showModal,
-                reviewProvider,
-                allCommits,
-              );
+              const confirmation = await confirmShouldSubmit('submit', allCommits);
               if (!confirmation) {
                 return [];
               }
