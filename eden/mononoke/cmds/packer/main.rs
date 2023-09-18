@@ -30,6 +30,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use regex::Regex;
 use scuba_ext::MononokeScubaSampleBuilder;
+use slog::info;
 
 mod pack_utils;
 
@@ -187,7 +188,12 @@ fn main(fb: FacebookInit) -> Result<()> {
         // Read keys from the file
         let keys_list = lines_from_file(entry);
         if print_progress {
-            println!("File {}, which has {} lines", filename, keys_list.len());
+            info!(
+                logger,
+                "File {}, which has {} lines",
+                filename,
+                keys_list.len()
+            );
         }
         runtime.block_on(async {
             // construct blobstore instance
@@ -229,7 +235,8 @@ fn main(fb: FacebookInit) -> Result<()> {
         });
         let elapsed = now.elapsed();
         if print_progress {
-            println!(
+            info!(
+                logger,
                 "Progress: {:.3}%\tprocessing took {:.2?}",
                 (cur + 1) as f32 * 100.0 / total_file_count as f32,
                 elapsed
