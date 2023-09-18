@@ -160,6 +160,7 @@ Show debug commands if there are no other candidates
   debugmergestate
   debugmetalog
   debugmetalogroots
+  debugmigratesymlinks
   debugmutation
   debugmutationfromobsmarkers
   debugnamecomplete
@@ -488,6 +489,7 @@ Show all commands + options
   debugmergestate: 
   debugmetalog: time-range
   debugmetalogroots: style, template
+  debugmigratesymlinks: 
   debugmutation: rev, successors, time-range
   debugmutationfromobsmarkers: 
   debugnamecomplete: description

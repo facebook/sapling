@@ -82,6 +82,8 @@ from .. import (
 from ..i18n import _, _n, _x
 from ..node import bin, hex, nullhex, nullid, nullrev, short
 from ..pycompat import decodeutf8, range
+
+from . import migratesymlinks
 from .cmdtable import command
 
 release = lockmod.release
@@ -3480,6 +3482,22 @@ def debugtreestate(ui, repo, cmd: str = "status", **opts) -> None:
             )
     else:
         raise error.Abort("unrecognised command: %s" % cmd)
+
+
+@command(
+    "debugmigratesymlinks",
+    [],
+    "hg debugmigratesymlinks [enable|disable]",
+)
+def debugmigratesymlinks(ui, repo, cmd: str = "enable", **opts) -> None:
+    """enables or disables symlink support on a repo on Windows
+
+    enable: makes the current repo support symlinks
+    disable: makes the current repo NOT support symlinks
+    """
+    if not pycompat.iswindows:
+        raise error.Abort("this command only supports Windows")
+    migratesymlinks.changereposymlinkstatus(ui, repo, cmd == "enable")
 
 
 @command(

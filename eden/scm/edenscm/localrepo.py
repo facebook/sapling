@@ -438,7 +438,11 @@ class localrepository:
     _lockfreeprefix = set()
 
     def __init__(
-        self, baseui, path, create=False, initial_config: Optional[str] = None
+        self,
+        baseui,
+        path,
+        create=False,
+        initial_config: Optional[str] = None,
     ):
         """Instantiate local repo object, optionally creating a new repo on disk if `create` is True.
         If specified, `initial_config` is added to the created repo's config."""
@@ -508,6 +512,13 @@ class localrepository:
         except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
+        forcewindowssymlinks = self.ui.configbool(
+            "experimental", "windows-symlinks.force", None
+        )
+        if forcewindowssymlinks:
+            self.requirements.add("windowssymlinks")
+        elif forcewindowssymlinks is False:
+            self.requirements.remove("windowssymlinks")
 
         # wvfs: rooted at the repository root, used to access the working copy
         disablesymlinks = (

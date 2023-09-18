@@ -1030,6 +1030,8 @@ Test list of internal help commands
    debugmetalog  show changes in commit graph over time
    debugmetalogroots
                  list roots stored in metalog
+   debugmigratesymlinks
+                 enables or disables symlink support on a repo on Windows
    debugmutation
                  display the mutation history (or future) of a commit
    debugmutationfromobsmarkers
