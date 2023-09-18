@@ -783,3 +783,12 @@ def hook_recursive_with_spinner(function: Callable, spinner: Spinner):
         return function(*args, **kwargs)
 
     return run
+
+
+if sys.platform == "win32":
+
+    def remove_unc_prefix(path: Path) -> Path:
+        parts = list(path.parts)
+        if re.match(r"\\\\\?\\[A-Z]:\\", parts[0]):
+            parts[0] = parts[0][-3:]
+        return Path(*parts)

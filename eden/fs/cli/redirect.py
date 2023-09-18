@@ -29,6 +29,10 @@ from .subcmd import Subcmd
 from .util import mkscratch_bin
 
 
+if sys.platform == "win32":
+    from .util import remove_unc_prefix
+
+
 redirect_cmd = subcmd_mod.Decorator()
 
 log: logging.Logger = logging.getLogger(__name__)
@@ -663,10 +667,15 @@ def get_effective_redirections(
                     try:
                         # TODO: replace this with Path.readlink once Python 3.9+
                         target = Path(os.readlink(symlink_path)).resolve()
+                        if sys.platform == "win32":
+                            target = remove_unc_prefix(target)
                     except ValueError as exc:
                         # Windows throws ValueError when the target is not a symlink
                         raise OSError(errno.EINVAL) from exc
                     if target != expected_target:
+                        print(
+                            f"EXPECTED {expected_target}, got {target}", file=sys.stderr
+                        )
                         redir.state = RedirectionState.SYMLINK_INCORRECT
                 except OSError:
                     # We're considering a variety of errors that might
