@@ -983,6 +983,9 @@ class gitfilelog:
     def read(self, node):
         return self.store.readobj(node, "blob")
 
+    def revision(self, node, raw=False):
+        return self.store.readobj(node, "blob")
+
     def size(self, node):
         return self.store.readobjsize(node, "blob")
 

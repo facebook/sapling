@@ -26,6 +26,7 @@ from . import (
     changegroup,
     discovery,
     error,
+    git,
     lock as lockmod,
     mutation,
     obsolete,
@@ -533,8 +534,11 @@ def _pushaddblobs(pushop):
 def findblobs(repo, nodes):
     """find new HG blobs (file, tree, commit) to push.
 
-    yield (blobtype, path, node, (p1, p2), text) per item.
-    blobtype: "blob", "tree", or "commit"
+    yield (blobtype, path, node, parents, text) per item.
+    blobtype: "blob", "tree", or "commit".
+
+    For git format, parents is always (). For hg format, parents is always
+    (p1, p2) and they can be nullid.
     """
     dag = repo.changelog.dag
     parentnames = dag.parentnames
@@ -545,11 +549,15 @@ def findblobs(repo, nodes):
     mfstore = repo.manifestlog.datastore
     treedepth = 1 << 15
 
+    is_git = git.isgitformat(repo)
+
     def mfread(node, get=repo.manifestlog.get):
         # subdir does not matter here - use ""
         return get("", node).read()
 
     commitnodes = dag.sort(nodes)
+    parents = ()
+
     for node in commitnodes.iterrev():
         parentnodes = parentnames(node)
         mfnode = changelogrevision(node).manifest
@@ -570,20 +578,26 @@ def findblobs(repo, nodes):
             if newnode != oldnode and newnode is not None:
                 fctx = ctx[path]
                 assert fctx.filenode() == newnode
-                p1, p2 = fctx.filelog().parents(newnode)
-                assert (
-                    not fctx.rawflags()
-                ), f"findblobs does not support LFS content {path}"
-                yield "blob", path, newnode, (p1, p2), fctx.rawdata()
+                if not is_git:
+                    p1, p2 = fctx.filelog().parents(newnode)
+                    parents = (p1, p2)
+                    assert (
+                        not fctx.rawflags()
+                    ), f"findblobs does not support LFS content {path}"
+                yield "blob", path, newnode, parents, fctx.rawdata()
 
         # changed trees
         difftrees = subdirdiff(mfstore, "", mfnode, basemfnodes, treedepth)
         for subdir, treenode, treetext, p1, p2 in difftrees:
-            yield "tree", subdir, treenode, (p1, p2), treetext
+            if not is_git:
+                parents = (p1, p2)
+            yield "tree", subdir, treenode, parents, treetext
 
         # commit
-        p1, p2 = clparents(node)
-        yield "commit", "", node, (p1, p2), clrevision(node)
+        if not is_git:
+            p1, p2 = clparents(node)
+            parents = (p1, p2)
+        yield "commit", "", node, parents, clrevision(node)
 
 
 # list of steps to perform discovery before push
