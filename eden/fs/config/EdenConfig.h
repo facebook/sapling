@@ -1133,7 +1133,7 @@ class EdenConfig : private ConfigSettingManager {
   // [redirections]
 
   /**
-   * Whether to use APFS volumes or disk images for bind
+   * Whether to use symlinks, APFS volumes, or disk images for bind
    * redirections on macOS.
    */
   ConfigSetting<std::string> darwinRedirectionType{

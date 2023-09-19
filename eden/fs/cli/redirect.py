@@ -56,15 +56,15 @@ def have_apfs_helper() -> bool:
 
 def determine_bind_redirection_type(instance: EdenInstance) -> str:
     """Determine what bind redirection type should be used on macOS.
-    There are currently only 2 options: "apfs" or "dmg". We default
+    There are currently 3 options: "symlink", "apfs" or "dmg". We default
     to the old behavior, "apfs"."""
     config_value = instance.get_config_value(
         "redirections.darwin-redirection-type", "apfs"
     )
     default_type = "apfs" if have_apfs_helper() else "dmg"
-    if config_value not in ["apfs", "dmg"]:
+    if config_value not in ["symlink", "apfs", "dmg"]:
         print(
-            f'darwin redirection type {config_value} must be either "apfs" or "dmg". Defaulting to {default_type}.'
+            f'darwin redirection type {config_value} must be either "symlink", "apfs" or "dmg". Defaulting to {default_type}.'
         )
         config_value = default_type
 
@@ -256,10 +256,17 @@ class Redirection:
     def _bind_mount_darwin(
         self, instance: EdenInstance, checkout_path: Path, target: Path
     ) -> None:
-        if determine_bind_redirection_type(instance) == "dmg":
+        if determine_bind_redirection_type(instance) == "symlink":
+            return self._bind_mount_darwin_symlink(instance, checkout_path, target)
+        elif determine_bind_redirection_type(instance) == "dmg":
             return self._bind_mount_darwin_dmg(instance, checkout_path, target)
         else:
             return self._bind_mount_darwin_apfs(instance, checkout_path, target)
+
+    def _bind_mount_darwin_symlink(
+        self, instance: EdenInstance, checkout_path: Path, target: Path
+    ) -> None:
+        self._apply_symlink(checkout_path, target)
 
     def _bind_mount_darwin_apfs(
         self, instance: EdenInstance, checkout_path: Path, target: Path
@@ -317,9 +324,12 @@ class Redirection:
 
     def _bind_unmount_darwin(self, checkout: EdenCheckout) -> None:
         mount_path = checkout.path / self.repo_path
-        # We use unmount instead of eject here since eject has caused issues
-        # by unmounting unrelated apfs volumes in the past. See S325232.
-        run_cmd_quietly(["diskutil", "unmount", "force", mount_path])
+        if determine_bind_redirection_type(checkout.instance) == "symlink":
+            mount_path.unlink()
+        else:
+            # We use unmount instead of eject here since eject has caused issues
+            # by unmounting unrelated apfs volumes in the past. See S325232.
+            run_cmd_quietly(["diskutil", "unmount", "force", mount_path])
 
     def _bind_mount_linux(
         self, instance: EdenInstance, checkout_path: Path, target: Path

@@ -101,6 +101,7 @@ impl FromStr for RedirectionType {
 pub enum DarwinBindRedirectionType {
     APFS,
     DMG,
+    SYMLINK,
 }
 
 #[cfg(target_os = "macos")]
@@ -112,6 +113,7 @@ impl fmt::Display for DarwinBindRedirectionType {
             match *self {
                 DarwinBindRedirectionType::APFS => "apfs",
                 DarwinBindRedirectionType::DMG => "dmg",
+                DarwinBindRedirectionType::SYMLINK => "symlink",
             }
         )
     }
@@ -126,6 +128,8 @@ impl FromStr for DarwinBindRedirectionType {
             Ok(DarwinBindRedirectionType::APFS)
         } else if s.to_lowercase() == "dmg" {
             Ok(DarwinBindRedirectionType::DMG)
+        } else if s.to_lowercase() == "symlink" {
+            Ok(DarwinBindRedirectionType::SYMLINK)
         } else {
             // deliberately did not implement "Unknown"
             Err(EdenFsError::ConfigurationError(format!(
@@ -585,7 +589,9 @@ impl Redirection {
     #[cfg(target_os = "macos")]
     fn _bind_mount_darwin(&self, checkout_path: &Path, target: &Path) -> Result<()> {
         // We default to APFS since DMG redirections are experimental at this point
-        if Self::determine_bind_redirection_type() == DarwinBindRedirectionType::DMG {
+        if Self::determine_bind_redirection_type() == DarwinBindRedirectionType::SYMLINK {
+            self._apply_symlink(checkout_path, target)
+        } else if Self::determine_bind_redirection_type() == DarwinBindRedirectionType::DMG {
             self._bind_mount_darwin_dmg(checkout_path, target)
         } else {
             self._bind_mount_darwin_apfs(checkout_path)
@@ -640,28 +646,33 @@ impl Redirection {
     #[cfg(target_os = "macos")]
     fn _bind_unmount_darwin(&self, checkout: &EdenFsCheckout) -> Result<()> {
         let mount_path = checkout.path().join(&self.repo_path);
-        // We use unmount instead of eject here since eject has caused issues
-        // by unmounting unrelated apfs volumes in the past. See S325232.
-        let args = &["unmount", "force", &mount_path.to_string_lossy()];
-        let output = Command::new("diskutil")
-            .args(args)
-            .output()
-            .from_err()
-            .with_context(|| {
-                format!(
-                    "Failed to execute command `diskutil {}`",
-                    shlex::join(args.iter().copied())
-                )
-            })?;
-        if output.status.success() {
-            Ok(())
+        if Self::determine_bind_redirection_type() == DarwinBindRedirectionType::SYMLINK {
+            let repo_path = self.expand_repo_path(checkout);
+            remove_symlink(&repo_path)
+                .with_context(|| format!("Failed to remove symlink {}", repo_path.display()))?;
         } else {
-            Err(EdenFsError::Other(anyhow!(format!(
-                "failed to remove bind mount. stderr: {}\n stdout: {}",
-                String::from_utf8_lossy(&output.stderr),
-                String::from_utf8_lossy(&output.stdout)
-            ))))
+            // We use unmount instead of eject here since eject has caused issues
+            // by unmounting unrelated apfs volumes in the past. See S325232.
+            let args = &["unmount", "force", &mount_path.to_string_lossy()];
+            let output = Command::new("diskutil")
+                .args(args)
+                .output()
+                .from_err()
+                .with_context(|| {
+                    format!(
+                        "Failed to execute command `diskutil {}`",
+                        shlex::join(args.iter().copied())
+                    )
+                })?;
+            if !output.status.success() {
+                return Err(EdenFsError::Other(anyhow!(format!(
+                    "failed to remove bind mount. stderr: {}\n stdout: {}",
+                    String::from_utf8_lossy(&output.stderr),
+                    String::from_utf8_lossy(&output.stdout)
+                ))));
+            }
         }
+        Ok(())
     }
 
     #[cfg(target_os = "windows")]

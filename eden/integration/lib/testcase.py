@@ -245,11 +245,13 @@ class EdenTestCase(EdenTestCaseBase):
         if self.use_nfs():
             configs["clone"] = ['default-mount-protocol = "NFS"']
         # The number of concurrent APFS volumes we can create on macOS
-        # Sandcastle hosts is extremely limited. Therefore, let's use disk
-        # image redirections instead of APFS volume redirections.
+        # Sandcastle hosts is extremely limited. Furthermore, cleaning
+        # up disk image redirections on Sandcastle is non-trivial. Let's
+        # use symlink. redirections to avoid these issues.
         if sys.platform == "darwin":
-            configs["redirections"] = ['darwin-redirection-type = "dmg"']
             configs["nfs"] = ["allow-apple-double = false"]
+            if "SANDCASTLE" in os.environ:
+                configs["redirections"] = ['darwin-redirection-type = "symlink"']
         return configs
 
     def create_hg_repo(
