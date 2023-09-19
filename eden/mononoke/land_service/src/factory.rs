@@ -21,7 +21,6 @@ use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
-use scuba_ext::ScubaValue;
 use slog::Logger;
 use srserver::RequestContext;
 
@@ -32,6 +31,8 @@ const FORWARDED_IDENTITIES_HEADER: &str = "scm_forwarded_identities";
 const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
 const FORWARDED_CLIENT_DEBUG_HEADER: &str = "scm_forwarded_client_debug";
 const FORWARDED_OTHER_CATS_HEADER: &str = "scm_forwarded_other_cats";
+use clientinfo::ClientInfo;
+use clientinfo::CLIENT_INFO_HEADER;
 
 #[derive(Clone)]
 pub(crate) struct Factory {
@@ -74,8 +75,8 @@ impl Factory {
         req_ctxt: &RequestContext,
     ) -> Result<CoreContext, LandChangesetsError> {
         let session = self.create_session(req_ctxt).await?;
-        let identities = session.metadata().identities();
-        let scuba = self.create_scuba(name, req_ctxt, identities)?;
+        let mut scuba = self.create_scuba(name, req_ctxt)?;
+        scuba.add_metadata(session.metadata());
         let ctx = session.new_context_with_scribe(self.logger.clone(), scuba, self.scribe.clone());
         Ok(ctx)
     }
@@ -85,12 +86,10 @@ impl Factory {
         &self,
         name: &str,
         req_ctxt: &RequestContext,
-        identities: &MononokeIdentitySet,
     ) -> Result<MononokeScubaSampleBuilder, LandChangesetsError> {
         let mut scuba = self.scuba_builder.clone().with_seq("seq");
         scuba.add("type", "thrift");
         scuba.add("method", name);
-
         const CLIENT_HEADERS: &[&str] = &[
             "client_id",
             "client_type",
@@ -103,15 +102,6 @@ impl Factory {
                 scuba.add(header, value);
             }
         }
-
-        scuba.add(
-            "identities",
-            identities
-                .iter()
-                .map(|id| id.to_string())
-                .collect::<ScubaValue>(),
-        );
-
         Ok(scuba)
     }
 
@@ -143,6 +133,12 @@ impl Factory {
             .map(MononokeIdentity::from_identity_ref)
             .collect();
 
+        // Read client info
+        let client_info: Option<ClientInfo> = req_ctxt
+            .header(CLIENT_INFO_HEADER)?
+            .as_ref()
+            .and_then(|ci| serde_json::from_str(ci).ok());
+
         if let (Some(forwarded_identities), Some(forwarded_ip)) = (
             header(FORWARDED_IDENTITIES_HEADER)?,
             header(FORWARDED_CLIENT_IP_HEADER)?,
@@ -150,11 +146,13 @@ impl Factory {
             let mut header_identities: MononokeIdentitySet =
                 serde_json::from_str(forwarded_identities.as_str())
                     .map_err(|e| errors::internal_error(&e))?;
+
             let client_ip = Some(
                 forwarded_ip
                     .parse::<IpAddr>()
                     .map_err(|e| errors::internal_error(&e))?,
             );
+
             let client_debug = header(FORWARDED_CLIENT_DEBUG_HEADER)?.is_some();
 
             header_identities.extend(cats_identities.into_iter());
@@ -173,17 +171,26 @@ impl Factory {
                 metadata.add_raw_encoded_cats(other_cats);
             }
 
+            if let Some(client_info) = client_info {
+                metadata.add_client_info(client_info);
+            }
+
             return Ok(metadata);
         }
 
-        Ok(Metadata::new(
+        let mut metadata = Metadata::new(
             None,
             tls_identities.union(&cats_identities).cloned().collect(),
             false,
             metadata::security::is_client_untrusted(|h| req_ctxt.header(h))?,
             None,
         )
-        .await)
+        .await;
+
+        if let Some(client_info) = client_info {
+            metadata.add_client_info(client_info);
+        }
+        Ok(metadata)
     }
 
     /// Create and configure the session container for a request.
