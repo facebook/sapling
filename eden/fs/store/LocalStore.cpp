@@ -35,20 +35,22 @@ using std::string;
 namespace facebook::eden {
 
 namespace {
-template <typename T, typename C, typename F>
+template <typename T, typename F>
 FOLLY_ALWAYS_INLINE std::shared_ptr<T> parse(
     const ObjectId& id,
     std::string_view context,
     const EdenStatsPtr& stats,
-    C failureCounter,
+    StatsGroupBase::Counter LocalStoreStats::*successCounter,
+    StatsGroupBase::Counter LocalStoreStats::*errorCounter,
     F&& fn) {
   std::shared_ptr<T> def(nullptr);
   if (auto ew = folly::try_and_catch(
           [&def, fn = std::forward<F>(fn)]() { def = fn(); })) {
-    stats->increment(failureCounter);
+    stats->increment(errorCounter);
     XLOGF(ERR, "Failed to get {} for {}: {}", context, id, ew.what());
   }
 
+  stats->increment(successCounter);
   return def;
 }
 } // namespace
@@ -123,7 +125,8 @@ ImmediateFuture<TreePtr> LocalStore::getTree(const ObjectId& id) const {
                   id,
                   "Tree",
                   stats,
-                  &LocalStoreStats::getTreeFailure,
+                  &LocalStoreStats::getTreeSuccess,
+                  &LocalStoreStats::getTreeError,
                   [&id, &data]() {
                     auto tree =
                         Tree::tryDeserialize(id, StringPiece{data.bytes()});
@@ -151,7 +154,8 @@ ImmediateFuture<BlobPtr> LocalStore::getBlob(const ObjectId& id) const {
                   id,
                   "Blob",
                   stats,
-                  &LocalStoreStats::getBlobFailure,
+                  &LocalStoreStats::getBlobSuccess,
+                  &LocalStoreStats::getBlobError,
                   [&data]() {
                     auto buf = data.extractIOBuf();
                     return deserializeGitBlob(&buf);
@@ -175,7 +179,8 @@ ImmediateFuture<BlobMetadataPtr> LocalStore::getBlobMetadata(
                   id,
                   "BlobMetadata",
                   stats,
-                  &LocalStoreStats::getBlobMetadataFailure,
+                  &LocalStoreStats::getBlobMetadataSuccess,
+                  &LocalStoreStats::getBlobMetadataError,
                   [&id, &data]() {
                     return SerializedBlobMetadata::parse(id, data);
                   });

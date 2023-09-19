@@ -314,9 +314,15 @@ struct LocalStoreStats : StatsGroup<LocalStoreStats> {
   Duration getTree{"local_store.get_tree_us"};
   Duration getBlob{"local_store.get_blob_us"};
   Duration getBlobMetadata{"local_store.get_blob_metadata_us"};
+  Counter getTreeSuccess{"local_store.get_tree_success"};
+  Counter getBlobSuccess{"local_store.get_blob_success"};
+  Counter getBlobMetadataSuccess{"local_store.get_blob_metadata_success"};
   Counter getTreeFailure{"local_store.get_tree_failure"};
   Counter getBlobFailure{"local_store.get_blob_failure"};
   Counter getBlobMetadataFailure{"local_store.get_blob_metadata_failure"};
+  Counter getTreeError{"local_store.get_tree_error"};
+  Counter getBlobError{"local_store.get_blob_error"};
+  Counter getBlobMetadataError{"local_store.get_blob_metadata_error"};
 };
 
 /**
