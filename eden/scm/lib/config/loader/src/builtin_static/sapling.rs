@@ -170,7 +170,7 @@ tweakdefaults=
 undo=
 
 [extorder]
-fsmonitor=sqldirstate, sparse
+fsmonitor=sparse
 journal=eden
 
 [format]
