@@ -45,7 +45,6 @@ useruststore=True
 
 [remotefilelog]
 reponame=reponame-default
-localdatarepack=True
 cachepath=$TESTTMP/default-hgcache
 
 [mutation]

@@ -27,16 +27,6 @@ be prefetched after a pull. Defaults to None.
     [treemanifest]
     pullprefetchrevs = master + stable
 
-Setting `treemanifest.repackstartrev` and `treemanifest.repackendrev` causes `hg
-repack --incremental` to only repack the revlog entries in the given range. The
-default values are 0 and len(changelog) - 1, respectively.
-
-::
-
-    [treemanifest]
-    repackstartrev = 0
-    repackendrev = 1000
-
 `treemanifest.fetchdepth` sets the default depth to fetch trees when fetching
 trees from the server.
 
@@ -116,7 +106,6 @@ from ..remotefilelog.contentstore import unioncontentstore
 from ..remotefilelog.datapack import memdatapack
 from ..remotefilelog.historypack import memhistorypack
 from ..remotefilelog.metadatastore import unionmetadatastore
-from ..remotefilelog.repack import domaintenancerepack
 
 
 try:
@@ -412,11 +401,6 @@ def _prunesharedpacks(repo, packpath):
         numentries = len(os.listdir(packpath))
     except OSError:
         return
-
-    # Note this is based on file count, not pack count.
-    config = repo.ui.configint("packs", "maxpackfilecount")
-    if config and numentries > config:
-        domaintenancerepack(repo)
 
 
 def setuptreestores(repo, mfl):
@@ -899,14 +883,8 @@ def _checkhash(orig, self, *args, **kwargs):
 # Wrapper around the 'prefetch' command which also allows for prefetching the
 # trees along with the files.
 def _prefetchwrapper(orig, ui, repo, *pats, **opts):
-    # The wrapper will take care of the repacking.
-    repackrequested = opts.pop("repack")
-
     _prefetchonlytrees(repo, opts)
     _prefetchonlyfiles(orig, ui, repo, *pats, **opts)
-
-    if repackrequested:
-        domaintenancerepack(repo)
 
 
 # Wrapper around the 'prefetch' command which overrides the command completely

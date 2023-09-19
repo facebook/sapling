@@ -292,9 +292,5 @@ class rusthistpacktests(histpacktestsbase, unittest.TestCase):
         unittest.TestCase.__init__(self, *args, **kwargs)
 
 
-# TODO:
-# histpack store:
-# - repack two packs into one
-
 if __name__ == "__main__":
     silenttestrunner.main(__name__)

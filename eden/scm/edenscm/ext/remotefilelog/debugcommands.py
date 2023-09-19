@@ -18,7 +18,6 @@ from edenscm.node import bin, hex, nullid, short
 from . import constants, fileserverclient, shallowrepo, shallowutil
 from .contentstore import unioncontentstore
 from .lz4wrapper import lz4decompress
-from .repack import repacklockvfs
 
 
 def debugremotefilelog(ui, path, **opts):
@@ -487,11 +486,6 @@ def debugindexedloghistorystore(ui, paths, **opts):
     for path in paths:
         store = revisionstore.indexedloghistorystore(path, ui._uiconfig._rcfg)
         debughistorystore(ui, store, **opts)
-
-
-def debugwaitonrepack(repo):
-    with extutil.flock(repacklockvfs(repo).join("repacklock"), ""):
-        return
 
 
 def debugwaitonprefetch(repo):

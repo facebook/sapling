@@ -163,8 +163,6 @@ Somehow problematic: With many extensions
   > publish = False
   > 
   > [remotefilelog]
-  > datapackversion = 1
-  > historypackv1 = True
   > reponame = x
   > cachepath = $TESTTMP/cache
   > 

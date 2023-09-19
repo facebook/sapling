@@ -223,14 +223,9 @@ publish=False
 
 [remotefilelog]
 cachelimit=20GB
-cleanoldpacks=True
-fastdatapack=True
-historypackv1=True
-localdatarepack=True
 useruststore=True
 manifestlimit=4GB
 http=True
-userustrepack=True
 cachepath=~/.sl_cache
 retryprefetch=True
 fetchpacks=True

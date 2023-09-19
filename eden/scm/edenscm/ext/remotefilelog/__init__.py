@@ -22,12 +22,8 @@ Configs:
 
     update, and on other commands that use them. Different from pullprefetch.
 
-    ``remotefilelog.gcrepack`` does garbage collection during repack when True
-
     ``remotefilelog.nodettl`` specifies maximum TTL of a node in seconds before
     it is garbage collected
-
-    ``remotefilelog.localdatarepack`` runs repack on local data loose files
 
     ``remotefilelog.getfilesstep`` the number of files per batch during fetching
 
@@ -49,15 +45,6 @@ Configs:
     or ['1MB', '100MB'] will lead to three generations: [0, 1MB), [
     1MB, 100MB) and [100MB, infinity).
 
-    ``remotefilelog.data.maxrepackpacks`` the maximum number of pack files to
-    include in an incremental data repack.
-
-    ``remotefilelog.data.repackmaxpacksize`` the maximum size of a pack file for
-    it to be considered for an incremental data repack.
-
-    ``remotefilelog.data.repacksizelimit`` the maximum total size of pack files
-    to include in an incremental data repack.
-
     ``remotefilelog.history.gencountlimit`` constraints the minimum number of
     history pack files required to be considered part of a generation. In
     particular, minimum number of packs files > gencountlimit.
@@ -66,15 +53,6 @@ Configs:
     each generation of the history pack files. For example, list [
     '100MB', '1MB'] or ['1MB', '100MB'] will lead to three generations: [
     0, 1MB), [1MB, 100MB) and [100MB, infinity).
-
-    ``remotefilelog.history.maxrepackpacks`` the maximum number of pack files to
-    include in an incremental history repack.
-
-    ``remotefilelog.history.repackmaxpacksize`` the maximum size of a pack file
-    for it to be considered for an incremental history repack.
-
-    ``remotefilelog.history.repacksizelimit`` the maximum total size of pack
-    files to include in an incremental history repack.
 
     ``remotefilelog.dolfsprefetch`` means that fileserverclient's prefetch
     will also cause lfs prefetch to happen. This is True by default.
@@ -87,15 +65,6 @@ Configs:
     linkrev-fixup fastpath when creating a filectx from a descendant rev.
     The default is true, but this may make some operations cause many tree
     fetches when used in conjunction with treemanifest in treeonly mode.
-
-    ``remotefilelog.cleanoldpacks`` controls whether repack will attempt to
-    limit the size of its cache.
-
-    ``remotefilelog.cachelimit`` limit the size of the hgcache to this size.
-    Packfiles will be removed from oldest to newest during repack.
-
-    ``remotefilelog.manifestlimit`` limit the size of the manifest cache to this size.
-    Manifests will be removed from oldest to newest during repack.
 
     ``remotefilelog.getpackversion`` version of the "getpack" wire protocol.
     Starting with 2, LFS blobs are supported.
@@ -169,7 +138,6 @@ from . import (
     remotefilectx,
     remotefilelog,
     remotefilelogserver,
-    repack as repackmod,
     shallowbundle,
     shallowrepo,
     shallowstore,
@@ -194,13 +162,11 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("remotefilelog", "descendantrevfastpath", default=False)
-configitem("remotefilelog", "localdatarepack", default=False)
 configitem("remotefilelog", "updatesharedcache", default=True)
 configitem("remotefilelog", "servercachepath", default=None)
 configitem("remotefilelog", "simplecacheserverstore", default=False)
 configitem("remotefilelog", "server", default=None)
 configitem("remotefilelog", "getpackversion", default=1)
-configitem("remotefilelog", "commitsperrepack", default=100)
 configitem("remotefilelog", "http", default=True)
 configitem("edenapi", "url", default=None)
 
@@ -870,17 +836,12 @@ def pull(orig, ui, repo, *pats, **opts):
     if shallowrepo.requirement in repo.requirements:
         # prefetch if it's configured
         prefetchrevset = ui.config("remotefilelog", "pullprefetch", None)
-        bgrepack = repo.ui.configbool("remotefilelog", "backgroundrepack", False)
 
         if prefetchrevset:
             ui.status(_("prefetching file contents\n"))
             revs = scmutil.revrange(repo, [prefetchrevset])
             base = repo["."].rev()
             repo.prefetch(revs, base=base)
-            if bgrepack:
-                repackmod.domaintenancerepack(repo)
-        elif bgrepack:
-            repackmod.domaintenancerepack(repo)
 
     return result
 
@@ -1002,11 +963,6 @@ def debugindexedloghistorystore(ui, *paths, **opts):
     return debugcommands.debugindexedloghistorystore(ui, paths, **opts)
 
 
-@command("debugwaitonrepack", [], _("@prog@ debugwaitonrepack"))
-def debugwaitonrepack(ui, repo, **opts):
-    return debugcommands.debugwaitonrepack(repo)
-
-
 @command("debugwaitonprefetch", [], _("@prog@ debugwaitonprefetch"))
 def debugwaitonprefetch(ui, repo, **opts):
     return debugcommands.debugwaitonprefetch(repo)
@@ -1036,7 +992,6 @@ def resolveprefetchopts(ui, opts):
     "prefetch",
     [
         ("r", "rev", [], _("prefetch the specified revisions"), _("REV")),
-        ("", "repack", False, _("run repack after prefetch")),
         ("b", "base", "", _("rev that is assumed to already be local")),
     ]
     + commands.walkopts,
@@ -1065,31 +1020,3 @@ def prefetch(ui, repo, *pats, **opts):
     matcher = scmutil.match(repo[None], pats, opts)
     revs = scmutil.revrange(repo, opts.get("rev"))
     repo.prefetch(revs, opts.get("base"), matcher=matcher)
-
-    # Run repack in background
-    if opts.get("repack"):
-        repackmod.domaintenancerepack(repo)
-
-
-@command(
-    "repack",
-    [
-        ("", "background", None, _("run in a background process"), None),
-        ("", "incremental", None, _("do an incremental repack"), None),
-    ],
-    _("@prog@ repack [OPTIONS]"),
-)
-def repack(ui, repo, *pats, **opts):
-    if opts.get("background"):
-        repackmod.backgroundrepack(repo, incremental=opts.get("incremental"))
-        return
-
-    try:
-        if opts.get("incremental"):
-            repackmod.incrementalrepack(repo)
-        else:
-            repackmod.fullrepack(repo)
-    except repackmod.RepackAlreadyRunning as ex:
-        # Don't propogate the exception if the repack is already in
-        # progress, since we want the command to exit 0.
-        repo.ui.warn("%s\n" % ex)

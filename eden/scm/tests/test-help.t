@@ -1130,8 +1130,6 @@ Test list of internal help commands
                  print visible heads
    debugwaitonprefetch
                  (no help text available)
-   debugwaitonrepack
-                 (no help text available)
    debugwalk     show how files match on given patterns
    debugwireargs
                  (no help text available)

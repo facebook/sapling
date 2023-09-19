@@ -105,11 +105,6 @@ class basepackstore:
         self.packs = _cachebackedpacks([], self.DEFAULTCACHESIZE)
         self.packspath = set()
 
-    def repackstore(self, incremental=True):
-        from .repack import runrepacklegacy
-
-        runrepacklegacy(self.ui, self.path, incremental, self.shared)
-
     def _getavailablepackfiles(self, currentpacks=None):
         """For each pack file (a index/data file combo), yields:
           (full path without extension, mtime, size)
@@ -210,25 +205,6 @@ class basepackstore:
         """Checks for any new packs on disk, adds them to the main pack list,
         and returns a list of just the new packs."""
         now = time.time()
-
-        # When remotefilelog.fetchpacks is enabled, some commands will trigger
-        # many packfiles to be written to disk. This has the negative effect to
-        # really slow down the refresh function, to the point where 90+% of the
-        # time would be spent in it. A simple (but effective) solution is to
-        # run repack when we detect that the number of packfiles is too big. A
-        # better solution is to use a file format that isn't immutable, like
-        # IndexedLog. Running repack is the short-time solution until
-        # IndexedLog is more widely deployed.
-        if len(self.packs) == self.DEFAULTCACHESIZE:
-            self.packs.clear()
-            self.packspath.clear()
-            try:
-                self.repackstore()
-            except Exception:
-                # Failures can happen due to concurrent repacks, which should
-                # be rare. Let's just ignore these, the next refresh will
-                # re-issue the repack and succeed.
-                pass
 
         # If we experience a lot of misses (like in the case of getmissing() on
         # new objects), let's only actually check disk for new stuff every once

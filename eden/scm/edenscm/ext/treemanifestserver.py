@@ -58,16 +58,6 @@ be prefetched after a pull. Defaults to None.
     [treemanifest]
     pullprefetchrevs = master + stable
 
-Setting `treemanifest.repackstartrev` and `treemanifest.repackendrev` causes `hg
-repack --incremental` to only repack the revlog entries in the given range. The
-default values are 0 and len(changelog) - 1, respectively.
-
-::
-
-    [treemanifest]
-    repackstartrev = 0
-    repackendrev = 1000
-
 Setting `treemanifest.treeonly` to True will force all manifest reads to use the
 tree format. This is useful in the final stages of a migration to treemanifest
 to prevent accesses of flat manifests.
@@ -199,7 +189,6 @@ from edenscm.ext.remotefilelog.contentstore import (
 from edenscm.ext.remotefilelog.datapack import makedatapackstore, memdatapack
 from edenscm.ext.remotefilelog.historypack import makehistorypackstore, memhistorypack
 from edenscm.ext.remotefilelog.metadatastore import unionmetadatastore
-from edenscm.ext.remotefilelog.repack import domaintenancerepack
 from edenscm.i18n import _, _n
 from edenscm.node import bin, hex, nullid, short
 from edenscm.pycompat import range
@@ -646,11 +635,6 @@ def _prunesharedpacks(repo, packpath):
         numentries = len(os.listdir(packpath))
     except OSError:
         return
-
-    # Note this is based on file count, not pack count.
-    config = repo.ui.configint("packs", "maxpackfilecount")
-    if config and numentries > config:
-        domaintenancerepack(repo)
 
 
 def setuptreestores(repo, mfl):
@@ -1926,14 +1910,8 @@ def _checkhash(orig, self, *args, **kwargs):
 # Wrapper around the 'prefetch' command which also allows for prefetching the
 # trees along with the files.
 def _prefetchwrapper(orig, ui, repo, *pats, **opts):
-    # The wrapper will take care of the repacking.
-    repackrequested = opts.pop("repack")
-
     _prefetchonlytrees(repo, opts)
     _prefetchonlyfiles(orig, ui, repo, *pats, **opts)
-
-    if repackrequested:
-        domaintenancerepack(repo)
 
 
 # Wrapper around the 'prefetch' command which overrides the command completely
@@ -1942,9 +1920,6 @@ def _prefetchwrapper(orig, ui, repo, *pats, **opts):
 # loaded and we want to be able to at least prefetch trees. The wrapping just
 # ensures that we get a consistent interface to the 'prefetch' command.
 def _overrideprefetch(orig, ui, repo, *pats, **opts):
-    if opts.get("repack"):
-        raise error.Abort(_("repack requires remotefilelog extension"))
-
     _prefetchonlytrees(repo, opts)
 
 

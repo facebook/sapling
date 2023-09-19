@@ -11,7 +11,6 @@ from edenscm.i18n import _
 from edenscm.node import hex, nullid
 
 from . import fileserverclient, remotefilectx, remotefilelog
-from .repack import domaintenancerepack
 
 
 requirement = "remotefilelog"
@@ -79,17 +78,6 @@ def wraprepo(repo) -> None:
         def commitpending(self):
             super(shallowrepository, self).commitpending()
 
-            self.numtransactioncommits += 1
-            # In some cases, we can have many transactions in the same repo, in
-            # which case each one will create a packfile, let's trigger a repack at
-            # this point to bring the number of packfiles down to a reasonable
-            # number.
-            if self.numtransactioncommits >= self.ui.configint(
-                "remotefilelog", "commitsperrepack"
-            ):
-                domaintenancerepack(self)
-                self.numtransactioncommits = 0
-
         def commitctx(self, ctx, error=False):
             """Add a new revision to current repository.
             Revision information is passed via the context argument.
@@ -109,13 +97,9 @@ def wraprepo(repo) -> None:
                 self.fileservice.prefetch(files)
             return super(shallowrepository, self).commitctx(ctx, error=error)
 
-        def backgroundprefetch(
-            self, revs, base=None, repack=False, pats=None, opts=None
-        ):
-            """Runs prefetch in background with optional repack"""
+        def backgroundprefetch(self, revs, base=None, pats=None, opts=None):
+            """Runs prefetch in background"""
             cmd = [util.hgexecutable(), "-R", self.origroot, "prefetch"]
-            if repack:
-                cmd.append("--repack")
             if revs:
                 cmd += ["-r", revs]
             if base:
@@ -124,9 +108,7 @@ def wraprepo(repo) -> None:
             util.spawndetached(cmd)
 
         def prefetch(self, revs, base=None, matcher=None):
-            """Prefetches all the necessary file revisions for the given revs
-            Optionally runs repack in background
-            """
+            """Prefetches all the necessary file revisions for the given revs"""
             with self._lock(
                 self.svfs,
                 "prefetchlock",
@@ -164,8 +146,6 @@ def wraprepo(repo) -> None:
 
     repo.shallowmatch = match.always(repo.root, "")
     repo.fileservice = fileserverclient.fileserverclient(repo)
-
-    repo.numtransactioncommits = 0
 
     repo.includepattern = repo.ui.configlist("remotefilelog", "includepattern", None)
     repo.excludepattern = repo.ui.configlist("remotefilelog", "excludepattern", None)
