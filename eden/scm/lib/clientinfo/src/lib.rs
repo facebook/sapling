@@ -52,3 +52,21 @@ impl ClientInfo {
         serde_json::to_string(self).map_err(|e| anyhow!(e))
     }
 }
+
+/// ClientRequestInfo holds information that will be used for tracing the request
+/// through Source Control systems.
+#[derive(Clone, Deserialize, Serialize, Debug)]
+pub struct ClientRequestInfo {
+    /// Identifier indicates who triggered the request (e.g: "user:user_id")
+    pub main_id: String,
+    /// The entry point of the request
+    pub entry_point: ClientEntryPoint,
+    /// A random string that identifies the request
+    pub correlator: String,
+}
+
+#[derive(Clone, Deserialize, Serialize, Debug)]
+pub enum ClientEntryPoint {
+    Sapling,
+    EdenFs,
+}
