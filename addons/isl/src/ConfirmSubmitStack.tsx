@@ -6,6 +6,7 @@
  */
 
 import type {CommitInfo} from './types';
+import type {MutableRefObject} from 'react';
 
 import {Commit} from './Commit';
 import {FlexSpacer} from './ComponentUtils';
@@ -18,7 +19,7 @@ import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {CommitPreview} from './previews';
 import {useModal} from './useModal';
 import {VSCodeDivider, VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
-import {useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 
 import './ConfirmSubmitStack.css';
@@ -79,6 +80,16 @@ export function useShowConfirmSubmitStack() {
   });
 }
 
+function useAutofocusRef(): React.MutableRefObject<HTMLButtonElement | null> {
+  const ref = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    if (ref.current != null) {
+      ref.current.focus();
+    }
+  }, [ref]);
+  return ref;
+}
+
 function ConfirmModalContent({
   stack,
   returnResultAndDismiss,
@@ -92,6 +103,8 @@ function ConfirmModalContent({
   const shouldSubmitAsDraft = useRecoilValue(submitAsDraft);
   const [updateMessage, setUpdateMessage] = useState('');
   const commitsWithDiffs = stack.filter(commit => commit.diffId != null);
+
+  const submitRef = useAutofocusRef();
 
   const provider = useRecoilValue(codeReviewProvider);
   return (
@@ -137,6 +150,7 @@ function ConfirmModalContent({
           <T>Cancel</T>
         </VSCodeButton>
         <VSCodeButton
+          ref={submitRef as MutableRefObject<null>}
           appearance="primary"
           onClick={() =>
             returnResultAndDismiss({
