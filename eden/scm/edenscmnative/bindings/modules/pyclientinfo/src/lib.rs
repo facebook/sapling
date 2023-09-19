@@ -19,6 +19,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
 
     m.add_class::<clientinfo>(py)?;
+    m.add_class::<ClientRequestInfo>(py)?;
     Ok(m)
 }
 
@@ -44,5 +45,14 @@ py_class!(pub class clientinfo |py| {
 
     def into_json(&self) -> PyResult<PyBytes> {
         convert(py, self.clientinfo(py).borrow().into_json().map(|s| s.into_bytes()))
+    }
+});
+
+py_class!(pub class ClientRequestInfo |py| {
+    data inner: RefCell<client_info::ClientRequestInfo>;
+
+    def __new__(_cls) -> PyResult<ClientRequestInfo> {
+        let client_request_info = client_info::ClientRequestInfo::new().map_pyerr(py)?;
+        ClientRequestInfo::create_instance(py, RefCell::new(client_request_info))
     }
 });

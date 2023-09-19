@@ -70,3 +70,14 @@ pub enum ClientEntryPoint {
     Sapling,
     EdenFs,
 }
+
+impl ClientRequestInfo {
+    pub fn new() -> Result<Self> {
+        // a dummy client request info
+        Ok(ClientRequestInfo {
+            main_id: "user:test".to_string(),
+            entry_point: ClientEntryPoint::Sapling,
+            correlator: "123456".to_string(),
+        })
+    }
+}
