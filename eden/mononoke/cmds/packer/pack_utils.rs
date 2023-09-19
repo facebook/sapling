@@ -262,6 +262,7 @@ pub async fn repack_keys<T: BlobstoreUnlinkOps>(
                     .await?;
 
                 // log what we stored
+                tuning_scuba.add_opt("packed_key", Some(pack_key.as_str()));
                 for mut scuba in logs {
                     scuba.add(PACK_KEY, pack_key.as_str());
                     scuba.log();
