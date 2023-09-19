@@ -1111,7 +1111,6 @@ def saveremotenames(repo, remotebookmarks, override: bool = True) -> None:
 
         journal = []
         nm = repo.changelog.nodemap
-        missingnode = False
         for remote, rmbookmarks in pycompat.iteritems(remotebookmarks):
             # Do not write 'default-push' names. See https://fburl.com/1rft34i8.
             if remote == "default-push":
@@ -1122,7 +1121,7 @@ def saveremotenames(repo, remotebookmarks, override: bool = True) -> None:
                 newnode = hexnode
                 if not bin(newnode) in nm:
                     # node is unknown locally, don't change the bookmark
-                    missingnode = True
+                    # This code path does not actually happen in prod.
                     newnode = oldnode
                 if newnode != hex(nullid):
                     fullname = joinremotename(remote, name)
@@ -1131,7 +1130,6 @@ def saveremotenames(repo, remotebookmarks, override: bool = True) -> None:
                         journal.append(
                             (joinremotename(remote, name), bin(oldnode), bin(newnode))
                         )
-        repo.ui.log("remotenamesmissingnode", remotenamesmissingnode=str(missingnode))
 
         repo.svfs.write("remotenames", encoderemotenames(newremotenamenodes))
 

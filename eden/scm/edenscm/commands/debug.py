@@ -697,7 +697,6 @@ def debugdetectissues(ui, repo) -> None:
         )
         for issue in issues:
             ui.write(_("'%s': '%s'\n") % (issue.category, issue.message))
-            ui.log("repoissues", issue.message, category=issue.category, **issue.data)
 
 
 @command("debugduplicatedconfig", cmdutil.templateopts, "")

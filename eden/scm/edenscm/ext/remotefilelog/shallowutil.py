@@ -141,12 +141,6 @@ def prefixkeys(dict, prefix):
     return result
 
 
-def reportpackmetrics(ui, prefix, *stores):
-    dicts = [s.getmetrics() for s in stores]
-    data = prefixkeys(sumdicts(*dicts), prefix + "_")
-    ui.log(prefix + "_packsizes", **data)
-
-
 def _parsepackmeta(metabuf: bytes) -> "Dict[str, bytes]":
     """parse datapack meta, bytes (<metadata-list>) -> dict
 

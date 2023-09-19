@@ -767,7 +767,6 @@ def setuptreestores(repo, mfl):
         histstores.append(ondemandstore)
 
     mfl.historystore = unionmetadatastore(*histstores)
-    shallowutil.reportpackmetrics(ui, "treestore", mfl.datastore, mfl.historystore)
 
     remotestore.setshared(mfl.datastore, mfl.historystore)
     ondemandstore.setshared(mfl.datastore, mfl.historystore)

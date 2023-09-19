@@ -533,27 +533,3 @@ def parselist(value):
         return [unitolocal(v) for v in configloader.parselist(unifromlocal(value))]
     else:
         return value
-
-
-# TODO Call this from somewhere
-def logages(ui, configpath, cachepath):
-    kwargs = dict()
-    for path, name in [
-        (cachepath, "dynamicconfig_remote_age"),
-        # We do the config age last, so we can return the mtime
-        (configpath, "dynamicconfig_age"),
-    ]:
-        # Default to the unix epoch as the mtime
-        mtime = 0
-        if os.path.exists(path):
-            mtime = os.lstat(path).st_mtime
-
-        age = time.time() - mtime
-        # Round it so we get better compression upstream.
-        age = age - (age % 10)
-
-        kwargs[name] = age
-
-    ui.log("dynamicconfig_age", **kwargs)
-
-    return mtime
