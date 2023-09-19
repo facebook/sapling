@@ -1296,7 +1296,7 @@ def hgexecutable():
                 _sethgexecutable(encoding.environ["EXECUTABLEPATH"])
             else:
                 _sethgexecutable(pycompat.sysexecutable)
-        elif os.path.basename(getattr(mainmod, "__file__", "")) == "hg":
+        elif os.path.basename(getattr(mainmod, "__file__", None) or "") == "hg":
             _sethgexecutable(mainmod.__file__)
         else:
             exe = findexe("hg") or os.path.basename(sys.argv[0])

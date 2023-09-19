@@ -675,8 +675,7 @@ def get_effective_redirections(
                         expected_target = expected_target.resolve()
                     symlink_path = os.fsdecode(redir.expand_repo_path(checkout))
                     try:
-                        # TODO: replace this with Path.readlink once Python 3.9+
-                        target = Path(os.readlink(symlink_path)).resolve()
+                        target = Path(symlink_path).readlink()
                         if sys.platform == "win32":
                             target = remove_unc_prefix(target)
                     except ValueError as exc:

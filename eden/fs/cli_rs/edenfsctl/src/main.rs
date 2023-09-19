@@ -28,8 +28,10 @@ use tracing_subscriber::filter::EnvFilter;
 
 #[cfg(windows)]
 const PYTHON_CANDIDATES: &[&str] = &[
+    r"c:\tools\fb-python\fb-python310",
     r"c:\tools\fb-python\fb-python39",
     r"c:\tools\fb-python\fb-python38",
+    r"c:\Python310",
     r"c:\Python39",
     r"c:\Python38",
 ];

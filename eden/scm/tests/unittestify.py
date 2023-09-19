@@ -83,6 +83,7 @@ def prepareargsenv(runtestsdir, port=None):
     # set HGDATAPATH
     datapath = os.path.join(runtestsdir, "../edenscm")
     env["HGDATAPATH"] = datapath
+    env["PYTHONPATH"] = os.path.join(runtestsdir, "../")
     # set HGPYTHONPATH since PYTHONPATH might be discarded
     pythonpath = os.pathsep.join([runtestsdir])
     env["HGPYTHONPATH"] = pythonpath
