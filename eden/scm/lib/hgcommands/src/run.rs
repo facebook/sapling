@@ -61,6 +61,7 @@ use crate::HgPython;
 /// Have side effect on `io` and return the command exit code.
 pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     let start_time = SystemTime::now();
+    let start_blocked = io.time_interval().total_blocked_ms();
 
     // The pfcserver or commandserver do not want tracing or blackbox or ctrlc setup,
     // or going through the Rust command table. Bypass them.
@@ -175,7 +176,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
 
     let _ = maybe_write_trace(io, &tracing_data, trace_output_path);
 
-    log_end(exit_code as u8, start_time, tracing_data, &span);
+    log_end(io, exit_code as u8, start_blocked, start_time, tracing_data);
 
     // Sync the blackbox before returning: this exit code is going to be used to process::exit(),
     // so we need to flush now.
@@ -686,19 +687,7 @@ fn log_start(args: Vec<String>, now: SystemTime) -> tracing::Span {
         }
     }
 
-    let span = tracing::info_span!(
-        "Run Command",
-        pid = pid,
-        uid = uid,
-        nice = nice,
-        args = AsRef::<str>::as_ref(&serde_json::to_string(&args).unwrap()),
-        parent_pids = AsRef::<str>::as_ref(&serde_json::to_string(&parent_pids).unwrap()),
-        parent_names = AsRef::<str>::as_ref(&serde_json::to_string(&parent_names).unwrap()),
-        version = version::VERSION,
-        // Reserved for log_end.
-        exit_code = 0,
-        max_rss = 0,
-    );
+    let span = tracing::info_span!("run");
 
     blackbox::log(&blackbox::event::Event::Start {
         pid,
@@ -717,10 +706,11 @@ fn log_start(args: Vec<String>, now: SystemTime) -> tracing::Span {
 }
 
 fn log_end(
+    io: &IO,
     exit_code: u8,
+    start_blocked: u64,
     start_time: SystemTime,
     tracing_data: Arc<Mutex<TracingData>>,
-    span: &tracing::Span,
 ) {
     let inside_test = is_inside_test();
     let duration_ms = if inside_test {
@@ -736,9 +726,29 @@ fn log_end(
     } else {
         procinfo::max_rss_bytes()
     };
+    let total_blocked_ms = if inside_test {
+        0
+    } else {
+        io.time_interval().total_blocked_ms() - start_blocked
+    };
 
-    span.record("exit_code", exit_code);
-    span.record("max_rss", max_rss);
+    if tracing::enabled!(target: "hgcommands::run::blocked", Level::DEBUG) {
+        let interval = io.time_interval();
+        let tags = interval.list_tags();
+        for tag in tags {
+            let tag: &str = tag.as_ref();
+            let time = interval.tagged_blocked_ms(tag);
+            tracing::debug!(target: "hgcommands::run::blocked", tag=tag, time=time, "blocked tag");
+        }
+        tracing::debug!(target: "hgcommands::run::blocked", total=total_blocked_ms, start=start_blocked, "blocked total");
+    }
+
+    tracing::info!(
+        target: "command_info",
+        exit_code=exit_code,
+        max_rss=max_rss,
+        total_blocked_ms=util::math::truncate_int(total_blocked_ms, 3),
+    );
 
     blackbox::log(&blackbox::event::Event::Finish {
         exit_code,
