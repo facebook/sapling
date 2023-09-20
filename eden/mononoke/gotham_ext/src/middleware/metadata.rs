@@ -9,6 +9,8 @@ use std::net::IpAddr;
 use std::net::SocketAddr;
 
 use cats::try_get_cats_idents;
+use clientinfo::ClientInfo;
+use clientinfo::CLIENT_INFO_HEADER;
 use fbinit::FacebookInit;
 use gotham::state::client_addr;
 use gotham::state::FromState;
@@ -136,7 +138,13 @@ impl Middleware for MetadataMiddleware {
             if let Some(identities) = maybe_identities {
                 metadata = metadata.set_identities(identities)
             }
-
+            let client_info: Option<ClientInfo> = headers
+                .get(CLIENT_INFO_HEADER)
+                .and_then(|h| h.to_str().ok())
+                .and_then(|ci| serde_json::from_str(ci).ok());
+            if let Some(client_info) = client_info {
+                metadata.add_client_info(client_info);
+            }
             metadata.update_client_untrusted(
                 metadata::security::is_client_untrusted(|h| {
                     Ok(headers

@@ -219,6 +219,7 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
             |header| header.to_string(),
         );
 
+        // TODO(rajshar): Remove this once the ClientRequestInfo pieces are deployed in Prod
         add_header(
             scuba,
             headers,
@@ -233,7 +234,9 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
         if let Some(ref address) = metadata.client_ip() {
             scuba.add(HttpScubaKey::ClientIp, address.to_string());
         }
-
+        if let Some(client_info) = metadata.client_request_info() {
+            scuba.add_client_request_info(client_info);
+        }
         let identities = metadata.identities();
         scuba.sample_for_identities(identities);
         let identities: Vec<_> = identities.iter().map(|i| i.to_string()).collect();
