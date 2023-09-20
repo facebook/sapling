@@ -519,7 +519,6 @@ mod h2m {
             metadata
                 .add_raw_encoded_cats(cats.to_str().context("Invalid encoded cats")?.to_string());
         }
-
         let src_region = headers
             .get(HEADER_REVPROXY_REGION)
             .and_then(|r| r.to_str().ok().map(|r| r.to_string()));
@@ -527,16 +526,6 @@ mod h2m {
         if let Some(src_region) = src_region {
             metadata.add_revproxy_region(src_region);
         }
-
-        let client_info: Option<ClientInfo> = headers
-            .get(CLIENT_INFO_HEADER)
-            .and_then(|h| h.to_str().ok())
-            .and_then(|ci| serde_json::from_str(ci).ok());
-
-        if let Some(client_info) = client_info {
-            metadata.add_client_info(client_info);
-        }
-
         Ok(())
     }
 
@@ -548,6 +537,10 @@ mod h2m {
         let debug = headers.contains_key(HEADER_CLIENT_DEBUG);
         let internal_identity = &conn.pending.acceptor.common_config.internal_identity;
         let is_trusted = conn.is_trusted;
+        let client_info: Option<ClientInfo> = headers
+            .get(CLIENT_INFO_HEADER)
+            .and_then(|h| h.to_str().ok())
+            .and_then(|ci| serde_json::from_str(ci).ok());
 
         // CATs are verifiable - we know that only the signer could have
         // generated them. We extract the signer's identity. The connecting
@@ -589,8 +582,11 @@ mod h2m {
                 )
                 .await;
 
-                metadata_populate_trusted(&mut metadata, headers)?;
+                if let Some(client_info) = client_info {
+                    metadata.add_client_info(client_info);
+                }
 
+                metadata_populate_trusted(&mut metadata, headers)?;
                 return Ok(metadata);
             }
         }
@@ -599,7 +595,7 @@ mod h2m {
         identities.extend(conn.identities.iter().cloned());
 
         // Generic fallback
-        Ok(Metadata::new(
+        let mut metadata = Metadata::new(
             Some(&generate_session_id().to_string()),
             identities,
             debug,
@@ -611,6 +607,12 @@ mod h2m {
             })?,
             Some(conn.pending.addr.ip()),
         )
-        .await)
+        .await;
+
+        if let Some(client_info) = client_info {
+            metadata.add_client_info(client_info);
+        }
+
+        Ok(metadata)
     }
 }
