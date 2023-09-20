@@ -12,6 +12,7 @@ use std::path::Path;
 use std::time::Duration;
 
 use anyhow::Result;
+use clientinfo::ClientRequestInfo;
 use fbinit::FacebookInit;
 use futures_stats::FutureStats;
 use futures_stats::StreamStats;
@@ -126,6 +127,16 @@ impl MononokeScubaSampleBuilder {
 
     pub fn add<K: Into<String>, V: Into<ScubaValue>>(&mut self, key: K, value: V) -> &mut Self {
         self.inner.add(key, value);
+        self
+    }
+
+    pub fn add_client_request_info(&mut self, client_info: &ClientRequestInfo) -> &mut Self {
+        self.inner
+            .add("client_main_id", client_info.main_id.as_str());
+        self.inner
+            .add("client_entry_point", client_info.entry_point.to_string());
+        self.inner
+            .add("client_correlator", client_info.correlator.as_str());
         self
     }
 
