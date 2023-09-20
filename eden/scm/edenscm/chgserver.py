@@ -81,7 +81,7 @@ def _newchgui(srcui, csystem, attachio):
             return self._csystem.runsystem(cmd, util.shellenviron(environ), cwd)
 
         def _runpager(self, cmd, env=None):
-            util.mainio.disable_progress()
+            util.get_main_io().disable_progress()
             self._csystem.runpager(
                 cmd,
                 util.shellenviron(env),

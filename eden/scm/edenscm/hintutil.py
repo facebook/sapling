@@ -91,7 +91,7 @@ def show(ui) -> None:
     if ui.plain("hint"):
         return
     names = []
-    if util.mainio.is_pager_active():
+    if util.get_main_io().is_pager_active():
         # For stream pager, people expect hints to be at the end, not in a
         # separate panel. Make it so. When the pager is active, we know that the
         # stdout is not being redirected to a file or pipe, so this won't affect

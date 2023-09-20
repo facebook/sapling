@@ -606,7 +606,7 @@ class unixforkingservice:
             # os._exit here. So let's explicitly clear the progress before
             # os._exit.
             try:
-                util.mainio.disable_progress()
+                util.get_main_io().disable_progress()
             except Exception:
                 pass
             # os._exit bypasses Rust `atexit::drop_queued`. Call `drop_queued`

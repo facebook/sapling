@@ -141,7 +141,7 @@ def _startipython(ui, repo, env) -> None:
             " ms: repo._mutationstore\n"
         )
 
-    util.mainio.disable_progress()
+    util.get_main_io().disable_progress()
 
     have_ipython = False
     try:

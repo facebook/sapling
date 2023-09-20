@@ -290,11 +290,11 @@ def init():
 
 @contextlib.contextmanager
 def _suspendrustprogressbar():
-    util.mainio.disable_progress(True)
+    util.get_main_io().disable_progress(True)
     try:
         yield
     finally:
-        util.mainio.disable_progress(False)
+        util.get_main_io().disable_progress(False)
 
 
 suspend = _suspendrustprogressbar

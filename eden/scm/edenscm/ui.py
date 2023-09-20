@@ -221,8 +221,8 @@ class ui:
         else:
             self._uiconfig = uiconfig.uiconfig(rcfg=rcfg)
 
-            self.fout = util.refcell(util.mainio.output())
-            self.ferr = util.refcell(util.mainio.error())
+            self.fout = util.refcell(util.get_main_io().output())
+            self.ferr = util.refcell(util.get_main_io().error())
             self.fin = util.refcell(util.stdin)
             self.pageractive = False
             self._disablepager = False
@@ -938,7 +938,7 @@ class ui:
         self.flush()
 
         # This will start the pager using the system terminal immediately.
-        util.mainio.start_pager(self._rcfg)
+        util.get_main_io().start_pager(self._rcfg)
 
         # The Rust pager wants utf-8 unconditionally.
         encoding.outputencoding = "utf-8"
@@ -946,7 +946,7 @@ class ui:
         @self.atexit
         def waitpager():
             with self.timeblockedsection("pager"):
-                util.mainio.wait_pager()
+                util.get_main_io().wait_pager()
             encoding.outputencoding = origencoding
 
         self.pageractive = True
@@ -981,7 +981,7 @@ class ui:
 
         try:
             with self.timeblockedsection("pager"):
-                util.mainio.disable_progress()
+                util.get_main_io().disable_progress()
                 pager = subprocess.Popen(
                     command,
                     shell=shell,

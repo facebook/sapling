@@ -135,7 +135,7 @@ else:
 
 
 # The main Rust IO. It handles progress and streampager.
-mainio = bindings.io.IO.main()
+get_main_io = bindings.io.IO.main
 
 # Define a fail point.
 failpoint = bindings.fail.failpoint
@@ -1349,7 +1349,9 @@ def rawsystem(cmd, environ=None, cwd=None, out=None):
     if istest():
         parent, _basename = os.path.split(cmd.split()[0])
         if parent and not os.path.isabs(parent.strip('"')):
-            mainio.write_err(f"command '{cmd}' should use absolute path\n".encode())
+            get_main_io().write_err(
+                f"command '{cmd}' should use absolute path\n".encode()
+            )
 
     env = shellenviron(environ)
     if out is None or isatty(out) or isstdout(out):
@@ -4759,9 +4761,9 @@ def printrecordedtracebacks():
      ...
     """
     for funcname, calls in sorted(_recordedtracebacks.items()):
-        mainio.write_err(("Callsites for %s:\n" % (funcname,)).encode())
+        get_main_io().write_err(("Callsites for %s:\n" % (funcname,)).encode())
         for tb, count in sorted(calls.items(), key=lambda i: (-i[1], i[0])):
-            mainio.write_err((" %d %s\n" % (count, tb)).encode())
+            get_main_io().write_err((" %d %s\n" % (count, tb)).encode())
 
 
 class wrapped_stat_result:
