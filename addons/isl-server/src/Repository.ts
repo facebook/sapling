@@ -6,6 +6,7 @@
  */
 
 import type {CodeReviewProvider} from './CodeReviewProvider';
+import type {TrackEventName} from './analytics/eventNames';
 import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {Logger} from './logger';
 import type {ExecaError} from 'execa';
@@ -359,7 +360,10 @@ export class Repository {
     try {
       // TODO: is this command fast on large files? it includes full conflicting file contents!
       // `sl resolve --list --all` does not seem to give any way to disambiguate (all conflicts resolved) and (not in merge)
-      const proc = await this.runCommand(['resolve', '--tool', 'internal:dumpjson', '--all']);
+      const proc = await this.runCommand(
+        ['resolve', '--tool', 'internal:dumpjson', '--all'],
+        'GetConflictsCommand',
+      );
       output = JSON.parse(proc.stdout) as ResolveCommandConflictOutput;
     } catch (err) {
       this.logger.error(`failed to check for merge conflicts: ${err}`);
@@ -556,7 +560,7 @@ export class Repository {
     try {
       this.uncommittedChangesBeginFetchingEmitter.emit('start');
       // Note `status -tjson` run with PLAIN are repo-relative
-      const proc = await this.runCommand(['status', '-Tjson', '--copies']);
+      const proc = await this.runCommand(['status', '-Tjson', '--copies'], 'StatusCommand');
       const files = (JSON.parse(proc.stdout) as UncommittedChanges).map(change => ({
         ...change,
         path: removeLeadingPathSep(change.path),
@@ -628,7 +632,10 @@ export class Repository {
         ? 'smartlog()'
         : // filter default smartlog query by date range
           `smartlog(((interestingbookmarks() + heads(draft())) & date(-${visibleCommitDayRange})) + .)`;
-      const proc = await this.runCommand(['log', '--template', FETCH_TEMPLATE, '--rev', revset]);
+      const proc = await this.runCommand(
+        ['log', '--template', FETCH_TEMPLATE, '--rev', revset],
+        'LogCommand',
+      );
       const commits = parseCommitInfoOutput(this.logger, proc.stdout.trim());
       if (commits.length === 0) {
         throw new Error(ErrorShortMessages.NoCommitsFetched);
@@ -686,8 +693,14 @@ export class Repository {
     return this.catLimiter.enqueueRun(async () => {
       // For `sl cat`, we want the output of the command verbatim.
       const options = {stripFinalNewline: false};
-      return (await this.runCommand(['cat', file, '--rev', rev], /*cwd=*/ undefined, options))
-        .stdout;
+      return (
+        await this.runCommand(
+          ['cat', file, '--rev', rev],
+          'CatCommand',
+          /*cwd=*/ undefined,
+          options,
+        )
+      ).stdout;
     });
   }
 
@@ -703,6 +716,7 @@ export class Repository {
     const t1 = Date.now();
     const output = await this.runCommand(
       ['blame', filePath, '-Tjson', '--change', '--rev', hash],
+      'BlameCommand',
       undefined,
       undefined,
       /* don't timeout */ 0,
@@ -739,13 +753,10 @@ export class Repository {
     const commits =
       hashesToFetch.length === 0
         ? [] // don't bother running log
-        : await this.runCommand([
-            'log',
-            '--template',
-            FETCH_TEMPLATE,
-            '--rev',
-            hashesToFetch.join('+'),
-          ]).then(output => {
+        : await this.runCommand(
+            ['log', '--template', FETCH_TEMPLATE, '--rev', hashesToFetch.join('+')],
+            'LookupCommitsCommand',
+          ).then(output => {
             return parseCommitInfoOutput(this.logger, output.stdout.trim());
           });
 
@@ -769,7 +780,10 @@ export class Repository {
 
   public async getShelvedChanges(): Promise<Array<ShelvedChange>> {
     const output = (
-      await this.runCommand(['log', '--rev', 'shelved()', '--template', SHELVE_FETCH_TEMPLATE])
+      await this.runCommand(
+        ['log', '--rev', 'shelved()', '--template', SHELVE_FETCH_TEMPLATE],
+        'GetShelvesCommand',
+      )
     ).stdout;
 
     const shelves = parseShelvedCommitsOutput(this.logger, output.trim());
@@ -787,32 +801,49 @@ export class Repository {
   }
 
   public async runDiff(comparison: Comparison, contextLines = 4): Promise<string> {
-    const output = await this.runCommand([
-      'diff',
-      ...revsetArgsForComparison(comparison),
-      // don't include a/ and b/ prefixes on files
-      '--noprefix',
-      '--no-binary',
-      '--nodate',
-      '--unified',
-      String(contextLines),
-    ]);
+    const output = await this.runCommand(
+      [
+        'diff',
+        ...revsetArgsForComparison(comparison),
+        // don't include a/ and b/ prefixes on files
+        '--noprefix',
+        '--no-binary',
+        '--nodate',
+        '--unified',
+        String(contextLines),
+      ],
+      'DiffCommand',
+    );
     return output.stdout;
   }
 
   public runCommand(
     args: Array<string>,
+    /** Which event name to track for this command. If undefined, generic 'RunCommand' is used. */
+    eventName: TrackEventName | undefined,
     cwd?: string,
     options?: execa.Options,
-    timeout: number = READ_COMMAND_TIMEOUT_MS,
+    timeout?: number,
+    /**
+     * Optionally provide a more specific tracker. If not provided, the best-effort tracker for the repo is used.
+     * Prefer passing an exact tracker when available, or else cwd/session id/platform/version could be inaccurate.
+     */
+    tracker: ServerSideTracker = this.trackerBestEffort,
   ) {
-    return runCommand(
-      this.info.command,
-      args,
-      this.logger,
-      unwrap(cwd ?? this.info.repoRoot),
-      options,
-      timeout,
+    return tracker.operation(
+      eventName ?? 'RunCommand',
+      'RunCommandError',
+      // if we don't specify a specific eventName, provide the command arguments in logging
+      eventName == null ? {extras: {args}} : undefined,
+      () =>
+        runCommand(
+          this.info.command,
+          args,
+          this.logger,
+          unwrap(cwd ?? this.info.repoRoot),
+          options,
+          timeout ?? READ_COMMAND_TIMEOUT_MS,
+        ),
     );
   }
 
@@ -831,6 +862,7 @@ export class Repository {
   }
 }
 
+/** Run an sl command (without analytics). */
 async function runCommand(
   command_: string,
   args_: Array<string>,

@@ -564,7 +564,14 @@ export default class ServerToClientAPI {
       }
       case 'fetchCommitMessageTemplate': {
         repo
-          .runCommand(['debugcommitmessage', 'isl'])
+          .runCommand(
+            ['debugcommitmessage', 'isl'],
+            'FetchCommitTemplateCommand',
+            undefined,
+            undefined,
+            undefined,
+            this.tracker,
+          )
           .then(result => {
             const template = result.stdout
               .replace(repo.IGNORE_COMMIT_MESSAGE_LINES_REGEX, '')
@@ -639,9 +646,11 @@ export default class ServerToClientAPI {
         const assumeTrackedArgs = (assumeTracked ?? []).map(path => `--assume-tracked=${path}`);
         const exec = repo.runCommand(
           ['debugexportstack', '-r', revs, ...assumeTrackedArgs],
+          'ExportStackCommand',
           undefined,
           undefined,
           /* don't timeout */ 0,
+          this.tracker,
         );
         const reply = (stack?: ExportStack, error?: string) => {
           this.postMessage({
@@ -659,9 +668,11 @@ export default class ServerToClientAPI {
         const stdinStream = Readable.from(JSON.stringify(data.stack));
         const exec = repo.runCommand(
           ['debugimportstack'],
+          'ImportStackCommand',
           undefined,
           {stdin: stdinStream},
           /* don't timeout */ 0,
+          this.tracker,
         );
         const reply = (imported?: ImportedStack, error?: string) => {
           this.postMessage({type: 'importedStack', imported: imported ?? [], error});
