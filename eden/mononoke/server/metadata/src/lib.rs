@@ -16,6 +16,7 @@ use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use clientinfo::ClientInfo;
+use clientinfo::ClientRequestInfo;
 use permission_checker::MononokeIdentitySet;
 use permission_checker::MononokeIdentitySetExt;
 use session_id::generate_session_id;
@@ -206,6 +207,12 @@ impl Metadata {
         self.client_info
             .as_ref()
             .and_then(|ci| ci.fb.sandcastle_nonce())
+    }
+
+    pub fn client_request_info(&self) -> Option<&ClientRequestInfo> {
+        self.client_info
+            .as_ref()
+            .and_then(|ci| ci.request_info.as_ref())
     }
 
     pub fn clientinfo_tw_job(&self) -> Option<&str> {

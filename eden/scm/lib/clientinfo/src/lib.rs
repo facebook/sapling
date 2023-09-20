@@ -27,11 +27,13 @@ use oss as facebook;
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct ClientInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub u64token: Option<u64>,
+    pub u64token: Option<u64>, // Currently not used
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hostname: Option<String>,
     #[serde(flatten)]
     pub fb: FbClientInfo,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_info: Option<ClientRequestInfo>,
 }
 
 impl ClientInfo {
@@ -45,11 +47,17 @@ impl ClientInfo {
             u64token,
             hostname,
             fb,
+            request_info: None,
         })
     }
 
     pub fn into_json(&self) -> Result<String> {
         serde_json::to_string(self).map_err(|e| anyhow!(e))
+    }
+
+    pub fn add_request_info(&mut self, info: ClientRequestInfo) -> &mut Self {
+        self.request_info = Some(info);
+        self
     }
 }
 
