@@ -56,7 +56,7 @@ import {RateLimiter} from 'shared/RateLimiter';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {exists} from 'shared/fs';
 import {removeLeadingPathSep} from 'shared/pathUtils';
-import {notEmpty, unwrap} from 'shared/utils';
+import {notEmpty, randomId, unwrap} from 'shared/utils';
 
 export const COMMIT_END_MARK = '<<COMMIT_END_MARK>>';
 export const NULL_CHAR = '\0';
@@ -830,18 +830,25 @@ export class Repository {
      */
     tracker: ServerSideTracker = this.trackerBestEffort,
   ) {
+    const id = randomId();
     return tracker.operation(
       eventName ?? 'RunCommand',
       'RunCommandError',
-      // if we don't specify a specific eventName, provide the command arguments in logging
-      eventName == null ? {extras: {args}} : undefined,
+      {
+        // if we don't specify a specific eventName, provide the command arguments in logging
+        extras: eventName == null ? {args} : undefined,
+        operationId: `isl:${id}`,
+      },
       () =>
         runCommand(
           this.info.command,
           args,
           this.logger,
           unwrap(cwd ?? this.info.repoRoot),
-          options,
+          {
+            ...options,
+            env: {...options?.env, ...Internal.additionalEnvForCommand?.(id)} as NodeJS.ProcessEnv,
+          },
           timeout ?? READ_COMMAND_TIMEOUT_MS,
         ),
     );
@@ -1000,6 +1007,7 @@ function getExecParams(
   const options: execa.Options = {
     ...options_,
     env: {
+      ...options_?.env,
       ...env,
       LANG: 'en_US.utf-8', // make sure to use unicode if user hasn't set LANG themselves
       // TODO: remove when SL_ENCODING is used everywhere
