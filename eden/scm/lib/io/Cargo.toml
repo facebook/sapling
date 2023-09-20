@@ -15,3 +15,4 @@ pipe = "0.2"
 streampager = { version = "0.10.3", path = "../third-party/streampager" }
 terminal_size = "0.2.6"
 termwiz = { version = "0.18", features = ["widgets"] }
+time-interval = { version = "0.1.0", path = "../util/time-interval" }

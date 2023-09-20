@@ -8,6 +8,8 @@
 use std::any::Any;
 use std::io;
 use std::mem;
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::sync::Arc;
 use std::sync::Weak;
 use std::thread::spawn;
@@ -18,6 +20,7 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
+use parking_lot::MutexGuard;
 use parking_lot::RwLock;
 use pipe::pipe;
 use pipe::PipeWriter;
@@ -33,6 +36,9 @@ use term::DEFAULT_TERM_HEIGHT;
 use term::DEFAULT_TERM_WIDTH;
 use termwiz::surface::change::ChangeSequence;
 use termwiz::surface::Change;
+pub use time_interval;
+use time_interval::BlockedInterval;
+use time_interval::TimeInterval;
 
 mod impls;
 mod term;
@@ -64,6 +70,8 @@ pub struct IOProgress(Weak<Inner>);
 
 struct Inner {
     io_state: Mutex<IOState>,
+    // Track "blocked" time intervals.
+    time_interval: TimeInterval,
     // Use a separate Mutex for quitting the pager without blocking.
     //
     // Note: wait_pager is in io_state so quit_pager during wait_pager
@@ -171,7 +179,7 @@ impl io::Read for IOInput {
             Some(inner) => inner,
             None => return Ok(0),
         };
-        let mut inner = inner.io_state.lock();
+        let mut inner = inner.locked_with_blocked_interval();
         inner.input.read(buf)
     }
 }
@@ -183,7 +191,7 @@ impl io::Write for IOError {
             Some(inner) => inner,
             None => return Ok(buf.len()),
         };
-        let mut inner = inner.io_state.lock();
+        let mut inner = inner.locked_with_blocked_interval();
         if inner.redirect_err_to_out {
             inner.clear_progress_for_output()?;
             inner.output_on_new_line = buf.ends_with(b"\n");
@@ -203,7 +211,7 @@ impl io::Write for IOError {
             Some(inner) => inner,
             None => return Ok(()),
         };
-        let mut inner = inner.io_state.lock();
+        let mut inner = inner.locked_with_blocked_interval();
         if let Some(error) = inner.error.as_mut() {
             error.flush()?;
         }
@@ -218,7 +226,7 @@ impl io::Write for IOOutput {
             Some(inner) => inner,
             None => return Ok(buf.len()),
         };
-        let mut inner = inner.io_state.lock();
+        let mut inner = inner.locked_with_blocked_interval();
         inner.clear_progress_for_output()?;
         inner.output_on_new_line = buf.ends_with(b"\n");
         inner.output.write(buf)
@@ -229,7 +237,7 @@ impl io::Write for IOOutput {
             Some(inner) => inner,
             None => return Ok(()),
         };
-        let mut inner = inner.io_state.lock();
+        let mut inner = inner.locked_with_blocked_interval();
         inner.output.flush()
     }
 }
@@ -247,7 +255,7 @@ impl IOProgress {
 
     pub fn term_size(&self) -> (usize, usize) {
         if let Some(inner) = Weak::upgrade(&self.0) {
-            inner.io_state.lock().term_size()
+            inner.locked_with_blocked_interval().term_size()
         } else {
             (DEFAULT_TERM_WIDTH, DEFAULT_TERM_HEIGHT)
         }
@@ -256,15 +264,19 @@ impl IOProgress {
 
 impl IO {
     pub fn with_input<R>(&self, f: impl FnOnce(&mut dyn Read) -> R) -> R {
-        f(self.inner.io_state.lock().input.as_mut())
+        f(self.inner.locked_with_blocked_interval().input.as_mut())
     }
 
     pub fn with_output<R>(&self, f: impl FnOnce(&dyn Write) -> R) -> R {
-        f(self.inner.io_state.lock().output.as_ref())
+        f(self.inner.locked_with_blocked_interval().output.as_ref())
     }
 
     pub fn with_error<R>(&self, f: impl FnOnce(Option<&dyn Write>) -> R) -> R {
-        f(self.inner.io_state.lock().error.as_deref())
+        f(self.inner.locked_with_blocked_interval().error.as_deref())
+    }
+
+    pub fn time_interval(&self) -> &TimeInterval {
+        &self.inner.time_interval
     }
 
     /// Returns a clonable value that impls [`io::Write`] to `error` stream.
@@ -325,6 +337,7 @@ impl IO {
                 redirect_err_to_out: false,
                 pager_wait_func: None,
             }),
+            time_interval: TimeInterval::from_now(),
             pager_quit_func: Default::default(),
         };
 
@@ -336,7 +349,7 @@ impl IO {
     /// Wait for the pager to exit, and restore outputs to stdio.
     /// Might block if the pager is waiting for the user to exit.
     pub fn wait_pager(&self) -> io::Result<()> {
-        let mut inner = self.inner.io_state.lock();
+        let mut inner = self.inner.locked_with_blocked_interval();
         inner.flush()?;
 
         // Drop the piped streams (to the pager).
@@ -371,7 +384,7 @@ impl IO {
 
     pub fn write(&self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
-        let mut inner = self.inner.io_state.lock();
+        let mut inner = self.inner.locked_with_blocked_interval();
         inner.clear_progress_for_output()?;
         inner.output_on_new_line = data.ends_with(b"\n");
         inner.output.write_all(data)?;
@@ -380,7 +393,7 @@ impl IO {
 
     pub fn write_err(&self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
-        let mut inner = self.inner.io_state.lock();
+        let mut inner = self.inner.locked_with_blocked_interval();
         if inner.redirect_err_to_out {
             inner.clear_progress_for_output()?;
             inner.output_on_new_line = data.ends_with(b"\n");
@@ -396,7 +409,7 @@ impl IO {
     }
 
     pub fn set_progress(&self, changes: &[Change]) -> io::Result<()> {
-        let mut inner = self.inner.io_state.lock();
+        let mut inner = self.inner.locked_with_blocked_interval();
         inner.set_progress(changes)
     }
 
@@ -405,7 +418,7 @@ impl IO {
     }
 
     pub fn flush(&self) -> io::Result<()> {
-        let mut inner = self.inner.io_state.lock();
+        let mut inner = self.inner.locked_with_blocked_interval();
         inner.flush()
     }
 
@@ -426,6 +439,7 @@ impl IO {
                 redirect_err_to_out: false,
                 pager_wait_func: None,
             }),
+            time_interval: TimeInterval::from_now(),
             pager_quit_func: Default::default(),
         };
         Self {
@@ -501,7 +515,7 @@ impl IO {
     ///
     /// It is recommended to run [`IO::flush`] and [`IO::wait_pager`] before exiting.
     pub fn start_pager(&self, config: &dyn Config) -> io::Result<()> {
-        let mut inner = self.inner.io_state.lock();
+        let mut inner = self.inner.locked_with_blocked_interval();
         if inner.is_pager_active() {
             return Ok(());
         }
@@ -616,7 +630,7 @@ impl IO {
     ///   If all `disable_progress(true)` are canceled out, restore the progress
     ///   rendering.
     pub fn disable_progress(&self, disabled: bool) -> io::Result<()> {
-        let mut inner = self.inner.io_state.lock();
+        let mut inner = self.inner.locked_with_blocked_interval();
         if disabled {
             inner.progress_disabled += 1;
             inner.set_progress(&[])?;
@@ -633,7 +647,7 @@ impl IO {
     }
 
     pub fn set_progress_pipe_writer(&self, progress: Option<PipeWriter>) -> io::Result<()> {
-        let mut inner = self.inner.io_state.lock();
+        let mut inner = self.inner.locked_with_blocked_interval();
         inner.pager_progress = match progress {
             Some(progress) => {
                 let mut pager_term = DumbTerm::new(DumbTty::new(Box::new(progress)))
@@ -644,6 +658,36 @@ impl IO {
             None => None,
         };
         Ok(())
+    }
+}
+
+struct LockedIOState<'a> {
+    _interval: BlockedInterval,
+    inner: MutexGuard<'a, IOState>,
+}
+
+impl Deref for LockedIOState<'_> {
+    type Target = IOState;
+    fn deref(&self) -> &Self::Target {
+        self.inner.deref()
+    }
+}
+
+impl DerefMut for LockedIOState<'_> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.inner.deref_mut()
+    }
+}
+
+impl Inner {
+    /// Lock, and track the interval as "blocking".
+    fn locked_with_blocked_interval(&self) -> LockedIOState {
+        let interval = self.time_interval.scoped_blocked_interval("stdio".into());
+        let inner = self.io_state.lock();
+        LockedIOState {
+            _interval: interval,
+            inner,
+        }
     }
 }
 
