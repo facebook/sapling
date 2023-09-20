@@ -38,6 +38,13 @@ export const CommitInfoTestUtils = {
     return within(screen.getByTestId('commit-info-actions-bar'));
   },
 
+  openCommitInfoSidebar() {
+    screen.queryAllByTestId('drawer-label').forEach(el => {
+      const commitInfoTab = within(el).queryByText('Commit Info');
+      commitInfoTab?.click();
+    });
+  },
+
   clickToSelectCommit(hash: string) {
     const commit = within(screen.getByTestId(`commit-${hash}`)).queryByTestId('draggable-commit');
     expect(commit).toBeInTheDocument();

@@ -63,7 +63,7 @@ import {
 } from './serverAPIState';
 import {usePromise} from './usePromise';
 import {VSCodeButton, VSCodeCheckbox, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
-import React, {useRef, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {useRecoilCallback, useRecoilValue} from 'recoil';
 import {labelForComparison, revsetForComparison, ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
@@ -153,6 +153,18 @@ const sortKeyForStatus: Record<VisualChangedFileType, number> = {
   Resolved: 8,
 };
 
+/**
+ * Display a list of changed files.
+ *
+ * If filesSubset is too long, but filesSubset.length === totalFiles, pagination buttons
+ * are shown. This happens for uncommitted changes, where we have the entire list of files.
+ *
+ * If filesSubset.length < totalFiles, no pagination buttons are shown.
+ * It's expected that filesSubset is already truncated to fit.
+ * This happens for committed lists of changes, where we don't have the entire list of files.
+ *
+ * In either case, a banner is shown to warn that not all files are shown.
+ */
 export function ChangedFiles(props: {
   filesSubset: Array<ChangedFile>;
   totalFiles: number;
@@ -162,14 +174,67 @@ export function ChangedFiles(props: {
 }) {
   const displayType = useRecoilValue(changedFilesDisplayType);
   const {filesSubset, totalFiles, ...rest} = props;
-  const processedFiles = useDeepMemo(() => processCopiesAndRenames(filesSubset), [filesSubset]);
+  const MAX_FILES_TO_SHOW = 25;
+  const [pageNum, setPageNum] = useState(0);
+  const isLastPage = pageNum >= Math.floor((totalFiles - 1) / MAX_FILES_TO_SHOW);
+  const rangeStart = pageNum * MAX_FILES_TO_SHOW;
+  const rangeEnd = Math.min(filesSubset.length, (pageNum + 1) * MAX_FILES_TO_SHOW);
+  const filesToShow = filesSubset.slice(rangeStart, rangeEnd);
+  const hasAdditionalPages = filesSubset.length > MAX_FILES_TO_SHOW;
+  const processedFiles = useDeepMemo(() => processCopiesAndRenames(filesToShow), [filesToShow]);
+
+  useEffect(() => {
+    // If the list of files is updated to have fewer files, we need to reset
+    // the pageNum state to be in the proper range again.
+    const lastPageIndex = Math.floor((totalFiles - 1) / MAX_FILES_TO_SHOW);
+    if (pageNum > lastPageIndex) {
+      setPageNum(Math.max(0, lastPageIndex));
+    }
+  }, [totalFiles, pageNum]);
+
   return (
-    <div className="changed-files">
-      {totalFiles > filesSubset.length ? (
-        <Banner key={'alert'} icon={<Icon icon="info" />}>
-          <T replace={{$numShown: filesSubset.length, $total: totalFiles}}>
-            Showing first $numShown files out of $total total
-          </T>
+    <div className="changed-files" data-testid="changed-files">
+      {totalFiles > filesToShow.length ? (
+        <Banner
+          key={'alert'}
+          icon={<Icon icon="info" />}
+          buttons={
+            hasAdditionalPages ? (
+              <div className="changed-files-pages-buttons">
+                <Tooltip title={t('See previous page of files')}>
+                  <VSCodeButton
+                    data-testid="changed-files-previous-page"
+                    appearance="icon"
+                    disabled={pageNum === 0}
+                    onClick={() => {
+                      setPageNum(old => old - 1);
+                    }}>
+                    <Icon icon="arrow-left" />
+                  </VSCodeButton>
+                </Tooltip>
+                <Tooltip title={t('See next page of files')}>
+                  <VSCodeButton
+                    data-testid="changed-files-next-page"
+                    appearance="icon"
+                    disabled={isLastPage}
+                    onClick={() => {
+                      setPageNum(old => old + 1);
+                    }}>
+                    <Icon icon="arrow-right" />
+                  </VSCodeButton>
+                </Tooltip>
+              </div>
+            ) : null
+          }>
+          {pageNum === 0 ? (
+            <T replace={{$numShown: filesToShow.length, $total: totalFiles}}>
+              Showing first $numShown files out of $total total
+            </T>
+          ) : (
+            <T replace={{$rangeStart: rangeStart + 1, $rangeEnd: rangeEnd, $total: totalFiles}}>
+              Showing files $rangeStart – $rangeEnd out of $total total
+            </T>
+          )}
         </Banner>
       ) : null}
       {displayType === 'tree' ? (
@@ -606,7 +671,7 @@ export function UncommittedChanges({place}: {place: Place}) {
         />
       ) : (
         <ChangedFiles
-          filesSubset={uncommittedChanges.slice(0, 25)}
+          filesSubset={uncommittedChanges}
           totalFiles={uncommittedChanges.length}
           place={place}
           selection={selection}

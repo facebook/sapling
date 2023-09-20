@@ -71,6 +71,12 @@
   max-width: unset;
 }
 
+.changed-files-pages-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+}
+
 .file-tree-level .file-tree-level:before {
   content: '';
   position: absolute;
