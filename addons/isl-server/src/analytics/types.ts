@@ -41,6 +41,8 @@ export type TrackData = {
   id?: string;
   /** id field from another track event, for cross-referencing */
   parentId?: string;
+  /** Unique ID for an sl command, also passed to sl itself for analytics correlation */
+  operationId?: string;
 };
 
 export type TrackDataWithEventName = TrackData & {eventName: TrackEventName};

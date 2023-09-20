@@ -80,7 +80,7 @@ export class OperationQueue {
       await tracker.operation(
         operation.trackEventName,
         'RunOperationError',
-        {extras: {args: operation.args, runner: operation.runner}},
+        {extras: {args: operation.args, runner: operation.runner}, operationId: operation.id},
         _p => this.runCallback(operation, cwd, handleCommandProgress, controller.signal),
       );
       this.runningOperation = undefined;
