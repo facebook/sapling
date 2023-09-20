@@ -484,11 +484,7 @@ export class Repository {
    * Called by this.operationQueue in response to runOrQueueOperation when an operation is ready to actually run.
    */
   private async runOperation(
-    operation: {
-      id: string;
-      args: Array<CommandArg>;
-      stdin?: string;
-    },
+    operation: RunnableOperation,
     onProgress: OperationCommandProgressReporter,
     cwd: string,
     signal: AbortSignal,
@@ -500,6 +496,7 @@ export class Repository {
       cwdRelativeArgs,
       cwd,
       stdin ? {input: stdin} : undefined,
+      Internal.additionalEnvForCommand?.(operation),
     );
 
     this.logger.log('run operation: ', command, cwdRelativeArgs.join(' '));
@@ -942,6 +939,7 @@ function getExecParams(
   args_: Array<string>,
   cwd: string,
   options_?: execa.Options,
+  env?: NodeJS.ProcessEnv | Record<string, string>,
 ): {
   command: string;
   args: Array<string>;
@@ -961,6 +959,7 @@ function getExecParams(
   const options: execa.Options = {
     ...options_,
     env: {
+      ...env,
       LANG: 'en_US.utf-8', // make sure to use unicode if user hasn't set LANG themselves
       // TODO: remove when SL_ENCODING is used everywhere
       HGENCODING: 'UTF-8',
