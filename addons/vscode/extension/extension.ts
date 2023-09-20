@@ -27,7 +27,7 @@ export async function activate(context: vscode.ExtensionContext) {
     await ensureTranslationsLoaded(context);
     context.subscriptions.push(registerISLCommands(context, logger));
     context.subscriptions.push(outputChannel);
-    const reposList = new VSCodeReposList(logger);
+    const reposList = new VSCodeReposList(logger, extensionTracker);
     context.subscriptions.push(reposList);
     context.subscriptions.push(new InlineBlameProvider(reposList, logger, extensionTracker));
     context.subscriptions.push(registerSaplingDiffContentProvider(logger));

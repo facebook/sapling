@@ -17,6 +17,13 @@ import {defer} from 'shared/utils';
 /** Matches any non-empty string */
 const anyActualString = expect.stringMatching(/.+/);
 
+const mockTracker = makeServerSideTracker(
+  mockLogger,
+  {platformName: 'test'} as ServerPlatform,
+  '0.1',
+  jest.fn(),
+);
+
 describe('track', () => {
   const mockSendData = jest.fn();
   let tracker: ServerSideTracker;
@@ -76,6 +83,7 @@ describe('track', () => {
         pullRequestDomain: undefined,
       },
       mockLogger,
+      mockTracker,
     );
     tracker.context.setRepo(repo);
     tracker.track('ClickedRefresh');

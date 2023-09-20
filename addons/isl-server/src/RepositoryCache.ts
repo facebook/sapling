@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {Logger} from './logger';
 import type {AbsolutePath, RepositoryError, ValidatedRepoInfo} from 'isl/src/types';
 
@@ -99,7 +100,12 @@ class RepositoryCache {
    * Create a new Repository, or re-use if one already exists.
    * Repositories are reference-counted to ensure they can be disposed when no longer needed.
    */
-  getOrCreate(cmd: string, logger: Logger, cwd: string): RepositoryReference {
+  getOrCreate(
+    cmd: string,
+    logger: Logger,
+    tracker: ServerSideTracker,
+    cwd: string,
+  ): RepositoryReference {
     // Fast path: if this cwd is already a known repo root, we can use it directly.
     // This only works if the cwd happens to be the repo root.
     const found = this.lookup(cwd);
@@ -148,6 +154,7 @@ class RepositoryCache {
       const repo = new this.RepositoryType(
         repoInfo as ValidatedRepoInfo, // repoInfo is now guaranteed to have these root/dotdir set
         logger,
+        tracker,
       );
 
       const internalRef = new RefCounted(repo);

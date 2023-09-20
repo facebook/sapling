@@ -196,7 +196,16 @@ export class Repository {
   ];
 
   /**  Prefer using `RepositoryCache.getOrCreate()` to access and dispose `Repository`s. */
-  constructor(public info: ValidatedRepoInfo, public logger: Logger) {
+  constructor(
+    public info: ValidatedRepoInfo,
+    public logger: Logger,
+    /** Analytics Tracker that was valid when this repo was created. Since Repository's can be reused,
+     * there may be other trackers associated with this repo, which are not accounted for.
+     * This tracker should only be used for things that are shared among multiple consumers of this repo,
+     * like uncommitted changes.
+     */
+    public trackerBestEffort: ServerSideTracker,
+  ) {
     const remote = info.codeReviewSystem;
     if (remote.type === 'github') {
       this.codeReviewProvider = new GitHubCodeReviewProvider(remote, logger);

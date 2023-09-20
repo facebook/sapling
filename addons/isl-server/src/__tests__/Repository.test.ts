@@ -6,9 +6,11 @@
  */
 
 import type {ResolveCommandConflictOutput} from '../Repository';
+import type {ServerPlatform} from '../serverPlatform';
 import type {MergeConflicts, ValidatedRepoInfo} from 'isl/src/types';
 
 import {absolutePathForFileInRepo, extractRepoInfoFromUrl, Repository} from '../Repository';
+import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import * as execa from 'execa';
 import os from 'os';
 import path from 'path';
@@ -25,6 +27,13 @@ jest.mock('../WatchForChanges', () => {
   }
   return {WatchForChanges: MockWatchForChanges};
 });
+
+const mockTracker = makeServerSideTracker(
+  mockLogger,
+  {platformName: 'test'} as ServerPlatform,
+  '0.1',
+  jest.fn(),
+);
 
 function mockExeca(
   cmds: Array<[RegExp, (() => {stdout: string} | Error) | {stdout: string} | Error]>,
@@ -96,7 +105,7 @@ describe('Repository', () => {
         mockLogger,
         '/path/to/cwd',
       )) as ValidatedRepoInfo;
-      const repo = new Repository(info, mockLogger);
+      const repo = new Repository(info, mockLogger, mockTracker);
       expect(repo.info).toEqual({
         type: 'success',
         command: 'sl',
@@ -119,7 +128,7 @@ describe('Repository', () => {
         mockLogger,
         '/path/to/cwd',
       )) as ValidatedRepoInfo;
-      const repo = new Repository(info, mockLogger);
+      const repo = new Repository(info, mockLogger, mockTracker);
       expect(repo.info).toEqual({
         type: 'success',
         command: 'sl',
@@ -142,7 +151,7 @@ describe('Repository', () => {
         mockLogger,
         '/path/to/cwd',
       )) as ValidatedRepoInfo;
-      const repo = new Repository(info, mockLogger);
+      const repo = new Repository(info, mockLogger, mockTracker);
       expect(repo.info).toEqual({
         type: 'success',
         command: 'sl',
@@ -169,7 +178,7 @@ describe('Repository', () => {
       mockLogger,
       '/path/to/cwd',
     )) as ValidatedRepoInfo;
-    const repo = new Repository(info, mockLogger);
+    const repo = new Repository(info, mockLogger, mockTracker);
     expect(repo.info).toEqual({
       type: 'success',
       command: 'sl',
@@ -313,7 +322,7 @@ ${MARK_OUT}
     });
 
     it('checks for merge conflicts', async () => {
-      const repo = new Repository(repoInfo, mockLogger);
+      const repo = new Repository(repoInfo, mockLogger, mockTracker);
 
       const onChange = jest.fn();
       repo.onChangeConflictState(onChange);
@@ -341,7 +350,7 @@ ${MARK_OUT}
     });
 
     it('disposes conflict change subscriptions', async () => {
-      const repo = new Repository(repoInfo, mockLogger);
+      const repo = new Repository(repoInfo, mockLogger, mockTracker);
 
       const onChange = jest.fn();
       const subscription = repo.onChangeConflictState(onChange);
@@ -355,7 +364,7 @@ ${MARK_OUT}
     it('sends conflicts right away on subscription if already in conflicts', async () => {
       enterMergeConflict(MOCK_CONFLICT);
 
-      const repo = new Repository(repoInfo, mockLogger);
+      const repo = new Repository(repoInfo, mockLogger, mockTracker);
 
       const onChange = jest.fn();
       repo.onChangeConflictState(onChange);
@@ -377,7 +386,7 @@ ${MARK_OUT}
     });
 
     it('preserves previous conflicts as resolved', async () => {
-      const repo = new Repository(repoInfo, mockLogger);
+      const repo = new Repository(repoInfo, mockLogger, mockTracker);
       const onChange = jest.fn();
       repo.onChangeConflictState(onChange);
 
@@ -418,7 +427,7 @@ ${MARK_OUT}
         [/^sl resolve --tool internal:dumpjson --all/, new Error('failed to do the thing')],
       ]);
 
-      const repo = new Repository(repoInfo, mockLogger);
+      const repo = new Repository(repoInfo, mockLogger, mockTracker);
       const onChange = jest.fn();
       repo.onChangeConflictState(onChange);
 
@@ -551,7 +560,7 @@ describe('absolutePathForFileInRepo', () => {
       codeReviewSystem: {type: 'unknown'},
       pullRequestDomain: undefined,
     };
-    const repo = new Repository(repoInfo, mockLogger);
+    const repo = new Repository(repoInfo, mockLogger, mockTracker);
 
     expect(absolutePathForFileInRepo('foo/bar/file.txt', repo)).toEqual(
       '/path/to/repo/foo/bar/file.txt',
@@ -577,7 +586,7 @@ describe('absolutePathForFileInRepo', () => {
       codeReviewSystem: {type: 'unknown'},
       pullRequestDomain: undefined,
     };
-    const repo = new Repository(repoInfo, mockLogger);
+    const repo = new Repository(repoInfo, mockLogger, mockTracker);
 
     expect(absolutePathForFileInRepo('foo\\bar\\file.txt', repo, path.win32)).toEqual(
       'C:\\path\\to\\repo\\foo\\bar\\file.txt',

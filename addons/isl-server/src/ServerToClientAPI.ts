@@ -194,7 +194,7 @@ export default class ServerToClientAPI {
     // This ensures new messages coming in will be queued and handled only with the new repository
     this.currentState = {type: 'loading'};
     const command = this.connection.command ?? 'sl';
-    this.activeRepoRef = repositoryCache.getOrCreate(command, this.logger, newCwd);
+    this.activeRepoRef = repositoryCache.getOrCreate(command, this.logger, this.tracker, newCwd);
     this.activeRepoRef.promise.then(repoOrError => {
       if (repoOrError instanceof Repository) {
         this.setCurrentRepo(repoOrError, newCwd);

@@ -6,6 +6,7 @@
  */
 
 import type {RepositoryReference} from 'isl-server/src/RepositoryCache';
+import type {ServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
 import type {Logger} from 'isl-server/src/logger';
 import type {ChangedFile} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
@@ -26,7 +27,7 @@ export class VSCodeReposList {
 
   private reposByPath = new Map</* arbitrary subpath of repo */ string, VSCodeRepo>();
 
-  constructor(private logger: Logger) {
+  constructor(private logger: Logger, private tracker: ServerSideTracker) {
     if (vscode.workspace.workspaceFolders) {
       this.updateRepos(vscode.workspace.workspaceFolders, []);
     }
@@ -48,7 +49,12 @@ export class VSCodeReposList {
       if (this.knownRepos.has(fsPath)) {
         throw new Error(`Attempted to add workspace folder path twice: ${fsPath}`);
       }
-      const repoReference = repositoryCache.getOrCreate(getCLICommand(), this.logger, fsPath);
+      const repoReference = repositoryCache.getOrCreate(
+        getCLICommand(),
+        this.logger,
+        this.tracker,
+        fsPath,
+      );
       this.knownRepos.set(fsPath, repoReference);
       repoReference.promise.then(repo => {
         if (repo instanceof Repository) {
