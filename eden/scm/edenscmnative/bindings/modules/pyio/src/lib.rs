@@ -10,11 +10,12 @@
 use std::cell::Cell;
 use std::cell::RefCell;
 
-use clidispatch::io::IO as RustIO;
 use cpython::*;
 use cpython_ext::wrap_rust_write;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
+use io::time_interval;
+use io::IO as RustIO;
 use pyconfigloader::config as PyConfig;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -109,6 +110,26 @@ py_class!(class IO |py| {
         let io = RustIO::main().map_pyerr(py)?;
         io.disable_progress(disabled).map_pyerr(py)?;
         Ok(PyNone)
+    }
+
+    /// Get a context object to track "blocked time"
+    def scoped_blocked_interval(&self, name: String) -> PyResult<ScopedBlockedInterval> {
+        let io = RustIO::main().map_pyerr(py)?;
+        let interval = io.time_interval().scoped_blocked_interval(name.into());
+        ScopedBlockedInterval::create_instance(py, RefCell::new(Some(interval)))
+    }
+});
+
+py_class!(class ScopedBlockedInterval |py| {
+    data inner: RefCell<Option<time_interval::BlockedInterval>>;
+
+    def __enter__(&self) -> PyResult<Self> {
+        Ok(self.clone_ref(py))
+    }
+
+    def __exit__(&self, _ty: Option<PyType>, _value: PyObject, _traceback: PyObject) -> PyResult<bool> {
+        let _interval = self.inner(py).borrow_mut().take();
+        Ok(false) // preserves exceptions
     }
 });
 
