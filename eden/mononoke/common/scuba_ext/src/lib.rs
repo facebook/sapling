@@ -154,6 +154,15 @@ impl MononokeScubaSampleBuilder {
             self.inner.add("unix_username", unix_name);
         }
 
+        if let Some(client_info) = metadata.client_request_info() {
+            self.inner
+                .add("client_main_id", client_info.main_id.as_str());
+            self.inner
+                .add("client_entry_point", client_info.entry_point.to_string());
+            self.inner
+                .add("client_correlator", client_info.correlator.as_str());
+        }
+
         self.inner
             .add_opt("sandcastle_alias", metadata.sandcastle_alias());
         self.inner

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt::Display;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use configmodel::Config;
@@ -87,5 +89,15 @@ impl ClientRequestInfo {
             entry_point: ClientEntryPoint::Sapling,
             correlator: "123456".to_string(),
         })
+    }
+}
+
+impl Display for ClientEntryPoint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let out = match self {
+            ClientEntryPoint::Sapling => "sapling",
+            ClientEntryPoint::EdenFs => "edenfs",
+        };
+        write!(f, "{}", out)
     }
 }
