@@ -340,12 +340,8 @@ class ui:
 
     @contextlib.contextmanager
     def timeblockedsection(self, key):
-        # this is open-coded below - search for timeblockedsection to find them
-        starttime = util.timer()
-        try:
+        with util.get_main_io().scoped_blocked_interval(key):
             yield
-        finally:
-            self._measuredtimes[key + "_blocked"] += (util.timer() - starttime) * 1000
 
     @contextlib.contextmanager
     def timesection(self, key):
@@ -826,25 +822,17 @@ class ui:
             self._measuredtimes["stdio_blocked"] += millis
 
     def flush(self):
-        # opencode timeblockedsection because this is a critical path
-        starttime = util.timer()
         try:
+            self.fout.flush()
+        except IOError as err:
+            if err.errno not in (errno.EPIPE, errno.EIO, errno.EBADF):
+                raise error.StdioError(err)
+        finally:
             try:
-                self.fout.flush()
+                self.ferr.flush()
             except IOError as err:
                 if err.errno not in (errno.EPIPE, errno.EIO, errno.EBADF):
                     raise error.StdioError(err)
-            finally:
-                try:
-                    self.ferr.flush()
-                except IOError as err:
-                    if err.errno not in (errno.EPIPE, errno.EIO, errno.EBADF):
-                        raise error.StdioError(err)
-        finally:
-            millis = int((util.timer() - starttime) * 1000)
-            self._measuredtimes["stdio_blocked"] += millis
-            if millis >= 20:
-                util.info("stdio", cat="blocked-after", millis=millis)
 
     def _isatty(self, fh):
         if self.configbool("ui", "nontty"):
@@ -945,8 +933,7 @@ class ui:
 
         @self.atexit
         def waitpager():
-            with self.timeblockedsection("pager"):
-                util.get_main_io().wait_pager()
+            util.get_main_io().wait_pager()
             encoding.outputencoding = origencoding
 
         self.pageractive = True
@@ -1014,7 +1001,7 @@ class ui:
             os.dup2(stdoutfd, util.stdout.fileno())
             os.dup2(stderrfd, util.stderr.fileno())
             pager.stdin.close()
-            with self.timeblockedsection("pager"):
+            with self.timeblockedsection("pager"):  # not yet using Rust pager
                 pager.wait()
 
         return True
@@ -1187,7 +1174,7 @@ class ui:
 
         # prompt ' ' must exist; otherwise readline may delete entire line
         # - http://bugs.python.org/issue12833
-        with self.timeblockedsection("stdio"):
+        with self.timeblockedsection("stdio"):  # fin is not yet Rust IO
             if usereadline:
                 line = pycompat.rawinput("")
             else:
@@ -1281,7 +1268,7 @@ class ui:
             self.write_err(self.label(prompt or _("password: "), "ui.prompt"))
             # disable getpass() only if explicitly specified. it's still valid
             # to interact with tty even if fin is not a tty.
-            with self.timeblockedsection("stdio"):
+            with self.timeblockedsection("stdio"):  # fin is not Rust IO
                 if self.configbool("ui", "nontty"):
                     l = decodeutf8(self.fin.readline())
                     if not l:
