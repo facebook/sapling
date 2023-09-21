@@ -46,7 +46,7 @@ export function ComparisonViewModal() {
   }
 
   return (
-    <Modal className="comparison-view-modal">
+    <Modal className="comparison-view-modal" height="" width="">
       <Suspense fallback={<Icon icon="loading" />}>
         <ComparisonView comparison={mode.comparison} />
       </Suspense>
