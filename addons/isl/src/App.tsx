@@ -6,6 +6,7 @@
  */
 
 import type {RepositoryError} from './types';
+import type {ReactNode} from 'react';
 
 import {AccessGlobalRecoil} from './AccessGlobalRecoil';
 import {CommandHistoryAndProgress} from './CommandHistoryAndProgress';
@@ -24,7 +25,7 @@ import {I18nSupport, t, T} from './i18n';
 import platform from './platform';
 import {useMainContentWidth} from './responsive';
 import {applicationinfo, repositoryInfo} from './serverAPIState';
-import {ThemeRoot} from './theme';
+import {themeState} from './theme';
 import {ModalContainer} from './useModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import React from 'react';
@@ -42,7 +43,7 @@ export default function App() {
       <I18nSupport>
         <RecoilRoot>
           <AccessGlobalRecoil />
-          <ThemeRoot>
+          <ISLRoot>
             <ISLCommandContext>
               <ErrorBoundary>
                 <ISLDrawers />
@@ -53,11 +54,33 @@ export default function App() {
                 <ContextMenus />
               </ErrorBoundary>
             </ISLCommandContext>
-          </ThemeRoot>
+          </ISLRoot>
         </RecoilRoot>
       </I18nSupport>
     </React.StrictMode>
   );
+}
+
+function ISLRoot({children}: {children: ReactNode}) {
+  const theme = useRecoilValue(themeState);
+  return (
+    <div
+      className={`isl-root ${theme}-theme`}
+      onDragEnter={handleDragAndDrop}
+      onDragOver={handleDragAndDrop}>
+      {children}
+    </div>
+  );
+}
+
+function handleDragAndDrop(e: React.DragEvent<HTMLDivElement>) {
+  // VS Code tries to capture drag & drop events to open files. But if you're dragging
+  // on ISL, you probably want to do an ImageUpload. Prevent this event from propagating to vscode.
+  if (e.dataTransfer?.types?.some(t => t === 'Files')) {
+    e.stopPropagation();
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  }
 }
 
 function ISLDrawers() {

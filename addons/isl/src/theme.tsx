@@ -5,10 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ReactNode} from 'react';
-
 import platform from './platform';
-import {atom, useRecoilValue} from 'recoil';
+import {atom} from 'recoil';
 
 import './themeLight.css';
 import './themeDark.css';
@@ -37,8 +35,3 @@ export const themeState = atom<ThemeColor>({
     },
   ],
 });
-
-export function ThemeRoot({children}: {children: ReactNode}) {
-  const theme = useRecoilValue(themeState);
-  return <div className={`isl-root ${theme}-theme`}>{children}</div>;
-}
