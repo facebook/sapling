@@ -19,6 +19,7 @@ import {
   simulateMessageFromServer,
 } from '../testUtils';
 import {fireEvent, render, screen} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {act} from 'react-dom/test-utils';
 
 jest.mock('../MessageBus');
@@ -134,6 +135,20 @@ describe('Changed Files', () => {
         fireEvent.click(screen.getByText('Full file paths'));
       });
 
+      expect(screen.getByText(ignoreRTL('file1.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('src/file2.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('src/a/foo.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('src/b/foo.js'))).toBeInTheDocument();
+      expect(
+        screen.getByText(ignoreRTL('src/subfolder/another/yet/another/file5.js')),
+      ).toBeInTheDocument();
+    });
+
+    it('shows full paths when holding alt', () => {
+      expect(screen.queryByText(ignoreRTL('src/b/foo.js'))).not.toBeInTheDocument();
+      act(() => {
+        userEvent.keyboard('{Alt>}'); // '>' means keep pressed
+      });
       expect(screen.getByText(ignoreRTL('file1.js'))).toBeInTheDocument();
       expect(screen.getByText(ignoreRTL('src/file2.js'))).toBeInTheDocument();
       expect(screen.getByText(ignoreRTL('src/a/foo.js'))).toBeInTheDocument();

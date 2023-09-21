@@ -64,7 +64,7 @@ import {
 import {usePromise} from './usePromise';
 import {VSCodeButton, VSCodeCheckbox, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import React, {useEffect, useRef, useState} from 'react';
-import {useRecoilCallback, useRecoilValue} from 'recoil';
+import {atom, useRecoilCallback, useRecoilValue} from 'recoil';
 import {labelForComparison, revsetForComparison, ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
@@ -73,6 +73,31 @@ import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 import {basename, notEmpty} from 'shared/utils';
 
 import './UncommittedChanges.css';
+
+const holdingAltAtom = atom<boolean>({
+  key: 'holdingAltAtom',
+  default: false,
+  effects: [
+    ({setSelf}) => {
+      const keydown = (e: KeyboardEvent) => {
+        if (e.altKey) {
+          setSelf(true);
+        }
+      };
+      const keyup = (e: KeyboardEvent) => {
+        if (!e.altKey) {
+          setSelf(false);
+        }
+      };
+      document.addEventListener('keydown', keydown);
+      document.addEventListener('keyup', keyup);
+      return () => {
+        document.removeEventListener('keydown', keydown);
+        document.removeEventListener('keyup', keyup);
+      };
+    },
+  ],
+});
 
 type UIChangedFile = {
   path: RepoRelativePath;
@@ -355,6 +380,11 @@ function File({
     return options;
   });
 
+  // Hold "alt" key to show full file paths instead of short form.
+  // This is a quick way to see where a file comes from without
+  // needing to go through the menu to change the rendering type.
+  const isHoldingAlt = useRecoilValue(holdingAltAtom);
+
   return (
     <>
       <div
@@ -390,15 +420,16 @@ function File({
                 }
               }}>
               {escapeForRTL(
-                displayType === 'fish'
+                displayType === 'tree'
+                  ? file.path.slice(file.path.lastIndexOf('/') + 1)
+                  : // Holding alt takes precedence over fish/short styles, but not tree.
+                  displayType === 'fullPaths' || isHoldingAlt
+                  ? file.path
+                  : displayType === 'fish'
                   ? file.path
                       .split('/')
                       .map((a, i, arr) => (i === arr.length - 1 ? a : a[0]))
                       .join('/')
-                  : displayType === 'fullPaths'
-                  ? file.path
-                  : displayType === 'tree'
-                  ? file.path.slice(file.path.lastIndexOf('/') + 1)
                   : file.label,
               )}
             </span>

@@ -52,7 +52,10 @@ export function ChangedFileDisplayTypePicker() {
   const contextMenu = useContextMenu(() => actions);
 
   return (
-    <Tooltip title={t('Change how file paths are displayed')}>
+    <Tooltip
+      title={t(
+        'Change how file paths are displayed.\n\nTip: Hold the alt key to quickly see full file paths.',
+      )}>
       <VSCodeButton
         appearance="icon"
         className="changed-file-display-type-picker"
