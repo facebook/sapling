@@ -384,6 +384,10 @@ type StackEditMetrics = {
   moveUpDown?: number;
   moveDnD?: number;
   fileStackEdit?: number;
+  splitMoveFile?: number;
+  splitMoveLine?: number;
+  splitInsertBlank?: number;
+  splitChangeRange?: number;
 };
 
 // Not atoms. They do not trigger re-render.

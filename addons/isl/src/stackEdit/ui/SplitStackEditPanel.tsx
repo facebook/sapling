@@ -22,7 +22,7 @@ import {tracker} from '../../analytics';
 import {t, T} from '../../i18n';
 import {firstLine} from '../../utils';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
-import {SplitRangeRecord, useStackEditState} from './stackEditState';
+import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackEditState';
 import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {Set as ImSet, Range} from 'immutable';
 import {useRef, useState, useEffect, useMemo} from 'react';
@@ -66,6 +66,7 @@ export function SplitStackEditPanel() {
 
   const insertBlankCommit = (rev: Rev) => {
     const newStack = stackEdit.commitStack.insertEmpty(startRev + rev, t('New Commit'));
+    bumpStackEditMetric('splitInsertBlank');
 
     let {splitRange} = stackEdit;
     if (rev === 0) {
@@ -287,6 +288,7 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
       }
       return newRevs === line.revs ? line : line.set('revs', newRevs);
     });
+    bumpStackEditMetric('splitMoveFile');
 
     setStack(newFileStack);
   };
@@ -456,6 +458,8 @@ function StackRangeSelector() {
           newRange = newRange.set('startKey', startKey);
           newRange = newRange.set('endKey', endKey ?? startKey);
           stackEdit.setSplitRange(newRange);
+
+          bumpStackEditMetric('splitChangeRange');
         }}>
         <div className="commit-group inner-commit-group">{commits}</div>
         <BranchIndicator />

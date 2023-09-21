@@ -10,6 +10,7 @@ import type {FileStackState, Rev} from '../fileStackState';
 import type {RangeInfo} from './TextEditable';
 
 import {t} from '../../i18n';
+import {bumpStackEditMetric} from './stackEditState';
 import {Set as ImSet, Range} from 'immutable';
 import {applyTokenizationToLine} from 'shared/createTokenizedIntralineDiff';
 import {type Block, collapseContextBlocks, type LineIdx} from 'shared/diff';
@@ -168,6 +169,8 @@ export function computeLinesForFileStackEditor(
         return newRevs === line.revs ? line : line.set('revs', newRevs);
       });
       setStack(newStack);
+
+      bumpStackEditMetric('splitMoveLine');
 
       // deselect
       window.getSelection()?.removeAllRanges();
