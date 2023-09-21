@@ -24,14 +24,14 @@
   height: 100%;
 }
 
-/* actual content takes all the size minus label and resize handle  */
+/* actual content takes all the size minus label and resize handle and 1px of border on each side */
 .drawer-left > div:nth-child(3),
 .drawer-right > div:nth-child(3) {
-  width: calc(100% - var(--drawer-label-size) - var(--drag-handle-size) - var(--pad));
+  width: calc(100% - var(--drawer-label-size) - var(--drag-handle-size) - var(--pad) - 2px);
 }
 .drawer-top > div:nth-child(3),
 .drawer-bottom > div:nth-child(3) {
-  height: calc(100% - var(--drawer-label-size) - var(--drag-handle-size) - var(--pad));
+  height: calc(100% - var(--drawer-label-size) - var(--drag-handle-size) - var(--pad) - 2px);
 }
 
 .drawer-main-content {
