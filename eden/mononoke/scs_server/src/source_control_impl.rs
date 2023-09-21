@@ -11,6 +11,8 @@ use std::net::IpAddr;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use clientinfo::ClientInfo;
+use clientinfo::CLIENT_INFO_HEADER;
 use connection_security_checker::ConnectionSecurityChecker;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
@@ -144,6 +146,9 @@ impl SourceControlServiceImpl {
         let session = self.create_session(req_ctxt).await?;
         let identities = session.metadata().identities();
         let mut scuba = self.create_scuba(name, req_ctxt, specifier, params, identities)?;
+        if let Some(client_info) = session.metadata().client_request_info() {
+            scuba.add_client_request_info(client_info);
+        }
         scuba.add("session_uuid", session.metadata().session_id().to_string());
 
         let ctx = session.new_context_with_scribe(self.logger.clone(), scuba, self.scribe.clone());
@@ -241,6 +246,12 @@ impl SourceControlServiceImpl {
             .map(MononokeIdentity::from_identity_ref)
             .collect();
 
+        let client_info: Option<ClientInfo> = req_ctxt
+            .header(CLIENT_INFO_HEADER)
+            .map_err(errors::invalid_request)?
+            .as_ref()
+            .and_then(|ci| serde_json::from_str(ci).ok());
+
         let is_trusted = self
             .identity_proxy_checker
             .check_if_trusted(&tls_identities)
@@ -278,11 +289,13 @@ impl SourceControlServiceImpl {
                     metadata.add_raw_encoded_cats(other_cats);
                 }
 
+                if let Some(client_info) = client_info {
+                    metadata.add_client_info(client_info);
+                }
                 return Ok(metadata);
             }
         }
-
-        Ok(Metadata::new(
+        let mut metadata = Metadata::new(
             None,
             tls_identities.union(&cats_identities).cloned().collect(),
             false,
@@ -290,7 +303,12 @@ impl SourceControlServiceImpl {
                 .map_err(errors::invalid_request)?,
             None,
         )
-        .await)
+        .await;
+
+        if let Some(client_info) = client_info {
+            metadata.add_client_info(client_info);
+        }
+        Ok(metadata)
     }
 
     /// Create and configure the session container for a request.
