@@ -8,6 +8,7 @@
 import type {CommitInfo, Hash} from './types';
 
 import {Subtle} from './Subtle';
+import {tracker} from './analytics';
 import {T} from './i18n';
 import {RebaseOperation} from './operations/RebaseOperation';
 import {treeWithPreviews} from './previews';
@@ -92,9 +93,9 @@ export function SuggestedRebaseButton({stackBaseHash}: {stackBaseHash: Hash}) {
             </span>
           ),
           onClick: () => {
-            runOperation(
-              new RebaseOperation(stackBaseHash, dest.remoteBookmarks?.[0] ?? dest.hash),
-            );
+            const destination = dest.remoteBookmarks?.[0] ?? dest.hash;
+            tracker.track('ClickSuggestedRebase', {extras: {destination}});
+            runOperation(new RebaseOperation(stackBaseHash, destination));
           },
         };
       }) ?? []

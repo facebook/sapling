@@ -26,6 +26,7 @@ export type TrackEventName =
   | 'CommitOperation'
   | 'ContinueMergeOperation'
   | 'CreateEmptyInitialCommit'
+  | 'ClickSuggestedRebase'
   | 'DiscardOperation'
   | 'ForgetOperation'
   | 'GettingStartedInteraction'
