@@ -10,7 +10,7 @@ import type {ExclusiveOr} from 'shared/typeUtils';
 
 import React, {useLayoutEffect, useEffect, useRef, useState} from 'react';
 import ReactDOM from 'react-dom';
-import {findParentWithClassName, unwrap} from 'shared/utils';
+import {findParentWithClassName} from 'shared/utils';
 
 import './Tooltip.css';
 
@@ -280,27 +280,35 @@ function RenderTooltipOnto({
       />
       {children}
     </div>,
-    findParentTooltipContainer(element),
+    getTooltipContainer(),
   );
 }
 
-let foundRoot: HTMLElement;
-const findParentTooltipContainer = (element: HTMLElement): HTMLElement => {
-  if (foundRoot) {
+let cachedRoot: HTMLElement | undefined;
+const getTooltipContainer = (): HTMLElement => {
+  if (cachedRoot) {
     // memoize since our root component won't change
-    return foundRoot;
+    return cachedRoot;
   }
-  const islRoot = unwrap(findParentWithClassName(element, 'isl-root'));
-  foundRoot = unwrap(islRoot.querySelector('.tooltip-root-container')) as HTMLElement;
-  return foundRoot;
+  throw new Error(
+    'TooltipRootContainer not found. Make sure you render it at the root of the tree.',
+  );
 };
 
-export const __TEST__ = {
-  resetMemoizedTooltipContainer: () => {
-    // memoizing breaks across multiple test cases, we need to reset it after each test
-    foundRoot = undefined as unknown as HTMLElement;
-  },
-};
+export function TooltipRootContainer() {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (rootRef.current) {
+      cachedRoot = rootRef.current;
+    }
+    return () => {
+      cachedRoot = undefined;
+    };
+  }, []);
+  return (
+    <div ref={rootRef} className="tooltip-root-container" data-testid="tooltip-root-container" />
+  );
+}
 
 type OffsetPlacement = {
   top: number;

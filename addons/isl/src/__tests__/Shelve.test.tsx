@@ -6,7 +6,6 @@
  */
 
 import App from '../App';
-import {__TEST__} from '../Tooltip';
 import {ignoreRTL} from '../testQueries';
 import {
   resetTestMessages,
@@ -54,10 +53,6 @@ describe('Shelve', () => {
         ],
       });
     });
-  });
-
-  afterEach(() => {
-    __TEST__.resetMemoizedTooltipContainer();
   });
 
   describe('Shelve button', () => {

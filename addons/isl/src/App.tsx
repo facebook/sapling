@@ -16,6 +16,7 @@ import {ComparisonViewModal} from './ComparisonView/ComparisonViewModal';
 import {EmptyState} from './EmptyState';
 import {ErrorBoundary, ErrorNotice} from './ErrorNotice';
 import {ISLCommandContext, useCommand} from './ISLShortcuts';
+import {TooltipRootContainer} from './Tooltip';
 import {TopBar} from './TopBar';
 import {TopLevelErrors} from './TopLevelErrors';
 import {tracker} from './analytics';
@@ -47,7 +48,7 @@ export default function App() {
             <ISLCommandContext>
               <ErrorBoundary>
                 <ISLDrawers />
-                <div className="tooltip-root-container" data-testid="tooltip-root-container" />
+                <TooltipRootContainer />
                 <GettingStartedModal />
                 <ComparisonViewModal />
                 <ModalContainer />

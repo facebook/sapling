@@ -6,7 +6,6 @@
  */
 
 import App from '../App';
-import {__TEST__} from '../Tooltip';
 import {CommitTreeListTestUtils} from '../testQueries';
 import {
   closeCommitInfoSidebar,
@@ -43,10 +42,6 @@ describe('cwd', () => {
         ],
       });
     });
-  });
-
-  afterEach(() => {
-    __TEST__.resetMemoizedTooltipContainer();
   });
 
   const openCwdDropdown = () => {

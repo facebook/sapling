@@ -6,7 +6,6 @@
  */
 
 import App from '../App';
-import {__TEST__} from '../Tooltip';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -24,7 +23,6 @@ jest.mock('../MessageBus');
 describe('Suggested Rebase button', () => {
   beforeEach(() => {
     resetTestMessages();
-    __TEST__.resetMemoizedTooltipContainer();
     render(<App />);
     act(() => {
       simulateRepoConnected();

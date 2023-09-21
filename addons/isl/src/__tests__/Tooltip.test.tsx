@@ -8,7 +8,7 @@
 import type {ReactNode} from 'react';
 
 import App from '../App';
-import {Tooltip, __TEST__} from '../Tooltip';
+import {Tooltip, TooltipRootContainer} from '../Tooltip';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -47,7 +47,6 @@ describe('tooltips in ISL', () => {
     });
   });
   afterEach(() => {
-    __TEST__.resetMemoizedTooltipContainer();
     unmount();
   });
 
@@ -150,15 +149,11 @@ describe('tooltip', () => {
   function renderCustom(node: ReactNode) {
     render(
       <div className="isl-root">
-        <div className="tooltip-root-container" data-testid="tooltip-root-container">
-          {node}
-        </div>
+        <TooltipRootContainer />
+        {node}
       </div>,
     );
   }
-  afterEach(() => {
-    __TEST__.resetMemoizedTooltipContainer();
-  });
 
   describe('onDismiss', () => {
     it('calls onDismiss when hover leaves', () => {

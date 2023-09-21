@@ -6,7 +6,6 @@
  */
 
 import App from '../App';
-import {__TEST__} from '../Tooltip';
 import {ignoreRTL, CommitInfoTestUtils} from '../testQueries';
 import {
   expectMessageSentToServer,
@@ -27,7 +26,6 @@ jest.mock('../MessageBus');
 describe('Changed Files', () => {
   beforeEach(() => {
     resetTestMessages();
-    __TEST__.resetMemoizedTooltipContainer();
     render(<App />);
     act(() => {
       simulateRepoConnected();
