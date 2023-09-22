@@ -15,6 +15,10 @@ use std::sync::Arc;
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use parking_lot::MutexGuard;
+use serde::ser::Serialize;
+use serde::ser::SerializeMap;
+use serde::Serializer;
+use serde_json::Serializer as JsonSerializer;
 
 pub static CONFIG: OnceCell<Option<Arc<SamplingConfig>>> = OnceCell::new();
 
@@ -85,6 +89,23 @@ impl SamplingConfig {
 
     pub fn file(&self) -> MutexGuard<File> {
         self.file.lock()
+    }
+
+    pub fn append<V: ?Sized>(&self, category: &str, value: &V) -> std::io::Result<()>
+    where
+        V: Serialize,
+    {
+        let mut file = self.file();
+        let mut serializer = JsonSerializer::new(&*file);
+
+        let mut serializer = serializer.serialize_map(None)?;
+        serializer.serialize_entry("category", category)?;
+        serializer.serialize_entry("data", value)?;
+        serializer.end()?;
+
+        file.write_all(b"\0")?;
+
+        Ok(())
     }
 }
 

@@ -5,14 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use std::io::Write;
 use std::sync::Arc;
 
 use once_cell::sync::OnceCell;
 use sampling::SamplingConfig;
-use serde::ser::SerializeMap;
-use serde::ser::Serializer;
-use serde_json::Serializer as JsonSerializer;
 use tracing::subscriber::Interest;
 use tracing::Event;
 use tracing::Metadata;
@@ -51,21 +47,7 @@ impl<S: Subscriber> Layer<S> for SamplingLayer {
             None => return,
         };
 
-        let serialize = || -> std::io::Result<()> {
-            let mut file = config.file();
-            let mut serializer = JsonSerializer::new(&*file);
-
-            let mut serializer = serializer.serialize_map(None)?;
-            serializer.serialize_entry("category", category)?;
-            serializer.serialize_entry("data", &event.field_map())?;
-            serializer.end()?;
-
-            file.write_all(b"\0")?;
-
-            Ok(())
-        };
-
-        let _ = serialize();
+        let _ = config.append(category, &event.field_map());
     }
 }
 
