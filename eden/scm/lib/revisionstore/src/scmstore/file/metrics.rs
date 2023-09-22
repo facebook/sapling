@@ -9,6 +9,8 @@ use std::ops::AddAssign;
 use std::sync::Arc;
 
 use parking_lot::RwLock;
+#[cfg(feature = "ods")]
+use stats::prelude::*;
 
 use crate::scmstore::metrics::namespaced;
 use crate::scmstore::metrics::ApiMetrics;
@@ -83,6 +85,25 @@ impl FileStoreFetchMetrics {
             .chain(namespaced("lfs", self.lfs.metrics()))
             .chain(namespaced("aux", self.aux.metrics()))
             .chain(namespaced("contentstore", self.contentstore.metrics()))
+    }
+    /// Update ODS stats.
+    /// This assumes that fbinit was called higher up the stack.
+    /// It is meant to be used when called from eden which uses the `revisionstore_with_ods`
+    /// target, which sets the `ods` feature flag.
+    #[cfg(feature = "ods")]
+    pub(crate) fn update_ods(&self) -> anyhow::Result<()> {
+        for (metric, value) in self.metrics() {
+            // SAFETY: this is called from C++ and was init'd there
+            unsafe {
+                let fb = fbinit::assume_init();
+                STATS::fetch.increment_value(fb, value.try_into()?, (metric,));
+            }
+        }
+        Ok(())
+    }
+    #[cfg(not(feature = "ods"))]
+    pub(crate) fn update_ods(&self) -> anyhow::Result<()> {
+        Ok(())
     }
 }
 
@@ -195,4 +216,10 @@ impl FileStoreMetrics {
                 .chain(namespaced("api", self.api.metrics())),
         )
     }
+}
+
+#[cfg(feature = "ods")]
+define_stats! {
+    prefix = "scmstore.file";
+    fetch: dynamic_singleton_counter("fetch.{}", (specific_counter: String)),
 }

@@ -232,6 +232,9 @@ impl FileStore {
             );
 
             metrics.write().fetch += state.metrics().clone();
+            if let Err(err) = state.metrics().update_ods() {
+                tracing::error!("Error updating ods fetch metrics: {}", err);
+            }
             state.finish();
 
             if let Some(activity_logger) = activity_logger {
