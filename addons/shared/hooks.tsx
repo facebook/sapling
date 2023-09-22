@@ -50,3 +50,16 @@ export function useDeepMemo<T>(construct: () => T, dependencies: React.Dependenc
   // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(construct, deepDeps);
 }
+
+/**
+ * Returns a react ref that you can pass to an element to autofocus it on mount.
+ */
+export function useAutofocusRef(): React.MutableRefObject<HTMLElement | null> {
+  const ref = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (ref.current != null) {
+      ref.current.focus();
+    }
+  }, [ref]);
+  return ref;
+}

@@ -19,8 +19,9 @@ import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {CommitPreview} from './previews';
 import {useModal} from './useModal';
 import {VSCodeDivider, VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
-import {useEffect, useRef, useState} from 'react';
+import {useState} from 'react';
 import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
+import {useAutofocusRef} from 'shared/hooks';
 
 import './ConfirmSubmitStack.css';
 
@@ -78,16 +79,6 @@ export function useShowConfirmSubmitStack() {
     });
     return response;
   });
-}
-
-function useAutofocusRef(): React.MutableRefObject<HTMLButtonElement | null> {
-  const ref = useRef<HTMLButtonElement | null>(null);
-  useEffect(() => {
-    if (ref.current != null) {
-      ref.current.focus();
-    }
-  }, [ref]);
-  return ref;
 }
 
 function ConfirmModalContent({
