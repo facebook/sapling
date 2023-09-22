@@ -7,6 +7,7 @@
 
 import type {Hash} from '../../types';
 
+import {commitFieldsBeingEdited, editedCommitMessages} from '../../CommitInfoView/CommitInfoState';
 import {Tooltip, DOCUMENTATION_DELAY} from '../../Tooltip';
 import {T, t} from '../../i18n';
 import {ImportStackOperation} from '../../operations/ImportStackOperation';
@@ -20,7 +21,7 @@ import {
   useStackEditState,
 } from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useRecoilState, useRecoilValue} from 'recoil';
+import {useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 export function StackEditConfirmButtons(): React.ReactElement {
@@ -43,6 +44,26 @@ export function StackEditConfirmButtons(): React.ReactElement {
     bumpStackEditMetric('redo');
   };
 
+  /**
+   * Invalidate any unsaved edited commit messages for the original commits,
+   * to prevent detected successions from persisting that state.
+   * Splitting can cause the top of the stack to be an unexpected
+   * successor, leading to wrong commit messages.
+   * We already showed a confirm modal to "apply" your edits to split,
+   * but we actually need to delete them now that we're really
+   * doing the split/edit stack.
+   */
+  const invalidateUnsavedCommitMessages = useRecoilCallback(
+    ({reset}) =>
+      (commits: Array<Hash>) => {
+        for (const hash of commits) {
+          reset(editedCommitMessages(hash));
+        }
+        reset(commitFieldsBeingEdited);
+      },
+    [],
+  );
+
   const handleSaveChanges = () => {
     const originalHash = originalHead?.hash;
     const importStack = stackEdit.commitStack.calculateImportStack({
@@ -52,6 +73,9 @@ export function StackEditConfirmButtons(): React.ReactElement {
     const op = new ImportStackOperation(importStack);
     runOperation(op);
     sendStackEditMetrics(true);
+
+    invalidateUnsavedCommitMessages(stackEdit.commitStack.originalStack.map(c => c.node));
+
     // For standalone split, follow-up with a rebase.
     // Note: the rebase might fail with conflicted pending changes.
     // rebase is technically incorrect if the user edits the changes.
