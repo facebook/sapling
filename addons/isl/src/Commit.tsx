@@ -42,6 +42,7 @@ import {
   useRunOperation,
   useRunPreviewedOperation,
 } from './serverAPIState';
+import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
 import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
@@ -146,10 +147,14 @@ export const Commit = memo(
       });
     });
 
-    const handleSplit = () => {
+    const confirmUnsavedEditsBeforeSplit = useConfirmUnsavedEditsBeforeSplit();
+    async function handleSplit() {
+      if (!(await confirmUnsavedEditsBeforeSplit([commit]))) {
+        return;
+      }
       setEditStackIntentionHashes(['split', new Set([commit.hash])]);
       tracker.track('SplitOpenFromCommitContextMenu');
-    };
+    }
 
     const makeContextMenuOptions = useRecoilCallback(({snapshot}) => () => {
       const hasUncommittedChanges =
