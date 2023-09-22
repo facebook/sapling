@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
@@ -13,6 +15,8 @@ use bookmarks::BookmarksRef;
 use clap::ArgGroup;
 use clap::Args;
 use context::CoreContext;
+use futures::stream;
+use futures::stream::StreamExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 
@@ -26,15 +30,15 @@ use mononoke_types::ChangesetId;
 pub struct ChangesetArgs {
     /// Bonsai changeset id
     #[clap(long, short = 'i')]
-    changeset_id: Option<ChangesetId>,
+    changeset_id: Vec<ChangesetId>,
 
     /// Hg changeset id
     #[clap(long)]
-    hg_id: Option<HgChangesetId>,
+    hg_id: Vec<HgChangesetId>,
 
     /// Bookmark name
     #[clap(long, short = 'B')]
-    bookmark: Option<BookmarkKey>,
+    bookmark: Vec<BookmarkKey>,
 }
 
 impl ChangesetArgs {
@@ -43,18 +47,43 @@ impl ChangesetArgs {
         ctx: &CoreContext,
         repo: &(impl BookmarksRef + BonsaiHgMappingRef),
     ) -> Result<Option<ChangesetId>> {
-        if let Some(bookmark) = &self.bookmark {
-            repo.bookmarks()
-                .get(ctx.clone(), bookmark)
-                .await
-                .with_context(|| format!("Failed to resolve bookmark '{}'", bookmark))
-        } else if let Some(hg_id) = self.hg_id {
-            repo.bonsai_hg_mapping()
-                .get_bonsai_from_hg(ctx, hg_id)
-                .await
-                .with_context(|| format!("Failed to resolve hg changeset id {}", hg_id))
-        } else {
-            Ok(self.changeset_id)
-        }
+        self.resolve_changesets(ctx, repo)
+            .await
+            .and_then(|changesets| {
+                if changesets.len() > 1 {
+                    bail!("Only one changeset may be provided")
+                } else {
+                    Ok(changesets.into_iter().next())
+                }
+            })
+    }
+    pub async fn resolve_changesets(
+        &self,
+        ctx: &CoreContext,
+        repo: &(impl BookmarksRef + BonsaiHgMappingRef),
+    ) -> Result<Vec<ChangesetId>> {
+        stream::iter(self.bookmark.iter())
+            .then(|bookmark| async move {
+                repo.bookmarks()
+                    .get(ctx.clone(), bookmark)
+                    .await
+                    .with_context(|| format!("Failed to resolve bookmark '{}'", bookmark))?
+                    .ok_or_else(|| anyhow!("Couldn't find bookmark: {}", bookmark))
+            })
+            .chain(stream::iter(self.hg_id.iter()).then(|hg_id| async move {
+                repo.bonsai_hg_mapping()
+                    .get_bonsai_from_hg(ctx, *hg_id)
+                    .await
+                    .with_context(|| format!("Failed to resolve hg changeset id {}", hg_id))?
+                    .ok_or_else(|| anyhow!("Couldn't find hg id: {}", hg_id))
+            }))
+            .chain(
+                stream::iter(self.changeset_id.iter())
+                    .then(|changeset_id| async move { Ok(*changeset_id) }),
+            )
+            .collect::<Vec<_>>()
+            .await
+            .into_iter()
+            .collect()
     }
 }
