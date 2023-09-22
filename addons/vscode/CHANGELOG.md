@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.27
+
+### Sep 22 2023
+
+- Confirm unsaved message changes before opening the split UI
+- Use the latest remote message for commits in the split UI
+- Hold alt key to quickly show full file paths
+- Fix comparison view not having any margins
+- Add left/right arrows to navigate pages in uncommitted changes list when there are more than 25 files
+- Fix commit info sidebar shrinking by 2px in some cases
+
 ## 0.1.26
 
 ### Sep 14 2023
