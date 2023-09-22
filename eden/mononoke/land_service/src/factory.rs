@@ -9,6 +9,7 @@ use std::net::IpAddr;
 use std::sync::Arc;
 
 use anyhow::Result;
+use clientinfo::ClientEntryPoint;
 use fbinit::FacebookInit;
 use identity::Identity;
 use login_objects_thrift::EnvironmentType;
@@ -171,9 +172,10 @@ impl Factory {
                 metadata.add_raw_encoded_cats(other_cats);
             }
 
-            if let Some(client_info) = client_info {
-                metadata.add_client_info(client_info);
-            }
+            let client_info = client_info.unwrap_or_else(|| {
+                ClientInfo::default_with_entry_point(ClientEntryPoint::LandService)
+            });
+            metadata.add_client_info(client_info);
 
             return Ok(metadata);
         }
@@ -187,9 +189,9 @@ impl Factory {
         )
         .await;
 
-        if let Some(client_info) = client_info {
-            metadata.add_client_info(client_info);
-        }
+        let client_info = client_info
+            .unwrap_or_else(|| ClientInfo::default_with_entry_point(ClientEntryPoint::LandService));
+        metadata.add_client_info(client_info);
         Ok(metadata)
     }
 

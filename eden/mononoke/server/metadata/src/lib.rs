@@ -117,14 +117,16 @@ impl Metadata {
 
     pub fn add_client_info(&mut self, client_info: ClientInfo) -> &mut Self {
         self.client_info = Some(client_info);
-        self
+        self.set_main_id()
     }
 
     pub fn set_main_id(&mut self) -> &mut Self {
         self.client_info.as_mut().map(|x| {
-            x.request_info
-                .as_mut()
-                .map(|y| y.set_main_id(self.identities.main_client_identity()))
+            x.request_info.as_mut().map(|client_request_info| {
+                if !client_request_info.has_main_id() {
+                    client_request_info.set_main_id(self.identities.main_client_identity())
+                }
+            })
         });
         self
     }

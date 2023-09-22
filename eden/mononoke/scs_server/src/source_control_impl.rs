@@ -11,6 +11,7 @@ use std::net::IpAddr;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use clientinfo::CLIENT_INFO_HEADER;
 use connection_security_checker::ConnectionSecurityChecker;
@@ -288,10 +289,9 @@ impl SourceControlServiceImpl {
                 if let Some(other_cats) = header(FORWARDED_OTHER_CATS_HEADER)? {
                     metadata.add_raw_encoded_cats(other_cats);
                 }
-
-                if let Some(client_info) = client_info {
-                    metadata.add_client_info(client_info);
-                }
+                let client_info = client_info
+                    .unwrap_or_else(|| ClientInfo::default_with_entry_point(ClientEntryPoint::SCS));
+                metadata.add_client_info(client_info);
                 return Ok(metadata);
             }
         }
@@ -305,9 +305,9 @@ impl SourceControlServiceImpl {
         )
         .await;
 
-        if let Some(client_info) = client_info {
-            metadata.add_client_info(client_info);
-        }
+        let client_info = client_info
+            .unwrap_or_else(|| ClientInfo::default_with_entry_point(ClientEntryPoint::SCS));
+        metadata.add_client_info(client_info);
         Ok(metadata)
     }
 

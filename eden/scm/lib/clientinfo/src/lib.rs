@@ -29,7 +29,7 @@ use facebook::FbClientInfo;
 #[cfg(not(fbcode_build))]
 use oss as facebook;
 
-#[derive(Clone, Deserialize, Serialize, Debug)]
+#[derive(Default, Clone, Deserialize, Serialize, Debug)]
 pub struct ClientInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub u64token: Option<u64>, // Currently not used
@@ -54,6 +54,12 @@ impl ClientInfo {
             fb,
             request_info: None,
         })
+    }
+
+    pub fn default_with_entry_point(entry_point: ClientEntryPoint) -> Self {
+        let mut client_info = Self::default();
+        client_info.add_request_info(ClientRequestInfo::new(entry_point));
+        client_info
     }
 
     pub fn into_json(&self) -> Result<String> {
@@ -85,6 +91,10 @@ pub enum ClientEntryPoint {
     SCS,
     SCMQuery,
     EdenAPI,
+    LandService,
+    LFS,
+    DerivedDataService,
+    ISL,
 }
 
 impl ClientRequestInfo {
@@ -124,8 +134,12 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::Sapling => "sapling",
             ClientEntryPoint::EdenFS => "edenfs",
             ClientEntryPoint::SCS => "scs",
-            ClientEntryPoint::SCMQuery => "scmquery",
-            ClientEntryPoint::EdenAPI => "edenapi",
+            ClientEntryPoint::SCMQuery => "scm_query",
+            ClientEntryPoint::EdenAPI => "eden_api",
+            ClientEntryPoint::LandService => "landservice",
+            ClientEntryPoint::LFS => "lfs",
+            ClientEntryPoint::DerivedDataService => "derived_data_service",
+            ClientEntryPoint::ISL => "isl",
         };
         write!(f, "{}", out)
     }
@@ -141,6 +155,10 @@ impl TryFrom<&str> for ClientEntryPoint {
             "scs" => Ok(ClientEntryPoint::SCS),
             "scm_query" => Ok(ClientEntryPoint::SCMQuery),
             "eden_api" => Ok(ClientEntryPoint::EdenAPI),
+            "landservice" => Ok(ClientEntryPoint::LandService),
+            "lfs" => Ok(ClientEntryPoint::LFS),
+            "derived_data_service" => Ok(ClientEntryPoint::DerivedDataService),
+            "isl" => Ok(ClientEntryPoint::ISL),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }

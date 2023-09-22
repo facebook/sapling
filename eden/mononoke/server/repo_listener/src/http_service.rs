@@ -16,6 +16,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use bookmarks::BookmarksRef;
+use clientinfo::ClientEntryPoint;
 #[cfg(fbcode_build)]
 use clientinfo::ClientInfo;
 #[cfg(fbcode_build)]
@@ -582,9 +583,10 @@ mod h2m {
                 )
                 .await;
 
-                if let Some(client_info) = client_info {
-                    metadata.add_client_info(client_info);
-                }
+                let client_info = client_info.unwrap_or_else(|| {
+                    ClientInfo::default_with_entry_point(ClientEntryPoint::EdenAPI)
+                });
+                metadata.add_client_info(client_info);
 
                 metadata_populate_trusted(&mut metadata, headers)?;
                 return Ok(metadata);
@@ -609,9 +611,9 @@ mod h2m {
         )
         .await;
 
-        if let Some(client_info) = client_info {
-            metadata.add_client_info(client_info);
-        }
+        let client_info = client_info
+            .unwrap_or_else(|| ClientInfo::default_with_entry_point(ClientEntryPoint::EdenAPI));
+        metadata.add_client_info(client_info);
 
         Ok(metadata)
     }

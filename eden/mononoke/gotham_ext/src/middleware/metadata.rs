@@ -9,6 +9,7 @@ use std::net::IpAddr;
 use std::net::SocketAddr;
 
 use cats::try_get_cats_idents;
+use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use clientinfo::CLIENT_INFO_HEADER;
 use fbinit::FacebookInit;
@@ -48,14 +49,21 @@ pub struct MetadataMiddleware {
     fb: FacebookInit,
     logger: Logger,
     internal_identity: Identity,
+    entry_point: ClientEntryPoint,
 }
 
 impl MetadataMiddleware {
-    pub fn new(fb: FacebookInit, logger: Logger, internal_identity: Identity) -> Self {
+    pub fn new(
+        fb: FacebookInit,
+        logger: Logger,
+        internal_identity: Identity,
+        entry_point: ClientEntryPoint,
+    ) -> Self {
         Self {
             fb,
             logger,
             internal_identity,
+            entry_point,
         }
     }
 
@@ -142,9 +150,9 @@ impl Middleware for MetadataMiddleware {
                 .get(CLIENT_INFO_HEADER)
                 .and_then(|h| h.to_str().ok())
                 .and_then(|ci| serde_json::from_str(ci).ok());
-            if let Some(client_info) = client_info {
-                metadata.add_client_info(client_info);
-            }
+            let client_info = client_info
+                .unwrap_or_else(|| ClientInfo::default_with_entry_point(self.entry_point.clone()));
+            metadata.add_client_info(client_info);
             metadata.update_client_untrusted(
                 metadata::security::is_client_untrusted(|h| {
                     Ok(headers

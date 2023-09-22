@@ -8,7 +8,7 @@
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(Clone, Deserialize, Serialize, Debug)]
+#[derive(Default, Clone, Deserialize, Serialize, Debug)]
 pub struct FbClientInfo {}
 
 impl FbClientInfo {
