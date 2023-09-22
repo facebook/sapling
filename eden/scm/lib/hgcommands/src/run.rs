@@ -60,7 +60,7 @@ use crate::HgPython;
 ///
 /// Have side effect on `io` and return the command exit code.
 pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
-    let start_time = SystemTime::now();
+    let start_time = StartTime::now();
     let start_blocked = io.time_interval().total_blocked_ms();
 
     // The pfcserver or commandserver do not want tracing or blackbox or ctrlc setup,
@@ -195,7 +195,7 @@ fn dispatch_command(
     mut dispatcher: Dispatcher,
     cwd: PathBuf,
     in_scope: Weak<()>,
-    start_time: SystemTime,
+    start_time: StartTime,
 ) -> i32 {
     log_repo_path_and_exe_version(dispatcher.repo());
 
@@ -646,7 +646,7 @@ pub(crate) fn write_trace(io: &IO, path: &str, data: &TracingData) -> Result<()>
     Ok(())
 }
 
-fn log_start(args: Vec<String>, now: SystemTime) -> tracing::Span {
+fn log_start(args: Vec<String>, now: StartTime) -> tracing::Span {
     let inside_test = is_inside_test();
     let (uid, pid, nice) = if inside_test {
         (0, 0, 0)
@@ -694,7 +694,7 @@ fn log_start(args: Vec<String>, now: SystemTime) -> tracing::Span {
         uid,
         nice,
         args,
-        timestamp_ms: epoch_ms(now),
+        timestamp_ms: now.epoch_ms(),
     });
 
     blackbox::log(&blackbox::event::Event::ProcessTree {
@@ -709,17 +709,14 @@ fn log_end(
     io: &IO,
     exit_code: u8,
     start_blocked: u64,
-    start_time: SystemTime,
+    start_time: StartTime,
     tracing_data: Arc<Mutex<TracingData>>,
 ) {
     let inside_test = is_inside_test();
     let duration_ms = if inside_test {
         0
     } else {
-        match start_time.elapsed() {
-            Ok(duration) => duration.as_millis() as u64,
-            Err(_) => 0,
-        }
+        start_time.elapsed().as_millis() as u64
     };
     let max_rss = if inside_test {
         0
@@ -754,7 +751,7 @@ fn log_end(
         exit_code,
         max_rss,
         duration_ms,
-        timestamp_ms: epoch_ms(start_time),
+        timestamp_ms: start_time.epoch_ms(),
     });
 
     // Stop sending tracing events to subscribers. This prevents
@@ -778,10 +775,29 @@ fn log_end(
     });
 }
 
-fn epoch_ms(time: SystemTime) -> u64 {
-    match time.duration_since(SystemTime::UNIX_EPOCH) {
-        Ok(duration) => duration.as_millis() as u64,
-        Err(_) => 0,
+#[derive(Copy, Clone)]
+struct StartTime {
+    t: SystemTime,
+    i: Instant,
+}
+
+impl StartTime {
+    pub fn now() -> Self {
+        Self {
+            t: SystemTime::now(),
+            i: Instant::now(),
+        }
+    }
+
+    pub fn epoch_ms(&self) -> u64 {
+        match self.t.duration_since(SystemTime::UNIX_EPOCH) {
+            Ok(duration) => duration.as_millis() as u64,
+            Err(_) => 0,
+        }
+    }
+
+    pub fn elapsed(&self) -> Duration {
+        self.i.elapsed()
     }
 }
 
@@ -809,30 +825,29 @@ fn log_repo_path_and_exe_version(repo: Option<&Repo>) {
     tracing::info!(target: "command_info", version = version::VERSION);
 }
 
-fn log_perftrace(io: &IO, config: &ConfigSet, start_time: SystemTime) -> Result<()> {
+fn log_perftrace(io: &IO, config: &ConfigSet, start_time: StartTime) -> Result<()> {
     if let Some(threshold) = config.get_opt::<Duration>("tracing", "threshold")? {
-        if let Ok(elapsed) = start_time.elapsed() {
-            if elapsed >= threshold {
-                let key = format!(
-                    "flat/perftrace-{}-{}-{}",
-                    hostname::get()?.to_string_lossy(),
-                    std::process::id(),
-                    (epoch_ms(start_time) as f64) / 1e3,
-                );
+        let elapsed = start_time.elapsed();
+        if elapsed >= threshold {
+            let key = format!(
+                "flat/perftrace-{}-{}-{}",
+                hostname::get()?.to_string_lossy(),
+                std::process::id(),
+                (start_time.epoch_ms() as f64) / 1e3,
+            );
 
-                let mut ascii_opts = tracing_collector::model::AsciiOptions::default();
+            let mut ascii_opts = tracing_collector::model::AsciiOptions::default();
 
-                // Minimum resolution = 1% of duration.
-                ascii_opts.min_duration_micros_to_hide = (elapsed.as_micros() / 100) as u64;
+            // Minimum resolution = 1% of duration.
+            ascii_opts.min_duration_micros_to_hide = (elapsed.as_micros() / 100) as u64;
 
-                let output = pytracing::DATA.lock().ascii(&ascii_opts);
+            let output = pytracing::DATA.lock().ascii(&ascii_opts);
 
-                tracing::info!(target: "perftrace", key=key.as_str(), payload=output.as_str(), "Trace:\n{}\n", output);
-                tracing::info!(target: "perftracekey", perftracekey=key.as_str(), "Trace key:\n{}\n", key);
+            tracing::info!(target: "perftrace", key=key.as_str(), payload=output.as_str(), "Trace:\n{}\n", output);
+            tracing::info!(target: "perftracekey", perftracekey=key.as_str(), "Trace key:\n{}\n", key);
 
-                if config.get_or_default("tracing", "stderr")? {
-                    let _ = write!(io.error(), "{}\n", output);
-                }
+            if config.get_or_default("tracing", "stderr")? {
+                let _ = write!(io.error(), "{}\n", output);
             }
         }
     }
@@ -874,12 +889,9 @@ fn setup_fail_points<'a>() -> Option<FailScenario<'a>> {
     }
 }
 
-fn setup_atexit(start_time: SystemTime) {
+fn setup_atexit(start_time: StartTime) {
     atexit::AtExit::new(Box::new(move || {
-        let duration_ms = match start_time.elapsed() {
-            Ok(duration) => duration.as_millis() as u64,
-            Err(_) => 0,
-        };
+        let duration_ms = start_time.elapsed().as_millis() as u64;
 
         // Truncate duration to top three significant decimal digits of
         // precision to reduce cardinality for logging storage.
