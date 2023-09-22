@@ -7,6 +7,7 @@
 
 import type {FieldsBeingEdited} from '../../CommitInfoView/types';
 import type {CommitInfo} from '../../types';
+import type {MutableRefObject} from 'react';
 
 import {
   commitFieldsBeingEdited,
@@ -21,6 +22,7 @@ import {useModal} from '../../useModal';
 import {VSCodeButton, VSCodeDivider} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilCallback, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
+import {useAutofocusRef} from 'shared/hooks';
 
 import './ConfirmUnsavedEditsBeforeSplit.css';
 
@@ -86,6 +88,8 @@ function PreSplitUnsavedEditsConfirmationModal({
     Object.values(fields).some(Boolean),
   );
 
+  const saveButtonRef = useAutofocusRef();
+
   return (
     <div className="confirm-unsaved-edits-pre-split" data-testid="confirm-unsaved-edits-pre-split">
       <>
@@ -150,6 +154,7 @@ function PreSplitUnsavedEditsConfirmationModal({
             <T>Discard Edits</T>
           </VSCodeButton>
           <VSCodeButton
+            ref={saveButtonRef as MutableRefObject<null>}
             appearance="primary"
             onClick={() => {
               // Unsaved edits will be automatically loaded by the split as the commits' text
