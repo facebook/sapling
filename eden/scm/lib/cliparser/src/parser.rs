@@ -15,6 +15,7 @@ use cpython::*;
 use cpython_ext::Bytes;
 #[cfg(feature = "python")]
 use cpython_ext::Str;
+use indexmap::set::IndexSet;
 use thiserror::Error;
 
 use crate::utils::get_prefix_bounds;
@@ -475,6 +476,7 @@ impl Parser {
 
         let mut first_arg_index = args.len();
         let mut opts = self.opts.clone();
+        let mut specified_opts = IndexSet::new();
         let mut iter = args.into_iter().enumerate().peekable();
         let mut positional_args = Vec::new();
 
@@ -497,7 +499,9 @@ impl Parser {
                 positional_args.push(arg);
                 iter.next();
             } else if arg.starts_with("--") {
-                if let Err(msg) = self.parse_double_hyphen_flag(&mut iter, &mut opts) {
+                if let Err(msg) =
+                    self.parse_double_hyphen_flag(&mut iter, &mut opts, &mut specified_opts)
+                {
                     if self.parsing_options.error_on_unknown_opts {
                         return Err(msg);
                     } else {
@@ -506,7 +510,9 @@ impl Parser {
                     }
                 }
             } else if arg.starts_with('-') {
-                if let Err(msg) = self.parse_single_hyphen_flag(&mut iter, &mut opts) {
+                if let Err(msg) =
+                    self.parse_single_hyphen_flag(&mut iter, &mut opts, &mut specified_opts)
+                {
                     if self.parsing_options.error_on_unknown_opts {
                         return Err(msg);
                     } else {
@@ -521,17 +527,19 @@ impl Parser {
             }
         }
 
-        Ok(ParseOutput::new(
+        Ok(ParseOutput {
             opts,
-            positional_args.iter().map(|s| s.to_string()).collect(),
+            args: positional_args.iter().map(|s| s.to_string()).collect(),
             first_arg_index,
-        ))
+            specified_opts: specified_opts.into_iter().collect(),
+        })
     }
 
     fn parse_double_hyphen_flag<'a>(
         &self,
         iter: &mut impl Iterator<Item = (usize, &'a str)>,
         opts: &mut HashMap<String, Value>,
+        specified_opts: &mut IndexSet<String>,
     ) -> Result<(), ParseError> {
         let arg = iter.next().unwrap().1;
 
@@ -554,6 +562,7 @@ impl Parser {
 
         if let Some(&known_flag_id) = self.long_map.get(clean_arg) {
             let name = self.parsing_options.flags[known_flag_id].long_name.as_ref();
+            specified_opts.insert(name.to_string());
             match opts.get_mut(name) {
                 Some(Value::Bool(ref mut b)) => *b = Some(positive_flag),
                 Some(ref mut value) => {
@@ -571,6 +580,7 @@ impl Parser {
 
         if let Some(&known_flag_id) = self.long_map.get(&flag_with_no) {
             let name = self.parsing_options.flags[known_flag_id].long_name.as_ref();
+            specified_opts.insert(name.to_string());
             match opts.get_mut(name) {
                 Some(Value::Bool(ref mut b)) => *b = Some(!positive_flag),
                 Some(ref mut value) => {
@@ -608,6 +618,7 @@ impl Parser {
         } else {
             let matched_flag = &self.parsing_options.flags[prefixed_flag_ids[0]];
             let name = matched_flag.long_name.as_ref();
+            specified_opts.insert(name.to_string());
             match opts.get_mut(name) {
                 Some(Value::Bool(ref mut b)) => *b = Some(positive_flag),
                 Some(ref mut value) => {
@@ -626,6 +637,7 @@ impl Parser {
         &self,
         iter: &mut impl Iterator<Item = (usize, &'a str)>,
         opts: &mut HashMap<String, Value>,
+        specified_opts: &mut IndexSet<String>,
     ) -> Result<(), ParseError> {
         let clean_arg = iter.next().unwrap().1.trim_start_matches('-');
 
@@ -636,6 +648,7 @@ impl Parser {
                 let flag_name = self.parsing_options.flags[known_flag_id]
                     .long_name
                     .to_string();
+                specified_opts.insert(flag_name.clone());
                 match opts.get_mut(&flag_name) {
                     Some(Value::Bool(ref mut b)) => *b = Some(true),
                     Some(ref mut value) => {
@@ -705,26 +718,22 @@ pub struct ParseOutput {
     /// The positional args
     pub args: Vec<String>,
     pub first_arg_index: usize,
+
+    // Long name of options actually specified (vs. default value).
+    specified_opts: Vec<String>,
 }
 
 /// ParseOutput represents all of the information successfully parsed from the command-line
 /// arguments, as well as exposing a convenient API for application logic to query results
 /// parsed.
 impl ParseOutput {
-    pub fn new(opts: HashMap<String, Value>, args: Vec<String>, first_arg_index: usize) -> Self {
-        ParseOutput {
-            opts,
-            args,
-            first_arg_index,
-        }
-    }
-
     /// Clone only the "options" part.
     pub fn clone_only_opts(&self) -> ParseOutput {
         ParseOutput {
             opts: self.opts.clone(),
             args: Vec::new(),
             first_arg_index: 0,
+            specified_opts: Vec::new(),
         }
     }
 
@@ -750,6 +759,10 @@ impl ParseOutput {
     /// arguments.
     pub fn first_arg_index(&self) -> usize {
         self.first_arg_index
+    }
+
+    pub fn specified_opts(&self) -> &[String] {
+        &self.specified_opts
     }
 }
 
@@ -819,11 +832,16 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
+        let mut specified_opts = IndexSet::new();
 
         let args = vec!["-q"];
 
         let _ = parser
-            .parse_single_hyphen_flag(&mut args.into_iter().enumerate().peekable(), &mut opts)
+            .parse_single_hyphen_flag(
+                &mut args.into_iter().enumerate().peekable(),
+                &mut opts,
+                &mut specified_opts,
+            )
             .unwrap();
         let quiet: bool = opts.get("quiet").cloned().unwrap().into();
         assert!(quiet);
@@ -835,18 +853,23 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
+        let mut specified_opts = IndexSet::new();
         const PATH: &str = "$HOME/path/to/config/file";
 
         let args = vec!["-c", PATH];
 
-        let _result = parser
-            .parse_single_hyphen_flag(&mut args.into_iter().enumerate().peekable(), &mut opts);
+        let _result = parser.parse_single_hyphen_flag(
+            &mut args.into_iter().enumerate().peekable(),
+            &mut opts,
+            &mut specified_opts,
+        );
     }
 
     #[test]
     fn test_parse_single_cluster_with_end_value() {
         let parser = ParseOptions::new().flags(flags()).into_parser();
         let mut opts = parser.opts.clone();
+        let mut specified_opts = IndexSet::new();
         const PATH: &str = "$HOME/path/to/config/file";
         const CLUSTER: &str = "-qhvc";
 
@@ -856,6 +879,7 @@ mod tests {
             .parse_single_hyphen_flag(
                 &mut clustered_args.into_iter().enumerate().peekable(),
                 &mut opts,
+                &mut specified_opts,
             )
             .unwrap();
 
@@ -868,11 +892,16 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
+        let mut specified_opts = IndexSet::new();
 
         let args = vec!["--quiet"];
 
         let _ = parser
-            .parse_double_hyphen_flag(&mut args.into_iter().enumerate().peekable(), &mut opts)
+            .parse_double_hyphen_flag(
+                &mut args.into_iter().enumerate().peekable(),
+                &mut opts,
+                &mut specified_opts,
+            )
             .unwrap();
 
         //assert_eq!(parsed_flag, flag.long_name);
@@ -884,12 +913,17 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
+        let mut specified_opts = IndexSet::new();
         const PATH: &str = "$HOME/path/to/config/file";
 
         let args = vec!["--config", PATH];
 
         let _ = parser
-            .parse_double_hyphen_flag(&mut args.into_iter().enumerate().peekable(), &mut opts)
+            .parse_double_hyphen_flag(
+                &mut args.into_iter().enumerate().peekable(),
+                &mut opts,
+                &mut specified_opts,
+            )
             .unwrap();
 
         //assert_eq!(parsed_flag, flag.long_name);
@@ -903,11 +937,16 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
+        let mut specified_opts = IndexSet::new();
 
         let args = vec!["--number", "60"];
 
         let _ = parser
-            .parse_double_hyphen_flag(&mut args.into_iter().enumerate().peekable(), &mut opts)
+            .parse_double_hyphen_flag(
+                &mut args.into_iter().enumerate().peekable(),
+                &mut opts,
+                &mut specified_opts,
+            )
             .unwrap();
 
         //assert_eq!(parsed_flag, flag.long_name);
@@ -1446,5 +1485,28 @@ mod tests {
 
         let parsed = parser.parse_args(&["--no-opt-bool"]).unwrap();
         assert_eq!(parsed.pick::<Option<bool>>("opt-bool"), Some(false),);
+    }
+
+    #[test]
+    fn test_specified_options() {
+        let flags = vec![
+            ('b', "bool", "a bool", true, "").into(),
+            ('s', "str", "a str", "default", "").into(),
+            ('l', "list", "a list", Value::List(Vec::new()), "").into(),
+        ];
+
+        let parsed = ParseOptions::new()
+            .flags(flags.clone())
+            .into_parser()
+            .parse_args(&Vec::<&str>::new())
+            .unwrap();
+        assert_eq!(parsed.specified_opts().len(), 0);
+
+        let parsed = ParseOptions::new()
+            .flags(flags)
+            .into_parser()
+            .parse_args(&["-l", "one", "--no-bool", "-s=", "--list=two"])
+            .unwrap();
+        assert_eq!(parsed.specified_opts(), &["list", "bool", "str"]);
     }
 }
