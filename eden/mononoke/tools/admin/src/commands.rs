@@ -34,6 +34,7 @@ mononoke_app::subcommands! {
     mod commit;
     mod commit_graph;
     mod convert;
+    mod derived_data;
     mod dump_changesets;
     mod ephemeral_store;
     mod fetch;
