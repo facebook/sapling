@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod count_underived;
 mod exists;
 
 use anyhow::Context;
@@ -23,6 +24,8 @@ use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 
+use self::count_underived::count_underived;
+use self::count_underived::CountUnderivedArgs;
 use self::exists::exists;
 use self::exists::ExistsArgs;
 
@@ -62,6 +65,8 @@ pub struct CommandArgs {
 enum DerivedDataSubcommand {
     /// Get the changeset of a bookmark
     Exists(ExistsArgs),
+    /// Count how many ancestors of a given commit weren't derived
+    CountUnderived(CountUnderivedArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -74,6 +79,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     match args.subcommand {
         DerivedDataSubcommand::Exists(args) => exists(&ctx, &repo, args).await?,
+        DerivedDataSubcommand::CountUnderived(args) => count_underived(&ctx, &repo, args).await?,
     }
 
     Ok(())
