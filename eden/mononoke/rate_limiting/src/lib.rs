@@ -148,11 +148,18 @@ impl LoadShedLimit {
         let metric = self.raw_config.metric.to_string();
 
         match STATS::load_shed_counter.get_value(fb, (metric.clone(),)) {
-            Some(value) if value > self.raw_config.limit => Err(RateLimitReason::LoadShedMetric(
-                metric,
-                value,
-                self.raw_config.limit,
-            )),
+            Some(value) if value > self.raw_config.limit => match self.raw_config.status {
+                RateLimitStatus::Disabled => Ok(()),
+                // TODO (liubovd): add logging to scuba for reached limits
+                RateLimitStatus::Tracked => Ok(()),
+                RateLimitStatus::Enforced => Err(RateLimitReason::LoadShedMetric(
+                    metric,
+                    value,
+                    self.raw_config.limit,
+                )),
+                // NOTE: Thrift enums aren't real enums once in Rust. We have to account for other values here.
+                _ => Ok(()),
+            },
             _ => Ok(()),
         }
     }
