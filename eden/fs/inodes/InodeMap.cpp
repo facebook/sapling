@@ -273,7 +273,11 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
   // Check to see if this Inode is already loaded
   auto loadedIter = data->loadedInodes_.find(number);
   if (loadedIter != data->loadedInodes_.end()) {
-    return loadedIter->second.getPtr();
+    auto inode = loadedIter->second.getPtr();
+    stats_->increment(
+        inode->isDir() ? &InodeMapStats::lookupTreeInodeHit
+                       : &InodeMapStats::lookupBlobInodeHit);
+    return inode;
   }
 
   // Look up the data in the unloadedInodes_ map.
@@ -494,6 +498,10 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
       data->unloadedInodes_.erase(it);
     }
     mount_->publishInodeTraceEvent(std::move(endLoadEvent.value()));
+    stats_->increment(
+        inode->isDir() ? &InodeMapStats::lookupTreeInodeMiss
+                       : &InodeMapStats::lookupBlobInodeMiss,
+        promises.size());
     return promises;
   } catch (...) {
     auto ew = folly::exception_wrapper{std::current_exception()};
@@ -505,6 +513,7 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
     if (optionalFailEvent.has_value()) {
       mount_->publishInodeTraceEvent(std::move(optionalFailEvent.value()));
     }
+    stats_->increment(&InodeMapStats::lookupInodeError, promises.size());
     return PromiseVector{};
   }
 }
@@ -522,6 +531,7 @@ void InodeMap::inodeLoadFailed(
   if (optionalFailEvent.has_value()) {
     mount_->publishInodeTraceEvent(std::move(optionalFailEvent.value()));
   }
+  stats_->increment(&InodeMapStats::lookupInodeError, promises.size());
 }
 
 InodeTraceEvent InodeMap::createInodeLoadStartEvent(
