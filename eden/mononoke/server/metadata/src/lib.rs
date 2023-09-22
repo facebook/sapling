@@ -120,6 +120,15 @@ impl Metadata {
         self
     }
 
+    pub fn set_main_id(&mut self) -> &mut Self {
+        self.client_info.as_mut().map(|x| {
+            x.request_info
+                .as_mut()
+                .map(|y| y.set_main_id(self.identities.main_client_identity()))
+        });
+        self
+    }
+
     pub fn add_original_identities(&mut self, identities: MononokeIdentitySet) -> &mut Self {
         self.original_identities = Some(identities);
         self
