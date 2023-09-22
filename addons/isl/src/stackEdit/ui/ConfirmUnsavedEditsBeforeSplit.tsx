@@ -24,13 +24,16 @@ import {Icon} from 'shared/Icon';
 
 import './ConfirmUnsavedEditsBeforeSplit.css';
 
+type UnsavedEditConfirmKind = 'split' | 'edit_stack';
+
 export function useConfirmUnsavedEditsBeforeSplit(): (
   commits: Array<CommitInfo>,
+  kind: UnsavedEditConfirmKind,
 ) => Promise<boolean> {
   const showModal = useModal();
   const showConfirmation = useRecoilCallback(
     ({snapshot}) =>
-      async (commits: Array<CommitInfo>): Promise<boolean> => {
+      async (commits: Array<CommitInfo>, kind: UnsavedEditConfirmKind): Promise<boolean> => {
         const editedCommits = commits
           .map(commit => [
             commit,
@@ -42,11 +45,15 @@ export function useConfirmUnsavedEditsBeforeSplit(): (
             type: 'custom',
             component: ({returnResultAndDismiss}) => (
               <PreSplitUnsavedEditsConfirmationModal
+                kind={kind}
                 editedCommits={editedCommits}
                 returnResultAndDismiss={returnResultAndDismiss}
               />
             ),
-            title: t('Save edits before splitting?'),
+            title:
+              kind === 'split'
+                ? t('Save edits before splitting?')
+                : t('Save edits before editing stack?'),
           });
           return continueWithSplit === true;
         }
@@ -54,15 +61,17 @@ export function useConfirmUnsavedEditsBeforeSplit(): (
       },
   );
 
-  return (commits: Array<CommitInfo>) => {
-    return showConfirmation(commits);
+  return (commits: Array<CommitInfo>, kind: UnsavedEditConfirmKind) => {
+    return showConfirmation(commits, kind);
   };
 }
 
 function PreSplitUnsavedEditsConfirmationModal({
+  kind,
   editedCommits,
   returnResultAndDismiss,
 }: {
+  kind: UnsavedEditConfirmKind;
   editedCommits: Array<[CommitInfo, FieldsBeingEdited]>;
   returnResultAndDismiss: (continueWithSplit: boolean) => unknown;
 }) {
@@ -73,15 +82,23 @@ function PreSplitUnsavedEditsConfirmationModal({
     reset(commitFieldsBeingEdited);
   });
 
+  const commitsWithUnsavedEdits = editedCommits.filter(([_, fields]) =>
+    Object.values(fields).some(Boolean),
+  );
+
   return (
     <div className="confirm-unsaved-edits-pre-split" data-testid="confirm-unsaved-edits-pre-split">
       <>
         <div>
-          <T count={editedCommits.length}>confirmUnsavedEditsBeforeSplit</T>
+          <T count={commitsWithUnsavedEdits.length}>
+            {kind === 'split'
+              ? 'confirmUnsavedEditsBeforeSplit'
+              : 'confirmUnsavedEditsBeforeEditStack'}
+          </T>
         </div>
         <div className="commits-with-unsaved-changes">
-          {editedCommits.map(([commit, fields]) => (
-            <>
+          {commitsWithUnsavedEdits.map(([commit, fields]) => (
+            <div className="commit-row">
               <span key={`${commit.hash}`} className="commit">
                 <span className="unsaved-message-indicator">
                   <Tooltip title={t('This commit has unsaved changes to its message')}>
@@ -113,7 +130,7 @@ function PreSplitUnsavedEditsConfirmationModal({
                   unsaved changes to $fields
                 </T>
               </span>
-            </>
+            </div>
           ))}
         </div>
         <VSCodeDivider />

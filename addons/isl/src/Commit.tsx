@@ -149,7 +149,7 @@ export const Commit = memo(
 
     const confirmUnsavedEditsBeforeSplit = useConfirmUnsavedEditsBeforeSplit();
     async function handleSplit() {
-      if (!(await confirmUnsavedEditsBeforeSplit([commit]))) {
+      if (!(await confirmUnsavedEditsBeforeSplit([commit], 'split'))) {
         return;
       }
       setEditStackIntentionHashes(['split', new Set([commit.hash])]);

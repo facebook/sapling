@@ -19,6 +19,7 @@ import {type CommitTreeWithPreviews, walkTreePostorder, isTreeLinear} from './ge
 import {T, t} from './i18n';
 import {HideOperation} from './operations/HideOperation';
 import {useRunOperation, latestUncommittedChangesData} from './serverAPIState';
+import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {StackEditIcon} from './stackEdit/ui/StackEditIcon';
 import {editingStackIntentionHashes, loadingStackState} from './stackEdit/ui/stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -274,6 +275,7 @@ function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactEle
   const highlight = disabled ? [] : stackCommits;
   const tooltipDelay = disabled && !isLoading ? undefined : DOCUMENTATION_DELAY;
   const icon = isLoading ? <Icon icon="loading" slot="start" /> : <StackEditIcon slot="start" />;
+  const confirmUnsavedEditsBeforeSplit = useConfirmUnsavedEditsBeforeSplit();
 
   return (
     <HighlightCommitsWhileHovering key="submit-stack" toHighlight={highlight}>
@@ -282,7 +284,10 @@ function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactEle
           className={`edit-stack-button ${disabled && 'disabled'}`}
           disabled={disabled}
           appearance="icon"
-          onClick={() => {
+          onClick={async () => {
+            if (!(await confirmUnsavedEditsBeforeSplit(stackCommits, 'edit_stack'))) {
+              return;
+            }
             setStackIntentionHashes(['general', new Set<Hash>(stackCommits.map(c => c.hash))]);
           }}>
           {icon}

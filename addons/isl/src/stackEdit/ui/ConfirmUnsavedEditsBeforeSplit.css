@@ -22,9 +22,15 @@
   gap: var(--pad);
 }
 
+.confirm-unsaved-edits-pre-split .commits-with-unsaved-changes .commit-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--halfpad);
+}
+
 .confirm-unsaved-edits-pre-split .commits-with-unsaved-changes .commit {
   display: flex;
-  gap: var(--halfpad);
+  gap: var(--pad);
   align-items: center;
 }
 
