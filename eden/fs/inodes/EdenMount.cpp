@@ -260,7 +260,10 @@ EdenMount::EdenMount(
           serverState_->getEdenConfig()->prjfsNumInvalidationThreads.getValue(),
           "prjfs-dir-inval")},
 #endif
-      inodeMap_{new InodeMap(this, serverState_->getReloadableConfig())},
+      inodeMap_{new InodeMap(
+          this,
+          serverState_->getReloadableConfig(),
+          stats.copy())},
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
       blobAccess_{objectStore_, blobCache_},

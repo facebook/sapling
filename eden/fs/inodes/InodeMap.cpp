@@ -99,8 +99,11 @@ InodeType InodeMap::UnloadedInode::getInodeType() const {
   return S_ISDIR(mode) ? InodeType::TREE : InodeType::FILE;
 }
 
-InodeMap::InodeMap(EdenMount* mount, std::shared_ptr<ReloadableConfig> config)
-    : mount_{mount}, config_{std::move(config)} {}
+InodeMap::InodeMap(
+    EdenMount* mount,
+    std::shared_ptr<ReloadableConfig> config,
+    EdenStatsPtr stats)
+    : mount_{mount}, config_{std::move(config)}, stats_{std::move(stats)} {}
 
 InodeMap::~InodeMap() {
   // TODO: We need to clean up the EdenMount / InodeMap destruction process a

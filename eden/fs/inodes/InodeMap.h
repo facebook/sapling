@@ -20,6 +20,7 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/takeover/gen-cpp2/takeover_types.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -98,7 +99,10 @@ class InodeMap {
  public:
   using PromiseVector = std::vector<folly::Promise<InodePtr>>;
 
-  explicit InodeMap(EdenMount* mount, std::shared_ptr<ReloadableConfig> config);
+  explicit InodeMap(
+      EdenMount* mount,
+      std::shared_ptr<ReloadableConfig> config,
+      EdenStatsPtr stats);
   virtual ~InodeMap();
 
   InodeMap(InodeMap&&) = delete;
@@ -723,6 +727,7 @@ class InodeMap {
   EdenMount* const mount_{nullptr};
 
   std::shared_ptr<ReloadableConfig> config_;
+  EdenStatsPtr stats_;
 
   /**
    * The root inode.
