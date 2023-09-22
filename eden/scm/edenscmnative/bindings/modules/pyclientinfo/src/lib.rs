@@ -51,8 +51,8 @@ py_class!(pub class clientinfo |py| {
 py_class!(pub class ClientRequestInfo |py| {
     data inner: RefCell<client_info::ClientRequestInfo>;
 
-    def __new__(_cls) -> PyResult<ClientRequestInfo> {
-        let client_request_info = client_info::ClientRequestInfo::new().map_pyerr(py)?;
+    def __new__(_cls, entry_point: &str) -> PyResult<ClientRequestInfo> {
+        let client_request_info = client_info::ClientRequestInfo::new(entry_point.try_into().map_pyerr(py)?);
         ClientRequestInfo::create_instance(py, RefCell::new(client_request_info))
     }
 });
