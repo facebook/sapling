@@ -50,10 +50,9 @@ pub enum ParseError {
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Value {
     Bool(Option<bool>),
-    Str(String),
-    Int(i64),
+    Str(Option<String>),
+    Int(Option<i64>),
     List(Vec<String>),
-    OptStr(Option<String>),
 }
 
 impl Value {
@@ -70,21 +69,19 @@ impl Value {
         match self {
             Value::Bool(_) => unreachable!(),
             Value::Str(ref mut s) => {
-                *s = token.to_string();
-                Ok(())
-            }
-            Value::OptStr(ref mut s) => {
                 *s = Some(token.to_string());
                 Ok(())
             }
             Value::Int(ref mut i) => {
-                *i = token
-                    .parse::<i64>()
-                    .map_err(|_| ParseError::OptionArgumentInvalid {
-                        option_name: "".to_string(),
-                        given: token.to_string(),
-                        expected: "int".to_string(),
-                    })?;
+                *i = Some(
+                    token
+                        .parse::<i64>()
+                        .map_err(|_| ParseError::OptionArgumentInvalid {
+                            option_name: "".to_string(),
+                            given: token.to_string(),
+                            expected: "int".to_string(),
+                        })?,
+                );
                 Ok(())
             }
             Value::List(ref mut vec) => {
@@ -102,10 +99,7 @@ impl ToPyObject for Value {
     fn to_py_object(&self, py: Python) -> Self::ObjectType {
         match self {
             Value::Bool(b) => b.to_py_object(py).into_object(),
-            Value::Str(s) => Str::from(Bytes::from(s.to_string()))
-                .to_py_object(py)
-                .into_object(),
-            Value::OptStr(s) => s
+            Value::Str(s) => s
                 .as_ref()
                 .map(|s| Str::from(s.to_string()))
                 .to_py_object(py),
@@ -132,11 +126,11 @@ impl<'source> FromPyObject<'source> for Value {
             return Ok(Value::List(Vec::new()));
         }
         if let Ok(s) = obj.cast_as::<PyString>(py) {
-            return Ok(Value::Str(s.to_string(py).unwrap().to_string()));
+            return Ok(Value::Str(Some(s.to_string(py).unwrap().to_string())));
         }
 
         if let Ok(_i) = obj.cast_as::<PyInt>(py) {
-            return Ok(Value::Int(obj.extract::<i64>(py).unwrap()));
+            return Ok(Value::Int(Some(obj.extract::<i64>(py).unwrap())));
         }
 
         Ok(Value::Bool(None))
@@ -146,7 +140,7 @@ impl<'source> FromPyObject<'source> for Value {
 impl From<Value> for i64 {
     fn from(v: Value) -> Self {
         match v {
-            Value::Int(i) => i,
+            Value::Int(i) => i.unwrap_or_default(),
             _ => panic!("programming error:  {:?} was converted to i64", v),
         }
     }
@@ -155,7 +149,7 @@ impl From<Value> for i64 {
 impl From<Value> for String {
     fn from(v: Value) -> Self {
         match v {
-            Value::Str(s) => s,
+            Value::Str(s) => s.unwrap_or_default(),
             _ => panic!("programming error:  {:?} was converted to String", v),
         }
     }
@@ -164,7 +158,7 @@ impl From<Value> for String {
 impl From<Value> for Option<String> {
     fn from(v: Value) -> Self {
         match v {
-            Value::OptStr(s) => s,
+            Value::Str(s) => s,
             _ => panic!(
                 "programming error:  {:?} was converted to Option<String>",
                 v
@@ -202,7 +196,7 @@ impl From<Value> for Vec<String> {
 
 impl From<i64> for Value {
     fn from(v: i64) -> Self {
-        Value::Int(v)
+        Value::Int(Some(v))
     }
 }
 
@@ -220,19 +214,19 @@ impl From<Option<bool>> for Value {
 
 impl From<&str> for Value {
     fn from(v: &str) -> Self {
-        Value::Str(v.to_string())
+        Value::Str(Some(v.to_string()))
     }
 }
 
 impl From<String> for Value {
     fn from(v: String) -> Self {
-        Value::Str(v)
+        Value::Str(Some(v))
     }
 }
 
 impl From<Option<String>> for Value {
     fn from(v: Option<String>) -> Self {
-        Value::OptStr(v)
+        Value::Str(v)
     }
 }
 
@@ -787,7 +781,13 @@ mod tests {
                 Value::Bool(Some(false)),
                 "",
             ),
-            ('r', "rev", "revision hash", Value::Str("".to_string()), ""),
+            (
+                'r',
+                "rev",
+                "revision hash",
+                Value::Str(Some("".to_string())),
+                "",
+            ),
         ]
         .into_iter()
         .map(Into::into)
@@ -1418,16 +1418,7 @@ mod tests {
 
     #[test]
     fn test_parse_option_string_value() {
-        let flags = vec![
-            (
-                ' ',
-                "opt_str",
-                "an optional string",
-                Value::OptStr(None),
-                "",
-            )
-                .into(),
-        ];
+        let flags = vec![(' ', "opt_str", "an optional string", Value::Str(None), "").into()];
         let parser = ParseOptions::new().flags(flags).into_parser();
 
         let args: Vec<&str> = Default::default();
