@@ -137,10 +137,6 @@ if sys.platform == "win32":
             # Windows doesn't support executable files; mode changes are no-op
             "test_mode_change_with_no_content_change",
         ],
-        "hg.update_test.UpdateTestTreeOnlyInMemory": [
-            # kill and restart Eden
-            "test_resume_interrupted_update"
-        ],
         "stale_inode_test.StaleInodeTestHgNFS": True,
         "windows_fsck_test.WindowsFsckTestHg": [
             # T146967686

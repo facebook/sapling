@@ -881,7 +881,9 @@ class UpdateTest(EdenHgTestCase):
             )
             inodes = dict((i.path.decode("utf8"), i) for i in inode_status)
             self.assertNotIn("dir1", inodes)
-            self.assertFalse(inodes["dir2"].materialized)
+            # dir2 will either be not loaded or not materialized.
+            dir2 = next(inode for inode in inodes[""].entries if inode.name == b"dir2")
+            self.assertFalse(dir2.loaded and inodes["dir2"].materialized)
             self.assertNotIn("dir3", inodes)
 
     def test_resume_interrupted_with_concurrent_update(self) -> None:
