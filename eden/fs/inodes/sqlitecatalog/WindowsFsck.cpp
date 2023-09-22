@@ -60,11 +60,14 @@ dtype_t dtypeFromAttrs(DWORD dwFileAttributes, DWORD dwReserved0) {
   }
 }
 
-PathMap<overlay::OverlayEntry> toPathMap(overlay::OverlayDir& dir) {
+PathMap<overlay::OverlayEntry> toPathMap(
+    std::optional<overlay::OverlayDir>& dir) {
   PathMap<overlay::OverlayEntry> newMap(CaseSensitivity::Insensitive);
-  const auto& entries = *dir.entries_ref();
-  for (auto iter = entries.begin(); iter != entries.end(); ++iter) {
-    newMap[PathComponentPiece{iter->first}] = iter->second;
+  if (dir.has_value()) {
+    const auto& entries = dir.value().entries_ref();
+    for (auto iter = entries->begin(); iter != entries->end(); ++iter) {
+      newMap[PathComponentPiece{iter->first}] = iter->second;
+    }
   }
   return newMap;
 }
@@ -617,7 +620,7 @@ ImmediateFuture<bool> processChildren(
                           fsckRenamedFiles](
                              const std::shared_ptr<const Tree>& childScmTree) {
                 auto childOverlayDir =
-                    *inodeCatalog.loadOverlayDir(childInodeNumber);
+                    inodeCatalog.loadOverlayDir(childInodeNumber);
                 auto childInsensitiveOverlayDir = toPathMap(childOverlayDir);
 
                 return processChildren(
@@ -650,7 +653,7 @@ ImmediateFuture<bool> processChildren(
                   childState.desiredHash = std::nullopt;
 
                   auto updatedOverlayDir =
-                      *inodeCatalog.loadOverlayDir(inodeNumber);
+                      inodeCatalog.loadOverlayDir(inodeNumber);
                   auto updatedInsensitiveOverlayDir =
                       toPathMap(updatedOverlayDir);
                   // Update the overlay entry to remove the scmHash.
@@ -684,12 +687,14 @@ ImmediateFuture<bool> processChildren(
 void windowsFsckScanLocalChanges(
     std::shared_ptr<const EdenConfig> config,
     InodeCatalog& inodeCatalog,
+    InodeCatalogType inodeCatalogType,
     AbsolutePathPiece mountPath,
     bool windowsSymlinksEnabled,
     InodeCatalog::LookupCallback& callback) {
   XLOGF(INFO, "Start scanning {}", mountPath);
-  if (auto view = inodeCatalog.loadOverlayDir(kRootNodeId)) {
-    auto insensitiveOverlayDir = toPathMap(*view);
+  auto view = inodeCatalog.loadOverlayDir(kRootNodeId);
+  if (view.has_value() || inodeCatalogType == InodeCatalogType::InMemory) {
+    auto insensitiveOverlayDir = toPathMap(view);
     std::atomic<uint64_t> traversedDirectories = 1;
     // TODO: Handler errors or no trees
 
@@ -732,7 +737,7 @@ void windowsFsckScanLocalChanges(
     XLOGF(INFO, "Scanning complete for {}", mountPath);
   } else {
     XLOG(INFO)
-        << "Unable to start fsck since root inode is not present. Possibly new mount.";
+        << "Unable to start fsck since root inode is not present and not an InMemory overlay. Possibly new mount.";
   }
 }
 

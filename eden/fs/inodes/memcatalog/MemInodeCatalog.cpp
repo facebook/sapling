@@ -8,6 +8,7 @@
 #include "eden/fs/inodes/memcatalog/MemInodeCatalog.h"
 #include <algorithm>
 #include <utility>
+
 #include "eden/fs/inodes/sqlitecatalog/WindowsFsck.h"
 
 namespace facebook::eden {
@@ -191,7 +192,12 @@ InodeNumber MemInodeCatalog::scanLocalChanges(
     FOLLY_MAYBE_UNUSED InodeCatalog::LookupCallback& callback) {
 #ifdef _WIN32
   windowsFsckScanLocalChanges(
-      config, *this, mountPath, windowsSymlinksEnabled, callback);
+      config,
+      *this,
+      InodeCatalogType::InMemory,
+      mountPath,
+      windowsSymlinksEnabled,
+      callback);
 #endif
   return InodeNumber{nextInode_.load()};
 }

@@ -9,6 +9,7 @@
 
 #ifdef _WIN32
 
+#include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/inodes/InodeCatalog.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -53,6 +54,7 @@ class EdenConfig;
 void windowsFsckScanLocalChanges(
     std::shared_ptr<const EdenConfig> config,
     InodeCatalog& overlay,
+    InodeCatalogType inodeCatalogType,
     AbsolutePathPiece mountPath,
     bool windowsSymlinksEnabled,
     InodeCatalog::LookupCallback& callback);
