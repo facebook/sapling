@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Dict, Iterable, List, NamedTuple, Optional, Tuple, Union
 
 import eden.dirstate
-import facebook.eden.ttypes as eden_ttypes
 from eden.fs.cli import mtab, version as version_mod
 from eden.fs.cli.config import (
     AbstractEdenInstance,
