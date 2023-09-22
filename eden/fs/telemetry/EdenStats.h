@@ -30,6 +30,7 @@ struct ThriftStats;
 struct TelemetryStats;
 struct OverlayStats;
 struct InodeMapStats;
+struct InodeMetadataTableStats;
 
 /**
  * StatsGroupBase is a base class for a group of thread-local stats
@@ -126,6 +127,7 @@ class EdenStats : public RefCounted {
   ThreadLocal<TelemetryStats> telemetryStats_;
   ThreadLocal<OverlayStats> overlayStats_;
   ThreadLocal<InodeMapStats> inodeMapStats_;
+  ThreadLocal<InodeMetadataTableStats> inodeMetadataTableStats_;
 };
 
 using EdenStatsPtr = RefPtr<EdenStats>;
@@ -190,6 +192,12 @@ inline OverlayStats& EdenStats::getStatsForCurrentThread<OverlayStats>() {
 template <>
 inline InodeMapStats& EdenStats::getStatsForCurrentThread<InodeMapStats>() {
   return *inodeMapStats_.get();
+}
+
+template <>
+inline InodeMetadataTableStats&
+EdenStats::getStatsForCurrentThread<InodeMetadataTableStats>() {
+  return *inodeMetadataTableStats_.get();
 }
 
 template <typename T>
@@ -397,6 +405,11 @@ struct InodeMapStats : StatsGroup<InodeMapStats> {
   Counter lookupTreeInodeMiss{"inode_map.lookup_tree_inode_miss"};
   Counter lookupBlobInodeMiss{"inode_map.lookup_blob_inode_miss"};
   Counter lookupInodeError{"inode_map.lookup_inode_error"};
+};
+
+struct InodeMetadataTableStats : StatsGroup<InodeMetadataTableStats> {
+  Counter getHit{"inode_metadata_table.get_hit"};
+  Counter getMiss{"inode_metadata_table.get_miss"};
 };
 
 /**

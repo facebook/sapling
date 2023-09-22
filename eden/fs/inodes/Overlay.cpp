@@ -363,8 +363,8 @@ void Overlay::initOverlay(
   // Open after infoFile_'s lock is acquired because the InodeTable acquires
   // its own lock, which should be released prior to infoFile_.
   inodeMetadataTable_ = InodeMetadataTable::open(
-      (localDir_ + PathComponentPiece{FileContentStore::kMetadataFile})
-          .c_str());
+      (localDir_ + PathComponentPiece{FileContentStore::kMetadataFile}).c_str(),
+      stats_.copy());
 #endif // !_WIN32
 }
 
