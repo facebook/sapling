@@ -11,7 +11,13 @@ import type {RecordOf} from 'immutable';
 import type {SetterOrUpdater} from 'recoil';
 import type {ExportStack} from 'shared/types/stack';
 
+import {globalRecoil} from '../../AccessGlobalRecoil';
 import clientToServerAPI from '../../ClientToServerAPI';
+import {editedCommitMessages} from '../../CommitInfoView/CommitInfoState';
+import {
+  commitMessageFieldsSchema,
+  commitMessageFieldsToString,
+} from '../../CommitInfoView/CommitMessageFields';
 import {getTracker} from '../../analytics/globalTracker';
 import {CommitStackState} from '../../stackEdit/commitStackState';
 import {assert} from '../../utils';
@@ -187,7 +193,11 @@ const stackEditState = atom<StackEditState>({
           if (event.error != null) {
             return {hashes, intention, history: {state: 'hasError', error: event.error}};
           } else {
-            return {hashes, intention, history: {state: 'loading', exportedStack: event.stack}};
+            return {
+              hashes,
+              intention,
+              history: {state: 'loading', exportedStack: rewriteCommitMessagesInStack(event.stack)},
+            };
           }
         });
       });
@@ -220,6 +230,25 @@ const stackEditState = atom<StackEditState>({
     },
   ],
 });
+
+/**
+ * Update commits messages in an exported stack to include:
+ * 1. Any local edits the user has pending (these have already been confirmed by a modal at this point)
+ * 2. Any remote message changes from the server (which allows the titles in the edit stack UI to be up to date)
+ */
+function rewriteCommitMessagesInStack(stack: ExportStack): ExportStack {
+  const schema = globalRecoil().getLoadable(commitMessageFieldsSchema).valueMaybe();
+  return stack.map(c => {
+    let text = c.text;
+    if (schema) {
+      const latestMessage = globalRecoil().getLoadable(editedCommitMessages(c.node)).valueMaybe();
+      if (latestMessage != null && latestMessage.type !== 'optimistic') {
+        text = commitMessageFieldsToString(schema, latestMessage.fields);
+      }
+    }
+    return {...c, text};
+  });
+}
 
 /**
  * Commit hashes being stack edited for general purpose.
