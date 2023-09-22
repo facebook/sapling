@@ -32,10 +32,16 @@
   display: flex;
   gap: var(--pad);
   align-items: center;
+  pointer-events: none;
 }
 
-.confirm-unsaved-edits-pre-split .commits-with-unsaved-changes .unsaved-message-indicator {
-  display: inline-flex;
+.confirm-unsaved-edits-pre-split .commits-with-unsaved-changes .unsaved-message-indicator,
+.confirm-unsaved-edits-pre-split .commits-with-unsaved-changes .selected-commit-background,
+.confirm-unsaved-edits-pre-split
+  .commits-with-unsaved-changes
+  .selected-commit
+  .commit-details:before {
+  display: none;
 }
 
 .confirm-unsaved-edits-pre-split .commits-with-unsaved-changes .field-name {

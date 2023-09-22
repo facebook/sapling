@@ -9,6 +9,7 @@ import type {FieldsBeingEdited} from '../../CommitInfoView/types';
 import type {CommitInfo} from '../../types';
 import type {MutableRefObject} from 'react';
 
+import {Commit} from '../../Commit';
 import {
   commitFieldsBeingEdited,
   editedCommitMessages,
@@ -18,6 +19,7 @@ import {commitMessageFieldsSchema} from '../../CommitInfoView/CommitMessageField
 import {FlexSpacer} from '../../ComponentUtils';
 import {Tooltip} from '../../Tooltip';
 import {T, t} from '../../i18n';
+import {CommitPreview} from '../../previews';
 import {useModal} from '../../useModal';
 import {VSCodeButton, VSCodeDivider} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilCallback, useRecoilValue} from 'recoil';
@@ -102,15 +104,12 @@ function PreSplitUnsavedEditsConfirmationModal({
         </div>
         <div className="commits-with-unsaved-changes">
           {commitsWithUnsavedEdits.map(([commit, fields]) => (
-            <div className="commit-row">
-              <span key={`${commit.hash}`} className="commit">
-                <span className="unsaved-message-indicator">
-                  <Tooltip title={t('This commit has unsaved changes to its message')}>
-                    <Icon icon="circle-large-filled" />
-                  </Tooltip>
-                </span>
-                {commit.title}
-              </span>
+            <div className="commit-row" key={commit.hash}>
+              <Commit
+                commit={commit}
+                hasChildren={false}
+                previewType={CommitPreview.NON_ACTIONABLE_COMMIT}
+              />
               <span key={`${commit.hash}-fields`} className="byline">
                 <T
                   replace={{
