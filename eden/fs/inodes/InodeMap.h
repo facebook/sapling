@@ -20,7 +20,6 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/takeover/gen-cpp2/takeover_types.h"
-#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -36,6 +35,11 @@ class InodeBase;
 class TreeInode;
 class ParentInodeInfo;
 class ReloadableConfig;
+
+class EdenStats;
+template <typename T>
+class RefPtr;
+using EdenStatsPtr = RefPtr<EdenStats>;
 
 class InodeMapLock;
 

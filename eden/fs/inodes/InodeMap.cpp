@@ -20,6 +20,7 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/SystemError.h"
