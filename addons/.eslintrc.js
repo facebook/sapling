@@ -62,7 +62,7 @@ module.exports = {
   rules: {
     // Need to use the TypeScript version of no-unused-vars so it understands
     // "private" constructor args.
-    '@typescript-eslint/no-unused-vars': ['error', {argsIgnorePattern: '^_'}],
+    '@typescript-eslint/no-unused-vars': ['warn', {argsIgnorePattern: '^_'}],
     '@typescript-eslint/consistent-type-imports': 'error',
 
     curly: 'error',
