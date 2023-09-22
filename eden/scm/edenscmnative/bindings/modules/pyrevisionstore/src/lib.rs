@@ -29,7 +29,6 @@ use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::Str;
 use io::IO;
 use parking_lot::RwLock;
 use pyconfigloader::config;
@@ -198,7 +197,7 @@ fn repair(
     local_path: Option<&PyPath>,
     suffix: Option<&PyPath>,
     config: config,
-) -> PyResult<Str> {
+) -> PyResult<String> {
     let config = config.get_cfg(py);
     py.allow_threads::<Result<String>, _>(|| {
         let mut message = ContentStore::repair(
@@ -219,7 +218,6 @@ fn repair(
         Ok(message)
     })
     .map_pyerr(py)
-    .map(Into::into)
 }
 
 py_class!(class datapack |py| {

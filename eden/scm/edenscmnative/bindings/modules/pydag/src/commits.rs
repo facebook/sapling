@@ -17,7 +17,6 @@ use cpython_ext::PyCell;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::Str;
 use dag::ops::DagExportCloneData;
 use dag::ops::DagImportCloneData;
 use dag::ops::DagPersistent;
@@ -168,15 +167,15 @@ py_class!(pub class commits |py| {
     }
 
     /// Name of the backend used for DAG algorithms.
-    def algorithmbackend(&self) -> PyResult<Str> {
+    def algorithmbackend(&self) -> PyResult<String> {
         let inner = self.inner(py).read();
-        Ok(inner.algorithm_backend().to_string().into())
+        Ok(inner.algorithm_backend().to_string())
     }
 
     /// Describe the backend.
-    def describebackend(&self) -> PyResult<Str> {
+    def describebackend(&self) -> PyResult<String> {
         let inner = self.inner(py).read();
-        Ok(inner.describe_backend().into())
+        Ok(inner.describe_backend())
     }
 
     /// Explain internal data.

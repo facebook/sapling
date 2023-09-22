@@ -19,7 +19,6 @@ mod path;
 mod pybuf;
 mod pyset;
 pub mod ser;
-mod str;
 
 #[cfg(test)]
 mod tests;
@@ -49,4 +48,3 @@ pub use crate::path::PyPathBuf;
 pub use crate::pybuf::SimplePyBuf;
 pub use crate::pyset::pyset_add;
 pub use crate::pyset::pyset_new;
-pub use crate::str::Str;

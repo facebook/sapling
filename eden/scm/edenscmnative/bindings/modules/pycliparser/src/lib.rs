@@ -12,7 +12,6 @@ use cliparser::alias::expand_aliases;
 use cliparser::parser::*;
 use configmodel::Config;
 use cpython::*;
-use cpython_ext::Str;
 use pyconfigloader::config;
 
 mod exceptions {
@@ -117,7 +116,7 @@ fn parse_command(
     py: Python,
     args: Vec<String>,
     definitions: Vec<FlagDef>,
-) -> PyResult<(Vec<Str>, HashMap<Str, Value>)> {
+) -> PyResult<(Vec<String>, HashMap<String, Value>)> {
     let flags: Vec<Flag> = definitions.into_iter().map(Into::into).collect();
 
     let result = ParseOptions::new()
@@ -127,19 +126,20 @@ fn parse_command(
         .parse_args(&args)
         .map_err(|e| map_to_python_err(py, e))?;
 
-    let arguments: Vec<Str> = result.args().clone().into_iter().map(Str::from).collect();
-
-    let opts = result.opts().clone();
-
-    let options: HashMap<Str, Value> = opts
-        .into_iter()
-        .map(|(k, v)| (k.replace('-', "_").into(), v))
+    let options: HashMap<String, Value> = result
+        .opts()
+        .iter()
+        .map(|(k, v)| (k.replace('-', "_"), v.clone()))
         .collect();
 
-    Ok((arguments, options))
+    Ok((result.args, options))
 }
 
-fn expand_args(py: Python, config: config, args: Vec<String>) -> PyResult<(Vec<Str>, Vec<Str>)> {
+fn expand_args(
+    py: Python,
+    config: config,
+    args: Vec<String>,
+) -> PyResult<(Vec<String>, Vec<String>)> {
     let cfg = &config.get_cfg(py);
 
     let lookup = move |name: &str| {
@@ -162,9 +162,6 @@ fn expand_args(py: Python, config: config, args: Vec<String>) -> PyResult<(Vec<S
 
     let (expanded_args, replaced_aliases) =
         expand_aliases(lookup, &args).map_err(|e| map_to_python_err(py, e))?;
-
-    let expanded_args: Vec<Str> = expanded_args.into_iter().map(Str::from).collect();
-    let replaced_aliases: Vec<Str> = replaced_aliases.into_iter().map(Str::from).collect();
 
     Ok((expanded_args, replaced_aliases))
 }
@@ -202,7 +199,7 @@ fn parse(
     py: Python,
     args: Vec<String>,
     keep_sep: bool,
-) -> PyResult<(Vec<Str>, HashMap<Str, PyObject>, usize)> {
+) -> PyResult<(Vec<String>, HashMap<String, PyObject>, usize)> {
     let result = ParseOptions::new()
         .flag_alias("repo", "repository")
         .flags(HgGlobalOpts::flags())
@@ -210,11 +207,11 @@ fn parse(
         .parse_args(&args)
         .map_err(|e| map_to_python_err(py, e))?;
 
-    let arguments = result.args().iter().cloned().map(Str::from).collect();
+    let arguments = result.args().to_vec();
     let opts = result
         .opts()
         .iter()
-        .map(|(k, v)| (Str::from(k.clone()), v.to_py_object(py).into_object()))
+        .map(|(k, v)| (k.clone(), v.to_py_object(py).into_object()))
         .collect();
 
     Ok((arguments, opts, result.first_arg_index()))

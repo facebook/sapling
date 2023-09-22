@@ -25,7 +25,6 @@ use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::Str;
 use crossbeam::channel::bounded;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
@@ -262,10 +261,10 @@ py_class!(class writerworker |py| {
     }
 
     /// Wait for all the pending `write` calls to complete.
-    def wait(&self) -> PyResult<(usize, Vec<(PyPathBuf, Str)>)> {
+    def wait(&self) -> PyResult<(usize, Vec<(PyPathBuf, String)>)> {
         let inner = self.inner(py).borrow_mut().take().unwrap();
 
-        py.allow_threads(move || -> Result<(usize, Vec<(PyPathBuf, Str)>)> {
+        py.allow_threads(move || -> Result<(usize, Vec<(PyPathBuf, String)>)> {
             let mut written = 0;
             let mut failures = Vec::new();
 
@@ -275,9 +274,9 @@ py_class!(class writerworker |py| {
                     let path = PyPathBuf::from(path);
 
                     let flags = match flag {
-                        UpdateFlag::Regular => Str::from("".to_string()),
-                        UpdateFlag::Symlink => Str::from("l".to_string()),
-                        UpdateFlag::Executable => Str::from("x".to_string()),
+                        UpdateFlag::Regular => "".to_string(),
+                        UpdateFlag::Symlink => "l".to_string(),
+                        UpdateFlag::Executable => "x".to_string(),
                     };
 
                     (path, flags)

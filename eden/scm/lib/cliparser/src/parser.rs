@@ -12,10 +12,6 @@ use std::collections::HashMap;
 use ::serde::Serialize;
 #[cfg(feature = "python")]
 use cpython::*;
-#[cfg(feature = "python")]
-use cpython_ext::Bytes;
-#[cfg(feature = "python")]
-use cpython_ext::Str;
 use indexmap::set::IndexSet;
 use thiserror::Error;
 
@@ -102,18 +98,9 @@ impl ToPyObject for Value {
     fn to_py_object(&self, py: Python) -> Self::ObjectType {
         match self {
             Value::Bool(b) => b.to_py_object(py).into_object(),
-            Value::Str(s) => s
-                .as_ref()
-                .map(|s| Str::from(s.to_string()))
-                .to_py_object(py),
+            Value::Str(s) => s.as_ref().map(|s| s.to_string()).to_py_object(py),
             Value::Int(i) => i.to_py_object(py).into_object(),
-            Value::List(vec) => {
-                let collection: Vec<Str> = vec
-                    .iter()
-                    .map(|s: &String| Str::from(Bytes::from(s.to_string())))
-                    .collect();
-                collection.to_py_object(py).into_object()
-            }
+            Value::List(vec) => vec.clone().to_py_object(py).into_object(),
         }
     }
 }
@@ -329,16 +316,16 @@ impl ToPyObject for Flag {
     type ObjectType = PyObject;
 
     fn to_py_object(&self, py: Python) -> Self::ObjectType {
-        let short_name = Str::from(self.short_name.map(|s| s.to_string()).unwrap_or_default());
-        let long_name = Str::from(self.long_name.to_string());
-        let description = Str::from(self.description.to_string());
+        let short_name = self.short_name.map(|s| s.to_string()).unwrap_or_default();
+        let long_name = self.long_name.to_string();
+        let description = self.description.to_string();
         if let Some(flag_type) = &self.flag_type {
             (
                 short_name,
                 long_name,
                 &self.default_value,
                 description,
-                Str::from(flag_type.to_string()),
+                flag_type.to_string(),
             )
                 .to_py_object(py)
         } else {

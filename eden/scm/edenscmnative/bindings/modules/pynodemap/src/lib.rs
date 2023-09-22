@@ -17,7 +17,6 @@ use cpython_ext::Bytes;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::Str;
 use types::node::Node;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -89,8 +88,8 @@ py_class!(class nodemap |py| {
     }
 
     @staticmethod
-    def repair(path: &str) -> PyResult<Str> {
-        py.allow_threads(|| NodeMap::repair(path)).map_pyerr(py).map(Into::into)
+    def repair(path: &str) -> PyResult<String> {
+        py.allow_threads(|| NodeMap::repair(path)).map_pyerr(py)
     }
 });
 
@@ -130,7 +129,7 @@ py_class!(class nodeset |py| {
     }
 
     @staticmethod
-    def repair(path: &str) -> PyResult<Str> {
-        NodeSet::repair(path).map_pyerr(py).map(Into::into)
+    def repair(path: &str) -> PyResult<String> {
+        NodeSet::repair(path).map_pyerr(py)
     }
 });

@@ -21,9 +21,7 @@ use cpython::*;
 use cpython_ext::convert::Serde;
 use cpython_ext::format_py_error;
 use cpython_ext::wrap_pyio;
-use cpython_ext::Bytes;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::Str;
 use cpython_ext::WrappedIO;
 use nodeipc::NodeIpc;
 use tracing::debug_span;
@@ -187,7 +185,6 @@ impl HgPython {
                 None => fout.clone_ref(py),
                 Some(error) => write_to_py_object(py, error),
             });
-            let args: Vec<Str> = args.into_iter().map(Str::from).collect();
             let config =
                 pyconfigloader::config::create_instance(py, RefCell::new(config.clone())).unwrap();
             (args, fin, fout, ferr, config).to_py_object(py)
@@ -392,17 +389,14 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
         let table = commands::table();
         let py_table: PyDict = PyDict::new(py);
         for def in table.values() {
-            let doc = Str::from(Bytes::from(def.doc().to_string()));
+            let doc = def.doc().to_string();
 
             // Key entry by primary command name which Python knows to
             // look for. This avoids having to make the alias list
             // match exactly between Python and Rust.
             let primary_name = def.aliases().split('|').next().unwrap();
 
-            if let Some(synopsis) = def
-                .synopsis()
-                .map(|s| Str::from(Bytes::from(s.to_string())))
-            {
+            if let Some(synopsis) = def.synopsis().map(|s| s.to_string()) {
                 py_table.set_item(py, primary_name, (doc, def.flags(), synopsis))?;
             } else {
                 py_table.set_item(py, primary_name, (doc, def.flags()))?;

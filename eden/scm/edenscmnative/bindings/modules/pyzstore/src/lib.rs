@@ -14,7 +14,6 @@ use ::zstore::Repair;
 use ::zstore::Zstore;
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::Str;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "zstore"].join(".");
@@ -71,7 +70,7 @@ py_class!(class zstore |py| {
     }
 
     @staticmethod
-    def repair(path: &str) -> PyResult<Str> {
-        py.allow_threads(|| Zstore::repair(path)).map_pyerr(py).map(Into::into)
+    def repair(path: &str) -> PyResult<String> {
+        py.allow_threads(|| Zstore::repair(path)).map_pyerr(py)
     }
 });

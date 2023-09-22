@@ -81,11 +81,11 @@ py_class!(class walker |py| {
         }
     }
 
-    def errors(&self) -> PyResult<Vec<(cpython_ext::Str, cpython_ext::Str)>> {
+    def errors(&self) -> PyResult<Vec<(String, String)>> {
         Ok(self._errors(py).borrow().iter().map(|e| match e.downcast_ref::<WalkError>() {
-            Some(e) => (e.filename().into(), e.message().into()),
-            None => ("unknown".to_string().into(), e.to_string().into()),
-        }).collect::<Vec<(cpython_ext::Str, cpython_ext::Str)>>())
+            Some(e) => (e.filename(), e.message()),
+            None => ("unknown".to_string(), e.to_string()),
+        }).collect::<Vec<(String, String)>>())
     }
 
 });

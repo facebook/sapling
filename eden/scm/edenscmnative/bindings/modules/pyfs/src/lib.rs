@@ -8,7 +8,6 @@
 use cpython::*;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::Str;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "fs"].join(".");
@@ -29,7 +28,7 @@ fn canonicalize(py: Python, path: &str) -> PyResult<String> {
     }
 }
 
-fn fstype(py: Python, path: &PyPath) -> PyResult<Str> {
+fn fstype(py: Python, path: &PyPath) -> PyResult<String> {
     let fstype = fsinfo::fstype(path).map_pyerr(py)?;
-    Ok(fstype.to_string().into())
+    Ok(fstype.to_string())
 }

@@ -10,7 +10,6 @@ use std::cell::RefCell;
 use cpython::*;
 use cpython_ext::AnyhowResultExt;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::Str;
 use futures::stream::BoxStream;
 use futures::stream::TryStreamExt;
 use futures::Stream;
@@ -148,8 +147,8 @@ mod pytypes {
             }
         }
 
-        def typename(&self) -> PyResult<Str> {
-            Ok(self.type_name(py).clone().into())
+        def typename(&self) -> PyResult<String> {
+            Ok(self.type_name(py).clone())
         }
     });
 

@@ -13,7 +13,6 @@ use cpython::*;
 use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::Str;
 use dag::DagAlgorithm;
 use dag::IdSegment;
 use dag::Set;
@@ -166,7 +165,7 @@ py_class!(pub class dagalgo |py| {
     }
 
     /// Render the graph into an ASCII string.
-    def render(&self, getmessage: Option<PyObject> = None) -> PyResult<Str> {
+    def render(&self, getmessage: Option<PyObject> = None) -> PyResult<String> {
         let get_message = move |vertex: &Vertex| -> Option<String> {
             if let Some(getmessage) = &getmessage {
                 if getmessage.is_callable(py) {
@@ -180,7 +179,7 @@ py_class!(pub class dagalgo |py| {
             None
         };
         let dag = self.dag(py);
-        Ok(dag::render::render_namedag(dag.as_ref(), get_message).map_pyerr(py)?.into())
+        dag::render::render_namedag(dag.as_ref(), get_message).map_pyerr(py)
     }
 
     /// segments(nameset, maxlevel=255) -> [segment]

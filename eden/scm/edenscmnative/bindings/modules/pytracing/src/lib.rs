@@ -18,7 +18,6 @@ use cpython::*;
 use cpython_ext::Bytes;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::Str;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use python3_sys as ffi;
@@ -161,10 +160,10 @@ py_class!(class tracingdata |py| {
     ///
     /// `minduration` specifies the minimal duration threshold in micro seconds.
     /// The default value is 10000 (10 milliseconds).
-    def ascii(&self, minduration: u64 = 10000) -> PyResult<Str> {
+    def ascii(&self, minduration: u64 = 10000) -> PyResult<String> {
         let mut opts = tracing_collector::model::AsciiOptions::default();
         opts.min_duration_micros_to_hide = minduration;
-        Ok(self.data(py).lock().ascii(&opts).into())
+        Ok(self.data(py).lock().ascii(&opts))
     }
 
     /// Get the TreeSpans for all threads.

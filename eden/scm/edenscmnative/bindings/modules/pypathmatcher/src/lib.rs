@@ -19,7 +19,6 @@ use cpython_ext::ExtractInner;
 use cpython_ext::ExtractInnerRef;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
-use cpython_ext::Str;
 use pathmatcher::build_patterns;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::DifferenceMatcher;
@@ -68,8 +67,8 @@ py_class!(class gitignorematcher |py| {
         Ok(self.matcher(py).match_relative(path, is_dir))
     }
 
-    def explain(&self, path: &PyPath, is_dir: bool) -> PyResult<Str> {
-        Ok(self.matcher(py).explain(path, is_dir).into())
+    def explain(&self, path: &PyPath, is_dir: bool) -> PyResult<String> {
+        Ok(self.matcher(py).explain(path, is_dir))
     }
 });
 
@@ -270,19 +269,16 @@ impl ExtractInnerRef for dynmatcher {
     }
 }
 
-fn normalize_glob(_py: Python, path: &str) -> PyResult<Str> {
-    Ok(pathmatcher::normalize_glob(path).into())
+fn normalize_glob(_py: Python, path: &str) -> PyResult<String> {
+    Ok(pathmatcher::normalize_glob(path))
 }
 
-fn plain_to_glob(_py: Python, path: &str) -> PyResult<Str> {
-    Ok(pathmatcher::plain_to_glob(path).into())
+fn plain_to_glob(_py: Python, path: &str) -> PyResult<String> {
+    Ok(pathmatcher::plain_to_glob(path))
 }
 
-fn expand_curly_brackets(_py: Python, pattern: &str) -> PyResult<Vec<Str>> {
-    Ok(pathmatcher::expand_curly_brackets(pattern)
-        .into_iter()
-        .map(|s| s.into())
-        .collect())
+fn expand_curly_brackets(_py: Python, pattern: &str) -> PyResult<Vec<String>> {
+    Ok(pathmatcher::expand_curly_brackets(pattern))
 }
 
 pub struct PythonMatcher<'a> {

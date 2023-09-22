@@ -101,16 +101,10 @@ fn register_error_handlers() {
                     _ => {}
                 },
                 dag::Error::VertexNotFound(_) | dag::Error::IdNotFound(_) => {
-                    return Some(PyErr::new::<CommitLookupError, _>(
-                        py,
-                        cpython_ext::Str::from(e.to_string()),
-                    ));
+                    return Some(PyErr::new::<CommitLookupError, _>(py, e.to_string()));
                 }
                 dag::Error::NeedSlowPath(_) => {
-                    return Some(PyErr::new::<NeedSlowPathError, _>(
-                        py,
-                        cpython_ext::Str::from(e.to_string()),
-                    ));
+                    return Some(PyErr::new::<NeedSlowPathError, _>(py, e.to_string()));
                 }
                 _ => {}
             }
@@ -123,7 +117,7 @@ fn register_error_handlers() {
                 }) => {
                     return Some(PyErr::new::<LockContendedError, _>(
                         py,
-                        cpython_ext::Str::from(contents.clone()),
+                        String::from_utf8_lossy(contents),
                     ));
                 }
                 repolock::LockError::Io(e) => {
@@ -134,103 +128,54 @@ fn register_error_handlers() {
         }
 
         if e.is::<indexedlog::Error>() {
-            Some(PyErr::new::<IndexedLogError, _>(
-                py,
-                cpython_ext::Str::from(format!("{:?}", e)),
-            ))
+            Some(PyErr::new::<IndexedLogError, _>(py, format!("{:?}", e)))
         } else if e.is::<metalog::Error>() {
-            Some(PyErr::new::<MetaLogError, _>(
-                py,
-                cpython_ext::Str::from(format!("{:?}", e)),
-            ))
+            Some(PyErr::new::<MetaLogError, _>(py, format!("{:?}", e)))
         } else if e.is::<configmodel::Error>() {
-            Some(PyErr::new::<ConfigError, _>(
-                py,
-                cpython_ext::Str::from(format!("{:?}", e)),
-            ))
+            Some(PyErr::new::<ConfigError, _>(py, format!("{:?}", e)))
         } else if matches!(
             e.downcast_ref::<dag::Error>(),
             Some(dag::Error::NeedSlowPath(_))
         ) {
-            Some(PyErr::new::<NeedSlowPathError, _>(
-                py,
-                cpython_ext::Str::from(e.to_string()),
-            ))
+            Some(PyErr::new::<NeedSlowPathError, _>(py, e.to_string()))
         } else if matches!(
             e.downcast_ref::<dag::Error>(),
             Some(dag::Error::VertexNotFound(_)) | Some(dag::Error::IdNotFound(_))
         ) {
-            Some(PyErr::new::<CommitLookupError, _>(
-                py,
-                cpython_ext::Str::from(e.to_string()),
-            ))
+            Some(PyErr::new::<CommitLookupError, _>(py, e.to_string()))
         } else if e.is::<repo::errors::InitError>() {
-            Some(PyErr::new::<RepoInitError, _>(
-                py,
-                cpython_ext::Str::from(e.to_string()),
-            ))
+            Some(PyErr::new::<RepoInitError, _>(py, e.to_string()))
         } else if e.is::<repo::errors::InvalidWorkingCopy>() {
-            Some(PyErr::new::<WorkingCopyError, _>(
-                py,
-                cpython_ext::Str::from(format!("{:#}", e)),
-            ))
+            Some(PyErr::new::<WorkingCopyError, _>(py, format!("{:#}", e)))
         } else if e.is::<cpython_ext::Error>() {
-            Some(PyErr::new::<NonUTF8Path, _>(
-                py,
-                cpython_ext::Str::from(format!("{:?}", e)),
-            ))
+            Some(PyErr::new::<NonUTF8Path, _>(py, format!("{:?}", e)))
         } else if e.is::<types::path::ParseError>() {
-            Some(PyErr::new::<InvalidRepoPath, _>(
-                py,
-                cpython_ext::Str::from(format!("{:?}", e)),
-            ))
+            Some(PyErr::new::<InvalidRepoPath, _>(py, format!("{:?}", e)))
         } else if let Some(e) = e.downcast_ref::<edenapi::EdenApiError>() {
             match e {
                 edenapi::EdenApiError::Http(http_client::HttpClientError::Tls(
                     http_client::TlsError { source: e, .. },
-                )) => Some(PyErr::new::<TlsError, _>(
-                    py,
-                    cpython_ext::Str::from(e.to_string()),
-                )),
-                _ => Some(PyErr::new::<HttpError, _>(
-                    py,
-                    cpython_ext::Str::from(e.to_string()),
-                )),
+                )) => Some(PyErr::new::<TlsError, _>(py, e.to_string())),
+                _ => Some(PyErr::new::<HttpError, _>(py, e.to_string())),
             }
         } else if e.is::<auth::MissingCerts>() {
-            Some(PyErr::new::<CertificateError, _>(
-                py,
-                cpython_ext::Str::from(format!("{}", e)),
-            ))
+            Some(PyErr::new::<CertificateError, _>(py, format!("{}", e)))
         } else if e.is::<auth::X509Error>() {
-            Some(PyErr::new::<CertificateError, _>(
-                py,
-                cpython_ext::Str::from(format!("{}", e)),
-            ))
+            Some(PyErr::new::<CertificateError, _>(py, format!("{}", e)))
         } else if let Some(e) = e.downcast_ref::<revisionstore::scmstore::KeyFetchError>() {
             use revisionstore::scmstore::KeyFetchError::*;
             if let Other(ref e) = e {
                 specific_error_handler(py, e)
             } else {
-                Some(PyErr::new::<FetchError, _>(
-                    py,
-                    cpython_ext::Str::from(format!("{}", e)),
-                ))
+                Some(PyErr::new::<FetchError, _>(py, format!("{}", e)))
             }
         } else if let Some(e) = e.downcast_ref::<types::errors::NetworkError>() {
             // If we don't handle inner error specifically, default to
             // HttpError which will trigger the network doctor.
-            specific_error_handler(py, &e.0).or_else(|| {
-                Some(PyErr::new::<HttpError, _>(
-                    py,
-                    cpython_ext::Str::from(e.0.to_string()),
-                ))
-            })
+            specific_error_handler(py, &e.0)
+                .or_else(|| Some(PyErr::new::<HttpError, _>(py, e.0.to_string())))
         } else if e.is::<pathmatcher::Error>() {
-            Some(PyErr::new::<PathMatcherError, _>(
-                py,
-                cpython_ext::Str::from(format!("{:?}", e)),
-            ))
+            Some(PyErr::new::<PathMatcherError, _>(py, format!("{:?}", e)))
         } else if let Some(e) = e.downcast_ref::<cpython_ext::PyErr>() {
             Some(e.clone(py).into())
         } else {

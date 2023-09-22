@@ -22,7 +22,6 @@ use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::Str;
 use parking_lot::RwLock;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -142,8 +141,8 @@ py_class!(pub class metalog |py| {
     }
 
     /// Why the change was made.
-    def message(&self) -> PyResult<Str> {
-        Ok(Str::from(self.log(py).read().message().to_string()))
+    def message(&self) -> PyResult<String> {
+        Ok(self.log(py).read().message().to_string())
     }
 
     /// When the change was made.
@@ -176,8 +175,8 @@ py_class!(pub class metalog |py| {
     }
 
     @staticmethod
-    def repair(path: &str) -> PyResult<Str> {
-        py.allow_threads(|| MetaLog::repair(path)).map_pyerr(py).map(Into::into)
+    def repair(path: &str) -> PyResult<String> {
+        py.allow_threads(|| MetaLog::repair(path)).map_pyerr(py)
     }
 });
 

@@ -21,7 +21,6 @@ use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::Str;
 use pydag::dagalgo::dagalgo;
 use pydag::Names;
 use thiserror::Error;
@@ -161,12 +160,12 @@ py_class!(class mutationentry |py| {
         Ok(self.entry(py).split.iter().map(|s| PyBytes::new(py, s.as_ref())).collect())
     }
 
-    def op(&self) -> PyResult<Str> {
-        Ok(self.entry(py).op.clone().into())
+    def op(&self) -> PyResult<String> {
+        Ok(self.entry(py).op.clone())
     }
 
-    def user(&self) -> PyResult<Str> {
-        Ok(self.entry(py).user.clone().into())
+    def user(&self) -> PyResult<String> {
+        Ok(self.entry(py).user.clone())
     }
 
     def time(&self) -> PyResult<i64> {
@@ -283,7 +282,7 @@ py_class!(class mutationstore |py| {
     }
 
     @staticmethod
-    def repair(path: &str) -> PyResult<Str> {
-        py.allow_threads(|| MutationStore::repair(path)).map_pyerr(py).map(Into::into)
+    def repair(path: &str) -> PyResult<String> {
+        py.allow_threads(|| MutationStore::repair(path)).map_pyerr(py)
     }
 });

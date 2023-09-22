@@ -12,7 +12,6 @@ use std::ops::Range;
 
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::Str;
 use regex::bytes::Regex as BinaryRegex;
 use regex::Regex;
 
@@ -38,8 +37,8 @@ fn compile(py: Python, s: PyObject) -> PyResult<PyObject> {
     }
 }
 
-fn escape(_py: Python, s: &str) -> PyResult<Str> {
-    Ok(regex::escape(s).into())
+fn escape(_py: Python, s: &str) -> PyResult<String> {
+    Ok(regex::escape(s))
 }
 
 py_class!(class StringPattern |py| {
@@ -75,20 +74,20 @@ py_class!(class StringMatchObject |py| {
     data text: PyString;
     data dict: HashMap<String, Range<usize>>;
 
-    def group(&self, i: usize = 0) -> PyResult<Option<Str>> {
+    def group(&self, i: usize = 0) -> PyResult<Option<String>> {
         match self.get_range(py, i)? {
             None => Ok(None),
             Some(range) => Ok(Some(self.get_slice(py, range)?)),
         }
     }
 
-    def groups(&self) -> PyResult<Vec<Option<Str>>> {
+    def groups(&self) -> PyResult<Vec<Option<String>>> {
         self.ranges(py).iter().skip(1).cloned().map(|range| {
             range.map(|r| self.get_slice(py, r)).transpose()
         }).collect::<PyResult<_>>()
     }
 
-    def groupdict(&self) -> PyResult<HashMap<Str, Str>> {
+    def groupdict(&self) -> PyResult<HashMap<String, String>> {
         let mut dict = HashMap::new();
         for (name, range) in self.dict(py).iter() {
             dict.insert(name.to_string().into(), self.get_slice(py, range.clone())?);
@@ -118,7 +117,7 @@ impl StringMatchObject {
         }
     }
 
-    fn get_slice(&self, py: Python, range: Range<usize>) -> PyResult<Str> {
+    fn get_slice(&self, py: Python, range: Range<usize>) -> PyResult<String> {
         let slice = self
             .text(py)
             .to_string(py)
@@ -131,7 +130,7 @@ impl StringMatchObject {
                 )
             })?
             .to_string();
-        Ok(slice.into())
+        Ok(slice)
     }
 
     fn new(

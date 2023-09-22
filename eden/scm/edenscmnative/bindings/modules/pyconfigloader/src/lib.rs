@@ -22,7 +22,6 @@ use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
-use cpython_ext::Str;
 
 mod impl_into;
 
@@ -58,7 +57,7 @@ py_class!(pub class config |py| {
         sections: Option<Vec<String>>,
         remap: Option<Vec<(String, String)>>,
         readonly_items: Option<Vec<(String, String)>>
-    ) -> PyResult<Vec<Str>> {
+    ) -> PyResult<Vec<String>> {
         let mut cfg = self.cfg(py).borrow_mut();
 
         let mut opts = Options::new().source(source).process_hgplain();
@@ -77,7 +76,7 @@ py_class!(pub class config |py| {
         Ok(errors_to_str_vec(errors))
     }
 
-    def parse(&self, content: String, source: String) -> PyResult<Vec<Str>> {
+    def parse(&self, content: String, source: String) -> PyResult<Vec<String>> {
         let mut cfg = self.cfg(py).borrow_mut();
         let opts = source.into();
         let errors = cfg.parse(content, &opts);
@@ -138,9 +137,9 @@ py_class!(pub class config |py| {
         Ok(cfg.keys(section).iter().map(|s| PyUnicode::new(py, s)).collect())
     }
 
-    def tostring(&self) -> PyResult<Str> {
+    def tostring(&self) -> PyResult<String> {
         let cfg = self.cfg(py).borrow();
-        Ok(cfg.to_string().into())
+        Ok(cfg.to_string())
     }
 
     @staticmethod
@@ -188,9 +187,6 @@ fn parselist(py: Python, value: String) -> PyResult<Vec<PyUnicode>> {
         .collect())
 }
 
-fn errors_to_str_vec(errors: Vec<configloader::error::Error>) -> Vec<Str> {
-    errors
-        .into_iter()
-        .map(|err| Str::from(format!("{}", err)))
-        .collect()
+fn errors_to_str_vec(errors: Vec<configloader::error::Error>) -> Vec<String> {
+    errors.into_iter().map(|err| format!("{}", err)).collect()
 }
