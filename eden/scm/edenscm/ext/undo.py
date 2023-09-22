@@ -1023,7 +1023,7 @@ def redo(ui, repo, *args, **opts):
             # don't want to redo to an interrupted state
             reverseindex += 1
         elif commandlist[0] == "undo":
-            _args, undoopts = cliparser.parsecommand(
+            _args, undoopts, _specifiedopts = cliparser.parsecommand(
                 commandlist,
                 cmdtable["undo"][1] + commands.globalopts,
             )

@@ -116,7 +116,7 @@ fn parse_command(
     py: Python,
     args: Vec<String>,
     definitions: Vec<FlagDef>,
-) -> PyResult<(Vec<String>, HashMap<String, Value>)> {
+) -> PyResult<(Vec<String>, HashMap<String, Value>, Vec<String>)> {
     let flags: Vec<Flag> = definitions.into_iter().map(Into::into).collect();
 
     let result = ParseOptions::new()
@@ -132,7 +132,9 @@ fn parse_command(
         .map(|(k, v)| (k.replace('-', "_"), v.clone()))
         .collect();
 
-    Ok((result.args, options))
+    let specified = result.specified_opts().to_vec();
+
+    Ok((result.args, options, specified))
 }
 
 fn expand_args(

@@ -79,7 +79,7 @@ def parseoptions(ui, cmdoptions, args):
     args = list(args)
     while True:
         try:
-            args, opts = cliparser.parsecommand(list(args), cmdoptions)
+            args, opts, _specifiedopts = cliparser.parsecommand(list(args), cmdoptions)
             break
         except (
             cliparser.OptionNotRecognized,

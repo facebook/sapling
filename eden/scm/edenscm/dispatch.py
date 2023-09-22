@@ -44,7 +44,6 @@ from . import (
     registrar,
     scmutil,
     ui as uimod,
-    uiconfig,
     util,
 )
 from .i18n import _, _x
@@ -797,7 +796,6 @@ def _parse(ui, args):
 
     # -cm foo: --config m foo
     fullargs = list(args)
-    commandnames = [command for command in commands.table]
 
     args, options, replace = cliparser.parse(args, True)
     if args:
@@ -836,7 +834,15 @@ def _parse(ui, args):
     c += commands.globalopts
 
     try:
-        args, cmdoptions = cliparser.parsecommand(fullargs, c)
+        args, cmdoptions, specifiedopts = cliparser.parsecommand(fullargs, c)
+
+        ui.log(
+            "command_info",
+            positional_args=args,
+            option_names=specifiedopts,
+            option_values=[cmdoptions.get(o) for o in specifiedopts],
+        )
+
         args = args[level:]
     except (
         cliparser.OptionNotRecognized,
