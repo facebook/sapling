@@ -1147,10 +1147,6 @@ impl LfsRemoteInner {
                     )
                     .http_version(http_options.http_version);
 
-                if let Some(ref correlator) = http_options.correlator {
-                    req.set_header("X-Client-Correlator", correlator.clone());
-                }
-
                 if http_options.accept_zstd {
                     req.set_accept_encoding([Encoding::Zstd]);
                 }

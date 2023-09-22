@@ -11,8 +11,6 @@ use std::fmt::Debug;
 use std::fs::create_dir_all;
 use std::future::ready;
 use std::num::NonZeroU64;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -228,16 +226,6 @@ impl Client {
 
         for (k, v) in &config.headers {
             req.set_header(k, v);
-        }
-
-        if let Some(ref correlator) = config.correlator {
-            // Also send correlator to telemetry. Usually it's just the edenapi
-            // DEFAULT_CORRELATOR so we just send it once.
-            static LOGGED: AtomicBool = AtomicBool::new(false);
-            if !LOGGED.fetch_or(true, Ordering::AcqRel) {
-                tracing::debug!(target: "clienttelemetry", client_correlator=config.correlator);
-            }
-            req.set_header("X-Client-Correlator", correlator);
         }
 
         if let Some(timeout) = config.timeout {

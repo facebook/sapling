@@ -331,13 +331,6 @@ class _gitlfsremote:
 
     def _addextraheaders(self, req):
         headers = {}
-
-        try:
-            clienttelemetry = extensions.find("clienttelemetry")
-            headers["X-Client-Correlator"] = clienttelemetry.correlator(self.ui)
-        except KeyError:
-            pass
-
         for k, v in headers.items():
             req.add_header(k, v)
 
