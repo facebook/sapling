@@ -21,6 +21,7 @@ import {
   parseCommitMessageFields,
   findFieldsBeingEdited,
   emptyCommitMessageFields,
+  allFieldsBeingEdited,
 } from './CommitMessageFields';
 import {atomFamily, selectorFamily, atom, selector} from 'recoil';
 
@@ -149,22 +150,38 @@ export const __TEST__ = {
   },
 };
 
-export const hasUnsavedEditedCommitMessage = selectorFamily<boolean, Hash | 'head'>({
-  key: 'hasUnsavedEditedCommitMessage',
+export const unsavedFieldsBeingEdited = selectorFamily<
+  FieldsBeingEdited | undefined,
+  Hash | 'head'
+>({
+  key: 'unsavedFieldsBeingEdited',
   get:
     hash =>
     ({get}) => {
       const edited = get(editedCommitMessages(hash));
       if (edited.type === 'optimistic') {
-        return false;
+        return undefined;
       }
+      const schema = get(commitMessageFieldsSchema);
       if (hash === 'head') {
-        return Object.values(edited).some(Boolean);
+        return allFieldsBeingEdited(schema);
       }
       const [originalTitle, originalDescription] = get(latestCommitMessage(hash));
-      const schema = get(commitMessageFieldsSchema);
       const parsed = parseCommitMessageFields(schema, originalTitle, originalDescription);
-      return Object.values(findFieldsBeingEdited(schema, edited.fields, parsed)).some(Boolean);
+      return findFieldsBeingEdited(schema, edited.fields, parsed);
+    },
+});
+
+export const hasUnsavedEditedCommitMessage = selectorFamily<boolean, Hash | 'head'>({
+  key: 'hasUnsavedEditedCommitMessage',
+  get:
+    hash =>
+    ({get}) => {
+      const beingEdited = get(unsavedFieldsBeingEdited(hash));
+      if (beingEdited == null) {
+        return false;
+      }
+      return Object.values(beingEdited).some(Boolean);
     },
 });
 
