@@ -393,9 +393,11 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
   IORequest req{this};
   auto dirData = inodeCatalog_->loadOverlayDir(inodeNumber);
   if (!dirData.has_value()) {
+    stats_->increment(&OverlayStats::loadOverlayDirMiss);
     return result;
   }
   const auto& dir = dirData.value();
+  stats_->increment(&OverlayStats::loadOverlayDirHit);
 
   bool shouldRewriteOverlay = false;
 

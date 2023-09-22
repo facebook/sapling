@@ -397,6 +397,8 @@ struct OverlayStats : StatsGroup<OverlayStats> {
   Duration removeChild{"overlay.remove_child_us"};
   Duration removeChildren{"overlay.remove_children_us"};
   Duration renameChild{"overlay.rename_child_us"};
+  Counter loadOverlayDirHit{"overlay.load_overlay_dir_hit"};
+  Counter loadOverlayDirMiss{"overlay.load_overlay_dir_miss"};
 };
 
 struct InodeMapStats : StatsGroup<InodeMapStats> {
