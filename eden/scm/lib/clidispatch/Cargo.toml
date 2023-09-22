@@ -18,6 +18,7 @@ indexedlog = { version = "0.1.0", path = "../indexedlog", features = ["configura
 io = { version = "0.1.0", path = "../io" }
 network-doctor = { version = "0.1.0", path = "../doctor/network" }
 repo = { version = "0.1.0", path = "../repo" }
+sampling = { version = "0.1.0", path = "../sampling" }
 termlogger = { version = "0.1.0", path = "../io/term/logger" }
 thiserror = "1.0.43"
 thrift-types = { version = "0.1.0", path = "../thrift-types", optional = true }

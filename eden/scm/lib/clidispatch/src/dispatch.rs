@@ -416,6 +416,14 @@ impl Dispatcher {
             Err(e) => return (None, Err(e)),
         };
 
+        sampling::append_sample("command_info", "positional_args", parsed.args());
+
+        let opt_names = parsed.specified_opts();
+        sampling::append_sample("command_info", "option_names", opt_names);
+
+        let opt_values: Vec<_> = opt_names.iter().map(|n| parsed.opts().get(n)).collect();
+        sampling::append_sample("command_info", "option_values", &opt_values);
+
         let res = || -> Result<u8> {
             add_global_flag_derived_configs(&mut self.optional_repo, parsed.clone().try_into()?);
             tracing::debug!("command handled by a Rust function");

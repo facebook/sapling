@@ -38,6 +38,7 @@ use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
+#[cfg(feature = "eden")]
 use types::hgid::NULL_ID;
 use types::repo::StorageFormat;
 use types::HgId;

@@ -10,6 +10,7 @@ edition = "2021"
 cpython = { version = "0.7.1", optional = true, default-features = false }
 cpython_ext = { version = "0.1.0", path = "../cpython-ext", optional = true }
 indexmap = { version = "1.9.2", features = ["arbitrary", "rayon", "serde-1"] }
+serde = { version = "1.0.185", features = ["derive", "rc"] }
 shlex = "1.0"
 thiserror = "1.0.43"
 

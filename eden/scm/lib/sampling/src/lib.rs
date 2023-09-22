@@ -32,6 +32,19 @@ pub fn flush() {
     }
 }
 
+pub fn append_sample<V: ?Sized>(key: &str, name: &str, value: &V)
+where
+    V: Serialize,
+{
+    if let Some(Some(sc)) = CONFIG.get() {
+        let category = match sc.category(key) {
+            Some(v) => v,
+            None => return,
+        };
+        let _ = sc.append(category, &HashMap::from([(name, value)]));
+    }
+}
+
 #[derive(Debug)]
 pub struct SamplingConfig {
     keys: HashMap<String, String>,

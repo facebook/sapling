@@ -9,6 +9,7 @@ use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 
+use ::serde::Serialize;
 #[cfg(feature = "python")]
 use cpython::*;
 #[cfg(feature = "python")]
@@ -48,7 +49,8 @@ pub enum ParseError {
     MalformedAlias { name: String, value: String },
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize)]
+#[serde(untagged)]
 pub enum Value {
     Bool(Option<bool>),
     Str(Option<String>),

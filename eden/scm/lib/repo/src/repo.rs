@@ -11,7 +11,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-#[cfg(feature = "wdir")]
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
