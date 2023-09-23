@@ -11,6 +11,8 @@ import socket
 import ssl
 import time
 
+from bindings import clientinfo
+
 from edenscm import error, httpclient, httpconnection, json, perftrace, pycompat, util
 from edenscm.i18n import _
 
@@ -81,6 +83,9 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             "Accept-Encoding": "none, gzip",
             "Content-Encoding": "gzip",
             "User-Agent": self.user_agent,
+            "X-Client-Info": clientinfo.clientinfo(self.ui._uiconfig._rcfg)
+            .into_json()
+            .decode(),
         }
 
         u = util.url(self.url, parsequery=False, parsefragment=False)
