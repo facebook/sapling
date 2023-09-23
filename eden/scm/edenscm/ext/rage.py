@@ -123,9 +123,16 @@ def _tail(
     return "".join(reversed(logs))
 
 
+defaulttimeout = 60
+
 rageopts: List[Tuple[str, str, Optional[int], str]] = [
     ("p", "preview", None, _("print diagnostic information without uploading paste")),
-    ("t", "timeout", 20, _("maximum seconds spent on collecting one section")),
+    (
+        "t",
+        "timeout",
+        defaulttimeout,
+        _("maximum seconds spent on collecting one section"),
+    ),
 ]
 
 
@@ -457,7 +464,7 @@ def _makerage(ui, repo, **opts) -> str:
     msg = ""
 
     footnotes = []
-    timeout = opts.get("timeout") or 20
+    timeout = opts.get("timeout") or defaulttimeout
 
     class TimedOut(RuntimeError):
         pass
