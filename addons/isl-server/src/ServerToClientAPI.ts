@@ -563,24 +563,7 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fetchCommitMessageTemplate': {
-        repo
-          .runCommand(
-            ['debugcommitmessage', 'isl'],
-            'FetchCommitTemplateCommand',
-            undefined,
-            undefined,
-            undefined,
-            this.tracker,
-          )
-          .then(result => {
-            const template = result.stdout
-              .replace(repo.IGNORE_COMMIT_MESSAGE_LINES_REGEX, '')
-              .replace(/^<Replace this line with a title. Use 1 line only, 67 chars or less>/, '');
-            this.postMessage({type: 'fetchedCommitMessageTemplate', template});
-          })
-          .catch(err => {
-            logger?.error('Could not fetch commit message template', err);
-          });
+        this.handleFetchCommitMessageTemplate(repo);
         break;
       }
       case 'fetchShelvedChanges': {
@@ -734,6 +717,40 @@ export default class ServerToClientAPI {
     const listeners = this.listenersByType.get(data.type);
     if (listeners) {
       listeners.forEach(handle => handle(data));
+    }
+  }
+
+  private async handleFetchCommitMessageTemplate(repo: Repository) {
+    const {logger} = repo;
+    try {
+      const [result, customTemplate] = await Promise.all([
+        repo.runCommand(
+          ['debugcommitmessage', 'isl'],
+          'FetchCommitTemplateCommand',
+          undefined,
+          undefined,
+          undefined,
+          this.tracker,
+        ),
+        Internal.getCustomDefaultCommitTemplate?.(),
+      ]);
+
+      let template = result.stdout
+        .replace(repo.IGNORE_COMMIT_MESSAGE_LINES_REGEX, '')
+        .replace(/^<Replace this line with a title. Use 1 line only, 67 chars or less>/, '');
+
+      if (customTemplate?.trim() !== '') {
+        template = customTemplate as string;
+
+        this.tracker.track('UseCustomCommitMessageTemplate');
+      }
+
+      this.postMessage({
+        type: 'fetchedCommitMessageTemplate',
+        template,
+      });
+    } catch (err) {
+      logger?.error('Could not fetch commit message template', err);
     }
   }
 }

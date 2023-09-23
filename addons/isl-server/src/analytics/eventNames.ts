@@ -87,7 +87,8 @@ export type TrackEventName =
   | 'RunVSCodeCommand'
   | 'UnsubmittedStarRating'
   | 'BlameLoaded'
-  | 'VSCodeExtensionActivated';
+  | 'VSCodeExtensionActivated'
+  | 'UseCustomCommitMessageTemplate';
 
 export type TrackErrorName =
   | 'BlameError'
