@@ -651,14 +651,6 @@ class buildembedded(Command):
     def finalize_options(self):
         pass
 
-    def _process_isl(self, dirforisl):
-        """Copy edenscm-isl, if present, to the destination.
-
-        This is for external OSS build."""
-        isldir = pjoin(scriptdir, "build", distutils_dir_name("lib"), "edenscm-isl")
-        if os.path.isdir(isldir):
-            copy_to(isldir, pjoin(dirforisl, "edenscm-isl"))
-
     def _zip_pyc_files(self, zipname, package):
         """Modify a zip archive to include our .pyc files"""
         sourcedir = pjoin(scriptdir, package)
@@ -733,7 +725,6 @@ class buildembedded(Command):
         embdir = pjoin(scriptdir, "build", "embedded")
         ensureempty(embdir)
         ensureexists(embdir)
-        self._process_isl(embdir)
 
         # On Windows, Python shared library has to live at the same level
         # as the main project binary, since this is the location which
@@ -826,11 +817,6 @@ class BuildInteractiveSmartLog(build):
         )
 
     def run(self):
-        if not ossbuild:
-            raise DistutilsSetupError(
-                "ISL should only built as part of the open source build"
-            )
-
         # External path to addons/
         addons_path = os.path.realpath(pjoin(scriptdir, "..", "..", "addons"))
         if not os.path.isdir(addons_path):
@@ -841,32 +827,25 @@ class BuildInteractiveSmartLog(build):
                 # revision in the Sapling repo.
                 return
 
-        isl_out = os.path.realpath(pjoin(self.build_temp, "edenscm-isl"))
-        ensureempty(isl_out)
+        env = None
+        if havefb and "YARN" not in os.environ:
+            env = {
+                **os.environ,
+                "YARN": os.path.realpath(
+                    pjoin(
+                        scriptdir,
+                        "../../../xplat/third-party/yarn",
+                        iswindows and "yarn.bat" or "yarn",
+                    )
+                ),
+            }
 
         subprocess.run(
-            [lookup_path("yarn"), "install", "--prefer-offline"],
+            [sys.executable, "build-tar.py", "-o", pjoin(scriptdir, "isl-dist.tar.xz")],
             check=True,
             cwd=addons_path,
+            env=env,
         )
-        subprocess.run(
-            [lookup_path("node"), "release.js", isl_out],
-            check=True,
-            cwd=os.path.join(addons_path, "isl"),
-        )
-        copy_to(isl_out, pjoin(self.build_lib, "edenscm-isl"))
-
-
-def lookup_path(cmd: str) -> str:
-    r"""Use PATH to resolve `cmd` to an absolute path.
-
-    `subprocess` has trouble finding executables on Windows, such as
-    when running `yarn` when it is in your PATH as `C:\somewhere\yarn.CMD`.
-    Here we use `shutil.which` to pre-expand the executable path, which works better."""
-    found = shutil.which(cmd)
-    if not found:
-        raise RuntimeError(f"Could not find '{cmd}' in path")
-    return found
 
 
 class hginstall(install):

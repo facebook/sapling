@@ -75,6 +75,7 @@ install/
 .pytype/
 rpmbuild/
 getdeps_build.log
+/isl-dist.tar.xz
 
 # Rust libraries and extensions
 Cargo.lock
