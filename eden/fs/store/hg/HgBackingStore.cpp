@@ -290,21 +290,22 @@ folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
     ObjectId edenTreeID,
     RelativePath path,
     std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
-  auto fut = folly::via(
-                 importThreadPool_.get(),
-                 [this,
-                  path,
-                  manifestNode,
-                  &liveImportTreeWatches = liveImportTreeWatches_] {
-                   Importer& importer = getThreadLocalImporter();
-                   folly::stop_watch<std::chrono::milliseconds> watch;
-                   RequestMetricsScope queueTracker{&liveImportTreeWatches};
-                   auto serializedTree = importer.fetchTree(path, manifestNode);
-                   stats_->addDuration(
-                       &HgBackingStoreStats::importTree, watch.elapsed());
-                   return serializedTree;
-                 })
-                 .via(serverThreadPool_);
+  auto fut =
+      folly::via(
+          importThreadPool_.get(),
+          [this,
+           path,
+           manifestNode,
+           &liveImportTreeWatches = liveImportTreeWatches_] {
+            Importer& importer = getThreadLocalImporter();
+            folly::stop_watch<std::chrono::milliseconds> watch;
+            RequestMetricsScope queueTracker{&liveImportTreeWatches};
+            auto serializedTree = importer.fetchTree(path, manifestNode);
+            stats_->addDuration(
+                &HgBackingStoreStats::importTreeDuration, watch.elapsed());
+            return serializedTree;
+          })
+          .via(serverThreadPool_);
 
   return std::move(fut).thenTry([this,
                                  ownedPath = std::move(path),
@@ -313,7 +314,15 @@ folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
                                  batch = std::move(writeBatch)](
                                     folly::Try<std::unique_ptr<IOBuf>> val) {
     // Note: the `value` call will throw if fetchTree threw an exception
+    if (val.hasException()) {
+      stats_->increment(&HgBackingStoreStats::importTreeError);
+    }
     auto iobuf = std::move(val).value();
+    if (iobuf) {
+      stats_->increment(&HgBackingStoreStats::importTreeSuccess);
+    } else {
+      stats_->increment(&HgBackingStoreStats::importTreeFailure);
+    }
     return processTree(std::move(iobuf), node, treeID, ownedPath, batch.get());
   });
 }
@@ -546,7 +555,14 @@ SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
         RequestMetricsScope queueTracker{&liveImportBlobWatches};
         auto blob =
             importer.importFileContents(hgInfo.path(), hgInfo.revHash());
-        stats_->addDuration(&HgBackingStoreStats::importBlob, watch.elapsed());
+        stats_->addDuration(
+            &HgBackingStoreStats::importBlobDuration, watch.elapsed());
+
+        if (blob) {
+          stats_->increment(&HgBackingStoreStats::importBlobSuccess);
+        } else {
+          stats_->increment(&HgBackingStoreStats::importBlobFailure);
+        }
         return blob;
       });
 }
