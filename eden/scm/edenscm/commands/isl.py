@@ -5,12 +5,18 @@
 
 import os
 import os.path
+import shlex
+import shutil
 import subprocess
-from typing import List
+import sys
+import tarfile
+import tempfile
+from typing import Dict, List, Optional, Tuple
+
+import bindings
 
 from .. import error
 from ..i18n import _
-from ..pycompat import iswindows
 
 from . import util
 from .cmdtable import command
@@ -119,18 +125,17 @@ def launch_server(
     force=False,
     platform=None,
 ):
-    isl_args = get_isl_args()
-    if isl_args[0] == "dotslash":
-        ui.status_err(_("launching web server for Interactive Smartlog...\n"))
-        if not foreground:
-            ui.status_err(
-                _("re-run with --foreground and check VPN if slow to start.\n")
-            )
-    args = ["--port", str(port)]
-    args.append("--command")
-    args.append(util.hgcmd()[0])
-    args.append("--sl-version")
-    args.append(util.version())
+    isl_args, isl_cwd = get_isl_args_cwd(ui)
+    args = [
+        "--port",
+        str(port),
+        "--command",
+        util.hgcmd()[0],
+        "--cwd",
+        cwd,
+        "--sl-version",
+        util.version(),
+    ]
     if not open_isl:
         args.append("--no-open")
     if json_output:
@@ -142,26 +147,83 @@ def launch_server(
     if kill:
         args.append("--kill")
     if platform:
-        args.append("--platform")
-        args.append(str(platform))
-    subprocess.call(isl_args + args, cwd=cwd)
+        args += ["--platform", str(platform)]
+    full_args = isl_args + args
+    ui.note_err(_("running %s\n") % (shlex.join(full_args),))
+    subprocess.call(full_args, cwd=isl_cwd)
 
 
-def get_isl_args() -> List[str]:
+def untar(tar_path, dest_dir) -> Dict[str, str]:
+    """untar to the destination directory, return the tar metadata (dict)"""
+    os.makedirs(dest_dir, exist_ok=True)
+    with tarfile.open(tar_path, "r", format=tarfile.PAX_FORMAT) as tar:
+        # build-tar.py sets the "source_hash" but if it doesn't, use the file
+        # size as an approx.
+        source_hash = tar.pax_headers.get("source_hash") or str(
+            os.stat(tar_path).st_size
+        )
+        existing_source_hash_path = os.path.join(dest_dir, ".source_hash")
+        existing_source_hash = ""
+        try:
+            with open(existing_source_hash_path, "rb") as f:
+                existing_source_hash = f.read().decode()
+        except FileNotFoundError:
+            pass
+        # extract if changed
+        if source_hash != existing_source_hash:
+            # Delete the existing directory. Rename first for better
+            # compatibility on Windows.
+            if os.path.isdir(dest_dir):
+                to_delete_dir = f"{dest_dir}.to-delete"
+                shutil.rmtree(to_delete_dir, ignore_errors=True)
+                os.rename(dest_dir, to_delete_dir)
+                shutil.rmtree(to_delete_dir, ignore_errors=True)
+                os.makedirs(dest_dir, exist_ok=True)
+            tar.extractall(dest_dir, filter="data")
+            # write source_hash so we can skip extractall() next time
+            with open(existing_source_hash_path, "wb") as f:
+                f.write(source_hash.encode())
+        return tar.pax_headers or {}
+
+
+def resolve_path(candidates, which=shutil.which) -> Optional[str]:
+    """resolve full path from candidates"""
+    for path in candidates:
+        if not os.path.isabs(path):
+            path = which(path)
+        if path and os.path.isfile(path):
+            return path
+    return None
+
+
+def find_nodejs(ui) -> str:
+    """find the path to nodejs, or raise if nothing found"""
+    candidates = ui.configlist("web", "node-path") + ["node"]
+    node_path = resolve_path(candidates)
+    if node_path is None:
+        raise error.Abort(_("cannot find nodejs to execute ISL"))
+    return node_path
+
+
+def get_isl_args_cwd(ui) -> Tuple[List[str], str]:
+    # find "isl-dist.tar.xz"
+    candidates = ui.configlist("web", "isl-dist-path") + ["isl-dist.tar.xz"]
+    isl_tar_path = resolve_path(
+        candidates, lambda p: os.path.join(os.path.dirname(sys.executable), p)
+    )
+    if isl_tar_path is None:
+        raise error.Abort(_("ISL is not available with this @prog@ install"))
+
+    # extract "isl-dist.tar.xz"
+    data_dir = bindings.dirs.data_local_dir() or tempfile.gettempdir()
+    dest_dir = os.path.join(data_dir, "Sapling", "ISL")
+    ui.note_err(_("extracting %s to %s\n") % (isl_tar_path, dest_dir))
     try:
-        from . import fb
+        tar_metadata = untar(isl_tar_path, dest_dir)
+    except Exception as e:
+        raise error.Abort(_("cannot extract ISL: %s") % (e,))
 
-        return fb.isl_dotslash_args()
-    except ImportError:
-        pass
-    # This is the path to ISL in the Make-built release.
-    this_dir = os.path.dirname(__file__)
-    proxy_path = ["isl-server", "dist", "run-proxy.js"]
-    for isl_dir in ["edenscm-isl", "addons"]:
-        for relative_len in range(2, 4):
-            server_path = os.path.join(
-                this_dir, *([".."] * relative_len), isl_dir, *proxy_path
-            )
-            if os.path.exists(server_path):
-                return ["node", server_path]
-    raise error.Abort(_("unable to find isl-server build"))
+    # the args are: node entry_point ...
+    node_path = find_nodejs(ui)
+    entry_point = tar_metadata.get("entry_point") or "isl-server/dist/run-proxy.js"
+    return [node_path, entry_point], dest_dir
