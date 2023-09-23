@@ -17,16 +17,32 @@ import os
 import subprocess
 import sys
 
+EXE = ".exe" if os.name == "nt" else ""
+
 
 def main(args):
+    names = (
+        list(filter(None, [os.getenv("PYTHON_SYS_EXECUTABLE")]))
+        + args
+        + [
+            p + EXE
+            for p in [
+                "python3.10",
+                "python3.9",
+                "python3.8",
+                "python3.7",
+                "python3.6",
+                "python3",
+            ]
+        ]
+    )
     dirs = os.environ.get("PATH").split(os.pathsep)
-    names = args or ["python3"]
-    if names == ["python3"]:
-        # Try different pythons
-        names = ["python3.10", "python3.8", "python3.7", "python3.6"] + names
     for name in names:
-        for dir in dirs:
-            path = os.path.join(dir, name)
+        if os.path.isabs(name):
+            paths = [name]
+        else:
+            paths = [os.path.join(d, name) for d in dirs]
+        for path in paths:
             if does_python_look_good(path):
                 print(path)
                 return
@@ -45,7 +61,7 @@ def does_python_look_good(path):
                 [path, "-c", "import sysconfig;print(sysconfig.get_config_vars())"]
             ).decode("utf-8")
         )
-        cflags = cfg["CFLAGS"]
+        cflags = cfg.get("CFLAGS") or ""
         if "-nostdinc" in cflags.split():
             sys.stderr.write("%s: ignored, lack of C stdlib\n" % path)
             return False
