@@ -38,8 +38,6 @@ use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
-#[cfg(feature = "eden")]
-use types::hgid::NULL_ID;
 use types::repo::StorageFormat;
 use types::HgId;
 use types::RepoPath;
@@ -227,14 +225,7 @@ impl WorkingCopy {
                 #[cfg(not(feature = "eden"))]
                 panic!("cannot use EdenFS in a non-EdenFS build");
                 #[cfg(feature = "eden")]
-                Box::new(EdenFileSystem::new(
-                    vfs.clone(),
-                    treestate
-                        .lock()
-                        .parents()
-                        .next()
-                        .unwrap_or_else(|| Ok(NULL_ID))?,
-                )?)
+                Box::new(EdenFileSystem::new(vfs.clone(), treestate)?)
             }
         };
         Ok(FileSystem {

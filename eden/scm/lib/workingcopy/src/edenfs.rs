@@ -6,15 +6,18 @@
  */
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::SystemTime;
 
 use anyhow::anyhow;
 use anyhow::Result;
 use configmodel::Config;
 use io::IO;
+use parking_lot::Mutex;
 use pathmatcher::DynMatcher;
 use thrift_types::edenfs::ScmFileStatus;
-use types::HgId;
+use treestate::treestate::TreeState;
+use types::hgid::NULL_ID;
 use types::RepoPathBuf;
 use vfs::VFS;
 
@@ -23,13 +26,13 @@ use crate::filesystem::PendingChanges;
 
 pub struct EdenFileSystem {
     root: PathBuf,
-    p1: HgId,
+    treestate: Arc<Mutex<TreeState>>,
 }
 
 impl EdenFileSystem {
-    pub fn new(vfs: VFS, p1: HgId) -> Result<Self> {
+    pub fn new(vfs: VFS, treestate: Arc<Mutex<TreeState>>) -> Result<Self> {
         Ok(EdenFileSystem {
-            p1,
+            treestate,
             root: vfs.root().to_path_buf(),
         })
     }
@@ -46,7 +49,14 @@ impl PendingChanges for EdenFileSystem {
         _config: &dyn Config,
         _io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
-        let result = edenfs_client::status::get_status(&self.root, self.p1, include_ignored)?;
+        let p1 = self
+            .treestate
+            .lock()
+            .parents()
+            .next()
+            .unwrap_or_else(|| Ok(NULL_ID))?;
+
+        let result = edenfs_client::status::get_status(&self.root, p1, include_ignored)?;
         Ok(Box::new(result.status.entries.into_iter().map(
             |(path, status)| {
                 {
