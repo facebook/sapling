@@ -10,6 +10,7 @@
 use std::cell::RefCell;
 use std::collections::hash_map::Keys;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::str;
 
 use cpython::*;
@@ -21,7 +22,21 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "dirs"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<dirs>(py)?;
+    m.add(py, "cache_dir", py_fn!(py, cache_dir()))?;
+    m.add(py, "data_local_dir", py_fn!(py, data_local_dir()))?;
     Ok(m)
+}
+
+fn cache_dir(_py: Python) -> PyResult<Option<String>> {
+    Ok(to_option_string(::dirs::cache_dir()))
+}
+
+fn data_local_dir(_py: Python) -> PyResult<Option<String>> {
+    Ok(to_option_string(::dirs::data_local_dir()))
+}
+
+fn to_option_string(path: Option<PathBuf>) -> Option<String> {
+    path.and_then(|p| p.to_str().map(|s| s.to_string()))
 }
 
 fn add_path(map: &mut HashMap<PyPathBuf, u64>, path: &PyPath) {
