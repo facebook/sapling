@@ -17,6 +17,7 @@ use mononoke_api::CoreContext;
 use mononoke_api::MononokeError;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::bookmark;
 use tests_utils::CreateCommitContext;
@@ -66,6 +67,7 @@ pub async fn build_test_repo(
     let first = CreateCommitContext::new_root(ctx, source_repo)
         .add_file(EXPORT_FILE, "file_to_export")
         .set_message("first")
+        .set_author_date(DateTime::from_timestamp(1000, 0)?)
         .commit()
         .await?;
 
@@ -73,6 +75,7 @@ pub async fn build_test_repo(
     let second = CreateCommitContext::new(ctx, source_repo, vec![first])
         .add_file(IRRELEVANT_FILE, "IRRELEVANT_FILE")
         .set_message("second")
+        .set_author_date(DateTime::from_timestamp(2000, 0)?)
         .commit()
         .await?;
 
@@ -81,6 +84,7 @@ pub async fn build_test_repo(
         .add_file(EXPORT_FILE, "change EXPORT_FILE")
         .add_file(IRRELEVANT_FILE, "change IRRELEVANT_FILE")
         .set_message("third")
+        .set_author_date(DateTime::from_timestamp(3000, 0)?)
         .commit()
         .await?;
 
@@ -88,6 +92,7 @@ pub async fn build_test_repo(
     let fourth = CreateCommitContext::new(ctx, source_repo, vec![third])
         .add_file(IRRELEVANT_FILE, "change only IRRELEVANT_FILE")
         .set_message("fourth")
+        .set_author_date(DateTime::from_timestamp(4000, 0)?)
         .commit()
         .await?;
 
@@ -95,6 +100,7 @@ pub async fn build_test_repo(
     let fifth = CreateCommitContext::new(ctx, source_repo, vec![fourth])
         .add_file(EXPORT_FILE, "change only EXPORT_FILE in fifth")
         .set_message("fifth")
+        .set_author_date(DateTime::from_timestamp(5000, 0)?)
         .commit()
         .await?;
 
@@ -106,6 +112,7 @@ pub async fn build_test_repo(
         )
         .add_file(SECOND_IRRELEVANT_FILE, "SECOND_IRRELEVANT_FILE")
         .set_message("sixth")
+        .set_author_date(DateTime::from_timestamp(6000, 0)?)
         .commit()
         .await?;
 
@@ -118,6 +125,7 @@ pub async fn build_test_repo(
         let branch_commit = CreateCommitContext::new(ctx, source_repo, vec![fifth])
             .add_file(SECOND_EXPORT_FILE, "change export_file in a branch")
             .set_message("branch commit")
+            .set_author_date(DateTime::from_timestamp(6500, 0)?)
             .commit()
             .await?;
 
@@ -133,6 +141,7 @@ pub async fn build_test_repo(
             "change file in second export dir again",
         )
         .set_message("seventh")
+        .set_author_date(DateTime::from_timestamp(7000, 0)?)
         .commit()
         .await?;
 
@@ -140,6 +149,7 @@ pub async fn build_test_repo(
     let eighth = CreateCommitContext::new(ctx, source_repo, vec![seventh])
         .delete_file(IRRELEVANT_FILE)
         .set_message("eighth")
+        .set_author_date(DateTime::from_timestamp(8000, 0)?)
         .commit()
         .await?;
 
@@ -147,12 +157,14 @@ pub async fn build_test_repo(
     let ninth = CreateCommitContext::new(ctx, source_repo, vec![eighth])
         .delete_file(SECOND_EXPORT_FILE)
         .set_message("ninth")
+        .set_author_date(DateTime::from_timestamp(9000, 0)?)
         .commit()
         .await?;
 
     let tenth = CreateCommitContext::new(ctx, source_repo, vec![ninth])
         .add_file(EXPORT_FILE, "add export file back")
         .set_message("tenth")
+        .set_author_date(DateTime::from_timestamp(10000, 0)?)
         .commit()
         .await?;
 

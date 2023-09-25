@@ -36,6 +36,9 @@ pub async fn build_partial_commit_graph_for_export<P>(
     logger: &Logger,
     paths: Vec<P>,
     cs_ctx: ChangesetContext,
+    // Consider history until the provided timestamp, i.e. all commits in the
+    // graph will have its creation time greater than or equal to it.
+    oldest_commit_ts: Option<i64>,
 ) -> Result<PartialGraphInfo, MononokeError>
 where
     P: TryInto<MononokePath>,
@@ -54,14 +57,15 @@ where
 
     let cs_path_history_options = ChangesetPathHistoryOptions {
         follow_history_across_deletions: true,
+        until_timestamp: oldest_commit_ts,
         ..Default::default()
     };
+
     // Get each path's history as a vector of changesets
     let history_changesets: Vec<Vec<ChangesetContext>> = try_join_all(
         try_join_all(
             cs_path_hist_ctxs
                 .iter()
-                // TODO(T160600443): support other ChangesetPathHistoryOptions
                 .map(|csphc| csphc.history(cs_path_history_options)),
         )
         .await?
@@ -198,7 +202,8 @@ mod test {
             .ok_or(anyhow!("Couldn't find master bookmark in source repo."))?;
 
         let (relevant_css, parents_map) =
-            build_partial_commit_graph_for_export(&logger, vec![export_dir], master_cs).await?;
+            build_partial_commit_graph_for_export(&logger, vec![export_dir], master_cs, None)
+                .await?;
 
         let relevant_cs_ids = relevant_css
             .iter()
@@ -240,6 +245,7 @@ mod test {
             &logger,
             vec![export_dir, second_export_dir],
             master_cs,
+            None,
         )
         .await
         .unwrap_err();
@@ -303,6 +309,76 @@ mod test {
             &logger,
             vec![export_dir, second_export_dir],
             master_cs,
+            None,
+        )
+        .await?;
+
+        let relevant_cs_ids = relevant_css
+            .iter()
+            .map(ChangesetContext::id)
+            .collect::<Vec<_>>();
+
+        assert_eq!(expected_cs_ids, relevant_cs_ids);
+
+        assert_eq!(expected_parent_map, parents_map);
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_oldest_commit_ts_option(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let logger = logger_that_can_work_in_tests().unwrap();
+
+        let export_dir = NonRootMPath::new(EXPORT_DIR).unwrap();
+        let second_export_dir = NonRootMPath::new(SECOND_EXPORT_DIR).unwrap();
+
+        let test_repo_opts = GitExportTestRepoOptions {
+            add_branch_commit: false,
+        };
+        let (source_repo_ctx, changeset_ids) = build_test_repo(fb, &ctx, test_repo_opts).await?;
+
+        let fifth = changeset_ids["fifth"];
+        // The sixth commit changes only the file in the second export path
+        let sixth = changeset_ids["sixth"];
+        let seventh = changeset_ids["seventh"];
+        let ninth = changeset_ids["ninth"];
+        let tenth = changeset_ids["tenth"];
+
+        // Ids of the changesets that are expected to be rewritten
+        // Ids of the changesets that are expected to be rewritten.
+        // First and third commits would also be included, but we're going to
+        // use fifth's author date as the oldest_commit_ts argument.
+        let expected_cs_ids: Vec<ChangesetId> = vec![fifth, sixth, seventh, ninth, tenth];
+
+        let expected_parent_map = HashMap::from([
+            (fifth, vec![]),
+            (sixth, vec![fifth]),
+            (seventh, vec![sixth]),
+            (ninth, vec![seventh]),
+            (tenth, vec![ninth]),
+        ]);
+
+        let master_cs = source_repo_ctx
+            .resolve_bookmark(
+                &BookmarkKey::from_str("master")?,
+                BookmarkFreshness::MostRecent,
+            )
+            .await?
+            .ok_or(anyhow!("Couldn't find master bookmark in source repo."))?;
+
+        let fifth_cs = source_repo_ctx
+            .changeset(fifth)
+            .await?
+            .ok_or(anyhow!("Failed to get changeset context of fifth commit"))?;
+
+        let oldest_ts = fifth_cs.author_date().await?.timestamp();
+
+        let (relevant_css, parents_map) = build_partial_commit_graph_for_export(
+            &logger,
+            vec![export_dir, second_export_dir],
+            master_cs,
+            Some(oldest_ts),
         )
         .await?;
 

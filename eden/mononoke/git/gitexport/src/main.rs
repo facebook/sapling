@@ -89,7 +89,10 @@ pub mod types {
         #[clap(long, short = 'B', conflicts_with = "latest_cs_id", required = true)]
         pub latest_cs_bookmark: Option<String>,
 
-        // TODO(T160600443): support until_timestamp argument
+        // Consider history until the provided timestamp, i.e. all exported
+        // commits will have its creation time greater than or equal to it.
+        #[clap(long)]
+        pub oldest_commit_ts: Option<i64>,
 
         // -----------------------------------------------------------------
         // Graph printing args for debugging and tests
@@ -141,8 +144,13 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         .map(|p| TryFrom::try_from(p.as_os_str()))
         .collect::<Result<Vec<NonRootMPath>>>()?;
 
-    let (changesets, cs_parents) =
-        build_partial_commit_graph_for_export(logger, export_paths.clone(), cs_ctx).await?;
+    let (changesets, cs_parents) = build_partial_commit_graph_for_export(
+        logger,
+        export_paths.clone(),
+        cs_ctx,
+        args.oldest_commit_ts,
+    )
+    .await?;
 
     debug!(logger, "changesets: {:#?}", changesets);
     debug!(logger, "changeset parents: {:?}", cs_parents);
