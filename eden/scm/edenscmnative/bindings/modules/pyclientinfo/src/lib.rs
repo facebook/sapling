@@ -11,6 +11,7 @@ use std::cell::RefCell;
 
 use ::clientinfo as client_info;
 use cpython::*;
+use cpython_ext::convert::Serde;
 use cpython_ext::ResultPyErrExt;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -19,6 +20,11 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
     m.add_class::<clientinfo>(py)?;
     m.add_class::<ClientRequestInfo>(py)?;
+    m.add(
+        py,
+        "get_client_request_info",
+        py_fn!(py, get_client_request_info()),
+    )?;
     Ok(m)
 }
 
@@ -55,3 +61,7 @@ py_class!(pub class ClientRequestInfo |py| {
         ClientRequestInfo::create_instance(py, RefCell::new(client_request_info))
     }
 });
+
+pub fn get_client_request_info(_py: Python) -> PyResult<Serde<client_info::ClientRequestInfo>> {
+    Ok(Serde(client_info::get_client_request_info()))
+}
