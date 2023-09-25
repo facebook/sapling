@@ -395,7 +395,9 @@ EdenServer::EdenServer(
           mainEventBase_,
           getPlatformNotifier(config_, structuredLogger_, version),
           FLAGS_enable_fault_injection)},
-      blobCache_{BlobCache::create(serverState_->getReloadableConfig())},
+      blobCache_{BlobCache::create(
+          serverState_->getReloadableConfig(),
+          serverState_->getStats().copy())},
       treeCache_{TreeCache::create(serverState_->getReloadableConfig())},
       version_{std::move(version)},
       progressManager_{

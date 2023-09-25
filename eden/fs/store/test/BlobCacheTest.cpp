@@ -8,6 +8,7 @@
 #include "eden/fs/store/BlobCache.h"
 #include <folly/portability/GTest.h>
 #include "eden/fs/model/Blob.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 using namespace folly::literals;
 using namespace facebook::eden;
@@ -35,7 +36,7 @@ const auto blob9 = std::make_shared<Blob>("999999999"_sp);
 } // namespace
 
 TEST(BlobCache, evicts_oldest_on_insertion) {
-  auto cache = BlobCache::create(10, 0);
+  auto cache = BlobCache::create(10, 0, makeRefPtr<EdenStats>());
   cache->insert(hash3, blob3);
   cache->insert(hash4, blob4); // blob4 is considered more recent than blob3
   EXPECT_EQ(7, cache->getStats().totalSizeInBytes);
@@ -52,7 +53,7 @@ TEST(BlobCache, evicts_oldest_on_insertion) {
 }
 
 TEST(BlobCache, inserting_large_blob_evicts_multiple_small_blobs) {
-  auto cache = BlobCache::create(10, 0);
+  auto cache = BlobCache::create(10, 0, makeRefPtr<EdenStats>());
   cache->insert(hash3, blob3);
   cache->insert(hash4, blob4);
   cache->insert(hash9, blob9);
@@ -62,7 +63,7 @@ TEST(BlobCache, inserting_large_blob_evicts_multiple_small_blobs) {
 }
 
 TEST(BlobCache, preserves_minimum_number_of_entries) {
-  auto cache = BlobCache::create(1, 3);
+  auto cache = BlobCache::create(1, 3, makeRefPtr<EdenStats>());
   cache->insert(hash3, blob3);
   cache->insert(hash4, blob4);
   cache->insert(hash5, blob5);
@@ -76,7 +77,7 @@ TEST(BlobCache, preserves_minimum_number_of_entries) {
 }
 
 TEST(BlobCache, can_forget_cached_entries) {
-  auto cache = BlobCache::create(100, 0);
+  auto cache = BlobCache::create(100, 0, makeRefPtr<EdenStats>());
   auto handle3 = cache->insert(
       hash3,
       std::make_shared<Blob>("blob3"_sp),
@@ -95,7 +96,7 @@ TEST(BlobCache, can_forget_cached_entries) {
 }
 
 TEST(BlobCache, does_not_forget_blob_until_last_handle_is_forgotten) {
-  auto cache = BlobCache::create(100, 0);
+  auto cache = BlobCache::create(100, 0, makeRefPtr<EdenStats>());
   auto blob = std::make_shared<Blob>("newblob"_sp);
   auto weak = std::weak_ptr<const Blob>{blob};
   cache->insert(hash6, blob, BlobCache::Interest::UnlikelyNeededAgain);

@@ -83,7 +83,7 @@ struct BlobAccessTest : ::testing::Test {
   BlobAccessTest()
       : localStore{std::make_shared<NullLocalStore>()},
         backingStore{std::make_shared<FakeBackingStore>()},
-        blobCache{BlobCache::create(10, 0)} {
+        blobCache{BlobCache::create(10, 0, makeRefPtr<EdenStats>())} {
     std::shared_ptr<EdenConfig> rawEdenConfig{
         EdenConfig::createTestEdenConfig()};
     rawEdenConfig->inMemoryTreeCacheSize.setValue(

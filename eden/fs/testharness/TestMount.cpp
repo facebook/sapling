@@ -38,6 +38,7 @@
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/TreeCache.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -138,7 +139,8 @@ bool TestMountFile::operator==(const TestMountFile& other) const {
 TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
     : blobCache_{BlobCache::create(
           kBlobCacheMaximumSize,
-          kBlobCacheMinimumEntries)},
+          kBlobCacheMinimumEntries,
+          makeRefPtr<EdenStats>())},
       privHelper_{make_shared<FakePrivHelper>()},
       serverExecutor_{make_shared<folly::ManualExecutor>()} {
   // Initialize the temporary directory.
