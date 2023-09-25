@@ -184,10 +184,16 @@ fn register_error_handlers() {
     }
 
     fn fallback_error_handler(py: Python, e: &error::Error) -> Option<PyErr> {
-        Some(PyErr::new::<UncategorizedNativeError, _>(
-            py,
-            format!("{:?}", e),
-        ))
+        let output = format!("{:?}", e);
+
+        if output.contains("SSL") || output.contains("certificate") {
+            // Turn it into a TlsError which will trigger the network doctor.
+            // This should help with hard-to-categorize situations where cert
+            // errors propagate up from hg import helper to EdenFS to hg.
+            Some(PyErr::new::<TlsError, _>(py, output))
+        } else {
+            Some(PyErr::new::<UncategorizedNativeError, _>(py, output))
+        }
     }
 
     error::register("010-specific", specific_error_handler);
