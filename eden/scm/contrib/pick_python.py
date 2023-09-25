@@ -44,6 +44,14 @@ def main(args):
             paths = [os.path.join(d, name) for d in dirs]
         for path in paths:
             if does_python_look_good(path):
+                if os.name == "nt":
+                    # This is a workaround for an issue with make.exe on Windows.
+                    # On some of our Makefile targets (e.g., oss, oss-install) we set up environment variables.
+                    # If environment variables are not set, backward slashes will be interpreted as such.
+                    # e.g., having a make target that runs something like `FOO=bar echo c:\baz`
+                    # will print `c:baz`, whereas having a target like `echo c:\baz` will print
+                    # `c:\baz`.
+                    path = path.replace("\\", "/")
                 print(path)
                 return
 
