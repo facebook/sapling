@@ -43,6 +43,8 @@ use test_repo_factory::TestRepoFactory;
 pub use crate::partial_commit_graph::build_partial_commit_graph_for_export;
 use crate::partial_commit_graph::ChangesetParents;
 
+pub const MASTER_BOOKMARK: &str = "master";
+
 /// Given a list of changesets, their parents and a list of paths, create
 /// copies in a target mononoke repository containing only changes that
 /// were made on the given paths.
@@ -125,7 +127,7 @@ pub async fn rewrite_partial_changesets(
 
     // Set master bookmark to point to the latest changeset
     if let Err(err) = temp_repo_ctx
-        .create_bookmark(&BookmarkKey::from_str("master")?, head_cs_id, None)
+        .create_bookmark(&BookmarkKey::from_str(MASTER_BOOKMARK)?, head_cs_id, None)
         .await
     {
         // TODO(T161902005): stop failing silently on bookmark creation
@@ -305,7 +307,7 @@ mod test {
 
         let temp_repo_master_csc = temp_repo_ctx
             .resolve_bookmark(
-                &BookmarkKey::from_str("master")?,
+                &BookmarkKey::from_str(MASTER_BOOKMARK)?,
                 BookmarkFreshness::MostRecent,
             )
             .await?

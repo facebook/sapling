@@ -13,10 +13,13 @@ use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use bookmarks_types::BookmarkKey;
+use commit_id::parse_commit_id;
 use fbinit::FacebookInit;
 use gitexport_tools::build_partial_commit_graph_for_export;
 use gitexport_tools::rewrite_partial_changesets;
+use gitexport_tools::MASTER_BOOKMARK;
 use mononoke_api::BookmarkFreshness;
+use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetId;
 use mononoke_api::RepoContext;
 use mononoke_app::fb303::AliveService;
@@ -28,6 +31,7 @@ use print_graph::print_graph;
 use print_graph::PrintGraphOptions;
 use repo_authorization::AuthorizationContext;
 use slog::debug;
+use slog::info;
 
 use crate::types::GitExportArgs;
 
@@ -72,7 +76,19 @@ pub mod types {
         #[clap(long, short('p'))]
         /// Paths in the source hg repo that should be exported to a git repo.
         pub export_paths: Vec<PathBuf>,
-        // TODO(T160600443): support last revision argument
+        // Specify the changeset used to lookup the history of the exported
+        // directories. Any exported changeset will be its ancestor.
+        // Provide either a changeset id or bookmark name.
+        #[clap(
+            long,
+            short = 'i',
+            conflicts_with = "latest_cs_bookmark",
+            required = true
+        )]
+        pub latest_cs_id: Option<String>,
+        #[clap(long, short = 'B', conflicts_with = "latest_cs_id", required = true)]
+        pub latest_cs_bookmark: Option<String>,
+
         // TODO(T160600443): support until_timestamp argument
 
         // -----------------------------------------------------------------
@@ -101,14 +117,13 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let auth_ctx = AuthorizationContext::new_bypass_access_control();
     let repo_ctx: RepoContext = RepoContext::new(ctx, auth_ctx.into(), repo, None, None).await?;
 
-    // TODO(T160600443): support using a specific changeset as starting commit,
-    // instead of a bookmark.
-    let bookmark_key = BookmarkKey::from_str("master")?;
+    let cs_ctx = get_latest_changeset_context(&repo_ctx, &args).await?;
 
-    let cs_ctx = repo_ctx
-        .resolve_bookmark(&bookmark_key, BookmarkFreshness::MostRecent)
-        .await?
-        .unwrap();
+    info!(
+        logger,
+        "Using changeset {0:#?} as the starting changeset",
+        cs_ctx.id()
+    );
 
     if let Some(source_graph_output) = args.print_graph_args.source_graph_output.clone() {
         print_commit_graph(
@@ -137,7 +152,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
 
     let temp_master_csc = temp_repo_ctx
         .resolve_bookmark(
-            &BookmarkKey::from_str("master")?,
+            &BookmarkKey::from_str(MASTER_BOOKMARK)?,
             BookmarkFreshness::MostRecent,
         )
         .await?
@@ -184,4 +199,30 @@ async fn print_commit_graph(
         output_file,
     )
     .await
+}
+
+async fn get_latest_changeset_context(
+    repo_ctx: &RepoContext,
+    args: &GitExportArgs,
+) -> Result<ChangesetContext> {
+    if let Some(changeset_id) = &args.latest_cs_id {
+        let cs_id = parse_commit_id(repo_ctx.ctx(), repo_ctx.repo(), changeset_id.as_str()).await?;
+        return repo_ctx
+            .changeset(cs_id)
+            .await?
+            .ok_or(anyhow!("Provided starting changeset id not found"));
+    };
+
+    let bookmark_name = args.latest_cs_bookmark.clone().ok_or(anyhow!(
+        "No bookmark or changeset id specified to search history"
+    ))?;
+
+    let bookmark_key = BookmarkKey::from_str(bookmark_name.as_str())?;
+
+    let cs_ctx = repo_ctx
+        .resolve_bookmark(&bookmark_key, BookmarkFreshness::MostRecent)
+        .await?
+        .unwrap();
+
+    Ok(cs_ctx)
 }

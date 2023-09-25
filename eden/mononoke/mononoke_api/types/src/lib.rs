@@ -11,6 +11,7 @@ use blobrepo::BlobRepo;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
@@ -53,6 +54,7 @@ pub struct InnerRepo {
         dyn BonsaiTagMapping,
         dyn BonsaiGlobalrevMapping,
         dyn BonsaiHgMapping,
+        dyn BonsaiSvnrevMapping,
         dyn BookmarkUpdateLog,
         dyn Bookmarks,
         dyn ChangesetFetcher,

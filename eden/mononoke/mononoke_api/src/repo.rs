@@ -30,6 +30,7 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::BookmarkCategory;
@@ -214,6 +215,7 @@ pub struct Repo {
         dyn BonsaiTagMapping,
         dyn BonsaiGitMapping,
         dyn BonsaiGlobalrevMapping,
+        dyn BonsaiSvnrevMapping,
         dyn BonsaiHgMapping,
         dyn BookmarkUpdateLog,
         dyn Bookmarks,
