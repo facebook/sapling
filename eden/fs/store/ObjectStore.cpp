@@ -216,6 +216,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
   // we could avoid that case.
 
   if (auto maybeTree = treeCache_->get(id)) {
+    stats_->increment(&ObjectStoreStats::getTreeFromMemory);
     fetchContext->didFetch(
         ObjectFetchContext::Tree, id, ObjectFetchContext::FromMemoryCache);
 

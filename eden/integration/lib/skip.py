@@ -85,6 +85,9 @@ if sys.platform == "win32":
             "test_writing_untracked_file_bumps_write_counter",  # counter not implemented for PrjFS (T147665665)
             "test_summary_counters_available",  # counter not implemented for PrjFS (T147669123)
         ],
+        "stats_test.ObjectCacheStatsTest": [
+            "test_get_tree_memory",  # unloadInodeForPath not implemented
+        ],
         "stop_test.AutoStopTest": True,
         "stop_test.StopTestAdHoc": True,
         "stop_test.StopTestManaged": True,
