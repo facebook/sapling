@@ -229,6 +229,11 @@ Invalid format strings don't crash Mercurial
   ...             print("category: %s" % category)
   ...             for k, v in sorted(data.items()):
   ...                 print("  %s=%s" % (k, v))
+  category: command_info
+    metrics_type=command_info
+    option_names=['config', 'command']
+    option_values=[['sampling.key.invalid=invalid'], 'repo.ui.log("invalid", "invalid format %s %s", "single")']
+    positional_args=['debugsh']
   category: invalid
     metrics_type=invalid
     msg=invalid format %s %s single

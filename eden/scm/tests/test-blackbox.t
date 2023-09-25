@@ -32,6 +32,8 @@ FIXME: (recursive) alias expansion is not logged
   [command] [*, "so-confusing"] started by uid 0 as pid 0 with nice 0 (glob) (?)
   [process_tree] (this process) (?)
   [legacy][command_info]
+  [legacy][command_info]
+  [legacy][command_info]
   [legacy][env_vars]
   [legacy][command_info] (?)
   [legacy][env_vars] (?)
@@ -47,6 +49,7 @@ FIXME: (recursive) alias expansion is not logged
   [tracing] (binary data of * bytes) (glob)
   [command] [*, "blackbox"] started by uid 0 as pid 0 with nice 0 (glob)
   [process_tree] (this process)
+  [legacy][command_info]
   [legacy][command_info]
   [legacy][env_vars]
   [legacy][command] blackbox
