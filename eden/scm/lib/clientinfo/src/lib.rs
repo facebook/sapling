@@ -44,11 +44,12 @@ impl ClientInfo {
         let fb = get_fb_client_info();
 
         let hostname = get_hostname().ok();
+        let cri = get_client_request_info();
 
         Ok(ClientInfo {
             hostname,
             fb,
-            request_info: None,
+            request_info: Some(cri),
         })
     }
 
