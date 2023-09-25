@@ -210,10 +210,6 @@ impl Metadata {
             .and_then(|ci| ci.fb.sandcastle_alias())
     }
 
-    pub fn clientinfo_u64tag(&self) -> Option<u64> {
-        self.client_info.as_ref()?.u64token
-    }
-
     pub fn sandcastle_nonce(&self) -> Option<&str> {
         self.client_info
             .as_ref()

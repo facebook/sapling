@@ -12,7 +12,6 @@ use std::cell::RefCell;
 use ::clientinfo as client_info;
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
-use pyconfigloader::config;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "pyclientinfo"].join(".");
@@ -36,9 +35,8 @@ where
 py_class!(pub class clientinfo |py| {
     data clientinfo: RefCell<client_info::ClientInfo>;
 
-    def __new__(_cls, config: config) -> PyResult<clientinfo> {
-        let config = config.get_cfg(py);
-        let clientinfo = client_info::ClientInfo::new(&config).map_pyerr(py)?;
+    def __new__(_cls) -> PyResult<clientinfo> {
+        let clientinfo = client_info::ClientInfo::new().map_pyerr(py)?;
 
         clientinfo::create_instance(py, RefCell::new(clientinfo))
     }

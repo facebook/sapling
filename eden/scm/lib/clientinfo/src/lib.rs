@@ -9,8 +9,6 @@ use std::fmt::Display;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use configmodel::Config;
-use configmodel::ConfigExt;
 use hostname::get_hostname;
 use rand::distributions::Alphanumeric;
 use rand::thread_rng;
@@ -32,8 +30,6 @@ use oss as facebook;
 #[derive(Default, Clone, Deserialize, Serialize, Debug)]
 pub struct ClientInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub u64token: Option<u64>, // Currently not used
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub hostname: Option<String>,
     #[serde(flatten)]
     pub fb: FbClientInfo,
@@ -42,14 +38,12 @@ pub struct ClientInfo {
 }
 
 impl ClientInfo {
-    pub fn new(config: &dyn Config) -> Result<Self> {
+    pub fn new() -> Result<Self> {
         let fb = get_fb_client_info();
 
-        let u64token = config.get_opt::<u64>("clientinfo", "u64token")?;
         let hostname = get_hostname().ok();
 
         Ok(ClientInfo {
-            u64token,
             hostname,
             fb,
             request_info: None,

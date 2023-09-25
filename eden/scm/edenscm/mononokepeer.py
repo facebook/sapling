@@ -233,7 +233,7 @@ class mononokepeer(stdiopeer.stdiopeer):
         if u.passwd is not None:
             self._abort(error.RepoError(_("password in URL not supported")))
 
-        self._clientinfo = clientinfo.clientinfo(ui._uiconfig._rcfg)
+        self._clientinfo = clientinfo.clientinfo()
         self._user = u.user
         self._host = maybestripsquarebrackets(u.host)
         self._port = u.port or 443
