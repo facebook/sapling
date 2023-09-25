@@ -48,6 +48,17 @@ impl ContentStoreFetchMetrics {
         self.lfsptr_hits += keys;
     }
 
+    pub(crate) fn time(&mut self, keys: usize) {
+        self.common.time(keys)
+    }
+
+    pub(crate) fn time_from_duration(
+        &mut self,
+        keys: std::time::Duration,
+    ) -> Result<(), anyhow::Error> {
+        self.common.time_from_duration(keys)
+    }
+
     fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
         std::iter::once(("lfsptrhits", self.lfsptr_hits))
             .filter(|&(_, v)| v != 0)

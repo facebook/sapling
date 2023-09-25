@@ -25,6 +25,9 @@ pub struct FetchMetrics {
 
     /// Number of entities which returned a fetch error (including batch errors)
     errors: usize,
+
+    // Total time spent completing the fetch
+    time: usize,
 }
 
 impl AddAssign for FetchMetrics {
@@ -34,6 +37,7 @@ impl AddAssign for FetchMetrics {
         self.hits += rhs.hits;
         self.misses += rhs.misses;
         self.errors += rhs.errors;
+        self.time += rhs.time;
     }
 }
 
@@ -55,6 +59,24 @@ impl FetchMetrics {
         self.errors += keys;
     }
 
+    // Provide the time as microseconds
+    pub(crate) fn time(&mut self, keys: usize) {
+        self.time += keys;
+    }
+
+    // Given a duration, perform a best effort conversion to microseconds and
+    // record the value.
+    pub(crate) fn time_from_duration(
+        &mut self,
+        keys: std::time::Duration,
+    ) -> Result<(), anyhow::Error> {
+        // We expect fetch times in microseconds to be << MAX_USIZE, so this
+        // conversion should be safe.
+        let usize: usize = keys.as_micros().try_into()?;
+        self.time(usize);
+        Ok(())
+    }
+
     pub(crate) fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
         [
             ("requests", self.requests),
@@ -62,6 +84,7 @@ impl FetchMetrics {
             ("hits", self.hits),
             ("misses", self.misses),
             ("errors", self.errors),
+            ("time", self.time),
         ]
         .into_iter()
         .filter(|&(_, v)| v != 0)

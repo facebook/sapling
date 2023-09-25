@@ -262,6 +262,8 @@ impl FetchState {
             return;
         }
 
+        let fetch_start = std::time::Instant::now();
+
         debug!(
             "Checking store Indexedlog ({cache}) for {key}{more}",
             cache = match typ {
@@ -303,6 +305,12 @@ impl FetchState {
             }
         }
 
+        self.metrics
+            .indexedlog
+            .store(typ)
+            .time_from_duration(fetch_start.elapsed())
+            .ok();
+
         if found != 0 {
             debug!(
                 "    Found {found} {result}",
@@ -329,6 +337,8 @@ impl FetchState {
         if pending.is_empty() {
             return;
         }
+
+        let fetch_start = std::time::Instant::now();
 
         debug!(
             "Checking store AUX ({cache}) - Count = {count}",
@@ -367,6 +377,12 @@ impl FetchState {
             }
         }
 
+        self.metrics
+            .aux
+            .store(typ)
+            .time_from_duration(fetch_start.elapsed())
+            .ok();
+
         if found != 0 {
             debug!("    Found = {found}", found = found);
         }
@@ -393,6 +409,8 @@ impl FetchState {
         if pending.is_empty() {
             return;
         }
+
+        let fetch_start = std::time::Instant::now();
 
         debug!(
             "Checking store LFS ({cache}) - Count = {count}",
@@ -437,6 +455,12 @@ impl FetchState {
                 }
             }
         }
+
+        self.metrics
+            .lfs
+            .store(typ)
+            .time_from_duration(fetch_start.elapsed())
+            .ok();
 
         if found != 0 {
             debug!("    Found = {found}", found = found);
@@ -660,6 +684,11 @@ impl FetchState {
 
         if let Ok(stats) = block_on(response.stats) {
             util::record_edenapi_stats(&span, &stats);
+            // Mononoke already records the time it takes to send the request
+            // (from first byte to last byte sent). We are more interested in
+            // the total time since it includes time not recorded by Mononoke
+            // (routing, cross regional latency, etc).
+            self.metrics.edenapi.time_from_duration(stats.time).ok();
         }
 
         // We subtract any lfs pointers that were found -- these requests were
@@ -799,6 +828,8 @@ impl FetchState {
         store: &ContentStore,
         pending: &mut Vec<StoreKey>,
     ) -> Result<()> {
+        let fetch_start = std::time::Instant::now();
+
         debug!(
             "ContentStore Fallback  - Count = {count}",
             count = pending.len()
@@ -849,6 +880,11 @@ impl FetchState {
                 }
             }
         }
+
+        self.metrics
+            .contentstore
+            .time_from_duration(fetch_start.elapsed())
+            .ok();
 
         if found != 0 {
             debug!("    Found = {found}", found = found);

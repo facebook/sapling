@@ -32,7 +32,8 @@ Clone it
                                                                   keys : 4}}},
                                       fetch : { indexedlog : { cache : { hits : 10,
                                                                          keys : 10,
-                                                                         requests : 7}}}}},
+                                                                         requests : 7,
+                                                                         time : *}}}}}, (glob)
                 ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 2},
                         gettreepack : { basemfnodes : 0,
