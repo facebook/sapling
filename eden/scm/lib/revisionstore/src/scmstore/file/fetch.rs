@@ -513,7 +513,8 @@ impl FetchState {
 
         let mut fetching_keys: HashSet<Key> = pending.iter().cloned().collect();
 
-        debug!("Fetching EdenAPI - Count = {count}", count = pending.len());
+        let count = pending.len();
+        debug!("Fetching EdenAPI - Count = {}", count);
 
         let mut found = 0;
         let mut found_pointers = 0;
@@ -660,6 +661,12 @@ impl FetchState {
         if let Ok(stats) = block_on(response.stats) {
             util::record_edenapi_stats(&span, &stats);
         }
+
+        // We subtract any lfs pointers that were found -- these requests were
+        // fulfiled by LFS, not EdenAPI
+        self.metrics.edenapi.fetch(count - found_pointers);
+        self.metrics.edenapi.err(errors);
+        self.metrics.edenapi.hit(found);
     }
 
     pub(crate) fn fetch_lfs_remote(
