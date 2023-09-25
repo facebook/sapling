@@ -288,6 +288,27 @@ new mode 120000
         self.assertTrue(os.path.isfile(self.get_path("symlink")))
         self.assertEqual("hola", self.read_file("symlink"))
 
+    def test_abspath_posixstyle_symlink(self) -> None:
+        self.repo.symlink("slink", os.sep.join(["", "foo", "bar"]))
+        slinkcommit = self.repo.commit("Symlink with unixpaths")
+        self.assertEqual(
+            self.repo.hg("log", "-r", ".", "--template", "{node}", "--patch"),
+            r"""31ca60316fb55b7165c8c9257374ef4d4a09c13bdiff --git a/slink b/slink
+new file mode 120000
+--- /dev/null
++++ b/slink
+@@ -0,0 +1,1 @@
++/foo/bar
+\ No newline at end of file
+
+""",
+        )
+        self.repo.update(self.simple_commit)
+        self.repo.update(slinkcommit)
+        self.assertEqual(
+            os.readlink(self.get_path("slink")), os.sep.join(["", "foo", "bar"])
+        )
+
 
 @hg_test
 # pyre-ignore[13]: T62487924

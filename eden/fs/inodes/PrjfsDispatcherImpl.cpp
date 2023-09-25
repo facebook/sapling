@@ -196,6 +196,13 @@ ImmediateFuture<bool> PrjfsDispatcherImpl::isFinalSymlinkPathDirectory(
     return false;
   }
 
+  // If the file starts with a "/", assume it's an absolute POSIX path and
+  // refuse to resolve it.
+  if (!targetStringView.starts_with(detail::kUNCPrefix) &&
+      targetStringView.starts_with("\\")) {
+    return false;
+  }
+
   bool newCheck = true;
   {
     // We need to mark symlinks as visited to avoid infinite loops.
