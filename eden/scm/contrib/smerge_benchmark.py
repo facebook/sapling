@@ -9,9 +9,9 @@ import time
 from dataclasses import dataclass
 from typing import List, Optional
 
-from edenscm import error, mdiff, registrar, scmutil
-from edenscm.i18n import _
-from edenscm.simplemerge import Merge3Text, render_minimized, wordmergemode
+from sapling import error, mdiff, registrar, scmutil
+from sapling.i18n import _
+from sapling.simplemerge import Merge3Text, render_minimized, wordmergemode
 
 cmdtable = {}
 command = registrar.command(cmdtable)

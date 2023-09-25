@@ -5,12 +5,12 @@ from typing import Any, Dict, List, Optional
 
 import ghstack
 import ghstack.config
-
-from edenscm import error, gpg
-from edenscm.i18n import _
-from edenscm.node import hex, nullid
 from ghstack.ghs_types import GitCommitHash
 from ghstack.shell import _SHELL_RET
+
+from sapling import error, gpg
+from sapling.i18n import _
+from sapling.node import hex, nullid
 
 WILDCARD_ARG = {}
 

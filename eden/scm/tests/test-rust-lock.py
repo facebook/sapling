@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 import silenttestrunner
-from edenscm import error, lock, pycompat, ui, vfs
+from sapling import error, lock, pycompat, ui, vfs
 
 
 class testrustlock(unittest.TestCase):

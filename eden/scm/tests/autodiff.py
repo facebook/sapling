@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from edenscm import error, patch, registrar, scmutil
+from sapling import error, patch, registrar, scmutil
 
 
 cmdtable = {}

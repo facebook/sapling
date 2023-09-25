@@ -5,10 +5,11 @@
 
 from __future__ import absolute_import, print_function
 
-from edenscm import pycompat
-
-from edenscm.ext.lfs import pointer
 from hghave import require
+
+from sapling import pycompat
+
+from sapling.ext.lfs import pointer
 
 
 def tryparse(text):

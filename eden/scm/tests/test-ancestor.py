@@ -13,9 +13,10 @@ import random
 import sys
 import time
 
-from edenscm import ancestor, debugcommands, hg, pycompat, ui as uimod, util
-from edenscm.node import nullrev
 from hghave import require
+
+from sapling import ancestor, debugcommands, hg, pycompat, ui as uimod, util
+from sapling.node import nullrev
 
 
 long = int

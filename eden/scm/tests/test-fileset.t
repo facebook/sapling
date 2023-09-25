@@ -330,7 +330,7 @@ Test safety of 'encoding' on removed files
 Test detection of unintentional 'matchctx.existing()' invocation
 
   $ cat > $TESTTMP/existingcaller.py <<EOF
-  > from edenscm import registrar
+  > from sapling import registrar
   > 
   > filesetpredicate = registrar.filesetpredicate()
   > @filesetpredicate('existingcaller()', callexisting=False)
@@ -345,7 +345,7 @@ Test detection of unintentional 'matchctx.existing()' invocation
   > EOF
 
   $ fileset 'existingcaller()' 2>&1 | tail -1
-  edenscm.error.ProgrammingError: unexpected existing() invocation
+  sapling.error.ProgrammingError: unexpected existing() invocation
 
 Test 'revs(...)'
 ================

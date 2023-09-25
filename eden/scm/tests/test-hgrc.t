@@ -182,7 +182,7 @@ don't set editor to empty string
 plain mode with exceptions
 
   $ cat > plain.py <<EOF
-  > from edenscm import commands, extensions
+  > from sapling import commands, extensions
   > def _config(orig, ui, repo, *values, **opts):
   >     ui.write('plain: %r\n' % ui.plain())
   >     return orig(ui, repo, *values, **opts)

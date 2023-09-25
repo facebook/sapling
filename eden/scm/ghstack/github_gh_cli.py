@@ -9,9 +9,9 @@ import json
 import os
 from typing import Any, Dict, List, Optional, Union
 
-from edenscm import error
-from edenscm.i18n import _
-from edenscm.result import Err, Ok, Result
+from sapling import error
+from sapling.i18n import _
+from sapling.result import Err, Ok, Result
 
 
 JsonDict = Dict[str, Any]

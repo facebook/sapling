@@ -81,7 +81,7 @@ def prepareargsenv(runtestsdir, port=None):
     if watchman:
         args += ["--with-watchman", watchman]
     # set HGDATAPATH
-    datapath = os.path.join(runtestsdir, "../edenscm")
+    datapath = os.path.join(runtestsdir, "../sapling")
     env["HGDATAPATH"] = datapath
     env["PYTHONPATH"] = os.path.join(runtestsdir, "../")
     # set HGPYTHONPATH since PYTHONPATH might be discarded

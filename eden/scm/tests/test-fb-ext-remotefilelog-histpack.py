@@ -17,10 +17,10 @@ import unittest
 
 import silenttestrunner
 from bindings import revisionstore
-from edenscm import error, pycompat, ui as uimod, util
-from edenscm.ext.remotefilelog.metadatastore import unionmetadatastore
-from edenscm.node import nullid
 from hghave import require
+from sapling import error, pycompat, ui as uimod, util
+from sapling.ext.remotefilelog.metadatastore import unionmetadatastore
+from sapling.node import nullid
 
 
 SMALLFANOUTCUTOFF = int(2**16 / 8)

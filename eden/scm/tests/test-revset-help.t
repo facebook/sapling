@@ -3,7 +3,7 @@
   $ configure modern
 
   $ cat >> checkdoc.py << 'EOF'
-  > from edenscm import revset, help, registrar
+  > from sapling import revset, help, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > special_names = {"id", "allprecursors", "precursors"}

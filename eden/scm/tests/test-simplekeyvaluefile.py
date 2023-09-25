@@ -8,9 +8,9 @@ from __future__ import absolute_import
 import unittest
 
 import silenttestrunner
-from edenscm import error, scmutil
-from edenscm.pycompat import decodeutf8
 from hghave import require
+from sapling import error, scmutil
+from sapling.pycompat import decodeutf8
 
 
 class mockfile:

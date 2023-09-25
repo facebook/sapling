@@ -6,7 +6,7 @@ Test hg log changeset printer external hook
 
   $ cat > $TESTTMP/logexthook.py <<EOF
   > from __future__ import absolute_import
-  > from edenscm import (
+  > from sapling import (
   >   cmdutil,
   >   commands,
   >   repair,

@@ -8,7 +8,7 @@
   $ setconfig morestatus.show=true
   $ cat >> $TESTTMP/breakupdate.py << EOF
   > import sys
-  > from edenscm import merge
+  > from sapling import merge
   > def extsetup(ui):
   >     merge.applyupdates = lambda *args, **kwargs: sys.exit()
   > EOF

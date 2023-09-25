@@ -575,12 +575,12 @@ class hgbuildmo(build):
             pofile = join(podir, po)
             modir = join("locale", po[:-3], "LC_MESSAGES")
             mofile = join(modir, "hg.mo")
-            mobuildfile = join("edenscm", mofile)
+            mobuildfile = join("sapling", mofile)
             cmd = ["msgfmt", "-v", "-o", mobuildfile, pofile]
             if sys.platform != "sunos5":
                 # msgfmt on Solaris does not know about -c
                 cmd.append("-c")
-            self.mkpath(join("edenscm", modir))
+            self.mkpath(join("sapling", modir))
             self.make_file([pofile], mobuildfile, spawn, (cmd,))
 
 
@@ -732,7 +732,7 @@ class buildembedded(Command):
 
         # Build everything into pythonXX.zip, which is in the default sys.path.
         zippath = pjoin(embdir, f"python{PY_VERSION}.zip")
-        self._zip_pyc_files(zippath, "edenscm")
+        self._zip_pyc_files(zippath, "sapling")
         self._zip_pyc_files(zippath, "ghstack")
         self._copy_hg_exe(embdir)
         self._copy_other(embdir)
@@ -745,7 +745,7 @@ class hgbuildpy(build_py):
         if self.distribution.pure:
             self.distribution.ext_modules = []
         elif self.distribution.cffi:
-            from edenscm.cffi import bdiffbuild, mpatchbuild
+            from sapling.cffi import bdiffbuild, mpatchbuild
 
             exts = [
                 mpatchbuild.ffi.distutils_extension(),
@@ -753,13 +753,13 @@ class hgbuildpy(build_py):
             ]
             # cffi modules go here
             if sys.platform == "darwin":
-                from edenscm.cffi import osutilbuild
+                from sapling.cffi import osutilbuild
 
                 exts.append(osutilbuild.ffi.distutils_extension())
             self.distribution.ext_modules = exts
 
     def run(self):
-        basepath = os.path.join(self.build_lib, "edenscm")
+        basepath = os.path.join(self.build_lib, "sapling")
         self.mkpath(basepath)
 
         build_py.run(self)
@@ -768,7 +768,7 @@ class hgbuildpy(build_py):
 class buildextindex(Command):
     description = "generate prebuilt index of ext (for frozen package)"
     user_options = []
-    _indexfilename = "edenscm/ext/__index__.py"
+    _indexfilename = "sapling/ext/__index__.py"
 
     def initialize_options(self):
         pass
@@ -783,7 +783,7 @@ class buildextindex(Command):
 
         # here no extension enabled, disabled() lists up everything
         code = (
-            "import pprint; from edenscm import extensions; "
+            "import pprint; from sapling import extensions; "
             "pprint.pprint(extensions.disabled())"
         )
         returncode, out, err = runcmd([sys.executable, "-c", code], localhgenv())
@@ -999,16 +999,16 @@ cmdclass = {
 
 packages = [
     os.path.dirname(p).replace("/", ".").replace("\\", ".")
-    for p in glob.glob("edenscm/**/__init__.py", recursive=True)
+    for p in glob.glob("sapling/**/__init__.py", recursive=True)
 ] + [
-    "edenscmnative",
+    "saplingnative",
     "ghstack",
 ]
 
 common_depends = [
-    "edenscm/bitmanipulation.h",
-    "edenscm/compat.h",
-    "edenscm/cext/util.h",
+    "sapling/bitmanipulation.h",
+    "sapling/compat.h",
+    "sapling/cext/util.h",
 ]
 
 
@@ -1090,11 +1090,11 @@ libraries = [
     (
         "mpatch",
         {
-            "sources": ["edenscm/mpatch.c"],
+            "sources": ["sapling/mpatch.c"],
             "depends": [
-                "edenscm/bitmanipulation.h",
-                "edenscm/compat.h",
-                "edenscm/mpatch.h",
+                "sapling/bitmanipulation.h",
+                "sapling/compat.h",
+                "sapling/mpatch.h",
             ],
             "include_dirs": ["."] + include_dirs,
         },
@@ -1185,7 +1185,7 @@ if os.name == "nt":
     msvccompiler.MSVCCompiler = HackedMSVCCompiler
 
 packagedata = {
-    "edenscm": [
+    "sapling": [
         "mercurial/locale/*/LC_MESSAGES/hg.mo",
         "mercurial/help/*.txt",
         "mercurial/help/internals/*.txt",
@@ -1341,7 +1341,7 @@ if sys.platform == "cygwin":
 
 
 setup(
-    name="edenscm",
+    name="sapling",
     version=setupversion,
     author="Olivia Mackall and many others",
     url="https://sapling-scm.com/",

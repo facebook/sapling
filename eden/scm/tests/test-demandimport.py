@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function
 
 # isort:skip_file
 
-from edenscm import hgdemandimport as demandimport
+from sapling import hgdemandimport as demandimport
 
 demandimport.enable()
 
@@ -49,7 +49,7 @@ print("os =", f(os))
 print("os.system =", f(os.system))
 print("os =", f(os))
 
-from edenscm import util
+from sapling import util
 
 print("util =", f(util))
 print("util.system =", f(util.rawsystem))
@@ -80,7 +80,7 @@ print("re.stderr =", f(re.stderr))
 print("re =", f(re))
 
 # Test access to special attributes through demandmod proxy
-from edenscm import pvec as pvecproxy
+from sapling import pvec as pvecproxy
 
 print("pvecproxy =", f(pvecproxy))
 print("pvecproxy.__doc__ = %r" % (" ".join(pvecproxy.__doc__.split()[:3]) + " ..."))
@@ -117,6 +117,6 @@ print(
 os.environ["HGDEMANDIMPORT"] = "disable"
 # this enable call should not actually enable demandimport!
 demandimport.enable()
-from edenscm import node
+from sapling import node
 
 print("node =", f(node))

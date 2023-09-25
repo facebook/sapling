@@ -5,7 +5,7 @@
 Avoid "\r" in messages:
 
   $ cat > crlf.py << 'EOF'
-  > from edenscm import extensions, util
+  > from sapling import extensions, util
   > def uisetup(ui):
   >     extensions.wrapfunction(util, 'tonativeeol', lambda _orig, x: x)
   > EOF

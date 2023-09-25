@@ -2,8 +2,9 @@ from __future__ import absolute_import
 
 import unittest
 
-from edenscm import error, mdiff
 from hghave import require
+
+from sapling import error, mdiff
 
 
 require(["py2"])

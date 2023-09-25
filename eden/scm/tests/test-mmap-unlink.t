@@ -6,7 +6,7 @@
   > import os
   > import shutil
   > 
-  > from edenscm import util
+  > from sapling import util
   > 
   > with util.posixfile("file", "w") as f:
   >     f.write("CONTENT")

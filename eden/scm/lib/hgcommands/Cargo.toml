@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = { version = "1.0.71", features = ["backtrace"] }
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 atexit = { version = "0.1.0", path = "../util/atexit" }
-bindings = { version = "0.1.0", path = "../../edenscmnative/bindings", default-features = false }
+bindings = { version = "0.1.0", path = "../../saplingnative/bindings", default-features = false }
 blackbox = { version = "0.1.0", path = "../blackbox" }
 checkout = { version = "0.1.0", path = "../checkout" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
@@ -52,11 +52,11 @@ pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 procinfo = { version = "0.1.0", path = "../procinfo" }
 progress-model = { version = "0.1.0", path = "../progress/model" }
 progress-render = { version = "0.1.0", path = "../progress/render" }
-pyconfigloader = { version = "0.1.0", path = "../../edenscmnative/bindings/modules/pyconfigloader" }
-pyedenclient = { version = "0.1.0", path = "../../edenscmnative/bindings/modules/pyedenclient" }
-pymodules = { version = "0.1.0", path = "../../edenscmnative/bindings/modules/pymodules" }
+pyconfigloader = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pyconfigloader" }
+pyedenclient = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pyedenclient" }
+pymodules = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pymodules" }
 python3-sys = "0.7.1"
-pytracing = { version = "0.1.0", path = "../../edenscmnative/bindings/modules/pytracing", default-features = false }
+pytracing = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pytracing", default-features = false }
 rand = { version = "0.8", features = ["small_rng"] }
 repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }
 repo_name = { version = "0.1.0", path = "../repo_name" }

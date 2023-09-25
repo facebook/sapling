@@ -2258,7 +2258,7 @@ class DebugRunTestTest(Test):
             "debugpython",
             "--",
             "-m",
-            "edenscm.testing.single",
+            "sapling.testing.single",
             self.path,
             "-o",
             self.errpath,
@@ -3949,7 +3949,7 @@ class TestRunner:
             # The pythondir has been inferred from --with-hg flag.
             # We cannot expect anything sensible here.
             return
-        expecthg = os.path.join(self._pythondir, "edenscm")
+        expecthg = os.path.join(self._pythondir, "sapling")
         actualhg = self._gethgpath()
         if os.path.abspath(actualhg) != os.path.abspath(expecthg):
             sys.stderr.write(
@@ -3963,7 +3963,7 @@ class TestRunner:
         if self._hgpath is not None:
             return self._hgpath
 
-        cmd = '%s -c "from edenscm import mercurial; print (mercurial.__path__[0])"'
+        cmd = '%s -c "from sapling import mercurial; print (mercurial.__path__[0])"'
         cmd = cmd % PYTHON
         pipe = os.popen(cmd)
         try:

@@ -11,8 +11,8 @@ import tempfile
 import unittest
 
 import silenttestrunner
-from edenscm import encoding, error, extensions, lock, pycompat, ui, util, vfs as vfsmod
 from hghave import require
+from sapling import encoding, error, extensions, lock, pycompat, ui, util, vfs as vfsmod
 
 
 testlockname = "testlock"

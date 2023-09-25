@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-//! Analyze tracing data for edenscm
+//! Analyze tracing data for sapling
 //!
-//! This is edenscm application specific. It's not a general purposed library.
+//! This is sapling application specific. It's not a general purposed library.
 
 mod tables;
 pub use tables::extract_tables;

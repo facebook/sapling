@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from edenscm import util
+from sapling import util
 
 
 # XXX: we should probably offer a devel option to do this in blackbox directly

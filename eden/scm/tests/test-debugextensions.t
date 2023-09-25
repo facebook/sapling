@@ -35,7 +35,7 @@
     location: */ext/histedit.py* (glob)
     bundled: yes
   hotfix1
-    location: <edenscm_ext_hotfix1>
+    location: <sapling_ext_hotfix1>
     bundled: no
   rebase
     location: */ext/rebase.py* (glob)
@@ -68,7 +68,7 @@
     "buglink": "",
     "bundled": false,
     "name": "hotfix1",
-    "source": "<edenscm_ext_hotfix1>",
+    "source": "<sapling_ext_hotfix1>",
     "testedwith": []
    },
    {

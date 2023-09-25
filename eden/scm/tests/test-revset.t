@@ -15,9 +15,9 @@
   $ HGENCODING=utf-8
 
   $ cat > testrevset.py << 'EOF'
-  > import edenscm.revset
+  > import sapling.revset
   > 
-  > baseset = edenscm.revset.baseset
+  > baseset = sapling.revset.baseset
   > 
   > def r3232(repo, subset, x):
   >     """"simple revset that return [3,2,3,2]
@@ -30,7 +30,7 @@
   >        return baseset(repo=repo)
   >     return baseset([3,3,2,2], repo=repo)
   > 
-  > edenscm.revset.symbols['r3232'] = r3232
+  > sapling.revset.symbols['r3232'] = r3232
   > EOF
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
@@ -70,7 +70,7 @@
 
   $ cat > debugrevlistspec.py << 'EOF'
   > from __future__ import absolute_import
-  > from edenscm import (
+  > from sapling import (
   >     node as nodemod,
   >     registrar,
   >     revset,

@@ -4,8 +4,9 @@ import collections
 import struct
 import unittest
 
-from edenscm import mdiff
 from hghave import require
+
+from sapling import mdiff
 
 
 require(["py2"])

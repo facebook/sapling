@@ -683,7 +683,7 @@ Test date rewriting
 
   $ cat > $TESTTMP/daterewrite.py <<EOF
   > import sys, time
-  > from edenscm import extensions
+  > from sapling import extensions
   > def extsetup(ui):
   >     def faketime(orig):
   >         return 1000000000

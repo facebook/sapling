@@ -7,7 +7,7 @@
 
 //! # gitstore
 //!
-//! Git object store for various trait impls in EdenSCM.
+//! Git object store for various trait impls in Sapling.
 
 mod gitstore;
 mod trait_impls;

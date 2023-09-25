@@ -3712,7 +3712,7 @@
 
 # revert side effect of loading the revnames extension
 
-    from edenscm import namespaces
+    from sapling import namespaces
     del namespaces.namespacetable["revnames"]
 
   $ hg log -r2 -T '{namespaces % "{namespace}: {names}\n"}'
@@ -4083,7 +4083,7 @@
   $ cd a
 
   $ cat > $TESTTMP/customfunc.py << 'EOF'
-  > from edenscm import registrar
+  > from sapling import registrar
   > templatefunc = registrar.templatefunc()
   > @templatefunc('custom()')
   > def custom(context, mapping, args):

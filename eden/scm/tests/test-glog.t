@@ -91,7 +91,7 @@
 
   $ cat > printrevset.py << 'EOF'
   > from __future__ import absolute_import
-  > from edenscm import (
+  > from sapling import (
   >   cmdutil,
   >   commands,
   >   extensions,

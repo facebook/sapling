@@ -5,7 +5,7 @@
 Setup
 
   $ enable phabstatus smartlog
-  $ setconfig extensions.arcconfig="$TESTDIR/../edenscm/ext/extlib/phabricator/arcconfig.py"
+  $ setconfig extensions.arcconfig="$TESTDIR/../sapling/ext/extlib/phabricator/arcconfig.py"
   $ hg init repo
   $ cd repo
   $ touch foo

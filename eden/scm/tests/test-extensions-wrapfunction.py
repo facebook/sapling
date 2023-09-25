@@ -1,7 +1,8 @@
 from __future__ import absolute_import, print_function
 
-from edenscm import extensions
 from hghave import require
+
+from sapling import extensions
 
 
 require(["py2"])

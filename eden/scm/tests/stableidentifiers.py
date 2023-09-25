@@ -7,9 +7,9 @@
 # incrementing sequence.
 import os
 
-from edenscm import extensions, util
+from sapling import extensions, util
 
-from edenscm.ext import extutil
+from sapling.ext import extutil
 
 
 def makestableidentifier(orig, length=16):

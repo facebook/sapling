@@ -3,10 +3,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from edenscm import extensions
-from edenscm.ext.github import submit
-from edenscm.ext.github.mock_utils import mock_run_git_command, MockGitHubServer
 from ghstack import github_gh_cli
+from sapling import extensions
+from sapling.ext.github import submit
+from sapling.ext.github.mock_utils import mock_run_git_command, MockGitHubServer
 
 # An extension to mock network requests by replacing the `github_gh_cli.make_request`
 # and `submit.run_git_command` with the corresponding wrapper functions. Check `uisetup`

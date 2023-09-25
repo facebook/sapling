@@ -4,8 +4,9 @@ import os
 import subprocess
 import sys
 
-from edenscm import extensions, hg, localrepo, ui as uimod, util, vfs as vfsmod
 from hghave import require
+
+from sapling import extensions, hg, localrepo, ui as uimod, util, vfs as vfsmod
 
 
 require(["py2"])

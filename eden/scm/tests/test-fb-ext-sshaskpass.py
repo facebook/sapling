@@ -9,11 +9,12 @@ import os
 import signal
 import sys
 
-from edenscm import error
+from hghave import require
+
+from sapling import error
 
 # Make sure we use sshaskpass.py in this repo, unaffected by PYTHONPATH
-from edenscm.ext import sshaskpass
-from hghave import require
+from sapling.ext import sshaskpass
 
 
 require(["py2"])

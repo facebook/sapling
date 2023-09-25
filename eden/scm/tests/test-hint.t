@@ -2,7 +2,7 @@
   $ eagerepo
 `
   $ newext showhint << EOF
-  > from edenscm import (
+  > from sapling import (
   >     cmdutil,
   >     hintutil,
   >     registrar,

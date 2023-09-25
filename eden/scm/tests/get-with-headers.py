@@ -17,7 +17,7 @@ import json
 import os
 import sys
 
-from edenscm import util
+from sapling import util
 
 
 httplib = util.httplib

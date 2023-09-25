@@ -5,8 +5,8 @@ import ghstack.github
 import ghstack.github_utils
 import ghstack.sapling_shell
 
-from edenscm import error
-from edenscm.i18n import _
+from sapling import error
+from sapling.i18n import _
 
 
 def main(

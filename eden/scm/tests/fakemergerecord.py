@@ -4,7 +4,7 @@
 
 from __future__ import absolute_import
 
-from edenscm import merge, registrar
+from sapling import merge, registrar
 
 
 cmdtable = {}

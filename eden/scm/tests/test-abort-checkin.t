@@ -11,7 +11,7 @@
 
   $ eagerepo
   $ cat > abortcommit.py << 'EOF'
-  > from edenscm import error
+  > from sapling import error
   > def hook(**args):
   >     raise error.Abort("no commits allowed")
   > def reposetup(ui, repo):

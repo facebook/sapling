@@ -650,7 +650,7 @@ strip backup content
 Check that the phase cache is properly invalidated after a strip with bookmark.
 
   $ cat > ../stripstalephasecache.py << EOF
-  > from edenscm import extensions, localrepo
+  > from sapling import extensions, localrepo
   > def transactioncallback(orig, repo, desc, *args, **kwargs):
   >     def test(transaction):
   >         # observe cache inconsistency
@@ -704,7 +704,7 @@ Use delayedstrip to strip inside a transaction
   $ echo 3 >> I
   $ cat > $TESTTMP/delayedstrip.py <<EOF
   > from __future__ import absolute_import
-  > from edenscm import commands, registrar, repair
+  > from sapling import commands, registrar, repair
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('testdelayedstrip')
@@ -753,7 +753,7 @@ Test high-level scmutil.cleanupnodes API
   $ cp -R . ../scmutilcleanup.obsstore
 
   $ cat > $TESTTMP/scmutilcleanup.py <<EOF
-  > from edenscm import registrar, scmutil
+  > from sapling import registrar, scmutil
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('testnodescleanup')

@@ -7,7 +7,7 @@
 def test_nested_lock():
     import os, tempfile
 
-    from edenscm import hg, ui as uimod
+    from sapling import hg, ui as uimod
 
     if os.name == "nt":
         return

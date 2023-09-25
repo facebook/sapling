@@ -63,7 +63,7 @@ coherent (issue4353)
 
   $ cat > ../dirstateexception.py <<EOF
   > from __future__ import absolute_import
-  > from edenscm import (
+  > from sapling import (
   >   error,
   >   extensions,
   >   merge,

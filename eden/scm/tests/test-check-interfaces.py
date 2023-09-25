@@ -2,8 +2,9 @@
 
 from __future__ import absolute_import, print_function
 
-from edenscm import bundlerepo, localrepo, sshpeer, ui as uimod
 from hghave import require
+
+from sapling import bundlerepo, localrepo, sshpeer, ui as uimod
 
 
 def checkobject(o):

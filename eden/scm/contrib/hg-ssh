@@ -35,10 +35,10 @@ import shlex
 import sys
 
 # enable importing on demand to reduce startup time
-import edenscm.hgdemandimport
-edenscm.hgdemandimport.enable()
+import sapling.hgdemandimport
+sapling.hgdemandimport.enable()
 
-from edenscm import (
+from sapling import (
     dispatch,
 )
 

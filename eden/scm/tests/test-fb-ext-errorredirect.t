@@ -2,7 +2,7 @@
 
   $ eagerepo
   $ newext crash <<EOF
-  > from edenscm import registrar
+  > from sapling import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('crash', [])

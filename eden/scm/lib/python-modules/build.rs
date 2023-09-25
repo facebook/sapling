@@ -16,7 +16,7 @@ fn main() {
     let manifest_dir = env::var_os("CARGO_MANIFEST_DIR").unwrap();
     let manifest_dir = Path::new(&manifest_dir);
     let sys_path = manifest_dir.parent().unwrap().parent().unwrap();
-    let root_modules = ["edenscm", "ghstack", "linecache"];
+    let root_modules = ["sapling", "ghstack", "linecache"];
 
     let code = codegen::generate_code(&Path::new(&python), Some(sys_path.as_ref()), &root_modules);
 

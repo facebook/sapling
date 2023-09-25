@@ -21,7 +21,7 @@ Create an extension that logs every commit and also call repo.revs twice
 
 Create an extension that logs the call to commit
   $ cat > $TESTTMP/logcommit.py << EOF
-  > from edenscm import extensions, localrepo
+  > from sapling import extensions, localrepo
   > def cb(sample):
   >   return len(sample)
   > def _commit(orig, repo, *args, **kwargs):
@@ -64,7 +64,7 @@ Do a couple of commits.  We expect to log two messages per call to repo.commit.
   $ mkcommit c
   atexit handler executed
   atexit handler executed
-  >>> from edenscm import pycompat
+  >>> from sapling import pycompat
   >>> import json
   >>> with open("$LOGDIR/samplingpath.txt") as f:
   ...     data = f.read()
@@ -93,7 +93,7 @@ Test topdir logging:
   $ setconfig sampling.key.command_info=command_info
   $ hg files c > /dev/null
   atexit handler executed
-  >>> from edenscm import json
+  >>> from sapling import json
   >>> with open("$LOGDIR/samplingpath.txt") as f:
   ...     data = f.read().strip("\0").split("\0")
   >>> print([json.loads(d)["data"]["topdir"] for d in data if "topdir" in d])
@@ -121,7 +121,7 @@ Test env-var logging:
 Test rust traces make it to sampling file as well:
   $ rm $LOGDIR/samplingpath.txt
   $ setconfig sampling.key.from_rust=hello
-  $ hg debugshell -c "from edenscm import tracing; tracing.info('msg', target='from_rust', hi='there')"
+  $ hg debugshell -c "from sapling import tracing; tracing.info('msg', target='from_rust', hi='there')"
   atexit handler executed
   >>> import json
   >>> with open("$LOGDIR/samplingpath.txt") as f:
@@ -135,7 +135,7 @@ Test rust traces make it to sampling file as well:
 Test command_duration is logged when ctrl-c'd:
   $ rm $LOGDIR/samplingpath.txt
   $ cat > $TESTTMP/sleep.py <<EOF
-  > from edenscm import registrar
+  > from sapling import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('sleep', norepo=True)

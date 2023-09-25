@@ -1583,7 +1583,7 @@ impl LfsRemote {
             }
 
             let user_agent = config.get_or("experimental", "lfs.user-agent", || {
-                format!("EdenSCM/{}", ::version::VERSION)
+                format!("Sapling/{}", ::version::VERSION)
             })?;
 
             let concurrent_fetches = config.get_or("lfs", "concurrentfetches", || 4)?;

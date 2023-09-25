@@ -53,7 +53,7 @@ non-utf8, symlink, executable:
 
 Test that various code paths in debugexportstack are exercised:
 
-    from edenscm.commands import debugstack
+    from sapling.commands import debugstack
     with assertCovered(debugstack.debugexportstack):
       # Regular export.
       $ hg debugexportstack -r $B::$D | pprint

@@ -1255,7 +1255,7 @@
   @  6408d34d8180 'commit1'
 
   $ cat >> $TESTTMP/abortupdate.py << 'EOF'
-  > from edenscm import extensions, hg, error
+  > from sapling import extensions, hg, error
   > def update(orig, repo, *args, **kwargs):
   >     if not repo.ui.configbool("abortupdate", "abort"):
   >         return orig(repo, *args, **kwargs)

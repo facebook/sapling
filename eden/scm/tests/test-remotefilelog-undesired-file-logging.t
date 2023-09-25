@@ -4,8 +4,8 @@
   $ . "$TESTDIR/library.sh"
 
   $ cat >> "$TESTTMP/uilog.py" <<EOF
-  > from edenscm import extensions
-  > from edenscm import ui as uimod
+  > from sapling import extensions
+  > from sapling import ui as uimod
   > def uisetup(ui):
   >   extensions.wrapfunction(uimod.ui, 'log', mylog)
   > def mylog(orig, self, service, *msg, **opts):

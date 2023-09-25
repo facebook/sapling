@@ -55,7 +55,7 @@ merge driver that always takes other versions
 (rc = 0, unresolved = n, driver-resolved = n)
 
   $ cat > ../mergedriver-other.py << EOF
-  > from edenscm import debugcommands
+  > from sapling import debugcommands
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     overrides = {('ui', 'forcemerge'): ':other'}
   >     with ui.configoverride(overrides, 'mergedriver'):
@@ -101,7 +101,7 @@ mark a file driver-resolved, and leave others unresolved
 (r = False, unresolved = y, driver-resolved = y)
 
   $ cat > ../mergedriver-auto1.py << EOF
-  > from edenscm import util
+  > from sapling import util
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     repo.ui.status('* preprocess called\n')
   >     mergestate.mark('foo.txt', 'd')
@@ -222,7 +222,7 @@ leave no files unresolved, but files driver-resolved
 for the conclude step, also test that leaving files as driver-resolved
 implicitly makes them resolved
   $ cat > ../mergedriver-driveronly.py << EOF
-  > from edenscm import debugcommands
+  > from sapling import debugcommands
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     repo.ui.status('* preprocess called\n')
   >     mergestate.mark('foo.txt', 'd')
@@ -371,7 +371,7 @@ raise an error
   $ hg goto --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat > ../mergedriver-mark-and-raise.py << EOF
-  > from edenscm import error
+  > from sapling import error
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     repo.ui.status('* preprocess called\n')
   >     for f in mergestate:
@@ -392,7 +392,7 @@ raise an error
   error: preprocess hook failed: foo
   Traceback (most recent call last):
     # collapsed by devel.collapse-traceback
-  edenscm.error.Abort: foo
+  sapling.error.Abort: foo
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -429,7 +429,7 @@ this shouldn't abort
   error: preprocess hook failed: foo
   Traceback (most recent call last):
     # collapsed by devel.collapse-traceback
-  edenscm.error.Abort: foo
+  sapling.error.Abort: foo
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   $ hg resolve --list
@@ -460,7 +460,7 @@ this should go through at this point
   error: preprocess hook failed: foo
   Traceback (most recent call last):
     # collapsed by devel.collapse-traceback
-  edenscm.error.Abort: foo
+  sapling.error.Abort: foo
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -473,14 +473,14 @@ XXX this is really confused
   error: preprocess hook failed: foo
   Traceback (most recent call last):
     # collapsed by devel.collapse-traceback
-  edenscm.error.Abort: foo
+  sapling.error.Abort: foo
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   * conclude called
   error: conclude hook failed: bar
   Traceback (most recent call last):
     # collapsed by devel.collapse-traceback
-  edenscm.error.Abort: bar
+  sapling.error.Abort: bar
   warning: merge driver failed to resolve files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   [1]
@@ -594,7 +594,7 @@ this should invoke the merge driver
   $ hg goto --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat > ../mergedriver-raise.py << EOF
-  > from edenscm import error
+  > from sapling import error
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     repo.ui.status('* preprocess called\n')
   >     raise error.Abort('foo')
@@ -612,7 +612,7 @@ this should invoke the merge driver
   error: preprocess hook failed: foo
   Traceback (most recent call last):
     # collapsed by devel.collapse-traceback
-  edenscm.error.Abort: foo
+  sapling.error.Abort: foo
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -638,14 +638,14 @@ XXX this is really confused
   error: preprocess hook failed: foo
   Traceback (most recent call last):
     # collapsed by devel.collapse-traceback
-  edenscm.error.Abort: foo
+  sapling.error.Abort: foo
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   * conclude called
   error: conclude hook failed: bar
   Traceback (most recent call last):
     # collapsed by devel.collapse-traceback
-  edenscm.error.Abort: bar
+  sapling.error.Abort: bar
   warning: merge driver failed to resolve files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   [1]

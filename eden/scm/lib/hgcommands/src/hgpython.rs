@@ -36,7 +36,7 @@ use crate::python::py_main;
 use crate::python::py_set_argv;
 use crate::python::py_set_program_name;
 
-const HGPYENTRYPOINT_MOD: &str = "edenscm";
+const HGPYENTRYPOINT_MOD: &str = "sapling";
 pub struct HgPython {
     py_initialized_by_us: bool,
 }
@@ -111,7 +111,7 @@ impl HgPython {
         // alongside the binary. Let's setup the PATH so we discover those python modules.
         // An example layout:
         //   $PREFIX/usr/local/bin/hg
-        //   $PREFIX/usr/local/lib/python3.8/site-packages/edenscm
+        //   $PREFIX/usr/local/lib/python3.8/site-packages/sapling
         let py_version: (i32, i32, i32, String, i32) =
             sys.get(py, "version_info").unwrap().extract(py).unwrap();
 
@@ -177,7 +177,7 @@ impl HgPython {
         config: &ConfigSet,
     ) -> PyResult<()> {
         let entry_point_mod =
-            info_span!("import edenscm").in_scope(|| py.import(HGPYENTRYPOINT_MOD))?;
+            info_span!("import sapling").in_scope(|| py.import(HGPYENTRYPOINT_MOD))?;
         let call_args = {
             let fin = io.with_input(|i| read_to_py_object(py, i));
             let fout = io.with_output(|o| write_to_py_object(py, o));
@@ -228,7 +228,7 @@ impl HgPython {
     }
 
     /// Setup ad-hoc tracing with `pattern` about modules.
-    /// See `edenscm/traceimport.py` for details.
+    /// See `sapling/traceimport.py` for details.
     ///
     /// Call this before `run_python`, or `run_hg`.
     ///
@@ -238,7 +238,7 @@ impl HgPython {
     pub fn setup_tracing(&mut self, pattern: String) -> PyResult<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let traceimport = py.import("edenscm.traceimport")?;
+        let traceimport = py.import("sapling.traceimport")?;
         traceimport.call(py, "enable", (pattern,), None)?;
         Ok(())
     }
@@ -268,7 +268,7 @@ impl HgPython {
         // cpython_ext::PyErr can render traceback when RUST_BACKTRACE=1.
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let dispatch = py.import("edenscm.dispatch")?;
+        let dispatch = py.import("sapling.dispatch")?;
         dispatch.call(py, "_preimportmodules", NoArgs, None)?;
         Ok(())
     }

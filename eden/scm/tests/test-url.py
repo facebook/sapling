@@ -4,8 +4,9 @@ from __future__ import absolute_import, print_function
 import doctest
 import os
 
-from edenscm import sslutil
 from hghave import require
+
+from sapling import sslutil
 
 
 def check(a, b):
@@ -237,7 +238,7 @@ check(
 
 def test_url():
     """
-    >>> from edenscm.util import url
+    >>> from sapling.util import url
 
     This tests for edge cases in url.URL's parsing algorithm. Most of
     these aren't useful for documentation purposes, so they aren't

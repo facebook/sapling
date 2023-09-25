@@ -13532,7 +13532,7 @@ a.anchor-link {
 <li><code>wrapfunc</code> has 300ns overhead per Python function call.</li>
 <li>A command like <code>hg sl</code> can take 1 second. It has 200k calls.</li>
 <li>If <em>all</em> functions are wrapped, the overhead of <code>hg sl</code> is 60ms, or 6%.</li>
-<li>As a comparison, <code>import edenscm.eden_dirstate</code> takes 50ms.</li>
+<li>As a comparison, <code>import sapling.eden_dirstate</code> takes 50ms.</li>
 </ul>
 <p>If some functions are not cheap to trace, we can blacklist them.</p>
 
@@ -13542,7 +13542,7 @@ a.anchor-link {
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p><code>edenscm.traceimport</code> added to handle automatic tracing. It is enabled right before <code>edenscm.hgdemandimport</code>.</p>
+<p><code>sapling.traceimport</code> added to handle automatic tracing. It is enabled right before <code>sapling.hgdemandimport</code>.</p>
 
 </div>
 </div>
@@ -13553,9 +13553,9 @@ a.anchor-link {
 <p>Python tracing can be turned on via <code>EDENSCM_TRACE_PY</code>:</p>
 <div class="highlight"><pre><span></span><span class="nv">EDENSCM_TRACE_PY</span><span class="o">=</span><span class="s1">&#39;*&#39;</span> ./hg ...           <span class="c1"># (attempt to) trace everything</span>
 <span class="nv">EDENSCM_TRACE_PY</span><span class="o">=</span><span class="s1">&#39;import&#39;</span> ...           <span class="c1"># trace import overhead</span>
-<span class="nv">EDENSCM_TRACE_PY</span><span class="o">=</span><span class="s1">&#39;import edenscm.*&#39;</span> ... <span class="c1"># trace imports, and edenscm modules</span>
+<span class="nv">EDENSCM_TRACE_PY</span><span class="o">=</span><span class="s1">&#39;import sapling.*&#39;</span> ... <span class="c1"># trace imports, and sapling modules</span>
 </pre></div>
-<p>Wrapping happens at <code>import</code> time. The importer is changed at <code>edenscm.run</code>, before enabling <code>demandimport</code>.</p>
+<p>Wrapping happens at <code>import</code> time. The importer is changed at <code>sapling.run</code>, before enabling <code>demandimport</code>.</p>
 
 </div>
 </div>
@@ -14050,7 +14050,7 @@ Start Dur.ms | Name                  Source
 <div class="highlight"><pre><span></span><span class="nb">export</span> <span class="nv">CHGDISABLE</span><span class="o">=</span><span class="m">1</span>
 <span class="nv">EDENSCM_TRACE_OUTPUT</span><span class="o">=</span>a.txt     ./hg ...
 <span class="nv">EDENSCM_TRACE_OUTPUT</span><span class="o">=</span>a.json    ./hg ...
-<span class="nv">EDENSCM_TRACE_OUTPUT</span><span class="o">=</span>a.json.gz <span class="nv">EDENSCM_TRACE_PY</span><span class="o">=</span><span class="s1">&#39;import edenscm.*&#39;</span> <span class="nv">EDENSCM_TRACE_LEVEL</span><span class="o">=</span>debug ./hg ...
+<span class="nv">EDENSCM_TRACE_OUTPUT</span><span class="o">=</span>a.json.gz <span class="nv">EDENSCM_TRACE_PY</span><span class="o">=</span><span class="s1">&#39;import sapling.*&#39;</span> <span class="nv">EDENSCM_TRACE_LEVEL</span><span class="o">=</span>debug ./hg ...
 </pre></div>
 
 </div>
@@ -14204,7 +14204,7 @@ Start Dur.ms | Name                  Source
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Tracing-non-hg-programs">Tracing non-hg programs<a class="anchor-link" href="#Tracing-non-hg-programs">&#182;</a></h3><p><code>hg debugpython --trace 'edenscm.*' python-script.py</code> can be used to do ad-hoc analysis.</p>
+<h3 id="Tracing-non-hg-programs">Tracing non-hg programs<a class="anchor-link" href="#Tracing-non-hg-programs">&#182;</a></h3><p><code>hg debugpython --trace 'sapling.*' python-script.py</code> can be used to do ad-hoc analysis.</p>
 
 </div>
 </div>

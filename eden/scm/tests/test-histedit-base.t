@@ -9,7 +9,7 @@ Create repo a:
 
   $ hg init a
   $ cd a
-  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
+  $ setconfig extensions.treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
   $ setconfig treemanifest.server=True ui.allowemptycommit=True
   $ hg commit -qm "A"
   $ hg commit -qm "B"

@@ -62,6 +62,6 @@ class BisectTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    from edenscm.ext.generic_bisect import bisect
+    from sapling.ext.generic_bisect import bisect
 
     silenttestrunner.main(__name__)

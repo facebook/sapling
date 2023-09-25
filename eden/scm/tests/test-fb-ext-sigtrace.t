@@ -1,7 +1,7 @@
 
   $ eagerepo
   $ newext signal <<EOF
-  > from edenscm import registrar
+  > from sapling import registrar
   > import os, signal
   > cmdtable = {}
   > command = registrar.command(cmdtable)

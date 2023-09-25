@@ -16,7 +16,7 @@ import optparse
 import os
 import sys
 
-from edenscm import (
+from sapling import (
     commands,
     extensions,
     help,

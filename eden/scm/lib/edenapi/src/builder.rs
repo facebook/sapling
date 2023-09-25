@@ -184,7 +184,7 @@ impl HttpClientBuilder {
             .unwrap_or_default();
         headers.insert(
             "User-Agent".to_string(),
-            format!("EdenSCM/{}", version::VERSION),
+            format!("Sapling/{}", version::VERSION),
         );
 
         let max_requests = get_config(config, "edenapi", "maxrequests")?;

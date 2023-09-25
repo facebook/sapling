@@ -3,7 +3,7 @@
 
   $ eagerepo
   $ newext adddrop <<EOF
-  > from edenscm import registrar
+  > from sapling import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('debugadddrop',

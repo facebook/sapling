@@ -8,7 +8,7 @@
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
-  > treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
+  > treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
   > [remotefilelog]
   > server=True
   > [treemanifest]
@@ -61,7 +61,7 @@ Add a few more public server comits
 
 Create an extension the prints out whenever we compare manifests on the server
   $ cat > "$TESTTMP/diffdebug.py" << EOF
-  > from edenscm import manifest
+  > from sapling import manifest
   > class manifestdict(manifest.manifestdict):
   >     ui = None
   >     def diff(self, *args, **kwargs):

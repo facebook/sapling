@@ -482,7 +482,7 @@ py3pats = [
 
 checks = [
     ("python", r".*\.(py|cgi)$", r"^#!.*python", pyfilters, pypats),
-    ("python", r"edenscm.*\.(py|cgi)$", r"^#!.*python", pyfilters, corepypats),
+    ("python", r"sapling.*\.(py|cgi)$", r"^#!.*python", pyfilters, corepypats),
     ("python", r".*\.(py|cgi)$", r"^#!.*python", [], pynfpats),
     ("python", r".*ext.*\.py$", "", [], pyextnfpats),
     (

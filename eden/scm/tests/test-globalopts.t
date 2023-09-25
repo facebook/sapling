@@ -238,7 +238,7 @@ Testing --traceback (this does not work with the Rust code path):
   $ hg --traceback log -r foo
   Traceback (most recent call last):
     # collapsed by devel.collapse-traceback
-  edenscm.error.RepoError: '$TESTTMP' is not inside a repository, but this command requires a repository
+  sapling.error.RepoError: '$TESTTMP' is not inside a repository, but this command requires a repository
   abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
   (use 'cd' to go to a directory inside a repository and try again)
   [255]

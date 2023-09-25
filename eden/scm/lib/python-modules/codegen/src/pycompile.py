@@ -63,14 +63,14 @@ def find_modules(modules):
             # Find the module without importing it.
             spec = importlib.util.find_spec(root_module_name)
             # Examples:
-            #   >>> importlib.util.find_spec('edenscm')
-            #   ModuleSpec(name='edenscm', origin='.../edenscm/__init__.py',
-            #              submodule_search_locations=['.../edenscm'])
-            #   >>> importlib.util.find_spec('edenscm.mercurial')
-            #   ModuleSpec(name='edenscm.ext', origin='.../edenscm/ext/__init__.py',
-            #              submodule_search_locations=['.../edenscm/ext'])
-            #   >>> importlib.util.find_spec('edenscmercurial.revset')
-            #   ModuleSpec(name='edenscm.revset', origin='.../edenscm/revset.py')
+            #   >>> importlib.util.find_spec('sapling')
+            #   ModuleSpec(name='sapling', origin='.../sapling/__init__.py',
+            #              submodule_search_locations=['.../sapling'])
+            #   >>> importlib.util.find_spec('sapling.mercurial')
+            #   ModuleSpec(name='sapling.ext', origin='.../sapling/ext/__init__.py',
+            #              submodule_search_locations=['.../sapling/ext'])
+            #   >>> importlib.util.find_spec('saplingercurial.revset')
+            #   ModuleSpec(name='sapling.revset', origin='.../sapling/revset.py')
             if spec is None:
                 raise RuntimeError(
                     f"cannot locate Python module {root_module_name} in {sys.path}"

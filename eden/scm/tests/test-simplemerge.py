@@ -22,9 +22,9 @@ from __future__ import absolute_import
 
 import unittest
 
-from edenscm import error, util
-from edenscm.pycompat import decodeutf8
-from edenscm.simplemerge import Merge3Text, render_minimized, wordmergemode
+from sapling import error, util
+from sapling.pycompat import decodeutf8
+from sapling.simplemerge import Merge3Text, render_minimized, wordmergemode
 
 
 TestCase = unittest.TestCase

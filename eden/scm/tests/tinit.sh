@@ -86,7 +86,7 @@ newserver() {
   else
     mkdir "$TESTTMP/$reponame"
     cd "$TESTTMP/$reponame"
-    hg --config extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py \
+    hg --config extensions.treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py \
       --config experimental.narrow-heads=false \
       --config visibility.enabled=false \
       init
@@ -98,7 +98,7 @@ newserver() {
        infinitepush.server=yes infinitepush.reponame="$reponame" \
        infinitepush.indextype=disk infinitepush.storetype=disk \
        experimental.narrow-heads=false \
-       extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
+       extensions.treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
   fi
 }
 

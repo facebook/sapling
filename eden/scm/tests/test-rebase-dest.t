@@ -76,7 +76,7 @@ Setup rebase with multiple destinations
 
   $ cat >> $TESTTMP/maprevset.py <<EOF
   > from __future__ import absolute_import
-  > from edenscm import registrar, revset, revsetlang, smartset
+  > from sapling import registrar, revset, revsetlang, smartset
   > revsetpredicate = registrar.revsetpredicate()
   > cache = {}
   > @revsetpredicate('map')

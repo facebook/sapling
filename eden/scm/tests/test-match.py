@@ -4,8 +4,8 @@ import os
 import unittest
 
 import silenttestrunner
-from edenscm import match as matchmod
 from hghave import require
+from sapling import match as matchmod
 
 
 class NeverMatcherTests(unittest.TestCase):

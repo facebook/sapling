@@ -29,7 +29,7 @@ $(eval HGROOT := $(shell pwd))
 HGPYTHONS ?= $(HGROOT)/build/pythons
 PURE=
 PYFILES:=$(shell find mercurial ext -name '*.py' 2>/dev/null)
-DOCFILES=edenscm/help/*.txt
+DOCFILES=sapling/help/*.txt
 export LANGUAGE=C
 export LC_ALL=C
 TESTFLAGS ?= $(shell echo $$HGTESTFLAGS)
@@ -133,13 +133,13 @@ getdepsbuild:
 
 cleanbutpackages:
 	-$(PYTHON3) setup.py clean --all # ignore errors from this command
-	find contrib doc i18n edenscm tests \
+	find contrib doc i18n sapling tests \
 		\( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
-	rm -f MANIFEST MANIFEST.in edenscm/ext/__index__.py tests/*.err
-	rm -f edenscm/__modulepolicy__.py
-	if test -d .hg; then rm -f edenscm/__version__.py; fi
+	rm -f MANIFEST MANIFEST.in sapling/ext/__index__.py tests/*.err
+	rm -f sapling/__modulepolicy__.py
+	if test -d .hg; then rm -f sapling/__version__.py; fi
 	rm -rf build/*
-	rm -rf build edenscm/locale
+	rm -rf build sapling/locale
 	rm -f Cargo.lock
 ifeq ($(OS),Windows_NT)
 	$(RM) -r hg-python $(HGNAME).exe python27.dll
@@ -171,13 +171,13 @@ tests:
 update-pot: i18n/hg.pot
 
 i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
-	$(PYTHON) i18n/hggettext edenscm/commands.py \
-	  edenscm/ext/*.py edenscm/ext/*/__init__.py \
-	  edenscm/fileset.py edenscm/revset.py \
-	  edenscm/templatefilters.py edenscm/templatekw.py \
-	  edenscm/templater.py \
-	  edenscm/filemerge.py \
-	  edenscm/util.py \
+	$(PYTHON) i18n/hggettext sapling/commands.py \
+	  sapling/ext/*.py sapling/ext/*/__init__.py \
+	  sapling/fileset.py sapling/revset.py \
+	  sapling/templatefilters.py sapling/templatekw.py \
+	  sapling/templater.py \
+	  sapling/filemerge.py \
+	  sapling/util.py \
 	  $(DOCFILES) > i18n/hg.pot.tmp
         # All strings marked for translation in Mercurial contain
         # ASCII characters only. But some files contain string

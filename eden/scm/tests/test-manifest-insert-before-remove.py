@@ -8,7 +8,7 @@ import unittest
 
 import bindings
 import silenttestrunner
-from edenscm.node import bin
+from sapling.node import bin
 
 
 class ManifestInsertBeforeRemoveTest(unittest.TestCase):

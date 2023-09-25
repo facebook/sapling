@@ -15,11 +15,11 @@
 
 # Setup repo
 
-  $ hg init repo --config remotefilelog.reponame=repo --config extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
+  $ hg init repo --config remotefilelog.reponame=repo --config extensions.treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
   $ cd repo
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
+  > treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
   > [treemanifest]
   > server=True
   > [remotefilelog]

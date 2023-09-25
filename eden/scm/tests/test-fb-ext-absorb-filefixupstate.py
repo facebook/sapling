@@ -7,8 +7,9 @@ from __future__ import absolute_import
 
 import itertools
 
-from edenscm.ext import absorb
 from hghave import require
+
+from sapling.ext import absorb
 
 
 class simplefctx:
