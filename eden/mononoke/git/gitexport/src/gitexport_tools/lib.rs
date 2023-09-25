@@ -37,6 +37,7 @@ use repo_blobstore::RepoBlobstoreArc;
 use slog::debug;
 use slog::error;
 use slog::info;
+use slog::trace;
 use sql::rusqlite::Connection as SqliteConnection;
 use test_repo_factory::TestRepoFactory;
 
@@ -59,8 +60,9 @@ pub async fn rewrite_partial_changesets(
 
     let logger = ctx.logger();
 
+    info!(logger, "Copying changesets to temporary repo...");
+
     debug!(logger, "export_paths: {:#?}", &export_paths);
-    debug!(logger, "changeset_parents: {:#?}", &changeset_parents);
 
     // Repo that will hold the partial changesets that will be exported to git
     let temp_repo_ctx = create_temp_repo(fb, ctx).await?;
@@ -71,14 +73,15 @@ pub async fn rewrite_partial_changesets(
         let should_export = export_paths.iter().any(|p| p.is_prefix_of(source_path));
 
         if !should_export {
-            debug!(
+            trace!(
                 logger_clone,
-                "Path {:#?} will NOT be exported.", &source_path
+                "Path {:#?} will NOT be exported.",
+                &source_path
             );
             return Ok(vec![]);
         }
 
-        debug!(logger_clone, "Path {:#?} will be exported.", &source_path);
+        trace!(logger_clone, "Path {:#?} will be exported.", &source_path);
         Ok(vec![source_path.clone()])
     });
 
@@ -107,9 +110,10 @@ pub async fn rewrite_partial_changesets(
         )
         .await?;
 
-    debug!(
+    trace!(
         logger,
-        "new_bonsai_changesets: {:#?}", &new_bonsai_changesets
+        "new_bonsai_changesets: {:#?}",
+        &new_bonsai_changesets
     );
 
     let head_cs_id = new_bonsai_changesets
@@ -117,6 +121,7 @@ pub async fn rewrite_partial_changesets(
         .ok_or(Error::msg("No changesets were moved"))?
         .get_changeset_id();
 
+    debug!(logger, "Uploading copied changesets...");
     upload_commits(
         source_repo_ctx.ctx(),
         new_bonsai_changesets,
@@ -148,7 +153,7 @@ async fn create_bonsai_for_new_repo(
     changeset_ctx: ChangesetContext,
 ) -> Result<(BonsaiChangeset, HashMap<ChangesetId, ChangesetId>), MononokeError> {
     let logger = changeset_ctx.repo().ctx().logger();
-    debug!(
+    trace!(
         logger,
         "Rewriting changeset: {:#?} | {:#?}",
         &changeset_ctx.id(),

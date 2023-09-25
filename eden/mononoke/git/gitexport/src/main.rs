@@ -30,8 +30,8 @@ use mononoke_types::NonRootMPath;
 use print_graph::print_graph;
 use print_graph::PrintGraphOptions;
 use repo_authorization::AuthorizationContext;
-use slog::debug;
 use slog::info;
+use slog::trace;
 
 use crate::types::GitExportArgs;
 
@@ -124,7 +124,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
 
     info!(
         logger,
-        "Using changeset {0:#?} as the starting changeset",
+        "Using changeset {0:?} as the starting changeset",
         cs_ctx.id()
     );
 
@@ -152,8 +152,8 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     )
     .await?;
 
-    debug!(logger, "changesets: {:#?}", changesets);
-    debug!(logger, "changeset parents: {:?}", cs_parents);
+    trace!(logger, "changesets: {:#?}", changesets);
+    trace!(logger, "changeset parents: {:?}", cs_parents);
 
     let temp_repo_ctx =
         rewrite_partial_changesets(app.fb, repo_ctx, changesets, &cs_parents, export_paths).await?;

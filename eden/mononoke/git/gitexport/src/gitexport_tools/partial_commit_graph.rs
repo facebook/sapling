@@ -22,6 +22,8 @@ use mononoke_api::MononokeError;
 use mononoke_api::MononokePath;
 use mononoke_types::ChangesetId;
 use slog::debug;
+use slog::info;
+use slog::trace;
 use slog::Logger;
 
 pub type ChangesetParents = HashMap<ChangesetId, Vec<ChangesetId>>;
@@ -44,6 +46,7 @@ where
     P: TryInto<MononokePath>,
     MononokeError: From<P::Error>,
 {
+    info!(logger, "Building partial commit graph for export...");
     let mononoke_paths = paths
         .into_iter()
         .map(|path| path.try_into())
@@ -75,14 +78,19 @@ where
     .await?;
 
     let (sorted_changesets, parents_map) =
-        merge_cs_lists_and_build_parents_map(history_changesets).await?;
+        merge_cs_lists_and_build_parents_map(logger, history_changesets).await?;
 
-    debug!(logger, "sorted_changesets: {0:#?}", &sorted_changesets);
+    info!(
+        logger,
+        "Number of changsets to export: {0:?}",
+        sorted_changesets.len()
+    );
 
     // TODO(gustavoavena): remove these prints for debugging after adding tests
     let cs_msgs: Vec<_> = try_join_all(sorted_changesets.iter().map(|csc| csc.message())).await?;
-    debug!(logger, "changeset messages: {0:#?}", cs_msgs);
+    trace!(logger, "changeset messages: {0:#?}", cs_msgs);
 
+    info!(logger, "Partial commit graph built!");
     Ok((sorted_changesets, parents_map))
 }
 
@@ -96,8 +104,13 @@ where
 /// have modified export paths, the parent map should be `{A: [D]}`, because
 /// the partial graph is `A -> D`.
 async fn merge_cs_lists_and_build_parents_map(
+    logger: &Logger,
     changeset_lists: Vec<Vec<ChangesetContext>>,
 ) -> Result<(Vec<ChangesetContext>, ChangesetParents), Error> {
+    info!(
+        logger,
+        "Merging changeset lists and building parents map..."
+    );
     let mut changesets_with_gen: Vec<(ChangesetContext, u64)> =
         stream::iter(changeset_lists.into_iter().flatten())
             .then(|cs| async move {
@@ -108,6 +121,7 @@ async fn merge_cs_lists_and_build_parents_map(
             .await?;
 
     // Sort by generation number
+    debug!(logger, "Sorting changesets by generation number...");
     changesets_with_gen
         .sort_by(|(cs_a, gen_a), (cs_b, gen_b)| (gen_a, cs_a.id()).cmp(&(gen_b, cs_b.id())));
 
@@ -119,11 +133,13 @@ async fn merge_cs_lists_and_build_parents_map(
 
     // Remove any duplicates from the list.
     // NOTE: `dedup_by` can only be used here because the list is sorted!
+    debug!(logger, "Deduping changesets...");
     sorted_css.dedup_by(|cs_a, cs_b| cs_a.id().eq(&cs_b.id()));
 
     // Make sure that there are no merge commits by checking that consecutive
     // changesest are ancestors of each other.
     // In this process, also build the parents map.
+    debug!(logger, "Building parents map...");
     let mut parents_map = try_join_all(sorted_css.iter().tuple_windows().map(|(parent, child)| async {
          let is_ancestor = parent.is_ancestor_of(child.id()).await?;
          if !is_ancestor {
