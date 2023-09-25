@@ -1326,13 +1326,15 @@ rustextbinaries = [
     ),
 ]
 
-if not ossbuild:
+skip_other_binaries = bool(os.environ.get("SAPLING_SKIP_OTHER_RUST_BINARIES"))
+
+if not ossbuild and not skip_other_binaries:
     rustextbinaries += [
         RustBinary("mkscratch", manifest="exec/scratch/Cargo.toml"),
         RustBinary("scm_daemon", manifest="exec/scm_daemon/Cargo.toml"),
     ]
 
-if havefb and iswindows:
+if havefb and iswindows and not skip_other_binaries:
     rustextbinaries += [RustBinary("fbclone", manifest="fb/fbclone/Cargo.toml")]
 
 

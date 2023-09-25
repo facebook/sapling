@@ -69,8 +69,17 @@ help:
 
 all: build
 
-oss:
-	SAPLING_OSS_BUILD=true HGNAME=$(SL_NAME) \
+oss: OSS=true HGNAME=$(SL_NAME)
+oss: local
+
+install-oss: oss
+	$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
+	  install --root="$(DESTDIR)/" --prefix="$(PREFIX)" \
+	  --install-lib="$(PREFIX)"/lib/python3.$(shell $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) -c "import sys; print(sys.version_info.minor)")/site-packages \
+	  --install-scripts="$(PREFIX)/bin" --force
+
+local:
+	SAPLING_OSS_BUILD=$(OSS) \
 	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
 	  build_interactive_smartlog \
 	  build_py -c -d . \
@@ -79,22 +88,14 @@ oss:
 	  build_rust_ext -i -l $(RUST_FLAG) \
 	  build_mo
 ifeq ($(OS),Windows_NT)
-	cp build/scripts-3*/$(SL_NAME).exe $(SL_NAME).exe
+	cp build/scripts-3*/$(HGNAME).exe $(HGNAME).exe
 else
-	$(RM) $(SL_NAME)
-	cp build/scripts-3*/$(SL_NAME) $(SL_NAME)
+	$(RM) $(HGNAME)
+	cp build/scripts-3*/$(HGNAME) $(HGNAME)
 endif
 
-install-oss: oss
-	SAPLING_OSS_BUILD=true HGNAME=$(SL_NAME) \
-	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
-	  install --root="$(DESTDIR)/" --prefix="$(PREFIX)" \
-	  --install-lib="$(PREFIX)"/lib/python3.$(shell $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) -c "import sys; print(sys.version_info.minor)")/site-packages \
-	  --install-scripts="$(PREFIX)/bin" --force
-
-local:
-	$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
-	  build_interactive_smartlog \
+hg:
+	SAPLING_SKIP_OTHER_RUST_BINARIES=true $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
 	  build_py -c -d . \
 	  build_clib $(COMPILERFLAG) \
 	  build_ext $(COMPILERFLAG) -i \
@@ -204,4 +205,4 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 
 # Packaging targets
 
-.PHONY: help all local build cleanbutpackages clean install install-home install-getdeps getdepsbuild deb
+.PHONY: help all local build cleanbutpackages clean install install-home install-getdeps getdepsbuild deb hg
