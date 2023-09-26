@@ -12,6 +12,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Error;
+use anyhow::Result;
 use blobstore::Loadable;
 use blobstore::PutBehaviour;
 use borrowed::borrowed;
@@ -23,6 +24,8 @@ use fbinit::FacebookInit;
 use fileblob::Fileblob;
 use futures::stream::TryStreamExt;
 use futures::stream::{self};
+use indicatif::ProgressBar;
+use indicatif::ProgressStyle;
 use mononoke_api::BookmarkKey;
 use mononoke_api::ChangesetContext;
 use mononoke_api::CoreContext;
@@ -39,6 +42,7 @@ use slog::debug;
 use slog::error;
 use slog::info;
 use slog::trace;
+use slog::Drain;
 use sql::rusqlite::Connection as SqliteConnection;
 use test_repo_factory::TestRepoFactory;
 
@@ -56,7 +60,7 @@ pub async fn rewrite_partial_changesets(
     changesets: Vec<ChangesetContext>,
     changeset_parents: &ChangesetParents,
     export_paths: Vec<NonRootMPath>,
-) -> Result<RepoContext, MononokeError> {
+) -> Result<RepoContext> {
     let ctx: &CoreContext = source_repo_ctx.ctx();
 
     let logger = ctx.logger();
@@ -86,14 +90,31 @@ pub async fn rewrite_partial_changesets(
         Ok(vec![source_path.clone()])
     });
 
+    let num_changesets = changesets.len().try_into().unwrap();
     let cs_results: Vec<Result<ChangesetContext, MononokeError>> =
         changesets.into_iter().map(Ok).collect::<Vec<_>>();
+
+    let mb_progress_bar = if logger.is_enabled(slog::Level::Info) {
+        let progress_bar = ProgressBar::new(num_changesets)
+        .with_message("Copying changesets")
+        .with_style(
+            ProgressStyle::with_template(
+                "[{percent}%] {msg} [{bar:60.cyan}] (ETA: {eta}) ({human_pos}/{human_len}) ({per_sec}) ",
+            )?
+            .progress_chars("#>-"),
+        );
+        progress_bar.enable_steady_tick(std::time::Duration::from_secs(5));
+        Some(progress_bar)
+    } else {
+        None
+    };
 
     let (new_bonsai_changesets, _) = stream::iter(cs_results)
         .try_fold(
             (Vec::new(), HashMap::new()),
             |(mut new_bonsai_changesets, remapped_parents), changeset| {
                 borrowed!(source_repo_ctx);
+                borrowed!(mb_progress_bar);
                 cloned!(multi_mover);
                 async move {
                     let (new_bcs, remapped_parents) = create_bonsai_for_new_repo(
@@ -105,6 +126,9 @@ pub async fn rewrite_partial_changesets(
                     )
                     .await?;
                     new_bonsai_changesets.push(new_bcs);
+                    if let Some(progress_bar) = mb_progress_bar {
+                        progress_bar.inc(1);
+                    }
                     Ok((new_bonsai_changesets, remapped_parents))
                 }
             },
