@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.71"
-configmodel = { version = "0.1.0", path = "../config/model" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lazy_static = "1.4"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
