@@ -14,6 +14,10 @@ path = "src/gitexport_tools/lib.rs"
 name = "gitexport"
 path = "src/main.rs"
 
+[[test]]
+name = "partial_commit_graph_tests"
+path = "tests/gitexport_tools/partial_commit_graph/lib.rs"
+
 [dependencies]
 anyhow = "1.0.71"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
