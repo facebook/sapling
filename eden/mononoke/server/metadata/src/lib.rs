@@ -120,6 +120,10 @@ impl Metadata {
         self.set_main_id()
     }
 
+    pub fn client_info(&self) -> Option<&ClientInfo> {
+        self.client_info.as_ref()
+    }
+
     pub fn set_main_id(&mut self) -> &mut Self {
         self.client_info.as_mut().map(|x| {
             x.request_info.as_mut().map(|client_request_info| {
