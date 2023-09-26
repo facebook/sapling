@@ -403,13 +403,13 @@ def simpledate(context, mapping, args):
         tzname = templater.evalstring(context, mapping, args[1])
         if tzname:
             try:
-                import pytz
+                import zoneinfo
 
-                tz = pytz.timezone(tzname)
+                tz = zoneinfo.ZoneInfo(tzname)
             except ImportError:
-                msg = "Couldn't import pytz, using default time zone\n"
+                msg = "Couldn't import ZoneInfo, using default time zone\n"
                 repo.ui.warn(msg)
-            except pytz.UnknownTimeZoneError:
+            except zoneinfo._common.ZoneInfoNotFoundError:
                 msg = "Unknown time zone: %s\n" % tzname
                 repo.ui.warn(msg)
     then = datetime.datetime.fromtimestamp(date[0], tz)
