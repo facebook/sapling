@@ -156,6 +156,7 @@ async fn merge_cs_lists_and_build_parents_map(
 }
 
 #[cfg(test)]
+#[allow(non_snake_case)] // For test commits
 mod test {
 
     use std::str::FromStr;
@@ -185,23 +186,23 @@ mod test {
         let (source_repo_ctx, changeset_ids) =
             build_test_repo(fb, &ctx, GitExportTestRepoOptions::default()).await?;
 
-        let first = changeset_ids["first"];
-        let third = changeset_ids["third"];
-        let fifth = changeset_ids["fifth"];
-        let seventh = changeset_ids["seventh"];
-        let ninth = changeset_ids["ninth"];
-        let tenth = changeset_ids["tenth"];
+        let A = changeset_ids["A"];
+        let C = changeset_ids["C"];
+        let E = changeset_ids["E"];
+        let G = changeset_ids["G"];
+        let I = changeset_ids["I"];
+        let J = changeset_ids["J"];
 
         // Ids of the changesets that are expected to be rewritten
-        let expected_cs_ids: Vec<ChangesetId> = vec![first, third, fifth, seventh, ninth, tenth];
+        let expected_cs_ids: Vec<ChangesetId> = vec![A, C, E, G, I, J];
 
         let expected_parent_map = HashMap::from([
-            (first, vec![]),
-            (third, vec![first]),
-            (fifth, vec![third]),
-            (seventh, vec![fifth]),
-            (ninth, vec![seventh]),
-            (tenth, vec![ninth]),
+            (A, vec![]),
+            (C, vec![A]),
+            (E, vec![C]),
+            (G, vec![E]),
+            (I, vec![G]),
+            (J, vec![I]),
         ]);
 
         let master_cs = source_repo_ctx
@@ -241,8 +242,8 @@ mod test {
 
         let (source_repo_ctx, changeset_ids) = build_test_repo(fb, &ctx, test_repo_opts).await?;
 
-        let sixth = changeset_ids["sixth"];
-        let branch_commit = changeset_ids["branch"];
+        let F = changeset_ids["F"];
+        let branch_commit = changeset_ids["K"];
 
         let master_cs = source_repo_ctx
             .resolve_bookmark(
@@ -263,7 +264,7 @@ mod test {
 
         let expected_error = format!(
             "internal error: Merge commits are not supported for partial commit graphs. Commit {0:?} is not an ancestor of {1:?}",
-            sixth, branch_commit
+            branch_commit, F
         );
         assert_eq!(expected_error, error.to_string(),);
 
@@ -285,27 +286,26 @@ mod test {
         };
         let (source_repo_ctx, changeset_ids) = build_test_repo(fb, &ctx, test_repo_opts).await?;
 
-        let first = changeset_ids["first"];
-        let third = changeset_ids["third"];
-        let fifth = changeset_ids["fifth"];
-        // The sixth commit changes only the file in the second export path
-        let sixth = changeset_ids["sixth"];
-        let seventh = changeset_ids["seventh"];
-        let ninth = changeset_ids["ninth"];
-        let tenth = changeset_ids["tenth"];
+        let A = changeset_ids["A"];
+        let C = changeset_ids["C"];
+        let E = changeset_ids["E"];
+        // The F commit changes only the file in the second export path
+        let F = changeset_ids["F"];
+        let G = changeset_ids["G"];
+        let I = changeset_ids["I"];
+        let J = changeset_ids["J"];
 
         // Ids of the changesets that are expected to be rewritten
-        let expected_cs_ids: Vec<ChangesetId> =
-            vec![first, third, fifth, sixth, seventh, ninth, tenth];
+        let expected_cs_ids: Vec<ChangesetId> = vec![A, C, E, F, G, I, J];
 
         let expected_parent_map = HashMap::from([
-            (first, vec![]),
-            (third, vec![first]),
-            (fifth, vec![third]),
-            (sixth, vec![fifth]),
-            (seventh, vec![sixth]),
-            (ninth, vec![seventh]),
-            (tenth, vec![ninth]),
+            (A, vec![]),
+            (C, vec![A]),
+            (E, vec![C]),
+            (F, vec![E]),
+            (G, vec![F]),
+            (I, vec![G]),
+            (J, vec![I]),
         ]);
 
         let master_cs = source_repo_ctx
@@ -349,25 +349,25 @@ mod test {
         };
         let (source_repo_ctx, changeset_ids) = build_test_repo(fb, &ctx, test_repo_opts).await?;
 
-        let fifth = changeset_ids["fifth"];
-        // The sixth commit changes only the file in the second export path
-        let sixth = changeset_ids["sixth"];
-        let seventh = changeset_ids["seventh"];
-        let ninth = changeset_ids["ninth"];
-        let tenth = changeset_ids["tenth"];
+        let E = changeset_ids["E"];
+        // The F commit changes only the file in the second export path
+        let F = changeset_ids["F"];
+        let G = changeset_ids["G"];
+        let I = changeset_ids["I"];
+        let J = changeset_ids["J"];
 
         // Ids of the changesets that are expected to be rewritten
         // Ids of the changesets that are expected to be rewritten.
-        // First and third commits would also be included, but we're going to
-        // use fifth's author date as the oldest_commit_ts argument.
-        let expected_cs_ids: Vec<ChangesetId> = vec![fifth, sixth, seventh, ninth, tenth];
+        // First and C commits would also be included, but we're going to
+        // use E's author date as the oldest_commit_ts argument.
+        let expected_cs_ids: Vec<ChangesetId> = vec![E, F, G, I, J];
 
         let expected_parent_map = HashMap::from([
-            (fifth, vec![]),
-            (sixth, vec![fifth]),
-            (seventh, vec![sixth]),
-            (ninth, vec![seventh]),
-            (tenth, vec![ninth]),
+            (E, vec![]),
+            (F, vec![E]),
+            (G, vec![F]),
+            (I, vec![G]),
+            (J, vec![I]),
         ]);
 
         let master_cs = source_repo_ctx
@@ -379,9 +379,9 @@ mod test {
             .ok_or(anyhow!("Couldn't find master bookmark in source repo."))?;
 
         let fifth_cs = source_repo_ctx
-            .changeset(fifth)
+            .changeset(E)
             .await?
-            .ok_or(anyhow!("Failed to get changeset context of fifth commit"))?;
+            .ok_or(anyhow!("Failed to get changeset context of E commit"))?;
 
         let oldest_ts = fifth_cs.author_date().await?.timestamp();
 

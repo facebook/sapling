@@ -296,6 +296,8 @@ async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoCon
 }
 
 #[cfg(test)]
+#[allow(non_snake_case)] // For test commits
+
 mod test {
 
     use std::collections::VecDeque;
@@ -325,30 +327,29 @@ mod test {
         let (source_repo_ctx, changeset_ids) =
             build_test_repo(fb, &ctx, GitExportTestRepoOptions::default()).await?;
 
-        let first = changeset_ids["first"];
-        let third = changeset_ids["third"];
-        let fifth = changeset_ids["fifth"];
-        let sixth = changeset_ids["sixth"];
-        let seventh = changeset_ids["seventh"];
-        let ninth = changeset_ids["ninth"];
-        let tenth = changeset_ids["tenth"];
+        let A = changeset_ids["A"];
+        let C = changeset_ids["C"];
+        let E = changeset_ids["E"];
+        let F = changeset_ids["F"];
+        let G = changeset_ids["G"];
+        let I = changeset_ids["I"];
+        let J = changeset_ids["J"];
 
         // Test that changesets are rewritten when relevant changesets are given
         // topologically sorted
-        let relevant_changeset_ids: Vec<ChangesetId> =
-            vec![first, third, fifth, sixth, seventh, ninth, tenth];
+        let relevant_changeset_ids: Vec<ChangesetId> = vec![A, C, E, F, G, I, J];
 
         let relevant_changesets: Vec<ChangesetContext> =
             get_relevant_changesets_from_ids(&source_repo_ctx, relevant_changeset_ids).await?;
 
         let relevant_changeset_parents = HashMap::from([
-            (first, vec![]),
-            (third, vec![first]),
-            (fifth, vec![third]),
-            (sixth, vec![fifth]),
-            (seventh, vec![sixth]),
-            (ninth, vec![seventh]),
-            (tenth, vec![ninth]),
+            (A, vec![]),
+            (C, vec![A]),
+            (E, vec![C]),
+            (F, vec![E]),
+            (G, vec![F]),
+            (I, vec![G]),
+            (J, vec![I]),
         ]);
 
         let temp_repo_ctx = rewrite_partial_changesets(
@@ -428,22 +429,22 @@ mod test {
         }
 
         assert_eq!(result.len(), 7);
-        assert_eq!(result[0], build_expected_tuple("first", vec![EXPORT_FILE]));
-        assert_eq!(result[1], build_expected_tuple("third", vec![EXPORT_FILE]));
-        assert_eq!(result[2], build_expected_tuple("fifth", vec![EXPORT_FILE]));
+        assert_eq!(result[0], build_expected_tuple("A", vec![EXPORT_FILE]));
+        assert_eq!(result[1], build_expected_tuple("C", vec![EXPORT_FILE]));
+        assert_eq!(result[2], build_expected_tuple("E", vec![EXPORT_FILE]));
         assert_eq!(
             result[3],
-            build_expected_tuple("sixth", vec![FILE_IN_SECOND_EXPORT_DIR])
+            build_expected_tuple("F", vec![FILE_IN_SECOND_EXPORT_DIR])
         );
         assert_eq!(
             result[4],
-            build_expected_tuple("seventh", vec![EXPORT_FILE, FILE_IN_SECOND_EXPORT_DIR])
+            build_expected_tuple("G", vec![EXPORT_FILE, FILE_IN_SECOND_EXPORT_DIR])
         );
         assert_eq!(
             result[5],
-            build_expected_tuple("ninth", vec![SECOND_EXPORT_FILE])
+            build_expected_tuple("I", vec![SECOND_EXPORT_FILE])
         );
-        assert_eq!(result[6], build_expected_tuple("tenth", vec![EXPORT_FILE]));
+        assert_eq!(result[6], build_expected_tuple("J", vec![EXPORT_FILE]));
 
         Ok(())
     }
@@ -457,23 +458,19 @@ mod test {
         let (source_repo_ctx, changeset_ids) =
             build_test_repo(fb, &ctx, GitExportTestRepoOptions::default()).await?;
 
-        let first = changeset_ids["first"];
-        let third = changeset_ids["third"];
-        let fourth = changeset_ids["fourth"];
-        let fifth = changeset_ids["fifth"];
+        let A = changeset_ids["A"];
+        let C = changeset_ids["C"];
+        let D = changeset_ids["D"];
+        let E = changeset_ids["E"];
 
         // Passing an irrelevant changeset in the list should result in an error
-        let broken_changeset_list_ids: Vec<ChangesetId> = vec![first, third, fourth, fifth];
+        let broken_changeset_list_ids: Vec<ChangesetId> = vec![A, C, D, E];
 
         let broken_changeset_list: Vec<ChangesetContext> =
             get_relevant_changesets_from_ids(&source_repo_ctx, broken_changeset_list_ids).await?;
 
-        let broken_changeset_parents = HashMap::from([
-            (first, vec![]),
-            (third, vec![first]),
-            (fourth, vec![third]),
-            (fifth, vec![fourth]),
-        ]);
+        let broken_changeset_parents =
+            HashMap::from([(A, vec![]), (C, vec![A]), (D, vec![C]), (E, vec![D])]);
 
         let error = rewrite_partial_changesets(
             fb,
