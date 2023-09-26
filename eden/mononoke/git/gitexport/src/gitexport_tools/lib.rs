@@ -30,6 +30,7 @@ use mononoke_api::MononokeError;
 use mononoke_api::RepoContext;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use mononoke_types::FileChange;
 use mononoke_types::NonRootMPath;
 use rand::distributions::Alphanumeric;
 use rand::distributions::DistString;
@@ -180,6 +181,31 @@ async fn create_bonsai_for_new_repo(
         .unwrap_or_default();
     let mut mut_bcs = bcs.into_mut();
     mut_bcs.parents = orig_parent_ids.clone();
+
+    // If this isn't the first changeset (i.e. that creates the oldest exported
+    // directory), we need to make sure that file changes that copy from
+    // previous commits only reference revisions that are also being exported.
+    if let Some(new_parent_cs_id) = orig_parent_ids.first() {
+        // TODO(T161204758): iterate over all parents and select one that is the closest
+        // ancestor of each commit in the `copy_from` field.
+        mut_bcs.file_changes.iter_mut().for_each(|(_p, fc)| {
+            if let FileChange::Change(tracked_fc) = fc {
+                // If any FileChange copies a file from a previous revision (e.g. a parent),
+                // set the `copy_from` field to point to its new parent.
+                //
+                // Since we're building a history using all changesets that
+                // affect the exported directories, any file being copied
+                // should always exist in the new parent.
+                //
+                // If this isn't done, it might not be possible to rewrite the
+                // commit to the new repo, because the changeset referenced in
+                // its `copy_from` field will not have been remapped.
+                if let Some((_p, copy_from_cs_id)) = tracked_fc.copy_from_mut() {
+                    *copy_from_cs_id = new_parent_cs_id.clone();
+                };
+            };
+        });
+    };
 
     let rewritten_bcs_mut = rewrite_commit(
         source_repo_ctx.ctx(),
