@@ -47,15 +47,10 @@ where
     MononokeError: From<P::Error>,
 {
     info!(logger, "Building partial commit graph for export...");
-    let mononoke_paths = paths
-        .into_iter()
-        .map(|path| path.try_into())
-        .collect::<Result<Vec<MononokePath>, _>>()?;
 
-    let cs_path_hist_ctxs: Vec<ChangesetPathHistoryContext> = cs_ctx
-        .paths_with_history(mononoke_paths.into_iter())
-        .await?
-        .try_collect()
+    let cs_path_hist_ctxs: Vec<ChangesetPathHistoryContext> = stream::iter(paths)
+        .then(|p| async { cs_ctx.path_with_history(p).await })
+        .try_collect::<Vec<_>>()
         .await?;
 
     let cs_path_history_options = ChangesetPathHistoryOptions {

@@ -95,6 +95,7 @@ Run the tool and pass the old name manually as an export path
   Error: Execution failed
 
 
+
   $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_GRAPH_OUTPUT" "$PARTIAL_GRAPH_OUTPUT"
   diff: $TESTTMP/partial_graph_output: No such file or directory
   [2]
