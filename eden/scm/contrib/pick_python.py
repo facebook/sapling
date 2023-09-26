@@ -23,18 +23,16 @@ EXE = ".exe" if os.name == "nt" else ""
 def main(args):
     names = (
         list(filter(None, [os.getenv("PYTHON_SYS_EXECUTABLE")]))
-        + args
         + [
             p + EXE
             for p in [
                 "python3.10",
                 "python3.9",
                 "python3.8",
-                "python3.7",
-                "python3.6",
                 "python3",
             ]
         ]
+        + args
     )
     dirs = os.environ.get("PATH").split(os.pathsep)
     for name in names:
