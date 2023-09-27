@@ -39,9 +39,21 @@ fn new_client_request_info() -> ClientRequestInfo {
     let entry_point: ClientEntryPoint = match entry_point {
         // We fallback to default entry point if the environment variable is invalid,
         // this behavior is to avoid panic or `Result` output type.
-        Some(v) => <std::string::String as AsRef<str>>::as_ref(&v)
-            .try_into()
-            .unwrap_or(DEFAULT_CLIENT_ENTRY_POINT),
+        Some(v) => {
+            let entry_point = ClientEntryPoint::try_from(v.as_ref());
+            match entry_point {
+                Ok(entry_point) => entry_point,
+                Err(_) => {
+                    tracing::warn!(
+                        "Failed to parse client entry point from env variable {}={}, default to {}",
+                        ENV_SAPLING_CLIENT_ENTRY_POINT,
+                        v,
+                        ClientEntryPoint::Sapling,
+                    );
+                    DEFAULT_CLIENT_ENTRY_POINT
+                }
+            }
+        }
         None => DEFAULT_CLIENT_ENTRY_POINT,
     };
     let correlator = correlator.unwrap_or_else(ClientRequestInfo::generate_correlator);
