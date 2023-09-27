@@ -26,7 +26,12 @@ pub fn new_system_command(command: String) -> Command {
         #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;
-            cmd.arg("/c").raw_arg(command);
+            let quoted = if need_cmd_quote(&command) {
+                format!("\"{}\"", command)
+            } else {
+                command
+            };
+            cmd.arg("/c").raw_arg(quoted);
         }
         #[cfg(not(windows))]
         {
@@ -36,4 +41,22 @@ pub fn new_system_command(command: String) -> Command {
     } else {
         Command::new(command)
     }
+}
+
+#[cfg(any(windows, test))]
+fn need_cmd_quote(cmd: &str) -> bool {
+    // Work with D49694880 - should never triple quote.
+    if cmd.starts_with("\"\"") && cmd.ends_with("\"\"") {
+        return false;
+    }
+    true
+}
+
+#[cfg(test)]
+#[test]
+fn test_need_cmd_quote() {
+    assert!(need_cmd_quote("foo bar"));
+    assert!(need_cmd_quote("\"foo bar\""));
+    assert!(need_cmd_quote("\"foo\" \"bar\""));
+    assert!(!need_cmd_quote("\"\"foo bar\"\""));
 }
