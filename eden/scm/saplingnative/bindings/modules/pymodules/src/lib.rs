@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::cell::Cell;
-use std::cell::RefCell;
 use std::path::Path;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -68,9 +66,13 @@ fn to_bytes(py: Python, slice: &'static [u8]) -> PyResult<::pybytes::Bytes> {
     pybytes::Bytes::from_bytes(py, bytes)
 }
 
+// This is both a finder and a loader.
 py_class!(pub class BindingsModuleFinder |py| {
     // If set, modules found from this path will be ignored.
     data home: Option<String>;
+
+    // importlib.machinery.ModuleSpec
+    data module_spec: PyObject;
 
     def __new__(_cls, home: Option<String>) -> PyResult<Self> {
         Self::new(py, home)
@@ -78,7 +80,7 @@ py_class!(pub class BindingsModuleFinder |py| {
 
     // https://docs.python.org/3/library/importlib.html#importlib.abc.MetaPathFinder
 
-    def find_spec(&self, name: &str, _path: Option<PyObject> = None, _target: Option<PyObject> = None) -> PyResult<Option<ModuleSpec>> {
+    def find_spec(&self, name: &str, _path: Option<PyObject> = None, _target: Option<PyObject> = None) -> PyResult<Option<PyObject>> {
         match python_modules::find_module(name) {
             None => Ok(None),
             Some(info) => {
@@ -94,14 +96,11 @@ py_class!(pub class BindingsModuleFinder |py| {
                         return Ok(None);
                     }
                 }
+                // ModuleSpec(name, loader, *, origin=None, loader_state=None, is_package=None)
                 let loader = self.clone_ref(py).into_object();
-                let spec = ModuleSpec::create_instance(
-                    py,
-                    info,
-                    Cell::new(false),
-                    RefCell::new(Some(loader)),
-                    RefCell::new(None),
-                )?;
+                let kwargs = PyDict::new(py);
+                kwargs.set_item(py, "is_package", info.is_package())?;
+                let spec = self.module_spec(py).call(py, (name, loader), Some(&kwargs))?;
                 Ok(Some(spec))
             }
         }
@@ -119,10 +118,15 @@ py_class!(pub class BindingsModuleFinder |py| {
 
     def exec_module(&self, module: PyModule) -> PyResult<PyObject> {
         let spec = module.get(py, "__spec__")?;
-        let spec: ModuleSpec = spec.cast_into(py).map_err(|e| {
-            PyErr::new::<exc::TypeError, _>(py, format!("BindingsModuleLoader cannot load other modules: {:?}", e))
-        })?;
-        let info = spec.info(py);
+        let name = spec.getattr(py, "name")?;
+        let name: String = name.extract(py)?;
+        let info = match python_modules::find_module(&name) {
+            Some(info) => info,
+            None => {
+                let msg = format!("BindingsModuleFinder cannot load {}", name);
+                return Err(PyErr::new::<exc::ImportError, _>(py, msg));
+            }
+        };
         let bytecode = info.byte_code();
         let c_name = info.c_name();
         let obj = unsafe {
@@ -162,98 +166,9 @@ py_class!(pub class BindingsModuleFinder |py| {
 impl BindingsModuleFinder {
     pub fn new(py: Python, home: Option<String>) -> PyResult<Self> {
         bytecode_compatibility_check(py)?;
-        Self::create_instance(py, home)
+        // import _frozen_importlib instead of importlib to avoid hitting the filesystem.
+        let importlib = py.import("_frozen_importlib")?;
+        let module_spec = importlib.get(py, "ModuleSpec")?;
+        Self::create_instance(py, home, module_spec)
     }
 }
-
-// Duck-typed `importlib.machinery.ModuleSpec` to avoid importing `importlib`.
-// https://docs.python.org/3/library/importlib.html#importlib.machinery.ModuleSpec
-py_class!(pub class ModuleSpec |py| {
-    data info: python_modules::ModuleInfo;
-    data initializing: Cell<bool>;
-    data loader_override: RefCell<Option<PyObject>>;
-    data loader_state_override: RefCell<Option<PyObject>>;
-
-    @property
-    def name(&self) -> PyResult<&'static str> {
-        Ok(self.info(py).name())
-    }
-
-    @property
-    def loader(&self) -> PyResult<Option<PyObject>> {
-        Ok(self.loader_override(py).borrow().clone_ref(py))
-    }
-
-    // Used by hgdemandimport
-    @loader.setter
-    def set_loader(&self, obj: Option<PyObject>) -> PyResult<()> {
-        let mut loader = self.loader_override(py).borrow_mut();
-        *loader = obj;
-        Ok(())
-    }
-
-    @property
-    def origin(&self) -> PyResult<Option<String>> {
-        Ok(None)
-    }
-
-    @property
-    def submodule_search_locations(&self) -> PyResult<Option<Vec<String>>> {
-        let info = self.info(py);
-        if info.is_package() {
-            Ok(Some(Vec::new()))
-        } else {
-            Ok(None)
-        }
-    }
-
-    @property
-    def loader_state(&self) -> PyResult<Option<PyObject>> {
-        Ok(self.loader_state_override(py).borrow().clone_ref(py))
-    }
-
-    // used by importlib.util
-    @loader_state.setter
-    def set_loader_state(&self, obj: Option<PyObject>) -> PyResult<()> {
-        let mut loader_state = self.loader_state_override(py).borrow_mut();
-        *loader_state = obj;
-        Ok(())
-    }
-
-    @property
-    def cached(&self) -> PyResult<Option<PyObject>> {
-        Ok(None)
-    }
-
-    @property
-    def parent(&self) -> PyResult<&'static str> {
-        let info = self.info(py);
-        let name = info.name();
-        if info.is_package() {
-            Ok(name)
-        } else {
-            match name.rsplit_once('.') {
-                None => Ok(""),
-                Some((parent, _)) => Ok(parent),
-            }
-        }
-    }
-
-    @property
-    def has_location(&self) -> PyResult<bool> {
-        Ok(false)
-    }
-
-    @property
-    def _initializing(&self) -> PyResult<bool> {
-        Ok(self.initializing(py).get())
-    }
-
-    @_initializing.setter
-    def set_initializing(&self, value: Option<bool>) -> PyResult<()> {
-        let value = value.unwrap_or_default();
-        self.initializing(py).set(value);
-        Ok(())
-    }
-
-});
