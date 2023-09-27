@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.71"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
+clientinfo = { version = "0.1.0", path = "../clientinfo" }
 fbthrift_socket = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 thrift-types = { version = "0.1.0", path = "../thrift-types" }

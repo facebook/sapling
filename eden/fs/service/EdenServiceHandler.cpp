@@ -582,6 +582,7 @@ EdenServiceHandler::semifuture_checkOutRevision(
     std::unique_ptr<std::string> hash,
     CheckoutMode checkoutMode,
     std::unique_ptr<CheckOutRevisionParams> params) {
+  // auto cri = *params->cri_ref(); // client request info
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG1,
       *mountPoint,
@@ -617,6 +618,7 @@ EdenServiceHandler::semifuture_resetParentCommits(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<WorkingDirectoryParents> parents,
     std::unique_ptr<ResetParentCommitsParams> params) {
+  // auto cri = *params->cri_ref(); // client request info
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG1,
       *mountPoint,
@@ -2955,6 +2957,7 @@ EdenServiceHandler::semifuture_changeOwnership(
 folly::SemiFuture<std::unique_ptr<GetScmStatusResult>>
 EdenServiceHandler::semifuture_getScmStatusV2(
     unique_ptr<GetScmStatusParams> params) {
+  // auto cri = *params->cri_ref(); // client request info
   auto* context = getRequestContext();
 
   auto helper = INSTRUMENT_THRIFT_CALL(

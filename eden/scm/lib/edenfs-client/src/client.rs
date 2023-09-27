@@ -13,6 +13,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Result;
 use async_runtime::block_on;
+use clientinfo::get_client_request_info;
 use fbthrift_socket::SocketTransport;
 use serde::Deserialize;
 use thrift_types::edenfs;
@@ -51,6 +52,16 @@ impl EdenFsClient {
         Ok(client)
     }
 
+    /// Construct a RequestInfo to pass alone with requests.
+    pub(crate) fn get_client_request_info(&self) -> edenfs::ClientRequestInfo {
+        let slcri = get_client_request_info();
+        edenfs::ClientRequestInfo {
+            correlator: slcri.correlator,
+            entry_point: slcri.entry_point.to_string(),
+            ..Default::default()
+        }
+    }
+
     /// Used by thrift parameters.
     fn root_vec(&self) -> Vec<u8> {
         self.eden_config.root.clone().into_bytes()
@@ -68,6 +79,7 @@ impl EdenFsClient {
                 mountPoint: self.root_vec(),
                 commit: commit.into_byte_array().into(),
                 listIgnored: list_ignored,
+                cri: Some(self.get_client_request_info()),
                 ..Default::default()
             },
         )))?;
@@ -97,6 +109,7 @@ impl EdenFsClient {
         let root_vec = self.root_vec();
         let params = edenfs::ResetParentCommitsParams {
             hgRootManifest: Some(p1_tree.into_byte_array().into()),
+            cri: Some(self.get_client_request_info()),
             ..Default::default()
         };
         extract_error(block_on(
@@ -119,6 +132,7 @@ impl EdenFsClient {
         let thrift_client = block_on(self.get_thrift_client())?;
         let params = edenfs::CheckOutRevisionParams {
             hgRootManifest: Some(tree_vec),
+            cri: Some(self.get_client_request_info()),
             ..Default::default()
         };
         let root_vec = self.root_vec();
