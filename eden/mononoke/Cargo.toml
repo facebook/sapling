@@ -41,7 +41,7 @@ name = "streaming_clone_warmup"
 path = "cmds/streaming_clone_warmup/main.rs"
 
 [dependencies]
-anyhow = "1.0.71"
+anyhow = { version = "=1.0.71", features = ["backtrace"] }
 ascii = "1.0"
 blobrepo = { version = "0.1.0", path = "blobrepo" }
 blobrepo_utils = { version = "0.1.0", path = "blobrepo_utils" }
