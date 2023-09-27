@@ -57,6 +57,7 @@ use fsnodes::RootFsnodeId;
 use git_symbolic_refs::ArcGitSymbolicRefs;
 use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
 use git_types::MappedGitCommitId;
+use git_types::RootGitDeltaManifestId;
 use git_types::TreeHandle;
 use hooks::ArcHookManager;
 use hooks::HookManager;
@@ -179,7 +180,7 @@ pub fn default_test_repo_config() -> RepoConfig {
             RootUnodeManifestId::NAME.to_string(),
             TreeHandle::NAME.to_string(),
             MappedGitCommitId::NAME.to_string(),
-            // TODO(rajshar): Add RootGitDeltaManifestId once the derivation code is complete
+            RootGitDeltaManifestId::NAME.to_string(),
             MappedHgChangesetId::NAME.to_string(),
             RootSkeletonManifestId::NAME.to_string(),
             RootBasenameSuffixSkeletonManifest::NAME.to_string(),

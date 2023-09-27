@@ -253,9 +253,9 @@ impl Storable for GitDeltaManifest {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct GitDeltaManifestEntry {
     /// The full version of the Git object
-    full: ObjectEntry,
+    pub full: ObjectEntry,
     /// The delta variant of the Git object against all possible base objects
-    deltas: Vec<ObjectDelta>,
+    pub deltas: Vec<ObjectDelta>,
 }
 
 impl GitDeltaManifestEntry {
@@ -276,6 +276,10 @@ impl GitDeltaManifestEntry {
             ObjectKind::Blob => false,
             ObjectKind::Tree => true,
         }
+    }
+
+    pub fn is_delta(&self) -> bool {
+        !self.deltas.is_empty()
     }
 }
 
@@ -326,12 +330,12 @@ impl Arbitrary for GitDeltaManifestEntry {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ObjectDelta {
     /// The commit that originally introduced this Git object
-    origin: ChangesetId,
+    pub origin: ChangesetId,
     /// The base Git object used for creating the delta
-    base: ObjectEntry,
+    pub base: ObjectEntry,
     /// The raw Zlib encoded instructions are stored in the blobstore in chunks. This property
     /// reflects the number of chunks stored for these raw instructions in the blobstore
-    instructions_chunk_count: u64,
+    pub instructions_chunk_count: u64,
 }
 
 impl ObjectDelta {

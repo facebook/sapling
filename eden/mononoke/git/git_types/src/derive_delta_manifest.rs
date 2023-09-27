@@ -267,10 +267,6 @@ impl DeltaEntryMetadata {
                     return Err(anyhow!(
                         "All entries must have the same actual object for merging"
                     ));
-                } else if !entry.is_delta_entry() {
-                    return Err(anyhow!(
-                        "Only delta entries can be merged into other delta entries"
-                    ));
                 } else {
                     acc.deltas.extend(entry.deltas.into_iter());
                 }
@@ -329,7 +325,7 @@ impl BonsaiDerivable for RootGitDeltaManifestId {
         // that have been modified in the current commit as compared to the parent commit. Collect the result in a Multimap that
         // maps from MPath (added or modified) to Vec<DeltaEntryMetadata>. In case of added MPath, there would be only one DeltaEntryMetadata
         // value but for modified paths (by different parents), there will be multiple DeltaEntryMetadata values.
-        let diff_items = stream::iter(parent_trees_with_commit)
+        let mut diff_items = stream::iter(parent_trees_with_commit)
             .flat_map(|(parent_changeset_id, parent_tree_handle)| {
                 // Diff the Git tree of the parent with the current commits Git tree. This will give information about
                 // what paths were added, modified or deleted
@@ -355,10 +351,7 @@ impl BonsaiDerivable for RootGitDeltaManifestId {
                                 {
                                     // If either the base object or the actual object is too large, then we don't want to delta them
                                     // and instead use them directly
-                                    Some((
-                                        path,
-                                        DeltaEntryMetadata::new(TreeMember::from(new_entry)),
-                                    ))
+                                    Some((path, DeltaEntryMetadata::new(actual)))
                                 } else {
                                     Some((
                                         path,
@@ -383,7 +376,15 @@ impl BonsaiDerivable for RootGitDeltaManifestId {
             // Collect as a MultiMap since the same modification can potentially be made as part of different parents
             .try_collect::<MultiMap<_, _>>()
             .await?;
-
+        // If the current commit has no parent, (i.e. its a root commit), then performing a manifest diff would yield no results. In this case, we can just
+        // directly add all entries from the tree of the current commit
+        if bonsai.parents().count() == 0 {
+            diff_items = tree_handle
+                .list_all_entries(ctx.clone(), derivation_ctx.blobstore().clone())
+                .map_ok(|(path, entry)| (path, DeltaEntryMetadata::new(entry.into())))
+                .try_collect::<MultiMap<_, _>>()
+                .await?;
+        }
         // The MultiMap contains a map of MPath -> Vec<DeltaEntryMetadata> since a modified path can have potentially multiple bases to
         // create delta and each such base object will have its own associated commit (e.g. merge-commit containing file/directory modified in multiple parents).
         // Since DeltaEntryMetadata can represent multiple base objects with their commits, lets merge Vec<DeltaEntryMetadata> into a single DeltaEntryMetadata
@@ -551,3 +552,461 @@ impl BonsaiDerivable for RootGitDeltaManifestId {
 }
 
 impl_bonsai_derived_via_manager!(RootGitDeltaManifestId);
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashSet;
+    use std::str::FromStr;
+
+    use anyhow::format_err;
+    use anyhow::Result;
+    use blobstore::Loadable;
+    use bonsai_hg_mapping::BonsaiHgMappingArc;
+    use bookmarks::BookmarkKey;
+    use bookmarks::BookmarksRef;
+    use changesets::ChangesetsRef;
+    use derived_data::BonsaiDerived;
+    use fbinit::FacebookInit;
+    use fixtures::TestRepoFixture;
+    use futures::future;
+    use futures_util::stream::TryStreamExt;
+    use mercurial_types::HgChangesetId;
+    use repo_blobstore::RepoBlobstoreArc;
+    use repo_derived_data::RepoDerivedDataRef;
+    use repo_identity::RepoIdentityRef;
+
+    use super::*;
+
+    /// This function generates GitDeltaManifest for each bonsai commit in the fixture starting from
+    /// the fixture's master Bonsai bookmark. It validates that the derivation is successful and returns
+    /// the GitDeltaManifest and Bonsai Changeset ID corresponding to the master bookmark
+    async fn common_git_delta_manifest_validation(
+        repo: impl BookmarksRef
+        + RepoBlobstoreArc
+        + RepoDerivedDataRef
+        + RepoIdentityRef
+        + ChangesetsRef
+        + Send
+        + Sync,
+        ctx: CoreContext,
+    ) -> Result<(RootGitDeltaManifestId, ChangesetId)> {
+        let bcs_id = repo
+            .bookmarks()
+            .get(ctx.clone(), &BookmarkKey::from_str("master")?)
+            .await?
+            .ok_or_else(|| format_err!("no master"))?;
+        // Validate that the derivation of the Git Delta Manifest for the head commit succeeds
+        let root_mf_id = RootGitDeltaManifestId::derive(&ctx, &repo, bcs_id).await?;
+        // Validate the derivation of all the commits in this repo succeeds
+        let result = repo
+            .changesets()
+            .list_enumeration_range(&ctx, 0, u64::MAX, None, false)
+            .map_ok(|(bcs_id, _)| {
+                let repo = &repo;
+                let ctx: &CoreContext = &ctx;
+                async move {
+                    let mf_id = RootGitDeltaManifestId::derive(ctx, repo, bcs_id).await?;
+                    Ok(mf_id)
+                }
+            })
+            .try_buffer_unordered(100)
+            .try_collect::<Vec<_>>()
+            .await;
+        assert!(
+            result.is_ok(),
+            "Failed to derive Git Delta Manifest for commits in repo {}",
+            repo.repo_identity().name()
+        );
+        Ok((root_mf_id, bcs_id))
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_linear(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::Linear::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore_arc();
+        let (master_mf_id, _) = common_git_delta_manifest_validation(repo, ctx.clone()).await?;
+        let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
+        let expected_paths = vec![MPath::EMPTY, MPath::new("10")?] //MPath::EMPTY for root directory
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let matched_entries = delta_manifest
+            .clone()
+            .into_subentries(&ctx, &blobstore)
+            .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
+        assert_eq!(matched_entries.len(), expected_paths.len());
+        // Since the file 10 was modified, we should have a delta variant for it. Additionally, the root directory is always modified so it should
+        // have a delta variant as well
+        assert!(matched_entries.values().all(|entry| entry.is_delta()));
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_branch_even(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::BranchEven::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore_arc();
+        let (master_mf_id, _) =
+            common_git_delta_manifest_validation(repo.clone(), ctx.clone()).await?;
+        let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
+        let expected_paths = vec![MPath::EMPTY, MPath::new("base")?] //MPath::EMPTY for root directory
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let matched_entries = delta_manifest
+            .clone()
+            .into_subentries(&ctx, &blobstore)
+            .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
+        assert_eq!(matched_entries.len(), expected_paths.len());
+        // Since the file base was modified, we should have a delta variant for it. Additionally, the root directory is always modified so it should
+        // have a delta variant as well
+        assert!(matched_entries.values().all(|entry| entry.is_delta()));
+        // Since the file "base" was modified, ensure that the delta variant for its entry points to the right changeset
+        let entry = matched_entries
+            .get(&MPath::new("base")?)
+            .expect("Expected entry for path 'base'");
+        // There should only be one delta base for the file "base"
+        assert_eq!(entry.deltas.len(), 1);
+        let delta = entry
+            .deltas
+            .first()
+            .expect("Expected delta variant for entry for path 'base'");
+        let base_hg_id = repo
+            .bonsai_hg_mapping_arc()
+            .get_hg_from_bonsai(&ctx, delta.origin)
+            .await?
+            .expect("Expected HG ID to exist for bonsai changeset");
+        // Validate that the base commit for the delta is as expected
+        assert_eq!(
+            base_hg_id,
+            HgChangesetId::from_str("15c40d0abc36d47fb51c8eaec51ac7aad31f669c").unwrap()
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_branch_uneven(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::BranchUneven::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore_arc();
+        let (master_mf_id, _) = common_git_delta_manifest_validation(repo, ctx.clone()).await?;
+        let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
+        let expected_paths = vec![MPath::EMPTY, MPath::new("5")?] //MPath::EMPTY for root directory
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let matched_entries = delta_manifest
+            .clone()
+            .into_subentries(&ctx, &blobstore)
+            .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
+        assert_eq!(matched_entries.len(), expected_paths.len());
+        // Ensure that the root entry has a delta variant
+        assert!(
+            matched_entries
+                .get(&MPath::EMPTY)
+                .expect("Expected root entry to exist")
+                .is_delta()
+        );
+        // Since the file 5 was added in this commit, it should NOT have a delta variant
+        assert!(
+            !matched_entries
+                .get(&MPath::new("5")?)
+                .expect("Expected file 5 entry to exist")
+                .is_delta()
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_branch_wide(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::BranchWide::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore_arc();
+        let (master_mf_id, _) = common_git_delta_manifest_validation(repo, ctx.clone()).await?;
+        let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
+        let expected_paths = vec![MPath::EMPTY, MPath::new("3")?] //MPath::EMPTY for root directory
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let matched_entries = delta_manifest
+            .clone()
+            .into_subentries(&ctx, &blobstore)
+            .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
+        assert_eq!(matched_entries.len(), expected_paths.len());
+        // Ensure that the root entry has a delta variant
+        assert!(
+            matched_entries
+                .get(&MPath::EMPTY)
+                .expect("Expected root entry to exist")
+                .is_delta()
+        );
+        // Since the file 3 was added in this commit, it should NOT have a delta variant
+        assert!(
+            !matched_entries
+                .get(&MPath::new("3")?)
+                .expect("Expected file 3 entry to exist")
+                .is_delta()
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_merge_even(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::MergeEven::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore_arc();
+        let (master_mf_id, _) =
+            common_git_delta_manifest_validation(repo.clone(), ctx.clone()).await?;
+        let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
+        let expected_paths = vec![MPath::EMPTY, MPath::new("base")?] //MPath::EMPTY for root directory
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let matched_entries = delta_manifest
+            .clone()
+            .into_subentries(&ctx, &blobstore)
+            .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
+        assert_eq!(matched_entries.len(), expected_paths.len());
+        // Since the file base was modified, we should have a delta variant for it. Additionally, the root directory is always modified so it should
+        // have a delta variant as well
+        assert!(matched_entries.values().all(|entry| entry.is_delta()));
+        // The commit has a change for path "branch" as well. However, both parents of the merge commit have the same version
+        // of the file, so there should not be any entry for it in the manifest
+        let branch_entry = delta_manifest
+            .lookup(&ctx, &blobstore, &MPath::new("branch")?)
+            .await?;
+        assert!(branch_entry.is_none());
+        // Since the file "base" was modified, ensure that the delta variant for its entry points to the right changeset
+        let entry = matched_entries
+            .get(&MPath::new("base")?)
+            .expect("Expected entry for path 'base'");
+        // There should only be one delta base for the file "base"
+        assert_eq!(entry.deltas.len(), 1);
+        let delta = entry
+            .deltas
+            .first()
+            .expect("Expected delta variant for entry for path 'base'");
+        let base_hg_id = repo
+            .bonsai_hg_mapping_arc()
+            .get_hg_from_bonsai(&ctx, delta.origin)
+            .await?
+            .expect("Expected HG ID to exist for bonsai changeset");
+        // Validate that the base commit for the delta is as expected
+        assert_eq!(
+            base_hg_id,
+            HgChangesetId::from_str("15c40d0abc36d47fb51c8eaec51ac7aad31f669c").unwrap()
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_many_files_dirs(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::ManyFilesDirs::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore_arc();
+        let (master_mf_id, _) =
+            common_git_delta_manifest_validation(repo.clone(), ctx.clone()).await?;
+        let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
+        let expected_paths = vec![MPath::EMPTY, MPath::new("1")?] //MPath::EMPTY for root directory
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let matched_entries = delta_manifest
+            .clone()
+            .into_subentries(&ctx, &blobstore)
+            .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
+        assert_eq!(matched_entries.len(), expected_paths.len());
+        // Since the commit is a root commit, i.e. has no parents, all changes introduced by this commit should be considered new additions and should
+        // not have any delta variant associated with it
+        assert!(matched_entries.values().all(|entry| !entry.is_delta()));
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_merge_uneven(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::MergeUneven::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore_arc();
+        let (master_mf_id, _) =
+            common_git_delta_manifest_validation(repo.clone(), ctx.clone()).await?;
+        let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
+        let expected_paths = vec![MPath::EMPTY, MPath::new("base")?] //MPath::EMPTY for root directory
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let matched_entries = delta_manifest
+            .clone()
+            .into_subentries(&ctx, &blobstore)
+            .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
+        assert_eq!(matched_entries.len(), expected_paths.len());
+        // Since the file base was modified, we should have a delta variant for it. Additionally, the root directory is always modified so it should
+        // have a delta variant as well
+        assert!(matched_entries.values().all(|entry| entry.is_delta()));
+        // The commit has a change for path "branch" as well. However, both parents of the merge commit have the same version
+        // of the file, so there should not be any entry for it in the manifest
+        let branch_entry = delta_manifest
+            .lookup(&ctx, &blobstore, &MPath::new("branch")?)
+            .await?;
+        assert!(branch_entry.is_none());
+        // Since the file "base" was modified, ensure that the delta variant for its entry points to the right changeset
+        let entry = matched_entries
+            .get(&MPath::new("base")?)
+            .expect("Expected entry for path 'base'");
+        // There should only be one delta base for the file "base"
+        assert_eq!(entry.deltas.len(), 1);
+        let delta = entry
+            .deltas
+            .first()
+            .expect("Expected delta variant for entry for path 'base'");
+        let base_hg_id = repo
+            .bonsai_hg_mapping_arc()
+            .get_hg_from_bonsai(&ctx, delta.origin)
+            .await?
+            .expect("Expected HG ID to exist for bonsai changeset");
+        // Validate that the base commit for the delta is as expected
+        assert_eq!(
+            base_hg_id,
+            HgChangesetId::from_str("15c40d0abc36d47fb51c8eaec51ac7aad31f669c").unwrap()
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_merge_multiple_files(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::MergeMultipleFiles::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore_arc();
+        let (master_mf_id, _) =
+            common_git_delta_manifest_validation(repo.clone(), ctx.clone()).await?;
+        let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
+        let expected_paths = vec![
+            MPath::EMPTY,
+            MPath::new("base")?,
+            MPath::new("1")?,
+            MPath::new("2")?,
+            MPath::new("3")?,
+            MPath::new("4")?,
+            MPath::new("5")?,
+        ] //MPath::EMPTY for root directory
+        .into_iter()
+        .collect::<HashSet<_>>();
+        let matched_entries = delta_manifest
+            .clone()
+            .into_subentries(&ctx, &blobstore)
+            .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
+        assert_eq!(matched_entries.len(), expected_paths.len());
+        // The commit has a chan|ge for path "branch" as well. However, both parents of the merge commit have the same version
+        // of the file, so there should not be any entry for it in the manifest
+        let branch_entry = delta_manifest
+            .lookup(&ctx, &blobstore, &MPath::new("branch")?)
+            .await?;
+        assert!(branch_entry.is_none());
+        // Files 1, 2, 4 and 5 should show up as added entries without any delta variants since they are present in one parent branch
+        // and not in the other
+        let added_paths = vec![
+            MPath::new("1")?,
+            MPath::new("2")?,
+            MPath::new("4")?,
+            MPath::new("5")?,
+        ]
+        .into_iter()
+        .collect::<HashSet<_>>();
+        assert!(
+            matched_entries
+                .iter()
+                .filter(|(path, _)| added_paths.contains(path))
+                .all(|(_, entry)| !entry.is_delta())
+        );
+        // Files root and base are present in both parents but with different content/version. The GitDeltaManifest should have entries
+        // for these files and these entries should have two delta variants
+        let modified_in_both_paths = vec![MPath::EMPTY, MPath::new("3")?]
+            .into_iter()
+            .collect::<HashSet<_>>();
+
+        assert!(
+            matched_entries
+                .iter()
+                .filter(|(path, _)| modified_in_both_paths.contains(path))
+                .all(|(_, entry)| entry.is_delta() && entry.deltas.len() == 2)
+        );
+        // Validate that the correct commits are used as origin for modified files
+        validate_origin_hg_hash(
+            &ctx,
+            &matched_entries,
+            &repo,
+            &MPath::new("3")?,
+            vec![
+                "a291c0b59375c5321da2a77e215647b405c8cb79",
+                "c0c7af787afb8dffa4eab1eb45019ab4ac9e8688",
+            ]
+            .into_iter()
+            .collect(),
+        )
+        .await?;
+
+        validate_origin_hg_hash(
+            &ctx,
+            &matched_entries,
+            &repo,
+            &MPath::EMPTY,
+            vec![
+                "5e09a5d3676c8b51db7fee4aa6ce393871860569",
+                "a291c0b59375c5321da2a77e215647b405c8cb79",
+            ]
+            .into_iter()
+            .collect(),
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn validate_origin_hg_hash(
+        ctx: &CoreContext,
+        matched_entries: &HashMap<MPath, GitDeltaManifestEntry>,
+        repo: &impl BonsaiHgMappingArc,
+        file_path: &MPath,
+        expected_hg_hashes: HashSet<&str>,
+    ) -> Result<()> {
+        // Since the file was modified, ensure that the delta variant for its entry points to the right changeset
+        let entry = matched_entries
+            .get(file_path)
+            .expect("Expected entry for file_path");
+        let origin_hg_hashes = stream::iter(entry.deltas.iter())
+            .map(|delta| async move {
+                let hg_hash = repo
+                    .bonsai_hg_mapping_arc()
+                    .get_hg_from_bonsai(ctx, delta.origin)
+                    .await?
+                    .expect("Expected HG ID to exist for bonsai changeset");
+                anyhow::Ok(hg_hash.to_hex().to_string())
+            })
+            .buffered(100)
+            .try_collect::<Vec<_>>()
+            .await?;
+        // Validate that the base commits for the deltas are as expected
+        assert!(
+            origin_hg_hashes
+                .into_iter()
+                .all(|hg_hash| expected_hg_hashes.contains(&hg_hash.as_str()))
+        );
+        Ok(())
+    }
+}
