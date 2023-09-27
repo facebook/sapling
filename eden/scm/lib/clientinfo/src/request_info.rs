@@ -46,6 +46,9 @@ fn new_client_request_info() -> ClientRequestInfo {
     };
     let correlator = correlator.unwrap_or_else(ClientRequestInfo::generate_correlator);
 
+    tracing::info!(target: "clienttelemetry", client_entry_point=entry_point.to_string());
+    tracing::info!(target: "clienttelemetry", client_correlator=correlator);
+
     ClientRequestInfo::new_ext(entry_point, correlator)
 }
 
