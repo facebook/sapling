@@ -6,8 +6,6 @@
  */
 
 use std::collections::HashSet;
-use std::path::Path;
-use std::process::Command;
 use std::sync::Arc;
 use std::sync::Weak;
 
@@ -47,32 +45,7 @@ impl Client {
     /// Run a shell command. Return exit code.
     fn system(&self, env: CommandEnv, command: String) -> i32 {
         tracing::debug!("client::system {}", command);
-        // Maybe we don't actually need a shell.
-        let need_shell = command.contains(|ch| "|&;<>()$`\"' \t\n*?[#~=%".contains(ch)) || {
-            let path = Path::new(&command);
-            path.is_absolute() && !path.exists()
-        };
-        let mut cmd = if need_shell {
-            let mut cmd = if cfg!(windows) {
-                let cmd_spec = std::env::var("ComSpec");
-                Command::new(cmd_spec.unwrap_or_else(|_| "cmd.exe".to_owned()))
-            } else {
-                Command::new("/bin/sh")
-            };
-            #[cfg(windows)]
-            {
-                use std::os::windows::process::CommandExt;
-                cmd.arg("/c").raw_arg(command);
-            }
-            #[cfg(not(windows))]
-            {
-                cmd.arg("-c").arg(command);
-            }
-            cmd
-        } else {
-            Command::new(command)
-        };
-
+        let mut cmd = system_command::new_system_command(command);
         let CommandEnv { cwd, env } = env;
         cmd.env_clear().envs(env).current_dir(cwd);
         match cmd.status() {
