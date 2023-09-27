@@ -151,3 +151,15 @@ export function tryJsonParse(s: string): Json | undefined {
     return undefined;
   }
 }
+
+/**
+ * Like Array.filter, but separates elements that pass from those that don't pass and return both arrays.
+ * For example, partition([1, 2, 3], n => n % 2 === 0) returns [[2], [1, 3]]
+ */
+export function partition<T>(a: Array<T>, predicate: (item: T) => boolean): [Array<T>, Array<T>] {
+  const [passed, failed] = [[], []] as [Array<T>, Array<T>];
+  for (const item of a) {
+    (predicate(item) ? passed : failed).push(item);
+  }
+  return [passed, failed];
+}
