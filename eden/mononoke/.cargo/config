@@ -1,0 +1,4 @@
+# default ld on linux has duplicate symbol error, lld handles it fine. TODO: remove once need for https://github.com/mitrandir77/zstd-rs fork is gone
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
