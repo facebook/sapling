@@ -32,7 +32,6 @@ use async_trait::async_trait;
 use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use context::CoreContext;
-pub use errors::*;
 use fbinit::FacebookInit;
 use futures::stream::futures_unordered::FuturesUnordered;
 use futures::stream::TryStreamExt;
@@ -57,6 +56,8 @@ use regex::Regex;
 use scuba::builder::ServerData;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
+
+pub use crate::errors::ErrorKind;
 
 /// Manages hooks and allows them to be installed and uninstalled given a name
 /// Knows how to run hooks
