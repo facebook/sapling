@@ -26,6 +26,7 @@ def main(args):
         + [
             p + EXE
             for p in [
+                "python3.11",
                 "python3.10",
                 "python3.9",
                 "python3.8",
