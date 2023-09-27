@@ -465,6 +465,7 @@ function FileSelectionCheckbox({
     <VSCodeCheckbox
       checked={selection.isFullyOrPartiallySelected(file.path)}
       indeterminate={selection.isPartiallySelected(file.path)}
+      data-testid={'file-selection-checkbox'}
       // Note: Using `onClick` instead of `onChange` since onChange apparently fires when the controlled `checked` value changes,
       // which means this fires when using "select all" / "deselect all"
       onClick={e => {
@@ -656,6 +657,7 @@ export function UncommittedChanges({place}: {place: Place}) {
               <VSCodeButton
                 appearance="icon"
                 disabled={noFilesSelected}
+                data-testid={'discard-all-selected-button'}
                 onClick={() => {
                   platform.confirm(t('confirmDiscardChanges')).then(ok => {
                     if (!ok) {
@@ -967,6 +969,7 @@ function FileActions({
             className="file-show-on-hover"
             key={file.path}
             appearance="icon"
+            data-testid="file-action-delete"
             onClick={async () => {
               const ok = await platform.confirm(
                 t('Are you sure you want to delete $file?', {replace: {$file: file.path}}),
