@@ -5,40 +5,48 @@
  * GNU General Public License version 2.
  */
 
+use std::env::var;
 use std::fmt::Display;
 
 use anyhow::anyhow;
 use anyhow::Result;
 use lazy_static::lazy_static;
-use parking_lot::RwLock;
 use rand::distributions::Alphanumeric;
 use rand::thread_rng;
 use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
 
+const ENV_SAPLING_CLIENT_ENTRY_POINT: &str = "SAPLING_CLIENT_ENTRY_POINT";
+const ENV_SAPLING_CLIENT_CORRELATOR: &str = "SAPLING_CLIENT_CORRELATOR";
+
+const DEFAULT_CLIENT_ENTRY_POINT: ClientEntryPoint = ClientEntryPoint::Sapling;
+
 lazy_static! {
-    pub static ref CLIENT_REQUEST_INFO: RwLock<ClientRequestInfo> = {
-        let entry_point = ClientEntryPoint::Sapling;
-        let correlator = thread_rng()
-            .sample_iter(Alphanumeric)
-            .take(16)
-            .map(char::from)
-            .collect();
-        RwLock::new(ClientRequestInfo::new_ext(entry_point, correlator))
-    };
+    pub static ref CLIENT_REQUEST_INFO: ClientRequestInfo = new_client_request_info();
 }
 
 /// Get a copy of the global static ClientRequestInfo
 pub fn get_client_request_info() -> ClientRequestInfo {
-    let cri = CLIENT_REQUEST_INFO.read();
-    cri.clone()
+    CLIENT_REQUEST_INFO.clone()
 }
 
-/// Update the global static ClientRequestInfo
-pub fn update_client_request_info(new_val: ClientRequestInfo) {
-    let mut client_info = CLIENT_REQUEST_INFO.write();
-    *client_info = new_val;
+/// Initilaizer of the global static ClientRequestInfo
+fn new_client_request_info() -> ClientRequestInfo {
+    let entry_point = var(ENV_SAPLING_CLIENT_ENTRY_POINT).ok();
+    let correlator = var(ENV_SAPLING_CLIENT_CORRELATOR).ok();
+
+    let entry_point: ClientEntryPoint = match entry_point {
+        // We fallback to default entry point if the environment variable is invalid,
+        // this behavior is to avoid panic or `Result` output type.
+        Some(v) => <std::string::String as AsRef<str>>::as_ref(&v)
+            .try_into()
+            .unwrap_or(DEFAULT_CLIENT_ENTRY_POINT),
+        None => DEFAULT_CLIENT_ENTRY_POINT,
+    };
+    let correlator = correlator.unwrap_or_else(ClientRequestInfo::generate_correlator);
+
+    ClientRequestInfo::new_ext(entry_point, correlator)
 }
 
 /// ClientRequestInfo holds information that will be used for tracing the request
@@ -105,7 +113,7 @@ impl ClientRequestInfo {
         self.main_id.is_some()
     }
 
-    fn generate_correlator() -> String {
+    pub(crate) fn generate_correlator() -> String {
         thread_rng()
             .sample_iter(Alphanumeric)
             .take(16)
@@ -152,6 +160,8 @@ impl TryFrom<&str> for ClientEntryPoint {
 
 #[cfg(test)]
 mod tests {
+    use std::env::set_var;
+
     use super::*;
 
     #[test]
@@ -176,18 +186,12 @@ mod tests {
     }
 
     #[test]
-    fn test_static_client_requst_info() {
+    fn test_static_client_requst_info_with_env_vars() {
+        let correlator = "test1234";
+        set_var(ENV_SAPLING_CLIENT_CORRELATOR, correlator);
+        set_var(ENV_SAPLING_CLIENT_ENTRY_POINT, "isl");
         let cri = get_client_request_info();
-        assert!(!cri.correlator.is_empty());
-        assert_eq!(cri.entry_point, ClientEntryPoint::Sapling);
-
-        let correlator = "test1234".to_owned();
-        let entry_point = ClientEntryPoint::EdenAPI;
-        let cri = ClientRequestInfo::new_ext(entry_point.clone(), correlator.clone());
-        update_client_request_info(cri);
-
-        let cri = get_client_request_info();
-        assert_eq!(cri.entry_point, entry_point);
-        assert_eq!(cri.correlator, correlator);
+        assert_eq!(cri.entry_point, ClientEntryPoint::ISL);
+        assert_eq!(cri.correlator, correlator.to_owned());
     }
 }
