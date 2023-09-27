@@ -17,7 +17,6 @@ import {
 } from '../../CommitInfoView/CommitInfoState';
 import {commitMessageFieldsSchema} from '../../CommitInfoView/CommitMessageFields';
 import {FlexSpacer} from '../../ComponentUtils';
-import {Tooltip} from '../../Tooltip';
 import {T, t} from '../../i18n';
 import {CommitPreview} from '../../previews';
 import {useModal} from '../../useModal';

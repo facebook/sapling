@@ -9,7 +9,6 @@ import type {CodeReviewProvider} from './CodeReviewProvider';
 import type {TrackEventName} from './analytics/eventNames';
 import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {Logger} from './logger';
-import type {ExecaError} from 'execa';
 import type {
   CommitInfo,
   CommitPhaseType,
@@ -45,7 +44,7 @@ import {WatchForChanges} from './WatchForChanges';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD, ErrorShortMessages} from './constants';
 import {GitHubCodeReviewProvider} from './github/githubCodeReviewProvider';
 import {isGithubEnterprise} from './github/queryGraphQL';
-import {handleAbortSignalOnProcess, serializeAsyncCall} from './utils';
+import {handleAbortSignalOnProcess, isExecaError, serializeAsyncCall} from './utils';
 import execa from 'execa';
 import {CommandRunner} from 'isl/src/types';
 import os from 'os';
@@ -883,8 +882,9 @@ async function runCommand(
   const result = execa(command, args, options);
 
   let timedOut = false;
+  let timeoutId: NodeJS.Timeout | undefined;
   if (timeout > 0) {
-    const timeoutId = setTimeout(() => {
+    timeoutId = setTimeout(() => {
       result.kill('SIGTERM', {forceKillAfterTimeout: 5_000});
       logger.error(`Timed out waiting for ${command} ${args[0]} to finish`);
       timedOut = true;
@@ -907,11 +907,9 @@ async function runCommand(
       }
     }
     throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
-}
-
-function isExecaError(err: unknown): err is ExecaError {
-  return typeof err === 'object' && err != null && 'exitCode' in err;
 }
 
 export const __TEST__ = {

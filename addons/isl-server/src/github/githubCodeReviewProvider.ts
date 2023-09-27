@@ -115,6 +115,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
 
   public dispose() {
     this.diffSummaries.removeAllListeners();
+    this.triggerDiffSummariesFetch.dispose();
   }
 
   public getSummaryName(): string {
