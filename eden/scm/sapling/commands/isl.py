@@ -179,7 +179,10 @@ def untar(tar_path, dest_dir) -> Dict[str, str]:
                 os.rename(dest_dir, to_delete_dir)
                 shutil.rmtree(to_delete_dir, ignore_errors=True)
                 os.makedirs(dest_dir, exist_ok=True)
-            tar.extractall(dest_dir, filter="data")
+            if sys.version_info > (3, 11):
+                tar.extractall(dest_dir, filter="data")
+            else:
+                tar.extractall(dest_dir)
             # write source_hash so we can skip extractall() next time
             with open(existing_source_hash_path, "wb") as f:
                 f.write(source_hash.encode())
