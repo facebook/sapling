@@ -27,10 +27,9 @@ import type {
 import type {ExportStack, ImportedStack} from 'shared/types/stack';
 
 import {Internal} from './Internal';
-import {Repository, absolutePathForFileInRepo} from './Repository';
+import {Repository} from './Repository';
 import {repositoryCache} from './RepositoryCache';
 import {findPublicAncestor, parseExecJson} from './utils';
-import fs from 'fs';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
 import {revsetForComparison} from 'shared/Comparison';
 import {randomId, unwrap} from 'shared/utils';
@@ -485,25 +484,6 @@ export default class ServerToClientAPI {
         repo.setConfig('user', data.name, data.value).catch(err => {
           logger.error('error setting config', data.name, data.value, err);
         });
-        break;
-      }
-      case 'deleteFile': {
-        const {filePath} = data;
-        const absolutePath = absolutePathForFileInRepo(filePath, repo);
-        // security: don't trust client messages to allow us to delete files outside the repository
-        if (absolutePath == null) {
-          logger.warn("can't delete file outside of the repo", filePath);
-          return;
-        }
-
-        fs.promises
-          .rm(absolutePath)
-          .then(() => {
-            logger.info('deleted file from filesystem', absolutePath);
-          })
-          .catch(err => {
-            logger.error('unable to delete file', absolutePath, err);
-          });
         break;
       }
       case 'requestComparison': {

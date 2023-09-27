@@ -419,7 +419,6 @@ export type ClientToServerMessage =
   | {type: 'fileBugReport'; data: FileABugFields; uiState?: Json}
   | {type: 'runOperation'; operation: RunnableOperation}
   | {type: 'abortRunningOperation'; operationId: string}
-  | {type: 'deleteFile'; filePath: RepoRelativePath}
   | {type: 'fetchCommitMessageTemplate'}
   | {type: 'fetchShelvedChanges'}
   | {type: 'typeahead'; kind: TypeaheadKind; query: string; id: string}

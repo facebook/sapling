@@ -974,11 +974,7 @@ function FileActions({
               if (!ok) {
                 return;
               }
-              // There's no `sl` command that will delete an untracked file, we need to do it manually.
-              serverAPI.postMessage({
-                type: 'deleteFile',
-                filePath: file.path,
-              });
+              runOperation(new PurgeOperation([file.path]));
             }}>
             <Icon icon="trash" />
           </VSCodeButton>
