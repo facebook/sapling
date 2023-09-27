@@ -29,15 +29,16 @@ lazy_static! {
     };
 }
 
+/// Get a copy of the global static ClientRequestInfo
 pub fn get_client_request_info() -> ClientRequestInfo {
     let cri = CLIENT_REQUEST_INFO.read();
     cri.clone()
 }
 
-pub fn update_client_request_info(entry_point: ClientEntryPoint, correlator: String) {
+/// Update the global static ClientRequestInfo
+pub fn update_client_request_info(new_val: ClientRequestInfo) {
     let mut client_info = CLIENT_REQUEST_INFO.write();
-    client_info.set_entry_point(entry_point);
-    client_info.set_correlator(correlator);
+    *client_info = new_val;
 }
 
 /// ClientRequestInfo holds information that will be used for tracing the request
@@ -45,6 +46,8 @@ pub fn update_client_request_info(entry_point: ClientEntryPoint, correlator: Str
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct ClientRequestInfo {
     /// Identifier indicates who triggered the request (e.g: "user:user_id")
+    /// The `main_id` is generated on the server (Mononoke) side, client side
+    /// does not use it.
     pub main_id: Option<String>,
     /// The entry point of the request
     pub entry_point: ClientEntryPoint,
@@ -66,12 +69,18 @@ pub enum ClientEntryPoint {
 }
 
 impl ClientRequestInfo {
+    /// Create a new ClientRequestInfo with entry_point. The correlator will be a
+    /// randomly generated string.
+    ///
+    /// NOTE: Please consider using `get_client_request_info()` if you just
+    /// want to get the current singleton ClientRequestInfo object.
     pub fn new(entry_point: ClientEntryPoint) -> Self {
         let correlator = Self::generate_correlator();
 
         Self::new_ext(entry_point, correlator)
     }
 
+    /// Create a new ClientRequestInfo with entry_point and correlator.
     pub fn new_ext(entry_point: ClientEntryPoint, correlator: String) -> Self {
         Self {
             main_id: None,
@@ -174,7 +183,8 @@ mod tests {
 
         let correlator = "test1234".to_owned();
         let entry_point = ClientEntryPoint::EdenAPI;
-        update_client_request_info(entry_point.clone(), correlator.clone());
+        let cri = ClientRequestInfo::new_ext(entry_point.clone(), correlator.clone());
+        update_client_request_info(cri);
 
         let cri = get_client_request_info();
         assert_eq!(cri.entry_point, entry_point);
