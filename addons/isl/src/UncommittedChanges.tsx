@@ -70,7 +70,7 @@ import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {useDeepMemo} from 'shared/hooks';
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
-import {basename, notEmpty} from 'shared/utils';
+import {basename, notEmpty, partition} from 'shared/utils';
 
 import './UncommittedChanges.css';
 
@@ -657,9 +657,6 @@ export function UncommittedChanges({place}: {place: Place}) {
                 appearance="icon"
                 disabled={noFilesSelected}
                 onClick={() => {
-                  const selectedFiles = uncommittedChanges
-                    .filter(file => selection.isFullyOrPartiallySelected(file.path))
-                    .map(file => file.path);
                   platform.confirm(t('confirmDiscardChanges')).then(ok => {
                     if (!ok) {
                       return;
@@ -679,8 +676,21 @@ export function UncommittedChanges({place}: {place: Place}) {
                       selection.discardPartialSelections();
                       runOperation(operation);
                     } else {
-                      // only a subset of files selected -> we need to revert selected files individually
-                      runOperation(new RevertOperation(selectedFiles));
+                      const selectedFiles = uncommittedChanges.filter(file =>
+                        selection.isFullyOrPartiallySelected(file.path),
+                      );
+                      const [selectedTrackedFiles, selectedUntrackedFiles] = partition(
+                        selectedFiles,
+                        file => file.status !== '?', // only untracked, not missing
+                      );
+                      if (selectedTrackedFiles.length > 0) {
+                        // only a subset of files selected -> we need to revert selected tracked files individually
+                        runOperation(new RevertOperation(selectedTrackedFiles.map(f => f.path)));
+                      }
+                      if (selectedUntrackedFiles.length > 0) {
+                        // untracked files must be purged separately to delete from disk
+                        runOperation(new PurgeOperation(selectedUntrackedFiles.map(f => f.path)));
+                      }
                     }
                   });
                 }}>
