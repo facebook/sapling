@@ -172,6 +172,11 @@ elif sys.platform.startswith("darwin"):
         "test_status_thrift_apis",
     ]
 
+    # Times out on macOS
+    TEST_DISABLED["stats_test.ObjectCacheStatsTest"] = [
+        "test_get_tree_memory",
+    ]
+
     TEST_DISABLED["hg.update_test.UpdateTestTreeOnly"] = [
         # update fails because new file created while checkout operation in progress
         "test_change_casing_with_untracked",
