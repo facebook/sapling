@@ -392,14 +392,40 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   }
 
   std::move(prepareFuture)
-      .thenTry([startupLogger, daemonStart](folly::Try<folly::Unit>&& result) {
-        // If an error occurred this means that we failed to mount all of the
-        // mount points.  However, we have still started and will continue
-        // running, so we report successful startup here no matter what.
+      .thenTry([startupLogger,
+                structuredLogger =
+                    server->getServerState()->getStructuredLogger(),
+                daemonStart](folly::Try<folly::Unit>&& result) {
+        // If an error occurred this means that we failed to mount all of
+        // the mount points or there was an issue opening the LocalStore.
+        //
+        // LocalStore errors mean that Eden can't operate correctly, so we
+        // need to exit.
+        //
+        // Mount errors are fine. We have still started and will
+        // continue running, so we can report successful startup.
         if (result.hasException()) {
+          if (auto* err = result.tryGetExceptionObject<
+                          EdenServer::LocalStoreOpenError>()) {
+            auto startTimeInSeconds =
+                std::chrono::duration<double>{daemonStart.elapsed()}.count();
+            structuredLogger->logEvent(DaemonStart{
+                startTimeInSeconds, FLAGS_takeover, false /*success*/});
+            // Note: this will cause EdenFs to exit abruptly. We are not using
+            // normal shutdown procedures. This is consistent with other
+            // pre-mount startup errors. Admittedly this will leave hung mounts
+            // during graceful restarts:
+            // TODO(T164077169): attempt to cleanup mounts left behind by a
+            // graceful restart when EdenFS fails to startup after recieving
+            // takeover data.
+            startupLogger->exitUnsuccessfully(
+                kExitCodeError,
+                "error starting EdenFS: ",
+                folly::exceptionStr(*err));
+          }
           // Log an overall error message here.
-          // We will have already logged more detailed messages for each mount
-          // failure when it occurred.
+          // We will have already logged more detailed messages for each
+          // mount failure when it occurred.
           startupLogger->warn(
               "did not successfully remount all repositories: ",
               result.exception().what());
@@ -413,7 +439,8 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
            structuredLogger = server->getServerState()->getStructuredLogger(),
            takeover = FLAGS_takeover] {
             // This value is slightly different from `startTimeInSeconds`
-            // we pass into `startupLogger->success()`, but should be identical.
+            // we pass into `startupLogger->success()`, but should be
+            // identical.
             auto startTimeInSeconds =
                 std::chrono::duration<double>{daemonStart.elapsed()}.count();
             // Here we log a success even if we did not successfully remount

@@ -140,6 +140,14 @@ if sys.platform == "win32":
             # Windows doesn't support executable files; mode changes are no-op
             "test_mode_change_with_no_content_change",
         ],
+        "hg.storage_engine_test.FailsToOpenLocalStoreTest": [
+            # takeover unsupported on Windows
+            "test_restart_eden_with_local_store_that_fails_to_open"
+        ],
+        "hg.storage_engine_test.FailsToOpenLocalStoreTestWithMounts": [
+            # takeover unsupported on Windows
+            "test_restart_eden_with_local_store_that_fails_to_open"
+        ],
         "stale_inode_test.StaleInodeTestHgNFS": True,
         "windows_fsck_test.WindowsFsckTestHg": [
             # T146967686

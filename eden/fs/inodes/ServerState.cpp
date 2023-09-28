@@ -26,8 +26,13 @@ DEFINE_bool(
     "Block mount attempts via the fault injection framework.  "
     "Requires --enable_fault_injection.");
 
-namespace facebook::eden {
+DEFINE_bool(
+    fault_injection_fail_opening_local_store,
+    false,
+    "Causes the local store to fail to open on startup. "
+    "Requires --enable_fault_injection.");
 
+namespace facebook::eden {
 /** Throttle Ignore change checks, max of 1 per kUserIgnoreMinPollSeconds */
 constexpr std::chrono::seconds kUserIgnoreMinPollSeconds{5};
 
@@ -80,15 +85,23 @@ ServerState::ServerState(
               ? std::make_shared<FsEventLogger>(config_, hiveLogger_)
               : nullptr} {
   // It would be nice if we eventually built a more generic mechanism for
-  // defining faults to be configured on start up.  (e.g., loading this from the
-  // EdenConfig).
+  // defining faults to be configured on start up.  (e.g., loading this from
+  // the EdenConfig).
   //
-  // For now, blocking mounts is the main thing we want to be able to control on
-  // startup (since mounting occurs automatically during startup).  Add a
-  // one-off command line flag to control this for now, until we build a more
-  // generic mechanism.
+  // For now, blocking mounts and failing localstore opening are the main
+  // things we want to be able to control on startup (since mounting and
+  // opening localstore occurs automatically during startup).  Add a two-off
+  // command
+  // line flag to control this for now, until we build a more generic
+  // mechanism.
   if (FLAGS_fault_injection_block_mounts) {
     faultInjector_->injectBlock("mount", ".*");
+  }
+  if (FLAGS_fault_injection_fail_opening_local_store) {
+    faultInjector_->injectError(
+        "open_local_store",
+        ".*",
+        std::runtime_error{"Some random error opening LocalStore"});
   }
 }
 

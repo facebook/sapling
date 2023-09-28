@@ -442,7 +442,9 @@ class EdenFS:
     def graceful_restart(
         self,
         timeout: float = EDENFS_START_TIMEOUT,
-        should_wait: bool = True,
+        should_wait_for_old: bool = True,
+        should_wait_for_new: bool = True,
+        extra_args: Optional[List[str]] = None,
     ) -> subprocess.Popen:
         """
         Roughly equivalent to `eden restart --graceful` to restart the daemon
@@ -468,7 +470,8 @@ class EdenFS:
             self.start(
                 timeout=timeout,
                 takeover_from=old_pid,
-                should_wait_for_daemon_healthy=should_wait,
+                should_wait_for_daemon_healthy=should_wait_for_new,
+                extra_args=extra_args,
             )
         except Exception:
             # TODO: There might be classes of errors where the old_process is
@@ -477,7 +480,7 @@ class EdenFS:
             raise
 
         # Check the return code from the old edenfs process
-        if should_wait:
+        if should_wait_for_old:
             return_code = old_process.wait()
             if return_code != 0:
                 raise Exception(

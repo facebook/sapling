@@ -82,6 +82,7 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/EnumValue.h"
+#include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/FsChannelTypes.h"
 #include "eden/fs/utils/NfsSocket.h"
@@ -1010,8 +1011,15 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
        takeoverData = std::move(takeoverData),
 #endif
        thriftRunningFuture = std::move(thriftRunningFuture)]() mutable {
-        openStorageEngine(*logger);
-
+        try {
+          // it's important that this be the first thing that happens in this
+          // future. The local store needs to be setup before mounts can be
+          // accessed but also errors here may cause eden to bail out early. We
+          // don't want eden to bail out with partially setup mounts.
+          openStorageEngine(*logger);
+        } catch (const std::exception& ex) {
+          throw LocalStoreOpenError(ex.what());
+        }
         std::vector<Future<Unit>> mountFutures;
         if (doingTakeover) {
 #ifndef _WIN32
@@ -1106,6 +1114,7 @@ bool EdenServer::createStorageEngine(cpptoml::table& config) {
 void EdenServer::openStorageEngine(StartupLogger& logger) {
   logger.log("Opening local store...");
   folly::stop_watch<std::chrono::milliseconds> watch;
+  serverState_->getFaultInjector().check("open_local_store");
   localStore_->open();
   logger.log(
       "Opened local store in ", watch.elapsed().count() / 1000.0, " seconds.");

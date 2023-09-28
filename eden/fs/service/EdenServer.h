@@ -170,6 +170,19 @@ class EdenServer : private TakeoverHandler {
     return runningState_.rlock()->state;
   }
 
+  class LocalStoreOpenError : public std::exception {
+   public:
+    explicit LocalStoreOpenError(std::string&& str)
+        : message_(std::move(str)) {}
+
+    const char* what() const noexcept override {
+      return message_.c_str();
+    }
+
+   private:
+    std::string message_;
+  };
+
   /**
    * Prepare to run the EdenServer.
    *
