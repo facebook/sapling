@@ -10,5 +10,4 @@ from bindings import edenapi
 
 def getclient(ui):
     """Obtain the edenapi client"""
-    correlator = ui.correlator()
-    return edenapi.client(ui._rcfg, correlator)
+    return edenapi.client(ui._rcfg)

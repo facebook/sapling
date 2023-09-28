@@ -958,12 +958,11 @@ py_class!(pub class contentstore |py| {
         remote: pyremotestore,
         edenapi: Option<edenapifilestore> = None,
         suffix: Option<String> = None,
-        correlator: Option<String> = None
     ) -> PyResult<contentstore> {
         let remotestore = remote.extract_inner(py);
         let config = config.get_cfg(py);
 
-        let mut builder = ContentStoreBuilder::new(&config).correlator(correlator);
+        let mut builder = ContentStoreBuilder::new(&config);
 
         builder = if let Some(edenapi) = edenapi {
             builder.remotestore(edenapi.extract_inner(py))
@@ -1155,17 +1154,12 @@ fn make_filescmstore<'a>(
     remote: Arc<PyHgIdRemoteStore>,
     edenapi_filestore: Option<Arc<EdenApiFileStore>>,
     suffix: Option<String>,
-    correlator: Option<String>,
 ) -> Result<(Arc<FileStore>, Arc<ContentStore>)> {
-    let mut builder = ContentStoreBuilder::new(&config).correlator(correlator.clone());
+    let mut builder = ContentStoreBuilder::new(&config);
     let mut filestore_builder = FileStoreBuilder::new(&config);
 
     if config.get_or_default::<bool>("scmstore", "auxindexedlog")? {
         filestore_builder = filestore_builder.store_aux_data();
-    }
-
-    if let Some(correlator) = correlator {
-        filestore_builder = filestore_builder.correlator(correlator);
     }
 
     builder = if let Some(path) = path {
@@ -1231,7 +1225,6 @@ py_class!(pub class filescmstore |py| {
         remote: pyremotestore,
         edenapi: Option<edenapifilestore> = None,
         suffix: Option<String> = None,
-        correlator: Option<String> = None
     ) -> PyResult<filescmstore> {
         // Extract Rust Values
         let path = path.as_ref().map(|v| v.as_path());
@@ -1239,7 +1232,7 @@ py_class!(pub class filescmstore |py| {
         let remote = remote.extract_inner(py);
         let edenapi = edenapi.map(|v| v.extract_inner(py));
 
-        let (filestore, contentstore) = make_filescmstore(path, &config, remote, edenapi, suffix, correlator).map_pyerr(py)?;
+        let (filestore, contentstore) = make_filescmstore(path, &config, remote, edenapi, suffix).map_pyerr(py)?;
 
         filescmstore::create_instance(py, filestore, contentstore)
     }
@@ -1405,9 +1398,8 @@ fn make_treescmstore<'a>(
     edenapi_treestore: Option<Arc<EdenApiTreeStore>>,
     filestore: Option<Arc<FileStore>>,
     suffix: Option<String>,
-    correlator: Option<String>,
 ) -> Result<(Arc<TreeStore>, Arc<ContentStore>)> {
-    let mut builder = ContentStoreBuilder::new(&config).correlator(correlator);
+    let mut builder = ContentStoreBuilder::new(&config);
     let mut treestore_builder = TreeStoreBuilder::new(&config);
 
     builder = if let Some(path) = path {
@@ -1485,7 +1477,6 @@ py_class!(pub class treescmstore |py| {
         edenapi: Option<edenapitreestore> = None,
         filestore: Option<filescmstore> = None,
         suffix: Option<String> = None,
-        correlator: Option<String> = None
     ) -> PyResult<treescmstore> {
         // Extract Rust Values
         let path = path.as_ref().map(|v| v.as_path());
@@ -1494,7 +1485,7 @@ py_class!(pub class treescmstore |py| {
         let edenapi = edenapi.map(|v| v.extract_inner(py));
         let filestore = filestore.map(|v| v.extract_inner(py));
 
-        let (treestore, contentstore) = make_treescmstore(path, &config, remote, edenapi, filestore, suffix, correlator).map_pyerr(py)?;
+        let (treestore, contentstore) = make_treescmstore(path, &config, remote, edenapi, filestore, suffix).map_pyerr(py)?;
 
         treescmstore::create_instance(py, treestore, contentstore)
     }

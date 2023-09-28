@@ -198,7 +198,6 @@ class ui:
             self._tweaked = src._tweaked
             self._outputui = src._outputui
             self._terminaloutput = src._terminaloutput
-            self._correlator = src._correlator
 
             self.environ = src.environ
             self.callhooks = src.callhooks
@@ -227,7 +226,6 @@ class ui:
             self.pageractive = False
             self._disablepager = False
             self._tweaked = False
-            self._correlator = util.refcell(None)
 
             # shared read-only environment
             self.environ = encoding.environ
@@ -302,17 +300,6 @@ class ui:
         """Clear internal state that shouldn't persist across commands"""
         progress.resetstate()
         self.httppasswordmgrdb = httppasswordmgrdbproxy()
-
-    def correlator(self):
-        """a random string that is logged on both the client and server.  This
-        can be used to correlate the client logging to the server logging.
-        """
-        assert isinstance(self._correlator, util.refcell)
-        if self._correlator.get() is None:
-            correlator = bindings.edenapi.correlator()
-            self._correlator.swap(correlator)
-            self.log("clienttelemetry", client_correlator=correlator)
-        return self._correlator.get()
 
     def setclioverrides(self, cliconfigs, cliconfigfiles):
         self.cliconfigs = (cliconfigs or []).copy()

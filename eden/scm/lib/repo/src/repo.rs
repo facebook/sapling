@@ -319,11 +319,8 @@ impl Repo {
             Some(eden_api) => Ok(eden_api.clone()),
             None => {
                 tracing::trace!(target: "repo::eden_api", "creating edenapi");
-                let correlator = edenapi::DEFAULT_CORRELATOR.as_str();
                 tracing::trace!(target: "repo::eden_api", "getting edenapi builder");
-                let eden_api = Builder::from_config(&self.config)?
-                    .correlator(Some(correlator))
-                    .build()?;
+                let eden_api = Builder::from_config(&self.config)?.build()?;
                 tracing::info!(url=eden_api.url(), path=?self.path, "EdenApi built");
                 self.eden_api = Some(eden_api.clone());
                 Ok(eden_api)
@@ -487,9 +484,7 @@ impl Repo {
         let eden_api = self.optional_eden_api()?;
 
         tracing::trace!(target: "repo::file_store", "building filestore");
-        let mut file_builder = FileStoreBuilder::new(self.config())
-            .local_path(self.store_path())
-            .correlator(edenapi::DEFAULT_CORRELATOR.as_str());
+        let mut file_builder = FileStoreBuilder::new(self.config()).local_path(self.store_path());
 
         if let Some(eden_api) = eden_api {
             tracing::trace!(target: "repo::file_store", "enabling edenapi");
@@ -742,10 +737,6 @@ impl Repo {
             return Ok(Some((store.clone(), store)));
         }
         Ok(None)
-    }
-
-    pub fn correlator(&self) -> &'static str {
-        edenapi::DEFAULT_CORRELATOR.as_str()
     }
 }
 

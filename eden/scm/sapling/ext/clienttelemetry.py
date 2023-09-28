@@ -37,16 +37,6 @@ def hostname(ui) -> str:
 
 
 @clienttelemetryfunc
-def correlator(ui):
-    """
-    The correlator is a random string that is logged on both the client and
-    server.  This can be used to correlate the client logging to the server
-    logging.
-    """
-    return ui.correlator()
-
-
-@clienttelemetryfunc
 def wantslfspointers(ui):
     """
     Tells the server whether this clients wants LFS pointers to be sent in

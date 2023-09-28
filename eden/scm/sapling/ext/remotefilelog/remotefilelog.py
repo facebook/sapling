@@ -520,8 +520,6 @@ class remotefileslog(filelog.fileslog):
         )
         edenapistore = self.edenapistore(repo)
 
-        correlator = clienttelemetry.correlator(repo.ui)
-
         mask = os.umask(0o002)
         try:
             sharedonlycontentstore = revisionstore.filescmstore(
@@ -529,7 +527,6 @@ class remotefileslog(filelog.fileslog):
                 repo.ui._rcfg,
                 sharedonlyremotestore,
                 edenapistore,
-                correlator=correlator,
             )
             sharedonlymetadatastore = revisionstore.metadatastore(
                 None,

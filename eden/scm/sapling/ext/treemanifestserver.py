@@ -968,7 +968,6 @@ class basetreemanifestlog:
 
     def makeruststore(self):
         remotestore = revisionstore.pyremotestore(remotetreestore(self._repo))
-        correlator = clienttelemetry.correlator(self._repo.ui)
         edenapistore = self.edenapistore(self._repo)
 
         mask = os.umask(0o002)
@@ -983,7 +982,6 @@ class basetreemanifestlog:
                 edenapistore,
                 None,
                 "manifests",
-                correlator=correlator,
             )
             self.datastore = self.treescmstore.get_contentstore()
             self.historystore = revisionstore.metadatastore(

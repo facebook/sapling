@@ -25,10 +25,5 @@ def makestableidentifier(orig, length=16):
     return "%0*d" % (length, coid)
 
 
-def reposetup(ui, repo):
-    assert ui._correlator.get() is None
-    ui._correlator.swap("stableidentifiers:correlator")
-
-
 def uisetup(ui):
     extensions.wrapfunction(util, "makerandomidentifier", makestableidentifier)

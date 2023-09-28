@@ -150,7 +150,6 @@ struct HttpOptions {
     accept_zstd: bool,
     http_version: HttpVersion,
     min_transfer_speed: Option<MinTransferSpeed>,
-    correlator: Option<String>,
     user_agent: String,
     backoff_times: Vec<f32>,
     throttle_backoff_times: Vec<f32>,
@@ -1555,7 +1554,6 @@ impl LfsRemote {
         shared: Arc<LfsStore>,
         local: Option<Arc<LfsStore>>,
         config: &dyn Config,
-        correlator: Option<String>,
     ) -> Result<Self> {
         let mut url: String = config.must_get("lfs", "url")?;
         // A trailing '/' needs to be present so that `Url::join` doesn't remove the reponame
@@ -1654,7 +1652,6 @@ impl LfsRemote {
                         accept_zstd,
                         http_version,
                         min_transfer_speed,
-                        correlator,
                         user_agent,
                         backoff_times,
                         throttle_backoff_times,
@@ -2774,7 +2771,7 @@ mod tests {
             let _m2 = get_lfs_download_mock(200, blob);
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
 
             let objs = [(blob.sha, blob.size)]
                 .iter()
@@ -2798,7 +2795,7 @@ mod tests {
             set_var("https_proxy", "fwdproxy:8082");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
 
             let blob = example_blob();
             let objs = [(blob.sha, blob.size)]
@@ -2825,7 +2822,7 @@ mod tests {
             set_var("https_proxy", "http://fwdproxy:8082");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
 
             let blob = example_blob();
             let objs = [(blob.sha, blob.size)]
@@ -2856,7 +2853,7 @@ mod tests {
             set_var("NO_PROXY", "localhost,127.0.0.1");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
 
             let objs = [(blob.sha, blob.size)]
                 .iter()
@@ -2879,7 +2876,7 @@ mod tests {
             let mut config = make_lfs_config(&cachedir, "test_download");
             configure(&mut config);
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
 
             let _mocks: Vec<_> = blobs
                 .iter()
@@ -2987,7 +2984,7 @@ mod tests {
             setconfig(&mut config, "lfs", "http-version", "3");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config).unwrap());
-            let result = LfsRemote::new(lfs, None, &config, None);
+            let result = LfsRemote::new(lfs, None, &config);
 
             assert!(result.is_err());
 
@@ -3005,7 +3002,7 @@ mod tests {
             setconfig(&mut config, "lfs", "requesttimeout", "0");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
 
             let blob = (
                 Sha256::from_str(
@@ -3036,7 +3033,7 @@ mod tests {
             let _m2 = get_lfs_download_mock(200, blob);
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = Arc::new(LfsRemote::new(lfs.clone(), None, &config, None)?);
+            let remote = Arc::new(LfsRemote::new(lfs.clone(), None, &config)?);
 
             let key = key("a/b", "1234");
 
@@ -3095,7 +3092,7 @@ mod tests {
                 .create();
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
 
             let objs = [(blob.sha, blob.size)]
                 .iter()
@@ -3145,7 +3142,7 @@ mod tests {
         let url = Url::from_file_path(&remote).unwrap();
         setconfig(&mut config, "lfs", "url", url.as_str());
 
-        let remote = LfsRemote::new(lfs, None, &config, None)?;
+        let remote = LfsRemote::new(lfs, None, &config)?;
 
         let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1)]
             .iter()
@@ -3205,7 +3202,7 @@ mod tests {
         let url = Url::from_file_path(&remote_dir).unwrap();
         setconfig(&mut config, "lfs", "url", url.as_str());
 
-        let remote = LfsRemote::new(shared_lfs, Some(local_lfs.clone()), &config, None)?;
+        let remote = LfsRemote::new(shared_lfs, Some(local_lfs.clone()), &config)?;
 
         let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1)]
             .iter()
@@ -3257,7 +3254,6 @@ mod tests {
             shared_lfs.clone(),
             Some(local_lfs.clone()),
             &config,
-            None,
         )?);
         let remote = remote.datastore(shared_lfs.clone());
         let k = StoreKey::hgid(k1.clone());
@@ -3337,7 +3333,7 @@ mod tests {
         setconfig(&mut config, "lfs", "url", "http://192.0.2.0/");
 
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-        let remote = Arc::new(LfsRemote::new(lfs, None, &config, None)?);
+        let remote = Arc::new(LfsRemote::new(lfs, None, &config)?);
 
         let resp = remote.datastore(store).prefetch(&[]);
         assert!(resp.is_ok());
@@ -3410,7 +3406,7 @@ mod tests {
 
             let lfsdir = TempDir::new()?;
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
             let objs = [(blobs[0].sha, blobs[0].size)]
                 .iter()
                 .cloned()

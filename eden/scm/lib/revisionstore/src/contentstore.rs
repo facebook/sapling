@@ -278,7 +278,6 @@ pub struct ContentStoreBuilder<'a> {
     config: &'a dyn Config,
     remotestore: Option<Arc<dyn HgIdRemoteStore>>,
     suffix: Option<PathBuf>,
-    correlator: Option<String>,
     shared_indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
     shared_indexedlog_shared: Option<Arc<IndexedLogHgIdDataStore>>,
     shared_lfs_local: Option<Arc<LfsStore>>,
@@ -293,7 +292,6 @@ impl<'a> ContentStoreBuilder<'a> {
             config,
             remotestore: None,
             suffix: None,
-            correlator: None,
             shared_indexedlog_shared: None,
             shared_indexedlog_local: None,
             shared_lfs_shared: None,
@@ -323,11 +321,6 @@ impl<'a> ContentStoreBuilder<'a> {
 
     pub fn suffix(mut self, suffix: impl AsRef<Path>) -> Self {
         self.suffix = Some(suffix.as_ref().to_path_buf());
-        self
-    }
-
-    pub fn correlator(mut self, correlator: Option<impl ToString>) -> Self {
-        self.correlator = correlator.map(|s| s.to_string());
         self
     }
 
@@ -559,7 +552,6 @@ impl<'a> ContentStoreBuilder<'a> {
                     shared_lfs_store,
                     local_lfs_store,
                     self.config,
-                    self.correlator,
                 )?);
                 remotestores.add(lfs_remote_store.datastore(shared_store.clone()));
 
@@ -638,6 +630,7 @@ mod tests {
     use std::ops::Sub;
 
     use minibytes::Bytes;
+    #[cfg(feature = "fb")]
     use mockito::Mock;
     use tempfile::TempDir;
     use types::testutil::*;
@@ -650,12 +643,15 @@ mod tests {
     use crate::repack::RepackLocation;
     #[cfg(feature = "fb")]
     use crate::testutil::example_blob;
+    #[cfg(feature = "fb")]
     use crate::testutil::get_lfs_batch_mock;
+    #[cfg(feature = "fb")]
     use crate::testutil::get_lfs_download_mock;
     use crate::testutil::make_config;
     use crate::testutil::make_lfs_config;
     use crate::testutil::setconfig;
     use crate::testutil::FakeHgIdRemoteStore;
+    #[cfg(feature = "fb")]
     use crate::testutil::TestBlob;
     use crate::types::ContentHash;
 

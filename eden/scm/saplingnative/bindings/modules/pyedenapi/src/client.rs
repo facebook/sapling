@@ -79,13 +79,11 @@ py_class!(pub class client |py| {
     def __new__(
         _cls,
         config: config,
-        correlator: Option<String> = None,
         reponame: Option<String> = None,
     ) -> PyResult<client> {
         let config = config.get_cfg(py);
         let inner = Builder::from_config(&config)
             .map_pyerr(py)?
-            .correlator(correlator)
             .repo_name(reponame)
             .build()
             .map_pyerr(py)?;

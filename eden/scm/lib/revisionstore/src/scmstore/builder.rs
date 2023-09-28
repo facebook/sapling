@@ -42,7 +42,6 @@ pub struct FileStoreBuilder<'a> {
     config: &'a dyn Config,
     local_path: Option<PathBuf>,
     suffix: Option<PathBuf>,
-    correlator: Option<String>,
     store_aux_data: bool,
     override_edenapi: Option<bool>,
 
@@ -61,7 +60,6 @@ impl<'a> FileStoreBuilder<'a> {
             config,
             local_path: None,
             suffix: None,
-            correlator: None,
             store_aux_data: false,
             override_edenapi: None,
             indexedlog_local: None,
@@ -80,11 +78,6 @@ impl<'a> FileStoreBuilder<'a> {
 
     pub fn suffix(mut self, suffix: impl AsRef<Path>) -> Self {
         self.suffix = Some(suffix.as_ref().to_path_buf());
-        self
-    }
-
-    pub fn correlator(mut self, correlator: impl ToString) -> Self {
-        self.correlator = Some(correlator.to_string());
         self
     }
 
@@ -335,7 +328,6 @@ impl<'a> FileStoreBuilder<'a> {
                     lfs_cache.clone(),
                     lfs_local.clone(),
                     self.config,
-                    self.correlator.take(),
                 )?))
             } else {
                 None

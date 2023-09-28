@@ -135,7 +135,6 @@ py_class!(pub class repo |py| {
         let mut file_scm_store = repo.file_scm_store().unwrap();
 
         let mut builder = ContentStoreBuilder::new(repo.config())
-            .correlator(Some(repo.correlator()))
             .remotestore(remote.extract_inner(py))
             .local_path(repo.store_path());
 
@@ -162,7 +161,6 @@ py_class!(pub class repo |py| {
         let mut tree_scm_store = repo.tree_scm_store().unwrap();
 
         let mut builder = ContentStoreBuilder::new(repo.config())
-            .correlator(Some(repo.correlator()))
             .remotestore(remote.extract_inner(py))
             .local_path(repo.store_path())
             .suffix("manifests");
