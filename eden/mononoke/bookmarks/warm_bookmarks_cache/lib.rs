@@ -592,14 +592,9 @@ async fn move_bookmark_back_in_history_until_derived(
 ) -> Result<Option<ChangesetId>, Error> {
     info!(ctx.logger(), "moving {} bookmark back in history...", book);
 
-    let (latest_derived_entry, _) = find_latest_derived_and_oldest_underived(
-        ctx,
-        bookmarks,
-        bookmark_update_log,
-        book,
-        warmers,
-    )
-    .await?;
+    let (latest_derived_entry, _) =
+        find_latest_derived_and_underived(ctx, bookmarks, bookmark_update_log, book, warmers)
+            .await?;
 
     match latest_derived_entry {
         LatestDerivedBookmarkEntry::Found(maybe_cs_id_and_ts) => {
@@ -627,6 +622,8 @@ pub enum LatestDerivedBookmarkEntry {
 
 #[derive(Default)]
 pub struct LatestUnderivedBookmarkEntry {
+    /// Changeset ID of the latest underived bookmark entry.  This is the next
+    /// thing to try to derive.
     maybe_cs_id: Option<ChangesetId>,
     /// ID and TS for the oldest underived bookmark entry for logging
     maybe_id_ts: Option<(BookmarkUpdateLogId, Timestamp)>,
@@ -636,7 +633,7 @@ pub struct BookmarkUpdateLogId(pub u64);
 
 /// Searches bookmark log for latest entry for which everything is derived. Note that we consider log entry that
 /// deletes a bookmark to be derived.
-pub async fn find_latest_derived_and_oldest_underived(
+pub async fn find_latest_derived_and_underived(
     ctx: &CoreContext,
     bookmarks: &dyn Bookmarks,
     bookmark_update_log: &dyn BookmarkUpdateLog,
@@ -644,6 +641,7 @@ pub async fn find_latest_derived_and_oldest_underived(
     warmers: &[Warmer],
 ) -> Result<(LatestDerivedBookmarkEntry, LatestUnderivedBookmarkEntry), Error> {
     let mut latest_underived = LatestUnderivedBookmarkEntry::default();
+    let mut found_latest_entry = false;
     let history_depth_limits = vec![0, 10, 50, 100, 1000, 10000];
 
     for (prev_limit, limit) in history_depth_limits.into_iter().tuple_windows() {
@@ -676,9 +674,12 @@ pub async fn find_latest_derived_and_oldest_underived(
         }
 
         let log_entries_fetched = log_entries.len();
-        if let Some((maybe_cs_id, _)) = log_entries.first() {
-            latest_underived.maybe_cs_id = *maybe_cs_id;
-        };
+        if !found_latest_entry {
+            if let Some((maybe_cs_id, _)) = log_entries.first() {
+                latest_underived.maybe_cs_id = *maybe_cs_id;
+                found_latest_entry = true;
+            }
+        }
 
         let mut maybe_derived = stream::iter(log_entries.into_iter().map(
             |(maybe_cs_id, id_and_ts)| async move {
@@ -1075,7 +1076,7 @@ async fn single_bookmark_updater(
     warmers: &Arc<Vec<Warmer>>,
     mut staleness_reporter: impl FnMut(Timestamp),
 ) -> Result<(), Error> {
-    let (latest_derived, latest_underived) = find_latest_derived_and_oldest_underived(
+    let (latest_derived, latest_underived) = find_latest_derived_and_underived(
         ctx,
         repo.bookmarks(),
         repo.bookmark_update_log(),
