@@ -1055,7 +1055,34 @@ function PartialSelectionAction({file}: {file: UIChangedFile}) {
   };
 
   return (
-    <Tooltip title={t('Toggle chunk selection')}>
+    <Tooltip
+      component={() => (
+        <div style={{maxWidth: '300px'}}>
+          <div>
+            <T
+              replace={{
+                $beta: (
+                  <span
+                    style={{
+                      color: 'var(--scm-removed-foreground)',
+                      marginLeft: 'var(--halfpad)',
+                      fontSize: '80%',
+                    }}>
+                    (Beta)
+                  </span>
+                ),
+              }}>
+              Toggle chunk selection $beta
+            </T>
+          </div>
+          <div>
+            <T>
+              Shows changed files in your commit and lets you select individual chunks or lines to
+              include.
+            </T>
+          </div>
+        </div>
+      )}>
       <VSCodeButton className="file-show-on-hover" appearance="icon" onClick={handleClick}>
         <Icon icon="diff" />
       </VSCodeButton>
