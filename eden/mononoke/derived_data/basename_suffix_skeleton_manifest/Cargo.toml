@@ -15,6 +15,7 @@ anyhow = "1.0.71"
 async-stream = "0.3"
 async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+bytes = { version = "1.1", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = ".." }
@@ -25,6 +26,7 @@ itertools = "0.10.3"
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 skeleton_manifest = { version = "0.1.0", path = "../skeleton_manifest" }
+tunables = { version = "0.1.0", path = "../../tunables" }
 vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]

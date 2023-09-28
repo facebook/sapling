@@ -26,6 +26,7 @@ use mononoke_types::fsnode::Fsnode;
 use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::path::MPath;
+use mononoke_types::sharded_map::ShardedTrieMap;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
 use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
 use mononoke_types::unode::ManifestUnode;
@@ -176,7 +177,7 @@ fn to_mf_entry(entry: BssmEntry) -> Entry<BssmDirectory, ()> {
 impl<Store: Blobstore> AsyncManifest<Store> for BasenameSuffixSkeletonManifest {
     type TreeId = BssmDirectory;
     type LeafId = ();
-    type TrieMapType = TrieMap<Entry<BssmDirectory, ()>>;
+    type TrieMapType = ShardedTrieMap<BssmEntry>;
 
     async fn list(
         &self,
@@ -218,13 +219,35 @@ impl<Store: Blobstore> AsyncManifest<Store> for BasenameSuffixSkeletonManifest {
 
     async fn into_trie_map(
         self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::TrieMapType> {
+        Ok(ShardedTrieMap::new(self.subentries))
+    }
+}
+
+#[async_trait]
+impl<Store: Blobstore> TrieMapOps<Store, Entry<BssmDirectory, ()>> for ShardedTrieMap<BssmEntry> {
+    async fn expand(
+        self,
         ctx: &CoreContext,
         blobstore: &Store,
-    ) -> Result<Self::TrieMapType> {
-        self.into_subentries(ctx, blobstore)
+    ) -> Result<(Option<Entry<BssmDirectory, ()>>, Vec<(u8, Self)>)> {
+        let (entry, children) = self.expand(ctx, blobstore).await?;
+        Ok((entry.map(to_mf_entry), children))
+    }
+
+    async fn into_stream(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(SmallVec<[u8; 24]>, Entry<BssmDirectory, ()>)>>>
+    {
+        Ok(self
+            .into_stream(ctx, blobstore)
+            .await?
             .map_ok(|(path, entry)| (path, to_mf_entry(entry)))
-            .try_collect()
-            .await
+            .boxed())
     }
 }
 
