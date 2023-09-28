@@ -17,11 +17,13 @@ bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
+itertools = "0.10.3"
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 nonzero_ext = "0.2"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
+smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]

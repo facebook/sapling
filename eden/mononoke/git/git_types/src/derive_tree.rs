@@ -26,6 +26,7 @@ use futures::future::ready;
 use futures::stream::FuturesUnordered;
 use futures::stream::TryStreamExt;
 use manifest::derive_manifest;
+use manifest::flatten_subentries;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
@@ -123,16 +124,15 @@ async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
         {
             cloned!(ctx, blobstore);
             move |tree_info| {
-                let members = tree_info
-                    .subentries
-                    .into_iter()
-                    .map(|(p, (_, entry))| (p, entry.into()))
-                    .collect();
-
-                let builder = TreeBuilder::new(members);
-                let (mut tree_bytes_without_header, tree) = builder.into_tree_with_bytes();
                 cloned!(ctx, blobstore);
                 async move {
+                    let members = flatten_subentries(&ctx, &(), tree_info.subentries)
+                        .await?
+                        .map(|(p, (_, entry))| (p, entry.into()))
+                        .collect();
+
+                    let builder = TreeBuilder::new(members);
+                    let (mut tree_bytes_without_header, tree) = builder.into_tree_with_bytes();
                     // Store the raw git tree before storing the thrift version
                     let oid = tree.handle().oid();
                     let git_hash =

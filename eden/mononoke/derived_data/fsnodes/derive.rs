@@ -32,6 +32,7 @@ use futures::stream::FuturesUnordered;
 use futures::stream::TryStreamExt;
 use manifest::derive_manifest_with_io_sender;
 use manifest::derive_manifests_for_simple_stack_of_commits;
+use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestChanges;
@@ -52,6 +53,7 @@ use mononoke_types::FileType;
 use mononoke_types::FsnodeId;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
+use mononoke_types::TrieMap;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::FsnodeDerivationError;
@@ -325,14 +327,21 @@ async fn create_fsnode(
     blobstore: &Arc<dyn Blobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     prefetched_content_metadata: Arc<HashMap<ContentId, ContentMetadataV2>>,
-    tree_info: TreeInfo<FsnodeId, (ContentId, FileType), Option<FsnodeSummary>>,
+    tree_info: TreeInfo<
+        FsnodeId,
+        (ContentId, FileType),
+        Option<FsnodeSummary>,
+        TrieMap<Entry<FsnodeId, FsnodeFile>>,
+    >,
 ) -> Result<(Option<FsnodeSummary>, FsnodeId)> {
     let entries = collect_fsnode_subentries(
         ctx,
         &blobstore,
         prefetched_content_metadata.as_ref(),
         tree_info.parents,
-        tree_info.subentries,
+        flatten_subentries(ctx, &(), tree_info.subentries)
+            .await?
+            .collect(),
     )
     .await?;
 

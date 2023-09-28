@@ -39,11 +39,47 @@ use mononoke_types::SkeletonManifestId;
 use mononoke_types::TrieMap;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
+use smallvec::SmallVec;
+
+#[async_trait]
+pub trait TrieMapOps<Store, Value>: Sized {
+    async fn expand(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<(Option<Value>, Vec<(u8, Self)>)>;
+
+    async fn into_stream(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(SmallVec<[u8; 24]>, Value)>>>;
+}
+
+#[async_trait]
+impl<Store, V: Send> TrieMapOps<Store, V> for TrieMap<V> {
+    async fn expand(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<(Option<V>, Vec<(u8, Self)>)> {
+        Ok(self.expand())
+    }
+
+    async fn into_stream(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(SmallVec<[u8; 24]>, V)>>> {
+        Ok(stream::iter(self).map(Ok).boxed())
+    }
+}
 
 #[async_trait]
 pub trait AsyncManifest<Store: Send + Sync>: Sized + 'static {
     type TreeId: Send + Sync;
     type LeafId: Send + Sync;
+    type TrieMapType: Send + Sync;
 
     async fn list(
         &self,
@@ -63,6 +99,8 @@ pub trait AsyncManifest<Store: Send + Sync>: Sized + 'static {
         blobstore: &Store,
         name: &MPathElement,
     ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>>;
+    async fn into_trie_map(self, ctx: &CoreContext, blobstore: &Store)
+    -> Result<Self::TrieMapType>;
 }
 
 pub trait Manifest: Sync + Sized + 'static {
@@ -80,9 +118,10 @@ pub trait Manifest: Sync + Sized + 'static {
 }
 
 #[async_trait]
-impl<M: Manifest, Store: Send + Sync> AsyncManifest<Store> for M {
+impl<M: Manifest + Send, Store: Send + Sync> AsyncManifest<Store> for M {
     type TreeId = <Self as Manifest>::TreeId;
     type LeafId = <Self as Manifest>::LeafId;
+    type TrieMapType = TrieMap<Entry<Self::TreeId, Self::LeafId>>;
 
     async fn list(
         &self,
@@ -116,6 +155,14 @@ impl<M: Manifest, Store: Send + Sync> AsyncManifest<Store> for M {
     ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
         anyhow::Ok(Manifest::lookup(self, name))
     }
+
+    async fn into_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::TrieMapType> {
+        Ok(Manifest::list(&self).collect())
+    }
 }
 
 fn to_mf_entry(entry: BssmEntry) -> Entry<BssmDirectory, ()> {
@@ -129,6 +176,7 @@ fn to_mf_entry(entry: BssmEntry) -> Entry<BssmDirectory, ()> {
 impl<Store: Blobstore> AsyncManifest<Store> for BasenameSuffixSkeletonManifest {
     type TreeId = BssmDirectory;
     type LeafId = ();
+    type TrieMapType = TrieMap<Entry<BssmDirectory, ()>>;
 
     async fn list(
         &self,
@@ -166,6 +214,17 @@ impl<Store: Blobstore> AsyncManifest<Store> for BasenameSuffixSkeletonManifest {
         name: &MPathElement,
     ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
         Ok(self.lookup(ctx, blobstore, name).await?.map(to_mf_entry))
+    }
+
+    async fn into_trie_map(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<Self::TrieMapType> {
+        self.into_subentries(ctx, blobstore)
+            .map_ok(|(path, entry)| (path, to_mf_entry(entry)))
+            .try_collect()
+            .await
     }
 }
 
@@ -285,7 +344,7 @@ pub trait AsyncOrderedManifest<Store: Send + Sync>: AsyncManifest<Store> {
 }
 
 #[async_trait]
-impl<M: OrderedManifest, Store: Send + Sync> AsyncOrderedManifest<Store> for M {
+impl<M: OrderedManifest + Send, Store: Send + Sync> AsyncOrderedManifest<Store> for M {
     async fn list_weighted(
         &self,
         _ctx: &CoreContext,
