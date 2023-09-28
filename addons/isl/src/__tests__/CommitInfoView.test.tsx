@@ -1142,14 +1142,12 @@ describe('CommitInfoView', () => {
           expect(withinCommitInfo().queryByText('You are here')).toBeInTheDocument();
         });
 
-        it('takes previews into account when rendering non-head commit', () => {
-          clickToSelectCommit('b'); // explicitly select, so we show even while goto runs
+        it('shows new head when running goto', () => {
+          clickToSelectCommit('b'); // explicitly select
           clickGotoCommit('a');
 
-          // we still show the other commit
-          expect(withinCommitInfo().queryByText('Head Commit')).toBeInTheDocument();
-          // but its not the head commit anymore, according to optimistic state
-          expect(withinCommitInfo().queryByText('You are here')).not.toBeInTheDocument();
+          expect(withinCommitInfo().queryByText('My Commit')).toBeInTheDocument();
+          expect(withinCommitInfo().queryByText('You are here')).toBeInTheDocument();
         });
 
         it('renders metaedit operation smoothly', async () => {

@@ -9,6 +9,7 @@ import type {CommitInfo, SuccessorInfo} from './types';
 import type {Snapshot} from 'recoil';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
+import {globalRecoil} from './AccessGlobalRecoil';
 import {BranchIndicator} from './BranchIndicator';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
@@ -32,7 +33,7 @@ import platform from './platform';
 import {CommitPreview, uncommittedChangesWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {isNarrowCommitTree} from './responsive';
-import {useCommitSelection} from './selection';
+import {selectedCommits, useCommitSelection} from './selection';
 import {
   inlineProgressByHash,
   isFetchingUncommittedChanges,
@@ -254,7 +255,10 @@ export const Commit = memo(
                   commit.remoteBookmarks.length > 0 ? commit.remoteBookmarks[0] : commit.hash,
                 ),
               );
-              event.stopPropagation(); // don't select commit
+              event.stopPropagation(); // don't toggle selection by letting click propagate onto selection target.
+              // Instead, ensure we remove the selection, so we view the new head commit by default
+              // (since the head commit is the default thing shown in the sidebar)
+              globalRecoil().reset(selectedCommits);
             }}>
             <T>Goto</T> <Icon icon="newline" />
           </VSCodeButton>
