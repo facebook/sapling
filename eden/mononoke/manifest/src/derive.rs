@@ -405,12 +405,11 @@ where
     let MergeNode {
         name,
         path,
-        changes: PathTree {
-            value: change,
-            subentries,
-        },
+        changes,
         mut parents,
     } = node;
+
+    let (change, subentries) = changes.deconstruct();
 
     // Deduplicate entries in parents list, **preserving order** of entries.
     // Essentially performing a trivial merge between identical entries.

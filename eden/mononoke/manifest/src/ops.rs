@@ -29,7 +29,6 @@ use crate::select::select_path_tree;
 use crate::AsyncManifest as Manifest;
 use crate::Entry;
 use crate::PathOrPrefix;
-use crate::PathTree;
 use crate::StoreLoadable;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -75,10 +74,7 @@ where
                 256,
                 init,
                 move |(manifest_id, selector, path, recursive)| {
-                    let PathTree {
-                        subentries,
-                        value: select,
-                    } = selector;
+                    let (select, subentries) = selector.deconstruct();
 
                     async move {
                         let manifest = manifest_id.load(ctx, store).await?;

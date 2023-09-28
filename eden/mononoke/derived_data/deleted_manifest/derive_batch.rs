@@ -152,10 +152,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             all_changes,
             parent,
         } = unfold_node;
-        let PathTree {
-            value: change_by_cs,
-            subentries,
-        } = all_changes;
+        let (change_by_cs, subentries) = all_changes.deconstruct();
 
         let parent = match parent {
             None => None,
