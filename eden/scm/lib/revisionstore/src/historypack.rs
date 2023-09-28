@@ -488,8 +488,8 @@ pub mod tests {
 
     pub fn make_historypack(tempdir: &TempDir, nodes: &HashMap<Key, NodeInfo>) -> HistoryPack {
         let mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One);
-        for (ref key, ref info) in nodes.iter() {
-            mutpack.add(key.clone(), info.clone()).unwrap();
+        for (key, info) in nodes.iter() {
+            mutpack.add(key, info).unwrap();
         }
 
         let path = &mutpack.flush().unwrap().unwrap()[0];
@@ -603,8 +603,8 @@ pub mod tests {
         let nodes = get_nodes(&mut rng);
 
         let mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One);
-        for (ref key, ref info) in nodes.iter() {
-            mutpack.add(key.clone(), info.clone()).unwrap();
+        for (key, info) in nodes.iter() {
+            mutpack.add(key, info).unwrap();
         }
 
         let path = &mutpack.flush().unwrap().unwrap()[0];
