@@ -264,7 +264,10 @@ export class Repository {
           );
         } else if (operation.runner === CommandRunner.InternalArcanist) {
           const normalizedArgs = this.normalizeOperationArgs(cwd, operation.args);
-          Internal.runArcanistCommand?.(cwd, normalizedArgs, handleCommandProgress, signal);
+          return (
+            Internal.runArcanistCommand?.(cwd, normalizedArgs, handleCommandProgress, signal) ??
+            Promise.resolve()
+          );
         }
         return Promise.resolve();
       },
