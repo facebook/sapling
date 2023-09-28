@@ -8,7 +8,6 @@
 import type {ChunkSelectState, LineRegion, SelectLine} from './stackEdit/chunkSelectState';
 import type {RangeInfo} from './stackEdit/ui/TextEditable';
 
-import {ScrollX, Row} from './ComponentUtils';
 import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {T, t} from './i18n';
 import {TextEditable} from './stackEdit/ui/TextEditable';
@@ -117,19 +116,18 @@ function PartialFileSelectionWithCheckbox(props: Props & {unified?: boolean}) {
     if (region.collapsed) {
       // Skip "~~~~" for the first and last collapsed region.
       if (regionIndex > 0 && regionIndex + 1 < lineRegions.length) {
-        const contextLineContent = <div key={key} className="line line-context" />;
-        lineAContent.push(contextLineContent);
+        lineAContent.push(<td key={'line-a' + key} className="line line-context" />);
         if (!unified) {
-          lineBContent.push(contextLineContent);
+          lineBContent.push(<td key={'line-b' + key} className="line line-context" />);
         }
-        const contextLineNumber = <div key={key} className="line-number line-context" />;
-        lineCheckbox.push(contextLineNumber);
-        lineANumber.push(contextLineNumber);
-        lineBNumber.push(contextLineNumber);
+        lineCheckbox.push(<td key="c" />);
+        lineANumber.push(<td key="anum" />);
+        lineBNumber.push(<td key="bnum" />);
       }
       return;
     }
 
+    let hasPushedCheckbox = false;
     if (!region.same) {
       const selectableCount = region.lines.reduce(
         (acc, line) => acc + (line.selected != null ? 1 : 0),
@@ -140,7 +138,7 @@ function PartialFileSelectionWithCheckbox(props: Props & {unified?: boolean}) {
         const indeterminate = selectedCount > 0 && selectedCount < selectableCount;
         const checked = selectedCount === selectableCount;
         lineCheckbox.push(
-          <div className="checkbox-anchor" key={`${key}c`}>
+          <td className="checkbox-anchor" key={`${key}c`}>
             <div className="checkbox-container">
               <VSCodeCheckbox
                 checked={checked}
@@ -150,9 +148,10 @@ function PartialFileSelectionWithCheckbox(props: Props & {unified?: boolean}) {
                 }}
               />
             </div>
-          </div>,
+          </td>,
         );
       }
+      hasPushedCheckbox = true;
     }
 
     let regionALineCount = 0;
@@ -187,30 +186,36 @@ function PartialFileSelectionWithCheckbox(props: Props & {unified?: boolean}) {
 
       if (hasA) {
         lineANumber.push(
-          <div key={key} className={lineNumberClasses.join(' ')} {...handlerProps}>
+          <td
+            key={'line-a-num-' + key}
+            className={'column-a-number ' + lineNumberClasses.join(' ')}
+            {...handlerProps}>
             {line.aLine}
             {'\n'}
-          </div>,
+          </td>,
         );
         lineAContent.push(
-          <div key={key} className={lineClasses.join(' ')}>
+          <td key={'line-a-' + key} className={lineClasses.join(' ')}>
             {line.data}
-          </div>,
+          </td>,
         );
         regionALineCount += 1;
       }
       if (hasB) {
         lineBNumber.push(
-          <div key={key} className={lineNumberClasses.join(' ')} {...handlerProps}>
+          <td
+            key={'line-b-num-' + key}
+            className={'column-b-number ' + lineNumberClasses.join(' ')}
+            {...handlerProps}>
             {line.bLine}
             {'\n'}
-          </div>,
+          </td>,
         );
         if (!unified) {
           lineBContent.push(
-            <div key={key} className={lineClasses.join(' ')}>
+            <td key={'line-b-' + key} className={lineClasses.join(' ')}>
               {line.data}
-            </div>,
+            </td>,
           );
           regionBLineCount += 1;
         }
@@ -228,41 +233,36 @@ function PartialFileSelectionWithCheckbox(props: Props & {unified?: boolean}) {
         count = regionALineCount - regionBLineCount;
       }
       for (let i = 0; i < count; i++) {
-        columns.forEach(column => column.push(<div key={`${key}-pad-${i}`}>{'\n'}</div>));
+        columns.forEach(column => column.push(<td key={`${key}-pad-${i}`}>{'\n'}</td>));
       }
     }
 
-    for (let i = 0; i < Math.max(regionALineCount, regionBLineCount); i++) {
-      lineCheckbox.push(<div key={`${key}-pad-${i}`}>{'\n'}</div>);
+    for (let i = hasPushedCheckbox ? 1 : 0; i < Math.max(regionALineCount, regionBLineCount); i++) {
+      lineCheckbox.push(<td key={`${key}-pad-${i}`}>{'\n'}</td>);
     }
   });
 
-  const scrollX = (children: JSX.Element) => {
-    return (
-      <ScrollX size={600} maxSize={600} hideBar={true}>
-        {children}
-      </ScrollX>
-    );
-  };
-
   return (
-    <Row className="partial-file-selection checkboxes partial-file-selection-border">
-      <pre className="column-checkbox">{lineCheckbox}</pre>
-      {unified ? (
-        <>
-          <pre className="column-a-number">{lineANumber}</pre>
-          <pre className="column-b-number">{lineBNumber}</pre>
-          {scrollX(<pre className="column-unified">{lineAContent}</pre>)}
-        </>
-      ) : (
-        <>
-          <pre className="column-a-number">{lineANumber}</pre>
-          {scrollX(<pre className="column-a">{lineAContent}</pre>)}
-          <pre className="column-b-number">{lineBNumber}</pre>
-          {scrollX(<pre className="column-b">{lineBContent}</pre>)}
-        </>
-      )}
-    </Row>
+    <>
+      <table className="partial-file-selection checkboxes">
+        <colgroup>
+          <col width={'3em'} />
+          <col width={'3em'} />
+          <col width={'40px'} />
+          <col width={'100%'} />
+        </colgroup>
+        {lineAContent.map((line, i) => {
+          return (
+            <tr key={i} className="column-unified">
+              {lineCheckbox[i]}
+              {lineANumber[i]}
+              {lineBNumber[i]}
+              {line}
+            </tr>
+          );
+        })}
+      </table>
+    </>
   );
 }
 
