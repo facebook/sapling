@@ -12,6 +12,9 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Error;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
+use clientinfo::CLIENT_INFO_HEADER;
 use fbinit::FacebookInit;
 use sharding_ext::encode_repo_name;
 use source_control::client::make_SourceControlService;
@@ -61,24 +64,15 @@ impl Connection {
         shardmanager_domain: Option<&str>,
     ) -> Result<Self, Error> {
         use maplit::hashmap;
-        use rand::distributions::Alphanumeric;
-        use rand::Rng;
         use srclient::ClientParams;
         use srclient::SRChannelBuilder;
-
-        let correlator: String = rand::thread_rng()
-            .sample_iter(&Alphanumeric)
-            .take(16)
-            .map(char::from)
-            .collect();
+        let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::SCS_CLI)?;
         let headers = hashmap! {
-            String::from("client_type") => String::from("scsc CLI"),
-            String::from("client_correlator") => correlator,
+            String::from(CLIENT_INFO_HEADER) => client_info.into_json()?,
         };
         let conn_config = hashmap! {
             String::from("client_id") => client_id,
         };
-
         let client = SRChannelBuilder::from_service_name(fb, tier.as_ref())?
             .with_conn_config(&conn_config)
             .with_persistent_headers(headers);

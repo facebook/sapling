@@ -39,6 +39,7 @@ pub struct ClientInfo {
 }
 
 impl ClientInfo {
+    /// Creates a new ClientInfo object with a singleton (Sapling) ClientRequestInfo
     pub fn new() -> Result<Self> {
         let fb = get_fb_client_info();
 
@@ -52,6 +53,19 @@ impl ClientInfo {
         })
     }
 
+    /// Creates a new ClientInfo object with fresh generated ClientRequestInfo for the specified ClientEntryPoint
+    pub fn new_with_entry_point(entry_point: ClientEntryPoint) -> Result<Self> {
+        let fb = get_fb_client_info();
+        let hostname = get_hostname().ok();
+        Ok(ClientInfo {
+            hostname,
+            fb,
+            request_info: Some(ClientRequestInfo::new(entry_point)),
+        })
+    }
+
+    /// Creates a new ClientInfo object with fresh generated ClientRequestInfo for the specified
+    /// ClientEntryPoint but the remaining fields will be empty.
     pub fn default_with_entry_point(entry_point: ClientEntryPoint) -> Self {
         let mut client_info = Self::default();
         client_info.add_request_info(ClientRequestInfo::new(entry_point));

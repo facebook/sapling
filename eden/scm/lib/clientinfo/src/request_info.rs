@@ -89,6 +89,7 @@ pub enum ClientEntryPoint {
     LFS,
     DerivedDataService,
     ISL,
+    SCS_CLI,
 }
 
 impl ClientRequestInfo {
@@ -149,6 +150,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::LFS => "lfs",
             ClientEntryPoint::DerivedDataService => "derived_data_service",
             ClientEntryPoint::ISL => "isl",
+            ClientEntryPoint::SCS_CLI => "scsc",
         };
         write!(f, "{}", out)
     }
