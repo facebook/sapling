@@ -6,6 +6,7 @@
  */
 
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
+#![cfg_attr(test, feature(trait_alias))]
 
 pub mod errors;
 #[cfg(fbcode_build)]
@@ -13,6 +14,8 @@ mod facebook;
 pub mod hook_loader;
 mod implementations;
 mod lua_pattern;
+#[cfg(test)]
+mod testlib;
 
 pub use hook_manager::ChangesetHook;
 pub use hook_manager::CrossRepoPushSource;

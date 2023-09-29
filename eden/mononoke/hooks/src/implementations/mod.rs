@@ -8,8 +8,9 @@
 //! For Facebook hooks check the src/facebook/ folder
 
 mod always_fail_changeset;
+mod block_commit_message_pattern;
+mod block_content_pattern;
 mod block_empty_commit;
-mod check_nocommit;
 mod conflict_markers;
 pub(crate) mod deny_files;
 mod limit_commit_message_length;
@@ -27,6 +28,7 @@ use fbinit::FacebookInit;
 use metaconfig_types::HookParams;
 use permission_checker::AclProvider;
 use permission_checker::ArcMembershipChecker;
+use regex::Regex;
 
 use crate::ChangesetHook;
 use crate::FileHook;
@@ -44,9 +46,23 @@ pub async fn make_changeset_hook(
 ) -> Result<Option<Box<dyn ChangesetHook + 'static>>> {
     Ok(match params.implementation.as_str() {
         "always_fail_changeset" => Some(b(always_fail_changeset::AlwaysFailChangeset::new())),
+        "block_commit_message_pattern" => Some(b(
+            block_commit_message_pattern::BlockCommitMessagePatternHook::new(&params.config)?,
+        )),
         "block_empty_commit" => Some(b(block_empty_commit::BlockEmptyCommit::new())),
         "check_nocommit_message" => {
-            Some(b(check_nocommit::CheckNocommitHook::new(&params.config)?))
+            // Implement old hook behaviour directly during the transition.
+            Some(Box::new(
+                block_commit_message_pattern::BlockCommitMessagePatternHook::with_config(
+                    block_commit_message_pattern::BlockCommitMessagePatternConfig {
+                        pattern: Regex::new(
+                            "(?i)(\x40(nocommit|no-commit|do-not-commit|do_not_commit))(\\W|_|\\z)",
+                        )
+                        .unwrap(),
+                        message: String::from("Commit message contains a nocommit marker: ${1}"),
+                    },
+                )?,
+            ))
         }
         "limit_commit_message_length" => Some(b(
             limit_commit_message_length::LimitCommitMessageLength::new(&params.config)?,
@@ -63,9 +79,23 @@ pub fn make_file_hook(
     params: &HookParams,
 ) -> Result<Option<Box<dyn FileHook + 'static>>> {
     Ok(match params.implementation.as_str() {
-        "check_nocommit" => Some(Box::new(check_nocommit::CheckNocommitHook::new(
-            &params.config,
-        )?)),
+        "block_content_pattern" => Some(Box::new(
+            block_content_pattern::BlockContentPatternHook::new(&params.config)?,
+        )),
+        "check_nocommit" => {
+            // Implement old hook behaviour directly during the transition.
+            Some(Box::new(
+                block_content_pattern::BlockContentPatternHook::with_config(
+                    block_content_pattern::BlockContentPatternConfig {
+                        pattern: Regex::new(
+                            "(?i)(\x40(nocommit|no-commit|do-not-commit|do_not_commit))(\\W|_|\\z)",
+                        )
+                        .unwrap(),
+                        message: String::from("File contains a ${1} marker"),
+                    },
+                )?,
+            ))
+        }
         "conflict_markers" => Some(Box::new(conflict_markers::ConflictMarkers::new())),
         "deny_files" => Some(Box::new(
             deny_files::DenyFiles::builder()
