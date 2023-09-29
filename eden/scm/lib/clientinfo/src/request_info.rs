@@ -20,7 +20,8 @@ use serde::Serialize;
 const ENV_SAPLING_CLIENT_ENTRY_POINT: &str = "SAPLING_CLIENT_ENTRY_POINT";
 const ENV_SAPLING_CLIENT_CORRELATOR: &str = "SAPLING_CLIENT_CORRELATOR";
 
-const DEFAULT_CLIENT_ENTRY_POINT: ClientEntryPoint = ClientEntryPoint::Sapling;
+const DEFAULT_CLIENT_ENTRY_POINT_SAPLING: ClientEntryPoint = ClientEntryPoint::Sapling;
+const DEFAULT_CLIENT_ENTRY_POINT_EDENFS: ClientEntryPoint = ClientEntryPoint::EdenFS;
 
 lazy_static! {
     pub static ref CLIENT_REQUEST_INFO: ClientRequestInfo = new_client_request_info();
@@ -50,11 +51,25 @@ fn new_client_request_info() -> ClientRequestInfo {
                         v,
                         ClientEntryPoint::Sapling,
                     );
-                    DEFAULT_CLIENT_ENTRY_POINT
+                    DEFAULT_CLIENT_ENTRY_POINT_SAPLING
                 }
             }
         }
-        None => DEFAULT_CLIENT_ENTRY_POINT,
+        None => {
+            if std::env::current_exe()
+                .ok()
+                .and_then(|path| {
+                    path.file_name()
+                        .and_then(|s| s.to_str())
+                        .map(|s| s.contains("edenfs"))
+                })
+                .unwrap_or_default()
+            {
+                DEFAULT_CLIENT_ENTRY_POINT_EDENFS
+            } else {
+                DEFAULT_CLIENT_ENTRY_POINT_SAPLING
+            }
+        }
     };
     let correlator = correlator.unwrap_or_else(ClientRequestInfo::generate_correlator);
 
