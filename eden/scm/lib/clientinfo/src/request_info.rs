@@ -170,6 +170,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "lfs" => Ok(ClientEntryPoint::LFS),
             "derived_data_service" => Ok(ClientEntryPoint::DerivedDataService),
             "isl" => Ok(ClientEntryPoint::ISL),
+            "scsc" => Ok(ClientEntryPoint::SCS_CLI),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }
