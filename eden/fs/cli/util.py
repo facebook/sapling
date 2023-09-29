@@ -789,6 +789,6 @@ if sys.platform == "win32":
 
     def remove_unc_prefix(path: Path) -> Path:
         parts = list(path.parts)
-        if re.match(r"\\\\\?\\[A-Z]:\\", parts[0]):
-            parts[0] = parts[0][-3:]
+        if re.match(r"\\\\\?\\[A-Za-z]:\\", parts[0]):
+            parts[0] = parts[0][-3:].upper()
         return Path(*parts)
