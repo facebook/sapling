@@ -44,6 +44,8 @@ context = { version = "0.1.0", path = "../../server/context" }
 dag = { version = "0.1.0", path = "../../../scm/lib/dag" }
 dag-types = { version = "0.1.0", path = "../../../scm/lib/dag/dag-types", features = ["for-tests", "serialize-abomonation"] }
 deletion_log = { version = "0.1.0", path = "../../repo_attributes/deletion_log" }
+derived_data = { version = "0.1.0", path = "../../derived_data" }
+derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 derived_data_utils = { version = "0.1.0", path = "../../derived_data/utils" }
 environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
@@ -93,6 +95,7 @@ repo_lock = { version = "0.1.0", path = "../../repo_attributes/repo_lock/repo_lo
 revset = { version = "0.1.0", path = "../../revset" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
+skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 source_control = { version = "0.1.0", path = "../../scs/if" }

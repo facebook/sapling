@@ -7,6 +7,7 @@
 
 mod count_underived;
 mod exists;
+mod verify_manifests;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -28,6 +29,8 @@ use self::count_underived::count_underived;
 use self::count_underived::CountUnderivedArgs;
 use self::exists::exists;
 use self::exists::ExistsArgs;
+use self::verify_manifests::verify_manifests;
+use self::verify_manifests::VerifyManifestsArgs;
 
 #[facet::container]
 struct Repo {
@@ -67,6 +70,8 @@ enum DerivedDataSubcommand {
     Exists(ExistsArgs),
     /// Count how many ancestors of a given commit weren't derived
     CountUnderived(CountUnderivedArgs),
+    /// Compare check if derived data has been generated
+    VerifyManifests(VerifyManifestsArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -80,6 +85,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     match args.subcommand {
         DerivedDataSubcommand::Exists(args) => exists(&ctx, &repo, args).await?,
         DerivedDataSubcommand::CountUnderived(args) => count_underived(&ctx, &repo, args).await?,
+        DerivedDataSubcommand::VerifyManifests(args) => verify_manifests(&ctx, &repo, args).await?,
     }
 
     Ok(())
