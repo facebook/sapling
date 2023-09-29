@@ -381,3 +381,15 @@ class SymlinkWindowsDisabledTest(EdenHgTestCase):
 \\ No newline at end of file
 """,
         )
+
+    def test_status_empty_after_restart(self) -> None:
+        # Run scandir for triggering the bug
+        self.assertEqual(
+            {"contents1", "contents2", "symlink", ".hg", ".eden"},
+            {entry.name for entry in os.scandir(self.mount)},
+        )
+        self.assert_status_empty()
+        self.eden.shutdown()
+        self.eden.start()
+        # Makes sure the symlink does not appear after restarting
+        self.assert_status_empty()

@@ -295,9 +295,11 @@ void populateDiskState(
 
 void populateOverlayState(
     FsckFileState& state,
-    const overlay::OverlayEntry& overlayEntry) {
+    const overlay::OverlayEntry& overlayEntry,
+    bool windowsSymlinksEnabled) {
   state.inOverlay = true;
-  state.overlayDtype = mode_to_dtype(*overlayEntry.mode());
+  state.overlayDtype = filteredEntryDtype(
+      mode_to_dtype(*overlayEntry.mode()), windowsSymlinksEnabled);
   if (overlayEntry.hash().has_value() && !overlayEntry.hash().value().empty()) {
     auto objId = ObjectId(*overlayEntry.hash());
     state.overlayHash = std::move(objId);
@@ -307,9 +309,13 @@ void populateOverlayState(
   state.overlayEntry = overlayEntry;
 }
 
-void populateScmState(FsckFileState& state, const TreeEntry& treeEntry) {
+void populateScmState(
+    FsckFileState& state,
+    const TreeEntry& treeEntry,
+    bool windowsSymlinksEnabled) {
   state.scmHash = treeEntry.getHash();
-  state.scmDtype = treeEntry.getDtype();
+  state.scmDtype =
+      filteredEntryDtype(treeEntry.getDtype(), windowsSymlinksEnabled);
   state.inScm = true;
 }
 
@@ -548,7 +554,7 @@ ImmediateFuture<bool> processChildren(
 
   for (const auto& [name, overlayEntry] : insensitiveOverlayDir) {
     auto& childState = children[name];
-    populateOverlayState(childState, overlayEntry);
+    populateOverlayState(childState, overlayEntry, windowsSymlinksEnabled);
   }
 
   // Don't recurse if there are no disk children for fixing up or overlay
@@ -561,7 +567,7 @@ ImmediateFuture<bool> processChildren(
   if (scmTree) {
     for (const auto& [name, treeEntry] : *scmTree) {
       auto& childState = children[name];
-      populateScmState(childState, treeEntry);
+      populateScmState(childState, treeEntry, windowsSymlinksEnabled);
     }
   }
 
