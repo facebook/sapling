@@ -220,7 +220,6 @@ overrides = {{}}
                     """
 [experimental]
 enable-nfs-server = true
-use-edenapi = true
 
 [hg]
 import-batch-size = "32"

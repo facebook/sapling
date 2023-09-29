@@ -253,8 +253,8 @@ path = "/data/users/${USER}/fbsource"
     def test_printed_config_writes_booleans_as_booleans(self) -> None:
         self.write_user_config(
             """
-[experimental]
-use-edenapi = true
+[prefetch-profiles]
+prefetching-enable = true
 """
         )
 
@@ -262,7 +262,7 @@ use-edenapi = true
         self.get_config().print_full_config(printed_config)
         parsed_config = printed_config.getvalue().decode("utf-8")
 
-        self.assertRegex(parsed_config, r"use-edenapi\s*=\s*true")
+        self.assertRegex(parsed_config, r"prefetching-enable\s*=\s*true")
 
     def get_config(self) -> EdenInstance:
         return EdenInstance(
