@@ -29,6 +29,10 @@
   align-items: center;
 }
 
+.comparison-view-header vscode-dropdown {
+  z-index: 2;
+}
+
 .comparison-view-details {
   overflow-x: hidden;
   overflow-y: scroll;
