@@ -15,6 +15,7 @@ import {onClientConnection} from '../src/index';
 import {areTokensEqual} from './proxyUtils';
 import fs from 'fs';
 import http from 'http';
+import {grammars} from 'isl/src/generated/textmate/TextMateGrammarManifest';
 import path from 'path';
 import urlModule from 'url';
 import WebSocket from 'ws';
@@ -269,7 +270,20 @@ const extensionToMIMEType: {[key: string]: string} = {
 
 const requestUrlToResource: {[key: string]: string} = {
   '/': 'index.html',
+  ...allGeneratedFileResources(),
 };
+
+function allGeneratedFileResources(): Record<string, string> {
+  const resources = Object.fromEntries(
+    Object.entries(grammars).map(([_, grammar]) => {
+      const p = `generated/textmate/${grammar.fileName}.${grammar.fileFormat}`;
+      return ['/' + p, p];
+    }),
+  );
+  // the WASM file is not in the manifest but is needed to highlight
+  resources['/generated/textmate/onig.wasm'] = 'generated/textmate/onig.wasm';
+  return resources;
+}
 
 function htmlEscape(str: string): string {
   return str
