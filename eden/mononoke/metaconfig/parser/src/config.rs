@@ -812,7 +812,7 @@ mod test {
             hook_name="hook1"
 
             [[bookmarks.hooks]]
-            hook_name="rust:rusthook"
+            hook_name="hook2a"
 
             [[bookmarks]]
             regex="[^/]*/stable"
@@ -822,9 +822,11 @@ mod test {
             [[hooks]]
             name="hook1"
             bypass_commit_string="@allow_hook1"
+            config_json = "{\"test\": \"abcde\"}"
 
             [[hooks]]
-            name="rust:rusthook"
+            name="hook2a"
+            implementation="hook2"
             config_ints={ int1 = 44 }
             config_ints_64={ int2 = 42 }
             [hooks.config_string_lists]
@@ -1095,7 +1097,7 @@ mod test {
                 bookmarks: vec![
                     BookmarkParams {
                         bookmark: BookmarkKey::new("master").unwrap().into(),
-                        hooks: vec!["hook1".to_string(), "rust:rusthook".to_string()],
+                        hooks: vec!["hook1".to_string(), "hook2a".to_string()],
                         only_fast_forward: false,
                         allowed_users: Some(Regex::new("^(svcscm|twsvcscm)$").unwrap().into()),
                         allowed_hipster_group: None,
@@ -1119,8 +1121,10 @@ mod test {
                 hooks: vec![
                     HookParams {
                         name: "hook1".to_string(),
+                        implementation: "hook1".to_string(),
                         config: HookConfig {
                             bypass: Some(HookBypass::new_with_commit_msg("@allow_hook1".into())),
+                            options: Some(r#"{"test": "abcde"}"#.to_string()),
                             strings: hashmap! {},
                             ints: hashmap! {},
                             ints_64: hashmap! {},
@@ -1130,9 +1134,11 @@ mod test {
                         },
                     },
                     HookParams {
-                        name: "rust:rusthook".to_string(),
+                        name: "hook2a".to_string(),
+                        implementation: "hook2".to_string(),
                         config: HookConfig {
                             bypass: None,
+                            options: None,
                             strings: hashmap! {},
                             ints: hashmap! {
                                 "int1".into() => 44,

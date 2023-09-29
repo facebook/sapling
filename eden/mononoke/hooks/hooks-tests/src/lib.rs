@@ -1490,6 +1490,7 @@ async fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
 
     config.hooks = vec![HookParams {
         name: "hook1".into(),
+        implementation: "hook1".into(),
         config: Default::default(),
     }];
 
@@ -1519,6 +1520,7 @@ async fn test_load_disabled_hooks(fb: FacebookInit) {
 
     config.hooks = vec![HookParams {
         name: "hook1".into(),
+        implementation: "hook1".into(),
         config: Default::default(),
     }];
 
@@ -1553,6 +1555,7 @@ async fn test_load_disabled_hooks_referenced_by_bookmark(fb: FacebookInit) {
 
     config.hooks = vec![HookParams {
         name: "hook1".into(),
+        implementation: "hook1".into(),
         config: Default::default(),
     }];
 

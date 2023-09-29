@@ -578,6 +578,10 @@ impl HookBypass {
 pub struct HookConfig {
     /// An optional way to bypass a hook
     pub bypass: Option<HookBypass>,
+    /// Configuration options (in JSON format)
+    pub options: Option<String>,
+
+    // Deprecated config options
     /// Map of config to it's value. Values here are strings
     pub strings: HashMap<String, String>,
     /// **Warning:** this being deprecated, please use ints_64 instead. Map of config to it's value. Values here are 32bit integers
@@ -597,6 +601,8 @@ pub struct HookConfig {
 pub struct HookParams {
     /// The name of the hook
     pub name: String,
+    /// The name of the hook implementation
+    pub implementation: String,
     /// Configs that should be passed to hook
     pub config: HookConfig,
 }
