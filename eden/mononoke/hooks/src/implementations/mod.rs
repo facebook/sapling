@@ -16,7 +16,6 @@ mod limit_commit_message_length;
 pub(crate) mod limit_commitsize;
 pub(crate) mod limit_filesize;
 mod limit_path_length;
-mod lua_pattern;
 pub(crate) mod no_bad_extensions;
 pub(crate) mod no_bad_filenames;
 mod no_insecure_filenames;
@@ -29,7 +28,6 @@ use metaconfig_types::HookParams;
 use permission_checker::AclProvider;
 use permission_checker::ArcMembershipChecker;
 
-pub(crate) use self::lua_pattern::LuaPattern;
 use crate::ChangesetHook;
 use crate::FileHook;
 

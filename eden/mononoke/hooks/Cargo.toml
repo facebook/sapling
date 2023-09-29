@@ -11,10 +11,6 @@ license = "GPLv2+"
 test = false
 doctest = false
 
-[[test]]
-name = "hooks_tests"
-path = "hooks-tests/src/lib.rs"
-
 [dependencies]
 anyhow = "1.0.71"
 async-trait = "0.1.71"

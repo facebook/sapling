@@ -9,9 +9,6 @@ use bookmarks::BookmarkKey;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::TestRepoFixture;
-use hooks::errors::ErrorKind;
-use hooks::hook_loader::load_hooks;
-use hooks::HookManager;
 use maplit::hashset;
 use metaconfig_types::BookmarkParams;
 use metaconfig_types::HookManagerParams;
@@ -21,6 +18,10 @@ use permission_checker::InternalAclProvider;
 use repo_hook_file_content_provider::RepoHookFileContentProvider;
 use scuba_ext::MononokeScubaSampleBuilder;
 use tests_utils::BasicTestRepo;
+
+use crate::errors::ErrorKind;
+use crate::hook_loader::load_hooks;
+use crate::HookManager;
 
 async fn hook_manager_repo(fb: FacebookInit, repo: &BasicTestRepo) -> HookManager {
     let ctx = CoreContext::test_mock(fb);

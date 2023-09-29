@@ -13,7 +13,7 @@ use metaconfig_types::HookConfig;
 use mononoke_types::BasicFileChange;
 use mononoke_types::NonRootMPath;
 
-use super::LuaPattern;
+use crate::lua_pattern::LuaPattern;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookExecution;

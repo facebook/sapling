@@ -11,7 +11,8 @@ pub mod errors;
 #[cfg(fbcode_build)]
 mod facebook;
 pub mod hook_loader;
-mod rust_hooks;
+mod implementations;
+mod lua_pattern;
 
 pub use hook_manager::ChangesetHook;
 pub use hook_manager::CrossRepoPushSource;

@@ -7,6 +7,9 @@
 
 //! This sub module contains functions to load hooks for the server
 
+#[cfg(test)]
+mod tests;
+
 use std::collections::HashSet;
 
 use anyhow::Error;
@@ -16,13 +19,13 @@ use permission_checker::AclProvider;
 
 use crate::errors::*;
 #[cfg(fbcode_build)]
-use crate::facebook::rust_hooks::make_changeset_hook;
+use crate::facebook::implementations::make_changeset_hook;
 #[cfg(fbcode_build)]
-use crate::facebook::rust_hooks::make_file_hook;
+use crate::facebook::implementations::make_file_hook;
 #[cfg(not(fbcode_build))]
-use crate::rust_hooks::make_changeset_hook;
+use crate::implementations::make_changeset_hook;
 #[cfg(not(fbcode_build))]
-use crate::rust_hooks::make_file_hook;
+use crate::implementations::make_file_hook;
 use crate::ChangesetHook;
 use crate::FileHook;
 use crate::HookManager;
