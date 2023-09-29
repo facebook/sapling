@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(test)]
+mod tests;
+
 use std::collections::HashMap;
 
 use anyhow::format_err;

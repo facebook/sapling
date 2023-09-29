@@ -230,8 +230,8 @@ mod test {
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
-    use hooks_content_stores::RepoHookFileContentProvider;
     use maplit::hashmap;
+    use repo_hook_file_content_provider::RepoHookFileContentProvider;
     use tests_utils::BasicTestRepo;
     use tests_utils::CreateCommitContext;
 
