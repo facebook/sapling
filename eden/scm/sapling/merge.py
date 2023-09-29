@@ -2710,4 +2710,4 @@ def graft(repo, ctx, pctx, labels, keepparent=False):
 
 def _gethex(ctx):
     # for workingctx return p1 hex
-    return ctx.hex() if ctx.hex() != wdirhex else ctx.p1().hex()
+    return ctx.hex() if ctx.node() and ctx.hex() != wdirhex else ctx.p1().hex()
