@@ -1594,3 +1594,26 @@ async fn test_load_disabled_hooks_hook_does_not_exist(fb: FacebookInit) {
         _ => panic!("Unexpected err type"),
     };
 }
+
+#[fbinit::test]
+async fn test_load_hook_with_different_name_and_implementation(fb: FacebookInit) {
+    let mut config = RepoConfig::default();
+
+    config.hooks = vec![HookParams {
+        name: "hook1".into(),
+        implementation: "always_fail_changeset".into(),
+        config: Default::default(),
+    }];
+
+    let mut hm = hook_manager_many_files_dirs_repo(fb).await;
+
+    load_hooks(
+        fb,
+        &InternalAclProvider::default(),
+        &mut hm,
+        &config,
+        &hashset![],
+    )
+    .await
+    .expect("loading hooks should succeed");
+}
