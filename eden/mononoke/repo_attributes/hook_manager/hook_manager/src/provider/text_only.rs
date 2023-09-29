@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use bookmarks::BookmarkKey;
+use bookmarks_types::BookmarkKey;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
@@ -17,19 +17,17 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::NonRootMPath;
 
-use crate::ErrorKind;
-use crate::FileChange;
-use crate::FileContentManager;
-use crate::PathContent;
+use crate::errors::HookFileContentProviderError;
+use crate::provider::FileChange;
+use crate::provider::HookFileContentProvider;
+use crate::provider::PathContent;
 
-const NULL: u8 = 0;
-
-pub struct TextOnlyFileContentManager<T> {
+pub struct TextOnlyHookFileContentProvider<T> {
     inner: Arc<T>,
     max_size: u64,
 }
 
-impl<T> TextOnlyFileContentManager<T> {
+impl<T> TextOnlyHookFileContentProvider<T> {
     pub fn new(inner: T, max_size: u64) -> Self {
         Self {
             inner: Arc::new(inner),
@@ -39,12 +37,14 @@ impl<T> TextOnlyFileContentManager<T> {
 }
 
 #[async_trait]
-impl<T: FileContentManager + 'static> FileContentManager for TextOnlyFileContentManager<T> {
+impl<T: HookFileContentProvider + 'static> HookFileContentProvider
+    for TextOnlyHookFileContentProvider<T>
+{
     async fn get_file_size<'a>(
         &'a self,
         ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<u64, ErrorKind> {
+    ) -> Result<u64, HookFileContentProviderError> {
         self.inner.get_file_size(ctx, id).await
     }
 
@@ -54,7 +54,7 @@ impl<T: FileContentManager + 'static> FileContentManager for TextOnlyFileContent
         &'a self,
         ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<Option<Bytes>, ErrorKind> {
+    ) -> Result<Option<Bytes>, HookFileContentProviderError> {
         // Don't fetch content if we know the object is too large
         let size = self.get_file_size(ctx, id).await?;
         if size > self.max_size {
@@ -63,13 +63,7 @@ impl<T: FileContentManager + 'static> FileContentManager for TextOnlyFileContent
 
         let file_bytes = self.inner.get_file_text(ctx, id).await?;
 
-        Ok(file_bytes.and_then(|bytes| {
-            if looks_like_binary(&bytes) {
-                None
-            } else {
-                Some(bytes)
-            }
-        }))
+        Ok(file_bytes.filter(|bytes| !bytes.contains(&0)))
     }
 
     async fn find_content<'a>(
@@ -77,7 +71,7 @@ impl<T: FileContentManager + 'static> FileContentManager for TextOnlyFileContent
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
         paths: Vec<NonRootMPath>,
-    ) -> Result<HashMap<NonRootMPath, PathContent>, ErrorKind> {
+    ) -> Result<HashMap<NonRootMPath, PathContent>, HookFileContentProviderError> {
         self.inner.find_content(ctx, bookmark, paths).await
     }
 
@@ -86,7 +80,7 @@ impl<T: FileContentManager + 'static> FileContentManager for TextOnlyFileContent
         ctx: &'a CoreContext,
         new_cs_id: ChangesetId,
         old_cs_id: ChangesetId,
-    ) -> Result<Vec<(NonRootMPath, FileChange)>, ErrorKind> {
+    ) -> Result<Vec<(NonRootMPath, FileChange)>, HookFileContentProviderError> {
         self.inner.file_changes(ctx, new_cs_id, old_cs_id).await
     }
 
@@ -95,13 +89,9 @@ impl<T: FileContentManager + 'static> FileContentManager for TextOnlyFileContent
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
         paths: Vec<NonRootMPath>,
-    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, ErrorKind> {
+    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, HookFileContentProviderError> {
         self.inner.latest_changes(ctx, bookmark, paths).await
     }
-}
-
-fn looks_like_binary(file_bytes: &[u8]) -> bool {
-    file_bytes.contains(&NULL)
 }
 
 #[cfg(test)]
@@ -111,17 +101,17 @@ mod test {
     use tokio::runtime::Runtime;
 
     use super::*;
-    use crate::InMemoryFileContentManager;
+    use crate::InMemoryHookFileContentProvider;
 
     #[fbinit::test]
     fn test_acceptable_file(fb: FacebookInit) {
         let rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
-        let mut inner = InMemoryFileContentManager::new();
+        let mut inner = InMemoryHookFileContentProvider::new();
         inner.insert(ONES_CTID, "foobar");
 
-        let store = TextOnlyFileContentManager::new(inner, 10);
+        let store = TextOnlyHookFileContentProvider::new(inner, 10);
         let ret = rt.block_on(store.get_file_text(&ctx, ONES_CTID)).unwrap();
         assert_eq!(ret, Some("foobar".into()));
         let ret = rt.block_on(store.get_file_size(&ctx, ONES_CTID)).unwrap();
@@ -133,10 +123,10 @@ mod test {
         let rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
-        let mut inner = InMemoryFileContentManager::new();
+        let mut inner = InMemoryHookFileContentProvider::new();
         inner.insert(ONES_CTID, "foobar");
 
-        let store = TextOnlyFileContentManager::new(inner, 2);
+        let store = TextOnlyHookFileContentProvider::new(inner, 2);
         let ret = rt.block_on(store.get_file_text(&ctx, ONES_CTID)).unwrap();
         assert_eq!(ret, None);
 
@@ -149,10 +139,10 @@ mod test {
         let rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
-        let mut inner = InMemoryFileContentManager::new();
+        let mut inner = InMemoryHookFileContentProvider::new();
         inner.insert(ONES_CTID, "foo\0");
 
-        let store = TextOnlyFileContentManager::new(inner, 10);
+        let store = TextOnlyHookFileContentProvider::new(inner, 10);
         let ret = rt.block_on(store.get_file_text(&ctx, ONES_CTID)).unwrap();
         assert_eq!(ret, None);
         let ret = rt.block_on(store.get_file_size(&ctx, ONES_CTID)).unwrap();

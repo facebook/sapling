@@ -365,6 +365,7 @@ members = [
   "repo_attributes/commit_graph/preloaded_commit_graph_storage",
   "repo_attributes/commit_graph/sql_commit_graph_storage",
   "repo_attributes/deletion_log",
+  "repo_attributes/hook_manager/hook_manager",
   "repo_attributes/repo_bookmark_attrs",
   "repo_attributes/repo_cross_repo",
   "repo_attributes/repo_derived_data",

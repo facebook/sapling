@@ -11,7 +11,7 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_movement::CreateBookmarkOp;
 use bytes::Bytes;
-use hooks::HookManagerRef;
+use hook_manager::manager::HookManagerRef;
 use mononoke_types::ChangesetId;
 use tunables::tunables;
 

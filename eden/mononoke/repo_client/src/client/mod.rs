@@ -86,7 +86,7 @@ use hgproto::GetbundleArgs;
 use hgproto::GettreepackArgs;
 use hgproto::HgCommandRes;
 use hgproto::HgCommands;
-use hooks::HookManagerArc;
+use hook_manager::manager::HookManagerArc;
 use hostname::get_hostname;
 use itertools::Itertools;
 use lazy_static::lazy_static;

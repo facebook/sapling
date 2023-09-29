@@ -94,11 +94,11 @@ use filestore::FilestoreConfig;
 use futures_watchdog::WatchdogExt;
 use git_symbolic_refs::ArcGitSymbolicRefs;
 use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
+use hook_manager::manager::ArcHookManager;
+use hook_manager::manager::HookManager;
+use hook_manager::TextOnlyHookFileContentProvider;
 use hooks::hook_loader::load_hooks;
-use hooks::ArcHookManager;
-use hooks::HookManager;
-use hooks_content_stores::RepoFileContentManager;
-use hooks_content_stores::TextOnlyFileContentManager;
+use hooks_content_stores::RepoHookFileContentProvider;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use memcache::KeyGen;
 use memcache::MemcacheClient;
@@ -1296,12 +1296,6 @@ impl RepoFactory {
     ) -> Result<ArcHookManager> {
         let name = repo_identity.name();
 
-        let content_store = RepoFileContentManager::from_parts(
-            bookmarks.clone(),
-            repo_blobstore.clone(),
-            repo_derived_data.clone(),
-        );
-
         let disabled_hooks = self
             .env
             .disabled_hooks
@@ -1323,15 +1317,19 @@ impl RepoFactory {
         }
 
         let hook_manager = async {
-            let fetcher = Box::new(TextOnlyFileContentManager::new(
-                content_store,
+            let content_provider = Box::new(TextOnlyHookFileContentProvider::new(
+                RepoHookFileContentProvider::from_parts(
+                    bookmarks.clone(),
+                    repo_blobstore.clone(),
+                    repo_derived_data.clone(),
+                ),
                 repo_config.hook_max_file_size,
             ));
 
             let mut hook_manager = HookManager::new(
                 self.env.fb,
                 self.env.acl_provider.as_ref(),
-                fetcher,
+                content_provider,
                 repo_config.hook_manager_params.clone().unwrap_or_default(),
                 hooks_scuba,
                 name.to_string(),

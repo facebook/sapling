@@ -20,6 +20,10 @@ use context::CoreContext;
 use futures::future;
 use futures::stream::TryStreamExt;
 use futures_util::future::TryFutureExt;
+use hook_manager::FileChange;
+use hook_manager::HookFileContentProvider;
+use hook_manager::HookFileContentProviderError;
+use hook_manager::PathContent;
 use manifest::Diff;
 use manifest::Entry;
 use manifest::ManifestOps;
@@ -39,28 +43,23 @@ use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataArc;
 use unodes::RootUnodeManifestId;
 
-use crate::ErrorKind;
-use crate::FileChange;
-use crate::FileContentManager;
-use crate::PathContent;
-
-pub struct RepoFileContentManager {
+pub struct RepoHookFileContentProvider {
     repo_blobstore: ArcRepoBlobstore,
     bookmarks: ArcBookmarks,
     repo_derived_data: ArcRepoDerivedData,
 }
 
 #[async_trait]
-impl FileContentManager for RepoFileContentManager {
+impl HookFileContentProvider for RepoHookFileContentProvider {
     async fn get_file_size<'a>(
         &'a self,
         ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<u64, ErrorKind> {
+    ) -> Result<u64, HookFileContentProviderError> {
         Ok(
             filestore::get_metadata(&self.repo_blobstore, ctx, &id.into())
                 .await?
-                .ok_or(ErrorKind::ContentIdNotFound(id))?
+                .ok_or(HookFileContentProviderError::ContentIdNotFound(id))?
                 .total_size,
         )
     }
@@ -69,10 +68,10 @@ impl FileContentManager for RepoFileContentManager {
         &'a self,
         ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<Option<Bytes>, ErrorKind> {
+    ) -> Result<Option<Bytes>, HookFileContentProviderError> {
         filestore::fetch_concat_opt(&self.repo_blobstore, ctx, &id.into())
             .await?
-            .ok_or(ErrorKind::ContentIdNotFound(id))
+            .ok_or(HookFileContentProviderError::ContentIdNotFound(id))
             .map(Option::Some)
     }
 
@@ -81,7 +80,7 @@ impl FileContentManager for RepoFileContentManager {
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
         paths: Vec<NonRootMPath>,
-    ) -> Result<HashMap<NonRootMPath, PathContent>, ErrorKind> {
+    ) -> Result<HashMap<NonRootMPath, PathContent>, HookFileContentProviderError> {
         let changeset_id = self
             .bookmarks
             .get(ctx.clone(), &bookmark)
@@ -109,7 +108,7 @@ impl FileContentManager for RepoFileContentManager {
             .try_buffer_unordered(100)
             .try_filter_map(future::ok)
             .try_collect::<HashMap<_, _>>()
-            .map_err(ErrorKind::from)
+            .map_err(HookFileContentProviderError::from)
             .await
     }
 
@@ -118,7 +117,7 @@ impl FileContentManager for RepoFileContentManager {
         ctx: &'a CoreContext,
         new_cs_id: ChangesetId,
         old_cs_id: ChangesetId,
-    ) -> Result<Vec<(NonRootMPath, FileChange)>, ErrorKind> {
+    ) -> Result<Vec<(NonRootMPath, FileChange)>, HookFileContentProviderError> {
         let new_mf_fut = derive_hg_manifest(
             ctx,
             &self.repo_derived_data,
@@ -135,7 +134,7 @@ impl FileContentManager for RepoFileContentManager {
 
         old_mf
             .diff(ctx.clone(), self.repo_blobstore.clone(), new_mf)
-            .map_err(ErrorKind::from)
+            .map_err(HookFileContentProviderError::from)
             .map_ok(move |diff| async move {
                 match diff {
                     Diff::Added(path, entry) => match Option::<NonRootMPath>::from(path) {
@@ -194,7 +193,7 @@ impl FileContentManager for RepoFileContentManager {
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
         paths: Vec<NonRootMPath>,
-    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, ErrorKind> {
+    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, HookFileContentProviderError> {
         let changeset_id = self
             .bookmarks
             .get(ctx.clone(), &bookmark)
@@ -232,20 +231,20 @@ impl FileContentManager for RepoFileContentManager {
             .try_buffer_unordered(100)
             .try_filter_map(future::ok)
             .try_collect::<HashMap<_, _>>()
-            .map_err(ErrorKind::from)
+            .map_err(HookFileContentProviderError::from)
             .await
     }
 }
 
-impl RepoFileContentManager {
+impl RepoHookFileContentProvider {
     pub fn new(
         container: &(impl RepoBlobstoreArc + BookmarksArc + RepoDerivedDataArc),
-    ) -> RepoFileContentManager {
+    ) -> RepoHookFileContentProvider {
         let repo_blobstore = container.repo_blobstore_arc();
         let bookmarks = container.bookmarks_arc();
         let repo_derived_data = container.repo_derived_data_arc();
 
-        RepoFileContentManager {
+        RepoHookFileContentProvider {
             repo_blobstore,
             bookmarks,
             repo_derived_data,
@@ -257,7 +256,7 @@ impl RepoFileContentManager {
         repo_blobstore: ArcRepoBlobstore,
         repo_derived_data: ArcRepoDerivedData,
     ) -> Self {
-        RepoFileContentManager {
+        RepoHookFileContentProvider {
             repo_blobstore,
             bookmarks,
             repo_derived_data,
@@ -270,7 +269,7 @@ async fn derive_hg_manifest(
     repo_derived_data: &RepoDerivedData,
     blobstore: &RepoBlobstore,
     changeset_id: ChangesetId,
-) -> Result<HgManifestId, ErrorKind> {
+) -> Result<HgManifestId, HookFileContentProviderError> {
     let hg_changeset_id = repo_derived_data
         .derive::<MappedHgChangesetId>(ctx, changeset_id)
         .await
@@ -289,7 +288,7 @@ async fn derive_unode_manifest(
     ctx: &CoreContext,
     repo_derived_data: &RepoDerivedData,
     changeset_id: ChangesetId,
-) -> Result<ManifestUnodeId, ErrorKind> {
+) -> Result<ManifestUnodeId, HookFileContentProviderError> {
     let unode_mf = repo_derived_data
         .derive::<RootUnodeManifestId>(ctx, changeset_id.clone())
         .await
@@ -303,7 +302,7 @@ async fn resolve_content_id(
     ctx: &CoreContext,
     blobstore: &RepoBlobstore,
     entry: Entry<HgManifestId, (FileType, HgFileNodeId)>,
-) -> Result<PathContent, ErrorKind> {
+) -> Result<PathContent, HookFileContentProviderError> {
     match entry {
         Entry::Tree(_tree) => {
             // there is no content for trees
@@ -314,6 +313,6 @@ async fn resolve_content_id(
             .map_ok(|file_env| PathContent::File(file_env.content_id()))
             .await
             .with_context(|| format!("Error loading filenode: {}", file_node_id))
-            .map_err(ErrorKind::from),
+            .map_err(HookFileContentProviderError::from),
     }
 }

@@ -7,9 +7,9 @@
 
 use std::collections::HashMap;
 
-use anyhow::format_err;
+use anyhow::anyhow;
 use async_trait::async_trait;
-use bookmarks::BookmarkKey;
+use bookmarks_types::BookmarkKey;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
@@ -17,10 +17,10 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::NonRootMPath;
 
-use crate::ErrorKind;
-use crate::FileChange;
-use crate::FileContentManager;
-use crate::PathContent;
+use crate::errors::HookFileContentProviderError;
+use crate::provider::FileChange;
+use crate::provider::HookFileContentProvider;
+use crate::provider::PathContent;
 
 #[derive(Clone)]
 pub enum InMemoryFileText {
@@ -48,20 +48,20 @@ impl From<u64> for InMemoryFileText {
 }
 
 #[derive(Clone)]
-pub struct InMemoryFileContentManager {
+pub struct InMemoryHookFileContentProvider {
     id_to_text: HashMap<ContentId, InMemoryFileText>,
 }
 
 #[async_trait]
-impl FileContentManager for InMemoryFileContentManager {
+impl HookFileContentProvider for InMemoryHookFileContentProvider {
     async fn get_file_size<'a>(
         &'a self,
         _ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<u64, ErrorKind> {
+    ) -> Result<u64, HookFileContentProviderError> {
         self.id_to_text
             .get(&id)
-            .ok_or(ErrorKind::ContentIdNotFound(id))
+            .ok_or(HookFileContentProviderError::ContentIdNotFound(id))
             .map(|maybe_bytes| match maybe_bytes {
                 InMemoryFileText::Present(bytes) => bytes.len() as u64,
                 InMemoryFileText::Elided(size) => *size,
@@ -72,10 +72,10 @@ impl FileContentManager for InMemoryFileContentManager {
         &'a self,
         _ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<Option<Bytes>, ErrorKind> {
+    ) -> Result<Option<Bytes>, HookFileContentProviderError> {
         self.id_to_text
             .get(&id)
-            .ok_or(ErrorKind::ContentIdNotFound(id))
+            .ok_or(HookFileContentProviderError::ContentIdNotFound(id))
             .map(|maybe_bytes| match maybe_bytes {
                 InMemoryFileText::Present(bytes) => Some(bytes.clone()),
                 InMemoryFileText::Elided(_) => None,
@@ -87,9 +87,9 @@ impl FileContentManager for InMemoryFileContentManager {
         _ctx: &'a CoreContext,
         _bookmark: BookmarkKey,
         _paths: Vec<NonRootMPath>,
-    ) -> Result<HashMap<NonRootMPath, PathContent>, ErrorKind> {
+    ) -> Result<HashMap<NonRootMPath, PathContent>, HookFileContentProviderError> {
         Err(
-            format_err!("`find_content` is not implemented for `InMemoryFileContentManager`")
+            anyhow!("`find_content` is not implemented for `InMemoryHookFileContentProvider`")
                 .into(),
         )
     }
@@ -99,9 +99,9 @@ impl FileContentManager for InMemoryFileContentManager {
         _ctx: &'a CoreContext,
         _new_cs_id: ChangesetId,
         _old_cs_id: ChangesetId,
-    ) -> Result<Vec<(NonRootMPath, FileChange)>, ErrorKind> {
+    ) -> Result<Vec<(NonRootMPath, FileChange)>, HookFileContentProviderError> {
         Err(
-            format_err!("`file_changes` is not implemented for `InMemoryFileContentManager`")
+            anyhow!("`file_changes` is not implemented for `InMemoryHookFileContentProvider`")
                 .into(),
         )
     }
@@ -111,17 +111,17 @@ impl FileContentManager for InMemoryFileContentManager {
         _ctx: &'a CoreContext,
         _bookmark: BookmarkKey,
         _paths: Vec<NonRootMPath>,
-    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, ErrorKind> {
+    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, HookFileContentProviderError> {
         Err(
-            format_err!("`latest_changes` is not implemented for `InMemoryFileContentManager`")
+            anyhow!("`latest_changes` is not implemented for `InMemoryHookFileContentProvider`")
                 .into(),
         )
     }
 }
 
-impl InMemoryFileContentManager {
-    pub fn new() -> InMemoryFileContentManager {
-        InMemoryFileContentManager {
+impl InMemoryHookFileContentProvider {
+    pub fn new() -> InMemoryHookFileContentProvider {
+        InMemoryHookFileContentProvider {
             id_to_text: HashMap::new(),
         }
     }

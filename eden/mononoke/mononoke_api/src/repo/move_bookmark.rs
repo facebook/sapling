@@ -15,7 +15,7 @@ use bookmarks_movement::BookmarkUpdatePolicy;
 use bookmarks_movement::BookmarkUpdateTargets;
 use bookmarks_movement::UpdateBookmarkOp;
 use bytes::Bytes;
-use hooks::HookManagerRef;
+use hook_manager::manager::HookManagerRef;
 use mononoke_types::ChangesetId;
 use tunables::tunables;
 

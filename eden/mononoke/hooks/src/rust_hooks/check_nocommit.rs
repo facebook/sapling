@@ -17,10 +17,10 @@ use regex::Regex;
 
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
-use crate::FileContentManager;
 use crate::FileHook;
 use crate::HookConfig;
 use crate::HookExecution;
+use crate::HookFileContentProvider;
 use crate::HookRejectionInfo;
 use crate::PushAuthoredBy;
 
@@ -54,7 +54,7 @@ impl FileHook for CheckNocommitHook {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         ctx: &'ctx CoreContext,
-        content_manager: &'fetcher dyn FileContentManager,
+        content_manager: &'fetcher dyn HookFileContentProvider,
         change: Option<&'change BasicFileChange>,
         path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -96,7 +96,7 @@ impl ChangesetHook for CheckNocommitHook {
         _ctx: &'ctx CoreContext,
         _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        _content_manager: &'fetcher dyn FileContentManager,
+        _content_manager: &'fetcher dyn HookFileContentProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {

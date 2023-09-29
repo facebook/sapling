@@ -59,9 +59,9 @@ use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
 use git_types::MappedGitCommitId;
 use git_types::RootGitDeltaManifestId;
 use git_types::TreeHandle;
-use hooks::ArcHookManager;
-use hooks::HookManager;
-use hooks_content_stores::RepoFileContentManager;
+use hook_manager::manager::ArcHookManager;
+use hook_manager::manager::HookManager;
+use hooks_content_stores::RepoHookFileContentProvider;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
 use maplit::hashmap;
 use maplit::hashset;
@@ -786,7 +786,7 @@ impl TestRepoFactory {
         bookmarks: &ArcBookmarks,
         repo_blobstore: &ArcRepoBlobstore,
     ) -> ArcHookManager {
-        let content_store = RepoFileContentManager::from_parts(
+        let content_store = RepoHookFileContentProvider::from_parts(
             bookmarks.clone(),
             repo_blobstore.clone(),
             repo_derived_data.clone(),

@@ -43,6 +43,7 @@ filenodes = { version = "0.1.0", path = "../filenodes" }
 filestore = { version = "0.1.0", path = "../filestore" }
 futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 git_symbolic_refs = { version = "0.1.0", path = "../git_symbolic_refs" }
+hook_manager = { version = "0.1.0", path = "../repo_attributes/hook_manager/hook_manager" }
 hooks = { version = "0.1.0", path = "../hooks" }
 hooks_content_stores = { version = "0.1.0", path = "../hooks/content-stores" }
 live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_commit_sync_config" }

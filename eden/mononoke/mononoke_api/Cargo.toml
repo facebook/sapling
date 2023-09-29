@@ -52,6 +52,7 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 git_types = { version = "0.1.0", path = "../git/git_types" }
 gix-hash = "0.11"
 history_traversal = { version = "0.1.0", path = "../features/history_traversal" }
+hook_manager = { version = "0.1.0", path = "../repo_attributes/hook_manager/hook_manager" }
 hooks = { version = "0.1.0", path = "../hooks" }
 itertools = "0.10.3"
 lazy_static = "1.4"

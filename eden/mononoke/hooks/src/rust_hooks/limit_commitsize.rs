@@ -16,9 +16,9 @@ use regex::Regex;
 
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
-use crate::FileContentManager;
 use crate::HookConfig;
 use crate::HookExecution;
+use crate::HookFileContentProvider;
 use crate::HookRejectionInfo;
 use crate::PushAuthoredBy;
 
@@ -151,7 +151,7 @@ impl ChangesetHook for LimitCommitsize {
         _ctx: &'ctx CoreContext,
         _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        _content_manager: &'fetcher dyn FileContentManager,
+        _content_manager: &'fetcher dyn HookFileContentProvider,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
@@ -230,7 +230,7 @@ mod test {
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
-    use hooks_content_stores::RepoFileContentManager;
+    use hooks_content_stores::RepoHookFileContentProvider;
     use maplit::hashmap;
     use tests_utils::BasicTestRepo;
     use tests_utils::CreateCommitContext;
@@ -252,7 +252,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
-        let content_manager = RepoFileContentManager::new(&repo);
+        let content_manager = RepoHookFileContentProvider::new(&repo);
         let hook = build_hook(hashmap! {
             "commitsizelimit".to_string() => 3,
             "changed_files_limit".to_string() => 3,
@@ -337,7 +337,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
-        let content_manager = RepoFileContentManager::new(&repo);
+        let content_manager = RepoHookFileContentProvider::new(&repo);
         let hook = build_hook(hashmap! {
             "commitsizelimit".to_string() => 100,
             "changed_files_limit".to_string() => 2,
@@ -392,7 +392,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
-        let content_manager = RepoFileContentManager::new(&repo);
+        let content_manager = RepoHookFileContentProvider::new(&repo);
         let hook = build_hook_with_limits(
             hashmap! {
                 "commitsizelimit".to_string() => 1,
@@ -436,7 +436,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
-        let content_manager = RepoFileContentManager::new(&repo);
+        let content_manager = RepoHookFileContentProvider::new(&repo);
 
         let hook = build_hook_with_limits(
             hashmap! {
@@ -489,7 +489,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
-        let content_manager = RepoFileContentManager::new(&repo);
+        let content_manager = RepoHookFileContentProvider::new(&repo);
         let hook = build_hook_with_limits(
             hashmap! {
                 "commitsizelimit".to_string() => 2,

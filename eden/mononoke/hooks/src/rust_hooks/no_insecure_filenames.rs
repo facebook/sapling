@@ -13,9 +13,9 @@ use mononoke_types::NonRootMPath;
 use regex::Regex;
 
 use crate::CrossRepoPushSource;
-use crate::FileContentManager;
 use crate::FileHook;
 use crate::HookExecution;
+use crate::HookFileContentProvider;
 use crate::HookRejectionInfo;
 use crate::PushAuthoredBy;
 
@@ -56,7 +56,7 @@ impl FileHook for NoInsecureFilenames {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_manager: &'fetcher dyn FileContentManager,
+        _content_manager: &'fetcher dyn HookFileContentProvider,
         change: Option<&'change BasicFileChange>,
         path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,

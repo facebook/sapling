@@ -40,7 +40,7 @@ filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
-hooks = { version = "0.1.0", path = "../../hooks" }
+hook_manager = { version = "0.1.0", path = "../../repo_attributes/hook_manager/hook_manager" }
 hooks_content_stores = { version = "0.1.0", path = "../../hooks/content-stores" }
 live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
 maplit = "1.0"
