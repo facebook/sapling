@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import os
 import sys
 
+import bindings
 from sapling import hgdemandimport as demandimport
 
 from . import encoding, error, extensions, pycompat, util
@@ -129,6 +130,10 @@ def _exthook(ui, repo, htype, name, cmd, args, throw, background=False):
             env["HG_SHAREDPENDING"] = repo.sharedroot
     env["HG_HOOKTYPE"] = htype
     env["HG_HOOKNAME"] = name
+
+    cri = bindings.clientinfo.get_client_request_info()
+    env["SAPLING_CLIENT_ENTRY_POINT"] = cri["entry_point"]
+    env["SAPLING_CLIENT_CORRELATOR"] = cri["correlator"]
 
     for k, v in pycompat.iteritems(args):
         if callable(v):
