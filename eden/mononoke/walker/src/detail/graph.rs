@@ -9,6 +9,7 @@ use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::str::FromStr;
+use std::sync::OnceLock;
 
 use ahash::RandomState;
 use anyhow::format_err;
@@ -77,7 +78,6 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use mononoke_types::SkeletonManifestId;
 use newfilenodes::PathHash;
-use once_cell::sync::OnceCell;
 use phases::Phase;
 use repo_blobstore::RepoBlobstoreRef;
 use skeleton_manifest::RootSkeletonManifestId;
@@ -689,14 +689,14 @@ impl fmt::Display for WrappedPathHash {
 #[derive(Debug)]
 pub struct MPathWithHashMemo {
     mpath: NonRootMPath,
-    memoized_hash: OnceCell<WrappedPathHash>,
+    memoized_hash: OnceLock<WrappedPathHash>,
 }
 
 impl MPathWithHashMemo {
     fn new(mpath: NonRootMPath) -> Self {
         Self {
             mpath,
-            memoized_hash: OnceCell::new(),
+            memoized_hash: OnceLock::new(),
         }
     }
 
@@ -782,7 +782,7 @@ impl fmt::Display for WrappedPath {
     }
 }
 
-static PATH_HASHER_FACTORY: OnceCell<RandomState> = OnceCell::new();
+static PATH_HASHER_FACTORY: OnceLock<RandomState> = OnceLock::new();
 
 impl From<Option<NonRootMPath>> for WrappedPath {
     fn from(mpath: Option<NonRootMPath>) -> Self {

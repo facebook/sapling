@@ -609,10 +609,11 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
 
 #[cfg(all(test, fbcode_build))]
 mod test {
+    use std::sync::OnceLock;
+
     use fbinit::FacebookInit;
     use futures_stats::TimedTryFutureExt;
     use nonzero_ext::nonzero;
-    use once_cell::sync::OnceCell;
     use time_ext::DurationExt;
 
     use super::*;
@@ -638,7 +639,7 @@ mod test {
         blob_pool_name: &str,
         cache_filter: fn(&Bytes) -> Result<()>,
     ) -> Result<Cache> {
-        static INSTANCE: OnceCell<()> = OnceCell::new();
+        static INSTANCE: OnceLock<()> = OnceLock::new();
         INSTANCE.get_or_init(|| {
             let config = cachelib::LruCacheConfig::new(64 * 1024 * 1024);
             cachelib::init_cache(fb, config).unwrap();

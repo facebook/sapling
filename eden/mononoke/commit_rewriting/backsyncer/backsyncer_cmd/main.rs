@@ -12,6 +12,7 @@ use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use anyhow::bail;
@@ -55,7 +56,6 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
-use once_cell::sync::OnceCell;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
@@ -421,8 +421,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .value_of(cmdlib::args::SHARDED_SCOPE_NAME)
                 .unwrap_or(DEFAULT_SHARDED_SCOPE_NAME);
             // The service name needs to be 'static to satisfy SM contract
-            static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
-            static SM_SERVICE_SCOPE_NAME: OnceCell<String> = OnceCell::new();
+            static SM_SERVICE_NAME: OnceLock<String> = OnceLock::new();
+            static SM_SERVICE_SCOPE_NAME: OnceLock<String> = OnceLock::new();
             let logger = process.matches.logger().clone();
             let matches = Arc::clone(&process.matches);
             let mut executor = ShardedProcessExecutor::new(

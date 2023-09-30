@@ -30,7 +30,6 @@ live_commit_sync_config = { version = "0.1.0", path = "../../live_commit_sync_co
 mercurial_derivation = { version = "0.1.0", path = "../../../derived_data/mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
-once_cell = "1.12"
 repo_identity = { version = "0.1.0", path = "../../../repo_attributes/repo_identity" }
 scuba_ext = { version = "0.1.0", path = "../../../common/scuba_ext" }
 sharding_ext = { version = "0.1.0", path = "../../../cmdlib/sharding_ext" }

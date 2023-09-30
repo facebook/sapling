@@ -8,6 +8,7 @@
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::num::NonZeroU32;
+use std::sync::OnceLock;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -19,7 +20,6 @@ use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgGroup;
 use fbinit::FacebookInit;
-use once_cell::sync::OnceCell;
 use repo_factory::ReadOnlyStorage;
 use slog::Record;
 use sql_ext::facebook::SharedConnectionPool;
@@ -713,7 +713,7 @@ impl MononokeAppBuilder {
 
         if let Some(default) = self.blobstore_read_qps_default {
             // Lazy static is nicer to LeakSanitizer than Box::leak
-            static QPS_FORMATTED: OnceCell<String> = OnceCell::new();
+            static QPS_FORMATTED: OnceLock<String> = OnceLock::new();
             // clap needs &'static str
             read_qps_arg =
                 read_qps_arg.default_value(QPS_FORMATTED.get_or_init(|| format!("{}", default)));
@@ -866,7 +866,7 @@ impl MononokeAppBuilder {
                 .required(false)
                 .help("Number of seconds grace to give for key to arrive in multiple blobstores or the healer queue when scrubbing");
             if let Some(default) = self.scrub_grace_secs_default {
-                static FORMATTED: OnceCell<String> = OnceCell::new(); // Lazy static is nicer to LeakSanitizer than Box::leak
+                static FORMATTED: OnceLock<String> = OnceLock::new(); // Lazy static is nicer to LeakSanitizer than Box::leak
                 scrub_grace_arg =
                     scrub_grace_arg.default_value(FORMATTED.get_or_init(|| format!("{}", default)));
             }
@@ -879,7 +879,7 @@ impl MononokeAppBuilder {
             .requires(BLOBSTORE_SCRUB_ACTION_ARG)
             .help("Number of seconds within which we consider it worth checking the healer queue.");
             if let Some(default) = self.scrub_queue_peek_bound_secs_default {
-                static FORMATTED: OnceCell<String> = OnceCell::new(); // Lazy static is nicer to LeakSanitizer than Box::leak
+                static FORMATTED: OnceLock<String> = OnceLock::new(); // Lazy static is nicer to LeakSanitizer than Box::leak
                 scrub_queue_peek_bound_arg = scrub_queue_peek_bound_arg
                     .default_value(FORMATTED.get_or_init(|| format!("{}", default)));
             };

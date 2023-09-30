@@ -11,6 +11,7 @@
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
+use std::sync::OnceLock;
 
 use anyhow::bail;
 use anyhow::Context;
@@ -34,7 +35,6 @@ use futures::TryStreamExt;
 use itertools::Either;
 use itertools::Itertools;
 use nonzero_ext::nonzero;
-use once_cell::sync::OnceCell;
 use smallvec::SmallVec;
 use sorted_vector_map::sorted_vector_map;
 use sorted_vector_map::SortedVectorMap;
@@ -63,7 +63,7 @@ pub enum ShardedMapNode<Value: MapValue> {
         value: Option<Value>,
         edges: SortedVectorMap<u8, ShardedMapEdge<Value>>,
         #[derivative(PartialEq = "ignore", Debug = "ignore")]
-        size: OnceCell<usize>,
+        size: OnceLock<usize>,
     },
     Terminal {
         // The key is the original map key minus the prefixes and edges from all

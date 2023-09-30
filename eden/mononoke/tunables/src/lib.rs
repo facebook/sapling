@@ -9,6 +9,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::thread_local;
 
 use anyhow::Result;
@@ -18,7 +19,6 @@ use cached_config::ConfigHandle;
 use futures::future::poll_fn;
 use futures::Future;
 use futures::FutureExt;
-use once_cell::sync::OnceCell;
 use slog::debug;
 use slog::error;
 use slog::warn;
@@ -33,8 +33,8 @@ define_stats! {
     refresh_failure_count: timeseries(Average, Sum, Count),
 }
 
-static TUNABLES: OnceCell<MononokeTunables> = OnceCell::new();
-static TUNABLES_WORKER_STATE: OnceCell<TunablesWorkerState> = OnceCell::new();
+static TUNABLES: OnceLock<MononokeTunables> = OnceLock::new();
+static TUNABLES_WORKER_STATE: OnceLock<TunablesWorkerState> = OnceLock::new();
 
 thread_local! {
     static TUNABLES_OVERRIDE: RefCell<Option<Arc<MononokeTunables>>> = RefCell::new(None);
