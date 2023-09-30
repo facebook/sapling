@@ -322,8 +322,8 @@ Test bisect search status (after cleaning up previous setup)
   # The repository is in an unfinished *bisect* state.
   # Current bisect state: 1 good commit(s), 1 bad commit(s), 0 skip commit(s)
   # 
-  # Current Tracker: bad commit     current        good commit
-  #                  547e426ae373...69a19f24e505...0efcea34f18a
+  # Current Tracker: good commit    current        bad commit
+  #                  0efcea34f18a...69a19f24e505...547e426ae373
   # Commits remaining:           5
   # Estimated bisects remaining: 3
   # To mark the changeset good:    hg bisect --good

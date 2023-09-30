@@ -36,7 +36,7 @@ Test from bad to good
   # Current bisect state: 1 good commit(s), 1 bad commit(s), 0 skip commit(s)
   # 
   # Current Tracker: bad commit     current        good commit
-  #                  26805aba1e60...112478962961...426bada5c675
+  #                  426bada5c675...112478962961...26805aba1e60
   # Commits remaining:           2
   # Estimated bisects remaining: 1
   # To mark the changeset good:    hg bisect --good
@@ -54,8 +54,8 @@ Test from good to bad
   # The repository is in an unfinished *bisect* state.
   # Current bisect state: 1 good commit(s), 1 bad commit(s), 0 skip commit(s)
   # 
-  # Current Tracker: bad commit     current        good commit
-  #                  26805aba1e60...112478962961...426bada5c675
+  # Current Tracker: good commit    current        bad commit
+  #                  426bada5c675...112478962961...26805aba1e60
   # Commits remaining:           2
   # Estimated bisects remaining: 1
   # To mark the changeset good:    hg bisect --good

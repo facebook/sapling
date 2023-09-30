@@ -147,29 +147,34 @@ def bisectmsg(repo, ui):
 
     if len(state["good"]) > 0 and len(state["bad"]) > 0:
         try:
-            nodes, commitsremaining, searching, badnode, goodnode = hbisect.bisect(
+            nodes, commitsremaining, badtogood, rightnode, leftnode = hbisect.bisect(
                 repo, state
             )
+
             searchesremaining = (
                 int(math.ceil(math.log(commitsremaining, 2)))
                 if commitsremaining > 0
                 else 0
             )
-            bisectstatus = _(
+            bisectstatustmpl = _(
                 """
-Current Tracker: bad commit     current        good commit
+Current Tracker: {:<15}{:<15}{}
                  {}...{}...{}
 Commits remaining:           {}
 Estimated bisects remaining: {}
 """
-            ).format(
-                nodeutil.short(badnode),
+            )
+            labels = ("good commit", "bad commit", "current")
+            bisectstatus = bisectstatustmpl.format(
+                labels[badtogood],
+                labels[2],
+                labels[1 - badtogood],
+                nodeutil.short(leftnode),
                 nodeutil.short(nodes[0]),
-                nodeutil.short(goodnode),
+                nodeutil.short(rightnode),
                 commitsremaining,
                 searchesremaining,
             )
-
             ui.write_err(prefixlines(bisectstatus))
         except Abort:
             # ignore the output if bisect() fails
