@@ -666,17 +666,7 @@ def _runcatch(req):
             # Potentially enter the debugger when we hit an exception
             startdebugger = req.earlyoptions["debugger"]
             if startdebugger:
-                # Enforce the use of ipdb, since it's always available and
-                # we can afford the import overhead here.
-                debugmod = pdb
-                with demandimport.deactivated():
-                    try:
-                        import ipdb
-
-                        debugmod = ipdb
-                    except ImportError:
-                        pass
-
+                debugmod = getdebugmod()
                 ui.write_err(util.smartformatexc())
                 debugmod.post_mortem(sys.exc_info()[2])
                 os._exit(255)
@@ -749,12 +739,10 @@ def _callcatch(ui, req, func):
                     )
                 )
 
-            with demandimport.deactivated():
-                import ipdb
-
+            debugmod = getdebugmod()
             if not ui.tracebackflag:
                 ui.write_err(util.smartformatexc())
-            ipdb.post_mortem(sys.exc_info()[2])
+            debugmod.post_mortem(sys.exc_info()[2])
             os._exit(255)
         if not handlecommandexception(ui):
             raise
@@ -1272,3 +1260,14 @@ def rejectpush(ui, **kwargs):
     # mercurial hooks use unix process conventions for hook return values
     # so a truthy return means failure
     return True
+
+
+def getdebugmod(default=pdb):
+    """Try to use ipdb, if it's not available, then fallback to the default."""
+    try:
+        with demandimport.deactivated():
+            import ipdb
+
+            return ipdb
+    except ModuleNotFoundError:
+        return default
