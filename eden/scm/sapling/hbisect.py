@@ -18,7 +18,7 @@ from __future__ import absolute_import
 import collections
 from typing import Optional, Sized
 
-from . import error, pycompat, util
+from . import error, pycompat
 from .i18n import _
 from .node import hex, short
 
