@@ -11,8 +11,8 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
-use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use parking_lot::MutexGuard;
 use serde::ser::Serialize;
@@ -20,7 +20,7 @@ use serde::ser::SerializeMap;
 use serde::Serializer;
 use serde_json::Serializer as JsonSerializer;
 
-pub static CONFIG: OnceCell<Option<Arc<SamplingConfig>>> = OnceCell::new();
+pub static CONFIG: OnceLock<Option<Arc<SamplingConfig>>> = OnceLock::new();
 
 pub fn init(config: &dyn configmodel::Config) {
     CONFIG.get_or_init(|| SamplingConfig::new(config).map(Arc::new));

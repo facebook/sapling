@@ -17,9 +17,8 @@ use std::sync::atomic::Ordering::Acquire;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::atomic::Ordering::Release;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Instant;
-
-use once_cell::sync::OnceCell;
 
 #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Progress {
@@ -239,7 +238,7 @@ impl ProgressUpdater {
 #[derive(Default)]
 struct ProgressInner {
     total_progress: MutableProgress,
-    first_byte_received: OnceCell<Instant>,
+    first_byte_received: OnceLock<Instant>,
 }
 
 impl ProgressInner {

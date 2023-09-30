@@ -6,8 +6,8 @@
  */
 
 use std::sync::Arc;
+use std::sync::OnceLock;
 
-use once_cell::sync::OnceCell;
 use sampling::SamplingConfig;
 use tracing::subscriber::Interest;
 use tracing::Event;
@@ -20,7 +20,7 @@ use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Layer;
 
 pub struct SamplingLayer {
-    config: &'static OnceCell<Option<Arc<SamplingConfig>>>,
+    config: &'static OnceLock<Option<Arc<SamplingConfig>>>,
 }
 
 impl SamplingLayer {
@@ -29,7 +29,7 @@ impl SamplingLayer {
     }
 
     fn new_with_config<S: Subscriber + for<'a> LookupSpan<'a>>(
-        config: &'static OnceCell<Option<Arc<SamplingConfig>>>,
+        config: &'static OnceLock<Option<Arc<SamplingConfig>>>,
     ) -> impl Layer<S> {
         Self { config }.with_filter(SamplingFilter { config })
     }
@@ -52,7 +52,7 @@ impl<S: Subscriber> Layer<S> for SamplingLayer {
 }
 
 struct SamplingFilter {
-    config: &'static OnceCell<Option<Arc<SamplingConfig>>>,
+    config: &'static OnceLock<Option<Arc<SamplingConfig>>>,
 }
 
 impl SamplingFilter {
@@ -88,7 +88,7 @@ mod tests {
 
     use super::*;
 
-    static TEST_CONFIG: OnceCell<Option<Arc<SamplingConfig>>> = OnceCell::new();
+    static TEST_CONFIG: OnceLock<Option<Arc<SamplingConfig>>> = OnceLock::new();
 
     #[test]
     fn test_sampling_layer() {
