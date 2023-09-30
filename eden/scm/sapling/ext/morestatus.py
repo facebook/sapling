@@ -134,9 +134,9 @@ def mergemsg(repo, ui):
 
 def bisectmsg(repo, ui):
     msg = _(
-        "To mark the changeset good:    @prog@ bisect --good\n"
-        "To mark the changeset bad:     @prog@ bisect --bad\n"
-        "To abort:                      @prog@ bisect --reset\n"
+        "To mark the commit good:     @prog@ bisect --good\n"
+        "To mark the commit bad:      @prog@ bisect --bad\n"
+        "To abort:                    @prog@ bisect --reset\n"
     )
 
     state = hbisect.load_state(repo)

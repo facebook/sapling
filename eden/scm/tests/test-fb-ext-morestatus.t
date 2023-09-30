@@ -51,9 +51,9 @@ Test bisect state
   
   # The repository is in an unfinished *bisect* state.
   # Current bisect state: 1 good commit(s), 0 bad commit(s), 0 skip commit(s)
-  # To mark the changeset good:    hg bisect --good
-  # To mark the changeset bad:     hg bisect --bad
-  # To abort:                      hg bisect --reset
+  # To mark the commit good:     hg bisect --good
+  # To mark the commit bad:      hg bisect --bad
+  # To abort:                    hg bisect --reset
 
 
 Verify that suppressing a morestatus state warning works with the config knob:
@@ -326,9 +326,9 @@ Test bisect search status (after cleaning up previous setup)
   #                  0efcea34f18a...69a19f24e505...547e426ae373
   # Commits remaining:           5
   # Estimated bisects remaining: 3
-  # To mark the changeset good:    hg bisect --good
-  # To mark the changeset bad:     hg bisect --bad
-  # To abort:                      hg bisect --reset
+  # To mark the commit good:     hg bisect --good
+  # To mark the commit bad:      hg bisect --bad
+  # To abort:                    hg bisect --reset
 
 
 Test hg status is normal after bisect reset

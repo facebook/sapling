@@ -39,9 +39,9 @@ Test from bad to good
   #                  426bada5c675...112478962961...26805aba1e60
   # Commits remaining:           2
   # Estimated bisects remaining: 1
-  # To mark the changeset good:    hg bisect --good
-  # To mark the changeset bad:     hg bisect --bad
-  # To abort:                      hg bisect --reset
+  # To mark the commit good:     hg bisect --good
+  # To mark the commit bad:      hg bisect --bad
+  # To abort:                    hg bisect --reset
   $ hg bisect -r
 
 Test from good to bad
@@ -58,7 +58,7 @@ Test from good to bad
   #                  426bada5c675...112478962961...26805aba1e60
   # Commits remaining:           2
   # Estimated bisects remaining: 1
-  # To mark the changeset good:    hg bisect --good
-  # To mark the changeset bad:     hg bisect --bad
-  # To abort:                      hg bisect --reset
+  # To mark the commit good:     hg bisect --good
+  # To mark the commit bad:      hg bisect --bad
+  # To abort:                    hg bisect --reset
   $ hg bisect -r

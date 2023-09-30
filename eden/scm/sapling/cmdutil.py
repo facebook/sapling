@@ -744,9 +744,9 @@ def _mergemsg():
 
 def _bisectmsg():
     msg = _(
-        "To mark the changeset good:    @prog@ bisect --good\n"
-        "To mark the changeset bad:     @prog@ bisect --bad\n"
-        "To abort:                      @prog@ bisect --reset\n"
+        "To mark the commit good:     @prog@ bisect --good\n"
+        "To mark the commit bad:      @prog@ bisect --bad\n"
+        "To abort:                    @prog@ bisect --reset\n"
     )
     return _commentlines(msg)
 
