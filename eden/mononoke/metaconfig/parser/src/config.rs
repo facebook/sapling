@@ -1251,7 +1251,7 @@ mod test {
                         regions: vec![AclRegion {
                             roots: vec![ONES_CSID],
                             heads: vec![],
-                            path_prefixes: vec![MPath::new("test/prefix").unwrap(), MPath::EMPTY],
+                            path_prefixes: vec![MPath::new("test/prefix").unwrap(), MPath::ROOT],
                         }],
                         hipster_acl: "acl_test".to_string(),
                     }],

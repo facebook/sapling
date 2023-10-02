@@ -49,7 +49,7 @@ const ARG_LIMIT: &str = "limit";
 
 fn path_resolve(path: &str) -> Result<MPath, Error> {
     match path {
-        "/" => Ok(MPath::EMPTY),
+        "/" => Ok(MPath::ROOT),
         _ => Ok(MPath::new(path)?),
     }
 }
@@ -174,7 +174,7 @@ async fn single_verify(ctx: &CoreContext, repo: &BlobRepo, csid: ChangesetId) ->
             .find_entries(
                 ctx.clone(),
                 repo.repo_blobstore().clone(),
-                vec![PathOrPrefix::Prefix(MPath::EMPTY)],
+                vec![PathOrPrefix::Prefix(MPath::ROOT)],
             )
             .try_filter_map(|(path, _)| async move { Ok(Option::<NonRootMPath>::from(path)) })
             .try_collect::<BTreeSet<_>>()
@@ -189,7 +189,7 @@ async fn single_verify(ctx: &CoreContext, repo: &BlobRepo, csid: ChangesetId) ->
             .find_entries(
                 ctx.clone(),
                 repo.repo_blobstore().clone(),
-                vec![PathOrPrefix::Prefix(MPath::EMPTY)],
+                vec![PathOrPrefix::Prefix(MPath::ROOT)],
             )
             .try_filter_map(|(path, _)| async { Ok(Option::<NonRootMPath>::from(path)) })
             .try_collect::<BTreeSet<_>>()

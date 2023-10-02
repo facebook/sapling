@@ -66,7 +66,7 @@ where
     {
         let selector = select_path_tree(paths_or_prefixes);
 
-        let init = Some((self.clone(), selector, MPath::EMPTY, false));
+        let init = Some((self.clone(), selector, MPath::ROOT, false));
         (async_stream::stream! {
             let store = &store;
             borrowed!(ctx, store);
@@ -164,7 +164,7 @@ where
             Error,
         >,
     > {
-        self.find_entries(ctx, store, vec![PathOrPrefix::Prefix(MPath::EMPTY)])
+        self.find_entries(ctx, store, vec![PathOrPrefix::Prefix(MPath::ROOT)])
     }
 
     fn list_leaf_entries(
@@ -308,7 +308,7 @@ where
 
         bounded_traversal::bounded_traversal_stream(
             256,
-            Some(Diff::Changed(MPath::EMPTY, self.clone(), other)),
+            Some(Diff::Changed(MPath::ROOT, self.clone(), other)),
             move |input| {
                 cloned!(ctx, output_filter, recurse_pruner, store, other_store);
                 async move {

@@ -727,7 +727,7 @@ impl<V> IntoIterator for PathTree<V> {
 
     fn into_iter(self) -> Self::IntoIter {
         PathTreeIter {
-            frames: vec![(MPath::EMPTY, self)],
+            frames: vec![(MPath::ROOT, self)],
         }
     }
 }

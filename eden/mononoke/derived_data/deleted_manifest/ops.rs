@@ -357,7 +357,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
         (async_stream::stream! {
             let ctx = ctx.borrow();
             let blobstore = &blobstore;
-            let s = bounded_traversal_stream(256, Some((MPath::EMPTY, root_id)), move |(path, manifest_id)| {
+            let s = bounded_traversal_stream(256, Some((MPath::ROOT, root_id)), move |(path, manifest_id)| {
                 async move {
                     let manifest = manifest_id.load(ctx, blobstore).await?;
                     let entry = if manifest.is_deleted() {

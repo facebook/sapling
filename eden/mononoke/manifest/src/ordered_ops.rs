@@ -148,7 +148,7 @@ where
 
         let init = Some((
             queue_max.get(),
-            (self.clone(), selector, MPath::EMPTY, false, after),
+            (self.clone(), selector, MPath::ROOT, false, after),
         ));
         (async_stream::stream! {
             borrowed!(ctx, store);
@@ -328,7 +328,7 @@ where
 
         let init = Some((
             queue_max.get(),
-            (Diff::Changed(MPath::EMPTY, self.clone(), other), after),
+            (Diff::Changed(MPath::ROOT, self.clone(), other), after),
         ));
 
         (async_stream::stream! {

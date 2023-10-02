@@ -630,7 +630,7 @@ mod test {
         let blobstore = repo.repo_blobstore_arc();
         let (master_mf_id, _) = common_git_delta_manifest_validation(repo, ctx.clone()).await?;
         let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
-        let expected_paths = vec![MPath::EMPTY, MPath::new("10")?] //MPath::EMPTY for root directory
+        let expected_paths = vec![MPath::ROOT, MPath::new("10")?] //MPath::ROOT for root directory
             .into_iter()
             .collect::<HashSet<_>>();
         let matched_entries = delta_manifest
@@ -655,7 +655,7 @@ mod test {
         let (master_mf_id, _) =
             common_git_delta_manifest_validation(repo.clone(), ctx.clone()).await?;
         let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
-        let expected_paths = vec![MPath::EMPTY, MPath::new("base")?] //MPath::EMPTY for root directory
+        let expected_paths = vec![MPath::ROOT, MPath::new("base")?] //MPath::ROOT for root directory
             .into_iter()
             .collect::<HashSet<_>>();
         let matched_entries = delta_manifest
@@ -699,7 +699,7 @@ mod test {
         let blobstore = repo.repo_blobstore_arc();
         let (master_mf_id, _) = common_git_delta_manifest_validation(repo, ctx.clone()).await?;
         let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
-        let expected_paths = vec![MPath::EMPTY, MPath::new("5")?] //MPath::EMPTY for root directory
+        let expected_paths = vec![MPath::ROOT, MPath::new("5")?] //MPath::ROOT for root directory
             .into_iter()
             .collect::<HashSet<_>>();
         let matched_entries = delta_manifest
@@ -713,7 +713,7 @@ mod test {
         // Ensure that the root entry has a delta variant
         assert!(
             matched_entries
-                .get(&MPath::EMPTY)
+                .get(&MPath::ROOT)
                 .expect("Expected root entry to exist")
                 .is_delta()
         );
@@ -734,7 +734,7 @@ mod test {
         let blobstore = repo.repo_blobstore_arc();
         let (master_mf_id, _) = common_git_delta_manifest_validation(repo, ctx.clone()).await?;
         let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
-        let expected_paths = vec![MPath::EMPTY, MPath::new("3")?] //MPath::EMPTY for root directory
+        let expected_paths = vec![MPath::ROOT, MPath::new("3")?] //MPath::ROOT for root directory
             .into_iter()
             .collect::<HashSet<_>>();
         let matched_entries = delta_manifest
@@ -748,7 +748,7 @@ mod test {
         // Ensure that the root entry has a delta variant
         assert!(
             matched_entries
-                .get(&MPath::EMPTY)
+                .get(&MPath::ROOT)
                 .expect("Expected root entry to exist")
                 .is_delta()
         );
@@ -770,7 +770,7 @@ mod test {
         let (master_mf_id, _) =
             common_git_delta_manifest_validation(repo.clone(), ctx.clone()).await?;
         let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
-        let expected_paths = vec![MPath::EMPTY, MPath::new("base")?] //MPath::EMPTY for root directory
+        let expected_paths = vec![MPath::ROOT, MPath::new("base")?] //MPath::ROOT for root directory
             .into_iter()
             .collect::<HashSet<_>>();
         let matched_entries = delta_manifest
@@ -821,7 +821,7 @@ mod test {
         let (master_mf_id, _) =
             common_git_delta_manifest_validation(repo.clone(), ctx.clone()).await?;
         let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
-        let expected_paths = vec![MPath::EMPTY, MPath::new("1")?] //MPath::EMPTY for root directory
+        let expected_paths = vec![MPath::ROOT, MPath::new("1")?] //MPath::ROOT for root directory
             .into_iter()
             .collect::<HashSet<_>>();
         let matched_entries = delta_manifest
@@ -846,7 +846,7 @@ mod test {
         let (master_mf_id, _) =
             common_git_delta_manifest_validation(repo.clone(), ctx.clone()).await?;
         let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
-        let expected_paths = vec![MPath::EMPTY, MPath::new("base")?] //MPath::EMPTY for root directory
+        let expected_paths = vec![MPath::ROOT, MPath::new("base")?] //MPath::ROOT for root directory
             .into_iter()
             .collect::<HashSet<_>>();
         let matched_entries = delta_manifest
@@ -898,14 +898,14 @@ mod test {
             common_git_delta_manifest_validation(repo.clone(), ctx.clone()).await?;
         let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
         let expected_paths = vec![
-            MPath::EMPTY,
+            MPath::ROOT,
             MPath::new("base")?,
             MPath::new("1")?,
             MPath::new("2")?,
             MPath::new("3")?,
             MPath::new("4")?,
             MPath::new("5")?,
-        ] //MPath::EMPTY for root directory
+        ] //MPath::ROOT for root directory
         .into_iter()
         .collect::<HashSet<_>>();
         let matched_entries = delta_manifest
@@ -940,7 +940,7 @@ mod test {
         );
         // Files root and base are present in both parents but with different content/version. The GitDeltaManifest should have entries
         // for these files and these entries should have two delta variants
-        let modified_in_both_paths = vec![MPath::EMPTY, MPath::new("3")?]
+        let modified_in_both_paths = vec![MPath::ROOT, MPath::new("3")?]
             .into_iter()
             .collect::<HashSet<_>>();
 
@@ -969,7 +969,7 @@ mod test {
             &ctx,
             &matched_entries,
             &repo,
-            &MPath::EMPTY,
+            &MPath::ROOT,
             vec![
                 "5e09a5d3676c8b51db7fee4aa6ce393871860569",
                 "a291c0b59375c5321da2a77e215647b405c8cb79",

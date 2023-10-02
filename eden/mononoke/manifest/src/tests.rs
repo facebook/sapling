@@ -323,7 +323,7 @@ impl Loadable for Files {
     ) -> Result<Self::Value, LoadableError> {
         bounded_traversal_stream(
             256,
-            Some((MPath::EMPTY, Entry::Tree(self.0))),
+            Some((MPath::ROOT, Entry::Tree(self.0))),
             move |(path, entry)| {
                 async move {
                     let content = Loadable::load(&entry, ctx, blobstore).await?;
@@ -371,7 +371,7 @@ fn test_path_tree() -> Result<()> {
     ]);
 
     let reference = vec![
-        (MPath::EMPTY, false),
+        (MPath::ROOT, false),
         (MPath::new("one")?, false),
         (MPath::new("one/two")?, true),
         (MPath::new("one/two/three")?, true),
@@ -395,7 +395,7 @@ fn test_path_insert_and_merge() -> Result<()> {
     }
 
     let reference = vec![
-        (MPath::EMPTY, vec![]),
+        (MPath::ROOT, vec![]),
         (MPath::new("one")?, vec![]),
         (MPath::new("one/two")?, vec![]),
         (MPath::new("one/two/three")?, vec![true, false]),
@@ -1049,7 +1049,7 @@ fn make_paths(paths_str: &[&str]) -> Result<BTreeSet<MPath>> {
     paths_str
         .iter()
         .map(|path_str| match path_str {
-            &"/" => Ok(MPath::EMPTY),
+            &"/" => Ok(MPath::ROOT),
             _ => MPath::new(path_str),
         })
         .collect()
@@ -1170,7 +1170,7 @@ async fn test_find_entries(fb: FacebookInit) -> Result<()> {
     // find entry
     {
         let mf_root = mf0
-            .find_entry(ctx.clone(), blobstore.clone(), MPath::EMPTY)
+            .find_entry(ctx.clone(), blobstore.clone(), MPath::ROOT)
             .await?;
         assert_eq!(mf_root, Some(Entry::Tree(mf0)));
 

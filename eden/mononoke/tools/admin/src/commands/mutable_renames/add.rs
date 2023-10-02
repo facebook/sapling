@@ -143,7 +143,7 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
                 .try_collect()
                 .await?;
             let first = match (
-                src_entries.remove(&MPath::EMPTY),
+                src_entries.remove(&MPath::ROOT),
                 dst_entries.remove(&dst_path),
             ) {
                 (Some(src_entry), Some(dst_entry)) => Some(create_mutable_rename(

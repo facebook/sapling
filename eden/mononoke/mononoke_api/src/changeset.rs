@@ -1125,7 +1125,7 @@ impl ChangesetContext {
                 .into_iter()
                 .map(|prefix| PathOrPrefix::Prefix(prefix.into_mpath().into()))
                 .collect(),
-            None => vec![PathOrPrefix::Prefix(MPath::EMPTY)],
+            None => vec![PathOrPrefix::Prefix(MPath::ROOT)],
         };
         let entries = match ordering {
             ChangesetFileOrdering::Unordered => root

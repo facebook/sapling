@@ -75,7 +75,7 @@ impl RootBasenameSuffixSkeletonManifest {
             .map_any(Vec1::into_vec, Vec1::into_vec)
             .or_default();
         let prefixes: Vec1<PathOrPrefix> = Vec1::try_from_vec(prefixes)
-            .unwrap_or_else(|_| vec1![MPath::EMPTY])
+            .unwrap_or_else(|_| vec1![MPath::ROOT])
             .mapped(PathOrPrefix::Prefix);
         let mut all: Vec<BasenameOrSuffix> = basenames
             .into_iter()

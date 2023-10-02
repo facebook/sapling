@@ -423,7 +423,7 @@ pub struct MPath {
 }
 
 impl MPath {
-    pub const EMPTY: MPath = MPath {
+    pub const ROOT: MPath = MPath {
         elements: Vec::new(),
     };
 
@@ -510,7 +510,7 @@ impl MPath {
     /// Create a new path with the number of leading components specified.
     pub fn take_prefix_components(&self, components: usize) -> Result<Self> {
         match components {
-            0 => Ok(Self::EMPTY),
+            0 => Ok(Self::ROOT),
             x if x > self.num_components() => bail!(
                 "taking {} components but path only has {}",
                 components,
@@ -532,7 +532,7 @@ impl MPath {
         for elem in prefix {
             // The prefix is not a strict prefix, so return empty MPath
             if Some(elem) != self_iter.next() {
-                return Self::EMPTY;
+                return Self::ROOT;
             }
         }
         let elements: Vec<_> = self_iter.cloned().collect();
@@ -648,7 +648,7 @@ impl MPath {
     /// byte sequence just contains the null byte, then the empty (root) path is returned
     pub fn from_null_separated_bytes(path: Vec<u8>) -> Result<Self> {
         if path == vec![b'\0'] {
-            return Ok(Self::EMPTY);
+            return Ok(Self::ROOT);
         }
         let segments = path
             .split(|elem| elem == &b'\0')
@@ -663,7 +663,7 @@ impl From<Option<NonRootMPath>> for MPath {
     fn from(value: Option<NonRootMPath>) -> Self {
         match value {
             Some(v) => v.0,
-            None => Self::EMPTY,
+            None => Self::ROOT,
         }
     }
 }
@@ -680,7 +680,7 @@ impl From<MPath> for Option<NonRootMPath> {
 
 impl<'a> From<Option<&'a NonRootMPath>> for &'a MPath {
     fn from(value: Option<&'a NonRootMPath>) -> Self {
-        static EMPTY: MPath = MPath::EMPTY;
+        static EMPTY: MPath = MPath::ROOT;
         match value {
             Some(v) => &v.0,
             None => &EMPTY,
@@ -1938,9 +1938,9 @@ mod test {
         assert_eq!(foo.common_components(None), 0);
 
         let root_foo = MPath::new("").unwrap();
-        assert_eq!(root_foo.common_components(&MPath::EMPTY), 0);
+        assert_eq!(root_foo.common_components(&MPath::ROOT), 0);
 
-        assert_eq!(foo_bar1.take_prefix_components(0).unwrap(), MPath::EMPTY);
+        assert_eq!(foo_bar1.take_prefix_components(0).unwrap(), MPath::ROOT);
         assert_eq!(foo_bar1.take_prefix_components(1).unwrap(), foo);
         assert_eq!(foo_bar1.take_prefix_components(2).unwrap(), foo_bar1);
         foo_bar1
@@ -1958,7 +1958,7 @@ mod test {
         let bar12 = MPath::new("bar1/2").unwrap();
         let two = MPath::new("2").unwrap();
 
-        assert_eq!(baz.remove_prefix_component(&foo), MPath::EMPTY);
+        assert_eq!(baz.remove_prefix_component(&foo), MPath::ROOT);
         assert_eq!(foo_bar1.remove_prefix_component(&foo), bar1);
         assert_eq!(foo_bar12.remove_prefix_component(&foo), bar12);
         assert_eq!(foo_bar12.remove_prefix_component(&foo_bar1), two);
