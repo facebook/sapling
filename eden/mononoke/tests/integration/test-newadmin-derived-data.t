@@ -9,7 +9,7 @@
 
 setup configuration
   $ setup_common_config
-  $ mononoke_testtool drawdag -R repo --derive-all <<'EOF'
+  $ mononoke_testtool drawdag -R repo <<'EOF'
   > A-B-C
   >    \
   >     D
@@ -20,15 +20,23 @@ setup configuration
   C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
   D=5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be
 
+derived-data derive:
+  $ mononoke_newadmin derived-data -R repo derive -T unodes -B main && echo success || echo failure
+  success
+  $ mononoke_newadmin derived-data -R repo derive --rederive -T unodes -B main && echo success || echo failure
+  success
+
 derived-data exists:
 
 Simple usage
   $ mononoke_newadmin derived-data -R repo exists -T unodes -i aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   Derived: aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  $ mononoke_newadmin derived-data -R repo exists -T fsnodes -i aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  Not Derived: aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
 Multiple changesets
   $ mononoke_newadmin derived-data -R repo exists -T unodes -i aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675 -i 5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be
   Derived: aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
-  Derived: 5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be
+  Not Derived: 5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be
 Bookmark
   $ mononoke_newadmin derived-data -R repo exists -T unodes -B main
   Derived: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
@@ -41,7 +49,7 @@ Simple usage
 Multiple changesets
   $ mononoke_newadmin derived-data -R repo count-underived -T unodes -i aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675 -i 5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be
   aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675: 0
-  5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be: 0
+  5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be: 1
 Bookmark
   $ mononoke_newadmin derived-data -R repo count-underived -T unodes -B main
   e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2: 0

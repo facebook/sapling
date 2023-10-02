@@ -6,14 +6,18 @@
  */
 
 mod count_underived;
+mod derive;
 mod exists;
 mod verify_manifests;
+
+use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
+use cacheblob::dummy::DummyLease;
 use changesets::Changesets;
 use clap::Parser;
 use clap::Subcommand;
@@ -27,6 +31,8 @@ use repo_identity::RepoIdentity;
 
 use self::count_underived::count_underived;
 use self::count_underived::CountUnderivedArgs;
+use self::derive::derive;
+use self::derive::DeriveArgs;
 use self::exists::exists;
 use self::exists::ExistsArgs;
 use self::verify_manifests::verify_manifests;
@@ -72,20 +78,43 @@ enum DerivedDataSubcommand {
     CountUnderived(CountUnderivedArgs),
     /// Compare check if derived data has been generated
     VerifyManifests(VerifyManifestsArgs),
+    /// Actually derive data
+    Derive(DeriveArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
-    let ctx = app.new_basic_context();
+    let mut ctx = app.new_basic_context();
 
-    let repo: Repo = app
-        .open_repo(&args.repo)
-        .await
-        .context("Failed to open repo")?;
+    let repo: Repo = match &args.subcommand {
+        DerivedDataSubcommand::Exists(_)
+        | DerivedDataSubcommand::CountUnderived(_)
+        | DerivedDataSubcommand::VerifyManifests(_) => app
+            .open_repo(&args.repo)
+            .await
+            .context("Failed to open repo")?,
+        DerivedDataSubcommand::Derive(derive_args) => if derive_args.rederive {
+            app.open_repo_with_factory_customization(&args.repo, |repo_factory| {
+                repo_factory
+                    .with_lease_override(|_| Arc::new(DummyLease {}))
+                    .with_bonsai_hg_mapping_override()
+            })
+            .await
+        } else {
+            app.open_repo_with_factory_customization(&args.repo, |repo_factory| {
+                repo_factory
+                    .with_lease_override(|_| Arc::new(DummyLease {}))
+                    .with_bonsai_hg_mapping_override()
+            })
+            .await
+        }
+        .context("Failed to open repo")?,
+    };
 
     match args.subcommand {
         DerivedDataSubcommand::Exists(args) => exists(&ctx, &repo, args).await?,
         DerivedDataSubcommand::CountUnderived(args) => count_underived(&ctx, &repo, args).await?,
         DerivedDataSubcommand::VerifyManifests(args) => verify_manifests(&ctx, &repo, args).await?,
+        DerivedDataSubcommand::Derive(args) => derive(&mut ctx, &repo, args).await?,
     }
 
     Ok(())
