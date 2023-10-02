@@ -22,6 +22,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use gix_hash::ObjectId;
 use packfile::bundle::BundleWriter;
+use packfile::types::PackfileItem;
 use walkdir::WalkDir;
 
 const HEAD_REF_PREFIX: &str = "ref: ";
@@ -121,7 +122,6 @@ pub async fn create(_ctx: &CoreContext, create_args: CreateBundleArgs) -> Result
         object_count as u32,
     )
     .await?;
-    // let mut writer = PackfileWriter::new(output_file, object_count as u32);
     let object_stream =
         object_stream.ok_or_else(|| anyhow::anyhow!("No objects found to write to bundle"))?;
     // Write the encoded Git object content to the Git bundle
@@ -203,7 +203,7 @@ async fn get_refs(refs_path: PathBuf) -> Result<HashMap<String, ObjectId>> {
 /// their content as a stream
 async fn get_objects_stream(
     object_paths: Vec<PathBuf>,
-) -> impl Stream<Item = impl Future<Output = Result<Bytes>>> {
+) -> impl Stream<Item = impl Future<Output = Result<PackfileItem>>> {
     stream::iter(object_paths.into_iter().map(|path| {
         async move {
             // Fetch the Zlib encoded content of the Git object
@@ -215,7 +215,7 @@ async fn get_objects_stream(
             let mut decoder = ZlibDecoder::new(decoded_data);
             decoder.write_all(encoded_data.as_ref())?;
             decoded_data = decoder.finish()?;
-            anyhow::Ok(Bytes::from(decoded_data))
+            PackfileItem::new_base(Bytes::from(decoded_data))
         }
     }))
 }

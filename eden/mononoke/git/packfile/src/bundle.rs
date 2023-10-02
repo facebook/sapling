@@ -8,7 +8,6 @@
 use std::fmt::Display;
 
 use anyhow::Result;
-use bytes::Bytes;
 use futures::Future;
 use futures::Stream;
 use gix_hash::ObjectId;
@@ -16,6 +15,7 @@ use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 
 use crate::pack::PackfileWriter;
+use crate::types::PackfileItem;
 
 /// The message/comment associated with the pre-requisite objects
 const BUNDLE_PREREQ_MSG: &str = "bundled object";
@@ -93,7 +93,7 @@ impl<T: AsyncWrite + Unpin> BundleWriter<T> {
     /// Write the stream of input items to the bundle
     pub async fn write(
         &mut self,
-        objects_stream: impl Stream<Item = impl Future<Output = Result<Bytes>>>,
+        objects_stream: impl Stream<Item = impl Future<Output = Result<PackfileItem>>>,
     ) -> Result<()> {
         self.pack_writer.write(objects_stream).await
     }

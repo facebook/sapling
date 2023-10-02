@@ -9,7 +9,6 @@ use std::io::Write;
 
 use anyhow::Context;
 use anyhow::Result;
-use bytes::Bytes;
 use futures::Future;
 use futures::Stream;
 use futures::StreamExt;
@@ -80,16 +79,18 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
     /// Write the stream of objects to the packfile
     pub async fn write(
         &mut self,
-        bytes_stream: impl Stream<Item = impl Future<Output = Result<Bytes>>>,
+        entries_stream: impl Stream<Item = impl Future<Output = Result<PackfileItem>>>,
     ) -> Result<()> {
         // Write the packfile header if applicable
         self.write_header().await?;
-        let mut bytes_stream = Box::pin(bytes_stream);
-        while let Some(bytes) = bytes_stream.next().await {
-            let bytes = bytes
+        let mut entries_stream = Box::pin(entries_stream);
+        while let Some(entry) = entries_stream.next().await {
+            let entry = entry
                 .await
-                .context("Failure in getting bytes for git object")?;
-            let entry: Entry = PackfileItem::new(bytes).and_then(|item| item.try_into())?;
+                .context("Failure in getting packfile item entry")?;
+            let entry: Entry = entry
+                .try_into()
+                .context("Failure in converting PackfileItem to Entry")?;
             // Will be false for all our cases since we generate the entry with the object ID in hand. Including here for
             // completeness sake.
             if entry.is_invalid() {

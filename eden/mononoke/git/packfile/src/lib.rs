@@ -9,4 +9,4 @@ pub mod bundle;
 mod hash_writer;
 pub mod pack;
 mod test;
-mod types;
+pub mod types;
