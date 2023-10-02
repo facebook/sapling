@@ -61,14 +61,14 @@ try:
     import curses
 
     curses.error
-except ImportError:
+except (AttributeError, ImportError):
     # I have no idea if wcurses works with crecord...
     try:
         # pyre-fixme[21]: Could not find `wcurses`.
         import wcurses as curses
 
         curses.error
-    except ImportError:
+    except (AttributeError, ImportError):
         # wcurses is not shipped on Windows by default, or python is not
         # compiled with curses
         curses = False
