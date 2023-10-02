@@ -30,7 +30,6 @@ mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_repos = { version = "0.1.0", path = "../mononoke_repos" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
-once_cell = "1.12"
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }
