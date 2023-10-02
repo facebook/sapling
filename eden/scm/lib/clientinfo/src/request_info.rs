@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::RefCell;
 use std::env::var;
 use std::fmt::Display;
 
@@ -23,6 +24,7 @@ const ENV_SAPLING_CLIENT_CORRELATOR: &str = "SAPLING_CLIENT_CORRELATOR";
 const DEFAULT_CLIENT_ENTRY_POINT_SAPLING: ClientEntryPoint = ClientEntryPoint::Sapling;
 const DEFAULT_CLIENT_ENTRY_POINT_EDENFS: ClientEntryPoint = ClientEntryPoint::EdenFS;
 
+// The global static ClientRequestInfo
 lazy_static! {
     pub static ref CLIENT_REQUEST_INFO: ClientRequestInfo = new_client_request_info();
 }
@@ -77,6 +79,18 @@ fn new_client_request_info() -> ClientRequestInfo {
     tracing::info!(target: "clienttelemetry", client_correlator=correlator);
 
     ClientRequestInfo::new_ext(entry_point, correlator)
+}
+
+thread_local! {
+    pub static CLIENT_REQUEST_INFO_THREAD_LOCAL: RefCell<Option<ClientRequestInfo>> = Default::default();
+}
+
+pub fn set_client_request_info_thread_local(cri: ClientRequestInfo) {
+    CLIENT_REQUEST_INFO_THREAD_LOCAL.with(move |cri_old| *cri_old.borrow_mut() = Some(cri));
+}
+
+pub fn get_client_request_info_thread_local() -> Option<ClientRequestInfo> {
+    CLIENT_REQUEST_INFO_THREAD_LOCAL.with(|cri| cri.borrow().clone())
 }
 
 /// ClientRequestInfo holds information that will be used for tracing the request

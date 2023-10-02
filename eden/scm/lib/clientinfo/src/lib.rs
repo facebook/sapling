@@ -25,6 +25,8 @@ use facebook::FbClientInfo;
 use oss as facebook;
 
 pub use crate::request_info::get_client_request_info;
+pub use crate::request_info::get_client_request_info_thread_local;
+pub use crate::request_info::set_client_request_info_thread_local;
 pub use crate::request_info::ClientEntryPoint;
 pub use crate::request_info::ClientRequestInfo;
 
