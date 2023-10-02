@@ -189,23 +189,38 @@ Verify configs.allowedlocations limits config loading to the allowed locations
   > other_key=other_bar
   > EOF
   $ hg config --debug | grep ': zz_'
-  $TESTTMP/shared_copy/.hg/hgrc2:4: zz_other_section.other_key=other_bar
-  $TESTTMP/shared_copy/.hg/hgrc2:2: zz_section.key=bar
+  $TESTTMP/shared_copy/.hg/hgrc2:4:repo: zz_other_section.other_key=other_bar
+  $TESTTMP/shared_copy/.hg/hgrc2:2:repo: zz_section.key=bar
 
   $ hg config --debug --config "configs.allowedlocations=hgrc1 .hgrc" | grep ': zz_'
-  $TESTTMP/shared_copy/.hg/hgrc1:4: zz_other_section.other_key=other_foo
-  $TESTTMP/shared_copy/.hg/hgrc1:2: zz_section.key=foo
+  $TESTTMP/shared_copy/.hg/hgrc1:4:repo: zz_other_section.other_key=other_foo
+  $TESTTMP/shared_copy/.hg/hgrc1:2:repo: zz_section.key=foo
+
+  $ hg config --debug --verbose --config "configs.allowedlocations=hgrc1 .hgrc" | grep ': zz_'
+  $TESTTMP/shared_copy/.hg/hgrc1:4:repo: zz_other_section.other_key=other_foo
+    $TESTTMP/shared_copy/.hg/hgrc2:4:repo (invalid - dropped): zz_other_section.other_key=other_bar
+  $TESTTMP/shared_copy/.hg/hgrc1:2:repo: zz_section.key=foo
+    $TESTTMP/shared_copy/.hg/hgrc2:2:repo (invalid - dropped): zz_section.key=bar
 
   $ hg config --debug --config "configs.allowedlocations=hgrc2 .hgrc" | grep ': zz_'
-  $TESTTMP/shared_copy/.hg/hgrc2:4: zz_other_section.other_key=other_bar
-  $TESTTMP/shared_copy/.hg/hgrc2:2: zz_section.key=bar
+  $TESTTMP/shared_copy/.hg/hgrc2:4:repo: zz_other_section.other_key=other_bar
+  $TESTTMP/shared_copy/.hg/hgrc2:2:repo: zz_section.key=bar
 
   $ hg config --debug --config "configs.allowedlocations=hgrc3 .hgrc" | grep ': zz_'
-  [1]
+  (invalid - dummy): zz_other_section.other_key=<%unset>
+  (invalid - dummy): zz_section.key=<%unset>
+
+  $ hg config --debug --verbose --config "configs.allowedlocations=hgrc3 .hgrc" | grep ': zz_'
+  (invalid - dummy): zz_other_section.other_key=<%unset>
+    $TESTTMP/shared_copy/.hg/hgrc2:4:repo (invalid - dropped): zz_other_section.other_key=other_bar
+    $TESTTMP/shared_copy/.hg/hgrc1:4:repo (invalid - dropped): zz_other_section.other_key=other_foo
+  (invalid - dummy): zz_section.key=<%unset>
+    $TESTTMP/shared_copy/.hg/hgrc2:2:repo (invalid - dropped): zz_section.key=bar
+    $TESTTMP/shared_copy/.hg/hgrc1:2:repo (invalid - dropped): zz_section.key=foo
 
   $ hg config --debug --config "configs.allowedlocations=hgrc3 .hgrc" --config "configs.allowedconfigs=zz_section.key .hgrc" | grep 'zz_section\.'
   --config: configs.allowedconfigs=zz_section.key .hgrc
-  $TESTTMP/shared_copy/.hg/hgrc2:2: zz_section.key=bar
+  $TESTTMP/shared_copy/.hg/hgrc2:2:repo: zz_section.key=bar
 
 Verify we load dynamicconfigs during clone
   $ cd $TESTTMP

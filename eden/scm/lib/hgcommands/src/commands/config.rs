@@ -161,7 +161,7 @@ impl<'a> Formattable for ConfigItem<'a> {
                 write!(
                     writer,
                     "  {}: {kv_section}{}\n",
-                    source_to_display_string(s),
+                    source_to_display_string(s, options.debug),
                     value.replace('\n', "\\n"),
                 )?;
             }
@@ -194,7 +194,7 @@ fn get_config_item<'a>(
     }
 
     Some(ConfigItem {
-        source: source_to_display_string(config_value_source),
+        source: source_to_display_string(config_value_source, debug),
         section,
         key,
         value: value.as_ref().map(|v| v.to_string()),
@@ -204,7 +204,7 @@ fn get_config_item<'a>(
     })
 }
 
-fn source_to_display_string(source: &ValueSource) -> String {
+fn source_to_display_string(source: &ValueSource, debug: bool) -> String {
     source
         .location()
         .and_then(|(location, range)| {
@@ -215,7 +215,12 @@ fn source_to_display_string(source: &ValueSource) -> String {
                     .filter(|ch| *ch == '\n')
                     .count();
                 if !location.as_os_str().is_empty() {
-                    format!("{}:{}", location.display(), line)
+                    if debug && !source.source().is_empty() {
+                        // The source can contain useful hints, so always show it with --debug.
+                        format!("{}:{}:{}", location.display(), line, source.source())
+                    } else {
+                        format!("{}:{}", location.display(), line)
+                    }
                 } else {
                     format!("{}:{}", source.source(), line)
                 }

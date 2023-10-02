@@ -71,7 +71,7 @@ Test repo config loading
   > bar=baz
   > EOF
   $ hg config foo.bar --debug
-  $TESTTMP/for_testing_dothg_hgrc/.hg/hgrc:2: baz
+  $TESTTMP/for_testing_dothg_hgrc/.hg/hgrc:2:repo: baz
   $ mv .hg/hgrc .hg/config
   $ hg config foo.bar --debug
   [1]
@@ -81,7 +81,7 @@ Test repo config loading
   $ sl init
   $ cp ../for_testing_dothg_hgrc/.hg/config .sl/config
   $ hg config foo.bar --debug
-  $TESTTMP/for_testing_dotsl_config/.sl/config:2: baz
+  $TESTTMP/for_testing_dotsl_config/.sl/config:2:repo: baz
   $ mv .sl/config .sl/hgrc
   $ hg config foo.bar --debug
   [1]
