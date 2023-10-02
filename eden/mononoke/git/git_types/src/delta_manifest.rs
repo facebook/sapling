@@ -40,6 +40,7 @@ use mononoke_types::MononokeId;
 use mononoke_types::ThriftConvert;
 use quickcheck::Arbitrary;
 
+use crate::store::StoredInstructionsMetadata;
 use crate::thrift;
 
 /// An identifier for a sharded map node used in git delta manifest
@@ -333,17 +334,27 @@ pub struct ObjectDelta {
     pub origin: ChangesetId,
     /// The base Git object used for creating the delta
     pub base: ObjectEntry,
-    /// The raw Zlib encoded instructions are stored in the blobstore in chunks. This property
-    /// reflects the number of chunks stored for these raw instructions in the blobstore
+    /// The Zlib encoded instructions are stored in the blobstore in chunks. This property
+    /// reflects the number of chunks stored for these encoded instructions in the blobstore
     pub instructions_chunk_count: u64,
+    /// The total size of the raw delta instructions bytes before Zlib compression/encoding
+    pub instructions_uncompressed_size: u64,
+    /// The total size of the compressed delta instructions bytes after Zlib compression/encoding
+    pub instructions_compressed_size: u64,
 }
 
 impl ObjectDelta {
-    pub fn new(origin: ChangesetId, base: ObjectEntry, instructions_chunk_count: u64) -> Self {
+    pub fn new(
+        origin: ChangesetId,
+        base: ObjectEntry,
+        metadata: StoredInstructionsMetadata,
+    ) -> Self {
         Self {
             origin,
             base,
-            instructions_chunk_count,
+            instructions_chunk_count: metadata.chunks,
+            instructions_uncompressed_size: metadata.uncompressed_bytes,
+            instructions_compressed_size: metadata.compressed_bytes,
         }
     }
 }
@@ -354,11 +365,15 @@ impl TryFrom<thrift::ObjectDelta> for ObjectDelta {
     fn try_from(value: thrift::ObjectDelta) -> Result<Self, Self::Error> {
         let base = value.base.try_into()?;
         let instructions_chunk_count = value.instructions_chunk_count.try_into()?;
+        let instructions_uncompressed_size = value.instructions_uncompressed_size.try_into()?;
+        let instructions_compressed_size = value.instructions_compressed_size.try_into()?;
         let origin = ChangesetId::from_thrift(value.origin)?;
         Ok(Self {
             base,
             origin,
             instructions_chunk_count,
+            instructions_uncompressed_size,
+            instructions_compressed_size,
         })
     }
 }
@@ -367,11 +382,15 @@ impl From<ObjectDelta> for thrift::ObjectDelta {
     fn from(value: ObjectDelta) -> Self {
         let base = value.base.into();
         let instructions_chunk_count = value.instructions_chunk_count as i64;
+        let instructions_uncompressed_size = value.instructions_uncompressed_size as i64;
+        let instructions_compressed_size = value.instructions_compressed_size as i64;
         let origin = ChangesetId::into_thrift(value.origin);
         Self {
             base,
             origin,
             instructions_chunk_count,
+            instructions_uncompressed_size,
+            instructions_compressed_size,
         }
     }
 }
@@ -394,10 +413,14 @@ impl Arbitrary for ObjectDelta {
         let base = ObjectEntry::arbitrary(g);
         let origin = ChangesetId::arbitrary(g);
         let instructions_chunk_count = u64::arbitrary(g) / 2;
+        let instructions_uncompressed_size = u64::arbitrary(g) / 2;
+        let instructions_compressed_size = u64::arbitrary(g) / 2;
         Self {
             base,
             origin,
             instructions_chunk_count,
+            instructions_uncompressed_size,
+            instructions_compressed_size,
         }
     }
 }

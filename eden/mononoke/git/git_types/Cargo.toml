@@ -9,6 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.71"
+async-compression = { version = "0.4.1", features = ["brotli", "bzip2", "deflate", "futures-io", "gzip", "tokio", "zlib", "zstd", "zstdmt"] }
 async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
@@ -33,6 +34,7 @@ manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 multimap = "0.8.1"
+pin-project = "0.4.30"
 quickcheck = "1.0"
 regex = "1.9.2"
 sha1 = "0.10.5"

@@ -18,6 +18,7 @@ use filestore::ExpectedSize;
 use filestore::Sha1IncrementalHasher;
 use futures::future;
 use futures::stream;
+use futures::stream::BoxStream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use mononoke_types::BlobstoreBytes;
@@ -30,6 +31,7 @@ use crate::delta::DeltaInstructions;
 use crate::errors::GitError;
 use crate::thrift::Tree as ThriftTree;
 use crate::thrift::TreeHandle as ThriftTreeHandle;
+use crate::zlib_writer::AsyncZlibEncoder;
 use crate::Tree;
 use crate::TreeHandle;
 
@@ -123,8 +125,18 @@ where
     Ok(object.into())
 }
 
-/// Store delta instructions in blobstore by chunking the incoming byte stream and returning the total
-/// number of chunk_size chunks stored to represent the delta instructions. This method can partially fail
+/// Struct containing the information pertaining to stored chunks of raw instructions
+pub struct StoredInstructionsMetadata {
+    /// The total size of the raw delta instructions without Zlib encoding/compression
+    pub uncompressed_bytes: u64,
+    /// The compressed size of the raw delta instructions with Zlib encoding/compression
+    pub compressed_bytes: u64,
+    /// The total number of chunks used to store the raw delta instructions
+    pub chunks: u64,
+}
+
+/// Store delta instructions in blobstore by chunking the incoming byte stream and returning the metadata of
+/// the written delta instructions stored as chunks in the blobstore. This method can partially fail
 /// and store a subset of the chunks. However, it is perfectly safe to retry until all the chunks are stored
 /// successfully
 #[allow(dead_code)]
@@ -134,19 +146,23 @@ pub async fn store_delta_instructions<B>(
     instructions: DeltaInstructions,
     chunk_prefix: DeltaInstructionChunkIdPrefix,
     chunk_size: Option<u64>,
-) -> anyhow::Result<u64>
+) -> anyhow::Result<StoredInstructionsMetadata>
 where
     B: Blobstore + Clone,
 {
-    let mut raw_instruction_bytes = Vec::new();
+    // Zlib encode the instructions when writing to buffer
+    let mut raw_instruction_bytes = AsyncZlibEncoder::new(Vec::new());
     instructions
         .write(&mut raw_instruction_bytes)
         .await
         .context("Error in converting DeltaInstructions to raw bytes")?;
-    let size = ExpectedSize::new(raw_instruction_bytes.len() as u64);
+    let uncompressed_bytes = raw_instruction_bytes.bytes_written();
+    let raw_instruction_bytes = raw_instruction_bytes.into_inner();
+    let compressed_bytes = raw_instruction_bytes.len() as u64;
+    let size = ExpectedSize::new(compressed_bytes);
     let raw_instructions_stream = stream::once(future::ok(Bytes::from(raw_instruction_bytes)));
     let chunk_stream = filestore::make_chunks(raw_instructions_stream, size, chunk_size);
-    match chunk_stream {
+    let chunks = match chunk_stream {
         filestore::Chunks::Inline(fallible_bytes) => {
             let instruction_bytes = fallible_bytes
                 .await
@@ -184,7 +200,36 @@ where
             .try_collect::<Vec<_>>()
             .await
             .map(|result| result.len() as u64),
-    }
+    };
+    chunks.map(|chunks| StoredInstructionsMetadata {
+        uncompressed_bytes,
+        compressed_bytes,
+        chunks,
+    })
+}
+
+/// Fetch all the delta instruction chunks corresponding to the given prefix and return the result
+/// as a boxed stream of bytes in order
+#[allow(dead_code)]
+pub fn fetch_delta_instructions<'a, B>(
+    ctx: &'a CoreContext,
+    blobstore: &'a B,
+    chunk_prefix: &'a DeltaInstructionChunkIdPrefix,
+    chunk_count: u64,
+) -> BoxStream<'a, anyhow::Result<Bytes>>
+where
+    B: Blobstore + Clone,
+{
+    stream::iter(0..chunk_count)
+        .map(move |chunk_idx| async move {
+            let chunk_id = chunk_prefix.as_id(chunk_idx as usize);
+            let chunk = chunk_id.load(ctx, blobstore).await.with_context(|| {
+                format!("Error while fetching instructions chunk #{}", chunk_idx)
+            })?;
+            anyhow::Ok(chunk.into_bytes())
+        })
+        .buffered(24) // Same as the concurrency used for filestore
+        .boxed()
 }
 
 async fn store_delta_instruction_chunk<B>(

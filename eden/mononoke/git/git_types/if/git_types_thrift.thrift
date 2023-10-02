@@ -52,6 +52,8 @@ struct ObjectDelta {
   1: mononoke_types_thrift.ChangesetId origin;
   2: ObjectEntry base;
   3: i64 instructions_chunk_count;
+  4: i64 instructions_uncompressed_size;
+  5: i64 instructions_compressed_size;
 } (rust.exhaustive)
 
 /// An entry in the GitDeltaManifest for a given commit

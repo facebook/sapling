@@ -204,7 +204,7 @@ async fn metadata_to_manifest_entry(
                 let chunk_prefix =
                     DeltaInstructionChunkIdPrefix::new(commit, path.clone(), origin, path.clone());
                 let chunk_size = Some(CHUNK_SIZE);
-                let instructions_chunk_count = store_delta_instructions(&ctx, &blobstore, instructions, chunk_prefix, chunk_size)
+                let stored_instructions_metadata = store_delta_instructions(&ctx, &blobstore, instructions, chunk_prefix, chunk_size)
                     .await
                     .with_context(|| {
                         format!(
@@ -212,7 +212,7 @@ async fn metadata_to_manifest_entry(
                             path, commit
                         )
                     })?;
-                anyhow::Ok(ObjectDelta::new(origin, base, instructions_chunk_count))
+                anyhow::Ok(ObjectDelta::new(origin, base, stored_instructions_metadata))
             })
         })
         .buffer_unordered(20) // There will mostly be 1-2 deltas per path per object so concurrency of 20 is more than enough
@@ -560,6 +560,7 @@ mod test {
 
     use anyhow::format_err;
     use anyhow::Result;
+    use async_compression::tokio::write::ZlibDecoder;
     use blobstore::Loadable;
     use bonsai_hg_mapping::BonsaiHgMappingArc;
     use bookmarks::BookmarkKey;
@@ -574,8 +575,10 @@ mod test {
     use repo_blobstore::RepoBlobstoreArc;
     use repo_derived_data::RepoDerivedDataRef;
     use repo_identity::RepoIdentityRef;
+    use tokio::io::AsyncWriteExt;
 
     use super::*;
+    use crate::store::fetch_delta_instructions;
 
     /// This function generates GitDeltaManifest for each bonsai commit in the fixture starting from
     /// the fixture's master Bonsai bookmark. It validates that the derivation is successful and returns
@@ -975,6 +978,45 @@ mod test {
             .collect(),
         )
         .await?;
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_instructions_encoding(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::Linear::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore_arc();
+        let (master_mf_id, cs_id) = common_git_delta_manifest_validation(repo, ctx.clone()).await?;
+        let delta_manifest = master_mf_id.0.load(&ctx, &blobstore).await?;
+        let entry = delta_manifest
+            .lookup(&ctx, &blobstore, &MPath::new("10")?)
+            .await?
+            .expect("Expected entry for path '10'");
+        let delta = entry
+            .deltas
+            .first()
+            .expect("Expected a delta variant for path '10'");
+        // Validate that the size of the encoded instructions is less than the size of the raw instructions
+        assert!(delta.instructions_compressed_size < delta.instructions_uncompressed_size);
+        let chunk_prefix = DeltaInstructionChunkIdPrefix::new(
+            cs_id,
+            MPath::new("10")?,
+            delta.origin,
+            MPath::new("10")?,
+        );
+        let fallible_bytes = fetch_delta_instructions(
+            &ctx,
+            &blobstore,
+            &chunk_prefix,
+            delta.instructions_chunk_count,
+        )
+        .try_fold(ZlibDecoder::new(Vec::new()), |mut acc, bytes| async move {
+            acc.write_all(bytes.as_ref()).await?;
+            Ok(acc)
+        })
+        .await;
+        // Validate that we are successfully able to fetch and decode the delta instructions
+        assert!(fallible_bytes.is_ok());
         Ok(())
     }
 

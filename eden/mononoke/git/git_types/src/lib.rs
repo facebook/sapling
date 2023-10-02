@@ -27,6 +27,7 @@ mod manifest;
 mod object;
 mod store;
 mod tree;
+mod zlib_writer;
 
 pub use delta_manifest::ObjectKind as DeltaObjectKind;
 pub use object::ObjectKind;
