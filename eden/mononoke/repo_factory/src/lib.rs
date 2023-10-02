@@ -236,6 +236,7 @@ pub struct RepoFactory {
     blobstores: RepoFactoryCache<BlobConfig, Arc<dyn Blobstore>>,
     redacted_blobs: RepoFactoryCache<MetadataDatabaseConfig, Arc<RedactedBlobs>>,
     blobstore_override: Option<Arc<dyn RepoFactoryOverride<Arc<dyn Blobstore>>>>,
+    lease_override: Option<Arc<dyn RepoFactoryOverride<Arc<dyn LeaseOps>>>>,
     scrub_handler: Arc<dyn ScrubHandler>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
     bonsai_hg_mapping_overwrite: bool,
@@ -248,6 +249,7 @@ impl RepoFactory {
             blobstores: RepoFactoryCache::new(),
             redacted_blobs: RepoFactoryCache::new(),
             blobstore_override: None,
+            lease_override: None,
             scrub_handler: default_scrub_handler(),
             blobstore_component_sampler: None,
             bonsai_hg_mapping_overwrite: false,
@@ -260,6 +262,14 @@ impl RepoFactory {
         blobstore_override: impl RepoFactoryOverride<Arc<dyn Blobstore>>,
     ) -> &mut Self {
         self.blobstore_override = Some(Arc::new(blobstore_override));
+        self
+    }
+
+    pub fn with_lease_override(
+        &mut self,
+        lease_override: impl RepoFactoryOverride<Arc<dyn LeaseOps>>,
+    ) -> &mut Self {
+        self.lease_override = Some(Arc::new(lease_override));
         self
     }
 
@@ -449,6 +459,32 @@ impl RepoFactory {
                 Ok(blobstore)
             })
             .await
+    }
+
+    fn lease_init(
+        fb: FacebookInit,
+        caching: Caching,
+        lease_type: &'static str,
+    ) -> Result<Arc<dyn LeaseOps>> {
+        // Derived data leasing is performed through the cache, so is only
+        // available if caching is enabled.
+        if let Caching::Enabled(_) = caching {
+            Ok(Arc::new(MemcacheOps::new(fb, lease_type, "")?))
+        } else {
+            Ok(Arc::new(InProcessLease::new()))
+        }
+    }
+
+    fn lease(&self, lease_type: &'static str) -> Result<Arc<dyn LeaseOps>> {
+        let fb = self.env.fb;
+        let caching = self.env.caching;
+        Self::lease_init(fb, caching, lease_type).map(|lease| {
+            if let Some(lease_override) = &self.lease_override {
+                lease_override(lease)
+            } else {
+                lease
+            }
+        })
     }
 
     pub async fn blobstore_unlink_ops_with_overriden_blob_config(
@@ -1067,7 +1103,7 @@ impl RepoFactory {
         repo_blobstore: &ArcRepoBlobstore,
     ) -> Result<ArcRepoDerivedData> {
         let config = repo_config.derived_data_config.clone();
-        let lease = lease_init(self.env.fb, self.env.caching, DERIVED_DATA_LEASE)?;
+        let lease = self.lease(DERIVED_DATA_LEASE)?;
         let scuba = build_scuba(
             self.env.fb,
             config.scuba_table.clone(),
@@ -1205,7 +1241,7 @@ impl RepoFactory {
         repo_blobstore: &ArcRepoBlobstore,
     ) -> Result<ArcDerivedDataManagerSet> {
         let config = repo_config.derived_data_config.clone();
-        let lease = lease_init(self.env.fb, self.env.caching, DERIVED_DATA_LEASE)?;
+        let lease = self.lease(DERIVED_DATA_LEASE)?;
         let ctx = self.ctx(Some(repo_identity));
         let logger = ctx.logger().clone();
         let derived_data_scuba = build_scuba(
@@ -1618,20 +1654,6 @@ impl RepoFactory {
             .await
             .context(RepoFactoryError::SqlDeletionLog)?;
         Ok(Arc::new(DeletionLog { sql_deletion_log }))
-    }
-}
-
-fn lease_init(
-    fb: FacebookInit,
-    caching: Caching,
-    lease_type: &'static str,
-) -> Result<Arc<dyn LeaseOps>> {
-    // Derived data leasing is performed through the cache, so is only
-    // available if caching is enabled.
-    if let Caching::Enabled(_) = caching {
-        Ok(Arc::new(MemcacheOps::new(fb, lease_type, "")?))
-    } else {
-        Ok(Arc::new(InProcessLease::new()))
     }
 }
 
