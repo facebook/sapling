@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
@@ -16,6 +17,7 @@ use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
 use context::CoreContext;
+use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::stream::StreamExt;
 use manifest::Entry;
@@ -30,7 +32,6 @@ use skeleton_manifest::RootSkeletonManifestId;
 use slog::info;
 use slog::Logger;
 
-use crate::derived_data::derive_or_fetch;
 use crate::error::SubcommandError;
 
 pub const SKELETON_MANIFESTS: &str = "skeleton-manifests";
@@ -111,6 +112,20 @@ pub async fn subcommand_skeleton_manifests<'a>(
             Ok(())
         }
         _ => Err(SubcommandError::InvalidArgs),
+    }
+}
+
+async fn derive_or_fetch<T: BonsaiDerived>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    csid: ChangesetId,
+    fetch_derived: bool,
+) -> Result<T, Error> {
+    if fetch_derived {
+        let value = T::fetch_derived(ctx, repo, &csid).await?;
+        value.ok_or_else(|| anyhow!("{} are not derived for {}", T::DERIVABLE_NAME, csid))
+    } else {
+        Ok(T::derive(ctx, repo, csid).await?)
     }
 }
 

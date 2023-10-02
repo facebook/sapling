@@ -34,7 +34,6 @@ mod bookmarks_manager;
 mod common;
 mod content_fetch;
 mod crossrepo;
-mod derived_data;
 mod error;
 mod filenodes;
 mod hash_convert;
@@ -70,7 +69,6 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(crossrepo::build_subcommand())
         .subcommand(subcommand_blame::build_subcommand())
         .subcommand(subcommand_deleted_manifest::build_subcommand())
-        .subcommand(derived_data::build_subcommand())
         .subcommand(rsync::build_subcommand())
         .subcommand(subcommand_skeleton_manifests::build_subcommand())
         .subcommand(truncate_segmented_changelog::build_subcommand())
@@ -136,9 +134,6 @@ fn main(fb: FacebookInit) -> ExitCode {
                     fb, logger, &matches, sub_m,
                 )
                 .await
-            }
-            (derived_data::DERIVED_DATA, Some(sub_m)) => {
-                derived_data::subcommand_derived_data(fb, logger, &matches, sub_m).await
             }
             (rsync::RSYNC, Some(sub_m)) => {
                 rsync::subcommand_rsync(fb, logger, &matches, sub_m).await
