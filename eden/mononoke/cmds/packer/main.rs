@@ -164,13 +164,13 @@ fn main(fb: FacebookInit) -> Result<()> {
     let total_file_count = keys_file_entries.len();
     for (cur, entry) in keys_file_entries.iter().enumerate() {
         let now = Instant::now();
-        let filename = entry
+        let file_fullpath = entry
             .to_str()
             .ok_or_else(|| anyhow::anyhow!("name of key file must be valid UTF-8"))?;
 
         // Parse repo name, and inner blobstore id from file name
-        let repo_name = extract_repo_name_from_filename(filename);
-        let inner_blobstore_id = extract_inner_store_id_from_filename(filename);
+        let repo_name = extract_repo_name_from_filename(file_fullpath);
+        let inner_blobstore_id = extract_inner_store_id_from_filename(file_fullpath);
 
         // construct blobstore specific parameters
         let repo_arg = mononoke_app::args::RepoArg::Name(String::from(repo_name));
@@ -188,6 +188,12 @@ fn main(fb: FacebookInit) -> Result<()> {
         // Read keys from the file
         let keys_list = lines_from_file(entry);
         if print_progress {
+            let path = Path::new(file_fullpath);
+            let filename = path
+                .file_name()
+                .expect("Can get the file part")
+                .to_str()
+                .ok_or_else(|| anyhow::anyhow!("name of key file must be valid UTF-8"))?;
             info!(
                 logger,
                 "File {}, which has {} lines",
