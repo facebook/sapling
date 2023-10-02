@@ -275,6 +275,7 @@ fn dispatch_command(
                 interp.run_hg(dispatcher.args().to_vec(), io, config)
             } else {
                 errors::print_error(&err, io, &dispatcher.args()[1..]);
+                errors::upload_traceback(&err, start_time.epoch_ms());
                 255
             }
         }

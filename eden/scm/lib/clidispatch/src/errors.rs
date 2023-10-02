@@ -88,6 +88,33 @@ pub fn print_error(err: &anyhow::Error, io: &crate::io::IO, _args: &[String]) {
     }
 }
 
+/// Get the traceback from anyhow and upload it
+pub fn upload_traceback(err: &anyhow::Error, start_time_epoch_ms: u64) {
+    if !tracing::enabled!(target: "errortrace", tracing::Level::INFO)
+        || !tracing::enabled!(target: "errortracekey", tracing::Level::INFO)
+    {
+        return;
+    }
+    let hostname = match hostname::get_hostname() {
+        Ok(s) => s,
+        Err(_) => {
+            return;
+        }
+    };
+    let pid = std::process::id();
+    let trace_key = format!(
+        "flat/errortrace-{}-{}-{}{}",
+        hostname,
+        pid,
+        start_time_epoch_ms / 1000,
+        (start_time_epoch_ms % 1000) * 1000, // this is microseconds on python
+    );
+    let traceback = format!("abort: {:?}\n", err);
+    let tk = trace_key.as_str();
+    tracing::info!(target: "errortracekey", errortracekey=tk);
+    tracing::info!(target: "errortrace", key=tk, payload=traceback);
+}
+
 /// Optionally transform an error into something more friendly to the user.
 pub fn triage_error(
     config: &ConfigSet,
