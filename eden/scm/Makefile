@@ -69,7 +69,8 @@ help:
 
 all: build
 
-oss: OSS=true HGNAME=$(SL_NAME)
+oss: OSS=true
+oss: HGNAME=$(SL_NAME)
 oss: local
 
 install-oss: oss
