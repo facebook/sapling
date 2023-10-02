@@ -34,7 +34,6 @@ mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_de
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-once_cell = "1.12"
 redactedblobstore = { version = "0.1.0", path = "../blobstore/redactedblobstore" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }

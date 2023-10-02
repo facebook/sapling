@@ -6,7 +6,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-once_cell = "1.12"
 sampling = { version = "0.1.0", path = "../sampling" }
 tracing = "0.1.35"
 tracing-serde = "0.1.3"
