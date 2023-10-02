@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <algorithm>
 #include <optional>
+#include <stdexcept>
 #include <typeinfo>
 
 #include <fb303/ServiceData.h>
@@ -1811,6 +1812,12 @@ EdenServiceHandler::streamChangesSince(
   }
 
   return {std::move(result), std::move(serverStream)};
+}
+
+apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
+EdenServiceHandler::streamSelectedChangesSince(
+    std::unique_ptr<StreamSelectedChangesSinceParams>) {
+  NOT_IMPLEMENTED();
 }
 
 void EdenServiceHandler::getFilesChangedSince(
