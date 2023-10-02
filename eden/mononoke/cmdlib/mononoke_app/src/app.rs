@@ -486,6 +486,28 @@ impl MononokeApp {
         Ok(repo)
     }
 
+    /// Open a repository based on user-provided arguments while modifying the repo_factory as
+    /// needed
+    pub async fn open_repo_with_factory_customization<Repo>(
+        &self,
+        repo_args: &impl AsRepoArg,
+        customize_repo_factory: impl Fn(&mut RepoFactory) -> &mut RepoFactory,
+    ) -> Result<Repo>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let repo_arg = repo_args.as_repo_arg();
+        let (repo_name, repo_config) = self.repo_config(repo_arg)?;
+        let common_config = self.repo_configs().common.clone();
+        let mut repo_factory = self.repo_factory.clone();
+        let repo_factory = Arc::make_mut(&mut repo_factory);
+        customize_repo_factory(repo_factory);
+        let repo = repo_factory
+            .build(repo_name, repo_config, common_config)
+            .await?;
+        Ok(repo)
+    }
+
     /// Open an existing repo object
     /// Make sure that the opened repo has redaction DISABLED
     pub async fn open_repo_unredacted<Repo>(&self, repo_args: &impl AsRepoArg) -> Result<Repo>
