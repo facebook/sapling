@@ -1496,27 +1496,30 @@ def _definedestmap(
     allsrc = revsetlang.formatspec("%ld", rebaseset)
     alias = {"ALLSRC": allsrc}
 
-    if dest is None:
+    if dest is None and not "SRC" in str(destf):
         try:
             # fast path: try to resolve dest without SRC alias
             dest = scmutil.revsingle(repo, destf, localalias=alias)
         except error.RepoLookupError:
-            # multi-dest path: resolve dest for each SRC separately
-            destmap = {}
-            for r in rebaseset:
-                alias["SRC"] = revsetlang.formatspec("%d", r)
-                # use repo.anyrevs instead of scmutil.revsingle because we
-                # don't want to abort if destset is empty.
-                destset = repo.anyrevs([destf], user=True, localalias=alias)
-                size = len(destset)
-                if size == 1:
-                    destmap[r] = destset.first()
-                elif size == 0:
-                    ui.note(_("skipping %s - empty destination\n") % repo[r])
-                else:
-                    raise error.Abort(
-                        _("rebase destination for %s is not " "unique") % repo[r]
-                    )
+            pass
+
+    if dest is None:
+        # multi-dest path: resolve dest for each SRC separately
+        destmap = {}
+        for r in rebaseset:
+            alias["SRC"] = revsetlang.formatspec("%d", r)
+            # use repo.anyrevs instead of scmutil.revsingle because we
+            # don't want to abort if destset is empty.
+            destset = repo.anyrevs([destf], user=True, localalias=alias)
+            size = len(destset)
+            if size == 1:
+                destmap[r] = destset.first()
+            elif size == 0:
+                ui.note(_("skipping %s - empty destination\n") % repo[r])
+            else:
+                raise error.Abort(
+                    _("rebase destination for %s is not " "unique") % repo[r]
+                )
 
     if dest is not None:
         # single-dest case: assign dest to each rev in rebaseset
