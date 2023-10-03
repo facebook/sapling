@@ -68,7 +68,7 @@ impl Connection {
         use source_control_srclients::make_SourceControlService_srclient;
         use srclient::ClientParams;
 
-        let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::SCS_CLI)?;
+        let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::ScsClient)?;
         let headers = hashmap! {
             String::from(CLIENT_INFO_HEADER) => client_info.to_json()?,
         };

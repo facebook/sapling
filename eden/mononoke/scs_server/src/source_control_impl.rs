@@ -289,8 +289,9 @@ impl SourceControlServiceImpl {
                 if let Some(other_cats) = header(FORWARDED_OTHER_CATS_HEADER)? {
                     metadata.add_raw_encoded_cats(other_cats);
                 }
-                let client_info = client_info
-                    .unwrap_or_else(|| ClientInfo::default_with_entry_point(ClientEntryPoint::SCS));
+                let client_info = client_info.unwrap_or_else(|| {
+                    ClientInfo::default_with_entry_point(ClientEntryPoint::ScsServer)
+                });
                 metadata.add_client_info(client_info);
                 return Ok(metadata);
             }
@@ -306,7 +307,7 @@ impl SourceControlServiceImpl {
         .await;
 
         let client_info = client_info
-            .unwrap_or_else(|| ClientInfo::default_with_entry_point(ClientEntryPoint::SCS));
+            .unwrap_or_else(|| ClientInfo::default_with_entry_point(ClientEntryPoint::ScsServer));
         metadata.add_client_info(client_info);
         Ok(metadata)
     }

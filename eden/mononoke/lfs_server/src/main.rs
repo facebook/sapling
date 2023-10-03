@@ -335,7 +335,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     fb,
                     logger.clone(),
                     internal_identity,
-                    ClientEntryPoint::LFS,
+                    ClientEntryPoint::LfsServer,
                 ))
                 .add(PostResponseMiddleware::with_config(config_handle))
                 .add(RequestContextMiddleware::new(

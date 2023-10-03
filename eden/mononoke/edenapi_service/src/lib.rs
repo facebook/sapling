@@ -80,7 +80,7 @@ pub fn build(
             fb,
             logger.clone(),
             common_config.internal_identity.clone(),
-            ClientEntryPoint::EdenAPI,
+            ClientEntryPoint::EdenApi,
         ))
         .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
             "edenapi_server",

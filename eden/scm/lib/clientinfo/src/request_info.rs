@@ -22,7 +22,7 @@ const ENV_SAPLING_CLIENT_ENTRY_POINT: &str = "SAPLING_CLIENT_ENTRY_POINT";
 const ENV_SAPLING_CLIENT_CORRELATOR: &str = "SAPLING_CLIENT_CORRELATOR";
 
 const DEFAULT_CLIENT_ENTRY_POINT_SAPLING: ClientEntryPoint = ClientEntryPoint::Sapling;
-const DEFAULT_CLIENT_ENTRY_POINT_EDENFS: ClientEntryPoint = ClientEntryPoint::EdenFS;
+const DEFAULT_CLIENT_ENTRY_POINT_EDENFS: ClientEntryPoint = ClientEntryPoint::EdenFs;
 
 // The global static ClientRequestInfo
 lazy_static! {
@@ -110,16 +110,16 @@ pub struct ClientRequestInfo {
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub enum ClientEntryPoint {
     Sapling,
-    EdenFS,
-    SCS,
-    SCMQuery,
-    EdenAPI,
+    EdenFs,
+    ScsServer,
+    ScmQuery,
+    EdenApi,
     LandService,
-    LFS,
+    LfsServer,
     DerivedDataService,
     DerivationWorker,
-    ISL,
-    SCS_CLI,
+    InteractiveSmartlog,
+    ScsClient,
 }
 
 impl ClientRequestInfo {
@@ -172,16 +172,16 @@ impl Display for ClientEntryPoint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let out = match self {
             ClientEntryPoint::Sapling => "sapling",
-            ClientEntryPoint::EdenFS => "edenfs",
-            ClientEntryPoint::SCS => "scs",
-            ClientEntryPoint::SCMQuery => "scm_query",
-            ClientEntryPoint::EdenAPI => "eden_api",
+            ClientEntryPoint::EdenFs => "edenfs",
+            ClientEntryPoint::ScsServer => "scs",
+            ClientEntryPoint::ScmQuery => "scm_query",
+            ClientEntryPoint::EdenApi => "eden_api",
             ClientEntryPoint::LandService => "landservice",
-            ClientEntryPoint::LFS => "lfs",
+            ClientEntryPoint::LfsServer => "lfs",
             ClientEntryPoint::DerivedDataService => "derived_data_service",
             ClientEntryPoint::DerivationWorker => "derivation_worker",
-            ClientEntryPoint::ISL => "isl",
-            ClientEntryPoint::SCS_CLI => "scsc",
+            ClientEntryPoint::InteractiveSmartlog => "isl",
+            ClientEntryPoint::ScsClient => "scsc",
         };
         write!(f, "{}", out)
     }
@@ -193,15 +193,15 @@ impl TryFrom<&str> for ClientEntryPoint {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             "sapling" => Ok(ClientEntryPoint::Sapling),
-            "edenfs" => Ok(ClientEntryPoint::EdenFS),
-            "scs" => Ok(ClientEntryPoint::SCS),
-            "scm_query" => Ok(ClientEntryPoint::SCMQuery),
-            "eden_api" => Ok(ClientEntryPoint::EdenAPI),
+            "edenfs" => Ok(ClientEntryPoint::EdenFs),
+            "scs" => Ok(ClientEntryPoint::ScsServer),
+            "scm_query" => Ok(ClientEntryPoint::ScmQuery),
+            "eden_api" => Ok(ClientEntryPoint::EdenApi),
             "landservice" => Ok(ClientEntryPoint::LandService),
-            "lfs" => Ok(ClientEntryPoint::LFS),
+            "lfs" => Ok(ClientEntryPoint::LfsServer),
             "derived_data_service" => Ok(ClientEntryPoint::DerivedDataService),
-            "isl" => Ok(ClientEntryPoint::ISL),
-            "scsc" => Ok(ClientEntryPoint::SCS_CLI),
+            "isl" => Ok(ClientEntryPoint::InteractiveSmartlog),
+            "scsc" => Ok(ClientEntryPoint::ScsClient),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }
@@ -223,13 +223,13 @@ mod tests {
 
         let correlator = "test1234".to_owned();
         let main_id = "user:test".to_owned();
-        let entry_point = ClientEntryPoint::EdenAPI;
+        let entry_point = ClientEntryPoint::EdenApi;
         cri.set_main_id(main_id.clone());
         cri.set_entry_point(entry_point);
         cri.set_correlator(correlator.clone());
 
         assert_eq!(cri.main_id, Some(main_id));
-        assert_eq!(cri.entry_point, ClientEntryPoint::EdenAPI);
+        assert_eq!(cri.entry_point, ClientEntryPoint::EdenApi);
         assert_eq!(cri.correlator, correlator);
         assert!(cri.has_main_id());
     }
@@ -240,7 +240,7 @@ mod tests {
         set_var(ENV_SAPLING_CLIENT_CORRELATOR, correlator);
         set_var(ENV_SAPLING_CLIENT_ENTRY_POINT, "isl");
         let cri = get_client_request_info();
-        assert_eq!(cri.entry_point, ClientEntryPoint::ISL);
+        assert_eq!(cri.entry_point, ClientEntryPoint::InteractiveSmartlog);
         assert_eq!(cri.correlator, correlator.to_owned());
     }
 }
