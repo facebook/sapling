@@ -499,7 +499,7 @@ impl MPath {
     /// `foo` is a prefix of `foo/bar`, but not of `foo1`.
     #[inline]
     pub fn is_prefix_of<'a, E: IntoIterator<Item = &'a MPathElement>>(&self, other: E) -> bool {
-        let common_components = self.common_components(other.into_iter());
+        let common_components = self.common_components(other);
         let total_components = self.num_components();
         // If all the components of this path are present in the other path, then this path is
         // considered as a prefix of other path. However, if the current path is empty then the
