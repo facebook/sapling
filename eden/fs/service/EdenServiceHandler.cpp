@@ -163,6 +163,20 @@ class ThriftFetchContext : public ObjectFetchContext {
     requestInfo_.insert(another.begin(), another.end());
   }
 
+  void fillClientRequestInfo(
+      apache::thrift::optional_field_ref<ClientRequestInfo&>
+          clientRequestInfo) {
+    if (clientRequestInfo.has_value()) {
+      auto correlator = clientRequestInfo->correlator_ref();
+      auto entry_point = clientRequestInfo->entry_point_ref();
+      if (!(correlator->empty() || entry_point->empty())) {
+        updateRequestInfo(
+            {{ObjectFetchContext::kClientCorrelator, *correlator},
+             {ObjectFetchContext::kClientEntryPoint, *entry_point}});
+      }
+    }
+  }
+
  private:
   OptionalProcessId pid_;
   std::string_view endpoint_;
@@ -583,7 +597,6 @@ EdenServiceHandler::semifuture_checkOutRevision(
     std::unique_ptr<std::string> hash,
     CheckoutMode checkoutMode,
     std::unique_ptr<CheckOutRevisionParams> params) {
-  // auto cri = *params->cri_ref(); // client request info
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG1,
       *mountPoint,
@@ -592,6 +605,7 @@ EdenServiceHandler::semifuture_checkOutRevision(
       params->hgRootManifest_ref().has_value()
           ? logHash(*params->hgRootManifest_ref())
           : "(unspecified hg root manifest)");
+  helper->getThriftFetchContext().fillClientRequestInfo(params->cri_ref());
 
   auto mountPath = absolutePathFromThrift(*mountPoint);
   auto checkoutFuture =
@@ -619,7 +633,6 @@ EdenServiceHandler::semifuture_resetParentCommits(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<WorkingDirectoryParents> parents,
     std::unique_ptr<ResetParentCommitsParams> params) {
-  // auto cri = *params->cri_ref(); // client request info
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG1,
       *mountPoint,
@@ -627,6 +640,7 @@ EdenServiceHandler::semifuture_resetParentCommits(
       params->hgRootManifest_ref().has_value()
           ? logHash(*params->hgRootManifest_ref())
           : "(unspecified hg root manifest)");
+  helper->getThriftFetchContext().fillClientRequestInfo(params->cri_ref());
 
   auto mountHandle = lookupMount(mountPoint);
   auto parent1 =
@@ -2964,7 +2978,6 @@ EdenServiceHandler::semifuture_changeOwnership(
 folly::SemiFuture<std::unique_ptr<GetScmStatusResult>>
 EdenServiceHandler::semifuture_getScmStatusV2(
     unique_ptr<GetScmStatusParams> params) {
-  // auto cri = *params->cri_ref(); // client request info
   auto* context = getRequestContext();
 
   auto helper = INSTRUMENT_THRIFT_CALL(
@@ -2972,6 +2985,7 @@ EdenServiceHandler::semifuture_getScmStatusV2(
       *params->mountPoint_ref(),
       folly::to<string>("commitHash=", logHash(*params->commit_ref())),
       folly::to<string>("listIgnored=", *params->listIgnored_ref()));
+  helper->getThriftFetchContext().fillClientRequestInfo(params->cri_ref());
 
   auto mountHandle = lookupMount(params->mountPoint());
   auto rootId = mountHandle.getObjectStore().parseRootId(*params->commit_ref());
