@@ -7,7 +7,7 @@
 
 mod request_info;
 
-use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use hostname::get_hostname;
 use serde::Deserialize;
@@ -74,8 +74,12 @@ impl ClientInfo {
         client_info
     }
 
-    pub fn into_json(&self) -> Result<String> {
-        serde_json::to_string(self).map_err(|e| anyhow!(e))
+    pub fn to_json(&self) -> Result<String> {
+        serde_json::to_string(self).context("Failed to serialize ClientInfo")
+    }
+
+    pub fn from_json(json: &str) -> Result<Self> {
+        serde_json::from_str(json).context("Failed to parse ClientInfo")
     }
 
     pub fn add_request_info(&mut self, info: ClientRequestInfo) -> &mut Self {

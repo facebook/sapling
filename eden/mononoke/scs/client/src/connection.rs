@@ -70,7 +70,7 @@ impl Connection {
 
         let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::SCS_CLI)?;
         let headers = hashmap! {
-            String::from(CLIENT_INFO_HEADER) => client_info.into_json()?,
+            String::from(CLIENT_INFO_HEADER) => client_info.to_json()?,
         };
         let conn_config = hashmap! {
             String::from("client_id") => client_id,

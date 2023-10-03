@@ -47,8 +47,8 @@ py_class!(pub class clientinfo |py| {
         clientinfo::create_instance(py, RefCell::new(clientinfo))
     }
 
-    def into_json(&self) -> PyResult<PyBytes> {
-        convert(py, self.clientinfo(py).borrow().into_json().map(|s| s.into_bytes()))
+    def to_json(&self) -> PyResult<PyBytes> {
+        convert(py, self.clientinfo(py).borrow().to_json().map(|s| s.into_bytes()))
     }
 });
 

@@ -83,7 +83,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             "Accept-Encoding": "none, gzip",
             "Content-Encoding": "gzip",
             "User-Agent": self.user_agent,
-            "X-Client-Info": clientinfo.clientinfo().into_json().decode(),
+            "X-Client-Info": clientinfo.clientinfo().to_json().decode(),
         }
 
         u = util.url(self.url, parsequery=False, parsefragment=False)

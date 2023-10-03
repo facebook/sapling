@@ -361,7 +361,7 @@ class mononokepeer(stdiopeer.stdiopeer):
                     "Connection": "Upgrade",
                     "Upgrade": "websocket",
                 }
-                headers["X-Client-Info"] = self._clientinfo.into_json().decode()
+                headers["X-Client-Info"] = self._clientinfo.to_json().decode()
 
                 if self._cats:
                     headers["x-forwarded-cats"] = self._cats
