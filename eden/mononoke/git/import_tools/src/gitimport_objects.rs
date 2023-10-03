@@ -318,6 +318,7 @@ impl GitimportTarget {
 
 #[derive(Debug)]
 pub struct TagMetadata {
+    pub oid: ObjectId,
     pub message: String,
     pub author: Option<String>,
     pub author_date: Option<DateTime>,
@@ -352,6 +353,7 @@ impl TagMetadata {
             .take()
             .map(|signature| Bytes::from(signature.to_vec()));
         Result::<_, Error>::Ok(TagMetadata {
+            oid,
             author,
             author_date,
             name,

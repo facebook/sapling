@@ -152,6 +152,11 @@
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1
   fb02ed046a1e75fe2abb8763f7c715496ae36353
 
+# Generating bookmarks should also capture the tag mapping in bonsai_tag_mapping table
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT tag_name, hex(changeset_id) as cs_id, hex(tag_hash) as tag_hash FROM bonsai_tag_mapping"
+  tags/empty_tag|D5BE6FDF77FC73EE5E3A4BAB1ADBB4772829E06C0F104E6CC0D70CABF1EBFF4B|FB02ED046A1E75FE2ABB8763F7C715496AE36353
+  tags/first_tag|5CA579C0E3EBEA708371B65CE559E5A51B231AD1B6F3CDFD874CA27362A2A6A8|8963E1F55D1346A07C3AEC8C8FC72BF87D0452B1
+
 # Generating bookmarks should also create the changeset corresponding to the
 # git tag at Mononoke end
   $ ls $TESTTMP/blobstore/blobs | grep -e d5be6fdf77fc73ee5e3a4bab1adbb4772829e06c0f104e6cc0d70cabf1ebff4b -e 5ca579c0e3ebea708371b65ce559e5a51b231ad1b6f3cdfd874ca27362a2a6a8
