@@ -9,6 +9,7 @@
 
 #include <folly/Synchronized.h>
 #include <folly/container/EvictingCacheMap.h>
+#include <folly/futures/SharedPromise.h>
 #include <memory>
 #include <unordered_map>
 
@@ -18,6 +19,7 @@
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/TreeFwd.h"
+#include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -26,7 +28,6 @@
 
 namespace facebook::eden {
 
-class BackingStore;
 class Blob;
 class EdenConfig;
 class EdenStats;
@@ -337,6 +338,12 @@ class ObjectStore : public IObjectStore,
    * approach the size limit of the cache.)
    */
   const std::shared_ptr<TreeCache> treeCache_;
+
+  // TODO: shard this for lower contention
+  mutable std::shared_ptr<folly::Synchronized<std::unordered_map<
+      ObjectId,
+      folly::SharedPromise<BackingStore::GetTreeResult>>>>
+      inflightTreeGet_;
 
   /*
    * The BackingStore.

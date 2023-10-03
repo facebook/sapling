@@ -70,6 +70,9 @@ ObjectStore::ObjectStore(
     CaseSensitivity caseSensitive)
     : metadataCache_{folly::in_place, kCacheSize},
       treeCache_{std::move(treeCache)},
+      inflightTreeGet_{std::make_shared<folly::Synchronized<std::unordered_map<
+          ObjectId,
+          folly::SharedPromise<BackingStore::GetTreeResult>>>>()},
       backingStore_{std::move(backingStore)},
       stats_{std::move(stats)},
       pidFetchCounts_{std::make_unique<PidFetchCounts>()},
@@ -196,6 +199,36 @@ ObjectStore::getTreeEntryForObjectId(
           [](std::shared_ptr<TreeEntry> treeEntry) { return treeEntry; });
 }
 
+namespace {
+template <typename T, typename F>
+ImmediateFuture<T> tryDedupGet(
+    const ObjectId& id,
+    std::shared_ptr<folly::Synchronized<
+        std::unordered_map<ObjectId, folly::SharedPromise<T>>>>& dedupMap,
+    F&& backingStoreGet) {
+  {
+    auto lockedMap = dedupMap->wlock();
+    auto [iterator, inserted] = lockedMap->try_emplace(id);
+    if (!inserted) {
+      return ImmediateFuture{iterator->second.getSemiFuture()};
+    }
+  }
+
+  return backingStoreGet().thenTry(
+      [id, dedupMap](folly::Try<T> result) mutable {
+        {
+          auto lockedMap = dedupMap->wlock();
+          auto promiseIterator = lockedMap->find(id);
+          XCHECK_NE(promiseIterator, lockedMap->end());
+          promiseIterator->second.setTry(folly::Try{result});
+          lockedMap->erase(promiseIterator);
+        }
+
+        return result;
+      });
+}
+} // namespace
+
 ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& fetchContext) const {
@@ -227,11 +260,17 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
 
   deprioritizeWhenFetchHeavy(*fetchContext);
 
-  return ImmediateFuture{backingStore_->getTree(id, fetchContext)}.thenValue(
-      [self = shared_from_this(),
-       statScope = std::move(statScope),
-       id,
-       fetchContext = fetchContext.copy()](BackingStore::GetTreeResult result) {
+  return tryDedupGet(
+             id,
+             inflightTreeGet_,
+             [&] {
+               return ImmediateFuture{backingStore_->getTree(id, fetchContext)};
+             })
+      .thenValue([self = shared_from_this(),
+                  statScope = std::move(statScope),
+                  id,
+                  fetchContext =
+                      fetchContext.copy()](BackingStore::GetTreeResult result) {
         TaskTraceBlock block2{"ObjectStore::getTree::thenValue"};
         if (!result.tree) {
           // TODO: Perhaps we should do some short-term negative
