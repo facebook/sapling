@@ -122,6 +122,7 @@ impl SourceControlServiceImpl {
         };
         let changeset_context = repo_ctx
             .create_annotated_tag(
+                None, // To be populated later
                 params.tag_name,
                 params.author,
                 author_date,

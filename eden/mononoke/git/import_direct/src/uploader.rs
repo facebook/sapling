@@ -254,6 +254,7 @@ where
         create_annotated_tag(
             ctx,
             &*self.inner,
+            None, // To be populated later
             tag_name,
             tag.author.take(),
             tag.author_date.take().map(|date| date.into()),

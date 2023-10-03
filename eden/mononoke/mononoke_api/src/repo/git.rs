@@ -17,6 +17,7 @@ use chrono::DateTime;
 use chrono::FixedOffset;
 use context::CoreContext;
 use git_types::GitError;
+use gix_hash::ObjectId;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTag;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::BonsaiChangesetMut;
@@ -100,6 +101,7 @@ impl RepoContext {
     /// Create a new annotated tag in the repository.
     pub async fn create_annotated_tag(
         &self,
+        tag_object_id: Option<ObjectId>,
         name: String,
         author: Option<String>,
         author_date: Option<DateTime<FixedOffset>>,
@@ -109,6 +111,7 @@ impl RepoContext {
         let new_changeset_id = create_annotated_tag(
             self.ctx(),
             self.inner_repo(),
+            tag_object_id,
             name,
             author,
             author_date,
@@ -186,6 +189,7 @@ pub async fn create_git_tree(
 pub async fn create_annotated_tag(
     ctx: &CoreContext,
     repo: &(impl changesets::ChangesetsRef + repo_blobstore::RepoBlobstoreRef + BonsaiTagMappingRef),
+    tag_hash: Option<ObjectId>,
     name: String,
     author: Option<String>,
     author_date: Option<DateTime<FixedOffset>>,
@@ -217,13 +221,17 @@ pub async fn create_annotated_tag(
     changesets_creation::save_changesets(ctx, repo, vec![changeset])
         .await
         .map_err(|e| GitError::StorageFailure(tag_id.clone(), e.into()))?;
+    let tag_hash = tag_hash.unwrap_or_else(|| ObjectId::null(gix_hash::Kind::Sha1));
+    let tag_hash = GitSha1::from_bytes(tag_hash.as_bytes())
+        .map_err(|_| GitError::InvalidHash(tag_hash.to_string()))?;
     // Create a mapping between the tag name and the metadata changeset
     let mapping_entry = BonsaiTagMappingEntry {
         changeset_id,
+        tag_hash,
         tag_name: name,
     };
     repo.bonsai_tag_mapping()
-        .add_mappings(vec![mapping_entry])
+        .add_or_update_mappings(vec![mapping_entry])
         .await
         .map_err(|e| GitError::StorageFailure(tag_id, e.into()))?;
     Ok(changeset_id)
