@@ -78,6 +78,12 @@ class RevlogMeta:
         not recorded in the "store".
         """
         cl = repo.changelog
+        if len(cl) > 100000:
+            raise error.Abort(
+                _(
+                    "revlog2 is for legacy test compatibility, and should not be used in large repos"
+                )
+            )
         nodes = [
             n for n in cl.dag.all().iterrev() if not self.hasnode("00changelog", n)
         ]
