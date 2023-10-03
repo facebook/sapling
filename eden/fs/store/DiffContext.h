@@ -38,6 +38,7 @@ class DiffContext {
   DiffContext(
       DiffCallback* cb,
       folly::CancellationToken cancellation,
+      const ObjectFetchContextPtr& fetchContext,
       bool listIgnored,
       CaseSensitivity caseSensitive,
       bool windowsSymlinksEnabled,
@@ -85,12 +86,11 @@ class DiffContext {
   std::unique_ptr<TopLevelIgnores> topLevelIgnores_;
   const folly::CancellationToken cancellation_;
 
-  // TODO: We could populate pid and cause here.
-  StatsFetchContextPtr statsContext_ = makeRefPtr<StatsFetchContext>();
+  StatsFetchContextPtr statsContext_;
 
   // This redundant, upcasted RefPtr exists to avoid needing to bump the
   // reference count on every fetch.
-  ObjectFetchContextPtr fetchContext_ = statsContext_.copy();
+  ObjectFetchContextPtr fetchContext_;
 
   // Controls the case sensitivity of the diff operation.
   CaseSensitivity caseSensitive_;

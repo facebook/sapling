@@ -1672,10 +1672,12 @@ ImmediateFuture<folly::Unit> diffBetweenRoots(
     const CheckoutConfig& checkoutConfig,
     const std::shared_ptr<ObjectStore>& objectStore,
     folly::CancellationToken cancellation,
+    const ObjectFetchContextPtr& fetchContext,
     DiffCallback* callback) {
   auto diffContext = std::make_unique<DiffContext>(
       callback,
       cancellation,
+      fetchContext,
       true,
       checkoutConfig.getCaseSensitive(),
       checkoutConfig.getEnableWindowsSymlinks(),
@@ -1694,6 +1696,7 @@ EdenServiceHandler::streamChangesSince(
       DBG3, &ThriftStats::streamChangesSince, *params->mountPoint_ref());
   auto mountHandle = lookupMount(params->mountPoint());
   const auto& fromPosition = *params->fromPosition_ref();
+  auto& fetchContext = helper->getFetchContext();
 
   // Streaming in Thrift can be done via a Stream Generator, or via a Stream
   // Publisher. We're using the latter here as the former can only be used with
@@ -1793,6 +1796,7 @@ EdenServiceHandler::streamChangesSince(
            to,
            mountHandle,
            token = cancellationSource->getToken(),
+           fetchContext = fetchContext.copy(),
            callback = callback.get()](auto&&) {
             return diffBetweenRoots(
                 from,
@@ -1800,6 +1804,7 @@ EdenServiceHandler::streamChangesSince(
                 *mountHandle.getEdenMount().getCheckoutConfig(),
                 mountHandle.getObjectStorePtr(),
                 token,
+                fetchContext,
                 callback);
           }));
     }
@@ -2988,6 +2993,8 @@ EdenServiceHandler::semifuture_getScmStatusV2(
       folly::to<string>("listIgnored=", *params->listIgnored_ref()));
   helper->getThriftFetchContext().fillClientRequestInfo(params->cri_ref());
 
+  auto& fetchContext = helper->getFetchContext();
+
   auto mountHandle = lookupMount(params->mountPoint());
   auto rootId = mountHandle.getObjectStore().parseRootId(*params->commit_ref());
   const auto& enforceParents = server_->getServerState()
@@ -3001,6 +3008,7 @@ EdenServiceHandler::semifuture_getScmStatusV2(
                      mountHandle.getRootInode(),
                      rootId,
                      context->getConnectionContext()->getCancellationToken(),
+                     fetchContext,
                      *params->listIgnored_ref(),
                      enforceParents)
                  .ensure([mountHandle] {})
@@ -3024,6 +3032,7 @@ EdenServiceHandler::semifuture_getScmStatus(
       *mountPoint,
       folly::to<string>("listIgnored=", listIgnored ? "true" : "false"),
       folly::to<string>("commitHash=", logHash(*commitHash)));
+  auto& fetchContext = helper->getFetchContext();
 
   // Unlike getScmStatusV2(), this older getScmStatus() call does not enforce
   // that the caller specified the current commit.  In the future we might
@@ -3037,6 +3046,7 @@ EdenServiceHandler::semifuture_getScmStatus(
                  mountHandle.getRootInode(),
                  hash,
                  context->getConnectionContext()->getCancellationToken(),
+                 fetchContext,
                  listIgnored,
                  /*enforceCurrentParent=*/false))
       .ensure([mountHandle] {})
@@ -3055,6 +3065,7 @@ EdenServiceHandler::semifuture_getScmStatusBetweenRevisions(
       folly::to<string>("oldHash=", logHash(*oldHash)),
       folly::to<string>("newHash=", logHash(*newHash)));
   auto mountHandle = lookupMount(mountPoint);
+  auto& fetchContext = helper->getFetchContext();
 
   auto callback = std::make_unique<ScmStatusDiffCallback>();
   auto diffFuture = diffBetweenRoots(
@@ -3063,6 +3074,7 @@ EdenServiceHandler::semifuture_getScmStatusBetweenRevisions(
       *mountHandle.getEdenMount().getCheckoutConfig(),
       mountHandle.getObjectStorePtr(),
       context->getConnectionContext()->getCancellationToken(),
+      fetchContext,
       callback.get());
   return wrapImmediateFuture(
              std::move(helper),

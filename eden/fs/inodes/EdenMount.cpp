@@ -169,9 +169,10 @@ class EdenMount::JournalDiffCallback : public DiffCallback {
   FOLLY_NODISCARD ImmediateFuture<StatsFetchContext> performDiff(
       EdenMount* mount,
       TreeInodePtr rootInode,
-      std::vector<std::shared_ptr<const Tree>> rootTrees) {
-    auto diffContext =
-        mount->createDiffContext(this, folly::CancellationToken{});
+      std::vector<std::shared_ptr<const Tree>> rootTrees,
+      std::shared_ptr<CheckoutContext> ctx) {
+    auto diffContext = mount->createDiffContext(
+        this, folly::CancellationToken{}, ctx->getFetchContext());
     auto rawContext = diffContext.get();
 
     return rootInode
@@ -1460,7 +1461,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
               trees.push_back(std::get<1>(treeResults).tree);
             }
             return journalDiffCallback
-                ->performDiff(this, rootInode, std::move(trees))
+                ->performDiff(this, rootInode, std::move(trees), ctx)
                 .thenValue([ctx, journalDiffCallback, treeResults](
                                const StatsFetchContext& diffFetchContext) {
                   ctx->getStatsContext().merge(diffFetchContext);
@@ -1730,10 +1731,12 @@ ImmediateFuture<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
 std::unique_ptr<DiffContext> EdenMount::createDiffContext(
     DiffCallback* callback,
     folly::CancellationToken cancellation,
+    const ObjectFetchContextPtr& fetchContext,
     bool listIgnored) const {
   return make_unique<DiffContext>(
       callback,
       cancellation,
+      fetchContext,
       listIgnored,
       getCheckoutConfig()->getCaseSensitive(),
       getCheckoutConfig()->getEnableWindowsSymlinks(),
@@ -1767,7 +1770,8 @@ ImmediateFuture<Unit> EdenMount::diff(
     const RootId& commitHash,
     bool listIgnored,
     bool enforceCurrentParent,
-    folly::CancellationToken cancellation) const {
+    folly::CancellationToken cancellation,
+    const ObjectFetchContextPtr& fetchContext) const {
   if (enforceCurrentParent) {
     auto parentInfo = parentState_.rlock();
 
@@ -1805,8 +1809,8 @@ ImmediateFuture<Unit> EdenMount::diff(
   }
 
   // Create a DiffContext object for this diff operation.
-  auto context =
-      createDiffContext(callback, std::move(cancellation), listIgnored);
+  auto context = createDiffContext(
+      callback, std::move(cancellation), fetchContext, listIgnored);
   DiffContext* ctxPtr = context.get();
 
   // stateHolder() exists to ensure that the DiffContext and the EdenMount
@@ -1820,6 +1824,7 @@ ImmediateFuture<std::unique_ptr<ScmStatus>> EdenMount::diff(
     TreeInodePtr rootInode,
     const RootId& commitHash,
     folly::CancellationToken cancellation,
+    const ObjectFetchContextPtr& fetchContext,
     bool listIgnored,
     bool enforceCurrentParent) {
   auto callback = std::make_unique<ScmStatusDiffCallback>();
@@ -1831,7 +1836,8 @@ ImmediateFuture<std::unique_ptr<ScmStatus>> EdenMount::diff(
           commitHash,
           listIgnored,
           enforceCurrentParent,
-          std::move(cancellation))
+          std::move(cancellation),
+          fetchContext)
       .thenValue([callback = std::move(callback)](auto&&) {
         return std::make_unique<ScmStatus>(callback->extractStatus());
       });

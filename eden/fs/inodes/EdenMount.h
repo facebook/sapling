@@ -795,6 +795,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       TreeInodePtr rootInode,
       const RootId& commitHash,
       folly::CancellationToken cancellation,
+      const ObjectFetchContextPtr& fetchContext,
       bool listIgnored = false,
       bool enforceCurrentParent = true);
 
@@ -1195,6 +1196,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::unique_ptr<DiffContext> createDiffContext(
       DiffCallback* callback,
       folly::CancellationToken cancellation,
+      const ObjectFetchContextPtr& fetchContext,
       bool listIgnored = false) const;
 
   /**
@@ -1210,7 +1212,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       const RootId& commitHash,
       bool listIgnored,
       bool enforceCurrentParent,
-      folly::CancellationToken cancellation) const;
+      folly::CancellationToken cancellation,
+      const ObjectFetchContextPtr& fetchContext) const;
 
   /**
    * Signal to unmount() that fsChannelMount() or takeoverFuse() has started.

@@ -96,6 +96,7 @@ class DiffTest : public ::testing::Test {
     return std::make_unique<DiffContext>(
         callback,
         folly::CancellationToken{},
+        ObjectFetchContext::getNullContext(),
         listIgnored,
         caseSensitive,
         true,
