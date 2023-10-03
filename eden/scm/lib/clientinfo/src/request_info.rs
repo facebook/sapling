@@ -117,6 +117,7 @@ pub enum ClientEntryPoint {
     LandService,
     LFS,
     DerivedDataService,
+    DerivationWorker,
     ISL,
     SCS_CLI,
 }
@@ -178,6 +179,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::LandService => "landservice",
             ClientEntryPoint::LFS => "lfs",
             ClientEntryPoint::DerivedDataService => "derived_data_service",
+            ClientEntryPoint::DerivationWorker => "derivation_worker",
             ClientEntryPoint::ISL => "isl",
             ClientEntryPoint::SCS_CLI => "scsc",
         };
