@@ -120,9 +120,23 @@ impl SourceControlServiceImpl {
             target: BonsaiAnnotatedTagTarget::Changeset(target_changeset_id),
             pgp_signature: params.pgp_signature.map(Bytes::from),
         };
+        let tag_hash = params
+            .tag_hash
+            .as_ref()
+            .map(|hash| {
+                gix_hash::oid::try_from_bytes(hash)
+                    .map(|oid| oid.to_owned())
+                    .map_err(|err| {
+                        invalid_request(format!(
+                            "Error in creating Git ObjectId from {:?}. Cause: {:#}",
+                            hash, err
+                        ))
+                    })
+            })
+            .transpose()?;
         let changeset_context = repo_ctx
             .create_annotated_tag(
-                None, // To be populated later
+                tag_hash,
                 params.tag_name,
                 params.author,
                 author_date,
