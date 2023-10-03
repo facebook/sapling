@@ -201,6 +201,10 @@ impl Timestamp {
         Timestamp(ts)
     }
 
+    pub fn from_thrift(ts: thrift::Timestamp) -> Self {
+        Self::from_timestamp_nanos(ts.0)
+    }
+
     pub fn timestamp_nanos(&self) -> i64 {
         self.0
     }
@@ -220,6 +224,10 @@ impl Timestamp {
 
     pub fn since_seconds(&self) -> i64 {
         self.since_nanos() / SEC_IN_NS
+    }
+
+    pub fn into_thrift(self) -> thrift::Timestamp {
+        thrift::Timestamp(self.0)
     }
 }
 

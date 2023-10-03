@@ -179,6 +179,8 @@ struct DateTime {
   2: required i32 tz_offset_secs;
 } (rust.exhaustive)
 
+typedef i64 Timestamp (rust.newtype)
+
 struct ContentChunkPointer {
   1: ContentChunkId chunk_id;
   2: i64 size;
