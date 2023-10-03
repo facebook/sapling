@@ -239,8 +239,9 @@ LocalStoreCachedBackingStore::stopRecordingFetch() {
 folly::SemiFuture<folly::Unit>
 LocalStoreCachedBackingStore::importManifestForRoot(
     const RootId& rootId,
-    const Hash20& manifest) {
-  return backingStore_->importManifestForRoot(rootId, manifest);
+    const Hash20& manifest,
+    const ObjectFetchContextPtr& context) {
+  return backingStore_->importManifestForRoot(rootId, manifest, context);
 }
 
 RootId LocalStoreCachedBackingStore::parseRootId(folly::StringPiece rootId) {

@@ -201,7 +201,8 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    */
   virtual folly::SemiFuture<folly::Unit> importManifestForRoot(
       const RootId& /*rootId*/,
-      const Hash20& /*manifest*/) {
+      const Hash20& /*manifest*/,
+      const ObjectFetchContextPtr& /*context*/) {
     return folly::unit;
   }
 

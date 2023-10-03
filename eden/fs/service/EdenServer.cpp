@@ -1834,7 +1834,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
     auto rootManifest = hash20FromThrift(rootHgManifest.value());
     edenMount.getObjectStore()
         ->getBackingStore()
-        ->importManifestForRoot(rootId, rootManifest)
+        ->importManifestForRoot(rootId, rootManifest, fetchContext)
         .get();
   }
 

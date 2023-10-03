@@ -193,7 +193,8 @@ class HgQueuedBackingStore final : public BackingStore {
 
   folly::SemiFuture<folly::Unit> importManifestForRoot(
       const RootId& root,
-      const Hash20& manifest) override;
+      const Hash20& manifest,
+      const ObjectFetchContextPtr& context) override;
 
   void periodicManagementTask() override;
 

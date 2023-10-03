@@ -71,7 +71,8 @@ class FilteredBackingStore
 
   folly::SemiFuture<folly::Unit> importManifestForRoot(
       const RootId& rootId,
-      const Hash20& manifest) override;
+      const Hash20& manifest,
+      const ObjectFetchContextPtr& context) override;
 
   RootId parseRootId(folly::StringPiece rootId) override;
   std::string renderRootId(const RootId& rootId) override;

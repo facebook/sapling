@@ -239,8 +239,9 @@ std::unordered_set<std::string> FilteredBackingStore::stopRecordingFetch() {
 
 folly::SemiFuture<folly::Unit> FilteredBackingStore::importManifestForRoot(
     const RootId& rootId,
-    const Hash20& manifest) {
-  return backingStore_->importManifestForRoot(rootId, manifest);
+    const Hash20& manifest,
+    const ObjectFetchContextPtr& context) {
+  return backingStore_->importManifestForRoot(rootId, manifest, context);
 }
 
 RootId FilteredBackingStore::parseRootId(folly::StringPiece rootId) {

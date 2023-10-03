@@ -649,6 +649,7 @@ EdenServiceHandler::semifuture_resetParentCommits(
 
   auto fut = folly::SemiFuture<folly::Unit>::makeEmpty();
   if (params->hgRootManifest_ref().has_value()) {
+    auto& fetchContext = helper->getFetchContext();
     // The hg client has told us what the root manifest is.
     //
     // This is useful when a commit has just been created.  We won't be able to
@@ -657,13 +658,18 @@ EdenServiceHandler::semifuture_resetParentCommits(
     // import the manifest for this commit directly.
     auto rootManifest = hash20FromThrift(*params->hgRootManifest_ref());
     fut = mountHandle.getObjectStore().getBackingStore()->importManifestForRoot(
-        parent1, rootManifest);
+        parent1, rootManifest, fetchContext);
   } else {
     fut = folly::makeSemiFuture();
   }
-  return std::move(fut).deferValue([parent1, mountHandle](folly::Unit) {
-    mountHandle.getEdenMount().resetParent(parent1);
-  });
+
+  return wrapImmediateFuture(
+             std::move(helper),
+             ImmediateFuture{
+                 std::move(fut).deferValue([parent1, mountHandle](folly::Unit) {
+                   mountHandle.getEdenMount().resetParent(parent1);
+                 })})
+      .semi();
 }
 
 namespace {
