@@ -640,8 +640,8 @@ HgQueuedBackingStore::getBlobMetadataImpl(
 ImmediateFuture<BackingStore::GetRootTreeResult>
 HgQueuedBackingStore::getRootTree(
     const RootId& rootId,
-    const ObjectFetchContextPtr& /*context*/) {
-  return backingStore_->getRootTree(rootId);
+    const ObjectFetchContextPtr& context) {
+  return backingStore_->getRootTree(rootId, context);
 }
 
 folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
@@ -788,7 +788,7 @@ std::unordered_set<std::string> HgQueuedBackingStore::stopRecordingFetch() {
 folly::SemiFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
     const RootId& root,
     const Hash20& manifest,
-    const ObjectFetchContextPtr& /*context*/) {
+    const ObjectFetchContextPtr& context) {
   // This method is used when the client informs us about a target manifest
   // that it is about to update to, for the scenario when a manifest has
   // just been created.  Since the manifest has just been created locally, and
@@ -797,7 +797,7 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
   //
   // When the local store is populated with metadata for newly-created
   // manifests then we can update this so that is true when appropriate.
-  return backingStore_->importTreeManifestForRoot(root, manifest);
+  return backingStore_->importTreeManifestForRoot(root, manifest, context);
 }
 
 void HgQueuedBackingStore::periodicManagementTask() {

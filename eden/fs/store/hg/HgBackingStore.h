@@ -67,7 +67,8 @@ class HgBackingStore {
   ~HgBackingStore();
 
   ImmediateFuture<BackingStore::GetRootTreeResult> getRootTree(
-      const RootId& rootId);
+      const RootId& rootId,
+      const ObjectFetchContextPtr& context);
   folly::SemiFuture<TreePtr> getTree(
       const std::shared_ptr<HgImportRequest>& request);
 
@@ -80,13 +81,16 @@ class HgBackingStore {
    */
   folly::Future<folly::Unit> importTreeManifestForRoot(
       const RootId& rootId,
-      const Hash20& manifestId);
+      const Hash20& manifestId,
+      const ObjectFetchContextPtr& context);
 
   /**
    * Import the manifest for the specified revision using mercurial
    * treemanifest data.
    */
-  folly::Future<TreePtr> importTreeManifest(const ObjectId& commitId);
+  folly::Future<TreePtr> importTreeManifest(
+      const ObjectId& commitId,
+      const ObjectFetchContextPtr& context);
 
   /**
    * Objects that can be imported from Hg
@@ -139,7 +143,9 @@ class HgBackingStore {
   HgBackingStore(HgBackingStore const&) = delete;
   HgBackingStore& operator=(HgBackingStore const&) = delete;
 
-  folly::Future<TreePtr> importTreeManifestImpl(Hash20 manifestNode);
+  folly::Future<TreePtr> importTreeManifestImpl(
+      Hash20 manifestNode,
+      const ObjectFetchContextPtr& context);
 
   void initializeDatapackImport(AbsolutePathPiece repository);
   folly::Future<TreePtr> importTreeImpl(

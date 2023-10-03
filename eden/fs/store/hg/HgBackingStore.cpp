@@ -206,17 +206,18 @@ HgBackingStore::HgBackingStore(
 HgBackingStore::~HgBackingStore() = default;
 
 ImmediateFuture<BackingStore::GetRootTreeResult> HgBackingStore::getRootTree(
-    const RootId& rootId) {
+    const RootId& rootId,
+    const ObjectFetchContextPtr& context) {
   ObjectId commitId = hashFromRootId(rootId);
 
   return localStore_
       ->getImmediateFuture(KeySpace::HgCommitToTreeFamily, commitId)
       .thenValue(
-          [this, commitId](StoreResult result)
+          [this, commitId, context = context.copy()](StoreResult result)
               -> folly::SemiFuture<BackingStore::GetRootTreeResult> {
             if (!result.isValid()) {
-              return importTreeManifest(commitId).thenValue(
-                  [this, commitId](TreePtr rootTree) {
+              return importTreeManifest(commitId, context)
+                  .thenValue([this, commitId](TreePtr rootTree) {
                     XLOG(DBG1) << "imported mercurial commit " << commitId
                                << " as tree " << rootTree->getHash();
 
@@ -234,7 +235,7 @@ ImmediateFuture<BackingStore::GetRootTreeResult> HgBackingStore::getRootTree(
                 ObjectId{result.bytes()},
                 "getRootTree",
                 *stats_);
-            return importTreeManifestImpl(rootTreeHash.revHash())
+            return importTreeManifestImpl(rootTreeHash.revHash(), context)
                 .thenValue([](TreePtr tree) {
                   return BackingStore::GetRootTreeResult{tree, tree->getHash()};
                 });
@@ -469,21 +470,22 @@ TreePtr HgBackingStore::processTree(
 
 folly::Future<folly::Unit> HgBackingStore::importTreeManifestForRoot(
     const RootId& rootId,
-    const Hash20& manifestId) {
+    const Hash20& manifestId,
+    const ObjectFetchContextPtr& context) {
   auto commitId = hashFromRootId(rootId);
   return localStore_
       ->getImmediateFuture(KeySpace::HgCommitToTreeFamily, commitId)
       .semi()
       .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue(
-          [this, commitId, manifestId](
+          [this, commitId, manifestId, context = context.copy()](
               StoreResult result) -> folly::Future<folly::Unit> {
             if (result.isValid()) {
               // We have already imported this commit, nothing to do.
               return folly::unit;
             }
 
-            return importTreeManifestImpl(manifestId)
+            return importTreeManifestImpl(manifestId, context)
                 .thenValue([this, commitId, manifestId](TreePtr rootTree) {
                   XLOG(DBG3) << "imported mercurial commit " << commitId
                              << " with manifest " << manifestId << " as tree "
@@ -498,7 +500,8 @@ folly::Future<folly::Unit> HgBackingStore::importTreeManifestForRoot(
 }
 
 folly::Future<TreePtr> HgBackingStore::importTreeManifest(
-    const ObjectId& commitId) {
+    const ObjectId& commitId,
+    const ObjectFetchContextPtr& context) {
   return folly::via(
              importThreadPool_.get(),
              [commitId] {
@@ -506,15 +509,17 @@ folly::Future<TreePtr> HgBackingStore::importTreeManifest(
                    commitId.asHexString());
              })
       .via(serverThreadPool_)
-      .thenValue([this, commitId](auto manifestNode) {
-        XLOG(DBG2) << "revision " << commitId << " has manifest node "
-                   << manifestNode;
-        return importTreeManifestImpl(manifestNode);
-      });
+      .thenValue(
+          [this, commitId, fetchContext = context.copy()](auto manifestNode) {
+            XLOG(DBG2) << "revision " << commitId << " has manifest node "
+                       << manifestNode;
+            return importTreeManifestImpl(manifestNode, fetchContext);
+          });
 }
 
 folly::Future<TreePtr> HgBackingStore::importTreeManifestImpl(
-    Hash20 manifestNode) {
+    Hash20 manifestNode,
+    const ObjectFetchContextPtr& /*context*/) {
   // Record that we are at the root for this node
   RelativePathPiece path{};
   auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
