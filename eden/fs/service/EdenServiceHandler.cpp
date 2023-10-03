@@ -606,6 +606,7 @@ EdenServiceHandler::semifuture_checkOutRevision(
           ? logHash(*params->hgRootManifest_ref())
           : "(unspecified hg root manifest)");
   helper->getThriftFetchContext().fillClientRequestInfo(params->cri_ref());
+  auto& fetchContext = helper->getFetchContext();
 
   auto mountPath = absolutePathFromThrift(*mountPoint);
   auto checkoutFuture =
@@ -614,7 +615,7 @@ EdenServiceHandler::semifuture_checkOutRevision(
                               mountPath,
                               *hash,
                               params->hgRootManifest_ref().to_optional(),
-                              helper->getFetchContext()->getClientPid(),
+                              fetchContext,
                               helper->getFunctionName(),
                               checkoutMode)
                           .semi()};

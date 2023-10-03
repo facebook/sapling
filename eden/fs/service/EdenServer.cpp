@@ -1818,7 +1818,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
     AbsolutePathPiece mountPath,
     std::string& rootHash,
     std::optional<folly::StringPiece> rootHgManifest,
-    OptionalProcessId clientPid,
+    const ObjectFetchContextPtr& fetchContext,
     StringPiece callerName,
     CheckoutMode checkoutMode) {
   auto mountHandle = getMount(mountPath);
@@ -1847,7 +1847,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
       .checkout(
           mountHandle.getRootInode(),
           rootId,
-          clientPid,
+          fetchContext,
           callerName,
           checkoutMode)
       .thenValue([this, checkoutMode, isNfs, mountPath = mountPath.copy()](

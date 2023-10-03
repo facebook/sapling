@@ -760,7 +760,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   folly::Future<CheckoutResult> checkout(
       TreeInodePtr rootInode,
       const RootId& snapshotHash,
-      OptionalProcessId clientPid,
+      const ObjectFetchContextPtr& fetchContext,
       folly::StringPiece thriftMethodCaller,
       CheckoutMode checkoutMode = CheckoutMode::NORMAL);
 

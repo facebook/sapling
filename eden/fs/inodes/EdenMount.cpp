@@ -792,7 +792,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
     auto ctx = std::make_shared<CheckoutContext>(
         this,
         checkoutMode,
-        std::nullopt,
+        context->getClientPid(),
         "setPathObjectId",
         context->getRequestInfo());
 
@@ -1344,7 +1344,7 @@ ImmediateFuture<folly::Unit> EdenMount::waitForPendingWrites() const {
 folly::Future<CheckoutResult> EdenMount::checkout(
     TreeInodePtr rootInode,
     const RootId& snapshotHash,
-    OptionalProcessId clientPid,
+    const ObjectFetchContextPtr& fetchContext,
     folly::StringPiece thriftMethodCaller,
     CheckoutMode checkoutMode) {
   const folly::stop_watch<> stopWatch;
@@ -1390,7 +1390,11 @@ folly::Future<CheckoutResult> EdenMount::checkout(
   }
 
   auto ctx = std::make_shared<CheckoutContext>(
-      this, checkoutMode, clientPid, thriftMethodCaller);
+      this,
+      checkoutMode,
+      fetchContext->getClientPid(),
+      thriftMethodCaller,
+      fetchContext->getRequestInfo());
   XLOG(DBG1) << "starting checkout for " << this->getPath() << ": " << oldParent
              << " to " << snapshotHash;
 

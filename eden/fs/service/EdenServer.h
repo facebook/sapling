@@ -333,7 +333,7 @@ class EdenServer : private TakeoverHandler {
       AbsolutePathPiece mountPath,
       std::string& rootHash,
       std::optional<folly::StringPiece> rootHgManifest,
-      OptionalProcessId clientPid,
+      const ObjectFetchContextPtr& fetchContext,
       folly::StringPiece callerName,
       CheckoutMode checkoutMode);
 

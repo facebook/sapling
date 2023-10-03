@@ -59,7 +59,7 @@ TEST(
                     ->checkout(
                         mount.getRootInode(),
                         RootId{"2"},
-                        std::nullopt,
+                        ObjectFetchContext::getNullContext(),
                         __func__,
                         CheckoutMode::FORCE)
                     .via(executor)
@@ -118,11 +118,14 @@ TEST(Dematerialize, test_dematerialization_migrates_to_the_new_ID_scheme) {
 
   // Now checkout 2.
 
-  auto result =
-      mount.getEdenMount()
-          ->checkout(mount.getRootInode(), RootId{"2"}, std::nullopt, __func__)
-          //.via(executor)
-          .getVia(executor);
+  auto result = mount.getEdenMount()
+                    ->checkout(
+                        mount.getRootInode(),
+                        RootId{"2"},
+                        ObjectFetchContext::getNullContext(),
+                        __func__)
+                    //.via(executor)
+                    .getVia(executor);
 
   // There should be no conflicts, as the file is not modified.
   EXPECT_EQ(0, result.conflicts.size());
