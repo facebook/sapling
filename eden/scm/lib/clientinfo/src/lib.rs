@@ -30,7 +30,7 @@ pub use crate::request_info::set_client_request_info_thread_local;
 pub use crate::request_info::ClientEntryPoint;
 pub use crate::request_info::ClientRequestInfo;
 
-#[derive(Default, Clone, Deserialize, Serialize, Debug)]
+#[derive(Default, Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub struct ClientInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hostname: Option<String>,

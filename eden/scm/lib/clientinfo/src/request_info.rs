@@ -95,7 +95,7 @@ pub fn get_client_request_info_thread_local() -> Option<ClientRequestInfo> {
 
 /// ClientRequestInfo holds information that will be used for tracing the request
 /// through Source Control systems.
-#[derive(Clone, Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub struct ClientRequestInfo {
     /// Identifier indicates who triggered the request (e.g: "user:user_id")
     /// The `main_id` is generated on the server (Mononoke) side, client side
@@ -107,7 +107,7 @@ pub struct ClientRequestInfo {
     pub correlator: String,
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub enum ClientEntryPoint {
     Sapling,
     EdenFS,
