@@ -1269,5 +1269,5 @@ def getdebugmod(default=pdb):
             import ipdb
 
             return ipdb
-    except ModuleNotFoundError:
+    except ImportError:
         return default
