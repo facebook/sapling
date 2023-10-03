@@ -47,7 +47,7 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
-use slog::info;
+use slog::debug;
 use slog::Logger;
 use sorted_vector_map::SortedVectorMap;
 use thiserror::Error;
@@ -636,7 +636,7 @@ fn mark_as_created_by_lossy_conversion(
                 "implicit file changes from the source changeset don't all have an equivalent implicit file change in the target changeset"
             }
         };
-        info!(
+        debug!(
             logger,
             "Marking changeset as created by lossy conversion because {}", reason
         );
