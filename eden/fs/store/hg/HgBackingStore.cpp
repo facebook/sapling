@@ -519,7 +519,7 @@ folly::Future<TreePtr> HgBackingStore::importTreeManifest(
 
 folly::Future<TreePtr> HgBackingStore::importTreeManifestImpl(
     Hash20 manifestNode,
-    const ObjectFetchContextPtr& /*context*/) {
+    const ObjectFetchContextPtr& context) {
   // Record that we are at the root for this node
   RelativePathPiece path{};
   auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
@@ -538,7 +538,8 @@ folly::Future<TreePtr> HgBackingStore::importTreeManifestImpl(
 
   // try edenapi + hgcache first
   folly::stop_watch<std::chrono::milliseconds> watch;
-  if (auto tree = datapackStore_.getTree(path.copy(), manifestNode, objectId)) {
+  if (auto tree = datapackStore_.getTree(
+          path.copy(), manifestNode, objectId, context)) {
     XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
                << " from Rust hgcache";
     stats_->addDuration(&HgBackingStoreStats::fetchTree, watch.elapsed());

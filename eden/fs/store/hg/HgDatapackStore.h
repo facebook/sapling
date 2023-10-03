@@ -25,6 +25,10 @@ class HgImportRequest;
 class ObjectId;
 class ReloadableConfig;
 class StructuredLogger;
+template <typename T>
+class RefPtr;
+class ObjectFetchContext;
+using ObjectFetchContextPtr = RefPtr<ObjectFetchContext>;
 
 class HgDatapackStore {
  public:
@@ -47,7 +51,8 @@ class HgDatapackStore {
   TreePtr getTree(
       const RelativePath& path,
       const Hash20& manifestId,
-      const ObjectId& edenTreeId);
+      const ObjectId& edenTreeId,
+      const ObjectFetchContextPtr& context);
 
   /**
    * Imports the tree identified by the given hash from the local store.

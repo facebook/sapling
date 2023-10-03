@@ -19,11 +19,13 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {
 
@@ -111,6 +113,9 @@ void HgDatapackStore::getTreeBatch(
     const std::vector<std::shared_ptr<HgImportRequest>>& importRequests) {
   auto count = importRequests.size();
 
+  // TODO: extract each ClientRequestInfo from importRequests into a
+  // sapling::ClientRequestInfo and pass them with the corresponding
+  // sapling::NodeId
   std::vector<sapling::NodeId> requests;
   requests.reserve(count);
   for (const auto& importRequest : importRequests) {
@@ -176,7 +181,8 @@ void HgDatapackStore::getTreeBatch(
 TreePtr HgDatapackStore::getTree(
     const RelativePath& path,
     const Hash20& manifestId,
-    const ObjectId& edenTreeId) {
+    const ObjectId& edenTreeId,
+    const ObjectFetchContextPtr& /*context*/) {
   // For root trees we will try getting the tree locally first.  This allows
   // us to catch when Mercurial might have just written a tree to the store,
   // and refresh the store so that the store can pick it up.  We don't do
@@ -184,12 +190,15 @@ TreePtr HgDatapackStore::getTree(
   // cache miss, and just doing it for root trees is sufficient to detect the
   // scenario where Mercurial just wrote a brand new tree.
   bool local_only = path.empty();
-  auto tree = store_.getTree(manifestId.getBytes(), local_only);
+  auto tree = store_.getTree(
+      manifestId.getBytes(),
+      local_only /*, sapling::ClientRequestInfo(context)*/);
   if (!tree && local_only) {
     // Mercurial might have just written the tree to the store. Refresh the
     // store and try again, this time allowing remote fetches.
     store_.flush();
-    tree = store_.getTree(manifestId.getBytes(), false);
+    tree = store_.getTree(
+        manifestId.getBytes(), false /*, sapling::ClientRequestInfo(context)*/);
   }
   if (tree) {
     auto hgObjectIdFormat =
@@ -226,6 +235,9 @@ void HgDatapackStore::getBlobBatch(
     const std::vector<std::shared_ptr<HgImportRequest>>& importRequests) {
   size_t count = importRequests.size();
 
+  // TODO: extract each ClientRequestInfo from importRequests into a
+  // sapling::ClientRequestInfo and pass them with the corresponding
+  // sapling::NodeId
   std::vector<sapling::NodeId> requests;
   requests.reserve(count);
   for (const auto& importRequest : importRequests) {
@@ -306,6 +318,9 @@ void HgDatapackStore::getBlobMetadataBatch(
     const std::vector<std::shared_ptr<HgImportRequest>>& importRequests) {
   size_t count = importRequests.size();
 
+  // TODO: extract each ClientRequestInfo from importRequests into a
+  // sapling::ClientRequestInfo and pass them with the corresponding
+  // sapling::NodeId
   std::vector<sapling::NodeId> requests;
   requests.reserve(count);
   for (const auto& importRequest : importRequests) {
