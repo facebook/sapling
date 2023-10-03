@@ -28,12 +28,10 @@ TEST(HgProxyHashTest, test_moved_from_and_empty_hash_compare_the_same) {
 
   EXPECT_EQ(HgProxyHash{}.path(), from.path());
   EXPECT_EQ(HgProxyHash{}.revHash(), from.revHash());
-  EXPECT_EQ(HgProxyHash{}.sha1(), from.sha1());
 
   HgProxyHash zero{RelativePathPiece{}, kZeroHash};
   EXPECT_EQ(HgProxyHash{}.path(), zero.path());
   EXPECT_EQ(HgProxyHash{}.revHash(), zero.revHash());
-  EXPECT_EQ(HgProxyHash{}.sha1(), zero.sha1());
 }
 
 TEST(HgProxyHashTest, round_trip_version_1) {

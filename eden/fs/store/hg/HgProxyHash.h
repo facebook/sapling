@@ -95,12 +95,6 @@ class HgProxyHash {
    */
   Hash20 revHash() const noexcept;
 
-  /**
-   * Returns the SHA-1 of the canonical serialization of this ProxyHash, which
-   * is used as the object ID throughout EdenFS.
-   */
-  ObjectId sha1() const noexcept;
-
   bool operator==(const HgProxyHash&) const;
   bool operator<(const HgProxyHash&) const;
 
