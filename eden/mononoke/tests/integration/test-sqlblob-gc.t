@@ -32,6 +32,7 @@ Run sqlblob_gc generation size report
   Generation | Size
   -----------------
            2 | 199 B
+  Total size: 199 B
 
 Run sqlblob_gc generation size report again, just to check mark has not broken it
 Run sqlblob_gc mark
@@ -50,7 +51,9 @@ Run sqlblob_gc generation size report again, just to check mark has not broken i
   Generation | Size
   -----------------
            2 | 199 B
+  Total size: 199 B
 
 Check the sizes are logged
-  $ jq -r '.int | [ .shard, .generation, .size, .chunk_id_count ] | @csv' < scuba.json | sort
-  1,2,199,1
+  $ jq -r '.int | [ .shard, .generation, .size, .chunk_id_count, .storage_total_footprint ] | @csv' < scuba.json | sort
+  ,,,,199
+  1,2,199,1,
