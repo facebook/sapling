@@ -33,6 +33,7 @@ using ObjectFetchContextPtr = RefPtr<ObjectFetchContext>;
 class HgDatapackStore {
  public:
   using Options = sapling::BackingStoreOptions;
+  using ImportRequestsList = std::vector<std::shared_ptr<HgImportRequest>>;
 
   HgDatapackStore(
       AbsolutePathPiece repository,
@@ -45,8 +46,7 @@ class HgDatapackStore {
         logger_{std::move(logger)},
         repoName_{std::move(repoName)} {}
 
-  void getTreeBatch(
-      const std::vector<std::shared_ptr<HgImportRequest>>& requests);
+  void getTreeBatch(const ImportRequestsList& requests);
 
   TreePtr getTree(
       const RelativePath& path,
@@ -67,8 +67,7 @@ class HgDatapackStore {
    * length. Promises passed in will be resolved if a blob is successfully
    * imported. Otherwise the promise will be left untouched.
    */
-  void getBlobBatch(
-      const std::vector<std::shared_ptr<HgImportRequest>>& requests);
+  void getBlobBatch(const ImportRequestsList& requests);
 
   /**
    * Imports the blob identified by the given hash from the local store.
@@ -86,8 +85,7 @@ class HgDatapackStore {
    *
    * This function returns when all the aux data have been fetched.
    */
-  void getBlobMetadataBatch(
-      const std::vector<std::shared_ptr<HgImportRequest>>& requests);
+  void getBlobMetadataBatch(const ImportRequestsList& requests);
 
   /**
    * Flush any pending writes to disk.
@@ -122,6 +120,9 @@ class HgDatapackStore {
   }
 
  private:
+  using ImportRequestsMap = std::
+      map<sapling::NodeId, std::pair<ImportRequestsList, RequestMetricsScope>>;
+
   sapling::SaplingNativeBackingStore store_;
   std::shared_ptr<ReloadableConfig> config_;
   std::shared_ptr<StructuredLogger> logger_;
